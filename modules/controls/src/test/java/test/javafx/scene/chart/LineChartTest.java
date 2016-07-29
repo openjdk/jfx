@@ -58,17 +58,14 @@ public class LineChartTest extends XYChartTestBase {
         return lineChart;
     }
 
-    private StringBuffer getSeriesLineFromPlot() {
-        ObservableList<Node> childrenList = XYChartShim.getPlotChildren(lineChart);
-        StringBuffer sb = new StringBuffer();
-        for (Node n : childrenList) {
+    private String getSeriesLineFromPlot() {
+        for (Node n : XYChartShim.getPlotChildren(lineChart)) {
             if (n instanceof Path && "chart-series-line".equals(n.getStyleClass().get(0))) {
                 Path line = (Path)n;
-                sb = computeSVGPath(line);
-                return sb;
+                return computeSVGPath(line);
             }
         }
-        return sb;
+        return "";
     }
 
     @Test
@@ -139,5 +136,27 @@ public class LineChartTest extends XYChartTestBase {
         lineChart.getData().addAll(series1);
         pulse();
         assertEquals(true, lineChart.getAnimated());
+    }
+
+    @Override
+    void checkSeriesStyleClasses(XYChart.Series<?, ?> series,
+            int seriesIndex, int colorIndex) {
+        Node seriesLine = series.getNode();
+        checkStyleClass(seriesLine, "series"+seriesIndex, "default-color"+colorIndex);
+    }
+
+    @Override
+    void checkDataStyleClasses(XYChart.Data<?, ?> data,
+            int seriesIndex, int dataIndex, int colorIndex) {
+        Node symbol = data.getNode();
+        checkStyleClass(symbol, "series"+seriesIndex, "data"+dataIndex, "default-color"+colorIndex);
+    }
+
+    @Test
+    public void testSeriesRemoveAnimatedStyleClasses() {
+        startApp();
+        //lineChart.setCreateSymbols(false);
+        int nodesPerSeries = 4; // 3 symbols + 1 path
+        checkSeriesRemoveAnimatedStyleClasses(lineChart, nodesPerSeries, 900);
     }
 }

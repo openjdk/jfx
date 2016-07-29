@@ -78,21 +78,18 @@ public class StackedAreaChartTest extends XYChartTestBase {
         return ac;
     }
 
-    private StringBuffer getSeriesLineFromPlot() {
-        ObservableList<Node> childrenList = XYChartShim.getPlotChildren(ac);
-        StringBuffer sb = new StringBuffer();
-        for (Node n : childrenList) {
+    private String getSeriesLineFromPlot() {
+        for (Node n : XYChartShim.getPlotChildren(ac)) {
             if (n instanceof Group) {
                 for (Node gn : ((Group)n).getChildren()) {
                     if (gn instanceof Path && "chart-series-area-line".equals(gn.getStyleClass().get(0))) {
                         Path line = (Path)gn;
-                        sb = computeSVGPath(line);
-                        return sb;
+                        return computeSVGPath(line);
                     }
                 }
             }
         }
-        return sb;
+        return "";
     }
 
     @Test @Ignore("pending RT-28373")
@@ -100,9 +97,8 @@ public class StackedAreaChartTest extends XYChartTestBase {
         startApp();
         ac.getData().addAll(series1);
         pulse();
-        StringBuffer sb = getSeriesLineFromPlot();
-//        assertEquals("L220.0 59.0 L264.0 175.0 L440.0 175.0 L704.0 291.0 ", sb.toString());
-        assertEquals("L219.0 58.0 L263.0 173.0 L438.0 173.0 L700.0 289.0 ", sb.toString());
+//        assertEquals("L220.0 59.0 L264.0 175.0 L440.0 175.0 L704.0 291.0 ", getSeriesLineFromPlot());
+        assertEquals("L219.0 58.0 L263.0 173.0 L438.0 173.0 L700.0 289.0 ", getSeriesLineFromPlot());
 
     }
 
@@ -114,8 +110,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
         if (!ac.getData().isEmpty()) {
             series1.getData().remove(0);
             pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "L247.0 171.0 L412.0 171.0 L658.0 284.0 ");
+            assertEquals("L247.0 171.0 L412.0 171.0 L658.0 284.0 ", getSeriesLineFromPlot());
         }
     }
 
@@ -127,8 +122,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
         if (!ac.getData().isEmpty()) {
             series1.getData().add(new XYChart.Data(40d,10d));
             pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "L206.0 57.0 L247.0 171.0 L329.0 284.0 L412.0 171.0 L658.0 284.0 ");
+            assertEquals("L206.0 57.0 L247.0 171.0 L329.0 284.0 L412.0 171.0 L658.0 284.0 ", getSeriesLineFromPlot());
         }
     }
 
@@ -140,8 +134,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
         if (!ac.getData().isEmpty()) {
             series1.getData().add(2, new XYChart.Data(40d,10d));
             pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "L206.0 57.0 L247.0 171.0 L329.0 284.0 L412.0 171.0 L658.0 284.0 ");
+            assertEquals("L206.0 57.0 L247.0 171.0 L329.0 284.0 L412.0 171.0 L658.0 284.0 ", getSeriesLineFromPlot());
         }
     }
 
@@ -155,8 +148,7 @@ public class StackedAreaChartTest extends XYChartTestBase {
             d.setXValue(40d);
             d.setYValue(30d);
             pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "L206.0 197.0 L329.0 40.0 L412.0 276.0 L658.0 354.0 ");
+            assertEquals("L206.0 197.0 L329.0 40.0 L412.0 276.0 L658.0 354.0 ", getSeriesLineFromPlot());
         }
     }
 
@@ -414,5 +406,30 @@ public class StackedAreaChartTest extends XYChartTestBase {
 
         assertEquals(2, ValueAxisShim.get_dataMinValue(yAxis), 1e-100);
         assertEquals(15, ValueAxisShim.get_dataMaxValue(yAxis), 1e-100);
+    }
+
+    @Override
+    void checkSeriesStyleClasses(XYChart.Series<?, ?> series,
+            int seriesIndex, int colorIndex) {
+        Group group = (Group) series.getNode();
+        Node fillPath = group.getChildren().get(0);
+        Node seriesLine = group.getChildren().get(1);
+        checkStyleClass(fillPath, "series"+seriesIndex, "default-color"+colorIndex);
+        checkStyleClass(seriesLine, "series"+seriesIndex, "default-color"+colorIndex);
+    }
+
+    @Override
+    void checkDataStyleClasses(XYChart.Data<?, ?> data,
+            int seriesIndex, int dataIndex, int colorIndex) {
+        Node symbol = data.getNode();
+        checkStyleClass(symbol, "series"+seriesIndex, "data"+dataIndex, "default-color"+colorIndex);
+    }
+
+    @Test
+    public void testSeriesRemoveAnimatedStyleClasses() {
+        startApp();
+        //ac.setCreateSymbols(false);
+        int nodesPerSeries = 4; // 3 symbols + 1 path
+        checkSeriesRemoveAnimatedStyleClasses(ac, nodesPerSeries, 400);
     }
 }

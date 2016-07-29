@@ -40,6 +40,7 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChart.Series;
 import javafx.scene.chart.XYChartShim;
 import javafx.scene.layout.StackPane;
+import org.junit.Ignore;
 
 public class BarChartTest extends XYChartTestBase {
 
@@ -73,14 +74,12 @@ public class BarChartTest extends XYChartTestBase {
         return bc;
     }
 
+    @Ignore("JDK-8162547")
     @Test
     public void testAddingCustomStyleClassToBarChartBarNodes() {
         startApp();
         XYChart.Series<String, Number> series = new XYChart.Series();
-        ObservableList<XYChart.Data<String, Number>> seriesData = series.getData();
-        String xValue = "A";
-        Number yValue = Integer.valueOf(20);
-        XYChart.Data<String, Number> item = new XYChart.Data(xValue, yValue);
+        XYChart.Data<String, Number> item = new XYChart.Data("A", 20);
         Node bar = item.getNode();
         if (bar == null) {
             bar = new StackPane();
@@ -88,9 +87,9 @@ public class BarChartTest extends XYChartTestBase {
         String myStyleClass = "my-style";
         bar.getStyleClass().add(myStyleClass);
         item.setNode(bar);
-        seriesData.add(item);
+        series.getData().add(item);
         bc.getData().add(series);
-        assertEquals("my-style", bar.getStyleClass().get(0));
+        checkStyleClass(bar, myStyleClass);
     }
 
     @Test
@@ -141,5 +140,42 @@ public class BarChartTest extends XYChartTestBase {
         assertEquals(3, XYChartShim.Series_getDataSize(s));
         s.getData().remove(0);
         assertEquals(2, XYChartShim.Series_getDataSize(s));
+    }
+
+    @Override
+    ObservableList<XYChart.Series<?, ?>> createTestSeries() {
+        ObservableList<XYChart.Series<?, ?>> list = FXCollections.observableArrayList();
+        for (int i = 0; i != 10; i++) {
+            XYChart.Series<String, Number> series = new XYChart.Series<>();
+            series.getData().add(new XYChart.Data<>(Integer.toString(i*10), i*10));
+            series.getData().add(new XYChart.Data<>(Integer.toString(i*20), i*20));
+            series.getData().add(new XYChart.Data<>(Integer.toString(i*30), i*30));
+            list.add(series);
+        }
+        return list;
+    }
+
+    @Override
+    void checkSeriesStyleClasses(XYChart.Series<?, ?> series,
+            int seriesIndex, int colorIndex) {
+        // TODO: legend
+    }
+
+    @Override
+    void checkDataStyleClasses(XYChart.Data<?, ?> data,
+            int seriesIndex, int dataIndex, int colorIndex) {
+        Node bar = data.getNode();
+        checkStyleClass(bar, "series"+seriesIndex, "data"+dataIndex, "default-color"+colorIndex);
+    }
+
+    @Test
+    public void testSeriesRemoveAnimatedStyleClasses() {
+        startApp();
+        bc.getData().clear();
+        xAxis.getCategories().clear();
+        xAxis.setAutoRanging(true);
+        pulse();
+        int nodesPerSeries = 3; // 3 bars
+        checkSeriesRemoveAnimatedStyleClasses(bc, nodesPerSeries, 700);
     }
 }

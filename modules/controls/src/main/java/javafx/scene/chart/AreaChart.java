@@ -402,25 +402,8 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         }
         if (shouldAnimate()) animate(keyFrames.toArray(new KeyFrame[keyFrames.size()]));
     }
-    private void updateDefaultColorIndex(final Series<X,Y> series) {
-        int clearIndex = seriesColorMap.get(series);
-        Path seriesLine = (Path)((Group)series.getNode()).getChildren().get(1);
-        Path fillPath = (Path)((Group)series.getNode()).getChildren().get(0);
-        if (seriesLine != null) {
-            seriesLine.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
-        }
-        if (fillPath != null) {
-            fillPath.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
-        }
-        for (int j=0; j < series.getData().size(); j++) {
-            final Node node = series.getData().get(j).getNode();
-            if(node!=null) {
-                node.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
-            }
-        }
-    }
+
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
-        updateDefaultColorIndex(series);
         // remove series Y multiplier
         seriesYMultiplierMap.remove(series);
         // remove all symbol nodes

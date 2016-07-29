@@ -77,21 +77,18 @@ public class AreaChartTest extends XYChartTestBase {
         return ac;
     }
 
-    private StringBuffer getSeriesLineFromPlot() {
-        ObservableList<Node> childrenList = XYChartShim.getPlotChildren(ac);
-        StringBuffer sb = new StringBuffer();
-        for (Node n : childrenList) {
+    private String getSeriesLineFromPlot() {
+        for (Node n : XYChartShim.getPlotChildren(ac)) {
             if (n instanceof Group) {
                 for (Node gn : ((Group)n).getChildren()) {
                     if (gn instanceof Path && "chart-series-area-line".equals(gn.getStyleClass().get(0))) {
                         Path line = (Path)gn;
-                        sb = computeSVGPath(line);
-                        return sb;
+                        return computeSVGPath(line);
                     }
                 }
             }
         }
-        return sb;
+        return "";
     }
 
     @Test @Ignore
@@ -102,8 +99,7 @@ public class AreaChartTest extends XYChartTestBase {
         if (!ac.getData().isEmpty()) {
             series1.getData().remove(0);
             pulse();
-            StringBuffer sb = getSeriesLineFromPlot();
-            assertEquals(sb.toString(), "L247.0 171.0 L412.0 171.0 L658.0 284.0 ");
+            assertEquals("L247.0 171.0 L412.0 171.0 L658.0 284.0 ", getSeriesLineFromPlot());
         }
     }
 
@@ -112,6 +108,31 @@ public class AreaChartTest extends XYChartTestBase {
         useCategoryAxis = true;
         startApp();
         useCategoryAxis = false;
+    }
+
+    @Override
+    void checkSeriesStyleClasses(XYChart.Series<?, ?> series,
+            int seriesIndex, int colorIndex) {
+        Group group = (Group) series.getNode();
+        Node fillPath = group.getChildren().get(0);
+        Node seriesLine = group.getChildren().get(1);
+        checkStyleClass(fillPath, "series"+seriesIndex, "default-color"+colorIndex);
+        checkStyleClass(seriesLine, "series"+seriesIndex, "default-color"+colorIndex);
+    }
+
+    @Override
+    void checkDataStyleClasses(XYChart.Data<?, ?> data,
+            int seriesIndex, int dataIndex, int colorIndex) {
+        Node symbol = data.getNode();
+        checkStyleClass(symbol, "series"+seriesIndex, "data"+dataIndex, "default-color"+colorIndex);
+    }
+
+    @Test
+    public void testSeriesRemoveAnimatedStyleClasses() {
+        startApp();
+        //ac.setCreateSymbols(false);
+        int nodesPerSeries = 4; // 3 symbols + 1 path
+        checkSeriesRemoveAnimatedStyleClasses(ac, nodesPerSeries, 400);
     }
 
     @Test public void testCreateSymbols() {

@@ -29,12 +29,14 @@ import org.junit.Before;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.Toolkit;
+import java.util.Arrays;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.chart.Chart;
 import javafx.stage.Stage;
 import javafx.scene.layout.Region;
 import javafx.scene.shape.*;
-
+import static org.junit.Assert.assertTrue;
 
 public abstract class ChartTestBase {
     private Scene scene;
@@ -79,27 +81,37 @@ public abstract class ChartTestBase {
 
     protected abstract Chart createChart();
 
-    StringBuffer computeSVGPath(Path line) {
-        StringBuffer str = new StringBuffer();
-        for(PathElement pe : line.getElements()) {
+    String computeSVGPath(Path line) {
+        StringBuilder str = new StringBuilder();
+        for (PathElement pe : line.getElements()) {
             if (pe instanceof LineTo) {
-                str.append("L"+((LineTo)pe).getX()+" "+((LineTo)pe).getY()+" ");
+                str.append("L").append(((LineTo)pe).getX()).append(" ")
+                               .append(((LineTo)pe).getY()).append(" ");
             }
         }
-        return str;
+        return str.toString();
     }
 
-    StringBuffer computeBoundsString(Region r1, Region r2, Region r3) {
-        StringBuffer str = new StringBuffer();
-        str.append(Math.round(r1.getLayoutX())
-                                +" "+Math.round(r1.getLayoutY())+" "+Math.round(r1.getWidth())+
-                                " "+Math.round(r1.getHeight())+" ");
-        str.append(Math.round(r2.getLayoutX())
-                                +" "+Math.round(r2.getLayoutY())+" "+Math.round(r2.getWidth())+
-                                " "+Math.round(r2.getHeight())+" ");
-        str.append(Math.round(r3.getLayoutX())
-                                +" "+Math.round(r3.getLayoutY())+" "+Math.round(r3.getWidth())+
-                                " "+Math.round(r3.getHeight())+" ");
-        return str;
+    String computeBoundsString(Region r1, Region r2, Region r3) {
+        StringBuilder str = new StringBuilder();
+        str.append(Math.round(r1.getLayoutX())).append(" ")
+           .append(Math.round(r1.getLayoutY())).append(" ")
+           .append(Math.round(r1.getWidth())).append(" ")
+           .append(Math.round(r1.getHeight())).append(" ");
+        str.append(Math.round(r2.getLayoutX())).append(" ")
+           .append(Math.round(r2.getLayoutY())).append(" ")
+           .append(Math.round(r2.getWidth())).append(" ")
+           .append(Math.round(r2.getHeight())).append(" ");
+        str.append(Math.round(r3.getLayoutX())).append(" ")
+           .append(Math.round(r3.getLayoutY())).append(" ")
+           .append(Math.round(r3.getWidth())).append(" ")
+           .append(Math.round(r3.getHeight())).append(" ");
+        return str.toString();
+    }
+
+    void checkStyleClass(Node item, String... styleClass) {
+        assertTrue("\"" + item.getStyleClass() + "\" doesn't contain all of the " +
+                Arrays.toString(styleClass),
+                item.getStyleClass().containsAll(Arrays.asList(styleClass)));
     }
 }

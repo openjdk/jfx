@@ -137,8 +137,6 @@ public abstract class XYChart<X,Y> extends Chart {
             for (Series<X,Y> s : c.getRemoved()) {
                 s.setToRemove = true;
                 seriesRemoved(s);
-                int idx = seriesColorMap.remove(s);
-                colorBits.clear(idx);
             }
 
             for(int i=c.getFrom(); i<c.getTo() && !c.wasPermutated(); i++) {
@@ -883,6 +881,8 @@ public abstract class XYChart<X,Y> extends Chart {
         if (series != null) series.setToRemove = false;
         series.setChart(null);
         displayedSeries.remove(series);
+        int idx = seriesColorMap.remove(series);
+        colorBits.clear(idx);
     }
 
     /**

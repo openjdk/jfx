@@ -84,4 +84,14 @@ public class XYNumberChartsTest extends XYNumberChartsTestBase {
     public void testSeriesRemove() {
         checkSeriesRemove(2 + nodesPerSeries);
     }
+
+    @Override
+    void checkSeriesStyleClasses(XYChart.Series<?, ?> series, int seriesIndex, int colorIndex) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    void checkDataStyleClasses(XYChart.Data<?, ?> data, int seriesIndex, int dataIndex, int colorIndex) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

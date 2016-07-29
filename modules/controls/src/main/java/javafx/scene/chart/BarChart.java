@@ -54,6 +54,7 @@ import javafx.css.CssMetaData;
 import javafx.css.PseudoClass;
 
 import javafx.css.converter.SizeConverter;
+import javafx.collections.ListChangeListener;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -267,6 +268,19 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
          }
     }
 
+    @Override protected void seriesChanged(ListChangeListener.Change<? extends Series> c) {
+        // Update style classes for all series lines and symbols
+        // Note: is there a more efficient way of doing this?
+        for (int i = 0; i < getDataSize(); i++) {
+            final Series<X,Y> series = getData().get(i);
+            for (int j=0; j<series.getData().size(); j++) {
+                Data<X,Y> item = series.getData().get(j);
+                Node bar = item.getNode();
+                bar.getStyleClass().setAll("chart-bar", "series" + i, "data" + j, series.defaultColorStyleClass);
+            }
+        }
+    }
+
     @Override protected void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
         // create entry in the map
@@ -297,7 +311,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     }
 
     @Override protected void seriesRemoved(final Series<X,Y> series) {
-        updateDefaultColorIndex(series);
         // remove all symbol nodes
         if (shouldAnimate()) {
             pt = new ParallelTransition();
@@ -541,16 +554,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    private void updateDefaultColorIndex(final Series<X,Y> series) {
-        int clearIndex = seriesColorMap.get(series);
-        for (Data<X,Y> d : series.getData()) {
-            final Node bar = d.getNode();
-            if (bar != null) {
-                bar.getStyleClass().remove(DEFAULT_COLOR+clearIndex);
-            }
-        }
-    }
-
     private Node createBar(Series<X,Y> series, int seriesIndex, final Data<X,Y> item, int itemIndex) {
         Node bar = item.getNode();
         if (bar == null) {
@@ -560,7 +563,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             bar.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(bar);
         }
-        bar.getStyleClass().addAll("chart-bar", "series" + seriesIndex, "data" + itemIndex,series.defaultColorStyleClass);
+        bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex,series.defaultColorStyleClass);
         return bar;
     }
 

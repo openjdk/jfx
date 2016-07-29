@@ -70,8 +70,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
     private ValueAxis valueAxis;
-    private int seriesDefaultColorIndex = 0;
-    private Map<Series<X, Y>, String> seriesDefaultColorMap = new HashMap<Series<X, Y>, String>();
     // RT-23125 handling data removal when a category is removed.
     private ListChangeListener<String> categoriesListener = new ListChangeListener<String>() {
         @Override public void onChanged(ListChangeListener.Change<? extends String> c) {
@@ -288,11 +286,21 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         }
     }
 
+    @Override protected void seriesChanged(ListChangeListener.Change<? extends Series> c) {
+        // Update style classes for all series lines and symbols
+        // Note: is there a more efficient way of doing this?
+        for (int i = 0; i < getDataSize(); i++) {
+            final Series<X,Y> series = getData().get(i);
+            for (int j=0; j<series.getData().size(); j++) {
+                Data<X,Y> item = series.getData().get(j);
+                Node bar = item.getNode();
+                bar.getStyleClass().setAll("chart-bar", "series" + i, "data" + j, series.defaultColorStyleClass);
+            }
+        }
+    }
+
     /** @inheritDoc */
     @Override protected void seriesAdded(Series<X, Y> series, int seriesIndex) {
-        String defaultColorStyleClass = "default-color" + (seriesDefaultColorIndex % 8);
-        seriesDefaultColorMap.put(series, defaultColorStyleClass);
-        seriesDefaultColorIndex++;
         // handle any data already in series
         // create entry in the map
         Map<String, List<Data<X, Y>>> categoryMap = new HashMap<String, List<Data<X, Y>>>();
@@ -350,9 +358,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     }
 
     @Override protected void seriesRemoved(final Series<X, Y> series) {
-        // Added for RT-40104
-        seriesDefaultColorIndex--;
-
         // remove all symbol nodes
         if (shouldAnimate()) {
             ParallelTransition pt = new ParallelTransition();
@@ -513,9 +518,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             for (int seriesIndex = 0; seriesIndex < getData().size(); seriesIndex++) {
                 Series<X,Y> series = getData().get(seriesIndex);
                 Legend.LegendItem legenditem = new Legend.LegendItem(series.getName());
-                String defaultColorStyleClass = seriesDefaultColorMap.get(series);
                 legenditem.getSymbol().getStyleClass().addAll("chart-bar", "series" + seriesIndex, "bar-legend-symbol",
-                        defaultColorStyleClass);
+                        series.defaultColorStyleClass);
                 legend.getItems().add(legenditem);
             }
         }
@@ -537,8 +541,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             bar.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(bar);
         }
-        String defaultColorStyleClass = seriesDefaultColorMap.get(series);
-        bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex, defaultColorStyleClass);
+        bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex, series.defaultColorStyleClass);
         return bar;
     }
 
