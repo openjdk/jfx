@@ -69,10 +69,10 @@ public final class CornerRadiiConverter extends StyleConverter<ParsedValue<Parse
             Size bottomLeftVerticalRadius = sizes[1][3].convert(font);
 
             cornerRadiiValues[n] = new CornerRadii(
-                    topLeftHorizontalRadius.pixels(),     topLeftVerticalRadius.pixels(),
-                    topRightVerticalRadius.pixels(),      topRightHorizontalRadius.pixels(),
-                    bottomRightHorizontalRadius.pixels(), bottomRightVerticalRadius.pixels(),
-                    bottomLeftVerticalRadius.pixels(),    bottomLeftHorizontalRadius.pixels(),
+                    topLeftHorizontalRadius.pixels(font),     topLeftVerticalRadius.pixels(font),
+                    topRightVerticalRadius.pixels(font),      topRightHorizontalRadius.pixels(font),
+                    bottomRightHorizontalRadius.pixels(font), bottomRightVerticalRadius.pixels(font),
+                    bottomLeftVerticalRadius.pixels(font),    bottomLeftHorizontalRadius.pixels(font),
                     topLeftHorizontalRadius.getUnits()     == SizeUnits.PERCENT, topLeftVerticalRadius.getUnits()      == SizeUnits.PERCENT,
                     topRightVerticalRadius.getUnits()      == SizeUnits.PERCENT, topRightHorizontalRadius.getUnits()   == SizeUnits.PERCENT,
                     bottomRightHorizontalRadius.getUnits() == SizeUnits.PERCENT, bottomRightVerticalRadius.getUnits()  == SizeUnits.PERCENT,
