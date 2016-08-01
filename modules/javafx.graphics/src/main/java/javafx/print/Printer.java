@@ -254,10 +254,10 @@ public final class Printer {
         double prm = width - imgArea.getMaxX();
         double pbm = height - imgArea.getMaxY();
         // fix for FP error
-        if (Math.abs(plm) < 0.01) plm = 0;
-        if (Math.abs(prm) < 0.01) prm = 0;
-        if (Math.abs(ptm) < 0.01) ptm = 0;
-        if (Math.abs(pbm) < 0.01) pbm = 0;
+        if (plm < 0.01) plm = 0;
+        if (prm < 0.01) prm = 0;
+        if (ptm < 0.01) ptm = 0;
+        if (pbm < 0.01) pbm = 0;
 
         switch (mType) {
         case DEFAULT:
@@ -285,6 +285,14 @@ public final class Printer {
             break;
         }
 
+        while (plm + prm > width) {
+           plm /= 2.0;
+           prm /= 2.0;
+        }
+        while (ptm + pbm > height) {
+           ptm /= 2.0;
+           pbm /= 2.0;
+        }
         double lm, rm, tm, bm;
         // Now we gave the margins, they need to be adjusted into
         // the orientation of the paper. If the orientation is not
