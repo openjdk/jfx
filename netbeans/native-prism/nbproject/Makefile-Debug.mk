@@ -68,40 +68,40 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism.${CND_DLIB_EXT}: ${OB
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.c} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
 
-${OBJECTDIR}/_ext/342980646/Curve.o: ../../modules/graphics/src/main/native-prism/Curve.c 
+${OBJECTDIR}/_ext/342980646/Curve.o: ../../modules/javafx.graphics/src/main/native-prism/Curve.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Curve.o ../../modules/graphics/src/main/native-prism/Curve.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Curve.o ../../modules/javafx.graphics/src/main/native-prism/Curve.c
 
-${OBJECTDIR}/_ext/342980646/Dasher.o: ../../modules/graphics/src/main/native-prism/Dasher.c 
+${OBJECTDIR}/_ext/342980646/Dasher.o: ../../modules/javafx.graphics/src/main/native-prism/Dasher.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Dasher.o ../../modules/graphics/src/main/native-prism/Dasher.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Dasher.o ../../modules/javafx.graphics/src/main/native-prism/Dasher.c
 
-${OBJECTDIR}/_ext/342980646/Helpers.o: ../../modules/graphics/src/main/native-prism/Helpers.c 
+${OBJECTDIR}/_ext/342980646/Helpers.o: ../../modules/javafx.graphics/src/main/native-prism/Helpers.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Helpers.o ../../modules/graphics/src/main/native-prism/Helpers.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Helpers.o ../../modules/javafx.graphics/src/main/native-prism/Helpers.c
 
-${OBJECTDIR}/_ext/342980646/NativePiscesRasterizer.o: ../../modules/graphics/src/main/native-prism/NativePiscesRasterizer.c 
+${OBJECTDIR}/_ext/342980646/NativePiscesRasterizer.o: ../../modules/javafx.graphics/src/main/native-prism/NativePiscesRasterizer.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/NativePiscesRasterizer.o ../../modules/graphics/src/main/native-prism/NativePiscesRasterizer.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/NativePiscesRasterizer.o ../../modules/javafx.graphics/src/main/native-prism/NativePiscesRasterizer.c
 
-${OBJECTDIR}/_ext/342980646/Renderer.o: ../../modules/graphics/src/main/native-prism/Renderer.c 
+${OBJECTDIR}/_ext/342980646/Renderer.o: ../../modules/javafx.graphics/src/main/native-prism/Renderer.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Renderer.o ../../modules/graphics/src/main/native-prism/Renderer.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Renderer.o ../../modules/javafx.graphics/src/main/native-prism/Renderer.c
 
-${OBJECTDIR}/_ext/342980646/Stroker.o: ../../modules/graphics/src/main/native-prism/Stroker.c 
+${OBJECTDIR}/_ext/342980646/Stroker.o: ../../modules/javafx.graphics/src/main/native-prism/Stroker.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Stroker.o ../../modules/graphics/src/main/native-prism/Stroker.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Stroker.o ../../modules/javafx.graphics/src/main/native-prism/Stroker.c
 
-${OBJECTDIR}/_ext/342980646/Transformer.o: ../../modules/graphics/src/main/native-prism/Transformer.c 
+${OBJECTDIR}/_ext/342980646/Transformer.o: ../../modules/javafx.graphics/src/main/native-prism/Transformer.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/342980646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Transformer.o ../../modules/graphics/src/main/native-prism/Transformer.c
+	$(COMPILE.c) -g -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/342980646/Transformer.o ../../modules/javafx.graphics/src/main/native-prism/Transformer.c
 
 # Subprojects
 .build-subprojects:

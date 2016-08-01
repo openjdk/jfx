@@ -10,8 +10,8 @@
             <sourceEncoding>UTF-8</sourceEncoding>
             <make-dep-projects/>
             <sourceRootList>
-                <sourceRootElem>../../modules/graphics/src/main/native-prism-es2</sourceRootElem>
-                <sourceRootElem>../../modules/graphics/build/generated-src/headers/prismES2</sourceRootElem>
+                <sourceRootElem>../../modules/javafx.graphics/src/main/native-prism-es2</sourceRootElem>
+                <sourceRootElem>../../modules/javafx.graphics/build/generated-src/headers/prismES2</sourceRootElem>
             </sourceRootList>
             <confList>
                 <confElem>

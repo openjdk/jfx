@@ -15,12 +15,12 @@
       <logicalFolder name="native-decora"
                      displayName="native-decora"
                      projectFiles="true">
-        <itemPath>../../modules/graphics/src/main/native-decora/SSEBoxBlurPeer.cc</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-decora/SSEBoxShadowPeer.cc</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-decora/SSELinearConvolvePeer.cc</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-decora/SSEUtils.cc</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-decora/SSEUtils.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-decora/SSEBoxBlurPeer.cc</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-decora/SSEBoxShadowPeer.cc</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-decora/SSELinearConvolvePeer.cc</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-decora/SSEUtils.cc</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-decora/SSEUtils.h</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -36,7 +36,7 @@
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
-    <Elem>../../modules/graphics/src/main/native-decora</Elem>
+    <Elem>../../modules/javafx.graphics/src/main/native-decora</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -49,32 +49,32 @@
       </toolsSet>
       <compileType>
       </compileType>
-      <item path="../../modules/graphics/src/main/native-decora/SSEBoxBlurPeer.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSEBoxBlurPeer.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSEBoxShadowPeer.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSEBoxShadowPeer.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSELinearConvolvePeer.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSELinearConvolvePeer.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSEUtils.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSEUtils.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSEUtils.h"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSEUtils.h"
             ex="false"
             tool="3"
             flavor2="0">
@@ -101,32 +101,32 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
-      <item path="../../modules/graphics/src/main/native-decora/SSEBoxBlurPeer.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSEBoxBlurPeer.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSEBoxShadowPeer.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSEBoxShadowPeer.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSELinearConvolvePeer.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSELinearConvolvePeer.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSELinearConvolveShadowPeer.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSEUtils.cc"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSEUtils.cc"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-decora/SSEUtils.h"
+      <item path="../../modules/javafx.graphics/src/main/native-decora/SSEUtils.h"
             ex="false"
             tool="3"
             flavor2="0">

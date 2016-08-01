@@ -1789,12 +1789,6 @@ project(":controls") {
     }
 }
 
-project(":extensions") {
-    dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics")
-    }
-}
-
 project(":swing") {
     /* should not be built, but needed in JMX
     tasks.all {

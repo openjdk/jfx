@@ -1,0 +1,14 @@
+#!/bin/bash
+#
+# use as a pipe to rename an jdk 9  module path to the jdk 8 module path
+#
+
+sed \
+ -e '/^\(diff \|--- \|+++ \)/s,modules/jdk.packager,modules/fxpackager,g' \
+ -e '/^\(diff \|--- \|+++ \)/s,modules/jdk.packager.services,modules/fxpackagerservices,g' \
+ -e '/^\(diff \|--- \|+++ \)/s,extensions/,modules/extensions/,g' \
+ \
+ -e '/^\(diff \|--- \|+++ \)/s,modules/javafx.\(.*\)/src/test/java/test/,modules/\1/src/test/java/,' \
+ \
+ -e '/^\(diff \|--- \|+++ \)/s,modules/javafx.\(base\|graphics\|controls\|swing\|media\|web\|fxml\|swt\|jmx\)/,modules/\1/,g' 
+

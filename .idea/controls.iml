@@ -2,16 +2,16 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$/modules/controls">
-      <sourceFolder url="file://$MODULE_DIR$/modules/controls/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/controls/src/main/resources" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/controls/src/test/java" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/controls/src/test/resources" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/controls/build/resources/main" type="java-resource" />
-      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build/classes" />
-      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build/dependency-cache" />
-      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build/libs" />
-      <excludeFolder url="file://$MODULE_DIR$/modules/controls/build/reports" />
+    <content url="file://$MODULE_DIR$/modules/javafx.controls">
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/src/main/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/src/test/resources" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/resources/main" type="java-resource" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/classes" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/dependency-cache" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/libs" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/javafx.controls/build/reports" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="base" exported="" />

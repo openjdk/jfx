@@ -15,33 +15,33 @@
       <logicalFolder name="native-prism-sw"
                      displayName="native-prism-sw"
                      projectFiles="true">
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JJavaSurface.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JNIUtil.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JNIUtil.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JNativeSurface.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JTransform.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/JTransform.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesBlit.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesBlit.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesDefs.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesMath.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesMath.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesPaint.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesPaint.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesRenderer.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesRenderer.inl</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesSurface.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesSurface.inl</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesTransform.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesTransform.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesUtil.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism-sw/PiscesUtil.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JAbstractSurface.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JAbstractSurface.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JJavaSurface.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JNIUtil.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JNIUtil.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JNativeSurface.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JPiscesRenderer.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JPiscesRenderer.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JTransform.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/JTransform.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesBlit.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesBlit.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesDefs.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesMath.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesMath.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesPaint.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesPaint.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesRenderer.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesRenderer.inl</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSurface.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSurface.inl</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSysutils.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSysutils.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesTransform.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesTransform.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesUtil.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism-sw/PiscesUtil.h</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -57,7 +57,7 @@
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
-    <Elem>../../modules/graphics/src/main/native-prism-sw</Elem>
+    <Elem>../../modules/javafx.graphics/src/main/native-prism-sw</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -71,141 +71,141 @@
       <compileType>
         <cTool>
           <incDir>
-            <pElem>../../modules/graphics/build/generated-src/headers/prismSW/win</pElem>
+            <pElem>../../modules/javafx.graphics/build/generated-src/headers/prismSW/win</pElem>
           </incDir>
         </cTool>
       </compileType>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JAbstractSurface.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JAbstractSurface.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JJavaSurface.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JJavaSurface.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JNIUtil.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JNIUtil.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JNIUtil.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JNIUtil.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JNativeSurface.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JNativeSurface.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JPiscesRenderer.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JPiscesRenderer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JTransform.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JTransform.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JTransform.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JTransform.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesBlit.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesBlit.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesBlit.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesBlit.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesDefs.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesDefs.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesMath.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesMath.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesMath.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesMath.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesPaint.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesPaint.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesPaint.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesPaint.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesRenderer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesRenderer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesRenderer.inl"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesRenderer.inl"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesSurface.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSurface.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesSurface.inl"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSurface.inl"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSysutils.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSysutils.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesTransform.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesTransform.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesTransform.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesTransform.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesUtil.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesUtil.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesUtil.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesUtil.h"
             ex="false"
             tool="3"
             flavor2="0">
@@ -232,137 +232,137 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JAbstractSurface.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JAbstractSurface.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JAbstractSurface.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JJavaSurface.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JJavaSurface.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JNIUtil.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JNIUtil.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JNIUtil.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JNIUtil.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JNativeSurface.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JNativeSurface.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JPiscesRenderer.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JPiscesRenderer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JPiscesRenderer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JTransform.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JTransform.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/JTransform.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/JTransform.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesBlit.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesBlit.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesBlit.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesBlit.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesDefs.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesDefs.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesMath.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesMath.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesMath.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesMath.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesPaint.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesPaint.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesPaint.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesPaint.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesRenderer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesRenderer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesRenderer.inl"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesRenderer.inl"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesSurface.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSurface.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesSurface.inl"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSurface.inl"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSysutils.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesSysutils.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesSysutils.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesTransform.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesTransform.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesTransform.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesTransform.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesUtil.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesUtil.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism-sw/PiscesUtil.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism-sw/PiscesUtil.h"
             ex="false"
             tool="3"
             flavor2="0">

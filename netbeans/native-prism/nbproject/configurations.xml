@@ -15,21 +15,21 @@
       <logicalFolder name="native-prism"
                      displayName="native-prism"
                      projectFiles="true">
-        <itemPath>../../modules/graphics/src/main/native-prism/AlphaConsumer.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Curve.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Curve.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Dasher.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Dasher.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Helpers.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Helpers.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/NativePiscesRasterizer.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/PathConsumer.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Renderer.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Renderer.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Stroker.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Stroker.h</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Transformer.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-prism/Transformer.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/AlphaConsumer.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Curve.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Curve.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Dasher.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Dasher.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Helpers.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Helpers.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/NativePiscesRasterizer.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/PathConsumer.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Renderer.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Renderer.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Stroker.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Stroker.h</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Transformer.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-prism/Transformer.h</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -45,7 +45,7 @@
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
-    <Elem>../../modules/graphics/src/main/native-prism</Elem>
+    <Elem>../../modules/javafx.graphics/src/main/native-prism</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -58,77 +58,77 @@
       </toolsSet>
       <compileType>
       </compileType>
-      <item path="../../modules/graphics/src/main/native-prism/AlphaConsumer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/AlphaConsumer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Curve.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Curve.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Curve.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Curve.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Dasher.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Dasher.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Dasher.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Dasher.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Helpers.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Helpers.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Helpers.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Helpers.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/NativePiscesRasterizer.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/NativePiscesRasterizer.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/PathConsumer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/PathConsumer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Renderer.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Renderer.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Renderer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Renderer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Stroker.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Stroker.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Stroker.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Stroker.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Transformer.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Transformer.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Transformer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Transformer.h"
             ex="false"
             tool="3"
             flavor2="0">
@@ -155,77 +155,77 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
-      <item path="../../modules/graphics/src/main/native-prism/AlphaConsumer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/AlphaConsumer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Curve.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Curve.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Curve.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Curve.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Dasher.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Dasher.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Dasher.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Dasher.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Helpers.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Helpers.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Helpers.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Helpers.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/NativePiscesRasterizer.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/NativePiscesRasterizer.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/PathConsumer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/PathConsumer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Renderer.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Renderer.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Renderer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Renderer.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Stroker.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Stroker.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Stroker.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Stroker.h"
             ex="false"
             tool="3"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Transformer.c"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Transformer.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-prism/Transformer.h"
+      <item path="../../modules/javafx.graphics/src/main/native-prism/Transformer.h"
             ex="false"
             tool="3"
             flavor2="0">

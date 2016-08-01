@@ -10,7 +10,7 @@
             <sourceEncoding>UTF-8</sourceEncoding>
             <make-dep-projects/>
             <sourceRootList>
-                <sourceRootElem>../../../modules/web/src/android/native</sourceRootElem>
+                <sourceRootElem>../../../modules/javafx.web/src/android/native</sourceRootElem>
             </sourceRootList>
             <confList>
                 <confElem>

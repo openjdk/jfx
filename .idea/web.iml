@@ -2,13 +2,13 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$/modules/web">
-      <sourceFolder url="file://$MODULE_DIR$/modules/web/src/main/resources" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/web/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/web/src/test/java" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/web/src/test/resources" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/web/src/main/java-wrappers" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/modules/web/build" />
+    <content url="file://$MODULE_DIR$/modules/javafx.web">
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.web/src/main/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.web/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.web/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.web/src/test/resources" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.web/src/main/java-wrappers" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/javafx.web/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="graphics" exported="" />

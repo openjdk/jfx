@@ -78,90 +78,90 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism-d3d.${CND_DLIB_EXT}: 
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism-d3d.${CND_DLIB_EXT} ${OBJECTFILES} ${LDLIBSOPTIONS} -shared -fPIC
 
-${OBJECTDIR}/_ext/284623486/D3DContext.o: ../../modules/graphics/src/main/native-prism-d3d/D3DContext.cc 
+${OBJECTDIR}/_ext/284623486/D3DContext.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DContext.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DContext.o ../../modules/graphics/src/main/native-prism-d3d/D3DContext.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DContext.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DContext.cc
 
-${OBJECTDIR}/_ext/284623486/D3DContextInit.o: ../../modules/graphics/src/main/native-prism-d3d/D3DContextInit.cc 
+${OBJECTDIR}/_ext/284623486/D3DContextInit.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DContextInit.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DContextInit.o ../../modules/graphics/src/main/native-prism-d3d/D3DContextInit.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DContextInit.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DContextInit.cc
 
-${OBJECTDIR}/_ext/284623486/D3DGraphics.o: ../../modules/graphics/src/main/native-prism-d3d/D3DGraphics.cc 
+${OBJECTDIR}/_ext/284623486/D3DGraphics.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DGraphics.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DGraphics.o ../../modules/graphics/src/main/native-prism-d3d/D3DGraphics.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DGraphics.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DGraphics.cc
 
-${OBJECTDIR}/_ext/284623486/D3DLight.o: ../../modules/graphics/src/main/native-prism-d3d/D3DLight.cc 
+${OBJECTDIR}/_ext/284623486/D3DLight.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DLight.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DLight.o ../../modules/graphics/src/main/native-prism-d3d/D3DLight.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DLight.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DLight.cc
 
-${OBJECTDIR}/_ext/284623486/D3DMesh.o: ../../modules/graphics/src/main/native-prism-d3d/D3DMesh.cc 
+${OBJECTDIR}/_ext/284623486/D3DMesh.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DMesh.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DMesh.o ../../modules/graphics/src/main/native-prism-d3d/D3DMesh.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DMesh.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DMesh.cc
 
-${OBJECTDIR}/_ext/284623486/D3DMeshView.o: ../../modules/graphics/src/main/native-prism-d3d/D3DMeshView.cc 
+${OBJECTDIR}/_ext/284623486/D3DMeshView.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DMeshView.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DMeshView.o ../../modules/graphics/src/main/native-prism-d3d/D3DMeshView.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DMeshView.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DMeshView.cc
 
-${OBJECTDIR}/_ext/284623486/D3DPhongMaterial.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPhongMaterial.cc 
+${OBJECTDIR}/_ext/284623486/D3DPhongMaterial.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPhongMaterial.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongMaterial.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongMaterial.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongMaterial.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPhongMaterial.cc
 
-${OBJECTDIR}/_ext/284623486/D3DPhongShader.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShader.cc 
+${OBJECTDIR}/_ext/284623486/D3DPhongShader.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPhongShader.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongShader.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShader.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongShader.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPhongShader.cc
 
-${OBJECTDIR}/_ext/284623486/D3DPhongShaderGen.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShaderGen.cc 
+${OBJECTDIR}/_ext/284623486/D3DPhongShaderGen.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPhongShaderGen.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongShaderGen.o ../../modules/graphics/src/main/native-prism-d3d/D3DPhongShaderGen.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPhongShaderGen.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPhongShaderGen.cc
 
-${OBJECTDIR}/_ext/284623486/D3DPipeline.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPipeline.cc 
+${OBJECTDIR}/_ext/284623486/D3DPipeline.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPipeline.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPipeline.o ../../modules/graphics/src/main/native-prism-d3d/D3DPipeline.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPipeline.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPipeline.cc
 
-${OBJECTDIR}/_ext/284623486/D3DPipelineManager.o: ../../modules/graphics/src/main/native-prism-d3d/D3DPipelineManager.cc 
+${OBJECTDIR}/_ext/284623486/D3DPipelineManager.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPipelineManager.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPipelineManager.o ../../modules/graphics/src/main/native-prism-d3d/D3DPipelineManager.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DPipelineManager.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DPipelineManager.cc
 
-${OBJECTDIR}/_ext/284623486/D3DResourceFactory.o: ../../modules/graphics/src/main/native-prism-d3d/D3DResourceFactory.cc 
+${OBJECTDIR}/_ext/284623486/D3DResourceFactory.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DResourceFactory.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DResourceFactory.o ../../modules/graphics/src/main/native-prism-d3d/D3DResourceFactory.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DResourceFactory.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DResourceFactory.cc
 
-${OBJECTDIR}/_ext/284623486/D3DResourceManager.o: ../../modules/graphics/src/main/native-prism-d3d/D3DResourceManager.cc 
+${OBJECTDIR}/_ext/284623486/D3DResourceManager.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DResourceManager.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DResourceManager.o ../../modules/graphics/src/main/native-prism-d3d/D3DResourceManager.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DResourceManager.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DResourceManager.cc
 
-${OBJECTDIR}/_ext/284623486/D3DShader.o: ../../modules/graphics/src/main/native-prism-d3d/D3DShader.cc 
+${OBJECTDIR}/_ext/284623486/D3DShader.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DShader.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DShader.o ../../modules/graphics/src/main/native-prism-d3d/D3DShader.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DShader.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DShader.cc
 
-${OBJECTDIR}/_ext/284623486/D3DWindow.o: ../../modules/graphics/src/main/native-prism-d3d/D3DWindow.cc 
+${OBJECTDIR}/_ext/284623486/D3DWindow.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DWindow.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DWindow.o ../../modules/graphics/src/main/native-prism-d3d/D3DWindow.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/D3DWindow.o ../../modules/javafx.graphics/src/main/native-prism-d3d/D3DWindow.cc
 
-${OBJECTDIR}/_ext/284623486/TextureUploader.o: ../../modules/graphics/src/main/native-prism-d3d/TextureUploader.cc 
+${OBJECTDIR}/_ext/284623486/TextureUploader.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/TextureUploader.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/TextureUploader.o ../../modules/graphics/src/main/native-prism-d3d/TextureUploader.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/TextureUploader.o ../../modules/javafx.graphics/src/main/native-prism-d3d/TextureUploader.cc
 
-${OBJECTDIR}/_ext/284623486/Trace.o: ../../modules/graphics/src/main/native-prism-d3d/Trace.cc 
+${OBJECTDIR}/_ext/284623486/Trace.o: ../../modules/javafx.graphics/src/main/native-prism-d3d/Trace.cc 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284623486
 	${RM} "$@.d"
-	$(COMPILE.cc) -g -I../../modules/graphics/build/generated-src/headers/prismD3D/win -I../../modules/graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/Trace.o ../../modules/graphics/src/main/native-prism-d3d/Trace.cc
+	$(COMPILE.cc) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win -I../../modules/javafx.graphics/build/headers/PrismD3D -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284623486/Trace.o ../../modules/javafx.graphics/src/main/native-prism-d3d/Trace.cc
 
 # Subprojects
 .build-subprojects:

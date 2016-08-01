@@ -2,12 +2,12 @@
 <module type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager" inherit-compiler-output="true">
     <exclude-output />
-    <content url="file://$MODULE_DIR$/modules/fxpackager">
-      <sourceFolder url="file://$MODULE_DIR$/modules/fxpackager/src/main/java" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/fxpackager/src/main/resources" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/fxpackager/src/test/java" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/modules/fxpackager/src/test/resources" type="java-test-resource" />
-      <excludeFolder url="file://$MODULE_DIR$/modules/fxpackager/build" />
+    <content url="file://$MODULE_DIR$/modules/jdk.packager">
+      <sourceFolder url="file://$MODULE_DIR$/modules/jdk.packager/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/jdk.packager/src/main/resources" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/jdk.packager/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/jdk.packager/src/test/resources" type="java-test-resource" />
+      <excludeFolder url="file://$MODULE_DIR$/modules/jdk.packager/build" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="controls" exported="" />

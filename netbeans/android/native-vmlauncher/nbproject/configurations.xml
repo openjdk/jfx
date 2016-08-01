@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configurationDescriptor version="89">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
-    <df root="../../../modules/graphics/src/android/native" name="src">
+    <df root="../../../modules/javafx.graphics/src/android/native" name="src">
     </df>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -29,7 +29,7 @@
           <executablePath></executablePath>
           <cTool>
             <incDir>
-              <pElem>../../../modules/graphics/build/generated-src/headers/vmlauncher/android</pElem>
+              <pElem>../../../modules/javafx.graphics/build/generated-src/headers/vmlauncher/android</pElem>
               <pElem>/opt/android-ndk-r7c/platforms/android-14/arch-x86/usr/include</pElem>
             </incDir>
           </cTool>

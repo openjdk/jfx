@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configurationDescriptor version="89">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
-    <df root="../../../modules/graphics/src/main/native-prism-es2" name="prism-es2">
+    <df root="../../../modules/javafx.graphics/src/main/native-prism-es2" name="prism-es2">
     </df>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -29,7 +29,7 @@
           <executablePath></executablePath>
           <cTool>
             <incDir>
-              <pElem>../../../modules/graphics/build/generated-src/headers/prismES2/android</pElem>
+              <pElem>../../../modules/javafx.graphics/build/generated-src/headers/prismES2/android</pElem>
               <pElem>/opt/android-ndk-r7c/platforms/android-14/arch-arm/usr/include</pElem>
             </incDir>
           </cTool>
