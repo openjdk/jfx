@@ -45,21 +45,23 @@ import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
 public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
-    private Class chartClass;
-    private int seriesFadeOutTime;
+    private final Class chartClass;
+    private final int seriesFadeOutTime;
+    private final int dataFadeOutTime;
 
     @Parameterized.Parameters
     public static Collection implementations() {
         return Arrays.asList(new Object[][] {
-            { AreaChart.class, 400 },
-            { LineChart.class, 900 },
-            { StackedAreaChart.class, 400 }
+            { AreaChart.class, 400, 800 },
+            { LineChart.class, 900, 500 },
+            { StackedAreaChart.class, 400, 800 }
         });
     }
 
-    public XYNumberLineChartsTest(Class chartClass, int seriesFadeOutTime) {
+    public XYNumberLineChartsTest(Class chartClass, int seriesFadeOutTime, int dataFadeOutTime) {
         this.chartClass = chartClass;
         this.seriesFadeOutTime = seriesFadeOutTime;
+        this.dataFadeOutTime = dataFadeOutTime;
     }
 
     @Override
@@ -115,6 +117,24 @@ public class XYNumberLineChartsTest extends XYNumberChartsTestBase {
         ControlTestUtils.runWithExceptionHandler(() -> {
             toolkit.setAnimationTime(0);
         });
+    }
+
+    @Test
+    public void testSeriesClearWithoutSymbolsAnimated_8150264() {
+        startAppWithSeries();
+        assertEquals(3, XYChartShim.Series_getDataSize(series));
+
+        chart.setAnimated(true);
+        series.getData().remove(0);
+        toolkit.setAnimationTime(dataFadeOutTime/2);
+        assertEquals(3, XYChartShim.Series_getDataSize(series));
+        toolkit.setAnimationTime(dataFadeOutTime);
+        assertEquals(2, XYChartShim.Series_getDataSize(series));
+
+        series.getData().clear();
+        toolkit.setAnimationTime(dataFadeOutTime);
+        // removed instantly
+        assertEquals(0, XYChartShim.Series_getDataSize(series));
     }
 
     @Override

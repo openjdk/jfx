@@ -287,27 +287,28 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
 //                double y = (y3 + y1)/2;
 //                item.setCurrentX(x);
 //                item.setCurrentY(y);
+            } else if (itemIndex == 0 && dataListSize > 1) {
+                animate = true;
+                item.setXValue(series.getData().get(0).getXValue());
+                item.setYValue(series.getData().get(0).getYValue());
+            } else if (itemIndex == (dataSize - 1) && dataListSize > 1) {
+                animate = true;
+                int last = dataListSize - 1;
+                item.setXValue(series.getData().get(last).getXValue());
+                item.setYValue(series.getData().get(last).getYValue());
+            } else if (symbol != null) {
+                // fade out symbol
+                symbol.setOpacity(0);
+                FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
+                ft.setToValue(0);
+                ft.setOnFinished(actionEvent -> {
+                    getPlotChildren().remove(symbol);
+                    removeDataItemFromDisplay(series, item);
+                });
+                ft.play();
             } else {
-                if (itemIndex == 0 && dataListSize > 1) {
-                    animate = true;
-                    item.setXValue(series.getData().get(0).getXValue());
-                    item.setYValue(series.getData().get(0).getYValue());
-                } else if (itemIndex == (dataSize - 1) && dataListSize > 1) {
-                    animate = true;
-                    int last = dataListSize - 1;
-                    item.setXValue(series.getData().get(last).getXValue());
-                    item.setYValue(series.getData().get(last).getYValue());
-                } else if (symbol != null) {
-                    // fade out symbol
-                    symbol.setOpacity(0);
-                    FadeTransition ft = new FadeTransition(Duration.millis(500),symbol);
-                    ft.setToValue(0);
-                    ft.setOnFinished(actionEvent -> {
-                        getPlotChildren().remove(symbol);
-                        removeDataItemFromDisplay(series, item);
-                    });
-                    ft.play();
-                }
+                item.setSeries(null);
+                removeDataItemFromDisplay(series, item);
             }
             if (animate) {
                 animate( new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),

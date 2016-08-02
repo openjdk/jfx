@@ -354,6 +354,9 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
                     symbol.setOpacity(1.0);
                 });
                 fadeSymbolTransition.play();
+            } else {
+                item.setSeries(null);
+                removeDataItemFromDisplay(series, item);
             }
             if (animate) {
                 dataRemoveTimeline = createDataRemoveTimeline(item, symbol, series);

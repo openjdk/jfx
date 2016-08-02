@@ -292,6 +292,9 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
                     symbol.setOpacity(1.0);
                 });
                 ft.play();
+            } else {
+                item.setSeries(null);
+                removeDataItemFromDisplay(series, item);
             }
             if (animate) {
                 animate( new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),

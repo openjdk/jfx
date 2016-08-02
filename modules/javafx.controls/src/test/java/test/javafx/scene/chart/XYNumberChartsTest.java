@@ -82,7 +82,7 @@ public class XYNumberChartsTest extends XYNumberChartsTestBase {
 
     @Test
     public void testSeriesRemove() {
-        checkSeriesRemove(2 + nodesPerSeries);
+        checkSeriesRemove(seriesData.size() + nodesPerSeries);
     }
 
     @Override

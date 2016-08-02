@@ -36,7 +36,8 @@ abstract public class XYNumberChartsTestBase extends XYChartTestBase {
     XYChart<Number, Number> chart;
     ObservableList<XYChart.Data<Number, Number>> seriesData = FXCollections.observableArrayList(
             new XYChart.Data<>(10, 10),
-            new XYChart.Data<>(20, 20)
+            new XYChart.Data<>(20, 20),
+            new XYChart.Data<>(30, 30)
     );
     XYChart.Series<Number, Number> series = new XYChart.Series<>(seriesData);
 
