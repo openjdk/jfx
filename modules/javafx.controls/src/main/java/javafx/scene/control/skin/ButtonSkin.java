@@ -63,13 +63,17 @@ public class ButtonSkin extends LabeledSkinBase<Button> {
      **************************************************************************/
 
     Runnable defaultButtonRunnable = () -> {
-        if (NodeHelper.isTreeShowing(getSkinnable()) && !getSkinnable().isDisabled()) {
+        if (getSkinnable().getScene() != null
+                && NodeHelper.isTreeVisible(getSkinnable())
+                && !getSkinnable().isDisabled()) {
             getSkinnable().fire();
         }
     };
 
     Runnable cancelButtonRunnable = () -> {
-        if (NodeHelper.isTreeShowing(getSkinnable()) && !getSkinnable().isDisabled()) {
+        if (getSkinnable().getScene() != null
+                && NodeHelper.isTreeVisible(getSkinnable())
+                && !getSkinnable().isDisabled()) {
             getSkinnable().fire();
         }
     };
