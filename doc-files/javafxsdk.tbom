@@ -10,7 +10,7 @@
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
-    <file source="rt/modules/javafx.jmx/g/src/main/resources/com/oracle/javafx/jmx/json/impl/JSONMessagesBundle%j.properties"
+    <file source="rt/modules/javafx.jmx/src/main/resources/com/oracle/javafx/jmx/json/impl/JSONMessagesBundle%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
