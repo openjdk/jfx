@@ -248,24 +248,24 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
 
     /** @inheritDoc */
     @Override protected void dataItemChanged(Data<X, Y> item) {
-         double barVal;
-         double currentVal;
+        double barVal;
+        double currentVal;
         if (orientation == Orientation.VERTICAL) {
-             barVal = ((Number)item.getYValue()).doubleValue();
-             currentVal = ((Number)item.getCurrentY()).doubleValue();
+            barVal = ((Number)item.getYValue()).doubleValue();
+            currentVal = ((Number)item.getCurrentY()).doubleValue();
         } else {
-             barVal = ((Number)item.getXValue()).doubleValue();
-             currentVal = ((Number)item.getCurrentX()).doubleValue();
+            barVal = ((Number)item.getXValue()).doubleValue();
+            currentVal = ((Number)item.getCurrentX()).doubleValue();
         }
-         if (currentVal > 0 && barVal < 0) { // going from positive to negative
-             // add style class negative
-             item.getNode().getStyleClass().add(NEGATIVE_STYLE);
-         } else if (currentVal < 0 && barVal > 0) { // going from negative to positive
-             // remove style class negative
-             // RT-21164 upside down bars: was adding NEGATIVE_STYLE styleclass
-             // instead of removing it; when going from negative to positive
-             item.getNode().getStyleClass().remove(NEGATIVE_STYLE);
-         }
+        if (currentVal > 0 && barVal < 0) { // going from positive to negative
+            // add style class negative
+            item.getNode().getStyleClass().add(NEGATIVE_STYLE);
+        } else if (currentVal < 0 && barVal > 0) { // going from negative to positive
+            // remove style class negative
+            // RT-21164 upside down bars: was adding NEGATIVE_STYLE styleclass
+            // instead of removing it; when going from negative to positive
+            item.getNode().getStyleClass().remove(NEGATIVE_STYLE);
+        }
     }
 
     @Override protected void seriesChanged(ListChangeListener.Change<? extends Series> c) {
@@ -341,9 +341,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             pt.play();
         } else {
             for (Data<X,Y> d : series.getData()) {
-                final Node bar = d.getNode();
-                getPlotChildren().remove(bar);
-                updateMap(series, d);
+                processDataRemove(series, d);
             }
             removeSeriesFromDisplay(series);
         }
@@ -353,8 +351,8 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     @Override protected void layoutPlotChildren() {
         double catSpace = categoryAxis.getCategorySpacing();
         // calculate bar spacing
-        final double avilableBarSpace = catSpace - (getCategoryGap() + getBarGap());
-        double barWidth = (avilableBarSpace / getSeriesSize()) - getBarGap();
+        final double availableBarSpace = catSpace - (getCategoryGap() + getBarGap());
+        double barWidth = (availableBarSpace / getSeriesSize()) - getBarGap();
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
         final double zeroPos = (valueAxis.getLowerBound() > 0) ?
                 valueAxis.getDisplayPosition(valueAxis.getLowerBound()) : valueAxis.getZeroPosition();
@@ -406,10 +404,10 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     @Override protected void updateLegend() {
         legend.getItems().clear();
         if (getData() != null) {
-            for (int seriesIndex=0; seriesIndex < getData().size(); seriesIndex++) {
+            for (int seriesIndex = 0; seriesIndex < getData().size(); seriesIndex++) {
                 Series<X,Y> series = getData().get(seriesIndex);
                 LegendItem legenditem = new LegendItem(series.getName());
-                legenditem.getSymbol().getStyleClass().addAll("chart-bar","series"+seriesIndex,"bar-legend-symbol",
+                legenditem.getSymbol().getStyleClass().addAll("chart-bar", "series" + seriesIndex, "bar-legend-symbol",
                         series.defaultColorStyleClass);
                 legend.getItems().add(legenditem);
             }
@@ -453,10 +451,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             getPlotChildren().add(bar);
             item.setYValue(getYAxis().toRealValue(barVal));
             animate(
-                new KeyFrame(Duration.ZERO, new KeyValue(item.currentYProperty(),
-                item.getCurrentY())),
-                new KeyFrame(Duration.millis(700),
-                new KeyValue(item.currentYProperty(), item.getYValue(), Interpolator.EASE_BOTH))
+                    new KeyFrame(Duration.ZERO, new KeyValue(
+                            item.currentYProperty(),
+                            item.getCurrentY())),
+                    new KeyFrame(Duration.millis(700), new KeyValue(
+                            item.currentYProperty(),
+                            item.getYValue(), Interpolator.EASE_BOTH))
             );
         } else {
             barVal = ((Number)item.getXValue()).doubleValue();
@@ -467,10 +467,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             getPlotChildren().add(bar);
             item.setXValue(getXAxis().toRealValue(barVal));
             animate(
-                new KeyFrame(Duration.ZERO, new KeyValue(item.currentXProperty(),
-                item.getCurrentX())),
-                new KeyFrame(Duration.millis(700),
-                new KeyValue(item.currentXProperty(), item.getXValue(), Interpolator.EASE_BOTH))
+                    new KeyFrame(Duration.ZERO, new KeyValue(
+                            item.currentXProperty(),
+                            item.getCurrentX())),
+                    new KeyFrame(Duration.millis(700), new KeyValue(
+                            item.currentXProperty(),
+                            item.getXValue(), Interpolator.EASE_BOTH))
             );
         }
     }
@@ -483,25 +485,30 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             // save data values in case the same data item gets added immediately.
             XYValueMap.put(item, ((Number)item.getYValue()).doubleValue());
             item.setYValue(getYAxis().toRealValue(bottomPos));
-            t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO,
-                                    new KeyValue(item.currentYProperty(), item.getCurrentY())),
-                                    new KeyFrame(Duration.millis(700), actionEvent -> {
-                                        processDataRemove(series, item);
-                                        XYValueMap.clear();
-                                    },
-                                new KeyValue(item.currentYProperty(), item.getYValue(),
-                                Interpolator.EASE_BOTH) ));
+            t.getKeyFrames().addAll(
+                    new KeyFrame(Duration.ZERO, new KeyValue(
+                            item.currentYProperty(), item.getCurrentY())),
+                    new KeyFrame(Duration.millis(700), actionEvent -> {
+                        processDataRemove(series, item);
+                        XYValueMap.clear();
+                    }, new KeyValue(
+                            item.currentYProperty(),
+                            item.getYValue(), Interpolator.EASE_BOTH))
+            );
         } else {
             // save data values in case the same data item gets added immediately.
              XYValueMap.put(item, ((Number)item.getXValue()).doubleValue());
             item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
-            t.getKeyFrames().addAll(new KeyFrame(Duration.ZERO, new KeyValue(item.currentXProperty(), item.getCurrentX())),
-                new KeyFrame(Duration.millis(700), actionEvent -> {
-                    processDataRemove(series, item);
-                    XYValueMap.clear();
-                },
-                    new KeyValue(item.currentXProperty(), item.getXValue(),
-                            Interpolator.EASE_BOTH) ));
+            t.getKeyFrames().addAll(
+                    new KeyFrame(Duration.ZERO, new KeyValue(
+                            item.currentXProperty(), item.getCurrentX())),
+                    new KeyFrame(Duration.millis(700), actionEvent -> {
+                        processDataRemove(series, item);
+                        XYValueMap.clear();
+                    }, new KeyValue(
+                            item.currentXProperty(),
+                            item.getXValue(), Interpolator.EASE_BOTH))
+            );
         }
         return t;
     }
@@ -563,7 +570,7 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             bar.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(bar);
         }
-        bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex,series.defaultColorStyleClass);
+        bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex, series.defaultColorStyleClass);
         return bar;
     }
 
@@ -577,10 +584,10 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     /*
      * Super-lazy instantiation pattern from Bill Pugh.
      */
-     private static class StyleableProperties {
-         private static final CssMetaData<BarChart<?,?>,Number> BAR_GAP =
-             new CssMetaData<BarChart<?,?>,Number>("-fx-bar-gap",
-                 SizeConverter.getInstance(), 4.0) {
+    private static class StyleableProperties {
+        private static final CssMetaData<BarChart<?,?>,Number> BAR_GAP =
+            new CssMetaData<BarChart<?,?>,Number>("-fx-bar-gap",
+                SizeConverter.getInstance(), 4.0) {
 
             @Override
             public boolean isSettable(BarChart<?,?> node) {
@@ -593,9 +600,9 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             }
         };
 
-         private static final CssMetaData<BarChart<?,?>,Number> CATEGORY_GAP =
-             new CssMetaData<BarChart<?,?>,Number>("-fx-category-gap",
-                 SizeConverter.getInstance(), 10.0)  {
+        private static final CssMetaData<BarChart<?,?>,Number> CATEGORY_GAP =
+            new CssMetaData<BarChart<?,?>,Number>("-fx-category-gap",
+                SizeConverter.getInstance(), 10.0)  {
 
             @Override
             public boolean isSettable(BarChart<?,?> node) {
@@ -608,15 +615,15 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
             }
         };
 
-         private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
-         static {
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+        static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                    new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(BAR_GAP);
             styleables.add(CATEGORY_GAP);
             STYLEABLES = Collections.unmodifiableList(styleables);
-         }
+        }
     }
 
     /**

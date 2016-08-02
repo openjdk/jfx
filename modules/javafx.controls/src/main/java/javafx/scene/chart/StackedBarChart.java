@@ -64,8 +64,8 @@ import javafx.css.StyleableProperty;
 public class StackedBarChart<X, Y> extends XYChart<X, Y> {
 
     // -------------- PRIVATE FIELDS -------------------------------------------
-    private Map<Series, Map<String, List<Data<X, Y>>>> seriesCategoryMap =
-                         new HashMap<Series, Map<String, List<Data<X, Y>>>>();
+    private Map<Series<X, Y>, Map<String, List<Data<X, Y>>>> seriesCategoryMap =
+            new HashMap<>();
     private Legend legend = new Legend();
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
@@ -75,7 +75,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         @Override public void onChanged(ListChangeListener.Change<? extends String> c) {
             while (c.next()) {
                 for(String cat : c.getRemoved()) {
-                    for (Series<X,Y> series : getData()) {
+                    for (Series<X, Y> series : getData()) {
                         for (Data<X, Y> data : series.getData()) {
                             if ((cat).equals((orientation == orientation.VERTICAL) ?
                                     data.getXValue() : data.getYValue())) {
@@ -230,7 +230,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             });
             t.play();
         } else {
-            getPlotChildren().remove(bar);
+            processDataRemove(series, item);
             removeDataItemFromDisplay(series, item);
         }
     }
@@ -252,37 +252,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         } else if (currentVal < 0 && barVal > 0) { // going from negative to positive
             // remove style class negative
             item.getNode().getStyleClass().remove("negative");
-        }
-    }
-
-    private void animateDataAdd(Data<X, Y> item, Node bar) {
-        double barVal;
-        if (orientation == Orientation.VERTICAL) {
-            barVal = ((Number) item.getYValue()).doubleValue();
-            if (barVal < 0) {
-                bar.getStyleClass().add("negative");
-            }
-            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
-            setCurrentDisplayedYValue(item, getYAxis().toRealValue(getYAxis().getZeroPosition()));
-            getPlotChildren().add(bar);
-            item.setYValue(getYAxis().toRealValue(barVal));
-            animate(new Timeline(
-                        new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item), getCurrentDisplayedYValue(item))),
-                        new KeyFrame(Duration.millis(700), new KeyValue(currentDisplayedYValueProperty(item), item.getYValue(), Interpolator.EASE_BOTH)))
-                    );
-        } else {
-            barVal = ((Number) item.getXValue()).doubleValue();
-            if (barVal < 0) {
-                bar.getStyleClass().add("negative");
-            }
-            item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
-            setCurrentDisplayedXValue(item, getXAxis().toRealValue(getXAxis().getZeroPosition()));
-            getPlotChildren().add(bar);
-            item.setXValue(getXAxis().toRealValue(barVal));
-            animate(new Timeline(
-                        new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item), getCurrentDisplayedXValue(item))),
-                        new KeyFrame(Duration.millis(700), new KeyValue(currentDisplayedXValueProperty(item), item.getXValue(), Interpolator.EASE_BOTH)))
-                    );
         }
     }
 
@@ -333,30 +302,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         }
     }
 
-    private Timeline createDataRemoveTimeline(Data<X, Y> item, final Node bar, final Series<X, Y> series) {
-        Timeline t = new Timeline();
-        if (orientation == Orientation.VERTICAL) {
-            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
-            t.getKeyFrames().addAll(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedYValueProperty(item),
-                    getCurrentDisplayedYValue(item))),
-                    new KeyFrame(Duration.millis(700), actionEvent -> {
-                        getPlotChildren().remove(bar);
-                    },
-                    new KeyValue(currentDisplayedYValueProperty(item), item.getYValue(), Interpolator.EASE_BOTH)));
-        } else {
-            item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
-            t.getKeyFrames().addAll(
-                    new KeyFrame(Duration.ZERO, new KeyValue(currentDisplayedXValueProperty(item),
-                    getCurrentDisplayedXValue(item))),
-                    new KeyFrame(Duration.millis(700), actionEvent -> {
-                        getPlotChildren().remove(bar);
-                    },
-                    new KeyValue(currentDisplayedXValueProperty(item), item.getXValue(), Interpolator.EASE_BOTH)));
-        }
-        return t;
-    }
-
     @Override protected void seriesRemoved(final Series<X, Y> series) {
         // remove all symbol nodes
         if (shouldAnimate()) {
@@ -380,7 +325,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                     ft.setFromValue(1);
                     ft.setToValue(0);
                     ft.setOnFinished(actionEvent -> {
-                        getPlotChildren().remove(bar);
+                        processDataRemove(series, d);
                         bar.setOpacity(1.0);
                     });
                     pt.getChildren().add(ft);
@@ -389,8 +334,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             pt.play();
         } else {
             for (Data<X, Y> d : series.getData()) {
-                final Node bar = d.getNode();
-                getPlotChildren().remove(bar);
+                processDataRemove(series, d);
             }
             removeSeriesFromDisplay(series);
             requestChartLayout();
@@ -445,8 +389,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         final double availableBarSpace = catSpace - getCategoryGap();
         final double barWidth = availableBarSpace;
         final double barOffset = -((catSpace - getCategoryGap()) / 2);
-        final double lowerBoundValue = valueAxis.getLowerBound();
-        final double upperBoundValue = valueAxis.getUpperBound();
         // update bar positions and sizes
         for (String category : categoryAxis.getCategories()) {
             double currentPositiveValue = 0;
@@ -532,7 +474,93 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         }
     }
 
-    private Node createBar(Series series, int seriesIndex, final Data item, int itemIndex) {
+    private void updateMap(Series<X,Y> series, Data<X,Y> item) {
+        final String category = (orientation == Orientation.VERTICAL) ? (String)item.getXValue() :
+                                     (String)item.getYValue();
+        Map<String, List<Data<X, Y>>> categoryMap = seriesCategoryMap.get(series);
+        if (categoryMap != null) {
+            categoryMap.remove(category);
+            if (categoryMap.isEmpty()) seriesCategoryMap.remove(series);
+        }
+        if (seriesCategoryMap.isEmpty() && categoryAxis.isAutoRanging()) categoryAxis.getCategories().clear();
+    }
+
+    private void processDataRemove(final Series<X,Y> series, final Data<X,Y> item) {
+        Node bar = item.getNode();
+        getPlotChildren().remove(bar);
+        updateMap(series, item);
+    }
+
+    private void animateDataAdd(Data<X, Y> item, Node bar) {
+        double barVal;
+        if (orientation == Orientation.VERTICAL) {
+            barVal = ((Number) item.getYValue()).doubleValue();
+            if (barVal < 0) {
+                bar.getStyleClass().add("negative");
+            }
+            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
+            setCurrentDisplayedYValue(item, getYAxis().toRealValue(getYAxis().getZeroPosition()));
+            getPlotChildren().add(bar);
+            item.setYValue(getYAxis().toRealValue(barVal));
+            animate(
+                    new KeyFrame(Duration.ZERO, new KeyValue(
+                            currentDisplayedYValueProperty(item),
+                            getCurrentDisplayedYValue(item))),
+                    new KeyFrame(Duration.millis(700), new KeyValue(
+                            currentDisplayedYValueProperty(item),
+                            item.getYValue(), Interpolator.EASE_BOTH))
+            );
+        } else {
+            barVal = ((Number) item.getXValue()).doubleValue();
+            if (barVal < 0) {
+                bar.getStyleClass().add("negative");
+            }
+            item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
+            setCurrentDisplayedXValue(item, getXAxis().toRealValue(getXAxis().getZeroPosition()));
+            getPlotChildren().add(bar);
+            item.setXValue(getXAxis().toRealValue(barVal));
+            animate(
+                    new KeyFrame(Duration.ZERO, new KeyValue(
+                            currentDisplayedXValueProperty(item),
+                            getCurrentDisplayedXValue(item))),
+                    new KeyFrame(Duration.millis(700), new KeyValue(
+                            currentDisplayedXValueProperty(item),
+                            item.getXValue(), Interpolator.EASE_BOTH))
+            );
+        }
+    }
+
+    private Timeline createDataRemoveTimeline(Data<X, Y> item, final Node bar, final Series<X, Y> series) {
+        Timeline t = new Timeline();
+        if (orientation == Orientation.VERTICAL) {
+            item.setYValue(getYAxis().toRealValue(getYAxis().getZeroPosition()));
+            t.getKeyFrames().addAll(
+                    new KeyFrame(Duration.ZERO, new KeyValue(
+                            currentDisplayedYValueProperty(item),
+                            getCurrentDisplayedYValue(item))),
+                    new KeyFrame(Duration.millis(700), actionEvent -> {
+                        processDataRemove(series, item);
+                    }, new KeyValue(
+                            currentDisplayedYValueProperty(item),
+                            item.getYValue(), Interpolator.EASE_BOTH))
+            );
+        } else {
+            item.setXValue(getXAxis().toRealValue(getXAxis().getZeroPosition()));
+            t.getKeyFrames().addAll(
+                    new KeyFrame(Duration.ZERO, new KeyValue(
+                            currentDisplayedXValueProperty(item),
+                            getCurrentDisplayedXValue(item))),
+                    new KeyFrame(Duration.millis(700), actionEvent -> {
+                        processDataRemove(series, item);
+                    }, new KeyValue(
+                            currentDisplayedXValueProperty(item),
+                            item.getXValue(), Interpolator.EASE_BOTH))
+            );
+        }
+        return t;
+    }
+
+    private Node createBar(Series<X, Y> series, int seriesIndex, final Data<X, Y> item, int itemIndex) {
         Node bar = item.getNode();
         if (bar == null) {
             bar = new StackPane();
@@ -577,7 +605,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         static {
 
             final List<CssMetaData<? extends Styleable, ?>> styleables =
-                new ArrayList<CssMetaData<? extends Styleable, ?>>(XYChart.getClassCssMetaData());
+                    new ArrayList<>(XYChart.getClassCssMetaData());
             styleables.add(CATEGORY_GAP);
             STYLEABLES = Collections.unmodifiableList(styleables);
         }
@@ -604,6 +632,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     /** Pseudoclass indicating this is a vertical chart. */
     private static final PseudoClass VERTICAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("vertical");
+
     /** Pseudoclass indicating this is a horizontal chart. */
     private static final PseudoClass HORIZONTAL_PSEUDOCLASS_STATE =
             PseudoClass.getPseudoClass("horizontal");
