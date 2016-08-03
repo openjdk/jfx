@@ -102,12 +102,8 @@ public class J2DPrinterJob implements PrinterJobImpl {
         } catch (PrinterException pe) {
         }
         printReqAttrSet = new HashPrintRequestAttributeSet();
-        // dialog selection is a JDK 1.7 attribute.
-        // We expect to run on 1.8 and above so this should be fine.
-        // Don't use on Linux where it has no effect and runs into a JDK bug
-        if (!PlatformUtil.isLinux()) {
-            printReqAttrSet.add(DialogTypeSelection.NATIVE);
-        }
+        printReqAttrSet.add(DialogTypeSelection.NATIVE);
+
         j2dPageable = new J2DPageable();
         pJob2D.setPageable(j2dPageable);
     }
