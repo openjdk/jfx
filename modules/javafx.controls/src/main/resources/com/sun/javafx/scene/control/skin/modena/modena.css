@@ -545,10 +545,21 @@ is being used to size a border should also be in pixels.
 .toggle-button:show-mnemonics > .mnemonic-underline,
 .radio-button:show-mnemonics > .mnemonic-underline,
 .check-box:show-mnemonics > .mnemonic-underline,
-.hyperlink:show-mnemonics > .mnemonic-underline,
 .split-menu-button:show-mnemonics > .mnemonic-underline,
 .menu-button:show-mnemonics > .mnemonic-underline {
     -fx-stroke: -fx-text-base-color;
+}
+
+.menu-button:showing > .label:show-mnemonics > .mnemonic-underline,
+.menu-button:hover > .label:show-mnemonics > .mnemonic-underline,
+.menu-button:focused > .label:show-mnemonics > .mnemonic-underline,
+.menu-item:hover .label:show-mnemonics > .mnemonic-underline,
+.menu-item:focused .label:show-mnemonics > .mnemonic-underline {
+    -fx-stroke: -fx-focused-text-base-color;
+}
+
+.hyperlink:show-mnemonics > .mnemonic-underline {
+    -fx-stroke: -fx-text-fill;
 }
 
 /* ====   MARKS   =========================================================== */
@@ -820,9 +831,6 @@ is being used to size a border should also be in pixels.
     -fx-border-color: -fx-focus-color;
     -fx-border-style: segments(0.166667em, 0.166667em);
     -fx-border-width: 1px;
-}
-.hyperlink:show-mnemonics > .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
 }
 
 /* Fix for RT-37971 */
@@ -1455,9 +1463,7 @@ is being used to size a border should also be in pixels.
     -fx-background-color: -fx-background;
     -fx-text-fill: -fx-text-background-color;
 }
-.context-menu:show-mnemonics > .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
-}
+
 
 /*******************************************************************************
  *                                                                             *
@@ -1468,9 +1474,6 @@ is being used to size a border should also be in pixels.
 .menu {
     -fx-background-color: transparent;
     -fx-padding: 0.333333em 0.666667em 0.333333em 0.666667em; /* 4 8 4 8 */
-}
-.menu:show-mnemonics > .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
 }
 .menu > .right-container > .arrow {
     -fx-padding: 0.458em 0.167em 0.458em 0.167em; /* 4.5 2 4.5 2 */
@@ -1540,9 +1543,7 @@ is being used to size a border should also be in pixels.
 .menu-bar > .container > .menu-button:showing  > .label {
     -fx-text-fill: -fx-text-background-color;
 }
-.menu-bar:show-mnemonics > .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
-}
+
 
 /*******************************************************************************
  *                                                                             *
@@ -1574,9 +1575,6 @@ is being used to size a border should also be in pixels.
 }
 .menu-item > .right-container {
     -fx-padding: 0em 0em 0em 0.5em;
-}
-.menu-item:show-mnemonics > .mnemonic-underline {
-    -fx-stroke: -fx-text-fill;
 }
 .radio-menu-item:checked > .left-container > .radio {
     -fx-background-color: -fx-mark-color;
