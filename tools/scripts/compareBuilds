@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+# a simple script to compare the file output of two builds.
+#
+# usage: compareBuilds full_path_to_top_one full_path_to_top_two
+
+
+one=$1
+two=$2
+
+if [ "$one" = '.' ]
+then
+    one="$PWD"
+fi
+if [ -d "$one/rt" ]
+then
+    one="$one/rt"
+fi
+
+if [ "$two" = '.' ]
+then
+    two="$PWD"
+fi
+if [ -d "$two/rt" ]
+then
+    two="$two/rt"
+fi
+
+echo "Comparing:"
+echo "    one: $one"
+echo "    two: $two"
+
+if [ ! -d "$one/../rt" -o ! -d "$two/../rt" ]
+then
+  echo "error: $0 repo_one repo_two"
+  exit 0
+fi
+
+echo "Comparing rt/build files:"
+(cd $one;
+ find build -type f | sort > /tmp/build-files-one
+) 
+
+(cd $two;
+ find build -type f | sort > /tmp/build-files-two
+) 
+
+comm -3 /tmp/build-files-one /tmp/build-files-two
+
+#########################################################
+
+for i in \
+    build/sdk/lib/javafx-swt.jar \
+    build/sdk/lib/jfxrt.jar \
+    build/sdk/lib/javafx-mx.jar
+do
+    if [ -f "${one}/$i" -a -f "${two}/$i" ]
+    then
+        echo "Comparing JAR $i $jar"
+        jar=${i##*/}
+        jar=${jar%.jar}
+        jar tf ${one}/$i | sort > /tmp/files-one-$jar
+        jar tf ${two}/$i | sort > /tmp/files-two-$jar
+        comm -3 /tmp/files-one-$jar /tmp/files-two-$jar
+    else
+        echo "Skipping missing JAR $i $jar"
+    fi
+done
+
+#########################################################
+
+if [ -d "$one/../artifacts" -a -d "$two/../artifacts" ]
+then
+    echo "Comparing artifact files:"
+    (cd $one/../artifacts;
+     find . -type f | sort > /tmp/artifact-files-one
+    ) 
+
+    (cd $two/../artifacts;
+     find . -type f | sort > /tmp/artifact-files-two
+    ) 
+
+    comm -3 /tmp/artifact-files-one /tmp/artifact-files-two
+fi
