@@ -261,7 +261,7 @@ void GraphicsContext::clip(const FloatRect& rect)
     if (paintingDisabled())
         return;
 
-    m_state.clipBounds.intersect(rect);
+    m_state.clipBounds.intersect(m_state.transform.mapRect(rect));
     platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETCLIP_IIII
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
@@ -773,7 +773,7 @@ static void setClipPath(
     if (gc.paintingDisabled() || path.isEmpty())
         return;
 
-    state.clipBounds.intersect(path.fastBoundingRect());
+    state.clipBounds.intersect(state.transform.mapRect(path.fastBoundingRect()));
     gc.platformContext()->rq().freeSpace(16)
     << jint(com_sun_webkit_graphics_GraphicsDecoder_CLIP_PATH)
     << copyPath(path.platformPath())
