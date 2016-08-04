@@ -267,6 +267,20 @@ ext.IS_MAC = OS_NAME.contains("mac") || OS_NAME.contains("darwin")
 ext.IS_WINDOWS = OS_NAME.contains("windows")
 ext.IS_LINUX = OS_NAME.contains("linux")
 
+// Verify that the architecture & OS are supported configurations. Note that
+// at present building on PI is not supported, but we would only need to make
+// some changes on assumptions on what should be built (like SWT / Swing) and
+// such and we could probably make it work.
+if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) fail("Unsupported build OS ${OS_NAME}")
+if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
+    fail("Unknown and unsupported build architecture: $OS_ARCH")
+} else if (IS_MAC && OS_ARCH != "x86_64") {
+    fail("Unknown and unsupported build architecture: $OS_ARCH")
+} else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64") {
+    fail("Unknown and unsupported build architecture: $OS_ARCH")
+}
+
+
 // Get the JDK_HOME automatically based on the version of Java used to execute gradle. Or, if specified,
 // use a user supplied JDK_HOME, STUB_RUNTIME, JAVAC, and/or JAVAH, all of which may be specified
 // independently (or we'll try to get the right one based on other supplied info). Sometimes the
@@ -793,19 +807,6 @@ compileTargets { t ->
  *  gradle, etc you will get some kind of helpful error / warning message     *
  *                                                                            *
  *****************************************************************************/
-
-// Verify that the architecture & OS are supported configurations. Note that
-// at present building on PI is not supported, but we would only need to make
-// some changes on assumptions on what should be built (like SWT / Swing) and
-// such and we could probably make it work.
-if (!IS_MAC && !IS_WINDOWS && !IS_LINUX) logger.error("Unsupported build OS ${OS_NAME}")
-if (IS_WINDOWS && OS_ARCH != "x86" && OS_ARCH != "amd64") {
-    throw new Exception("Unknown and unsupported build architecture: $OS_ARCH")
-} else if (IS_MAC && OS_ARCH != "x86_64") {
-    throw new Exception("Unknown and unsupported build architecture: $OS_ARCH")
-} else if (IS_LINUX && OS_ARCH != "i386" && OS_ARCH != "amd64") {
-    throw new Exception("Unknown and unsupported build architecture: $OS_ARCH")
-}
 
 // Sanity check that we actually have a list of compile targets to execute
 if (COMPILE_TARGETS == null || COMPILE_TARGETS == "") {
