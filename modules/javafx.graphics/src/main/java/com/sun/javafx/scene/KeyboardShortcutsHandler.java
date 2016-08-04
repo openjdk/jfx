@@ -202,17 +202,20 @@ public final class KeyboardShortcutsHandler extends BasicEventDispatcher {
         ** if we're not on mac, and nobody consumed the event, then we should
         ** check to see if we should highlight the mnemonics on the scene
         */
-        if (!PlatformUtil.isMac()) {
-            if (keyPressedEvent && keyEvent.isAltDown() && !event.isConsumed()) {
-                /*
-                 * show mnemonics while alt is held
-                 */
-                if (!isMnemonicsDisplayEnabled()) {
-                    setMnemonicsDisplayEnabled(true);
-                } else {
-                    if (PlatformUtil.isWindows()) {
-                        setMnemonicsDisplayEnabled(!isMnemonicsDisplayEnabled());
+        if (!PlatformUtil.isMac() && !event.isConsumed()) {
+            if (keyPressedEvent) {
+                if (keyEvent.isAltDown()) {
+                    // show mnemonic underline when alt is pressed
+                    if (!isMnemonicsDisplayEnabled()) {
+                        setMnemonicsDisplayEnabled(true);
+                    } else {
+                        if (PlatformUtil.isWindows()) {
+                            setMnemonicsDisplayEnabled(!isMnemonicsDisplayEnabled());
+                        }
                     }
+                } else if (keyEvent.getCode() == KeyCode.ESCAPE) {
+                    // when escape is pressed we remove the mnemonic underline again
+                    setMnemonicsDisplayEnabled(false);
                 }
             }
             if (keyReleasedEvent && !keyEvent.isAltDown() && !PlatformUtil.isWindows()) {
