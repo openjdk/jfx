@@ -182,6 +182,7 @@ public abstract class XYChart<X,Y> extends Chart {
         private ObservableList<Series<X,Y>> old;
         @Override protected void invalidated() {
             final ObservableList<Series<X,Y>> current = getValue();
+            if (current == old) return;
             int saveAnimationState = -1;
             // add remove listeners
             if(old != null) {

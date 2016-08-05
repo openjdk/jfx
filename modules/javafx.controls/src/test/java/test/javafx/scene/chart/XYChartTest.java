@@ -26,6 +26,8 @@
 package test.javafx.scene.chart;
 
 
+import javafx.beans.property.ListProperty;
+import javafx.beans.property.SimpleListProperty;
 import org.junit.Test;
 import javafx.collections.*;
 import javafx.scene.chart.Axis.TickMark;
@@ -53,21 +55,17 @@ import javafx.stage.Stage;
 import org.junit.Assert;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
-
+import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 
 public class XYChartTest extends ChartTestBase {
 
     NumberAxis yaxis;
-    CategoryAxis cataxis;
-    AreaChart<?, ?> areachart;
+    AreaChart<String, Number> areachart;
 
+    @Override
     protected Chart createChart() {
-        ObservableList<String> cat = FXCollections.observableArrayList();
-        cataxis = new CategoryAxis();
         yaxis = new NumberAxis();
-        ObservableList<XYChart.Series<String, Number>> nodata = FXCollections.observableArrayList();
-        areachart = new AreaChart<String, Number>(cataxis, yaxis, nodata);
-        areachart.setId("AreaChart");
+        areachart = new AreaChart<>(new CategoryAxis(), yaxis);
         return areachart;
     }
 
@@ -91,23 +89,17 @@ public class XYChartTest extends ChartTestBase {
         ParsedValue pv = new CssParser().parseExpr("-fx-tick-label-font","0.916667em System");
         Object val = pv.convert(null);
         CssMetaData prop = ((StyleableProperty)yaxis.tickLabelFontProperty()).getCssMetaData();
-        try {
-            prop.set(yaxis, val, null);
-            // confirm tickLabelFont, measure and tick's textnode all are in sync with -fx-tick-label-font
-            assertEquals(11, new Double(yaxis.getTickLabelFont().getSize()).intValue());
-            assertEquals(11, new Double(AxisShim.get_measure(yaxis).getFont().getSize()).intValue());
-            final ObservableList<Axis.TickMark<Number>> yaTickMarks = yaxis.getTickMarks();
-            TickMark tm = yaTickMarks.get(0);
-            assertEquals(11, new Double(AxisShim.TickMark_get_textNode(tm).getFont().getSize()).intValue());
-        } catch (Exception e) {
-            Assert.fail(e.toString());
-        }
+        prop.set(yaxis, val, null);
+        // confirm tickLabelFont, measure and tick's textnode all are in sync with -fx-tick-label-font
+        assertEquals(11, new Double(yaxis.getTickLabelFont().getSize()).intValue());
+        assertEquals(11, new Double(AxisShim.get_measure(yaxis).getFont().getSize()).intValue());
+        final ObservableList<Axis.TickMark<Number>> yaTickMarks = yaxis.getTickMarks();
+        TickMark tm = yaTickMarks.get(0);
+        assertEquals(11, new Double(AxisShim.TickMark_get_textNode(tm).getFont().getSize()).intValue());
         // set tick label font programmatically and test.
         yaxis.setTickLabelFont(new Font(12.0f));
         assertEquals(12, new Double(yaxis.getTickLabelFont().getSize()).intValue());
         assertEquals(12, new Double(AxisShim.get_measure(yaxis).getFont().getSize()).intValue());
-        final ObservableList<Axis.TickMark<Number>> yaTickMarks = yaxis.getTickMarks();
-        TickMark tm = yaTickMarks.get(0);
         assertEquals(12, new Double(AxisShim.TickMark_get_textNode(tm).getFont().getSize()).intValue());
     }
 
@@ -166,5 +158,17 @@ public class XYChartTest extends ChartTestBase {
         series.setData(dataList2);
 
         assertSame(dataList2, series.getData());
+    }
+
+    @Test
+    public void testBindDataToListProperty() {
+        createChart();
+        ListProperty<XYChart.Series<String, Number>> seriesProperty =
+                new SimpleListProperty<>(FXCollections.observableArrayList());
+
+        areachart.dataProperty().bind(seriesProperty);
+        ControlTestUtils.runWithExceptionHandler(() -> {
+            seriesProperty.add(new XYChart.Series<>());
+        });
     }
 }
