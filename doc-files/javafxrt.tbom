@@ -5,27 +5,27 @@
 </meta>
 
 <file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
-    <file source="rt/modules/media/src/main/resources/com/sun/media/jfxmedia/MediaErrors%j.properties"
+    <file source="rt/modules/javafx.media/src/main/resources/com/sun/media/jfxmedia/MediaErrors%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
-    <file source="rt/modules/web/src/main/resources/com/sun/webkit/LocalizedStrings%j.properties"
+    <file source="rt/modules/javafx.web/src/main/resources/com/sun/webkit/LocalizedStrings%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
-    <file source="rt/modules/controls/src/main/resources/com/sun/javafx/scene/control/skin/resources/controls%j.properties"
+    <file source="rt/modules/javafx.controls/src/main/resources/com/sun/javafx/scene/control/skin/resources/controls%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
-    <file source="rt/modules/web/src/main/resources/javafx/scene/web/HTMLEditorSkin%j.properties"
+    <file source="rt/modules/javafx.web/src/main/resources/javafx/scene/web/HTMLEditorSkin%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 
 <file-set name="Java Property Resource Bundles" languages="Std_Admin +Swedish">
-    <file source="rt/modules/graphics/src/main/resources/com/sun/javafx/tk/quantum/QuantumMessagesBundle%j.properties"
+    <file source="rt/modules/javafx.graphics/src/main/resources/com/sun/javafx/tk/quantum/QuantumMessagesBundle%j.properties"
           file-type="JavaProperties"/>
 </file-set>
 

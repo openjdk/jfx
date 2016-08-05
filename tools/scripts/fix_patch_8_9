@@ -1,0 +1,31 @@
+#!/bin/bash
+#
+# use as a pipe to rename an jdk 8 module path to the jdk 9 module path
+#
+
+case "`uname`" in
+    Darwin*) platform="macosx";;
+    CYGWIN*) platform="windows" ; PATHSEP=";";;
+    Windows_NT*) platform="mks" ; PATHSEP=";";;
+    Linux*)  platform="linux";;
+    SunOS*)  platform="solaris";;
+esac
+
+if [ "X$platform" = "Xmacosx" ]
+then
+sed -E \
+ -e '/^(diff |--- |\+\+\+ )/s,modules/fxpackager/,modules/jdk.packager/,g' \
+ -e '/^(diff |--- |\+\+\+ )/s,modules/fxpackagerservices/,modules/jdk.packager.services/,g' \
+ -e '/^(diff |--- |\+\+\+ )/s,modules/extensions/,extensions/,g' \
+ \
+ -e '/^(diff |--- |\+\+\+ )/s,modules/(base|graphics|controls|swing|media|web|fxml|swt|jmx)/,modules/javafx.\1/,g' 
+else
+sed \
+ -e '/^\(diff \|--- \|+++ \)/s,modules/fxpackager/,modules/jdk.packager/,g' \
+ -e '/^\(diff \|--- \|+++ \)/s,modules/fxpackagerservices/,modules/jdk\.packager\.services/,g' \
+ -e '/^\(diff \|--- \|+++ \)/s,modules/extensions/,extensions/,g' \
+ \
+ -e '/^\(diff \|--- \|+++ \)/s,modules/\(base\|graphics\|controls\|swing\|media\|web\|fxml\|swt\|jmx\)/,modules/javafx.\1/,g' 
+fi
+
+exit 0

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configurationDescriptor version="88">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
-    <df root="../../../modules/web/src/android/native" name="native">
+    <df root="../../../modules/javafx.web/src/android/native" name="native">
       <in>android_log.h</in>
       <in>android_webview.c</in>
       <in>android_webview.h</in>
@@ -17,7 +17,7 @@
   </logicalFolder>
   <sourceFolderFilter>^(nbproject)$</sourceFolderFilter>
   <sourceRootList>
-    <Elem>../../../modules/web/src/android/native</Elem>
+    <Elem>../../../modules/javafx.web/src/android/native</Elem>
   </sourceRootList>
   <projectmakefile>Android.mk</projectmakefile>
   <confs>
@@ -48,13 +48,13 @@
           </cTool>
         </makeTool>
       </makefileType>
-      <item path="../../../modules/web/src/android/native/android_log.h" ex="false" tool="3" flavor2="0">
+      <item path="../../../modules/javafx.web/src/android/native/android_log.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="../../../modules/web/src/android/native/android_webview.c" ex="false" tool="0" flavor2="0">
+      <item path="../../../modules/javafx.web/src/android/native/android_webview.c" ex="false" tool="0" flavor2="0">
       </item>
-      <item path="../../../modules/web/src/android/native/android_webview.h" ex="false" tool="3" flavor2="0">
+      <item path="../../../modules/javafx.web/src/android/native/android_webview.h" ex="false" tool="3" flavor2="0">
       </item>
-      <item path="../../../modules/web/src/android/native/native_webview.c" ex="false" tool="0" flavor2="2">
+      <item path="../../../modules/javafx.web/src/android/native/native_webview.c" ex="false" tool="0" flavor2="2">
         <cTool>
         </cTool>
       </item>

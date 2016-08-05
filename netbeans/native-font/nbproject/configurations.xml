@@ -13,14 +13,14 @@
                    displayName="Source Files"
                    projectFiles="true">
       <logicalFolder name="native-font" displayName="native-font" projectFiles="true">
-        <itemPath>../../modules/graphics/src/main/native-font/MacFontFinder.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-font/coretext.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-font/dfontdecoder.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-font/directwrite.cpp</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-font/fontpath.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-font/fontpath_linux.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-font/freetype.c</itemPath>
-        <itemPath>../../modules/graphics/src/main/native-font/pango.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-font/MacFontFinder.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-font/coretext.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-font/dfontdecoder.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-font/directwrite.cpp</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-font/fontpath.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-font/fontpath_linux.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-font/freetype.c</itemPath>
+        <itemPath>../../modules/javafx.graphics/src/main/native-font/pango.c</itemPath>
       </logicalFolder>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -36,7 +36,7 @@
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
-    <Elem>../../modules/graphics/src/main/native-font</Elem>
+    <Elem>../../modules/javafx.graphics/src/main/native-font</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -48,42 +48,42 @@
       </toolsSet>
       <compileType>
       </compileType>
-      <item path="../../modules/graphics/src/main/native-font/MacFontFinder.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/MacFontFinder.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/coretext.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/coretext.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/dfontdecoder.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/dfontdecoder.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/directwrite.cpp"
+      <item path="../../modules/javafx.graphics/src/main/native-font/directwrite.cpp"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/fontpath.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/fontpath.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/fontpath_linux.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/fontpath_linux.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/freetype.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/freetype.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/pango.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/pango.c"
             ex="false"
             tool="0"
             flavor2="0">
@@ -109,42 +109,42 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
-      <item path="../../modules/graphics/src/main/native-font/MacFontFinder.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/MacFontFinder.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/coretext.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/coretext.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/dfontdecoder.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/dfontdecoder.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/directwrite.cpp"
+      <item path="../../modules/javafx.graphics/src/main/native-font/directwrite.cpp"
             ex="false"
             tool="1"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/fontpath.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/fontpath.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/fontpath_linux.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/fontpath_linux.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/freetype.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/freetype.c"
             ex="false"
             tool="0"
             flavor2="0">
       </item>
-      <item path="../../modules/graphics/src/main/native-font/pango.c"
+      <item path="../../modules/javafx.graphics/src/main/native-font/pango.c"
             ex="false"
             tool="0"
             flavor2="0">

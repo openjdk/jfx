@@ -76,7 +76,7 @@
     <target name="-post-jar">
         <echo level="info">Adding prism resources to jar...</echo>
         <jar destfile="${dist.jar}" update="true">
-            <fileset dir="../../modules/graphics/build/resources/main"/>
+            <fileset dir="../../modules/javafx.graphics/build/resources/main"/>
         </jar>
     </target>
 

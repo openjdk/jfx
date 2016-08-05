@@ -18,13 +18,13 @@
                     <encoding>UTF-8</encoding>
                 </source-folder>
                 <source-folder>
-                    <label>../../../modules/graphics/src/android/java</label>
-                    <location>../../../modules/graphics/src/android/java</location>
+                    <label>../../../modules/javafx.graphics/src/android/java</label>
+                    <location>../../../modules/javafx.graphics/src/android/java</location>
                 </source-folder>
                 <source-folder>
-                    <label>../../../modules/graphics/src/android/java</label>
+                    <label>../../../modules/javafx.graphics/src/android/java</label>
                     <type>java</type>
-                    <location>../../../modules/graphics/src/android/java</location>
+                    <location>../../../modules/javafx.graphics/src/android/java</location>
                     <encoding>UTF-8</encoding>
                 </source-folder>
             </folders>
@@ -43,8 +43,8 @@
             <view>
                 <items>
                     <source-folder style="packages">
-                        <label>../../../modules/graphics/src/android/java</label>
-                        <location>../../../modules/graphics/src/android/java</location>
+                        <label>../../../modules/javafx.graphics/src/android/java</label>
+                        <location>../../../modules/javafx.graphics/src/android/java</location>
                     </source-folder>
                     <source-file>
                         <location>build.xml</location>
@@ -60,7 +60,7 @@
         </general-data>
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/1">
             <compilation-unit>
-                <package-root>../../../modules/graphics/src/android/java</package-root>
+                <package-root>../../../modules/javafx.graphics/src/android/java</package-root>
                  <classpath mode="compile">${android.sdk}/platforms/${android.sdk.target}/android.jar</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>

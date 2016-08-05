@@ -89,7 +89,7 @@
         </copy>
     </target>
 
-    <property name="javafx.scene.doc-files.dir" location="${basedir}/../../../modules/graphics/src/main/docs/javafx/scene/doc-files"/>
+    <property name="javafx.scene.doc-files.dir" location="${basedir}/../../../modules/javafx.graphics/src/main/docs/javafx/scene/doc-files"/>
     <condition property="javafx.scene.doc-files.exists">
         <available file="${javafx.scene.doc-files.dir}" type="dir"/>
     </condition>

@@ -17,7 +17,7 @@
 ^.idea/out/
 ^build/
 ^buildSrc/build/
-^modules/[a-zA-Z0-9_]*/build/
+^modules/[a-zA-Z0-9_\.]*/build/
 ^apps/build/
 ^apps/.*/build/
 ^netbeans/.*/build/
@@ -33,7 +33,7 @@ syntax: glob
 */Release/*
 */Debug/*
 *~
-modules/web/src/main/native/LayoutTests
+modules/javafx.web/src/main/native/LayoutTests
 
 # avoid someone inadvertently checking in their gradle settings
 gradle.properties

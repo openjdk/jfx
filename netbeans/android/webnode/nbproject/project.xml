@@ -18,9 +18,9 @@
                     <encoding>UTF-8</encoding>
                 </source-folder>
                 <source-folder>
-                    <label>../../../modules/web/src/android/java</label>
+                    <label>../../../modules/javafx.web/src/android/java</label>
                     <type>java</type>
-                    <location>../../../modules/web/src/android/java</location>
+                    <location>../../../modules/javafx.web/src/android/java</location>
                     <encoding>UTF-8</encoding>
                 </source-folder>
             </folders>
@@ -39,8 +39,8 @@
             <view>
                 <items>
                     <source-folder style="packages">
-                        <label>../../../modules/web/src/android/java</label>
-                        <location>../../../modules/web/src/android/java</location>
+                        <label>../../../modules/javafx.web/src/android/java</label>
+                        <location>../../../modules/javafx.web/src/android/java</location>
                     </source-folder>
                     <source-file>
                         <location>build.xml</location>
@@ -56,8 +56,8 @@
         </general-data>
         <java-data xmlns="http://www.netbeans.org/ns/freeform-project-java/1">
             <compilation-unit>
-                <package-root>../../../modules/web/src/android/java</package-root>
-                <classpath mode="compile">../../../modules/graphics/build/classes/main:../../../modules/base/build/classes/main</classpath>
+                <package-root>../../../modules/javafx.web/src/android/java</package-root>
+                <classpath mode="compile">../../../modules/javafx.graphics/build/classes/main:../../../modules/javafx.base/build/classes/main</classpath>
                 <source-level>1.5</source-level>
             </compilation-unit>
         </java-data>

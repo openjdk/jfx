@@ -22,7 +22,7 @@
 # or visit www.oracle.com if you need additional information or have any
 # questions.
 #
-LOCAL_PATH := $(call my-dir)/../../../modules/web/src/android/native
+LOCAL_PATH := $(call my-dir)/../../../modules/javafx.web/src/android/native
 include $(CLEAR_VARS)
 
 LOCAL_MODULE     := webview

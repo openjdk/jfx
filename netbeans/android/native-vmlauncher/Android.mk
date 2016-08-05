@@ -22,7 +22,7 @@
 # or visit www.oracle.com if you need additional information or have any
 # questions.
 #
-LOCAL_PATH := $(call my-dir)/../../../modules/graphics/src/android/native
+LOCAL_PATH := $(call my-dir)/../../../modules/javafx.graphics/src/android/native
 include $(CLEAR_VARS)
 
 LOCAL_MODULE     := vmlauncher

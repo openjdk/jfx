@@ -23,7 +23,7 @@
 #  questions.
 #
 
-LOCAL_PATH := $(call my-dir)/../../../modules/graphics/src/main/native-prism-es2
+LOCAL_PATH := $(call my-dir)/../../../modules/javafx.graphics/src/main/native-prism-es2
 include $(CLEAR_VARS)
 LOCAL_MODULE := prism-es2-eglfb
 LOCAL_SRC_FILES := GLContext.c GLDrawable.c GLFactory.c GLPixelFormat.c
