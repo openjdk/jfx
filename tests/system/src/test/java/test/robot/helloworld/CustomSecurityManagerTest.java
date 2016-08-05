@@ -124,6 +124,12 @@ public class CustomSecurityManagerTest extends VisualTestBase {
             System.setSecurityManager(null);
         }
         runAndWait(() -> {
+            boolean propertyState = testStage1.alwaysOnTopProperty().get();
+            if (expectedOnTop) {
+                assertTrue(propertyState);
+            } else {
+                assertFalse(propertyState);
+            }
             Color color = getColor(testScene1, WIDTH / 2, HEIGHT / 2);
             if (expectedOnTop) {
                 assertColorEquals(Color.RED, color, TOLERANCE);
