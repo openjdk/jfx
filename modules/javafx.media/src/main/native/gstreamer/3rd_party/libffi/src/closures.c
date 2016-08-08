@@ -618,6 +618,10 @@ ffi_closure_alloc (size_t size, void **code)
   if (ptr)
     {
       msegmentptr seg = segment_holding (gm, ptr);
+#ifdef GSTREAMER_LITE
+      if (seg == NULL)
+        return NULL;
+#endif // GSTREAMER_LITE
 
       *code = add_segment_exec_offset (ptr, seg);
     }
