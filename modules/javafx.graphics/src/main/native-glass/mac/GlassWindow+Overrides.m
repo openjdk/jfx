@@ -180,6 +180,11 @@
 - (BOOL)windowShouldZoom:(NSWindow *)window toFrame:(NSRect)newFrame
 {
     GET_MAIN_JENV;
+
+    if ([window isZoomed]) {
+        return NO;
+    }
+
     (*env)->CallVoidMethod(env, jWindow, jWindowNotifyResize, com_sun_glass_events_WindowEvent_MAXIMIZE, (int)newFrame.size.width, (int)newFrame.size.height);
 
     return YES;
