@@ -130,10 +130,7 @@ public class PieChart extends Chart {
                         ptr = item;
                     }
                 }
-                // update legend style classes
-                if (isLegendVisible()) {
-                    updateLegend();
-                }
+                updateLegend();
                 requestChartLayout();
                 return;
             }
@@ -175,10 +172,7 @@ public class PieChart extends Chart {
                     Data item = getData().get(i);
                     updateDataItemStyleClass(item, i);
                 }
-                // update legend if any data has changed
-                if (isLegendVisible()) {
-                    updateLegend();
-                }
+                updateLegend();
             }
         }
         // re-layout everything
@@ -747,7 +741,7 @@ public class PieChart extends Chart {
      */
     private void updateLegend() {
         Node legendNode = getLegend();
-        if (legendNode != null && legendNode != legend) return; // RT-23569 dont update when user has set legend.
+        if (legendNode != null && legendNode != legend) return; // RT-23596 dont update when user has set legend.
         legend.setVertical(getLegendSide().equals(Side.LEFT) || getLegendSide().equals(Side.RIGHT));
         legend.getItems().clear();
         if (getData() != null) {

@@ -27,15 +27,12 @@ package test.javafx.scene.chart;
 
 import com.sun.javafx.charts.Legend;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.chart.Chart;
 import javafx.scene.chart.ChartShim;
 import javafx.scene.chart.PieChart;
-import javafx.scene.text.Text;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -55,49 +52,36 @@ public class PieChartTest extends ChartTestBase {
         return pc;
     }
 
-    @Test
-    public void testLabelsVisibleFalse_RT24106() {
+    private void addTestData() {
         data.add(new PieChart.Data("Sun", 20));
         data.add(new PieChart.Data("IBM", 12));
         data.add(new PieChart.Data("HP", 25));
         data.add(new PieChart.Data("Dell", 22));
         data.add(new PieChart.Data("Apple", 30));
+    }
+
+    @Test
+    public void testLabelsVisibleFalse_RT24106() {
+        addTestData();
         pc.setLabelsVisible(false);
         assertEquals(false, pc.getLabelsVisible());
     }
 
     @Test
     public void testLegendUpdateAfterPieNameChange_RT26854() {
-        startApp();
         data.add(new PieChart.Data("Sun", 20));
-        for(Node n : ChartShim.getChartChildren(pc)) {
-            if (n instanceof Text) {
-                assertEquals("Sun", pc.getData().get(0).getName());
-            }
-        }
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException ex) {
-            Logger.getLogger(PieChartTest.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        Legend.LegendItem legendItem = ((Legend)ChartShim.getLegend(pc)).getItems().get(0);
+        assertEquals("Sun", legendItem.getText());
         // change name of data item.
         pc.getData().get(0).setName("Oracle");
-        for(Node n : ChartShim.getChartChildren(pc)) {
-            if (n instanceof Text) {
-                assertEquals("Oracle", pc.getData().get(0).getName());
-            }
-        }
+        legendItem = ((Legend)ChartShim.getLegend(pc)).getItems().get(0);
+        assertEquals("Oracle", legendItem.getText());
     }
 
     @Test
     public void testDataItemRemovedWithAnimation() {
-        startApp();
         pc.setAnimated(true);
-        data.add(new PieChart.Data("Sun", 20));
-        data.add(new PieChart.Data("IBM", 12));
-        data.add(new PieChart.Data("HP", 25));
-        data.add(new PieChart.Data("Dell", 22));
-        data.add(new PieChart.Data("Apple", 30));
+        addTestData();
         pc.getData().remove(0);
         assertEquals(4, pc.getData().size());
     }
@@ -165,5 +149,15 @@ public class PieChartTest extends ChartTestBase {
         checkStyleClass(3, "default-color4");
         checkStyleClass(6, "default-color7");
         checkStyleClass(7, "default-color2");
+    }
+
+    @Test
+    public void testLegendUpdateWhileNotVisible_8163454() {
+        addTestData();
+        assertEquals(5, ((Legend)ChartShim.getLegend(pc)).getItems().size());
+        pc.setLegendVisible(false);
+        data.remove(0);
+        pc.setLegendVisible(true);
+        assertEquals(4, ((Legend)ChartShim.getLegend(pc)).getItems().size());
     }
 }
