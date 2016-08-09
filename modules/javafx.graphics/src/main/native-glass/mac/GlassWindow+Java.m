@@ -42,6 +42,7 @@
 #endif
 
 static NSWindow *s_grabWindow = nil;
+extern NSSize maxScreenDimensions;
 
 @interface NSWindow (External)
 
@@ -358,6 +359,14 @@ static NSWindow *s_grabWindow = nil;
 
     frameRect.origin.y = screenFrame.size.height - frameRect.size.height - frameRect.origin.y;
     //NSLog(@"            set to frameRect:%.2f,%.2f %.2fx%.2f", frameRect.origin.x, frameRect.origin.y, frameRect.size.width, frameRect.size.height);
+
+    if (frameRect.size.width > maxScreenDimensions.width) {
+        frameRect.size.width = maxScreenDimensions.width;
+    }
+
+    if (frameRect.size.height > maxScreenDimensions.height) {
+        frameRect.size.height = maxScreenDimensions.height;
+    }
 
     [self->nsWindow setFrame:frameRect display:displayFlag animate:animateFlag];
 
