@@ -300,17 +300,6 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_win_WinRobot__1getPixelColor
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
     (JNIEnv *env, jobject jrobot, jint x, jint y, jint width, jint height, jintArray pixelArray)
 {
-    jfloat fx = (jfloat) x;
-    jfloat fy = (jfloat) y;
-    GlassScreen::FX2Win(&fx, &fy);
-    jint dx = (jint) ceil(fx - 0.5f);
-    jint dy = (jint) ceil(fy - 0.5f);
-    fx = (jfloat) (x + width);
-    fy = (jfloat) (y + height);
-    GlassScreen::FX2Win(&fx, &fy);
-    jint dw = ((jint) ceil(fx - 0.5f)) - dx;
-    jint dh = ((jint) ceil(fy - 0.5f)) - dy;
-
     int numPixels = width * height;
     int pixelDataSize = sizeof(jint) * numPixels;
     ASSERT(pixelDataSize > 0 && pixelDataSize % 4 == 0);
@@ -318,7 +307,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinRobot__1getScreenCapture
     jint * pixelData = (jint *)(new BYTE[pixelDataSize]);
 
     if (pixelData) {
-        GetScreenCapture(dx, dy, dw, dh, pixelData, width, height);
+        GetScreenCapture(x, y, width, height, pixelData, width, height);
 
         // copy pixels into Java array
         env->SetIntArrayRegion(pixelArray, 0, numPixels, pixelData);

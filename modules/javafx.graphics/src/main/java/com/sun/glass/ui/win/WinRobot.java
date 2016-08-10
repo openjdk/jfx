@@ -51,12 +51,5 @@ final class WinRobot extends Robot {
     @Override native protected int _getMouseY();
 
     @Override native protected int _getPixelColor(int x, int y);
-    native private void _getScreenCapture(int x, int y, int width, int height, int[] data);
-    @Override protected Pixels _getScreenCapture(int x, int y, int width, int height, boolean isHiDPI) {
-        int data[] = new int[width * height];
-        _getScreenCapture(x, y, width, height, data);
-        return Application.GetApplication().createPixels(width, height, IntBuffer.wrap(data));
-    }
-
+    @Override native protected void _getScreenCapture(int x, int y, int width, int height, int[] data);
 }
-
