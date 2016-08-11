@@ -25,6 +25,8 @@
 
 package com.sun.javafx.charts;
 
+import java.util.List;
+import java.util.stream.Collectors;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.BooleanPropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -52,8 +54,10 @@ public class Legend extends TilePane {
     // -------------- PRIVATE FIELDS ------------------------------------------
 
     private ListChangeListener<LegendItem> itemsListener = c -> {
-        getChildren().clear();
-        for (LegendItem item : getItems()) getChildren().add(item.label);
+        List<Label> labels = getItems().stream()
+                                       .map(i -> i.label)
+                                       .collect(Collectors.toList());
+        getChildren().setAll(labels);
         if(isVisible()) requestLayout();
     };
 
@@ -83,28 +87,31 @@ public class Legend extends TilePane {
      /** The legend items to display in this legend */
     private ObjectProperty<ObservableList<LegendItem>> items = new ObjectPropertyBase<ObservableList<LegendItem>>() {
         ObservableList<LegendItem> oldItems = null;
-         @Override protected void invalidated() {
-             if(oldItems!=null) oldItems.removeListener(itemsListener);
-             getChildren().clear();
-             ObservableList<LegendItem> newItems = get();
-             if(newItems != null) {
-                 newItems.addListener(itemsListener);
-                 for(LegendItem item: newItems) getChildren().add(item.label);
-             }
-             oldItems = get();
-             requestLayout();
-         }
+        @Override protected void invalidated() {
+            if (oldItems != null) oldItems.removeListener(itemsListener);
+            getChildren().clear();
+            ObservableList<LegendItem> newItems = get();
+            if (newItems != null) {
+                newItems.addListener(itemsListener);
+                List<Label> labels = newItems.stream()
+                        .map(i -> i.label)
+                        .collect(Collectors.toList());
+                getChildren().addAll(labels);
+            }
+            oldItems = newItems;
+            requestLayout();
+        }
 
-         @Override
-         public Object getBean() {
-             return Legend.this;
-         }
+        @Override
+        public Object getBean() {
+            return Legend.this;
+        }
 
-         @Override
-         public String getName() {
-             return "items";
-         }
-     };
+        @Override
+        public String getName() {
+            return "items";
+        }
+    };
     public final void setItems(ObservableList<LegendItem> value) {itemsProperty().set(value);}
     public final ObservableList<LegendItem> getItems() { return items.get();}
     public final ObjectProperty<ObservableList<LegendItem>> itemsProperty() {return items;}
@@ -198,4 +205,3 @@ public class Legend extends TilePane {
         }
     }
 }
-

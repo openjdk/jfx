@@ -43,7 +43,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.*;
 import javafx.util.Duration;
 
-import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 import javafx.css.converter.BooleanConverter;
 
@@ -74,7 +73,6 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
 
     /** A multiplier for teh Y values that we store for each series, it is used to animate in a new series */
     private Map<Series<X,Y>, DoubleProperty> seriesYMultiplierMap = new HashMap<>();
-    private Legend legend = new Legend();
 
     // -------------- PUBLIC PROPERTIES ----------------------------------------
     /**
@@ -156,7 +154,6 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         if (!(yAxis instanceof ValueAxis)) {
             throw new IllegalArgumentException("Axis type incorrect, yAxis must be of ValueAxis type.");
         }
-        setLegend(legend);
         setData(data);
     }
 
@@ -794,27 +791,12 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         return symbol;
     }
 
-    /**
-     * This is called whenever a series is added or removed and the legend needs to be updated
-     */
-    @Override protected void updateLegend() {
-        legend.getItems().clear();
-        if (getData() != null) {
-            for (int seriesIndex=0; seriesIndex < getData().size(); seriesIndex++) {
-                Series<X,Y> series = getData().get(seriesIndex);
-                LegendItem legenditem = new LegendItem(series.getName());
-                legenditem.getSymbol().getStyleClass().addAll("chart-area-symbol","series"+seriesIndex,
-                        "area-legend-symbol", series.defaultColorStyleClass);
-                legend.getItems().add(legenditem);
-            }
-        }
-        if (legend.getItems().size() > 0) {
-            if (getLegend() == null) {
-                setLegend(legend);
-            }
-        } else {
-            setLegend(null);
-        }
+    @Override
+    LegendItem createLegendItemForSeries(Series<X, Y> series, int seriesIndex) {
+        LegendItem legendItem = new LegendItem(series.getName());
+        legendItem.getSymbol().getStyleClass().addAll("chart-area-symbol", "series" + seriesIndex,
+                "area-legend-symbol", series.defaultColorStyleClass);
+        return legendItem;
     }
 
     // -------------- INNER CLASSES --------------------------------------------

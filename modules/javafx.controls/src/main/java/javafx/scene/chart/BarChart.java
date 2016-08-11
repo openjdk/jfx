@@ -46,7 +46,6 @@ import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
-import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 
 import javafx.css.StyleableDoubleProperty;
@@ -69,7 +68,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     // -------------- PRIVATE FIELDS -------------------------------------------
 
     private Map<Series<X,Y>, Map<String, Data<X,Y>>> seriesCategoryMap = new HashMap<>();
-    private Legend legend = new Legend();
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
     private ValueAxis valueAxis;
@@ -154,7 +152,6 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
     public BarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X,Y>> data) {
         super(xAxis, yAxis);
         getStyleClass().add("bar-chart");
-        setLegend(legend);
         if (!((xAxis instanceof ValueAxis && yAxis instanceof CategoryAxis) ||
              (yAxis instanceof ValueAxis && xAxis instanceof CategoryAxis))) {
             throw new IllegalArgumentException("Axis type incorrect, one of X,Y should be CategoryAxis and the other NumberAxis");
@@ -397,27 +394,12 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    /**
-     * This is called whenever a series is added or removed and the legend needs to be updated
-     */
-    @Override protected void updateLegend() {
-        legend.getItems().clear();
-        if (getData() != null) {
-            for (int seriesIndex = 0; seriesIndex < getData().size(); seriesIndex++) {
-                Series<X,Y> series = getData().get(seriesIndex);
-                LegendItem legenditem = new LegendItem(series.getName());
-                legenditem.getSymbol().getStyleClass().addAll("chart-bar", "series" + seriesIndex, "bar-legend-symbol",
-                        series.defaultColorStyleClass);
-                legend.getItems().add(legenditem);
-            }
-        }
-        if (legend.getItems().size() > 0) {
-            if (getLegend() == null) {
-                setLegend(legend);
-            }
-        } else {
-            setLegend(null);
-        }
+    @Override
+    LegendItem createLegendItemForSeries(Series<X, Y> series, int seriesIndex) {
+        LegendItem legendItem = new LegendItem(series.getName());
+        legendItem.getSymbol().getStyleClass().addAll("chart-bar", "series" + seriesIndex,
+                "bar-legend-symbol", series.defaultColorStyleClass);
+        return legendItem;
     }
 
     // -------------- PRIVATE METHODS ------------------------------------------
