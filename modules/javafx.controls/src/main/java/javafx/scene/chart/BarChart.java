@@ -318,14 +318,13 @@ public class BarChart<X,Y> extends XYChart<X,Y> {
                 removeSeriesFromDisplay(series);
             });
 
-            boolean lastSeries = (getSeriesSize() > 1) ? false : true;
             XYValueMap.clear();
             for (final Data<X,Y> d : series.getData()) {
                 final Node bar = d.getNode();
                 // Animate series deletion
-                if (!lastSeries) {
-                        Timeline t = createDataRemoveTimeline(d, bar, series);
-                        pt.getChildren().add(t);
+                if (getSeriesSize() > 1) {
+                    Timeline t = createDataRemoveTimeline(d, bar, series);
+                    pt.getChildren().add(t);
                 } else {
                     // fade out last series
                     FadeTransition ft = new FadeTransition(Duration.millis(700),bar);

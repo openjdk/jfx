@@ -314,11 +314,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                 final Node bar = d.getNode();
                 // Animate series deletion
                 if (getSeriesSize() > 1) {
-                    for (int j = 0; j < series.getData().size(); j++) {
-                        Data<X, Y> item = series.getData().get(j);
-                        Timeline t = createDataRemoveTimeline(item, bar, series);
-                        pt.getChildren().add(t);
-                    }
+                    Timeline t = createDataRemoveTimeline(d, bar, series);
+                    pt.getChildren().add(t);
                 } else {
                     // fade out last series
                     FadeTransition ft = new FadeTransition(Duration.millis(700), bar);
@@ -435,20 +432,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                 }
             }
         }
-    }
-
-    /**
-     * Computes the size of series linked list
-     * @return size of series linked list
-     */
-    @Override int getSeriesSize() {
-        int count = 0;
-        Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
-        while (seriesIterator.hasNext()) {
-            seriesIterator.next();
-            count++;
-        }
-        return count;
     }
 
     /**
