@@ -76,15 +76,12 @@ int wrapper_load_symbols_gio (void *libgio)
     PRELOAD_SYMBOL_GIO_OPT (g_settings_new);
     PRELOAD_SYMBOL_GIO_OPT (g_settings_get_uint);
 
-    if (symbol_load_errors && wrapper_debug)
-    {
-      fprintf (stderr, "failed to load %d required gio symbols\n",
-           symbol_load_errors);
+    if (symbol_load_errors && wrapper_debug) {
+        fprintf (stderr, "failed to load %d required gio symbols\n", symbol_load_errors);
     }
-    if (symbol_load_missing && wrapper_debug)
-    {
-      fprintf (stderr, "missing %d optional gio symbols\n",
-           symbol_load_missing);
+
+    if (symbol_load_missing && wrapper_debug) {
+        fprintf (stderr, "missing %d optional gio symbols\n", symbol_load_missing);
     }
 
     return symbol_load_errors;
@@ -106,7 +103,7 @@ int wrapper_load_symbols_gio (void *libgio)
 #define CHECK_LOAD_SYMBOL_GIO_OPT(x, retval) \
     { \
         if (!_##x) { \
-            if (wrapper_debug) fprintf(stderr, "missing %s\n", #x); \
+            if (wrapper_debug) fprintf(stderr, "missing optional %s\n", #x); \
             return retval; \
         } else { \
             if (wrapper_debug) { \

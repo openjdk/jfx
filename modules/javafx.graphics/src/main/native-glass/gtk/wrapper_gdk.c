@@ -267,6 +267,8 @@ static void (*_gdk_window_set_functions) (GdkWindow * window,
                       GdkWMFunction functions);
 static void (*_gdk_window_show) (GdkWindow * window);
 static Display *(*_gdk_x11_display_get_xdisplay) (GdkDisplay * display);
+static void (*_gdk_x11_display_set_window_scale) (GdkDisplay *display,
+                                  gint scale);
 static XID (*_gdk_x11_drawable_get_xid) (GdkDrawable * drawable);
 static gint (*_gdk_x11_get_default_screen) (void);
 static Display *(*_gdk_x11_get_default_xdisplay) (void);
@@ -359,8 +361,16 @@ static cairo_region_t * (*_gdk_cairo_region_create_from_surface) (cairo_surface_
         fprintf(stderr,"failed loading %s\n", #x); \
     }
 
+#define PRELOAD_SYMBOL_GDK_OPT(x) \
+    _##x = dlsym(libgdk, #x); \
+    if (wrapper_debug && _##x == NULL) { \
+        symbol_load_missing++; \
+        fprintf(stderr, "missing optional %s\n", #x); \
+    }
+
 int wrapper_load_symbols_gdk (int version, void * libgdk)
 {
+    int symbol_load_missing = 0;
     int symbol_load_errors = 0;
 
     PRELOAD_SYMBOL_GDK (gdk_atom_intern);
@@ -492,10 +502,15 @@ int wrapper_load_symbols_gdk (int version, void * libgdk)
         PRELOAD_SYMBOL_GDK (gdk_cairo_region_create_from_surface);
         PRELOAD_SYMBOL_GDK (gdk_window_shape_combine_region);
         PRELOAD_SYMBOL_GDK (gdk_window_input_shape_combine_region);
+        PRELOAD_SYMBOL_GDK_OPT (gdk_x11_display_set_window_scale);
     }
 
     if (symbol_load_errors && wrapper_debug) {
-        fprintf (stderr, "failed to load %d gdk symbols", symbol_load_errors);
+        fprintf (stderr, "failed to load %d required gdk symbols\n", symbol_load_errors);
+    }
+
+    if (symbol_load_missing && wrapper_debug) {
+        fprintf (stderr, "missing %d optional gdk symbols\n", symbol_load_missing);
     }
 
     return symbol_load_errors;
@@ -507,6 +522,19 @@ int wrapper_load_symbols_gdk (int version, void * libgdk)
         if (!_##x) { \
             if (wrapper_debug) fprintf(stderr,"missing %s\n", #x); \
             assert(_##x); \
+        } else { \
+            if (wrapper_debug) { \
+               fprintf(stderr,"using %s\n", #x); \
+               fflush(stderr); \
+            } \
+        } \
+    }
+
+#define CHECK_LOAD_SYMBOL_GDK_OPT(x) \
+    { \
+        if (!_##x) { \
+            if (wrapper_debug) fprintf(stderr,"missing optional %s\n", #x); \
+            return; \
         } else { \
             if (wrapper_debug) { \
                fprintf(stderr,"using %s\n", #x); \
@@ -1155,6 +1183,19 @@ Display *gdk_x11_display_get_xdisplay (GdkDisplay * display)
 {
     CHECK_LOAD_SYMBOL_GDK (gdk_x11_display_get_xdisplay);
     return (*_gdk_x11_display_get_xdisplay) (display);
+}
+
+void glass_gdk_x11_display_set_window_scale (GdkDisplay *display,
+                          gint scale)
+{
+    if (wrapper_gtk_version >= 3) {
+        // Optional call, if it does not exist then GTK3 is not yet
+        // doing automatic scaling of coordinates so we do not need
+        // to override it.  CHECK_LOAD_SYMBOL_GDK_OPT will simply
+        // return if the symbol was not found.
+        CHECK_LOAD_SYMBOL_GDK_OPT (gdk_x11_display_set_window_scale);
+        (*_gdk_x11_display_set_window_scale) (display, scale);
+    }
 }
 
 XID gdk_x11_drawable_get_xid (GdkDrawable * drawable)

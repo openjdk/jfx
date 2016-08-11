@@ -119,6 +119,9 @@ glass_gdk_window_get_size(GdkWindow *window, gint *w, gint *h);
 void
 glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y);
 
+void
+glass_gdk_x11_display_set_window_scale(GdkDisplay *display, gint scale);
+
 gboolean
 glass_configure_window_transparency(GtkWidget *window, gboolean transparent);
 
