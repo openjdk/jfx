@@ -22,6 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
 package jdk.packager.internal;
 
 import java.io.File;
@@ -59,12 +60,6 @@ public final class Module {
 
     public ModuleType getModuleType() {
         return moduleType;
-    }
-
-    public String getVersion() {
-        String result = "";
-        //TODO implement JDK-8149975
-        return result;
     }
 
     private static ModuleType getModuleType(File AFile) {

@@ -137,6 +137,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1init
     process_events_prev = (GdkEventFunc) handler;
     disableGrab = (gboolean) _disableGrab;
 
+    glass_gdk_x11_display_set_window_scale(gdk_display_get_default(), 1);
     gdk_event_handler_set(process_events, NULL, NULL);
 
     GdkScreen *default_gdk_screen = gdk_screen_get_default();

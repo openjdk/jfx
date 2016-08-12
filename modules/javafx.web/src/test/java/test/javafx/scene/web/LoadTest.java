@@ -33,12 +33,14 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assume.assumeTrue;
 import java.io.File;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import javafx.concurrent.Worker.State;
 import javafx.event.EventHandler;
 import javafx.scene.web.WebEngine;
+import netscape.javascript.JSObject;
 import org.junit.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -273,27 +275,104 @@ public class LoadTest extends TestBase {
         load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
                 + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root0.html");
         assertEquals("archive-root0.html failed to load src='archive-r0.js'",
-                executeScript("jsr0()").toString(), "loaded");
+                "loaded", executeScript("jsr0()").toString());
 
         assertEquals("archive-root0.html failed to load src='c/archive-c0.js'",
-                executeScript("jsc0()").toString(), "loaded");
+                "loaded", executeScript("jsc0()").toString());
 
         // archive-root1.html -- src ./archive-r0.js, ./c/archive-c0.js
         load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
                 + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root1.html");
         assertEquals("archive-root1.html failed to load src='./archive-r0.js'",
-                executeScript("jsr0()").toString(), "loaded");
+                "loaded", executeScript("jsr0()").toString());
 
         assertEquals("archive-root1.html failed to load src='./c/archive-c0.js'",
-                executeScript("jsc0()").toString(), "loaded");
+                "loaded", executeScript("jsc0()").toString());
 
         // archive-root2.html -- src ./c/../archive-r0.js, ./c/./././archive-c0.js
         load("jar:" + new File(System.getProperties().get("WEB_ARCHIVE_JAR_TEST_DIR").toString()
                 + "/webArchiveJar.jar").toURI().toASCIIString() + "!/archive-root2.html");
         assertEquals("archive-root2.html failed to load src='./c/../archive-r0.js'",
-                executeScript("jsr0()").toString(), "loaded");
+                "loaded", executeScript("jsr0()").toString());
 
         assertEquals("archive-root2.html failed to load src='./c/./././archive-c0.js'",
-                executeScript("jsc0()").toString(), "loaded");
+                "loaded", executeScript("jsc0()").toString());
+    }
+
+    /**
+     * 8153681 html "img" tag event listener
+     */
+    public final class ImageEvent {
+        public void onLoad() {
+            ++loaded;
+        }
+
+        public void onError() {
+            ++failed;
+        }
+
+        int loaded;
+        int failed;
+    }
+
+    /**
+     * @test
+     * @bug 8153681
+     * summary testing jrt url scheme support in WebView
+     */
+    @Test(timeout = 30000) public void loadJrtResource() throws Exception {
+        assumeTrue(isJigsawMode());
+
+        final String[] jrtResources = {
+                "jrt:/javafx.web/javafx/scene/web/AlignLeft_16x16_JFX.png",
+                "jrt:/javafx.web/./javafx/scene/web/Strikethrough_16x16_JFX.png",
+                "jrt:/javafx.web/./javafx/scene/../../javafx/scene/web/FontColor_16x16_JFX.png",
+                "jrt:/javafx.web/./javafx/./scene/./web/./DrawHorizontalLine_16x16_JFX.png",
+                "jrt:/javafx.web/javafx/scene/web/../../../javafx/scene/web/OrderedListNumbers_16x16_JFX-rtl.png"
+        };
+
+        // Load single resource and check for image is being rendered
+        // Check the natural width of rendered image
+        load(jrtResources[0]);
+        assertEquals("Failed to load " + jrtResources[0],
+                1, executeScript("document.getElementsByTagName('img').length"));
+
+        assertEquals("Failed to Render " + jrtResources[0],
+                16, executeScript("document.getElementsByTagName('img')[0].naturalWidth"));
+
+        // LoadContent with multiple jrt resource which needs to
+        // resolve path navigation i.e ./ or ../ in native url handler
+        final ImageEvent imageEvent = new ImageEvent();
+
+        // Wait till contents are loaded (SUCCEEDED)
+        final CountDownLatch latch = new CountDownLatch(1);
+        submit(() -> {
+            WebEngine webEngine = new WebEngine();
+            webEngine.getLoadWorker().stateProperty().addListener(((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    final String msg = String.format(
+                            "Failed to load : %d / %d resources",
+                            imageEvent.failed, jrtResources.length);
+                    assertTrue(msg, imageEvent.loaded == jrtResources.length);
+                    latch.countDown();
+                }
+            }));
+
+            StringBuffer jrtContent = new StringBuffer();
+            for (int i = 0; i < jrtResources.length; ++i) {
+                jrtContent.append("<img src=" +  jrtResources[i] +
+                        " onload='imageStatus.onLoad()'" +
+                        " onerror='imageStatus.onError()'/>");
+            }
+            final JSObject window = (JSObject) webEngine.executeScript("window");
+            window.setMember("imageStatus", imageEvent );
+            webEngine.loadContent(jrtContent.toString());
+        });
+
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionError(ex);
+        }
     }
 }

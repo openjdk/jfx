@@ -39,7 +39,6 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Ellipse;
 import javafx.util.Duration;
 
-import com.sun.javafx.charts.Legend;
 import com.sun.javafx.charts.Legend.LegendItem;
 
 /**
@@ -48,10 +47,6 @@ import com.sun.javafx.charts.Legend.LegendItem;
  * @since JavaFX 2.0
  */
 public class BubbleChart<X,Y> extends XYChart<X,Y> {
-
-    // -------------- PRIVATE FIELDS ------------------------------------------
-
-    private Legend legend = new Legend();
 
     // -------------- CONSTRUCTORS ----------------------------------------------
 
@@ -76,7 +71,6 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
      */
     public BubbleChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X,Y>> data) {
         super(xAxis, yAxis);
-        setLegend(legend);
         if (!(xAxis instanceof ValueAxis && yAxis instanceof ValueAxis)) {
             throw new IllegalArgumentException("Axis type incorrect, X and Y should both be NumberAxis");
         }
@@ -289,26 +283,11 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    /**
-     * This is called whenever a series is added or removed and the legend needs to be updated
-     */
-    @Override protected void updateLegend() {
-        legend.getItems().clear();
-        if (getData() != null) {
-            for (int seriesIndex=0; seriesIndex< getData().size(); seriesIndex++) {
-                Series<X,Y> series = getData().get(seriesIndex);
-                LegendItem legenditem = new LegendItem(series.getName());
-                legenditem.getSymbol().getStyleClass().addAll("series"+seriesIndex,"chart-bubble",
-                        "bubble-legend-symbol", series.defaultColorStyleClass);
-                legend.getItems().add(legenditem);
-            }
-        }
-        if (legend.getItems().size() > 0) {
-            if (getLegend() == null) {
-                setLegend(legend);
-            }
-        } else {
-            setLegend(null);
-        }
+    @Override
+    LegendItem createLegendItemForSeries(Series<X, Y> series, int seriesIndex) {
+        LegendItem legendItem = new LegendItem(series.getName());
+        legendItem.getSymbol().getStyleClass().addAll("series" + seriesIndex, "chart-bubble",
+                "bubble-legend-symbol", series.defaultColorStyleClass);
+        return legendItem;
     }
 }

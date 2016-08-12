@@ -96,6 +96,25 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     StandardBundlerParam::createAppResourcesListFromString
             );
 
+    @SuppressWarnings("unchecked")
+    public static final StandardBundlerParam<String> SOURCE_DIR =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.source-dir.name"),
+                    I18N.getString("param.source-dir.description"),
+                    "srcdir",
+                    String.class,
+                    p -> null,
+                    (s, p) -> {
+                        String value = String.valueOf(s);
+                        if (value.charAt(value.length() - 1) == File.separatorChar) {
+                            return value.substring(0, value.length() - 1);
+                        }
+                        else {
+                            return value;
+                        }
+                    }
+            );
+
     private static List<RelativeFileSet> createAppResourcesListFromString(String s, Map<String, ? super Object> objectObjectMap) {
         List<RelativeFileSet> result = new ArrayList<>();
         for (String path : s.split("[:;]")) {
@@ -239,7 +258,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                             }
                             else {
                                 List<Path> modulePath = JLinkBundlerHelper.MODULE_PATH.fetchFrom(p);
-                                Path modularJarPath = JLinkBundlerHelper.findModulePath(modulePath, s);
+                                Path modularJarPath = JLinkBundlerHelper.findPathOfModule(modulePath, s);
 
                                 if (modularJarPath != null && Files.exists(modularJarPath)) {
                                     return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(modularJarPath.toFile())));

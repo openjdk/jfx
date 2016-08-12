@@ -84,7 +84,7 @@ public class DeployParams extends CommonParams {
     String modulePath = null;
     String module = null;
     String debugPort = null;
-    File srcdir;
+    String srcdir;
 
     int width;
     int height;
@@ -277,7 +277,7 @@ public class DeployParams extends CommonParams {
         this.module = value;
     }
 
-    public void setDebugPort(String value) {
+    public void setDebug(String value) {
         this.debugPort = value;
     }
 
@@ -494,11 +494,14 @@ public class DeployParams extends CommonParams {
         if (outfile == null) {
             throw new PackagerException("ERR_MissingArgument", "-outfile");
         }
-        if (resources.isEmpty()) {
-            throw new PackagerException("ERR_MissingAppResources");
-        }
-        if (applicationClass == null && module == null) { //TODO better error here for mainmodule
-            throw new PackagerException("ERR_MissingArgument", "-appclass");
+
+        if (module == null) {
+            if (resources.isEmpty()) {
+                throw new PackagerException("ERR_MissingAppResources");
+            }
+            if (applicationClass == null) {
+                throw new PackagerException("ERR_MissingArgument", "-appclass");
+            }
         }
     }
 
@@ -716,7 +719,7 @@ public class DeployParams extends CommonParams {
         }
 
         if (debugPort != null && !debugPort.isEmpty()) {
-            bundleParams.setDebugPort(debugPort);
+            bundleParams.setDebug(debugPort);
         }
 
         if (detectmods != null) {

@@ -252,7 +252,9 @@ public class CommonDialogs {
     {
         List<File> list = new ArrayList<File>();
         for (String s : files) {
-            list.add(new File(s));
+            if (s != null) {
+                list.add(new File(s));
+            }
         }
         return new FileChooserResult(list,
                 extensionFilters == null || index < 0 || index >= extensionFilters.length ?

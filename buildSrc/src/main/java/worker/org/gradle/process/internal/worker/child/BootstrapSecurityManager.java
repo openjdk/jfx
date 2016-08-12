@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,34 +22,47 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.glass.ui.win;
 
-import com.sun.glass.ui.*;
-import java.nio.IntBuffer;
+package worker.org.gradle.process.internal.worker.child;
+
+import java.security.Permission;
 
 /**
- * MS Windows platform implementation class for Robot.
+ * override Gradle bootstrap loader hack for JDK 9
  */
-final class WinRobot extends Robot {
+public class BootstrapSecurityManager extends SecurityManager {
 
-    @Override protected void _create() {
-        // no-op
+    private boolean initialised;
+    private final ClassLoader target;
+
+    public BootstrapSecurityManager() {
+        this(null);
     }
-    @Override protected void _destroy() {
-        // no-op
+
+    BootstrapSecurityManager(ClassLoader target) {
+        //System.err.println("STARTING OVERRIDE  BootstrapSecurityManager");
+        this.target = target;
     }
 
-    @Override native protected void _keyPress(int code);
-    @Override native protected void _keyRelease(int code);
+    @Override
+    public void checkPermission(Permission permission) {
+        synchronized (this) {
+            if (initialised) {
+                return;
+            }
+            if (System.in == null) {
+                // Still starting up
+                return;
+            }
 
-    @Override native protected void _mouseMove(int x, int y);
-    @Override native protected void _mousePress(int buttons);
-    @Override native protected void _mouseRelease(int buttons);
-    @Override native protected void _mouseWheel(int wheelAmt);
+            initialised = true;
+        }
 
-    @Override native protected int _getMouseX();
-    @Override native protected int _getMouseY();
-
-    @Override native protected int _getPixelColor(int x, int y);
-    @Override native protected void _getScreenCapture(int x, int y, int width, int height, int[] data);
+        try {
+            System.clearProperty("java.security.manager");
+            System.setSecurityManager(null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

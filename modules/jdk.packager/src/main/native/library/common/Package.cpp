@@ -196,7 +196,6 @@ void Package::Initialize() {
         FBootFields->FArgs.push_back(debug);
     }
 
-
     MergeJVMDefaultsWithOverrides();
 }
 

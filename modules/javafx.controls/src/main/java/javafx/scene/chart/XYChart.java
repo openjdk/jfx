@@ -26,6 +26,7 @@
 package javafx.scene.chart;
 
 
+import com.sun.javafx.charts.Legend;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collections;
@@ -113,6 +114,7 @@ public abstract class XYChart<X,Y> extends Chart {
     private final Rectangle plotAreaClip = new Rectangle();
 
     private final List<Series<X, Y>> displayedSeries = new ArrayList<>();
+    private Legend legend = new Legend();
 
     /** This is called when a series is added or removed from the chart */
     private final ListChangeListener<Series<X,Y>> seriesChanged = c -> {
@@ -470,6 +472,7 @@ public abstract class XYChart<X,Y> extends Chart {
             if(getXAxis() != null) getXAxis().setAnimated(newValue);
             if(getYAxis() != null) getYAxis().setAnimated(newValue);
         });
+        setLegend(legend);
     }
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
@@ -520,7 +523,34 @@ public abstract class XYChart<X,Y> extends Chart {
     /**
      * This is called whenever a series is added or removed and the legend needs to be updated
      */
-    protected void updateLegend(){}
+    protected void updateLegend() {
+        List<Legend.LegendItem> legendList = new ArrayList<>();
+        if (getData() != null) {
+            for (int seriesIndex = 0; seriesIndex < getData().size(); seriesIndex++) {
+                Series<X, Y> series = getData().get(seriesIndex);
+                legendList.add(createLegendItemForSeries(series, seriesIndex));
+            }
+        }
+        legend.getItems().setAll(legendList);
+        if (legendList.size() > 0) {
+            if (getLegend() == null) {
+                setLegend(legend);
+            }
+        } else {
+            setLegend(null);
+        }
+    }
+
+    /**
+     * Called by the updateLegend for each series in the chart in order to
+     * create new legend item
+     * @param series the series for this legend item
+     * @param seriesIndex the index of the series
+     * @return new legend item for this series
+     */
+    Legend.LegendItem createLegendItemForSeries(Series<X, Y> series, int seriesIndex) {
+        return new Legend.LegendItem(series.getName());
+    }
 
     /**
      * This method is called when there is an attempt to add series that was

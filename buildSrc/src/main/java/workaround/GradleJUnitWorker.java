@@ -65,6 +65,8 @@ public class GradleJUnitWorker {
 
     private static final String ENCODERCLASS
             = "jarjar.org.gradle.process.internal.child.EncodedStream$EncodedInput";
+    private static final String ENCODERCLASS_2
+            = "worker.org.gradle.process.internal.streams.EncodedStream$EncodedInput";
 
     private static URL fileToURL(File file) throws IOException {
         return file.getCanonicalFile().toURI().toURL();
@@ -233,13 +235,22 @@ public class GradleJUnitWorker {
                     }
                 }
             }
+            if (encoderClass == null) {
+                try {
+                    encoderClass = Class.forName(ENCODERCLASS_2, true, cloader);
+                } catch (ClassNotFoundException e) {
+                    if (debug) {
+                        System.err.println("did not find " + ENCODERCLASS_2);
+                    }
+                }
+            }
 
             if (encoderClass != null) {
                 if (debug) {
                     System.err.println("Found EncoderClass " + encoderClass.getName());
                 }
             } else {
-                throw new RuntimeException("Encoder not found");
+                throw new RuntimeException("Gradle Encoder Class not found");
             }
 
             Constructor constructor

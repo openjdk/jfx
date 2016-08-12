@@ -288,4 +288,16 @@ public class TestBase implements ChangeListener, InvalidationListener {
     public void waitLoadFinished() {
         wait(LOCK, getLoadTimeOut());
     }
+
+    /**
+     * Check for Jigsaw Mode
+     */
+    public boolean isJigsawMode() {
+        Class clazz = null;
+        try {
+            clazz = Class.forName("java.lang.reflect.Module", false, TestBase.class.getClassLoader());
+        } catch (Exception e) { }
+
+        return clazz != null;
+    }
 }

@@ -208,9 +208,15 @@ public abstract class AbstractAppImageBuilder {
             }
         }
 
+        String version = JLinkBundlerHelper.getJDKVersion(params);
+
+        if (!version.isEmpty()) {
+            out.println("app.java.version=" + version);
+        }
+
         out.println("packager.java.version=" + System.getProperty("java.version"));
 
-        Integer port = JLinkBundlerHelper.DEBUG_PORT.fetchFrom(params);
+        Integer port = JLinkBundlerHelper.DEBUG.fetchFrom(params);
 
         if (port != null) {
             out.println("app.debug=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=localhost:" + port);

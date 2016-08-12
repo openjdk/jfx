@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.Properties;
 import com.sun.javafx.tools.packager.HtmlParam;
 import com.sun.javafx.tools.packager.Param;
-//import java.nio.file.Path;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.types.DataType;
 import org.apache.tools.ant.types.Reference;

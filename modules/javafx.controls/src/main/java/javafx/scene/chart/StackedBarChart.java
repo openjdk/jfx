@@ -41,7 +41,7 @@ import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
-import com.sun.javafx.charts.Legend;
+import com.sun.javafx.charts.Legend.LegendItem;
 
 import javafx.css.StyleableDoubleProperty;
 import javafx.css.CssMetaData;
@@ -66,7 +66,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     // -------------- PRIVATE FIELDS -------------------------------------------
     private Map<Series<X, Y>, Map<String, List<Data<X, Y>>>> seriesCategoryMap =
             new HashMap<>();
-    private Legend legend = new Legend();
     private final Orientation orientation;
     private CategoryAxis categoryAxis;
     private ValueAxis valueAxis;
@@ -150,7 +149,6 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     public StackedBarChart(@NamedArg("xAxis") Axis<X> xAxis, @NamedArg("yAxis") Axis<Y> yAxis, @NamedArg("data") ObservableList<Series<X, Y>> data) {
         super(xAxis, yAxis);
         getStyleClass().add("stacked-bar-chart");
-        setLegend(legend);
         if (!((xAxis instanceof ValueAxis && yAxis instanceof CategoryAxis)
                 || (yAxis instanceof ValueAxis && xAxis instanceof CategoryAxis))) {
             throw new IllegalArgumentException("Axis type incorrect, one of X,Y should be CategoryAxis and the other NumberAxis");
@@ -314,11 +312,8 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                 final Node bar = d.getNode();
                 // Animate series deletion
                 if (getSeriesSize() > 1) {
-                    for (int j = 0; j < series.getData().size(); j++) {
-                        Data<X, Y> item = series.getData().get(j);
-                        Timeline t = createDataRemoveTimeline(item, bar, series);
-                        pt.getChildren().add(t);
-                    }
+                    Timeline t = createDataRemoveTimeline(d, bar, series);
+                    pt.getChildren().add(t);
                 } else {
                     // fade out last series
                     FadeTransition ft = new FadeTransition(Duration.millis(700), bar);
@@ -437,41 +432,12 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
         }
     }
 
-    /**
-     * Computes the size of series linked list
-     * @return size of series linked list
-     */
-    @Override int getSeriesSize() {
-        int count = 0;
-        Iterator<Series<X, Y>> seriesIterator = getDisplayedSeriesIterator();
-        while (seriesIterator.hasNext()) {
-            seriesIterator.next();
-            count++;
-        }
-        return count;
-    }
-
-    /**
-     * This is called whenever a series is added or removed and the legend needs to be updated
-     */
-    @Override protected void updateLegend() {
-        legend.getItems().clear();
-        if (getData() != null) {
-            for (int seriesIndex = 0; seriesIndex < getData().size(); seriesIndex++) {
-                Series<X,Y> series = getData().get(seriesIndex);
-                Legend.LegendItem legenditem = new Legend.LegendItem(series.getName());
-                legenditem.getSymbol().getStyleClass().addAll("chart-bar", "series" + seriesIndex, "bar-legend-symbol",
-                        series.defaultColorStyleClass);
-                legend.getItems().add(legenditem);
-            }
-        }
-        if (legend.getItems().size() > 0) {
-            if (getLegend() == null) {
-                setLegend(legend);
-            }
-        } else {
-            setLegend(null);
-        }
+    @Override
+    LegendItem createLegendItemForSeries(Series<X, Y> series, int seriesIndex) {
+        LegendItem legendItem = new LegendItem(series.getName());
+        legendItem.getSymbol().getStyleClass().addAll("chart-bar", "series" + seriesIndex,
+                "bar-legend-symbol", series.defaultColorStyleClass);
+        return legendItem;
     }
 
     private void updateMap(Series<X,Y> series, Data<X,Y> item) {

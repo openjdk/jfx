@@ -66,15 +66,27 @@ public class Main {
     private static boolean makeAll = false;
 
     private static void addResources(CommonParams commonParams,
-                                     File baseDir, String s) {
+                                     String baseDir, String s) {
         if (s == null || "".equals(s)) {
             return;
         }
 
-        String[] pathArray = s.split(File.pathSeparator);
+        String ls = ".";
+
+        if (s != null) {
+            ls = s;
+        }
+
+        String[] pathArray = ls.split(File.pathSeparator);
+
+        File lbaseDir = null;
+
+        if (baseDir != null) {
+            lbaseDir = new File(baseDir);
+        }
 
         for (final String path: pathArray) {
-            commonParams.addResource(baseDir, path);
+            commonParams.addResource(lbaseDir, path);
         }
     }
 
@@ -174,11 +186,11 @@ public class Main {
             CreateBSSParams createBssParams = new CreateBSSParams();
             SignJarParams signJarParams = new SignJarParams();
             MakeAllParams makeAllParams = new MakeAllParams();
+            String srcdir = null;
+            String srcfiles = null;
 
-            File srcdir = null;
             try {
                 if (args[0].equalsIgnoreCase("-createjar")) {
-                    boolean srcfilesSet = false;
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.equalsIgnoreCase("-appclass")) {
@@ -203,11 +215,10 @@ public class Main {
                             createJarParams.setOutdir(new File(nextArg(args, i++)));
                         } else if (arg.equalsIgnoreCase("-outfile")) {
                             createJarParams.setOutfile(nextArg(args, i++));
-                        } else if (arg.equalsIgnoreCase("-srcdir")) {
-                            srcdir = new File(nextArg(args, i++));
+                        } else if (arg.equalsIgnoreCase("-" + StandardBundlerParam.SOURCE_DIR.getID())) {
+                            srcdir = nextArg(args, i++);
                         } else if (arg.equalsIgnoreCase("-srcfiles")) {
-                            addResources(createJarParams, srcdir, nextArg(args, i++));
-                            srcfilesSet = true;
+                            srcfiles = nextArg(args, i++);
                         } else if (arg.equalsIgnoreCase("-argument")) {
                             addArgument(createJarParams, nextArg(args, i++));
                         }  else if (arg.equalsIgnoreCase("-paramFile")) {
@@ -216,20 +227,10 @@ public class Main {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
-                    if (srcdir != null && !srcdir.isDirectory()) {
-                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());
-                    }
-                    if (!srcfilesSet) {
-                        //using "." as default dir is confusing. Require explicit list of inputs
-                        if (srcdir == null) {
-                            throw new PackagerException("ERR_MissingArgument", "-srcfiles (-srcdir)");
-                        }
-                        addResources(createJarParams, srcdir, ".");
-                    }
-                    packageAsJar = true;
 
+                    addResources(createJarParams, srcdir, srcfiles);
+                    packageAsJar = true;
                 } else if (args[0].equalsIgnoreCase("-deploy")) {
-                    boolean srcfilesSet = false;
                     File templateInFile = null;
                     File templateOutFile = null;
                     deployParams.setBundleType(BundleType.JNLP);
@@ -334,12 +335,11 @@ public class Main {
                             deployParams.setOutdir(new File(nextArg(args, i++)));
                         } else if (arg.equalsIgnoreCase("-outfile")) {
                             deployParams.setOutfile(nextArg(args, i++));
-                        } else if (arg.equalsIgnoreCase("-srcdir")) {
-                            srcdir = new File(nextArg(args, i++));
+                        } else if (arg.equalsIgnoreCase("-" + StandardBundlerParam.SOURCE_DIR.getID())) {
+                            srcdir = nextArg(args, i++);
                             deployParams.srcdir = srcdir;
                         } else if (arg.equalsIgnoreCase("-srcfiles")) {
-                            addResources(deployParams, srcdir, nextArg(args, i++));
-                            srcfilesSet = true;
+                            srcfiles = nextArg(args, i++);
                         } else if (arg.equalsIgnoreCase("-argument")) {
                             addArgument(deployParams, nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-nosign")) {
@@ -362,16 +362,12 @@ public class Main {
                             deployParams.modulePath = nextArg(args, i++);
                         } else if (arg.equals(MODULE_PATH + "=")) {
                             deployParams.modulePath = arg.replace(MODULE_PATH + "=", "");
-                        } else if (arg.equals(P + "=")) {
-                            deployParams.modulePath = arg.replace(P + "=", "");
                         } else if (arg.equals(MODULE) || arg.equals(M)) {
                             deployParams.setModule(nextArg(args, i++));
                         } else if (arg.equals(MODULE + "=")) {
                             deployParams.setModule(arg.replace(MODULE + "=", ""));
-                        } else if (arg.equals(M + "=")) {
-                            deployParams.setModule(arg.replace(M + "=", ""));
-                        } else if (arg.equals("-Xdebug")) {
-                            deployParams.setDebugPort(nextArg(args, i++));
+                        } else if (arg.startsWith(J_XDEBUG)) {
+                            deployParams.setDebug(arg.replace(J_XDEBUG, ""));
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
@@ -388,11 +384,8 @@ public class Main {
                         genPackages = true;
                     }
 
-                    if (!srcfilesSet) {
-                        addResources(deployParams, srcdir, ".");
-                    }
+                    addResources(deployParams, srcdir, srcfiles);
                 } else if (args[0].equalsIgnoreCase("-createbss")) {
-                    boolean srcfilesSet = false;
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.equalsIgnoreCase("-verbose") || arg.equalsIgnoreCase("-v")) {
@@ -401,28 +394,17 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-outdir")) {
                             createBssParams.setOutdir(new File(nextArg(args, i++)));
                         } else if (arg.equalsIgnoreCase("-srcdir")) {
-                            srcdir = new File(nextArg(args, i++));
+                            srcdir = nextArg(args, i++);
                         } else if (arg.equalsIgnoreCase("-srcfiles")) {
-                            addResources(createBssParams, srcdir, nextArg(args, i++));
-                            srcfilesSet = true;
+                            srcfiles = nextArg(args, i++);
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
-                    if (srcdir != null && !srcdir.isDirectory()) {
-                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());
-                    }
-                    if (!srcfilesSet) {
-                        //using "." as default dir is confusing. Require explicit list of inputs
-                        if (srcdir == null) {
-                            throw new PackagerException("ERR_MissingArgument", "-srcfiles (-srcdir)");
-                        }
-                        addResources(createBssParams, srcdir, ".");
-                    }
-                    css2Bin = true;
 
+                    addResources(createBssParams, srcdir, srcfiles);
+                    css2Bin = true;
                 } else if (args[0].equalsIgnoreCase("-signJar")) {
-                    boolean srcfilesSet = false;
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.equalsIgnoreCase("-keyStore")) {
@@ -441,24 +423,15 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-outdir")) {
                             signJarParams.setOutdir(new File(nextArg(args, i++)));
                         } else if (arg.equalsIgnoreCase("-srcdir")) {
-                            srcdir = new File(nextArg(args, i++));
+                            srcdir = nextArg(args, i++);
                         } else if (arg.equalsIgnoreCase("-srcfiles")) {
-                            addResources(signJarParams, srcdir, nextArg(args, i++));
-                            srcfilesSet = true;
+                            srcfiles = nextArg(args, i++);
                         } else {
                             throw new PackagerException("ERR_UnknownArgument", arg);
                         }
                     }
-                    if (srcdir != null && !srcdir.isDirectory()) {
-                        throw new PackagerException("ERR_InvalidDirectory", srcdir.getAbsolutePath());
-                    }
-                    if (!srcfilesSet) {
-                        //using "." as default dir is confusing. Require explicit list of inputs
-                        if (srcdir == null) {
-                            throw new PackagerException("ERR_MissingArgument", "-srcfiles (-srcdir)");
-                        }
-                        addResources(signJarParams, srcdir, ".");
-                    }
+
+                    addResources(signJarParams, srcdir, srcfiles);
                     signJar = true;
                 } else if (args[0].equalsIgnoreCase("-makeall")) {
                     for (int i = 1; i < args.length; i++) {
@@ -553,6 +526,7 @@ public class Main {
             }
         }
     }
+    private static final String J_XDEBUG = JLinkBundlerHelper.DEBUG.getID() + ":";
 
     private static final String MODULE = "--" + JLinkBundlerHelper.MODULE.getID();
     private static final String M = "-m";
