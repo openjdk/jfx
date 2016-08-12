@@ -174,11 +174,11 @@ public class JLinkBundlerHelper {
                     (s, p) -> s);
 
     @SuppressWarnings("unchecked")
-    public static final BundlerParamInfo<Integer> DEBUG_PORT =
+    public static final BundlerParamInfo<Integer> DEBUG =
             new StandardBundlerParam<>(
                     I18N.getString("param.main.module.name"),
                     I18N.getString("param.main.module.description"),
-                    "-Xdebug",
+                    "-J-Xdebug",
                     Integer.class,
                     p -> null,
                     (s, p) -> {
@@ -215,10 +215,17 @@ public class JLinkBundlerHelper {
 
     public static File getMainJar(Map<String, ? super Object> params) {
         File result = null;
+        String srcdir = StandardBundlerParam.SOURCE_DIR.fetchFrom(params);
         RelativeFileSet fileset = MAIN_JAR.fetchFrom(params);
 
         if (fileset != null) {
-            result = new File(fileset.getIncludedFiles().iterator().next());
+            String filename = fileset.getIncludedFiles().iterator().next();
+
+            if (srcdir != null) {
+                filename = srcdir + File.separator + filename;
+            }
+
+            result = new File(filename);
         }
 
         return result;
@@ -259,6 +266,21 @@ public class JLinkBundlerHelper {
             else {
                 result = mainModule;
             }
+        }
+
+        return result;
+    }
+
+    public static String getJDKVersion(Map<String, ? super Object> params) {
+        String result = "";
+        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
+        Path jdkModulePath = setupDefaultModulePathIfNecessary(modulePath);
+        Path javaBasePath = jdkModulePath.resolve("java.base.jmod");
+
+        if (javaBasePath != null && javaBasePath.toFile().exists()) {
+            result = RedistributableModules.getModuleVersion(javaBasePath.toFile(),
+                        modulePath, ADD_MODULES.fetchFrom(params),
+                        LIMIT_MODULES.fetchFrom(params));
         }
 
         return result;
@@ -335,7 +357,7 @@ public class JLinkBundlerHelper {
     }
 
     // Returns the path to the JDK modules in the user defined module path.
-    public static Path findModulePath(List<Path> modulePath, String moduleName) {
+    public static Path findPathOfModule(List<Path> modulePath, String moduleName) {
         Path result = null;
 
         for (Path path : modulePath) {
@@ -352,7 +374,7 @@ public class JLinkBundlerHelper {
 
     private static Path setupDefaultModulePathIfNecessary(List<Path> modulePath) {
         Path result = null;
-        Path userDefinedJdkModulePath = findModulePath(modulePath, "java.base.jmod");
+        Path userDefinedJdkModulePath = findPathOfModule(modulePath, "java.base.jmod");
 
         //TODO Fix JDK-8158977
 
@@ -379,10 +401,12 @@ public class JLinkBundlerHelper {
     private static Set<String> getResourceFileJarList(Map<String, ? super Object> params, Module.JarType Query) {
         Set<String> files = new LinkedHashSet();
 
+        String srcdir = StandardBundlerParam.SOURCE_DIR.fetchFrom(params);
+
         for (RelativeFileSet appResources : StandardBundlerParam.APP_RESOURCES_LIST.fetchFrom(params)) {
             for (String resource : appResources.getIncludedFiles()) {
                 if (resource.endsWith(".jar")) {
-                    String filename = appResources.getBaseDirectory() + File.separator + resource;
+                    String filename = srcdir + File.separator + resource;
 
                     switch (Query) {
                         case All: {
@@ -413,57 +437,11 @@ public class JLinkBundlerHelper {
         return files;
     }
 
-    /**
-     * This helper class
-     */
     private static class ModuleHelper {
-        private static final Set<String> REDISTRIBUTBLE_MODULES = Set.of(
-            "java.base",
-            "java.compiler",
-            "java.datatransfer",
-            "java.desktop",
-            "java.httpclient",
-            "java.instrument",
-            "java.logging",
-            "java.management",
-            "java.naming",
-            "java.prefs",
-            "java.rmi",
-            "java.scripting",
-            "java.security.jgss",
-            "java.security.sasl",
-            "java.sql",
-            "java.sql.rowset",
-            "java.xml",
-            "java.xml.crypto",
-            "javafx.base",
-            "javafx.controls",
-            "javafx.fxml",
-            "javafx.graphics",
-            "javafx.media",
-            "javafx.swing",
-            "javafx.web",
-            "jdk.accessibility",
-            "jdk.dynalink",
-            "jdk.httpserver",
-            "jdk.jfr",
-            "jdk.jsobject",
-            "jdk.management",
-            "jdk.management.cmm",
-            "jdk.management.jfr",
-            "jdk.management.resource",
-            "jdk.net",
-            "jdk.scripting.nashorn",
-            "jdk.sctp",
-            "jdk.security.auth",
-            "jdk.security.jgss",
-            "jdk.unsupported",
-            "jdk.vm.cds",
-            "jdk.xml.dom");
-
-        // The token for "all modules on the module path"
+        // The token for "all modules on the module path".
         private static final String ALL_MODULE_PATH = "ALL-MODULE-PATH";
 
+        // The token for "all redistributable runtime modules".
         public static final String ALL_RUNTIME = "ALL-RUNTIME";
 
         private final Set<String> modules = new HashSet<>();
@@ -487,7 +465,12 @@ public class JLinkBundlerHelper {
                         iterator.remove();
 
                         if (!found) {
-                            modules.addAll(REDISTRIBUTBLE_MODULES);
+                            Set<String> modules = RedistributableModules.getRedistributableModules(paths, roots, limitMods);
+
+                            if (modules != null) {
+                                this.modules.addAll(modules);
+                            }
+
                             found = true;
                         }
                         break;

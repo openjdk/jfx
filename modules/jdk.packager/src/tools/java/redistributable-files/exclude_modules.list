@@ -1,0 +1,17 @@
+java.compact1
+java.compact2
+java.compact3
+java.se
+javafx.deploy
+jdk.deploy
+jdk.jlink
+jdk.javaws
+jdk.packager
+jdk.jdeps
+jdk.jartool
+jdk.internal.le
+jdk.internal.opt
+jdk.jshell
+jdk.deploy.controlpanel
+jdk.deploy.controlpanel.fx
+jdk.plugin

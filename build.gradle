@@ -320,7 +320,7 @@ defineProperty("JIGSAW_JAVAC", cygpath("$JIGSAW_HOME/bin/javac${IS_WINDOWS ? '.e
 defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JDK_DOCS", "https://docs.oracle.com/javase/8/docs/api/")
-defineProperty("JIGSAW_MODULES", cygpath(System.getenv("JIGSAW_MODULES")) ?: "")
+defineProperty("JIGSAW_MODULES", cygpath(System.getenv("JIGSAW_MODULES")) ?: cygpath(System.getenv("JIGSAW_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
 def javaVersionInfo = parseJavaVersion(javaRuntimeVersion)
@@ -1937,6 +1937,11 @@ project(":fxpackager") {
     project.ext.buildModule = COMPILE_FXPACKAGER
     project.ext.moduleRuntime = false
     project.ext.moduleName = "jdk.packager"
+    manifest {
+        attributes(
+                "Main-Class": "com.sun.javafx.tools.packager.Main"
+        )
+    }
     tasks.all {
         if (!COMPILE_FXPACKAGER) it.enabled = false
     }
@@ -1963,7 +1968,7 @@ project(":fxpackager") {
     jar {
         includeEmptyDirs = false
         archiveName = "ant-javafx.jar"
-        includes = ["com/sun/javafx/tools/ant/**", "com/javafx/main/**"]
+        includes = ["com/sun/javafx/tools/ant/**", "com/javafx/main/**", "resources/web-files/**"]
         eachFile { FileCopyDetails details ->
             if (details.path.startsWith("com/javafx/main")) {
                 details.path = "resources/classes/$details.path"
@@ -1983,7 +1988,7 @@ project(":fxpackager") {
     }
     processResources.dependsOn man
 
-    // Compile the native launchers. These are included in ant-javafx.jar.
+    // Compile the native launchers. These are included in jdk.packager.jmod.
     if (IS_WINDOWS && COMPILE_FXPACKAGER) {
         task buildWinLauncher(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher";
@@ -2258,7 +2263,6 @@ project(":fxpackager") {
                 from "$projectDir/src/test/resources/hello/test.icns"
                 from "$projectDir/src/test/resources/hello/LICENSE-RTF.rtf"
                 from "$projectDir/../../LICENSE"
-                from "$projectDir/build/libs/packager.jar"
                 into project.file("$projectDir/build/tmp/tests/appResources")
             }
             copy {
@@ -2323,6 +2327,64 @@ project(":fxpackager") {
                 packagerDevOpts
         ].flatten()
     }
+
+    task buildRedistributableFiles() {
+        def projectDir = "tools/java/redistributable-files"
+        def sourceDir = "src/$projectDir"
+        def buildDir = "build/$projectDir"
+
+        doLast {
+            exec {
+                commandLine(JIGSAW_JAVAC)
+                args("-d")
+                args("$buildDir")
+                args("$sourceDir/RedistributableFiles.java")
+            }
+        }
+    }
+
+    task runRedistributableFiles() {
+        def projectDir = "tools/java/redistributable-files"
+        def sourceDir = "src/$projectDir"
+        def buildDir = "build/$projectDir"
+        def resourceDir = "build/resources/main/jdk/packager/internal/resources/tools/redistributable-files"
+
+        doLast {
+            def fxmodules = ""
+
+            if (!file("$JIGSAW_MODULES/jdk.packager.jmod").exists()) {
+                moduleProjList.each { project ->
+                    if (fxmodules.isEmpty()) {
+                        fxmodules = project.ext.moduleName
+                    }
+                    else {
+                        fxmodules += "," + project.ext.moduleName
+                    }
+                }
+            }
+
+            exec {
+                commandLine(JIGSAW_JAVA)
+                args("-classpath")
+                args("$buildDir")
+                args("RedistributableFiles")
+                args("--module-path")
+                args("$JIGSAW_MODULES")
+                args("--exclude-filelist")
+                args("$sourceDir/exclude_modules.list")
+                args("--out-file")
+                args("$resourceDir/redistributable.list")
+
+                if (!fxmodules.isEmpty()) {
+                    args("--add-modules")
+                    args("$fxmodules")
+                }
+            }
+        }
+    }
+
+    runRedistributableFiles.dependsOn buildRedistributableFiles
+    processResources.dependsOn runRedistributableFiles
 }
 
 project(":media") {
@@ -2944,8 +3006,16 @@ project(":fxpackager") {
         compile.options.compilerArgs = [
                 "-XaddExports:java.base/sun.security.pkcs=ALL-UNNAMED,"
                         + "java.base/sun.security.timestamp=ALL-UNNAMED,"
-                        + "java.base/sun.security.x509=ALL-UNNAMED,"
-                        + "jdk.jdeps/com.sun.tools.jdeps=ALL-UNNAMED",
+                        + "java.base/sun.security.x509=ALL-UNNAMED",
+                "-encoding", "UTF-8"]
+    }
+}
+
+// fxpackagerservices requires JDK 9 to compile
+project(":fxpackagerservices") {
+    tasks.withType(JavaCompile) { compile ->
+        compile.options.forkOptions.executable = JIGSAW_JAVAC
+        compile.options.compilerArgs = [
                 "-encoding", "UTF-8"]
     }
 }

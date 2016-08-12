@@ -186,8 +186,8 @@ public class BundleParams {
         putUnlessNull(JLinkBundlerHelper.DETECT_MODULES.getID(), value);
     }
 
-    public void setSrcDir(File value) {
-        //putUnlessNull(JDK_MODULE_PATH.getID(), appModulePath); //TODO remove?
+    public void setSrcDir(String value) {
+        putUnlessNull(SOURCE_DIR.getID(), value);
     }
 
     public void setModulePath(String value) {
@@ -198,8 +198,8 @@ public class BundleParams {
         putUnlessNull(JLinkBundlerHelper.MODULE.getID(), value);
     }
 
-    public void setDebugPort(String value) {
-        putUnlessNull(JLinkBundlerHelper.DEBUG_PORT.getID(), value);
+    public void setDebug(String value) {
+        putUnlessNull(JLinkBundlerHelper.DEBUG.getID(), value);
     }
 
     public String getApplicationID() {
@@ -500,15 +500,6 @@ public class BundleParams {
     private String mainJar = null;
     private String mainJarClassPath = null;
     private boolean useFXPackaging = true;
-
-    //are we packaging JavaFX application or regular executable Jar?
-    public boolean useJavaFXPackaging() {
-        if (mainJar == null) {
-            //this will find out answer
-            getMainApplicationJar();
-        }
-        return useFXPackaging;
-    }
 
     //For regular executable Jars we need to take care of classpath
     //For JavaFX executable jars we do not need to pay attention to ClassPath entry in manifest
