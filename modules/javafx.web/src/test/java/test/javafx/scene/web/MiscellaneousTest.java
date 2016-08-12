@@ -29,6 +29,7 @@ import java.io.File;
 import static java.lang.String.format;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -107,26 +108,26 @@ public class MiscellaneousTest extends TestBase {
     @Test public void testRT26306() {
         loadContent(
                 "<script language='javascript'>\n" +
-                "var s = '0123456789abcdef';\n" +
-                "while (true) {\n" +
-                "    alert(s.length);\n" +
-                "    s = s + s;\n" +
-                "}\n" +
-                "</script>");
+                        "var s = '0123456789abcdef';\n" +
+                        "while (true) {\n" +
+                        "    alert(s.length);\n" +
+                        "    s = s + s;\n" +
+                        "}\n" +
+                        "</script>");
     }
 
     @Test public void testWebViewWithoutSceneGraph() {
         submit(() -> {
-             WebEngine engine = new WebView().getEngine();
-             engine.getLoadWorker().stateProperty().addListener(
+            WebEngine engine = new WebView().getEngine();
+            engine.getLoadWorker().stateProperty().addListener(
                     (observable, oldValue, newValue) -> {
                         if (State.SUCCEEDED == newValue) {
                             engine.executeScript(
-                                "window.scrollTo" +
-                                "(0, document.documentElement.scrollHeight)");
+                                    "window.scrollTo" +
+                                            "(0, document.documentElement.scrollHeight)");
                         }
                     });
-             engine.loadContent("<body> <a href=#>hello</a></body>");
+            engine.loadContent("<body> <a href=#>hello</a></body>");
         });
     }
 
@@ -209,6 +210,46 @@ public class MiscellaneousTest extends TestBase {
             assertTrue(msg,
                     (stat.firedTime - stat.createdTime) <= (stat.interval + 1000));
         }
+    }
+
+    /**
+     * @test
+     * @bug 8163582
+     * summary svg.path.getTotalLength
+     * Load a simple SVG, Replace its path and get its path's totalLength using pat.getTotalLength
+     */
+    @Test(timeout = 30000) public void testSvgGetTotalLength() throws Exception {
+        final String svgStub = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'>" +
+                " <path id='pathId' d='M150 0 L75 200 L225 200 Z' /> <svg>";
+
+        // <Path, [Expected, Error Tolerance]>
+        final HashMap<String, Double[]> svgPaths = new HashMap<>();
+        svgPaths.put("'M 0 0 L 100 0 L 100 100 L 0 100 Z'",
+                new Double[] {400.0, 0.000001});
+        svgPaths.put("'M 0 0 l 100 0 l 0 100 l -100 0 Z'",
+                new Double[] {400.0, 0.000001});
+        svgPaths.put("'M 0 0 t 0 100'",
+                new Double[] {100.0, 0.1});
+        svgPaths.put("'M 0 0 Q 55 50 100 100'",
+                new Double[] {141.4803314, 0.000001});
+        svgPaths.put("'M 778.4191616766467 375.19086364081954 C 781.239563 " +
+                        "375.1908569 786.8525244750526 346.60170830052556 786.8802395209582 346.87991373394766'",
+                new Double[] {29.86020, 0.0001});
+        svgPaths.put("'M 0 0 C 0.00001 0.00001 0.00002 0.00001 0.00003 0'",
+                new Double[] {0.0000344338, 0.000000001});
+
+        loadContent(svgStub);
+
+        svgPaths.forEach((pathData, expected) -> {
+            executeScript("document.getElementById('pathId').setAttribute('d' , " + pathData + ");");
+            // Get svg path's total length
+            Double totalLength = ((Number) executeScript("document.getElementById('pathId').getTotalLength();")).doubleValue();
+            final String msg = String.format(
+                    "svg.path.getTotalLength() for %s, expected : %f, actual : %f",
+                    pathData, expected[0], totalLength);
+            assertEquals(msg,
+                    expected[0], totalLength, expected[1]);
+        });
     }
 
     private WebEngine createWebEngine() {

@@ -26,8 +26,6 @@
 
 namespace WebCore {
 
-static const float kPathSegmentLengthTolerance = 0.00001f;
-
 static inline FloatPoint midPoint(const FloatPoint& first, const FloatPoint& second)
 {
     return FloatPoint((first.x() + second.x()) / 2.0f, (first.y() + second.y()) / 2.0f);
@@ -46,7 +44,13 @@ struct QuadraticBezier {
         : start(s)
         , control(c)
         , end(e)
+        , splitDepth(0)
     {
+    }
+
+    double magnitudeSquared() const
+    {
+        return ((double)(start.dot(start)) + (double)(control.dot(control)) + (double)(end.dot(end))) / 9.0;
     }
 
     float approximateDistance() const
@@ -65,11 +69,14 @@ struct QuadraticBezier {
 
         left.start = start;
         right.end = end;
+
+        left.splitDepth = right.splitDepth = splitDepth + 1;
     }
 
     FloatPoint start;
     FloatPoint control;
     FloatPoint end;
+    unsigned short splitDepth;
 };
 
 struct CubicBezier {
@@ -79,7 +86,13 @@ struct CubicBezier {
         , control1(c1)
         , control2(c2)
         , end(e)
+        , splitDepth(0)
     {
+    }
+
+    double magnitudeSquared() const
+    {
+        return ((double)(start.dot(start)) + (double)(control1.dot(control1)) + (double)(control2.dot(control2)) + (double)(end.dot(end))) / 16.0;
     }
 
     float approximateDistance() const
@@ -102,20 +115,17 @@ struct CubicBezier {
         FloatPoint leftControl2ToRightControl1 = midPoint(left.control2, right.control1);
         left.end = leftControl2ToRightControl1;
         right.start = leftControl2ToRightControl1;
+
+        left.splitDepth = right.splitDepth = splitDepth + 1;
     }
 
     FloatPoint start;
     FloatPoint control1;
     FloatPoint control2;
     FloatPoint end;
+    unsigned short splitDepth;
 };
 
-// FIXME: This function is possibly very slow due to the ifs required for proper path measuring
-// A simple speed-up would be to use an additional boolean template parameter to control whether
-// to use the "fast" version of this function with no PathTraversalState updating, vs. the slow
-// version which does update the PathTraversalState.  We'll have to shark it to see if that's necessary.
-// Another check which is possible up-front (to send us down the fast path) would be to check if
-// approximateDistance() + current total distance > desired distance
 template<class CurveType>
 static float curveLength(const PathTraversalState& traversalState, const CurveType& originalCurve, FloatPoint& previous, FloatPoint& current)
 {
@@ -124,10 +134,17 @@ static float curveLength(const PathTraversalState& traversalState, const CurveTy
     Vector<CurveType, curveStackDepthLimit> curveStack;
     float totalLength = 0;
 
+    static const double pathSegmentLengthToleranceSquared = 1.e-16;
+
+    double curveScaleForToleranceSquared = originalCurve.magnitudeSquared();
+    if (curveScaleForToleranceSquared < pathSegmentLengthToleranceSquared)
+        return 0;
     while (true) {
         float length = curve.approximateDistance();
+        double lengthDiscrepancy = length - distanceLine(curve.start, curve.end);
 
-        if ((length - distanceLine(curve.start, curve.end)) > kPathSegmentLengthTolerance && curveStack.size() < curveStackDepthLimit) {
+        // Note : 8163582
+        if ((lengthDiscrepancy * lengthDiscrepancy) / curveScaleForToleranceSquared > pathSegmentLengthToleranceSquared && curve.splitDepth < curveStackDepthLimit) {
             CurveType leftCurve;
             CurveType rightCurve;
             curve.split(leftCurve, rightCurve);
@@ -263,4 +280,3 @@ bool PathTraversalState::processPathElement(PathElementType type, const FloatPoi
 }
 
 }
-
