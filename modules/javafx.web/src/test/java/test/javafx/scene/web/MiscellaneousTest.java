@@ -108,26 +108,26 @@ public class MiscellaneousTest extends TestBase {
     @Test public void testRT26306() {
         loadContent(
                 "<script language='javascript'>\n" +
-                        "var s = '0123456789abcdef';\n" +
-                        "while (true) {\n" +
-                        "    alert(s.length);\n" +
-                        "    s = s + s;\n" +
-                        "}\n" +
-                        "</script>");
+                "var s = '0123456789abcdef';\n" +
+                "while (true) {\n" +
+                "    alert(s.length);\n" +
+                "    s = s + s;\n" +
+                "}\n" +
+                "</script>");
     }
 
     @Test public void testWebViewWithoutSceneGraph() {
         submit(() -> {
-            WebEngine engine = new WebView().getEngine();
-            engine.getLoadWorker().stateProperty().addListener(
+             WebEngine engine = new WebView().getEngine();
+             engine.getLoadWorker().stateProperty().addListener(
                     (observable, oldValue, newValue) -> {
                         if (State.SUCCEEDED == newValue) {
                             engine.executeScript(
-                                    "window.scrollTo" +
-                                            "(0, document.documentElement.scrollHeight)");
+                                "window.scrollTo" +
+                                "(0, document.documentElement.scrollHeight)");
                         }
                     });
-            engine.loadContent("<body> <a href=#>hello</a></body>");
+             engine.loadContent("<body> <a href=#>hello</a></body>");
         });
     }
 
