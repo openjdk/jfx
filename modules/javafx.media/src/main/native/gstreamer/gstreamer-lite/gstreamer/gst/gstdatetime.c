@@ -519,6 +519,10 @@ gst_date_time_new_local_time (gint year, gint month, gint day, gint hour,
 
   datetime = gst_date_time_new_from_g_date_time (g_date_time_new_local (year,
           month, day, hour, minute, seconds));
+#ifdef GSTREAMER_LITE
+  if (datetime == NULL)
+    return NULL;
+#endif // GSTREAMER_LITE
 
   datetime->fields = fields;
   return datetime;
@@ -645,6 +649,10 @@ gst_date_time_new (gfloat tzoffset, gint year, gint month, gint day, gint hour,
   g_time_zone_unref (tz);
 
   datetime = gst_date_time_new_from_g_date_time (dt);
+#ifdef GSTREAMER_LITE
+  if (datetime == NULL)
+    return NULL;
+#endif // GSTREAMER_LITE
   datetime->fields = fields;
 
   return datetime;

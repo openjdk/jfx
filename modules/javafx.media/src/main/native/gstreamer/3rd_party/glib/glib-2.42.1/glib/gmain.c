@@ -1052,6 +1052,10 @@ source_remove_from_context (GSource      *source,
 
   source_list = find_source_list_for_priority (context, source->priority, FALSE);
   g_return_if_fail (source_list != NULL);
+#ifdef GSTREAMER_LITE
+  if (source_list == NULL)
+    return;
+#endif // GSTREAMER_LITE
 
   if (source->prev)
     source->prev->next = source->next;
@@ -1326,6 +1330,11 @@ g_source_add_poll (GSource *source,
   g_return_if_fail (fd != NULL);
   g_return_if_fail (!SOURCE_DESTROYED (source));
 
+#ifdef GSTREAMER_LITE
+  if (source == NULL)
+    return;
+#endif // GSTREAMER_LITE
+
   context = source->context;
 
   if (context)
@@ -1595,6 +1604,10 @@ g_source_set_callback (GSource        *source,
   GSourceCallback *new_callback;
 
   g_return_if_fail (source != NULL);
+#ifdef GSTREAMER_LITE
+  if (source == NULL)
+    return;
+#endif // GSTREAMER_LITE
 
   new_callback = g_new (GSourceCallback, 1);
 
@@ -1635,6 +1648,14 @@ g_source_set_priority_unlocked (GSource      *source,
                 gint          priority)
 {
   GSList *tmp_list;
+
+#ifdef GSTREAMER_LITE
+  if (source == NULL || source->priv == NULL || source->priv->parent_source == NULL)
+    return;
+
+  if (context == NULL)
+    return;
+#endif // GSTREAMER_LITE
 
   g_return_if_fail (source->priv->parent_source == NULL ||
             source->priv->parent_source->priority == priority);
@@ -1703,6 +1724,11 @@ g_source_set_priority (GSource  *source,
 {
   GMainContext *context;
 
+#ifdef GSTREAMER_LITE
+  if (source == NULL || source->priv == NULL || source->priv->parent_source == NULL)
+    return;
+#endif // GSTREAMER_LITE
+
   g_return_if_fail (source != NULL);
   g_return_if_fail (source->priv->parent_source == NULL);
 
@@ -1767,6 +1793,11 @@ g_source_set_ready_time (GSource *source,
 
   g_return_if_fail (source != NULL);
   g_return_if_fail (source->ref_count > 0);
+
+#ifdef GSTREAMER_LITE
+  if (source == NULL)
+    return;
+#endif // GSTREAMER_LITE
 
   if (source->priv->ready_time == ready_time)
     return;
@@ -2076,6 +2107,10 @@ void
 g_source_unref (GSource *source)
 {
   g_return_if_fail (source != NULL);
+#ifdef GSTREAMER_LITE
+  if (source == NULL)
+    return;
+#endif // GSTREAMER_LITE
 
   g_source_unref_internal (source, source->context, FALSE);
 }
@@ -4566,6 +4601,10 @@ GSource *
 g_timeout_source_new (guint interval)
 {
   GSource *source = g_source_new (&g_timeout_funcs, sizeof (GTimeoutSource));
+#ifdef GSTREAMER_LITE
+  if (source == NULL)
+      return NULL;
+#endif // GSTREAMER_LITE
   GTimeoutSource *timeout_source = (GTimeoutSource *)source;
 
   timeout_source->interval = interval;
@@ -4574,6 +4613,7 @@ g_timeout_source_new (guint interval)
   return source;
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * g_timeout_source_new_seconds:
  * @interval: the timeout interval in seconds
@@ -4607,7 +4647,7 @@ g_timeout_source_new_seconds (guint interval)
 
   return source;
 }
-
+#endif // GSTREAMER_LITE
 
 /**
  * g_timeout_add_full:
@@ -4655,6 +4695,10 @@ g_timeout_add_full (gint           priority,
   g_return_val_if_fail (function != NULL, 0);
 
   source = g_timeout_source_new (interval);
+#ifdef GSTREAMER_LITE
+  if (source == NULL)
+      return 0;
+#endif // GSTREAMER_LITE
 
   if (priority != G_PRIORITY_DEFAULT)
     g_source_set_priority (source, priority);
@@ -4708,6 +4752,7 @@ g_timeout_add (guint32        interval,
                  interval, function, data, NULL);
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * g_timeout_add_seconds_full:
  * @priority: the priority of the timeout source. Typically this will be in
@@ -4816,6 +4861,7 @@ g_timeout_add_seconds (guint       interval,
 
   return g_timeout_add_seconds_full (G_PRIORITY_DEFAULT, interval, function, data, NULL);
 }
+#endif // GSTREAMER_LITE
 
 /* Child watch functions */
 
@@ -5231,6 +5277,10 @@ g_child_watch_source_new (GPid pid)
 #endif
 
   source = g_source_new (&g_child_watch_funcs, sizeof (GChildWatchSource));
+#ifdef GSTREAMER_LITE
+  if (source == NULL)
+      return NULL;
+#endif // GSTREAMER_LITE
   child_watch_source = (GChildWatchSource *)source;
 
   child_watch_source->pid = pid;

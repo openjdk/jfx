@@ -276,8 +276,10 @@ GVariantIter *                  g_variant_iter_new                      (GVarian
 GLIB_AVAILABLE_IN_ALL
 gsize                           g_variant_iter_init                     (GVariantIter         *iter,
                                                                          GVariant             *value);
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 GVariantIter *                  g_variant_iter_copy                     (GVariantIter         *iter);
+#endif // GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 gsize                           g_variant_iter_n_children               (GVariantIter         *iter);
 GLIB_AVAILABLE_IN_ALL
