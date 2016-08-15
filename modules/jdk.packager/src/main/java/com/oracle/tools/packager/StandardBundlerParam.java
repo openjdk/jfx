@@ -469,7 +469,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.menu-shortcut-hint.description"),
                     BundleParams.PARAM_MENU,
                     Boolean.class,
-                    params -> true,
+                    params -> false,
                     // valueOf(null) is false, and we actually do want null in some cases
                     (s, p) -> (s == null || "null".equalsIgnoreCase(s))? true : Boolean.valueOf(s)
             );
