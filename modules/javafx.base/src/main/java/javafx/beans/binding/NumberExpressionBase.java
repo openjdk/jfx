@@ -57,6 +57,7 @@ public abstract class NumberExpressionBase implements NumberExpression {
      * {@link javafx.beans.binding.NumberBinding} is created that is bound to
      * the {@code ObservableNumberValue}.
      *
+     * @param <S> The type of Number to be wrapped
      * @param value
      *            The source {@code ObservableNumberValue}
      * @return An {@code NumberExpressionBase} that wraps the

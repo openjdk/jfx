@@ -78,6 +78,7 @@ public abstract class ReadOnlyFloatProperty extends FloatExpression implements
      *
      * Note: null values will be interpreted as 0f
      *
+     * @param <T> The type of Number to be wrapped
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyFloatProperty} that wraps the

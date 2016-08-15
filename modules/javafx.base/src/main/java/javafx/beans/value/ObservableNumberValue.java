@@ -29,9 +29,6 @@ package javafx.beans.value;
  * A common interface of all sub-interfaces of {@link ObservableValue} that wrap
  * a number.
  *
- * @param T
- *            The type of the wrapped value (a {@code Number}).
- *
  * @see ObservableValue
  * @see ObservableDoubleValue
  * @see ObservableFloatValue

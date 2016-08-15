@@ -92,6 +92,8 @@ public class FormatStringConverter<T> extends StringConverter<T> {
     /**
      * <p>Return a <code>Format</code> instance to use for formatting
      * and parsing in this {@link StringConverter}.</p>
+     *
+     * @return a {@code Format} instance for formatting and parsing in this {@link StringConverter}
      */
     protected Format getFormat() {
         return format;

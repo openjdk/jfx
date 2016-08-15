@@ -113,7 +113,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
      * Changing this property will result in a change of the original property.
      *
      * <p>
-     * This is very useful when bidirectionally binding an ObjectProperty<Integer> and
+     * This is very useful when bidirectionally binding an ObjectProperty&lt;Integer&gt; and
      * a IntegerProperty.
      *
      * <blockquote><pre>

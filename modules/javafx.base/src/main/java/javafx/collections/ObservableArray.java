@@ -73,7 +73,7 @@ public interface ObservableArray<T extends ObservableArray<T>> extends Observabl
      * Grows the capacity of this array if the current capacity is less than
      * given {@code capacity}, does nothing if it already exceeds
      * the {@code capacity}.
-     * @param capacity
+     * @param capacity the capacity of this array
      */
     public void ensureCapacity(int capacity);
 

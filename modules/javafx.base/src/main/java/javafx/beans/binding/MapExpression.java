@@ -99,6 +99,8 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
      * {@link javafx.beans.binding.MapBinding} is created that is bound to
      * the {@code ObservableMapValue}.
      *
+     * @param <K> the type of the key elements
+     * @param <V> the type of the value elements
      * @param value
      *            The source {@code ObservableMapValue}
      * @return A {@code MapExpression} that wraps the
@@ -135,6 +137,7 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
 
     /**
      * The size of the map
+     * @return the size
      */
     public int getSize() {
         return size();
@@ -148,6 +151,7 @@ public abstract class MapExpression<K, V> implements ObservableMapValue<K, V> {
 
     /**
      * A boolean property that is {@code true}, if the map is empty.
+     * @return the {@code ReadOnlyBooleanProperty}
      */
     public abstract ReadOnlyBooleanProperty emptyProperty();
 

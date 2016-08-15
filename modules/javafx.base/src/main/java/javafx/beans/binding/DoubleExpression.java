@@ -133,6 +133,7 @@ public abstract class DoubleExpression extends NumberExpressionBase implements
      *
      * Note: null values will be interpreted as 0.0
      *
+     * @param <T> The type of Number to be wrapped
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code DoubleExpression} that wraps the

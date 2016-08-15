@@ -106,7 +106,7 @@ public class LocalDateTimeStringConverter extends StringConverter<LocalDateTime>
      * <blockquote><pre>
      * String pattern = "yyyy-MM-dd HH:mm";
      * DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
-     * StringConverter<LocalDateTime> converter =
+     * StringConverter&lt;LocalDateTime&gt; converter =
      *     DateTimeStringConverter.getLocalDateTimeConverter(formatter, null);
      * </pre></blockquote>
      *

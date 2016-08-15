@@ -96,6 +96,7 @@ public abstract class StringProperty extends ReadOnlyStringProperty implements
      * Create a bidirectional binding between this {@code StringProperty} and another
      * arbitrary property. Relies on an implementation of {@link StringConverter} for conversion.
      *
+     * @param <T> the type of the wrapped {@code Object}
      * @param other
      *            the other {@code Property}
      * @param converter

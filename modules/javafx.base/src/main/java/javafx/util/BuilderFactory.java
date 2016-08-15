@@ -36,7 +36,7 @@ public interface BuilderFactory {
     /**
      * Returns a builder suitable for constructing instances of the given type.
      *
-     * @param type
+     * @param type the given type or null
      *
      * @return
      * A builder for the given type, or <tt>null</tt> if this factory does not

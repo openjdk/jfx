@@ -57,6 +57,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
      * {@link javafx.beans.binding.ObjectBinding} is created that is bound to
      * the {@code ObservableObjectValue}.
      *
+     * @param <T> the type of the wrapped {@code Object}
      * @param value
      *            The source {@code ObservableObjectValue}
      * @return A {@code ObjectExpression} that wraps the
@@ -206,6 +207,7 @@ public abstract class ObjectExpression<T> implements ObservableObjectValue<T> {
      * formatting rules. See {@code java.util.Locale} for details on
      * {@code Locale}.
      *
+     * @param locale the Locale to be used
      * @param format
      *            the formatting {@code String}
      * @return the new {@code StringBinding}

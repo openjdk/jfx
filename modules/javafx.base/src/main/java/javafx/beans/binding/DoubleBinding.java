@@ -89,7 +89,7 @@ import com.sun.javafx.binding.ExpressionHelper;
  *     }
  *
  *     &#x40;Override
- *     public ObservableList<?> getDependencies() {
+ *     public ObservableList&lt;?&gt; getDependencies() {
  *         return FXCollections.singletonObservableList(moo);
  *     }
  *

@@ -45,6 +45,7 @@ import java.lang.annotation.Target;
 public @interface DefaultProperty {
     /**
      * The name of the default property.
+     * @return the name of the property
      */
     public String value();
 }

@@ -315,6 +315,7 @@ public final class Bindings {
     /**
      * Helper function to create a custom {@link ObjectBinding}.
      *
+     * @param <T> the type of the bound {@code Object}
      * @param func The function that calculates the value of this binding
      * @param dependencies The dependencies of this binding
      * @return The generated binding
@@ -406,6 +407,7 @@ public final class Bindings {
      *
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
      *
+     * @param <T> the type of the wrapped {@code Object}
      * @param root
      *            The root {@link javafx.beans.value.ObservableValue}
      * @param steps
@@ -544,9 +546,10 @@ public final class Bindings {
      * <p>
      * All classes and properties used in a select-binding have to be public.
      *
-     * If root has JavaFX properties, this call is equivalent to {@link #select(javafx.beans.value.ObservableValue, java.lang.String[]),
+     * If root has JavaFX properties, this call is equivalent to {@link #select(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
      *
+     * @param <T> the type of the wrapped {@code Object}
      * @param root
      *            The root bean.
      * @param steps
@@ -567,7 +570,7 @@ public final class Bindings {
      * <p>
      * All classes and properties used in a select-binding have to be public.
      *
-     * If root has JavaFX properties, this call is equivalent to {@link #selectDouble(javafx.beans.value.ObservableValue, java.lang.String[]),
+     * If root has JavaFX properties, this call is equivalent to {@link #selectDouble(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
      *
      * @param root
@@ -590,7 +593,7 @@ public final class Bindings {
      * <p>
      * All classes and properties used in a select-binding have to be public.
      *
-     * If root has JavaFX properties, this call is equivalent to {@link #selectFloat(javafx.beans.value.ObservableValue, java.lang.String[]),
+     * If root has JavaFX properties, this call is equivalent to {@link #selectFloat(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
      *
      * @param root
@@ -613,7 +616,7 @@ public final class Bindings {
      * <p>
      * All classes and properties used in a select-binding have to be public.
      *
-     * If root has JavaFX properties, this call is equivalent to {@link #selectInteger(javafx.beans.value.ObservableValue, java.lang.String[]),
+     * If root has JavaFX properties, this call is equivalent to {@link #selectInteger(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
      *
      * @param root
@@ -636,7 +639,7 @@ public final class Bindings {
      * <p>
      * All classes and properties used in a select-binding have to be public.
      *
-     * If root has JavaFX properties, this call is equivalent to {@link #selectLong(javafx.beans.value.ObservableValue, java.lang.String[]),
+     * If root has JavaFX properties, this call is equivalent to {@link #selectLong(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
      *
      * @param root
@@ -659,7 +662,7 @@ public final class Bindings {
      * <p>
      * All classes and properties used in a select-binding have to be public.
      *
-     * If root has JavaFX properties, this call is equivalent to {@link #selectBoolean(javafx.beans.value.ObservableValue, java.lang.String[]),
+     * If root has JavaFX properties, this call is equivalent to {@link #selectBoolean(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
      *
      * @param root
@@ -682,7 +685,7 @@ public final class Bindings {
      * <p>
      * All classes and properties used in a select-binding have to be public.
      *
-     * If root has JavaFX properties, this call is equivalent to {@link #selectString(javafx.beans.value.ObservableValue, java.lang.String[]),
+     * If root has JavaFX properties, this call is equivalent to {@link #selectString(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
      *
      * @param root
@@ -845,6 +848,7 @@ public final class Bindings {
      * bindings are calculated eagerly, i.e. a bound property is updated
      * immediately.
      *
+     * @param <T> the type of the wrapped {@code Object}
      * @param stringProperty
      *            the {@code String} {@code Property}
      * @param otherProperty
@@ -6003,7 +6007,7 @@ public final class Bindings {
      * @param <E> the type of the {@code List} elements
      * @return the new {@code ObjectBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 2.1
      */
     public static <E> ObjectBinding<E> valueAt(final ObservableList<E> op, final int index) {
@@ -6110,7 +6114,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 2.1
      */
     public static BooleanBinding booleanValueAt(final ObservableList<Boolean> op, final int index) {
@@ -6225,7 +6229,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code DoubleBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 2.1
      */
     public static DoubleBinding doubleValueAt(final ObservableList<? extends Number> op, final int index) {
@@ -6340,7 +6344,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 2.1
      */
     public static FloatBinding floatValueAt(final ObservableList<? extends Number> op, final int index) {
@@ -6455,7 +6459,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 2.1
      */
     public static IntegerBinding integerValueAt(final ObservableList<? extends Number> op, final int index) {
@@ -6570,7 +6574,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code LongBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 2.1
      */
     public static LongBinding longValueAt(final ObservableList<? extends Number> op, final int index) {
@@ -6685,7 +6689,7 @@ public final class Bindings {
      * @param index the position in the {@code List}
      * @return the new {@code StringBinding}
      * @throws NullPointerException if the {@code ObservableList} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 2.1
      */
     public static StringBinding stringValueAt(final ObservableList<String> op, final int index) {
@@ -6950,7 +6954,7 @@ public final class Bindings {
      * @param index the position in the {@code ObservableArray}
      * @return the new {@code FloatBinding}
      * @throws NullPointerException if the {@code ObservableArray} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 8.0
      */
     public static FloatBinding floatValueAt(final ObservableFloatArray op, final int index) {
@@ -7055,7 +7059,7 @@ public final class Bindings {
      * @param index the position in the {@code ObservableArray}
      * @return the new {@code IntegerBinding}
      * @throws NullPointerException if the {@code ObservableArray} is {@code null}
-     * @throws IllegalArgumentException if (@code index < 0}
+     * @throws IllegalArgumentException if (@code index &lt; 0)
      * @since JavaFX 8.0
      */
     public static IntegerBinding integerValueAt(final ObservableIntegerArray op, final int index) {

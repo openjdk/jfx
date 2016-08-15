@@ -113,7 +113,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
      * Changing this property will result in a change of the original property.
      *
      * <p>
-     * This is very useful when bidirectionally binding an ObjectProperty<Float> and
+     * This is very useful when bidirectionally binding an ObjectProperty&lt;Float&gt; and
      * a FloatProperty.
      *
      * <blockquote><pre>

@@ -77,6 +77,7 @@ public abstract class ReadOnlyLongProperty extends LongExpression implements
      *
      * Note: null values will be interpreted as 0L
      *
+     * @param <T> The type of Number to be wrapped
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyLongProperty} that wraps the

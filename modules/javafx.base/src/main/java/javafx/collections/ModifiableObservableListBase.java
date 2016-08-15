@@ -204,9 +204,12 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
      * @param index the position where to add the element
      * @param element the element that will be added
 
-     * @throws ClassCastException
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
+     * @throws ClassCastException if the type of the specified element is
+     * incompatible with this list
+     * @throws NullPointerException if the specified arguments contain one or
+     * more null elements
+     * @throws IllegalArgumentException if some property of this element
+     * prevents it from being added to this list
      * @throws IndexOutOfBoundsException if the index is out of range
      *         (<tt>index &lt; 0 || index &gt; size()</tt>)
      */
@@ -222,9 +225,12 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
      * @param element the element that will be set at the specified position
      * @return the old element at the specified position
      *
-     * @throws ClassCastException
-     * @throws NullPointerException
-     * @throws IllegalArgumentException
+     * @throws ClassCastException if the type of the specified element is
+     * incompatible with this list
+     * @throws NullPointerException if the specified arguments contain one or
+     * more null elements
+     * @throws IllegalArgumentException if some property of this element
+     * prevents it from being added to this list
      * @throws IndexOutOfBoundsException if the index is out of range
      *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
      */
