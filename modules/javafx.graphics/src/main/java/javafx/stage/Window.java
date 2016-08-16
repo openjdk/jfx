@@ -578,14 +578,16 @@ public class Window implements EventTarget {
     private boolean widthExplicit = false;
 
     /**
-     * The width of this {@code Stage}. Changing this attribute will narrow or
-     * widen the width of the {@code Stage}. Changing this
-     * attribute will not visually affect a {@code Stage} while
-     * {@code fullScreen} is true, but will be honored by the {@code Stage} once
+     * The width of this {@code Window}. Changing this attribute will narrow or
+     * widen the width of the {@code Window}. Changing this
+     * attribute will not visually affect a {@code Window} while
+     * {@code fullScreen} is true, but will be honored by the {@code Window} once
      * {@code fullScreen} becomes false. This value includes any and all
      * decorations which may be added by the Operating System such as resizable
-     * frame handles. Typical applications will set the {@link javafx.scene.Scene} width
-     * instead.
+     * frame handles. Typical applications will set the {@link javafx.scene.Scene}
+     * width instead. This window will take its width from the scene if it has
+     * never been set by the application. Resizing the window by end user does
+     * not count as a setting the width by the application.
      * <p>
      * The property is read only because it can be changed externally
      * by the underlying platform and therefore must not be bindable.
@@ -604,13 +606,16 @@ public class Window implements EventTarget {
 
     private boolean heightExplicit = false;
     /**
-     * The height of this {@code Stage}. Changing this attribute will shrink
-     * or heighten the height of the {@code Stage}. Changing this
-     * attribute will not visually affect a {@code Stage} while
-     * {@code fullScreen} is true, but will be honored by the {@code Stage} once
+     * The height of this {@code Window}. Changing this attribute will shrink
+     * or heighten the height of the {@code Window}. Changing this
+     * attribute will not visually affect a {@code Window} while
+     * {@code fullScreen} is true, but will be honored by the {@code Window} once
      * {@code fullScreen} becomes false. This value includes any and all
      * decorations which may be added by the Operating System such as the title
-     * bar. Typical applications will set the {@link javafx.scene.Scene} height instead.
+     * bar. Typical applications will set the {@link javafx.scene.Scene} height
+     * instead. This window will take its height from the scene if it has never
+     * been set by the application. Resizing this window by end user does not
+     * count as a setting the height by the application.
      * <p>
      * The property is read only because it can be changed externally
      * by the underlying platform and therefore must not be bindable.
@@ -742,12 +747,16 @@ public class Window implements EventTarget {
     }
 
     /**
-     * The {@code Scene} to be rendered on this {@code Stage}. There can only
-     * be one {@code Scene} on the {@code Stage} at a time, and a {@code Scene}
-     * can only be on one {@code Stage} at a time. Setting a {@code Scene} on
-     * a different {@code Stage} will cause the old {@code Stage} to lose the
+     * The {@code Scene} to be rendered on this {@code Window}. There can only
+     * be one {@code Scene} on the {@code Window} at a time, and a {@code Scene}
+     * can only be on one {@code Window} at a time. Setting a {@code Scene} on
+     * a different {@code Window} will cause the old {@code Window} to lose the
      * reference before the new one gains it. You may swap {@code Scene}s on
-     * a {@code Stage} at any time, even while in full-screen exclusive mode.
+     * a {@code Window} at any time, even while in full-screen exclusive mode.
+     * If the width or height of this {@code Window} have never been set by the
+     * application, setting the scene will cause this {@code Window} to take its
+     * width or height from that scene.  Resizing this window by end user does
+     * not count as setting the width or height by the application.
      *
      * An {@link IllegalStateException} is thrown if this property is set
      * on a thread other than the JavaFX Application Thread.
