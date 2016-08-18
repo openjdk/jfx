@@ -53,6 +53,7 @@ import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.scene.Scene;
 import javafx.scene.input.TransferMode;
+import javafx.stage.Window;
 import javafx.util.FXPermission;
 
 import org.eclipse.swt.SWT;
@@ -100,7 +101,7 @@ import org.eclipse.swt.widgets.Shell;
  * {@code FXCanvas} is a component to embed JavaFX content into
  * SWT applications. The content to be displayed is specified
  * with the {@link #setScene} method that accepts an instance of
- * JavaFX {@code Scene}. After the scene is assigned, it gets
+ * JavaFX {@code Scene}. After the scene is attached, it gets
  * repainted automatically. All the input and focus events are
  * forwarded to the scene transparently to the developer.
  * <p>
@@ -256,6 +257,32 @@ public class FXCanvas extends Canvas {
         registerEventListeners();
         Display display = parent.getDisplay();
         display.addFilter(SWT.Move, moveFilter);
+    }
+
+    /**
+     * Retrieves the {@code FXCanvas} embedding the given {@code Scene},
+     * that is the {@code FXCanvas} to which the given {@code Scene} was
+     * attached using {@link #setScene}.
+     *
+     * @param scene the {@code Scene} whose embedding {@code FXCanvas}
+     *              instance is to be retrieved
+     * @return the {@code FXCanvas} to which the given {@code Scene} is
+     * attached, or null if the given {@code Scene} is not attached to an
+     * {@code FXCanvas}.
+     *
+     * @since 9
+     */
+    public static FXCanvas getFXCanvas(Scene scene) {
+        Window window = scene.getWindow();
+        if (window != null && window instanceof EmbeddedWindow) {
+            HostInterface hostInterface = ((EmbeddedWindow) window).getHost();
+            if (hostInterface instanceof HostContainer) {
+                // Obtain FXCanvas as the enclosing instance of the FXCanvas$HostContainer
+                // that is host of the embedded Scene's EmbeddedWindow.
+                return ((HostContainer)hostInterface).fxCanvas;
+            }
+        }
+        return null;
     }
 
     private static void initFx() {
@@ -731,6 +758,8 @@ public class FXCanvas extends Canvas {
     }
 
     private class HostContainer implements HostInterface {
+
+        final FXCanvas fxCanvas = FXCanvas.this;
 
         @Override
         public void setEmbeddedStage(EmbeddedStageInterface embeddedStage) {

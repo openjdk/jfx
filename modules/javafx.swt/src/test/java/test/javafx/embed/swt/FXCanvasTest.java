@@ -27,24 +27,22 @@ package test.javafx.embed.swt;
 
 import javafx.embed.swt.FXCanvas;
 import javafx.scene.Group;
-import javafx.scene.ImageCursor;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 import org.junit.Rule;
 import org.junit.Test;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertSame;
 
-public class SWTCursorsTest {
+public class FXCanvasTest {
 
     @Rule
     public SwtRule ctx = new SwtRule();
 
     @Test(timeout = 10000)
-    public void testImageCursor() throws Throwable {
+    public void getFXCanvas() throws Throwable {
         final Shell shell = new Shell(Display.getCurrent());
         final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
         shell.open();
@@ -53,15 +51,10 @@ public class SWTCursorsTest {
         Scene scene = new Scene(new Group());
         canvas.setScene(scene);
 
-        // set image cursor to scene
-        Image cursorImage = new Image("test/javafx/embed/swt/cursor.png");
-        scene.setCursor(new ImageCursor(cursorImage));
+        // check FXCanvas is properly retrieved
+        assertSame(canvas, FXCanvas.getFXCanvas(canvas.getScene()));
 
-        Display.getCurrent().asyncExec(() -> {
-            assertNotNull(canvas.getCursor());
-
-            // FIXME: We cannot close the shell here because of https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066.
-            //shell.close();
-        });
+        // FIXME: We cannot close the shell here because of https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066.
+        // shell.close();
     }
 }

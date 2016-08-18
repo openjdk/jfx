@@ -53,6 +53,10 @@ public class EmbeddedWindow extends Window {
         EmbeddedWindowHelper.initHelper(this);
     }
 
+    public HostInterface getHost() {
+        return host;
+    }
+
     /**
      * Specify the scene to be used on this stage.
      */

@@ -1860,9 +1860,6 @@ project(":swt") {
                 enabled = false
                 logger.info("SWT tests are disabled on MAC, because Gradle test runner does not handle -XstartOnFirstThread properly (https://issues.gradle.org/browse/GRADLE-3290).")
             }
-            if (IS_LINUX) {
-                logger.info("SWT tests may cause 'Gtk-CRITICAL **: IA__gtk_main_quit: assertion 'main_loops != NULL' failed' LINUX (https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066). This happens on shutdown, the tests are not affected.")
-            }
         }
     }
 }
