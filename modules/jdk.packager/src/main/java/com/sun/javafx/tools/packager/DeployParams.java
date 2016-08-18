@@ -28,7 +28,6 @@ package com.sun.javafx.tools.packager;
 import com.oracle.tools.packager.*;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.jnlp.JNLPBundler;
-import com.sun.javafx.tools.ant.Callback;
 import com.sun.javafx.tools.packager.bundlers.*;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import java.io.File;
@@ -116,7 +115,7 @@ public class DeployParams extends CommonParams {
     // didn't have a setter...
     boolean offlineAllowed = true;
 
-    List<JSCallback> callbacks;
+    List<JSCallback> callbacks = null;
 
     //list of HTML templates to process
     List<Template> templates = new LinkedList<>();
@@ -368,12 +367,12 @@ public class DeployParams extends CommonParams {
         callbacks = list;
     }
 
-    public void setCallbacks(List<Callback> list) {
-        List<JSCallback> jslist = new ArrayList<>(list.size());
-        for (Callback cb: list) {
-            jslist.add(new JSCallback(cb.getName(), cb.getCmd()));
+    public void addCallback(String name, String cmd) {
+        if (callbacks == null) {
+            callbacks = new ArrayList<>();
         }
-        callbacks = jslist;
+
+        callbacks.add(new JSCallback(name, cmd));
     }
 
     static class Template {

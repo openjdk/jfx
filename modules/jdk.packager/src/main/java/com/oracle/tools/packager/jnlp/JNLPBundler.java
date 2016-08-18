@@ -765,6 +765,7 @@ public class JNLPBundler extends AbstractBundler {
                     xout.writeEmptyElement("menu");
                     //todo add submenu element
                 }
+
                 xout.writeEndElement();
             }
 
