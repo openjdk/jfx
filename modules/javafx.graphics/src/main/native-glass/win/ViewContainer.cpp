@@ -194,6 +194,18 @@ void ViewContainer::HandleViewInputLangChange(HWND hwnd, UINT msg, WPARAM wParam
     m_deadKeyWParam = 0;
 }
 
+void ViewContainer::NotifyViewMoved(HWND hwnd)
+{
+    if (!hwnd || !GetGlassView()) {
+        return;
+    }
+
+    JNIEnv* env = GetEnv();
+    env->CallVoidMethod(GetView(), javaIDs.View.notifyView,
+                        com_sun_glass_events_ViewEvent_MOVE);
+    CheckAndClearException(env);
+}
+
 void ViewContainer::NotifyViewSize(HWND hwnd)
 {
     if (!hwnd || !GetGlassView()) {

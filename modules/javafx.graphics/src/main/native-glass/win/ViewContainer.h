@@ -106,6 +106,7 @@ class ViewContainer {
 
         unsigned int HandleViewTouchEvent(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+        void NotifyViewMoved(HWND hwnd);
         void NotifyViewSize(HWND hwnd);
 
         void NotifyGesturePerformed(HWND hWnd,
