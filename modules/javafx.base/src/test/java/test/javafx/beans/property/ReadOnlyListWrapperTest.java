@@ -26,12 +26,14 @@
 package test.javafx.beans.property;
 
 
+import java.util.Collections;
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.ReadOnlyListProperty;
 import javafx.beans.property.ReadOnlyListWrapper;
 import javafx.beans.property.SimpleListProperty;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
+import test.javafx.collections.MockListObserver;
 import javafx.beans.value.ObservableObjectValueStub;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -737,6 +739,21 @@ public class ReadOnlyListWrapperTest {
         final ReadOnlyListWrapper<Object> v4 = new ReadOnlyListWrapper<Object>(null, name);
         assertEquals("ListProperty [name: My name, value: " + DEFAULT + "]", v4.toString());
         assertEquals("ReadOnlyListProperty [name: My name, value: " + DEFAULT + "]", v4.getReadOnlyProperty().toString());
+    }
+
+    @Test
+    public void testBothListChangeListeners() {
+        property.set(FXCollections.observableArrayList());
+
+        MockListObserver<Object> mloInternal = new MockListObserver<>();
+        MockListObserver<Object> mloPublic = new MockListObserver<>();
+        property.addListener(mloInternal);
+        readOnlyProperty.addListener(mloPublic);
+
+        property.add(new Object());
+
+        mloInternal.check1AddRemove(property, Collections.emptyList(), 0, 1);
+        mloPublic.check1AddRemove(readOnlyProperty, Collections.emptyList(), 0, 1);
     }
 
     private static class ReadOnlyListWrapperMock extends ReadOnlyListWrapper<Object> {
