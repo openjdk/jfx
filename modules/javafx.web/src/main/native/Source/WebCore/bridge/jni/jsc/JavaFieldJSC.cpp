@@ -78,7 +78,7 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
     JLObject jlfield(jfield, true);
 
     if (!jlfield) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaField::valueFromInstance", jlfield);
+        LOG_ERROR("Could not get javaInstance for %p in JavaField::valueFromInstance", (jobject)jlfield);
         return jsresult;
     }
 
@@ -87,7 +87,7 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
     JLObject jlinstance(jinstance, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaField::valueFromInstance", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaField::valueFromInstance", (jobject)jlinstance);
         return jsresult;
     }
 
@@ -158,7 +158,7 @@ void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue a
     JLObject jlfield(jfield, true);
 
     if (!jlfield) {
-        LOG_ERROR("Could not get Instance for %p in JavaField::setValueToInstance", jlfield);
+        LOG_ERROR("Could not get Instance for %p in JavaField::setValueToInstance", (jobject)jlfield);
         return;
     }
 
@@ -167,7 +167,7 @@ void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue a
     JLObject jlinstance(jinstance, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaField::setValueToInstance", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaField::setValueToInstance", (jobject)jlinstance);
         return;
     }
 

@@ -44,7 +44,7 @@ JavaClass::JavaClass(jobject anInstance, RootObject* rootObject, jobject accessC
     JLObject jlinstance(anInstance, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaClass Constructor", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaClass Constructor", (jobject)jlinstance);
         anInstance = createDummyObject();
         if (anInstance == NULL) {
             LOG_ERROR("Could not createDummyObject for %p in JavaClass Constructor", anInstance);
