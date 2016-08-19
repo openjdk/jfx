@@ -62,7 +62,7 @@ JavaArray::JavaArray(jobject array, const char* type, PassRefPtr<RootObject> roo
     JLObject jlarrayinstance(m_array->instance(), true);
 
     if (!jlarrayinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaArray Constructor", (jobject)jlarrayinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaArray Constructor", jlarrayinstance);
         m_length = 0;
     } else {
         m_length = env->GetArrayLength(static_cast<jarray>(m_array->instance()));
@@ -88,7 +88,7 @@ void JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) cons
     JLObject jlinstance(javaArray(), true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaArray::setValueAt", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaArray::setValueAt", jlinstance);
         return;
     }
 
@@ -172,7 +172,7 @@ JSValue JavaArray::valueAt(ExecState* exec, unsigned index) const
     JLObject jlinstance(javaArray(), true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaArray::valueAt", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaArray::valueAt", jlinstance);
         return jsUndefined();
     }
 

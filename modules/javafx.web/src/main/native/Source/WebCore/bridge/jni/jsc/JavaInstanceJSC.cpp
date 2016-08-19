@@ -99,7 +99,7 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::stringValue", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::stringValue", jlinstance);
         return jsUndefined();
     }
 
@@ -135,7 +135,7 @@ static JSValue numberValueForCharacter(jobject obj) {
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValueForCharacter", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValueForCharacter", jlinstance);
         return jsUndefined();
     }
 
@@ -148,7 +148,7 @@ static JSValue numberValueForNumber(jobject obj) {
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValueForNumber", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValueForNumber", jlinstance);
         return jsUndefined();
     }
 
@@ -163,7 +163,7 @@ JSValue JavaInstance::numberValue(ExecState*) const
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValue", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::numberValue", jlinstance);
         return jsUndefined();
     }
 
@@ -184,7 +184,7 @@ JSValue JavaInstance::booleanValue() const
     JLObject jlinstance(m_instance->instance(), true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::booleanValue", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::booleanValue", jlinstance);
         return jsUndefined();
     }
 
@@ -281,7 +281,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::invokeMethod", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::invokeMethod", jlinstance);
         return jsUndefined();
     }
 
@@ -322,7 +322,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
         JLObject jlinstance(obj, true);
 
         if (!jlinstance) {
-            LOG_ERROR("Could not get javaInstance for %p in JavaInstance::invokeMethod", (jobject)jlinstance);
+            LOG_ERROR("Could not get javaInstance for %p in JavaInstance::invokeMethod", jlinstance);
             return jsUndefined();
         }
 
@@ -431,7 +431,7 @@ JSValue JavaInstance::defaultValue(ExecState* exec, PreferredPrimitiveType hint)
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::defaultValue", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JavaInstance::defaultValue", jlinstance);
         return jsUndefined();
     }
 

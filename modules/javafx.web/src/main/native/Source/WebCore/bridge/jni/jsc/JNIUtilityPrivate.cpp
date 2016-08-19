@@ -225,7 +225,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                         // Since instance->javaInstance() is WeakGlobalRef, creating a localref to safeguard javaInstance() from GC
                         JLObject jlinstance(instance->javaInstance(), true);
                         if (!jlinstance) {
-                            LOG_ERROR("Could not get javaInstance for %p in JNIUtilityPrivate::convertValueToJValue", (jobject)jlinstance);
+                            LOG_ERROR("Could not get javaInstance for %p in JNIUtilityPrivate::convertValueToJValue", jlinstance);
                             return result;
                         }
                         result.l = instance->javaInstance();
@@ -238,7 +238,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                     // Since array->javaArray() is WeakGlobalRef, creating a localref to safeguard javaInstance() from GC
                     JLObject jlinstancearray(array->javaArray(), true);
                     if (!jlinstancearray) {
-                        LOG_ERROR("Could not get javaArrayInstance for %p in JNIUtilityPrivate::convertValueToJValue", (jobject)jlinstancearray);
+                        LOG_ERROR("Could not get javaArrayInstance for %p in JNIUtilityPrivate::convertValueToJValue", jlinstancearray);
                         return result;
                     }
                     result.l = array->javaArray();
@@ -437,7 +437,7 @@ jthrowable dispatchJNICall(int count, RootObject* rootObject, jobject obj, bool 
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtilityPrivate::dispatchJNICall", (jobject)jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtilityPrivate::dispatchJNICall", jlinstance);
         return NULL;
     }
 
