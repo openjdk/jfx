@@ -193,7 +193,7 @@ static T callJNIMethodV(jobject obj, const char* name, const char* sig, va_list 
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethodV", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethodV", (jobject)jlinstance);
         return 0;
     }
 
@@ -243,7 +243,7 @@ inline void callJNIMethodV<void>(jobject obj, const char* name, const char* sig,
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethodV<void>", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethodV<void>", (jobject)jlinstance);
         return;
     }
 
@@ -275,7 +275,7 @@ inline void callJNIMethod<void>(jobject obj, const char* methodName, const char*
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethod<void>", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethod<void>", (jobject)jlinstance);
         return;
     }
 
