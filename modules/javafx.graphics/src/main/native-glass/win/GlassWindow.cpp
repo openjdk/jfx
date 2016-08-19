@@ -647,6 +647,8 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
 }
 
 void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam) {
+    HWND hWnd = GetHWND();
+
     if (GlassApplication::IsUIScaleOverridden()) {
         return;
     }
@@ -667,8 +669,8 @@ void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam) {
     // client dimensions padded for the unchanging frame border.
     LPRECT lprcNewBounds = (LPRECT) lParam;
     RECT oldBounds, oldClient, padding, newClient, newBounds;
-    ::GetWindowRect(GetHWND(), &oldBounds);
-    ::GetClientRect(GetHWND(), &oldClient);
+    ::GetWindowRect(hWnd, &oldBounds);
+    ::GetClientRect(hWnd, &oldClient);
     float rescaleX = ((float) (lprcNewBounds->right - lprcNewBounds->left)) /
                               (oldBounds.right - oldBounds.left);
     float rescaleY = ((float) (lprcNewBounds->bottom - lprcNewBounds->top)) /
@@ -719,12 +721,18 @@ void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam) {
             newBounds.left,   newBounds.top,  newBounds.right,   newBounds.bottom,
             newBounds.right - newBounds.left, newBounds.bottom - newBounds.top);
 #endif
-    ::SetWindowPos(GetHWND(), HWND_TOP,
+    ::SetWindowPos(hWnd, HWND_TOP,
                    newBounds.left,
                    newBounds.top,
                    newBounds.right  - newBounds.left,
                    newBounds.bottom - newBounds.top,
                    SWP_NOZORDER | SWP_NOACTIVATE);
+
+    // Relative scales will have changed, which affect the xy offset of the view within the window
+    GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+    if (::IsWindowVisible(hWnd)) {
+        pWindow->NotifyViewMoved(hWnd);
+    }
 }
 
 void GlassWindow::HandleWindowPosChangedEvent()

@@ -94,7 +94,7 @@ public class LocalTimeStringConverter extends StringConverter<LocalTime> {
      * <blockquote><pre>
      * String pattern = "HH:mm:ss";
      * DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
-     * StringConverter<LocalTime> converter =
+     * StringConverter&lt;LocalTime&gt; converter =
      *     DateTimeStringConverter.getLocalTimeConverter(formatter, null);
      * </pre></blockquote>
      *

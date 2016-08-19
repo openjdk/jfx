@@ -28,6 +28,9 @@ package javafx.beans.property;
 import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableObjectValue;
+import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
+import javafx.collections.ObservableSet;
 
 /**
  * This class provides a full implementation of a {@link Property} wrapping an

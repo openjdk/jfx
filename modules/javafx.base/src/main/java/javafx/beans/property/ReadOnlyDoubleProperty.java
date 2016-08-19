@@ -78,6 +78,7 @@ public abstract class ReadOnlyDoubleProperty extends DoubleExpression implements
      *
      * Note: null values will be interpreted as 0.0
      *
+     * @param <T> The type of Number to be wrapped
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyDoubleProperty} that wraps the

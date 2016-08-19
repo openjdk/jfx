@@ -863,6 +863,7 @@ public interface NumberExpression extends ObservableNumberValue {
      * formatting rules. See {@code java.util.Locale} for details on
      * {@code Locale}.
      *
+     * @param locale the Locale to be used
      * @param format
      *            the formatting {@code String}
      * @return the new {@code StringBinding}

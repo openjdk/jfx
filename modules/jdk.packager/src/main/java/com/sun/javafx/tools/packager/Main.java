@@ -202,12 +202,12 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-manifestAttrs")) {
                             createJarParams.setManifestAttrs(createAttrMap(nextArg(args, i++)));
                         } else if (arg.equalsIgnoreCase("-noembedlauncher")) {
-                            System.out.println("-noembedlauncher is deprecated");
+                            System.err.println("-noembedlauncher is deprecated");
                         } else if (arg.equalsIgnoreCase("-nocss2bin")) {
                             createJarParams.setCss2bin(false);
                         } else if (arg.equalsIgnoreCase("-runtimeVersion")) {
                             createJarParams.setFxVersion(nextArg(args, i++));
-                            System.out.println("-runtimeVersion is deprecated");
+                            System.err.println("-runtimeVersion is deprecated");
                         } else if (arg.equalsIgnoreCase("-verbose") || arg.equalsIgnoreCase("-v")) {
                             createJarParams.setVerbose(true);
                             verbose = true;
@@ -309,7 +309,7 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-embedJNLP")) {
                             deployParams.setEmbedJNLP(true);
                         } else if (arg.equalsIgnoreCase("-embedCertificates")) {
-                            System.out.println("-embedCertificates is deprecated");
+                            System.err.println("-embedCertificates is deprecated");
                         } else if (arg.equalsIgnoreCase("-allpermissions")) {
                             deployParams.setAllPermissions(true);
                         } else if (arg.equalsIgnoreCase("-updatemode")) {
@@ -434,6 +434,7 @@ public class Main {
                     addResources(signJarParams, srcdir, srcfiles);
                     signJar = true;
                 } else if (args[0].equalsIgnoreCase("-makeall")) {
+                    System.err.println("-makeall is deprecated");
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.equalsIgnoreCase("-appclass")) {

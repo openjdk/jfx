@@ -861,6 +861,7 @@ public class When {
      * Defines the {@link javafx.beans.value.ObservableObjectValue} which value
      * is returned by the ternary expression if the condition is {@code true}.
      *
+     * @param <T> the type of the intermediate result
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch
@@ -876,6 +877,7 @@ public class When {
      * Defines a constant value of the ternary expression, that is returned if
      * the condition is {@code true}.
      *
+     * @param <T> the type of the intermediate result
      * @param thenValue
      *            the value
      * @return the intermediate result which still requires the otherwise-branch

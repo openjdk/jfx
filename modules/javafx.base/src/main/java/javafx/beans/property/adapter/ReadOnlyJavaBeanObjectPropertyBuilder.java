@@ -65,6 +65,7 @@ public final class ReadOnlyJavaBeanObjectPropertyBuilder<T> {
     /**
      * Create a new instance of {@code ReadOnlyJavaBeanObjectPropertyBuilder}
      *
+     * @param <T> the type of the wrapped {@code Object}
      * @return the new {@code ReadOnlyJavaBeanObjectPropertyBuilder}
      */
     public static <T> ReadOnlyJavaBeanObjectPropertyBuilder<T> create() {

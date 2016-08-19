@@ -161,7 +161,7 @@ public interface ObservableIntegerArray extends ObservableArray<ObservableIntege
 
     /**
      * Sets a single value in the array. Avoid using this method if many values
-     * are updated, use {@linkplain #setAll(int, int[], int, int)} update method
+     * are updated, use {@linkplain #set(int, int[], int, int)} update method
      * instead with as minimum number of invocations as possible.
      * @param index index of the value to set
      * @param value new value for the given index

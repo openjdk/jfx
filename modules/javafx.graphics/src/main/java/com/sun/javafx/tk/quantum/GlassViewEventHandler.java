@@ -376,11 +376,27 @@ class GlassViewEventHandler extends View.EventHandler {
                     boolean middleButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_MIDDLE) != 0;
                     boolean secondaryButtonDown = (modifiers & KeyEvent.MODIFIER_BUTTON_SECONDARY) != 0;
                     final Window w = view.getWindow();
-                    double pScaleX = (w == null) ? 1.0 : w.getPlatformScaleX();
-                    double pScaleY = (w == null) ? 1.0 : w.getPlatformScaleY();
+                    double pScaleX, pScaleY, spx, spy, sx, sy;
+                    if (w != null) {
+                        pScaleX = w.getPlatformScaleX();
+                        pScaleY = w.getPlatformScaleY();
+                        Screen scr = w.getScreen();
+                        if (scr != null) {
+                            spx = scr.getPlatformX();
+                            spy = scr.getPlatformY();
+                            sx = scr.getX();
+                            sy = scr.getY();
+                        } else {
+                            spx = spy = sx = sy = 0.0;
+                        }
+                    } else {
+                        pScaleX = pScaleY = 1.0;
+                        spx = spy = sx = sy = 0.0;
+                    }
 
                     scene.sceneListener.mouseEvent(mouseEventType(type),
-                            x / pScaleX, y / pScaleY, xAbs / pScaleX, yAbs / pScaleY,
+                            x / pScaleX, y / pScaleY,
+                            sx + (xAbs - spx) / pScaleX, sy + (yAbs - spy) / pScaleY,
                             mouseEventButton(button), isPopupTrigger, isSynthesized,
                             shiftDown, controlDown, altDown, metaDown,
                             primaryButtonDown, middleButtonDown, secondaryButtonDown);
@@ -489,14 +505,31 @@ class GlassViewEventHandler extends View.EventHandler {
                 return AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                     if (scene.sceneListener != null) {
                         final Window w = view.getWindow();
-                        double pScaleX = (w == null) ? 1.0 : w.getPlatformScaleX();
-                        double pScaleY = (w == null) ? 1.0 : w.getPlatformScaleY();
+                        double pScaleX, pScaleY, spx, spy, sx, sy;
+                        if (w != null) {
+                            pScaleX = w.getPlatformScaleX();
+                            pScaleY = w.getPlatformScaleY();
+                            Screen scr = w.getScreen();
+                            if (scr != null) {
+                                spx = scr.getPlatformX();
+                                spy = scr.getPlatformY();
+                                sx = scr.getX();
+                                sy = scr.getY();
+                            } else {
+                                spx = spy = sx = sy = 0.0;
+                            }
+                        } else {
+                            pScaleX = pScaleY = 1.0;
+                            spx = spy = sx = sy = 0.0;
+                        }
                         scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
                             deltaX / pScaleX, deltaY / pScaleY, 0, 0,
                             xMultiplier, yMultiplier,
                             0, // touchCount
                             chars, lines, defaultChars, defaultLines,
-                            x / pScaleX, y / pScaleY, xAbs / pScaleX, yAbs / pScaleY,
+                            x / pScaleX, y / pScaleY,
+                            sx + (xAbs - spx) / pScaleX,
+                            sy + (yAbs - spy) / pScaleY,
                             (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                             (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                             (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -917,8 +950,23 @@ class GlassViewEventHandler extends View.EventHandler {
                                 throw new RuntimeException("Unknown scroll event type: " + type);
                         }
                         final Window w = view.getWindow();
-                        double pScaleX = (w == null) ? 1.0 : w.getPlatformScaleX();
-                        double pScaleY = (w == null) ? 1.0 : w.getPlatformScaleY();
+                        double pScaleX, pScaleY, spx, spy, sx, sy;
+                        if (w != null) {
+                            pScaleX = w.getPlatformScaleX();
+                            pScaleY = w.getPlatformScaleY();
+                            Screen scr = w.getScreen();
+                            if (scr != null) {
+                                spx = scr.getPlatformX();
+                                spy = scr.getPlatformY();
+                                sx = scr.getX();
+                                sy = scr.getY();
+                            } else {
+                                spx = spy = sx = sy = 0.0;
+                            }
+                        } else {
+                            pScaleX = pScaleY = 1.0;
+                            spx = spy = sx = sy = 0.0;
+                        }
                         scene.sceneListener.scrollEvent(eventType,
                                 dx / pScaleX, dy / pScaleY, totaldx / pScaleX, totaldy / pScaleY,
                                 multiplierX, multiplierY,
@@ -926,8 +974,8 @@ class GlassViewEventHandler extends View.EventHandler {
                                 0, 0, 0, 0,
                                 x == View.GESTURE_NO_VALUE ? Double.NaN : x / pScaleX,
                                 y == View.GESTURE_NO_VALUE ? Double.NaN : y / pScaleY,
-                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs / pScaleX,
-                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs / pScaleY,
+                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : sx + (xAbs - spx) / pScaleX,
+                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : sy + (yAbs - spy) / pScaleY,
                                 (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                                 (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                                 (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -981,14 +1029,29 @@ class GlassViewEventHandler extends View.EventHandler {
                                 throw new RuntimeException("Unknown scroll event type: " + type);
                         }
                         final Window w = view.getWindow();
-                        double pScaleX = (w == null) ? 1.0 : w.getPlatformScaleX();
-                        double pScaleY = (w == null) ? 1.0 : w.getPlatformScaleY();
+                        double pScaleX, pScaleY, spx, spy, sx, sy;
+                        if (w != null) {
+                            pScaleX = w.getPlatformScaleX();
+                            pScaleY = w.getPlatformScaleY();
+                            Screen scr = w.getScreen();
+                            if (scr != null) {
+                                spx = scr.getPlatformX();
+                                spy = scr.getPlatformY();
+                                sx = scr.getX();
+                                sy = scr.getY();
+                            } else {
+                                spx = spy = sx = sy = 0.0;
+                            }
+                        } else {
+                            pScaleX = pScaleY = 1.0;
+                            spx = spy = sx = sy = 0.0;
+                        }
                         // REMIND: Scale the [total]scale params too?
                         scene.sceneListener.zoomEvent(eventType, scale, totalscale,
                                 originx == View.GESTURE_NO_VALUE ? Double.NaN : originx / pScaleX,
                                 originy == View.GESTURE_NO_VALUE ? Double.NaN : originy / pScaleY,
-                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs / pScaleX,
-                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs / pScaleY,
+                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : sx + (originxAbs - spx) / pScaleX,
+                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : sy + (originyAbs - spy) / pScaleY,
                                 (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                                 (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                                 (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -1041,13 +1104,28 @@ class GlassViewEventHandler extends View.EventHandler {
                                 throw new RuntimeException("Unknown scroll event type: " + type);
                         }
                         final Window w = view.getWindow();
-                        double pScaleX = (w == null) ? 1.0 : w.getPlatformScaleX();
-                        double pScaleY = (w == null) ? 1.0 : w.getPlatformScaleY();
+                        double pScaleX, pScaleY, spx, spy, sx, sy;
+                        if (w != null) {
+                            pScaleX = w.getPlatformScaleX();
+                            pScaleY = w.getPlatformScaleY();
+                            Screen scr = w.getScreen();
+                            if (scr != null) {
+                                spx = scr.getPlatformX();
+                                spy = scr.getPlatformY();
+                                sx = scr.getX();
+                                sy = scr.getY();
+                            } else {
+                                spx = spy = sx = sy = 0.0;
+                            }
+                        } else {
+                            pScaleX = pScaleY = 1.0;
+                            spx = spy = sx = sy = 0.0;
+                        }
                         scene.sceneListener.rotateEvent(eventType, dangle, totalangle,
                                 originx == View.GESTURE_NO_VALUE ? Double.NaN : originx / pScaleX,
                                 originy == View.GESTURE_NO_VALUE ? Double.NaN : originy / pScaleY,
-                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : originxAbs / pScaleX,
-                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : originyAbs / pScaleY,
+                                originxAbs == View.GESTURE_NO_VALUE ? Double.NaN : sx + (originxAbs - spx) / pScaleX,
+                                originyAbs == View.GESTURE_NO_VALUE ? Double.NaN : sy + (originyAbs - spy) / pScaleY,
                                 (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                                 (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                                 (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -1102,13 +1180,28 @@ class GlassViewEventHandler extends View.EventHandler {
                                 throw new RuntimeException("Unknown swipe event direction: " + dir);
                         }
                         final Window w = view.getWindow();
-                        double pScaleX = (w == null) ? 1.0 : w.getPlatformScaleX();
-                        double pScaleY = (w == null) ? 1.0 : w.getPlatformScaleY();
+                        double pScaleX, pScaleY, spx, spy, sx, sy;
+                        if (w != null) {
+                            pScaleX = w.getPlatformScaleX();
+                            pScaleY = w.getPlatformScaleY();
+                            Screen scr = w.getScreen();
+                            if (scr != null) {
+                                spx = scr.getPlatformX();
+                                spy = scr.getPlatformY();
+                                sx = scr.getX();
+                                sy = scr.getY();
+                            } else {
+                                spx = spy = sx = sy = 0.0;
+                            }
+                        } else {
+                            pScaleX = pScaleY = 1.0;
+                            spx = spy = sx = sy = 0.0;
+                        }
                         scene.sceneListener.swipeEvent(eventType, touchCount,
                                 x == View.GESTURE_NO_VALUE ? Double.NaN : x / pScaleX,
                                 y == View.GESTURE_NO_VALUE ? Double.NaN : y / pScaleY,
-                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : xAbs / pScaleX,
-                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : yAbs / pScaleY,
+                                xAbs == View.GESTURE_NO_VALUE ? Double.NaN : sx + (xAbs - spx) / pScaleX,
+                                yAbs == View.GESTURE_NO_VALUE ? Double.NaN : sy + (yAbs - spy) / pScaleY,
                                 (modifiers & KeyEvent.MODIFIER_SHIFT) != 0,
                                 (modifiers & KeyEvent.MODIFIER_CONTROL) != 0,
                                 (modifiers & KeyEvent.MODIFIER_ALT) != 0,
@@ -1198,10 +1291,27 @@ class GlassViewEventHandler extends View.EventHandler {
                                 throw new RuntimeException("Unknown touch state: " + type);
                         }
                         final Window w = view.getWindow();
-                        double pScaleX = (w == null) ? 1.0 : w.getPlatformScaleX();
-                        double pScaleY = (w == null) ? 1.0 : w.getPlatformScaleY();
+                        double pScaleX, pScaleY, spx, spy, sx, sy;
+                        if (w != null) {
+                            pScaleX = w.getPlatformScaleX();
+                            pScaleY = w.getPlatformScaleY();
+                            Screen scr = w.getScreen();
+                            if (scr != null) {
+                                spx = scr.getPlatformX();
+                                spy = scr.getPlatformY();
+                                sx = scr.getX();
+                                sy = scr.getY();
+                            } else {
+                                spx = spy = sx = sy = 0.0;
+                            }
+                        } else {
+                            pScaleX = pScaleY = 1.0;
+                            spx = spy = sx = sy = 0.0;
+                        }
                         scene.sceneListener.touchEventNext(state, touchId,
-                                x / pScaleX, y / pScaleY, xAbs / pScaleX, yAbs / pScaleY);
+                                x / pScaleX, y / pScaleY,
+                                sx + (xAbs - spx) / pScaleX,
+                                sy + (yAbs - spy) / pScaleY);
                     }
                     return null;
                 }, scene.getAccessControlContext());

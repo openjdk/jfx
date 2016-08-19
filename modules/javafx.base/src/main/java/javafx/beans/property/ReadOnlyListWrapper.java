@@ -114,6 +114,7 @@ public class ReadOnlyListWrapper<E> extends SimpleListProperty<E> {
     protected void fireValueChangedEvent(Change<? extends E> change) {
         super.fireValueChangedEvent(change);
         if (readOnlyProperty != null) {
+            change.reset();
             readOnlyProperty.fireValueChangedEvent(change);
         }
     }

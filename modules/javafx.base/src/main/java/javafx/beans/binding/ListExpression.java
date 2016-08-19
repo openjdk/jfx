@@ -70,6 +70,7 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
      * {@link javafx.beans.binding.ListBinding} is created that is bound to
      * the {@code ObservableListValue}.
      *
+     * @param <E> the type of the wrapped {@code List}
      * @param value
      *            The source {@code ObservableListValue}
      * @return A {@code ListExpression} that wraps the
@@ -106,6 +107,7 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
 
     /**
      * The size of the list
+     * @return the size
      */
     public int getSize() {
         return size();
@@ -119,6 +121,8 @@ public abstract class ListExpression<E> implements ObservableListValue<E> {
 
     /**
      * A boolean property that is {@code true}, if the list is empty.
+     * @return the {@code ReadOnlyBooleanProperty}
+     *
      */
     public abstract ReadOnlyBooleanProperty emptyProperty();
 

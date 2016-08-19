@@ -227,7 +227,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
 
     /**
      * Notifies all listeners of a change
-     * @param change
+     * @param change an object representing the change that was done
      */
     protected final void fireChange(ListChangeListener.Change<? extends E> change) {
         ListListenerHelper.fireValueChangedEvent(listenerHelper, change);
@@ -235,6 +235,7 @@ public abstract class ObservableListBase<E> extends AbstractList<E>  implements 
 
     /**
      * Returns true if there are some listeners registered for this list.
+     * @return true if there is a listener for this list
      */
     protected final boolean hasListeners() {
         return ListListenerHelper.hasListeners(listenerHelper);

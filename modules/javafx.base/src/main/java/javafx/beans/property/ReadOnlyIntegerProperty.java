@@ -79,6 +79,7 @@ public abstract class ReadOnlyIntegerProperty extends IntegerExpression
      *
      * Note: null values will be interpreted as 0
      *
+     * @param <T> The type of Number to be wrapped
      * @param property
      *            The source {@code ReadOnlyProperty}
      * @return A {@code ReadOnlyIntegerProperty} that wraps the

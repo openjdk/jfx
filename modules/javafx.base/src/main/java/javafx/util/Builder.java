@@ -35,6 +35,8 @@ package javafx.util;
 public interface Builder<T> {
     /**
      * Builds and returns the object.
+     *
+     * @return the object
      */
     public T build();
 }

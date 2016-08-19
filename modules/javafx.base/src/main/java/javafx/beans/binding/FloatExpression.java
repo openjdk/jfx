@@ -132,6 +132,7 @@ public abstract class FloatExpression extends NumberExpressionBase implements
      *
      *  Note: null values will be interpreted as 0f
      *
+     * @param <T> The type of Number to be wrapped
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code FloatExpression} that wraps the

@@ -749,9 +749,13 @@ public class JNLPBundler extends AbstractBundler {
             Boolean needShortcut = SHORTCUT_HINT.fetchFrom(params);
             Boolean needMenu = MENU_HINT.fetchFrom(params);
             Boolean needInstall = INSTALL_HINT.fetchFrom(params);
-            if (Boolean.TRUE.equals(needShortcut) || Boolean.TRUE.equals(needMenu) || Boolean.TRUE.equals(needInstall)) {
+
+            if ((needShortcut != null && Boolean.TRUE.equals(needShortcut)) ||
+                (needMenu != null && Boolean.TRUE.equals(needMenu)) ||
+                (needInstall != null && Boolean.TRUE.equals(needInstall))) {
+
                 xout.writeStartElement("shortcut");
-                if (needInstall != null) {
+                if (Boolean.TRUE.equals(needInstall)) {
                     xout.writeAttribute("installed", needInstall.toString());
                 }
                 if (Boolean.TRUE.equals(needShortcut)) {
@@ -761,6 +765,7 @@ public class JNLPBundler extends AbstractBundler {
                     xout.writeEmptyElement("menu");
                     //todo add submenu element
                 }
+
                 xout.writeEndElement();
             }
 

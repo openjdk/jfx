@@ -123,6 +123,7 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
      * {@link javafx.beans.binding.SetBinding} is created that is bound to
      * the {@code ObservableSetValue}.
      *
+     * @param <E> the type of the {@code Set} elements
      * @param value
      *            The source {@code ObservableSetValue}
      * @return A {@code SetExpression} that wraps the
@@ -159,6 +160,7 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
 
     /**
      * The size of the set
+     * @return the size
      */
     public int getSize() {
         return size();
@@ -172,6 +174,7 @@ public abstract class SetExpression<E> implements ObservableSetValue<E> {
 
     /**
      * A boolean property that is {@code true}, if the set is empty.
+     * @return the {@code ReadOnlyBooleanProperty}
      */
     public abstract ReadOnlyBooleanProperty emptyProperty();
 

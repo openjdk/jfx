@@ -89,6 +89,7 @@ public class FXCollections {
      * <em>not</em> reported to observers of any ObservableList that
      * wraps it.
      *
+     * @param <E> The type of List to be wrapped
      * @param list a concrete List that backs this ObservableList
      * @return a newly created ObservableList
      */
@@ -112,6 +113,7 @@ public class FXCollections {
      * Observable objects returned by extractor (applied to each list element) are listened for changes
      * and transformed into "update" change of ListChangeListener.
      *
+     * @param <E> The type of List to be wrapped
      * @param list a concrete List that backs this ObservableList
      * @param extractor element to Observable[] convertor
      * @since JavaFX 2.1
@@ -131,6 +133,8 @@ public class FXCollections {
      * to observers that have registered on that instance.<br>
      * Note that mutation operations made directly to the underlying map are <em>not</em>
      * reported to observers of any ObservableMap that wraps it.
+     * @param <K> the type of the wrapped key
+     * @param <V> the type of the wrapped value
      * @param map a Map that backs this ObservableMap
      * @return a newly created ObservableMap
      */
@@ -147,6 +151,7 @@ public class FXCollections {
      * to observers that have registered on that instance.<br>
      * Note that mutation operations made directly to the underlying set are <em>not</em>
      * reported to observers of any ObservableSet that wraps it.
+     * @param <E> The type of List to be wrapped
      * @param set a Set that backs this ObservableSet
      * @return a newly created ObservableSet
      * @since JavaFX 2.1
@@ -161,6 +166,7 @@ public class FXCollections {
     /**
      * Constructs an ObservableSet backed by a HashSet
      * that contains all the specified elements.
+     * @param <E> The type of List to be wrapped
      * @param elements elements that will be added into returned ObservableSet
      * @return a newly created ObservableSet
      * @since JavaFX 2.1
@@ -179,6 +185,8 @@ public class FXCollections {
      * mutation operations made to the underlying ObservableMap will be reported
      * to observers that have registered on the unmodifiable instance. This allows
      * clients to track changes in a Map but disallows the ability to modify it.
+     * @param <K> the type of the wrapped key
+     * @param <V> the type of the wrapped value
      * @param map an ObservableMap that is to be monitored by this interface
      * @return a newly created UnmodifiableObservableMap
      */
@@ -191,11 +199,13 @@ public class FXCollections {
 
     /**
      * Creates and returns a typesafe wrapper on top of provided observable map.
+     * @param <K> the type of the wrapped key
+     * @param <V> the type of the wrapped value
      * @param map an Observable map to be wrapped
      * @param keyType the type of key that {@code map} is permitted to hold
      * @param valueType the type of value that {@code map} is permitted to hold
      * @return a dynamically typesafe view of the specified map
-     * @see Collections#checkedMap(java.util.Map, java.lang.Class)
+     * @see Collections#checkedMap(java.util.Map, java.lang.Class, java.lang.Class)
      * @since JavaFX 8.0
      */
     public static <K, V> ObservableMap<K, V> checkedObservableMap(ObservableMap<K, V> map, Class<K> keyType, Class<V> valueType) {
@@ -207,6 +217,8 @@ public class FXCollections {
 
     /**
      * Creates and returns a synchronized wrapper on top of provided observable map.
+     * @param <K> the type of the wrapped key
+     * @param <V> the type of the wrapped value
      * @param  map the map to be "wrapped" in a synchronized map.
      * @return A synchronized version of the observable map
      * @see Collections#synchronizedMap(java.util.Map)
@@ -223,6 +235,8 @@ public class FXCollections {
 
     /**
      * Creates and empty unmodifiable observable map.
+     * @param <K> the type of the wrapped key
+     * @param <V> the type of the wrapped value
      * @return An empty unmodifiable observable map
      * @see Collections#emptyMap()
      * @since JavaFX 8.0
@@ -295,6 +309,7 @@ public class FXCollections {
     /**
      * Creates a new empty observable list that is backed by an arraylist.
      * @see #observableList(java.util.List)
+     * @param <E> The type of List to be wrapped
      * @return a newly created ObservableList
      */
     @SuppressWarnings("unchecked")
@@ -306,6 +321,7 @@ public class FXCollections {
      * Creates a new empty observable list backed by an arraylist.
      *
      * This list reports element updates.
+     * @param <E> The type of List to be wrapped
      * @param extractor element to Observable[] convertor. Observable objects are listened for changes on the element.
      * @see #observableList(java.util.List, javafx.util.Callback)
      * @since JavaFX 2.1
@@ -317,8 +333,9 @@ public class FXCollections {
 
     /**
      * Creates a new observable array list with {@code items} added to it.
-     * @return a newly created observableArrayList
+     * @param <E> The type of List to be wrapped
      * @param items the items that will be in the new observable ArrayList
+     * @return a newly created observableArrayList
      * @see #observableArrayList()
      */
     public static <E> ObservableList<E> observableArrayList(E... items) {
@@ -330,6 +347,7 @@ public class FXCollections {
     /**
      * Creates a new observable array list and adds a content of collection {@code col}
      * to it.
+     * @param <E> The type of List to be wrapped
      * @param col a collection which content should be added to the observableArrayList
      * @return a newly created observableArrayList
      */
@@ -341,8 +359,8 @@ public class FXCollections {
 
     /**
      * Creates a new empty observable map that is backed by a HashMap.
-     * @param <K> the type of keys
-     * @param <V> the type of values
+     * @param <K> the type of the wrapped key
+     * @param <V> the type of the wrapped value
      * @return a newly created observable HashMap
      */
     public static <K,V> ObservableMap<K,V> observableHashMap() {
@@ -352,6 +370,7 @@ public class FXCollections {
     /**
      * Concatenates more observable lists into one. The resulting list
      * would be backed by an arraylist.
+     * @param <E> The type of List to be wrapped
      * @param lists lists to concatenate
      * @return new observable array list concatenated from the arguments
      */
@@ -373,6 +392,7 @@ public class FXCollections {
     /**
      * Creates and returns unmodifiable wrapper list on top of provided observable list.
      * @param list  an ObservableList that is to be wrapped
+     * @param <E> The type of List to be wrapped
      * @return an ObserableList wrapper that is unmodifiable
      * @see Collections#unmodifiableList(java.util.List)
      */
@@ -385,6 +405,7 @@ public class FXCollections {
 
     /**
      * Creates and returns a typesafe wrapper on top of provided observable list.
+     * @param <E> The type of List to be wrapped
      * @param list  an Observable list to be wrapped
      * @param type   the type of element that <tt>list</tt> is permitted to hold
      * @return a dynamically typesafe view of the specified list
@@ -399,6 +420,7 @@ public class FXCollections {
 
     /**
      * Creates and returns a synchronized wrapper on top of provided observable list.
+     * @param <E> The type of List to be wrapped
      * @param  list the list to be "wrapped" in a synchronized list.
      * @return A synchronized version of the observable list
      * @see Collections#synchronizedList(java.util.List)
@@ -415,6 +437,7 @@ public class FXCollections {
 
     /**
      * Creates and empty unmodifiable observable list.
+     * @param <E> The type of List to be wrapped
      * @return An empty unmodifiable observable list
      * @see Collections#emptyList()
      */
@@ -425,6 +448,7 @@ public class FXCollections {
 
     /**
      * Creates an unmodifiable observable list with single element.
+     * @param <E> The type of List to be wrapped
      * @param e the only elements that will be contained in this singleton observable list
      * @return a singleton observable list
      * @see Collections#singletonList(java.lang.Object)
@@ -435,6 +459,7 @@ public class FXCollections {
 
     /**
      * Creates and returns unmodifiable wrapper on top of provided observable set.
+     * @param <E> The type of List to be wrapped
      * @param set an ObservableSet that is to be wrapped
      * @return an ObserableSet wrapper that is unmodifiable
      * @see Collections#unmodifiableSet(java.util.Set)
@@ -449,6 +474,7 @@ public class FXCollections {
 
     /**
      * Creates and returns a typesafe wrapper on top of provided observable set.
+     * @param <E> The type of List to be wrapped
      * @param set an Observable set to be wrapped
      * @param type  the type of element that <tt>set</tt> is permitted to hold
      * @return a dynamically typesafe view of the specified set
@@ -464,6 +490,7 @@ public class FXCollections {
 
     /**
      * Creates and returns a synchronized wrapper on top of provided observable set.
+     * @param <E> The type of List to be wrapped
      * @param  set the set to be "wrapped" in a synchronized set.
      * @return A synchronized version of the observable set
      * @see Collections#synchronizedSet(java.util.Set)
@@ -480,6 +507,7 @@ public class FXCollections {
 
     /**
      * Creates and empty unmodifiable observable set.
+     * @param <E> The type of List to be wrapped
      * @return An empty unmodifiable observable set
      * @see Collections#emptySet()
      * @since JavaFX 8.0
@@ -491,6 +519,7 @@ public class FXCollections {
 
     /**
      * Copies elements from src to dest. Fires only <b>one</b> change notification on dest.
+     * @param <T> The type of List to be wrapped
      * @param dest the destination observable list
      * @param src the source list
      * @see Collections#copy(java.util.List, java.util.List)
@@ -508,6 +537,7 @@ public class FXCollections {
 
     /**
      * Fills the provided list with obj. Fires only <b>one</b> change notification on the list.
+     * @param <T> The type of List to be wrapped
      * @param list the list to fill
      * @param obj the object to fill the list with
      * @see Collections#fill(java.util.List, java.lang.Object)
@@ -522,6 +552,7 @@ public class FXCollections {
     /**
      * Replace all oldVal elements in the list with newVal element.
      * Fires only <b>one</b> change notification on the list.
+     * @param <T> The type of List to be wrapped
      * @param list the list which will have it's elements replaced
      * @param oldVal the element that is going to be replace
      * @param newVal the replacement
@@ -637,6 +668,8 @@ public class FXCollections {
     /**
      * Sorts the provided observable list.
      * Fires only <b>one</b> change notification on the list.
+     * @param <T> The type of List to be wrapped
+     * @param list the list to be sorted
      * @see Collections#sort(java.util.List)
      */
     @SuppressWarnings("unchecked")
@@ -653,6 +686,7 @@ public class FXCollections {
     /**
      * Sorts the provided observable list using the c comparator.
      * Fires only <b>one</b> change notification on the list.
+     * @param <T> The type of List to be wrapped
      * @param list the list to sort
      * @param c comparator used for sorting. Null if natural ordering is required.
      * @see Collections#sort(java.util.List, java.util.Comparator)

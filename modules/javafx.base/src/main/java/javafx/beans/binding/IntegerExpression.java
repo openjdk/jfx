@@ -132,6 +132,7 @@ public abstract class IntegerExpression extends NumberExpressionBase implements
      *
      * Note: null values will be interpreted as 0
      *
+     * @param <T> The type of Number to be wrapped
      * @param value
      *            The source {@code ObservableValue}
      * @return A {@code IntegerExpression} that wraps the

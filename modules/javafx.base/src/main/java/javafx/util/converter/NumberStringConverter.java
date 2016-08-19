@@ -114,6 +114,9 @@ public class NumberStringConverter extends StringConverter<Number> {
     /**
      * <p>Return a <code>NumberFormat</code> instance to use for formatting
      * and parsing in this {@link StringConverter}.</p>
+     *
+     * @return a {@code NumberFormat} instance for formatting and parsing in this
+     * {@link StringConverter}
      */
     protected NumberFormat getNumberFormat() {
         Locale _locale = locale == null ? Locale.getDefault() : locale;

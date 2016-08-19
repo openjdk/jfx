@@ -33,83 +33,35 @@ import javafx.scene.image.Image;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
+import org.junit.Rule;
 import org.junit.Test;
-
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertNotNull;
 
 public class SWTCursorsTest {
 
-    @Test(timeout=10000)
+    @Rule
+    public SwtRule ctx = new SwtRule();
+
+    @Test(timeout = 10000)
     public void testImageCursor() throws Throwable {
-        // create display on first thread (required when using SWT on Mac OS X)
-        final Display display = new Display();
-        final Shell shell = new Shell(display);
+        final Shell shell = new Shell(Display.getCurrent());
         final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
         shell.open();
 
-        // keep track of exceptions thrown in UI thread
-        final AtomicReference<Throwable> throwableRef = new AtomicReference<>();
+        // create and hook scene
+        Scene scene = new Scene(new Group());
+        canvas.setScene(scene);
 
-        final CountDownLatch latch = new CountDownLatch(2);
-        display.asyncExec(() -> {
-            try {
-                // create and hook scene
-                Scene scene = new Scene(new Group());
-                canvas.setScene(scene);
+        // set image cursor to scene
+        Image cursorImage = new Image("test/javafx/embed/swt/cursor.png");
+        scene.setCursor(new ImageCursor(cursorImage));
 
-                // set image cursor to scene
-                Image cursorImage = new Image("test/javafx/embed/swt/cursor.png");
-                scene.setCursor(new ImageCursor(cursorImage));
+        Display.getCurrent().asyncExec(() -> {
+            assertNotNull(canvas.getCursor());
 
-            } catch (Throwable throwable) {
-                throwableRef.set(throwable);
-            } finally {
-                latch.countDown();
-            }
+            // FIXME: We cannot close the shell here because of https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066.
+            //shell.close();
         });
-
-        while (latch.getCount() > 1) {
-            // run SWT event loop
-            if (!display.readAndDispatch()) {
-                display.sleep();
-            }
-        }
-
-        rethrow(throwableRef);
-
-        // ensure at least one pulse has passed before asserting the cursor is set,
-        // as the scene property synchronization is triggered by the pulse listener
-        display.asyncExec(() -> {
-            try {
-                assertNotNull(canvas.getCursor());
-            } catch (Throwable throwable) {
-                throwableRef.set(throwable);
-            } finally {
-                latch.countDown();
-            }
-        });
-
-        while (latch.getCount() > 0) {
-            // run SWT event loop (again)
-            if (!display.readAndDispatch()) {
-                display.sleep();
-            }
-        }
-
-        shell.close();
-        shell.dispose();
-        display.dispose();
-
-        rethrow(throwableRef);
-    }
-
-    private void rethrow(AtomicReference<Throwable> throwableRef) throws Throwable {
-        Throwable thrown = throwableRef.get();
-        if (thrown != null) {
-            throw thrown;
-        }
     }
 }

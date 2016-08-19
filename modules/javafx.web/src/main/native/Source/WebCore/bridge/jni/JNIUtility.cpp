@@ -133,7 +133,7 @@ jmethodID getMethodID(jobject obj, const char* name, const char* sig)
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::getMethodID", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::getMethodID", (jobject)jlinstance);
         return mid;
     }
 
@@ -324,7 +324,7 @@ jvalue getJNIField(jobject obj, JavaType type, const char* name, const char* sig
     JLObject jlinstance(obj, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::getJNIField", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::getJNIField", (jobject)jlinstance);
         return result;
     }
 
@@ -389,7 +389,7 @@ jvalue callJNIMethod(jobject object, JavaType returnType, const char* name, cons
     JLObject jlinstance(object, true);
 
     if (!jlinstance) {
-        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethod", jlinstance);
+        LOG_ERROR("Could not get javaInstance for %p in JNIUtility::callJNIMethod", (jobject)jlinstance);
         return result;
     }
 

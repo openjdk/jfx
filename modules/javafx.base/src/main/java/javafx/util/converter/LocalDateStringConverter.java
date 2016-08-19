@@ -88,7 +88,7 @@ public class LocalDateStringConverter extends StringConverter<LocalDate> {
      * <blockquote><pre>
      * String pattern = "yyyy-MM-dd";
      * DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
-     * StringConverter<LocalDate> converter =
+     * StringConverter&lt;LocalDate&gt; converter =
      *     DateTimeStringConverter.getLocalDateStringConverter(formatter, null);
      * </pre></blockquote>
      *

@@ -355,7 +355,7 @@ public class Duration implements Comparable<Duration>, Serializable {
      * INDEFINITE is treated as if it were positive infinity.
      *
      * @param other cannot be null
-     * @return true if millis < other.millis using double arithmetic
+     * @return true if millis &lt; other.millis using double arithmetic
      */
     public boolean lessThan(Duration other) {
         return millis < other.millis;
@@ -366,7 +366,7 @@ public class Duration implements Comparable<Duration>, Serializable {
      * INDEFINITE is treated as if it were positive infinity.
      *
      * @param other cannot be null
-     * @return true if millis <= other.millis using double arithmetic
+     * @return true if millis &lt;= other.millis using double arithmetic
      */
     public boolean lessThanOrEqualTo(Duration other) {
         return millis <= other.millis;
@@ -377,7 +377,7 @@ public class Duration implements Comparable<Duration>, Serializable {
      * INDEFINITE is treated as if it were positive infinity.
      *
      * @param other cannot be null
-     * @return true if millis > other.millis using double arithmetic
+     * @return true if millis &gt; other.millis using double arithmetic
      */
     public boolean greaterThan(Duration other) {
         return millis > other.millis;
@@ -388,7 +388,7 @@ public class Duration implements Comparable<Duration>, Serializable {
      * INDEFINITE is treated as if it were positive infinity.
      *
      * @param other cannot be null
-     * @return true if millis >= other.millis using double arithmetic
+     * @return true if millis &gt;= other.millis using double arithmetic
      */
     public boolean greaterThanOrEqualTo(Duration other) {
         return millis >= other.millis;

@@ -49,7 +49,6 @@ import org.apache.tools.ant.types.DataType;
 public final class Callback extends DataType {
     private String name;
     private String cmd;
-    private boolean isText;
 
     public Callback() {
     }

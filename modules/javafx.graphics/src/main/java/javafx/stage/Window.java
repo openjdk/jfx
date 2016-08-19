@@ -519,11 +519,13 @@ public class Window implements EventTarget {
 
     private boolean xExplicit = false;
     /**
-     * The horizontal location of this {@code Stage} on the screen. Changing
-     * this attribute will move the {@code Stage} horizontally. Changing this
-     * attribute will not visually affect a {@code Stage} while
-     * {@code fullScreen} is true, but will be honored by the {@code Stage} once
-     * {@code fullScreen} becomes false.
+     * The horizontal location of this {@code Window} on the screen. Changing
+     * this attribute will move the {@code Window} horizontally. If this
+     * {@code Window} is an instance of {@code Stage}, changing this attribute
+     * will not visually affect the {@code Window} while
+     * {@link Stage#fullScreenProperty fullScreen} is true, but will be honored
+     * by the {@code Window} once {@link Stage#fullScreenProperty fullScreen}
+     * becomes false.
      */
     private ReadOnlyDoubleWrapper x =
             new ReadOnlyDoubleWrapper(this, "x", Double.NaN);
@@ -542,11 +544,13 @@ public class Window implements EventTarget {
 
     private boolean yExplicit = false;
     /**
-     * The vertical location of this {@code Stage} on the screen. Changing this
-     * attribute will move the {@code Stage} vertically. Changing this
-     * attribute will not visually affect a {@code Stage} while
-     * {@code fullScreen} is true, but will be honored by the {@code Stage} once
-     * {@code fullScreen} becomes false.
+     * The vertical location of this {@code Window} on the screen. Changing this
+     * attribute will move the {@code Window} vertically. If this
+     * {@code Window} is an instance of {@code Stage}, changing this attribute
+     * will not visually affect the {@code Window} while
+     * {@link Stage#fullScreenProperty fullScreen} is true, but will be honored
+     * by the {@code Window} once {@link Stage#fullScreenProperty fullScreen}
+     * becomes false.
      */
     private ReadOnlyDoubleWrapper y =
             new ReadOnlyDoubleWrapper(this, "y", Double.NaN);
@@ -578,14 +582,18 @@ public class Window implements EventTarget {
     private boolean widthExplicit = false;
 
     /**
-     * The width of this {@code Stage}. Changing this attribute will narrow or
-     * widen the width of the {@code Stage}. Changing this
-     * attribute will not visually affect a {@code Stage} while
-     * {@code fullScreen} is true, but will be honored by the {@code Stage} once
-     * {@code fullScreen} becomes false. This value includes any and all
+     * The width of this {@code Window}. Changing this attribute will narrow or
+     * widen the width of the {@code Window}. This value includes any and all
      * decorations which may be added by the Operating System such as resizable
-     * frame handles. Typical applications will set the {@link javafx.scene.Scene} width
-     * instead.
+     * frame handles. Typical applications will set the {@link javafx.scene.Scene}
+     * width instead. This {@code Window} will take its width from the scene if
+     * it has never been set by the application. Resizing the window by end user
+     * does not count as a setting the width by the application. If this
+     * {@code Window} is an instance of {@code Stage}, changing this attribute
+     * will not visually affect the {@code Window} while
+     * {@link Stage#fullScreenProperty fullScreen} is true, but will be honored
+     * by the {@code Window} once {@link Stage#fullScreenProperty fullScreen}
+     * becomes false.
      * <p>
      * The property is read only because it can be changed externally
      * by the underlying platform and therefore must not be bindable.
@@ -604,13 +612,18 @@ public class Window implements EventTarget {
 
     private boolean heightExplicit = false;
     /**
-     * The height of this {@code Stage}. Changing this attribute will shrink
-     * or heighten the height of the {@code Stage}. Changing this
-     * attribute will not visually affect a {@code Stage} while
-     * {@code fullScreen} is true, but will be honored by the {@code Stage} once
-     * {@code fullScreen} becomes false. This value includes any and all
+     * The height of this {@code Window}. Changing this attribute will shrink
+     * or heighten the height of the {@code Window}. This value includes any and all
      * decorations which may be added by the Operating System such as the title
-     * bar. Typical applications will set the {@link javafx.scene.Scene} height instead.
+     * bar. Typical applications will set the {@link javafx.scene.Scene} height
+     * instead. This window will take its height from the scene if it has never
+     * been set by the application. Resizing this window by end user does not
+     * count as a setting the height by the application.  If this
+     * {@code Window} is an instance of {@code Stage}, changing this attribute
+     * will not visually affect the {@code Window} while
+     * {@link Stage#fullScreenProperty fullScreen} is true, but will be honored
+     * by the {@code Window} once {@link Stage#fullScreenProperty fullScreen}
+     * becomes false.
      * <p>
      * The property is read only because it can be changed externally
      * by the underlying platform and therefore must not be bindable.
@@ -742,12 +755,17 @@ public class Window implements EventTarget {
     }
 
     /**
-     * The {@code Scene} to be rendered on this {@code Stage}. There can only
-     * be one {@code Scene} on the {@code Stage} at a time, and a {@code Scene}
-     * can only be on one {@code Stage} at a time. Setting a {@code Scene} on
-     * a different {@code Stage} will cause the old {@code Stage} to lose the
+     * The {@code Scene} to be rendered on this {@code Window}. There can only
+     * be one {@code Scene} on the {@code Window} at a time, and a {@code Scene}
+     * can only be on one {@code Window} at a time. Setting a {@code Scene} on
+     * a different {@code Window} will cause the old {@code Window} to lose the
      * reference before the new one gains it. You may swap {@code Scene}s on
-     * a {@code Stage} at any time, even while in full-screen exclusive mode.
+     * a {@code Window} at any time, even if it is an instance of {@code Stage}
+     * and with {@link Stage#fullScreenProperty fullScreen} set to true.
+     * If the width or height of this {@code Window} have never been set by the
+     * application, setting the scene will cause this {@code Window} to take its
+     * width or height from that scene.  Resizing this window by end user does
+     * not count as setting the width or height by the application.
      *
      * An {@link IllegalStateException} is thrown if this property is set
      * on a thread other than the JavaFX Application Thread.
@@ -827,12 +845,12 @@ public class Window implements EventTarget {
     }
 
     /**
-     * Defines the opacity of the {@code Stage} as a value between 0.0 and 1.0.
-     * The opacity is reflected across the {@code Stage}, its {@code Decoration}
+     * Defines the opacity of the {@code Window} as a value between 0.0 and 1.0.
+     * The opacity is reflected across the {@code Window}, its {@code Decoration}
      * and its {@code Scene} content. On a JavaFX runtime platform that does not
      * support opacity, assigning a value to this variable will have no
-     * visible difference. A {@code Stage} with 0% opacity is fully translucent.
-     * Typically, a {@code Stage} with 0% opacity will not receive any mouse
+     * visible difference. A {@code Window} with 0% opacity is fully translucent.
+     * Typically, a {@code Window} with 0% opacity will not receive any mouse
      * events.
      *
      * @defaultValue 1.0
@@ -1026,10 +1044,10 @@ public class Window implements EventTarget {
     }
 
     /**
-     * Whether or not this {@code Stage} is showing (that is, open on the
-     * user's system). The Stage might be "showing", yet the user might not
-     * be able to see it due to the Stage being rendered behind another window
-     * or due to the Stage being positioned off the monitor.
+     * Whether or not this {@code Window} is showing (that is, open on the
+     * user's system). The Window might be "showing", yet the user might not
+     * be able to see it due to the Window being rendered behind another Window
+     * or due to the Window being positioned off the monitor.
      *
      * @defaultValue false
      */

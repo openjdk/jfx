@@ -278,7 +278,9 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         }
 
         if (callbacks != null) {
-            deployParams.setCallbacks(callbacks.callbacks);
+            for (Callback cb: callbacks.callbacks) {
+                deployParams.addCallback(cb.getName(), cb.getCmd());
+            }
         }
 
         if (prefs != null) {

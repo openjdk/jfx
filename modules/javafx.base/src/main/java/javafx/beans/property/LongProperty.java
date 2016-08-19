@@ -111,7 +111,7 @@ public abstract class LongProperty extends ReadOnlyLongProperty implements
      * Changing this property will result in a change of the original property.
      *
      * <p>
-     * This is very useful when bidirectionally binding an ObjectProperty<Long> and
+     * This is very useful when bidirectionally binding an ObjectProperty&lt;Long&gt; and
      * a LongProperty.
      *
      * <blockquote><pre>

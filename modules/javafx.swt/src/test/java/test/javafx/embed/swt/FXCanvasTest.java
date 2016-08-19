@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,21 +22,39 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package javafx.collections;
 
-/**
- * Interface that receives notifications of changes to an ObservableArray.
- * @since JavaFX 8.0
- */
-public interface ArrayChangeListener<T extends ObservableArray<T>> {
+package test.javafx.embed.swt;
 
-    /**
-     * Called after a change has been made to an ObservableArray.
-     *
-     * @param observableArray the array that changed
-     * @param sizeChanged indicates size of array changed
-     * @param from A beginning (inclusive) of an interval related to the change
-     * @param to An end (exclusive) of an interval related to the change.
-     */
-    public void onChanged(T observableArray, boolean sizeChanged, int from, int to);
+import javafx.embed.swt.FXCanvas;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.junit.Rule;
+import org.junit.Test;
+
+import static org.junit.Assert.assertSame;
+
+public class FXCanvasTest {
+
+    @Rule
+    public SwtRule ctx = new SwtRule();
+
+    @Test(timeout = 10000)
+    public void getFXCanvas() throws Throwable {
+        final Shell shell = new Shell(Display.getCurrent());
+        final FXCanvas canvas = new FXCanvas(shell, SWT.NONE);
+        shell.open();
+
+        // create and hook scene
+        Scene scene = new Scene(new Group());
+        canvas.setScene(scene);
+
+        // check FXCanvas is properly retrieved
+        assertSame(canvas, FXCanvas.getFXCanvas(canvas.getScene()));
+
+        // FIXME: We cannot close the shell here because of https://bugs.eclipse.org/bugs/show_bug.cgi?id=435066.
+        // shell.close();
+    }
 }
