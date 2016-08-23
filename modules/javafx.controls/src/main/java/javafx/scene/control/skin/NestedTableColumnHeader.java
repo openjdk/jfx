@@ -290,16 +290,15 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
         // children columns need to share the total available width
         double x = snappedLeftInset();
-        int pos = 0;
+        final double height = snapSizeY(h - labelHeight);
         for (int i = 0, max = getColumnHeaders().size(); i < max; i++) {
             TableColumnHeader n = getColumnHeaders().get(i);
             if (! n.isVisible()) continue;
 
-            double prefWidth = snapSizeX(n.prefWidth(-1));
-//            double prefHeight = n.prefHeight(-1);
+            double prefWidth = n.prefWidth(height);
 
             // position the column header in the default location...
-            n.resize(prefWidth, snapSizeY(h - labelHeight));
+            n.resize(prefWidth, height);
             n.relocate(x, labelHeight + snappedTopInset());
 
 //            // ...but, if there are no children of this column, we should ensure
@@ -333,7 +332,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (getColumns() != null) {
             for (TableColumnHeader c : getColumnHeaders()) {
                 if (c.isVisible()) {
-                    width += snapSizeX(c.computePrefWidth(height));
+                    width += c.computePrefWidth(height);
                 }
             }
         }

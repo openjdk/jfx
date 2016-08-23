@@ -362,7 +362,7 @@ public abstract class TableRowSkinBase<T,
                     getChildren().add(tableCell);
                 }
 
-                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
+                width = tableCell.prefWidth(height) - snapSize(horizontalPadding);
 
                 // Added for RT-32700, and then updated for RT-34074.
                 // We change the alignment from CENTER_LEFT to TOP_LEFT if the
