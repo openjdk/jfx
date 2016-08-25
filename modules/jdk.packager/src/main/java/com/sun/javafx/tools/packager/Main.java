@@ -26,9 +26,9 @@
 package com.sun.javafx.tools.packager;
 
 import com.oracle.tools.packager.*;
-import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.UnsupportedPlatformException;
+import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -267,22 +267,14 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-vendor")) {
                             deployParams.setVendor(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-native")) {
-                            //if no argument is provided we will treat it as ALL
-                            // for compatibility with FX 2.2
-                            BundleType type = BundleType.ALL;
+                            BundleType type = BundleType.NONE;
                             String format = null; //null means ANY
                             if (i+1 < args.length && !args[i+1].startsWith("-")) {
                                 String v = args[++i];
-                                //parsing logic is the same as in DeployFXTask
-                                if ("image".equals(v)) {
-                                    type = BundleType.IMAGE;
-                                } else if ("installer".equals(v)) {
-                                    type = BundleType.INSTALLER;
-                                } else {
-                                    //assume it is request to build only specific format
-                                    // (like exe or msi)
-                                    format = (v != null) ? v.toLowerCase() : null;
-                                }
+                                com.sun.javafx.tools.packager.bundlers.Bundler.Bundle bundle =
+                                        com.sun.javafx.tools.packager.bundlers.Bundler.stringToBundle(v);
+                                type = bundle.type;
+                                format = bundle.format;
                             }
                             deployParams.setBundleType(type);
                             deployParams.setTargetFormat(format);
@@ -481,6 +473,7 @@ public class Main {
                     packager.packageAsJar(createJarParams);
                 }
                 if (genJNLP) {
+                    deployParams.setBundleType(BundleType.JNLP);
                     deployParams.validate();
                     packager.generateDeploymentPackages(deployParams);
                 }

@@ -132,20 +132,6 @@ public class Platform extends DataType {
 
     public final static String USE_SYSTEM_JRE = "";
 
-    public void setBasedir(String v) {
-        if (v.trim().isEmpty()) {
-            //special case: request to use system runtime
-            javaRoot = USE_SYSTEM_JRE;
-        } else {
-            File f = new File(v);
-            if (!f.exists()) {
-                throw new BuildException(
-                        "Specified JDK location do not exist: " + v);
-            }
-            javaRoot = f.getAbsolutePath();
-        }
-    }
-
     public Property createProperty() {
         Property t = new Property();
         properties.add(t);
