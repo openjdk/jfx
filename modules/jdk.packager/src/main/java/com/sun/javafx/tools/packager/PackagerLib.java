@@ -314,18 +314,19 @@ public class PackagerLib {
 
         try {
             BundleParams bp = deployParams.getBundleParams();
-            if (bp != null && deployParams.getTargetFormat() == null) {
+
+            if (bp != null) {
                 switch(deployParams.getBundleType()) {
                     case NATIVE: {
                         // Generate disk images.
-                        generateNativeBundles(new File(deployParams.outdir, "bundles"),
+                        generateNativeBundles(deployParams.outdir,
                                               bp.getBundleParamsAsMap(),
                                               BundleType.IMAGE.toString(),
                                               deployParams.getTargetFormat());
 
                         //TODO generate installers referencing disk image
                         // For now just generate all images.
-                        generateNativeBundles(new File(deployParams.outdir, "bundles"),
+                        generateNativeBundles(deployParams.outdir,
                                               bp.getBundleParamsAsMap(),
                                               BundleType.INSTALLER.toString(),
                                               deployParams.getTargetFormat());
@@ -334,7 +335,7 @@ public class PackagerLib {
 
                     case JNLP:
                     case NONE: {
-                        // Old school default.  Just generate JNLP.
+                        // Old school default. Just generate JNLP.
                         generateNativeBundles(deployParams.outdir,
                                               bp.getBundleParamsAsMap(),
                                               BundleType.JNLP.toString(),
@@ -360,10 +361,7 @@ public class PackagerLib {
     }
 
     private void generateNativeBundles(File outdir, Map<String, ? super Object> params, String bundleType, String bundleFormat) throws PackagerException {
-        //FIXME //TODO check for system JRE
-
         for (com.oracle.tools.packager.Bundler bundler : Bundlers.createBundlersInstance().getBundlers(bundleType)) {
-
             // if they specify the bundle format, require we match the ID
             if (bundleFormat != null && !bundleFormat.equalsIgnoreCase(bundler.getID())) continue;
 
@@ -375,7 +373,6 @@ public class PackagerLib {
                         throw new PackagerException("MSG_BundlerFailed", bundler.getID(), bundler.getName());
                     }
                 }
-
             } catch (UnsupportedPlatformException e) {
                 com.oracle.tools.packager.Log.debug(MessageFormat.format(bundle.getString("MSG_BundlerPlatformException"), bundler.getName()));
             } catch (ConfigException e) {
@@ -503,8 +500,6 @@ public class PackagerLib {
         FileOutputStream fos = new FileOutputStream(signedJar);
         signature.signJarAsBLOB(in, new ZipOutputStream(fos));
     }
-
-
 
     public void makeAll(MakeAllParams makeAllParams) throws PackagerException {
         final String exe = (Platform.getPlatform() == Platform.WINDOWS) ? ".exe" : "";
@@ -808,7 +803,6 @@ public class PackagerLib {
         }
     }
 
-
     private void createBinaryCss(List<PackagerResource> cssResources, File outdir)
             throws PackagerException {
         for (PackagerResource cssRes: cssResources) {
@@ -968,5 +962,4 @@ public class PackagerLib {
         }
         return dir.delete();
     }
-
 }

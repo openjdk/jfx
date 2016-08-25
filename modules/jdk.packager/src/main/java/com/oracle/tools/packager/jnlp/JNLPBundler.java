@@ -72,6 +72,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import jdk.packager.internal.JLinkBundlerHelper;
 
 
 public class JNLPBundler extends AbstractBundler {

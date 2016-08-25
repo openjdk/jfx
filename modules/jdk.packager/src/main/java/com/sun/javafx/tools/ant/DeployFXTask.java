@@ -39,6 +39,8 @@ import com.sun.javafx.tools.packager.DeployParams;
 import com.oracle.tools.packager.Log;
 import com.sun.javafx.tools.packager.PackagerException;
 import com.sun.javafx.tools.packager.PackagerLib;
+import com.sun.javafx.tools.packager.bundlers.Bundler;
+import com.sun.javafx.tools.packager.bundlers.Bundler.Bundle;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.DynamicAttribute;
@@ -142,157 +144,169 @@ public class DeployFXTask extends Task implements DynamicAttribute {
 
     @Override
     public void execute() {
+        boolean isModular = (app.getModule() != null) && !app.getModule().isEmpty();
         deployParams.setOutfile(outfile);
         deployParams.setOutdir(new File(outdir));
-        deployParams.setOfflineAllowed(offlineAllowed);
-        deployParams.setVerbose(verbose);
-        deployParams.setCodebase(codebase);
-        deployParams.setSignBundle(signBundle);
 
-        if (width != null) {
-            deployParams.setWidth(Integer.valueOf(width));
-        }
+        if (!isModular &&
+            (nativeBundles == BundleType.JNLP ||
+             nativeBundles == BundleType.ALL)) {
+            deployParams.setOfflineAllowed(offlineAllowed);
+            deployParams.setVerbose(verbose);
+            deployParams.setCodebase(codebase);
+            deployParams.setSignBundle(signBundle);
 
-        if (height != null) {
-            deployParams.setHeight(Integer.valueOf(height));
-        }
-
-        if (embeddedWidth != null && embeddedHeight != null) {
-            deployParams.setEmbeddedDimensions(embeddedWidth, embeddedHeight);
-        }
-
-        deployParams.setEmbedJNLP(embedJNLP);
-        if (perms != null) {
-           deployParams.setAllPermissions(perms.getElevated());
-        }
-
-        if (app != null) {
-            if (app.getModule() == null) {
-                deployParams.setApplicationClass(app.get().mainClass);
+            if (width != null) {
+                deployParams.setWidth(Integer.valueOf(width));
             }
-            else {
-                nativeBundles = BundleType.NATIVE;
-                int index = app.getModule().indexOf("/");
 
-                if (index > 0) {
-                    deployParams.setModule(app.getModule());
+            if (height != null) {
+                deployParams.setHeight(Integer.valueOf(height));
+            }
+
+            if (embeddedWidth != null && embeddedHeight != null) {
+                deployParams.setEmbeddedDimensions(embeddedWidth, embeddedHeight);
+            }
+
+            deployParams.setEmbedJNLP(embedJNLP);
+            if (perms != null) {
+               deployParams.setAllPermissions(perms.getElevated());
+            }
+
+            deployParams.setUpdateMode(updateMode);
+            deployParams.setExtension(isExtension);
+            deployParams.setIncludeDT(includeDT);
+
+            if (platform != null) {
+                Platform pl = platform.get();
+                if (pl.j2se != null) {
+                    deployParams.setJRE(pl.j2se);
+                }
+                if (pl.javafx != null) {
+                    deployParams.setJavafx(pl.javafx);
+                }
+
+                //only pass it further if it was explicitly set
+                // as we do not want to override default
+                if (pl.javaRoot != null) {
+                    if (Platform.USE_SYSTEM_JRE.equals(pl.javaRoot)) {
+                        deployParams.setJavaRuntimeSource(null);
+                    } else {
+                        deployParams.setJavaRuntimeSource(new File(pl.javaRoot));
+                    }
+                }
+
+                for (Property p: pl.properties) {
+                    deployParams.addJvmProperty(p.name, p.value);
+                }
+                for (Jvmarg a: pl.jvmargs) {
+                    deployParams.addJvmArg(a.value);
+                }
+                for (Property a: pl.jvmUserArgs) {
+                    deployParams.addJvmUserArg(a.name, a.value);
+                }
+            }
+
+            if (callbacks != null) {
+                for (Callback cb: callbacks.callbacks) {
+                    deployParams.addCallback(cb.getName(), cb.getCmd());
+                }
+            }
+
+            if (prefs != null) {
+                deployParams.setNeedShortcut(prefs.getShortcut());
+                deployParams.setNeedInstall(prefs.getInstall());
+                deployParams.setNeedMenu(prefs.getMenu());
+                deployParams.setSystemWide(prefs.getSystemInstall());
+                deployParams.setInstalldirChooser(prefs.getInstalldirChooser());
+            }
+
+            for (Template t: templateList) {
+                deployParams.addTemplate(t.infile, t.outfile);
+            }
+        }
+
+        if (isModular &&
+            (nativeBundles == BundleType.NATIVE ||
+             nativeBundles == BundleType.IMAGE ||
+             nativeBundles == BundleType.INSTALLER ||
+             nativeBundles == BundleType.ALL)) {
+            if (app != null) {
+                if (app.getModule() == null) {
+                    deployParams.setApplicationClass(app.get().mainClass);
                 }
                 else {
-                    deployParams.setModule(app.getModule() + "/" + app.get().mainClass);
+                    int index = app.getModule().indexOf("/");
+
+                    if (index > 0) {
+                        deployParams.setModule(app.getModule());
+                    }
+                    else {
+                        deployParams.setModule(app.getModule() + "/" + app.get().mainClass);
+                    }
+                }
+
+                deployParams.setPreloader(app.get().preloaderClass);
+                deployParams.setAppId(app.get().id);
+                deployParams.setAppName(app.get().name);
+                deployParams.setParams(app.get().parameters);
+                deployParams.setArguments(app.get().getArguments());
+                deployParams.setHtmlParams(app.get().htmlParameters);
+                deployParams.setFallback(app.get().fallbackApp);
+                deployParams.setSwingAppWithEmbeddedJavaFX(app.get().embeddedIntoSwing);
+                deployParams.setVersion(app.get().version);
+                deployParams.setId(app.get().id);
+                deployParams.setServiceHint(app.get().daemon);
+
+                if (runtime != null) {
+                    for (String s : runtime.getAddModules()) {
+                        deployParams.addAddModule(s);
+                    }
+
+                    for (String s : runtime.getLimitModules()) {
+                        deployParams.addLimitModule(s);
+                    }
+
+                    deployParams.setModulePath(runtime.getModulePath());
+
+                    Boolean stripNativeCommands = runtime.getStripNativeCommands();
+
+                    if (stripNativeCommands != null) {
+                        deployParams.setStripNativeCommands(stripNativeCommands);
+                    }
+
+                    Boolean detectModules = runtime.getDetectModules();
+
+                    if (detectModules != null) {
+                        deployParams.setDetectModules(detectModules);
+                    }
                 }
             }
 
-            deployParams.setPreloader(app.get().preloaderClass);
-            deployParams.setAppId(app.get().id);
-            deployParams.setAppName(app.get().name);
-            deployParams.setParams(app.get().parameters);
-            deployParams.setArguments(app.get().getArguments());
-            deployParams.setHtmlParams(app.get().htmlParameters);
-            deployParams.setFallback(app.get().fallbackApp);
-            deployParams.setSwingAppWithEmbeddedJavaFX(app.get().embeddedIntoSwing);
-            deployParams.setVersion(app.get().version);
-            deployParams.setId(app.get().id);
-            deployParams.setServiceHint(app.get().daemon);
+            if (appInfo != null) {
+                deployParams.setTitle(appInfo.title);
+                deployParams.setVendor(appInfo.vendor);
+                deployParams.setDescription(appInfo.appDescription);
+                deployParams.setCategory(appInfo.category);
+                deployParams.setLicenseType(appInfo.licenseType);
+                deployParams.setCopyright(appInfo.copyright);
+                deployParams.setEmail(appInfo.email);
 
-            if (runtime != null) {
-                for (String s : runtime.getAddModules()) {
-                    deployParams.addAddModule(s);
+                for (Info.Icon i: appInfo.icons) {
+                    if (i instanceof Info.Splash) {
+                       deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
+                            ((Info.Splash) i).mode);
+                    } else {
+                       deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
+                            DeployParams.RunMode.WEBSTART);
+                    }
                 }
 
-                for (String s : runtime.getLimitModules()) {
-                    deployParams.addLimitModule(s);
-                }
-
-                deployParams.setModulePath(runtime.getModulePath());
-
-                Boolean stripNativeCommands = runtime.getStripNativeCommands();
-
-                if (stripNativeCommands != null) {
-                    deployParams.setStripNativeCommands(stripNativeCommands);
-                }
-
-                Boolean detectModules = runtime.getDetectModules();
-
-                if (detectModules != null) {
-                    deployParams.setDetectModules(detectModules);
-                }
+                deployParams.addBundleArgument(StandardBundlerParam.FILE_ASSOCIATIONS.getID(),
+                        appInfo.fileAssociations.stream()
+                            .map(FileAssociation::createLauncherMap)
+                            .collect(Collectors.toList()));
             }
-        }
-
-        if (appInfo != null) {
-            deployParams.setTitle(appInfo.title);
-            deployParams.setVendor(appInfo.vendor);
-            deployParams.setDescription(appInfo.appDescription);
-            deployParams.setCategory(appInfo.category);
-            deployParams.setLicenseType(appInfo.licenseType);
-            deployParams.setCopyright(appInfo.copyright);
-            deployParams.setEmail(appInfo.email);
-
-            for (Info.Icon i: appInfo.icons) {
-                if (i instanceof Info.Splash) {
-                   deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
-                        ((Info.Splash) i).mode);
-                } else {
-                   deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
-                        DeployParams.RunMode.WEBSTART);
-                }
-            }
-
-            deployParams.addBundleArgument(StandardBundlerParam.FILE_ASSOCIATIONS.getID(),
-                    appInfo.fileAssociations.stream()
-                        .map(FileAssociation::createLauncherMap)
-                        .collect(Collectors.toList()));
-        }
-
-        deployParams.setUpdateMode(updateMode);
-        deployParams.setExtension(isExtension);
-        deployParams.setIncludeDT(includeDT);
-
-        if (platform != null) {
-            Platform pl = platform.get();
-            if (pl.j2se != null) {
-                deployParams.setJRE(pl.j2se);
-            }
-            if (pl.javafx != null) {
-                deployParams.setJavafx(pl.javafx);
-            }
-
-            //only pass it further if it was explicitly set
-            // as we do not want to override default
-            if (pl.javaRoot != null) {
-                if (Platform.USE_SYSTEM_JRE.equals(pl.javaRoot)) {
-                    deployParams.setJavaRuntimeSource(null);
-                } else {
-                    deployParams.setJavaRuntimeSource(new File(pl.javaRoot));
-                }
-            }
-            for (Property p: pl.properties) {
-                deployParams.addJvmProperty(p.name, p.value);
-            }
-            for (Jvmarg a: pl.jvmargs) {
-                deployParams.addJvmArg(a.value);
-            }
-            for (Property a: pl.jvmUserArgs) {
-                deployParams.addJvmUserArg(a.name, a.value);
-            }
-        }
-
-        if (callbacks != null) {
-            for (Callback cb: callbacks.callbacks) {
-                deployParams.addCallback(cb.getName(), cb.getCmd());
-            }
-        }
-
-        if (prefs != null) {
-            deployParams.setNeedShortcut(prefs.getShortcut());
-            deployParams.setNeedInstall(prefs.getInstall());
-            deployParams.setNeedMenu(prefs.getMenu());
-            deployParams.setSystemWide(prefs.getSystemInstall());
-            deployParams.setInstalldirChooser(prefs.getInstalldirChooser());
-        }
-
-        for (Template t: templateList) {
-            deployParams.addTemplate(t.infile, t.outfile);
         }
 
         for (BundleArgument ba : bundleArgumentList) {
@@ -348,19 +362,9 @@ public class DeployFXTask extends Task implements DynamicAttribute {
     }
 
     public void setNativeBundles(String v) {
-        if ("false".equals(v) || "none".equals(v)) {
-            nativeBundles = BundleType.NONE;
-        } else if ("all".equals(v) || "true".equals(v)) {
-            nativeBundles = BundleType.ALL;
-        } else if ("image".equals(v)) {
-            nativeBundles = BundleType.IMAGE;
-        } else if ("installer".equals(v)) {
-            nativeBundles = BundleType.INSTALLER;
-        } else {
-            //assume it is request to build only specific format (like exe or msi)
-            nativeBundles = BundleType.INSTALLER;
-            bundleFormat = (v != null) ? v.toLowerCase() : null;
-        }
+        Bundle bundle = Bundler.stringToBundle(v);
+        this.nativeBundles = bundle.type;
+        this.bundleFormat = bundle.format;
     }
 
     /**

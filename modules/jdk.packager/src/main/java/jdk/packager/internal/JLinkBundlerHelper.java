@@ -76,10 +76,12 @@ import jdk.packager.builders.AbstractAppImageBuilder;
 import jdk.packager.internal.Module;
 
 
-public class JLinkBundlerHelper {
+public final class JLinkBundlerHelper {
 
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(JLinkBundlerHelper.class.getName());
+
+    private JLinkBundlerHelper() {}
 
     @SuppressWarnings("unchecked")
     public static final BundlerParamInfo<List<Path>> MODULE_PATH =
@@ -88,7 +90,7 @@ public class JLinkBundlerHelper {
                     I18N.getString("param.module-path.description"),
                     "module-path",
                     (Class<List<Path>>) (Object)List.class,
-                    p -> new ArrayList(),
+                    p -> {setupDefaultModulePathIfNecessary(p); return new ArrayList();},
                     (s, p) -> Arrays.asList(s.split("[;:]")).stream()
                         .map(ss -> new File(ss).toPath())
                         .collect(Collectors.toList()));
@@ -185,7 +187,7 @@ public class JLinkBundlerHelper {
                         return Integer.valueOf(s);
                     });
 
-    public static String ListOfPathToString(List<Path> value) {
+    public static String listOfPathToString(List<Path> value) {
         String result = "";
 
         for (Path path : value) {
@@ -199,7 +201,7 @@ public class JLinkBundlerHelper {
         return result;
     }
 
-    public static String SetOfStringToString(Set<String> value) {
+    public static String setOfStringToString(Set<String> value) {
         String result = "";
 
         for (String element : value) {
@@ -274,13 +276,24 @@ public class JLinkBundlerHelper {
     public static String getJDKVersion(Map<String, ? super Object> params) {
         String result = "";
         List<Path> modulePath = MODULE_PATH.fetchFrom(params);
-        Path jdkModulePath = setupDefaultModulePathIfNecessary(modulePath);
-        Path javaBasePath = jdkModulePath.resolve("java.base.jmod");
+        Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
 
         if (javaBasePath != null && javaBasePath.toFile().exists()) {
             result = RedistributableModules.getModuleVersion(javaBasePath.toFile(),
                         modulePath, ADD_MODULES.fetchFrom(params),
                         LIMIT_MODULES.fetchFrom(params));
+        }
+
+        return result;
+    }
+
+    public static Path getJDKHome(Map<String, ? super Object> params) {
+        Path result = null;
+        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
+        Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
+
+        if (javaBasePath != null && javaBasePath.toFile().exists()) {
+            result = javaBasePath.getParent();
         }
 
         return result;
@@ -295,7 +308,6 @@ public class JLinkBundlerHelper {
         Path outputDir = imageBuilder.getRoot();
         String excludeFileList = imageBuilder.getExcludeFileList();
         Set<String> jars = getResourceFileJarList(params, Module.JarType.UnnamedJar);
-        setupDefaultModulePathIfNecessary(modulePath);
         File mainJar = getMainJar(params);
         Module.ModuleType mainJarType = Module.ModuleType.Unknown;
 
@@ -372,30 +384,25 @@ public class JLinkBundlerHelper {
         return result;
     }
 
-    private static Path setupDefaultModulePathIfNecessary(List<Path> modulePath) {
-        Path result = null;
+    private static void setupDefaultModulePathIfNecessary(Map<String, ? super Object> params) {
+        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
         Path userDefinedJdkModulePath = findPathOfModule(modulePath, "java.base.jmod");
 
-        //TODO Fix JDK-8158977
-
         // Add the default JDK module path to the module path.
-        if (userDefinedJdkModulePath != null) {
-            result = userDefinedJdkModulePath;
-        }
-        else {
+        if (userDefinedJdkModulePath == null) {
             Path jdkModulePath = Paths.get(System.getProperty("java.home"), "jmods").toAbsolutePath();
 
             if (jdkModulePath != null && Files.exists(jdkModulePath)) {
-                result = jdkModulePath;
-                modulePath.add(result);
+                modulePath.add(jdkModulePath);
+                params.put(MODULE_PATH.getID(), listOfPathToString(modulePath));
             }
         }
 
-        if (result == null) {
+        Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
+
+        if (javaBasePath == null || !javaBasePath.toFile().exists()) {
             Log.info(String.format(I18N.getString("warning.no.jdk.modules.found")));
         }
-
-        return result;
     }
 
     private static Set<String> getResourceFileJarList(Map<String, ? super Object> params, Module.JarType Query) {

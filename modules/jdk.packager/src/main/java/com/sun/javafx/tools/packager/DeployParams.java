@@ -120,7 +120,7 @@ public class DeployParams extends CommonParams {
     //list of HTML templates to process
     List<Template> templates = new LinkedList<>();
 
-    String jrePlatform = "1.8+";
+    String jrePlatform = PackagerLib.JAVAFX_VERSION+"+";
     String fxPlatform = PackagerLib.JAVAFX_VERSION+"+";
     File javaRuntimeToUse = null;
     boolean javaRuntimeWasSet = false;
@@ -509,7 +509,7 @@ public class DeployParams extends CommonParams {
 
         // Success
         if (applicationClass != null && !applicationClass.isEmpty() &&
-            (getBundleType() == BundleType.JNLP || getBundleType() == BundleType.ALL)) {
+            (getBundleType() == BundleType.JNLP)) {
             result = true;
         }
 
