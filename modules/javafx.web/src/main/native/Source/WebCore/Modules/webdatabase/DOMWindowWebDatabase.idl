@@ -26,6 +26,8 @@
 
 [
 ] partial interface DOMWindow {
+#if 0  // FIXME: Currently WebSQL feature is not implemented completely.
     [RaisesException] Database openDatabase(DOMString name, DOMString version, DOMString displayName, unsigned long estimatedSize, optional DatabaseCallback creationCallback);
+#endif
 };
 
