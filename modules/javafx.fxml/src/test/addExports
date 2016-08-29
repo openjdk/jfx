@@ -1,15 +1,15 @@
--XaddExports:javafx.base/com.sun.javafx.collections=ALL-UNNAMED
+--add-exports javafx.base/com.sun.javafx.collections=ALL-UNNAMED
 #
--XaddExports:javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.javafx.font=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.javafx.perf=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.javafx.scene=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.prism=ALL-UNNAMED
--XaddExports:javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.application=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.font=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.geom=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.perf=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.scene=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.scene.text=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.javafx.tk=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.prism=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED
 #
--XaddExports:javafx.fxml/com.sun.javafx.fxml=ALL-UNNAMED
--XaddExports:javafx.fxml/com.sun.javafx.fxml.builder=ALL-UNNAMED
--XaddExports:javafx.fxml/com.sun.javafx.fxml.expression=ALL-UNNAMED
+--add-exports javafx.fxml/com.sun.javafx.fxml=ALL-UNNAMED
+--add-exports javafx.fxml/com.sun.javafx.fxml.builder=ALL-UNNAMED
+--add-exports javafx.fxml/com.sun.javafx.fxml.expression=ALL-UNNAMED

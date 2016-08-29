@@ -145,21 +145,21 @@ public class GradleJUnitWorker {
         try {
             final ArrayList<String> cmd = new ArrayList<>(30);
             String gradleWorkerJar = null;
-            String xpatchesFile = null;
+            String patchmoduleFile = null;
             String exportsFile = null;
             String classpathFile = null;
             String jigsawJavapath = null;
 
             final String exportsFileProperty = "worker.exports.file";
             final String workerDebugProperty = "worker.debug";
-            final String xpatchesFileProperty = "worker.xpatch.file";
+            final String patchmoduleFileProperty = "worker.patchmodule.file";
             final String classpathFileProperty = "worker.classpath.file";
             final String javaCmdProperty = "worker.java.cmd";
 
             Collections.addAll(ignoreSysProps, defSysProps);
             ignoreSysProps.add(exportsFileProperty);
             ignoreSysProps.add(workerDebugProperty);
-            ignoreSysProps.add(xpatchesFileProperty);
+            ignoreSysProps.add(patchmoduleFileProperty);
             ignoreSysProps.add(classpathFileProperty);
             ignoreSysProps.add(javaCmdProperty);
 
@@ -175,10 +175,10 @@ public class GradleJUnitWorker {
                     int equals = args[i].indexOf("=");
                     exportsFile = args[i].substring(equals+1);
                     if (debug) System.err.println("XWORKER "+exportsFileProperty+"="+exportsFile);
-                } else if (args[i].contains(xpatchesFileProperty)) {
+                } else if (args[i].contains(patchmoduleFileProperty)) {
                     int equals = args[i].indexOf("=");
-                    xpatchesFile = args[i].substring(equals+1);
-                    if (debug) System.err.println("XWORKER "+xpatchesFileProperty+"="+xpatchesFile);
+                    patchmoduleFile = args[i].substring(equals+1);
+                    if (debug) System.err.println("XWORKER "+patchmoduleFileProperty+"="+patchmoduleFile);
                 } else if (args[i].contains(javaCmdProperty)) {
                     int equals = args[i].indexOf("=");
                     jigsawJavapath = args[i].substring(equals+1);
@@ -374,13 +374,13 @@ public class GradleJUnitWorker {
 
             cmd.add("-D"+javaCmdProperty+"="+java_cmd);
 
-            if (xpatchesFile == null) {
-                xpatchesFile = System.getProperty(xpatchesFileProperty);
+            if (patchmoduleFile == null) {
+                patchmoduleFile = System.getProperty(patchmoduleFileProperty);
             }
 
-            if (xpatchesFile != null) {
-                cmd.add("@" + xpatchesFile);
-                cmd.add("-D" + xpatchesFileProperty + "=" + xpatchesFile);
+            if (patchmoduleFile != null) {
+                cmd.add("@" + patchmoduleFile);
+                cmd.add("-D" + patchmoduleFileProperty + "=" + patchmoduleFile);
             }
 
             if (exportsFile == null) {

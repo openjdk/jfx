@@ -82,8 +82,8 @@ do
         echo "Warning: ${mod} package is missing from $MODTOP/${mod}"
     fi
     mp=`do_cygpath "$MODTOP/${mod}"`
-    echo "-Xpatch:${mod}=\"$mp\""
-    echo "-Xpatch:${mod}=\"$mp\"" >> "${XPATCHFILE}"
+    echo "--patch-module ${mod}=\"$mp\""
+    echo "--patch-module ${mod}=\"$mp\"" >> "${XPATCHFILE}"
 
     # note: javafx.base exists, but currently does not have any shared libs in it.
     # add it anyway

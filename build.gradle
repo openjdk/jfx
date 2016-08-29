@@ -2318,7 +2318,7 @@ project(":fxpackager") {
         classpath = project.files("build/libs/ant-javafx.jar", "build/classes/test", "build/resources/test")
         main = "hello.SimpleBundle"
         args = [
-                '-modulepath', JIGSAW_MODULES,
+                '--module-path', JIGSAW_MODULES,
                 '-o', "$projectDir/build/dev",
                 '-all',
                 packagerDevOpts
@@ -3001,9 +3001,9 @@ project(":fxpackager") {
     tasks.withType(JavaCompile) { compile ->
         compile.options.forkOptions.executable = JIGSAW_JAVAC
         compile.options.compilerArgs = [
-                "-XaddExports:java.base/sun.security.pkcs=ALL-UNNAMED,"
-                        + "java.base/sun.security.timestamp=ALL-UNNAMED,"
-                        + "java.base/sun.security.x509=ALL-UNNAMED",
+                "--add-exports", "java.base/sun.security.pkcs=ALL-UNNAMED",
+                "--add-exports", "java.base/sun.security.timestamp=ALL-UNNAMED",
+                "--add-exports", "java.base/sun.security.x509=ALL-UNNAMED",
                 "-encoding", "UTF-8"]
     }
 }
@@ -3464,9 +3464,9 @@ compileTargets { t ->
     def modulesSrcDir = "${modularSdkDir}/modules_src"
     def modulesConfDir = "${modularSdkDir}/modules_conf"
     def modulesMakeDir = "${modularSdkDir}/make"
-    final File xpatchFile = file("${rootProject.buildDir}/xpatch.args")
+    final File patchmoduleFile = file("${rootProject.buildDir}/patchmodule.args")
 
-    project.files(xpatchFile);
+    project.files(patchmoduleFile);
 
     def zipTask = project.task("buildModuleZip$t.capital", type: Zip, group: "Build") {
         enabled = IS_BUILD_MODULE_ZIP
@@ -3563,24 +3563,24 @@ compileTargets { t ->
     zipTask.dependsOn(buildModulesTask);
     buildModules.dependsOn(buildModulesTask)
 
-    def buildModulesXpatchTask = task("buildModulesXpatch$t.capital", group: "Build") {
+    def buildModulesPatchTask = task("buildModulesPatch$t.capital", group: "Build") {
         doLast() {
-            xpatchFile.delete()
+            patchmoduleFile.delete()
 
-            logger.info("Creating xpatch.args file ${xpatchFile}")
+            logger.info("Creating patchmodule.args file ${patchmoduleFile}")
             String thepath=cygpath("${rootProject.buildDir}/sdk/${targetProperties.libDest}")
 
-            xpatchFile <<  "-Djava.library.path=${thepath}\n"
+            patchmoduleFile <<  "-Djava.library.path=${thepath}\n"
             moduleProjList.each { project ->
                 def moduleName = project.ext.moduleName
                 def dstModuleDir = cygpath("${modulesDir}/${moduleName}")
-                xpatchFile <<  "-Xpatch:${moduleName}=${dstModuleDir}\n"
+                patchmoduleFile <<  "--patch-module ${moduleName}=\"${dstModuleDir}\"\n"
             }
         }
     }
 
-    buildModulesXpatchTask.dependsOn(buildModulesTask)
-    buildModules.dependsOn(buildModulesXpatchTask)
+    buildModulesPatchTask.dependsOn(buildModulesTask)
+    buildModules.dependsOn(buildModulesPatchTask)
 
     def isWindows = IS_WINDOWS && t.name == "win";
     def isMac = IS_MAC && t.name == "mac";
@@ -3917,7 +3917,7 @@ void configureJigsawTests(
         def testingDir = "${rootProject.buildDir}/${targetProperties.platformPrefix}testing";
         def patchesDir = new File("${testingDir}/modules");
         File patchPolicyFile = new File("${testingDir}/java.patch.policy");
-        File xpatchFile = new File("${testingDir}/xpatch.args");
+        File patchmoduleFile = new File("${testingDir}/patchmodule.args");
 
         String javaLibraryPath = "${rootProject.buildDir}/sdk/$targetProperties.libDest"
 
@@ -3925,7 +3925,7 @@ void configureJigsawTests(
         def jigsawPatchesTestDir = new File("${testingDir}/tests/$moduleName");
 
         p.files(patchPolicyFile);
-        p.files(xpatchFile);
+        p.files(patchmoduleFile);
 
         def srcClassesDir = "${p.buildDir}/${targetProperties.platformPrefix}module-classes"
         Task classes =  p.task("jigsawCopyClasses${t.capital}", type: Copy, dependsOn: [p.classes]) {
@@ -3982,17 +3982,17 @@ void configureJigsawTests(
         } else {
             patchPerms = rootProject.task(nameis) {
                 outputs.file(patchPolicyFile)
-                outputs.file(xpatchFile)
+                outputs.file(patchmoduleFile)
                 doLast() {
                     logger.info("Creating test patch.policy file ${patchPolicyFile}")
-                    logger.info("Creating test patch.policy file ${xpatchFile}")
+                    logger.info("Creating test patch.policy file ${patchmoduleFile}")
 
                     delete(patchPolicyFile)
-                    delete(xpatchFile)
+                    delete(patchmoduleFile)
                     mkdir(testingDir)
                     String thepath=cygpath("${rootProject.buildDir}/sdk/${targetProperties.libDest}")
 
-                    xpatchFile <<  "-Djava.library.path=${thepath}\n"
+                    patchmoduleFile <<  "-Djava.library.path=${thepath}\n"
                     moduleProjList.each { project ->
                         String themod = file("${patchesDir}/${project.ext.moduleName}").toURI()
                         patchPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
@@ -4000,7 +4000,7 @@ void configureJigsawTests(
                         "};\n"
 
                         def dstModuleDir = cygpath("${patchesDir}/${project.ext.moduleName}")
-                        xpatchFile <<  "-Xpatch:${project.ext.moduleName}=${dstModuleDir}\n"
+                        patchmoduleFile <<  "--patch-module ${project.ext.moduleName}=\"${dstModuleDir}\"\n"
                     }
                 }
             }
@@ -4054,7 +4054,7 @@ void configureJigsawTests(
                 String bcp = "-Xbootclasspath/a:" + rootProject.projectDir.path + "/buildSrc/build/libs/buildSrc.jar"
 
                 systemProperties 'worker.debug': IS_WORKER_DEBUG
-                systemProperties 'worker.xpatch.file': cygpath(xpatchFile.path)
+                systemProperties 'worker.patchmodule.file': cygpath(patchmoduleFile.path)
                 if (addExportsFile != null) {
                     systemProperties 'worker.exports.file': cygpath(addExportsFile)
                 }

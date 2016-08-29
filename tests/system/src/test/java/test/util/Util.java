@@ -185,7 +185,7 @@ public class Util {
          */
         final Boolean isJigsaw = Boolean.getBoolean("worker.isJigsaw");
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
-        final String workerXpatchFile = System.getProperty("worker.xpatch.file");
+        final String workerPatchModuleFile = System.getProperty("worker.patchmodule.file");
         final String workerPatchPolicy = System.getProperty("worker.patch.policy");
         final String workerClassPath = System.getProperty("worker.classpath.file");
         final Boolean workerDebug = Boolean.getBoolean("worker.debug");
@@ -198,8 +198,8 @@ public class Util {
             cmd.add("java");
         }
 
-        if (isJigsaw && workerXpatchFile != null) {
-            cmd.add("@" + workerXpatchFile);
+        if (isJigsaw && workerPatchModuleFile != null) {
+            cmd.add("@" + workerPatchModuleFile);
         } else {
             String jfxdir = getJfxrtDir(classpath);
             Assert.assertNotNull("failed to find jfxdir",jfxdir);
@@ -208,7 +208,7 @@ public class Util {
 
         // This is a "minimum" set, rather than the full @addExports
         if (isJigsaw) {
-            cmd.add("-XaddExports:javafx.graphics/com.sun.javafx.application=ALL-UNNAMED");
+            cmd.add("--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED");
         }
 
         if (isJigsaw && workerClassPath != null) {
@@ -229,7 +229,7 @@ public class Util {
             try {
                 if (workerPatchPolicy != null) {
                     // with Jigsaw, we need to create a merged java.policy
-                    // file that contains the permissions for the Xpatch classes
+                    // file that contains the permissions for the patchmodule classes
                     // as well as the permissions needed for this test
 
                     File wpp = new File(workerPatchPolicy);
