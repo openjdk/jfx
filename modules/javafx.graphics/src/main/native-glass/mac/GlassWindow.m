@@ -884,6 +884,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setView
         //NSLog(@"        view: %@", window->view);
         //NSLog(@"                frame: %.2f,%.2f %.2fx%.2f", [window->view frame].origin.x, [window->view frame].origin.y, [window->view frame].size.width, [window->view frame].size.height);
 
+        // Make sure we synchronize scale factors to the new view as any
+        // dynamic updates might have happened when we had the old view
+        // and/or we may have been set visible before we had a view and
+        // missed the initial notification.
+        if ([window->nsWindow screen]) {
+            [window->view notifyScaleFactorChanged:GetScreenScaleFactor([window->nsWindow screen])];
+        }
+
         if (oldView && oldView != window->view) {
             [[oldView delegate] resetMouseTracking];
         }
