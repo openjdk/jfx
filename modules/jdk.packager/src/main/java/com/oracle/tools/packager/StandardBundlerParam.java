@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,6 +55,9 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import static jdk.packager.internal.JLinkBundlerHelper.findPathOfModule;
+import static jdk.packager.internal.JLinkBundlerHelper.listOfPathToString;
 
 public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
 
@@ -115,40 +119,33 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     }
             );
 
-    private static List<RelativeFileSet> createAppResourcesListFromString(String s, Map<String, ? super Object> objectObjectMap) {
-        List<RelativeFileSet> result = new ArrayList<>();
-        for (String path : s.split("[:;]")) {
-            File f = new File(path);
-            if (f.getName().equals("*") || path.endsWith("/") || path.endsWith("\\")) {
-                if (f.getName().equals("*")) {
-                    f = f.getParentFile();
-                }
-                Set<File> theFiles = new HashSet<>();
-                try {
-                    Files.walk(f.toPath())
-                            .filter(Files::isRegularFile)
-                            .forEach(p -> theFiles.add(p.toFile()));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                result.add(new RelativeFileSet(f, theFiles));
-            } else {
-                result.add(new RelativeFileSet(f.getParentFile(), Collections.singleton(f)));
-            }
-        }
-        return result;
-    }
-
-    public static final StandardBundlerParam<File> ICON =
+    // note that each bundler is likely to replace this one with their own converter
+    public static final StandardBundlerParam<RelativeFileSet> MAIN_JAR =
             new StandardBundlerParam<>(
-                    I18N.getString("param.icon-file.name"),
-                    I18N.getString("param.icon-file.description"),
-                    BundleParams.PARAM_ICON,
-                    File.class,
-                    params -> null,
-                    (s, p) -> new File(s)
+                    I18N.getString("param.main-jar.name"),
+                    I18N.getString("param.main-jar.description"),
+                    "mainJar",
+                    RelativeFileSet.class,
+                    params -> {
+                        extractMainClassInfoFromAppResources(params);
+                        return (RelativeFileSet) params.get("mainJar");
+                    },
+                    (s, p) -> getMainJar(s, p)
             );
 
+    public static final StandardBundlerParam<String> CLASSPATH =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.classpath.name"),
+                    I18N.getString("param.classpath.description"),
+                    "classpath",
+                    String.class,
+                    params -> {
+                        extractMainClassInfoFromAppResources(params);
+                        String cp = (String) params.get("classpath");
+                        return cp == null ? "" : cp;
+                    },
+                    (s, p) -> s.replace(File.pathSeparator, " ")
+            );
 
     public static final StandardBundlerParam<String> MAIN_CLASS =
             new StandardBundlerParam<>(
@@ -195,6 +192,15 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> s
             );
 
+    public static final StandardBundlerParam<File> ICON =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.icon-file.name"),
+                    I18N.getString("param.icon-file.description"),
+                    BundleParams.PARAM_ICON,
+                    File.class,
+                    params -> null,
+                    (s, p) -> new File(s)
+            );
 
     public static final StandardBundlerParam<String> VENDOR =
             new StandardBundlerParam<>(
@@ -236,54 +242,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     String.class,
                     params -> MessageFormat.format(I18N.getString("param.copyright.default"), new Date()),
                     (s, p) -> s
-            );
-
-    // note that each bundler is likely to replace this one with their own converter
-    public static final StandardBundlerParam<RelativeFileSet> MAIN_JAR =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.main-jar.name"),
-                    I18N.getString("param.main-jar.description"),
-                    "mainJar",
-                    RelativeFileSet.class,
-                    params -> {
-                        extractMainClassInfoFromAppResources(params);
-                        return (RelativeFileSet) params.get("mainJar");
-                    },
-                    (s, p) -> {
-                        for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(p)) {
-                            File appResourcesRoot = rfs.getBaseDirectory();
-                            File mainJarFile = new File(appResourcesRoot, s);
-                            if (mainJarFile.exists()) {
-                                return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(mainJarFile)));
-                            }
-                            else {
-                                List<Path> modulePath = JLinkBundlerHelper.MODULE_PATH.fetchFrom(p);
-                                Path modularJarPath = JLinkBundlerHelper.findPathOfModule(modulePath, s);
-
-                                if (modularJarPath != null && Files.exists(modularJarPath)) {
-                                    return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(modularJarPath.toFile())));
-                                }
-                            }
-                        }
-                        throw new IllegalArgumentException(
-                                new ConfigException(
-                                        MessageFormat.format(I18N.getString("error.main-jar-does-not-exist"), s),
-                                        I18N.getString("error.main-jar-does-not-exist.advice")));
-                    }
-            );
-
-    public static final StandardBundlerParam<String> CLASSPATH =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.classpath.name"),
-                    I18N.getString("param.classpath.description"),
-                    "classpath",
-                    String.class,
-                    params -> {
-                        extractMainClassInfoFromAppResources(params);
-                        String cp = (String) params.get("classpath");
-                        return cp == null ? "" : cp;
-                    },
-                    (s, p) -> s.replace(File.pathSeparator, " ")
             );
 
     public static final StandardBundlerParam<Boolean> USE_FX_PACKAGING =
@@ -377,7 +335,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     APP_NAME::fetchFrom,
                     (s, p) -> s
             );
-
 
     // note that each bundler is likely to replace this one with their own converter
     public static final StandardBundlerParam<String> VERSION =
@@ -678,12 +635,66 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (s, p) -> Arrays.asList(s.split("[ ,:]"))
             );
 
+    @SuppressWarnings("unchecked")
+    public static final BundlerParamInfo<List<Path>> MODULE_PATH =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.module-path.name"),
+                    I18N.getString("param.module-path.description"),
+                    "module-path",
+                    (Class<List<Path>>) (Object)List.class,
+                    p -> {setupDefaultModulePathIfNecessary(p); return new ArrayList();},
+                    (s, p) -> Arrays.asList(s.split("[;:]")).stream()
+                        .map(ss -> new File(ss).toPath())
+                        .collect(Collectors.toList()));
+
+    @SuppressWarnings("unchecked")
+    public static final BundlerParamInfo<String> MODULE =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.main.module.name"),
+                    I18N.getString("param.main.module.description"),
+                    "module",
+                    String.class,
+                    p -> null,
+                    (s, p) -> {
+                        return String.valueOf(s);
+                    });
+
+    @SuppressWarnings("unchecked")
+    public static final BundlerParamInfo<Set<String>> ADD_MODULES =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.add-modules.name"),
+                    I18N.getString("param.add-modules.description"),
+                    "add-modules",
+                    (Class<Set<String>>) (Object) Set.class,
+                    p -> new LinkedHashSet(),
+                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+"))));
+
+    @SuppressWarnings("unchecked")
+    public static final BundlerParamInfo<Set<String>> LIMIT_MODULES =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.limit-modules.name"),
+                    I18N.getString("param.limit-modules.description"),
+                    "limit-modules",
+                    (Class<Set<String>>) (Object) Set.class,
+                    p -> new LinkedHashSet(),
+                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+"))));
+
+    @SuppressWarnings("unchecked")
+    public static final BundlerParamInfo<Boolean> STRIP_NATIVE_COMMANDS =
+            new StandardBundlerParam<>(
+                    I18N.getString("param.strip-executables.name"),
+                    I18N.getString("param.strip-executables.description"),
+                    "strip-native-commands",
+                    Boolean.class,
+                    p -> Boolean.TRUE,
+                    (s, p) -> Boolean.valueOf(s));
+
     public static void extractMainClassInfoFromAppResources(Map<String, ? super Object> params) {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
         boolean hasPreloader = params.containsKey(PRELOADER_CLASS.getID());
-        boolean hasModule = params.containsKey(JLinkBundlerHelper.MODULE.getID());
+        boolean hasModule = params.containsKey(MODULE.getID());
 
         if (hasMainClass && hasMainJar && hasMainJarClassPath || hasModule) {
             return;
@@ -788,7 +799,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
         boolean hasMainJar = params.containsKey(MAIN_JAR.getID());
         boolean hasMainJarClassPath = params.containsKey(CLASSPATH.getID());
-        boolean hasModule = params.containsKey(JLinkBundlerHelper.MODULE.getID());
+        boolean hasModule = params.containsKey(MODULE.getID());
 
         if (hasMainClass && hasMainJar && hasMainJarClassPath || hasModule) {
             return;
@@ -835,5 +846,74 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         }
         l.add(current.toString());
         return l;
+    }
+
+    private static List<RelativeFileSet> createAppResourcesListFromString(String s, Map<String, ? super Object> objectObjectMap) {
+        List<RelativeFileSet> result = new ArrayList<>();
+        for (String path : s.split("[:;]")) {
+            File f = new File(path);
+            if (f.getName().equals("*") || path.endsWith("/") || path.endsWith("\\")) {
+                if (f.getName().equals("*")) {
+                    f = f.getParentFile();
+                }
+                Set<File> theFiles = new HashSet<>();
+                try {
+                    Files.walk(f.toPath())
+                            .filter(Files::isRegularFile)
+                            .forEach(p -> theFiles.add(p.toFile()));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                result.add(new RelativeFileSet(f, theFiles));
+            } else {
+                result.add(new RelativeFileSet(f.getParentFile(), Collections.singleton(f)));
+            }
+        }
+        return result;
+    }
+
+    private static void setupDefaultModulePathIfNecessary(Map<String, ? super Object> params) {
+        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
+        Path userDefinedJdkModulePath = findPathOfModule(modulePath, "java.base.jmod");
+
+        // Add the default JDK module path to the module path.
+        if (userDefinedJdkModulePath == null) {
+            Path jdkModulePath = Paths.get(System.getProperty("java.home"), "jmods").toAbsolutePath();
+
+            if (jdkModulePath != null && Files.exists(jdkModulePath)) {
+                modulePath.add(jdkModulePath);
+                params.put(MODULE_PATH.getID(), listOfPathToString(modulePath));
+            }
+        }
+
+        Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
+
+        if (javaBasePath == null || !javaBasePath.toFile().exists()) {
+            Log.info(String.format(I18N.getString("warning.no.jdk.modules.found")));
+        }
+    }
+
+    private static RelativeFileSet getMainJar(String moduleName, Map<String, ? super Object> params) {
+        for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
+            File appResourcesRoot = rfs.getBaseDirectory();
+            File mainJarFile = new File(appResourcesRoot, moduleName);
+
+            if (mainJarFile.exists()) {
+                return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(mainJarFile)));
+            }
+            else {
+                List<Path> modulePath = MODULE_PATH.fetchFrom(params);
+                Path modularJarPath = JLinkBundlerHelper.findPathOfModule(modulePath, moduleName);
+
+                if (modularJarPath != null && Files.exists(modularJarPath)) {
+                    return new RelativeFileSet(appResourcesRoot, new LinkedHashSet<>(Collections.singletonList(modularJarPath.toFile())));
+                }
+            }
+        }
+
+        throw new IllegalArgumentException(
+                new ConfigException(
+                        MessageFormat.format(I18N.getString("error.main-jar-does-not-exist"), moduleName),
+                        I18N.getString("error.main-jar-does-not-exist.advice")));
     }
 }

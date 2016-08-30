@@ -171,15 +171,15 @@ public class BundleParams {
     }
 
     public void setAddModules(Set<String> addModules) {
-        putUnlessNullOrEmpty(JLinkBundlerHelper.ADD_MODULES.getID(), addModules);
+        putUnlessNullOrEmpty(StandardBundlerParam.ADD_MODULES.getID(), addModules);
     }
 
     public void setLimitModules(Set<String> limitModules)  {
-        putUnlessNullOrEmpty(JLinkBundlerHelper.LIMIT_MODULES.getID(), limitModules);
+        putUnlessNullOrEmpty(StandardBundlerParam.LIMIT_MODULES.getID(), limitModules);
     }
 
     public void setStripNativeCommands(boolean value) {
-        putUnlessNull(JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID(), value);
+        putUnlessNull(StandardBundlerParam.STRIP_NATIVE_COMMANDS.getID(), value);
     }
 
     public void setDetectMods(boolean value) {
@@ -191,11 +191,11 @@ public class BundleParams {
     }
 
     public void setModulePath(String value) {
-        putUnlessNull(JLinkBundlerHelper.MODULE_PATH.getID(), value);
+        putUnlessNull(StandardBundlerParam.MODULE_PATH.getID(), value);
     }
 
     public void setMainModule(String value) {
-        putUnlessNull(JLinkBundlerHelper.MODULE.getID(), value);
+        putUnlessNull(StandardBundlerParam.MODULE.getID(), value);
     }
 
     public void setDebug(String value) {

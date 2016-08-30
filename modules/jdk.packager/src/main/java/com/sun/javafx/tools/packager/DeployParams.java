@@ -47,6 +47,7 @@ import jdk.packager.internal.JLinkBundlerHelper;
 
 import static com.oracle.tools.packager.jnlp.JNLPBundler.*;
 
+@Deprecated
 public class DeployParams extends CommonParams {
     public enum RunMode {
         WEBSTART, EMBEDDED, STANDALONE, ALL
@@ -610,10 +611,10 @@ public class DeployParams extends CommonParams {
             StandardBundlerParam.JVM_OPTIONS.getID(),
             StandardBundlerParam.USER_JVM_OPTIONS.getID(),
             StandardBundlerParam.ARGUMENTS.getID(),
-            JLinkBundlerHelper.MODULE_PATH.getID(),
-            JLinkBundlerHelper.ADD_MODULES.getID(),
-            JLinkBundlerHelper.LIMIT_MODULES.getID(),
-            JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID(),
+            StandardBundlerParam.MODULE_PATH.getID(),
+            StandardBundlerParam.ADD_MODULES.getID(),
+            StandardBundlerParam.LIMIT_MODULES.getID(),
+            StandardBundlerParam.STRIP_NATIVE_COMMANDS.getID(),
             JLinkBundlerHelper.DETECT_MODULES.getID()
     ));
 

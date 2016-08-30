@@ -35,6 +35,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.*;
+
 import jdk.packager.internal.JLinkBundlerHelper;
 
 
@@ -520,15 +521,16 @@ public class Main {
             }
         }
     }
-    private static final String J_XDEBUG = JLinkBundlerHelper.DEBUG.getID() + ":";
 
-    private static final String MODULE = "--" + JLinkBundlerHelper.MODULE.getID();
+    private static final String MODULE = "--" + StandardBundlerParam.MODULE.getID();
     private static final String M = "-m";
-    private static final String MODULE_PATH = "--" + JLinkBundlerHelper.MODULE_PATH.getID();
+    private static final String MODULE_PATH = "--" + StandardBundlerParam.MODULE_PATH.getID();
     private static final String P = "-p";
-    private static final String ADD_MODULES = "--" + JLinkBundlerHelper.ADD_MODULES.getID();
-    private static final String LIMIT_MODULES = "--" + JLinkBundlerHelper.LIMIT_MODULES.getID();
-    private static final String STRIP_NATIVE_COMMANDS = "--" + JLinkBundlerHelper.STRIP_NATIVE_COMMANDS.getID();
+    private static final String ADD_MODULES = "--" + StandardBundlerParam.ADD_MODULES.getID();
+    private static final String LIMIT_MODULES = "--" + StandardBundlerParam.LIMIT_MODULES.getID();
+    private static final String STRIP_NATIVE_COMMANDS = "--" + StandardBundlerParam.STRIP_NATIVE_COMMANDS.getID();
+
+    private static final String J_XDEBUG = JLinkBundlerHelper.DEBUG.getID() + ":";
     private static final String DETECT_MODULES = "--" + JLinkBundlerHelper.DETECT_MODULES.getID();
 
     public static void showBundlerHelp(String bundlerName, boolean verbose) {

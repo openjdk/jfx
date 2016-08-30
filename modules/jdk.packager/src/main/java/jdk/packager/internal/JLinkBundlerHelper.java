@@ -26,11 +26,7 @@
 package jdk.packager.internal;
 
 
-import static com.oracle.tools.packager.StandardBundlerParam.APP_RESOURCES;
-import static com.oracle.tools.packager.StandardBundlerParam.MAIN_CLASS;
-import static com.oracle.tools.packager.StandardBundlerParam.MAIN_JAR;
-import jdk.tools.jlink.internal.packager.AppRuntimeImageBuilder;
-
+import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.RelativeFileSet;
@@ -72,8 +68,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
 import jdk.packager.builders.AbstractAppImageBuilder;
 import jdk.packager.internal.Module;
+import jdk.tools.jlink.internal.packager.AppRuntimeImageBuilder;
 
 
 public final class JLinkBundlerHelper {
@@ -82,60 +80,6 @@ public final class JLinkBundlerHelper {
             ResourceBundle.getBundle(JLinkBundlerHelper.class.getName());
 
     private JLinkBundlerHelper() {}
-
-    @SuppressWarnings("unchecked")
-    public static final BundlerParamInfo<List<Path>> MODULE_PATH =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.module-path.name"),
-                    I18N.getString("param.module-path.description"),
-                    "module-path",
-                    (Class<List<Path>>) (Object)List.class,
-                    p -> {setupDefaultModulePathIfNecessary(p); return new ArrayList();},
-                    (s, p) -> Arrays.asList(s.split("[;:]")).stream()
-                        .map(ss -> new File(ss).toPath())
-                        .collect(Collectors.toList()));
-
-    @SuppressWarnings("unchecked")
-    public static final BundlerParamInfo<String> MODULE =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.main.module.name"),
-                    I18N.getString("param.main.module.description"),
-                    "module",
-                    String.class,
-                    p -> null,
-                    (s, p) -> {
-                        return String.valueOf(s);
-                    });
-
-    @SuppressWarnings("unchecked")
-    public static final BundlerParamInfo<Set<String>> ADD_MODULES =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.add-modules.name"),
-                    I18N.getString("param.add-modules.description"),
-                    "add-modules",
-                    (Class<Set<String>>) (Object) Set.class,
-                    p -> new LinkedHashSet(),
-                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+"))));
-
-    @SuppressWarnings("unchecked")
-    public static final BundlerParamInfo<Set<String>> LIMIT_MODULES =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.limit-modules.name"),
-                    I18N.getString("param.limit-modules.description"),
-                    "limit-modules",
-                    (Class<Set<String>>) (Object) Set.class,
-                    p -> new LinkedHashSet(),
-                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+"))));
-
-    @SuppressWarnings("unchecked")
-    public static final BundlerParamInfo<Boolean> STRIP_NATIVE_COMMANDS =
-            new StandardBundlerParam<>(
-                    I18N.getString("param.strip-executables.name"),
-                    I18N.getString("param.strip-executables.description"),
-                    "strip-native-commands",
-                    Boolean.class,
-                    p -> Boolean.TRUE,
-                    (s, p) -> Boolean.valueOf(s));
 
     @SuppressWarnings("unchecked")
     public static final BundlerParamInfo<Boolean> DETECT_MODULES =
@@ -178,8 +122,8 @@ public final class JLinkBundlerHelper {
     @SuppressWarnings("unchecked")
     public static final BundlerParamInfo<Integer> DEBUG =
             new StandardBundlerParam<>(
-                    I18N.getString("param.main.module.name"),
-                    I18N.getString("param.main.module.description"),
+                    "",
+                    "",
                     "-J-Xdebug",
                     Integer.class,
                     p -> null,
@@ -218,7 +162,7 @@ public final class JLinkBundlerHelper {
     public static File getMainJar(Map<String, ? super Object> params) {
         File result = null;
         String srcdir = StandardBundlerParam.SOURCE_DIR.fetchFrom(params);
-        RelativeFileSet fileset = MAIN_JAR.fetchFrom(params);
+        RelativeFileSet fileset = StandardBundlerParam.MAIN_JAR.fetchFrom(params);
 
         if (fileset != null) {
             String filename = fileset.getIncludedFiles().iterator().next();
@@ -238,10 +182,10 @@ public final class JLinkBundlerHelper {
         File mainJar = getMainJar(params);
 
         if (mainJar != null) {
-            result = MAIN_CLASS.fetchFrom(params);
+            result = StandardBundlerParam.MAIN_CLASS.fetchFrom(params);
         }
         else {
-            String mainModule = MODULE.fetchFrom(params);
+            String mainModule = StandardBundlerParam.MODULE.fetchFrom(params);
 
             if (mainModule != null) {
                 int index = mainModule.indexOf("/");
@@ -257,7 +201,7 @@ public final class JLinkBundlerHelper {
 
     public static String getMainModule(Map<String, ? super Object> params) {
         String result = "";
-        String mainModule = MODULE.fetchFrom(params);
+        String mainModule = StandardBundlerParam.MODULE.fetchFrom(params);
 
         if (mainModule != null) {
             int index = mainModule.indexOf("/");
@@ -275,13 +219,13 @@ public final class JLinkBundlerHelper {
 
     public static String getJDKVersion(Map<String, ? super Object> params) {
         String result = "";
-        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
+        List<Path> modulePath = StandardBundlerParam.MODULE_PATH.fetchFrom(params);
         Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
 
         if (javaBasePath != null && javaBasePath.toFile().exists()) {
             result = RedistributableModules.getModuleVersion(javaBasePath.toFile(),
-                        modulePath, ADD_MODULES.fetchFrom(params),
-                        LIMIT_MODULES.fetchFrom(params));
+                        modulePath, StandardBundlerParam.ADD_MODULES.fetchFrom(params),
+                        StandardBundlerParam.LIMIT_MODULES.fetchFrom(params));
         }
 
         return result;
@@ -289,7 +233,7 @@ public final class JLinkBundlerHelper {
 
     public static Path getJDKHome(Map<String, ? super Object> params) {
         Path result = null;
-        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
+        List<Path> modulePath = StandardBundlerParam.MODULE_PATH.fetchFrom(params);
         Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
 
         if (javaBasePath != null && javaBasePath.toFile().exists()) {
@@ -300,10 +244,10 @@ public final class JLinkBundlerHelper {
     }
 
     public static void execute(Map<String, ? super Object> params, AbstractAppImageBuilder imageBuilder) throws IOException, Exception {
-        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
-        Set<String> addModules = ADD_MODULES.fetchFrom(params);
-        Set<String> limitModules = LIMIT_MODULES.fetchFrom(params);
-        boolean stripNativeCommands = STRIP_NATIVE_COMMANDS.fetchFrom(params);
+        List<Path> modulePath = StandardBundlerParam.MODULE_PATH.fetchFrom(params);
+        Set<String> addModules = StandardBundlerParam.ADD_MODULES.fetchFrom(params);
+        Set<String> limitModules = StandardBundlerParam.LIMIT_MODULES.fetchFrom(params);
+        boolean stripNativeCommands = StandardBundlerParam.STRIP_NATIVE_COMMANDS.fetchFrom(params);
         Map<String, String> userArguments = JLINK_OPTIONS.fetchFrom(params);
         Path outputDir = imageBuilder.getRoot();
         String excludeFileList = imageBuilder.getExcludeFileList();
@@ -382,27 +326,6 @@ public final class JLinkBundlerHelper {
         }
 
         return result;
-    }
-
-    private static void setupDefaultModulePathIfNecessary(Map<String, ? super Object> params) {
-        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
-        Path userDefinedJdkModulePath = findPathOfModule(modulePath, "java.base.jmod");
-
-        // Add the default JDK module path to the module path.
-        if (userDefinedJdkModulePath == null) {
-            Path jdkModulePath = Paths.get(System.getProperty("java.home"), "jmods").toAbsolutePath();
-
-            if (jdkModulePath != null && Files.exists(jdkModulePath)) {
-                modulePath.add(jdkModulePath);
-                params.put(MODULE_PATH.getID(), listOfPathToString(modulePath));
-            }
-        }
-
-        Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
-
-        if (javaBasePath == null || !javaBasePath.toFile().exists()) {
-            Log.info(String.format(I18N.getString("warning.no.jdk.modules.found")));
-        }
     }
 
     private static Set<String> getResourceFileJarList(Map<String, ? super Object> params, Module.JarType Query) {

@@ -25,6 +25,7 @@
 
 package com.sun.javafx.tools.ant;
 
+import com.oracle.tools.packager.StandardBundlerParam;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.DynamicAttribute;
 import org.apache.tools.ant.types.DataType;
@@ -82,7 +83,7 @@ public class SecondaryLauncher extends DataType implements DynamicAttribute {
             putUnlessNull(bundleParams, MAIN_CLASS.getID(), mainClass);
         }
         else if (module == null && mainClass != null) {
-            putUnlessNull(bundleParams, JLinkBundlerHelper.MODULE.getID(), module + "/" + mainClass);
+            putUnlessNull(bundleParams, StandardBundlerParam.MODULE.getID(), module + "/" + mainClass);
         }
 
 //??        putUnlessNull(bundleParams, Preloader, preloaderClass);
