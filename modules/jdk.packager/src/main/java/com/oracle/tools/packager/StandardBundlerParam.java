@@ -872,24 +872,36 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         return result;
     }
 
+    private static boolean setupDefaultModulePath = false;
+
     private static void setupDefaultModulePathIfNecessary(Map<String, ? super Object> params) {
-        List<Path> modulePath = MODULE_PATH.fetchFrom(params);
-        Path userDefinedJdkModulePath = findPathOfModule(modulePath, "java.base.jmod");
+        if (!setupDefaultModulePath) {
+            setupDefaultModulePath = true;
+            Path userDefinedJdkModulePath = null;
+            List<Path> modulePath = MODULE_PATH.fetchFrom(params, false);
 
-        // Add the default JDK module path to the module path.
-        if (userDefinedJdkModulePath == null) {
-            Path jdkModulePath = Paths.get(System.getProperty("java.home"), "jmods").toAbsolutePath();
-
-            if (jdkModulePath != null && Files.exists(jdkModulePath)) {
-                modulePath.add(jdkModulePath);
-                params.put(MODULE_PATH.getID(), listOfPathToString(modulePath));
+            if (modulePath != null) {
+                userDefinedJdkModulePath = findPathOfModule(modulePath, "java.base.jmod");
             }
-        }
+            else {
+                modulePath = new ArrayList();
+            }
 
-        Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
+            // Add the default JDK module path to the module path.
+            if (userDefinedJdkModulePath == null) {
+                Path jdkModulePath = Paths.get(System.getProperty("java.home"), "jmods").toAbsolutePath();
 
-        if (javaBasePath == null || !javaBasePath.toFile().exists()) {
-            Log.info(String.format(I18N.getString("warning.no.jdk.modules.found")));
+                if (jdkModulePath != null && Files.exists(jdkModulePath)) {
+                    modulePath.add(jdkModulePath);
+                    params.put(MODULE_PATH.getID(), listOfPathToString(modulePath));
+                }
+            }
+
+            Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
+
+            if (javaBasePath == null || !javaBasePath.toFile().exists()) {
+                Log.info(String.format(I18N.getString("warning.no.jdk.modules.found")));
+            }
         }
     }
 
