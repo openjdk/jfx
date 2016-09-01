@@ -913,7 +913,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
             if (elo != null && currPageInfo != null) {
                 Application.invokeLater(new ExitLoopRunnable(elo, null));
-        }
+            }
 
             if (currPageInfo != null) {
                 if (Toolkit.getToolkit().isFxUserThread()) {
@@ -1092,7 +1092,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
 
 
     public boolean endJob() {
-        if (jobRunning && !jobDone &&!jobError) {
+        if (jobRunning && !jobDone && !jobError) {
             jobDone = true;
             try {
                 synchronized (monitor) {
@@ -1105,7 +1105,7 @@ public class J2DPrinterJob implements PrinterJobImpl {
                 }
             }
         } else {
-            return false;
+            return jobDone && !jobError;
         }
         return jobDone;
     }

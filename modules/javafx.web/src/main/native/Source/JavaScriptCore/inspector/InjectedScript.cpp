@@ -304,6 +304,10 @@ void InjectedScript::releaseObject(const String& objectId)
 void InjectedScript::releaseObjectGroup(const String& objectGroup)
 {
     ASSERT(!hasNoValue());
+    // JDK-8164960
+    if (hasNoValue())
+        return;
+
     Deprecated::ScriptFunctionCall releaseFunction(injectedScriptObject(), ASCIILiteral("releaseObjectGroup"), inspectorEnvironment()->functionCallHandler());
     releaseFunction.appendArgument(objectGroup);
 

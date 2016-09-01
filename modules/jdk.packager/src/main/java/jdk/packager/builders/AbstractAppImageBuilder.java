@@ -30,6 +30,7 @@ import jdk.packager.internal.JLinkBundlerHelper;
 import com.oracle.tools.packager.RelativeFileSet;
 
 import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.StandardBundlerParam;
 import jdk.packager.internal.Module;
 
 import java.io.ByteArrayOutputStream;
@@ -179,7 +180,7 @@ public abstract class AbstractAppImageBuilder {
             mainJarType = new Module(mainJar).getModuleType();
         }
 
-        String mainModule = JLinkBundlerHelper.MODULE.fetchFrom(params);
+        String mainModule = StandardBundlerParam.MODULE.fetchFrom(params);
 
         PrintStream out = new PrintStream(cfgFileName);
 

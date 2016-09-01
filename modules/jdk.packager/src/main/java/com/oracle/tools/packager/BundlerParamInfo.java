@@ -112,6 +112,11 @@ public class BundlerParamInfo<T> {
 
     @SuppressWarnings("unchecked")
     public final T fetchFrom(Map<String, ? super Object> params) {
+        return fetchFrom(params, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    public final T fetchFrom(Map<String, ? super Object> params, boolean invokeDefault) {
         Object o = params.get(getID());
         if (o instanceof String && getStringConverter() != null) {
             return getStringConverter().apply((String)o, params);
@@ -129,7 +134,7 @@ public class BundlerParamInfo<T> {
             return null;
         }
 
-        if (getDefaultValueFunction() != null) {
+        if (invokeDefault && (getDefaultValueFunction() != null)) {
             T result =  getDefaultValueFunction().apply(params);
             if (result != null) {
                 params.put(getID(), result);

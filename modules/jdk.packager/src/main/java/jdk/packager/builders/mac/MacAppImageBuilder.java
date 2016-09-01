@@ -521,7 +521,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
                 MAC_CATEGORY.fetchFrom(params));
 
         boolean hasMainJar = MAIN_JAR.fetchFrom(params) != null;
-        boolean hasMainModule = JLinkBundlerHelper.MODULE.fetchFrom(params) != null;
+        boolean hasMainModule = StandardBundlerParam.MODULE.fetchFrom(params) != null;
 
         if (hasMainJar) {
             data.put("DEPLOY_MAIN_JAR_NAME", MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
