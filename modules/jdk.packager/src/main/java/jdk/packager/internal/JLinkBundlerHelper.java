@@ -44,6 +44,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -277,7 +278,7 @@ public final class JLinkBundlerHelper {
             Set<String> modularJars = getResourceFileJarList(params, Module.JarType.ModularJar);
 
             if (!modularJars.isEmpty()) {
-                throw new Exception(String.format(I18N.getString("error.srcfiles.contain.modules"), modularJars.toString()));
+                throw new Exception(MessageFormat.format(I18N.getString("error.srcfiles.contain.modules"), modularJars.toString()));
             }
         }
 
@@ -289,7 +290,7 @@ public final class JLinkBundlerHelper {
 
         // Bundle with minimum dependencies that unnamed jars depend on.
         if (detectModules && !jars.isEmpty()) {
-            Log.info(String.format(I18N.getString("using.experimental.feature"), "--" + DETECT_MODULES.getID()));
+            Log.info(MessageFormat.format(I18N.getString("using.experimental.feature"), "--" + DETECT_MODULES.getID()));
             Collection<String> detectedModules = JDepHelper.calculateModules(jars, modulePath);
 
             if (!detectedModules.isEmpty()) {
@@ -297,7 +298,7 @@ public final class JLinkBundlerHelper {
             }
         }
 
-        Log.info(String.format(I18N.getString("message.modules"), addModules.toString()));
+        Log.info(MessageFormat.format(I18N.getString("message.modules"), addModules.toString()));
 
         AppRuntimeImageBuilder appRuntimeBuilder = new AppRuntimeImageBuilder();
         appRuntimeBuilder.setOutputDir(outputDir);
