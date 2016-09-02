@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@ import com.sun.media.jfxmedia.effects.AudioEqualizer;
 import com.sun.media.jfxmedia.effects.AudioSpectrum;
 import com.sun.media.jfxmedia.effects.EqualizerBand;
 import com.sun.media.jfxmedia.locator.Locator;
+import com.sun.media.jfxmedia.control.MediaPlayerOverlay;
 import com.sun.media.jfxmediaimpl.NativeMediaPlayer;
 
 import java.util.Map;
@@ -45,6 +46,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
 
     private final NullAudioEQ audioEqualizer;
     private final NullAudioSpectrum audioSpectrum;
+    private final MediaPlayerOverlay mediaPlayerOverlay;
 
     private float mutedVolume = 1.0f;  // last volume before mute
     private boolean muteEnabled; // false by default
@@ -60,6 +62,7 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
 
         audioEqualizer = new NullAudioEQ();
         audioSpectrum = new NullAudioSpectrum();
+        mediaPlayerOverlay = new MediaPlayerOverlayImpl();
     }
 
     IOSMediaPlayer(final Locator source) {
@@ -74,6 +77,11 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
     @Override
     public AudioSpectrum getAudioSpectrum() {
         return audioSpectrum;
+    }
+
+    @Override
+    public MediaPlayerOverlay getMediaPlayerOverlay() {
+        return mediaPlayerOverlay;
     }
 
     private void handleError(final int err) throws MediaException {
@@ -219,45 +227,6 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
     protected void playerDispose() {
         iosDispose(iosMedia.getNativeMediaRef());
         iosMedia = null;
-    }
-
-    public void setOverlayX(final double x) {
-        handleError(iosSetOverlayX(iosMedia.getNativeMediaRef(), x));
-    }
-
-    public void setOverlayY(final double y) {
-        handleError(iosSetOverlayY(iosMedia.getNativeMediaRef(), y));
-    }
-
-    public void setOverlayVisible(final boolean visible) {
-        handleError(iosSetOverlayVisible(iosMedia.getNativeMediaRef(), visible));
-    }
-
-    public void setOverlayWidth(final double width) {
-        handleError(iosSetOverlayWidth(iosMedia.getNativeMediaRef(), width));
-    }
-
-    public void setOverlayHeight(final double height) {
-        handleError(iosSetOverlayHeight(iosMedia.getNativeMediaRef(), height));
-    }
-
-    public void setOverlayPreserveRatio(final boolean preserveRatio) {
-        handleError(iosSetOverlayPreserveRatio(iosMedia.getNativeMediaRef(), preserveRatio));
-    }
-
-    public void setOverlayOpacity(final double opacity) {
-        handleError(iosSetOverlayOpacity(iosMedia.getNativeMediaRef(), opacity));
-    }
-
-    public void setOverlayTransform(
-            final double mxx, final double mxy, final double mxz, final double mxt,
-            final double myx, final double myy, final double myz, final double myt,
-            final double mzx, final double mzy, final double mzz, final double mzt) {
-        handleError(iosSetOverlayTransform(
-                iosMedia.getNativeMediaRef(),
-                mxx, mxy, mxz, mxt,
-                myx, myy, myz, myt,
-                mzx, mzy, mzz, mzt));
     }
 
     // Native methods
@@ -418,6 +387,56 @@ public final class IOSMediaPlayer extends NativeMediaPlayer {
 
         public void setGain(double gain) {
             this.gain = gain;
+        }
+    }
+
+    private final class MediaPlayerOverlayImpl implements MediaPlayerOverlay {
+
+        @Override
+        public void setOverlayX(final double x) {
+            handleError(iosSetOverlayX(iosMedia.getNativeMediaRef(), x));
+        }
+
+        @Override
+        public void setOverlayY(final double y) {
+            handleError(iosSetOverlayY(iosMedia.getNativeMediaRef(), y));
+        }
+
+        @Override
+        public void setOverlayVisible(final boolean visible) {
+            handleError(iosSetOverlayVisible(iosMedia.getNativeMediaRef(), visible));
+        }
+
+        @Override
+        public void setOverlayWidth(final double width) {
+            handleError(iosSetOverlayWidth(iosMedia.getNativeMediaRef(), width));
+        }
+
+        @Override
+        public void setOverlayHeight(final double height) {
+            handleError(iosSetOverlayHeight(iosMedia.getNativeMediaRef(), height));
+        }
+
+        @Override
+        public void setOverlayPreserveRatio(final boolean preserveRatio) {
+            handleError(iosSetOverlayPreserveRatio(iosMedia.getNativeMediaRef(), preserveRatio));
+        }
+
+        @Override
+        public void setOverlayOpacity(final double opacity) {
+            handleError(iosSetOverlayOpacity(iosMedia.getNativeMediaRef(), opacity));
+        }
+
+        @Override
+        public void setOverlayTransform(
+                final double mxx, final double mxy, final double mxz, final double mxt,
+                final double myx, final double myy, final double myz, final double myt,
+                final double mzx, final double mzy, final double mzz, final double mzt) {
+            handleError(iosSetOverlayTransform(
+                    iosMedia.getNativeMediaRef(),
+                    mxx, mxy, mxz, mxt,
+                    myx, myy, myz, myt,
+                    mzx, mzy, mzz, mzt));
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import com.sun.media.jfxmedia.MediaException;
 import com.sun.media.jfxmedia.effects.AudioEqualizer;
 import com.sun.media.jfxmedia.effects.AudioSpectrum;
 import com.sun.media.jfxmedia.locator.Locator;
+import com.sun.media.jfxmedia.control.MediaPlayerOverlay;
 import com.sun.media.jfxmediaimpl.NativeMediaPlayer;
 
 /**
@@ -70,6 +71,11 @@ final class GSTMediaPlayer extends NativeMediaPlayer {
     @Override
     public AudioSpectrum getAudioSpectrum() {
         return audioSpectrum;
+    }
+
+    @Override
+    public MediaPlayerOverlay getMediaPlayerOverlay() {
+        return null; // Not needed
     }
 
     // FIXME: this should be pushed down to native instead of returning an int value
