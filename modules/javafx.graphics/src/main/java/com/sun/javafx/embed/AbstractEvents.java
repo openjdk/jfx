@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,8 @@ public class AbstractEvents {
     public final static int MOUSEEVENT_EXITED = 4;
     public final static int MOUSEEVENT_MOVED = 5;
     public final static int MOUSEEVENT_DRAGGED = 6;
-    public final static int MOUSEEVENT_WHEEL = 7;
+    public final static int MOUSEEVENT_VERTICAL_WHEEL = 7;
+    public final static int MOUSEEVENT_HORIZONTAL_WHEEL = 8;
 
     public final static int MOUSEEVENT_NONE_BUTTON = 0;
     public final static int MOUSEEVENT_PRIMARY_BUTTON = 1;

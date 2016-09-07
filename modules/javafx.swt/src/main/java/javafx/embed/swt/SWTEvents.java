@@ -32,6 +32,8 @@ import java.lang.reflect.Method;
 
 //import com.sun.glass.events.KeyEvent;
 import com.sun.javafx.embed.AbstractEvents;
+import org.eclipse.swt.widgets.Event;
+
 import java.lang.reflect.InvocationTargetException;
 
 /**
@@ -58,8 +60,6 @@ class SWTEvents {
                 return AbstractEvents.MOUSEEVENT_ENTERED;
             case MouseEvent.MOUSE_EXITED:
                 return AbstractEvents.MOUSEEVENT_EXITED;
-            case MouseWheelEvent.MOUSE_WHEEL:
-                return AbstractEvents.MOUSEEVENT_WHEEL;
         }
         return 0;
     }
@@ -73,33 +73,30 @@ class SWTEvents {
         return AbstractEvents.MOUSEEVENT_NONE_BUTTON;
     }
 
-    static int getWheelRotation(MouseEvent e, int embedMouseType) {
+    static int getWheelRotation(Event e) {
         int divisor = 1;
-        if (embedMouseType == AbstractEvents.MOUSEEVENT_WHEEL) {
-            if ("win32".equals(SWT.getPlatform())) {
-                int [] linesToScroll = new int [1];
-                //OS.SystemParametersInfo (OS.SPI_GETWHEELSCROLLLINES, 0, linesToScroll, 0);
-                try {
-                    Class clazz = Class.forName("org.eclipse.swt.internal.win32.OS");
-                    Method method = clazz.getDeclaredMethod("SystemParametersInfo", new Class []{int.class, int.class, int [].class, int.class});
-                    method.invoke(clazz, 104 /*SPI_GETWHEELSCROLLLINES*/, 0, linesToScroll, 0);
-                } catch (IllegalAccessException iae) {
-                } catch (InvocationTargetException ite) {
-                } catch (NoSuchMethodException nme) {
-                } catch (ClassNotFoundException cfe) {
-                    //Fail silently
-                }
-                if (linesToScroll [0] != -1 /*OS.WHEEL_PAGESCROLL*/) {
-                    divisor = linesToScroll [0];
-                }
-            } else {
-                if ("gtk".equals(SWT.getPlatform())) {
-                    divisor = 3;
-                }
+        if ("win32".equals(SWT.getPlatform())) {
+            int [] linesToScroll = new int [1];
+            //OS.SystemParametersInfo (OS.SPI_GETWHEELSCROLLLINES, 0, linesToScroll, 0);
+            try {
+                Class clazz = Class.forName("org.eclipse.swt.internal.win32.OS");
+                Method method = clazz.getDeclaredMethod("SystemParametersInfo", new Class []{int.class, int.class, int [].class, int.class});
+                method.invoke(clazz, 104 /*SPI_GETWHEELSCROLLLINES*/, 0, linesToScroll, 0);
+            } catch (IllegalAccessException iae) {
+            } catch (InvocationTargetException ite) {
+            } catch (NoSuchMethodException nme) {
+            } catch (ClassNotFoundException cfe) {
+                //Fail silently
             }
-            return -e.count / Math.max(1, divisor);
+            if (linesToScroll [0] != -1 /*OS.WHEEL_PAGESCROLL*/) {
+                divisor = linesToScroll [0];
+            }
+        } else {
+            if ("gtk".equals(SWT.getPlatform())) {
+                divisor = 3;
+            }
         }
-        return 0;
+        return -e.count / Math.max(1, divisor);
     }
 
     static int keyIDToEmbedKeyType(int id) {

@@ -369,16 +369,27 @@ public class JFXPanel extends JComponent {
         if (e.getID() == MouseEvent.MOUSE_PRESSED || e.getID() == MouseEvent.MOUSE_RELEASED) {
             popupTrigger = e.isPopupTrigger();
         }
-        scenePeer.mouseEvent(
-                SwingEvents.mouseIDToEmbedMouseType(e.getID()),
-                SwingEvents.mouseButtonToEmbedMouseButton(e.getButton(), extModifiers),
-                primaryBtnDown, middleBtnDown, secondaryBtnDown,
-                e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(),
-                (extModifiers & MouseEvent.SHIFT_DOWN_MASK) != 0,
-                (extModifiers & MouseEvent.CTRL_DOWN_MASK) != 0,
-                (extModifiers & MouseEvent.ALT_DOWN_MASK) != 0,
-                (extModifiers & MouseEvent.META_DOWN_MASK) != 0,
-                SwingEvents.getWheelRotation(e), popupTrigger);
+
+        if(e.getID() == MouseEvent.MOUSE_WHEEL) {
+            scenePeer.scrollEvent(AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL,
+                    0, -SwingEvents.getWheelRotation(e),
+                    e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(),
+                    (extModifiers & MouseEvent.SHIFT_DOWN_MASK) != 0,
+                    (extModifiers & MouseEvent.CTRL_DOWN_MASK) != 0,
+                    (extModifiers & MouseEvent.ALT_DOWN_MASK) != 0,
+                    (extModifiers & MouseEvent.META_DOWN_MASK) != 0);
+        } else {
+            scenePeer.mouseEvent(
+                    SwingEvents.mouseIDToEmbedMouseType(e.getID()),
+                    SwingEvents.mouseButtonToEmbedMouseButton(e.getButton(), extModifiers),
+                    primaryBtnDown, middleBtnDown, secondaryBtnDown,
+                    e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(),
+                    (extModifiers & MouseEvent.SHIFT_DOWN_MASK) != 0,
+                    (extModifiers & MouseEvent.CTRL_DOWN_MASK) != 0,
+                    (extModifiers & MouseEvent.ALT_DOWN_MASK) != 0,
+                    (extModifiers & MouseEvent.META_DOWN_MASK) != 0,
+                    popupTrigger);
+        }
         if (e.isPopupTrigger()) {
             scenePeer.menuEvent(e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(), false);
         }
