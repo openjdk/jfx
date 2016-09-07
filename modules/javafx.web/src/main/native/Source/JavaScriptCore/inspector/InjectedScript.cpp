@@ -304,7 +304,7 @@ void InjectedScript::releaseObject(const String& objectId)
 void InjectedScript::releaseObjectGroup(const String& objectGroup)
 {
     ASSERT(!hasNoValue());
-    // JDK-8164960
+    // JDK-8164076
     if (hasNoValue())
         return;
 
