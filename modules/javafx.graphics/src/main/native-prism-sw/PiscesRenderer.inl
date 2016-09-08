@@ -366,6 +366,8 @@ renderer_setTexture(Renderer* rdr, jint renderMode, jint* data, jint width, jint
         if (rdr->_texture_m02 == 0 && rdr->_texture_m12 == 0)
         {
             rdr->_texture_transformType = TEXTURE_TRANSFORM_IDENTITY;
+            // we can disable interpolation since TX and TX has no fraction part
+            rdr->_texture_interpolate = XNI_FALSE;
         } else {
             rdr->_texture_transformType = TEXTURE_TRANSFORM_TRANSLATE;
             if ((rdr->_texture_m02 & 0xFFFF) == 0 &&
