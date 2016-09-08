@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,7 +24,6 @@
  */
 package hello.dialog.wizard;
 
-import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 
@@ -44,12 +43,12 @@ public class ImplUtils {
         // no-op
     }
 
-    public static List<Node> getChildren(Node n, boolean useReflection) {
-        return n instanceof Parent ? getChildren((Parent)n, useReflection) : Collections.emptyList();
+    public static List<Node> getChildren(Node n) {
+        return n instanceof Parent ? getChildren((Parent)n) : Collections.emptyList();
     }
 
     @SuppressWarnings("unchecked")
-    public static ObservableList<Node> getChildren(Parent p, boolean useReflection) {
+    public static ObservableList<Node> getChildren(Parent p) {
         ObservableList<Node> children = null;
 
         // previously we used reflection immediately, now we try to avoid reflection
@@ -64,29 +63,7 @@ public class ImplUtils {
             Control c = (Control) p;
             Skin<?> s = c.getSkin();
             children = s instanceof SkinBase ? ((SkinBase<?>)s).getChildren() : null;
-        } else if (useReflection) {
-            // we really want to avoid using this!!!!
-            try {
-                Method getChildrenMethod = Parent.class.getDeclaredMethod("getChildren"); //$NON-NLS-1$
-
-                if (getChildrenMethod != null) {
-                    if (! getChildrenMethod.isAccessible()) {
-                        getChildrenMethod.setAccessible(true);
-                    }
-                    children = (ObservableList<Node>) getChildrenMethod.invoke(p);
-                } else {
-                    // uh oh, trouble
-                }
-            } catch (ReflectiveOperationException | IllegalArgumentException e) {
-                throw new RuntimeException("Unable to get children for Parent of type " + p.getClass(), e);
-            }
         }
-
-        if (useReflection && children == null) {
-            throw new RuntimeException("Unable to get children for Parent of type " + p.getClass() +
-                                       ". useReflection is set to true");
-        }
-
         return children == null ? FXCollections.emptyObservableList() : children;
     }
 }

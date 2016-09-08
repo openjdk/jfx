@@ -346,7 +346,7 @@ public class Wizard {
         } else {
             // go into children of this node (if possible) and see if we can get
             // a value from them (recursively)
-            List<Node> children = ImplUtils.getChildren(n, false);
+            List<Node> children = ImplUtils.getChildren(n);
 
             // we're doing a depth-first search, where we stop drilling down
             // once we hit a successful read
