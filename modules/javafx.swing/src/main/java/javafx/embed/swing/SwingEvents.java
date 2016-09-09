@@ -56,8 +56,6 @@ class SwingEvents {
                 return AbstractEvents.MOUSEEVENT_ENTERED;
             case MouseEvent.MOUSE_EXITED:
                 return AbstractEvents.MOUSEEVENT_EXITED;
-            case MouseWheelEvent.MOUSE_WHEEL:
-                return AbstractEvents.MOUSEEVENT_WHEEL;
         }
         return 0;
     }

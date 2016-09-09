@@ -71,7 +71,14 @@ public interface EmbeddedSceneInterface {
                            boolean primaryBtnDown, boolean middleBtnDown, boolean secondaryBtnDown,
                            int x, int y, int xAbs, int yAbs,
                            boolean shift, boolean ctrl, boolean alt, boolean meta,
-                           int wheelRotation, boolean popupTrigger);
+                           boolean popupTrigger);
+    /*
+     * A notification about mouse wheel scroll events received by the host container;
+     */
+    public void scrollEvent(int type, double scrollX, double scrollY,
+                            double x, double y, double screenX, double screenY,
+                            boolean shift, boolean ctrl,
+                            boolean alt, boolean meta);
     /*
      * A notification about key event received by host container.
      */

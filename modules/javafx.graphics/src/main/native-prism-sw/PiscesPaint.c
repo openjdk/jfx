@@ -406,9 +406,7 @@ static INLINE void getPointsToInterpolateRepeat(jint *pts, jint *data, jint sidx
 void
 genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
     jint j;
-    jint minX, maxX;
     jint paintStride = rdr->_alphaWidth;
-    jint firstRowNum = rdr->_rowNum;
 
     jint x, y;
     jint* txtData = rdr->_texture_intData;
@@ -434,44 +432,18 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
             REPEAT_NO_INTERPOLATE : NO_REPEAT_NO_INTERPOLATE;
     }
 
-    minX = rdr->_minTouched;
-    maxX = rdr->_maxTouched;
-
     switch (rdr->_texture_transformType) {
     case TEXTURE_TRANSFORM_IDENTITY:
-        {
-        if (rdr->_texture_repeat) {
-            jint txtOffsetRepeat = rdr->_currX % txtWidth;
-            jint txtRowNumRepeat = rdr->_currY % txtHeight;
-            for (j = 0; j < height; j++) {
-                jint *tStart = txtData + txtStride * txtRowNumRepeat;
-                jint *t = tStart + txtOffsetRepeat;
-                jint *tEnd = tStart + txtWidth;
-                jint *d = paint + paintStride * j;
-                jint *dEnd = d + paintStride;
-                while (d < dEnd) {
-                    *d++ = *t++;
-                    if (t == tEnd) {
-                        t = tStart;
-                    }
-                }
-                txtRowNumRepeat++;
-                if (txtRowNumRepeat == txtHeight) {
-                    txtRowNumRepeat = 0;
-                }
-            }
-        } else {
-            jint minX = MAX(rdr->_rectX, rdr->_clip_bbMinX);
-            jint minY = MAX(rdr->_rectY, rdr->_clip_bbMinY);
-            jint clipOffset = (minY - rdr->_rectY) * txtStride + minX - rdr->_rectX;
-            for (j = 0; j < height; j++) {
-                memcpy(paint + paintStride * j,
-                     txtData + clipOffset + txtStride * (firstRowNum + j),
-                     sizeof(jint) * paintStride);
-            }
-        }
-        }
-        break;
+        // There used to be special case code for IDENTITY, but it had a number
+        // of bugs where it punted on some calculations which turned out to be
+        // necessary.  It was also rarely used because it relied on no
+        // translations to be set and/or no sub-textures to be used, which
+        // almost never happens in a scene graph, so this code was largely
+        // untested (witness the bugs mentioned above).  The decision was made
+        // to just have this case fall through to the translate case which is
+        // reasonably optimal and the code that was being used 99% of the
+        // time when there was no scale anyway.
+    /* NO BREAK */
 
     // just TRANSLATION
     case TEXTURE_TRANSFORM_TRANSLATE:
@@ -513,19 +485,24 @@ genTexturePaintTarget(Renderer *rdr, jint *paint, jint height) {
 
             switch (repeatInterpolateMode) {
             case NO_REPEAT_NO_INTERPOLATE:
+            {
+                jint *txtRow = txtData + (MAX(0, ty) * txtStride);
+                jint len;
+                tx = (jint)(ltx >> 16);
+                while (tx < txMin && a < am) {
+                    *a++ = txtRow[txMin];
+                    ++tx;
+                }
+                len = MIN(am-a, txMax-tx+1);
+                if (len > 0) {
+                    memcpy(a, txtRow + tx, sizeof(jint) * len);
+                    a += len;
+                }
                 while (a < am) {
-                    tx = (jint)(ltx >> 16);
-                    checkBoundsNoRepeat(&tx, &ltx, txMin-1, txMax);
-                    PISCES_DEBUG("[%d, %d, h:%d, v:%d] ", tx, ty, hfrac, vfrac);
-                    sidx = MAX(0, ty) * txtStride + MAX(0, tx);
-                    assert(pidx >= 0);
-                    assert(pidx < rdr->_paint_length);
-                    paint[pidx] = txtData[sidx];
-                    ++a;
-                    ++pidx;
-                    ltx += 0x10000;
-                } // while (a < am)
+                    *a++ = txtRow[txMax];
+                }
                 break;
+            }
             case REPEAT_NO_INTERPOLATE:
                 while (a < am) {
                     tx = (jint)(ltx >> 16);

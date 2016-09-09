@@ -94,6 +94,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 
@@ -463,8 +464,11 @@ public class FXCanvas extends Canvas {
             }
         });
 
-        addMouseWheelListener(me -> {
-            FXCanvas.this.sendMouseEventToFX(me, AbstractEvents.MOUSEEVENT_WHEEL);
+        addListener(SWT.MouseVerticalWheel, e -> {
+            FXCanvas.this.sendScrollEventToFX(e, AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL);
+        });
+        addListener(SWT.MouseHorizontalWheel, e -> {
+            FXCanvas.this.sendScrollEventToFX(e, AbstractEvents.MOUSEEVENT_HORIZONTAL_WHEEL);
         });
 
         addMouseTrackListener(new MouseTrackListener() {
@@ -673,8 +677,23 @@ public class FXCanvas extends Canvas {
                 me.x, me.y,
                 los.x, los.y,
                 shift, control, alt, meta,
-                SWTEvents.getWheelRotation(me, embedMouseType),
                 false);  // RT-32990: popup trigger not implemented
+    }
+
+    private void sendScrollEventToFX(Event event, int type){
+        if (scenePeer == null) {
+            return;
+        }
+        Point los = toDisplay(event.x, event.y);
+        scenePeer.scrollEvent(type,
+                (type == AbstractEvents.MOUSEEVENT_HORIZONTAL_WHEEL) ? -SWTEvents.getWheelRotation(event) : 0,
+                (type == AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL) ? -SWTEvents.getWheelRotation(event) : 0,
+                event.x, event.y,
+                los.x, los.y,
+                (event.stateMask & SWT.SHIFT) != 0,
+                (event.stateMask & SWT.CONTROL) != 0,
+                (event.stateMask & SWT.ALT) != 0,
+                (event.stateMask & SWT.COMMAND) != 0);
     }
 
     private void sendKeyEventToFX(final KeyEvent e, int type) {

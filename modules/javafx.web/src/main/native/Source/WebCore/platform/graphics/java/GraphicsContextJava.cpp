@@ -770,7 +770,7 @@ static void setClipPath(
     WindRule wrule,
     bool isOut)
 {
-    if (gc.paintingDisabled() || path.isEmpty())
+    if (gc.paintingDisabled())
         return;
 
     state.clipBounds.intersect(state.transform.mapRect(path.fastBoundingRect()));

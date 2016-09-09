@@ -273,7 +273,7 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                            final boolean primaryBtnDown, final boolean middleBtnDown, final boolean secondaryBtnDown,
                            final int x, final int y, final int xAbs, final int yAbs,
                            final boolean shift, final boolean ctrl, final boolean alt, final boolean meta,
-                           final int wheelRotation, final boolean popupTrigger)
+                           final boolean popupTrigger)
     {
         Platform.runLater(() -> {
             AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
@@ -282,21 +282,35 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                 }
                 // Click events are generated in Scene, so we don't expect them here
                 assert type != AbstractEvents.MOUSEEVENT_CLICKED;
-                if (type == AbstractEvents.MOUSEEVENT_WHEEL) {
-                    sceneListener.scrollEvent(ScrollEvent.SCROLL, 0, -wheelRotation, 0, 0, 40.0, 40.0,
-                            0, 0, 0, 0, 0,
-                            x, y, xAbs, yAbs, shift, ctrl, alt, meta, false, false);
-                } else {
-                    EventType<MouseEvent> eventType = AbstractEvents.mouseIDToFXEventID(type);
-                    sceneListener.mouseEvent(eventType, x, y, xAbs, yAbs,
+                EventType<MouseEvent> eventType = AbstractEvents.mouseIDToFXEventID(type);
+                sceneListener.mouseEvent(eventType, x, y, xAbs, yAbs,
                             AbstractEvents.mouseButtonToFXMouseButton(button),
                             popupTrigger, false, // do we know if it's synthesized? RT-20142
                             shift, ctrl, alt, meta,
                             primaryBtnDown, middleBtnDown, secondaryBtnDown);
-                }
                 return null;
             }, getAccessControlContext());
         });
+    }
+
+    @Override
+    public void scrollEvent(final int type, final double scrollX, final double scrollY,
+                            final double x, final double y,
+                            final double xAbs, final double yAbs,
+                            final boolean shift, final boolean ctrl, final boolean alt, final boolean meta) {
+        {
+            Platform.runLater(() -> {
+                AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                    if (sceneListener == null) {
+                        return null;
+                    }
+                    sceneListener.scrollEvent(ScrollEvent.SCROLL, scrollX, scrollY, 0, 0, 40.0, 40.0,
+                            0, 0, 0, 0, 0,
+                            x, y, xAbs, yAbs, shift, ctrl, alt, meta, false, false);
+                    return null;
+                }, getAccessControlContext());
+            });
+        }
     }
 
     @Override

@@ -60,7 +60,7 @@ void WebInjectedScriptManager::discardInjectedScriptsFor(DOMWindow* window)
     Vector<long> idsToRemove;
     for (const auto& it : m_idToInjectedScript) {
         JSC::ExecState* scriptState = it.value.scriptState();
-        // JDK-8164960
+        // JDK-8164076
         if (scriptState == nullptr || window != domWindowFromExecState(scriptState))
             continue;
         m_scriptStateToId.remove(scriptState);
