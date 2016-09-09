@@ -3744,6 +3744,10 @@ invalid_closure_notify (gpointer  instance,
   SIGNAL_LOCK ();
 
   handler = handler_lookup (instance, 0, closure, &signal_id);
+#ifdef GSTREAMER_LITE
+  if (handler == NULL)
+    return;
+#endif // GSTREAMER_LITE
   g_assert (handler->closure == closure);
 
   handler->sequential_number = 0;
