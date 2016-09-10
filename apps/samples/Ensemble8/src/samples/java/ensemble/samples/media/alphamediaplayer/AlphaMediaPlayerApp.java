@@ -33,6 +33,7 @@ package ensemble.samples.media.alphamediaplayer;
 
 import javafx.application.Application;
 import javafx.beans.Observable;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Parent;
 import javafx.scene.media.Media;
@@ -63,10 +64,26 @@ public class AlphaMediaPlayerApp extends Application {
     PlanetaryPlayerPane planetaryPlayerPane;
     private MediaPlayer arthPlayer;
     private MediaPlayer fierPlayer;
-    SimpleDoubleProperty arthPos = new SimpleDoubleProperty(-90.0);
-    SimpleDoubleProperty fierPos = new SimpleDoubleProperty(50.0);
-    SimpleDoubleProperty arthRate = new SimpleDoubleProperty(1.0);
-    SimpleDoubleProperty fierRate = new SimpleDoubleProperty(1.0);
+
+    private final DoubleProperty arthPos = new SimpleDoubleProperty(-90.0);
+    public final DoubleProperty arthPosProperty() {
+        return arthPos;
+    }
+
+    private final DoubleProperty fierPos = new SimpleDoubleProperty(50.0);
+    public final DoubleProperty fierPosProperty() {
+        return fierPos;
+    }
+
+    private final DoubleProperty arthRate = new SimpleDoubleProperty(1.0);
+    public final DoubleProperty arthRateProperty() {
+        return arthRate;
+    }
+
+    private final DoubleProperty fierRate = new SimpleDoubleProperty(1.0);
+    public final DoubleProperty fierRateProperty() {
+        return fierRate;
+    }
 
     public Parent createContent() {
         String ARTH_URL =

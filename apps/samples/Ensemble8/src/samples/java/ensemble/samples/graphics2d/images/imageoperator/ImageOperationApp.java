@@ -34,6 +34,7 @@ package ensemble.samples.graphics2d.images.imageoperator;
 import javafx.application.Application;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -64,9 +65,20 @@ import javafx.stage.Stage;
  * @related /Graphics 2d/Images/Image Properties
  */
 public class ImageOperationApp extends Application {
-    private SimpleDoubleProperty gridSize = new SimpleDoubleProperty(3.0);
-    private SimpleDoubleProperty hueFactor = new SimpleDoubleProperty(12.0);
-    private SimpleDoubleProperty hueOffset = new SimpleDoubleProperty(240.0);
+    private final DoubleProperty gridSize = new SimpleDoubleProperty(3.0);
+    public final DoubleProperty gridSizeProperty() {
+        return gridSize;
+    }
+
+    private final DoubleProperty hueFactor = new SimpleDoubleProperty(12.0);
+    public final DoubleProperty hueFactorProperty() {
+        return hueFactor;
+    }
+
+    private final DoubleProperty hueOffset = new SimpleDoubleProperty(240.0);
+    public final DoubleProperty hueOffsetProperty() {
+        return hueOffset;
+    }
 
        private static void renderImage(WritableImage img, double gridSize,
                                        double hueFactor, double hueOffset) {

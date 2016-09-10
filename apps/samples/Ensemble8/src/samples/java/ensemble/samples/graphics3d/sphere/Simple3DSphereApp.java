@@ -100,12 +100,36 @@ public class Simple3DSphereApp extends Application {
     private Sphere earth;
     private PhongMaterial material;
     private PointLight sun;
+
     private final DoubleProperty sunDistance = new SimpleDoubleProperty(100);
+    public final DoubleProperty sunDistanceProperty() {
+        return sunDistance;
+    }
+
     private final BooleanProperty sunLight = new SimpleBooleanProperty(true);
+    public final BooleanProperty sunLightProperty() {
+        return sunLight;
+    }
+
     private final BooleanProperty diffuseMap = new SimpleBooleanProperty(true);
+    public final BooleanProperty diffuseMapProperty() {
+        return diffuseMap;
+    }
+
     private final BooleanProperty specularMap = new SimpleBooleanProperty(true);
+    public final BooleanProperty specularMapProperty() {
+        return specularMap;
+    }
+
     private final BooleanProperty bumpMap = new SimpleBooleanProperty(true);
+    public final BooleanProperty bumpMapProperty() {
+        return bumpMap;
+    }
+
     private final BooleanProperty selfIlluminationMap = new SimpleBooleanProperty(true);
+    public final BooleanProperty selfIlluminationMapProperty() {
+        return selfIlluminationMap;
+    }
 
     public Parent createContent() throws Exception {
 

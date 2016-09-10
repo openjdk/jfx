@@ -62,7 +62,10 @@ import java.text.NumberFormat;
  */
 public class TextFormatterApp extends Application{
 
-    private DoubleProperty price = new SimpleDoubleProperty(1200.555);
+    private final DoubleProperty price = new SimpleDoubleProperty(1200.555);
+    public final DoubleProperty priceProperty() {
+        return price;
+    }
 
     public Parent createContent() {
         final NumberFormat currencyInstance = NumberFormat.getCurrencyInstance();

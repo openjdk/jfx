@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -174,16 +174,7 @@ class PlaygroundTabs extends TabPane {
                 if (prop.propertyName.startsWith("get")) {
                     property = object.getClass().getMethod(prop.propertyName).invoke(object);
                 } else {
-                    for (Field f : object.getClass().getDeclaredFields()) {
-                        if (f.getName().equals(prop.propertyName)) {
-                            f.setAccessible(true);
-                            property = f.get(object);
-                            break;
-                        }
-                    }
-                    if (property == null) {
-                        property = object.getClass().getMethod(prop.propertyName + "Property").invoke(object);
-                    }
+                    property = object.getClass().getMethod(prop.propertyName + "Property").invoke(object);
                 }
                 if (object instanceof XYChart && prop.propertyName.equals("data")) {
                     needsDataTab = true;
