@@ -39,7 +39,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerValueFactory;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.TilePane;
 import javafx.stage.Stage;
 
 import java.util.Arrays;
@@ -72,10 +73,6 @@ public class SpinnerApp extends Application {
 
     public Parent createContent() {
 
-        HBox intBlock = new HBox(30);
-        HBox stringBlock = new HBox(30);
-        HBox doubleBlock = new HBox(30);
-
         String[] styles = {
             "spinner",  // defaults to arrows on right stacked vertically
             Spinner.STYLE_CLASS_ARROWS_ON_RIGHT_HORIZONTAL,
@@ -85,9 +82,15 @@ public class SpinnerApp extends Application {
             Spinner.STYLE_CLASS_SPLIT_ARROWS_HORIZONTAL
         };
 
-        Spinner[] intSpinners = new Spinner[styles.length];
-        Spinner[] stringSpinners = new Spinner[styles.length];
-        Spinner[] doubleSpinners = new Spinner[styles.length];
+        TilePane tilePane = new TilePane();
+        tilePane.setPrefColumns(6);     //preferred columns
+        tilePane.setPrefRows(3);        //preferred rows
+        tilePane.setHgap(20);
+        tilePane.setVgap(30);
+
+        Pane root = new Pane();
+        root.setMinSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
+        root.setMaxSize(Pane.USE_PREF_SIZE, Pane.USE_PREF_SIZE);
 
         for (int i = 0; i < styles.length; i++) {
             /* Integer spinners */
@@ -97,37 +100,35 @@ public class SpinnerApp extends Application {
             sp.setValueFactory(svf);
             sp.getStyleClass().add(styles[i]);
             sp.setPrefWidth(80);
-            intSpinners[i] = sp;
+            tilePane.getChildren().add(sp);
+        }
 
+        for (int i = 0; i < styles.length; i++) {
             /* Double spinners */
-            svf = new SpinnerValueFactory.DoubleSpinnerValueFactory(0.0, 1.0,
-                                                                    0.5, 0.01);
-            sp = new Spinner();
+            SpinnerValueFactory svf =
+                new SpinnerValueFactory.DoubleSpinnerValueFactory(0.0, 1.0,
+                                                                  0.5, 0.01);
+            Spinner sp = new Spinner();
             sp.setValueFactory(svf);
             sp.getStyleClass().add(styles[i]);
             sp.setPrefWidth(90);
-            doubleSpinners[i] = sp;
+            tilePane.getChildren().add(sp);
+        }
 
+        for (int i = 0; i < styles.length; i++) {
             /* String spinners */
             ObservableList<String> items =
                 FXCollections.observableArrayList("Grace", "Matt", "Katie");
-            svf = new SpinnerValueFactory.ListSpinnerValueFactory<>(items);
-            sp = new Spinner();
+            SpinnerValueFactory svf =
+                new SpinnerValueFactory.ListSpinnerValueFactory<>(items);
+            Spinner sp = new Spinner();
             sp.setValueFactory(svf);
             sp.setPrefWidth(100);
             sp.getStyleClass().add(styles[i]);
-            stringSpinners[i] = sp;
+            tilePane.getChildren().add(sp);
         }
 
-        intBlock.getChildren().addAll(Arrays.asList(intSpinners));
-        doubleBlock.getChildren().addAll(Arrays.asList(doubleSpinners));
-        stringBlock.getChildren().addAll(Arrays.asList(stringSpinners));
-
-        doubleBlock.setLayoutY(100);
-        stringBlock.setLayoutY(200);
-
-        Group group = new Group(intBlock, doubleBlock, stringBlock);
-        // group.getChildren().addAll();
-        return group;
+        root.getChildren().add(tilePane);
+        return root;
     }
 }
