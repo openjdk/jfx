@@ -42,6 +42,7 @@
 #define URI_LIST_LINE_BREAK "\r\n"
 
 extern JNIEnv* mainEnv; // Use only with main loop thread!!!
+extern JavaVM* javaVM;
 
 #include <exception>
 

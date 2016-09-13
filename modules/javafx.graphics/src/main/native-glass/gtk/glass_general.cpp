@@ -118,6 +118,8 @@ is_display_valid() {
     return displayValid;
 }
 
+JavaVM* javaVM;
+
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *jvm, void *reserved)
 {
@@ -127,9 +129,10 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jclass clazz;
     Display* display;
 
+    javaVM = jvm;
     if (jvm->GetEnv((void **)&env, JNI_VERSION_1_6)) {
          return JNI_ERR; /* JNI version not supported */
-     }
+    }
 
     clazz = env->FindClass("java/lang/String");
     if (env->ExceptionCheck()) return JNI_ERR;

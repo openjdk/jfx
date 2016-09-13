@@ -79,8 +79,18 @@ static gboolean call_runnable_in_timer
         return FALSE;
     }
     else if (context->runnable) {
-        mainEnv->CallVoidMethod(context->runnable, jRunnableRun, NULL);
-        LOG_EXCEPTION(mainEnv);
+        JNIEnv *env;
+        int envStatus = javaVM->GetEnv((void **)&env, JNI_VERSION_1_6);
+        if (envStatus == JNI_EDETACHED) {
+            javaVM->AttachCurrentThread((void **)&env, NULL);
+        }
+
+        env->CallVoidMethod(context->runnable, jRunnableRun, NULL);
+        LOG_EXCEPTION(env);
+
+        if (envStatus == JNI_EDETACHED) {
+            javaVM->DetachCurrentThread();
+        }
     }
     return TRUE;
 }
