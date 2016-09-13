@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,11 +41,15 @@ CJavaBandsHolder::~CJavaBandsHolder()
     JNIEnv *pEnv = jenv.getEnvironment();
 
     if (pEnv) {
-        if (m_Magnitudes)
+        if (m_Magnitudes) {
             pEnv->DeleteGlobalRef(m_Magnitudes);
+            m_Magnitudes = NULL;
+        }
 
-        if (m_Phases)
+        if (m_Phases) {
             pEnv->DeleteGlobalRef(m_Phases);
+            m_Phases = NULL;
+        }
     }
 }
 
@@ -57,7 +61,16 @@ void CJavaBandsHolder::UpdateBands(int size, const float* magnitudes, const floa
     CJavaEnvironment jenv(m_jvm);
     JNIEnv *pEnv = jenv.getEnvironment();
     if (pEnv) {
-        pEnv->SetFloatArrayRegion(m_Magnitudes, 0, size, magnitudes);
-        pEnv->SetFloatArrayRegion(m_Phases, 0, size, phases);
+        // use local references due to threading issues
+        jfloatArray localMagnitudes = (jfloatArray)pEnv->NewLocalRef(m_Magnitudes);
+        jfloatArray localPhases = (jfloatArray)pEnv->NewLocalRef(m_Phases);
+
+        if (localMagnitudes && localPhases) {
+            pEnv->SetFloatArrayRegion(localMagnitudes, 0, size, magnitudes);
+            pEnv->SetFloatArrayRegion(localPhases, 0, size, phases);
+        }
+
+        pEnv->DeleteLocalRef(localMagnitudes);
+        pEnv->DeleteLocalRef(localPhases);
     }
 }

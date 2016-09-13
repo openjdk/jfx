@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 #ifndef __JFXMedia__AVFKernelProcessor__
 #define __JFXMedia__AVFKernelProcessor__
+
+#include <memory>
 
 #include "AUEffectBase.h"
 
@@ -80,8 +82,16 @@ protected:
 };
 
 /*
- * Returns an instance of our common AudioUnit set up to use the given kernel
+ * Shared pointer that handles deleting the kernel when it's no longer in use.
+ * Please use this instead of raw pointers.
  */
-extern AudioUnit NewKernelProcessorUnit(AVFKernelProcessor *kernel);
+
+typedef std::shared_ptr<AVFKernelProcessor> AVFKernelProcessorPtr;
+
+/*
+ * Returns an instance of our common AudioUnit set up to use the given kernel.
+ * Use static_pointer_cast<AVFKernelProcessor>(kernelPtr) when passing a subclass
+ */
+AudioUnit NewKernelProcessorUnit(AVFKernelProcessorPtr kernel);
 
 #endif /* defined(__JFXMedia__AVFKernelProcessor__) */

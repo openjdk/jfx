@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,12 +98,17 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
 
 bool CJavaInputStreamCallbacks::NeedBuffer()
 {
-    bool     result = false;
+    bool result = false;
     CJavaEnvironment javaEnv(m_jvm);
     JNIEnv *pEnv = javaEnv.getEnvironment();
-    if (m_ConnectionHolder && pEnv)
-    {
-        result = (pEnv->CallBooleanMethod(m_ConnectionHolder, m_NeedBufferMID) == JNI_TRUE);
+
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            result = (pEnv->CallBooleanMethod(connection, m_NeedBufferMID) == JNI_TRUE);
+            pEnv->DeleteLocalRef(connection);
+        }
+
         javaEnv.reportException();
     }
 
@@ -116,8 +121,13 @@ int CJavaInputStreamCallbacks::ReadNextBlock()
     CJavaEnvironment javaEnv(m_jvm);
     JNIEnv *pEnv = javaEnv.getEnvironment();
 
-    if (m_ConnectionHolder && pEnv) {
-        result = pEnv->CallIntMethod(m_ConnectionHolder, m_ReadNextBlockMID);
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            result = pEnv->CallIntMethod(connection, m_ReadNextBlockMID);
+            pEnv->DeleteLocalRef(connection);
+        }
+
         if (javaEnv.clearException()) {
             result = -2;
         }
@@ -132,9 +142,13 @@ int CJavaInputStreamCallbacks::ReadBlock(int64_t position, int size)
     CJavaEnvironment javaEnv(m_jvm);
     JNIEnv *pEnv = javaEnv.getEnvironment();
 
-    if (m_ConnectionHolder && pEnv)
-    {
-        result = pEnv->CallIntMethod(m_ConnectionHolder, m_ReadBlockMID, position, size);
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            result = pEnv->CallIntMethod(connection, m_ReadBlockMID, position, size);
+            pEnv->DeleteLocalRef(connection);
+        }
+
         if (javaEnv.clearException()) {
             result = -2;
         }
@@ -147,13 +161,16 @@ void CJavaInputStreamCallbacks::CopyBlock(void* destination, int size)
 {
     CJavaEnvironment javaEnv(m_jvm);
     JNIEnv *pEnv = javaEnv.getEnvironment();
-    if (m_ConnectionHolder && pEnv)
-    {
-        jobject buffer = pEnv->GetObjectField(m_ConnectionHolder, m_BufferFID);
-        void *data = pEnv->GetDirectBufferAddress(buffer);
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            jobject buffer = pEnv->GetObjectField(connection, m_BufferFID);
+            void *data = pEnv->GetDirectBufferAddress(buffer);
 
-        memcpy(destination, data, size);
-        pEnv->DeleteLocalRef(buffer);
+            memcpy(destination, data, size);
+            pEnv->DeleteLocalRef(buffer);
+            pEnv->DeleteLocalRef(connection);
+        }
     }
  }
 
@@ -163,9 +180,13 @@ bool CJavaInputStreamCallbacks::IsSeekable()
     JNIEnv *pEnv = javaEnv.getEnvironment();
     bool result = false;
 
-    if (m_ConnectionHolder && pEnv)
-    {
-        result = (pEnv->CallBooleanMethod(m_ConnectionHolder, m_IsSeekableMID) == JNI_TRUE);
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            result = (pEnv->CallBooleanMethod(connection, m_IsSeekableMID) == JNI_TRUE);
+            pEnv->DeleteLocalRef(connection);
+        }
+
         javaEnv.reportException();
     }
 
@@ -178,9 +199,13 @@ bool CJavaInputStreamCallbacks::IsRandomAccess()
     JNIEnv *pEnv = javaEnv.getEnvironment();
     bool result = false;
 
-    if (m_ConnectionHolder && pEnv)
-    {
-        result = (pEnv->CallBooleanMethod(m_ConnectionHolder, m_IsRandomAccessMID) == JNI_TRUE);
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            result = (pEnv->CallBooleanMethod(connection, m_IsRandomAccessMID) == JNI_TRUE);
+            pEnv->DeleteLocalRef(connection);
+        }
+
         javaEnv.reportException();
     }
 
@@ -193,9 +218,13 @@ int64_t CJavaInputStreamCallbacks::Seek(int64_t position)
     JNIEnv *pEnv = javaEnv.getEnvironment();
     jlong result = -1;
 
-    if (m_ConnectionHolder && pEnv)
-    {
-        result = pEnv->CallLongMethod(m_ConnectionHolder, m_SeekMID, (jlong)position);
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            result = pEnv->CallLongMethod(connection, m_SeekMID, (jlong)position);
+            pEnv->DeleteLocalRef(connection);
+        }
+
         javaEnv.reportException();
     }
 
@@ -206,10 +235,16 @@ void CJavaInputStreamCallbacks::CloseConnection()
 {
     CJavaEnvironment javaEnv(m_jvm);
     JNIEnv *pEnv = javaEnv.getEnvironment();
-    if (m_ConnectionHolder && pEnv)
-    {
-        pEnv->CallVoidMethod(m_ConnectionHolder, m_CloseConnectionMID);
-        javaEnv.reportException();
+
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            pEnv->CallVoidMethod(connection, m_CloseConnectionMID);
+            pEnv->DeleteLocalRef(connection);
+
+            javaEnv.reportException();
+        }
+
         pEnv->DeleteGlobalRef(m_ConnectionHolder);
         m_ConnectionHolder = NULL;
     }
@@ -221,9 +256,13 @@ int CJavaInputStreamCallbacks::Property(int prop, int value)
     JNIEnv *pEnv = javaEnv.getEnvironment();
     int result = 0;
 
-    if (m_ConnectionHolder && pEnv)
-    {
-        result = pEnv->CallIntMethod(m_ConnectionHolder, m_PropertyMID, (jint)prop, (jint)value);
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            result = pEnv->CallIntMethod(connection, m_PropertyMID, (jint)prop, (jint)value);
+            pEnv->DeleteLocalRef(connection);
+        }
+
         javaEnv.reportException();
     }
 
@@ -236,9 +275,13 @@ int CJavaInputStreamCallbacks::GetStreamSize()
     JNIEnv *pEnv = javaEnv.getEnvironment();
     int result = 0;
 
-    if (m_ConnectionHolder && pEnv)
-    {
-        result = pEnv->CallIntMethod(m_ConnectionHolder, m_GetStreamSizeMID);
+    if (pEnv) {
+        jobject connection = pEnv->NewLocalRef(m_ConnectionHolder);
+        if (connection) {
+            result = pEnv->CallIntMethod(connection, m_GetStreamSizeMID);
+            pEnv->DeleteLocalRef(connection);
+        }
+
         javaEnv.reportException();
     }
 

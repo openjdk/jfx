@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,10 @@
 #define __JFXMedia__AVFAudioEqualizer__
 
 #include <PipelineManagement/AudioEqualizer.h>
+
 #include <map>
+#include <memory>
+
 #include "AVFKernelProcessor.h"
 #include "CAAutoDisposer.h"
 
@@ -161,5 +164,7 @@ private:
     // Call this after adding, removing or reordering bands
     void ResetBandParameters();
 };
+
+typedef std::shared_ptr<AVFAudioEqualizer> AVFAudioEqualizerPtr;
 
 #endif /* defined(__JFXMedia__AVFAudioEqualizer__) */
