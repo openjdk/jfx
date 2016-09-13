@@ -491,6 +491,7 @@ public class DeployParams extends CommonParams {
         if (outdir == null) {
             throw new PackagerException("ERR_MissingArgument", "-outdir");
         }
+
         if (outfile == null) {
             throw new PackagerException("ERR_MissingArgument", "-outfile");
         }
