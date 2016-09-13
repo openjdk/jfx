@@ -642,10 +642,36 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.module-path.description"),
                     "module-path",
                     (Class<List<Path>>) (Object)List.class,
-                    p -> {setupDefaultModulePathIfNecessary(p); return new ArrayList();},
-                    (s, p) -> Arrays.asList(s.split("[;:]")).stream()
-                        .map(ss -> new File(ss).toPath())
-                        .collect(Collectors.toList()));
+                    p -> { return getDefaultModulePath(); },
+                    (s, p) -> {
+                        List<Path> modulePath = Arrays.asList(s.split("[;:]")).stream()
+                                                      .map(ss -> new File(ss).toPath())
+                                                      .collect(Collectors.toList());
+                        Path userDefinedJdkModulePath = null;
+                        if (modulePath != null) {
+                            userDefinedJdkModulePath = JLinkBundlerHelper.findPathOfModule(modulePath, "java.base.jmod");
+                        }
+                        else {
+                            modulePath = new ArrayList();
+                        }
+
+                        // Add the default JDK module path to the module path.
+                        if (userDefinedJdkModulePath == null) {
+                            List<Path> jdkModulePath = getDefaultModulePath();
+
+                            if (jdkModulePath != null) {
+                                modulePath.addAll(jdkModulePath);
+                            }
+                        }
+
+                        Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
+
+                        if (javaBasePath == null || !javaBasePath.toFile().exists()) {
+                            com.oracle.tools.packager.Log.info(String.format(I18N.getString("warning.no.jdk.modules.found")));
+                        }
+
+                        return modulePath;
+                    });
 
     @SuppressWarnings("unchecked")
     public static final BundlerParamInfo<String> MODULE =
@@ -667,7 +693,8 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "add-modules",
                     (Class<Set<String>>) (Object) Set.class,
                     p -> new LinkedHashSet(),
-                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+"))));
+                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+")))
+            );
 
     @SuppressWarnings("unchecked")
     public static final BundlerParamInfo<Set<String>> LIMIT_MODULES =
@@ -677,7 +704,8 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "limit-modules",
                     (Class<Set<String>>) (Object) Set.class,
                     p -> new LinkedHashSet(),
-                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+"))));
+                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+")))
+            );
 
     @SuppressWarnings("unchecked")
     public static final BundlerParamInfo<Boolean> STRIP_NATIVE_COMMANDS =
@@ -687,7 +715,8 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "strip-native-commands",
                     Boolean.class,
                     p -> Boolean.TRUE,
-                    (s, p) -> Boolean.valueOf(s));
+                    (s, p) -> Boolean.valueOf(s)
+            );
 
     public static void extractMainClassInfoFromAppResources(Map<String, ? super Object> params) {
         boolean hasMainClass = params.containsKey(MAIN_CLASS.getID());
@@ -872,39 +901,6 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         return result;
     }
 
-    private static boolean setupDefaultModulePath = false;
-
-    private static void setupDefaultModulePathIfNecessary(Map<String, ? super Object> params) {
-        if (!setupDefaultModulePath) {
-            setupDefaultModulePath = true;
-            Path userDefinedJdkModulePath = null;
-            List<Path> modulePath = MODULE_PATH.fetchFrom(params, false);
-
-            if (modulePath != null) {
-                userDefinedJdkModulePath = findPathOfModule(modulePath, "java.base.jmod");
-            }
-            else {
-                modulePath = new ArrayList();
-            }
-
-            // Add the default JDK module path to the module path.
-            if (userDefinedJdkModulePath == null) {
-                Path jdkModulePath = Paths.get(System.getProperty("java.home"), "jmods").toAbsolutePath();
-
-                if (jdkModulePath != null && Files.exists(jdkModulePath)) {
-                    modulePath.add(jdkModulePath);
-                    params.put(MODULE_PATH.getID(), listOfPathToString(modulePath));
-                }
-            }
-
-            Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
-
-            if (javaBasePath == null || !javaBasePath.toFile().exists()) {
-                Log.info(String.format(I18N.getString("warning.no.jdk.modules.found")));
-            }
-        }
-    }
-
     private static RelativeFileSet getMainJar(String moduleName, Map<String, ? super Object> params) {
         for (RelativeFileSet rfs : APP_RESOURCES_LIST.fetchFrom(params)) {
             File appResourcesRoot = rfs.getBaseDirectory();
@@ -927,5 +923,16 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                 new ConfigException(
                         MessageFormat.format(I18N.getString("error.main-jar-does-not-exist"), moduleName),
                         I18N.getString("error.main-jar-does-not-exist.advice")));
+    }
+
+    public static List<Path> getDefaultModulePath() {
+        List<Path> result = new ArrayList();
+        Path jdkModulePath = Paths.get(System.getProperty("java.home"), "jmods").toAbsolutePath();
+
+        if (jdkModulePath != null && Files.exists(jdkModulePath)) {
+            result.add(jdkModulePath);
+        }
+
+        return result;
     }
 }
