@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,17 +98,13 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
 + (BOOL) playerAvailable {
     // Check if AVPlayerItemVideoOutput exists, if not we're running on 10.7 or
-    // earlier and have to fall back on QTKit
+    // earlier which is no longer supported
     Class klass = objc_getClass("AVPlayerItemVideoOutput");
     return (klass != nil);
 }
 
 - (id) initWithURL:(NSURL *)source eventHandler:(CJavaPlayerEventDispatcher*)hdlr {
     if ((self = [super init]) != nil) {
-        _audioSyncDelay = 0LL;
-        _volume = 1.0f;
-        _balance = 0.0f;
-
         previousWidth = -1;
         previousHeight = -1;
         previousPlayerState = kPlayerState_UNKNOWN;
@@ -123,18 +119,12 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         playerQueue = dispatch_queue_create(NULL, NULL);
 
         // Create the player
-        _player = [[AVPlayer alloc] init];
+        _player = [AVPlayer playerWithURL:source];
         if (!_player) {
             return nil;
         }
         _player.volume = 1.0f;
         _player.muted = NO;
-
-        _playerItem = [AVPlayerItem playerItemWithURL:_movieURL];
-        if (!_playerItem) {
-            return nil;
-        }
-        [_player replaceCurrentItemWithPlayerItem:_playerItem];
 
         // Set the player item end action to NONE since we'll handle it internally
         _player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
@@ -151,7 +141,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         __weak AVFMediaPlayer *blockSelf = self; // retain cycle avoidance
         NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
         observer = [center addObserverForName:AVPlayerItemDidPlayToEndTimeNotification
-                                       object:_playerItem
+                                       object:_player.currentItem
                                         queue:[NSOperationQueue mainQueue]
                                    usingBlock:^(NSNotification *note) {
                                        // promote FINISHED state...
@@ -162,13 +152,13 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         }
 
         keyPathsObserved = [[NSMutableArray alloc] init];
-        [self observeKeyPath:@"self.playerItem.status"
+        [self observeKeyPath:@"self.player.currentItem.status"
                  withContext:AVFMediaPlayerItemStatusContext];
 
-        [self observeKeyPath:@"self.playerItem.duration"
+        [self observeKeyPath:@"self.player.currentItem.duration"
                  withContext:AVFMediaPlayerItemDurationContext];
 
-        [self observeKeyPath:@"self.playerItem.tracks"
+        [self observeKeyPath:@"self.player.currentItem.tracks"
                  withContext:AVFMediaPlayerItemTracksContext];
 
 
@@ -182,10 +172,12 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         _playerOutput = nil;
         _displayLink = NULL;
 
-        _audioSpectrum = new AVFAudioSpectrumUnit();
-        _audioSpectrum->SetSpectrumCallbackProc(SpectrumCallbackProc, (__bridge void*)self);
+        _audioProcessor = [[AVFAudioProcessor alloc] init];
+        if (_audioProcessor.audioSpectrum != nullptr) {
+            _audioProcessor.audioSpectrum->SetSpectrumCallbackProc(SpectrumCallbackProc, (__bridge void*)self);
+        }
 
-        _audioEqualizer = new AVFAudioEqualizer();
+        isDisposed = NO;
     }
     return self;
 }
@@ -195,26 +187,17 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
     self.movieURL = nil;
     self.player = nil;
-    self.playerItem = nil;
     self.playerOutput = nil;
-
-    if (_audioSpectrum) {
-        delete _audioSpectrum;
-        _audioSpectrum = NULL;
-    }
-
-    if (_audioEqualizer) {
-        delete _audioEqualizer;
-        _audioEqualizer = NULL;
-    }
 }
 
 - (CAudioSpectrum*) audioSpectrum {
-    return _audioSpectrum;
+    AVFAudioSpectrumUnitPtr asPtr = _audioProcessor.audioSpectrum;
+    return static_cast<CAudioSpectrum*>(&(*asPtr));
 }
 
 - (CAudioEqualizer*) audioEqualizer {
-    return _audioEqualizer;
+    AVFAudioEqualizerPtr eqPtr = _audioProcessor.audioEqualizer;
+    return static_cast<CAudioEqualizer*>(&(*eqPtr));
 }
 
 - (void) observeKeyPath:(NSString*)keyPath withContext:(void*)context {
@@ -235,13 +218,13 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 
         if (newOutput) {
             CVDisplayLinkStop(_displayLink);
-            [_playerItem removeOutput:_playerOutput];
+            [_player.currentItem removeOutput:_playerOutput];
             [_playerOutput setDelegate:nil queue:nil];
 
             self.playerOutput = newOutput;
             [_playerOutput setDelegate:blockSelf queue:playerQueue];
             [_playerOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:ADVANCE_INTERVAL_IN_SECONDS];
-            [_playerItem addOutput:_playerOutput];
+            [_player.currentItem addOutput:_playerOutput];
         }
     });
 }
@@ -280,7 +263,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             [_playerOutput setDelegate:self queue:playerQueue];
             [_playerOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:ADVANCE_INTERVAL_IN_SECONDS];
 
-            [_playerItem addOutput:_playerOutput];
+            [_player.currentItem addOutput:_playerOutput];
         }
     }
 }
@@ -308,7 +291,7 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         }
     } else if (context == AVFMediaPlayerItemDurationContext) {
         // send update duration event
-        double duration = CMTimeGetSeconds(_playerItem.duration);
+        double duration = CMTimeGetSeconds(_player.currentItem.duration);
         eventHandler->SendDurationUpdateEvent(duration);
     } else if (context == AVFMediaPlayerItemTracksContext) {
         [self extractTrackInfo];
@@ -335,33 +318,28 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     self.player.muted = state;
 }
 
+- (int64_t) audioSyncDelay {
+    return _audioProcessor.audioDelay;
+}
+
 - (void) setAudioSyncDelay:(int64_t)audioSyncDelay {
-    _audioSyncDelay = audioSyncDelay;
-    if (_audioProcessor) {
-        _audioProcessor.audioDelay = audioSyncDelay;
-    }
+    _audioProcessor.audioDelay = audioSyncDelay;
 }
 
 - (float) balance {
-    return _balance;
+    return _audioProcessor.balance;
 }
 
 - (void) setBalance:(float)balance {
-    _balance = balance;
-    if (_audioProcessor) {
-        _audioProcessor.balance = balance;
-    }
+    _audioProcessor.balance = balance;
 }
 
 - (float) volume {
-    return _volume;
+    return _audioProcessor.volume;
 }
 
 - (void) setVolume:(float)volume {
-    _volume = volume;
-    if (_audioProcessor) {
-        _audioProcessor.volume = volume;
-    }
+    _audioProcessor.volume = volume;
 }
 
 - (float) rate {
@@ -373,8 +351,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 }
 
 - (double) duration {
-    if (self.playerItem.status == AVPlayerItemStatusReadyToPlay) {
-        return CMTimeGetSeconds(self.playerItem.duration);
+    if (self.player.currentItem.status == AVPlayerItemStatusReadyToPlay) {
+        return CMTimeGetSeconds(self.player.currentItem.duration);
     }
     return -1.0;
 }
@@ -402,12 +380,21 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
     @synchronized(self) {
         if (!isDisposed) {
             if (_player != nil) {
-                // this should stop and dealloc the audio processor
-                _player.currentItem.audioMix = nil;
+                // stop the player
+                _player.rate = 0.0;
+                [_player cancelPendingPrerolls];
+            }
+
+            AVFAudioSpectrumUnitPtr asPtr = _audioProcessor.audioSpectrum;
+            if (asPtr != nullptr) {
+                // Prevent future spectrum callbacks
+                asPtr->SetEnabled(FALSE);
+                asPtr->SetSpectrumCallbackProc(NULL, NULL);
+                asPtr->SetBands(0, NULL);
             }
 
             if (_playerOutput != nil) {
-                [_playerItem removeOutput:_playerOutput];
+                [_player.currentItem removeOutput:_playerOutput];
                 [_playerOutput setDelegate:nil queue:nil];
             }
 
@@ -436,9 +423,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
 #if DUMP_TRACK_INFO
     NSMutableString *trackLog = [[NSMutableString alloc] initWithFormat:
                                  @"Parsing tracks for player item %@:\n",
-                                 _playerItem];
+                                 _player.currentItem];
 #endif
-    NSArray *tracks = self.playerItem.tracks;
+    NSArray *tracks = self.player.currentItem.tracks;
     int videoIndex = 1;
     int audioIndex = 1;
     int textIndex = 1;
@@ -532,18 +519,14 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
             name = [NSString stringWithFormat:@"Audio Track %d", audioIndex++];
             TRACK_LOG(@"  track name: %@", name);
 
-            // Create audio processor
-            if (!_audioProcessor) {
-                _audioProcessor = [[AVFAudioProcessor alloc] initWithPlayer:self
-                                                                 assetTrack:track];
-                _audioProcessor.volume = _volume;
-                _audioProcessor.balance = _balance;
+            // Set up audio processing
+            if (_audioProcessor) {
                 // Make sure the players volume is set to 1.0
                 self.player.volume = 1.0;
 
-                // Set up EQ and spectrum
-                _audioProcessor.audioSpectrum = _audioSpectrum;
-                _audioProcessor.audioEqualizer = _audioEqualizer;
+                // set up the mixer
+                _audioProcessor.audioTrack = track;
+                self.player.currentItem.audioMix = _audioProcessor.mixer;
             }
 
             // We have to get the audio information from the format description
@@ -691,8 +674,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink, const CVTimeSt
                      * than not playing at all, and this should not happen once
                      * the bug is fixed in AVFoundation.
                      */
-                    [self.playerItem removeOutput:playerItemVideoOutput];
-                    [self.playerItem addOutput:playerItemVideoOutput];
+                    [self.player.currentItem removeOutput:playerItemVideoOutput];
+                    [self.player.currentItem addOutput:playerItemVideoOutput];
                     self.hlsBugResetCount = 0;
                     self.lastHostTime = inNow->hostTime;
                     // fall through to allow it to stop the display link

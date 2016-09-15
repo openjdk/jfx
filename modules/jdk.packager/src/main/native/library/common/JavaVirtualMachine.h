@@ -48,7 +48,7 @@
 #endif //MAC
 
 #ifdef LINUX
-//#define USE_JLI_LAUNCH
+#define USE_JLI_LAUNCH
 #endif //LINUX
 
 

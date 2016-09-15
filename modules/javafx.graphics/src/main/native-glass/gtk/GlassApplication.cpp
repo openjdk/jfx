@@ -56,10 +56,21 @@ static gboolean call_runnable (gpointer data)
 {
     RunnableContext* context = reinterpret_cast<RunnableContext*>(data);
 
-    mainEnv->CallVoidMethod(context->runnable, jRunnableRun, NULL);
-    LOG_EXCEPTION(mainEnv);
-    mainEnv->DeleteGlobalRef(context->runnable);
+    JNIEnv *env;
+    int envStatus = javaVM->GetEnv((void **)&env, JNI_VERSION_1_6);
+    if (envStatus == JNI_EDETACHED) {
+        javaVM->AttachCurrentThread((void **)&env, NULL);
+    }
+
+    env->CallVoidMethod(context->runnable, jRunnableRun, NULL);
+    LOG_EXCEPTION(env);
+    env->DeleteGlobalRef(context->runnable);
     free(context);
+
+    if (envStatus == JNI_EDETACHED) {
+        javaVM->DetachCurrentThread();
+    }
+
     return FALSE;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -81,20 +81,6 @@ private:
     static jmethodID m_SendBufferProgressEventMethod;
     static jmethodID m_SendDurationUpdateEventMethod;
     static jmethodID m_SendAudioSpectrumEventMethod;
-
-    bool SendToJava_PlayerMediaErrorEvent(int errorCode);
-    bool SendToJava_PlayerHaltEvent(const char* message, double time);
-    bool SendToJava_PlayerStateEvent(long newJavaState, double presentTime);
-    bool SendToJava_NewFrameEvent(CVideoFrame* pVideoFrame);
-    bool SendToJava_FrameSizeChangedEvent(int width, int height);
-    bool SendToJava_AudioTrackEvent(CAudioTrack* pTrack);
-    bool SendToJava_VideoTrackEvent(CVideoTrack* pTrack);
-    bool SendToJava_SubtitleTrackEvent(CSubtitleTrack* pTrack);
-    bool SendToJava_MarkerEvent(string name, double time);
-    bool SendToJava_BufferProgressEvent(double clipDuration, int64_t start, int64_t stop, int64_t position);
-    bool SendToJava_StopReachedEvent(double time);
-    bool SendToJava_DurationUpdateEvent(double time);
-    bool SendToJava_AudioSpectrumEvent(double time, double duration);
 
     static jobject CreateObject(JNIEnv *env, jmethodID *cid,
                                 const char* class_name, const char* signature,

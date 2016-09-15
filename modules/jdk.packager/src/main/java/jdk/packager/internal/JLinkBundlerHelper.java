@@ -28,7 +28,6 @@ package jdk.packager.internal;
 
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.BundlerParamInfo;
-import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.Log;
 

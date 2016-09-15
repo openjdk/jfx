@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,6 +110,7 @@ void CJavaPlayerEventDispatcher::Dispose()
     JNIEnv *pEnv = jenv.getEnvironment();
     if (pEnv) {
         pEnv->DeleteGlobalRef(m_PlayerInstance);
+        m_PlayerInstance = NULL; // prevent further calls to this object
     }
 
     LOWLEVELPERF_EXECTIMESTOP("CJavaPlayerEventDispatcher::Dispose()");
@@ -117,40 +118,68 @@ void CJavaPlayerEventDispatcher::Dispose()
 
 void CJavaPlayerEventDispatcher::Warning(int warningCode, const char* warningMessage)
 {
-    if (NULL == m_PlayerInstance)
-        return;
-
     CJavaEnvironment jenv(m_PlayerVM);
     JNIEnv *pEnv = jenv.getEnvironment();
     if (pEnv) {
-        jstring jmessage = NULL;
-        if (warningMessage) {
-            jmessage = pEnv->NewStringUTF(warningMessage);
-        }
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendWarningMethod,
-                             (jint)warningCode, jmessage);
-        if (jmessage) {
-            pEnv->DeleteLocalRef(jmessage);
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            jstring jmessage = NULL;
+            if (warningMessage) {
+                jmessage = pEnv->NewStringUTF(warningMessage);
+            }
+            pEnv->CallVoidMethod(localPlayer, m_SendWarningMethod,
+                                 (jint)warningCode, jmessage);
+            if (jmessage) {
+                pEnv->DeleteLocalRef(jmessage);
+            }
+            pEnv->DeleteLocalRef(localPlayer);
         }
     }
 }
 
 bool CJavaPlayerEventDispatcher::SendPlayerMediaErrorEvent(int errorCode)
 {
-    return SendToJava_PlayerMediaErrorEvent(errorCode);
+    bool bSucceeded = false;
+    CJavaEnvironment jenv(m_PlayerVM);
+    JNIEnv *pEnv = jenv.getEnvironment();
+    if (pEnv) {
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            pEnv->CallVoidMethod(localPlayer, m_SendPlayerMediaErrorEventMethod, errorCode);
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
+    }
+
+    return bSucceeded;
 }
 
 bool CJavaPlayerEventDispatcher::SendPlayerHaltEvent(const char* message, double time)
 {
-    return SendToJava_PlayerHaltEvent(message, time);
+    bool bSucceeded = false;
+    CJavaEnvironment jenv(m_PlayerVM);
+    JNIEnv *pEnv = jenv.getEnvironment();
+    if (pEnv) {
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            jstring jmessage = pEnv->NewStringUTF(message);
+            pEnv->CallVoidMethod(localPlayer, m_SendPlayerHaltEventMethod, jmessage, time);
+            pEnv->DeleteLocalRef(jmessage);
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
+    }
+
+    return bSucceeded;
 }
 
 bool CJavaPlayerEventDispatcher::SendPlayerStateEvent(int newState, double presentTime)
 {
     long newJavaState;
 
-    switch(newState)
-    {
+    switch(newState) {
     case CPipeline::Unknown:
         newJavaState = com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerUnknown;
         break;
@@ -179,241 +208,241 @@ bool CJavaPlayerEventDispatcher::SendPlayerStateEvent(int newState, double prese
         return false;
     }
 
-    return SendToJava_PlayerStateEvent(newJavaState, presentTime);
-}
+    LOWLEVELPERF_EXECTIMESTOP("gstInitPlatformToSendToJavaPlayerStateEventPaused");
+    LOWLEVELPERF_EXECTIMESTOP("gstPauseToSendToJavaPlayerStateEventPaused");
+    LOWLEVELPERF_EXECTIMESTOP("gstStopToSendToJavaPlayerStateEventStopped");
+    LOWLEVELPERF_EXECTIMESTOP("gstPlayToSendToJavaPlayerStateEventPlaying");
 
-bool CJavaPlayerEventDispatcher::SendNewFrameEvent(CVideoFrame* pVideoFrame)
-{
-    return SendToJava_NewFrameEvent(pVideoFrame);
-}
-
-bool CJavaPlayerEventDispatcher::SendFrameSizeChangedEvent(int width, int height)
-{
-    return SendToJava_FrameSizeChangedEvent(width, height);
-}
-
-bool CJavaPlayerEventDispatcher::SendAudioTrackEvent(CAudioTrack* pTrack)
-{
-    return SendToJava_AudioTrackEvent(pTrack);
-}
-
-bool CJavaPlayerEventDispatcher::SendVideoTrackEvent(CVideoTrack* pTrack)
-{
-    return SendToJava_VideoTrackEvent(pTrack);
-}
-
-bool CJavaPlayerEventDispatcher::SendSubtitleTrackEvent(CSubtitleTrack* pTrack)
-{
-    return SendToJava_SubtitleTrackEvent(pTrack);
-}
-
-bool CJavaPlayerEventDispatcher::SendMarkerEvent(string name, double time)
-{
-    return SendToJava_MarkerEvent(name, time);
-}
-
-bool CJavaPlayerEventDispatcher::SendBufferProgressEvent(double clipDuration, int64_t start, int64_t stop, int64_t position)
-{
-   return SendToJava_BufferProgressEvent(clipDuration, start, stop, position);
-}
-
-bool CJavaPlayerEventDispatcher::SendDurationUpdateEvent(double time)
-{
-    return SendToJava_DurationUpdateEvent(time);
-}
-
-bool CJavaPlayerEventDispatcher::SendAudioSpectrumEvent(double time, double duration)
-{
-    return SendToJava_AudioSpectrumEvent(time, duration);
-}
-/*********************************************************************************
- * SendToJava methods section
- **********************************************************************************/
-bool CJavaPlayerEventDispatcher::SendToJava_PlayerMediaErrorEvent(int errorCode)
-{
-    if (NULL == m_PlayerInstance)
-        return false;
-
-    CJavaEnvironment jenv(m_PlayerVM);
-    JNIEnv *pEnv = jenv.getEnvironment();
-    if (pEnv) {
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendPlayerMediaErrorEventMethod, errorCode);
-        return !jenv.reportException();
-    }
-
-    return false;
-}
-
-bool CJavaPlayerEventDispatcher::SendToJava_PlayerHaltEvent(const char* message, double time)
-{
-    if (NULL == m_PlayerInstance)
-        return false;
-
-    CJavaEnvironment jenv(m_PlayerVM);
-    JNIEnv *pEnv = jenv.getEnvironment();
-    if (pEnv) {
-        jstring jmessage = pEnv->NewStringUTF(message);
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendPlayerHaltEventMethod, jmessage, time);
-        pEnv->DeleteLocalRef(jmessage);
-        return !jenv.reportException();
-    }
-
-    return false;
-}
-
-bool CJavaPlayerEventDispatcher::SendToJava_PlayerStateEvent(long eventID, double presentTime)
-{
-    if (NULL == m_PlayerInstance)
-        return false;
-
-    switch(eventID) {
-        case com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerUnknown:
-        case com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerReady:
-        case com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerPlaying:
-        case com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerPaused:
-        case com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerStopped:
-        case com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerFinished:
-        case com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerStalled:
-        case com_sun_media_jfxmediaimpl_NativeMediaPlayer_eventPlayerError:
-        {
-            LOWLEVELPERF_EXECTIMESTOP("gstInitPlatformToSendToJavaPlayerStateEventPaused");
-            LOWLEVELPERF_EXECTIMESTOP("gstPauseToSendToJavaPlayerStateEventPaused");
-            LOWLEVELPERF_EXECTIMESTOP("gstStopToSendToJavaPlayerStateEventStopped");
-            LOWLEVELPERF_EXECTIMESTOP("gstPlayToSendToJavaPlayerStateEventPlaying");
-            // Send an event only if the ID is valid.
-            CJavaEnvironment jenv(m_PlayerVM);
-            JNIEnv *pEnv = jenv.getEnvironment();
-            if (pEnv) {
-                pEnv->CallVoidMethod(m_PlayerInstance, m_SendPlayerStateEventMethod, eventID, presentTime);
-                return !jenv.reportException();
-            }
-            break;
-        }
-        default:
-            break;
-    }
-
-    return false;
-}
-
-bool CJavaPlayerEventDispatcher::SendToJava_NewFrameEvent(CVideoFrame* pVideoFrame)
-{
-    LOWLEVELPERF_EXECTIMESTART("CJavaPlayerEventDispatcher::SendToJava_NewFrameEvent()");
     bool bSucceeded = false;
-
-    if (NULL == m_PlayerInstance)
-        return false;
-
     CJavaEnvironment jenv(m_PlayerVM);
     JNIEnv *pEnv = jenv.getEnvironment();
     if (pEnv) {
-        // SendNewFrameEvent will create the NativeVideoBuffer wrapper for the java side
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendNewFrameEventMethod, ptr_to_jlong(pVideoFrame));
-        bSucceeded = !jenv.reportException();
-    }
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            pEnv->CallVoidMethod(localPlayer, m_SendPlayerStateEventMethod, newJavaState, presentTime);
+            pEnv->DeleteLocalRef(localPlayer);
 
-    LOWLEVELPERF_EXECTIMESTOP("CJavaPlayerEventDispatcher::SendToJava_NewFrameEvent()");
+            bSucceeded = !jenv.reportException();
+        }
+    }
 
     return bSucceeded;
 }
 
-bool CJavaPlayerEventDispatcher::SendToJava_FrameSizeChangedEvent(int width, int height)
+bool CJavaPlayerEventDispatcher::SendNewFrameEvent(CVideoFrame* pVideoFrame)
 {
-    if (NULL == m_PlayerInstance)
-        return false;
+    LOWLEVELPERF_EXECTIMESTART("CJavaPlayerEventDispatcher::SendNewFrameEvent()");
+    bool bSucceeded = false;
 
     CJavaEnvironment jenv(m_PlayerVM);
     JNIEnv *pEnv = jenv.getEnvironment();
     if (pEnv) {
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendFrameSizeChangedEventMethod, (jint)width, (jint)height);
-        return !jenv.reportException();
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            // SendNewFrameEvent will create the NativeVideoBuffer wrapper for the java side
+            pEnv->CallVoidMethod(localPlayer, m_SendNewFrameEventMethod, ptr_to_jlong(pVideoFrame));
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
     }
 
-    return false;
+    LOWLEVELPERF_EXECTIMESTOP("CJavaPlayerEventDispatcher::SendNewFrameEvent()");
+
+    return bSucceeded;
 }
 
-bool CJavaPlayerEventDispatcher::SendToJava_AudioTrackEvent(CAudioTrack* pTrack)
+bool CJavaPlayerEventDispatcher::SendFrameSizeChangedEvent(int width, int height)
 {
-    if (NULL == m_PlayerInstance)
-        return false;
-
+    bool bSucceeded = false;
     CJavaEnvironment jenv(m_PlayerVM);
     JNIEnv *pEnv = jenv.getEnvironment();
     if (pEnv) {
-        jstring name = pEnv->NewStringUTF(pTrack->GetName().c_str());
-        jstring language = pEnv->NewStringUTF(pTrack->GetLanguage().c_str());
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            pEnv->CallVoidMethod(localPlayer, m_SendFrameSizeChangedEventMethod, (jint)width, (jint)height);
+            pEnv->DeleteLocalRef(localPlayer);
 
-        // Translate channel mask bits from native values to Java values.
-        int nativeChannelMask = pTrack->GetChannelMask();
-        jint javaChannelMask = 0;
-        if (nativeChannelMask & CAudioTrack::UNKNOWN)
-            javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_UNKNOWN;
-        if (nativeChannelMask & CAudioTrack::FRONT_LEFT)
-            javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_FRONT_LEFT;
-        if (nativeChannelMask & CAudioTrack::FRONT_RIGHT)
-            javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_FRONT_RIGHT;
-        if (nativeChannelMask & CAudioTrack::FRONT_CENTER)
-            javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_FRONT_CENTER;
-        if (nativeChannelMask & CAudioTrack::REAR_LEFT)
-            javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_REAR_LEFT;
-        if (nativeChannelMask & CAudioTrack::REAR_RIGHT)
-            javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_REAR_RIGHT;
-        if (nativeChannelMask & CAudioTrack::REAR_CENTER)
-            javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_REAR_CENTER;
-
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendAudioTrackEventMethod,
-                             (jboolean)pTrack->isEnabled(), (jlong)pTrack->GetTrackID(), name, pTrack->GetEncoding(), language,
-                             pTrack->GetNumChannels(), javaChannelMask, pTrack->GetSampleRate());
-
-        pEnv->DeleteLocalRef(name);
-        pEnv->DeleteLocalRef(language);
-        return !jenv.reportException();
+            bSucceeded = !jenv.reportException();
+        }
     }
 
-    return false;
+    return bSucceeded;
 }
 
-bool CJavaPlayerEventDispatcher::SendToJava_VideoTrackEvent(CVideoTrack* pTrack)
+bool CJavaPlayerEventDispatcher::SendAudioTrackEvent(CAudioTrack* pTrack)
 {
-    if (NULL == m_PlayerInstance)
-        return false;
-
+    bool bSucceeded = false;
     CJavaEnvironment jenv(m_PlayerVM);
     JNIEnv *pEnv = jenv.getEnvironment();
     if (pEnv) {
-        jstring name = pEnv->NewStringUTF(pTrack->GetName().c_str());
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendVideoTrackEventMethod,
-                             (jboolean)pTrack->isEnabled(), (jlong)pTrack->GetTrackID(), name, pTrack->GetEncoding(),
-                             pTrack->GetWidth(), pTrack->GetHeight(),
-                             pTrack->GetFrameRate(), pTrack->HasAlphaChannel());
-        pEnv->DeleteLocalRef(name);
-        return !jenv.reportException();
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            jstring name = pEnv->NewStringUTF(pTrack->GetName().c_str());
+            jstring language = pEnv->NewStringUTF(pTrack->GetLanguage().c_str());
+
+            // Translate channel mask bits from native values to Java values.
+            int nativeChannelMask = pTrack->GetChannelMask();
+            jint javaChannelMask = 0;
+            if (nativeChannelMask & CAudioTrack::UNKNOWN)
+                javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_UNKNOWN;
+            if (nativeChannelMask & CAudioTrack::FRONT_LEFT)
+                javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_FRONT_LEFT;
+            if (nativeChannelMask & CAudioTrack::FRONT_RIGHT)
+                javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_FRONT_RIGHT;
+            if (nativeChannelMask & CAudioTrack::FRONT_CENTER)
+                javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_FRONT_CENTER;
+            if (nativeChannelMask & CAudioTrack::REAR_LEFT)
+                javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_REAR_LEFT;
+            if (nativeChannelMask & CAudioTrack::REAR_RIGHT)
+                javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_REAR_RIGHT;
+            if (nativeChannelMask & CAudioTrack::REAR_CENTER)
+                javaChannelMask |= com_sun_media_jfxmedia_track_AudioTrack_REAR_CENTER;
+
+            pEnv->CallVoidMethod(localPlayer,
+                                 m_SendAudioTrackEventMethod,
+                                 (jboolean)pTrack->isEnabled(),
+                                 (jlong)pTrack->GetTrackID(),
+                                 name,
+                                 pTrack->GetEncoding(),
+                                 language,
+                                 pTrack->GetNumChannels(),
+                                 javaChannelMask,
+                                 pTrack->GetSampleRate());
+
+            pEnv->DeleteLocalRef(name);
+            pEnv->DeleteLocalRef(language);
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
     }
 
-    return false;
+    return bSucceeded;
 }
 
-bool CJavaPlayerEventDispatcher::SendToJava_SubtitleTrackEvent(CSubtitleTrack* pTrack)
+bool CJavaPlayerEventDispatcher::SendVideoTrackEvent(CVideoTrack* pTrack)
 {
-    if (NULL == m_PlayerInstance)
-        return false;
-
+    bool bSucceeded = false;
     CJavaEnvironment jenv(m_PlayerVM);
     JNIEnv *pEnv = jenv.getEnvironment();
     if (pEnv) {
-        jstring name = pEnv->NewStringUTF(pTrack->GetName().c_str());
-        jstring language = pEnv->NewStringUTF(pTrack->GetLanguage().c_str());
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            jstring name = pEnv->NewStringUTF(pTrack->GetName().c_str());
+            pEnv->CallVoidMethod(localPlayer, m_SendVideoTrackEventMethod,
+                                 (jboolean)pTrack->isEnabled(), (jlong)pTrack->GetTrackID(), name, pTrack->GetEncoding(),
+                                 pTrack->GetWidth(), pTrack->GetHeight(),
+                                 pTrack->GetFrameRate(), pTrack->HasAlphaChannel());
+            pEnv->DeleteLocalRef(name);
+            pEnv->DeleteLocalRef(localPlayer);
 
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendSubtitleTrackEventMethod,
-                             (jboolean)pTrack->isEnabled(), (jlong)pTrack->GetTrackID(),
-                             name, pTrack->GetEncoding(), language);
-        pEnv->DeleteLocalRef(name);
-        pEnv->DeleteLocalRef(language);
-
-        return !jenv.reportException();
+            bSucceeded = !jenv.reportException();
+        }
     }
 
-    return false;
+    return bSucceeded;
+}
+
+bool CJavaPlayerEventDispatcher::SendSubtitleTrackEvent(CSubtitleTrack* pTrack)
+{
+    bool bSucceeded = false;
+    CJavaEnvironment jenv(m_PlayerVM);
+    JNIEnv *pEnv = jenv.getEnvironment();
+    if (pEnv) {
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            jstring name = pEnv->NewStringUTF(pTrack->GetName().c_str());
+            jstring language = pEnv->NewStringUTF(pTrack->GetLanguage().c_str());
+
+            pEnv->CallVoidMethod(localPlayer, m_SendSubtitleTrackEventMethod,
+                                 (jboolean)pTrack->isEnabled(), (jlong)pTrack->GetTrackID(),
+                                 name, pTrack->GetEncoding(), language);
+            pEnv->DeleteLocalRef(name);
+            pEnv->DeleteLocalRef(language);
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
+    }
+
+    return bSucceeded;
+}
+
+bool CJavaPlayerEventDispatcher::SendMarkerEvent(string name, double time)
+{
+    bool bSucceeded = false;
+    CJavaEnvironment jenv(m_PlayerVM);
+    JNIEnv *pEnv = jenv.getEnvironment();
+    if (pEnv) {
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            jobject jname = pEnv->NewStringUTF(name.c_str());
+            pEnv->CallVoidMethod(localPlayer, m_SendMarkerEventMethod,
+                                 jname, time);
+            pEnv->DeleteLocalRef(jname);
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
+    }
+
+    return bSucceeded;
+}
+
+bool CJavaPlayerEventDispatcher::SendBufferProgressEvent(double clipDuration, int64_t start, int64_t stop, int64_t position)
+{
+    bool bSucceeded = false;
+    CJavaEnvironment jenv(m_PlayerVM);
+    JNIEnv *pEnv = jenv.getEnvironment();
+    if (pEnv) {
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            pEnv->CallVoidMethod(localPlayer, m_SendBufferProgressEventMethod, clipDuration, start, stop, position);
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
+    }
+
+    return bSucceeded;
+}
+
+bool CJavaPlayerEventDispatcher::SendDurationUpdateEvent(double time)
+{
+    bool bSucceeded = false;
+    CJavaEnvironment jenv(m_PlayerVM);
+    JNIEnv *pEnv = jenv.getEnvironment();
+    if (pEnv) {
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            pEnv->CallVoidMethod(localPlayer, m_SendDurationUpdateEventMethod,
+                                 (jdouble)time);
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
+    }
+
+    return bSucceeded;
+}
+
+bool CJavaPlayerEventDispatcher::SendAudioSpectrumEvent(double time, double duration)
+{
+    bool bSucceeded = false;
+    CJavaEnvironment jenv(m_PlayerVM);
+    JNIEnv *pEnv = jenv.getEnvironment();
+    if (pEnv) {
+        jobject localPlayer = pEnv->NewLocalRef(m_PlayerInstance);
+        if (localPlayer) {
+            pEnv->CallVoidMethod(localPlayer, m_SendAudioSpectrumEventMethod, time, duration);
+            pEnv->DeleteLocalRef(localPlayer);
+
+            bSucceeded = !jenv.reportException();
+        }
+    }
+
+    return bSucceeded;
 }
 
 /******************************************************************************************
@@ -511,68 +540,4 @@ jobject CJavaPlayerEventDispatcher::CreateDuration(JNIEnv *env, jlong duration)
     env->DeleteLocalRef(durationClass);
 
     return result;
-}
-
-bool CJavaPlayerEventDispatcher::SendToJava_MarkerEvent(string name, double time)
-{
-    if (NULL == m_PlayerInstance)
-        return false;
-
-    CJavaEnvironment jenv(m_PlayerVM);
-    JNIEnv *pEnv = jenv.getEnvironment();
-    if (pEnv) {
-        jobject jname = pEnv->NewStringUTF(name.c_str());
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendMarkerEventMethod,
-                             jname, time);
-        pEnv->DeleteLocalRef(jname);
-        return !jenv.reportException();
-    }
-
-    return false;
-}
-
-bool CJavaPlayerEventDispatcher::SendToJava_BufferProgressEvent(double clipDuration, int64_t start, int64_t stop, int64_t position)
-{
-    if (NULL == m_PlayerInstance)
-        return false;
-
-    CJavaEnvironment jenv(m_PlayerVM);
-    JNIEnv *pEnv = jenv.getEnvironment();
-    if (pEnv) {
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendBufferProgressEventMethod, clipDuration, start, stop, position);
-        return !jenv.reportException();
-    }
-
-    return false;
-}
-
-bool CJavaPlayerEventDispatcher::SendToJava_DurationUpdateEvent(double time)
-{
-    if (NULL == m_PlayerInstance)
-        return false;
-
-    CJavaEnvironment jenv(m_PlayerVM);
-    JNIEnv *pEnv = jenv.getEnvironment();
-    if (pEnv) {
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendDurationUpdateEventMethod,
-                             (jdouble)time);
-        return !jenv.reportException();
-    }
-
-    return false;
-}
-
-bool CJavaPlayerEventDispatcher::SendToJava_AudioSpectrumEvent(double time, double duration)
-{
-    if (NULL == m_PlayerInstance)
-        return false;
-
-    CJavaEnvironment jenv(m_PlayerVM);
-    JNIEnv *pEnv = jenv.getEnvironment();
-    if (pEnv) {
-        pEnv->CallVoidMethod(m_PlayerInstance, m_SendAudioSpectrumEventMethod, time, duration);
-        return !jenv.reportException();
-    }
-
-    return false;
 }

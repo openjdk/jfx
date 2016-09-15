@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,19 +54,10 @@
     BOOL isDisposed;
     NSMutableArray *keyPathsObserved;
     NSMutableArray *playerObservers; // player item notification observers
-
-    // placeholders until audio processor is created
-    float _volume;
-    float _balance;
-    int64_t _audioSyncDelay; // delay is time in milliseconds
-
-    AVFAudioSpectrumUnit *_audioSpectrum;
-    AVFAudioEqualizer *_audioEqualizer;
 }
 
 @property (nonatomic,retain) NSURL *movieURL;
 @property (nonatomic,retain) AVPlayer *player;
-@property (nonatomic,retain) AVPlayerItem *playerItem;
 @property (nonatomic,retain) AVPlayerItemVideoOutput *playerOutput;
 @property (nonatomic,retain) AVFAudioProcessor *audioProcessor;
 @property (nonatomic,assign) uint64_t lastHostTime;

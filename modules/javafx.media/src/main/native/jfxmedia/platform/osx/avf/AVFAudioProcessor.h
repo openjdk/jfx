@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,25 +32,21 @@
 
 @class AVFMediaPlayer;
 
-@interface AVFAudioProcessor : NSObject
+@interface AVFAudioProcessor : NSObject {
+    AVAudioMix *_mixer;
+}
 
-@property (nonatomic,readonly) AVFSoundLevelUnit *soundLevelUnit;
+@property (nonatomic,readonly) AVFSoundLevelUnitPtr soundLevelUnit;
+@property (nonatomic,readonly) AVFAudioSpectrumUnitPtr audioSpectrum;
+@property (nonatomic,readonly) AVFAudioEqualizerPtr audioEqualizer;
 
-// These will be set by the media player since the objects must be persistent
-@property (nonatomic,assign) AVFAudioSpectrumUnit *audioSpectrum;
-@property (nonatomic,assign) AVFAudioEqualizer *audioEqualizer;
+@property (nonatomic,retain) AVAssetTrack *audioTrack;
 
-// Player we'll send events to
-@property (weak,readonly,nonatomic) AVFMediaPlayer *player; // weak to avoid retain loop
-@property (readonly,nonatomic) AVAudioMix *mixer;
-@property (nonatomic,assign) void *tapStorage;
+@property (nonatomic,readonly) AVAudioMix *mixer;
 
 // Settings from player
 @property (nonatomic,assign) float volume;
 @property (nonatomic,assign) float balance;
 @property (nonatomic,assign) int64_t audioDelay;
-
-// Asset track and mixer will be pulled from player
-- (id) initWithPlayer:(AVFMediaPlayer*)player assetTrack:(AVAssetTrack*)assetTrack;
 
 @end
