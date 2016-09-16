@@ -39,4 +39,94 @@
           file-type="JavaProperties"/>
 </file-set>
 
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/AbstractBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/AbstractImageBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/StandardBundlerParam%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/jnlp/JNLPBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/linux/LinuxAppBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/mac/MacAppStoreBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/mac/MacBaseInstallerBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/mac/MacDaemonBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/mac/MacDmgBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/mac/MacPkgBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/windows/WinAppBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/windows/WinServiceBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/windows/WindowsBundlerParam%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/jdk/packager/builders/AbstractAppImageBuilder%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/jdk/packager/builders/linux/LinuxAppImageBuilder%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/jdk/packager/builders/mac/MacAppImageBuilder%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/jdk/packager/builders/windows/WindowsAppImageBuilder%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/jdk/packager/internal/JLinkBundlerHelper%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
 </translation>
