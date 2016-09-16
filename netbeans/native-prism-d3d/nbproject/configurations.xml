@@ -74,7 +74,7 @@
   <sourceRootList>
     <Elem>../../modules/javafx.graphics/src/main/native-prism-d3d</Elem>
     <Elem>../../modules/javafx.graphics/build/headers/PrismD3D</Elem>
-    <Elem>../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win</Elem>
+    <Elem>../../modules/javafx.graphics/build/gensrc/headers/prismD3D/win</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -88,7 +88,7 @@
       <compileType>
         <ccTool>
           <incDir>
-            <pElem>../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win</pElem>
+            <pElem>../../modules/javafx.graphics/build/gensrc/headers/prismD3D/win</pElem>
             <pElem>../../modules/javafx.graphics/build/headers/PrismD3D</pElem>
           </incDir>
         </ccTool>

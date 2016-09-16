@@ -19,6 +19,6 @@
       <attribute name="optional" value="true"/>
     </attributes>
   </classpathentry>
-  <classpathentry kind="src" exported="true" path="build/generated-src/version-info"/>
+  <classpathentry kind="src" exported="true" path="build/gensrc/java"/>
   <classpathentry kind="src" exported="true" path="/buildSrc"/>
 </classpath>

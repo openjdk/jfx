@@ -95,157 +95,157 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/libnative-prism-es2.${CND_DLIB_EXT}: 
 ${OBJECTDIR}/_ext/284620591/GLContext.o: ../../modules/javafx.graphics/src/main/native-prism-es2/GLContext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284620591
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284620591/GLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/GLContext.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284620591/GLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/GLContext.c
 
 ${OBJECTDIR}/_ext/284620591/GLDrawable.o: ../../modules/javafx.graphics/src/main/native-prism-es2/GLDrawable.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284620591
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284620591/GLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/GLDrawable.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284620591/GLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/GLDrawable.c
 
 ${OBJECTDIR}/_ext/284620591/GLFactory.o: ../../modules/javafx.graphics/src/main/native-prism-es2/GLFactory.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284620591
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284620591/GLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/GLFactory.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284620591/GLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/GLFactory.c
 
 ${OBJECTDIR}/_ext/284620591/GLPixelFormat.o: ../../modules/javafx.graphics/src/main/native-prism-es2/GLPixelFormat.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/284620591
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284620591/GLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/GLPixelFormat.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/284620591/GLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/GLPixelFormat.c
 
 ${OBJECTDIR}/_ext/2081220488/EGLFBGLContext.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLContext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/2081220488
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/EGLFBGLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLContext.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/EGLFBGLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLContext.c
 
 ${OBJECTDIR}/_ext/2081220488/EGLFBGLDrawable.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLDrawable.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/2081220488
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/EGLFBGLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLDrawable.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/EGLFBGLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLDrawable.c
 
 ${OBJECTDIR}/_ext/2081220488/EGLFBGLFactory.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLFactory.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/2081220488
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/EGLFBGLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLFactory.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/EGLFBGLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLFactory.c
 
 ${OBJECTDIR}/_ext/2081220488/EGLFBGLPixelFormat.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLPixelFormat.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/2081220488
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/EGLFBGLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLPixelFormat.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/EGLFBGLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/EGLFBGLPixelFormat.c
 
 ${OBJECTDIR}/_ext/2081220488/eglUtils.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/eglUtils.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/2081220488
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/eglUtils.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/eglUtils.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/eglUtils.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/eglUtils.c
 
 ${OBJECTDIR}/_ext/2081220488/wrapped_egl.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/wrapped_egl.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/2081220488
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/wrapped_egl.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/wrapped_egl.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/2081220488/wrapped_egl.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglfb/wrapped_egl.c
 
 ${OBJECTDIR}/_ext/93341516/EGLX11GLContext.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLContext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/93341516
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/93341516/EGLX11GLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLContext.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/93341516/EGLX11GLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLContext.c
 
 ${OBJECTDIR}/_ext/93341516/EGLX11GLDrawable.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLDrawable.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/93341516
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/93341516/EGLX11GLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLDrawable.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/93341516/EGLX11GLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLDrawable.c
 
 ${OBJECTDIR}/_ext/93341516/EGLX11GLFactory.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLFactory.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/93341516
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/93341516/EGLX11GLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLFactory.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/93341516/EGLX11GLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLFactory.c
 
 ${OBJECTDIR}/_ext/93341516/EGLX11GLPixelFormat.o: ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLPixelFormat.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/93341516
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/93341516/EGLX11GLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLPixelFormat.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/93341516/EGLX11GLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/eglx11/EGLX11GLPixelFormat.c
 
 ${OBJECTDIR}/_ext/1092801073/IOSGLContext.o: ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLContext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1092801073
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092801073/IOSGLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLContext.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092801073/IOSGLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLContext.c
 
 ${OBJECTDIR}/_ext/1092801073/IOSGLDrawable.o: ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLDrawable.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1092801073
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092801073/IOSGLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLDrawable.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092801073/IOSGLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLDrawable.c
 
 ${OBJECTDIR}/_ext/1092801073/IOSGLFactory.o: ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLFactory.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1092801073
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092801073/IOSGLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLFactory.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092801073/IOSGLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSGLFactory.c
 
 ${OBJECTDIR}/_ext/1092801073/IOSWindowSystemInterface.o: ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSWindowSystemInterface.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1092801073
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092801073/IOSWindowSystemInterface.o ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSWindowSystemInterface.m
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092801073/IOSWindowSystemInterface.o ../../modules/javafx.graphics/src/main/native-prism-es2/ios/IOSWindowSystemInterface.m
 
 ${OBJECTDIR}/_ext/316558947/MacGLContext.o: ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLContext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/316558947
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacGLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLContext.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacGLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLContext.c
 
 ${OBJECTDIR}/_ext/316558947/MacGLDrawable.o: ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLDrawable.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/316558947
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacGLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLDrawable.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacGLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLDrawable.c
 
 ${OBJECTDIR}/_ext/316558947/MacGLFactory.o: ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLFactory.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/316558947
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacGLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLFactory.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacGLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLFactory.c
 
 ${OBJECTDIR}/_ext/316558947/MacGLPixelFormat.o: ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLPixelFormat.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/316558947
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacGLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLPixelFormat.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacGLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacGLPixelFormat.c
 
 ${OBJECTDIR}/_ext/316558947/MacOSXWindowSystemInterface.o: ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacOSXWindowSystemInterface.m 
 	${MKDIR} -p ${OBJECTDIR}/_ext/316558947
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacOSXWindowSystemInterface.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacOSXWindowSystemInterface.m
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/316558947/MacOSXWindowSystemInterface.o ../../modules/javafx.graphics/src/main/native-prism-es2/macosx/MacOSXWindowSystemInterface.m
 
 ${OBJECTDIR}/_ext/1747355461/WinGLContext.o: ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLContext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1747355461
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1747355461/WinGLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLContext.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1747355461/WinGLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLContext.c
 
 ${OBJECTDIR}/_ext/1747355461/WinGLDrawable.o: ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLDrawable.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1747355461
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1747355461/WinGLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLDrawable.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1747355461/WinGLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLDrawable.c
 
 ${OBJECTDIR}/_ext/1747355461/WinGLFactory.o: ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLFactory.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1747355461
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1747355461/WinGLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLFactory.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1747355461/WinGLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLFactory.c
 
 ${OBJECTDIR}/_ext/1747355461/WinGLPixelFormat.o: ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLPixelFormat.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1747355461
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1747355461/WinGLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLPixelFormat.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1747355461/WinGLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/windows/WinGLPixelFormat.c
 
 ${OBJECTDIR}/_ext/1092788646/X11GLContext.o: ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLContext.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1092788646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092788646/X11GLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLContext.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092788646/X11GLContext.o ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLContext.c
 
 ${OBJECTDIR}/_ext/1092788646/X11GLDrawable.o: ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLDrawable.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1092788646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092788646/X11GLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLDrawable.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092788646/X11GLDrawable.o ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLDrawable.c
 
 ${OBJECTDIR}/_ext/1092788646/X11GLFactory.o: ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLFactory.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1092788646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092788646/X11GLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLFactory.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092788646/X11GLFactory.o ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLFactory.c
 
 ${OBJECTDIR}/_ext/1092788646/X11GLPixelFormat.o: ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLPixelFormat.c 
 	${MKDIR} -p ${OBJECTDIR}/_ext/1092788646
 	${RM} "$@.d"
-	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/generated-src/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092788646/X11GLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLPixelFormat.c
+	$(COMPILE.c) -g -I../../modules/javafx.graphics/build/gensrc/headers/prismES2/win -fPIC  -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/_ext/1092788646/X11GLPixelFormat.o ../../modules/javafx.graphics/src/main/native-prism-es2/x11/X11GLPixelFormat.c
 
 # Subprojects
 .build-subprojects:

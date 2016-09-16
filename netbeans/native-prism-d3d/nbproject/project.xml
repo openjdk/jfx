@@ -12,7 +12,7 @@
             <sourceRootList>
                 <sourceRootElem>../../modules/javafx.graphics/src/main/native-prism-d3d</sourceRootElem>
                 <sourceRootElem>../../modules/javafx.graphics/build/headers/PrismD3D</sourceRootElem>
-                <sourceRootElem>../../modules/javafx.graphics/build/generated-src/headers/prismD3D/win</sourceRootElem>
+                <sourceRootElem>../../modules/javafx.graphics/build/gensrc/headers/prismD3D/win</sourceRootElem>
             </sourceRootList>
             <confList>
                 <confElem>

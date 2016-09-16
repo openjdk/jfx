@@ -86,7 +86,7 @@
   </logicalFolder>
   <sourceRootList>
     <Elem>../../modules/javafx.graphics/src/main/native-prism-es2</Elem>
-    <Elem>../../modules/javafx.graphics/build/generated-src/headers/prismES2</Elem>
+    <Elem>../../modules/javafx.graphics/build/gensrc/headers/prismES2</Elem>
   </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
@@ -100,7 +100,7 @@
       <compileType>
         <cTool>
           <incDir>
-            <pElem>../../modules/javafx.graphics/build/generated-src/headers/prismES2/win</pElem>
+            <pElem>../../modules/javafx.graphics/build/gensrc/headers/prismES2/win</pElem>
           </incDir>
         </cTool>
       </compileType>

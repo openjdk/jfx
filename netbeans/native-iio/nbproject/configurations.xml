@@ -104,7 +104,7 @@
       <compileType>
         <cTool>
           <incDir>
-            <pElem>../../modules/javafx.graphics/build/generated-src/headers/iio/win</pElem>
+            <pElem>../../modules/javafx.graphics/build/gensrc/headers/iio/win</pElem>
           </incDir>
         </cTool>
       </compileType>

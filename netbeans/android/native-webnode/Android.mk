@@ -27,7 +27,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE     := webview
 LOCAL_SRC_FILES  := native_webview.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../build/generated-src/headers/webview/android	
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../build/gensrc/headers/webview/android	
 LOCAL_LDLIBS := -llog -ldl
 LOCAL_CFLAGS := -DDEBUG -DANDROID_NDK
 include $(BUILD_SHARED_LIBRARY)
@@ -35,7 +35,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE     := android_webview
 LOCAL_SRC_FILES  := android_webview.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../build/generated-src/headers/dvkwebview/android	
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../build/gensrc/headers/dvkwebview/android	
 LOCAL_LDLIBS = -llog -ldl
 LOCAL_CFLAGS := -DDEBUG -DANDROID_NDK
 include $(BUILD_SHARED_LIBRARY)

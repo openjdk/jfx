@@ -44,7 +44,7 @@ INCLUDEPATH += \
     $$PWD/ForwardingHeaders \
     $$PWD/../WTF \
     $$PWD/../WTF/wtf \
-    $$OUT_PWD/../../../generated-src/headers
+    $$OUT_PWD/../../../gensrc/headers
 
 win* {
     INCLUDEPATH += \

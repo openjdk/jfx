@@ -29,7 +29,7 @@ LOCAL_MODULE := prism-es2-eglfb
 LOCAL_SRC_FILES := GLContext.c GLDrawable.c GLFactory.c GLPixelFormat.c
 LOCAL_SRC_FILES += eglfb/EGLFBGLContext.c eglfb/EGLFBGLDrawable.c eglfb/EGLFBGLFactory.c eglfb/EGLFBGLPixelFormat.c 
 LOCAL_SRC_FILES += eglfb/eglUtils.c eglfb/wrapped_egl.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/eglfb $(LOCAL_PATH)/GL $(LOCAL_PATH)/../../../build/generated-src/headers/prismES2/android
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/eglfb $(LOCAL_PATH)/GL $(LOCAL_PATH)/../../../build/gensrc/headers/prismES2/android
 LOCAL_LDLIBS += -llog -ldl -lGLESv2 -lEGL
 LOCAL_CFLAGS += -DANDROID_NDK -DDEBUG -DIS_EGLFB
 

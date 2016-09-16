@@ -29,7 +29,7 @@
           <executablePath></executablePath>
           <cTool>
             <incDir>
-              <pElem>../../../modules/javafx.graphics/build/generated-src/headers/vmlauncher/android</pElem>
+              <pElem>../../../modules/javafx.graphics/build/gensrc/headers/vmlauncher/android</pElem>
               <pElem>/opt/android-ndk-r7c/platforms/android-14/arch-x86/usr/include</pElem>
             </incDir>
           </cTool>

@@ -27,7 +27,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE     := vmlauncher
 LOCAL_SRC_FILES  := VMLauncher.c NativePipeReader.c DalvikProxySelector.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../../graphics/build/generated-src/headers/vmlauncher/android
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/../../../../graphics/build/gensrc/headers/vmlauncher/android
 LOCAL_LDLIBS = -llog
  
 include $(BUILD_SHARED_LIBRARY)

@@ -30,7 +30,7 @@
           <cTool>
             <incDir>
               <pElem>/opt/android-ndk-r7c/platforms/android-14/arch-arm/usr/include</pElem>
-              <pElem>../../../modules/javafx.graphics/build/generated-src/headers/glass/android</pElem>
+              <pElem>../../../modules/javafx.graphics/build/gensrc/headers/glass/android</pElem>
             </incDir>
             <preprocessorList>
               <Elem>ANDROID_NDK</Elem>

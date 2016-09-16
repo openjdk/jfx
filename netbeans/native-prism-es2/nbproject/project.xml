@@ -11,7 +11,7 @@
             <make-dep-projects/>
             <sourceRootList>
                 <sourceRootElem>../../modules/javafx.graphics/src/main/native-prism-es2</sourceRootElem>
-                <sourceRootElem>../../modules/javafx.graphics/build/generated-src/headers/prismES2</sourceRootElem>
+                <sourceRootElem>../../modules/javafx.graphics/build/gensrc/headers/prismES2</sourceRootElem>
             </sourceRootList>
             <confList>
                 <confElem>

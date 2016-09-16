@@ -32,7 +32,7 @@ LOCAL_SRC_FILES += wm/LensWindowManager.c wm/robot.c
 LOCAL_SRC_FILES += wm/screen/androidScreen.c
 LOCAL_SRC_FILES += cursor/nullCursor/nullCursor.c
 LOCAL_SRC_FILES += input/android/androidInput.c input/android/androidLens.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/input/android $(LOCAL_PATH)/../../../../build/generated-src/headers/glass/android
+LOCAL_C_INCLUDES := $(LOCAL_PATH) $(LOCAL_PATH)/input/android $(LOCAL_PATH)/../../../../build/gensrc/headers/glass/android
 LOCAL_CFLAGS := -DANDROID_NDK -DDEBUG -std=c99
 LOCAL_LDLIBS := -llog -landroid -ldl
 include $(BUILD_SHARED_LIBRARY)
@@ -40,7 +40,7 @@ include $(BUILD_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := glass-lens-android
 LOCAL_SRC_FILES := android/android.c
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/android $(LOCAL_PATH)/../../../../build/generated-src/headers/glass/android
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/android $(LOCAL_PATH)/../../../../build/gensrc/headers/glass/android
 LOCAL_CFLAGS := -DANDROID_NDK -DDEBUG -std=c99
 LOCAL_LDLIBS := -llog -landroid -ldl
 include $(BUILD_SHARED_LIBRARY)	

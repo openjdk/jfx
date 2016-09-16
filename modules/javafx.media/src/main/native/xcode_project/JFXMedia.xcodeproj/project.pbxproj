@@ -1060,7 +1060,7 @@
 					../jfxmedia/jni,
 				);
 				JDK_HOME = "$(SYMROOT)/jdk_home";
-				JFX_GENERATED_SRC_DIR = "$(JFX_MEDIA_BUILD_DIR)/generated-src";
+				JFX_GENERATED_SRC_DIR = "$(JFX_MEDIA_BUILD_DIR)/gensrc";
 				JFX_MEDIA_BUILD_DIR = "$(JFX_MEDIA_DIR)/build";
 				JFX_MEDIA_DIR = ../../../..;
 				JFX_MEDIA_OUTPUT_DIR = "$(JFX_MEDIA_BUILD_DIR)/native/mac";
@@ -1112,7 +1112,7 @@
 					../jfxmedia/jni,
 				);
 				JDK_HOME = "$(SYMROOT)/jdk_home";
-				JFX_GENERATED_SRC_DIR = "$(JFX_MEDIA_BUILD_DIR)/generated-src";
+				JFX_GENERATED_SRC_DIR = "$(JFX_MEDIA_BUILD_DIR)/gensrc";
 				JFX_MEDIA_BUILD_DIR = "$(JFX_MEDIA_DIR)/build";
 				JFX_MEDIA_DIR = ../../../..;
 				JFX_MEDIA_OUTPUT_DIR = "$(JFX_MEDIA_BUILD_DIR)/native/mac";

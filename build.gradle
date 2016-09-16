@@ -972,7 +972,7 @@ void addNative(Project project, String name) {
 
     // Each of the different compile targets will be placed in a sub directory
     // of these root dirs, with the name of the dir being the name of the target
-    def headerRootDir = project.file("$project.buildDir/generated-src/headers/$name")
+    def headerRootDir = project.file("$project.buildDir/gensrc/headers/$name")
     def nativeRootDir = project.file("$project.buildDir/native/$name")
     def libRootDir = project.file("$project.buildDir/libs/$name")
     // For each compile target, create a javah / cc / link triplet
@@ -1072,8 +1072,8 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
     def compileCompilers = project.task("compile${name}Compilers", type: JavaCompile, dependsOn: project.compileJava) {
         description = "Compile the $name JSL Compilers"
         classpath = project.files(project.sourceSets.main.output.classesDir) +
-                rootProject.BUILD_SRC +
-                project.configurations.antlr3
+               project.files(project.sourceSets.jslc.output.classesDir) +
+               project.configurations.antlr
         source = [project.file("src/main/jsl-$lowerName")]
         destinationDir = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
     }
@@ -1081,7 +1081,7 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
     def generateShaders = project.task("generate${name}Shaders", dependsOn: compileCompilers) {
         description = "Generate $name shaders from JSL"
         def sourceDir = project.file("src/main/jsl-$lowerName")
-        def destinationDir = project.file("$project.buildDir/generated-src/jsl-$lowerName")
+        def destinationDir = project.file("$project.buildDir/gensrc/jsl-$lowerName")
         inputs.dir sourceDir
         outputs.dir destinationDir
         doLast {
@@ -1089,30 +1089,27 @@ void addJSL(Project project, String name, String pkg, Closure compile) {
         }
     }
 
-    project.task("compile${name}JavaShaders", type: JavaCompile, dependsOn: generateShaders) {
-        description = "Compile the Java $name JSL shaders"
-        classpath = project.files(project.sourceSets.main.output.classesDir) + rootProject.BUILD_SRC
-        source = [project.file("$project.buildDir/generated-src/jsl-$lowerName")]
-        destinationDir = project.file("$project.buildDir/classes/jsl-$lowerName")
-    }
-
     def compileHLSLShaders = project.task("compile${name}HLSLShaders", dependsOn: generateShaders, type: CompileHLSLTask) {
         enabled = IS_WINDOWS
         description = "Compile $name HLSL files into .obj files"
         matches = ".*\\.hlsl"
         output project.file("$project.buildDir/hlsl/$name/$pkg")
-        source project.file("$project.buildDir/generated-src/jsl-$lowerName/$pkg")
+        source project.file("$project.buildDir/gensrc/jsl-$lowerName/$pkg")
     }
 
-    project.task("process${name}Shaders", dependsOn: [generateShaders, compileHLSLShaders], type: Copy, description: "Copy hlsl / frag shaders to build/resources/jsl-$lowerName") {
+    def processShaders = project.task("process${name}Shaders", dependsOn: [generateShaders, compileHLSLShaders], type: Copy, description: "Copy hlsl / frag shaders to build/resources/jsl-$lowerName") {
         from("$project.buildDir/hlsl/$name") {
             include "**/*.obj"
         }
-        from("$project.buildDir/generated-src/jsl-$lowerName") {
+        from("$project.buildDir/gensrc/jsl-$lowerName") {
             include("**/*.frag")
         }
-        into "$project.buildDir/resources/jsl-$lowerName"
+        into project.sourceSets.main.output.resourcesDir
     }
+
+    project.processShaders.dependsOn(processShaders)
+    project.sourceSets.shaders.output.dir("$project.buildDir/gensrc/jsl-$lowerName", builtBy: processShaders )
+
 }
 
 /**
@@ -1360,7 +1357,6 @@ project(":base") {
         )
 
     dependencies {
-        compile BUILD_SRC
     }
 
     // We need to take the VersionInfo.java file and replace the various
@@ -1374,9 +1370,9 @@ project(":base") {
         "RELEASE_VERSION": RELEASE_VERSION,
         "RELEASE_SUFFIX": RELEASE_SUFFIX];
     task processVersionInfo(type: Copy, description: "Replace params in VersionInfo and copy file to destination") {
-        doFirst { mkdir "$buildDir/generated-src/version-info" }
+        doFirst { mkdir "$buildDir/gensrc/java" }
         from "src/main/version-info"
-        into "$buildDir/generated-src/version-info/com/sun/javafx/runtime"
+        into "$buildDir/gensrc/java/com/sun/javafx/runtime"
         filter {line->
             replacements.each() {k, v ->
                 line = line.replace("@$k@", v.toString());
@@ -1389,10 +1385,10 @@ project(":base") {
         sourceSets.main.java.srcDirs += "src/main/java-jfr"
     }
 
-    // Make sure to include $buildDir/generated-src/version-info that we previously created.
+    // Make sure to include $buildDir/gensrc/java that we previously created.
     // We DO NOT want to include src/main/version-info
 
-    sourceSets.main.java.srcDirs += "$buildDir/generated-src/version-info"
+    sourceSets.main.java.srcDirs += "$buildDir/gensrc/java"
 
     compileJava.dependsOn processVersionInfo
 }
@@ -1402,12 +1398,14 @@ project(":base") {
 // This is a fairly complicated module. There are many different types of native components
 // that all need to be compiled.
 project(":graphics") {
-    // Workaround for lack of Antlr 3 support in Gradle. By defining a configuration,
-    // we can then give it a class path and use that classpath to execute a java command
-    getConfigurations().create("antlr3");
+
+    apply plugin: 'antlr'
 
     sourceSets {
+        antlr  // antlr sources for JSLC
+        jslc   // JSLC gramar subset
         main
+        shaders // generated shaders (prism & decora)
         test
         stub
     }
@@ -1422,21 +1420,48 @@ project(":graphics") {
         project.projectDir.path + "/src/test/addExports"
         )
 
-    project.ext.extraBuildDirs = [
-        "${buildDir}/classes/jsl-decora",
-        "${buildDir}/resources/jsl-decora",
-        "${buildDir}/classes/jsl-prism",
-        "${buildDir}/resources/jsl-prism"
-    ]
-
     dependencies {
-        compile project(":base"), BUILD_SRC
+        compile project(":base")
         stubCompile group: "junit", name: "junit", version: "4.8.2",
         project(":base").sourceSets.test.output, sourceSets.main.output
-        antlr3 group: "org.antlr", name: "antlr", version: "3.1.3"
-        antlr3 group: "org.antlr", name: "antlr-runtime",  version: "3.1.3"
-        antlr3 group: "org.antlr", name: "stringtemplate", version: "3.2"
+
+        jslcCompile  group: "org.antlr", name: "antlr-complete", version: "3.5.2"
+
+        antlr  group: "org.antlr", name: "antlr-complete", version: "3.5.2"
     }
+
+    compileJslcJava.dependsOn(generateGrammarSource)
+    compileJava.dependsOn(compileJslcJava)
+
+    /*
+    Graphics compilation is "complicated" by the generated shaders.
+
+    We have two shader groups - Decora and Prism.
+
+    The shader groups each will generate a custom compiler that
+    then genarates the shader code. These compilers rely on the JSLC
+    gramar parser which is antlr generated and compile separately.
+
+    The decora compiler relies on compileJava - which is sourceSet.main.java
+    It also accesses module private packages, so will need add-exports
+
+    Once the shader java code is generated, we can compileFullJava
+
+    After that, we can generate the required native header and then build the native code
+    */
+
+    project.task("processShaders") {
+        // an empty task to hang the prism and decora shaders on
+   }
+
+    project.task("compileFullJava", type: JavaCompile, dependsOn: processShaders) {
+        description = "Compile all of the graphics java classes - main and shaders"
+        classpath = configurations.compile
+        source = project.sourceSets.main.java.srcDirs
+        source += project.sourceSets.shaders.output
+        destinationDir = project.sourceSets.main.output.classesDir
+    }
+    classes.dependsOn(compileFullJava)
 
     // Create a single "native" task which will depend on all the individual native tasks for graphics
     project.ext.nativeAllTask = task("native", group: "Build", description: "Compiles and Builds all native libraries for Graphics");
@@ -1557,10 +1582,10 @@ project(":graphics") {
     //      1) Compile the *Compile.java classes. These live in src/main/jsl-* and will be
     //         output to $buildDir/classes/jsl-compilers/* (where * == decora or prism).
     //      2) Generate source files from the JSL files contained in src/main/jsl-*. These
-    //         will be output to $buildDir/generated-src/jsl-*
-    //      3) Compile the JSL Java sources in $buildDir/generated-src/jsl-* and put the output
+    //         will be output to $buildDir/gensrc/jsl-*
+    //      3) Compile the JSL Java sources in $buildDir/gensrc/jsl-* and put the output
     //         into classes/jsl-*
-    //      4) Compile the native JSL sources in $buildDir/generated-src/jsl-* and put the obj
+    //      4) Compile the native JSL sources in $buildDir/gensrc/jsl-* and put the obj
     //         files into native/jsl-* and the resulting library into libs/jsl-*.dll|so|dylib
     //      5) Modify the jar step to include classes/jsl-*
     // The native library must be copied over during SDK creation time in the "sdk" task. In
@@ -1583,7 +1608,12 @@ project(":graphics") {
                 executable = JAVA
                 workingDir = project.projectDir
                 main = settings.generator
-                classpath = configurations.compile + configurations.antlr3
+                classpath = configurations.compile + configurations.antlr
+                classpath += files(project.sourceSets.jslc.output.classesDir)
+
+                //classpath += files(project.sourceSets.jslc.resources) // not quite right..
+                classpath += files("${project.projectDir}/src/jslc/resources")
+
                 classpath += files("$buildDir/classes/main")
                 classpath += files("$buildDir/classes/jsl-compilers/decora")
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
@@ -1591,13 +1621,13 @@ project(":graphics") {
         }
     }
 
-    task generateDecoraNativeHeaders(type: JavaHeaderTask, dependsOn: compileDecoraJavaShaders) {
+    task generateDecoraNativeHeaders(type: JavaHeaderTask, dependsOn: compileFullJava) {
         description = "Generates JNI Headers for Decora SSE Natives"
-        source file("$buildDir/classes/jsl-decora")
         source file("$buildDir/classes/main")
         include("com/sun/scenario/effect/impl/sw/sse/*");
-        classpath = files("$buildDir/classes/main", "$buildDir/classes/jsl-decora")
-        output = file("$buildDir/generated-src/headers/jsl-decora")
+        classpath = files("$buildDir/classes/main")
+        classpath += files(project.sourceSets.jslc.output.classesDir)
+        output = file("$buildDir/gensrc/headers/jsl-decora")
     }
 
     task nativeDecora(dependsOn: compileDecoraHLSLShaders, group: "Build") {
@@ -1607,7 +1637,7 @@ project(":graphics") {
         description = "Clean native objects for Decora"
     }
 
-    def headerDir = file("$buildDir/generated-src/headers/jsl-decora")
+    def headerDir = file("$buildDir/gensrc/headers/jsl-decora")
     def nativeRootDir = project.file("$project.buildDir/native/jsl-decora")
     def libRootDir = project.file("$project.buildDir/libs/jsl-decora")
     // For each compile target, create cc and link tasks
@@ -1629,7 +1659,7 @@ project(":graphics") {
             def ccTask = task("compileDecoraNativeShaders$capitalTarget$capitalVariant", type: CCTask, dependsOn: generateDecoraNativeHeaders) {
                 description = "Compiles Decora SSE natives for ${t.name}${capitalVariant != '' ? ' for variant ' + capitalVariant : ''}"
                 matches = ".*\\.cc"
-                source file("$buildDir/generated-src/jsl-decora")
+                source file("$buildDir/gensrc/jsl-decora")
                 source file(project.projectDir.path + "/src/main/native-decora")
                 headers = headerDir
                 params.addAll(variantProperties.ccFlags)
@@ -1674,7 +1704,9 @@ project(":graphics") {
                 executable = JAVA
                 workingDir = project.projectDir
                 main = "CompileJSL"
-                classpath = configurations.compile + configurations.antlr3
+                classpath = configurations.compile + configurations.antlr
+                classpath += files(project.sourceSets.jslc.output.classesDir)
+                classpath += files(project.sourceSets.jslc.resources)
                 classpath += files("$buildDir/classes/jsl-compilers/prism",
                     project.projectDir.path + "/src/main/jsl-prism") // for the .stg
                 args = ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/prism", "-d3d", "-es2", "-name", "$file"]
@@ -1682,7 +1714,6 @@ project(":graphics") {
         }
     }
 
-    classes.dependsOn compilePrismJavaShaders;
     nativePrism.dependsOn compilePrismHLSLShaders;
 
     project.nativeAllTask.dependsOn nativeDecora
@@ -1727,13 +1758,11 @@ project(":graphics") {
         }
         if (allLibsPresent) return;
 
-        for (File f : [configurations.compile.files, configurations.antlr3.files].flatten()) {
+        for (File f : [configurations.compile.files, configurations.antlr.files].flatten()) {
             copy {
                 into libsDir
                 from f.getParentFile()
-                include "**/antlr-3.1.3.jar"
-                include "**/stringtemplate-3.2.jar"
-                include "**/antlr-runtime-3.1.3.jar"
+                include "**/antlr-complete-3.5.2.jar"
                 includeEmptyDirs = false
             }
         }
@@ -1752,7 +1781,7 @@ project(":controls") {
     )
 
     dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics")
+        compile project(":base"), project(":graphics")
         // TODO not sure how to specify this? processResources project(":base"), project(":graphics")
         testCompile project(":graphics").sourceSets.test.output
         testCompile project(":base").sourceSets.test.output
@@ -1801,7 +1830,7 @@ project(":swing") {
     project.ext.moduleName = "javafx.swing"
 
     dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics")
+        compile project(":base"), project(":graphics")
     }
 
     Set<String> testInclude = [ "test/**" ]
@@ -1824,7 +1853,7 @@ project(":swt") {
     project.ext.buildModule = false
 
     dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics")
+        compile project(":base"), project(":graphics")
         compile name: SWT_FILE_NAME
     }
     classes << {
@@ -1876,8 +1905,7 @@ project(":fxml") {
     )
 
     dependencies {
-        compile BUILD_SRC,
-                project(":base"),
+        compile project(":base"),
                 project(":graphics"),
                 project(":controls")
         testCompile project(":graphics").sourceSets.test.output
@@ -2394,7 +2422,7 @@ project(":media") {
     project.ext.moduleName = "javafx.media"
 
     dependencies {
-        compile BUILD_SRC, project(":base"), project(":graphics")
+        compile project(":base"), project(":graphics")
     }
 
     compileJava.dependsOn updateCacheIfNeeded
@@ -2414,7 +2442,7 @@ project(":media") {
     project.ext.buildType = IS_DEBUG_NATIVE ? "Debug" : "Release";
 
     def nativeSrcDir = file("${projectDir}/src/main/native")
-    def generatedHeadersDir = file("${buildDir}/generated-src/headers")
+    def generatedHeadersDir = file("${buildDir}/gensrc/headers")
 
     task generateHeaders(dependsOn: compileJava) {
         enabled = IS_COMPILE_MEDIA
@@ -2741,7 +2769,7 @@ project(":web") {
         doLast {
             def classpath = files("$buildDir/classes/main",
                                   project(":graphics").sourceSets.main.output.classesDir)
-            def dest = file("$buildDir/generated-src/headers");
+            def dest = file("$buildDir/gensrc/headers");
             mkdir dest;
             exec {
                 commandLine("$JAVAH", "-d", "$dest",
@@ -3062,7 +3090,6 @@ task javadoc(type: Javadoc) {
     setDestinationDir(new File(buildDir, 'javadoc'));
     // FIXME: The following is a workaround for JDK-8151191; it should be
     // reverted once that bug is fixed
-    classpath = rootProject.BUILD_SRC
     classpath += files(projectsToDocument.collect { project ->
         project.sourceSets.main.java.srcDirs
     });
@@ -3594,9 +3621,6 @@ compileTargets { t ->
                 "${buildDir}/classes/main",
                 "${buildDir}/resources/main"
             ]
-            if (project.hasProperty("extraBuildDirs")) {
-                sourceBuildDirs += project.ext.extraBuildDirs
-            }
             doLast {
                 def moduleClassesDir = "$buildDir/${platformPrefix}module-classes"
                 copy {

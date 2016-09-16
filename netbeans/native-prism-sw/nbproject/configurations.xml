@@ -71,7 +71,7 @@
       <compileType>
         <cTool>
           <incDir>
-            <pElem>../../modules/javafx.graphics/build/generated-src/headers/prismSW/win</pElem>
+            <pElem>../../modules/javafx.graphics/build/gensrc/headers/prismSW/win</pElem>
           </incDir>
         </cTool>
       </compileType>

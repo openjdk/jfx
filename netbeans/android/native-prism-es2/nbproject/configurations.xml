@@ -29,7 +29,7 @@
           <executablePath></executablePath>
           <cTool>
             <incDir>
-              <pElem>../../../modules/javafx.graphics/build/generated-src/headers/prismES2/android</pElem>
+              <pElem>../../../modules/javafx.graphics/build/gensrc/headers/prismES2/android</pElem>
               <pElem>/opt/android-ndk-r7c/platforms/android-14/arch-arm/usr/include</pElem>
             </incDir>
           </cTool>
