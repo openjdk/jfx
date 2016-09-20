@@ -47,6 +47,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
 
 import javafx.application.Platform;
@@ -77,6 +78,7 @@ import org.eclipse.swt.events.DisposeEvent;
 import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.FocusEvent;
 import org.eclipse.swt.events.FocusListener;
+import org.eclipse.swt.events.GestureEvent;
 import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.MenuDetectEvent;
@@ -464,11 +466,19 @@ public class FXCanvas extends Canvas {
             }
         });
 
+        // SWT emulates mouse events from PAN gesture events.
+        // We need to suppress them while a gesture is active or inertia events are still processed.
         addListener(SWT.MouseVerticalWheel, e -> {
-            FXCanvas.this.sendScrollEventToFX(e, AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL);
+            if (!gestureActive && (!panGestureInertiaActive || lastGestureEvent == null || e.time != lastGestureEvent.time)) {
+                FXCanvas.this.sendScrollEventToFX(AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL,
+                        0, SWTEvents.getWheelRotation(e), e.x, e.y, e.stateMask, false);
+            }
         });
         addListener(SWT.MouseHorizontalWheel, e -> {
-            FXCanvas.this.sendScrollEventToFX(e, AbstractEvents.MOUSEEVENT_HORIZONTAL_WHEEL);
+            if (!gestureActive && (!panGestureInertiaActive || lastGestureEvent == null || e.time != lastGestureEvent.time)) {
+                FXCanvas.this.sendScrollEventToFX(AbstractEvents.MOUSEEVENT_HORIZONTAL_WHEEL,
+                        SWTEvents.getWheelRotation(e), 0, e.x, e.y, e.stateMask, false);
+            }
         });
 
         addMouseTrackListener(new MouseTrackListener() {
@@ -518,6 +528,10 @@ public class FXCanvas extends Canvas {
             public void keyReleased(KeyEvent e) {
                 FXCanvas.this.sendKeyEventToFX(e, SWT.KeyUp);
             }
+        });
+
+        addGestureListener(ge -> {
+            FXCanvas.this.sendGestureEventToFX(ge);
         });
 
         addMenuDetectListener(e -> {
@@ -680,20 +694,56 @@ public class FXCanvas extends Canvas {
                 false);  // RT-32990: popup trigger not implemented
     }
 
-    private void sendScrollEventToFX(Event event, int type){
+    double totalScrollX = 0;
+    double totalScrollY = 0;
+    private void sendScrollEventToFX(int type, double scrollX, double scrollY, int x, int y, int stateMask, boolean inertia) {
         if (scenePeer == null) {
             return;
         }
-        Point los = toDisplay(event.x, event.y);
+
+        double multiplier = 5.0;
+        if (type == AbstractEvents.MOUSEEVENT_HORIZONTAL_WHEEL  || type == AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL) {
+            // granularity for mouse wheel scroll events is more coarse-grained than for pan gesture events
+            multiplier = 40.0;
+
+            // mouse wheel scroll events do not belong to a gesture,
+            // so total scroll is not accumulated
+            totalScrollX = scrollX;
+            totalScrollY = scrollY;
+        } else {
+            // up to and including SWT 4.5, direction was inverted for pan gestures on the Mac
+            // (see https://bugs.eclipse.org/bugs/show_bug.cgi?id=481331)
+            if ("cocoa".equals(SWT.getPlatform()) && SWT.getVersion() < 4600) {
+                multiplier  *= -1.0;
+            }
+
+            if (type == AbstractEvents.SCROLLEVENT_STARTED) {
+                totalScrollX = 0;
+                totalScrollY = 0;
+            } else if (inertia) {
+                // inertia events do not belong to the gesture,
+                // thus total scroll is not accumulated
+                totalScrollX = scrollX;
+                totalScrollY = scrollY;
+            } else {
+                // accumulate total scroll as long as the gesture occurs
+                totalScrollX += scrollX;
+                totalScrollY += scrollY;
+            }
+        }
+
+        Point los = toDisplay(x, y);
         scenePeer.scrollEvent(type,
-                (type == AbstractEvents.MOUSEEVENT_HORIZONTAL_WHEEL) ? -SWTEvents.getWheelRotation(event) : 0,
-                (type == AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL) ? -SWTEvents.getWheelRotation(event) : 0,
-                event.x, event.y,
+                scrollX, scrollY,
+                totalScrollX, totalScrollY,
+                multiplier, multiplier,
+                x, y,
                 los.x, los.y,
-                (event.stateMask & SWT.SHIFT) != 0,
-                (event.stateMask & SWT.CONTROL) != 0,
-                (event.stateMask & SWT.ALT) != 0,
-                (event.stateMask & SWT.COMMAND) != 0);
+                (stateMask & SWT.SHIFT) != 0,
+                (stateMask & SWT.CONTROL) != 0,
+                (stateMask & SWT.ALT) != 0,
+                (stateMask & SWT.COMMAND) != 0,
+                inertia);
     }
 
     private void sendKeyEventToFX(final KeyEvent e, int type) {
@@ -724,6 +774,191 @@ public class FXCanvas extends Canvas {
                     e.keyCode, chars,
                     SWTEvents.keyModifiersToEmbedKeyModifiers(stateMask));
         }
+    }
+
+    // true in between begin and end events of a (compound) gesture (not including inertia events)
+    private boolean gestureActive = false;
+    // true while inertia events of a pan gesture might be processed
+    private boolean panGestureInertiaActive = false;
+    // the last gesture event that was received (may also be an inertia event)
+    private GestureEvent lastGestureEvent;
+    // used to keep track of which (atomic) gestures are enclosed
+    private Stack<Integer> nestedGestures = new Stack<>();
+    // data used to compute inertia values for pan gesture events (as SWT does not provide these)
+    private long inertiaTime = 0;
+    private double inertiaXScroll = 0.0;
+    private double inertiaYScroll = 0.0;
+    private void sendGestureEventToFX(GestureEvent gestureEvent) {
+        if (scenePeer == null) {
+            return;
+        }
+
+        // An SWT gesture may be compound, comprising several MAGNIFY, PAN, and ROTATE events, which are enclosed by a
+        // generic BEGIN and END event (while SWIPE events occur without being enclosed).
+        // In JavaFX, such a compound gesture is represented through (possibly nested) atomic gestures, which all
+        // (again excluding swipe) have their specific START and FINISH events.
+        // While a complex SWT gesture is active, we therefore have to generate START events for atomic gestures as
+        // needed, finishing them all when the compound SWT gesture ends (in the reverse order they were started),
+        // after which we still process inertia events (that only seem to occur for PAN). SWIPE events may simply be
+        // forwarded.
+        switch (gestureEvent.detail) {
+            case SWT.GESTURE_BEGIN:
+                // a (complex) gesture has started
+                gestureActive = true;
+                // we are within an active gesture, so no inertia processing now
+                panGestureInertiaActive = false;
+                break;
+            case SWT.GESTURE_MAGNIFY:
+                // emulate the start of an atomic gesture
+                if (gestureActive && !nestedGestures.contains(SWT.GESTURE_MAGNIFY)) {
+                    sendZoomEventToFX(AbstractEvents.ZOOMEVENT_STARTED, gestureEvent);
+                    nestedGestures.push(SWT.GESTURE_MAGNIFY);
+                }
+                sendZoomEventToFX(AbstractEvents.ZOOMEVENT_ZOOM, gestureEvent);
+                break;
+            case SWT.GESTURE_PAN:
+                // emulate the start of an atomic gesture
+                if (gestureActive && !nestedGestures.contains(SWT.GESTURE_PAN)) {
+                    sendScrollEventToFX(AbstractEvents.SCROLLEVENT_STARTED, gestureEvent.xDirection, gestureEvent.yDirection,
+                            gestureEvent.x, gestureEvent.y, gestureEvent.stateMask, false);
+                    nestedGestures.push(SWT.GESTURE_PAN);
+                }
+
+                // SWT does not flag inertia events and does not allow to distinguish emulated PAN gesture events
+                // (resulting from mouse wheel interaction) from native ones (resulting from touch device interaction);
+                // as it will always send both, mouse wheel as well as PAN gesture events when using the touch device or
+                // the mouse wheel, we can identify native PAN gesture inertia events only based on their temporal relationship
+                // to the preceding gesture event.
+                if(panGestureInertiaActive && gestureEvent.time > lastGestureEvent.time + 250) {
+                    panGestureInertiaActive = false;
+                }
+
+                if(gestureActive || panGestureInertiaActive) {
+                    double xDirection = gestureEvent.xDirection;
+                    double yDirection = gestureEvent.yDirection;
+
+                    if (panGestureInertiaActive) {
+                        // calculate inertia values for scrollX and scrollY, as SWT (at least on MacOSX) provides zero values
+                        if (xDirection == 0 && yDirection == 0) {
+                            double delta = Math.max(0.0, Math.min(1.0, (gestureEvent.time - inertiaTime) / 1500.0));
+                            xDirection = (1.0 - delta) * inertiaXScroll;
+                            yDirection = (1.0 - delta) * inertiaYScroll;
+                        }
+                    }
+
+                    sendScrollEventToFX(AbstractEvents.SCROLLEVENT_SCROLL, xDirection, yDirection,
+                            gestureEvent.x, gestureEvent.y, gestureEvent.stateMask, panGestureInertiaActive);
+                }
+                break;
+            case SWT.GESTURE_ROTATE:
+                // emulate the start of an atomic gesture
+                if(gestureActive && !nestedGestures.contains(SWT.GESTURE_ROTATE)) {
+                    sendRotateEventToFX(AbstractEvents.ROTATEEVENT_STARTED, gestureEvent);
+                    nestedGestures.push(SWT.GESTURE_ROTATE);
+                }
+                sendRotateEventToFX(AbstractEvents.ROTATEEVENT_ROTATE, gestureEvent);
+                break;
+            case SWT.GESTURE_SWIPE:
+                sendSwipeEventToFX(gestureEvent);
+                break;
+            case SWT.GESTURE_END:
+                // finish atomic gesture(s) in reverse order of their start; SWIPE may be ignored,
+                // as JavaFX (like SWT) does not recognize it as a gesture
+                while (!nestedGestures.isEmpty()) {
+                    switch (nestedGestures.pop()) {
+                        case SWT.GESTURE_MAGNIFY:
+                            sendZoomEventToFX(AbstractEvents.ZOOMEVENT_FINISHED, gestureEvent);
+                            break;
+                        case SWT.GESTURE_PAN:
+                            sendScrollEventToFX(AbstractEvents.SCROLLEVENT_FINISHED, gestureEvent.xDirection, gestureEvent.yDirection,
+                                    gestureEvent.x, gestureEvent.y, gestureEvent.stateMask, false);
+                            // use the scroll values of the preceding scroll event to compute values for inertia events
+                            inertiaXScroll = lastGestureEvent.xDirection;
+                            inertiaYScroll = lastGestureEvent.yDirection;
+                            inertiaTime = gestureEvent.time;
+                            // from now on, inertia events may occur
+                            panGestureInertiaActive = true;
+                            break;
+                        case SWT.GESTURE_ROTATE:
+                            sendRotateEventToFX(AbstractEvents.ROTATEEVENT_FINISHED, gestureEvent);
+                            break;
+                    }
+                }
+                // compound SWT gesture has ended
+                gestureActive = false;
+                break;
+            default:
+                // ignore
+        }
+        // keep track of currently received gesture event; this is needed to identify inertia events
+        lastGestureEvent = gestureEvent;
+    }
+
+    // used to compute zoom deltas, which are not provided by SWT
+    private double lastTotalZoom = 0.0;
+    private void sendZoomEventToFX(int type, GestureEvent gestureEvent) {
+        Point los = toDisplay(gestureEvent.x, gestureEvent.y);
+
+        double totalZoom = gestureEvent.magnification;
+        if (type == AbstractEvents.ZOOMEVENT_STARTED) {
+            // ensure first event does not provide any zoom yet
+            totalZoom = lastTotalZoom = 1.0;
+        } else if (type == AbstractEvents.ZOOMEVENT_FINISHED) {
+            // SWT uses 0.0 for final event, while JavaFX still provides a (total) zoom value
+            totalZoom = lastTotalZoom;
+        }
+        double zoom = type == AbstractEvents.ZOOMEVENT_FINISHED ? 1.0 : totalZoom / lastTotalZoom;
+        lastTotalZoom = totalZoom;
+
+        scenePeer.zoomEvent(type, zoom, totalZoom,
+                gestureEvent.x, gestureEvent.y, los.x, los.y,
+                (gestureEvent.stateMask & SWT.SHIFT) != 0,
+                (gestureEvent.stateMask & SWT.CONTROL) != 0,
+                (gestureEvent.stateMask & SWT.ALT) != 0,
+                (gestureEvent.stateMask & SWT.COMMAND) != 0,
+                !gestureActive);
+    }
+
+    private double lastTotalAngle = 0.0;
+    private void sendRotateEventToFX(int type, GestureEvent gestureEvent) {
+        Point los = toDisplay(gestureEvent.x, gestureEvent.y);
+
+        double totalAngle = gestureEvent.rotation;
+        if (type == AbstractEvents.ROTATEEVENT_STARTED) {
+            totalAngle = lastTotalAngle = 0.0;
+        } else if (type == AbstractEvents.ROTATEEVENT_FINISHED) {
+            // SWT uses 0.0 for final event, while JavaFX still provides a (total) rotation value
+            totalAngle = lastTotalAngle;
+        }
+        double angle = type == AbstractEvents.ROTATEEVENT_FINISHED ? 0.0 : totalAngle - lastTotalAngle;
+        lastTotalAngle = totalAngle;
+
+        scenePeer.rotateEvent(type, angle, totalAngle,
+                gestureEvent.x, gestureEvent.y, los.x, los.y,
+                (gestureEvent.stateMask & SWT.SHIFT) != 0,
+                (gestureEvent.stateMask & SWT.CONTROL) != 0,
+                (gestureEvent.stateMask & SWT.ALT) != 0,
+                (gestureEvent.stateMask & SWT.COMMAND) != 0,
+                !gestureActive);
+    }
+
+    private void sendSwipeEventToFX(GestureEvent gestureEvent) {
+        Point los = toDisplay(gestureEvent.x, gestureEvent.y);
+        int type = -1;
+        if(gestureEvent.yDirection > 0) {
+            type = AbstractEvents.SWIPEEVENT_DOWN;
+        } else if(gestureEvent.yDirection < 0) {
+            type = AbstractEvents.SWIPEEVENT_UP;
+        } else if(gestureEvent.xDirection > 0) {
+            type = AbstractEvents.SWIPEEVENT_RIGHT;
+        } else if(gestureEvent.xDirection < 0) {
+            type = AbstractEvents.SWIPEEVENT_LEFT;
+        }
+        scenePeer.swipeEvent(type, gestureEvent.x, gestureEvent.y, los.x, los.y,
+                (gestureEvent.stateMask & SWT.SHIFT) != 0,
+                (gestureEvent.stateMask & SWT.CONTROL) != 0,
+                (gestureEvent.stateMask & SWT.ALT) != 0,
+                (gestureEvent.stateMask & SWT.COMMAND) != 0);
     }
 
     private void sendMenuEventToFX(MenuDetectEvent me) {

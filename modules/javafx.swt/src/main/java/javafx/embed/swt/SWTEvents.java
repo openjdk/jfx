@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package javafx.embed.swt;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.MouseEvent;
+//import org.eclipse.swt.events.MouseEvent;
 
 import java.lang.reflect.Method;
 
@@ -73,9 +73,9 @@ class SWTEvents {
         return AbstractEvents.MOUSEEVENT_NONE_BUTTON;
     }
 
-    static int getWheelRotation(Event e) {
+    static double getWheelRotation(Event e) {
         int divisor = 1;
-        if ("win32".equals(SWT.getPlatform())) {
+        if ("win32".equals(SWT.getPlatform()) && e.type == SWT.MouseVerticalWheel) {
             int [] linesToScroll = new int [1];
             //OS.SystemParametersInfo (OS.SPI_GETWHEELSCROLLLINES, 0, linesToScroll, 0);
             try {
@@ -91,12 +91,13 @@ class SWTEvents {
             if (linesToScroll [0] != -1 /*OS.WHEEL_PAGESCROLL*/) {
                 divisor = linesToScroll [0];
             }
-        } else {
-            if ("gtk".equals(SWT.getPlatform())) {
-                divisor = 3;
-            }
+        } else if ("gtk".equals(SWT.getPlatform())) {
+            divisor = 3;
         }
-        return -e.count / Math.max(1, divisor);
+        else if ("cocoa".equals(SWT.getPlatform())) {
+            divisor = Math.abs(e.count);
+        }
+        return e.count / (double) Math.max(1, divisor);
     }
 
     static int keyIDToEmbedKeyType(int id) {

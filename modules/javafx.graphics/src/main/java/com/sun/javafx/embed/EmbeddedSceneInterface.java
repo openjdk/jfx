@@ -76,13 +76,35 @@ public interface EmbeddedSceneInterface {
      * A notification about mouse wheel scroll events received by the host container;
      */
     public void scrollEvent(int type, double scrollX, double scrollY,
+                            double totalScrollX, double totalScrollY,
+                            double xMultiplier, double yMultiplier,
                             double x, double y, double screenX, double screenY,
                             boolean shift, boolean ctrl,
-                            boolean alt, boolean meta);
+                            boolean alt, boolean meta, boolean inertia);
     /*
      * A notification about key event received by host container.
      */
     public void keyEvent(int type, int key, char[] chars, int modifiers);
+
+    /*
+     * A notification about zoom events received by the host container.
+     */
+    public void zoomEvent(final int type, final double zoomFactor, final double totalZoomFactor,
+                          final double x, final double y, final double screenX, final double screenY,
+                          boolean shift, boolean ctrl, boolean alt, boolean meta, boolean inertia);
+
+    /*
+     * A notification about rotate events received by the host container.
+     */
+    public void rotateEvent(final int type, final double angle, final double totalAngle,
+                          final double x, final double y, final double screenX, final double screenY,
+                          boolean shift, boolean ctrl, boolean alt, boolean meta, boolean inertia);
+
+    /*
+     * A notification about swipe events received by the host container.
+     */
+    public void swipeEvent(final int type, final double x, final double y, final double screenX, final double screenY,
+                           boolean shift, boolean ctrl, boolean alt, boolean meta);
 
     /*
      * A notification about menu event received by host container.
