@@ -375,9 +375,11 @@ public final class JLinkBundlerHelper {
         public static final String ALL_RUNTIME = "ALL-RUNTIME";
 
         private final Set<String> modules = new HashSet<>();
+        private enum Macros {None, AllModulePath, AllRuntime}
 
         public ModuleHelper(List<Path> paths, Set<String> roots, Set<String> limitMods) {
-            boolean found = false;
+            Set<String> lroots = new HashSet<>();
+            Macros macro = Macros.None;
 
             for (Iterator<String> iterator = roots.iterator(); iterator.hasNext();) {
                 String module = iterator.next();
@@ -385,29 +387,32 @@ public final class JLinkBundlerHelper {
                 switch (module) {
                     case ALL_MODULE_PATH:
                         iterator.remove();
-
-                        if (!found) {
-                            modules.addAll(getModuleNamesFromPath(paths));
-                            found = true;
-                        }
+                        macro = Macros.AllModulePath;
                         break;
                     case ALL_RUNTIME:
                         iterator.remove();
-
-                        if (!found) {
-                            Set<String> modules = RedistributableModules.getRedistributableModules(paths, roots, limitMods);
-
-                            if (modules != null) {
-                                this.modules.addAll(modules);
-                            }
-
-                            found = true;
-                        }
+                        macro = Macros.AllRuntime;
                         break;
                     default:
-                        modules.add(module);
+                        lroots.add(module);
                 }
             }
+
+            switch (macro) {
+                case AllModulePath:
+                    this.modules.addAll(getModuleNamesFromPath(paths));
+                    break;
+                case AllRuntime:
+                    Set<String> m = RedistributableModules.getRedistributableModules(paths);
+
+                    if (m != null) {
+                        this.modules.addAll(m);
+                    }
+
+                    break;
+            }
+
+            this.modules.addAll(lroots);
         }
 
         public Set<String> modules() {
