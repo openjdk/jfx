@@ -66,7 +66,9 @@ void CJavaPlayerEventDispatcher::Init(JNIEnv *env, jobject PlayerInstance, CMedi
     LOWLEVELPERF_EXECTIMESTART("CJavaPlayerEventDispatcher::Init()");
 
     if (env->GetJavaVM(&m_PlayerVM) != JNI_OK) {
-        // FIXME: Warning/error message??
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
         return;
     }
     m_PlayerInstance = env->NewGlobalRef(PlayerInstance);
