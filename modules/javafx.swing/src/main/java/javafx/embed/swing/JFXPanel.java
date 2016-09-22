@@ -373,11 +373,14 @@ public class JFXPanel extends JComponent {
         if(e.getID() == MouseEvent.MOUSE_WHEEL) {
             scenePeer.scrollEvent(AbstractEvents.MOUSEEVENT_VERTICAL_WHEEL,
                     0, -SwingEvents.getWheelRotation(e),
-                    e.getX(), e.getY(), e.getXOnScreen(), e.getYOnScreen(),
+                    0, 0, // total scroll
+                    40, 40, // multiplier
+                    e.getX(), e.getY(),
+                    e.getXOnScreen(), e.getYOnScreen(),
                     (extModifiers & MouseEvent.SHIFT_DOWN_MASK) != 0,
                     (extModifiers & MouseEvent.CTRL_DOWN_MASK) != 0,
                     (extModifiers & MouseEvent.ALT_DOWN_MASK) != 0,
-                    (extModifiers & MouseEvent.META_DOWN_MASK) != 0);
+                    (extModifiers & MouseEvent.META_DOWN_MASK) != 0, false);
         } else {
             scenePeer.mouseEvent(
                     SwingEvents.mouseIDToEmbedMouseType(e.getID()),

@@ -294,19 +294,22 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
     }
 
     @Override
-    public void scrollEvent(final int type, final double scrollX, final double scrollY,
+    public void scrollEvent(final int type,
+                            final double scrollX, final double scrollY,
+                            final double totalScrollX, final double totalScrollY,
+                            double xMultiplier, double yMultiplier,
                             final double x, final double y,
                             final double xAbs, final double yAbs,
-                            final boolean shift, final boolean ctrl, final boolean alt, final boolean meta) {
+                            final boolean shift, final boolean ctrl, final boolean alt, final boolean meta,
+                            final boolean inertia) {
         {
             Platform.runLater(() -> {
                 AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
                     if (sceneListener == null) {
                         return null;
                     }
-                    sceneListener.scrollEvent(ScrollEvent.SCROLL, scrollX, scrollY, 0, 0, 40.0, 40.0,
-                            0, 0, 0, 0, 0,
-                            x, y, xAbs, yAbs, shift, ctrl, alt, meta, false, false);
+                    sceneListener.scrollEvent(AbstractEvents.scrollIDToFXEventType(type), scrollX, scrollY, totalScrollX, totalScrollY, xMultiplier, yMultiplier,
+                            0, 0, 0, 0, 0, x, y, xAbs, yAbs, shift, ctrl, alt, meta, false, inertia);
                     return null;
                 }, getAccessControlContext());
             });
@@ -358,6 +361,61 @@ final class EmbeddedScene extends GlassScene implements EmbeddedSceneInterface {
                             shiftDown, controlDown, altDown, metaDown);
                     sceneListener.keyEvent(keyEvent);
                 }
+                return null;
+            }, getAccessControlContext());
+        });
+    }
+
+    @Override
+    public void zoomEvent(final int type, final double zoomFactor, final double totalZoomFactor,
+                          final double x, final double y, final double screenX, final double screenY,
+                          boolean shift, boolean ctrl, boolean alt, boolean meta, boolean inertia)
+    {
+        Platform.runLater(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (sceneListener == null) {
+                    return null;
+                }
+                sceneListener.zoomEvent(AbstractEvents.zoomIDToFXEventType(type),
+                        zoomFactor, totalZoomFactor,
+                        x, y, screenX, screenY,
+                        shift, ctrl, alt, meta, false, inertia);
+                return null;
+            }, getAccessControlContext());
+        });
+    }
+
+    @Override
+    public void rotateEvent(final int type, final double angle, final double totalAngle,
+                          final double x, final double y, final double screenX, final double screenY,
+                          boolean shift, boolean ctrl, boolean alt, boolean meta, boolean inertia)
+    {
+        Platform.runLater(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (sceneListener == null) {
+                    return null;
+                }
+                sceneListener.rotateEvent(AbstractEvents.rotateIDToFXEventType(type),
+                        angle, totalAngle,
+                        x, y, screenX, screenY,
+                        shift, ctrl, alt, meta, false, inertia);
+                return null;
+            }, getAccessControlContext());
+        });
+    }
+
+    @Override
+    public void swipeEvent(final int type, final double x, final double y, final double screenX, final double screenY,
+                            boolean shift, boolean ctrl, boolean alt, boolean meta)
+    {
+        Platform.runLater(() -> {
+            AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                if (sceneListener == null) {
+                    return null;
+                }
+                sceneListener.swipeEvent(AbstractEvents.swipeIDToFXEventType(type),
+                        0, x, y, screenX, screenY,
+                        shift, ctrl, alt, meta, false);
                 return null;
             }, getAccessControlContext());
         });

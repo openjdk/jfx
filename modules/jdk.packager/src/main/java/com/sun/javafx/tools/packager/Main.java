@@ -338,13 +338,13 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-nosign")) {
                             deployParams.setSignBundle(false);
                         } else if (arg.equals(ADD_MODULES)) {
-                            deployParams.addModules.add(nextArg(args, i++));
+                            deployParams.addAddModule(nextArg(args, i++));
                         } else if (arg.startsWith(ADD_MODULES + "=")) {
-                            deployParams.addModules.add(arg.replace(ADD_MODULES + "=", ""));
+                            deployParams.addAddModule(arg.replace(ADD_MODULES + "=", ""));
                         } else if (arg.equals(LIMIT_MODULES)) {
-                            deployParams.limitModules.add(nextArg(args, i++));
+                            deployParams.addLimitModule(nextArg(args, i++));
                         } else if (arg.startsWith(LIMIT_MODULES + "=")) {
-                            deployParams.limitModules.add(arg.replace(LIMIT_MODULES + "=", ""));
+                            deployParams.addLimitModule(arg.replace(LIMIT_MODULES + "=", ""));
                         } else if (arg.equals(STRIP_NATIVE_COMMANDS)) {
                             deployParams.setStripNativeCommands(Boolean.valueOf(nextArg(args, i++)));
                         } else if (arg.equals(STRIP_NATIVE_COMMANDS + "=")) {

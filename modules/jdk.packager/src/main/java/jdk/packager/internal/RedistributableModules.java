@@ -45,6 +45,7 @@ import java.lang.module.ModuleReader;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -58,8 +59,10 @@ public final class RedistributableModules {
 
     private RedistributableModules() {}
 
-    public static Set<String> getRedistributableModules(List<Path> modulePath, Set<String> addModules, Set<String> limitModules) {
+    public static Set<String> getRedistributableModules(List<Path> modulePath) {
         Set<String> result = null;
+        Set<String> addModules = new HashSet<>();
+        Set<String> limitModules = new HashSet<>();
         ModuleFinder finder = AppRuntimeImageBuilder.moduleFinder(modulePath, addModules, limitModules);
         Optional<ModuleReference> mref = finder.find(JDK_PACKAGER_MODULE);
 

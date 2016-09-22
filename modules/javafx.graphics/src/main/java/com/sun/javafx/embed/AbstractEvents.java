@@ -29,10 +29,12 @@ import javafx.event.EventType;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.RotateEvent;
+import javafx.scene.input.ScrollEvent;
+import javafx.scene.input.SwipeEvent;
+import javafx.scene.input.ZoomEvent;
 
 import com.sun.javafx.tk.FocusCause;
-import javafx.scene.input.InputEvent;
-import javafx.scene.input.ScrollEvent;
 
 /**
  * An utility class to translate input events between embedded
@@ -59,6 +61,23 @@ public class AbstractEvents {
     public final static int KEYEVENT_PRESSED = 0;
     public final static int KEYEVENT_RELEASED = 1;
     public final static int KEYEVENT_TYPED = 2;
+
+    public final static int ZOOMEVENT_STARTED = 0;
+    public final static int ZOOMEVENT_ZOOM = 1;
+    public final static int ZOOMEVENT_FINISHED = 2;
+
+    public final static int ROTATEEVENT_STARTED = 0;
+    public final static int ROTATEEVENT_ROTATE = 1;
+    public final static int ROTATEEVENT_FINISHED = 2;
+
+    public final static int SCROLLEVENT_STARTED = 0;
+    public final static int SCROLLEVENT_SCROLL = 1;
+    public final static int SCROLLEVENT_FINISHED = 2;
+
+    public final static int SWIPEEVENT_DOWN = 0;
+    public final static int SWIPEEVENT_UP = 1;
+    public final static int SWIPEEVENT_LEFT = 2;
+    public final static int SWIPEEVENT_RIGHT = 3;
 
     public final static int FOCUSEVENT_ACTIVATED = 0;
     public final static int FOCUSEVENT_TRAVERSED_FORWARD = 1;
@@ -115,6 +134,62 @@ public class AbstractEvents {
         }
         // Should never reach here
         return KeyEvent.KEY_TYPED;
+    }
+
+    public static EventType<ZoomEvent> zoomIDToFXEventType(int zoomID) {
+        switch(zoomID) {
+            case ZOOMEVENT_STARTED:
+                return ZoomEvent.ZOOM_STARTED;
+            case ZOOMEVENT_ZOOM:
+                return ZoomEvent.ZOOM;
+            case ZOOMEVENT_FINISHED:
+                return ZoomEvent.ZOOM_FINISHED;
+        }
+        // Should never reach here
+        return ZoomEvent.ZOOM;
+    }
+
+    public static EventType<RotateEvent> rotateIDToFXEventType(int rotateID) {
+        switch(rotateID) {
+            case ROTATEEVENT_STARTED:
+                return RotateEvent.ROTATION_STARTED;
+            case ROTATEEVENT_ROTATE:
+                return RotateEvent.ROTATE;
+            case ROTATEEVENT_FINISHED:
+                return RotateEvent.ROTATION_FINISHED;
+        }
+        // Should never reach here
+        return RotateEvent.ROTATE;
+    }
+
+    public static EventType<SwipeEvent> swipeIDToFXEventType(int swipeID) {
+        switch(swipeID) {
+            case SWIPEEVENT_UP:
+                return SwipeEvent.SWIPE_UP;
+            case SWIPEEVENT_DOWN:
+                return SwipeEvent.SWIPE_DOWN;
+            case SWIPEEVENT_LEFT:
+                return SwipeEvent.SWIPE_LEFT;
+            case SWIPEEVENT_RIGHT:
+                return SwipeEvent.SWIPE_RIGHT;
+        }
+        // Should never reach here
+        return SwipeEvent.SWIPE_DOWN;
+    }
+
+    public static EventType<ScrollEvent> scrollIDToFXEventType(int scrollID) {
+        switch(scrollID) {
+            case SCROLLEVENT_STARTED:
+                return ScrollEvent.SCROLL_STARTED;
+            case SCROLLEVENT_FINISHED:
+                return ScrollEvent.SCROLL_FINISHED;
+            case MOUSEEVENT_VERTICAL_WHEEL:
+            case MOUSEEVENT_HORIZONTAL_WHEEL:
+            case SCROLLEVENT_SCROLL:
+                return ScrollEvent.SCROLL;
+        }
+        // Should never reach here
+        return ScrollEvent.SCROLL;
     }
 
     public static FocusCause focusCauseToPeerFocusCause(int focusCause) {

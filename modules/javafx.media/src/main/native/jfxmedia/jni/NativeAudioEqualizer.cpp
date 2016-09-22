@@ -61,16 +61,27 @@ Java_com_sun_media_jfxmediaimpl_NativeAudioEqualizer_nativeAddBand(JNIEnv *env, 
     static jmethodID mid_EqualizerBandConstructor = NULL;
 
     CAudioEqualizer *pEqualizer = (CAudioEqualizer*)jlong_to_ptr(nativeRef);
+    CJavaEnvironment jenv(env);
     if (NULL != pEqualizer) {
         CEqualizerBand *band = pEqualizer->AddBand(centerFrequency, bandWidth, gain);
         if (NULL != band) {
             jclass bandClass = env->FindClass("com/sun/media/jfxmediaimpl/NativeEqualizerBand");
+            if (jenv.reportException()) {
+                return NULL;
+            }
 
             if (NULL == mid_EqualizerBandConstructor)
+            {
                 mid_EqualizerBandConstructor = env->GetMethodID(bandClass, "<init>", "(J)V");
+                if (jenv.reportException()) {
+                    env->DeleteLocalRef(bandClass);
+                    return NULL;
+                }
+            }
 
             jobject band_instance = env->NewObject(bandClass, mid_EqualizerBandConstructor, ptr_to_jlong(band));
             env->DeleteLocalRef(bandClass);
+            jenv.reportException(); // Report exception from NewObject()
 
             return band_instance;
         }

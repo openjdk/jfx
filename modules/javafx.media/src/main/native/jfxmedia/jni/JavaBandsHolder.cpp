@@ -26,36 +26,51 @@
 #include "JavaBandsHolder.h"
 #include "JniUtils.h"
 
-CJavaBandsHolder::CJavaBandsHolder(JNIEnv* env, int bands, jfloatArray magnitudes, jfloatArray phases)
-    : m_Bands(bands)
+CJavaBandsHolder::CJavaBandsHolder()
 {
-    env->GetJavaVM(&m_jvm);
-    m_Magnitudes = (jfloatArray)env->NewGlobalRef(magnitudes);
-    m_Phases = (jfloatArray)env->NewGlobalRef(phases);
-    InitRef(this);
 }
 
 CJavaBandsHolder::~CJavaBandsHolder()
 {
-    CJavaEnvironment jenv(m_jvm);
-    JNIEnv *pEnv = jenv.getEnvironment();
+    if (m_jvm != NULL) {
+        CJavaEnvironment jenv(m_jvm);
+        JNIEnv *pEnv = jenv.getEnvironment();
 
-    if (pEnv) {
-        if (m_Magnitudes) {
-            pEnv->DeleteGlobalRef(m_Magnitudes);
-            m_Magnitudes = NULL;
-        }
+        if (pEnv) {
+            if (m_Magnitudes) {
+                pEnv->DeleteGlobalRef(m_Magnitudes);
+                m_Magnitudes = NULL;
+            }
 
-        if (m_Phases) {
-            pEnv->DeleteGlobalRef(m_Phases);
-            m_Phases = NULL;
+            if (m_Phases) {
+                pEnv->DeleteGlobalRef(m_Phases);
+                m_Phases = NULL;
+            }
         }
     }
 }
 
+bool CJavaBandsHolder::Init(JNIEnv* env, int bands, jfloatArray magnitudes, jfloatArray phases)
+{
+    env->GetJavaVM(&m_jvm);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        m_jvm = NULL;
+        return false;
+    }
+
+    m_Bands = bands;
+    m_Magnitudes = (jfloatArray)env->NewGlobalRef(magnitudes);
+    m_Phases = (jfloatArray)env->NewGlobalRef(phases);
+
+    InitRef(this);
+
+    return true;
+}
+
 void CJavaBandsHolder::UpdateBands(int size, const float* magnitudes, const float* phases)
 {
-    if (m_Bands != size)
+    if (m_Bands != size || m_jvm == NULL)
         return;
 
     CJavaEnvironment jenv(m_jvm);
