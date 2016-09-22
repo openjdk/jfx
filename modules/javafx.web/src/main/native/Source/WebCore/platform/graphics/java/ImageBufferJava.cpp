@@ -22,7 +22,8 @@ namespace WebCore {
 
 ImageBufferData::ImageBufferData(
     const FloatSize& size,
-    ImageBuffer &rq_holder
+    ImageBuffer &rq_holder,
+    float resolutionScale
 ) : m_rq_holder(rq_holder)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -36,8 +37,8 @@ ImageBufferData::ImageBufferData(
     m_image = RQRef::create(JLObject(env->CallObjectMethod(
         PL_GetGraphicsManager(env),
         midCreateImage,
-        (jint) size.width(),
-        (jint) size.height()
+        (jint) ceilf(resolutionScale * size.width()),
+        (jint) ceilf(resolutionScale * size.height())
     )));
     CheckAndClearException(env);
 }
@@ -90,8 +91,9 @@ ImageBuffer::ImageBuffer(
     RenderingMode,
     bool& success
 )
-    : m_data(size, *this)
-    , m_resolutionScale(1)
+    : m_data(size, *this, resolutionScale)
+    , m_resolutionScale(resolutionScale)
+    , m_logicalSize(size)
 {
     // RT-10059: ImageBufferData construction may fail if the requested
     // image size is too large. In that case we exit immediately,
@@ -108,7 +110,6 @@ ImageBuffer::ImageBuffer(
         return;
 
     m_size = IntSize(scaledWidth, scaledHeight);
-    m_logicalSize = IntSize(scaledWidth, scaledHeight);
 
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID midCreateBufferedContextRQ = env->GetMethodID(

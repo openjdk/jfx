@@ -14,7 +14,7 @@ namespace WebCore {
 
     class ImageBufferData {
     public:
-        ImageBufferData(const FloatSize &size, ImageBuffer &rq_holder);
+        ImageBufferData(const FloatSize &size, ImageBuffer &rq_holder, float resolutionScale);
         JLObject getWCImage() const;
         unsigned char *data() const;
         void update();
