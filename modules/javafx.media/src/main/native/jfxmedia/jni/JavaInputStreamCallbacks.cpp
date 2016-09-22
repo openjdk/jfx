@@ -52,6 +52,12 @@ CJavaInputStreamCallbacks::~CJavaInputStreamCallbacks()
 bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
 {
     env->GetJavaVM(&m_jvm);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        m_jvm = NULL;
+        return false;
+    }
+
     CJavaEnvironment javaEnv(m_jvm);
 
     static jmethodID createConnectionHolder = 0;
@@ -60,6 +66,8 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
         jclass klass = env->GetObjectClass(jLocator);
         createConnectionHolder = env->GetMethodID(klass, "createConnectionHolder", "()Lcom/sun/media/jfxmedia/locator/ConnectionHolder;");
         env->DeleteLocalRef(klass);
+        if (javaEnv.reportException())
+            return false;
     }
 
     m_ConnectionHolder = env->NewGlobalRef(env->CallObjectMethod(jLocator, createConnectionHolder));
@@ -70,30 +78,83 @@ bool CJavaInputStreamCallbacks::Init(JNIEnv *env, jobject jLocator)
     }
 
     static bool methodIDsInitialized = false;
+    bool hasException = false;
     if (!methodIDsInitialized)
     {
         // Get the parent abstract class. It's wrong to get method ids from the concrete implementation
         // because it crashes jvm when it tries to call virtual methods.
         // See https://javafx-jira.kenai.com/browse/RT-37115
-        jclass klass = env->FindClass("com/sun/media/jfxmedia/locator/ConnectionHolder");
+        jclass klass = NULL;
+        klass = env->FindClass("com/sun/media/jfxmedia/locator/ConnectionHolder");
+        hasException = javaEnv.reportException();
 
-        m_BufferFID = env->GetFieldID(klass, "buffer", "Ljava/nio/ByteBuffer;");
-        m_NeedBufferMID = env->GetMethodID(klass, "needBuffer", "()Z");
-        m_ReadNextBlockMID = env->GetMethodID(klass, "readNextBlock", "()I");
-        m_ReadBlockMID = env->GetMethodID(klass, "readBlock", "(JI)I");
-        m_IsSeekableMID = env->GetMethodID(klass, "isSeekable", "()Z");
-        m_IsRandomAccessMID = env->GetMethodID(klass, "isRandomAccess", "()Z");
-        m_SeekMID = env->GetMethodID(klass, "seek", "(J)J");
-        m_CloseConnectionMID = env->GetMethodID(klass, "closeConnection", "()V");
-        m_PropertyMID = env->GetMethodID(klass, "property", "(II)I");
-        m_GetStreamSizeMID = env->GetMethodID(klass, "getStreamSize", "()I");
+        if (!hasException)
+        {
+            m_BufferFID = env->GetFieldID(klass, "buffer", "Ljava/nio/ByteBuffer;");
+            hasException = javaEnv.reportException();
+        }
 
-        methodIDsInitialized = true;
-        env->DeleteLocalRef(klass);
+        if (!hasException)
+        {
+            m_NeedBufferMID = env->GetMethodID(klass, "needBuffer", "()Z");
+            hasException = javaEnv.reportException();
+        }
+
+        if (!hasException)
+        {
+            m_ReadNextBlockMID = env->GetMethodID(klass, "readNextBlock", "()I");
+            hasException = javaEnv.reportException();
+        }
+
+        if (!hasException)
+        {
+            m_ReadBlockMID = env->GetMethodID(klass, "readBlock", "(JI)I");
+            hasException = javaEnv.reportException();
+        }
+
+        if (!hasException)
+        {
+            m_IsSeekableMID = env->GetMethodID(klass, "isSeekable", "()Z");
+            hasException = javaEnv.reportException();
+        }
+
+        if (!hasException)
+        {
+            m_IsRandomAccessMID = env->GetMethodID(klass, "isRandomAccess", "()Z");
+            hasException = javaEnv.reportException();
+        }
+
+        if (!hasException)
+        {
+            m_SeekMID = env->GetMethodID(klass, "seek", "(J)J");
+            hasException = javaEnv.reportException();
+        }
+
+        if (!hasException)
+        {
+            m_CloseConnectionMID = env->GetMethodID(klass, "closeConnection", "()V");
+            hasException = javaEnv.reportException();
+        }
+
+        if (!hasException)
+        {
+            m_PropertyMID = env->GetMethodID(klass, "property", "(II)I");
+            hasException = javaEnv.reportException();
+        }
+
+        if (!hasException)
+        {
+            m_GetStreamSizeMID = env->GetMethodID(klass, "getStreamSize", "()I");
+            hasException = javaEnv.reportException();
+        }
+
+        if (NULL != klass)
+            env->DeleteLocalRef(klass);
+
+        methodIDsInitialized = !hasException;
     }
 
-    javaEnv.reportException();
-    return true;
+    return methodIDsInitialized;
 }
 
 bool CJavaInputStreamCallbacks::NeedBuffer()

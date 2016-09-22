@@ -98,15 +98,21 @@ bool CJavaEnvironment::reportException()
     if (environment) {
         jthrowable exc = environment->ExceptionOccurred();
         if (exc) {
+            environment->ExceptionClear(); // Clear current exception
             jclass cid = environment->FindClass("java/lang/Throwable");
-            jmethodID mid = environment->GetMethodID(cid, "toString", "()Ljava/lang/String;");
-            jstring jmsg = (jstring)environment->CallObjectMethod(exc, mid);
-            char* pmsg = (char*)environment->GetStringUTFChars(jmsg, NULL);
-            LOGGER_ERRORMSG(pmsg);
-            environment->ReleaseStringUTFChars(jmsg, pmsg);
-            environment->ExceptionClear();
+            if (!clearException()) {
+                jmethodID mid = environment->GetMethodID(cid, "toString", "()Ljava/lang/String;");
+                if (!clearException()) {
+                    jstring jmsg = (jstring)environment->CallObjectMethod(exc, mid);
+                    if (!clearException()) {
+                        char* pmsg = (char*)environment->GetStringUTFChars(jmsg, NULL);
+                        LOGGER_ERRORMSG(pmsg);
+                        environment->ReleaseStringUTFChars(jmsg, pmsg);
+                    }
+                }
+                environment->DeleteLocalRef(cid);
+            }
             environment->DeleteLocalRef(exc);
-            environment->DeleteLocalRef(cid);
             return true;
         }
     }

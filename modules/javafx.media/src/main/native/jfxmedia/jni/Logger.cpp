@@ -54,7 +54,13 @@ void CLogger::logMsg(int level, const char *msg)
     }
 
     jstring jmsg = env->NewStringUTF(msg);
+    if (javaEnv.clearException()) {
+        return;
+    }
+
     env->CallStaticVoidMethod(m_cls, m_logMsg1Method, (jint)level, jmsg);
+    env->DeleteLocalRef(jmsg);
+    javaEnv.clearException();
 }
 
 void CLogger::logMsg(int level, const char *sourceClass, const char *sourceMethod, const char *msg)
@@ -66,11 +72,37 @@ void CLogger::logMsg(int level, const char *sourceClass, const char *sourceMetho
         return;
     }
 
-    jstring jsourceClass = env->NewStringUTF(sourceClass);
-    jstring jsourceMethod = env->NewStringUTF(sourceMethod);
-    jstring jmsg = env->NewStringUTF(msg);
+    jstring jsourceClass = NULL;
+    jstring jsourceMethod = NULL;
+    jstring jmsg = NULL;
+    jsourceClass = env->NewStringUTF(sourceClass);
+    bool hasException = javaEnv.clearException();
+    if (!hasException) {
+        jsourceMethod = env->NewStringUTF(sourceMethod);
+        hasException = javaEnv.clearException();
+    }
 
-    env->CallStaticVoidMethod(m_cls, m_logMsg2Method, (jint)level, jsourceClass, jsourceMethod, jmsg);
+    if (!hasException) {
+        jmsg = env->NewStringUTF(msg);
+        hasException = javaEnv.clearException();
+    }
+
+    if (!hasException) {
+        env->CallStaticVoidMethod(m_cls, m_logMsg2Method, (jint)level, jsourceClass, jsourceMethod, jmsg);
+        javaEnv.clearException();
+    }
+
+    if (jsourceClass) {
+        env->DeleteLocalRef(jsourceClass);
+    }
+
+    if (jsourceMethod) {
+        env->DeleteLocalRef(jsourceMethod);
+    }
+
+    if (jmsg) {
+        env->DeleteLocalRef(jmsg);
+    }
 }
 
 // Do NOT use this function. Instead use init() from Java layer.
@@ -79,9 +111,20 @@ bool CLogger::init(JNIEnv *pEnv, jclass cls)
     if (!pEnv || !cls) {
         return false;
     }
+
+    CJavaEnvironment javaEnv(pEnv);
+
     pEnv->GetJavaVM(&m_jvm);
+    if (javaEnv.clearException()) {
+        return false;
+    }
+
     if (!m_areJMethodIDsInitialized) {
         jclass local_cls = pEnv->FindClass("com/sun/media/jfxmedia/logging/Logger");
+        if (javaEnv.clearException()) {
+            return false;
+        }
+
         if (NULL != local_cls) {
             // Get global reference
             m_cls = (jclass)pEnv->NewWeakGlobalRef(local_cls);
@@ -89,7 +132,14 @@ bool CLogger::init(JNIEnv *pEnv, jclass cls)
 
             if (NULL != m_cls) {
                 m_logMsg1Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;)V");
+                if (javaEnv.clearException()) {
+                   return false;
+                }
+
                 m_logMsg2Method = pEnv->GetStaticMethodID(m_cls, "logMsg", "(ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+                if (javaEnv.clearException()) {
+                   return false;
+                }
 
                 if (NULL != m_logMsg1Method && NULL != m_logMsg2Method) {
                     m_areJMethodIDsInitialized = true;
