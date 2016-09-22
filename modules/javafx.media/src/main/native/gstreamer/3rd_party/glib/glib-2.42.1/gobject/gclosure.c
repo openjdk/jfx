@@ -910,6 +910,10 @@ g_cclosure_new (GCallback      callback_func,
   g_return_val_if_fail (callback_func != NULL, NULL);
 
   closure = g_closure_new_simple (sizeof (GCClosure), user_data);
+#ifdef GSTREAMER_LITE
+  if (closure == NULL)
+    return NULL;
+#endif // GSTREAMER_LITE
   if (destroy_data)
     g_closure_add_finalize_notifier (closure, user_data, destroy_data);
   ((GCClosure*) closure)->callback = (gpointer) callback_func;
@@ -938,6 +942,10 @@ g_cclosure_new_swap (GCallback      callback_func,
   g_return_val_if_fail (callback_func != NULL, NULL);
 
   closure = g_closure_new_simple (sizeof (GCClosure), user_data);
+#ifdef GSTREAMER_LITE
+  if (closure == NULL)
+    return NULL;
+#endif // GSTREAMER_LITE
   if (destroy_data)
     g_closure_add_finalize_notifier (closure, user_data, destroy_data);
   ((GCClosure*) closure)->callback = (gpointer) callback_func;
