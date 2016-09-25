@@ -637,18 +637,15 @@ public class PieChart extends Chart {
                 index++;
             }
 
-             // Check for collision and resolve by hiding the label of the smaller pie slice
-            resolveCollision(fullPie);
-
             // update/draw pie slices
             double sAngle = getStartAngle();
             for (Data item = begin; item != null; item = item.next) {
-             Node node = item.getNode();
+                Node node = item.getNode();
                 Arc arc = null;
-                 if (node != null) {
+                if (node != null) {
                     if (node instanceof Region) {
                         Region arcRegion = (Region)node;
-                        if( arcRegion.getShape() == null) {
+                        if (arcRegion.getShape() == null) {
                             arc = new Arc();
                             arcRegion.setShape(arc);
                         } else {
@@ -674,6 +671,9 @@ public class PieChart extends Chart {
             }
             // finally draw the text and line
             if (fullPie != null) {
+                // Check for collision and resolve by hiding the label of the smaller pie slice
+                resolveCollision(fullPie);
+
                 for (LabelLayoutInfo info : fullPie) {
                     if (info.text.isVisible()) drawLabelLinePath(info);
                 }
@@ -685,23 +685,21 @@ public class PieChart extends Chart {
     // compare the size of the slices, and hide the label of the smaller slice.
     private void resolveCollision(ArrayList<LabelLayoutInfo> list) {
         int boxH = (begin != null) ? (int)begin.textNode.getLayoutBounds().getHeight() : 0;
-        int i; int j;
-        for (i = 0, j = 1; list != null && j < list.size(); j++ ) {
-            LabelLayoutInfo box1 = list.get(i);
-            LabelLayoutInfo box2 = list.get(j);
-            if ((box1.text.isVisible() && box2.text.isVisible()) &&
-                    (fuzzyGT(box2.textY, box1.textY) ? fuzzyLT((box2.textY - boxH - box1.textY), 2) :
-                     fuzzyLT((box1.textY - boxH - box2.textY), 2)) &&
-                    (fuzzyGT(box1.textX, box2.textX) ? fuzzyLT((box1.textX - box2.textX), box2.text.prefWidth(-1)) :
-                        fuzzyLT((box2.textX - box1.textX), box1.text.prefWidth(-1)))) {
-                if (fuzzyLT(box1.size, box2.size)) {
-                    box1.text.setVisible(false);
-                    i = j;
-                } else {
-                    box2.text.setVisible(false);
+        for (int i = 0; i < list.size(); i++ ) {
+            for (int j = i+1; j < list.size(); j++ ) {
+                LabelLayoutInfo box1 = list.get(i);
+                LabelLayoutInfo box2 = list.get(j);
+                if ((box1.text.isVisible() && box2.text.isVisible()) &&
+                        (fuzzyGT(box2.textY, box1.textY) ? fuzzyLT((box2.textY - boxH - box1.textY), 2) :
+                                fuzzyLT((box1.textY - boxH - box2.textY), 2)) &&
+                        (fuzzyGT(box1.textX, box2.textX) ? fuzzyLT((box1.textX - box2.textX), box2.text.prefWidth(-1)) :
+                                fuzzyLT((box2.textX - box1.textX), box1.text.prefWidth(-1)))) {
+                    if (fuzzyLT(box1.size, box2.size)) {
+                        box1.text.setVisible(false);
+                    } else {
+                        box2.text.setVisible(false);
+                    }
                 }
-            } else {
-                i = j;
             }
         }
     }

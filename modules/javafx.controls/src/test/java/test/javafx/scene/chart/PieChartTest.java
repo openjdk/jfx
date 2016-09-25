@@ -26,13 +26,18 @@
 package test.javafx.scene.chart;
 
 import com.sun.javafx.charts.Legend;
+
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import javafx.scene.chart.Chart;
 import javafx.scene.chart.ChartShim;
 import javafx.scene.chart.PieChart;
+import javafx.scene.text.Text;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -159,5 +164,23 @@ public class PieChartTest extends ChartTestBase {
         data.remove(0);
         pc.setLegendVisible(true);
         assertEquals(4, ((Legend)ChartShim.getLegend(pc)).getItems().size());
+    }
+
+    @Test
+    public void testLabelsCollision_8166055() {
+        data.addAll(
+                new PieChart.Data("AAAAA", 2),
+                new PieChart.Data("BBBBB", 1),
+                new PieChart.Data("CCCCC", 1000),
+                new PieChart.Data("BBBBB", 1),
+                new PieChart.Data("BBBBB", 1)
+        );
+        startApp();
+        List<Text> labels = ChartShim.getChartChildren(pc).stream()
+                .filter(n -> n.getStyleClass().contains("chart-pie-label"))
+                .map(n -> (Text) n)
+                .collect(Collectors.toList());
+        assertTrue(labels.stream().filter(n -> n.getText().equals("BBBBB")).noneMatch(n -> n.isVisible()));
+        assertTrue(labels.stream().filter(n -> !n.getText().equals("BBBBB")).allMatch(n -> n.isVisible()));
     }
 }
