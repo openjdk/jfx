@@ -589,11 +589,11 @@ if (!DO_BUILD_SDK_FOR_TEST && !file(jfxrtJarFromSdk).exists()) {
             + "Please, set the correct TEST_SDK")
 }
 
-// These tasks would be disabled when running with DO_BUILD_SDK_FOR_TEST=false as they're unneeded for running tests
-def disabledTasks = DO_BUILD_SDK_FOR_TEST ? [] : ["compileJava", "processResources", "classes", // all projects
-         "generateDecoraShaders", "generatePrismShaders",
-         "compilePrismCompilers", "compilePrismJavaShaders", "compileDecoraCompilers", // :graphics
-         "processDecoraShaders", "processPrismShaders"]
+// All "classes" and "jar" tasks and their dependencies would be disabled 
+// when running with DO_BUILD_SDK_FOR_TEST=false as they're unneeded for running tests
+if (!DO_BUILD_SDK_FOR_TEST) {
+    gradle.taskGraph.useFilter({ task -> !task.name.equals("classes") && !task.name.equals("jar") })
+}
 
 /**
  * Fetch/Check that external tools are present for the build. This method
@@ -3016,11 +3016,6 @@ allprojects {
                 compile.options.compilerArgs += "-Xlint:$s"
             }
         }
-    }
-
-    // Some tasks should be disabled not to compile SDK, when running only the tests
-    disabledTasks.each {
-        project.getTasksByName(it, false)*.enabled = false
     }
 }
 
