@@ -11,6 +11,8 @@
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.graphics/build/resources/jsl-prism" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.graphics/src/test/java" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/modules/javafx.graphics/src/test/resources" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.graphics/build/gensrc/jsl-prism" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/modules/javafx.graphics/build/gensrc/jsl-decora" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/modules/javafx.graphics/build/classes" />
       <excludeFolder url="file://$MODULE_DIR$/modules/javafx.graphics/build/dependency-cache" />
       <excludeFolder url="file://$MODULE_DIR$/modules/javafx.graphics/build/libs" />
