@@ -214,9 +214,7 @@ public class SwingNode extends Node {
     public void setContent(final JComponent content) {
         this.content = content;
 
-        SwingFXUtils.runOnEDT(() -> {
-            setContentImpl(content);
-        });
+        SwingFXUtils.runOnEDT(() -> setContentImpl(content));
     }
 
     /**
@@ -289,15 +287,12 @@ public class SwingNode extends Node {
             lwFrame.addWindowFocusListener(new WindowFocusListener() {
                 @Override
                 public void windowGainedFocus(WindowEvent e) {
-                    SwingFXUtils.runOnFxThread(() -> {
-                        SwingNode.this.requestFocus();
-                    });
+                    SwingFXUtils.runOnFxThread(() ->
+                                                 SwingNode.this.requestFocus());
                 }
                 @Override
                 public void windowLostFocus(WindowEvent e) {
-                    SwingFXUtils.runOnFxThread(() -> {
-                        ungrabFocus(true);
-                    });
+                    SwingFXUtils.runOnFxThread(() -> ungrabFocus(true));
                 }
             });
 
@@ -317,22 +312,6 @@ public class SwingNode extends Node {
 
     private List<Runnable> peerRequests = new ArrayList<>();
 
-    private static float getPlatformScaleX(Window win) {
-        return WindowHelper.getWindowAccessor().getPlatformScaleX(win);
-    }
-
-    private static float getPlatformScaleY(Window win) {
-        return WindowHelper.getWindowAccessor().getPlatformScaleY(win);
-    }
-
-    private float getPlatformScaleX() {
-        return getPlatformScaleX(getScene().getWindow());
-    }
-
-    private float getPlatformScaleY() {
-        return getPlatformScaleY(getScene().getWindow());
-    }
-
     /*
      * Called on EDT
      */
@@ -342,13 +321,8 @@ public class SwingNode extends Node {
                         final int linestride,
                         final int scale)
     {
-        Runnable r = () -> {
-            Window win = getScene().getWindow();
-            float uiScaleX = getPlatformScaleX(win);
-            float uiScaleY = getPlatformScaleY(win);
-            peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h,
-                                w / uiScaleX, h / uiScaleY, linestride, scale);
-        };
+        Runnable r = () -> peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h,
+                                w, h, linestride, scale);
         SwingFXUtils.runOnFxThread(() -> {
             if (peer != null) {
                 r.run();
@@ -363,12 +337,7 @@ public class SwingNode extends Node {
      * Called on EDT
      */
     void setImageBounds(final int x, final int y, final int w, final int h) {
-        Runnable r = () -> {
-            Window win = getScene().getWindow();
-            float uiScaleX = getPlatformScaleX(win);
-            float uiScaleY = getPlatformScaleY(win);
-            peer.setImageBounds(x, y, w, h, w / uiScaleX, h / uiScaleY);
-        };
+        Runnable r = () -> peer.setImageBounds(x, y, w, h, w, h);
         SwingFXUtils.runOnFxThread(() -> {
             if (peer != null) {
                 r.run();
@@ -433,7 +402,7 @@ public class SwingNode extends Node {
      */
     @Override
     public double prefWidth(double height) {
-        return swingPrefWidth / getPlatformScaleX();
+        return swingPrefWidth;
     }
 
     /**
@@ -444,7 +413,7 @@ public class SwingNode extends Node {
      */
     @Override
     public double prefHeight(double width) {
-        return swingPrefHeight / getPlatformScaleY();
+        return swingPrefHeight;
     }
 
     /**
@@ -454,7 +423,7 @@ public class SwingNode extends Node {
      * @return the maximum width that the node should be resized to during layout
      */
     @Override public double maxWidth(double height) {
-        return swingMaxWidth / getPlatformScaleX();
+        return swingMaxWidth;
     }
 
     /**
@@ -464,7 +433,7 @@ public class SwingNode extends Node {
      * @return the maximum height that the node should be resized to during layout
      */
     @Override public double maxHeight(double width) {
-        return swingMaxHeight / getPlatformScaleY();
+        return swingMaxHeight;
     }
 
     /**
@@ -474,7 +443,7 @@ public class SwingNode extends Node {
      * @return the minimum width that the node should be resized to during layout
      */
     @Override public double minWidth(double height) {
-        return swingMinWidth / getPlatformScaleX();
+        return swingMinWidth;
     }
 
     /**
@@ -484,7 +453,7 @@ public class SwingNode extends Node {
      * @return the minimum height that the node should be resized to during layout
      */
     @Override public double minHeight(double width) {
-        return swingMinHeight / getPlatformScaleY();
+        return swingMinHeight;
     }
 
     /*
@@ -631,20 +600,18 @@ public class SwingNode extends Node {
         }
         Window w = getScene().getWindow();
         float renderScaleX = (float) w.getRenderScaleX();
-        float uiScaleX = getPlatformScaleX(w);
-        float uiScaleY = getPlatformScaleY(w);
         int lwScale = Math.round(renderScaleX);
         boolean sendScale = (this.scale != lwScale);
         this.scale = lwScale;
         final Point2D loc = localToScene(0, 0);
-        final int windowX = (int) (w.getX() * uiScaleX);
-        final int windowY = (int) (w.getY() * uiScaleY);
-        final int windowW = (int) (w.getWidth() * uiScaleX);
-        final int windowH = (int) (w.getHeight() * uiScaleY);
-        final int frameX = (int) Math.round((w.getX() + getScene().getX() + loc.getX()) * uiScaleX);
-        final int frameY = (int) Math.round((w.getY() + getScene().getY() + loc.getY()) * uiScaleY);
-        final int frameW = (int) (fxWidth * uiScaleX);
-        final int frameH = (int) (fxHeight * uiScaleY);
+        final int windowX = (int) (w.getX());
+        final int windowY = (int) (w.getY());
+        final int windowW = (int) (w.getWidth());
+        final int windowH = (int) (w.getHeight());
+        final int frameX = (int) Math.round(w.getX() + getScene().getX() + loc.getX());
+        final int frameY = (int) Math.round(w.getY() + getScene().getY() + loc.getY());
+        final int frameW = (int) (fxWidth);
+        final int frameH = (int) (fxHeight);
 
         SwingFXUtils.runOnEDT(() -> {
             if (lwFrame != null) {
@@ -921,13 +888,10 @@ public class SwingNode extends Node {
             boolean swingPopupTrigger = event.isPopupTrigger();
             int swingButton = SwingEvents.fxMouseButtonToMouseButton(event);
             long swingWhen = System.currentTimeMillis();
-            Window win = getScene().getWindow();
-            float uiScaleX = getPlatformScaleX(win);
-            float uiScaleY = getPlatformScaleY(win);
-            int relX = (int) Math.round(event.getX() * uiScaleX);
-            int relY = (int) Math.round(event.getY() * uiScaleY);
-            int absX = (int) Math.round(event.getScreenX() * uiScaleX);
-            int absY = (int) Math.round(event.getScreenY() * uiScaleY);
+            int relX = (int) Math.round(event.getX());
+            int relY = (int) Math.round(event.getY());
+            int absX = (int) Math.round(event.getScreenX());
+            int absY = (int) Math.round(event.getScreenY());
             java.awt.event.MouseEvent mouseEvent =
                     new java.awt.event.MouseEvent(
                         frame, swingID, swingWhen, swingModifiers,
@@ -970,11 +934,8 @@ public class SwingNode extends Node {
             if (signum * delta < 1) {
                 wheelRotation = signum;
             }
-            Window w = getScene().getWindow();
-            float uiScaleX = getPlatformScaleX(w);
-            float uiScaleY = getPlatformScaleY(w);
-            int x = (int) Math.round(fxX * uiScaleX);
-            int y = (int) Math.round(fxY * uiScaleY);
+            int x = (int) Math.round(fxX);
+            int y = (int) Math.round(fxY);
             MouseWheelEvent mouseWheelEvent =
                     new MouseWheelEvent(source, java.awt.event.MouseEvent.MOUSE_WHEEL,
                             System.currentTimeMillis(), swingModifiers, x, y, 0, 0,
