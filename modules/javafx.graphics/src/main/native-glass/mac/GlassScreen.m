@@ -24,7 +24,6 @@
  */
 
 #import "common.h"
-#import "com_sun_glass_ui_Screen.h"
 
 #import "GlassMacros.h"
 #import "GlassScreen.h"

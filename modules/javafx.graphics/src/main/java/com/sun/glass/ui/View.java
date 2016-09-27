@@ -403,12 +403,12 @@ public abstract class View {
 
     static final public class Capability {
         // we need these for native code
-        static final public int k3dKeyValue                     = 0;
-        static final public int kSyncKeyValue                   = 1;
-        static final public int k3dProjectionKeyValue           = 2;
-        static final public int k3dProjectionAngleKeyValue      = 3;
-        static final public int k3dDepthKeyValue                = 4;
-        static final public int kHiDPIAwareKeyValue             = 5;
+        @Native static final public int k3dKeyValue                     = 0;
+        @Native static final public int kSyncKeyValue                   = 1;
+        @Native static final public int k3dProjectionKeyValue           = 2;
+        @Native static final public int k3dProjectionAngleKeyValue      = 3;
+        @Native static final public int k3dDepthKeyValue                = 4;
+        @Native static final public int kHiDPIAwareKeyValue             = 5;
 
         static final public Object k3dKey                       = Integer.valueOf(k3dKeyValue); // value must be Boolean
         static final public Object kSyncKey                     = Integer.valueOf(kSyncKeyValue); // value must be Boolean
