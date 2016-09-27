@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.glass.ui;
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
 
+import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -34,14 +35,14 @@ import java.util.Map;
 
 public abstract class View {
 
-    public final static int GESTURE_NO_VALUE = Integer.MAX_VALUE;
-    public final static double GESTURE_NO_DOUBLE_VALUE = Double.NaN;
+    @Native public final static int GESTURE_NO_VALUE = Integer.MAX_VALUE;
+    @Native public final static double GESTURE_NO_DOUBLE_VALUE = Double.NaN;
 
-    public final static byte IME_ATTR_INPUT                 = 0x00;
-    public final static byte IME_ATTR_TARGET_CONVERTED      = 0x01;
-    public final static byte IME_ATTR_CONVERTED             = 0x02;
-    public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
-    public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
+    @Native public final static byte IME_ATTR_INPUT                 = 0x00;
+    @Native public final static byte IME_ATTR_TARGET_CONVERTED      = 0x01;
+    @Native public final static byte IME_ATTR_CONVERTED             = 0x02;
+    @Native public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
+    @Native public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
 
     final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
         String force = System.getProperty("glass.accessible.force");

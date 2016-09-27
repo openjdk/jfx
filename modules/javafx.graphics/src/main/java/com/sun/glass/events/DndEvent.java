@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,12 @@
  */
 package com.sun.glass.events;
 
+import java.lang.annotation.Native;
+
 public class DndEvent {
-    final static public int ENTER   = 611;
-    final static public int UPDATE  = 612;
-    final static public int PERFORM = 613;
-    final static public int EXIT    = 614;
-    final static public int END     = 615;
+    @Native final static public int ENTER   = 611;
+    @Native final static public int UPDATE  = 612;
+    @Native final static public int PERFORM = 613;
+    @Native final static public int EXIT    = 614;
+    @Native final static public int END     = 615;
 }

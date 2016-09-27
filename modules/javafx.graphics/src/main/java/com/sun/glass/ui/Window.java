@@ -28,6 +28,8 @@ import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.WindowEvent;
 import com.sun.prism.impl.PrismSettings;
 
+import java.lang.annotation.Native;
+
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -129,7 +131,7 @@ public abstract class Window {
      * Often used for floating toolbars. It has smaller than usual decorations
      * and doesn't display a taskbar button.
      */
-    public static final int UTILITY         = 1 << 2;
+    @Native public static final int UTILITY         = 1 << 2;
     /**
      * A popup window.
      *
@@ -137,18 +139,18 @@ public abstract class Window {
      * default it may display a task-bar button. To hide it the window must be
      * owned.
      */
-    public static final int POPUP           = 1 << 3;
+    @Native public static final int POPUP           = 1 << 3;
 
     // These affect window decorations as well as system menu actions,
     // so applicable to both decorated and undecorated windows
-    public static final int CLOSABLE        = 1 << 4;
-    public static final int MINIMIZABLE     = 1 << 5;
-    public static final int MAXIMIZABLE     = 1 << 6;
+    @Native public static final int CLOSABLE        = 1 << 4;
+    @Native public static final int MINIMIZABLE     = 1 << 5;
+    @Native public static final int MAXIMIZABLE     = 1 << 6;
 
     /**
      * Indicates that the window trim will draw from right to left.
      */
-    public static final int RIGHT_TO_LEFT     = 1 << 7;
+    @Native public static final int RIGHT_TO_LEFT     = 1 << 7;
 
     /**
      * Indicates that a window will have a client area textured the same way as the platform decorations
@@ -156,12 +158,12 @@ public abstract class Window {
      * This is supported not on all platforms, the client should check if the feature is supported by using
      * {@link com.sun.glass.ui.Application#supportsUnifiedWindows()}
      */
-    public static final int UNIFIED = 1 << 8;
+    @Native public static final int UNIFIED = 1 << 8;
 
     final static public class State {
-        public static final int NORMAL = 1;
-        public static final int MINIMIZED = 2;
-        public static final int MAXIMIZED = 3;
+        @Native public static final int NORMAL = 1;
+        @Native public static final int MINIMIZED = 2;
+        @Native public static final int MAXIMIZED = 3;
     }
 
     /**
@@ -173,18 +175,18 @@ public abstract class Window {
      * @see #setLevel
      */
     public static final class Level {
-        private static final int _MIN = 1;
+        @Native private static final int _MIN = 1;
 
         /** Normal window level. */
-        public static final int NORMAL = 1;
+        @Native public static final int NORMAL = 1;
 
         /** A window level that is above all other NORMAL windows. */
-        public static final int FLOATING = 2;
+        @Native public static final int FLOATING = 2;
 
         /** A very topmost window level. May cover system UI elements such as dock, taskbar, etc. */
-        public static final int TOPMOST = 3;
+        @Native public static final int TOPMOST = 3;
 
-        private static final int _MAX = 3;
+        @Native private static final int _MAX = 3;
     }
 
     private final Window owner;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.sun.glass.events.mac;
 
+import java.lang.annotation.Native;
 import java.util.Map;
 import com.sun.glass.ui.Window;
 
@@ -33,25 +34,25 @@ import com.sun.glass.ui.Window;
 public class NpapiEvent {
 
     // draw
-    final static public int NPCocoaEventDrawRect            = 1;
+    @Native final static public int NPCocoaEventDrawRect            = 1;
     // mouse
-    final static public int NPCocoaEventMouseDown           = 2;
-    final static public int NPCocoaEventMouseUp             = 3;
-    final static public int NPCocoaEventMouseMoved          = 4;
-    final static public int NPCocoaEventMouseEntered        = 5;
-    final static public int NPCocoaEventMouseExited         = 6;
-    final static public int NPCocoaEventMouseDragged        = 7;
+    @Native final static public int NPCocoaEventMouseDown           = 2;
+    @Native final static public int NPCocoaEventMouseUp             = 3;
+    @Native final static public int NPCocoaEventMouseMoved          = 4;
+    @Native final static public int NPCocoaEventMouseEntered        = 5;
+    @Native final static public int NPCocoaEventMouseExited         = 6;
+    @Native final static public int NPCocoaEventMouseDragged        = 7;
     // key
-    final static public int NPCocoaEventKeyDown             = 8;
-    final static public int NPCocoaEventKeyUp               = 9;
-    final static public int NPCocoaEventFlagsChanged        = 10;
+    @Native final static public int NPCocoaEventKeyDown             = 8;
+    @Native final static public int NPCocoaEventKeyUp               = 9;
+    @Native final static public int NPCocoaEventFlagsChanged        = 10;
     // focus
-    final static public int NPCocoaEventFocusChanged        = 11;
-    final static public int NPCocoaEventWindowFocusChanged  = 12;
+    @Native final static public int NPCocoaEventFocusChanged        = 11;
+    @Native final static public int NPCocoaEventWindowFocusChanged  = 12;
     // mouse
-    final static public int NPCocoaEventScrollWheel         = 13;
+    @Native final static public int NPCocoaEventScrollWheel         = 13;
     // text input
-    final static public int NPCocoaEventTextInput           = 14;
+    @Native final static public int NPCocoaEventTextInput           = 14;
 
     private native static void _dispatchCocoaNpapiDrawEvent(long windowPtr, int type,
             long context, double x, double y, double width, double height);

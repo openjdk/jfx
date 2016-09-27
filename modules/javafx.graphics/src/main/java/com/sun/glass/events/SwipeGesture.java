@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,13 @@
  */
 package com.sun.glass.events;
 
+import java.lang.annotation.Native;
+
 public class SwipeGesture {
 
     // directions
-    public final static int DIR_UP = 1;
-    public final static int DIR_DOWN = 2;
-    public final static int DIR_LEFT = 3;
-    public final static int DIR_RIGHT = 4;
+    @Native public final static int DIR_UP = 1;
+    @Native public final static int DIR_DOWN = 2;
+    @Native public final static int DIR_LEFT = 3;
+    @Native public final static int DIR_RIGHT = 4;
 }

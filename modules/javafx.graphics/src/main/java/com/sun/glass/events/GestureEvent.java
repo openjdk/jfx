@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,9 +24,11 @@
  */
 package com.sun.glass.events;
 
+import java.lang.annotation.Native;
+
 public class GestureEvent {
 
-    public final static int GESTURE_STARTED = 1;
-    public final static int GESTURE_PERFORMED = 2;
-    public final static int GESTURE_FINISHED = 3;
+    @Native public final static int GESTURE_STARTED = 1;
+    @Native public final static int GESTURE_PERFORMED = 2;
+    @Native public final static int GESTURE_FINISHED = 3;
 }
