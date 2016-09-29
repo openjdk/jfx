@@ -336,6 +336,10 @@ if (WIN32)
     list(APPEND WebCore_SOURCES
       platform/win/SystemInfo.cpp
     )
+    # Adds version information to jfxwebkit.dll created by Gradle build, see JDK-8166265
+    list(APPEND WebCore_LIBRARIES
+        ${CMAKE_BINARY_DIR}/WebCore/obj/version.res
+    )
 elseif(APPLE)
     list(APPEND WebCore_INCLUDE_DIRECTORIES
         ${WEBCORE_DIR}/icu
