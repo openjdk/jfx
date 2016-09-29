@@ -161,17 +161,19 @@ public final class JLinkBundlerHelper {
 
     public static File getMainJar(Map<String, ? super Object> params) {
         File result = null;
-        String srcdir = StandardBundlerParam.SOURCE_DIR.fetchFrom(params);
         RelativeFileSet fileset = StandardBundlerParam.MAIN_JAR.fetchFrom(params);
 
         if (fileset != null) {
             String filename = fileset.getIncludedFiles().iterator().next();
+            result = fileset.getBaseDirectory().toPath().resolve(filename).toFile();
 
-            if (srcdir != null) {
-                filename = srcdir + File.separator + filename;
+            if (result == null || !result.exists()) {
+                String srcdir = StandardBundlerParam.SOURCE_DIR.fetchFrom(params);
+
+                if (srcdir != null) {
+                    result = new File(srcdir + File.separator + filename);
+                }
             }
-
-            result = new File(filename);
         }
 
         return result;

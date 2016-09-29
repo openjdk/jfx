@@ -270,7 +270,7 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-vendor")) {
                             deployParams.setVendor(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-native")) {
-                            bundleType = BundleType.NONE;
+                            bundleType = BundleType.NATIVE;
                             String format = null; //null means ANY
                             if (i+1 < args.length && !args[i+1].startsWith("-")) {
                                 String v = args[++i];

@@ -309,6 +309,52 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             }
         }
 
+        if (!isModular &&
+            (nativeBundles == BundleType.NATIVE ||
+             nativeBundles == BundleType.IMAGE ||
+             nativeBundles == BundleType.INSTALLER ||
+             nativeBundles == BundleType.ALL)) {
+            if (app != null) {
+                deployParams.setApplicationClass(app.get().mainClass);
+                deployParams.setPreloader(app.get().preloaderClass);
+                deployParams.setAppId(app.get().id);
+                deployParams.setAppName(app.get().name);
+                deployParams.setParams(app.get().parameters);
+                deployParams.setArguments(app.get().getArguments());
+                deployParams.setHtmlParams(app.get().htmlParameters);
+                deployParams.setFallback(app.get().fallbackApp);
+                deployParams.setSwingAppWithEmbeddedJavaFX(app.get().embeddedIntoSwing);
+                deployParams.setVersion(app.get().version);
+                deployParams.setId(app.get().id);
+                deployParams.setServiceHint(app.get().daemon);
+            }
+
+            if (appInfo != null) {
+                deployParams.setTitle(appInfo.title);
+                deployParams.setVendor(appInfo.vendor);
+                deployParams.setDescription(appInfo.appDescription);
+                deployParams.setCategory(appInfo.category);
+                deployParams.setLicenseType(appInfo.licenseType);
+                deployParams.setCopyright(appInfo.copyright);
+                deployParams.setEmail(appInfo.email);
+
+                for (Info.Icon i: appInfo.icons) {
+                    if (i instanceof Info.Splash) {
+                       deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
+                            ((Info.Splash) i).mode);
+                    } else {
+                       deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
+                            DeployParams.RunMode.WEBSTART);
+                    }
+                }
+
+                deployParams.addBundleArgument(StandardBundlerParam.FILE_ASSOCIATIONS.getID(),
+                        appInfo.fileAssociations.stream()
+                            .map(FileAssociation::createLauncherMap)
+                            .collect(Collectors.toList()));
+            }
+        }
+
         for (BundleArgument ba : bundleArgumentList) {
             deployParams.addBundleArgument(ba.arg, ba.value);
         }
@@ -317,7 +363,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
 
         if (resources != null) {
             for (FileSet fs: resources.getResources()) {
-                   Utils.addResources(deployParams, fs);
+                Utils.addResources(deployParams, fs);
             }
         }
 
