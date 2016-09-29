@@ -26,7 +26,6 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.PlatformUtil;
-import com.sun.javafx.scene.control.behavior.BehaviorBase;
 import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.Animation.Status;
 import javafx.animation.Interpolator;
@@ -40,7 +39,6 @@ import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Control;
 import javafx.scene.control.TitledPane;
@@ -232,7 +230,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
                                             final double w, final double h) {
 
         // header
-        double headerHeight = snapSize(titleRegion.prefHeight(-1));
+        double headerHeight = snapSizeY(titleRegion.prefHeight(-1));
 
         titleRegion.resize(w, headerHeight);
         positionInArea(titleRegion, x, y,
@@ -246,9 +244,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
                 contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
             }
         }
-        contentHeight = snapSize(contentHeight);
+        contentHeight = snapSizeY(contentHeight);
 
-        y += snapSize(headerHeight);
+        y += headerHeight;
         contentContainer.resize(w, contentHeight);
         clipRect.setHeight(contentHeight);
         positionInArea(contentContainer, x, y,
@@ -257,30 +255,30 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
 
     /** {@inheritDoc} */
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double titleWidth = snapSize(titleRegion.prefWidth(height));
-        double contentWidth = snapSize(contentContainer.minWidth(height));
+        double titleWidth = snapSizeX(titleRegion.prefWidth(height));
+        double contentWidth = snapSizeX(contentContainer.minWidth(height));
         return Math.max(titleWidth, contentWidth) + leftInset + rightInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double headerHeight = snapSize(titleRegion.prefHeight(width));
+        double headerHeight = snapSizeY(titleRegion.prefHeight(width));
         double contentHeight = contentContainer.minHeight(width) * getTransition();
-        return headerHeight + snapSize(contentHeight) + topInset + bottomInset;
+        return headerHeight + snapSizeY(contentHeight) + topInset + bottomInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double titleWidth = snapSize(titleRegion.prefWidth(height));
-        double contentWidth = snapSize(contentContainer.prefWidth(height));
+        double titleWidth = snapSizeX(titleRegion.prefWidth(height));
+        double contentWidth = snapSizeX(contentContainer.prefWidth(height));
         return Math.max(titleWidth, contentWidth) + leftInset + rightInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double headerHeight = snapSize(titleRegion.prefHeight(width));
+        double headerHeight = snapSizeY(titleRegion.prefHeight(width));
         double contentHeight = contentContainer.prefHeight(width) * getTransition();
-        return headerHeight + snapSize(contentHeight) + topInset + bottomInset;
+        return headerHeight + snapSizeY(contentHeight) + topInset + bottomInset;
     }
 
     /** {@inheritDoc} */
@@ -329,7 +327,7 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
     }
 
     double getTitleRegionSize(double width) {
-        return snapSize(titleRegion.prefHeight(width)) + snappedTopInset() + snappedBottomInset();
+        return snapSizeY(titleRegion.prefHeight(width)) + snappedTopInset() + snappedBottomInset();
     }
 
     private double prefHeightFromAccordion = 0;
@@ -338,9 +336,9 @@ public class TitledPaneSkin extends LabeledSkinBase<TitledPane>  {
     }
 
     double getTitledPaneHeightForAccordion() {
-        double headerHeight = snapSize(titleRegion.prefHeight(-1));
+        double headerHeight = snapSizeY(titleRegion.prefHeight(-1));
         double contentHeight = (prefHeightFromAccordion - headerHeight) * getTransition();
-        return headerHeight + snapSize(contentHeight) + snappedTopInset() + snappedBottomInset();
+        return headerHeight + snapSizeY(contentHeight) + snappedTopInset() + snappedBottomInset();
     }
 
     private void doAnimationTransition() {

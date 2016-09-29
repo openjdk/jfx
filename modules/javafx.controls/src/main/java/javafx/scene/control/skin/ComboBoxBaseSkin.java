@@ -166,7 +166,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
             updateDisplayArea();
         }
 
-        final double arrowWidth = snapSize(arrow.prefWidth(-1));
+        final double arrowWidth = snapSizeX(arrow.prefWidth(-1));
         final double arrowButtonWidth = (isButton()) ? 0 :
                 arrowButton.snappedLeftInset() + arrowWidth +
                 arrowButton.snappedRightInset();
@@ -189,7 +189,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
             updateDisplayArea();
         }
 
-        final double arrowWidth = snapSize(arrow.prefWidth(-1));
+        final double arrowWidth = snapSizeX(arrow.prefWidth(-1));
         final double arrowButtonWidth = isButton() ? 0 :
                                         arrowButton.snappedLeftInset() +
                                         arrowWidth +

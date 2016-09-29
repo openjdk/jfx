@@ -152,58 +152,58 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
 
         if (s.getOrientation() == Orientation.VERTICAL) {
             if (!Properties.IS_TOUCH_SUPPORTED) {
-                double decHeight = snapSize(decButton.prefHeight(-1));
-                double incHeight = snapSize(incButton.prefHeight(-1));
+                double decHeight = snapSizeY(decButton.prefHeight(-1));
+                double incHeight = snapSizeY(incButton.prefHeight(-1));
 
                 decButton.resize(w, decHeight);
                 incButton.resize(w, incHeight);
 
-                trackLength = snapSize(h - (decHeight + incHeight));
-                thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
+                trackLength = snapSizeY(h - (decHeight + incHeight));
+                thumbLength = snapSizeY(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-                trackBackground.resizeRelocate(snapPosition(x), snapPosition(y), w, trackLength+decHeight+incHeight);
-                decButton.relocate(snapPosition(x), snapPosition(y));
-                incButton.relocate(snapPosition(x), snapPosition(y + h - incHeight));
-                track.resizeRelocate(snapPosition(x), snapPosition(y + decHeight), w, trackLength);
-                thumb.resize(snapSize(x >= 0 ? w : w + x), thumbLength); // Account for negative padding (see also RT-10719)
+                trackBackground.resizeRelocate(snapPositionX(x), snapPositionY(y), w, trackLength+decHeight+incHeight);
+                decButton.relocate(snapPositionX(x), snapPositionY(y));
+                incButton.relocate(snapPositionX(x), snapPositionY(y + h - incHeight));
+                track.resizeRelocate(snapPositionX(x), snapPositionY(y + decHeight), w, trackLength);
+                thumb.resize(snapSizeX(x >= 0 ? w : w + x), thumbLength); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
             else {
-                trackLength = snapSize(h);
-                thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
+                trackLength = snapSizeY(h);
+                thumbLength = snapSizeY(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-                track.resizeRelocate(snapPosition(x), snapPosition(y), w, trackLength);
-                thumb.resize(snapSize(x >= 0 ? w : w + x), thumbLength); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPositionX(x), snapPositionY(y), w, trackLength);
+                thumb.resize(snapSizeX(x >= 0 ? w : w + x), thumbLength); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
         } else {
             if (!Properties.IS_TOUCH_SUPPORTED) {
-                double decWidth = snapSize(decButton.prefWidth(-1));
-                double incWidth = snapSize(incButton.prefWidth(-1));
+                double decWidth = snapSizeX(decButton.prefWidth(-1));
+                double incWidth = snapSizeX(incButton.prefWidth(-1));
 
                 decButton.resize(decWidth, h);
                 incButton.resize(incWidth, h);
 
-                trackLength = snapSize(w - (decWidth + incWidth));
-                thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
+                trackLength = snapSizeX(w - (decWidth + incWidth));
+                thumbLength = snapSizeX(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-                trackBackground.resizeRelocate(snapPosition(x), snapPosition(y), trackLength+decWidth+incWidth, h);
-                decButton.relocate(snapPosition(x), snapPosition(y));
-                incButton.relocate(snapPosition(x + w - incWidth), snapPosition(y));
-                track.resizeRelocate(snapPosition(x + decWidth), snapPosition(y), trackLength, h);
-                thumb.resize(thumbLength, snapSize(y >= 0 ? h : h + y)); // Account for negative padding (see also RT-10719)
+                trackBackground.resizeRelocate(snapPositionX(x), snapPositionY(y), trackLength+decWidth+incWidth, h);
+                decButton.relocate(snapPositionX(x), snapPositionY(y));
+                incButton.relocate(snapPositionX(x + w - incWidth), snapPositionY(y));
+                track.resizeRelocate(snapPositionX(x + decWidth), snapPositionY(y), trackLength, h);
+                thumb.resize(thumbLength, snapSizeY(y >= 0 ? h : h + y)); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
             else {
-                trackLength = snapSize(w);
-                thumbLength = snapSize(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
+                trackLength = snapSizeX(w);
+                thumbLength = snapSizeX(Utils.clamp(minThumbLength(), (trackLength * visiblePortion), trackLength));
 
-                track.resizeRelocate(snapPosition(x), snapPosition(y), trackLength, h);
-                thumb.resize(thumbLength, snapSize(y >= 0 ? h : h + y)); // Account for negative padding (see also RT-10719)
+                track.resizeRelocate(snapPositionX(x), snapPositionY(y), trackLength, h);
+                thumb.resize(thumbLength, snapSizeY(y >= 0 ? h : h + y)); // Account for negative padding (see also RT-10719)
                 positionThumb();
             }
 
-            s.resize(snapSize(s.getWidth()), snapSize(s.getHeight()));
+            s.resize(snapSizeX(s.getWidth()), snapSizeY(s.getHeight()));
         }
 
         // things should be invisible only when well below minimum length
@@ -616,8 +616,8 @@ public class ScrollBarSkin extends SkinBase<ScrollBar> {
             }
         }
 
-        thumb.setTranslateX( snapPosition(s.getOrientation() == Orientation.VERTICAL ? snappedLeftInset() : trackPos + snappedLeftInset()));
-        thumb.setTranslateY( snapPosition(s.getOrientation() == Orientation.VERTICAL ? trackPos + snappedTopInset() : snappedTopInset()));
+        thumb.setTranslateX( snapPositionX(s.getOrientation() == Orientation.VERTICAL ? snappedLeftInset() : trackPos + snappedLeftInset()));
+        thumb.setTranslateY( snapPositionY(s.getOrientation() == Orientation.VERTICAL ? trackPos + snappedTopInset() : snappedTopInset()));
     }
 
     private Node getThumb() {

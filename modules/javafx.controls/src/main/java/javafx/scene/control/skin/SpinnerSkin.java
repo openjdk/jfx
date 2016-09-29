@@ -266,10 +266,10 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
                                             final double w, final double h) {
 
         final double incrementArrowButtonWidth = incrementArrowButton.snappedLeftInset() +
-                snapSize(incrementArrow.prefWidth(-1)) + incrementArrowButton.snappedRightInset();
+                snapSizeX(incrementArrow.prefWidth(-1)) + incrementArrowButton.snappedRightInset();
 
         final double decrementArrowButtonWidth = decrementArrowButton.snappedLeftInset() +
-                snapSize(decrementArrow.prefWidth(-1)) + decrementArrowButton.snappedRightInset();
+                snapSizeX(decrementArrow.prefWidth(-1)) + decrementArrowButton.snappedRightInset();
 
         final double widestArrowButton = Math.max(incrementArrowButtonWidth, decrementArrowButtonWidth);
 
@@ -309,10 +309,10 @@ public class SpinnerSkin<T> extends SkinBase<Spinner<T>> {
                     incrementArrowButtonWidth, h, 0, HPos.CENTER, VPos.CENTER);
         } else if (layoutMode == SPLIT_ARROWS_VERTICAL) {
             final double incrementArrowButtonHeight = incrementArrowButton.snappedTopInset() +
-                    snapSize(incrementArrow.prefHeight(-1)) + incrementArrowButton.snappedBottomInset();
+                    snapSizeY(incrementArrow.prefHeight(-1)) + incrementArrowButton.snappedBottomInset();
 
             final double decrementArrowButtonHeight = decrementArrowButton.snappedTopInset() +
-                    snapSize(decrementArrow.prefHeight(-1)) + decrementArrowButton.snappedBottomInset();
+                    snapSizeY(decrementArrow.prefHeight(-1)) + decrementArrowButton.snappedBottomInset();
 
             final double tallestArrowButton = Math.max(incrementArrowButtonHeight, decrementArrowButtonHeight);
 

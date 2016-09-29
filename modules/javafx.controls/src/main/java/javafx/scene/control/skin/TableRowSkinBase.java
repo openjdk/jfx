@@ -354,7 +354,7 @@ public abstract class TableRowSkinBase<T,
                 height = fixedCellSize;
             } else {
                 height = Math.max(controlHeight, tableCell.prefHeight(-1));
-                height = snapSize(height) - snapSize(verticalPadding);
+                height = snapSizeY(height) - snapSizeY(verticalPadding);
             }
 
             if (isVisible) {
@@ -362,7 +362,7 @@ public abstract class TableRowSkinBase<T,
                     getChildren().add(tableCell);
                 }
 
-                width = tableCell.prefWidth(height) - snapSize(horizontalPadding);
+                width = tableCell.prefWidth(height) - snapSizeX(horizontalPadding);
 
                 // Added for RT-32700, and then updated for RT-34074.
                 // We change the alignment from CENTER_LEFT to TOP_LEFT if the
@@ -435,7 +435,7 @@ public abstract class TableRowSkinBase<T,
                 // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
-                width = snapSize(tableCell.prefWidth(-1)) - snapSize(horizontalPadding);
+                width = snapSizeX(tableCell.prefWidth(-1)) - snapSizeX(horizontalPadding);
 
                 if (fixedCellSizeEnabled) {
                     // we only add/remove to the scenegraph if the fixed cell

@@ -200,8 +200,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             double oldHeight = oldBounds.getHeight();
             double newHeight = newBounds.getHeight();
             if (oldHeight > 0 && oldHeight != newHeight) {
-                double oldPositionY = (snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (oldHeight - contentHeight)));
-                double newPositionY = (snapPosition(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (newHeight - contentHeight)));
+                double oldPositionY = (snapPositionY(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (oldHeight - contentHeight)));
+                double newPositionY = (snapPositionY(snappedTopInset() - posY / (vsb.getMax() - vsb.getMin()) * (newHeight - contentHeight)));
 
                 double newValueY = (oldPositionY/newPositionY)*vsb.getValue();
                 if (newValueY < 0.0) {
@@ -224,8 +224,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
             double oldWidth = oldBounds.getWidth();
             double newWidth = newBounds.getWidth();
             if (oldWidth > 0 && oldWidth != newWidth) {
-                double oldPositionX = (snapPosition(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (oldWidth - contentWidth)));
-                double newPositionX = (snapPosition(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (newWidth - contentWidth)));
+                double oldPositionX = (snapPositionX(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (oldWidth - contentWidth)));
+                double newPositionX = (snapPositionX(snappedLeftInset() - posX / (hsb.getMax() - hsb.getMin()) * (newWidth - contentWidth)));
 
                 double newValueX = (oldPositionX/newPositionX)*hsb.getValue();
                 if (newValueX < 0.0) {
@@ -279,8 +279,8 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                 }
                 scrollNode = getSkinnable().getContent();
                 if (scrollNode != null) {
-                    nodeWidth = snapSize(scrollNode.getLayoutBounds().getWidth());
-                    nodeHeight = snapSize(scrollNode.getLayoutBounds().getHeight());
+                    nodeWidth = snapSizeX(scrollNode.getLayoutBounds().getWidth());
+                    nodeHeight = snapSizeY(scrollNode.getLayoutBounds().getHeight());
                     viewContent.getChildren().setAll(scrollNode);
                     scrollNode.layoutBoundsProperty().addListener(nodeListener);
                     scrollNode.layoutBoundsProperty().addListener(boundsChangeListener);
@@ -478,10 +478,10 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                                             final double w, final double h) {
         final ScrollPane control = getSkinnable();
         final Insets padding = control.getPadding();
-        final double rightPadding = snapSize(padding.getRight());
-        final double leftPadding = snapSize(padding.getLeft());
-        final double topPadding = snapSize(padding.getTop());
-        final double bottomPadding = snapSize(padding.getBottom());
+        final double rightPadding = snapSizeX(padding.getRight());
+        final double leftPadding = snapSizeX(padding.getLeft());
+        final double topPadding = snapSizeY(padding.getTop());
+        final double bottomPadding = snapSizeY(padding.getBottom());
 
         vsb.setMin(control.getVmin());
         vsb.setMax(control.getVmax());
@@ -586,18 +586,18 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         }
         updateHorizontalSB();
 
-        viewRect.resizeRelocate(snappedLeftInset(), snappedTopInset(), snapSize(contentWidth), snapSize(contentHeight));
+        viewRect.resizeRelocate(snappedLeftInset(), snappedTopInset(), snapSizeX(contentWidth), snapSizeY(contentHeight));
         resetClip();
 
         if (vsbvis && hsbvis) {
             corner.setVisible(true);
             double cornerWidth = vsbWidth;
             double cornerHeight = hsbHeight;
-            corner.resizeRelocate(snapPosition(vsb.getLayoutX()), snapPosition(hsb.getLayoutY()), snapSize(cornerWidth), snapSize(cornerHeight));
+            corner.resizeRelocate(snapPositionX(vsb.getLayoutX()), snapPositionY(hsb.getLayoutY()), snapSizeX(cornerWidth), snapSizeY(cornerHeight));
         } else {
             corner.setVisible(false);
         }
-        control.setViewportBounds(new BoundingBox(snapPosition(viewContent.getLayoutX()), snapPosition(viewContent.getLayoutY()), snapSize(contentWidth), snapSize(contentHeight)));
+        control.setViewportBounds(new BoundingBox(snapPositionX(viewContent.getLayoutX()), snapPositionY(viewContent.getLayoutY()), snapSizeX(contentWidth), snapSizeY(contentHeight)));
     }
 
     /** {@inheritDoc} */
@@ -1039,27 +1039,27 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                 ScrollPane control = getSkinnable();
                 Orientation bias = scrollNode.getContentBias();
                 if (bias == null) {
-                    nodeWidth = snapSize(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(-1),
+                    nodeWidth = snapSizeX(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(-1),
                                                          scrollNode.minWidth(-1),scrollNode.maxWidth(-1)));
-                    nodeHeight = snapSize(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(-1),
+                    nodeHeight = snapSizeY(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(-1),
                                                           scrollNode.minHeight(-1), scrollNode.maxHeight(-1)));
 
                 } else if (bias == Orientation.HORIZONTAL) {
-                    nodeWidth = snapSize(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(-1),
+                    nodeWidth = snapSizeX(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(-1),
                                                          scrollNode.minWidth(-1),scrollNode.maxWidth(-1)));
-                    nodeHeight = snapSize(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(nodeWidth),
+                    nodeHeight = snapSizeY(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(nodeWidth),
                                                           scrollNode.minHeight(nodeWidth),scrollNode.maxHeight(nodeWidth)));
 
                 } else { // bias == VERTICAL
-                    nodeHeight = snapSize(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(-1),
+                    nodeHeight = snapSizeY(boundedSize(control.isFitToHeight()? contentHeight : scrollNode.prefHeight(-1),
                                                           scrollNode.minHeight(-1), scrollNode.maxHeight(-1)));
-                    nodeWidth = snapSize(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(nodeHeight),
+                    nodeWidth = snapSizeX(boundedSize(control.isFitToWidth()? contentWidth : scrollNode.prefWidth(nodeHeight),
                                                          scrollNode.minWidth(nodeHeight),scrollNode.maxWidth(nodeHeight)));
                 }
 
             } else {
-                nodeWidth = snapSize(scrollNode.getLayoutBounds().getWidth());
-                nodeHeight = snapSize(scrollNode.getLayoutBounds().getHeight());
+                nodeWidth = snapSizeX(scrollNode.getLayoutBounds().getWidth());
+                nodeHeight = snapSizeY(scrollNode.getLayoutBounds().getHeight());
             }
             nodeSizeInvalid = false;
         }
@@ -1104,7 +1104,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     }
 
     private void computeScrollBarSize() {
-        vsbWidth = snapSize(vsb.prefWidth(-1));
+        vsbWidth = snapSizeX(vsb.prefWidth(-1));
         if (vsbWidth == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar width, using {DEFAULT_SB_BREADTH}");
             if (Properties.IS_TOUCH_SUPPORTED) {
@@ -1114,7 +1114,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                 vsbWidth = DEFAULT_SB_BREADTH;
             }
         }
-        hsbHeight = snapSize(hsb.prefHeight(-1));
+        hsbHeight = snapSizeY(hsb.prefHeight(-1));
         if (hsbHeight == 0) {
             //            println("*** WARNING ScrollPaneSkin: can't get scroll bar height, using {DEFAULT_SB_BREADTH}");
             if (Properties.IS_TOUCH_SUPPORTED) {
@@ -1178,7 +1178,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
         final ScrollPane sp = getSkinnable();
         double x = isReverseNodeOrientation() ? (hsb.getMax() - (posX - hsb.getMin())) : posX;
         double minX = Math.min((- x / (hsb.getMax() - hsb.getMin()) * (nodeWidth - contentWidth)), 0);
-        viewContent.setLayoutX(snapPosition(minX));
+        viewContent.setLayoutX(snapPositionX(minX));
         if (!sp.hvalueProperty().isBound()) sp.setHvalue(Utils.clamp(sp.getHmin(), posX, sp.getHmax()));
         return posX;
     }
@@ -1186,14 +1186,14 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     private double updatePosY() {
         final ScrollPane sp = getSkinnable();
         double minY = Math.min((- posY / (vsb.getMax() - vsb.getMin()) * (nodeHeight - contentHeight)), 0);
-        viewContent.setLayoutY(snapPosition(minY));
+        viewContent.setLayoutY(snapPositionY(minY));
         if (!sp.vvalueProperty().isBound()) sp.setVvalue(Utils.clamp(sp.getVmin(), posY, sp.getVmax()));
         return posY;
     }
 
     private void resetClip() {
-        clipRect.setWidth(snapSize(contentWidth));
-        clipRect.setHeight(snapSize(contentHeight));
+        clipRect.setWidth(snapSizeX(contentWidth));
+        clipRect.setHeight(snapSizeY(contentHeight));
     }
 
     private void startSBReleasedAnimation() {

@@ -227,7 +227,11 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
                 Content c = contentRegions.get(i);
                 double min = horizontal ? c.minWidth(-1) : c.minHeight(-1);
                 percentage = min/minSize;
-                c.setArea(snapSpace(percentage * (horizontal ? w : h)));
+                if (horizontal) {
+                    c.setArea(snapSpaceX(percentage * w));
+                } else {
+                    c.setArea(snapSpaceY(percentage * h));
+                }
                 c.setAvailable(0);
             }
             setupContentAndDividerForLayout();
@@ -758,7 +762,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             return size;
         }
 
-        size = snapSize(size);
+        size = horizontal ? snapSizeX(size) : snapSizeY(size);
         int portion = (int)(size)/available.size();
         int remainder;
 
@@ -812,7 +816,7 @@ public class SplitPaneSkin extends SkinBase<SplitPane> {
             return size;
         }
 
-        size = snapSize(size);
+        size = horizontal ? snapSizeX(size) : snapSizeY(size);
         int portion = (int)(size)/available.size();
         int remainder;
 

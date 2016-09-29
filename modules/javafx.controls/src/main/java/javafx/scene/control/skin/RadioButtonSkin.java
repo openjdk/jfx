@@ -106,23 +106,23 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
 
     /** {@inheritDoc} */
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return super.computeMinWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSize(radio.minWidth(-1));
+        return super.computeMinWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSizeX(radio.minWidth(-1));
     }
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return Math.max(snapSize(super.computeMinHeight(width - radio.minWidth(-1), topInset, rightInset, bottomInset, leftInset)),
+        return Math.max(snapSizeY(super.computeMinHeight(width - radio.minWidth(-1), topInset, rightInset, bottomInset, leftInset)),
                 topInset + radio.minHeight(-1) + bottomInset);
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSize(radio.prefWidth(-1));
+        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSizeX(radio.prefWidth(-1));
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return Math.max(snapSize(super.computePrefHeight(width - radio.prefWidth(-1), topInset, rightInset, bottomInset, leftInset)),
+        return Math.max(snapSizeY(super.computePrefHeight(width - radio.prefWidth(-1), topInset, rightInset, bottomInset, leftInset)),
                 topInset + radio.prefHeight(-1) + bottomInset);
     }
 
@@ -133,14 +133,14 @@ public class RadioButtonSkin extends LabeledSkinBase<RadioButton> {
         final double radioWidth = radio.prefWidth(-1);
         final double radioHeight = radio.prefHeight(-1);
         final double computeWidth = Math.max(radioButton.prefWidth(-1),radioButton.minWidth(-1));
-        final double labelWidth = Math.min(computeWidth - radioWidth, w - snapSize(radioWidth));
+        final double labelWidth = Math.min(computeWidth - radioWidth, w - snapSizeX(radioWidth));
         final double labelHeight = Math.min(radioButton.prefHeight(labelWidth), h);
         final double maxHeight = Math.max(radioHeight, labelHeight);
         final double xOffset = Utils.computeXOffset(w, labelWidth + radioWidth, radioButton.getAlignment().getHpos()) + x;
         final double yOffset = Utils.computeYOffset(h, maxHeight, radioButton.getAlignment().getVpos()) + y;
 
         layoutLabelInArea(xOffset + radioWidth, yOffset, labelWidth, maxHeight,  radioButton.getAlignment());
-        radio.resize(snapSize(radioWidth), snapSize(radioHeight));
+        radio.resize(snapSizeX(radioWidth), snapSizeY(radioHeight));
         positionInArea(radio, xOffset, yOffset, radioWidth, maxHeight, 0, radioButton.getAlignment().getHpos(), radioButton.getAlignment().getVpos());
     }
 

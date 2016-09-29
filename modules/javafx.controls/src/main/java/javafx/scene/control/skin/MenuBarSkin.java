@@ -572,11 +572,11 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     // --- spacing
     private DoubleProperty spacing;
     public final void setSpacing(double value) {
-        spacingProperty().set(snapSpace(value));
+        spacingProperty().set(snapSpaceX(value));
     }
 
     public final double getSpacing() {
-        return spacing == null ? 0.0 : snapSpace(spacing.get());
+        return spacing == null ? 0.0 : snapSpaceX(spacing.get());
     }
 
     public final DoubleProperty spacingProperty() {

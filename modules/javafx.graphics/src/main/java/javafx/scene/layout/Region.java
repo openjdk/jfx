@@ -1709,7 +1709,7 @@ public class Region extends Parent {
      * @return value rounded to nearest pixel
      * @since 9
      */
-    protected double snapSpaceX(double value) {
+    public double snapSpaceX(double value) {
         return snapSpaceX(value, isSnapToPixel());
     }
 
@@ -1721,7 +1721,7 @@ public class Region extends Parent {
      * @return value rounded to nearest pixel
      * @since 9
      */
-    protected double snapSpaceY(double value) {
+    public double snapSpaceY(double value) {
         return snapSpaceY(value, isSnapToPixel());
     }
 
@@ -1748,7 +1748,7 @@ public class Region extends Parent {
      * @return value ceiled to nearest pixel
      * @since 9
      */
-    protected double snapSizeX(double value) {
+    public double snapSizeX(double value) {
         return snapSizeX(value, isSnapToPixel());
     }
 
@@ -1760,7 +1760,7 @@ public class Region extends Parent {
      * @return value ceiled to nearest pixel
      * @since 9
      */
-    protected double snapSizeY(double value) {
+    public double snapSizeY(double value) {
         return snapSizeY(value, isSnapToPixel());
     }
 
@@ -1787,7 +1787,7 @@ public class Region extends Parent {
      * @return value rounded to nearest pixel
      * @since 9
      */
-    protected double snapPositionX(double value) {
+    public double snapPositionX(double value) {
         return snapPositionX(value, isSnapToPixel());
     }
 
@@ -1799,7 +1799,7 @@ public class Region extends Parent {
      * @return value rounded to nearest pixel
      * @since 9
      */
-    protected double snapPositionY(double value) {
+    public double snapPositionY(double value) {
         return snapPositionY(value, isSnapToPixel());
     }
 

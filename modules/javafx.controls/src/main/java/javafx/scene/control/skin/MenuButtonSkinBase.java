@@ -216,14 +216,14 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return leftInset
                 + label.minWidth(height)
-                + snapSize(arrowButton.minWidth(height))
+                + snapSizeX(arrowButton.minWidth(height))
                 + rightInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset
-                + Math.max(label.minHeight(width), snapSize(arrowButton.minHeight(-1)))
+                + Math.max(label.minHeight(width), snapSizeY(arrowButton.minHeight(-1)))
                 + bottomInset;
     }
 
@@ -231,14 +231,14 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         return leftInset
                 + label.prefWidth(height)
-                + snapSize(arrowButton.prefWidth(height))
+                + snapSizeX(arrowButton.prefWidth(height))
                 + rightInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
         return topInset
-                + Math.max(label.prefHeight(width), snapSize(arrowButton.prefHeight(-1)))
+                + Math.max(label.prefHeight(width), snapSizeY(arrowButton.prefHeight(-1)))
                 + bottomInset;
     }
 
@@ -255,7 +255,7 @@ public class MenuButtonSkinBase<C extends MenuButton> extends SkinBase<C> {
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, final double y,
                                             final double w, final double h) {
-        final double arrowButtonWidth = snapSize(arrowButton.prefWidth(-1));
+        final double arrowButtonWidth = snapSizeX(arrowButton.prefWidth(-1));
         label.resizeRelocate(x, y, w - arrowButtonWidth, h);
         arrowButton.resizeRelocate(x + (w - arrowButtonWidth), y, arrowButtonWidth, h);
     }

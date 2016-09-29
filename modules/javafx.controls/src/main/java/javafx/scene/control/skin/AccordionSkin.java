@@ -221,7 +221,7 @@ public class AccordionSkin extends SkinBase<Accordion> {
         for (TitledPane tp : getSkinnable().getPanes()) {
             if (!tp.equals(expandedPane)) {
                 TitledPaneSkin childSkin = (TitledPaneSkin) ((TitledPane)tp).getSkin();
-                collapsedPanesHeight += snapSize(childSkin.getTitleRegionSize(w));
+                collapsedPanesHeight += snapSizeY(childSkin.getTitleRegionSize(w));
             }
         }
         final double maxTitledPaneHeight = h - collapsedPanesHeight;
@@ -231,7 +231,7 @@ public class AccordionSkin extends SkinBase<Accordion> {
             double ph;
             if (skin instanceof TitledPaneSkin) {
                 ((TitledPaneSkin)skin).setMaxTitledPaneHeightForAccordion(maxTitledPaneHeight);
-                ph = snapSize(((TitledPaneSkin)skin).getTitledPaneHeightForAccordion());
+                ph = snapSizeY(((TitledPaneSkin)skin).getTitledPaneHeightForAccordion());
             } else {
                 ph = tp.prefHeight(w);
             }

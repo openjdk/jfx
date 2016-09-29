@@ -503,8 +503,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             text.setText("");
         } else {
             updateDisplayedText(w, h); // Have to do this just in case it needs to be recomputed
-            textWidth  = snapSize(Math.min(text.getLayoutBounds().getWidth(),  wrapWidth));
-            textHeight = snapSize(Math.min(text.getLayoutBounds().getHeight(), wrapHeight));
+            textWidth  = snapSizeX(Math.min(text.getLayoutBounds().getWidth(),  wrapWidth));
+            textHeight = snapSizeY(Math.min(text.getLayoutBounds().getHeight(), wrapHeight));
         }
 
         final double gap = (ignoreText || ignoreGraphic) ? 0 : labeled.getGraphicTextGap();
@@ -578,13 +578,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             if (text.isManaged()) {
                 text.setManaged(false);
             }
-            text.relocate(snapPosition(contentX), snapPosition(contentY));
+            text.relocate(snapPositionX(contentX), snapPositionY(contentY));
         } else if (ignoreGraphic) {
             // Since I only have to position the text, it goes at the
             // contentX/contentY location. Note that positionNode will
             // adjust the text based on the text's minX/minY so no need to
             // worry about that here
-            text.relocate(snapPosition(contentX), snapPosition(contentY));
+            text.relocate(snapPositionX(contentX), snapPositionY(contentY));
             if (containsMnemonic) {
                 mnemonic_underscore.setEndX(mnemonicWidth-2.0);
                 mnemonic_underscore.relocate(contentX+preMnemonicWidth, contentY+mnemonicHeight-1);
@@ -594,8 +594,8 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // there isn't text to display, so we need to position it
             // such that it doesn't affect the content area (although when
             // there is a graphic, the text isn't even in the scene)
-            text.relocate(snapPosition(contentX), snapPosition(contentY));
-            graphic.relocate(snapPosition(contentX), snapPosition(contentY));
+            text.relocate(snapPositionX(contentX), snapPositionY(contentY));
+            graphic.relocate(snapPositionX(contentX), snapPositionY(contentY));
             if (containsMnemonic) {
                 mnemonic_underscore.setEndX(mnemonicWidth);
                 mnemonic_underscore.setStrokeWidth(mnemonicHeight/10.0);
@@ -642,13 +642,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 graphicY = contentY + ((contentHeight - graphicHeight) / 2.0);
                 textY = contentY + ((contentHeight - textHeight) / 2.0);
             }
-            text.relocate(snapPosition(textX), snapPosition(textY));
+            text.relocate(snapPositionX(textX), snapPositionY(textY));
             if (containsMnemonic) {
                 mnemonic_underscore.setEndX(mnemonicWidth);
                 mnemonic_underscore.setStrokeWidth(mnemonicHeight/10.0);
-                mnemonic_underscore.relocate(snapPosition(textX+preMnemonicWidth), snapPosition(textY+mnemonicHeight-1));
+                mnemonic_underscore.relocate(snapPositionX(textX+preMnemonicWidth), snapPositionY(textY+mnemonicHeight-1));
             }
-            graphic.relocate(snapPosition(graphicX), snapPosition(graphicY));
+            graphic.relocate(snapPositionX(graphicX), snapPositionY(graphicY));
         }
 
         /**
@@ -822,19 +822,19 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
     }
 
     double topLabelPadding() {
-        return snapSize(getSkinnable().getLabelPadding().getTop());
+        return snapSizeY(getSkinnable().getLabelPadding().getTop());
     }
 
     double bottomLabelPadding() {
-        return snapSize(getSkinnable().getLabelPadding().getBottom());
+        return snapSizeY(getSkinnable().getLabelPadding().getBottom());
     }
 
     double leftLabelPadding() {
-        return snapSize(getSkinnable().getLabelPadding().getLeft());
+        return snapSizeX(getSkinnable().getLabelPadding().getLeft());
     }
 
     double rightLabelPadding() {
-        return snapSize(getSkinnable().getLabelPadding().getRight());
+        return snapSizeX(getSkinnable().getLabelPadding().getRight());
     }
 
 

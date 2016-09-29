@@ -111,7 +111,7 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox> {
 
     /** {@inheritDoc} */
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return super.computeMinWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSize(box.minWidth(-1));
+        return super.computeMinWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSizeX(box.minWidth(-1));
     }
 
     /** {@inheritDoc} */
@@ -122,7 +122,7 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox> {
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSize(box.prefWidth(-1));
+        return super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset) + snapSizeX(box.prefWidth(-1));
     }
 
     /** {@inheritDoc} */
@@ -135,10 +135,10 @@ public class CheckBoxSkin extends LabeledSkinBase<CheckBox> {
     @Override protected void layoutChildren(final double x, final double y,
             final double w, final double h) {
         final CheckBox checkBox = getSkinnable();
-        final double boxWidth = snapSize(box.prefWidth(-1));
-        final double boxHeight = snapSize(box.prefHeight(-1));
+        final double boxWidth = snapSizeX(box.prefWidth(-1));
+        final double boxHeight = snapSizeY(box.prefHeight(-1));
         final double computeWidth = Math.max(checkBox.prefWidth(-1), checkBox.minWidth(-1));
-        final double labelWidth = Math.min( computeWidth - boxWidth, w - snapSize(boxWidth));
+        final double labelWidth = Math.min( computeWidth - boxWidth, w - snapSizeX(boxWidth));
         final double labelHeight = Math.min(checkBox.prefHeight(labelWidth), h);
         final double maxHeight = Math.max(boxHeight, labelHeight);
         final double xOffset = Utils.computeXOffset(w, labelWidth + boxWidth, checkBox.getAlignment().getHpos()) + x;

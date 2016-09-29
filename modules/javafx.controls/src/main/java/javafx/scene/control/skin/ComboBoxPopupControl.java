@@ -413,8 +413,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
 
         final ComboBoxBase<T> comboBoxBase = getSkinnable();
         _popup.show(comboBoxBase.getScene().getWindow(),
-                snapPosition(p.getX()),
-                snapPosition(p.getY()));
+                snapPositionX(p.getX()),
+                snapPositionY(p.getY()));
 
         popupContent.requestFocus();
 
@@ -431,15 +431,15 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
             final Region r = (Region) popupContent;
 
             // 0 is used here for the width due to RT-46097
-            double prefHeight = snapSize(r.prefHeight(0));
-            double minHeight = snapSize(r.minHeight(0));
-            double maxHeight = snapSize(r.maxHeight(0));
-            double h = snapSize(Math.min(Math.max(prefHeight, minHeight), Math.max(minHeight, maxHeight)));
+            double prefHeight = snapSizeY(r.prefHeight(0));
+            double minHeight = snapSizeY(r.minHeight(0));
+            double maxHeight = snapSizeY(r.maxHeight(0));
+            double h = snapSizeY(Math.min(Math.max(prefHeight, minHeight), Math.max(minHeight, maxHeight)));
 
-            double prefWidth = snapSize(r.prefWidth(h));
-            double minWidth = snapSize(r.minWidth(h));
-            double maxWidth = snapSize(r.maxWidth(h));
-            double w = snapSize(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
+            double prefWidth = snapSizeX(r.prefWidth(h));
+            double minWidth = snapSizeX(r.minWidth(h));
+            double maxWidth = snapSizeX(r.maxWidth(h));
+            double w = snapSizeX(Math.min(Math.max(prefWidth, minWidth), Math.max(minWidth, maxWidth)));
 
             popupContent.resize(w, h);
         } else {
