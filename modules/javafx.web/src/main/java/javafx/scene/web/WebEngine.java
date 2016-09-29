@@ -1599,6 +1599,16 @@ final public class WebEngine {
         }
     }
 
+    private static final boolean printStatusOK(PrinterJob job) {
+        switch (job.getJobStatus()) {
+            case NOT_STARTED:
+            case PRINTING:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     /**
      * Prints the current Web page using the given printer job.
      * <p>This method does not modify the state of the job, nor does it call
@@ -1608,14 +1618,20 @@ final public class WebEngine {
      * @since JavaFX 8.0
      */
     public void print(PrinterJob job) {
+        if (!printStatusOK(job)) {
+            return;
+        }
+
         PageLayout pl = job.getJobSettings().getPageLayout();
         float width = (float) pl.getPrintableWidth();
         float height = (float) pl.getPrintableHeight();
         int pageCount = page.beginPrinting(width, height);
 
         for (int i = 0; i < pageCount; i++) {
-            Node printable = new Printable(page, i, width);
-            job.printPage(printable);
+            if (printStatusOK(job)) {
+                Node printable = new Printable(page, i, width);
+                job.printPage(printable);
+            }
         }
         page.endPrinting();
     }
