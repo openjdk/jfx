@@ -2952,6 +2952,7 @@ g_variant_iter_init (GVariantIter *iter,
   return GVSI(iter)->n;
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * g_variant_iter_copy:
  * @iter: a #GVariantIter
@@ -2989,6 +2990,7 @@ g_variant_iter_copy (GVariantIter *iter)
 
   return copy;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_variant_iter_n_children:
