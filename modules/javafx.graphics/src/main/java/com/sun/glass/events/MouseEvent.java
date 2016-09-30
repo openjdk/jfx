@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,19 +24,21 @@
  */
 package com.sun.glass.events;
 
-public class MouseEvent {
-    final static public int BUTTON_NONE     = 211;
-    final static public int BUTTON_LEFT     = 212;
-    final static public int BUTTON_RIGHT    = 213;
-    final static public int BUTTON_OTHER    = 214;
+import java.lang.annotation.Native;
 
-    final static public int DOWN            = 221;
-    final static public int UP              = 222;
-    final static public int DRAG            = 223;
-    final static public int MOVE            = 224;
-    final static public int ENTER           = 225;
-    final static public int EXIT            = 226;
-    final static public int CLICK           = 227; // synthetic
+public class MouseEvent {
+    @Native final static public int BUTTON_NONE     = 211;
+    @Native final static public int BUTTON_LEFT     = 212;
+    @Native final static public int BUTTON_RIGHT    = 213;
+    @Native final static public int BUTTON_OTHER    = 214;
+
+    @Native final static public int DOWN            = 221;
+    @Native final static public int UP              = 222;
+    @Native final static public int DRAG            = 223;
+    @Native final static public int MOVE            = 224;
+    @Native final static public int ENTER           = 225;
+    @Native final static public int EXIT            = 226;
+    @Native final static public int CLICK           = 227; // synthetic
 
     /**
      * Artificial WHEEL event type.
@@ -44,5 +46,5 @@ public class MouseEvent {
      * The app must listen to Scroll events instead.
      * This identifier is required for internal purposes.
      */
-    final static public int WHEEL           = 228;
+    @Native final static public int WHEEL           = 228;
 }

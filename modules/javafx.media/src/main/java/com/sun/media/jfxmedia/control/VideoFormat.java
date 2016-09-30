@@ -25,6 +25,7 @@
 
 package com.sun.media.jfxmedia.control;
 
+import java.lang.annotation.Native;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -73,9 +74,9 @@ public enum VideoFormat {
 
     // Constants for JNI headers
     public static class FormatTypes {
-        public static final int FORMAT_TYPE_ARGB = 1;
-        public static final int FORMAT_TYPE_BGRA_PRE = 2;
-        public static final int FORMAT_TYPE_YCBCR_420P = 100;
-        public static final int FORMAT_TYPE_YCBCR_422 = 101;
+        @Native public static final int FORMAT_TYPE_ARGB = 1;
+        @Native public static final int FORMAT_TYPE_BGRA_PRE = 2;
+        @Native public static final int FORMAT_TYPE_YCBCR_420P = 100;
+        @Native public static final int FORMAT_TYPE_YCBCR_422 = 101;
     }
 }

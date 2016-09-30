@@ -176,6 +176,8 @@ public class Main {
 
     @SuppressWarnings("deprecation")
     public static void main(String... args) throws Exception {
+        BundleType bundleType = BundleType.NONE;
+
         if (args.length == 0 || args.length == 1 && args[0].equals("-help")) {
             System.out.println(help);
         } else if (args.length == 1 && args[0].equals("-version")) {
@@ -237,9 +239,9 @@ public class Main {
                     deployParams.setBundleType(BundleType.JNLP);
                     deployParams.setTargetFormat("jnlp");
 
-
                     //can only set it to true with command line, reset default
                     deployParams.setEmbedJNLP(false);
+
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.startsWith("-B")) {
@@ -268,16 +270,16 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-vendor")) {
                             deployParams.setVendor(nextArg(args, i++));
                         } else if (arg.equalsIgnoreCase("-native")) {
-                            BundleType type = BundleType.NONE;
+                            bundleType = BundleType.NATIVE;
                             String format = null; //null means ANY
                             if (i+1 < args.length && !args[i+1].startsWith("-")) {
                                 String v = args[++i];
                                 com.sun.javafx.tools.packager.bundlers.Bundler.Bundle bundle =
                                         com.sun.javafx.tools.packager.bundlers.Bundler.stringToBundle(v);
-                                type = bundle.type;
+                                bundleType = bundle.type;
                                 format = bundle.format;
                             }
-                            deployParams.setBundleType(type);
+                            deployParams.setBundleType(bundleType);
                             deployParams.setTargetFormat(format);
                         } else if (arg.equalsIgnoreCase("-description")) {
                             deployParams.setDescription(nextArg(args, i++));
@@ -479,7 +481,7 @@ public class Main {
                     packager.generateDeploymentPackages(deployParams);
                 }
                 if (genPackages) {
-                    deployParams.setBundleType(BundleType.NATIVE);
+                    deployParams.setBundleType(bundleType);
                     deployParams.validate();
                     packager.generateDeploymentPackages(deployParams);
                 }

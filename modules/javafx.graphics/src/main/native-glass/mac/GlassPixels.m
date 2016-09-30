@@ -24,7 +24,6 @@
  */
 
 #import "common.h"
-#import "com_sun_glass_ui_Pixels.h"
 #import "com_sun_glass_ui_Pixels_Format.h"
 #import "com_sun_glass_ui_mac_MacPixels.h"
 

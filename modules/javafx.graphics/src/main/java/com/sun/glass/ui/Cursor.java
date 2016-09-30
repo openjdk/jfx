@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,29 +24,31 @@
  */
 package com.sun.glass.ui;
 
+import java.lang.annotation.Native;
+
 public abstract class Cursor {
 
-    public final static int CURSOR_NONE = -1;
-    public final static int CURSOR_CUSTOM = 0;
-    public final static int CURSOR_DEFAULT = 1;
-    public final static int CURSOR_TEXT = 2;
-    public final static int CURSOR_CROSSHAIR = 3;
-    public final static int CURSOR_CLOSED_HAND = 4;
-    public final static int CURSOR_OPEN_HAND = 5;
-    public final static int CURSOR_POINTING_HAND = 6;
-    public final static int CURSOR_RESIZE_LEFT = 7;
-    public final static int CURSOR_RESIZE_RIGHT = 8;
-    public final static int CURSOR_RESIZE_UP = 9;
-    public final static int CURSOR_RESIZE_DOWN = 10;
-    public final static int CURSOR_RESIZE_LEFTRIGHT = 11;
-    public final static int CURSOR_RESIZE_UPDOWN = 12;
-    public final static int CURSOR_DISAPPEAR = 13;
-    public final static int CURSOR_WAIT = 14;
-    public final static int CURSOR_RESIZE_SOUTHWEST = 15;
-    public final static int CURSOR_RESIZE_SOUTHEAST = 16;
-    public final static int CURSOR_RESIZE_NORTHWEST = 17;
-    public final static int CURSOR_RESIZE_NORTHEAST = 18;
-    public final static int CURSOR_MOVE = 19;
+    @Native public final static int CURSOR_NONE = -1;
+    @Native public final static int CURSOR_CUSTOM = 0;
+    @Native public final static int CURSOR_DEFAULT = 1;
+    @Native public final static int CURSOR_TEXT = 2;
+    @Native public final static int CURSOR_CROSSHAIR = 3;
+    @Native public final static int CURSOR_CLOSED_HAND = 4;
+    @Native public final static int CURSOR_OPEN_HAND = 5;
+    @Native public final static int CURSOR_POINTING_HAND = 6;
+    @Native public final static int CURSOR_RESIZE_LEFT = 7;
+    @Native public final static int CURSOR_RESIZE_RIGHT = 8;
+    @Native public final static int CURSOR_RESIZE_UP = 9;
+    @Native public final static int CURSOR_RESIZE_DOWN = 10;
+    @Native public final static int CURSOR_RESIZE_LEFTRIGHT = 11;
+    @Native public final static int CURSOR_RESIZE_UPDOWN = 12;
+    @Native public final static int CURSOR_DISAPPEAR = 13;
+    @Native public final static int CURSOR_WAIT = 14;
+    @Native public final static int CURSOR_RESIZE_SOUTHWEST = 15;
+    @Native public final static int CURSOR_RESIZE_SOUTHEAST = 16;
+    @Native public final static int CURSOR_RESIZE_NORTHWEST = 17;
+    @Native public final static int CURSOR_RESIZE_NORTHEAST = 18;
+    @Native public final static int CURSOR_MOVE = 19;
     private final static int CURSOR_MAX = 19;
 
     private final int type;

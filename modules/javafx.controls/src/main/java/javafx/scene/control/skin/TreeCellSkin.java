@@ -300,7 +300,7 @@ public class TreeCellSkin<T> extends CellSkinBase<TreeCell<T>> {
 
         // RT-30212: TreeCell does not honor minSize of cells.
         // snapSize for RT-36460
-        return snapSize(Math.max(cell.getMinHeight(), prefHeight));
+        return snapSizeY(Math.max(cell.getMinHeight(), prefHeight));
     }
 
     /** {@inheritDoc} */

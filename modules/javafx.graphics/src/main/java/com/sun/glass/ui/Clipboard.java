@@ -26,6 +26,7 @@ package com.sun.glass.ui;
 
 import com.sun.glass.ui.delegate.ClipboardDelegate;
 
+import java.lang.annotation.Native;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -38,32 +39,32 @@ public class Clipboard {
      * predefined mime types
      * Have to be synchronized with native realization.
      */
-    public final static String TEXT_TYPE = "text/plain";
-    public final static String HTML_TYPE = "text/html";
-    public final static String RTF_TYPE = "text/rtf";
-    public final static String URI_TYPE = "text/uri-list";//http://www.ietf.org/rfc/rfc2483.txt
-    public final static String FILE_LIST_TYPE = "application/x-java-file-list";
-    public final static String RAW_IMAGE_TYPE = "application/x-java-rawimage";
-    public final static String DRAG_IMAGE = "application/x-java-drag-image";
-    public final static String DRAG_IMAGE_OFFSET = "application/x-java-drag-image-offset";
-    public final static String IE_URL_SHORTCUT_FILENAME = "text/ie-shortcut-filename";
+    @Native public final static String TEXT_TYPE = "text/plain";
+    @Native public final static String HTML_TYPE = "text/html";
+    @Native public final static String RTF_TYPE = "text/rtf";
+    @Native public final static String URI_TYPE = "text/uri-list";//http://www.ietf.org/rfc/rfc2483.txt
+    @Native public final static String FILE_LIST_TYPE = "application/x-java-file-list";
+    @Native public final static String RAW_IMAGE_TYPE = "application/x-java-rawimage";
+    @Native public final static String DRAG_IMAGE = "application/x-java-drag-image";
+    @Native public final static String DRAG_IMAGE_OFFSET = "application/x-java-drag-image-offset";
+    @Native public final static String IE_URL_SHORTCUT_FILENAME = "text/ie-shortcut-filename";
 
     /**
      * predefined drop-effect actions and combinations.
      */
-    public final static int ACTION_NONE = 0x0;
-    public final static int ACTION_COPY = 0x1;
-    public final static int ACTION_MOVE = 0x2;
-    public final static int ACTION_REFERENCE = 0x40000000;
-    public final static int ACTION_COPY_OR_MOVE = ACTION_COPY | ACTION_MOVE;
-    public final static int ACTION_ANY       = 0x4FFFFFFF;
+    @Native public final static int ACTION_NONE = 0x0;
+    @Native public final static int ACTION_COPY = 0x1;
+    @Native public final static int ACTION_MOVE = 0x2;
+    @Native public final static int ACTION_REFERENCE = 0x40000000;
+    @Native public final static int ACTION_COPY_OR_MOVE = ACTION_COPY | ACTION_MOVE;
+    @Native public final static int ACTION_ANY       = 0x4FFFFFFF;
 
     /**
      * predefined clipboard name for system shared buffers
      */
-    public final static String DND = "DND";
-    public final static String SYSTEM = "SYSTEM";
-    public final static String SELECTION = "SELECTION";
+    @Native public final static String DND = "DND";
+    @Native public final static String SYSTEM = "SYSTEM";
+    @Native public final static String SELECTION = "SELECTION";
 
     private final static Map <String, Clipboard> clipboards  = new HashMap <String, Clipboard> ();
     private final static ClipboardDelegate delegate = PlatformFactory.getPlatformFactory().createClipboardDelegate();

@@ -86,6 +86,8 @@ public class TableColumnHeader extends Region {
      *                                                                         *
      **************************************************************************/
 
+    static final String DEFAULT_STYLE_CLASS = "column-header";
+
     // Copied from TableColumn. The value here should always be in-sync with
     // the value in TableColumn
     static final double DEFAULT_COLUMN_WIDTH = 80.0F;
@@ -154,6 +156,7 @@ public class TableColumnHeader extends Region {
         setFocusTraversable(false);
 
         updateColumnIndex();
+        initStyleClasses();
         initUI();
 
         // change listener for multiple properties
@@ -188,11 +191,8 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(tc.textProperty(), e -> label.setText(tc.getText()));
             changeListenerHandler.registerChangeListener(tc.graphicProperty(), e -> label.setGraphic(tc.getGraphic()));
 
-            tc.getStyleClass().addListener(weakStyleClassListener);
-
             setId(tc.getId());
             setStyle(tc.getStyle());
-            updateStyleClass();
             /* Having TableColumn role parented by TableColumn causes VoiceOver to be unhappy */
             setAccessibleRole(AccessibleRole.TABLE_COLUMN);
         }
@@ -218,7 +218,14 @@ public class TableColumnHeader extends Region {
     };
 
     private ListChangeListener<String> styleClassListener = c -> {
-        updateStyleClass();
+        while (c.next()) {
+            if (c.wasRemoved()) {
+                getStyleClass().removeAll(c.getRemoved());
+            }
+            if (c.wasAdded()) {
+                getStyleClass().addAll(c.getAddedSubList());
+            }
+        }
     };
 
     private WeakListChangeListener<TableColumnBase<?,?>> weakSortOrderListener =
@@ -441,6 +448,21 @@ public class TableColumnHeader extends Region {
      *                                                                         *
      **************************************************************************/
 
+    void initStyleClasses() {
+        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        installTableColumnStyleClassListener();
+    }
+
+    void installTableColumnStyleClassListener() {
+        TableColumnBase tc = getTableColumn();
+        if (tc != null) {
+            // add in all styleclasses from the table column into the header, and also set up a listener
+            // so that any subsequent changes to the table column are also applied to the header
+            getStyleClass().addAll(tc.getStyleClass());
+            tc.getStyleClass().addListener(weakStyleClassListener);
+        }
+    }
+
     TableViewSkinBase<?,?,?,?,TableColumnBase<?,?>> getTableViewSkin() {
         return skin;
     }
@@ -469,13 +491,6 @@ public class TableColumnHeader extends Region {
         } else {
             header.updateSortPosition();
         }
-    }
-
-    private void updateStyleClass() {
-        // For now we leave the 'column-header' style class intact so that the
-        // appropriate border styles are shown, etc.
-        getStyleClass().setAll("column-header");
-        getStyleClass().addAll(getTableColumn().getStyleClass());
     }
 
     private void updateScene() {

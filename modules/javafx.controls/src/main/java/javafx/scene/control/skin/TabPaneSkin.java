@@ -274,16 +274,17 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         // The TabPane can only be as wide as it widest content width.
         double maxw = 0.0;
         for (TabContentRegion contentRegion: tabContentRegions) {
-            maxw = Math.max(maxw, snapSize(contentRegion.prefWidth(-1)));
+            maxw = Math.max(maxw, snapSizeX(contentRegion.prefWidth(-1)));
         }
 
         final boolean isHorizontal = isHorizontal();
-        final double tabHeaderAreaSize = snapSize(isHorizontal ?
-                tabHeaderArea.prefWidth(-1) : tabHeaderArea.prefHeight(-1));
+        final double tabHeaderAreaSize = isHorizontal
+                ? snapSizeX(tabHeaderArea.prefWidth(-1))
+                : snapSizeY(tabHeaderArea.prefHeight(-1));
 
         double prefWidth = isHorizontal ?
                 Math.max(maxw, tabHeaderAreaSize) : maxw + tabHeaderAreaSize;
-        return snapSize(prefWidth) + rightInset + leftInset;
+        return snapSizeX(prefWidth) + rightInset + leftInset;
     }
 
     /** {@inheritDoc} */
@@ -291,16 +292,17 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         // The TabPane can only be as high as it highest content height.
         double maxh = 0.0;
         for (TabContentRegion contentRegion: tabContentRegions) {
-            maxh = Math.max(maxh, snapSize(contentRegion.prefHeight(-1)));
+            maxh = Math.max(maxh, snapSizeY(contentRegion.prefHeight(-1)));
         }
 
         final boolean isHorizontal = isHorizontal();
-        final double tabHeaderAreaSize = snapSize(isHorizontal ?
-                tabHeaderArea.prefHeight(-1) : tabHeaderArea.prefWidth(-1));
+        final double tabHeaderAreaSize = isHorizontal
+                ? snapSizeY(tabHeaderArea.prefHeight(-1))
+                : snapSizeX(tabHeaderArea.prefWidth(-1));
 
         double prefHeight = isHorizontal ?
-                maxh + snapSize(tabHeaderAreaSize) : Math.max(maxh, tabHeaderAreaSize);
-        return snapSize(prefHeight) + topInset + bottomInset;
+                maxh + snapSizeY(tabHeaderAreaSize) : Math.max(maxh, tabHeaderAreaSize);
+        return snapSizeY(prefHeight) + topInset + bottomInset;
     }
 
     /** {@inheritDoc} */
@@ -318,13 +320,14 @@ public class TabPaneSkin extends SkinBase<TabPane> {
         TabPane tabPane = getSkinnable();
         Side tabPosition = tabPane.getSide();
 
-        double headerHeight = snapSize(tabHeaderArea.prefHeight(-1));
+        double headerHeight = tabPosition.isHorizontal()
+                ? snapSizeY(tabHeaderArea.prefHeight(-1))
+                : snapSizeX(tabHeaderArea.prefHeight(-1));
         double tabsStartX = tabPosition.equals(Side.RIGHT)? x + w - headerHeight : x;
         double tabsStartY = tabPosition.equals(Side.BOTTOM)? y + h - headerHeight : y;
 
         final double leftInset = snappedLeftInset();
         final double topInset = snappedTopInset();
-        final double rightInset = snappedRightInset();
 
         if (tabPosition == Side.TOP) {
             tabHeaderArea.resize(w, headerHeight);

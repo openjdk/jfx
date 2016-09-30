@@ -25,13 +25,14 @@
 package com.sun.glass.ui;
 
 import static com.sun.javafx.FXPermissions.CREATE_ROBOT_PERMISSION;
+import java.lang.annotation.Native;
 import java.nio.IntBuffer;
 
 public abstract class Robot {
 
-    final static public int MOUSE_LEFT_BTN   = 1;
-    final static public int MOUSE_RIGHT_BTN  = 2;
-    final static public int MOUSE_MIDDLE_BTN = 4;
+    @Native public static final int MOUSE_LEFT_BTN   = 1;
+    @Native public static final int MOUSE_RIGHT_BTN  = 2;
+    @Native public static final int MOUSE_MIDDLE_BTN = 4;
 
     protected abstract void _create();
     protected Robot() {

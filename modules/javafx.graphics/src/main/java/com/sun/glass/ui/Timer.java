@@ -24,6 +24,8 @@
  */
 package com.sun.glass.ui;
 
+import java.lang.annotation.Native;
+
 /**
  * A high-resolution timer.
  *
@@ -36,8 +38,8 @@ package com.sun.glass.ui;
  */
 public abstract class Timer {
 
-    private final static double UNSET_PERIOD = -1.0; // 0 is valid value, so can't use it here
-    private final static double SET_PERIOD   = -2.0; // token value for vsync timer
+    @Native private final static double UNSET_PERIOD = -1.0; // 0 is valid value, so can't use it here
+    @Native private final static double SET_PERIOD   = -2.0; // token value for vsync timer
 
     private final Runnable runnable;
     private long ptr;

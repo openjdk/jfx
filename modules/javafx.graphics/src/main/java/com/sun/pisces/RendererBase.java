@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 
 package com.sun.pisces;
+
+import java.lang.annotation.Native;
 
 public final class RendererBase {
 
@@ -54,20 +56,20 @@ public final class RendererBase {
      * of source and destination.
      * @see setCompositeRule(int), PiscesRenderer.setComposite(int, float)
      */
-    public static final int COMPOSITE_CLEAR    = 0;
-    public static final int COMPOSITE_SRC      = 1;
-    public static final int COMPOSITE_SRC_OVER = 2;
+    @Native public static final int COMPOSITE_CLEAR    = 0;
+    @Native public static final int COMPOSITE_SRC      = 1;
+    @Native public static final int COMPOSITE_SRC_OVER = 2;
 
     /**
      * Constant indicating 8/8/8/8 ARGB alpha-premultiplied pixel data stored
      * in a <code>int</code> array.
      */
-    public static final int TYPE_INT_ARGB_PRE = 1;
+    @Native public static final int TYPE_INT_ARGB_PRE = 1;
 
-    public static final int IMAGE_MODE_NORMAL = 1;
-    public static final int IMAGE_MODE_MULTIPLY = 2;
+    @Native public static final int IMAGE_MODE_NORMAL = 1;
+    @Native public static final int IMAGE_MODE_MULTIPLY = 2;
 
-    public static final int IMAGE_FRAC_EDGE_KEEP = 0;
-    public static final int IMAGE_FRAC_EDGE_PAD  = 1;
-    public static final int IMAGE_FRAC_EDGE_TRIM = 2;
+    @Native public static final int IMAGE_FRAC_EDGE_KEEP = 0;
+    @Native public static final int IMAGE_FRAC_EDGE_PAD  = 1;
+    @Native public static final int IMAGE_FRAC_EDGE_TRIM = 2;
 }

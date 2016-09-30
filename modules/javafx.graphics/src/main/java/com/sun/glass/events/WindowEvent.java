@@ -24,27 +24,29 @@
  */
 package com.sun.glass.events;
 
+import java.lang.annotation.Native;
+
 public class WindowEvent {
-    final static public int RESIZE                = 511;
-    final static public int MOVE                  = 512;
-    final static public int RESCALE               = 513;
+    @Native final static public int RESIZE                = 511;
+    @Native final static public int MOVE                  = 512;
+    @Native final static public int RESCALE               = 513;
 
-    final static public int CLOSE                 = 521;
-    final static public int DESTROY               = 522;
+    @Native final static public int CLOSE                 = 521;
+    @Native final static public int DESTROY               = 522;
 
-    final static public int MINIMIZE              = 531;
-    final static public int MAXIMIZE              = 532;
-    final static public int RESTORE               = 533;
+    @Native final static public int MINIMIZE              = 531;
+    @Native final static public int MAXIMIZE              = 532;
+    @Native final static public int RESTORE               = 533;
 
-    final static public int _FOCUS_MIN            = 541;
-    final static public int FOCUS_LOST            = 541;
-    final static public int FOCUS_GAINED          = 542;
-    final static public int FOCUS_GAINED_FORWARD  = 543;
-    final static public int FOCUS_GAINED_BACKWARD = 544;
-    final static public int _FOCUS_MAX            = 544;
+    @Native final static public int _FOCUS_MIN            = 541;
+    @Native final static public int FOCUS_LOST            = 541;
+    @Native final static public int FOCUS_GAINED          = 542;
+    @Native final static public int FOCUS_GAINED_FORWARD  = 543;
+    @Native final static public int FOCUS_GAINED_BACKWARD = 544;
+    @Native final static public int _FOCUS_MAX            = 544;
 
-    final static public int FOCUS_DISABLED        = 545;
-    final static public int FOCUS_UNGRAB          = 546;
+    @Native final static public int FOCUS_DISABLED        = 545;
+    @Native final static public int FOCUS_UNGRAB          = 546;
 
     public static String getEventName(final int eventType) {
         switch(eventType) {

@@ -486,33 +486,141 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     }
 
     /**
-     * If this region's snapToPixel property is true, returns a value rounded
-     * to the nearest pixel, else returns the same value.
+     * If {@code getSkinnable().isSnapToPixel()} is false, this method
+     * returns the same value, else it tries to return a value rounded to
+     * the nearest pixel, but since there is no indication if the value is
+     * a vertical or horizontal measurement then it may be snapped to the
+     * wrong pixel size metric on screens with different horizontal and
+     * vertical scales.
      * @param value the space value to be snapped
      * @return value rounded to nearest pixel
+     * @deprecated replaced by {@code snapSpaceX()} and {@code snapSpaceY()}
      */
+    @Deprecated
     protected double snapSpace(double value) {
-        return control.isSnapToPixel() ? Math.round(value) : value;
+        return control.snapSpaceX(value);
     }
 
     /**
-     * If this region's snapToPixel property is true, returns a value ceiled
-     * to the nearest pixel, else returns the same value.
+     * Convenience method for accessing the
+     * {@link Region#snapSpaceX(double) snapSpaceX()}
+     * method on the skinnable.
+     * It is equivalent to calling
+     * {@code getSkinnable().snapSpaceX(value)}.
+     * @param value the space value to be snapped
+     * @return value rounded to nearest pixel
+     * @see Region#snapSpaceX(double)
+     * @since 9
+     */
+    protected double snapSpaceX(double value) {
+        return control.snapSpaceX(value);
+    }
+
+    /**
+     * Convenience method for accessing the
+     * {@link Region#snapSpaceY(double) snapSpaceY()}
+     * method on the skinnable.
+     * It is equivalent to calling
+     * {@code getSkinnable().snapSpaceY(value)}.
+     * @param value the space value to be snapped
+     * @return value rounded to nearest pixel
+     * @see Region#snapSpaceY(double)
+     * @since 9
+     */
+    protected double snapSpaceY(double value) {
+        return control.snapSpaceY(value);
+    }
+
+    /**
+     * If {@code getSkinnable().isSnapToPixel()} is false, this method
+     * returns the same value, else it tries to return a value ceiled to
+     * the nearest pixel, but since there is no indication if the value is
+     * a vertical or horizontal measurement then it may be snapped to the
+     * wrong pixel size metric on screens with different horizontal and
+     * vertical scales.
      * @param value the size value to be snapped
      * @return value ceiled to nearest pixel
+     * @deprecated replaced by {@code snapSizeX()} and {@code snapSizeY()}
      */
+    @Deprecated
     protected double snapSize(double value) {
-        return control.isSnapToPixel() ? Math.ceil(value) : value;
+        return control.snapSizeX(value);
     }
 
     /**
-     * If this region's snapToPixel property is true, returns a value rounded
-     * to the nearest pixel, else returns the same value.
+     * Convenience method for accessing the
+     * {@link Region#snapSizeX(double) snapSizeX()}
+     * method on the skinnable.
+     * It is equivalent to calling
+     * {@code getSkinnable().snapSizeX(value)}.
+     * @param value the size value to be snapped
+     * @return value ceiled to nearest pixel
+     * @see Region#snapSizeX(double)
+     * @since 9
+     */
+    protected double snapSizeX(double value) {
+        return control.snapSizeX(value);
+    }
+
+    /**
+     * Convenience method for accessing the
+     * {@link Region#snapSizeY(double) snapSizeY()}
+     * method on the skinnable.
+     * It is equivalent to calling
+     * {@code getSkinnable().snapSizeY(value)}.
+     * @param value the size value to be snapped
+     * @return value ceiled to nearest pixel
+     * @see Region#snapSizeY(double)
+     * @since 9
+     */
+    protected double snapSizeY(double value) {
+        return control.snapSizeY(value);
+    }
+
+    /**
+     * If {@code getSkinnable().isSnapToPixel()} is false, this method
+     * returns the same value, else it tries to return a value rounded to
+     * the nearest pixel, but since there is no indication if the value is
+     * a vertical or horizontal measurement then it may be snapped to the
+     * wrong pixel size metric on screens with different horizontal and
+     * vertical scales.
      * @param value the position value to be snapped
      * @return value rounded to nearest pixel
+     * @deprecated replaced by {@code snapPositionX()} and {@code snapPositionY()}
      */
+    @Deprecated
     protected double snapPosition(double value) {
-        return control.isSnapToPixel() ? Math.round(value) : value;
+        return control.snapPositionX(value);
+    }
+
+    /**
+     * Convenience method for accessing the
+     * {@link Region#snapPositionX(double) snapPositionX()}
+     * method on the skinnable.
+     * It is equivalent to calling
+     * {@code getSkinnable().snapPositionX(value)}.
+     * @param value the position value to be snapped
+     * @return value rounded to nearest pixel
+     * @see Region#snapPositionX(double)
+     * @since 9
+     */
+    protected double snapPositionX(double value) {
+        return control.snapPositionX(value);
+    }
+
+    /**
+     * Convenience method for accessing the
+     * {@link Region#snapPositionY(double) snapPositionY()}
+     * method on the skinnable.
+     * It is equivalent to calling
+     * {@code getSkinnable().snapPositionY(value)}.
+     * @param value the position value to be snapped
+     * @return value rounded to nearest pixel
+     * @see Region#snapPositionY(double)
+     * @since 9
+     */
+    protected double snapPositionY(double value) {
+        return control.snapPositionY(value);
     }
 
     /**

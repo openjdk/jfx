@@ -116,7 +116,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
             // Place the secondary Text node at BOTTOM_RIGHT.
             double textX = x + w - rightLabelPadding()  - secondaryText.getLayoutBounds().getWidth();
             double textY = y + h - bottomLabelPadding() - secondaryText.getLayoutBounds().getHeight();
-            secondaryText.relocate(snapPosition(textX), snapPosition(textY));
+            secondaryText.relocate(snapPositionX(textX), snapPositionY(textY));
         }
     }
 
@@ -125,7 +125,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
                                                 double topInset, double rightInset,
                                                 double bottomInset, double leftInset) {
         double pref = super.computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
-        return snapSize(Math.max(pref, cellSize()));
+        return snapSizeX(Math.max(pref, cellSize()));
     }
 
     /** {@inheritDoc} */
@@ -133,7 +133,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
                                                  double topInset, double rightInset,
                                                  double bottomInset, double leftInset) {
         double pref = super.computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
-        return snapSize(Math.max(pref, cellSize()));
+        return snapSizeY(Math.max(pref, cellSize()));
     }
 
 

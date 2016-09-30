@@ -29,8 +29,6 @@
 #include "GlassWindow.h"
 
 #include "com_sun_glass_ui_win_WinMenuImpl.h"
-#include "com_sun_glass_ui_win_WinMenuDelegate.h"
-#include "com_sun_glass_ui_win_WinMenubarDelegate.h"
 
 static jclass jMenuClass = NULL;
 static jmethodID midNotifyCommand = NULL;

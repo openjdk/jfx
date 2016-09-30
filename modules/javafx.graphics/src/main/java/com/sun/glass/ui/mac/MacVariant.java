@@ -25,31 +25,32 @@
 
 package com.sun.glass.ui.mac;
 
+import java.lang.annotation.Native;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Arrays;
 import javafx.geometry.Bounds;
 
 final class MacVariant {
-    final static int NSArray_id = 1;
-    final static int NSArray_NSString = 2;
-    final static int NSArray_int = 3;
-    final static int NSArray_range = 4;
-    final static int NSAttributedString = 5; /* Uses string for the text and variantArray for the styles */
-    final static int NSData = 6;
-    final static int NSDate = 7;
-    final static int NSDictionary = 8; /* Uses longArray for keys (NSString) and variantArray for values */
-    final static int NSNumber_Boolean = 9;
-    final static int NSNumber_Int = 10;
-    final static int NSNumber_Float = 11;
-    final static int NSNumber_Double = 12;
-    final static int NSString = 13;
-    final static int NSURL = 14;
-    final static int NSValue_point = 15;
-    final static int NSValue_size = 16;
-    final static int NSValue_rectangle = 17;
-    final static int NSValue_range = 18;
-    final static int NSObject = 19; /* id */
+    @Native final static int NSArray_id = 1;
+    @Native final static int NSArray_NSString = 2;
+    @Native final static int NSArray_int = 3;
+    @Native final static int NSArray_range = 4;
+    @Native final static int NSAttributedString = 5; /* Uses string for the text and variantArray for the styles */
+    @Native final static int NSData = 6;
+    @Native final static int NSDate = 7;
+    @Native final static int NSDictionary = 8; /* Uses longArray for keys (NSString) and variantArray for values */
+    @Native final static int NSNumber_Boolean = 9;
+    @Native final static int NSNumber_Int = 10;
+    @Native final static int NSNumber_Float = 11;
+    @Native final static int NSNumber_Double = 12;
+    @Native final static int NSString = 13;
+    @Native final static int NSURL = 14;
+    @Native final static int NSValue_point = 15;
+    @Native final static int NSValue_size = 16;
+    @Native final static int NSValue_rectangle = 17;
+    @Native final static int NSValue_range = 18;
+    @Native final static int NSObject = 19; /* id */
 
     int type;
     long[] longArray;

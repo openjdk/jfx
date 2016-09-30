@@ -24,7 +24,6 @@
  */
 
 #import "common.h"
-#import "com_sun_glass_ui_Application.h"
 #import "com_sun_glass_ui_mac_MacApplication.h"
 #import "com_sun_glass_events_KeyEvent.h"
 

@@ -24,6 +24,7 @@
  */
 package com.sun.glass.ui;
 
+import java.lang.annotation.Native;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -51,8 +52,8 @@ public abstract class Pixels {
      * when passing image data as ints.
      */
     public static class Format {
-        public static final int BYTE_BGRA_PRE = 1;
-        public static final int BYTE_ARGB = 2;
+        @Native public static final int BYTE_BGRA_PRE = 1;
+        @Native public static final int BYTE_ARGB = 2;
     }
 
     public static int getNativeFormat() {

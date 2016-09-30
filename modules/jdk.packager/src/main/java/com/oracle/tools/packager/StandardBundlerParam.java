@@ -932,6 +932,13 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
         if (jdkModulePath != null && Files.exists(jdkModulePath)) {
             result.add(jdkModulePath);
         }
+        else {
+            jdkModulePath = Paths.get(System.getProperty("java.home"), "../images/jmods").toAbsolutePath();
+
+            if (jdkModulePath != null && Files.exists(jdkModulePath)) {
+                result.add(jdkModulePath);
+            }
+        }
 
         return result;
     }

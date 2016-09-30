@@ -28,7 +28,6 @@
 #import <OpenGL/CGLTypes.h>
 
 #import "../macosx-window-system.h"
-#import "com_sun_prism_es2_GLPixelFormat.h"
 #import "com_sun_prism_es2_GLPixelFormat_Attributes.h"
 
 void *createPixelFormat(jint *ivalues) {

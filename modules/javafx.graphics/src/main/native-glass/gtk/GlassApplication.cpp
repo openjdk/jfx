@@ -31,7 +31,6 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <com_sun_glass_ui_Application.h>
 #include <com_sun_glass_ui_gtk_GtkApplication.h>
 #include <com_sun_glass_events_WindowEvent.h>
 #include <com_sun_glass_events_MouseEvent.h>

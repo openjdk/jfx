@@ -54,6 +54,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -1761,7 +1762,23 @@ public final class WebPage {
                 log.warning("beginPrinting() called for a disposed web page.");
                 return 0;
             }
-            return twkBeginPrinting(getPage(), width, height);
+            AtomicReference<Integer> retVal = new AtomicReference<>(0);
+            final CountDownLatch l = new CountDownLatch(1);
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                try {
+                    int nPages = twkBeginPrinting(getPage(), width, height);
+                    retVal.set(nPages);
+                } finally {
+                    l.countDown();
+                }
+            });
+
+            try {
+                l.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            return retVal.get();
         } finally {
             unlockPage();
         }
@@ -1774,7 +1791,20 @@ public final class WebPage {
                 log.warning("endPrinting() called for a disposed web page.");
                 return;
             }
-            twkEndPrinting(getPage());
+            final CountDownLatch l = new CountDownLatch(1);
+            Invoker.getInvoker().invokeOnEventThread(() -> {
+                try {
+                    twkEndPrinting(getPage());
+                } finally {
+                    l.countDown();
+                }
+            });
+
+            try {
+                l.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         } finally {
             unlockPage();
         }

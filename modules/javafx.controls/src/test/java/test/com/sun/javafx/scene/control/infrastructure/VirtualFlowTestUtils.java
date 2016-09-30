@@ -403,6 +403,9 @@ public class VirtualFlowTestUtils {
     private static TableColumnHeader findColumnHeader(NestedTableColumnHeader nestedHeader, TableColumnBase<?,?> column) {
         for (TableColumnHeader header : nestedHeader.getColumnHeaders()) {
             if (header instanceof NestedTableColumnHeader) {
+                if (column.equals(header.getTableColumn())) {
+                    return header;
+                }
                 TableColumnHeader result = findColumnHeader((NestedTableColumnHeader)header, column);
                 if (result != null) {
                     return result;

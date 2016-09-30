@@ -28,8 +28,6 @@
 #include "GlassScreen.h"
 #include "GlassApplication.h"
 
-#include "com_sun_glass_ui_Screen.h"
-
 extern BOOL CALLBACK CountMonitorsCallback(HMONITOR hMon, HDC hDC, LPRECT rRect, LPARAM lP);
 extern BOOL CALLBACK CollectMonitorsCallback(HMONITOR hMonitor, HDC hDC, LPRECT rRect, LPARAM lP);
 

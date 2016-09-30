@@ -392,33 +392,33 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
     /** {@inheritDoc} */
     @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double navigationWidth = navigation.isVisible() ? snapSize(navigation.minWidth(height)) : 0;
+        double navigationWidth = navigation.isVisible() ? snapSizeX(navigation.minWidth(height)) : 0;
         return leftInset + Math.max(currentStackPane.minWidth(height), navigationWidth) + rightInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double navigationHeight = navigation.isVisible() ? snapSize(navigation.minHeight(width)) : 0;
+        double navigationHeight = navigation.isVisible() ? snapSizeY(navigation.minHeight(width)) : 0;
         return topInset + currentStackPane.minHeight(width) + navigationHeight + bottomInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double navigationWidth = navigation.isVisible() ? snapSize(navigation.prefWidth(height)) : 0;
+        double navigationWidth = navigation.isVisible() ? snapSizeX(navigation.prefWidth(height)) : 0;
         return leftInset + Math.max(currentStackPane.prefWidth(height), navigationWidth) + rightInset;
     }
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(width)) : 0;
+        double navigationHeight = navigation.isVisible() ? snapSizeY(navigation.prefHeight(width)) : 0;
         return topInset + currentStackPane.prefHeight(width) + navigationHeight + bottomInset;
     }
 
     /** {@inheritDoc} */
     @Override protected void layoutChildren(final double x, final double y,
                                             final double w, final double h) {
-        double navigationHeight = navigation.isVisible() ? snapSize(navigation.prefHeight(-1)) : 0;
-        double stackPaneHeight = snapSize(h - navigationHeight);
+        double navigationHeight = navigation.isVisible() ? snapSizeY(navigation.prefHeight(-1)) : 0;
+        double stackPaneHeight = snapSizeY(h - navigationHeight);
 
         layoutInArea(currentStackPane, x, y, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);
         layoutInArea(nextStackPane, x, y, w, stackPaneHeight, 0, HPos.CENTER, VPos.CENTER);

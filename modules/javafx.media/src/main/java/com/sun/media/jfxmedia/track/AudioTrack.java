@@ -25,6 +25,7 @@
 
 package com.sun.media.jfxmedia.track;
 
+import java.lang.annotation.Native;
 import java.util.Locale;
 import com.sun.media.jfxmedia.Media;
 
@@ -38,37 +39,37 @@ public class AudioTrack extends Track {
     /**
      * Channel mask bit indicating the absence of any channel
      */
-    public static final int UNKNOWN         = 0;
+    @Native public static final int UNKNOWN         = 0;
 
     /**
      * Channel mask bit indicating the presence of a front left channel.
      */
-    public static final int FRONT_LEFT      = 0x01;
+    @Native public static final int FRONT_LEFT      = 0x01;
 
     /**
      * Channel mask bit indicating the presence of a front right channel.
      */
-    public static final int FRONT_RIGHT     = 0x02;
+    @Native public static final int FRONT_RIGHT     = 0x02;
 
     /**
      * Channel mask bit indicating the presence of a front center channel.
      */
-    public static final int FRONT_CENTER    = 0x04;
+    @Native public static final int FRONT_CENTER    = 0x04;
 
     /**
      * Channel mask bit indicating the presence of a rear left channel.
      */
-    public static final int REAR_LEFT       = 0x08;
+    @Native public static final int REAR_LEFT       = 0x08;
 
     /**
      * Channel mask bit indicating the presence of a rear right channel.
      */
-    public static final int REAR_RIGHT      = 0x10;
+    @Native public static final int REAR_RIGHT      = 0x10;
 
     /**
      * Channel mask bit indicating the presence of a rear center channel.
      */
-    public static final int REAR_CENTER     = 0x20;
+    @Native public static final int REAR_CENTER     = 0x20;
 
     private int    numChannels;
     private int    channelMask;
