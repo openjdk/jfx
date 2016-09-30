@@ -67,6 +67,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      *                                                                         *
      **************************************************************************/
 
+    static final String DEFAULT_STYLE_CLASS = "nested-column-header";
+
     private static final int DRAG_RECT_WIDTH = 4;
 
     private static final String TABLE_COLUMN_KEY = "TableColumn";
@@ -118,7 +120,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     public NestedTableColumnHeader(final TableViewSkinBase skin, final TableColumnBase tc) {
         super(skin, tc);
 
-        getStyleClass().setAll("nested-column-header");
         setFocusTraversable(false);
 
         // init UI
@@ -385,6 +386,11 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      * Private Implementation                                                  *
      *                                                                         *
      **************************************************************************/
+
+    @Override void initStyleClasses() {
+        getStyleClass().setAll(DEFAULT_STYLE_CLASS);
+        installTableColumnStyleClassListener();
+    }
 
     @Override void setTableHeaderRow(TableHeaderRow header) {
         super.setTableHeaderRow(header);

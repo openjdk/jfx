@@ -39,6 +39,7 @@ import com.sun.javafx.scene.control.SelectedCellsMap;
 import com.sun.javafx.scene.control.TableColumnBaseHelper;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import javafx.beans.InvalidationListener;
+import javafx.scene.Node;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
@@ -5388,5 +5389,41 @@ public class TableViewTest {
         });
         TableColumn last = new TableColumn("Last Name");
         table.getColumns().add(0, last);
+    }
+
+    @Test public void test_8166025() {
+        TableColumn standard = new TableColumn("Standard");
+
+        TableColumn standardWithStyleClass = new TableColumn("Standard w/ style class");
+        standardWithStyleClass.getStyleClass().add("custom-style-class");
+
+        TableColumn parent = new TableColumn("Parent column");
+        parent.getStyleClass().add("parent");
+
+        TableColumn child = new TableColumn("Child column");
+        child.getStyleClass().add("child");
+
+        parent.getColumns().add(child);
+        table.getColumns().setAll(standard, standardWithStyleClass, parent);
+        StageLoader sl = new StageLoader(table);
+
+        TableColumnHeader standardHeader = VirtualFlowTestUtils.getTableColumnHeader(table, standard);
+        TableColumnHeader standardWithStyleClassHeader = VirtualFlowTestUtils.getTableColumnHeader(table, standardWithStyleClass);
+        TableColumnHeader parentHeader = VirtualFlowTestUtils.getTableColumnHeader(table, parent);
+        TableColumnHeader childHeader = VirtualFlowTestUtils.getTableColumnHeader(table, child);
+
+        // for standard header, we expect [column-header table-column]
+        assertArrayEquals(new String[] {"column-header", "table-column"}, standardHeader.getStyleClass().toArray());
+
+        // for standard header, we expect [column-header table-column custom-style-class]
+        assertArrayEquals(new String[] {"column-header", "table-column", "custom-style-class"}, standardWithStyleClassHeader.getStyleClass().toArray());
+
+        // for the parent header, we expect [nested-column-header table-column parent]
+        assertArrayEquals(new String[] {"nested-column-header", "table-column", "parent"}, parentHeader.getStyleClass().toArray());
+
+        // for the child header, we expect [column-header table-column child]
+        assertArrayEquals(new String[] {"column-header", "table-column", "child"}, childHeader.getStyleClass().toArray());
+
+        sl.dispose();
     }
 }
