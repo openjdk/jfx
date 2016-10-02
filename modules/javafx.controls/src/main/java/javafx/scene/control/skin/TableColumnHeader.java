@@ -74,7 +74,8 @@ import static com.sun.javafx.scene.control.TableColumnSortTypeWrapper.setSortTyp
 
 
 /**
- * Region responsible for painting a single column header.
+ * Region responsible for painting a single column header. A subcomponent used by
+ * subclasses of {@link TableViewSkinBase}.
  *
  * @since 9
  */
@@ -103,7 +104,6 @@ public class TableColumnHeader extends Region {
     private boolean autoSizeComplete = false;
 
     private double dragOffset;
-    private final TableViewSkinBase<?,?,?,?,TableColumnBase<?,?>> skin;
     private NestedTableColumnHeader nestedColumnHeader;
     private TableHeaderRow tableHeaderRow;
     private NestedTableColumnHeader parentHeader;
@@ -131,7 +131,7 @@ public class TableColumnHeader extends Region {
     // the line drawn in the table when a user presses and moves a column header
     // to indicate where the column will be dropped. This is provided by the
     // table skin, but manipulated by the header
-    final Region columnReorderLine;
+    Region columnReorderLine;
 
 
 
@@ -145,29 +145,18 @@ public class TableColumnHeader extends Region {
      * Creates a new TableColumnHeader instance to visually represent the given
      * {@link TableColumnBase} instance.
      *
-     * @param skin The skin used by the UI control.
      * @param tc The table column to be visually represented by this instance.
      */
-    public TableColumnHeader(final TableViewSkinBase skin, final TableColumnBase tc) {
-        this.skin = skin;
+    public TableColumnHeader(final TableColumnBase tc) {
         setTableColumn(tc);
-        this.columnReorderLine = skin.getColumnReorderLine();
-
         setFocusTraversable(false);
 
-        updateColumnIndex();
         initStyleClasses();
         initUI();
 
         // change listener for multiple properties
         changeListenerHandler = new LambdaMultiplePropertyChangeListenerHandler();
         changeListenerHandler.registerChangeListener(sceneProperty(), e -> updateScene());
-
-        if (getTableColumn() != null) {
-            updateSortPosition();
-            TableSkinUtils.getSortOrder(skin).addListener(weakSortOrderListener);
-            TableSkinUtils.getVisibleLeafColumns(skin).addListener(weakVisibleLeafColumnsListener);
-        }
 
         if (getTableColumn() != null) {
             changeListenerHandler.registerChangeListener(tc.idProperty(), e -> setId(tc.getId()));
@@ -183,7 +172,7 @@ public class TableColumnHeader extends Region {
             changeListenerHandler.registerChangeListener(tc.sortableProperty(), e -> {
                 // we need to notify all headers that a sortable state has changed,
                 // in case the sort grid in other columns needs to be updated.
-                if (TableSkinUtils.getSortOrder(skin).contains(getTableColumn())) {
+                if (TableSkinUtils.getSortOrder(getTableSkin()).contains(getTableColumn())) {
                     NestedTableColumnHeader root = getTableHeaderRow().getRootHeader();
                     updateAllHeaders(root);
                 }
@@ -251,7 +240,7 @@ public class TableColumnHeader extends Region {
 
         // pass focus to the table, so that the user immediately sees
         // the focus rectangle around the table control.
-        header.getTableViewSkin().getSkinnable().requestFocus();
+        header.getTableSkin().getSkinnable().requestFocus();
 
         if (me.isPrimaryButtonDown() && header.isColumnReorderingEnabled()) {
             header.columnReorderingStarted(me.getX());
@@ -463,15 +452,34 @@ public class TableColumnHeader extends Region {
         }
     }
 
-    TableViewSkinBase<?,?,?,?,TableColumnBase<?,?>> getTableViewSkin() {
-        return skin;
-    }
-
     NestedTableColumnHeader getNestedColumnHeader() { return nestedColumnHeader; }
     void setNestedColumnHeader(NestedTableColumnHeader nch) { nestedColumnHeader = nch; }
 
     TableHeaderRow getTableHeaderRow() { return tableHeaderRow; }
-    void setTableHeaderRow(TableHeaderRow thr) { tableHeaderRow = thr; }
+    void setTableHeaderRow(TableHeaderRow thr) {
+        tableHeaderRow = thr;
+        updateTableSkin();
+    }
+
+    private void updateTableSkin() {
+        // when we get the table header row, we are also given the skin,
+        // so this is the time to hook up listeners, etc.
+        TableViewSkinBase<?,?,?,?,?> tableSkin = getTableSkin();
+        if (tableSkin == null) return;
+
+        updateColumnIndex();
+        this.columnReorderLine = tableSkin.getColumnReorderLine();
+
+        if (getTableColumn() != null) {
+            updateSortPosition();
+            TableSkinUtils.getSortOrder(tableSkin).addListener(weakSortOrderListener);
+            TableSkinUtils.getVisibleLeafColumns(tableSkin).addListener(weakVisibleLeafColumnsListener);
+        }
+    }
+
+    TableViewSkinBase<?,?,?,?,?> getTableSkin() {
+        return tableHeaderRow == null ? null : tableHeaderRow.tableSkin;
+    }
 
     NestedTableColumnHeader getParentHeader() { return parentHeader; }
     void setParentHeader(NestedTableColumnHeader ph) { parentHeader = ph; }
@@ -511,10 +519,10 @@ public class TableColumnHeader extends Region {
     }
 
     void dispose() {
-        TableViewSkinBase skin = getTableViewSkin();
-        if (skin != null) {
-            TableSkinUtils.getVisibleLeafColumns(skin).removeListener(weakVisibleLeafColumnsListener);
-            TableSkinUtils.getSortOrder(skin).removeListener(weakSortOrderListener);
+        TableViewSkinBase tableSkin = getTableSkin();
+        if (tableSkin != null) {
+            TableSkinUtils.getVisibleLeafColumns(tableSkin).removeListener(weakVisibleLeafColumnsListener);
+            TableSkinUtils.getSortOrder(tableSkin).removeListener(weakSortOrderListener);
         }
 
         changeListenerHandler.dispose();
@@ -529,7 +537,7 @@ public class TableColumnHeader extends Region {
 
     private boolean isColumnReorderingEnabled() {
         // we only allow for column reordering if there are more than one column,
-        return !Properties.IS_TOUCH_SUPPORTED && TableSkinUtils.getVisibleLeafColumns(getTableViewSkin()).size() > 1;
+        return !Properties.IS_TOUCH_SUPPORTED && TableSkinUtils.getVisibleLeafColumns(getTableSkin()).size() > 1;
     }
 
     private void initUI() {
@@ -562,7 +570,7 @@ public class TableColumnHeader extends Region {
 
         // if the prefWidth has been set, we do _not_ autosize columns
         if (prefWidth == DEFAULT_COLUMN_WIDTH) {
-            TableSkinUtils.resizeColumnToFitContent(getTableViewSkin(), column, cellsToMeasure);
+            TableSkinUtils.resizeColumnToFitContent(getTableSkin(), column, cellsToMeasure);
 //            getTableViewSkin().resizeColumnToFitContent(column, cellsToMeasure);
         }
     }
@@ -591,7 +599,7 @@ public class TableColumnHeader extends Region {
         }
 
         // RT-28016: if the tablecolumn is not a visible leaf column, we should ignore this
-        int visibleLeafIndex = TableSkinUtils.getVisibleLeafIndex(skin,getTableColumn());
+        int visibleLeafIndex = TableSkinUtils.getVisibleLeafIndex(getTableSkin(), getTableColumn());
         if (visibleLeafIndex == -1) return;
 
         final int sortColumnCount = getVisibleSortOrderColumnCount();
@@ -747,7 +755,7 @@ public class TableColumnHeader extends Region {
 
     private ObservableList<TableColumnBase<?,?>> getColumns(TableColumnBase column) {
         return column.getParentColumn() == null ?
-                TableSkinUtils.getColumns(getTableViewSkin()) :
+                TableSkinUtils.getColumns(getTableSkin()) :
                 column.getParentColumn().getColumns();
     }
 
@@ -770,15 +778,15 @@ public class TableColumnHeader extends Region {
 
     private void updateColumnIndex() {
 //        TableView tv = getTableView();
-        TableViewSkinBase skin = getTableViewSkin();
         TableColumnBase tc = getTableColumn();
-        columnIndex = skin == null || tc == null ? -1 :TableSkinUtils.getVisibleLeafIndex(skin,tc);
+        TableViewSkinBase tableSkin = getTableSkin();
+        columnIndex = tableSkin == null || tc == null ? -1 :TableSkinUtils.getVisibleLeafIndex(tableSkin,tc);
 
         // update the pseudo class state regarding whether this is the last
         // visible cell (i.e. the right-most).
         isLastVisibleColumn = getTableColumn() != null &&
                 columnIndex != -1 &&
-                columnIndex == TableSkinUtils.getVisibleLeafColumns(skin).size() - 1;
+                columnIndex == TableSkinUtils.getVisibleLeafColumns(tableSkin).size() - 1;
         pseudoClassStateChanged(PSEUDO_CLASS_LAST_VISIBLE, isLastVisibleColumn);
     }
 
@@ -791,7 +799,7 @@ public class TableColumnHeader extends Region {
 //        final int sortPos = getTable().getSortOrder().indexOf(column);
 //        final boolean isSortColumn = sortPos != -1;
 
-        final ObservableList<TableColumnBase<?,?>> sortOrder = TableSkinUtils.getSortOrder(skin);
+        final ObservableList<TableColumnBase<?,?>> sortOrder = TableSkinUtils.getSortOrder(getTableSkin());
 
         // addColumn is true e.g. when the user is holding down Shift
         if (addColumn) {
@@ -871,7 +879,7 @@ public class TableColumnHeader extends Region {
     }
 
     private List<TableColumnBase> getVisibleSortOrderColumns() {
-        final ObservableList<TableColumnBase<?,?>> sortOrder = TableSkinUtils.getSortOrder(skin);
+        final ObservableList<TableColumnBase<?,?>> sortOrder = TableSkinUtils.getSortOrder(getTableSkin());
 
         List<TableColumnBase> visibleSortOrderColumns = new ArrayList<>();
         for (int i = 0; i < sortOrder.size(); i++) {
@@ -934,7 +942,7 @@ public class TableColumnHeader extends Region {
         final double x = getParentHeader().sceneToLocal(sceneX, sceneY).getX();
 
         // calculate where the ghost column header should be
-        double dragX = getTableViewSkin().getSkinnable().sceneToLocal(sceneX, sceneY).getX() - dragOffset;
+        double dragX = getTableSkin().getSkinnable().sceneToLocal(sceneX, sceneY).getX() - dragOffset;
         getTableHeaderRow().setDragHeaderX(dragX);
 
         double startX = 0;
@@ -982,7 +990,7 @@ public class TableColumnHeader extends Region {
         double lineX = getTableHeaderRow().sceneToLocal(hoverHeader.localToScene(hoverHeader.getBoundsInLocal())).getMinX();
         lineX = lineX + ((beforeMidPoint) ? (0) : (hoverHeader.getWidth()));
 
-        if (lineX >= -0.5 && lineX <= getTableViewSkin().getSkinnable().getWidth()) {
+        if (lineX >= -0.5 && lineX <= getTableSkin().getSkinnable().getWidth()) {
             columnReorderLine.setTranslateX(lineX);
 
             // then if this is the first event, we set the property to true

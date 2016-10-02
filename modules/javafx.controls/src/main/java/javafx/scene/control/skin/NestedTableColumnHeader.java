@@ -114,11 +114,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      * Creates a new NestedTableColumnHeader instance to visually represent the given
      * {@link TableColumnBase} instance.
      *
-     * @param skin The skin used by the UI control.
      * @param tc The table column to be visually represented by this instance.
      */
-    public NestedTableColumnHeader(final TableViewSkinBase skin, final TableColumnBase tc) {
-        super(skin, tc);
+    public NestedTableColumnHeader(final TableColumnBase tc) {
+        super(tc);
 
         setFocusTraversable(false);
 
@@ -132,8 +131,6 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             changeListenerHandler.registerChangeListener(getTableColumn().textProperty(), e ->
                     label.setVisible(getTableColumn().getText() != null && ! getTableColumn().getText().isEmpty()));
         }
-
-        changeListenerHandler.registerChangeListener(TableSkinUtils.columnResizePolicyProperty(skin), e -> updateContent());
     }
 
 
@@ -168,7 +165,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         if (me.getClickCount() == 2 && me.isPrimaryButtonDown()) {
             // the user wants to resize the column such that its
             // width is equal to the widest element in the column
-            TableSkinUtils.resizeColumnToFitContent(header.getTableViewSkin(), column, -1);
+            TableSkinUtils.resizeColumnToFitContent(header.getTableSkin(), column, -1);
         } else {
             // rather than refer to the rect variable, we just grab
             // it from the source to prevent a small memory leak.
@@ -375,8 +372,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      */
     protected TableColumnHeader createTableColumnHeader(TableColumnBase col) {
         return col == null || col.getColumns().isEmpty() || col == getTableColumn() ?
-                new TableColumnHeader(getTableViewSkin(), col) :
-                new NestedTableColumnHeader(getTableViewSkin(), col);
+                new TableColumnHeader(col) :
+                new NestedTableColumnHeader(col);
     }
 
 
@@ -394,6 +391,11 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     @Override void setTableHeaderRow(TableHeaderRow header) {
         super.setTableHeaderRow(header);
+
+        // it's only now that a skin might be available
+        if (getTableSkin() != null) {
+            changeListenerHandler.registerChangeListener(TableSkinUtils.columnResizePolicyProperty(getTableSkin()), e -> updateContent());
+        }
 
         label.setTableHeaderRow(header);
 
@@ -426,8 +428,8 @@ public class NestedTableColumnHeader extends TableColumnHeader {
 
     void updateTableColumnHeaders() {
         // watching for changes to the view columns in either table or tableColumn.
-        if (getTableColumn() == null && getTableViewSkin() != null) {
-            setColumns(TableSkinUtils.getColumns(getTableViewSkin()));
+        if (getTableColumn() == null && getTableSkin() != null) {
+            setColumns(TableSkinUtils.getColumns(getTableSkin()));
         } else if (getTableColumn() != null) {
             setColumns(getTableColumn().getColumns());
         }
@@ -584,20 +586,19 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             return;
         }
 
-        final TableViewSkinBase<?,?,?,?,?> skin = getTableViewSkin();
-
         boolean isConstrainedResize = false;
-        Callback<ResizeFeaturesBase,Boolean> columnResizePolicy = TableSkinUtils.columnResizePolicyProperty(skin).get();
+        TableViewSkinBase tableSkin = getTableSkin();
+        Callback<ResizeFeaturesBase,Boolean> columnResizePolicy = TableSkinUtils.columnResizePolicyProperty(tableSkin).get();
         if (columnResizePolicy != null) {
             isConstrainedResize =
-                    skin instanceof TableViewSkin ? TableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
-                    skin instanceof TreeTableViewSkin ? TreeTableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
+                    tableSkin instanceof TableViewSkin ? TableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
+                    tableSkin instanceof TreeTableViewSkin ? TreeTableView.CONSTRAINED_RESIZE_POLICY.equals(columnResizePolicy) :
                     false;
         }
 
         // RT-32547 - don't show resize cursor when in constrained resize mode
         // and there is only one column
-        if (isConstrainedResize && TableSkinUtils.getVisibleLeafColumns(skin).size() == 1) {
+        if (isConstrainedResize && TableSkinUtils.getVisibleLeafColumns(tableSkin).size() == 1) {
             return;
         }
 
@@ -664,7 +665,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             draggedX = -draggedX;
         }
         double delta = draggedX - lastX;
-        boolean allowed = TableSkinUtils.resizeColumn(getTableViewSkin(), col, delta);
+        boolean allowed = TableSkinUtils.resizeColumn(getTableSkin(), col, delta);
         if (allowed) {
             lastX = draggedX;
         }

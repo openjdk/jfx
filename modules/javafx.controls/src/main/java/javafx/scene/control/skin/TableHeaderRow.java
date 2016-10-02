@@ -85,7 +85,7 @@ public class TableHeaderRow extends StackPane {
             ControlResources.getString("TableView.nestedColumnControlMenuSeparator");
 
     private final VirtualFlow flow;
-    private final TableViewSkinBase<?,?,?,?,?> tableSkin;
+    final TableViewSkinBase<?,?,?,?,?> tableSkin;
     private Map<TableColumnBase, CheckMenuItem> columnMenuItems = new HashMap<TableColumnBase, CheckMenuItem>();
     private double scrollX;
     private double tableWidth;
@@ -413,7 +413,7 @@ public class TableHeaderRow extends StackPane {
      * @return A new NestedTableColumnHeader instance.
      */
     protected NestedTableColumnHeader createRootHeader() {
-        return new NestedTableColumnHeader(tableSkin, null);
+        return new NestedTableColumnHeader(null);
     }
 
 
