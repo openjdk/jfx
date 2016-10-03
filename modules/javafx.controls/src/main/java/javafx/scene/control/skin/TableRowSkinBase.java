@@ -567,12 +567,9 @@ public abstract class TableRowSkinBase<T,
     /** {@inheritDoc} */
     @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
         double prefWidth = 0.0;
-
-        final List<? extends TableColumnBase/*<T,?>*/> visibleLeafColumns = getVisibleLeafColumns();
-        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-            prefWidth += visibleLeafColumns.get(i).getWidth();
+        for (R cell : cells) {
+            prefWidth += cell.prefWidth(height);
         }
-
         return prefWidth;
     }
 
