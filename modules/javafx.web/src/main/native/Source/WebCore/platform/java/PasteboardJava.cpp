@@ -25,7 +25,6 @@
 #include "Attr.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
-#include "com_sun_webkit_WCPasteboard.h"
 
 #include "wtf/Ref.h"
 

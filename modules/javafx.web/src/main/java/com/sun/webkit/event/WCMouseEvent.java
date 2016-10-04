@@ -25,20 +25,22 @@
 
 package com.sun.webkit.event;
 
+import java.lang.annotation.Native;
+
 public final class WCMouseEvent {
 
     // id
-    public final static int MOUSE_PRESSED = 0;
-    public final static int MOUSE_RELEASED = 1;
-    public final static int MOUSE_MOVED = 2;
-    public final static int MOUSE_DRAGGED = 3;
-    public final static int MOUSE_WHEEL = 4;
+    @Native public final static int MOUSE_PRESSED = 0;
+    @Native public final static int MOUSE_RELEASED = 1;
+    @Native public final static int MOUSE_MOVED = 2;
+    @Native public final static int MOUSE_DRAGGED = 3;
+    @Native public final static int MOUSE_WHEEL = 4;
 
     // button
-    public final static int NOBUTTON = 0;
-    public final static int BUTTON1 = 1;
-    public final static int BUTTON2 = 2;
-    public final static int BUTTON3 = 4;
+    @Native public final static int NOBUTTON = 0;
+    @Native public final static int BUTTON1 = 1;
+    @Native public final static int BUTTON2 = 2;
+    @Native public final static int BUTTON3 = 4;
 
     private final int id;
     private final long when;

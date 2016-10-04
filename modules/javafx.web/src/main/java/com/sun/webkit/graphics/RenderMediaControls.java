@@ -25,6 +25,7 @@
 
 package com.sun.webkit.graphics;
 
+import java.lang.annotation.Native;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,27 +33,27 @@ final class RenderMediaControls {
     /**
      * Media control part constants (types for the paintControl method)
      */
-    private static final int PLAY_BUTTON                     = 1;
-    private static final int PAUSE_BUTTON                    = 2;
-    private static final int DISABLED_PLAY_BUTTON            = 3;
+    @Native private static final int PLAY_BUTTON                     = 1;
+    @Native private static final int PAUSE_BUTTON                    = 2;
+    @Native private static final int DISABLED_PLAY_BUTTON            = 3;
 
-    private static final int MUTE_BUTTON                     = 4;
-    private static final int UNMUTE_BUTTON                   = 5;
-    private static final int DISABLED_MUTE_BUTTON            = 6;
+    @Native private static final int MUTE_BUTTON                     = 4;
+    @Native private static final int UNMUTE_BUTTON                   = 5;
+    @Native private static final int DISABLED_MUTE_BUTTON            = 6;
 
-    //private static final int FULLSCREEN_BUTTON               = 7;
+    //@Native private static final int FULLSCREEN_BUTTON               = 7;
 
     // background for control panel (except buttons)
-    //private static final int BACKGROUND                      = 8;
+    //@Native private static final int BACKGROUND                      = 8;
 
     // Time slider track is rendered by paintTimeSliderTrack
-    private static final int TIME_SLIDER_TRACK               = 9;
-    private static final int TIME_SLIDER_THUMB               = 10;
+    @Native private static final int TIME_SLIDER_TRACK               = 9;
+    @Native private static final int TIME_SLIDER_THUMB               = 10;
 
-    private static final int VOLUME_CONTAINER                = 11;
+    @Native private static final int VOLUME_CONTAINER                = 11;
     // Volume slider track is rendered by paintVolumeTrack
-    private static final int VOLUME_TRACK                    = 12;
-    private static final int VOLUME_THUMB                    = 13;
+    @Native private static final int VOLUME_TRACK                    = 12;
+    @Native private static final int VOLUME_THUMB                    = 13;
 
     //private static final int CURRENT_TIME                    = 14;
     //private static final int REMAINING_TIME                  = 15;

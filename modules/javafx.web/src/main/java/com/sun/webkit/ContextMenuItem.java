@@ -25,10 +25,12 @@
 
 package com.sun.webkit;
 
+import java.lang.annotation.Native;
+
 public final class ContextMenuItem {
-    public static final int ACTION_TYPE = 0;
-    public static final int SEPARATOR_TYPE = 1;
-    public static final int SUBMENU_TYPE = 2;
+    @Native public static final int ACTION_TYPE = 0;
+    @Native public static final int SEPARATOR_TYPE = 1;
+    @Native public static final int SUBMENU_TYPE = 2;
 
     private String title;
     private int action;

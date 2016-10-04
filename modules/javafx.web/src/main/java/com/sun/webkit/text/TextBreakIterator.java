@@ -25,6 +25,7 @@
 
 package com.sun.webkit.text;
 
+import java.lang.annotation.Native;
 import java.text.BreakIterator;
 import java.text.CharacterIterator;
 import java.util.HashMap;
@@ -34,21 +35,21 @@ import java.util.Map;
 final class TextBreakIterator {
 
     // Break iterator types
-    static final int CHARACTER_ITERATOR = 0;
-    static final int WORD_ITERATOR = 1;
-    static final int LINE_ITERATOR = 2;
-    static final int SENTENCE_ITERATOR = 3;
+    @Native static final int CHARACTER_ITERATOR = 0;
+    @Native static final int WORD_ITERATOR = 1;
+    @Native static final int LINE_ITERATOR = 2;
+    @Native static final int SENTENCE_ITERATOR = 3;
 
     // Break iterator methods
-    static final int TEXT_BREAK_FIRST = 0;
-    static final int TEXT_BREAK_LAST = 1;
-    static final int TEXT_BREAK_NEXT = 2;
-    static final int TEXT_BREAK_PREVIOUS = 3;
-    static final int TEXT_BREAK_CURRENT = 4;
-    static final int TEXT_BREAK_PRECEDING = 5;
-    static final int TEXT_BREAK_FOLLOWING = 6;
-    static final int IS_TEXT_BREAK = 7;
-    static final int IS_WORD_TEXT_BREAK = 8;
+    @Native static final int TEXT_BREAK_FIRST = 0;
+    @Native static final int TEXT_BREAK_LAST = 1;
+    @Native static final int TEXT_BREAK_NEXT = 2;
+    @Native static final int TEXT_BREAK_PREVIOUS = 3;
+    @Native static final int TEXT_BREAK_CURRENT = 4;
+    @Native static final int TEXT_BREAK_PRECEDING = 5;
+    @Native static final int TEXT_BREAK_FOLLOWING = 6;
+    @Native static final int IS_TEXT_BREAK = 7;
+    @Native static final int IS_WORD_TEXT_BREAK = 8;
 
     // The cache key is the combination of iterator type and locale name.
     private final static class CacheKey {

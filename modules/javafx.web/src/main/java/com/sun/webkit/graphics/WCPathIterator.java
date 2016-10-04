@@ -25,13 +25,15 @@
 
 package com.sun.webkit.graphics;
 
+import java.lang.annotation.Native;
+
 public interface WCPathIterator {
 
-    public static final int SEG_MOVETO = 0;
-    public static final int SEG_LINETO = 1;
-    public static final int SEG_QUADTO = 2;
-    public static final int SEG_CUBICTO = 3;
-    public static final int SEG_CLOSE = 4;
+    @Native public static final int SEG_MOVETO = 0;
+    @Native public static final int SEG_LINETO = 1;
+    @Native public static final int SEG_QUADTO = 2;
+    @Native public static final int SEG_CUBICTO = 3;
+    @Native public static final int SEG_CLOSE = 4;
 
     public int getWindingRule();
 
