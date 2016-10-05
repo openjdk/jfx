@@ -463,6 +463,7 @@ public class ContextMenuContent extends Region {
     private void initialize() {
         // RT-19624 calling requestFocus inside layout was casuing repeated layouts.
         contextMenu.addEventHandler(Menu.ON_SHOWN, event -> {
+            currentFocusedIndex = -1;
             for (Node child : itemsContainer.getChildren()) {
                 if (child instanceof MenuItemContainer) {
                     final MenuItem item = ((MenuItemContainer)child).item;

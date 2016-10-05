@@ -575,4 +575,49 @@ public class ContextMenuTest {
         focusedItem = getCurrentFocusedItem(cm);
         assertEquals("Expected " + menuItem1.getText() + ", found " + focusedItem.getText(), menuItem1, focusedItem);
     }
+
+    @Test public void test_jdk_8167132_issue_1() {
+        ContextMenu cm = createContextMenu(true);
+
+        MenuItem item1, item2, item3, item4;
+        cm.getItems().setAll(
+                item1 = new MenuItem("Item 1"),
+                item2 = new MenuItem("Item 2"),
+                item3 = new MenuItem("Item 3"),
+                item4 = new MenuItem("Item 4"));
+
+        assertEquals(-1, getCurrentFocusedIndex(cm));
+
+        // press down once to go to item1
+        pressDownKey(cm);
+        MenuItem focusedItem = getCurrentFocusedItem(cm);
+        assertEquals(0, getCurrentFocusedIndex(cm));
+        assertEquals("Expected " + item1.getText() + ", found " + focusedItem.getText(),
+                item1, focusedItem);
+
+        // press down once to go to item2
+        pressDownKey(cm);
+        focusedItem = getCurrentFocusedItem(cm);
+        assertEquals(1, getCurrentFocusedIndex(cm));
+        assertEquals("Expected " + item2.getText() + ", found " + focusedItem.getText(),
+                item2, focusedItem);
+
+        // hide context menu
+        cm.hide();
+
+        // show context menu again
+        cm.show(anchorBtn, Side.RIGHT, 0, 0);
+
+        // assert that focus is now not anywhere to be seen
+        focusedItem = getCurrentFocusedItem(cm);
+        assertEquals(-1, getCurrentFocusedIndex(cm));
+        assertNull(focusedItem);
+
+        // press down once to go to item1
+        pressDownKey(cm);
+        focusedItem = getCurrentFocusedItem(cm);
+        assertEquals(0, getCurrentFocusedIndex(cm));
+        assertEquals("Expected " + item1.getText() + ", found " + focusedItem.getText(),
+                item1, focusedItem);
+    }
 }
