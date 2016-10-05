@@ -1069,9 +1069,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     }
 
     private void moveToMenu(Direction dir, boolean doShow) {
+        boolean showNextMenu = doShow && focusedMenu.isShowing();
         findSibling(dir, focusedMenuIndex).ifPresent(p -> {
             setFocusedMenuIndex(p.getValue());
-            if (doShow) {
+            if (showNextMenu) {
                 showMenu(p.getKey(), true);
             }
         });
