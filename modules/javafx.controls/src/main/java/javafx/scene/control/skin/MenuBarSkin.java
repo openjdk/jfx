@@ -437,7 +437,11 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         });
     }
 
-    private void showMenu(Menu menu, boolean keyboardDriven) {
+    private void showMenu(Menu menu) {
+        showMenu(menu, false);
+    }
+
+    private void showMenu(Menu menu, boolean selectFirstItem) {
         // hide the currently visible menu, and move to the next one
         if (openMenu == menu) return;
         if (openMenu != null) {
@@ -446,7 +450,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
         openMenu = menu;
         if (!menu.isShowing() && !isMenuEmpty(menu)) {
-            if (keyboardDriven) {
+            if (selectFirstItem) {
                 // put selection / focus on first item in menu
                 MenuButton menuButton = getNodeForMenu(focusedMenuIndex);
                 Skin<?> skin = menuButton.getSkin();
@@ -939,7 +943,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                         openMenuButton.hide();
                     }
                     openMenuButton = menuButton;
-                    showMenu(menu, false);
+                    showMenu(menu);
                 } else {
                     // Fix for JDK-8167138 - we need to clear out the openMenu / openMenuButton
                     // when the menu is hidden (e.g. via autoHide), so that we can open it again
@@ -954,7 +958,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
                 // check if the owner window has focus
                 if (menuButton.getScene().getWindow().isFocused()) {
-                    showMenu(menu, false);
+                    showMenu(menu);
                     // update FocusedIndex
                     menuModeStart(getMenuBarButtonIndex(menuButton));
                 }
@@ -981,7 +985,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     }
                     updateFocusedIndex();
                     if (openMenu != null && openMenu != menu) {
-                        showMenu(menu, false);
+                        showMenu(menu);
                     }
                 }
             });
@@ -1073,7 +1077,9 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         findSibling(dir, focusedMenuIndex).ifPresent(p -> {
             setFocusedMenuIndex(p.getValue());
             if (showNextMenu) {
-                showMenu(p.getKey(), true);
+                // we explicitly do *not* allow selection - we are moving
+                // to a sibling menu, and therefore selection should be reset
+                showMenu(p.getKey(), false);
             }
         });
     }
