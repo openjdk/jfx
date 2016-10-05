@@ -940,6 +940,12 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     }
                     openMenuButton = menuButton;
                     showMenu(menu, false);
+                } else {
+                    // Fix for JDK-8167138 - we need to clear out the openMenu / openMenuButton
+                    // when the menu is hidden (e.g. via autoHide), so that we can open it again
+                    // the next time (if it is the first menu requested to show)
+                    openMenu = null;
+                    openMenuButton = null;
                 }
             });
 
