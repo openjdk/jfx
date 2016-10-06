@@ -176,7 +176,7 @@ public abstract class Cursor {
 
     /**
      * Activates the cursor. Cursor should be activated to make sure
-     * that the {@code impl_getCurrentFrame} returns up-to date values.
+     * that the {@code getCurrentFrame} returns up-to date values.
      */
     void activate() {
         // no activation necessary for standard cursors

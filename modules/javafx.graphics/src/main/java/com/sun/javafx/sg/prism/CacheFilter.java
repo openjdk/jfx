@@ -226,7 +226,7 @@ public class CacheFilter {
                 return true;
             }
             if (scrollCacheState == ScrollCacheState.CHECKING_PRECONDITIONS) {
-                if (impl_scrollCacheCapable() && isXformScrollCacheCapable(xformInfo)) {
+                if (scrollCacheCapable() && isXformScrollCacheCapable(xformInfo)) {
                     scrollCacheState = ScrollCacheState.ENABLED;
                 } else {
                     scrollCacheState = ScrollCacheState.DISABLED;
@@ -573,9 +573,9 @@ public class CacheFilter {
                 screenXform.setTransform(BaseTransform.IDENTITY_TRANSFORM);
             }
 
-            cacheBounds = impl_getCacheBounds(cacheBounds, cachedXform);
-            cachedImageData = impl_createImageData(fctx, cacheBounds);
-            impl_renderNodeToCache(cachedImageData, cacheBounds, cachedXform, null);
+            cacheBounds = getCacheBounds(cacheBounds, cachedXform);
+            cachedImageData = createImageData(fctx, cacheBounds);
+            renderNodeToCache(cachedImageData, cacheBounds, cachedXform, null);
 
             // cachedBounds includes effects, and is in *scene* coords
             Rectangle cachedBounds = cachedImageData.getUntransformedBounds();
@@ -589,8 +589,8 @@ public class CacheFilter {
         } else {
             if (scrollCacheState == ScrollCacheState.ENABLED &&
                     (lastXDelta != 0 || lastYDelta != 0) ) {
-                impl_moveCacheBy(cachedImageData, lastXDelta, lastYDelta);
-                impl_renderNodeToCache(cachedImageData, cacheBounds, cachedXform, computeDirtyRegionForTranslate());
+                moveCacheBy(cachedImageData, lastXDelta, lastYDelta);
+                renderNodeToCache(cachedImageData, cacheBounds, cachedXform, computeDirtyRegionForTranslate());
                 lastXDelta = lastYDelta = 0;
             }
             // Using the cached image; calculate screenXform to paint to screen.
@@ -615,11 +615,11 @@ public class CacheFilter {
             if (PulseLogger.PULSE_LOGGING_ENABLED) {
                 PulseLogger.incrementCounter("CacheFilter not used");
             }
-            impl_renderNodeToScreen(g);
+            renderNodeToScreen(g);
         } else {
             double mxt = xform.getMxt();
             double myt = xform.getMyt();
-            impl_renderCacheToScreen(g, implImage, mxt, myt);
+            renderCacheToScreen(g, implImage, mxt, myt);
             implImage.unlock();
         }
     }
@@ -627,7 +627,7 @@ public class CacheFilter {
     /**
      * Create the ImageData for the cached bitmap, with the specified bounds.
      */
-    ImageData impl_createImageData(FilterContext fctx, Rectangle bounds) {
+    ImageData createImageData(FilterContext fctx, Rectangle bounds) {
         Filterable ret;
         try {
             ret = Effect.getCompatibleImage(fctx,
@@ -648,7 +648,7 @@ public class CacheFilter {
      * @param xform transformation
      * @param dirtyBounds null or dirty rectangle to be rendered
      */
-    void impl_renderNodeToCache(ImageData cacheData,
+    void renderNodeToCache(ImageData cacheData,
                                 Rectangle cacheBounds,
                                 BaseTransform xform,
                                 Rectangle dirtyBounds) {
@@ -684,7 +684,7 @@ public class CacheFilter {
      * Render the node directly to the screen, in the case that the cached
      * image is unexpectedly null.  See RT-6428.
      */
-    void impl_renderNodeToScreen(Object implGraphics) {
+    void renderNodeToScreen(Object implGraphics) {
         Graphics g = (Graphics)implGraphics;
         if (node.getEffectFilter() != null) {
             node.renderEffect(g);
@@ -696,7 +696,7 @@ public class CacheFilter {
     /**
      * Render the cached image to the screen, translated by mxt, myt.
      */
-    void impl_renderCacheToScreen(Object implGraphics, Filterable implImage,
+    void renderCacheToScreen(Object implGraphics, Filterable implImage,
                                   double mxt, double myt)
     {
         Graphics g = (Graphics)implGraphics;
@@ -717,7 +717,7 @@ public class CacheFilter {
     /**
      * True if we can use scrolling optimization on this node.
      */
-    boolean impl_scrollCacheCapable() {
+    boolean scrollCacheCapable() {
         if (!(node instanceof NGGroup)) {
             return false;
         }
@@ -767,7 +767,7 @@ public class CacheFilter {
      * @param xDelta x-axis delta
      * @param yDelta y-axis delta
      */
-    void impl_moveCacheBy(ImageData cachedImageData, double xDelta, double yDelta) {
+    void moveCacheBy(ImageData cachedImageData, double xDelta, double yDelta) {
         PrDrawable drawable = (PrDrawable) cachedImageData.getUntransformedImage();
         final Rectangle r = cachedImageData.getUntransformedBounds();
         int x = (int)Math.max(0, (-xDelta));
@@ -804,7 +804,7 @@ public class CacheFilter {
      * @param bounds rectangle to store bounds to
      * @param xform transformation
      */
-    Rectangle impl_getCacheBounds(Rectangle bounds, BaseTransform xform) {
+    Rectangle getCacheBounds(Rectangle bounds, BaseTransform xform) {
         final BaseBounds b = node.getClippedBounds(TEMP_BOUNDS, xform);
         bounds.setBounds(b);
         return bounds;

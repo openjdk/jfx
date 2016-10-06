@@ -69,18 +69,18 @@ public abstract class PathElement {
      * Defines the sequence of {@code Path} objects this path element
      * is attached to.
      */
-    WeakReferenceQueue impl_nodes = new WeakReferenceQueue();
+    WeakReferenceQueue nodes = new WeakReferenceQueue();
 
     void addNode(final Node n) {
-        impl_nodes.add(n);
+        nodes.add(n);
     }
 
     void removeNode(final Node n) {
-        impl_nodes.remove(n);
+        nodes.remove(n);
     }
 
     void u() {
-        final Iterator iterator = impl_nodes.iterator();
+        final Iterator iterator = nodes.iterator();
         while (iterator.hasNext()) {
             ((Path) iterator.next()).markPathDirty();
         }

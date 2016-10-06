@@ -99,7 +99,7 @@ public class PopupControl extends PopupWindow implements Skinnable, Styleable {
      * This special root node is responsible for mapping the id, styleClass,
      * and style defined on the PopupControl such that CSS will read the
      * values from the PopupControl, and then apply CSS state to that
-     * special node. The node will then be able to pass impl_cssSet calls
+     * special node. The node will then be able to pass cssSet calls
      * along, such that any subclass of PopupControl will be able to
      * use the Styleable properties  and we'll be able to style it from
      * CSS, in such a way that it participates and applies to the skin,

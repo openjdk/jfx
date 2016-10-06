@@ -138,7 +138,7 @@ public class LabeledImpl extends Label {
             // the properites that are inherited by virtue of LabeledImpl
             // being a Label. This allows for the LabledImpl to be styled
             // with styles like .menu-button .label { -fx-opacity: 80%; }
-            // If just this subset were returned (by impl_CSS_STYLEABLE) then
+            // If just this subset were returned then
             // -fx-opacity (for example) would be meaningless to the Labeled.
             //
             final List<CssMetaData<? extends Styleable, ?>> labeledStyleables = Labeled.getClassCssMetaData();

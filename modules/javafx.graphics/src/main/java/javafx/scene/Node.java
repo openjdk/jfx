@@ -725,7 +725,7 @@ public abstract class Node implements EventTarget, Styleable {
             n.updateBounds();
         }
 
-        // See impl_syncPeer()
+        // See syncPeer()
         if (!treeVisible && !isDirty(DirtyBits.NODE_VISIBLE)) {
 
             // Need to save the dirty bits since they will be cleared even for the
@@ -3920,7 +3920,7 @@ public abstract class Node implements EventTarget, Styleable {
      *
      *  layoutBound is somewhat unique in that it can be redefined in
      *  subclasses. By default, the layoutBounds is the geomBounds, and so
-     *  whenever the impl_geomBounds() function is called the layoutBounds
+     *  whenever the geomBounds() function is called the layoutBounds
      *  must be invalidated. However in subclasses, especially Resizables,
      *  the layout bounds may not be defined to be the same as the geometric
      *  bounds. This is both useful and provides a very nice performance
