@@ -45,6 +45,7 @@ ifeq ($(ARCH), x32)
     ASM_FLAGS = -DX86_WIN32
 
     ML = ml.exe
+    MLFLAGS = -safeseh
 else
     INCLUDES += -I$(SRCBASE_DIR)/include/x64
     CFLAGS += -DX86_WIN64
@@ -55,6 +56,7 @@ else
     ASM_FLAGS = -DX86_WIN64
 
     ML = ml64.exe
+    MLFLAGS =
 endif
 
 OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.obj,$(C_SOURCES)) \
@@ -77,4 +79,4 @@ $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.c
 
 $(OBJBASE_DIR)/%.obj: $(SRCBASE_DIR)/%.S
 	$(CC) -EP $(INCLUDES) $(CFLAGS) $(shell cygpath -ma $(SRCBASE_DIR)/$(ASM_SOURCES)) > $(shell cygpath -ma $@.asm)
-	$(ML) -c -Fo$(shell cygpath -ma $@) $(shell cygpath -ma $@.asm)
+	$(ML) $(MLFLAGS) -c -Fo$(shell cygpath -ma $@) $(shell cygpath -ma $@.asm)
