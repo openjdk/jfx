@@ -140,9 +140,11 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
     private WeakEventHandler<KeyEvent> weakSceneKeyEventHandler;
     private WeakEventHandler<MouseEvent> weakSceneMouseEventHandler;
+    private WeakEventHandler<KeyEvent> weakSceneAltKeyEventHandler;
     private WeakChangeListener<Boolean> weakWindowFocusListener;
     private WeakChangeListener<Window> weakWindowSceneListener;
     private EventHandler<KeyEvent> keyEventHandler;
+    private EventHandler<KeyEvent> altKeyEventHandler;
     private EventHandler<MouseEvent> mouseEventHandler;
     private ChangeListener<Boolean> menuBarFocusedPropertyListener;
     private ChangeListener<Scene> sceneChangeListener;
@@ -382,11 +384,10 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         } else {
            acceleratorKeyCombo = KeyCombination.keyCombination("F10");
         }
-        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
-            scene.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
 
-            // Clear menu selection when ALT is pressed by itself
-            scene.addEventHandler(KeyEvent.KEY_PRESSED, e -> {
+        altKeyEventHandler = e -> {
+            if (e.getEventType() == KeyEvent.KEY_PRESSED) {
+                // Clear menu selection when ALT is pressed by itself
                 altKeyPressed = false;
                 if (e.getCode() == ALT && !e.isConsumed()) {
                     if (focusedMenuIndex == -1) {
@@ -394,15 +395,20 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
                     }
                     unSelectMenus();
                 }
-            });
-            // Put focus on the first menu when ALT is released
-            // directly after being pressed by itself
-            scene.addEventHandler(KeyEvent.KEY_RELEASED, e -> {
+            } else if (e.getEventType() == KeyEvent.KEY_RELEASED) {
+                // Put focus on the first menu when ALT is released
+                // directly after being pressed by itself
                 if (altKeyPressed && e.getCode() == ALT && !e.isConsumed()) {
                     firstMenuRunnable.run();
                 }
                 altKeyPressed = false;
-            });
+            }
+        };
+        weakSceneAltKeyEventHandler = new WeakEventHandler<>(altKeyEventHandler);
+
+        Utils.executeOnceWhenPropertyIsNonNull(control.sceneProperty(), (Scene scene) -> {
+            scene.getAccelerators().put(acceleratorKeyCombo, firstMenuRunnable);
+            scene.addEventHandler(KeyEvent.ANY, weakSceneAltKeyEventHandler);
         });
 
         ParentTraversalEngine engine = new ParentTraversalEngine(getSkinnable());
@@ -413,15 +419,17 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         ParentHelper.setTraversalEngine(getSkinnable(), engine);
 
         control.sceneProperty().addListener((ov, t, t1) -> {
-            if (weakSceneKeyEventHandler != null) {
-                // remove event filter from the old scene (t)
-                if (t != null)
+            // remove event handlers / filters from the old scene (t)
+            if (t != null) {
+                if (weakSceneKeyEventHandler != null) {
                     t.removeEventFilter(KeyEvent.KEY_PRESSED, weakSceneKeyEventHandler);
-            }
-            if (weakSceneMouseEventHandler != null) {
-                // remove event filter from the old scene (t)
-                if (t != null)
+                }
+                if (weakSceneMouseEventHandler != null) {
                     t.removeEventFilter(MouseEvent.MOUSE_CLICKED, weakSceneMouseEventHandler);
+                }
+                if (weakSceneAltKeyEventHandler != null) {
+                    t.removeEventHandler(KeyEvent.ANY, weakSceneAltKeyEventHandler);
+                }
             }
 
             /**
@@ -831,7 +839,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         container.getChildren().clear();
 
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
-
             final Scene scene = getSkinnable().getScene();
             if (scene != null) {
                 // RT-36554 - make sure system menu is updated when this MenuBar's scene changes.
