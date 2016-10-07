@@ -535,7 +535,7 @@ public class DeployParams extends CommonParams {
 
         // Success
         if (((applicationClass != null && !applicationClass.isEmpty()) ||
-            !module.isEmpty())) {
+            (module != null && !module.isEmpty()))) {
             result = true;
         }
 

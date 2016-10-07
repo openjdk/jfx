@@ -200,7 +200,7 @@ public class WinAppBundler extends AbstractImageBundler {
 
         String commandline;
         File runtimePath = JLinkBundlerHelper.getJDKHome(params).toFile();
-        File launcherPath = new File(runtimePath, "bin\\java");
+        File launcherPath = new File(runtimePath, "bin\\java.exe");
 
         ProcessBuilder pb = new ProcessBuilder(launcherPath.getAbsolutePath(), "-version");
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
