@@ -786,6 +786,8 @@ compileTargets { t ->
 
     if (!targetProperties.containsKey('includeGTK')) targetProperties.includeGTK = IS_LINUX
 
+    if (!targetProperties.containsKey('modLibDest')) targetProperties.modLibDest = targetProperties.libDest
+
     // This value is used as a prefix for various directories under ./build,
     // such as sdk, to allow for a common name for the hosted build
     // (for use when building apps) and a unique name for cross builds.
@@ -3335,6 +3337,14 @@ compileTargets { t ->
                     from "${modulesLibsDir}/${project.ext.moduleName}"
                 }
                 into "build/${sdkDirName}/lib"
+                exclude("*.dll")
+            }
+            copy {
+                moduleProjList.each { project ->
+                    from "${modulesLibsDir}/${project.ext.moduleName}"
+                }
+                into "build/${sdkDirName}/bin"
+                include("*.dll")
             }
 
             copy {
@@ -3778,8 +3788,8 @@ compileTargets { t ->
 
 
             def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
-            def libDest = targetProperties.libDest
-            def moduleNativeDirName = "${platformPrefix}module-$libDest"
+            def modLibDest = targetProperties.modLibDest
+            def moduleNativeDirName = "${platformPrefix}module-$modLibDest"
 
             // javafx.graphics native libraries
 

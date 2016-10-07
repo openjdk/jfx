@@ -38,6 +38,7 @@ WIN.includeNull3d = true
 WIN.library = { name -> return "${name}.dll" as String }
 
 WIN.libDest = "bin"
+WIN.modLibDest = "lib"
 
 setupTools("windows_tools",
     { propFile ->
