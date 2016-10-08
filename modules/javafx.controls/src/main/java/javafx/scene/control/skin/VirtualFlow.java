@@ -102,7 +102,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     private static final int MIN_SCROLLING_LINES_PER_PAGE = 8;
 
     /**
-     * Indicates that this is a newly created cell and we need call impl_processCSS for it.
+     * Indicates that this is a newly created cell and we need call processCSS for it.
      *
      * See RT-23616 for more details.
      */

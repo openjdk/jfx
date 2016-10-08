@@ -954,7 +954,7 @@ public class PrismTextLayout implements TextLayout {
 
     private float getMirroringWidth() {
         /* The text node in the scene layer is mirrored based on
-         * result of impl_computeLayoutBounds. The coordinate translation
+         * result of computeLayoutBounds. The coordinate translation
          * in text layout has to be based on the same width.
          */
         return wrapWidth != 0 ? wrapWidth : layoutWidth;

@@ -51,9 +51,6 @@ import javafx.beans.DefaultProperty;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.ObjectBinding;
-import javafx.beans.property.*;
-import javafx.css.*;
-import javafx.geometry.*;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.paint.Color;
@@ -66,6 +63,32 @@ import javafx.scene.shape.StrokeType;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.DoublePropertyBase;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.IntegerPropertyBase;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.ObjectPropertyBase;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.StringProperty;
+import javafx.beans.property.StringPropertyBase;
+import javafx.css.CssMetaData;
+import javafx.css.FontCssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableObjectProperty;
+import javafx.css.StyleableProperty;
+import javafx.geometry.BoundingBox;
+import javafx.geometry.Bounds;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point2D;
+import javafx.geometry.VPos;
 import javafx.scene.Node;
 
 /**
@@ -829,7 +852,7 @@ public class Text extends Shape {
     }
 
     public final ReadOnlyObjectProperty<PathElement[]> selectionShapeProperty() {
-        return getTextAttribute().impl_selectionShapeProperty();
+        return getTextAttribute().selectionShapeProperty();
     }
 
     /**
@@ -840,21 +863,21 @@ public class Text extends Shape {
      */
     public final void setSelectionStart(int value) {
         if (value == -1 &&
-                (attributes == null || attributes.impl_selectionStart == null)) {
+                (attributes == null || attributes.selectionStart == null)) {
             return;
         }
         selectionStartProperty().set(value);
     }
 
     public final int getSelectionStart() {
-        if (attributes == null || attributes.impl_selectionStart == null) {
+        if (attributes == null || attributes.selectionStart == null) {
             return DEFAULT_SELECTION_START;
         }
-        return attributes.getImpl_selectionStart();
+        return attributes.getSelectionStart();
     }
 
     public final IntegerProperty selectionStartProperty() {
-        return getTextAttribute().impl_selectionStartProperty();
+        return getTextAttribute().selectionStartProperty();
     }
 
     /**
@@ -865,21 +888,21 @@ public class Text extends Shape {
      */
     public final void setSelectionEnd(int value) {
         if (value == -1 &&
-                (attributes == null || attributes.impl_selectionEnd == null)) {
+                (attributes == null || attributes.selectionEnd == null)) {
             return;
         }
         selectionEndProperty().set(value);
     }
 
     public final int getSelectionEnd() {
-        if (attributes == null || attributes.impl_selectionEnd == null) {
+        if (attributes == null || attributes.selectionEnd == null) {
             return DEFAULT_SELECTION_END;
         }
-        return attributes.getImpl_selectionEnd();
+        return attributes.getSelectionEnd();
     }
 
     public final IntegerProperty selectionEndProperty() {
-        return getTextAttribute().impl_selectionEndProperty();
+        return getTextAttribute().selectionEndProperty();
     }
 
     /**
@@ -888,7 +911,7 @@ public class Text extends Shape {
      * @since 9
      */
     public final ObjectProperty<Paint> selectionFillProperty() {
-        return getTextAttribute().impl_selectionFillProperty();
+        return getTextAttribute().selectionFillProperty();
     }
 
     public final void setSelectionFill(Paint paint) {
@@ -908,7 +931,7 @@ public class Text extends Shape {
     }
 
     public final ReadOnlyObjectProperty<PathElement[]> caretShapeProperty() {
-        return getTextAttribute().impl_caretShapeProperty();
+        return getTextAttribute().caretShapeProperty();
     }
 
     /**
@@ -919,21 +942,21 @@ public class Text extends Shape {
      */
     public final void setCaretPosition(int value) {
         if (value == -1 &&
-                (attributes == null || attributes.impl_caretPosition == null)) {
+                (attributes == null || attributes.caretPosition == null)) {
             return;
         }
         caretPositionProperty().set(value);
     }
 
     public final int getCaretPosition() {
-        if (attributes == null || attributes.impl_caretPosition == null) {
+        if (attributes == null || attributes.caretPosition == null) {
             return DEFAULT_CARET_POSITION;
         }
-        return attributes.getImpl_caretPosition();
+        return attributes.getCaretPosition();
     }
 
     public final IntegerProperty caretPositionProperty() {
-        return getTextAttribute().impl_caretPositionProperty();
+        return getTextAttribute().caretPositionProperty();
     }
 
     /**
@@ -943,21 +966,21 @@ public class Text extends Shape {
      * @since 9
      */
     public final void setCaretBias(boolean value) {
-        if (value && (attributes == null || attributes.impl_caretBias == null)) {
+        if (value && (attributes == null || attributes.caretBias == null)) {
             return;
         }
         caretBiasProperty().set(value);
     }
 
     public final boolean isCaretBias() {
-        if (attributes == null || attributes.impl_caretBias == null) {
+        if (attributes == null || attributes.caretBias == null) {
             return DEFAULT_CARET_BIAS;
         }
-        return getTextAttribute().isImpl_caretBias();
+        return getTextAttribute().isCaretBias();
     }
 
     public final BooleanProperty caretBiasProperty() {
-        return getTextAttribute().impl_caretBiasProperty();
+        return getTextAttribute().caretBiasProperty();
     }
 
     /**
@@ -1485,7 +1508,7 @@ public class Text extends Shape {
 
         private ObjectProperty<VPos> textOrigin;
 
-        public final VPos getTextOrigin() {
+        final VPos getTextOrigin() {
             return textOrigin == null ? DEFAULT_TEXT_ORIGIN : textOrigin.get();
         }
 
@@ -1507,11 +1530,11 @@ public class Text extends Shape {
 
         private BooleanProperty underline;
 
-        public final boolean isUnderline() {
+        final boolean isUnderline() {
             return underline == null ? DEFAULT_UNDERLINE : underline.get();
         }
 
-        public final BooleanProperty underlineProperty() {
+        final BooleanProperty underlineProperty() {
             if (underline == null) {
                 underline = new StyleableBooleanProperty() {
                     @Override public Object getBean() { return Text.this; }
@@ -1532,11 +1555,11 @@ public class Text extends Shape {
 
         private BooleanProperty strikethrough;
 
-        public final boolean isStrikethrough() {
+        final boolean isStrikethrough() {
             return strikethrough == null ? DEFAULT_STRIKETHROUGH : strikethrough.get();
         }
 
-        public final BooleanProperty strikethroughProperty() {
+        final BooleanProperty strikethroughProperty() {
             if (strikethrough == null) {
                 strikethrough = new StyleableBooleanProperty() {
                     @Override public Object getBean() { return Text.this; }
@@ -1557,11 +1580,11 @@ public class Text extends Shape {
 
         private ObjectProperty<TextAlignment> textAlignment;
 
-        public final TextAlignment getTextAlignment() {
+        final TextAlignment getTextAlignment() {
             return textAlignment == null ? DEFAULT_TEXT_ALIGNMENT : textAlignment.get();
         }
 
-        public final ObjectProperty<TextAlignment> textAlignmentProperty() {
+        final ObjectProperty<TextAlignment> textAlignmentProperty() {
             if (textAlignment == null) {
                 textAlignment =
                     new StyleableObjectProperty<TextAlignment>(DEFAULT_TEXT_ALIGNMENT) {
@@ -1589,11 +1612,11 @@ public class Text extends Shape {
 
         private DoubleProperty lineSpacing;
 
-        public final double getLineSpacing() {
+        final double getLineSpacing() {
             return lineSpacing == null ? DEFAULT_LINE_SPACING : lineSpacing.get();
         }
 
-        public final DoubleProperty lineSpacingProperty() {
+        final DoubleProperty lineSpacingProperty() {
             if (lineSpacing == null) {
                 lineSpacing =
                     new StyleableDoubleProperty(DEFAULT_LINE_SPACING) {
@@ -1617,7 +1640,7 @@ public class Text extends Shape {
 
         private ReadOnlyDoubleWrapper baselineOffset;
 
-        public final ReadOnlyDoubleProperty baselineOffsetProperty() {
+        final ReadOnlyDoubleProperty baselineOffsetProperty() {
             if (baselineOffset == null) {
                 baselineOffset = new ReadOnlyDoubleWrapper(Text.this, "baselineOffset") {
                     {bind(new DoubleBinding() {
@@ -1635,36 +1658,33 @@ public class Text extends Shape {
             return baselineOffset.getReadOnlyProperty();
         }
 
-        @Deprecated
-        private ObjectProperty<PathElement[]> impl_selectionShape;
+        private ObjectProperty<PathElement[]> selectionShape;
         private ObjectBinding<PathElement[]> selectionBinding;
 
-        @Deprecated
-        public final ReadOnlyObjectProperty<PathElement[]> impl_selectionShapeProperty() {
-            if (impl_selectionShape == null) {
+        final ReadOnlyObjectProperty<PathElement[]> selectionShapeProperty() {
+            if (selectionShape == null) {
                 selectionBinding = new ObjectBinding<PathElement[]>() {
-                    {bind(impl_selectionStartProperty(), impl_selectionEndProperty());}
+                    {bind(selectionStartProperty(), selectionEndProperty());}
                     @Override protected PathElement[] computeValue() {
                         int start = getSelectionStart();
                         int end = getSelectionEnd();
                         return getRange(start, end, TextLayout.TYPE_TEXT);
                     }
               };
-              impl_selectionShape = new SimpleObjectProperty<PathElement[]>(Text.this, "impl_selectionShape");
-              impl_selectionShape.bind(selectionBinding);
+              selectionShape = new SimpleObjectProperty<PathElement[]>(Text.this, "selectionShape");
+              selectionShape.bind(selectionBinding);
             }
-            return impl_selectionShape;
+            return selectionShape;
         }
 
         private ObjectProperty<Paint> selectionFill;
 
-        @Deprecated
-        public final ObjectProperty<Paint> impl_selectionFillProperty() {
+        final ObjectProperty<Paint> selectionFillProperty() {
             if (selectionFill == null) {
                 selectionFill =
                     new ObjectPropertyBase<Paint>(DEFAULT_SELECTION_FILL) {
                         @Override public Object getBean() { return Text.this; }
-                        @Override public String getName() { return "impl_selectionFill"; }
+                        @Override public String getName() { return "selectionFill"; }
                         @Override protected void invalidated() {
                             NodeHelper.markDirty(Text.this, DirtyBits.TEXT_SELECTION);
                         }
@@ -1673,67 +1693,60 @@ public class Text extends Shape {
             return selectionFill;
         }
 
-        @Deprecated
-        private IntegerProperty impl_selectionStart;
+        private IntegerProperty selectionStart;
 
-        @Deprecated
-        public final int getImpl_selectionStart() {
-            return impl_selectionStart == null ? DEFAULT_SELECTION_START : impl_selectionStart.get();
+        final int getSelectionStart() {
+            return selectionStart == null ? DEFAULT_SELECTION_START : selectionStart.get();
         }
 
-        @Deprecated
-        public final IntegerProperty impl_selectionStartProperty() {
-            if (impl_selectionStart == null) {
-                impl_selectionStart =
+        final IntegerProperty selectionStartProperty() {
+            if (selectionStart == null) {
+                selectionStart =
                     new IntegerPropertyBase(DEFAULT_SELECTION_START) {
                         @Override public Object getBean() { return Text.this; }
-                        @Override public String getName() { return "impl_selectionStart"; }
+                        @Override public String getName() { return "selectionStart"; }
                         @Override protected void invalidated() {
                             NodeHelper.markDirty(Text.this, DirtyBits.TEXT_SELECTION);
                             notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_START);
                         }
                 };
             }
-            return impl_selectionStart;
+            return selectionStart;
         }
 
-        @Deprecated
-        private IntegerProperty impl_selectionEnd;
+        private IntegerProperty selectionEnd;
 
-        @Deprecated
-        public final int getImpl_selectionEnd() {
-            return impl_selectionEnd == null ? DEFAULT_SELECTION_END : impl_selectionEnd.get();
+        final int getSelectionEnd() {
+            return selectionEnd == null ? DEFAULT_SELECTION_END : selectionEnd.get();
         }
 
-        @Deprecated
-        public final IntegerProperty impl_selectionEndProperty() {
-            if (impl_selectionEnd == null) {
-                impl_selectionEnd =
+        final IntegerProperty selectionEndProperty() {
+            if (selectionEnd == null) {
+                selectionEnd =
                     new IntegerPropertyBase(DEFAULT_SELECTION_END) {
                         @Override public Object getBean() { return Text.this; }
-                        @Override public String getName() { return "impl_selectionEnd"; }
+                        @Override public String getName() { return "selectionEnd"; }
                         @Override protected void invalidated() {
                             NodeHelper.markDirty(Text.this, DirtyBits.TEXT_SELECTION);
                             notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
                         }
                     };
             }
-            return impl_selectionEnd;
+            return selectionEnd;
         }
 
-        private ObjectProperty<PathElement[]> impl_caretShape;
+        private ObjectProperty<PathElement[]> caretShape;
         private ObjectBinding<PathElement[]> caretBinding;
 
-        @Deprecated
-        public final ReadOnlyObjectProperty<PathElement[]> impl_caretShapeProperty() {
-            if (impl_caretShape == null) {
+        final ReadOnlyObjectProperty<PathElement[]> caretShapeProperty() {
+            if (caretShape == null) {
                 caretBinding = new ObjectBinding<PathElement[]>() {
-                    {bind(impl_caretPositionProperty(), impl_caretBiasProperty());}
+                    {bind(caretPositionProperty(), caretBiasProperty());}
                     @Override protected PathElement[] computeValue() {
-                        int pos = getImpl_caretPosition();
+                        int pos = getCaretPosition();
                         int length = getTextInternal().length();
                         if (0 <= pos && pos <= length) {
-                            boolean bias = isImpl_caretBias();
+                            boolean bias = isCaretBias();
                             float x = (float)getX();
                             float y = (float)getY() - getYRendering();
                             TextLayout layout = getTextLayout();
@@ -1742,50 +1755,44 @@ public class Text extends Shape {
                         return EMPTY_PATH_ELEMENT_ARRAY;
                     }
                 };
-                impl_caretShape = new SimpleObjectProperty<PathElement[]>(Text.this, "impl_caretShape");
-                impl_caretShape.bind(caretBinding);
+                caretShape = new SimpleObjectProperty<PathElement[]>(Text.this, "caretShape");
+                caretShape.bind(caretBinding);
             }
-            return impl_caretShape;
+            return caretShape;
         }
 
-        @Deprecated
-        private IntegerProperty impl_caretPosition;
+        private IntegerProperty caretPosition;
 
-        @Deprecated
-        public final int getImpl_caretPosition() {
-            return impl_caretPosition == null ? DEFAULT_CARET_POSITION : impl_caretPosition.get();
+        final int getCaretPosition() {
+            return caretPosition == null ? DEFAULT_CARET_POSITION : caretPosition.get();
         }
 
-        @Deprecated
-        public final IntegerProperty impl_caretPositionProperty() {
-            if (impl_caretPosition == null) {
-                impl_caretPosition =
+        final IntegerProperty caretPositionProperty() {
+            if (caretPosition == null) {
+                caretPosition =
                     new IntegerPropertyBase(DEFAULT_CARET_POSITION) {
                         @Override public Object getBean() { return Text.this; }
-                        @Override public String getName() { return "impl_caretPosition"; }
+                        @Override public String getName() { return "caretPosition"; }
                         @Override protected void invalidated() {
                             notifyAccessibleAttributeChanged(AccessibleAttribute.SELECTION_END);
                         }
                     };
             }
-            return impl_caretPosition;
+            return caretPosition;
         }
 
-        @Deprecated
-        private BooleanProperty impl_caretBias;
+        private BooleanProperty caretBias;
 
-        @Deprecated
-        public final boolean isImpl_caretBias() {
-            return impl_caretBias == null ? DEFAULT_CARET_BIAS : impl_caretBias.get();
+        final boolean isCaretBias() {
+            return caretBias == null ? DEFAULT_CARET_BIAS : caretBias.get();
         }
 
-        @Deprecated
-        public final BooleanProperty impl_caretBiasProperty() {
-            if (impl_caretBias == null) {
-                impl_caretBias =
-                        new SimpleBooleanProperty(Text.this, "impl_caretBias", DEFAULT_CARET_BIAS);
+        final BooleanProperty caretBiasProperty() {
+            if (caretBias == null) {
+                caretBias =
+                        new SimpleBooleanProperty(Text.this, "caretBias", DEFAULT_CARET_BIAS);
             }
-            return impl_caretBias;
+            return caretBias;
         }
     }
 

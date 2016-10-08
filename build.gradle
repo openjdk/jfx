@@ -589,11 +589,11 @@ if (!DO_BUILD_SDK_FOR_TEST && !file(jfxrtJarFromSdk).exists()) {
             + "Please, set the correct TEST_SDK")
 }
 
-// These tasks would be disabled when running with DO_BUILD_SDK_FOR_TEST=false as they're unneeded for running tests
-def disabledTasks = DO_BUILD_SDK_FOR_TEST ? [] : ["compileJava", "processResources", "classes", // all projects
-         "generateDecoraShaders", "generatePrismShaders",
-         "compilePrismCompilers", "compilePrismJavaShaders", "compileDecoraCompilers", // :graphics
-         "processDecoraShaders", "processPrismShaders"]
+// All "classes" and "jar" tasks and their dependencies would be disabled 
+// when running with DO_BUILD_SDK_FOR_TEST=false as they're unneeded for running tests
+if (!DO_BUILD_SDK_FOR_TEST) {
+    gradle.taskGraph.useFilter({ task -> !task.name.equals("classes") && !task.name.equals("jar") })
+}
 
 /**
  * Fetch/Check that external tools are present for the build. This method
@@ -785,6 +785,8 @@ compileTargets { t ->
     if (!targetProperties.containsKey('includeEGL')) targetProperties.includeEGL = false
 
     if (!targetProperties.containsKey('includeGTK')) targetProperties.includeGTK = IS_LINUX
+
+    if (!targetProperties.containsKey('modLibDest')) targetProperties.modLibDest = targetProperties.libDest
 
     // This value is used as a prefix for various directories under ./build,
     // such as sdk, to allow for a common name for the hosted build
@@ -3017,11 +3019,6 @@ allprojects {
             }
         }
     }
-
-    // Some tasks should be disabled not to compile SDK, when running only the tests
-    disabledTasks.each {
-        project.getTasksByName(it, false)*.enabled = false
-    }
 }
 
 // fxpackager requires JDK 9 to compile
@@ -3340,6 +3337,14 @@ compileTargets { t ->
                     from "${modulesLibsDir}/${project.ext.moduleName}"
                 }
                 into "build/${sdkDirName}/lib"
+                exclude("*.dll")
+            }
+            copy {
+                moduleProjList.each { project ->
+                    from "${modulesLibsDir}/${project.ext.moduleName}"
+                }
+                into "build/${sdkDirName}/bin"
+                include("*.dll")
             }
 
             copy {
@@ -3783,8 +3788,8 @@ compileTargets { t ->
 
 
             def useLipo = targetProperties.containsKey('useLipo') ? targetProperties.useLipo : false
-            def libDest = targetProperties.libDest
-            def moduleNativeDirName = "${platformPrefix}module-$libDest"
+            def modLibDest = targetProperties.modLibDest
+            def moduleNativeDirName = "${platformPrefix}module-$modLibDest"
 
             // javafx.graphics native libraries
 

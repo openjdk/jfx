@@ -804,14 +804,14 @@ public class Scene implements EventTarget {
         assert peer == null;
 
         Window window = getWindow();
-        // impl_initPeer() is only called from Window, either when the window
+        // initPeer() is only called from Window, either when the window
         // is being shown, or the window scene is being changed. In any case
         // this scene's window cannot be null.
         assert window != null;
 
         TKStage windowPeer = WindowHelper.getPeer(window);
         if (windowPeer == null) {
-            // This is fine, the window is not visible. impl_initPeer() will
+            // This is fine, the window is not visible. initPeer() will
             // be called again later, when the window is being shown.
             return;
         }
@@ -857,7 +857,7 @@ public class Scene implements EventTarget {
     public void disposePeer() {
         if (peer == null) {
             // This is fine, the window is either not shown yet and there is no
-            // need in disposing scene peer, or is hidden and impl_disposePeer()
+            // need in disposing scene peer, or is hidden and disposePeer()
             // has already been called.
             return;
         }
@@ -3227,14 +3227,14 @@ public class Scene implements EventTarget {
         private void processTargetActionChanged(DragEvent de) {
             // Do we want DRAG_TRANSFER_MODE_CHANGED event?
 //            final Node pickedNode = Scene.this.mouseHandler.pickNode(de.getX(), de.getY());
-//            if (pickedNode != null && pickedNode.impl_isTreeVisible()) {
-//                de = DragEvent.impl_copy(de.getSource(), pickedNode, source,
+//            if (pickedNode != null && pickedNode.isTreeVisible()) {
+//                de = DragEvent.copy(de.getSource(), pickedNode, source,
 //                        pickedNode, de, DragEvent.DRAG_TRANSFER_MODE_CHANGED);
 //
 //                if (dragboard == null) {
 //                    dragboard = createDragboard(de);
 //                }
-//                dragboard = de.impl_getPlatformDragboard();
+//                dragboard = de.getPlatformDragboard();
 //
 //                fireEvent(pickedNode, de);
 //            }

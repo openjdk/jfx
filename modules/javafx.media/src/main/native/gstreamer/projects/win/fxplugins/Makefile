@@ -108,7 +108,7 @@ else # debug
 endif
 
 ifeq ($(ARCH), x32)
-    LDFLAGS += -MACHINE:x86
+    LDFLAGS += -safeseh -MACHINE:x86
 else
     CFLAGS += -D_WIN64
     LDFLAGS += -MACHINE:x64

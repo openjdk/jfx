@@ -62,7 +62,7 @@ public abstract class TableCellBehaviorBase<S, T, TC extends TableColumnBase<S, 
      *************************************************************************/
 
     protected abstract TableColumnBase<S, T> getTableColumn(); // getControl().getTableColumn()
-    protected abstract int getItemCount();        // tableView.impl_getTreeItemCount()
+    protected abstract int getItemCount();
     protected abstract TableSelectionModel<S> getSelectionModel();
     protected abstract TableFocusModel<S,TC> getFocusModel();
     protected abstract TablePositionBase getFocusedCell();

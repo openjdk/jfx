@@ -58,6 +58,7 @@ class GlassWindowEventHandler extends Window.EventHandler implements PrivilegedA
                 stage.stageListener.changedIconified(true);
                 break;
             case WindowEvent.MAXIMIZE:
+                stage.stageListener.changedIconified(false);
                 stage.stageListener.changedMaximized(true);
                 break;
             case WindowEvent.RESTORE:

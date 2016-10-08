@@ -156,7 +156,11 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     params -> {
                         //FIXME sniff modules
                         extractMainClassInfoFromAppResources(params);
-                        return (String) params.get(BundleParams.PARAM_APPLICATION_CLASS);
+                        String s = (String) params.get(BundleParams.PARAM_APPLICATION_CLASS);
+                        if (s == null) {
+                            s = JLinkBundlerHelper.getMainClass(params);
+                        }
+                        return s;
                     },
                     (s, p) -> s
             );

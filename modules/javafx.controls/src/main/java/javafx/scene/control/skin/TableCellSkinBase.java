@@ -156,6 +156,6 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
         }
 
         TableColumnBase<?,?> tableColumn = getTableColumn();
-        return tableColumn == null ? 0 : tableColumn.getWidth();
+        return tableColumn == null ? 0 : snapSizeX(tableColumn.getWidth());
     }
 }

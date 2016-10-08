@@ -151,7 +151,7 @@ public class HelloComboBox extends Application {
         stage.setScene(scene);
         stage.show();
 
-//        scene.impl_focusOwnerProperty().addListener(new ChangeListener<Node>() {
+//        scene.focusOwnerProperty().addListener(new ChangeListener<Node>() {
 //            public void changed(ObservableValue<? extends Node> ov, Node t, Node t1) {
 //                System.out.println("focus moved from " + t + " to " + t1);
 //            }

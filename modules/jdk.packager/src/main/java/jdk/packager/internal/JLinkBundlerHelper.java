@@ -30,6 +30,7 @@ import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.Platform;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -240,6 +241,27 @@ public final class JLinkBundlerHelper {
 
         if (javaBasePath != null && javaBasePath.toFile().exists()) {
             result = javaBasePath.getParent();
+
+            // On a developer build the JDK Home isn't where we expect it
+            // relative to the jmods directory. Do some extra
+            // processing to find it.
+            if (result != null) {
+                boolean found = false;
+                Path bin = result.resolve("bin");
+
+                if (Files.exists(bin)) {
+                    final String exe = (Platform.getPlatform() == Platform.WINDOWS) ? ".exe" : "";
+                    Path javaExe = bin.resolve("java" + exe);
+
+                    if (Files.exists(javaExe)) {
+                        found = true;
+                    }
+                }
+
+                if (!found) {
+                    result = result.resolve(".." + File.separator + "jdk");
+                }
+            }
         }
 
         return result;

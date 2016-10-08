@@ -38,6 +38,7 @@ WIN.includeNull3d = true
 WIN.library = { name -> return "${name}.dll" as String }
 
 WIN.libDest = "bin"
+WIN.modLibDest = "lib"
 
 setupTools("windows_tools",
     { propFile ->
@@ -108,7 +109,8 @@ def ccFlags = ["/nologo", "/W3", "/EHsc", "/c",
         "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
         ccDebugFlags].flatten();
 
-def linkFlags = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no"];
+def linkFlags = ["/nologo", "/dll", "/manifest", "/opt:REF", "/incremental:no", "/dynamicbase", "/nxcompat"];
+if (!IS_64) linkFlags.add("/safeseh");
 if (IS_DEBUG_NATIVE) linkFlags.add("/debug");
 
 // Remove C++ static linking if not on VS2010

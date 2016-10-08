@@ -398,7 +398,7 @@ public class TableColumnHeader extends Region {
 
             return width;
         } else if (getTableColumn() != null && getTableColumn().isVisible()) {
-            return getTableColumn().getWidth();
+            return snapSizeX(getTableColumn().getWidth());
         }
 
         return 0;

@@ -5,8 +5,6 @@
 #include "config.h"
 #include "Watchdog.h"
 
-#include "com_sun_webkit_WatchdogTimer.h"
-
 namespace JSC {
 
 static jclass GetWatchdogTimerClass(JNIEnv* env)

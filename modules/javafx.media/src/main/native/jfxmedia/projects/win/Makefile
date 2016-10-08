@@ -77,7 +77,7 @@ PDB      = $(shell cygpath -ma "$(BUILD_DIR)/$(BASE_NAME).pdb")
 
 LDFLAGS = -dll -out:$(shell cygpath -ma $(TARGET)) -incremental:no -nologo -libpath:$(shell cygpath -ma $(BUILD_DIR)) $(LIBS) \
           -manifest -manifestfile:$(MANIFEST) -manifestuac:"level='asInvoker' uiAccess='false'" \
-          -subsystem:windows -dynamicbase -errorreport:queue
+          -subsystem:windows -dynamicbase -nxcompat -errorreport:queue
 
 ifeq ($(BUILD_TYPE), Release)
     CFLAGS += -DNDEBUG -O2 -MD
@@ -89,7 +89,7 @@ endif
 
 ifeq ($(ARCH), x32)
     CFLAGS += -Oy-
-    LDFLAGS += -MACHINE:x86
+    LDFLAGS += -safeseh -MACHINE:x86
 else
     CFLAGS += -D_WIN64
     LDFLAGS += -MACHINE:x64

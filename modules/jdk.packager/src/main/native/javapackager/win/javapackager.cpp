@@ -409,9 +409,7 @@ JavaVersion * GetMaxVersion(HKEY key, const char * sKey) {
                             }
                         }
                     }
-
                 }
-
             }
         }
 
@@ -443,6 +441,22 @@ bool hasEnding(std::wstring const &fullString, std::wstring const &ending) {
     }
 }
 
+#define TRAILING_PATHSEPARATOR '\\'
+
+std::wstring ExtractFilePath(std::wstring Path) {
+    std::wstring result;
+    size_t slash = Path.find_last_of(TRAILING_PATHSEPARATOR);
+    if (slash != std::wstring::npos)
+        result = Path.substr(0, slash);
+    return result;
+}
+
+std::wstring GetCurrentExecutableName() {
+    TCHAR FileName[MAX_PATH];
+    GetModuleFileName(NULL, FileName, MAX_PATH);
+    return FileName;
+}
+
 int wmain(int argc, wchar_t* argv[]) {
     wchar_t buf[MAX_PATH];
     GetModuleFileName(NULL, buf, MAX_PATH);
@@ -466,7 +480,8 @@ int wmain(int argc, wchar_t* argv[]) {
         }
     }
     else {
-        javacmd = L"";
+        std::wstring exe = GetCurrentExecutableName();
+        javacmd = ExtractFilePath(exe) + L"\\java.exe";
     }
 
     if (javacmd.length() <= 0) {
@@ -475,8 +490,9 @@ int wmain(int argc, wchar_t* argv[]) {
             javacmd = jv2->path;
             javahome = jv2->home;
         }
-        else
+        else {
             javacmd = L"java.exe";
+        }
     }
 
     std::wstring cmd = L"\"" + javacmd + L"\"";

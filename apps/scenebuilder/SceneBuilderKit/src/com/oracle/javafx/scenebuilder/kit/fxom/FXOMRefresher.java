@@ -252,9 +252,9 @@ class FXOMRefresher {
 //            final List<String> stylesheets = new ArrayList<>();
 //            stylesheets.addAll(p.getStylesheets());
 ////            p.getStylesheets().clear();
-////            p.impl_processCSS(true);
+////            p.processCSS(true);
 //            p.getStylesheets().setAll(stylesheets);
-////            p.impl_processCSS(true);
+////            p.processCSS(true);
 //        }
 //        for (Node child : p.getChildrenUnmodifiable()) {
 //            if (child instanceof Parent) {

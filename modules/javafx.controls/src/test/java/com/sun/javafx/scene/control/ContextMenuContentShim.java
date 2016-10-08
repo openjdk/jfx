@@ -132,7 +132,7 @@ public class ContextMenuContentShim {
         if (showingMenuContent.isPresent()) {
             ContextMenuContent content = showingMenuContent.get();
             int currentFocusIndex = content.getCurrentFocusIndex();
-            return showingMenuItems.get(currentFocusIndex);
+            return currentFocusIndex == -1 ? null : showingMenuItems.get(currentFocusIndex);
         }
 
         return null;

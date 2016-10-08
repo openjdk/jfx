@@ -205,7 +205,7 @@ public abstract class AbstractAppImageBuilder {
                 // If the app is contained in an unnamed jar then launch it the
                 // legacy way and the main class string must be of the format com/foo/Main
                 out.println("app.mainclass=" + mainClass.replaceAll("\\.", "/"));
-                out.println("app.mainjar=" + mainJar);
+                out.println("app.mainjar=" + mainJar.toPath().getFileName().toString());
             }
         }
 

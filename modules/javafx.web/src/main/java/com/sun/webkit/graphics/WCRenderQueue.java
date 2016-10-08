@@ -25,6 +25,7 @@
 
 package com.sun.webkit.graphics;
 
+import java.lang.annotation.Native;
 import com.sun.webkit.Invoker;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -37,7 +38,7 @@ public abstract class WCRenderQueue extends Ref {
     private final static AtomicInteger idCountObj = new AtomicInteger(0);
     private final static Logger log =
         Logger.getLogger(WCRenderQueue.class.getName());
-    public final static int MAX_QUEUE_SIZE = 0x80000;
+    @Native public final static int MAX_QUEUE_SIZE = 0x80000;
 
     private final LinkedList<BufferData> buffers = new LinkedList<BufferData>();
     private BufferData currentBuffer = new BufferData();
