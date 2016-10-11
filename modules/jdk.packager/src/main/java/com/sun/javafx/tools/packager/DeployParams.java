@@ -492,7 +492,7 @@ public class DeployParams extends CommonParams {
             throw new PackagerException("ERR_MissingArgument", "-outdir");
         }
 
-        if (outfile == null) {
+        if (getBundleType() == BundleType.JNLP && outfile == null) {
             throw new PackagerException("ERR_MissingArgument", "-outfile");
         }
 
