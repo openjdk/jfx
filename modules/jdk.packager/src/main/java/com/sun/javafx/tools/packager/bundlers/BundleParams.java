@@ -170,12 +170,12 @@ public class BundleParams {
         putUnlessNullOrEmpty(ARGUMENTS.getID(), arguments);
     }
 
-    public void setAddModules(Set<String> addModules) {
-        putUnlessNullOrEmpty(StandardBundlerParam.ADD_MODULES.getID(), addModules);
+    public void setAddModules(String value) {
+        putUnlessNull(StandardBundlerParam.ADD_MODULES.getID(), value);
     }
 
-    public void setLimitModules(Set<String> limitModules)  {
-        putUnlessNullOrEmpty(StandardBundlerParam.LIMIT_MODULES.getID(), limitModules);
+    public void setLimitModules(String value)  {
+        putUnlessNull(StandardBundlerParam.LIMIT_MODULES.getID(), value);
     }
 
     public void setStripNativeCommands(boolean value) {
