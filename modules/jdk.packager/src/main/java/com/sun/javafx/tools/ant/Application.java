@@ -70,16 +70,6 @@ public class Application extends DataType implements Cloneable {
         embeddedIntoSwing = "swing".equalsIgnoreCase(v);
     }
 
-    /**
-     * Main class of AWT-based applet to be used if application fail to launch
-     * due to missing FX runtime and installation of JavaFX is not possible.
-     *
-     * @ant.not-required
-     */
-    public void setFallbackClass(String v) {
-        fallbackApp = v;
-    }
-
     public void setName(String v) {
         name = v;
     }
