@@ -802,13 +802,14 @@ public class JNLPBundler extends AbstractBundler {
                     xout.writeAttribute("java-vm-args", vmargs);
                 }
                 xout.writeAttribute("href", "http://java.sun.com/products/autodl/j2se");
+                xout.writeEndElement(); //j2se
+
                 for (Map.Entry<String, String> entry : JVM_PROPERTIES.fetchFrom(params).entrySet()) {
                     xout.writeStartElement("property");
                     xout.writeAttribute("name", entry.getKey());
                     xout.writeAttribute("value", entry.getValue());
                     xout.writeEndElement(); //property
                 }
-                xout.writeEndElement(); //j2se
             }
             String currentOS = null, currentArch = null;
 //            //NOTE: This should sort the list by os+arch; it will reduce the number of resource tags
