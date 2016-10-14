@@ -1253,6 +1253,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         computeBarVisiblity();
+
+        recreatedOrRebuilt = recreatedOrRebuilt || rebuild;
         updateScrollBarsAndCells(recreatedOrRebuilt);
 
         lastWidth = getWidth();

@@ -150,11 +150,16 @@ public class DeployFXTask extends Task implements DynamicAttribute {
 
         if (!isModular &&
             (nativeBundles == BundleType.JNLP ||
-             nativeBundles == BundleType.ALL)) {
+             nativeBundles == BundleType.ALL ||
+             nativeBundles == BundleType.NONE)) {
             deployParams.setOfflineAllowed(offlineAllowed);
             deployParams.setVerbose(verbose);
             deployParams.setCodebase(codebase);
             deployParams.setSignBundle(signBundle);
+
+            if (app.getModule() == null) {
+                deployParams.setApplicationClass(app.get().mainClass);
+            }
 
             if (width != null) {
                 deployParams.setWidth(Integer.valueOf(width));

@@ -46,7 +46,6 @@ import org.apache.tools.ant.types.FileSet;
  * In addition to just creating jar archive it also:
  * <ul>
  *   <li> embeds of JavaFX launcher (for double clickable jars)
- *   <li> embeds of fallback AWT applet (to be used if JavaFX is not available)
  *   <li> ensures jar manifests do not have "bad" entries (such as Class-Path)
  * </ul>
  *

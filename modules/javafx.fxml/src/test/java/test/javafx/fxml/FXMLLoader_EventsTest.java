@@ -1,6 +1,5 @@
 package test.javafx.fxml;
 
-import com.sun.xml.internal.bind.v2.runtime.unmarshaller.Loader;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;

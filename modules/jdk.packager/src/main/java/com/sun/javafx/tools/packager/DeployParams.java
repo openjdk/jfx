@@ -77,8 +77,8 @@ public class DeployParams extends CommonParams {
     List<String> arguments; //unnamed arguments
 
     // Java 9 modules support
-    Set<String> addModules = null;
-    Set<String> limitModules = null;
+    String addModules = null;
+    String limitModules = null;
     Boolean stripNativeCommands = null;
     Boolean detectmods = null;
     String modulePath = null;
@@ -253,20 +253,22 @@ public class DeployParams extends CommonParams {
         this.arguments = args;
     }
 
-    public void addAddModule(String module) {
+    public void addAddModule(String value) {
         if (addModules == null) {
-            addModules = new LinkedHashSet<>();
+            addModules = value;
         }
-
-        addModules.add(module);
+        else {
+            addModules += "," + value;
+        }
     }
 
-    public void addLimitModule(String module) {
+    public void addLimitModule(String value) {
         if (limitModules == null) {
-            limitModules = new LinkedHashSet<>();
+            limitModules = value;
         }
-
-        limitModules.add(module);
+        else {
+            limitModules += "," + value;
+        }
     }
 
     public void setModulePath(String value) {
@@ -492,7 +494,7 @@ public class DeployParams extends CommonParams {
             throw new PackagerException("ERR_MissingArgument", "-outdir");
         }
 
-        if (outfile == null) {
+        if (getBundleType() == BundleType.JNLP && outfile == null) {
             throw new PackagerException("ERR_MissingArgument", "-outfile");
         }
 

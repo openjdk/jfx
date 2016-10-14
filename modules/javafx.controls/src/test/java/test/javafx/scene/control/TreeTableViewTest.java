@@ -26,7 +26,6 @@
 package test.javafx.scene.control;
 
 import com.sun.javafx.scene.control.TableColumnBaseHelper;
-import static com.sun.xml.internal.fastinfoset.alphabet.BuiltInRestrictedAlphabets.table;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import static javafx.scene.control.TreeTableColumn.SortType.ASCENDING;
 import static javafx.scene.control.TreeTableColumn.SortType.DESCENDING;

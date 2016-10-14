@@ -937,10 +937,17 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
             result.add(jdkModulePath);
         }
         else {
-            jdkModulePath = Paths.get(System.getProperty("java.home"), "../images/jmods").toAbsolutePath();
+            // On a developer build the JDK Home isn't where we expect it
+            // relative to the jmods directory. Do some extra
+            // processing to find it.
+            Map<String, String> env = System.getenv();
 
-            if (jdkModulePath != null && Files.exists(jdkModulePath)) {
-                result.add(jdkModulePath);
+            if (env.containsKey("JDK_HOME")) {
+                jdkModulePath = Paths.get(env.get("JDK_HOME"), ".." + File.separator + "images" + File.separator + "jmods").toAbsolutePath();
+
+                if (jdkModulePath != null && Files.exists(jdkModulePath)) {
+                    result.add(jdkModulePath);
+                }
             }
         }
 

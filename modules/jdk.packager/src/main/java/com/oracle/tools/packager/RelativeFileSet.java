@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,7 +61,7 @@ public class RelativeFileSet {
             String absolute = f.getAbsolutePath();
             if (!absolute.startsWith(baseAbsolute)) {
                 throw new RuntimeException("File " + f.getAbsolutePath() +
-                        " does not belong to "+baseAbsolute);
+                        " does not belong to " + baseAbsolute);
             }
             if (!absolute.equals(baseAbsolute)) { //possible in javapackager case
                 this.files.add(absolute.substring(baseAbsolute.length()+1));
