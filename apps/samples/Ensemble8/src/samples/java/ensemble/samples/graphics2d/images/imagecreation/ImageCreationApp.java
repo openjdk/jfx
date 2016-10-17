@@ -62,7 +62,7 @@ public class ImageCreationApp extends Application {
         ImageView sample1 = new ImageView(ICON_48);
 
         // load and display a image resource from url
-        Image JV0H = new Image("http://java.com/images/jv0h.jpg",
+        Image JV0H = new Image("https://java.com/images/jv0h.jpg",
                                400, 100, true, true);
         ImageView sample2 = new ImageView(JV0H);
 
