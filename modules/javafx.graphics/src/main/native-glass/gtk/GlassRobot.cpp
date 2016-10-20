@@ -27,6 +27,7 @@
 #include <X11/extensions/XTest.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <math.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
 
@@ -34,6 +35,7 @@
 #include <com_sun_glass_events_MouseEvent.h>
 #include "glass_general.h"
 #include "glass_key.h"
+#include "glass_screen.h"
 
 
 static void checkXTest(JNIEnv* env) {
@@ -127,6 +129,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_gtk_GtkRobot__1mouseMove
 
     Display *xdisplay = gdk_x11_get_default_xdisplay();
     checkXTest(env);
+    jfloat uiScale = getUIScale();
+    x = rint(x * uiScale);
+    y = rint(y * uiScale);
     XWarpPointer(xdisplay,
             None,
             XRootWindow(xdisplay,gdk_x11_get_default_screen()),
