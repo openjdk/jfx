@@ -104,6 +104,26 @@ static GdkRectangle get_screen_workarea(GdkScreen *screen) {
 
 }
 
+jfloat getUIScale() {
+    jfloat uiScale;
+    if (OverrideUIScale > 0.0f) {
+        uiScale = OverrideUIScale;
+    } else {
+        char *scale_str = getenv("GDK_SCALE");
+        int gdk_scale = (scale_str == NULL) ? -1 : atoi(scale_str);
+        if (gdk_scale > 0) {
+            uiScale = (jfloat) gdk_scale;
+        } else {
+            uiScale = (jfloat) glass_settings_get_guint_opt("org.gnome.desktop.interface",
+                                                            "scaling-factor", 0);
+            if (uiScale < 1) {
+                uiScale = 1;
+            }
+        }
+    }
+    return uiScale;
+}
+
 static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx)
 {
     GdkRectangle workArea = get_screen_workarea(screen);
@@ -121,22 +141,7 @@ static jobject createJavaScreen(JNIEnv* env, GdkScreen* screen, gint monitor_idx
     GdkRectangle working_monitor_geometry;
     gdk_rectangle_intersect(&workArea, &monitor_geometry, &working_monitor_geometry);
 
-    jfloat uiScale;
-    if (OverrideUIScale > 0.0f) {
-        uiScale = OverrideUIScale;
-    } else {
-        char *scale_str = getenv("GDK_SCALE");
-        int gdk_scale = (scale_str == NULL) ? -1 : atoi(scale_str);
-        if (gdk_scale > 0) {
-            uiScale = (jfloat) gdk_scale;
-        } else {
-            uiScale = (jfloat) glass_settings_get_guint_opt("org.gnome.desktop.interface",
-                                                            "scaling-factor", 0);
-            if (uiScale < 1) {
-                uiScale = 1;
-            }
-        }
-    }
+    jfloat uiScale = getUIScale();
 
     jint mx = monitor_geometry.x / uiScale;
     jint my = monitor_geometry.y / uiScale;

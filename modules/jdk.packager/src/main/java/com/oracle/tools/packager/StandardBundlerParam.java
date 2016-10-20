@@ -638,6 +638,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     p -> Collections.singletonList(MAIN_CLASS.fetchFrom(p)),
                     (s, p) -> Arrays.asList(s.split("[ ,:]"))
             );
+    private static final String JAVABASEJMOD = "java.base.jmod";
 
     @SuppressWarnings("unchecked")
     public static final BundlerParamInfo<List<Path>> MODULE_PATH =
@@ -648,30 +649,30 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     (Class<List<Path>>) (Object)List.class,
                     p -> { return getDefaultModulePath(); },
                     (s, p) -> {
-                        List<Path> modulePath = Arrays.asList(s.split("[;:]")).stream()
+                        List<Path> modulePath = Arrays.asList(s.split(File.pathSeparator)).stream()
                                                       .map(ss -> new File(ss).toPath())
                                                       .collect(Collectors.toList());
-                        Path userDefinedJdkModulePath = null;
+                        Path javaBasePath = null;
                         if (modulePath != null) {
-                            userDefinedJdkModulePath = JLinkBundlerHelper.findPathOfModule(modulePath, "java.base.jmod");
+                            javaBasePath = JLinkBundlerHelper.findPathOfModule(modulePath, JAVABASEJMOD);
                         }
                         else {
                             modulePath = new ArrayList();
                         }
 
                         // Add the default JDK module path to the module path.
-                        if (userDefinedJdkModulePath == null) {
+                        if (javaBasePath == null) {
                             List<Path> jdkModulePath = getDefaultModulePath();
 
                             if (jdkModulePath != null) {
                                 modulePath.addAll(jdkModulePath);
+                                javaBasePath = JLinkBundlerHelper.findPathOfModule(modulePath, JAVABASEJMOD);
                             }
                         }
 
-                        Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
-
-                        if (javaBasePath == null || !javaBasePath.toFile().exists()) {
-                            com.oracle.tools.packager.Log.info(String.format(I18N.getString("warning.no.jdk.modules.found")));
+                        if (javaBasePath == null || !Files.exists(javaBasePath)) {
+                            com.oracle.tools.packager.Log.info(
+                                String.format(I18N.getString("warning.no.jdk.modules.found")));
                         }
 
                         return modulePath;
@@ -697,7 +698,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "add-modules",
                     (Class<Set<String>>) (Object) Set.class,
                     p -> new LinkedHashSet(),
-                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+")))
+                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split(",")))
             );
 
     @SuppressWarnings("unchecked")
@@ -708,7 +709,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     "limit-modules",
                     (Class<Set<String>>) (Object) Set.class,
                     p -> new LinkedHashSet(),
-                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split("[,;: ]+")))
+                    (s, p) -> new LinkedHashSet<>(Arrays.asList(s.split(",")))
             );
 
     @SuppressWarnings("unchecked")
