@@ -1021,8 +1021,16 @@ Controller.prototype = {
         this.controls.panel.classList.remove(this.ClassNames.show);
     },
 
+    controlsAreAlwaysVisible: function()
+    {
+        return this.controls.panel.classList.contains(this.ClassNames.noVideo);
+    },
+
     controlsAreHidden: function()
     {
+        if (this.controlsAreAlwaysVisible())
+            return false;
+
         return !this.controls.panel.classList.contains(this.ClassNames.show) || this.controls.panel.classList.contains(this.ClassNames.hidden);
     },
 
