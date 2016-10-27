@@ -484,11 +484,13 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
                     jfloat scale = (*env)->CallStaticFloatMethod(env,
                             [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env],
                             javaIDs.Application.getScaleFactor, x, y, width, height);
+                     if ((*env)->ExceptionCheck(env)) return NULL;
 
                     // create Pixels
                     pixels = (*env)->CallStaticObjectMethod(env,
                             [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env],
                             javaIDs.Application.createPixels, pixWidth, pixHeight, pixelArray, scale, scale);
+                    if ((*env)->ExceptionCheck(env)) return NULL;
                 }
             }
 

@@ -446,6 +446,7 @@ static jobject dnd_target_get_image(JNIEnv *env)
                 EXCEPTION_OCCURED(env);
 
                 buffer = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, data_array);
+                EXCEPTION_OCCURED(env);
                 result = env->NewObject(jGtkPixelsCls, jGtkPixelsInit, w, h, buffer);
                 EXCEPTION_OCCURED(env);
 
@@ -474,6 +475,7 @@ static jobject dnd_target_get_raw(JNIEnv *env, GdkAtom target, gboolean string_d
             env->SetByteArrayRegion(array, 0, length, (const jbyte*)ctx.data);
             EXCEPTION_OCCURED(env);
             result = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, array);
+            EXCEPTION_OCCURED(env);
         }
     }
     g_free(ctx.data);

@@ -248,8 +248,10 @@ jobject COMFileChooser_Show(HWND owner, LPCTSTR folder, LPCTSTR filename, LPCTST
     jclass jc = env->FindClass("com/sun/glass/ui/CommonDialogs");
     if (CheckAndClearException(env)) return NULL;
     JLClass cls(env, jc);
-    return env->CallStaticObjectMethod(cls, javaIDs.CommonDialogs.createFileChooserResult,
+    jobject jobj = env->CallStaticObjectMethod(cls, javaIDs.CommonDialogs.createFileChooserResult,
             ret, jFilters, (jint)(index - 1));
+    if (CheckAndClearException(env)) return NULL;
+    return jobj;
 }
 
 /*****************************

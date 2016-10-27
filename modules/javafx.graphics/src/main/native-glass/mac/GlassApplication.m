@@ -708,6 +708,10 @@ jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
     GET_MAIN_JENV;
     (*env)->CallStaticObjectMethod(env, jApplicationClass,
             javaIDs.Application.enterNestedEventLoop);
+    if ((*env)->ExceptionCheck(env) == JNI_TRUE) {
+        (*env)->ExceptionDescribe(env);
+        (*env)->ExceptionClear(env);
+    }
     isFullScreenExitingLoop = NO;
 }
 

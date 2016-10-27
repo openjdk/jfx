@@ -136,22 +136,22 @@ JNI_OnLoad_glass(JavaVM *vm, void *reserved)
 jboolean setContextClassLoader(JNIEnv *env, jobject contextClassLoader)
 {
     jclass threadCls = (*env)->FindClass(env, "java/lang/Thread");
-    if (threadCls == NULL) {
+    if ((*env)->ExceptionCheck(env) || threadCls == NULL) {
         return JNI_FALSE;
     }
     jmethodID currentThreadMID = (*env)->GetStaticMethodID(env, threadCls,
                                                            "currentThread", "()Ljava/lang/Thread;");
-    if (currentThreadMID == NULL) {
+    if ((*env)->ExceptionCheck(env) || currentThreadMID == NULL) {
         return JNI_FALSE;
     }
     jobject jCurrentThread = (*env)->CallStaticObjectMethod(env, threadCls, currentThreadMID);
-    if (jCurrentThread == NULL) {
+    if ((*env)->ExceptionCheck(env) || jCurrentThread == NULL) {
         return JNI_FALSE;
     }
 
     jmethodID setContextClassLoaderMID = (*env)->GetMethodID(env, threadCls,
                                                              "setContextClassLoader", "(Ljava/lang/ClassLoader;)V");
-    if (setContextClassLoaderMID == NULL) {
+    if ((*env)->ExceptionCheck(env) || setContextClassLoaderMID == NULL) {
         return JNI_FALSE;
     }
     (*env)->CallVoidMethod(env, jCurrentThread, setContextClassLoaderMID, contextClassLoader);
@@ -174,22 +174,22 @@ jboolean setContextClassLoader(JNIEnv *env, jobject contextClassLoader)
 jclass classForName(JNIEnv *env, char *className)
 {
     jclass threadCls = (*env)->FindClass(env, "java/lang/Thread");
-    if (threadCls == NULL) {
+    if ((*env)->ExceptionCheck(env) || threadCls == NULL) {
         return NULL;
     }
     jmethodID currentThreadMID = (*env)->GetStaticMethodID(env, threadCls,
                                                            "currentThread", "()Ljava/lang/Thread;");
-    if (currentThreadMID == NULL) {
+    if ((*env)->ExceptionCheck(env) || currentThreadMID == NULL) {
         return NULL;
     }
     jobject jCurrentThread = (*env)->CallStaticObjectMethod(env, threadCls, currentThreadMID);
-    if (jCurrentThread == NULL) {
+    if ((*env)->ExceptionCheck(env) || jCurrentThread == NULL) {
         return NULL;
     }
 
     jmethodID getContextClassLoaderMID = (*env)->GetMethodID(env, threadCls,
                                                              "getContextClassLoader", "()Ljava/lang/ClassLoader;");
-    if (getContextClassLoaderMID == NULL) {
+    if ((*env)->ExceptionCheck(env) || getContextClassLoaderMID == NULL) {
         return NULL;
     }
     jobject contextClassLoader = (*env)->CallObjectMethod(env, jCurrentThread, getContextClassLoaderMID);
@@ -198,21 +198,23 @@ jclass classForName(JNIEnv *env, char *className)
     }
 
     jclass classCls = (*env)->FindClass(env, "java/lang/Class");
-    if (classCls == NULL) {
+    if ((*env)->ExceptionCheck(env) || classCls == NULL) {
         return NULL;
     }
     jmethodID forNameMID = (*env)->GetStaticMethodID(env, classCls,
                                                      "forName", "(Ljava/lang/String;ZLjava/lang/ClassLoader;)Ljava/lang/Class;");
-    if (forNameMID == NULL) {
+    if ((*env)->ExceptionCheck(env) || forNameMID == NULL) {
         return NULL;
     }
     jstring classNameStr = (*env)->NewStringUTF(env, className);
-    if (classNameStr == NULL) {
+    if ((*env)->ExceptionCheck(env) || classNameStr == NULL) {
         return NULL;
     }
     jclass theCls = (*env)->CallStaticObjectMethod(env, classCls, forNameMID,
                                                    classNameStr, JNI_TRUE, contextClassLoader);
-
+    if ((*env)->ExceptionCheck(env)) {
+        return NULL;
+    }
     return theCls;
 }
 
@@ -765,7 +767,11 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosApplication__1initIDs
 
 #if PROTECT_INVOKE_AND_WAIT
 static jobject getCurrentThread(JNIEnv *env) {
-    return (*env)->CallStaticObjectMethod(env, mat_jThreadClass, mat_ThreadCurrentThread);
+    jobject jobj = (*env)->CallStaticObjectMethod(env, mat_jThreadClass, mat_ThreadCurrentThread);
+    if ((*env)->ExceptionCheck(env)) {
+        return NULL;
+    }
+    return jobj;
 }
 #endif
 

@@ -328,6 +328,7 @@ static jobject get_data_image(JNIEnv* env) {
     EXCEPTION_OCCURED(env);
 
     buffer = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, data_array);
+    EXCEPTION_OCCURED(env);
     result = env->NewObject(jGtkPixelsCls, jGtkPixelsInit, w, h, buffer);
     EXCEPTION_OCCURED(env);
 
@@ -357,6 +358,7 @@ static jobject get_data_raw(JNIEnv *env, const char* mime, gboolean string_data)
             env->SetByteArrayRegion(array, 0, length, (const jbyte*)raw_data);
             EXCEPTION_OCCURED(env);
             result = env->CallStaticObjectMethod(jByteBufferCls, jByteBufferWrap, array);
+            EXCEPTION_OCCURED(env);
         }
         gtk_selection_data_free(data);
     }
