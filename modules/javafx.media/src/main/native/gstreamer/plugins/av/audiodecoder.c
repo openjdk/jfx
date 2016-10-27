@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -122,6 +122,7 @@ static GstFlowReturn audiodecoder_chain(GstPad * pad, GstObject *parent, GstBuff
 static gboolean audiodecoder_src_query(GstPad * pad, GstObject *parent, GstQuery* query);
 static gboolean audiodecoder_init_state(AudioDecoder *decoder);
 static gboolean audiodecoder_open_init(AudioDecoder *decoder, GstCaps* caps);
+static gboolean audiodecoder_src_event(GstPad* pad, GstObject *parent, GstEvent* event);
 
 #if DECODE_AUDIO4
 static gboolean audiodecoder_is_oformat_supported(int format);
@@ -173,6 +174,7 @@ static void audiodecoder_init(AudioDecoder* decoder)
     if (TRUE != gst_element_add_pad(GST_ELEMENT(decoder), base->srcpad))
         g_warning("audiodecoder element failed to add source pad!\n"); //
     gst_pad_set_query_function(base->srcpad, audiodecoder_src_query);
+    gst_pad_set_event_function(base->srcpad, audiodecoder_src_event);
     gst_pad_use_fixed_caps(base->srcpad);
 }
 
@@ -437,6 +439,50 @@ audiodecoder_src_query(GstPad * pad, GstObject *parent, GstQuery * query) {
     // Use default query if flag indicates query not handled.
     if (result == FALSE)
         result = gst_pad_query_default(pad, parent, query);
+
+    return result;
+}
+
+static gboolean audiodecoder_src_event(GstPad* pad, GstObject *parent, GstEvent* event) {
+    gboolean result = FALSE;
+    BaseDecoder *base = BASEDECODER(parent);
+
+    if (GST_EVENT_TYPE(event) == GST_EVENT_SEEK) {
+        gdouble rate; // segment rate
+        GstFormat format; // format of the seek values
+        GstSeekFlags flags; // the seek flags
+        GstSeekType start_type; // the seek type of the start position
+        GstSeekType stop_type; // the seek type of the stop position
+        gint64 start; // the seek start position in the given format
+        gint64 stop; // the seek stop position in the given format
+
+        // Looks like mpegaudioparse has a bug for seeking within ~20 seconds of
+        // mp3 file. Seeking will not be correct and offset will be ~15 seconds.
+        // DShowWrapper does not let mpegaudioparse to do seek, instead it asks
+        // it to convert TIME to BYTES and let source element do seek. This approach
+        // works fine on Windows and Linux, so we will do same here.
+
+        // Get seek description from the event.
+        gst_event_parse_seek(event, &rate, &format, &flags, &start_type, &start, &stop_type, &stop);
+        if (format == GST_FORMAT_TIME) {
+            gint64 start_byte = 0;
+            if (gst_pad_peer_query_convert(base->sinkpad, GST_FORMAT_TIME, start, GST_FORMAT_BYTES, &start_byte)) {
+                result = gst_pad_push_event(base->sinkpad,
+                        gst_event_new_seek(rate, GST_FORMAT_BYTES,
+                        (GstSeekFlags) (GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_ACCURATE),
+                        GST_SEEK_TYPE_SET, start_byte,
+                        GST_SEEK_TYPE_NONE, 0));
+                if (result) {
+                    // INLINE - gst_event_unref()
+                    gst_event_unref(event);
+                }
+            }
+        }
+    }
+
+    // Push the event upstream only if it was not processed.
+    if (!result)
+        result = gst_pad_push_event(base->sinkpad, event);
 
     return result;
 }
