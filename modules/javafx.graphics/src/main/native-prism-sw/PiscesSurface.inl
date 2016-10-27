@@ -49,6 +49,7 @@ surface_dispose(Surface* surface) {
 static INLINE void
 surface_setRGB(Surface* dstSurface, jint x, jint y,
                jint width, jint height, jint* data, jint scanLength) {
+    if (dstSurface->data == NULL) return;
     setRGB((jint*)dstSurface->data + y * dstSurface->width + x, 
            dstSurface->width, data, scanLength, width, height);
 }
