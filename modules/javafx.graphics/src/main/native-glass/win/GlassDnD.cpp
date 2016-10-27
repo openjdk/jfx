@@ -77,6 +77,10 @@ HRESULT  GlassDropTarget::UpdateDnDClipboardData(
     }
     JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
     ASSERT(jDnDClipboard)
+    result = checkJavaException(env);
+    if (result != S_OK) {
+        return result;
+    }
 
     IDataObject *pOldDataObj = getPtr(env, jDnDClipboard);
     if (pOldDataObj != pDataObj) {
@@ -234,7 +238,10 @@ HRESULT GlassDropTarget::SetSourceSupportedActions(/*in*/jint actions)
 
     JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
     ASSERT(jDnDClipboard)
-
+    result = checkJavaException(env);
+    if (result != S_OK) {
+        return result;
+    }
     env->CallVoidMethod(jDnDClipboard, midSetSourceSupportedActions, actions);
 
     return checkJavaException(env);
@@ -270,6 +277,10 @@ HRESULT  GlassDropSource::SetDragButton(jint button)
 
     JLObject jDnDClipboard(env, env->CallStaticObjectMethod(jcWinDnDClipboard, midGetInstance));
     ASSERT(jDnDClipboard)
+    result = checkJavaException(env);
+    if (result != S_OK) {
+        return result;
+    }
 
     env->CallVoidMethod(jDnDClipboard, midSetDragButton, button);
 
