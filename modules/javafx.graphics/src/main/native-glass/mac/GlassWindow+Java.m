@@ -69,6 +69,12 @@ extern NSSize maxScreenDimensions;
     }
 }
 
+- (void)_sendJavaWindowNotifyScaleChanged:(CGFloat)newScale
+{
+    GET_MAIN_JENV;
+    (*env)->CallVoidMethod(env, jWindow, jWindowNotifyScaleChanged, 1.0f, 1.0f, newScale, newScale);
+}
+
 - (void)_sendJavaWindowMoveEventForFrame:(NSRect)frame
 {
     if (self->suppressWindowMoveEvent == NO)

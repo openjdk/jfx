@@ -52,16 +52,6 @@ final class MacWindow extends Window {
         super(parent);
     }
 
-    @Override
-    protected void setScreen(Screen screen) {
-        // SceneState will be called to update with new scale values
-        // before we return from super.setScreen()...
-        super.setScreen(screen);
-        notifyScaleChanged(1.0f, 1.0f,
-                           screen.getRecommendedOutputScaleX(),
-                           screen.getRecommendedOutputScaleY());
-    }
-
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
     @Override native protected long _createChildWindow(long parent);
     @Override native protected boolean _close(long ptr);

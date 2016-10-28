@@ -137,7 +137,9 @@
     // The spec for [NSWindow backingScaleFactor] only mentions 1.0 and 2.0
     // whereas NSScreen's one is more generic. So use the latter.
     if ([self->nsWindow screen]) {
-        [self->view notifyScaleFactorChanged:GetScreenScaleFactor([self->nsWindow screen])];
+        CGFloat scale = GetScreenScaleFactor([self->nsWindow screen]);
+        [self->view notifyScaleFactorChanged:scale];
+        [self _sendJavaWindowNotifyScaleChanged:scale];
     }
 
     // Screen.notifySettingsChanged() calls Window.setScreen(), and the latter

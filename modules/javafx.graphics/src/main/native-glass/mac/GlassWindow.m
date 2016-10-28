@@ -636,6 +636,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
         if ((*env)->ExceptionCheck(env)) return;
     }
 
+    if (jWindowNotifyScaleChanged == NULL)
+    {
+        jWindowNotifyScaleChanged = (*env)->GetMethodID(env, jWindowClass, "notifyScaleChanged", "(FFFF)V");
+        if ((*env)->ExceptionCheck(env)) return;
+    }
+
     if (jWindowNotifyClose == NULL)
     {
         jWindowNotifyClose = (*env)->GetMethodID(env, jWindowClass, "notifyClose", "()V");

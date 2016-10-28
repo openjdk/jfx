@@ -364,13 +364,15 @@ class WindowStage extends GlassStage {
         } else {
             px = py = 0;
         }
-        int pw = (int) (w > 0 ? Math.ceil(w * pScaleX) : w);
-        int ph = (int) (h > 0 ? Math.ceil(h * pScaleY) : h);
-        int pcw = (int) (cw > 0 ? Math.ceil(cw * pScaleX) : cw);
-        int pch = (int) (ch > 0 ? Math.ceil(ch * pScaleY) : ch);
-        platformWindow.setBounds(px, py, xSet, ySet,
-                                 pw, ph, pcw, pch,
-                                 xGravity, yGravity);
+        if (xSet || ySet || w > 0 || h > 0 || cw > 0 || ch > 0) {
+            int pw = (int) (w > 0 ? Math.ceil(w * pScaleX) : w);
+            int ph = (int) (h > 0 ? Math.ceil(h * pScaleY) : h);
+            int pcw = (int) (cw > 0 ? Math.ceil(cw * pScaleX) : cw);
+            int pch = (int) (ch > 0 ? Math.ceil(ch * pScaleY) : ch);
+            platformWindow.setBounds(px, py, xSet, ySet,
+                                     pw, ph, pcw, pch,
+                                     xGravity, yGravity);
+        }
     }
 
     @Override

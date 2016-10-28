@@ -53,6 +53,7 @@ jmethodID jWindowNotifyMove = NULL;
 jmethodID jWindowNotifyResize = NULL;
 jmethodID jWindowNotifyClose = NULL;
 jmethodID jWindowNotifyMoveToAnotherScreen = NULL;
+jmethodID jWindowNotifyScaleChanged = NULL;
 jmethodID jWindowNotifyFocus = NULL;
 jmethodID jWindowNotifyFocusUngrab = NULL;
 jmethodID jWindowNotifyFocusDisabled = NULL;

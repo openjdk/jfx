@@ -51,6 +51,7 @@ extern jmethodID jWindowNotifyMove;
 extern jmethodID jWindowNotifyResize;
 extern jmethodID jWindowNotifyClose;
 extern jmethodID jWindowNotifyMoveToAnotherScreen;
+extern jmethodID jWindowNotifyScaleChanged;
 extern jmethodID jWindowNotifyFocus;
 extern jmethodID jWindowNotifyFocusUngrab;
 extern jmethodID jWindowNotifyFocusDisabled;
