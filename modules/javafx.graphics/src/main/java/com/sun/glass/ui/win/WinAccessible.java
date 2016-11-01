@@ -25,7 +25,10 @@
 
 package com.sun.glass.ui.win;
 
+import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Bounds;
@@ -479,6 +482,17 @@ final class WinAccessible extends Accessible {
             case SPINNER: return UIA_SpinnerControlTypeId;
             default: return 0;
         }
+    }
+
+    /* Filter out hidden child nodes */
+    private List<Node> getUnignoredChildren(WinAccessible acc) {
+        if (acc == null) return FXCollections.emptyObservableList();
+
+        @SuppressWarnings("unchecked")
+        ObservableList<Node> children = (ObservableList<Node>)acc.getAttribute(CHILDREN);
+        return children.stream()
+                .filter(Node::isVisible)
+                .collect(Collectors.toList());
     }
 
     /* Helper used by TreeTableCell to find the TableRow */
@@ -978,8 +992,7 @@ final class WinAccessible extends Accessible {
                             return (Node)parentAccessible.getAttribute(AccessibleAttribute.TREE_ITEM_AT_INDEX, index);
                         };
                     } else {
-                        @SuppressWarnings("unchecked")
-                        ObservableList<Node> children = (ObservableList<Node>)parentAccessible.getAttribute(CHILDREN);
+                        List<Node> children = getUnignoredChildren(parentAccessible);
                         if (children == null) return 0;
                         count = children.size();
                         getChild = index -> {
@@ -1036,8 +1049,7 @@ final class WinAccessible extends Accessible {
                         node = (Node)getAttribute(TREE_ITEM_AT_INDEX, lastIndex);
                     }
                 } else {
-                    @SuppressWarnings("unchecked")
-                    ObservableList<Node> children = (ObservableList<Node>)getAttribute(CHILDREN);
+                    List<Node> children = getUnignoredChildren(this);
                     if (children != null && children.size() > 0) {
                         lastIndex = direction == NavigateDirection_FirstChild ? 0 : children.size() - 1;
                         node = children.get(lastIndex);
