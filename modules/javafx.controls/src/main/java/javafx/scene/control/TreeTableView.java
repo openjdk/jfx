@@ -3305,6 +3305,10 @@ public class TreeTableView<S> extends Control {
                     focus(0);
                 }
             });
+
+            focusedCellProperty().addListener(o -> {
+                treeTableView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
+            });
         }
 
         private final ChangeListener<TreeItem<S>> rootPropertyListener = (observable, oldValue, newValue) -> {

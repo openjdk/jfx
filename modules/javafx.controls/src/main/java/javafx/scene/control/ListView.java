@@ -1525,6 +1525,10 @@ public class ListView<T> extends Control {
 
             updateItemCount();
             updateDefaultFocus();
+
+            focusedIndexProperty().addListener(o -> {
+                listView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
+            });
         }
 
 
