@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,6 +51,10 @@ HRESULT CAllocator::GetBuffer(IMediaSample **ppBuffer, REFERENCE_TIME *pStartTim
     HRESULT hr = S_OK;
     CSample *pSample = NULL;
 
+    hr = CBaseAllocator::GetBuffer(ppBuffer, pStartTime, pEndTime, dwFlags);
+    if (FAILED(hr))
+        return hr;
+
     if (m_pBuffer == NULL)
     {
         if (GetGstBuffer != NULL)
@@ -59,10 +63,6 @@ HRESULT CAllocator::GetBuffer(IMediaSample **ppBuffer, REFERENCE_TIME *pStartTim
         if (m_pBuffer == NULL)
             return E_FAIL;
     }
-
-    hr = CBaseAllocator::GetBuffer(ppBuffer, pStartTime, pEndTime, dwFlags);
-    if (FAILED(hr))
-        return hr;
 
     pSample = (CSample*)*ppBuffer;
     if (!gst_buffer_map(m_pBuffer, &m_MapInfo, GST_MAP_WRITE))

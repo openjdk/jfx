@@ -1291,6 +1291,9 @@ gst_qtdemux_do_push_seek (GstQTDemux * qtdemux, GstPad * pad, GstEvent * event)
   gint64 byte_cur;
   gint64 original_stop;
   guint32 seqnum;
+#ifdef GSTREAMER_LITE
+  GstEvent * new_event = NULL;
+#endif // GSTREAMER_LITE
 
   GST_DEBUG_OBJECT (qtdemux, "doing push-based seek");
 
@@ -1341,10 +1344,20 @@ gst_qtdemux_do_push_seek (GstQTDemux * qtdemux, GstPad * pad, GstEvent * event)
   GST_OBJECT_UNLOCK (qtdemux);
 
   /* BYTE seek event */
+#ifdef GSTREAMER_LITE
+  new_event = gst_event_new_seek(rate, GST_FORMAT_BYTES, flags, cur_type, byte_cur,
+      stop_type, stop);
+  gst_event_set_seqnum(new_event, seqnum);
+  res = gst_pad_push_event(qtdemux->sinkpad, new_event);
+  if (res) {
+    gst_event_unref(event);
+  }
+#else // GSTREAMER_LITE
   event = gst_event_new_seek (rate, GST_FORMAT_BYTES, flags, cur_type, byte_cur,
       stop_type, stop);
   gst_event_set_seqnum (event, seqnum);
   res = gst_pad_push_event (qtdemux->sinkpad, event);
+#endif // GSTREAMER_LITE
 
   return res;
 

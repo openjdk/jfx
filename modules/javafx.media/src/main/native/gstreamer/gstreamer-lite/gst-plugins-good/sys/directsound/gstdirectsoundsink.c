@@ -426,6 +426,13 @@ gst_directsound_sink_acceptcaps (GstBaseSink * sink, GstQuery * query)
   GST_DEBUG_OBJECT (dsink, "Accepting caps");
 
 done:
+#ifdef GSTREAMER_LITE
+  if (spec.caps) {
+    // gst_audio_ring_buffer_parse_caps() will ref and set spec.caps to caps
+    // passed to this function. Unref it to avoid memory leak.
+    gst_caps_unref(spec.caps);
+  }
+#endif // GSTREAMER_LITE
   gst_query_set_accept_caps_result (query, ret);
   return TRUE;
 }
