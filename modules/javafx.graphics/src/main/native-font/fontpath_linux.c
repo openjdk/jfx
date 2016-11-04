@@ -470,6 +470,7 @@ Java_com_sun_javafx_font_FontConfigManager_getFontConfig
                 if (file[j] != NULL) {
                     jstr = (*env)->NewStringUTF(env, (const char*)file[j]);
                     (*env)->SetObjectField(env, fcFont, fontFileFID, jstr);
+                    (*env)->DeleteLocalRef(env, jstr);
                 }
                 if (styleStr[j] != NULL) {
                     jstr = (*env)->NewStringUTF(env, (const char*)styleStr[j]);
@@ -498,6 +499,7 @@ Java_com_sun_javafx_font_FontConfigManager_getFontConfig
             (*env)->DeleteLocalRef(env, fcFontArr);
         }
         (*env)->ReleaseStringUTFChars (env, fcNameStr, (const char*)fcName);
+        (*env)->DeleteLocalRef(env, fcNameStr);
         (*FcFontSetDestroy)(fontset);
         (*FcPatternDestroy)(pattern);
         free(family);
@@ -750,9 +752,14 @@ Java_com_sun_javafx_font_FontConfigManager_populateMapsNative
 
         jFamilyStrLC = (*env)->CallObjectMethod(env, jFamilyStr,
                                                 toLowerCaseMID, locale);
+        if ((*env)->ExceptionOccurred(env)) {
+            return JNI_FALSE;
+        }
         jFullNameStrLC = (*env)->CallObjectMethod(env, jFullNameStr,
                                                   toLowerCaseMID, locale);
-
+        if ((*env)->ExceptionOccurred(env)) {
+            return JNI_FALSE;
+        }
         if (jFamilyStrLC == NULL || jFullNameStrLC == NULL) {
             if (debugFC) {
                 fprintf(stderr,"Failed to create lower case string object");
@@ -763,16 +770,29 @@ Java_com_sun_javafx_font_FontConfigManager_populateMapsNative
 
         (*env)->CallObjectMethod(env, fontToFileMap, putMID,
                                  jFullNameStrLC, jFileStr);
+        if ((*env)->ExceptionOccurred(env)) {
+            return JNI_FALSE;
+        }
         (*env)->CallObjectMethod(env, fontToFamilyNameMap, putMID,
                                  jFullNameStrLC, jFamilyStr);
-
+        if ((*env)->ExceptionOccurred(env)) {
+            return JNI_FALSE;
+        }
         jList = (*env)->CallObjectMethod(env, familyToFontListMap,
                                          getMID, jFamilyStrLC);
-
+        if ((*env)->ExceptionOccurred(env)) {
+            return JNI_FALSE;
+        }
         if (jList == NULL) {
             jList = (*env)->NewObject(env, arrayListClass, arrayListCtr, 4);
+            if ((*env)->ExceptionOccurred(env)) {
+                return JNI_FALSE;
+            }
             (*env)->CallObjectMethod(env, familyToFontListMap,
                                      putMID, jFamilyStrLC, jList);
+            if ((*env)->ExceptionOccurred(env)) {
+                return JNI_FALSE;
+            }
         }
         if (jList == NULL) {
             if (debugFC) {
@@ -782,7 +802,9 @@ Java_com_sun_javafx_font_FontConfigManager_populateMapsNative
             continue;
         }
         (*env)->CallObjectMethod(env, jList, addMID, jFullNameStr);
-
+        if ((*env)->ExceptionOccurred(env)) {
+            return JNI_FALSE;
+        }
         /* Now referenced from the passed in maps, so can delete local refs. */
         (*env)->DeleteLocalRef(env, jFileStr);
         (*env)->DeleteLocalRef(env, jFamilyStr);
