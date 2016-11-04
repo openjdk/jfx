@@ -1,49 +1,11 @@
 /*
-     File: CAStreamBasicDescription.cpp
- Abstract: CAStreamBasicDescription.h
-  Version: 1.1
+Copyright (C) 2016 Apple Inc. All Rights Reserved.
+See LICENSE.txt for this sample’s licensing information
 
- Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
- Inc. ("Apple") in consideration of your agreement to the following
- terms, and your use, installation, modification or redistribution of
- this Apple software constitutes acceptance of these terms.  If you do
- not agree with these terms, please do not use, install, modify or
- redistribute this Apple software.
-
- In consideration of your agreement to abide by the following terms, and
- subject to these terms, Apple grants you a personal, non-exclusive
- license, under Apple's copyrights in this original Apple software (the
- "Apple Software"), to use, reproduce, modify and redistribute the Apple
- Software, with or without modifications, in source and/or binary forms;
- provided that if you redistribute the Apple Software in its entirety and
- without modifications, you must retain this notice and the following
- text and disclaimers in all such redistributions of the Apple Software.
- Neither the name, trademarks, service marks or logos of Apple Inc. may
- be used to endorse or promote products derived from the Apple Software
- without specific prior written permission from Apple.  Except as
- expressly stated in this notice, no other rights or licenses, express or
- implied, are granted by Apple herein, including but not limited to any
- patent rights that may be infringed by your derivative works or by other
- works in which the Apple Software may be incorporated.
-
- The Apple Software is provided by Apple on an "AS IS" basis.  APPLE
- MAKES NO WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
- THE IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY AND FITNESS
- FOR A PARTICULAR PURPOSE, REGARDING THE APPLE SOFTWARE OR ITS USE AND
- OPERATION ALONE OR IN COMBINATION WITH YOUR PRODUCTS.
-
- IN NO EVENT SHALL APPLE BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL
- OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- INTERRUPTION) ARISING IN ANY WAY OUT OF THE USE, REPRODUCTION,
- MODIFICATION AND/OR DISTRIBUTION OF THE APPLE SOFTWARE, HOWEVER CAUSED
- AND WHETHER UNDER THEORY OF CONTRACT, TORT (INCLUDING NEGLIGENCE),
- STRICT LIABILITY OR OTHERWISE, EVEN IF APPLE HAS BEEN ADVISED OF THE
- POSSIBILITY OF SUCH DAMAGE.
-
- Copyright (C) 2014 Apple Inc. All Rights Reserved.
-
+Abstract:
+Part of Core Audio Public Utility Classes
 */
+
 #include "CAStreamBasicDescription.h"
 #include "CAMath.h"
 
@@ -138,6 +100,9 @@ char *CAStreamBasicDescription::AsString(char *buf, size_t _bufsize, bool brief 
             switch (com) {
             case kPCMFormatInt16:
                 desc = "Int16";
+                break;
+            case kPCMFormatInt32:
+                desc = "Int32";
                 break;
             case kPCMFormatFixed824:
                 desc = "Int8.24";
@@ -269,6 +234,46 @@ void    CAStreamBasicDescription::NormalizeLinearPCMFormat(bool inNativeEndian, 
         ioDescription.mFramesPerPacket = 1;
         ioDescription.mBytesPerFrame = SizeOf32(AudioSampleType) * ioDescription.mChannelsPerFrame;
         ioDescription.mBitsPerChannel = 8 * SizeOf32(AudioSampleType);
+    }
+}
+
+void    CAStreamBasicDescription::VirtualizeLinearPCMFormat(AudioStreamBasicDescription& ioDescription)
+{
+    //  the only thing that changes is to make mixable linear PCM into the HAL's virtual linear PCM format, which is Float32 currently
+    if((ioDescription.mFormatID == kAudioFormatLinearPCM) && ((ioDescription.mFormatFlags & kIsNonMixableFlag) == 0))
+    {
+        //  the virtual linear PCM format
+        ioDescription.mFormatFlags = kAudioFormatFlagsNativeFloatPacked;
+        ioDescription.mBytesPerPacket = SizeOf32(Float32) * ioDescription.mChannelsPerFrame;
+        ioDescription.mFramesPerPacket = 1;
+        ioDescription.mBytesPerFrame = SizeOf32(Float32) * ioDescription.mChannelsPerFrame;
+        ioDescription.mBitsPerChannel = 8 * SizeOf32(Float32);
+    }
+}
+
+void    CAStreamBasicDescription::VirtualizeLinearPCMFormat(bool inNativeEndian, AudioStreamBasicDescription& ioDescription)
+{
+    //  the only thing that changes is to make mixable linear PCM into the HAL's virtual linear PCM format, which is Float32 currently
+    if((ioDescription.mFormatID == kAudioFormatLinearPCM) && ((ioDescription.mFormatFlags & kIsNonMixableFlag) == 0))
+    {
+        //  the virtual linear PCM format
+        ioDescription.mFormatFlags = kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked;
+        if(inNativeEndian)
+        {
+#if TARGET_RT_BIG_ENDIAN
+            ioDescription.mFormatFlags |= kAudioFormatFlagIsBigEndian;
+#endif
+        }
+        else
+        {
+#if TARGET_RT_LITTLE_ENDIAN
+            ioDescription.mFormatFlags |= kAudioFormatFlagIsBigEndian;
+#endif
+        }
+        ioDescription.mBytesPerPacket = SizeOf32(Float32) * ioDescription.mChannelsPerFrame;
+        ioDescription.mFramesPerPacket = 1;
+        ioDescription.mBytesPerFrame = SizeOf32(Float32) * ioDescription.mChannelsPerFrame;
+        ioDescription.mBitsPerChannel = 8 * SizeOf32(Float32);
     }
 }
 
@@ -560,134 +565,136 @@ bool    operator<(const AudioStreamBasicDescription& x, const AudioStreamBasicDe
     return theAnswer;
 }
 
-void CAStreamBasicDescription::ModifyFormatFlagsForMatching(const AudioStreamBasicDescription& x, const AudioStreamBasicDescription& y, UInt32& xFlags, UInt32& yFlags, bool converterOnly )
+UInt32 CAStreamBasicDescription::GetRegularizedFormatFlags(bool forHardware) const
 {
-    // match wildcards
-    if (x.mFormatID == 0 || y.mFormatID == 0 || xFlags == 0 || yFlags == 0)
+    UInt32 result = mFormatFlags;
+
+    if (IsPCM()) {
+        // First, if there are bits other than AllClear set, clear it because it's lying.
+        if (result & ~kAudioFormatFlagsAreAllClear)
+            result &= ~kAudioFormatFlagsAreAllClear;
+
+        // If not forHardware, remove the mixability flag.
+        if (!forHardware)
+            result &= ~kLinearPCMFormatFlagIsNonMixable;
+
+        // If the format has no extra bits, then it is packed.
+        if (!PackednessIsSignificant())
+            result |= kLinearPCMFormatFlagIsPacked;
+
+        // Remove the high-aligned flag if alignment is irrelevant.
+        if (!AlignmentIsSignificant())
+            result &= ~kLinearPCMFormatFlagIsAlignedHigh;
+
+        // Remove the signed integer bit if it's float
+        if (result & kLinearPCMFormatFlagIsFloat)
+            result &= ~kLinearPCMFormatFlagIsSignedInteger;
+
+        // If the bit depth is 8 bits or less and the format is packed, we don't care about endianness
+        if (mBitsPerChannel <= 8 && (result & kLinearPCMFormatFlagIsPacked))
+            result &= kAudioFormatFlagIsBigEndian;
+
+        // If there is 1 channel, we don't care about non-interleavedness.
+        if (mChannelsPerFrame == 1)
+            result &= ~kLinearPCMFormatFlagIsNonInterleaved;
+
+        // Finally, if the bits really are all 0, set the AllClear flag.
+        if (result == 0)
+            result = kAudioFormatFlagsAreAllClear;
+    }
+    return result;
+}
+
+// private
+bool CAStreamBasicDescription::EquivalentFormatFlags(const AudioStreamBasicDescription &x, const AudioStreamBasicDescription &y, bool forHardware, bool usingWildcards)
+{
+    if (usingWildcards)
     {
-        // Obliterate all flags.
-        xFlags = yFlags = 0;
-        return;
+        // if either of the formats is a wildcard, we don't care about the flags
+        // if either of the flags is a wildcard, we have matched
+        if (x.mFormatID == 0 || y.mFormatID == 0 || x.mFormatFlags == 0 || y.mFormatFlags == 0)
+        {
+            return true;
+        }
     }
 
-    if (x.mFormatID == kAudioFormatLinearPCM) {
-        // knock off the all clear flag
-        xFlags = xFlags & ~kAudioFormatFlagsAreAllClear;
-        yFlags = yFlags & ~kAudioFormatFlagsAreAllClear;
+    if (x.mFormatID != kAudioFormatLinearPCM) // we already know the formatID's match and have taken wildcards out of the picture.
+        return x.mFormatFlags == y.mFormatFlags;
 
-        // if both kAudioFormatFlagIsPacked bits are set, then we don't care about the kAudioFormatFlagIsAlignedHigh bit.
-        if (xFlags & yFlags & kAudioFormatFlagIsPacked) {
-            xFlags = xFlags & ~static_cast<UInt32>(kAudioFormatFlagIsAlignedHigh);
-            yFlags = yFlags & ~static_cast<UInt32>(kAudioFormatFlagIsAlignedHigh);
-        }
+    // It is safe to down-cast from AudioStreamBasicDescription to its C++ wrapper.
+    // The cast could be avoided with a copy, but here, efficiency matters.
+    const CAStreamBasicDescription &a = *static_cast<const CAStreamBasicDescription *>(&x);
+    const CAStreamBasicDescription &b = *static_cast<const CAStreamBasicDescription *>(&y);
 
-        // if both kAudioFormatFlagIsFloat bits are set, then we don't care about the kAudioFormatFlagIsSignedInteger bit.
-        if (xFlags & yFlags & kAudioFormatFlagIsFloat) {
-            xFlags = xFlags & ~static_cast<UInt32>(kAudioFormatFlagIsSignedInteger);
-            yFlags = yFlags & ~static_cast<UInt32>(kAudioFormatFlagIsSignedInteger);
-        }
-
-        //  if the bit depth is 8 bits or less and the format is packed, we don't care about endianness
-        if((x.mBitsPerChannel <= 8) && ((xFlags & kAudioFormatFlagIsPacked) == kAudioFormatFlagIsPacked))
-        {
-            xFlags = xFlags & ~static_cast<UInt32>(kAudioFormatFlagIsBigEndian);
-        }
-        if((y.mBitsPerChannel <= 8) && ((yFlags & kAudioFormatFlagIsPacked) == kAudioFormatFlagIsPacked))
-        {
-            yFlags = yFlags & ~static_cast<UInt32>(kAudioFormatFlagIsBigEndian);
-        }
-
-        //  if the number of channels is 1, we don't care about non-interleavedness
-        if (x.mChannelsPerFrame == 1 && y.mChannelsPerFrame == 1) {
-            xFlags &= ~static_cast<UInt32>(kLinearPCMFormatFlagIsNonInterleaved);
-            yFlags &= ~static_cast<UInt32>(kLinearPCMFormatFlagIsNonInterleaved);
-        }
-
-        if (converterOnly) {
-            CAStreamBasicDescription cas_x = CAStreamBasicDescription(x);
-            CAStreamBasicDescription cas_y = CAStreamBasicDescription(y);
-            if (!cas_x.PackednessIsSignificant() && !cas_y.PackednessIsSignificant()) {
-                xFlags &= ~static_cast<UInt32>(kAudioFormatFlagIsPacked);
-                yFlags &= ~static_cast<UInt32>(kAudioFormatFlagIsPacked);
-            }
-            if (!cas_x.AlignmentIsSignificant() && !cas_y.AlignmentIsSignificant()) {
-                xFlags &= ~static_cast<UInt32>(kAudioFormatFlagIsAlignedHigh);
-                yFlags &= ~static_cast<UInt32>(kAudioFormatFlagIsAlignedHigh);
-            }
-            // We don't care about whether the streams are mixable in this case
-            xFlags &= ~static_cast<UInt32>(kAudioFormatFlagIsNonMixable);
-            yFlags &= ~static_cast<UInt32>(kAudioFormatFlagIsNonMixable);
-        }
-    }
+    return a.GetRegularizedFormatFlags(forHardware) == b.GetRegularizedFormatFlags(forHardware);
 }
 
-static bool MatchFormatFlags(const AudioStreamBasicDescription& x, const AudioStreamBasicDescription& y)
+bool    CAStreamBasicDescription::IsExactlyEqual(const AudioStreamBasicDescription &x, const AudioStreamBasicDescription &y)
 {
-    UInt32 xFlags = x.mFormatFlags;
-    UInt32 yFlags = y.mFormatFlags;
-
-    CAStreamBasicDescription::ModifyFormatFlagsForMatching(x, y, xFlags, yFlags, false);
-    return xFlags == yFlags;
+    // mReserved didn't exist in early versions of OS X; we want to ignore differences there.
+    // The structure is properly packed up until that point, so the shortcut of using memcmp()
+    // instead of individual field comparisons is safe.
+    return memcmp(&x, &y, offsetof(AudioStreamBasicDescription, mReserved)) == 0;
 }
 
+#define MATCH_WITH_WILDCARD(name) ((x.name) == 0 || (y.name) == 0 || (x.name) == (y.name))
+
+bool    CAStreamBasicDescription::IsEquivalent(const AudioStreamBasicDescription &x, const AudioStreamBasicDescription &y, ComparisonOptions options)
+{
+    if (options & kCompareUsingWildcards) {
+        return
+            //  check the sample rate
+            (fiszero(x.mSampleRate) || fiszero(y.mSampleRate) || fequal(x.mSampleRate, y.mSampleRate))
+
+            //  check the format ids
+            && MATCH_WITH_WILDCARD(mFormatID)
+
+            //  check the bytes per packet
+            && MATCH_WITH_WILDCARD(mBytesPerPacket)
+
+            //  check the frames per packet
+            && MATCH_WITH_WILDCARD(mFramesPerPacket)
+
+            //  check the bytes per frame
+            && MATCH_WITH_WILDCARD(mBytesPerFrame)
+
+            //  check the channels per frame
+            && MATCH_WITH_WILDCARD(mChannelsPerFrame)
+
+            //  check the bits per channel
+            && MATCH_WITH_WILDCARD(mBitsPerChannel)
+
+            // Only if we get this far, do the work of matching the format flags
+            && EquivalentFormatFlags(x, y, options & kCompareForHardware, /*usingWildcards=*/true);
+    } else {
+        return  x.mSampleRate == y.mSampleRate
+            &&  x.mFormatID == y.mFormatID
+            &&  x.mBytesPerPacket == y.mBytesPerPacket
+            &&  x.mFramesPerPacket == y.mFramesPerPacket
+            &&  x.mChannelsPerFrame == y.mChannelsPerFrame
+            &&  x.mBitsPerChannel == y.mBitsPerChannel
+            &&  EquivalentFormatFlags(x, y, options & kCompareForHardware, /*usingWildcards=*/false);
+    }
+}
+
+// DEPRECATED.
 bool    operator==(const AudioStreamBasicDescription& x, const AudioStreamBasicDescription& y)
 {
-    //  the semantics for equality are:
-    //      1) Values must match exactly -- except for PCM format flags, see above.
-    //      2) wildcard's are ignored in the comparison
-
-#define MATCH(name) ((x.name) == 0 || (y.name) == 0 || (x.name) == (y.name))
-
-    return
-    //  check all but the format flags
-    CAStreamBasicDescription::FlagIndependentEquivalence(x, y)
-    //  check the format flags
-    && MatchFormatFlags(x, y);
+    return CAStreamBasicDescription::IsEquivalent(x, y, CAStreamBasicDescription::kCompareUsingWildcards | CAStreamBasicDescription::kCompareForHardware);
 }
 
-bool    CAStreamBasicDescription::FlagIndependentEquivalence(const AudioStreamBasicDescription &x, const AudioStreamBasicDescription &y)
-{
-    return
-    //  check the sample rate
-    (fiszero(x.mSampleRate) || fiszero(y.mSampleRate) || fequal(x.mSampleRate, y.mSampleRate))
-
-    //  check the format ids
-    && MATCH(mFormatID)
-
-    //  check the bytes per packet
-    && MATCH(mBytesPerPacket)
-
-    //  check the frames per packet
-    && MATCH(mFramesPerPacket)
-
-    //  check the bytes per frame
-    && MATCH(mBytesPerFrame)
-
-    //  check the channels per frame
-    && MATCH(mChannelsPerFrame)
-
-    //  check the channels per frame
-    && MATCH(mBitsPerChannel) ;
-}
-
+// To be deprecated.
 bool    CAStreamBasicDescription::IsEqual(const AudioStreamBasicDescription &other, bool interpretingWildcards) const
 {
     if (interpretingWildcards)
-        return *this == other;
-    return memcmp(this, &other, offsetof(AudioStreamBasicDescription, mReserved)) == 0;
+        return CAStreamBasicDescription::IsEquivalent(*this, other, CAStreamBasicDescription::kCompareUsingWildcards | CAStreamBasicDescription::kCompareForHardware);
+    return IsExactlyEqual(*this, other);
 }
 
-bool    CAStreamBasicDescription::IsFunctionallyEquivalent(const AudioStreamBasicDescription &x, const AudioStreamBasicDescription &y)
+// DEPRECATED.
+bool    CAStreamBasicDescription::IsEqual(const AudioStreamBasicDescription &other) const
 {
-    UInt32 xFlags = x.mFormatFlags, yFlags = y.mFormatFlags;
-    CAStreamBasicDescription::ModifyFormatFlagsForMatching(x, y, xFlags, yFlags, true);
-
-    return
-    // check all but the format flags
-    CAStreamBasicDescription::FlagIndependentEquivalence(x, y)
-    // check the format flags with converter focus
-    && (xFlags == yFlags);
-
+    return CAStreamBasicDescription::IsEquivalent(*this, other, CAStreamBasicDescription::kCompareUsingWildcards | CAStreamBasicDescription::kCompareForHardware);
 }
 
 bool SanityCheck(const AudioStreamBasicDescription& x)
@@ -702,6 +709,7 @@ bool SanityCheck(const AudioStreamBasicDescription& x)
         && (x.mBytesPerPacket < 1000000)
         && (x.mFramesPerPacket < 1000000)
         && (x.mBytesPerFrame < 1000000)
+        && (x.mChannelsPerFrame > 0)
         && (x.mChannelsPerFrame <= 1024)
         && (x.mBitsPerChannel <= 1024)
         && (x.mFormatID != 0)

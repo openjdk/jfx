@@ -1,51 +1,19 @@
 /*
-     File: AUScopeElement.cpp
- Abstract: AUScopeElement.h
-  Version: 1.1
+Copyright (C) 2016 Apple Inc. All Rights Reserved.
+See LICENSE.txt for this sample’s licensing information
 
- Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
- Inc. ("Apple") in consideration of your agreement to the following
- terms, and your use, installation, modification or redistribution of
- this Apple software constitutes acceptance of these terms.  If you do
- not agree with these terms, please do not use, install, modify or
- redistribute this Apple software.
-
- In consideration of your agreement to abide by the following terms, and
- subject to these terms, Apple grants you a personal, non-exclusive
- license, under Apple's copyrights in this original Apple software (the
- "Apple Software"), to use, reproduce, modify and redistribute the Apple
- Software, with or without modifications, in source and/or binary forms;
- provided that if you redistribute the Apple Software in its entirety and
- without modifications, you must retain this notice and the following
- text and disclaimers in all such redistributions of the Apple Software.
- Neither the name, trademarks, service marks or logos of Apple Inc. may
- be used to endorse or promote products derived from the Apple Software
- without specific prior written permission from Apple.  Except as
- expressly stated in this notice, no other rights or licenses, express or
- implied, are granted by Apple herein, including but not limited to any
- patent rights that may be infringed by your derivative works or by other
- works in which the Apple Software may be incorporated.
-
- The Apple Software is provided by Apple on an "AS IS" basis.  APPLE
- MAKES NO WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
- THE IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY AND FITNESS
- FOR A PARTICULAR PURPOSE, REGARDING THE APPLE SOFTWARE OR ITS USE AND
- OPERATION ALONE OR IN COMBINATION WITH YOUR PRODUCTS.
-
- IN NO EVENT SHALL APPLE BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL
- OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- INTERRUPTION) ARISING IN ANY WAY OUT OF THE USE, REPRODUCTION,
- MODIFICATION AND/OR DISTRIBUTION OF THE APPLE SOFTWARE, HOWEVER CAUSED
- AND WHETHER UNDER THEORY OF CONTRACT, TORT (INCLUDING NEGLIGENCE),
- STRICT LIABILITY OR OTHERWISE, EVEN IF APPLE HAS BEEN ADVISED OF THE
- POSSIBILITY OF SUCH DAMAGE.
-
- Copyright (C) 2014 Apple Inc. All Rights Reserved.
-
+Abstract:
+Part of Core Audio AUBase Classes
 */
+
 #include "AUScopeElement.h"
+#include <AudioUnit/AudioUnitProperties.h>
 #include "AUBase.h"
+
+/* This is defined in later MacOSX SDKs than the SDK used on the official build systems */
+#ifndef kAudioUnitParameterFlag_OmitFromPresets
+ #define kAudioUnitParameterFlag_OmitFromPresets (1UL << 13)
+#endif
 
 //_____________________________________________________________________________
 //
@@ -252,12 +220,16 @@ void            AUElement::GetParameterList(AudioUnitParameterID *outList)
 
 //_____________________________________________________________________________
 //
-void            AUElement::SaveState(CFMutableDataRef data)
+void            AUElement::SaveState(AudioUnitScope scope, CFMutableDataRef data)
 {
+    AudioUnitParameterInfo paramInfo;
+    CFIndex countOffset = CFDataGetLength(data);
+    UInt32 nparams, nOmitted = 0, theData;
+
     if(mUseIndexedParameters)
     {
-        UInt32 nparams = static_cast<UInt32>(mIndexedParameters.size());
-        UInt32 theData = CFSwapInt32HostToBig(nparams);
+        nparams = static_cast<UInt32>(mIndexedParameters.size());
+        theData = CFSwapInt32HostToBig(nparams);
         CFDataAppendBytes(data, (UInt8 *)&theData, sizeof(nparams));
 
         for (UInt32 i = 0; i < nparams; i++)
@@ -267,6 +239,15 @@ void            AUElement::SaveState(CFMutableDataRef data)
                 //CFSwappedFloat32  value; crashes gcc3 PFE
                 UInt32              value;  // really a big-endian float
             } entry;
+
+            if (mAudioUnit->GetParameterInfo(scope, i, paramInfo) == noErr) {
+                if ((paramInfo.flags & kAudioUnitParameterFlag_CFNameRelease) && paramInfo.cfNameString)
+                    CFRelease(paramInfo.cfNameString);
+                if (paramInfo.flags & kAudioUnitParameterFlag_OmitFromPresets) {
+                    ++nOmitted;
+                    continue;
+                }
+            }
 
             entry.paramID = CFSwapInt32HostToBig(i);
 
@@ -278,8 +259,9 @@ void            AUElement::SaveState(CFMutableDataRef data)
     }
     else
     {
-        UInt32 nparams = CFSwapInt32HostToBig(static_cast<uint32_t>(mParameters.size()));
-        CFDataAppendBytes(data, (UInt8 *)&nparams, sizeof(nparams));
+        nparams = static_cast<uint32_t>(mParameters.size());
+        theData = CFSwapInt32HostToBig(nparams);
+        CFDataAppendBytes(data, (UInt8 *)&theData, sizeof(nparams));
 
         for (ParameterMap::iterator i = mParameters.begin(); i != mParameters.end(); ++i) {
             struct {
@@ -288,6 +270,15 @@ void            AUElement::SaveState(CFMutableDataRef data)
                 UInt32              value;  // really a big-endian float
             } entry;
 
+            if (mAudioUnit->GetParameterInfo(scope, (*i).first, paramInfo) == noErr) {
+                if ((paramInfo.flags & kAudioUnitParameterFlag_CFNameRelease) && paramInfo.cfNameString)
+                    CFRelease(paramInfo.cfNameString);
+                if (paramInfo.flags & kAudioUnitParameterFlag_OmitFromPresets) {
+                    ++nOmitted;
+                    continue;
+                }
+            }
+
             entry.paramID = CFSwapInt32HostToBig((*i).first);
 
             AudioUnitParameterValue v = (*i).second.GetValue();
@@ -295,6 +286,10 @@ void            AUElement::SaveState(CFMutableDataRef data)
 
             CFDataAppendBytes(data, (UInt8 *)&entry, sizeof(entry));
         }
+    }
+    if (nOmitted > 0) {
+        theData = CFSwapInt32HostToBig(nparams - nOmitted);
+        *(UInt32 *)(CFDataGetBytePtr(data) + countOffset) = theData;
     }
 }
 
@@ -341,10 +336,9 @@ AUIOElement::AUIOElement(AUBase *audioUnit) :
     AUElement(audioUnit),
     mWillAllocate (true)
 {
-    mStreamFormat.SetAUCanonical(2, // stereo
-        audioUnit->AudioUnitAPIVersion() == 1);
+    mStreamFormat = CAStreamBasicDescription(kAUDefaultSampleRate, 2, CAStreamBasicDescription::kPCMFormatFloat32, audioUnit->AudioUnitAPIVersion() == 1);
+        // stereo
         // interleaved if API version 1, deinterleaved if version 2
-    mStreamFormat.mSampleRate = kAUDefaultSampleRate;
 }
 
 //_____________________________________________________________________________
@@ -395,8 +389,8 @@ UInt32      AUIOElement::GetChannelLayoutTags (AudioChannelLayoutTag        *out
 // the AU should also return whether the property is writable (that is the client can provide any arbitrary ACL that the audio unit will then honour)
 // or if the property is read only - which is the generally preferred mode.
 // If the AU doesn't require an AudioChannelLayout, then just return 0.
-UInt32      AUIOElement::GetAudioChannelLayout (AudioChannelLayout      *outMapPtr,
-                                            Boolean             &outWritable)
+UInt32      AUIOElement::GetAudioChannelLayout (AudioChannelLayout  *outMapPtr,
+                                                Boolean             &outWritable)
 {
     return 0;
 }
@@ -539,7 +533,7 @@ void    AUScope::SaveState(CFMutableDataRef data)
             hdr.element = CFSwapInt32HostToBig(ielem);
             CFDataAppendBytes(data, (UInt8 *)&hdr, sizeof(hdr));
 
-            element->SaveState(data);
+            element->SaveState(mScope, data);
         }
     }
 }
