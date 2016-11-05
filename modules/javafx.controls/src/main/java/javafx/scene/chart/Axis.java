@@ -685,7 +685,6 @@ public abstract class Axis<T> extends Region {
             for(T newValue: newTickValues) {
                 final TickMark<T> tick = new TickMark<T>();
                 tick.setValue(newValue);
-                tick.setPosition(getDisplayPosition(newValue));
                 tick.textNode.setText(getTickMarkLabel(newValue));
                 tick.textNode.setFont(getTickLabelFont());
                 tick.textNode.setFill(getTickLabelFill());
@@ -718,6 +717,7 @@ public abstract class Axis<T> extends Region {
             double totalLabelsSize = 0;
             double maxLabelSize = 0;
             for (TickMark<T> m : tickMarks) {
+                m.setPosition(getDisplayPosition(m.getValue()));
                 if (m.isTextVisible()) {
                     double tickSize = measureTickMarkSize(m.getValue(), side);
                     totalLabelsSize += tickSize;
@@ -890,6 +890,7 @@ public abstract class Axis<T> extends Region {
     {
         // check if position is inside bounds
         if (tick.getPosition() >= 0 && tick.getPosition() <= Math.ceil(length)) {
+            tick.textNode.setVisible(tick.isTextVisible());
             // add tick mark line
             tickMarkPath.getElements().addAll(
                     new MoveTo(startX, startY),

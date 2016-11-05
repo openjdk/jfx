@@ -14,7 +14,6 @@
 			);
 			dependencies = (
 				65989B071991620500319296 /* PBXTargetDependency */,
-				65989B091991620500319296 /* PBXTargetDependency */,
 				65989B0B1991620500319296 /* PBXTargetDependency */,
 			);
 			name = All;
@@ -87,10 +86,6 @@
 		65989AB01991570800319296 /* MTObjectProxy.m in Sources */ = {isa = PBXBuildFile; fileRef = 659896EA1991570800319296 /* MTObjectProxy.m */; };
 		65989AB11991570800319296 /* posix_critical_section.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 659896EC1991570800319296 /* posix_critical_section.cpp */; };
 		65989ABC1991574B00319296 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989ABB1991574B00319296 /* CoreVideo.framework */; };
-		65989AED199160EC00319296 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989ABB1991574B00319296 /* CoreVideo.framework */; };
-		65989AEE199160EC00319296 /* QTKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989AB91991574400319296 /* QTKit.framework */; };
-		65989AEF199160EC00319296 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989AB71991573600319296 /* AVFoundation.framework */; };
-		65989AF0199160EC00319296 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65FF27961991545E006BF9EE /* Cocoa.framework */; };
 		65989AF91991613700319296 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989ABB1991574B00319296 /* CoreVideo.framework */; };
 		65989AFB1991613700319296 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65989AB71991573600319296 /* AVFoundation.framework */; };
 		65989AFC1991613700319296 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65FF27961991545E006BF9EE /* Cocoa.framework */; };
@@ -100,6 +95,7 @@
 		65D754E719B7BFFB00EE3C99 /* CAStreamBasicDescription.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65D754E519B7BFFB00EE3C99 /* CAStreamBasicDescription.cpp */; };
 		65D754E819B7BFFB00EE3C99 /* CAVectorUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 65D754E619B7BFFB00EE3C99 /* CAVectorUnit.cpp */; };
 		65FF27971991545E006BF9EE /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 65FF27961991545E006BF9EE /* Cocoa.framework */; };
+		B319E1DD1DC29AD100A4E6E8 /* CAHostTimeBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B319E1DC1DC29AD100A4E6E8 /* CAHostTimeBase.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,26 +106,12 @@
 			remoteGlobalIDString = 65FF27921991545E006BF9EE;
 			remoteInfo = JFXMedia;
 		};
-		65989B081991620500319296 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 65FF278B1991545E006BF9EE /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 65989ABD199160EC00319296;
-			remoteInfo = "JFXMedia QTKit";
-		};
 		65989B0A1991620500319296 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 65FF278B1991545E006BF9EE /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 65989AF51991613700319296;
 			remoteInfo = "JFXMedia AVF";
-		};
-		65989B0C19917CC500319296 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 65FF278B1991545E006BF9EE /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 65FF27921991545E006BF9EE;
-			remoteInfo = JFXMedia;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -274,7 +256,6 @@
 		65989AB71991573600319296 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		65989AB91991574400319296 /* QTKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QTKit.framework; path = System/Library/Frameworks/QTKit.framework; sourceTree = SDKROOT; };
 		65989ABB1991574B00319296 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
-		65989AF4199160EC00319296 /* libjfxmedia_qtkit.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libjfxmedia_qtkit.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		65989B001991613700319296 /* libjfxmedia_avf.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libjfxmedia_avf.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		65989B121991823700319296 /* build_prereqs.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build_prereqs.sh; sourceTree = "<group>"; };
 		65989B131991823700319296 /* java_home.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = java_home.sh; sourceTree = "<group>"; };
@@ -297,23 +278,12 @@
 		65FF279A1991545E006BF9EE /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		65FF279B1991545E006BF9EE /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		65FF279E1991545E006BF9EE /* JFXMedia-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "JFXMedia-Prefix.pch"; sourceTree = SOURCE_ROOT; };
-		65FF27A71991545E006BF9EE /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
+		B319E1DC1DC29AD100A4E6E8 /* CAHostTimeBase.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CAHostTimeBase.cpp; sourceTree = "<group>"; };
 		B3BFE7711D7A159A00E48712 /* gstreamer-lite */ = {isa = PBXFileReference; lastKnownFileType = folder; name = "gstreamer-lite"; path = "../gstreamer/gstreamer-lite"; sourceTree = "<group>"; };
 		B3BFE7721D7A15FA00E48712 /* glib */ = {isa = PBXFileReference; lastKnownFileType = folder; name = glib; path = ../gstreamer/3rd_party/glib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		65989AEC199160EC00319296 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				65989AED199160EC00319296 /* CoreVideo.framework in Frameworks */,
-				65989AEE199160EC00319296 /* QTKit.framework in Frameworks */,
-				65989AEF199160EC00319296 /* AVFoundation.framework in Frameworks */,
-				65989AF0199160EC00319296 /* Cocoa.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		65989AF81991613700319296 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -440,6 +410,7 @@
 				65D754DC19B7BBC000EE3C99 /* CADebugMacros.h */,
 				6548E54A19C1070200CDAC55 /* CADebugPrintf.h */,
 				65D754DD19B7BEA600EE3C99 /* CAException.h */,
+				B319E1DC1DC29AD100A4E6E8 /* CAHostTimeBase.cpp */,
 				65D754E419B7BFD800EE3C99 /* CAHostTimeBase.h */,
 				65D754E019B7BF7100EE3C99 /* CAMath.h */,
 				65D754E319B7BFC700EE3C99 /* CAMutex.h */,
@@ -657,7 +628,6 @@
 			isa = PBXGroup;
 			children = (
 				65FF27931991545E006BF9EE /* libjfxmedia.dylib */,
-				65989AF4199160EC00319296 /* libjfxmedia_qtkit.dylib */,
 				65989B001991613700319296 /* libjfxmedia_avf.dylib */,
 			);
 			name = Products;
@@ -676,7 +646,6 @@
 				65989AB91991574400319296 /* QTKit.framework */,
 				65989AB71991573600319296 /* AVFoundation.framework */,
 				65FF27961991545E006BF9EE /* Cocoa.framework */,
-				65FF27A71991545E006BF9EE /* XCTest.framework */,
 				65FF27981991545E006BF9EE /* Other Frameworks */,
 			);
 			name = Frameworks;
@@ -695,23 +664,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		65989ABD199160EC00319296 /* JFXMedia QTKit */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 65989AF1199160EC00319296 /* Build configuration list for PBXNativeTarget "JFXMedia QTKit" */;
-			buildPhases = (
-				65989ABE199160EC00319296 /* Sources */,
-				65989AEC199160EC00319296 /* Frameworks */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				65989B0D19917CC500319296 /* PBXTargetDependency */,
-			);
-			name = "JFXMedia QTKit";
-			productName = JFXMedia;
-			productReference = 65989AF4199160EC00319296 /* libjfxmedia_qtkit.dylib */;
-			productType = "com.apple.product-type.library.dynamic";
-		};
 		65989AF51991613700319296 /* JFXMedia AVFoundation */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 65989AFD1991613700319296 /* Build configuration list for PBXNativeTarget "JFXMedia AVFoundation" */;
@@ -769,7 +721,6 @@
 			projectRoot = "";
 			targets = (
 				65FF27921991545E006BF9EE /* JFXMedia */,
-				65989ABD199160EC00319296 /* JFXMedia QTKit */,
 				65989AF51991613700319296 /* JFXMedia AVFoundation */,
 				65989B02199161F900319296 /* All */,
 			);
@@ -808,13 +759,6 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		65989ABE199160EC00319296 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		65989AF61991613700319296 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -823,6 +767,7 @@
 				652BEF1C19A69B84007217BB /* AUInputElement.cpp in Sources */,
 				652BEF6819ABA566007217BB /* AVFAudioSpectrumUnit.cpp in Sources */,
 				65D754D219B7888C00EE3C99 /* AUBuffer.cpp in Sources */,
+				B319E1DD1DC29AD100A4E6E8 /* CAHostTimeBase.cpp in Sources */,
 				652BEF1D19A69B84007217BB /* AUOutputElement.cpp in Sources */,
 				652BEF7719AF87FE007217BB /* AVFKernelProcessor.cpp in Sources */,
 				652BEF1A19A69B84007217BB /* AUBase.cpp in Sources */,
@@ -899,60 +844,14 @@
 			target = 65FF27921991545E006BF9EE /* JFXMedia */;
 			targetProxy = 65989B061991620500319296 /* PBXContainerItemProxy */;
 		};
-		65989B091991620500319296 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 65989ABD199160EC00319296 /* JFXMedia QTKit */;
-			targetProxy = 65989B081991620500319296 /* PBXContainerItemProxy */;
-		};
 		65989B0B1991620500319296 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 65989AF51991613700319296 /* JFXMedia AVFoundation */;
 			targetProxy = 65989B0A1991620500319296 /* PBXContainerItemProxy */;
 		};
-		65989B0D19917CC500319296 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 65FF27921991545E006BF9EE /* JFXMedia */;
-			targetProxy = 65989B0C19917CC500319296 /* PBXContainerItemProxy */;
-		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		65989AF2199160EC00319296 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ENABLE_OBJC_ARC = NO;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				EXECUTABLE_PREFIX = lib;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "JFXMedia-Prefix.pch";
-				GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = NO;
-				OTHER_LDFLAGS = (
-					"-ljfxmedia",
-					"-Wl,-install_name,@rpath/libjfxmedia_qtkit.dylib",
-				);
-				PRODUCT_NAME = jfxmedia_qtkit;
-			};
-			name = Debug;
-		};
-		65989AF3199160EC00319296 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ENABLE_OBJC_ARC = NO;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				EXECUTABLE_PREFIX = lib;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "JFXMedia-Prefix.pch";
-				GCC_WARN_ABOUT_DEPRECATED_FUNCTIONS = NO;
-				OTHER_LDFLAGS = (
-					"-ljfxmedia",
-					"-Wl,-install_name,@rpath/libjfxmedia_qtkit.dylib",
-				);
-				PRODUCT_NAME = jfxmedia_qtkit;
-			};
-			name = Release;
-		};
 		65989AFE1991613700319296 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1049,7 +948,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				GLIB_LITE_DIR = "../gstreamer/3rd_party/glib/glib-2.28.8";
+				GLIB_LITE_DIR = "../gstreamer/3rd_party/glib/glib-2.42.1";
 				GSTREAMER_LITE_DIR = "../gstreamer/gstreamer-lite";
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1101,7 +1000,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				GLIB_LITE_DIR = "../gstreamer/3rd_party/glib/glib-2.28.8";
+				GLIB_LITE_DIR = "../gstreamer/3rd_party/glib/glib-2.42.1";
 				GSTREAMER_LITE_DIR = "../gstreamer/gstreamer-lite";
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1135,8 +1034,11 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(GLIB_LITE_DIR)",
+					"$(GLIB_LITE_DIR)/deprecated",
 					"$(GLIB_LITE_DIR)/glib",
 					"$(GLIB_LITE_DIR)/gmodule",
+					"$(GLIB_LITE_DIR)/gobject",
+					"$(GLIB_LITE_DIR)/gthread",
 					"$(GLIB_LITE_DIR)/build/osx",
 					"$(GSTREAMER_LITE_DIR)/gstreamer",
 					"$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs",
@@ -1150,6 +1052,10 @@
 					"-DGST_DISABLE_XML",
 					"-DJFXMEDIA_JNI_EXPORTS",
 					"-DHAVE_CONFIG_H",
+					"-DPCRE_STATIC",
+					"-DG_DISABLE_ASSERT",
+					"-DG_DISABLE_DEPRECATED",
+					"-DG_LOG_DOMAIN=\\\"GLib\\\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lglib-lite",
@@ -1172,8 +1078,11 @@
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(GLIB_LITE_DIR)",
+					"$(GLIB_LITE_DIR)/deprecated",
 					"$(GLIB_LITE_DIR)/glib",
 					"$(GLIB_LITE_DIR)/gmodule",
+					"$(GLIB_LITE_DIR)/gobject",
+					"$(GLIB_LITE_DIR)/gthread",
 					"$(GLIB_LITE_DIR)/build/osx",
 					"$(GSTREAMER_LITE_DIR)/gstreamer",
 					"$(GSTREAMER_LITE_DIR)/gst-plugins-base/gst-libs",
@@ -1187,6 +1096,10 @@
 					"-DGST_DISABLE_XML",
 					"-DJFXMEDIA_JNI_EXPORTS",
 					"-DHAVE_CONFIG_H",
+					"-DPCRE_STATIC",
+					"-DG_DISABLE_ASSERT",
+					"-DG_DISABLE_DEPRECATED",
+					"-DG_LOG_DOMAIN=\\\"GLib\\\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lglib-lite",
@@ -1200,15 +1113,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		65989AF1199160EC00319296 /* Build configuration list for PBXNativeTarget "JFXMedia QTKit" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				65989AF2199160EC00319296 /* Debug */,
-				65989AF3199160EC00319296 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		65989AFD1991613700319296 /* Build configuration list for PBXNativeTarget "JFXMedia AVFoundation" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

@@ -821,6 +821,7 @@ final class MacAccessible extends Accessible {
     private long[] getUnignoredChildren(ObservableList<Node> children) {
         if (children == null) return new long[0];
         long[] ids = children.stream()
+                             .filter(Node::isVisible)
                              .mapToLong(n -> getNativeAccessible(n))
                              .filter(n -> n != 0)
                              .toArray();

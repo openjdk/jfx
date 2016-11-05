@@ -121,6 +121,9 @@ CFIndex addCTFontDescriptor(CTFontDescriptorRef fd, JNIEnv *env, jobjectArray re
                 checkAndClearException(env);
                 (*env)->SetObjectArrayElement(env, result, index++, jfile);
                 checkAndClearException(env);
+                (*env)->DeleteLocalRef(env, jname);
+                (*env)->DeleteLocalRef(env, jfamily);
+                (*env)->DeleteLocalRef(env, jfile);
             }
         }
         if (name) CFRelease(name);

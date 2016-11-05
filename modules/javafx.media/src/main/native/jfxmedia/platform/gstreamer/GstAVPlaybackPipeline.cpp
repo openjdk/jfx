@@ -232,6 +232,7 @@ bool CGstAVPlaybackPipeline::CheckCodecSupport()
     {
         return CGstAudioPlaybackPipeline::CheckCodecSupport();
     }
+    return FALSE;
 }
 
 /**

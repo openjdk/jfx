@@ -1,49 +1,11 @@
 /*
-     File: AUBase.cpp
- Abstract: AUBase.h
-  Version: 1.1
+Copyright (C) 2016 Apple Inc. All Rights Reserved.
+See LICENSE.txt for this sample’s licensing information
 
- Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
- Inc. ("Apple") in consideration of your agreement to the following
- terms, and your use, installation, modification or redistribution of
- this Apple software constitutes acceptance of these terms.  If you do
- not agree with these terms, please do not use, install, modify or
- redistribute this Apple software.
-
- In consideration of your agreement to abide by the following terms, and
- subject to these terms, Apple grants you a personal, non-exclusive
- license, under Apple's copyrights in this original Apple software (the
- "Apple Software"), to use, reproduce, modify and redistribute the Apple
- Software, with or without modifications, in source and/or binary forms;
- provided that if you redistribute the Apple Software in its entirety and
- without modifications, you must retain this notice and the following
- text and disclaimers in all such redistributions of the Apple Software.
- Neither the name, trademarks, service marks or logos of Apple Inc. may
- be used to endorse or promote products derived from the Apple Software
- without specific prior written permission from Apple.  Except as
- expressly stated in this notice, no other rights or licenses, express or
- implied, are granted by Apple herein, including but not limited to any
- patent rights that may be infringed by your derivative works or by other
- works in which the Apple Software may be incorporated.
-
- The Apple Software is provided by Apple on an "AS IS" basis.  APPLE
- MAKES NO WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WITHOUT LIMITATION
- THE IMPLIED WARRANTIES OF NON-INFRINGEMENT, MERCHANTABILITY AND FITNESS
- FOR A PARTICULAR PURPOSE, REGARDING THE APPLE SOFTWARE OR ITS USE AND
- OPERATION ALONE OR IN COMBINATION WITH YOUR PRODUCTS.
-
- IN NO EVENT SHALL APPLE BE LIABLE FOR ANY SPECIAL, INDIRECT, INCIDENTAL
- OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- INTERRUPTION) ARISING IN ANY WAY OUT OF THE USE, REPRODUCTION,
- MODIFICATION AND/OR DISTRIBUTION OF THE APPLE SOFTWARE, HOWEVER CAUSED
- AND WHETHER UNDER THEORY OF CONTRACT, TORT (INCLUDING NEGLIGENCE),
- STRICT LIABILITY OR OTHERWISE, EVEN IF APPLE HAS BEEN ADVISED OF THE
- POSSIBILITY OF SUCH DAMAGE.
-
- Copyright (C) 2014 Apple Inc. All Rights Reserved.
-
+Abstract:
+Part of Core Audio AUBase Classes
 */
+
 #include "AUBase.h"
 #if !CA_USE_AUDIO_PLUGIN_ONLY
     #include "AUDispatch.h"
@@ -56,8 +18,6 @@
 #include "CAHostTimeBase.h"
 #include "CAVectorUnit.h"
 #include "CAXException.h"
-
-
 
 #if TARGET_OS_MAC && (TARGET_CPU_X86 || TARGET_CPU_X86_64)
     // our compiler does ALL floating point with SSE
@@ -540,7 +500,7 @@ OSStatus            AUBase::DispatchGetPropertyInfo(AudioUnitPropertyID         
         outWritable = false;
         break;
 
-    case 54:// kAudioUnitProperty_NickName -> is not defined in Xcode 4.5
+    case kAudioUnitProperty_NickName:
         ca_require(inScope == kAudioUnitScope_Global, InvalidScope);
         outDataSize = sizeof(CFStringRef);
         outWritable = true;
@@ -747,16 +707,6 @@ OSStatus            AUBase::DispatchGetProperty(    AudioUnitPropertyID         
         break;
 #endif
 #if !CA_NO_AU_UI_FEATURES
-    case kAudioUnitProperty_IconLocation:
-        {
-            CFURLRef iconLocation = CopyIconLocation();
-            if (iconLocation) {
-                *(CFURLRef*)outData = iconLocation;
-            } else
-                result = kAudioUnitErr_InvalidProperty;
-        }
-        break;
-
     case kAudioUnitProperty_ContextName:
         *(CFStringRef *)outData = mContextName;
         if (mContextName) {
@@ -765,6 +715,16 @@ OSStatus            AUBase::DispatchGetProperty(    AudioUnitPropertyID         
             result = noErr;
         } else {
             result = kAudioUnitErr_InvalidPropertyValue;
+        }
+        break;
+
+    case kAudioUnitProperty_IconLocation:
+        {
+            CFURLRef iconLocation = CopyIconLocation();
+            if (iconLocation) {
+                *(CFURLRef*)outData = iconLocation;
+            } else
+                result = kAudioUnitErr_InvalidProperty;
         }
         break;
 
@@ -791,7 +751,7 @@ OSStatus            AUBase::DispatchGetProperty(    AudioUnitPropertyID         
         *(Float64*)outData = mCurrentRenderTime.mSampleTime;
         break;
 
-    case 54:// kAudioUnitProperty_NickName -> is not defined in Xcode 4.5
+    case kAudioUnitProperty_NickName:
         // Ownership follows Core Foundation's 'Copy Rule'
         if (mNickName) CFRetain(mNickName);
         *(CFStringRef*)outData = mNickName;
@@ -861,11 +821,13 @@ OSStatus            AUBase::DispatchSetProperty(    AudioUnitPropertyID         
             memset (&newDesc, 0, sizeof(newDesc));
             memcpy (&newDesc, inData, 36);
 
+            ca_require(SanityCheck(newDesc), InvalidFormat);
+
             ca_require(ValidFormat(inScope, inElement, newDesc), InvalidFormat);
 
             const CAStreamBasicDescription curDesc = GetStreamFormat(inScope, inElement);
 
-            if ( !curDesc.IsEqual(newDesc, false) ) {
+            if ( !curDesc.IsExactlyEqual(newDesc) ) {
                 ca_require(IsStreamFormatWritable(inScope, inElement), NotWritable);
                 result = ChangeStreamFormat(inScope, inElement, curDesc, newDesc);
             }
@@ -883,7 +845,7 @@ OSStatus            AUBase::DispatchSetProperty(    AudioUnitPropertyID         
 
             ca_require(ValidFormat(inScope, inElement, newDesc), InvalidFormat);
 
-            if ( !curDesc.IsEqual(newDesc, false) ) {
+            if ( !curDesc.IsExactlyEqual(newDesc) ) {
                 ca_require(IsStreamFormatWritable(inScope, inElement), NotWritable);
                 result = ChangeStreamFormat(inScope, inElement, curDesc, newDesc);
             }
@@ -1006,7 +968,7 @@ OSStatus            AUBase::DispatchSetProperty(    AudioUnitPropertyID         
 
 #endif // !CA_NO_AU_UI_FEATURES
 
-    case 54:// kAudioUnitProperty_NickName -> is not defined in Xcode 4.5
+    case kAudioUnitProperty_NickName:
     {
         ca_require(inScope == kAudioUnitScope_Global, InvalidScope);
         ca_require(inDataSize == sizeof(CFStringRef), InvalidPropertyValue);
@@ -1093,7 +1055,7 @@ OSStatus            AUBase::DispatchRemovePropertyValue (AudioUnitPropertyID    
 
 #endif // !CA_NO_AU_UI_FEATURES
 
-    case 54:// kAudioUnitProperty_NickName -> is not defined in Xcode 4.5
+    case kAudioUnitProperty_NickName:
     {
         if(inScope == kAudioUnitScope_Global) {
             if (mNickName) CFRelease(mNickName);
@@ -1433,9 +1395,9 @@ OSStatus            AUBase::DoRender(       AudioUnitRenderActionFlags &    ioAc
         ca_require(IsInitialized(), Uninitialized);
         ca_require(mAudioUnitAPIVersion >= 2, ParamErr);
         if (inFramesToProcess > mMaxFramesPerSlice) {
-            static time_t lastTimeMessagePrinted = 0;
-            time_t now = time(NULL);
-            if (now != lastTimeMessagePrinted) {
+            static UInt64 lastTimeMessagePrinted = 0;
+            UInt64 now = CAHostTimeBase::GetCurrentTime();
+            if (now - lastTimeMessagePrinted > CAHostTimeBase::GetFrequency()) { // not more than once per second.
                 lastTimeMessagePrinted = now;
                 syslog(LOG_ERR, "kAudioUnitErr_TooManyFramesToProcess : inFramesToProcess=%u, mMaxFramesPerSlice=%u", (unsigned)inFramesToProcess, (unsigned)mMaxFramesPerSlice);
                 DebugMessageN4("%s:%d inFramesToProcess=%u, mMaxFramesPerSlice=%u; TooManyFrames", __FILE__, __LINE__, (unsigned)inFramesToProcess, (unsigned)mMaxFramesPerSlice);
@@ -1531,7 +1493,7 @@ OSStatus            AUBase::DoRender(       AudioUnitRenderActionFlags &    ioAc
     }
 done:
     RESTORE_DENORMALS
-    AUTRACE(kCATrace_AUBaseRenderEnd, mComponentInstance, (intptr_t)this, theError, ioActionFlags, CATrace::ablData(ioData));
+    AUTRACE(kCATrace_AUBaseRenderEnd, mComponentInstance, (intptr_t)this, theError, ioActionFlags, CATrace_ablData(ioData));
 
     return theError;
 
@@ -1615,7 +1577,7 @@ OSStatus    AUBase::DoProcess ( AudioUnitRenderActionFlags  &       ioActionFlag
     }
 done:
     RESTORE_DENORMALS
-    AUTRACE(kCATrace_AUBaseRenderEnd, mComponentInstance, (intptr_t)this, theError, ioActionFlags, CATrace::ablData(ioData));
+    AUTRACE(kCATrace_AUBaseRenderEnd, mComponentInstance, (intptr_t)this, theError, ioActionFlags, CATrace_ablData(ioData));
 
     return theError;
 
@@ -1807,7 +1769,9 @@ bool                AUBase::ValidFormat(            AudioUnitScope              
                                                     AudioUnitElement                inElement,
                                                     const CAStreamBasicDescription &        inNewFormat)
 {
-    return FormatIsCanonical(inNewFormat);
+    bool isInterleaved = false;
+
+    return inNewFormat.IsCommonFloat32(&isInterleaved) && !isInterleaved;
 }
 
 //_____________________________________________________________________________
@@ -1872,8 +1836,11 @@ OSStatus            AUBase::SetBusCount(    AudioUnitScope                  inSc
 OSStatus            AUBase::ChangeStreamFormat(     AudioUnitScope                  inScope,
                                                     AudioUnitElement                inElement,
                                                     const CAStreamBasicDescription & inPrevFormat,
-                                                    const CAStreamBasicDescription &    inNewFormat)
+                                                    const CAStreamBasicDescription & inNewFormat)
 {
+    if (inNewFormat.IsExactlyEqual(inPrevFormat))
+        return noErr;
+
 //#warning "aliasing of global scope format should be pushed to subclasses"
     AUIOElement *element;
 

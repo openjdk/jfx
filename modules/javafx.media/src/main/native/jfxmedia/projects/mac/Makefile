@@ -204,6 +204,8 @@ COREAUDIO_UTILITY_CLASSES = \
         platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/OtherBases/AUEffectBase.cpp \
         platform/osx/CoreAudioUtilityClasses/CoreAudio/AudioUnits/AUPublic/Utility/AUBuffer.cpp \
         platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAAudioChannelLayout.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CADebugPrintf.cpp \
+        platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAHostTimeBase.cpp \
         platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CASpectralProcessor.cpp \
         platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAStreamBasicDescription.cpp \
         platform/osx/CoreAudioUtilityClasses/CoreAudio/PublicUtility/CAVectorUnit.cpp

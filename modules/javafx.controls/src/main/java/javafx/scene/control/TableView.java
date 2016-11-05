@@ -3043,6 +3043,10 @@ public class TableView<S> extends Control {
             }
 
             updateDefaultFocus();
+
+            focusedCellProperty().addListener(o -> {
+                tableView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM);
+            });
         }
 
         private final InvalidationListener itemsObserver;
