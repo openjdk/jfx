@@ -237,7 +237,9 @@ webEngine.executeScript("history.back()");
  * in that accessing properties of the {@code JavaRuntimeObject}
  * causes the Java field or method with the same name to be accessed.
  * <p> Note that the Java objects bound using
- * {@link netscape.javascript.JSObject#setMember JSObject.setMember}
+ * {@link netscape.javascript.JSObject#setMember JSObject.setMember},
+ * {@link netscape.javascript.JSObject#setSlot JSObject.setSlot}, and
+ * {@link netscape.javascript.JSObject#call JSObject.call}
  * are implemented using weak references. This means that the Java object
  * can be garbage collected, causing subsequent accesses to the JavaScript
  * objects to have no effect.
