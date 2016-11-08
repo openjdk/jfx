@@ -156,7 +156,7 @@ INCLUDEPATH += \
     $$SOURCE_DIR/WTF/wtf/java \
     $$SOURCE_DIR/WTF/wtf/unicode/java \
     $$SOURCE_DIR/../WebKitLibraries/zlib/include \
-    $$OUT_PWD/../../../gensrc/headers \
+    $$OUT_PWD/../../../gensrc/headers/javafx.web \
     $$OUT_PWD/../JavaScriptCore \
     $$OUT_PWD/../JavaScriptCore/generated
 

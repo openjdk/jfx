@@ -28,3 +28,5 @@
 --add-exports javafx.controls/com.sun.javafx.scene.control.inputmap=ALL-UNNAMED
 --add-exports javafx.controls/com.sun.javafx.scene.control.skin=ALL-UNNAMED
 --add-exports javafx.controls/javafx.scene.chart=ALL-UNNAMED
+# compile additions
+--add-exports=javafx.graphics/com.sun.javafx.menu=ALL-UNNAMED

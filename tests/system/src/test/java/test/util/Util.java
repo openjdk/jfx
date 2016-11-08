@@ -156,21 +156,6 @@ public class Util {
         }
     }
 
-    private static String getJfxrtDir(final String classpath) {
-        final String jfxrt = "jfxrt.jar";
-        String cp = classpath;
-        int idx = cp.replace('\\', '/').indexOf("/" + jfxrt);
-        if (idx >= 0) {
-            cp = cp.substring(0, idx);
-            idx = cp.lastIndexOf(File.pathSeparator);
-            if (idx >= 0) {
-                cp = cp.substring(idx, cp.length());
-            }
-            return cp;
-        }
-        return null;
-    }
-
     public static ArrayList<String> createApplicationLaunchCommand(
             String testAppName,
             String testPldrName,
@@ -179,11 +164,8 @@ public class Util {
         final String classpath = System.getProperty("java.class.path");
 
         /*
-         * note: the "worker" properties are tied into build.gradle and
-         * the related GradleJUnitWorker as a workaround until the build
-         * is fully converted to a modular build
+         * note: the "worker" properties are tied into build.gradle
          */
-        final Boolean isJigsaw = Boolean.getBoolean("worker.isJigsaw");
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
         final String workerPatchModuleFile = System.getProperty("worker.patchmodule.file");
         final String workerPatchPolicy = System.getProperty("worker.patch.policy");
@@ -198,24 +180,17 @@ public class Util {
             cmd.add("java");
         }
 
-        if (isJigsaw && workerPatchModuleFile != null) {
+        if (workerPatchModuleFile != null) {
             cmd.add("@" + workerPatchModuleFile);
         } else {
-            String jfxdir = getJfxrtDir(classpath);
-            Assert.assertNotNull("failed to find jfxdir",jfxdir);
-            cmd.add("-Xbootclasspath/a:" + jfxdir + "/" + "jfxrt.jar");
+            System.out.println("Warning: no worker.patchmodule passed to unit test");
         }
 
         // This is a "minimum" set, rather than the full @addExports
-        if (isJigsaw) {
-            cmd.add("--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED");
-        }
+        cmd.add("--add-exports=javafx.graphics/com.sun.javafx.application=ALL-UNNAMED");
 
-        if (isJigsaw && workerClassPath != null) {
+        if (workerClassPath != null) {
             cmd.add("@" + workerClassPath);
-        } else {
-            cmd.add("-cp");
-            cmd.add(classpath);
         }
 
         if (testPldrName != null) {

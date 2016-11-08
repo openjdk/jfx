@@ -61,7 +61,7 @@ message(STATUS "+++++++++++++++++++++ append JavaScriptCore_LUT_FILES ${JavaScri
 
 list(APPEND JavaScriptCore_INCLUDE_DIRECTORIES
     ${ICU_INCLUDE_DIRS}
-    ${CMAKE_BINARY_DIR}/../../gensrc/headers
+    ${CMAKE_BINARY_DIR}/../../gensrc/headers/javafx.web
     ${WTF_DIR}/wtf
     ${CMAKE_SOURCE_DIR}/Source/WebCore/platform
     ${JAVA_INCLUDE_PATH}
