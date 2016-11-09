@@ -100,9 +100,7 @@ public abstract class PrismFontFactory implements FontFactory {
                     NativeLibLoader.loadLibrary("javafx_font");
                     String dbg = System.getProperty("prism.debugfonts", "");
                     boolean debug = "true".equals(dbg);
-                    jreFontDir =
-                    System.getProperty("java.home","") + File.separator +
-                    "lib" + File.separator + "fonts" + File.separator;
+                    jreFontDir = getJDKFontDir();
                     String s = System.getProperty("com.sun.javafx.fontSize");
                     systemFontSize = -1f;
                     if (s != null) {
@@ -168,6 +166,23 @@ public abstract class PrismFontFactory implements FontFactory {
                 }
         );
         cacheLayoutSize = tempCacheLayoutSize[0];
+    }
+
+    private static String getJDKFontDir() {
+        try {
+            Class<?> c = Class.forName("sun.font.lookup.JDKFontLookup");
+            Method m = c.getMethod("getJDKFontDir");
+            jreFontDir = (String)m.invoke(c);
+            return jreFontDir;
+        } catch (Throwable t) {
+            if (debugFonts) {
+                System.err.println("Could not get JRE font dir via API");
+                t.printStackTrace();
+            }
+        }
+        return
+            System.getProperty("java.home","") + File.separator +
+                "lib" + File.separator + "fonts" + File.separator;
     }
 
     private static String getNativeFactoryName() {
