@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2006, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.geom;
 
 import com.sun.javafx.geom.transform.BaseTransform;
+import java.util.Arrays;
 
 /**
  * The {@code Path2D} class provides a simple, yet flexible
@@ -101,6 +102,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
     static final int INIT_SIZE = 20;
     static final int EXPAND_MAX = 500;
+    static final int EXPAND_MAX_COORDS = EXPAND_MAX * 2;
 
     float floatCoords[];
     float moveX, moveY;
@@ -176,13 +178,10 @@ import com.sun.javafx.geom.transform.BaseTransform;
             Path2D p2d = (Path2D) s;
             setWindingRule(p2d.windingRule);
             this.numTypes = p2d.numTypes;
-            //this.pointTypes = Arrays.copyOf(p2d.pointTypes,
-            //                                p2d.pointTypes.length); // jk16 dependency
-            this.pointTypes = copyOf(p2d.pointTypes,
-                                            p2d.pointTypes.length);
+            this.pointTypes = Arrays.copyOf(p2d.pointTypes, numTypes);
             this.numCoords = p2d.numCoords;
             if (tx == null || tx.isIdentity()) {
-                this.floatCoords = copyOf(p2d.floatCoords, numCoords);
+                this.floatCoords = Arrays.copyOf(p2d.floatCoords, numCoords);
                 this.moveX = p2d.moveX;
                 this.moveY = p2d.moveY;
                 this.prevX = p2d.prevX;
@@ -336,7 +335,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
     }
 
     void needRoom(boolean needMove, int newCoords) {
-        if (needMove && numTypes == 0) {
+        if (needMove && (numTypes == 0)) {
             throw new IllegalPathStateException("missing initial moveto "+
                                                 "in path definition");
         }
@@ -344,24 +343,84 @@ import com.sun.javafx.geom.transform.BaseTransform;
         if (size == 0) {
             pointTypes = new byte[2];
         } else if (numTypes >= size) {
-            int grow = size;
-            if (grow > EXPAND_MAX) {
-                grow = EXPAND_MAX;
-            }
-            //pointTypes = Arrays.copyOf(pointTypes, size+grow); // jk16 dependency
-            pointTypes = copyOf(pointTypes, size+grow);
+            pointTypes = expandPointTypes(pointTypes, 1);
         }
         size = floatCoords.length;
-        if (numCoords + newCoords > size) {
-            int grow = size;
-            if (grow > EXPAND_MAX * 2) {
-                grow = EXPAND_MAX * 2;
+        if (numCoords > (floatCoords.length - newCoords)) {
+            floatCoords = expandCoords(floatCoords, newCoords);
+        }
+    }
+
+    static byte[] expandPointTypes(byte[] oldPointTypes, int needed) {
+        final int oldSize = oldPointTypes.length;
+        final int newSizeMin = oldSize + needed;
+        if (newSizeMin < oldSize) {
+            // hard overflow failure - we can't even accommodate
+            // new items without overflowing
+            throw new ArrayIndexOutOfBoundsException(
+                          "pointTypes exceeds maximum capacity !");
+        }
+        // growth algorithm computation
+        int grow = oldSize;
+        if (grow > EXPAND_MAX) {
+            grow = Math.max(EXPAND_MAX, oldSize >> 3); // 1/8th min
+        } else if (grow < INIT_SIZE) {
+            grow = INIT_SIZE; // ensure > 6 (cubics)
+        }
+        assert grow > 0;
+
+        int newSize = oldSize + grow;
+        if (newSize < newSizeMin) {
+            // overflow in growth algorithm computation
+            newSize = Integer.MAX_VALUE;
+        }
+
+        while (true) {
+            try {
+                // try allocating the larger array
+                return Arrays.copyOf(oldPointTypes, newSize);
+            } catch (OutOfMemoryError oome) {
+                if (newSize == newSizeMin) {
+                    throw oome;
+                }
             }
-            if (grow < newCoords) {
-                grow = newCoords;
+            newSize = newSizeMin + (newSize - newSizeMin) / 2;
+        }
+    }
+
+    static float[] expandCoords(float[] oldCoords, int needed) {
+        final int oldSize = oldCoords.length;
+        final int newSizeMin = oldSize + needed;
+        if (newSizeMin < oldSize) {
+            // hard overflow failure - we can't even accommodate
+            // new items without overflowing
+            throw new ArrayIndexOutOfBoundsException(
+                          "coords exceeds maximum capacity !");
+        }
+        // growth algorithm computation
+        int grow = oldSize;
+        if (grow > EXPAND_MAX_COORDS) {
+            grow = Math.max(EXPAND_MAX_COORDS, oldSize >> 3); // 1/8th min
+        } else if (grow < INIT_SIZE) {
+            grow = INIT_SIZE; // ensure > 6 (cubics)
+        }
+        assert grow > needed;
+
+        int newSize = oldSize + grow;
+        if (newSize < newSizeMin) {
+            // overflow in growth algorithm computation
+            newSize = Integer.MAX_VALUE;
+        }
+        while (true) {
+            try {
+                // try allocating the larger array
+                return Arrays.copyOf(oldCoords, newSize);
+            } catch (OutOfMemoryError oome) {
+                if (newSize == newSizeMin) {
+                    throw oome;
+                }
             }
-            //floatCoords = Arrays.copyOf(floatCoords, size+grow); // jk16 dependency
-            floatCoords = copyOf(floatCoords, size+grow);
+            newSize = newSizeMin + (newSize - newSizeMin) / 2;
         }
     }
 
@@ -2288,20 +2347,6 @@ import com.sun.javafx.geom.transform.BaseTransform;
             int type = path.pointTypes[typeIdx++];
             pointIdx += curvecoords[type];
         }
-    }
-
-    // jk16 dependency methods
-    static byte[] copyOf(byte[] original, int newLength) {
-        byte[] copy = new byte[newLength];
-        System.arraycopy(original, 0, copy, 0,
-                         Math.min(original.length, newLength));
-        return copy;
-    }
-    static float[] copyOf(float[] original, int newLength) {
-        float[] copy = new float[newLength];
-        System.arraycopy(original, 0, copy, 0,
-                         Math.min(original.length, newLength));
-        return copy;
     }
 
     public void setTo(Path2D otherPath) {
