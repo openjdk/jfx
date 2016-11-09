@@ -3888,6 +3888,37 @@ compileTargets { t ->
                 def policyFile = file("${policyDir}/java.policy")
                 if (policyFile.exists()) outputPolicyFile << policyFile.text
             }
+
+            // ----------------------------------------------
+            // FIXME: Begin temporary jake support
+            // ----------------------------------------------
+
+            // Copy modules_src into modules_src_jake, replacing
+            // module-info.java with a jake-compatible version
+
+            def modulesSrcJakeDir = "${modularSdkDir}/modules_src_jake"
+            copy {
+                from modulesSrcDir
+                into modulesSrcJakeDir
+            }
+
+            moduleProjList.each { project ->
+                def moduleName = project.ext.moduleName
+                def dstModulesSrcJakeDir = "${modulesSrcJakeDir}/${moduleName}"
+
+                // Copy src/main/jake/module-info.java to modules_src_jake
+                def srcJakeModuleInfoFile = "${project.projectDir}/src/main/jake/module-info.java"
+                copy {
+                    from srcJakeModuleInfoFile
+                    into dstModulesSrcJakeDir
+                    if (!IS_COMPILE_JFR && project.name.equals("base")) {
+                        filter { line-> line.contains("requires jdk.jfr;") ? "" : line }
+                    }
+                }
+            }
+            // ----------------------------------------------
+            // FIXME: End temporary jake support
+            // ----------------------------------------------
         }
     }
     zipTask.dependsOn(buildModulesTask);
