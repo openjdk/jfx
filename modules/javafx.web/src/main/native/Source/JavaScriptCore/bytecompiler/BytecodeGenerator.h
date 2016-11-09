@@ -101,7 +101,8 @@ namespace JSC {
         FinallyContext finallyContext;
     };
 
-    class ForInContext {
+    class ForInContext : public RefCounted<ForInContext> {
+        WTF_MAKE_NONCOPYABLE(ForInContext);
     public:
         ForInContext(RegisterID* localRegister)
             : m_localRegister(localRegister)
@@ -777,7 +778,7 @@ namespace JSC {
 
         Vector<ControlFlowContext, 0, UnsafeVectorOverflow> m_scopeContextStack;
         Vector<SwitchInfo> m_switchContextStack;
-        Vector<std::unique_ptr<ForInContext>> m_forInContextStack;
+        Vector<RefPtr<ForInContext>> m_forInContextStack;
         Vector<TryContext> m_tryContextStack;
         enum FunctionVariableType : uint8_t { NormalFunctionVariable, GlobalFunctionVariable };
         Vector<std::pair<FunctionBodyNode*, FunctionVariableType>> m_functionsToInitialize;
