@@ -25,7 +25,6 @@
 
 module javafx.base {
     requires java.desktop;
-    requires jdk.jfr;
 
     exports javafx.beans;
     exports javafx.beans.binding;
