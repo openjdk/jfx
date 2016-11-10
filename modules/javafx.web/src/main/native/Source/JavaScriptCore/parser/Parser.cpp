@@ -559,6 +559,7 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseVariableDecl
                 JSTextPosition varDivot = tokenStartPosition() + 1;
                 initStart = tokenStartPosition();
                 next(TreeBuilder::DontBuildStrings); // consume '='
+                propagateError();
                 TreeExpression initializer = parseAssignmentExpression(context);
                 initEnd = lastTokenEndPosition();
                 lastInitializer = initializer;
@@ -2177,6 +2178,8 @@ template <class TreeBuilder> TreeExpression Parser<LexerType>::parseExpression(T
 template <typename LexerType>
 template <typename TreeBuilder> TreeExpression Parser<LexerType>::parseAssignmentExpression(TreeBuilder& context)
 {
+    ASSERT(!hasError());
+
     failIfStackOverflow();
     JSTextPosition start = tokenStartPosition();
     JSTokenLocation location(tokenLocation());
