@@ -63,7 +63,7 @@ INCLUDEPATH += \
     $$PWD/../../Source/JavaScriptCore/yarr \
     $$PWD/../../Source/JavaScriptCore/API \
     $$PWD/../../Source/JavaScriptCore/ForwardingHeaders \
-    ../../../gensrc/headers
+    ../../../gensrc/headers/javafx.web
 
 LIBS += -ljfxwebkit
 

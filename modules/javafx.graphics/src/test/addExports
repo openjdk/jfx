@@ -46,3 +46,13 @@
 --add-exports javafx.graphics/com.sun.scenario=ALL-UNNAMED
 #
 --add-exports java.base/sun.util.logging=ALL-UNNAMED
+#
+--add-exports javafx.graphics/com.sun.javafx.jmx=ALL-UNNAMED
+# compile time additions
+--add-exports=javafx.base/com.sun.javafx.runtime=ALL-UNNAMED
+--add-exports=javafx.graphics/com.sun.javafx.cursor=ALL-UNNAMED
+--add-exports=javafx.graphics/com.sun.javafx.text=ALL-UNNAMED
+--add-exports=javafx.graphics/com.sun.prism.shape=ALL-UNNAMED
+--add-exports=java.desktop/sun.font=ALL-UNNAMED
+--add-exports=java.desktop/sun.awt=ALL-UNNAMED
+--add-exports=java.xml/com.sun.org.apache.xerces.internal.util=ALL-UNNAMED

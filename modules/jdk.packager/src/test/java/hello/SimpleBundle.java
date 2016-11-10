@@ -28,7 +28,6 @@ package hello;
 import com.oracle.tools.packager.Bundler;
 import com.oracle.tools.packager.Bundlers;
 import com.oracle.tools.packager.ConfigException;
-import com.oracle.tools.packager.JLinkBundlerHelper;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
@@ -79,7 +78,7 @@ public class SimpleBundle {
                     break;
 
                 case "-modulepath":
-                    params.put(JLinkBundlerHelper.MODULE_PATH.getID(), argsQ.remove());
+                    params.put(StandardBundlerParam.MODULE_PATH.getID(), argsQ.remove());
                     break;
 
                 case "-all":

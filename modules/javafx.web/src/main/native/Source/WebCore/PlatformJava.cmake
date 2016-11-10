@@ -24,7 +24,7 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
     ${WEBCORE_DIR}/bridge/jni/jsc
     ${WEBCORE_DIR}/bridge/jsc
     ${DERIVED_SOURCES_DIR}/ForwardingHeaders/JavaScriptCore
-    ${CMAKE_BINARY_DIR}/../../gensrc/headers
+    ${CMAKE_BINARY_DIR}/../../gensrc/headers/javafx.web
     ${CMAKE_BINARY_DIR}/WebCore/generated
     ${WTF_DIR}/wtf/text
     ${WTF_DIR}/wtf/java

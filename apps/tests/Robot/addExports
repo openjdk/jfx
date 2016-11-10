@@ -1,0 +1,2 @@
+--add-exports=javafx.graphics/com.sun.glass.events=ALL-UNNAMED
+--add-exports=javafx.graphics/com.sun.glass.ui=ALL-UNNAMED

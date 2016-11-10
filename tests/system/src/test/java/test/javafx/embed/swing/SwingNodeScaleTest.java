@@ -62,7 +62,8 @@ public class SwingNodeScaleTest {
 
         try {
             if (!launchLatch.await(5 * TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Application to launch");
+                throw new AssertionFailedError("Timeout waiting for Application to launch ("+
+                    (5 * TIMEOUT) + " seconds)");
             }
         } catch (InterruptedException ex) {
             AssertionFailedError err = new AssertionFailedError("Unexpected exception");

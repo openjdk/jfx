@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project default="sampleAppsJar" basedir=".">
+<project default="appsJar" basedir=".">
 
     <!-- 
        Note: this build.xml will be pulled into the
@@ -37,6 +37,10 @@
     <target name="scenebuilderAppClean">
         <ant dir="scenebuilder" target="clean-sb" inheritAll="true"/>
     </target>
+
+    <target name="appsJar" depends="sampleAppsJar,scenebuilderAppJar,scenebuilderSampleAppsJar"/>
+
+    <target name="clean" depends="sampleAppsClean,scenebuilderAppClean,scenebuilderSampleAppsClean"/>
 
 </project>
 

@@ -481,7 +481,7 @@ public class LauncherImpl {
                     }
                 }
 
-                // we have to add jfxrt.jar to the new class loader, or the app won't load
+                // we have to add the current code source to the new class loader, or the app won't load
                 URL jfxRtURL = LauncherImpl.class.getProtectionDomain().getCodeSource().getLocation();
                 urlList.add(jfxRtURL);
 

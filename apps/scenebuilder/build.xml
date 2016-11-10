@@ -24,12 +24,12 @@
     </target>
 
     <target name="run" depends="jar-sb">
+        <!-- FIXME: run using @run.args -->
         <java classname="com.oracle.javafx.scenebuilder.app.SceneBuilderApp"
             fork="true"
             failonerror="true"
             >
         <classpath>
-            <pathelement location="../../build/sdk/lib/jfxrt.jar"/>
             <pathelement location="SceneBuilderApp/dist/SceneBuilderApp.jar"/>
             <pathelement location="SceneBuilderKit/dist/SceneBuilderKit.jar"/>
          </classpath>

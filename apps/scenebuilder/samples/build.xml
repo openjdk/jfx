@@ -2,16 +2,20 @@
 <project default="jar" basedir=".">
 
     <target name="swingJar" unless="JFX_CORE_ONLY">
+<!--JIGSAW fix this
         <ant dir="HelloSwingNode" target="jar" inheritAll="true"/>
+-->
     </target>
 
     <target name="jar" depends="swingJar">
+<!--JIGSAW fix this
         <ant dir="AirportApp" target="jar" inheritAll="true"/>
         <ant dir="HelloI18N" target="jar" inheritAll="true"/>
         <ant dir="IssueTrackingBiDi" target="jar" inheritAll="true"/>
         <ant dir="IssueTrackingLite" target="jar" inheritAll="true"/>
         <ant dir="Login" target="jar" inheritAll="true"/>
         <ant dir="UnlockCustom" target="jar" inheritAll="true"/>
+-->
     </target>
 
     <target name="clean">

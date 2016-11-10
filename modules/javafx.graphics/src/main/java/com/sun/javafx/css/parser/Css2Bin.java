@@ -31,7 +31,7 @@ import java.io.File;
 import java.io.IOException;
 
 /** Css2Bin <input file> [<output file name>]
- * java -classpath <sdk desktop lib path>/javafx-ui-common.jar com.sun.javafx.css.parser.Css2Bin input.css output.bss
+ * java com.sun.javafx.css.parser.Css2Bin input.css output.bss
  *  If no output file is given, then the input file name is used with an extension of 'bss'x
  */
 public final class Css2Bin {
