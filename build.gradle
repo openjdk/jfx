@@ -3850,7 +3850,7 @@ compileTargets { t ->
                         List<String> lines = extras.get(usename)
                         e.eachLine { line ->
                             line = line.trim()
-                            if (line.contains("exports")) {
+                            if (line.length() > 1 && Character.isLetter(line.charAt(0))) {
                                 lines << line
                             }
                         }
@@ -3858,8 +3858,9 @@ compileTargets { t ->
                     } else {
                         List<String> lines = []
                         e.eachLine { line ->
-                            if (line.contains("exports")) {
-                                lines << line.trim()
+                            line = line.trim()
+                            if (line.length() > 1 && Character.isLetter(line.charAt(0))) {
+                                lines << line
                             }
                         }
                         extras.put(usename,lines)
