@@ -35,12 +35,15 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Layer;
 import java.lang.reflect.Method;
+import java.lang.reflect.Module;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -51,6 +54,7 @@ import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.Base64;
+import java.util.Optional;
 import com.sun.javafx.jmx.MXExtension;
 import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.stage.StageHelper;
@@ -68,6 +72,14 @@ public class LauncherImpl {
      * launchName is a path to a JavaFX application jar file to be launched.
      */
     public static final String LAUNCH_MODE_JAR = "LM_JAR";
+
+    /**
+     * When passed as launchMode to launchApplication, tells the method that
+     * launchName is the name of the JavaFX application class within a module
+     * to be launched. Either the class name will be provided or the main class
+     * will be defined in the module's descriptor.
+     */
+    public static final String LAUNCH_MODE_MODULE = "LM_MODULE";
 
     // set to true to debug launch issues from Java launcher
     private static final boolean trace = false;
@@ -215,14 +227,15 @@ public class LauncherImpl {
 
     /**
      * This method is called by the Java launcher. This allows us to be launched
-     * directly from the command line via "java -jar fxapp.jar" or
-     * "java -cp path some.fx.App". The launchMode argument must be one of
-     * "LM_CLASS" or "LM_JAR" or execution will abort with an error.
+     * directly from the command line via "java -jar fxapp.jar",
+     * "java -cp path some.fx.App", or "java -m module/some.fx.App". The launchMode
+     * argument must be one of "LM_CLASS", "LM_JAR", or "LM_MODULE" or execution will
+     * abort with an error.
      *
-     * @param launchName Either the path to a jar file or the application class
-     * name to launch
-     * @param launchMode The method of launching the application, either LM_JAR
-     * or LM_CLASS
+     * @param launchName The path to a jar file, the application class name to launch,
+     * or the module and optional class name to launch
+     * @param launchMode The method of launching the application, one of LM_JAR,
+     * LM_CLASS, or LM_MODULE
      * @param args Application arguments from the command line
      */
     public static void launchApplication(final String launchName,
@@ -230,7 +243,7 @@ public class LauncherImpl {
             final String[] args) {
 
         if (verbose) {
-            System.err.println("Java 8 launchApplication method: launchMode="
+            System.err.println("JavaFX launchApplication method: launchMode="
                     + launchMode);
         }
 
@@ -243,6 +256,7 @@ public class LauncherImpl {
         String preloaderClassName = null;
         String[] appArgs = args;
         ClassLoader appLoader = null;
+        Module mainModule = null;
 
         if (launchMode.equals(LAUNCH_MODE_JAR)) {
             Attributes jarAttrs = getJarAttributes(launchName);
@@ -302,10 +316,45 @@ public class LauncherImpl {
             }
         } else if (launchMode.equals(LAUNCH_MODE_CLASS)) {
             mainClassName = launchName;
-            preloaderClassName = System.getProperty("javafx.preloader");
+        } else if (launchMode.equals(LAUNCH_MODE_MODULE)) {
+            // This is largely copied from java.base/sun.launcher.LauncherHelper
+            int i = launchName.indexOf('/');
+            String moduleName;
+            if (i == -1) {
+                moduleName = launchName;
+                mainClassName = null;
+            } else {
+                moduleName = launchName.substring(0, i);
+                mainClassName = launchName.substring(i+1);
+            }
+
+            // main module is in the boot layer
+            Layer layer = Layer.boot();
+            Optional<Module> om = layer.findModule(moduleName);
+            if (!om.isPresent()) {
+                // should not happen
+                throw new InternalError("Module " + moduleName + " not in boot Layer");
+            }
+            mainModule = om.get();
+
+            // get main class from module descriptor
+            if (mainClassName == null) {
+                Optional<String> omc = mainModule.getDescriptor().mainClass();
+                if (!omc.isPresent()) {
+                    abort(null, "Module %1$s does not have a MainClass attribute, use -m <module>/<main-class>",
+                            moduleName);
+                }
+                mainClassName = omc.get();
+            }
         } else {
-            abort(new IllegalArgumentException("The launchMode argument must be one of LM_CLASS or LM_JAR"),
+            abort(new IllegalArgumentException(
+                    "The launchMode argument must be one of LM_CLASS, LM_JAR or LM_MODULE"),
                     "Invalid launch mode: %1$s", launchMode);
+        }
+
+        // fall back if no MF_JAVAFX_PRELOADER attribute, or not launching using -jar
+        if (preloaderClassName == null) {
+            preloaderClassName = System.getProperty("javafx.preloader");
         }
 
         if (mainClassName == null) {
@@ -320,23 +369,60 @@ public class LauncherImpl {
 
                 // then invoke the second part of this launcher using reflection
                 Method lawa = launcherClass.getMethod("launchApplicationWithArgs",
-                        new Class[] { String.class, String.class, (new String[0]).getClass()});
+                        new Class[] { Module.class, String.class, String.class, (new String[0]).getClass()});
 
                 // set the thread context class loader before we continue, or it won't load properly
                 Thread.currentThread().setContextClassLoader(appLoader);
-                lawa.invoke(null, new Object[] {mainClassName, preloaderClassName, appArgs});
+                lawa.invoke(null, new Object[] {null, mainClassName, preloaderClassName, appArgs});
             } catch (Exception e) {
                 abort(e, "Exception while launching application");
             }
         } else {
-            launchApplicationWithArgs(mainClassName, preloaderClassName, appArgs);
+            launchApplicationWithArgs(mainModule, mainClassName, preloaderClassName, appArgs);
         }
     }
 
-    // Must be public since we could be called from a different class loader
-    public static void launchApplicationWithArgs(final String mainClassName,
-            final String preloaderClassName, String[] args) {
+    // wrapper for Class.forName that handles cases where diacritical marks in the name
+    // cause the class to not be loaded, also largely copied from LauncherHelper.java
+    // this method returns null if the class cannot be loaded
+    private static Class<?> loadClass(final Module mainModule, final String className) {
+        Class<?> clz = null;
+        final ClassLoader loader = Thread.currentThread().getContextClassLoader();
 
+        // loader is ignored for modular mode
+        // the only time we need to use a separate loader is LM_JAR with
+        // a MF_JAVAFX_CLASS_PATH attribute which is deprecated
+
+        if (mainModule != null) {
+            clz = Class.forName(mainModule, className);
+        } else {
+            try {
+                clz = Class.forName(className, true, loader);
+            } catch (ClassNotFoundException | NoClassDefFoundError cnfe) {}
+        }
+
+        if (clz == null && System.getProperty("os.name", "").contains("OS X")
+                    && Normalizer.isNormalized(className, Normalizer.Form.NFD)) {
+            // macOS may have decomposed diacritical marks in mainClassName
+            // recompose them and try again
+            String cn = Normalizer.normalize(className, Normalizer.Form.NFC);
+
+            if (mainModule != null) {
+                clz = Class.forName(mainModule, cn);
+            } else {
+                try {
+                    clz = Class.forName(cn, true, loader);
+                } catch (ClassNotFoundException | NoClassDefFoundError cnfe) {}
+            }
+        }
+
+        return clz;
+    }
+
+    // Must be public since we could be called from a different class loader
+    public static void launchApplicationWithArgs(final Module mainModule,
+            final String mainClassName,
+            final String preloaderClassName, String[] args) {
         try {
             startToolkit();
         } catch (InterruptedException ex) {
@@ -347,23 +433,26 @@ public class LauncherImpl {
         Class<? extends Preloader> preClass = null;
         Class<?> tempAppClass = null;
 
-        final ClassLoader loader = Thread.currentThread().getContextClassLoader();
         final AtomicReference<Class<?>> tmpClassRef = new AtomicReference<>();
         final AtomicReference<Class<? extends Preloader>> preClassRef = new AtomicReference<>();
         PlatformImpl.runAndWait(() -> {
-            Class<?> clz = null;
-            try {
-                clz = Class.forName(mainClassName, true, loader);
-            } catch (ClassNotFoundException cnfe) {
-                abort(cnfe, "Missing JavaFX application class %1$s", mainClassName);
+            Class<?> clz = loadClass(mainModule, mainClassName);
+            if (clz == null) {
+                if (mainModule != null) {
+                    abort(null, "Missing JavaFX application class %1$s in module %2$s",
+                            mainClassName, mainModule.getName());
+                } else {
+                    abort(null, "Missing JavaFX application class %1$s", mainClassName);
+                }
             }
+
             tmpClassRef.set(clz);
 
             if (preloaderClassName != null) {
-                try {
-                    clz = Class.forName(preloaderClassName, true, loader);
-                } catch (ClassNotFoundException cnfe) {
-                    abort(cnfe, "Missing JavaFX preloader class %1$s", preloaderClassName);
+                // TODO: modular preloader?
+                clz = loadClass(null, preloaderClassName);
+                if (clz == null) {
+                    abort(null, "Missing JavaFX preloader class %1$s", preloaderClassName);
                 }
 
                 if (!Preloader.class.isAssignableFrom(clz)) {
