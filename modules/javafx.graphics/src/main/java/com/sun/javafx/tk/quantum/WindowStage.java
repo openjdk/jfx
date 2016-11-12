@@ -201,9 +201,39 @@ class WindowStage extends GlassStage {
                 if (securityDialog) {
                     platformWindow.setLevel(Window.Level.FLOATING);
                 }
+                if (fxStage != null && fxStage.getScene() != null) {
+                    javafx.scene.paint.Paint paint = fxStage.getScene().getFill();
+                    if (paint instanceof javafx.scene.paint.Color) {
+                        javafx.scene.paint.Color color = (javafx.scene.paint.Color) paint;
+                        platformWindow.setBackground((float) color.getRed(), (float) color.getGreen(), (float) color.getBlue());
+                    } else if (paint instanceof javafx.scene.paint.LinearGradient) {
+                        javafx.scene.paint.LinearGradient lgradient = (javafx.scene.paint.LinearGradient) paint;
+                        computeAndSetBackground(lgradient.getStops());
+                    } else if (paint instanceof javafx.scene.paint.RadialGradient) {
+                        javafx.scene.paint.RadialGradient rgradient = (javafx.scene.paint.RadialGradient) paint;
+                        computeAndSetBackground(rgradient.getStops());
+                    }
+                }
+
             }
         }
         platformWindows.put(platformWindow, this);
+    }
+
+    private void computeAndSetBackground(List<javafx.scene.paint.Stop> stops) {
+        if (stops.size() == 1) {
+            javafx.scene.paint.Color color = stops.get(0).getColor();
+            platformWindow.setBackground((float) color.getRed(),
+                    (float) color.getGreen(), (float) color.getBlue());
+        } else if (stops.size() > 1) {
+            // A simple attempt to find a reasonable average color that is
+            // within the stops arrange.
+            javafx.scene.paint.Color color = stops.get(0).getColor();
+            javafx.scene.paint.Color color2 = stops.get(stops.size() - 1).getColor();
+            platformWindow.setBackground((float) ((color.getRed() + color2.getRed()) / 2.0),
+                    (float) ((color.getGreen() + color2.getGreen()) / 2.0),
+                    (float) ((color.getBlue() + color2.getBlue()) / 2.0));
+        }
     }
 
     final Window getPlatformWindow() {
