@@ -95,10 +95,6 @@ public class AppPlatform {
     public static boolean requestStart(
             AppNotificationHandler notificationHandler, Application.Parameters parameters)
     throws IOException {
-        if (IS_MAC) {
-            Platform.setImplicitExit(false);
-        }
-
         if (EditorPlatform.isAssertionEnabled()) {
             // Development mode : we do not delegate to the existing instance
             notificationHandler.handleLaunch(parameters.getUnnamed());
