@@ -3119,6 +3119,7 @@ project(":web") {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             enabled =  (IS_COMPILE_WEBKIT)
 
+            outputs.upToDateWhen { false }
             outputs.dir("$webkitOutputDir/$webkitConfig/DerivedSources/WebCore/nativeJava/java")
 
             doLast {
