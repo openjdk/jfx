@@ -1958,7 +1958,7 @@ project(":graphics") {
         libsDir.mkdirs();
 
         def allLibsPresent = true
-        def libNames = ["antlr-3.1.3.jar", "stringtemplate-3.2.jar", "antlr-runtime-3.1.3.jar"]
+        def libNames = [ "antlr-complete-3.5.2.jar" ]
         libNames.each { name ->
             File f = new File(libsDir, name)
             if (!f.exists()) allLibsPresent = false
