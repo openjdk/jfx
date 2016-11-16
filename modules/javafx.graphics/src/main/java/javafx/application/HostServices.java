@@ -154,7 +154,7 @@ public final class HostServices {
      * @deprecated This method is deprecated as of JDK 9 because the
      * {@link java.applet.Applet Applet} API is deprecated.
      */
-    @Deprecated // FIXME: (since = "9")
+    @Deprecated(since="9", forRemoval=true)
     public final JSObject getWebContext() {
         return delegate.getWebContext();
     }
