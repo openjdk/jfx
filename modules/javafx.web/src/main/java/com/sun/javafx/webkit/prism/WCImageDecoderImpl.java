@@ -244,6 +244,14 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     }
 
     @Override protected int getFrameCount() {
+        // Initiate full decode to get frame count.
+        // NOTE: This method will be called just before
+        // rendering the given image, so there will not
+        // be any performance degrade while initiating a
+        // full decode.
+        if (fullDataReceived) {
+            getImageFrame(0);
+        }
         return frameCount;
     }
 
