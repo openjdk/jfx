@@ -22,7 +22,7 @@ for i in "$@"; do
         ARGUMENT=${i:2}
         JAVA_ARGS="${JAVA_ARGS} ${ARGUMENT}"
     else
-        ARGS+=("$i")
+        ARGS+=("\"$i\"")
     fi
 done
 
@@ -112,4 +112,4 @@ fi
 # separated list to be passed as an argument to JAVA. This is similar to "$@"
 # except we had to strip out some arguments that we don't want to be passed
 # to the Java Packager.
-exec "$JAVA_CMD" ${DEBUG} ${MEMORY} ${JAVA_ARGS} "-Djavafx.home=$javafx_home" -classpath "$classpath" -m jdk.packager/com.sun.javafx.tools.packager.Main $(IFS=$' '; echo "${ARGS[*]}")
+eval exec "$JAVA_CMD" ${DEBUG} ${MEMORY} ${JAVA_ARGS} "-Djavafx.home=$javafx_home" -classpath "$classpath" -m jdk.packager/com.sun.javafx.tools.packager.Main $(IFS=$' '; echo "${ARGS[*]}")

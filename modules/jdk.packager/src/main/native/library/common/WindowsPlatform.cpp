@@ -254,7 +254,6 @@ MessageResponse WindowsPlatform::ShowResponseMessage(TString title, TString desc
 //}
 
 TString WindowsPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
-#ifdef USE_JLI_LAUNCH
     TString result = FilePath::IncludeTrailingSeparater(RuntimePath) +
         _T("jre\\bin\\jli.dll");
 
@@ -262,25 +261,6 @@ TString WindowsPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
         result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             _T("bin\\jli.dll");
     }
-#else
-    TString result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-        _T("jre\\bin\\client\\jvm.dll");
-
-    if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-            _T("jre\\bin\\server\\jvm.dll");
-    }
-
-    if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-            _T("bin\\client\\jvm.dll");
-    }
-
-    if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-            _T("bin\\server\\jvm.dll");
-    }
-#endif
 
     return result;
 }

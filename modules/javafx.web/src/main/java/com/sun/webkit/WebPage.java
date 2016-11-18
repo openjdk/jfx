@@ -2224,11 +2224,11 @@ public final class WebPage {
         }
     }
 
-    private String[] fwkChooseFile(String initialFileName, boolean multiple) {
+    private String[] fwkChooseFile(String initialFileName, boolean multiple, String mimeFilters) {
         log.log(Level.FINER, "Choose file, initial=" + initialFileName);
 
         return uiClient != null
-                ? uiClient.chooseFile(initialFileName, multiple)
+                ? uiClient.chooseFile(initialFileName, multiple, mimeFilters)
                 : null;
     }
 

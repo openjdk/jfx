@@ -145,7 +145,7 @@ static void initRefs(JNIEnv* env)
         ASSERT(windowToScreenMID);
 
         chooseFileMID = env->GetMethodID(getWebPageCls(), "fwkChooseFile",
-            "(Ljava/lang/String;Z)[Ljava/lang/String;");
+            "(Ljava/lang/String;ZLjava/lang/String;)[Ljava/lang/String;");
         ASSERT(chooseFileMID);
     }
     if (!rectxFID) {
@@ -470,16 +470,6 @@ void ChromeClientJava::runOpenPanel(Frame* frame, PassRefPtr<FileChooser> fileCh
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
-/*
-    WebFileChooserParams params;
-    params.multiSelect = fileChooser->settings().allowsMultipleFiles;
-#if ENABLE(DIRECTORY_UPLOAD)
-    params.directory = fileChooser->settings().allowsDirectoryUpload;
-#else
-    params.directory = false;
-#endif
-    params.acceptMIMETypes = fileChooser->settings().acceptMIMETypes;
-    // FIXME: Remove WebFileChooserParams::acceptTypes.
     StringBuilder builder;
     const Vector<String>& acceptTypeList = fileChooser->settings().acceptMIMETypes;
     for (unsigned i = 0; i < acceptTypeList.size(); ++i) {
@@ -487,12 +477,7 @@ void ChromeClientJava::runOpenPanel(Frame* frame, PassRefPtr<FileChooser> fileCh
             builder.append(',');
         builder.append(acceptTypeList[i]);
     }
-    params.acceptTypes = builder.toString();
-    params.selectedFiles = fileChooser->settings().selectedFiles;
-    if (params.selectedFiles.size() > 0)
-        params.initialValue = params.selectedFiles[0];
 
-*/
     JLString initialFilename;
     const Vector<String> &filenames = fileChooser->settings().selectedFiles;
     if (filenames.size() > 0) {
@@ -502,7 +487,8 @@ void ChromeClientJava::runOpenPanel(Frame* frame, PassRefPtr<FileChooser> fileCh
     bool multiple = fileChooser->settings().allowsMultipleFiles;
     JLocalRef<jobjectArray> jfiles(static_cast<jobjectArray>(
         env->CallObjectMethod(m_webPage, chooseFileMID,
-                              (jstring)initialFilename, multiple)));
+                              (jstring)initialFilename, multiple,
+                              (jstring)(builder.toString().toJavaString(env)))));
     CheckAndClearException(env);
 
     if (jfiles) {

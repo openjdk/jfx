@@ -44,11 +44,7 @@ Messages::Messages(void) {
     FMessages.SetReadOnly(false);
     FMessages.SetValue(LIBRARY_NOT_FOUND, _T("Failed to find library."));
     FMessages.SetValue(FAILED_CREATING_JVM, _T("Failed to create JVM"));
-#ifndef USE_JLI_LAUNCH
-    FMessages.SetValue(FAILED_LOCATING_JVM_ENTRY_POINT, _T("Failed to locate JNI_CreateJavaVM"));
-#else
     FMessages.SetValue(FAILED_LOCATING_JVM_ENTRY_POINT, _T("Failed to locate JLI_Launch"));
-#endif
     FMessages.SetValue(NO_MAIN_CLASS_SPECIFIED, _T("No main class specified"));
     FMessages.SetValue(METHOD_NOT_FOUND, _T("No method %s in class %s."));
     FMessages.SetValue(CLASS_NOT_FOUND, _T("Class %s not found."));

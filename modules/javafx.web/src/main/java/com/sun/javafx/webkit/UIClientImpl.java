@@ -48,7 +48,9 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.image.Image;
@@ -62,12 +64,46 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebEvent;
 import javafx.scene.web.WebView;
 import javafx.stage.FileChooser;
+import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Window;
 import javax.imageio.ImageIO;
 
 public final class UIClientImpl implements UIClient {
     private final Accessor accessor;
     private FileChooser chooser;
+    private static final Map<String, FileExtensionInfo> fileExtensionMap = new HashMap<>();
+
+    private static class FileExtensionInfo {
+        private String description;
+        private List<String> extensions;
+        static void add(String type, String description, String... extensions) {
+            FileExtensionInfo info = new FileExtensionInfo();
+            info.description = description;
+            info.extensions = Arrays.asList(extensions);
+            fileExtensionMap.put(type, info);
+        }
+
+        private ExtensionFilter getExtensionFilter(String type) {
+            final String extensionType = "*." + type;
+            String desc = this.description + " ";
+
+            if (type.equals("*")) {
+                desc += extensions.stream().collect(java.util.stream.Collectors.joining(", ", "(", ")"));
+                return new ExtensionFilter(desc, this.extensions);
+            } else if (extensions.contains(extensionType)) {
+                desc += "(" + extensionType + ")";
+                return new ExtensionFilter(desc, extensionType);
+            }
+            return null;
+        }
+    }
+
+    static {
+        FileExtensionInfo.add("video", "Video Files", "*.webm", "*.mp4", "*.ogg");
+        FileExtensionInfo.add("audio", "Audio Files", "*.mp3", "*.aac", "*.wav");
+        FileExtensionInfo.add("text", "Text Files", "*.txt", "*.csv", "*.text", "*.ttf", "*.sdf", "*.srt", "*.htm", "*.html");
+        FileExtensionInfo.add("image", "Image Files", "*.png", "*.jpg", "*.gif", "*.bmp", "*.jpeg");
+    }
 
     public UIClientImpl(Accessor accessor) {
         this.accessor = accessor;
@@ -179,7 +215,7 @@ public final class UIClientImpl implements UIClient {
         return "";
     }
 
-    @Override public String[] chooseFile(String initialFileName, boolean multiple) {
+    @Override public String[] chooseFile(String initialFileName, boolean multiple, String mimeFilters) {
         // get the toplevel window
         Window win = null;
         WebView view = accessor.getView();
@@ -190,6 +226,13 @@ public final class UIClientImpl implements UIClient {
         if (chooser == null) {
             chooser = new FileChooser();
         }
+
+        // Remove old filters, add specific filters and finally add generic filter
+        chooser.getExtensionFilters().clear();
+        if (mimeFilters != null && !mimeFilters.isEmpty()) {
+            addMimeFilters(chooser, mimeFilters);
+        }
+        chooser.getExtensionFilters().addAll(new ExtensionFilter("All Files", "*.*"));
 
         // set initial directory
         if (initialFileName != null) {
@@ -216,6 +259,35 @@ public final class UIClientImpl implements UIClient {
             return f != null
                     ? new String[] { f.getAbsolutePath() }
                     : null;
+        }
+    }
+
+    private void addSpecificFilters(FileChooser chooser, String mimeString) {
+        if (mimeString.contains("/")) {
+            final String splittedMime[] = mimeString.split("/");
+            final String mainType = splittedMime[0];
+            final String subType = splittedMime[1];
+            final FileExtensionInfo extensionValue = fileExtensionMap.get(mainType);
+
+            if (extensionValue != null) {
+                ExtensionFilter extFilter = extensionValue.getExtensionFilter(subType);
+                if(extFilter != null) {
+                    chooser.getExtensionFilters().addAll(extFilter);
+                }
+            }
+        }
+    }
+
+    private void addMimeFilters(FileChooser chooser, String mimeFilters) {
+        if (mimeFilters.contains(",")) {
+            // Filter consists of multiple MIME types
+            String types[] = mimeFilters.split(",");
+            for (String mimeType : types) {
+                addSpecificFilters(chooser, mimeType);
+            }
+        } else {
+            // Filter consists of single MIME type
+            addSpecificFilters(chooser, mimeFilters);
         }
     }
 

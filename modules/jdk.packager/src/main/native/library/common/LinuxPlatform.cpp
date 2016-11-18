@@ -127,7 +127,6 @@ ISectionalPropertyContainer* LinuxPlatform::GetConfigFile(TString FileName) {
 }
 
 TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
-#ifdef USE_JLI_LAUNCH
     TString result = FilePath::IncludeTrailingSeparater(RuntimePath) +
         "lib/"JAVAARCH"/jli/libjli.so";
 
@@ -135,25 +134,6 @@ TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
         result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             "lib/"JAVAARCH"/jli/libjli.so";
     }
-#else
-    TString result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-        "jre/lib/"JAVAARCH"/client/libjvm.so";
-
-    if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-            "jre/lib/"JAVAARCH"/server/libjvm.so";
-    }
-
-    if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-            "lib/"JAVAARCH"/server/libjvm.so";
-    }
-
-    if (FilePath::FileExists(result) == false) {
-        result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-            "lib/"JAVAARCH"/server/libjvm.so";
-    }
-#endif
 
     return result;
 }
