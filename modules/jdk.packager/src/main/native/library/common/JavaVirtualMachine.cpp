@@ -54,7 +54,6 @@ bool RunVM() {
 
     if (javavm.StartJVM() == true) {
         result = true;
-        javavm.ShutdownJVM();
     }
     else {
         Platform& platform = Platform::GetInstance();
@@ -66,10 +65,6 @@ bool RunVM() {
 
 
 // Private typedef for function pointer casting
-#ifndef USE_JLI_LAUNCH
-#define LAUNCH_FUNC "JNI_CreateJavaVM"
-typedef jint (JNICALL *JVM_CREATE)(JavaVM ** jvm, JNIEnv ** env, void *);
-#else
 #define LAUNCH_FUNC "JLI_Launch"
 typedef int (JNICALL *JVM_CREATE)(int argc, char ** argv,
                                     int jargc, const char** jargv,
@@ -82,7 +77,6 @@ typedef int (JNICALL *JVM_CREATE)(int argc, char ** argv,
                                     jboolean cpwildcard,
                                     jboolean javaw,
                                     jint ergo);
-#endif //USE_JLI_LAUNCH
 
 class JavaLibrary : public Library {
     JVM_CREATE FCreateProc;
@@ -94,31 +88,6 @@ public:
         FCreateProc = NULL;
     }
 
-#ifndef USE_JLI_LAUNCH
-bool JavaVMCreate(JavaVM** jvm, JNIEnv** env, void* jvmArgs) {
-        bool result = true;
-
-        if (FCreateProc == NULL) {
-            FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
-        }
-
-        if (FCreateProc == NULL) {
-            Platform& platform = Platform::GetInstance();
-            Messages& messages = Messages::GetInstance();
-            platform.ShowMessage(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
-            return false;
-        }
-
-        if ((*FCreateProc)(jvm, env, jvmArgs) < 0) {
-            Platform& platform = Platform::GetInstance();
-            Messages& messages = Messages::GetInstance();
-            platform.ShowMessage(messages.GetMessage(FAILED_CREATING_JVM));
-            return false;
-        }
-
-        return result;
-    }
-#else
     bool JavaVMCreate(size_t argc, char *argv[]) {
         if (FCreateProc == NULL) {
             FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
@@ -143,40 +112,7 @@ bool JavaVMCreate(JavaVM** jvm, JNIEnv** env, void* jvmArgs) {
             false,
             0) == 0;
     }
-#endif //USE_JLI_LAUNCH
 };
-
-#ifndef USE_JLI_LAUNCH
-//debug hook to print JVM messages into console.
-static jint JNICALL vfprintfHook(FILE *fp, const char *format, va_list args) {
-#ifdef WINDOWS
-   char buffer[20480];
-   int len;
-   HANDLE hConsole;
-   DWORD wasWritten;
-
-   len = _vsnprintf_s(buffer, sizeof(buffer), sizeof(buffer), format, args);
-
-   if (len <= 0) {
-        return len;
-   }
-
-   hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-
-   if (hConsole == INVALID_HANDLE_VALUE) {
-        return false;
-   }
-
-   //JVM will always pass us ASCII
-   WriteConsoleA(hConsole, buffer, strlen(buffer), &wasWritten, NULL);
-
-   return (jint) len;
-#endif //WINDOWS
-#ifdef LINUX
-   return 0;
-#endif //LINUX
-}
-#endif //USE_JLI_LAUNCH
 
 //--------------------------------------------------------------------------------------------------
 
@@ -195,16 +131,6 @@ private:
 public:
     JavaOptions() {
         FOptions = NULL;
-
-#ifndef USE_JLI_LAUNCH
-#ifdef DEBUG
-        Platform& platform = Platform::GetInstance();
-
-        if (platform.GetDebugState() == dsNative) {
-            AppendValue(_T("vfprintf"), _T(""), (void*)vfprintfHook);
-        }
-#endif //DEBUG
-#endif //USE_JLI_LAUNCH
     }
 
     ~JavaOptions() {
@@ -262,30 +188,6 @@ public:
         }
     }
 
-#ifndef USE_JLI_LAUNCH
-    JavaVMOption* ToJavaOptions() {
-        FOptions = new JavaVMOption[FItems.size()];
-        memset(FOptions, 0, sizeof(JavaVMOption) * FItems.size());
-        Macros& macros = Macros::GetInstance();
-        unsigned int index = 0;
-
-        for (std::list<JavaOptionItem>::const_iterator iterator = FItems.begin();
-             iterator != FItems.end(); iterator++) {
-            TString key = iterator->name;
-            TString value = iterator->value;
-            TString option = Helpers::NameValueToString(key, value);
-            option = macros.ExpandMacros(option);
-#ifdef DEBUG
-            printf("%s\n", PlatformString(option).c_str());
-#endif //DEBUG
-            FOptions[index].optionString = PlatformString::duplicate(PlatformString(option).c_str());
-            FOptions[index].extraInfo = iterator->extraInfo;
-            index++;
-        }
-
-        return FOptions;
-    }
-#else
     std::list<TString> ToList() {
         std::list<TString> result;
         Macros& macros = Macros::GetInstance();
@@ -301,7 +203,6 @@ public:
 
         return result;
     }
-#endif //USE_JLI_LAUNCH
 
     size_t GetCount() {
         return FItems.size();
@@ -350,10 +251,6 @@ OrderedMap<TString, TString> RemoveTrailingEquals(OrderedMap<TString, TString> M
 //--------------------------------------------------------------------------------------------------
 
 JavaVirtualMachine::JavaVirtualMachine() {
-#ifndef USE_JLI_LAUNCH
-    FEnv = NULL;
-    FJvm = NULL;
-#endif //USE_JLI_LAUNCH
 }
 
 JavaVirtualMachine::~JavaVirtualMachine(void) {
@@ -426,42 +323,6 @@ bool JavaVirtualMachine::StartJVM() {
 
     javaLibrary.Load(package.GetJVMLibraryFileName());
 
-#ifndef USE_JLI_LAUNCH
-    options.AppendValue(_T("-Djava.class.path"), classpath);
-
-    if (package.HasSplashScreen() == true) {
-        options.AppendValue(TString(_T("-splash:")) + package.GetSplashScreenFileName(), _T(""));
-    }
-
-    // Set up the VM init args
-    JavaVMInitArgs jvmArgs;
-    memset(&jvmArgs, 0, sizeof(JavaVMInitArgs));
-    jvmArgs.version = JNI_VERSION_1_6;
-    jvmArgs.options = options.ToJavaOptions();
-    jvmArgs.nOptions = (jint)options.GetCount();
-    jvmArgs.ignoreUnrecognized = JNI_TRUE;
-
-    if (javaLibrary.JavaVMCreate(&FJvm, &FEnv, &jvmArgs) == true) {
-        try {
-            JavaClass mainClass(FEnv, Helpers::ConvertIdToJavaPath(mainClassName));
-            JavaStaticMethod mainMethod = mainClass.GetStaticMethod(_T("main"), _T("([Ljava/lang/String;)V"));
-            std::list<TString> appargs = package.GetArgs();
-            JavaStringArray largs(FEnv, appargs);
-
-            package.FreeBootFields();
-
-            mainMethod.CallVoidMethod(1, largs.GetData());
-            return true;
-        }
-        catch (JavaException& exception) {
-            platform.ShowMessage(exception.GetMessage());
-            return false;
-        }
-    }
-
-    return false;
-}
-#else
     // Initialize the arguments to JLI_Launch()
     //
     // On Mac OS X JLI_Launch spawns a new thread that actually starts the JVM. This
@@ -539,28 +400,4 @@ bool JavaVirtualMachine::StartJVM() {
     }
 
     return false;
-}
-#endif //USE_JLI_LAUNCH
-
-void JavaVirtualMachine::ShutdownJVM() {
-#ifndef USE_JLI_LAUNCH
-    if (FJvm != NULL) {
-        // If application main() exits quickly but application is run on some other thread
-        //  (e.g. Swing app performs invokeLater() in main and exits)
-        // then if we return execution to tWinMain it will exit.
-        // This will cause process to exit and application will not actually run.
-        //
-        // To avoid this we are trying to detach jvm from current thread (java.exe does the same)
-        // Because we are doing this on the main JVM thread (i.e. one that was used to create JVM)
-        // this call will spawn "Destroy Java VM" java thread that will shut JVM once there are
-        // no non-daemon threads running, and then return control here.
-        // I.e. this will happen when EDT and other app thread will exit.
-        if (FJvm->DetachCurrentThread() != JNI_OK) {
-            Platform& platform = Platform::GetInstance();
-            platform.ShowMessage(_T("Detach failed."));
-        }
-
-        FJvm->DestroyJavaVM();
-    }
-#endif //USE_JLI_LAUNCH
 }
