@@ -218,13 +218,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                 }
             }
 
-            if (prefs != null) {
-                deployParams.setNeedShortcut(prefs.getShortcut());
-                deployParams.setNeedInstall(prefs.getInstall());
-                deployParams.setNeedMenu(prefs.getMenu());
-                deployParams.setSystemWide(prefs.getSystemInstall());
-                deployParams.setInstalldirChooser(prefs.getInstalldirChooser());
-            }
+            setPreferences();
 
             for (Template t: templateList) {
                 deployParams.addTemplate(t.infile, t.outfile);
@@ -312,6 +306,8 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                             .map(FileAssociation::createLauncherMap)
                             .collect(Collectors.toList()));
             }
+
+            setPreferences();
         }
 
         if (!isModular &&
@@ -358,6 +354,8 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                             .map(FileAssociation::createLauncherMap)
                             .collect(Collectors.toList()));
             }
+
+            setPreferences();
         }
 
         for (BundleArgument ba : bundleArgumentList) {
@@ -639,6 +637,16 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         //Use qName and value - can't really validate anything until we know which bundlers we have, so this has
         //to done (way) downstream
         bundleArgumentList.add(new BundleArgument(name, value));
+    }
+
+    private void setPreferences() {
+        if (prefs != null) {
+            deployParams.setNeedShortcut(prefs.getShortcut());
+            deployParams.setNeedInstall(prefs.getInstall());
+            deployParams.setNeedMenu(prefs.getMenu());
+            deployParams.setSystemWide(prefs.getSystemInstall());
+            deployParams.setInstalldirChooser(prefs.getInstalldirChooser());
+        }
     }
 
     /**
