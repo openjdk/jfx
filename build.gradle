@@ -257,6 +257,7 @@ ext.BUILD_CLOSED = buildClosed
 
 ext.RUNARGSFILE = "run.args"
 ext.COMPILEARGSFILE = "compile.args"
+ext.JAVAPOLICYFILE = 'run.java.policy'
 
 ext.TESTCOMPILEARGSFILE = "testcompile.args"
 ext.TESTRUNARGSFILE = "testrun.args"
@@ -752,15 +753,17 @@ List<String> computeLibraryPath(boolean working) {
 
 // Return list with the arguments needed for --patch-module for the provided projects
 // used with Java executables ie. tests
-List<String> computePatchModuleArgs(List<String> deps, boolean test) {
+List<String> computePatchModuleArgs(List<String> deps, boolean test, boolean includeJLP) {
      List<String> pma = []
 
      deps.each {String projname ->
          def proj = project(projname)
          if (proj.hasProperty("moduleName")) {
-             File dir = proj.sourceSets.main.output.classesDir
+             File dir;
              if (test && proj.sourceSets.hasProperty('shims')) {
-                dir = proj.sourceSets.shims.output.classesDir
+                dir = file("${rootProject.buildDir}/shims")
+             } else {
+                dir = file("${rootProject.buildDir}/modular-sdk/modules")
              }
              String moduleName = proj.ext.moduleName
              String dirpath = cygpath("${dir}/${moduleName}")
@@ -768,7 +771,9 @@ List<String> computePatchModuleArgs(List<String> deps, boolean test) {
          }
      }
 
-    pma += "-Djava.library.path=" + computeLibraryPath(true).join(File.pathSeparator)
+    if (includeJLP) {
+        pma += "-Djava.library.path=" + computeLibraryPath(true).join(File.pathSeparator)
+    }
 
     return pma
 }
@@ -808,23 +813,8 @@ List<String> computeModulePathArgs(String  pname, List<String> deps, boolean tes
 
          mpa += mp
          return mpa
-    }
+}
 
-    void writeCompileArgsFile(File dest, List<String>path) {
-        dest.delete()
-
-        logger.info("Creating file ${dest.path}")
-        dest << "--upgrade-module-path\n"
-
-        dest << "\"\\\n"
-        path.each() { e->
-            dest << "  "
-            dest << cygpath(e)
-            dest << File.pathSeparator
-            dest << "\\\n"
-        }
-        dest << "\"\n"
-    }
 
 void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath) {
 
@@ -832,17 +822,19 @@ void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath) {
 
     logger.info("Creating file ${dest.path}")
 
-    dest <<  "-Djava.library.path=\"\\\n"
-    libpath.each() { e->
-        dest << "  "
-        dest << e
-        dest << File.pathSeparator
-        dest << "\\\n"
+    if (libpath != null) {
+        dest <<  "-Djava.library.path=\"\\\n"
+        libpath.each() { e->
+            dest << "  "
+            dest << e
+            dest << File.pathSeparator
+            dest << "\\\n"
+        }
+        dest <<  "  \"\n"
     }
-    dest <<  "  \"\n"
 
     modpath.each { e ->
-        dest <<  "--patch-module \""
+        dest <<  "--patch-module=\""
         dest << e
         dest << "\"\n"
     }
@@ -862,9 +854,9 @@ void commonModuleSetup(Project p, List<String> moduleChain) {
         p.ext.modulePathArgs = mpa
     }
 
-    p.ext.testModulePathArgs = computeModulePathArgs(p.name, moduleChain, true)
-    p.ext.patchModuleArgs = computePatchModuleArgs(moduleChain ,false)
-    p.ext.testPatchModuleArgs = computePatchModuleArgs(moduleChain, true)
+    p.ext.testModulePathArgs = computePatchModuleArgs(moduleChain, true, false)
+    p.ext.patchModuleArgs = computePatchModuleArgs(moduleChain ,false, true)
+    p.ext.testPatchModuleArgs = computePatchModuleArgs(moduleChain, true, true)
 
     moduleChain.each() {e ->
         if (!e.equals(p.name)) {
@@ -3280,53 +3272,35 @@ project(":systemTests") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ])
 
-    File patchPolicyFile = new File(project.buildDir, TESTJAVAPOLICYFILE);
-    File runArgsFile = new File(project.buildDir,RUNARGSFILE);
+    File javaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE);
+    File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
+
+    File stRunArgsFile = new File(project.buildDir,"st.run.args");
 
     def sts = task("systemTestSetup") {
-        outputs.file(patchPolicyFile)
-        outputs.file(runArgsFile)
+        outputs.file(stRunArgsFile)
 
         doLast() {
-            runArgsFile.delete()
-            patchPolicyFile.delete()
+            stRunArgsFile.delete()
 
-            logger.info("Creating patchmodule.args file ${runArgsFile}")
+            logger.info("Creating patchmodule.args file ${stRunArgsFile}")
 
             // Create an argfile with the information needed to launch
             // the stand alone system unit tests.
 
             //First add in all of the patch-module args we use for the
-            //normal unit tests
-            testPatchModuleArgs.each { str ->
-                runArgsFile <<  "${str}\n"
+            //normal unit tests, copied from test.run.args
+            testRunArgsFile.eachLine { str ->
+                stRunArgsFile <<  "${str}\n"
             }
 
             // Now add in the working classpath elements (junit, test classes...)
-            runArgsFile <<  "-cp \"\\\n"
+            stRunArgsFile <<  "-cp \"\\\n"
             test.classpath.each() { elem ->
                 def e = cygpath("${elem}")
-                runArgsFile <<  "  ${e}${File.pathSeparator}\\\n"
+                stRunArgsFile <<  "  ${e}${File.pathSeparator}\\\n"
             }
-            runArgsFile <<  "\"\n"
-
-            // Now create a policy file with full paths matching the patched modules
-            // we have provided. This needs to be in sync with testPatchModuleArgs
-            moduleProjList.each { project ->
-                if (project.hasProperty("moduleName") && project.buildModule) {
-                    File dir;
-                    if (test && project.sourceSets.hasProperty('shims')) {
-                       dir = new File(project.sourceSets.shims.output.classesDir, project.ext.moduleName);
-                    } else {
-                       dir = new File(project.sourceSets.main.output.classesDir, project.ext.moduleName);
-                    }
-
-                    String themod = dir.toURI()
-                    patchPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
-                    "    permission java.security.AllPermission;\n" +
-                    "};\n"
-                }
-            }
+            stRunArgsFile <<  "\"\n"
         }
     }
 
@@ -3338,8 +3312,8 @@ project(":systemTests") {
 
         // Properties passed to test.util.Util
         systemProperties 'worker.debug': IS_WORKER_DEBUG
-        systemProperties 'worker.patchmodule.file': cygpath(runArgsFile.path)
-        systemProperties 'worker.patch.policy': cygpath(patchPolicyFile.path)
+        systemProperties 'worker.patchmodule.file': cygpath(stRunArgsFile.path)
+        systemProperties 'worker.patch.policy': cygpath(javaPolicyFile.path)
         systemProperties 'worker.java.cmd': JAVA
 
         if (!IS_USE_ROBOT) {
@@ -3419,6 +3393,14 @@ allprojects {
         }
 
         compileTestJava.dependsOn(compileShimsJava)
+
+        def copyGeneratedShimsTask = task("copyGeneratedShims", type: Copy, dependsOn: [compileShimsJava]) {
+            from project.sourceSets.shims.output.classesDir
+            into "${rootProject.buildDir}/shims"
+            exclude("*/module-info.class")
+        }
+
+        compileTestJava.dependsOn(copyGeneratedShimsTask)
     }
 
     if (project.hasProperty('modulePathArgs')) {
@@ -3526,7 +3508,6 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.addBooleanOption("use").setValue(true);
 
     options.setOptionFiles([
-        new File("${rootProject.buildDir}/${COMPILEARGSFILE}"),
         new File(rootProject.buildDir,MODULESOURCEPATH)
         ]);
 
@@ -3923,24 +3904,10 @@ compileTargets { t ->
             }
 
             writeRunArgsFile(runArgsFile, computeLibraryPath(true), modpath)
+            writeRunArgsFile(compileArgsFile, null, modpath)
         }
     }
     buildModules.dependsOn(buildRunArgsTask)
-
-    def buildCompileArgsTask = task("buildCompileArgs$t.capital",
-            group: "Build", dependsOn: buildModulesTask) {
-        outputs.file(compileArgsFile);
-        doLast() {
-            List<String> modlist = []
-            moduleProjList.each { project ->
-                def moduleName = project.ext.moduleName
-                def dstModuleDir = "${modulesDir}/${moduleName}"
-                modlist << dstModuleDir
-            }
-            writeCompileArgsFile(compileArgsFile, modlist);
-        }
-    }
-    buildModules.dependsOn(buildCompileArgsTask)
 
     def isWindows = IS_WINDOWS && t.name == "win";
     def isMac = IS_MAC && t.name == "mac";
@@ -4249,13 +4216,7 @@ compileTargets { t ->
             // And the test (shimed) variation...
 
             testRunArgsFile.delete()
-
-            logger.info("Creating argfile ${testRunArgsFile.path}")
-
-            computePatchModuleArgs(projNames, true).each() { a->
-                testRunArgsFile << a
-                testRunArgsFile << "\n"
-            }
+            testCompileArgsFile.delete()
 
             testJavaPolicyFile.delete()
 
@@ -4265,12 +4226,13 @@ compileTargets { t ->
                 if (project.hasProperty("moduleName") && project.buildModule) {
                     File dir;
                     if (project.sourceSets.hasProperty('shims')) {
-                       dir = new File(project.sourceSets.shims.output.classesDir, project.ext.moduleName);
+                       dir = new File(rootProject.buildDir, "shims/${project.ext.moduleName}")
                     } else {
-                       dir = new File(project.sourceSets.main.output.classesDir, project.ext.moduleName);
+                       dir = new File(rootProject.buildDir, "modular-sdk/modules/${project.ext.moduleName}")
                     }
 
-                    modpath << dir.path
+                    def dstModuleDir = cygpath(dir.path)
+                    modpath << "${project.ext.moduleName}=${dstModuleDir}"
 
                     String themod = dir.toURI()
                     testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
@@ -4279,7 +4241,8 @@ compileTargets { t ->
                 }
             }
 
-            writeCompileArgsFile(testCompileArgsFile, modpath)
+            writeRunArgsFile(testCompileArgsFile, null, modpath)
+            writeRunArgsFile(testRunArgsFile, computeLibraryPath(true), modpath)
         }
     }
     sdk.dependsOn(testArgFiles)
