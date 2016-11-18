@@ -4328,6 +4328,10 @@ gst_value_subtract_fraction_range_fraction_range (GValue * dest,
 
   g_return_val_if_fail (min1 != NULL && max1 != NULL, FALSE);
   g_return_val_if_fail (min2 != NULL && max2 != NULL, FALSE);
+#ifdef GSTREAMER_LITE
+  if (min1 == NULL || max1 == NULL || min2 == NULL || max2 == NULL)
+    return FALSE;
+#endif // GSTREAMER_LITE
 
   compare = gst_value_get_compare_func (min1);
   g_return_val_if_fail (compare, FALSE);
@@ -5039,6 +5043,10 @@ gst_value_init_and_copy (GValue * dest, const GValue * src)
 {
   g_return_if_fail (G_IS_VALUE (src));
   g_return_if_fail (dest != NULL);
+#ifdef GSTREAMER_LITE
+  if (src == NULL || !G_IS_VALUE (src) || dest == NULL)
+    return;
+#endif // GSTREAMER_LITE
 
   g_value_init (dest, G_VALUE_TYPE (src));
   g_value_copy (src, dest);
