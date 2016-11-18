@@ -56,6 +56,7 @@ import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
@@ -289,16 +290,17 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
 
         AtomicReference<IOException> ioe = new AtomicReference<>();
         final String finalVsVer = vsVer;
-        Files.list(runtimeDir.resolve("bin"))
-                .filter(p -> Pattern.matches("msvc(r|p)\\d\\d\\d.dll", p.toFile().getName().toLowerCase()))
-                .filter(p -> !p.toString().toLowerCase().endsWith(finalVsVer + ".dll"))
-                .forEach(p -> {
+        try (Stream<Path> files = Files.list(runtimeDir.resolve("bin"))) {
+            files.filter(p -> Pattern.matches("msvc(r|p)\\d\\d\\d.dll", p.toFile().getName().toLowerCase()))
+                 .filter(p -> !p.toString().toLowerCase().endsWith(finalVsVer + ".dll"))
+                 .forEach(p -> {
                     try {
                         Files.copy(p, root.resolve((p.toFile().getName())));
                     } catch (IOException e) {
                         ioe.set(e);
                     }
                 });
+        }
 
         IOException e = ioe.get();
         if (e != null) {
