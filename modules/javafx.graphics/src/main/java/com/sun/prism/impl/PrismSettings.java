@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ public final class PrismSettings {
     public static final List<String> tryOrder;
     public static final int prismStatFrequency;
     public static final boolean doNativePisces;
+    public static final boolean useMarlinRasterizer;
     public static final String refType;
     public static final boolean forceRepaint;
     public static final boolean noFallback;
@@ -214,11 +215,16 @@ public final class PrismSettings {
 
         tryOrder = Collections.unmodifiableList(Arrays.asList(tryOrderArr));
 
-        String npprop = systemProperties.getProperty("prism.nativepisces");
-        if (npprop == null) {
-            doNativePisces = PlatformUtil.isEmbedded() || !PlatformUtil.isLinux();
+        useMarlinRasterizer = getBoolean(systemProperties, "prism.marlinrasterizer", false);
+        if (useMarlinRasterizer) {
+            doNativePisces = false;
         } else {
-            doNativePisces = Boolean.parseBoolean(npprop);
+            String npprop = systemProperties.getProperty("prism.nativepisces");
+            if (npprop == null) {
+                doNativePisces = PlatformUtil.isEmbedded() || !PlatformUtil.isLinux();
+            } else {
+                doNativePisces = Boolean.parseBoolean(npprop);
+            }
         }
 
         String primtex = systemProperties.getProperty("prism.primtextures");
@@ -255,8 +261,12 @@ public final class PrismSettings {
                 System.out.print(s+" ");
             }
             System.out.println("");
-            String piscestype = (doNativePisces ? "native" : "java");
-            System.out.println("Using " + piscestype + "-based Pisces rasterizer");
+            if (useMarlinRasterizer) {
+                System.out.println("Using Marlin rasterizer");
+            } else {
+                String piscestype = (doNativePisces ? "native" : "java");
+                System.out.println("Using " + piscestype + "-based Pisces rasterizer");
+            }
             printBooleanOption(dirtyOptsEnabled, "Using dirty region optimizations");
             if (primTextureSize == 0) {
                 System.out.println("Not using texture mask for primitives");

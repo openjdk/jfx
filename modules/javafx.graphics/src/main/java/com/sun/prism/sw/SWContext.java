@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,16 @@
 
 package com.sun.prism.sw;
 
+import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.marlin.IntArrayCache;
+import com.sun.marlin.MarlinAlphaConsumer;
+import com.sun.marlin.MarlinConst;
+import com.sun.marlin.MarlinRenderer;
+import com.sun.marlin.MarlinRenderingEngine;
+import com.sun.marlin.RendererContext;
 import com.sun.openpisces.Renderer;
 import com.sun.pisces.PiscesRenderer;
 import com.sun.prism.BasicStroke;
@@ -35,6 +42,7 @@ import com.sun.prism.PixelFormat;
 import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
+import com.sun.prism.impl.shape.MarlinPrismUtils;
 import com.sun.prism.impl.shape.MaskData;
 import com.sun.prism.impl.shape.OpenPiscesPrismUtils;
 import com.sun.prism.impl.shape.ShapeUtil;
@@ -121,9 +129,156 @@ final class SWContext {
         public void dispose() { }
     }
 
+    static final class MarlinShapeRenderer implements ShapeRenderer {
+        private final DirectRTMarlinAlphaConsumer alphaConsumer = new DirectRTMarlinAlphaConsumer();
+
+        @Override
+        public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
+            if (stroke != null && stroke.getType() != BasicStroke.TYPE_CENTERED) {
+                // RT-27427
+                // TODO: Optimize the combinatorial strokes for simple
+                // shapes and/or teach the rasterizer to be able to
+                // do a "differential fill" between two shapes.
+                // Note that most simple shapes will use a more optimized path
+                // than this method for the INNER/OUTER strokes anyway.
+                shape = stroke.createStrokedShape(shape);
+                stroke = null;
+            }
+            final RendererContext rdrCtx = MarlinRenderingEngine.getRendererContext();
+            MarlinRenderer renderer = null;
+            try {
+                if (shape instanceof Path2D) {
+                    renderer = MarlinPrismUtils.setupRenderer(rdrCtx, (Path2D) shape, stroke, tr, clip,
+                            antialiasedShape);
+                }
+                if (renderer == null) {
+                    renderer = MarlinPrismUtils.setupRenderer(rdrCtx, shape, stroke, tr, clip,
+                            antialiasedShape);
+                }
+                final int outpix_xmin = renderer.getOutpixMinX();
+                final int outpix_xmax = renderer.getOutpixMaxX();
+                final int outpix_ymin = renderer.getOutpixMinY();
+                final int outpix_ymax = renderer.getOutpixMaxY();
+                final int w = outpix_xmax - outpix_xmin;
+                final int h = outpix_ymax - outpix_ymin;
+                if ((w <= 0) || (h <= 0)) {
+                    return;
+                }
+                alphaConsumer.initConsumer(outpix_xmin, outpix_ymin, w, h, pr);
+                renderer.produceAlphas(alphaConsumer);
+            } finally {
+                if (renderer != null) {
+                    renderer.dispose();
+                }
+                // recycle the RendererContext instance
+                MarlinRenderingEngine.returnRendererContext(rdrCtx);
+            }
+        }
+
+        @Override
+        public void dispose() { }
+
+        private static final class DirectRTMarlinAlphaConsumer implements MarlinAlphaConsumer {
+            private byte alpha_map[];
+            private int x;
+            private int y;
+            private int w;
+            private int h;
+            private int rowNum;
+
+            private PiscesRenderer pr;
+
+            public void initConsumer(int x, int y, int w, int h, PiscesRenderer pr) {
+                this.x = x;
+                this.y = y;
+                this.w = w;
+                this.h = h;
+                rowNum = 0;
+                this.pr = pr;
+            }
+
+            @Override
+            public int getOriginX() {
+                return x;
+            }
+
+            @Override
+            public int getOriginY() {
+                return y;
+            }
+
+            @Override
+            public int getWidth() {
+                return w;
+            }
+
+            @Override
+            public int getHeight() {
+                return h;
+            }
+
+            @Override
+            public void setMaxAlpha(int maxalpha) {
+                if ((alpha_map == null) || (alpha_map.length != maxalpha+1)) {
+                    alpha_map = new byte[maxalpha+1];
+                    for (int i = 0; i <= maxalpha; i++) {
+                        alpha_map[i] = (byte) ((i*255 + maxalpha/2)/maxalpha);
+                    }
+                }
+            }
+
+            @Override
+            public boolean supportBlockFlags() {
+                return false;
+            }
+
+            @Override
+            public void clearAlphas(final int pix_y) {
+                // noop
+            }
+
+            @Override
+            public void setAndClearRelativeAlphas(final int[] alphaDeltas, final int pix_y,
+                                                  final int pix_from, final int pix_to)
+            {
+                // use x instead of pix_from as it cause artefacts:
+                // note: it would be more efficient to skip all those empty pixels [x to pix_from[
+                // but the native implementation must be fixed too.
+//                pr.emitAndClearAlphaRow(alpha_map, alphaDeltas, pix_y, pix_from, pix_to, rowNum);
+                pr.emitAndClearAlphaRow(alpha_map, alphaDeltas, pix_y, x, pix_to, rowNum);
+                rowNum++;
+
+                // clear properly the end of the alphaDeltas:
+                final int to = pix_to - x;
+                if (to <= w) {
+                    alphaDeltas[to] = 0;
+                } else {
+                    alphaDeltas[w]  = 0;
+                }
+
+                if (MarlinConst.DO_CHECKS) {
+                    IntArrayCache.check(alphaDeltas, pix_from - x, to + 1, 0);
+                }
+            }
+
+            @Override
+            public void setAndClearRelativeAlphas(final int[] blkFlags, final int[] alphaDeltas, final int pix_y,
+                                                  final int pix_from, final int pix_to)
+            {
+                throw new UnsupportedOperationException();
+            }
+        }
+    }
+
     SWContext(ResourceFactory factory) {
         this.factory = factory;
-        this.shapeRenderer = (PrismSettings.doNativePisces) ? new NativeShapeRenderer() : new JavaShapeRenderer();
+        if (PrismSettings.useMarlinRasterizer) {
+            this.shapeRenderer = new MarlinShapeRenderer();
+        } else if (PrismSettings.doNativePisces) {
+            this.shapeRenderer = new NativeShapeRenderer();
+        } else {
+            this.shapeRenderer = new JavaShapeRenderer();
+        }
     }
 
     void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
