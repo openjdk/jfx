@@ -162,7 +162,7 @@ final class UIClientImpl implements UIClient {
      * {@inheritDoc}
      */
     @Override
-    public String[] chooseFile(String initialFileName, boolean multiple) {
+    public String[] chooseFile(String initialFileName, boolean multiple, String mimeFilters) {
         throw new UnsupportedOperationException("Not supported yet");
     }
 

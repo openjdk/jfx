@@ -43,7 +43,7 @@ public interface UIClient {
     public boolean confirm(String text);
     public String prompt(String text, String defaultValue);
 
-    public String[] chooseFile(String initialFileName, boolean multiple);
+    public String[] chooseFile(String initialFileName, boolean multiple, String mimeFilters);
     public void print();
 
     public void startDrag(
