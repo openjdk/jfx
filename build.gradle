@@ -379,11 +379,6 @@ ext.IS_COMPILE_HARFBUZZ = Boolean.parseBoolean(COMPILE_HARFBUZZ)
 defineProperty("COMPILE_PARFAIT", "false")
 ext.IS_COMPILE_PARFAIT = Boolean.parseBoolean(COMPILE_PARFAIT)
 
-// FIXME: update the default when using 9 (pre-jigsaw) as boot jdk
-// COMPILE_JFR specifies whether to build code that logs to JRockit Flight Recorder
-defineProperty("COMPILE_JFR", Boolean.toString(file("$JDK_HOME/jre/lib/jfr.jar").exists()))
-ext.IS_COMPILE_JFR = Boolean.parseBoolean(COMPILE_JFR)
-
 // BUILD_FXPACKAGER enables building the packager modules and native code
 defineProperty("BUILD_FXPACKAGER", "true")
 ext.IS_BUILD_FXPACKAGER = Boolean.parseBoolean(BUILD_FXPACKAGER)
@@ -409,10 +404,6 @@ ext.SWT_FILE_NAME = IS_MAC ? "org.eclipse.swt.cocoa.macosx.x86_64_3.7.2.v3740f" 
 // Build javadocs only if BUILD_JAVADOC=true
 defineProperty("BUILD_JAVADOC", "false")
 ext.IS_BUILD_JAVADOC = Boolean.parseBoolean(BUILD_JAVADOC)
-
-// Specifies whether to build the javafx-src bundle
-defineProperty("BUILD_SRC_ZIP", "false")
-ext.IS_BUILD_SRC_ZIP = Boolean.parseBoolean(BUILD_SRC_ZIP)
 
 // Specifies whether to build the javafx-exports bundle
 defineProperty("BUILD_MODULE_ZIP", "true")
@@ -1518,6 +1509,7 @@ project.ext.defaultModuleSourcePathShim =
 // all other modules. It is useful even for non-GUI applications.
 project(":base") {
     project.ext.buildModule = true
+    project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.base"
 
@@ -1577,6 +1569,7 @@ project(":base") {
 project(":graphics") {
 
     project.ext.buildModule = true
+    project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.graphics"
 
@@ -1978,6 +1971,7 @@ project(":graphics") {
 
 project(":controls") {
     project.ext.buildModule = true
+    project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.controls"
 
@@ -2034,6 +2028,7 @@ project(":swing") {
     }
     */
     project.ext.buildModule = COMPILE_SWING
+    project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.swing"
 
@@ -2115,6 +2110,7 @@ project(":swt") {
 
 project(":fxml") {
     project.ext.buildModule = true
+    project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.fxml"
 
@@ -2172,6 +2168,7 @@ project(":jmx") {
 
 project(":fxpackagerservices") {
     project.ext.buildModule = COMPILE_FXPACKAGER
+    project.ext.includeSources = true
     project.ext.moduleRuntime = false
     project.ext.moduleName = "jdk.packager.services"
 
@@ -2201,6 +2198,7 @@ project(":fxpackagerservices") {
 
 project(":fxpackager") {
     project.ext.buildModule = COMPILE_FXPACKAGER
+    project.ext.includeSources = true
     project.ext.moduleRuntime = false
     project.ext.moduleName = "jdk.packager"
 
@@ -2722,6 +2720,7 @@ project(":media") {
     }
 
     project.ext.buildModule = true
+    project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.media"
 
@@ -3018,6 +3017,7 @@ project(":web") {
         webkit
     }
     project.ext.buildModule = true
+    project.ext.includeSources = true
     project.ext.moduleRuntime = true
     project.ext.moduleName = "javafx.web"
 
@@ -3611,34 +3611,6 @@ task zips() {
     dependsOn(sdk,publicExports,apps,perf)
 }
 
-task copySources(type: Copy) {
-    enabled = IS_BUILD_SRC_ZIP
-    def projectsToCopy = [
-            project(":base"), project(":graphics"), project(":controls"),
-            project(":swing"), project(":swt"), project(":fxml"),
-            project(":media"), project(":web")]
-    from(projectsToCopy.collect({ proj ->
-        files(proj.sourceSets.main.java.srcDirs)
-    }))
-    include "**/*.java"
-    into "${buildDir}/javafx-src"
-}
-
-task zipSources(type: Zip) {
-    enabled = IS_BUILD_SRC_ZIP
-    dependsOn(copySources)
-    archiveName = "javafx-src.zip"
-    destinationDir = file("$buildDir")
-    includeEmptyDirs = false
-    from "${buildDir}/javafx-src"
-}
-
-task src {
-    enabled = IS_BUILD_SRC_ZIP
-    description = "Created the javafx-src.zip bundle"
-    dependsOn(zipSources)
-}
-
 task all() {
     dependsOn(sdk,publicExports,apps,perf,zips)
 }
@@ -3808,14 +3780,25 @@ compileTargets { t ->
                     into dstLibsDir
                 }
 
-                // Copy module-info.java
-                def srcModuleInfoFile = "${project.projectDir}/src/main/java/module-info.java"
-                def dstModuleInfoDir = "${modulesSrcDir}/${moduleName}"
+                // Copy module sources
+                // FIXME: javafx.swt sources?
+                def copySources = project.hasProperty("includeSources") && project.includeSources
                 copy {
-                    from srcModuleInfoFile
-                    into dstModuleInfoDir
-                    if (!IS_COMPILE_JFR && project.name.equals("base")) {
-                        filter { line-> line.contains("requires jdk.jfr;") ? "" : line }
+                    if (copySources) {
+                        from "${project.projectDir}/src/main/java"
+                        if (project.name.equals("base")) {
+                            from "${project.projectDir}/build/gensrc/java"
+                        }
+                        if (project.name.equals("web")) {
+                            from "${project.projectDir}/src/main/java-wrappers"
+                        }
+                    } else {
+                        from "${project.projectDir}/src/main/java/module-info.java"
+                    }
+                    into "${modulesSrcDir}/${moduleName}"
+                    include "**/*.java"
+                    if (project.hasProperty("sourceFilter")) {
+                        filter(project.sourceFilter)
                     }
                 }
 
@@ -3913,8 +3896,8 @@ compileTargets { t ->
                 copy {
                     from srcJakeModuleInfoFile
                     into dstModulesSrcJakeDir
-                    if (!IS_COMPILE_JFR && project.name.equals("base")) {
-                        filter { line-> line.contains("requires jdk.jfr;") ? "" : line }
+                    if (project.hasProperty("sourceFilter")) {
+                        filter(project.sourceFilter)
                     }
                 }
             }
