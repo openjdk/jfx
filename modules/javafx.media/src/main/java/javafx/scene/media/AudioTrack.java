@@ -44,6 +44,7 @@ public final class AudioTrack extends Track {
      * @return the IANA language code or <code>null</code>.
      * @deprecated Use {@link Track#getLocale()} instead.
      */
+    @Deprecated
     public final String getLanguage() {
         Locale l = getLocale();
         return (null == l) ? null : l.getLanguage();

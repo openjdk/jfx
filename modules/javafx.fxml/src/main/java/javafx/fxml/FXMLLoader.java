@@ -2995,6 +2995,7 @@ public class FXMLLoader {
      * @deprecated
      * This method now delegates to {@link #getDefaultClassLoader()}.
      */
+    @Deprecated
     public static Class<?> loadType(String packageName, String className) throws ClassNotFoundException {
         return loadType(packageName + "." + className.replace('.', '$'));
     }
@@ -3007,6 +3008,7 @@ public class FXMLLoader {
      * @deprecated
      * This method now delegates to {@link #getDefaultClassLoader()}.
      */
+    @Deprecated
     public static Class<?> loadType(String className) throws ClassNotFoundException {
         ReflectUtil.checkPackageAccess(className);
         return Class.forName(className, true, getDefaultClassLoader());

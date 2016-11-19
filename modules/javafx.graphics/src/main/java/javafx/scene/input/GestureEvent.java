@@ -59,7 +59,7 @@ public class GestureEvent extends InputEvent {
      * @param eventType Type of the event
      * @deprecated Do not use this constructor. Constructs empty event.
      */
-    @Deprecated
+    @Deprecated(since="8")
     protected GestureEvent(final EventType<? extends GestureEvent> eventType) {
         this(eventType, 0, 0, 0, 0, false, false, false, false, false, false, null);
     }
@@ -71,7 +71,7 @@ public class GestureEvent extends InputEvent {
      * @param eventType Type of the event
      * @deprecated Do not use this constructor. Constructs empty event.
      */
-    @Deprecated
+    @Deprecated(since="8")
     protected GestureEvent(Object source, EventTarget target,
             final EventType<? extends GestureEvent> eventType) {
         super(source, target, eventType);

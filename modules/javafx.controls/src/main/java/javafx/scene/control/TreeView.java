@@ -281,7 +281,7 @@ public class TreeView<T> extends Control {
      *          the proper way to do this is via
      *          {@link TreeView#getTreeItemLevel(TreeItem)}
      */
-    @Deprecated
+    @Deprecated(since="8u20")
     public static int getNodeLevel(TreeItem<?> node) {
         if (node == null) return -1;
 

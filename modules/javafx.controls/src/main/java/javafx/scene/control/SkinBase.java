@@ -496,7 +496,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return value rounded to nearest pixel
      * @deprecated replaced by {@code snapSpaceX()} and {@code snapSpaceY()}
      */
-    @Deprecated
+    @Deprecated(since="9")
     protected double snapSpace(double value) {
         return control.snapSpaceX(value);
     }
@@ -542,7 +542,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return value ceiled to nearest pixel
      * @deprecated replaced by {@code snapSizeX()} and {@code snapSizeY()}
      */
-    @Deprecated
+    @Deprecated(since="9")
     protected double snapSize(double value) {
         return control.snapSizeX(value);
     }
@@ -588,7 +588,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * @return value rounded to nearest pixel
      * @deprecated replaced by {@code snapPositionX()} and {@code snapPositionY()}
      */
-    @Deprecated
+    @Deprecated(since="9")
     protected double snapPosition(double value) {
         return control.snapPositionX(value);
     }

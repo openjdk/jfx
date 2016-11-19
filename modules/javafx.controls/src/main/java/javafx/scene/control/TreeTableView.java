@@ -493,7 +493,7 @@ public class TreeTableView<S> extends Control {
      *          the proper way to do this is via
      *          {@link TreeTableView#getTreeItemLevel(TreeItem)}
      */
-    @Deprecated
+    @Deprecated(since="8u20")
     public static int getNodeLevel(TreeItem<?> node) {
         return TreeView.getNodeLevel(node);
     }
