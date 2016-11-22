@@ -30,7 +30,6 @@ import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
 
-import com.sun.javafx.scene.control.SelectedItemsReadOnlyObservableList;
 import com.sun.javafx.scene.control.behavior.TableCellBehavior;
 import com.sun.javafx.scene.control.behavior.TableCellBehaviorBase;
 import com.sun.javafx.scene.control.behavior.TreeTableCellBehavior;
@@ -2391,7 +2390,7 @@ public class TreeTableView<S> extends Control {
             shiftSelection(0, treeTableView.isShowRoot() ? 1 : -1, null);
         };
 
-        private EventHandler<TreeItem.TreeModificationEvent<S>> treeItemListener = new EventHandler<TreeItem.TreeModificationEvent<S>>() {
+        private EventHandler<TreeItem.TreeModificationEvent<S>> treeItemListener = new EventHandler<>() {
             @Override public void handle(TreeItem.TreeModificationEvent<S> e) {
 
                 if (getSelectedIndex() == -1 && getSelectedItem() == null) return;
@@ -2400,7 +2399,6 @@ public class TreeTableView<S> extends Control {
                 if (treeItem == null) return;
 
                 final int oldSelectedIndex = getSelectedIndex();
-                final TreeItem<S> oldSelectedItem = getSelectedItem();
 
                 treeTableView.expandedItemCountDirty = true;
 
@@ -2486,16 +2484,69 @@ public class TreeTableView<S> extends Control {
                         shift += -count + 1;
                         startRow++;
                     } else if (e.wasPermutated()) {
-                        // This handles the sorting case where nothing was added or
-                        // removed, but the location of the selected index / item
-                        // has likely changed. This was added to fix RT-30156 and
-                        // unit tests exist to prevent it from regressing.
+                        // General approach:
+                        //   -- detected a sort has happened
+                        //   -- Create a permutation lookup map (1)
+                        //   -- dump all the selected indices into a list (2)
+                        //   -- create a list containing the new indices (3)
+                        //   -- for each previously-selected index (4)
+                        //     -- if index is in the permutation lookup map
+                        //       -- add the new index to the new indices list
+                        //   -- Perform batch selection (5)
 
-                        // FIXME the following line is a temporary crutch as we transition away from ReadOnlyUnbackedObservableList
-                        ((SelectedItemsReadOnlyObservableList)getSelectedItems()).eventBlock = true;
+                        startAtomic();
 
-                        quietClearSelection();
-                        select(oldSelectedItem);
+                        final int offset = startRow + 1;
+
+                        // (1)
+                        int length = e.getTo() - e.getFrom();
+                        HashMap<Integer, Integer> pMap = new HashMap<> (length);
+                        for (int i = e.getFrom(); i < e.getTo(); i++) {
+                            pMap.put(i, e.getChange().getPermutation(i));
+                        }
+
+                        // (2)
+                        List<TreeTablePosition<S,?>> selectedIndices = new ArrayList<>(getSelectedCells());
+
+                        // (3)
+                        List<TreeTablePosition<S,?>> newIndices = new ArrayList<>(selectedIndices.size());
+
+                        // (4)
+                        boolean selectionIndicesChanged = false;
+                        for (int i = 0; i < selectedIndices.size(); i++) {
+                            final TreeTablePosition<S,?> oldIndex = selectedIndices.get(i);
+                            final int oldRow = oldIndex.getRow() - offset;
+
+                            if (pMap.containsKey(oldRow)) {
+                                int newIndex = pMap.get(oldRow) + offset;
+
+                                selectionIndicesChanged = selectionIndicesChanged || newIndex != oldRow;
+
+                                newIndices.add(new TreeTablePosition<>(oldIndex.getTreeTableView(), newIndex, oldIndex.getTableColumn()));
+                            }
+
+                            // check if the root element of this event was selected, so that we can retain it
+                            if (oldIndex.getRow() == startRow) {
+                                newIndices.add(new TreeTablePosition<>(oldIndex.getTreeTableView(), oldIndex.getRow(), oldIndex.getTableColumn()));
+                            }
+                        }
+
+                        if (selectionIndicesChanged) {
+                            // (5)
+                            quietClearSelection();
+                            stopAtomic();
+
+                            selectedCellsMap.setAll(newIndices);
+
+                            final int offsetOldIndex = oldSelectedIndex - offset;
+                            if (offsetOldIndex >= 0 && offsetOldIndex < getItemCount()) {
+                                int newIndex = e.getChange().getPermutation(offsetOldIndex);
+                                setSelectedIndex(newIndex + offset);
+                                focus(newIndex + offset);
+                            }
+                        } else {
+                            stopAtomic();
+                        }
                     } else if (e.wasAdded()) {
                         // shuffle selection by the number of added items
                         shift += treeItem.isExpanded() ? addedSize : 0;

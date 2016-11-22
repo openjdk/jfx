@@ -37,6 +37,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -6194,5 +6195,115 @@ public class TreeTableViewTest {
         });
         TreeTableColumn last = new TreeTableColumn("Last Name");
         table.getColumns().add(0, last);
+    }
+
+    private void test_jdk_8169642(Consumer<TreeTableView.TreeTableViewSelectionModel> before,
+                                  Consumer<TreeTableView.TreeTableViewSelectionModel> afterDescending,
+                                  Consumer<TreeTableView.TreeTableViewSelectionModel> afterAscending) {
+        final TreeItem<String> rootItem = new TreeItem<>("root");
+        rootItem.setExpanded(true);
+        rootItem.getChildren().addAll(new TreeItem<>("first child"), new TreeItem<>("second child"), new TreeItem<>("third child"));
+
+        final TreeTableView<String> tree = new TreeTableView<>(rootItem);
+        final TreeTableColumn<String, String> column = new TreeTableColumn<>("first column");
+        column.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getValue()));
+        tree.getColumns().add(column);
+
+        TreeTableView.TreeTableViewSelectionModel sm = tree.getSelectionModel();
+        sm.setSelectionMode(SelectionMode.MULTIPLE);
+
+        assertTrue(sm.isEmpty());
+        before.accept(sm);
+
+        tree.getSortOrder().add(column);
+        column.setSortType(TreeTableColumn.SortType.DESCENDING);
+        afterDescending.accept(sm);
+
+        column.setSortType(TreeTableColumn.SortType.ASCENDING);
+        afterAscending.accept(sm);
+    }
+
+    @Test public void test_jdk_8169642_1_only() {
+        test_jdk_8169642(
+            sm -> {
+                // select 'first'
+                sm.select(1);
+                assertTrue(sm.isSelected(1));
+                assertEquals(1, sm.getSelectedCells().size());
+            },
+            sm -> {
+                assertTrue(sm.isSelected(3));
+                assertEquals(1, sm.getSelectedCells().size());
+            },
+            sm -> {
+                assertTrue(sm.isSelected(1));
+                assertEquals(1, sm.getSelectedCells().size());
+            }
+        );
+    }
+
+    @Test public void test_jdk_8169642_2_only() {
+        test_jdk_8169642(
+            sm -> {
+                // select 'second'
+                sm.select(2);
+                assertTrue(sm.isSelected(2));
+                assertEquals(1, sm.getSelectedCells().size());
+            },
+            sm -> {
+                assertTrue(sm.isSelected(2));
+                assertEquals(1, sm.getSelectedCells().size());
+            },
+            sm -> {
+                assertTrue(sm.isSelected(2));
+                assertEquals(1, sm.getSelectedCells().size());
+            }
+        );
+    }
+
+    @Test public void test_jdk_8169642_1_and_3() {
+        test_jdk_8169642(
+            sm -> {
+                // select 'first' and 'third', they should flip positions
+                sm.select(1);
+                sm.select(3);
+                assertTrue(sm.isSelected(1));
+                assertTrue(sm.isSelected(3));
+                assertEquals(2, sm.getSelectedCells().size());
+            },
+            sm -> {
+                assertTrue(sm.isSelected(1));
+                assertTrue(sm.isSelected(3));
+                assertEquals(2, sm.getSelectedCells().size());
+            },
+            sm -> {
+                assertTrue(sm.isSelected(1));
+                assertTrue(sm.isSelected(3));
+                assertEquals(2, sm.getSelectedCells().size());
+            }
+        );
+    }
+
+    @Test public void test_jdk_8169642_0_and_3() {
+        test_jdk_8169642(
+                sm -> {
+                    // select 'root' and 'third'
+                    sm.select(0);
+                    sm.select(3);
+                    assertTrue(sm.isSelected(0));
+                    assertTrue(sm.isSelected(3));
+                    assertEquals(2, sm.getSelectedCells().size());
+                },
+                sm -> {
+                    assertTrue(sm.isSelected(0));
+                    assertTrue(sm.isSelected(1));
+                    assertEquals(2, sm.getSelectedCells().size());
+                },
+                sm -> {
+                    assertTrue(sm.isSelected(0));
+                    assertTrue(sm.isSelected(3));
+                    assertEquals(2, sm.getSelectedCells().size());
+                }
+        );
     }
 }
