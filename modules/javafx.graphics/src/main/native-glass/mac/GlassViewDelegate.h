@@ -74,6 +74,8 @@
 - (void)updateTrackingAreas;
 - (void)drawRect:(NSRect)dirtyRect;
 
+- (void)setResizableForFullscreen:(BOOL)resizable;
+
 - (void)sendJavaMouseEvent:(NSEvent *)theEvent;
 - (void)resetMouseTracking;
 - (void)sendJavaMenuEvent:(NSEvent *)theEvent;

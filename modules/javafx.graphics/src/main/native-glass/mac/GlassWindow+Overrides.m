@@ -195,6 +195,7 @@
 - (void)windowWillEnterFullScreen:(NSNotification *)notification
 {
     //NSLog(@"windowWillEnterFullScreen");
+    [[self->view delegate] setResizableForFullscreen:YES];
 }
 
 - (void)windowDidEnterFullScreen:(NSNotification *)notification
@@ -208,10 +209,15 @@
 {
     //NSLog(@"windowWillExitFullScreen");
 }
+
 - (void)windowDidExitFullScreen:(NSNotification *)notification
 {
     //NSLog(@"windowDidExitFullScreen");
-    [(GlassViewDelegate*)[self->view delegate] sendJavaFullScreenEvent:NO withNativeWidget:YES];
+
+    GlassViewDelegate* delegate = (GlassViewDelegate*)[self->view delegate];
+    [delegate setResizableForFullscreen:NO];
+
+    [delegate sendJavaFullScreenEvent:NO withNativeWidget:YES];
     [GlassApplication leaveFullScreenExitingLoopIfNeeded];
 }
 
