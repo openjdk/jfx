@@ -42,6 +42,7 @@ import com.sun.javafx.tools.packager.PackagerLib;
 import com.sun.javafx.tools.packager.bundlers.Bundler;
 import com.sun.javafx.tools.packager.bundlers.Bundler.Bundle;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
+import java.util.ResourceBundle;
 import org.apache.tools.ant.BuildException;
 import org.apache.tools.ant.DynamicAttribute;
 import org.apache.tools.ant.Task;
@@ -89,6 +90,10 @@ import org.apache.tools.ant.types.DataType;
  * @ant.task name="deploy" category="javafx"
  */
 public class DeployFXTask extends Task implements DynamicAttribute {
+
+    private static final ResourceBundle I18N =
+            ResourceBundle.getBundle(DeployFXTask.class.getName());
+
     private String width = null;
     private String height = null;
     private String embeddedWidth = null;
@@ -127,6 +132,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
     // use NONE to avoid large disk space and build time overhead
     BundleType nativeBundles = BundleType.NONE;
     String bundleFormat = null;
+    boolean versionCheck = true;
 
     private boolean verbose = false;
     public void setVerbose(boolean v) {
@@ -147,6 +153,12 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         boolean isModular = (app.getModule() != null) && !app.getModule().isEmpty();
         deployParams.setOutfile(outfile);
         deployParams.setOutdir(new File(outdir));
+
+        if (versionCheck) {
+            if (!com.sun.javafx.tools.ant.VersionCheck.isSameVersion()) {
+                throw new BuildException(I18N.getString("message.java.version.mismatch"));
+            }
+        }
 
         if (!isModular &&
             (nativeBundles == BundleType.JNLP ||
@@ -388,11 +400,9 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             packager.generateDeploymentPackages(deployParams);
         } catch (PackagerException pe) {
             if (pe.getCause() != null) {
-               throw new BuildException(pe.getCause().getMessage(),
-                        pe.getCause());
+               throw new BuildException(pe.getCause().getMessage(), pe.getCause());
             } else {
-                throw new BuildException(pe.getMessage(),
-                        pe);
+                throw new BuildException(pe.getMessage(), pe);
             }
         } catch (Exception e) {
             throw new BuildException(e.getMessage(), e);
@@ -414,6 +424,10 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         Bundle bundle = Bundler.stringToBundle(v);
         this.nativeBundles = bundle.type;
         this.bundleFormat = bundle.format;
+    }
+
+    public void setVersionCheck(String value) {
+        this.versionCheck = Boolean.valueOf(value);
     }
 
     /**
