@@ -26,8 +26,10 @@
 package javafx.scene.chart;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import javafx.animation.Animation;
 import javafx.animation.FadeTransition;
@@ -79,7 +81,6 @@ import javafx.css.CssMetaData;
 
 import javafx.css.converter.BooleanConverter;
 import javafx.css.converter.SizeConverter;
-import java.util.BitSet;
 
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
@@ -100,8 +101,6 @@ public class PieChart extends Chart {
     private static final double LABEL_TICK_GAP = 6;
     private static final double LABEL_BALL_RADIUS = 2;
     private BitSet colorBits = new BitSet(8);
-    private double centerX;
-    private double centerY;
     private double pieRadius;
     private Data begin = null;
     private final Path labelLinePath = new Path() {
@@ -109,6 +108,7 @@ public class PieChart extends Chart {
             return false;
         }
     };
+    private List<LabelLayoutInfo> labelLayoutInfos = null;
     private Legend legend = new Legend();
     private Data dataItemBeingRemoved = null;
     private Timeline dataRemoveTimeline = null;
@@ -523,31 +523,27 @@ public class PieChart extends Chart {
 
     /** @inheritDoc */
     @Override protected void layoutChartChildren(double top, double left, double contentWidth, double contentHeight) {
-        centerX = contentWidth/2 + left;
-        centerY = contentHeight/2 + top;
         double total = 0.0;
         for (Data item = begin; item != null; item = item.next) {
             total+= Math.abs(item.getCurrentPieValue());
         }
         double scale = (total != 0) ? 360 / total : 0;
 
-        labelLinePath.getElements().clear();
          // calculate combined bounds of all labels & pie radius
         double[] labelsX = null;
         double[] labelsY = null;
         double[] labelAngles = null;
         double labelScale = 1;
-        ArrayList<LabelLayoutInfo> fullPie = null;
+        List<LabelLayoutInfo> fullPie = null;
         boolean shouldShowLabels = getLabelsVisible();
-        if(getLabelsVisible()) {
-
+        if (shouldShowLabels) {
             double xPad = 0d;
             double yPad = 0d;
 
             labelsX = new double[getDataSize()];
             labelsY = new double[getDataSize()];
             labelAngles = new double[getDataSize()];
-            fullPie = new ArrayList<LabelLayoutInfo>();
+            fullPie = new ArrayList<>();
             int index = 0;
             double start = getStartAngle();
             for (Data item = begin; item != null; item = item.next) {
@@ -595,11 +591,14 @@ public class PieChart extends Chart {
             }
         }
 
-        if(!shouldShowLabels) {
+        if (!shouldShowLabels) {
             pieRadius = Math.min(contentWidth,contentHeight) / 2;
+            labelLinePath.getElements().clear();
         }
 
         if (getChartChildren().size() > 0) {
+            double centerX = contentWidth / 2 + left;
+            double centerY = contentHeight / 2 + top;
             int index = 0;
             for (Data item = begin; item != null; item = item.next) {
                 // layout labels for pie slice
@@ -627,9 +626,7 @@ public class PieChart extends Chart {
                         item.textNode.getTransforms().add(
                             new Scale(
                                     labelScale, labelScale,
-                                    isLeftSide ? item.textNode.getLayoutBounds().getWidth() : 0,
-//                                    0,
-                                    0
+                                    isLeftSide ? item.textNode.getLayoutBounds().getWidth() : 0, 0
                             )
                         );
                     }
@@ -651,8 +648,6 @@ public class PieChart extends Chart {
                         } else {
                             arc = (Arc)arcRegion.getShape();
                         }
-                        arcRegion.setShape(null);
-                        arcRegion.setShape(arc);
                         arcRegion.setScaleShape(false);
                         arcRegion.setCenterShape(false);
                         arcRegion.setCacheShape(false);
@@ -674,8 +669,12 @@ public class PieChart extends Chart {
                 // Check for collision and resolve by hiding the label of the smaller pie slice
                 resolveCollision(fullPie);
 
-                for (LabelLayoutInfo info : fullPie) {
-                    if (info.text.isVisible()) drawLabelLinePath(info);
+                if (!fullPie.equals(labelLayoutInfos)) {
+                    labelLinePath.getElements().clear();
+                    for (LabelLayoutInfo info : fullPie) {
+                        if (info.text.isVisible()) drawLabelLinePath(info);
+                    }
+                    labelLayoutInfos = fullPie;
                 }
             }
         }
@@ -683,7 +682,7 @@ public class PieChart extends Chart {
 
     // We check for pie slice label collision and if collision is detected, we then
     // compare the size of the slices, and hide the label of the smaller slice.
-    private void resolveCollision(ArrayList<LabelLayoutInfo> list) {
+    private void resolveCollision(List<LabelLayoutInfo> list) {
         int boxH = (begin != null) ? (int)begin.textNode.getLayoutBounds().getHeight() : 0;
         for (int i = 0; i < list.size(); i++ ) {
             for (int j = i+1; j < list.size(); j++ ) {
@@ -710,11 +709,11 @@ public class PieChart extends Chart {
     }
 
     private boolean fuzzyGT(double o1, double o2) {
-        return (fuzzyCompare(o1, o2) == 1) ? true: false;
+        return fuzzyCompare(o1, o2) == 1;
     }
 
     private boolean fuzzyLT(double o1, double o2) {
-        return (fuzzyCompare(o1, o2) == -1) ? true : false;
+        return fuzzyCompare(o1, o2) == -1;
     }
 
     private void drawLabelLinePath(LabelLayoutInfo info) {
@@ -787,7 +786,7 @@ public class PieChart extends Chart {
     // -------------- INNER CLASSES --------------------------------------------
 
     // Class holding label line layout info for collision detection and removal
-    final static class LabelLayoutInfo {
+    private final static class LabelLayoutInfo {
         double startX;
         double startY;
         double endX;
@@ -797,7 +796,7 @@ public class PieChart extends Chart {
         Text text;
         double size;
 
-        public LabelLayoutInfo(double startX, double startY, double endX, double endY,
+        LabelLayoutInfo(double startX, double startY, double endX, double endY,
                 double textX, double textY, Text text, double size) {
             this.startX = startX;
             this.startY = startY;
@@ -807,6 +806,25 @@ public class PieChart extends Chart {
             this.textY = textY;
             this.text = text;
             this.size = size;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            LabelLayoutInfo that = (LabelLayoutInfo) o;
+            return Double.compare(that.startX, startX) == 0 &&
+                    Double.compare(that.startY, startY) == 0 &&
+                    Double.compare(that.endX, endX) == 0 &&
+                    Double.compare(that.endY, endY) == 0 &&
+                    Double.compare(that.textX, textX) == 0 &&
+                    Double.compare(that.textY, textY) == 0 &&
+                    Double.compare(that.size, size) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(startX, startY, endX, endY, textX, textY, size);
         }
     }
 

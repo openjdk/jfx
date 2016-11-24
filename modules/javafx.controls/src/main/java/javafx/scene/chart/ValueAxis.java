@@ -68,6 +68,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     double dataMaxValue;
     /** List of the values at which there are minor ticks */
     private List<T> minorTickMarkValues = null;
+    private boolean minorTickMarksDirty = true;
     // -------------- PRIVATE PROPERTIES -------------------------------------------------------------------------------
 
     /**
@@ -339,6 +340,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         super.tickMarksUpdated();
         // recalculate minor tick marks
         minorTickMarkValues = calculateMinorTickMarks();
+        minorTickMarksDirty = true;
     }
 
     /**
@@ -356,6 +358,14 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
         }
         // we have done all auto calcs, let Axis position major tickmarks
         super.layoutChildren();
+
+        if (minorTickMarksDirty) {
+            minorTickMarksDirty = false;
+            updateMinorTickPath(side, length);
+        }
+    }
+
+    private void updateMinorTickPath(Side side, double length) {
         int numMinorTicks = (getTickMarks().size() - 1)*(Math.max(1, getMinorTickCount()) - 1);
         double neededLength = (getTickMarks().size()+numMinorTicks)*2;
 

@@ -639,13 +639,10 @@ public abstract class Axis<T> extends Region {
      * Invoked during the layout pass to layout this axis and all its content.
      */
     @Override protected void layoutChildren() {
-        final double width = getWidth();
-        final double height = getHeight();
-        final double tickMarkLength = (isTickMarkVisible() && getTickLength() > 0) ? getTickLength() : 0;
         final boolean isFirstPass = oldLength == 0;
         // auto range if it is not valid
         final Side side = getEffectiveSide();
-        final double length = (side.isVertical()) ? height : width;
+        final double length = side.isVertical() ? getHeight() : getWidth();
         boolean rangeInvalid = !isRangeValid();
         boolean lengthDiffers = oldLength != length;
         if (lengthDiffers || rangeInvalid) {
@@ -751,12 +748,18 @@ public abstract class Axis<T> extends Region {
                     m1.setTextVisible(false);
                 }
             }
+            updateTickMarks(side, length);
         }
+    }
 
+    private void updateTickMarks(Side side, double length) {
         // clear tick mark path elements as we will recreate
         tickMarkPath.getElements().clear();
         // do layout of axis label, tick mark lines and text
-        double effectiveLabelRotation = getEffectiveTickLabelRotation();
+        final double width = getWidth();
+        final double height = getHeight();
+        final double tickMarkLength = (isTickMarkVisible() && getTickLength() > 0) ? getTickLength() : 0;
+        final double effectiveLabelRotation = getEffectiveTickLabelRotation();
         if (Side.LEFT.equals(side)) {
             // offset path to make strokes snap to pixel
             tickMarkPath.setLayoutX(-0.5);
