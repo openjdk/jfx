@@ -1044,6 +1044,21 @@ static jint getSwipeDirFromEvent(NSEvent *theEvent)
     GLASS_CHECK_EXCEPTION(env);
 }
 
+- (void)setResizableForFullscreen:(BOOL)resizable
+{
+    NSWindow* window =  [self->nsView window];
+    if ([window isKindOfClass:[GlassEmbeddedWindow class]] == NO
+        && !((GlassWindow*) window)->isResizable) {
+        NSUInteger mask = [window styleMask];
+        if (resizable) {
+            mask |= NSResizableWindowMask;
+        } else {
+            mask &= ~(NSUInteger)NSResizableWindowMask;
+        }
+        [window setStyleMask: mask];
+    }
+}
+
 /*
  The hierarchy for our view is view -> superview (host) -> window
 

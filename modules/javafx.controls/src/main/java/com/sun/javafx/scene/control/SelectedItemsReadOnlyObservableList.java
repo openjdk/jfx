@@ -51,19 +51,12 @@ public abstract class SelectedItemsReadOnlyObservableList<E> extends ObservableL
 
     private final List<WeakReference<E>> itemsRefList;
 
-    public boolean eventBlock = false;
-
     public SelectedItemsReadOnlyObservableList(ObservableList<Integer> selectedIndices, Supplier<Integer> modelSizeSupplier) {
         this.modelSizeSupplier = modelSizeSupplier;
         this.selectedIndices = selectedIndices;
         this.itemsRefList = new ArrayList<>();
 
         selectedIndices.addListener((ListChangeListener<Integer>)c -> {
-            if (eventBlock) {
-                eventBlock = false;
-                return;
-            }
-
             beginChange();
 
             while (c.next()) {

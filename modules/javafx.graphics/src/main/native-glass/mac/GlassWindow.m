@@ -514,9 +514,9 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         /* 10.7 full screen window support */
         if ([NSWindow instancesRespondToSelector:@selector(toggleFullScreen:)]) {
             NSWindowCollectionBehavior behavior = [window->nsWindow collectionBehavior];
-            if (window->isDecorated && !window->owner)
+            if ((jStyleMask&com_sun_glass_ui_Window_POPUP) == 0 && !window->owner)
             {
-                // Only titled ownerless windows should have the Full Screen Toggle control
+                // Only ownerless windows should have the Full Screen Toggle control
                 behavior |= (1 << 7) /* NSWindowCollectionBehaviorFullScreenPrimary */;
             }
             else

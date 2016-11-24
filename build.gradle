@@ -2286,7 +2286,7 @@ project(":fxpackager") {
         }
 
         from (sourceSets.main.resources) {
-            includes = [ "com/sun/javafx/tools/ant/antlib.xml" ]
+            includes = [ "com/sun/javafx/tools/ant/**" ]
         }
 
         from (sourceSets.main.output.resourcesDir) {

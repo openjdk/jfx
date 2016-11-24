@@ -449,12 +449,9 @@ final class FXDnD {
 
             SwingFXUtils.runOnEDTAndWait(FXDnD.this, () -> {
                 if (target != dt) {
-                    // FIXME: once we switch to JDK 9 as the boot JDK
-                    // we need to re-implement the following using
-                    // available API.
-                    /*
-                    if (ctx != null) ctx.removeNotify();
-                    */
+                    if (ctx != null) {
+                        AWTAccessor.getDropTargetContextAccessor().reset(ctx);
+                    }
                     ctx = null;
 
                     currentAction = dropAction = DnDConstants.ACTION_NONE;
@@ -463,12 +460,8 @@ final class FXDnD {
                 if (target != null) {
                     if (ctx == null) {
                         ctx = target.getDropTargetContext();
-                        // FIXME: once we switch to JDK 9 as the boot JDK
-                        // we need to re-implement the following using
-                        // available API.
-                        /*
-                        ctx.addNotify(FXDropTargetContextPeer.this);
-                        */
+                        AWTAccessor.getDropTargetContextAccessor()
+                                .setDropTargetContextPeer(ctx, FXDropTargetContextPeer.this);
                     }
 
                     DropTargetListener dtl = (DropTargetListener)target;

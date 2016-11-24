@@ -15,3 +15,7 @@ jdk.jshell
 jdk.deploy.controlpanel
 jdk.deploy.controlpanel.fx
 jdk.plugin
+jdk.management.cmm
+jdk.management.jfr
+jdk.management.resource
+jdk.vm.cds

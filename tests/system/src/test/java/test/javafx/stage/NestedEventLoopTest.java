@@ -31,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Application;
@@ -193,18 +194,24 @@ public class NestedEventLoopTest {
         final long result2 = 2049L;
         final AtomicLong returnedValue1 = new AtomicLong();
         final AtomicLong returnedValue2 = new AtomicLong();
+        final AtomicBoolean loopOneRunning = new AtomicBoolean(false);
+        final AtomicBoolean loopTwoRunning = new AtomicBoolean(false);
 
         Util.runAndWait(
                 () -> {
                     // enter loop one
                     assertFalse(Platform.isNestedLoopRunning());
+                    loopOneRunning.set(true);
                     Long actual = (Long) Platform.enterNestedEventLoop(key1);
+                    loopOneRunning.set(false);
                     returnedValue1.set(actual);
                 },
                 () -> {
                     // enter loop two
                     assertTrue(Platform.isNestedLoopRunning());
+                    loopTwoRunning.set(true);
                     Long actual = (Long) Platform.enterNestedEventLoop(key2);
+                    loopTwoRunning.set(false);
                     returnedValue2.set(actual);
                 },
                 () -> {
@@ -215,6 +222,8 @@ public class NestedEventLoopTest {
                 () -> {
                     // check loop two is done
                     assertTrue(Platform.isNestedLoopRunning());
+                    assertTrue(loopOneRunning.get());
+                    assertFalse(loopTwoRunning.get());
                     assertEquals(result2, returnedValue2.get());
                 },
                 () -> {
@@ -225,8 +234,98 @@ public class NestedEventLoopTest {
                 () -> {
                     // check loop one is done
                     assertFalse(Platform.isNestedLoopRunning());
+                    assertFalse(loopOneRunning.get());
+                    assertFalse(loopTwoRunning.get());
                     assertEquals(result1, returnedValue1.get());
                 }
         );
+    }
+
+    // We can only exit the inner-most event loop. If we try to exit an event loop that
+    // is not the inner-most, the implementation is supposed to wait until it becomes
+    // the inner-most loop.
+    @Test public void testCanEnterMultipleNestedLoops_andExitOutOfOrder() {
+        final long key1 = 1024L;
+        final long key2 = 1025L;
+        final long key3 = 1026L;
+        final long result1 = 2048L;
+        final long result2 = 2049L;
+        final long result3 = 2050L;
+        final AtomicLong returnedValue1 = new AtomicLong();
+        final AtomicLong returnedValue2 = new AtomicLong();
+        final AtomicLong returnedValue3 = new AtomicLong();
+        final AtomicBoolean loopOneRunning = new AtomicBoolean(false);
+        final AtomicBoolean loopTwoRunning = new AtomicBoolean(false);
+        final AtomicBoolean loopThreeRunning = new AtomicBoolean(false);
+
+        Util.runAndWait(
+                () -> {
+                    // enter loop one
+                    assertFalse(Platform.isNestedLoopRunning());
+                    loopOneRunning.set(true);
+                    Long actual = (Long) Platform.enterNestedEventLoop(key1);
+                    loopOneRunning.set(false);
+                    returnedValue1.set(actual);
+                },
+                () -> {
+                    // enter loop two
+                    assertTrue(Platform.isNestedLoopRunning());
+                    loopTwoRunning.set(true);
+                    Long actual = (Long) Platform.enterNestedEventLoop(key2);
+                    loopTwoRunning.set(false);
+                    returnedValue2.set(actual);
+                },
+                () -> {
+                    // enter loop three
+                    assertTrue(Platform.isNestedLoopRunning());
+                    loopThreeRunning.set(true);
+                    Long actual = (Long) Platform.enterNestedEventLoop(key3);
+                    loopThreeRunning.set(false);
+                    returnedValue3.set(actual);
+                },
+                () -> {
+                    // exit loop two - this should block until loop three is exited
+                    assertTrue(Platform.isNestedLoopRunning());
+                    Platform.exitNestedEventLoop(key2, result2);
+                },
+                () -> {
+                    // check loop two is not done, so the returnedValue2 should still be zero.
+                    assertTrue(Platform.isNestedLoopRunning());
+                    assertTrue(loopOneRunning.get());
+                    assertTrue(loopTwoRunning.get());
+                    assertTrue(loopThreeRunning.get());
+                    assertEquals(0, returnedValue2.get());
+                },
+                () -> {
+                    // exit loop three - this will unblock loop two as well
+                    assertTrue(Platform.isNestedLoopRunning());
+                    Platform.exitNestedEventLoop(key3, result3);
+                },
+                () -> {
+                    // check loop two and three are now both done,
+                    // with loop one still running
+                    assertTrue(Platform.isNestedLoopRunning());
+                    assertTrue(loopOneRunning.get());
+                },
+                () -> {
+                    // exit loop one
+                    assertTrue(Platform.isNestedLoopRunning());
+                    Platform.exitNestedEventLoop(key1, result1);
+                }
+        );
+        Util.runAndWait(() -> {
+            assertFalse(loopTwoRunning.get());
+            assertFalse(loopThreeRunning.get());
+            assertEquals(result2, returnedValue2.get());
+            assertEquals(result3, returnedValue3.get());
+        });
+        // check loop one is done
+        Util.runAndWait(() -> {
+            assertFalse(Platform.isNestedLoopRunning());
+            assertFalse(loopOneRunning.get());
+            assertFalse(loopTwoRunning.get());
+            assertFalse(loopThreeRunning.get());
+            assertEquals(result1, returnedValue1.get());
+        });
     }
 }
