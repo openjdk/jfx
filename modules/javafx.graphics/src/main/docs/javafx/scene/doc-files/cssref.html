@@ -915,13 +915,13 @@
     </table>
     <p>Note that for inline styles, leading dot-segments (e.g. '..' or '.') do resolve since the path is always
     anchored at the root of the classpath.</p>
-    <!-- FIXME: this is no longer allowed and should be removed or redone -->
-    <p>This snippet of code creates a scene filled with the "paste" image from HTMLEditor which is found in jfxrt.jar.</p>
+    <p>As an example, the code snippet below creates a scene filled with a fictional 'Duke.png' image, located in an
+    'image' directory:</p>
     <textarea rows="9" cols="132">
 
     @Override public void start(Stage stage) {
         StackPane root = new StackPane();
-        root.setStyle("-fx-background-image: url(/com/sun/javafx/scene/control/skin/modena/HTMLEditor-Paste.png);");
+        root.setStyle("-fx-background-image: url(images/Duke.png);");
         Scene scene = new Scene(root, 300, 250);
         stage.setScene(scene);
         stage.show();
