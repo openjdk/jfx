@@ -194,42 +194,13 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             deployParams.setExtension(isExtension);
             deployParams.setIncludeDT(includeDT);
 
-            if (platform != null) {
-                Platform pl = platform.get();
-                if (pl.j2se != null) {
-                    deployParams.setJRE(pl.j2se);
-                }
-                if (pl.javafx != null) {
-                    deployParams.setJavafx(pl.javafx);
-                }
-
-                //only pass it further if it was explicitly set
-                // as we do not want to override default
-                if (pl.javaRoot != null) {
-                    if (Platform.USE_SYSTEM_JRE.equals(pl.javaRoot)) {
-                        deployParams.setJavaRuntimeSource(null);
-                    } else {
-                        deployParams.setJavaRuntimeSource(new File(pl.javaRoot));
-                    }
-                }
-
-                for (Property p: pl.properties) {
-                    deployParams.addJvmProperty(p.name, p.value);
-                }
-                for (Jvmarg a: pl.jvmargs) {
-                    deployParams.addJvmArg(a.value);
-                }
-                for (Property a: pl.jvmUserArgs) {
-                    deployParams.addJvmUserArg(a.name, a.value);
-                }
-            }
-
             if (callbacks != null) {
                 for (Callback cb: callbacks.callbacks) {
                     deployParams.addCallback(cb.getName(), cb.getCmd());
                 }
             }
 
+            setPlatform();
             setPreferences();
 
             for (Template t: templateList) {
@@ -319,6 +290,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                             .collect(Collectors.toList()));
             }
 
+            setPlatform();
             setPreferences();
         }
 
@@ -367,6 +339,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                             .collect(Collectors.toList()));
             }
 
+            setPlatform();
             setPreferences();
         }
 
@@ -651,6 +624,38 @@ public class DeployFXTask extends Task implements DynamicAttribute {
         //Use qName and value - can't really validate anything until we know which bundlers we have, so this has
         //to done (way) downstream
         bundleArgumentList.add(new BundleArgument(name, value));
+    }
+
+    private void setPlatform() {
+        if (platform != null) {
+            Platform pl = platform.get();
+            if (pl.j2se != null) {
+                deployParams.setJRE(pl.j2se);
+            }
+            if (pl.javafx != null) {
+                deployParams.setJavafx(pl.javafx);
+            }
+
+            //only pass it further if it was explicitly set
+            // as we do not want to override default
+            if (pl.javaRoot != null) {
+                if (Platform.USE_SYSTEM_JRE.equals(pl.javaRoot)) {
+                    deployParams.setJavaRuntimeSource(null);
+                } else {
+                    deployParams.setJavaRuntimeSource(new File(pl.javaRoot));
+                }
+            }
+
+            for (Property p: pl.properties) {
+                deployParams.addJvmProperty(p.name, p.value);
+            }
+            for (Jvmarg a: pl.jvmargs) {
+                deployParams.addJvmArg(a.value);
+            }
+            for (Property a: pl.jvmUserArgs) {
+                deployParams.addJvmUserArg(a.name, a.value);
+            }
+        }
     }
 
     private void setPreferences() {
