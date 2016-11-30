@@ -336,7 +336,8 @@ public class EnsembleApp extends Application {
 
     @Override public void start(final Stage stage) throws Exception {
         // CREATE SCENE
-        scene = new Scene(root, 1024, 768, Color.BLACK);
+        // #f4f4f4 is the background color defined in the css resource and SourceTab.java
+        scene = new Scene(root, 1024, 768, Color.web("#f4f4f4"));
         if (IS_EMBEDDED || IS_ANDROID) {
             new ScrollEventSynthesizer(scene);
         }
