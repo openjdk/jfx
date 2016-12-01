@@ -248,6 +248,8 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
         // traverse flagged blocks:
         final int blkW = (from >> _BLK_SIZE_LG);
         final int blkE = (ato   >> _BLK_SIZE_LG) + 1;
+        // ensure last block flag = 0 to process final block:
+        blkFlags[blkE] = 0;
 
         // Perform run-length encoding and store results in the piscesCache
         int curAlpha = 0;
@@ -290,7 +292,6 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
                                     i = cx;
                                 } else {
                                     val = _unsafe.getByte(addr_alpha + curAlpha);
-
                                     do {
                                         out[off + i] = val;
                                         i++;
@@ -306,12 +307,13 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
             }
 
             // Process remaining span:
-            val = _unsafe.getByte(addr_alpha + curAlpha);
-
-            do {
-                out[off + i] = val;
-                i++;
-            } while (i < ato);
+            if (curAlpha != 0) {
+                val = _unsafe.getByte(addr_alpha + curAlpha);
+                while (i < ato) {
+                    out[off + i] = val;
+                    i++;
+                }
+            }
 
         } else {
             int i = 0;
@@ -345,7 +347,6 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
                             // fill span:
                             if (cx != i) {
                                 val = _unsafe.getByte(addr_alpha + curAlpha);
-
                                 do {
                                     out[off + i] = val;
                                     i++;
@@ -360,12 +361,13 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
             }
 
             // Process remaining span:
-            val = _unsafe.getByte(addr_alpha + curAlpha);
-
-            do {
-                out[off + i] = val;
-                i++;
-            } while (i < ato);
+            if (curAlpha != 0) {
+                val = _unsafe.getByte(addr_alpha + curAlpha);
+                while (i < ato) {
+                    out[off + i] = val;
+                    i++;
+                }
+            }
 
             while (i < w) {
                 out[off + i] = 0;

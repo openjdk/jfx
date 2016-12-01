@@ -173,7 +173,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
                     I18N.getString("param.cfbundle-identifier.description"),
                     "mac.CFBundleIdentifier",
                     String.class,
-                    params -> "com.example.bad", //FIXME
+                    IDENTIFIER::fetchFrom,
                     (s, p) -> s);
 
     public static final BundlerParamInfo<String> MAC_CF_BUNDLE_VERSION =

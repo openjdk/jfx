@@ -364,6 +364,24 @@ fail:
     return rc;
 }
 
+JNIEXPORT void JNICALL OS_NATIVE(CFRelease)
+    (JNIEnv *env, jclass that, jlong arg0)
+{
+    CFRelease((CFTypeRef)arg0);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithGraphicsFont)
+    (JNIEnv *env, jclass that, jlong cgFont, jdouble size, jobject matrix, jlong attributes)
+{
+    CGAffineTransform transform;
+    if (matrix) {
+        getCGAffineTransformFields(env, matrix, &transform);
+    } else {
+        transform = CGAffineTransformIdentity;
+    }
+    return (jlong)CTFontCreateWithGraphicsFont((CGFontRef)cgFont, (CGFloat)size, &transform, (CTFontDescriptorRef)attributes);
+}
+
 JNIEXPORT jlong JNICALL OS_NATIVE(CTFontCreateWithName)
     (JNIEnv *env, jclass that, jlong arg0, jdouble arg1, jobject arg2)
 {
@@ -377,11 +395,6 @@ fail:
     return rc;
 }
 
-JNIEXPORT void JNICALL OS_NATIVE(CFRelease)
-    (JNIEnv *env, jclass that, jlong arg0)
-{
-    CFRelease((CFTypeRef)arg0);
-}
 
 JNIEXPORT jlong JNICALL OS_NATIVE(CFURLCreateWithFileSystemPath)
     (JNIEnv *env, jclass that, jlong arg0, jlong arg1, jlong arg2, jboolean arg3)
@@ -406,6 +419,12 @@ fail:
     /* In Only */
 //    if (arg2 && lparg2) setCGAffineTransformFields(env, arg2, lparg2);
     return rc;
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CGFontCreateWithDataProvider)
+    (JNIEnv *env, jclass that, jlong dataProvider)
+{
+    return (jlong)CGFontCreateWithDataProvider((CGDataProviderRef)dataProvider);
 }
 
 JNIEXPORT void JNICALL OS_NATIVE(CGPathRelease)
@@ -487,6 +506,11 @@ JNIEXPORT void JNICALL OS_NATIVE(CGColorSpaceRelease)
     (JNIEnv *env, jclass that, jlong arg0)
 {
     CGColorSpaceRelease((CGColorSpaceRef)arg0);
+}
+
+JNIEXPORT jlong JNICALL OS_NATIVE(CGDataProviderCreateWithURL)
+    (JNIEnv *env, jclass that, jlong cfURL) {
+      return (jlong)CGDataProviderCreateWithURL((CFURLRef)cfURL);
 }
 
 JNIEXPORT jlong JNICALL OS_NATIVE(kCFTypeDictionaryKeyCallBacks)

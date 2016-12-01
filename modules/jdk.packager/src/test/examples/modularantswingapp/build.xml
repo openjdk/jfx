@@ -1,0 +1,99 @@
+<project name="Test" default="package"  xmlns:fx="javacom.sun.javafx.tools.ant">
+  <echo>
+    java_home
+  </echo>
+<echo>
+  ${java.home}
+</echo>
+
+<taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+         uri="javacom.sun.javafx.tools.ant"
+         classpath="${java.home}/lib/ant-javafx.jar;."/>
+
+<property name="src.dir" value="src"/>
+<property name="build.dir" value="build"/>
+<property name="classes.dir" value="${build.dir}/hello.world"/>
+<property name="bundles.dir" value="output"/>
+
+<target name="clean">
+  <delete dir="${build.dir}"/>
+  <delete dir="${bundles.dir}"/>
+</target>
+
+<target name="compile">
+  <mkdir dir="${build.dir}"/>
+  <mkdir dir="${classes.dir}"/>
+  <javac includeantruntime="false"
+         srcdir="${src.dir}"
+         destdir="${classes.dir}"/>
+  <copy todir="${classes.dir}">
+    <fileset dir="${src.dir}">
+      <exclude name="**/*.java"/>
+    </fileset>
+  </copy>
+</target>
+
+<target name="jar" depends="compile">
+  <mkdir dir="${build.dir}/modules"/>
+  <jar destfile="${build.dir}/modules/hello.world.jar" basedir="${build.dir}/hello.world">
+    <manifest>
+       <attribute name="Main-Class" value="com.greetings.HelloWorld"/>
+     </manifest>
+  </jar>
+</target>
+
+<mkdir dir="${bundles.dir}"/>
+
+<target name="package" depends="jar">
+    <fx:deploy outdir="${bundles.dir}"
+               outfile="Test"
+               nativeBundles="native"
+               verbose="true"
+               versionCheck="false">
+
+        <fx:runtime detect-modules="true" strip-native-commands="false">
+            <fx:add-modules value="java.base"/>
+            <fx:add-modules value="jdk.packager.services,javafx.controls"/>
+            <fx:limit-modules value="java.sql"/>
+            <fx:limit-modules value="jdk.packager.services,javafx.controls"/>
+            <fx:module-path value="${java.home}/../images/jmods"/>
+            <fx:module-path value="${build.dir}/modules"/>
+        </fx:runtime>
+
+        <fx:application id="Test"
+                        name="Test"
+                        version="1.0"
+                        module="hello.world"
+                        mainClass="com.greetings.HelloWorld">
+        </fx:application>
+
+        <!-- Used to include resources -->
+        <!--<resources>
+            <fileset dir="${bundles.dir}" includes="**/*"/>
+        </resources>-->
+
+        <fx:info title="Test"
+                  vendor="Oracle"
+                  description="Java Packager Demo"
+                  category="Test"
+                  copyright="(c) 2016 Oracle"
+                  license="3 Clause BSD">
+        </fx:info>
+
+        <fx:bundleArgument arg="win.exe.systemWide" value="true"/>
+        <fx:bundleArgument arg="win.menuGroup" value="Games"/>
+        <fx:bundleArgument arg="mac.dmg.simple" value="true"/>
+        <fx:bundleArgument arg="signBundle" value="false"/>
+        <!-- <fx:bundleArgument arg="linux.bundleName" value="file-association-demo"/> -->
+        <!-- <fx:bundleArgument arg="email" value="maintainer@example.com"/> -->
+        <fx:bundleArgument arg="mac.CFBundleName" value="Test"/>
+
+        <fx:secondaryLauncher name="Test2"
+                              module="hello.world"
+                              mainClass="com.greetings.HelloWorld">
+            <!--<fx:jvmuserarg name="-Xmx" value="1g"/>-->
+        </fx:secondaryLauncher>
+    </fx:deploy>
+</target>
+
+</project>
