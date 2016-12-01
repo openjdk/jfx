@@ -1,0 +1,90 @@
+<project name="Test" default="package"  xmlns:fx="javacom.sun.javafx.tools.ant">
+  <echo>
+    java_home
+  </echo>
+<echo>
+  ${java.home}
+</echo>
+
+<taskdef resource="com/sun/javafx/tools/ant/antlib.xml"
+         uri="javacom.sun.javafx.tools.ant"
+         classpath="${java.home}/lib/ant-javafx.jar;."/>
+
+<property name="src.dir" value="src"/>
+<property name="build.dir" value="build"/>
+<property name="classes.dir" value="${build.dir}/hello.world"/>
+<property name="bundles.dir" value="output"/>
+
+<target name="clean">
+  <delete dir="${build.dir}"/>
+  <delete dir="${bundles.dir}"/>
+</target>
+
+<target name="compile">
+  <mkdir dir="${build.dir}"/>
+  <mkdir dir="${classes.dir}"/>
+  <javac includeantruntime="false"
+         srcdir="${src.dir}"
+         destdir="${classes.dir}"/>
+  <copy todir="${classes.dir}">
+    <fileset dir="${src.dir}">
+      <exclude name="**/*.java"/>
+    </fileset>
+  </copy>
+</target>
+
+<target name="jar" depends="compile">
+  <mkdir dir="${build.dir}/jars"/>
+  <jar destfile="${build.dir}/jars/hello.world.jar" basedir="${build.dir}/hello.world">
+    <manifest>
+       <attribute name="Main-Class" value="HelloWorld"/>
+     </manifest>
+  </jar>
+</target>
+
+<mkdir dir="${bundles.dir}"/>
+
+<target name="package" depends="jar">
+    <fx:deploy outdir="${bundles.dir}"
+               outfile="Test"
+               nativeBundles="image"
+               verbose="true"
+               versionCheck="false">
+
+        <fx:application id="Test"
+                        name="Test"
+                        version="1.0"
+                        mainClass="HelloWorld">
+        </fx:application>
+
+        <resources>
+            <fileset dir="${build.dir}/jars" includes="**/*"/>
+        </resources>
+
+        <fx:info title="Test"
+                  vendor="Oracle"
+                  description="Java Packager Demo"
+                  category="Test"
+                  copyright="(c) 2016 Oracle"
+                  license="3 Clause BSD">
+        </fx:info>
+
+        <fx:bundleArgument arg="win.exe.systemWide" value="true"/>
+        <fx:bundleArgument arg="win.menuGroup" value="Games"/>
+        <fx:bundleArgument arg="mac.dmg.simple" value="true"/>
+        <fx:bundleArgument arg="signBundle" value="false"/>
+        <!-- <fx:bundleArgument arg="linux.bundleName" value="file-association-demo"/> -->
+        <!-- <fx:bundleArgument arg="email" value="maintainer@example.com"/> -->
+        <fx:bundleArgument arg="mac.CFBundleName" value="Test"/>
+
+        <fx:platform>
+          <fx:jvmarg value="-Xmx512m"/>
+        </fx:platform>
+        <fx:secondaryLauncher name="Test2"
+                              mainClass="HelloWorld">
+            <!--<fx:jvmuserarg name="-Xmx" value="1g"/>-->
+        </fx:secondaryLauncher>
+    </fx:deploy>
+</target>
+
+</project>
