@@ -25,6 +25,8 @@
 
 package com.sun.javafx.font.coretext;
 
+import com.sun.javafx.font.Disposer;
+import com.sun.javafx.font.DisposerRecord;
 import com.sun.javafx.font.FontStrikeDesc;
 import com.sun.javafx.font.PrismFontFile;
 import com.sun.javafx.font.PrismFontStrike;
@@ -33,6 +35,7 @@ import com.sun.javafx.geom.transform.BaseTransform;
 
 class CTFontFile extends PrismFontFile {
 
+    private final long cgFontRef;
     /* Transform used for outline and bounds */
     private final static CGAffineTransform tx = new CGAffineTransform();
     static {
@@ -40,9 +43,32 @@ class CTFontFile extends PrismFontFile {
         tx.d = -1;  /* scale y */
     }
 
+    private static class SelfDisposerRecord implements DisposerRecord {
+        private long cgFontRef;
+
+        SelfDisposerRecord(long cgFontRef) {
+            this.cgFontRef = cgFontRef;
+        }
+
+        @Override
+        public synchronized void dispose() {
+            if (cgFontRef != 0) {
+                OS.CFRelease(cgFontRef);
+                cgFontRef = 0;
+            }
+        }
+    }
+
     CTFontFile(String name, String filename, int fIndex, boolean register,
                boolean embedded, boolean copy, boolean tracked) throws Exception {
         super(name, filename, fIndex, register, embedded, copy, tracked);
+
+        if (embedded) {
+            cgFontRef = createCGFontForEmbeddedFont();
+            Disposer.addRecord(this, new SelfDisposerRecord(cgFontRef));
+        } else {
+            cgFontRef = 0;
+        }
     }
 
     public static boolean registerFont(String fontfile) {
@@ -61,6 +87,30 @@ class CTFontFile extends PrismFontFile {
             OS.CFRelease(fileRef);
         }
         return result;
+    }
+
+    private long createCGFontForEmbeddedFont() {
+        long cgFontRef = 0;
+        final long fileNameRef = OS.CFStringCreate(getFileName());
+        if (fileNameRef != 0) {
+            final long url = OS.CFURLCreateWithFileSystemPath(
+                    OS.kCFAllocatorDefault(), fileNameRef,
+                    OS.kCFURLPOSIXPathStyle, false);
+            if (url != 0) {
+                final long dataProvider = OS.CGDataProviderCreateWithURL(url);
+                if (dataProvider != 0) {
+                    cgFontRef = OS.CGFontCreateWithDataProvider(dataProvider);
+                    OS.CFRelease(dataProvider);
+                }
+                OS.CFRelease(url);
+            }
+            OS.CFRelease(fileNameRef);
+        }
+        return cgFontRef;
+    }
+
+    long getCGFontRef() {
+        return cgFontRef;
     }
 
     CGRect getBBox(int gc, float size) {

@@ -97,9 +97,12 @@ class OS {
     static final native long CGColorSpaceCreateDeviceGray();
     static final native long CGColorSpaceCreateDeviceRGB();
     static final native void CGColorSpaceRelease(long space);
+    static final native long CGDataProviderCreateWithURL(long cfURL);
+    static final native long CGFontCreateWithDataProvider(long dataProvider);
     static final native void CGPathRelease(long path);
-    static final native long CTFontCreateWithName(long name, double size, CGAffineTransform matrix);
     static final native long CTFontCreatePathForGlyph(long font, short glyph, CGAffineTransform matrix);
+    static final native long CTFontCreateWithGraphicsFont(long cgFont, double size, CGAffineTransform matrix, long attributes);
+    static final native long CTFontCreateWithName(long name, double size, CGAffineTransform matrix);
     static final native boolean CTFontManagerRegisterFontsForURL(long fontURL, int scope, long error);
     static final native long CTLineCreateWithAttributedString(long string);
     static final native long CTLineGetGlyphRuns(long line);

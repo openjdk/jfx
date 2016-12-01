@@ -77,10 +77,19 @@ class CTFontStrike extends PrismFontStrike<CTFontFile> {
               drawShapes = true;
             }
         }
-        long psNameRef = OS.CFStringCreate(fontResource.getPSName());
-        if (psNameRef != 0) {
-            fontRef = OS.CTFontCreateWithName(psNameRef, size, matrix);
-            OS.CFRelease(psNameRef);
+
+        if (fontResource.isEmbeddedFont()) {
+            final long cgFontRef = fontResource.getCGFontRef();
+            if (cgFontRef != 0) {
+                fontRef = OS.CTFontCreateWithGraphicsFont(
+                        cgFontRef, size, matrix, 0);
+            }
+        } else {
+            final long psNameRef = OS.CFStringCreate(fontResource.getPSName());
+            if (psNameRef != 0) {
+                fontRef = OS.CTFontCreateWithName(psNameRef, size, matrix);
+                OS.CFRelease(psNameRef);
+            }
         }
         if (fontRef == 0) {
             if (PrismFontFactory.debugFonts) {
