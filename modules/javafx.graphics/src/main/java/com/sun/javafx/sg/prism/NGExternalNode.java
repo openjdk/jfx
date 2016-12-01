@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package com.sun.javafx.sg.prism;
 import java.nio.Buffer;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.UnaryOperator;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.prism.Graphics;
 import com.sun.prism.PixelFormat;
@@ -142,15 +141,17 @@ public class NGExternalNode extends NGNode {
         final float usrheight;
 
         // source image scale factor
-        final int scale;
+        final double scaleX;
+        final double scaleY;
 
         BufferData(Buffer srcbuffer, int linestride,
                    int x, int y, int width, int height,
                    float usrWidth, float usrHeight,
-                   int scale)
+                   double scaleX, double scaleY)
         {
             this.srcbuffer = srcbuffer;
-            this.scale = scale;
+            this.scaleX = scaleX;
+            this.scaleY = scaleY;
             this.linestride = linestride;
             this.srcbounds = scale(new Rectangle(x, y, width, height));
             this.usrwidth = usrWidth;
@@ -158,10 +159,12 @@ public class NGExternalNode extends NGNode {
         }
 
         Rectangle scale(Rectangle r) {
-            r.x *= this.scale;
-            r.y *= this.scale;
-            r.width *= this.scale;
-            r.height *= this.scale;
+            int x = r.x;
+            r.x = (int)Math.round(x * scaleX);
+            int y = r.y;
+            r.y = (int)Math.round(y * scaleY);
+            r.width = (int)Math.round(r.width * scaleX);
+            r.height = (int)Math.round(r.height * scaleY);
             return r;
         }
 
@@ -169,8 +172,8 @@ public class NGExternalNode extends NGNode {
                                   float usrWidth, float usrHeight)
         {
             return new BufferData(this.srcbuffer, this.linestride,
-                                  x, y, width, height,
-                                  usrWidth, usrHeight, this.scale);
+                                 x, y, width, height,
+                                 usrWidth, usrHeight, this.scaleX, this.scaleY);
         }
     }
 
@@ -210,9 +213,10 @@ public class NGExternalNode extends NGNode {
                                int x, int y, int width, int height,
                                float usrWidth, float usrHeight,
                                int linestride,
-                               int scale)
+                               double scaleX, double scaleY)
     {
-        bufferData = new BufferData(buffer, linestride, x, y, width, height, usrWidth, usrHeight, scale);
+        bufferData = new BufferData(buffer, linestride, x, y, width, height,
+                                           usrWidth, usrHeight, scaleX, scaleY);
         renderData.set(new RenderData(bufferData, x, y, width, height, true));
     }
 

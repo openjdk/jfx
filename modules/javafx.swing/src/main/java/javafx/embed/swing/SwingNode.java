@@ -175,8 +175,6 @@ public class SwingNode extends Node {
     private boolean skipBackwardUnrgabNotification;
     private boolean grabbed; // lwframe initiated grab
 
-    private volatile int scale = 1;
-
     {
         // To initialize the class helper at the begining each constructor of this class
         SwingNodeHelper.initHelper(this);
@@ -235,8 +233,9 @@ public class SwingNode extends Node {
 
     private static final class OptionalMethod<T> {
         private final Method method;
+        private final boolean isIntegerAPI;
 
-        public OptionalMethod(Class<T> cls, String name, Class<?>... args) {
+        OptionalMethod(Class<T> cls, String name, Class<?>... args) {
             Method m;
             try {
                 m = cls.getMethod(name, args);
@@ -247,10 +246,16 @@ public class SwingNode extends Node {
                 throw new RuntimeException("Error when calling " + cls.getName() + ".getMethod('" + name + "').", ex);
             }
             method = m;
+            isIntegerAPI = args != null && args.length > 0 &&
+                                                        args[0] == Integer.TYPE;
         }
 
         public boolean isSupported() {
             return method != null;
+        }
+
+        public boolean isIntegerApi() {
+            return isIntegerAPI;
         }
 
         public Object invoke(T object, Object... args) {
@@ -270,8 +275,16 @@ public class SwingNode extends Node {
      * Calls JLightweightFrame.notifyDisplayChanged.
      * Must be called on EDT only.
      */
-    private static final OptionalMethod<JLightweightFrame> jlfNotifyDisplayChanged =
-        new OptionalMethod<>(JLightweightFrame.class, "notifyDisplayChanged", Integer.TYPE);
+    private static OptionalMethod<JLightweightFrame> jlfNotifyDisplayChanged;
+
+    static {
+        jlfNotifyDisplayChanged = new OptionalMethod<>(JLightweightFrame.class,
+                "notifyDisplayChanged", Double.TYPE, Double.TYPE);
+        if (!jlfNotifyDisplayChanged.isSupported()) {
+            jlfNotifyDisplayChanged = new OptionalMethod<>(
+                  JLightweightFrame.class,"notifyDisplayChanged", Integer.TYPE);
+        }
+    }
 
     /*
      * Called on EDT
@@ -296,7 +309,19 @@ public class SwingNode extends Node {
                 }
             });
 
-            jlfNotifyDisplayChanged.invoke(lwFrame, scale);
+            if (getScene() != null) {
+                Window window = getScene().getWindow();
+                if (window != null) {
+                    if (jlfNotifyDisplayChanged.isIntegerApi()) {
+                        jlfNotifyDisplayChanged.invoke(lwFrame,
+                                (int) Math.round(window.getRenderScaleX()));
+                    } else {
+                        jlfNotifyDisplayChanged.invoke(lwFrame,
+                                window.getRenderScaleX(),
+                                window.getRenderScaleY());
+                    }
+                }
+            }
             lwFrame.setContent(new SwingNodeContent(content));
             lwFrame.setVisible(true);
 
@@ -319,10 +344,11 @@ public class SwingNode extends Node {
                         final int x, final int y,
                         final int w, final int h,
                         final int linestride,
-                        final int scale)
+                        final double scaleX,
+                        final double scaleY)
     {
         Runnable r = () -> peer.setImageBuffer(IntBuffer.wrap(data), x, y, w, h,
-                                w, h, linestride, scale);
+                                w, h, linestride, scaleX, scaleY);
         SwingFXUtils.runOnFxThread(() -> {
             if (peer != null) {
                 r.run();
@@ -516,10 +542,7 @@ public class SwingNode extends Node {
         window.renderScaleXProperty().addListener(locationListener);
         window.addEventHandler(FocusUngrabEvent.FOCUS_UNGRAB, ungrabHandler);
         window.showingProperty().addListener(windowVisibleListener);
-
-        // LW framework should be upgraded to separate X,Y scales...
-        this.scale = (int) Math.round(window.getRenderScaleX());
-        setLwFrameScale(this.scale);
+        setLwFrameScale(window.getRenderScaleX(), window.getRenderScaleY());
     }
 
     private void removeWindowListeners(final Window window) {
@@ -599,10 +622,8 @@ public class SwingNode extends Node {
             return;
         }
         Window w = getScene().getWindow();
-        float renderScaleX = (float) w.getRenderScaleX();
-        int lwScale = Math.round(renderScaleX);
-        boolean sendScale = (this.scale != lwScale);
-        this.scale = lwScale;
+        double renderScaleX = w.getRenderScaleX();
+        double renderScaleY = w.getRenderScaleY();
         final Point2D loc = localToScene(0, 0);
         final int windowX = (int) (w.getX());
         final int windowY = (int) (w.getY());
@@ -615,11 +636,14 @@ public class SwingNode extends Node {
 
         SwingFXUtils.runOnEDT(() -> {
             if (lwFrame != null) {
-                if (sendScale) {
-                    jlfNotifyDisplayChanged.invoke(lwFrame, scale);
+                if (jlfNotifyDisplayChanged.isIntegerApi()) {
+                    jlfNotifyDisplayChanged.invoke(lwFrame,
+                            (int)Math.round(renderScaleX));
+                } else {
+                    jlfNotifyDisplayChanged.invoke(lwFrame, renderScaleX,
+                                                                  renderScaleY);
                 }
-                lwFrame.setSize(frameW, frameH);
-                lwFrame.setLocation(frameX, frameY);
+                lwFrame.setBounds(frameX, frameY, frameW, frameH);
                 jlfSetHostBounds.invoke(lwFrame, windowX, windowY,
                     windowW, windowH);
             }
@@ -660,15 +684,17 @@ public class SwingNode extends Node {
         });
     }
 
-    private void setLwFrameScale(final int scale) {
+    private void setLwFrameScale(final double scaleX, final double scaleY) {
         if (lwFrame == null) {
             return;
         }
-        SwingFXUtils.runOnEDT(new Runnable() {
-            @Override
-            public void run() {
-                if (lwFrame != null) {
-                    jlfNotifyDisplayChanged.invoke(lwFrame, scale);
+        SwingFXUtils.runOnEDT(() -> {
+            if (lwFrame != null) {
+                if (jlfNotifyDisplayChanged.isIntegerApi()) {
+                    jlfNotifyDisplayChanged.invoke(lwFrame,
+                                                       (int)Math.round(scaleX));
+                } else {
+                    jlfNotifyDisplayChanged.invoke(lwFrame, scaleX, scaleY);
                 }
             }
         });
@@ -694,7 +720,7 @@ public class SwingNode extends Node {
         private JComponent comp;
         private volatile FXDnD dnd;
 
-        public SwingNodeContent(JComponent comp) {
+        SwingNodeContent(JComponent comp) {
             this.comp = comp;
         }
         @Override
@@ -718,7 +744,11 @@ public class SwingNode extends Node {
         }
         //@Override
         public void imageBufferReset(int[] data, int x, int y, int width, int height, int linestride, int scale) {
-            SwingNode.this.setImageBuffer(data, x, y, width, height, linestride, scale);
+            SwingNode.this.setImageBuffer(data, x, y, width, height, linestride, scale, scale);
+        }
+        //@Override
+        public void imageBufferReset(int[] data, int x, int y, int width, int height, int linestride, double scaleX, double scaleY) {
+            SwingNode.this.setImageBuffer(data, x, y, width, height, linestride, scaleX, scaleY);
         }
         @Override
         public void imageReshaped(int x, int y, int width, int height) {
@@ -839,7 +869,7 @@ public class SwingNode extends Node {
 
     private class PostEventAction implements PrivilegedAction<Void> {
         private AWTEvent event;
-        public PostEventAction(AWTEvent event) {
+        PostEventAction(AWTEvent event) {
             this.event = event;
         }
         @Override
