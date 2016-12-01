@@ -383,7 +383,9 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
 //            HandleMoveEvent((RECT *)lParam);
 //            break;
         case WM_MOVE:
-            HandleMoveEvent(NULL);
+            if (!::IsIconic(GetHWND())) {
+                HandleMoveEvent(NULL);
+            }
             break;
         case WM_WINDOWPOSCHANGED:
             HandleWindowPosChangedEvent();
