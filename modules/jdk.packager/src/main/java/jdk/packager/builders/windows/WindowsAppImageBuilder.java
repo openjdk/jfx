@@ -370,8 +370,9 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
 
     private void createLauncherForEntryPoint(Map<String, ? super Object> p) throws IOException {
 
-        File icon = ICON_ICO.fetchFrom(params);
-        File iconTarget = getConfig_AppIcon(params);
+        File launcherIcon = ICON_ICO.fetchFrom(p);
+        File icon = launcherIcon != null ? launcherIcon : ICON_ICO.fetchFrom(params);
+        File iconTarget = getConfig_AppIcon(p);
 
         InputStream in = locateResource("package/windows/" + APP_NAME.fetchFrom(params) + ".ico",
                 "icon",
@@ -405,7 +406,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
             executableFile.toFile().setWritable(true);
             ProcessBuilder pb = new ProcessBuilder(
                     iconSwapTool.getAbsolutePath(),
-                    getConfig_AppIcon(p).getAbsolutePath(),
+                    iconTarget.getAbsolutePath(),
                     executableFile.toFile().getAbsolutePath());
             IOUtils.exec(pb, VERBOSE.fetchFrom(p));
             executableFile.toFile().setReadOnly();
