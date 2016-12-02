@@ -35,6 +35,10 @@ public final class JavaSurface extends AbstractSurface {
 
     public JavaSurface(int[] dataInt, int dataType, int width, int height) {
         super(width, height);
+        if (dataInt.length / width < height) {
+            throw new IllegalArgumentException("width(=" + width + ") * height(="
+                    + height + ") is greater than dataInt.length(=" + dataInt.length + ")");
+        }
         this.dataInt = dataInt;
         this.dataBuffer = IntBuffer.wrap(this.dataInt);
 
