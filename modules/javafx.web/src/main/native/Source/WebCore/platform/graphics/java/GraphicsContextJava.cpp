@@ -23,6 +23,7 @@
 #include "NotImplemented.h"
 #include "Path.h"
 #include "Pattern.h"
+#include "PlatformContextJava.h"
 #include "RenderingQueue.h"
 #include "Font.h" //XXX: SimpleFontData.h -> Font.h
 #include "TransformationMatrix.h"

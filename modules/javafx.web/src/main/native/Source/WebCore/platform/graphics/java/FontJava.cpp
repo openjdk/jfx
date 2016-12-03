@@ -12,6 +12,7 @@
 #include "GraphicsContext.h"
 #include "GraphicsContextJava.h"
 #include "RenderingQueue.h"
+#include "PlatformContextJava.h"
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
 #include "NotImplemented.h"
 

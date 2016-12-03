@@ -11,6 +11,8 @@
 
 namespace WebCore {
 
+class RenderingQueue;
+
 //BufferImage is an image renderer. That provides the functionality
 //of canvas buffer drawing.
 
