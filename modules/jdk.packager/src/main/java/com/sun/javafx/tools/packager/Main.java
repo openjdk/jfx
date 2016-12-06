@@ -35,6 +35,9 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.*;
+import java.util.stream.Stream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import jdk.packager.internal.JLinkBundlerHelper;
 
@@ -67,28 +70,33 @@ public class Main {
     private static boolean makeAll = false;
 
     private static void addResources(CommonParams commonParams,
-                                     String baseDir, String s) {
-        if (s == null || "".equals(s)) {
+                                     String srcdir, String srcfiles) {
+        if (srcdir == null || "".equals(srcdir)) {
             return;
         }
 
-        String ls = ".";
+        File baseDir = new File(srcdir);
 
-        if (s != null) {
-            ls = s;
+        if (!baseDir.isDirectory()) {
+            Log.info("Unable to add resources: \"-srcdir\" is not a directory.");
+            return;
         }
 
-        String[] pathArray = ls.split(File.pathSeparator);
-
-        File lbaseDir = null;
-
-        if (baseDir != null) {
-            lbaseDir = new File(baseDir);
+        List<String> fileNames;
+        if (srcfiles != null) {
+            fileNames = Arrays.asList(srcfiles.split(File.pathSeparator));
+        } else {
+            // "-srcfiles" is omitted, all files in srcdir (which
+            // is a mandatory argument in this case) will be packaged.
+            fileNames = new ArrayList<>();
+            try (Stream<Path> files = Files.list(baseDir.toPath())) {
+                files.forEach(file -> fileNames.add(file.getFileName().toString()));
+            } catch (IOException e) {
+                Log.info("Unable to add resources: " + e.getMessage());
+            }
         }
 
-        for (final String path: pathArray) {
-            commonParams.addResource(lbaseDir, path);
-        }
+        fileNames.forEach(file -> commonParams.addResource(baseDir, file));
     }
 
     private static void addArgument(DeployParams deployParams, String argument) {
