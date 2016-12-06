@@ -49,7 +49,8 @@ bool FilePath::FileExists(const TString FileName) {
     bool result = false;
 #ifdef WINDOWS
     WIN32_FIND_DATA FindFileData;
-    HANDLE handle = FindFirstFile(FileName.data(), &FindFileData);
+    TString fileName = FixPathForPlatform(FileName);
+    HANDLE handle = FindFirstFile(fileName.data(), &FindFileData);
 
     if (handle != INVALID_HANDLE_VALUE) {
         if (FILE_ATTRIBUTE_DIRECTORY & FindFileData.dwFileAttributes) {
@@ -76,7 +77,8 @@ bool FilePath::DirectoryExists(const TString DirectoryName) {
     bool result = false;
 #ifdef WINDOWS
     WIN32_FIND_DATA FindFileData;
-    HANDLE handle = FindFirstFile(DirectoryName.data(), &FindFileData);
+    TString directoryName = FixPathForPlatform(DirectoryName);
+    HANDLE handle = FindFirstFile(directoryName.data(), &FindFileData);
 
     if (handle != INVALID_HANDLE_VALUE) {
         if (FILE_ATTRIBUTE_DIRECTORY & FindFileData.dwFileAttributes) {
@@ -123,7 +125,7 @@ bool FilePath::DeleteFile(const TString FileName) {
 
     if (FileExists(FileName) == true) {
 #ifdef WINDOWS
-        TString lFileName = FileName;
+        TString lFileName = FixPathForPlatform(FileName);
         FileAttributes attributes(lFileName);
 
         if (attributes.Contains(faReadOnly) == true) {
@@ -148,9 +150,10 @@ bool FilePath::DeleteDirectory(const TString DirectoryName) {
     if (DirectoryExists(DirectoryName) == true) {
 #ifdef WINDOWS
         SHFILEOPSTRUCTW fos = {0};
-        DynamicBuffer<TCHAR> lDirectoryName(DirectoryName.size() + 2);
-        memcpy(lDirectoryName.GetData(), DirectoryName.data(), (DirectoryName.size() + 2) * sizeof(TCHAR));
-        lDirectoryName[DirectoryName.size() + 1] = NULL; // Double null terminate for SHFileOperation.
+        TString directoryName = FixPathForPlatform(DirectoryName);
+        DynamicBuffer<TCHAR> lDirectoryName(directoryName.size() + 2);
+        memcpy(lDirectoryName.GetData(), directoryName.data(), (directoryName.size() + 2) * sizeof(TCHAR));
+        lDirectoryName[directoryName.size() + 1] = NULL; // Double null terminate for SHFileOperation.
 
         // Delete the folder and everything inside.
         fos.wFunc = FO_DELETE;
@@ -250,6 +253,24 @@ TString FilePath::ChangeFileExt(TString Path, TString Extension) {
 TString FilePath::FixPathForPlatform(TString Path) {
     TString result = Path;
     std::replace(result.begin(), result.end(), BAD_TRAILING_PATHSEPARATOR, TRAILING_PATHSEPARATOR);
+#ifdef WINDOWS
+    // The maximum path that does not require long path prefix. On Windows the
+    // maximum path is 260 minus 1 (NUL) but for directories it is 260 minus
+    // 12 minus 1 (to allow for the creation of a 8.3 file in the directory).
+    const int maxPath = 247;
+    if (result.length() > maxPath &&
+        result.find(_T("\\\\?\\")) == TString::npos &&
+        result.find(_T("\\\\?\\UNC")) == TString::npos) {
+        const TString prefix(_T("\\\\"));
+        if (!result.compare(0, prefix.size(), prefix)) {
+            // UNC path, converting to UNC path in long notation
+            result = _T("\\\\?\\UNC") + result.substr(1, result.length());
+        } else {
+            // converting to non-UNC path in long notation
+            result = _T("\\\\?\\") + result;
+        }
+    }
+#endif // WINDOWS
     return result;
 }
 
