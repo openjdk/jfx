@@ -153,7 +153,7 @@ public class IOUtils {
         String lineRead;
         while ((lineRead = br.readLine()) != null) {
             if (consumer != null) {
-                consumer.print(lineRead);
+                consumer.print(lineRead + '\n');
             } else if (verbose) {
                Log.info(lineRead);
             } else {

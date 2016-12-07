@@ -53,6 +53,9 @@ import java.util.Optional;
 import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEYCHAIN;
+import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEY_USER;
+import jdk.packager.internal.mac.MacCertificate;
 
 public class MacPkgBundler extends MacBaseInstallerBundler {
 
@@ -97,7 +100,20 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-developer-id-installer.description"),
             "mac.signing-key-developer-id-installer",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> {
+                    String result = MacBaseInstallerBundler.findKey("Developer ID Installer: " + SIGNING_KEY_USER.fetchFrom(params),
+                                                                    SIGNING_KEYCHAIN.fetchFrom(params),
+                                                                    VERBOSE.fetchFrom(params));
+                    if (result != null) {
+                        MacCertificate certificate = new MacCertificate(result, VERBOSE.fetchFrom(params));
+
+                        if (!certificate.isValid()) {
+                            Log.info(MessageFormat.format(I18N.getString("error.certificate.expired"), result));
+                        }
+                    }
+
+                    return result;
+                },
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> INSTALLER_SUFFIX = new StandardBundlerParam<> (

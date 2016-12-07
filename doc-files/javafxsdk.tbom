@@ -134,4 +134,9 @@
           file-type="JavaProperties"/>
 </file-set>
 
+<file-set name="Java Property Resource Bundles" languages="Japanese +Simplified_Chinese">
+    <file source="rt/modules/jdk.packager/src/main/resources/com/oracle/tools/packager/mac/MacAppStoreBundler%j.properties"
+          file-type="JavaProperties"/>
+</file-set>
+
 </translation>
