@@ -434,17 +434,4 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_dom_JSObject_callImpl
     return WebCore::JSValue_to_Java_Object(result, env, ctx, rootObject.get());
 }
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_JSObject_unprotectImpl
-(JNIEnv *env, jclass clas, jlong peer, jint peer_type)
-{
-    JSObjectRef object;
-    JSContextRef ctx;
-    RefPtr<JSC::Bindings::RootObject> rootObject(checkJSPeer(peer, peer_type, object, ctx));
-    if (!rootObject || !peer || !ctx) {
-        return;
-    }
-
-    rootObject->gcUnprotect(toJS(object));
-}
-
 }
