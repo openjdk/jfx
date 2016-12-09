@@ -25,6 +25,8 @@
 
 package com.sun.webkit.dom;
 
+import com.sun.webkit.Disposer;
+import com.sun.webkit.DisposerRecord;
 import com.sun.webkit.Invoker;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -42,11 +44,18 @@ class JSObject extends netscape.javascript.JSObject {
     JSObject(long peer, int peer_type) {
         this.peer = peer;
         this.peer_type = peer_type;
+        if (peer_type == JS_CONTEXT_OBJECT) {
+            // if peer type is JS_CONTEXT_OBJECT, the JSObject is already GC Protected
+            // from native side and we want to add JSObject to Disposer, only in this case.
+            Disposer.addRecord(this, new SelfDisposer(peer, peer_type));
+        }
     }
 
     long getPeer() {
         return peer;
     }
+
+    private static native void unprotectImpl(long peer, int peer_type);
 
     @Override
     public Object eval(String s) throws JSException {
@@ -138,5 +147,22 @@ class JSObject extends netscape.javascript.JSObject {
         if (value instanceof Throwable)
             ex.initCause((Throwable) value);
         return ex;
+    }
+
+    private static final class SelfDisposer implements DisposerRecord {
+        long peer;
+        final int peer_type;
+
+        private SelfDisposer(long peer, int peer_type) {
+            this.peer = peer;
+            this.peer_type = peer_type;
+        }
+
+        @Override public void dispose() {
+            if (peer != 0) {
+                JSObject.unprotectImpl(peer, peer_type);
+                peer = 0;
+            }
+        }
     }
 }
