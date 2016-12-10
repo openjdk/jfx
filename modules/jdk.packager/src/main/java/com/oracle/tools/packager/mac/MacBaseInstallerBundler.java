@@ -216,12 +216,6 @@ public abstract class MacBaseInstallerBundler extends AbstractBundler {
         return DAEMON_BUNDLER.fetchFrom(p).doBundle(p, daemonImageRoot, true);
     }
 
-//    public static void signAppBundle(Map<String, ? super Object> params, File appLocation, String signingIdentity, String identifierPrefix) throws IOException {
-//        signAppBundle(params, appLocation, signingIdentity, identifierPrefix, null, null);
-//    }
-//
-
-
     @Override
     public Collection<BundlerParamInfo<?>> getBundleParameters() {
         Collection<BundlerParamInfo<?>> results = new LinkedHashSet<>();

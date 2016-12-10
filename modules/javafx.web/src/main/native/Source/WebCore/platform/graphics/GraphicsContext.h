@@ -48,7 +48,9 @@ typedef WebCore::PlatformContextCairo PlatformGraphicsContext;
 #elif USE(WINGDI)
 typedef struct HDC__ PlatformGraphicsContext;
 #elif PLATFORM(JAVA)
-#include "PlatformContextJava.h"
+namespace WebCore {
+class PlatformContextJava;
+}
 typedef WebCore::PlatformContextJava PlatformGraphicsContext;
 #else
 typedef void PlatformGraphicsContext;

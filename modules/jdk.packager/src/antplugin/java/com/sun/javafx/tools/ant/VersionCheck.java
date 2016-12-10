@@ -61,11 +61,11 @@ final class VersionCheck {
     public static boolean isSameVersion() {
         boolean result = false;
 
-        String jarVersion = getVersion();
-        String runtimeVersion = System.getProperty(JAVA_VERSION);
+        JavaVersion jarVersion = new JavaVersion(getVersion());
+        JavaVersion runtimeVersion = new JavaVersion(System.getProperty(JAVA_VERSION));
 
         if (!jarVersion.isEmpty() && !runtimeVersion.isEmpty() &&
-            jarVersion.equals(runtimeVersion)) {
+            jarVersion.match(runtimeVersion)) {
             result = true;
         }
 

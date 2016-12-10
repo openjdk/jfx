@@ -361,6 +361,9 @@ public final class WebPage {
             paintLog.finest("rect=[" + x + ", " + y + " " + w + "x" + h +
                             "] delta=[" + dx + ", " + dy + "]");
         }
+        dx += currentFrame.scrollDx;
+        dy += currentFrame.scrollDy;
+
         if (Math.abs(dx) < w && Math.abs(dy) < h) {
             int cx = (dx >= 0) ? x : x - dx;
             int cy = (dy >= 0) ? y : y - dy;
@@ -378,13 +381,15 @@ public final class WebPage {
                     .putInt(dx).putInt(dy);
             buffer.flip();
             rq.addBuffer(buffer);
+            // Ignore previous COPYREGION
+            currentFrame.drop();
             currentFrame.addRenderQueue(rq);
-
+            currentFrame.scrollDx = dx;
+            currentFrame.scrollDy = dy;
             // Now we have to translate "old" dirty rects that fit to the frame's
             // content as the content is already scrolled at the moment by webkit.
             if (!dirtyRects.isEmpty()) {
                 WCRectangle scrollRect = new WCRectangle(x, y, w, h);
-
                 for (WCRectangle r: dirtyRects) {
                     if (scrollRect.contains(r)) {
                         if (paintLog.isLoggable(Level.FINEST)) {
@@ -408,6 +413,7 @@ public final class WebPage {
     private static final class RenderFrame {
         private final List<WCRenderQueue> rqList =
                 new LinkedList<WCRenderQueue>();
+        private int scrollDx, scrollDy;
         private final WCRectangle enclosingRect = new WCRectangle();
 
         // Called on: Event thread only
@@ -444,6 +450,8 @@ public final class WebPage {
             }
             rqList.clear();
             enclosingRect.setFrame(0, 0, 0, 0);
+            scrollDx = 0;
+            scrollDy = 0;
         }
 
         @Override

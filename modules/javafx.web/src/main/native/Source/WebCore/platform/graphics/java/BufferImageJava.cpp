@@ -5,6 +5,7 @@
 
 #include "ImageObserver.h"
 #include "BufferImageJava.h"
+#include "PlatformContextJava.h"
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
 
 namespace WebCore {

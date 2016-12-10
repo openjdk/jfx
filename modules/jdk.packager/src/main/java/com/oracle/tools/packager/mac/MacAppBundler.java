@@ -51,6 +51,7 @@ import java.util.ResourceBundle;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.*;
 import jdk.packager.builders.AbstractAppImageBuilder;
+import jdk.packager.internal.mac.MacCertificate;
 
 public class MacAppBundler extends AbstractImageBundler {
 
@@ -182,7 +183,20 @@ public class MacAppBundler extends AbstractImageBundler {
             I18N.getString("param.signing-key-developer-id-app.description"),
             "mac.signing-key-developer-id-app",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> {
+                    String result = MacBaseInstallerBundler.findKey("Developer ID Application: " + SIGNING_KEY_USER.fetchFrom(params),
+                                                                    SIGNING_KEYCHAIN.fetchFrom(params),
+                                                                    VERBOSE.fetchFrom(params));
+                    if (result != null) {
+                        MacCertificate certificate = new MacCertificate(result, VERBOSE.fetchFrom(params));
+
+                        if (!certificate.isValid()) {
+                            Log.info(MessageFormat.format(I18N.getString("error.certificate.expired"), result));
+                        }
+                    }
+
+                    return result;
+                },
             (s, p) -> s);
 
     public static final BundlerParamInfo<String> BUNDLE_ID_SIGNING_PREFIX = new StandardBundlerParam<>(

@@ -52,6 +52,7 @@
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "PageGroup.h"
+#include "PlatformContextJava.h"
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformTouchEvent.h"

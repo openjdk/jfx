@@ -7,6 +7,7 @@
 #include "JavaEnv.h"
 #include "MediaPlayerPrivateJava.h"
 #include "NotImplemented.h"
+#include "PlatformContextJava.h"
 
 #include "Document.h"
 #include "Settings.h"
