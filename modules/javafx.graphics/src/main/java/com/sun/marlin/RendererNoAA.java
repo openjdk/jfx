@@ -32,8 +32,8 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
     static final boolean DISABLE_RENDER = false;
 
-    private static final int ALL_BUT_LSB = 0xfffffffe;
-    private static final int ERR_STEP_MAX = 0x7fffffff; // = 2^31 - 1
+    private static final int ALL_BUT_LSB = 0xFFFFFFFE;
+    private static final int ERR_STEP_MAX = 0x7FFFFFFF; // = 2^31 - 1
 
     private static final double POWER_2_TO_32 = 0x1.0p32;
 
@@ -136,7 +136,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     private float edgeMinX = Float.POSITIVE_INFINITY;
     private float edgeMaxX = Float.NEGATIVE_INFINITY;
 
-    // edges [floats|ints] stored in off-heap memory
+    // edges [ints] stored in off-heap memory
     private final OffHeapArray edges;
 
     private int[] edgeBuckets;
@@ -316,7 +316,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
             x1 = tmp;
         }
 
-        // convert subpixel coordinates (float) into pixel positions (int)
+        // convert subpixel coordinates [float] into pixel positions [int]
 
         // The index of the pixel that holds the next HPC is at ceil(trueY - 0.5)
         // Since y1 and y2 are biased by -0.5 in tosubpixy(), this is simply
@@ -418,13 +418,13 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         // long x1_fixed = x1_intercept * 2^32;  (fixed point 32.32 format)
         // curx = next VPC = fixed_floor(x1_fixed - 2^31 + 2^32 - 1)
         //                 = fixed_floor(x1_fixed + 2^31 - 1)
-        //                 = fixed_floor(x1_fixed + 0x7fffffff)
-        // and error       = fixed_fract(x1_fixed + 0x7fffffff)
+        //                 = fixed_floor(x1_fixed + 0x7FFFFFFF)
+        // and error       = fixed_fract(x1_fixed + 0x7FFFFFFF)
         final double x1_intercept = x1d + (firstCrossing - y1d) * slope;
 
         // inlined scalb(x1_intercept, 32):
         final long x1_fixed_biased = ((long) (POWER_2_TO_32 * x1_intercept))
-                                     + 0x7fffffffL;
+                                     + 0x7FFFFFFFL;
         // curx:
         // last bit corresponds to the orientation
         _unsafe.putInt(addr, (((int) (x1_fixed_biased >> 31L)) & ALL_BUT_LSB) | or);
@@ -933,8 +933,8 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                         // get the pointer to the edge
                         ecur = _edgePtrs[i];
 
-                        /* convert subpixel coordinates (float) into pixel
-                            positions (int) for coming scanline */
+                        /* convert subpixel coordinates into pixel
+                            positions for coming scanline */
                         /* note: it is faster to always update edges even
                            if it is removed from AEL for coming or last scanline */
 
@@ -1033,8 +1033,8 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
                         // get the pointer to the edge
                         ecur = _edgePtrs[i];
 
-                        /* convert subpixel coordinates (float) into pixel
-                            positions (int) for coming scanline */
+                        /* convert subpixel coordinates into pixel
+                            positions for coming scanline */
                         /* note: it is faster to always update edges even
                            if it is removed from AEL for coming or last scanline */
 
@@ -1306,36 +1306,26 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
             return; // undefined edges bounds
         }
 
-        final int _boundsMinY = boundsMinY;
-        final int _boundsMaxY = boundsMaxY;
-
-        // bounds as inclusive intervals
+        // bounds as half-open intervals
         final int spminX = FloatMath.max(FloatMath.ceil_int(edgeMinX - 0.5f), boundsMinX);
-        final int spmaxX = FloatMath.min(FloatMath.ceil_int(edgeMaxX - 0.5f), boundsMaxX - 1);
+        final int spmaxX = FloatMath.min(FloatMath.ceil_int(edgeMaxX - 0.5f), boundsMaxX);
 
         // edge Min/Max Y are already rounded to subpixels within bounds:
         final int spminY = edgeMinY;
-        final int spmaxY;
-        int maxY = edgeMaxY;
+        final int spmaxY = edgeMaxY;
 
-        if (maxY <= _boundsMaxY - 1) {
-            spmaxY = maxY;
-        } else {
-            spmaxY = _boundsMaxY - 1;
-            maxY   = _boundsMaxY;
-        }
-        buckets_minY = spminY - _boundsMinY;
-        buckets_maxY = maxY   - _boundsMinY;
+        buckets_minY = spminY - boundsMinY;
+        buckets_maxY = spmaxY - boundsMinY;
 
         if (DO_LOG_BOUNDS) {
             MarlinUtils.logInfo("edgesXY = [" + edgeMinX + " ... " + edgeMaxX
-                                + "][" + edgeMinY + " ... " + edgeMaxY + "]");
+                                + "[ [" + edgeMinY + " ... " + edgeMaxY + "[");
             MarlinUtils.logInfo("spXY    = [" + spminX + " ... " + spmaxX
-                                + "][" + spminY + " ... " + spmaxY + "]");
+                                + "[ [" + spminY + " ... " + spmaxY + "[");
         }
 
         // test clipping for shapes out of bounds
-        if ((spminX > spmaxX) || (spminY > spmaxY)) {
+        if ((spminX >= spmaxX) || (spminY >= spmaxY)) {
             return;
         }
 
@@ -1343,11 +1333,11 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         // inclusive:
         final int pminX = spminX;
         // exclusive:
-        final int pmaxX = spmaxX + 1; // +1 to ensure proper upper bound
+        final int pmaxX = spmaxX;
         // inclusive:
         final int pminY = spminY;
         // exclusive:
-        final int pmaxY = spmaxY + 1; // +1 to ensure proper upper bound
+        final int pmaxY = spmaxY;
 
         // store BBox to answer ptg.getBBox():
         initConsumer(pminX, pminY, pmaxX, pmaxY);
@@ -1375,9 +1365,9 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         // exclusive:
         bbox_spmaxX = pmaxX;
         // inclusive:
-        bbox_spminY = pminY;
+        bbox_spminY = spminY;
         // exclusive:
-        bbox_spmaxY = pmaxY;
+        bbox_spmaxY = spmaxY;
 
         if (DO_LOG_BOUNDS) {
             MarlinUtils.logInfo("pXY       = [" + pminX + " ... " + pmaxX
