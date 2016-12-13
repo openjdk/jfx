@@ -12,7 +12,6 @@
 
 <property name="src.dir" value="src"/>
 <property name="build.dir" value="build"/>
-<property name="classes.dir" value="${build.dir}/hello.world"/>
 <property name="bundles.dir" value="output"/>
 
 <target name="clean">
@@ -20,22 +19,45 @@
   <delete dir="${bundles.dir}"/>
 </target>
 
-<target name="compile">
+<target name="compile_module">
   <mkdir dir="${build.dir}"/>
-  <mkdir dir="${classes.dir}"/>
+  <mkdir dir="${build.dir}/my.module"/>
   <javac includeantruntime="false"
-         srcdir="${src.dir}"
-         destdir="${classes.dir}"/>
-  <copy todir="${classes.dir}">
-    <fileset dir="${src.dir}">
+         srcdir="${src.dir}/my.module"
+         destdir="${build.dir}/my.module"/>
+  <copy todir="${build.dir}/my.module">
+    <fileset dir="${src.dir}/my.module">
       <exclude name="**/*.java"/>
     </fileset>
   </copy>
 </target>
 
-<target name="jar" depends="compile">
+<target name="module" depends="compile_module">
+  <mkdir dir="${build.dir}/modules"/>
+  <jar destfile="${build.dir}/modules/my.module.jar" basedir="${build.dir}/my.module">
+  </jar>
+</target>
+
+
+<target name="compile_jar" depends="module">
+  <mkdir dir="${build.dir}"/>
+  <mkdir dir="${build.dir}/my.jar"/>
+  <javac includeantruntime="false"
+         srcdir="${src.dir}/my.jar"
+         destdir="${build.dir}/my.jar">
+         <compilerarg line="--module-path ${build.dir}/modules"/>
+         <compilerarg line="--add-modules my.module"/>
+   </javac>
+  <copy todir="${build.dir}/my.jar">
+    <fileset dir="${src.dir}/my.jar">
+      <exclude name="**/*.java"/>
+    </fileset>
+  </copy>
+</target>
+
+<target name="jar" depends="compile_jar">
   <mkdir dir="${build.dir}/jars"/>
-  <jar destfile="${build.dir}/jars/hello.world.jar" basedir="${build.dir}/hello.world">
+  <jar destfile="${build.dir}/jars/my.jar.jar" basedir="${build.dir}/my.jar">
     <manifest>
        <attribute name="Main-Class" value="HelloWorld"/>
      </manifest>
@@ -51,17 +73,20 @@
                verbose="true"
                versionCheck="false">
 
+        <resources>
+            <fileset dir="${build.dir}/jars" includes="**/*"/>
+        </resources>
+
+        <fx:runtime strip-native-commands="false">
+            <fx:add-modules value="my.module"/>
+            <fx:module-path value="${build.dir}/modules"/>
+        </fx:runtime>
+
         <fx:application id="Test"
                         name="Test"
                         version="1.0"
                         mainClass="HelloWorld">
         </fx:application>
-
-        <fx:runtime strip-native-commands="false"/>
-
-        <resources>
-            <fileset dir="${build.dir}/jars" includes="**/*"/>
-        </resources>
 
         <fx:info title="Test"
                   vendor="Oracle"
@@ -71,23 +96,8 @@
                   license="3 Clause BSD">
         </fx:info>
 
-        <fx:bundleArgument arg="mainJar" value="hello.world.jar"/>
-        <fx:bundleArgument arg="classpath" value="hello.world.jar"/>
-        <fx:bundleArgument arg="win.exe.systemWide" value="true"/>
-        <fx:bundleArgument arg="win.menuGroup" value="Games"/>
-        <fx:bundleArgument arg="mac.dmg.simple" value="true"/>
-        <fx:bundleArgument arg="signBundle" value="false"/>
-        <!-- <fx:bundleArgument arg="linux.bundleName" value="file-association-demo"/> -->
-        <!-- <fx:bundleArgument arg="email" value="maintainer@example.com"/> -->
-        <fx:bundleArgument arg="mac.CFBundleName" value="Test"/>
-
-        <fx:platform>
-          <fx:jvmarg value="-Xmx512m"/>
-        </fx:platform>
-        <fx:secondaryLauncher name="Test2"
-                              mainClass="HelloWorld">
-            <!--<fx:jvmuserarg name="-Xmx" value="1g"/>-->
-        </fx:secondaryLauncher>
+        <fx:bundleArgument arg="mainJar" value="my.jar.jar"/>
+        <fx:bundleArgument arg="classpath" value="my.jar.jar"/>
     </fx:deploy>
 </target>
 
