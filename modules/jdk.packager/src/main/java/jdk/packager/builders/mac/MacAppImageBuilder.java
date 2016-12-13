@@ -154,7 +154,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
                     I18N.getString("param.category-name.description"),
                     "mac.category",
                     String.class,
-                    params -> "public.app-category.developer-tools", // this category is almost certianly wrong, encouraging the user to set a value
+                    CATEGORY::fetchFrom,
                     (s, p) -> s
             );
 
