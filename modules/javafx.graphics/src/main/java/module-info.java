@@ -24,7 +24,7 @@
  */
 
 module javafx.graphics {
-    requires public javafx.base;
+    requires transitive javafx.base;
 
     requires java.desktop;
     requires java.xml;

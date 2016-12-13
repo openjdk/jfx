@@ -24,10 +24,10 @@
  */
 
 module javafx.web {
-    requires public java.xml;
-    requires public javafx.base;
-    requires public javafx.controls;
-    requires public javafx.graphics;
+    requires transitive java.xml;
+    requires transitive javafx.base;
+    requires transitive javafx.controls;
+    requires transitive javafx.graphics;
 
     requires java.desktop;
     requires java.logging;

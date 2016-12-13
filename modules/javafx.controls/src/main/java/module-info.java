@@ -24,8 +24,8 @@
  */
 
 module javafx.controls {
-    requires public javafx.base;
-    requires public javafx.graphics;
+    requires transitive javafx.base;
+    requires transitive javafx.graphics;
 
     exports javafx.scene.chart;
     exports javafx.scene.control;

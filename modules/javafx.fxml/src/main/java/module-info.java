@@ -24,7 +24,7 @@
  */
 
 module javafx.fxml {
-    requires public javafx.base;
+    requires transitive javafx.base;
 
     requires java.logging;
     requires java.scripting;
