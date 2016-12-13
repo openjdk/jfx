@@ -81,7 +81,8 @@ public class SecondaryLauncher extends DataType implements DynamicAttribute {
         if (module == null) {
             putUnlessNull(bundleParams, MAIN_CLASS.getID(), mainClass);
         }
-        else if (module == null && mainClass != null) {
+
+        if (module != null && mainClass != null) {
             putUnlessNull(bundleParams, StandardBundlerParam.MODULE.getID(), module + "/" + mainClass);
         }
 

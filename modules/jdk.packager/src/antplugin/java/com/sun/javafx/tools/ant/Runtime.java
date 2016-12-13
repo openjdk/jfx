@@ -126,7 +126,7 @@ public class Runtime extends DataType implements Cloneable, DynamicElement, Dyna
      */
     public String getModulePath() {
         String result = "";
-        List<String> paths = processArguments(this.modulePath, "[;:]+");
+        List<String> paths = processArguments(this.modulePath, "["+File.pathSeparator+"]+");
 
         for (String s : paths) {
             if (!result.isEmpty()) {
