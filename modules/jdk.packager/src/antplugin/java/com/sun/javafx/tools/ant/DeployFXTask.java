@@ -240,29 +240,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                 deployParams.setId(app.get().id);
                 deployParams.setServiceHint(app.get().daemon);
 
-                if (runtime != null) {
-                    for (String s : runtime.getAddModules()) {
-                        deployParams.addAddModule(s);
-                    }
-
-                    for (String s : runtime.getLimitModules()) {
-                        deployParams.addLimitModule(s);
-                    }
-
-                    deployParams.setModulePath(runtime.getModulePath());
-
-                    Boolean stripNativeCommands = runtime.getStripNativeCommands();
-
-                    if (stripNativeCommands != null) {
-                        deployParams.setStripNativeCommands(stripNativeCommands);
-                    }
-
-                    Boolean detectModules = runtime.getDetectModules();
-
-                    if (detectModules != null) {
-                        deployParams.setDetectModules(detectModules);
-                    }
-                }
+                setRuntime();
             }
 
             if (appInfo != null) {
@@ -312,6 +290,8 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                 deployParams.setVersion(app.get().version);
                 deployParams.setId(app.get().id);
                 deployParams.setServiceHint(app.get().daemon);
+
+                setRuntime();
             }
 
             if (appInfo != null) {
@@ -381,6 +361,32 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             throw new BuildException(e.getMessage(), e);
         } finally {
             Log.setLogger(null);
+        }
+    }
+
+    private void setRuntime() {
+        if (runtime != null) {
+            for (String s : runtime.getAddModules()) {
+                deployParams.addAddModule(s);
+            }
+
+            for (String s : runtime.getLimitModules()) {
+                deployParams.addLimitModule(s);
+            }
+
+            deployParams.setModulePath(runtime.getModulePath());
+
+            Boolean stripNativeCommands = runtime.getStripNativeCommands();
+
+            if (stripNativeCommands != null) {
+                deployParams.setStripNativeCommands(stripNativeCommands);
+            }
+
+            Boolean detectModules = runtime.getDetectModules();
+
+            if (detectModules != null) {
+                deployParams.setDetectModules(detectModules);
+            }
         }
     }
 
