@@ -263,8 +263,10 @@ public abstract class TextInputControl extends Control {
     public final Font getFont() { return font == null ? Font.getDefault() : font.getValue(); }
 
     /**
-     * The prompt text to display in the {@code TextInputControl}, or
-     * <tt>null</tt> if no prompt text is displayed.
+     * The prompt text to display in the {@code TextInputControl}. If set to null or an empty string, no
+     * prompt text is displayed.
+     *
+     * @defaultValue An empty String
      * @since JavaFX 2.2
      */
     private StringProperty promptText = new SimpleStringProperty(this, "promptText", "") {
