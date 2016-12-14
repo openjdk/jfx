@@ -63,7 +63,7 @@ static void findGrammaticalErrors(TextCheckerClient& client, StringView text, Ve
         badGrammar.type = TextCheckingTypeGrammar;
         badGrammar.location = checkLocation + badGrammarLocation;
         badGrammar.length = badGrammarLength;
-        badGrammar.details = WTF::move(badGrammarDetails);
+        badGrammar.details = WTFMove(badGrammarDetails);
         results.append(badGrammar);
 
         checkLocation += badGrammarLocation + badGrammarLength;
@@ -107,11 +107,11 @@ static void findMisspellings(TextCheckerClient& client, StringView text, Vector<
 
 #endif
 
-static PassRefPtr<Range> expandToParagraphBoundary(PassRefPtr<Range> range)
+static Ref<Range> expandToParagraphBoundary(PassRefPtr<Range> range)
 {
-    RefPtr<Range> paragraphRange = range->cloneRange(IGNORE_EXCEPTION);
-    setStart(paragraphRange.get(), startOfParagraph(range->startPosition()));
-    setEnd(paragraphRange.get(), endOfParagraph(range->endPosition()));
+    Ref<Range> paragraphRange = range->cloneRange();
+    setStart(paragraphRange.ptr(), startOfParagraph(range->startPosition()));
+    setEnd(paragraphRange.ptr(), endOfParagraph(range->endPosition()));
     return paragraphRange;
 }
 
@@ -173,11 +173,11 @@ PassRefPtr<Range> TextCheckingParagraph::subrange(int characterOffset, int chara
 int TextCheckingParagraph::offsetTo(const Position& position, ExceptionCode& ec) const
 {
     ASSERT(m_checkingRange);
-    RefPtr<Range> range = offsetAsRange()->cloneRange(ASSERT_NO_EXCEPTION);
+    Ref<Range> range = offsetAsRange()->cloneRange();
     range->setEnd(position.containerNode(), position.computeOffsetInContainerNode(), ec);
     if (ec)
         return 0;
-    return TextIterator::rangeLength(range.get());
+    return TextIterator::rangeLength(range.ptr());
 }
 
 bool TextCheckingParagraph::isEmpty() const
@@ -191,7 +191,7 @@ PassRefPtr<Range> TextCheckingParagraph::offsetAsRange() const
 {
     ASSERT(m_checkingRange);
     if (!m_offsetAsRange)
-        m_offsetAsRange = Range::create(paragraphRange()->startContainer()->document(), paragraphRange()->startPosition(), checkingRange()->startPosition());
+        m_offsetAsRange = Range::create(paragraphRange()->startContainer().document(), paragraphRange()->startPosition(), checkingRange()->startPosition());
 
     return m_offsetAsRange;
 }
@@ -281,7 +281,7 @@ String TextCheckingHelper::findFirstMisspelling(int& firstMisspellingOffset, boo
             }
 
             // Store marker for misspelled word.
-            misspellingRange->startContainer()->document().markers().addMarker(misspellingRange.get(), DocumentMarker::Spelling);
+            misspellingRange->startContainer().document().markers().addMarker(misspellingRange.get(), DocumentMarker::Spelling);
 
             // Bail out if we're marking only the first misspelling, and not all instances.
             if (!markAll)
@@ -312,31 +312,31 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
     // Expand the search range to encompass entire paragraphs, since text checking needs that much context.
     // Determine the character offset from the start of the paragraph to the start of the original search range,
     // since we will want to ignore results in this area.
-    RefPtr<Range> paragraphRange = m_range->cloneRange(IGNORE_EXCEPTION);
-    setStart(paragraphRange.get(), startOfParagraph(m_range->startPosition()));
-    int totalRangeLength = TextIterator::rangeLength(paragraphRange.get());
-    setEnd(paragraphRange.get(), endOfParagraph(m_range->startPosition()));
+    Ref<Range> paragraphRange = m_range->cloneRange();
+    setStart(paragraphRange.ptr(), startOfParagraph(m_range->startPosition()));
+    int totalRangeLength = TextIterator::rangeLength(paragraphRange.ptr());
+    setEnd(paragraphRange.ptr(), endOfParagraph(m_range->startPosition()));
 
-    RefPtr<Range> offsetAsRange = Range::create(paragraphRange->startContainer()->document(), paragraphRange->startPosition(), m_range->startPosition());
-    int rangeStartOffset = TextIterator::rangeLength(offsetAsRange.get());
+    Ref<Range> offsetAsRange = Range::create(paragraphRange->startContainer().document(), paragraphRange->startPosition(), m_range->startPosition());
+    int rangeStartOffset = TextIterator::rangeLength(offsetAsRange.ptr());
     int totalLengthProcessed = 0;
 
     bool firstIteration = true;
     bool lastIteration = false;
     while (totalLengthProcessed < totalRangeLength) {
         // Iterate through the search range by paragraphs, checking each one for spelling and grammar.
-        int currentLength = TextIterator::rangeLength(paragraphRange.get());
+        int currentLength = TextIterator::rangeLength(paragraphRange.ptr());
         int currentStartOffset = firstIteration ? rangeStartOffset : 0;
         int currentEndOffset = currentLength;
         if (inSameParagraph(paragraphRange->startPosition(), m_range->endPosition())) {
             // Determine the character offset from the end of the original search range to the end of the paragraph,
             // since we will want to ignore results in this area.
-            RefPtr<Range> endOffsetAsRange = Range::create(paragraphRange->startContainer()->document(), paragraphRange->startPosition(), m_range->endPosition());
+            RefPtr<Range> endOffsetAsRange = Range::create(paragraphRange->startContainer().document(), paragraphRange->startPosition(), m_range->endPosition());
             currentEndOffset = TextIterator::rangeLength(endOffsetAsRange.get());
             lastIteration = true;
         }
         if (currentStartOffset < currentEndOffset) {
-            String paragraphString = plainText(paragraphRange.get());
+            String paragraphString = plainText(paragraphRange.ptr());
             if (paragraphString.length() > 0) {
                 bool foundGrammar = false;
                 int spellingLocation = 0;
@@ -348,37 +348,36 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
                 TextCheckingTypeMask checkingTypes = checkGrammar ? (TextCheckingTypeSpelling | TextCheckingTypeGrammar) : TextCheckingTypeSpelling;
                 checkTextOfParagraph(*m_client->textChecker(), paragraphString, checkingTypes, results);
 
-                for (unsigned i = 0; i < results.size(); i++) {
-                    const TextCheckingResult* result = &results[i];
-                    if (result->type == TextCheckingTypeSpelling && result->location >= currentStartOffset && result->location + result->length <= currentEndOffset) {
-                        ASSERT(result->length > 0);
-                        ASSERT(result->location >= 0);
-                        spellingLocation = result->location;
-                        misspelledWord = paragraphString.substring(result->location, result->length);
+                for (auto& result : results) {
+                    if (result.type == TextCheckingTypeSpelling && result.location >= currentStartOffset && result.location + result.length <= currentEndOffset) {
+                        ASSERT(result.length > 0);
+                        ASSERT(result.location >= 0);
+                        spellingLocation = result.location;
+                        misspelledWord = paragraphString.substring(result.location, result.length);
                         ASSERT(misspelledWord.length());
                         break;
                     }
-                    if (checkGrammar && result->type == TextCheckingTypeGrammar && result->location < currentEndOffset && result->location + result->length > currentStartOffset) {
-                        ASSERT(result->length > 0);
-                        ASSERT(result->location >= 0);
+                    if (checkGrammar && result.type == TextCheckingTypeGrammar && result.location < currentEndOffset && result.location + result.length > currentStartOffset) {
+                        ASSERT(result.length > 0);
+                        ASSERT(result.location >= 0);
                         // We can't stop after the first grammar result, since there might still be a spelling result after
                         // it begins but before the first detail in it, but we can stop if we find a second grammar result.
                         if (foundGrammar)
                             break;
-                        for (unsigned j = 0; j < result->details.size(); j++) {
-                            const GrammarDetail* detail = &result->details[j];
+                        for (unsigned j = 0; j < result.details.size(); j++) {
+                            const GrammarDetail* detail = &result.details[j];
                             ASSERT(detail->length > 0);
                             ASSERT(detail->location >= 0);
-                            if (result->location + detail->location >= currentStartOffset && result->location + detail->location + detail->length <= currentEndOffset && (!foundGrammar || result->location + detail->location < grammarDetailLocation)) {
+                            if (result.location + detail->location >= currentStartOffset && result.location + detail->location + detail->length <= currentEndOffset && (!foundGrammar || result.location + detail->location < grammarDetailLocation)) {
                                 grammarDetailIndex = j;
-                                grammarDetailLocation = result->location + detail->location;
+                                grammarDetailLocation = result.location + detail->location;
                                 foundGrammar = true;
                             }
                         }
                         if (foundGrammar) {
-                            grammarPhraseLocation = result->location;
-                            outGrammarDetail = result->details[grammarDetailIndex];
-                            badGrammarPhrase = paragraphString.substring(result->location, result->length);
+                            grammarPhraseLocation = result.location;
+                            outGrammarDetail = result.details[grammarDetailIndex];
+                            badGrammarPhrase = paragraphString.substring(result.location, result.length);
                             ASSERT(badGrammarPhrase.length());
                         }
                     }
@@ -387,7 +386,7 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
                 if (!misspelledWord.isEmpty() && (!checkGrammar || badGrammarPhrase.isEmpty() || spellingLocation <= grammarDetailLocation)) {
                     int spellingOffset = spellingLocation - currentStartOffset;
                     if (!firstIteration) {
-                        RefPtr<Range> paragraphOffsetAsRange = Range::create(paragraphRange->startContainer()->document(), m_range->startPosition(), paragraphRange->startPosition());
+                        RefPtr<Range> paragraphOffsetAsRange = Range::create(paragraphRange->startContainer().document(), m_range->startPosition(), paragraphRange->startPosition());
                         spellingOffset += TextIterator::rangeLength(paragraphOffsetAsRange.get());
                     }
                     outIsSpelling = true;
@@ -398,7 +397,7 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
                 if (checkGrammar && !badGrammarPhrase.isEmpty()) {
                     int grammarPhraseOffset = grammarPhraseLocation - currentStartOffset;
                     if (!firstIteration) {
-                        RefPtr<Range> paragraphOffsetAsRange = Range::create(paragraphRange->startContainer()->document(), m_range->startPosition(), paragraphRange->startPosition());
+                        RefPtr<Range> paragraphOffsetAsRange = Range::create(paragraphRange->startContainer().document(), m_range->startPosition(), paragraphRange->startPosition());
                         grammarPhraseOffset += TextIterator::rangeLength(paragraphOffsetAsRange.get());
                     }
                     outIsSpelling = false;
@@ -411,8 +410,8 @@ String TextCheckingHelper::findFirstMisspellingOrBadGrammar(bool checkGrammar, b
         if (lastIteration || totalLengthProcessed + currentLength >= totalRangeLength)
             break;
         VisiblePosition newParagraphStart = startOfNextParagraph(paragraphRange->endPosition());
-        setStart(paragraphRange.get(), newParagraphStart);
-        setEnd(paragraphRange.get(), endOfParagraph(newParagraphStart));
+        setStart(paragraphRange.ptr(), newParagraphStart);
+        setEnd(paragraphRange.ptr(), endOfParagraph(newParagraphStart));
         firstIteration = false;
         totalLengthProcessed += currentLength;
     }
@@ -444,7 +443,7 @@ int TextCheckingHelper::findFirstGrammarDetail(const Vector<GrammarDetail>& gram
 
         if (markAll) {
             RefPtr<Range> badGrammarRange = TextIterator::subrange(m_range.get(), badGrammarPhraseLocation - startOffset + detail->location, detail->length);
-            badGrammarRange->startContainer()->document().markers().addMarker(badGrammarRange.get(), DocumentMarker::Grammar, detail->userDescription);
+            badGrammarRange->startContainer().document().markers().addMarker(badGrammarRange.get(), DocumentMarker::Grammar, detail->userDescription);
         }
 
         // Remember this detail only if it's earlier than our current candidate (the details aren't in a guaranteed order)
@@ -519,7 +518,7 @@ bool TextCheckingHelper::isUngrammatical() const
     if (!m_client)
         return false;
 
-    if (!m_range || m_range->collapsed(IGNORE_EXCEPTION))
+    if (!m_range || m_range->collapsed())
         return false;
 
     // Returns true only if the passed range exactly corresponds to a bad grammar detail range. This is analogous
@@ -569,7 +568,7 @@ Vector<String> TextCheckingHelper::guessesForMisspelledOrUngrammaticalRange(bool
     misspelled = false;
     ungrammatical = false;
 
-    if (!m_client || !m_range || m_range->collapsed(IGNORE_EXCEPTION))
+    if (!m_client || !m_range || m_range->collapsed())
         return guesses;
 
     // Expand the range to encompass entire paragraphs, since text checking needs that much context.
@@ -581,9 +580,8 @@ Vector<String> TextCheckingHelper::guessesForMisspelledOrUngrammaticalRange(bool
     TextCheckingTypeMask checkingTypes = checkGrammar ? (TextCheckingTypeSpelling | TextCheckingTypeGrammar) : TextCheckingTypeSpelling;
     checkTextOfParagraph(*m_client->textChecker(), paragraph.text(), checkingTypes, results);
 
-    for (unsigned i = 0; i < results.size(); i++) {
-        const TextCheckingResult* result = &results[i];
-        if (result->type == TextCheckingTypeSpelling && paragraph.checkingRangeMatches(result->location, result->length)) {
+    for (auto& result : results) {
+        if (result.type == TextCheckingTypeSpelling && paragraph.checkingRangeMatches(result.location, result.length)) {
             String misspelledWord = paragraph.checkingSubstring();
             ASSERT(misspelledWord.length());
             m_client->textChecker()->getGuessesForWord(misspelledWord, String(), guesses);
@@ -596,19 +594,17 @@ Vector<String> TextCheckingHelper::guessesForMisspelledOrUngrammaticalRange(bool
     if (!checkGrammar)
         return guesses;
 
-    for (unsigned i = 0; i < results.size(); i++) {
-        const TextCheckingResult* result = &results[i];
-        if (result->type == TextCheckingTypeGrammar && paragraph.isCheckingRangeCoveredBy(result->location, result->length)) {
-            for (unsigned j = 0; j < result->details.size(); j++) {
-                const GrammarDetail* detail = &result->details[j];
-                ASSERT(detail->length > 0);
-                ASSERT(detail->location >= 0);
-                if (paragraph.checkingRangeMatches(result->location + detail->location, detail->length)) {
-                    String badGrammarPhrase = paragraph.textSubstring(result->location, result->length);
+    for (auto& result : results) {
+        if (result.type == TextCheckingTypeGrammar && paragraph.isCheckingRangeCoveredBy(result.location, result.length)) {
+            for (auto& detail : result.details) {
+                ASSERT(detail.length > 0);
+                ASSERT(detail.location >= 0);
+                if (paragraph.checkingRangeMatches(result.location + detail.location, detail.length)) {
+                    String badGrammarPhrase = paragraph.textSubstring(result.location, result.length);
                     ASSERT(badGrammarPhrase.length());
-                    for (unsigned k = 0; k < detail->guesses.size(); k++)
-                        guesses.append(detail->guesses[k]);
-                    m_client->updateSpellingUIWithGrammarString(badGrammarPhrase, *detail);
+                    for (auto& guess : detail.guesses)
+                        guesses.append(guess);
+                    m_client->updateSpellingUIWithGrammarString(badGrammarPhrase, detail);
                     ungrammatical = true;
                     return guesses;
                 }
@@ -661,11 +657,11 @@ void checkTextOfParagraph(TextCheckerClient& client, StringView text, TextChecki
         findGrammaticalErrors(client, text.substring(0, grammarCheckLength), grammaticalErrors);
     }
 
-    results = WTF::move(grammaticalErrors);
+    results = WTFMove(grammaticalErrors);
 #endif
 
     if (results.isEmpty())
-        results = WTF::move(mispellings);
+        results = WTFMove(mispellings);
     else
         results.appendVector(mispellings);
 #endif // USE(UNIFIED_TEXT_CHECKING)

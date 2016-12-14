@@ -27,8 +27,10 @@
 #include "DateConversion.h"
 #include "DateInstance.h"
 #include "Error.h"
+#include "JSCBuiltins.h"
 #include "JSDateMath.h"
 #include "JSGlobalObject.h"
+#include "JSObject.h"
 #include "JSString.h"
 #include "Lookup.h"
 #include "ObjectPrototype.h"
@@ -78,7 +80,6 @@ EncodedJSValue JSC_HOST_CALL dateProtoFuncGetMilliSeconds(ExecState*);
 EncodedJSValue JSC_HOST_CALL dateProtoFuncGetMinutes(ExecState*);
 EncodedJSValue JSC_HOST_CALL dateProtoFuncGetMonth(ExecState*);
 EncodedJSValue JSC_HOST_CALL dateProtoFuncGetSeconds(ExecState*);
-EncodedJSValue JSC_HOST_CALL dateProtoFuncGetTime(ExecState*);
 EncodedJSValue JSC_HOST_CALL dateProtoFuncGetTimezoneOffset(ExecState*);
 EncodedJSValue JSC_HOST_CALL dateProtoFuncGetUTCDate(ExecState*);
 EncodedJSValue JSC_HOST_CALL dateProtoFuncGetUTCDay(ExecState*);
@@ -425,7 +426,7 @@ static bool fillStructuresUsingDateArgs(ExecState *exec, int maxArgs, double *ms
     return ok;
 }
 
-const ClassInfo DatePrototype::s_info = {"Date", &DateInstance::s_info, &dateTable, CREATE_METHOD_TABLE(DatePrototype)};
+const ClassInfo DatePrototype::s_info = {"Object", &JSNonFinalObject::s_info, &dateTable, CREATE_METHOD_TABLE(DatePrototype)};
 
 /* Source for DatePrototype.lut.h
 @begin dateTable
@@ -481,14 +482,22 @@ const ClassInfo DatePrototype::s_info = {"Date", &DateInstance::s_info, &dateTab
 // ECMA 15.9.4
 
 DatePrototype::DatePrototype(VM& vm, Structure* structure)
-    : DateInstance(vm, structure)
+    : Base(vm, structure)
 {
 }
 
-void DatePrototype::finishCreation(VM& vm, JSGlobalObject*)
+void DatePrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
+
+#if ENABLE(INTL)
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleString", datePrototypeToLocaleStringCodeGenerator, DontEnum);
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleDateString", datePrototypeToLocaleDateStringCodeGenerator, DontEnum);
+    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleTimeString", datePrototypeToLocaleTimeStringCodeGenerator, DontEnum);
+#else
+    UNUSED_PARAM(globalObject);
+#endif // ENABLE(INTL)
 
     // The constructor will be added later, after DateConstructor has been built.
 }

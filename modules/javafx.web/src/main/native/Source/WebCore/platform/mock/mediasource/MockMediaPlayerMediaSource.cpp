@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,9 +45,9 @@ void MockMediaPlayerMediaSource::registerMediaEngine(MediaEngineRegistrar regist
         supportsType, 0, 0, 0, 0);
 }
 
-static const HashSet<String>& mimeTypeCache()
+static const HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
 {
-    static NeverDestroyed<HashSet<String>> cache;
+    static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> cache;
     static bool isInitialized = false;
 
     if (!isInitialized) {
@@ -59,7 +59,7 @@ static const HashSet<String>& mimeTypeCache()
     return cache;
 }
 
-void MockMediaPlayerMediaSource::getSupportedTypes(HashSet<String>& supportedTypes)
+void MockMediaPlayerMediaSource::getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& supportedTypes)
 {
     supportedTypes = mimeTypeCache();
 }
@@ -69,7 +69,7 @@ MediaPlayer::SupportsType MockMediaPlayerMediaSource::supportsType(const MediaEn
     if (!parameters.isMediaSource)
         return MediaPlayer::IsNotSupported;
 
-    if (!mimeTypeCache().contains(parameters.type))
+    if (parameters.type.isEmpty() || !mimeTypeCache().contains(parameters.type))
         return MediaPlayer::IsNotSupported;
 
     if (parameters.codecs.isEmpty())
@@ -180,7 +180,7 @@ void MockMediaPlayerMediaSource::setSize(const IntSize&)
 {
 }
 
-void MockMediaPlayerMediaSource::paint(GraphicsContext*, const FloatRect&)
+void MockMediaPlayerMediaSource::paint(GraphicsContext&, const FloatRect&)
 {
 }
 

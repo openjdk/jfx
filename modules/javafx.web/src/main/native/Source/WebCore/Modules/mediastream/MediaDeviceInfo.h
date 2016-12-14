@@ -39,7 +39,6 @@ class MediaDeviceInfo : public RefCounted<MediaDeviceInfo>, public ScriptWrappab
 public:
     static Ref<MediaDeviceInfo> create(ScriptExecutionContext*, const String&, const String&, const String&, const String&);
 
-
     virtual ~MediaDeviceInfo() { }
 
     const String& label() const { return m_label; }
@@ -59,6 +58,8 @@ private:
     const String m_groupId;
     const String m_kind;
 };
+
+typedef Vector<RefPtr<MediaDeviceInfo>> MediaDeviceInfoVector;
 
 }
 

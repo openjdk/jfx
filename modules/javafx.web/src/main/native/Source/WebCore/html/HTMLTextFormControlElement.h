@@ -34,6 +34,7 @@ class RenderTextControl;
 class TextControlInnerTextElement;
 class VisiblePosition;
 
+enum class AutoFillButtonType : uint8_t { None, Credentials, Contacts };
 enum TextFieldSelectionDirection { SelectionHasNoDirection, SelectionHasForwardDirection, SelectionHasBackwardDirection };
 enum TextFieldEventBehavior { DispatchNoEvent, DispatchChangeEvent, DispatchInputAndChangeEvent };
 
@@ -46,6 +47,8 @@ public:
 
     void didEditInnerTextValue();
     void forwardEvent(Event*);
+
+    void setMaxLengthForBindings(int, ExceptionCode&);
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
 
@@ -74,10 +77,10 @@ public:
 
     virtual void dispatchFormControlChangeEvent() override final;
 
-    virtual int maxLength() const = 0;
     virtual String value() const = 0;
 
     virtual TextControlInnerTextElement* innerTextElement() const = 0;
+    virtual Ref<RenderStyle> createInnerTextStyle(const RenderStyle&) const = 0;
 
     void selectionChanged(bool shouldFireSelectEvent);
     WEBCORE_EXPORT bool lastChangeWasUserEdit() const;
@@ -118,6 +121,8 @@ protected:
     void setLastChangeWasNotUserEdit() { m_lastChangeWasUserEdit = false; }
 
     String valueWithHardLineBreaks() const;
+
+    void adjustInnerTextStyle(const RenderStyle& parentStyle, RenderStyle& textBlockStyle) const;
 
 private:
     TextFieldSelectionDirection cachedSelectionDirection() const { return static_cast<TextFieldSelectionDirection>(m_cachedSelectionDirection); }

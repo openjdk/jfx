@@ -46,23 +46,12 @@ WebGLExtension::ExtensionName WebGLDrawBuffers::getName() const
     return WebGLExtension::WebGLDrawBuffersName;
 }
 
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101000)
-
-bool WebGLDrawBuffers::supported(WebGLRenderingContextBase*)
-{
-    return false;
-}
-
-#else
-
 bool WebGLDrawBuffers::supported(WebGLRenderingContextBase* context)
 {
     Extensions3D* extensions = context->graphicsContext3D()->getExtensions();
     return extensions->supports("GL_EXT_draw_buffers")
         && satisfiesWebGLRequirements(context);
 }
-
-#endif
 
 void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GC3Denum>& buffers)
 {
@@ -173,8 +162,8 @@ bool WebGLDrawBuffers::satisfiesWebGLRequirements(WebGLRenderingContextBase* web
         context->deleteTexture(depth);
     if (supportsDepthStencil)
         context->deleteTexture(depthStencil);
-    for (size_t i = 0; i < colors.size(); ++i)
-        context->deleteTexture(colors[i]);
+    for (auto& color : colors)
+        context->deleteTexture(color);
     return ok;
 }
 

@@ -114,7 +114,7 @@ void TextTrackLoader::deprecatedDidReceiveCachedResource(CachedResource* resourc
 
 void TextTrackLoader::corsPolicyPreventedLoad()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Cross-origin text track load denied by Cross-Origin Resource Sharing policy.")));
+    static NeverDestroyed<String> consoleMessage(ASCIILiteral("Cross-origin text track load denied by Cross-Origin Resource Sharing policy."));
     Document* document = downcast<Document>(m_scriptExecutionContext);
     document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, consoleMessage);
     m_state = Failed;
@@ -159,7 +159,7 @@ bool TextTrackLoader::load(const URL& url, const String& crossOriginMode, bool i
 
     if (!crossOriginMode.isNull()) {
         m_crossOriginMode = crossOriginMode;
-        StoredCredentials allowCredentials = equalIgnoringCase(crossOriginMode, "use-credentials") ? AllowStoredCredentials : DoNotAllowStoredCredentials;
+        StoredCredentials allowCredentials = equalLettersIgnoringASCIICase(crossOriginMode, "use-credentials") ? AllowStoredCredentials : DoNotAllowStoredCredentials;
         updateRequestForAccessControl(cueRequest.mutableResourceRequest(), document->securityOrigin(), allowCredentials);
     } else {
         // Cross-origin resources that are not suitably CORS-enabled may not load.
@@ -187,12 +187,10 @@ void TextTrackLoader::newCuesParsed()
     m_cueLoadTimer.startOneShot(0);
 }
 
-#if ENABLE(WEBVTT_REGIONS)
 void TextTrackLoader::newRegionsParsed()
 {
     m_client.newRegionsAvailable(this);
 }
-#endif
 
 void TextTrackLoader::fileFailedToParse()
 {
@@ -218,14 +216,13 @@ void TextTrackLoader::getNewCues(Vector<RefPtr<TextTrackCue>>& outputCues)
     }
 }
 
-#if ENABLE(WEBVTT_REGIONS)
 void TextTrackLoader::getNewRegions(Vector<RefPtr<VTTRegion>>& outputRegions)
 {
     ASSERT(m_cueParser);
     if (m_cueParser)
         m_cueParser->getNewRegions(outputRegions);
 }
-#endif
+
 }
 
 #endif

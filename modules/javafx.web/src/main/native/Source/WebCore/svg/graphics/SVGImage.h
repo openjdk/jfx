@@ -33,13 +33,11 @@
 namespace WebCore {
 
 class Element;
-class FrameLoader;
 class FrameView;
 class ImageBuffer;
 class Page;
 class RenderBox;
 class SVGSVGElement;
-class SVGFrameLoaderClient;
 class SVGImageChromeClient;
 class SVGImageForContainer;
 
@@ -57,7 +55,6 @@ public:
     virtual FloatSize size() const override { return m_intrinsicSize; }
 
     void setURL(const URL& url) { m_url = url; }
-    void setDataProtocolLoader(FrameLoader* dataProtocolLoader) { m_dataProtocolLoader = dataProtocolLoader; }
 
     virtual bool hasSingleSecurityOrigin() const override;
 
@@ -93,20 +90,20 @@ private:
     // FIXME: Implement this to be less conservative.
     virtual bool currentFrameKnownToBeOpaque() override { return false; }
 
+    virtual void dump(TextStream&) const override;
+
     SVGImage(ImageObserver&, const URL&);
-    virtual void draw(GraphicsContext*, const FloatRect& fromRect, const FloatRect& toRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription) override;
-    void drawForContainer(GraphicsContext*, const FloatSize, float, const FloatRect&, const FloatRect&, ColorSpace, CompositeOperator, BlendMode);
-    void drawPatternForContainer(GraphicsContext*, const FloatSize, float, const FloatRect&, const AffineTransform&, const FloatPoint&, ColorSpace,
+    virtual void draw(GraphicsContext&, const FloatRect& fromRect, const FloatRect& toRect, CompositeOperator, BlendMode, ImageOrientationDescription) override;
+    void drawForContainer(GraphicsContext&, const FloatSize, float, const FloatRect&, const FloatRect&, CompositeOperator, BlendMode);
+    void drawPatternForContainer(GraphicsContext&, const FloatSize& containerSize, float zoom, const FloatRect& srcRect, const AffineTransform&, const FloatPoint& phase, const FloatSize& spacing,
         CompositeOperator, const FloatRect&, BlendMode);
 
     SVGSVGElement* rootElement() const;
 
-    std::unique_ptr<SVGFrameLoaderClient> m_loaderClient;
     std::unique_ptr<SVGImageChromeClient> m_chromeClient;
     std::unique_ptr<Page> m_page;
     FloatSize m_intrinsicSize;
     URL m_url;
-    FrameLoader* m_dataProtocolLoader { nullptr };
 };
 
 bool isInSVGImage(const Element*);

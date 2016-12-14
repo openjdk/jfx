@@ -34,12 +34,8 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
-#include "Chrome.h"
-#include "ChromeClient.h"
-#include "DOMWindow.h"
 #include "FloatRect.h"
 #include "FrameView.h"
-#include "InspectorInstrumentation.h"
 #include "IntRect.h"
 #include "MainFrame.h"
 #include "MediaFeatureNames.h"
@@ -58,10 +54,6 @@
 
 #if ENABLE(3D_TRANSFORMS)
 #include "RenderLayerCompositor.h"
-#endif
-
-#if PLATFORM(IOS)
-#include "WebCoreSystemInterface.h"
 #endif
 
 namespace WebCore {
@@ -112,8 +104,8 @@ MediaQueryEvaluator::~MediaQueryEvaluator()
 bool MediaQueryEvaluator::mediaTypeMatch(const String& mediaTypeToMatch) const
 {
     return mediaTypeToMatch.isEmpty()
-        || equalIgnoringCase(mediaTypeToMatch, "all")
-        || equalIgnoringCase(mediaTypeToMatch, m_mediaType);
+        || equalLettersIgnoringASCIICase(mediaTypeToMatch, "all")
+        || equalIgnoringASCIICase(mediaTypeToMatch, m_mediaType);
 }
 
 bool MediaQueryEvaluator::mediaTypeMatchSpecific(const char* mediaTypeToMatch) const
@@ -121,8 +113,8 @@ bool MediaQueryEvaluator::mediaTypeMatchSpecific(const char* mediaTypeToMatch) c
     // Like mediaTypeMatch, but without the special cases for "" and "all".
     ASSERT(mediaTypeToMatch);
     ASSERT(mediaTypeToMatch[0] != '\0');
-    ASSERT(!equalIgnoringCase(mediaTypeToMatch, String("all")));
-    return equalIgnoringCase(mediaTypeToMatch, m_mediaType);
+    ASSERT(!equalLettersIgnoringASCIICase(StringView(mediaTypeToMatch), "all"));
+    return equalIgnoringASCIICase(m_mediaType, mediaTypeToMatch);
 }
 
 static bool applyRestrictor(MediaQuery::Restrictor r, bool value)
@@ -162,6 +154,40 @@ bool MediaQueryEvaluator::eval(const MediaQuerySet* querySet, StyleResolver* sty
 
             // assume true if we are at the end of the list,
             // otherwise assume false
+            result = applyRestrictor(query->restrictor(), expressions.size() == j);
+        } else
+            result = applyRestrictor(query->restrictor(), false);
+    }
+
+    return result;
+}
+
+bool MediaQueryEvaluator::evalCheckingViewportDependentResults(const MediaQuerySet* querySet, Vector<std::unique_ptr<MediaQueryResult>>& results)
+{
+    if (!querySet)
+        return true;
+
+    auto& queries = querySet->queryVector();
+    if (!queries.size())
+        return true;
+
+    bool result = false;
+    for (size_t i = 0; i < queries.size() && !result; ++i) {
+        MediaQuery* query = queries[i].get();
+
+        if (query->ignored())
+            continue;
+
+        if (mediaTypeMatch(query->mediaType())) {
+            auto& expressions = query->expressions();
+            size_t j = 0;
+            for (; j < expressions.size(); ++j) {
+                bool exprResult = eval(expressions.at(j).get());
+                if (expressions.at(j)->isViewportDependent())
+                    results.append(std::make_unique<MediaQueryResult>(*expressions.at(j), exprResult));
+                if (!exprResult)
+                    break;
+            }
             result = applyRestrictor(query->restrictor(), expressions.size() == j);
         } else
             result = applyRestrictor(query->restrictor(), false);
@@ -306,9 +332,9 @@ static bool evalResolution(CSSValue* value, Frame* frame, MediaFeaturePrefix op)
     // in the query. Thus, if if the document's media type is "print", the
     // media type of the query will either be "print" or "all".
     String mediaType = view->mediaType();
-    if (equalIgnoringCase(mediaType, "screen"))
+    if (equalLettersIgnoringASCIICase(mediaType, "screen"))
         deviceScaleFactor = frame->page()->deviceScaleFactor();
-    else if (equalIgnoringCase(mediaType, "print")) {
+    else if (equalLettersIgnoringASCIICase(mediaType, "print")) {
         // The resolution of images while printing should not depend on the dpi
         // of the screen. Until we support proper ways of querying this info
         // we use 300px which is considered minimum for current printers.
@@ -631,20 +657,9 @@ static bool view_modeMediaFeatureEval(CSSValue* value, const CSSToLengthConversi
 }
 #endif // ENABLE(VIEW_MODE_CSS_MEDIA)
 
-// FIXME: Find a better place for this function. Maybe ChromeClient?
-static inline bool isRunningOnIPhoneOrIPod()
-{
-#if PLATFORM(IOS)
-    static wkDeviceClass deviceClass = iosDeviceClass();
-    return deviceClass == wkDeviceClassiPhone || deviceClass == wkDeviceClassiPod;
-#else
-    return false;
-#endif
-}
-
 static bool video_playable_inlineMediaFeatureEval(CSSValue*, const CSSToLengthConversionData&, Frame* frame, MediaFeaturePrefix)
 {
-    return !isRunningOnIPhoneOrIPod() || frame->settings().allowsInlineMediaPlayback();
+    return frame->settings().allowsInlineMediaPlayback();
 }
 
 static bool hoverMediaFeatureEval(CSSValue* value, const CSSToLengthConversionData&, Frame*, MediaFeaturePrefix)

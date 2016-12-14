@@ -9,7 +9,11 @@
 namespace WTF {
 void scheduleDispatchFunctionsOnMainThread()
 {
-    JSC_GETJAVAENV_CHKRET(env);
+    JNIEnv *env;
+    int envStatus = jvm->GetEnv((void **)&env, JNI_VERSION_1_2);
+    if (envStatus == JNI_EDETACHED) {
+        jvm->AttachCurrentThread((void **)&env, NULL);
+    }
 
     static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
 
@@ -22,6 +26,10 @@ void scheduleDispatchFunctionsOnMainThread()
 
     env->CallStaticVoidMethod(jMainThreadCls, mid);
     CheckAndClearException(env);
+
+    if (envStatus == JNI_EDETACHED) {
+        jvm->DetachCurrentThread();
+    }
 }
 
 void initializeMainThreadPlatform()

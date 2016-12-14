@@ -37,6 +37,7 @@
 #include <wtf/ASCIICType.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
@@ -109,14 +110,7 @@ struct TextCodecFactory {
 typedef HashMap<const char*, const char*, TextEncodingNameHash> TextEncodingNameMap;
 typedef HashMap<const char*, TextCodecFactory> TextCodecMap;
 
-static std::mutex& encodingRegistryMutex()
-{
-    // We don't have to construct this mutex in a thread safe way because this function
-    // is called on the main thread for any page before it is used in worker threads.
-    static NeverDestroyed<std::mutex> mutex;
-
-    return mutex;
-}
+static StaticLock encodingRegistryMutex;
 
 static TextEncodingNameMap* textEncodingNameMap;
 static TextCodecMap* textCodecMap;
@@ -302,7 +296,7 @@ static void extendTextCodecMaps()
 
 std::unique_ptr<TextCodec> newTextCodec(const TextEncoding& encoding)
 {
-    std::lock_guard<std::mutex> lock(encodingRegistryMutex());
+    std::lock_guard<StaticLock> lock(encodingRegistryMutex);
 
     ASSERT(textCodecMap);
     TextCodecFactory factory = textCodecMap->get(encoding.name());
@@ -318,7 +312,7 @@ const char* atomicCanonicalTextEncodingName(const char* name)
     if (!textEncodingNameMap)
         buildBaseTextCodecMaps();
 
-    std::lock_guard<std::mutex> lock(encodingRegistryMutex());
+    std::lock_guard<StaticLock> lock(encodingRegistryMutex);
 
     if (const char* atomicName = textEncodingNameMap->get(name))
         return atomicName;
@@ -371,11 +365,11 @@ String defaultTextEncodingNameForSystemLanguage()
     // ICU uses this name for a different encoding, so we need to change the name to a value that actually gives us windows-949.
     // In addition, this value must match what is used in Safari, see <rdar://problem/5579292>.
     // On some OS versions, the result is CP949 (uppercase).
-    if (equalIgnoringCase(systemEncodingName, "cp949"))
-        systemEncodingName = "ks_c_5601-1987";
+    if (equalLettersIgnoringASCIICase(systemEncodingName, "cp949"))
+        systemEncodingName = ASCIILiteral("ks_c_5601-1987");
     return systemEncodingName;
 #else
-    return String("ISO-8859-1");
+    return ASCIILiteral("ISO-8859-1");
 #endif
 }
 
@@ -385,7 +379,7 @@ void dumpTextEncodingNameMap()
     unsigned size = textEncodingNameMap->size();
     fprintf(stderr, "Dumping %u entries in WebCore::textEncodingNameMap...\n", size);
 
-    std::lock_guard<std::mutex> lock(encodingRegistryMutex());
+    std::lock_guard<StaticLock> lock(encodingRegistryMutex);
 
     TextEncodingNameMap::const_iterator it = textEncodingNameMap->begin();
     TextEncodingNameMap::const_iterator end = textEncodingNameMap->end();

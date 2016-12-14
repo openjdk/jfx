@@ -176,8 +176,8 @@ std::pair<float, float> SVGGlyphToPathTranslator::extents()
 {
     AffineTransform glyphPathTransform = transform();
     FloatPoint beginning = glyphPathTransform.mapPoint(m_currentPoint);
-    FloatSize end = glyphPathTransform.mapSize(FloatSize(m_glyphBuffer.advanceAt(m_index)));
-    return std::make_pair(beginning.x(), beginning.x() + end.width());
+    float width = narrowPrecisionToFloat(m_glyphBuffer.advanceAt(m_index).width() * glyphPathTransform.xScale());
+    return std::make_pair(beginning.x(), beginning.x() + width);
 }
 
 auto SVGGlyphToPathTranslator::underlineType() -> GlyphUnderlineType
@@ -262,13 +262,13 @@ std::unique_ptr<GlyphToPathTranslator> SVGTextRunRenderingContext::createGlyphTo
     return std::make_unique<SVGGlyphToPathTranslator>(textRun, glyphBuffer, point, *svgFontData, *fontElement, from, numGlyphs, scale, isVerticalText);
 }
 
-void SVGTextRunRenderingContext::drawSVGGlyphs(GraphicsContext* context, const Font* font, const GlyphBuffer& glyphBuffer, int from, int numGlyphs, const FloatPoint& point) const
+void SVGTextRunRenderingContext::drawSVGGlyphs(GraphicsContext& context, const Font& font, const GlyphBuffer& glyphBuffer, int from, int numGlyphs, const FloatPoint& point) const
 {
     auto activePaintingResource = this->activePaintingResource();
     if (!activePaintingResource) {
         // TODO: We're only supporting simple filled HTML text so far.
         RenderSVGResourceSolidColor* solidPaintingResource = RenderSVGResource::sharedSolidPaintingResource();
-        solidPaintingResource->setColor(context->fillColor());
+        solidPaintingResource->setColor(context.fillColor());
         activePaintingResource = solidPaintingResource;
     }
 
@@ -277,15 +277,16 @@ void SVGTextRunRenderingContext::drawSVGGlyphs(GraphicsContext* context, const F
 
     ASSERT(activePaintingResource);
 
-    RenderSVGResourceMode resourceMode = context->textDrawingMode() == TextModeStroke ? ApplyToStrokeMode : ApplyToFillMode;
-    for (auto translator = createGlyphToPathTranslator(*font, nullptr, glyphBuffer, from, numGlyphs, point); translator->containsMorePaths(); translator->advance()) {
+    GraphicsContext* usedContext = &context;
+    RenderSVGResourceMode resourceMode = context.textDrawingMode() == TextModeStroke ? ApplyToStrokeMode : ApplyToFillMode;
+    for (auto translator = createGlyphToPathTranslator(font, nullptr, glyphBuffer, from, numGlyphs, point); translator->containsMorePaths(); translator->advance()) {
         Path glyphPath = translator->path();
-        if (activePaintingResource->applyResource(elementRenderer, style, context, resourceMode)) {
-            float strokeThickness = context->strokeThickness();
+        if (activePaintingResource->applyResource(elementRenderer, style, usedContext, resourceMode)) {
+            float strokeThickness = context.strokeThickness();
             if (is<RenderSVGInlineText>(renderer()))
-                context->setStrokeThickness(strokeThickness * downcast<RenderSVGInlineText>(renderer()).scalingFactor());
-            activePaintingResource->postApplyResource(elementRenderer, context, resourceMode, &glyphPath, nullptr);
-            context->setStrokeThickness(strokeThickness);
+                usedContext->setStrokeThickness(strokeThickness * downcast<RenderSVGInlineText>(renderer()).scalingFactor());
+            activePaintingResource->postApplyResource(elementRenderer, usedContext, resourceMode, &glyphPath, nullptr);
+            usedContext->setStrokeThickness(strokeThickness);
         }
     }
 }
@@ -340,7 +341,7 @@ GlyphData SVGTextRunRenderingContext::glyphDataForCharacter(const FontCascade& f
 
     // SVG font context sensitive selection failed and there is no defined missing glyph. Drop down to a default font.
     // The behavior does not seem to be specified. For simplicity we don't try to resolve font fallbacks context-sensitively.
-    FontDescription fallbackDescription = font.fontDescription();
+    auto fallbackDescription = font.fontDescription();
     fallbackDescription.setFamilies(Vector<AtomicString> { sansSerifFamily });
     FontCascade fallbackFont(fallbackDescription, font.letterSpacing(), font.wordSpacing());
     fallbackFont.update(font.fontSelector());

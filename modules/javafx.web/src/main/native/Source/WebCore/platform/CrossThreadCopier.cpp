@@ -38,14 +38,22 @@
 #include "ResourceResponse.h"
 #include "SerializedScriptValue.h"
 #include "SessionID.h"
+#include "ThreadSafeDataBuffer.h"
 #include <wtf/Assertions.h>
 #include <wtf/text/WTFString.h>
 
 #if ENABLE(INDEXED_DATABASE)
-#include "IDBDatabaseMetadata.h"
+#include "IDBCursorInfo.h"
+#include "IDBDatabaseIdentifier.h"
+#include "IDBDatabaseInfo.h"
+#include "IDBError.h"
 #include "IDBGetResult.h"
+#include "IDBIndexInfo.h"
 #include "IDBKeyData.h"
 #include "IDBKeyRangeData.h"
+#include "IDBObjectStoreInfo.h"
+#include "IDBResourceIdentifier.h"
+#include "IDBTransactionInfo.h"
 #endif
 
 namespace WebCore {
@@ -80,6 +88,11 @@ CrossThreadCopierBase<false, false, SessionID>::Type CrossThreadCopierBase<false
     return sessionID;
 }
 
+CrossThreadCopierBase<false, false, ThreadSafeDataBuffer>::Type CrossThreadCopierBase<false, false, ThreadSafeDataBuffer>::copy(const ThreadSafeDataBuffer& buffer)
+{
+    return ThreadSafeDataBuffer(buffer);
+}
+
 #if ENABLE(INDEXED_DATABASE)
 
 IndexedDB::TransactionMode CrossThreadCopierBase<false, false, IndexedDB::TransactionMode>::copy(const IndexedDB::TransactionMode& mode)
@@ -97,19 +110,9 @@ IndexedDB::CursorType CrossThreadCopierBase<false, false, IndexedDB::CursorType>
     return type;
 }
 
-CrossThreadCopierBase<false, false, IDBDatabaseMetadata>::Type CrossThreadCopierBase<false, false, IDBDatabaseMetadata>::copy(const IDBDatabaseMetadata& metadata)
-{
-    return metadata.isolatedCopy();
-}
-
 CrossThreadCopierBase<false, false, IDBGetResult>::Type CrossThreadCopierBase<false, false, IDBGetResult>::copy(const IDBGetResult& result)
 {
     return result.isolatedCopy();
-}
-
-CrossThreadCopierBase<false, false, IDBIndexMetadata>::Type CrossThreadCopierBase<false, false, IDBIndexMetadata>::copy(const IDBIndexMetadata& metadata)
-{
-    return metadata.isolatedCopy();
 }
 
 CrossThreadCopierBase<false, false, IDBKeyData>::Type CrossThreadCopierBase<false, false, IDBKeyData>::copy(const IDBKeyData& keyData)
@@ -122,12 +125,47 @@ CrossThreadCopierBase<false, false, IDBKeyRangeData>::Type CrossThreadCopierBase
     return keyRangeData.isolatedCopy();
 }
 
-CrossThreadCopierBase<false, false, IDBObjectStoreMetadata>::Type CrossThreadCopierBase<false, false, IDBObjectStoreMetadata>::copy(const IDBObjectStoreMetadata& metadata)
+CrossThreadCopierBase<false, false, IDBDatabaseInfo>::Type CrossThreadCopierBase<false, false, IDBDatabaseInfo>::copy(const IDBDatabaseInfo& info)
 {
-    return metadata.isolatedCopy();
+    return info.isolatedCopy();
 }
 
-#endif
+CrossThreadCopierBase<false, false, IDBDatabaseIdentifier>::Type CrossThreadCopierBase<false, false, IDBDatabaseIdentifier>::copy(const IDBDatabaseIdentifier& identifier)
+{
+    return identifier.isolatedCopy();
+}
+
+CrossThreadCopierBase<false, false, IDBTransactionInfo>::Type CrossThreadCopierBase<false, false, IDBTransactionInfo>::copy(const IDBTransactionInfo& info)
+{
+    return info.isolatedCopy();
+}
+
+CrossThreadCopierBase<false, false, IDBResourceIdentifier>::Type CrossThreadCopierBase<false, false, IDBResourceIdentifier>::copy(const IDBResourceIdentifier& identifier)
+{
+    return identifier.isolatedCopy();
+}
+
+CrossThreadCopierBase<false, false, IDBError>::Type CrossThreadCopierBase<false, false, IDBError>::copy(const IDBError& error)
+{
+    return error.isolatedCopy();
+}
+
+CrossThreadCopierBase<false, false, IDBObjectStoreInfo>::Type CrossThreadCopierBase<false, false, IDBObjectStoreInfo>::copy(const IDBObjectStoreInfo& info)
+{
+    return info.isolatedCopy();
+}
+
+CrossThreadCopierBase<false, false, IDBIndexInfo>::Type CrossThreadCopierBase<false, false, IDBIndexInfo>::copy(const IDBIndexInfo& info)
+{
+    return info.isolatedCopy();
+}
+
+CrossThreadCopierBase<false, false, IDBCursorInfo>::Type CrossThreadCopierBase<false, false, IDBCursorInfo>::copy(const IDBCursorInfo& info)
+{
+    return info.isolatedCopy();
+}
+
+#endif // ENABLE(INDEXED_DATABASE)
 
 // Test CrossThreadCopier using COMPILE_ASSERT.
 

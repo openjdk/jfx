@@ -40,6 +40,7 @@
 #include "GraphicsContext.h"
 #include "HTMLCanvasElement.h"
 #include "ImageBuffer.h"
+#include "Logging.h"
 #if PLATFORM(IOS)
 #import "OpenGLESSPI.h"
 #import <OpenGLES/ES2/glext.h>
@@ -58,18 +59,15 @@
 #include <runtime/Int32Array.h>
 #include <runtime/Float32Array.h>
 #include <runtime/Uint8Array.h>
+#include <sysexits.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
 
-#define USE_GPU_STATUS_CHECK ((PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000) || PLATFORM(IOS))
-
 const int maxActiveContexts = 64;
 int GraphicsContext3D::numActiveContexts = 0;
-#if USE_GPU_STATUS_CHECK
 const int GPUStatusCheckThreshold = 5;
 int GraphicsContext3D::GPUCheckCounter = 0;
-#endif
 
 // FIXME: This class is currently empty on Mac, but will get populated as
 // the restructuring in https://bugs.webkit.org/show_bug.cgi?id=66903 is done
@@ -204,13 +202,11 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
         return;
 
     CGLError err = CGLCreateContext(pixelFormatObj, 0, &m_contextObj);
-#if USE_GPU_STATUS_CHECK
     GLint abortOnBlacklist = 0;
 #if PLATFORM(MAC)
     CGLSetParameter(m_contextObj, kCGLCPAbortOnGPURestartStatusBlacklisted, &abortOnBlacklist);
 #elif PLATFORM(IOS)
     CGLSetParameter(m_contextObj, kEAGLCPAbortOnGPURestartStatusBlacklisted, &abortOnBlacklist);
-#endif
 #endif
 
     CGLDestroyPixelFormat(pixelFormatObj);
@@ -231,9 +227,6 @@ GraphicsContext3D::GraphicsContext3D(GraphicsContext3D::Attributes attrs, HostWi
     // Create the WebGLLayer
     BEGIN_BLOCK_OBJC_EXCEPTIONS
         m_webGLLayer = adoptNS([[WebGLLayer alloc] initWithGraphicsContext3D:this]);
-#if PLATFORM(IOS)
-        [m_webGLLayer setOpaque:0];
-#endif
 #ifndef NDEBUG
         [m_webGLLayer setName:@"WebGL Layer"];
 #endif
@@ -318,7 +311,6 @@ GraphicsContext3D::~GraphicsContext3D()
         makeContextCurrent();
         [m_contextObj renderbufferStorage:GL_RENDERBUFFER fromDrawable:nil];
         ::glDeleteRenderbuffers(1, &m_texture);
-        ::glDeleteRenderbuffers(1, &m_compositorTexture);
 #else
         CGLSetCurrentContext(m_contextObj);
         ::glDeleteTextures(1, &m_texture);
@@ -350,7 +342,9 @@ GraphicsContext3D::~GraphicsContext3D()
 bool GraphicsContext3D::setRenderbufferStorageFromDrawable(GC3Dsizei width, GC3Dsizei height)
 {
     [m_webGLLayer setBounds:CGRectMake(0, 0, width, height)];
-    return [m_contextObj renderbufferStorage:GL_RENDERBUFFER fromDrawable:static_cast<NSObject<EAGLDrawable>*>(m_webGLLayer.get())];
+    [m_webGLLayer setOpaque:(m_internalColorFormat != GL_RGBA8)];
+
+    return [m_contextObj renderbufferStorage:GL_RENDERBUFFER fromDrawable:static_cast<id<EAGLDrawable>>(m_webGLLayer.get())];
 }
 #endif
 
@@ -372,28 +366,32 @@ bool GraphicsContext3D::makeContextCurrent()
 
 void GraphicsContext3D::checkGPUStatusIfNecessary()
 {
-#if USE_GPU_STATUS_CHECK
+    bool needsCheck = !GPUCheckCounter;
     GPUCheckCounter = (GPUCheckCounter + 1) % GPUStatusCheckThreshold;
-    if (GPUCheckCounter)
+
+    if (!needsCheck)
         return;
-#if PLATFORM(MAC)
+
     GLint restartStatus = 0;
+#if PLATFORM(MAC)
     CGLGetParameter(platformGraphicsContext3D(), kCGLCPGPURestartStatus, &restartStatus);
-    if (restartStatus == kCGLCPGPURestartStatusCaused || restartStatus == kCGLCPGPURestartStatusBlacklisted) {
-        CGLSetCurrentContext(0);
-        CGLDestroyContext(platformGraphicsContext3D());
+    if (restartStatus == kCGLCPGPURestartStatusBlacklisted) {
+        LOG(WebGL, "The GPU has blacklisted us. Terminating.");
+        exit(EX_OSERR);
+    }
+    if (restartStatus == kCGLCPGPURestartStatusCaused) {
+        LOG(WebGL, "The GPU has reset us. Lose the context.");
         forceContextLost();
+        CGLSetCurrentContext(0);
     }
 #elif PLATFORM(IOS)
-    GLint restartStatus = 0;
     EAGLContext* currentContext = static_cast<EAGLContext*>(PlatformGraphicsContext3D());
     [currentContext getParameter:kEAGLCPGPURestartStatus to:&restartStatus];
     if (restartStatus == kEAGLCPGPURestartStatusCaused || restartStatus == kEAGLCPGPURestartStatusBlacklisted) {
-        [EAGLContext setCurrentContext:0];
-        [static_cast<EAGLContext*>(currentContext) release];
+        LOG(WebGL, "The GPU has either reset or blacklisted us. Lose the context.");
         forceContextLost();
+        [EAGLContext setCurrentContext:0];
     }
-#endif
 #endif
 }
 
@@ -401,6 +399,8 @@ void GraphicsContext3D::checkGPUStatusIfNecessary()
 void GraphicsContext3D::endPaint()
 {
     makeContextCurrent();
+    if (m_attrs.antialias)
+        resolveMultisamplingIfNecessary();
     ::glFlush();
     ::glBindRenderbuffer(GL_RENDERBUFFER, m_texture);
     [static_cast<EAGLContext*>(m_contextObj) presentRenderbuffer:GL_RENDERBUFFER];

@@ -30,6 +30,7 @@
 
 #include "CachedScript.h"
 #include "DOMTimer.h"
+#include "DOMWindow.h"
 #include "DatabaseContext.h"
 #include "Document.h"
 #include "ErrorEvent.h"
@@ -98,11 +99,13 @@ inline void ScriptExecutionContext::checkConsistency() const
 
 void ScriptExecutionContext::checkConsistency() const
 {
-    for (auto* messagePort : m_messagePorts)
+    for (auto* messagePort : m_messagePorts) {
         ASSERT(messagePort->scriptExecutionContext() == this);
+    }
 
-    for (auto* destructionObserver : m_destructionObservers)
+    for (auto* destructionObserver : m_destructionObservers) {
         ASSERT(destructionObserver->scriptExecutionContext() == this);
+    }
 
     for (auto* activeDOMObject : m_activeDOMObjects) {
         ASSERT(activeDOMObject->scriptExecutionContext() == this);
@@ -176,7 +179,7 @@ void ScriptExecutionContext::didLoadResourceSynchronously(const ResourceRequest&
 {
 }
 
-bool ScriptExecutionContext::canSuspendActiveDOMObjectsForPageCache(Vector<ActiveDOMObject*>* unsuspendableObjects)
+bool ScriptExecutionContext::canSuspendActiveDOMObjectsForDocumentSuspension(Vector<ActiveDOMObject*>* unsuspendableObjects)
 {
     checkConsistency();
 
@@ -193,7 +196,7 @@ bool ScriptExecutionContext::canSuspendActiveDOMObjectsForPageCache(Vector<Activ
     // canSuspend functions so it will not happen!
     NoEventDispatchAssertion assertNoEventDispatch;
     for (auto* activeDOMObject : m_activeDOMObjects) {
-        if (!activeDOMObject->canSuspendForPageCache()) {
+        if (!activeDOMObject->canSuspendForDocumentSuspension()) {
             canSuspend = false;
             if (unsuspendableObjects)
                 unsuspendableObjects->append(activeDOMObject);
@@ -214,12 +217,13 @@ void ScriptExecutionContext::suspendActiveDOMObjects(ActiveDOMObject::ReasonForS
 {
     checkConsistency();
 
-#if PLATFORM(IOS)
     if (m_activeDOMObjectsAreSuspended) {
-        ASSERT(m_reasonForSuspendingActiveDOMObjects == ActiveDOMObject::DocumentWillBePaused);
+        // A page may subsequently suspend DOM objects, say as part of entering the page cache, after the embedding
+        // client requested the page be suspended. We ignore such requests so long as the embedding client requested
+        // the suspension first. See <rdar://problem/13754896> for more details.
+        ASSERT(m_reasonForSuspendingActiveDOMObjects == ActiveDOMObject::PageWillBeSuspended);
         return;
     }
-#endif
 
     m_activeDOMObjectAdditionForbidden = true;
 #if !ASSERT_DISABLED || ENABLE(SECURITY_ASSERTIONS)
@@ -372,7 +376,7 @@ void ScriptExecutionContext::reportException(const String& errorMessage, int lin
     if (!m_pendingExceptions)
         return;
 
-    std::unique_ptr<Vector<std::unique_ptr<PendingException>>> pendingExceptions = WTF::move(m_pendingExceptions);
+    std::unique_ptr<Vector<std::unique_ptr<PendingException>>> pendingExceptions = WTFMove(m_pendingExceptions);
     for (auto& exception : *pendingExceptions)
         logExceptionToConsole(exception->m_errorMessage, exception->m_sourceURL, exception->m_lineNumber, exception->m_columnNumber, exception->m_callStack.copyRef());
 }
@@ -389,7 +393,7 @@ bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int 
         return false;
 
 #if PLATFORM(IOS)
-    if (target == target->toDOMWindow() && is<Document>(*this)) {
+    if (target->toDOMWindow() && is<Document>(*this)) {
         Settings* settings = downcast<Document>(*this).settings();
         if (settings && !settings->shouldDispatchJavaScriptWindowOnErrorEvents())
             return false;
@@ -404,7 +408,7 @@ bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int 
 
     ASSERT(!m_inDispatchErrorEvent);
     m_inDispatchErrorEvent = true;
-    RefPtr<ErrorEvent> errorEvent = ErrorEvent::create(message, sourceName, line, column);
+    Ref<ErrorEvent> errorEvent = ErrorEvent::create(message, sourceName, line, column);
     target->dispatchEvent(errorEvent);
     m_inDispatchErrorEvent = false;
     return errorEvent->defaultPrevented();

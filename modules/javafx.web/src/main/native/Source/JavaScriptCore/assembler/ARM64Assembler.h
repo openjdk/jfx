@@ -29,6 +29,7 @@
 #if ENABLE(ASSEMBLER) && CPU(ARM64)
 
 #include "AssemblerBuffer.h"
+#include "AssemblerCommon.h"
 #include <limits.h>
 #include <wtf/Assertions.h>
 #include <wtf/Vector.h>
@@ -38,6 +39,7 @@
 #define DATASIZE_OF(datasize) ((datasize == 64) ? Datasize_64 : Datasize_32)
 #define MEMOPSIZE_OF(datasize) ((datasize == 8 || datasize == 128) ? MemOpSize_8_or_128 : (datasize == 16) ? MemOpSize_16 : (datasize == 32) ? MemOpSize_32 : MemOpSize_64)
 #define CHECK_DATASIZE() CHECK_DATASIZE_OF(datasize)
+#define CHECK_VECTOR_DATASIZE() ASSERT(datasize == 64 || datasize == 128)
 #define DATASIZE DATASIZE_OF(datasize)
 #define MEMOPSIZE MEMOPSIZE_OF(datasize)
 #define CHECK_FP_MEMOP_DATASIZE() ASSERT(datasize == 8 || datasize == 16 || datasize == 32 || datasize == 64 || datasize == 128)
@@ -51,11 +53,6 @@ ALWAYS_INLINE bool isInt7(int32_t value)
     return value == ((value << 25) >> 25);
 }
 
-ALWAYS_INLINE bool isInt9(int32_t value)
-{
-    return value == ((value << 23) >> 23);
-}
-
 ALWAYS_INLINE bool isInt11(int32_t value)
 {
     return value == ((value << 21) >> 21);
@@ -64,16 +61,6 @@ ALWAYS_INLINE bool isInt11(int32_t value)
 ALWAYS_INLINE bool isUInt5(int32_t value)
 {
     return !(value & ~0x1f);
-}
-
-ALWAYS_INLINE bool isUInt12(int32_t value)
-{
-    return !(value & ~0xfff);
-}
-
-ALWAYS_INLINE bool isUInt12(intptr_t value)
-{
-    return !(value & ~0xfffL);
 }
 
 class UInt5 {
@@ -160,227 +147,7 @@ private:
     int m_value;
 };
 
-class LogicalImmediate {
-public:
-    static LogicalImmediate create32(uint32_t value)
-    {
-        // Check for 0, -1 - these cannot be encoded.
-        if (!value || !~value)
-            return InvalidLogicalImmediate;
-
-        // First look for a 32-bit pattern, then for repeating 16-bit
-        // patterns, 8-bit, 4-bit, and finally 2-bit.
-
-        unsigned hsb, lsb;
-        bool inverted;
-        if (findBitRange<32>(value, hsb, lsb, inverted))
-            return encodeLogicalImmediate<32>(hsb, lsb, inverted);
-
-        if ((value & 0xffff) != (value >> 16))
-            return InvalidLogicalImmediate;
-        value &= 0xffff;
-
-        if (findBitRange<16>(value, hsb, lsb, inverted))
-            return encodeLogicalImmediate<16>(hsb, lsb, inverted);
-
-        if ((value & 0xff) != (value >> 8))
-            return InvalidLogicalImmediate;
-        value &= 0xff;
-
-        if (findBitRange<8>(value, hsb, lsb, inverted))
-            return encodeLogicalImmediate<8>(hsb, lsb, inverted);
-
-        if ((value & 0xf) != (value >> 4))
-            return InvalidLogicalImmediate;
-        value &= 0xf;
-
-        if (findBitRange<4>(value, hsb, lsb, inverted))
-            return encodeLogicalImmediate<4>(hsb, lsb, inverted);
-
-        if ((value & 0x3) != (value >> 2))
-            return InvalidLogicalImmediate;
-        value &= 0x3;
-
-        if (findBitRange<2>(value, hsb, lsb, inverted))
-            return encodeLogicalImmediate<2>(hsb, lsb, inverted);
-
-        return InvalidLogicalImmediate;
-    }
-
-    static LogicalImmediate create64(uint64_t value)
-    {
-        // Check for 0, -1 - these cannot be encoded.
-        if (!value || !~value)
-            return InvalidLogicalImmediate;
-
-        // Look for a contiguous bit range.
-        unsigned hsb, lsb;
-        bool inverted;
-        if (findBitRange<64>(value, hsb, lsb, inverted))
-            return encodeLogicalImmediate<64>(hsb, lsb, inverted);
-
-        // If the high & low 32 bits are equal, we can try for a 32-bit (or narrower) pattern.
-        if (static_cast<uint32_t>(value) == static_cast<uint32_t>(value >> 32))
-            return create32(static_cast<uint32_t>(value));
-        return InvalidLogicalImmediate;
-    }
-
-    int value() const
-    {
-        ASSERT(isValid());
-        return m_value;
-    }
-
-    bool isValid() const
-    {
-        return m_value != InvalidLogicalImmediate;
-    }
-
-    bool is64bit() const
-    {
-        return m_value & (1 << 12);
-    }
-
-private:
-    LogicalImmediate(int value)
-        : m_value(value)
-    {
-    }
-
-    // Generate a mask with bits in the range hsb..0 set, for example:
-    //   hsb:63 = 0xffffffffffffffff
-    //   hsb:42 = 0x000007ffffffffff
-    //   hsb: 0 = 0x0000000000000001
-    static uint64_t mask(unsigned hsb)
-    {
-        ASSERT(hsb < 64);
-        return 0xffffffffffffffffull >> (63 - hsb);
-    }
-
-    template<unsigned N>
-    static void partialHSB(uint64_t& value, unsigned&result)
-    {
-        if (value & (0xffffffffffffffffull << N)) {
-            result += N;
-            value >>= N;
-        }
-    }
-
-    // Find the bit number of the highest bit set in a non-zero value, for example:
-    //   0x8080808080808080 = hsb:63
-    //   0x0000000000000001 = hsb: 0
-    //   0x000007ffffe00000 = hsb:42
-    static unsigned highestSetBit(uint64_t value)
-    {
-        ASSERT(value);
-        unsigned hsb = 0;
-        partialHSB<32>(value, hsb);
-        partialHSB<16>(value, hsb);
-        partialHSB<8>(value, hsb);
-        partialHSB<4>(value, hsb);
-        partialHSB<2>(value, hsb);
-        partialHSB<1>(value, hsb);
-        return hsb;
-    }
-
-    // This function takes a value and a bit width, where value obeys the following constraints:
-    //   * bits outside of the width of the value must be zero.
-    //   * bits within the width of value must neither be all clear or all set.
-    // The input is inspected to detect values that consist of either two or three contiguous
-    // ranges of bits. The output range hsb..lsb will describe the second range of the value.
-    // if the range is set, inverted will be false, and if the range is clear, inverted will
-    // be true. For example (with width 8):
-    //   00001111 = hsb:3, lsb:0, inverted:false
-    //   11110000 = hsb:3, lsb:0, inverted:true
-    //   00111100 = hsb:5, lsb:2, inverted:false
-    //   11000011 = hsb:5, lsb:2, inverted:true
-    template<unsigned width>
-    static bool findBitRange(uint64_t value, unsigned& hsb, unsigned& lsb, bool& inverted)
-    {
-        ASSERT(value & mask(width - 1));
-        ASSERT(value != mask(width - 1));
-        ASSERT(!(value & ~mask(width - 1)));
-
-        // Detect cases where the top bit is set; if so, flip all the bits & set invert.
-        // This halves the number of patterns we need to look for.
-        const uint64_t msb = 1ull << (width - 1);
-        if ((inverted = (value & msb)))
-            value ^= mask(width - 1);
-
-        // Find the highest set bit in value, generate a corresponding mask & flip all
-        // bits under it.
-        hsb = highestSetBit(value);
-        value ^= mask(hsb);
-        if (!value) {
-            // If this cleared the value, then the range hsb..0 was all set.
-            lsb = 0;
-            return true;
-        }
-
-        // Try making one more mask, and flipping the bits!
-        lsb = highestSetBit(value);
-        value ^= mask(lsb);
-        if (!value) {
-            // Success - but lsb actually points to the hsb of a third range - add one
-            // to get to the lsb of the mid range.
-            ++lsb;
-            return true;
-        }
-
-        return false;
-    }
-
-    // Encodes the set of immN:immr:imms fields found in a logical immediate.
-    template<unsigned width>
-    static int encodeLogicalImmediate(unsigned hsb, unsigned lsb, bool inverted)
-    {
-        // Check width is a power of 2!
-        ASSERT(!(width & (width -1)));
-        ASSERT(width <= 64 && width >= 2);
-        ASSERT(hsb >= lsb);
-        ASSERT(hsb < width);
-
-        int immN = 0;
-        int imms = 0;
-        int immr = 0;
-
-        // For 64-bit values this is easy - just set immN to true, and imms just
-        // contains the bit number of the highest set bit of the set range. For
-        // values with narrower widths, these are encoded by a leading set of
-        // one bits, followed by a zero bit, followed by the remaining set of bits
-        // being the high bit of the range. For a 32-bit immediate there are no
-        // leading one bits, just a zero followed by a five bit number. For a
-        // 16-bit immediate there is one one bit, a zero bit, and then a four bit
-        // bit-position, etc.
-        if (width == 64)
-            immN = 1;
-        else
-            imms = 63 & ~(width + width - 1);
-
-        if (inverted) {
-            // if width is 64 & hsb is 62, then we have a value something like:
-            //   0x80000000ffffffff (in this case with lsb 32).
-            // The ror should be by 1, imms (effectively set width minus 1) is
-            // 32. Set width is full width minus cleared width.
-            immr = (width - 1) - hsb;
-            imms |= (width - ((hsb - lsb) + 1)) - 1;
-        } else {
-            // if width is 64 & hsb is 62, then we have a value something like:
-            //   0x7fffffff00000000 (in this case with lsb 32).
-            // The value is effectively rol'ed by lsb, which is equivalent to
-            // a ror by width - lsb (or 0, in the case where lsb is 0). imms
-            // is hsb - lsb.
-            immr = (width - lsb) & (width - 1);
-            imms |= hsb - lsb;
-        }
-
-        return immN << 12 | immr << 6 | imms;
-    }
-
-    static const int InvalidLogicalImmediate = -1;
-
-    int m_value;
-};
+typedef ARM64LogicalImmediate LogicalImmediate;
 
 inline uint16_t getHalfword(uint64_t value, int which)
 {
@@ -388,105 +155,138 @@ inline uint16_t getHalfword(uint64_t value, int which)
 }
 
 namespace ARM64Registers {
-    typedef enum {
-        // ￼Parameter/result registers
-        x0,
-        x1,
-        x2,
-        x3,
-        x4,
-        x5,
-        x6,
-        x7,
-        // Indirect result location register
-        x8,
-        // Temporary registers
-        x9,
-        x10,
-        x11,
-        x12,
-        x13,
-        x14,
-        x15,
-        // Intra-procedure-call scratch registers (temporary)
-        x16, ip0 = x16,
-        x17, ip1 = x17,
-        // Platform Register (temporary)
-        x18,
-        // Callee-saved
-        x19,
-        x20,
-        x21,
-        x22,
-        x23,
-        x24,
-        x25,
-        x26,
-        x27,
-        x28,
-        // Special
-        x29, fp = x29,
-        x30, lr = x30,
-        sp,
-        zr = 0x3f,
-    } RegisterID;
 
-    typedef enum {
-        // Parameter/result registers
-        q0,
-        q1,
-        q2,
-        q3,
-        q4,
-        q5,
-        q6,
-        q7,
-        // Callee-saved (up to 64-bits only!)
-        q8,
-        q9,
-        q10,
-        q11,
-        q12,
-        q13,
-        q14,
-        q15,
-        // Temporary registers
-        q16,
-        q17,
-        q18,
-        q19,
-        q20,
-        q21,
-        q22,
-        q23,
-        q24,
-        q25,
-        q26,
-        q27,
-        q28,
-        q29,
-        q30,
-        q31,
-    } FPRegisterID;
+#define FOR_EACH_CPU_REGISTER(V) \
+    FOR_EACH_CPU_GPREGISTER(V) \
+    FOR_EACH_CPU_SPECIAL_REGISTER(V) \
+    FOR_EACH_CPU_FPREGISTER(V)
 
-    static bool isSp(RegisterID reg) { return reg == sp; }
-    static bool isZr(RegisterID reg) { return reg == zr; }
-}
+// The following are defined as pairs of the following value:
+// 1. type of the storage needed to save the register value by the JIT probe.
+// 2. name of the register.
+#define FOR_EACH_CPU_GPREGISTER(V) \
+    /* Parameter/result registers */ \
+    V(void*, x0) \
+    V(void*, x1) \
+    V(void*, x2) \
+    V(void*, x3) \
+    V(void*, x4) \
+    V(void*, x5) \
+    V(void*, x6) \
+    V(void*, x7) \
+    /* Indirect result location register */ \
+    V(void*, x8) \
+    /* Temporary registers */ \
+    V(void*, x9) \
+    V(void*, x10) \
+    V(void*, x11) \
+    V(void*, x12) \
+    V(void*, x13) \
+    V(void*, x14) \
+    V(void*, x15) \
+    /* Intra-procedure-call scratch registers (temporary) */ \
+    V(void*, x16) \
+    V(void*, x17) \
+    /* Platform Register (temporary) */ \
+    V(void*, x18) \
+    /* Callee-saved */ \
+    V(void*, x19) \
+    V(void*, x20) \
+    V(void*, x21) \
+    V(void*, x22) \
+    V(void*, x23) \
+    V(void*, x24) \
+    V(void*, x25) \
+    V(void*, x26) \
+    V(void*, x27) \
+    V(void*, x28) \
+    /* Special */ \
+    V(void*, fp) \
+    V(void*, lr) \
+    V(void*, sp)
+
+#define FOR_EACH_CPU_SPECIAL_REGISTER(V) \
+    V(void*, pc) \
+    V(void*, nzcv) \
+    V(void*, fpsr) \
+
+// ARM64 always has 32 FPU registers 128-bits each. See http://llvm.org/devmtg/2012-11/Northover-AArch64.pdf
+// and Section 5.1.2 in http://infocenter.arm.com/help/topic/com.arm.doc.ihi0055b/IHI0055B_aapcs64.pdf.
+// However, we only use them for 64-bit doubles.
+#define FOR_EACH_CPU_FPREGISTER(V) \
+    /* Parameter/result registers */ \
+    V(double, q0) \
+    V(double, q1) \
+    V(double, q2) \
+    V(double, q3) \
+    V(double, q4) \
+    V(double, q5) \
+    V(double, q6) \
+    V(double, q7) \
+    /* Callee-saved (up to 64-bits only!) */ \
+    V(double, q8) \
+    V(double, q9) \
+    V(double, q10) \
+    V(double, q11) \
+    V(double, q12) \
+    V(double, q13) \
+    V(double, q14) \
+    V(double, q15) \
+    /* Temporary registers */ \
+    V(double, q16) \
+    V(double, q17) \
+    V(double, q18) \
+    V(double, q19) \
+    V(double, q20) \
+    V(double, q21) \
+    V(double, q22) \
+    V(double, q23) \
+    V(double, q24) \
+    V(double, q25) \
+    V(double, q26) \
+    V(double, q27) \
+    V(double, q28) \
+    V(double, q29) \
+    V(double, q30) \
+    V(double, q31)
+
+typedef enum {
+    #define DECLARE_REGISTER(_type, _regName) _regName,
+    FOR_EACH_CPU_GPREGISTER(DECLARE_REGISTER)
+    #undef DECLARE_REGISTER
+
+    ip0 = x16,
+    ip1 = x17,
+    x29 = fp,
+    x30 = lr,
+    zr = 0x3f,
+} RegisterID;
+
+typedef enum {
+    #define DECLARE_REGISTER(_type, _regName) _regName,
+    FOR_EACH_CPU_FPREGISTER(DECLARE_REGISTER)
+    #undef DECLARE_REGISTER
+} FPRegisterID;
+
+static constexpr bool isSp(RegisterID reg) { return reg == sp; }
+static constexpr bool isZr(RegisterID reg) { return reg == zr; }
+
+} // namespace ARM64Registers
 
 class ARM64Assembler {
 public:
     typedef ARM64Registers::RegisterID RegisterID;
     typedef ARM64Registers::FPRegisterID FPRegisterID;
 
-    static RegisterID firstRegister() { return ARM64Registers::x0; }
-    static RegisterID lastRegister() { return ARM64Registers::sp; }
+    static constexpr RegisterID firstRegister() { return ARM64Registers::x0; }
+    static constexpr RegisterID lastRegister() { return ARM64Registers::sp; }
 
-    static FPRegisterID firstFPRegister() { return ARM64Registers::q0; }
-    static FPRegisterID lastFPRegister() { return ARM64Registers::q31; }
+    static constexpr FPRegisterID firstFPRegister() { return ARM64Registers::q0; }
+    static constexpr FPRegisterID lastFPRegister() { return ARM64Registers::q31; }
 
 private:
-    static bool isSp(RegisterID reg) { return ARM64Registers::isSp(reg); }
-    static bool isZr(RegisterID reg) { return ARM64Registers::isZr(reg); }
+    static constexpr bool isSp(RegisterID reg) { return ARM64Registers::isSp(reg); }
+    static constexpr bool isZr(RegisterID reg) { return ARM64Registers::isZr(reg); }
 
 public:
     ARM64Assembler()
@@ -683,19 +483,12 @@ public:
     template<int datasize>
     static bool canEncodePImmOffset(int32_t offset)
     {
-        int32_t maxPImm = 4095 * (datasize / 8);
-        if (offset < 0)
-            return false;
-        if (offset > maxPImm)
-            return false;
-        if (offset & ((datasize / 8 ) - 1))
-            return false;
-        return true;
+        return isValidScaledUImm12<datasize>(offset);
     }
 
     static bool canEncodeSImmOffset(int32_t offset)
     {
-        return isInt9(offset);
+        return isValidSignedImm9(offset);
     }
 
 private:
@@ -826,6 +619,10 @@ private:
         FPDataOp_FMAXNM,
         FPDataOp_FMINNM,
         FPDataOp_FNMUL
+    };
+
+    enum SIMD3Same {
+        SIMD_LogicalOp_AND = 0x03
     };
 
     enum FPIntConvOp {
@@ -2385,6 +2182,13 @@ public:
     }
 
     template<int datasize>
+    ALWAYS_INLINE void vand(FPRegisterID vd, FPRegisterID vn, FPRegisterID vm)
+    {
+        CHECK_VECTOR_DATASIZE();
+        insn(vectorDataProcessing2Source(SIMD_LogicalOp_AND, vm, vn, vd));
+    }
+
+    template<int datasize>
     ALWAYS_INLINE void frinta(FPRegisterID vd, FPRegisterID vn)
     {
         CHECK_DATASIZE();
@@ -2851,10 +2655,10 @@ public:
 
     unsigned debugOffset() { return m_buffer.debugOffset(); }
 
-#if OS(LINUX) && COMPILER(GCC)
+#if OS(LINUX) && COMPILER(GCC_OR_CLANG)
     static inline void linuxPageFlush(uintptr_t begin, uintptr_t end)
     {
-        __builtin___clear_cache(reinterpret_cast<void*>(begin), reinterpret_cast<void*>(end));
+        __builtin___clear_cache(reinterpret_cast<char*>(begin), reinterpret_cast<char*>(end));
     }
 #endif
 
@@ -3252,8 +3056,18 @@ private:
         return (insn & 0x7c000000) == 0x14000000;
     }
 
-    static int xOrSp(RegisterID reg) { ASSERT(!isZr(reg)); return reg; }
-    static int xOrZr(RegisterID reg) { ASSERT(!isSp(reg)); return reg & 31; }
+    static int xOrSp(RegisterID reg)
+    {
+        ASSERT(!isZr(reg));
+        ASSERT(!isIOS() || reg != ARM64Registers::x18);
+        return reg;
+    }
+    static int xOrZr(RegisterID reg)
+    {
+        ASSERT(!isSp(reg));
+        ASSERT(!isIOS() || reg != ARM64Registers::x18);
+        return reg & 31;
+    }
     static FPRegisterID xOrZrAsFPR(RegisterID reg) { return static_cast<FPRegisterID>(xOrZr(reg)); }
     static int xOrZrOrSp(bool useZr, RegisterID reg) { return useZr ? xOrZr(reg) : xOrSp(reg); }
 
@@ -3439,6 +3253,18 @@ private:
         const int S = 0;
         return (0x1e200800 | M << 31 | S << 29 | type << 22 | rm << 16 | opcode << 12 | rn << 5 | rd);
     }
+
+    ALWAYS_INLINE static int vectorDataProcessing2Source(SIMD3Same opcode, unsigned size, FPRegisterID vm, FPRegisterID vn, FPRegisterID vd)
+    {
+        const int Q = 0;
+        return (0xe201c00 | Q << 30 | size << 22 | vm << 16 | opcode << 11 | vn << 5 | vd);
+    }
+
+    ALWAYS_INLINE static int vectorDataProcessing2Source(SIMD3Same opcode, FPRegisterID vm, FPRegisterID vn, FPRegisterID vd)
+    {
+        return vectorDataProcessing2Source(opcode, 0, vm, vn, vd);
+    }
+
 
     // 'o1' means negate
     ALWAYS_INLINE static int floatingPointDataProcessing3Source(Datasize type, bool o1, FPRegisterID rm, AddOp o2, FPRegisterID ra, FPRegisterID rn, FPRegisterID rd)

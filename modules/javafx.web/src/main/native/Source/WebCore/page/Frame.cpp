@@ -165,7 +165,6 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
 #if PLATFORM(IOS)
     , m_overflowAutoScrollTimer(*this, &Frame::overflowAutoScrollTimerFired)
     , m_selectionChangeCallbacksDisabled(false)
-    , m_timersPausedCount(0)
 #endif
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
@@ -192,17 +191,10 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
     frameCounter.increment();
 #endif
 
-    // FIXME: We should reconcile the iOS and OpenSource code below.
-    Frame* parent = parentFromOwnerElement(ownerElement);
-#if PLATFORM(IOS)
-    // Pause future timers if this frame is created when page is in pending state.
-    if (parent && parent->timersPaused())
-        setTimersPaused(true);
-#else
     // Pause future ActiveDOMObjects if this frame is being created while the page is in a paused state.
+    Frame* parent = parentFromOwnerElement(ownerElement);
     if (parent && parent->activeDOMObjectsAndAnimationsSuspended())
         suspendActiveDOMObjectsAndAnimations();
-#endif
 }
 
 Ref<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient* client)
@@ -261,7 +253,7 @@ void Frame::setView(RefPtr<FrameView>&& view)
 
     eventHandler().clear();
 
-    m_view = WTF::move(view);
+    m_view = WTFMove(view);
 
     // Only one form submission is allowed per view of a part.
     // Since this part may be getting reused as a result of being
@@ -314,7 +306,7 @@ static JSC::Yarr::RegularExpression createRegExpForLabels(const Vector<String>& 
     // REVIEW- version of this call in FrameMac.mm caches based on the NSArray ptrs being
     // the same across calls.  We can't do that.
 
-    DEPRECATED_DEFINE_STATIC_LOCAL(JSC::Yarr::RegularExpression, wordRegExp, ("\\w", TextCaseSensitive));
+    static NeverDestroyed<JSC::Yarr::RegularExpression> wordRegExp("\\w", TextCaseSensitive);
     StringBuilder pattern;
     pattern.append('(');
     unsigned int numLabels = labels.size();
@@ -325,8 +317,8 @@ static JSC::Yarr::RegularExpression createRegExpForLabels(const Vector<String>& 
         bool startsWithWordChar = false;
         bool endsWithWordChar = false;
         if (label.length()) {
-            startsWithWordChar = wordRegExp.match(label.substring(0, 1)) >= 0;
-            endsWithWordChar = wordRegExp.match(label.substring(label.length() - 1, 1)) >= 0;
+            startsWithWordChar = wordRegExp.get().match(label.substring(0, 1)) >= 0;
+            endsWithWordChar = wordRegExp.get().match(label.substring(label.length() - 1, 1)) >= 0;
         }
 
         if (i)
@@ -498,25 +490,25 @@ void Frame::scrollOverflowLayer(RenderLayer* layer, const IntRect& visibleRect, 
     if (visibleRect.intersects(exposeRect))
         return;
 
-    int x = layer->scrollXOffset();
+    // FIXME: Why isn't this just calling RenderLayer::scrollRectToVisible()?
+    ScrollOffset scrollOffset = layer->scrollOffset();
     int exposeLeft = exposeRect.x();
     int exposeRight = exposeLeft + exposeRect.width();
     int clientWidth = roundToInt(box->clientWidth());
     if (exposeLeft <= 0)
-        x = std::max(0, x + exposeLeft - clientWidth / 2);
+        scrollOffset.setX(std::max(0, scrollOffset.x() + exposeLeft - clientWidth / 2));
     else if (exposeRight >= clientWidth)
-        x = std::min(box->scrollWidth() - clientWidth, x + clientWidth / 2);
+        scrollOffset.setX(std::min(box->scrollWidth() - clientWidth, scrollOffset.x() + clientWidth / 2));
 
-    int y = layer->scrollYOffset();
     int exposeTop = exposeRect.y();
     int exposeBottom = exposeTop + exposeRect.height();
     int clientHeight = roundToInt(box->clientHeight());
     if (exposeTop <= 0)
-        y = std::max(0, y + exposeTop - clientHeight / 2);
+        scrollOffset.setY(std::max(0, scrollOffset.y() + exposeTop - clientHeight / 2));
     else if (exposeBottom >= clientHeight)
-        y = std::min(box->scrollHeight() - clientHeight, y + clientHeight / 2);
+        scrollOffset.setY(std::min(box->scrollHeight() - clientHeight, scrollOffset.y() + clientHeight / 2));
 
-    layer->scrollToOffset(IntSize(x, y));
+    layer->scrollToOffset(scrollOffset);
     selection().setCaretRectNeedsUpdate();
     selection().updateAppearance();
 }
@@ -610,7 +602,7 @@ int Frame::checkOverflowScroll(OverflowScrollAction action)
     }
 
     if (action == PerformOverflowScroll && (deltaX || deltaY)) {
-        layer->scrollToOffset(IntSize(layer->scrollXOffset() + deltaX, layer->scrollYOffset() + deltaY));
+        layer->scrollToOffset(layer->scrollOffset() + IntSize(deltaX, deltaY));
 
         // Handle making selection.
         VisiblePosition visiblePosition(renderer->positionForPoint(selectionPosition, nullptr));
@@ -878,7 +870,6 @@ void Frame::createView(const IntSize& viewportSize, const Color& backgroundColor
     bool useFixedLayout, ScrollbarMode horizontalScrollbarMode, bool horizontalLock,
     ScrollbarMode verticalScrollbarMode, bool verticalLock)
 {
-    ASSERT(this);
     ASSERT(m_page);
 
     bool isMainFrame = this->isMainFrame();
@@ -986,9 +977,6 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
         if (document->renderView() && document->renderView()->needsLayout() && view->didFirstLayout())
             view->layout();
     }
-
-    if (isMainFrame())
-        PageCache::singleton().markPagesForFullStyleRecalc(*page);
 }
 
 float Frame::frameScaleFactor() const
@@ -1012,27 +1000,31 @@ void Frame::suspendActiveDOMObjectsAndAnimations()
         return;
 
     // FIXME: Suspend/resume calls will not match if the frame is navigated, and gets a new document.
-    if (document()) {
-        document()->suspendScriptedAnimationControllerCallbacks();
-        animation().suspendAnimationsForDocument(document());
-        document()->suspendActiveDOMObjects(ActiveDOMObject::PageWillBeSuspended);
-    }
+    clearTimers(); // Suspends animations and pending relayouts.
+    if (m_doc)
+        m_doc->suspendScheduledTasks(ActiveDOMObject::PageWillBeSuspended);
 }
 
 void Frame::resumeActiveDOMObjectsAndAnimations()
 {
-    ASSERT(activeDOMObjectsAndAnimationsSuspended());
+    if (!activeDOMObjectsAndAnimationsSuspended())
+        return;
 
     m_activeDOMObjectsAndAnimationsSuspendedCount--;
 
     if (activeDOMObjectsAndAnimationsSuspended())
         return;
 
-    if (document()) {
-        document()->resumeActiveDOMObjects(ActiveDOMObject::PageWillBeSuspended);
-        animation().resumeAnimationsForDocument(document());
-        document()->resumeScriptedAnimationControllerCallbacks();
-    }
+    if (!m_doc)
+        return;
+
+    // FIXME: Suspend/resume calls will not match if the frame is navigated, and gets a new document.
+    m_doc->resumeScheduledTasks(ActiveDOMObject::PageWillBeSuspended);
+
+    // Frame::clearTimers() suspended animations and pending relayouts.
+    animation().resumeAnimationsForDocument(m_doc.get());
+    if (m_view)
+        m_view->scheduleRelayout();
 }
 
 void Frame::deviceOrPageScaleFactorChanged()

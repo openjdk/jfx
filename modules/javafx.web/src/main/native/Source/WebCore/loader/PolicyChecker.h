@@ -51,6 +51,7 @@ class ResourceResponse;
 
 class PolicyChecker {
     WTF_MAKE_NONCOPYABLE(PolicyChecker);
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit PolicyChecker(Frame&);
 
@@ -79,7 +80,7 @@ public:
     void continueLoadAfterWillSubmitForm(PolicyAction);
 
 #if ENABLE(CONTENT_FILTERING)
-    void setContentFilterUnblockHandler(ContentFilterUnblockHandler unblockHandler) { m_contentFilterUnblockHandler = WTF::move(unblockHandler); }
+    void setContentFilterUnblockHandler(ContentFilterUnblockHandler unblockHandler) { m_contentFilterUnblockHandler = WTFMove(unblockHandler); }
 #endif
 
 private:

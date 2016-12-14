@@ -35,7 +35,6 @@
 #include "DOMWindow.h"
 #include "ErrorEvent.h"
 #include "Event.h"
-#include "EventException.h"
 #include "ExceptionCode.h"
 #include "InspectorConsoleInstrumentation.h"
 #include "MessagePort.h"
@@ -44,14 +43,12 @@
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
 #include "URL.h"
-#include "WorkerInspectorController.h"
 #include "WorkerLocation.h"
 #include "WorkerNavigator.h"
 #include "WorkerObjectProxy.h"
 #include "WorkerScriptLoader.h"
 #include "WorkerThread.h"
 #include "WorkerThreadableLoader.h"
-#include "XMLHttpRequestException.h"
 #include <bindings/ScriptValue.h>
 #include <inspector/ConsoleMessage.h>
 #include <inspector/ScriptCallStack.h>
@@ -65,17 +62,18 @@ using namespace Inspector;
 
 namespace WebCore {
 
-WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& userAgent, WorkerThread& thread, PassRefPtr<SecurityOrigin> topOrigin)
+WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& userAgent, WorkerThread& thread, bool shouldBypassMainWorldContentSecurityPolicy, PassRefPtr<SecurityOrigin> topOrigin)
     : m_url(url)
     , m_userAgent(userAgent)
     , m_script(std::make_unique<WorkerScriptController>(this))
     , m_thread(thread)
-    , m_workerInspectorController(std::make_unique<WorkerInspectorController>(*this))
     , m_closing(false)
+    , m_shouldBypassMainWorldContentSecurityPolicy(shouldBypassMainWorldContentSecurityPolicy)
     , m_eventQueue(*this)
     , m_topOrigin(topOrigin)
 {
     setSecurityOriginPolicy(SecurityOriginPolicy::create(SecurityOrigin::create(url)));
+    setContentSecurityPolicy(std::make_unique<ContentSecurityPolicy>(*this));
 }
 
 WorkerGlobalScope::~WorkerGlobalScope()
@@ -89,10 +87,9 @@ WorkerGlobalScope::~WorkerGlobalScope()
     thread().workerReportingProxy().workerGlobalScopeDestroyed();
 }
 
-void WorkerGlobalScope::applyContentSecurityPolicyFromString(const String& policy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType)
+void WorkerGlobalScope::applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders)
 {
-    setContentSecurityPolicy(std::make_unique<ContentSecurityPolicy>(this));
-    contentSecurityPolicy()->didReceiveHeader(policy, contentSecurityPolicyType);
+    contentSecurityPolicy()->didReceiveHeaders(contentSecurityPolicyResponseHeaders);
 }
 
 URL WorkerGlobalScope::completeURL(const String& url) const
@@ -148,12 +145,12 @@ WorkerNavigator* WorkerGlobalScope::navigator() const
 
 void WorkerGlobalScope::postTask(Task task)
 {
-    thread().runLoop().postTask(WTF::move(task));
+    thread().runLoop().postTask(WTFMove(task));
 }
 
 int WorkerGlobalScope::setTimeout(std::unique_ptr<ScheduledAction> action, int timeout)
 {
-    return DOMTimer::install(*this, WTF::move(action), timeout, true);
+    return DOMTimer::install(*this, WTFMove(action), timeout, true);
 }
 
 void WorkerGlobalScope::clearTimeout(int timeoutId)
@@ -163,7 +160,7 @@ void WorkerGlobalScope::clearTimeout(int timeoutId)
 
 int WorkerGlobalScope::setInterval(std::unique_ptr<ScheduledAction> action, int timeout)
 {
-    return DOMTimer::install(*this, WTF::move(action), timeout, false);
+    return DOMTimer::install(*this, WTFMove(action), timeout, false);
 }
 
 void WorkerGlobalScope::clearInterval(int timeoutId)
@@ -182,16 +179,23 @@ void WorkerGlobalScope::importScripts(const Vector<String>& urls, ExceptionCode&
             ec = SYNTAX_ERR;
             return;
         }
-        completedURLs.append(WTF::move(url));
+        completedURLs.append(WTFMove(url));
     }
 
     for (auto& url : completedURLs) {
+        // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
+        bool shouldBypassMainWorldContentSecurityPolicy = scriptExecutionContext()->shouldBypassMainWorldContentSecurityPolicy();
+        if (!scriptExecutionContext()->contentSecurityPolicy()->allowScriptFromSource(url, shouldBypassMainWorldContentSecurityPolicy)) {
+            ec = NETWORK_ERR;
+            return;
+        }
+
         Ref<WorkerScriptLoader> scriptLoader = WorkerScriptLoader::create();
-        scriptLoader->loadSynchronously(scriptExecutionContext(), url, AllowCrossOriginRequests);
+        scriptLoader->loadSynchronously(scriptExecutionContext(), url, AllowCrossOriginRequests, shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceScriptSrcDirective);
 
         // If the fetching attempt failed, throw a NETWORK_ERR exception and abort all these steps.
         if (scriptLoader->failed()) {
-            ec = XMLHttpRequestException::NETWORK_ERR;
+            ec = NETWORK_ERR;
             return;
         }
 
@@ -216,6 +220,17 @@ void WorkerGlobalScope::logExceptionToConsole(const String& errorMessage, const 
     thread().workerReportingProxy().postExceptionToWorkerObject(errorMessage, lineNumber, columnNumber, sourceURL);
 }
 
+void WorkerGlobalScope::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage> message)
+{
+    if (!isContextThread()) {
+        postTask(AddConsoleMessageTask(message->source(), message->level(), StringCapture(message->message())));
+        return;
+    }
+
+    thread().workerReportingProxy().postConsoleMessageToWorkerObject(message->source(), message->level(), message->message(), message->line(), message->column(), message->url());
+    addMessageToWorkerConsole(WTFMove(message));
+}
+
 void WorkerGlobalScope::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, unsigned long requestIdentifier)
 {
     if (!isContextThread()) {
@@ -235,21 +250,25 @@ void WorkerGlobalScope::addMessage(MessageSource source, MessageLevel level, con
     }
 
     thread().workerReportingProxy().postConsoleMessageToWorkerObject(source, level, message, lineNumber, columnNumber, sourceURL);
-    addMessageToWorkerConsole(source, level, message, sourceURL, lineNumber, columnNumber, WTF::move(callStack), state, requestIdentifier);
+    addMessageToWorkerConsole(source, level, message, sourceURL, lineNumber, columnNumber, WTFMove(callStack), state, requestIdentifier);
 }
 
 void WorkerGlobalScope::addMessageToWorkerConsole(MessageSource source, MessageLevel level, const String& messageText, const String& suggestedURL, unsigned suggestedLineNumber, unsigned suggestedColumnNumber, RefPtr<ScriptCallStack>&& callStack, JSC::ExecState* state, unsigned long requestIdentifier)
 {
-    ASSERT(isContextThread());
-
     std::unique_ptr<Inspector::ConsoleMessage> message;
 
     if (callStack)
-        message = std::make_unique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, WTF::move(callStack), requestIdentifier);
+        message = std::make_unique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, WTFMove(callStack), requestIdentifier);
     else
         message = std::make_unique<Inspector::ConsoleMessage>(source, MessageType::Log, level, messageText, suggestedURL, suggestedLineNumber, suggestedColumnNumber, state, requestIdentifier);
 
-    InspectorInstrumentation::addMessageToConsole(this, WTF::move(message));
+    addMessageToWorkerConsole(WTFMove(message));
+}
+
+void WorkerGlobalScope::addMessageToWorkerConsole(std::unique_ptr<Inspector::ConsoleMessage> message)
+{
+    ASSERT(isContextThread());
+    InspectorInstrumentation::addMessageToConsole(this, WTFMove(message));
 }
 
 bool WorkerGlobalScope::isContextThread() const

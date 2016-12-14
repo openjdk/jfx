@@ -201,18 +201,16 @@ void TreeScope::removeImageMap(HTMLMapElement& imageMap)
 
 HTMLMapElement* TreeScope::getImageMap(const String& url) const
 {
-    if (url.isNull())
-        return nullptr;
     if (!m_imageMapsByName)
         return nullptr;
-    size_t hashPos = url.find('#');
-    String name = (hashPos == notFound ? String() : url.substring(hashPos + 1)).impl();
+    auto hashPosition = url.find('#');
+    if (hashPosition == notFound)
+        return nullptr;
+    String name = url.substring(hashPosition + 1);
     if (name.isEmpty())
         return nullptr;
-    if (m_rootNode.document().isHTMLDocument()) {
-        AtomicString lowercasedName = name.lower();
-        return m_imageMapsByName->getElementByLowercasedMapName(*lowercasedName.impl(), *this);
-    }
+    if (m_rootNode.document().isHTMLDocument())
+        return m_imageMapsByName->getElementByCaseFoldedMapName(*AtomicString(name.foldCase()).impl(), *this);
     return m_imageMapsByName->getElementByMapName(*AtomicString(name).impl(), *this);
 }
 
@@ -270,8 +268,10 @@ Element* TreeScope::findAnchor(const String& name)
         return element;
     for (auto& anchor : descendantsOfType<HTMLAnchorElement>(m_rootNode)) {
         if (m_rootNode.document().inQuirksMode()) {
-            // Quirks mode, case insensitive comparison of names.
-            if (equalIgnoringCase(anchor.name(), name))
+            // Quirks mode, ASCII case-insensitive comparison of names.
+            // FIXME: This behavior is not mentioned in the HTML specification.
+            // We should either remove this or get this into the specification.
+            if (equalIgnoringASCIICase(anchor.name(), name))
                 return &anchor;
         } else {
             // Strict mode, names need to match exactly.
@@ -284,7 +284,6 @@ Element* TreeScope::findAnchor(const String& name)
 
 void TreeScope::adoptIfNeeded(Node* node)
 {
-    ASSERT(this);
     ASSERT(node);
     ASSERT(!node->isDocumentNode());
     ASSERT(!node->m_deletionHasBegun);
@@ -313,7 +312,7 @@ Element* TreeScope::focusedElement()
         return nullptr;
     TreeScope* treeScope = &element->treeScope();
     while (treeScope != this && treeScope != &document) {
-        element = downcast<ShadowRoot>(treeScope->rootNode()).hostElement();
+        element = downcast<ShadowRoot>(treeScope->rootNode()).host();
         treeScope = &element->treeScope();
     }
     if (this != treeScope)

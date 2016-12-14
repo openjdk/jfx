@@ -81,19 +81,8 @@ static CompilationResult compileImpl(
     // make sure that all JIT code generation does finalization on the main thread.
     vm.getCTIStub(osrExitGenerationThunkGenerator);
     vm.getCTIStub(throwExceptionFromCallSlowPathGenerator);
-    if (mode == DFGMode) {
-        vm.getCTIStub(linkCallThunkGenerator);
-        vm.getCTIStub(linkConstructThunkGenerator);
-        vm.getCTIStub(linkPolymorphicCallThunkGenerator);
-        vm.getCTIStub(virtualCallThunkGenerator);
-        vm.getCTIStub(virtualConstructThunkGenerator);
-    } else {
-        vm.getCTIStub(linkCallThatPreservesRegsThunkGenerator);
-        vm.getCTIStub(linkConstructThatPreservesRegsThunkGenerator);
-        vm.getCTIStub(linkPolymorphicCallThatPreservesRegsThunkGenerator);
-        vm.getCTIStub(virtualCallThatPreservesRegsThunkGenerator);
-        vm.getCTIStub(virtualConstructThatPreservesRegsThunkGenerator);
-    }
+    vm.getCTIStub(linkCallThunkGenerator);
+    vm.getCTIStub(linkPolymorphicCallThunkGenerator);
 
     if (vm.typeProfiler())
         vm.typeProfilerLog()->processLogEntries(ASCIILiteral("Preparing for DFG compilation."));
@@ -102,7 +91,7 @@ static CompilationResult compileImpl(
         new Plan(codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, mustHandleValues));
 
     plan->callback = callback;
-    if (Options::enableConcurrentJIT()) {
+    if (Options::useConcurrentJIT()) {
         Worklist* worklist = ensureGlobalWorklistFor(mode);
         if (logCompilationChanges(mode))
             dataLog("Deferring DFG compilation of ", *codeBlock, " with queue length ", worklist->queueLength(), ".\n");
@@ -132,7 +121,7 @@ CompilationResult compile(
         vm, codeBlock, profiledDFGCodeBlock, mode, osrEntryBytecodeIndex, mustHandleValues,
         callback);
     if (result != CompilationDeferred)
-        callback->compilationDidComplete(codeBlock, result);
+        callback->compilationDidComplete(codeBlock, profiledDFGCodeBlock, result);
     return result;
 }
 

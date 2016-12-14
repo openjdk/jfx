@@ -35,6 +35,7 @@
 #if USE(CF)
 typedef const struct __CFURL* CFURLRef;
 #if PLATFORM(JAVA)
+#include "JavaEnv.h"
 typedef const struct __CFString* CFString;
 #endif
 #endif
@@ -191,6 +192,7 @@ public:
 
 #if PLATFORM(JAVA)
     bool isJarFile() const { return m_protocolIsInJar; }
+    URL(JNIEnv* env, jstring url) { parse(String(env, url)); }
 #endif
     const URL* innerURL() const { return 0; }
 
@@ -242,6 +244,7 @@ bool operator!=(const String&, const URL&);
 
 WEBCORE_EXPORT bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
 WEBCORE_EXPORT bool protocolHostAndPortAreEqual(const URL&, const URL&);
+WEBCORE_EXPORT bool hostsAreEqual(const URL&, const URL&);
 
 WEBCORE_EXPORT const URL& blankURL();
 
@@ -254,8 +257,9 @@ WEBCORE_EXPORT bool protocolIs(const String& url, const char* protocol);
 WEBCORE_EXPORT bool protocolIsJavaScript(const String& url);
 WEBCORE_EXPORT bool protocolIsInHTTPFamily(const String& url);
 
+unsigned short defaultPortForProtocol(const String& protocol);
 bool isDefaultPortForProtocol(unsigned short port, const String& protocol);
-bool portAllowed(const URL&); // Blacklist ports that should never be used for Web resources.
+WEBCORE_EXPORT bool portAllowed(const URL&); // Blacklist ports that should never be used for Web resources.
 
 bool isValidProtocol(const String&);
 
@@ -401,7 +405,7 @@ inline const URL& URLCapture::url() const
 
 inline URL URLCapture::releaseURL()
 {
-    return WTF::move(m_URL);
+    return WTFMove(m_URL);
 }
 
 } // namespace WebCore

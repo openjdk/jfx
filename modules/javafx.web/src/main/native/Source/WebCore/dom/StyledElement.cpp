@@ -46,8 +46,7 @@ COMPILE_ASSERT(sizeof(StyledElement) == sizeof(Element), styledelement_should_re
 using namespace HTMLNames;
 
 struct PresentationAttributeCacheKey {
-    PresentationAttributeCacheKey() : tagName(0) { }
-    AtomicStringImpl* tagName;
+    AtomicStringImpl* tagName { nullptr };
     // Only the values need refcounting.
     Vector<std::pair<AtomicStringImpl*, AtomicString>, 3> attributesAndValues;
 };
@@ -138,7 +137,7 @@ StyledElement::~StyledElement()
         cssomWrapper->clearParentElement();
 }
 
-CSSStyleDeclaration* StyledElement::style()
+CSSStyleDeclaration* StyledElement::cssomStyle()
 {
     return ensureMutableInlineStyle().ensureInlineCSSStyleDeclaration(this);
 }
@@ -214,29 +213,27 @@ void StyledElement::styleAttributeChanged(const AtomicString& newStyleString, At
 
 void StyledElement::inlineStyleChanged()
 {
-    setNeedsStyleRecalc(InlineStyleChange);
-    ASSERT(elementData());
-    elementData()->setStyleAttributeIsDirty(true);
+    invalidateStyleAttribute();
     InspectorInstrumentation::didInvalidateStyleAttr(document(), *this);
 }
 
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, CSSValueID identifier, bool important)
 {
-    ensureMutableInlineStyle().setProperty(propertyID, cssValuePool().createIdentifierValue(identifier), important);
+    ensureMutableInlineStyle().setProperty(propertyID, CSSValuePool::singleton().createIdentifierValue(identifier), important);
     inlineStyleChanged();
     return true;
 }
 
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, CSSPropertyID identifier, bool important)
 {
-    ensureMutableInlineStyle().setProperty(propertyID, cssValuePool().createIdentifierValue(identifier), important);
+    ensureMutableInlineStyle().setProperty(propertyID, CSSValuePool::singleton().createIdentifierValue(identifier), important);
     inlineStyleChanged();
     return true;
 }
 
 bool StyledElement::setInlineStyleProperty(CSSPropertyID propertyID, double value, CSSPrimitiveValue::UnitTypes unit, bool important)
 {
-    ensureMutableInlineStyle().setProperty(propertyID, cssValuePool().createValue(value, unit), important);
+    ensureMutableInlineStyle().setProperty(propertyID, CSSValuePool::singleton().createValue(value, unit), important);
     inlineStyleChanged();
     return true;
 }
@@ -269,7 +266,7 @@ void StyledElement::removeAllInlineStyleProperties()
 
 void StyledElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
-    if (const StyleProperties* inlineStyle = elementData() ? elementData()->inlineStyle() : 0)
+    if (const StyleProperties* inlineStyle = elementData() ? elementData()->inlineStyle() : nullptr)
         inlineStyle->addSubresourceStyleURLs(urls, &document().elementSheet().contents());
 }
 
@@ -343,7 +340,7 @@ void StyledElement::rebuildPresentationAttributeStyle()
     UniqueElementData& elementData = ensureUniqueElementData();
 
     elementData.setPresentationAttributeStyleIsDirty(false);
-    elementData.m_presentationAttributeStyle = style->isEmpty() ? 0 : style;
+    elementData.m_presentationAttributeStyle = style->isEmpty() ? nullptr : style;
 
     if (!cacheHash || cacheIterator->value)
         return;
@@ -356,19 +353,19 @@ void StyledElement::rebuildPresentationAttributeStyle()
     if (presentationAttributeCache().size() > presentationAttributeCacheMaximumSize) {
         // Start building from scratch if the cache ever gets big.
         presentationAttributeCache().clear();
-        presentationAttributeCache().set(cacheHash, WTF::move(newEntry));
+        presentationAttributeCache().set(cacheHash, WTFMove(newEntry));
     } else
-        cacheIterator->value = WTF::move(newEntry);
+        cacheIterator->value = WTFMove(newEntry);
 }
 
 void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, CSSValueID identifier)
 {
-    style.setProperty(propertyID, cssValuePool().createIdentifierValue(identifier));
+    style.setProperty(propertyID, CSSValuePool::singleton().createIdentifierValue(identifier));
 }
 
 void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, double value, CSSPrimitiveValue::UnitTypes unit)
 {
-    style.setProperty(propertyID, cssValuePool().createValue(value, unit));
+    style.setProperty(propertyID, CSSValuePool::singleton().createValue(value, unit));
 }
 
 void StyledElement::addPropertyToPresentationAttributeStyle(MutableStyleProperties& style, CSSPropertyID propertyID, const String& value)

@@ -124,15 +124,15 @@ void HTMLDocument::setDir(const AtomicString& value)
 
 String HTMLDocument::designMode() const
 {
-    return inDesignMode() ? "on" : "off";
+    return inDesignMode() ? ASCIILiteral("on") : ASCIILiteral("off");
 }
 
 void HTMLDocument::setDesignMode(const String& value)
 {
     InheritedBool mode;
-    if (equalIgnoringCase(value, "on"))
+    if (equalLettersIgnoringASCIICase(value, "on"))
         mode = on;
-    else if (equalIgnoringCase(value, "off"))
+    else if (equalLettersIgnoringASCIICase(value, "off"))
         mode = off;
     else
         mode = inherit;
@@ -225,15 +225,6 @@ Ref<DocumentParser> HTMLDocument::createParser()
 // --------------------------------------------------------------------------
 // not part of the DOM
 // --------------------------------------------------------------------------
-
-RefPtr<Element> HTMLDocument::createElement(const AtomicString& name, ExceptionCode& ec)
-{
-    if (!isValidName(name)) {
-        ec = INVALID_CHARACTER_ERR;
-        return 0;
-    }
-    return HTMLElementFactory::createElement(QualifiedName(nullAtom, name.lower(), xhtmlNamespaceURI), *this);
-}
 
 static void addLocalNameToSet(HashSet<AtomicStringImpl*>* set, const QualifiedName& qName)
 {

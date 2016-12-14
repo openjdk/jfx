@@ -48,6 +48,10 @@ class CDMSessionMediaSourceAVFObjC;
 class PlatformClockCM;
 class MediaSourcePrivateAVFObjC;
 
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+class VideoFullscreenLayerManager;
+#endif
+
 class MediaPlayerPrivateMediaSourceAVFObjC : public MediaPlayerPrivateInterface {
 public:
     explicit MediaPlayerPrivateMediaSourceAVFObjC(MediaPlayer*);
@@ -57,7 +61,7 @@ public:
 
     // MediaPlayer Factory Methods
     static bool isAvailable();
-    static void getSupportedTypes(HashSet<String>& types);
+    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
 
     void addDisplayLayer(AVSampleBufferDisplayLayer*);
@@ -82,10 +86,16 @@ public:
     void sizeChanged();
     void characteristicsChanged();
 
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    virtual void setVideoFullscreenLayer(PlatformLayer*) override;
+    virtual void setVideoFullscreenFrame(FloatRect) override;
+#endif
+
 #if ENABLE(ENCRYPTED_MEDIA_V2)
     bool hasStreamSession() { return m_streamSession; }
     AVStreamSession *streamSession();
     virtual void setCDMSession(CDMSession*) override;
+    CDMSessionMediaSourceAVFObjC* cdmSession() const { return m_session; }
     void keyNeeded(Uint8Array*);
 #endif
 
@@ -147,8 +157,8 @@ private:
 
     virtual void setSize(const IntSize&) override;
 
-    virtual void paint(GraphicsContext*, const FloatRect&) override;
-    virtual void paintCurrentFrameInContext(GraphicsContext*, const FloatRect&) override;
+    virtual void paint(GraphicsContext&, const FloatRect&) override;
+    virtual void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override;
 
     virtual bool hasAvailableVideoFrame() const override;
 
@@ -181,7 +191,6 @@ private:
     void ensureLayer();
     void destroyLayer();
     bool shouldBePlaying() const;
-    void seekTimerFired();
 
     friend class MediaSourcePrivateAVFObjC;
 
@@ -222,6 +231,9 @@ private:
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     RefPtr<MediaPlaybackTarget> m_playbackTarget;
     bool m_shouldPlayToTarget { false };
+#endif
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    std::unique_ptr<VideoFullscreenLayerManager> m_videoFullscreenLayerManager;
 #endif
 };
 

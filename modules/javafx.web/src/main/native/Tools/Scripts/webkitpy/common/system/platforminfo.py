@@ -1,4 +1,5 @@
 # Copyright (c) 2011 Google Inc. All rights reserved.
+# Copyright (c) 2015 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -136,7 +137,7 @@ class PlatformInfo(object):
             return 'mac'
         if sys_platform.startswith('linux'):
             return 'linux'
-        if sys_platform in ('win32', 'cygwin'):
+        if sys_platform.startswith('win') or sys_platform == 'cygwin':
             return 'win'
         if sys_platform.startswith('freebsd'):
             return 'freebsd'
@@ -165,6 +166,9 @@ class PlatformInfo(object):
         return 'lucid'
 
     def _determine_win_version(self, win_version_tuple):
+        if win_version_tuple[:2] == (0, 0):
+            if win_version_tuple[2] > 10000:
+                return 'win10'
         if win_version_tuple[:3] == (6, 1, 7600):
             return '7sp0'
         if win_version_tuple[:2] == (6, 0):

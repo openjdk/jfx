@@ -34,36 +34,28 @@ namespace WebCore {
 class Node;
 
 struct FocusEventInit : public UIEventInit {
-    FocusEventInit();
-
     RefPtr<EventTarget> relatedTarget;
 };
 
 class FocusEvent final : public UIEvent {
 public:
-    static Ref<FocusEvent> create()
+    static Ref<FocusEvent> create(const AtomicString& type, bool canBubble, bool cancelable, AbstractView* view, int detail, RefPtr<EventTarget>&& relatedTarget)
     {
-        return adoptRef(*new FocusEvent);
+        return adoptRef(*new FocusEvent(type, canBubble, cancelable, view, detail, WTFMove(relatedTarget)));
     }
 
-    static Ref<FocusEvent> create(const AtomicString& type, bool canBubble, bool cancelable, RefPtr<AbstractView>&& view, int detail, RefPtr<EventTarget>&& relatedTarget)
-    {
-        return adoptRef(*new FocusEvent(type, canBubble, cancelable, WTF::move(view), detail, WTF::move(relatedTarget)));
-    }
-
-    static Ref<FocusEvent> create(const AtomicString& type, const FocusEventInit& initializer)
+    static Ref<FocusEvent> createForBindings(const AtomicString& type, const FocusEventInit& initializer)
     {
         return adoptRef(*new FocusEvent(type, initializer));
     }
 
     virtual EventTarget* relatedTarget() const override { return m_relatedTarget.get(); }
-    void setRelatedTarget(RefPtr<EventTarget>&& relatedTarget) { m_relatedTarget = WTF::move(relatedTarget); }
+    void setRelatedTarget(RefPtr<EventTarget>&& relatedTarget) { m_relatedTarget = WTFMove(relatedTarget); }
 
     virtual EventInterface eventInterface() const override;
 
 private:
-    FocusEvent();
-    FocusEvent(const AtomicString& type, bool canBubble, bool cancelable, RefPtr<AbstractView>&&, int, RefPtr<EventTarget>&&);
+    FocusEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView*, int, RefPtr<EventTarget>&&);
     FocusEvent(const AtomicString& type, const FocusEventInit&);
 
     virtual bool isFocusEvent() const override;

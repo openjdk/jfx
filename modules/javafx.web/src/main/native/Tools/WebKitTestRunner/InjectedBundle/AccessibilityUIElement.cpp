@@ -70,6 +70,11 @@ bool AccessibilityUIElement::scrollPageUp() { return false; }
 bool AccessibilityUIElement::scrollPageDown() { return false; }
 bool AccessibilityUIElement::scrollPageLeft() { return false; }
 bool AccessibilityUIElement::scrollPageRight() { return false; }
+bool AccessibilityUIElement::hasContainedByFieldsetTrait() { return false; }
+PassRefPtr<AccessibilityUIElement> AccessibilityUIElement::fieldsetAncestorElement() { return nullptr; }
+bool AccessibilityUIElement::isSearchField() const { return false; }
+bool AccessibilityUIElement::isTextArea() const { return false; }
+
 #endif
 
 // Unsupported methods on various platforms. As they're implemented on other platforms this list should be modified.
@@ -78,8 +83,6 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::characterAtOffset(int) { return
 JSRetainPtr<JSStringRef> AccessibilityUIElement::wordAtOffset(int) { return 0; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::lineAtOffset(int) { return 0; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::sentenceAtOffset(int) { return 0; }
-void AccessibilityUIElement::setSelectedChildAtIndex(unsigned) const { }
-void AccessibilityUIElement::removeSelectionAtIndex(unsigned) const { }
 #endif
 
 #if (!PLATFORM(COCOA) && !PLATFORM(GTK) && !PLATFORM(EFL)) || !HAVE(ACCESSIBILITY)
@@ -147,6 +150,8 @@ bool AccessibilityUIElement::isSelectedOptionActive() const { return false; }
 bool AccessibilityUIElement::isSelectable() const { return false; }
 bool AccessibilityUIElement::isMultiSelectable() const { return false; }
 void AccessibilityUIElement::setSelectedChild(AccessibilityUIElement*) const { }
+void AccessibilityUIElement::setSelectedChildAtIndex(unsigned) const { }
+void AccessibilityUIElement::removeSelectionAtIndex(unsigned) const { }
 unsigned AccessibilityUIElement::selectedChildrenCount() const { return 0; }
 PassRefPtr<AccessibilityUIElement> AccessibilityUIElement::selectedChildAtIndex(unsigned) const { return 0; }
 bool AccessibilityUIElement::isExpanded() const { return false; }
@@ -224,6 +229,8 @@ int AccessibilityUIElement::indexForTextMarker(AccessibilityTextMarker*) { retur
 bool AccessibilityUIElement::isTextMarkerValid(AccessibilityTextMarker*) { return false; }
 PassRefPtr<AccessibilityTextMarker> AccessibilityUIElement::textMarkerForIndex(int) { return 0; }
 void AccessibilityUIElement::scrollToMakeVisible() { }
+void AccessibilityUIElement::scrollToGlobalPoint(int, int) { }
+void AccessibilityUIElement::scrollToMakeVisibleWithSubFocus(int, int, int, int) { }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::supportedActions() const { return 0; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::mathPostscriptsDescription() const { return 0; }
 JSRetainPtr<JSStringRef> AccessibilityUIElement::mathPrescriptsDescription() const { return 0; }
@@ -235,6 +242,19 @@ JSRetainPtr<JSStringRef> AccessibilityUIElement::pathDescription() const { retur
 PassRefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::selectedTextMarkerRange() { return nullptr; }
 void AccessibilityUIElement::resetSelectedTextMarkerRange() { }
 void AccessibilityUIElement::setBoolAttributeValue(JSStringRef, bool) { }
+#endif
+
+#if (!PLATFORM(MAC) && !PLATFORM(IOS)) || !HAVE(ACCESSIBILITY)
+PassRefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::leftWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::rightWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarker> AccessibilityUIElement::previousWordStartTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarker> AccessibilityUIElement::nextWordEndTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::paragraphTextMarkerRangeForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarker> AccessibilityUIElement::nextParagraphEndTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarker> AccessibilityUIElement::previousParagraphStartTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarkerRange> AccessibilityUIElement::sentenceTextMarkerRangeForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarker> AccessibilityUIElement::nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
+PassRefPtr<AccessibilityTextMarker> AccessibilityUIElement::previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker*) { return nullptr; }
 #endif
 
 } // namespace WTR

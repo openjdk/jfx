@@ -26,26 +26,15 @@
 #ifndef CopyVisitorInlines_h
 #define CopyVisitorInlines_h
 
-#include "ClassInfo.h"
 #include "CopyVisitor.h"
-#include "GCThreadSharedData.h"
-#include "JSCell.h"
-#include "JSDestructibleObject.h"
+#include "Heap.h"
 
 namespace JSC {
 
-inline void CopyVisitor::visitItem(CopyWorklistItem item)
-{
-    if (item.token() == ButterflyCopyToken) {
-        JSObject::copyBackingStore(item.cell(), *this, ButterflyCopyToken);
-        return;
-    }
-
-    item.cell()->methodTable()->copyBackingStore(item.cell(), *this, item.token());
-}
-
 inline bool CopyVisitor::checkIfShouldCopy(void* oldPtr)
 {
+    if (!oldPtr)
+        return false;
     CopiedBlock* block = CopiedSpace::blockFor(oldPtr);
     if (block->isOversize() || block->isPinned())
         return false;
@@ -66,29 +55,13 @@ inline void* CopyVisitor::allocateNewSpace(size_t bytes)
 inline void* CopyVisitor::allocateNewSpaceSlow(size_t bytes)
 {
     CopiedBlock* newBlock = 0;
-    m_shared.m_copiedSpace->doneFillingBlock(m_copiedAllocator.resetCurrentBlock(), &newBlock);
+    m_heap.m_storageSpace.doneFillingBlock(m_copiedAllocator.resetCurrentBlock(), &newBlock);
     m_copiedAllocator.setCurrentBlock(newBlock);
 
     void* result = 0;
     CheckedBoolean didSucceed = m_copiedAllocator.tryAllocateDuringCopying(bytes, &result);
     ASSERT(didSucceed);
     return result;
-}
-
-inline void CopyVisitor::startCopying()
-{
-    ASSERT(!m_copiedAllocator.isValid());
-    CopiedBlock* block = 0;
-    m_shared.m_copiedSpace->doneFillingBlock(m_copiedAllocator.resetCurrentBlock(), &block);
-    m_copiedAllocator.setCurrentBlock(block);
-}
-
-inline void CopyVisitor::doneCopying()
-{
-    if (!m_copiedAllocator.isValid())
-        return;
-
-    m_shared.m_copiedSpace->doneFillingBlock(m_copiedAllocator.resetCurrentBlock(), 0);
 }
 
 inline void CopyVisitor::didCopy(void* ptr, size_t bytes)
@@ -103,4 +76,3 @@ inline void CopyVisitor::didCopy(void* ptr, size_t bytes)
 } // namespace JSC
 
 #endif // CopyVisitorInlines_h
-

@@ -40,13 +40,9 @@ class TouchEvent final : public MouseRelatedEvent {
 public:
     virtual ~TouchEvent();
 
-    static Ref<TouchEvent> create()
-    {
-        return adoptRef(*new TouchEvent);
-    }
     static Ref<TouchEvent> create(TouchList* touches,
             TouchList* targetTouches, TouchList* changedTouches,
-            const AtomicString& type, PassRefPtr<AbstractView> view,
+            const AtomicString& type, AbstractView* view,
             int screenX, int screenY, int pageX, int pageY,
             bool ctrlKey, bool altKey, bool shiftKey, bool metaKey)
     {
@@ -54,10 +50,14 @@ public:
                 type, view, screenX, screenY, pageX, pageY,
                 ctrlKey, altKey, shiftKey, metaKey));
     }
+    static Ref<TouchEvent> createForBindings()
+    {
+        return adoptRef(*new TouchEvent);
+    }
 
     void initTouchEvent(TouchList* touches, TouchList* targetTouches,
             TouchList* changedTouches, const AtomicString& type,
-            PassRefPtr<AbstractView> view, int screenX, int screenY,
+            AbstractView*, int screenX, int screenY,
             int clientX, int clientY,
             bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 
@@ -65,9 +65,9 @@ public:
     TouchList* targetTouches() const { return m_targetTouches.get(); }
     TouchList* changedTouches() const { return m_changedTouches.get(); }
 
-    void setTouches(PassRefPtr<TouchList> touches) { m_touches = touches; }
-    void setTargetTouches(PassRefPtr<TouchList> targetTouches) { m_targetTouches = targetTouches; }
-    void setChangedTouches(PassRefPtr<TouchList> changedTouches) { m_changedTouches = changedTouches; }
+    void setTouches(RefPtr<TouchList>&& touches) { m_touches = touches; }
+    void setTargetTouches(RefPtr<TouchList>&& targetTouches) { m_targetTouches = targetTouches; }
+    void setChangedTouches(RefPtr<TouchList>&& changedTouches) { m_changedTouches = changedTouches; }
 
     virtual bool isTouchEvent() const override;
 
@@ -77,7 +77,7 @@ private:
     TouchEvent();
     TouchEvent(TouchList* touches, TouchList* targetTouches,
             TouchList* changedTouches, const AtomicString& type,
-            PassRefPtr<AbstractView>, int screenX, int screenY, int pageX,
+            AbstractView*, int screenX, int screenY, int pageX,
             int pageY,
             bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 

@@ -29,7 +29,7 @@
 #define RemoteInspectorXPCConnection_h
 
 #import <dispatch/dispatch.h>
-#import <mutex>
+#import <wtf/Lock.h>
 #import <wtf/ThreadSafeRefCounted.h>
 #import <wtf/spi/darwin/XPCSPI.h>
 
@@ -62,12 +62,15 @@ private:
 
     // We handle XPC events on the queue, but a client may call close() on any queue.
     // We make sure that m_client is thread safe and immediately cleared in close().
-    std::mutex m_mutex;
+    Lock m_mutex;
 
     xpc_connection_t m_connection;
     dispatch_queue_t m_queue;
     Client* m_client;
-    bool m_closed;
+    bool m_closed { false };
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000)
+    bool m_validated { false };
+#endif
 };
 
 } // namespace Inspector

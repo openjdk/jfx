@@ -29,7 +29,8 @@
 #if ENABLE(ENCRYPTED_MEDIA_V2) && ENABLE(MEDIA_SOURCE)
 
 #import "CDM.h"
-#import "CDMSessionMediaSourceAVFObjC.h"
+#import "CDMSessionAVContentKeySession.h"
+#import "CDMSessionAVStreamSession.h"
 #import "ContentType.h"
 #import "ExceptionCode.h"
 #import "MediaPlayerPrivateMediaSourceAVFObjC.h"
@@ -43,8 +44,14 @@ namespace WebCore {
 
 static RegularExpression& validKeySystemRE()
 {
-    static NeverDestroyed<RegularExpression> keySystemRE("^com\\.apple\\.fps\\.2_\\d+(?:,\\d+)*$", TextCaseInsensitive);
+    static NeverDestroyed<RegularExpression> keySystemRE("^com\\.apple\\.fps\\.[23]_\\d+(?:,\\d+)*$", TextCaseInsensitive);
     return keySystemRE;
+}
+
+CDMPrivateMediaSourceAVFObjC::~CDMPrivateMediaSourceAVFObjC()
+{
+    for (auto& session : m_sessions)
+        session->invalidateCDM();
 }
 
 bool CDMPrivateMediaSourceAVFObjC::supportsKeySystem(const String& keySystem)
@@ -55,6 +62,9 @@ bool CDMPrivateMediaSourceAVFObjC::supportsKeySystem(const String& keySystem)
     if (!keySystem.isEmpty() && validKeySystemRE().match(keySystem) < 0)
         return false;
 
+    if (keySystem.substring(14, 1).toInt() == 3 && !CDMSessionAVContentKeySession::isAvailable())
+        return false;
+
     return true;
 }
 
@@ -63,22 +73,23 @@ bool CDMPrivateMediaSourceAVFObjC::supportsKeySystemAndMimeType(const String& ke
     if (!supportsKeySystem(keySystem))
         return false;
 
-    if (!mimeType.isEmpty()) {
-        if (equalIgnoringCase(mimeType, "keyrelease"))
-            return true;
+    if (mimeType.isEmpty())
+        return true;
 
-        MediaEngineSupportParameters parameters;
-        parameters.isMediaSource = true;
-        parameters.type = mimeType;
+    // FIXME: Why is this ignoring case since the check in supportsMIMEType is checking case?
+    if (equalLettersIgnoringASCIICase(mimeType, "keyrelease"))
+        return true;
 
-        return MediaPlayerPrivateMediaSourceAVFObjC::supportsType(parameters) != MediaPlayer::IsNotSupported;
-    }
+    MediaEngineSupportParameters parameters;
+    parameters.isMediaSource = true;
+    parameters.type = mimeType;
 
-    return true;
+    return MediaPlayerPrivateMediaSourceAVFObjC::supportsType(parameters) != MediaPlayer::IsNotSupported;
 }
 
 bool CDMPrivateMediaSourceAVFObjC::supportsMIMEType(const String& mimeType)
 {
+    // FIXME: Why is this checking case since the check in supportsKeySystemAndMimeType is ignoring case?
     if (mimeType == "keyrelease")
         return true;
 
@@ -89,7 +100,7 @@ bool CDMPrivateMediaSourceAVFObjC::supportsMIMEType(const String& mimeType)
     return MediaPlayerPrivateMediaSourceAVFObjC::supportsType(parameters) != MediaPlayer::IsNotSupported;
 }
 
-std::unique_ptr<CDMSession> CDMPrivateMediaSourceAVFObjC::createSession()
+std::unique_ptr<CDMSession> CDMPrivateMediaSourceAVFObjC::createSession(CDMSessionClient* client)
 {
     String keySystem = m_cdm->keySystem();
     ASSERT(validKeySystemRE().match(keySystem) >= 0);
@@ -101,7 +112,20 @@ std::unique_ptr<CDMSession> CDMPrivateMediaSourceAVFObjC::createSession()
     for (auto& protocolVersionString : protocolVersionsStrings)
         protocolVersions.append(protocolVersionString.toInt());
 
-    return std::make_unique<CDMSessionMediaSourceAVFObjC>(protocolVersions);
+    std::unique_ptr<CDMSessionMediaSourceAVFObjC> session;
+    if (keySystem.substring(14, 1).toInt() == 3 && CDMSessionAVContentKeySession::isAvailable())
+        session = std::make_unique<CDMSessionAVContentKeySession>(protocolVersions, *this, client);
+    else
+        session = std::make_unique<CDMSessionAVStreamSession>(protocolVersions, *this, client);
+
+    m_sessions.append(session.get());
+    return WTFMove(session);
+}
+
+void CDMPrivateMediaSourceAVFObjC::invalidateSession(CDMSessionMediaSourceAVFObjC* session)
+{
+    ASSERT(m_sessions.contains(session));
+    m_sessions.removeAll(session);
 }
 
 }

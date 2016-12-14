@@ -48,9 +48,7 @@ public:
 
     int naturalWidth() const;
     int naturalHeight() const;
-#if ENABLE(PICTURE_SIZES)
     const AtomicString& currentSrc() const { return m_currentSrc; }
-#endif
 
     bool isServerMap() const;
 
@@ -62,7 +60,7 @@ public:
 
     void setLoadManually(bool loadManually) { m_imageLoader.setLoadManually(loadManually); }
 
-    bool matchesLowercasedUsemap(const AtomicStringImpl&) const;
+    bool matchesCaseFoldedUsemap(const AtomicStringImpl&) const;
 
     const AtomicString& alt() const;
 
@@ -70,6 +68,9 @@ public:
 
     URL src() const;
     void setSrc(const String&);
+
+    void setCrossOrigin(const AtomicString&);
+    String crossOrigin() const;
 
     void setWidth(int);
 
@@ -89,6 +90,9 @@ public:
     virtual const AtomicString& imageSourceURL() const override;
 
     bool hasShadowControls() const { return m_experimentalImageMenuEnabled; }
+
+    HTMLPictureElement* pictureElement() const;
+    void setPictureElement(HTMLPictureElement*);
 
 protected:
     HTMLImageElement(const QualifiedName&, Document&, HTMLFormElement* = 0);
@@ -122,14 +126,18 @@ private:
     virtual HTMLImageElement& asHTMLElement() override final { return *this; }
     virtual const HTMLImageElement& asHTMLElement() const override final { return *this; }
 
+    void selectImageSource();
+
+    ImageCandidate bestFitSourceFromPictureElement();
+
     HTMLImageLoader m_imageLoader;
     HTMLFormElement* m_form;
+    HTMLFormElement* m_formSetByParser;
+
     CompositeOperator m_compositeOperator;
     AtomicString m_bestFitImageURL;
-#if ENABLE(PICTURE_SIZES)
     AtomicString m_currentSrc;
-#endif
-    AtomicString m_lowercasedUsemap;
+    AtomicString m_caseFoldedUsemap;
     float m_imageDevicePixelRatio;
     bool m_experimentalImageMenuEnabled;
     bool m_hadNameBeforeAttributeChanged { false }; // FIXME: We only need this because parseAttribute() can't see the old value.
@@ -141,6 +149,8 @@ private:
     bool hasImageControls() const;
     virtual bool childShouldCreateRenderer(const Node&) const override;
 #endif
+
+    friend class HTMLPictureElement;
 };
 
 } //namespace

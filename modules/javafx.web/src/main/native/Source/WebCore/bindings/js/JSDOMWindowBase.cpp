@@ -3,6 +3,7 @@
  *  Copyright (C) 2006 Jon Shier (jshier@iastate.edu)
  *  Copyright (C) 2003-2009, 2014 Apple Inc. All rights reseved.
  *  Copyright (C) 2006 Alexey Proskuryakov (ap@webkit.org)
+ *  Copyright (c) 2015 Canon Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -23,19 +24,26 @@
 #include "config.h"
 #include "JSDOMWindowBase.h"
 
+#include "ActiveDOMCallbackMicrotask.h"
 #include "Chrome.h"
 #include "DOMWindow.h"
 #include "Frame.h"
 #include "InspectorController.h"
 #include "JSDOMGlobalObjectTask.h"
 #include "JSDOMWindowCustom.h"
+#include "JSMainThreadExecState.h"
+#include "JSModuleLoader.h"
 #include "JSNode.h"
+#include "Language.h"
 #include "Logging.h"
 #include "Page.h"
+#include "RuntimeApplicationChecks.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "WebCoreJSClientData.h"
+#include <heap/StrongInlines.h>
+#include <runtime/JSInternalPromiseDeferred.h>
 #include <runtime/Microtask.h>
 #include <wtf/MainThread.h>
 
@@ -51,17 +59,17 @@ namespace WebCore {
 
 static bool shouldAllowAccessFrom(const JSGlobalObject* thisObject, ExecState* exec)
 {
-    return BindingSecurity::shouldAllowAccessToDOMWindow(exec, asJSDOMWindow(thisObject)->impl());
+    return BindingSecurity::shouldAllowAccessToDOMWindow(exec, asJSDOMWindow(thisObject)->wrapped());
 }
 
 const ClassInfo JSDOMWindowBase::s_info = { "Window", &JSDOMGlobalObject::s_info, 0, CREATE_METHOD_TABLE(JSDOMWindowBase) };
 
-const GlobalObjectMethodTable JSDOMWindowBase::s_globalObjectMethodTable = { &shouldAllowAccessFrom, &supportsProfiling, &supportsRichSourceInfo, &shouldInterruptScript, &javaScriptRuntimeFlags, &queueTaskToEventLoop, &shouldInterruptScriptBeforeTimeout };
+const GlobalObjectMethodTable JSDOMWindowBase::s_globalObjectMethodTable = { &shouldAllowAccessFrom, &supportsLegacyProfiling, &supportsRichSourceInfo, &shouldInterruptScript, &javaScriptRuntimeFlags, &queueTaskToEventLoop, &shouldInterruptScriptBeforeTimeout, &moduleLoaderResolve, &moduleLoaderFetch, nullptr, nullptr, &moduleLoaderEvaluate, &defaultLanguage };
 
 JSDOMWindowBase::JSDOMWindowBase(VM& vm, Structure* structure, PassRefPtr<DOMWindow> window, JSDOMWindowShell* shell)
     : JSDOMGlobalObject(vm, structure, &shell->world(), &s_globalObjectMethodTable)
     , m_windowCloseWatchpoints((window && window->frame()) ? IsWatched : IsInvalidated)
-    , m_impl(window)
+    , m_wrapped(window)
     , m_shell(shell)
 {
 }
@@ -73,10 +81,17 @@ void JSDOMWindowBase::finishCreation(VM& vm, JSDOMWindowShell* shell)
 
     GlobalPropertyInfo staticGlobals[] = {
         GlobalPropertyInfo(vm.propertyNames->document, jsNull(), DontDelete | ReadOnly),
-        GlobalPropertyInfo(vm.propertyNames->window, m_shell, DontDelete | ReadOnly)
+        GlobalPropertyInfo(vm.propertyNames->window, m_shell, DontDelete | ReadOnly),
     };
 
     addStaticGlobals(staticGlobals, WTF_ARRAY_LENGTH(staticGlobals));
+}
+
+void JSDOMWindowBase::visitChildren(JSCell* cell, SlotVisitor& visitor)
+{
+    JSDOMWindowBase* thisObject = jsCast<JSDOMWindowBase*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
+    Base::visitChildren(thisObject, visitor);
 }
 
 void JSDOMWindowBase::destroy(JSCell* cell)
@@ -86,25 +101,25 @@ void JSDOMWindowBase::destroy(JSCell* cell)
 
 void JSDOMWindowBase::updateDocument()
 {
-    ASSERT(m_impl->document());
+    ASSERT(m_wrapped->document());
     ExecState* exec = globalExec();
-    symbolTablePutWithAttributes(this, exec->vm(), exec->vm().propertyNames->document, toJS(exec, this, m_impl->document()), DontDelete | ReadOnly);
+    symbolTablePutWithAttributesTouchWatchpointSet(this, exec, exec->vm().propertyNames->document, toJS(exec, this, m_wrapped->document()), DontDelete | ReadOnly);
 }
 
 ScriptExecutionContext* JSDOMWindowBase::scriptExecutionContext() const
 {
-    return m_impl->document();
+    return m_wrapped->document();
 }
 
 void JSDOMWindowBase::printErrorMessage(const String& message) const
 {
-    printErrorMessageForFrame(impl().frame(), message);
+    printErrorMessageForFrame(wrapped().frame(), message);
 }
 
-bool JSDOMWindowBase::supportsProfiling(const JSGlobalObject* object)
+bool JSDOMWindowBase::supportsLegacyProfiling(const JSGlobalObject* object)
 {
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
-    Frame* frame = thisObject->impl().frame();
+    Frame* frame = thisObject->wrapped().frame();
     if (!frame)
         return false;
 
@@ -112,13 +127,13 @@ bool JSDOMWindowBase::supportsProfiling(const JSGlobalObject* object)
     if (!page)
         return false;
 
-    return page->inspectorController().profilerEnabled();
+    return page->inspectorController().legacyProfilerEnabled();
 }
 
 bool JSDOMWindowBase::supportsRichSourceInfo(const JSGlobalObject* object)
 {
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
-    Frame* frame = thisObject->impl().frame();
+    Frame* frame = thisObject->wrapped().frame();
     if (!frame)
         return false;
 
@@ -128,7 +143,7 @@ bool JSDOMWindowBase::supportsRichSourceInfo(const JSGlobalObject* object)
 
     bool enabled = page->inspectorController().enabled();
     ASSERT(enabled || !thisObject->debugger());
-    ASSERT(enabled || !supportsProfiling(thisObject));
+    ASSERT(enabled || !supportsLegacyProfiling(thisObject));
     return enabled;
 }
 
@@ -147,16 +162,16 @@ static inline bool shouldInterruptScriptToPreventInfiniteRecursionWhenClosingPag
 bool JSDOMWindowBase::shouldInterruptScript(const JSGlobalObject* object)
 {
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
-    ASSERT(thisObject->impl().frame());
-    Page* page = thisObject->impl().frame()->page();
+    ASSERT(thisObject->wrapped().frame());
+    Page* page = thisObject->wrapped().frame()->page();
     return shouldInterruptScriptToPreventInfiniteRecursionWhenClosingPage(page);
 }
 
 bool JSDOMWindowBase::shouldInterruptScriptBeforeTimeout(const JSGlobalObject* object)
 {
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
-    ASSERT(thisObject->impl().frame());
-    Page* page = thisObject->impl().frame()->page();
+    ASSERT(thisObject->wrapped().frame());
+    Page* page = thisObject->wrapped().frame()->page();
 
     if (shouldInterruptScriptToPreventInfiniteRecursionWhenClosingPage(page))
         return true;
@@ -172,16 +187,52 @@ bool JSDOMWindowBase::shouldInterruptScriptBeforeTimeout(const JSGlobalObject* o
 RuntimeFlags JSDOMWindowBase::javaScriptRuntimeFlags(const JSGlobalObject* object)
 {
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
-    Frame* frame = thisObject->impl().frame();
+    Frame* frame = thisObject->wrapped().frame();
     if (!frame)
         return RuntimeFlags();
     return frame->settings().javaScriptRuntimeFlags();
 }
 
-void JSDOMWindowBase::queueTaskToEventLoop(const JSGlobalObject* object, PassRefPtr<Microtask> task)
+class JSDOMWindowMicrotaskCallback : public RefCounted<JSDOMWindowMicrotaskCallback> {
+public:
+    static Ref<JSDOMWindowMicrotaskCallback> create(JSDOMWindowBase* globalObject, PassRefPtr<JSC::Microtask> task)
+    {
+        return adoptRef(*new JSDOMWindowMicrotaskCallback(globalObject, task));
+    }
+
+    void call()
+    {
+        Ref<JSDOMWindowMicrotaskCallback> protect(*this);
+        JSLockHolder lock(m_globalObject->vm());
+
+        ExecState* exec = m_globalObject->globalExec();
+
+        JSMainThreadExecState::runTask(exec, *m_task.get());
+
+        ASSERT(!exec->hadException());
+    }
+
+private:
+    JSDOMWindowMicrotaskCallback(JSDOMWindowBase* globalObject, PassRefPtr<JSC::Microtask> task)
+        : m_globalObject(globalObject->vm(), globalObject)
+        , m_task(task)
+    {
+    }
+
+    Strong<JSDOMWindowBase> m_globalObject;
+    RefPtr<JSC::Microtask> m_task;
+};
+
+void JSDOMWindowBase::queueTaskToEventLoop(const JSGlobalObject* object, PassRefPtr<JSC::Microtask> task)
 {
     const JSDOMWindowBase* thisObject = static_cast<const JSDOMWindowBase*>(object);
-    thisObject->scriptExecutionContext()->postTask(JSGlobalObjectTask((JSDOMWindowBase*)thisObject, task));
+
+    RefPtr<JSDOMWindowMicrotaskCallback> callback = JSDOMWindowMicrotaskCallback::create((JSDOMWindowBase*)thisObject, task);
+    auto microtask = std::make_unique<ActiveDOMCallbackMicrotask>(MicrotaskQueue::mainThreadQueue(), *thisObject->scriptExecutionContext(), [callback]() mutable {
+        callback->call();
+    });
+
+    MicrotaskQueue::mainThreadQueue().append(WTFMove(microtask));
 }
 
 void JSDOMWindowBase::willRemoveFromWindowShell()
@@ -206,14 +257,17 @@ VM& JSDOMWindowBase::commonVM()
         vm->setExclusiveThread(std::this_thread::get_id());
 #else
         vm->heap.setFullActivityCallback(WebSafeFullGCActivityCallback::create(&vm->heap));
-#if ENABLE(GGC)
         vm->heap.setEdenActivityCallback(WebSafeEdenGCActivityCallback::create(&vm->heap));
-#else
-        vm->heap.setEdenActivityCallback(vm->heap.fullActivityCallback());
-#endif
+
         vm->heap.setIncrementalSweeper(std::make_unique<WebSafeIncrementalSweeper>(&vm->heap));
         vm->heap.machineThreads().addCurrentThread();
 #endif
+
+#if PLATFORM(MAC)
+        if (applicationIsITunes() || applicationIsIBooks() || Settings::shouldRewriteConstAsVar())
+            vm->setShouldRewriteConstAsVar(true);
+#endif
+
         initNormalWorldClientData(vm);
     }
 
@@ -263,7 +317,7 @@ JSDOMWindow* toJSDOMWindow(JSValue value)
 void JSDOMWindowBase::fireFrameClearedWatchpointsForWindow(DOMWindow* window)
 {
     JSC::VM& vm = JSDOMWindowBase::commonVM();
-    WebCoreJSClientData* clientData = static_cast<WebCoreJSClientData*>(vm.clientData);
+    JSVMClientData* clientData = static_cast<JSVMClientData*>(vm.clientData);
     Vector<Ref<DOMWrapperWorld>> wrapperWorlds;
     clientData->getAllWorlds(wrapperWorlds);
     for (unsigned i = 0; i < wrapperWorlds.size(); ++i) {
@@ -277,6 +331,33 @@ void JSDOMWindowBase::fireFrameClearedWatchpointsForWindow(DOMWindow* window)
         JSDOMWindowBase* jsWindow = JSC::jsCast<JSDOMWindowBase*>(wrapper);
         jsWindow->m_windowCloseWatchpoints.fireAll("Frame cleared");
     }
+}
+
+
+JSC::JSInternalPromise* JSDOMWindowBase::moduleLoaderResolve(JSC::JSGlobalObject* globalObject, JSC::ExecState* exec, JSC::JSValue moduleName, JSC::JSValue importerModuleKey)
+{
+    JSDOMWindowBase* thisObject = JSC::jsCast<JSDOMWindowBase*>(globalObject);
+    if (RefPtr<Document> document = thisObject->wrapped().document())
+        return document->moduleLoader()->resolve(globalObject, exec, moduleName, importerModuleKey);
+    JSC::JSInternalPromiseDeferred* deferred = JSC::JSInternalPromiseDeferred::create(exec, globalObject);
+    return deferred->reject(exec, jsUndefined());
+}
+
+JSC::JSInternalPromise* JSDOMWindowBase::moduleLoaderFetch(JSC::JSGlobalObject* globalObject, JSC::ExecState* exec, JSC::JSValue moduleKey)
+{
+    JSDOMWindowBase* thisObject = JSC::jsCast<JSDOMWindowBase*>(globalObject);
+    if (RefPtr<Document> document = thisObject->wrapped().document())
+        return document->moduleLoader()->fetch(globalObject, exec, moduleKey);
+    JSC::JSInternalPromiseDeferred* deferred = JSC::JSInternalPromiseDeferred::create(exec, globalObject);
+    return deferred->reject(exec, jsUndefined());
+}
+
+JSC::JSValue JSDOMWindowBase::moduleLoaderEvaluate(JSC::JSGlobalObject* globalObject, JSC::ExecState* exec, JSC::JSValue moduleKey, JSC::JSValue moduleRecord)
+{
+    JSDOMWindowBase* thisObject = JSC::jsCast<JSDOMWindowBase*>(globalObject);
+    if (RefPtr<Document> document = thisObject->wrapped().document())
+        return document->moduleLoader()->evaluate(globalObject, exec, moduleKey, moduleRecord);
+    return JSC::jsUndefined();
 }
 
 } // namespace WebCore

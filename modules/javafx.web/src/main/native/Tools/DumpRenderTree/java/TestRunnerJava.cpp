@@ -341,6 +341,12 @@ void TestRunner::evaluateInWebInspector(JSStringRef script)
     // FIXME: implement
 }
 
+JSStringRef TestRunner::inspectorTestStubURL()
+{
+    // FIXME: Implement this to support Web Inspector tests using `protocol-test.js`.
+    return nullptr;
+}
+
 void TestRunner::evaluateScriptInIsolatedWorld(unsigned worldId, JSObjectRef globalObject, JSStringRef script)
 {
     // FIXME: implement
@@ -456,6 +462,13 @@ int TestRunner::numberOfPendingGeolocationPermissionRequests()
     // FIXME: Implement for Geolocation layout tests.
     return -1;
 }
+
+bool TestRunner::isGeolocationProviderActive()
+{
+    // FIXME: Implement for Geolocation layout tests.
+    return false;
+}
+
 
 JSValueRef TestRunner::originsWithApplicationCache(JSContextRef context)
 {

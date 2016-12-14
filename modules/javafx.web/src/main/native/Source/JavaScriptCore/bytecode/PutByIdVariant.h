@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #ifndef PutByIdVariant_h
 #define PutByIdVariant_h
 
-#include "IntendedStructureChain.h"
+#include "ObjectPropertyConditionSet.h"
 #include "PropertyOffset.h"
 #include "StructureSet.h"
 
@@ -46,7 +46,6 @@ public:
     PutByIdVariant()
         : m_kind(NotSet)
         , m_newStructure(nullptr)
-        , m_alternateBase(nullptr)
         , m_offset(invalidOffset)
     {
     }
@@ -54,16 +53,15 @@ public:
     PutByIdVariant(const PutByIdVariant&);
     PutByIdVariant& operator=(const PutByIdVariant&);
 
-    static PutByIdVariant replace(
-        const StructureSet& structure, PropertyOffset offset);
+    static PutByIdVariant replace(const StructureSet&, PropertyOffset, const InferredType::Descriptor&);
 
     static PutByIdVariant transition(
         const StructureSet& oldStructure, Structure* newStructure,
-        const IntendedStructureChain* structureChain, PropertyOffset offset);
+        const ObjectPropertyConditionSet&, PropertyOffset, const InferredType::Descriptor&);
 
     static PutByIdVariant setter(
-        const StructureSet& structure, PropertyOffset offset,
-        IntendedStructureChain* chain, std::unique_ptr<CallLinkStatus> callLinkStatus);
+        const StructureSet&, PropertyOffset, const ObjectPropertyConditionSet&,
+        std::unique_ptr<CallLinkStatus>);
 
     Kind kind() const { return m_kind; }
 
@@ -74,6 +72,11 @@ public:
     {
         ASSERT(kind() == Replace || kind() == Setter);
         return m_oldStructure;
+    }
+
+    const StructureSet& structureSet() const
+    {
+        return structure();
     }
 
     const StructureSet& oldStructure() const
@@ -96,28 +99,25 @@ public:
         return m_newStructure;
     }
 
+    InferredType::Descriptor requiredType() const
+    {
+        return m_requiredType;
+    }
+
     bool writesStructures() const;
     bool reallocatesStorage() const;
     bool makesCalls() const;
 
-    const ConstantStructureCheckVector& constantChecks() const
-    {
-        return m_constantChecks;
-    }
+    const ObjectPropertyConditionSet& conditionSet() const { return m_conditionSet; }
+
+    // We don't support intrinsics for Setters (it would be sweet if we did) but we need this for templated helpers.
+    Intrinsic intrinsic() const { return NoIntrinsic; }
 
     PropertyOffset offset() const
     {
         ASSERT(isSet());
         return m_offset;
     }
-
-    JSObject* alternateBase() const
-    {
-        ASSERT(kind() == Setter);
-        return m_alternateBase;
-    }
-
-    StructureSet baseStructure() const;
 
     CallLinkStatus* callLinkStatus() const
     {
@@ -136,9 +136,9 @@ private:
     Kind m_kind;
     StructureSet m_oldStructure;
     Structure* m_newStructure;
-    ConstantStructureCheckVector m_constantChecks;
-    JSObject* m_alternateBase;
+    ObjectPropertyConditionSet m_conditionSet;
     PropertyOffset m_offset;
+    InferredType::Descriptor m_requiredType;
     std::unique_ptr<CallLinkStatus> m_callLinkStatus;
 };
 

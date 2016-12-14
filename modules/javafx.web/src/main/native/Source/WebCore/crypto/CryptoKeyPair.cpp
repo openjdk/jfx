@@ -30,9 +30,9 @@
 
 namespace WebCore {
 
-CryptoKeyPair::CryptoKeyPair(PassRefPtr<CryptoKey> publicKey, PassRefPtr<CryptoKey> privateKey)
-    : m_publicKey(publicKey)
-    , m_privateKey(privateKey)
+CryptoKeyPair::CryptoKeyPair(RefPtr<CryptoKey>&& publicKey, RefPtr<CryptoKey>&& privateKey)
+    : m_publicKey(WTFMove(publicKey))
+    , m_privateKey(WTFMove(privateKey))
 {
 }
 

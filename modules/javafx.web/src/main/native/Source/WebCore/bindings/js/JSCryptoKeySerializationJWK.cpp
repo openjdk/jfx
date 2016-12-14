@@ -53,7 +53,7 @@ namespace WebCore {
 static bool getJSArrayFromJSON(ExecState* exec, JSObject* json, const char* key, JSArray*& result)
 {
     Identifier identifier = Identifier::fromString(exec, key);
-    PropertySlot slot(json);
+    PropertySlot slot(json, PropertySlot::InternalMethodType::Get);
 
     if (!json->getPropertySlot(exec, identifier, slot))
         return false;
@@ -73,7 +73,7 @@ static bool getJSArrayFromJSON(ExecState* exec, JSObject* json, const char* key,
 static bool getStringFromJSON(ExecState* exec, JSObject* json, const char* key, String& result)
 {
     Identifier identifier = Identifier::fromString(exec, key);
-    PropertySlot slot(json);
+    PropertySlot slot(json, PropertySlot::InternalMethodType::Get);
 
     if (!json->getPropertySlot(exec, identifier, slot))
         return false;
@@ -94,7 +94,7 @@ static bool getStringFromJSON(ExecState* exec, JSObject* json, const char* key, 
 static bool getBooleanFromJSON(ExecState* exec, JSObject* json, const char* key, bool& result)
 {
     Identifier identifier = Identifier::fromString(exec, key);
-    PropertySlot slot(json);
+    PropertySlot slot(json, PropertySlot::InternalMethodType::Get);
 
     if (!json->getPropertySlot(exec, identifier, slot))
         return false;
@@ -152,7 +152,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createHMACParameters(CryptoAlg
 {
     std::unique_ptr<CryptoAlgorithmHmacParams> hmacParameters = std::make_unique<CryptoAlgorithmHmacParams>();
     hmacParameters->hash = hashFunction;
-    return WTF::move(hmacParameters);
+    return WTFMove(hmacParameters);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createRSAKeyParametersWithHash(CryptoAlgorithmIdentifier hashFunction)
@@ -160,7 +160,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRSAKeyParametersWithHash
     std::unique_ptr<CryptoAlgorithmRsaKeyParamsWithHash> rsaKeyParameters = std::make_unique<CryptoAlgorithmRsaKeyParamsWithHash>();
     rsaKeyParameters->hasHash = true;
     rsaKeyParameters->hash = hashFunction;
-    return WTF::move(rsaKeyParameters);
+    return WTFMove(rsaKeyParameters);
 }
 
 bool JSCryptoKeySerializationJWK::reconcileAlgorithm(std::unique_ptr<CryptoAlgorithm>& suggestedAlgorithm, std::unique_ptr<CryptoAlgorithmParameters>& suggestedParameters) const
@@ -193,7 +193,7 @@ bool JSCryptoKeySerializationJWK::reconcileAlgorithm(std::unique_ptr<CryptoAlgor
         parameters = createRSAKeyParametersWithHash(CryptoAlgorithmIdentifier::SHA_512);
     } else if (m_jwkAlgorithmName == "RSA1_5") {
         algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5);
-        parameters = std::make_unique<CryptoAlgorithmParameters>();
+        parameters = std::make_unique<CryptoAlgorithmRsaKeyParamsWithHash>();
     } else if (m_jwkAlgorithmName == "RSA-OAEP") {
         algorithm = algorithmRegisty.create(CryptoAlgorithmIdentifier::RSA_OAEP);
         parameters = createRSAKeyParametersWithHash(CryptoAlgorithmIdentifier::SHA_1);
@@ -221,8 +221,8 @@ bool JSCryptoKeySerializationJWK::reconcileAlgorithm(std::unique_ptr<CryptoAlgor
     }
 
     if (!suggestedAlgorithm) {
-        suggestedAlgorithm = WTF::move(algorithm);
-        suggestedParameters =  WTF::move(parameters);
+        suggestedAlgorithm = WTFMove(algorithm);
+        suggestedParameters =  WTFMove(parameters);
         return true;
     }
 

@@ -26,14 +26,17 @@
 [
     Conditional=INDEXED_DATABASE,
     EnabledAtRuntime=IndexedDB,
+    ActiveDOMObject,
+    SkipVTableValidation,
+    JSCustomMarkFunction,
 ] interface IDBCursor {
     readonly attribute IDBAny source;
     readonly attribute DOMString direction;
     readonly attribute any key;
     readonly attribute any primaryKey;
 
-    [CallWith=ScriptState, RaisesException] IDBRequest update(any value);
-    [RaisesException] void advance([EnforceRange] unsigned long count);
-    [CallWith=ScriptExecutionContext, ImplementedAs=continueFunction, RaisesException] void continue(optional any key);
-    [CallWith=ScriptExecutionContext, ImplementedAs=deleteFunction, RaisesException] IDBRequest delete();
+    [CallWith=ScriptState, RaisesExceptionWithMessage] IDBRequest update(any value);
+    [RaisesExceptionWithMessage] void advance([EnforceRange] unsigned long count);
+    [CallWith=ScriptExecutionContext, ImplementedAs=continueFunction, RaisesExceptionWithMessage] void continue(optional any key);
+    [CallWith=ScriptExecutionContext, ImplementedAs=deleteFunction, RaisesExceptionWithMessage] IDBRequest delete();
 };

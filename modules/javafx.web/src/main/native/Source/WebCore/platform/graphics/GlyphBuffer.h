@@ -245,7 +245,11 @@ private:
     Vector<GlyphBufferGlyph, 2048> m_glyphs;
     Vector<GlyphBufferAdvance, 2048> m_advances;
     GlyphBufferAdvance m_initialAdvance;
+#if ENABLE(CXX_11_FIX)
+    std::shared_ptr<Vector<unsigned, 2048>> m_offsetsInString;
+#else
     std::unique_ptr<Vector<unsigned, 2048>> m_offsetsInString;
+#endif
 #if PLATFORM(WIN)
     Vector<FloatSize, 2048> m_offsets;
 #endif

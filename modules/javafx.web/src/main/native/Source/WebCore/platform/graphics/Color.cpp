@@ -28,6 +28,7 @@
 
 #include "AnimationUtilities.h"
 #include "HashTools.h"
+#include "TextStream.h"
 #include <wtf/Assertions.h>
 #include <wtf/DecimalNumber.h>
 #include <wtf/HexNumber.h>
@@ -127,7 +128,7 @@ RGBA32 makeRGBAFromCMYKA(float c, float m, float y, float k, float a)
 template <typename CharacterType>
 static inline bool parseHexColorInternal(const CharacterType* name, unsigned length, RGBA32& rgb)
 {
-    if (length != 3 && length != 6)
+    if (length != 3 && length != 4 && length != 6 && length != 8)
         return false;
     unsigned value = 0;
     for (unsigned i = 0; i < length; ++i) {
@@ -138,6 +139,20 @@ static inline bool parseHexColorInternal(const CharacterType* name, unsigned len
     }
     if (length == 6) {
         rgb = 0xFF000000 | value;
+        return true;
+    }
+    if (length == 8) {
+        // We parsed the values into RGBA order, but the RGBA32 type
+        // expects them to be in ARGB order, so we right rotate eight bits.
+        rgb = value << 24 | value >> 8;
+        return true;
+    }
+    if (length == 4) {
+        // #abcd converts to ddaabbcc in RGBA32.
+        rgb = (value & 0xF) << 28 | (value & 0xF) << 24
+            | (value & 0xF000) << 8 | (value & 0xF000) << 4
+            | (value & 0xF00) << 4 | (value & 0xF00)
+            | (value & 0xF0) | (value & 0xF0) >> 4;
         return true;
     }
     // #abc converts to #aabbcc
@@ -211,29 +226,37 @@ String Color::serialized() const
         return builder.toString();
     }
 
-    Vector<LChar> result;
-    result.reserveInitialCapacity(28);
-    const char commaSpace[] = ", ";
-    const char rgbaParen[] = "rgba(";
+    return cssText();
+}
 
-    result.append(rgbaParen, 5);
-    appendNumber(result, red());
-    result.append(commaSpace, 2);
-    appendNumber(result, green());
-    result.append(commaSpace, 2);
-    appendNumber(result, blue());
-    result.append(commaSpace, 2);
+String Color::cssText() const
+{
+    StringBuilder builder;
+    builder.reserveCapacity(28);
+    bool colorHasAlpha = hasAlpha();
+    if (colorHasAlpha)
+        builder.appendLiteral("rgba(");
+    else
+        builder.appendLiteral("rgb(");
 
-    if (!alpha())
-        result.append('0');
-    else {
-        NumberToLStringBuffer buffer;
-        unsigned length = DecimalNumber(alpha() / 255.0).toStringDecimal(buffer, WTF::NumberToStringBufferLength);
-        result.append(buffer, length);
+    builder.appendNumber(static_cast<unsigned char>(red()));
+    builder.appendLiteral(", ");
+
+    builder.appendNumber(static_cast<unsigned char>(green()));
+    builder.appendLiteral(", ");
+
+
+    builder.appendNumber(static_cast<unsigned char>(blue()));
+    if (colorHasAlpha) {
+        builder.appendLiteral(", ");
+
+        NumberToStringBuffer buffer;
+        bool shouldTruncateTrailingZeros = true;
+        builder.append(numberToFixedPrecisionString(alpha() / 255.0f, 6, buffer, shouldTruncateTrailingZeros));
     }
 
-    result.append(')');
-    return String::adopt(result);
+    builder.append(')');
+    return builder.toString();
 }
 
 String Color::nameForRenderTreeAsText() const
@@ -480,5 +503,9 @@ Color blend(const Color& from, const Color& to, double progress, bool blendPremu
         blend(from.alpha(), to.alpha(), progress));
 }
 
+TextStream& operator<<(TextStream& ts, const Color& color)
+{
+    return ts << color.nameForRenderTreeAsText();
+}
 
 } // namespace WebCore

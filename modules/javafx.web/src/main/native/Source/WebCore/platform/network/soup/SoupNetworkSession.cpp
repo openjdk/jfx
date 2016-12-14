@@ -37,6 +37,7 @@
 #include "ResourceHandle.h"
 #include <glib/gstdio.h>
 #include <libsoup/soup.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -51,7 +52,7 @@ inline static void soupLogPrinter(SoupLogger*, SoupLoggerLogLevel, char directio
 
 SoupNetworkSession& SoupNetworkSession::defaultSession()
 {
-    static SoupNetworkSession networkSession(soupCookieJar());
+    static NeverDestroyed<SoupNetworkSession> networkSession(soupCookieJar());
     return networkSession;
 }
 
@@ -96,7 +97,7 @@ SoupNetworkSession::SoupNetworkSession(SoupCookieJar* cookieJar)
     // the rule "Do What Every Other Modern Browser Is Doing". They seem
     // to significantly improve page loading time compared to soup's
     // default values.
-    static const int maxConnections = 35;
+    static const int maxConnections = 17;
     static const int maxConnectionsPerHost = 6;
 
     g_object_set(m_soupSession.get(),

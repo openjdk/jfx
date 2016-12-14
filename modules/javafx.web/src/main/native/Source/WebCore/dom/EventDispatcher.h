@@ -28,7 +28,6 @@
 
 #include "SimulatedClickOptions.h"
 #include <wtf/Forward.h>
-#include <wtf/PassRefPtr.h>
 
 namespace WebCore {
 
@@ -38,11 +37,10 @@ class Node;
 
 namespace EventDispatcher {
 
-bool dispatchEvent(Node*, PassRefPtr<Event>);
-void dispatchScopedEvent(Node&, PassRefPtr<Event>);
-void dispatchSimulatedClick(Element*, Event* underlyingEvent, SimulatedClickMouseEventOptions, SimulatedClickVisualOptions);
+bool dispatchEvent(Node*, Event&);
+void dispatchScopedEvent(Node&, Event&);
 
-};
+}
 
 }
 

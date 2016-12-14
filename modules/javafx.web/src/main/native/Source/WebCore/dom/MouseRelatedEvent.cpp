@@ -55,7 +55,7 @@ static LayoutSize contentsScrollOffset(AbstractView* abstractView)
 #endif
 }
 
-MouseRelatedEvent::MouseRelatedEvent(const AtomicString& eventType, bool canBubble, bool cancelable, double timestamp, PassRefPtr<AbstractView> abstractView,
+MouseRelatedEvent::MouseRelatedEvent(const AtomicString& eventType, bool canBubble, bool cancelable, double timestamp, AbstractView* abstractView,
                                      int detail, const IntPoint& screenLocation, const IntPoint& windowLocation,
 #if ENABLE(POINTER_LOCK)
                                      const IntPoint& movementDelta,
@@ -68,10 +68,26 @@ MouseRelatedEvent::MouseRelatedEvent(const AtomicString& eventType, bool canBubb
 #endif
     , m_isSimulated(isSimulated)
 {
+    init(isSimulated, windowLocation);
+}
+
+MouseRelatedEvent::MouseRelatedEvent(const AtomicString& eventType, const MouseRelatedEventInit& initializer)
+    : UIEventWithKeyState(eventType, initializer)
+    , m_screenLocation(IntPoint(initializer.screenX, initializer.screenY))
+#if ENABLE(POINTER_LOCK)
+    , m_movementDelta(IntPoint(0, 0))
+#endif
+    , m_isSimulated(false)
+{
+    init(false, IntPoint(0, 0));
+}
+
+void MouseRelatedEvent::init(bool isSimulated, const IntPoint& windowLocation)
+{
     LayoutPoint adjustedPageLocation;
     LayoutPoint scrollPosition;
 
-    Frame* frame = view() ? view()->frame() : 0;
+    Frame* frame = view() ? view()->frame() : nullptr;
     if (frame && !isSimulated) {
         if (FrameView* frameView = frame->view()) {
             scrollPosition = frameView->contentsScrollPosition();
@@ -150,7 +166,7 @@ void MouseRelatedEvent::receivedTarget()
 
 void MouseRelatedEvent::computeRelativePosition()
 {
-    Node* targetNode = target() ? target()->toNode() : 0;
+    Node* targetNode = target() ? target()->toNode() : nullptr;
     if (!targetNode)
         return;
 

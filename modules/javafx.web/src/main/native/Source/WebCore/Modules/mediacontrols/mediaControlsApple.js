@@ -113,6 +113,7 @@ Controller.prototype = {
         noVideo: 'no-video',
         down: 'down',
         out: 'out',
+        pictureInPictureButton: 'picture-in-picture-button',
     },
     KeyCodes: {
         enter: 13,
@@ -142,6 +143,11 @@ Controller.prototype = {
             if (!child.hasOwnProperty(property))
                 child[property] = this[property];
         }
+    },
+
+    get idiom()
+    {
+        return "apple";
     },
 
     UIString: function(developmentString, replaceString, replacementString)
@@ -208,6 +214,9 @@ Controller.prototype = {
         this.controlsObserver.observe(this.video, { attributes: true, attributeFilter: ['controls'] });
 
         this.listenFor(this.video, 'webkitcurrentplaybacktargetiswirelesschanged', this.handleWirelessPlaybackChange);
+
+        if ('webkitPresentationMode' in this.video)
+            this.listenFor(this.video, 'webkitpresentationmodechanged', this.handlePresentationModeChange);
     },
 
     removeVideoListeners: function()
@@ -237,6 +246,9 @@ Controller.prototype = {
 
         this.stopListeningFor(this.video, 'webkitcurrentplaybacktargetiswirelesschanged', this.handleWirelessPlaybackChange);
         this.setShouldListenForPlaybackTargetAvailabilityEvent(false);
+
+        if ('webkitPresentationMode' in this.video)
+            this.stopListeningFor(this.video, 'webkitpresentationmodechanged', this.handlePresentationModeChange);
     },
 
     handleEvent: function(event)
@@ -463,6 +475,7 @@ Controller.prototype = {
         captionButton.setAttribute('pseudo', '-webkit-media-controls-toggle-closed-captions-button');
         captionButton.setAttribute('aria-label', this.UIString('Captions'));
         captionButton.setAttribute('aria-haspopup', 'true');
+        captionButton.setAttribute('aria-owns', 'audioAndTextTrackMenu');
         this.listenFor(captionButton, 'click', this.handleCaptionButtonClicked);
 
         var fullscreenButton = this.controls.fullscreenButton = document.createElement('button');
@@ -473,6 +486,7 @@ Controller.prototype = {
         var pictureInPictureButton = this.controls.pictureInPictureButton = document.createElement('button');
         pictureInPictureButton.setAttribute('pseudo', '-webkit-media-controls-picture-in-picture-button');
         pictureInPictureButton.setAttribute('aria-label', this.UIString('Display Picture in Picture'));
+        pictureInPictureButton.classList.add(this.ClassNames.pictureInPictureButton);
         this.listenFor(pictureInPictureButton, 'click', this.handlePictureInPictureButtonClicked);
 
         var inlinePlaybackPlaceholder = this.controls.inlinePlaybackPlaceholder = document.createElement('div');
@@ -494,6 +508,14 @@ Controller.prototype = {
         wirelessTargetPicker.setAttribute('pseudo', '-webkit-media-controls-wireless-playback-picker-button');
         wirelessTargetPicker.setAttribute('aria-label', this.UIString('Choose Wireless Display'));
         this.listenFor(wirelessTargetPicker, 'click', this.handleWirelessPickerButtonClicked);
+
+        // Show controls button is an accessibility workaround since the controls are now removed from the DOM. http://webkit.org/b/145684
+        var showControlsButton = this.showControlsButton = document.createElement('button');
+        showControlsButton.setAttribute('pseudo', '-webkit-media-show-controls');
+        showControlsButton.hidden = true;
+        showControlsButton.setAttribute('aria-label', this.UIString('Show Controls'));
+        this.listenFor(showControlsButton, 'click', this.handleShowControlsClick);
+        this.base.appendChild(showControlsButton);
 
         if (!Controller.gSimulateWirelessPlaybackTarget)
             wirelessTargetPicker.classList.add(this.ClassNames.hidden);
@@ -570,8 +592,10 @@ Controller.prototype = {
         this.controls.muteBox.appendChild(this.controls.muteButton);
         this.controls.panel.appendChild(this.controls.wirelessTargetPicker);
         this.controls.panel.appendChild(this.controls.captionButton);
-        if (!this.isAudio())
+        if (!this.isAudio()) {
+            this.updatePictureInPictureButton();
             this.controls.panel.appendChild(this.controls.fullscreenButton);
+        }
 
         this.controls.panel.style.removeProperty('left');
         this.controls.panel.style.removeProperty('top');
@@ -641,7 +665,7 @@ Controller.prototype = {
             this.controls.statusDisplay.innerText = this.UIString('Error');
         else if (this.isLive && this.video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA)
             this.controls.statusDisplay.innerText = this.UIString('Live Broadcast');
-        else if (this.video.networkState === HTMLMediaElement.NETWORK_LOADING)
+        else if (!this.isPlayable() && this.video.networkState === HTMLMediaElement.NETWORK_LOADING)
             this.controls.statusDisplay.innerText = this.UIString('Loading');
         else
             this.controls.statusDisplay.innerText = '';
@@ -688,6 +712,7 @@ Controller.prototype = {
         this.updateCaptionButton();
         this.updateCaptionContainer();
         this.updateFullscreenButtons();
+        this.updateWirelessTargetAvailable();
         this.updateWirelessTargetPickerButton();
         this.updateProgress();
         this.updateControls();
@@ -770,9 +795,83 @@ Controller.prototype = {
         this.updateCaptionButton();
     },
 
+    presentationMode: function() {
+        if ('webkitPresentationMode' in this.video)
+            return this.video.webkitPresentationMode;
+
+        if (this.isFullScreen())
+            return 'fullscreen';
+
+        return 'inline';
+    },
+
     isFullScreen: function()
     {
-        return this.video.webkitDisplayingFullscreen;
+        if (!this.video.webkitDisplayingFullscreen)
+            return false;
+
+        if ('webkitPresentationMode' in this.video && this.video.webkitPresentationMode === 'picture-in-picture')
+            return false;
+
+        return true;
+    },
+
+    updatePictureInPictureButton: function()
+    {
+        var shouldShowPictureInPictureButton = (Controller.gSimulatePictureInPictureAvailable || ('webkitSupportsPresentationMode' in this.video && this.video.webkitSupportsPresentationMode('picture-in-picture'))) && this.hasVideo();
+        if (shouldShowPictureInPictureButton) {
+            if (!this.controls.pictureInPictureButton.parentElement) {
+                if (this.controls.fullscreenButton.parentElement == this.controls.panel)
+                    this.controls.panel.insertBefore(this.controls.pictureInPictureButton, this.controls.fullscreenButton);
+                else
+                    this.controls.panel.appendChild(this.controls.pictureInPictureButton);
+            }
+            this.controls.pictureInPictureButton.classList.remove(this.ClassNames.hidden);
+        } else
+            this.controls.pictureInPictureButton.classList.add(this.ClassNames.hidden);
+    },
+
+    handlePresentationModeChange: function(event)
+    {
+        var presentationMode = this.presentationMode();
+
+        switch (presentationMode) {
+            case 'inline':
+                this.controls.panel.classList.remove(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholder.classList.add(this.ClassNames.hidden);
+                this.controls.inlinePlaybackPlaceholder.classList.remove(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholderTextTop.classList.remove(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholderTextBottom.classList.remove(this.ClassNames.pictureInPicture);
+
+                this.controls.pictureInPictureButton.classList.remove(this.ClassNames.returnFromPictureInPicture);
+                break;
+            case 'picture-in-picture':
+                this.controls.panel.classList.add(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholder.classList.add(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholder.classList.remove(this.ClassNames.hidden);
+
+                this.controls.inlinePlaybackPlaceholderTextTop.innerText = this.UIString('This video is playing in Picture in Picture');
+                this.controls.inlinePlaybackPlaceholderTextTop.classList.add(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholderTextBottom.innerText = "";
+                this.controls.inlinePlaybackPlaceholderTextBottom.classList.add(this.ClassNames.pictureInPicture);
+
+                this.controls.pictureInPictureButton.classList.add(this.ClassNames.returnFromPictureInPicture);
+                break;
+            default:
+                this.controls.panel.classList.remove(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholder.classList.remove(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholderTextTop.classList.remove(this.ClassNames.pictureInPicture);
+                this.controls.inlinePlaybackPlaceholderTextBottom.classList.remove(this.ClassNames.pictureInPicture);
+
+                this.controls.pictureInPictureButton.classList.remove(this.ClassNames.returnFromPictureInPicture);
+                break;
+        }
+
+        this.updateControls();
+        this.updateCaptionContainer();
+        this.resetHideControlsTimer();
+        if (presentationMode != 'fullscreen' && this.video.paused && this.controlsAreHidden())
+            this.showControls();
     },
 
     handleFullscreenChange: function(event)
@@ -791,6 +890,18 @@ Controller.prototype = {
             this.controls.fullscreenButton.setAttribute('aria-label', this.UIString('Display Full Screen'));
             this.host.exitedFullscreen();
         }
+
+        if ('webkitPresentationMode' in this.video)
+            this.handlePresentationModeChange(event);
+    },
+
+    handleShowControlsClick: function(event)
+    {
+        if (!this.video.controls && !this.isFullScreen())
+            return;
+
+        if (this.controlsAreHidden())
+            this.showControls(true);
     },
 
     handleWrapperMouseMove: function(event)
@@ -1032,7 +1143,7 @@ Controller.prototype = {
     {
         var shouldBeHidden = !this.video.webkitSupportsFullscreen || !this.hasVideo();
         this.controls.fullscreenButton.classList.toggle(this.ClassNames.hidden, shouldBeHidden && !this.isFullScreen());
-        this.controls.pictureInPictureButton.classList.toggle(this.ClassNames.hidden, shouldBeHidden);
+        this.updatePictureInPictureButton();
         this.setNeedsUpdateForDisplayedWidth();
         this.updateLayoutForDisplayedWidth();
     },
@@ -1063,9 +1174,9 @@ Controller.prototype = {
         try {
             this.updateBase();
 
-            if (this.shouldHaveControls())
+            if (this.shouldHaveControls() && !this.hasControls())
                 this.addControls();
-            else
+            else if (!this.shouldHaveControls() && this.hasControls())
                 this.removeControls();
         } catch(e) {
             if (window.console)
@@ -1404,7 +1515,7 @@ Controller.prototype = {
         }
     },
 
-    showControls: function()
+    showControls: function(focusControls)
     {
         this.updateShouldListenForPlaybackTargetAvailabilityEvent();
         if (!this.video.controls && !this.isFullScreen())
@@ -1414,7 +1525,10 @@ Controller.prototype = {
         if (this.shouldHaveControls() && !this.controls.panel.parentElement) {
             this.base.appendChild(this.controls.inlinePlaybackPlaceholder);
             this.base.appendChild(this.controls.panel);
+            if (focusControls)
+                this.controls.playButton.focus();
         }
+        this.showControlsButton.hidden = true;
     },
 
     hideControls: function()
@@ -1427,6 +1541,7 @@ Controller.prototype = {
         this.controls.panel.classList.remove(this.ClassNames.show);
         if (this.controls.panelBackground)
             this.controls.panelBackground.classList.remove(this.ClassNames.show);
+        this.showControlsButton.hidden = false;
     },
 
     setNeedsUpdateForDisplayedWidth: function()
@@ -1453,7 +1568,10 @@ Controller.prototype = {
         if (!this.controls || !this.controls.panel)
             return;
 
-        var visibleWidth = this.controls.panel.getBoundingClientRect().width * this._pageScaleFactor;
+        var visibleWidth = this.controls.panel.getBoundingClientRect().width;
+        if (this._pageScaleFactor > 1)
+            visibleWidth *= this._pageScaleFactor;
+
         if (visibleWidth <= 0 || visibleWidth == this.currentDisplayWidth)
             return;
 
@@ -1470,6 +1588,7 @@ Controller.prototype = {
 
         // Check if there is enough room for the scrubber.
         var shouldDropTimeline = (visibleWidth - visibleButtonWidth) < this.MinimumTimelineWidth;
+        this.controls.timeline.classList.toggle(this.ClassNames.dropped, shouldDropTimeline);
         this.controls.currentTime.classList.toggle(this.ClassNames.dropped, shouldDropTimeline);
         this.controls.thumbnailTrack.classList.toggle(this.ClassNames.dropped, shouldDropTimeline);
         this.controls.remainingTime.classList.toggle(this.ClassNames.dropped, shouldDropTimeline);
@@ -1488,6 +1607,9 @@ Controller.prototype = {
 
     controlsAlwaysVisible: function()
     {
+        if (this.presentationMode() === 'picture-in-picture')
+            return true;
+
         return this.isAudio() || this.currentPlaybackTargetIsWireless() || this.scrubbing;
     },
 
@@ -1508,6 +1630,11 @@ Controller.prototype = {
         this.base.appendChild(this.controls.inlinePlaybackPlaceholder);
         this.base.appendChild(this.controls.panel);
         this.updateControls();
+    },
+
+    hasControls: function()
+    {
+        return this.controls.panel.parentElement;
     },
 
     updateTime: function()
@@ -1615,6 +1742,7 @@ Controller.prototype = {
 
         this.captionMenu = document.createElement('div');
         this.captionMenu.setAttribute('pseudo', '-webkit-media-controls-closed-captions-container');
+        this.captionMenu.setAttribute('id', 'audioAndTextTrackMenu');
         this.base.appendChild(this.captionMenu);
         this.captionMenuItems = [];
 
@@ -1650,6 +1778,10 @@ Controller.prototype = {
                 menuItem.innerText = this.host.displayNameForTrack(track);
                 menuItem.track = track;
 
+                var itemCheckmark = document.createElement("img");
+                itemCheckmark.classList.add("checkmark-container");
+                menuItem.insertBefore(itemCheckmark, menuItem.firstChild);
+
                 if (track.enabled) {
                     menuItem.classList.add(this.ClassNames.selected);
                     menuItem.setAttribute('tabindex', '0');
@@ -1682,6 +1814,10 @@ Controller.prototype = {
                 menuItem.innerText = this.host.displayNameForTrack(track);
                 menuItem.track = track;
 
+                var itemCheckmark = document.createElement("img");
+                itemCheckmark.classList.add("checkmark-container");
+                menuItem.insertBefore(itemCheckmark, menuItem.firstChild);
+
                 if (track === offItem) {
                     var offMenu = menuItem;
                     continue;
@@ -1705,10 +1841,10 @@ Controller.prototype = {
 
             }
 
-            if (offMenu && displayMode === 'forced-only' && !trackMenuItemSelected) {
+            if (offMenu && (displayMode === 'forced-only' || displayMode === 'manual') && !trackMenuItemSelected) {
                 offMenu.classList.add(this.ClassNames.selected);
-                menuItem.setAttribute('tabindex', '0');
-                menuItem.setAttribute('aria-checked', 'true');
+                offMenu.setAttribute('tabindex', '0');
+                offMenu.setAttribute('aria-checked', 'true');
             }
         }
         
@@ -1866,9 +2002,6 @@ Controller.prototype = {
             this.controls.panel.classList.remove(this.ClassNames.noVideo);
         else
             this.controls.panel.classList.add(this.ClassNames.noVideo);
-
-        // The wireless target picker is only visible for files with video, force an update.
-        this.updateWirelessTargetAvailable();
     },
 
     updateVolume: function()
@@ -1907,6 +2040,13 @@ Controller.prototype = {
     },
 
     handlePictureInPictureButtonClicked: function(event) {
+        if (!('webkitSetPresentationMode' in this.video))
+            return;
+
+        if (this.presentationMode() === 'picture-in-picture')
+            this.video.webkitSetPresentationMode('inline');
+        else
+            this.video.webkitSetPresentationMode('picture-in-picture');
     },
 
     currentPlaybackTargetIsWireless: function() {
@@ -1982,7 +2122,7 @@ Controller.prototype = {
         if (this.wirelessPlaybackDisabled)
             wirelessPlaybackTargetsAvailable = false;
 
-        if (wirelessPlaybackTargetsAvailable && this.isPlayable() && this.hasVideo())
+        if (wirelessPlaybackTargetsAvailable && this.isPlayable())
             this.controls.wirelessTargetPicker.classList.remove(this.ClassNames.hidden);
         else
             this.controls.wirelessTargetPicker.classList.add(this.ClassNames.hidden);
@@ -2064,6 +2204,98 @@ Controller.prototype = {
         this.setNeedsTimelineMetricsUpdate();
         this.updateTimelineMetricsIfNeeded();
         this.drawTimelineBackground();
+    },
+
+    getCurrentControlsStatus: function ()
+    {
+        var result = {
+            idiom: this.idiom,
+            status: "ok"
+        };
+
+        var elements = [
+            {
+                name: "Show Controls",
+                object: this.showControlsButton,
+                extraProperties: ["hidden"]
+            },
+            {
+                name: "Status Display",
+                object: this.controls.statusDisplay,
+                styleValues: ["display"],
+                extraProperties: ["textContent"]
+            },
+            {
+                name: "Play Button",
+                object: this.controls.playButton
+            },
+            {
+                name: "Rewind Button",
+                object: this.controls.rewindButton
+            },
+            {
+                name: "Timeline Box",
+                object: this.controls.timelineBox
+            },
+            {
+                name: "Mute Box",
+                object: this.controls.muteBox
+            },
+            {
+                name: "Fullscreen Button",
+                object: this.controls.fullscreenButton
+            },
+            {
+                name: "AppleTV Device Picker",
+                object: this.controls.wirelessTargetPicker,
+                styleValues: ["display"],
+                extraProperties: ["hidden"],
+            },
+            {
+                name: "Picture-in-picture Button",
+                object: this.controls.pictureInPictureButton,
+                extraProperties: ["parentElement"],
+            },
+            {
+                name: "Track Menu",
+                object: this.captionMenu
+            },
+            {
+                name: "Inline playback placeholder",
+                object: this.controls.inlinePlaybackPlaceholder,
+            },
+        ];
+
+        elements.forEach(function (element) {
+            var obj = element.object;
+            delete element.object;
+
+            element.computedStyle = {};
+            if (obj && element.styleValues) {
+                var computedStyle = window.getComputedStyle(obj);
+                element.styleValues.forEach(function (propertyName) {
+                    element.computedStyle[propertyName] = computedStyle[propertyName];
+                });
+                delete element.styleValues;
+            }
+
+            element.bounds = obj ? obj.getBoundingClientRect() : null;
+            element.className = obj ? obj.className : null;
+            element.ariaLabel = obj ? obj.getAttribute('aria-label') : null;
+
+            if (element.extraProperties) {
+                element.extraProperties.forEach(function (property) {
+                    element[property] = obj ? obj[property] : null;
+                });
+                delete element.extraProperties;
+            }
+
+             element.element = obj;
+        });
+
+        result.elements = elements;
+
+        return JSON.stringify(result);
     }
 
 };

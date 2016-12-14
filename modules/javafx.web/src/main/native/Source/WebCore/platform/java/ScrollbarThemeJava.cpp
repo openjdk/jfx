@@ -24,10 +24,10 @@
 namespace WebCore {
 
 
-ScrollbarTheme* ScrollbarTheme::nativeTheme()
+ScrollbarTheme& ScrollbarTheme::nativeTheme()
 {
     static ScrollbarTheme *s_sharedInstance = new ScrollbarThemeJava();
-    return s_sharedInstance;
+    return *s_sharedInstance;
 }
 
 jclass getJScrollBarThemeClass()

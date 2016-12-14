@@ -44,17 +44,22 @@ class RemoteCommandListener;
 class PlatformMediaSessionManager : private RemoteCommandListenerClient, private SystemSleepListener::Client, private AudioHardwareListener::Client {
     WTF_MAKE_FAST_ALLOCATED;
 public:
+    WEBCORE_EXPORT static PlatformMediaSessionManager* sharedManagerIfExists();
     WEBCORE_EXPORT static PlatformMediaSessionManager& sharedManager();
     virtual ~PlatformMediaSessionManager() { }
 
     bool has(PlatformMediaSession::MediaType) const;
     int count(PlatformMediaSession::MediaType) const;
     bool activeAudioSessionRequired() const;
+    bool canProduceAudio() const;
+
+    bool willIgnoreSystemInterruptions() const { return m_willIgnoreSystemInterruptions; }
+    void setWillIgnoreSystemInterruptions(bool ignore) { m_willIgnoreSystemInterruptions = ignore; }
 
     WEBCORE_EXPORT void beginInterruption(PlatformMediaSession::InterruptionType);
     WEBCORE_EXPORT void endInterruption(PlatformMediaSession::EndInterruptionFlags);
 
-    WEBCORE_EXPORT void applicationWillEnterForeground() const;
+    WEBCORE_EXPORT void applicationDidEnterForeground() const;
     WEBCORE_EXPORT void applicationWillEnterBackground() const;
 
     void stopAllMediaPlaybackForDocument(const Document*);
@@ -63,12 +68,9 @@ public:
     enum SessionRestrictionFlags {
         NoRestrictions = 0,
         ConcurrentPlaybackNotPermitted = 1 << 0,
-        InlineVideoPlaybackRestricted = 1 << 1,
-        MetadataPreloadingNotPermitted = 1 << 2,
-        AutoPreloadingNotPermitted = 1 << 3,
-        BackgroundProcessPlaybackRestricted = 1 << 4,
-        BackgroundTabPlaybackRestricted = 1 << 5,
-        InterruptedPlaybackNotPermitted = 1 << 6,
+        BackgroundProcessPlaybackRestricted = 1 << 1,
+        BackgroundTabPlaybackRestricted = 1 << 2,
+        InterruptedPlaybackNotPermitted = 1 << 3,
     };
     typedef unsigned SessionRestrictions;
 
@@ -79,9 +81,6 @@ public:
 
     virtual bool sessionWillBeginPlayback(PlatformMediaSession&);
     virtual void sessionWillEndPlayback(PlatformMediaSession&);
-
-    bool sessionRestrictsInlineVideoPlayback(const PlatformMediaSession&) const;
-
     virtual bool sessionCanLoadMedia(const PlatformMediaSession&) const;
 
 #if PLATFORM(IOS)
@@ -91,6 +90,9 @@ public:
 
     void setCurrentSession(PlatformMediaSession&);
     PlatformMediaSession* currentSession();
+
+    void sessionIsPlayingToWirelessPlaybackTargetChanged(PlatformMediaSession&);
+    void sessionCanProduceAudioChanged(PlatformMediaSession&);
 
 protected:
     friend class PlatformMediaSession;
@@ -130,6 +132,8 @@ private:
 #endif
 
     bool m_interrupted { false };
+    mutable bool m_isApplicationInBackground { false };
+    bool m_willIgnoreSystemInterruptions { false };
 };
 
 }

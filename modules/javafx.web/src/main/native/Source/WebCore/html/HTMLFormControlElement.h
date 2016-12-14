@@ -53,6 +53,8 @@ public:
     String formMethod() const;
     void setFormMethod(const String&);
     bool formNoValidate() const;
+    String formAction() const;
+    void setFormAction(const AtomicString&);
 
     void setAncestorDisabled(bool isDisabled);
 
@@ -69,6 +71,7 @@ public:
     void dispatchFormControlInputEvent();
 
     virtual bool isDisabledFormControl() const override;
+    virtual bool isDefaultButtonForForm() const override;
 
     virtual bool isFocusable() const override;
     virtual bool isEnumeratable() const override { return false; }
@@ -114,6 +117,9 @@ public:
 
     static HTMLFormControlElement* enclosingFormControlElement(Node*);
 
+    String autocomplete() const;
+    void setAutocomplete(const String&);
+
     using Node::ref;
     using Node::deref;
 
@@ -129,6 +135,7 @@ protected:
     virtual void requiredAttributeChanged();
     virtual void didAttachRenderers() override;
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
+    void finishedInsertingSubtree() override;
     virtual void removedFrom(ContainerNode&) override;
     virtual void didMoveToNewDocument(Document* oldDocument) override;
 
@@ -162,7 +169,6 @@ private:
     virtual short tabIndex() const override final;
 
     virtual HTMLFormElement* virtualForm() const override;
-    virtual bool isDefaultButtonForForm() const override;
     bool isValidFormControlElement() const;
 
     bool computeIsDisabledByFieldsetAncestor() const;

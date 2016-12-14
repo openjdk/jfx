@@ -48,7 +48,8 @@
             "properties": [
                 { "name": "condition", "type": "string", "optional": true, "description": "Expression to use as a breakpoint condition. When specified, debugger will only stop on the breakpoint if this expression evaluates to true." },
                 { "name": "actions", "type": "array", "optional": true, "items": { "$ref": "BreakpointAction" }, "description": "Actions to perform automatically when the breakpoint is triggered." },
-                { "name": "autoContinue", "type": "boolean", "optional": true, "description": "Automatically continue after hitting this breakpoint and running actions." }
+                { "name": "autoContinue", "type": "boolean", "optional": true, "description": "Automatically continue after hitting this breakpoint and running actions." },
+                { "name": "ignoreCount", "type": "integer", "optional": true, "description": "Number of times to ignore this breakpoint, before stopping on the breakpoint and running actions." }
             ],
             "description": "Extra options that modify breakpoint behavior."
         },
@@ -80,7 +81,7 @@
             "id": "Scope",
             "type": "object",
             "properties": [
-                { "name": "type", "type": "string", "enum": ["global", "local", "with", "closure", "catch", "functionName"], "description": "Scope type." },
+                { "name": "type", "type": "string", "enum": ["global", "with", "closure", "catch", "functionName", "globalLexicalEnvironment", "nestedLexical"], "description": "Scope type." },
                 { "name": "object", "$ref": "Runtime.RemoteObject", "description": "Object representing the scope. For <code>global</code> and <code>with</code> scopes it represents the actual object; for the rest of the scopes, it is artificial transient object enumerating scope variables as its properties." }
             ],
             "description": "Scope description."

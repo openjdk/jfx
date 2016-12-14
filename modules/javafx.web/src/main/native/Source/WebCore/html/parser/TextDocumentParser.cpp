@@ -36,11 +36,11 @@ TextDocumentParser::TextDocumentParser(HTMLDocument& document)
 {
 }
 
-void TextDocumentParser::append(PassRefPtr<StringImpl> text)
+void TextDocumentParser::append(RefPtr<StringImpl>&& text)
 {
     if (!m_haveInsertedFakePreElement)
         insertFakePreElement();
-    HTMLDocumentParser::append(text);
+    HTMLDocumentParser::append(WTFMove(text));
 }
 
 void TextDocumentParser::insertFakePreElement()
@@ -52,7 +52,7 @@ void TextDocumentParser::insertFakePreElement()
     // distrubing the line/column number calculations.
     Vector<Attribute> attributes;
     attributes.append(Attribute(styleAttr, "word-wrap: break-word; white-space: pre-wrap;"));
-    AtomicHTMLToken fakePre(HTMLToken::StartTag, preTag.localName(), WTF::move(attributes));
+    AtomicHTMLToken fakePre(HTMLToken::StartTag, preTag.localName(), WTFMove(attributes));
     treeBuilder().constructTree(fakePre);
 
     // Normally we would skip the first \n after a <pre> element, but we don't

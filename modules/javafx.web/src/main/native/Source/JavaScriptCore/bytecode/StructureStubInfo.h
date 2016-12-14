@@ -30,10 +30,11 @@
 #include "Instruction.h"
 #include "JITStubRoutine.h"
 #include "MacroAssembler.h"
+#include "ObjectPropertyConditionSet.h"
 #include "Opcode.h"
-#include "PolymorphicAccessStructureList.h"
+#include "Options.h"
+#include "PolymorphicAccess.h"
 #include "RegisterSet.h"
-#include "SpillRegistersMode.h"
 #include "Structure.h"
 #include "StructureStubClearingWatchpoint.h"
 
@@ -41,163 +42,105 @@ namespace JSC {
 
 #if ENABLE(JIT)
 
-class PolymorphicGetByIdList;
-class PolymorphicPutByIdList;
+class PolymorphicAccess;
 
-enum AccessType {
-    access_get_by_id_self,
-    access_get_by_id_list,
-    access_put_by_id_transition_normal,
-    access_put_by_id_transition_direct,
-    access_put_by_id_replace,
-    access_put_by_id_list,
-    access_unset,
-    access_in_list
+enum class AccessType : int8_t {
+    Get,
+    Put,
+    In
 };
 
-inline bool isGetByIdAccess(AccessType accessType)
-{
-    switch (accessType) {
-    case access_get_by_id_self:
-    case access_get_by_id_list:
-        return true;
-    default:
-        return false;
-    }
-}
+enum class CacheType : int8_t {
+    Unset,
+    GetByIdSelf,
+    PutByIdReplace,
+    Stub
+};
 
-inline bool isPutByIdAccess(AccessType accessType)
-{
-    switch (accessType) {
-    case access_put_by_id_transition_normal:
-    case access_put_by_id_transition_direct:
-    case access_put_by_id_replace:
-    case access_put_by_id_list:
-        return true;
-    default:
-        return false;
-    }
-}
+class StructureStubInfo {
+    WTF_MAKE_NONCOPYABLE(StructureStubInfo);
+    WTF_MAKE_FAST_ALLOCATED;
+public:
+    StructureStubInfo(AccessType);
+    ~StructureStubInfo();
 
-inline bool isInAccess(AccessType accessType)
-{
-    switch (accessType) {
-    case access_in_list:
-        return true;
-    default:
-        return false;
-    }
-}
+    void initGetByIdSelf(CodeBlock*, Structure* baseObjectStructure, PropertyOffset);
+    void initPutByIdReplace(CodeBlock*, Structure* baseObjectStructure, PropertyOffset);
+    void initStub(CodeBlock*, std::unique_ptr<PolymorphicAccess>);
 
-struct StructureStubInfo {
-    StructureStubInfo()
-        : accessType(access_unset)
-        , seen(false)
-        , resetByGC(false)
-        , tookSlowPath(false)
-    {
-    }
+    MacroAssemblerCodePtr addAccessCase(
+        CodeBlock*, const Identifier&, std::unique_ptr<AccessCase>);
 
-    void initGetByIdSelf(VM& vm, JSCell* owner, Structure* baseObjectStructure)
-    {
-        accessType = access_get_by_id_self;
-
-        u.getByIdSelf.baseObjectStructure.set(vm, owner, baseObjectStructure);
-    }
-
-    void initGetByIdList(PolymorphicGetByIdList* list)
-    {
-        accessType = access_get_by_id_list;
-        u.getByIdList.list = list;
-    }
-
-    // PutById*
-
-    void initPutByIdTransition(VM& vm, JSCell* owner, Structure* previousStructure, Structure* structure, StructureChain* chain, bool isDirect)
-    {
-        if (isDirect)
-            accessType = access_put_by_id_transition_direct;
-        else
-            accessType = access_put_by_id_transition_normal;
-
-        u.putByIdTransition.previousStructure.set(vm, owner, previousStructure);
-        u.putByIdTransition.structure.set(vm, owner, structure);
-        u.putByIdTransition.chain.set(vm, owner, chain);
-    }
-
-    void initPutByIdReplace(VM& vm, JSCell* owner, Structure* baseObjectStructure)
-    {
-        accessType = access_put_by_id_replace;
-
-        u.putByIdReplace.baseObjectStructure.set(vm, owner, baseObjectStructure);
-    }
-
-    void initPutByIdList(PolymorphicPutByIdList* list)
-    {
-        accessType = access_put_by_id_list;
-        u.putByIdList.list = list;
-    }
-
-    void initInList(PolymorphicAccessStructureList* list, int listSize)
-    {
-        accessType = access_in_list;
-        u.inList.structureList = list;
-        u.inList.listSize = listSize;
-    }
-
-    void reset()
-    {
-        deref();
-        accessType = access_unset;
-        stubRoutine = nullptr;
-        watchpoints = nullptr;
-    }
+    void reset(CodeBlock*);
 
     void deref();
+    void aboutToDie();
 
-    // Check if the stub has weak references that are dead. If there are dead ones that imply
-    // that the stub should be entirely reset, this should return false. If there are dead ones
-    // that can be handled internally by the stub and don't require a full reset, then this
-    // should reset them and return true. If there are no dead weak references, return true.
-    // If this method returns true it means that it has left the stub in a state where all
-    // outgoing GC pointers are known to point to currently marked objects; this method is
-    // allowed to accomplish this by either clearing those pointers somehow or by proving that
-    // they have already been marked. It is not allowed to mark new objects.
-    bool visitWeakReferences(RepatchBuffer&);
+    // Check if the stub has weak references that are dead. If it does, then it resets itself,
+    // either entirely or just enough to ensure that those dead pointers don't get used anymore.
+    void visitWeakReferences(CodeBlock*);
 
-    bool seenOnce()
+    ALWAYS_INLINE bool considerCaching()
     {
-        return seen;
+        everConsidered = true;
+        if (!countdown) {
+            // Check if we have been doing repatching too frequently. If so, then we should cool off
+            // for a while.
+            willRepatch();
+            if (repatchCount > Options::repatchCountForCoolDown()) {
+                // We've been repatching too much, so don't do it now.
+                repatchCount = 0;
+                // The amount of time we require for cool-down depends on the number of times we've
+                // had to cool down in the past. The relationship is exponential. The max value we
+                // allow here is 2^256 - 2, since the slow paths may increment the count to indicate
+                // that they'd like to temporarily skip patching just this once.
+                countdown = WTF::leftShiftWithSaturation(
+                    static_cast<uint8_t>(Options::initialCoolDownCount()),
+                    numberOfCoolDowns,
+                    static_cast<uint8_t>(std::numeric_limits<uint8_t>::max() - 1));
+                willCoolDown();
+                return false;
+            }
+            return true;
+        }
+        countdown--;
+        return false;
     }
 
-    void setSeen()
+    ALWAYS_INLINE void willRepatch()
     {
-        seen = true;
+        WTF::incrementWithSaturation(repatchCount);
     }
 
-    StructureStubClearingWatchpoint* addWatchpoint(CodeBlock* codeBlock)
+    ALWAYS_INLINE void willCoolDown()
     {
-        return WatchpointsOnStructureStubInfo::ensureReferenceAndAddWatchpoint(
-            watchpoints, codeBlock, this);
+        WTF::incrementWithSaturation(numberOfCoolDowns);
     }
 
-    int8_t accessType;
-    bool seen : 1;
-    bool resetByGC : 1;
-    bool tookSlowPath : 1;
+    CodeLocationCall callReturnLocation;
 
     CodeOrigin codeOrigin;
+    CallSiteIndex callSiteIndex;
+
+    bool containsPC(void* pc) const;
+
+    union {
+        struct {
+            WriteBarrierBase<Structure> baseObjectStructure;
+            PropertyOffset offset;
+        } byIdSelf;
+        PolymorphicAccess* stub;
+    } u;
 
     struct {
-        unsigned spillMode : 8;
         int8_t baseGPR;
 #if USE(JSVALUE32_64)
         int8_t valueTagGPR;
+        int8_t baseTagGPR;
 #endif
         int8_t valueGPR;
         RegisterSet usedRegisters;
         int32_t deltaCallToDone;
-        int32_t deltaCallToStorageLoad;
         int32_t deltaCallToJump;
         int32_t deltaCallToSlowCase;
         int32_t deltaCheckImmToCall;
@@ -209,47 +152,14 @@ struct StructureStubInfo {
 #endif
     } patch;
 
-    union {
-        struct {
-            // It would be unwise to put anything here, as it will surely be overwritten.
-        } unset;
-        struct {
-            WriteBarrierBase<Structure> baseObjectStructure;
-        } getByIdSelf;
-        struct {
-            WriteBarrierBase<Structure> baseObjectStructure;
-            WriteBarrierBase<Structure> prototypeStructure;
-            bool isDirect;
-        } getByIdProto;
-        struct {
-            WriteBarrierBase<Structure> baseObjectStructure;
-            WriteBarrierBase<StructureChain> chain;
-            unsigned count : 31;
-            bool isDirect : 1;
-        } getByIdChain;
-        struct {
-            PolymorphicGetByIdList* list;
-        } getByIdList;
-        struct {
-            WriteBarrierBase<Structure> previousStructure;
-            WriteBarrierBase<Structure> structure;
-            WriteBarrierBase<StructureChain> chain;
-        } putByIdTransition;
-        struct {
-            WriteBarrierBase<Structure> baseObjectStructure;
-        } putByIdReplace;
-        struct {
-            PolymorphicPutByIdList* list;
-        } putByIdList;
-        struct {
-            PolymorphicAccessStructureList* structureList;
-            int listSize;
-        } inList;
-    } u;
-
-    RefPtr<JITStubRoutine> stubRoutine;
-    CodeLocationCall callReturnLocation;
-    RefPtr<WatchpointsOnStructureStubInfo> watchpoints;
+    AccessType accessType;
+    CacheType cacheType;
+    uint8_t countdown; // We repatch only when this is zero. If not zero, we decrement.
+    uint8_t repatchCount;
+    uint8_t numberOfCoolDowns;
+    bool resetByGC : 1;
+    bool tookSlowPath : 1;
+    bool everConsidered : 1;
 };
 
 inline CodeOrigin getStructureStubInfoCodeOrigin(StructureStubInfo& structureStubInfo)

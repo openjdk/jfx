@@ -1,13 +1,3 @@
-find_library(COCOA_LIBRARY Cocoa)
-find_library(COREFOUNDATION_LIBRARY CoreFoundation)
-find_library(READLINE_LIBRARY Readline)
-list(APPEND JavaScriptCore_LIBRARIES
-    ${COREFOUNDATION_LIBRARY}
-    ${COCOA_LIBRARY}
-    ${READLINE_LIBRARY}
-    libicucore.dylib
-)
-
 list(APPEND JavaScriptCore_SOURCES
     API/JSAPIWrapperObject.mm
     API/JSContext.mm
@@ -19,9 +9,11 @@ list(APPEND JavaScriptCore_SOURCES
     API/JSWrapperMap.mm
     API/ObjCCallbackFunction.mm
 
+    inspector/remote/RemoteAutomationTarget.cpp
+    inspector/remote/RemoteConnectionToTarget.mm
+    inspector/remote/RemoteControllableTarget.cpp
+    inspector/remote/RemoteInspectionTarget.cpp
     inspector/remote/RemoteInspector.mm
-    inspector/remote/RemoteInspectorDebuggable.cpp
-    inspector/remote/RemoteInspectorDebuggableConnection.mm
     inspector/remote/RemoteInspectorXPCConnection.mm
 )
 add_definitions(-DSTATICALLY_LINKED_WITH_WTF)
@@ -34,9 +26,21 @@ add_custom_command(
     VERBATIM)
 
 list(APPEND JavaScriptCore_INCLUDE_DIRECTORIES
+    ${WTF_DIR}
     ${JAVASCRIPTCORE_DIR}/disassembler/udis86
     ${JAVASCRIPTCORE_DIR}/icu
 )
 list(APPEND JavaScriptCore_HEADERS
     ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/TracingDtrace.h
 )
+
+# FIXME: Make including these files consistent in the source so these forwarding headers are not needed.
+if (NOT EXISTS ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/InspectorBackendDispatchers.h)
+    file(WRITE ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/InspectorBackendDispatchers.h "#include \"inspector/InspectorBackendDispatchers.h\"")
+endif ()
+if (NOT EXISTS ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/InspectorFrontendDispatchers.h)
+    file(WRITE ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/InspectorFrontendDispatchers.h "#include \"inspector/InspectorFrontendDispatchers.h\"")
+endif ()
+if (NOT EXISTS ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/InspectorProtocolObjects.h)
+    file(WRITE ${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/InspectorProtocolObjects.h "#include \"inspector/InspectorProtocolObjects.h\"")
+endif ()

@@ -34,7 +34,9 @@
 #include "DFGNodeFlags.h"
 #include "DFGStructureAbstractValue.h"
 #include "DFGStructureClobberState.h"
+#include "InferredType.h"
 #include "JSCell.h"
+#include "ResultType.h"
 #include "SpeculatedType.h"
 #include "DumpContext.h"
 #include "StructureSet.h"
@@ -215,6 +217,9 @@ struct AbstractValue {
         checkConsistency();
     }
 
+    void set(Graph&, const InferredType::Descriptor&);
+    void set(Graph&, const InferredType::Descriptor&, StructureClobberState);
+
     void fixTypeForRepresentation(Graph&, NodeFlags representation, Node* = nullptr);
     void fixTypeForRepresentation(Graph&, Node*);
 
@@ -281,11 +286,21 @@ struct AbstractValue {
         return !(m_type & ~desiredType);
     }
 
-    FiltrationResult filter(Graph&, const StructureSet&);
+    bool isType(Graph&, const InferredType::Descriptor&) const;
+
+    // Filters the value using the given structure set. If the admittedTypes argument is not passed, this
+    // implicitly filters by the types implied by the structure set, which are usually a subset of
+    // SpecCell. Hence, after this call, the value will no longer have any non-cell members. But, you can
+    // use admittedTypes to preserve some non-cell types. Note that it's wrong for admittedTypes to overlap
+    // with SpecCell.
+    FiltrationResult filter(Graph&, const StructureSet&, SpeculatedType admittedTypes = SpecNone);
+
     FiltrationResult filterArrayModes(ArrayModes);
     FiltrationResult filter(SpeculatedType);
     FiltrationResult filterByValue(const FrozenValue& value);
     FiltrationResult filter(const AbstractValue&);
+
+    FiltrationResult filter(Graph&, const InferredType::Descriptor&);
 
     FiltrationResult changeStructure(Graph&, const StructureSet&);
 
@@ -330,6 +345,8 @@ struct AbstractValue {
     void checkConsistency() const;
     void assertIsRegistered(Graph&) const;
 #endif
+
+    ResultType resultType() const;
 
     void dumpInContext(PrintStream&, DumpContext*) const;
     void dump(PrintStream&) const;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,9 +29,18 @@
 #include "JIT.h"
 
 #include "CodeBlock.h"
+#include "JITAddGenerator.h"
+#include "JITBitAndGenerator.h"
+#include "JITBitOrGenerator.h"
+#include "JITBitXorGenerator.h"
+#include "JITDivGenerator.h"
 #include "JITInlines.h"
+#include "JITLeftShiftGenerator.h"
+#include "JITMulGenerator.h"
+#include "JITNegGenerator.h"
 #include "JITOperations.h"
-#include "JITStubs.h"
+#include "JITRightShiftGenerator.h"
+#include "JITSubGenerator.h"
 #include "JSArray.h"
 #include "JSFunction.h"
 #include "Interpreter.h"
@@ -189,187 +198,15 @@ void JIT::emitSlow_op_jngreatereq(Instruction* currentInstruction, Vector<SlowCa
 
 #if USE(JSVALUE64)
 
-void JIT::emit_op_negate(Instruction* currentInstruction)
-{
-    int dst = currentInstruction[1].u.operand;
-    int src = currentInstruction[2].u.operand;
-
-    emitGetVirtualRegister(src, regT0);
-
-    Jump srcNotInt = emitJumpIfNotImmediateInteger(regT0);
-    addSlowCase(branchTest32(Zero, regT0, TrustedImm32(0x7fffffff)));
-    neg32(regT0);
-    emitFastArithReTagImmediate(regT0, regT0);
-
-    Jump end = jump();
-
-    srcNotInt.link(this);
-    emitJumpSlowCaseIfNotImmediateNumber(regT0);
-
-    move(TrustedImm64((int64_t)0x8000000000000000ull), regT1);
-    xor64(regT1, regT0);
-
-    end.link(this);
-    emitPutVirtualRegister(dst);
-}
-
-void JIT::emitSlow_op_negate(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
-{
-    linkSlowCase(iter); // 0x7fffffff check
-    linkSlowCase(iter); // double check
-
-    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_negate);
-    slowPathCall.call();
-}
-
-void JIT::emit_op_lshift(Instruction* currentInstruction)
-{
-    int result = currentInstruction[1].u.operand;
-    int op1 = currentInstruction[2].u.operand;
-    int op2 = currentInstruction[3].u.operand;
-
-    emitGetVirtualRegisters(op1, regT0, op2, regT2);
-    // FIXME: would we be better using 'emitJumpSlowCaseIfNotImmediateIntegers'? - we *probably* ought to be consistent.
-    emitJumpSlowCaseIfNotImmediateInteger(regT0);
-    emitJumpSlowCaseIfNotImmediateInteger(regT2);
-    emitFastArithImmToInt(regT0);
-    emitFastArithImmToInt(regT2);
-    lshift32(regT2, regT0);
-    emitFastArithReTagImmediate(regT0, regT0);
-    emitPutVirtualRegister(result);
-}
-
-void JIT::emitSlow_op_lshift(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
-{
-    linkSlowCase(iter);
-    linkSlowCase(iter);
-    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_lshift);
-    slowPathCall.call();
-}
-
-void JIT::emit_op_rshift(Instruction* currentInstruction)
-{
-    int result = currentInstruction[1].u.operand;
-    int op1 = currentInstruction[2].u.operand;
-    int op2 = currentInstruction[3].u.operand;
-
-    if (isOperandConstantImmediateInt(op2)) {
-        // isOperandConstantImmediateInt(op2) => 1 SlowCase
-        emitGetVirtualRegister(op1, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        // Mask with 0x1f as per ecma-262 11.7.2 step 7.
-        rshift32(Imm32(getConstantOperandImmediateInt(op2) & 0x1f), regT0);
-    } else {
-        emitGetVirtualRegisters(op1, regT0, op2, regT2);
-        if (supportsFloatingPointTruncate()) {
-            Jump lhsIsInt = emitJumpIfImmediateInteger(regT0);
-            // supportsFloatingPoint() && USE(JSVALUE64) => 3 SlowCases
-            addSlowCase(emitJumpIfNotImmediateNumber(regT0));
-            add64(tagTypeNumberRegister, regT0);
-            move64ToDouble(regT0, fpRegT0);
-            addSlowCase(branchTruncateDoubleToInt32(fpRegT0, regT0));
-            lhsIsInt.link(this);
-            emitJumpSlowCaseIfNotImmediateInteger(regT2);
-        } else {
-            // !supportsFloatingPoint() => 2 SlowCases
-            emitJumpSlowCaseIfNotImmediateInteger(regT0);
-            emitJumpSlowCaseIfNotImmediateInteger(regT2);
-        }
-        emitFastArithImmToInt(regT2);
-        rshift32(regT2, regT0);
-    }
-    emitFastArithIntToImmNoCheck(regT0, regT0);
-    emitPutVirtualRegister(result);
-}
-
-void JIT::emitSlow_op_rshift(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
-{
-    int op2 = currentInstruction[3].u.operand;
-
-    if (isOperandConstantImmediateInt(op2))
-        linkSlowCase(iter);
-
-    else {
-        if (supportsFloatingPointTruncate()) {
-            linkSlowCase(iter);
-            linkSlowCase(iter);
-            linkSlowCase(iter);
-        } else {
-            linkSlowCase(iter);
-            linkSlowCase(iter);
-        }
-    }
-
-    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_rshift);
-    slowPathCall.call();
-}
-
-void JIT::emit_op_urshift(Instruction* currentInstruction)
-{
-    int result = currentInstruction[1].u.operand;
-    int op1 = currentInstruction[2].u.operand;
-    int op2 = currentInstruction[3].u.operand;
-
-    if (isOperandConstantImmediateInt(op2)) {
-        // isOperandConstantImmediateInt(op2) => 1 SlowCase
-        emitGetVirtualRegister(op1, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        // Mask with 0x1f as per ecma-262 11.7.2 step 7.
-        urshift32(Imm32(getConstantOperandImmediateInt(op2) & 0x1f), regT0);
-    } else {
-        emitGetVirtualRegisters(op1, regT0, op2, regT2);
-        if (supportsFloatingPointTruncate()) {
-            Jump lhsIsInt = emitJumpIfImmediateInteger(regT0);
-            // supportsFloatingPoint() && USE(JSVALUE64) => 3 SlowCases
-            addSlowCase(emitJumpIfNotImmediateNumber(regT0));
-            add64(tagTypeNumberRegister, regT0);
-            move64ToDouble(regT0, fpRegT0);
-            addSlowCase(branchTruncateDoubleToInt32(fpRegT0, regT0));
-            lhsIsInt.link(this);
-            emitJumpSlowCaseIfNotImmediateInteger(regT2);
-        } else {
-            // !supportsFloatingPoint() => 2 SlowCases
-            emitJumpSlowCaseIfNotImmediateInteger(regT0);
-            emitJumpSlowCaseIfNotImmediateInteger(regT2);
-        }
-        emitFastArithImmToInt(regT2);
-        urshift32(regT2, regT0);
-    }
-    emitFastArithIntToImmNoCheck(regT0, regT0);
-    emitPutVirtualRegister(result);
-}
-
-void JIT::emitSlow_op_urshift(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
-{
-    int op2 = currentInstruction[3].u.operand;
-
-    if (isOperandConstantImmediateInt(op2))
-        linkSlowCase(iter);
-
-    else {
-        if (supportsFloatingPointTruncate()) {
-            linkSlowCase(iter);
-            linkSlowCase(iter);
-            linkSlowCase(iter);
-        } else {
-            linkSlowCase(iter);
-            linkSlowCase(iter);
-        }
-    }
-
-    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_urshift);
-    slowPathCall.call();
-}
-
 void JIT::emit_op_unsigned(Instruction* currentInstruction)
 {
     int result = currentInstruction[1].u.operand;
     int op1 = currentInstruction[2].u.operand;
 
     emitGetVirtualRegister(op1, regT0);
-    emitJumpSlowCaseIfNotImmediateInteger(regT0);
+    emitJumpSlowCaseIfNotInt(regT0);
     addSlowCase(branch32(LessThan, regT0, TrustedImm32(0)));
-    emitFastArithReTagImmediate(regT0, regT0);
+    emitTagInt(regT0, regT0);
     emitPutVirtualRegister(result, regT0);
 }
 
@@ -389,7 +226,7 @@ void JIT::emit_compareAndJump(OpcodeID, int op1, int op2, unsigned target, Relat
     // - constant int immediate to int immediate
     // - int immediate to int immediate
 
-    if (isOperandConstantImmediateChar(op1)) {
+    if (isOperandConstantChar(op1)) {
         emitGetVirtualRegister(op2, regT0);
         addSlowCase(emitJumpIfNotJSCell(regT0));
         JumpList failures;
@@ -398,7 +235,7 @@ void JIT::emit_compareAndJump(OpcodeID, int op1, int op2, unsigned target, Relat
         addJump(branch32(commute(condition), regT0, Imm32(asString(getConstantOperand(op1))->tryGetValue()[0])), target);
         return;
     }
-    if (isOperandConstantImmediateChar(op2)) {
+    if (isOperandConstantChar(op2)) {
         emitGetVirtualRegister(op1, regT0);
         addSlowCase(emitJumpIfNotJSCell(regT0));
         JumpList failures;
@@ -407,20 +244,20 @@ void JIT::emit_compareAndJump(OpcodeID, int op1, int op2, unsigned target, Relat
         addJump(branch32(condition, regT0, Imm32(asString(getConstantOperand(op2))->tryGetValue()[0])), target);
         return;
     }
-    if (isOperandConstantImmediateInt(op2)) {
+    if (isOperandConstantInt(op2)) {
         emitGetVirtualRegister(op1, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        int32_t op2imm = getConstantOperandImmediateInt(op2);
+        emitJumpSlowCaseIfNotInt(regT0);
+        int32_t op2imm = getOperandConstantInt(op2);
         addJump(branch32(condition, regT0, Imm32(op2imm)), target);
-    } else if (isOperandConstantImmediateInt(op1)) {
+    } else if (isOperandConstantInt(op1)) {
         emitGetVirtualRegister(op2, regT1);
-        emitJumpSlowCaseIfNotImmediateInteger(regT1);
-        int32_t op1imm = getConstantOperandImmediateInt(op1);
+        emitJumpSlowCaseIfNotInt(regT1);
+        int32_t op1imm = getOperandConstantInt(op1);
         addJump(branch32(commute(condition), regT1, Imm32(op1imm)), target);
     } else {
         emitGetVirtualRegisters(op1, regT0, op2, regT1);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT1);
+        emitJumpSlowCaseIfNotInt(regT0);
+        emitJumpSlowCaseIfNotInt(regT1);
 
         addJump(branch32(condition, regT0, regT1), target);
     }
@@ -440,7 +277,7 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
     // - floating-point number to constant int immediate
     // - constant int immediate to floating-point number
     // - floating-point number to floating-point number.
-    if (isOperandConstantImmediateChar(op1) || isOperandConstantImmediateChar(op2)) {
+    if (isOperandConstantChar(op1) || isOperandConstantChar(op2)) {
         linkSlowCase(iter);
         linkSlowCase(iter);
         linkSlowCase(iter);
@@ -453,11 +290,11 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
         return;
     }
 
-    if (isOperandConstantImmediateInt(op2)) {
+    if (isOperandConstantInt(op2)) {
         linkSlowCase(iter);
 
         if (supportsFloatingPoint()) {
-            Jump fail1 = emitJumpIfNotImmediateNumber(regT0);
+            Jump fail1 = emitJumpIfNotNumber(regT0);
             add64(tagTypeNumberRegister, regT0);
             move64ToDouble(regT0, fpRegT0);
 
@@ -476,11 +313,11 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
         emitGetVirtualRegister(op2, regT1);
         callOperation(operation, regT0, regT1);
         emitJumpSlowToHot(branchTest32(invert ? Zero : NonZero, returnValueGPR), target);
-    } else if (isOperandConstantImmediateInt(op1)) {
+    } else if (isOperandConstantInt(op1)) {
         linkSlowCase(iter);
 
         if (supportsFloatingPoint()) {
-            Jump fail1 = emitJumpIfNotImmediateNumber(regT1);
+            Jump fail1 = emitJumpIfNotNumber(regT1);
             add64(tagTypeNumberRegister, regT1);
             move64ToDouble(regT1, fpRegT1);
 
@@ -503,9 +340,9 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
         linkSlowCase(iter);
 
         if (supportsFloatingPoint()) {
-            Jump fail1 = emitJumpIfNotImmediateNumber(regT0);
-            Jump fail2 = emitJumpIfNotImmediateNumber(regT1);
-            Jump fail3 = emitJumpIfImmediateInteger(regT1);
+            Jump fail1 = emitJumpIfNotNumber(regT0);
+            Jump fail2 = emitJumpIfNotNumber(regT1);
+            Jump fail3 = emitJumpIfInt(regT1);
             add64(tagTypeNumberRegister, regT0);
             add64(tagTypeNumberRegister, regT1);
             move64ToDouble(regT0, fpRegT0);
@@ -526,50 +363,14 @@ void JIT::emit_compareAndJumpSlow(int op1, int op2, unsigned target, DoubleCondi
     }
 }
 
-void JIT::emit_op_bitand(Instruction* currentInstruction)
-{
-    int result = currentInstruction[1].u.operand;
-    int op1 = currentInstruction[2].u.operand;
-    int op2 = currentInstruction[3].u.operand;
-
-    if (isOperandConstantImmediateInt(op1)) {
-        emitGetVirtualRegister(op2, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        int32_t imm = getConstantOperandImmediateInt(op1);
-        and64(Imm32(imm), regT0);
-        if (imm >= 0)
-            emitFastArithIntToImmNoCheck(regT0, regT0);
-    } else if (isOperandConstantImmediateInt(op2)) {
-        emitGetVirtualRegister(op1, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        int32_t imm = getConstantOperandImmediateInt(op2);
-        and64(Imm32(imm), regT0);
-        if (imm >= 0)
-            emitFastArithIntToImmNoCheck(regT0, regT0);
-    } else {
-        emitGetVirtualRegisters(op1, regT0, op2, regT1);
-        and64(regT1, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-    }
-    emitPutVirtualRegister(result);
-}
-
-void JIT::emitSlow_op_bitand(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
-{
-    linkSlowCase(iter);
-
-    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_bitand);
-    slowPathCall.call();
-}
-
 void JIT::emit_op_inc(Instruction* currentInstruction)
 {
     int srcDst = currentInstruction[1].u.operand;
 
     emitGetVirtualRegister(srcDst, regT0);
-    emitJumpSlowCaseIfNotImmediateInteger(regT0);
+    emitJumpSlowCaseIfNotInt(regT0);
     addSlowCase(branchAdd32(Overflow, TrustedImm32(1), regT0));
-    emitFastArithIntToImmNoCheck(regT0, regT0);
+    emitTagInt(regT0, regT0);
     emitPutVirtualRegister(srcDst);
 }
 
@@ -586,9 +387,9 @@ void JIT::emit_op_dec(Instruction* currentInstruction)
     int srcDst = currentInstruction[1].u.operand;
 
     emitGetVirtualRegister(srcDst, regT0);
-    emitJumpSlowCaseIfNotImmediateInteger(regT0);
+    emitJumpSlowCaseIfNotInt(regT0);
     addSlowCase(branchSub32(Overflow, TrustedImm32(1), regT0));
-    emitFastArithIntToImmNoCheck(regT0, regT0);
+    emitTagInt(regT0, regT0);
     emitPutVirtualRegister(srcDst);
 }
 
@@ -612,24 +413,26 @@ void JIT::emit_op_mod(Instruction* currentInstruction)
 
     // Make sure registers are correct for x86 IDIV instructions.
     ASSERT(regT0 == X86Registers::eax);
-    ASSERT(regT1 == X86Registers::edx);
-    ASSERT(regT2 == X86Registers::ecx);
+    auto edx = X86Registers::edx;
+    auto ecx = X86Registers::ecx;
+    ASSERT(regT4 != edx);
+    ASSERT(regT4 != ecx);
 
-    emitGetVirtualRegisters(op1, regT3, op2, regT2);
-    emitJumpSlowCaseIfNotImmediateInteger(regT3);
-    emitJumpSlowCaseIfNotImmediateInteger(regT2);
+    emitGetVirtualRegisters(op1, regT4, op2, ecx);
+    emitJumpSlowCaseIfNotInt(regT4);
+    emitJumpSlowCaseIfNotInt(ecx);
 
-    move(regT3, regT0);
-    addSlowCase(branchTest32(Zero, regT2));
-    Jump denominatorNotNeg1 = branch32(NotEqual, regT2, TrustedImm32(-1));
+    move(regT4, regT0);
+    addSlowCase(branchTest32(Zero, ecx));
+    Jump denominatorNotNeg1 = branch32(NotEqual, ecx, TrustedImm32(-1));
     addSlowCase(branch32(Equal, regT0, TrustedImm32(-2147483647-1)));
     denominatorNotNeg1.link(this);
-    m_assembler.cdq();
-    m_assembler.idivl_r(regT2);
-    Jump numeratorPositive = branch32(GreaterThanOrEqual, regT3, TrustedImm32(0));
-    addSlowCase(branchTest32(Zero, regT1));
+    x86ConvertToDoubleWord32();
+    x86Div32(ecx);
+    Jump numeratorPositive = branch32(GreaterThanOrEqual, regT4, TrustedImm32(0));
+    addSlowCase(branchTest32(Zero, edx));
     numeratorPositive.link(this);
-    emitFastArithReTagImmediate(regT1, regT0);
+    emitTagInt(edx, regT0);
     emitPutVirtualRegister(result);
 }
 
@@ -661,128 +464,216 @@ void JIT::emitSlow_op_mod(Instruction*, Vector<SlowCaseEntry>::iterator&)
 
 /* ------------------------------ END: OP_MOD ------------------------------ */
 
-/* ------------------------------ BEGIN: USE(JSVALUE64) (OP_ADD, OP_SUB, OP_MUL) ------------------------------ */
+#endif // USE(JSVALUE64)
 
-void JIT::compileBinaryArithOp(OpcodeID opcodeID, int, int op1, int op2, OperandTypes)
+void JIT::emit_op_negate(Instruction* currentInstruction)
 {
-    emitGetVirtualRegisters(op1, regT0, op2, regT1);
-    emitJumpSlowCaseIfNotImmediateInteger(regT0);
-    emitJumpSlowCaseIfNotImmediateInteger(regT1);
-    RareCaseProfile* profile = m_codeBlock->addSpecialFastCaseProfile(m_bytecodeOffset);
-    if (opcodeID == op_add)
-        addSlowCase(branchAdd32(Overflow, regT1, regT0));
-    else if (opcodeID == op_sub)
-        addSlowCase(branchSub32(Overflow, regT1, regT0));
-    else {
-        ASSERT(opcodeID == op_mul);
-        if (shouldEmitProfiling()) {
-            // We want to be able to measure if this is taking the slow case just
-            // because of negative zero. If this produces positive zero, then we
-            // don't want the slow case to be taken because that will throw off
-            // speculative compilation.
-            move(regT0, regT2);
-            addSlowCase(branchMul32(Overflow, regT1, regT2));
-            JumpList done;
-            done.append(branchTest32(NonZero, regT2));
-            Jump negativeZero = branch32(LessThan, regT0, TrustedImm32(0));
-            done.append(branch32(GreaterThanOrEqual, regT1, TrustedImm32(0)));
-            negativeZero.link(this);
-            // We only get here if we have a genuine negative zero. Record this,
-            // so that the speculative JIT knows that we failed speculation
-            // because of a negative zero.
-            add32(TrustedImm32(1), AbsoluteAddress(&profile->m_counter));
-            addSlowCase(jump());
-            done.link(this);
-            move(regT2, regT0);
-        } else {
-            addSlowCase(branchMul32(Overflow, regT1, regT0));
-            addSlowCase(branchTest32(Zero, regT0));
-        }
-    }
-    emitFastArithIntToImmNoCheck(regT0, regT0);
+    int result = currentInstruction[1].u.operand;
+    int src = currentInstruction[2].u.operand;
+
+#if USE(JSVALUE64)
+    JSValueRegs srcRegs = JSValueRegs(regT0);
+    JSValueRegs resultRegs = srcRegs;
+    GPRReg scratchGPR = regT2;
+#else
+    JSValueRegs srcRegs = JSValueRegs(regT1, regT0);
+    JSValueRegs resultRegs = srcRegs;
+    GPRReg scratchGPR = regT4;
+#endif
+
+    emitGetVirtualRegister(src, srcRegs);
+
+    JITNegGenerator gen(resultRegs, srcRegs, scratchGPR);
+    gen.generateFastPath(*this);
+
+    ASSERT(gen.didEmitFastPath());
+    gen.endJumpList().link(this);
+    emitPutVirtualRegister(result, resultRegs);
+
+    addSlowCase(gen.slowPathJumpList());
 }
 
-void JIT::compileBinaryArithOpSlowCase(Instruction* currentInstruction, OpcodeID opcodeID, Vector<SlowCaseEntry>::iterator& iter, int result, int op1, int op2, OperandTypes types, bool op1HasImmediateIntFastCase, bool op2HasImmediateIntFastCase)
+void JIT::emitSlow_op_negate(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    // We assume that subtracting TagTypeNumber is equivalent to adding DoubleEncodeOffset.
-    COMPILE_ASSERT(((TagTypeNumber + DoubleEncodeOffset) == 0), TagTypeNumber_PLUS_DoubleEncodeOffset_EQUALS_0);
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
 
-    Jump notImm1;
-    Jump notImm2;
-    if (op1HasImmediateIntFastCase) {
-        notImm2 = getSlowCase(iter);
-    } else if (op2HasImmediateIntFastCase) {
-        notImm1 = getSlowCase(iter);
-    } else {
-        notImm1 = getSlowCase(iter);
-        notImm2 = getSlowCase(iter);
-    }
-
-    linkSlowCase(iter); // Integer overflow case - we could handle this in JIT code, but this is likely rare.
-    if (opcodeID == op_mul && !op1HasImmediateIntFastCase && !op2HasImmediateIntFastCase) // op_mul has an extra slow case to handle 0 * negative number.
-        linkSlowCase(iter);
-
-    Label stubFunctionCall(this);
-
-    JITSlowPathCall slowPathCall(this, currentInstruction, opcodeID == op_add ? slow_path_add : opcodeID == op_sub ? slow_path_sub : slow_path_mul);
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_negate);
     slowPathCall.call();
-    Jump end = jump();
+}
 
-    if (op1HasImmediateIntFastCase) {
-        notImm2.link(this);
-        if (!types.second().definitelyIsNumber())
-            emitJumpIfNotImmediateNumber(regT0).linkTo(stubFunctionCall, this);
-        emitGetVirtualRegister(op1, regT1);
-        convertInt32ToDouble(regT1, fpRegT1);
-        add64(tagTypeNumberRegister, regT0);
-        move64ToDouble(regT0, fpRegT2);
-    } else if (op2HasImmediateIntFastCase) {
-        notImm1.link(this);
-        if (!types.first().definitelyIsNumber())
-            emitJumpIfNotImmediateNumber(regT0).linkTo(stubFunctionCall, this);
-        emitGetVirtualRegister(op2, regT1);
-        convertInt32ToDouble(regT1, fpRegT1);
-        add64(tagTypeNumberRegister, regT0);
-        move64ToDouble(regT0, fpRegT2);
-    } else {
-        // if we get here, eax is not an int32, edx not yet checked.
-        notImm1.link(this);
-        if (!types.first().definitelyIsNumber())
-            emitJumpIfNotImmediateNumber(regT0).linkTo(stubFunctionCall, this);
-        if (!types.second().definitelyIsNumber())
-            emitJumpIfNotImmediateNumber(regT1).linkTo(stubFunctionCall, this);
-        add64(tagTypeNumberRegister, regT0);
-        move64ToDouble(regT0, fpRegT1);
-        Jump op2isDouble = emitJumpIfNotImmediateInteger(regT1);
-        convertInt32ToDouble(regT1, fpRegT2);
-        Jump op2wasInteger = jump();
+template<typename SnippetGenerator>
+void JIT::emitBitBinaryOpFastPath(Instruction* currentInstruction)
+{
+    int result = currentInstruction[1].u.operand;
+    int op1 = currentInstruction[2].u.operand;
+    int op2 = currentInstruction[3].u.operand;
 
-        // if we get here, eax IS an int32, edx is not.
-        notImm2.link(this);
-        if (!types.second().definitelyIsNumber())
-            emitJumpIfNotImmediateNumber(regT1).linkTo(stubFunctionCall, this);
-        convertInt32ToDouble(regT0, fpRegT1);
-        op2isDouble.link(this);
-        add64(tagTypeNumberRegister, regT1);
-        move64ToDouble(regT1, fpRegT2);
-        op2wasInteger.link(this);
-    }
+#if USE(JSVALUE64)
+    JSValueRegs leftRegs = JSValueRegs(regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT1);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT2;
+#else
+    JSValueRegs leftRegs = JSValueRegs(regT1, regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT3, regT2);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT4;
+#endif
 
-    if (opcodeID == op_add)
-        addDouble(fpRegT2, fpRegT1);
-    else if (opcodeID == op_sub)
-        subDouble(fpRegT2, fpRegT1);
-    else if (opcodeID == op_mul)
-        mulDouble(fpRegT2, fpRegT1);
-    else {
-        ASSERT(opcodeID == op_div);
-        divDouble(fpRegT2, fpRegT1);
-    }
-    moveDoubleTo64(fpRegT1, regT0);
-    sub64(tagTypeNumberRegister, regT0);
-    emitPutVirtualRegister(result, regT0);
+    SnippetOperand leftOperand;
+    SnippetOperand rightOperand;
 
-    end.link(this);
+    if (isOperandConstantInt(op1))
+        leftOperand.setConstInt32(getOperandConstantInt(op1));
+    else if (isOperandConstantInt(op2))
+        rightOperand.setConstInt32(getOperandConstantInt(op2));
+
+    RELEASE_ASSERT(!leftOperand.isConst() || !rightOperand.isConst());
+
+    if (!leftOperand.isConst())
+        emitGetVirtualRegister(op1, leftRegs);
+    if (!rightOperand.isConst())
+        emitGetVirtualRegister(op2, rightRegs);
+
+    SnippetGenerator gen(leftOperand, rightOperand, resultRegs, leftRegs, rightRegs, scratchGPR);
+
+    gen.generateFastPath(*this);
+
+    ASSERT(gen.didEmitFastPath());
+    gen.endJumpList().link(this);
+    emitPutVirtualRegister(result, resultRegs);
+
+    addSlowCase(gen.slowPathJumpList());
+}
+
+void JIT::emit_op_bitand(Instruction* currentInstruction)
+{
+    emitBitBinaryOpFastPath<JITBitAndGenerator>(currentInstruction);
+}
+
+void JIT::emitSlow_op_bitand(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+{
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_bitand);
+    slowPathCall.call();
+}
+
+void JIT::emit_op_bitor(Instruction* currentInstruction)
+{
+    emitBitBinaryOpFastPath<JITBitOrGenerator>(currentInstruction);
+}
+
+void JIT::emitSlow_op_bitor(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+{
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_bitor);
+    slowPathCall.call();
+}
+
+void JIT::emit_op_bitxor(Instruction* currentInstruction)
+{
+    emitBitBinaryOpFastPath<JITBitXorGenerator>(currentInstruction);
+}
+
+void JIT::emitSlow_op_bitxor(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+{
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_bitxor);
+    slowPathCall.call();
+}
+
+void JIT::emit_op_lshift(Instruction* currentInstruction)
+{
+    emitBitBinaryOpFastPath<JITLeftShiftGenerator>(currentInstruction);
+}
+
+void JIT::emitSlow_op_lshift(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+{
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_lshift);
+    slowPathCall.call();
+}
+
+void JIT::emitRightShiftFastPath(Instruction* currentInstruction, OpcodeID opcodeID)
+{
+    ASSERT(opcodeID == op_rshift || opcodeID == op_urshift);
+
+    JITRightShiftGenerator::ShiftType snippetShiftType = opcodeID == op_rshift ?
+        JITRightShiftGenerator::SignedShift : JITRightShiftGenerator::UnsignedShift;
+
+    int result = currentInstruction[1].u.operand;
+    int op1 = currentInstruction[2].u.operand;
+    int op2 = currentInstruction[3].u.operand;
+
+#if USE(JSVALUE64)
+    JSValueRegs leftRegs = JSValueRegs(regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT1);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT2;
+    FPRReg scratchFPR = InvalidFPRReg;
+#else
+    JSValueRegs leftRegs = JSValueRegs(regT1, regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT3, regT2);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT4;
+    FPRReg scratchFPR = fpRegT2;
+#endif
+
+    SnippetOperand leftOperand;
+    SnippetOperand rightOperand;
+
+    if (isOperandConstantInt(op1))
+        leftOperand.setConstInt32(getOperandConstantInt(op1));
+    else if (isOperandConstantInt(op2))
+        rightOperand.setConstInt32(getOperandConstantInt(op2));
+
+    RELEASE_ASSERT(!leftOperand.isConst() || !rightOperand.isConst());
+
+    if (!leftOperand.isConst())
+        emitGetVirtualRegister(op1, leftRegs);
+    if (!rightOperand.isConst())
+        emitGetVirtualRegister(op2, rightRegs);
+
+    JITRightShiftGenerator gen(leftOperand, rightOperand, resultRegs, leftRegs, rightRegs,
+        fpRegT0, scratchGPR, scratchFPR, snippetShiftType);
+
+    gen.generateFastPath(*this);
+
+    ASSERT(gen.didEmitFastPath());
+    gen.endJumpList().link(this);
+    emitPutVirtualRegister(result, resultRegs);
+
+    addSlowCase(gen.slowPathJumpList());
+}
+
+void JIT::emit_op_rshift(Instruction* currentInstruction)
+{
+    emitRightShiftFastPath(currentInstruction, op_rshift);
+}
+
+void JIT::emitSlow_op_rshift(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+{
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_rshift);
+    slowPathCall.call();
+}
+
+void JIT::emit_op_urshift(Instruction* currentInstruction)
+{
+    emitRightShiftFastPath(currentInstruction, op_urshift);
+}
+
+void JIT::emitSlow_op_urshift(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+{
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_urshift);
+    slowPathCall.call();
 }
 
 void JIT::emit_op_add(Instruction* currentInstruction)
@@ -792,44 +683,133 @@ void JIT::emit_op_add(Instruction* currentInstruction)
     int op2 = currentInstruction[3].u.operand;
     OperandTypes types = OperandTypes::fromInt(currentInstruction[4].u.operand);
 
-    if (!types.first().mightBeNumber() || !types.second().mightBeNumber()) {
-        addSlowCase();
+#if USE(JSVALUE64)
+    JSValueRegs leftRegs = JSValueRegs(regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT1);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT2;
+    FPRReg scratchFPR = InvalidFPRReg;
+#else
+    JSValueRegs leftRegs = JSValueRegs(regT1, regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT3, regT2);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT4;
+    FPRReg scratchFPR = fpRegT2;
+#endif
+
+    SnippetOperand leftOperand(types.first());
+    SnippetOperand rightOperand(types.second());
+
+    if (isOperandConstantInt(op1))
+        leftOperand.setConstInt32(getOperandConstantInt(op1));
+    else if (isOperandConstantInt(op2))
+        rightOperand.setConstInt32(getOperandConstantInt(op2));
+
+    RELEASE_ASSERT(!leftOperand.isConst() || !rightOperand.isConst());
+
+    if (!leftOperand.isConst())
+        emitGetVirtualRegister(op1, leftRegs);
+    if (!rightOperand.isConst())
+        emitGetVirtualRegister(op2, rightRegs);
+
+    JITAddGenerator gen(leftOperand, rightOperand, resultRegs, leftRegs, rightRegs,
+        fpRegT0, fpRegT1, scratchGPR, scratchFPR);
+
+    gen.generateFastPath(*this);
+
+    if (gen.didEmitFastPath()) {
+        gen.endJumpList().link(this);
+        emitPutVirtualRegister(result, resultRegs);
+
+        addSlowCase(gen.slowPathJumpList());
+    } else {
+        ASSERT(gen.endJumpList().empty());
+        ASSERT(gen.slowPathJumpList().empty());
         JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_add);
         slowPathCall.call();
-        return;
     }
-
-    if (isOperandConstantImmediateInt(op1)) {
-        emitGetVirtualRegister(op2, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        addSlowCase(branchAdd32(Overflow, regT0, Imm32(getConstantOperandImmediateInt(op1)), regT1));
-        emitFastArithIntToImmNoCheck(regT1, regT0);
-    } else if (isOperandConstantImmediateInt(op2)) {
-        emitGetVirtualRegister(op1, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        addSlowCase(branchAdd32(Overflow, regT0, Imm32(getConstantOperandImmediateInt(op2)), regT1));
-        emitFastArithIntToImmNoCheck(regT1, regT0);
-    } else
-        compileBinaryArithOp(op_add, result, op1, op2, types);
-
-    emitPutVirtualRegister(result);
 }
 
 void JIT::emitSlow_op_add(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+{
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_add);
+    slowPathCall.call();
+}
+
+void JIT::emit_op_div(Instruction* currentInstruction)
 {
     int result = currentInstruction[1].u.operand;
     int op1 = currentInstruction[2].u.operand;
     int op2 = currentInstruction[3].u.operand;
     OperandTypes types = OperandTypes::fromInt(currentInstruction[4].u.operand);
 
-    if (!types.first().mightBeNumber() || !types.second().mightBeNumber()) {
-        linkDummySlowCase(iter);
-        return;
-    }
+#if USE(JSVALUE64)
+    JSValueRegs leftRegs = JSValueRegs(regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT1);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT2;
+#else
+    JSValueRegs leftRegs = JSValueRegs(regT1, regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT3, regT2);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT4;
+#endif
+    FPRReg scratchFPR = fpRegT2;
 
-    bool op1HasImmediateIntFastCase = isOperandConstantImmediateInt(op1);
-    bool op2HasImmediateIntFastCase = !op1HasImmediateIntFastCase && isOperandConstantImmediateInt(op2);
-    compileBinaryArithOpSlowCase(currentInstruction, op_add, iter, result, op1, op2, types, op1HasImmediateIntFastCase, op2HasImmediateIntFastCase);
+    ResultProfile* resultProfile = nullptr;
+    if (shouldEmitProfiling())
+        resultProfile = m_codeBlock->ensureResultProfile(m_bytecodeOffset);
+
+    SnippetOperand leftOperand(types.first());
+    SnippetOperand rightOperand(types.second());
+
+    if (isOperandConstantInt(op1))
+        leftOperand.setConstInt32(getOperandConstantInt(op1));
+#if USE(JSVALUE64)
+    else if (isOperandConstantDouble(op1))
+        leftOperand.setConstDouble(getOperandConstantDouble(op1));
+#endif
+
+    if (isOperandConstantInt(op2))
+        rightOperand.setConstInt32(getOperandConstantInt(op2));
+#if USE(JSVALUE64)
+    else if (isOperandConstantDouble(op2))
+        rightOperand.setConstDouble(getOperandConstantDouble(op2));
+#endif
+
+    RELEASE_ASSERT(!leftOperand.isConst() || !rightOperand.isConst());
+
+    if (!leftOperand.isConst())
+        emitGetVirtualRegister(op1, leftRegs);
+    if (!rightOperand.isConst())
+        emitGetVirtualRegister(op2, rightRegs);
+
+    JITDivGenerator gen(leftOperand, rightOperand, resultRegs, leftRegs, rightRegs,
+        fpRegT0, fpRegT1, scratchGPR, scratchFPR, resultProfile);
+
+    gen.generateFastPath(*this);
+
+    if (gen.didEmitFastPath()) {
+        gen.endJumpList().link(this);
+        emitPutVirtualRegister(result, resultRegs);
+
+        addSlowCase(gen.slowPathJumpList());
+    } else {
+        ASSERT(gen.endJumpList().empty());
+        ASSERT(gen.slowPathJumpList().empty());
+        JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_div);
+        slowPathCall.call();
+    }
+}
+
+void JIT::emitSlow_op_div(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
+{
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
+
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_div);
+    slowPathCall.call();
 }
 
 void JIT::emit_op_mul(Instruction* currentInstruction)
@@ -839,136 +819,62 @@ void JIT::emit_op_mul(Instruction* currentInstruction)
     int op2 = currentInstruction[3].u.operand;
     OperandTypes types = OperandTypes::fromInt(currentInstruction[4].u.operand);
 
-    // For now, only plant a fast int case if the constant operand is greater than zero.
-    int32_t value;
-    if (isOperandConstantImmediateInt(op1) && ((value = getConstantOperandImmediateInt(op1)) > 0)) {
-        // Add a special fast case profile because the DFG JIT will expect one.
-        m_codeBlock->addSpecialFastCaseProfile(m_bytecodeOffset);
-        emitGetVirtualRegister(op2, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        addSlowCase(branchMul32(Overflow, Imm32(value), regT0, regT1));
-        emitFastArithReTagImmediate(regT1, regT0);
-    } else if (isOperandConstantImmediateInt(op2) && ((value = getConstantOperandImmediateInt(op2)) > 0)) {
-        // Add a special fast case profile because the DFG JIT will expect one.
-        m_codeBlock->addSpecialFastCaseProfile(m_bytecodeOffset);
-        emitGetVirtualRegister(op1, regT0);
-        emitJumpSlowCaseIfNotImmediateInteger(regT0);
-        addSlowCase(branchMul32(Overflow, Imm32(value), regT0, regT1));
-        emitFastArithReTagImmediate(regT1, regT0);
-    } else
-        compileBinaryArithOp(op_mul, result, op1, op2, types);
+#if USE(JSVALUE64)
+    JSValueRegs leftRegs = JSValueRegs(regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT1);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT2;
+    FPRReg scratchFPR = InvalidFPRReg;
+#else
+    JSValueRegs leftRegs = JSValueRegs(regT1, regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT3, regT2);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT4;
+    FPRReg scratchFPR = fpRegT2;
+#endif
 
-    emitPutVirtualRegister(result);
+    ResultProfile* resultProfile = nullptr;
+    if (shouldEmitProfiling())
+        resultProfile = m_codeBlock->ensureResultProfile(m_bytecodeOffset);
+
+    SnippetOperand leftOperand(types.first());
+    SnippetOperand rightOperand(types.second());
+
+    if (isOperandConstantInt(op1))
+        leftOperand.setConstInt32(getOperandConstantInt(op1));
+    else if (isOperandConstantInt(op2))
+        rightOperand.setConstInt32(getOperandConstantInt(op2));
+
+    RELEASE_ASSERT(!leftOperand.isConst() || !rightOperand.isConst());
+
+    if (!leftOperand.isPositiveConstInt32())
+        emitGetVirtualRegister(op1, leftRegs);
+    if (!rightOperand.isPositiveConstInt32())
+        emitGetVirtualRegister(op2, rightRegs);
+
+    JITMulGenerator gen(leftOperand, rightOperand, resultRegs, leftRegs, rightRegs,
+        fpRegT0, fpRegT1, scratchGPR, scratchFPR, resultProfile);
+
+    gen.generateFastPath(*this);
+
+    if (gen.didEmitFastPath()) {
+        gen.endJumpList().link(this);
+        emitPutVirtualRegister(result, resultRegs);
+
+        addSlowCase(gen.slowPathJumpList());
+    } else {
+        ASSERT(gen.endJumpList().empty());
+        ASSERT(gen.slowPathJumpList().empty());
+        JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_mul);
+        slowPathCall.call();
+    }
 }
 
 void JIT::emitSlow_op_mul(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    int result = currentInstruction[1].u.operand;
-    int op1 = currentInstruction[2].u.operand;
-    int op2 = currentInstruction[3].u.operand;
-    OperandTypes types = OperandTypes::fromInt(currentInstruction[4].u.operand);
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
 
-    bool op1HasImmediateIntFastCase = isOperandConstantImmediateInt(op1) && getConstantOperandImmediateInt(op1) > 0;
-    bool op2HasImmediateIntFastCase = !op1HasImmediateIntFastCase && isOperandConstantImmediateInt(op2) && getConstantOperandImmediateInt(op2) > 0;
-    compileBinaryArithOpSlowCase(currentInstruction, op_mul, iter, result, op1, op2, types, op1HasImmediateIntFastCase, op2HasImmediateIntFastCase);
-}
-
-void JIT::emit_op_div(Instruction* currentInstruction)
-{
-    int dst = currentInstruction[1].u.operand;
-    int op1 = currentInstruction[2].u.operand;
-    int op2 = currentInstruction[3].u.operand;
-    OperandTypes types = OperandTypes::fromInt(currentInstruction[4].u.operand);
-
-    if (isOperandConstantImmediateDouble(op1)) {
-        emitGetVirtualRegister(op1, regT0);
-        add64(tagTypeNumberRegister, regT0);
-        move64ToDouble(regT0, fpRegT0);
-    } else if (isOperandConstantImmediateInt(op1)) {
-        emitLoadInt32ToDouble(op1, fpRegT0);
-    } else {
-        emitGetVirtualRegister(op1, regT0);
-        if (!types.first().definitelyIsNumber())
-            emitJumpSlowCaseIfNotImmediateNumber(regT0);
-        Jump notInt = emitJumpIfNotImmediateInteger(regT0);
-        convertInt32ToDouble(regT0, fpRegT0);
-        Jump skipDoubleLoad = jump();
-        notInt.link(this);
-        add64(tagTypeNumberRegister, regT0);
-        move64ToDouble(regT0, fpRegT0);
-        skipDoubleLoad.link(this);
-    }
-
-    if (isOperandConstantImmediateDouble(op2)) {
-        emitGetVirtualRegister(op2, regT1);
-        add64(tagTypeNumberRegister, regT1);
-        move64ToDouble(regT1, fpRegT1);
-    } else if (isOperandConstantImmediateInt(op2)) {
-        emitLoadInt32ToDouble(op2, fpRegT1);
-    } else {
-        emitGetVirtualRegister(op2, regT1);
-        if (!types.second().definitelyIsNumber())
-            emitJumpSlowCaseIfNotImmediateNumber(regT1);
-        Jump notInt = emitJumpIfNotImmediateInteger(regT1);
-        convertInt32ToDouble(regT1, fpRegT1);
-        Jump skipDoubleLoad = jump();
-        notInt.link(this);
-        add64(tagTypeNumberRegister, regT1);
-        move64ToDouble(regT1, fpRegT1);
-        skipDoubleLoad.link(this);
-    }
-    divDouble(fpRegT1, fpRegT0);
-
-    // Is the result actually an integer? The DFG JIT would really like to know. If it's
-    // not an integer, we increment a count. If this together with the slow case counter
-    // are below threshold then the DFG JIT will compile this division with a specualtion
-    // that the remainder is zero.
-
-    // As well, there are cases where a double result here would cause an important field
-    // in the heap to sometimes have doubles in it, resulting in double predictions getting
-    // propagated to a use site where it might cause damage (such as the index to an array
-    // access). So if we are DFG compiling anything in the program, we want this code to
-    // ensure that it produces integers whenever possible.
-
-    JumpList notInteger;
-    branchConvertDoubleToInt32(fpRegT0, regT0, notInteger, fpRegT1);
-    // If we've got an integer, we might as well make that the result of the division.
-    emitFastArithReTagImmediate(regT0, regT0);
-    Jump isInteger = jump();
-    notInteger.link(this);
-    moveDoubleTo64(fpRegT0, regT0);
-    Jump doubleZero = branchTest64(Zero, regT0);
-    add32(TrustedImm32(1), AbsoluteAddress(&m_codeBlock->addSpecialFastCaseProfile(m_bytecodeOffset)->m_counter));
-    sub64(tagTypeNumberRegister, regT0);
-    Jump trueDouble = jump();
-    doubleZero.link(this);
-    move(tagTypeNumberRegister, regT0);
-    trueDouble.link(this);
-    isInteger.link(this);
-
-    emitPutVirtualRegister(dst, regT0);
-}
-
-void JIT::emitSlow_op_div(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
-{
-    int op1 = currentInstruction[2].u.operand;
-    int op2 = currentInstruction[3].u.operand;
-    OperandTypes types = OperandTypes::fromInt(currentInstruction[4].u.operand);
-    if (types.first().definitelyIsNumber() && types.second().definitelyIsNumber()) {
-        if (!ASSERT_DISABLED)
-            abortWithReason(JITDivOperandsAreNotNumbers);
-        return;
-    }
-    if (!isOperandConstantImmediateDouble(op1) && !isOperandConstantImmediateInt(op1)) {
-        if (!types.first().definitelyIsNumber())
-            linkSlowCase(iter);
-    }
-    if (!isOperandConstantImmediateDouble(op2) && !isOperandConstantImmediateInt(op2)) {
-        if (!types.second().definitelyIsNumber())
-            linkSlowCase(iter);
-    }
-    // There is an extra slow case for (op1 * -N) or (-N * op2), to check for 0 since this should produce a result of -0.
-    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_div);
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_mul);
     slowPathCall.call();
 }
 
@@ -979,23 +885,47 @@ void JIT::emit_op_sub(Instruction* currentInstruction)
     int op2 = currentInstruction[3].u.operand;
     OperandTypes types = OperandTypes::fromInt(currentInstruction[4].u.operand);
 
-    compileBinaryArithOp(op_sub, result, op1, op2, types);
-    emitPutVirtualRegister(result);
+#if USE(JSVALUE64)
+    JSValueRegs leftRegs = JSValueRegs(regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT1);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT2;
+    FPRReg scratchFPR = InvalidFPRReg;
+#else
+    JSValueRegs leftRegs = JSValueRegs(regT1, regT0);
+    JSValueRegs rightRegs = JSValueRegs(regT3, regT2);
+    JSValueRegs resultRegs = leftRegs;
+    GPRReg scratchGPR = regT4;
+    FPRReg scratchFPR = fpRegT2;
+#endif
+
+    SnippetOperand leftOperand(types.first());
+    SnippetOperand rightOperand(types.second());
+
+    emitGetVirtualRegister(op1, leftRegs);
+    emitGetVirtualRegister(op2, rightRegs);
+
+    JITSubGenerator gen(leftOperand, rightOperand, resultRegs, leftRegs, rightRegs,
+        fpRegT0, fpRegT1, scratchGPR, scratchFPR);
+
+    gen.generateFastPath(*this);
+
+    ASSERT(gen.didEmitFastPath());
+    gen.endJumpList().link(this);
+    emitPutVirtualRegister(result, resultRegs);
+
+    addSlowCase(gen.slowPathJumpList());
 }
 
 void JIT::emitSlow_op_sub(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    int result = currentInstruction[1].u.operand;
-    int op1 = currentInstruction[2].u.operand;
-    int op2 = currentInstruction[3].u.operand;
-    OperandTypes types = OperandTypes::fromInt(currentInstruction[4].u.operand);
+    linkAllSlowCasesForBytecodeOffset(m_slowCases, iter, m_bytecodeOffset);
 
-    compileBinaryArithOpSlowCase(currentInstruction, op_sub, iter, result, op1, op2, types, false, false);
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_sub);
+    slowPathCall.call();
 }
 
 /* ------------------------------ END: OP_ADD, OP_SUB, OP_MUL ------------------------------ */
-
-#endif // USE(JSVALUE64)
 
 } // namespace JSC
 

@@ -58,11 +58,12 @@ if (ICU_INCLUDE_DIR AND ICU_LIBRARY)
     endif()
 
     # Look for the ICU internationalization libraries
+    pkg_check_modules(PC_ICU_I18N icu-i18n)
     find_library(
         ICU_I18N_LIBRARY
-        NAMES sicuin icuin icui18n cygicuin cygicuin32
-        HINTS ${PC_ICU_LIBRARY_DIRS}
-              ${PC_ICU_LIBDIR}
+        NAMES sicuin icui18n icuin cygicuin cygicuin32
+        HINTS ${PC_ICU_I18N_LIBRARY_DIRS}
+              ${PC_ICU_I18N_LIBDIR}
         DOC "Libraries to link against for ICU internationalization")
     mark_as_advanced(ICU_I18N_LIBRARY)
     if (ICU_I18N_LIBRARY)

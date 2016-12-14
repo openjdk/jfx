@@ -32,32 +32,32 @@
 
 namespace WebCore {
 
-Ref<TextEvent> TextEvent::create()
+Ref<TextEvent> TextEvent::createForBindings()
 {
     return adoptRef(*new TextEvent);
 }
 
-Ref<TextEvent> TextEvent::create(PassRefPtr<AbstractView> view, const String& data, TextEventInputType inputType)
+Ref<TextEvent> TextEvent::create(AbstractView* view, const String& data, TextEventInputType inputType)
 {
     return adoptRef(*new TextEvent(view, data, inputType));
 }
 
-Ref<TextEvent> TextEvent::createForPlainTextPaste(PassRefPtr<AbstractView> view, const String& data, bool shouldSmartReplace)
+Ref<TextEvent> TextEvent::createForPlainTextPaste(AbstractView* view, const String& data, bool shouldSmartReplace)
 {
     return adoptRef(*new TextEvent(view, data, 0, shouldSmartReplace, false, MailBlockquoteHandling::RespectBlockquote));
 }
 
-Ref<TextEvent> TextEvent::createForFragmentPaste(PassRefPtr<AbstractView> view, PassRefPtr<DocumentFragment> data, bool shouldSmartReplace, bool shouldMatchStyle, MailBlockquoteHandling mailBlockquoteHandling)
+Ref<TextEvent> TextEvent::createForFragmentPaste(AbstractView* view, RefPtr<DocumentFragment>&& data, bool shouldSmartReplace, bool shouldMatchStyle, MailBlockquoteHandling mailBlockquoteHandling)
 {
-    return adoptRef(*new TextEvent(view, "", data, shouldSmartReplace, shouldMatchStyle, mailBlockquoteHandling));
+    return adoptRef(*new TextEvent(view, emptyString(), WTFMove(data), shouldSmartReplace, shouldMatchStyle, mailBlockquoteHandling));
 }
 
-Ref<TextEvent> TextEvent::createForDrop(PassRefPtr<AbstractView> view, const String& data)
+Ref<TextEvent> TextEvent::createForDrop(AbstractView* view, const String& data)
 {
     return adoptRef(*new TextEvent(view, data, TextEventInputDrop));
 }
 
-Ref<TextEvent> TextEvent::createForDictation(PassRefPtr<AbstractView> view, const String& data, const Vector<DictationAlternative>& dictationAlternatives)
+Ref<TextEvent> TextEvent::createForDictation(AbstractView* view, const String& data, const Vector<DictationAlternative>& dictationAlternatives)
 {
     return adoptRef(*new TextEvent(view, data, dictationAlternatives));
 }
@@ -70,29 +70,28 @@ TextEvent::TextEvent()
 {
 }
 
-TextEvent::TextEvent(PassRefPtr<AbstractView> view, const String& data, TextEventInputType inputType)
+TextEvent::TextEvent(AbstractView* view, const String& data, TextEventInputType inputType)
     : UIEvent(eventNames().textInputEvent, true, true, view, 0)
     , m_inputType(inputType)
     , m_data(data)
-    , m_pastingFragment(0)
     , m_shouldSmartReplace(false)
     , m_shouldMatchStyle(false)
     , m_mailBlockquoteHandling(MailBlockquoteHandling::RespectBlockquote)
 {
 }
 
-TextEvent::TextEvent(PassRefPtr<AbstractView> view, const String& data, PassRefPtr<DocumentFragment> pastingFragment, bool shouldSmartReplace, bool shouldMatchStyle, MailBlockquoteHandling mailBlockquoteHandling)
+TextEvent::TextEvent(AbstractView* view, const String& data, RefPtr<DocumentFragment>&& pastingFragment, bool shouldSmartReplace, bool shouldMatchStyle, MailBlockquoteHandling mailBlockquoteHandling)
     : UIEvent(eventNames().textInputEvent, true, true, view, 0)
     , m_inputType(TextEventInputPaste)
     , m_data(data)
-    , m_pastingFragment(pastingFragment)
+    , m_pastingFragment(WTFMove(pastingFragment))
     , m_shouldSmartReplace(shouldSmartReplace)
     , m_shouldMatchStyle(shouldMatchStyle)
     , m_mailBlockquoteHandling(mailBlockquoteHandling)
 {
 }
 
-TextEvent::TextEvent(PassRefPtr<AbstractView> view, const String& data, const Vector<DictationAlternative>& dictationAlternatives)
+TextEvent::TextEvent(AbstractView* view, const String& data, const Vector<DictationAlternative>& dictationAlternatives)
     : UIEvent(eventNames().textInputEvent, true, true, view, 0)
     , m_inputType(TextEventInputDictation)
     , m_data(data)
@@ -107,7 +106,7 @@ TextEvent::~TextEvent()
 {
 }
 
-void TextEvent::initTextEvent(const AtomicString& type, bool canBubble, bool cancelable, PassRefPtr<AbstractView> view, const String& data)
+void TextEvent::initTextEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView* view, const String& data)
 {
     if (dispatched())
         return;

@@ -73,9 +73,8 @@ public final class DumpRenderTree {
     private final UIClientImpl uiClient;
     private final EventSender eventSender;
 
-    private final CountDownLatch latch;
-    private final String testPath;
-    private String pixelsHash = "";
+    private CountDownLatch latch;
+    private String testPath;
     private boolean loaded;
     private boolean waiting;
     private boolean complete;
@@ -160,16 +159,7 @@ public final class DumpRenderTree {
     }
 
     // called on FX thread
-    private DumpRenderTree(String testString, CountDownLatch latch) {
-        int t = testString.indexOf("'");
-        if ((t > 0) && (t < testString.length() - 1)) {
-            pixelsHash = testString.substring(t + 1);
-            testString = testString.substring(0, t);
-        }
-        this.testPath = testString;
-        this.latch = latch;
-        drt = this;
-
+    private DumpRenderTree() {
         uiClient = new UIClientImpl();
         webPage = new WebPage(new WebPageClientImpl(), uiClient, null, null,
                               new ThemeClientImplStub(), false);
@@ -181,22 +171,20 @@ public final class DumpRenderTree {
         webPage.setDeveloperExtrasEnabled(true);
         webPage.addLoadListenerClient(new DRTLoadListener());
 
-        init(testPath, pixelsHash);
     }
 
-    // called on FX thread
-    private void run() {
-        String file = testPath;
-        mlog("{runTest: " + file);
-        long mainFrame = webPage.getMainFrame();
-        try {
-            new URL(file);
-        } catch (MalformedURLException ex) {
-            file = "file:///" + file;
+    private String getTestPath(String testString) {
+        int t = testString.indexOf("'");
+        String pixelsHash = "";
+        if ((t > 0) && (t < testString.length() - 1)) {
+            pixelsHash = testString.substring(t + 1);
+            testString = testString.substring(0, t);
         }
-        webPage.open(mainFrame, file);
-        mlog("}runTest");
+        this.testPath = testString;
+        init(testString, pixelsHash);
+        return testString;
     }
+
 
     private static boolean isDebug()
     {
@@ -220,22 +208,52 @@ public final class DumpRenderTree {
             new WebEngine();    // initialize Webkit classes
             System.loadLibrary("DumpRenderTreeJava");
             PageCache.setCapacity(1);
+            drt = new DumpRenderTree();
             latch.countDown();
         });
         // wait for libraries to load
         latch.await();
     }
 
-    private static void runTest(final String testString) throws Exception {
-        final CountDownLatch latch = new CountDownLatch(1);
+    private void reset() {
+        mlog("reset");
+        // Reset native objects associated with WebPage
+        webPage.resetToConsistentStateBeforeTesting();
+        // Reset zoom factors
+        webPage.setZoomFactor(1.0f, true);
+        webPage.setZoomFactor(1.0f, false);
+        // Reset DRT internal states
+        complete = false;
+        loaded = false;
+        waiting = false;
+    }
+
+    // called on FX thread
+    private void run(final String testString, final CountDownLatch latch) {
+        this.latch = latch;
+        String file = getTestPath(testString);
+        mlog("{runTest: " + file);
+        long mainFrame = webPage.getMainFrame();
+        try {
+            new URL(file);
+        } catch (MalformedURLException ex) {
+            file = "file:///" + file;
+        }
+        reset();
+        webPage.open(mainFrame, file);
+        mlog("}runTest");
+    }
+
+    private void runTest(final String testString) throws Exception {
+        final CountDownLatch l = new CountDownLatch(1);
         Invoker.getInvoker().invokeOnEventThread(() -> {
-            new DumpRenderTree(testString, latch).run();
+            run(testString, l);
         });
         // wait until test is finished
-        latch.await();
+        l.await();
         Invoker.getInvoker().invokeOnEventThread(() -> {
             mlog("dispose");
-            drt.uiClient.closePage();
+            // drt.uiClient.closePage();
             dispose();
         });
     }
@@ -386,7 +404,7 @@ public final class DumpRenderTree {
 
         mlog("{main");
         initPlatform();
-
+        assert drt != null;
         for (String arg: args) {
             if ("--dump-as-text".equals(arg)) {
                 forceDumpAsText = true;
@@ -396,11 +414,11 @@ public final class DumpRenderTree {
                         new InputStreamReader(System.in));
                 String testPath;
                 while ((testPath = in.readLine()) != null) {
-                    runTest(testPath);
+                    drt.runTest(testPath);
                 }
                 in.close();
             } else {
-                runTest(arg);
+                drt.runTest(arg);
             }
         }
         PlatformImpl.exit();

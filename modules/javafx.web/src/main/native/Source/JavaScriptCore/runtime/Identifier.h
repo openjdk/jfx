@@ -282,6 +282,15 @@ ALWAYS_INLINE Optional<uint32_t> parseIndex(const Identifier& identifier)
     return parseIndex(*uid);
 }
 
+JSValue identifierToJSValue(VM&, const Identifier&);
+// This will stringify private symbols. When leaking JSValues to
+// non-internal code, make sure to use this function and not the above one.
+JSValue identifierToSafePublicJSValue(VM&, const Identifier&);
+
+// FIXME: It may be better for this to just be a typedef for PtrHash, since PtrHash may be cheaper to
+// compute than loading the StringImpl's hash from memory. That change would also reduce the likelihood of
+// crashes in code that somehow dangled a StringImpl.
+// https://bugs.webkit.org/show_bug.cgi?id=150137
 struct IdentifierRepHash : PtrHash<RefPtr<UniquedStringImpl>> {
     static unsigned hash(const RefPtr<UniquedStringImpl>& key) { return key->existingSymbolAwareHash(); }
     static unsigned hash(UniquedStringImpl* key) { return key->existingSymbolAwareHash(); }
@@ -292,6 +301,7 @@ struct IdentifierMapIndexHashTraits : HashTraits<int> {
     static const bool emptyValueIsZero = false;
 };
 
+typedef HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> IdentifierSet;
 typedef HashMap<RefPtr<UniquedStringImpl>, int, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, IdentifierMapIndexHashTraits> IdentifierMap;
 typedef HashMap<UniquedStringImpl*, int, IdentifierRepHash, HashTraits<UniquedStringImpl*>, IdentifierMapIndexHashTraits> BorrowedIdentifierMap;
 

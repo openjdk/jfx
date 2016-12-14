@@ -38,11 +38,12 @@ try		TRY
 typeof		TYPEOF
 with		WITH
 debugger	DEBUGGER
+yield	YIELD
 
 # Reserved for future use.
 enum            RESERVED
-export          RESERVED
-import          RESERVED
+export          EXPORT
+import          IMPORT
 
 # Reserved for future use in strict code.
 implements      RESERVED_IF_STRICT
@@ -52,6 +53,5 @@ private         RESERVED_IF_STRICT
 protected       RESERVED_IF_STRICT
 public          RESERVED_IF_STRICT
 static          RESERVED_IF_STRICT
-yield           RESERVED_IF_STRICT
 
 @end

@@ -29,8 +29,10 @@ use warnings;
 
 my $defines;
 my $preprocessor;
+my $gperf;
 GetOptions('defines=s' => \$defines,
-           'preprocessor=s' => \$preprocessor);
+           'preprocessor=s' => \$preprocessor,
+           'gperf-executable=s' => \$gperf);
 
 my @NAMES = applyPreprocessor("CSSPropertyNames.in", $defines, $preprocessor);
 die "We've reached more than 1024 CSS properties, please make sure to update CSSProperty/StylePropertyMetadata accordingly" if (scalar(@NAMES) > 1024);
@@ -38,7 +40,7 @@ die "We've reached more than 1024 CSS properties, please make sure to update CSS
 my %namesHash;
 my @duplicates = ();
 
-my $numPredefinedProperties = 1;
+my $numPredefinedProperties = 2;
 my @names = ();
 my %nameIsInherited;
 my %propertiesWithStyleBuilderOptions;
@@ -236,6 +238,7 @@ String getJSPropertyName(CSSPropertyID id)
 
 static const bool isInheritedPropertyTable[numCSSProperties + $numPredefinedProperties] = {
     false, // CSSPropertyInvalid
+    true, // CSSPropertyCustom
 EOF
 
 foreach my $name (@names) {
@@ -283,6 +286,7 @@ namespace WebCore {
 
 enum CSSPropertyID : uint16_t {
     CSSPropertyInvalid = 0,
+    CSSPropertyCustom = 1,
 EOF
 
 my $first = $numPredefinedProperties;
@@ -313,7 +317,7 @@ WTF::String getJSPropertyName(CSSPropertyID);
 
 inline CSSPropertyID convertToCSSPropertyID(int value)
 {
-    ASSERT((value >= firstCSSProperty && value <= lastCSSProperty) || value == CSSPropertyInvalid);
+    ASSERT((value >= firstCSSProperty && value <= lastCSSProperty) || value == CSSPropertyInvalid || value == CSSPropertyCustom);
     return static_cast<CSSPropertyID>(value);
 }
 
@@ -709,8 +713,8 @@ sub generateInitialValueSetter {
   } elsif (exists $propertiesWithStyleBuilderOptions{$name}{"AnimationProperty"}) {
     $setterContent .= generateAnimationPropertyInitialValueSetter($name, $indent . "    ");
   } elsif (exists $propertiesWithStyleBuilderOptions{$name}{"FontProperty"}) {
-    $setterContent .= $indent . "    FontDescription fontDescription = styleResolver.fontDescription();\n";
-    $setterContent .= $indent . "    fontDescription." . $setter . "(FontDescription::" . $initial . "());\n";
+    $setterContent .= $indent . "    auto fontDescription = styleResolver.fontDescription();\n";
+    $setterContent .= $indent . "    fontDescription." . $setter . "(FontCascadeDescription::" . $initial . "());\n";
     $setterContent .= $indent . "    styleResolver.setFontDescription(fontDescription);\n";
   } elsif (exists $propertiesWithStyleBuilderOptions{$name}{"FillLayerProperty"}) {
     $setterContent .= generateFillLayerPropertyInitialValueSetter($name, $indent . "    ");
@@ -753,7 +757,7 @@ sub generateInheritValueSetter {
     $setterContent .= generateAnimationPropertyInheritValueSetter($name, $indent . "    ");
     $didCallSetValue = 1;
   } elsif (exists $propertiesWithStyleBuilderOptions{$name}{"FontProperty"}) {
-    $setterContent .= $indent . "    FontDescription fontDescription = styleResolver.fontDescription();\n";
+    $setterContent .= $indent . "    auto fontDescription = styleResolver.fontDescription();\n";
     $setterContent .= $indent . "    fontDescription." . $setter . "(styleResolver.parentFontDescription()." . $getter . "());\n";
     $setterContent .= $indent . "    styleResolver.setFontDescription(fontDescription);\n";
     $didCallSetValue = 1;
@@ -807,7 +811,7 @@ sub generateValueSetter {
     $setterContent .= generateAnimationPropertyValueSetter($name, $indent . "    ");
     $didCallSetValue = 1;
   } elsif (exists $propertiesWithStyleBuilderOptions{$name}{"FontProperty"}) {
-    $setterContent .= $indent . "    FontDescription fontDescription = styleResolver.fontDescription();\n";
+    $setterContent .= $indent . "    auto fontDescription = styleResolver.fontDescription();\n";
     $setterContent .= $indent . "    fontDescription." . $setter . "(" . $convertedValue . ");\n";
     $setterContent .= $indent . "    styleResolver.setFontDescription(fontDescription);\n";
     $didCallSetValue = 1;
@@ -872,6 +876,7 @@ void StyleBuilder::applyProperty(CSSPropertyID property, StyleResolver& styleRes
 {
     switch (property) {
     case CSSPropertyInvalid:
+    case CSSPropertyCustom:
         break;
 EOF
 
@@ -957,9 +962,19 @@ foreach my $name (@names) {
   print SHORTHANDS_CPP "{\n";
   print SHORTHANDS_CPP "    static const CSSPropertyID " . $lowercaseId . "Properties[] = {\n";
   foreach (@longhands) {
-    die "Unknown CSS property used in Longhands: " . $nameToId{$_} if !exists($nameToId{$_});
-    push(@{$longhandToShorthands{$_}}, $name);
-    print SHORTHANDS_CPP "        CSSProperty" . $nameToId{$_} . ",\n";
+    if ($_ eq "all") {
+        foreach my $propname (@names) {
+            next if (exists $propertiesWithStyleBuilderOptions{$propname}{"Longhands"});
+            next if ($propname eq "direction" || $propname eq "unicode-bidi");
+            die "Unknown CSS property used in all shorthand: " . $nameToId{$propname} if !exists($nameToId{$propname});
+            push(@{$longhandToShorthands{$propname}}, $name);
+            print SHORTHANDS_CPP "        CSSProperty" . $nameToId{$propname} . ",\n";
+        }
+    } else {
+        die "Unknown CSS property used in Longhands: " . $nameToId{$_} if !exists($nameToId{$_});
+        push(@{$longhandToShorthands{$_}}, $name);
+        print SHORTHANDS_CPP "        CSSProperty" . $nameToId{$_} . ",\n";
+    }
   }
   print SHORTHANDS_CPP "    };\n";
   print SHORTHANDS_CPP "    return StylePropertyShorthand(CSSProperty" . $nameToId{$name} . ", " . $lowercaseId . "Properties);\n";
@@ -1033,5 +1048,7 @@ EOF
 
 close SHORTHANDS_CPP;
 
-my $gperf = $ENV{GPERF} ? $ENV{GPERF} : "gperf";
+if (not $gperf) {
+    $gperf = $ENV{GPERF} ? $ENV{GPERF} : "gperf";
+}
 system("\"$gperf\" --key-positions=\"*\" -D -n -s 2 CSSPropertyNames.gperf --output-file=CSSPropertyNames.cpp") == 0 || die "calling gperf failed: $?";

@@ -34,7 +34,6 @@
 #include "FloatRoundedRect.h"
 #include "FloatSize.h"
 #include "GraphicsLayerClient.h"
-#include "IntRect.h"
 #include "Path.h"
 #include "PlatformLayer.h"
 #include "TransformOperations.h"
@@ -54,6 +53,10 @@ class TextStream;
 class TiledBacking;
 class TimingFunction;
 class TransformationMatrix;
+
+namespace DisplayList {
+typedef unsigned AsTextFlags;
+}
 
 // Base class for animation values (also used for transitions). Here to
 // represent values for properties being animated via the GraphicsLayer,
@@ -346,6 +349,9 @@ public:
     bool acceleratesDrawing() const { return m_acceleratesDrawing; }
     virtual void setAcceleratesDrawing(bool b) { m_acceleratesDrawing = b; }
 
+    bool usesDisplayListDrawing() const { return m_usesDisplayListDrawing; }
+    virtual void setUsesDisplayListDrawing(bool b) { m_usesDisplayListDrawing = b; }
+
     bool needsBackdrop() const { return !m_backdropFilters.isEmpty(); }
 
     // The color used to paint the layer background. Pass an invalid color to remove it.
@@ -515,6 +521,13 @@ public:
     // pointers for the layers and timing data will be included in the returned string.
     WEBCORE_EXPORT String layerTreeAsText(LayerTreeAsTextBehavior = LayerTreeAsTextBehaviorNormal) const;
 
+    // For testing.
+    WEBCORE_EXPORT virtual String displayListAsText(DisplayList::AsTextFlags) const { return String(); }
+
+    WEBCORE_EXPORT virtual void setIsTrackingDisplayListReplay(bool isTracking) { m_isTrackingDisplayListReplay = isTracking; }
+    WEBCORE_EXPORT virtual bool isTrackingDisplayListReplay() const { return m_isTrackingDisplayListReplay; }
+    WEBCORE_EXPORT virtual String replayDisplayListAsText(DisplayList::AsTextFlags) const { return String(); }
+
     // Return an estimate of the backing store memory cost (in bytes). May be incorrect for tiled layers.
     WEBCORE_EXPORT virtual double backingStoreMemoryEstimate() const;
 
@@ -607,10 +620,12 @@ protected:
     bool m_drawsContent : 1;
     bool m_contentsVisible : 1;
     bool m_acceleratesDrawing : 1;
+    bool m_usesDisplayListDrawing : 1;
     bool m_appliesPageScale : 1; // Set for the layer which has the page scale applied to it.
     bool m_showDebugBorder : 1;
     bool m_showRepaintCounter : 1;
     bool m_isMaskLayer : 1;
+    bool m_isTrackingDisplayListReplay : 1;
 
     GraphicsLayerPaintingPhase m_paintingPhase;
     CompositingCoordinatesOrientation m_contentsOrientation; // affects orientation of layer contents
@@ -640,6 +655,9 @@ protected:
     WindRule m_shapeLayerWindRule { RULE_NONZERO };
 #endif
 };
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const Vector<GraphicsLayer::PlatformLayerID>&);
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const GraphicsLayer::CustomAppearance&);
 
 } // namespace WebCore
 

@@ -41,10 +41,13 @@
 #include "RenderSVGRoot.h"
 #include "RenderStyle.h"
 #include "SVGDocument.h"
+#include "SVGFEImageElement.h"
 #include "SVGForeignObjectElement.h"
 #include "SVGImageClients.h"
+#include "SVGImageElement.h"
 #include "SVGSVGElement.h"
 #include "Settings.h"
+#include "TextStream.h"
 
 namespace WebCore {
 
@@ -58,7 +61,7 @@ SVGImage::~SVGImage()
 {
     if (m_page) {
         // Store m_page in a local variable, clearing m_page, so that SVGImageChromeClient knows we're destructed.
-        std::unique_ptr<Page> currentPage = WTF::move(m_page);
+        std::unique_ptr<Page> currentPage = WTFMove(m_page);
         currentPage->mainFrame().loader().frameDetached(); // Break both the loader and view references to the frame
     }
 
@@ -79,9 +82,20 @@ bool SVGImage::hasSingleSecurityOrigin() const
     if (!rootElement)
         return true;
 
-    // Don't allow foreignObject elements since they can leak information with arbitrary HTML (like spellcheck or control theme).
-    if (descendantsOfType<SVGForeignObjectElement>(*rootElement).first())
-        return false;
+    // FIXME: Once foreignObject elements within SVG images are updated to not leak cross-origin data
+    // (e.g., visited links, spellcheck) we can remove the SVGForeignObjectElement check here and
+    // research if we can remove the Image::hasSingleSecurityOrigin mechanism entirely.
+    for (auto& element : descendantsOfType<SVGElement>(*rootElement)) {
+        if (is<SVGForeignObjectElement>(element))
+            return false;
+        if (is<SVGImageElement>(element)) {
+            if (!downcast<SVGImageElement>(element).hasSingleSecurityOrigin())
+                return false;
+        } else if (is<SVGFEImageElement>(element)) {
+            if (!downcast<SVGFEImageElement>(element).hasSingleSecurityOrigin())
+                return false;
+        }
+    }
 
     // Because SVG image rendering disallows external resources and links,
     // these images effectively are restricted to a single security origin.
@@ -137,8 +151,8 @@ IntSize SVGImage::containerSize() const
     return IntSize(300, 150);
 }
 
-void SVGImage::drawForContainer(GraphicsContext* context, const FloatSize containerSize, float zoom, const FloatRect& dstRect,
-    const FloatRect& srcRect, ColorSpace colorSpace, CompositeOperator compositeOp, BlendMode blendMode)
+void SVGImage::drawForContainer(GraphicsContext& context, const FloatSize containerSize, float zoom, const FloatRect& dstRect,
+    const FloatRect& srcRect, CompositeOperator compositeOp, BlendMode blendMode)
 {
     if (!m_page)
         return;
@@ -160,7 +174,7 @@ void SVGImage::drawForContainer(GraphicsContext* context, const FloatSize contai
     adjustedSrcSize.scale(roundedContainerSize.width() / containerSize.width(), roundedContainerSize.height() / containerSize.height());
     scaledSrc.setSize(adjustedSrcSize);
 
-    draw(context, dstRect, scaledSrc, colorSpace, compositeOp, blendMode, ImageOrientationDescription());
+    draw(context, dstRect, scaledSrc, compositeOp, blendMode, ImageOrientationDescription());
 
     setImageObserver(observer);
 }
@@ -173,25 +187,26 @@ PassNativeImagePtr SVGImage::nativeImageForCurrentFrame()
     if (!m_page)
         return 0;
 
-    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(size(), 1);
+    // Cairo does not use the accelerated drawing flag, so it's OK to make an unconditionally unaccelerated buffer.
+    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(size(), Unaccelerated);
     if (!buffer) // failed to allocate image
         return 0;
 
-    draw(buffer->context(), rect(), rect(), ColorSpaceDeviceRGB, CompositeSourceOver, BlendModeNormal, ImageOrientationDescription());
+    draw(buffer->context(), rect(), rect(), CompositeSourceOver, BlendModeNormal, ImageOrientationDescription());
 
     // FIXME: WK(Bug 113657): We should use DontCopyBackingStore here.
     return buffer->copyImage(CopyBackingStore)->nativeImageForCurrentFrame();
 }
 #endif
 
-void SVGImage::drawPatternForContainer(GraphicsContext* context, const FloatSize containerSize, float zoom, const FloatRect& srcRect,
-    const AffineTransform& patternTransform, const FloatPoint& phase, ColorSpace colorSpace, CompositeOperator compositeOp, const FloatRect& dstRect, BlendMode blendMode)
+void SVGImage::drawPatternForContainer(GraphicsContext& context, const FloatSize& containerSize, float zoom, const FloatRect& srcRect,
+    const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator compositeOp, const FloatRect& dstRect, BlendMode blendMode)
 {
     FloatRect zoomedContainerRect = FloatRect(FloatPoint(), containerSize);
     zoomedContainerRect.scale(zoom);
 
     // The ImageBuffer size needs to be scaled to match the final resolution.
-    AffineTransform transform = context->getCTM();
+    AffineTransform transform = context.getCTM();
     FloatSize imageBufferScale = FloatSize(transform.xScale(), transform.yScale());
     ASSERT(imageBufferScale.width());
     ASSERT(imageBufferScale.height());
@@ -199,17 +214,16 @@ void SVGImage::drawPatternForContainer(GraphicsContext* context, const FloatSize
     FloatRect imageBufferSize = zoomedContainerRect;
     imageBufferSize.scale(imageBufferScale.width(), imageBufferScale.height());
 
-    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(imageBufferSize.size()), 1, ColorSpaceDeviceRGB, context, true);
+    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::createCompatibleBuffer(expandedIntSize(imageBufferSize.size()), 1, ColorSpaceSRGB, context, true);
     if (!buffer) // Failed to allocate buffer.
         return;
-    drawForContainer(buffer->context(), containerSize, zoom, imageBufferSize, zoomedContainerRect, ColorSpaceDeviceRGB, CompositeSourceOver, BlendModeNormal);
-    if (context->drawLuminanceMask())
+    drawForContainer(buffer->context(), containerSize, zoom, imageBufferSize, zoomedContainerRect, CompositeSourceOver, BlendModeNormal);
+    if (context.drawLuminanceMask())
         buffer->convertToLuminanceMask();
 
-    RefPtr<Image> image = buffer->copyImage(DontCopyBackingStore, Unscaled);
+    RefPtr<Image> image = ImageBuffer::sinkIntoImage(WTFMove(buffer), Unscaled);
     if (!image)
         return;
-    image->setSpaceSize(spaceSize());
 
     // Adjust the source rect and transform due to the image buffer's scaling.
     FloatRect scaledSrcRect = srcRect;
@@ -217,11 +231,11 @@ void SVGImage::drawPatternForContainer(GraphicsContext* context, const FloatSize
     AffineTransform unscaledPatternTransform(patternTransform);
     unscaledPatternTransform.scale(1 / imageBufferScale.width(), 1 / imageBufferScale.height());
 
-    context->setDrawLuminanceMask(false);
-    image->drawPattern(context, scaledSrcRect, unscaledPatternTransform, phase, colorSpace, compositeOp, dstRect, blendMode);
+    context.setDrawLuminanceMask(false);
+    image->drawPattern(context, scaledSrcRect, unscaledPatternTransform, phase, spacing, compositeOp, dstRect, blendMode);
 }
 
-void SVGImage::draw(GraphicsContext* context, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription)
+void SVGImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription)
 {
     if (!m_page)
         return;
@@ -229,15 +243,15 @@ void SVGImage::draw(GraphicsContext* context, const FloatRect& dstRect, const Fl
     FrameView* view = frameView();
     ASSERT(view);
 
-    GraphicsContextStateSaver stateSaver(*context);
-    context->setCompositeOperation(compositeOp, blendMode);
-    context->clip(enclosingIntRect(dstRect));
+    GraphicsContextStateSaver stateSaver(context);
+    context.setCompositeOperation(compositeOp, blendMode);
+    context.clip(enclosingIntRect(dstRect));
 
-    float alpha = context->alpha();
+    float alpha = context.alpha();
     bool compositingRequiresTransparencyLayer = compositeOp != CompositeSourceOver || blendMode != BlendModeNormal || alpha < 1;
     if (compositingRequiresTransparencyLayer) {
-        context->beginTransparencyLayer(alpha);
-        context->setCompositeOperation(CompositeSourceOver, BlendModeNormal);
+        context.beginTransparencyLayer(alpha);
+        context.setCompositeOperation(CompositeSourceOver, BlendModeNormal);
     }
 
     FloatSize scale(dstRect.width() / srcRect.width(), dstRect.height() / srcRect.height());
@@ -247,8 +261,8 @@ void SVGImage::draw(GraphicsContext* context, const FloatRect& dstRect, const Fl
     FloatSize topLeftOffset(srcRect.location().x() * scale.width(), srcRect.location().y() * scale.height());
     FloatPoint destOffset = dstRect.location() - topLeftOffset;
 
-    context->translate(destOffset.x(), destOffset.y());
-    context->scale(scale);
+    context.translate(destOffset.x(), destOffset.y());
+    context.scale(scale);
 
     view->resize(containerSize());
 
@@ -258,10 +272,10 @@ void SVGImage::draw(GraphicsContext* context, const FloatRect& dstRect, const Fl
     if (view->needsLayout())
         view->layout();
 
-    view->paint(context, intersection(context->clipBounds(), enclosingIntRect(srcRect)));
+    view->paint(context, intersection(context.clipBounds(), enclosingIntRect(srcRect)));
 
     if (compositingRequiresTransparencyLayer)
-        context->endTransparencyLayer();
+        context.endTransparencyLayer();
 
     stateSaver.restore();
 
@@ -350,8 +364,6 @@ bool SVGImage::dataChanged(bool allDataReceived)
         fillWithEmptyClients(pageConfiguration);
         m_chromeClient = std::make_unique<SVGImageChromeClient>(this);
         pageConfiguration.chromeClient = m_chromeClient.get();
-        m_loaderClient = std::make_unique<SVGFrameLoaderClient>(m_dataProtocolLoader);
-        pageConfiguration.loaderClientForMainFrame = m_loaderClient.get();
 
         // FIXME: If this SVG ends up loading itself, we might leak the world.
         // The Cache code does not know about CachedImages holding Frames and
@@ -401,5 +413,12 @@ bool isInSVGImage(const Element* element)
 
     return page->chrome().client().isSVGImageChromeClient();
 }
+
+void SVGImage::dump(TextStream& ts) const
+{
+    Image::dump(ts);
+    ts.dumpProperty("url", m_url.string());
+}
+
 
 }

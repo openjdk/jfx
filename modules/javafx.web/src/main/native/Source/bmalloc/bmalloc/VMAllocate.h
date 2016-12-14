@@ -82,6 +82,29 @@ inline void* tryVMAllocate(size_t vmSize)
     return result;
 }
 
+inline bool tryVMExtend(void* p, size_t vmOldSize, size_t vmNewSize)
+{
+    vmValidate(vmOldSize);
+    vmValidate(vmNewSize);
+
+    BASSERT(vmOldSize < vmNewSize);
+
+    void* nextAddress = static_cast<char*>(p) + vmOldSize;
+    size_t extentionSize = vmNewSize - vmOldSize;
+
+    void* result = mmap(nextAddress, extentionSize, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, BMALLOC_VM_TAG, 0);
+
+    if (result == MAP_FAILED)
+        return false;
+
+    if (result != nextAddress) {
+        munmap(result, extentionSize);
+        return false;
+    }
+
+    return true;
+}
+
 inline void* vmAllocate(size_t vmSize)
 {
     void* result = tryVMAllocate(vmSize);
@@ -160,10 +183,10 @@ inline void vmDeallocatePhysicalPagesSloppy(void* p, size_t size)
     vmDeallocatePhysicalPages(begin, end - begin);
 }
 
-// Expands requests that are un-page-aligned. NOTE: Allocation must proceed left-to-right.
+// Expands requests that are un-page-aligned.
 inline void vmAllocatePhysicalPagesSloppy(void* p, size_t size)
 {
-    char* begin = roundUpToMultipleOf<vmPageSize>(static_cast<char*>(p));
+    char* begin = roundDownToMultipleOf<vmPageSize>(static_cast<char*>(p));
     char* end = roundUpToMultipleOf<vmPageSize>(static_cast<char*>(p) + size);
 
     if (begin >= end)

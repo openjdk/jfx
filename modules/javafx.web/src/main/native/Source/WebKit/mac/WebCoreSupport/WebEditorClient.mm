@@ -54,18 +54,25 @@
 #import <WebCore/ArchiveResource.h>
 #import <WebCore/Document.h>
 #import <WebCore/DocumentFragment.h>
+#import <WebCore/Editor.h>
+#import <WebCore/FloatQuad.h>
+#import <WebCore/Frame.h>
+#import <WebCore/FrameView.h>
 #import <WebCore/HTMLInputElement.h>
 #import <WebCore/HTMLNames.h>
 #import <WebCore/HTMLTextAreaElement.h>
 #import <WebCore/KeyboardEvent.h>
 #import <WebCore/LegacyWebArchive.h>
+#import <WebCore/NSSpellCheckerSPI.h>
 #import <WebCore/Page.h>
 #import <WebCore/PlatformKeyboardEvent.h>
 #import <WebCore/Settings.h>
 #import <WebCore/SpellChecker.h>
 #import <WebCore/StyleProperties.h>
+#import <WebCore/TextIterator.h>
 #import <WebCore/UndoStep.h>
 #import <WebCore/UserTypingGestureIndicator.h>
+#import <WebCore/VisibleUnits.h>
 #import <WebCore/WebCoreObjCExtras.h>
 #import <runtime/InitializeThreading.h>
 #import <wtf/MainThread.h>
@@ -119,7 +126,6 @@ static WebViewInsertAction kit(EditorInsertAction coreAction)
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
-    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 - (id)initWithUndoStep:(PassRefPtr<UndoStep>)step
@@ -138,11 +144,6 @@ static WebViewInsertAction kit(EditorInsertAction coreAction)
         return;
 
     [super dealloc];
-}
-
-- (void)finalize
-{
-    [super finalize];
 }
 
 + (WebUndoStep *)stepWithUndoStep:(PassRefPtr<UndoStep>)step
@@ -195,6 +196,7 @@ WebEditorClient::WebEditorClient(WebView *webView)
     , m_delayingContentChangeNotifications(0)
     , m_hasDelayedContentChangeNotification(0)
 #endif
+    , m_weakPtrFactory(this)
 {
 }
 
@@ -348,8 +350,10 @@ void WebEditorClient::respondToChangedContents()
 void WebEditorClient::respondToChangedSelection(Frame* frame)
 {
     NSView<WebDocumentView> *documentView = [[kit(frame) frameView] documentView];
-    if ([documentView isKindOfClass:[WebHTMLView class]])
+    if ([documentView isKindOfClass:[WebHTMLView class]]) {
         [(WebHTMLView *)documentView _selectionChanged];
+        [m_webView updateWebViewAdditions];
+    }
 
 #if !PLATFORM(IOS)
     // FIXME: This quirk is needed due to <rdar://problem/5009625> - We can phase it out once Aperture can adopt the new behavior on their end
@@ -362,6 +366,11 @@ void WebEditorClient::respondToChangedSelection(Frame* frame)
     // for the NSInvocation to retain the WebView.
     if (![m_webView _isClosing])
         WebThreadPostNotification(WebViewDidChangeSelectionNotification, m_webView, nil);
+#endif
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
+    if (frame->editor().canEdit())
+        requestCandidatesForSelection(frame->selection().selection());
 #endif
 }
 
@@ -1108,6 +1117,118 @@ void WebEditorClient::willSetInputMethodState()
 void WebEditorClient::setInputMethodState(bool)
 {
 }
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
+void WebEditorClient::requestCandidatesForSelection(const VisibleSelection& selection)
+{
+    RefPtr<Range> selectedRange = selection.toNormalizedRange();
+    if (!selectedRange)
+        return;
+
+    m_lastSelectionForRequestedCandidates = selection;
+
+    VisiblePosition selectionStart = selection.visibleStart();
+    VisiblePosition selectionEnd = selection.visibleEnd();
+    VisiblePosition paragraphStart = startOfParagraph(selectionStart);
+    VisiblePosition paragraphEnd = endOfParagraph(selectionEnd);
+
+    int lengthToSelectionStart = TextIterator::rangeLength(makeRange(paragraphStart, selectionStart).get());
+    int lengthToSelectionEnd = TextIterator::rangeLength(makeRange(paragraphStart, selectionEnd).get());
+    NSRange rangeForCandidates = NSMakeRange(lengthToSelectionStart, lengthToSelectionEnd - lengthToSelectionStart);
+    String fullPlainTextStringOfParagraph = plainText(makeRange(paragraphStart, paragraphEnd).get());
+
+    NSTextCheckingTypes checkingTypes = NSTextCheckingTypeSpelling | NSTextCheckingTypeReplacement | NSTextCheckingTypeCorrection;
+    auto weakEditor = m_weakPtrFactory.createWeakPtr();
+    [[NSSpellChecker sharedSpellChecker] requestCandidatesForSelectedRange:rangeForCandidates inString:fullPlainTextStringOfParagraph types:checkingTypes options:nil inSpellDocumentWithTag:spellCheckerDocumentTag() completionHandler:[weakEditor](NSInteger sequenceNumber, NSArray<NSTextCheckingResult *> *candidates) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!weakEditor)
+                return;
+            weakEditor->handleRequestedCandidates(sequenceNumber, candidates);
+        });
+    }];
+}
+
+void WebEditorClient::handleRequestedCandidates(NSInteger sequenceNumber, NSArray<NSTextCheckingResult *> *candidates)
+{
+    Frame* frame = core([m_webView _selectedOrMainFrame]);
+    if (!frame)
+        return;
+
+    const VisibleSelection& selection = frame->selection().selection();
+    if (selection != m_lastSelectionForRequestedCandidates)
+        return;
+
+    RefPtr<Range> selectedRange = selection.toNormalizedRange();
+    if (!selectedRange)
+        return;
+
+    IntRect rectForSelectionCandidates;
+    Vector<FloatQuad> quads;
+    selectedRange->absoluteTextQuads(quads);
+    if (!quads.isEmpty())
+        rectForSelectionCandidates = frame->view()->contentsToWindow(quads[0].enclosingBoundingBox());
+
+    auto weakEditor = m_weakPtrFactory.createWeakPtr();
+    [m_webView showCandidates:candidates forString:frame->editor().stringForCandidateRequest() inRect:rectForSelectionCandidates view:m_webView completionHandler:[weakEditor](NSTextCheckingResult *acceptedCandidate) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (!weakEditor)
+                return;
+            weakEditor->handleAcceptedCandidate(acceptedCandidate);
+        });
+    }];
+
+}
+
+static WebCore::TextCheckingResult textCheckingResultFromNSTextCheckingResult(NSTextCheckingResult *nsResult)
+{
+    WebCore::TextCheckingResult result;
+
+    switch ([nsResult resultType]) {
+    case NSTextCheckingTypeSpelling:
+        result.type = WebCore::TextCheckingTypeSpelling;
+        break;
+    case NSTextCheckingTypeReplacement:
+        result.type = WebCore::TextCheckingTypeReplacement;
+        break;
+    case NSTextCheckingTypeCorrection:
+        result.type = WebCore::TextCheckingTypeCorrection;
+        break;
+    default:
+        result.type = WebCore::TextCheckingTypeNone;
+    }
+
+    NSRange resultRange = [nsResult range];
+    result.location = resultRange.location;
+    result.length = resultRange.length;
+    result.replacement = [nsResult replacementString];
+
+    return result;
+}
+
+void WebEditorClient::handleAcceptedCandidate(NSTextCheckingResult *acceptedCandidate)
+{
+    Frame* frame = core([m_webView _selectedOrMainFrame]);
+    if (!frame)
+        return;
+
+    const VisibleSelection& selection = frame->selection().selection();
+    if (selection != m_lastSelectionForRequestedCandidates)
+        return;
+
+    NSView <WebDocumentView> *view = [[[m_webView selectedFrame] frameView] documentView];
+    if ([view isKindOfClass:[WebHTMLView class]]) {
+        NSRange range = [acceptedCandidate range];
+        if (acceptedCandidate.replacementString && [acceptedCandidate.replacementString length] > 0) {
+            NSRange replacedRange = NSMakeRange(range.location, [acceptedCandidate.replacementString length]);
+            NSRange softSpaceRange = NSMakeRange(NSMaxRange(replacedRange) - 1, 1);
+            if ([acceptedCandidate.replacementString hasSuffix:@" "])
+                [(WebHTMLView *)view _setSoftSpaceRange:softSpaceRange];
+        }
+    }
+
+    frame->editor().handleAcceptedCandidate(textCheckingResultFromNSTextCheckingResult(acceptedCandidate));
+}
+#endif // PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
 
 #if !PLATFORM(IOS)
 @interface WebEditorSpellCheckResponder : NSObject

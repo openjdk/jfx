@@ -30,10 +30,11 @@
 
 namespace WebCore {
 
+class Attribute;
 class CSSStyleDeclaration;
 class MutableStyleProperties;
 
-// Attr can have Text and EntityReference children
+// Attr can have Text children
 // therefore it has to be a fullblown Node. The plan
 // is to dynamically allocate a textchild and store the
 // resulting nodevalue in the attribute upon
@@ -80,7 +81,7 @@ private:
 
     virtual String nodeValue() const override { return value(); }
     virtual void setNodeValue(const String&, ExceptionCode&) override;
-    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    virtual Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
     virtual bool isAttributeNode() const override { return true; }
     virtual bool childTypeAllowed(NodeType) const override;
@@ -91,12 +92,12 @@ private:
 
     // Attr wraps either an element/name, or a name/value pair (when it's a standalone Node.)
     // Note that m_name is always set, but m_element/m_standaloneValue may be null.
-    Element* m_element;
+    Element* m_element { nullptr };
     QualifiedName m_name;
     AtomicString m_standaloneValue;
 
     RefPtr<MutableStyleProperties> m_style;
-    unsigned m_ignoreChildrenChanged;
+    unsigned m_ignoreChildrenChanged { 0 };
 };
 
 } // namespace WebCore

@@ -28,7 +28,6 @@
 #include "NodeFilter.h"
 #include "ScriptWrappable.h"
 #include "Traversal.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -37,14 +36,14 @@ namespace WebCore {
 
     class NodeIterator : public ScriptWrappable, public RefCounted<NodeIterator>, public NodeIteratorBase {
     public:
-        static Ref<NodeIterator> create(PassRefPtr<Node> rootNode, unsigned whatToShow, PassRefPtr<NodeFilter> filter, bool expandEntityReferences)
+        static Ref<NodeIterator> create(Node* rootNode, unsigned long whatToShow, RefPtr<NodeFilter>&& filter)
         {
-            return adoptRef(*new NodeIterator(rootNode, whatToShow, filter, expandEntityReferences));
+            return adoptRef(*new NodeIterator(rootNode, whatToShow, WTFMove(filter)));
         }
         ~NodeIterator();
 
-        PassRefPtr<Node> nextNode(JSC::ExecState*, ExceptionCode&);
-        PassRefPtr<Node> previousNode(JSC::ExecState*, ExceptionCode&);
+        RefPtr<Node> nextNode();
+        RefPtr<Node> previousNode();
         void detach();
 
         Node* referenceNode() const { return m_referenceNode.node.get(); }
@@ -53,19 +52,14 @@ namespace WebCore {
         // This function is called before any node is removed from the document tree.
         void nodeWillBeRemoved(Node&);
 
-        // Do not call these functions. They are just scaffolding to support the Objective-C bindings.
-        // They operate in the main thread normal world, and they swallow JS exceptions.
-        PassRefPtr<Node> nextNode(ExceptionCode& ec) { return nextNode(execStateFromNode(mainThreadNormalWorld(), referenceNode()), ec); }
-        PassRefPtr<Node> previousNode(ExceptionCode& ec) { return previousNode(execStateFromNode(mainThreadNormalWorld(), referenceNode()), ec); }
-
     private:
-        NodeIterator(PassRefPtr<Node>, unsigned whatToShow, PassRefPtr<NodeFilter>, bool expandEntityReferences);
+        NodeIterator(Node*, unsigned long whatToShow, RefPtr<NodeFilter>&&);
 
         struct NodePointer {
             RefPtr<Node> node;
             bool isPointerBeforeNode;
             NodePointer();
-            NodePointer(PassRefPtr<Node>, bool);
+            NodePointer(Node*, bool);
             void clear();
             bool moveToNext(Node* root);
             bool moveToPrevious(Node* root);
@@ -75,7 +69,6 @@ namespace WebCore {
 
         NodePointer m_referenceNode;
         NodePointer m_candidateNode;
-        bool m_detached;
     };
 
 } // namespace WebCore

@@ -249,11 +249,15 @@ static unsigned countUsages(CryptoKeyUsage usages)
  * and EmptyStringObjectTag for serialization of Boolean, Number and String objects.
  * Version 4. added support for serializing non-index properties of arrays.
  * Version 5. added support for Map and Set types.
+ * Version 6. added support for 8-bit strings.
  */
-static const unsigned CurrentVersion = 5;
+static const unsigned CurrentVersion = 6;
 static const unsigned TerminatorTag = 0xFFFFFFFF;
 static const unsigned StringPoolTag = 0xFFFFFFFE;
 static const unsigned NonIndexPropertiesTag = 0xFFFFFFFD;
+
+// The high bit of a StringData's length determines the character size.
+static const unsigned StringDataIs8BitFlag = 0x80000000;
 
 /*
  * Object serialization is performed according to the following grammar, all tags
@@ -320,7 +324,7 @@ static const unsigned NonIndexPropertiesTag = 0xFFFFFFFD;
  *
  * StringData :-
  *      StringPoolTag <cpIndex:IndexType>
- *      (not (TerminatorTag | StringPoolTag))<length:uint32_t><characters:UChar{length}> // Added to constant pool when seen, string length 0xFFFFFFFF is disallowed
+ *      (not (TerminatorTag | StringPoolTag))<is8Bit:uint32_t:1><length:uint32_t:31><characters:CharType{length}> // Added to constant pool when seen, string length 0xFFFFFFFF is disallowed
  *
  * File :-
  *    FileTag FileData
@@ -456,19 +460,6 @@ template <typename T> static bool writeLittleEndian(Vector<uint8_t>& buffer, con
     return true;
 }
 
-static bool writeLittleEndianUInt16(Vector<uint8_t>& buffer, const LChar* values, uint32_t length)
-{
-    if (length > std::numeric_limits<uint32_t>::max() / 2)
-        return false;
-
-    for (unsigned i = 0; i < length; ++i) {
-        buffer.append(values[i]);
-        buffer.append(0);
-    }
-
-    return true;
-}
-
 template <> bool writeLittleEndian<uint8_t>(Vector<uint8_t>& buffer, const uint8_t* values, uint32_t length)
 {
     buffer.append(values, length);
@@ -493,9 +484,11 @@ public:
             return true;
         }
         writeLittleEndian<uint8_t>(out, StringTag);
+        if (s.is8Bit()) {
+            writeLittleEndian(out, s.length() | StringDataIs8BitFlag);
+            return writeLittleEndian(out, s.characters8(), s.length());
+        }
         writeLittleEndian(out, s.length());
-        if (s.is8Bit())
-            return writeLittleEndianUInt16(out, s.characters8(), s.length());
         return writeLittleEndian(out, s.characters16(), s.length());
     }
 
@@ -650,7 +643,7 @@ private:
 
     JSValue getProperty(JSObject* object, const Identifier& propertyName)
     {
-        PropertySlot slot(object);
+        PropertySlot slot(object, PropertySlot::InternalMethodType::Get);
         if (object->methodTable()->getOwnPropertySlot(object, m_exec, propertyName, slot))
             return slot.getValue(m_exec, propertyName);
         return JSValue();
@@ -995,22 +988,21 @@ private:
 
         unsigned length = str.length();
 
-        // This condition is unlikely to happen as they would imply an ~8gb
-        // string but we should guard against it anyway
-        if (length >= StringPoolTag) {
-            fail();
-            return;
-        }
-
         // Guard against overflow
         if (length > (std::numeric_limits<uint32_t>::max() - sizeof(uint32_t)) / sizeof(UChar)) {
             fail();
             return;
         }
 
-        writeLittleEndian<uint32_t>(m_buffer, length);
-        if (!length || str.is8Bit()) {
-            if (!writeLittleEndianUInt16(m_buffer, str.characters8(), length))
+        if (str.is8Bit())
+            writeLittleEndian<uint32_t>(m_buffer, length | StringDataIs8BitFlag);
+        else
+            writeLittleEndian<uint32_t>(m_buffer, length);
+
+        if (!length)
+            return;
+        if (str.is8Bit()) {
+            if (!writeLittleEndian(m_buffer, str.characters8(), length))
                 fail();
             return;
         }
@@ -1479,12 +1471,14 @@ public:
         if (!readLittleEndian(ptr, end, tag) || tag != StringTag)
             return String();
         uint32_t length;
-        if (!readLittleEndian(ptr, end, length) || length >= StringPoolTag)
+        if (!readLittleEndian(ptr, end, length))
             return String();
+        bool is8Bit = length & StringDataIs8BitFlag;
+        length &= ~StringDataIs8BitFlag;
         String str;
-        if (!readString(ptr, end, str, length))
+        if (!readString(ptr, end, str, length, is8Bit))
             return String();
-        return String(str.impl());
+        return str;
     }
 
     static DeserializationResult deserialize(ExecState* exec, JSGlobalObject* globalObject,
@@ -1664,10 +1658,18 @@ private:
         return read(i);
     }
 
-    static bool readString(const uint8_t*& ptr, const uint8_t* end, String& str, unsigned length)
+    static bool readString(const uint8_t*& ptr, const uint8_t* end, String& str, unsigned length, bool is8Bit)
     {
         if (length >= std::numeric_limits<int32_t>::max() / sizeof(UChar))
             return false;
+
+        if (is8Bit) {
+            if ((end - ptr) < static_cast<int>(length))
+                return false;
+            str = String(reinterpret_cast<const LChar*>(ptr), length);
+            ptr += length;
+            return true;
+        }
 
         unsigned size = length * sizeof(UChar);
         if ((end - ptr) < static_cast<int>(size))
@@ -1719,8 +1721,10 @@ private:
             cachedString = CachedStringRef(&m_constantPool, index);
             return true;
         }
+        bool is8Bit = length & StringDataIs8BitFlag;
+        length &= ~StringDataIs8BitFlag;
         String str;
-        if (!readString(m_ptr, m_end, str, length)) {
+        if (!readString(m_ptr, m_end, str, length, is8Bit)) {
             fail();
             return false;
         }
@@ -1813,31 +1817,31 @@ private:
             arrayBufferView = getJSValue(DataView::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Int8ArrayTag:
-            arrayBufferView = getJSValue(Int8Array::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Int8Array::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Uint8ArrayTag:
-            arrayBufferView = getJSValue(Uint8Array::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Uint8Array::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Uint8ClampedArrayTag:
-            arrayBufferView = getJSValue(Uint8ClampedArray::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Uint8ClampedArray::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Int16ArrayTag:
-            arrayBufferView = getJSValue(Int16Array::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Int16Array::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Uint16ArrayTag:
-            arrayBufferView = getJSValue(Uint16Array::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Uint16Array::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Int32ArrayTag:
-            arrayBufferView = getJSValue(Int32Array::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Int32Array::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Uint32ArrayTag:
-            arrayBufferView = getJSValue(Uint32Array::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Uint32Array::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Float32ArrayTag:
-            arrayBufferView = getJSValue(Float32Array::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Float32Array::create(arrayBuffer, byteOffset, length).get());
             return true;
         case Float64ArrayTag:
-            arrayBufferView = getJSValue(Float64Array::create(arrayBuffer, byteOffset, length).get());
+            arrayBufferView = toJS(m_exec, m_globalObject, Float64Array::create(arrayBuffer, byteOffset, length).get());
             return true;
         default:
             return false;
@@ -2021,10 +2025,8 @@ private:
 
         if (type == CryptoKeyAsymmetricTypeSubtag::Public) {
             auto keyData = CryptoKeyDataRSAComponents::createPublic(modulus, exponent);
-            auto key = CryptoKeyRSA::create(algorithm, *keyData, extractable, usages);
-            if (isRestrictedToHash)
-                key->restrictToHash(hash);
-            result = WTF::move(key);
+            auto key = CryptoKeyRSA::create(algorithm, hash, isRestrictedToHash, *keyData, extractable, usages);
+            result = WTFMove(key);
             return true;
         }
 
@@ -2038,10 +2040,8 @@ private:
 
         if (!primeCount) {
             auto keyData = CryptoKeyDataRSAComponents::createPrivate(modulus, exponent, privateExponent);
-            auto key = CryptoKeyRSA::create(algorithm, *keyData, extractable, usages);
-            if (isRestrictedToHash)
-                key->restrictToHash(hash);
-            result = WTF::move(key);
+            auto key = CryptoKeyRSA::create(algorithm, hash, isRestrictedToHash, *keyData, extractable, usages);
+            result = WTFMove(key);
             return true;
         }
 
@@ -2072,10 +2072,8 @@ private:
         }
 
         auto keyData = CryptoKeyDataRSAComponents::createPrivateWithAdditionalData(modulus, exponent, privateExponent, firstPrimeInfo, secondPrimeInfo, otherPrimeInfos);
-        auto key = CryptoKeyRSA::create(algorithm, *keyData, extractable, usages);
-        if (isRestrictedToHash)
-            key->restrictToHash(hash);
-        result = WTF::move(key);
+        auto key = CryptoKeyRSA::create(algorithm, hash, isRestrictedToHash, *keyData, extractable, usages);
+        result = WTFMove(key);
         return true;
     }
 
@@ -2233,11 +2231,11 @@ private:
                 if (!readFile(file))
                     return JSValue();
                 if (m_isDOMGlobalObject)
-                    files.append(WTF::move(file));
+                    files.append(WTFMove(file));
             }
             if (!m_isDOMGlobalObject)
                 return jsNull();
-            return getJSValue(FileList::create(WTF::move(files)).get());
+            return getJSValue(FileList::create(WTFMove(files)).get());
         }
         case ImageDataTag: {
             int32_t width;
@@ -2334,7 +2332,7 @@ private:
                 fail();
                 return JSValue();
             }
-            JSValue result = getJSValue(arrayBuffer.get());
+            JSValue result = JSArrayBuffer::create(m_exec->vm(), m_globalObject->arrayBufferStructure(), arrayBuffer.release());
             m_gcBuffer.append(result);
             return result;
         }
@@ -2599,27 +2597,22 @@ SerializedScriptValue::~SerializedScriptValue()
 {
 }
 
-SerializedScriptValue::SerializedScriptValue(const Vector<uint8_t>& buffer)
-    : m_data(buffer)
+SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer)
+    : m_data(WTFMove(buffer))
 {
 }
 
-SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer)
+SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, const Vector<String>& blobURLs)
+    : m_data(WTFMove(buffer))
 {
-    m_data.swap(buffer);
-}
-
-SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<String>& blobURLs)
-{
-    m_data.swap(buffer);
     for (auto& string : blobURLs)
         addBlobURL(string);
 }
 
-SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>& buffer, Vector<String>& blobURLs, std::unique_ptr<ArrayBufferContentsArray> arrayBufferContentsArray)
-    : m_arrayBufferContentsArray(WTF::move(arrayBufferContentsArray))
+SerializedScriptValue::SerializedScriptValue(Vector<uint8_t>&& buffer, const Vector<String>& blobURLs, std::unique_ptr<ArrayBufferContentsArray>&& arrayBufferContentsArray)
+    : m_data(WTFMove(buffer))
+    , m_arrayBufferContentsArray(WTFMove(arrayBufferContentsArray))
 {
-    m_data.swap(buffer);
     for (auto& string : blobURLs)
         addBlobURL(string);
 }
@@ -2636,7 +2629,7 @@ std::unique_ptr<SerializedScriptValue::ArrayBufferContentsArray> SerializedScrip
 
     auto contents = std::make_unique<ArrayBufferContentsArray>(arrayBuffers.size());
     Vector<Ref<DOMWrapperWorld>> worlds;
-    static_cast<WebCoreJSClientData*>(exec->vm().clientData)->getAllWorlds(worlds);
+    static_cast<JSVMClientData*>(exec->vm().clientData)->getAllWorlds(worlds);
 
     HashSet<JSC::ArrayBuffer*> visited;
     for (size_t arrayBufferIndex = 0; arrayBufferIndex < arrayBuffers.size(); arrayBufferIndex++) {
@@ -2670,7 +2663,7 @@ RefPtr<SerializedScriptValue> SerializedScriptValue::create(ExecState* exec, JSV
     if (!serializationDidCompleteSuccessfully(code))
         return nullptr;
 
-    return adoptRef(*new SerializedScriptValue(buffer, blobURLs, WTF::move(arrayBufferContentsArray)));
+    return adoptRef(*new SerializedScriptValue(WTFMove(buffer), blobURLs, WTFMove(arrayBufferContentsArray)));
 }
 
 RefPtr<SerializedScriptValue> SerializedScriptValue::create(const String& string)
@@ -2678,7 +2671,7 @@ RefPtr<SerializedScriptValue> SerializedScriptValue::create(const String& string
     Vector<uint8_t> buffer;
     if (!CloneSerializer::serialize(string, buffer))
         return nullptr;
-    return adoptRef(*new SerializedScriptValue(buffer));
+    return adoptRef(*new SerializedScriptValue(WTFMove(buffer)));
 }
 
 #if ENABLE(INDEXED_DATABASE)
@@ -2686,18 +2679,18 @@ Ref<SerializedScriptValue> SerializedScriptValue::numberValue(double value)
 {
     Vector<uint8_t> buffer;
     CloneSerializer::serializeNumber(value, buffer);
-    return adoptRef(*new SerializedScriptValue(buffer));
+    return adoptRef(*new SerializedScriptValue(WTFMove(buffer)));
 }
 
 Ref<SerializedScriptValue> SerializedScriptValue::undefinedValue()
 {
     Vector<uint8_t> buffer;
     CloneSerializer::serializeUndefined(buffer);
-    return adoptRef(*new SerializedScriptValue(buffer));
+    return adoptRef(*new SerializedScriptValue(WTFMove(buffer)));
 }
 #endif
 
-PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(JSContextRef originContext, JSValueRef apiValue, JSValueRef* exception)
+RefPtr<SerializedScriptValue> SerializedScriptValue::create(JSContextRef originContext, JSValueRef apiValue, JSValueRef* exception)
 {
     ExecState* exec = toJS(originContext);
     JSLockHolder locker(exec);
@@ -2707,10 +2700,10 @@ PassRefPtr<SerializedScriptValue> SerializedScriptValue::create(JSContextRef ori
         if (exception)
             *exception = toRef(exec, exec->exception()->value());
         exec->clearException();
-        return 0;
+        return nullptr;
     }
     ASSERT(serializedValue);
-    return serializedValue.release();
+    return serializedValue;
 }
 
 String SerializedScriptValue::toString()
@@ -2745,8 +2738,7 @@ JSValueRef SerializedScriptValue::deserialize(JSContextRef destinationContext, J
 
 Ref<SerializedScriptValue> SerializedScriptValue::nullValue()
 {
-    Vector<uint8_t> buffer;
-    return adoptRef(*new SerializedScriptValue(buffer));
+    return adoptRef(*new SerializedScriptValue(Vector<uint8_t>()));
 }
 
 void SerializedScriptValue::maybeThrowExceptionIfSerializationFailed(ExecState* exec, SerializationReturnCode code)

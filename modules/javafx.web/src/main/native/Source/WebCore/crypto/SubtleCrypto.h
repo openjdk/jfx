@@ -27,8 +27,8 @@
 #define SubtleCrypto_h
 
 #include "ContextDestructionObserver.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 
 #if ENABLE(SUBTLE_CRYPTO)
 
@@ -38,7 +38,7 @@ class Document;
 
 class SubtleCrypto : public ContextDestructionObserver, public RefCounted<SubtleCrypto> {
 public:
-    static PassRefPtr<SubtleCrypto> create(Document& document) { return adoptRef(new SubtleCrypto(document)); }
+    static Ref<SubtleCrypto> create(Document& document) { return adoptRef(*new SubtleCrypto(document)); }
 
     Document* document() const;
 

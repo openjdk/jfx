@@ -75,12 +75,12 @@ public:
     const String& fragment() const { return m_fragment; }
 
 private:
-    virtual bool operator==(const ClipPathOperation& o) const override
+    virtual bool operator==(const ClipPathOperation& other) const override
     {
-        if (!isSameType(o))
+        if (!isSameType(other))
             return false;
-        const ReferenceClipPathOperation* other = static_cast<const ReferenceClipPathOperation*>(&o);
-        return m_url == other->m_url;
+        auto& referenceClip = downcast<ReferenceClipPathOperation>(other);
+        return m_url == referenceClip.m_url;
     }
 
     ReferenceClipPathOperation(const String& url, const String& fragment)
@@ -98,17 +98,12 @@ class ShapeClipPathOperation final : public ClipPathOperation {
 public:
     static Ref<ShapeClipPathOperation> create(Ref<BasicShape>&& shape)
     {
-        return adoptRef(*new ShapeClipPathOperation(WTF::move(shape)));
+        return adoptRef(*new ShapeClipPathOperation(WTFMove(shape)));
     }
 
     const BasicShape& basicShape() const { return m_shape; }
     WindRule windRule() const { return m_shape.get().windRule(); }
-    const Path pathForReferenceRect(const FloatRect& boundingRect)
-    {
-        Path path;
-        m_shape.get().path(path, boundingRect);
-        return path;
-    }
+    const Path& pathForReferenceRect(const FloatRect& boundingRect) { return m_shape.get().path(boundingRect); }
 
     void setReferenceBox(CSSBoxType referenceBox) { m_referenceBox = referenceBox; }
     CSSBoxType referenceBox() const { return m_referenceBox; }
@@ -118,13 +113,14 @@ private:
     {
         if (!isSameType(other))
             return false;
-        const auto& shapeClip = downcast<ShapeClipPathOperation>(other);
-        return m_shape.ptr() == shapeClip.m_shape.ptr();
+        auto& shapeClip = downcast<ShapeClipPathOperation>(other);
+        return m_referenceBox == shapeClip.referenceBox()
+            && (m_shape.ptr() == shapeClip.m_shape.ptr() || m_shape.get() == shapeClip.m_shape.get());
     }
 
     explicit ShapeClipPathOperation(Ref<BasicShape>&& shape)
         : ClipPathOperation(Shape)
-        , m_shape(WTF::move(shape))
+        , m_shape(WTFMove(shape))
         , m_referenceBox(BoxMissing)
     {
     }
@@ -149,12 +145,12 @@ public:
     CSSBoxType referenceBox() const { return m_referenceBox; }
 
 private:
-    virtual bool operator==(const ClipPathOperation& o) const override
+    virtual bool operator==(const ClipPathOperation& other) const override
     {
-        if (!isSameType(o))
+        if (!isSameType(other))
             return false;
-        const BoxClipPathOperation* other = static_cast<const BoxClipPathOperation*>(&o);
-        return m_referenceBox == other->m_referenceBox;
+        auto& boxClip = downcast<BoxClipPathOperation>(other);
+        return m_referenceBox == boxClip.m_referenceBox;
     }
 
     explicit BoxClipPathOperation(CSSBoxType referenceBox)

@@ -37,7 +37,8 @@ public:
     CachedScript(const ResourceRequest&, const String& charset, SessionID);
     virtual ~CachedScript();
 
-    const String& script();
+    StringView script();
+    unsigned scriptHash();
 
     String mimeType() const;
 
@@ -57,6 +58,11 @@ private:
     virtual void destroyDecodedData() override;
 
     String m_script;
+    unsigned m_scriptHash { 0 };
+
+    enum DecodingState { NeverDecoded, DataAndDecodedStringHaveSameBytes, DataAndDecodedStringHaveDifferentBytes };
+    DecodingState m_decodingState { NeverDecoded };
+
     RefPtr<TextResourceDecoder> m_decoder;
 };
 

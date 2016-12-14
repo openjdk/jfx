@@ -46,7 +46,7 @@ void Font::platformInit()
     m_syntheticBoldOffset = m_platformData.syntheticBold() ? 1.0f : 0.f;
     m_scriptCache = 0;
     m_scriptFontProperties = 0;
-    m_isSystemFont = false;
+    m_platformData.setIsSystemFont(false);
 
     if (m_platformData.useGDI())
        return initGDIFont();
@@ -55,7 +55,7 @@ void Font::platformInit()
         m_fontMetrics.reset();
         m_avgCharWidth = 0;
         m_maxCharWidth = 0;
-        m_isSystemFont = false;
+        m_platformData.setIsSystemFont(false);
         m_scriptCache = 0;
         m_scriptFontProperties = 0;
         return;
@@ -69,19 +69,28 @@ void Font::platformInit()
 
     cairo_win32_scaled_font_select_font(scaledFont, dc);
 
-    TEXTMETRIC textMetrics;
-    GetTextMetrics(dc, &textMetrics);
-    float ascent = textMetrics.tmAscent * metricsMultiplier;
-    float descent = textMetrics.tmDescent * metricsMultiplier;
+    OUTLINETEXTMETRIC metrics;
+    GetOutlineTextMetrics(dc, sizeof(metrics), &metrics);
+    TEXTMETRIC& textMetrics = metrics.otmTextMetrics;
+    float ascent, descent, lineGap;
+    // The Open Font Format describes the OS/2 USE_TYPO_METRICS flag as follows:
+    // "If set, it is strongly recommended to use OS/2.sTypoAscender - OS/2.sTypoDescender+ OS/2.sTypoLineGap as a value for default line spacing for this font."
+    const UINT useTypoMetricsMask = 1 << 7;
+    if (metrics.otmfsSelection & useTypoMetricsMask) {
+        ascent = metrics.otmAscent * metricsMultiplier;
+        descent = metrics.otmDescent * metricsMultiplier;
+        lineGap = metrics.otmLineGap * metricsMultiplier;
+    } else {
+        ascent = textMetrics.tmAscent * metricsMultiplier;
+        descent = textMetrics.tmDescent * metricsMultiplier;
+        lineGap = textMetrics.tmExternalLeading * metricsMultiplier;
+    }
     float xHeight = ascent * 0.56f; // Best guess for xHeight for non-Truetype fonts.
-    float lineGap = textMetrics.tmExternalLeading * metricsMultiplier;
 
     int faceLength = ::GetTextFace(dc, 0, 0);
     Vector<WCHAR> faceName(faceLength);
     ::GetTextFace(dc, faceLength, faceName.data());
-    m_isSystemFont = !wcscmp(faceName.data(), L"Lucida Grande");
-
-    ascent = ascentConsideringMacAscentHack(faceName.data(), ascent, descent);
+    m_platformData.setIsSystemFont(!wcscmp(faceName.data(), L"Lucida Grande"));
 
     m_fontMetrics.setAscent(ascent);
     m_fontMetrics.setDescent(descent);

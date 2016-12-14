@@ -28,13 +28,32 @@
 
 namespace WebCore {
 
-static const int defaultTileWidth = 512;
-static const int defaultTileHeight = 512;
+enum TileSizeMode {
+    StandardTileSizeMode,
+    GiantTileSizeMode
+};
 
+inline static IntSize defaultTileSize(TileSizeMode tileSizeMode = StandardTileSizeMode)
+{
+    static const int kTiledLayerTileSize = 512;
+
+    // This is an experimental value for debugging and evaluating the overhead which may be
+    // incurred due to a large tile size.
+    static const int kGiantTiledLayerTileSize = 4096;
+
+    if (tileSizeMode == GiantTileSizeMode)
+        return IntSize(kGiantTiledLayerTileSize, kGiantTiledLayerTileSize);
+
+    return IntSize(kTiledLayerTileSize, kTiledLayerTileSize);
+}
+
+class FloatPoint;
+class FloatRect;
 class IntRect;
 class PlatformCALayer;
 
 enum ScrollingModeIndication {
+    SynchronousScrollingBecauseOfLackOfScrollingCoordinatorIndication,
     SynchronousScrollingBecauseOfStyleIndication,
     SynchronousScrollingBecauseOfEventHandlersIndication,
     AsyncScrollingIndication
@@ -91,7 +110,7 @@ public:
     virtual void setTileCoverage(TileCoverage) = 0;
     virtual TileCoverage tileCoverage() const = 0;
 
-    virtual FloatRect computeTileCoverageRect(const FloatSize& newSize, const FloatRect& previousVisibleRect, const FloatRect& currentVisibleRect, float contentsScale) const = 0;
+    virtual void adjustTileCoverageRect(FloatRect& coverageRect, const FloatSize& newSize, const FloatRect& previousVisibleRect, const FloatRect& currentVisibleRect, float contentsScale) const = 0;
 
     virtual IntSize tileSize() const = 0;
 

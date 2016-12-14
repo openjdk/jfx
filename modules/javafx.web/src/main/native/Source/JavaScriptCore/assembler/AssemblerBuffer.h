@@ -56,6 +56,8 @@ namespace JSC {
             return AssemblerLabel(m_offset + offset);
         }
 
+        bool operator==(const AssemblerLabel& other) const { return m_offset == other.m_offset; }
+
         uint32_t m_offset;
     };
 
@@ -161,7 +163,7 @@ namespace JSC {
 
         unsigned debugOffset() { return m_index; }
 
-        AssemblerData releaseAssemblerData() { return WTF::move(m_storage); }
+        AssemblerData releaseAssemblerData() { return WTFMove(m_storage); }
 
     protected:
         template<typename IntegralType>

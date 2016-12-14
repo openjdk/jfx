@@ -49,7 +49,7 @@ std::unique_ptr<GLTransportSurface> EGLTransportSurface::createTransportSurface(
 #endif
 
     if (surface)
-        return WTF::move(surface);
+        return WTFMove(surface);
 
     return nullptr;
 }
@@ -67,7 +67,7 @@ std::unique_ptr<GLTransportSurfaceClient> EGLTransportSurface::createTransportSu
 #endif
 
     if (client)
-        return WTF::move(client);
+        return WTFMove(client);
 
     return nullptr;
 }
@@ -84,6 +84,11 @@ EGLTransportSurface::EGLTransportSurface(const IntSize& size, SurfaceAttributes 
 GLPlatformSurface::SurfaceAttributes EGLTransportSurface::attributes() const
 {
     return m_configSelector->attributes();
+}
+
+bool EGLTransportSurface::isCurrentDrawable() const
+{
+    return m_drawable == eglGetCurrentSurface(EGL_DRAW);
 }
 
 EGLTransportSurface::~EGLTransportSurface()
@@ -136,6 +141,11 @@ EGLOffScreenSurface::~EGLOffScreenSurface()
 GLPlatformSurface::SurfaceAttributes EGLOffScreenSurface::attributes() const
 {
     return m_configSelector->attributes();
+}
+
+bool EGLOffScreenSurface::isCurrentDrawable() const
+{
+    return m_drawable == eglGetCurrentSurface(EGL_DRAW);
 }
 
 PlatformSurfaceConfig EGLOffScreenSurface::configuration()

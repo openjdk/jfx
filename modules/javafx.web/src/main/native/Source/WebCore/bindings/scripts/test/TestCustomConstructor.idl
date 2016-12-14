@@ -31,4 +31,3 @@
     NoInterfaceObject
 ] interface TestCustomConstructorWithNoInterfaceObject {
 };
-

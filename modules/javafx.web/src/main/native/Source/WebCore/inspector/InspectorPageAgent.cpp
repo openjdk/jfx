@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -54,7 +55,6 @@
 #include "ImageBuffer.h"
 #include "InspectorClient.h"
 #include "InspectorDOMAgent.h"
-#include "InspectorInstrumentation.h"
 #include "InspectorOverlay.h"
 #include "InspectorTimelineAgent.h"
 #include "InstrumentingAgents.h"
@@ -72,6 +72,7 @@
 #include <inspector/IdentifiersFactory.h>
 #include <inspector/InspectorValues.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/Stopwatch.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringBuilder.h>
 #include <yarr/RegularExpression.h>
@@ -122,14 +123,14 @@ static RefPtr<TextResourceDecoder> createXHRTextDecoder(const String& mimeType, 
     RefPtr<TextResourceDecoder> decoder;
     if (!textEncodingName.isEmpty())
         decoder = TextResourceDecoder::create("text/plain", textEncodingName);
-    else if (DOMImplementation::isXMLMIMEType(mimeType.lower())) {
+    else if (DOMImplementation::isXMLMIMEType(mimeType)) {
         decoder = TextResourceDecoder::create("application/xml");
         decoder->useLenientXMLDecoding();
-    } else if (equalIgnoringCase(mimeType, "text/html"))
+    } else if (equalLettersIgnoringASCIICase(mimeType, "text/html"))
         decoder = TextResourceDecoder::create("text/html", "UTF-8");
     else
         decoder = TextResourceDecoder::create("text/plain", "UTF-8");
-    return WTF::move(decoder);
+    return decoder;
 }
 
 bool InspectorPageAgent::cachedResourceContent(CachedResource* cachedResource, String* result, bool* base64Encoded)
@@ -160,7 +161,7 @@ bool InspectorPageAgent::cachedResourceContent(CachedResource* cachedResource, S
             *result = downcast<CachedCSSStyleSheet>(*cachedResource).sheetText();
             return !result->isNull();
         case CachedResource::Script:
-            *result = downcast<CachedScript>(*cachedResource).script();
+            *result = downcast<CachedScript>(*cachedResource).script().toString();
             return true;
         case CachedResource::RawResource: {
             auto* buffer = cachedResource->resourceBuffer();
@@ -186,11 +187,11 @@ bool InspectorPageAgent::mainResourceContent(Frame* frame, bool withBase64Encode
     RefPtr<SharedBuffer> buffer = frame->loader().documentLoader()->mainResourceData();
     if (!buffer)
         return false;
-    return InspectorPageAgent::dataContent(buffer->data(), buffer->size(), frame->document()->inputEncoding(), withBase64Encode, result);
+    return InspectorPageAgent::dataContent(buffer->data(), buffer->size(), frame->document()->encoding(), withBase64Encode, result);
 }
 
 // static
-bool InspectorPageAgent::sharedBufferContent(PassRefPtr<SharedBuffer> buffer, const String& textEncodingName, bool withBase64Encode, String* result)
+bool InspectorPageAgent::sharedBufferContent(RefPtr<SharedBuffer>&& buffer, const String& textEncodingName, bool withBase64Encode, String* result)
 {
     return dataContent(buffer ? buffer->data() : nullptr, buffer ? buffer->size() : 0, textEncodingName, withBase64Encode, result);
 }
@@ -229,8 +230,8 @@ void InspectorPageAgent::resourceContent(ErrorString& errorString, Frame* frame,
 //static
 String InspectorPageAgent::sourceMapURLForResource(CachedResource* cachedResource)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, sourceMapHTTPHeader, (ASCIILiteral("SourceMap")));
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, sourceMapHTTPHeaderDeprecated, (ASCIILiteral("X-SourceMap")));
+    static NeverDestroyed<String> sourceMapHTTPHeader(ASCIILiteral("SourceMap"));
+    static NeverDestroyed<String> sourceMapHTTPHeaderDeprecated(ASCIILiteral("X-SourceMap"));
 
     if (!cachedResource)
         return String();
@@ -257,6 +258,9 @@ String InspectorPageAgent::sourceMapURLForResource(CachedResource* cachedResourc
 
 CachedResource* InspectorPageAgent::cachedResource(Frame* frame, const URL& url)
 {
+    if (url.isNull())
+        return nullptr;
+
     CachedResource* cachedResource = frame->document()->cachedResourceLoader().cachedResource(url);
     if (!cachedResource) {
         ResourceRequest request(url);
@@ -325,31 +329,22 @@ Inspector::Protocol::Page::ResourceType InspectorPageAgent::cachedResourceTypeJs
     return resourceTypeJson(cachedResourceType(cachedResource));
 }
 
-InspectorPageAgent::InspectorPageAgent(InstrumentingAgents* instrumentingAgents, Page* page, InspectorClient* client, InspectorOverlay* overlay)
-    : InspectorAgentBase(ASCIILiteral("Page"), instrumentingAgents)
-    , m_page(page)
+InspectorPageAgent::InspectorPageAgent(PageAgentContext& context, InspectorClient* client, InspectorOverlay* overlay)
+    : InspectorAgentBase(ASCIILiteral("Page"), context)
+    , m_frontendDispatcher(std::make_unique<Inspector::PageFrontendDispatcher>(context.frontendRouter))
+    , m_backendDispatcher(Inspector::PageBackendDispatcher::create(context.backendDispatcher, this))
+    , m_page(context.inspectedPage)
     , m_client(client)
     , m_overlay(overlay)
-    , m_lastScriptIdentifier(0)
-    , m_enabled(false)
-    , m_isFirstLayoutAfterOnLoad(false)
-    , m_originalScriptExecutionDisabled(false)
-    , m_ignoreScriptsEnabledNotification(false)
-    , m_showPaintRects(false)
 {
 }
 
-void InspectorPageAgent::didCreateFrontendAndBackend(Inspector::FrontendChannel* frontendChannel, Inspector::BackendDispatcher* backendDispatcher)
+void InspectorPageAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
 {
-    m_frontendDispatcher = std::make_unique<Inspector::PageFrontendDispatcher>(frontendChannel);
-    m_backendDispatcher = Inspector::PageBackendDispatcher::create(backendDispatcher, this);
 }
 
 void InspectorPageAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
-    m_frontendDispatcher = nullptr;
-    m_backendDispatcher = nullptr;
-
     ErrorString unused;
     disable(unused);
 #if ENABLE(TOUCH_EVENTS)
@@ -359,27 +354,26 @@ void InspectorPageAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReas
 
 double InspectorPageAgent::timestamp()
 {
-    return m_instrumentingAgents->inspectorEnvironment().executionStopwatch()->elapsedTime();
+    return m_environment.executionStopwatch()->elapsedTime();
 }
 
 void InspectorPageAgent::enable(ErrorString&)
 {
     m_enabled = true;
-    m_instrumentingAgents->setInspectorPageAgent(this);
+    m_instrumentingAgents.setInspectorPageAgent(this);
 
-    auto stopwatch = m_instrumentingAgents->inspectorEnvironment().executionStopwatch();
+    auto stopwatch = m_environment.executionStopwatch();
     stopwatch->reset();
     stopwatch->start();
 
-    if (Frame* frame = mainFrame())
-        m_originalScriptExecutionDisabled = !frame->settings().isScriptEnabled();
+    m_originalScriptExecutionDisabled = !mainFrame().settings().isScriptEnabled();
 }
 
 void InspectorPageAgent::disable(ErrorString&)
 {
     m_enabled = false;
     m_scriptsToEvaluateOnLoad = nullptr;
-    m_instrumentingAgents->setInspectorPageAgent(nullptr);
+    m_instrumentingAgents.setInspectorPageAgent(nullptr);
 
     ErrorString unused;
     setScriptExecutionDisabled(unused, m_originalScriptExecutionDisabled);
@@ -414,13 +408,13 @@ void InspectorPageAgent::removeScriptToEvaluateOnLoad(ErrorString& error, const 
 void InspectorPageAgent::reload(ErrorString&, const bool* const optionalIgnoreCache, const String* optionalScriptToEvaluateOnLoad)
 {
     m_pendingScriptToEvaluateOnLoadOnce = optionalScriptToEvaluateOnLoad ? *optionalScriptToEvaluateOnLoad : "";
-    m_page->mainFrame().loader().reload(optionalIgnoreCache ? *optionalIgnoreCache : false);
+    m_page.mainFrame().loader().reload(optionalIgnoreCache ? *optionalIgnoreCache : false);
 }
 
 void InspectorPageAgent::navigate(ErrorString&, const String& url)
 {
     UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
-    Frame& frame = m_page->mainFrame();
+    Frame& frame = m_page.mainFrame();
 
     ResourceRequest resourceRequest(frame.document()->completeURL(url));
     FrameLoadRequest frameRequest(frame.document()->securityOrigin(), resourceRequest, "_self", LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, AllowNavigationToInvalidURL::No, NewFrameOpenerPolicy::Allow, ShouldReplaceDocumentIfJavaScriptURL::ReplaceDocumentIfJavaScriptURL, ShouldOpenExternalURLsPolicy::ShouldNotAllow);
@@ -449,7 +443,7 @@ static Ref<Inspector::Protocol::Array<Inspector::Protocol::Page::Cookie>> buildA
     for (const auto& cookie : cookiesList)
         cookies->addItem(buildObjectForCookie(cookie));
 
-    return WTF::move(cookies);
+    return cookies;
 }
 
 static Vector<CachedResource*> cachedResourcesForFrame(Frame* frame)
@@ -508,7 +502,7 @@ void InspectorPageAgent::getCookies(ErrorString&, RefPtr<Inspector::Protocol::Ar
     // always return the same true/false value.
     bool rawCookiesImplemented = false;
 
-    for (Frame* frame = mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
         Document* document = frame->document();
 
         for (auto& url : allResourcesURLsForFrame(frame)) {
@@ -521,10 +515,9 @@ void InspectorPageAgent::getCookies(ErrorString&, RefPtr<Inspector::Protocol::Ar
                 // because "document" is the document of the main frame of the page.
                 stringCookiesList.append(document->cookie(ASSERT_NO_EXCEPTION));
             } else {
-                int cookiesSize = docCookiesList.size();
-                for (int i = 0; i < cookiesSize; i++) {
-                    if (!rawCookiesList.contains(docCookiesList[i]))
-                        rawCookiesList.add(docCookiesList[i]);
+                for (auto& cookie : docCookiesList) {
+                    if (!rawCookiesList.contains(cookie))
+                        rawCookiesList.add(cookie);
                 }
             }
         }
@@ -540,13 +533,13 @@ void InspectorPageAgent::getCookies(ErrorString&, RefPtr<Inspector::Protocol::Ar
 void InspectorPageAgent::deleteCookie(ErrorString&, const String& cookieName, const String& url)
 {
     URL parsedURL(ParsedURLString, url);
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext())
+    for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext())
         WebCore::deleteCookie(frame->document(), parsedURL, cookieName);
 }
 
 void InspectorPageAgent::getResourceTree(ErrorString&, RefPtr<Inspector::Protocol::Page::FrameResourceTree>& object)
 {
-    object = buildObjectForFrameTree(&m_page->mainFrame());
+    object = buildObjectForFrameTree(&m_page.mainFrame());
 }
 
 void InspectorPageAgent::getResourceContent(ErrorString& errorString, const String& frameId, const String& url, String* content, bool* base64Encoded)
@@ -622,7 +615,7 @@ void InspectorPageAgent::searchInResources(ErrorString&, const String& text, con
     bool caseSensitive = optionalCaseSensitive ? *optionalCaseSensitive : false;
     JSC::Yarr::RegularExpression regex = ContentSearchUtilities::createSearchRegex(text, caseSensitive, isRegex);
 
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         String content;
 
         for (auto* cachedResource : cachedResourcesForFrame(frame)) {
@@ -670,11 +663,8 @@ void InspectorPageAgent::getScriptExecutionStatus(ErrorString&, Inspector::PageB
 {
     bool disabledByScriptController = false;
     bool disabledInSettings = false;
-    Frame* frame = mainFrame();
-    if (frame) {
-        disabledByScriptController = !frame->script().canExecuteScripts(NotAboutToExecuteScript);
-        disabledInSettings = !frame->settings().isScriptEnabled();
-    }
+    disabledByScriptController = mainFrame().script().canExecuteScripts(NotAboutToExecuteScript);
+    disabledInSettings = !mainFrame().settings().isScriptEnabled();
 
     if (!disabledByScriptController) {
         *status = Inspector::PageBackendDispatcherHandler::Result::Allowed;
@@ -689,20 +679,14 @@ void InspectorPageAgent::getScriptExecutionStatus(ErrorString&, Inspector::PageB
 
 void InspectorPageAgent::setScriptExecutionDisabled(ErrorString&, bool value)
 {
-    if (!mainFrame())
-        return;
-
     m_ignoreScriptsEnabledNotification = true;
-    mainFrame()->settings().setScriptEnabled(!value);
+    mainFrame().settings().setScriptEnabled(!value);
     m_ignoreScriptsEnabledNotification = false;
 }
 
 void InspectorPageAgent::didClearWindowObjectInWorld(Frame* frame, DOMWrapperWorld& world)
 {
     if (&world != &mainThreadNormalWorld())
-        return;
-
-    if (!m_frontendDispatcher)
         return;
 
     if (m_scriptsToEvaluateOnLoad) {
@@ -747,10 +731,9 @@ void InspectorPageAgent::frameDetached(Frame& frame)
     }
 }
 
-Frame* InspectorPageAgent::mainFrame()
+MainFrame& InspectorPageAgent::mainFrame()
 {
-    // FIXME: This should return a Frame&
-    return &m_page->mainFrame();
+    return m_page.mainFrame();
 }
 
 Frame* InspectorPageAgent::frameForId(const String& frameId)
@@ -790,7 +773,7 @@ String InspectorPageAgent::loaderId(DocumentLoader* loader)
 
 Frame* InspectorPageAgent::findFrameWithSecurityOrigin(const String& originRawString)
 {
-    for (Frame* frame = &m_page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+    for (Frame* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
         RefPtr<SecurityOrigin> documentOrigin = frame->document()->securityOrigin();
         if (documentOrigin->toRawString() == originRawString)
             return frame;
@@ -823,12 +806,6 @@ void InspectorPageAgent::loaderDetachedFromFrame(DocumentLoader& loader)
 
 void InspectorPageAgent::frameStartedLoading(Frame& frame)
 {
-    if (frame.isMainFrame()) {
-        auto stopwatch = m_instrumentingAgents->inspectorEnvironment().executionStopwatch();
-        stopwatch->reset();
-        stopwatch->start();
-    }
-
     m_frontendDispatcher->frameStartedLoading(frameId(&frame));
 }
 
@@ -913,6 +890,8 @@ void InspectorPageAgent::scriptsEnabled(bool isEnabled)
 
 Ref<Inspector::Protocol::Page::Frame> InspectorPageAgent::buildObjectForFrame(Frame* frame)
 {
+    ASSERT_ARG(frame, frame);
+
     auto frameObject = Inspector::Protocol::Page::Frame::create()
         .setId(frameId(frame))
         .setLoaderId(loaderId(frame->loader().documentLoader()))
@@ -929,15 +908,17 @@ Ref<Inspector::Protocol::Page::Frame> InspectorPageAgent::buildObjectForFrame(Fr
         frameObject->setName(name);
     }
 
-    return WTF::move(frameObject);
+    return frameObject;
 }
 
 Ref<Inspector::Protocol::Page::FrameResourceTree> InspectorPageAgent::buildObjectForFrameTree(Frame* frame)
 {
+    ASSERT_ARG(frame, frame);
+
     Ref<Inspector::Protocol::Page::Frame> frameObject = buildObjectForFrame(frame);
     auto subresources = Inspector::Protocol::Array<Inspector::Protocol::Page::FrameResource>::create();
     auto result = Inspector::Protocol::Page::FrameResourceTree::create()
-        .setFrame(WTF::move(frameObject))
+        .setFrame(WTFMove(frameObject))
         .setResources(subresources.copyRef())
         .release();
 
@@ -954,7 +935,7 @@ Ref<Inspector::Protocol::Page::FrameResourceTree> InspectorPageAgent::buildObjec
         String sourceMappingURL = InspectorPageAgent::sourceMapURLForResource(cachedResource);
         if (!sourceMappingURL.isEmpty())
             resourceObject->setSourceMapURL(sourceMappingURL);
-        subresources->addItem(WTF::move(resourceObject));
+        subresources->addItem(WTFMove(resourceObject));
     }
 
     RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Page::FrameResourceTree>> childrenArray;
@@ -971,8 +952,7 @@ Ref<Inspector::Protocol::Page::FrameResourceTree> InspectorPageAgent::buildObjec
 #if ENABLE(TOUCH_EVENTS)
 void InspectorPageAgent::updateTouchEventEmulationInPage(bool enabled)
 {
-    if (mainFrame())
-        mainFrame()->settings().setTouchEventEmulationEnabled(enabled);
+    mainFrame().settings().setTouchEventEmulationEnabled(enabled);
 }
 #endif
 
@@ -993,7 +973,7 @@ void InspectorPageAgent::setEmulatedMedia(ErrorString&, const String& media)
         return;
 
     m_emulatedMedia = media;
-    Document* document = m_page->mainFrame().document();
+    Document* document = m_page.mainFrame().document();
     if (document) {
         document->styleResolverChanged(RecalcStyleImmediately);
         document->updateLayout();
@@ -1008,27 +988,26 @@ void InspectorPageAgent::applyEmulatedMedia(String& media)
 
 void InspectorPageAgent::getCompositingBordersVisible(ErrorString&, bool* outParam)
 {
-    *outParam = m_page->settings().showDebugBorders() || m_page->settings().showRepaintCounter();
+    *outParam = m_page.settings().showDebugBorders() || m_page.settings().showRepaintCounter();
 }
 
 void InspectorPageAgent::setCompositingBordersVisible(ErrorString&, bool visible)
 {
-    m_page->settings().setShowDebugBorders(visible);
-    m_page->settings().setShowRepaintCounter(visible);
+    m_page.settings().setShowDebugBorders(visible);
+    m_page.settings().setShowRepaintCounter(visible);
 }
 
 void InspectorPageAgent::snapshotNode(ErrorString& errorString, int nodeId, String* outDataURL)
 {
-    Frame* frame = mainFrame();
-    ASSERT(frame);
+    Frame& frame = mainFrame();
 
-    InspectorDOMAgent* domAgent = m_instrumentingAgents->inspectorDOMAgent();
+    InspectorDOMAgent* domAgent = m_instrumentingAgents.inspectorDOMAgent();
     ASSERT(domAgent);
     Node* node = domAgent->assertNode(errorString, nodeId);
     if (!node)
         return;
 
-    std::unique_ptr<ImageBuffer> snapshot = WebCore::snapshotNode(*frame, *node);
+    std::unique_ptr<ImageBuffer> snapshot = WebCore::snapshotNode(frame, *node);
     if (!snapshot) {
         errorString = ASCIILiteral("Could not capture snapshot");
         return;
@@ -1039,15 +1018,14 @@ void InspectorPageAgent::snapshotNode(ErrorString& errorString, int nodeId, Stri
 
 void InspectorPageAgent::snapshotRect(ErrorString& errorString, int x, int y, int width, int height, const String& coordinateSystem, String* outDataURL)
 {
-    Frame* frame = mainFrame();
-    ASSERT(frame);
+    Frame& frame = mainFrame();
 
     SnapshotOptions options = SnapshotOptionsNone;
     if (coordinateSystem == "Viewport")
         options |= SnapshotOptionsInViewCoordinates;
 
     IntRect rectangle(x, y, width, height);
-    std::unique_ptr<ImageBuffer> snapshot = snapshotFrameRect(*frame, rectangle, options);
+    std::unique_ptr<ImageBuffer> snapshot = snapshotFrameRect(frame, rectangle, options);
 
     if (!snapshot) {
         errorString = ASCIILiteral("Could not capture snapshot");
@@ -1065,14 +1043,9 @@ void InspectorPageAgent::handleJavaScriptDialog(ErrorString& errorString, bool a
 
 void InspectorPageAgent::archive(ErrorString& errorString, String* data)
 {
-    Frame* frame = mainFrame();
-    if (!frame) {
-        errorString = ASCIILiteral("No main frame");
-        return;
-    }
-
 #if ENABLE(WEB_ARCHIVE) && USE(CF)
-    RefPtr<LegacyWebArchive> archive = LegacyWebArchive::create(frame);
+    Frame& frame = mainFrame();
+    RefPtr<LegacyWebArchive> archive = LegacyWebArchive::create(&frame);
     if (!archive) {
         errorString = ASCIILiteral("Could not create web archive for main frame");
         return;

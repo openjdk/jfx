@@ -29,7 +29,6 @@
 #include "CopiedSpaceInlines.h"
 #include "GCActivityCallback.h"
 #include "JSCInlines.h"
-#include "Options.h"
 
 namespace JSC {
 
@@ -45,22 +44,22 @@ CopiedSpace::CopiedSpace(Heap* heap)
 CopiedSpace::~CopiedSpace()
 {
     while (!m_oldGen.toSpace->isEmpty())
-        CopiedBlock::destroy(m_oldGen.toSpace->removeHead());
+        CopiedBlock::destroy(*heap(), m_oldGen.toSpace->removeHead());
 
     while (!m_oldGen.fromSpace->isEmpty())
-        CopiedBlock::destroy(m_oldGen.fromSpace->removeHead());
+        CopiedBlock::destroy(*heap(), m_oldGen.fromSpace->removeHead());
 
     while (!m_oldGen.oversizeBlocks.isEmpty())
-        CopiedBlock::destroy(m_oldGen.oversizeBlocks.removeHead());
+        CopiedBlock::destroy(*heap(), m_oldGen.oversizeBlocks.removeHead());
 
     while (!m_newGen.toSpace->isEmpty())
-        CopiedBlock::destroy(m_newGen.toSpace->removeHead());
+        CopiedBlock::destroy(*heap(), m_newGen.toSpace->removeHead());
 
     while (!m_newGen.fromSpace->isEmpty())
-        CopiedBlock::destroy(m_newGen.fromSpace->removeHead());
+        CopiedBlock::destroy(*heap(), m_newGen.fromSpace->removeHead());
 
     while (!m_newGen.oversizeBlocks.isEmpty())
-        CopiedBlock::destroy(m_newGen.oversizeBlocks.removeHead());
+        CopiedBlock::destroy(*heap(), m_newGen.oversizeBlocks.removeHead());
 
     ASSERT(m_oldGen.toSpace->isEmpty());
     ASSERT(m_oldGen.fromSpace->isEmpty());
@@ -99,7 +98,7 @@ CheckedBoolean CopiedSpace::tryAllocateOversize(size_t bytes, void** outPtr)
 {
     ASSERT(isOversize(bytes));
 
-    CopiedBlock* block = CopiedBlock::create(WTF::roundUpToMultipleOf<sizeof(double)>(sizeof(CopiedBlock) + bytes));
+    CopiedBlock* block = CopiedBlock::create(*m_heap, WTF::roundUpToMultipleOf<sizeof(double)>(sizeof(CopiedBlock) + bytes));
     m_newGen.oversizeBlocks.push(block);
     m_newGen.blockFilter.add(reinterpret_cast<Bits>(block));
     m_blockSet.add(block);
@@ -165,7 +164,7 @@ CheckedBoolean CopiedSpace::tryReallocateOversize(void** ptr, size_t oldSize, si
         } else
             m_newGen.oversizeBlocks.remove(oldBlock);
         m_blockSet.remove(oldBlock);
-        CopiedBlock::destroy(oldBlock);
+        CopiedBlock::destroy(*heap(), oldBlock);
     }
 
     *ptr = newPtr;
@@ -191,19 +190,17 @@ void CopiedSpace::doneFillingBlock(CopiedBlock* block, CopiedBlock** exchange)
 
     {
         // Always put the block into the old gen because it's being promoted!
-        SpinLockHolder locker(&m_toSpaceLock);
+        LockHolder locker(&m_toSpaceLock);
         m_oldGen.toSpace->push(block);
         m_blockSet.add(block);
         m_oldGen.blockFilter.add(reinterpret_cast<Bits>(block));
     }
 
     {
-        MutexLocker locker(m_loanedBlocksLock);
+        LockHolder locker(m_loanedBlocksLock);
         ASSERT(m_numberOfLoanedBlocks > 0);
         ASSERT(m_inCopyingPhase);
         m_numberOfLoanedBlocks--;
-        if (!m_numberOfLoanedBlocks)
-            m_loanedBlocksCondition.signal();
     }
 }
 
@@ -230,13 +227,8 @@ void CopiedSpace::didStartFullCollection()
 
 void CopiedSpace::doneCopying()
 {
-    {
-        MutexLocker locker(m_loanedBlocksLock);
-        while (m_numberOfLoanedBlocks > 0)
-            m_loanedBlocksCondition.wait(m_loanedBlocksLock);
-    }
-
-    ASSERT(m_inCopyingPhase == m_shouldDoCopyPhase);
+    RELEASE_ASSERT(!m_numberOfLoanedBlocks);
+    RELEASE_ASSERT(m_inCopyingPhase == m_shouldDoCopyPhase);
     m_inCopyingPhase = false;
 
     DoublyLinkedList<CopiedBlock>* toSpace;

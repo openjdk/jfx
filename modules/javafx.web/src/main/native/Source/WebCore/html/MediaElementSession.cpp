@@ -35,6 +35,7 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "HTMLMediaElement.h"
+#include "HTMLMediaElementEnums.h"
 #include "HTMLNames.h"
 #include "HTMLVideoElement.h"
 #include "Logging.h"
@@ -73,6 +74,7 @@ static String restrictionName(MediaElementSession::BehaviorRestrictions restrict
     CASE(WirelessVideoPlaybackDisabled);
 #endif
     CASE(RequireUserGestureForAudioRateChange);
+    CASE(InvisibleAutoplayNotPermitted);
 
     return restrictionBuilder.toString();
 }
@@ -129,12 +131,12 @@ bool MediaElementSession::playbackPermitted(const HTMLMediaElement& element) con
     if (pageExplicitlyAllowsElementToAutoplayInline(element))
         return true;
 
-    if (m_restrictions & RequireUserGestureForRateChange && !ScriptController::processingUserGesture()) {
+    if (m_restrictions & RequireUserGestureForRateChange && !ScriptController::processingUserGestureForMedia()) {
         LOG(Media, "MediaElementSession::playbackPermitted - returning FALSE");
         return false;
     }
 
-    if (m_restrictions & RequireUserGestureForAudioRateChange && element.hasAudio() && !ScriptController::processingUserGesture()) {
+    if (m_restrictions & RequireUserGestureForAudioRateChange && element.hasAudio() && !ScriptController::processingUserGestureForMedia()) {
         LOG(Media, "MediaElementSession::playbackPermitted - returning FALSE");
         return false;
     }
@@ -144,7 +146,7 @@ bool MediaElementSession::playbackPermitted(const HTMLMediaElement& element) con
 
 bool MediaElementSession::dataLoadingPermitted(const HTMLMediaElement&) const
 {
-    if (m_restrictions & RequireUserGestureForLoad && !ScriptController::processingUserGesture()) {
+    if (m_restrictions & RequireUserGestureForLoad && !ScriptController::processingUserGestureForMedia()) {
         LOG(Media, "MediaElementSession::dataLoadingPermitted - returning FALSE");
         return false;
     }
@@ -154,7 +156,7 @@ bool MediaElementSession::dataLoadingPermitted(const HTMLMediaElement&) const
 
 bool MediaElementSession::fullscreenPermitted(const HTMLMediaElement&) const
 {
-    if (m_restrictions & RequireUserGestureForFullscreen && !ScriptController::processingUserGesture()) {
+    if (m_restrictions & RequireUserGestureForFullscreen && !ScriptController::processingUserGestureForMedia()) {
         LOG(Media, "MediaElementSession::fullscreenPermitted - returning FALSE");
         return false;
     }
@@ -189,7 +191,7 @@ void MediaElementSession::showPlaybackTargetPicker(const HTMLMediaElement& eleme
 {
     LOG(Media, "MediaElementSession::showPlaybackTargetPicker");
 
-    if (m_restrictions & RequireUserGestureToShowPlaybackTargetPicker && !ScriptController::processingUserGesture()) {
+    if (m_restrictions & RequireUserGestureToShowPlaybackTargetPicker && !ScriptController::processingUserGestureForMedia()) {
         LOG(Media, "MediaElementSession::showPlaybackTargetPicker - returning early because of permissions");
         return;
     }
@@ -200,13 +202,14 @@ void MediaElementSession::showPlaybackTargetPicker(const HTMLMediaElement& eleme
     }
 
 #if !PLATFORM(IOS)
-    if (!element.hasVideo()) {
-        LOG(Media, "MediaElementSession::showPlaybackTargetPicker - returning early because element has no video");
+    if (element.readyState() < HTMLMediaElementEnums::HAVE_METADATA) {
+        LOG(Media, "MediaElementSession::showPlaybackTargetPicker - returning early because element is not playable");
         return;
     }
 #endif
 
-    element.document().showPlaybackTargetPicker(*this, is<HTMLVideoElement>(element));
+    String customMenuItemTitle = element.playbackTargetPickerCustomActionName();
+    element.document().showPlaybackTargetPicker(*this, is<HTMLVideoElement>(element), customMenuItemTitle);
 }
 
 bool MediaElementSession::hasWirelessPlaybackTargets(const HTMLMediaElement&) const
@@ -236,11 +239,11 @@ bool MediaElementSession::wirelessVideoPlaybackDisabled(const HTMLMediaElement& 
 
 #if PLATFORM(IOS)
     String legacyAirplayAttributeValue = element.fastGetAttribute(HTMLNames::webkitairplayAttr);
-    if (equalIgnoringCase(legacyAirplayAttributeValue, "deny")) {
+    if (equalLettersIgnoringASCIICase(legacyAirplayAttributeValue, "deny")) {
         LOG(Media, "MediaElementSession::wirelessVideoPlaybackDisabled - returning TRUE because of legacy attribute");
         return true;
     }
-    if (equalIgnoringCase(legacyAirplayAttributeValue, "allow")) {
+    if (equalLettersIgnoringASCIICase(legacyAirplayAttributeValue, "allow")) {
         LOG(Media, "MediaElementSession::wirelessVideoPlaybackDisabled - returning FALSE because of legacy attribute");
         return false;
     }
@@ -287,7 +290,7 @@ void MediaElementSession::setHasPlaybackTargetAvailabilityListeners(const HTMLMe
 
 void MediaElementSession::setPlaybackTarget(Ref<MediaPlaybackTarget>&& device)
 {
-    m_playbackTarget = WTF::move(device);
+    m_playbackTarget = WTFMove(device);
     client().setWirelessPlaybackTarget(*m_playbackTarget.copyRef());
 }
 
@@ -330,6 +333,11 @@ void MediaElementSession::setShouldPlayToPlaybackTarget(bool shouldPlay)
     client().setShouldPlayToPlaybackTarget(shouldPlay);
 }
 
+void MediaElementSession::customPlaybackActionSelected()
+{
+    client().customPlaybackActionSelected();
+}
+
 void MediaElementSession::mediaStateDidChange(const HTMLMediaElement& element, MediaProducer::MediaStateFlags state)
 {
     element.document().playbackTargetPickerClientStateDidChange(*this, state);
@@ -338,16 +346,15 @@ void MediaElementSession::mediaStateDidChange(const HTMLMediaElement& element, M
 
 MediaPlayer::Preload MediaElementSession::effectivePreloadForElement(const HTMLMediaElement& element) const
 {
-    PlatformMediaSessionManager::SessionRestrictions restrictions = PlatformMediaSessionManager::sharedManager().restrictions(mediaType());
     MediaPlayer::Preload preload = element.preloadValue();
 
     if (pageExplicitlyAllowsElementToAutoplayInline(element))
         return preload;
 
-    if ((restrictions & PlatformMediaSessionManager::MetadataPreloadingNotPermitted) == PlatformMediaSessionManager::MetadataPreloadingNotPermitted)
+    if (m_restrictions & MetadataPreloadingNotPermitted)
         return MediaPlayer::None;
 
-    if ((restrictions & PlatformMediaSessionManager::AutoPreloadingNotPermitted) == PlatformMediaSessionManager::AutoPreloadingNotPermitted) {
+    if (m_restrictions & AutoPreloadingNotPermitted) {
         if (preload > MediaPlayer::MetaData)
             return MediaPlayer::MetaData;
     }
@@ -360,22 +367,11 @@ bool MediaElementSession::requiresFullscreenForVideoPlayback(const HTMLMediaElem
     if (pageExplicitlyAllowsElementToAutoplayInline(element))
         return false;
 
-    if (!PlatformMediaSessionManager::sharedManager().sessionRestrictsInlineVideoPlayback(*this))
-        return false;
-
     Settings* settings = element.document().settings();
     if (!settings || !settings->allowsInlineMediaPlayback())
         return true;
 
-    if (element.fastHasAttribute(HTMLNames::webkit_playsinlineAttr))
-        return false;
-
-#if PLATFORM(IOS)
-    if (applicationIsDumpRenderTree())
-        return false;
-#endif
-
-    return true;
+    return settings->inlineMediaPlaybackRequiresPlaysInlineAttribute() && !element.fastHasAttribute(HTMLNames::webkit_playsinlineAttr);
 }
 
 bool MediaElementSession::allowsAutomaticMediaDataLoading(const HTMLMediaElement& element) const
@@ -412,6 +408,13 @@ bool MediaElementSession::allowsPictureInPicture(const HTMLMediaElement& element
     Settings* settings = element.document().settings();
     return settings && settings->allowsPictureInPictureMediaPlayback() && !element.webkitCurrentPlaybackTargetIsWireless();
 }
+
+#if PLATFORM(IOS)
+bool MediaElementSession::requiresPlaybackTargetRouteMonitoring() const
+{
+    return m_hasPlaybackTargetAvailabilityListeners && !client().elementIsHidden();
+}
+#endif
 
 #if ENABLE(MEDIA_SOURCE)
 const unsigned fiveMinutesOf1080PVideo = 290 * 1024 * 1024; // 290 MB is approximately 5 minutes of 8Mbps (1080p) content.

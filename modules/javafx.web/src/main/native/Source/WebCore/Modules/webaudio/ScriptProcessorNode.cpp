@@ -40,7 +40,7 @@
 
 namespace WebCore {
 
-RefPtr<ScriptProcessorNode> ScriptProcessorNode::create(AudioContext* context, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels)
+RefPtr<ScriptProcessorNode> ScriptProcessorNode::create(AudioContext& context, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels)
 {
     // Check for valid buffer size.
     switch (bufferSize) {
@@ -68,7 +68,7 @@ RefPtr<ScriptProcessorNode> ScriptProcessorNode::create(AudioContext* context, f
     return adoptRef(*new ScriptProcessorNode(context, sampleRate, bufferSize, numberOfInputChannels, numberOfOutputChannels));
 }
 
-ScriptProcessorNode::ScriptProcessorNode(AudioContext* context, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels)
+ScriptProcessorNode::ScriptProcessorNode(AudioContext& context, float sampleRate, size_t bufferSize, unsigned numberOfInputChannels, unsigned numberOfOutputChannels)
     : AudioNode(context, sampleRate)
     , m_doubleBufferIndex(0)
     , m_doubleBufferIndexForEvent(0)
@@ -104,7 +104,7 @@ void ScriptProcessorNode::initialize()
     if (isInitialized())
         return;
 
-    float sampleRate = context()->sampleRate();
+    float sampleRate = context().sampleRate();
 
     // Create double buffers on both the input and output sides.
     // These AudioBuffers will be directly accessed in the main thread by JavaScript.
@@ -210,24 +210,17 @@ void ScriptProcessorNode::process(size_t framesToProcess)
             // Fire the event on the main thread, not this one (which is the realtime audio thread).
             m_doubleBufferIndexForEvent = m_doubleBufferIndex;
             m_isRequestOutstanding = true;
-            callOnMainThread(fireProcessEventDispatch, this);
+
+            callOnMainThread([this] {
+                fireProcessEvent();
+
+                // De-reference to match the ref() call in process().
+                deref();
+            });
         }
 
         swapBuffers();
     }
-}
-
-void ScriptProcessorNode::fireProcessEventDispatch(void* userData)
-{
-    ScriptProcessorNode* jsAudioNode = static_cast<ScriptProcessorNode*>(userData);
-    ASSERT(jsAudioNode);
-    if (!jsAudioNode)
-        return;
-
-    jsAudioNode->fireProcessEvent();
-
-    // De-reference to match the ref() call in process().
-    jsAudioNode->deref();
 }
 
 void ScriptProcessorNode::fireProcessEvent()
@@ -246,13 +239,13 @@ void ScriptProcessorNode::fireProcessEvent()
         return;
 
     // Avoid firing the event if the document has already gone away.
-    if (context()->scriptExecutionContext()) {
+    if (context().scriptExecutionContext()) {
         // Let the audio thread know we've gotten to the point where it's OK for it to make another request.
         m_isRequestOutstanding = false;
 
         // Calculate playbackTime with the buffersize which needs to be processed each time when onaudioprocess is called.
         // The outputBuffer being passed to JS will be played after exhausting previous outputBuffer by double-buffering.
-        double playbackTime = (context()->currentSampleFrame() + m_bufferSize) / static_cast<double>(context()->sampleRate());
+        double playbackTime = (context().currentSampleFrame() + m_bufferSize) / static_cast<double>(context().sampleRate());
 
         // Call the JavaScript event handler which will do the audio processing.
         dispatchEvent(AudioProcessingEvent::create(inputBuffer, outputBuffer, playbackTime));
@@ -280,9 +273,9 @@ double ScriptProcessorNode::latencyTime() const
     return std::numeric_limits<double>::infinity();
 }
 
-bool ScriptProcessorNode::addEventListener(const AtomicString& eventType, PassRefPtr<EventListener> listener, bool useCapture)
+bool ScriptProcessorNode::addEventListener(const AtomicString& eventType, RefPtr<EventListener>&& listener, bool useCapture)
 {
-    bool success = AudioNode::addEventListener(eventType, listener, useCapture);
+    bool success = AudioNode::addEventListener(eventType, WTFMove(listener), useCapture);
     if (success && eventType == eventNames().audioprocessEvent)
         m_hasAudioProcessListener = hasEventListeners(eventNames().audioprocessEvent);
     return success;

@@ -69,7 +69,7 @@ MemoryCache::MemoryCache()
     , m_deadDecodedDataDeletionInterval(defaultDecodedDataDeletionInterval)
     , m_liveSize(0)
     , m_deadSize(0)
-    , m_pruneTimer(*this, &MemoryCache::pruneTimerFired)
+    , m_pruneTimer(*this, &MemoryCache::prune)
 {
 }
 
@@ -277,6 +277,24 @@ void MemoryCache::pruneLiveResources(bool shouldDestroyDecodedDataForAllLiveReso
     pruneLiveResourcesToSize(targetSize, shouldDestroyDecodedDataForAllLiveResources);
 }
 
+void MemoryCache::forEachResource(const std::function<void(CachedResource&)>& function)
+{
+    for (auto& unprotectedLRUList : m_allResources) {
+        Vector<CachedResourceHandle<CachedResource>> lruList;
+        copyToVector(*unprotectedLRUList, lruList);
+        for (auto& resource : lruList)
+            function(*resource);
+    }
+}
+
+void MemoryCache::destroyDecodedDataForAllImages()
+{
+    MemoryCache::singleton().forEachResource([](CachedResource& resource) {
+        if (resource.isImage())
+            resource.destroyDecodedData();
+    });
+}
+
 void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestroyDecodedDataForAllLiveResources)
 {
     if (m_inPruneResources)
@@ -314,9 +332,6 @@ void MemoryCache::pruneLiveResourcesToSize(unsigned targetSize, bool shouldDestr
             if (!shouldDestroyDecodedDataForAllLiveResources && elapsedTime < cMinDelayBeforeLiveDecodedPrune)
                 return;
 
-            if (current->decodedDataIsPurgeable())
-                continue;
-
             // Destroy our decoded data. This will remove us from m_liveDecodedResources, and possibly move us
             // to a different LRU list in m_allResources.
             current->destroyDecodedData();
@@ -348,55 +363,39 @@ void MemoryCache::pruneDeadResourcesToSize(unsigned targetSize)
 
     bool canShrinkLRULists = true;
     for (int i = m_allResources.size() - 1; i >= 0; i--) {
-        LRUList& list = *m_allResources[i];
+        // Make a copy of the LRUList first (and ref the resources) as calling
+        // destroyDecodedData() can alter the LRUList.
+        Vector<CachedResourceHandle<CachedResource>> lruList;
+        copyToVector(*m_allResources[i], lruList);
 
         // First flush all the decoded data in this queue.
         // Remove from the head, since this is the least frequently accessed of the objects.
-        auto it = list.begin();
-        while (it != list.end()) {
-            CachedResource& current = **it;
+        for (auto& resource : lruList) {
+            if (!resource->inCache())
+                continue;
 
-            // Increment the iterator now as the call to destroyDecodedData() below may
-            // invalidate the current iterator.
-            ++it;
-
-            // Protect 'next' so it can't get deleted during destroyDecodedData().
-            CachedResourceHandle<CachedResource> next = it != list.end() ? *it : nullptr;
-            ASSERT(!next || next->inCache());
-            if (!current.hasClients() && !current.isPreloaded() && current.isLoaded()) {
+            if (!resource->hasClients() && !resource->isPreloaded() && resource->isLoaded()) {
                 // Destroy our decoded data. This will remove us from
                 // m_liveDecodedResources, and possibly move us to a different
                 // LRU list in m_allResources.
-                current.destroyDecodedData();
+                resource->destroyDecodedData();
 
                 if (targetSize && m_deadSize <= targetSize)
                     return;
             }
-            // Decoded data may reference other resources. Stop iterating if 'next' somehow got
-            // kicked out of cache during destroyDecodedData().
-            if (next && !next->inCache())
-                break;
         }
 
         // Now evict objects from this list.
         // Remove from the head, since this is the least frequently accessed of the objects.
-        it = list.begin();
-        while (it != list.end()) {
-            CachedResource& current = **it;
+        for (auto& resource : lruList) {
+            if (!resource->inCache())
+                continue;
 
-            // Increment the iterator now as the call to remove() below will
-            // invalidate the current iterator.
-            ++it;
-
-            CachedResourceHandle<CachedResource> next = it != list.end() ? *it : nullptr;
-            ASSERT(!next || next->inCache());
-            if (!current.hasClients() && !current.isPreloaded() && !current.isCacheValidator()) {
-                remove(current);
+            if (!resource->hasClients() && !resource->isPreloaded() && !resource->isCacheValidator()) {
+                remove(*resource);
                 if (targetSize && m_deadSize <= targetSize)
                     return;
             }
-            if (next && !next->inCache())
-                break;
         }
 
         // Shrink the vector back down so we don't waste time inspecting
@@ -757,11 +756,6 @@ void MemoryCache::prune()
 
     pruneDeadResources(); // Prune dead first, in case it was "borrowing" capacity from live.
     pruneLiveResources();
-}
-
-void MemoryCache::pruneTimerFired()
-{
-    prune();
 }
 
 void MemoryCache::pruneSoon()

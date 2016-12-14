@@ -139,7 +139,11 @@ bool GraphicsContext3D::reshapeFBOs(const IntSize& size)
             sampleCount = maxSampleCount;
         ::glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_multisampleFBO);
         ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_multisampleColorBuffer);
+#if PLATFORM(IOS)
+        ::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT, sampleCount, GL_RGBA8_OES, width, height);
+#else
         ::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER_EXT, sampleCount, m_internalColorFormat, width, height);
+#endif
         ::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_RENDERBUFFER_EXT, m_multisampleColorBuffer);
         if (m_attrs.stencil || m_attrs.depth) {
             ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_multisampleDepthStencilBuffer);
@@ -172,23 +176,16 @@ bool GraphicsContext3D::reshapeFBOs(const IntSize& size)
         ::glBindTexture(GL_TEXTURE_2D, m_compositorTexture);
         ::glTexImage2D(GL_TEXTURE_2D, 0, m_internalColorFormat, width, height, 0, colorFormat, GL_UNSIGNED_BYTE, 0);
         ::glBindTexture(GL_TEXTURE_2D, 0);
+#if USE(COORDINATED_GRAPHICS_THREADED)
+        ::glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_compositorFBO);
+        ::glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, m_compositorTexture, 0);
+        attachDepthAndStencilBufferIfNeeded(internalDepthStencilFormat, width, height);
+        ::glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fbo);
+#endif
     }
 #endif
 
-    if (!m_attrs.antialias && (m_attrs.stencil || m_attrs.depth)) {
-        ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthStencilBuffer);
-        ::glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, internalDepthStencilFormat, width, height);
-        if (m_attrs.stencil)
-            ::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthStencilBuffer);
-        if (m_attrs.depth)
-            ::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthStencilBuffer);
-        ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
-    }
-
-    if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT) {
-        // FIXME: cleanup
-        notImplemented();
-    }
+    attachDepthAndStencilBufferIfNeeded(internalDepthStencilFormat, width, height);
 
     bool mustRestoreFBO = true;
     if (m_attrs.antialias) {
@@ -203,6 +200,24 @@ bool GraphicsContext3D::reshapeFBOs(const IntSize& size)
     return mustRestoreFBO;
 }
 
+void GraphicsContext3D::attachDepthAndStencilBufferIfNeeded(GLuint internalDepthStencilFormat, int width, int height)
+{
+    if (!m_attrs.antialias && (m_attrs.stencil || m_attrs.depth)) {
+        ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, m_depthStencilBuffer);
+        ::glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, internalDepthStencilFormat, width, height);
+        if (m_attrs.stencil)
+            ::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_STENCIL_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthStencilBuffer);
+        if (m_attrs.depth)
+            ::glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, m_depthStencilBuffer);
+        ::glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, 0);
+    }
+
+    if (glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) != GL_FRAMEBUFFER_COMPLETE_EXT) {
+        // FIXME: cleanup
+        notImplemented();
+    }
+}
+
 void GraphicsContext3D::resolveMultisamplingIfNecessary(const IntRect& rect)
 {
     TemporaryOpenGLSetting scopedScissor(GL_SCISSOR_TEST, GL_FALSE);
@@ -210,11 +225,17 @@ void GraphicsContext3D::resolveMultisamplingIfNecessary(const IntRect& rect)
     TemporaryOpenGLSetting scopedDepth(GL_DEPTH_TEST, GL_FALSE);
     TemporaryOpenGLSetting scopedStencil(GL_STENCIL_TEST, GL_FALSE);
 
+    GLint boundFrameBuffer;
+    ::glGetIntegerv(GL_FRAMEBUFFER_BINDING, &boundFrameBuffer);
+
     ::glBindFramebufferEXT(GL_READ_FRAMEBUFFER_EXT, m_multisampleFBO);
     ::glBindFramebufferEXT(GL_DRAW_FRAMEBUFFER_EXT, m_fbo);
 #if PLATFORM(IOS)
     UNUSED_PARAM(rect);
     ::glResolveMultisampleFramebufferAPPLE();
+    const GLenum discards[] = { GL_COLOR_ATTACHMENT0, GL_DEPTH_ATTACHMENT };
+    ::glDiscardFramebufferEXT(GL_READ_FRAMEBUFFER_APPLE, 2, discards);
+    ::glBindFramebuffer(GL_FRAMEBUFFER, boundFrameBuffer);
 #else
     IntRect resolveRect = rect;
     if (rect.isEmpty())
@@ -344,6 +365,7 @@ bool GraphicsContext3D::texImage2D(GC3Denum target, GC3Dint level, GC3Denum inte
         type = GL_HALF_FLOAT_ARB;
     }
 
+    ASSERT(format != Extensions3D::SRGB8_ALPHA8_EXT);
     if (format == Extensions3D::SRGB_ALPHA_EXT)
         openGLFormat = GL_RGBA;
     else if (format == Extensions3D::SRGB_EXT)

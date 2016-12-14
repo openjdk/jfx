@@ -105,9 +105,9 @@ void XMLDocumentParser::insert(const SegmentedString&)
     ASSERT_NOT_REACHED();
 }
 
-void XMLDocumentParser::append(PassRefPtr<StringImpl> inputSource)
+void XMLDocumentParser::append(RefPtr<StringImpl>&& inputSource)
 {
-    SegmentedString source(inputSource);
+    SegmentedString source(WTFMove(inputSource));
     if (m_sawXSLTransform || !m_sawFirstElement)
         m_originalSourceForTransform.append(source);
 
@@ -136,12 +136,15 @@ void XMLDocumentParser::handleError(XMLErrors::ErrorType type, const char* m, Te
         stopParsing();
 }
 
-void XMLDocumentParser::enterText()
+void XMLDocumentParser::createLeafTextNode()
 {
+    if (m_leafTextNode)
+        return;
+
     ASSERT(m_bufferedText.size() == 0);
     ASSERT(!m_leafTextNode);
     m_leafTextNode = Text::create(m_currentNode->document(), "");
-    m_currentNode->parserAppendChild(m_leafTextNode.get());
+    m_currentNode->parserAppendChild(*m_leafTextNode);
 }
 
 static inline String toString(const xmlChar* string, size_t size)
@@ -150,19 +153,23 @@ static inline String toString(const xmlChar* string, size_t size)
 }
 
 
-void XMLDocumentParser::exitText()
+bool XMLDocumentParser::updateLeafTextNode()
 {
     if (isStopped())
-        return;
+        return false;
 
     if (!m_leafTextNode)
-        return;
+        return true;
 
-    m_leafTextNode->appendData(toString(m_bufferedText.data(), m_bufferedText.size()), IGNORE_EXCEPTION);
-    Vector<xmlChar> empty;
-    m_bufferedText.swap(empty);
+    // This operation might fire mutation event, see below.
+    m_leafTextNode->appendData(toString(m_bufferedText.data(), m_bufferedText.size()));
+    m_bufferedText = { };
 
     m_leafTextNode = nullptr;
+
+    // Hence, we need to check again whether the parser is stopped, since mutation
+    // event handlers executed by appendData might have detached this parser.
+    return !isStopped();
 }
 
 void XMLDocumentParser::detach()
@@ -191,7 +198,7 @@ void XMLDocumentParser::end()
     if (m_sawError)
         insertErrorMessageBlock();
     else {
-        exitText();
+        updateLeafTextNode();
         document()->styleResolverChanged(RecalcStyleImmediately);
     }
 

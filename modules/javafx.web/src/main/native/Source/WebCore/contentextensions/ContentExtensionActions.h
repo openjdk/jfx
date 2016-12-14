@@ -40,7 +40,13 @@ enum class ActionType : uint8_t {
     CSSDisplayNoneSelector,
     CSSDisplayNoneStyleSheet,
     IgnorePreviousRules,
+    MakeHTTPS,
     InvalidAction,
+};
+
+enum class BlockedStatus {
+    Blocked,
+    NotBlocked,
 };
 
 } // namespace ContentExtensions

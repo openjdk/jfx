@@ -35,6 +35,7 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "RealtimeMediaSource.h"
+#include "RealtimeMediaSourceSupportedConstraints.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -42,18 +43,21 @@ namespace WebCore {
 
 class MediaConstraints;
 class MediaStreamCreationClient;
-class RealtimeMediaSourceStates;
 class MediaStreamTrackSourcesRequestClient;
+class RealtimeMediaSourceSettings;
+class RealtimeMediaSourceSupportedConstraints;
 class TrackSourceInfo;
 
 class RealtimeMediaSourceCenter {
 public:
     virtual ~RealtimeMediaSourceCenter();
 
-    static RealtimeMediaSourceCenter& singleton();
-    static void setSharedStreamCenter(RealtimeMediaSourceCenter*);
+    WEBCORE_EXPORT static RealtimeMediaSourceCenter& singleton();
+    static void setSharedStreamCenterOverride(RealtimeMediaSourceCenter*);
 
-    virtual void validateRequestConstraints(PassRefPtr<MediaStreamCreationClient>, PassRefPtr<MediaConstraints> audioConstraints, PassRefPtr<MediaConstraints> videoConstraints) = 0;
+    virtual void validateRequestConstraints(MediaStreamCreationClient*, RefPtr<MediaConstraints>& audioConstraints, RefPtr<MediaConstraints>& videoConstraints) = 0;
+
+    virtual void createMediaStream(MediaStreamCreationClient*, const String& audioDeviceID, const String& videoDeviceID) = 0;
 
     virtual void createMediaStream(PassRefPtr<MediaStreamCreationClient>, PassRefPtr<MediaConstraints> audioConstraints, PassRefPtr<MediaConstraints> videoConstraints) = 0;
 
@@ -61,10 +65,13 @@ public:
 
     virtual RefPtr<TrackSourceInfo> sourceWithUID(const String&, RealtimeMediaSource::Type, MediaConstraints*) = 0;
 
+    virtual const RealtimeMediaSourceSupportedConstraints& supportedConstraints() { return m_supportedConstraints; }
+
 protected:
     RealtimeMediaSourceCenter();
 
     static RealtimeMediaSourceCenter& platformCenter();
+    RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
 };
 
 } // namespace WebCore

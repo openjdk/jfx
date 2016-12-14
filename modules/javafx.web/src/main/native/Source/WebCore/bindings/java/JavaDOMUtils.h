@@ -8,8 +8,8 @@
 
 #include "wtf/RefPtr.h"
 #include "wtf/text/WTFString.h"
-#include "WebCore/dom/RangeException.h"
 #include "WebCore/dom/ExceptionCodePlaceholder.h"
+#include "WebCore/dom/ExceptionCode.h"
 
 // Note that a pointer to a Node is not necessarily the same address
 // as a pointer to an Element: a static_cast between the two is not
@@ -46,10 +46,12 @@ public:
 
     ~JavaException() {
         if (m_ec) {
+            // FIXME-java: RangeException has been removed from w3c spec
+            // http://trac.webkit.org/changeset/189202
             JavaExceptionType type = (JavaRangeException == m_type2
                 && (
-                       m_ec == RangeException::BAD_BOUNDARYPOINTS_ERR
-                    || m_ec == RangeException::INVALID_NODE_TYPE_ERR
+                       m_ec == INVALID_STATE_ERR
+                    || m_ec == INVALID_NODE_TYPE_ERR
                 )
             )
             ? JavaRangeException
@@ -130,12 +132,7 @@ public:
     //     m_returnValue = WTF::move(returnValue);
     // }
 
-    JavaReturn(JNIEnv* env, Ref<T> returnValue)
-    : m_env(env)
-    , m_returnValue(returnValue.ptr())
-    {}
-
-    JavaReturn(JNIEnv* env, PassRefPtr<T> returnValue)
+    JavaReturn(JNIEnv* env, RefPtr<T> returnValue)
     : m_env(env)
     , m_returnValue(returnValue)
     {}

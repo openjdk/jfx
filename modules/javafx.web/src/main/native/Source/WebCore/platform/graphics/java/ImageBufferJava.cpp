@@ -3,6 +3,10 @@
  */
 #include "config.h"
 
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "BufferImageJava.h"
 #include <wtf/text/CString.h>
 #include "GraphicsContext.h"
@@ -13,7 +17,7 @@
 
 #include "PlatformContextJava.h"
 #include "GraphicsContext.h"
-#include "IntRect.h" //XXX: recheck
+#include "IntRect.h"
 #include "ImageBufferData.h"
 
 
@@ -54,7 +58,7 @@ unsigned char *ImageBufferData::data() const
 
     //RenderQueue need to be processed before pixel buffer extraction.
     //For that purpose it has to be in actual state.
-    m_rq_holder.context()->platformContext()->rq().flushBuffer();
+    m_rq_holder.context().platformContext()->rq().flushBuffer();
 
     static jmethodID midGetBGRABytes = env->GetMethodID(
         PG_GetImageClass(env),
@@ -140,9 +144,9 @@ size_t ImageBuffer::dataSize() const
 }
 */
 
-GraphicsContext* ImageBuffer::context() const
+GraphicsContext& ImageBuffer::context() const
 {
-    return m_data.m_context.get();
+    return *m_data.m_context.get();
 }
 
 RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBehavior scaleBehavior) const
@@ -348,40 +352,36 @@ void ImageBuffer::putByteArray(
     m_data.update();
 }
 
-void ImageBuffer::clip(GraphicsContext*, const FloatRect&) const
+void ImageBuffer::drawConsuming(std::unique_ptr<ImageBuffer> imageBuffer, GraphicsContext& destContext, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator op, BlendMode blendMode)
 {
-    notImplemented();
+    imageBuffer->draw(destContext, destRect, srcRect, op, blendMode);
 }
 
 void ImageBuffer::draw(
-    GraphicsContext* context,
-    ColorSpace styleColorSpace,
+    GraphicsContext& context,
     const FloatRect& destRect,
     const FloatRect& srcRect,
     CompositeOperator op,
-    BlendMode bm,
-    bool useLowQualityScale)
+    BlendMode bm)
 {
     RefPtr<Image> imageCopy = copyImage();
-    context->drawImage(
-        imageCopy.get(),
-        styleColorSpace,
+    context.drawImage(
+        *imageCopy,
         destRect,
         srcRect,
         ImagePaintingOptions(
             op,
             bm,
-            DoNotRespectImageOrientation,
-            useLowQualityScale)
+            DoNotRespectImageOrientation)
         );
 }
 
 void ImageBuffer::drawPattern(
-    GraphicsContext* context,
+    GraphicsContext& context,
     const FloatRect& srcRect,
     const AffineTransform& patternTransform,
     const FloatPoint& phase,
-    ColorSpace styleColorSpace,
+    const FloatSize& spacing,
     CompositeOperator op,
     const FloatRect& destRect,
     BlendMode bm) // todo tav new param
@@ -392,9 +392,15 @@ void ImageBuffer::drawPattern(
         srcRect,
         patternTransform,
         phase,
-        styleColorSpace,
+        spacing,
         op,
-        destRect);
+        destRect,
+        bm);
+}
+
+RefPtr<Image> ImageBuffer::sinkIntoImage(std::unique_ptr<ImageBuffer> imageBuffer, ScaleBehavior scaleBehavior)
+{
+    return imageBuffer->copyImage(DontCopyBackingStore, scaleBehavior);
 }
 
 String ImageBuffer::toDataURL(const String& mimeType, const double* quality, CoordinateSystem) const
@@ -402,7 +408,7 @@ String ImageBuffer::toDataURL(const String& mimeType, const double* quality, Coo
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         //RenderQueue need to be processed before pixel buffer extraction.
         //For that purpose it has to be in actual state.
-        context()->platformContext()->rq().flushBuffer();
+        context().platformContext()->rq().flushBuffer();
 
         JNIEnv* env = WebCore_GetJavaEnv();
 

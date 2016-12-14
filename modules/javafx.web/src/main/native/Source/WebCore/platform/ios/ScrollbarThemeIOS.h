@@ -59,8 +59,6 @@ protected:
 
     virtual int minimumThumbLength(Scrollbar&) override;
 
-    virtual bool shouldCenterOnThumb(Scrollbar&, const PlatformMouseEvent&) override;
-
 public:
     void preferencesChanged();
 };

@@ -23,6 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// @internal
+
 function toInteger(target)
 {
     "use strict";
@@ -49,9 +51,16 @@ function toLength(target)
     return length > 0 ? (length < maxSafeInteger ? length : maxSafeInteger) : 0;
 }
 
-function isObject(object)
+function isDictionary(object)
 {
     "use strict";
 
-    return (object !== null && typeof object === "object") || typeof object === "function";
+    return object === @undefined || object == null || typeof object === "object";
+}
+
+// FIXME: this needs to have it's name changed to "get [Symbol.species]".
+// see: https://bugs.webkit.org/show_bug.cgi?id=151363
+function speciesGetter()
+{
+    return this;
 }

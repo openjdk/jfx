@@ -32,11 +32,15 @@
 #include "PageOverlayController.h"
 #include "ScrollLatchingState.h"
 #include "Settings.h"
-#include "WheelEventDeltaTracker.h"
+#include "WheelEventDeltaFilter.h"
 #include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(MAC)
 #include "ServicesOverlayController.h"
+#endif /* PLATFORM(MAC) */
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/MainFrameIncludes.h>
 #endif
 
 namespace WebCore {
@@ -49,10 +53,13 @@ inline MainFrame::MainFrame(Page& page, PageConfiguration& configuration)
     , m_servicesOverlayController(std::make_unique<ServicesOverlayController>(*this))
 #endif
 #endif
-    , m_recentWheelEventDeltaTracker(std::make_unique<WheelEventDeltaTracker>())
+    , m_recentWheelEventDeltaFilter(WheelEventDeltaFilter::create())
     , m_pageOverlayController(std::make_unique<PageOverlayController>(*this))
     , m_diagnosticLoggingClient(configuration.diagnosticLoggingClient)
 {
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/MainFrameInitialization.cpp>
+#endif
 }
 
 MainFrame::~MainFrame()
@@ -123,6 +130,20 @@ void MainFrame::resetLatchingState()
 void MainFrame::popLatchingState()
 {
     m_latchingState.removeLast();
+}
+
+void MainFrame::removeLatchingStateForTarget(Element& targetNode)
+{
+    if (m_latchingState.isEmpty())
+        return;
+
+    m_latchingState.removeAllMatching([&targetNode] (ScrollLatchingState& state) {
+        auto* wheelElement = state.wheelEventElement();
+        if (!wheelElement)
+            return false;
+
+        return targetNode.isEqualNode(wheelElement);
+    });
 }
 #endif
 

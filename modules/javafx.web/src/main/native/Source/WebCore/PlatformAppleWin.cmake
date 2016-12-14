@@ -1,7 +1,12 @@
+add_definitions(-DQUARTZCORE_DLL -DDISABLE_COREIMAGE -DDISABLE_FRONTEND -DDISABLE_IOSURFACE -DDISABLE_RENDERSERVER
+    -DDISABLE_3D_TRANSFORMS -DWEBCORE_CONTEXT_MENUS -DPSAPI_VERSION=1)
+
 list(APPEND WebCore_INCLUDE_DIRECTORIES
-    "$ENV{WEBKIT_LIBRARIES}/include"
-    "$ENV{WEBKIT_LIBRARIES}/include/zlib"
+    "${WEBKIT_LIBRARIES_DIR}/include"
+    "${WEBKIT_LIBRARIES_DIR}/include/zlib"
     "${WEBCORE_DIR}/loader/archive/cf"
+    "${WEBCORE_DIR}/platform/graphics/avfoundation"
+    "${WEBCORE_DIR}/platform/graphics/avfoundation/cf"
     "${WEBCORE_DIR}/platform/graphics/ca"
     "${WEBCORE_DIR}/platform/graphics/ca/win"
     "${WEBCORE_DIR}/platform/graphics/cg"
@@ -13,7 +18,28 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
 list(APPEND WebCore_SOURCES
     editing/SmartReplaceCF.cpp
 
+    loader/cf/ResourceLoaderCFNet.cpp
+
+    page/CaptionUserPreferencesMediaAF.cpp
+
+    page/win/FrameCGWin.cpp
+
+    platform/cf/CFURLExtras.cpp
+    platform/cf/CoreMediaSoftLink.cpp
+    platform/cf/MediaAccessibilitySoftLink.cpp
     platform/cf/URLCF.cpp
+
+    platform/graphics/avfoundation/InbandMetadataTextTrackPrivateAVF.cpp
+    platform/graphics/avfoundation/InbandTextTrackPrivateAVF.cpp
+    platform/graphics/avfoundation/MediaPlayerPrivateAVFoundation.cpp
+    platform/graphics/avfoundation/MediaTimeAVFoundation.cpp
+    platform/graphics/avfoundation/WebMediaSessionManagerMac.cpp
+
+    platform/graphics/avfoundation/cf/CDMSessionAVFoundationCF.cpp
+    platform/graphics/avfoundation/cf/InbandTextTrackPrivateLegacyAVCF.cpp
+    platform/graphics/avfoundation/cf/InbandTextTrackPrivateAVCF.cpp
+    platform/graphics/avfoundation/cf/MediaPlayerPrivateAVFoundationCF.cpp
+    platform/graphics/avfoundation/cf/WebCoreAVCFResourceLoader.cpp
 
     platform/graphics/ca/GraphicsLayerCA.cpp
     platform/graphics/ca/LayerFlushScheduler.cpp
@@ -30,6 +56,7 @@ list(APPEND WebCore_SOURCES
     platform/graphics/ca/win/PlatformCAFiltersWin.cpp
     platform/graphics/ca/win/PlatformCALayerWin.cpp
     platform/graphics/ca/win/PlatformCALayerWinInternal.cpp
+    platform/graphics/ca/win/WebTiledBackingLayerWin.cpp
     platform/graphics/ca/win/WKCACFViewLayerTreeHost.cpp
 
     platform/graphics/cg/BitmapImageCG.cpp
@@ -55,6 +82,8 @@ list(APPEND WebCore_SOURCES
     platform/graphics/cg/SubimageCacheWithTimer.cpp
     platform/graphics/cg/TransformationMatrixCG.cpp
 
+    platform/graphics/opentype/OpenTypeCG.cpp
+
     platform/graphics/win/FontCGWin.cpp
     platform/graphics/win/FontCustomPlatformData.cpp
     platform/graphics/win/FontPlatformDataCGWin.cpp
@@ -71,12 +100,16 @@ list(APPEND WebCore_SOURCES
     platform/network/cf/FormDataStreamCFNet.cpp
     platform/network/cf/LoaderRunLoopCF.cpp
     platform/network/cf/NetworkStorageSessionCFNet.cpp
+    platform/network/cf/ProtectionSpaceCFNet.cpp
     platform/network/cf/ProxyServerCFNet.cpp
     platform/network/cf/ResourceErrorCF.cpp
     platform/network/cf/ResourceHandleCFNet.cpp
+    platform/network/cf/ResourceHandleCFURLConnectionDelegate.cpp
     platform/network/cf/ResourceRequestCFNet.cpp
     platform/network/cf/ResourceResponseCFNet.cpp
     platform/network/cf/SocketStreamHandleCFNet.cpp
+    platform/network/cf/SynchronousLoaderClientCFNet.cpp
+    platform/network/cf/SynchronousResourceHandleCFURLConnectionDelegate.cpp
 
     platform/win/DragImageCGWin.cpp
 )

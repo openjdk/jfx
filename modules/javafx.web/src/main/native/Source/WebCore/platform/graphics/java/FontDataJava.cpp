@@ -52,7 +52,9 @@ void Font::platformInit()
     static jmethodID getLineSpacing_mID = env->GetMethodID(PG_GetFontClass(env),
         "getLineSpacing", "()F");
     ASSERT(getLineSpacing_mID);
-    m_fontMetrics.setLineSpacing(env->CallFloatMethod(*jFont, getLineSpacing_mID));
+    // Match CoreGraphics metrics.
+    m_fontMetrics.setLineSpacing(lroundf(
+        env->CallFloatMethod(*jFont, getLineSpacing_mID)));
     CheckAndClearException(env);
 
     static jmethodID getLineGap_mID = env->GetMethodID(PG_GetFontClass(env),
@@ -92,13 +94,7 @@ void Font::platformDestroy()
     notImplemented();
 }
 
-// bool Font::containsCharacters(const UChar *characters, int length) const
-// {
-//     notImplemented();
-//     return true;
-// }
-
-PassRefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescription, float scaleFactor) const
+RefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {
     return Font::create(*m_platformData.derive(scaleFactor), isCustomFont(), false);
 }

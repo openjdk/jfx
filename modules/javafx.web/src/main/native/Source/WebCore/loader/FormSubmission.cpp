@@ -65,7 +65,7 @@ static void appendMailtoPostFormDataToURL(URL& url, const FormData& data, const 
 {
     String body = data.flattenToString();
 
-    if (equalIgnoringCase(encodingType, "text/plain")) {
+    if (equalLettersIgnoringASCIICase(encodingType, "text/plain")) {
         // Convention seems to be to decode, and s/&/\r\n/. Also, spaces are encoded as %20.
         body = decodeURLEscapeSequences(body.replaceWithLiteral('&', "\r\n").replace('+', ' ') + "\r\n");
     }
@@ -90,9 +90,9 @@ void FormSubmission::Attributes::parseAction(const String& action)
 
 String FormSubmission::Attributes::parseEncodingType(const String& type)
 {
-    if (equalIgnoringCase(type, "multipart/form-data"))
+    if (equalLettersIgnoringASCIICase(type, "multipart/form-data"))
         return "multipart/form-data";
-    if (equalIgnoringCase(type, "text/plain"))
+    if (equalLettersIgnoringASCIICase(type, "text/plain"))
         return "text/plain";
     return "application/x-www-form-urlencoded";
 }
@@ -105,7 +105,7 @@ void FormSubmission::Attributes::updateEncodingType(const String& type)
 
 FormSubmission::Method FormSubmission::Attributes::parseMethodType(const String& type)
 {
-    return equalIgnoringCase(type, "post") ? FormSubmission::PostMethod : FormSubmission::GetMethod;
+    return equalLettersIgnoringASCIICase(type, "post") ? FormSubmission::PostMethod : FormSubmission::GetMethod;
 }
 
 void FormSubmission::Attributes::updateMethodType(const String& type)
@@ -151,14 +151,14 @@ static TextEncoding encodingFromAcceptCharset(const String& acceptCharset, Docum
             return encoding;
     }
 
-    return document.inputEncoding();
+    return document.textEncoding();
 }
 
 Ref<FormSubmission> FormSubmission::create(HTMLFormElement* form, const Attributes& attributes, PassRefPtr<Event> event, LockHistory lockHistory, FormSubmissionTrigger trigger)
 {
     ASSERT(form);
 
-    HTMLFormControlElement* submitButton = 0;
+    HTMLFormControlElement* submitButton = nullptr;
     if (event && event->target()) {
         for (Node* node = event->target()->toNode(); node; node = node->parentNode()) {
             if (is<HTMLFormControlElement>(*node)) {
@@ -201,11 +201,10 @@ Ref<FormSubmission> FormSubmission::create(HTMLFormElement* form, const Attribut
     Vector<std::pair<String, String>> formValues;
 
     bool containsPasswordData = false;
-    for (unsigned i = 0; i < form->associatedElements().size(); ++i) {
-        FormAssociatedElement& control = *form->associatedElements()[i];
-        HTMLElement& element = control.asHTMLElement();
+    for (auto& control : form->associatedElements()) {
+        HTMLElement& element = control->asHTMLElement();
         if (!element.isDisabledFormControl())
-            control.appendFormData(*domFormData, isMultiPartForm);
+            control->appendFormData(*domFormData, isMultiPartForm);
         if (is<HTMLInputElement>(element)) {
             HTMLInputElement& input = downcast<HTMLInputElement>(element);
             if (input.isTextField()) {
@@ -259,7 +258,7 @@ void FormSubmission::populateFrameLoadRequest(FrameLoadRequest& frameRequest)
 
     if (m_method == FormSubmission::PostMethod) {
         frameRequest.resourceRequest().setHTTPMethod("POST");
-        frameRequest.resourceRequest().setHTTPBody(m_formData);
+        frameRequest.resourceRequest().setHTTPBody(m_formData.copyRef());
 
         // construct some user headers if necessary
         if (m_boundary.isEmpty())

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, 2013 Apple Inc. All rights reserved.
- * Copyright (C) 2010-2011 Google Inc. All rights reserved.
+ * Copyright (C) 2010, 2013, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,10 +43,6 @@
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
 
-namespace WTF {
-class Stopwatch;
-}
-
 namespace Inspector {
 
 class InjectedScript;
@@ -65,7 +61,7 @@ public:
 
     virtual ~InspectorDebuggerAgent();
 
-    virtual void didCreateFrontendAndBackend(FrontendChannel*, BackendDispatcher*) override;
+    virtual void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) override;
     virtual void willDestroyFrontendAndBackend(DisconnectReason) override;
 
     virtual void enable(ErrorString&) override;
@@ -89,6 +85,8 @@ public:
 
     bool isPaused();
 
+    void setSuppressAllPauses(bool);
+
     void handleConsoleAssert(const String& message);
 
     void schedulePauseOnNextStatement(DebuggerFrontendDispatcher::Reason breakReason, RefPtr<InspectorObject>&& data);
@@ -106,16 +104,14 @@ public:
     };
     void setListener(Listener* listener) { m_listener = listener; }
 
-    virtual ScriptDebugServer& scriptDebugServer() = 0;
-
 protected:
-    InspectorDebuggerAgent(InjectedScriptManager*);
+    InspectorDebuggerAgent(AgentContext&);
 
-    InjectedScriptManager* injectedScriptManager() const { return m_injectedScriptManager; }
+    InjectedScriptManager& injectedScriptManager() const { return m_injectedScriptManager; }
     virtual InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) = 0;
 
-    virtual void startListeningScriptDebugServer() = 0;
-    virtual void stopListeningScriptDebugServer(bool skipRecompile) = 0;
+    ScriptDebugServer& scriptDebugServer() { return m_scriptDebugServer; }
+
     virtual void muteConsole() = 0;
     virtual void unmuteConsole() = 0;
 
@@ -129,7 +125,7 @@ protected:
     void didClearGlobalObject();
 
 private:
-    Ref<Inspector::Protocol::Array<Inspector::Protocol::Debugger::CallFrame>> currentCallFrames(InjectedScript);
+    Ref<Inspector::Protocol::Array<Inspector::Protocol::Debugger::CallFrame>> currentCallFrames(const InjectedScript&);
 
     virtual void didParseSource(JSC::SourceID, const Script&) override final;
     virtual void failedToParseSource(const String& url, const String& data, int firstLine, int errorLine, const String& errorMessage) override final;
@@ -154,11 +150,12 @@ private:
     typedef HashMap<String, RefPtr<InspectorObject>> BreakpointIdentifierToBreakpointMap;
     typedef HashMap<JSC::BreakpointID, String> DebugServerBreakpointIDToBreakpointIdentifier;
 
-    InjectedScriptManager* m_injectedScriptManager;
+    InjectedScriptManager& m_injectedScriptManager;
     std::unique_ptr<DebuggerFrontendDispatcher> m_frontendDispatcher;
     RefPtr<DebuggerBackendDispatcher> m_backendDispatcher;
-    Listener* m_listener {nullptr};
-    JSC::ExecState* m_pausedScriptState {nullptr};
+    ScriptDebugServer& m_scriptDebugServer;
+    Listener* m_listener { nullptr };
+    JSC::ExecState* m_pausedScriptState { nullptr };
     Deprecated::ScriptValue m_currentCallStack;
     ScriptsMap m_scripts;
     BreakpointIdentifierToDebugServerBreakpointIDsMap m_breakpointIdentifierToDebugServerBreakpointIDs;
@@ -167,11 +164,10 @@ private:
     JSC::BreakpointID m_continueToLocationBreakpointID;
     DebuggerFrontendDispatcher::Reason m_breakReason;
     RefPtr<InspectorObject> m_breakAuxData;
-    bool m_enabled {false};
-    bool m_javaScriptPauseScheduled {false};
-    bool m_hasExceptionValue {false};
-    bool m_didPauseStopwatch {false};
-    RefPtr<WTF::Stopwatch> m_stopwatch;
+    bool m_enabled { false };
+    bool m_javaScriptPauseScheduled { false };
+    bool m_hasExceptionValue { false };
+    bool m_didPauseStopwatch { false };
 };
 
 } // namespace Inspector

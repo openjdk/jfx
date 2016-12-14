@@ -80,7 +80,7 @@ FilterEffectRenderer::~FilterEffectRenderer()
 
 GraphicsContext* FilterEffectRenderer::inputContext()
 {
-    return sourceImage() ? sourceImage()->context() : 0;
+    return sourceImage() ? &sourceImage()->context() : nullptr;
 }
 
 PassRefPtr<FilterEffect> FilterEffectRenderer::buildReferenceFilter(RenderElement* renderer, PassRefPtr<FilterEffect> previousEffect, ReferenceFilterOperation* filterOperation)
@@ -284,7 +284,7 @@ bool FilterEffectRenderer::build(RenderElement* renderer, const FilterOperations
             // Unlike SVG Filters and CSSFilterImages, filter functions on the filter
             // property applied here should not clip to their primitive subregions.
             effect->setClipsToBounds(consumer == FilterFunction);
-            effect->setOperatingColorSpace(ColorSpaceDeviceRGB);
+            effect->setOperatingColorSpace(ColorSpaceSRGB);
 
             if (filterOperation.type() != FilterOperation::REFERENCE) {
                 effect->inputEffects().append(previousEffect);
@@ -323,7 +323,7 @@ void FilterEffectRenderer::allocateBackingStoreIfNeeded()
     if (!m_graphicsBufferAttached) {
         IntSize logicalSize(m_sourceDrawingRegion.width(), m_sourceDrawingRegion.height());
         if (!sourceImage() || sourceImage()->logicalSize() != logicalSize)
-            setSourceImage(ImageBuffer::create(logicalSize, filterScale(), ColorSpaceDeviceRGB, renderingMode()));
+            setSourceImage(ImageBuffer::create(logicalSize, renderingMode(), filterScale()));
         m_graphicsBufferAttached = true;
     }
 }
@@ -339,7 +339,7 @@ void FilterEffectRenderer::apply()
 {
     RefPtr<FilterEffect> effect = lastEffect();
     effect->apply();
-    effect->transformResultColorSpace(ColorSpaceDeviceRGB);
+    effect->transformResultColorSpace(ColorSpaceSRGB);
 }
 
 LayoutRect FilterEffectRenderer::computeSourceImageRectForDirtyRect(const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect)
@@ -417,7 +417,7 @@ bool FilterEffectRendererHelper::beginFilterEffect()
     return true;
 }
 
-void FilterEffectRendererHelper::applyFilterEffect(GraphicsContext* destinationContext)
+void FilterEffectRendererHelper::applyFilterEffect(GraphicsContext& destinationContext)
 {
     ASSERT(m_haveFilterEffect && m_renderLayer->filterRenderer());
     FilterEffectRenderer* filter = m_renderLayer->filterRenderer();
@@ -429,8 +429,8 @@ void FilterEffectRendererHelper::applyFilterEffect(GraphicsContext* destinationC
     LayoutRect destRect = filter->outputRect();
     destRect.move(m_paintOffset.x(), m_paintOffset.y());
 
-    destinationContext->drawImageBuffer(filter->output(), m_renderLayer->renderer().style().colorSpace(),
-        snapRectToDevicePixels(destRect, m_renderLayer->renderer().document().deviceScaleFactor()));
+    if (ImageBuffer* outputBuffer = filter->output())
+        destinationContext.drawImageBuffer(*outputBuffer, snapRectToDevicePixels(destRect, m_renderLayer->renderer().document().deviceScaleFactor()));
 
     filter->clearIntermediateResults();
 }

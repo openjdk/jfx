@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "MediaDevices.h"
 #include "RealtimeMediaSource.h"
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
@@ -38,7 +39,7 @@ class MediaStreamCreationClient : public RefCounted<MediaStreamCreationClient> {
 public:
     virtual ~MediaStreamCreationClient() { }
 
-    virtual void constraintsValidated(const Vector<RefPtr<RealtimeMediaSource>>& videoTracks, const Vector<RefPtr<RealtimeMediaSource>>& audioTracks) = 0;
+    virtual void constraintsValidated(const Vector<RefPtr<RealtimeMediaSource>>& audioTracks, const Vector<RefPtr<RealtimeMediaSource>>& videoTracks) = 0;
     virtual void constraintsInvalid(const String& constraintName) = 0;
 
     virtual void didCreateStream(PassRefPtr<MediaStreamPrivate>) = 0;

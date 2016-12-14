@@ -3,15 +3,13 @@
  */
 #include "config.h"
 
-#include "CString.h"
 #include "FontPlatformData.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"
 
 #include <wtf/Assertions.h>
+#include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
-
-// #include <wtf/PassOwnPtr.h> // todo tav remove when building w/ pch //XXX:
 
 namespace WebCore {
 

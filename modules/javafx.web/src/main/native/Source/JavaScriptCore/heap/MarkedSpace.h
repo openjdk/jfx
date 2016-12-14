@@ -22,13 +22,10 @@
 #ifndef MarkedSpace_h
 #define MarkedSpace_h
 
-#include "MachineStackMarker.h"
 #include "MarkedAllocator.h"
 #include "MarkedBlock.h"
 #include "MarkedBlockSet.h"
 #include <array>
-#include <wtf/Bitmap.h>
-#include <wtf/DoublyLinkedList.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RetainPtr.h>
@@ -38,11 +35,7 @@ namespace JSC {
 
 class Heap;
 class HeapIterationScope;
-class JSCell;
-class LiveObjectIterator;
 class LLIntOffsetsExtractor;
-class WeakGCHandle;
-class SlotVisitor;
 
 struct ClearMarks : MarkedBlock::VoidFunctor {
     void operator()(MarkedBlock* block)
@@ -74,13 +67,14 @@ struct Size : MarkedBlock::CountFunctor {
 class MarkedSpace {
     WTF_MAKE_NONCOPYABLE(MarkedSpace);
 public:
-    // [ 32... 128 ]
+    // [ 16 ... 768 ]
     static const size_t preciseStep = MarkedBlock::atomSize;
-    static const size_t preciseCutoff = 128;
+    static const size_t preciseCutoff = 768;
     static const size_t preciseCount = preciseCutoff / preciseStep;
 
-    // [ 1024... blockSize ]
-    static const size_t impreciseStep = 2 * preciseCutoff;
+    // [ 1024 ... blockSize/2 ]
+    static const size_t impreciseStart = 1024;
+    static const size_t impreciseStep = 256;
     static const size_t impreciseCutoff = MarkedBlock::blockSize / 2;
     static const size_t impreciseCount = impreciseCutoff / impreciseStep;
 
@@ -94,7 +88,6 @@ public:
     ~MarkedSpace();
     void lastChanceToFinalize();
 
-    MarkedAllocator& firstAllocator();
     MarkedAllocator& allocatorFor(size_t);
     MarkedAllocator& destructorAllocatorFor(size_t);
     void* allocateWithDestructor(size_t);
@@ -111,7 +104,7 @@ public:
     MarkedBlockSet& blocks() { return m_blocks; }
 
     void willStartIterating();
-    bool isIterating() { return m_isIterating; }
+    bool isIterating() const { return m_isIterating; }
     void didFinishIterating();
 
     void stopAllocating();
@@ -143,10 +136,6 @@ public:
     size_t capacity();
 
     bool isPagedOut(double deadline);
-
-#if USE(CF)
-    template<typename T> void releaseSoon(RetainPtr<T>&&);
-#endif
 
     const Vector<MarkedBlock*>& blocksWithNewObjects() const { return m_blocksWithNewObjects; }
 
@@ -262,11 +251,7 @@ inline void MarkedSpace::didAddBlock(MarkedBlock* block)
 
 inline void MarkedSpace::didAllocateInBlock(MarkedBlock* block)
 {
-#if ENABLE(GGC)
     m_blocksWithNewObjects.append(block);
-#else
-    UNUSED_PARAM(block);
-#endif
 }
 
 inline size_t MarkedSpace::objectCount()

@@ -28,7 +28,7 @@
 
 #if ENABLE(JAVA_BRIDGE)
 
-#include "JavaRef.h"
+#include <wtf/java/JavaRef.h>
 #include "JavaType.h"
 
 #if OS(MAC_OS_X)

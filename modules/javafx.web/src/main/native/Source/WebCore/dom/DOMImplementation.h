@@ -26,6 +26,7 @@
 
 #include "Document.h"
 #include "MediaPlayer.h"
+#include "XMLDocument.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
@@ -53,18 +54,18 @@ public:
     // DOM methods & attributes for DOMImplementation
     static bool hasFeature(const String& feature, const String& version);
     RefPtr<DocumentType> createDocumentType(const String& qualifiedName, const String& publicId, const String& systemId, ExceptionCode&);
-    RefPtr<Document> createDocument(const String& namespaceURI, const String& qualifiedName, DocumentType*, ExceptionCode&);
+    RefPtr<XMLDocument> createDocument(const String& namespaceURI, const String& qualifiedName, DocumentType*, ExceptionCode&);
 
     DOMImplementation* getInterface(const String& feature);
 
     // From the DOMImplementationCSS interface
-    static RefPtr<CSSStyleSheet> createCSSStyleSheet(const String& title, const String& media, ExceptionCode&);
+    static Ref<CSSStyleSheet> createCSSStyleSheet(const String& title, const String& media, ExceptionCode&);
 
     // From the HTMLDOMImplementation interface
-    RefPtr<HTMLDocument> createHTMLDocument(const String& title);
+    Ref<HTMLDocument> createHTMLDocument(const String& title);
 
     // Other methods (not part of DOM)
-    static RefPtr<Document> createDocument(const String& MIMEType, Frame*, const URL&);
+    static Ref<Document> createDocument(const String& MIMEType, Frame*, const URL&);
 
     WEBCORE_EXPORT static bool isXMLMIMEType(const String& MIMEType);
     WEBCORE_EXPORT static bool isTextMIMEType(const String& MIMEType);

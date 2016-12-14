@@ -194,7 +194,6 @@ typedef struct {
     JSC::initializeThreading();
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
-    WebCoreObjCFinalizeOnMainThread(self);
     WKSendUserChangeNotifications();
 }
 
@@ -1379,15 +1378,6 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     [super dealloc];
 }
 
-- (void)finalize
-{
-    ASSERT(!_isStarted);
-
-    [self fini];
-
-    [super finalize];
-}
-
 - (void)drawRect:(NSRect)rect
 {
     if (_cachedSnapshot) {
@@ -2164,7 +2154,7 @@ static inline void getNPRect(const NSRect& nr, NPRect& npr)
     if (_shouldFireTimers)
         timer->start(_isCompletelyObscured);
 
-    *slot = WTF::move(timer);
+    *slot = WTFMove(timer);
 
     return timerID;
 }

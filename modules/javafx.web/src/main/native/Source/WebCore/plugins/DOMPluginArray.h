@@ -24,7 +24,6 @@
 #include "DOMPlugin.h"
 #include "DOMWindowProperty.h"
 #include "ScriptWrappable.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -38,9 +37,9 @@ public:
     ~DOMPluginArray();
 
     unsigned length() const;
-    PassRefPtr<DOMPlugin> item(unsigned index);
-    bool canGetItemsForName(const AtomicString& propertyName);
-    PassRefPtr<DOMPlugin> namedItem(const AtomicString& propertyName);
+    RefPtr<DOMPlugin> item(unsigned index);
+    RefPtr<DOMPlugin> namedItem(const AtomicString& propertyName);
+    Vector<AtomicString> supportedPropertyNames();
 
     void refresh(bool reload);
 

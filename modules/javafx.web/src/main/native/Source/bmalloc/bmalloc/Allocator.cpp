@@ -42,7 +42,7 @@ Allocator::Allocator(Heap* heap, Deallocator& deallocator)
     : m_isBmallocEnabled(heap->environment().isBmallocEnabled())
     , m_deallocator(deallocator)
 {
-    for (unsigned short size = alignment; size <= mediumMax; size += alignment)
+    for (unsigned short size = alignment; size <= smallMax; size += alignment)
         m_bumpAllocators[sizeClass(size)].init(size);
 }
 
@@ -87,16 +87,6 @@ void* Allocator::allocate(size_t alignment, size_t size)
         }
     }
 
-    if (size <= mediumMax && alignment <= mediumLineSize) {
-        size = std::max(size, smallMax + Sizes::alignment);
-        size_t alignmentMask = alignment - 1;
-        while (void* p = allocate(size)) {
-            if (!test(p, alignmentMask))
-                return p;
-            m_deallocator.deallocate(p);
-        }
-    }
-
     if (size <= largeMax && alignment <= largeMax) {
         size = std::max(largeMin, roundUpToMultipleOf<largeAlignment>(size));
         alignment = roundUpToMultipleOf<largeAlignment>(alignment);
@@ -130,17 +120,12 @@ void* Allocator::reallocate(void* object, size_t newSize)
         oldSize = objectSize(page->sizeClass());
         break;
     }
-    case Medium: {
-        MediumPage* page = MediumPage::get(MediumLine::get(object));
-        oldSize = objectSize(page->sizeClass());
-        break;
-    }
     case Large: {
         std::unique_lock<StaticMutex> lock(PerProcess<Heap>::mutex());
         LargeObject largeObject(object);
         oldSize = largeObject.size();
 
-        if (newSize < oldSize && newSize > mediumMax) {
+        if (newSize < oldSize && newSize > smallMax) {
             newSize = roundUpToMultipleOf<largeAlignment>(newSize);
             if (oldSize - newSize >= largeMin) {
                 std::pair<LargeObject, LargeObject> split = largeObject.split(newSize);
@@ -162,6 +147,11 @@ void* Allocator::reallocate(void* object, size_t newSize)
         Range& range = PerProcess<Heap>::getFastCase()->findXLarge(lock, object);
         oldSize = range.size();
 
+        newSize = roundUpToMultipleOf<xLargeAlignment>(newSize);
+
+        if (newSize == oldSize)
+            return object;
+
         if (newSize < oldSize && newSize > largeMax) {
             newSize = roundUpToMultipleOf<xLargeAlignment>(newSize);
             if (oldSize - newSize >= xLargeAlignment) {
@@ -172,6 +162,17 @@ void* Allocator::reallocate(void* object, size_t newSize)
                 range = Range(object, newSize);
             }
             return object;
+        }
+
+        if (newSize > oldSize) {
+            lock.unlock();
+            bool wasExtended = tryVMExtend(object, oldSize, newSize);
+            lock.lock();
+
+            if (wasExtended) {
+                range = Range(object, newSize);
+                return object;
+            }
         }
         break;
     }
@@ -186,7 +187,7 @@ void* Allocator::reallocate(void* object, size_t newSize)
 
 void Allocator::scavenge()
 {
-    for (unsigned short i = alignment; i <= mediumMax; i += alignment) {
+    for (unsigned short i = alignment; i <= smallMax; i += alignment) {
         BumpAllocator& allocator = m_bumpAllocators[sizeClass(i)];
         BumpRangeCache& bumpRangeCache = m_bumpRangeCaches[sizeClass(i)];
 
@@ -203,25 +204,20 @@ void Allocator::scavenge()
     }
 }
 
-NO_INLINE BumpRange Allocator::allocateBumpRangeSlowCase(size_t sizeClass)
+NO_INLINE void Allocator::refillAllocatorSlowCase(BumpAllocator& allocator, size_t sizeClass)
 {
     BumpRangeCache& bumpRangeCache = m_bumpRangeCaches[sizeClass];
 
     std::lock_guard<StaticMutex> lock(PerProcess<Heap>::mutex());
-    if (sizeClass <= bmalloc::sizeClass(smallMax))
-        PerProcess<Heap>::getFastCase()->refillSmallBumpRangeCache(lock, sizeClass, bumpRangeCache);
-    else
-        PerProcess<Heap>::getFastCase()->refillMediumBumpRangeCache(lock, sizeClass, bumpRangeCache);
-
-    return bumpRangeCache.pop();
+    PerProcess<Heap>::getFastCase()->allocateSmallBumpRanges(lock, sizeClass, allocator, bumpRangeCache);
 }
 
-INLINE BumpRange Allocator::allocateBumpRange(size_t sizeClass)
+INLINE void Allocator::refillAllocator(BumpAllocator& allocator, size_t sizeClass)
 {
     BumpRangeCache& bumpRangeCache = m_bumpRangeCaches[sizeClass];
     if (!bumpRangeCache.size())
-        return allocateBumpRangeSlowCase(sizeClass);
-    return bumpRangeCache.pop();
+        return refillAllocatorSlowCase(allocator, sizeClass);
+    return allocator.refill(bumpRangeCache.pop());
 }
 
 NO_INLINE void* Allocator::allocateLarge(size_t size)
@@ -243,10 +239,10 @@ void* Allocator::allocateSlowCase(size_t size)
     if (!m_isBmallocEnabled)
         return malloc(size);
 
-    if (size <= mediumMax) {
+    if (size <= smallMax) {
         size_t sizeClass = bmalloc::sizeClass(size);
         BumpAllocator& allocator = m_bumpAllocators[sizeClass];
-        allocator.refill(allocateBumpRange(sizeClass));
+        refillAllocator(allocator, sizeClass);
         return allocator.allocate();
     }
 

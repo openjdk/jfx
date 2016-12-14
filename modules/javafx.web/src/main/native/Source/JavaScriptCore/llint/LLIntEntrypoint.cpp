@@ -28,6 +28,7 @@
 #include "CodeBlock.h"
 #include "HeapInlines.h"
 #include "JITCode.h"
+#include "JSCellInlines.h"
 #include "JSObject.h"
 #include "LLIntThunks.h"
 #include "LowLevelInterpreter.h"
@@ -96,11 +97,29 @@ static void setProgramEntrypoint(VM& vm, CodeBlock* codeBlock)
         adoptRef(new DirectJITCode(MacroAssemblerCodeRef::createLLIntCodeRef(llint_program_prologue), MacroAssemblerCodePtr(), JITCode::InterpreterThunk)));
 }
 
+static void setModuleProgramEntrypoint(VM& vm, CodeBlock* codeBlock)
+{
+#if ENABLE(JIT)
+    if (vm.canUseJIT()) {
+        codeBlock->setJITCode(
+            adoptRef(new DirectJITCode(vm.getCTIStub(moduleProgramEntryThunkGenerator), MacroAssemblerCodePtr(), JITCode::InterpreterThunk)));
+        return;
+    }
+#endif // ENABLE(JIT)
+
+    UNUSED_PARAM(vm);
+    codeBlock->setJITCode(
+        adoptRef(new DirectJITCode(MacroAssemblerCodeRef::createLLIntCodeRef(llint_module_program_prologue), MacroAssemblerCodePtr(), JITCode::InterpreterThunk)));
+}
+
 void setEntrypoint(VM& vm, CodeBlock* codeBlock)
 {
     switch (codeBlock->codeType()) {
     case GlobalCode:
         setProgramEntrypoint(vm, codeBlock);
+        return;
+    case ModuleCode:
+        setModuleProgramEntrypoint(vm, codeBlock);
         return;
     case EvalCode:
         setEvalEntrypoint(vm, codeBlock);
@@ -115,9 +134,9 @@ void setEntrypoint(VM& vm, CodeBlock* codeBlock)
 
 unsigned frameRegisterCountFor(CodeBlock* codeBlock)
 {
-    ASSERT(static_cast<unsigned>(codeBlock->m_numCalleeRegisters) == WTF::roundUpToMultipleOf(stackAlignmentRegisters(), static_cast<unsigned>(codeBlock->m_numCalleeRegisters)));
+    ASSERT(static_cast<unsigned>(codeBlock->m_numCalleeLocals) == WTF::roundUpToMultipleOf(stackAlignmentRegisters(), static_cast<unsigned>(codeBlock->m_numCalleeLocals)));
 
-    return roundLocalRegisterCountForFramePointerOffset(codeBlock->m_numCalleeRegisters + maxFrameExtentForSlowPathCallInRegisters);
+    return roundLocalRegisterCountForFramePointerOffset(codeBlock->m_numCalleeLocals + maxFrameExtentForSlowPathCallInRegisters);
 }
 
 } } // namespace JSC::LLInt

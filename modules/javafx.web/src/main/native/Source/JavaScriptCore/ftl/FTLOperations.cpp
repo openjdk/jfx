@@ -30,7 +30,11 @@
 
 #include "ClonedArguments.h"
 #include "DirectArguments.h"
+#include "FTLJITCode.h"
+#include "FTLLazySlowPath.h"
+#include "InlineCallFrame.h"
 #include "JSCInlines.h"
+#include "JSGeneratorFunction.h"
 #include "JSLexicalEnvironment.h"
 
 namespace JSC { namespace FTL {
@@ -45,7 +49,9 @@ extern "C" JSCell* JIT_OPERATION operationNewObjectWithButterfly(ExecState* exec
     Butterfly* butterfly = Butterfly::create(
         vm, nullptr, 0, structure->outOfLineCapacity(), false, IndexingHeader(), 0);
 
-    return JSFinalObject::create(exec, structure, butterfly);
+    JSObject* result = JSFinalObject::create(exec, structure, butterfly);
+    result->butterfly(); // Ensure that the butterfly is in to-space.
+    return result;
 }
 
 extern "C" void JIT_OPERATION operationPopulateObjectInOSR(
@@ -87,6 +93,7 @@ extern "C" void JIT_OPERATION operationPopulateObjectInOSR(
     }
 
     case PhantomNewFunction:
+    case PhantomNewGeneratorFunction:
     case PhantomDirectArguments:
     case PhantomClonedArguments:
         // Those are completely handled by operationMaterializeObjectInOSR
@@ -155,7 +162,8 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(
         return result;
     }
 
-    case PhantomNewFunction: {
+    case PhantomNewFunction:
+    case PhantomNewGeneratorFunction: {
         // Figure out what the executable and activation are
         FunctionExecutable* executable = nullptr;
         JSScope* activation = nullptr;
@@ -168,9 +176,10 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(
         }
         RELEASE_ASSERT(executable && activation);
 
-        JSFunction* result = JSFunction::createWithInvalidatedReallocationWatchpoint(vm, executable, activation);
-
-        return result;
+        if (materialization->type() == PhantomNewFunction)
+            return JSFunction::createWithInvalidatedReallocationWatchpoint(vm, executable, activation);
+        ASSERT(materialization->type() == PhantomNewGeneratorFunction);
+        return JSGeneratorFunction::createWithInvalidatedReallocationWatchpoint(vm, executable, activation);
     }
 
     case PhantomCreateActivation: {
@@ -345,6 +354,22 @@ extern "C" JSCell* JIT_OPERATION operationMaterializeObjectInOSR(
         RELEASE_ASSERT_NOT_REACHED();
         return nullptr;
     }
+}
+
+extern "C" void* JIT_OPERATION compileFTLLazySlowPath(ExecState* exec, unsigned index)
+{
+    VM& vm = exec->vm();
+
+    // We cannot GC. We've got pointers in evil places.
+    DeferGCForAWhile deferGC(vm.heap);
+
+    CodeBlock* codeBlock = exec->codeBlock();
+    JITCode* jitCode = codeBlock->jitCode()->ftl();
+
+    LazySlowPath& lazySlowPath = *jitCode->lazySlowPaths[index];
+    lazySlowPath.generate(codeBlock);
+
+    return lazySlowPath.stub().code().executableAddress();
 }
 
 } } // namespace JSC::FTL

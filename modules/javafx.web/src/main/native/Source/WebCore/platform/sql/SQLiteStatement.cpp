@@ -59,9 +59,7 @@ int SQLiteStatement::prepare()
 {
     ASSERT(!m_isPrepared);
 
-    MutexLocker databaseLock(m_database.databaseMutex());
-    if (m_database.isInterrupted())
-        return SQLITE_INTERRUPT;
+    LockHolder databaseLock(m_database.databaseMutex());
 
     CString query = m_query.stripWhiteSpace().utf8();
 
@@ -88,9 +86,7 @@ int SQLiteStatement::prepare()
 
 int SQLiteStatement::step()
 {
-    MutexLocker databaseLock(m_database.databaseMutex());
-    if (m_database.isInterrupted())
-        return SQLITE_INTERRUPT;
+    LockHolder databaseLock(m_database.databaseMutex());
 
     if (!m_statement)
         return SQLITE_OK;
@@ -292,8 +288,7 @@ bool SQLiteStatement::isColumnDeclaredAsBlob(int col)
         if (prepare() != SQLITE_OK)
             return false;
     }
-
-    return equalIgnoringCase(String("BLOB"), String(reinterpret_cast<const UChar*>(sqlite3_column_decltype16(m_statement, col))));
+    return equalLettersIgnoringASCIICase(StringView(reinterpret_cast<const UChar*>(sqlite3_column_decltype16(m_statement, col))), "blob");
 }
 
 String SQLiteStatement::getColumnName(int col)

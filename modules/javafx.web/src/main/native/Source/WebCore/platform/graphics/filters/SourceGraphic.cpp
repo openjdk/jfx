@@ -23,6 +23,7 @@
 #include "Filter.h"
 #include "GraphicsContext.h"
 #include "TextStream.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
@@ -35,7 +36,7 @@ Ref<SourceGraphic> SourceGraphic::create(Filter& filter)
 
 const AtomicString& SourceGraphic::effectName()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, s_effectName, ("SourceGraphic", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> s_effectName("SourceGraphic", AtomicString::ConstructFromLiteral);
     return s_effectName;
 }
 
@@ -49,12 +50,14 @@ void SourceGraphic::determineAbsolutePaintRect()
 
 void SourceGraphic::platformApplySoftware()
 {
-    ImageBuffer* resultImage = createImageBufferResult();
     Filter& filter = this->filter();
-    if (!resultImage || !filter.sourceImage())
+
+    ImageBuffer* resultImage = createImageBufferResult();
+    ImageBuffer* sourceImage = filter.sourceImage();
+    if (!resultImage || !sourceImage)
         return;
 
-    resultImage->context()->drawImageBuffer(filter.sourceImage(), ColorSpaceDeviceRGB, IntPoint());
+    resultImage->context().drawImageBuffer(*sourceImage, IntPoint());
 }
 
 void SourceGraphic::dump()

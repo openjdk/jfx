@@ -29,23 +29,17 @@
 #ifndef NetworkResourcesData_h
 #define NetworkResourcesData_h
 
-#include "HTTPHeaderMap.h"
 #include "InspectorPageAgent.h"
-#include "URL.h"
 #include "TextResourceDecoder.h"
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
-#include <wtf/RefCounted.h>
-#include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class CachedResource;
-class FormData;
 class ResourceResponse;
 class SharedBuffer;
-class TextResourceDecoder;
 
 class NetworkResourcesData {
     WTF_MAKE_FAST_ALLOCATED;
@@ -85,10 +79,10 @@ public:
         void setTextEncodingName(const String& textEncodingName) { m_textEncodingName = textEncodingName; }
 
         RefPtr<TextResourceDecoder> decoder() const { return m_decoder.copyRef(); }
-        void setDecoder(RefPtr<TextResourceDecoder>&& decoder) { m_decoder = WTF::move(decoder); }
+        void setDecoder(RefPtr<TextResourceDecoder>&& decoder) { m_decoder = WTFMove(decoder); }
 
         RefPtr<SharedBuffer> buffer() const { return m_buffer.copyRef(); }
-        void setBuffer(RefPtr<SharedBuffer>&& buffer) { m_buffer = WTF::move(buffer); }
+        void setBuffer(RefPtr<SharedBuffer>&& buffer) { m_buffer = WTFMove(buffer); }
 
         CachedResource* cachedResource() const { return m_cachedResource; }
         void setCachedResource(CachedResource* cachedResource) { m_cachedResource = cachedResource; }
@@ -129,7 +123,7 @@ public:
     void maybeAddResourceData(const String& requestId, const char* data, size_t dataLength);
     void maybeDecodeDataToContent(const String& requestId);
     void addCachedResource(const String& requestId, CachedResource*);
-    void addResourceSharedBuffer(const String& requestId, PassRefPtr<SharedBuffer>, const String& textEncodingName);
+    void addResourceSharedBuffer(const String& requestId, RefPtr<SharedBuffer>&&, const String& textEncodingName);
     ResourceData const* data(const String& requestId);
     Vector<String> removeCachedResource(CachedResource*);
     void clear(const String& preservedLoaderId = String());

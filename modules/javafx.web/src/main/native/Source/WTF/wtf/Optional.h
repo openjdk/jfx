@@ -36,8 +36,17 @@
 
 namespace WTF {
 
-enum InPlaceTag { InPlace };
-enum NulloptTag { Nullopt };
+struct InPlaceTag { };
+
+struct NulloptTag { explicit constexpr NulloptTag(int) { } };
+
+#if ENABLE(CXX_11_FIX)
+const static InPlaceTag InPlace { };
+const static NulloptTag Nullopt { 0 };
+#else
+constexpr InPlaceTag InPlace { };
+constexpr NulloptTag Nullopt { 0 };
+#endif
 
 template<typename T>
 class Optional {
@@ -69,13 +78,13 @@ public:
         : m_isEngaged(other.m_isEngaged)
     {
         if (m_isEngaged)
-            new (NotNull, &m_value) T(WTF::move(*other.asPtr()));
+            new (NotNull, &m_value) T(WTFMove(*other.asPtr()));
     }
 
     Optional(T&& value)
         : m_isEngaged(true)
     {
-        new (NotNull, &m_value) T(WTF::move(value));
+        new (NotNull, &m_value) T(WTFMove(value));
     }
 
     template<typename... Args>
@@ -116,7 +125,7 @@ public:
 
         destroy();
         if (other.m_isEngaged) {
-            new (NotNull, &m_value) T(WTF::move(*other.asPtr()));
+            new (NotNull, &m_value) T(WTFMove(*other.asPtr()));
             m_isEngaged = true;
         }
         return *this;
@@ -132,6 +141,21 @@ public:
     }
 
     explicit operator bool() const { return m_isEngaged; }
+
+    const T* operator->() const
+    {
+        ASSERT(m_isEngaged);
+        return asPtr();
+    }
+
+    T* operator->()
+    {
+        ASSERT(m_isEngaged);
+        return asPtr();
+    }
+
+    const T& operator*() const { return value(); }
+    T& operator*() { return value(); }
 
     T& value()
     {
@@ -178,10 +202,18 @@ private:
     typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_value;
 };
 
+template<typename T>
+Optional<typename std::decay<T>::type>
+makeOptional(T&& value)
+{
+    return Optional<typename std::decay<T>::type>(std::forward<T>(value));
+}
+
 } // namespace WTF
 
 using WTF::InPlace;
 using WTF::Nullopt;
 using WTF::Optional;
+using WTF::makeOptional;
 
 #endif // Optional_h

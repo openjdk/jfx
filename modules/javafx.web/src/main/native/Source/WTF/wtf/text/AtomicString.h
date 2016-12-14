@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006, 2008, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2006, 2008, 2014-2016 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -80,13 +80,15 @@ public:
     // We have to declare the copy constructor and copy assignment operator as well, otherwise
     // they'll be implicitly deleted by adding the move constructor and move assignment operator.
     AtomicString(const AtomicString& other) : m_string(other.m_string) { }
-    AtomicString(AtomicString&& other) : m_string(WTF::move(other.m_string)) { }
+    AtomicString(AtomicString&& other) : m_string(WTFMove(other.m_string)) { }
     AtomicString& operator=(const AtomicString& other) { m_string = other.m_string; return *this; }
-    AtomicString& operator=(AtomicString&& other) { m_string = WTF::move(other.m_string); return *this; }
+    AtomicString& operator=(AtomicString&& other) { m_string = WTFMove(other.m_string); return *this; }
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     AtomicString(WTF::HashTableDeletedValueType) : m_string(WTF::HashTableDeletedValue) { }
     bool isHashTableDeletedValue() const { return m_string.isHashTableDeletedValue(); }
+
+    unsigned existingHash() const { return isNull() ? 0 : impl()->existingHash(); }
 
     operator const String&() const { return m_string; }
     const String& string() const { return m_string; };
@@ -152,8 +154,7 @@ public:
         { return m_string.endsWith<matchLength>(prefix, caseSensitive); }
 
     WTF_EXPORT_STRING_API AtomicString convertToASCIILowercase() const;
-    WTF_EXPORT_STRING_API AtomicString lower() const;
-    AtomicString upper() const { return AtomicString(impl()->upper()); }
+    WTF_EXPORT_STRING_API AtomicString convertToASCIIUppercase() const;
 
     int toInt(bool* ok = 0) const { return m_string.toInt(ok); }
     double toDouble(bool* ok = 0) const { return m_string.toDouble(ok); }
@@ -184,6 +185,9 @@ private:
     // The explicit constructors with AtomicString::ConstructFromLiteral must be used for literals.
     AtomicString(ASCIILiteral);
 
+    enum class CaseConvertType { Upper, Lower };
+    template<CaseConvertType> AtomicString convertASCIICase() const;
+
     WTF_EXPORT_STRING_API static AtomicString fromUTF8Internal(const char*, const char*);
 
     String m_string;
@@ -209,20 +213,12 @@ inline bool operator!=(const LChar* a, const AtomicString& b) { return !(b == a)
 inline bool operator!=(const String& a, const AtomicString& b) { return !equal(a.impl(), b.impl()); }
 inline bool operator!=(const Vector<UChar>& a, const AtomicString& b) { return !(a == b); }
 
-inline bool equalIgnoringCase(const AtomicString& a, const AtomicString& b) { return equalIgnoringCase(a.impl(), b.impl()); }
-inline bool equalIgnoringCase(const AtomicString& a, const LChar* b) { return equalIgnoringCase(a.impl(), b); }
-inline bool equalIgnoringCase(const AtomicString& a, const char* b) { return equalIgnoringCase(a.impl(), reinterpret_cast<const LChar*>(b)); }
-inline bool equalIgnoringCase(const AtomicString& a, const String& b) { return equalIgnoringCase(a.impl(), b.impl()); }
-inline bool equalIgnoringCase(const LChar* a, const AtomicString& b) { return equalIgnoringCase(a, b.impl()); }
-inline bool equalIgnoringCase(const char* a, const AtomicString& b) { return equalIgnoringCase(reinterpret_cast<const LChar*>(a), b.impl()); }
-inline bool equalIgnoringCase(const String& a, const AtomicString& b) { return equalIgnoringCase(a.impl(), b.impl()); }
+bool equalIgnoringASCIICase(const AtomicString&, const AtomicString&);
+bool equalIgnoringASCIICase(const AtomicString&, const String&);
+bool equalIgnoringASCIICase(const String&, const AtomicString&);
+bool equalIgnoringASCIICase(const AtomicString&, const char*);
 
-inline bool equalIgnoringASCIICase(const AtomicString& a, const AtomicString& b) { return equalIgnoringASCIICase(a.impl(), b.impl()); }
-inline bool equalIgnoringASCIICase(const AtomicString& a, const String& b) { return equalIgnoringASCIICase(a.impl(), b.impl()); }
-inline bool equalIgnoringASCIICase(const String& a, const AtomicString& b) { return equalIgnoringASCIICase(a.impl(), b.impl()); }
-
-template <unsigned charactersCount>
-inline bool equalIgnoringASCIICase(const AtomicString& a, const char (&b)[charactersCount]) { return equalIgnoringASCIICase<charactersCount>(a.impl(), b); }
+template<unsigned length> bool equalLettersIgnoringASCIICase(const AtomicString&, const char (&lowercaseLetters)[length]);
 
 inline AtomicString::AtomicString()
 {
@@ -292,7 +288,7 @@ inline AtomicString::AtomicString(CFStringRef s)
 
 #ifdef __OBJC__
 inline AtomicString::AtomicString(NSString* s)
-    : m_string(AtomicStringImpl::add((CFStringRef)s))
+    : m_string(AtomicStringImpl::add((__bridge CFStringRef)s))
 {
 }
 #endif
@@ -334,6 +330,31 @@ template<> struct DefaultHash<AtomicString> {
     typedef AtomicStringHash Hash;
 };
 
+template<unsigned length> inline bool equalLettersIgnoringASCIICase(const AtomicString& string, const char (&lowercaseLetters)[length])
+{
+    return equalLettersIgnoringASCIICase(string.string(), lowercaseLetters);
+}
+
+inline bool equalIgnoringASCIICase(const AtomicString& a, const AtomicString& b)
+{
+    return equalIgnoringASCIICase(a.string(), b.string());
+}
+
+inline bool equalIgnoringASCIICase(const AtomicString& a, const String& b)
+{
+    return equalIgnoringASCIICase(a.string(), b);
+}
+
+inline bool equalIgnoringASCIICase(const String& a, const AtomicString& b)
+{
+    return equalIgnoringASCIICase(a, b.string());
+}
+
+inline bool equalIgnoringASCIICase(const AtomicString& a, const char* b)
+{
+    return equalIgnoringASCIICase(a.string(), b);
+}
+
 } // namespace WTF
 
 #ifndef ATOMICSTRING_HIDE_GLOBALS
@@ -349,4 +370,5 @@ using WTF::xlinkAtom;
 #endif
 
 #include <wtf/text/StringConcatenate.h>
+
 #endif // AtomicString_h

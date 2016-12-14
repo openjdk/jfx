@@ -31,6 +31,8 @@
 #include "Logging.h"
 #include "SQLiteFileSystem.h"
 #include "SQLiteStatement.h"
+#include <mutex>
+#include <sqlite3.h>
 #include <thread>
 #include <wtf/Threading.h>
 #include <wtf/text/CString.h>
@@ -53,11 +55,26 @@ SQLiteDatabase::SQLiteDatabase()
     , m_transactionInProgress(false)
     , m_sharable(false)
     , m_openingThread(0)
-    , m_interrupted(false)
     , m_openError(SQLITE_ERROR)
     , m_openErrorMessage()
     , m_lastChangesCount(0)
 {
+    static std::once_flag flag;
+    std::call_once(flag, [] {
+        // It should be safe to call this outside of std::call_once, since it is documented to be
+        // completely threadsafe. But in the past it was not safe, and the SQLite developers still
+        // aren't confident that it really is, and we still support ancient versions of SQLite. So
+        // std::call_once is used to stay on the safe side. See bug #143245.
+        int ret = sqlite3_initialize();
+        if (ret != SQLITE_OK) {
+#if PLATFORM(MAC) || SQLITE_VERSION_NUMBER >= 3007015
+            WTFLogAlways("Failed to initialize SQLite: %s", sqlite3_errstr(ret));
+#else
+            WTFLogAlways("Failed to initialize SQLite");
+#endif
+            CRASH();
+        }
+    });
 }
 
 SQLiteDatabase::~SQLiteDatabase()
@@ -101,12 +118,12 @@ bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
     SQLiteStatement walStatement(*this, ASCIILiteral("PRAGMA journal_mode=WAL;"));
     int result = walStatement.step();
     if (result != SQLITE_OK && result != SQLITE_ROW)
-        LOG_ERROR("SQLite database failed to set journal_mode to WAL, error: %s",  lastErrorMsg());
+        LOG_ERROR("SQLite database failed to set journal_mode to WAL, error: %s", lastErrorMsg());
 
 #ifndef NDEBUG
     if (result == SQLITE_ROW) {
         String mode = walStatement.getColumnText(0);
-        if (!equalIgnoringCase(mode, "wal"))
+        if (!equalLettersIgnoringASCIICase(mode, "wal"))
             LOG_ERROR("journal_mode of database should be 'wal', but is '%s'", mode.utf8().data());
     }
 #endif
@@ -121,7 +138,7 @@ void SQLiteDatabase::close()
         // ASSERT(currentThread() == m_openingThread);
         sqlite3* db = m_db;
         {
-            MutexLocker locker(m_databaseClosingMutex);
+            LockHolder locker(m_databaseClosingMutex);
             m_db = 0;
         }
         sqlite3_close(db);
@@ -148,26 +165,6 @@ void SQLiteDatabase::overrideUnauthorizedFunctions()
         sqlite3_create_function(m_db, functionParameter.first, functionParameter.second, SQLITE_UTF8, const_cast<char*>(functionParameter.first), unauthorizedSQLFunction, 0, 0);
 }
 
-void SQLiteDatabase::interrupt()
-{
-    m_interrupted = true;
-    while (!m_lockingMutex.tryLock()) {
-        MutexLocker locker(m_databaseClosingMutex);
-        if (!m_db)
-            return;
-        sqlite3_interrupt(m_db);
-        std::this_thread::yield();
-    }
-
-    m_lockingMutex.unlock();
-}
-
-bool SQLiteDatabase::isInterrupted()
-{
-    ASSERT(!m_lockingMutex.tryLock());
-    return m_interrupted;
-}
-
 void SQLiteDatabase::setFullsync(bool fsync)
 {
     if (fsync)
@@ -181,7 +178,7 @@ int64_t SQLiteDatabase::maximumSize()
     int64_t maxPageCount = 0;
 
     {
-        MutexLocker locker(m_authorizerLock);
+        LockHolder locker(m_authorizerLock);
         enableAuthorizer(false);
         SQLiteStatement statement(*this, ASCIILiteral("PRAGMA max_page_count"));
         maxPageCount = statement.getColumnInt64(0);
@@ -201,7 +198,7 @@ void SQLiteDatabase::setMaximumSize(int64_t size)
     ASSERT(currentPageSize || !m_db);
     int64_t newMaxPageCount = currentPageSize ? size / currentPageSize : 0;
 
-    MutexLocker locker(m_authorizerLock);
+    LockHolder locker(m_authorizerLock);
     enableAuthorizer(false);
 
     SQLiteStatement statement(*this, "PRAGMA max_page_count = " + String::number(newMaxPageCount));
@@ -218,7 +215,7 @@ int SQLiteDatabase::pageSize()
     // Since the page size of a database is locked in at creation and therefore cannot be dynamic,
     // we can cache the value for future use
     if (m_pageSize == -1) {
-        MutexLocker locker(m_authorizerLock);
+        LockHolder locker(m_authorizerLock);
         enableAuthorizer(false);
 
         SQLiteStatement statement(*this, ASCIILiteral("PRAGMA page_size"));
@@ -235,7 +232,7 @@ int64_t SQLiteDatabase::freeSpaceSize()
     int64_t freelistCount = 0;
 
     {
-        MutexLocker locker(m_authorizerLock);
+        LockHolder locker(m_authorizerLock);
         enableAuthorizer(false);
         // Note: freelist_count was added in SQLite 3.4.1.
         SQLiteStatement statement(*this, ASCIILiteral("PRAGMA freelist_count"));
@@ -251,7 +248,7 @@ int64_t SQLiteDatabase::totalSize()
     int64_t pageCount = 0;
 
     {
-        MutexLocker locker(m_authorizerLock);
+        LockHolder locker(m_authorizerLock);
         enableAuthorizer(false);
         SQLiteStatement statement(*this, ASCIILiteral("PRAGMA page_count"));
         pageCount = statement.getColumnInt64(0);
@@ -330,7 +327,7 @@ int SQLiteDatabase::runVacuumCommand()
 
 int SQLiteDatabase::runIncrementalVacuumCommand()
 {
-    MutexLocker locker(m_authorizerLock);
+    LockHolder locker(m_authorizerLock);
     enableAuthorizer(false);
 
     if (!executeCommand(ASCIILiteral("PRAGMA incremental_vacuum")))
@@ -378,12 +375,8 @@ const char* SQLiteDatabase::lastErrorMsg()
 #ifndef NDEBUG
 void SQLiteDatabase::disableThreadingChecks()
 {
-    // This doesn't guarantee that SQList was compiled with -DTHREADSAFE, or that you haven't turned off the mutexes.
-#if SQLITE_VERSION_NUMBER >= 3003001
+    // Note that SQLite could be compiled with -DTHREADSAFE, or you may have turned off the mutexes.
     m_sharable = true;
-#else
-    ASSERT(0); // Your SQLite doesn't support sharing handles across threads.
-#endif
 }
 #endif
 
@@ -447,7 +440,6 @@ int SQLiteDatabase::authorizerFunction(void* userData, int actionCode, const cha
             return auth->allowAlterTable(parameter1, parameter2);
         case SQLITE_REINDEX:
             return auth->allowReindex(parameter1);
-#if SQLITE_VERSION_NUMBER >= 3003013
         case SQLITE_ANALYZE:
             return auth->allowAnalyze(parameter1);
         case SQLITE_CREATE_VTABLE:
@@ -456,7 +448,6 @@ int SQLiteDatabase::authorizerFunction(void* userData, int actionCode, const cha
             return auth->dropVTable(parameter1, parameter2);
         case SQLITE_FUNCTION:
             return auth->allowFunction(parameter2);
-#endif
         default:
             ASSERT_NOT_REACHED();
             return SQLAuthDeny;
@@ -471,7 +462,7 @@ void SQLiteDatabase::setAuthorizer(PassRefPtr<DatabaseAuthorizer> auth)
         return;
     }
 
-    MutexLocker locker(m_authorizerLock);
+    LockHolder locker(m_authorizerLock);
 
     m_authorizer = auth;
 

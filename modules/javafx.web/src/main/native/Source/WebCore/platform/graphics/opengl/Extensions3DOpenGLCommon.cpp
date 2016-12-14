@@ -58,7 +58,6 @@ Extensions3DOpenGLCommon::Extensions3DOpenGLCommon(GraphicsContext3D* context)
     , m_isAMD(false)
     , m_isIntel(false)
     , m_isImagination(false)
-    , m_maySupportMultisampling(true)
     , m_requiresBuiltInFunctionEmulation(false)
     , m_requiresRestrictedMaximumTextureSize(false)
 {
@@ -66,7 +65,7 @@ Extensions3DOpenGLCommon::Extensions3DOpenGLCommon(GraphicsContext3D* context)
     m_renderer = String(reinterpret_cast<const char*>(::glGetString(GL_RENDERER)));
 
     Vector<String> vendorComponents;
-    m_vendor.lower().split(' ', vendorComponents);
+    m_vendor.convertToASCIILowercase().split(' ', vendorComponents);
     if (vendorComponents.contains("nvidia"))
         m_isNVIDIA = true;
     if (vendorComponents.contains("ati") || vendorComponents.contains("amd"))
@@ -80,17 +79,8 @@ Extensions3DOpenGLCommon::Extensions3DOpenGLCommon(GraphicsContext3D* context)
     if (m_isAMD || m_isIntel)
         m_requiresBuiltInFunctionEmulation = true;
 
-    // Currently in Mac we only allow multisampling if the vendor is NVIDIA,
-    // or if the vendor is AMD/ATI and the system is 10.7.2 and above.
-
-    bool systemSupportsMultisampling = true;
-
-    if (m_isAMD && !systemSupportsMultisampling)
-        m_maySupportMultisampling = false;
-
     // Intel HD 3000 devices have problems with large textures. <rdar://problem/16649140>
-    if (m_isIntel)
-        m_requiresRestrictedMaximumTextureSize = m_renderer.startsWith("Intel HD Graphics 3000");
+    m_requiresRestrictedMaximumTextureSize = m_renderer.startsWith("Intel HD Graphics 3000");
 #endif
 }
 
@@ -102,6 +92,12 @@ bool Extensions3DOpenGLCommon::supports(const String& name)
 {
     if (!m_initializedAvailableExtensions)
         initializeAvailableExtensions();
+
+    // We explicitly do not support this extension until
+    // we fix the following bug:
+    // https://bugs.webkit.org/show_bug.cgi?id=149734
+    if (name == "GL_ANGLE_translated_shader_source")
+        return false;
 
     return supportsExtension(name);
 }

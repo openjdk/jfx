@@ -35,6 +35,7 @@
 #import <WebKit/WKUIDelegate.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
 #import <WebKit/WKWebViewPrivate.h>
+#import <WebKit/WKWebsiteDataStorePrivate.h>
 #import <WebKit/WebNSURLExtras.h>
 
 static void* keyValueObservingContext = &keyValueObservingContext;
@@ -341,13 +342,17 @@ static CGFloat viewScaleForMenuItemTag(NSInteger tag)
     preferences._compositingBordersVisible = settings.layerBordersVisible;
     preferences._compositingRepaintCountersVisible = settings.layerBordersVisible;
     preferences._simpleLineLayoutDebugBordersEnabled = settings.simpleLineLayoutDebugBordersEnabled;
+    preferences._acceleratedDrawingEnabled = settings.acceleratedDrawingEnabled;
+    preferences._resourceUsageOverlayVisible = settings.resourceUsageOverlayVisible;
+    preferences._displayListDrawingEnabled = settings.displayListDrawingEnabled;
 
     BOOL useTransparentWindows = settings.useTransparentWindows;
-    if (useTransparentWindows != _webView._drawsTransparentBackground) {
+    if (useTransparentWindows != !_webView._drawsBackground) {
         [self.window setOpaque:!useTransparentWindows];
+        [self.window setBackgroundColor:[NSColor clearColor]];
         [self.window setHasShadow:!useTransparentWindows];
 
-        _webView._drawsTransparentBackground = useTransparentWindows;
+        _webView._drawsBackground = !useTransparentWindows;
 
         [self.window display];
     }
@@ -475,7 +480,7 @@ static NSSet *dataTypes()
 
 - (IBAction)fetchWebsiteData:(id)sender
 {
-    [_configuration.websiteDataStore fetchDataRecordsOfTypes:dataTypes() completionHandler:^(NSArray *websiteDataRecords) {
+    [_configuration.websiteDataStore _fetchDataRecordsOfTypes:dataTypes() withOptions:_WKWebsiteDataStoreFetchOptionComputeSizes completionHandler:^(NSArray *websiteDataRecords) {
         NSLog(@"did fetch website data %@.", websiteDataRecords);
     }];
 }
@@ -496,6 +501,11 @@ static NSSet *dataTypes()
     [_configuration.websiteDataStore removeDataOfTypes:dataTypes() modifiedSince:[NSDate distantPast] completionHandler:^{
         NSLog(@"Did clear website data.");
     }];
+}
+
+- (IBAction)printWebView:(id)sender
+{
+    [[_webView _printOperationWithPrintInfo:[NSPrintInfo sharedPrintInfo] forFrame:nil] runOperationModalForWindow:self.window delegate:nil didRunSelector:nil contextInfo:nil];
 }
 
 #pragma mark WKNavigationDelegate

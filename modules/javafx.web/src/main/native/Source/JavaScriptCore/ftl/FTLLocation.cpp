@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "B3ValueRep.h"
 #include "FTLSaveRestore.h"
 #include "RegisterSet.h"
 #include <wtf/CommaPrinter.h>
@@ -36,38 +37,28 @@
 
 namespace JSC { namespace FTL {
 
-Location Location::forStackmaps(const StackMaps* stackmaps, const StackMaps::Location& location)
+using namespace B3;
+
+Location Location::forValueRep(const ValueRep& rep)
 {
-    switch (location.kind) {
-    case StackMaps::Location::Unprocessed:
+    switch (rep.kind()) {
+    case ValueRep::Register:
+        return forRegister(rep.reg(), 0);
+    case ValueRep::Stack:
+        return forIndirect(GPRInfo::callFrameRegister, rep.offsetFromFP());
+    case ValueRep::Constant:
+        return forConstant(rep.value());
+    default:
         RELEASE_ASSERT_NOT_REACHED();
-        break;
-
-    case StackMaps::Location::Register:
-    case StackMaps::Location::Direct:
-        return forRegister(location.dwarfReg, location.offset);
-
-    case StackMaps::Location::Indirect:
-        return forIndirect(location.dwarfReg, location.offset);
-
-    case StackMaps::Location::Constant:
-        return forConstant(location.offset);
-
-    case StackMaps::Location::ConstantIndex:
-        ASSERT(stackmaps);
-        return forConstant(stackmaps->constants[location.offset].integer);
+        return Location();
     }
-
-    RELEASE_ASSERT_NOT_REACHED();
-
-    return Location();
 }
 
 void Location::dump(PrintStream& out) const
 {
     out.print("(", kind());
-    if (hasDwarfReg())
-        out.print(", ", dwarfReg());
+    if (hasReg())
+        out.print(", ", reg());
     if (hasOffset())
         out.print(", ", offset());
     if (hasAddend())
@@ -84,22 +75,22 @@ bool Location::involvesGPR() const
 
 bool Location::isGPR() const
 {
-    return kind() == Register && dwarfReg().reg().isGPR();
+    return kind() == Register && reg().isGPR();
 }
 
 GPRReg Location::gpr() const
 {
-    return dwarfReg().reg().gpr();
+    return reg().gpr();
 }
 
 bool Location::isFPR() const
 {
-    return kind() == Register && dwarfReg().reg().isFPR();
+    return kind() == Register && reg().isFPR();
 }
 
 FPRReg Location::fpr() const
 {
-    return dwarfReg().reg().fpr();
+    return reg().fpr();
 }
 
 void Location::restoreInto(MacroAssembler& jit, char* savedRegisters, GPRReg result, unsigned numFramesToPop) const
@@ -139,7 +130,7 @@ void Location::restoreInto(MacroAssembler& jit, char* savedRegisters, GPRReg res
 
     switch (kind()) {
     case Register:
-        // LLVM used some register that we don't know about!
+        // B3 used some register that we don't know about!
         dataLog("Unrecognized location: ", *this, "\n");
         RELEASE_ASSERT_NOT_REACHED();
         return;
@@ -160,8 +151,6 @@ void Location::restoreInto(MacroAssembler& jit, char* savedRegisters, GPRReg res
         return;
 
     case Unprocessed:
-        // Should never see this - it's an enumeration entry on LLVM's side that means that
-        // it hasn't processed this location.
         RELEASE_ASSERT_NOT_REACHED();
         return;
     }

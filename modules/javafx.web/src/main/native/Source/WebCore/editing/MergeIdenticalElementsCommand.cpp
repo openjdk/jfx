@@ -47,13 +47,12 @@ void MergeIdenticalElementsCommand::doApply()
 
     m_atChild = m_element2->firstChild();
 
-    Vector<RefPtr<Node>> children;
+    Vector<Ref<Node>> children;
     for (Node* child = m_element1->firstChild(); child; child = child->nextSibling())
-        children.append(child);
+        children.append(*child);
 
-    size_t size = children.size();
-    for (size_t i = 0; i < size; ++i)
-        m_element2->insertBefore(children[i].release(), m_atChild.get(), IGNORE_EXCEPTION);
+    for (auto& child : children)
+        m_element2->insertBefore(WTFMove(child), m_atChild.get(), IGNORE_EXCEPTION);
 
     m_element1->remove(IGNORE_EXCEPTION);
 }
@@ -71,17 +70,16 @@ void MergeIdenticalElementsCommand::doUnapply()
 
     ExceptionCode ec = 0;
 
-    parent->insertBefore(m_element1.get(), m_element2.get(), ec);
+    parent->insertBefore(*m_element1, m_element2.get(), ec);
     if (ec)
         return;
 
-    Vector<RefPtr<Node>> children;
+    Vector<Ref<Node>> children;
     for (Node* child = m_element2->firstChild(); child && child != atChild; child = child->nextSibling())
-        children.append(child);
+        children.append(*child);
 
-    size_t size = children.size();
-    for (size_t i = 0; i < size; ++i)
-        m_element1->appendChild(children[i].release(), ec);
+    for (auto& child : children)
+        m_element1->appendChild(WTFMove(child), ec);
 }
 
 #ifndef NDEBUG

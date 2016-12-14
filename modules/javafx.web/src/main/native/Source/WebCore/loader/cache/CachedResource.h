@@ -148,8 +148,6 @@ public:
     unsigned decodedSize() const { return m_decodedSize; }
     unsigned overheadSize() const;
 
-    virtual bool decodedDataIsPurgeable() const { return false; }
-
     bool isLoaded() const { return !m_loading; } // FIXME. Method name is inaccurate. Loading might not have started yet.
 
     bool isLoading() const { return m_loading; }
@@ -196,6 +194,7 @@ public:
 
     virtual void redirectReceived(ResourceRequest&, const ResourceResponse&);
     virtual void responseReceived(const ResourceResponse&);
+    virtual bool shouldCacheResponse(const ResourceResponse&) { return true; }
     void setResponse(const ResourceResponse& response) { m_response = response; }
     const ResourceResponse& response() const { return m_response; }
     // This is the same as response() except after HTTP redirect to data: URL.
@@ -218,6 +217,8 @@ public:
 
     bool shouldSendResourceLoadCallbacks() const { return m_options.sendLoadCallbacks() == SendCallbacks; }
     DataBufferingPolicy dataBufferingPolicy() const { return m_options.dataBufferingPolicy(); }
+
+    bool allowsCaching() const { return m_options.cachingPolicy() == CachingPolicy::AllowCaching; }
 
     virtual void destroyDecodedData() { }
 
@@ -244,13 +245,13 @@ public:
     virtual void switchClientsToRevalidatedResource();
     void clearResourceToRevalidate();
     void updateResponseAfterRevalidation(const ResourceResponse& validatingResponse);
+    bool validationInProgress() const { return m_proxyResource; }
+    bool validationCompleting() const { return m_proxyResource && m_proxyResource->m_switchingClientsToRevalidatedResource; }
 
     virtual void didSendData(unsigned long long /* bytesSent */, unsigned long long /* totalBytesToBeSent */) { }
 
     void setLoadFinishTime(double finishTime) { m_loadFinishTime = finishTime; }
     double loadFinishTime() const { return m_loadFinishTime; }
-
-    virtual bool canReuse(const ResourceRequest&) const { return true; }
 
 #if USE(FOUNDATION) || USE(SOUP)
     WEBCORE_EXPORT void tryReplaceEncodedData(SharedBuffer&);
@@ -266,6 +267,8 @@ protected:
     void setEncodedSize(unsigned);
     void setDecodedSize(unsigned);
     void didAccessDecodedData(double timeStamp);
+
+    virtual void didReplaceSharedBufferContents() { }
 
     // FIXME: Make the rest of these data members private and use functions in derived classes instead.
     HashCountedSet<CachedResourceClient*> m_clients;
@@ -348,6 +351,9 @@ private:
 };
 
 class CachedResource::Callback {
+#if !COMPILER(MSVC)
+    WTF_MAKE_FAST_ALLOCATED;
+#endif
 public:
     Callback(CachedResource&, CachedResourceClient&);
 

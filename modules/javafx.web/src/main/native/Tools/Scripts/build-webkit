@@ -194,18 +194,18 @@ if (isAppleMacWebKit()) {
         splice(@projects, $webKitIndex, 0, "Source/WebInspectorUI");
 
         # Copy library and header from WebKitLibraries to a findable place in the product directory.
-        my @copyLibrariesArgs = ("perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory", "--wksi", "--llvm", productDir());
+        my @copyLibrariesArgs = ("perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory", "--wksi",  productDir());
         print(join(" ", @copyLibrariesArgs) . "\n");
         (system(@copyLibrariesArgs) == 0) or die;
     } else {
-        my @copyLibrariesArgs = (
-            "perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory",
-            "--sdk", xcodeSDK(), "--wksi", "--llvm", "--prefer-system-llvm",
-            "--llvm-subdirectory", "internal-llvm", productDir(),
-            "--llvm-prefix", "/usr/local"
-        );
+        my @copyLibrariesArgs = ("perl", "Tools/Scripts/copy-webkitlibraries-to-product-directory", "--sdk", xcodeSDK(), "--wksi");
+        push @copyLibrariesArgs, productDir();
         print(join(" ", @copyLibrariesArgs) . "\n");
         (system(@copyLibrariesArgs) == 0) or die;
+
+        if (willUseIOSSimulatorSDK()) {
+            (system("perl", "Tools/Scripts/build-layouttestrelay", argumentsForConfiguration()) == 0) or die;
+        }
     }
 
     # Build Tools needed for Apple ports
@@ -222,11 +222,6 @@ if (isAppleMacWebKit()) {
     foreach (@features) {
         push @options, "DEFINES+=$_->{define}=${$_->{value}}" if ${$_->{value}} != $_->{default};
     }
-    if (defined($ENV{COMPILE_PARFAIT})) {
-	push @options, "QMAKE_CC=$ENV{QMAKE_CC}";
-	push @options, "QMAKE_CXX=$ENV{QMAKE_CXX}";
-	push @options, "QMAKE_LINK=$ENV{QMAKE_LINK}";
-    }
 }
 
 # If asked to build just the WebKit project, overwrite the projects
@@ -242,7 +237,7 @@ if (isInspectorFrontend()) {
 }
 
 if (isCMakeBuild()) {
-    print "// XXX CMake build\n";
+
     # By default we build using all of the available CPUs.
     $makeArgs .= ($makeArgs ? " " : "") . "-j" . numberOfCPUs() if $makeArgs !~ /-j\s*\d+/;
     my $maxCPULoad = maxCPULoad() if $makeArgs !~ /-l\s*\d+\.?\d*/;
@@ -253,59 +248,22 @@ if (isCMakeBuild()) {
     my @featureArgs = cMakeArgsFromFeatures();
     removeCMakeCache(@featureArgs);
 
-    buildCMakeProjectOrExit($clean, cmakeBasedPortName(), $prefixPath, $makeArgs, (cmakeBasedPortArguments(), @featureArgs), $cmakeArgs);
+    buildCMakeProjectOrExit($clean, $prefixPath, $makeArgs, (cmakeBasedPortArguments(), @featureArgs), $cmakeArgs);
 }
 
-# Build, and abort if the build fails.
-for my $dir (@projects) {
-    chdir $dir or die;
-    $result = 0;
-#    if (isJava() && $dir ne "Source/WebKit") { # //XXX remove?
-#        print "==================== hii ii i i\n";
-#        chdirWebKit();
-#        next;
-#    }
-    my $project = basename($dir);
-    my $baseProductDir = baseProductDir();
-#    if (isJava()) {
-#        $result = buildQMakeJavaProject("java", $dir, $clean, @options); # //XXX qmake -> cmake
-#    } els
-if (isAppleMacWebKit()) {
-        my @local_options = @options;
-        push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
-        push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
-        my $projectPath = $project =~ /gtest/ ? "xcode/gtest" : $project;
-        if (isIOSWebKit()){
-            push @local_options, qw(-target WebKitTestRunnerApp) if ($project eq "WebKitTestRunner") && !$clean;
-        }
-        $result = buildXCodeProject($projectPath, $clean, @local_options, @ARGV);
-    } elsif (isAppleWinWebKit() || isWinCairo()) {
-        chdirWebKit();
-        if (isWinCairo()) {
-            if (exitStatus(generateBuildSystemFromCMakeProject("WinCairo"))) {
-                die "Run \"C:/Program Files (x86)/Microsoft Visual Studio 12.0/VC/vcvarsall.bat\" before build-webkit when using ninja";
-            }
-            if (canUseNinja()) {
-                chdir "WebKitBuild/" . configuration();
-                $result = system("ninja");
-            } else {
-                $result = buildVisualStudioProject("WebKitBuild/" . configuration() . "/WebKit.sln", $clean);
-            }
-        } else {
-            my $webkitSolutionPath = "Source/WebKit/WebKit.vcxproj/WebKit.sln";
-            $result = buildVisualStudioProject($webkitSolutionPath, $clean);
-        }
-        if (usingVisualStudioExpress()) {
-            # Visual Studio Express is so lame it can't stdout build failures.
-            # So we find its logs and dump them to the console ourselves.
-            my $vsConfiguration = configuration();
-            open(my $OUTPUT_HANDLE, '<', "$baseProductDir/$vsConfiguration/BuildOutput.htm") or die "Could not open build log file at $baseProductDir/$vsConfiguration/BuildOutput.htm";
-            print while (<$OUTPUT_HANDLE>);
-        }
-    }
-    # Various build* calls above may change the CWD.
+my $baseProductDir = baseProductDir();
+if (isAppleWinWebKit() || isWinCairo()) {
     chdirWebKit();
-
+    if (exitStatus(generateBuildSystemFromCMakeProject())) {
+        die "Run \"C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/vcvarsall.bat\" before build-webkit when using ninja";
+    }
+    chdirWebKit();
+    if (canUseNinja()) {
+        chdir File::Spec->catdir("WebKitBuild", configuration());
+        $result = system("ninja");
+    } else {
+        $result = buildVisualStudioProject(File::Spec->catfile("WebKitBuild", configuration(), "WebKit.sln"), $clean);
+    }
     if (exitStatus($result)) {
         my $scriptDir = relativeScriptsDir();
         if (isAppleWinWebKit() || isWinCairo()) {
@@ -314,6 +272,27 @@ if (isAppleMacWebKit()) {
             print "You can view build errors by checking the BuildLog.htm files located at:\n$baseProductDir/obj/<project>/<config>.\n";
         }
         exit exitStatus($result);
+    }
+} elsif (isAppleMacWebKit() && !isCMakeBuild()) {
+    # Build, and abort if the build fails.
+    for my $dir (@projects) {
+        chdir $dir or die;
+        $result = 0;
+
+        my $project = basename($dir);
+        
+        my @local_options = @options;
+        push @local_options, XcodeCoverageSupportOptions() if $coverageSupport;
+        push @local_options, XcodeStaticAnalyzerOption() if $shouldRunStaticAnalyzer;
+        my $projectPath = $project =~ /gtest/ ? "xcode/gtest" : $project;
+        $result = buildXCodeProject($projectPath, $clean, @local_options, @ARGV);
+
+        # Various build* calls above may change the CWD.
+        chdirWebKit();
+
+        if (exitStatus($result)) {
+            exit exitStatus($result);
+        }
     }
 }
 

@@ -29,17 +29,38 @@
 #if ENABLE(REMOTE_INSPECTOR)
 
 #import <Foundation/Foundation.h>
+#import <mutex>
 #import <wtf/Assertions.h>
+#import <wtf/Lock.h>
 #import <wtf/Ref.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/spi/cocoa/SecuritySPI.h>
 #import <wtf/spi/darwin/XPCSPI.h>
 
-#if __has_include(<CoreFoundation/CFXPCBridge.h>)
+#if USE(APPLE_INTERNAL_SDK)
 #import <CoreFoundation/CFXPCBridge.h>
 #else
 extern "C" {
     xpc_object_t _CFXPCCreateXPCMessageWithCFObject(CFTypeRef);
     CFTypeRef _CFXPCCreateCFObjectFromXPCMessage(xpc_object_t);
+}
+#endif
+
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000)
+static bool auditTokenHasEntitlement(audit_token_t token, NSString *entitlement)
+{
+    auto task = adoptCF(SecTaskCreateWithAuditToken(kCFAllocatorDefault, token));
+    if (!task)
+        return false;
+
+    auto value = adoptCF(SecTaskCopyValueForEntitlement(task.get(), (CFStringRef)entitlement, nullptr));
+    if (!value)
+        return false;
+
+    if (CFGetTypeID(value.get()) != CFBooleanGetTypeID())
+        return false;
+
+    return CFBooleanGetValue(static_cast<CFBooleanRef>(value.get()));
 }
 #endif
 
@@ -54,7 +75,6 @@ RemoteInspectorXPCConnection::RemoteInspectorXPCConnection(xpc_connection_t conn
     : m_connection(connection)
     , m_queue(queue)
     , m_client(client)
-    , m_closed(false)
 {
     dispatch_retain(m_queue);
 
@@ -79,7 +99,7 @@ RemoteInspectorXPCConnection::~RemoteInspectorXPCConnection()
 
 void RemoteInspectorXPCConnection::close()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
     closeFromMessage();
 }
 
@@ -89,7 +109,7 @@ void RemoteInspectorXPCConnection::closeFromMessage()
     m_client = nullptr;
 
     dispatch_async(m_queue, ^{
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard<Lock> lock(m_mutex);
         // This will trigger one last XPC_ERROR_CONNECTION_INVALID event on the queue and deref us.
         closeOnQueue();
     });
@@ -116,7 +136,7 @@ NSDictionary *RemoteInspectorXPCConnection::deserializeMessage(xpc_object_t obje
 
     xpc_object_t xpcDictionary = xpc_dictionary_get_value(object, RemoteInspectorXPCConnectionSerializedMessageKey);
     if (!xpcDictionary || xpc_get_type(xpcDictionary) != XPC_TYPE_DICTIONARY) {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard<Lock> lock(m_mutex);
         if (m_client)
             m_client->xpcConnectionUnhandledMessage(this, object);
         return nil;
@@ -131,7 +151,7 @@ void RemoteInspectorXPCConnection::handleEvent(xpc_object_t object)
 {
     if (xpc_get_type(object) == XPC_TYPE_ERROR) {
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
+            std::lock_guard<Lock> lock(m_mutex);
             if (m_client)
                 m_client->xpcConnectionFailed(this);
 
@@ -148,13 +168,27 @@ void RemoteInspectorXPCConnection::handleEvent(xpc_object_t object)
         return;
     }
 
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000)
+    if (!m_validated) {
+        audit_token_t token;
+        xpc_connection_get_audit_token(m_connection, &token);
+        if (!auditTokenHasEntitlement(token, @"com.apple.private.webinspector.webinspectord")) {
+            std::lock_guard<Lock> lock(m_mutex);
+            // This will trigger one last XPC_ERROR_CONNECTION_INVALID event on the queue and deref us.
+            closeOnQueue();
+            return;
+        }
+        m_validated = true;
+    }
+#endif
+
     NSDictionary *dataDictionary = deserializeMessage(object);
     if (!dataDictionary)
         return;
 
     NSString *message = [dataDictionary objectForKey:RemoteInspectorXPCConnectionMessageNameKey];
     NSDictionary *userInfo = [dataDictionary objectForKey:RemoteInspectorXPCConnectionUserInfoKey];
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
     if (m_client)
         m_client->xpcConnectionReceivedMessage(this, message, userInfo);
 }

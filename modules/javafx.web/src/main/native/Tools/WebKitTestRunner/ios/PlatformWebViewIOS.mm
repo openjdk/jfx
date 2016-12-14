@@ -23,14 +23,20 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
-#include "PlatformWebView.h"
-#include "TestController.h"
+#import "config.h"
+#import "PlatformWebView.h"
 
+#import "TestController.h"
+#import "TestRunnerWKWebView.h"
 #import <WebKit/WKImageCG.h>
-#import <WebKit/WKViewPrivate.h>
 #import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKWebViewConfiguration.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <wtf/RetainPtr.h>
+
+@interface WKWebView (Details)
+- (WKPageRef)_pageForTesting;
+@end
 
 @interface WebKitTestRunnerWindow : UIWindow {
     WTR::PlatformWebView* _platformWebView;
@@ -38,32 +44,6 @@
     BOOL _initialized;
 }
 @property (nonatomic, assign) WTR::PlatformWebView* platformWebView;
-@end
-
-@interface TestRunnerWKView : WKView {
-    BOOL _useTiledDrawing;
-}
-
-- (id)initWithFrame:(CGRect)frame contextRef:(WKContextRef)contextRef pageGroupRef:(WKPageGroupRef)pageGroupRef relatedToPage:(WKPageRef)relatedPage useTiledDrawing:(BOOL)useTiledDrawing;
-
-@property (nonatomic, assign) BOOL useTiledDrawing;
-@end
-
-@implementation TestRunnerWKView
-
-@synthesize useTiledDrawing = _useTiledDrawing;
-
-- (id)initWithFrame:(CGRect)frame contextRef:(WKContextRef)contextRef pageGroupRef:(WKPageGroupRef)pageGroupRef relatedToPage:(WKPageRef)relatedPage useTiledDrawing:(BOOL)useTiledDrawing
-{
-    _useTiledDrawing = useTiledDrawing;
-    return [super initWithFrame:frame contextRef:contextRef pageGroupRef:pageGroupRef];
-}
-
-- (BOOL)_shouldUseTiledDrawingArea
-{
-    return _useTiledDrawing;
-}
-
 @end
 
 @implementation WebKitTestRunnerWindow
@@ -76,9 +56,10 @@
 
     return self;
 }
+
 - (BOOL)isKeyWindow
 {
-    return _platformWebView ? _platformWebView->windowIsKey() : YES;
+    return [super isKeyWindow] && (_platformWebView ? _platformWebView->windowIsKey() : YES);
 }
 
 - (void)setFrameOrigin:(CGPoint)point
@@ -113,7 +94,7 @@
 
 @end
 
-@interface UIWindow (Details)
+@interface UIWindow ()
 
 - (void)_setWindowResolution:(CGFloat)resolution displayIfChanged:(BOOL)displayIfChanged;
 
@@ -121,26 +102,32 @@
 
 namespace WTR {
 
-PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef, WKPageRef relatedPage, WKDictionaryRef options)
+PlatformWebView::PlatformWebView(WKWebViewConfiguration* configuration, const TestOptions& options)
     : m_windowIsKey(true)
     , m_options(options)
 {
-    WKRetainPtr<WKStringRef> useTiledDrawingKey(AdoptWK, WKStringCreateWithUTF8CString("TiledDrawing"));
-    WKTypeRef useTiledDrawingValue = options ? WKDictionaryGetItemForKey(options, useTiledDrawingKey.get()) : NULL;
-    bool useTiledDrawing = useTiledDrawingValue && WKBooleanGetValue(static_cast<WKBooleanRef>(useTiledDrawingValue));
-
     CGRect rect = CGRectMake(0, 0, TestController::viewWidth, TestController::viewHeight);
-    m_view = [[TestRunnerWKView alloc] initWithFrame:rect contextRef:contextRef pageGroupRef:pageGroupRef relatedToPage:relatedPage useTiledDrawing:useTiledDrawing];
+    m_view = [[TestRunnerWKWebView alloc] initWithFrame:rect configuration:configuration];
 
-    WKPreferencesSetCompositingBordersVisible(WKPageGroupGetPreferences(pageGroupRef), YES);
-    WKPreferencesSetCompositingRepaintCountersVisible(WKPageGroupGetPreferences(pageGroupRef), YES);
-
-    CGRect windowRect = rect;
-    m_window = [[WebKitTestRunnerWindow alloc] initWithFrame:windowRect];
+    m_window = [[WebKitTestRunnerWindow alloc] initWithFrame:rect];
     m_window.platformWebView = this;
 
     [m_window addSubview:m_view];
     [m_window makeKeyAndVisible];
+}
+
+PlatformWebView::~PlatformWebView()
+{
+    m_window.platformWebView = nil;
+    [m_view release];
+    [m_window release];
+}
+
+void PlatformWebView::setWindowIsKey(bool isKey)
+{
+    m_windowIsKey = isKey;
+    if (isKey)
+        [m_window makeKeyWindow];
 }
 
 void PlatformWebView::resizeTo(unsigned width, unsigned height)
@@ -151,22 +138,14 @@ void PlatformWebView::resizeTo(unsigned width, unsigned height)
     setWindowFrame(frame);
 }
 
-PlatformWebView::~PlatformWebView()
-{
-    m_window.platformWebView = 0;
-//    [m_window close];
-    [m_view release];
-    [m_window release];
-}
-
 WKPageRef PlatformWebView::page()
 {
-    return [m_view pageRef];
+    return [m_view _pageForTesting];
 }
 
 void PlatformWebView::focus()
 {
-//    [m_window makeFirstResponder:m_view]; // FIXME: iOS equivalent?
+    makeWebViewFirstResponder();
     setWindowIsKey(true);
 }
 
@@ -185,7 +164,7 @@ WKRect PlatformWebView::windowFrame()
 void PlatformWebView::setWindowFrame(WKRect frame)
 {
     [m_window setFrame:CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, frame.size.height)];
-    [m_view setFrame:CGRectMake(0, 0, frame.size.width, frame.size.height)];
+    [platformView() setFrame:CGRectMake(0, 0, frame.size.width, frame.size.height)];
 }
 
 void PlatformWebView::didInitializeClients()
@@ -216,7 +195,8 @@ void PlatformWebView::removeChromeInputField()
 
 void PlatformWebView::makeWebViewFirstResponder()
 {
-//    [m_window makeFirstResponder:m_view];
+    // FIXME: iOS equivalent?
+    // [m_window makeFirstResponder:m_view];
 }
 
 void PlatformWebView::changeWindowScaleIfNeeded(float)
@@ -226,16 +206,20 @@ void PlatformWebView::changeWindowScaleIfNeeded(float)
 
 WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
 {
-    return 0; // FIXME for iOS?
+    // FIXME: Need an implementation of this, or we're depending on software paints!
+    return nullptr;
 }
 
-bool PlatformWebView::viewSupportsOptions(WKDictionaryRef options) const
+bool PlatformWebView::viewSupportsOptions(const TestOptions& options) const
 {
-    WKRetainPtr<WKStringRef> useTiledDrawingKey(AdoptWK, WKStringCreateWithUTF8CString("TiledDrawing"));
-    WKTypeRef useTiledDrawingValue = WKDictionaryGetItemForKey(options, useTiledDrawingKey.get());
-    bool useTiledDrawing = useTiledDrawingValue && WKBooleanGetValue(static_cast<WKBooleanRef>(useTiledDrawingValue));
+    if (m_options.overrideLanguages != options.overrideLanguages)
+        return false;
 
-    return useTiledDrawing == [(TestRunnerWKView *)m_view useTiledDrawing];
+    return true;
+}
+
+void PlatformWebView::setNavigationGesturesEnabled(bool enabled)
+{
 }
 
 } // namespace WTR

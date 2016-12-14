@@ -28,14 +28,12 @@
 
 #include "AbstractDatabaseServer.h"
 #include "Database.h"
-#include "DatabaseBackend.h"
-#include "DatabaseBackendBase.h"
 #include "DatabaseCallback.h"
 #include "DatabaseContext.h"
 #include "DatabaseServer.h"
 #include "DatabaseTask.h"
 #include "ExceptionCode.h"
-#include "InspectorDatabaseInstrumentation.h"
+#include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "PlatformStrategies.h"
 #include "ScriptController.h"
@@ -109,7 +107,7 @@ void DatabaseManager::setIsAvailable(bool available)
 
 RefPtr<DatabaseContext> DatabaseManager::existingDatabaseContextFor(ScriptExecutionContext* context)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
 
     ASSERT(m_databaseContextRegisteredCount >= 0);
     ASSERT(m_databaseContextInstanceCount >= 0);
@@ -140,7 +138,7 @@ RefPtr<DatabaseContext> DatabaseManager::databaseContextFor(ScriptExecutionConte
 
 void DatabaseManager::registerDatabaseContext(DatabaseContext* databaseContext)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
 
     ScriptExecutionContext* context = databaseContext->scriptExecutionContext();
     m_contextMap.set(context, databaseContext);
@@ -151,7 +149,7 @@ void DatabaseManager::registerDatabaseContext(DatabaseContext* databaseContext)
 
 void DatabaseManager::unregisterDatabaseContext(DatabaseContext* databaseContext)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
 
     ScriptExecutionContext* context = databaseContext->scriptExecutionContext();
     ASSERT(m_contextMap.get(context));
@@ -164,14 +162,14 @@ void DatabaseManager::unregisterDatabaseContext(DatabaseContext* databaseContext
 #if !ASSERT_DISABLED
 void DatabaseManager::didConstructDatabaseContext()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
 
     m_databaseContextInstanceCount++;
 }
 
 void DatabaseManager::didDestructDatabaseContext()
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
 
     m_databaseContextInstanceCount--;
     ASSERT(m_databaseContextRegisteredCount <= m_databaseContextInstanceCount);
@@ -203,13 +201,13 @@ static void logOpenDatabaseError(ScriptExecutionContext* context, const String& 
         context->securityOrigin()->toString().ascii().data());
 }
 
-PassRefPtr<DatabaseBackendBase> DatabaseManager::openDatabaseBackend(ScriptExecutionContext* context, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError& error, String& errorMessage)
+PassRefPtr<Database> DatabaseManager::openDatabaseBackend(ScriptExecutionContext* context, const String& name, const String& expectedVersion, const String& displayName, unsigned long estimatedSize, bool setVersionInNewDatabase, DatabaseError& error, String& errorMessage)
 {
     ASSERT(error == DatabaseError::None);
 
     RefPtr<DatabaseContext> databaseContext = databaseContextFor(context);
 
-    RefPtr<DatabaseBackendBase> backend = m_server->openDatabase(databaseContext, name, expectedVersion, displayName, estimatedSize, setVersionInNewDatabase, error, errorMessage);
+    RefPtr<Database> backend = m_server->openDatabase(databaseContext, name, expectedVersion, displayName, estimatedSize, setVersionInNewDatabase, error, errorMessage);
 
     if (!backend) {
         ASSERT(error != DatabaseError::None);
@@ -260,14 +258,14 @@ PassRefPtr<DatabaseBackendBase> DatabaseManager::openDatabaseBackend(ScriptExecu
 
 void DatabaseManager::addProposedDatabase(ProposedDatabase* proposedDb)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
 
     m_proposedDatabases.add(proposedDb);
 }
 
 void DatabaseManager::removeProposedDatabase(ProposedDatabase* proposedDb)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
+    std::lock_guard<Lock> lock(m_mutex);
 
     m_proposedDatabases.remove(proposedDb);
 }
@@ -282,17 +280,15 @@ RefPtr<Database> DatabaseManager::openDatabase(ScriptExecutionContext* context,
 
     bool setVersionInNewDatabase = !creationCallback;
     String errorMessage;
-    RefPtr<DatabaseBackendBase> backend = openDatabaseBackend(context, name, expectedVersion, displayName, estimatedSize, setVersionInNewDatabase, error, errorMessage);
-    if (!backend)
+    RefPtr<Database> database = openDatabaseBackend(context, name, expectedVersion, displayName, estimatedSize, setVersionInNewDatabase, error, errorMessage);
+    if (!database)
         return nullptr;
-
-    RefPtr<Database> database = Database::create(context, backend);
 
     RefPtr<DatabaseContext> databaseContext = databaseContextFor(context);
     databaseContext->setHasOpenDatabases();
     InspectorInstrumentation::didOpenDatabase(context, database.copyRef(), context->securityOrigin()->host(), name, expectedVersion);
 
-    if (backend->isNew() && creationCallback.get()) {
+    if (database->isNew() && creationCallback.get()) {
         LOG(StorageAPI, "Scheduling DatabaseCreationCallbackTask for database %p\n", database.get());
         database->setHasPendingCreationEvent(true);
         database->m_scriptExecutionContext->postTask([creationCallback, database] (ScriptExecutionContext&) {
@@ -324,7 +320,7 @@ void DatabaseManager::stopDatabases(ScriptExecutionContext* context, DatabaseTas
 String DatabaseManager::fullPathForDatabase(SecurityOrigin* origin, const String& name, bool createIfDoesNotExist)
 {
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard<Lock> lock(m_mutex);
 
         for (auto* proposedDatabase : m_proposedDatabases) {
             if (proposedDatabase->details().name() == name && proposedDatabase->origin()->equal(origin))
@@ -353,7 +349,7 @@ bool DatabaseManager::databaseNamesForOrigin(SecurityOrigin* origin, Vector<Stri
 DatabaseDetails DatabaseManager::detailsForNameAndOrigin(const String& name, SecurityOrigin* origin)
 {
     {
-        std::lock_guard<std::mutex> lock(m_mutex);
+        std::lock_guard<Lock> lock(m_mutex);
 
         for (auto* proposedDatabase : m_proposedDatabases) {
             if (proposedDatabase->details().name() == name && proposedDatabase->origin()->equal(origin)) {
@@ -400,13 +396,6 @@ bool DatabaseManager::deleteDatabase(SecurityOrigin* origin, const String& name)
 void DatabaseManager::closeAllDatabases()
 {
     m_server->closeAllDatabases();
-}
-
-void DatabaseManager::interruptAllDatabasesForContext(ScriptExecutionContext* context)
-{
-    RefPtr<DatabaseContext> databaseContext = existingDatabaseContextFor(context);
-    if (databaseContext)
-        m_server->interruptAllDatabasesForContext(databaseContext.get());
 }
 
 void DatabaseManager::logErrorMessage(ScriptExecutionContext* context, const String& message)

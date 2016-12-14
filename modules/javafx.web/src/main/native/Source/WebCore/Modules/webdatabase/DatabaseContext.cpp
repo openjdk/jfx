@@ -99,9 +99,6 @@ DatabaseContext::DatabaseContext(ScriptExecutionContext* context)
     , m_hasOpenDatabases(false)
     , m_isRegistered(true) // will register on construction below.
     , m_hasRequestedTermination(false)
-#if PLATFORM(IOS)
-    , m_paused(false)
-#endif
 {
     // ActiveDOMObject expects this to be called to set internal flags.
     suspendIfNeeded();
@@ -145,7 +142,7 @@ void DatabaseContext::stop()
     stopDatabases();
 }
 
-bool DatabaseContext::canSuspendForPageCache() const
+bool DatabaseContext::canSuspendForDocumentSuspension() const
 {
     if (!hasOpenDatabases() || !m_databaseThread)
         return true;
@@ -156,9 +153,6 @@ bool DatabaseContext::canSuspendForPageCache() const
 DatabaseThread* DatabaseContext::databaseThread()
 {
     if (!m_databaseThread && !m_hasOpenDatabases) {
-#if PLATFORM(IOS)
-        MutexLocker lock(m_databaseThreadMutex);
-#endif
         // It's OK to ask for the m_databaseThread after we've requested
         // termination because we're still using it to execute the closing
         // of the database. However, it is NOT OK to create a new thread
@@ -170,26 +164,10 @@ DatabaseThread* DatabaseContext::databaseThread()
         m_databaseThread = DatabaseThread::create();
         if (!m_databaseThread->start())
             m_databaseThread = nullptr;
-
-#if PLATFORM(IOS)
-        if (m_databaseThread)
-            m_databaseThread->setPaused(m_paused);
-#endif
     }
 
     return m_databaseThread.get();
 }
-
-#if PLATFORM(IOS)
-void DatabaseContext::setPaused(bool paused)
-{
-    MutexLocker lock(m_databaseThreadMutex);
-
-    m_paused = paused;
-    if (m_databaseThread)
-        m_databaseThread->setPaused(m_paused);
-}
-#endif // PLATFORM(IOS)
 
 bool DatabaseContext::stopDatabases(DatabaseTaskSynchronizer* synchronizer)
 {
@@ -238,9 +216,6 @@ void DatabaseContext::databaseExceededQuota(const String& name, DatabaseDetails 
         return;
     }
     ASSERT(m_scriptExecutionContext->isWorkerGlobalScope());
-    // FIXME: This needs a real implementation; this is a temporary solution for testing.
-    const unsigned long long defaultQuota = 5 * 1024 * 1024;
-    DatabaseManager::singleton().setQuota(m_scriptExecutionContext->securityOrigin(), defaultQuota);
 }
 
 SecurityOrigin* DatabaseContext::securityOrigin() const

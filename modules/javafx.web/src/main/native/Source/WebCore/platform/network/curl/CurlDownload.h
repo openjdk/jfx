@@ -29,6 +29,7 @@
 #include "FileSystem.h"
 #include "ResourceHandle.h"
 #include "ResourceResponse.h"
+#include <wtf/Lock.h>
 #include <wtf/Threading.h>
 
 #if PLATFORM(WIN)
@@ -60,8 +61,8 @@ private:
 
     CURLM* getMultiHandle() const { return m_curlMultiHandle; }
 
-    bool runThread() const { return m_runThread; }
-    void setRunThread(bool runThread) { m_runThread = runThread; }
+    bool runThread() const { LockHolder locker(m_mutex); return m_runThread; }
+    void setRunThread(bool runThread) { LockHolder locker(m_mutex); m_runThread = runThread; }
 
     bool addToCurl(CURL* curlHandle);
     bool removeFromCurl(CURL* curlHandle);
@@ -73,7 +74,7 @@ private:
     Vector<CURL*> m_pendingHandleList;
     Vector<CURL*> m_activeHandleList;
     Vector<CURL*> m_removedHandleList;
-    mutable Mutex m_mutex;
+    mutable Lock m_mutex;
     bool m_runThread;
 };
 
@@ -140,7 +141,7 @@ private:
     WebCore::PlatformFileHandle m_tempHandle;
     WebCore::ResourceResponse m_response;
     bool m_deletesFileUponFailure;
-    mutable Mutex m_mutex;
+    mutable Lock m_mutex;
     CurlDownloadListener *m_listener;
 
     static CurlDownloadManager m_downloadManager;

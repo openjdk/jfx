@@ -527,6 +527,19 @@ class Port(object):
 
         return reftest_list.get(self._filesystem.join(self.layout_tests_dir(), test_name), [])  # pylint: disable=E1103
 
+    def potential_test_names_from_expected_file(self, path):
+        """Return potential test names if any from a potential expected file path, relative to LayoutTests directory."""
+
+        if not '-expected.' in path:
+            return None
+
+        subpath = self.host.filesystem.relpath(path, self.layout_tests_dir())
+        if path.startswith('platform' + self._filesystem.sep):
+            steps = path.split(self._filesystem.sep)
+            path = self._filesystem.join(self._filesystem.sep.join(steps[2:]))
+
+        return [self.host.filesystem.relpath(test, self.layout_tests_dir()) for test in self._filesystem.glob(re.sub('-expected.*', '.*', self._filesystem.join(self.layout_tests_dir(), path))) if self._filesystem.isfile(test)]
+
     def tests(self, paths):
         """Return the list of tests found. Both generic and platform-specific tests matching paths should be returned."""
         expanded_paths = self._expanded_paths(paths)
@@ -834,7 +847,10 @@ class Port(object):
             '_NT_SYMBOL_PATH',
 
             # Windows:
+            'COMSPEC',
             'PATH',
+            'SYSTEMDRIVE',
+            'SYSTEMROOT',
 
             # Most ports (?):
             'WEBKIT_TESTFONTS',
@@ -852,6 +868,17 @@ class Port(object):
             clean_env[name] = value
 
         return clean_env
+
+    def _clear_global_caches_and_temporary_files(self):
+        pass
+
+    @staticmethod
+    def _append_value_colon_separated(env, name, value):
+        assert ":" not in value
+        if name in env and env[name]:
+            env[name] = env[name] + ":" + value
+        else:
+            env[name] = value
 
     def show_results_html_file(self, results_filename):
         """This routine should display the HTML file pointed at by
@@ -878,11 +905,11 @@ class Port(object):
 
         Ports can stub this out if they don't need a web server to be running."""
         assert not self._http_server, 'Already running an http server.'
-
+        http_port = self.get_option('http_port')
         if self._uses_apache():
-            server = apache_http_server.LayoutTestApacheHttpd(self, self.results_directory(), additional_dirs=additional_dirs)
+            server = apache_http_server.LayoutTestApacheHttpd(self, self.results_directory(), additional_dirs=additional_dirs, port=http_port)
         else:
-            server = http_server.Lighttpd(self, self.results_directory(), additional_dirs=additional_dirs)
+            server = http_server.Lighttpd(self, self.results_directory(), additional_dirs=additional_dirs, port=http_port)
 
         server.start()
         self._http_server = server
@@ -900,7 +927,7 @@ class Port(object):
     def start_web_platform_test_server(self, additional_dirs=None, number_of_servers=None):
         assert not self._web_platform_test_server, 'Already running a Web Platform Test server.'
 
-        self._web_platform_test_server = web_platform_test_server.WebPlatformTestServer(self, "wptwk", self.results_directory())
+        self._web_platform_test_server = web_platform_test_server.WebPlatformTestServer(self, "wptwk")
         self._web_platform_test_server.start()
 
     def web_platform_test_server_doc_root(self):
@@ -1093,7 +1120,7 @@ class Port(object):
 
     # We pass sys_platform into this method to make it easy to unit test.
     def _apache_config_file_name_for_platform(self, sys_platform):
-        if sys_platform == 'cygwin' or sys_platform == 'win32':
+        if sys_platform == 'cygwin' or sys_platform.startswith('win'):
             return 'apache' + self._apache_version() + '-httpd-win.conf'
         if sys_platform.startswith('linux'):
             if self._is_redhat_based():
@@ -1122,29 +1149,41 @@ class Port(object):
         return self._filesystem.join(self.layout_tests_dir(), 'http', 'conf', config_file_name)
 
     def _build_path(self, *comps):
-        root_directory = self.get_option('root')
+        root_directory = self.get_option('_cached_root') or self.get_option('root')
         if not root_directory:
             build_directory = self.get_option('build_directory')
             if build_directory:
                 root_directory = self._filesystem.join(build_directory, self.get_option('configuration'))
             else:
                 root_directory = self._config.build_directory(self.get_option('configuration'))
-            # Set --root so that we can pass this to subprocesses and avoid making the
-            # slow call to config.build_directory() N times in each worker.
-            # FIXME: This is like @memoized, but more annoying and fragile; there should be another
-            # way to propagate values without mutating the options list.
-            self.set_option_default('root', root_directory)
+            # We take advantage of the behavior that self._options is passed by reference to worker
+            # subprocesses to use it as data store to cache the computed root directory path. This
+            # avoids making each worker subprocess compute this path again which is slow because of
+            # the call to config.build_directory().
+            #
+            # FIXME: This is like decorating this function with @memoized, but more annoying and fragile;
+            # there should be another way to propagate precomputed values to workers without modifying
+            # the options list.
+            self.set_option('_cached_root', root_directory)
+
+        if sys.platform.startswith('win') or sys.platform == 'cygwin':
+            return self._filesystem.join(root_directory, *comps)
+
         return self._filesystem.join(self._filesystem.abspath(root_directory), *comps)
 
     def _path_to_driver(self, configuration=None):
         """Returns the full path to the test driver (DumpRenderTree)."""
-        return self._build_path(self.driver_name())
+        local_driver_path = self._build_path(self.driver_name())
+        if sys.platform.startswith('win'):
+            base = os.path.splitext(local_driver_path)[0]
+            local_driver_path = base + ".exe"
+        return local_driver_path
 
     def _driver_tempdir(self):
         return self._filesystem.mkdtemp(prefix='%s-' % self.driver_name())
 
-    def _driver_tempdir_for_environment(self):
-        return self._driver_tempdir()
+    def remove_cache_directory(self, name):
+        pass
 
     def _path_to_webcore_library(self):
         """Returns the full path to a built copy of WebCore."""

@@ -51,6 +51,9 @@
     <ClCompile Include="..\Tests\WebCore\win\BitmapImage.cpp">
       <Filter>Tests\WebCore</Filter>
     </ClCompile>
+    <ClCompile Include="..\Tests\WebCore\HTMLParserIdioms.cpp">
+      <Filter>Tests\WebCore</Filter>
+    </ClCompile>
     <ClCompile Include="..\Tests\WebCore\LayoutUnit.cpp">
       <Filter>Tests\WebCore</Filter>
     </ClCompile>
@@ -157,6 +160,9 @@
     <ClCompile Include="..\Tests\WebCore\CalculationValue.cpp">
       <Filter>Tests\WebCore</Filter>
     </ClCompile>
+    <ClCompile Include="..\Tests\WebCore\ParsedContentRange.cpp">
+      <Filter>Tests\WebCore</Filter>
+    </ClCompile>
     <ClCompile Include="..\Tests\WebCore\TimeRanges.cpp">
       <Filter>Tests\WebCore</Filter>
     </ClCompile>
@@ -172,6 +178,7 @@
     <ClCompile Include="..\Tests\WTF\DateMath.cpp">
       <Filter>Tests\WTF</Filter>
     </ClCompile>
+    <ClCompile Include="..\Tests\WTF\Lock.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="TestWebKitAPIPostBuild.cmd" />

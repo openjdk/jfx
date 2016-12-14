@@ -3,17 +3,20 @@
  */
 #include "config.h"
 
-#include "BridgeUtils.h"
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
+#include "BridgeUtils.h"
 #include "WebPage.h"
-#include "DbgUtils.h"
+#include <wtf/java/DbgUtils.h>
 
 #include "AdjustViewSizeOrNot.h"
-//#include "Cache.h"
 #include "CharacterData.h"
 #include "Chrome.h"
 #include "ChromeClientJava.h"
 #include "ContextMenu.h"
+#include "ContextMenuJava.h"
 #include "ContextMenuClientJava.h"
 #include "ContextMenuController.h"
 #include "Document.h"
@@ -47,7 +50,7 @@
 #include "JSContextRefPrivate.h"
 #include "JSContextRef.h"
 #include "JavaEnv.h"
-#include "JavaRef.h"
+#include <wtf/java/JavaRef.h>
 #include "Logging.h"
 #include "NodeTraversal.h"
 #include "Page.h"
@@ -81,12 +84,14 @@
 #include "WebKitVersion.h" //generated
 #include "Widget.h"
 #include "WorkerThread.h"
+#include "testing/js/WebCoreTestSupport.h"
 
 #include <wtf/text/WTFString.h>
 #include <wtf/Ref.h>
 #include <runtime/InitializeThreading.h>
 #include <runtime/JSObject.h>
 #include <runtime/JSCJSValue.h>
+#include <runtime/Options.h>
 #include <JSLock.h>
 #include <API/APICast.h>
 #include <API/JSStringRef.h>
@@ -95,6 +100,7 @@
 #if OS(UNIX)
 #include <sys/utsname.h>
 #endif
+#include <mutex>
 #if OS(WINDOWS)
 #include <platform/win/SystemInfo.h>
 #endif
@@ -122,7 +128,7 @@ WebPage::WebPage(std::unique_ptr<Page> page)
     , m_syncLayers(false)
 #endif
 {
-    m_page = WTF::move(page);
+    m_page = std::move(page);
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     if(!NotificationController::clientFrom(m_page.get())) {
         provideNotification(m_page.get(), NotificationClientJava::instance());
@@ -192,9 +198,10 @@ static void drawDebugLed(GraphicsContext& context,
             rect.y() + rect.height() / 2 - h / 2,
             w,
             h);
-    context.fillRect(ledRect, color, ColorSpaceDeviceRGB);
+    context.fillRect(ledRect, color);
 }
 
+#if USE(ACCELERATED_COMPOSITING)
 static void drawDebugBorder(GraphicsContext& context,
                             const IntRect& rect,
                             const Color& color,
@@ -204,12 +211,12 @@ static void drawDebugBorder(GraphicsContext& context,
     int y = rect.y();
     int w = rect.width();
     int h = rect.height();
-    ColorSpace cs(ColorSpaceDeviceRGB);
-    context.fillRect(FloatRect(x, y, w, width), color, cs);
-    context.fillRect(FloatRect(x, y + h - width, w, width), color, cs);
-    context.fillRect(FloatRect(x, y, width, h), color, cs);
-    context.fillRect(FloatRect(x + w - width, y, width, h), color, cs);
+    context.fillRect(FloatRect(x, y, w, width));
+    context.fillRect(FloatRect(x, y + h - width, w, width), color);
+    context.fillRect(FloatRect(x, y, width, h), color);
+    context.fillRect(FloatRect(x + w - width, y, width, h), color);
 }
+#endif
 
 void WebPage::prePaint() {
 #if USE(ACCELERATED_COMPOSITING)
@@ -251,9 +258,9 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 
     // TODO: Following JS synchronization is not necessary for single thread model
     JSGlobalContextRef globalContext = toGlobalRef(mainFrame->script().globalObject(mainThreadNormalWorld())->globalExec());
-    JSC::JSLockHolder sw(toJS(globalContext)); //XXX: was JSC::APIEntryShim sw( toJS(globalContext) );
+    JSC::JSLockHolder sw(toJS(globalContext)); // TODO-java: was JSC::APIEntryShim sw( toJS(globalContext) );
 
-    frameView->paint(&gc, IntRect(x, y, w, h));
+    frameView->paint(gc, IntRect(x, y, w, h));
     if (m_page->settings().showDebugBorders()) {
         drawDebugLed(gc, IntRect(x, y, w, h), Color(0, 0, 255, 128));
     }
@@ -754,7 +761,7 @@ void WebPage::print(GraphicsContext& gc, int pageIndex, float pageWidth)
     ASSERT(m_printContext);
     ASSERT(pageIndex >= 0 && pageIndex < m_printContext->pageCount());
 
-    if (!m_printContext || pageIndex < 0 || pageIndex >= m_printContext->pageCount())
+    if (!m_printContext || pageIndex < 0 || pageIndex >= (int)m_printContext->pageCount())
         return;
 
     gc.save();
@@ -828,13 +835,28 @@ private:
     }
 };
 
+namespace {
+
+bool s_useJIT;
+bool s_useDFGJIT;
+
+}  // namespace
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInitWebCore
+    (JNIEnv* env, jclass self, jboolean useJIT, jboolean useDFGJIT) {
+    s_useJIT = useJIT;
+    s_useDFGJIT = useDFGJIT;
+}
+
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     (JNIEnv* env, jobject self, jboolean editable)
 {
+    // FIXME-java(JDK-8169950): Refactor the following WebCore module
+    // initialization flow.
     JSC::initializeThreading();
     WTF::initializeMainThread();
     // RT-17330: Allow local loads for substitute data, that is,
@@ -851,10 +873,17 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
 #endif
     PlatformStrategiesJava::initialize();
 
+    static std::once_flag initializeJSCOptions;
+    std::call_once(initializeJSCOptions, [] {
+        JSC::Options::useJIT() = s_useJIT;
+        // Enable DFG only if JIT is enabled.
+        JSC::Options::useDFGJIT() = s_useJIT && s_useDFGJIT;
+    });
+
     JLObject jlself(self, true);
 
     //utaTODO: history agent implementation
-    //XXX: PageClients -> PageConfiguration
+    // TODO-java: PageClients -> PageConfiguration
 
     PageConfiguration pc;
     fillWithEmptyClients(pc);
@@ -1100,7 +1129,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
     frame->loader().load(FrameLoadRequest(
         frame,
         ResourceRequest(URL(emptyParent, String(env, url))),
-        ShouldOpenExternalURLsPolicy::ShouldNotAllow //XXX: recheck policy value
+        ShouldOpenExternalURLsPolicy::ShouldNotAllow // TODO-java: recheck policy value
     ));
 }
 
@@ -1121,12 +1150,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     frame->loader().load(FrameLoadRequest(
         frame,
         ResourceRequest(emptyUrl),
-        ShouldOpenExternalURLsPolicy::ShouldNotAllow, //XXX: recheck policy value
+        ShouldOpenExternalURLsPolicy::ShouldNotAllow, // TODO-java: recheck policy value
         SubstituteData(
             buffer,
             URL(),
             response,
-            SubstituteData::SessionHistoryVisibility::Visible) //XXX: or Hidden?
+            SubstituteData::SessionHistoryVisibility::Visible) // TODO-java: or Hidden?
     ));
 
     env->ReleaseStringUTFChars(text, stringChars);
@@ -1286,6 +1315,21 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     } else if (nativePropertyName == "WebKitCSSRegionsEnabled") {
         RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled(nativePropertyValue.toInt());
     }
+}
+
+JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBeforeTesting
+    (JNIEnv* env, jobject self, jlong pPage)
+{
+    Page* page = WebPage::pageFromJLong(pPage);
+    if (!page) {
+        return;
+    }
+
+    Frame& coreFrame = page->mainFrame();
+    auto globalContext = toGlobalRef(coreFrame.script().globalObject(mainThreadNormalWorld())->globalExec());
+    WebCoreTestSupport::resetInternalsObject(globalContext);
+    // FIXME-java: Reset remaining module state like windows/osx DumpRenderTree
+    // refer Tools/DumpRenderTree/win/DumpRenderTree.cpp#resetWebViewToConsistentStateBeforeTesting
 }
 
 JNIEXPORT jfloat JNICALL Java_com_sun_webkit_WebPage_twkGetZoomFactor
@@ -1626,7 +1670,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
-                                                       timestamp, ForceAtClick); //XXX: handle force?
+                                                       timestamp, ForceAtClick); // TODO-java: handle force?
     switch (id) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
         //frame->focusWindow();
@@ -1665,7 +1709,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
         Frame* frame = node->document().frame();
         // we do not want to show context menu for frameset (see 6648628)
         if (frame && !frame->document()->isFrameSet()) {
-            contextMenu->show(&cmc, loc);
+            ContextMenuJava(contextMenu->items()).show(&cmc, self, loc);
         }
         return JNI_TRUE;
     }
@@ -1823,12 +1867,11 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
     Editor &editor = frame->editor();
     if (editor.hasComposition()) {
         RefPtr<Range> range = editor.compositionRange();
-        ExceptionCode ec = 0;
-        for (Node* node = range.get()->startContainer(ec); node; node = NodeTraversal::next(*node)) {
+        for (Node* node = &range->startContainer(); node; node = NodeTraversal::next(*node)) {
             RenderObject* renderer = node->renderer();
             IntRect content = renderer->absoluteBoundingBoxRect();
             VisiblePosition targetPosition(renderer->positionForPoint(LayoutPoint(point.x() - content.x(),
-                                                                            point.y() - content.y()), nullptr)); //XXX: recheck nullptr
+                                                                            point.y() - content.y()), nullptr)); // TODO-java: recheck nullptr
             offset = targetPosition.deepEquivalent().offsetInContainerNode();
             if (offset >= editor.compositionStart() && offset < editor.compositionEnd()) {
                 offset -= editor.compositionStart();
@@ -2033,7 +2076,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
                 : NoButton,
             PlatformEvent::MouseMoved,
             0,
-            false, false, false, false, 0.0, ForceAtClick); //XXX: handle force?
+            false, false, false, false, 0.0, ForceAtClick); // TODO-java: handle force?
         switch(actionId){
         case com_sun_webkit_WebPage_DND_SRC_EXIT:
         case com_sun_webkit_WebPage_DND_SRC_ENTER:
@@ -2289,10 +2332,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
     Page *page = WebPage::pageFromJLong(pPage);
     if (page) {
         InspectorController& ic = page->inspectorController();
-    InspectorClientJava *icj = static_cast<InspectorClientJava *>(ic.inspectorClient());
-    if (icj) {
-      ic.connectFrontend(icj, false);
-    }
+        InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorClient());
+        if (icj) {
+            ic.connectFrontend(icj, false);
+        }
 
     }
     WebPage::webPageFromJLong(pPage)->debugStarted();
@@ -2305,7 +2348,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDisconnectInspectorFronten
     if (!page) {
         return;
     }
-    page->inspectorController().disconnectFrontend(Inspector::DisconnectReason::InspectedTargetDestroyed);
+
+    InspectorController& ic = page->inspectorController();
+    InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorClient());
+    if (icj) {
+        ic.disconnectFrontend(icj);
+    }
+
     WebPage::webPageFromJLong(pPage)->debugEnded();
 }
 

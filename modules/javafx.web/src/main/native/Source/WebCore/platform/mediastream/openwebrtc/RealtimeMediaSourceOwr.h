@@ -58,14 +58,14 @@ RealtimeMediaSourceOwr(OwrMediaSource* mediaSource, const String& id, RealtimeMe
 
     virtual ~RealtimeMediaSourceOwr() { }
 
-    virtual RefPtr<RealtimeMediaSourceCapabilities> capabilities() const { return m_capabilities; }
-    virtual const RealtimeMediaSourceStates& states() { return m_currentStates; }
+    virtual RefPtr<RealtimeMediaSourceCapabilities> capabilities() { return m_capabilities; }
+    virtual const RealtimeMediaSourceSettings& settings() { return m_currentSettings; }
 
     OwrMediaSource* mediaSource() const { return m_mediaSource; }
 
 private:
     RefPtr<RealtimeMediaSourceCapabilities> m_capabilities;
-    RealtimeMediaSourceStates m_currentStates;
+    RealtimeMediaSourceSettings m_currentSettings;
     OwrMediaSource* m_mediaSource;
 };
 

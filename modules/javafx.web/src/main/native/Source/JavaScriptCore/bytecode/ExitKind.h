@@ -32,10 +32,12 @@ enum ExitKind : uint8_t {
     ExitKindUnset,
     BadType, // We exited because a type prediction was wrong.
     BadCell, // We exited because we made an incorrect assumption about what cell we would see. Usually used for function checks.
+    BadIdent, // We exited because we made an incorrect assumption about what identifier we would see. Usually used for cached Id check in get_by_val.
     BadExecutable, // We exited because we made an incorrect assumption about what executable we would see.
     BadCache, // We exited because an inline cache was wrong.
     BadConstantCache, // We exited because a cache on a weak constant (usually a prototype) was wrong.
     BadIndexingType, // We exited because an indexing type was wrong.
+    BadTypeInfoFlags, // We exited because we made an incorrect assumption about what TypeInfo flags we would see.
     Overflow, // We exited because of overflow.
     NegativeZero, // We exited because we encountered negative zero.
     Int52Overflow, // We exited because of an Int52 overflow.
@@ -51,11 +53,13 @@ enum ExitKind : uint8_t {
     Uncountable, // We exited for none of the above reasons, and we should not count it. Most uses of this should be viewed as a FIXME.
     UncountableInvalidation, // We exited because the code block was invalidated; this means that we've already counted the reasons why the code block was invalidated.
     WatchdogTimerFired, // We exited because we need to service the watchdog timer.
-    DebuggerEvent // We exited because we need to service the debugger.
+    DebuggerEvent, // We exited because we need to service the debugger.
+    ExceptionCheck, // We exited because a direct exception check showed that we threw an exception from a C call.
+    GenericUnwind, // We exited because a we arrived at this OSR exit from genericUnwind.
 };
 
 const char* exitKindToString(ExitKind);
-bool exitKindIsCountable(ExitKind);
+bool exitKindMayJettison(ExitKind);
 
 } // namespace JSC
 

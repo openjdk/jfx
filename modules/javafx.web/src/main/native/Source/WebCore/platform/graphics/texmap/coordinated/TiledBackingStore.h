@@ -44,16 +44,13 @@ public:
     TiledBackingStoreClient* client() { return m_client; }
 
     void setTrajectoryVector(const FloatPoint&);
-    void coverWithTilesIfNeeded();
+    void createTilesIfNeeded(const IntRect& unscaledVisibleRect, const IntRect& contentsRect);
 
     float contentsScale() { return m_contentsScale; }
 
     void updateTileBuffers();
 
     void invalidate(const IntRect& dirtyRect);
-
-    IntSize tileSize() { return m_tileSize; }
-    void setTileSize(const IntSize&);
 
     IntRect mapToContents(const IntRect&) const;
     IntRect mapFromContents(const IntRect&) const;
@@ -64,19 +61,17 @@ public:
 
     IntRect coverRect() const { return m_coverRect; }
     bool visibleAreaIsCovered() const;
-    void removeAllNonVisibleTiles();
+    void removeAllNonVisibleTiles(const IntRect& unscaledVisibleRect, const IntRect& contentsRect);
 
     void setSupportsAlpha(bool);
 
 private:
-    void createTiles();
+    void createTiles(const IntRect& visibleRect, const IntRect& scaledContentsRect);
     void computeCoverAndKeepRect(const IntRect& visibleRect, IntRect& coverRect, IntRect& keepRect) const;
 
     bool resizeEdgeTiles();
     void setCoverRect(const IntRect& rect) { m_coverRect = rect; }
     void setKeepRect(const IntRect&);
-
-    IntRect visibleRect() const;
 
     float coverageRatio(const IntRect&) const;
     void adjustForContentsRect(IntRect&) const;

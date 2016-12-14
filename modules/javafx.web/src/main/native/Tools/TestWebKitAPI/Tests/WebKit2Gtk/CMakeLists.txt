@@ -26,6 +26,7 @@ include_directories(
 include_directories(SYSTEM
     ${ATSPI_INCLUDE_DIRS}
     ${GLIB_INCLUDE_DIRS}
+    ${GSTREAMER_INCLUDE_DIRS}
     ${GTK3_INCLUDE_DIRS}
     ${GTK_UNIX_PRINT_INCLUDE_DIRS}
     ${LIBSOUP_INCLUDE_DIRS}
@@ -65,6 +66,11 @@ macro(ADD_WK2_TEST_WEB_EXTENSION extension_name)
     set_target_properties(${extension_name} PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY ${TEST_LIBRARY_DIR}
     )
+    target_link_libraries(${extension_name}
+        JavaScriptCore
+        WebKit2
+        ${GLIB_LIBRARIES}
+    )
 endmacro()
 
 macro(ADD_WK2_TEST test_name)
@@ -89,10 +95,11 @@ macro(ADD_WK2_TEST test_name)
 endmacro()
 
 ADD_WK2_TEST_WEB_EXTENSION(WebExtensionTest WebExtensionTest.cpp)
-ADD_WK2_TEST_WEB_EXTENSION(WebProcessTest DOMNodeTest.cpp DOMNodeFilterTest.cpp DOMXPathNSResolverTest.cpp FrameTest.cpp WebProcessTest.cpp EditorTest.cpp)
+ADD_WK2_TEST_WEB_EXTENSION(WebProcessTest AutocleanupsTest.cpp DOMNodeTest.cpp DOMNodeFilterTest.cpp DOMXPathNSResolverTest.cpp FrameTest.cpp WebProcessTest.cpp EditorTest.cpp)
 
 ADD_WK2_TEST(InspectorTestServer InspectorTestServer.cpp)
 ADD_WK2_TEST(TestAuthentication TestAuthentication.cpp)
+ADD_WK2_TEST(TestAutocleanups TestAutocleanups.cpp)
 ADD_WK2_TEST(TestBackForwardList TestBackForwardList.cpp)
 ADD_WK2_TEST(TestContextMenu TestContextMenu.cpp)
 ADD_WK2_TEST(TestCookieManager TestCookieManager.cpp)
@@ -120,6 +127,7 @@ ADD_WK2_TEST(TestWebKitWebContext TestWebKitWebContext.cpp)
 ADD_WK2_TEST(TestWebKitWebView TestWebKitWebView.cpp)
 ADD_WK2_TEST(TestWebKitUserContentManager TestWebKitUserContentManager.cpp)
 ADD_WK2_TEST(TestEditor TestEditor.cpp)
+ADD_WK2_TEST(TestConsoleMessage TestConsoleMessage.cpp)
 
 if (ATSPI_FOUND)
     ADD_WK2_TEST(AccessibilityTestServer AccessibilityTestServer.cpp)

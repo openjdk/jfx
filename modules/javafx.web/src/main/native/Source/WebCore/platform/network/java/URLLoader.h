@@ -4,7 +4,7 @@
 #ifndef URLLoader_h
 #define URLLoader_h
 
-#include <JavaRef.h>
+#include <wtf/java/JavaRef.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 

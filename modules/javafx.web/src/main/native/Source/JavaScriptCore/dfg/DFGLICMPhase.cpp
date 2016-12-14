@@ -36,6 +36,7 @@
 #include "DFGEdgeDominates.h"
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
+#include "DFGNaturalLoops.h"
 #include "DFGPhase.h"
 #include "DFGSafeToExecute.h"
 #include "JSCInlines.h"
@@ -46,7 +47,7 @@ namespace {
 
 struct LoopData {
     LoopData()
-        : preHeader(0)
+        : preHeader(nullptr)
     {
     }
 
@@ -71,10 +72,15 @@ public:
     {
         DFG_ASSERT(m_graph, nullptr, m_graph.m_form == SSA);
 
-        m_graph.m_dominators.computeIfNecessary(m_graph);
-        m_graph.m_naturalLoops.computeIfNecessary(m_graph);
+        m_graph.ensureDominators();
+        m_graph.ensureNaturalLoops();
 
-        m_data.resize(m_graph.m_naturalLoops.numLoops());
+        if (verbose) {
+            dataLog("Graph before LICM:\n");
+            m_graph.dump();
+        }
+
+        m_data.resize(m_graph.m_naturalLoops->numLoops());
 
         // Figure out the set of things each loop writes to, not including blocks that
         // belong to inner loops. We fix this later.
@@ -89,7 +95,7 @@ public:
             if (!block->cfaHasVisited)
                 continue;
 
-            const NaturalLoop* loop = m_graph.m_naturalLoops.innerMostLoopOf(block);
+            const NaturalLoop* loop = m_graph.m_naturalLoops->innerMostLoopOf(block);
             if (!loop)
                 continue;
             LoopData& data = m_data[loop->index()];
@@ -109,32 +115,56 @@ public:
         // For each loop:
         // - Identify its pre-header.
         // - Make sure its outer loops know what it clobbers.
-        for (unsigned loopIndex = m_graph.m_naturalLoops.numLoops(); loopIndex--;) {
-            const NaturalLoop& loop = m_graph.m_naturalLoops.loop(loopIndex);
+        for (unsigned loopIndex = m_graph.m_naturalLoops->numLoops(); loopIndex--;) {
+            const NaturalLoop& loop = m_graph.m_naturalLoops->loop(loopIndex);
             LoopData& data = m_data[loop.index()];
+
             for (
-                const NaturalLoop* outerLoop = m_graph.m_naturalLoops.innerMostOuterLoop(loop);
+                const NaturalLoop* outerLoop = m_graph.m_naturalLoops->innerMostOuterLoop(loop);
                 outerLoop;
-                outerLoop = m_graph.m_naturalLoops.innerMostOuterLoop(*outerLoop))
+                outerLoop = m_graph.m_naturalLoops->innerMostOuterLoop(*outerLoop))
                 m_data[outerLoop->index()].writes.addAll(data.writes);
 
             BasicBlock* header = loop.header();
-            BasicBlock* preHeader = 0;
+            BasicBlock* preHeader = nullptr;
+            unsigned numberOfPreHeaders = 0; // We're cool if this is 1.
+
+            // This is guaranteed because we expect the CFG not to have unreachable code. Therefore, a
+            // loop header must have a predecessor. (Also, we don't allow the root block to be a loop,
+            // which cuts out the one other way of having a loop header with only one predecessor.)
+            DFG_ASSERT(m_graph, header->at(0), header->predecessors.size() > 1);
+
             for (unsigned i = header->predecessors.size(); i--;) {
                 BasicBlock* predecessor = header->predecessors[i];
-                if (m_graph.m_dominators.dominates(header, predecessor))
+                if (m_graph.m_dominators->dominates(header, predecessor))
                     continue;
-                DFG_ASSERT(m_graph, nullptr, !preHeader || preHeader == predecessor);
+
                 preHeader = predecessor;
+                ++numberOfPreHeaders;
             }
 
+            // We need to validate the pre-header. There are a bunch of things that could be wrong
+            // about it:
+            //
+            // - There might be more than one. This means that pre-header creation either did not run,
+            //   or some CFG transformation destroyed the pre-headers.
+            //
+            // - It may not be legal to exit at the pre-header. That would be a real bummer. Currently,
+            //   LICM assumes that it can always hoist checks. See
+            //   https://bugs.webkit.org/show_bug.cgi?id=148545. Though even with that fixed, we anyway
+            //   would need to check if it's OK to exit at the pre-header since if we can't then we
+            //   would have to restrict hoisting to non-exiting nodes.
+
+            if (numberOfPreHeaders != 1)
+                continue;
+
+            // This is guaranteed because the header has multiple predecessors and critical edges are
+            // broken. Therefore the predecessors must all have one successor, which implies that they
+            // must end in a Jump.
             DFG_ASSERT(m_graph, preHeader->terminal(), preHeader->terminal()->op() == Jump);
 
-            // We should validate the pre-header. If we placed forExit origins on nodes only if
-            // at the top of that node it is legal to exit, then we would simply check if Jump
-            // had a forExit. We should disable hoisting to pre-headers that don't validate.
-            // Or, we could only allow hoisting of things that definitely don't exit.
-            // FIXME: https://bugs.webkit.org/show_bug.cgi?id=145204
+            if (!preHeader->terminal()->origin.exitOK)
+                continue;
 
             data.preHeader = preHeader;
         }
@@ -145,6 +175,7 @@ public:
         // We try to hoist to the outer-most loop that permits it. Hoisting is valid if:
         // - The node doesn't write anything.
         // - The node doesn't read anything that the loop writes.
+        // - The preHeader is valid (i.e. it passed the validation above).
         // - The preHeader's state at tail makes the node safe to execute.
         // - The loop's children all belong to nodes that strictly dominate the loop header.
         // - The preHeader's state at tail is still valid. This is mostly to save compile
@@ -159,7 +190,7 @@ public:
         Vector<const NaturalLoop*> loopStack;
         bool changed = false;
         for (BasicBlock* block : m_graph.blocksInPreOrder()) {
-            const NaturalLoop* loop = m_graph.m_naturalLoops.innerMostLoopOf(block);
+            const NaturalLoop* loop = m_graph.m_naturalLoops->innerMostLoopOf(block);
             if (!loop)
                 continue;
 
@@ -167,7 +198,7 @@ public:
             for (
                 const NaturalLoop* current = loop;
                 current;
-                current = m_graph.m_naturalLoops.innerMostOuterLoop(*current))
+                current = m_graph.m_naturalLoops->innerMostOuterLoop(*current))
                 loopStack.append(current);
 
             // Remember: the loop stack has the inner-most loop at index 0, so if we want
@@ -204,6 +235,12 @@ private:
     {
         Node* node = nodeRef;
         LoopData& data = m_data[loop->index()];
+
+        if (!data.preHeader) {
+            if (verbose)
+                dataLog("    Not hoisting ", node, " because the pre-header is invalid.\n");
+            return false;
+        }
 
         if (!data.preHeader->cfaDidFinish) {
             if (verbose)
@@ -284,20 +321,20 @@ private:
                 "\n");
         }
 
+        // FIXME: We should adjust the Check: flags on the edges of node. There are phases that assume
+        // that those flags are correct even if AI is stale.
+        // https://bugs.webkit.org/show_bug.cgi?id=148544
         data.preHeader->insertBeforeTerminal(node);
         node->owner = data.preHeader;
         NodeOrigin originalOrigin = node->origin;
-        node->origin.forExit = data.preHeader->terminal()->origin.forExit;
-        if (!node->origin.semantic.isSet())
-            node->origin.semantic = node->origin.forExit;
+        node->origin = data.preHeader->terminal()->origin.withSemantic(node->origin.semantic);
 
         // Modify the states at the end of the preHeader of the loop we hoisted to,
-        // and all pre-headers inside the loop.
-        // FIXME: This could become a scalability bottleneck. Fortunately, most loops
-        // are small and anyway we rapidly skip over basic blocks here.
+        // and all pre-headers inside the loop. This isn't a stability bottleneck right now
+        // because most loops are small and most blocks belong to few loops.
         for (unsigned bodyIndex = loop->size(); bodyIndex--;) {
             BasicBlock* subBlock = loop->at(bodyIndex);
-            const NaturalLoop* subLoop = m_graph.m_naturalLoops.headerOf(subBlock);
+            const NaturalLoop* subLoop = m_graph.m_naturalLoops->headerOf(subBlock);
             if (!subLoop)
                 continue;
             BasicBlock* subPreHeader = m_data[subLoop->index()].preHeader;

@@ -76,6 +76,9 @@ typedef void (*AXPostedNotificationCallback)(id element, NSString* notification,
 - (NSUInteger)accessibilityIndexOfChild:(id)child;
 - (NSUInteger)accessibilityArrayAttributeCount:(NSString *)attribute;
 - (void)_accessibilitySetTestValue:(id)value forAttribute:(NSString*)attributeName;
+- (void)_accessibilityScrollToMakeVisibleWithSubFocus:(NSRect)rect;
+- (void)_accessibilityScrollToGlobalPoint:(NSPoint)point;
+- (void)_accessibilitySetValue:(id)value forAttribute:(NSString*)attributeName;
 @end
 
 AccessibilityUIElement::AccessibilityUIElement(PlatformUIElement element)
@@ -395,8 +398,13 @@ AccessibilityUIElement AccessibilityUIElement::ariaFlowToElementAtIndex(unsigned
 
 AccessibilityUIElement AccessibilityUIElement::ariaControlsElementAtIndex(unsigned index)
 {
-    // FIXME: implement
-    return 0;
+    BEGIN_AX_OBJC_EXCEPTIONS
+    NSArray* ariaControls = [m_element accessibilityAttributeValue:@"AXARIAControls"];
+    if (index < [ariaControls count])
+        return [ariaControls objectAtIndex:index];
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
 }
 
 AccessibilityUIElement AccessibilityUIElement::disclosedRowAtIndex(unsigned index)
@@ -694,7 +702,8 @@ JSStringRef AccessibilityUIElement::stringValue()
 {
     BEGIN_AX_OBJC_EXCEPTIONS
     id description = descriptionOfValue([m_element accessibilityAttributeValue:NSAccessibilityValueAttribute], m_element);
-    return concatenateAttributeAndValue(@"AXValue", description);
+    if (description)
+        return concatenateAttributeAndValue(@"AXValue", description);
     END_AX_OBJC_EXCEPTIONS
 
     return nullptr;
@@ -1283,6 +1292,9 @@ AccessibilityUIElement AccessibilityUIElement::cellForColumnAndRow(unsigned col,
 
 AccessibilityUIElement AccessibilityUIElement::horizontalScrollbar() const
 {
+    if (!m_element)
+        return nullptr;
+    
     BEGIN_AX_OBJC_EXCEPTIONS
     return AccessibilityUIElement([m_element accessibilityAttributeValue:NSAccessibilityHorizontalScrollBarAttribute]);
     END_AX_OBJC_EXCEPTIONS
@@ -1292,6 +1304,9 @@ AccessibilityUIElement AccessibilityUIElement::horizontalScrollbar() const
 
 AccessibilityUIElement AccessibilityUIElement::verticalScrollbar() const
 {
+    if (!m_element)
+        return nullptr;
+
     BEGIN_AX_OBJC_EXCEPTIONS
     return AccessibilityUIElement([m_element accessibilityAttributeValue:NSAccessibilityVerticalScrollBarAttribute]);
     END_AX_OBJC_EXCEPTIONS
@@ -1398,6 +1413,33 @@ void AccessibilityUIElement::setSelectedChild(AccessibilityUIElement* element) c
     END_AX_OBJC_EXCEPTIONS
 }
 
+void AccessibilityUIElement::setSelectedChildAtIndex(unsigned index) const
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    AccessibilityUIElement element = const_cast<AccessibilityUIElement*>(this)->getChildAtIndex(index);
+    if (!element.platformUIElement())
+        return;
+    NSArray *selectedChildren = [m_element accessibilityAttributeValue:NSAccessibilitySelectedChildrenAttribute];
+    NSArray *array = [NSArray arrayWithObject:element.platformUIElement()];
+    if (selectedChildren)
+        array = [selectedChildren arrayByAddingObjectsFromArray:array];
+    [m_element _accessibilitySetValue:array forAttribute:NSAccessibilitySelectedChildrenAttribute];
+    END_AX_OBJC_EXCEPTIONS
+}
+
+void AccessibilityUIElement::removeSelectionAtIndex(unsigned index) const
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    AccessibilityUIElement element = const_cast<AccessibilityUIElement*>(this)->getChildAtIndex(index);
+    NSArray *selectedChildren = [m_element accessibilityAttributeValue:NSAccessibilitySelectedChildrenAttribute];
+    if (!element.platformUIElement() || !selectedChildren)
+        return;
+    NSMutableArray *array = [NSMutableArray arrayWithArray:selectedChildren];
+    [array removeObject:element.platformUIElement()];
+    [m_element _accessibilitySetValue:array forAttribute:NSAccessibilitySelectedChildrenAttribute];
+    END_AX_OBJC_EXCEPTIONS
+}
+
 JSStringRef AccessibilityUIElement::accessibilityValue() const
 {
     // FIXME: implement
@@ -1406,11 +1448,23 @@ JSStringRef AccessibilityUIElement::accessibilityValue() const
 
 JSStringRef AccessibilityUIElement::documentEncoding()
 {
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id value = [m_element accessibilityAttributeValue:@"AXDocumentEncoding"];
+    if ([value isKindOfClass:[NSString class]])
+        return [value createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+    
     return JSStringCreateWithCharacters(0, 0);
 }
 
 JSStringRef AccessibilityUIElement::documentURI()
 {
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id value = [m_element accessibilityAttributeValue:@"AXDocumentURI"];
+    if ([value isKindOfClass:[NSString class]])
+        return [value createJSStringRef];
+    END_AX_OBJC_EXCEPTIONS
+    
     return JSStringCreateWithCharacters(0, 0);
 }
 
@@ -1463,14 +1517,22 @@ bool AccessibilityUIElement::isFocusable() const
 
 bool AccessibilityUIElement::isSelectable() const
 {
-    // FIXME: implement
-    return false;
+    bool result = false;
+    BEGIN_AX_OBJC_EXCEPTIONS
+    result = [m_element accessibilityIsAttributeSettable:NSAccessibilitySelectedAttribute];
+    END_AX_OBJC_EXCEPTIONS
+    return result;
 }
 
 bool AccessibilityUIElement::isMultiSelectable() const
 {
-    // FIXME: implement
-    return false;
+    BOOL result = NO;
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id value = [m_element accessibilityAttributeValue:@"AXIsMultiSelectable"];
+    if ([value isKindOfClass:[NSNumber class]])
+        result = [value boolValue];
+    END_AX_OBJC_EXCEPTIONS
+    return result;
 }
 
 bool AccessibilityUIElement::isSelectedOptionActive() const
@@ -1550,7 +1612,7 @@ void AccessibilityUIElement::removeSelection()
     // FIXME: implement
 }
 
-#if SUPPORTS_AX_TEXTMARKERS
+#if SUPPORTS_AX_TEXTMARKERS && PLATFORM(MAC)
 
 // Text markers
 AccessibilityTextMarkerRange AccessibilityUIElement::lineTextMarkerRangeForTextMarker(AccessibilityTextMarker* textMarker)
@@ -1784,7 +1846,107 @@ bool AccessibilityUIElement::setSelectedVisibleTextRange(AccessibilityTextMarker
     return true;
 }
 
-#endif // SUPPORTS_AX_TEXTMARKERS
+AccessibilityTextMarkerRange AccessibilityUIElement::leftWordTextMarkerRangeForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id textMarkerRange = [m_element accessibilityAttributeValue:@"AXLeftWordTextMarkerRangeForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarkerRange(textMarkerRange);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::rightWordTextMarkerRangeForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id textMarkerRange = [m_element accessibilityAttributeValue:@"AXRightWordTextMarkerRangeForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarkerRange(textMarkerRange);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::previousWordStartTextMarkerForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id previousTextMarker = [m_element accessibilityAttributeValue:@"AXPreviousWordStartTextMarkerForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarker(previousTextMarker);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::nextWordEndTextMarkerForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id nextTextMarker = [m_element accessibilityAttributeValue:@"AXNextWordEndTextMarkerForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarker(nextTextMarker);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::paragraphTextMarkerRangeForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id textMarkerRange = [m_element accessibilityAttributeValue:@"AXParagraphTextMarkerRangeForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarkerRange(textMarkerRange);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::previousParagraphStartTextMarkerForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id previousTextMarker = [m_element accessibilityAttributeValue:@"AXPreviousParagraphStartTextMarkerForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarker(previousTextMarker);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::nextParagraphEndTextMarkerForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id nextTextMarker = [m_element accessibilityAttributeValue:@"AXNextParagraphEndTextMarkerForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarker(nextTextMarker);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::sentenceTextMarkerRangeForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id textMarkerRange = [m_element accessibilityAttributeValue:@"AXSentenceTextMarkerRangeForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarkerRange(textMarkerRange);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id previousTextMarker = [m_element accessibilityAttributeValue:@"AXPreviousSentenceStartTextMarkerForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarker(previousTextMarker);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker* textMarker)
+{
+    BEGIN_AX_OBJC_EXCEPTIONS
+    id nextTextMarker = [m_element accessibilityAttributeValue:@"AXNextSentenceEndTextMarkerForTextMarker" forParameter:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarker(nextTextMarker);
+    END_AX_OBJC_EXCEPTIONS
+    
+    return nullptr;
+}
+
+#endif // SUPPORTS_AX_TEXTMARKERS && PLATFORM(MAC)
 
 JSStringRef AccessibilityUIElement::supportedActions()
 {
@@ -1827,7 +1989,6 @@ JSStringRef AccessibilityUIElement::mathPrescriptsDescription() const
     return nullptr;
 }
 
-
 void AccessibilityUIElement::scrollToMakeVisible()
 {
     BEGIN_AX_OBJC_EXCEPTIONS
@@ -1837,10 +1998,14 @@ void AccessibilityUIElement::scrollToMakeVisible()
 
 void AccessibilityUIElement::scrollToMakeVisibleWithSubFocus(int x, int y, int width, int height)
 {
-    // FIXME: implement
+    BEGIN_AX_OBJC_EXCEPTIONS
+    [m_element _accessibilityScrollToMakeVisibleWithSubFocus:NSMakeRect(x, y, width, height)];
+    END_AX_OBJC_EXCEPTIONS
 }
 
 void AccessibilityUIElement::scrollToGlobalPoint(int x, int y)
 {
-    // FIXME: implement
+    BEGIN_AX_OBJC_EXCEPTIONS
+    [m_element _accessibilityScrollToGlobalPoint:NSMakePoint(x, y)];
+    END_AX_OBJC_EXCEPTIONS
 }

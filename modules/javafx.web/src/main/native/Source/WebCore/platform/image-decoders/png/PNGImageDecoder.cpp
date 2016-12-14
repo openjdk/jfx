@@ -45,10 +45,6 @@
 #include <png.h>
 #include <wtf/StdLibExtras.h>
 
-#if USE(QCMSLIB)
-#include <qcms.h>
-#endif
-
 #if defined(PNG_LIBPNG_VER_MAJOR) && defined(PNG_LIBPNG_VER_MINOR) && (PNG_LIBPNG_VER_MAJOR > 1 || (PNG_LIBPNG_VER_MAJOR == 1 && PNG_LIBPNG_VER_MINOR >= 4))
 #define JMPBUF(png_ptr) png_jmpbuf(png_ptr)
 #else
@@ -125,10 +121,6 @@ public:
         , m_decodingSizeOnly(false)
         , m_hasAlpha(false)
         , m_interlaceBuffer(0)
-#if USE(QCMSLIB)
-        , m_transform(0)
-        , m_rowBuffer()
-#endif
     {
         m_png = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, decodingFailed, decodingWarning);
         m_info = png_create_info_struct(m_png);
@@ -151,17 +143,12 @@ public:
         if (m_png && m_info)
             // This will zero the pointers.
             png_destroy_read_struct(&m_png, &m_info, 0);
-#if USE(QCMSLIB)
-        if (m_transform)
-            qcms_transform_release(m_transform);
-        m_transform = 0;
-#endif
         delete[] m_interlaceBuffer;
         m_interlaceBuffer = 0;
         m_readOffset = 0;
     }
 
-    bool decode(const SharedBuffer& data, bool sizeOnly)
+    bool decode(const SharedBuffer& data, bool sizeOnly, unsigned haltAtFrame)
     {
         m_decodingSizeOnly = sizeOnly;
         PNGImageDecoder* decoder = static_cast<PNGImageDecoder*>(png_get_progressive_ptr(m_png));
@@ -178,7 +165,7 @@ public:
             // We explicitly specify the superclass isSizeAvailable() because we
             // merely want to check if we've managed to set the size, not
             // (recursively) trigger additional decoding if we haven't.
-            if (sizeOnly ? decoder->ImageDecoder::isSizeAvailable() : decoder->isComplete())
+            if (sizeOnly ? decoder->ImageDecoder::isSizeAvailable() : decoder->isCompleteAtIndex(haltAtFrame))
                 return true;
         }
         return false;
@@ -195,33 +182,6 @@ public:
 
     png_bytep interlaceBuffer() const { return m_interlaceBuffer; }
     void createInterlaceBuffer(int size) { m_interlaceBuffer = new png_byte[size]; }
-#if USE(QCMSLIB)
-    png_bytep rowBuffer() const { return m_rowBuffer.get(); }
-    void createRowBuffer(int size) { m_rowBuffer = std::make_unique<png_byte[]>(size); }
-    qcms_transform* colorTransform() const { return m_transform; }
-
-    void createColorTransform(const ColorProfile& colorProfile, bool hasAlpha)
-    {
-        if (m_transform)
-            qcms_transform_release(m_transform);
-        m_transform = 0;
-
-        if (colorProfile.isEmpty())
-            return;
-        qcms_profile* deviceProfile = ImageDecoder::qcmsOutputDeviceProfile();
-        if (!deviceProfile)
-            return;
-        qcms_profile* inputProfile = qcms_profile_from_memory(colorProfile.data(), colorProfile.size());
-        if (!inputProfile)
-            return;
-        // We currently only support color profiles for RGB and RGBA images.
-        ASSERT(icSigRgbData == qcms_profile_get_color_space(inputProfile));
-        qcms_data_type dataFormat = hasAlpha ? QCMS_DATA_RGBA_8 : QCMS_DATA_RGB_8;
-        // FIXME: Don't force perceptual intent if the image profile contains an intent.
-        m_transform = qcms_transform_create(inputProfile, dataFormat, deviceProfile, dataFormat, QCMS_INTENT_PERCEPTUAL);
-        qcms_profile_release(inputProfile);
-    }
-#endif
 
 private:
     png_structp m_png;
@@ -231,10 +191,6 @@ private:
     bool m_decodingSizeOnly;
     bool m_hasAlpha;
     png_bytep m_interlaceBuffer;
-#if USE(QCMSLIB)
-    qcms_transform* m_transform;
-    std::unique_ptr<png_byte[]> m_rowBuffer;
-#endif
 };
 
 PNGImageDecoder::PNGImageDecoder(ImageSource::AlphaOption alphaOption, ImageSource::GammaAndColorProfileOption gammaAndColorProfileOption)
@@ -274,7 +230,7 @@ PNGImageDecoder::~PNGImageDecoder()
 bool PNGImageDecoder::isSizeAvailable()
 {
     if (!ImageDecoder::isSizeAvailable())
-         decode(true);
+        decode(true, 0);
 
     return ImageDecoder::isSizeAvailable();
 }
@@ -308,7 +264,7 @@ ImageFrame* PNGImageDecoder::frameBufferAtIndex(size_t index)
 
     ImageFrame& frame = m_frameBufferCache[index];
     if (frame.status() != ImageFrame::FrameComplete)
-        decode(false);
+        decode(false, index);
     return &frame;
 }
 
@@ -457,11 +413,6 @@ void PNGImageDecoder::headerAvailable()
         // the color profile or we'd need to decode into a gray-scale image buffer and
         // hand that to CoreGraphics.
         readColorProfile(png, info, m_colorProfile);
-#if USE(QCMSLIB)
-        bool decodedImageHasAlpha = (colorType & PNG_COLOR_MASK_ALPHA) || trnsCount;
-        m_reader->createColorTransform(m_colorProfile, decodedImageHasAlpha);
-        m_colorProfile.clear();
-#endif
     }
 
     // Deal with gamma and keep it under our control.
@@ -553,15 +504,6 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
             }
         }
 
-#if USE(QCMSLIB)
-        if (m_reader->colorTransform() && !m_currentFrame) {
-            m_reader->createRowBuffer(colorChannels * size().width());
-            if (!m_reader->rowBuffer()) {
-                longjmp(JMPBUF(png), 1);
-                return;
-            }
-        }
-#endif
         buffer.setStatus(ImageFrame::FramePartial);
         buffer.setHasAlpha(false);
         buffer.setColorProfile(m_colorProfile);
@@ -630,13 +572,6 @@ void PNGImageDecoder::rowAvailable(unsigned char* rowBuffer, unsigned rowIndex, 
         png_progressive_combine_row(m_reader->pngPtr(), row, rowBuffer);
     }
 
-#if USE(QCMSLIB)
-    if (qcms_transform* transform = m_reader->colorTransform()) {
-        qcms_transform_data(transform, row, m_reader->rowBuffer(), size().width());
-        row = m_reader->rowBuffer();
-    }
-#endif
-
     // Write the decoded row pixels to the frame buffer.
     ImageFrame::PixelData* address = buffer.getAddr(0, y);
     int width = scaledSize().width();
@@ -687,7 +622,7 @@ void PNGImageDecoder::pngComplete()
         m_frameBufferCache.first().setStatus(ImageFrame::FrameComplete);
 }
 
-void PNGImageDecoder::decode(bool onlySize)
+void PNGImageDecoder::decode(bool onlySize, unsigned haltAtFrame)
 {
     if (failed())
         return;
@@ -697,7 +632,7 @@ void PNGImageDecoder::decode(bool onlySize)
 
     // If we couldn't decode the image but we've received all the data, decoding
     // has failed.
-    if (!m_reader->decode(*m_data, onlySize) && isAllDataReceived())
+    if (!m_reader->decode(*m_data, onlySize, haltAtFrame) && isAllDataReceived())
         setFailed();
     // If we're done decoding the image, we don't need the PNGImageReader
     // anymore.  (If we failed, |m_reader| has already been cleared.)
@@ -769,6 +704,27 @@ void PNGImageDecoder::readChunks(png_unknown_chunkp chunk)
             || m_dispose > 2 || m_blend > 1) {
             fallbackNotAnimated();
             return;
+        }
+
+        if (m_frameBufferCache.isEmpty()) {
+            m_frameBufferCache.resize(1);
+            m_frameBufferCache[0].setPremultiplyAlpha(m_premultiplyAlpha);
+        }
+
+        if (m_currentFrame < m_frameBufferCache.size()) {
+            ImageFrame& buffer = m_frameBufferCache[m_currentFrame];
+
+            if (!m_delayDenominator)
+                buffer.setDuration(m_delayNumerator * 10);
+            else
+                buffer.setDuration(m_delayNumerator * 1000 / m_delayDenominator);
+
+            if (m_dispose == 2)
+                buffer.setDisposalMethod(ImageFrame::DisposeOverwritePrevious);
+            else if (m_dispose == 1)
+                buffer.setDisposalMethod(ImageFrame::DisposeOverwriteBgcolor);
+            else
+                buffer.setDisposalMethod(ImageFrame::DisposeKeep);
         }
 
         m_frameInfo = true;
@@ -927,18 +883,6 @@ void PNGImageDecoder::frameComplete()
     ImageFrame& buffer = m_frameBufferCache[m_currentFrame];
     buffer.setStatus(ImageFrame::FrameComplete);
 
-    if (!m_delayDenominator)
-        buffer.setDuration(m_delayNumerator * 10);
-    else
-        buffer.setDuration(m_delayNumerator * 1000 / m_delayDenominator);
-
-    if (m_dispose == 2)
-        buffer.setDisposalMethod(ImageFrame::DisposeOverwritePrevious);
-    else if (m_dispose == 1)
-        buffer.setDisposalMethod(ImageFrame::DisposeOverwriteBgcolor);
-    else
-        buffer.setDisposalMethod(ImageFrame::DisposeKeep);
-
     png_bytep interlaceBuffer = m_reader->interlaceBuffer();
 
     if (m_currentFrame && interlaceBuffer) {
@@ -952,12 +896,6 @@ void PNGImageDecoder::frameComplete()
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
         for (int y = 0; y < rect.maxY() - rect.y(); ++y) {
             png_bytep row = interlaceBuffer + (m_scaled ? m_scaledRows[y] : y) * colorChannels * size().width();
-#if USE(QCMSLIB)
-            if (qcms_transform* transform = m_reader->colorTransform()) {
-                qcms_transform_data(transform, row, m_reader->rowBuffer(), size().width());
-                row = m_reader->rowBuffer();
-            }
-#endif
             ImageFrame::PixelData* address = buffer.getAddr(rect.x(), y + rect.y());
             for (int x = 0; x < rect.maxX() - rect.x(); ++x) {
                 png_bytep pixel = row + (m_scaled ? m_scaledColumns[x] : x) * colorChannels;
@@ -974,12 +912,6 @@ void PNGImageDecoder::frameComplete()
         png_bytep row = interlaceBuffer;
         for (int y = rect.y(); y < rect.maxY(); ++y, row += colorChannels * size().width()) {
             png_bytep pixel = row;
-#if USE(QCMSLIB)
-            if (qcms_transform* transform = m_reader->colorTransform()) {
-                qcms_transform_data(transform, row, m_reader->rowBuffer(), size().width());
-                pixel = m_reader->rowBuffer();
-            }
-#endif
             ImageFrame::PixelData* address = buffer.getAddr(rect.x(), y);
             for (int x = rect.x(); x < rect.maxX(); ++x, pixel += colorChannels) {
                 unsigned alpha = hasAlpha ? pixel[3] : 255;

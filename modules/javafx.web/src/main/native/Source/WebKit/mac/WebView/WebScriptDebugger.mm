@@ -51,7 +51,7 @@ using namespace WebCore;
 
 static NSString *toNSString(SourceProvider* sourceProvider)
 {
-    const String& sourceString = sourceProvider->source();
+    const String& sourceString = sourceProvider->source().toString();
     if (sourceString.isEmpty())
         return nil;
     return sourceString;
@@ -68,11 +68,12 @@ static NSURL *toNSURL(const String& s)
 static WebFrame *toWebFrame(JSGlobalObject* globalObject)
 {
     JSDOMWindow* window = static_cast<JSDOMWindow*>(globalObject);
-    return kit(window->impl().frame());
+    return kit(window->wrapped().frame());
 }
 
 WebScriptDebugger::WebScriptDebugger(JSGlobalObject* globalObject)
-    : m_callingDelegate(false)
+    : Debugger(globalObject->vm())
+    , m_callingDelegate(false)
     , m_globalObject(globalObject->vm(), globalObject)
 {
     setPauseOnExceptionsState(PauseOnAllExceptions);

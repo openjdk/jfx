@@ -34,6 +34,7 @@
 #include "FontDescription.h"
 #include "GlyphPage.h"
 #include "HWndDC.h"
+#include "OpenTypeCG.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
 #include <mlang.h>
@@ -53,7 +54,6 @@ void Font::platformInit()
     m_syntheticBoldOffset = m_platformData.syntheticBold() ? 1.0f : 0.f;
     m_scriptCache = 0;
     m_scriptFontProperties = 0;
-    m_isSystemFont = false;
 
     if (m_platformData.useGDI())
         return initGDIFont();
@@ -63,6 +63,16 @@ void Font::platformInit()
     int iDescent = CGFontGetDescent(font);
     int iLineGap = CGFontGetLeading(font);
     int iCapHeight = CGFontGetCapHeight(font);
+
+    // The Open Font Format describes the OS/2 USE_TYPO_METRICS flag as follows:
+    // "If set, it is strongly recommended to use OS/2.sTypoAscender - OS/2.sTypoDescender+ OS/2.sTypoLineGap as a value for default line spacing for this font."
+    short typoAscent, typoDescent, typoLineGap;
+    if (OpenType::tryGetTypoMetrics(m_platformData.cgFont(), typoAscent, typoDescent, typoLineGap)) {
+        iAscent = typoAscent;
+        iDescent = typoDescent;
+        iLineGap = typoLineGap;
+    }
+
     unsigned unitsPerEm = CGFontGetUnitsPerEm(font);
     float pointSize = m_platformData.size();
     float fAscent = scaleEmToUnits(iAscent, unitsPerEm) * pointSize;
@@ -76,7 +86,7 @@ void Font::platformInit()
         int faceLength = GetTextFace(dc, 0, 0);
         Vector<WCHAR> faceName(faceLength);
         GetTextFace(dc, faceLength, faceName.data());
-        m_isSystemFont = !wcscmp(faceName.data(), L"Lucida Grande");
+        m_platformData.setIsSystemFont(!wcscmp(faceName.data(), L"Lucida Grande"));
         SelectObject(dc, oldFont);
 
         fAscent = ascentConsideringMacAscentHack(faceName.data(), fAscent, fDescent);
@@ -137,7 +147,7 @@ float Font::platformWidthForGlyph(Glyph glyph) const
 
     // FIXME: Need to add real support for printer fonts.
     bool isPrinterFont = false;
-    wkGetGlyphAdvances(font, m, m_isSystemFont, isPrinterFont, glyph, advance);
+    wkGetGlyphAdvances(font, m, m_platformData.isSystemFont(), isPrinterFont, glyph, advance);
 
     return advance.width + m_syntheticBoldOffset;
 }

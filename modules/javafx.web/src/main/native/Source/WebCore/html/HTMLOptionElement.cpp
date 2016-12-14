@@ -71,12 +71,12 @@ RefPtr<HTMLOptionElement> HTMLOptionElement::createForJSConstructor(Document& do
 {
     RefPtr<HTMLOptionElement> element = adoptRef(new HTMLOptionElement(optionTag, document));
 
-    RefPtr<Text> text = Text::create(document, data.isNull() ? "" : data);
+    Ref<Text> text = Text::create(document, data.isNull() ? "" : data);
 
     ec = 0;
-    element->appendChild(text.release(), ec);
+    element->appendChild(WTFMove(text), ec);
     if (ec)
-        return 0;
+        return nullptr;
 
     if (!value.isNull())
         element->setValue(value);
@@ -84,7 +84,7 @@ RefPtr<HTMLOptionElement> HTMLOptionElement::createForJSConstructor(Document& do
         element->setAttribute(selectedAttr, emptyAtom);
     element->setSelected(selected);
 
-    return element.release();
+    return element;
 }
 
 bool HTMLOptionElement::isFocusable() const
@@ -98,17 +98,7 @@ bool HTMLOptionElement::isFocusable() const
 
 String HTMLOptionElement::text() const
 {
-    String text;
-
-    // WinIE does not use the label attribute, so as a quirk, we ignore it.
-    if (!document().inQuirksMode())
-        text = fastGetAttribute(labelAttr);
-
-    // FIXME: The following treats an element with the label attribute set to
-    // the empty string the same as an element with no label attribute at all.
-    // Is that correct? If it is, then should the label function work the same way?
-    if (text.isEmpty())
-        text = collectOptionInnerText();
+    String text = collectOptionInnerText();
 
     // FIXME: Is displayStringModifiedByEncoding helpful here?
     // If it's correct here, then isn't it needed in the value and label functions too?
@@ -129,7 +119,7 @@ void HTMLOptionElement::setText(const String &text, ExceptionCode& ec)
     // Handle the common special case where there's exactly 1 child node, and it's a text node.
     Node* child = firstChild();
     if (is<Text>(child) && !child->nextSibling())
-        downcast<Text>(*child).setData(text, ec);
+        downcast<Text>(*child).setData(text);
     else {
         removeChildren();
         appendChild(Text::create(document(), text), ec);
@@ -156,12 +146,10 @@ int HTMLOptionElement::index() const
 
     int optionIndex = 0;
 
-    const Vector<HTMLElement*>& items = selectElement->listItems();
-    size_t length = items.size();
-    for (size_t i = 0; i < length; ++i) {
-        if (!is<HTMLOptionElement>(*items[i]))
+    for (auto& item : selectElement->listItems()) {
+        if (!is<HTMLOptionElement>(*item))
             continue;
-        if (items[i] == this)
+        if (item == this)
             return optionIndex;
         ++optionIndex;
     }
@@ -277,9 +265,9 @@ HTMLSelectElement* HTMLOptionElement::ownerSelectElement() const
 
 String HTMLOptionElement::label() const
 {
-    const AtomicString& label = fastGetAttribute(labelAttr);
+    String label = fastGetAttribute(labelAttr);
     if (!label.isNull())
-        return label;
+        return label.stripWhiteSpace(isHTMLSpace);
     return collectOptionInnerText().stripWhiteSpace(isHTMLSpace).simplifyWhiteSpace(isHTMLSpace);
 }
 
@@ -302,8 +290,8 @@ String HTMLOptionElement::textIndentedToRespectGroupLabel() const
 {
     ContainerNode* parent = parentNode();
     if (is<HTMLOptGroupElement>(parent))
-        return "    " + text();
-    return text();
+        return "    " + label();
+    return label();
 }
 
 bool HTMLOptionElement::isDisabledFormControl() const

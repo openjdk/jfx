@@ -43,13 +43,13 @@ class ScriptValue;
 }
 
 namespace JSC {
-    class JSGlobalObject;
-    class ExecState;
+class JSGlobalObject;
+class ExecState;
 
-    namespace Bindings {
-        class Instance;
-        class RootObject;
-    }
+namespace Bindings {
+class Instance;
+class RootObject;
+}
 }
 
 namespace WebCore {
@@ -77,7 +77,7 @@ public:
     explicit ScriptController(Frame&);
     ~ScriptController();
 
-    WEBCORE_EXPORT static PassRefPtr<DOMWrapperWorld> createWorld();
+    WEBCORE_EXPORT static Ref<DOMWrapperWorld> createWorld();
 
     JSDOMWindowShell* createWindowShell(DOMWrapperWorld&);
     void destroyWindowShell(DOMWrapperWorld&);
@@ -101,8 +101,8 @@ public:
 
     static void getAllWorlds(Vector<Ref<DOMWrapperWorld>>&);
 
-    Deprecated::ScriptValue executeScript(const ScriptSourceCode&);
-    WEBCORE_EXPORT Deprecated::ScriptValue executeScript(const String& script, bool forceUserGesture = false);
+    Deprecated::ScriptValue executeScript(const ScriptSourceCode&, ExceptionDetails* = nullptr);
+    WEBCORE_EXPORT Deprecated::ScriptValue executeScript(const String& script, bool forceUserGesture = false, ExceptionDetails* = nullptr);
     WEBCORE_EXPORT Deprecated::ScriptValue executeScriptInWorld(DOMWrapperWorld&, const String& script, bool forceUserGesture = false);
 
     // Returns true if argument is a JavaScript URL.
@@ -112,8 +112,8 @@ public:
     // Darwin is an exception to this rule: it is OK to call this function from any thread, even reentrantly.
     static void initializeThreading();
 
-    Deprecated::ScriptValue evaluate(const ScriptSourceCode&);
-    Deprecated::ScriptValue evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld&);
+    Deprecated::ScriptValue evaluate(const ScriptSourceCode&, ExceptionDetails* = nullptr);
+    Deprecated::ScriptValue evaluateInWorld(const ScriptSourceCode&, DOMWrapperWorld&, ExceptionDetails* = nullptr);
 
     WTF::TextPosition eventHandlerPosition() const;
 
@@ -121,6 +121,7 @@ public:
     void disableEval(const String& errorMessage);
 
     WEBCORE_EXPORT static bool processingUserGesture();
+    WEBCORE_EXPORT static bool processingUserGestureForMedia();
 
     static bool canAccessFromCurrentOrigin(Frame*);
     WEBCORE_EXPORT bool canExecuteScripts(ReasonForCallingCanExecuteScripts);
@@ -145,11 +146,11 @@ public:
 
     void updatePlatformScriptObjects();
 
-    PassRefPtr<JSC::Bindings::Instance>  createScriptInstanceForWidget(Widget*);
+    RefPtr<JSC::Bindings::Instance>  createScriptInstanceForWidget(Widget*);
     JSC::Bindings::RootObject* bindingRootObject();
     JSC::Bindings::RootObject* cacheableBindingRootObject();
 
-    WEBCORE_EXPORT PassRefPtr<JSC::Bindings::RootObject> createRootObject(void* nativeHandle);
+    WEBCORE_EXPORT RefPtr<JSC::Bindings::RootObject> createRootObject(void* nativeHandle);
 
     void collectIsolatedContexts(Vector<std::pair<JSC::ExecState*, SecurityOrigin*>>&);
 
@@ -164,8 +165,6 @@ public:
     NPObject* createScriptObjectForPluginElement(HTMLPlugInElement*);
     WEBCORE_EXPORT NPObject* windowScriptNPObject();
 #endif
-
-    bool shouldBypassMainWorldContentSecurityPolicy();
 
 private:
     WEBCORE_EXPORT JSDOMWindowShell* initScript(DOMWrapperWorld&);

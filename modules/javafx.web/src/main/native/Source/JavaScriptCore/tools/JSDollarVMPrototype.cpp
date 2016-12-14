@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSDollarVMPrototype.h"
 
+#include "CodeBlock.h"
 #include "Heap.h"
 #include "HeapIterationScope.h"
 #include "JSCInlines.h"
@@ -302,7 +303,10 @@ static EncodedJSValue JSC_HOST_CALL functionPrint(ExecState* exec)
     for (unsigned i = 0; i < exec->argumentCount(); ++i) {
         if (i)
             dataLog(" ");
-        dataLog(exec->uncheckedArgument(i).toString(exec)->value(exec));
+        String argStr = exec->uncheckedArgument(i).toString(exec)->value(exec);
+        if (exec->hadException())
+            return JSValue::encode(jsUndefined());
+        dataLog(argStr);
     }
     return JSValue::encode(jsUndefined());
 }
@@ -402,7 +406,7 @@ void JSDollarVMPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
 
     addFunction(vm, globalObject, "crash", functionCrash, 0);
 
-    putDirectNativeFunction(vm, globalObject, Identifier::fromString(&vm, "dfgTrue"), 0, functionDFGTrue, DFGTrueIntrinsic, DontEnum | JSC::Function);
+    putDirectNativeFunction(vm, globalObject, Identifier::fromString(&vm, "dfgTrue"), 0, functionDFGTrue, DFGTrueIntrinsic, DontEnum);
 
     addFunction(vm, globalObject, "llintTrue", functionLLintTrue, 0);
     addFunction(vm, globalObject, "jitTrue", functionJITTrue, 0);

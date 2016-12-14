@@ -26,10 +26,11 @@
 #include "HTMLFieldSetElement.h"
 
 #include "ElementIterator.h"
-#include "HTMLCollection.h"
+#include "HTMLFormControlsCollection.h"
 #include "HTMLLegendElement.h"
 #include "HTMLNames.h"
 #include "HTMLObjectElement.h"
+#include "NodeRareData.h"
 #include "RenderFieldset.h"
 #include <wtf/StdLibExtras.h>
 
@@ -145,13 +146,13 @@ bool HTMLFieldSetElement::supportsFocus() const
 
 const AtomicString& HTMLFieldSetElement::formControlType() const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, fieldset, ("fieldset", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> fieldset("fieldset", AtomicString::ConstructFromLiteral);
     return fieldset;
 }
 
 RenderPtr<RenderElement> HTMLFieldSetElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderFieldset>(*this, WTF::move(style));
+    return createRenderer<RenderFieldset>(*this, WTFMove(style));
 }
 
 HTMLLegendElement* HTMLFieldSetElement::legend() const
@@ -159,9 +160,14 @@ HTMLLegendElement* HTMLFieldSetElement::legend() const
     return const_cast<HTMLLegendElement*>(childrenOfType<HTMLLegendElement>(*this).first());
 }
 
-Ref<HTMLCollection> HTMLFieldSetElement::elements()
+Ref<HTMLFormControlsCollection> HTMLFieldSetElement::elements()
 {
-    return ensureCachedHTMLCollection(FormControls);
+    return ensureRareData().ensureNodeLists().addCachedCollection<HTMLFormControlsCollection>(*this, FormControls);
+}
+
+Ref<HTMLCollection> HTMLFieldSetElement::elementsForNativeBindings()
+{
+    return elements();
 }
 
 void HTMLFieldSetElement::refreshElementsIfNeeded() const
@@ -192,8 +198,8 @@ unsigned HTMLFieldSetElement::length() const
 {
     refreshElementsIfNeeded();
     unsigned length = 0;
-    for (unsigned i = 0; i < m_associatedElements.size(); ++i) {
-        if (m_associatedElements[i]->isEnumeratable())
+    for (auto& element : m_associatedElements) {
+        if (element->isEnumeratable())
             ++length;
     }
     return length;

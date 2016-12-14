@@ -34,7 +34,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 RenderDetailsMarker::RenderDetailsMarker(DetailsMarkerControl& element, Ref<RenderStyle>&& style)
-    : RenderBlockFlow(element, WTF::move(style))
+    : RenderBlockFlow(element, WTFMove(style))
 {
 }
 
@@ -124,19 +124,18 @@ void RenderDetailsMarker::paint(PaintInfo& paintInfo, const LayoutPoint& paintOf
     LayoutPoint boxOrigin(paintOffset + location());
     LayoutRect overflowRect(visualOverflowRect());
     overflowRect.moveBy(boxOrigin);
-    overflowRect.inflate(maximalOutlineSize(paintInfo.phase));
 
     if (!paintInfo.rect.intersects(snappedIntRect(overflowRect)))
         return;
 
     const Color color(style().visitedDependentColor(CSSPropertyColor));
-    paintInfo.context->setStrokeColor(color, style().colorSpace());
-    paintInfo.context->setStrokeStyle(SolidStroke);
-    paintInfo.context->setStrokeThickness(1.0f);
-    paintInfo.context->setFillColor(color, style().colorSpace());
+    paintInfo.context().setStrokeColor(color);
+    paintInfo.context().setStrokeStyle(SolidStroke);
+    paintInfo.context().setStrokeThickness(1.0f);
+    paintInfo.context().setFillColor(color);
 
     boxOrigin.move(borderLeft() + paddingLeft(), borderTop() + paddingTop());
-    paintInfo.context->fillPath(getPath(boxOrigin));
+    paintInfo.context().fillPath(getPath(boxOrigin));
 }
 
 bool RenderDetailsMarker::isOpen() const

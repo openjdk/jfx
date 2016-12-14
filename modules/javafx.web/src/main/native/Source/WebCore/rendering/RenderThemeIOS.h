@@ -39,7 +39,7 @@ class RenderThemeIOS final : public RenderTheme {
 public:
     static Ref<RenderTheme> create();
 
-    virtual int popupInternalPaddingRight(RenderStyle&) const override;
+    virtual int popupInternalPaddingRight(const RenderStyle&) const override;
 
     static void adjustRoundBorderRadius(RenderStyle&, RenderBox&);
 
@@ -48,9 +48,9 @@ public:
     WEBCORE_EXPORT static void setContentSizeCategory(const String&);
 
 protected:
-    virtual FontDescription& cachedSystemFontDescription(CSSValueID systemFontID) const override;
-    virtual void updateCachedSystemFontDescription(CSSValueID, FontDescription&) const override;
-    virtual int baselinePosition(const RenderObject&) const override;
+    virtual FontCascadeDescription& cachedSystemFontDescription(CSSValueID systemFontID) const override;
+    virtual void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
+    virtual int baselinePosition(const RenderBox&) const override;
 
     virtual bool isControlStyled(const RenderStyle&, const BorderData&, const FillLayer& background, const Color& backgroundColor) const override;
 
@@ -72,7 +72,7 @@ protected:
     virtual bool paintTextAreaDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     virtual void adjustMenuListButtonStyle(StyleResolver&, RenderStyle&, Element*) const override;
-    virtual bool paintMenuListButtonDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    virtual bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     virtual void adjustSliderTrackStyle(StyleResolver&, RenderStyle&, Element*) const override;
     virtual bool paintSliderTrack(const RenderObject&, const PaintInfo&, const IntRect&) override;
@@ -115,7 +115,7 @@ private:
     virtual ~RenderThemeIOS() { }
 
     const Color& shadowColor() const;
-    FloatRect addRoundedBorderClip(const RenderObject& box, GraphicsContext*, const IntRect&);
+    FloatRect addRoundedBorderClip(const RenderObject& box, GraphicsContext&, const IntRect&);
 
     virtual Color systemColor(CSSValueID) const override;
 

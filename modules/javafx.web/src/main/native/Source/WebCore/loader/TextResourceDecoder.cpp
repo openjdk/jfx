@@ -302,9 +302,9 @@ breakBreak:
 
 TextResourceDecoder::ContentType TextResourceDecoder::determineContentType(const String& mimeType)
 {
-    if (equalIgnoringCase(mimeType, "text/css"))
+    if (equalLettersIgnoringASCIICase(mimeType, "text/css"))
         return CSS;
-    if (equalIgnoringCase(mimeType, "text/html"))
+    if (equalLettersIgnoringASCIICase(mimeType, "text/html"))
         return HTML;
     if (DOMImplementation::isXMLMIMEType(mimeType))
         return XML;
@@ -326,7 +326,7 @@ TextResourceDecoder::TextResourceDecoder(const String& mimeType, const TextEncod
     : m_contentType(determineContentType(mimeType))
     , m_encoding(defaultEncoding(m_contentType, specifiedDefaultEncoding))
     , m_source(DefaultEncoding)
-    , m_hintEncoding(0)
+    , m_hintEncoding(nullptr)
     , m_checkedForBOM(false)
     , m_checkedForCSSCharset(false)
     , m_checkedForHeadCharset(false)

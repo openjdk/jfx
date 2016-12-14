@@ -77,7 +77,7 @@ inline MacroAssembler::JumpList JIT::emitArrayStorageGetByVal(Instruction* instr
     return emitArrayStorageLoad(instruction, badType);
 }
 
-ALWAYS_INLINE bool JIT::isOperandConstantImmediateDouble(int src)
+ALWAYS_INLINE bool JIT::isOperandConstantDouble(int src)
 {
     return m_codeBlock->isConstantRegisterIndex(src) && getConstantOperand(src).isDouble();
 }
@@ -125,14 +125,22 @@ ALWAYS_INLINE JIT::Call JIT::emitNakedCall(CodePtr function)
     return nakedCall;
 }
 
+ALWAYS_INLINE JIT::Call JIT::emitNakedTailCall(CodePtr function)
+{
+    ASSERT(m_bytecodeOffset != std::numeric_limits<unsigned>::max()); // This method should only be called during hot/cold path generation, so that m_bytecodeOffset is set.
+    Call nakedCall = nearTailCall();
+    m_calls.append(CallRecord(nakedCall, m_bytecodeOffset, function.executableAddress()));
+    return nakedCall;
+}
+
 ALWAYS_INLINE void JIT::updateTopCallFrame()
 {
     ASSERT(static_cast<int>(m_bytecodeOffset) >= 0);
 #if USE(JSVALUE32_64)
     Instruction* instruction = m_codeBlock->instructions().begin() + m_bytecodeOffset + 1;
-    uint32_t locationBits = CallFrame::Location::encodeAsBytecodeInstruction(instruction);
+    uint32_t locationBits = CallSiteIndex(instruction).bits();
 #else
-    uint32_t locationBits = CallFrame::Location::encodeAsBytecodeOffset(m_bytecodeOffset + 1);
+    uint32_t locationBits = CallSiteIndex(m_bytecodeOffset + 1).bits();
 #endif
     store32(TrustedImm32(locationBits), intTagFor(JSStack::ArgumentCount));
     storePtr(callFrameRegister, &m_vm->topCallFrame);
@@ -185,6 +193,19 @@ ALWAYS_INLINE MacroAssembler::Call JIT::appendCallWithExceptionCheckSetJSValueRe
     emitStore(dst, returnValueGPR2, returnValueGPR);
 #endif
     return call;
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(P_JITOperation_E operation)
+{
+    setupArgumentsExecState();
+    return appendCallWithExceptionCheck(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperationNoExceptionCheck(Z_JITOperation_E operation)
+{
+    setupArgumentsExecState();
+    updateTopCallFrame();
+    return appendCall(operation);
 }
 
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(C_JITOperation_E operation)
@@ -268,6 +289,12 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EC operatio
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EJscC operation, int dst, GPRReg arg1, JSCell* cell)
 {
     setupArgumentsWithExecState(arg1, TrustedImmPtr(cell));
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EJscCJ operation, int dst, GPRReg arg1, JSCell* cell, GPRReg arg2)
+{
+    setupArgumentsWithExecState(arg1, TrustedImmPtr(cell), arg2);
     return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
 }
 
@@ -379,6 +406,11 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperationWithCallFrameRollbackOnExce
     return appendCallWithCallFrameRollbackOnException(operation);
 }
 
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_ECIZC operation, RegisterID regOp1, UniquedStringImpl* identOp2, int32_t op3, RegisterID regOp4)
+{
+    setupArgumentsWithExecState(regOp1, TrustedImmPtr(identOp2), TrustedImm32(op3), regOp4);
+    return appendCallWithExceptionCheck(operation);
+}
 
 #if USE(JSVALUE64)
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(Z_JITOperation_EJZZ operation, GPRReg arg1, int32_t arg2, int32_t arg3)
@@ -408,6 +440,12 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJJJ operat
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJJJAp operation, RegisterID regOp1, RegisterID regOp2, RegisterID regOp3, ArrayProfile* arrayProfile)
 {
     setupArgumentsWithExecState(regOp1, regOp2, regOp3, TrustedImmPtr(arrayProfile));
+    return appendCallWithExceptionCheck(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJJJBy operation, RegisterID regOp1, RegisterID regOp2, RegisterID regOp3, ByValInfo* byValInfo)
+{
+    setupArgumentsWithExecState(regOp1, regOp2, regOp3, TrustedImmPtr(byValInfo));
     return appendCallWithExceptionCheck(operation);
 }
 
@@ -459,6 +497,18 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EJJAp opera
     return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
 }
 
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EJJBy operation, int dst, GPRReg arg1, GPRReg arg2, ByValInfo* byValInfo)
+{
+    setupArgumentsWithExecState(arg1, arg2, TrustedImmPtr(byValInfo));
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(Z_JITOperation_EJOJ operation, GPRReg arg1, GPRReg arg2, GPRReg arg3)
+{
+    setupArgumentsWithExecState(arg1, arg2, arg3);
+    return appendCallWithExceptionCheck(operation);
+}
+
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperationNoExceptionCheck(V_JITOperation_EJ operation, GPRReg arg1)
 {
     setupArgumentsWithExecState(arg1);
@@ -502,15 +552,15 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJ operatio
     return appendCallWithExceptionCheck(operation);
 }
 
-ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJIdJ operation, RegisterID regOp1, const Identifier* identOp2, RegisterID regOp3)
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_ECIZJJ operation, RegisterID regOp1, UniquedStringImpl* identOp2, int32_t op3, RegisterID regOp4, RegisterID regOp5)
 {
-    setupArgumentsWithExecState(regOp1, TrustedImmPtr(identOp2), regOp3);
+    setupArgumentsWithExecState(regOp1, TrustedImmPtr(identOp2), TrustedImm32(op3), regOp4, regOp5);
     return appendCallWithExceptionCheck(operation);
 }
 
-ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJIdJJ operation, RegisterID regOp1, const Identifier* identOp2, RegisterID regOp3, RegisterID regOp4)
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_ECJZC operation, RegisterID regOp1, RegisterID regOp2, int32_t op3, RegisterID regOp4)
 {
-    setupArgumentsWithExecState(regOp1, TrustedImmPtr(identOp2), regOp3, regOp4);
+    setupArgumentsWithExecState(regOp1, regOp2, TrustedImm32(op3), regOp4);
     return appendCallWithExceptionCheck(operation);
 }
 
@@ -550,6 +600,12 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperationNoExceptionCheck(V_JITOpera
     setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG arg1Payload, arg1Tag);
     updateTopCallFrame();
     return appendCall(operation);
+}
+
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(Z_JITOperation_EJOJ operation, GPRReg arg1Tag, GPRReg arg1Payload, GPRReg arg2, GPRReg arg3Tag, GPRReg arg3Payload)
+{
+    setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG arg1Payload, arg1Tag, arg2, EABI_32BIT_DUMMY_ARG arg3Payload, arg3Tag);
+    return appendCallWithExceptionCheck(operation);
 }
 
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(Z_JITOperation_EJZZ operation, GPRReg arg1Tag, GPRReg arg1Payload, int32_t arg2, int32_t arg3)
@@ -600,6 +656,12 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EJJAp opera
     return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
 }
 
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EJJBy operation, int dst, GPRReg arg1Tag, GPRReg arg1Payload, GPRReg arg2Tag, GPRReg arg2Payload, ByValInfo* byValInfo)
+{
+    setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG arg1Payload, arg1Tag, SH4_32BIT_DUMMY_ARG arg2Payload, arg2Tag, TrustedImmPtr(byValInfo));
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(JIT::WithProfileTag, J_JITOperation_EJJ operation, int dst, GPRReg arg1Tag, GPRReg arg1Payload, GPRReg arg2Tag, GPRReg arg2Payload)
 {
     setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG arg1Payload, arg1Tag, SH4_32BIT_DUMMY_ARG arg2Payload, arg2Tag);
@@ -624,15 +686,15 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(S_JITOperation_EJJ operati
     return appendCallWithExceptionCheck(operation);
 }
 
-ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_ECIC operation, RegisterID regOp1, const Identifier* identOp2, RegisterID regOp3)
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_ECIZCC operation, RegisterID regOp1, UniquedStringImpl* identOp2, int32_t op3, RegisterID regOp4, RegisterID regOp5)
 {
-    setupArgumentsWithExecState(regOp1, TrustedImmPtr(identOp2), regOp3);
+    setupArgumentsWithExecState(regOp1, TrustedImmPtr(identOp2), TrustedImm32(op3), regOp4, regOp5);
     return appendCallWithExceptionCheck(operation);
 }
 
-ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_ECICC operation, RegisterID regOp1, const Identifier* identOp2, RegisterID regOp3, RegisterID regOp4)
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_ECJZC operation, RegisterID arg1, RegisterID arg2Tag, RegisterID arg2Payload, int32_t arg3, RegisterID arg4)
 {
-    setupArgumentsWithExecState(regOp1, TrustedImmPtr(identOp2), regOp3, regOp4);
+    setupArgumentsWithExecState(arg1, arg2Payload, arg2Tag, TrustedImm32(arg3), arg4);
     return appendCallWithExceptionCheck(operation);
 }
 
@@ -666,6 +728,12 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJJJAp oper
     return appendCallWithExceptionCheck(operation);
 }
 
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJJJBy operation, RegisterID regOp1Tag, RegisterID regOp1Payload, RegisterID regOp2Tag, RegisterID regOp2Payload, RegisterID regOp3Tag, RegisterID regOp3Payload, ByValInfo* byValInfo)
+{
+    setupArgumentsWithExecState(EABI_32BIT_DUMMY_ARG regOp1Payload, regOp1Tag, SH4_32BIT_DUMMY_ARG regOp2Payload, regOp2Tag, regOp3Payload, regOp3Tag, TrustedImmPtr(byValInfo));
+    return appendCallWithExceptionCheck(operation);
+}
+
 ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EZJ operation, int dst, RegisterID regOp1Tag, RegisterID regOp1Payload)
 {
     setupArgumentsWithExecState(TrustedImm32(dst), regOp1Payload, regOp1Tag);
@@ -684,6 +752,12 @@ ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(V_JITOperation_EJZJ operat
     return appendCallWithExceptionCheck(operation);
 }
 
+ALWAYS_INLINE MacroAssembler::Call JIT::callOperation(J_JITOperation_EJscCJ operation, int dst, GPRReg arg1, JSCell* cell, GPRReg arg2Tag, GPRReg arg2Payload)
+{
+    setupArgumentsWithExecState(arg1, TrustedImmPtr(cell), EABI_32BIT_DUMMY_ARG arg2Payload, arg2Tag);
+    return appendCallWithExceptionCheckSetJSValueResult(operation, dst);
+}
+
 #undef EABI_32BIT_DUMMY_ARG
 #undef SH4_32BIT_DUMMY_ARG
 
@@ -698,6 +772,14 @@ ALWAYS_INLINE void JIT::linkSlowCaseIfNotJSCell(Vector<SlowCaseEntry>::iterator&
 {
     if (!m_codeBlock->isKnownNotImmediate(vReg))
         linkSlowCase(iter);
+}
+
+ALWAYS_INLINE void JIT::linkAllSlowCasesForBytecodeOffset(Vector<SlowCaseEntry>& slowCases, Vector<SlowCaseEntry>::iterator& iter, unsigned bytecodeOffset)
+{
+    while (iter != slowCases.end() && iter->to == bytecodeOffset) {
+        iter->from.link(this);
+        ++iter;
+    }
 }
 
 ALWAYS_INLINE void JIT::addSlowCase(Jump jump)
@@ -802,7 +884,7 @@ ALWAYS_INLINE void JIT::sampleCodeBlock(CodeBlock* codeBlock)
 #endif
 #endif
 
-ALWAYS_INLINE bool JIT::isOperandConstantImmediateChar(int src)
+ALWAYS_INLINE bool JIT::isOperandConstantChar(int src)
 {
     return m_codeBlock->isConstantRegisterIndex(src) && getConstantOperand(src).isString() && asString(getConstantOperand(src).asCell())->length() == 1;
 }
@@ -810,8 +892,12 @@ ALWAYS_INLINE bool JIT::isOperandConstantImmediateChar(int src)
 template<typename StructureType>
 inline void JIT::emitAllocateJSObject(RegisterID allocator, StructureType structure, RegisterID result, RegisterID scratch)
 {
-    loadPtr(Address(allocator, MarkedAllocator::offsetOfFreeListHead()), result);
-    addSlowCase(branchTestPtr(Zero, result));
+    if (Options::forceGCSlowPaths())
+        addSlowCase(jump());
+    else {
+        loadPtr(Address(allocator, MarkedAllocator::offsetOfFreeListHead()), result);
+        addSlowCase(branchTestPtr(Zero, result));
+    }
 
     // remove the object from the free list
     loadPtr(Address(result), scratch);
@@ -901,6 +987,16 @@ inline JITArrayMode JIT::chooseArrayMode(ArrayProfile* profile)
     return JITContiguous;
 }
 
+ALWAYS_INLINE int32_t JIT::getOperandConstantInt(int src)
+{
+    return getConstantOperand(src).asInt32();
+}
+
+ALWAYS_INLINE double JIT::getOperandConstantDouble(int src)
+{
+    return getConstantOperand(src).asDouble();
+}
+
 #if USE(JSVALUE32_64)
 
 inline void JIT::emitLoadTag(int index, RegisterID tag)
@@ -927,6 +1023,16 @@ inline void JIT::emitLoad(const JSValue& v, RegisterID tag, RegisterID payload)
 {
     move(Imm32(v.payload()), payload);
     move(Imm32(v.tag()), tag);
+}
+
+ALWAYS_INLINE void JIT::emitGetVirtualRegister(int src, JSValueRegs dst)
+{
+    emitLoad(src, dst.tagGPR(), dst.payloadGPR());
+}
+
+ALWAYS_INLINE void JIT::emitPutVirtualRegister(int dst, JSValueRegs from)
+{
+    emitStore(dst, from.tagGPR(), from.payloadGPR());
 }
 
 inline void JIT::emitLoad(int index, RegisterID tag, RegisterID payload, RegisterID base)
@@ -1045,20 +1151,20 @@ inline void JIT::emitJumpSlowCaseIfNotJSCell(int virtualRegisterIndex, RegisterI
     }
 }
 
-ALWAYS_INLINE bool JIT::isOperandConstantImmediateInt(int src)
+ALWAYS_INLINE bool JIT::isOperandConstantInt(int src)
 {
     return m_codeBlock->isConstantRegisterIndex(src) && getConstantOperand(src).isInt32();
 }
 
-ALWAYS_INLINE bool JIT::getOperandConstantImmediateInt(int op1, int op2, int& op, int32_t& constant)
+ALWAYS_INLINE bool JIT::getOperandConstantInt(int op1, int op2, int& op, int32_t& constant)
 {
-    if (isOperandConstantImmediateInt(op1)) {
+    if (isOperandConstantInt(op1)) {
         constant = getConstantOperand(op1).asInt32();
         op = op2;
         return true;
     }
 
-    if (isOperandConstantImmediateInt(op2)) {
+    if (isOperandConstantInt(op2)) {
         constant = getConstantOperand(op2).asInt32();
         op = op1;
         return true;
@@ -1087,6 +1193,11 @@ ALWAYS_INLINE void JIT::emitGetVirtualRegister(int src, RegisterID dst)
     load64(Address(callFrameRegister, src * sizeof(Register)), dst);
 }
 
+ALWAYS_INLINE void JIT::emitGetVirtualRegister(int src, JSValueRegs dst)
+{
+    emitGetVirtualRegister(src, dst.payloadGPR());
+}
+
 ALWAYS_INLINE void JIT::emitGetVirtualRegister(VirtualRegister src, RegisterID dst)
 {
     emitGetVirtualRegister(src.offset(), dst);
@@ -1103,12 +1214,7 @@ ALWAYS_INLINE void JIT::emitGetVirtualRegisters(VirtualRegister src1, RegisterID
     emitGetVirtualRegisters(src1.offset(), dst1, src2.offset(), dst2);
 }
 
-ALWAYS_INLINE int32_t JIT::getConstantOperandImmediateInt(int src)
-{
-    return getConstantOperand(src).asInt32();
-}
-
-ALWAYS_INLINE bool JIT::isOperandConstantImmediateInt(int src)
+ALWAYS_INLINE bool JIT::isOperandConstantInt(int src)
 {
     return m_codeBlock->isConstantRegisterIndex(src) && getConstantOperand(src).isInt32();
 }
@@ -1116,6 +1222,11 @@ ALWAYS_INLINE bool JIT::isOperandConstantImmediateInt(int src)
 ALWAYS_INLINE void JIT::emitPutVirtualRegister(int dst, RegisterID from)
 {
     store64(from, Address(callFrameRegister, dst * sizeof(Register)));
+}
+
+ALWAYS_INLINE void JIT::emitPutVirtualRegister(int dst, JSValueRegs from)
+{
+    emitPutVirtualRegister(dst, from.payloadGPR());
 }
 
 ALWAYS_INLINE void JIT::emitPutVirtualRegister(VirtualRegister dst, RegisterID from)
@@ -1168,75 +1279,55 @@ inline void JIT::emitLoadDouble(int index, FPRegisterID value)
 inline void JIT::emitLoadInt32ToDouble(int index, FPRegisterID value)
 {
     if (m_codeBlock->isConstantRegisterIndex(index)) {
-        ASSERT(isOperandConstantImmediateInt(index));
+        ASSERT(isOperandConstantInt(index));
         convertInt32ToDouble(Imm32(getConstantOperand(index).asInt32()), value);
     } else
         convertInt32ToDouble(addressFor(index), value);
 }
 
-ALWAYS_INLINE JIT::Jump JIT::emitJumpIfImmediateInteger(RegisterID reg)
+ALWAYS_INLINE JIT::Jump JIT::emitJumpIfInt(RegisterID reg)
 {
     return branch64(AboveOrEqual, reg, tagTypeNumberRegister);
 }
 
-ALWAYS_INLINE JIT::Jump JIT::emitJumpIfNotImmediateInteger(RegisterID reg)
+ALWAYS_INLINE JIT::Jump JIT::emitJumpIfNotInt(RegisterID reg)
 {
     return branch64(Below, reg, tagTypeNumberRegister);
 }
 
-ALWAYS_INLINE JIT::Jump JIT::emitJumpIfNotImmediateIntegers(RegisterID reg1, RegisterID reg2, RegisterID scratch)
+ALWAYS_INLINE JIT::PatchableJump JIT::emitPatchableJumpIfNotInt(RegisterID reg)
+{
+    return patchableBranch64(Below, reg, tagTypeNumberRegister);
+}
+
+ALWAYS_INLINE JIT::Jump JIT::emitJumpIfNotInt(RegisterID reg1, RegisterID reg2, RegisterID scratch)
 {
     move(reg1, scratch);
     and64(reg2, scratch);
-    return emitJumpIfNotImmediateInteger(scratch);
+    return emitJumpIfNotInt(scratch);
 }
 
-ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotImmediateInteger(RegisterID reg)
+ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotInt(RegisterID reg)
 {
-    addSlowCase(emitJumpIfNotImmediateInteger(reg));
+    addSlowCase(emitJumpIfNotInt(reg));
 }
 
-ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotImmediateIntegers(RegisterID reg1, RegisterID reg2, RegisterID scratch)
+ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotInt(RegisterID reg1, RegisterID reg2, RegisterID scratch)
 {
-    addSlowCase(emitJumpIfNotImmediateIntegers(reg1, reg2, scratch));
+    addSlowCase(emitJumpIfNotInt(reg1, reg2, scratch));
 }
 
-ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotImmediateNumber(RegisterID reg)
+ALWAYS_INLINE void JIT::emitJumpSlowCaseIfNotNumber(RegisterID reg)
 {
-    addSlowCase(emitJumpIfNotImmediateNumber(reg));
+    addSlowCase(emitJumpIfNotNumber(reg));
 }
 
-ALWAYS_INLINE void JIT::emitFastArithReTagImmediate(RegisterID src, RegisterID dest)
-{
-    emitFastArithIntToImmNoCheck(src, dest);
-}
-
-ALWAYS_INLINE void JIT::emitTagAsBoolImmediate(RegisterID reg)
+ALWAYS_INLINE void JIT::emitTagBool(RegisterID reg)
 {
     or32(TrustedImm32(static_cast<int32_t>(ValueFalse)), reg);
 }
 
 #endif // USE(JSVALUE32_64)
-
-template <typename T>
-JIT::Jump JIT::branchStructure(RelationalCondition condition, T leftHandSide, Structure* structure)
-{
-#if USE(JSVALUE64)
-    return branch32(condition, leftHandSide, TrustedImm32(structure->id()));
-#else
-    return branchPtr(condition, leftHandSide, TrustedImmPtr(structure));
-#endif
-}
-
-template <typename T>
-MacroAssembler::Jump branchStructure(MacroAssembler& jit, MacroAssembler::RelationalCondition condition, T leftHandSide, Structure* structure)
-{
-#if USE(JSVALUE64)
-    return jit.branch32(condition, leftHandSide, MacroAssembler::TrustedImm32(structure->id()));
-#else
-    return jit.branchPtr(condition, leftHandSide, MacroAssembler::TrustedImmPtr(structure));
-#endif
-}
 
 } // namespace JSC
 

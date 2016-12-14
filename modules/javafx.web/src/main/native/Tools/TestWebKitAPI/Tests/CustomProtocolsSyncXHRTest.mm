@@ -40,7 +40,7 @@
 #import <WebKit/WKViewPrivate.h>
 #import <wtf/RetainPtr.h>
 
-#if WK_API_ENABLED
+#if WK_API_ENABLED && PLATFORM(MAC)
 
 static bool testFinished = false;
 
@@ -48,8 +48,7 @@ namespace TestWebKitAPI {
 
 TEST(WebKit2CustomProtocolsTest, SyncXHR)
 {
-    [NSURLProtocol registerClass:[TestProtocol class]];
-    [WKBrowsingContextController registerSchemeForCustomProtocol:[TestProtocol scheme]];
+    [TestProtocol registerWithScheme:@"http"];
 
     RetainPtr<WKProcessGroup> processGroup = adoptNS([[WKProcessGroup alloc] init]);
     RetainPtr<WKBrowsingContextGroup> browsingContextGroup = adoptNS([[WKBrowsingContextGroup alloc] initWithIdentifier:@"TestIdentifier"]);
@@ -69,6 +68,7 @@ TEST(WebKit2CustomProtocolsTest, SyncXHR)
     WKPageLoadURL(wkView.get().pageRef, Util::createURLForResource("custom-protocol-sync-xhr", "html"));
 
     TestWebKitAPI::Util::run(&testFinished);
+    [TestProtocol unregister];
 }
 
 } // namespace TestWebKitAPI

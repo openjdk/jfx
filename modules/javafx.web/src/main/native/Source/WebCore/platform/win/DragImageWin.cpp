@@ -108,7 +108,7 @@ static FontCascade dragLabelFont(int size, bool bold, FontRenderingMode renderin
     metrics.cbSize = sizeof(metrics);
     SystemParametersInfo(SPI_GETNONCLIENTMETRICS, metrics.cbSize, &metrics, 0);
 
-    FontDescription description;
+    FontCascadeDescription description;
     description.setWeight(bold ? FontWeightBold : FontWeightNormal);
     description.setOneFamily(metrics.lfSmCaptionFont.lfFaceName);
     description.setSpecifiedSize((float)size);
@@ -126,14 +126,14 @@ DragImageRef createDragImageForLink(URL& url, const String& inLabel, FontRenderi
     const FontCascade* labelFont;
     const FontCascade* urlFont;
 
-    if (fontRenderingMode == AlternateRenderingMode) {
-        static const FontCascade alternateRenderingModeLabelFont = dragLabelFont(DragLinkLabelFontsize, true, AlternateRenderingMode);
-        static const FontCascade alternateRenderingModeURLFont = dragLabelFont(DragLinkUrlFontSize, false, AlternateRenderingMode);
+    if (fontRenderingMode == FontRenderingMode::Alternate) {
+        static const FontCascade alternateRenderingModeLabelFont = dragLabelFont(DragLinkLabelFontsize, true, FontRenderingMode::Alternate);
+        static const FontCascade alternateRenderingModeURLFont = dragLabelFont(DragLinkUrlFontSize, false, FontRenderingMode::Alternate);
         labelFont = &alternateRenderingModeLabelFont;
         urlFont = &alternateRenderingModeURLFont;
     } else {
-        static const FontCascade normalRenderingModeLabelFont = dragLabelFont(DragLinkLabelFontsize, true, NormalRenderingMode);
-        static const FontCascade normalRenderingModeURLFont = dragLabelFont(DragLinkUrlFontSize, false, NormalRenderingMode);
+        static const FontCascade normalRenderingModeLabelFont = dragLabelFont(DragLinkLabelFontsize, true, FontRenderingMode::Normal);
+        static const FontCascade normalRenderingModeURLFont = dragLabelFont(DragLinkUrlFontSize, false, FontRenderingMode::Normal);
         labelFont = &normalRenderingModeLabelFont;
         urlFont = &normalRenderingModeURLFont;
     }
@@ -192,20 +192,20 @@ DragImageRef createDragImageForLink(URL& url, const String& inLabel, FontRenderi
     static const Color backgroundColor(140, 140, 140);
     static const IntSize radii(DragLabelRadius, DragLabelRadius);
     IntRect rect(0, 0, imageSize.width(), imageSize.height());
-    context.fillRoundedRect(FloatRoundedRect(rect, radii, radii, radii, radii), backgroundColor, ColorSpaceDeviceRGB);
+    context.fillRoundedRect(FloatRoundedRect(rect, radii, radii, radii, radii), backgroundColor);
 
     // Draw the text
     static const Color topColor(0, 0, 0, 255); // original alpha = 0.75
     static const Color bottomColor(255, 255, 255, 127); // original alpha = 0.5
     if (drawURLString) {
         if (clipURLString)
-            urlString = StringTruncator::rightTruncate(urlString, imageSize.width() - (DragLabelBorderX * 2.0f), *urlFont, StringTruncator::EnableRoundingHacks);
+            urlString = StringTruncator::rightTruncate(urlString, imageSize.width() - (DragLabelBorderX * 2.0f), *urlFont);
         IntPoint textPos(DragLabelBorderX, imageSize.height() - (LabelBorderYOffset + urlFont->fontMetrics().descent()));
         WebCoreDrawDoubledTextAtPoint(context, urlString, textPos, *urlFont, topColor, bottomColor);
     }
 
     if (clipLabelString)
-        label = StringTruncator::rightTruncate(label, imageSize.width() - (DragLabelBorderX * 2.0f), *labelFont, StringTruncator::EnableRoundingHacks);
+        label = StringTruncator::rightTruncate(label, imageSize.width() - (DragLabelBorderX * 2.0f), *labelFont);
 
     IntPoint textPos(DragLabelBorderX, DragLabelBorderY + labelFont->pixelSize());
     WebCoreDrawDoubledTextAtPoint(context, label, textPos, *labelFont, topColor, bottomColor);

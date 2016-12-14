@@ -49,7 +49,6 @@
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
 #include "IdTargetObserver.h"
-#include "InsertionPoint.h"
 #include "KeyboardEvent.h"
 #include "Language.h"
 #include "LocalizedStrings.h"
@@ -59,15 +58,12 @@
 #include "RenderTheme.h"
 #include "RuntimeEnabledFeatures.h"
 #include "ScopedEventQueue.h"
+#include "ShadowRoot.h"
 #include "SearchInputType.h"
 #include "StyleResolver.h"
 #include "TextBreakIterator.h"
 #include <wtf/MathExtras.h>
 #include <wtf/Ref.h>
-
-#if ENABLE(INPUT_TYPE_COLOR)
-#include "ColorInputType.h"
-#endif
 
 #if ENABLE(TOUCH_EVENTS)
 #include "TouchEvent.h"
@@ -94,14 +90,14 @@ private:
 // large. However, due to https://bugs.webkit.org/show_bug.cgi?id=14536 things
 // get rather sluggish when a text field has a larger number of characters than
 // this, even when just clicking in the text field.
-const int HTMLInputElement::maximumLength = 524288;
+const unsigned HTMLInputElement::maxEffectiveLength = 524288;
 const int defaultSize = 20;
 const int maxSavedResults = 256;
 
 HTMLInputElement::HTMLInputElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form, bool createdByParser)
     : HTMLTextFormControlElement(tagName, document, form)
     , m_size(defaultSize)
-    , m_maxLength(maximumLength)
+    , m_maxLength(-1)
     , m_maxResults(-1)
     , m_isChecked(false)
     , m_reflectsCheckedAttribute(true)
@@ -110,7 +106,7 @@ HTMLInputElement::HTMLInputElement(const QualifiedName& tagName, Document& docum
     , m_isActivatedSubmit(false)
     , m_autocomplete(Uninitialized)
     , m_isAutoFilled(false)
-    , m_showAutoFillButton(false)
+    , m_autoFillButtonType(static_cast<uint8_t>(AutoFillButtonType::None))
 #if ENABLE(DATALIST_ELEMENT)
     , m_hasNonEmptyList(false)
 #endif
@@ -155,7 +151,7 @@ void HTMLInputElement::didAddUserAgentShadowRoot(ShadowRoot*)
 HTMLInputElement::~HTMLInputElement()
 {
     if (needsSuspensionCallback())
-        document().unregisterForPageCacheSuspensionCallbacks(this);
+        document().unregisterForDocumentSuspensionCallbacks(this);
 
     // Need to remove form association while this is still an HTMLInputElement
     // so that virtual functions are called correctly.
@@ -288,16 +284,14 @@ bool HTMLInputElement::tooLong(const String& value, NeedsToCheckDirtyFlag check)
     // 'virtual' overhead.
     if (!isTextType())
         return false;
-    int max = maxLength();
-    if (max < 0)
-        return false;
+    unsigned max = effectiveMaxLength();
     if (check == CheckDirtyFlag) {
         // Return false for the default value or a value set by a script even if
         // it is longer than maxLength.
         if (!hasDirtyValue() || !m_wasModifiedByUser)
             return false;
     }
-    return numGraphemeClusters(value) > static_cast<unsigned>(max);
+    return numGraphemeClusters(value) > max;
 }
 
 bool HTMLInputElement::rangeUnderflow() const
@@ -347,7 +341,7 @@ StepRange HTMLInputElement::createStepRange(AnyStepHandling anyStepHandling) con
 }
 
 #if ENABLE(DATALIST_ELEMENT)
-Decimal HTMLInputElement::findClosestTickMarkValue(const Decimal& value)
+Optional<Decimal> HTMLInputElement::findClosestTickMarkValue(const Decimal& value)
 {
     return m_inputType->findClosestTickMarkValue(value);
 }
@@ -403,17 +397,17 @@ bool HTMLInputElement::isTextFormControlMouseFocusable() const
     return HTMLTextFormControlElement::isMouseFocusable();
 }
 
-void HTMLInputElement::updateFocusAppearance(bool restorePreviousSelection)
+void HTMLInputElement::updateFocusAppearance(SelectionRestorationMode restorationMode, SelectionRevealMode revealMode)
 {
     if (isTextField()) {
-        if (!restorePreviousSelection || !hasCachedSelection())
+        if (restorationMode == SelectionRestorationMode::SetDefault || !hasCachedSelection())
             select(Element::defaultFocusTextStateChangeIntent());
         else
             restoreCachedSelection();
-        if (document().frame())
+        if (document().frame() && revealMode == SelectionRevealMode::Reveal)
             document().frame()->selection().revealSelection();
     } else
-        HTMLTextFormControlElement::updateFocusAppearance(restorePreviousSelection);
+        HTMLTextFormControlElement::updateFocusAppearance(restorationMode, revealMode);
 }
 
 void HTMLInputElement::endEditing()
@@ -469,7 +463,7 @@ void HTMLInputElement::updateType()
 
     m_inputType->destroyShadowSubtree();
 
-    m_inputType = WTF::move(newType);
+    m_inputType = WTFMove(newType);
     m_inputType->createShadowSubtree();
     updateInnerTextElementEditability();
 
@@ -529,10 +523,7 @@ inline void HTMLInputElement::runPostTypeUpdateTasks()
         setNeedsStyleRecalc(ReconstructRenderTree);
 
     if (document().focusedElement() == this)
-        updateFocusAppearance(true);
-
-    if (ShadowRoot* shadowRoot = shadowRootOfParentForDistribution(this))
-        shadowRoot->invalidateDistribution();
+        updateFocusAppearance(SelectionRestorationMode::Restore, SelectionRevealMode::Reveal);
 
     setChangedSinceLastFormControlChangeEvent(false);
 
@@ -649,7 +640,7 @@ void HTMLInputElement::parseAttribute(const QualifiedName& name, const AtomicStr
         addToRadioButtonGroup();
         HTMLTextFormControlElement::parseAttribute(name, value);
     } else if (name == autocompleteAttr) {
-        if (equalIgnoringCase(value, "off")) {
+        if (equalLettersIgnoringASCIICase(value, "off")) {
             m_autocomplete = Off;
             registerForSuspensionCallbackIfNeeded();
         } else {
@@ -690,11 +681,10 @@ void HTMLInputElement::parseAttribute(const QualifiedName& name, const AtomicStr
             m_reflectsCheckedAttribute = true;
         }
     } else if (name == maxlengthAttr)
-        parseMaxLengthAttribute(value);
+        maxLengthAttributeChanged(value);
     else if (name == sizeAttr) {
-        int oldSize = m_size;
-        int valueAsInteger = value.toInt();
-        m_size = valueAsInteger > 0 ? valueAsInteger : defaultSize;
+        unsigned oldSize = m_size;
+        m_size = limitToOnlyHTMLNonNegativeNumbersGreaterThanZero(value, defaultSize);
         if (m_size != oldSize && renderer())
             renderer()->setNeedsLayoutAndPrefWidthsRecalc();
     } else if (name == altAttr)
@@ -773,7 +763,7 @@ bool HTMLInputElement::rendererIsNeeded(const RenderStyle& style)
 
 RenderPtr<RenderElement> HTMLInputElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return m_inputType->createInputRenderer(WTF::move(style));
+    return m_inputType->createInputRenderer(WTFMove(style));
 }
 
 void HTMLInputElement::willAttachRenderers()
@@ -789,7 +779,7 @@ void HTMLInputElement::didAttachRenderers()
     m_inputType->attach();
 
     if (document().focusedElement() == this)
-        document().updateFocusAppearanceSoon(true /* restore selection */);
+        document().updateFocusAppearanceSoon(SelectionRestorationMode::Restore);
 }
 
 void HTMLInputElement::didDetachRenderers()
@@ -905,7 +895,7 @@ void HTMLInputElement::setIndeterminate(bool newValue)
         renderer()->theme().stateChanged(*renderer(), ControlStates::CheckedState);
 }
 
-int HTMLInputElement::size() const
+unsigned HTMLInputElement::size() const
 {
     return m_size;
 }
@@ -991,7 +981,7 @@ void HTMLInputElement::setValue(const String& value, ExceptionCode& ec, TextFiel
         ec = INVALID_STATE_ERR;
         return;
     }
-    setValue(value, eventBehavior);
+    setValue(value.isNull() ? emptyString() : value, eventBehavior);
 }
 
 void HTMLInputElement::setValue(const String& value, TextFieldEventBehavior eventBehavior)
@@ -1046,10 +1036,14 @@ void HTMLInputElement::setValueFromRenderer(const String& value)
     ASSERT(!isFileUpload());
 
     // Renderer and our event handler are responsible for sanitizing values.
-    ASSERT(value == sanitizeValue(value) || sanitizeValue(value).isEmpty());
+    // Input types that support the selection API do *not* sanitize their
+    // user input in order to retain parity between what's in the model and
+    // what's on the screen.
+    ASSERT(m_inputType->supportsSelectionAPI() || value == sanitizeValue(value) || sanitizeValue(value).isEmpty());
 
     // Workaround for bug where trailing \n is included in the result of textContent.
-    // The assert macro above may also be simplified to: value == constrainValue(value)
+    // The assert macro above may also be simplified by removing the expression
+    // that calls isEmpty.
     // http://bugs.webkit.org/show_bug.cgi?id=9661
     m_valueIfDirty = value == "\n" ? emptyString() : value;
 
@@ -1227,13 +1221,13 @@ static Vector<String> parseAcceptAttribute(const String& acceptString, bool (*pr
 
     Vector<String> splitTypes;
     acceptString.split(',', false, splitTypes);
-    for (size_t i = 0; i < splitTypes.size(); ++i) {
-        String trimmedType = stripLeadingAndTrailingHTMLSpaces(splitTypes[i]);
+    for (auto& splitType : splitTypes) {
+        String trimmedType = stripLeadingAndTrailingHTMLSpaces(splitType);
         if (trimmedType.isEmpty())
             continue;
         if (!predicate(trimmedType))
             continue;
-        types.append(trimmedType.lower());
+        types.append(trimmedType.convertToASCIILowercase());
     }
 
     return types;
@@ -1259,17 +1253,10 @@ String HTMLInputElement::alt() const
     return fastGetAttribute(altAttr);
 }
 
-int HTMLInputElement::maxLength() const
+unsigned HTMLInputElement::effectiveMaxLength() const
 {
-    return m_maxLength;
-}
-
-void HTMLInputElement::setMaxLength(int maxLength, ExceptionCode& ec)
-{
-    if (maxLength < 0)
-        ec = INDEX_SIZE_ERR;
-    else
-        setIntegralAttribute(maxlengthAttr, maxLength);
+    // The number -1 represents no maximum at all; conveniently it becomes a super-large value when converted to unsigned.
+    return std::min<unsigned>(m_maxLength, maxEffectiveLength);
 }
 
 bool HTMLInputElement::multiple() const
@@ -1279,7 +1266,7 @@ bool HTMLInputElement::multiple() const
 
 void HTMLInputElement::setSize(unsigned size)
 {
-    setUnsignedIntegralAttribute(sizeAttr, size);
+    setUnsignedIntegralAttribute(sizeAttr, limitToOnlyHTMLNonNegativeNumbersGreaterThanZero(size, defaultSize));
 }
 
 void HTMLInputElement::setSize(unsigned size, ExceptionCode& ec)
@@ -1304,12 +1291,12 @@ void HTMLInputElement::setAutoFilled(bool autoFilled)
     setNeedsStyleRecalc();
 }
 
-void HTMLInputElement::setShowAutoFillButton(bool showAutoFillButton)
+void HTMLInputElement::setShowAutoFillButton(AutoFillButtonType autoFillButtonType)
 {
-    if (showAutoFillButton == m_showAutoFillButton)
+    if (static_cast<uint8_t>(autoFillButtonType) == m_autoFillButtonType)
         return;
 
-    m_showAutoFillButton = showAutoFillButton;
+    m_autoFillButtonType = static_cast<uint8_t>(autoFillButtonType);
     m_inputType->updateAutoFillButton();
 }
 
@@ -1403,13 +1390,13 @@ bool HTMLInputElement::needsSuspensionCallback()
 void HTMLInputElement::registerForSuspensionCallbackIfNeeded()
 {
     if (needsSuspensionCallback())
-        document().registerForPageCacheSuspensionCallbacks(this);
+        document().registerForDocumentSuspensionCallbacks(this);
 }
 
 void HTMLInputElement::unregisterForSuspensionCallbackIfNeeded()
 {
     if (!needsSuspensionCallback())
-        document().unregisterForPageCacheSuspensionCallbacks(this);
+        document().unregisterForDocumentSuspensionCallbacks(this);
 }
 
 bool HTMLInputElement::isRequiredFormControl() const
@@ -1435,12 +1422,12 @@ void HTMLInputElement::onSearch()
     dispatchEvent(Event::create(eventNames().searchEvent, true, false));
 }
 
-void HTMLInputElement::documentDidResumeFromPageCache()
+void HTMLInputElement::resumeFromDocumentSuspension()
 {
     ASSERT(needsSuspensionCallback());
 
 #if ENABLE(INPUT_TYPE_COLOR)
-    // <input type=color> uses documentWillSuspendForPageCache to detach the color picker UI,
+    // <input type=color> uses prepareForDocumentSuspension to detach the color picker UI,
     // so it should not be reset when being loaded from page cache.
     if (isColorControl())
         return;
@@ -1449,7 +1436,7 @@ void HTMLInputElement::documentDidResumeFromPageCache()
 }
 
 #if ENABLE(INPUT_TYPE_COLOR)
-void HTMLInputElement::documentWillSuspendForPageCache()
+void HTMLInputElement::prepareForDocumentSuspension()
 {
     if (!isColorControl())
         return;
@@ -1473,12 +1460,17 @@ void HTMLInputElement::didChangeForm()
 Node::InsertionNotificationRequest HTMLInputElement::insertedInto(ContainerNode& insertionPoint)
 {
     HTMLTextFormControlElement::insertedInto(insertionPoint);
-    if (insertionPoint.inDocument() && !form())
-        addToRadioButtonGroup();
 #if ENABLE(DATALIST_ELEMENT)
     resetListAttributeTargetObserver();
 #endif
-    return InsertionDone;
+    return InsertionShouldCallFinishedInsertingSubtree;
+}
+
+void HTMLInputElement::finishedInsertingSubtree()
+{
+    HTMLTextFormControlElement::finishedInsertingSubtree();
+    if (inDocument() && !form())
+        addToRadioButtonGroup();
 }
 
 void HTMLInputElement::removedFrom(ContainerNode& insertionPoint)
@@ -1501,7 +1493,7 @@ void HTMLInputElement::didMoveToNewDocument(Document* oldDocument)
     if (oldDocument) {
         // Always unregister for cache callbacks when leaving a document, even if we would otherwise like to be registered
         if (needsSuspensionCallback)
-            oldDocument->unregisterForPageCacheSuspensionCallbacks(this);
+            oldDocument->unregisterForDocumentSuspensionCallbacks(this);
         if (isRadioButton())
             oldDocument->formController().checkedRadioButtons().removeButton(this);
 #if ENABLE(TOUCH_EVENTS)
@@ -1511,7 +1503,7 @@ void HTMLInputElement::didMoveToNewDocument(Document* oldDocument)
     }
 
     if (needsSuspensionCallback)
-        document().registerForPageCacheSuspensionCallbacks(this);
+        document().registerForDocumentSuspensionCallbacks(this);
 
 #if ENABLE(TOUCH_EVENTS)
     if (m_hasTouchEventHandler)
@@ -1541,14 +1533,15 @@ void HTMLInputElement::requiredAttributeChanged()
     m_inputType->requiredAttributeChanged();
 }
 
-#if ENABLE(INPUT_TYPE_COLOR)
-void HTMLInputElement::selectColorInColorChooser(const Color& color)
+Color HTMLInputElement::valueAsColor() const
 {
-    if (!m_inputType->isColorControl())
-        return;
-    static_cast<ColorInputType*>(m_inputType.get())->didChooseColor(color);
+    return m_inputType->valueAsColor();
 }
-#endif
+
+void HTMLInputElement::selectColor(const Color& color)
+{
+    m_inputType->selectColor(color);
+}
 
 #if ENABLE(DATALIST_ELEMENT)
 HTMLElement* HTMLInputElement::list() const
@@ -1739,17 +1732,14 @@ bool HTMLInputElement::isEmptyValue() const
     return m_inputType->isEmptyValue();
 }
 
-void HTMLInputElement::parseMaxLengthAttribute(const AtomicString& value)
+void HTMLInputElement::maxLengthAttributeChanged(const AtomicString& newValue)
 {
-    int maxLength;
-    if (!parseHTMLInteger(value, maxLength))
-        maxLength = maximumLength;
-    if (maxLength < 0 || maxLength > maximumLength)
-        maxLength = maximumLength;
-    int oldMaxLength = m_maxLength;
-    m_maxLength = maxLength;
-    if (oldMaxLength != maxLength)
+    unsigned oldEffectiveMaxLength = effectiveMaxLength();
+    m_maxLength = parseHTMLNonNegativeInteger(newValue).valueOr(-1);
+    if (oldEffectiveMaxLength != effectiveMaxLength())
         updateValueIfNeeded();
+
+    // FIXME: Do we really need to do this if the effective maxLength has not changed?
     setNeedsStyleRecalc();
     updateValidity();
 }
@@ -1868,6 +1858,29 @@ void HTMLInputElement::setRangeText(const String& replacement, unsigned start, u
     }
 
     HTMLTextFormControlElement::setRangeText(replacement, start, end, selectionMode, ec);
+}
+
+Ref<RenderStyle> HTMLInputElement::createInnerTextStyle(const RenderStyle& style) const
+{
+    auto textBlockStyle = RenderStyle::create();
+    textBlockStyle.get().inheritFrom(&style);
+    adjustInnerTextStyle(style, textBlockStyle.get());
+
+    textBlockStyle.get().setWhiteSpace(PRE);
+    textBlockStyle.get().setOverflowWrap(NormalOverflowWrap);
+    textBlockStyle.get().setOverflowX(OHIDDEN);
+    textBlockStyle.get().setOverflowY(OHIDDEN);
+
+    bool textShouldBeTruncated = document().focusedElement() != this && style.textOverflow() == TextOverflowEllipsis;
+    textBlockStyle.get().setTextOverflow(textShouldBeTruncated ? TextOverflowEllipsis : TextOverflowClip);
+
+    // Do not allow line-height to be smaller than our default.
+    if (textBlockStyle.get().fontMetrics().lineSpacing() > style.computedLineHeight())
+        textBlockStyle.get().setLineHeight(RenderStyle::initialLineHeight());
+
+    textBlockStyle.get().setDisplay(BLOCK);
+
+    return textBlockStyle;
 }
 
 #if ENABLE(DATE_AND_TIME_INPUT_TYPES)

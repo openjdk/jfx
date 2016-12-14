@@ -31,22 +31,19 @@
 
 namespace WebCore {
 
-class IDBFactoryBackendInterface;
+class IDBConnectionManager;
+class SessionID;
+
+namespace IDBClient {
+class IDBConnectionToServer;
+}
 
 class WEBCORE_EXPORT DatabaseProvider : public RefCounted<DatabaseProvider> {
 public:
     virtual ~DatabaseProvider();
 
 #if ENABLE(INDEXED_DATABASE)
-    IDBFactoryBackendInterface* idbFactoryBackend();
-#endif
-
-private:
-#if ENABLE(INDEXED_DATABASE)
-    virtual RefPtr<IDBFactoryBackendInterface> createIDBFactoryBackend() = 0;
-
-    bool m_didCreateIDBFactoryBackendInterface { false };
-    RefPtr<IDBFactoryBackendInterface> m_backendInterface;
+    virtual IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(const SessionID&) = 0;
 #endif
 };
 

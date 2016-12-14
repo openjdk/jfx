@@ -118,6 +118,9 @@ public:
     template<typename V> AddResult fastAdd(const KeyType&, V&&);
     template<typename V> AddResult fastAdd(KeyType&&, V&&);
 
+    template<typename Functor> AddResult ensure(const KeyType&, const Functor&);
+    template<typename Functor> AddResult ensure(KeyType&&, const Functor&);
+
     bool remove(const KeyType&);
     bool remove(iterator);
     template<typename Functor>
@@ -163,6 +166,9 @@ private:
     template<typename K, typename V>
     AddResult inlineAdd(K&&, V&&);
 
+    template<typename K, typename F>
+    AddResult inlineEnsure(K&&, const F&);
+
     HashTableType m_impl;
 };
 
@@ -174,6 +180,17 @@ struct HashMapTranslator {
     {
         location.key = std::forward<U>(key);
         location.value = std::forward<V>(mapped);
+    }
+};
+
+template<typename ValueTraits, typename HashFunctions>
+struct HashMapEnsureTranslator {
+    template<typename T> static unsigned hash(const T& key) { return HashFunctions::hash(key); }
+    template<typename T, typename U> static bool equal(const T& a, const U& b) { return HashFunctions::equal(a, b); }
+    template<typename T, typename U, typename Functor> static void translate(T& location, U&& key, const Functor& functor)
+    {
+        location.key = std::forward<U>(key);
+        location.value = functor();
     }
 };
 
@@ -297,6 +314,13 @@ ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTrait
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+template<typename K, typename F>
+ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::inlineEnsure(K&& key, const F& functor) -> AddResult
+{
+    return m_impl.template add<HashMapEnsureTranslator<KeyValuePairTraits, HashFunctions>>(std::forward<K>(key), functor);
+}
+
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
 template<typename T>
 auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::set(const KeyType& key, T&& mapped) -> AddResult
 {
@@ -307,7 +331,7 @@ template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTrai
 template<typename T>
 auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::set(KeyType&& key, T&& mapped) -> AddResult
 {
-    return inlineSet(WTF::move(key), std::forward<T>(mapped));
+    return inlineSet(WTFMove(key), std::forward<T>(mapped));
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
@@ -328,7 +352,7 @@ template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTrai
 template<typename T>
 auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::add(KeyType&& key, T&& mapped) -> AddResult
 {
-    return inlineAdd(WTF::move(key), std::forward<T>(mapped));
+    return inlineAdd(WTFMove(key), std::forward<T>(mapped));
 }
 
 template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
@@ -342,7 +366,21 @@ template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTrai
 template<typename T>
 ALWAYS_INLINE auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::fastAdd(KeyType&& key, T&& mapped) -> AddResult
 {
-    return inlineAdd(WTF::move(key), std::forward<T>(mapped));
+    return inlineAdd(WTFMove(key), std::forward<T>(mapped));
+}
+
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+template<typename Functor>
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::ensure(const KeyType& key, const Functor& functor) -> AddResult
+{
+    return inlineEnsure(key, functor);
+}
+
+template<typename KeyArg, typename MappedArg, typename HashArg, typename KeyTraitsArg, typename MappedTraitsArg>
+template<typename Functor>
+auto HashMap<KeyArg, MappedArg, HashArg, KeyTraitsArg, MappedTraitsArg>::ensure(KeyType&& key, const Functor& functor) -> AddResult
+{
+    return inlineEnsure(WTFMove(key), functor);
 }
 
 template<typename T, typename U, typename V, typename W, typename MappedTraits>
@@ -389,7 +427,7 @@ auto HashMap<T, U, V, W, MappedTraits>::take(const KeyType& key) -> MappedType
     iterator it = find(key);
     if (it == end())
         return MappedTraits::emptyValue();
-    MappedType value = WTF::move(it->value);
+    MappedType value = WTFMove(it->value);
     remove(it);
     return value;
 }
@@ -446,7 +484,7 @@ inline auto HashMap<T, U, V, W, X>::take(typename GetPtrHelper<K>::PtrType key) 
     iterator it = find(key);
     if (it == end())
         return MappedTraits::emptyValue();
-    MappedType value = WTF::move(it->value);
+    MappedType value = WTFMove(it->value);
     remove(it);
     return value;
 }

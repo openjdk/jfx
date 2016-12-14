@@ -28,6 +28,7 @@
 #include "HTMLTreeBuilder.h"
 
 #include "Comment.h"
+#include "CustomElementDefinitions.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
 #include "Frame.h"
@@ -36,11 +37,14 @@
 #include "HTMLElementFactory.h"
 #include "HTMLFormElement.h"
 #include "HTMLHtmlElement.h"
+#include "HTMLImageElement.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLParserIdioms.h"
+#include "HTMLPictureElement.h"
 #include "HTMLScriptElement.h"
 #include "HTMLTemplateElement.h"
+#include "HTMLUnknownElement.h"
 #include "NotImplemented.h"
 #include "SVGElement.h"
 #include "Text.h"
@@ -49,11 +53,16 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-static inline void setAttributes(Element* element, AtomicHTMLToken* token, ParserContentPolicy parserContentPolicy)
+static inline void setAttributes(Element& element, Vector<Attribute>& attributes, ParserContentPolicy parserContentPolicy)
 {
     if (!scriptingContentIsAllowed(parserContentPolicy))
-        element->stripScriptingAttributes(token->attributes());
-    element->parserSetAttributes(token->attributes());
+        element.stripScriptingAttributes(attributes);
+    element.parserSetAttributes(attributes);
+}
+
+static inline void setAttributes(Element& element, AtomicHTMLToken* token, ParserContentPolicy parserContentPolicy)
+{
+    setAttributes(element, token->attributes(), parserContentPolicy);
 }
 
 static bool hasImpliedEndTag(const HTMLStackItem& item)
@@ -102,9 +111,9 @@ static inline void insert(HTMLConstructionSiteTask& task)
         parent->parserRemoveChild(*task.child);
 
     if (task.nextChild)
-        task.parent->parserInsertBefore(task.child.get(), task.nextChild.get());
+        task.parent->parserInsertBefore(*task.child, *task.nextChild);
     else
-        task.parent->parserAppendChild(task.child.get());
+        task.parent->parserAppendChild(*task.child);
 }
 
 static inline void executeInsertTask(HTMLConstructionSiteTask& task)
@@ -126,7 +135,7 @@ static inline void executeReparentTask(HTMLConstructionSiteTask& task)
     if (ContainerNode* parent = task.child->parentNode())
         parent->parserRemoveChild(*task.child);
 
-    task.parent->parserAppendChild(task.child);
+    task.parent->parserAppendChild(*task.child);
 }
 
 static inline void executeInsertAlreadyParsedChildTask(HTMLConstructionSiteTask& task)
@@ -196,7 +205,7 @@ void HTMLConstructionSite::executeQueuedTasks()
 
     // Copy the task queue into a local variable in case executeTask
     // re-enters the parser.
-    TaskQueue queue = WTF::move(m_taskQueue);
+    TaskQueue queue = WTFMove(m_taskQueue);
 
     for (size_t i = 0; i < size; ++i)
         executeTask(queue[i]);
@@ -260,7 +269,7 @@ void HTMLConstructionSite::dispatchDocumentElementAvailableIfNeeded()
 void HTMLConstructionSite::insertHTMLHtmlStartTagBeforeHTML(AtomicHTMLToken* token)
 {
     Ref<HTMLHtmlElement> element = HTMLHtmlElement::create(*m_document);
-    setAttributes(element.ptr(), token, m_parserContentPolicy);
+    setAttributes(element.get(), token, m_parserContentPolicy);
     attachLater(m_attachmentRoot, element.ptr());
     m_openElements.pushHTMLHtmlElement(HTMLStackItem::create(element.copyRef(), *token));
 
@@ -274,8 +283,7 @@ void HTMLConstructionSite::mergeAttributesFromTokenIntoElement(AtomicHTMLToken* 
     if (token->attributes().isEmpty())
         return;
 
-    for (unsigned i = 0; i < token->attributes().size(); ++i) {
-        const Attribute& tokenAttribute = token->attributes().at(i);
+    for (auto& tokenAttribute : token->attributes()) {
         if (!element->elementData() || !element->findAttributeByName(tokenAttribute.name()))
             element->setAttribute(tokenAttribute.name(), tokenAttribute.value());
     }
@@ -374,12 +382,12 @@ void HTMLConstructionSite::setCompatibilityModeFromDoctype(const String& name, c
         || publicId.startsWith("-//W3C//DTD HTML Experimental 970421//", false)
         || publicId.startsWith("-//W3C//DTD W3 HTML//", false)
         || publicId.startsWith("-//W3O//DTD W3 HTML 3.0//", false)
-        || equalIgnoringCase(publicId, "-//W3O//DTD W3 HTML Strict 3.0//EN//")
+        || equalLettersIgnoringASCIICase(publicId, "-//w3o//dtd w3 html strict 3.0//en//")
         || publicId.startsWith("-//WebTechs//DTD Mozilla HTML 2.0//", false)
         || publicId.startsWith("-//WebTechs//DTD Mozilla HTML//", false)
-        || equalIgnoringCase(publicId, "-/W3C/DTD HTML 4.0 Transitional/EN")
-        || equalIgnoringCase(publicId, "HTML")
-        || equalIgnoringCase(systemId, "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd")
+        || equalLettersIgnoringASCIICase(publicId, "-/w3c/dtd html 4.0 transitional/en")
+        || equalLettersIgnoringASCIICase(publicId, "html")
+        || equalLettersIgnoringASCIICase(systemId, "http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd")
         || (systemId.isEmpty() && publicId.startsWith("-//W3C//DTD HTML 4.01 Frameset//", false))
         || (systemId.isEmpty() && publicId.startsWith("-//W3C//DTD HTML 4.01 Transitional//", false))) {
         setCompatibilityMode(DocumentCompatibilityMode::QuirksMode);
@@ -451,7 +459,7 @@ void HTMLConstructionSite::insertCommentOnHTMLHtmlElement(AtomicHTMLToken* token
 void HTMLConstructionSite::insertHTMLHeadElement(AtomicHTMLToken* token)
 {
     ASSERT(!shouldFosterParent());
-    m_head = HTMLStackItem::create(*createHTMLElement(token), *token);
+    m_head = HTMLStackItem::create(createHTMLElement(token), *token);
     attachLater(&currentNode(), &m_head->element());
     m_openElements.pushHTMLHeadElement(m_head);
 }
@@ -481,6 +489,26 @@ void HTMLConstructionSite::insertHTMLElement(AtomicHTMLToken* token)
     m_openElements.push(HTMLStackItem::create(element.releaseNonNull(), *token));
 }
 
+#if ENABLE(CUSTOM_ELEMENTS)
+JSCustomElementInterface* HTMLConstructionSite::insertHTMLElementOrFindCustomElementInterface(AtomicHTMLToken* token)
+{
+    JSCustomElementInterface* interface = nullptr;
+    RefPtr<Element> element = createHTMLElementOrFindCustomElementInterface(token, &interface);
+    if (UNLIKELY(interface))
+        return interface;
+    attachLater(&currentNode(), element);
+    m_openElements.push(HTMLStackItem::create(element.releaseNonNull(), *token));
+    return nullptr;
+}
+
+void HTMLConstructionSite::insertCustomElement(Ref<Element>&& element, const AtomicString& localName, Vector<Attribute>& attributes)
+{
+    setAttributes(element.get(), attributes, m_parserContentPolicy);
+    attachLater(&currentNode(), element.ptr());
+    m_openElements.push(HTMLStackItem::create(WTFMove(element), localName, attributes));
+}
+#endif
+
 void HTMLConstructionSite::insertSelfClosingHTMLElement(AtomicHTMLToken* token)
 {
     ASSERT(token->type() == HTMLToken::StartTag);
@@ -497,6 +525,7 @@ void HTMLConstructionSite::insertFormattingElement(AtomicHTMLToken* token)
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/parsing.html#the-stack-of-open-elements
     // Possible active formatting elements include:
     // a, b, big, code, em, font, i, nobr, s, small, strike, strong, tt, and u.
+    ASSERT(isFormattingTag(token->name()));
     insertHTMLElement(token);
     m_activeFormattingElements.append(&currentStackItem());
 }
@@ -510,11 +539,11 @@ void HTMLConstructionSite::insertScriptElement(AtomicHTMLToken* token)
     // those flags or effects thereof.
     const bool parserInserted = m_parserContentPolicy != AllowScriptingContentAndDoNotMarkAlreadyStarted;
     const bool alreadyStarted = m_isParsingFragment && parserInserted;
-    RefPtr<HTMLScriptElement> element = HTMLScriptElement::create(scriptTag, ownerDocumentForCurrentNode(), parserInserted, alreadyStarted);
+    Ref<HTMLScriptElement> element = HTMLScriptElement::create(scriptTag, ownerDocumentForCurrentNode(), parserInserted, alreadyStarted);
     setAttributes(element.get(), token, m_parserContentPolicy);
     if (scriptingContentIsAllowed(m_parserContentPolicy))
-        attachLater(&currentNode(), element);
-    m_openElements.push(HTMLStackItem::create(element.releaseNonNull(), *token));
+        attachLater(&currentNode(), element.ptr());
+    m_openElements.push(HTMLStackItem::create(WTFMove(element), *token));
 }
 
 void HTMLConstructionSite::insertForeignElement(AtomicHTMLToken* token, const AtomicString& namespaceURI)
@@ -571,7 +600,7 @@ void HTMLConstructionSite::insertTextNode(const String& characters, WhitespaceMo
 
         currentPosition += textNode->length();
         ASSERT(currentPosition <= characters.length());
-        task.child = WTF::move(textNode);
+        task.child = WTFMove(textNode);
 
         executeTask(task);
     }
@@ -614,12 +643,12 @@ void HTMLConstructionSite::takeAllChildren(HTMLStackItem& newParent, HTMLElement
     m_taskQueue.append(task);
 }
 
-PassRefPtr<Element> HTMLConstructionSite::createElement(AtomicHTMLToken* token, const AtomicString& namespaceURI)
+Ref<Element> HTMLConstructionSite::createElement(AtomicHTMLToken* token, const AtomicString& namespaceURI)
 {
     QualifiedName tagName(nullAtom, token->name(), namespaceURI);
-    RefPtr<Element> element = ownerDocumentForCurrentNode().createElement(tagName, true);
+    Ref<Element> element = ownerDocumentForCurrentNode().createElement(tagName, true);
     setAttributes(element.get(), token, m_parserContentPolicy);
-    return element.release();
+    return element;
 }
 
 inline Document& HTMLConstructionSite::ownerDocumentForCurrentNode()
@@ -631,31 +660,60 @@ inline Document& HTMLConstructionSite::ownerDocumentForCurrentNode()
     return currentNode().document();
 }
 
-PassRefPtr<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken* token)
+RefPtr<Element> HTMLConstructionSite::createHTMLElementOrFindCustomElementInterface(
+    AtomicHTMLToken* token, JSCustomElementInterface** customElementInterface)
 {
-    QualifiedName tagName(nullAtom, token->name(), xhtmlNamespaceURI);
+    auto& localName = token->name();
     // FIXME: This can't use HTMLConstructionSite::createElement because we
     // have to pass the current form element.  We should rework form association
     // to occur after construction to allow better code sharing here.
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tree-construction.html#create-an-element-for-the-token
     Document& ownerDocument = ownerDocumentForCurrentNode();
     bool insideTemplateElement = !ownerDocument.frame();
-    RefPtr<Element> element = HTMLElementFactory::createElement(tagName, ownerDocument, insideTemplateElement ? nullptr : form(), true);
-    setAttributes(element.get(), token, m_parserContentPolicy);
+    RefPtr<Element> element = HTMLElementFactory::createKnownElement(localName, ownerDocument, insideTemplateElement ? nullptr : form(), true);
+    if (UNLIKELY(!element)) {
+
+#if ENABLE(CUSTOM_ELEMENTS)
+        auto* definitions = ownerDocumentForCurrentNode().customElementDefinitions();
+        if (customElementInterface && UNLIKELY(definitions)) {
+            if (auto* interface = definitions->findInterface(localName)) {
+                *customElementInterface = interface;
+                return nullptr;
+            }
+        }
+#else
+        UNUSED_PARAM(customElementInterface);
+#endif
+
+        element = HTMLUnknownElement::create(QualifiedName(nullAtom, localName, xhtmlNamespaceURI), ownerDocumentForCurrentNode());
+    }
+    ASSERT(element);
+
+    // FIXME: This is a hack to connect images to pictures before the image has
+    // been inserted into the document. It can be removed once asynchronous image
+    // loading is working.
+    if (is<HTMLPictureElement>(currentNode()) && is<HTMLImageElement>(*element))
+        downcast<HTMLImageElement>(*element).setPictureElement(&downcast<HTMLPictureElement>(currentNode()));
+
+    setAttributes(*element, token, m_parserContentPolicy);
     ASSERT(element->isHTMLElement());
-    return element.release();
+    return element;
 }
 
-PassRefPtr<HTMLStackItem> HTMLConstructionSite::createElementFromSavedToken(HTMLStackItem* item)
+Ref<Element> HTMLConstructionSite::createHTMLElement(AtomicHTMLToken* token)
 {
-    RefPtr<Element> element;
+    RefPtr<Element> element = createHTMLElementOrFindCustomElementInterface(token, nullptr);
+    ASSERT(element);
+    return element.releaseNonNull();
+}
+
+Ref<HTMLStackItem> HTMLConstructionSite::createElementFromSavedToken(HTMLStackItem* item)
+{
     // NOTE: Moving from item -> token -> item copies the Attribute vector twice!
     AtomicHTMLToken fakeToken(HTMLToken::StartTag, item->localName(), Vector<Attribute>(item->attributes()));
-    if (item->namespaceURI() == HTMLNames::xhtmlNamespaceURI)
-        element = createHTMLElement(&fakeToken);
-    else
-        element = createElement(&fakeToken, item->namespaceURI());
-    return HTMLStackItem::create(element.releaseNonNull(), fakeToken, item->namespaceURI());
+    ASSERT(item->namespaceURI() == HTMLNames::xhtmlNamespaceURI);
+    ASSERT(isFormattingTag(item->localName()));
+    return HTMLStackItem::create(createHTMLElement(&fakeToken), fakeToken, item->namespaceURI());
 }
 
 bool HTMLConstructionSite::indexOfFirstUnopenFormattingElement(unsigned& firstUnopenElementIndex) const

@@ -9,10 +9,11 @@
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 
-#include <JavaRef.h> // todo tav remove when building w/ pch
+#include <wtf/java/JavaRef.h> // todo tav remove when building w/ pch
 
 namespace WebCore {
 
+class FontDescription;
 class FontPlatformData;
 class SharedBuffer;
 
@@ -22,13 +23,7 @@ public:
     FontCustomPlatformData(const JLObject& data);
     ~FontCustomPlatformData();
 
-    FontPlatformData fontPlatformData(
-            int size,
-            bool bold,
-            bool italic,
-            FontOrientation = Horizontal,
-            FontWidthVariant = RegularWidth,
-            FontRenderingMode = NormalRenderingMode);
+    FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic);
 
     static bool supportsFormat(const String&);
 

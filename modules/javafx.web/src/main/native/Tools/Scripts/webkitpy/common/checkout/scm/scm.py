@@ -77,12 +77,6 @@ class SCM:
                            return_stderr=return_stderr,
                            decode_output=decode_output)
 
-    def fix_changelog_patch(self, diff):
-        return self.run(
-                ['perl', '-e', 'use VCSUtils; print(fixChangeLogPatch(join("", <STDIN>))->{"patch"});'],
-                cwd=self._filesystem.join(self.checkout_root, 'Tools', 'Scripts'),
-                input=diff, decode_output=False)
-
     # SCM always returns repository relative path, but sometimes we need
     # absolute paths to pass to rm, etc.
     def absolute_path(self, repository_relative_path):
@@ -209,6 +203,16 @@ class SCM:
 
     def has_working_directory_changes(self):
         self._subclass_must_implement()
+
+    def untracked_files(self, include_ignored_files=False):
+        self._subclass_must_implement()
+
+    def discard_untracked_files(self, discard_ignored_files=False):
+        for filename in self.untracked_files(discard_ignored_files):
+            if self._filesystem.isdir(filename):
+                self._filesystem.rmtree(filename)
+            else:
+                self._filesystem.remove(filename)
 
     def discard_working_directory_changes(self):
         self._subclass_must_implement()

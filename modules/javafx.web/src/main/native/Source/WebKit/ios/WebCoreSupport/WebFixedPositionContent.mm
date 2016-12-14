@@ -37,6 +37,7 @@
 #import <WebCore/WebCoreThreadRun.h>
 
 #import <wtf/HashMap.h>
+#import <wtf/NeverDestroyed.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/Threading.h>
@@ -48,9 +49,9 @@
 using namespace WebCore;
 using namespace std;
 
-static Mutex& WebFixedPositionContentDataLock()
+static Lock& WebFixedPositionContentDataLock()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(Mutex, mutex, ());
+    static NeverDestroyed<Lock> mutex;
     return mutex;
 }
 
@@ -101,7 +102,7 @@ WebFixedPositionContentData::~WebFixedPositionContentData()
 
 - (void)scrollOrZoomChanged:(CGRect)positionedObjectsRect
 {
-    MutexLocker lock(WebFixedPositionContentDataLock());
+    LockHolder lock(WebFixedPositionContentDataLock());
 
     LayerInfoMap::const_iterator end = _private->m_viewportConstrainedLayers.end();
     for (LayerInfoMap::const_iterator it = _private->m_viewportConstrainedLayers.begin(); it != end; ++it) {
@@ -140,7 +141,7 @@ WebFixedPositionContentData::~WebFixedPositionContentData()
 
 - (void)overflowScrollPositionForLayer:(CALayer *)scrollLayer changedTo:(CGPoint)scrollPosition
 {
-    MutexLocker lock(WebFixedPositionContentDataLock());
+    LockHolder lock(WebFixedPositionContentDataLock());
 
     LayerInfoMap::const_iterator end = _private->m_viewportConstrainedLayers.end();
     for (LayerInfoMap::const_iterator it = _private->m_viewportConstrainedLayers.begin(); it != end; ++it) {
@@ -173,7 +174,7 @@ WebFixedPositionContentData::~WebFixedPositionContentData()
 
 - (void)setViewportConstrainedLayers:(WTF::HashMap<CALayer *, std::unique_ptr<WebCore::ViewportConstraints>>&)layerMap stickyContainerMap:(WTF::HashMap<CALayer*, CALayer*>&)stickyContainers
 {
-    MutexLocker lock(WebFixedPositionContentDataLock());
+    LockHolder lock(WebFixedPositionContentDataLock());
 
     _private->m_viewportConstrainedLayers.clear();
 
@@ -182,15 +183,15 @@ WebFixedPositionContentData::~WebFixedPositionContentData()
         auto layerData = std::make_unique<ViewportConstrainedLayerData>();
 
         layerData->m_enclosingAcceleratedScrollLayer = stickyContainers.get(layer);
-        layerData->m_viewportConstraints = WTF::move(layerAndConstraints.value);
+        layerData->m_viewportConstraints = WTFMove(layerAndConstraints.value);
 
-        _private->m_viewportConstrainedLayers.set(layer, WTF::move(layerData));
+        _private->m_viewportConstrainedLayers.set(layer, WTFMove(layerData));
     }
 }
 
 - (BOOL)hasFixedOrStickyPositionLayers
 {
-    MutexLocker lock(WebFixedPositionContentDataLock());
+    LockHolder lock(WebFixedPositionContentDataLock());
     return !_private->m_viewportConstrainedLayers.isEmpty();
 }
 
@@ -210,7 +211,7 @@ static ViewportConstraints::AnchorEdgeFlags anchorEdgeFlagsForAnchorEdge(WebFixe
 
 - (CGFloat)minimumOffsetFromFixedPositionLayersToAnchorEdge:(WebFixedPositionAnchorEdge)anchorEdge ofRect:(CGRect)rect inLayer:(CALayer *)layer
 {
-    MutexLocker lock(WebFixedPositionContentDataLock());
+    LockHolder lock(WebFixedPositionContentDataLock());
     ViewportConstraints::AnchorEdgeFlags anchorEdgeFlags = anchorEdgeFlagsForAnchorEdge(anchorEdge);
     CGFloat minimumOffset = CGFLOAT_MAX;
     LayerInfoMap::const_iterator end = _private->m_viewportConstrainedLayers.end();

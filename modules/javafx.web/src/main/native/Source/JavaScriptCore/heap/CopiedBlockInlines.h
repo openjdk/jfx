@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,24 +26,12 @@
 #ifndef CopiedBlockInlines_h
 #define CopiedBlockInlines_h
 
-#include "ClassInfo.h"
 #include "CopiedBlock.h"
 #include "Heap.h"
-#include "MarkedBlock.h"
 
 namespace JSC {
 
-inline bool CopiedBlock::shouldReportLiveBytes(SpinLockHolder&, JSCell* owner)
-{
-    // We want to add to live bytes if the owner isn't part of the remembered set or
-    // if this block was allocated during the last cycle.
-    // If we always added live bytes we would double count for elements in the remembered
-    // set across collections.
-    // If we didn't always add live bytes to new blocks, we'd get too few.
-    return !Heap::isRemembered(owner) || !m_isOld;
-}
-
-inline void CopiedBlock::reportLiveBytes(SpinLockHolder&, JSCell* owner, CopyToken token, unsigned bytes)
+inline void CopiedBlock::reportLiveBytes(LockHolder&, JSCell* owner, CopyToken token, unsigned bytes)
 {
     checkConsistency();
 #ifndef NDEBUG

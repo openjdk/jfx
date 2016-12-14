@@ -3,13 +3,18 @@
  */
 #include "config.h"
 
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "FrameLoaderClientJava.h"
 
 #include "NotImplemented.h"
 #include "CSSParser.h"
-#include "CString.h"
+#include <wtf/text/CString.h>
 #include "Chrome.h"
 #include "DocumentLoader.h"
+#include "DNS.h"
 #include "IconURL.h"
 #include "FormState.h"
 #include "FrameLoadRequest.h"
@@ -46,9 +51,6 @@
 
 static JGClass webPageClass;
 static JGClass networkContextClass;
-
-static jmethodID updateForStandardLoadMID;
-static jmethodID updateForReloadMID;
 
 static jmethodID setRequestURLMID;
 static jmethodID removeRequestURLMID;
@@ -145,22 +147,19 @@ enum {
 };
 
 FrameLoaderClientJava::FrameLoaderClientJava(const JLObject &webPage)
-    : m_page(0)
-    , m_frame(0)
-//    , m_pluginWidget(0)
+    : m_page(nullptr)
+    , m_frame(nullptr)
     , m_isPageRedirected(false)
-    , m_webPage(webPage)
     , m_hasRepresentation(false)
     , m_FrameLoaderClientDestroyed(false)
     , m_ProgressTrackerClientDestroyed(false)
+    , m_webPage(webPage)
 {
-//   CRASH();
 }
 
 void FrameLoaderClientJava::destroyIfNeeded() {
     if (m_FrameLoaderClientDestroyed && m_ProgressTrackerClientDestroyed) {
-
-    WC_GETJAVAENV_CHKRET(env);
+        WC_GETJAVAENV_CHKRET(env);
         initRefs(env);
 
         ASSERT(m_webPage);
@@ -243,9 +242,8 @@ void FrameLoaderClientJava::postLoadEvent(Frame* f, int state,
         state == com_sun_webkit_LoadListenerClient_CONTENT_RECEIVED)
     {
         DocumentLoader* dl = f->loader().activeDocumentLoader();
-        unsigned size = 0;
         if (dl && dl->mainResourceData()) {
-            size = dl->mainResourceData()->size(); //XXX recheck
+            dl->mainResourceData()->size(); // TODO-java: recheck
         }
     }
 
@@ -385,7 +383,7 @@ void FrameLoaderClientJava::dispatchDidReceiveResponse(DocumentLoader* l, unsign
 {
     m_response = response;
 
-    if (identifier == mainResourceRequestID) {
+    if (identifier == m_mainResourceRequestID) {
         double progress = page()->progress().estimatedProgress();
         postLoadEvent(frame(),
                       com_sun_webkit_LoadListenerClient_CONTENTTYPE_RECEIVED,
@@ -473,7 +471,7 @@ RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLP
         url.string(),
         mimeType,
         paramNames,
-        paramValues)); //XXX adoptRef to ?
+        paramValues));
 }
 
 RefPtr<Frame> FrameLoaderClientJava::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
@@ -526,13 +524,12 @@ PassRefPtr<Widget> FrameLoaderClientJava::createJavaAppletWidget(const IntSize& 
     return 0;
 }
 
-ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const String& mimeType, bool shouldPreferPlugInsForImages)
+ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const String& mimeType)
 {
     //copied from FrameLoaderClientEfl.cpp
 
     // FIXME: once plugin support is enabled, this method needs to correctly handle the 'shouldPreferPlugInsForImages' flag. See
     // WebCore::FrameLoader::defaultObjectContentType() for an example.
-    UNUSED_PARAM(shouldPreferPlugInsForImages);
 
     if (url.isEmpty() && mimeType.isEmpty())
         return ObjectContentNone;
@@ -585,20 +582,20 @@ void FrameLoaderClientJava::assignIdentifierToInitialRequest(unsigned long ident
 }
 
 void FrameLoaderClientJava::willReplaceMultipartContent() {
-    notImplemented(); //XXX: recheck
+    notImplemented(); // TODO-java: recheck
 }
 
 void FrameLoaderClientJava::didReplaceMultipartContent() {
-    notImplemented(); //XXX: recheck
+    notImplemented(); // TODO-java: recheck
 }
 
 void FrameLoaderClientJava::updateCachedDocumentLoader(DocumentLoader&) {
-    notImplemented(); //XXX: recheck
+    notImplemented(); // TODO-java: recheck
 }
 
 void FrameLoaderClientJava::dispatchDidStartProvisionalLoad()
 {
-    mainResourceRequestID = -1;
+    m_mainResourceRequestID = 0;
 }
 
 void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, unsigned long identifier, ResourceRequest& req, const ResourceResponse& res)
@@ -614,14 +611,14 @@ void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, unsigned 
     double progress = 0.0;
     progress = page()->progress().estimatedProgress();
 
-    if (mainResourceRequestID < 0) {
-        mainResourceRequestID = identifier;
+    if (m_mainResourceRequestID == 0) {
+        m_mainResourceRequestID = identifier;
         postLoadEvent(f,
                       com_sun_webkit_LoadListenerClient_PAGE_STARTED,
                       req.url().string(),
                       res.mimeType(),
                       progress);
-    } else if (mainResourceRequestID == identifier) { // serever-side redirection
+    } else if (m_mainResourceRequestID == identifier) { // serever-side redirection
         m_isPageRedirected = true;
         postLoadEvent(f,
                       com_sun_webkit_LoadListenerClient_PAGE_REDIRECTED,
@@ -772,7 +769,6 @@ void FrameLoaderClientJava::dispatchDidLoadMainResource(DocumentLoader* l)
 
 void FrameLoaderClientJava::dispatchDidFinishLoading(DocumentLoader* l, unsigned long identifier)
 {
-    double progress = page()->progress().estimatedProgress();
     postResourceLoadEvent(frame(),
                           com_sun_webkit_LoadListenerClient_RESOURCE_FINISHED,
                           identifier,
@@ -822,7 +818,7 @@ Frame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& action)
         frame(),
         FrameLoadRequest( frame()->document()->securityOrigin(), LockHistory::No,
                             LockBackForwardList::No, ShouldSendReferrer::MaybeSendReferrer,
-                            AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, //XXX check params
+                            AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, // TODO-java: check params
                             ShouldOpenExternalURLsPolicy::ShouldNotAllow),
         features,
         action);
@@ -842,15 +838,6 @@ bool FrameLoaderClientJava::shouldGoToHistoryItem(HistoryItem* item) const
     return item != 0;
 }
 
-const char backForwardNavigationScheme[] = "chrome-back-forward";
-bool FrameLoaderClientJava::shouldStopLoadingForHistoryItem(WebCore::HistoryItem *targetItem) const
-{
-    // Don't stop loading for pseudo-back-forward URLs, since they will get
-    // translated and then pass through again.
-    const URL& url = targetItem->url();
-    return !url.protocolIs(backForwardNavigationScheme);
-}
-
 void FrameLoaderClientJava::didDisplayInsecureContent()
 {
     notImplemented();
@@ -866,55 +853,19 @@ void FrameLoaderClientJava::didDetectXSS(const URL&, bool)
     notImplemented();
 }
 
-bool FrameLoaderClientJava::privateBrowsingEnabled() const
-{
-    notImplemented();
-    return false;
-}
-
-void FrameLoaderClientJava::makeDocumentView()
-{
-    notImplemented();
-}
-
 void FrameLoaderClientJava::makeRepresentation(DocumentLoader*)
 {
     m_hasRepresentation = true;
 }
 
-void FrameLoaderClientJava::forceLayout()
-{
-    notImplemented();
-
-    FrameView* frameView = frame()->view();
-    if (frameView) {
-        frameView->forceLayout(true);
-    }
-}
-
 void FrameLoaderClientJava::forceLayoutForNonHTML() { notImplemented(); }
 void FrameLoaderClientJava::setCopiesOnScroll() { notImplemented(); }
-void FrameLoaderClientJava::detachedFromParent1() { notImplemented(); }
 void FrameLoaderClientJava::detachedFromParent2() { notImplemented(); }
 void FrameLoaderClientJava::detachedFromParent3() { notImplemented(); }
-void FrameLoaderClientJava::detachedFromParent4() { notImplemented(); }
-void FrameLoaderClientJava::loadedFromCachedPage() { notImplemented(); }
-void FrameLoaderClientJava::dispatchDidHandleOnloadEvents() {notImplemented(); }
+void FrameLoaderClientJava::dispatchDidDispatchOnloadEvents() {notImplemented(); }
 void FrameLoaderClientJava::dispatchDidPushStateWithinPage() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidReplaceStateWithinPage() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidPopStateWithinPage() { notImplemented(); }
-void FrameLoaderClientJava::dispatchDidAddBackForwardItem(HistoryItem*) const {
-    // TODO: revise BackForwardList::notifyBackForwardListChanged function usage.
-    notImplemented();
-}
-void FrameLoaderClientJava::dispatchDidRemoveBackForwardItem(HistoryItem*) const {
-    // TODO: revise BackForwardList::notifyBackForwardListChanged function usage.
-    notImplemented();
-}
-void FrameLoaderClientJava::dispatchDidChangeBackForwardIndex() const {
-    // TODO: revise BackForwardList::notifyBackForwardListChanged function usage.
-    notImplemented();
-}
 void FrameLoaderClientJava::dispatchDidReceiveServerRedirectForProvisionalLoad() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidCancelClientRedirect() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidChangeLocationWithinPage() { notImplemented(); }
@@ -923,18 +874,11 @@ void FrameLoaderClientJava::dispatchDidCommitLoad() {
     // TODO: Look at GTK version
     notImplemented();
 }
-void FrameLoaderClientJava::dispatchDidFirstLayout() { notImplemented(); }
-void FrameLoaderClientJava::dispatchDidFirstVisuallyNonEmptyLayout() { notImplemented(); }
 void FrameLoaderClientJava::dispatchShow() { notImplemented(); }
 void FrameLoaderClientJava::cancelPolicyCheck() { notImplemented(); }
 void FrameLoaderClientJava::revertToProvisionalState(DocumentLoader*) { notImplemented(); }
-void FrameLoaderClientJava::clearUnarchivingState(DocumentLoader*) { notImplemented(); }
 void FrameLoaderClientJava::willChangeTitle(DocumentLoader*) { notImplemented(); }
 void FrameLoaderClientJava::didChangeTitle(DocumentLoader *l) { setTitle(l->title(), l->url()); }
-void FrameLoaderClientJava::finalSetupForReplace(DocumentLoader*) { notImplemented(); }
-bool FrameLoaderClientJava::isArchiveLoadPending(ResourceLoader*) const { notImplemented(); return false; }
-void FrameLoaderClientJava::cancelPendingArchiveLoad(ResourceLoader*) { notImplemented(); }
-void FrameLoaderClientJava::clearArchivedResources() { notImplemented(); }
 
 bool FrameLoaderClientJava::canHandleRequest(const ResourceRequest& req) const
 {
@@ -951,8 +895,7 @@ bool FrameLoaderClientJava::canHandleRequest(const ResourceRequest& req) const
 bool FrameLoaderClientJava::canShowMIMEType(const String& mimeType) const
 {
     //copy from QT implementation
-    String type(mimeType);
-    type.lower();
+    String type = mimeType.convertToLowercaseWithoutLocale();
     if (MIMETypeRegistry::isSupportedImageMIMEType(type))
         return true;
 
@@ -1004,10 +947,6 @@ void FrameLoaderClientJava::setTitle(const StringWithDirection&, const URL&) {
     notImplemented();
 }
 
-void FrameLoaderClientJava::setDocumentViewFromCachedPage(WebCore::CachedPage*) {
-    notImplemented();
-}
-
 bool FrameLoaderClientJava::dispatchDidLoadResourceFromMemoryCache(
     DocumentLoader*,
     const ResourceRequest&,
@@ -1018,17 +957,9 @@ bool FrameLoaderClientJava::dispatchDidLoadResourceFromMemoryCache(
     return false;
 }
 
-void FrameLoaderClientJava::download(
-    ResourceHandle*,
-    const ResourceRequest&,
-    const ResourceResponse&)
-{
-    notImplemented();
-}
-
 ResourceError FrameLoaderClientJava::cancelledError(const ResourceRequest& request)
 {
-    ResourceError error("Error", -999, request.url().string(),
+    ResourceError error("Error", -999, request.url(),
                         "Request cancelled");
     error.setIsCancellation(true);
     return error;
@@ -1036,37 +967,44 @@ ResourceError FrameLoaderClientJava::cancelledError(const ResourceRequest& reque
 
 ResourceError FrameLoaderClientJava::blockedError(const ResourceRequest& request)
 {
-    return ResourceError("Error", WebKitErrorCannotUseRestrictedPort, request.url().string(),
+    return ResourceError("Error", WebKitErrorCannotUseRestrictedPort, request.url(),
                          "Request blocked");
+}
+
+ResourceError FrameLoaderClientJava::blockedByContentBlockerError(const ResourceRequest& request)
+{
+    RELEASE_ASSERT_NOT_REACHED(); // Content Blockers are not enabled for WK1.
+    return ResourceError("Error", WebKitErrorCannotShowURL, request.url(),
+                         "Cannot show URL");
 }
 
 ResourceError FrameLoaderClientJava::cannotShowURLError(const ResourceRequest& request)
 {
-    return ResourceError("Error", WebKitErrorCannotShowURL, request.url().string(),
+    return ResourceError("Error", WebKitErrorCannotShowURL, request.url(),
                          "Cannot show URL");
 }
 
 ResourceError FrameLoaderClientJava::interruptedForPolicyChangeError(const ResourceRequest& request)
 {
     return ResourceError("Error", WebKitErrorFrameLoadInterruptedByPolicyChange,
-                         request.url().string(), "Frame load interrupted by policy change");
+                         request.url(), "Frame load interrupted by policy change");
 }
 
 ResourceError FrameLoaderClientJava::cannotShowMIMETypeError(const ResourceResponse& response)
 {
-    return ResourceError("Error", WebKitErrorCannotShowMIMEType, response.url().string(),
+    return ResourceError("Error", WebKitErrorCannotShowMIMEType, response.url(),
                          "Cannot show mimetype");
 }
 
 ResourceError FrameLoaderClientJava::fileDoesNotExistError(const ResourceResponse& response)
 {
-    return ResourceError("Error", -998 /* ### */, response.url().string(),
+    return ResourceError("Error", -998 /* ### */, response.url(),
                          "File does not exist");
 }
 
 ResourceError FrameLoaderClientJava::pluginWillHandleLoadError(const ResourceResponse& response)
 {
-    return ResourceError("Error", WebKitErrorPluginWillHandleLoad, response.url().string(), "Loading is handled by the media engine");
+    return ResourceError("Error", WebKitErrorPluginWillHandleLoad, response.url(), "Loading is handled by the media engine");
 }
 
 bool FrameLoaderClientJava::shouldFallBack(const ResourceError& error) {
@@ -1134,28 +1072,11 @@ void FrameLoaderClientJava::dispatchDidClearWindowObjectInWorld(
     CheckAndClearException(env);
 }
 
-void FrameLoaderClientJava::documentElementAvailable()
-{
-}
-
-void FrameLoaderClientJava::didPerformFirstNavigation() const {
-    //notImplemented();
-}
-
 void FrameLoaderClientJava::registerForIconNotification(bool) {
     //notImplemented();
 }
 
-void FrameLoaderClientJava::didTransferChildFrameToNewDocument(Page*) {
-    //notImplemented();
-}
-
-void FrameLoaderClientJava::transferLoadingResourceFromPage(ResourceLoader*, const ResourceRequest&, Page*)
-{
-    //notImplemented();
-}
-
-void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&)
+void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, SessionID, const ResourceRequest&, const ResourceResponse&)
 {
     //notImplemented();
 }
@@ -1173,5 +1094,9 @@ bool FrameLoaderClientJava::shouldUseCredentialStorage(
     return false;
 }
 
+void FrameLoaderClientJava::prefetchDNS(const String& hostname)
+{
+    WebCore::prefetchDNS(hostname);
+}
 
 }

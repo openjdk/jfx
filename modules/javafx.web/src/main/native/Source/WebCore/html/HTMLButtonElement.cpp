@@ -58,22 +58,22 @@ void HTMLButtonElement::setType(const AtomicString& type)
 
 RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderButton>(*this, WTF::move(style));
+    return createRenderer<RenderButton>(*this, WTFMove(style));
 }
 
 const AtomicString& HTMLButtonElement::formControlType() const
 {
     switch (m_type) {
         case SUBMIT: {
-            DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, submit, ("submit", AtomicString::ConstructFromLiteral));
+            static NeverDestroyed<const AtomicString> submit("submit", AtomicString::ConstructFromLiteral);
             return submit;
         }
         case BUTTON: {
-            DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, button, ("button", AtomicString::ConstructFromLiteral));
+            static NeverDestroyed<const AtomicString> button("button", AtomicString::ConstructFromLiteral);
             return button;
         }
         case RESET: {
-            DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, reset, ("reset", AtomicString::ConstructFromLiteral));
+            static NeverDestroyed<const AtomicString> reset("reset", AtomicString::ConstructFromLiteral);
             return reset;
         }
     }
@@ -96,9 +96,9 @@ bool HTMLButtonElement::isPresentationAttribute(const QualifiedName& name) const
 void HTMLButtonElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (name == typeAttr) {
-        if (equalIgnoringCase(value, "reset"))
+        if (equalLettersIgnoringASCIICase(value, "reset"))
             m_type = RESET;
-        else if (equalIgnoringCase(value, "button"))
+        else if (equalLettersIgnoringASCIICase(value, "button"))
             m_type = BUTTON;
         else
             m_type = SUBMIT;

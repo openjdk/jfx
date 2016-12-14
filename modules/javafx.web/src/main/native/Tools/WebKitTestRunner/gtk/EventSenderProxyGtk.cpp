@@ -451,6 +451,11 @@ void EventSenderProxy::mouseScrollByWithWheelAndMomentumPhases(int x, int y, int
     mouseScrollBy(x, y);
 }
 
+void EventSenderProxy::swipeGestureWithWheelAndMomentumPhases(int, int, int, int)
+{
+    notImplemented();
+}
+
 void EventSenderProxy::leapForward(int milliseconds)
 {
     if (m_eventQueue.isEmpty())
@@ -484,6 +489,7 @@ GUniquePtr<GdkEvent> EventSenderProxy::createTouchEvent(GdkEventType eventType, 
     return touchEvent;
 }
 
+#if ENABLE(TOUCH_EVENTS)
 void EventSenderProxy::addTouchPoint(int x, int y)
 {
     // Touch ID is array index plus one, so 0 is skipped.
@@ -574,6 +580,6 @@ void EventSenderProxy::setTouchModifier(WKEventModifiers modifier, bool enable)
         m_updatedTouchEvents.add(GPOINTER_TO_INT(event->touch.sequence));
     }
 }
-
+#endif // ENABLE(TOUCH_EVENTS)
 
 } // namespace WTR

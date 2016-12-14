@@ -49,6 +49,10 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 
+#if ENABLE(MEDIA_STREAM)
+#include "MockRealtimeMediaSourceCenter.h"
+#endif
+
 namespace WebCore {
 
 static void setImageLoadingSettings(Page* page)
@@ -57,6 +61,8 @@ static void setImageLoadingSettings(Page* page)
         return;
 
     for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (!frame->document())
+            continue;
         frame->document()->cachedResourceLoader().setImagesEnabled(page->settings().areImagesEnabled());
         frame->document()->cachedResourceLoader().setAutoLoadImages(page->settings().loadsImagesAutomatically());
     }
@@ -71,6 +77,7 @@ static void invalidateAfterGenericFamilyChange(Page* page)
 
 #if USE(AVFOUNDATION)
 bool Settings::gAVFoundationEnabled = true;
+bool Settings::gAVFoundationNSURLSessionEnabled = false;
 #endif
 
 #if PLATFORM(COCOA)
@@ -79,13 +86,20 @@ bool Settings::gQTKitEnabled = false;
 
 bool Settings::gMockScrollbarsEnabled = false;
 bool Settings::gUsesOverlayScrollbars = false;
+bool Settings::gMockScrollAnimatorEnabled = false;
+
+#if ENABLE(MEDIA_STREAM)
+bool Settings::gMockCaptureDevicesEnabled = false;
+#endif
 
 #if PLATFORM(WIN)
 bool Settings::gShouldUseHighResolutionTimers = true;
 #endif
 
+bool Settings::gShouldRewriteConstAsVar = false;
 bool Settings::gShouldRespectPriorityInCSSAttributeSetters = false;
 bool Settings::gLowPowerVideoAudioBufferSizeEnabled = false;
+bool Settings::gResourceLoadStatisticsEnabledEnabled = false;
 
 #if PLATFORM(IOS)
 bool Settings::gNetworkDataUsageTrackingEnabled = false;
@@ -122,8 +136,10 @@ static const bool defaultFixedPositionCreatesStackingContext = true;
 static const bool defaultFixedBackgroundsPaintRelativeToDocument = true;
 static const bool defaultAcceleratedCompositingForFixedPositionEnabled = true;
 static const bool defaultAllowsInlineMediaPlayback = false;
+static const bool defaultInlineMediaPlaybackRequiresPlaysInlineAttribute = true;
 static const bool defaultRequiresUserGestureForMediaPlayback = true;
 static const bool defaultAudioPlaybackRequiresUserGesture = true;
+static const bool defaultMediaDataLoadsAutomatically = false;
 static const bool defaultShouldRespectImageOrientation = true;
 static const bool defaultImageSubsamplingEnabled = true;
 static const bool defaultScrollingTreeIncludesFrames = true;
@@ -133,8 +149,10 @@ static const bool defaultFixedPositionCreatesStackingContext = false;
 static const bool defaultFixedBackgroundsPaintRelativeToDocument = false;
 static const bool defaultAcceleratedCompositingForFixedPositionEnabled = false;
 static const bool defaultAllowsInlineMediaPlayback = true;
+static const bool defaultInlineMediaPlaybackRequiresPlaysInlineAttribute = false;
 static const bool defaultRequiresUserGestureForMediaPlayback = false;
 static const bool defaultAudioPlaybackRequiresUserGesture = false;
+static const bool defaultMediaDataLoadsAutomatically = true;
 static const bool defaultShouldRespectImageOrientation = false;
 static const bool defaultImageSubsamplingEnabled = false;
 static const bool defaultScrollingTreeIncludesFrames = false;
@@ -164,7 +182,6 @@ Settings::Settings(Page* page)
     , m_storageBlockingPolicy(SecurityOrigin::AllowAllStorage)
     , m_layoutInterval(layoutScheduleThreshold)
     , m_minimumDOMTimerInterval(DOMTimer::defaultMinimumInterval())
-    , m_domTimerAlignmentInterval(DOMTimer::defaultAlignmentInterval())
 #if ENABLE(TEXT_AUTOSIZING)
     , m_textAutosizingFontScaleFactor(1)
 #if HACK_FORCE_TEXT_AUTOSIZING_ON_DESKTOP
@@ -184,7 +201,6 @@ Settings::Settings(Page* page)
     , m_needsAdobeFrameReloadingQuirk(false)
     , m_usesPageCache(false)
     , m_fontRenderingMode(0)
-    , m_antialiasedFontDilationEnabled(false)
     , m_showTiledScrollingIndicator(false)
     , m_backgroundShouldExtendBeyondPage(false)
     , m_dnsPrefetchingEnabled(false)
@@ -194,9 +210,7 @@ Settings::Settings(Page* page)
     , m_scrollingPerformanceLoggingEnabled(false)
     , m_timeWithoutMouseMovementBeforeHidingControls(3)
     , m_setImageLoadingSettingsTimer(*this, &Settings::imageLoadingSettingsTimerFired)
-#if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
     , m_hiddenPageDOMTimerThrottlingEnabled(false)
-#endif
     , m_hiddenPageCSSAnimationSuspensionEnabled(false)
     , m_fontFallbackPrefersPictographs(false)
     , m_forcePendingWebGLPolicy(false)
@@ -347,12 +361,6 @@ void Settings::setTextAutosizingFontScaleFactor(float fontScaleFactor)
 
 #endif
 
-void Settings::setAntialiasedFontDilationEnabled(bool enabled)
-{
-    // FIXME: It's wrong for a setting to toggle a global, but this code is temporary.
-    FontCascade::setAntialiasedFontDilationEnabled(enabled);
-}
-
 void Settings::setMediaTypeOverride(const String& mediaTypeOverride)
 {
     if (m_mediaTypeOverride == mediaTypeOverride)
@@ -469,11 +477,6 @@ void Settings::setMinimumDOMTimerInterval(double interval)
     }
 }
 
-void Settings::setDOMTimerAlignmentInterval(double alignmentInterval)
-{
-    m_domTimerAlignmentInterval = alignmentInterval;
-}
-
 void Settings::setLayoutInterval(std::chrono::milliseconds layoutInterval)
 {
     // FIXME: It seems weird that this function may disregard the specified layout interval.
@@ -499,7 +502,7 @@ void Settings::setFontRenderingMode(FontRenderingMode mode)
 {
     if (fontRenderingMode() == mode)
         return;
-    m_fontRenderingMode = mode;
+    m_fontRenderingMode = static_cast<int>(mode);
     if (m_page)
         m_page->setNeedsRecalcStyleInAllFrames();
 }
@@ -526,6 +529,18 @@ void Settings::setShowTiledScrollingIndicator(bool enabled)
 
     m_showTiledScrollingIndicator = enabled;
 }
+
+#if ENABLE(RESOURCE_USAGE)
+void Settings::setResourceUsageOverlayVisible(bool visible)
+{
+    if (m_resourceUsageOverlayVisible == visible)
+        return;
+
+    m_resourceUsageOverlayVisible = visible;
+    if (m_page)
+        m_page->setResourceUsageOverlayVisible(visible);
+}
+#endif
 
 #if PLATFORM(WIN)
 void Settings::setShouldUseHighResolutionTimers(bool shouldUseHighResolutionTimers)
@@ -564,6 +579,14 @@ void Settings::setAVFoundationEnabled(bool enabled)
     gAVFoundationEnabled = enabled;
     HTMLMediaElement::resetMediaEngines();
 }
+
+void Settings::setAVFoundationNSURLSessionEnabled(bool enabled)
+{
+    if (gAVFoundationNSURLSessionEnabled == enabled)
+        return;
+
+    gAVFoundationNSURLSessionEnabled = enabled;
+}
 #endif
 
 #if PLATFORM(COCOA)
@@ -574,6 +597,19 @@ void Settings::setQTKitEnabled(bool enabled)
 
     gQTKitEnabled = enabled;
     HTMLMediaElement::resetMediaEngines();
+}
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+bool Settings::mockCaptureDevicesEnabled()
+{
+    return gMockCaptureDevicesEnabled;
+}
+
+void Settings::setMockCaptureDevicesEnabled(bool enabled)
+{
+    gMockCaptureDevicesEnabled = enabled;
+    MockRealtimeMediaSourceCenter::setMockRealtimeMediaSourceCenterEnabled(enabled);
 }
 #endif
 
@@ -607,6 +643,16 @@ bool Settings::usesOverlayScrollbars()
     return gUsesOverlayScrollbars;
 }
 
+void Settings::setUsesMockScrollAnimator(bool flag)
+{
+    gMockScrollAnimatorEnabled = flag;
+}
+
+bool Settings::usesMockScrollAnimator()
+{
+    return gMockScrollAnimatorEnabled;
+}
+
 void Settings::setShouldRespectPriorityInCSSAttributeSetters(bool flag)
 {
     gShouldRespectPriorityInCSSAttributeSetters = flag;
@@ -617,7 +663,6 @@ bool Settings::shouldRespectPriorityInCSSAttributeSetters()
     return gShouldRespectPriorityInCSSAttributeSetters;
 }
 
-#if ENABLE(HIDDEN_PAGE_DOM_TIMER_THROTTLING)
 void Settings::setHiddenPageDOMTimerThrottlingEnabled(bool flag)
 {
     if (m_hiddenPageDOMTimerThrottlingEnabled == flag)
@@ -626,7 +671,15 @@ void Settings::setHiddenPageDOMTimerThrottlingEnabled(bool flag)
     if (m_page)
         m_page->hiddenPageDOMTimerThrottlingStateChanged();
 }
-#endif
+
+void Settings::setHiddenPageDOMTimerThrottlingAutoIncreases(bool flag)
+{
+    if (m_hiddenPageDOMTimerThrottlingAutoIncreases == flag)
+        return;
+    m_hiddenPageDOMTimerThrottlingAutoIncreases = flag;
+    if (m_page)
+        m_page->hiddenPageDOMTimerThrottlingStateChanged();
+}
 
 void Settings::setHiddenPageCSSAnimationSuspensionEnabled(bool flag)
 {
@@ -650,6 +703,11 @@ void Settings::setFontFallbackPrefersPictographs(bool preferPictographs)
 void Settings::setLowPowerVideoAudioBufferSizeEnabled(bool flag)
 {
     gLowPowerVideoAudioBufferSizeEnabled = flag;
+}
+
+void Settings::setResourceLoadStatisticsEnabled(bool flag)
+{
+    gResourceLoadStatisticsEnabledEnabled = flag;
 }
 
 #if PLATFORM(IOS)

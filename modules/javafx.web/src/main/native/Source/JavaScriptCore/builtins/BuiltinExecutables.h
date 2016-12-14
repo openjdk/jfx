@@ -47,7 +47,7 @@ public:
 UnlinkedFunctionExecutable* name##Executable(); \
 const SourceCode& name##Source() { return m_##name##Source; }
 
-    JSC_FOREACH_BUILTIN(EXPOSE_BUILTIN_EXECUTABLES)
+    JSC_FOREACH_BUILTIN_CODE(EXPOSE_BUILTIN_EXECUTABLES)
 #undef EXPOSE_BUILTIN_SOURCES
 
     UnlinkedFunctionExecutable* createDefaultConstructor(ConstructorKind, const Identifier& name);
@@ -57,16 +57,12 @@ private:
 
     VM& m_vm;
 
-    UnlinkedFunctionExecutable* createBuiltinExecutable(const SourceCode& code, const Identifier& name, ConstructAbility constructAbility)
-    {
-        return createExecutableInternal(code, name, ConstructorKind::None, constructAbility);
-    }
-    UnlinkedFunctionExecutable* createExecutableInternal(const SourceCode&, const Identifier&, ConstructorKind, ConstructAbility);
+    UnlinkedFunctionExecutable* createBuiltinExecutable(const SourceCode&, const Identifier&, ConstructAbility);
 
 #define DECLARE_BUILTIN_SOURCE_MEMBERS(name, functionName, length)\
     SourceCode m_##name##Source; \
     Weak<UnlinkedFunctionExecutable> m_##name##Executable;
-    JSC_FOREACH_BUILTIN(DECLARE_BUILTIN_SOURCE_MEMBERS)
+    JSC_FOREACH_BUILTIN_CODE(DECLARE_BUILTIN_SOURCE_MEMBERS)
 #undef DECLARE_BUILTIN_SOURCE_MEMBERS
 };
 

@@ -115,7 +115,8 @@ namespace WTF {
 
         static bool isValidValue(const ValueType&);
 
-        bool operator==(const HashSet&) const;
+        template<typename OtherCollection>
+        bool operator==(const OtherCollection&) const;
 
     private:
         HashTableType m_impl;
@@ -213,7 +214,7 @@ namespace WTF {
     template<typename T, typename U, typename V>
     inline auto HashSet<T, U, V>::add(ValueType&& value) -> AddResult
     {
-        return m_impl.add(WTF::move(value));
+        return m_impl.add(WTFMove(value));
     }
 
     template<typename Value, typename HashFunctions, typename Traits>
@@ -261,7 +262,7 @@ namespace WTF {
         if (it == end())
             return ValueTraits::emptyValue();
 
-        ValueType result = WTF::move(const_cast<ValueType&>(*it));
+        ValueType result = WTFMove(const_cast<ValueType&>(*it));
         remove(it);
         return result;
     }
@@ -337,12 +338,13 @@ namespace WTF {
     }
 
     template<typename T, typename U, typename V>
-    inline bool HashSet<T, U, V>::operator==(const HashSet& other) const
+    template<typename OtherCollection>
+    inline bool HashSet<T, U, V>::operator==(const OtherCollection& otherCollection) const
     {
-        if (size() != other.size())
+        if (size() != otherCollection.size())
             return false;
-        for (const_iterator iter = begin(); iter != end(); ++iter) {
-            if (!other.contains(*iter))
+        for (const auto& other : otherCollection) {
+            if (!contains(other))
                 return false;
         }
         return true;

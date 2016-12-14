@@ -68,6 +68,7 @@ const ClassInfo ObjectConstructor::s_info = { "Function", &InternalFunction::s_i
   getPrototypeOf            objectConstructorGetPrototypeOf             DontEnum|Function 1
   setPrototypeOf            objectConstructorSetPrototypeOf             DontEnum|Function 2
   getOwnPropertyDescriptor  objectConstructorGetOwnPropertyDescriptor   DontEnum|Function 2
+  getOwnPropertyDescriptors objectConstructorGetOwnPropertyDescriptors  DontEnum|Function 1
   getOwnPropertyNames       objectConstructorGetOwnPropertyNames        DontEnum|Function 1
   keys                      objectConstructorKeys                       DontEnum|Function 1
   defineProperty            objectConstructorDefineProperty             DontEnum|Function 3
@@ -80,7 +81,7 @@ const ClassInfo ObjectConstructor::s_info = { "Function", &InternalFunction::s_i
   isFrozen                  objectConstructorIsFrozen                   DontEnum|Function 1
   isExtensible              objectConstructorIsExtensible               DontEnum|Function 1
   is                        objectConstructorIs                         DontEnum|Function 2
-  assign                    objectConstructorAssign                     DontEnum|Function 2
+  assign                    JSBuiltin                                   DontEnum|Function 2
 @end
 */
 
@@ -97,9 +98,9 @@ void ObjectConstructor::finishCreation(VM& vm, JSGlobalObject* globalObject, Obj
     // no. of arguments for constructor
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum | DontDelete);
 
-    JSC_NATIVE_FUNCTION("getOwnPropertySymbols", objectConstructorGetOwnPropertySymbols, DontEnum, 1);
-    JSC_NATIVE_FUNCTION(vm.propertyNames->getPrototypeOfPrivateName, objectConstructorGetPrototypeOf, DontEnum, 1);
-    JSC_NATIVE_FUNCTION(vm.propertyNames->getOwnPropertyNamesPrivateName, objectConstructorGetOwnPropertyNames, DontEnum, 1);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION("getOwnPropertySymbols", objectConstructorGetOwnPropertySymbols, DontEnum, 1);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->getPrototypeOfPrivateName, objectConstructorGetPrototypeOf, DontEnum, 1);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->getOwnPropertyNamesPrivateName, objectConstructorGetOwnPropertyNames, DontEnum, 1);
 }
 
 JSFunction* ObjectConstructor::addDefineProperty(ExecState* exec, JSGlobalObject* globalObject)
@@ -152,11 +153,11 @@ public:
     ObjectConstructorGetPrototypeOfFunctor(JSObject* object)
         : m_hasSkippedFirstFrame(false)
         , m_object(object)
-        , m_result(JSValue::encode(jsUndefined()))
+        , m_result(jsUndefined())
     {
     }
 
-    EncodedJSValue result() const { return m_result; }
+    JSValue result() const { return m_result; }
 
     StackVisitor::Status operator()(StackVisitor& visitor)
     {
@@ -166,24 +167,29 @@ public:
         }
 
         if (m_object->allowsAccessFrom(visitor->callFrame()))
-            m_result = JSValue::encode(m_object->prototype());
+            m_result = m_object->prototype();
         return StackVisitor::Done;
     }
 
 private:
     bool m_hasSkippedFirstFrame;
     JSObject* m_object;
-    EncodedJSValue m_result;
+    JSValue m_result;
 };
+
+JSValue objectConstructorGetPrototypeOf(ExecState* exec, JSObject* object)
+{
+    ObjectConstructorGetPrototypeOfFunctor functor(object);
+    exec->iterate(functor);
+    return functor.result();
+}
 
 EncodedJSValue JSC_HOST_CALL objectConstructorGetPrototypeOf(ExecState* exec)
 {
     JSObject* object = exec->argument(0).toObject(exec);
     if (exec->hadException())
-        return JSValue::encode(jsNull());
-    ObjectConstructorGetPrototypeOfFunctor functor(object);
-    exec->iterate(functor);
-    return functor.result();
+        return JSValue::encode(jsUndefined());
+    return JSValue::encode(objectConstructorGetPrototypeOf(exec, object));
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorSetPrototypeOf(ExecState* exec)
@@ -203,32 +209,38 @@ EncodedJSValue JSC_HOST_CALL objectConstructorSetPrototypeOf(ExecState* exec)
     if (!checkProtoSetterAccessAllowed(exec, object))
         return JSValue::encode(objectValue);
 
-    if (!object->isExtensible())
+    if (object->prototype() == protoValue)
+        return JSValue::encode(objectValue);
+
+    bool isExtensible = object->isExtensible(exec);
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
+    if (!isExtensible)
         return throwVMError(exec, createTypeError(exec, StrictModeReadonlyPropertyWriteError));
 
-    if (!object->setPrototypeWithCycleCheck(exec, protoValue)) {
-        exec->vm().throwException(exec, createError(exec, ASCIILiteral("cyclic __proto__ value")));
+    VM& vm = exec->vm();
+    bool didSetPrototype = object->setPrototype(vm, exec, protoValue);
+    if (vm.exception())
+        return JSValue::encode(JSValue());
+    if (!didSetPrototype) {
+        vm.throwException(exec, createError(exec, ASCIILiteral("cyclic __proto__ value")));
         return JSValue::encode(jsUndefined());
     }
 
     return JSValue::encode(objectValue);
 }
 
-EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptor(ExecState* exec)
+JSValue objectConstructorGetOwnPropertyDescriptor(ExecState* exec, JSObject* object, const Identifier& propertyName)
 {
-    JSObject* object = exec->argument(0).toObject(exec);
-    if (exec->hadException())
-        return JSValue::encode(jsNull());
-    auto propertyName = exec->argument(1).toPropertyKey(exec);
-    if (exec->hadException())
-        return JSValue::encode(jsNull());
     PropertyDescriptor descriptor;
     if (!object->getOwnPropertyDescriptor(exec, propertyName, descriptor))
-        return JSValue::encode(jsUndefined());
+        return jsUndefined();
     if (exec->hadException())
-        return JSValue::encode(jsUndefined());
+        return jsUndefined();
 
     JSObject* description = constructEmptyObject(exec);
+    if (exec->hadException())
+        return jsUndefined();
     if (!descriptor.isAccessorDescriptor()) {
         description->putDirect(exec->vm(), exec->propertyNames().value, descriptor.value() ? descriptor.value() : jsUndefined(), 0);
         description->putDirect(exec->vm(), exec->propertyNames().writable, jsBoolean(descriptor.writable()), 0);
@@ -242,7 +254,46 @@ EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptor(ExecState
     description->putDirect(exec->vm(), exec->propertyNames().enumerable, jsBoolean(descriptor.enumerable()), 0);
     description->putDirect(exec->vm(), exec->propertyNames().configurable, jsBoolean(descriptor.configurable()), 0);
 
-    return JSValue::encode(description);
+    return description;
+}
+
+JSValue objectConstructorGetOwnPropertyDescriptors(ExecState* exec, JSObject* object)
+{
+    PropertyNameArray properties(exec, PropertyNameMode::StringsAndSymbols);
+    object->methodTable(exec->vm())->getOwnPropertyNames(object, exec, properties, EnumerationMode(DontEnumPropertiesMode::Include));
+    if (exec->hadException())
+        return jsUndefined();
+
+    JSObject* descriptors = constructEmptyObject(exec);
+
+    for (auto& propertyName : properties) {
+        JSValue fromDescriptor = objectConstructorGetOwnPropertyDescriptor(exec, object, propertyName);
+        if (exec->hadException())
+            return jsUndefined();
+
+        descriptors->putDirect(exec->vm(), propertyName, fromDescriptor, 0);
+    }
+
+    return descriptors;
+}
+
+EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptor(ExecState* exec)
+{
+    JSObject* object = exec->argument(0).toObject(exec);
+    if (exec->hadException())
+        return JSValue::encode(jsUndefined());
+    auto propertyName = exec->argument(1).toPropertyKey(exec);
+    if (exec->hadException())
+        return JSValue::encode(jsUndefined());
+    return JSValue::encode(objectConstructorGetOwnPropertyDescriptor(exec, object, propertyName));
+}
+
+EncodedJSValue JSC_HOST_CALL objectConstructorGetOwnPropertyDescriptors(ExecState* exec)
+{
+    JSObject* object = exec->argument(0).toObject(exec);
+    if (exec->hadException())
+        return JSValue::encode(jsUndefined());
+    return JSValue::encode(objectConstructorGetOwnPropertyDescriptors(exec, object));
 }
 
 // FIXME: Use the enumeration cache.
@@ -281,7 +332,7 @@ EncodedJSValue JSC_HOST_CALL ownEnumerablePropertyKeys(ExecState* exec)
 }
 
 // ES5 8.10.5 ToPropertyDescriptor
-static bool toPropertyDescriptor(ExecState* exec, JSValue in, PropertyDescriptor& desc)
+bool toPropertyDescriptor(ExecState* exec, JSValue in, PropertyDescriptor& desc)
 {
     if (!in.isObject()) {
         exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Property description must be an object.")));
@@ -289,14 +340,14 @@ static bool toPropertyDescriptor(ExecState* exec, JSValue in, PropertyDescriptor
     }
     JSObject* description = asObject(in);
 
-    PropertySlot enumerableSlot(description);
+    PropertySlot enumerableSlot(description, PropertySlot::InternalMethodType::HasProperty);
     if (description->getPropertySlot(exec, exec->propertyNames().enumerable, enumerableSlot)) {
         desc.setEnumerable(enumerableSlot.getValue(exec, exec->propertyNames().enumerable).toBoolean(exec));
         if (exec->hadException())
             return false;
     }
 
-    PropertySlot configurableSlot(description);
+    PropertySlot configurableSlot(description, PropertySlot::InternalMethodType::HasProperty);
     if (description->getPropertySlot(exec, exec->propertyNames().configurable, configurableSlot)) {
         desc.setConfigurable(configurableSlot.getValue(exec, exec->propertyNames().configurable).toBoolean(exec));
         if (exec->hadException())
@@ -304,21 +355,21 @@ static bool toPropertyDescriptor(ExecState* exec, JSValue in, PropertyDescriptor
     }
 
     JSValue value;
-    PropertySlot valueSlot(description);
+    PropertySlot valueSlot(description, PropertySlot::InternalMethodType::HasProperty);
     if (description->getPropertySlot(exec, exec->propertyNames().value, valueSlot)) {
         desc.setValue(valueSlot.getValue(exec, exec->propertyNames().value));
         if (exec->hadException())
             return false;
     }
 
-    PropertySlot writableSlot(description);
+    PropertySlot writableSlot(description, PropertySlot::InternalMethodType::HasProperty);
     if (description->getPropertySlot(exec, exec->propertyNames().writable, writableSlot)) {
         desc.setWritable(writableSlot.getValue(exec, exec->propertyNames().writable).toBoolean(exec));
         if (exec->hadException())
             return false;
     }
 
-    PropertySlot getSlot(description);
+    PropertySlot getSlot(description, PropertySlot::InternalMethodType::HasProperty);
     if (description->getPropertySlot(exec, exec->propertyNames().get, getSlot)) {
         JSValue get = getSlot.getValue(exec, exec->propertyNames().get);
         if (exec->hadException())
@@ -333,7 +384,7 @@ static bool toPropertyDescriptor(ExecState* exec, JSValue in, PropertyDescriptor
         desc.setGetter(get);
     }
 
-    PropertySlot setSlot(description);
+    PropertySlot setSlot(description, PropertySlot::InternalMethodType::HasProperty);
     if (description->getPropertySlot(exec, exec->propertyNames().set, setSlot)) {
         JSValue set = setSlot.getValue(exec, exec->propertyNames().set);
         if (exec->hadException())
@@ -472,7 +523,9 @@ EncodedJSValue JSC_HOST_CALL objectConstructorSeal(ExecState* exec)
     }
 
     // 3. Set the [[Extensible]] internal property of O to false.
-    object->preventExtensions(exec->vm());
+    object->methodTable(exec->vm())->preventExtensions(object, exec);
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
 
     // 4. Return O.
     return JSValue::encode(obj);
@@ -510,7 +563,9 @@ JSObject* objectConstructorFreeze(ExecState* exec, JSObject* object)
     }
 
     // 3. Set the [[Extensible]] internal property of O to false.
-    object->preventExtensions(exec->vm());
+    object->methodTable(exec->vm())->preventExtensions(object, exec);
+    if (exec->hadException())
+        return nullptr;
 
     // 4. Return O.
     return object;
@@ -522,16 +577,20 @@ EncodedJSValue JSC_HOST_CALL objectConstructorFreeze(ExecState* exec)
     JSValue obj = exec->argument(0);
     if (!obj.isObject())
         return JSValue::encode(obj);
-    return JSValue::encode(objectConstructorFreeze(exec, asObject(obj)));
+    JSObject* result = objectConstructorFreeze(exec, asObject(obj));
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
+    return JSValue::encode(result);
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorPreventExtensions(ExecState* exec)
 {
-    JSValue obj = exec->argument(0);
-    if (!obj.isObject())
-        return JSValue::encode(obj);
-    asObject(obj)->preventExtensions(exec->vm());
-    return JSValue::encode(obj);
+    JSValue argument = exec->argument(0);
+    if (!argument.isObject())
+        return JSValue::encode(argument);
+    JSObject* object = asObject(argument);
+    object->methodTable(exec->vm())->preventExtensions(object, exec);
+    return JSValue::encode(object);
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorIsSealed(ExecState* exec)
@@ -564,7 +623,10 @@ EncodedJSValue JSC_HOST_CALL objectConstructorIsSealed(ExecState* exec)
 
     // 3. If the [[Extensible]] internal property of O is false, then return true.
     // 4. Otherwise, return false.
-    return JSValue::encode(jsBoolean(!object->isExtensible()));
+    bool isExtensible = object->isExtensible(exec);
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
+    return JSValue::encode(jsBoolean(!isExtensible));
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorIsFrozen(ExecState* exec)
@@ -598,7 +660,10 @@ EncodedJSValue JSC_HOST_CALL objectConstructorIsFrozen(ExecState* exec)
 
     // 3. If the [[Extensible]] internal property of O is false, then return true.
     // 4. Otherwise, return false.
-    return JSValue::encode(jsBoolean(!object->isExtensible()));
+    bool isExtensible = object->isExtensible(exec);
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
+    return JSValue::encode(jsBoolean(!isExtensible));
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorIsExtensible(ExecState* exec)
@@ -606,7 +671,11 @@ EncodedJSValue JSC_HOST_CALL objectConstructorIsExtensible(ExecState* exec)
     JSValue obj = exec->argument(0);
     if (!obj.isObject())
         return JSValue::encode(jsBoolean(false));
-    return JSValue::encode(jsBoolean(asObject(obj)->isExtensible()));
+    JSObject* object = asObject(obj);
+    bool isExtensible = object->isExtensible(exec);
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
+    return JSValue::encode(jsBoolean(isExtensible));
 }
 
 EncodedJSValue JSC_HOST_CALL objectConstructorIs(ExecState* exec)

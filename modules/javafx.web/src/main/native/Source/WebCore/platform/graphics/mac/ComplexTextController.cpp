@@ -32,6 +32,7 @@
 #include "RenderText.h"
 #include "TextBreakIterator.h"
 #include "TextRun.h"
+#include <wtf/Optional.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/unicode/CharacterNames.h>
 
@@ -46,6 +47,7 @@
 namespace WebCore {
 
 class TextLayout {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     static bool isNeeded(RenderText& text, const FontCascade& font)
     {
@@ -289,6 +291,19 @@ static bool advanceByCombiningCharacterSequence(const UChar*& iterator, const UC
     return true;
 }
 
+// FIXME: Capitalization is language-dependent and context-dependent and should operate on grapheme clusters instead of codepoints.
+static inline Optional<UChar32> capitalized(UChar32 baseCharacter)
+{
+    if (U_GET_GC_MASK(baseCharacter) & U_GC_M_MASK)
+        return Nullopt;
+
+    UChar32 uppercaseCharacter = u_toupper(baseCharacter);
+    ASSERT(uppercaseCharacter == baseCharacter || (U_IS_BMP(baseCharacter) == U_IS_BMP(uppercaseCharacter)));
+    if (uppercaseCharacter != baseCharacter)
+        return uppercaseCharacter;
+    return Nullopt;
+}
+
 void ComplexTextController::collectComplexTextRuns()
 {
     if (!m_end)
@@ -304,7 +319,11 @@ void ComplexTextController::collectComplexTextRuns()
     } else
         cp = m_run.characters16();
 
-    if (m_font.isSmallCaps())
+    auto fontVariantCaps = m_font.fontDescription().variantCaps();
+    bool engageAllSmallCapsProcessing = fontVariantCaps == FontVariantCaps::AllSmall || fontVariantCaps == FontVariantCaps::AllPetite;
+    bool engageSmallCapsProcessing = engageAllSmallCapsProcessing || fontVariantCaps == FontVariantCaps::Small || fontVariantCaps == FontVariantCaps::Petite;
+
+    if (engageAllSmallCapsProcessing || engageSmallCapsProcessing)
         m_smallCapsBuffer.resize(m_end);
 
     unsigned indexOfFontTransition = 0;
@@ -312,74 +331,104 @@ void ComplexTextController::collectComplexTextRuns()
     const UChar* end = cp + m_end;
 
     const Font* font;
-    bool isMissingGlyph;
     const Font* nextFont;
-    bool nextIsMissingGlyph;
+    const Font* synthesizedFont = nullptr;
+    const Font* smallSynthesizedFont = nullptr;
 
     unsigned markCount;
-    const UChar* sequenceStart = curr;
     UChar32 baseCharacter;
     if (!advanceByCombiningCharacterSequence(curr, end, baseCharacter, markCount))
         return;
 
-    UChar uppercaseCharacter = 0;
+    nextFont = m_font.fontForCombiningCharacterSequence(cp, curr - cp);
 
-    bool isSmallCaps;
-    bool nextIsSmallCaps = m_font.isSmallCaps() && !(U_GET_GC_MASK(baseCharacter) & U_GC_M_MASK) && (uppercaseCharacter = u_toupper(baseCharacter)) != baseCharacter;
-    ASSERT(uppercaseCharacter == 0 || u_toupper(baseCharacter) <= 0xFFFF);
+    bool isSmallCaps = false;
+    bool nextIsSmallCaps = false;
 
-    if (nextIsSmallCaps) {
-        m_smallCapsBuffer[sequenceStart - cp] = uppercaseCharacter;
-        for (unsigned i = 0; i < markCount; ++i)
-            m_smallCapsBuffer[sequenceStart - cp + i + 1] = sequenceStart[i + 1];
+    auto capitalizedBase = capitalized(baseCharacter);
+    if (nextFont && nextFont != Font::systemFallback() && (capitalizedBase || engageAllSmallCapsProcessing)
+        && !nextFont->variantCapsSupportsCharacterForSynthesis(fontVariantCaps, baseCharacter)) {
+        synthesizedFont = &nextFont->noSynthesizableFeaturesFont();
+        smallSynthesizedFont = synthesizedFont->smallCapsFont(m_font.fontDescription());
+        UChar32 characterToWrite = capitalizedBase ? capitalizedBase.value() : cp[0];
+        unsigned characterIndex = 0;
+        U16_APPEND_UNSAFE(m_smallCapsBuffer, characterIndex, characterToWrite);
+        for (unsigned i = characterIndex; cp + i < curr; ++i)
+            m_smallCapsBuffer[i] = cp[i];
+        nextIsSmallCaps = true;
     }
-
-    nextIsMissingGlyph = false;
-    nextFont = m_font.fontForCombiningCharacterSequence(sequenceStart, curr - sequenceStart, nextIsSmallCaps ? SmallCapsVariant : NormalVariant);
-    if (!nextFont)
-        nextIsMissingGlyph = true;
 
     while (curr < end) {
         font = nextFont;
-        isMissingGlyph = nextIsMissingGlyph;
         isSmallCaps = nextIsSmallCaps;
-        int index = curr - cp;
+        unsigned index = curr - cp;
 
         if (!advanceByCombiningCharacterSequence(curr, end, baseCharacter, markCount))
             return;
 
-        if (m_font.isSmallCaps()) {
-            ASSERT(u_toupper(baseCharacter) <= 0xFFFF);
-            uppercaseCharacter = u_toupper(baseCharacter);
-            nextIsSmallCaps = uppercaseCharacter != baseCharacter;
-            if (nextIsSmallCaps) {
-                m_smallCapsBuffer[index] = uppercaseCharacter;
+        if (synthesizedFont) {
+            if (auto capitalizedBase = capitalized(baseCharacter)) {
+                unsigned characterIndex = index;
+                U16_APPEND_UNSAFE(m_smallCapsBuffer, characterIndex, capitalizedBase.value());
                 for (unsigned i = 0; i < markCount; ++i)
-                    m_smallCapsBuffer[index + i + 1] = cp[index + i + 1];
+                    m_smallCapsBuffer[i + characterIndex] = cp[i + characterIndex];
+                nextIsSmallCaps = true;
+            } else {
+                if (engageAllSmallCapsProcessing) {
+                    for (unsigned i = 0; i < curr - cp - index; ++i)
+                        m_smallCapsBuffer[index + i] = cp[index + i];
+                }
+                nextIsSmallCaps = engageAllSmallCapsProcessing;
             }
         }
 
-        nextIsMissingGlyph = false;
         if (baseCharacter == zeroWidthJoiner)
             nextFont = font;
-        else {
-            nextFont = m_font.fontForCombiningCharacterSequence(cp + index, curr - cp - index, nextIsSmallCaps ? SmallCapsVariant : NormalVariant);
-            if (!nextFont)
-                nextIsMissingGlyph = true;
+        else
+            nextFont = m_font.fontForCombiningCharacterSequence(cp + index, curr - cp - index);
+
+        capitalizedBase = capitalized(baseCharacter);
+        if (!synthesizedFont && nextFont && nextFont != Font::systemFallback() && (capitalizedBase || engageAllSmallCapsProcessing)
+            && !nextFont->variantCapsSupportsCharacterForSynthesis(fontVariantCaps, baseCharacter)) {
+            // Rather than synthesize each character individually, we should synthesize the entire "run" if any character requires synthesis.
+            synthesizedFont = &nextFont->noSynthesizableFeaturesFont();
+            smallSynthesizedFont = synthesizedFont->smallCapsFont(m_font.fontDescription());
+            nextIsSmallCaps = true;
+            curr = cp + indexOfFontTransition;
+            continue;
         }
 
-        if (nextFont != font || nextIsMissingGlyph != isMissingGlyph) {
-            int itemStart = static_cast<int>(indexOfFontTransition);
-            int itemLength = index - indexOfFontTransition;
-            collectComplexTextRunsForCharacters((isSmallCaps ? m_smallCapsBuffer.data() : cp) + itemStart, itemLength, itemStart, !isMissingGlyph ? font : 0);
+        if (nextFont != font || nextIsSmallCaps != isSmallCaps) {
+            unsigned itemLength = index - indexOfFontTransition;
+            if (itemLength) {
+                unsigned itemStart = indexOfFontTransition;
+                if (synthesizedFont) {
+                    if (isSmallCaps)
+                        collectComplexTextRunsForCharacters(m_smallCapsBuffer.data() + itemStart, itemLength, itemStart, smallSynthesizedFont);
+                    else
+                        collectComplexTextRunsForCharacters(cp + itemStart, itemLength, itemStart, synthesizedFont);
+                } else
+                    collectComplexTextRunsForCharacters(cp + itemStart, itemLength, itemStart, font);
+                if (nextFont != font) {
+                    synthesizedFont = nullptr;
+                    smallSynthesizedFont = nullptr;
+                    nextIsSmallCaps = false;
+                }
+            }
             indexOfFontTransition = index;
         }
     }
 
-    int itemLength = m_end - indexOfFontTransition;
+    unsigned itemLength = m_end - indexOfFontTransition;
     if (itemLength) {
-        int itemStart = indexOfFontTransition;
-        collectComplexTextRunsForCharacters((nextIsSmallCaps ? m_smallCapsBuffer.data() : cp) + itemStart, itemLength, itemStart, !nextIsMissingGlyph ? nextFont : 0);
+        unsigned itemStart = indexOfFontTransition;
+        if (synthesizedFont) {
+            if (nextIsSmallCaps)
+                collectComplexTextRunsForCharacters(m_smallCapsBuffer.data() + itemStart, itemLength, itemStart, smallSynthesizedFont);
+            else
+                collectComplexTextRunsForCharacters(cp + itemStart, itemLength, itemStart, synthesizedFont);
+        } else
+            collectComplexTextRunsForCharacters(cp + itemStart, itemLength, itemStart, nextFont);
     }
 
     if (!m_run.ltr())
@@ -603,7 +652,6 @@ void ComplexTextController::adjustGlyphsAndAdvances()
         ComplexTextRun& complexTextRun = *m_complexTextRuns[r];
         unsigned glyphCount = complexTextRun.glyphCount();
         const Font& font = complexTextRun.font();
-        bool isEmoji = font.platformData().isEmoji();
 
         // Represent the initial advance for a text run by adjusting the advance
         // of the last glyph of the previous text run in the glyph buffer.
@@ -623,7 +671,6 @@ void ComplexTextController::adjustGlyphsAndAdvances()
 
         bool lastRun = r + 1 == runCount;
         float spaceWidth = font.spaceWidth() - font.syntheticBoldOffset();
-        CGFloat roundedSpaceWidth = std::round(spaceWidth);
         const UChar* cp = complexTextRun.characters();
         CGPoint glyphOrigin = CGPointZero;
         CFIndex lastCharacterIndex = m_run.ltr() ? std::numeric_limits<CFIndex>::min() : std::numeric_limits<CFIndex>::max();
@@ -651,8 +698,6 @@ void ComplexTextController::adjustGlyphsAndAdvances()
             bool treatAsSpace = FontCascade::treatAsSpace(ch);
             CGGlyph glyph = treatAsSpace ? font.spaceGlyph() : glyphs[i];
             CGSize advance = treatAsSpace ? CGSizeMake(spaceWidth, advances[i].height) : advances[i];
-            if (isEmoji && advance.width)
-                advance.width = font.widthForGlyph(glyph);
 
             if (ch == '\t' && m_run.allowTabs())
                 advance.width = m_font.tabWidth(font, m_run.tabSize(), m_run.xPos() + m_totalWidth + widthSinceLastCommit);
@@ -661,16 +706,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                 glyph = font.spaceGlyph();
             }
 
-            float roundedAdvanceWidth = roundf(advance.width);
             advance.width += font.syntheticBoldOffset();
-
-
-            // We special case spaces in two ways when applying word rounding.
-            // First, we round spaces to an adjusted width in all fonts.
-            // Second, in fixed-pitch fonts we ensure that all glyphs that
-            // match the width of the space glyph have the same width as the space glyph.
-            if (m_run.applyWordRounding() && roundedAdvanceWidth == roundedSpaceWidth && (font.pitch() == FixedPitch || glyph == font.spaceGlyph()))
-                advance.width = font.adjustedSpaceWidth();
 
             if (hasExtraSpacing) {
                 // If we're a glyph with an advance, add in letter-spacing.
@@ -701,22 +737,18 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                     if (m_expansion) {
                         bool expandLeft, expandRight;
                         std::tie(expandLeft, expandRight) = expansionLocation(ideograph, treatAsSpace, m_run.ltr(), afterExpansion, forbidLeadingExpansion, forbidTrailingExpansion, forceLeadingExpansion, forceTrailingExpansion);
-                        float previousExpansion = m_expansion;
                         if (expandLeft) {
                             // Increase previous width
                             m_expansion -= m_expansionPerOpportunity;
-                            float expansionAtThisOpportunity = !m_run.applyWordRounding() ? m_expansionPerOpportunity : roundf(previousExpansion) - roundf(m_expansion);
-                            m_totalWidth += expansionAtThisOpportunity;
+                            m_totalWidth += m_expansionPerOpportunity;
                             if (m_adjustedAdvances.isEmpty())
-                                m_leadingExpansion = expansionAtThisOpportunity;
+                                m_leadingExpansion = m_expansionPerOpportunity;
                             else
-                                m_adjustedAdvances.last().width += expansionAtThisOpportunity;
-                            previousExpansion = m_expansion;
+                                m_adjustedAdvances.last().width += m_expansionPerOpportunity;
                         }
                         if (expandRight) {
                             m_expansion -= m_expansionPerOpportunity;
-                            float expansionAtThisOpportunity = !m_run.applyWordRounding() ? m_expansionPerOpportunity : roundf(previousExpansion) - roundf(m_expansion);
-                            advance.width += expansionAtThisOpportunity;
+                            advance.width += m_expansionPerOpportunity;
                             afterExpansion = true;
                         }
                     } else
@@ -729,33 +761,7 @@ void ComplexTextController::adjustGlyphsAndAdvances()
                     afterExpansion = false;
             }
 
-            // Apply rounding hacks if needed.
-            // We adjust the width of the last character of a "word" to ensure an integer width.
-            // Force characters that are used to determine word boundaries for the rounding hack
-            // to be integer width, so the following words will start on an integer boundary.
-            if (m_run.applyWordRounding() && FontCascade::isRoundingHackCharacter(ch))
-                advance.width = std::ceil(advance.width);
-
-            // Check to see if the next character is a "rounding hack character", if so, adjust the
-            // width so that the total run width will be on an integer boundary.
-            bool needsRoundingForCharacter = m_run.applyWordRounding() && !lastGlyph && FontCascade::isRoundingHackCharacter(nextCh);
-            if (needsRoundingForCharacter || (m_run.applyRunRounding() && lastGlyph)) {
-                CGFloat totalWidth = widthSinceLastCommit + advance.width;
-                widthSinceLastCommit = std::ceil(totalWidth);
-                CGFloat extraWidth = widthSinceLastCommit - totalWidth;
-                if (m_run.ltr())
-                    advance.width += extraWidth;
-                else {
-                    if (m_lastRoundingGlyph)
-                        m_adjustedAdvances[m_lastRoundingGlyph - 1].width += extraWidth;
-                    else
-                        m_finalRoundingWidth = extraWidth;
-                    m_lastRoundingGlyph = m_adjustedAdvances.size() + 1;
-                }
-                m_totalWidth += widthSinceLastCommit;
-                widthSinceLastCommit = 0;
-            } else
-                widthSinceLastCommit += advance.width;
+            widthSinceLastCommit += advance.width;
 
             // FIXME: Combining marks should receive a text emphasis mark if they are combine with a space.
             if (m_forTextEmphasis && (!FontCascade::canReceiveTextEmphasis(ch) || (U_GET_GC_MASK(ch) & U_GC_M_MASK)))

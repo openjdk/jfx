@@ -22,7 +22,6 @@
 #include "config.h"
 #include "RenderTextControl.h"
 
-#include "CSSPrimitiveValueMappings.h"
 #include "HTMLTextFormControlElement.h"
 #include "HitTestResult.h"
 #include "RenderText.h"
@@ -38,7 +37,7 @@
 namespace WebCore {
 
 RenderTextControl::RenderTextControl(HTMLTextFormControlElement& element, Ref<RenderStyle>&& style)
-    : RenderBlockFlow(element, WTF::move(style))
+    : RenderBlockFlow(element, WTFMove(style))
 {
 }
 
@@ -68,54 +67,9 @@ void RenderTextControl::styleDidChange(StyleDifference diff, const RenderStyle* 
         // Reset them now to avoid getting a spurious layout hint.
         innerTextRenderer->style().setHeight(Length());
         innerTextRenderer->style().setWidth(Length());
-        innerTextRenderer->setStyle(createInnerTextStyle(&style()));
+        innerTextRenderer->setStyle(textFormControlElement().createInnerTextStyle(style()));
     }
     textFormControlElement().updatePlaceholderVisibility();
-}
-
-void RenderTextControl::adjustInnerTextStyle(const RenderStyle* startStyle, RenderStyle& textBlockStyle) const
-{
-    // The inner block, if present, always has its direction set to LTR,
-    // so we need to inherit the direction and unicode-bidi style from the element.
-    textBlockStyle.setDirection(style().direction());
-    textBlockStyle.setUnicodeBidi(style().unicodeBidi());
-
-    HTMLTextFormControlElement& control = textFormControlElement();
-    if (HTMLElement* innerText = control.innerTextElement()) {
-        if (const StyleProperties* properties = innerText->presentationAttributeStyle()) {
-            RefPtr<CSSValue> value = properties->getPropertyCSSValue(CSSPropertyWebkitUserModify);
-            if (is<CSSPrimitiveValue>(value.get()))
-                textBlockStyle.setUserModify(downcast<CSSPrimitiveValue>(*value));
-        }
-    }
-
-    if (control.isDisabledFormControl())
-        textBlockStyle.setColor(theme().disabledTextColor(textBlockStyle.visitedDependentColor(CSSPropertyColor), startStyle->visitedDependentColor(CSSPropertyBackgroundColor)));
-#if PLATFORM(IOS)
-    if (textBlockStyle.textSecurity() != TSNONE && !textBlockStyle.isLeftToRightDirection()) {
-        // Preserve the alignment but force the direction to LTR so that the last-typed, unmasked character
-        // (which cannot have RTL directionality) will appear to the right of the masked characters. See <rdar://problem/7024375>.
-
-        switch (textBlockStyle.textAlign()) {
-        case TASTART:
-        case JUSTIFY:
-            textBlockStyle.setTextAlign(RIGHT);
-            break;
-        case TAEND:
-            textBlockStyle.setTextAlign(LEFT);
-            break;
-        case LEFT:
-        case RIGHT:
-        case CENTER:
-        case WEBKIT_LEFT:
-        case WEBKIT_RIGHT:
-        case WEBKIT_CENTER:
-            break;
-        }
-
-        textBlockStyle.setDirection(LTR);
-    }
-#endif
 }
 
 int RenderTextControl::textBlockLogicalHeight() const
@@ -138,7 +92,7 @@ int RenderTextControl::textBlockLogicalWidth() const
 int RenderTextControl::scrollbarThickness() const
 {
     // FIXME: We should get the size of the scrollbar from the RenderTheme instead.
-    return ScrollbarTheme::theme()->scrollbarThickness();
+    return ScrollbarTheme::theme().scrollbarThickness();
 }
 
 void RenderTextControl::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues& computedValues) const
@@ -181,7 +135,6 @@ float RenderTextControl::getAverageCharWidth()
     const String str = String(&ch, 1);
     const FontCascade& font = style().fontCascade();
     TextRun textRun = constructTextRun(this, font, str, style(), AllowTrailingExpansion);
-    textRun.disableRoundingHacks();
     return font.width(textRun);
 }
 
@@ -232,10 +185,10 @@ void RenderTextControl::computePreferredLogicalWidths()
     setPreferredLogicalWidthsDirty(false);
 }
 
-void RenderTextControl::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*)
+void RenderTextControl::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint& additionalOffset, const RenderLayerModelObject*)
 {
     if (!size().isEmpty())
-        rects.append(snappedIntRect(additionalOffset, size()));
+        rects.append(LayoutRect(additionalOffset, size()));
 }
 
 RenderObject* RenderTextControl::layoutSpecialExcludedChild(bool relayoutChildren)

@@ -33,9 +33,9 @@
 
 extern CGImageRef _NSCreateImageRef( unsigned char *const bitmapData[5], int pixelsWide, int pixelsHigh, int bitsPerSample, int samplesPerPixel, int bitsPerPixel, int bytesPerRow, BOOL isPlanar, BOOL hasAlpha, NSString *colorSpaceName, CGColorSpaceRef customColorSpace, id sourceObj);
 
-static void             PoolCleaner( EventLoopTimerRef inTimer, EventLoopIdleTimerMessage inState, void *inUserData );
+static void				PoolCleaner( EventLoopTimerRef inTimer, EventLoopIdleTimerMessage inState, void *inUserData );
 
-static NSAutoreleasePool*   sPool;
+static NSAutoreleasePool*	sPool;
 static unsigned numPools;
 static EventLoopRef poolLoop;
 
@@ -44,7 +44,7 @@ void                    HIWebViewRegisterClass( void );
 void
 WebInitForCarbon()
 {
-    static bool         sAppKitLoaded;
+    static bool			sAppKitLoaded;
 
     if ( !sAppKitLoaded )
     {
@@ -96,24 +96,24 @@ PoolCleaner( EventLoopTimerRef inTimer, EventLoopIdleTimerMessage inState, void 
 
 CGImageRef
 WebConvertNSImageToCGImageRef(
-    NSImage*         inImage )
+	NSImage*         inImage )
 {
-    NSArray*                reps = [inImage representations];
-    NSBitmapImageRep*       rep = NULL;
-    CGImageRef              image = NULL;
-    unsigned                i;
+	NSArray*				reps = [inImage representations];
+	NSBitmapImageRep*		rep = NULL;
+	CGImageRef				image = NULL;
+	unsigned				i;
 
-    for ( i=0; i < [reps count]; i++ )
-    {
+	for ( i=0; i < [reps count]; i++ )
+	{
         if ( [[reps objectAtIndex:i] isKindOfClass:[NSBitmapImageRep class]] )
         {
             rep = [reps objectAtIndex:i];
             break;
         }
-    }
+	}
 
-    if ( rep )
-    {
+	if ( rep )
+	{
         //CGColorSpaceRef csync = (CGColorSpaceRef)[rep valueForProperty:NSImageColorSyncProfileData];
 
         unsigned char* planes[5];
@@ -124,9 +124,9 @@ WebConvertNSImageToCGImageRef(
                     [rep bitsPerSample], [rep samplesPerPixel], [rep bitsPerPixel],
                     [rep bytesPerRow], [rep isPlanar], [rep hasAlpha], [rep colorSpaceName],
                     NULL, rep);
-    }
+	}
 
-    return image;
+	return image;
 }
 
 #endif

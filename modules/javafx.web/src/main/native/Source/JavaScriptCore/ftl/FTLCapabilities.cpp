@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -51,6 +51,7 @@ inline CapabilityLevel canCompile(Node* node)
     case GetStack:
     case MovHint:
     case ZombieHint:
+    case ExitOK:
     case Phantom:
     case Flush:
     case PhantomLocal:
@@ -67,17 +68,21 @@ inline CapabilityLevel canCompile(Node* node)
     case ArrayifyToStructure:
     case PutStructure:
     case GetButterfly:
+    case GetButterflyReadOnly:
     case NewObject:
     case NewArray:
     case NewArrayBuffer:
+    case NewTypedArray:
     case GetByOffset:
     case GetGetterSetterByOffset:
     case GetGetter:
     case GetSetter:
     case PutByOffset:
     case GetGlobalVar:
-    case PutGlobalVar:
+    case GetGlobalLexicalVariable:
+    case PutGlobalVariable:
     case ValueAdd:
+    case StrCat:
     case ArithAdd:
     case ArithClz32:
     case ArithSub:
@@ -90,13 +95,15 @@ inline CapabilityLevel canCompile(Node* node)
     case ArithSin:
     case ArithCos:
     case ArithPow:
+    case ArithRandom:
     case ArithRound:
+    case ArithFloor:
+    case ArithCeil:
     case ArithSqrt:
     case ArithLog:
     case ArithFRound:
     case ArithNegate:
     case UInt32ToNumber:
-    case CompareEqConstant:
     case Jump:
     case ForceOSRExit:
     case Phi:
@@ -105,7 +112,9 @@ inline CapabilityLevel canCompile(Node* node)
     case LoopHint:
     case SkipScope:
     case CreateActivation:
+    case NewArrowFunction:
     case NewFunction:
+    case NewGeneratorFunction:
     case GetClosureVar:
     case PutClosureVar:
     case CreateDirectArguments:
@@ -118,21 +127,28 @@ inline CapabilityLevel canCompile(Node* node)
     case CheckCell:
     case CheckBadCell:
     case CheckNotEmpty:
+    case CheckIdent:
+    case CheckWatchdogTimer:
     case StringCharCodeAt:
+    case StringFromCharCode:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
     case GetTypedArrayByteOffset:
     case NotifyWrite:
     case StoreBarrier:
     case Call:
+    case TailCall:
+    case TailCallInlinedCaller:
     case Construct:
     case CallVarargs:
-    case CallForwardVarargs:
+    case TailCallVarargs:
+    case TailCallVarargsInlinedCaller:
     case ConstructVarargs:
+    case CallForwardVarargs:
+    case TailCallForwardVarargs:
+    case TailCallForwardVarargsInlinedCaller:
     case ConstructForwardVarargs:
     case LoadVarargs:
-    case NativeCall:
-    case NativeConstruct:
     case ValueToInt32:
     case Branch:
     case LogicalNot:
@@ -149,6 +165,7 @@ inline CapabilityLevel canCompile(Node* node)
     case MakeRope:
     case NewArrayWithSize:
     case GetById:
+    case GetByIdFlush:
     case ToThis:
     case MultiGetByOffset:
     case MultiPutByOffset:
@@ -163,8 +180,10 @@ inline CapabilityLevel canCompile(Node* node)
     case IsObject:
     case IsObjectOrNull:
     case IsFunction:
-    case CheckHasInstance:
+    case CheckTypeInfoFlags:
+    case OverridesHasInstance:
     case InstanceOf:
+    case InstanceOfCustom:
     case DoubleRep:
     case ValueRep:
     case Int52Rep:
@@ -182,6 +201,7 @@ inline CapabilityLevel canCompile(Node* node)
     case BottomValue:
     case PhantomNewObject:
     case PhantomNewFunction:
+    case PhantomNewGeneratorFunction:
     case PhantomCreateActivation:
     case PutHint:
     case CheckStructureImmediate:
@@ -193,8 +213,20 @@ inline CapabilityLevel canCompile(Node* node)
     case ForwardVarargs:
     case Switch:
     case TypeOf:
+    case PutGetterById:
+    case PutSetterById:
+    case PutGetterSetterById:
+    case PutGetterByVal:
+    case PutSetterByVal:
+    case CopyRest:
+    case GetRestLength:
+    case RegExpExec:
+    case RegExpTest:
+    case NewRegexp:
+    case StringReplace:
         // These are OK.
         break;
+
     case Identity:
         // No backend handles this because it will be optimized out. But we may check
         // for capabilities before optimization. It would be a deep error to remove this
@@ -207,6 +239,7 @@ inline CapabilityLevel canCompile(Node* node)
         return CannotCompile;
     case PutByIdDirect:
     case PutById:
+    case PutByIdFlush:
         if (node->child1().useKind() == CellUse)
             break;
         return CannotCompile;
@@ -240,7 +273,7 @@ inline CapabilityLevel canCompile(Node* node)
         case Array::ScopedArguments:
             break;
         default:
-            if (isTypedView(node->arrayMode().typedArrayType()))
+            if (node->arrayMode().isSomeTypedArrayView())
                 break;
             return CannotCompile;
         }
@@ -264,6 +297,7 @@ inline CapabilityLevel canCompile(Node* node)
         case Array::Int32:
         case Array::Double:
         case Array::Contiguous:
+        case Array::Undecided:
         case Array::DirectArguments:
         case Array::ScopedArguments:
             break;
@@ -309,6 +343,10 @@ inline CapabilityLevel canCompile(Node* node)
             break;
         if (node->isBinaryUseKind(StringIdentUse))
             break;
+        if (node->isBinaryUseKind(StringUse))
+            break;
+        if (node->isBinaryUseKind(SymbolUse))
+            break;
         if (node->isBinaryUseKind(ObjectUse))
             break;
         if (node->isBinaryUseKind(UntypedUse))
@@ -318,6 +356,8 @@ inline CapabilityLevel canCompile(Node* node)
         if (node->isBinaryUseKind(ObjectUse, ObjectOrOtherUse))
             break;
         if (node->isBinaryUseKind(ObjectOrOtherUse, ObjectUse))
+            break;
+        if (node->child1().useKind() == OtherUse || node->child2().useKind() == OtherUse)
             break;
         return CannotCompile;
     case CompareStrictEq:
@@ -329,6 +369,8 @@ inline CapabilityLevel canCompile(Node* node)
             break;
         if (node->isBinaryUseKind(StringIdentUse))
             break;
+        if (node->isBinaryUseKind(StringUse))
+            break;
         if (node->isBinaryUseKind(ObjectUse, UntypedUse))
             break;
         if (node->isBinaryUseKind(UntypedUse, ObjectUse))
@@ -336,6 +378,8 @@ inline CapabilityLevel canCompile(Node* node)
         if (node->isBinaryUseKind(ObjectUse))
             break;
         if (node->isBinaryUseKind(BooleanUse))
+            break;
+        if (node->isBinaryUseKind(SymbolUse))
             break;
         if (node->isBinaryUseKind(MiscUse, UntypedUse))
             break;
@@ -408,16 +452,21 @@ CapabilityLevel canCompile(Graph& graph)
                 case DoubleRepUse:
                 case DoubleRepRealUse:
                 case BooleanUse:
+                case KnownBooleanUse:
                 case CellUse:
                 case KnownCellUse:
+                case CellOrOtherUse:
                 case ObjectUse:
                 case FunctionUse:
                 case ObjectOrOtherUse:
                 case StringUse:
                 case KnownStringUse:
+                case KnownPrimitiveUse:
                 case StringObjectUse:
                 case StringOrStringObjectUse:
+                case SymbolUse:
                 case FinalObjectUse:
+                case RegExpObjectUse:
                 case NotCellUse:
                 case OtherUse:
                 case MiscUse:

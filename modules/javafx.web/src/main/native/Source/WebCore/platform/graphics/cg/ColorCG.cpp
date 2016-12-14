@@ -31,6 +31,7 @@
 #include "GraphicsContextCG.h"
 #include <wtf/Assertions.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/TinyLRUCache.h>
 #if !PLATFORM(IOS)
 #include <ApplicationServices/ApplicationServices.h>
 #else
@@ -67,6 +68,7 @@ Color::Color(CGColorRef color)
     size_t numComponents = CGColorGetNumberOfComponents(color);
     const CGFloat* components = CGColorGetComponents(color);
 #else
+    // FIXME: can we remove this?
     RetainPtr<CGColorRef> correctedColor = adoptCF(createCGColorWithDeviceRGBA(color));
     if (!correctedColor)
         correctedColor = color;
@@ -99,64 +101,40 @@ Color::Color(CGColorRef color)
     m_valid = true;
 }
 
-static CGColorRef leakCGColor(const Color& color, ColorSpace colorSpace)
+static CGColorRef leakCGColor(const Color& color)
 {
     CGFloat components[4];
     color.getRGBA(components[0], components[1], components[2], components[3]);
-    return CGColorCreate(cachedCGColorSpace(colorSpace), components);
+    return CGColorCreate(sRGBColorSpaceRef(), components);
 }
 
-template<ColorSpace colorSpace> static CGColorRef cachedCGColor(const Color& color)
+template<>
+RetainPtr<CGColorRef> TinyLRUCachePolicy<Color, RetainPtr<CGColorRef>>::createValueForKey(const Color& color)
+{
+    return adoptCF(leakCGColor(color));
+}
+
+CGColorRef cachedCGColor(const Color& color)
 {
     switch (color.rgb()) {
     case Color::transparent: {
-        static CGColorRef transparentCGColor = leakCGColor(color, colorSpace);
+        static CGColorRef transparentCGColor = leakCGColor(color);
         return transparentCGColor;
     }
     case Color::black: {
-        static CGColorRef blackCGColor = leakCGColor(color, colorSpace);
+        static CGColorRef blackCGColor = leakCGColor(color);
         return blackCGColor;
     }
     case Color::white: {
-        static CGColorRef whiteCGColor = leakCGColor(color, colorSpace);
+        static CGColorRef whiteCGColor = leakCGColor(color);
         return whiteCGColor;
     }
     }
 
     ASSERT(color.rgb());
 
-    const size_t cacheSize = 32;
-    static RGBA32 cachedRGBAValues[cacheSize];
-    static RetainPtr<CGColorRef>* cachedCGColors = new RetainPtr<CGColorRef>[cacheSize];
-
-    for (size_t i = 0; i < cacheSize; ++i) {
-        if (cachedRGBAValues[i] == color.rgb())
-            return cachedCGColors[i].get();
-    }
-
-    CGColorRef newCGColor = leakCGColor(color, colorSpace);
-
-    static size_t cursor;
-    cachedRGBAValues[cursor] = color.rgb();
-    cachedCGColors[cursor] = adoptCF(newCGColor);
-    if (++cursor == cacheSize)
-        cursor = 0;
-
-    return newCGColor;
-}
-
-CGColorRef cachedCGColor(const Color& color, ColorSpace colorSpace)
-{
-    switch (colorSpace) {
-    case ColorSpaceDeviceRGB:
-        return cachedCGColor<ColorSpaceDeviceRGB>(color);
-    case ColorSpaceSRGB:
-        return cachedCGColor<ColorSpaceSRGB>(color);
-    case ColorSpaceLinearRGB:
-        return cachedCGColor<ColorSpaceLinearRGB>(color);
-    }
-    ASSERT_NOT_REACHED();
-    return cachedCGColor(color, ColorSpaceDeviceRGB);
+    static NeverDestroyed<TinyLRUCache<Color, RetainPtr<CGColorRef>, 32>> cache;
+    return cache.get().get(color).get();
 }
 
 }

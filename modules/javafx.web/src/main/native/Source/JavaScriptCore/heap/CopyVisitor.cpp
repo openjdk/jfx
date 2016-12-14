@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,40 +28,24 @@
 
 #include "CopiedSpaceInlines.h"
 #include "CopyVisitorInlines.h"
-#include "CopyWorkList.h"
-#include "GCThreadSharedData.h"
-#include "JSCell.h"
-#include "JSObject.h"
-#include "JSCInlines.h"
-#include <wtf/Threading.h>
 
 namespace JSC {
 
-CopyVisitor::CopyVisitor(GCThreadSharedData& shared)
-    : m_shared(shared)
+CopyVisitor::CopyVisitor(Heap& heap)
+    : m_heap(heap)
 {
+    ASSERT(!m_copiedAllocator.isValid());
+    CopiedBlock* block = nullptr;
+    m_heap.m_storageSpace.doneFillingBlock(nullptr, &block);
+    m_copiedAllocator.setCurrentBlock(block);
 }
 
-void CopyVisitor::copyFromShared()
+CopyVisitor::~CopyVisitor()
 {
-    size_t next, end;
-    m_shared.getNextBlocksToCopy(next, end);
-    while (next < end) {
-        for (; next < end; ++next) {
-            CopiedBlock* block = m_shared.m_blocksToCopy[next];
-            if (!block->hasWorkList())
-                continue;
+    if (m_copiedAllocator.isValid())
+        m_heap.m_storageSpace.doneFillingBlock(m_copiedAllocator.resetCurrentBlock(), nullptr);
 
-            CopyWorkList& workList = block->workList();
-            for (CopyWorkList::iterator it = workList.begin(); it != workList.end(); ++it)
-                visitItem(*it);
-
-            ASSERT(!block->liveBytes());
-            m_shared.m_copiedSpace->recycleEvacuatedBlock(block, m_shared.m_vm->heap.operationInProgress());
-        }
-        m_shared.getNextBlocksToCopy(next, end);
-    }
-    ASSERT(next == end);
+    WTF::releaseFastMallocFreeMemoryForThisThread();
 }
 
 } // namespace JSC

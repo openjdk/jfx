@@ -29,12 +29,12 @@
 #import "DOMNodeInternal.h"
 #import "Frame.h"
 #import "JSNode.h"
-#import "NSPointerFunctionsSPI.h"
 #import "ScriptController.h"
 #import "WebScriptObjectPrivate.h"
 #import "runtime_root.h"
+#import <wtf/HashMap.h>
+#import <wtf/Lock.h>
 #import <wtf/NeverDestroyed.h>
-#import <wtf/spi/cocoa/NSMapTableSPI.h>
 
 #if PLATFORM(IOS)
 #define NEEDS_WRAPPER_CACHE_LOCK 1
@@ -43,66 +43,38 @@
 //------------------------------------------------------------------------------------------
 // Wrapping WebCore implementation objects
 
-static NSMapTable* DOMWrapperCache;
-
 #ifdef NEEDS_WRAPPER_CACHE_LOCK
-static std::mutex& wrapperCacheLock()
+static StaticLock wrapperCacheLock;
+#endif
+
+static HashMap<DOMObjectInternal*, NSObject *>& wrapperCache()
 {
-    static std::once_flag onceFlag;
-    static LazyNeverDestroyed<std::mutex> mutex;
-
-    std::call_once(onceFlag, [] {
-        mutex.construct();
-    });
-    return mutex;
+    static NeverDestroyed<HashMap<DOMObjectInternal*, NSObject *>> map;
+    return map;
 }
-#endif
-
-#if COMPILER(CLANG)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-NSMapTable* createWrapperCache()
-{
-    // NSMapTable with zeroing weak pointers is the recommended way to build caches like this under garbage collection.
-    NSPointerFunctionsOptions keyOptions = NSPointerFunctionsOpaqueMemory | NSPointerFunctionsOpaquePersonality;
-    NSPointerFunctionsOptions valueOptions = NSPointerFunctionsZeroingWeakMemory | NSPointerFunctionsObjectPersonality;
-    return [[NSMapTable alloc] initWithKeyOptions:keyOptions valueOptions:valueOptions capacity:0];
-}
-
-#if COMPILER(CLANG)
-#pragma clang diagnostic pop
-#endif
 
 NSObject* getDOMWrapper(DOMObjectInternal* impl)
 {
 #ifdef NEEDS_WRAPPER_CACHE_LOCK
-    std::lock_guard<std::mutex> lock(wrapperCacheLock());
+    std::lock_guard<StaticLock> lock(wrapperCacheLock);
 #endif
-    if (!DOMWrapperCache)
-        return nil;
-    return static_cast<NSObject*>(NSMapGet(DOMWrapperCache, impl));
+    return wrapperCache().get(impl);
 }
 
 void addDOMWrapper(NSObject* wrapper, DOMObjectInternal* impl)
 {
 #ifdef NEEDS_WRAPPER_CACHE_LOCK
-    std::lock_guard<std::mutex> lock(wrapperCacheLock());
+    std::lock_guard<StaticLock> lock(wrapperCacheLock);
 #endif
-    if (!DOMWrapperCache)
-        DOMWrapperCache = createWrapperCache();
-    NSMapInsert(DOMWrapperCache, impl, wrapper);
+    wrapperCache().set(impl, wrapper);
 }
 
 void removeDOMWrapper(DOMObjectInternal* impl)
 {
 #ifdef NEEDS_WRAPPER_CACHE_LOCK
-    std::lock_guard<std::mutex> lock(wrapperCacheLock());
+    std::lock_guard<StaticLock> lock(wrapperCacheLock);
 #endif
-    if (!DOMWrapperCache)
-        return;
-    NSMapRemove(DOMWrapperCache, impl);
+    wrapperCache().remove(impl);
 }
 
 //------------------------------------------------------------------------------------------

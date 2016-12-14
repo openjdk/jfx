@@ -59,7 +59,9 @@ Ref<RenderStyle> resolveForDocument(const Document& document)
     documentStyle.get().setRTLOrdering(document.visuallyOrdered() ? VisualOrder : LogicalOrder);
     documentStyle.get().setZoom(!document.printing() ? renderView.frame().pageZoomFactor() : 1);
     documentStyle.get().setPageScaleTransform(renderView.frame().frameScaleFactor());
-    documentStyle.get().setLocale(document.contentLanguage());
+    FontCascadeDescription documentFontDescription = documentStyle.get().fontDescription();
+    documentFontDescription.setLocale(document.contentLanguage());
+    documentStyle.get().setFontDescription(WTFMove(documentFontDescription));
 
     // This overrides any -webkit-user-modify inherited from the parent iframe.
     documentStyle.get().setUserModify(document.inDesignMode() ? READ_WRITE : READ_ONLY);
@@ -76,11 +78,11 @@ Ref<RenderStyle> resolveForDocument(const Document& document)
         // If there is no body, then use the document element.
         auto* body = document.bodyOrFrameset();
         RenderObject* bodyRenderer = body ? body->renderer() : nullptr;
-        if (bodyRenderer && !document.writingModeSetOnDocumentElement())
+        if (bodyRenderer && !docElementRenderer->style().hasExplicitlySetWritingMode())
             documentStyle.get().setWritingMode(bodyRenderer->style().writingMode());
         else
             documentStyle.get().setWritingMode(docElementRenderer->style().writingMode());
-        if (bodyRenderer && !document.directionSetOnDocumentElement())
+        if (bodyRenderer && !docElementRenderer->style().hasExplicitlySetDirection())
             documentStyle.get().setDirection(bodyRenderer->style().direction());
         else
             documentStyle.get().setDirection(docElementRenderer->style().direction());
@@ -92,12 +94,16 @@ Ref<RenderStyle> resolveForDocument(const Document& document)
         documentStyle.get().setColumnGap(pagination.gap);
         if (renderView.multiColumnFlowThread())
             renderView.updateColumnProgressionFromStyle(documentStyle.get());
+        if (renderView.frame().page()->paginationLineGridEnabled()) {
+            documentStyle.get().setLineGrid("-webkit-default-pagination-grid");
+            documentStyle.get().setLineSnap(LineSnapContain);
+        }
     }
 
     const Settings& settings = renderView.frame().settings();
 
-    FontDescription fontDescription;
-    fontDescription.setScript(localeToScriptCodeForFontSelection(documentStyle.get().locale()));
+    FontCascadeDescription fontDescription;
+    fontDescription.setLocale(document.contentLanguage());
     fontDescription.setRenderingMode(settings.fontRenderingMode());
     fontDescription.setOneFamily(standardFamily);
 
@@ -109,7 +115,7 @@ Ref<RenderStyle> resolveForDocument(const Document& document)
 
     FontOrientation fontOrientation;
     NonCJKGlyphOrientation glyphOrientation;
-    documentStyle.get().getFontAndGlyphOrientation(fontOrientation, glyphOrientation);
+    std::tie(fontOrientation, glyphOrientation) = documentStyle.get().fontAndGlyphOrientation();
     fontDescription.setOrientation(fontOrientation);
     fontDescription.setNonCJKGlyphOrientation(glyphOrientation);
 

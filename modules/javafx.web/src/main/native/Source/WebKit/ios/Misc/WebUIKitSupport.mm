@@ -33,8 +33,10 @@
 #import "WebPlatformStrategies.h"
 #import "WebSystemInterface.h"
 #import "WebViewPrivate.h"
+#import <WebCore/DynamicLinkerSPI.h>
 #import <WebCore/PathUtilities.h>
 #import <WebCore/ResourceRequest.h>
+#import <WebCore/Settings.h>
 #import <WebCore/TextBreakIterator.h>
 #import <WebCore/WebCoreSystemInterface.h>
 #import <WebCore/WebCoreThreadSystemInterface.h>
@@ -46,7 +48,7 @@ using namespace WebCore;
 
 static inline bool linkedOnOrAfterIOS5()
 {
-    static bool s_linkedOnOrAfterIOS5 = iosExecutableWasLinkedOnOrAfterVersion(wkIOSSystemVersion_5_0);
+    static bool s_linkedOnOrAfterIOS5 = dyld_get_program_sdk_version() >= DYLD_IOS_VERSION_5_0;
     return s_linkedOnOrAfterIOS5;
 }
 
@@ -68,7 +70,6 @@ void WebKitInitialize(void)
     // We'd rather eat this cost at startup than slow down situations that need to be responsive.
     // See <rdar://problem/6776301>.
     LoadWebLocalizedStrings();
-    [WebView _setAllowsRoundingHacks:!linkedOnOrAfterIOS5()];
     [WebView registerForMemoryNotifications];
 
     // This needs to be called before any requests are made in the process, <rdar://problem/9691871>
@@ -83,7 +84,7 @@ void WebKitSetIsClassic(BOOL flag)
 
 float WebKitGetMinimumZoomFontSize(void)
 {
-    return WKGetMinimumZoomFontSize();
+    return Settings::defaultMinimumZoomFontSize();
 }
 
 int WebKitGetLastLineBreakInBuffer(UChar *characters, int position, int length)
@@ -110,27 +111,9 @@ const char *WebKitPlatformSystemRootDirectory(void)
 #endif
 }
 
-static void applicationDidEnterBackground(CFNotificationCenterRef, void*, CFStringRef, const void *, CFDictionaryRef)
-{
-    WebKitSetWebDatabasePaused(true);
-}
-
-static void applicationWillEnterForeground(CFNotificationCenterRef, void*, CFStringRef, const void*, CFDictionaryRef)
-{
-    WebKitSetWebDatabasePaused(false);
-}
-
 void WebKitSetBackgroundAndForegroundNotificationNames(NSString *didEnterBackgroundName, NSString *willEnterForegroundName)
 {
-    static bool initialized = false;
-    if (initialized)
-        return;
-    initialized = true;
-
-    CFNotificationCenterRef notificationCenter = CFNotificationCenterGetLocalCenter();
-    CFNotificationCenterAddObserver(notificationCenter, 0, applicationDidEnterBackground, (CFStringRef)didEnterBackgroundName, NULL, CFNotificationSuspensionBehaviorCoalesce);
-    CFNotificationCenterAddObserver(notificationCenter, 0, applicationWillEnterForeground, (CFStringRef)willEnterForegroundName, NULL, CFNotificationSuspensionBehaviorCoalesce);
-
+    // FIXME: Remove this function.
 }
 
 static WebBackgroundTaskIdentifier invalidTaskIdentifier = 0;

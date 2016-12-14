@@ -34,15 +34,17 @@
 #include "ExceptionCodePlaceholder.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
+
+using namespace HTMLNames;
 
 inline HTMLOutputElement::HTMLOutputElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElement(tagName, document, form)
     , m_isDefaultValueMode(true)
     , m_isSetTextContentInProgress(false)
     , m_defaultValue("")
-    , m_tokens(DOMSettableTokenList::create())
 {
 }
 
@@ -53,7 +55,7 @@ Ref<HTMLOutputElement> HTMLOutputElement::create(const QualifiedName& tagName, D
 
 const AtomicString& HTMLOutputElement::formControlType() const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, output, ("output", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> output("output", AtomicString::ConstructFromLiteral);
     return output;
 }
 
@@ -64,15 +66,11 @@ bool HTMLOutputElement::supportsFocus() const
 
 void HTMLOutputElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
-    if (name == HTMLNames::forAttr)
-        setFor(value);
-    else
+    if (name == forAttr) {
+        if (m_tokens)
+            m_tokens->attributeValueChanged(value);
+    } else
         HTMLFormControlElement::parseAttribute(name, value);
-}
-
-void HTMLOutputElement::setFor(const String& value)
-{
-    m_tokens->setValue(value);
 }
 
 void HTMLOutputElement::childrenChanged(const ChildChange& change)
@@ -127,6 +125,13 @@ void HTMLOutputElement::setDefaultValue(const String& value)
     // when the element's value mode flag to "default".
     if (m_isDefaultValueMode)
         setTextContentInternal(value);
+}
+
+DOMTokenList& HTMLOutputElement::htmlFor()
+{
+    if (!m_tokens)
+        m_tokens = std::make_unique<AttributeDOMTokenList>(*this, forAttr);
+    return *m_tokens;
 }
 
 void HTMLOutputElement::setTextContentInternal(const String& value)

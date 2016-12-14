@@ -75,6 +75,10 @@ public:
 
     static PutByIdStatus computeFor(CodeBlock* baselineBlock, CodeBlock* dfgBlock, StubInfoMap& baselineMap, StubInfoMap& dfgMap, CodeOrigin, UniquedStringImpl* uid);
 
+#if ENABLE(JIT)
+    static PutByIdStatus computeForStubInfo(const ConcurrentJITLocker&, CodeBlock* baselineBlock, StructureStubInfo*, CodeOrigin, UniquedStringImpl* uid);
+#endif
+
     State state() const { return m_state; }
 
     bool isSet() const { return m_state != NoInformation; }

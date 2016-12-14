@@ -33,22 +33,9 @@
 
 namespace WebCore {
 
-PopStateEventInit::PopStateEventInit()
-{
-}
-
-PopStateEvent::PopStateEvent()
-    : Event(eventNames().popstateEvent, false, true)
-    , m_serializedState(0)
-    , m_history(0)
-{
-}
-
 PopStateEvent::PopStateEvent(const AtomicString& type, const PopStateEventInit& initializer)
     : Event(type, initializer)
     , m_state(initializer.state)
-    , m_serializedState(0)
-    , m_history(0)
 {
 }
 
@@ -63,17 +50,12 @@ PopStateEvent::~PopStateEvent()
 {
 }
 
-Ref<PopStateEvent> PopStateEvent::create()
+Ref<PopStateEvent> PopStateEvent::create(RefPtr<SerializedScriptValue>&& serializedState, PassRefPtr<History> history)
 {
-    return adoptRef(*new PopStateEvent);
+    return adoptRef(*new PopStateEvent(WTFMove(serializedState), history));
 }
 
-Ref<PopStateEvent> PopStateEvent::create(PassRefPtr<SerializedScriptValue> serializedState, PassRefPtr<History> history)
-{
-    return adoptRef(*new PopStateEvent(serializedState, history));
-}
-
-Ref<PopStateEvent> PopStateEvent::create(const AtomicString& type, const PopStateEventInit& initializer)
+Ref<PopStateEvent> PopStateEvent::createForBindings(const AtomicString& type, const PopStateEventInit& initializer)
 {
     return adoptRef(*new PopStateEvent(type, initializer));
 }

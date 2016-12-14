@@ -36,7 +36,7 @@ using namespace HTMLNames;
 // calculation every time if anything has changed.
 
 HTMLFormControlsCollection::HTMLFormControlsCollection(ContainerNode& ownerNode)
-    : HTMLCollection(ownerNode, FormControls, CustomForwardOnlyTraversal)
+    : CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<FormControls>::traversalType>(ownerNode, FormControls)
     , m_cachedElement(nullptr)
     , m_cachedElementOffsetInArray(0)
 {
@@ -76,7 +76,7 @@ static unsigned findFormAssociatedElement(const Vector<FormAssociatedElement*>& 
     return elements.size();
 }
 
-Element* HTMLFormControlsCollection::customElementAfter(Element* current) const
+HTMLElement* HTMLFormControlsCollection::customElementAfter(Element* current) const
 {
     const Vector<FormAssociatedElement*>& elements = formControlElements();
     unsigned start;
@@ -96,42 +96,6 @@ Element* HTMLFormControlsCollection::customElementAfter(Element* current) const
         }
     }
     return nullptr;
-}
-
-static HTMLElement* firstNamedItem(const Vector<FormAssociatedElement*>& elementsArray,
-    const Vector<HTMLImageElement*>* imageElementsArray, const QualifiedName& attrName, const String& name)
-{
-    ASSERT(attrName == idAttr || attrName == nameAttr);
-
-    for (unsigned i = 0; i < elementsArray.size(); ++i) {
-        HTMLElement& element = elementsArray[i]->asHTMLElement();
-        if (elementsArray[i]->isEnumeratable() && element.fastGetAttribute(attrName) == name)
-            return &element;
-    }
-
-    if (!imageElementsArray)
-        return 0;
-
-    for (unsigned i = 0; i < imageElementsArray->size(); ++i) {
-        HTMLImageElement& element = *(*imageElementsArray)[i];
-        if (element.fastGetAttribute(attrName) == name)
-            return &element;
-    }
-
-    return nullptr;
-}
-
-HTMLElement* HTMLFormControlsCollection::namedItem(const AtomicString& name) const
-{
-    // http://msdn.microsoft.com/workshop/author/dhtml/reference/methods/nameditem.asp
-    // This method first searches for an object with a matching id
-    // attribute. If a match is not found, the method then searches for an
-    // object with a matching name attribute, but only on those elements
-    // that are allowed a name attribute.
-    auto* imageElements = is<HTMLFieldSetElement>(ownerNode()) ? nullptr : &formImageElements();
-    if (HTMLElement* item = firstNamedItem(formControlElements(), imageElements, idAttr, name))
-        return item;
-    return firstNamedItem(formControlElements(), imageElements, nameAttr, name);
 }
 
 void HTMLFormControlsCollection::updateNamedElementCache() const
@@ -174,12 +138,12 @@ void HTMLFormControlsCollection::updateNamedElementCache() const
         }
     }
 
-    setNamedItemCache(WTF::move(cache));
+    setNamedItemCache(WTFMove(cache));
 }
 
-void HTMLFormControlsCollection::invalidateCache(Document& document) const
+void HTMLFormControlsCollection::invalidateCache(Document& document)
 {
-    HTMLCollection::invalidateCache(document);
+    CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<FormControls>::traversalType>::invalidateCache(document);
     m_cachedElement = nullptr;
     m_cachedElementOffsetInArray = 0;
 }

@@ -56,7 +56,7 @@ static void ensureLineBoxes(const RenderLineBreak& renderer)
 }
 
 RenderLineBreak::RenderLineBreak(HTMLElement& element, Ref<RenderStyle>&& style)
-    : RenderBoxModelObject(element, WTF::move(style), 0)
+    : RenderBoxModelObject(element, WTFMove(style), 0)
     , m_inlineBoxWrapper(nullptr)
     , m_cachedLineHeight(invalidLineHeight)
     , m_isWBR(is<HTMLWBRElement>(element))
@@ -71,7 +71,7 @@ RenderLineBreak::~RenderLineBreak()
 
 LayoutUnit RenderLineBreak::lineHeight(bool firstLine, LineDirectionMode /*direction*/, LinePositionMode /*linePositionMode*/) const
 {
-    if (firstLine && document().styleSheetCollection().usesFirstLineRules()) {
+    if (firstLine && view().usesFirstLineRules()) {
         const RenderStyle& firstLineStyle = this->firstLineStyle();
         if (&firstLineStyle != &style())
             return firstLineStyle.computedLineHeight();

@@ -19,6 +19,7 @@
 import multiprocessing
 import sys
 import os
+import platform
 
 
 script_dir = None
@@ -35,9 +36,9 @@ def top_level_path(*args):
     return os.path.join(*((os.path.join(os.path.dirname(__file__), '..', '..'),) + args))
 
 
-def init(jhbuildrc_globals, platform):
+def init(jhbuildrc_globals, jhbuild_platform):
 
-    __tools_directory = os.path.join(os.path.dirname(__file__), "../", platform)
+    __tools_directory = os.path.join(os.path.dirname(__file__), "../", jhbuild_platform)
     sys.path.insert(0, __tools_directory)
 
     jhbuildrc_globals["build_policy"] = 'updated'
@@ -49,16 +50,16 @@ def init(jhbuildrc_globals, platform):
         jhbuildrc_globals["moduleset"].extend(__extra_modulesets)
 
     __extra_modules = os.environ.get("WEBKIT_EXTRA_MODULES", "").split(",")
-    jhbuildrc_globals["modules"] = ['webkit' + platform + '-testing-dependencies', ]
+    jhbuildrc_globals["modules"] = ['webkit' + jhbuild_platform + '-testing-dependencies', ]
     if __extra_modules != ['']:
         jhbuildrc_globals["modules"].extend(__extra_modules)
 
     if 'WEBKIT_OUTPUTDIR' in os.environ:
-        jhbuildrc_globals["checkoutroot"] = checkoutroot = os.path.abspath(os.path.join(os.environ['WEBKIT_OUTPUTDIR'], 'Dependencies' + platform.upper(), 'Source'))
-        jhbuildrc_globals["prefix"] = os.path.abspath(os.path.join(os.environ['WEBKIT_OUTPUTDIR'], 'Dependencies' + platform.upper(), 'Root'))
+        jhbuildrc_globals["checkoutroot"] = checkoutroot = os.path.abspath(os.path.join(os.environ['WEBKIT_OUTPUTDIR'], 'Dependencies' + jhbuild_platform.upper(), 'Source'))
+        jhbuildrc_globals["prefix"] = os.path.abspath(os.path.join(os.environ['WEBKIT_OUTPUTDIR'], 'Dependencies' + jhbuild_platform.upper(), 'Root'))
     else:
-        jhbuildrc_globals["checkoutroot"] = checkoutroot = os.path.abspath(top_level_path('WebKitBuild', 'Dependencies' + platform.upper(), 'Source'))
-        jhbuildrc_globals["prefix"] = os.path.abspath(top_level_path('WebKitBuild', 'Dependencies' + platform.upper(), 'Root'))
+        jhbuildrc_globals["checkoutroot"] = checkoutroot = os.path.abspath(top_level_path('WebKitBuild', 'Dependencies' + jhbuild_platform.upper(), 'Source'))
+        jhbuildrc_globals["prefix"] = os.path.abspath(top_level_path('WebKitBuild', 'Dependencies' + jhbuild_platform.upper(), 'Root'))
 
     jhbuildrc_globals["nonotify"] = True
     jhbuildrc_globals["notrayicon"] = True
@@ -71,18 +72,19 @@ def init(jhbuildrc_globals, platform):
     os.environ['GST_PLUGIN_SYSTEM_PATH'] = ''
 
     # Use system libraries while building.
-    if jhbuildrc_globals['use_lib64']:
-        _library_dir = 'lib64'
-    else:
-        _library_dir = 'lib'
     addpath = jhbuildrc_globals['addpath']
-    addpath('PKG_CONFIG_PATH', os.path.join(os.sep, 'usr', _library_dir, 'pkgconfig'))
+    system_libdirs = jhbuildrc_globals['system_libdirs']
+    for libdir in system_libdirs:
+        addpath('PKG_CONFIG_PATH', os.path.join(libdir, 'pkgconfig'))
     addpath('PKG_CONFIG_PATH', os.path.join(os.sep, 'usr', 'share', 'pkgconfig'))
 
     prefix = jhbuildrc_globals['prefix']
     addpath('CMAKE_PREFIX_PATH', prefix)
-    addpath('CMAKE_LIBRARY_PATH', os.path.join(prefix, _library_dir))
+    addpath('CMAKE_LIBRARY_PATH', os.path.join(prefix, 'lib'))
 
     if 'JHBUILD_MIRROR' in os.environ:
         jhbuildrc_globals['dvcs_mirror_dir'] = os.environ['JHBUILD_MIRROR']
         jhbuildrc_globals['tarballdir'] = os.environ['JHBUILD_MIRROR']
+
+    if 'x86_64' in platform.machine():
+        jhbuildrc_globals['conditions'].add('x86_64')

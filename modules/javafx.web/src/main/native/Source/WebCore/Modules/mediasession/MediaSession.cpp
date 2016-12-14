@@ -46,21 +46,19 @@ static const char* contentKind = "content";
 MediaSession::Kind MediaSession::parseKind(const String& kind)
 {
     // 4. Media Session
-    // 2. If no corresponding media session type can be found for the provided media session category or media session
-    //    category is empty, then set media session's current media session type to "content".
+    // 2. Set media session's current media session type to the corresponding media session type of media session category.
+
+    if (kind.isNull() || kind == contentKind)
+        return MediaSession::Kind::Content;
     if (kind == ambientKind)
         return MediaSession::Kind::Ambient;
     if (kind == transientKind)
         return MediaSession::Kind::Transient;
     if (kind == transientSoloKind)
         return MediaSession::Kind::TransientSolo;
-    return MediaSession::Kind::Content;
-}
 
-MediaSession::MediaSession(Document& document)
-    : m_document(document)
-{
-    MediaSessionManager::singleton().addMediaSession(*this);
+    ASSERT_NOT_REACHED();
+    return MediaSession::Kind::Content;
 }
 
 MediaSession::MediaSession(ScriptExecutionContext& context, const String& kind)
@@ -71,7 +69,7 @@ MediaSession::MediaSession(ScriptExecutionContext& context, const String& kind)
     // 3. If media session's current media session type is "content", then create a new media remote controller for media
     //    session. (Otherwise media session has no media remote controller.)
     if (m_kind == Kind::Content)
-        m_controls = adoptRef(*new MediaRemoteControls(context));
+        m_controls = MediaRemoteControls::create(context, this);
 
     MediaSessionManager::singleton().addMediaSession(*this);
 }
@@ -79,6 +77,9 @@ MediaSession::MediaSession(ScriptExecutionContext& context, const String& kind)
 MediaSession::~MediaSession()
 {
     MediaSessionManager::singleton().removeMediaSession(*this);
+
+    if (m_controls)
+        m_controls->clearSession();
 }
 
 String MediaSession::kind() const
@@ -97,11 +98,9 @@ String MediaSession::kind() const
     }
 }
 
-MediaRemoteControls* MediaSession::controls(bool& isNull)
+MediaRemoteControls* MediaSession::controls()
 {
-    MediaRemoteControls* controls = m_controls.get();
-    isNull = !controls;
-    return controls;
+    return m_controls.get();
 }
 
 void MediaSession::addMediaElement(HTMLMediaElement& element)
@@ -184,18 +183,20 @@ void MediaSession::setMetadata(const Dictionary& metadata)
         page->chrome().client().mediaSessionMetadataDidChange(m_metadata);
 }
 
-void MediaSession::releaseSession()
+void MediaSession::deactivate()
 {
-    // 5.1.3
+    // 5.1.2. Object members
+    // When the deactivate() method is invoked, the user agent must run the following steps:
     // 1. Let media session be the current media session.
-    // 2. Indefinitely pause all of media session's active participating media elements.
-    // 3. Reset media session's active participating media elements to an empty list.
+    // 2. Indefinitely pause all of media session’s audio-producing participants.
+    // 3. Set media session's resume list to an empty list.
+    // 4. Set media session's audio-producing participants to an empty list.
     changeActiveMediaElements([&]() {
         while (!m_activeParticipatingElements.isEmpty())
             m_activeParticipatingElements.takeAny()->pause();
     });
 
-    // 4. Run the media session release algorithm for media session.
+    // 5. Run the media session deactivation algorithm for media session.
     releaseInternal();
 }
 
@@ -315,6 +316,21 @@ void MediaSession::skipToPreviousTrack()
 {
     if (m_controls && m_controls->previousTrackEnabled())
         m_controls->dispatchEvent(Event::create(eventNames().previoustrackEvent, false, false));
+}
+
+void MediaSession::controlIsEnabledDidChange()
+{
+    // Media remote controls are only allowed on Content media sessions.
+    ASSERT(m_kind == Kind::Content);
+
+    // Media elements belonging to Content media sessions have mutually-exclusive playback.
+    ASSERT(m_activeParticipatingElements.size() <= 1);
+
+    if (m_activeParticipatingElements.isEmpty())
+        return;
+
+    HTMLMediaElement* element = *m_activeParticipatingElements.begin();
+    m_document.updateIsPlayingMedia(element->elementID());
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 #include "CacheValidation.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
+#include "ParsedContentRange.h"
 #include "ResourceResponse.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/MathExtras.h>
@@ -72,11 +73,12 @@ std::unique_ptr<ResourceResponse> ResourceResponseBase::adopt(std::unique_ptr<Cr
 
     response->setHTTPStatusCode(data->m_httpStatusCode);
     response->setHTTPStatusText(data->m_httpStatusText);
+    response->setHTTPVersion(data->m_httpVersion);
 
     response->lazyInit(AllFields);
-    response->m_httpHeaderFields.adopt(WTF::move(data->m_httpHeaders));
+    response->m_httpHeaderFields.adopt(WTFMove(data->m_httpHeaders));
     response->m_resourceLoadTiming = data->m_resourceLoadTiming;
-    response->doPlatformAdopt(WTF::move(data));
+    response->doPlatformAdopt(WTFMove(data));
     return response;
 }
 
@@ -89,18 +91,18 @@ std::unique_ptr<CrossThreadResourceResponseData> ResourceResponseBase::copyData(
     data->m_textEncodingName = textEncodingName().isolatedCopy();
     data->m_httpStatusCode = httpStatusCode();
     data->m_httpStatusText = httpStatusText().isolatedCopy();
+    data->m_httpVersion = httpVersion().isolatedCopy();
     data->m_httpHeaders = httpHeaderFields().copyData();
     data->m_resourceLoadTiming = m_resourceLoadTiming;
-    return asResourceResponse().doPlatformCopyData(WTF::move(data));
+    return asResourceResponse().doPlatformCopyData(WTFMove(data));
 }
 
+// FIXME: Name does not make it clear this is true for HTTPS!
 bool ResourceResponseBase::isHTTP() const
 {
     lazyInit(CommonFieldsOnly);
 
-    String protocol = m_url.protocol();
-
-    return equalIgnoringCase(protocol, "http")  || equalIgnoringCase(protocol, "https");
+    return m_url.protocolIsInHTTPFamily();
 }
 
 const URL& ResourceResponseBase::url() const
@@ -224,6 +226,29 @@ void ResourceResponseBase::setHTTPStatusText(const String& statusText)
     // FIXME: Should invalidate or update platform response if present.
 }
 
+const String& ResourceResponseBase::httpVersion() const
+{
+    lazyInit(AllFields);
+
+    return m_httpVersion;
+}
+
+void ResourceResponseBase::setHTTPVersion(const String& versionText)
+{
+    lazyInit(AllFields);
+
+    m_httpVersion = versionText;
+
+    // FIXME: Should invalidate or update platform response if present.
+}
+
+bool ResourceResponseBase::isHttpVersion0_9() const
+{
+    lazyInit(AllFields);
+
+    return m_httpVersion.startsWith("HTTP/0.9");
+}
+
 String ResourceResponseBase::httpHeaderField(const String& name) const
 {
     lazyInit(CommonFieldsOnly);
@@ -274,6 +299,10 @@ void ResourceResponseBase::updateHeaderParsedState(HTTPHeaderName name)
 
     case HTTPHeaderName::LastModified:
         m_haveParsedLastModifiedHeader = false;
+        break;
+
+    case HTTPHeaderName::ContentRange:
+        m_haveParsedContentRangeHeader = false;
         break;
 
     default:
@@ -425,22 +454,45 @@ Optional<std::chrono::system_clock::time_point> ResourceResponseBase::lastModifi
 
     if (!m_haveParsedLastModifiedHeader) {
         m_lastModified = parseDateValueInHeader(m_httpHeaderFields, HTTPHeaderName::LastModified);
+#if PLATFORM(COCOA)
+        // CFNetwork converts malformed dates into Epoch so we need to treat Epoch as
+        // an invalid value (rdar://problem/22352838).
+        const std::chrono::system_clock::time_point epoch;
+        if (m_lastModified && m_lastModified.value() == epoch)
+            m_lastModified = Nullopt;
+#endif
         m_haveParsedLastModifiedHeader = true;
     }
     return m_lastModified;
+}
+
+static ParsedContentRange parseContentRangeInHeader(const HTTPHeaderMap& headers)
+{
+    String contentRangeValue = headers.get(HTTPHeaderName::ContentRange);
+    if (contentRangeValue.isEmpty())
+        return ParsedContentRange();
+
+    return ParsedContentRange(contentRangeValue);
+}
+
+ParsedContentRange& ResourceResponseBase::contentRange() const
+{
+    lazyInit(CommonFieldsOnly);
+
+    if (!m_haveParsedContentRangeHeader) {
+        m_contentRange = parseContentRangeInHeader(m_httpHeaderFields);
+        m_haveParsedContentRangeHeader = true;
+    }
+
+    return m_contentRange;
 }
 
 bool ResourceResponseBase::isAttachment() const
 {
     lazyInit(AllFields);
 
-    String value = m_httpHeaderFields.get(HTTPHeaderName::ContentDisposition);
-    size_t loc = value.find(';');
-    if (loc != notFound)
-        value = value.left(loc);
-    value = value.stripWhiteSpace();
-
-    return equalIgnoringCase(value, "attachment");
+    auto value = m_httpHeaderFields.get(HTTPHeaderName::ContentDisposition);
+    return equalLettersIgnoringASCIICase(value.left(value.find(';')).stripWhiteSpace(), "attachment");
 }
 
 ResourceResponseBase::Source ResourceResponseBase::source() const

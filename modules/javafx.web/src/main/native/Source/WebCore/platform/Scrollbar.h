@@ -70,6 +70,9 @@ public:
     int maximum() const { return m_totalSize - m_visibleSize; }
     ScrollbarControlSize controlSize() const { return m_controlSize; }
 
+    int occupiedWidth() const;
+    int occupiedHeight() const;
+
     int lineStep() const { return m_lineStep; }
     int pageStep() const { return m_pageStep; }
     float pixelStep() const { return m_pixelStep; }
@@ -83,7 +86,7 @@ public:
     WEBCORE_EXPORT void setProportion(int visibleSize, int totalSize);
     void setPressedPos(int p) { m_pressedPos = p; }
 
-    virtual void paint(GraphicsContext*, const IntRect& damageRect) override;
+    virtual void paint(GraphicsContext&, const IntRect& damageRect) override;
 
     bool enabled() const { return m_enabled; }
     virtual void setEnabled(bool);
@@ -107,7 +110,7 @@ public:
 
     WEBCORE_EXPORT bool mouseDown(const PlatformMouseEvent&);
 
-    ScrollbarTheme* theme() const { return m_theme; }
+    ScrollbarTheme& theme() const { return m_theme; }
 
     virtual void invalidateRect(const IntRect&) override;
 
@@ -126,6 +129,9 @@ public:
 
     bool isAlphaLocked() const { return m_isAlphaLocked; }
     void setIsAlphaLocked(bool flag) { m_isAlphaLocked = flag; }
+
+    float opacity() const { return m_opacity; }
+    void setOpacity(float opacity) { m_opacity = opacity; }
 
     bool supportsUpdateOnSecondaryThread() const;
 
@@ -148,7 +154,7 @@ protected:
     ScrollableArea& m_scrollableArea;
     ScrollbarOrientation m_orientation;
     ScrollbarControlSize m_controlSize;
-    ScrollbarTheme* m_theme;
+    ScrollbarTheme& m_theme;
 
     int m_visibleSize;
     int m_totalSize;
@@ -174,6 +180,8 @@ protected:
     bool m_isAlphaLocked;
 
     bool m_isCustomScrollbar;
+
+    float m_opacity { 1 };
 
 private:
     virtual bool isScrollbar() const override { return true; }

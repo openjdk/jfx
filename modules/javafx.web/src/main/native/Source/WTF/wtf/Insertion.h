@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,14 +33,16 @@ class Insertion {
 public:
     Insertion() { }
 
-    Insertion(size_t index, T element)
+    template<typename U>
+    Insertion(size_t index, U&& element)
         : m_index(index)
-        , m_element(element)
+        , m_element(std::forward<U>(element))
     {
     }
 
     size_t index() const { return m_index; }
-    T element() const { return m_element; }
+    const T& element() const { return m_element; }
+    T& element() { return m_element; }
 
     bool operator<(const Insertion& other) const
     {
@@ -59,13 +61,15 @@ void executeInsertions(TargetVectorType& target, InsertionVectorType& insertions
         return;
     target.grow(target.size() + insertions.size());
     size_t lastIndex = target.size();
+    size_t originalTargetSize = target.size();
     for (size_t indexInInsertions = insertions.size(); indexInInsertions--;) {
         ASSERT(!indexInInsertions || insertions[indexInInsertions].index() >= insertions[indexInInsertions - 1].index());
+        ASSERT_UNUSED(originalTargetSize, insertions[indexInInsertions].index() < originalTargetSize);
         size_t firstIndex = insertions[indexInInsertions].index() + indexInInsertions;
         size_t indexOffset = indexInInsertions + 1;
         for (size_t i = lastIndex; --i > firstIndex;)
-            target[i] = target[i - indexOffset];
-        target[firstIndex] = insertions[indexInInsertions].element();
+            target[i] = WTFMove(target[i - indexOffset]);
+        target[firstIndex] = WTFMove(insertions[indexInInsertions].element());
         lastIndex = firstIndex;
     }
     insertions.resize(0);

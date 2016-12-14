@@ -41,11 +41,11 @@ public:
     void start();
     virtual void stop() override;
 
-    int scrollAmount() const;
-    void setScrollAmount(int, ExceptionCode&);
+    unsigned scrollAmount() const;
+    void setScrollAmount(unsigned);
 
-    int scrollDelay() const;
-    void setScrollDelay(int, ExceptionCode&);
+    unsigned scrollDelay() const;
+    void setScrollDelay(unsigned);
 
     int loop() const;
     void setLoop(int, ExceptionCode&);
@@ -57,10 +57,12 @@ private:
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) override;
 
     // ActiveDOMObject
-    virtual bool canSuspendForPageCache() const override;
+    virtual bool canSuspendForDocumentSuspension() const override;
     virtual void suspend(ReasonForSuspension) override;
     virtual void resume() override;
     virtual const char* activeDOMObjectName() const override { return "HTMLMarqueeElement"; }
+
+    virtual bool canHaveUserAgentShadowRoot() const override final { return true; }
 
     RenderMarquee* renderMarquee() const;
 };

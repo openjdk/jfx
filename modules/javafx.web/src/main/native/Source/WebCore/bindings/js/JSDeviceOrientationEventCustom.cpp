@@ -38,42 +38,42 @@ using namespace JSC;
 
 namespace WebCore {
 
-JSValue JSDeviceOrientationEvent::alpha(ExecState*) const
+JSValue JSDeviceOrientationEvent::alpha(ExecState&) const
 {
-    DeviceOrientationEvent& imp = impl();
+    DeviceOrientationEvent& imp = wrapped();
     if (!imp.orientation()->canProvideAlpha())
         return jsNull();
     return jsNumber(imp.orientation()->alpha());
 }
 
-JSValue JSDeviceOrientationEvent::beta(ExecState*) const
+JSValue JSDeviceOrientationEvent::beta(ExecState&) const
 {
-    DeviceOrientationEvent& imp = impl();
+    DeviceOrientationEvent& imp = wrapped();
     if (!imp.orientation()->canProvideBeta())
         return jsNull();
     return jsNumber(imp.orientation()->beta());
 }
 
-JSValue JSDeviceOrientationEvent::gamma(ExecState*) const
+JSValue JSDeviceOrientationEvent::gamma(ExecState&) const
 {
-    DeviceOrientationEvent& imp = impl();
+    DeviceOrientationEvent& imp = wrapped();
     if (!imp.orientation()->canProvideGamma())
         return jsNull();
     return jsNumber(imp.orientation()->gamma());
 }
 
 #if PLATFORM(IOS)
-JSValue JSDeviceOrientationEvent::webkitCompassHeading(ExecState*) const
+JSValue JSDeviceOrientationEvent::webkitCompassHeading(ExecState&) const
 {
-    DeviceOrientationEvent& imp = impl();
+    DeviceOrientationEvent& imp = wrapped();
     if (!imp.orientation()->canProvideCompassHeading())
         return jsNull();
     return jsNumber(imp.orientation()->compassHeading());
 }
 
-JSValue JSDeviceOrientationEvent::webkitCompassAccuracy(ExecState*) const
+JSValue JSDeviceOrientationEvent::webkitCompassAccuracy(ExecState&) const
 {
-    DeviceOrientationEvent& imp = impl();
+    DeviceOrientationEvent& imp = wrapped();
     if (!imp.orientation()->canProvideCompassAccuracy())
         return jsNull();
     return jsNumber(imp.orientation()->compassAccuracy());
@@ -81,40 +81,40 @@ JSValue JSDeviceOrientationEvent::webkitCompassAccuracy(ExecState*) const
 #endif
 
 #if !PLATFORM(IOS)
-JSValue JSDeviceOrientationEvent::absolute(ExecState*) const
+JSValue JSDeviceOrientationEvent::absolute(ExecState&) const
 {
-    DeviceOrientationEvent& imp = impl();
+    DeviceOrientationEvent& imp = wrapped();
     if (!imp.orientation()->canProvideAbsolute())
         return jsNull();
     return jsBoolean(imp.orientation()->absolute());
 }
 #endif
 
-JSValue JSDeviceOrientationEvent::initDeviceOrientationEvent(ExecState* exec)
+JSValue JSDeviceOrientationEvent::initDeviceOrientationEvent(ExecState& state)
 {
-    const String type = exec->argument(0).toString(exec)->value(exec);
-    bool bubbles = exec->argument(1).toBoolean(exec);
-    bool cancelable = exec->argument(2).toBoolean(exec);
+    const String type = state.argument(0).toString(&state)->value(&state);
+    bool bubbles = state.argument(1).toBoolean(&state);
+    bool cancelable = state.argument(2).toBoolean(&state);
     // If alpha, beta or gamma are null or undefined, mark them as not provided.
     // Otherwise, use the standard JavaScript conversion.
-    bool alphaProvided = !exec->argument(3).isUndefinedOrNull();
-    double alpha = exec->argument(3).toNumber(exec);
-    bool betaProvided = !exec->argument(4).isUndefinedOrNull();
-    double beta = exec->argument(4).toNumber(exec);
-    bool gammaProvided = !exec->argument(5).isUndefinedOrNull();
-    double gamma = exec->argument(5).toNumber(exec);
+    bool alphaProvided = !state.argument(3).isUndefinedOrNull();
+    double alpha = state.argument(3).toNumber(&state);
+    bool betaProvided = !state.argument(4).isUndefinedOrNull();
+    double beta = state.argument(4).toNumber(&state);
+    bool gammaProvided = !state.argument(5).isUndefinedOrNull();
+    double gamma = state.argument(5).toNumber(&state);
 #if PLATFORM(IOS)
-    bool compassHeadingProvided = !exec->argument(6).isUndefinedOrNull();
-    double compassHeading = exec->argument(6).toNumber(exec);
-    bool compassAccuracyProvided = !exec->argument(7).isUndefinedOrNull();
-    double compassAccuracy = exec->argument(7).toNumber(exec);
+    bool compassHeadingProvided = !state.argument(6).isUndefinedOrNull();
+    double compassHeading = state.argument(6).toNumber(&state);
+    bool compassAccuracyProvided = !state.argument(7).isUndefinedOrNull();
+    double compassAccuracy = state.argument(7).toNumber(&state);
     RefPtr<DeviceOrientationData> orientation = DeviceOrientationData::create(alphaProvided, alpha, betaProvided, beta, gammaProvided, gamma, compassHeadingProvided, compassHeading, compassAccuracyProvided, compassAccuracy);
 #else
-    bool absoluteProvided = !exec->argument(6).isUndefinedOrNull();
-    bool absolute = exec->argument(6).toBoolean(exec);
+    bool absoluteProvided = !state.argument(6).isUndefinedOrNull();
+    bool absolute = state.argument(6).toBoolean(&state);
     RefPtr<DeviceOrientationData> orientation = DeviceOrientationData::create(alphaProvided, alpha, betaProvided, beta, gammaProvided, gamma, absoluteProvided, absolute);
 #endif
-    impl().initDeviceOrientationEvent(type, bubbles, cancelable, orientation.get());
+    wrapped().initDeviceOrientationEvent(type, bubbles, cancelable, orientation.get());
     return jsUndefined();
 }
 

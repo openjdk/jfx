@@ -32,9 +32,9 @@
 
 namespace WebCore {
 
-BackForwardController::BackForwardController(Page& page, PassRefPtr<BackForwardClient> client)
+BackForwardController::BackForwardController(Page& page, RefPtr<BackForwardClient>&& client)
     : m_page(page)
-    , m_client(client)
+    , m_client(WTFMove(client))
 {
     if (!m_client)
         m_client = BackForwardList::create(&page);
@@ -99,7 +99,7 @@ bool BackForwardController::goForward()
 
 void BackForwardController::addItem(Ref<HistoryItem>&& item)
 {
-    m_client->addItem(WTF::move(item));
+    m_client->addItem(WTFMove(item));
 }
 
 void BackForwardController::setCurrentItem(HistoryItem* item)

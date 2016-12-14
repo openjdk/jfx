@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 namespace JSC {
 
 enum Intrinsic {
+    // Call intrinsics.
     NoIntrinsic,
     AbsIntrinsic,
     MinIntrinsic,
@@ -51,8 +52,15 @@ enum Intrinsic {
     RegExpExecIntrinsic,
     RegExpTestIntrinsic,
     StringPrototypeValueOfIntrinsic,
+    StringPrototypeReplaceIntrinsic,
     IMulIntrinsic,
+    RandomIntrinsic,
     FRoundIntrinsic,
+
+    // Getter intrinsics.
+    TypedArrayLengthIntrinsic,
+    TypedArrayByteLengthIntrinsic,
+    TypedArrayByteOffsetIntrinsic,
 
     // Debugging intrinsics. These are meant to be used as testing hacks within
     // jsc.cpp and should never be exposed to users.

@@ -95,8 +95,8 @@ void Frame::initWithSimpleHTMLDocument(const String& style, const URL& url)
     if (!style.isEmpty())
         body->setAttribute(HTMLNames::styleAttr, style);
 
-    rootElement->appendChild(body, ec);
-    document->appendChild(rootElement, ec);
+    rootElement->appendChild(body.releaseNonNull(), ec);
+    document->appendChild(rootElement.releaseNonNull(), ec);
 }
 
 const ViewportArguments& Frame::viewportArguments() const
@@ -123,8 +123,7 @@ int Frame::indexCountOfWordPrecedingSelection(NSString *word) const
 
     setEnd(searchRange.get(), oneBeforeStart.isNotNull() ? oneBeforeStart : start);
 
-    int exception = 0;
-    if (searchRange->collapsed(exception))
+    if (searchRange->collapsed())
         return result;
 
     WordAwareIterator it(*searchRange);
@@ -176,8 +175,7 @@ NSArray *Frame::wordsInCurrentParagraph() const
     setStart(searchRange.get(), start);
     setEnd(searchRange.get(), end);
 
-    int exception = 0;
-    if (searchRange->collapsed(exception))
+    if (searchRange->collapsed())
         return nil;
 
     NSMutableArray *words = [NSMutableArray array];
@@ -243,7 +241,7 @@ CGRect Frame::renderRectForPoint(CGPoint point, bool* isReplaced, float* fontSiz
 #if RECT_LOGGING
     printf("\n%f %f\n", point.x, point.y);
 #endif
-    while (renderer && !renderer->isBody() && !renderer->isRoot()) {
+    while (renderer && !renderer->isBody() && !renderer->isDocumentElementRenderer()) {
 #if RECT_LOGGING
         CGRect rect = renderer->absoluteBoundingBoxRect(true);
         if (renderer->node()) {
@@ -625,37 +623,13 @@ unsigned Frame::formElementsCharacterCount() const
 
 void Frame::setTimersPaused(bool paused)
 {
+    if (!m_page)
+        return;
     JSLockHolder lock(JSDOMWindowBase::commonVM());
-    setTimersPausedInternal(paused);
-}
-
-void Frame::setTimersPausedInternal(bool paused)
-{
-    if (paused) {
-        ++m_timersPausedCount;
-        if (m_timersPausedCount == 1) {
-            clearTimers();
-            if (document())
-                document()->suspendScheduledTasks(ActiveDOMObject::DocumentWillBePaused);
-        }
-    } else {
-        --m_timersPausedCount;
-        ASSERT(m_timersPausedCount >= 0);
-        if (m_timersPausedCount == 0) {
-            if (document())
-                document()->resumeScheduledTasks(ActiveDOMObject::DocumentWillBePaused);
-
-            // clearTimers() suspended animations and pending relayouts, reschedule if needed.
-            animation().resumeAnimationsForDocument(document());
-
-            if (view())
-                view()->scheduleRelayout();
-        }
-    }
-
-    // We need to make sure all subframes' states are up to date.
-    for (Frame* frame = tree().firstChild(); frame; frame = frame->tree().nextSibling())
-        frame->setTimersPausedInternal(paused);
+    if (paused)
+        m_page->suspendActiveDOMObjectsAndAnimations();
+    else
+        m_page->resumeActiveDOMObjectsAndAnimations();
 }
 
 void Frame::dispatchPageHideEventBeforePause()

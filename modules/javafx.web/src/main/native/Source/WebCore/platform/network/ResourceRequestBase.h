@@ -54,10 +54,10 @@ namespace WebCore {
     class ResourceRequestBase {
         WTF_MAKE_FAST_ALLOCATED;
     public:
-        static std::unique_ptr<ResourceRequest> adopt(std::unique_ptr<CrossThreadResourceRequestData>);
+        WEBCORE_EXPORT static std::unique_ptr<ResourceRequest> adopt(std::unique_ptr<CrossThreadResourceRequestData>);
 
         // Gets a copy of the data suitable for passing to another thread.
-        std::unique_ptr<CrossThreadResourceRequestData> copyData() const;
+        WEBCORE_EXPORT std::unique_ptr<CrossThreadResourceRequestData> copyData() const;
 
         WEBCORE_EXPORT bool isNull() const;
         WEBCORE_EXPORT bool isEmpty() const;
@@ -65,7 +65,7 @@ namespace WebCore {
         WEBCORE_EXPORT const URL& url() const;
         WEBCORE_EXPORT void setURL(const URL& url);
 
-        void removeCredentials();
+        WEBCORE_EXPORT void removeCredentials();
 
         WEBCORE_EXPORT ResourceRequestCachePolicy cachePolicy() const;
         WEBCORE_EXPORT void setCachePolicy(ResourceRequestCachePolicy cachePolicy);
@@ -93,19 +93,19 @@ namespace WebCore {
         template<size_t length> void setHTTPHeaderField(const char (&)[length], const String&) = delete;
         template<size_t length> void addHTTPHeaderField(const char (&)[length], const String&) = delete;
 
-        void clearHTTPAuthorization();
+        WEBCORE_EXPORT void clearHTTPAuthorization();
 
         WEBCORE_EXPORT String httpContentType() const;
         WEBCORE_EXPORT void setHTTPContentType(const String&);
         void clearHTTPContentType();
 
-        String httpReferrer() const;
+        WEBCORE_EXPORT String httpReferrer() const;
         WEBCORE_EXPORT void setHTTPReferrer(const String&);
-        void clearHTTPReferrer();
+        WEBCORE_EXPORT void clearHTTPReferrer();
 
         String httpOrigin() const;
         void setHTTPOrigin(const String&);
-        void clearHTTPOrigin();
+        WEBCORE_EXPORT void clearHTTPOrigin();
 
         String httpUserAgent() const;
         void setHTTPUserAgent(const String&);
@@ -115,11 +115,13 @@ namespace WebCore {
         void setHTTPAccept(const String&);
         void clearHTTPAccept();
 
+        void clearHTTPAcceptEncoding();
+
         const Vector<String>& responseContentDispositionEncodingFallbackArray() const { return m_responseContentDispositionEncodingFallbackArray; }
         WEBCORE_EXPORT void setResponseContentDispositionEncodingFallbackArray(const String& encoding1, const String& encoding2 = String(), const String& encoding3 = String());
 
         WEBCORE_EXPORT FormData* httpBody() const;
-        WEBCORE_EXPORT void setHTTPBody(PassRefPtr<FormData> httpBody);
+        WEBCORE_EXPORT void setHTTPBody(RefPtr<FormData>&&);
 
         bool allowCookies() const;
         void setAllowCookies(bool allowCookies);
@@ -244,7 +246,7 @@ namespace WebCore {
         ResourceRequestBase::Requester requester;
     };
 
-    unsigned initializeMaximumHTTPConnectionCountPerHost();
+    WEBCORE_EXPORT unsigned initializeMaximumHTTPConnectionCountPerHost();
 #if PLATFORM(IOS)
     WEBCORE_EXPORT void initializeHTTPConnectionSettingsOnStartup();
 #endif

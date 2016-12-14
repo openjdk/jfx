@@ -92,7 +92,8 @@ public:
     virtual void setBackingStoreAttached(bool) override;
     virtual bool backingStoreAttached() const override;
 
-    WEBCORE_EXPORT virtual void setGeometryFlipped(bool) override;
+    bool geometryFlipped() const override;
+    WEBCORE_EXPORT void setGeometryFlipped(bool) override;
 
     virtual bool isDoubleSided() const override;
     virtual void setDoubleSided(bool) override;
@@ -171,6 +172,8 @@ private:
     virtual bool isPlatformCALayerCocoa() const override { return true; }
 
     bool requiresCustomAppearanceUpdateOnBoundsChange() const;
+
+    AVPlayerLayer *avPlayerLayer() const;
 
     RetainPtr<NSObject> m_delegate;
     std::unique_ptr<PlatformCALayerList> m_customSublayers;

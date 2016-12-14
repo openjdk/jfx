@@ -33,9 +33,6 @@ public:
     static const AtomicString& effectName();
 
     virtual void platformApplySoftware();
-#if ENABLE(OPENCL)
-    virtual bool platformApplyOpenCL();
-#endif
     virtual void dump();
 
     virtual void determineAbsolutePaintRect();
@@ -48,7 +45,7 @@ private:
     SourceGraphic(Filter& filter)
         : FilterEffect(filter)
     {
-        setOperatingColorSpace(ColorSpaceDeviceRGB);
+        setOperatingColorSpace(ColorSpaceSRGB);
     }
 };
 

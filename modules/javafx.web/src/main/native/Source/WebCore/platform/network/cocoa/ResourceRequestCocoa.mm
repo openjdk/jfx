@@ -79,7 +79,7 @@ void ResourceRequest::doUpdateResourceRequest()
     m_allowCookies = [m_nsRequest.get() HTTPShouldHandleCookies];
 
     if (resourcePrioritiesEnabled())
-        m_priority = toResourceLoadPriority(wkGetHTTPRequestPriority([m_nsRequest.get() _CFURLRequest]));
+        m_priority = toResourceLoadPriority(m_nsRequest ? CFURLRequestGetRequestPriority([m_nsRequest _CFURLRequest]) : 0);
 
     m_httpHeaderFields.clear();
     [[m_nsRequest allHTTPHeaderFields] enumerateKeysAndObjectsUsingBlock: ^(NSString *name, NSString *value, BOOL *) {
@@ -133,13 +133,13 @@ void ResourceRequest::doUpdatePlatformRequest()
         nsRequest = [[NSMutableURLRequest alloc] initWithURL:url()];
 
     if (ResourceRequest::httpPipeliningEnabled())
-        wkHTTPRequestEnablePipelining([nsRequest _CFURLRequest]);
+        CFURLRequestSetShouldPipelineHTTP([nsRequest _CFURLRequest], true, true);
 
     if (ResourceRequest::resourcePrioritiesEnabled())
-        wkSetHTTPRequestPriority([nsRequest _CFURLRequest], toPlatformRequestPriority(priority()));
+        CFURLRequestSetRequestPriority([nsRequest _CFURLRequest], toPlatformRequestPriority(priority()));
 
     [nsRequest setCachePolicy:(NSURLRequestCachePolicy)cachePolicy()];
-    wkCFURLRequestAllowAllPostCaching([nsRequest _CFURLRequest]);
+    _CFURLRequestSetProtocolProperty([nsRequest _CFURLRequest], kCFURLRequestAllowAllPOSTCaching, kCFBooleanTrue);
 
     double timeoutInterval = ResourceRequestBase::timeoutInterval();
     if (timeoutInterval)
@@ -190,7 +190,7 @@ void ResourceRequest::doUpdatePlatformHTTPBody()
     else
         nsRequest = [[NSMutableURLRequest alloc] initWithURL:url()];
 
-    RefPtr<FormData> formData = httpBody();
+    FormData* formData = httpBody();
     if (formData && !formData->isEmpty())
         WebCore::setHTTPBody(nsRequest, formData);
 

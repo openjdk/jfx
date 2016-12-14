@@ -37,13 +37,16 @@
 #import "WebNSURLRequestExtras.h"
 #import "WebNetscapePluginPackage.h"
 #import "WebNetscapePluginView.h"
+#import "WebResourceLoadScheduler.h"
 #import <Foundation/NSURLResponse.h>
+#import <WebCore/CFNetworkSPI.h>
 #import <WebCore/Document.h>
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/Frame.h>
 #import <WebCore/FrameLoader.h>
 #import <WebCore/JSDOMWindowBase.h>
-#import <WebCore/ResourceLoadScheduler.h>
+#import <WebCore/LoaderStrategy.h>
+#import <WebCore/PlatformStrategies.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/SecurityPolicy.h>
 #import <WebCore/WebCoreObjCExtras.h>
@@ -51,6 +54,7 @@
 #import <WebKitSystemInterface.h>
 #import <runtime/JSLock.h>
 #import <wtf/HashMap.h>
+#import <wtf/NeverDestroyed.h>
 #import <wtf/StdLibExtras.h>
 
 using namespace WebCore;
@@ -80,7 +84,7 @@ private:
 typedef HashMap<NPStream*, NPP> StreamMap;
 static StreamMap& streams()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(StreamMap, staticStreams, ());
+    static NeverDestroyed<StreamMap> staticStreams;
     return staticStreams;
 }
 
@@ -135,7 +139,7 @@ WebNetscapePluginStream::WebNetscapePluginStream(FrameLoader* frameLoader)
     , m_newStreamSuccessful(false)
     , m_frameLoader(frameLoader)
     , m_pluginFuncs(0)
-    , m_deliverDataTimer(*this, &WebNetscapePluginStream::deliverDataTimerFired)
+    , m_deliverDataTimer(*this, &WebNetscapePluginStream::deliverData)
 {
     memset(&m_stream, 0, sizeof(NPStream));
 }
@@ -155,7 +159,7 @@ WebNetscapePluginStream::WebNetscapePluginStream(NSURLRequest *request, NPP plug
     , m_frameLoader(0)
     , m_request(adoptNS([request mutableCopy]))
     , m_pluginFuncs(0)
-    , m_deliverDataTimer(*this, &WebNetscapePluginStream::deliverDataTimerFired)
+    , m_deliverDataTimer(*this, &WebNetscapePluginStream::deliverData)
 {
     memset(&m_stream, 0, sizeof(NPStream));
 
@@ -286,7 +290,7 @@ void WebNetscapePluginStream::start()
     ASSERT(!m_frameLoader);
     ASSERT(!m_loader);
 
-    m_loader = resourceLoadScheduler()->schedulePluginStreamLoad(core([m_pluginView.get() webFrame]), this, m_request.get());
+    m_loader = webResourceLoadScheduler().schedulePluginStreamLoad(core([m_pluginView.get() webFrame]), this, m_request.get());
 }
 
 void WebNetscapePluginStream::stop()
@@ -295,6 +299,12 @@ void WebNetscapePluginStream::stop()
 
     if (!m_loader->isDone())
         cancelLoadAndDestroyStreamWithError(m_loader->cancelledError());
+}
+
+void WebNetscapePluginStream::willSendRequest(NetscapePlugInStreamLoader*, ResourceRequest&& request, const ResourceResponse&, std::function<void (WebCore::ResourceRequest&&)>&& callback)
+{
+    // FIXME: We should notify the plug-in with NPP_URLRedirectNotify here.
+    callback(WTFMove(request));
 }
 
 void WebNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*, const ResourceResponse& response)
@@ -350,7 +360,7 @@ void WebNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*, co
         // startStreamResponseURL:... will null-terminate.
     }
 
-    startStream([r URL], expectedContentLength, WKGetNSURLResponseLastModifiedDate(r), response.mimeType(), theHeaders);
+    startStream([r URL], expectedContentLength, [r _lastModifiedDate], response.mimeType(), theHeaders);
 }
 
 void WebNetscapePluginStream::startStreamWithResponse(NSURLResponse *response)
@@ -550,11 +560,6 @@ void WebNetscapePluginStream::deliverData()
                 destroyStream();
         }
     }
-}
-
-void WebNetscapePluginStream::deliverDataTimerFired()
-{
-    deliverData();
 }
 
 void WebNetscapePluginStream::deliverDataToFile(NSData *data)

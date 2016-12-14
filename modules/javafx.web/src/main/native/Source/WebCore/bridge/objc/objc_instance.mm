@@ -27,18 +27,17 @@
 #import "objc_instance.h"
 
 #import "JSDOMBinding.h"
-#import "NSPointerFunctionsSPI.h"
 #import "ObjCRuntimeObject.h"
 #import "WebScriptObject.h"
 #import "WebScriptObjectProtocol.h"
 #import "runtime/FunctionPrototype.h"
 #import "runtime_method.h"
-#import <objc/objc-auto.h>
 #import <runtime/Error.h>
 #import <runtime/JSLock.h>
 #import <runtime/ObjectPrototype.h>
 #import <wtf/Assertions.h>
-#import <wtf/spi/cocoa/NSMapTableSPI.h>
+#import <wtf/HashMap.h>
+#import <wtf/NeverDestroyed.h>
 
 #ifdef NDEBUG
 #define OBJC_LOG(formatAndArgs...) ((void)0)
@@ -54,24 +53,12 @@ using namespace JSC;
 
 static NSString *s_exception;
 static JSGlobalObject* s_exceptionEnvironment; // No need to protect this value, since we just use it for a pointer comparison.
-static NSMapTable *s_instanceWrapperCache;
 
-#if COMPILER(CLANG)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-static NSMapTable *createInstanceWrapperCache()
+static HashMap<id, ObjcInstance*>& wrapperCache()
 {
-    // NSMapTable with zeroing weak pointers is the recommended way to build caches like this under garbage collection.
-    NSPointerFunctionsOptions keyOptions = NSPointerFunctionsZeroingWeakMemory | NSPointerFunctionsOpaquePersonality;
-    NSPointerFunctionsOptions valueOptions = NSPointerFunctionsOpaqueMemory | NSPointerFunctionsOpaquePersonality;
-    return [[NSMapTable alloc] initWithKeyOptions:keyOptions valueOptions:valueOptions capacity:0];
+    static NeverDestroyed<HashMap<id, ObjcInstance*>> map;
+    return map;
 }
-
-#if COMPILER(CLANG)
-#pragma clang diagnostic pop
-#endif
 
 RuntimeObject* ObjcInstance::newRuntimeObject(ExecState* exec)
 {
@@ -105,8 +92,8 @@ void ObjcInstance::moveGlobalExceptionToExecState(ExecState* exec)
     s_exceptionEnvironment = 0;
 }
 
-ObjcInstance::ObjcInstance(id instance, PassRefPtr<RootObject> rootObject)
-    : Instance(rootObject)
+ObjcInstance::ObjcInstance(id instance, RefPtr<RootObject>&& rootObject) 
+    : Instance(WTFMove(rootObject))
     , _instance(instance)
     , _class(0)
     , _pool(0)
@@ -114,15 +101,16 @@ ObjcInstance::ObjcInstance(id instance, PassRefPtr<RootObject> rootObject)
 {
 }
 
-PassRefPtr<ObjcInstance> ObjcInstance::create(id instance, PassRefPtr<RootObject> rootObject)
+RefPtr<ObjcInstance> ObjcInstance::create(id instance, RefPtr<RootObject>&& rootObject)
 {
-    if (!s_instanceWrapperCache)
-        s_instanceWrapperCache = createInstanceWrapperCache();
-    if (void* existingWrapper = NSMapGet(s_instanceWrapperCache, instance))
-        return static_cast<ObjcInstance*>(existingWrapper);
-    RefPtr<ObjcInstance> wrapper = adoptRef(new ObjcInstance(instance, rootObject));
-    NSMapInsert(s_instanceWrapperCache, instance, wrapper.get());
-    return wrapper.release();
+    auto result = wrapperCache().add(instance, nullptr);
+    if (result.isNewEntry) {
+        RefPtr<ObjcInstance> wrapper = adoptRef(new ObjcInstance(instance, WTFMove(rootObject)));
+        result.iterator->value = wrapper.get();
+        return wrapper;
+    }
+
+    return result.iterator->value;
 }
 
 ObjcInstance::~ObjcInstance()
@@ -130,9 +118,8 @@ ObjcInstance::~ObjcInstance()
     // Both -finalizeForWebScript and -dealloc/-finalize of _instance may require autorelease pools.
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
 
-    ASSERT(s_instanceWrapperCache);
     ASSERT(_instance);
-    NSMapRemove(s_instanceWrapperCache, _instance.get());
+    wrapperCache().remove(_instance.get());
 
     if ([_instance.get() respondsToSelector:@selector(finalizeForWebScript)])
         [_instance.get() performSelector:@selector(finalizeForWebScript)];
@@ -141,21 +128,10 @@ ObjcInstance::~ObjcInstance()
     [pool drain];
 }
 
-static NSAutoreleasePool* allocateAutoReleasePool()
-{
-    // If GC is enabled an autorelease pool is unnecessary, and the
-    // pool cannot be protected from GC so may be collected leading
-    // to a crash when we try to drain the release pool.
-    if (objc_collectingEnabled())
-        return nil;
-
-    return [[NSAutoreleasePool alloc] init];
-}
-
 void ObjcInstance::virtualBegin()
 {
     if (!_pool)
-        _pool = allocateAutoReleasePool();
+        _pool = [[NSAutoreleasePool alloc] init];
     _beginCount++;
 }
 

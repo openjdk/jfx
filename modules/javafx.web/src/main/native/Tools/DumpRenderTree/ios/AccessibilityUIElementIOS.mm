@@ -83,6 +83,27 @@ AccessibilityUIElement::~AccessibilityUIElement()
 - (void)_accessibilitySetValue:(NSString *)value;
 - (void)_accessibilityActivate;
 - (UIAccessibilityTraits)_axSelectedTrait;
+- (UIAccessibilityTraits)_axTextAreaTrait;
+- (UIAccessibilityTraits)_axSearchFieldTrait;
+- (NSString *)accessibilityARIACurrentStatus;
+- (NSUInteger)accessibilityRowCount;
+- (NSUInteger)accessibilityColumnCount;
+- (NSUInteger)accessibilityARIARowCount;
+- (NSUInteger)accessibilityARIAColumnCount;
+- (NSUInteger)accessibilityARIARowIndex;
+- (NSUInteger)accessibilityARIAColumnIndex;
+- (UIAccessibilityTraits)_axContainedByFieldsetTrait;
+- (id)_accessibilityFieldsetAncestor;
+
+// TextMarker related
+- (NSArray *)textMarkerRange;
+- (NSInteger)lengthForTextMarkers:(NSArray *)textMarkers;
+- (NSString *)stringForTextMarkers:(NSArray *)markers;
+- (id)startOrEndTextMarkerForTextMarkers:(NSArray*)textMarkers isStart:(BOOL)isStart;
+- (NSArray *)textMarkerRangeForMarkers:(NSArray *)textMarkers;
+- (id)nextMarkerForMarker:(id)marker;
+- (id)previousMarkerForMarker:(id)marker;
+- (id)accessibilityObjectForTextMarker:(id)marker;
 @end
 
 @interface NSObject (WebAccessibilityObjectWrapperPrivate)
@@ -110,6 +131,16 @@ JSStringRef AccessibilityUIElement::identifier()
     return concatenateAttributeAndValue(@"AXIdentifier", [m_element accessibilityIdentifier]);
 }
 
+bool AccessibilityUIElement::isTextArea() const
+{
+    return ([m_element accessibilityTraits] & [m_element _axTextAreaTrait]) == [m_element _axTextAreaTrait];
+}
+
+bool AccessibilityUIElement::isSearchField() const
+{
+    return ([m_element accessibilityTraits] & [m_element _axSearchFieldTrait]) == [m_element _axSearchFieldTrait];
+}
+
 JSStringRef AccessibilityUIElement::traits()
 {
     return concatenateAttributeAndValue(@"AXTraits", [NSString stringWithFormat:@"%qu", [m_element accessibilityTraits]]);
@@ -126,6 +157,22 @@ int AccessibilityUIElement::elementTextLength()
     NSRange range = [[m_element valueForKey:@"elementTextRange"] rangeValue];
     return range.length;
 }
+
+bool AccessibilityUIElement::hasContainedByFieldsetTrait()
+{
+    UIAccessibilityTraits traits = [m_element accessibilityTraits];
+    return (traits & [m_element _axContainedByFieldsetTrait]) == [m_element _axContainedByFieldsetTrait];
+}
+
+AccessibilityUIElement AccessibilityUIElement::fieldsetAncestorElement()
+{
+    id ancestorElement = [m_element _accessibilityFieldsetAncestor];
+    if (ancestorElement)
+        return AccessibilityUIElement(ancestorElement);
+    
+    return nullptr;
+}
+
 
 JSStringRef AccessibilityUIElement::url()
 {
@@ -374,6 +421,187 @@ JSStringRef AccessibilityUIElement::pathDescription() const
     return [result createJSStringRef];
 }
 
+#if SUPPORTS_AX_TEXTMARKERS && PLATFORM(IOS)
+
+// Text markers
+
+AccessibilityTextMarkerRange AccessibilityUIElement::lineTextMarkerRangeForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::textMarkerRangeForElement(AccessibilityUIElement* element)
+{
+    id textMarkerRange = [element->platformUIElement() textMarkerRange];
+    return AccessibilityTextMarkerRange(textMarkerRange);
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::selectedTextMarkerRange()
+{
+    return nullptr;
+}
+
+void AccessibilityUIElement::resetSelectedTextMarkerRange()
+{
+}
+
+int AccessibilityUIElement::textMarkerRangeLength(AccessibilityTextMarkerRange* range)
+{
+    id textMarkers = (id)range->platformTextMarkerRange();
+    return [m_element lengthForTextMarkers:textMarkers];
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::textMarkerRangeForMarkers(AccessibilityTextMarker* startMarker, AccessibilityTextMarker* endMarker)
+{
+    NSArray *textMarkers = [NSArray arrayWithObjects:(id)startMarker->platformTextMarker(), (id)endMarker->platformTextMarker(), nil];
+    id textMarkerRange = [m_element textMarkerRangeForMarkers:textMarkers];
+    return AccessibilityTextMarkerRange(textMarkerRange);
+}
+
+AccessibilityTextMarker AccessibilityUIElement::startTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange* range)
+{
+    id textMarkers = (id)range->platformTextMarkerRange();
+    id textMarker = [m_element startOrEndTextMarkerForTextMarkers:textMarkers isStart:YES];
+    return AccessibilityTextMarker(textMarker);
+}
+
+AccessibilityTextMarker AccessibilityUIElement::endTextMarkerForTextMarkerRange(AccessibilityTextMarkerRange* range)
+{
+    id textMarkers = (id)range->platformTextMarkerRange();
+    id textMarker = [m_element startOrEndTextMarkerForTextMarkers:textMarkers isStart:NO];
+    return AccessibilityTextMarker(textMarker);
+}
+
+AccessibilityUIElement AccessibilityUIElement::accessibilityElementForTextMarker(AccessibilityTextMarker* marker)
+{
+    id obj = [m_element accessibilityObjectForTextMarker:(id)marker->platformTextMarker()];
+    if (obj)
+        return AccessibilityUIElement(obj);
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::endTextMarkerForBounds(int x, int y, int width, int height)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::startTextMarkerForBounds(int x, int y, int width, int height)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::textMarkerForPoint(int x, int y)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::previousTextMarker(AccessibilityTextMarker* textMarker)
+{
+    id previousMarker = [m_element previousMarkerForMarker:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarker(previousMarker);
+}
+
+AccessibilityTextMarker AccessibilityUIElement::nextTextMarker(AccessibilityTextMarker* textMarker)
+{
+    id nextMarker = [m_element nextMarkerForMarker:(id)textMarker->platformTextMarker()];
+    return AccessibilityTextMarker(nextMarker);
+}
+
+JSStringRef AccessibilityUIElement::stringForTextMarkerRange(AccessibilityTextMarkerRange* markerRange)
+{
+    id textMarkers = (id)markerRange->platformTextMarkerRange();
+    if (!textMarkers || ![textMarkers isKindOfClass:[NSArray class]])
+        return JSStringCreateWithCharacters(0, 0);
+    return [[m_element stringForTextMarkers:textMarkers] createJSStringRef];
+}
+
+bool AccessibilityUIElement::attributedStringForTextMarkerRangeContainsAttribute(JSStringRef, AccessibilityTextMarkerRange*)
+{
+    return false;
+}
+
+int AccessibilityUIElement::indexForTextMarker(AccessibilityTextMarker*)
+{
+    return -1;
+}
+
+bool AccessibilityUIElement::isTextMarkerValid(AccessibilityTextMarker*)
+{
+    return false;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::textMarkerForIndex(int)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::startTextMarker()
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::endTextMarker()
+{
+    return nullptr;
+}
+
+bool AccessibilityUIElement::setSelectedVisibleTextRange(AccessibilityTextMarkerRange*)
+{
+    return false;
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::leftWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::rightWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::previousWordStartTextMarkerForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::nextWordEndTextMarkerForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::paragraphTextMarkerRangeForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::previousParagraphStartTextMarkerForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::nextParagraphEndTextMarkerForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarkerRange AccessibilityUIElement::sentenceTextMarkerRangeForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+AccessibilityTextMarker AccessibilityUIElement::nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker*)
+{
+    return nullptr;
+}
+
+#endif // SUPPORTS_AX_TEXTMARKERS && PLATFORM(IOS)
+
 #pragma mark Unused
 
 void AccessibilityUIElement::getLinkedUIElements(Vector<AccessibilityUIElement>& elementVector)
@@ -409,6 +637,9 @@ JSStringRef AccessibilityUIElement::stringAttributeValue(JSStringRef attribute)
     if (JSStringIsEqualToUTF8CString(attribute, "AXPlaceholderValue"))
         return [[m_element accessibilityPlaceholderValue] createJSStringRef];
 
+    if (JSStringIsEqualToUTF8CString(attribute, "AXARIACurrent"))
+        return [[m_element accessibilityARIACurrentStatus] createJSStringRef];
+    
     return JSStringCreateWithCharacters(0, 0);
 }
 
@@ -643,12 +874,12 @@ JSStringRef AccessibilityUIElement::attributesOfHeader()
 
 int AccessibilityUIElement::rowCount()
 {
-    return -1;
+    return [m_element accessibilityRowCount];
 }
 
 int AccessibilityUIElement::columnCount()
 {
-    return -1;
+    return [m_element accessibilityColumnCount];
 }
 
 int AccessibilityUIElement::indexInTable()
@@ -676,6 +907,16 @@ AccessibilityUIElement AccessibilityUIElement::cellForColumnAndRow(unsigned col,
 }
 
 void AccessibilityUIElement::scrollToMakeVisible()
+{
+    // FIXME: implement
+}
+
+void AccessibilityUIElement::scrollToMakeVisibleWithSubFocus(int x, int y, int width, int height)
+{
+    // FIXME: implement
+}
+
+void AccessibilityUIElement::scrollToGlobalPoint(int x, int y)
 {
     // FIXME: implement
 }
@@ -849,7 +1090,16 @@ JSStringRef AccessibilityUIElement::selectTextWithCriteria(JSContextRef context,
 
 double AccessibilityUIElement::numberAttributeValue(JSStringRef attribute)
 {
-    // FIXME: implement
+    // Support test for table related attributes.
+    if (JSStringIsEqualToUTF8CString(attribute, "AXARIAColumnCount"))
+        return [m_element accessibilityARIAColumnCount];
+    if (JSStringIsEqualToUTF8CString(attribute, "AXARIARowCount"))
+        return [m_element accessibilityARIARowCount];
+    if (JSStringIsEqualToUTF8CString(attribute, "AXARIAColumnIndex"))
+        return [m_element accessibilityARIAColumnIndex];
+    if (JSStringIsEqualToUTF8CString(attribute, "AXARIARowIndex"))
+        return [m_element accessibilityARIARowIndex];
+    
     return 0;
 }
 

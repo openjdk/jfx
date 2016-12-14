@@ -26,23 +26,15 @@
 #include "config.h"
 #include "BlobRegistry.h"
 
-#include "BlobRegistryImpl.h"
-#include "LoaderStrategy.h"
 #include "PlatformStrategies.h"
 #include <wtf/MainThread.h>
-
-#if PLATFORM(IOS)
-#include "WebCoreThread.h"
-#endif
 
 namespace WebCore {
 
 BlobRegistry& blobRegistry()
 {
     ASSERT(isMainThread());
-
-    static BlobRegistry& instance = *platformStrategies()->loaderStrategy()->createBlobRegistry();
-    return instance;
+    return *platformStrategies()->blobRegistry();
 }
 
 BlobRegistry::~BlobRegistry()

@@ -43,18 +43,12 @@
 
 namespace WebCore {
 
-CompositingCoordinator::~CompositingCoordinator()
-{
-    purgeBackingStores();
-
-    for (auto& registeredLayer : m_registeredLayers.values())
-        registeredLayer->setCoordinator(0);
-}
-
 CompositingCoordinator::CompositingCoordinator(Page* page, CompositingCoordinator::Client* client)
     : m_page(page)
     , m_client(client)
-    , m_rootCompositingLayer(0)
+    , m_rootCompositingLayer(nullptr)
+    , m_overlayCompositingLayer(nullptr)
+    , m_isDestructing(false)
     , m_isPurging(false)
     , m_isFlushingLayerChanges(false)
     , m_shouldSyncFrame(false)
@@ -64,7 +58,16 @@ CompositingCoordinator::CompositingCoordinator(Page* page, CompositingCoordinato
     , m_lastAnimationServiceTime(0)
 #endif
 {
-    m_page->settings().setApplyDeviceScaleFactorInCompositor(true);
+}
+
+CompositingCoordinator::~CompositingCoordinator()
+{
+    m_isDestructing = true;
+
+    purgeBackingStores();
+
+    for (auto& registeredLayer : m_registeredLayers.values())
+        registeredLayer->setCoordinator(nullptr);
 }
 
 void CompositingCoordinator::setRootCompositingLayer(GraphicsLayer* compositingLayer, GraphicsLayer* overlayLayer)
@@ -76,8 +79,9 @@ void CompositingCoordinator::setRootCompositingLayer(GraphicsLayer* compositingL
     if (m_rootCompositingLayer)
         m_rootLayer->addChildAtIndex(m_rootCompositingLayer, 0);
 
-    if (overlayLayer)
-        m_rootLayer->addChild(overlayLayer);
+    m_overlayCompositingLayer = overlayLayer;
+    if (m_overlayCompositingLayer)
+        m_rootLayer->addChild(m_overlayCompositingLayer);
 }
 
 void CompositingCoordinator::sizeDidChange(const IntSize& newSize)
@@ -92,8 +96,12 @@ bool CompositingCoordinator::flushPendingLayerChanges()
 
     initializeRootCompositingLayerIfNeeded();
 
-    m_rootLayer->flushCompositingStateForThisLayerOnly(m_page->mainFrame().view()->viewportIsStable());
+    bool viewportIsStable = m_page->mainFrame().view()->viewportIsStable();
+    m_rootLayer->flushCompositingStateForThisLayerOnly(viewportIsStable);
     m_client->didFlushRootLayer(m_visibleContentsRect);
+
+    if (m_overlayCompositingLayer)
+        m_overlayCompositingLayer->flushCompositingState(FloatRect(FloatPoint(), m_rootLayer->size()), viewportIsStable);
 
     bool didSync = m_page->mainFrame().view()->flushCompositingStateIncludingSubframes();
 
@@ -241,10 +249,9 @@ void CompositingCoordinator::notifyAnimationStarted(const GraphicsLayer*, const 
 
 void CompositingCoordinator::notifyFlushRequired(const GraphicsLayer*)
 {
-    if (!isFlushingLayerChanges())
+    if (!m_isDestructing && !isFlushingLayerChanges())
         m_client->notifyFlushRequired();
 }
-
 
 void CompositingCoordinator::paintContents(const GraphicsLayer* graphicsLayer, GraphicsContext& graphicsContext, GraphicsLayerPaintingPhase, const FloatRect& clipRect)
 {
@@ -404,7 +411,7 @@ void CompositingCoordinator::releaseInactiveAtlasesTimerFired()
         bool usableForRootContentsLayer = !atlas->supportsAlpha();
         if (atlas->isInactive()) {
             if (!foundActiveAtlasForRootContentsLayer && !atlasToKeepAnyway && usableForRootContentsLayer)
-                atlasToKeepAnyway = WTF::move(m_updateAtlases[i]);
+                atlasToKeepAnyway = WTFMove(m_updateAtlases[i]);
             m_updateAtlases.remove(i);
         } else if (usableForRootContentsLayer)
             foundActiveAtlasForRootContentsLayer = true;

@@ -49,7 +49,7 @@
 
 #define OFFLINE_ASM_C_LOOP 0
 
-#if CPU(X86) && !PLATFORM(WIN)
+#if CPU(X86) && !(PLATFORM(WIN) || OS(WINDOWS) && PLATFORM(JAVA))
 #define OFFLINE_ASM_X86 1
 #else
 #define OFFLINE_ASM_X86 0
@@ -92,7 +92,7 @@
 #define OFFLINE_ASM_ARM 0
 #endif
 
-#if CPU(X86_64) && !PLATFORM(WIN)
+#if CPU(X86_64) && !(PLATFORM(WIN) || OS(WINDOWS) && PLATFORM(JAVA))
 #define OFFLINE_ASM_X86_64 1
 #else
 #define OFFLINE_ASM_X86_64 0
@@ -159,12 +159,6 @@
 #define OFFLINE_ASM_EXECUTION_TRACING 1
 #else
 #define OFFLINE_ASM_EXECUTION_TRACING 0
-#endif
-
-#if ENABLE(GGC)
-#define OFFLINE_ASM_GGC 1
-#else
-#define OFFLINE_ASM_GGC 0
 #endif
 
 #endif // LLIntOfflineAsmConfig_h

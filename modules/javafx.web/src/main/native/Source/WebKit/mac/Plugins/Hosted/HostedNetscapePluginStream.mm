@@ -36,11 +36,13 @@
 #import "WebKitSystemInterface.h"
 #import "WebNSURLExtras.h"
 #import "WebNSURLRequestExtras.h"
+#import "WebResourceLoadScheduler.h"
+#import <WebCore/CFNetworkSPI.h>
 #import <WebCore/Document.h>
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/Frame.h>
 #import <WebCore/FrameLoader.h>
-#import <WebCore/ResourceLoadScheduler.h>
+#import <WebCore/PlatformStrategies.h>
 #import <WebCore/SecurityOrigin.h>
 #import <WebCore/SecurityPolicy.h>
 #import <WebCore/WebCoreURLResponse.h>
@@ -129,6 +131,12 @@ void HostedNetscapePluginStream::didFinishLoading(WebCore::NetscapePlugInStreamL
     m_instance->disconnectStream(this);
 }
 
+void HostedNetscapePluginStream::willSendRequest(NetscapePlugInStreamLoader*, ResourceRequest&& request, const ResourceResponse&, std::function<void (WebCore::ResourceRequest&&)>&& callback)
+{
+    // FIXME: We should notify the plug-in with NPP_URLRedirectNotify here.
+    callback(WTFMove(request));
+}
+
 void HostedNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*, const ResourceResponse& response)
 {
     NSURLResponse *r = response.nsURLResponse();
@@ -182,7 +190,7 @@ void HostedNetscapePluginStream::didReceiveResponse(NetscapePlugInStreamLoader*,
         [theHeaders appendBytes:"\0" length:1];
     }
 
-    startStream([r URL], expectedContentLength, WKGetNSURLResponseLastModifiedDate(r), [r MIMEType], theHeaders);
+    startStream([r URL], expectedContentLength, [r _lastModifiedDate], [r MIMEType], theHeaders);
 }
 
 NPReason HostedNetscapePluginStream::reasonForError(NSError *error)
@@ -215,7 +223,7 @@ void HostedNetscapePluginStream::start()
     ASSERT(!m_frameLoader);
     ASSERT(!m_loader);
 
-    m_loader = resourceLoadScheduler()->schedulePluginStreamLoad(core([m_instance->pluginView() webFrame]), this, m_request.get());
+    m_loader = webResourceLoadScheduler().schedulePluginStreamLoad(core([m_instance->pluginView() webFrame]), this, m_request.get());
 }
 
 void HostedNetscapePluginStream::stop()

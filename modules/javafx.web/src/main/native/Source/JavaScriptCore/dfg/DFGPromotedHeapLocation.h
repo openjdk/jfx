@@ -46,7 +46,7 @@ enum PromotedLocationKind {
     FunctionExecutablePLoc,
     FunctionActivationPLoc,
     ActivationScopePLoc,
-    ClosureVarPLoc,
+    ClosureVarPLoc
 };
 
 class PromotedLocationDescriptor {

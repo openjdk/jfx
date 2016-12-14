@@ -36,6 +36,7 @@
 #include "IDBKeyPath.h"
 #include "IDBObjectStore.h"
 #include "JSDOMBinding.h"
+#include "JSDOMStringList.h"
 #include "JSIDBObjectStore.h"
 #include <runtime/Error.h>
 #include <runtime/JSString.h>
@@ -44,40 +45,79 @@ using namespace JSC;
 
 namespace WebCore {
 
-JSValue JSIDBDatabase::createObjectStore(ExecState* exec)
+JSValue JSIDBDatabase::createObjectStore(ExecState& state)
 {
-    if (exec->argumentCount() < 1)
-        return exec->vm().throwException(exec, createNotEnoughArgumentsError(exec));
+    if (state.argumentCount() < 1)
+        return state.vm().throwException(&state, createNotEnoughArgumentsError(&state));
 
-    String name = exec->argument(0).toString(exec)->value(exec);
-    if (exec->hadException())
+    String name = state.argument(0).toString(&state)->value(&state);
+    if (state.hadException())
         return jsUndefined();
 
-    JSValue optionsValue = exec->argument(1);
+    JSValue optionsValue = state.argument(1);
     if (!optionsValue.isUndefinedOrNull() && !optionsValue.isObject())
-        return throwTypeError(exec, "Not an object.");
+        return throwTypeError(&state, "Not an object.");
 
     IDBKeyPath keyPath;
     bool autoIncrement = false;
     if (!optionsValue.isUndefinedOrNull()) {
-        JSValue keyPathValue = optionsValue.get(exec, Identifier::fromString(exec, "keyPath"));
-        if (exec->hadException())
+        JSValue keyPathValue = optionsValue.get(&state, Identifier::fromString(&state, "keyPath"));
+        if (state.hadException())
             return jsUndefined();
 
         if (!keyPathValue.isUndefinedOrNull()) {
-            keyPath = idbKeyPathFromValue(exec, keyPathValue);
-            if (exec->hadException())
+            keyPath = idbKeyPathFromValue(&state, keyPathValue);
+            if (state.hadException())
                 return jsUndefined();
         }
 
-        autoIncrement = optionsValue.get(exec, Identifier::fromString(exec, "autoIncrement")).toBoolean(exec);
-        if (exec->hadException())
+        autoIncrement = optionsValue.get(&state, Identifier::fromString(&state, "autoIncrement")).toBoolean(&state);
+        if (state.hadException())
             return jsUndefined();
     }
 
-    ExceptionCode ec = 0;
-    JSValue result = toJS(exec, globalObject(), impl().createObjectStore(name, keyPath, autoIncrement, ec).get());
-    setDOMException(exec, ec);
+    ExceptionCodeWithMessage ec;
+    JSValue result = toJS(&state, globalObject(), wrapped().createObjectStore(name, keyPath, autoIncrement, ec).get());
+    setDOMException(&state, ec);
+    return result;
+}
+
+JSValue JSIDBDatabase::transaction(ExecState& exec)
+{
+    size_t argsCount = std::min<size_t>(2, exec.argumentCount());
+    if (argsCount < 1)
+        return exec.vm().throwException(&exec, createNotEnoughArgumentsError(&exec));
+
+    auto* scriptContext = jsCast<JSDOMGlobalObject*>(exec.lexicalGlobalObject())->scriptExecutionContext();
+    if (!scriptContext)
+        return jsUndefined();
+
+    Vector<String> scope;
+    JSValue scopeArg(exec.argument(0));
+    auto domStringList = JSDOMStringList::toWrapped(&exec, scopeArg);
+    if (exec.hadException())
+        return jsUndefined();
+
+    if (domStringList)
+        scope = *domStringList;
+    else {
+        scope.append(scopeArg.toString(&exec)->value(&exec));
+        if (exec.hadException())
+            return jsUndefined();
+    }
+
+    String mode;
+    if (argsCount == 2) {
+        JSValue modeArg(exec.argument(1));
+        mode = modeArg.toString(&exec)->value(&exec);
+
+        if (exec.hadException())
+            return jsUndefined();
+    }
+
+    ExceptionCodeWithMessage ec;
+    JSValue result = toJS(&exec, globalObject(), wrapped().transaction(scriptContext, scope, mode, ec).get());
+    setDOMException(&exec, ec);
     return result;
 }
 

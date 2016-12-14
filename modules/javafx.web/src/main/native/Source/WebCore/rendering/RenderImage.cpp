@@ -119,7 +119,7 @@ void RenderImage::collectSelectionRects(Vector<SelectionRect>& rects, unsigned, 
 using namespace HTMLNames;
 
 RenderImage::RenderImage(Element& element, Ref<RenderStyle>&& style, StyleImage* styleImage, const float imageDevicePixelRatio)
-    : RenderReplaced(element, WTF::move(style), IntSize())
+    : RenderReplaced(element, WTFMove(style), IntSize())
     , m_imageResource(styleImage ? std::make_unique<RenderImageResourceStyleImage>(*styleImage) : std::make_unique<RenderImageResource>())
     , m_needsToSetSizeForAltText(false)
     , m_didIncrementVisuallyNonEmptyPixelCount(false)
@@ -135,7 +135,7 @@ RenderImage::RenderImage(Element& element, Ref<RenderStyle>&& style, StyleImage*
 }
 
 RenderImage::RenderImage(Document& document, Ref<RenderStyle>&& style, StyleImage* styleImage)
-    : RenderReplaced(document, WTF::move(style), IntSize())
+    : RenderReplaced(document, WTFMove(style), IntSize())
     , m_imageResource(styleImage ? std::make_unique<RenderImageResourceStyleImage>(*styleImage) : std::make_unique<RenderImageResource>())
     , m_needsToSetSizeForAltText(false)
     , m_didIncrementVisuallyNonEmptyPixelCount(false)
@@ -375,7 +375,7 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
     LayoutUnit leftPad = paddingLeft();
     LayoutUnit topPad = paddingTop();
 
-    GraphicsContext* context = paintInfo.context;
+    GraphicsContext& context = paintInfo.context();
     float deviceScaleFactor = document().deviceScaleFactor();
 
     Page* page = frame().page();
@@ -391,10 +391,10 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
             LayoutUnit borderWidth = LayoutUnit(1 / deviceScaleFactor);
 
             // Draw an outline rect where the image should be.
-            context->setStrokeStyle(SolidStroke);
-            context->setStrokeColor(Color::lightGray, style().colorSpace());
-            context->setFillColor(Color::transparent, style().colorSpace());
-            context->drawRect(snapRectToDevicePixels(LayoutRect(paintOffset.x() + leftBorder + leftPad, paintOffset.y() + topBorder + topPad, cWidth, cHeight), deviceScaleFactor), borderWidth);
+            context.setStrokeStyle(SolidStroke);
+            context.setStrokeColor(Color::lightGray);
+            context.setFillColor(Color::transparent);
+            context.drawRect(snapRectToDevicePixels(LayoutRect(paintOffset.x() + leftBorder + leftPad, paintOffset.y() + topBorder + topPad, cWidth, cHeight), deviceScaleFactor), borderWidth);
 
             bool errorPictureDrawn = false;
             LayoutSize imageOffset;
@@ -424,13 +424,13 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
 #if ENABLE(CSS_IMAGE_ORIENTATION)
                 orientationDescription.setImageOrientationEnum(style().imageOrientation());
 #endif
-                context->drawImage(image.get(), style().colorSpace(), snapRectToDevicePixels(LayoutRect(paintOffset + imageOffset, imageSize), deviceScaleFactor), orientationDescription);
+                context.drawImage(*image, snapRectToDevicePixels(LayoutRect(paintOffset + imageOffset, imageSize), deviceScaleFactor), orientationDescription);
                 errorPictureDrawn = true;
             }
 
             if (!m_altText.isEmpty()) {
                 String text = document().displayStringModifiedByEncoding(m_altText);
-                context->setFillColor(style().visitedDependentColor(CSSPropertyColor), style().colorSpace());
+                context.setFillColor(style().visitedDependentColor(CSSPropertyColor));
                 const FontCascade& font = style().fontCascade();
                 const FontMetrics& fontMetrics = font.fontMetrics();
                 LayoutUnit ascent = fontMetrics.ascent();
@@ -443,9 +443,9 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
                 LayoutUnit textWidth = font.width(textRun);
                 if (errorPictureDrawn) {
                     if (usableWidth >= textWidth && fontMetrics.height() <= imageOffset.height())
-                        context->drawText(font, textRun, altTextOffset);
+                        context.drawText(font, textRun, altTextOffset);
                 } else if (usableWidth >= textWidth && usableHeight >= fontMetrics.height())
-                    context->drawText(font, textRun, altTextOffset);
+                    context.drawText(font, textRun, altTextOffset);
             }
         }
     } else if (imageResource().hasImage() && cWidth > 0 && cHeight > 0) {
@@ -461,9 +461,9 @@ void RenderImage::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
         LayoutRect replacedContentRect = this->replacedContentRect(intrinsicSize());
         replacedContentRect.moveBy(paintOffset);
         bool clip = !contentBoxRect.contains(replacedContentRect);
-        GraphicsContextStateSaver stateSaver(*context, clip);
+        GraphicsContextStateSaver stateSaver(context, clip);
         if (clip)
-            context->clip(contentBoxRect);
+            context.clip(contentBoxRect);
 
         paintIntoRect(context, snapRectToDevicePixels(replacedContentRect, deviceScaleFactor));
 
@@ -495,7 +495,7 @@ void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo)
     if (document().printing() || !frame().selection().isFocusedAndActive())
         return;
 
-    if (paintInfo.context->paintingDisabled() && !paintInfo.context->updatingControlTints())
+    if (paintInfo.context().paintingDisabled() && !paintInfo.context().updatingControlTints())
         return;
 
     Element* focusedElement = document().focusedElement();
@@ -516,11 +516,11 @@ void RenderImage::paintAreaElementFocusRing(PaintInfo& paintInfo)
     // FIXME: Do we need additional code to clip the path to the image's bounding box?
 
     RenderStyle* areaElementStyle = areaElement.computedStyle();
-    unsigned short outlineWidth = areaElementStyle->outlineWidth();
+    float outlineWidth = areaElementStyle->outlineWidth();
     if (!outlineWidth)
         return;
 
-    paintInfo.context->drawFocusRing(path, outlineWidth,
+    paintInfo.context().drawFocusRing(path, outlineWidth,
         areaElementStyle->outlineOffset(),
         areaElementStyle->visitedDependentColor(CSSPropertyOutlineColor));
 #endif
@@ -536,7 +536,7 @@ void RenderImage::areaElementFocusChanged(HTMLAreaElement* element)
     repaint();
 }
 
-void RenderImage::paintIntoRect(GraphicsContext* context, const FloatRect& rect)
+void RenderImage::paintIntoRect(GraphicsContext& context, const FloatRect& rect)
 {
     if (!imageResource().hasImage() || imageResource().errorOccurred() || rect.width() <= 0 || rect.height() <= 0)
         return;
@@ -547,14 +547,13 @@ void RenderImage::paintIntoRect(GraphicsContext* context, const FloatRect& rect)
 
     HTMLImageElement* imageElement = is<HTMLImageElement>(element()) ? downcast<HTMLImageElement>(element()) : nullptr;
     CompositeOperator compositeOperator = imageElement ? imageElement->compositeOperator() : CompositeSourceOver;
+
+    // FIXME: Document when image != img.get().
     Image* image = imageResource().image().get();
-    bool useLowQualityScaling = shouldPaintAtLowQuality(context, image, image, LayoutSize(rect.size()));
-    ImageOrientationDescription orientationDescription(shouldRespectImageOrientation());
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-    orientationDescription.setImageOrientationEnum(style().imageOrientation());
-#endif
-    context->drawImage(imageResource().image(rect.width(), rect.height()).get(), style().colorSpace(), rect,
-        ImagePaintingOptions(compositeOperator, BlendModeNormal, orientationDescription, useLowQualityScaling));
+    InterpolationQuality interpolation = image ? chooseInterpolationQuality(context, *image, image, LayoutSize(rect.size())) : InterpolationDefault;
+
+    ImageOrientationDescription orientationDescription(shouldRespectImageOrientation(), style().imageOrientation());
+    context.drawImage(*img, rect, ImagePaintingOptions(compositeOperator, BlendModeNormal, orientationDescription, interpolation));
 }
 
 bool RenderImage::boxShadowShouldBeAppliedToBackground(const LayoutPoint& paintOffset, BackgroundBleedAvoidance bleedAvoidance, InlineFlowBox*) const

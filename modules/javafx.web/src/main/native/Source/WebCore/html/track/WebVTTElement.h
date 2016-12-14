@@ -29,6 +29,7 @@
 #if ENABLE(VIDEO_TRACK)
 
 #include "HTMLElement.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -49,7 +50,7 @@ public:
     static Ref<WebVTTElement> create(const WebVTTNodeType, Document&);
     PassRefPtr<HTMLElement> createEquivalentHTMLElement(Document&);
 
-    virtual RefPtr<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
+    virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
 
     void setWebVTTNodeType(WebVTTNodeType type) { m_webVTTNodeType = static_cast<unsigned>(type); }
     WebVTTNodeType webVTTNodeType() const { return static_cast<WebVTTNodeType>(m_webVTTNodeType); }
@@ -62,13 +63,13 @@ public:
 
     static const QualifiedName& voiceAttributeName()
     {
-        DEPRECATED_DEFINE_STATIC_LOCAL(QualifiedName, voiceAttr, (nullAtom, "voice", nullAtom));
+        static NeverDestroyed<QualifiedName> voiceAttr(nullAtom, "voice", nullAtom);
         return voiceAttr;
     }
 
     static const QualifiedName& langAttributeName()
     {
-        DEPRECATED_DEFINE_STATIC_LOCAL(QualifiedName, voiceAttr, (nullAtom, "lang", nullAtom));
+        static NeverDestroyed<QualifiedName> voiceAttr(nullAtom, "lang", nullAtom);
         return voiceAttr;
     }
 

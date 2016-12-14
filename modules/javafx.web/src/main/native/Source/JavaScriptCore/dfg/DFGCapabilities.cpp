@@ -44,28 +44,36 @@ bool isSupported()
 
 bool isSupportedForInlining(CodeBlock* codeBlock)
 {
-    return codeBlock->ownerExecutable()->isInliningCandidate();
+#if ENABLE(WEBASSEMBLY)
+    if (codeBlock->ownerExecutable()->isWebAssemblyExecutable())
+        return false;
+#endif
+    return codeBlock->ownerScriptExecutable()->isInliningCandidate();
 }
 
 bool mightCompileEval(CodeBlock* codeBlock)
 {
     return isSupported()
-        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount();
+        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount()
+        && codeBlock->ownerScriptExecutable()->isOkToOptimize();
 }
 bool mightCompileProgram(CodeBlock* codeBlock)
 {
     return isSupported()
-        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount();
+        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount()
+        && codeBlock->ownerScriptExecutable()->isOkToOptimize();
 }
 bool mightCompileFunctionForCall(CodeBlock* codeBlock)
 {
     return isSupported()
-        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount();
+        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount()
+        && codeBlock->ownerScriptExecutable()->isOkToOptimize();
 }
 bool mightCompileFunctionForConstruct(CodeBlock* codeBlock)
 {
     return isSupported()
-        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount();
+        && codeBlock->instructionCount() <= Options::maximumOptimizationCandidateInstructionCount()
+        && codeBlock->ownerScriptExecutable()->isOkToOptimize();
 }
 
 bool mightInlineFunctionForCall(CodeBlock* codeBlock)
@@ -120,8 +128,9 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
     case op_profile_type:
     case op_profile_control_flow:
     case op_mov:
-    case op_check_has_instance:
+    case op_overrides_has_instance:
     case op_instanceof:
+    case op_instanceof_custom:
     case op_is_undefined:
     case op_is_boolean:
     case op_is_number:
@@ -144,14 +153,13 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
     case op_put_by_val:
     case op_put_by_val_direct:
     case op_get_by_id:
-    case op_get_by_id_out_of_line:
     case op_get_array_length:
     case op_put_by_id:
-    case op_put_by_id_out_of_line:
-    case op_put_by_id_transition_direct:
-    case op_put_by_id_transition_direct_out_of_line:
-    case op_put_by_id_transition_normal:
-    case op_put_by_id_transition_normal_out_of_line:
+    case op_put_getter_by_id:
+    case op_put_setter_by_id:
+    case op_put_getter_setter_by_id:
+    case op_put_getter_by_val:
+    case op_put_setter_by_val:
     case op_jmp:
     case op_jtrue:
     case op_jfalse:
@@ -166,6 +174,7 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
     case op_jngreater:
     case op_jngreatereq:
     case op_loop_hint:
+    case op_watchdog:
     case op_ret:
     case op_end:
     case op_new_object:
@@ -177,8 +186,10 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
     case op_throw:
     case op_throw_static_error:
     case op_call:
+    case op_tail_call:
     case op_construct:
     case op_call_varargs:
+    case op_tail_call_varargs:
     case op_construct_varargs:
     case op_create_direct_arguments:
     case op_create_scoped_arguments:
@@ -205,12 +216,18 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
     case op_to_index_string:
     case op_new_func:
     case op_new_func_exp:
+    case op_new_generator_func:
+    case op_new_generator_func_exp:
+    case op_new_arrow_func_exp:
     case op_create_lexical_environment:
     case op_get_parent_scope:
+    case op_catch:
+    case op_copy_rest:
+    case op_get_rest_length:
         return CanCompileAndInline;
 
     case op_put_to_scope: {
-        ResolveType resolveType = ResolveModeAndType(pc[4].u.operand).type();
+        ResolveType resolveType = GetPutInfo(pc[4].u.operand).resolveType();
         // If we're writing to a readonly property we emit a Dynamic put that
         // the DFG can't currently handle.
         if (resolveType == Dynamic)
@@ -220,7 +237,7 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
 
     case op_resolve_scope: {
         // We don't compile 'catch' or 'with', so there's no point in compiling variable resolution within them.
-        ResolveType resolveType = ResolveModeAndType(pc[4].u.operand).type();
+        ResolveType resolveType = static_cast<ResolveType>(pc[4].u.operand);
         if (resolveType == Dynamic)
             return CannotCompile;
         return CanCompileAndInline;

@@ -34,6 +34,7 @@
 #include "ScriptCallStackFactory.h"
 
 #include "CallFrame.h"
+#include "CodeBlock.h"
 #include "Exception.h"
 #include "JSCJSValue.h"
 #include "JSCInlines.h"
@@ -66,6 +67,10 @@ public:
         }
 
         if (m_remainingCapacityForFrameCapture) {
+#if ENABLE(WEBASSEMBLY)
+            if (visitor->codeBlock()->ownerExecutable()->isWebAssemblyExecutable())
+                return StackVisitor::Continue;
+#endif
             unsigned line;
             unsigned column;
             visitor->computeLineAndColumn(line, column);

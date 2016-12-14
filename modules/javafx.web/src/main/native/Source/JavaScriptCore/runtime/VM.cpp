@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2011, 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2011, 2013-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,9 +30,9 @@
 #include "VM.h"
 
 #include "ArgList.h"
-#include "ArityCheckFailReturnThunks.h"
 #include "ArrayBufferNeuteringWatchpoint.h"
 #include "BuiltinExecutables.h"
+#include "BytecodeIntrinsicRegistry.h"
 #include "CodeBlock.h"
 #include "CodeCache.h"
 #include "CommonIdentifiers.h"
@@ -46,12 +46,15 @@
 #include "FTLThunks.h"
 #include "FunctionConstructor.h"
 #include "GCActivityCallback.h"
+#include "GeneratorFrame.h"
 #include "GetterSetter.h"
 #include "Heap.h"
 #include "HeapIterationScope.h"
+#include "HeapProfiler.h"
 #include "HostCallReturnValue.h"
 #include "Identifier.h"
 #include "IncrementalSweeper.h"
+#include "InferredTypeTable.h"
 #include "Interpreter.h"
 #include "JITCode.h"
 #include "JSAPIValueWrapper.h"
@@ -59,9 +62,9 @@
 #include "JSCInlines.h"
 #include "JSFunction.h"
 #include "JSGlobalObjectFunctions.h"
+#include "JSInternalPromiseDeferred.h"
 #include "JSLexicalEnvironment.h"
 #include "JSLock.h"
-#include "JSNameScope.h"
 #include "JSNotAnObject.h"
 #include "JSPromiseDeferred.h"
 #include "JSPropertyNameEnumerator.h"
@@ -70,13 +73,16 @@
 #include "Lexer.h"
 #include "Lookup.h"
 #include "MapData.h"
+#include "NativeStdFunctionCell.h"
 #include "Nodes.h"
 #include "Parser.h"
 #include "ProfilerDatabase.h"
 #include "PropertyMapHashTable.h"
 #include "RegExpCache.h"
 #include "RegExpObject.h"
+#include "RegisterAtOffsetList.h"
 #include "RuntimeType.h"
+#include "SamplingProfiler.h"
 #include "SimpleTypedArrayController.h"
 #include "SourceProviderCache.h"
 #include "StackVisitor.h"
@@ -86,6 +92,8 @@
 #include "TypeProfiler.h"
 #include "TypeProfilerLog.h"
 #include "UnlinkedCodeBlock.h"
+#include "VMEntryScope.h"
+#include "Watchdog.h"
 #include "WeakGCMapInlines.h"
 #include "WeakMapData.h"
 #include <wtf/CurrentTime.h>
@@ -151,9 +159,9 @@ VM::VM(VMType vmType, HeapType heapType)
     , m_atomicStringTable(vmType == Default ? wtfThreadData().atomicStringTable() : new AtomicStringTable)
     , propertyNames(nullptr)
     , emptyList(new MarkedArgumentBuffer)
+    , customGetterSetterFunctionMap(*this)
     , stringCache(*this)
     , prototypeMap(*this)
-    , keywords(std::make_unique<Keywords>(*this))
     , interpreter(0)
     , jsArrayClassInfo(JSArray::info())
     , jsFinalObjectClassInfo(JSFinalObject::info())
@@ -163,7 +171,6 @@ VM::VM(VMType vmType, HeapType heapType)
 #if ENABLE(REGEXP_TRACING)
     , m_rtTraceList(new RTTraceList())
 #endif
-    , m_newStringsSinceLastHashCons(0)
 #if ENABLE(ASSEMBLER)
     , m_canUseAssembler(enableAssembler(executableAllocator))
 #endif
@@ -220,6 +227,10 @@ VM::VM(VMType vmType, HeapType heapType)
     evalExecutableStructure.set(*this, EvalExecutable::createStructure(*this, 0, jsNull()));
     programExecutableStructure.set(*this, ProgramExecutable::createStructure(*this, 0, jsNull()));
     functionExecutableStructure.set(*this, FunctionExecutable::createStructure(*this, 0, jsNull()));
+#if ENABLE(WEBASSEMBLY)
+    webAssemblyExecutableStructure.set(*this, WebAssemblyExecutable::createStructure(*this, 0, jsNull()));
+#endif
+    moduleProgramExecutableStructure.set(*this, ModuleProgramExecutable::createStructure(*this, 0, jsNull()));
     regExpStructure.set(*this, RegExp::createStructure(*this, 0, jsNull()));
     symbolStructure.set(*this, Symbol::createStructure(*this, 0, jsNull()));
     symbolTableStructure.set(*this, SymbolTable::createStructure(*this, 0, jsNull()));
@@ -231,20 +242,34 @@ VM::VM(VMType vmType, HeapType heapType)
     unlinkedProgramCodeBlockStructure.set(*this, UnlinkedProgramCodeBlock::createStructure(*this, 0, jsNull()));
     unlinkedEvalCodeBlockStructure.set(*this, UnlinkedEvalCodeBlock::createStructure(*this, 0, jsNull()));
     unlinkedFunctionCodeBlockStructure.set(*this, UnlinkedFunctionCodeBlock::createStructure(*this, 0, jsNull()));
+    unlinkedModuleProgramCodeBlockStructure.set(*this, UnlinkedModuleProgramCodeBlock::createStructure(*this, 0, jsNull()));
     propertyTableStructure.set(*this, PropertyTable::createStructure(*this, 0, jsNull()));
     weakMapDataStructure.set(*this, WeakMapData::createStructure(*this, 0, jsNull()));
     inferredValueStructure.set(*this, InferredValue::createStructure(*this, 0, jsNull()));
+    inferredTypeStructure.set(*this, InferredType::createStructure(*this, 0, jsNull()));
+    inferredTypeTableStructure.set(*this, InferredTypeTable::createStructure(*this, 0, jsNull()));
     functionRareDataStructure.set(*this, FunctionRareData::createStructure(*this, 0, jsNull()));
+    generatorFrameStructure.set(*this, GeneratorFrame::createStructure(*this, 0, jsNull()));
     exceptionStructure.set(*this, Exception::createStructure(*this, 0, jsNull()));
     promiseDeferredStructure.set(*this, JSPromiseDeferred::createStructure(*this, 0, jsNull()));
+    internalPromiseDeferredStructure.set(*this, JSInternalPromiseDeferred::createStructure(*this, 0, jsNull()));
+    programCodeBlockStructure.set(*this, ProgramCodeBlock::createStructure(*this, 0, jsNull()));
+    moduleProgramCodeBlockStructure.set(*this, ModuleProgramCodeBlock::createStructure(*this, 0, jsNull()));
+    evalCodeBlockStructure.set(*this, EvalCodeBlock::createStructure(*this, 0, jsNull()));
+    functionCodeBlockStructure.set(*this, FunctionCodeBlock::createStructure(*this, 0, jsNull()));
+#if ENABLE(WEBASSEMBLY)
+    webAssemblyCodeBlockStructure.set(*this, WebAssemblyCodeBlock::createStructure(*this, 0, jsNull()));
+#endif
+
     iterationTerminator.set(*this, JSFinalObject::create(*this, JSFinalObject::createStructure(*this, 0, jsNull(), 1)));
+    nativeStdFunctionCellStructure.set(*this, NativeStdFunctionCell::createStructure(*this, 0, jsNull()));
     smallStrings.initializeCommonStrings(*this);
 
     wtfThreadData().setCurrentAtomicStringTable(existingEntryAtomicStringTable);
 
 #if ENABLE(JIT)
     jitStubs = std::make_unique<JITThunks>();
-    arityCheckFailReturnThunks = std::make_unique<ArityCheckFailReturnThunks>();
+    allCalleeSaveRegisterOffsets = std::make_unique<RegisterAtOffsetList>(RegisterSet::vmCalleeSaveRegisters(), RegisterAtOffsetList::ZeroBased);
 #endif
     arityCheckData = std::make_unique<CommonSlowPaths::ArityCheckData>();
 
@@ -252,7 +277,7 @@ VM::VM(VMType vmType, HeapType heapType)
     ftlThunks = std::make_unique<FTL::Thunks>();
 #endif // ENABLE(FTL_JIT)
 
-    interpreter->initialize(this->canUseJIT());
+    interpreter->initialize();
 
 #if ENABLE(JIT)
     initializeHostCallReturnValue(); // This is needed to convince the linker not to drop host call return support.
@@ -262,7 +287,7 @@ VM::VM(VMType vmType, HeapType heapType)
 
     LLInt::Data::performAssertions(*this);
 
-    if (Options::enableProfiler()) {
+    if (Options::useProfiler()) {
         m_perBytecodeProfiler = std::make_unique<Profiler::Database>(*this);
 
         StringPrintStream pathOut;
@@ -273,6 +298,8 @@ VM::VM(VMType vmType, HeapType heapType)
         m_perBytecodeProfiler->registerToSaveAtExit(pathOut.toCString().data());
     }
 
+    callFrameForCatch = nullptr;
+
 #if ENABLE(DFG_JIT)
     if (canUseJIT())
         dfgState = std::make_unique<DFG::LongLivedState>();
@@ -282,16 +309,39 @@ VM::VM(VMType vmType, HeapType heapType)
     // won't use this.
     m_typedArrayController = adoptRef(new SimpleTypedArrayController());
 
-    if (Options::enableTypeProfiler())
+    m_bytecodeIntrinsicRegistry = std::make_unique<BytecodeIntrinsicRegistry>(*this);
+
+    if (Options::useTypeProfiler())
         enableTypeProfiler();
-    if (Options::enableControlFlowProfiler())
+    if (Options::useControlFlowProfiler())
         enableControlFlowProfiler();
+#if ENABLE(SAMPLING_PROFILER)
+    if (Options::useSamplingProfiler()) {
+        setShouldBuildPCToCodeOriginMapping();
+        m_samplingProfiler = adoptRef(new SamplingProfiler(*this, Stopwatch::create()));
+        m_samplingProfiler->start();
+    }
+#endif // ENABLE(SAMPLING_PROFILER)
+
+    if (Options::alwaysGeneratePCToCodeOriginMap())
+        setShouldBuildPCToCodeOriginMapping();
+
+    if (Options::watchdog()) {
+        std::chrono::milliseconds timeoutMillis(Options::watchdog());
+        Watchdog& watchdog = ensureWatchdog();
+        watchdog.setTimeLimit(timeoutMillis);
+    }
 }
 
 VM::~VM()
 {
     // Never GC, ever again.
     heap.incrementDeferralDepth();
+
+#if ENABLE(SAMPLING_PROFILER)
+    if (m_samplingProfiler)
+        m_samplingProfiler->shutdown();
+#endif // ENABLE(SAMPLING_PROFILER)
 
 #if ENABLE(DFG_JIT)
     // Make sure concurrent compilations are done, but don't install them, since there is
@@ -336,6 +386,11 @@ VM::~VM()
 #endif
 }
 
+void VM::setLastStackTop(void* lastStackTop)
+{
+    m_lastStackTop = lastStackTop;
+}
+
 Ref<VM> VM::createContextGroup(HeapType heapType)
 {
     return adoptRef(*new VM(APIContextGroup, heapType));
@@ -371,6 +426,39 @@ VM*& VM::sharedInstanceInternal()
     return sharedInstance;
 }
 
+Watchdog& VM::ensureWatchdog()
+{
+    if (!m_watchdog) {
+        m_watchdog = adoptRef(new Watchdog());
+
+        // The LLINT peeks into the Watchdog object directly. In order to do that,
+        // the LLINT assumes that the internal shape of a std::unique_ptr is the
+        // same as a plain C++ pointer, and loads the address of Watchdog from it.
+        RELEASE_ASSERT(*reinterpret_cast<Watchdog**>(&m_watchdog) == m_watchdog.get());
+
+        // And if we've previously compiled any functions, we need to revert
+        // them because they don't have the needed polling checks for the watchdog
+        // yet.
+        deleteAllCode();
+    }
+    return *m_watchdog;
+}
+
+HeapProfiler& VM::ensureHeapProfiler()
+{
+    if (!m_heapProfiler)
+        m_heapProfiler = std::make_unique<HeapProfiler>(*this);
+    return *m_heapProfiler;
+}
+
+#if ENABLE(SAMPLING_PROFILER)
+void VM::ensureSamplingProfiler(RefPtr<Stopwatch>&& stopwatch)
+{
+    if (!m_samplingProfiler)
+        m_samplingProfiler = adoptRef(new SamplingProfiler(*this, WTFMove(stopwatch)));
+}
+#endif // ENABLE(SAMPLING_PROFILER)
+
 #if ENABLE(JIT)
 static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
 {
@@ -401,29 +489,31 @@ static ThunkGenerator thunkGeneratorForIntrinsic(Intrinsic intrinsic)
         return logThunkGenerator;
     case IMulIntrinsic:
         return imulThunkGenerator;
+    case RandomIntrinsic:
+        return randomThunkGenerator;
     default:
         return 0;
     }
 }
 
-NativeExecutable* VM::getHostFunction(NativeFunction function, NativeFunction constructor)
+NativeExecutable* VM::getHostFunction(NativeFunction function, NativeFunction constructor, const String& name)
 {
-    return jitStubs->hostFunctionStub(this, function, constructor);
+    return jitStubs->hostFunctionStub(this, function, constructor, name);
 }
-NativeExecutable* VM::getHostFunction(NativeFunction function, Intrinsic intrinsic)
+NativeExecutable* VM::getHostFunction(NativeFunction function, Intrinsic intrinsic, const String& name)
 {
     ASSERT(canUseJIT());
-    return jitStubs->hostFunctionStub(this, function, intrinsic != NoIntrinsic ? thunkGeneratorForIntrinsic(intrinsic) : 0, intrinsic);
+    return jitStubs->hostFunctionStub(this, function, intrinsic != NoIntrinsic ? thunkGeneratorForIntrinsic(intrinsic) : 0, intrinsic, name);
 }
 
 #else // !ENABLE(JIT)
 
-NativeExecutable* VM::getHostFunction(NativeFunction function, NativeFunction constructor)
+NativeExecutable* VM::getHostFunction(NativeFunction function, NativeFunction constructor, const String& name)
 {
     return NativeExecutable::create(*this,
         adoptRef(new NativeJITCode(MacroAssemblerCodeRef::createLLIntCodeRef(llint_native_call_trampoline), JITCode::HostCallThunk)), function,
         adoptRef(new NativeJITCode(MacroAssemblerCodeRef::createLLIntCodeRef(llint_native_construct_trampoline), JITCode::HostCallThunk)), constructor,
-        NoIntrinsic);
+        NoIntrinsic, name);
 }
 
 #endif // !ENABLE(JIT)
@@ -450,24 +540,33 @@ void VM::stopSampling()
     interpreter->stopSampling();
 }
 
-void VM::prepareToDiscardCode()
+void VM::whenIdle(std::function<void()> callback)
 {
-#if ENABLE(DFG_JIT)
-    for (unsigned i = DFG::numberOfWorklists(); i--;) {
-        if (DFG::Worklist* worklist = DFG::worklistForIndexOrNull(i))
-            worklist->completeAllPlansForVM(*this);
+    if (!entryScope) {
+        callback();
+        return;
     }
-#endif // ENABLE(DFG_JIT)
+
+    entryScope->addDidPopListener(callback);
 }
 
-void VM::discardAllCode()
+void VM::deleteAllLinkedCode()
 {
-    prepareToDiscardCode();
-    m_codeCache->clear();
-    m_regExpCache->invalidateCode();
-    heap.deleteAllCompiledCode();
-    heap.deleteAllUnlinkedFunctionCode();
-    heap.reportAbandonedObjectGraph();
+    whenIdle([this]() {
+        heap.deleteAllCodeBlocks();
+        heap.reportAbandonedObjectGraph();
+    });
+}
+
+void VM::deleteAllCode()
+{
+    whenIdle([this]() {
+        m_codeCache->clear();
+        m_regExpCache->deleteAllCode();
+        heap.deleteAllCodeBlocks();
+        heap.deleteAllUnlinkedCodeBlocks();
+        heap.reportAbandonedObjectGraph();
+    });
 }
 
 void VM::dumpSampleData(ExecState* exec)
@@ -491,58 +590,6 @@ void VM::clearSourceProviderCaches()
     sourceProviderCacheMap.clear();
 }
 
-struct StackPreservingRecompiler : public MarkedBlock::VoidFunctor {
-    HashSet<FunctionExecutable*> currentlyExecutingFunctions;
-    inline void visit(JSCell* cell)
-    {
-        if (!cell->inherits(FunctionExecutable::info()))
-            return;
-        FunctionExecutable* executable = jsCast<FunctionExecutable*>(cell);
-        if (currentlyExecutingFunctions.contains(executable))
-            return;
-        executable->clearCode();
-    }
-    IterationStatus operator()(JSCell* cell)
-    {
-        visit(cell);
-        return IterationStatus::Continue;
-    }
-};
-
-void VM::releaseExecutableMemory()
-{
-    prepareToDiscardCode();
-
-    if (entryScope) {
-        StackPreservingRecompiler recompiler;
-        HeapIterationScope iterationScope(heap);
-        HashSet<JSCell*> roots;
-        heap.getConservativeRegisterRoots(roots);
-        HashSet<JSCell*>::iterator end = roots.end();
-        for (HashSet<JSCell*>::iterator ptr = roots.begin(); ptr != end; ++ptr) {
-            ScriptExecutable* executable = 0;
-            JSCell* cell = *ptr;
-            if (cell->inherits(ScriptExecutable::info()))
-                executable = static_cast<ScriptExecutable*>(*ptr);
-            else if (cell->inherits(JSFunction::info())) {
-                JSFunction* function = jsCast<JSFunction*>(*ptr);
-                if (function->isHostFunction())
-                    continue;
-                executable = function->jsExecutable();
-            } else
-                continue;
-            ASSERT(executable->inherits(ScriptExecutable::info()));
-            executable->unlinkCalls();
-            if (executable->inherits(FunctionExecutable::info()))
-                recompiler.currentlyExecutingFunctions.add(static_cast<FunctionExecutable*>(executable));
-
-        }
-        heap.objectSpace().forEachLiveCell<StackPreservingRecompiler>(iterationScope, recompiler);
-    }
-    m_regExpCache->invalidateCode();
-    heap.collectAllGarbage();
-}
-
 void VM::throwException(ExecState* exec, Exception* exception)
 {
     if (Options::breakOnThrow()) {
@@ -551,6 +598,9 @@ void VM::throwException(ExecState* exec, Exception* exception)
     }
 
     ASSERT(exec == topCallFrame || exec == exec->lexicalGlobalObject()->globalExec() || exec == exec->vmEntryGlobalObject()->globalExec());
+
+    interpreter->notifyDebuggerOfExceptionToBeThrown(exec, exception);
+
     setException(exception);
 }
 
@@ -585,7 +635,7 @@ size_t VM::updateReservedZoneSize(size_t reservedZoneSize)
     return oldReservedZoneSize;
 }
 
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) || (OS(WINDOWS) && PLATFORM(JAVA))
 // On Windows the reserved stack space consists of committed memory, a guard page, and uncommitted memory,
 // where the guard page is a barrier between committed and uncommitted memory.
 // When data from the guard page is read or written, the guard page is moved, and memory is committed.
@@ -612,7 +662,7 @@ static void preCommitStackMemory(void* stackLimit)
 
 inline void VM::updateStackLimit()
 {
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) || (OS(WINDOWS) && PLATFORM(JAVA))
     void* lastStackLimit = m_stackLimit;
 #endif
 
@@ -634,7 +684,7 @@ inline void VM::updateStackLimit()
 #endif
     }
 
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) || (OS(WINDOWS) && PLATFORM(JAVA))
     if (lastStackLimit != m_stackLimit)
         preCommitStackMemory(m_stackLimit);
 #endif
@@ -649,11 +699,6 @@ void VM::updateFTLLargestStackSize(size_t stackSize)
     }
 }
 #endif
-
-void releaseExecutableMemory(VM& vm)
-{
-    vm.releaseExecutableMemory();
-}
 
 #if ENABLE(DFG_JIT)
 void VM::gatherConservativeRoots(ConservativeRoots& conservativeRoots)
@@ -744,7 +789,6 @@ void VM::setEnabledProfiler(LegacyProfiler* profiler)
 {
     m_enabledProfiler = profiler;
     if (m_enabledProfiler) {
-        prepareToDiscardCode();
         SetEnabledProfilerFunctor functor;
         heap.forEachCodeBlock(functor);
     }

@@ -57,7 +57,7 @@ Node* highestAncestor(Node*);
 Node* highestEditableRoot(const Position&, EditableType = ContentIsEditable);
 
 Node* highestEnclosingNodeOfType(const Position&, bool (*nodeIsOfType)(const Node*),
-    EditingBoundaryCrossingRule = CannotCrossEditingBoundary, Node* stayWithin = 0);
+    EditingBoundaryCrossingRule = CannotCrossEditingBoundary, Node* stayWithin = nullptr);
 Node* highestNodeToRemoveInPruning(Node*);
 Node* lowestEditableAncestor(Node*);
 
@@ -143,9 +143,9 @@ Position nextVisuallyDistinctCandidate(const Position&);
 Position previousVisuallyDistinctCandidate(const Position&);
 
 Position positionOutsideTabSpan(const Position&);
-Position positionBeforeContainingSpecialElement(const Position&, Node** containingSpecialElement = 0);
-Position positionAfterContainingSpecialElement(const Position&, Node** containingSpecialElement = 0);
-Position positionOutsideContainingSpecialElement(const Position&, Node** containingSpecialElement = 0);
+Position positionBeforeContainingSpecialElement(const Position&, Node** containingSpecialElement = nullptr);
+Position positionAfterContainingSpecialElement(const Position&, Node** containingSpecialElement = nullptr);
+Position positionOutsideContainingSpecialElement(const Position&, Node** containingSpecialElement = nullptr);
 
 inline Position firstPositionInOrBeforeNode(Node* node)
 {
@@ -160,6 +160,9 @@ inline Position lastPositionInOrAfterNode(Node* node)
         return Position();
     return editingIgnoresContent(node) ? positionAfterNode(node) : lastPositionInNode(node);
 }
+
+Position firstEditablePositionAfterPositionInRoot(const Position&, Node*);
+Position lastEditablePositionBeforePositionInRoot(const Position&, Node*);
 
 // comparision functions on Position
 
@@ -186,8 +189,6 @@ void updatePositionForNodeRemoval(Position&, Node&);
 
 // Functions returning VisiblePosition
 
-VisiblePosition firstEditablePositionAfterPositionInRoot(const Position&, Node*);
-VisiblePosition lastEditablePositionBeforePositionInRoot(const Position&, Node*);
 VisiblePosition visiblePositionBeforeNode(Node*);
 VisiblePosition visiblePositionAfterNode(Node*);
 
@@ -206,8 +207,8 @@ VisiblePosition visiblePositionForIndexUsingCharacterIterator(Node*, int index);
 
 // Functions returning HTMLElement
 
-WEBCORE_EXPORT PassRefPtr<HTMLElement> createDefaultParagraphElement(Document&);
-PassRefPtr<HTMLElement> createBreakElement(Document&);
+WEBCORE_EXPORT Ref<HTMLElement> createDefaultParagraphElement(Document&);
+Ref<HTMLElement> createBreakElement(Document&);
 PassRefPtr<HTMLElement> createOrderedListElement(Document&);
 PassRefPtr<HTMLElement> createUnorderedListElement(Document&);
 PassRefPtr<HTMLElement> createListItemElement(Document&);
@@ -215,17 +216,17 @@ Ref<HTMLElement> createHTMLElement(Document&, const QualifiedName&);
 Ref<HTMLElement> createHTMLElement(Document&, const AtomicString&);
 
 HTMLElement* enclosingList(Node*);
-HTMLElement* outermostEnclosingList(Node*, Node* rootList = 0);
+HTMLElement* outermostEnclosingList(Node*, Node* rootList = nullptr);
 Node* enclosingListChild(Node*);
 
 // -------------------------------------------------------------------------
 // Element
 // -------------------------------------------------------------------------
 
-PassRefPtr<Element> createTabSpanElement(Document&);
-PassRefPtr<Element> createTabSpanElement(Document&, PassRefPtr<Node> tabTextNode);
-PassRefPtr<Element> createTabSpanElement(Document&, const String& tabText);
-PassRefPtr<Element> createBlockPlaceholderElement(Document&);
+Ref<Element> createTabSpanElement(Document&);
+Ref<Element> createTabSpanElement(Document&, PassRefPtr<Node> tabTextNode);
+Ref<Element> createTabSpanElement(Document&, const String& tabText);
+Ref<Element> createBlockPlaceholderElement(Document&);
 
 Element* editableRootForPosition(const Position&, EditableType = ContentIsEditable);
 Element* unsplittableElementForPosition(const Position&);

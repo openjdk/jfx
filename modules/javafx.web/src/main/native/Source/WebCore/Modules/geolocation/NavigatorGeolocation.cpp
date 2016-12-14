@@ -53,7 +53,7 @@ NavigatorGeolocation* NavigatorGeolocation::from(Navigator* navigator)
     if (!supplement) {
         auto newSupplement = std::make_unique<NavigatorGeolocation>(navigator->frame());
         supplement = newSupplement.get();
-        provideTo(navigator, supplementName(), WTF::move(newSupplement));
+        provideTo(navigator, supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
@@ -66,9 +66,9 @@ void NavigatorGeolocation::resetAllGeolocationPermission()
 }
 #endif // PLATFORM(IOS)
 
-Geolocation* NavigatorGeolocation::geolocation(Navigator* navigator)
+Geolocation* NavigatorGeolocation::geolocation(Navigator& navigator)
 {
-    return NavigatorGeolocation::from(navigator)->geolocation();
+    return NavigatorGeolocation::from(&navigator)->geolocation();
 }
 
 Geolocation* NavigatorGeolocation::geolocation() const

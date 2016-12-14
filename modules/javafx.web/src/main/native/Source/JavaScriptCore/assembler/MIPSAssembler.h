@@ -151,11 +151,11 @@ public:
     typedef MIPSRegisters::FPRegisterID FPRegisterID;
     typedef SegmentedVector<AssemblerLabel, 64> Jumps;
 
-    static RegisterID firstRegister() { return MIPSRegisters::r0; }
-    static RegisterID lastRegister() { return MIPSRegisters::r31; }
+    static constexpr RegisterID firstRegister() { return MIPSRegisters::r0; }
+    static constexpr RegisterID lastRegister() { return MIPSRegisters::r31; }
 
-    static FPRegisterID firstFPRegister() { return MIPSRegisters::f0; }
-    static FPRegisterID lastFPRegister() { return MIPSRegisters::f31; }
+    static constexpr FPRegisterID firstFPRegister() { return MIPSRegisters::f0; }
+    static constexpr FPRegisterID lastFPRegister() { return MIPSRegisters::f31; }
 
     MIPSAssembler()
         : m_indexOfLastWatchpoint(INT_MIN)
@@ -238,6 +238,11 @@ public:
     void lui(RegisterID rt, int imm)
     {
         emitInst(0x3c000000 | (rt << OP_SH_RT) | (imm & 0xffff));
+    }
+
+    void clz(RegisterID rd, RegisterID rs)
+    {
+        emitInst(0x70000020 | (rd << OP_SH_RD) | (rs << OP_SH_RS) | (rd << OP_SH_RT));
     }
 
     void addiu(RegisterID rt, RegisterID rs, int imm)

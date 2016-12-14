@@ -47,7 +47,8 @@ void FETile::platformApplySoftware()
     FilterEffect* in = inputEffect(0);
 
     ImageBuffer* resultImage = createImageBufferResult();
-    if (!resultImage)
+    ImageBuffer* inBuffer = in->asImageBuffer();
+    if (!resultImage || !inBuffer)
         return;
 
     setIsAlphaImage(in->isAlphaImage());
@@ -63,26 +64,26 @@ void FETile::platformApplySoftware()
         tileRect.scale(filter.filterResolution().width(), filter.filterResolution().height());
     }
 
-    auto tileImage = SVGRenderingContext::createImageBuffer(tileRect, tileRect, ColorSpaceDeviceRGB, filter().renderingMode());
+    auto tileImage = SVGRenderingContext::createImageBuffer(tileRect, tileRect, ColorSpaceSRGB, filter().renderingMode());
     if (!tileImage)
         return;
 
-    GraphicsContext* tileImageContext = tileImage->context();
-    tileImageContext->translate(-inMaxEffectLocation.x(), -inMaxEffectLocation.y());
-    tileImageContext->drawImageBuffer(in->asImageBuffer(), ColorSpaceDeviceRGB, in->absolutePaintRect().location());
+    GraphicsContext& tileImageContext = tileImage->context();
+    tileImageContext.translate(-inMaxEffectLocation.x(), -inMaxEffectLocation.y());
+    tileImageContext.drawImageBuffer(*inBuffer, in->absolutePaintRect().location());
 
-    auto tileImageCopy = tileImage->copyImage(CopyBackingStore);
+    auto tileImageCopy = ImageBuffer::sinkIntoImage(WTFMove(tileImage));
     if (!tileImageCopy)
         return;
 
-    auto pattern = Pattern::create(WTF::move(tileImageCopy), true, true);
+    auto pattern = Pattern::create(WTFMove(tileImageCopy), true, true);
 
     AffineTransform patternTransform;
     patternTransform.translate(inMaxEffectLocation.x() - maxEffectLocation.x(), inMaxEffectLocation.y() - maxEffectLocation.y());
     pattern.get().setPatternSpaceTransform(patternTransform);
-    GraphicsContext* filterContext = resultImage->context();
-    filterContext->setFillPattern(WTF::move(pattern));
-    filterContext->fillRect(FloatRect(FloatPoint(), absolutePaintRect().size()));
+    GraphicsContext& filterContext = resultImage->context();
+    filterContext.setFillPattern(WTFMove(pattern));
+    filterContext.fillRect(FloatRect(FloatPoint(), absolutePaintRect().size()));
 }
 
 void FETile::dump()

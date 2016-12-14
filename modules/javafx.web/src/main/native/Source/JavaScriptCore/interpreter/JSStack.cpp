@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2013, 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,17 +33,20 @@
 #include "Interpreter.h"
 #include "JSCInlines.h"
 #include "Options.h"
+#include <wtf/Lock.h>
 
 namespace JSC {
 
 #if !ENABLE(JIT)
 static size_t committedBytesCount = 0;
 
-static Mutex& stackStatisticsMutex()
+static size_t commitSize()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(Mutex, staticMutex, ());
-    return staticMutex;
+    static size_t size = std::max<size_t>(16 * 1024, pageSize());
+    return size;
 }
+
+static StaticLock stackStatisticsMutex;
 #endif // !ENABLE(JIT)
 
 JSStack::JSStack(VM& vm)
@@ -58,7 +61,7 @@ JSStack::JSStack(VM& vm)
     size_t capacity = Options::maxPerThreadStackUsage();
     ASSERT(capacity && isPageAligned(capacity));
 
-    m_reservation = PageReservation::reserve(WTF::roundUpToMultipleOf(commitSize, capacity), OSAllocator::JSVMStackPages);
+    m_reservation = PageReservation::reserve(WTF::roundUpToMultipleOf(commitSize(), capacity), OSAllocator::JSVMStackPages);
     setStackLimit(highAddress());
     m_commitTop = highAddress();
 
@@ -92,7 +95,7 @@ bool JSStack::growSlowCase(Register* newTopOfStack)
     // have it is still within our budget. If not, we'll fail to grow and
     // return false.
     ptrdiff_t delta = reinterpret_cast<char*>(m_commitTop) - reinterpret_cast<char*>(newTopOfStackWithReservedZone);
-    delta = WTF::roundUpToMultipleOf(commitSize, delta);
+    delta = WTF::roundUpToMultipleOf(commitSize(), delta);
     Register* newCommitTop = m_commitTop - (delta / sizeof(Register));
     if (newCommitTop < reservationTop())
         return false;
@@ -103,11 +106,6 @@ bool JSStack::growSlowCase(Register* newTopOfStack)
     m_commitTop = newCommitTop;
     setStackLimit(newTopOfStack);
     return true;
-}
-
-void JSStack::gatherConservativeRoots(ConservativeRoots& conservativeRoots)
-{
-    conservativeRoots.add(topOfStack() + 1, highAddress());
 }
 
 void JSStack::gatherConservativeRoots(ConservativeRoots& conservativeRoots, JITStubRoutineSet& jitStubRoutines, CodeBlockSet& codeBlocks)
@@ -139,14 +137,9 @@ void JSStack::releaseExcessCapacity()
     m_commitTop = highAddressWithReservedZone;
 }
 
-void JSStack::initializeThreading()
-{
-    stackStatisticsMutex();
-}
-
 void JSStack::addToCommittedByteCount(long byteCount)
 {
-    MutexLocker locker(stackStatisticsMutex());
+    LockHolder locker(stackStatisticsMutex);
     ASSERT(static_cast<long>(committedBytesCount) + byteCount > -1);
     committedBytesCount += byteCount;
 }
@@ -176,7 +169,7 @@ Register* JSStack::highAddress() const
 size_t JSStack::committedByteCount()
 {
 #if !ENABLE(JIT)
-    MutexLocker locker(stackStatisticsMutex());
+    LockHolder locker(stackStatisticsMutex);
     return committedBytesCount;
 #else
     // When using the C stack, we don't know how many stack pages are actually

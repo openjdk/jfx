@@ -105,7 +105,6 @@ my %baseTypeHash = ("Object" => 1, "Node" => 1, "NodeList" => 1, "NamedNodeMap" 
 
 # Constants
 my $shouldUseCGColor = defined $ENV{PLATFORM_NAME} && $ENV{PLATFORM_NAME} ne "macosx";
-my $nullableInit = "bool isNull = false;";
 my $exceptionInit = "WebCore::ExceptionCode ec = 0;";
 my $jsContextSetter = "WebCore::JSMainThreadNullState state;";
 my $exceptionRaiseOnError = "WebCore::raiseOnDOMError(ec);";
@@ -134,7 +133,6 @@ my %conflictMethod = (
     "description" => "NSObject",
     "doesNotRecognizeSelector:" => "NSObject",
     "encodeWithCoder:" => "NSObject",
-    "finalize" => "NSObject",
     "forwardInvocation:" => "NSObject",
     "hash" => "NSObject",
     "init" => "NSObject",
@@ -362,6 +360,10 @@ sub GenerateInterface
     $fatalError = 0;
 
     my $name = $interface->name;
+
+    # ObjC bindings only support EventTarget as base class for Node.
+    $interface->parents([grep(!/EventTarget/, @{$interface->parents})]) if $name ne "Node";
+
     my $className = GetClassName($name);
     my $parentClassName = "DOM" . GetParentImplClassName($interface);
     $isProtocol = $interface->extendedAttributes->{ObjCProtocol};
@@ -420,6 +422,7 @@ sub GetImplClassName
 {
     my $name = shift;
 
+    return "NativeNodeFilter" if $name eq "NodeFilter";
     return "DOMWindow" if $name eq "AbstractView";
     return $name;
 }
@@ -538,12 +541,16 @@ sub SkipFunction
     return 1 if $codeGenerator->GetArrayType($function->signature->type);
 
     return 1 if $function->signature->type eq "Promise";
+    return 1 if $function->signature->type eq "Symbol";
+    return 1 if $function->signature->extendedAttributes->{"CustomBinding"};
 
     foreach my $param (@{$function->parameters}) {
         return 1 if $codeGenerator->GetSequenceType($param->type);
         return 1 if $codeGenerator->GetArrayType($param->type);
         return 1 if $param->extendedAttributes->{"Clamp"};
     }
+
+    return 1 if $function->signature->extendedAttributes->{"Private"};
 
     return 0;
 }
@@ -558,6 +565,7 @@ sub SkipAttribute
     return 1 if $codeGenerator->IsTypedArrayType($type);
     return 1 if $codeGenerator->IsEnumType($type);
     return 1 if $type eq "EventHandler";
+    return 1 if $type eq "Symbol";
     return 1 if $attribute->isStatic;
 
     # This is for DynamicsCompressorNode.idl.
@@ -576,7 +584,6 @@ sub GetObjCType
     return "float" if $type eq "unrestricted float";
     return "id <$name>" if IsProtocolType($type);
     return $name if $codeGenerator->IsPrimitiveType($type) or $type eq "DOMTimeStamp";
-    return "unsigned short" if $type eq "CompareHow";
     return $name if IsCoreFoundationType($name);
     return "$name *";
 }
@@ -593,7 +600,7 @@ sub GetPropertyAttributes
     # FIXME: <rdar://problem/5049934> Consider using 'nonatomic' on the DOM @property declarations.
     if ($codeGenerator->IsStringType($type) || IsNativeObjCType($type)) {
         push(@attributes, "copy");
-    } elsif (!$codeGenerator->IsStringType($type) && !$codeGenerator->IsPrimitiveType($type) && $type ne "DOMTimeStamp" && $type ne "CompareHow") {
+    } elsif (!$codeGenerator->IsStringType($type) && !$codeGenerator->IsPrimitiveType($type) && $type ne "DOMTimeStamp") {
         push(@attributes, "strong");
     }
 
@@ -615,7 +622,6 @@ sub GetObjCTypeGetter
 
     return $argName if $codeGenerator->IsPrimitiveType($type) or $codeGenerator->IsStringType($type) or IsNativeObjCType($type);
     return $argName . "Node" if $type eq "EventTarget";
-    return "static_cast<WebCore::Range::CompareHow>($argName)" if $type eq "CompareHow";
     return "WTF::getPtr(nativeEventListener)" if $type eq "EventListener";
     return "WTF::getPtr(nativeNodeFilter)" if $type eq "NodeFilter";
     return "WTF::getPtr(nativeResolver)" if $type eq "XPathNSResolver";
@@ -694,7 +700,7 @@ sub AddIncludesForType
     }
 
     if ($type eq "NodeFilter") {
-        $implIncludes{"NodeFilter.h"} = 1;
+        $implIncludes{"NativeNodeFilter.h"} = 1;
         $implIncludes{"ObjCNodeFilterCondition.h"} = 1;
         return;
     }
@@ -1212,7 +1218,7 @@ sub GenerateImplementation
     # START implementation
     push(@implContent, "\@implementation $className\n\n");
 
-    # Only generate 'dealloc' and 'finalize' methods for direct subclasses of DOMObject.
+    # Only generate 'dealloc' for direct subclasses of DOMObject.
     if ($parentImplClassName eq "Object") {
         $implIncludes{"WebCoreObjCExtras.h"} = 1;
         push(@implContent, "- (void)dealloc\n");
@@ -1231,21 +1237,6 @@ sub GenerateImplementation
         }
         push(@implContent, "    [super dealloc];\n");
         push(@implContent, "}\n\n");
-
-        push(@implContent, "- (void)finalize\n");
-        push(@implContent, "{\n");
-        if ($interfaceName eq "NodeIterator") {
-            push(@implContent, "    if (_internal) {\n");
-            push(@implContent, "        [self detach];\n");
-            push(@implContent, "        IMPL->deref();\n");
-            push(@implContent, "    };\n");
-        } else {
-            push(@implContent, "    if (_internal)\n");
-            push(@implContent, "        IMPL->deref();\n");
-        }
-        push(@implContent, "    [super finalize];\n");
-        push(@implContent, "}\n\n");
-        
     }
 
     %attributeNames = ();
@@ -1294,7 +1285,7 @@ sub GenerateImplementation
             if ($attribute->signature->extendedAttributes->{"ImplementedBy"}) {
                 my $implementedBy = $attribute->signature->extendedAttributes->{"ImplementedBy"};
                 $implIncludes{"${implementedBy}.h"} = 1;
-                $getterContentHead = "${implementedBy}::${getterExpressionPrefix}IMPL";
+                $getterContentHead = "WebCore::${implementedBy}::${getterExpressionPrefix}*IMPL";
             } else {
                 $getterContentHead = "IMPL->$getterExpressionPrefix";
             }
@@ -1343,7 +1334,7 @@ sub GenerateImplementation
             } elsif ($idlType eq "Color") {
                 if ($shouldUseCGColor) {
                     $getterContentHead = "WebCore::cachedCGColor($getterContentHead";
-                    $getterContentTail .= ", WebCore::ColorSpaceDeviceRGB)";
+                    $getterContentTail .= ")";
                 } else {
                     $getterContentHead = "WebCore::nsColor($getterContentHead";
                     $getterContentTail .= ")";
@@ -1356,14 +1347,14 @@ sub GenerateImplementation
                 $getterContentTail .= "))";
             }
 
+            # It would be easy to add nullable support here if we ever need it, but we probably never
+            # will since we are unlikely to add Objective-C bindings that require it in the future.
+            # In particular, we'd have to decide what return type to use for "number or null".
+
             my $getterContent;
-            if ($hasGetterException || $attribute->signature->isNullable) {
+            if ($hasGetterException) {
                 $getterContent = $getterContentHead;
                 my $getterWithoutAttributes = $getterContentHead =~ /\($|, $/ ? "ec" : ", ec";
-                if ($attribute->signature->isNullable) {
-                    $getterContent .= $getterWithoutAttributes ? "isNull" : ", isNull";
-                    $getterWithoutAttributes = 0;
-                }
                 if ($hasGetterException) {
                     $getterContent .= $getterWithoutAttributes ? "ec" : ", ec";
                 }
@@ -1378,11 +1369,6 @@ sub GenerateImplementation
             push(@implContent, "{\n");
             push(@implContent, "    $jsContextSetter\n");
             push(@implContent, @customGetterContent);
-
-            # FIXME: Should we return a default value when isNull == true?
-            if ($attribute->signature->isNullable) {
-                push(@implContents, "    $nullableInit\n");
-            }
 
             if ($hasGetterException) {
                 # Differentiated between when the return type is a pointer and
@@ -1439,8 +1425,8 @@ sub GenerateImplementation
                 if ($attribute->signature->extendedAttributes->{"ImplementedBy"}) {
                     my $implementedBy = $attribute->signature->extendedAttributes->{"ImplementedBy"};
                     $implIncludes{"${implementedBy}.h"} = 1;
-                    unshift(@arguments, "IMPL");
-                    $functionName = "${implementedBy}::${functionName}";
+                    unshift(@arguments, "*IMPL");
+                    $functionName = "WebCore::${implementedBy}::${functionName}";
                 } else {
                     $functionName = "IMPL->${functionName}";
                 }
@@ -1558,7 +1544,7 @@ sub GenerateImplementation
                 my $paramName = $needsCustom{"NodeFilter"};
                 push(@functionContent, "    RefPtr<WebCore::NodeFilter> nativeNodeFilter;\n");
                 push(@functionContent, "    if ($paramName)\n");
-                push(@functionContent, "        nativeNodeFilter = WebCore::NodeFilter::create(WebCore::ObjCNodeFilterCondition::create($paramName));\n");
+                push(@functionContent, "        nativeNodeFilter = WebCore::NativeNodeFilter::create(WebCore::ObjCNodeFilterCondition::create($paramName));\n");
             }
 
             push(@parameterNames, "ec") if $raisesExceptions;
@@ -1567,8 +1553,8 @@ sub GenerateImplementation
             if ($function->signature->extendedAttributes->{"ImplementedBy"}) {
                 my $implementedBy = $function->signature->extendedAttributes->{"ImplementedBy"};
                 $implIncludes{"${implementedBy}.h"} = 1;
-                unshift(@parameterNames, $caller);
-                $content = "${implementedBy}::" . $codeGenerator->WK_lcfirst($functionName) . "(" . join(", ", @parameterNames) . ")";
+                unshift(@parameterNames, "*" . $caller);
+                $content = "WebCore::${implementedBy}::" . $codeGenerator->WK_lcfirst($functionName) . "(" . join(", ", @parameterNames) . ")";
             } else {
                 my $functionImplementationName = $function->signature->extendedAttributes->{"ImplementedAs"} || $codeGenerator->WK_lcfirst($functionName);
                 $content = "$caller->" . $functionImplementationName . "(" . join(", ", @parameterNames) . ")";

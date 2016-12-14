@@ -1,4 +1,4 @@
-# Copyright (C) 2011, 2012 Apple Inc. All rights reserved.
+# Copyright (C) 2011, 2012, 2015-2016 Apple Inc. All rights reserved.
 # Copyright (C) 2013 University of Szeged. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,34 @@ require "config"
 require "ast"
 require "opt"
 require "risc"
+
+# GPR conventions, to match the baseline JIT
+#
+#  x0 => t0, a0, r0
+#  x1 => t1, a1, r1
+#  x2 => t2, a2, r2
+#  x3 => t3, a3, r3
+#  x6 =>            (callee-save scratch)
+#  x7 => cfr        (ARMv7 only)
+#  x8 => t4         (callee-save)
+#  x9 => t5         (callee-save)
+# x10 =>            (callee-save scratch)
+# x11 => cfr        (ARM and ARMv7 traditional)
+# x12 =>            (callee-save scratch)
+#  lr => lr
+#  sp => sp
+#  pc => pc
+#
+# FPR conventions, to match the baseline JIT
+#
+# d0 => ft0, fa0, fr
+# d1 => ft1, fa1
+# d2 => ft2
+# d3 => ft3
+# d4 => ft4
+# d5 => ft5
+# d6 =>              (scratch)
+# d7 =>              (scratch)
 
 def isARMv7
     case $activeBackend
@@ -119,9 +147,9 @@ end
 class FPRegisterID
     def armOperand
         case name
-        when "ft0", "fr"
+        when "ft0", "fr", "fa0"
             "d0"
-        when "ft1"
+        when "ft1", "fa1"
             "d1"
         when "ft2"
             "d2"
@@ -321,6 +349,7 @@ class Instruction
     def lowerARMCommon
         $asm.codeOrigin codeOriginString if $enableCodeOriginComments
         $asm.annotation annotation if $enableInstrAnnotations
+        $asm.debugAnnotation codeOrigin.debugDirective if $enableDebugAnnotations
 
         case opcode
         when "addi", "addp", "addis", "addps"

@@ -60,7 +60,7 @@ static RetainPtr<NSLocale> determineLocale(const String& locale)
     RetainPtr<NSLocale> currentLocale = [NSLocale currentLocale];
     String currentLocaleLanguage = languageFromLocale(String([currentLocale.get() localeIdentifier]));
     String localeLanguage = languageFromLocale(locale);
-    if (equalIgnoringCase(currentLocaleLanguage, localeLanguage))
+    if (equalIgnoringASCIICase(currentLocaleLanguage, localeLanguage))
         return currentLocale;
     // It seems initWithLocaleIdentifier accepts dash-separated locale identifier.
      return adoptNS([[NSLocale alloc] initWithLocaleIdentifier:locale]);
@@ -84,11 +84,7 @@ static RetainPtr<NSDateFormatter> createDateTimeFormatter(NSLocale* locale, NSCa
 
 LocaleMac::LocaleMac(NSLocale* locale)
     : m_locale(locale)
-#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 80000) || PLATFORM(MAC)
     , m_gregorianCalendar(adoptNS([[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian]))
-#else
-    , m_gregorianCalendar(adoptNS([[NSCalendar alloc] initWithCalendarIdentifier:NSGregorianCalendar]))
-#endif
     , m_didInitializeNumberData(false)
 {
     NSArray* availableLanguages = [NSLocale ISOLanguageCodes];

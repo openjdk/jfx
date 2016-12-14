@@ -37,6 +37,7 @@
 #include "Logging.h"
 #include "RenderElement.h"
 #include "RenderStyle.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -168,7 +169,7 @@ void CompositeAnimation::updateTransitions(RenderElement* renderer, RenderStyle*
                 if (!equal && isActiveTransition) {
                     // Add the new transition
                     RefPtr<ImplicitAnimation> implicitAnimation = ImplicitAnimation::create(animation, prop, renderer, this, modifiedCurrentStyle ? modifiedCurrentStyle.get() : fromStyle);
-                    LOG(Animations, "Created ImplicitAnimation %p for property %s duration %.2f delay %.2f", implicitAnimation.get(), getPropertyName(prop), animation.duration(), animation.delay());
+                    LOG(Animations, "Created ImplicitAnimation %p on renderer %p for property %s duration %.2f delay %.2f", implicitAnimation.get(), renderer, getPropertyName(prop), animation.duration(), animation.delay());
                     m_transitions.set(prop, implicitAnimation.release());
                 }
 
@@ -185,7 +186,7 @@ void CompositeAnimation::updateTransitions(RenderElement* renderer, RenderStyle*
         if (!transition->active()) {
             animationController().animationWillBeRemoved(transition.get());
             toBeRemoved.append(transition->animatingProperty());
-            LOG(Animations, "Removing ImplicitAnimation %p for property %s", transition.get(), getPropertyName(transition->animatingProperty()));
+            LOG(Animations, "Removing ImplicitAnimation %p from renderer %p for property %s", transition.get(), renderer, getPropertyName(transition->animatingProperty()));
         }
     }
 
@@ -221,7 +222,7 @@ void CompositeAnimation::updateKeyframeAnimations(RenderElement* renderer, Rende
         // Toss the animation order map.
         m_keyframeAnimationOrderMap.clear();
 
-        DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, none, ("none", AtomicString::ConstructFromLiteral));
+        static NeverDestroyed<const AtomicString> none("none", AtomicString::ConstructFromLiteral);
 
         // Now mark any still active animations as active and add any new animations.
         if (targetStyle->animations()) {
@@ -256,7 +257,7 @@ void CompositeAnimation::updateKeyframeAnimations(RenderElement* renderer, Rende
                     keyframeAnim->setIndex(i);
                 } else if ((animation.duration() || animation.delay()) && animation.iterationCount() && animationName != none) {
                     keyframeAnim = KeyframeAnimation::create(animation, renderer, i, this, targetStyle);
-                    LOG(Animations, "Creating KeyframeAnimation %p with keyframes %s, duration %.2f, delay %.2f, iterations %.2f", keyframeAnim.get(), animation.name().utf8().data(), animation.duration(), animation.delay(), animation.iterationCount());
+                    LOG(Animations, "Creating KeyframeAnimation %p on renderer %p with keyframes %s, duration %.2f, delay %.2f, iterations %.2f", keyframeAnim.get(), renderer, animation.name().utf8().data(), animation.duration(), animation.delay(), animation.iterationCount());
                     if (m_suspended) {
                         keyframeAnim->updatePlayState(AnimPlayStatePaused);
                         LOG(Animations, "  (created in suspended/paused state)");
@@ -288,12 +289,12 @@ void CompositeAnimation::updateKeyframeAnimations(RenderElement* renderer, Rende
             animsToBeRemoved.append(animation->name().impl());
             animationController().animationWillBeRemoved(animation.get());
             animation->clear();
-            LOG(Animations, "Removing KeyframeAnimation %p", animation.get());
+            LOG(Animations, "Removing KeyframeAnimation %p from renderer %p", animation.get(), renderer);
         }
     }
 
     // Now remove the animations from the list.
-    for (auto nameForRemoval : animsToBeRemoved)
+    for (auto* nameForRemoval : animsToBeRemoved)
         m_keyframeAnimations.remove(nameForRemoval);
 }
 
@@ -518,13 +519,8 @@ bool CompositeAnimation::pauseAnimationAtTime(const AtomicString& name, double t
     if (!keyframeAnim || !keyframeAnim->running())
         return false;
 
-    double count = keyframeAnim->m_animation->iterationCount();
-    if ((t >= 0.0) && ((count == Animation::IterationCountInfinite) || (t <= count * keyframeAnim->duration()))) {
-        keyframeAnim->freezeAtTime(t);
-        return true;
-    }
-
-    return false;
+    keyframeAnim->freezeAtTime(t);
+    return true;
 }
 
 bool CompositeAnimation::pauseTransitionAtTime(CSSPropertyID property, double t)

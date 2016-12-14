@@ -169,6 +169,9 @@ interface AccessibilityUIElement {
     readonly attribute AccessibilityUIElement verticalScrollbar;
 
     void scrollToMakeVisible();
+    void scrollToGlobalPoint(int x, int y);
+    void scrollToMakeVisibleWithSubFocus(int x, int y, int width, int height);
+
     void takeFocus();
     boolean scrollPageDown();
     boolean scrollPageUp();
@@ -198,6 +201,16 @@ interface AccessibilityUIElement {
     readonly attribute AccessibilityTextMarker startTextMarker;
     readonly attribute AccessibilityTextMarker endTextMarker;
     boolean setSelectedVisibleTextRange(AccessibilityTextMarkerRange range);
+    AccessibilityTextMarkerRange leftWordTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarkerRange rightWordTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarker previousWordStartTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarker nextWordEndTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarkerRange paragraphTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarker previousParagraphStartTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarker nextParagraphEndTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarkerRange sentenceTextMarkerRangeForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarker previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
+    AccessibilityTextMarker nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker textMarker);
 
     // Returns an ordered list of supported actions for an element.
     readonly attribute DOMString supportedActions;
@@ -219,6 +232,12 @@ interface AccessibilityUIElement {
     AccessibilityUIElement headerElementAtIndex(unsigned long index);
     // This will simulate the accessibilityDidBecomeFocused API in UIKit.
     void assistiveTechnologySimulatedFocus();
+    readonly attribute boolean isSearchField;
+    readonly attribute boolean isTextArea;
+
+    // Fieldset
+    readonly attribute boolean hasContainedByFieldsetTrait;
+    AccessibilityUIElement fieldsetAncestorElement();
 
     // Notification support.
     boolean addNotificationListener(object callbackFunction);

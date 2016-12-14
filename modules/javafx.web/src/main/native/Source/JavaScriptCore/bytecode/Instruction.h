@@ -32,6 +32,7 @@
 #include "BasicBlockLocation.h"
 #include "MacroAssembler.h"
 #include "Opcode.h"
+#include "PutByIdFlags.h"
 #include "SymbolTable.h"
 #include "TypeLocation.h"
 #include "PropertySlot.h"
@@ -74,6 +75,18 @@ struct Instruction {
         u.jsCell.clear();
         u.operand = operand;
     }
+    Instruction(unsigned unsignedValue)
+    {
+        // We have to initialize one of the pointer members to ensure that
+        // the entire struct is initialized in 64-bit.
+        u.jsCell.clear();
+        u.unsignedValue = unsignedValue;
+    }
+
+    Instruction(PutByIdFlags flags)
+    {
+        u.putByIdFlags = flags;
+    }
 
     Instruction(VM& vm, JSCell* owner, Structure* structure)
     {
@@ -106,7 +119,9 @@ struct Instruction {
     union {
         Opcode opcode;
         int operand;
+        unsigned unsignedValue;
         WriteBarrierBase<Structure> structure;
+        StructureID structureID;
         WriteBarrierBase<SymbolTable> symbolTable;
         WriteBarrierBase<StructureChain> structureChain;
         WriteBarrierBase<JSCell> jsCell;
@@ -125,6 +140,7 @@ struct Instruction {
         ToThisStatus toThisStatus;
         TypeLocation* location;
         BasicBlockLocation* basicBlockLocation;
+        PutByIdFlags putByIdFlags;
     } u;
 
 private:

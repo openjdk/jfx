@@ -56,10 +56,7 @@
 #if ENABLE(VIDEO_TRACK)
 #include "TextTrackList.h"
 #endif
-
-#if ENABLE(WEBVTT_REGIONS)
 #include "VTTRegionList.h"
-#endif
 
 namespace WebCore {
 
@@ -312,7 +309,7 @@ void MediaControlTimelineContainerElement::setTimeDisplaysHidden(bool hidden)
 
 RenderPtr<RenderElement> MediaControlTimelineContainerElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderMediaControlTimelineContainer>(*this, WTF::move(style));
+    return createRenderer<RenderMediaControlTimelineContainer>(*this, WTFMove(style));
 }
 
 // ----------------------------
@@ -332,7 +329,7 @@ Ref<MediaControlVolumeSliderContainerElement> MediaControlVolumeSliderContainerE
 
 RenderPtr<RenderElement> MediaControlVolumeSliderContainerElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderMediaVolumeSliderContainer>(*this, WTF::move(style));
+    return createRenderer<RenderMediaVolumeSliderContainer>(*this, WTFMove(style));
 }
 
 void MediaControlVolumeSliderContainerElement::defaultEventHandler(Event* event)
@@ -724,14 +721,14 @@ void MediaControlClosedCaptionsTrackListElement::defaultEventHandler(Event* even
 void MediaControlClosedCaptionsTrackListElement::updateDisplay()
 {
 #if ENABLE(VIDEO_TRACK)
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, selectedClassValue, ("selected", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> selectedClassValue("selected", AtomicString::ConstructFromLiteral);
 
     if (!mediaController()->hasClosedCaptions())
         return;
 
     if (!document().page())
         return;
-    CaptionUserPreferences::CaptionDisplayMode displayMode = document().page()->group().captionPreferences()->captionDisplayMode();
+    CaptionUserPreferences::CaptionDisplayMode displayMode = document().page()->group().captionPreferences().captionDisplayMode();
 
     HTMLMediaElement* mediaElement = parentMediaElement(this);
     if (!mediaElement)
@@ -746,9 +743,7 @@ void MediaControlClosedCaptionsTrackListElement::updateDisplay()
     RefPtr<Element> offMenuItem;
     bool trackMenuItemSelected = false;
 
-    for (unsigned i = 0, length = m_menuItems.size(); i < length; ++i) {
-        RefPtr<Element> trackItem = m_menuItems[i];
-
+    for (auto& trackItem : m_menuItems) {
         RefPtr<TextTrack> textTrack;
         MenuItemToTrackMap::iterator iter = m_menuToTrackMap.find(trackItem.get());
         if (iter == m_menuToTrackMap.end())
@@ -807,24 +802,23 @@ void MediaControlClosedCaptionsTrackListElement::rebuildTrackListMenu()
 
     if (!document().page())
         return;
-    CaptionUserPreferences* captionPreferences = document().page()->group().captionPreferences();
-    Vector<RefPtr<TextTrack>> tracksForMenu = captionPreferences->sortedTrackListForMenu(trackList);
+    auto& captionPreferences = document().page()->group().captionPreferences();
+    Vector<RefPtr<TextTrack>> tracksForMenu = captionPreferences.sortedTrackListForMenu(trackList);
 
-    RefPtr<Element> captionsHeader = document().createElement(h3Tag, ASSERT_NO_EXCEPTION);
+    Ref<Element> captionsHeader = document().createElement(h3Tag, ASSERT_NO_EXCEPTION);
     captionsHeader->appendChild(document().createTextNode(textTrackSubtitlesText()));
-    appendChild(captionsHeader);
-    RefPtr<Element> captionsMenuList = document().createElement(ulTag, ASSERT_NO_EXCEPTION);
+    appendChild(WTFMove(captionsHeader));
+    Ref<Element> captionsMenuList = document().createElement(ulTag, ASSERT_NO_EXCEPTION);
 
-    for (unsigned i = 0, length = tracksForMenu.size(); i < length; ++i) {
-        RefPtr<TextTrack> textTrack = tracksForMenu[i];
-        RefPtr<Element> menuItem = document().createElement(liTag, ASSERT_NO_EXCEPTION);
-        menuItem->appendChild(document().createTextNode(captionPreferences->displayNameForTrack(textTrack.get())));
-        captionsMenuList->appendChild(menuItem);
-        m_menuItems.append(menuItem);
-        m_menuToTrackMap.add(menuItem, textTrack);
+    for (auto& textTrack : tracksForMenu) {
+        Ref<Element> menuItem = document().createElement(liTag, ASSERT_NO_EXCEPTION);
+        menuItem->appendChild(document().createTextNode(captionPreferences.displayNameForTrack(textTrack.get())));
+        captionsMenuList->appendChild(menuItem.copyRef());
+        m_menuItems.append(menuItem.ptr());
+        m_menuToTrackMap.add(menuItem.ptr(), textTrack);
     }
 
-    appendChild(captionsMenuList);
+    appendChild(WTFMove(captionsMenuList));
 #endif
 }
 
@@ -1044,7 +1038,7 @@ Ref<MediaControlTimeRemainingDisplayElement> MediaControlTimeRemainingDisplayEle
 
 static const AtomicString& getMediaControlTimeRemainingDisplayElementShadowPseudoId()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, id, ("-webkit-media-controls-time-remaining-display", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> id("-webkit-media-controls-time-remaining-display", AtomicString::ConstructFromLiteral);
     return id;
 }
 
@@ -1063,7 +1057,7 @@ Ref<MediaControlCurrentTimeDisplayElement> MediaControlCurrentTimeDisplayElement
 
 static const AtomicString& getMediaControlCurrentTimeDisplayElementShadowPseudoId()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, id, ("-webkit-media-controls-current-time-display", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> id("-webkit-media-controls-current-time-display", AtomicString::ConstructFromLiteral);
     return id;
 }
 
@@ -1090,7 +1084,7 @@ Ref<MediaControlTextTrackContainerElement> MediaControlTextTrackContainerElement
 
 RenderPtr<RenderElement> MediaControlTextTrackContainerElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderTextTrackContainerElement>(*this, WTF::move(style));
+    return createRenderer<RenderTextTrackContainerElement>(*this, WTFMove(style));
 }
 
 static bool compareCueIntervalForDisplay(const CueInterval& one, const CueInterval& two)
@@ -1179,7 +1173,6 @@ void MediaControlTextTrackContainerElement::updateDisplay()
         LOG(Media, "MediaControlTextTrackContainerElement::updateDisplay(%p) - adding and positioning cue #%zu: \"%s\", start=%.2f, end=%.2f, line=%.2f", this, i, cue->text().utf8().data(), cue->startTime(), cue->endTime(), cue->line());
 
         RefPtr<VTTCueBox> displayBox = cue->getDisplayTree(m_videoDisplaySize.size(), m_fontSize);
-#if ENABLE(WEBVTT_REGIONS)
         if (cue->track()->mode() == TextTrack::disabledKeyword())
             continue;
 
@@ -1188,25 +1181,22 @@ void MediaControlTextTrackContainerElement::updateDisplay()
             // If cue has an empty text track cue region identifier or there is no
             // WebVTT region whose region identifier is identical to cue's text
             // track cue region identifier, run the following substeps:
-#endif
             if (displayBox->hasChildNodes() && !contains(displayBox.get())) {
                 // Note: the display tree of a cue is removed when the active flag of the cue is unset.
-                appendChild(displayBox, ASSERT_NO_EXCEPTION);
+                appendChild(*displayBox, ASSERT_NO_EXCEPTION);
                 cue->setFontSize(m_fontSize, m_videoDisplaySize.size(), m_fontSizeIsImportant);
             }
-#if ENABLE(WEBVTT_REGIONS)
         } else {
             // Let region be the WebVTT region whose region identifier
             // matches the text track cue region identifier of cue.
-            RefPtr<HTMLDivElement> regionNode = region->getDisplayTree();
+            Ref<HTMLDivElement> regionNode = region->getDisplayTree();
 
             // Append the region to the viewport, if it was not already.
-            if (!contains(regionNode.get()))
+            if (!contains(regionNode.ptr()))
                 appendChild(region->getDisplayTree());
 
             region->appendTextTrackCueBox(displayBox);
         }
-#endif
     }
 
     // 11. Return output.
@@ -1229,12 +1219,11 @@ void MediaControlTextTrackContainerElement::updateActiveCuesFontSize()
         return;
 
     float smallestDimension = std::min(m_videoDisplaySize.size().height(), m_videoDisplaySize.size().width());
-    float fontScale = document().page()->group().captionPreferences()->captionFontSizeScaleAndImportance(m_fontSizeIsImportant);
+    float fontScale = document().page()->group().captionPreferences().captionFontSizeScaleAndImportance(m_fontSizeIsImportant);
     m_fontSize = lroundf(smallestDimension * fontScale);
 
-    CueList activeCues = mediaElement->currentlyActiveCues();
-    for (size_t i = 0; i < activeCues.size(); ++i) {
-        TextTrackCue* cue = activeCues[i].data();
+    for (auto& activeCue : mediaElement->currentlyActiveCues()) {
+        TextTrackCue* cue = activeCue.data();
         if (!cue->isRenderable())
             continue;
 
@@ -1378,13 +1367,14 @@ RefPtr<Image> MediaControlTextTrackContainerElement::createTextTrackRepresentati
 
     IntRect paintingRect = IntRect(IntPoint(), layer->size());
 
-    std::unique_ptr<ImageBuffer> buffer(ImageBuffer::create(paintingRect.size(), deviceScaleFactor, ColorSpaceDeviceRGB));
+    // FIXME (149422): This buffer should not be unconditionally unaccelerated.
+    std::unique_ptr<ImageBuffer> buffer(ImageBuffer::create(paintingRect.size(), Unaccelerated, deviceScaleFactor));
     if (!buffer)
         return nullptr;
 
     layer->paint(buffer->context(), paintingRect, LayoutSize(), PaintBehaviorFlattenCompositingLayers, nullptr, RenderLayer::PaintLayerPaintingCompositingAllPhases);
 
-    return buffer->copyImage();
+    return ImageBuffer::sinkIntoImage(WTFMove(buffer));
 }
 
 void MediaControlTextTrackContainerElement::textTrackRepresentationBoundsChanged(const IntRect&)

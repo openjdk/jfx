@@ -76,30 +76,28 @@ sub applyPreprocessor
 
     my $pid = 0;
     if ($Config{osname} eq "cygwin") {
-# todo tav open3 doesn't produce output, but open2
-#    if ($Config{osname} eq "cygwin" || $Config{osname} eq 'MSWin32') {
-#    if (0) {
-      my @preprocessorAndFlags;
-      if ($preprocessor eq "/usr/bin/gcc") {
-          @preprocessorAndFlags = split(' ', $preprocessor);
-      } else {
-          $preprocessor =~ /"(.*)"/;
-          chomp(my $preprocessor = `cygpath -u '$1'`) if (defined $1);
-          chomp($fileName = `cygpath -w '$fileName'`);
-          @preprocessorAndFlags = ($preprocessor, "/nologo", "/EP");
-      }
-      # This call can fail if Windows rebases cygwin, so retry a few times until it succeeds.
-      for (my $tries = 0; !$pid && ($tries < 20); $tries++) {
-          eval {
-              # Suppress STDERR so that if we're using cl.exe, the output
-              # name isn't needlessly echoed.
-              use Symbol 'gensym'; my $err = gensym;
-              $pid = open3(\*PP_IN, \*PP_OUT, $err, @preprocessorAndFlags, @args, @macros, $fileName);
-              1;
-          } or do {
-              sleep 1;
-          }
-      };
+        $ENV{PATH} = "$ENV{PATH}:/cygdrive/c/cygwin/bin";
+        my @preprocessorAndFlags;
+        if ($preprocessor eq "/usr/bin/gcc") {
+            @preprocessorAndFlags = split(' ', $preprocessor);
+        } else {        
+            $preprocessor =~ /"(.*)"/;
+            chomp(my $preprocessor = `cygpath -u '$1'`) if (defined $1);
+            chomp($fileName = `cygpath -w '$fileName'`);
+            @preprocessorAndFlags = ($preprocessor, "/nologo", "/EP");
+        }
+        # This call can fail if Windows rebases cygwin, so retry a few times until it succeeds.
+        for (my $tries = 0; !$pid && ($tries < 20); $tries++) {
+            eval {
+                # Suppress STDERR so that if we're using cl.exe, the output
+                # name isn't needlessly echoed.
+                use Symbol 'gensym'; my $err = gensym;
+                $pid = open3(\*PP_IN, \*PP_OUT, $err, @preprocessorAndFlags, @args, @macros, $fileName);
+                1;
+            } or do {
+                sleep 1;
+            }
+        };
     } elsif ($Config::Config{"osname"} eq "MSWin32") {
         $pid = open2(\*PP_OUT, \*PP_IN, $preprocessor, @args, @macros, $fileName);
     } else {

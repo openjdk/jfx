@@ -186,8 +186,7 @@ inline void AtomicHTMLToken::initializeAttributes(const HTMLToken::AttributeList
         return;
 
     m_attributes.reserveInitialCapacity(size);
-    for (unsigned i = 0; i < size; ++i) {
-        const HTMLToken::Attribute& attribute = attributes[i];
+    for (auto& attribute : attributes) {
         if (attribute.name.isEmpty())
             continue;
 
@@ -237,7 +236,7 @@ inline AtomicHTMLToken::AtomicHTMLToken(HTMLToken::Type type, const AtomicString
     : m_type(type)
     , m_name(name)
     , m_selfClosing(false)
-    , m_attributes(WTF::move(attributes))
+    , m_attributes(WTFMove(attributes))
 {
     ASSERT(type == HTMLToken::StartTag || type == HTMLToken::EndTag);
 }

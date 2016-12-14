@@ -57,7 +57,7 @@ private:
 
 DataTransfer::DataTransfer(DataTransferAccessPolicy policy, std::unique_ptr<Pasteboard> pasteboard, Type type, bool forFileDrag)
     : m_policy(policy)
-    , m_pasteboard(WTF::move(pasteboard))
+    , m_pasteboard(WTFMove(pasteboard))
 #if ENABLE(DRAG_SUPPORT)
     , m_forDrag(type != CopyAndPaste)
     , m_forFileDrag(forFileDrag)
@@ -196,7 +196,7 @@ bool DataTransfer::hasFileOfType(const String& type)
     ASSERT_WITH_SECURITY_IMPLICATION(canReadTypes());
 
     for (const String& path : m_pasteboard->readFilenames()) {
-        if (equalIgnoringCase(File::contentTypeForFile(path), type))
+        if (equalIgnoringASCIICase(File::contentTypeForFile(path), type))
             return true;
     }
 

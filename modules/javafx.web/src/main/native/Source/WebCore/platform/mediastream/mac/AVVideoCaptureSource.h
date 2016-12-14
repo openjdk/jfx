@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,43 +30,57 @@
 
 #include "AVMediaCaptureSource.h"
 
-OBJC_CLASS AVCaptureVideoPreviewLayer;
+OBJC_CLASS CALayer;
 
+typedef struct CGImage *CGImageRef;
 typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
+typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 
 namespace WebCore {
+
+class FloatRect;
+class GraphicsContext;
 
 class AVVideoCaptureSource : public AVMediaCaptureSource {
 public:
     static RefPtr<AVMediaCaptureSource> create(AVCaptureDevice*, const AtomicString&, PassRefPtr<MediaConstraints>);
 
-    virtual RefPtr<RealtimeMediaSourceCapabilities> capabilities() const override;
-    virtual void captureOutputDidOutputSampleBufferFromConnection(AVCaptureOutput*, CMSampleBufferRef, AVCaptureConnection*) override;
-
-    virtual int32_t width() const { return m_width; }
-    virtual int32_t height() const { return m_height; }
-
-    AVCaptureVideoPreviewLayer* previewLayer() { return m_videoPreviewLayer.get(); }
+    int32_t width() const { return m_width; }
+    int32_t height() const { return m_height; }
 
 private:
     AVVideoCaptureSource(AVCaptureDevice*, const AtomicString&, PassRefPtr<MediaConstraints>);
     virtual ~AVVideoCaptureSource();
 
-    virtual void setupCaptureSession() override;
-    virtual void updateStates() override;
+    void setupCaptureSession() override;
+    void shutdownCaptureSession() override;
+
+    void updateSettings(RealtimeMediaSourceSettings&) override;
+
+    void initializeCapabilities(RealtimeMediaSourceCapabilities&) override;
+    void initializeSupportedConstraints(RealtimeMediaSourceSupportedConstraints&) override;
 
     bool applyConstraints(MediaConstraints*);
     bool setFrameRateConstraint(float minFrameRate, float maxFrameRate);
 
-    void calculateFramerate(CMSampleBufferRef);
+    bool updateFramerate(CMSampleBufferRef);
 
-    RetainPtr<AVCaptureConnection> m_videoConnection;
-    RetainPtr<CMFormatDescriptionRef> m_videoFormatDescription;
-    RetainPtr<AVCaptureVideoPreviewLayer> m_videoPreviewLayer;
+    void captureOutputDidOutputSampleBufferFromConnection(AVCaptureOutput*, CMSampleBufferRef, AVCaptureConnection*) override;
+    void processNewFrame(RetainPtr<CMSampleBufferRef>);
+
+    void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override;
+    PlatformLayer* platformLayer() const override;
+
+    RetainPtr<CGImageRef> currentFrameCGImage();
+    RefPtr<Image> currentFrameImage() override;
+
+    RetainPtr<CMSampleBufferRef> m_buffer;
+    RetainPtr<CGImageRef> m_lastImage;
     Vector<Float64> m_videoFrameTimeStamps;
-    Float64 m_frameRate;
-    int32_t m_width;
-    int32_t m_height;
+    mutable RetainPtr<PlatformLayer> m_videoPreviewLayer;
+    Float64 m_frameRate { 0 };
+    int32_t m_width { 0 };
+    int32_t m_height { 0 };
 };
 
 } // namespace WebCore

@@ -29,73 +29,36 @@
 
 namespace WebCore {
 
-EventInit::EventInit()
-    : bubbles(false)
-    , cancelable(false)
-{
-}
-
-EventInit::EventInit(bool b, bool c)
-    : bubbles(b)
-    , cancelable(c)
-{
-}
-
 Event::Event()
-    : m_canBubble(false)
-    , m_cancelable(false)
-    , m_propagationStopped(false)
-    , m_immediatePropagationStopped(false)
-    , m_defaultPrevented(false)
-    , m_defaultHandled(false)
-    , m_cancelBubble(false)
-    , m_eventPhase(0)
-    , m_currentTarget(0)
-    , m_createTime(convertSecondsToDOMTimeStamp(currentTime()))
+    : m_createTime(convertSecondsToDOMTimeStamp(currentTime()))
 {
 }
 
 Event::Event(const AtomicString& eventType, bool canBubbleArg, bool cancelableArg)
-    : m_type(eventType)
+    : m_isInitialized(true)
+    , m_type(eventType)
     , m_canBubble(canBubbleArg)
     , m_cancelable(cancelableArg)
-    , m_propagationStopped(false)
-    , m_immediatePropagationStopped(false)
-    , m_defaultPrevented(false)
-    , m_defaultHandled(false)
-    , m_cancelBubble(false)
-    , m_eventPhase(0)
-    , m_currentTarget(0)
+    , m_isTrusted(true)
     , m_createTime(convertSecondsToDOMTimeStamp(currentTime()))
 {
 }
 
 Event::Event(const AtomicString& eventType, bool canBubbleArg, bool cancelableArg, double timestamp)
-    : m_type(eventType)
+    : m_isInitialized(true)
+    , m_type(eventType)
     , m_canBubble(canBubbleArg)
     , m_cancelable(cancelableArg)
-    , m_propagationStopped(false)
-    , m_immediatePropagationStopped(false)
-    , m_defaultPrevented(false)
-    , m_defaultHandled(false)
-    , m_cancelBubble(false)
-    , m_eventPhase(0)
-    , m_currentTarget(0)
+    , m_isTrusted(true)
     , m_createTime(convertSecondsToDOMTimeStamp(timestamp))
 {
 }
 
 Event::Event(const AtomicString& eventType, const EventInit& initializer)
-    : m_type(eventType)
+    : m_isInitialized(true)
+    , m_type(eventType)
     , m_canBubble(initializer.bubbles)
     , m_cancelable(initializer.cancelable)
-    , m_propagationStopped(false)
-    , m_immediatePropagationStopped(false)
-    , m_defaultPrevented(false)
-    , m_defaultHandled(false)
-    , m_cancelBubble(false)
-    , m_eventPhase(0)
-    , m_currentTarget(0)
     , m_createTime(convertSecondsToDOMTimeStamp(currentTime()))
 {
 }
@@ -109,9 +72,11 @@ void Event::initEvent(const AtomicString& eventTypeArg, bool canBubbleArg, bool 
     if (dispatched())
         return;
 
+    m_isInitialized = true;
     m_propagationStopped = false;
     m_immediatePropagationStopped = false;
     m_defaultPrevented = false;
+    m_isTrusted = false;
 
     m_type = eventTypeArg;
     m_canBubble = canBubbleArg;
@@ -183,17 +148,17 @@ bool Event::isWheelEvent() const
     return false;
 }
 
-PassRefPtr<Event> Event::cloneFor(HTMLIFrameElement*) const
+Ref<Event> Event::cloneFor(HTMLIFrameElement*) const
 {
     return Event::create(type(), bubbles(), cancelable());
 }
 
-void Event::setTarget(PassRefPtr<EventTarget> target)
+void Event::setTarget(RefPtr<EventTarget>&& target)
 {
     if (m_target == target)
         return;
 
-    m_target = target;
+    m_target = WTFMove(target);
     if (m_target)
         receivedTarget();
 }
@@ -202,13 +167,14 @@ void Event::receivedTarget()
 {
 }
 
-void Event::setUnderlyingEvent(PassRefPtr<Event> ue)
+void Event::setUnderlyingEvent(Event* underlyingEvent)
 {
     // Prohibit creation of a cycle -- just do nothing in that case.
-    for (Event* e = ue.get(); e; e = e->underlyingEvent())
-        if (e == this)
+    for (Event* event = underlyingEvent; event; event = event->underlyingEvent()) {
+        if (event == this)
             return;
-    m_underlyingEvent = ue;
+    }
+    m_underlyingEvent = underlyingEvent;
 }
 
 } // namespace WebCore

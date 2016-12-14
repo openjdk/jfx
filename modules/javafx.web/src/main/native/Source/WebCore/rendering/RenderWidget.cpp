@@ -46,7 +46,7 @@ unsigned WidgetHierarchyUpdatesSuspensionScope::s_widgetHierarchyUpdateSuspendCo
 
 WidgetHierarchyUpdatesSuspensionScope::WidgetToParentMap& WidgetHierarchyUpdatesSuspensionScope::widgetNewParentMap()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(WidgetToParentMap, map, ());
+    static NeverDestroyed<WidgetToParentMap> map;
     return map;
 }
 
@@ -81,7 +81,7 @@ static void moveWidgetToParentSoon(Widget* child, FrameView* parent)
 }
 
 RenderWidget::RenderWidget(HTMLFrameOwnerElement& element, Ref<RenderStyle>&& style)
-    : RenderReplaced(element, WTF::move(style))
+    : RenderReplaced(element, WTFMove(style))
     , m_weakPtrFactory(this)
 {
     setInline(false);
@@ -140,7 +140,7 @@ bool RenderWidget::setWidgetGeometry(const LayoutRect& frame)
     if (!weakThis)
         return true;
 
-    if (boundsChanged && hasLayer() && layer()->isComposited())
+    if (boundsChanged && isComposited())
         layer()->backing()->updateAfterWidgetResize();
 
     return oldFrameRect.size() != newFrameRect.size();
@@ -228,14 +228,14 @@ void RenderWidget::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintO
     // When painting widgets into compositing layers, tx and ty are relative to the enclosing compositing layer,
     // not the root. In this case, shift the CTM and adjust the paintRect to be root-relative to fix plug-in drawing.
     if (!widgetPaintOffset.isZero()) {
-        paintInfo.context->translate(widgetPaintOffset);
+        paintInfo.context().translate(widgetPaintOffset);
         paintRect.move(-widgetPaintOffset);
     }
     // FIXME: Remove repaintrect encolsing/integral snapping when RenderWidget becomes device pixel snapped.
-    m_widget->paint(paintInfo.context, snappedIntRect(paintRect));
+    m_widget->paint(paintInfo.context(), snappedIntRect(paintRect));
 
     if (!widgetPaintOffset.isZero())
-        paintInfo.context->translate(-widgetPaintOffset);
+        paintInfo.context().translate(-widgetPaintOffset);
 
     if (is<FrameView>(*m_widget)) {
         FrameView& frameView = downcast<FrameView>(*m_widget);
@@ -275,26 +275,26 @@ void RenderWidget::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
             return;
 
         // Push a clip if we have a border radius, since we want to round the foreground content that gets painted.
-        paintInfo.context->save();
+        paintInfo.context().save();
         FloatRoundedRect roundedInnerRect = FloatRoundedRect(style().getRoundedInnerBorderFor(borderRect,
             paddingTop() + borderTop(), paddingBottom() + borderBottom(), paddingLeft() + borderLeft(), paddingRight() + borderRight(), true, true));
-        clipRoundedInnerRect(paintInfo.context, borderRect, roundedInnerRect);
+        clipRoundedInnerRect(paintInfo.context(), borderRect, roundedInnerRect);
     }
 
     if (m_widget)
         paintContents(paintInfo, paintOffset);
 
     if (style().hasBorderRadius())
-        paintInfo.context->restore();
+        paintInfo.context().restore();
 
     // Paint a partially transparent wash over selected widgets.
     if (isSelected() && !document().printing()) {
         // FIXME: selectionRect() is in absolute, not painting coordinates.
-        paintInfo.context->fillRect(snappedIntRect(selectionRect()), selectionBackgroundColor(), style().colorSpace());
+        paintInfo.context().fillRect(snappedIntRect(selectionRect()), selectionBackgroundColor());
     }
 
     if (hasLayer() && layer()->canResize())
-        layer()->paintResizer(paintInfo.context, roundedIntPoint(adjustedPaintOffset), paintInfo.rect);
+        layer()->paintResizer(paintInfo.context(), roundedIntPoint(adjustedPaintOffset), paintInfo.rect);
 }
 
 void RenderWidget::setOverlapTestResult(bool isOverlapped)
@@ -306,12 +306,12 @@ void RenderWidget::setOverlapTestResult(bool isOverlapped)
 RenderWidget::ChildWidgetState RenderWidget::updateWidgetPosition()
 {
     if (!m_widget)
-        return ChildWidgetState::ChildWidgetIsDestroyed;
+        return ChildWidgetState::Destroyed;
 
     WeakPtr<RenderWidget> weakThis = createWeakPtr();
     bool widgetSizeChanged = updateWidgetGeometry();
     if (!weakThis || !m_widget)
-        return ChildWidgetState::ChildWidgetIsDestroyed;
+        return ChildWidgetState::Destroyed;
 
     // if the frame size got changed, or if view needs layout (possibly indicating
     // content size is wrong) we have to do a layout to set the right widget size.
@@ -321,7 +321,7 @@ RenderWidget::ChildWidgetState RenderWidget::updateWidgetPosition()
         if ((widgetSizeChanged || frameView.needsLayout()) && frameView.frame().page())
             frameView.layout();
     }
-    return ChildWidgetState::ChildWidgetIsValid;
+    return ChildWidgetState::Valid;
 }
 
 IntRect RenderWidget::windowClipRect() const
@@ -350,7 +350,7 @@ bool RenderWidget::nodeAtPoint(const HitTestRequest& request, HitTestResult& res
         RenderView& childRoot = *childFrameView.renderView();
 
         LayoutPoint adjustedLocation = accumulatedOffset + location();
-        LayoutPoint contentOffset = LayoutPoint(borderLeft() + paddingLeft(), borderTop() + paddingTop()) - childFrameView.scrollOffset();
+        LayoutPoint contentOffset = LayoutPoint(borderLeft() + paddingLeft(), borderTop() + paddingTop()) - toIntSize(childFrameView.scrollPosition());
         HitTestLocation newHitTestLocation(locationInContainer, -adjustedLocation - contentOffset);
         HitTestRequest newHitTestRequest(request.type() | HitTestRequest::ChildFrameHitTest);
         HitTestResult childFrameResult(newHitTestLocation);

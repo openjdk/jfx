@@ -20,6 +20,7 @@
 #include "config.h"
 #include "JSTreeWalker.h"
 
+#include "DOMWrapperWorld.h"
 #include "Node.h"
 #include <heap/SlotVisitorInlines.h>
 
@@ -27,7 +28,7 @@ namespace WebCore {
 
 void JSTreeWalker::visitAdditionalChildren(JSC::SlotVisitor& visitor)
 {
-    if (NodeFilter* filter = impl().filter())
+    if (NodeFilter* filter = wrapped().filter())
         visitor.addOpaqueRoot(filter);
 }
 

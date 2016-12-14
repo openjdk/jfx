@@ -30,8 +30,8 @@
 #define AudioParamTimeline_h
 
 #include "AudioContext.h"
-#include <mutex>
 #include <runtime/Float32Array.h>
+#include <wtf/Lock.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -53,7 +53,7 @@ public:
 
     // hasValue is set to true if a valid timeline value is returned.
     // otherwise defaultValue is returned.
-    float valueForContextTime(AudioContext*, float defaultValue, bool& hasValue);
+    float valueForContextTime(AudioContext&, float defaultValue, bool& hasValue);
 
     // Given the time range, calculates parameter values into the values buffer
     // and returns the last parameter value calculated for "values" or the defaultValue if none were calculated.
@@ -107,7 +107,7 @@ private:
 
     Vector<ParamEvent> m_events;
 
-    std::mutex m_eventsMutex;
+    Lock m_eventsMutex;
 };
 
 } // namespace WebCore

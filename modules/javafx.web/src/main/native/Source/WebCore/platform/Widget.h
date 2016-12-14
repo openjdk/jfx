@@ -62,7 +62,7 @@ typedef GtkWidget* PlatformWidget;
 
 #if PLATFORM(JAVA)
 #include <jni.h>
-#include <JavaRef.h>
+#include <wtf/java/JavaRef.h>
 typedef JGObject PlatformWidget;
 #endif
 
@@ -124,7 +124,7 @@ public:
     void move(int x, int y) { setFrameRect(IntRect(x, y, width(), height())); }
     void move(const IntPoint& p) { setFrameRect(IntRect(p, size())); }
 
-    WEBCORE_EXPORT virtual void paint(GraphicsContext*, const IntRect&);
+    WEBCORE_EXPORT virtual void paint(GraphicsContext&, const IntRect&);
     void invalidate() { invalidateRect(boundsRect()); }
     virtual void invalidateRect(const IntRect&) = 0;
 
@@ -158,7 +158,7 @@ public:
 
     virtual void notifyWidget(WidgetNotification) { }
 
-    IntRect convertToRootView(const IntRect&) const;
+    WEBCORE_EXPORT IntRect convertToRootView(const IntRect&) const;
     IntRect convertFromRootView(const IntRect&) const;
 
     IntPoint convertToRootView(const IntPoint&) const;

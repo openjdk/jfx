@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 
 #include "Document.h"
 #include "InspectorController.h"
-#include "InspectorForwarding.h"
 #include "MainFrame.h"
 #include "Page.h"
 #include "Settings.h"
@@ -48,6 +47,9 @@ PageDebuggable::PageDebuggable(Page& page)
 
 String PageDebuggable::name() const
 {
+    if (!m_nameOverride.isNull())
+        return m_nameOverride;
+
     if (!m_page.mainFrame().document())
         return String();
 
@@ -68,7 +70,7 @@ bool PageDebuggable::hasLocalDebugger() const
     return m_page.inspectorController().hasLocalFrontend();
 }
 
-void PageDebuggable::connect(Inspector::FrontendChannel* channel, bool isAutomaticInspection)
+void PageDebuggable::connect(Inspector::FrontendChannel* channel, bool isAutomaticConnection)
 {
     if (!m_page.settings().developerExtrasEnabled()) {
         m_forcedDeveloperExtrasEnabled = true;
@@ -77,15 +79,13 @@ void PageDebuggable::connect(Inspector::FrontendChannel* channel, bool isAutomat
         m_forcedDeveloperExtrasEnabled = false;
 
     InspectorController& inspectorController = m_page.inspectorController();
-    inspectorController.setHasRemoteFrontend(true);
-    inspectorController.connectFrontend(reinterpret_cast<Inspector::FrontendChannel*>(channel), isAutomaticInspection);
+    inspectorController.connectFrontend(channel, isAutomaticConnection);
 }
 
-void PageDebuggable::disconnect()
+void PageDebuggable::disconnect(Inspector::FrontendChannel* channel)
 {
     InspectorController& inspectorController = m_page.inspectorController();
-    inspectorController.disconnectFrontend(Inspector::DisconnectReason::InspectorDestroyed);
-    inspectorController.setHasRemoteFrontend(false);
+    inspectorController.disconnectFrontend(channel);
 
     if (m_forcedDeveloperExtrasEnabled) {
         m_forcedDeveloperExtrasEnabled = false;
@@ -93,7 +93,7 @@ void PageDebuggable::disconnect()
     }
 }
 
-void PageDebuggable::dispatchMessageFromRemoteFrontend(const String& message)
+void PageDebuggable::dispatchMessageFromRemote(const String& message)
 {
     m_page.inspectorController().dispatchMessageFromFrontend(message);
 }
@@ -101,6 +101,12 @@ void PageDebuggable::dispatchMessageFromRemoteFrontend(const String& message)
 void PageDebuggable::setIndicating(bool indicating)
 {
     m_page.inspectorController().setIndicating(indicating);
+}
+
+void PageDebuggable::setNameOverride(const String& name)
+{
+    m_nameOverride = name;
+    update();
 }
 
 } // namespace WebCore

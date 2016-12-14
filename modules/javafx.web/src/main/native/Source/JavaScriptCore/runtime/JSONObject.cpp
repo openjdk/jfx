@@ -63,6 +63,8 @@ void JSONObject::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
+
+    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "JSON"), DontEnum | ReadOnly);
 }
 
 // PropertyNameForFunctionCall objects must be on the stack, since the JSValue that they create is not marked.
@@ -108,8 +110,9 @@ private:
     friend class Holder;
 
     JSValue toJSON(JSValue, const PropertyNameForFunctionCall&);
+    JSValue toJSONImpl(JSValue, const PropertyNameForFunctionCall&);
 
-    enum StringifyResult { StringifyFailed, StringifySucceeded, StringifyFailedDueToUndefinedValue };
+    enum StringifyResult { StringifyFailed, StringifySucceeded, StringifyFailedDueToUndefinedOrSymbolValue };
     StringifyResult appendStringifiedValue(StringBuilder&, JSValue, JSObject* holder, const PropertyNameForFunctionCall&);
 
     bool willIndent() const;
@@ -143,6 +146,9 @@ static inline JSValue unwrapBoxedPrimitive(ExecState* exec, JSValue value)
         return object->toString(exec);
     if (object->inherits(BooleanObject::info()))
         return object->toPrimitive(exec);
+
+    // Do not unwrap SymbolObject to Symbol. It is not performed in the spec.
+    // http://www.ecma-international.org/ecma-262/6.0/#sec-serializejsonproperty
     return value;
 }
 
@@ -253,12 +259,16 @@ Local<Unknown> Stringifier::stringify(Handle<Unknown> value)
     return Local<Unknown>(m_exec->vm(), jsString(m_exec, result.toString()));
 }
 
-inline JSValue Stringifier::toJSON(JSValue value, const PropertyNameForFunctionCall& propertyName)
+ALWAYS_INLINE JSValue Stringifier::toJSON(JSValue value, const PropertyNameForFunctionCall& propertyName)
 {
     ASSERT(!m_exec->hadException());
     if (!value.isObject() || !asObject(value)->hasProperty(m_exec, m_exec->vm().propertyNames->toJSON))
         return value;
+    return toJSONImpl(value, propertyName);
+}
 
+JSValue Stringifier::toJSONImpl(JSValue value, const PropertyNameForFunctionCall& propertyName)
+{
     JSValue toJSONFunction = asObject(value)->get(m_exec, m_exec->vm().propertyNames->toJSON);
     if (m_exec->hadException())
         return jsNull();
@@ -294,8 +304,8 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
             return StringifyFailed;
     }
 
-    if (value.isUndefined() && !holder->inherits(JSArray::info()))
-        return StringifyFailedDueToUndefinedValue;
+    if ((value.isUndefined() || value.isSymbol()) && !holder->inherits(JSArray::info()))
+        return StringifyFailedDueToUndefinedOrSymbolValue;
 
     if (value.isNull()) {
         builder.appendLiteral("null");
@@ -344,7 +354,7 @@ Stringifier::StringifyResult Stringifier::appendStringifiedValue(StringBuilder& 
             builder.appendLiteral("null");
             return StringifySucceeded;
         }
-        return StringifyFailedDueToUndefinedValue;
+        return StringifyFailedDueToUndefinedOrSymbolValue;
     }
 
     // Handle cycle detection, and put the holder on the stack.
@@ -456,7 +466,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         if (m_isJSArray && asArray(m_object.get())->canGetIndexQuickly(index))
             value = asArray(m_object.get())->getIndexQuickly(index);
         else {
-            PropertySlot slot(m_object.get());
+            PropertySlot slot(m_object.get(), PropertySlot::InternalMethodType::Get);
             if (m_object->methodTable()->getOwnPropertySlotByIndex(m_object.get(), exec, index, slot)) {
                 value = slot.getValue(exec, index);
                 if (exec->hadException())
@@ -474,7 +484,7 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
         stringifyResult = stringifier.appendStringifiedValue(builder, value, m_object.get(), index);
     } else {
         // Get the value.
-        PropertySlot slot(m_object.get());
+        PropertySlot slot(m_object.get(), PropertySlot::InternalMethodType::Get);
         Identifier& propertyName = m_propertyNames->propertyNameVector()[index];
         if (!m_object->methodTable()->getOwnPropertySlot(m_object.get(), exec, propertyName, slot))
             return true;
@@ -509,10 +519,10 @@ bool Stringifier::Holder::appendNextProperty(Stringifier& stringifier, StringBui
             break;
         case StringifySucceeded:
             break;
-        case StringifyFailedDueToUndefinedValue:
-            // This only occurs when get an undefined value for an object property.
-            // In this case we don't want the separator and property name that we
-            // already appended, so roll back.
+        case StringifyFailedDueToUndefinedOrSymbolValue:
+            // This only occurs when get an undefined value or a symbol value for
+            // an object property. In this case we don't want the separator and
+            // property name that we already appended, so roll back.
             builder.resize(rollBackPoint);
             break;
     }
@@ -608,7 +618,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                 if (isJSArray(array) && array->canGetIndexQuickly(index))
                     inValue = array->getIndexQuickly(index);
                 else {
-                    PropertySlot slot(array);
+                    PropertySlot slot(array, PropertySlot::InternalMethodType::Get);
                     if (array->methodTable()->getOwnPropertySlotByIndex(array, m_exec, index, slot))
                         inValue = slot.getValue(m_exec, index);
                     else
@@ -660,7 +670,7 @@ NEVER_INLINE JSValue Walker::walk(JSValue unfiltered)
                     propertyStack.removeLast();
                     break;
                 }
-                PropertySlot slot(object);
+                PropertySlot slot(object, PropertySlot::InternalMethodType::Get);
                 if (object->methodTable()->getOwnPropertySlot(object, m_exec, properties[index], slot))
                     inValue = slot.getValue(m_exec, properties[index]);
                 else
@@ -719,7 +729,7 @@ EncodedJSValue JSC_HOST_CALL JSONProtoFuncParse(ExecState* exec)
 {
     if (!exec->argumentCount())
         return throwVMError(exec, createError(exec, ASCIILiteral("JSON.parse requires at least one parameter")));
-    StringView source = exec->uncheckedArgument(0).toString(exec)->view(exec);
+    JSString::SafeView source = exec->uncheckedArgument(0).toString(exec)->view(exec);
     if (exec->hadException())
         return JSValue::encode(jsNull());
 

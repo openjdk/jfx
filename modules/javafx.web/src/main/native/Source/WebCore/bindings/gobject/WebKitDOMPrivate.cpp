@@ -28,7 +28,6 @@
 #include "DOMObjectCache.h"
 #include "Element.h"
 #include "Event.h"
-#include "EventException.h"
 #include "EventTarget.h"
 #include "File.h"
 #include "HTMLElement.h"
@@ -47,7 +46,6 @@
 #include "WebKitDOMDocumentPrivate.h"
 #include "WebKitDOMDocumentTypePrivate.h"
 #include "WebKitDOMElementPrivate.h"
-#include "WebKitDOMEntityReferencePrivate.h"
 #include "WebKitDOMEventPrivate.h"
 #include "WebKitDOMEventTargetPrivate.h"
 #include "WebKitDOMFilePrivate.h"
@@ -93,8 +91,6 @@ WebKitDOMNode* wrap(Node* node)
         return WEBKIT_DOM_NODE(wrapText(downcast<Text>(node)));
     case Node::CDATA_SECTION_NODE:
         return WEBKIT_DOM_NODE(wrapCDATASection(static_cast<CDATASection*>(node)));
-    case Node::ENTITY_REFERENCE_NODE:
-        return WEBKIT_DOM_NODE(wrapEntityReference(static_cast<EntityReference*>(node)));
     case Node::PROCESSING_INSTRUCTION_NODE:
         return WEBKIT_DOM_NODE(wrapProcessingInstruction(static_cast<ProcessingInstruction*>(node)));
     case Node::COMMENT_NODE:
@@ -107,9 +103,6 @@ WebKitDOMNode* wrap(Node* node)
         return WEBKIT_DOM_NODE(wrapDocumentType(static_cast<DocumentType*>(node)));
     case Node::DOCUMENT_FRAGMENT_NODE:
         return WEBKIT_DOM_NODE(wrapDocumentFragment(static_cast<DocumentFragment*>(node)));
-    case Node::ENTITY_NODE:
-    case Node::XPATH_NAMESPACE_NODE:
-        break;
     }
 
     return wrapNode(node);

@@ -71,7 +71,7 @@ public:
         UnparentAllTiles    = 1 << 1
     };
     typedef unsigned TileValidationPolicy;
-    void revalidateTiles(TileValidationPolicy);
+    void revalidateTiles(TileValidationPolicy = 0);
 
     bool tilesWouldChangeForCoverageRect(const FloatRect&) const;
 
@@ -143,6 +143,7 @@ private:
     virtual bool platformCALayerContentsOpaque() const override;
     virtual bool platformCALayerDrawsContent() const override { return true; }
     virtual float platformCALayerDeviceScaleFactor() const override;
+    virtual bool isUsingDisplayListDrawing(PlatformCALayer*) const override;
 
     TileController& m_controller;
     Ref<PlatformCALayer> m_containerLayer;

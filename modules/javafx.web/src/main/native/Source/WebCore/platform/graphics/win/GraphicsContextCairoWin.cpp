@@ -67,26 +67,23 @@ static cairo_t* createCairoContextWithHDC(HDC hdc, bool hasAlpha)
 }
 
 GraphicsContext::GraphicsContext(HDC dc, bool hasAlpha)
-    : m_updatingControlTints(false),
-      m_transparencyCount(0)
 {
     platformInit(dc, hasAlpha);
 }
 
 void GraphicsContext::platformInit(HDC dc, bool hasAlpha)
 {
-    cairo_t* cr = 0;
-    if (dc)
-        cr = createCairoContextWithHDC(dc, hasAlpha);
-    else
-        setPaintingDisabled(true);
+    if (!dc)
+        return;
+
+    cairo_t* cr = createCairoContextWithHDC(dc, hasAlpha);
 
     m_data = new GraphicsContextPlatformPrivateToplevel(new PlatformContextCairo(cr));
     m_data->m_hdc = dc;
     if (platformContext()->cr()) {
         // Make sure the context starts in sync with our state.
-        setPlatformFillColor(fillColor(), fillColorSpace());
-        setPlatformStrokeColor(strokeColor(), strokeColorSpace());
+        setPlatformFillColor(fillColor());
+        setPlatformStrokeColor(strokeColor());
     }
     if (cr)
         cairo_destroy(cr);

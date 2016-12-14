@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,11 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "FTLState.h"
+
 namespace JSC { namespace FTL {
+
+using namespace B3;
 
 JITCode::JITCode()
     : JSC::JITCode(FTLJIT)
@@ -37,26 +41,22 @@ JITCode::JITCode()
 
 JITCode::~JITCode()
 {
+    if (FTL::shouldDumpDisassembly()) {
+        dataLog("Destroying FTL JIT code at ");
+        CommaPrinter comma;
+        dataLog(comma, m_b3Code);
+        dataLog(comma, m_arityCheckEntrypoint);
+    }
 }
 
-void JITCode::initializeExitThunks(CodeRef exitThunks)
+void JITCode::initializeB3Code(CodeRef b3Code)
 {
-    m_exitThunks = exitThunks;
+    m_b3Code = b3Code;
 }
 
-void JITCode::addHandle(PassRefPtr<ExecutableMemoryHandle> handle)
+void JITCode::initializeB3Byproducts(std::unique_ptr<OpaqueByproducts> byproducts)
 {
-    m_handles.append(handle);
-}
-
-void JITCode::addDataSection(PassRefPtr<DataSection> dataSection)
-{
-    m_dataSections.append(dataSection);
-}
-
-void JITCode::initializeArityCheckEntrypoint(CodeRef entrypoint)
-{
-    m_arityCheckEntrypoint = entrypoint;
+    m_b3Byproducts = WTFMove(byproducts);
 }
 
 void JITCode::initializeAddressForCall(CodePtr address)
@@ -64,7 +64,12 @@ void JITCode::initializeAddressForCall(CodePtr address)
     m_addressForCall = address;
 }
 
-JITCode::CodePtr JITCode::addressForCall(VM&, ExecutableBase*, ArityCheckMode arityCheck, RegisterPreservationMode)
+void JITCode::initializeArityCheckEntrypoint(CodeRef entrypoint)
+{
+    m_arityCheckEntrypoint = entrypoint;
+}
+
+JITCode::CodePtr JITCode::addressForCall(ArityCheckMode arityCheck)
 {
     switch (arityCheck) {
     case ArityCheckNotRequired:
@@ -110,11 +115,6 @@ bool JITCode::contains(void*)
     return false;
 }
 
-JITCode::CodePtr JITCode::exitThunks()
-{
-    return m_exitThunks.code();
-}
-
 JITCode* JITCode::ftl()
 {
     return this;
@@ -130,7 +130,38 @@ void JITCode::validateReferences(const TrackedReferences& trackedReferences)
     common.validateReferences(trackedReferences);
 
     for (OSRExit& exit : osrExit)
-        exit.validateReferences(trackedReferences);
+        exit.m_descriptor->validateReferences(trackedReferences);
+}
+
+RegisterSet JITCode::liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex callSiteIndex)
+{
+    for (OSRExit& exit : osrExit) {
+        if (exit.m_exceptionHandlerCallSiteIndex.bits() == callSiteIndex.bits()) {
+            RELEASE_ASSERT(exit.isExceptionHandler());
+            RELEASE_ASSERT(exit.isGenericUnwindHandler());
+            return ValueRep::usedRegisters(exit.m_valueReps);
+        }
+    }
+    return RegisterSet();
+}
+
+Optional<CodeOrigin> JITCode::findPC(CodeBlock* codeBlock, void* pc)
+{
+    for (OSRExit& exit : osrExit) {
+        if (ExecutableMemoryHandle* handle = exit.m_code.executableMemory()) {
+            if (handle->start() <= pc && pc < handle->end())
+                return Optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
+        }
+    }
+
+    for (std::unique_ptr<LazySlowPath>& lazySlowPath : lazySlowPaths) {
+        if (ExecutableMemoryHandle* handle = lazySlowPath->stub().executableMemory()) {
+            if (handle->start() <= pc && pc < handle->end())
+                return Optional<CodeOrigin>(codeBlock->codeOrigin(lazySlowPath->callSiteIndex()));
+        }
+    }
+
+    return Nullopt;
 }
 
 } } // namespace JSC::FTL

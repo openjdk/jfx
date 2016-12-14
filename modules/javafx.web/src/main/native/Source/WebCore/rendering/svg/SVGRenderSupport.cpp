@@ -67,20 +67,20 @@ LayoutRect SVGRenderSupport::clippedOverflowRectForRepaint(const RenderElement& 
     const SVGRenderStyle& svgStyle = renderer.style().svgStyle();
     if (const ShadowData* shadow = svgStyle.shadow())
         shadow->adjustRectForShadow(repaintRect);
-    renderer.computeFloatRectForRepaint(repaintContainer, repaintRect);
-    return enclosingLayoutRect(repaintRect);
+    return enclosingLayoutRect(renderer.computeFloatRectForRepaint(repaintRect, repaintContainer));
 }
 
-void SVGRenderSupport::computeFloatRectForRepaint(const RenderElement& renderer, const RenderLayerModelObject* repaintContainer, FloatRect& repaintRect, bool fixed)
+FloatRect SVGRenderSupport::computeFloatRectForRepaint(const RenderElement& renderer, const FloatRect& repaintRect, const RenderLayerModelObject* repaintContainer, bool fixed)
 {
+    FloatRect adjustedRect = repaintRect;
     const SVGRenderStyle& svgStyle = renderer.style().svgStyle();
     if (const ShadowData* shadow = svgStyle.shadow())
-        shadow->adjustRectForShadow(repaintRect);
-    repaintRect.inflate(renderer.style().outlineWidth());
+        shadow->adjustRectForShadow(adjustedRect);
+    adjustedRect.inflate(renderer.style().outlineWidth());
 
     // Translate to coords in our parent renderer, and then call computeFloatRectForRepaint() on our parent.
-    repaintRect = renderer.localToParentTransform().mapRect(repaintRect);
-    renderer.parent()->computeFloatRectForRepaint(repaintContainer, repaintRect, fixed);
+    adjustedRect = renderer.localToParentTransform().mapRect(adjustedRect);
+    return renderer.parent()->computeFloatRectForRepaint(adjustedRect, repaintContainer, fixed);
 }
 
 const RenderElement& SVGRenderSupport::localToParentTransform(const RenderElement& renderer, AffineTransform &transform)
@@ -184,9 +184,14 @@ bool SVGRenderSupport::paintInfoIntersectsRepaintRect(const FloatRect& localRepa
     return localTransform.mapRect(localRepaintRect).intersects(paintInfo.rect);
 }
 
-const RenderSVGRoot& SVGRenderSupport::findTreeRootObject(const RenderElement& start)
+RenderSVGRoot* SVGRenderSupport::findTreeRootObject(RenderElement& start)
 {
-    return *lineageOfType<RenderSVGRoot>(start).first();
+    return lineageOfType<RenderSVGRoot>(start).first();
+}
+
+const RenderSVGRoot* SVGRenderSupport::findTreeRootObject(const RenderElement& start)
+{
+    return lineageOfType<RenderSVGRoot>(start).first();
 }
 
 static inline void invalidateResourcesOfChildren(RenderElement& renderer)
@@ -223,6 +228,15 @@ bool SVGRenderSupport::transformToRootChanged(RenderElement* ancestor)
     }
 
     return false;
+}
+
+void SVGRenderSupport::layoutDifferentRootIfNeeded(const RenderElement& renderer)
+{
+    if (auto* resources = SVGResourcesCache::cachedResourcesForRenderer(renderer)) {
+        auto* svgRoot = SVGRenderSupport::findTreeRootObject(renderer);
+        ASSERT(svgRoot);
+        resources->layoutDifferentRootIfNeeded(svgRoot);
+    }
 }
 
 void SVGRenderSupport::layoutChildren(RenderElement& start, bool selfNeedsLayout)
@@ -273,6 +287,7 @@ void SVGRenderSupport::layoutChildren(RenderElement& start, bool selfNeedsLayout
             child->setNeedsLayout(MarkOnlyThis);
 
         if (child->needsLayout()) {
+            layoutDifferentRootIfNeeded(downcast<RenderElement>(*child));
             downcast<RenderElement>(*child).layout();
             // Renderers are responsible for repainting themselves when changing, except
             // for the initial paint to avoid potential double-painting caused by non-sensical "old" bounds.
@@ -299,7 +314,7 @@ void SVGRenderSupport::layoutChildren(RenderElement& start, bool selfNeedsLayout
 bool SVGRenderSupport::isOverflowHidden(const RenderElement& renderer)
 {
     // RenderSVGRoot should never query for overflow state - it should always clip itself to the initial viewport size.
-    ASSERT(!renderer.isRoot());
+    ASSERT(!renderer.isDocumentElementRenderer());
 
     return renderer.style().overflowX() == OHIDDEN || renderer.style().overflowX() == OSCROLL;
 }
@@ -355,7 +370,7 @@ void SVGRenderSupport::intersectRepaintRectWithShadows(const RenderElement& rend
     if (localToRootTransform.isIdentity())
         return;
 
-    AffineTransform rootToLocalTransform = localToRootTransform.inverse();
+    AffineTransform rootToLocalTransform = localToRootTransform.inverse().valueOr(AffineTransform());
     repaintRect = rootToLocalTransform.mapRect(repaintRect);
 }
 
@@ -452,7 +467,7 @@ void SVGRenderSupport::styleChanged(RenderElement& renderer, const RenderStyle* 
 #if ENABLE(CSS_COMPOSITING)
 bool SVGRenderSupport::isolatesBlending(const RenderStyle& style)
 {
-    return style.svgStyle().isolatesBlending() || style.hasBlendMode() || style.opacity() < 1.0f;
+    return style.svgStyle().isolatesBlending() || style.hasFilter() || style.hasBlendMode() || style.opacity() < 1.0f;
 }
 
 void SVGRenderSupport::updateMaskedAncestorShouldIsolateBlending(const RenderElement& renderer)

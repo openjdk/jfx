@@ -37,14 +37,10 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
-#include "InspectorInstrumentation.h"
 #include "MessageEvent.h"
 #include "PageGroup.h"
 #include "ScriptExecutionContext.h"
 #include "Worker.h"
-#include "WorkerDebuggerAgent.h"
-#include "WorkerInspectorController.h"
-#include <inspector/InspectorAgentBase.h>
 #include <inspector/ScriptCallStack.h>
 #include <runtime/ConsoleTypes.h>
 #include <wtf/MainThread.h>
@@ -63,7 +59,6 @@ WorkerMessagingProxy::WorkerMessagingProxy(Worker* workerObject)
     , m_unconfirmedMessageCount(0)
     , m_workerThreadHadPendingActivity(false)
     , m_askedToTerminate(false)
-    , m_pageInspector(nullptr)
 {
     ASSERT(m_workerObject);
     ASSERT((is<Document>(*m_scriptExecutionContext) && isMainThread())
@@ -77,15 +72,14 @@ WorkerMessagingProxy::~WorkerMessagingProxy()
         || (is<WorkerGlobalScope>(*m_scriptExecutionContext) && currentThread() == downcast<WorkerGlobalScope>(*m_scriptExecutionContext).thread().threadID()));
 }
 
-void WorkerMessagingProxy::startWorkerGlobalScope(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode startMode)
+void WorkerMessagingProxy::startWorkerGlobalScope(const URL& scriptURL, const String& userAgent, const String& sourceCode, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders, bool shouldBypassMainWorldContentSecurityPolicy, WorkerThreadStartMode startMode)
 {
     // FIXME: This need to be revisited when we support nested worker one day
     ASSERT(m_scriptExecutionContext);
     Document& document = downcast<Document>(*m_scriptExecutionContext);
-    RefPtr<DedicatedWorkerThread> thread = DedicatedWorkerThread::create(scriptURL, userAgent, sourceCode, *this, *this, startMode, document.contentSecurityPolicy()->deprecatedHeader(), document.contentSecurityPolicy()->deprecatedHeaderType(), document.topOrigin());
+    RefPtr<DedicatedWorkerThread> thread = DedicatedWorkerThread::create(scriptURL, userAgent, sourceCode, *this, *this, startMode, contentSecurityPolicyResponseHeaders, shouldBypassMainWorldContentSecurityPolicy, document.topOrigin());
     workerThreadCreated(thread);
     thread->start();
-    InspectorInstrumentation::didStartWorkerGlobalScope(m_scriptExecutionContext.get(), this, scriptURL);
 }
 
 void WorkerMessagingProxy::postMessageToWorkerObject(PassRefPtr<SerializedScriptValue> message, std::unique_ptr<MessagePortChannelArray> channels)
@@ -97,7 +91,7 @@ void WorkerMessagingProxy::postMessageToWorkerObject(PassRefPtr<SerializedScript
             return;
 
         std::unique_ptr<MessagePortArray> ports = MessagePort::entanglePorts(context, std::unique_ptr<MessagePortChannelArray>(channelsPtr));
-        workerObject->dispatchEvent(MessageEvent::create(WTF::move(ports), message));
+        workerObject->dispatchEvent(MessageEvent::create(WTFMove(ports), message));
     });
 }
 
@@ -111,22 +105,22 @@ void WorkerMessagingProxy::postMessageToWorkerGlobalScope(PassRefPtr<SerializedS
         ASSERT_WITH_SECURITY_IMPLICATION(scriptContext.isWorkerGlobalScope());
         DedicatedWorkerGlobalScope& context = static_cast<DedicatedWorkerGlobalScope&>(scriptContext);
         std::unique_ptr<MessagePortArray> ports = MessagePort::entanglePorts(scriptContext, std::unique_ptr<MessagePortChannelArray>(channelsPtr));
-        context.dispatchEvent(MessageEvent::create(WTF::move(ports), message));
+        context.dispatchEvent(MessageEvent::create(WTFMove(ports), message));
         context.thread().workerObjectProxy().confirmMessageFromWorkerObject(context.hasPendingActivity());
     });
 
     if (m_workerThread) {
         ++m_unconfirmedMessageCount;
-        m_workerThread->runLoop().postTask(WTF::move(task));
+        m_workerThread->runLoop().postTask(WTFMove(task));
     } else
-        m_queuedEarlyTasks.append(std::make_unique<ScriptExecutionContext::Task>(WTF::move(task)));
+        m_queuedEarlyTasks.append(std::make_unique<ScriptExecutionContext::Task>(WTFMove(task)));
 }
 
 void WorkerMessagingProxy::postTaskToLoader(ScriptExecutionContext::Task task)
 {
     // FIXME: In case of nested workers, this should go directly to the root Document context.
     ASSERT(m_scriptExecutionContext->isDocument());
-    m_scriptExecutionContext->postTask(WTF::move(task));
+    m_scriptExecutionContext->postTask(WTFMove(task));
 }
 
 bool WorkerMessagingProxy::postTaskForModeToWorkerGlobalScope(ScriptExecutionContext::Task task, const String& mode)
@@ -135,7 +129,7 @@ bool WorkerMessagingProxy::postTaskForModeToWorkerGlobalScope(ScriptExecutionCon
         return false;
 
     ASSERT(m_workerThread);
-    m_workerThread->runLoop().postTaskForMode(WTF::move(task), mode);
+    m_workerThread->runLoop().postTaskForMode(WTFMove(task), mode);
     return true;
 }
 
@@ -180,9 +174,9 @@ void WorkerMessagingProxy::workerThreadCreated(PassRefPtr<DedicatedWorkerThread>
         m_unconfirmedMessageCount = m_queuedEarlyTasks.size();
         m_workerThreadHadPendingActivity = true; // Worker initialization means a pending activity.
 
-        auto queuedEarlyTasks = WTF::move(m_queuedEarlyTasks);
+        auto queuedEarlyTasks = WTFMove(m_queuedEarlyTasks);
         for (auto& task : queuedEarlyTasks)
-            m_workerThread->runLoop().postTask(WTF::move(*task));
+            m_workerThread->runLoop().postTask(WTFMove(*task));
     }
 }
 
@@ -211,38 +205,6 @@ void WorkerMessagingProxy::notifyNetworkStateChange(bool isOnline)
     });
 }
 
-void WorkerMessagingProxy::connectToInspector(WorkerGlobalScopeProxy::PageInspector* pageInspector)
-{
-    if (m_askedToTerminate)
-        return;
-    ASSERT(!m_pageInspector);
-    m_pageInspector = pageInspector;
-    m_workerThread->runLoop().postTaskForMode([] (ScriptExecutionContext& context) {
-        downcast<WorkerGlobalScope>(context).workerInspectorController().connectFrontend();
-    }, WorkerDebuggerAgent::debuggerTaskMode);
-}
-
-void WorkerMessagingProxy::disconnectFromInspector()
-{
-    m_pageInspector = nullptr;
-    if (m_askedToTerminate)
-        return;
-    m_workerThread->runLoop().postTaskForMode([] (ScriptExecutionContext& context) {
-        downcast<WorkerGlobalScope>(context).workerInspectorController().disconnectFrontend(Inspector::DisconnectReason::InspectorDestroyed);
-    }, WorkerDebuggerAgent::debuggerTaskMode);
-}
-
-void WorkerMessagingProxy::sendMessageToInspector(const String& message)
-{
-    if (m_askedToTerminate)
-        return;
-    StringCapture capturedMessage(message);
-    m_workerThread->runLoop().postTaskForMode([capturedMessage] (ScriptExecutionContext& context) {
-        downcast<WorkerGlobalScope>(context).workerInspectorController().dispatchMessageFromFrontend(capturedMessage.string());
-    }, WorkerDebuggerAgent::debuggerTaskMode);
-    WorkerDebuggerAgent::interruptAndDispatchInspectorCommands(m_workerThread.get());
-}
-
 void WorkerMessagingProxy::workerGlobalScopeDestroyed()
 {
     m_scriptExecutionContext->postTask([this] (ScriptExecutionContext&) {
@@ -266,8 +228,6 @@ void WorkerMessagingProxy::workerGlobalScopeDestroyedInternal()
     m_askedToTerminate = true;
     m_workerThread = nullptr;
 
-    InspectorInstrumentation::workerGlobalScopeTerminated(m_scriptExecutionContext.get(), this);
-
     if (m_mayBeDestroyed)
         delete this;
 }
@@ -280,17 +240,6 @@ void WorkerMessagingProxy::terminateWorkerGlobalScope()
 
     if (m_workerThread)
         m_workerThread->stop();
-
-    InspectorInstrumentation::workerGlobalScopeTerminated(m_scriptExecutionContext.get(), this);
-}
-
-void WorkerMessagingProxy::postMessageToPageInspector(const String& message)
-{
-    StringCapture capturedMessage(message);
-    m_scriptExecutionContext->postTask([this, capturedMessage] (ScriptExecutionContext&) {
-        if (m_pageInspector)
-            m_pageInspector->dispatchMessageFromWorker(capturedMessage.string());
-    });
 }
 
 void WorkerMessagingProxy::confirmMessageFromWorkerObject(bool hasPendingActivity)

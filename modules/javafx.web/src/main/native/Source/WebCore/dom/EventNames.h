@@ -27,9 +27,18 @@
 #include <functional>
 #include <wtf/text/AtomicString.h>
 
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/EventNamesAdditions.h>
+#endif
+
 namespace WebCore {
 
+#if !defined(ADDITIONAL_DOM_EVENT_NAMES_FOR_EACH)
+#define ADDITIONAL_DOM_EVENT_NAMES_FOR_EACH(macro)
+#endif
+
 #define DOM_EVENT_NAMES_FOR_EACH(macro) \
+    ADDITIONAL_DOM_EVENT_NAMES_FOR_EACH(macro) \
     macro(DOMActivate) \
     macro(DOMCharacterDataModified) \
     macro(DOMContentLoaded) \
@@ -58,6 +67,7 @@ namespace WebCore {
     macro(beforeload) \
     macro(beforepaste) \
     macro(beforeunload) \
+    macro(beginEvent) \
     macro(blocked) \
     macro(blur) \
     macro(boundary) \
@@ -96,6 +106,7 @@ namespace WebCore {
     macro(durationchange) \
     macro(emptied) \
     macro(end) \
+    macro(endEvent) \
     macro(ended) \
     macro(enter) \
     macro(error) \
@@ -116,6 +127,7 @@ namespace WebCore {
     macro(hashchange) \
     macro(icecandidate) \
     macro(iceconnectionstatechange) \
+    macro(icegatheringstatechange) \
     macro(inactive) \
     macro(input) \
     macro(invalid) \
@@ -129,6 +141,7 @@ namespace WebCore {
     macro(loadend) \
     macro(loading) \
     macro(loadingdone) \
+    macro(loadingerror) \
     macro(loadstart) \
     macro(mark) \
     macro(message) \
@@ -205,6 +218,7 @@ namespace WebCore {
     macro(touchend) \
     macro(touchmove) \
     macro(touchstart) \
+    macro(track) \
     macro(transitionend) \
     macro(unload) \
     macro(unmute) \

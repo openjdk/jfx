@@ -32,7 +32,6 @@
 #define InspectorFrontendClient_h
 
 #include <wtf/Forward.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -56,6 +55,7 @@ public:
     virtual void moveWindowBy(float x, float y) = 0;
 
     virtual String localizedStringsURL() = 0;
+    virtual unsigned inspectionLevel() const = 0;
 
     virtual void bringToFront() = 0;
     virtual void closeWindow() = 0;
@@ -63,8 +63,6 @@ public:
     WEBCORE_EXPORT virtual void requestSetDockSide(DockSide) = 0;
     WEBCORE_EXPORT virtual void changeAttachedWindowHeight(unsigned) = 0;
     WEBCORE_EXPORT virtual void changeAttachedWindowWidth(unsigned) = 0;
-
-    virtual void setToolbarHeight(unsigned) = 0;
 
     WEBCORE_EXPORT virtual void openInNewTab(const String& url) = 0;
 

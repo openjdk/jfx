@@ -54,9 +54,13 @@ JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Element* e
     if (!element)
         return jsNull();
 
+#if ENABLE(CUSTOM_ELEMENTS)
+    if (element->isCustomElement())
+        return getCachedWrapper(globalObject->world(), element);
+#endif
     ASSERT(!getCachedWrapper(globalObject->world(), element));
 
-    JSDOMWrapper* wrapper;
+    JSDOMObject* wrapper;
     if (is<HTMLElement>(*element))
         wrapper = createJSHTMLWrapper(globalObject, downcast<HTMLElement>(element));
     else if (is<SVGElement>(*element))
@@ -67,47 +71,47 @@ JSValue toJSNewlyCreated(ExecState*, JSDOMGlobalObject* globalObject, Element* e
     return wrapper;
 }
 
-JSValue JSElement::before(ExecState* state)
+JSValue JSElement::before(ExecState& state)
 {
     ExceptionCode ec = 0;
-    impl().before(toNodeOrStringVector(*state), ec);
-    setDOMException(state, ec);
+    wrapped().before(toNodeOrStringVector(state), ec);
+    setDOMException(&state, ec);
 
     return jsUndefined();
 }
 
-JSValue JSElement::after(ExecState* state)
+JSValue JSElement::after(ExecState& state)
 {
     ExceptionCode ec = 0;
-    impl().after(toNodeOrStringVector(*state), ec);
-    setDOMException(state, ec);
+    wrapped().after(toNodeOrStringVector(state), ec);
+    setDOMException(&state, ec);
 
     return jsUndefined();
 }
 
-JSValue JSElement::replaceWith(ExecState* state)
+JSValue JSElement::replaceWith(ExecState& state)
 {
     ExceptionCode ec = 0;
-    impl().replaceWith(toNodeOrStringVector(*state), ec);
-    setDOMException(state, ec);
+    wrapped().replaceWith(toNodeOrStringVector(state), ec);
+    setDOMException(&state, ec);
 
     return jsUndefined();
 }
 
-JSValue JSElement::prepend(ExecState* state)
+JSValue JSElement::prepend(ExecState& state)
 {
     ExceptionCode ec = 0;
-    impl().prepend(toNodeOrStringVector(*state), ec);
-    setDOMException(state, ec);
+    wrapped().prepend(toNodeOrStringVector(state), ec);
+    setDOMException(&state, ec);
 
     return jsUndefined();
 }
 
-JSValue JSElement::append(ExecState* state)
+JSValue JSElement::append(ExecState& state)
 {
     ExceptionCode ec = 0;
-    impl().append(toNodeOrStringVector(*state), ec);
-    setDOMException(state, ec);
+    wrapped().append(toNodeOrStringVector(state), ec);
+    setDOMException(&state, ec);
 
     return jsUndefined();
 }

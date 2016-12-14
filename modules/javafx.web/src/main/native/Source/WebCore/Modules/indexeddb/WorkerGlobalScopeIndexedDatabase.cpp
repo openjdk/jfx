@@ -32,7 +32,6 @@
 #include "WorkerGlobalScopeIndexedDatabase.h"
 
 #include "IDBFactory.h"
-#include "IDBFactoryBackendInterface.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 
@@ -57,7 +56,7 @@ WorkerGlobalScopeIndexedDatabase* WorkerGlobalScopeIndexedDatabase::from(ScriptE
     if (!supplement) {
         auto newSupplement = std::make_unique<WorkerGlobalScopeIndexedDatabase>();
         supplement = newSupplement.get();
-        provideTo(context, supplementName(), WTF::move(newSupplement));
+        provideTo(context, supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
@@ -69,11 +68,7 @@ IDBFactory* WorkerGlobalScopeIndexedDatabase::indexedDB(ScriptExecutionContext* 
 
 IDBFactory* WorkerGlobalScopeIndexedDatabase::indexedDB()
 {
-    if (!m_factoryBackend)
-        m_factoryBackend = IDBFactoryBackendInterface::create();
-    if (!m_idbFactory)
-        m_idbFactory = IDBFactory::create(m_factoryBackend.get());
-    return m_idbFactory.get();
+    return nullptr;
 }
 
 } // namespace WebCore

@@ -16,7 +16,6 @@
 
 class PlatformStrategiesJava : public WebCore::PlatformStrategies,
     private WebCore::CookiesStrategy,
-    private WebCore::LoaderStrategy,
     private WebCore::PluginStrategy
  {
     // ,private WebCore::SharedWorkerStrategy
@@ -52,6 +51,7 @@ private:
     virtual void refreshPlugins();
     virtual void getPluginInfo(const WebCore::Page*, Vector<WebCore::PluginInfo>&);
     virtual void getWebVisiblePluginInfo(const WebCore::Page*, Vector<WebCore::PluginInfo>&);
+    WebCore::BlobRegistry* createBlobRegistry() override;
 
     // // WebCore::VisitedLinkStrategy
     // virtual bool isLinkVisited(WebCore::Page*, WebCore::LinkHash, const WebCore::URL& baseURL, const WTF::AtomicString& attributeURL);

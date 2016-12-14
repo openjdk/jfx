@@ -72,8 +72,6 @@ AnimationControllerPrivate::AnimationControllerPrivate(Frame& frame)
     , m_updateStyleIfNeededDispatcher(*this, &AnimationControllerPrivate::updateStyleIfNeededDispatcherFired)
     , m_frame(frame)
     , m_beginAnimationUpdateTime(cBeginAnimationUpdateTimeNotSet)
-    , m_animationsWaitingForStyle()
-    , m_animationsWaitingForStartTimeResponse()
     , m_beginAnimationUpdateCount(0)
     , m_waitingForAsyncStartNotification(false)
     , m_isSuspended(false)
@@ -98,6 +96,8 @@ CompositeAnimation& AnimationControllerPrivate::ensureCompositeAnimation(RenderE
 
 bool AnimationControllerPrivate::clear(RenderElement& renderer)
 {
+    LOG(Animations, "AnimationControllerPrivate %p clear: %p", this, &renderer);
+
     ASSERT(renderer.isCSSAnimating());
     ASSERT(m_compositeAnimations.contains(&renderer));
 
@@ -201,7 +201,7 @@ void AnimationControllerPrivate::fireEventsAndUpdateStyle()
     bool updateStyle = !m_eventsToDispatch.isEmpty() || !m_elementChangesToDispatch.isEmpty();
 
     // fire all the events
-    Vector<EventToDispatch> eventsToDispatch = WTF::move(m_eventsToDispatch);
+    Vector<EventToDispatch> eventsToDispatch = WTFMove(m_eventsToDispatch);
     for (auto& event : eventsToDispatch) {
         Element& element = *event.element;
         if (event.eventType == eventNames().transitionendEvent)
@@ -239,7 +239,7 @@ void AnimationControllerPrivate::addEventToDispatch(PassRefPtr<Element> element,
 
 void AnimationControllerPrivate::addElementChangeToDispatch(Ref<Element>&& element)
 {
-    m_elementChangesToDispatch.append(WTF::move(element));
+    m_elementChangesToDispatch.append(WTFMove(element));
     ASSERT(!m_elementChangesToDispatch.last()->document().inPageCache());
     startUpdateStyleIfNeededDispatcher();
 }
@@ -410,6 +410,8 @@ void AnimationControllerPrivate::endAnimationUpdate()
 
 void AnimationControllerPrivate::receivedStartTimeResponse(double time)
 {
+    LOG(Animations, "AnimationControllerPrivate %p receivedStartTimeResponse %f", this, time);
+
     m_waitingForAsyncStartNotification = false;
     startTimeResponse(time);
 }
@@ -521,11 +523,24 @@ void AnimationControllerPrivate::startTimeResponse(double time)
 
 void AnimationControllerPrivate::animationWillBeRemoved(AnimationBase* animation)
 {
+    LOG(Animations, "AnimationControllerPrivate %p animationWillBeRemoved: %p", this, animation);
+
     removeFromAnimationsWaitingForStyle(animation);
     removeFromAnimationsWaitingForStartTimeResponse(animation);
 #if ENABLE(CSS_ANIMATIONS_LEVEL_2)
     removeFromAnimationsDependentOnScroll(animation);
 #endif
+
+    bool anyAnimationsWaitingForAsyncStart = false;
+    for (auto& animation : m_animationsWaitingForStartTimeResponse) {
+        if (animation->waitingForStartTime() && animation->isAccelerated()) {
+            anyAnimationsWaitingForAsyncStart = true;
+            break;
+        }
+    }
+
+    if (!anyAnimationsWaitingForAsyncStart)
+        m_waitingForAsyncStartNotification = false;
 }
 
 #if ENABLE(CSS_ANIMATIONS_LEVEL_2)
@@ -544,7 +559,8 @@ void AnimationControllerPrivate::scrollWasUpdated()
     auto* view = m_frame.view();
     if (!view || !wantsScrollUpdates())
         return;
-    m_scrollPosition = view->scrollOffsetForFixedPosition().height().toFloat();
+
+    m_scrollPosition = view->scrollPositionForFixedPosition().y().toFloat();
 
     // FIXME: This is updating all the animations, rather than just the ones
     // that are dependent on scroll. We to go from our AnimationBase to its CompositeAnimation
@@ -633,8 +649,11 @@ bool AnimationController::computeExtentOfAnimation(RenderElement& renderer, Layo
     return m_data->computeExtentOfAnimation(renderer, bounds);
 }
 
-void AnimationController::notifyAnimationStarted(RenderElement&, double startTime)
+void AnimationController::notifyAnimationStarted(RenderElement& renderer, double startTime)
 {
+    LOG(Animations, "AnimationController %p notifyAnimationStarted on renderer %p, time=%f", this, &renderer, startTime);
+    UNUSED_PARAM(renderer);
+
     AnimationUpdateBlock animationUpdateBlock(this);
     m_data->receivedStartTimeResponse(startTime);
 }

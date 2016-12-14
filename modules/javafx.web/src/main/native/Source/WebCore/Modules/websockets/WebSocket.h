@@ -110,11 +110,12 @@ private:
     explicit WebSocket(ScriptExecutionContext&);
 
     void resumeTimerFired();
+    void dispatchOrQueueErrorEvent();
     void dispatchOrQueueEvent(Ref<Event>&&);
 
     // ActiveDOMObject API.
     void contextDestroyed() override;
-    bool canSuspendForPageCache() const override;
+    bool canSuspendForDocumentSuspension() const override;
     void suspend(ReasonForSuspension) override;
     void resume() override;
     void stop() override;
@@ -143,6 +144,7 @@ private:
     Timer m_resumeTimer;
     bool m_shouldDelayEventFiring { false };
     Deque<Ref<Event>> m_pendingEvents;
+    bool m_dispatchedErrorEvent { false };
 };
 
 } // namespace WebCore

@@ -33,6 +33,7 @@
 #include "CSSBorderImage.h"
 #include "CSSCalculationValue.h"
 #include "CSSCursorImageValue.h"
+#include "CSSCustomPropertyValue.h"
 #include "CSSDefaultStyleSheets.h"
 #include "CSSFilterImageValue.h"
 #include "CSSFontFaceRule.h"
@@ -40,6 +41,8 @@
 #include "CSSFontSelector.h"
 #include "CSSFontValue.h"
 #include "CSSFunctionValue.h"
+#include "CSSInheritedValue.h"
+#include "CSSInitialValue.h"
 #include "CSSKeyframeRule.h"
 #include "CSSKeyframesRule.h"
 #include "CSSLineBoxContainValue.h"
@@ -55,6 +58,8 @@
 #include "CSSSupportsRule.h"
 #include "CSSTimingFunctionValue.h"
 #include "CSSValueList.h"
+#include "CSSValuePool.h"
+#include "CSSVariableDependentValue.h"
 #include "CachedImage.h"
 #include "CachedResourceLoader.h"
 #include "CachedSVGDocument.h"
@@ -64,7 +69,6 @@
 #include "Counter.h"
 #include "CounterContent.h"
 #include "CursorList.h"
-#include "DocumentStyleSheetCollection.h"
 #include "ElementRuleCollector.h"
 #include "FilterOperation.h"
 #include "Frame.h"
@@ -80,7 +84,6 @@
 #include "HTMLStyleElement.h"
 #include "HTMLTableElement.h"
 #include "HTMLTextAreaElement.h"
-#include "InsertionPoint.h"
 #include "InspectorInstrumentation.h"
 #include "KeyframeList.h"
 #include "LinkHash.h"
@@ -140,6 +143,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/TemporaryChange.h>
 #include <wtf/Vector.h>
+#include <wtf/text/AtomicStringHash.h>
 
 #if ENABLE(CSS_GRID_LAYOUT)
 #include "CSSGridLineNamesValue.h"
@@ -170,55 +174,7 @@ using namespace HTMLNames;
 static const CSSPropertyID lastHighPriorityProperty = CSSPropertyFontSynthesis;
 static const CSSPropertyID firstLowPriorityProperty = static_cast<CSSPropertyID>(lastHighPriorityProperty + 1);
 
-class StyleResolver::CascadedProperties {
-public:
-    CascadedProperties(TextDirection, WritingMode);
-
-    struct Property {
-        void apply(StyleResolver&);
-
-        CSSPropertyID id;
-        CSSValue* cssValue[3];
-    };
-
-    bool hasProperty(CSSPropertyID id) const;
-    Property& property(CSSPropertyID);
-    void addMatches(const MatchResult&, bool important, int startIndex, int endIndex, bool inheritedOnly = false);
-
-    void set(CSSPropertyID, CSSValue&, unsigned linkMatchType);
-    void setDeferred(CSSPropertyID, CSSValue&, unsigned linkMatchType);
-
-    void applyDeferredProperties(StyleResolver&);
-
-private:
-    void addStyleProperties(const StyleProperties&, StyleRule&, bool isImportant, bool inheritedOnly, PropertyWhitelistType, unsigned linkMatchType);
-    static void setPropertyInternal(Property&, CSSPropertyID, CSSValue&, unsigned linkMatchType);
-
-    Property m_properties[numCSSProperties + 1];
-    std::bitset<numCSSProperties + 1> m_propertyIsPresent;
-
-    Vector<Property, 8> m_deferredProperties;
-
-    TextDirection m_direction;
-    WritingMode m_writingMode;
-};
-
 static void extractDirectionAndWritingMode(const RenderStyle&, const StyleResolver::MatchResult&, TextDirection&, WritingMode&);
-
-#define HANDLE_INHERIT(prop, Prop) \
-if (isInherit) { \
-    m_state.style()->set##Prop(m_state.parentStyle()->prop()); \
-    return; \
-}
-
-#define HANDLE_INHERIT_AND_INITIAL(prop, Prop) \
-HANDLE_INHERIT(prop, Prop) \
-if (isInitial) { \
-    m_state.style()->set##Prop(RenderStyle::initial##Prop()); \
-    return; \
-}
-
-RenderStyle* StyleResolver::s_styleNotYetAvailable;
 
 inline void StyleResolver::State::cacheBorderAndBackground()
 {
@@ -233,7 +189,6 @@ inline void StyleResolver::State::cacheBorderAndBackground()
 inline void StyleResolver::State::clear()
 {
     m_element = nullptr;
-    m_styledElement = nullptr;
     m_parentStyle = nullptr;
     m_regionForStyling = nullptr;
     m_pendingImageProperties.clear();
@@ -270,8 +225,13 @@ void StyleResolver::MatchResult::addMatchedProperties(const StyleProperties& pro
                 }
 
                 // The value currentColor has implicitely the same side effect. It depends on the value of color,
-                // which is an inherited value, making the non-inherited property implicitely inherited.
+                // which is an inherited value, making the non-inherited property implicitly inherited.
                 if (is<CSSPrimitiveValue>(value) && downcast<CSSPrimitiveValue>(value).getValueID() == CSSValueCurrentcolor) {
+                    isCacheable = false;
+                    break;
+                }
+
+                if (value.isVariableDependentValue()) {
                     isCacheable = false;
                     break;
                 }
@@ -280,11 +240,11 @@ void StyleResolver::MatchResult::addMatchedProperties(const StyleProperties& pro
     }
 }
 
-StyleResolver::StyleResolver(Document& document, bool matchAuthorAndUserStyles)
+StyleResolver::StyleResolver(Document& document)
     : m_matchedPropertiesCacheAdditionsSinceLastSweep(0)
     , m_matchedPropertiesCacheSweepTimer(*this, &StyleResolver::sweepMatchedPropertiesCache)
     , m_document(document)
-    , m_matchAuthorAndUserStyles(matchAuthorAndUserStyles)
+    , m_matchAuthorAndUserStyles(m_document.settings() ? m_document.settings()->authorAndUserStylesEnabled() : true)
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     , m_viewportStyleResolver(ViewportStyleResolver::create(&document))
 #endif
@@ -307,15 +267,14 @@ StyleResolver::StyleResolver(Document& document, bool matchAuthorAndUserStyles)
         m_medium = std::make_unique<MediaQueryEvaluator>("all");
 
     if (root)
-        m_rootDefaultStyle = styleForElement(root, m_document.renderStyle(), DisallowStyleSharing, MatchOnlyUserAgentRules);
+        m_rootDefaultStyle = styleForElement(*root, m_document.renderStyle(), MatchOnlyUserAgentRules);
 
     if (m_rootDefaultStyle && view)
         m_medium = std::make_unique<MediaQueryEvaluator>(view->mediaType(), &view->frame(), m_rootDefaultStyle.get());
 
     m_ruleSets.resetAuthorStyle();
 
-    DocumentStyleSheetCollection& styleSheetCollection = m_document.styleSheetCollection();
-    m_ruleSets.initUserStyle(styleSheetCollection, *m_medium, *this);
+    m_ruleSets.initUserStyle(m_document.extensionStyleSheets(), *m_medium, *this);
 
 #if ENABLE(SVG_FONTS)
     if (m_document.svgExtensions()) {
@@ -324,41 +283,17 @@ StyleResolver::StyleResolver(Document& document, bool matchAuthorAndUserStyles)
             m_document.fontSelector().addFontFaceRule(svgFontFaceElement->fontFaceRule(), svgFontFaceElement->isInUserAgentShadowTree());
     }
 #endif
-
-    appendAuthorStyleSheets(0, styleSheetCollection.activeAuthorStyleSheets());
 }
 
-void StyleResolver::appendAuthorStyleSheets(unsigned firstNew, const Vector<RefPtr<CSSStyleSheet>>& styleSheets)
+void StyleResolver::appendAuthorStyleSheets(const Vector<RefPtr<CSSStyleSheet>>& styleSheets)
 {
-    m_ruleSets.appendAuthorStyleSheets(firstNew, styleSheets, m_medium.get(), m_inspectorCSSOMWrappers, this);
+    m_ruleSets.appendAuthorStyleSheets(styleSheets, m_medium.get(), m_inspectorCSSOMWrappers, this);
     if (auto renderView = document().renderView())
         renderView->style().fontCascade().update(&document().fontSelector());
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
     viewportStyleResolver()->resolve();
 #endif
-}
-
-void StyleResolver::pushParentElement(Element* parent)
-{
-    const ContainerNode* parentsParent = parent->parentOrShadowHostElement();
-
-    // We are not always invoked consistently. For example, script execution can cause us to enter
-    // style recalc in the middle of tree building. We may also be invoked from somewhere within the tree.
-    // Reset the stack in this case, or if we see a new root element.
-    // Otherwise just push the new parent.
-    if (!parentsParent || m_selectorFilter.parentStackIsEmpty())
-        m_selectorFilter.setupParentStack(parent);
-    else
-        m_selectorFilter.pushParent(parent);
-}
-
-void StyleResolver::popParentElement(Element* parent)
-{
-    // Note that we may get invoked for some random elements in some wacky cases during style resolve.
-    // Pause maintaining the stack in this case.
-    if (m_selectorFilter.parentStackIsConsistent(parent))
-        m_selectorFilter.popParent();
 }
 
 // This is a simplified style setting function for keyframe styles
@@ -400,13 +335,22 @@ void StyleResolver::sweepMatchedPropertiesCache()
     m_matchedPropertiesCacheAdditionsSinceLastSweep = 0;
 }
 
-bool StyleResolver::classNamesAffectedByRules(const SpaceSplitString& classNames) const
+StyleResolver::State::State(Element& element, RenderStyle* parentStyle, const RenderRegion* regionForStyling, const SelectorFilter* selectorFilter)
+    : m_element(&element)
+    , m_parentStyle(parentStyle)
+    , m_regionForStyling(regionForStyling)
+    , m_elementLinkState(element.document().visitedLinkState().determineLinkState(element))
+    , m_selectorFilter(selectorFilter)
 {
-    for (unsigned i = 0; i < classNames.size(); ++i) {
-        if (m_ruleSets.features().classesInRules.contains(classNames[i].impl()))
-            return true;
-    }
-    return false;
+    bool resetStyleInheritance = hasShadowRootParent(element) && downcast<ShadowRoot>(element.parentNode())->resetStyleInheritance();
+    if (resetStyleInheritance)
+        m_parentStyle = nullptr;
+
+    auto& document = element.document();
+    auto* documentElement = document.documentElement();
+    m_rootElementStyle = (!documentElement || documentElement == &element) ? document.renderStyle() : documentElement->renderStyle();
+
+    updateConversionData();
 }
 
 inline void StyleResolver::State::updateConversionData()
@@ -414,349 +358,11 @@ inline void StyleResolver::State::updateConversionData()
     m_cssToLengthConversionData = CSSToLengthConversionData(m_style.get(), m_rootElementStyle, m_element ? document().renderView() : nullptr);
 }
 
-inline void StyleResolver::State::initElement(Element* element)
-{
-    m_element = element;
-    m_styledElement = element && is<StyledElement>(*element) ? downcast<StyledElement>(element) : nullptr;
-    m_elementLinkState = element ? element->document().visitedLinkState().determineLinkState(*element) : NotInsideLink;
-    updateConversionData();
-}
-
-inline void StyleResolver::initElement(Element* e)
-{
-    if (m_state.element() != e) {
-        m_state.initElement(e);
-        if (e && e == e->document().documentElement()) {
-            e->document().setDirectionSetOnDocumentElement(false);
-            e->document().setWritingModeSetOnDocumentElement(false);
-        }
-    }
-}
-
-inline void StyleResolver::State::initForStyleResolve(Document& document, Element* e, RenderStyle* parentStyle, const RenderRegion* regionForStyling)
-{
-    m_regionForStyling = regionForStyling;
-
-    if (e) {
-        bool resetStyleInheritance = hasShadowRootParent(*e) && downcast<ShadowRoot>(*e->parentNode()).resetStyleInheritance();
-        m_parentStyle = resetStyleInheritance ? nullptr : parentStyle;
-    } else
-        m_parentStyle = parentStyle;
-
-    Node* docElement = e ? e->document().documentElement() : nullptr;
-    RenderStyle* docStyle = document.renderStyle();
-    m_rootElementStyle = docElement && e != docElement ? docElement->renderStyle() : docStyle;
-
-    m_style = nullptr;
-    m_pendingImageProperties.clear();
-    m_fontDirty = false;
-
-    updateConversionData();
-}
-
 inline void StyleResolver::State::setStyle(Ref<RenderStyle>&& style)
 {
-    m_style = WTF::move(style);
+    m_style = WTFMove(style);
     updateConversionData();
 }
-
-static const unsigned cStyleSearchThreshold = 10;
-static const unsigned cStyleSearchLevelThreshold = 10;
-
-static inline bool parentElementPreventsSharing(const Element* parentElement)
-{
-    if (!parentElement)
-        return false;
-    return parentElement->hasFlagsSetDuringStylingOfChildren();
-}
-
-Node* StyleResolver::locateCousinList(Element* parent, unsigned& visitedNodeCount) const
-{
-    if (visitedNodeCount >= cStyleSearchThreshold * cStyleSearchLevelThreshold)
-        return nullptr;
-    if (!is<StyledElement>(parent))
-        return nullptr;
-    StyledElement* styledParent = downcast<StyledElement>(parent);
-    if (styledParent->inlineStyle())
-        return nullptr;
-    if (is<SVGElement>(*styledParent) && downcast<SVGElement>(*styledParent).animatedSMILStyleProperties())
-        return nullptr;
-    if (styledParent->hasID() && m_ruleSets.features().idsInRules.contains(styledParent->idForStyleResolution().impl()))
-        return nullptr;
-
-    RenderStyle* parentStyle = styledParent->renderStyle();
-    unsigned subcount = 0;
-    Node* thisCousin = styledParent;
-    Node* currentNode = styledParent->previousSibling();
-
-    // Reserve the tries for this level. This effectively makes sure that the algorithm
-    // will never go deeper than cStyleSearchLevelThreshold levels into recursion.
-    visitedNodeCount += cStyleSearchThreshold;
-    while (thisCousin) {
-        while (currentNode) {
-            ++subcount;
-            if (currentNode->renderStyle() == parentStyle && currentNode->lastChild()
-                && is<Element>(*currentNode) && !parentElementPreventsSharing(downcast<Element>(currentNode))
-                ) {
-                // Adjust for unused reserved tries.
-                visitedNodeCount -= cStyleSearchThreshold - subcount;
-                return currentNode->lastChild();
-            }
-            if (subcount >= cStyleSearchThreshold)
-                return nullptr;
-            currentNode = currentNode->previousSibling();
-        }
-        currentNode = locateCousinList(thisCousin->parentElement(), visitedNodeCount);
-        thisCousin = currentNode;
-    }
-
-    return nullptr;
-}
-
-bool StyleResolver::styleSharingCandidateMatchesRuleSet(RuleSet* ruleSet)
-{
-    if (!ruleSet)
-        return false;
-
-    ElementRuleCollector collector(*m_state.element(), m_state.style(), m_ruleSets, m_selectorFilter);
-    return collector.hasAnyMatchingRules(ruleSet);
-}
-
-bool StyleResolver::canShareStyleWithControl(StyledElement* element) const
-{
-    const State& state = m_state;
-    HTMLInputElement* thisInputElement = element->toInputElement();
-    HTMLInputElement* otherInputElement = state.element()->toInputElement();
-
-    if (!thisInputElement || !otherInputElement)
-        return false;
-
-    if (thisInputElement->isAutoFilled() != otherInputElement->isAutoFilled())
-        return false;
-    if (thisInputElement->shouldAppearChecked() != otherInputElement->shouldAppearChecked())
-        return false;
-    if (thisInputElement->shouldAppearIndeterminate() != otherInputElement->shouldAppearIndeterminate())
-        return false;
-    if (thisInputElement->isRequired() != otherInputElement->isRequired())
-        return false;
-
-    if (element->isDisabledFormControl() != state.element()->isDisabledFormControl())
-        return false;
-
-    if (element->isDefaultButtonForForm() != state.element()->isDefaultButtonForForm())
-        return false;
-
-    if (element->isInRange() != state.element()->isInRange())
-        return false;
-
-    if (element->isOutOfRange() != state.element()->isOutOfRange())
-        return false;
-
-    return true;
-}
-
-static inline bool elementHasDirectionAuto(Element* element)
-{
-    // FIXME: This line is surprisingly hot, we may wish to inline hasDirectionAuto into StyleResolver.
-    return is<HTMLElement>(*element) && downcast<HTMLElement>(*element).hasDirectionAuto();
-}
-
-bool StyleResolver::sharingCandidateHasIdenticalStyleAffectingAttributes(StyledElement* sharingCandidate) const
-{
-    const State& state = m_state;
-    if (state.element()->elementData() == sharingCandidate->elementData())
-        return true;
-    if (state.element()->fastGetAttribute(XMLNames::langAttr) != sharingCandidate->fastGetAttribute(XMLNames::langAttr))
-        return false;
-    if (state.element()->fastGetAttribute(langAttr) != sharingCandidate->fastGetAttribute(langAttr))
-        return false;
-
-    if (!state.elementAffectedByClassRules()) {
-        if (sharingCandidate->hasClass() && classNamesAffectedByRules(sharingCandidate->classNames()))
-            return false;
-    } else if (sharingCandidate->hasClass()) {
-        // SVG elements require a (slow!) getAttribute comparision because "class" is an animatable attribute for SVG.
-        if (state.element()->isSVGElement()) {
-            if (state.element()->getAttribute(classAttr) != sharingCandidate->getAttribute(classAttr))
-                return false;
-        } else {
-            if (state.element()->classNames() != sharingCandidate->classNames())
-                return false;
-        }
-    } else
-        return false;
-
-    if (state.styledElement()->presentationAttributeStyle() != sharingCandidate->presentationAttributeStyle())
-        return false;
-
-    if (state.element()->hasTagName(progressTag)) {
-        if (state.element()->shouldAppearIndeterminate() != sharingCandidate->shouldAppearIndeterminate())
-            return false;
-    }
-
-    return true;
-}
-
-bool StyleResolver::canShareStyleWithElement(StyledElement* element) const
-{
-    RenderStyle* style = element->renderStyle();
-    const State& state = m_state;
-
-    if (!style)
-        return false;
-    if (style->unique())
-        return false;
-    if (style->hasUniquePseudoStyle())
-        return false;
-    if (element->tagQName() != state.element()->tagQName())
-        return false;
-    if (element->inlineStyle())
-        return false;
-    if (element->needsStyleRecalc())
-        return false;
-    if (element->isSVGElement() && downcast<SVGElement>(*element).animatedSMILStyleProperties())
-        return false;
-    if (element->isLink() != state.element()->isLink())
-        return false;
-    if (element->hovered() != state.element()->hovered())
-        return false;
-    if (element->active() != state.element()->active())
-        return false;
-    if (element->focused() != state.element()->focused())
-        return false;
-    if (element->shadowPseudoId() != state.element()->shadowPseudoId())
-        return false;
-    if (element == element->document().cssTarget())
-        return false;
-    if (!sharingCandidateHasIdenticalStyleAffectingAttributes(element))
-        return false;
-    if (element->additionalPresentationAttributeStyle() != state.styledElement()->additionalPresentationAttributeStyle())
-        return false;
-    if (element->affectsNextSiblingElementStyle() || element->styleIsAffectedByPreviousSibling())
-        return false;
-
-    if (element->hasID() && m_ruleSets.features().idsInRules.contains(element->idForStyleResolution().impl()))
-        return false;
-
-    bool isControl = is<HTMLFormControlElement>(*element);
-
-    if (isControl != is<HTMLFormControlElement>(*state.element()))
-        return false;
-
-    if (isControl && !canShareStyleWithControl(element))
-        return false;
-
-    if (style->transitions() || style->animations())
-        return false;
-
-    // Turn off style sharing for elements that can gain layers for reasons outside of the style system.
-    // See comments in RenderObject::setStyle().
-    if (element->hasTagName(iframeTag) || element->hasTagName(frameTag) || element->hasTagName(embedTag) || element->hasTagName(objectTag) || element->hasTagName(appletTag) || element->hasTagName(canvasTag))
-        return false;
-
-    if (elementHasDirectionAuto(element))
-        return false;
-
-    if (element->isLink() && state.elementLinkState() != style->insideLink())
-        return false;
-
-    if (element->elementData() != state.element()->elementData()) {
-        if (element->fastGetAttribute(readonlyAttr) != state.element()->fastGetAttribute(readonlyAttr))
-            return false;
-        if (element->isSVGElement()) {
-            if (element->getAttribute(typeAttr) != state.element()->getAttribute(typeAttr))
-                return false;
-        } else {
-            if (element->fastGetAttribute(typeAttr) != state.element()->fastGetAttribute(typeAttr))
-                return false;
-        }
-    }
-
-    if (element->matchesValidPseudoClass() != state.element()->matchesValidPseudoClass())
-        return false;
-
-    if (element->matchesInvalidPseudoClass() != state.element()->matchesValidPseudoClass())
-        return false;
-
-#if ENABLE(VIDEO_TRACK)
-    // Deny sharing styles between WebVTT and non-WebVTT nodes.
-    if (is<WebVTTElement>(*state.element()))
-        return false;
-#endif
-
-#if ENABLE(FULLSCREEN_API)
-    if (element == element->document().webkitCurrentFullScreenElement() || state.element() == state.document().webkitCurrentFullScreenElement())
-        return false;
-#endif
-    return true;
-}
-
-inline StyledElement* StyleResolver::findSiblingForStyleSharing(Node* node, unsigned& count) const
-{
-    for (; node; node = node->previousSibling()) {
-        if (!is<StyledElement>(*node))
-            continue;
-        if (canShareStyleWithElement(downcast<StyledElement>(node)))
-            break;
-        if (count++ == cStyleSearchThreshold)
-            return nullptr;
-    }
-    return downcast<StyledElement>(node);
-}
-
-RenderStyle* StyleResolver::locateSharedStyle()
-{
-    State& state = m_state;
-    if (!state.styledElement() || !state.parentStyle())
-        return nullptr;
-
-    // If the element has inline style it is probably unique.
-    if (state.styledElement()->inlineStyle())
-        return nullptr;
-    if (state.styledElement()->isSVGElement() && downcast<SVGElement>(*state.styledElement()).animatedSMILStyleProperties())
-        return nullptr;
-    // Ids stop style sharing if they show up in the stylesheets.
-    if (state.styledElement()->hasID() && m_ruleSets.features().idsInRules.contains(state.styledElement()->idForStyleResolution().impl()))
-        return nullptr;
-    if (parentElementPreventsSharing(state.element()->parentElement()))
-        return nullptr;
-    if (state.element() == state.document().cssTarget())
-        return nullptr;
-    if (elementHasDirectionAuto(state.element()))
-        return nullptr;
-
-    // Cache whether state.element is affected by any known class selectors.
-    // FIXME: This shouldn't be a member variable. The style sharing code could be factored out of StyleResolver.
-    state.setElementAffectedByClassRules(state.element() && state.element()->hasClass() && classNamesAffectedByRules(state.element()->classNames()));
-
-    // Check previous siblings and their cousins.
-    unsigned count = 0;
-    unsigned visitedNodeCount = 0;
-    StyledElement* shareElement = nullptr;
-    Node* cousinList = state.styledElement()->previousSibling();
-    while (cousinList) {
-        shareElement = findSiblingForStyleSharing(cousinList, count);
-        if (shareElement)
-            break;
-        cousinList = locateCousinList(cousinList->parentElement(), visitedNodeCount);
-    }
-
-    // If we have exhausted all our budget or our cousins.
-    if (!shareElement)
-        return nullptr;
-
-    // Can't share if sibling rules apply. This is checked at the end as it should rarely fail.
-    if (styleSharingCandidateMatchesRuleSet(m_ruleSets.sibling()))
-        return nullptr;
-    // Can't share if attribute rules apply.
-    if (styleSharingCandidateMatchesRuleSet(m_ruleSets.uncommonAttribute()))
-        return nullptr;
-    // Tracking child index requires unique style for each node. This may get set by the sibling rule match above.
-    if (parentElementPreventsSharing(state.element()->parentElement()))
-        return nullptr;
-    return shareElement->renderStyle();
-}
-
 static inline bool isAtShadowBoundary(const Element* element)
 {
     if (!element)
@@ -765,58 +371,35 @@ static inline bool isAtShadowBoundary(const Element* element)
     return parentNode && parentNode->isShadowRoot();
 }
 
-Ref<RenderStyle> StyleResolver::styleForElement(Element* element, RenderStyle* defaultParent,
-    StyleSharingBehavior sharingBehavior, RuleMatchingBehavior matchingBehavior, const RenderRegion* regionForStyling)
+Ref<RenderStyle> StyleResolver::styleForElement(Element& element, RenderStyle* parentStyle, RuleMatchingBehavior matchingBehavior, const RenderRegion* regionForStyling, const SelectorFilter* selectorFilter)
 {
     RELEASE_ASSERT(!m_inLoadPendingImages);
 
-    // Once an element has a renderer, we don't try to destroy it, since otherwise the renderer
-    // will vanish if a style recalc happens during loading.
-    if (sharingBehavior == AllowStyleSharing && !element->document().haveStylesheetsLoaded() && !element->renderer()) {
-        if (!s_styleNotYetAvailable) {
-            s_styleNotYetAvailable = &RenderStyle::create().leakRef();
-            s_styleNotYetAvailable->setDisplay(NONE);
-            s_styleNotYetAvailable->fontCascade().update(&document().fontSelector());
-        }
-        element->document().setHasNodesWithPlaceholderStyle();
-        return *s_styleNotYetAvailable;
-    }
-
+    m_state = State(element, parentStyle, regionForStyling, selectorFilter);
     State& state = m_state;
-    initElement(element);
-    state.initForStyleResolve(document(), element, defaultParent, regionForStyling);
-    if (sharingBehavior == AllowStyleSharing) {
-        if (RenderStyle* sharedStyle = locateSharedStyle()) {
-            state.clear();
-            return *sharedStyle;
-        }
-    }
 
     if (state.parentStyle()) {
         state.setStyle(RenderStyle::create());
-        state.style()->inheritFrom(state.parentStyle(), isAtShadowBoundary(element) ? RenderStyle::AtShadowBoundary : RenderStyle::NotAtShadowBoundary);
+        state.style()->inheritFrom(state.parentStyle(), isAtShadowBoundary(&element) ? RenderStyle::AtShadowBoundary : RenderStyle::NotAtShadowBoundary);
     } else {
         state.setStyle(defaultStyleForElement());
         state.setParentStyle(RenderStyle::clone(state.style()));
     }
 
-    if (element->isLink()) {
+    if (element.isLink()) {
         state.style()->setIsLink(true);
         EInsideLink linkState = state.elementLinkState();
         if (linkState != NotInsideLink) {
-            bool forceVisited = InspectorInstrumentation::forcePseudoState(*element, CSSSelector::PseudoClassVisited);
+            bool forceVisited = InspectorInstrumentation::forcePseudoState(element, CSSSelector::PseudoClassVisited);
             if (forceVisited)
                 linkState = InsideVisitedLink;
         }
         state.style()->setInsideLink(linkState);
     }
 
-    bool needsCollection = false;
-    CSSDefaultStyleSheets::ensureDefaultStyleSheetsForElement(*element, needsCollection);
-    if (needsCollection)
-        m_ruleSets.collectFeatures();
+    CSSDefaultStyleSheets::ensureDefaultStyleSheetsForElement(element);
 
-    ElementRuleCollector collector(*element, state.style(), m_ruleSets, m_selectorFilter);
+    ElementRuleCollector collector(element, state.style(), m_ruleSets, m_state.selectorFilter());
     collector.setRegionForStyling(regionForStyling);
     collector.setMedium(m_medium.get());
 
@@ -828,7 +411,7 @@ Ref<RenderStyle> StyleResolver::styleForElement(Element* element, RenderStyle* d
     applyMatchedProperties(collector.matchedResult(), element);
 
     // Clean up our style object's display and text decorations (among other fixups).
-    adjustRenderStyle(*state.style(), *state.parentStyle(), element);
+    adjustRenderStyle(*state.style(), *state.parentStyle(), &element);
 
     if (state.style()->hasViewportUnits())
         document().setHasStyleWithViewportUnits();
@@ -863,18 +446,23 @@ Ref<RenderStyle> StyleResolver::styleForKeyframe(const RenderStyle* elementStyle
     CascadedProperties cascade(direction, writingMode);
     cascade.addMatches(result, false, 0, result.matchedProperties().size() - 1);
 
-    applyCascadedProperties(cascade, firstCSSProperty, lastHighPriorityProperty);
+    // Resolve custom properties first.
+    applyCascadedProperties(cascade, CSSPropertyCustom, CSSPropertyCustom, &result);
+
+    applyCascadedProperties(cascade, firstCSSProperty, lastHighPriorityProperty, &result);
 
     // If our font got dirtied, update it now.
     updateFont();
 
     // Now do rest of the properties.
-    applyCascadedProperties(cascade, firstLowPriorityProperty, lastCSSProperty);
+    applyCascadedProperties(cascade, firstLowPriorityProperty, lastCSSProperty, &result);
 
     // If our font got dirtied by one of the non-essential font props, update it a second time.
     updateFont();
 
-    cascade.applyDeferredProperties(*this);
+    cascade.applyDeferredProperties(*this, &result);
+
+    adjustRenderStyle(*state.style(), *state.parentStyle(), nullptr);
 
     // Start loading resources referenced by this style.
     loadPendingResources();
@@ -892,12 +480,12 @@ Ref<RenderStyle> StyleResolver::styleForKeyframe(const RenderStyle* elementStyle
     return state.takeStyle();
 }
 
-void StyleResolver::keyframeStylesForAnimation(Element* e, const RenderStyle* elementStyle, KeyframeList& list)
+void StyleResolver::keyframeStylesForAnimation(Element& element, const RenderStyle* elementStyle, KeyframeList& list)
 {
     list.clear();
 
     // Get the keyframesRule for this name
-    if (!e || list.animationName().isEmpty())
+    if (list.animationName().isEmpty())
         return;
 
     m_keyframesRuleMap.checkConsistency();
@@ -912,8 +500,7 @@ void StyleResolver::keyframeStylesForAnimation(Element* e, const RenderStyle* el
     const Vector<RefPtr<StyleKeyframe>>& keyframes = keyframesRule->keyframes();
     for (unsigned i = 0; i < keyframes.size(); ++i) {
         // Apply the declaration to the style. This is a simplified version of the logic in styleForElement
-        initElement(e);
-        m_state.initForStyleResolve(document(), e, nullptr);
+        m_state = State(element, nullptr);
 
         const StyleKeyframe* keyframe = keyframes[i].get();
 
@@ -953,17 +540,11 @@ void StyleResolver::keyframeStylesForAnimation(Element* e, const RenderStyle* el
     }
 }
 
-PassRefPtr<RenderStyle> StyleResolver::pseudoStyleForElement(Element* element, const PseudoStyleRequest& pseudoStyleRequest, RenderStyle* parentStyle)
+PassRefPtr<RenderStyle> StyleResolver::pseudoStyleForElement(Element& element, const PseudoStyleRequest& pseudoStyleRequest, RenderStyle& parentStyle)
 {
-    ASSERT(parentStyle);
-    if (!element)
-        return nullptr;
+    m_state = State(element, &parentStyle);
 
     State& state = m_state;
-
-    initElement(element);
-
-    state.initForStyleResolve(document(), element, parentStyle);
 
     if (m_state.parentStyle()) {
         state.setStyle(RenderStyle::create());
@@ -977,7 +558,7 @@ PassRefPtr<RenderStyle> StyleResolver::pseudoStyleForElement(Element* element, c
     // those rules.
 
     // Check UA, user and author rules.
-    ElementRuleCollector collector(*element, m_state.style(), m_ruleSets, m_selectorFilter);
+    ElementRuleCollector collector(element, m_state.style(), m_ruleSets, m_state.selectorFilter());
     collector.setPseudoStyleRequest(pseudoStyleRequest);
     collector.setMedium(m_medium.get());
     collector.matchUARules();
@@ -1011,7 +592,11 @@ Ref<RenderStyle> StyleResolver::styleForPage(int pageIndex)
 {
     RELEASE_ASSERT(!m_inLoadPendingImages);
 
-    m_state.initForStyleResolve(m_document, m_document.documentElement(), m_document.renderStyle());
+    auto* documentElement = m_document.documentElement();
+    if (!documentElement)
+        return RenderStyle::create();
+
+    m_state = State(*documentElement, m_document.renderStyle());
 
     m_state.setStyle(RenderStyle::create());
     m_state.style()->inheritFrom(m_state.rootElementStyle());
@@ -1028,14 +613,17 @@ Ref<RenderStyle> StyleResolver::styleForPage(int pageIndex)
     CascadedProperties cascade(direction, writingMode);
     cascade.addMatches(result, false, 0, result.matchedProperties().size() - 1);
 
-    applyCascadedProperties(cascade, firstCSSProperty, lastHighPriorityProperty);
+    // Resolve custom properties first.
+    applyCascadedProperties(cascade, CSSPropertyCustom, CSSPropertyCustom, &result);
+
+    applyCascadedProperties(cascade, firstCSSProperty, lastHighPriorityProperty, &result);
 
     // If our font got dirtied, update it now.
     updateFont();
 
-    applyCascadedProperties(cascade, firstLowPriorityProperty, lastCSSProperty);
+    applyCascadedProperties(cascade, firstLowPriorityProperty, lastCSSProperty, &result);
 
-    cascade.applyDeferredProperties(*this);
+    cascade.applyDeferredProperties(*this, &result);
 
     // Start loading resources referenced by this style.
     loadPendingResources();
@@ -1269,6 +857,7 @@ void StyleResolver::adjustRenderStyle(RenderStyle& style, const RenderStyle& par
         || style.position() == StickyPosition
         || (style.position() == FixedPosition && documentSettings() && documentSettings()->fixedPositionCreatesStackingContext())
         || style.hasFlowFrom()
+        || style.willChangeCreatesStackingContext()
         ))
         style.setZIndex(0);
 
@@ -1409,13 +998,13 @@ static void checkForOrientationChange(RenderStyle* style)
 {
     FontOrientation fontOrientation;
     NonCJKGlyphOrientation glyphOrientation;
-    style->getFontAndGlyphOrientation(fontOrientation, glyphOrientation);
+    std::tie(fontOrientation, glyphOrientation) = style->fontAndGlyphOrientation();
 
-    const FontDescription& fontDescription = style->fontDescription();
+    const auto& fontDescription = style->fontDescription();
     if (fontDescription.orientation() == fontOrientation && fontDescription.nonCJKGlyphOrientation() == glyphOrientation)
         return;
 
-    FontDescription newFontDescription(fontDescription);
+    auto newFontDescription = fontDescription;
     newFontDescription.setNonCJKGlyphOrientation(glyphOrientation);
     newFontDescription.setOrientation(fontOrientation);
     style->setFontDescription(newFontDescription);
@@ -1449,10 +1038,9 @@ Vector<RefPtr<StyleRule>> StyleResolver::pseudoStyleRulesForElement(Element* ele
     if (!element || !element->document().haveStylesheetsLoaded())
         return Vector<RefPtr<StyleRule>>();
 
-    initElement(element);
-    m_state.initForStyleResolve(document(), element, nullptr);
+    m_state = State(*element, nullptr);
 
-    ElementRuleCollector collector(*element, m_state.style(), m_ruleSets, m_selectorFilter);
+    ElementRuleCollector collector(*element, nullptr, m_ruleSets, m_state.selectorFilter());
     collector.setMode(SelectorChecker::Mode::CollectingRules);
     collector.setPseudoStyleRequest(PseudoStyleRequest(pseudoId));
     collector.setMedium(m_medium.get());
@@ -1474,13 +1062,6 @@ Vector<RefPtr<StyleRule>> StyleResolver::pseudoStyleRulesForElement(Element* ele
     }
 
     return collector.matchedRuleList();
-}
-
-// -------------------------------------------------------------------------------------
-
-static Length convertToFloatLength(const CSSPrimitiveValue* primitiveValue, const CSSToLengthConversionData& conversionData)
-{
-    return primitiveValue ? primitiveValue->convertToLength<FixedFloatConversion | PercentConversion | CalculatedConversion>(conversionData) : Length(Undefined);
 }
 
 static bool shouldApplyPropertyInParseOrder(CSSPropertyID propertyID)
@@ -1595,7 +1176,7 @@ void StyleResolver::addToMatchedPropertiesCache(const RenderStyle* style, const 
     // The RenderStyle in the cache is really just a holder for the substructures and never used as-is.
     cacheItem.renderStyle = RenderStyle::clone(style);
     cacheItem.parentRenderStyle = RenderStyle::clone(parentStyle);
-    m_matchedPropertiesCache.add(hash, WTF::move(cacheItem));
+    m_matchedPropertiesCache.add(hash, WTFMove(cacheItem));
 }
 
 void StyleResolver::invalidateMatchedPropertiesCache()
@@ -1614,10 +1195,11 @@ void StyleResolver::clearCachedPropertiesAffectedByViewportUnits()
         m_matchedPropertiesCache.remove(key);
 }
 
-static bool isCacheableInMatchedPropertiesCache(const Element* element, const RenderStyle* style, const RenderStyle* parentStyle)
+static bool isCacheableInMatchedPropertiesCache(const Element& element, const RenderStyle* style, const RenderStyle* parentStyle)
 {
-    // FIXME: CSSPropertyWebkitWritingMode modifies state when applying to document element. We can't skip the applying by caching.
-    if (element == element->document().documentElement() && element->document().writingModeSetOnDocumentElement())
+    // FIXME: Writing mode and direction properties modify state when applying to document element by calling
+    // Document::setWritingMode/DirectionSetOnDocumentElement. We can't skip the applying by caching.
+    if (&element == element.document().documentElement())
         return false;
     if (style->unique() || (style->styleType() != NOPSEUDO && parentStyle->unique()))
         return false;
@@ -1666,9 +1248,8 @@ void extractDirectionAndWritingMode(const RenderStyle& style, const StyleResolve
     }
 }
 
-void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const Element* element, ShouldUseMatchedPropertiesCache shouldUseMatchedPropertiesCache)
+void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const Element& element, ShouldUseMatchedPropertiesCache shouldUseMatchedPropertiesCache)
 {
-    ASSERT(element);
     State& state = m_state;
     unsigned cacheHash = shouldUseMatchedPropertiesCache && matchResult.isCacheable ? computeMatchedPropertiesHash(matchResult.matchedProperties().data(), matchResult.matchedProperties().size()) : 0;
     bool applyInheritedOnly = false;
@@ -1679,7 +1260,7 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
         // style declarations. We then only need to apply the inherited properties, if any, as their values can depend on the
         // element context. This is fast and saves memory by reusing the style data structures.
         state.style()->copyNonInheritedFrom(cacheItem->renderStyle.get());
-        if (state.parentStyle()->inheritedDataShared(cacheItem->parentRenderStyle.get()) && !isAtShadowBoundary(element)) {
+        if (state.parentStyle()->inheritedDataShared(cacheItem->parentRenderStyle.get()) && !isAtShadowBoundary(&element)) {
             EInsideLink linkStatus = state.style()->insideLink();
             // If the cache item parent style has identical inherited properties to the current parent style then the
             // resulting style will be identical too. We copy the inherited properties over from the cache and are done.
@@ -1707,14 +1288,17 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
         cascade.addMatches(matchResult, false, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, applyInheritedOnly);
         cascade.addMatches(matchResult, true, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, applyInheritedOnly);
 
-        applyCascadedProperties(cascade, CSSPropertyWebkitRubyPosition, CSSPropertyWebkitRubyPosition);
+        applyCascadedProperties(cascade, CSSPropertyWebkitRubyPosition, CSSPropertyWebkitRubyPosition, &matchResult);
         adjustStyleForInterCharacterRuby();
 
+        // Resolve custom variables first.
+        applyCascadedProperties(cascade, CSSPropertyCustom, CSSPropertyCustom, &matchResult);
+
         // Start by applying properties that other properties may depend on.
-        applyCascadedProperties(cascade, firstCSSProperty, lastHighPriorityProperty);
+        applyCascadedProperties(cascade, firstCSSProperty, lastHighPriorityProperty, &matchResult);
 
         updateFont();
-        applyCascadedProperties(cascade, firstLowPriorityProperty, lastCSSProperty);
+        applyCascadedProperties(cascade, firstLowPriorityProperty, lastCSSProperty, &matchResult);
 
         state.cacheBorderAndBackground();
     }
@@ -1725,13 +1309,16 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
     cascade.addMatches(matchResult, true, matchResult.ranges.firstUserRule, matchResult.ranges.lastUserRule, applyInheritedOnly);
     cascade.addMatches(matchResult, true, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, applyInheritedOnly);
 
-    applyCascadedProperties(cascade, CSSPropertyWebkitRubyPosition, CSSPropertyWebkitRubyPosition);
+    // Resolve custom properties first.
+    applyCascadedProperties(cascade, CSSPropertyCustom, CSSPropertyCustom, &matchResult);
+
+    applyCascadedProperties(cascade, CSSPropertyWebkitRubyPosition, CSSPropertyWebkitRubyPosition, &matchResult);
 
     // Adjust the font size to be smaller if ruby-position is inter-character.
     adjustStyleForInterCharacterRuby();
 
     // Start by applying properties that other properties may depend on.
-    applyCascadedProperties(cascade, firstCSSProperty, lastHighPriorityProperty);
+    applyCascadedProperties(cascade, firstCSSProperty, lastHighPriorityProperty, &matchResult);
 
     // If the effective zoom value changes, we can't use the matched properties cache. Start over.
     if (cacheItem && cacheItem->renderStyle->effectiveZoom() != state.style()->effectiveZoom())
@@ -1745,12 +1332,12 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
         return applyMatchedProperties(matchResult, element, DoNotUseMatchedPropertiesCache);
 
     // Apply properties that no other properties depend on.
-    applyCascadedProperties(cascade, firstLowPriorityProperty, lastCSSProperty);
+    applyCascadedProperties(cascade, firstLowPriorityProperty, lastCSSProperty, &matchResult);
 
     // Finally, some properties must be applied in the order they were parsed.
     // There are some CSS properties that affect the same RenderStyle values,
     // so to preserve behavior, we queue them up during cascade and flush here.
-    cascade.applyDeferredProperties(*this);
+    cascade.applyDeferredProperties(*this, &matchResult);
 
     // Start loading resources referenced by this style.
     loadPendingResources();
@@ -1759,15 +1346,15 @@ void StyleResolver::applyMatchedProperties(const MatchResult& matchResult, const
 
     if (cacheItem || !cacheHash)
         return;
-    if (!isCacheableInMatchedPropertiesCache(state.element(), state.style(), state.parentStyle()))
+    if (!isCacheableInMatchedPropertiesCache(*state.element(), state.style(), state.parentStyle()))
         return;
     addToMatchedPropertiesCache(state.style(), state.parentStyle(), cacheHash, matchResult);
 }
 
 void StyleResolver::applyPropertyToStyle(CSSPropertyID id, CSSValue* value, RenderStyle* style)
 {
-    initElement(nullptr);
-    m_state.initForStyleResolve(document(), nullptr, style);
+    m_state = State();
+    m_state.setParentStyle(*style);
     m_state.setStyle(*style);
     applyPropertyToCurrentStyle(id, value);
 }
@@ -1840,7 +1427,7 @@ inline bool StyleResolver::isValidCueStyleProperty(CSSPropertyID id)
     case CSSPropertyFontFamily:
     case CSSPropertyFontSize:
     case CSSPropertyFontStyle:
-    case CSSPropertyFontVariant:
+    case CSSPropertyFontVariantCaps:
     case CSSPropertyFontWeight:
     case CSSPropertyLineHeight:
     case CSSPropertyOpacity:
@@ -1880,20 +1467,122 @@ bool StyleResolver::useSVGZoomRulesForLength()
     return is<SVGElement>(m_state.element()) && !(is<SVGSVGElement>(*m_state.element()) && m_state.element()->parentNode());
 }
 
-void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
+StyleResolver::CascadedProperties* StyleResolver::cascadedPropertiesForRollback(const MatchResult& matchResult)
+{
+    ASSERT(cascadeLevel() != UserAgentLevel);
+
+    TextDirection direction;
+    WritingMode writingMode;
+    extractDirectionAndWritingMode(*state().style(), matchResult, direction, writingMode);
+
+    if (cascadeLevel() == AuthorLevel) {
+        CascadedProperties* authorRollback = state().authorRollback();
+        if (authorRollback)
+            return authorRollback;
+
+        auto newAuthorRollback(std::make_unique<CascadedProperties>(direction, writingMode));
+
+        // This special rollback cascade contains UA rules and user rules but no author rules.
+        newAuthorRollback->addMatches(matchResult, false, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, false);
+        newAuthorRollback->addMatches(matchResult, false, matchResult.ranges.firstUserRule, matchResult.ranges.lastUserRule, false);
+        newAuthorRollback->addMatches(matchResult, true, matchResult.ranges.firstUserRule, matchResult.ranges.lastUserRule, false);
+        newAuthorRollback->addMatches(matchResult, true, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, false);
+
+        state().setAuthorRollback(newAuthorRollback);
+        return state().authorRollback();
+    }
+
+    if (cascadeLevel() == UserLevel) {
+        CascadedProperties* userRollback = state().userRollback();
+        if (userRollback)
+            return userRollback;
+
+        auto newUserRollback(std::make_unique<CascadedProperties>(direction, writingMode));
+
+        // This special rollback cascade contains only UA rules.
+        newUserRollback->addMatches(matchResult, false, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, false);
+        newUserRollback->addMatches(matchResult, true, matchResult.ranges.firstUARule, matchResult.ranges.lastUARule, false);
+
+        state().setUserRollback(newUserRollback);
+        return state().userRollback();
+    }
+
+    return nullptr;
+}
+
+void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value, SelectorChecker::LinkMatchMask linkMatchMask, const MatchResult* matchResult)
 {
     ASSERT_WITH_MESSAGE(!isShorthandCSSProperty(id), "Shorthand property id = %d wasn't expanded at parsing time", id);
 
     State& state = m_state;
 
+    RefPtr<CSSValue> valueToApply = value;
+    if (value->isVariableDependentValue()) {
+        valueToApply = resolvedVariableValue(id, *downcast<CSSVariableDependentValue>(value));
+        if (!valueToApply) {
+            if (CSSProperty::isInheritedProperty(id))
+                valueToApply = CSSValuePool::singleton().createInheritedValue();
+            else
+                valueToApply = CSSValuePool::singleton().createExplicitInitialValue();
+        }
+    }
+
     if (CSSProperty::isDirectionAwareProperty(id)) {
         CSSPropertyID newId = CSSProperty::resolveDirectionAwareProperty(id, state.style()->direction(), state.style()->writingMode());
         ASSERT(newId != id);
-        return applyProperty(newId, value);
+        return applyProperty(newId, valueToApply.get(), linkMatchMask, matchResult);
     }
 
-    bool isInherit = state.parentStyle() && value->isInheritedValue();
-    bool isInitial = value->isInitialValue() || (!state.parentStyle() && value->isInheritedValue());
+    CSSValue* valueToCheckForInheritInitial = valueToApply.get();
+    CSSCustomPropertyValue* customPropertyValue = nullptr;
+
+    if (id == CSSPropertyCustom) {
+        customPropertyValue = &downcast<CSSCustomPropertyValue>(*valueToApply);
+        valueToCheckForInheritInitial = customPropertyValue->value().get();
+    }
+
+    bool isInherit = state.parentStyle() && valueToCheckForInheritInitial->isInheritedValue();
+    bool isInitial = valueToCheckForInheritInitial->isInitialValue() || (!state.parentStyle() && valueToCheckForInheritInitial->isInheritedValue());
+
+    bool isUnset = valueToCheckForInheritInitial->isUnsetValue();
+    bool isRevert = valueToCheckForInheritInitial->isRevertValue();
+
+    if (isRevert) {
+        if (cascadeLevel() == UserAgentLevel || !matchResult)
+            isUnset = true;
+        else {
+            // Fetch the correct rollback object from the state, building it if necessary.
+            // This requires having the original MatchResult available.
+            auto* rollback = cascadedPropertiesForRollback(*matchResult);
+            ASSERT(rollback);
+
+            // With the cascade built, we need to obtain the property and apply it. If the property is
+            // not present, then we behave like "unset." Otherwise we apply the property instead of
+            // our own.
+            if (customPropertyValue) {
+                if (rollback->hasCustomProperty(customPropertyValue->name())) {
+                    auto property = rollback->customProperty(customPropertyValue->name());
+                    if (property.cssValue[linkMatchMask])
+                        applyProperty(property.id, property.cssValue[linkMatchMask], linkMatchMask, matchResult);
+                    return;
+                }
+            } else if (rollback->hasProperty(id)) {
+                auto& property = rollback->property(id);
+                if (property.cssValue[linkMatchMask])
+                    applyProperty(property.id, property.cssValue[linkMatchMask], linkMatchMask, matchResult);
+                return;
+            }
+
+            isUnset = true;
+        }
+    }
+
+    if (isUnset) {
+        if (CSSProperty::isInheritedProperty(id))
+            isInherit = true;
+        else
+            isInitial = true;
+    }
 
     ASSERT(!isInherit || !isInitial); // isInherit -> !isInitial && isInitial -> !isInherit
 
@@ -1905,8 +1594,28 @@ void StyleResolver::applyProperty(CSSPropertyID id, CSSValue* value)
     if (isInherit && !state.parentStyle()->hasExplicitlyInheritedProperties() && !CSSProperty::isInheritedProperty(id))
         state.parentStyle()->setHasExplicitlyInheritedProperties();
 
+    if (id == CSSPropertyCustom) {
+        CSSCustomPropertyValue* customProperty = &downcast<CSSCustomPropertyValue>(*valueToApply);
+        if (isInherit) {
+            RefPtr<CSSValue> customVal = state.parentStyle()->getCustomPropertyValue(customProperty->name());
+            if (!customVal)
+                customVal = CSSCustomPropertyValue::createInvalid();
+            state.style()->setCustomPropertyValue(customProperty->name(), customVal);
+        } else if (isInitial)
+            state.style()->setCustomPropertyValue(customProperty->name(), CSSCustomPropertyValue::createInvalid());
+        else
+            state.style()->setCustomPropertyValue(customProperty->name(), customProperty->value());
+        return;
+    }
+
     // Use the generated StyleBuilder.
-    StyleBuilder::applyProperty(id, *this, *value, isInitial, isInherit);
+    StyleBuilder::applyProperty(id, *this, *valueToApply, isInitial, isInherit);
+}
+
+RefPtr<CSSValue> StyleResolver::resolvedVariableValue(CSSPropertyID propID, const CSSVariableDependentValue& value)
+{
+    CSSParser parser(m_state.document());
+    return parser.parseVariableDependentValue(propID, value, m_state.style()->customProperties());
 }
 
 PassRefPtr<StyleImage> StyleResolver::styleImage(CSSPropertyID property, CSSValue& value)
@@ -1977,7 +1686,7 @@ void StyleResolver::checkForTextSizeAdjust(RenderStyle* style)
     if (style->textSizeAdjust().isAuto())
         return;
 
-    FontDescription newFontDescription(style->fontDescription());
+    auto newFontDescription = style->fontDescription();
     if (!style->textSizeAdjust().isNone())
         newFontDescription.setComputedSize(newFontDescription.specifiedSize() * style->textSizeAdjust().multiplier());
     else
@@ -1994,20 +1703,20 @@ void StyleResolver::checkForZoomChange(RenderStyle* style, RenderStyle* parentSt
     if (style->effectiveZoom() == parentStyle->effectiveZoom() && style->textZoom() == parentStyle->textZoom())
         return;
 
-    const FontDescription& childFont = style->fontDescription();
-    FontDescription newFontDescription(childFont);
+    const auto& childFont = style->fontDescription();
+    auto newFontDescription = childFont;
     setFontSize(newFontDescription, childFont.specifiedSize());
     style->setFontDescription(newFontDescription);
 }
 
 void StyleResolver::checkForGenericFamilyChange(RenderStyle* style, RenderStyle* parentStyle)
 {
-    const FontDescription& childFont = style->fontDescription();
+    const auto& childFont = style->fontDescription();
 
     if (childFont.isAbsoluteSize() || !parentStyle)
         return;
 
-    const FontDescription& parentFont = parentStyle->fontDescription();
+    const auto& parentFont = parentStyle->fontDescription();
     if (childFont.useFixedDefaultSize() == parentFont.useFixedDefaultSize())
         return;
     // We know the parent is monospace or the child is monospace, and that font
@@ -2027,14 +1736,14 @@ void StyleResolver::checkForGenericFamilyChange(RenderStyle* style, RenderStyle*
                 childFont.specifiedSize() * fixedScaleFactor;
     }
 
-    FontDescription newFontDescription(childFont);
+    auto newFontDescription = childFont;
     setFontSize(newFontDescription, size);
     style->setFontDescription(newFontDescription);
 }
 
 void StyleResolver::initializeFontStyle(Settings* settings)
 {
-    FontDescription fontDescription;
+    FontCascadeDescription fontDescription;
     if (settings)
         fontDescription.setRenderingMode(settings->fontRenderingMode());
     fontDescription.setOneFamily(standardFamily);
@@ -2043,7 +1752,7 @@ void StyleResolver::initializeFontStyle(Settings* settings)
     setFontDescription(fontDescription);
 }
 
-void StyleResolver::setFontSize(FontDescription& fontDescription, float size)
+void StyleResolver::setFontSize(FontCascadeDescription& fontDescription, float size)
 {
     fontDescription.setSpecifiedSize(size);
     fontDescription.setComputedSize(Style::computedFontSizeFromSpecifiedSize(size, fontDescription.isAbsoluteSize(), useSVGZoomRules(), m_state.style(), document()));
@@ -2086,7 +1795,7 @@ static Color colorForCSSValue(CSSValueID cssValueId)
     return RenderTheme::defaultTheme()->systemColor(cssValueId);
 }
 
-bool StyleResolver::colorFromPrimitiveValueIsDerivedFromElement(CSSPrimitiveValue& value)
+bool StyleResolver::colorFromPrimitiveValueIsDerivedFromElement(const CSSPrimitiveValue& value)
 {
     int ident = value.getValueID();
     switch (ident) {
@@ -2100,7 +1809,7 @@ bool StyleResolver::colorFromPrimitiveValueIsDerivedFromElement(CSSPrimitiveValu
     }
 }
 
-Color StyleResolver::colorFromPrimitiveValue(CSSPrimitiveValue& value, bool forVisitedLink) const
+Color StyleResolver::colorFromPrimitiveValue(const CSSPrimitiveValue& value, bool forVisitedLink) const
 {
     if (value.isRGBColor())
         return Color(value.getRGBA32Value());
@@ -2193,13 +1902,13 @@ void StyleResolver::loadPendingSVGDocuments()
     state.filtersWithPendingSVGDocuments().clear();
 }
 
-bool StyleResolver::createFilterOperations(CSSValue& inValue, FilterOperations& outOperations)
+bool StyleResolver::createFilterOperations(const CSSValue& inValue, FilterOperations& outOperations)
 {
     State& state = m_state;
     ASSERT(outOperations.isEmpty());
 
     if (is<CSSPrimitiveValue>(inValue)) {
-        CSSPrimitiveValue& primitiveValue = downcast<CSSPrimitiveValue>(inValue);
+        auto& primitiveValue = downcast<CSSPrimitiveValue>(inValue);
         if (primitiveValue.getValueID() == CSSValueNone)
             return true;
     }
@@ -2218,12 +1927,12 @@ bool StyleResolver::createFilterOperations(CSSValue& inValue, FilterOperations& 
         if (operationType == FilterOperation::REFERENCE) {
             if (filterValue.length() != 1)
                 continue;
-            CSSValue& argument = *filterValue.itemWithoutBoundsCheck(0);
+            auto& argument = *filterValue.itemWithoutBoundsCheck(0);
 
             if (!is<CSSPrimitiveValue>(argument))
                 continue;
 
-            CSSPrimitiveValue& primitiveValue = downcast<CSSPrimitiveValue>(argument);
+            auto& primitiveValue = downcast<CSSPrimitiveValue>(argument);
             String cssUrl = primitiveValue.getStringValue();
             URL url = m_state.document().completeURL(cssUrl);
 
@@ -2237,7 +1946,7 @@ bool StyleResolver::createFilterOperations(CSSValue& inValue, FilterOperations& 
 
         // Check that all parameters are primitive values, with the
         // exception of drop shadow which has a CSSShadowValue parameter.
-        CSSPrimitiveValue* firstValue = nullptr;
+        const CSSPrimitiveValue* firstValue = nullptr;
         if (operationType != FilterOperation::DROP_SHADOW) {
             bool haveNonPrimitiveValue = false;
             for (unsigned j = 0; j < filterValue.length(); ++j) {
@@ -2302,11 +2011,11 @@ bool StyleResolver::createFilterOperations(CSSValue& inValue, FilterOperations& 
             if (filterValue.length() != 1)
                 return false;
 
-            CSSValue& cssValue = *filterValue.itemWithoutBoundsCheck(0);
+            auto& cssValue = *filterValue.itemWithoutBoundsCheck(0);
             if (!is<CSSShadowValue>(cssValue))
                 continue;
 
-            CSSShadowValue& item = downcast<CSSShadowValue>(cssValue);
+            auto& item = downcast<CSSShadowValue>(cssValue);
             int x = item.x->computeLength<int>(state.cssToLengthConversionData());
             int y = item.y->computeLength<int>(state.cssToLengthConversionData());
             IntPoint location(x, y);
@@ -2528,10 +2237,21 @@ inline StyleResolver::CascadedProperties::Property& StyleResolver::CascadedPrope
     return m_properties[id];
 }
 
-void StyleResolver::CascadedProperties::setPropertyInternal(Property& property, CSSPropertyID id, CSSValue& cssValue, unsigned linkMatchType)
+inline bool StyleResolver::CascadedProperties::hasCustomProperty(const String& name) const
+{
+    return m_customProperties.contains(name);
+}
+
+inline StyleResolver::CascadedProperties::Property StyleResolver::CascadedProperties::customProperty(const String& name) const
+{
+    return m_customProperties.get(name);
+}
+
+void StyleResolver::CascadedProperties::setPropertyInternal(Property& property, CSSPropertyID id, CSSValue& cssValue, unsigned linkMatchType, CascadeLevel cascadeLevel)
 {
     ASSERT(linkMatchType <= SelectorChecker::MatchAll);
     property.id = id;
+    property.level = cascadeLevel;
     if (linkMatchType == SelectorChecker::MatchAll) {
         property.cssValue[0] = &cssValue;
         property.cssValue[SelectorChecker::MatchLink] = &cssValue;
@@ -2540,7 +2260,7 @@ void StyleResolver::CascadedProperties::setPropertyInternal(Property& property, 
         property.cssValue[linkMatchType] = &cssValue;
 }
 
-void StyleResolver::CascadedProperties::set(CSSPropertyID id, CSSValue& cssValue, unsigned linkMatchType)
+void StyleResolver::CascadedProperties::set(CSSPropertyID id, CSSValue& cssValue, unsigned linkMatchType, CascadeLevel cascadeLevel)
 {
     if (CSSProperty::isDirectionAwareProperty(id))
         id = CSSProperty::resolveDirectionAwareProperty(id, m_direction, m_writingMode);
@@ -2549,24 +2269,42 @@ void StyleResolver::CascadedProperties::set(CSSPropertyID id, CSSValue& cssValue
 
     auto& property = m_properties[id];
     ASSERT(id < m_propertyIsPresent.size());
+    if (id == CSSPropertyCustom) {
+        m_propertyIsPresent.set(id);
+        const auto& customValue = downcast<CSSCustomPropertyValue>(cssValue);
+        bool hasValue = customProperties().contains(customValue.name());
+        if (!hasValue) {
+            Property property;
+            property.id = id;
+            memset(property.cssValue, 0, sizeof(property.cssValue));
+            setPropertyInternal(property, id, cssValue, linkMatchType, cascadeLevel);
+            customProperties().set(customValue.name(), property);
+        } else {
+            Property property = customProperties().get(customValue.name());
+            setPropertyInternal(property, id, cssValue, linkMatchType, cascadeLevel);
+            customProperties().set(customValue.name(), property);
+        }
+        return;
+    }
+
     if (!m_propertyIsPresent[id])
         memset(property.cssValue, 0, sizeof(property.cssValue));
     m_propertyIsPresent.set(id);
-    setPropertyInternal(property, id, cssValue, linkMatchType);
+    setPropertyInternal(property, id, cssValue, linkMatchType, cascadeLevel);
 }
 
-void StyleResolver::CascadedProperties::setDeferred(CSSPropertyID id, CSSValue& cssValue, unsigned linkMatchType)
+void StyleResolver::CascadedProperties::setDeferred(CSSPropertyID id, CSSValue& cssValue, unsigned linkMatchType, CascadeLevel cascadeLevel)
 {
     ASSERT(!CSSProperty::isDirectionAwareProperty(id));
     ASSERT(shouldApplyPropertyInParseOrder(id));
 
     Property property;
     memset(property.cssValue, 0, sizeof(property.cssValue));
-    setPropertyInternal(property, id, cssValue, linkMatchType);
+    setPropertyInternal(property, id, cssValue, linkMatchType, cascadeLevel);
     m_deferredProperties.append(property);
 }
 
-void StyleResolver::CascadedProperties::addStyleProperties(const StyleProperties& properties, StyleRule&, bool isImportant, bool inheritedOnly, PropertyWhitelistType propertyWhitelistType, unsigned linkMatchType)
+void StyleResolver::CascadedProperties::addStyleProperties(const StyleProperties& properties, StyleRule&, bool isImportant, bool inheritedOnly, PropertyWhitelistType propertyWhitelistType, unsigned linkMatchType, CascadeLevel cascadeLevel)
 {
     for (unsigned i = 0, count = properties.propertyCount(); i < count; ++i) {
         auto current = properties.propertyAt(i);
@@ -2588,10 +2326,19 @@ void StyleResolver::CascadedProperties::addStyleProperties(const StyleProperties
 #endif
 
         if (shouldApplyPropertyInParseOrder(propertyID))
-            setDeferred(propertyID, *current.value(), linkMatchType);
+            setDeferred(propertyID, *current.value(), linkMatchType, cascadeLevel);
         else
-            set(propertyID, *current.value(), linkMatchType);
+            set(propertyID, *current.value(), linkMatchType, cascadeLevel);
     }
+}
+
+static CascadeLevel cascadeLevelForIndex(const StyleResolver::MatchResult& matchResult, int index)
+{
+    if (index >= matchResult.ranges.firstUARule && index <= matchResult.ranges.lastUARule)
+        return UserAgentLevel;
+    if (index >= matchResult.ranges.firstUserRule && index <= matchResult.ranges.lastUserRule)
+        return UserLevel;
+    return AuthorLevel;
 }
 
 void StyleResolver::CascadedProperties::addMatches(const MatchResult& matchResult, bool important, int startIndex, int endIndex, bool inheritedOnly)
@@ -2601,24 +2348,26 @@ void StyleResolver::CascadedProperties::addMatches(const MatchResult& matchResul
 
     for (int i = startIndex; i <= endIndex; ++i) {
         const MatchedProperties& matchedProperties = matchResult.matchedProperties()[i];
-        addStyleProperties(*matchedProperties.properties, *matchResult.matchedRules[i], important, inheritedOnly, static_cast<PropertyWhitelistType>(matchedProperties.whitelistType), matchedProperties.linkMatchType);
+        addStyleProperties(*matchedProperties.properties, *matchResult.matchedRules[i], important, inheritedOnly, static_cast<PropertyWhitelistType>(matchedProperties.whitelistType), matchedProperties.linkMatchType,
+            cascadeLevelForIndex(matchResult, i));
     }
 }
 
-void StyleResolver::CascadedProperties::applyDeferredProperties(StyleResolver& resolver)
+void StyleResolver::CascadedProperties::applyDeferredProperties(StyleResolver& resolver, const MatchResult* matchResult)
 {
     for (auto& property : m_deferredProperties)
-        property.apply(resolver);
+        property.apply(resolver, matchResult);
 }
 
-void StyleResolver::CascadedProperties::Property::apply(StyleResolver& resolver)
+void StyleResolver::CascadedProperties::Property::apply(StyleResolver& resolver, const MatchResult* matchResult)
 {
     State& state = resolver.state();
+    state.setCascadeLevel(level);
 
-    if (cssValue[0]) {
+    if (cssValue[SelectorChecker::MatchDefault]) {
         state.setApplyPropertyToRegularStyle(true);
         state.setApplyPropertyToVisitedLinkStyle(false);
-        resolver.applyProperty(id, cssValue[0]);
+        resolver.applyProperty(id, cssValue[SelectorChecker::MatchDefault], SelectorChecker::MatchDefault, matchResult);
     }
 
     if (state.style()->insideLink() == NotInsideLink)
@@ -2627,29 +2376,38 @@ void StyleResolver::CascadedProperties::Property::apply(StyleResolver& resolver)
     if (cssValue[SelectorChecker::MatchLink]) {
         state.setApplyPropertyToRegularStyle(true);
         state.setApplyPropertyToVisitedLinkStyle(false);
-        resolver.applyProperty(id, cssValue[SelectorChecker::MatchLink]);
+        resolver.applyProperty(id, cssValue[SelectorChecker::MatchLink], SelectorChecker::MatchLink, matchResult);
     }
 
     if (cssValue[SelectorChecker::MatchVisited]) {
         state.setApplyPropertyToRegularStyle(false);
         state.setApplyPropertyToVisitedLinkStyle(true);
-        resolver.applyProperty(id, cssValue[SelectorChecker::MatchVisited]);
+        resolver.applyProperty(id, cssValue[SelectorChecker::MatchVisited], SelectorChecker::MatchVisited, matchResult);
     }
 
     state.setApplyPropertyToRegularStyle(true);
     state.setApplyPropertyToVisitedLinkStyle(false);
 }
 
-void StyleResolver::applyCascadedProperties(CascadedProperties& cascade, int firstProperty, int lastProperty)
+void StyleResolver::applyCascadedProperties(CascadedProperties& cascade, int firstProperty, int lastProperty, const MatchResult* matchResult)
 {
     for (int id = firstProperty; id <= lastProperty; ++id) {
         CSSPropertyID propertyID = static_cast<CSSPropertyID>(id);
         if (!cascade.hasProperty(propertyID))
             continue;
+        if (propertyID == CSSPropertyCustom) {
+            HashMap<AtomicString, CascadedProperties::Property>::iterator end = cascade.customProperties().end();
+            for (HashMap<AtomicString, CascadedProperties::Property>::iterator it = cascade.customProperties().begin(); it != end; ++it)
+                it->value.apply(*this, matchResult);
+            continue;
+        }
         auto& property = cascade.property(propertyID);
         ASSERT(!shouldApplyPropertyInParseOrder(propertyID));
-        property.apply(*this);
+        property.apply(*this, matchResult);
     }
+
+    if (firstProperty == CSSPropertyCustom)
+        m_state.style()->checkVariablesInCustomProperties();
 }
 
 } // namespace WebCore

@@ -91,10 +91,10 @@ namespace JSC { namespace DFG {
 //         FIXME: Make it easier to do this, that doesn't involve rerunning GCSE.
 //         https://bugs.webkit.org/show_bug.cgi?id=136639
 //
-//    4.3) Insert Upsilons for each Phi in each successor block. Use the available values table to
-//         decide the source value for each Phi's variable. Note that you could also use
-//         SSACalculator::reachingDefAtTail() instead of the available values table, though your
-//         local available values table is likely to be more efficient.
+//    4.3) Insert Upsilons at the end of the current block for the corresponding Phis in each successor block.
+//         Use the available values table to decide the source value for each Phi's variable. Note that
+//         you could also use SSACalculator::reachingDefAtTail() instead of the available values table,
+//         though your local available values table is likely to be more efficient.
 //
 // The most obvious use of SSACalculator is for the CPS->SSA conversion itself, but it's meant to
 // also be used for SSA update and for things like the promotion of heap fields to local SSA
@@ -176,10 +176,10 @@ public:
     template<typename PhiInsertionFunctor>
     void computePhis(const PhiInsertionFunctor& functor)
     {
-        DFG_ASSERT(m_graph, nullptr, m_graph.m_dominators.isValid());
+        DFG_ASSERT(m_graph, nullptr, m_graph.m_dominators);
 
         for (Variable& variable : m_variables) {
-            m_graph.m_dominators.forAllBlocksInPrunedIteratedDominanceFrontierOf(
+            m_graph.m_dominators->forAllBlocksInPrunedIteratedDominanceFrontierOf(
                 variable.m_blocksWithDefs,
                 [&] (BasicBlock* block) -> bool {
                     Node* phiNode = functor(&variable, block);

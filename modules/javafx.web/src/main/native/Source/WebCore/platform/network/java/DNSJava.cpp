@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 
 #ifndef DNSJava_H
@@ -14,10 +14,9 @@
 
 namespace WebCore {
 
-bool DNSResolveQueue::platformProxyIsEnabledInSystemPreferences()
+void DNSResolveQueue::updateIsUsingProxy()
 {
     notImplemented();
-    return false;
 }
 
 void DNSResolveQueue::platformResolve(const String&)

@@ -166,4 +166,14 @@ interface IWebPreferencesPrivate2 : IWebPreferencesPrivate
 {
     HRESULT javaScriptRuntimeFlags([out, retval] unsigned* flags);
     HRESULT setJavaScriptRuntimeFlags([in] unsigned flags);
+    HRESULT allowDisplayAndRunningOfInsecureContent([out, retval] BOOL* enabled);
+    HRESULT setAllowDisplayAndRunningOfInsecureContent([in] BOOL enabled);
 }
+
+[uuid(92809BFB-C24F-43AD-863F-601B08CC268D)]
+interface IWebPreferencesPrivate3 : IWebPreferencesPrivate2
+{
+    HRESULT showTiledScrollingIndicator([out, retval] BOOL* enabled);
+    HRESULT setShowTiledScrollingIndicator([in] BOOL enabled);
+}
+

@@ -26,6 +26,7 @@
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
 
 #include <WebCore/MediaPlaybackTarget.h>
+#include <WebCore/MediaPlaybackTargetContext.h>
 #include <WebCore/WebMediaSessionManagerClient.h>
 #include <wtf/Ref.h>
 
@@ -44,13 +45,16 @@ public:
 
     void addPlaybackTargetPickerClient(uint64_t);
     void removePlaybackTargetPickerClient(uint64_t);
-    void showPlaybackTargetPicker(uint64_t, const WebCore::FloatRect&, bool hasVideo);
+    void showPlaybackTargetPicker(uint64_t, const WebCore::FloatRect&, bool hasVideo, const String&);
     void playbackTargetPickerClientStateDidChange(uint64_t, WebCore::MediaProducer::MediaStateFlags);
+    void setMockMediaPlaybackTargetPickerEnabled(bool);
+    void setMockMediaPlaybackTargetPickerState(const String&, WebCore::MediaPlaybackTargetContext::State);
 
     // WebMediaSessionManagerClient
     virtual void setPlaybackTarget(uint64_t, Ref<WebCore::MediaPlaybackTarget>&&) override;
     virtual void externalOutputDeviceAvailableDidChange(uint64_t, bool) override;
     virtual void setShouldPlayToPlaybackTarget(uint64_t, bool) override;
+    virtual void customPlaybackActionSelected(uint64_t) override;
 
     void invalidate();
 

@@ -37,7 +37,6 @@
 // In fact, it can make a lot of sense: outside of JSC, this file becomes a kind of umbrella
 // header that pulls in most (all?) of the interesting things in JSC.
 
-#include "CallFrameInlines.h"
 #include "ExceptionHelpers.h"
 #include "GCIncomingRefCountedInlines.h"
 #include "HeapInlines.h"
@@ -46,6 +45,7 @@
 #include "JSArrayBufferViewInlines.h"
 #include "JSCJSValueInlines.h"
 #include "JSFunctionInlines.h"
+#include "JSObjectInlines.h"
 #include "JSProxy.h"
 #include "JSString.h"
 #include "Operations.h"

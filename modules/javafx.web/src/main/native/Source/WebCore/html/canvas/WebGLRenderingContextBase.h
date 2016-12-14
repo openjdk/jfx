@@ -33,6 +33,7 @@
 #include "Timer.h"
 #include "WebGLGetInfo.h"
 #include "WebGLObject.h"
+#include "WebGLTexture.h"
 #include <memory>
 #include <runtime/Float32Array.h>
 #include <runtime/Int32Array.h>
@@ -79,7 +80,6 @@ class WebGLRenderbuffer;
 class WebGLShader;
 class WebGLSharedObject;
 class WebGLShaderPrecisionFormat;
-class WebGLTexture;
 class WebGLUniformLocation;
 class WebGLVertexArrayObjectOES;
 
@@ -384,7 +384,7 @@ protected:
     virtual bool hasPendingActivity() const override;
     virtual void stop() override;
     virtual const char* activeDOMObjectName() const override;
-    bool canSuspendForPageCache() const override;
+    bool canSuspendForDocumentSuspension() const override;
 
     void addSharedObject(WebGLSharedObject*);
     void addContextObject(WebGLContextObject*);
@@ -426,11 +426,13 @@ protected:
     // Adds a compressed texture format.
     void addCompressedTextureFormat(GC3Denum);
 
-    PassRefPtr<Image> drawImageIntoBuffer(Image*, int width, int height, int deviceScaleFactor);
+    PassRefPtr<Image> drawImageIntoBuffer(Image&, int width, int height, int deviceScaleFactor);
 
 #if ENABLE(VIDEO)
     PassRefPtr<Image> videoFrameToImage(HTMLVideoElement*, BackingStoreCopy, ExceptionCode&);
 #endif
+
+    WebGLTexture::TextureExtensionFlag textureExtensionFlags() const;
 
     RefPtr<GraphicsContext3D> m_context;
     RefPtr<WebGLContextGroup> m_contextGroup;
@@ -494,6 +496,8 @@ protected:
         RefPtr<WebGLTexture> textureCubeMapBinding;
     };
     Vector<TextureUnitState> m_textureUnits;
+    HashSet<unsigned, DefaultHash<unsigned>::Hash, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> m_unrenderableTextureUnits;
+
     unsigned long m_activeTextureUnit;
 
     RefPtr<WebGLTexture> m_blackTexture2D;
@@ -799,10 +803,6 @@ protected:
     void dispatchContextLostEvent();
     // Helper for restoration after context lost.
     void maybeRestoreContext();
-
-    // Determine if we are running privileged code in the browser, for example,
-    // a Safari or Chrome extension.
-    bool allowPrivilegedExtensions() const;
 
     enum ConsoleDisplayPreference {
         DisplayInConsole,

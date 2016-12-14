@@ -68,11 +68,11 @@ public:
     WEBCORE_EXPORT ProtectionSpaceAuthenticationScheme authenticationScheme() const;
 
     bool receivesCredentialSecurely() const;
-    bool isPasswordBased() const;
+    WEBCORE_EXPORT bool isPasswordBased() const;
 
     bool encodingRequiresPlatformData() const { return false; }
 
-    static bool compare(const ProtectionSpace& a, const ProtectionSpace& b);
+    WEBCORE_EXPORT static bool compare(const ProtectionSpace&, const ProtectionSpace&);
 
 protected:
     WEBCORE_EXPORT ProtectionSpaceBase();

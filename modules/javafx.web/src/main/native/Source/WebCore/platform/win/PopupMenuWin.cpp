@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2011, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2008, 2011, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile Inc.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  *
@@ -36,6 +36,7 @@
 #include "HWndDC.h"
 #include "HostWindow.h"
 #include "LengthFunctions.h"
+#include "NotImplemented.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "PlatformScreen.h"
@@ -103,16 +104,6 @@ static FloatRect monitorFromHwnd(HWND hwnd)
 
 PopupMenuWin::PopupMenuWin(PopupMenuClient* client)
     : m_popupClient(client)
-    , m_scrollbar(0)
-    , m_popup(0)
-    , m_wasClicked(false)
-    , m_itemHeight(0)
-    , m_scrollOffset(0)
-    , m_wheelDelta(0)
-    , m_focusedIndex(0)
-    , m_hoveredIndex(0)
-    , m_scrollbarCapturingMouse(false)
-    , m_showPopup(false)
 {
 }
 
@@ -288,7 +279,7 @@ void PopupMenuWin::calculatePositionAndSize(const IntRect& r, FrameView* v)
     IntRect absoluteBounds = ((RenderMenuList*)m_popupClient)->absoluteBoundingBoxRect();
     IntRect absoluteScreenCoords(v->contentsToWindow(absoluteBounds.location()), absoluteBounds.size());
     POINT absoluteLocation(absoluteScreenCoords.location());
-    if (!::ClientToScreen(v->hostWindow()->platformPageClient(), &absoluteLocation))
+    if (!::ClientToScreen(hostWindow, &absoluteLocation))
         return;
     absoluteScreenCoords.setLocation(absoluteLocation);
 
@@ -314,10 +305,12 @@ void PopupMenuWin::calculatePositionAndSize(const IntRect& r, FrameView* v)
 
     // First, move to WebView coordinates
     IntRect rScreenCoords(v->contentsToWindow(r.location()), r.size());
+    if (Page* page = v->frame().page())
+        rScreenCoords.scale(page->deviceScaleFactor());
 
     // Then, translate to screen coordinates
     POINT location(rScreenCoords.location());
-    if (!::ClientToScreen(v->hostWindow()->platformPageClient(), &location))
+    if (!::ClientToScreen(hostWindow, &location))
         return;
 
     rScreenCoords.setLocation(location);
@@ -339,7 +332,7 @@ void PopupMenuWin::calculatePositionAndSize(const IntRect& r, FrameView* v)
 
         FontCascade itemFont = client()->menuStyle().font();
         if (client()->itemIsLabel(i)) {
-            FontDescription d = itemFont.fontDescription();
+            auto d = itemFont.fontDescription();
             d.setWeight(d.bolderWeight());
             itemFont = FontCascade(d, itemFont.letterSpacing(), itemFont.wordSpacing());
             itemFont.update(m_popupClient->fontSelector());
@@ -350,7 +343,7 @@ void PopupMenuWin::calculatePositionAndSize(const IntRect& r, FrameView* v)
 
     if (naturalHeight > maxPopupHeight)
         // We need room for a scrollbar
-        popupWidth += ScrollbarTheme::theme()->scrollbarThickness(SmallScrollbar);
+        popupWidth += ScrollbarTheme::theme().scrollbarThickness(SmallScrollbar);
 
     // Add padding to align the popup text with the <select> text
     popupWidth += std::max<int>(0, client()->clientPaddingRight() - client()->clientInsetRight()) + std::max<int>(0, client()->clientPaddingLeft() - client()->clientInsetLeft());
@@ -630,22 +623,22 @@ void PopupMenuWin::paint(const IntRect& damageRect, HDC hdc)
 
         // Draw the background for this menu item
         if (itemStyle.isVisible())
-            context.fillRect(itemRect, optionBackgroundColor, ColorSpaceDeviceRGB);
+            context.fillRect(itemRect, optionBackgroundColor);
 
         if (client()->itemIsSeparator(index)) {
             IntRect separatorRect(itemRect.x() + separatorPadding, itemRect.y() + (itemRect.height() - separatorHeight) / 2, itemRect.width() - 2 * separatorPadding, separatorHeight);
-            context.fillRect(separatorRect, optionTextColor, ColorSpaceDeviceRGB);
+            context.fillRect(separatorRect, optionTextColor);
             continue;
         }
 
         String itemText = client()->itemText(index);
 
         TextRun textRun(itemText, 0, 0, AllowTrailingExpansion, itemStyle.textDirection(), itemStyle.hasTextDirectionOverride());
-        context.setFillColor(optionTextColor, ColorSpaceDeviceRGB);
+        context.setFillColor(optionTextColor);
 
         FontCascade itemFont = client()->menuStyle().font();
         if (client()->itemIsLabel(index)) {
-            FontDescription d = itemFont.fontDescription();
+            auto d = itemFont.fontDescription();
             d.setWeight(d.bolderWeight());
             itemFont = FontCascade(d, itemFont.letterSpacing(), itemFont.wordSpacing());
             itemFont.update(m_popupClient->fontSelector());
@@ -670,7 +663,7 @@ void PopupMenuWin::paint(const IntRect& damageRect, HDC hdc)
     }
 
     if (m_scrollbar)
-        m_scrollbar->paint(&context, damageRect);
+        m_scrollbar->paint(context, damageRect);
 
     HWndDC hWndDC;
     HDC localDC = hdc ? hdc : hWndDC.setHWnd(m_popup);
@@ -683,7 +676,7 @@ int PopupMenuWin::scrollSize(ScrollbarOrientation orientation) const
     return ((orientation == VerticalScrollbar) && m_scrollbar) ? (m_scrollbar->totalSize() - m_scrollbar->visibleSize()) : 0;
 }
 
-int PopupMenuWin::scrollPosition(Scrollbar*) const
+int PopupMenuWin::scrollOffset(ScrollbarOrientation) const
 {
     return m_scrollOffset;
 }
@@ -745,7 +738,7 @@ IntSize PopupMenuWin::contentsSize() const
     return m_windowRect.size();
 }
 
-IntRect PopupMenuWin::scrollableAreaBoundingBox() const
+IntRect PopupMenuWin::scrollableAreaBoundingBox(bool*) const
 {
     return m_windowRect;
 }
@@ -1089,8 +1082,7 @@ LRESULT PopupMenuWin::wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPa
 }
 
 AccessiblePopupMenu::AccessiblePopupMenu(const PopupMenuWin& popupMenu)
-    : m_refCount(0)
-    , m_popupMenu(popupMenu)
+    : m_popupMenu(popupMenu)
 {
 }
 
@@ -1098,8 +1090,10 @@ AccessiblePopupMenu::~AccessiblePopupMenu()
 {
 }
 
-HRESULT AccessiblePopupMenu::QueryInterface(REFIID riid, __RPC__deref_out void __RPC_FAR *__RPC_FAR *ppvObject)
+HRESULT AccessiblePopupMenu::QueryInterface(_In_ REFIID riid, _COM_Outptr_ void** ppvObject)
 {
+    if (!ppvObject)
+        return E_POINTER;
     if (IsEqualGUID(riid, __uuidof(IAccessible)))
         *ppvObject = static_cast<IAccessible*>(this);
     else if (IsEqualGUID(riid, __uuidof(IDispatch)))
@@ -1107,7 +1101,7 @@ HRESULT AccessiblePopupMenu::QueryInterface(REFIID riid, __RPC__deref_out void _
     else if (IsEqualGUID(riid, __uuidof(IUnknown)))
         *ppvObject = static_cast<IAccessible*>(this);
     else {
-        *ppvObject = 0;
+        *ppvObject = nullptr;
         return E_NOINTERFACE;
     }
     AddRef();
@@ -1127,32 +1121,46 @@ ULONG AccessiblePopupMenu::Release()
     return refCount;
 }
 
-HRESULT AccessiblePopupMenu::GetTypeInfoCount(UINT* count)
+HRESULT AccessiblePopupMenu::GetTypeInfoCount(_Out_ UINT* count)
 {
+    if (!count)
+        return E_POINTER;
+    *count = 0;
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::GetTypeInfo(UINT, LCID, ITypeInfo** ppTInfo)
+HRESULT AccessiblePopupMenu::GetTypeInfo(UINT, LCID, _COM_Outptr_opt_ ITypeInfo** ppTInfo)
 {
+    if (!ppTInfo)
+        return E_POINTER;
+    *ppTInfo = nullptr;
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::GetIDsOfNames(REFIID, LPOLESTR*, UINT, LCID, DISPID*)
+HRESULT AccessiblePopupMenu::GetIDsOfNames(_In_ REFIID, __in_ecount(cNames) LPOLESTR*, UINT cNames, LCID, __out_ecount_full(cNames) DISPID*)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
 HRESULT AccessiblePopupMenu::Invoke(DISPID, REFIID, LCID, WORD, DISPPARAMS*, VARIANT*, EXCEPINFO*, UINT*)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::get_accParent(IDispatch**)
+HRESULT AccessiblePopupMenu::get_accParent(_COM_Outptr_opt_ IDispatch** parent)
 {
+    if (!parent)
+        return E_POINTER;
+    *parent = nullptr;
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::get_accChildCount(long* count)
+HRESULT AccessiblePopupMenu::get_accChildCount(_Out_ long* count)
 {
     if (!count)
         return E_POINTER;
@@ -1161,28 +1169,31 @@ HRESULT AccessiblePopupMenu::get_accChildCount(long* count)
     return S_OK;
 }
 
-HRESULT AccessiblePopupMenu::get_accChild(VARIANT vChild, IDispatch** ppChild)
+HRESULT AccessiblePopupMenu::get_accChild(VARIANT vChild, _COM_Outptr_opt_ IDispatch** ppChild)
 {
     if (!ppChild)
         return E_POINTER;
 
-    if (vChild.vt != VT_I4) {
-        *ppChild = nullptr;
-        return E_INVALIDARG;
-    }
     *ppChild = nullptr;
+
+    if (vChild.vt != VT_I4)
+        return E_INVALIDARG;
+
+    notImplemented();
     return S_FALSE;
 }
 
-HRESULT AccessiblePopupMenu::get_accName(VARIANT vChild, BSTR* name)
+HRESULT AccessiblePopupMenu::get_accName(VARIANT vChild, __deref_out_opt BSTR* name)
 {
     return get_accValue(vChild, name);
 }
 
-HRESULT AccessiblePopupMenu::get_accValue(VARIANT vChild, BSTR* value)
+HRESULT AccessiblePopupMenu::get_accValue(VARIANT vChild, __deref_out_opt BSTR* value)
 {
     if (!value)
         return E_POINTER;
+
+    *value = nullptr;
 
     if (vChild.vt != VT_I4)
         return E_INVALIDARG;
@@ -1198,16 +1209,16 @@ HRESULT AccessiblePopupMenu::get_accValue(VARIANT vChild, BSTR* value)
     return S_OK;
 }
 
-HRESULT AccessiblePopupMenu::get_accDescription(VARIANT, BSTR*)
+HRESULT AccessiblePopupMenu::get_accDescription(VARIANT, __deref_out_opt BSTR*)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::get_accRole(VARIANT vChild, VARIANT* pvRole)
+HRESULT AccessiblePopupMenu::get_accRole(VARIANT vChild, _Out_ VARIANT* pvRole)
 {
     if (!pvRole)
         return E_POINTER;
-
     if (vChild.vt != VT_I4)
         return E_INVALIDARG;
 
@@ -1223,7 +1234,7 @@ HRESULT AccessiblePopupMenu::get_accRole(VARIANT vChild, VARIANT* pvRole)
     return S_OK;
 }
 
-HRESULT AccessiblePopupMenu::get_accState(VARIANT vChild, VARIANT* pvState)
+HRESULT AccessiblePopupMenu::get_accState(VARIANT vChild, _Out_ VARIANT* pvState)
 {
     if (!pvState)
         return E_POINTER;
@@ -1237,37 +1248,43 @@ HRESULT AccessiblePopupMenu::get_accState(VARIANT vChild, VARIANT* pvState)
     return S_OK;
 }
 
-HRESULT AccessiblePopupMenu::get_accHelp(VARIANT vChild, BSTR* helpText)
+HRESULT AccessiblePopupMenu::get_accHelp(VARIANT vChild, __deref_out_opt BSTR* helpText)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::get_accKeyboardShortcut(VARIANT vChild, BSTR*)
+HRESULT AccessiblePopupMenu::get_accKeyboardShortcut(VARIANT vChild, __deref_out_opt BSTR*)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::get_accFocus(VARIANT* pvFocusedChild)
+HRESULT AccessiblePopupMenu::get_accFocus(_Out_ VARIANT* pvFocusedChild)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::get_accSelection(VARIANT* pvSelectedChild)
+HRESULT AccessiblePopupMenu::get_accSelection(_Out_ VARIANT* pvSelectedChild)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::get_accDefaultAction(VARIANT vChild, BSTR* actionDescription)
+HRESULT AccessiblePopupMenu::get_accDefaultAction(VARIANT vChild, __deref_out_opt BSTR* actionDescription)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
 HRESULT AccessiblePopupMenu::accSelect(long selectionFlags, VARIANT vChild)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::accLocation(long* left, long* top, long* width, long* height, VARIANT vChild)
+HRESULT AccessiblePopupMenu::accLocation(_Out_ long* left, _Out_ long* top, _Out_ long* width, _Out_ long* height, VARIANT vChild)
 {
     if (!left || !top || !width || !height)
         return E_POINTER;
@@ -1285,26 +1302,24 @@ HRESULT AccessiblePopupMenu::accLocation(long* left, long* top, long* width, lon
         Scrollbar& scrollbar = *m_popupMenu.scrollbar();
         WebCore::ScrollbarPart part = static_cast<WebCore::ScrollbarPart>(-vChild.lVal);
 
-        ScrollbarThemeWin* theme = static_cast<ScrollbarThemeWin*>(scrollbar.theme());
-        if (!theme)
-            return E_FAIL;
+        ScrollbarThemeWin& theme = static_cast<ScrollbarThemeWin&>(scrollbar.theme());
 
         IntRect partRect;
 
         switch (part) {
         case BackTrackPart:
         case BackButtonStartPart:
-            partRect = theme->backButtonRect(scrollbar, WebCore::BackTrackPart);
+            partRect = theme.backButtonRect(scrollbar, WebCore::BackTrackPart);
             break;
         case ThumbPart:
-            partRect = theme->thumbRect(scrollbar);
+            partRect = theme.thumbRect(scrollbar);
             break;
         case ForwardTrackPart:
         case ForwardButtonEndPart:
-            partRect = theme->forwardButtonRect(scrollbar, WebCore::ForwardTrackPart);
+            partRect = theme.forwardButtonRect(scrollbar, WebCore::ForwardTrackPart);
             break;
         case ScrollbarBGPart:
-            partRect = theme->trackRect(scrollbar);
+            partRect = theme.trackRect(scrollbar);
             break;
         default:
             return E_FAIL;
@@ -1333,12 +1348,13 @@ HRESULT AccessiblePopupMenu::accLocation(long* left, long* top, long* width, lon
     return S_OK;
 }
 
-HRESULT AccessiblePopupMenu::accNavigate(long direction, VARIANT vFromChild, VARIANT* pvNavigatedTo)
+HRESULT AccessiblePopupMenu::accNavigate(long direction, VARIANT vFromChild, _Out_ VARIANT* pvNavigatedTo)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::accHitTest(long x, long y, VARIANT* pvChildAtPoint)
+HRESULT AccessiblePopupMenu::accHitTest(long x, long y, _Out_ VARIANT* pvChildAtPoint)
 {
     if (!pvChildAtPoint)
         return E_POINTER;
@@ -1356,12 +1372,10 @@ HRESULT AccessiblePopupMenu::accHitTest(long x, long y, VARIANT* pvChildAtPoint)
 
     if (m_popupMenu.scrollbar() && scrollRect.contains(pt)) {
         Scrollbar& scrollbar = *m_popupMenu.scrollbar();
-        if (!scrollbar.theme())
-            return E_FAIL;
 
         pt.move(-scrollRect.x(), -scrollRect.y());
 
-        WebCore::ScrollbarPart part = scrollbar.theme()->hitTest(scrollbar, pt);
+        WebCore::ScrollbarPart part = scrollbar.theme().hitTest(scrollbar, pt);
 
         V_VT(pvChildAtPoint) = VT_I4;
         V_I4(pvChildAtPoint) = -part; // Scrollbar parts are encoded as negative, to avoid mixup with item indexes.
@@ -1383,21 +1397,25 @@ HRESULT AccessiblePopupMenu::accHitTest(long x, long y, VARIANT* pvChildAtPoint)
 
 HRESULT AccessiblePopupMenu::accDoDefaultAction(VARIANT vChild)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
 HRESULT AccessiblePopupMenu::put_accName(VARIANT, BSTR)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
 HRESULT AccessiblePopupMenu::put_accValue(VARIANT, BSTR)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 
-HRESULT AccessiblePopupMenu::get_accHelpTopic(BSTR* helpFile, VARIANT, long* topicID)
+HRESULT AccessiblePopupMenu::get_accHelpTopic(BSTR* helpFile, VARIANT, _Out_ long* topicID)
 {
+    notImplemented();
     return E_NOTIMPL;
 }
 

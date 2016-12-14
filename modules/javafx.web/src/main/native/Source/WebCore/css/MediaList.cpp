@@ -30,6 +30,7 @@
 #include "MediaQuery.h"
 #include "MediaQueryExp.h"
 #include "ScriptableDocumentParser.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -143,7 +144,7 @@ bool MediaQuerySet::parse(const String& mediaString)
                 continue;
             mediaQuery = std::make_unique<MediaQuery>(MediaQuery::None, mediaDescriptor, nullptr);
         }
-        result.append(WTF::move(mediaQuery));
+        result.append(WTFMove(mediaQuery));
     }
     // ",,,," falls straight through, but is not valid unless fallback
     if (!m_fallbackToDescriptor && list.isEmpty()) {
@@ -151,7 +152,7 @@ bool MediaQuerySet::parse(const String& mediaString)
         if (!strippedMediaString.isEmpty())
             return false;
     }
-    m_queries = WTF::move(result);
+    m_queries = WTFMove(result);
     return true;
 }
 
@@ -168,7 +169,7 @@ bool MediaQuerySet::add(const String& queryString)
     if (!parsedQuery)
         return false;
 
-    m_queries.append(WTF::move(parsedQuery));
+    m_queries.append(WTFMove(parsedQuery));
     return true;
 }
 
@@ -192,7 +193,7 @@ bool MediaQuerySet::remove(const String& queryStringToRemove)
 
 void MediaQuerySet::addMediaQuery(std::unique_ptr<MediaQuery> mediaQuery)
 {
-    m_queries.append(WTF::move(mediaQuery));
+    m_queries.append(WTFMove(mediaQuery));
 }
 
 String MediaQuerySet::mediaText() const
@@ -288,11 +289,11 @@ static void addResolutionWarningMessageToConsole(Document* document, const Strin
     ASSERT(document);
     ASSERT(value);
 
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, mediaQueryMessage, (ASCIILiteral("Consider using 'dppx' units instead of '%replacementUnits%', as in CSS '%replacementUnits%' means dots-per-CSS-%lengthUnit%, not dots-per-physical-%lengthUnit%, so does not correspond to the actual '%replacementUnits%' of a screen. In media query expression: ")));
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, mediaValueDPI, (ASCIILiteral("dpi")));
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, mediaValueDPCM, (ASCIILiteral("dpcm")));
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, lengthUnitInch, (ASCIILiteral("inch")));
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, lengthUnitCentimeter, (ASCIILiteral("centimeter")));
+    static NeverDestroyed<String> mediaQueryMessage(ASCIILiteral("Consider using 'dppx' units instead of '%replacementUnits%', as in CSS '%replacementUnits%' means dots-per-CSS-%lengthUnit%, not dots-per-physical-%lengthUnit%, so does not correspond to the actual '%replacementUnits%' of a screen. In media query expression: "));
+    static NeverDestroyed<String> mediaValueDPI(ASCIILiteral("dpi"));
+    static NeverDestroyed<String> mediaValueDPCM(ASCIILiteral("dpcm"));
+    static NeverDestroyed<String> lengthUnitInch(ASCIILiteral("inch"));
+    static NeverDestroyed<String> lengthUnitCentimeter(ASCIILiteral("centimeter"));
 
     String message;
     if (value->isDotsPerInch())
@@ -321,7 +322,7 @@ void reportMediaQueryWarningIfNeeded(Document* document, const MediaQuerySet* me
     for (size_t i = 0; i < queryCount; ++i) {
         const MediaQuery* query = mediaQueries[i].get();
         String mediaType = query->mediaType();
-        if (!query->ignored() && !equalIgnoringCase(mediaType, "print")) {
+        if (!query->ignored() && !equalLettersIgnoringASCIICase(mediaType, "print")) {
             auto& expressions = query->expressions();
             for (size_t j = 0; j < expressions.size(); ++j) {
                 const MediaQueryExp* exp = expressions.at(j).get();

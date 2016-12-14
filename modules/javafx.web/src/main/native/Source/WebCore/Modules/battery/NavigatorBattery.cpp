@@ -36,14 +36,14 @@ NavigatorBattery::~NavigatorBattery()
 {
 }
 
-BatteryManager* NavigatorBattery::webkitBattery(Navigator* navigator)
+BatteryManager* NavigatorBattery::webkitBattery(Navigator& navigator)
 {
-    if (!navigator->frame())
+    if (!navigator.frame())
         return nullptr;
 
-    NavigatorBattery* navigatorBattery = NavigatorBattery::from(navigator);
+    NavigatorBattery* navigatorBattery = NavigatorBattery::from(&navigator);
     if (!navigatorBattery->m_batteryManager)
-        navigatorBattery->m_batteryManager = BatteryManager::create(navigator);
+        navigatorBattery->m_batteryManager = BatteryManager::create(&navigator);
     return navigatorBattery->m_batteryManager.get();
 }
 
@@ -58,7 +58,7 @@ NavigatorBattery* NavigatorBattery::from(Navigator* navigator)
     if (!supplement) {
         auto newSupplement = std::make_unique<NavigatorBattery>();
         supplement = newSupplement.get();
-        provideTo(navigator, supplementName(), WTF::move(newSupplement));
+        provideTo(navigator, supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }

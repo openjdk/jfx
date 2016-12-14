@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +26,11 @@
 #ifndef SecurityPolicyViolationEvent_h
 #define SecurityPolicyViolationEvent_h
 
-#if ENABLE(CSP_NEXT)
-
 #include "Event.h"
 
 namespace WebCore {
 
 struct SecurityPolicyViolationEventInit : public EventInit {
-    SecurityPolicyViolationEventInit()
-    {
-    }
-
     String documentURI;
     String referrer;
     String blockedURI;
@@ -43,17 +38,24 @@ struct SecurityPolicyViolationEventInit : public EventInit {
     String effectiveDirective;
     String originalPolicy;
     String sourceFile;
-    int lineNumber;
+    unsigned short statusCode { 0 };
+    int lineNumber { 0 };
+    int columnNumber { 0 };
 };
 
 class SecurityPolicyViolationEvent final : public Event {
 public:
-    static Ref<SecurityPolicyViolationEvent> create()
+    static Ref<SecurityPolicyViolationEvent> create(const AtomicString& type, bool canBubble, bool cancelable, const String& documentURI, const String& referrer, const String& blockedURI, const String& violatedDirective, const String& effectiveDirective, const String& originalPolicy, const String& sourceFile, unsigned short statusCode, int lineNumber, int columnNumber)
+    {
+        return adoptRef(*new SecurityPolicyViolationEvent(type, canBubble, cancelable, documentURI, referrer, blockedURI, violatedDirective, effectiveDirective, originalPolicy, sourceFile, statusCode, lineNumber, columnNumber));
+    }
+
+    static Ref<SecurityPolicyViolationEvent> createForBindings()
     {
         return adoptRef(*new SecurityPolicyViolationEvent());
     }
 
-    static Ref<SecurityPolicyViolationEvent> create(const AtomicString& type, const SecurityPolicyViolationEventInit& initializer)
+    static Ref<SecurityPolicyViolationEvent> createForBindings(const AtomicString& type, const SecurityPolicyViolationEventInit& initializer)
     {
         return adoptRef(*new SecurityPolicyViolationEvent(type, initializer));
     }
@@ -65,12 +67,29 @@ public:
     const String& effectiveDirective() const { return m_effectiveDirective; }
     const String& originalPolicy() const { return m_originalPolicy; }
     const String& sourceFile() const { return m_sourceFile; }
+    unsigned short statusCode() const { return m_statusCode; }
     int lineNumber() const { return m_lineNumber; }
+    int columnNumber() const { return m_columnNumber; }
 
     virtual EventInterface eventInterface() const { return SecurityPolicyViolationEventInterfaceType; }
 
 private:
     SecurityPolicyViolationEvent()
+    {
+    }
+
+    SecurityPolicyViolationEvent(const AtomicString& type, bool canBubble, bool cancelable, const String& documentURI, const String& referrer, const String& blockedURI, const String& violatedDirective, const String& effectiveDirective, const String& originalPolicy, const String& sourceFile, unsigned short statusCode, int lineNumber, int columnNumber)
+        : Event(type, canBubble, cancelable)
+        , m_documentURI(documentURI)
+        , m_referrer(referrer)
+        , m_blockedURI(blockedURI)
+        , m_violatedDirective(violatedDirective)
+        , m_effectiveDirective(effectiveDirective)
+        , m_originalPolicy(originalPolicy)
+        , m_sourceFile(sourceFile)
+        , m_statusCode(statusCode)
+        , m_lineNumber(lineNumber)
+        , m_columnNumber(columnNumber)
     {
     }
 
@@ -83,7 +102,9 @@ private:
         , m_effectiveDirective(initializer.effectiveDirective)
         , m_originalPolicy(initializer.originalPolicy)
         , m_sourceFile(initializer.sourceFile)
+        , m_statusCode(initializer.statusCode)
         , m_lineNumber(initializer.lineNumber)
+        , m_columnNumber(initializer.columnNumber)
     {
     }
 
@@ -94,11 +115,11 @@ private:
     String m_effectiveDirective;
     String m_originalPolicy;
     String m_sourceFile;
+    unsigned short m_statusCode;
     int m_lineNumber;
+    int m_columnNumber;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(CSP_NEXT)
 
 #endif // SecurityPolicyViolationEvent_h

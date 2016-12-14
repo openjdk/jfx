@@ -29,8 +29,11 @@
 namespace WebCore {
 
 template<>
+inline unsigned SVGIDLEnumLimits<CompositeOperationType>::highestExposedEnumValue() { return FECOMPOSITE_OPERATOR_ARITHMETIC; }
+
+template<>
 struct SVGPropertyTraits<CompositeOperationType> {
-    static unsigned highestEnumValue() { return FECOMPOSITE_OPERATOR_ARITHMETIC; }
+    static unsigned highestEnumValue() { return FECOMPOSITE_OPERATOR_LIGHTER; }
 
     static String toString(CompositeOperationType type)
     {
@@ -38,17 +41,19 @@ struct SVGPropertyTraits<CompositeOperationType> {
         case FECOMPOSITE_OPERATOR_UNKNOWN:
             return emptyString();
         case FECOMPOSITE_OPERATOR_OVER:
-            return "over";
+            return ASCIILiteral("over");
         case FECOMPOSITE_OPERATOR_IN:
-            return "in";
+            return ASCIILiteral("in");
         case FECOMPOSITE_OPERATOR_OUT:
-            return "out";
+            return ASCIILiteral("out");
         case FECOMPOSITE_OPERATOR_ATOP:
-            return "atop";
+            return ASCIILiteral("atop");
         case FECOMPOSITE_OPERATOR_XOR:
-            return "xor";
+            return ASCIILiteral("xor");
         case FECOMPOSITE_OPERATOR_ARITHMETIC:
-            return "arithmetic";
+            return ASCIILiteral("arithmetic");
+        case FECOMPOSITE_OPERATOR_LIGHTER:
+            return ASCIILiteral("lighter");
         }
 
         ASSERT_NOT_REACHED();
@@ -69,6 +74,8 @@ struct SVGPropertyTraits<CompositeOperationType> {
             return FECOMPOSITE_OPERATOR_XOR;
         if (value == "arithmetic")
             return FECOMPOSITE_OPERATOR_ARITHMETIC;
+        if (value == "lighter")
+            return FECOMPOSITE_OPERATOR_LIGHTER;
         return FECOMPOSITE_OPERATOR_UNKNOWN;
     }
 };

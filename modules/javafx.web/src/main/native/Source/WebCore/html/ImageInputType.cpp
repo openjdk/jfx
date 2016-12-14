@@ -33,6 +33,7 @@
 #include "InputTypeNames.h"
 #include "MouseEvent.h"
 #include "RenderImage.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -64,10 +65,10 @@ bool ImageInputType::appendFormData(FormDataList& encoding, bool) const
         return true;
     }
 
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, dotXString, (ASCIILiteral(".x")));
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, dotYString, (ASCIILiteral(".y")));
-    encoding.appendData(name + dotXString, m_clickLocation.x());
-    encoding.appendData(name + dotYString, m_clickLocation.y());
+    static NeverDestroyed<String> dotXString(ASCIILiteral(".x"));
+    static NeverDestroyed<String> dotYString(ASCIILiteral(".y"));
+    encoding.appendData(name + dotXString.get(), m_clickLocation.x());
+    encoding.appendData(name + dotYString.get(), m_clickLocation.y());
 
     if (!element().value().isEmpty())
         encoding.appendData(name, element().value());
@@ -103,7 +104,7 @@ void ImageInputType::handleDOMActivateEvent(Event* event)
 
 RenderPtr<RenderElement> ImageInputType::createInputRenderer(Ref<RenderStyle>&& style)
 {
-    return createRenderer<RenderImage>(element(), WTF::move(style));
+    return createRenderer<RenderImage>(element(), WTFMove(style));
 }
 
 void ImageInputType::altAttributeChanged()
@@ -175,9 +176,8 @@ unsigned ImageInputType::height() const
 
     if (!element->renderer()) {
         // Check the attribute first for an explicit pixel value.
-        unsigned height;
-        if (parseHTMLNonNegativeInteger(element->fastGetAttribute(heightAttr), height))
-            return height;
+        if (Optional<int> height = parseHTMLNonNegativeInteger(element->fastGetAttribute(heightAttr)))
+            return height.value();
 
         // If the image is available, use its height.
         HTMLImageLoader* imageLoader = element->imageLoader();
@@ -197,9 +197,8 @@ unsigned ImageInputType::width() const
 
     if (!element->renderer()) {
         // Check the attribute first for an explicit pixel value.
-        unsigned width;
-        if (parseHTMLNonNegativeInteger(element->fastGetAttribute(widthAttr), width))
-            return width;
+        if (Optional<int> width = parseHTMLNonNegativeInteger(element->fastGetAttribute(widthAttr)))
+            return width.value();
 
         // If the image is available, use its width.
         HTMLImageLoader* imageLoader = element->imageLoader();

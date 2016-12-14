@@ -21,29 +21,30 @@
 #ifndef JSTestObj_h
 #define JSTestObj_h
 
-#include "JSDOMPromise.h"
 #include "JSDOMWrapper.h"
 #include "TestObj.h"
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-class JSTestObj : public JSDOMWrapper {
+class JSTestObj : public JSDOMWrapper<TestObj> {
 public:
-    typedef JSDOMWrapper Base;
+    typedef JSDOMWrapper<TestObj> Base;
     static JSTestObj* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestObj>&& impl)
     {
-        JSTestObj* ptr = new (NotNull, JSC::allocateCell<JSTestObj>(globalObject->vm().heap)) JSTestObj(structure, globalObject, WTF::move(impl));
+        JSTestObj* ptr = new (NotNull, JSC::allocateCell<JSTestObj>(globalObject->vm().heap)) JSTestObj(structure, *globalObject, WTFMove(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
+
+    static const bool hasStaticPropertyTable = true;
 
     static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static JSC::JSObject* getPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static TestObj* toWrapped(JSC::JSValue);
     static bool getOwnPropertySlot(JSC::JSObject*, JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&);
+    static bool getOwnPropertySlotByIndex(JSC::JSObject*, JSC::ExecState*, unsigned propertyName, JSC::PropertySlot&);
     static void destroy(JSC::JSCell*);
-    ~JSTestObj();
 
     DECLARE_INFO;
 
@@ -52,31 +53,25 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-    static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
-    JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute1;
-    JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute2;
-    JSC::Strong<JSC::JSPromiseDeferred> m_testPromiseAttrPromiseDeferred;
+    static void getOwnPropertyNames(JSC::JSObject*, JSC::ExecState*, JSC::PropertyNameArray&, JSC::EnumerationMode = JSC::EnumerationMode());
+    static JSC::JSValue getConstructor(JSC::VM&, const JSC::JSGlobalObject*);
+    mutable JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute1;
+    mutable JSC::WriteBarrier<JSC::Unknown> m_cachedAttribute2;
     static void visitChildren(JSCell*, JSC::SlotVisitor&);
 
 
     // Custom attributes
-    JSC::JSValue customAttr(JSC::ExecState*) const;
-    void setCustomAttr(JSC::ExecState*, JSC::JSValue);
-    JSC::JSValue testPromiseAttr(JSC::ExecState*) const;
+    JSC::JSValue customAttr(JSC::ExecState&) const;
+    void setCustomAttr(JSC::ExecState&, JSC::JSValue);
 
     // Custom functions
-    JSC::JSValue customMethod(JSC::ExecState*);
-    JSC::JSValue customMethodWithArgs(JSC::ExecState*);
-    static JSC::JSValue classMethod2(JSC::ExecState*);
-    TestObj& impl() const { return *m_impl; }
-    void releaseImpl() { std::exchange(m_impl, nullptr)->deref(); }
-
-private:
-    TestObj* m_impl;
+    JSC::JSValue customMethod(JSC::ExecState&);
+    JSC::JSValue customMethodWithArgs(JSC::ExecState&);
+    static JSC::JSValue classMethod2(JSC::ExecState&);
 public:
-    static const unsigned StructureFlags = JSC::OverridesGetOwnPropertySlot | Base::StructureFlags;
+    static const unsigned StructureFlags = JSC::InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | JSC::OverridesGetOwnPropertySlot | JSC::OverridesGetPropertyNames | Base::StructureFlags;
 protected:
-    JSTestObj(JSC::Structure*, JSDOMGlobalObject*, Ref<TestObj>&&);
+    JSTestObj(JSC::Structure*, JSDOMGlobalObject&, Ref<TestObj>&&);
 
     void finishCreation(JSC::VM& vm)
     {
@@ -98,8 +93,19 @@ inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestObj*)
     return &owner.get();
 }
 
+inline void* wrapperKey(TestObj* wrappableObject)
+{
+    return wrappableObject;
+}
+
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestObj*);
-inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TestObj& impl) { return toJS(exec, globalObject, &impl); }
+inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, TestObj& impl) { return toJS(state, globalObject, &impl); }
+JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject*, TestObj*);
+
+// Functions
+
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionCustomBindingMethod(JSC::ExecState*);
+JSC::EncodedJSValue JSC_HOST_CALL jsTestObjPrototypeFunctionCustomBindingMethodWithArgs(JSC::ExecState*);
 
 
 } // namespace WebCore

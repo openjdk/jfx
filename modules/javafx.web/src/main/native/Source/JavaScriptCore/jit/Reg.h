@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,6 +56,11 @@ public:
     {
     }
 
+    Reg(WTF::HashTableDeletedValueType)
+        : m_index(deleted())
+    {
+    }
+
     Reg(MacroAssembler::RegisterID reg)
         : m_index(MacroAssembler::registerIndex(reg))
     {
@@ -99,8 +104,15 @@ public:
 
     unsigned index() const { return m_index; }
 
+    static unsigned maxIndex()
+    {
+        return last().index();
+    }
+
     bool isSet() const { return m_index != invalid(); }
-    bool operator!() const { return !isSet(); }
+    explicit operator bool() const { return isSet(); }
+
+    bool isHashTableDeletedValue() const { return m_index == deleted(); }
 
     bool isGPR() const
     {
@@ -162,13 +174,75 @@ public:
 
     void dump(PrintStream&) const;
 
+    class AllRegsIterable {
+    public:
+
+        class iterator {
+        public:
+            iterator() { }
+
+            explicit iterator(Reg reg)
+                : m_regIndex(reg.index())
+            {
+            }
+
+            Reg operator*() const { return Reg::fromIndex(m_regIndex); }
+
+            iterator& operator++()
+            {
+                m_regIndex = Reg::fromIndex(m_regIndex).next().index();
+                return *this;
+            }
+
+            bool operator==(const iterator& other) const
+            {
+                return m_regIndex == other.m_regIndex;
+            }
+
+            bool operator!=(const iterator& other) const
+            {
+                return !(*this == other);
+            }
+
+        private:
+            unsigned m_regIndex;
+        };
+
+        iterator begin() const { return iterator(Reg::first()); }
+        iterator end() const { return iterator(Reg()); }
+    };
+
+    static AllRegsIterable all() { return AllRegsIterable(); }
+
 private:
     static uint8_t invalid() { return 0xff; }
+
+    static uint8_t deleted() { return 0xfe; }
 
     uint8_t m_index;
 };
 
+struct RegHash {
+    static unsigned hash(const Reg& key) { return key.hash(); }
+    static bool equal(const Reg& a, const Reg& b) { return a == b; }
+    static const bool safeToCompareToEmptyOrDeleted = true;
+};
+
 } // namespace JSC
+
+namespace WTF {
+
+template<typename T> struct DefaultHash;
+template<> struct DefaultHash<JSC::Reg> {
+    typedef JSC::RegHash Hash;
+};
+
+template<typename T> struct HashTraits;
+template<> struct HashTraits<JSC::Reg> : SimpleClassHashTraits<JSC::Reg> {
+    static const bool emptyValueIsZero = false;
+ };
+
+} // namespace WTF
 
 #endif // ENABLE(JIT)
 

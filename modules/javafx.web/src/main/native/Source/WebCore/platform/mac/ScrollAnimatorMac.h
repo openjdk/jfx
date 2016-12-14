@@ -52,7 +52,7 @@ public:
     ScrollAnimatorMac(ScrollableArea&);
     virtual ~ScrollAnimatorMac();
 
-    void immediateScrollToPointForScrollAnimation(const FloatPoint& newPosition);
+    void immediateScrollToPositionForScrollAnimation(const FloatPoint& newPosition);
     bool haveScrolledSincePageLoad() const { return m_haveScrolledSincePageLoad; }
 
     void updateScrollerStyle();
@@ -95,16 +95,17 @@ private:
 
     virtual void notifyPositionChanged(const FloatSize& delta) override;
     virtual void contentAreaWillPaint() const override;
-    virtual void mouseEnteredContentArea() const override;
-    virtual void mouseExitedContentArea() const override;
-    virtual void mouseMovedInContentArea() const override;
+    virtual void mouseEnteredContentArea() override;
+    virtual void mouseExitedContentArea() override;
+    virtual void mouseMovedInContentArea() override;
     virtual void mouseEnteredScrollbar(Scrollbar*) const override;
     virtual void mouseExitedScrollbar(Scrollbar*) const override;
+    virtual void mouseIsDownInScrollbar(Scrollbar*, bool) const override;
     virtual void willStartLiveResize() override;
     virtual void contentsResized() const override;
     virtual void willEndLiveResize() override;
-    virtual void contentAreaDidShow() const override;
-    virtual void contentAreaDidHide() const override;
+    virtual void contentAreaDidShow() override;
+    virtual void contentAreaDidHide() override;
     void didBeginScrollGesture() const;
     void didEndScrollGesture() const;
     void mayBeginScrollGesture() const;
@@ -133,7 +134,7 @@ private:
 
     FloatPoint adjustScrollPositionIfNecessary(const FloatPoint&) const;
 
-    void immediateScrollTo(const FloatPoint&);
+    void immediateScrollToPosition(const FloatPoint&);
 
     bool isRubberBandInProgress() const override;
     bool isScrollSnapInProgress() const override;
@@ -147,7 +148,6 @@ private:
     virtual bool canScrollHorizontally() override;
     virtual bool canScrollVertically() override;
     virtual bool shouldRubberBandInDirection(ScrollDirection) override;
-    virtual WebCore::IntPoint absoluteScrollPosition() override;
     virtual void immediateScrollByWithoutContentEdgeConstraints(const FloatSize&) override;
     virtual void immediateScrollBy(const FloatSize&) override;
     virtual void adjustScrollPositionToBoundsIfNecessary() override;

@@ -30,42 +30,65 @@
 #include "PlatformWebView.h"
 #include <gtk/gtk.h>
 #include <wtf/Platform.h>
-#include <wtf/glib/GMainLoopSource.h>
+#include <wtf/RunLoop.h>
+#include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTR {
 
-static GMainLoopSource timeoutSource;
+static GSource* timeoutSource()
+{
+    static GRefPtr<GSource> source = nullptr;
+    if (!source) {
+        source = adoptGRef(g_timeout_source_new(0));
+        g_source_set_ready_time(source.get(), -1);
+        g_source_set_name(source.get(), "[WTR] Test timeout source");
+        g_source_set_callback(source.get(), [](gpointer userData) -> gboolean {
+            g_source_set_ready_time(static_cast<GSource*>(userData), -1);
+            fprintf(stderr, "FAIL: TestControllerRunLoop timed out.\n");
+            RunLoop::main().stop();
+            return G_SOURCE_CONTINUE;
+        }, source.get(), nullptr);
+        g_source_attach(source.get(), nullptr);
+    }
+    return source.get();
+}
 
 void TestController::notifyDone()
 {
-    gtk_main_quit();
-    timeoutSource.cancel();
+    g_source_set_ready_time(timeoutSource(), -1);
+    RunLoop::main().stop();
 }
 
 void TestController::platformInitialize()
 {
 }
 
-void TestController::platformDestroy()
+WKPreferencesRef TestController::platformPreferences()
 {
+    return WKPageGroupGetPreferences(m_pageGroup.get());
 }
 
-void TestController::platformWillRunTest(const TestInvocation&)
+void TestController::platformDestroy()
 {
 }
 
 void TestController::platformRunUntil(bool&, double timeout)
 {
     if (timeout > 0) {
-        timeoutSource.scheduleAfterDelay("[WTR] Test timeout source", [] {
-            fprintf(stderr, "FAIL: TestControllerRunLoop timed out.\n");
-            gtk_main_quit();
-        }, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(timeout)));
+        // FIXME: This conversion is now repeated in several places, it should be moved to a common place in WTF and used everywhere.
+        auto timeoutDuration = std::chrono::duration<double>(timeout);
+        auto safeDuration = std::chrono::microseconds::max();
+        if (timeoutDuration < safeDuration)
+            safeDuration = std::chrono::duration_cast<std::chrono::microseconds>(timeoutDuration);
+        gint64 currentTime = g_get_monotonic_time();
+        gint64 targetTime = currentTime + std::min<gint64>(G_MAXINT64 - currentTime, safeDuration.count());
+        ASSERT(targetTime >= currentTime);
+        g_source_set_ready_time(timeoutSource(), targetTime);
     } else
-        timeoutSource.cancel();
-    gtk_main();
+        g_source_set_ready_time(timeoutSource(), -1);
+    RunLoop::main().run();
 }
 
 static char* getEnvironmentVariableAsUTF8String(const char* variableName)
@@ -124,6 +147,10 @@ void TestController::platformResetPreferencesToConsistentValues()
     if (!m_mainWebView)
         return;
     m_mainWebView->dismissAllPopupMenus();
+}
+
+void TestController::updatePlatformSpecificTestOptionsForTest(TestOptions&, const std::string&) const
+{
 }
 
 } // namespace WTR

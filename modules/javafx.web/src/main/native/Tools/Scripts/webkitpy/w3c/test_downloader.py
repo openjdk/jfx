@@ -51,8 +51,7 @@ class TestDownloader(object):
         return options
 
     @staticmethod
-    def load_test_repositories():
-        filesystem = FileSystem()
+    def load_test_repositories(filesystem=FileSystem()):
         webkit_finder = WebKitFinder(filesystem)
         test_repositories_path = webkit_finder.path_from_webkit_base('LayoutTests', 'imported', 'w3c', 'resources', 'TestRepositories')
         return json.loads(filesystem.read_text_file(test_repositories_path))
@@ -65,7 +64,7 @@ class TestDownloader(object):
 
         self.repository_directory = repository_directory
 
-        self.test_repositories = self.load_test_repositories()
+        self.test_repositories = self.load_test_repositories(self._filesystem)
 
         self.paths_to_skip = []
         self.paths_to_import = []
@@ -106,11 +105,12 @@ class TestDownloader(object):
             elif 'PASS' in line.expectations:
                 self.paths_to_import.append(line.name)
 
-    def _add_test_suite_paths(self, test_paths, directory, webkit_path):
-        for name in self._filesystem.listdir(directory):
-            path = self._filesystem.join(webkit_path, name)
-            if not name.startswith('.') and not path in self.paths_to_skip:
-                test_paths.append(path)
+    def _add_test_suite_paths(self, test_paths, directory, webkit_path, tests_directory):
+        complete_directory = self._filesystem.join(directory, tests_directory)
+        for name in self._filesystem.listdir(complete_directory):
+            original_path = self._filesystem.join(webkit_path, tests_directory, name)
+            if not name.startswith('.') and not original_path in self.paths_to_skip:
+                test_paths.append((original_path, self._filesystem.join(webkit_path, name)))
 
     def _empty_directory(self, directory):
         if self._filesystem.exists(directory):
@@ -123,19 +123,22 @@ class TestDownloader(object):
 
         copy_paths = []
         if test_paths:
-            copy_paths.extend(test_paths)
-            copy_paths.extend(self.paths_to_import)
+            for path in test_paths:
+                copy_paths.append((path, path))
+            for path in self.paths_to_import:
+                copy_paths.append((path, path))
         else:
             for test_repository in self.test_repositories:
-                self._add_test_suite_paths(copy_paths, self._filesystem.join(self.repository_directory, test_repository['name']), test_repository['name'])
+                self._add_test_suite_paths(copy_paths, self._filesystem.join(self.repository_directory, test_repository['name']), test_repository['name'],
+                    test_repository['tests_directory'] if ('tests_directory' in test_repository) else '')
             # Handling of tests marked as [ Pass ] in expectations file.
             for path in self.paths_to_import:
-                if not path in copy_paths:
-                    copy_paths.append(path)
+                if not (path, path) in copy_paths:
+                    copy_paths.append((path, path))
 
-        for path in copy_paths:
-            source_path = self._filesystem.join(self.repository_directory, path)
-            destination_path = self._filesystem.join(destination_directory, path)
+        for paths in copy_paths:
+            source_path = self._filesystem.join(self.repository_directory, paths[0])
+            destination_path = self._filesystem.join(destination_directory, paths[1])
             if not self._filesystem.exists(source_path):
                 _log.error('Cannot copy %s' % source_path)
             elif self._filesystem.isdir(source_path):
@@ -148,43 +151,34 @@ class TestDownloader(object):
             destination_path = self._filesystem.join(destination_directory, path)
             if self._filesystem.isfile(destination_path):
                 self._filesystem.remove(destination_path)
-
-    def _git_submodules_status(self, repository_directory):
-        return self.git(repository_directory)._run_git(['submodule', 'status'])
+            elif self._filesystem.isdir(destination_path):
+                self._filesystem.rmtree(destination_path)
 
     def _git_submodules_description(self, test_repository):
-        submodules = []
-        repository_directory = self._filesystem.join(self.repository_directory, test_repository['name'])
-        if self._filesystem.isfile(self._filesystem.join(repository_directory, '.gitmodules')):
-            submodule = {}
-            for line in self._filesystem.read_text_file(self._filesystem.join(repository_directory, '.gitmodules')).splitlines():
-                line = line.strip()
-                if line.startswith('path = '):
-                    submodule['path'] = line[7:]
-                elif line.startswith('url = '):
-                    submodule['url'] = line[6:]
-                    if not submodule['url'].startswith('https://github.com/'):
-                        _log.warning('Submodule %s is not hosted on github' % submodule['path'])
-                        _log.warning('Please ensure that generated URL points to an archive of the module or manually edit its value after the import')
-                    submodules.append(submodule)
-                    submodule = {}
+        directory = self._filesystem.join(self.repository_directory, test_repository['name'])
 
-        submodules_status = [line[1:].split(' ') for line in self._git_submodules_status(repository_directory).splitlines()]
-        for submodule in submodules:
-            for status in submodules_status:
-                if submodule['path'] == status[1]:
-                    url = submodule['url'][:-4]
-                    version = status[0]
-                    repository_name = url.split('/').pop()
-                    submodule['url'] = url + '/archive/' + version + '.tar.gz'
-                    submodule['url_subpath'] = repository_name + '-' + version
-            if '/' in submodule['path']:
-                steps = submodule['path'].split('/')
-                submodule['name'] = steps.pop()
-                submodule['path'] = steps
-            else:
-                submodule['name'] = submodule['path']
-                submodule['path'] = ['.']
+        git = self.git(directory)
+        git.init_submodules()
+
+        submodules = []
+        submodules_status = [line.strip().split(' ') for line in git.submodules_status().splitlines()]
+        for status in submodules_status:
+            version = status[0]
+            path = status[1].split('/')
+
+            url = self.git(self._filesystem.join(directory, status[1])).origin_url()
+            if not url.startswith('https://github.com/'):
+                _log.warning('Submodule %s (%s) is not hosted on github' % (status[1], url))
+                _log.warning('Please ensure that generated URL points to an archive of the module or manually edit its value after the import')
+            url = url[:-4]  # to remove .git
+
+            submodule = {}
+            submodule['path'] = path
+            submodule['url'] = url + '/archive/' + version + '.tar.gz'
+            submodule['url_subpath'] = url.split('/').pop() + '-' + version
+            submodules.append(submodule)
+
+        git.deinit_submodules()
         return submodules
 
     def generate_git_submodules_description(self, test_repository, filepath):

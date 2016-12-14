@@ -137,7 +137,7 @@ const char* NotificationCenter::activeDOMObjectName() const
     return "NotificationCenter";
 }
 
-bool NotificationCenter::canSuspendForPageCache() const
+bool NotificationCenter::canSuspendForDocumentSuspension() const
 {
     // We don't need to worry about Notifications because those are ActiveDOMObject too.
     // The NotificationCenter can safely be suspended if there are no pending permission requests.
@@ -147,7 +147,7 @@ bool NotificationCenter::canSuspendForPageCache() const
 void NotificationCenter::timerFired()
 {
     ASSERT(m_client);
-    auto callbacks = WTF::move(m_callbacks);
+    auto callbacks = WTFMove(m_callbacks);
     for (auto& callback : callbacks)
         callback();
     deref(); // Balanced by the ref in NotificationCenter::requestPermission.

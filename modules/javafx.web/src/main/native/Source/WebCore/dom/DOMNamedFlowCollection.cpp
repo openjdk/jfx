@@ -34,8 +34,8 @@ namespace WebCore {
 
 DOMNamedFlowCollection::DOMNamedFlowCollection(const Vector<WebKitNamedFlow*>& namedFlows)
 {
-    for (Vector<WebKitNamedFlow*>::const_iterator it = namedFlows.begin(); it != namedFlows.end(); ++it)
-        m_namedFlows.add(*it);
+    for (auto& flow : namedFlows)
+        m_namedFlows.add(flow);
 }
 
 unsigned long DOMNamedFlowCollection::length() const
@@ -43,27 +43,28 @@ unsigned long DOMNamedFlowCollection::length() const
     return m_namedFlows.size();
 }
 
-PassRefPtr<WebKitNamedFlow> DOMNamedFlowCollection::item(unsigned long index) const
+RefPtr<WebKitNamedFlow> DOMNamedFlowCollection::item(unsigned long index) const
 {
     if (index >= static_cast<unsigned long>(m_namedFlows.size()))
         return nullptr;
-    DOMNamedFlowSet::const_iterator it = m_namedFlows.begin();
+    auto it = m_namedFlows.begin();
     for (unsigned long i = 0; i < index; ++i)
         ++it;
     return *it;
 }
 
-PassRefPtr<WebKitNamedFlow> DOMNamedFlowCollection::namedItem(const AtomicString& name) const
+RefPtr<WebKitNamedFlow> DOMNamedFlowCollection::namedItem(const AtomicString& name) const
 {
-    DOMNamedFlowSet::const_iterator it = m_namedFlows.find<String, DOMNamedFlowHashTranslator>(name);
+    auto it = m_namedFlows.find<String, DOMNamedFlowHashTranslator>(name);
     if (it != m_namedFlows.end())
         return *it;
     return nullptr;
 }
 
-bool DOMNamedFlowCollection::hasNamedItem(const AtomicString& name) const
+Vector<AtomicString> DOMNamedFlowCollection::supportedPropertyNames()
 {
-    return namedItem(name);
+    // FIXME: Should be implemented.
+    return Vector<AtomicString>();
 }
 
 // The HashFunctions object used by the HashSet to compare between RefPtr<NamedFlows>.

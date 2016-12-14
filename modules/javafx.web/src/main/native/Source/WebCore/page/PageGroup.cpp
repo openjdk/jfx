@@ -30,13 +30,13 @@
 #include "ChromeClient.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
-#include "DocumentStyleSheetCollection.h"
 #include "MainFrame.h"
 #include "Page.h"
 #include "PageCache.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "StorageNamespace.h"
+#include <runtime/StructureInlines.h>
 #include <wtf/StdLibExtras.h>
 
 #if ENABLE(VIDEO_TRACK)
@@ -114,7 +114,7 @@ void PageGroup::captionPreferencesChanged()
     PageCache::singleton().markPagesForCaptionPreferencesChanged();
 }
 
-CaptionUserPreferences* PageGroup::captionPreferences()
+CaptionUserPreferences& PageGroup::captionPreferences()
 {
     if (!m_captionPreferences) {
 #if PLATFORM(MAC) || HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
@@ -124,7 +124,7 @@ CaptionUserPreferences* PageGroup::captionPreferences()
 #endif
     }
 
-    return m_captionPreferences.get();
+    return *m_captionPreferences.get();
 }
 #endif
 

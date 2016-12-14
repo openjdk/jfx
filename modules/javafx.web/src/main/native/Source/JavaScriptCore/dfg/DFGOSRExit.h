@@ -100,7 +100,6 @@ struct OSRExit : public OSRExitBase {
     void correctJump(LinkBuffer&);
 
     unsigned m_streamIndex;
-
     void considerAddingAsFrequentExitSite(CodeBlock* profiledCodeBlock)
     {
         OSRExitBase::considerAddingAsFrequentExitSite(profiledCodeBlock, ExitFromDFG);

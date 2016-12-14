@@ -37,11 +37,11 @@
 
 namespace JSC {
 
-bool shouldShowDisassemblyFor(CodeBlock* codeBlock)
+bool shouldDumpDisassemblyFor(CodeBlock* codeBlock)
 {
-    if (JITCode::isOptimizingJIT(codeBlock->jitType()) && Options::showDFGDisassembly())
+    if (JITCode::isOptimizingJIT(codeBlock->jitType()) && Options::dumpDFGDisassembly())
         return true;
-    return Options::showDisassembly();
+    return Options::dumpDisassembly();
 }
 
 LinkBuffer::CodeRef LinkBuffer::finalizeCodeWithoutDisassembly()
@@ -193,6 +193,8 @@ void LinkBuffer::linkCode(MacroAssembler& macroAssembler, void* ownerUID, JITCom
 #elif CPU(ARM64)
     copyCompactAndLinkCode<uint32_t>(macroAssembler, ownerUID, effort);
 #endif
+
+    m_linkTasks = WTFMove(macroAssembler.m_linkTasks);
 }
 
 void LinkBuffer::allocate(size_t initialSize, void* ownerUID, JITCompilationEffort effort)
@@ -209,7 +211,6 @@ void LinkBuffer::allocate(size_t initialSize, void* ownerUID, JITCompilationEffo
     m_executableMemory = m_vm->executableAllocator.allocate(*m_vm, initialSize, ownerUID, effort);
     if (!m_executableMemory)
         return;
-    ExecutableAllocator::makeWritable(m_executableMemory->start(), m_executableMemory->sizeInBytes());
     m_code = m_executableMemory->start();
     m_size = initialSize;
     m_didAllocate = true;
@@ -225,6 +226,9 @@ void LinkBuffer::shrink(size_t newSize)
 
 void LinkBuffer::performFinalization()
 {
+    for (auto& task : m_linkTasks)
+        task->run(*this);
+
 #ifndef NDEBUG
     ASSERT(!isCompilationThread());
     ASSERT(!m_completed);
@@ -232,11 +236,6 @@ void LinkBuffer::performFinalization()
     m_completed = true;
 #endif
 
-#if ENABLE(BRANCH_COMPACTION)
-    ExecutableAllocator::makeExecutable(code(), m_initialSize);
-#else
-    ExecutableAllocator::makeExecutable(code(), m_size);
-#endif
     MacroAssembler::cacheFlush(code(), m_size);
 }
 

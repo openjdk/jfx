@@ -44,7 +44,7 @@ static const float gLineThick = 3.f;
 static const float gFractionBarWidth = 0.05f;
 
 RenderMathMLFraction::RenderMathMLFraction(MathMLInlineContainerElement& element, Ref<RenderStyle>&& style)
-    : RenderMathMLBlock(element, WTF::move(style))
+    : RenderMathMLBlock(element, WTFMove(style))
     , m_lineThickness(gLineMedium)
 {
 }
@@ -70,11 +70,11 @@ void RenderMathMLFraction::updateFromElement()
 
     String thickness = element().getAttribute(MathMLNames::linethicknessAttr);
     m_lineThickness = gLineMedium;
-    if (equalIgnoringCase(thickness, "thin"))
+    if (equalLettersIgnoringASCIICase(thickness, "thin"))
         m_lineThickness = gLineThin;
-    else if (equalIgnoringCase(thickness, "medium"))
+    else if (equalLettersIgnoringASCIICase(thickness, "medium"))
         m_lineThickness = gLineMedium;
-    else if (equalIgnoringCase(thickness, "thick"))
+    else if (equalLettersIgnoringASCIICase(thickness, "thick"))
         m_lineThickness = gLineThick;
     else {
         // This function parses the thickness attribute using gLineMedium as
@@ -141,7 +141,7 @@ void RenderMathMLFraction::layout()
 void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 {
     RenderMathMLBlock::paint(info, paintOffset);
-    if (info.context->paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE)
+    if (info.context().paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE)
         return;
 
     RenderBox* denominatorWrapper = lastChildBox();
@@ -150,13 +150,12 @@ void RenderMathMLFraction::paint(PaintInfo& info, const LayoutPoint& paintOffset
 
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location() + denominatorWrapper->location() + LayoutPoint(0, m_lineThickness / 2));
 
-    GraphicsContextStateSaver stateSaver(*info.context);
+    GraphicsContextStateSaver stateSaver(info.context());
 
-    info.context->setStrokeThickness(m_lineThickness);
-    info.context->setStrokeStyle(SolidStroke);
-    info.context->setStrokeColor(style().visitedDependentColor(CSSPropertyColor), ColorSpaceSRGB);
-
-    info.context->drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x() + denominatorWrapper->pixelSnappedOffsetWidth(), adjustedPaintOffset.y()));
+    info.context().setStrokeThickness(m_lineThickness);
+    info.context().setStrokeStyle(SolidStroke);
+    info.context().setStrokeColor(style().visitedDependentColor(CSSPropertyColor));
+    info.context().drawLine(adjustedPaintOffset, roundedIntPoint(LayoutPoint(adjustedPaintOffset.x() + denominatorWrapper->offsetWidth(), adjustedPaintOffset.y())));
 }
 
 Optional<int> RenderMathMLFraction::firstLineBaseline() const

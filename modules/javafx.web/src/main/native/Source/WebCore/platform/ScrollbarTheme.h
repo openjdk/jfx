@@ -84,18 +84,18 @@ public:
 
     virtual void invalidatePart(Scrollbar&, ScrollbarPart) { }
 
-    virtual void paintScrollCorner(ScrollView*, GraphicsContext* context, const IntRect& cornerRect) { defaultPaintScrollCorner(context, cornerRect); }
-    static void defaultPaintScrollCorner(GraphicsContext* context, const IntRect& cornerRect) { context->fillRect(cornerRect, Color::white, ColorSpaceDeviceRGB); }
+    virtual void paintScrollCorner(ScrollView*, GraphicsContext& context, const IntRect& cornerRect) { defaultPaintScrollCorner(context, cornerRect); }
+    static void defaultPaintScrollCorner(GraphicsContext& context, const IntRect& cornerRect) { context.fillRect(cornerRect, Color::white); }
 
     virtual void paintTickmarks(GraphicsContext&, Scrollbar&, const IntRect&) { }
-    virtual void paintOverhangAreas(ScrollView*, GraphicsContext*, const IntRect&, const IntRect&, const IntRect&) { }
+    virtual void paintOverhangAreas(ScrollView&, GraphicsContext&, const IntRect&, const IntRect&, const IntRect&) { }
 
 #if ENABLE(RUBBER_BANDING)
     virtual void setUpOverhangAreasLayerContents(GraphicsLayer*, const Color&) { }
     virtual void setUpContentShadowLayer(GraphicsLayer*) { }
 #endif
 
-    virtual bool shouldCenterOnThumb(Scrollbar&, const PlatformMouseEvent&) { return false; }
+    virtual ScrollbarButtonPressAction handleMousePressEvent(Scrollbar&, const PlatformMouseEvent&, ScrollbarPart);
     virtual bool shouldSnapBackToDragOrigin(Scrollbar&, const PlatformMouseEvent&) { return false; }
     virtual bool shouldDragDocumentInsteadOfThumb(Scrollbar&, const PlatformMouseEvent&) { return false; }
     virtual int thumbPosition(Scrollbar&) { return 0; } // The position of the thumb relative to the track.
@@ -113,10 +113,10 @@ public:
 
     virtual bool isMockTheme() const { return false; }
 
-    WEBCORE_EXPORT static ScrollbarTheme* theme();
+    WEBCORE_EXPORT static ScrollbarTheme& theme();
 
 private:
-    static ScrollbarTheme* nativeTheme(); // Must be implemented to return the correct theme subclass.
+    static ScrollbarTheme& nativeTheme(); // Must be implemented to return the correct theme subclass.
 };
 
 }

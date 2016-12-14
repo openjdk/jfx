@@ -27,6 +27,7 @@
 #include "Language.h"
 
 #include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -39,8 +40,8 @@ namespace WebCore {
 typedef HashMap<void*, LanguageChangeObserverFunction> ObserverMap;
 static ObserverMap& observerMap()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(ObserverMap, map, ());
-    return map;
+    static NeverDestroyed<ObserverMap> map;
+    return map.get();
 }
 
 void addLanguageChangeObserver(void* context, LanguageChangeObserverFunction customObserver)
@@ -72,7 +73,7 @@ String defaultLanguage()
 
 static Vector<String>& preferredLanguagesOverride()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(Vector<String>, override, ());
+    static NeverDestroyed<Vector<String>> override;
     return override;
 }
 
@@ -84,6 +85,7 @@ Vector<String> userPreferredLanguagesOverride()
 void overrideUserPreferredLanguages(const Vector<String>& override)
 {
     preferredLanguagesOverride() = override;
+    languageDidChange();
 }
 
 Vector<String> userPreferredLanguages()
@@ -97,7 +99,7 @@ Vector<String> userPreferredLanguages()
 
 static String canonicalLanguageIdentifier(const String& languageCode)
 {
-    String lowercaseLanguageCode = languageCode.lower();
+    String lowercaseLanguageCode = languageCode.convertToASCIILowercase();
 
     if (lowercaseLanguageCode.length() >= 3 && lowercaseLanguageCode[2] == '_')
         lowercaseLanguageCode.replace(2, 1, "-");
@@ -107,7 +109,7 @@ static String canonicalLanguageIdentifier(const String& languageCode)
 
 size_t indexOfBestMatchingLanguageInList(const String& language, const Vector<String>& languageList, bool& exactMatch)
 {
-    String lowercaseLanguage = language.lower();
+    String lowercaseLanguage = language.convertToASCIILowercase();
     String languageWithoutLocaleMatch;
     String languageMatchButNotLocale;
     size_t languageWithoutLocaleMatchIndex = 0;

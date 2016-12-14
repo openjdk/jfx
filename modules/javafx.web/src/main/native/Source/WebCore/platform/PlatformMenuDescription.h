@@ -33,7 +33,7 @@ OBJC_CLASS NSMutableArray;
 #elif PLATFORM(GTK)
 typedef struct _GtkMenu GtkMenu;
 #elif PLATFORM(JAVA)
-#include "JavaRef.h"
+#include <wtf/java/JavaRef.h>
 #endif
 
 namespace WebCore {

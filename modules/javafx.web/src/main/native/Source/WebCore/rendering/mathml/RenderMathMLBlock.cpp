@@ -44,12 +44,12 @@ namespace WebCore {
 using namespace MathMLNames;
 
 RenderMathMLBlock::RenderMathMLBlock(Element& container, Ref<RenderStyle>&& style)
-    : RenderFlexibleBox(container, WTF::move(style))
+    : RenderFlexibleBox(container, WTFMove(style))
 {
 }
 
 RenderMathMLBlock::RenderMathMLBlock(Document& document, Ref<RenderStyle>&& style)
-    : RenderFlexibleBox(document, WTF::move(style))
+    : RenderFlexibleBox(document, WTFMove(style))
 {
 }
 
@@ -95,33 +95,33 @@ void RenderMathMLBlock::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 {
     RenderFlexibleBox::paint(info, paintOffset);
 
-    if (info.context->paintingDisabled() || info.phase != PaintPhaseForeground)
+    if (info.context().paintingDisabled() || info.phase != PaintPhaseForeground)
         return;
 
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location());
 
-    GraphicsContextStateSaver stateSaver(*info.context);
+    GraphicsContextStateSaver stateSaver(info.context());
 
-    info.context->setStrokeThickness(1.0f);
-    info.context->setStrokeStyle(SolidStroke);
-    info.context->setStrokeColor(Color(0, 0, 255), ColorSpaceSRGB);
+    info.context().setStrokeThickness(1.0f);
+    info.context().setStrokeStyle(SolidStroke);
+    info.context().setStrokeColor(Color(0, 0, 255));
 
-    info.context->drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y()));
-    info.context->drawLine(IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y()), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
-    info.context->drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
-    info.context->drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
+    info.context().drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y()));
+    info.context().drawLine(IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y()), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
+    info.context().drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
+    info.context().drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + pixelSnappedOffsetHeight()));
 
     int topStart = paddingTop();
 
-    info.context->setStrokeColor(Color(0, 255, 0), ColorSpaceSRGB);
+    info.context().setStrokeColor(Color(0, 255, 0));
 
-    info.context->drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + topStart), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + topStart));
+    info.context().drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + topStart), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + topStart));
 
     int baseline = roundToInt(baselinePosition(AlphabeticBaseline, true, HorizontalLine));
 
-    info.context->setStrokeColor(Color(255, 0, 0), ColorSpaceSRGB);
+    info.context().setStrokeColor(Color(255, 0, 0));
 
-    info.context->drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + baseline), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + baseline));
+    info.context().drawLine(IntPoint(adjustedPaintOffset.x(), adjustedPaintOffset.y() + baseline), IntPoint(adjustedPaintOffset.x() + pixelSnappedOffsetWidth(), adjustedPaintOffset.y() + baseline));
 }
 #endif // ENABLE(DEBUG_MATH_LAYOUT)
 

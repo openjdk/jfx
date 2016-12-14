@@ -34,28 +34,22 @@
 namespace WebCore {
 
 struct UIRequestEventInit : public UIEventInit {
-    UIRequestEventInit();
-
     RefPtr<EventTarget> receiver;
 };
 
 class UIRequestEvent : public UIEvent {
 public:
-    static Ref<UIRequestEvent> create();
-    static Ref<UIRequestEvent> create(const AtomicString& type, bool bubbles, bool cancelable, PassRefPtr<AbstractView>, int detail, PassRefPtr<EventTarget> receiver);
-
-    static Ref<UIRequestEvent> create(const AtomicString& eventType, const UIRequestEventInit&);
+    static Ref<UIRequestEvent> create(const AtomicString& type, bool bubbles, bool cancelable, AbstractView*, int detail, PassRefPtr<EventTarget> receiver);
+    static Ref<UIRequestEvent> createForBindings(const AtomicString& eventType, const UIRequestEventInit&);
 
     virtual ~UIRequestEvent();
 
     EventTarget* receiver() const { return m_receiver.get(); }
 
 protected:
-    UIRequestEvent(const AtomicString& type, bool bubbles, bool cancelable, PassRefPtr<AbstractView>, int detail, PassRefPtr<EventTarget> receiver);
+    UIRequestEvent(const AtomicString& type, bool bubbles, bool cancelable, AbstractView*, int detail, PassRefPtr<EventTarget> receiver);
 
     UIRequestEvent(const AtomicString& type, const UIRequestEventInit&);
-
-    UIRequestEvent();
 
     EventInterface eventInterface() const override;
 

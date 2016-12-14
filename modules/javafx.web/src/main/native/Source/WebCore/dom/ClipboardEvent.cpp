@@ -28,11 +28,7 @@
 
 namespace WebCore {
 
-ClipboardEvent::ClipboardEvent()
-{
-}
-
-ClipboardEvent::ClipboardEvent(const AtomicString& eventType, bool canBubble, bool cancelable, PassRefPtr<DataTransfer> dataTransfer)
+ClipboardEvent::ClipboardEvent(const AtomicString& eventType, bool canBubble, bool cancelable, DataTransfer* dataTransfer)
     : Event(eventType, canBubble, cancelable), m_dataTransfer(dataTransfer)
 {
 }

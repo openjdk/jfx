@@ -91,13 +91,13 @@ static inline bool shouldUseLetterpressEffect(const GraphicsContext& context)
 #endif
 }
 
-static void showLetterpressedGlyphsWithAdvances(const FloatPoint& point, const Font* font, CGContextRef context, const CGGlyph* glyphs, const CGSize* advances, size_t count)
+static void showLetterpressedGlyphsWithAdvances(const FloatPoint& point, const Font& font, CGContextRef context, const CGGlyph* glyphs, const CGSize* advances, size_t count)
 {
 #if ENABLE(LETTERPRESS)
     if (!count)
         return;
 
-    const FontPlatformData& platformData = font->platformData();
+    const FontPlatformData& platformData = font.platformData();
     if (platformData.orientation() == Vertical) {
         // FIXME: Implement support for vertical text. See <rdar://problem/13737298>.
         return;
@@ -158,14 +158,14 @@ private:
 #endif
 };
 
-static void showGlyphsWithAdvances(const FloatPoint& point, const Font* font, CGContextRef context, const CGGlyph* glyphs, const CGSize* advances, size_t count)
+static void showGlyphsWithAdvances(const FloatPoint& point, const Font& font, CGContextRef context, const CGGlyph* glyphs, const CGSize* advances, size_t count)
 {
     if (!count)
         return;
 
     CGContextSetTextPosition(context, point.x(), point.y());
 
-    const FontPlatformData& platformData = font->platformData();
+    const FontPlatformData& platformData = font.platformData();
     Vector<CGPoint, 256> positions(count);
     if (platformData.isColorBitmapFont())
         fillVectorWithHorizontalGlyphPositions(positions, context, advances, count);
@@ -181,7 +181,7 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font* font, CG
 
         CGAffineTransform transform = CGAffineTransformInvert(CGContextGetTextMatrix(context));
 
-        CGPoint position = FloatPoint(point.x(), point.y() + font->fontMetrics().floatAscent(IdeographicBaseline) - font->fontMetrics().floatAscent());
+        CGPoint position = FloatPoint(point.x(), point.y() + font.fontMetrics().floatAscent(IdeographicBaseline) - font.fontMetrics().floatAscent());
         for (size_t i = 0; i < count; ++i) {
             CGSize translation = CGSizeApplyAffineTransform(translations[i], rotateLeftTransform);
             positions[i] = CGPointApplyAffineTransform(CGPointMake(position.x - translation.width, position.y + translation.height), transform);
@@ -206,126 +206,53 @@ static void showGlyphsWithAdvances(const FloatPoint& point, const Font* font, CG
     }
 }
 
-#if PLATFORM(MAC)
-static void setCGFontRenderingMode(CGContextRef cgContext, NSFontRenderingMode renderingMode, BOOL shouldSubpixelQuantize)
+static void setCGFontRenderingMode(GraphicsContext& context)
 {
-    if (renderingMode == NSFontIntegerAdvancementsRenderingMode) {
-        CGContextSetShouldAntialiasFonts(cgContext, false);
-        return;
-    }
-
+    CGContextRef cgContext = context.platformContext();
     CGContextSetShouldAntialiasFonts(cgContext, true);
 
     CGAffineTransform contextTransform = CGContextGetCTM(cgContext);
-    BOOL isTranslationOrIntegralScale = WTF::isIntegral(contextTransform.a) && WTF::isIntegral(contextTransform.d) && contextTransform.b == 0.f && contextTransform.c == 0.f;
-    BOOL isRotated = ((contextTransform.b || contextTransform.c) && (contextTransform.a || contextTransform.d));
-    BOOL doSubpixelQuantization = isTranslationOrIntegralScale || (!isRotated && shouldSubpixelQuantize);
+    bool isTranslationOrIntegralScale = WTF::isIntegral(contextTransform.a) && WTF::isIntegral(contextTransform.d) && contextTransform.b == 0.f && contextTransform.c == 0.f;
+    bool isRotated = ((contextTransform.b || contextTransform.c) && (contextTransform.a || contextTransform.d));
+    bool doSubpixelQuantization = isTranslationOrIntegralScale || (!isRotated && context.shouldSubpixelQuantizeFonts());
 
-    CGContextSetShouldSubpixelPositionFonts(cgContext, renderingMode != NSFontAntialiasedIntegerAdvancementsRenderingMode || !isTranslationOrIntegralScale);
+    CGContextSetShouldSubpixelPositionFonts(cgContext, true);
     CGContextSetShouldSubpixelQuantizeFonts(cgContext, doSubpixelQuantization);
 }
-#endif
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
-static CGSize dilationSizeForTextColor(const Color& color)
+void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBuffer& glyphBuffer, int from, int numGlyphs, const FloatPoint& anchorPoint, FontSmoothingMode smoothingMode)
 {
-    double hue;
-    double saturation;
-    double lightness;
-    color.getHSL(hue, saturation, lightness);
-
-    // These values were derived empirically, and are only experimental.
-    if (lightness < 0.3333) // Dark
-        return CGSizeMake(0.007, 0.019);
-
-    if (lightness < 0.6667) // Medium
-        return CGSizeMake(0.032, 0.032);
-
-    // Light
-    return CGSizeMake(0.0475, 0.039);
-}
-#endif
-
-static inline bool isOnOrAfterIOS6()
-{
-#if PLATFORM(IOS)
-    return iosExecutableWasLinkedOnOrAfterVersion(wkIOSSystemVersion_6_0);
-#else
-    ASSERT_NOT_REACHED();
-    return false;
-#endif
-}
-
-static FloatPoint pointAdjustedForEmoji(const FontPlatformData& platformData, FloatPoint point)
-{
-    if (!platformData.isEmoji())
-        return point;
-
-    // Mimic the positioining of non-bitmap glyphs, which are not subpixel-positioned.
-    point.setY(ceilf(point.y()));
-
-    // Emoji glyphs snap to the CSS pixel grid.
-    point.setX(floorf(point.x()));
-
-    // Emoji glyphs are offset one CSS pixel to the right.
-    point.move(1, 0);
-
-    // Emoji glyphs are offset vertically based on font size.
-    float fontSize = platformData.size();
-    float y = point.y();
-    if (fontSize <= 15) {
-        // Undo Core Text's y adjustment.
-        static float yAdjustmentFactor = isOnOrAfterIOS6() ? .19 : .1;
-        point.setY(floorf(y - yAdjustmentFactor * (fontSize + 2) + 2));
-    } else {
-        if (fontSize < 26)
-            y -= .35f * fontSize - 10;
-
-        // Undo Core Text's y adjustment.
-        static float yAdjustment = isOnOrAfterIOS6() ? 3.8 : 2;
-        point.setY(floorf(y - yAdjustment));
-    }
-    return point;
-}
-
-void FontCascade::drawGlyphs(GraphicsContext* context, const Font* font, const GlyphBuffer& glyphBuffer, int from, int numGlyphs, const FloatPoint& anchorPoint) const
-{
-    const FontPlatformData& platformData = font->platformData();
+    const FontPlatformData& platformData = font.platformData();
     if (!platformData.size())
         return;
 
-    CGContextRef cgContext = context->platformContext();
+    CGContextRef cgContext = context.platformContext();
 
     bool shouldSmoothFonts;
     bool changeFontSmoothing;
-    bool matchAntialiasedAndSmoothedFonts = context->antialiasedFontDilationEnabled();
 
-    switch (fontDescription().fontSmoothing()) {
+    switch (smoothingMode) {
     case Antialiased: {
-        context->setShouldAntialias(true);
+        context.setShouldAntialias(true);
         shouldSmoothFonts = false;
         changeFontSmoothing = true;
-        matchAntialiasedAndSmoothedFonts = false; // CSS has opted into strictly antialiased fonts.
         break;
     }
     case SubpixelAntialiased: {
-        context->setShouldAntialias(true);
+        context.setShouldAntialias(true);
         shouldSmoothFonts = true;
         changeFontSmoothing = true;
-        matchAntialiasedAndSmoothedFonts = true;
         break;
     }
     case NoSmoothing: {
-        context->setShouldAntialias(false);
+        context.setShouldAntialias(false);
         shouldSmoothFonts = false;
         changeFontSmoothing = true;
-        matchAntialiasedAndSmoothedFonts = false;
         break;
     }
     case AutoSmoothing: {
         shouldSmoothFonts = true;
         changeFontSmoothing = false;
-        matchAntialiasedAndSmoothedFonts = true;
         break;
     }
     }
@@ -333,7 +260,6 @@ void FontCascade::drawGlyphs(GraphicsContext* context, const Font* font, const G
     if (!shouldUseSmoothing()) {
         shouldSmoothFonts = false;
         changeFontSmoothing = true;
-        matchAntialiasedAndSmoothedFonts = true;
     }
 
 #if !PLATFORM(IOS)
@@ -342,36 +268,16 @@ void FontCascade::drawGlyphs(GraphicsContext* context, const Font* font, const G
         originalShouldUseFontSmoothing = CGContextGetShouldSmoothFonts(cgContext);
         CGContextSetShouldSmoothFonts(cgContext, shouldSmoothFonts);
     }
-
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
-    CGFontAntialiasingStyle oldAntialiasingStyle;
-    bool resetAntialiasingStyle = false;
-    if (antialiasedFontDilationEnabled() && !CGContextGetShouldSmoothFonts(cgContext) && matchAntialiasedAndSmoothedFonts) {
-        resetAntialiasingStyle = true;
-        oldAntialiasingStyle = CGContextGetFontAntialiasingStyle(cgContext);
-        CGContextSetFontAntialiasingStyle(cgContext, kCGFontAntialiasingStyleUnfilteredCustomDilation);
-        CGContextSetFontDilation(cgContext, dilationSizeForTextColor(context->fillColor()));
-    }
-#endif
-#endif
-
-#if !PLATFORM(IOS)
-    NSFont* drawFont = [platformData.nsFont() printerFont];
 #endif
 
     CGContextSetFont(cgContext, platformData.cgFont());
 
-    bool useLetterpressEffect = shouldUseLetterpressEffect(*context);
-    FloatPoint point = pointAdjustedForEmoji(platformData, anchorPoint);
+    bool useLetterpressEffect = shouldUseLetterpressEffect(context);
+    FloatPoint point = anchorPoint;
 
-#if PLATFORM(IOS)
-    float fontSize = platformData.size();
-    CGAffineTransform matrix = useLetterpressEffect || platformData.isColorBitmapFont() ? CGAffineTransformIdentity : CGAffineTransformMakeScale(fontSize, fontSize);
-#else
     CGAffineTransform matrix = CGAffineTransformIdentity;
-    if (drawFont && !platformData.isColorBitmapFont())
-        memcpy(&matrix, [drawFont matrix], sizeof(matrix));
-#endif
+    if (!platformData.isColorBitmapFont())
+        matrix = CTFontGetMatrix(platformData.font());
     matrix.b = -matrix.b;
     matrix.d = -matrix.d;
     if (platformData.m_syntheticOblique) {
@@ -383,27 +289,17 @@ void FontCascade::drawGlyphs(GraphicsContext* context, const Font* font, const G
     }
     CGContextSetTextMatrix(cgContext, matrix);
 
-#if PLATFORM(IOS)
-    CGContextSetFontSize(cgContext, 1);
-    CGContextSetShouldSubpixelQuantizeFonts(cgContext, context->shouldSubpixelQuantizeFonts());
-#else
-    setCGFontRenderingMode(cgContext, [drawFont renderingMode], context->shouldSubpixelQuantizeFonts());
-    if (drawFont)
-        CGContextSetFontSize(cgContext, 1);
-    else
-        CGContextSetFontSize(cgContext, platformData.m_size);
-#endif
+    setCGFontRenderingMode(context);
+    CGContextSetFontSize(cgContext, platformData.size());
 
 
     FloatSize shadowOffset;
     float shadowBlur;
     Color shadowColor;
-    ColorSpace shadowColorSpace;
-    ColorSpace fillColorSpace = context->fillColorSpace();
-    context->getShadow(shadowOffset, shadowBlur, shadowColor, shadowColorSpace);
+    context.getShadow(shadowOffset, shadowBlur, shadowColor);
 
-    AffineTransform contextCTM = context->getCTM();
-    float syntheticBoldOffset = font->syntheticBoldOffset();
+    AffineTransform contextCTM = context.getCTM();
+    float syntheticBoldOffset = font.syntheticBoldOffset();
     if (syntheticBoldOffset && !contextCTM.isIdentityOrTranslationOrFlipped()) {
         FloatSize horizontalUnitSizeInDevicePixels = contextCTM.mapSize(FloatSize(1, 0));
         float horizontalUnitLengthInDevicePixels = sqrtf(horizontalUnitSizeInDevicePixels.width() * horizontalUnitSizeInDevicePixels.width() + horizontalUnitSizeInDevicePixels.height() * horizontalUnitSizeInDevicePixels.height());
@@ -411,38 +307,33 @@ void FontCascade::drawGlyphs(GraphicsContext* context, const Font* font, const G
             syntheticBoldOffset /= horizontalUnitLengthInDevicePixels;
     };
 
-    bool hasSimpleShadow = context->textDrawingMode() == TextModeFill && shadowColor.isValid() && !shadowBlur && !platformData.isColorBitmapFont() && (!context->shadowsIgnoreTransforms() || contextCTM.isIdentityOrTranslationOrFlipped()) && !context->isInTransparencyLayer();
+    bool hasSimpleShadow = context.textDrawingMode() == TextModeFill && shadowColor.isValid() && !shadowBlur && !platformData.isColorBitmapFont() && (!context.shadowsIgnoreTransforms() || contextCTM.isIdentityOrTranslationOrFlipped()) && !context.isInTransparencyLayer();
     if (hasSimpleShadow) {
         // Paint simple shadows ourselves instead of relying on CG shadows, to avoid losing subpixel antialiasing.
-        context->clearShadow();
-        Color fillColor = context->fillColor();
+        context.clearShadow();
+        Color fillColor = context.fillColor();
         Color shadowFillColor(shadowColor.red(), shadowColor.green(), shadowColor.blue(), shadowColor.alpha() * fillColor.alpha() / 255);
-        context->setFillColor(shadowFillColor, shadowColorSpace);
+        context.setFillColor(shadowFillColor);
         float shadowTextX = point.x() + shadowOffset.width();
         // If shadows are ignoring transforms, then we haven't applied the Y coordinate flip yet, so down is negative.
-        float shadowTextY = point.y() + shadowOffset.height() * (context->shadowsIgnoreTransforms() ? -1 : 1);
+        float shadowTextY = point.y() + shadowOffset.height() * (context.shadowsIgnoreTransforms() ? -1 : 1);
         showGlyphsWithAdvances(FloatPoint(shadowTextX, shadowTextY), font, cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
-        if (syntheticBoldOffset && !platformData.isEmoji())
+        if (syntheticBoldOffset)
             showGlyphsWithAdvances(FloatPoint(shadowTextX + syntheticBoldOffset, shadowTextY), font, cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
-        context->setFillColor(fillColor, fillColorSpace);
+        context.setFillColor(fillColor);
     }
 
     if (useLetterpressEffect)
         showLetterpressedGlyphsWithAdvances(point, font, cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
     else
         showGlyphsWithAdvances(point, font, cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
-    if (syntheticBoldOffset && !platformData.isEmoji())
+    if (syntheticBoldOffset)
         showGlyphsWithAdvances(FloatPoint(point.x() + syntheticBoldOffset, point.y()), font, cgContext, glyphBuffer.glyphs(from), static_cast<const CGSize*>(glyphBuffer.advances(from)), numGlyphs);
 
     if (hasSimpleShadow)
-        context->setShadow(shadowOffset, shadowBlur, shadowColor, shadowColorSpace);
+        context.setShadow(shadowOffset, shadowBlur, shadowColor);
 
 #if !PLATFORM(IOS)
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
-    if (resetAntialiasingStyle)
-        CGContextSetFontAntialiasingStyle(cgContext, oldAntialiasingStyle);
-#endif
-
     if (changeFontSmoothing)
         CGContextSetShouldSmoothFonts(cgContext, originalShouldUseFontSmoothing);
 #endif
@@ -658,17 +549,8 @@ DashArray FontCascade::dashesForIntersectionsWithRect(const TextRun& run, const 
 
 bool FontCascade::primaryFontIsSystemFont() const
 {
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED > 1090
     const auto& fontData = primaryFont();
     return !fontData.isSVGFont() && CTFontDescriptorIsSystemUIFont(adoptCF(CTFontCopyFontDescriptor(fontData.platformData().ctFont())).get());
-#else
-    const String& firstFamily = this->firstFamily();
-    return equalIgnoringASCIICase(firstFamily, "-webkit-system-font")
-        || equalIgnoringASCIICase(firstFamily, "-apple-system-font")
-        || equalIgnoringASCIICase(firstFamily, "-apple-system")
-        || equalIgnoringASCIICase(firstFamily, "-apple-menu")
-        || equalIgnoringASCIICase(firstFamily, "-apple-status-bar");
-#endif
 }
 
 void FontCascade::adjustSelectionRectForComplexText(const TextRun& run, LayoutRect& selectionRect, int from, int to) const
@@ -709,25 +591,7 @@ float FontCascade::getGlyphsAndAdvancesForComplexText(const TextRun& run, int fr
     return initialAdvance;
 }
 
-float FontCascade::drawComplexText(GraphicsContext* context, const TextRun& run, const FloatPoint& point, int from, int to) const
-{
-    // This glyph buffer holds our glyphs + advances + font data for each glyph.
-    GlyphBuffer glyphBuffer;
-
-    float startX = point.x() + getGlyphsAndAdvancesForComplexText(run, from, to, glyphBuffer);
-
-    // We couldn't generate any glyphs for the run. Give up.
-    if (glyphBuffer.isEmpty())
-        return 0;
-
-    // Draw the glyph buffer now at the starting point returned in startX.
-    FloatPoint startPoint(startX, point.y());
-    drawGlyphBuffer(context, run, glyphBuffer, startPoint);
-
-    return startPoint.x() - startX;
-}
-
-void FontCascade::drawEmphasisMarksForComplexText(GraphicsContext* context, const TextRun& run, const AtomicString& mark, const FloatPoint& point, int from, int to) const
+void FontCascade::drawEmphasisMarksForComplexText(GraphicsContext& context, const TextRun& run, const AtomicString& mark, const FloatPoint& point, int from, int to) const
 {
     GlyphBuffer glyphBuffer;
     float initialAdvance = getGlyphsAndAdvancesForComplexText(run, from, to, glyphBuffer, ForTextEmphasis);
@@ -756,16 +620,16 @@ int FontCascade::offsetForPositionForComplexText(const TextRun& run, float x, bo
     return controller.offsetForPosition(x, includePartialGlyphs);
 }
 
-const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length, FontVariant variant) const
+const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characters, size_t length) const
 {
     UChar32 baseCharacter;
     size_t baseCharacterLength = 0;
     U16_NEXT(characters, baseCharacterLength, length, baseCharacter);
 
-    GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, variant);
+    GlyphData baseCharacterGlyphData = glyphDataForCharacter(baseCharacter, false, NormalVariant);
 
     if (!baseCharacterGlyphData.glyph)
-        return 0;
+        return nullptr;
 
     if (length == baseCharacterLength)
         return baseCharacterGlyphData.font;
@@ -780,26 +644,20 @@ const Font* FontCascade::fontForCombiningCharacterSequence(const UChar* characte
         if (baseCharacter >= 0x0600 && baseCharacter <= 0x06ff && font->shouldNotBeUsedForArabic())
             continue;
 #endif
-        if (variant == NormalVariant) {
-            if (font->platformData().orientation() == Vertical) {
-                if (isCJKIdeographOrSymbol(baseCharacter) && !font->hasVerticalGlyphs()) {
-                    variant = BrokenIdeographVariant;
-                    font = font->brokenIdeographFont().get();
-                } else if (m_fontDescription.nonCJKGlyphOrientation() == NonCJKGlyphOrientationVerticalRight) {
-                    Font* verticalRightFont = font->verticalRightOrientationFont().get();
-                    Glyph verticalRightGlyph = verticalRightFont->glyphForCharacter(baseCharacter);
-                    if (verticalRightGlyph == baseCharacterGlyphData.glyph)
-                        font = verticalRightFont;
-                } else {
-                    Font* uprightFont = font->uprightOrientationFont().get();
-                    Glyph uprightGlyph = uprightFont->glyphForCharacter(baseCharacter);
-                    if (uprightGlyph != baseCharacterGlyphData.glyph)
-                        font = uprightFont;
-                }
+        if (font->platformData().orientation() == Vertical) {
+            if (isCJKIdeographOrSymbol(baseCharacter) && !font->hasVerticalGlyphs())
+                font = &font->brokenIdeographFont();
+            else if (m_fontDescription.nonCJKGlyphOrientation() == NonCJKGlyphOrientation::Mixed) {
+                const Font& verticalRightFont = font->verticalRightOrientationFont();
+                Glyph verticalRightGlyph = verticalRightFont.glyphForCharacter(baseCharacter);
+                if (verticalRightGlyph == baseCharacterGlyphData.glyph)
+                    font = &verticalRightFont;
+            } else {
+                const Font& uprightFont = font->uprightOrientationFont();
+                Glyph uprightGlyph = uprightFont.glyphForCharacter(baseCharacter);
+                if (uprightGlyph != baseCharacterGlyphData.glyph)
+                    font = &uprightFont;
             }
-        } else {
-            if (const Font* variantFont = font->variantFont(m_fontDescription, variant).get())
-                font = variantFont;
         }
 
         if (font == baseCharacterGlyphData.font)

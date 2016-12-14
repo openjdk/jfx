@@ -27,11 +27,19 @@
 #import "PlatformWebView.h"
 
 #import "TestController.h"
+#import "TestRunnerWKWebView.h"
 #import "WebKitTestRunnerDraggingInfo.h"
 #import <WebKit/WKImageCG.h>
 #import <WebKit/WKPreferencesPrivate.h>
-#import <WebKit/WKViewPrivate.h>
+#import <WebKit/WKWebViewConfiguration.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <wtf/RetainPtr.h>
+
+#if WK_API_ENABLED
+@interface WKWebView (Details)
+- (WKPageRef)_pageForTesting;
+@end
+#endif
 
 using namespace WTR;
 
@@ -44,33 +52,6 @@ enum {
     NSPoint _fakeOrigin;
 }
 @property (nonatomic, assign) PlatformWebView* platformWebView;
-@end
-
-@interface TestRunnerWKView : WKView {
-    BOOL _useThreadedScrolling;
-}
-
-- (id)initWithFrame:(NSRect)frame contextRef:(WKContextRef)context pageGroupRef:(WKPageGroupRef)pageGroup relatedToPage:(WKPageRef)relatedPage useThreadedScrolling:(BOOL)useThreadedScrolling;
-
-@property (nonatomic, assign) BOOL useThreadedScrolling;
-@end
-
-@implementation TestRunnerWKView
-
-@synthesize useThreadedScrolling = _useThreadedScrolling;
-
-- (id)initWithFrame:(NSRect)frame contextRef:(WKContextRef)context pageGroupRef:(WKPageGroupRef)pageGroup relatedToPage:(WKPageRef)relatedPage useThreadedScrolling:(BOOL)useThreadedScrolling
-{
-    _useThreadedScrolling = useThreadedScrolling;
-    return [super initWithFrame:frame contextRef:context pageGroupRef:pageGroup relatedToPage:relatedPage];
-}
-
-- (void)dragImage:(NSImage *)anImage at:(NSPoint)viewLocation offset:(NSSize)initialOffset event:(NSEvent *)event pasteboard:(NSPasteboard *)pboard source:(id)sourceObj slideBack:(BOOL)slideFlag
-{
-    RetainPtr<WebKitTestRunnerDraggingInfo> draggingInfo = adoptNS([[WebKitTestRunnerDraggingInfo alloc] initWithImage:anImage offset:initialOffset pasteboard:pboard source:sourceObj]);
-    [self draggingUpdated:draggingInfo.get()];
-}
-
 @end
 
 @implementation WebKitTestRunnerWindow
@@ -111,7 +92,7 @@ enum {
 }
 @end
 
-@interface NSWindow (Details)
+@interface NSWindow ()
 
 - (void)_setWindowResolution:(CGFloat)resolution displayIfChanged:(BOOL)displayIfChanged;
 
@@ -119,44 +100,40 @@ enum {
 
 namespace WTR {
 
-PlatformWebView::PlatformWebView(WKContextRef contextRef, WKPageGroupRef pageGroupRef, WKPageRef relatedPage, WKDictionaryRef options)
+PlatformWebView::PlatformWebView(WKWebViewConfiguration* configuration, const TestOptions& options)
     : m_windowIsKey(true)
     , m_options(options)
 {
-    WKRetainPtr<WKStringRef> useThreadedScrollingKey(AdoptWK, WKStringCreateWithUTF8CString("ThreadedScrolling"));
-    WKRetainPtr<WKStringRef> useRemoteLayerTreeKey(AdoptWK, WKStringCreateWithUTF8CString("RemoteLayerTree"));
-    WKTypeRef useThreadedScrollingValue = options ? WKDictionaryGetItemForKey(options, useThreadedScrollingKey.get()) : NULL;
-    bool useThreadedScrolling = useThreadedScrollingValue && WKBooleanGetValue(static_cast<WKBooleanRef>(useThreadedScrollingValue));
-
-    // The tiled drawing specific tests also depend on threaded scrolling.
-    WKPreferencesRef preferences = WKPageGroupGetPreferences(pageGroupRef);
-    WKPreferencesSetThreadedScrollingEnabled(preferences, useThreadedScrolling);
-
+#if WK_API_ENABLED
     // FIXME: Not sure this is the best place for this; maybe we should have API to set this so we can do it from TestController?
-    WKTypeRef useRemoteLayerTreeValue = options ? WKDictionaryGetItemForKey(options, useRemoteLayerTreeKey.get()) : NULL;
-    if (useRemoteLayerTreeValue && WKBooleanGetValue(static_cast<WKBooleanRef>(useRemoteLayerTreeValue)))
+    if (m_options.useRemoteLayerTree)
         [[NSUserDefaults standardUserDefaults] setValue:@YES forKey:@"WebKit2UseRemoteLayerTreeDrawingArea"];
 
-    NSRect rect = NSMakeRect(0, 0, TestController::viewWidth, TestController::viewHeight);
-    m_view = [[TestRunnerWKView alloc] initWithFrame:rect contextRef:contextRef pageGroupRef:pageGroupRef relatedToPage:relatedPage useThreadedScrolling:useThreadedScrolling];
-    [m_view setWindowOcclusionDetectionEnabled:NO];
+    RetainPtr<WKWebViewConfiguration> copiedConfiguration = adoptNS([configuration copy]);
+    WKPreferencesSetThreadedScrollingEnabled((WKPreferencesRef)[copiedConfiguration preferences], m_options.useThreadedScrolling);
 
-    WKRetainPtr<WKStringRef> shouldShowWebViewKey(AdoptWK, WKStringCreateWithUTF8CString("ShouldShowWebView"));
-    WKTypeRef shouldShowWebViewValue = options ? WKDictionaryGetItemForKey(options, shouldShowWebViewKey.get()) : NULL;
-    bool shouldShowWebView = shouldShowWebViewValue && WKBooleanGetValue(static_cast<WKBooleanRef>(shouldShowWebViewValue));
+    NSRect rect = NSMakeRect(0, 0, TestController::viewWidth, TestController::viewHeight);
+    m_view = [[TestRunnerWKWebView alloc] initWithFrame:rect configuration:copiedConfiguration.get()];
+    [m_view _setWindowOcclusionDetectionEnabled:NO];
 
     NSScreen *firstScreen = [[NSScreen screens] objectAtIndex:0];
-    NSRect windowRect = (shouldShowWebView) ? NSOffsetRect(rect, 100, 100) : NSOffsetRect(rect, -10000, [firstScreen frame].size.height - rect.size.height + 10000);
+    NSRect windowRect = m_options.shouldShowWebView ? NSOffsetRect(rect, 100, 100) : NSOffsetRect(rect, -10000, [firstScreen frame].size.height - rect.size.height + 10000);
     m_window = [[WebKitTestRunnerWindow alloc] initWithContentRect:windowRect styleMask:NSBorderlessWindowMask backing:(NSBackingStoreType)_NSBackingStoreUnbuffered defer:YES];
     m_window.platformWebView = this;
     [m_window setColorSpace:[firstScreen colorSpace]];
     [m_window setCollectionBehavior:NSWindowCollectionBehaviorStationary];
     [[m_window contentView] addSubview:m_view];
-    if (shouldShowWebView)
+    if (m_options.shouldShowWebView)
         [m_window orderFront:nil];
     else
         [m_window orderBack:nil];
     [m_window setReleasedWhenClosed:NO];
+#endif
+}
+
+void PlatformWebView::setWindowIsKey(bool isKey)
+{
+    m_windowIsKey = isKey;
 }
 
 void PlatformWebView::resizeTo(unsigned width, unsigned height)
@@ -177,12 +154,16 @@ PlatformWebView::~PlatformWebView()
 
 WKPageRef PlatformWebView::page()
 {
-    return [m_view pageRef];
+#if WK_API_ENABLED
+    return [m_view _pageForTesting];
+#else
+    return nullptr;
+#endif
 }
 
 void PlatformWebView::focus()
 {
-    [m_window makeFirstResponder:m_view];
+    [m_window makeFirstResponder:platformView()];
     setWindowIsKey(true);
 }
 
@@ -201,7 +182,7 @@ WKRect PlatformWebView::windowFrame()
 void PlatformWebView::setWindowFrame(WKRect frame)
 {
     [m_window setFrame:NSMakeRect(frame.origin.x, frame.origin.y, frame.size.width, frame.size.height) display:YES];
-    [m_view setFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
+    [platformView() setFrame:NSMakeRect(0, 0, frame.size.width, frame.size.height)];
 }
 
 void PlatformWebView::didInitializeClients()
@@ -212,18 +193,19 @@ void PlatformWebView::didInitializeClients()
 
 void PlatformWebView::addChromeInputField()
 {
-    NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 100, 20)];
+    NSTextField *textField = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 100, 20)];
     textField.tag = 1;
     [[m_window contentView] addSubview:textField];
     [textField release];
 
-    [textField setNextKeyView:m_view];
-    [m_view setNextKeyView:textField];
+    NSView *view = platformView();
+    [textField setNextKeyView:view];
+    [view setNextKeyView:textField];
 }
 
 void PlatformWebView::removeChromeInputField()
 {
-    NSView* textField = [[m_window contentView] viewWithTag:1];
+    NSView *textField = [[m_window contentView] viewWithTag:1];
     if (textField) {
         [textField removeFromSuperview];
         makeWebViewFirstResponder();
@@ -232,12 +214,12 @@ void PlatformWebView::removeChromeInputField()
 
 void PlatformWebView::makeWebViewFirstResponder()
 {
-    [m_window makeFirstResponder:m_view];
+    [m_window makeFirstResponder:platformView()];
 }
 
 WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
 {
-    [m_view display];
+    [platformView() display];
     CGWindowImageOption options = kCGWindowImageBoundsIgnoreFraming | kCGWindowImageShouldBeOpaque;
 
     if ([m_window backingScaleFactor] == 1)
@@ -249,13 +231,12 @@ WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
     return adoptWK(WKImageCreateFromCGImage(windowSnapshotImage.get(), 0));
 }
 
-bool PlatformWebView::viewSupportsOptions(WKDictionaryRef options) const
+bool PlatformWebView::viewSupportsOptions(const TestOptions& options) const
 {
-    WKRetainPtr<WKStringRef> useThreadedScrollingKey(AdoptWK, WKStringCreateWithUTF8CString("ThreadedScrolling"));
-    WKTypeRef useThreadedScrollingValue = WKDictionaryGetItemForKey(options, useThreadedScrollingKey.get());
-    bool useThreadedScrolling = useThreadedScrollingValue && WKBooleanGetValue(static_cast<WKBooleanRef>(useThreadedScrollingValue));
+    if (m_options.useThreadedScrolling != options.useThreadedScrolling || m_options.overrideLanguages != options.overrideLanguages)
+        return false;
 
-    return useThreadedScrolling == [(TestRunnerWKView *)m_view useThreadedScrolling];
+    return true;
 }
 
 void PlatformWebView::changeWindowScaleIfNeeded(float newScale)
@@ -277,6 +258,13 @@ void PlatformWebView::forceWindowFramesChanged()
     WKRect wkFrame = windowFrame();
     [m_window setFrame:NSMakeRect(0, 0, 1, 1) display:YES];
     setWindowFrame(wkFrame);
+}
+
+void PlatformWebView::setNavigationGesturesEnabled(bool enabled)
+{
+#if WK_API_ENABLED
+    [platformView() setAllowsBackForwardNavigationGestures:enabled];
+#endif
 }
 
 } // namespace WTR

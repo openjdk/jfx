@@ -34,6 +34,7 @@
 #include "Supplementable.h"
 #include <functional>
 #include <memory>
+#include <wtf/Optional.h>
 #include <wtf/WeakPtr.h>
 
 namespace Inspector {
@@ -119,9 +120,9 @@ namespace WebCore {
         void registerProperty(DOMWindowProperty*);
         void unregisterProperty(DOMWindowProperty*);
 
-        void resetUnlessSuspendedForPageCache();
-        void suspendForPageCache();
-        void resumeFromPageCache();
+        void resetUnlessSuspendedForDocumentSuspension();
+        void suspendForDocumentSuspension();
+        void resumeFromDocumentSuspension();
 
         PassRefPtr<MediaQueryList> matchMedia(const String&);
 
@@ -135,7 +136,7 @@ namespace WebCore {
         bool allowPopUp(); // Call on first window, not target window.
         static bool allowPopUp(Frame* firstFrame);
         static bool canShowModalDialog(const Frame*);
-        static bool canShowModalDialogNow(const Frame*);
+        WEBCORE_EXPORT void setCanShowModalDialogOverride(bool);
 
         // DOM Level 0
 
@@ -152,7 +153,7 @@ namespace WebCore {
         Navigator* clientInformation() const { return navigator(); }
 
         Location* location() const;
-        void setLocation(const String& location, DOMWindow& activeWindow, DOMWindow& firstWindow,
+        void setLocation(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& location,
             SetLocationLocking = LockHistoryBasedOnGestureState);
 
         DOMSelection* getSelection();
@@ -244,7 +245,7 @@ namespace WebCore {
         // Needed for Objective-C bindings (see bug 28774).
         void postMessage(PassRefPtr<SerializedScriptValue> message, MessagePort*, const String& targetOrigin, DOMWindow& source, ExceptionCode&);
         void postMessageTimerFired(PostMessageTimer&);
-        void dispatchMessageEventWithOriginCheck(SecurityOrigin* intendedTargetOrigin, PassRefPtr<Event>, PassRefPtr<Inspector::ScriptCallStack>);
+        void dispatchMessageEventWithOriginCheck(SecurityOrigin* intendedTargetOrigin, Event&, PassRefPtr<Inspector::ScriptCallStack>);
 
         void scrollBy(int x, int y) const;
         void scrollTo(int x, int y) const;
@@ -273,12 +274,12 @@ namespace WebCore {
 
         // Events
         // EventTarget API
-        virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture) override;
+        virtual bool addEventListener(const AtomicString& eventType, RefPtr<EventListener>&&, bool useCapture) override;
         virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture) override;
         virtual void removeAllEventListeners() override;
 
         using EventTarget::dispatchEvent;
-        bool dispatchEvent(PassRefPtr<Event> prpEvent, PassRefPtr<EventTarget> prpTarget);
+        bool dispatchEvent(Event&, EventTarget*);
 
         void dispatchLoadEvent();
 
@@ -361,13 +362,16 @@ namespace WebCore {
         void reconnectDOMWindowProperties();
         void willDestroyDocumentInFrame();
 
+        bool isSameSecurityOriginAsMainFrame() const;
+
 #if ENABLE(GAMEPAD)
         void incrementGamepadEventListenerCount();
         void decrementGamepadEventListenerCount();
 #endif
 
         bool m_shouldPrintWhenFinishedLoading;
-        bool m_suspendedForPageCache;
+        bool m_suspendedForDocumentSuspension;
+        Optional<bool> m_canShowModalDialogOverride;
 
         HashSet<DOMWindowProperty*> m_properties;
 

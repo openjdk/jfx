@@ -44,6 +44,8 @@ class TransformState;
 // SVGRendererSupport is a helper class sharing code between all SVG renderers.
 class SVGRenderSupport {
 public:
+    static void layoutDifferentRootIfNeeded(const RenderElement&);
+
     // Shares child layouting code between RenderSVGRoot/RenderSVG(Hidden)Container
     static void layoutChildren(RenderElement&, bool selfNeedsLayout);
 
@@ -67,7 +69,7 @@ public:
     // Important functions used by nearly all SVG renderers centralizing coordinate transformations / repaint rect calculations
     static FloatRect repaintRectForRendererInLocalCoordinatesExcludingSVGShadow(const RenderElement&);
     static LayoutRect clippedOverflowRectForRepaint(const RenderElement&, const RenderLayerModelObject* repaintContainer);
-    static void computeFloatRectForRepaint(const RenderElement&, const RenderLayerModelObject* repaintContainer, FloatRect&, bool fixed);
+    static FloatRect computeFloatRectForRepaint(const RenderElement&, const FloatRect&, const RenderLayerModelObject* repaintContainer, bool fixed);
     static const RenderElement& localToParentTransform(const RenderElement&, AffineTransform &);
     static void mapLocalToContainer(const RenderElement&, const RenderLayerModelObject* repaintContainer, TransformState&, bool* wasFixed);
     static const RenderElement* pushMappingToContainer(const RenderElement&, const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&);
@@ -91,8 +93,8 @@ public:
     static void updateMaskedAncestorShouldIsolateBlending(const RenderElement&);
 #endif
 
-    // FIXME: These methods do not belong here.
-    static const RenderSVGRoot& findTreeRootObject(const RenderElement&);
+    static RenderSVGRoot* findTreeRootObject(RenderElement&);
+    static const RenderSVGRoot* findTreeRootObject(const RenderElement&);
 
 private:
     // This class is not constructable.

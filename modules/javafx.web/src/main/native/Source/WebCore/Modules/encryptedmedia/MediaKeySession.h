@@ -86,7 +86,7 @@ protected:
 
     // CDMSessionClient
     virtual void sendMessage(Uint8Array*, String destinationURL) override;
-    virtual void sendError(MediaKeyErrorCode, unsigned long systemCode) override;
+    virtual void sendError(MediaKeyErrorCode, uint32_t systemCode) override;
     virtual String mediaKeysStorageDirectory() const override;
 
     MediaKeys* m_keys;
@@ -113,7 +113,7 @@ private:
 
     // ActiveDOMObject API.
     void stop() override;
-    bool canSuspendForPageCache() const override;
+    bool canSuspendForDocumentSuspension() const override;
     const char* activeDOMObjectName() const override;
 };
 

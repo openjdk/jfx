@@ -37,6 +37,7 @@ OBJC_CLASS WebMediaSessionHelper;
 extern NSString* WebUIApplicationWillResignActiveNotification;
 extern NSString* WebUIApplicationWillEnterForegroundNotification;
 extern NSString* WebUIApplicationDidBecomeActiveNotification;
+extern NSString* WebUIApplicationDidEnterBackgroundNotification;
 #endif
 
 namespace WebCore {
@@ -47,6 +48,8 @@ public:
 
     void externalOutputDeviceAvailableDidChange();
     virtual bool hasWirelessTargetsAvailable() override;
+    void applicationDidEnterBackground(bool isSuspendedUnderLock);
+    void applicationWillEnterForeground(bool isSuspendedUnderLock);
 
 private:
     friend class PlatformMediaSessionManager;
@@ -65,6 +68,7 @@ private:
     virtual bool sessionCanLoadMedia(const PlatformMediaSession&) const override;
 
     RetainPtr<WebMediaSessionHelper> m_objcObserver;
+    bool m_isInBackground { false };
 };
 
 } // namespace WebCore

@@ -92,6 +92,9 @@ struct BasicBlock : RefCounted<BasicBlock> {
             case Branch:
             case Switch:
             case Return:
+            case TailCall:
+            case TailCallVarargs:
+            case TailCallForwardVarargs:
             case Unreachable:
                 return NodeAndIndex(node, i);
             // The bitter end can contain Phantoms and the like. There will probably only be one or two nodes after the terminal. They are all no-ops and will not have any checked children.
@@ -141,9 +144,6 @@ struct BasicBlock : RefCounted<BasicBlock> {
 
     BlockNodeList::iterator begin() { return m_nodes.begin(); }
     BlockNodeList::iterator end() { return m_nodes.end(); }
-
-    Node* firstOriginNode();
-    NodeOrigin firstOrigin();
 
     unsigned numSuccessors() { return terminal()->numSuccessors(); }
 
@@ -204,8 +204,8 @@ struct BasicBlock : RefCounted<BasicBlock> {
     Vector<Node*> phis;
     PredecessorList predecessors;
 
-    Operands<Node*, NodePointerTraits> variablesAtHead;
-    Operands<Node*, NodePointerTraits> variablesAtTail;
+    Operands<Node*> variablesAtHead;
+    Operands<Node*> variablesAtTail;
 
     Operands<AbstractValue> valuesAtHead;
     Operands<AbstractValue> valuesAtTail;
@@ -237,11 +237,14 @@ struct BasicBlock : RefCounted<BasicBlock> {
     unsigned innerMostLoopIndices[numberOfInnerMostLoopIndices];
 
     struct SSAData {
+        WTF_MAKE_FAST_ALLOCATED;
+    public:
         AvailabilityMap availabilityAtHead;
         AvailabilityMap availabilityAtTail;
 
-        HashSet<Node*> liveAtHead;
+        bool liveAtTailIsDirty { false };
         HashSet<Node*> liveAtTail;
+        HashSet<Node*> liveAtHead;
         HashMap<Node*, AbstractValue> valuesAtHead;
         HashMap<Node*, AbstractValue> valuesAtTail;
 

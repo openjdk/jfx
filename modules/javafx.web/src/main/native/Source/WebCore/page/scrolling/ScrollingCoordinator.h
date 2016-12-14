@@ -62,6 +62,7 @@ class GraphicsLayer;
 class Page;
 class Region;
 class ScrollableArea;
+class TextStream;
 class ViewportConstraints;
 
 #if ENABLE(ASYNC_SCROLLING)
@@ -179,6 +180,7 @@ public:
     virtual String scrollingStateTreeAsText() const;
     virtual bool isRubberBandInProgress() const { return false; }
     virtual bool isScrollSnapInProgress() const { return false; }
+    virtual void updateScrollSnapPropertiesWithFrameView(const FrameView&) { }
     virtual void setScrollPinningBehavior(ScrollPinningBehavior) { }
 
     // Generated a unique id for scroll layers.
@@ -231,6 +233,8 @@ private:
 
     bool m_forceSynchronousScrollLayerPositionUpdates { false };
 };
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, ScrollingNodeType);
 
 } // namespace WebCore
 

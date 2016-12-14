@@ -27,19 +27,24 @@
 #define TestRunner_h
 
 #include "JSWrappable.h"
+#include "StringFunctions.h"
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <WebKit/WKBundleScriptWorld.h>
 #include <WebKit/WKRetainPtr.h>
 #include <string>
 #include <wtf/PassRefPtr.h>
+#include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
 #include <CoreFoundation/CFRunLoop.h>
 typedef RetainPtr<CFRunLoopTimerRef> PlatformTimerRef;
 #elif PLATFORM(GTK)
-#include <wtf/glib/GMainLoopSource.h>
-typedef GMainLoopSource PlatformTimerRef;
+#include <wtf/RunLoop.h>
+namespace WTR {
+class TestRunner;
+typedef RunLoop::Timer<TestRunner> PlatformTimerRef;
+}
 #elif PLATFORM(EFL)
 typedef Ecore_Timer* PlatformTimerRef;
 #endif
@@ -199,6 +204,7 @@ public:
     void showWebInspector();
     void closeWebInspector();
     void evaluateInWebInspector(JSStringRef script);
+    JSRetainPtr<JSStringRef> inspectorTestStubURL();
 
     void setPOSIXLocale(JSStringRef);
 
@@ -206,6 +212,8 @@ public:
     void setWillSendRequestReturnsNull(bool f) { m_willSendRequestReturnsNull = f; }
     bool willSendRequestReturnsNullOnRedirect() const { return m_willSendRequestReturnsNullOnRedirect; }
     void setWillSendRequestReturnsNullOnRedirect(bool f) { m_willSendRequestReturnsNullOnRedirect = f; }
+    void setWillSendRequestAddsHTTPBody(JSStringRef body) { m_willSendRequestHTTPBody = toWTFString(toWK(body)); }
+    String willSendRequestHTTPBody() const { return m_willSendRequestHTTPBody; }
 
     void setTextDirection(JSStringRef);
 
@@ -256,9 +264,11 @@ public:
     void setGeolocationPermission(bool);
     void setMockGeolocationPosition(double latitude, double longitude, double accuracy, JSValueRef altitude, JSValueRef altitudeAccuracy, JSValueRef heading, JSValueRef speed);
     void setMockGeolocationPositionUnavailableError(JSStringRef message);
+    bool isGeolocationProviderActive();
 
     // MediaStream
     void setUserMediaPermission(bool);
+    void setUserMediaPermissionForOrigin(bool permission, JSStringRef origin, JSStringRef parentOrigin);
 
     void setPageVisibility(JSStringRef state);
     void resetPageVisibility();
@@ -278,8 +288,27 @@ public:
 
     bool secureEventInputIsEnabled() const;
 
+    JSValueRef failNextNewCodeBlock();
     JSValueRef numberOfDFGCompiles(JSValueRef theFunction);
     JSValueRef neverInlineFunction(JSValueRef theFunction);
+
+    bool shouldDecideNavigationPolicyAfterDelay() const { return m_shouldDecideNavigationPolicyAfterDelay; }
+    void setShouldDecideNavigationPolicyAfterDelay(bool);
+    void setNavigationGesturesEnabled(bool);
+
+    void runUIScript(JSStringRef script, JSValueRef callback);
+    void runUIScriptCallback(unsigned callbackID, JSStringRef result);
+
+    void installDidBeginSwipeCallback(JSValueRef);
+    void installWillEndSwipeCallback(JSValueRef);
+    void installDidEndSwipeCallback(JSValueRef);
+    void installDidRemoveSwipeSnapshotCallback(JSValueRef);
+    void callDidBeginSwipeCallback();
+    void callWillEndSwipeCallback();
+    void callDidEndSwipeCallback();
+    void callDidRemoveSwipeSnapshotCallback();
+
+    void clearTestRunnerCallbacks();
 
 private:
     TestRunner();
@@ -319,6 +348,7 @@ private:
     bool m_willSendRequestReturnsNull;
     bool m_willSendRequestReturnsNullOnRedirect;
     bool m_shouldStopProvisionalFrameLoads;
+    String m_willSendRequestHTTPBody;
 
     bool m_policyDelegateEnabled;
     bool m_policyDelegatePermissive;
@@ -330,6 +360,8 @@ private:
 
     double m_databaseDefaultQuota;
     double m_databaseMaxQuota;
+
+    bool m_shouldDecideNavigationPolicyAfterDelay { false };
 
     bool m_userStyleSheetEnabled;
     WKRetainPtr<WKStringRef> m_userStyleSheetLocation;

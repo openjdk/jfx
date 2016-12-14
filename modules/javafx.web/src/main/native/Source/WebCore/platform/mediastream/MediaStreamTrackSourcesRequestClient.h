@@ -39,54 +39,57 @@ class TrackSourceInfo : public RefCounted<TrackSourceInfo> {
 public:
     enum SourceKind { Audio, Video };
 
-    static PassRefPtr<TrackSourceInfo> create(const AtomicString& id, SourceKind kind, const AtomicString& label)
+    static PassRefPtr<TrackSourceInfo> create(const AtomicString& persistentId, const AtomicString& id, SourceKind kind, const AtomicString& label)
     {
-        return adoptRef(new TrackSourceInfo(id, kind, label));
+        return adoptRef(new TrackSourceInfo(persistentId, id, kind, label));
     }
 
-    static Ref<TrackSourceInfo> create(const AtomicString& id, SourceKind kind, const AtomicString& label, const AtomicString& groupId, const AtomicString& deviceId)
+    static Ref<TrackSourceInfo> create(const AtomicString& persistentId, const AtomicString& id, SourceKind kind, const AtomicString& label, const AtomicString& groupId)
     {
-        return adoptRef(*new TrackSourceInfo(id, kind, label, groupId, deviceId));
+        return adoptRef(*new TrackSourceInfo(persistentId, id, kind, label, groupId));
     }
 
     const AtomicString& id() const { return m_id; }
+    const AtomicString& persistentId() const { return m_persistentId; }
     const AtomicString& label() const { return m_label; }
     const AtomicString& groupId() const { return m_groupId; }
-    const AtomicString& deviceId() const { return m_deviceId; }
     SourceKind kind() const { return m_kind; }
 
 private:
-    TrackSourceInfo(const AtomicString& id, SourceKind kind, const AtomicString& label)
-        : m_id(id)
+    TrackSourceInfo(const AtomicString& persistentId, const AtomicString& id, SourceKind kind, const AtomicString& label)
+        : m_persistentId(persistentId)
+        , m_id(id)
         , m_kind(kind)
         , m_label(label)
     {
     }
 
-    TrackSourceInfo(const AtomicString& id, SourceKind kind, const AtomicString& label, const AtomicString& groupId, const AtomicString& deviceId)
-        : m_id(id)
+    TrackSourceInfo(const AtomicString& persistentId, const AtomicString& id, SourceKind kind, const AtomicString& label, const AtomicString& groupId)
+        : m_persistentId(persistentId)
+        , m_id(id)
         , m_kind(kind)
         , m_label(label)
         , m_groupId(groupId)
-        , m_deviceId(deviceId)
     {
     }
 
+    AtomicString m_persistentId;
     AtomicString m_id;
     SourceKind m_kind;
     AtomicString m_label;
     AtomicString m_groupId;
-    AtomicString m_deviceId;
 };
+
+typedef Vector<RefPtr<TrackSourceInfo>> TrackSourceInfoVector;
 
 class MediaStreamTrackSourcesRequestClient : public RefCounted<MediaStreamTrackSourcesRequestClient> {
 public:
     virtual ~MediaStreamTrackSourcesRequestClient() { }
 
     virtual const String& requestOrigin() const = 0;
-    virtual void didCompleteRequest(const Vector<RefPtr<TrackSourceInfo>>&) = 0;
-
+    virtual void didCompleteTrackSourceInfoRequest(const TrackSourceInfoVector&) = 0;
 };
+
 
 } // namespace WebCore
 

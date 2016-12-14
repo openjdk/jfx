@@ -103,7 +103,7 @@ void GraphicsContext3DPrivate::releaseResources()
 
 void GraphicsContext3DPrivate::setContextLostCallback(std::unique_ptr<GraphicsContext3D::ContextLostCallback> callBack)
 {
-    m_contextLostCallback = WTF::move(callBack);
+    m_contextLostCallback = WTFMove(callBack);
 }
 
 PlatformGraphicsContext3D GraphicsContext3DPrivate::platformGraphicsContext3D() const
@@ -159,7 +159,7 @@ bool GraphicsContext3DPrivate::prepareBuffer() const
     return true;
 }
 
-void GraphicsContext3DPrivate::paintToTextureMapper(TextureMapper*, const FloatRect& /* target */, const TransformationMatrix&, float /* opacity */)
+void GraphicsContext3DPrivate::paintToTextureMapper(TextureMapper&, const FloatRect& /* target */, const TransformationMatrix&, float /* opacity */)
 {
     notImplemented();
 }

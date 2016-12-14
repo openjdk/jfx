@@ -86,7 +86,6 @@ MediaPlayerPrivateAVFoundation::~MediaPlayerPrivateAVFoundation()
 {
     LOG(Media, "MediaPlayerPrivateAVFoundation::~MediaPlayerPrivateAVFoundation(%p)", this);
     setIgnoreLoadStateChanges(true);
-    cancelCallOnMainThread(mainThreadCallback, this);
 }
 
 MediaPlayerPrivateAVFoundation::MediaRenderingMode MediaPlayerPrivateAVFoundation::currentRenderingMode() const
@@ -273,9 +272,6 @@ void MediaPlayerPrivateAVFoundation::seekWithTolerance(const MediaTime& mediaTim
 
     if (time > durationMediaTime())
         time = durationMediaTime();
-
-    if (currentMediaTime() == time)
-        return;
 
     if (currentTextTrack())
         currentTextTrack()->beginSeeking();
@@ -684,8 +680,6 @@ void MediaPlayerPrivateAVFoundation::didEnd()
 
 void MediaPlayerPrivateAVFoundation::invalidateCachedDuration()
 {
-    LOG(Media, "MediaPlayerPrivateAVFoundation::invalidateCachedDuration(%p)", this);
-
     m_cachedDuration = MediaTime::invalidTime();
 
     // For some media files, reported duration is estimated and updated as media is loaded
@@ -740,7 +734,7 @@ void MediaPlayerPrivateAVFoundation::setPreload(MediaPlayer::Preload preload)
 
 void MediaPlayerPrivateAVFoundation::setDelayCallbacks(bool delay) const
 {
-    MutexLocker lock(m_queueMutex);
+    LockHolder lock(m_queueMutex);
     if (delay)
         ++m_delayCallbacks;
     else {
@@ -749,17 +743,17 @@ void MediaPlayerPrivateAVFoundation::setDelayCallbacks(bool delay) const
     }
 }
 
-void MediaPlayerPrivateAVFoundation::mainThreadCallback(void* context)
+void MediaPlayerPrivateAVFoundation::mainThreadCallback()
 {
-    LOG(Media, "MediaPlayerPrivateAVFoundation::mainThreadCallback(%p)", context);
-    MediaPlayerPrivateAVFoundation* player = static_cast<MediaPlayerPrivateAVFoundation*>(context);
-    player->clearMainThreadPendingFlag();
-    player->dispatchNotification();
+    LOG(Media, "MediaPlayerPrivateAVFoundation::mainThreadCallback(%p)", this);
+
+    clearMainThreadPendingFlag();
+    dispatchNotification();
 }
 
 void MediaPlayerPrivateAVFoundation::clearMainThreadPendingFlag()
 {
-    MutexLocker lock(m_queueMutex);
+    LockHolder lock(m_queueMutex);
     m_mainThreadCallPending = false;
 }
 
@@ -805,7 +799,14 @@ void MediaPlayerPrivateAVFoundation::scheduleMainThreadNotification(Notification
 #endif
     if (delayDispatch && !m_mainThreadCallPending) {
         m_mainThreadCallPending = true;
-        callOnMainThread(mainThreadCallback, this);
+
+        auto weakThis = createWeakPtr();
+        callOnMainThread([weakThis] {
+            if (!weakThis)
+                return;
+
+            weakThis->mainThreadCallback();
+        });
     }
 
     m_queueMutex.unlock();
@@ -825,7 +826,7 @@ void MediaPlayerPrivateAVFoundation::dispatchNotification()
 
     Notification notification = Notification();
     {
-        MutexLocker lock(m_queueMutex);
+        LockHolder lock(m_queueMutex);
 
         if (m_queuedNotifications.isEmpty())
             return;
@@ -836,8 +837,15 @@ void MediaPlayerPrivateAVFoundation::dispatchNotification()
             m_queuedNotifications.remove(0);
         }
 
-        if (!m_queuedNotifications.isEmpty() && !m_mainThreadCallPending)
-            callOnMainThread(mainThreadCallback, this);
+        if (!m_queuedNotifications.isEmpty() && !m_mainThreadCallPending) {
+            auto weakThis = createWeakPtr();
+            callOnMainThread([weakThis] {
+                if (!weakThis)
+                    return;
+
+                weakThis->mainThreadCallback();
+            });
+        }
 
         if (!notification.isValid())
             return;
@@ -1034,7 +1042,7 @@ bool MediaPlayerPrivateAVFoundation::extractKeyURIKeyIDAndCertificateFromInitDat
     if (!status || offset + keyIDLength > initData->length())
         return false;
 
-    RefPtr<Uint16Array> keyIDArray = Uint16Array::create(initDataBuffer, offset, keyIDLength);
+    RefPtr<Uint8Array> keyIDArray = Uint8Array::create(initDataBuffer, offset, keyIDLength);
     if (!keyIDArray)
         return false;
 
@@ -1103,12 +1111,12 @@ bool MediaPlayerPrivateAVFoundation::isUnsupportedMIMEType(const String& type)
     return false;
 }
 
-const HashSet<String>& MediaPlayerPrivateAVFoundation::staticMIMETypeList()
+const HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivateAVFoundation::staticMIMETypeList()
 {
-    static NeverDestroyed<HashSet<String>> cache = []() {
-        HashSet<String> types;
+    static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> cache = []() {
+        HashSet<String, ASCIICaseInsensitiveHash> types;
 
-        static const char* typeNames[] = {
+        static const char* const typeNames[] = {
             "application/vnd.apple.mpegurl",
             "application/x-mpegurl",
             "audio/3gpp",
@@ -1140,8 +1148,8 @@ const HashSet<String>& MediaPlayerPrivateAVFoundation::staticMIMETypeList()
             "video/x-mpeg",
             "video/x-mpg",
         };
-        for (size_t i = 0; i < WTF_ARRAY_LENGTH(typeNames); ++i)
-            types.add(typeNames[i]);
+        for (auto& type : typeNames)
+            types.add(type);
 
         return types;
     }();

@@ -42,14 +42,14 @@ namespace XPath {
 
 Step::Step(Axis axis, NodeTest nodeTest)
     : m_axis(axis)
-    , m_nodeTest(WTF::move(nodeTest))
+    , m_nodeTest(WTFMove(nodeTest))
 {
 }
 
 Step::Step(Axis axis, NodeTest nodeTest, Vector<std::unique_ptr<Expression>> predicates)
     : m_axis(axis)
-    , m_nodeTest(WTF::move(nodeTest))
-    , m_predicates(WTF::move(predicates))
+    , m_nodeTest(WTFMove(nodeTest))
+    , m_predicates(WTFMove(predicates))
 {
 }
 
@@ -65,11 +65,11 @@ void Step::optimize()
     Vector<std::unique_ptr<Expression>> remainingPredicates;
     for (auto& predicate : m_predicates) {
         if ((!predicateIsContextPositionSensitive(*predicate) || m_nodeTest.m_mergedPredicates.isEmpty()) && !predicate->isContextSizeSensitive() && remainingPredicates.isEmpty())
-            m_nodeTest.m_mergedPredicates.append(WTF::move(predicate));
+            m_nodeTest.m_mergedPredicates.append(WTFMove(predicate));
         else
-            remainingPredicates.append(WTF::move(predicate));
+            remainingPredicates.append(WTFMove(predicate));
     }
-    m_predicates = WTF::move(remainingPredicates);
+    m_predicates = WTFMove(remainingPredicates);
 }
 
 void optimizeStepPair(Step& first, Step& second, bool& dropSecondStep)
@@ -99,8 +99,8 @@ void optimizeStepPair(Step& first, Step& second, bool& dropSecondStep)
         return;
 
     first.m_axis = Step::DescendantAxis;
-    first.m_nodeTest = WTF::move(second.m_nodeTest);
-    first.m_predicates = WTF::move(second.m_predicates);
+    first.m_nodeTest = WTFMove(second.m_nodeTest);
+    first.m_predicates = WTFMove(second.m_predicates);
     first.optimize();
     dropSecondStep = true;
 }
@@ -143,7 +143,7 @@ void Step::evaluate(Node& context, NodeSet& nodes) const
                 newNodes.append(node);
         }
 
-        nodes = WTF::move(newNodes);
+        nodes = WTFMove(newNodes);
     }
 }
 
@@ -153,8 +153,6 @@ static inline Node::NodeType primaryNodeType(Step::Axis axis)
     switch (axis) {
         case Step::AttributeAxis:
             return Node::ATTRIBUTE_NODE;
-        case Step::NamespaceAxis:
-            return Node::XPATH_NAMESPACE_NODE;
         default:
             return Node::ELEMENT_NODE;
     }
@@ -206,7 +204,7 @@ inline bool nodeMatchesBasicTest(Node& node, Step::Axis axis, const Step::NodeTe
             if (is<HTMLDocument>(node.document())) {
                 if (is<HTMLElement>(node)) {
                     // Paths without namespaces should match HTML elements in HTML documents despite those having an XHTML namespace. Names are compared case-insensitively.
-                    return equalIgnoringCase(downcast<HTMLElement>(node).localName(), name) && (namespaceURI.isNull() || namespaceURI == node.namespaceURI());
+                    return equalIgnoringASCIICase(downcast<HTMLElement>(node).localName(), name) && (namespaceURI.isNull() || namespaceURI == node.namespaceURI());
                 }
                 // An expression without any prefix shouldn't match no-namespace nodes (because HTML5 says so).
                 return downcast<Element>(node).hasLocalName(name) && namespaceURI == node.namespaceURI() && !namespaceURI.isNull();
@@ -285,7 +283,7 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
             return;
         }
         case FollowingSiblingAxis:
-            if (context.nodeType() == Node::ATTRIBUTE_NODE || context.nodeType() == Node::XPATH_NAMESPACE_NODE)
+            if (context.isAttributeNode())
                 return;
             for (Node* node = context.nextSibling(); node; node = node->nextSibling()) {
                 if (nodeMatches(*node, FollowingSiblingAxis, m_nodeTest))
@@ -293,7 +291,7 @@ void Step::nodesInAxis(Node& context, NodeSet& nodes) const
             }
             return;
         case PrecedingSiblingAxis:
-            if (context.nodeType() == Node::ATTRIBUTE_NODE || context.nodeType() == Node::XPATH_NAMESPACE_NODE)
+            if (context.isAttributeNode())
                 return;
             for (Node* node = context.previousSibling(); node; node = node->previousSibling()) {
                 if (nodeMatches(*node, PrecedingSiblingAxis, m_nodeTest))

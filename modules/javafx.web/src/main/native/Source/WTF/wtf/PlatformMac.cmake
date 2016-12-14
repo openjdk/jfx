@@ -1,3 +1,15 @@
+set(WTF_LIBRARY_TYPE SHARED)
+
+find_library(COCOA_LIBRARY Cocoa)
+find_library(COREFOUNDATION_LIBRARY CoreFoundation)
+find_library(READLINE_LIBRARY Readline)
+list(APPEND WTF_LIBRARIES
+    ${COREFOUNDATION_LIBRARY}
+    ${COCOA_LIBRARY}
+    ${READLINE_LIBRARY}
+    libicucore.dylib
+)
+
 list(APPEND WTF_SOURCES
     AutodrainedPoolMac.mm
     RunLoopTimerCF.cpp
@@ -23,4 +35,5 @@ list(APPEND WTF_SOURCES
 
 list(APPEND WTF_INCLUDE_DIRECTORIES
     "${WTF_DIR}/icu"
+    "${WTF_DIR}/wtf/spi/darwin"
 )

@@ -59,7 +59,7 @@ Ref<TextControlInnerContainer> TextControlInnerContainer::create(Document& docum
 
 RenderPtr<RenderElement> TextControlInnerContainer::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderTextControlInnerContainer>(*this, WTF::move(style));
+    return createRenderer<RenderTextControlInnerContainer>(*this, WTFMove(style));
 }
 
 TextControlInnerElement::TextControlInnerElement(Document& document)
@@ -73,10 +73,21 @@ Ref<TextControlInnerElement> TextControlInnerElement::create(Document& document)
     return adoptRef(*new TextControlInnerElement(document));
 }
 
-RefPtr<RenderStyle> TextControlInnerElement::customStyleForRenderer(RenderStyle&)
+RefPtr<RenderStyle> TextControlInnerElement::customStyleForRenderer(RenderStyle&, RenderStyle* shadowHostStyle)
 {
-    RenderTextControlSingleLine& parentRenderer = downcast<RenderTextControlSingleLine>(*shadowHost()->renderer());
-    return parentRenderer.createInnerBlockStyle(&parentRenderer.style());
+    auto innerContainerStyle = RenderStyle::create();
+    innerContainerStyle.get().inheritFrom(shadowHostStyle);
+
+    innerContainerStyle.get().setFlexGrow(1);
+    // min-width: 0; is needed for correct shrinking.
+    innerContainerStyle.get().setMinWidth(Length(0, Fixed));
+    innerContainerStyle.get().setDisplay(BLOCK);
+    innerContainerStyle.get().setDirection(LTR);
+
+    // We don't want the shadow dom to be editable, so we set this block to read-only in case the input itself is editable.
+    innerContainerStyle.get().setUserModify(READ_ONLY);
+
+    return WTFMove(innerContainerStyle);
 }
 
 // ---------------------------
@@ -113,7 +124,7 @@ void TextControlInnerTextElement::defaultEventHandler(Event* event)
 
 RenderPtr<RenderElement> TextControlInnerTextElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderTextControlInnerBlock>(*this, WTF::move(style));
+    return createRenderer<RenderTextControlInnerBlock>(*this, WTFMove(style));
 }
 
 RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
@@ -121,10 +132,9 @@ RenderTextControlInnerBlock* TextControlInnerTextElement::renderer() const
     return downcast<RenderTextControlInnerBlock>(HTMLDivElement::renderer());
 }
 
-RefPtr<RenderStyle> TextControlInnerTextElement::customStyleForRenderer(RenderStyle&)
+RefPtr<RenderStyle> TextControlInnerTextElement::customStyleForRenderer(RenderStyle&, RenderStyle* shadowHostStyle)
 {
-    RenderTextControl& parentRenderer = downcast<RenderTextControl>(*shadowHost()->renderer());
-    return parentRenderer.createInnerTextStyle(&parentRenderer.style());
+    return downcast<HTMLTextFormControlElement>(*shadowHost()).createInnerTextStyle(*shadowHostStyle);
 }
 
 // ----------------------------
@@ -147,11 +157,13 @@ void SearchFieldResultsButtonElement::defaultEventHandler(Event* event)
         input->focus();
         input->select();
 #if !PLATFORM(IOS)
-        RenderSearchField& renderer = downcast<RenderSearchField>(*input->renderer());
-        if (renderer.popupIsVisible())
-            renderer.hidePopup();
-        else if (input->maxResults() > 0)
-            renderer.showPopup();
+        if (RenderObject* renderer = input->renderer()) {
+            RenderSearchField& searchFieldRenderer = downcast<RenderSearchField>(*renderer);
+            if (searchFieldRenderer.popupIsVisible())
+                searchFieldRenderer.hidePopup();
+            else if (input->maxResults() > 0)
+                searchFieldRenderer.showPopup();
+        }
 #endif
         event->setDefaultHandled();
     }

@@ -28,6 +28,7 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "ArrayPrototype.h"
 #include "DFGAbstractValue.h"
 #include "DFGGraph.h"
 #include "JSCInlines.h"
@@ -48,17 +49,17 @@ ArrayMode ArrayMode::fromObserved(const ConcurrentJITLocker& locker, ArrayProfil
         return ArrayMode(Array::Unprofiled);
     case asArrayModes(NonArray):
         if (action == Array::Write && !profile->mayInterceptIndexedAccesses(locker))
-            return ArrayMode(Array::Undecided, nonArray, Array::OutOfBounds, Array::Convert);
+            return ArrayMode(Array::SelectUsingArguments, nonArray, Array::OutOfBounds, Array::Convert);
         return ArrayMode(Array::SelectUsingPredictions, nonArray).withSpeculationFromProfile(locker, profile, makeSafe);
 
     case asArrayModes(ArrayWithUndecided):
         if (action == Array::Write)
-            return ArrayMode(Array::Undecided, Array::Array, Array::OutOfBounds, Array::Convert);
-        return ArrayMode(Array::Generic);
+            return ArrayMode(Array::SelectUsingArguments, Array::Array, Array::OutOfBounds, Array::Convert);
+        return ArrayMode(Array::Undecided, Array::Array, Array::OutOfBounds, Array::AsIs).withProfile(locker, profile, makeSafe);
 
     case asArrayModes(NonArray) | asArrayModes(ArrayWithUndecided):
         if (action == Array::Write && !profile->mayInterceptIndexedAccesses(locker))
-            return ArrayMode(Array::Undecided, Array::PossiblyArray, Array::OutOfBounds, Array::Convert);
+            return ArrayMode(Array::SelectUsingArguments, Array::PossiblyArray, Array::OutOfBounds, Array::Convert);
         return ArrayMode(Array::SelectUsingPredictions).withSpeculationFromProfile(locker, profile, makeSafe);
 
     case asArrayModes(NonArrayWithInt32):
@@ -134,7 +135,7 @@ ArrayMode ArrayMode::fromObserved(const ConcurrentJITLocker& locker, ArrayProfil
         else if (shouldUseInt32(observed))
             type = Array::Int32;
         else
-            type = Array::Undecided;
+            type = Array::SelectUsingArguments;
 
         if (hasSeenArray(observed) && hasSeenNonArray(observed))
             arrayClass = Array::PossiblyArray;
@@ -179,7 +180,7 @@ ArrayMode ArrayMode::refine(
     // should just trust the array profile.
 
     switch (type()) {
-    case Array::Undecided:
+    case Array::SelectUsingArguments:
         if (!value)
             return withType(Array::ForceExit);
         if (isInt32Speculation(value))
@@ -187,7 +188,20 @@ ArrayMode ArrayMode::refine(
         if (isFullNumberSpeculation(value))
             return withTypeAndConversion(Array::Double, Array::Convert);
         return withTypeAndConversion(Array::Contiguous, Array::Convert);
-
+    case Array::Undecided: {
+        // If we have an OriginalArray and the JSArray prototype chain is sane,
+        // any indexed access always return undefined. We have a fast path for that.
+        JSGlobalObject* globalObject = graph.globalObjectFor(node->origin.semantic);
+        if (node->op() == GetByVal
+            && arrayClass() == Array::OriginalArray
+            && globalObject->arrayPrototypeChainIsSane()
+            && !graph.hasExitSite(node->origin.semantic, OutOfBounds)) {
+            graph.watchpoints().addLazily(globalObject->arrayPrototype()->structure()->transitionWatchpointSet());
+            graph.watchpoints().addLazily(globalObject->objectPrototype()->structure()->transitionWatchpointSet());
+            return withSpeculation(Array::SaneChain);
+        }
+        return ArrayMode(Array::Generic);
+    }
     case Array::Int32:
         if (!value || isInt32Speculation(value))
             return *this;
@@ -302,6 +316,8 @@ Structure* ArrayMode::originalArrayStructure(Graph& graph, const CodeOrigin& cod
             return globalObject->originalArrayStructureForIndexingType(ArrayWithDouble);
         case Array::Contiguous:
             return globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous);
+        case Array::Undecided:
+            return globalObject->originalArrayStructureForIndexingType(ArrayWithUndecided);
         case Array::ArrayStorage:
             return globalObject->originalArrayStructureForIndexingType(ArrayWithArrayStorage);
         default:
@@ -399,6 +415,9 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
     case Array::ArrayStorage:
         return alreadyChecked(graph, node, value, ArrayStorageShape);
 
+    case Array::Undecided:
+        return alreadyChecked(graph, node, value, UndecidedShape);
+
     case Array::SlowPutArrayStorage:
         switch (arrayClass()) {
         case Array::OriginalArray: {
@@ -467,9 +486,12 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
     case Array::Float64Array:
         return speculationChecked(value.m_type, SpecFloat64Array);
 
+    case Array::AnyTypedArray:
+        return speculationChecked(value.m_type, SpecTypedArrayView);
+
     case Array::SelectUsingPredictions:
     case Array::Unprofiled:
-    case Array::Undecided:
+    case Array::SelectUsingArguments:
         break;
     }
 
@@ -482,6 +504,8 @@ const char* arrayTypeToString(Array::Type type)
     switch (type) {
     case Array::SelectUsingPredictions:
         return "SelectUsingPredictions";
+    case Array::SelectUsingArguments:
+        return "SelectUsingArguments";
     case Array::Unprofiled:
         return "Unprofiled";
     case Array::Generic:
@@ -524,6 +548,8 @@ const char* arrayTypeToString(Array::Type type)
         return "Float32Array";
     case Array::Float64Array:
         return "Float64Array";
+    case Array::AnyTypedArray:
+        return "AnyTypedArray";
     default:
         // Better to return something then it is to crash. Remember, this method
         // is being called from our main diagnostic tool, the IR dumper. It's like
@@ -618,6 +644,9 @@ TypedArrayType toTypedArrayType(Array::Type type)
         return TypeFloat32;
     case Array::Float64Array:
         return TypeFloat64;
+    case Array::AnyTypedArray:
+        RELEASE_ASSERT_NOT_REACHED();
+        return NotTypedArray;
     default:
         return NotTypedArray;
     }
@@ -649,6 +678,19 @@ Array::Type toArrayType(TypedArrayType type)
     }
 }
 
+Array::Type refineTypedArrayType(Array::Type oldType, TypedArrayType newType)
+{
+    if (oldType == Array::Generic)
+        return oldType;
+    Array::Type newArrayType = toArrayType(newType);
+    if (newArrayType == Array::Generic)
+        return newArrayType;
+
+    if (oldType != newArrayType)
+        return Array::AnyTypedArray;
+    return oldType;
+}
+
 bool permitsBoundsCheckLowering(Array::Type type)
 {
     switch (type) {
@@ -664,6 +706,7 @@ bool permitsBoundsCheckLowering(Array::Type type)
     case Array::Uint32Array:
     case Array::Float32Array:
     case Array::Float64Array:
+    case Array::AnyTypedArray:
         return true;
     default:
         // These don't allow for bounds check lowering either because the bounds

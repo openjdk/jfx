@@ -403,8 +403,7 @@ static inline bool isGDIFontWeightBold(LONG gdiFontWeight)
 
 static LONG adjustedGDIFontWeight(LONG gdiFontWeight, const String& family)
 {
-    static AtomicString lucidaStr("Lucida Grande");
-    if (equalIgnoringCase(family, lucidaStr)) {
+    if (equalLettersIgnoringASCIICase(family, "lucida grande")) {
         if (gdiFontWeight == FW_NORMAL)
             return FW_MEDIUM;
         if (gdiFontWeight == FW_BOLD)
@@ -528,7 +527,6 @@ static int CALLBACK traitsInFamilyEnumProc(CONST LOGFONT* logFont, CONST TEXTMET
 
     unsigned traitsMask = 0;
     traitsMask |= logFont->lfItalic ? FontStyleItalicMask : FontStyleNormalMask;
-    traitsMask |= FontVariantNormalMask;
     LONG weight = adjustedGDIFontWeight(logFont->lfWeight, procData->m_familyName);
     traitsMask |= weight == FW_THIN ? FontWeight100Mask :
         weight == FW_EXTRALIGHT ? FontWeight200Mask :
@@ -542,7 +540,7 @@ static int CALLBACK traitsInFamilyEnumProc(CONST LOGFONT* logFont, CONST TEXTMET
     procData->m_traitsMasks.add(traitsMask);
     return 1;
 }
-void FontCache::getTraitsInFamily(const AtomicString& familyName, Vector<unsigned>& traitsMasks)
+Vector<FontTraitsMask> FontCache::getTraitsInFamily(const AtomicString& familyName)
 {
     HWndDC hdc(0);
 
@@ -555,17 +553,18 @@ void FontCache::getTraitsInFamily(const AtomicString& familyName, Vector<unsigne
 
     TraitsInFamilyProcData procData(familyName);
     EnumFontFamiliesEx(hdc, &logFont, traitsInFamilyEnumProc, reinterpret_cast<LPARAM>(&procData), 0);
-    copyToVector(procData.m_traitsMasks, traitsMasks);
+    Vector<FontTraitsMask> result;
+    result.reserveInitialCapacity(procData.m_traitsMasks.size());
+    for (unsigned mask : procData.m_traitsMasks)
+        result.uncheckedAppend(static_cast<FontTraitsMask>(mask));
+    return result;
 }
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family, const FontFeatureSettings*, const FontVariantSettings*)
 {
-    bool isLucidaGrande = false;
-    static AtomicString lucidaStr("Lucida Grande");
-    if (equalIgnoringCase(family, lucidaStr))
-        isLucidaGrande = true;
+    bool isLucidaGrande = equalLettersIgnoringASCIICase(family, "lucida grande");
 
-    bool useGDI = fontDescription.renderingMode() == AlternateRenderingMode && !isLucidaGrande;
+    bool useGDI = fontDescription.renderingMode() == FontRenderingMode::Alternate && !isLucidaGrande;
 
     // The logical size constant is 32. We do this for subpixel precision when rendering using Uniscribe.
     // This masks rounding errors related to the HFONT metrics being  different from the CGFont metrics.
@@ -587,7 +586,7 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     bool synthesizeBold = isGDIFontWeightBold(weight) && !isGDIFontWeightBold(logFont.lfWeight);
     bool synthesizeItalic = fontDescription.italic() && !logFont.lfItalic;
 
-    auto result = std::make_unique<FontPlatformData>(WTF::move(hfont), fontDescription.computedPixelSize(), synthesizeBold, synthesizeItalic, useGDI);
+    auto result = std::make_unique<FontPlatformData>(WTFMove(hfont), fontDescription.computedPixelSize(), synthesizeBold, synthesizeItalic, useGDI);
 
 #if USE(CG)
     bool fontCreationFailed = !result->cgFont();

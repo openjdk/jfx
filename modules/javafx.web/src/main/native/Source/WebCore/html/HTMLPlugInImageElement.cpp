@@ -49,7 +49,9 @@
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "StyleResolver.h"
+#include "StyleTreeResolver.h"
 #include "SubframeLoader.h"
+#include "TypedElementDescendantIterator.h"
 #include <JavaScriptCore/APICast.h>
 #include <JavaScriptCore/JSBase.h>
 #include <wtf/HashMap.h>
@@ -59,7 +61,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-typedef Vector<RefPtr<HTMLPlugInImageElement>> HTMLPlugInImageElementList;
+typedef Vector<Ref<HTMLPlugInImageElement>> HTMLPlugInImageElementList;
 typedef HashMap<String, String> MimeTypeToLocalizedStringMap;
 
 static const int sizingTinyDimensionThreshold = 40;
@@ -68,44 +70,46 @@ static const float autostartSoonAfterUserGestureThreshold = 5.0;
 
 // This delay should not exceed the snapshot delay in PluginView.cpp
 static const auto simulatedMouseClickTimerDelay = std::chrono::milliseconds { 750 };
+
+#if PLATFORM(COCOA)
 static const auto removeSnapshotTimerDelay = std::chrono::milliseconds { 1500 };
+#endif
 
 static const String titleText(Page* page, String mimeType)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(MimeTypeToLocalizedStringMap, mimeTypeToLabelTitleMap, ());
-    String titleText = mimeTypeToLabelTitleMap.get(mimeType);
+    static NeverDestroyed<MimeTypeToLocalizedStringMap> mimeTypeToLabelTitleMap;
+    String titleText = mimeTypeToLabelTitleMap.get().get(mimeType);
     if (!titleText.isEmpty())
         return titleText;
 
     titleText = page->chrome().client().plugInStartLabelTitle(mimeType);
     if (titleText.isEmpty())
         titleText = snapshottedPlugInLabelTitle();
-    mimeTypeToLabelTitleMap.set(mimeType, titleText);
+    mimeTypeToLabelTitleMap.get().set(mimeType, titleText);
     return titleText;
 };
 
 static const String subtitleText(Page* page, String mimeType)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(MimeTypeToLocalizedStringMap, mimeTypeToLabelSubtitleMap, ());
-    String subtitleText = mimeTypeToLabelSubtitleMap.get(mimeType);
+    static NeverDestroyed<MimeTypeToLocalizedStringMap> mimeTypeToLabelSubtitleMap;
+    String subtitleText = mimeTypeToLabelSubtitleMap.get().get(mimeType);
     if (!subtitleText.isEmpty())
         return subtitleText;
 
     subtitleText = page->chrome().client().plugInStartLabelSubtitle(mimeType);
     if (subtitleText.isEmpty())
         subtitleText = snapshottedPlugInLabelSubtitle();
-    mimeTypeToLabelSubtitleMap.set(mimeType, subtitleText);
+    mimeTypeToLabelSubtitleMap.get().set(mimeType, subtitleText);
     return subtitleText;
 };
 
-HTMLPlugInImageElement::HTMLPlugInImageElement(const QualifiedName& tagName, Document& document, bool createdByParser, PreferPlugInsForImagesOption preferPlugInsForImagesOption)
+HTMLPlugInImageElement::HTMLPlugInImageElement(const QualifiedName& tagName, Document& document, bool createdByParser)
     : HTMLPlugInElement(tagName, document)
     // m_needsWidgetUpdate(!createdByParser) allows HTMLObjectElement to delay
     // widget updates until after all children are parsed.  For HTMLEmbedElement
     // this delay is unnecessary, but it is simpler to make both classes share
     // the same codepath in this class.
     , m_needsWidgetUpdate(!createdByParser)
-    , m_shouldPreferPlugInsForImages(preferPlugInsForImagesOption == ShouldPreferPlugInsForImages)
     , m_needsDocumentActivationCallbacks(false)
     , m_simulatedMouseClickTimer(*this, &HTMLPlugInImageElement::simulatedMouseClickTimerFired, simulatedMouseClickTimerDelay)
     , m_removeSnapshotTimer(*this, &HTMLPlugInImageElement::removeSnapshotTimerFired)
@@ -123,7 +127,7 @@ HTMLPlugInImageElement::HTMLPlugInImageElement(const QualifiedName& tagName, Doc
 HTMLPlugInImageElement::~HTMLPlugInImageElement()
 {
     if (m_needsDocumentActivationCallbacks)
-        document().unregisterForPageCacheSuspensionCallbacks(this);
+        document().unregisterForDocumentSuspensionCallbacks(this);
 }
 
 void HTMLPlugInImageElement::setDisplayState(DisplayState state)
@@ -155,7 +159,7 @@ bool HTMLPlugInImageElement::isImageType()
 
     if (Frame* frame = document().frame()) {
         URL completedURL = document().completeURL(m_url);
-        return frame->loader().client().objectContentType(completedURL, m_serviceType, shouldPreferPlugInsForImages()) == ObjectContentImage;
+        return frame->loader().client().objectContentType(completedURL, m_serviceType) == ObjectContentImage;
     }
 
     return Image::supportsType(m_serviceType);
@@ -184,7 +188,7 @@ bool HTMLPlugInImageElement::wouldLoadAsNetscapePlugin(const String& url, const 
         completedURL = document().completeURL(url);
 
     FrameLoader& frameLoader = document().frame()->loader();
-    if (frameLoader.client().objectContentType(completedURL, serviceType, shouldPreferPlugInsForImages()) == ObjectContentNetscapePlugin)
+    if (frameLoader.client().objectContentType(completedURL, serviceType) == ObjectContentNetscapePlugin)
         return true;
     return false;
 }
@@ -194,31 +198,31 @@ RenderPtr<RenderElement> HTMLPlugInImageElement::createElementRenderer(Ref<Rende
     ASSERT(!document().inPageCache());
 
     if (displayState() >= PreparingPluginReplacement)
-        return HTMLPlugInElement::createElementRenderer(WTF::move(style), insertionPosition);
+        return HTMLPlugInElement::createElementRenderer(WTFMove(style), insertionPosition);
 
     // Once a PlugIn Element creates its renderer, it needs to be told when the Document goes
     // inactive or reactivates so it can clear the renderer before going into the page cache.
     if (!m_needsDocumentActivationCallbacks) {
         m_needsDocumentActivationCallbacks = true;
-        document().registerForPageCacheSuspensionCallbacks(this);
+        document().registerForDocumentSuspensionCallbacks(this);
     }
 
     if (displayState() == DisplayingSnapshot) {
-        auto renderSnapshottedPlugIn = createRenderer<RenderSnapshottedPlugIn>(*this, WTF::move(style));
+        auto renderSnapshottedPlugIn = createRenderer<RenderSnapshottedPlugIn>(*this, WTFMove(style));
         renderSnapshottedPlugIn->updateSnapshot(m_snapshotImage);
-        return WTF::move(renderSnapshottedPlugIn);
+        return WTFMove(renderSnapshottedPlugIn);
     }
 
     // Fallback content breaks the DOM->Renderer class relationship of this
     // class and all superclasses because createObject won't necessarily
     // return a RenderEmbeddedObject or RenderWidget.
     if (useFallbackContent())
-        return RenderElement::createFor(*this, WTF::move(style));
+        return RenderElement::createFor(*this, WTFMove(style));
 
     if (isImageType())
-        return createRenderer<RenderImage>(*this, WTF::move(style));
+        return createRenderer<RenderImage>(*this, WTFMove(style));
 
-    return HTMLPlugInElement::createElementRenderer(WTF::move(style), insertionPosition);
+    return HTMLPlugInElement::createElementRenderer(WTFMove(style), insertionPosition);
 }
 
 bool HTMLPlugInImageElement::childShouldCreateRenderer(const Node& child) const
@@ -271,6 +275,10 @@ void HTMLPlugInImageElement::willDetachRenderers()
         setNeedsWidgetUpdate(true);
     }
 
+    Widget* widget = pluginWidget(PluginLoadingPolicy::DoNotLoad);
+    if (is<PluginViewBase>(widget))
+        downcast<PluginViewBase>(*widget).willDetatchRenderer();
+
     HTMLPlugInElement::willDetachRenderers();
 }
 
@@ -301,8 +309,8 @@ void HTMLPlugInImageElement::finishParsingChildren()
 void HTMLPlugInImageElement::didMoveToNewDocument(Document* oldDocument)
 {
     if (m_needsDocumentActivationCallbacks) {
-        oldDocument->unregisterForPageCacheSuspensionCallbacks(this);
-        document().registerForPageCacheSuspensionCallbacks(this);
+        oldDocument->unregisterForDocumentSuspensionCallbacks(this);
+        document().registerForDocumentSuspensionCallbacks(this);
     }
 
     if (m_imageLoader)
@@ -311,19 +319,19 @@ void HTMLPlugInImageElement::didMoveToNewDocument(Document* oldDocument)
     HTMLPlugInElement::didMoveToNewDocument(oldDocument);
 }
 
-void HTMLPlugInImageElement::documentWillSuspendForPageCache()
+void HTMLPlugInImageElement::prepareForDocumentSuspension()
 {
     if (renderer())
         Style::detachRenderTree(*this);
 
-    HTMLPlugInElement::documentWillSuspendForPageCache();
+    HTMLPlugInElement::prepareForDocumentSuspension();
 }
 
-void HTMLPlugInImageElement::documentDidResumeFromPageCache()
+void HTMLPlugInImageElement::resumeFromDocumentSuspension()
 {
     setNeedsStyleRecalc(ReconstructRenderTree);
 
-    HTMLPlugInElement::documentDidResumeFromPageCache();
+    HTMLPlugInElement::resumeFromDocumentSuspension();
 }
 
 void HTMLPlugInImageElement::startLoadingImage()
@@ -407,11 +415,11 @@ void HTMLPlugInImageElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 
 bool HTMLPlugInImageElement::partOfSnapshotOverlay(const Node* node) const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, selector, (".snapshot-overlay", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> selector(".snapshot-overlay", AtomicString::ConstructFromLiteral);
     ShadowRoot* shadow = userAgentShadowRoot();
     if (!shadow)
         return false;
-    RefPtr<Element> snapshotLabel = shadow->querySelector(selector, ASSERT_NO_EXCEPTION);
+    RefPtr<Element> snapshotLabel = shadow->querySelector(selector.get(), ASSERT_NO_EXCEPTION);
     return node && snapshotLabel && (node == snapshotLabel.get() || node->isDescendantOf(snapshotLabel.get()));
 }
 
@@ -422,20 +430,6 @@ void HTMLPlugInImageElement::removeSnapshotTimerFired()
     setNeedsStyleRecalc(SyntheticStyleChange);
     if (renderer())
         renderer()->repaint();
-}
-
-static void addPlugInsFromNodeListMatchingPlugInOrigin(HTMLPlugInImageElementList& plugInList, PassRefPtr<NodeList> collection, const String& plugInOrigin, const String& mimeType)
-{
-    for (unsigned i = 0, length = collection->length(); i < length; i++) {
-        Node* node = collection->item(i);
-        if (is<HTMLPlugInImageElement>(*node)) {
-            HTMLPlugInImageElement& plugInImageElement = downcast<HTMLPlugInImageElement>(*node);
-            const URL& loadedURL = plugInImageElement.loadedUrl();
-            String otherMimeType = plugInImageElement.loadedMimeType();
-            if (plugInOrigin == loadedURL.host() && mimeType == otherMimeType)
-                plugInList.append(&plugInImageElement);
-        }
-    }
 }
 
 void HTMLPlugInImageElement::restartSimilarPlugIns()
@@ -457,19 +451,15 @@ void HTMLPlugInImageElement::restartSimilarPlugIns()
         if (!frame->document())
             continue;
 
-        RefPtr<NodeList> plugIns = frame->document()->getElementsByTagName(embedTag.localName());
-        if (plugIns)
-            addPlugInsFromNodeListMatchingPlugInOrigin(similarPlugins, plugIns, plugInOrigin, mimeType);
-
-        plugIns = frame->document()->getElementsByTagName(objectTag.localName());
-        if (plugIns)
-            addPlugInsFromNodeListMatchingPlugInOrigin(similarPlugins, plugIns, plugInOrigin, mimeType);
+        for (auto& element : descendantsOfType<HTMLPlugInImageElement>(*frame->document())) {
+            if (plugInOrigin == element.loadedUrl().host() && mimeType == element.loadedMimeType())
+                similarPlugins.append(element);
+        }
     }
 
-    for (size_t i = 0, length = similarPlugins.size(); i < length; ++i) {
-        HTMLPlugInImageElement* plugInToRestart = similarPlugins[i].get();
+    for (auto& plugInToRestart : similarPlugins) {
         if (plugInToRestart->displayState() <= HTMLPlugInElement::DisplayingSnapshot) {
-            LOG(Plugins, "%p Plug-in looks similar to a restarted plug-in. Restart.", plugInToRestart);
+            LOG(Plugins, "%p Plug-in looks similar to a restarted plug-in. Restart.", plugInToRestart.ptr());
             plugInToRestart->restartSnapshottedPlugIn();
         }
         plugInToRestart->m_snapshotDecision = NeverSnapshot;

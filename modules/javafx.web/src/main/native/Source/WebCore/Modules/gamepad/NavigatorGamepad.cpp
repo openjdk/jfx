@@ -62,7 +62,7 @@ NavigatorGamepad* NavigatorGamepad::from(Navigator* navigator)
     if (!supplement) {
         auto newSupplement = std::make_unique<NavigatorGamepad>();
         supplement = newSupplement.get();
-        provideTo(navigator, supplementName(), WTF::move(newSupplement));
+        provideTo(navigator, supplementName(), WTFMove(newSupplement));
 
         if (Frame* frame = navigator->frame()) {
             if (DocumentLoader* documentLoader = frame->loader().documentLoader())
@@ -81,9 +81,9 @@ Ref<Gamepad> NavigatorGamepad::gamepadFromPlatformGamepad(PlatformGamepad& platf
     return *m_gamepads[index];
 }
 
-const Vector<RefPtr<Gamepad>>& NavigatorGamepad::getGamepads(Navigator* navigator)
+const Vector<RefPtr<Gamepad>>& NavigatorGamepad::getGamepads(Navigator& navigator)
 {
-    return NavigatorGamepad::from(navigator)->gamepads();
+    return NavigatorGamepad::from(&navigator)->gamepads();
 }
 
 const Vector<RefPtr<Gamepad>>& NavigatorGamepad::gamepads()

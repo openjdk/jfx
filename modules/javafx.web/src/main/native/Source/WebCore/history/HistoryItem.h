@@ -28,6 +28,7 @@
 #define HistoryItem_h
 
 #include "FloatRect.h"
+#include "FrameLoaderTypes.h"
 #include "IntPoint.h"
 #include "IntRect.h"
 #include "SerializedScriptValue.h"
@@ -36,7 +37,7 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(JAVA)
-#include "JavaRef.h"
+#include <wtf/java/JavaRef.h>
 #endif
 
 #if PLATFORM(IOS)
@@ -76,10 +77,6 @@ public:
     {
         return adoptRef(*new HistoryItem(urlString, title, alternateTitle));
     }
-    static Ref<HistoryItem> create(const URL& url, const String& target, const String& parent, const String& title)
-    {
-        return adoptRef(*new HistoryItem(url, target, parent, title));
-    }
 
     WEBCORE_EXPORT ~HistoryItem();
 
@@ -98,7 +95,6 @@ public:
     WEBCORE_EXPORT void setAlternateTitle(const String&);
     WEBCORE_EXPORT const String& alternateTitle() const;
 
-    const String& parent() const;
     WEBCORE_EXPORT URL url() const;
     WEBCORE_EXPORT URL originalURL() const;
     WEBCORE_EXPORT const String& referrer() const;
@@ -110,9 +106,9 @@ public:
 
     bool lastVisitWasFailure() const { return m_lastVisitWasFailure; }
 
-    WEBCORE_EXPORT const IntPoint& scrollPoint() const;
-    WEBCORE_EXPORT void setScrollPoint(const IntPoint&);
-    void clearScrollPoint();
+    WEBCORE_EXPORT const IntPoint& scrollPosition() const;
+    WEBCORE_EXPORT void setScrollPosition(const IntPoint&);
+    void clearScrollPosition();
 
     WEBCORE_EXPORT float pageScaleFactor() const;
     WEBCORE_EXPORT void setPageScaleFactor(float);
@@ -121,17 +117,19 @@ public:
     WEBCORE_EXPORT void setDocumentState(const Vector<String>&);
     void clearDocumentState();
 
+    WEBCORE_EXPORT void setShouldOpenExternalURLsPolicy(ShouldOpenExternalURLsPolicy);
+    WEBCORE_EXPORT ShouldOpenExternalURLsPolicy shouldOpenExternalURLsPolicy() const;
+
     void setURL(const URL&);
     WEBCORE_EXPORT void setURLString(const String&);
     WEBCORE_EXPORT void setOriginalURLString(const String&);
     WEBCORE_EXPORT void setReferrer(const String&);
     WEBCORE_EXPORT void setTarget(const String&);
-    void setParent(const String&);
     WEBCORE_EXPORT void setTitle(const String&);
     WEBCORE_EXPORT void setIsTargetItem(bool);
 
-    WEBCORE_EXPORT void setStateObject(PassRefPtr<SerializedScriptValue>);
-    PassRefPtr<SerializedScriptValue> stateObject() const { return m_stateObject; }
+    WEBCORE_EXPORT void setStateObject(RefPtr<SerializedScriptValue>&&);
+    RefPtr<SerializedScriptValue> stateObject() const { return m_stateObject; }
 
     void setItemSequenceNumber(long long number) { m_itemSequenceNumber = number; }
     long long itemSequenceNumber() const { return m_itemSequenceNumber; }
@@ -140,7 +138,7 @@ public:
     long long documentSequenceNumber() const { return m_documentSequenceNumber; }
 
     void setFormInfoFromRequest(const ResourceRequest&);
-    WEBCORE_EXPORT void setFormData(PassRefPtr<FormData>);
+    WEBCORE_EXPORT void setFormData(RefPtr<FormData>&&);
     WEBCORE_EXPORT void setFormContentType(const String&);
 
     void setLastVisitWasFailure(bool wasFailure) { m_lastVisitWasFailure = wasFailure; }
@@ -149,7 +147,6 @@ public:
     void setChildItem(Ref<HistoryItem>&&);
     WEBCORE_EXPORT HistoryItem* childItemWithTarget(const String&);
     HistoryItem* childItemWithDocumentSequenceNumber(long long number);
-    WEBCORE_EXPORT HistoryItem* targetItem();
     WEBCORE_EXPORT const HistoryItemVector& children() const;
     WEBCORE_EXPORT bool hasChildren() const;
     void clearChildren();
@@ -216,34 +213,36 @@ public:
 
     void notifyChanged();
 
+    void setWasRestoredFromSession(bool wasRestoredFromSession) { m_wasRestoredFromSession = wasRestoredFromSession; }
+    bool wasRestoredFromSession() const { return m_wasRestoredFromSession; }
+
 private:
     WEBCORE_EXPORT HistoryItem();
     WEBCORE_EXPORT HistoryItem(const String& urlString, const String& title);
     WEBCORE_EXPORT HistoryItem(const String& urlString, const String& title, const String& alternateTitle);
-    WEBCORE_EXPORT HistoryItem(const URL&, const String& frameName, const String& parent, const String& title);
 
     HistoryItem(const HistoryItem&);
 
     bool hasSameDocumentTree(HistoryItem& otherItem) const;
 
-    HistoryItem* findTargetItem();
-
     String m_urlString;
     String m_originalURLString;
     String m_referrer;
     String m_target;
-    String m_parent;
     String m_title;
     String m_displayTitle;
 
-    IntPoint m_scrollPoint;
+    IntPoint m_scrollPosition;
     float m_pageScaleFactor;
     Vector<String> m_documentState;
+
+    ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
 
     HistoryItemVector m_children;
 
     bool m_lastVisitWasFailure;
     bool m_isTargetItem;
+    bool m_wasRestoredFromSession { false };
 
     std::unique_ptr<Vector<String>> m_redirectURLs;
 

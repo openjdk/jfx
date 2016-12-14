@@ -35,6 +35,7 @@
 #include <unicode/uidna.h>
 #include <wtf/HashMap.h>
 #include <wtf/HexNumber.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -435,7 +436,12 @@ void URL::invalidate()
 URL::URL(ParsedURLStringTag, const String& url)
 {
     parse(url);
+#if OS(WINDOWS)
+    // FIXME(148598): Work around Windows local file handling bug in CFNetwork
+    ASSERT(isLocalFile() || url == m_string);
+#else
     ASSERT(url == m_string);
+#endif
 }
 
 URL::URL(const URL& base, const String& relative)
@@ -515,7 +521,7 @@ void URL::init(const URL& base, const String& relative, const TextEncoding& enco
             ++p;
         }
         if (*p == ':') {
-            if (p[1] != '/' && equalIgnoringCase(base.protocol(), String(str, p - str)) && base.isHierarchical())
+            if (p[1] != '/' && equalIgnoringASCIICase(base.protocol(), StringView(reinterpret_cast<LChar*>(str), p - str)) && base.isHierarchical())
                 str = p + 1;
             else
                 absolute = true;
@@ -788,7 +794,7 @@ bool URL::protocolIs(const char* protocol) const
 
     // JavaScript URLs are "valid" and should be executed even if URL decides they are invalid.
     // The free function protocolIsJavaScript() should be used instead.
-    ASSERT(!equalIgnoringCase(protocol, String("javascript")));
+    ASSERT(!equalLettersIgnoringASCIICase(StringView(protocol), "javascript"));
 
     if (!m_isValid)
         return false;
@@ -1609,6 +1615,23 @@ bool protocolHostAndPortAreEqual(const URL& a, const URL& b)
     return true;
 }
 
+bool hostsAreEqual(const URL& a, const URL& b)
+{
+    int hostStartA = a.hostStart();
+    int hostLengthA = a.hostEnd() - hostStartA;
+    int hostStartB = b.hostStart();
+    int hostLengthB = b.hostEnd() - hostStartB;
+    if (hostLengthA != hostLengthB)
+        return false;
+
+    for (int i = 0; i < hostLengthA; ++i) {
+        if (a.string()[hostStartA + i] != b.string()[hostStartB + i])
+            return false;
+    }
+
+    return true;
+}
+
 String encodeWithURLEscapeSequences(const String& notEncodedString, PercentEncodeCharacterClass whatToEncode)
 {
     CString asUTF8 = notEncodedString.utf8();
@@ -1688,8 +1711,17 @@ static void appendEncodedHostname(UCharBuffer& buffer, StringView string)
 
     UChar hostnameBuffer[hostnameBufferLength];
     UErrorCode error = U_ZERO_ERROR;
+
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
     int32_t numCharactersConverted = uidna_IDNToASCII(string.upconvertedCharacters(), string.length(), hostnameBuffer,
         hostnameBufferLength, UIDNA_ALLOW_UNASSIGNED, 0, &error);
+#if COMPILER(GCC_OR_CLANG)
+#pragma GCC diagnostic pop
+#endif
+
     if (error == U_ZERO_ERROR)
         buffer.append(hostnameBuffer, numCharactersConverted);
 }
@@ -1966,7 +1998,7 @@ bool protocolIsInHTTPFamily(const String& url)
 
 const URL& blankURL()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(URL, staticBlankURL, (ParsedURLString, "about:blank"));
+    static NeverDestroyed<URL> staticBlankURL(ParsedURLString, "about:blank");
     return staticBlankURL;
 }
 
@@ -1975,20 +2007,28 @@ bool URL::isBlankURL() const
     return protocolIs("about");
 }
 
+typedef HashMap<String, unsigned short, ASCIICaseInsensitiveHash> DefaultPortsMap;
+static const DefaultPortsMap& defaultPortsMap()
+{
+    static NeverDestroyed<const DefaultPortsMap> defaultPortsMap(DefaultPortsMap({
+        { "http", 80 },
+        { "https", 443 },
+        { "ftp", 21 },
+        { "ftps", 990 }
+    }));
+    return defaultPortsMap.get();
+}
+unsigned short defaultPortForProtocol(const String& protocol)
+{
+    return defaultPortsMap().get(protocol);
+}
+
 bool isDefaultPortForProtocol(unsigned short port, const String& protocol)
 {
     if (protocol.isEmpty())
         return false;
 
-    typedef HashMap<String, unsigned, CaseFoldingHash> DefaultPortsMap;
-    DEPRECATED_DEFINE_STATIC_LOCAL(DefaultPortsMap, defaultPorts, ());
-    if (defaultPorts.isEmpty()) {
-        defaultPorts.set("http", 80);
-        defaultPorts.set("https", 443);
-        defaultPorts.set("ftp", 21);
-        defaultPorts.set("ftps", 990);
-    }
-    return defaultPorts.get(protocol) == port;
+    return defaultPortForProtocol(protocol) == port;
 }
 
 bool portAllowed(const URL& url)
@@ -2098,15 +2138,21 @@ bool portAllowed(const URL& url)
 String mimeTypeFromDataURL(const String& url)
 {
     ASSERT(protocolIs(url, "data"));
-    size_t index = url.find(';');
+
+    // FIXME: What's the right behavior when the URL has a comma first, but a semicolon later?
+    // Currently this code will break at the semicolon in that case. Not sure that's correct.
+    auto index = url.find(';', 5);
     if (index == notFound)
-        index = url.find(',');
-    if (index != notFound) {
-        if (index > 5)
-            return url.substring(5, index - 5).lower();
-        return "text/plain"; // Data URLs with no MIME type are considered text/plain.
+        index = url.find(',', 5);
+    if (index == notFound) {
+        // FIXME: There was an old comment here that made it sound like this should be returning text/plain.
+        // But we have been returning empty string here for some time, so not changing its behavior at this time.
+        return emptyString();
     }
-    return "";
+    if (index == 5)
+        return ASCIILiteral("text/plain");
+    ASSERT(index >= 5);
+    return url.substring(5, index - 5).convertToASCIILowercase();
 }
 
 String mimeTypeFromURL(const URL& url)

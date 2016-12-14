@@ -21,6 +21,8 @@
 #include "config.h"
 #include "ErrorInstance.h"
 
+#include "CodeBlock.h"
+#include "InlineCallFrame.h"
 #include "JSScope.h"
 #include "JSCInlines.h"
 #include "JSGlobalObjectFunctions.h"
@@ -53,13 +55,19 @@ static void appendSourceToError(CallFrame* callFrame, ErrorInstance* exception, 
     unsigned line = 0;
     unsigned column = 0;
 
-    CodeBlock* codeBlock = callFrame->codeBlock();
+    CodeBlock* codeBlock;
+    CodeOrigin codeOrigin = callFrame->codeOrigin();
+    if (codeOrigin && codeOrigin.inlineCallFrame)
+        codeBlock = baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame);
+    else
+        codeBlock = callFrame->codeBlock();
+
     codeBlock->expressionRangeForBytecodeOffset(bytecodeOffset, divotPoint, startOffset, endOffset, line, column);
 
     int expressionStart = divotPoint - startOffset;
     int expressionStop = divotPoint + endOffset;
 
-    const String& sourceString = codeBlock->source()->source();
+    StringView sourceString = codeBlock->source()->source();
     if (!expressionStop || expressionStart > static_cast<int>(sourceString.length()))
         return;
 
@@ -70,24 +78,23 @@ static void appendSourceToError(CallFrame* callFrame, ErrorInstance* exception, 
 
     String message = asString(jsMessage)->value(callFrame);
     if (expressionStart < expressionStop)
-        message = appender(message, codeBlock->source()->getRange(expressionStart, expressionStop) , type, ErrorInstance::FoundExactSource);
+        message = appender(message, codeBlock->source()->getRange(expressionStart, expressionStop).toString(), type, ErrorInstance::FoundExactSource);
     else {
         // No range information, so give a few characters of context.
-        const StringImpl* data = sourceString.impl();
         int dataLength = sourceString.length();
         int start = expressionStart;
         int stop = expressionStart;
         // Get up to 20 characters of context to the left and right of the divot, clamping to the line.
         // Then strip whitespace.
-        while (start > 0 && (expressionStart - start < 20) && (*data)[start - 1] != '\n')
+        while (start > 0 && (expressionStart - start < 20) && sourceString[start - 1] != '\n')
             start--;
-        while (start < (expressionStart - 1) && isStrWhiteSpace((*data)[start]))
+        while (start < (expressionStart - 1) && isStrWhiteSpace(sourceString[start]))
             start++;
-        while (stop < dataLength && (stop - expressionStart < 20) && (*data)[stop] != '\n')
+        while (stop < dataLength && (stop - expressionStart < 20) && sourceString[stop] != '\n')
             stop++;
-        while (stop > expressionStart && isStrWhiteSpace((*data)[stop - 1]))
+        while (stop > expressionStart && isStrWhiteSpace(sourceString[stop - 1]))
             stop--;
-        message = appender(message, codeBlock->source()->getRange(start, stop), type, ErrorInstance::FoundApproximateSource);
+        message = appender(message, codeBlock->source()->getRange(start, stop).toString(), type, ErrorInstance::FoundApproximateSource);
     }
     exception->putDirect(*vm, vm->propertyNames->message, jsString(vm, message));
 
@@ -127,50 +134,6 @@ private:
     bool m_foundStartCallFrame;
     unsigned m_index;
 };
-
-static bool addErrorInfoAndGetBytecodeOffset(ExecState* exec, VM& vm, JSObject* obj, bool useCurrentFrame, CallFrame*& callFrame, unsigned &bytecodeOffset)
-{
-    Vector<StackFrame> stackTrace = Vector<StackFrame>();
-
-    if (exec && stackTrace.isEmpty())
-        vm.interpreter->getStackTrace(stackTrace);
-
-    if (!stackTrace.isEmpty()) {
-
-        ASSERT(exec == vm.topCallFrame || exec == exec->lexicalGlobalObject()->globalExec() || exec == exec->vmEntryGlobalObject()->globalExec());
-
-        StackFrame* stackFrame;
-        for (unsigned i = 0 ; i < stackTrace.size(); ++i) {
-            stackFrame = &stackTrace.at(i);
-            if (stackFrame->bytecodeOffset)
-                break;
-        }
-
-        if (bytecodeOffset) {
-            FindFirstCallerFrameWithCodeblockFunctor functor(exec);
-            vm.topCallFrame->iterate(functor);
-            callFrame = functor.foundCallFrame();
-            unsigned stackIndex = functor.index();
-            bytecodeOffset = stackTrace.at(stackIndex).bytecodeOffset;
-        }
-
-        unsigned line;
-        unsigned column;
-        stackFrame->computeLineAndColumn(line, column);
-        obj->putDirect(vm, vm.propertyNames->line, jsNumber(line), ReadOnly | DontDelete);
-        obj->putDirect(vm, vm.propertyNames->column, jsNumber(column), ReadOnly | DontDelete);
-
-        if (!stackFrame->sourceURL.isEmpty())
-            obj->putDirect(vm, vm.propertyNames->sourceURL, jsString(&vm, stackFrame->sourceURL), ReadOnly | DontDelete);
-
-        if (!useCurrentFrame)
-            stackTrace.remove(0);
-        obj->putDirect(vm, vm.propertyNames->stack, vm.interpreter->stackTraceAsString(vm.topCallFrame, stackTrace), DontEnum);
-
-        return true;
-    }
-    return false;
-}
 
 void ErrorInstance::finishCreation(ExecState* exec, VM& vm, const String& message, bool useCurrentFrame)
 {

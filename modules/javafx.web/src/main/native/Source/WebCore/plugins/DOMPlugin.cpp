@@ -28,7 +28,7 @@ namespace WebCore {
 DOMPlugin::DOMPlugin(PluginData* pluginData, Frame* frame, PluginInfo pluginInfo)
     : FrameDestructionObserver(frame)
     , m_pluginData(pluginData)
-    , m_pluginInfo(WTF::move(pluginInfo))
+    , m_pluginInfo(WTFMove(pluginInfo))
 {
 }
 
@@ -56,10 +56,10 @@ unsigned DOMPlugin::length() const
     return m_pluginInfo.mimes.size();
 }
 
-PassRefPtr<DOMMimeType> DOMPlugin::item(unsigned index)
+RefPtr<DOMMimeType> DOMPlugin::item(unsigned index)
 {
     if (index >= m_pluginInfo.mimes.size())
-        return 0;
+        return nullptr;
 
     MimeClassInfo mime = m_pluginInfo.mimes[index];
 
@@ -71,22 +71,10 @@ PassRefPtr<DOMMimeType> DOMPlugin::item(unsigned index)
         if (mimes[i] == mime && plugins[mimePluginIndices[i]] == m_pluginInfo)
             return DOMMimeType::create(m_pluginData.get(), m_frame, i);
     }
-    return 0;
+    return nullptr;
 }
 
-bool DOMPlugin::canGetItemsForName(const AtomicString& propertyName)
-{
-    Vector<MimeClassInfo> mimes;
-    Vector<size_t> mimePluginIndices;
-    m_pluginData->getWebVisibleMimesAndPluginIndices(mimes, mimePluginIndices);
-    for (auto& mime : mimes) {
-        if (mime.type == propertyName)
-            return true;
-    }
-    return false;
-}
-
-PassRefPtr<DOMMimeType> DOMPlugin::namedItem(const AtomicString& propertyName)
+RefPtr<DOMMimeType> DOMPlugin::namedItem(const AtomicString& propertyName)
 {
     Vector<MimeClassInfo> mimes;
     Vector<size_t> mimePluginIndices;
@@ -94,7 +82,13 @@ PassRefPtr<DOMMimeType> DOMPlugin::namedItem(const AtomicString& propertyName)
     for (unsigned i = 0; i < mimes.size(); ++i)
         if (mimes[i].type == propertyName)
             return DOMMimeType::create(m_pluginData.get(), m_frame, i);
-    return 0;
+    return nullptr;
+}
+
+Vector<AtomicString> DOMPlugin::supportedPropertyNames()
+{
+    // FIXME: Should be implemented.
+    return Vector<AtomicString>();
 }
 
 } // namespace WebCore

@@ -41,6 +41,7 @@ enum LengthType {
 };
 
 class CalculationValue;
+class TextStream;
 
 struct Length {
     WTF_MAKE_FAST_ALLOCATED;
@@ -74,7 +75,6 @@ public:
     float value() const;
     int intValue() const;
     float percent() const;
-    float viewportPercentageLength() const;
     CalculationValue& calculationValue() const;
 
     LengthType type() const;
@@ -422,7 +422,7 @@ inline Length Length::blend(const Length& from, double progress) const
         return blendMixedTypes(from, progress);
 
     if (from.isZero() && isZero())
-        return *this;
+        return progress ? *this : from; // Pick up 'auto' from 'from' if progress is zero.
 
     LengthType resultType = type();
     if (isZero())
@@ -438,6 +438,8 @@ inline Length Length::blend(const Length& from, double progress) const
     float toValue = isZero() ? 0 : value();
     return Length(WebCore::blend(fromValue, toValue, progress), resultType);
 }
+
+TextStream& operator<<(TextStream&, Length);
 
 } // namespace WebCore
 

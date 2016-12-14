@@ -38,6 +38,7 @@
 #import "ResourceResponse.h"
 #import "StringTruncator.h"
 #import "TextRun.h"
+#import <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -160,7 +161,7 @@ const float DragLinkUrlFontSize = 10;
 static FontCascade& fontFromNSFont(NSFont *font)
 {
     static NSFont *currentFont;
-    DEPRECATED_DEFINE_STATIC_LOCAL(FontCascade, currentRenderer, ());
+    static NeverDestroyed<FontCascade> currentRenderer;
 
     if ([font isEqual:currentFont])
         return currentRenderer;
@@ -168,7 +169,7 @@ static FontCascade& fontFromNSFont(NSFont *font)
         CFRelease(currentFont);
     currentFont = font;
     CFRetain(currentFont);
-    currentRenderer = FontCascade(FontPlatformData(reinterpret_cast<CTFontRef>(font), [font pointSize]));
+    currentRenderer.get() = FontCascade(FontPlatformData(toCTFont(font), [font pointSize]));
     return currentRenderer;
 }
 
@@ -191,9 +192,8 @@ static float widthWithFont(NSString *string, NSFont *font)
     [string getCharacters:buffer.data()];
 
     if (canUseFastRenderer(buffer.data(), length)) {
-        FontCascade webCoreFont(FontPlatformData(reinterpret_cast<CTFontRef>(font), [font pointSize]));
+        FontCascade webCoreFont(FontPlatformData(toCTFont(font), [font pointSize]));
         TextRun run(StringView(buffer.data(), length));
-        run.disableRoundingHacks();
         return webCoreFont.width(run);
     }
 
@@ -223,18 +223,17 @@ static void drawAtPoint(NSString *string, NSPoint point, NSFont *font, NSColor *
         if (!flipped)
             CGContextScaleCTM(cgContext, 1, -1);
 
-        FontCascade webCoreFont(FontPlatformData(reinterpret_cast<CTFontRef>(font), [font pointSize]), Antialiased);
+        FontCascade webCoreFont(FontPlatformData(toCTFont(font), [font pointSize]), Antialiased);
         TextRun run(StringView(buffer.data(), length));
-        run.disableRoundingHacks();
 
         CGFloat red;
         CGFloat green;
         CGFloat blue;
         CGFloat alpha;
         [[textColor colorUsingColorSpaceName:NSDeviceRGBColorSpace] getRed:&red green:&green blue:&blue alpha:&alpha];
-        graphicsContext.setFillColor(makeRGBA(red * 255, green * 255, blue * 255, alpha * 255), ColorSpaceDeviceRGB);
+        graphicsContext.setFillColor(makeRGBA(red * 255, green * 255, blue * 255, alpha * 255));
 
-        webCoreFont.drawText(&graphicsContext, run, FloatPoint(point.x, (flipped ? point.y : (-1 * point.y))));
+        webCoreFont.drawText(graphicsContext, run, FloatPoint(point.x, (flipped ? point.y : (-1 * point.y))));
 
         if (!flipped)
             CGContextScaleCTM(cgContext, 1, -1);

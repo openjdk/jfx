@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +45,7 @@
 #include "SQLTransactionErrorCallback.h"
 #include "SQLValue.h"
 #include "VoidCallback.h"
+#include <inspector/InspectorFrontendRouter.h>
 #include <inspector/InspectorValues.h>
 #include <wtf/Vector.h>
 
@@ -61,14 +63,14 @@ void reportTransactionFailed(ExecuteSQLCallback& requestCallback, SQLError* erro
         .setMessage(error->message())
         .setCode(error->code())
         .release();
-    requestCallback.sendSuccess(nullptr, nullptr, WTF::move(errorObject));
+    requestCallback.sendSuccess(nullptr, nullptr, WTFMove(errorObject));
 }
 
 class StatementCallback : public SQLStatementCallback {
 public:
     static Ref<StatementCallback> create(Ref<ExecuteSQLCallback>&& requestCallback)
     {
-        return adoptRef(*new StatementCallback(WTF::move(requestCallback)));
+        return adoptRef(*new StatementCallback(WTFMove(requestCallback)));
     }
 
     virtual ~StatementCallback() { }
@@ -78,14 +80,11 @@ public:
         SQLResultSetRowList* rowList = resultSet->rows();
 
         auto columnNames = Inspector::Protocol::Array<String>::create();
-        const Vector<String>& columns = rowList->columnNames();
-        for (size_t i = 0; i < columns.size(); ++i)
-            columnNames->addItem(columns[i]);
+        for (auto& column : rowList->columnNames())
+            columnNames->addItem(column);
 
         auto values = Inspector::Protocol::Array<InspectorValue>::create();
-        const Vector<SQLValue>& data = rowList->values();
-        for (size_t i = 0; i < data.size(); ++i) {
-            const SQLValue& value = rowList->values()[i];
+        for (auto& value : rowList->values()) {
             RefPtr<InspectorValue> inspectorValue;
             switch (value.type()) {
             case SQLValue::StringValue: inspectorValue = InspectorString::create(value.string()); break;
@@ -93,15 +92,15 @@ public:
             case SQLValue::NullValue: inspectorValue = InspectorValue::null(); break;
             }
 
-            values->addItem(WTF::move(inspectorValue));
+            values->addItem(WTFMove(inspectorValue));
         }
-        m_requestCallback->sendSuccess(WTF::move(columnNames), WTF::move(values), nullptr);
+        m_requestCallback->sendSuccess(WTFMove(columnNames), WTFMove(values), nullptr);
         return true;
     }
 
 private:
     StatementCallback(Ref<ExecuteSQLCallback>&& requestCallback)
-        : m_requestCallback(WTF::move(requestCallback)) { }
+        : m_requestCallback(WTFMove(requestCallback)) { }
     Ref<ExecuteSQLCallback> m_requestCallback;
 };
 
@@ -109,7 +108,7 @@ class StatementErrorCallback : public SQLStatementErrorCallback {
 public:
     static Ref<StatementErrorCallback> create(Ref<ExecuteSQLCallback>&& requestCallback)
     {
-        return adoptRef(*new StatementErrorCallback(WTF::move(requestCallback)));
+        return adoptRef(*new StatementErrorCallback(WTFMove(requestCallback)));
     }
 
     virtual ~StatementErrorCallback() { }
@@ -122,7 +121,7 @@ public:
 
 private:
     StatementErrorCallback(Ref<ExecuteSQLCallback>&& requestCallback)
-        : m_requestCallback(WTF::move(requestCallback)) { }
+        : m_requestCallback(WTFMove(requestCallback)) { }
     Ref<ExecuteSQLCallback> m_requestCallback;
 };
 
@@ -130,7 +129,7 @@ class TransactionCallback : public SQLTransactionCallback {
 public:
     static Ref<TransactionCallback> create(const String& sqlStatement, Ref<ExecuteSQLCallback>&& requestCallback)
     {
-        return adoptRef(*new TransactionCallback(sqlStatement, WTF::move(requestCallback)));
+        return adoptRef(*new TransactionCallback(sqlStatement, WTFMove(requestCallback)));
     }
 
     virtual ~TransactionCallback() { }
@@ -143,13 +142,13 @@ public:
         Vector<SQLValue> sqlValues;
         Ref<SQLStatementCallback> callback(StatementCallback::create(m_requestCallback.copyRef()));
         Ref<SQLStatementErrorCallback> errorCallback(StatementErrorCallback::create(m_requestCallback.copyRef()));
-        transaction->executeSQL(m_sqlStatement, sqlValues, WTF::move(callback), WTF::move(errorCallback), IGNORE_EXCEPTION);
+        transaction->executeSQL(m_sqlStatement, sqlValues, WTFMove(callback), WTFMove(errorCallback), IGNORE_EXCEPTION);
         return true;
     }
 private:
     TransactionCallback(const String& sqlStatement, Ref<ExecuteSQLCallback>&& requestCallback)
         : m_sqlStatement(sqlStatement)
-        , m_requestCallback(WTF::move(requestCallback)) { }
+        , m_requestCallback(WTFMove(requestCallback)) { }
     String m_sqlStatement;
     Ref<ExecuteSQLCallback> m_requestCallback;
 };
@@ -158,7 +157,7 @@ class TransactionErrorCallback : public SQLTransactionErrorCallback {
 public:
     static Ref<TransactionErrorCallback> create(Ref<ExecuteSQLCallback>&& requestCallback)
     {
-        return adoptRef(*new TransactionErrorCallback(WTF::move(requestCallback)));
+        return adoptRef(*new TransactionErrorCallback(WTFMove(requestCallback)));
     }
 
     virtual ~TransactionErrorCallback() { }
@@ -170,7 +169,7 @@ public:
     }
 private:
     TransactionErrorCallback(Ref<ExecuteSQLCallback>&& requestCallback)
-        : m_requestCallback(WTF::move(requestCallback)) { }
+        : m_requestCallback(WTFMove(requestCallback)) { }
     Ref<ExecuteSQLCallback> m_requestCallback;
 };
 
@@ -191,17 +190,17 @@ private:
 
 } // namespace
 
-void InspectorDatabaseAgent::didOpenDatabase(PassRefPtr<Database> database, const String& domain, const String& name, const String& version)
+void InspectorDatabaseAgent::didOpenDatabase(RefPtr<Database>&& database, const String& domain, const String& name, const String& version)
 {
     if (InspectorDatabaseResource* resource = findByFileName(database->fileName())) {
-        resource->setDatabase(database);
+        resource->setDatabase(WTFMove(database));
         return;
     }
 
-    RefPtr<InspectorDatabaseResource> resource = InspectorDatabaseResource::create(database, domain, name, version);
+    RefPtr<InspectorDatabaseResource> resource = InspectorDatabaseResource::create(WTFMove(database), domain, name, version);
     m_resources.set(resource->id(), resource);
     // Resources are only bound while visible.
-    if (m_frontendDispatcher && m_enabled)
+    if (m_enabled)
         resource->bind(m_frontendDispatcher.get());
 }
 
@@ -210,29 +209,25 @@ void InspectorDatabaseAgent::clearResources()
     m_resources.clear();
 }
 
-InspectorDatabaseAgent::InspectorDatabaseAgent(InstrumentingAgents* instrumentingAgents)
-    : InspectorAgentBase(ASCIILiteral("Database"), instrumentingAgents)
-    , m_enabled(false)
+InspectorDatabaseAgent::InspectorDatabaseAgent(WebAgentContext& context)
+    : InspectorAgentBase(ASCIILiteral("Database"), context)
+    , m_frontendDispatcher(std::make_unique<Inspector::DatabaseFrontendDispatcher>(context.frontendRouter))
+    , m_backendDispatcher(Inspector::DatabaseBackendDispatcher::create(context.backendDispatcher, this))
 {
-    m_instrumentingAgents->setInspectorDatabaseAgent(this);
+    m_instrumentingAgents.setInspectorDatabaseAgent(this);
 }
 
 InspectorDatabaseAgent::~InspectorDatabaseAgent()
 {
-    m_instrumentingAgents->setInspectorDatabaseAgent(nullptr);
+    m_instrumentingAgents.setInspectorDatabaseAgent(nullptr);
 }
 
-void InspectorDatabaseAgent::didCreateFrontendAndBackend(Inspector::FrontendChannel* frontendChannel, Inspector::BackendDispatcher* backendDispatcher)
+void InspectorDatabaseAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
 {
-    m_frontendDispatcher = std::make_unique<Inspector::DatabaseFrontendDispatcher>(frontendChannel);
-    m_backendDispatcher = Inspector::DatabaseBackendDispatcher::create(backendDispatcher, this);
 }
 
 void InspectorDatabaseAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
-    m_frontendDispatcher = nullptr;
-    m_backendDispatcher = nullptr;
-
     ErrorString unused;
     disable(unused);
 }
@@ -243,9 +238,8 @@ void InspectorDatabaseAgent::enable(ErrorString&)
         return;
     m_enabled = true;
 
-    DatabaseResourcesMap::iterator databasesEnd = m_resources.end();
-    for (DatabaseResourcesMap::iterator it = m_resources.begin(); it != databasesEnd; ++it)
-        it->value->bind(m_frontendDispatcher.get());
+    for (auto& resource : m_resources.values())
+        resource->bind(m_frontendDispatcher.get());
 }
 
 void InspectorDatabaseAgent::disable(ErrorString&)
@@ -266,10 +260,8 @@ void InspectorDatabaseAgent::getDatabaseTableNames(ErrorString& error, const Str
 
     Database* database = databaseForId(databaseId);
     if (database) {
-        Vector<String> tableNames = database->tableNames();
-        unsigned length = tableNames.size();
-        for (unsigned i = 0; i < length; ++i)
-            names->addItem(tableNames[i]);
+        for (auto& tableName : database->tableNames())
+            names->addItem(tableName);
     }
 }
 
@@ -289,23 +281,23 @@ void InspectorDatabaseAgent::executeSQL(ErrorString&, const String& databaseId, 
     Ref<SQLTransactionCallback> callback(TransactionCallback::create(query, requestCallback.get()));
     Ref<SQLTransactionErrorCallback> errorCallback(TransactionErrorCallback::create(requestCallback.get()));
     Ref<VoidCallback> successCallback(TransactionSuccessCallback::create());
-    database->transaction(WTF::move(callback), WTF::move(errorCallback), WTF::move(successCallback));
+    database->transaction(WTFMove(callback), WTFMove(errorCallback), WTFMove(successCallback));
 }
 
 String InspectorDatabaseAgent::databaseId(Database* database)
 {
-    for (DatabaseResourcesMap::iterator it = m_resources.begin(); it != m_resources.end(); ++it) {
-        if (it->value->database() == database)
-            return it->key;
+    for (auto& resource : m_resources) {
+        if (resource.value->database() == database)
+            return resource.key;
     }
     return String();
 }
 
 InspectorDatabaseResource* InspectorDatabaseAgent::findByFileName(const String& fileName)
 {
-    for (DatabaseResourcesMap::iterator it = m_resources.begin(); it != m_resources.end(); ++it) {
-        if (it->value->database()->fileName() == fileName)
-            return it->value.get();
+    for (auto& resource : m_resources.values()) {
+        if (resource->database()->fileName() == fileName)
+            return resource.get();
     }
     return nullptr;
 }

@@ -366,6 +366,7 @@ void PluginView::updatePluginWidget()
     IntRect oldClipRect = m_clipRect;
 
     m_windowRect = IntRect(frameView.contentsToWindow(frameRect().location()), frameRect().size());
+    m_windowRect.scale(deviceScaleFactor());
     m_clipRect = windowClipRect();
     m_clipRect.move(-m_windowRect.x(), -m_windowRect.y());
 
@@ -500,11 +501,11 @@ void PluginView::paintIntoTransformedContext(HDC hdc)
     dispatchNPEvent(npEvent);
 }
 
-void PluginView::paintWindowedPluginIntoContext(GraphicsContext* context, const IntRect& rect)
+void PluginView::paintWindowedPluginIntoContext(GraphicsContext& context, const IntRect& rect)
 {
 #if !USE(WINGDI)
     ASSERT(m_isWindowed);
-    ASSERT(context->shouldIncludeChildWindows());
+    ASSERT(context.shouldIncludeChildWindows());
 
     IntPoint locationInWindow = downcast<FrameView>(*parent()).convertToContainingWindow(frameRect().location());
 
@@ -514,7 +515,7 @@ void PluginView::paintWindowedPluginIntoContext(GraphicsContext* context, const 
     // Must flush drawings up to this point to the backing metafile, otherwise the
     // plugin region will be overwritten with any clear regions specified in the
     // cairo-controlled portions of the rendering.
-    cairo_show_page(context->platformContext()->cr());
+    cairo_show_page(context.platformContext()->cr());
 #endif
 
     HDC hdc = windowsContext.hdc();
@@ -523,7 +524,7 @@ void PluginView::paintWindowedPluginIntoContext(GraphicsContext* context, const 
 
     // The plugin expects the DC to be in client coordinates, so we translate
     // the DC to make that so.
-    AffineTransform ctm = context->getCTM();
+    AffineTransform ctm = context.getCTM();
     ctm.translate(locationInWindow.x(), locationInWindow.y());
     XFORM transform = static_cast<XFORM>(ctm.toTransformationMatrix());
 
@@ -535,7 +536,7 @@ void PluginView::paintWindowedPluginIntoContext(GraphicsContext* context, const 
 #endif
 }
 
-void PluginView::paint(GraphicsContext* context, const IntRect& rect)
+void PluginView::paint(GraphicsContext& context, const IntRect& rect)
 {
     if (!m_isStarted) {
         // Draw the "missing plugin" image
@@ -543,7 +544,7 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
         return;
     }
 
-    if (context->paintingDisabled())
+    if (context.paintingDisabled())
         return;
 
     // Ensure that we have called SetWindow before we try to paint.
@@ -552,7 +553,7 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
 
     if (m_isWindowed) {
 #if !USE(WINGDI)
-        if (context->shouldIncludeChildWindows())
+        if (context.shouldIncludeChildWindows())
             paintWindowedPluginIntoContext(context, rect);
 #endif
         return;
@@ -563,7 +564,7 @@ void PluginView::paint(GraphicsContext* context, const IntRect& rect)
 
     // On Safari/Windows without transparency layers the GraphicsContext returns the HDC
     // of the window and the plugin expects that the passed in DC has window coordinates.
-    if (!context->isInTransparencyLayer()) {
+    if (context.hdc() == windowsContext.hdc()) {
         XFORM transform;
         GetWorldTransform(windowsContext.hdc(), &transform);
         transform.eDx = 0;
@@ -617,47 +618,46 @@ void PluginView::handleMouseEvent(MouseEvent* event)
     if (event->shiftKey())
         npEvent.wParam |= MK_SHIFT;
 
-    if (event->type() == eventNames().mousemoveEvent ||
-        event->type() == eventNames().mouseoutEvent ||
-        event->type() == eventNames().mouseoverEvent) {
+    if (event->type() == eventNames().mousemoveEvent
+        || event->type() == eventNames().mouseoutEvent
+        || event->type() == eventNames().mouseoverEvent) {
         npEvent.event = WM_MOUSEMOVE;
         if (event->buttonDown())
             switch (event->button()) {
-                case LeftButton:
-                    npEvent.wParam |= MK_LBUTTON;
-                    break;
-                case MiddleButton:
-                    npEvent.wParam |= MK_MBUTTON;
-                    break;
-                case RightButton:
-                    npEvent.wParam |= MK_RBUTTON;
+            case LeftButton:
+                npEvent.wParam |= MK_LBUTTON;
+                break;
+            case MiddleButton:
+                npEvent.wParam |= MK_MBUTTON;
+                break;
+            case RightButton:
+                npEvent.wParam |= MK_RBUTTON;
                 break;
             }
-    }
-    else if (event->type() == eventNames().mousedownEvent) {
+    } else if (event->type() == eventNames().mousedownEvent) {
         focusPluginElement();
         switch (event->button()) {
-            case 0:
-                npEvent.event = WM_LBUTTONDOWN;
-                break;
-            case 1:
-                npEvent.event = WM_MBUTTONDOWN;
-                break;
-            case 2:
-                npEvent.event = WM_RBUTTONDOWN;
-                break;
+        case LeftButton:
+            npEvent.event = WM_LBUTTONDOWN;
+            break;
+        case MiddleButton:
+            npEvent.event = WM_MBUTTONDOWN;
+            break;
+        case RightButton:
+            npEvent.event = WM_RBUTTONDOWN;
+            break;
         }
     } else if (event->type() == eventNames().mouseupEvent) {
         switch (event->button()) {
-            case 0:
-                npEvent.event = WM_LBUTTONUP;
-                break;
-            case 1:
-                npEvent.event = WM_MBUTTONUP;
-                break;
-            case 2:
-                npEvent.event = WM_RBUTTONUP;
-                break;
+        case LeftButton:
+            npEvent.event = WM_LBUTTONUP;
+            break;
+        case MiddleButton:
+            npEvent.event = WM_MBUTTONUP;
+            break;
+        case RightButton:
+            npEvent.event = WM_RBUTTONUP;
+            break;
         }
     } else
         return;
@@ -713,15 +713,22 @@ void PluginView::setNPWindowRect(const IntRect& rect)
     if (!m_isStarted)
         return;
 
+    float scaleFactor = deviceScaleFactor();
+
     IntPoint p = downcast<FrameView>(*parent()).contentsToWindow(rect.location());
+    p.scale(scaleFactor, scaleFactor);
+
+    IntSize s = rect.size();
+    s.scale(scaleFactor);
+
     m_npWindow.x = p.x();
     m_npWindow.y = p.y();
 
-    m_npWindow.width = rect.width();
-    m_npWindow.height = rect.height();
+    m_npWindow.width = s.width();
+    m_npWindow.height = s.height();
 
-    m_npWindow.clipRect.right = rect.width();
-    m_npWindow.clipRect.bottom = rect.height();
+    m_npWindow.clipRect.right = s.width();
+    m_npWindow.clipRect.bottom = s.height();
     m_npWindow.clipRect.left = 0;
     m_npWindow.clipRect.top = 0;
 
@@ -947,6 +954,25 @@ PassRefPtr<Image> PluginView::snapshot()
 #else
     return 0;
 #endif
+}
+
+float PluginView::deviceScaleFactor() const
+{
+    float scaleFactor = 1.0f;
+
+    if (!parent() || !parent()->isFrameView())
+        return scaleFactor;
+
+    // For windowless plugins, the device scale factor will be applied as for other page elements.
+    if (!m_isWindowed)
+        return scaleFactor;
+
+    FrameView& frameView = downcast<FrameView>(*parent());
+
+    if (frameView.frame().document())
+        scaleFactor = frameView.frame().document()->deviceScaleFactor();
+
+    return scaleFactor;
 }
 
 } // namespace WebCore

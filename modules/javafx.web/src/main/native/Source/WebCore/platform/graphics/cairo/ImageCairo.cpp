@@ -41,15 +41,10 @@
 
 namespace WebCore {
 
-void Image::drawPattern(GraphicsContext* context, const FloatRect& tileRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, ColorSpace, CompositeOperator op, const FloatRect& destRect, BlendMode)
+void Image::drawPattern(GraphicsContext& context, const FloatRect& tileRect, const AffineTransform& patternTransform,
+    const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op, const FloatRect& destRect, BlendMode blendMode)
 {
-    RefPtr<cairo_surface_t> surface = nativeImageForCurrentFrame();
-    if (!surface) // If it's too early we won't have an image yet.
-        return;
-
-    cairo_t* cr = context->platformContext()->cr();
-    drawPatternToCairoContext(cr, surface.get(), IntSize(size()), tileRect, patternTransform, phase, toCairoOperator(op), destRect);
+    context.drawPattern(*this, tileRect, patternTransform, phase, spacing, op, destRect, blendMode);
 
     if (imageObserver())
         imageObserver()->didDraw(this);

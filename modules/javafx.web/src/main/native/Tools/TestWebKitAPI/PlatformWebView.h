@@ -34,7 +34,7 @@
 #include <objc/objc.h>
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__) && !PLATFORM(GTK)
 #ifdef __OBJC__
 @class WKView;
 @class NSWindow;
@@ -80,6 +80,8 @@ public:
 private:
 #if PLATFORM(MAC)
     void initialize(WKPageConfigurationRef, Class wkViewSubclass);
+#elif PLATFORM(GTK)
+    void initialize(WKPageConfigurationRef);
 #endif
 
     PlatformWKView m_view;

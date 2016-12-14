@@ -19,11 +19,13 @@
  * Boston, MA 02110-1301, USA.
  */
 
-interface ProcessingInstruction : CharacterData {
+[
+    JSGenerateToJSObject
+] interface ProcessingInstruction : CharacterData {
 
     // DOM Level 1
 
-    [TreatReturnedNullStringAs=Null] readonly attribute DOMString target;
+    readonly attribute DOMString? target;
 
     // interface LinkStyle from DOM Level 2 Style Sheets
     readonly attribute StyleSheet sheet;

@@ -98,7 +98,7 @@ class Text;
 
         // From DocumentParser
         virtual void insert(const SegmentedString&) override;
-        virtual void append(PassRefPtr<StringImpl>) override;
+        virtual void append(RefPtr<StringImpl>&&) override;
         virtual void finish() override;
         virtual bool isWaitingForScripts() const override;
         virtual void stopParsing() override;
@@ -146,8 +146,8 @@ class Text;
 
         void insertErrorMessageBlock();
 
-        void enterText();
-        void exitText();
+        void createLeafTextNode();
+        bool updateLeafTextNode();
 
         void doWrite(const String&);
         void doEnd();

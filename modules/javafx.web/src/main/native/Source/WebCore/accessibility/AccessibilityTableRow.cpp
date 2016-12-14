@@ -98,13 +98,14 @@ AccessibilityTable* AccessibilityTableRow::parentTable() const
     // The parent table might not be the direct ancestor of the row unfortunately. ARIA states that role="grid" should
     // only have "row" elements, but if not, we still should handle it gracefully by finding the right table.
     for (AccessibilityObject* parent = parentObject(); parent; parent = parent->parentObject()) {
-        // If this is a table object, but not an accessibility table, we should stop because we don't want to
+        // If this is a non-anonymous table object, but not an accessibility table, we should stop because we don't want to
         // choose another ancestor table as this row's table.
         if (is<AccessibilityTable>(*parent)) {
             auto& parentTable = downcast<AccessibilityTable>(*parent);
             if (parentTable.isExposableThroughAccessibility())
                 return &parentTable;
-            break;
+            if (parentTable.node())
+                break;
         }
     }
 
@@ -134,6 +135,44 @@ AccessibilityObject* AccessibilityTableRow::headerObject()
         return nullptr;
 
     return cell;
+}
+
+void AccessibilityTableRow::addChildren()
+{
+    AccessibilityRenderObject::addChildren();
+
+    // "ARIA 1.1, If the set of columns which is present in the DOM is contiguous, and if there are no cells which span more than one row or
+    // column in that set, then authors may place aria-colindex on each row, setting the value to the index of the first column of the set."
+    // Update child cells' ariaColIndex if there's an aria-colindex value set for the row. So the cell doesn't have to go through the siblings
+    // to calculate the index.
+    int colIndex = ariaColumnIndex();
+    if (colIndex == -1)
+        return;
+
+    unsigned index = 0;
+    for (const auto& cell : children()) {
+        if (is<AccessibilityTableCell>(*cell))
+            downcast<AccessibilityTableCell>(*cell).setARIAColIndexFromRow(colIndex + index);
+        index++;
+    }
+}
+
+int AccessibilityTableRow::ariaColumnIndex() const
+{
+    const AtomicString& colIndexValue = getAttribute(aria_colindexAttr);
+    if (colIndexValue.toInt() >= 1)
+        return colIndexValue.toInt();
+
+    return -1;
+}
+
+int AccessibilityTableRow::ariaRowIndex() const
+{
+    const AtomicString& rowIndexValue = getAttribute(aria_rowindexAttr);
+    if (rowIndexValue.toInt() >= 1)
+        return rowIndexValue.toInt();
+
+    return -1;
 }
 
 } // namespace WebCore

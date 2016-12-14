@@ -32,12 +32,13 @@
 #include "JSObject.h"
 #include "Options.h"
 #include <stdlib.h>
+#include <wtf/CurrentTime.h>
+#include <wtf/DataLog.h>
+#include <wtf/StdLibExtras.h>
+
 #if OS(UNIX)
 #include <sys/resource.h>
 #endif
-#include <wtf/CurrentTime.h>
-#include <wtf/DataLog.h>
-#include <wtf/Deque.h>
 
 namespace JSC {
 
@@ -141,28 +142,6 @@ void HeapStatistics::reportSuccess()
 
 #endif // OS(UNIX)
 
-size_t HeapStatistics::parseMemoryAmount(char* s)
-{
-    size_t multiplier = 1;
-    char* afterS;
-    size_t value = strtol(s, &afterS, 10);
-    char next = afterS[0];
-    switch (next) {
-    case 'K':
-        multiplier = KB;
-        break;
-    case 'M':
-        multiplier = MB;
-        break;
-    case 'G':
-        multiplier = GB;
-        break;
-    default:
-        break;
-    }
-    return value * multiplier;
-}
-
 class StorageStatistics : public MarkedBlock::VoidFunctor {
 public:
     StorageStatistics();
@@ -237,7 +216,7 @@ inline size_t StorageStatistics::storageCapacity()
     return m_storageCapacity;
 }
 
-void HeapStatistics::showObjectStatistics(Heap* heap)
+void HeapStatistics::dumpObjectStatistics(Heap* heap)
 {
     dataLogF("\n=== Heap Statistics: ===\n");
     dataLogF("size: %ldkB\n", static_cast<long>(heap->m_sizeAfterLastCollect / KB));

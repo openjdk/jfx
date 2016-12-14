@@ -27,6 +27,9 @@
 #include "MemoryPressureHandler.h"
 
 #include "CSSValuePool.h"
+#include "Chrome.h"
+#include "ChromeClient.h"
+#include "DOMWindow.h"
 #include "Document.h"
 #include "FontCache.h"
 #include "FontCascade.h"
@@ -93,11 +96,6 @@ void MemoryPressureHandler::releaseNoncriticalMemory()
     }
 
     {
-        ReliefLogger log("Clearing JS string cache");
-        JSDOMWindow::commonVM().stringCache.clear();
-    }
-
-    {
         ReliefLogger log("Prune MemoryCache dead resources");
         MemoryCache::singleton().pruneDeadResourcesToSize(0);
     }
@@ -119,28 +117,25 @@ void MemoryPressureHandler::releaseCriticalMemory(Synchronous synchronous)
 
     {
         ReliefLogger log("Prune MemoryCache live resources");
-        MemoryCache::singleton().pruneLiveResourcesToSize(0);
+        MemoryCache::singleton().pruneLiveResourcesToSize(0, /*shouldDestroyDecodedDataForAllLiveResources*/ true);
     }
 
     {
         ReliefLogger log("Drain CSSValuePool");
-        cssValuePool().drain();
+        CSSValuePool::singleton().drain();
     }
 
     {
         ReliefLogger log("Discard StyleResolvers");
-        for (auto* document : Document::allDocuments())
+        Vector<RefPtr<Document>> documents;
+        copyToVector(Document::allDocuments(), documents);
+        for (auto& document : documents)
             document->clearStyleResolver();
     }
 
     {
         ReliefLogger log("Discard all JIT-compiled code");
-        GCController::singleton().discardAllCompiledCode();
-    }
-
-    {
-        ReliefLogger log("Invalidate font cache");
-        FontCache::singleton().invalidate();
+        GCController::singleton().deleteAllCode();
     }
 
 #if ENABLE(VIDEO)
@@ -158,6 +153,11 @@ void MemoryPressureHandler::releaseCriticalMemory(Synchronous synchronous)
         GCController::singleton().garbageCollectNow();
     } else
         GCController::singleton().garbageCollectNowIfNotDoneRecently();
+
+    // We reduce tiling coverage while under memory pressure, so make sure to drop excess tiles ASAP.
+    Page::forEachPage([](Page& page) {
+        page.chrome().client().scheduleCompositingLayerFlush();
+    });
 }
 
 void MemoryPressureHandler::releaseMemory(Critical critical, Synchronous synchronous)

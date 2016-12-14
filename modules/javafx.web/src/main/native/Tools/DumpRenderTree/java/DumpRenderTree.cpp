@@ -3,8 +3,10 @@
  */
 #include "config.h"
 
+#include <memory>
 #include "JavaEnv.h"
 #include "TestRunner.h"
+#include "GCController.h"
 #include "EventSender.h"
 #include "WorkQueue.h"
 #include "WebCore/testing/js/WebCoreTestSupport.h"
@@ -13,6 +15,7 @@
 #include <API/JavaScript.h>
 
 RefPtr<TestRunner> gTestRunner;
+std::unique_ptr<GCController> gGCController;
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,6 +29,8 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_init
 
     ASSERT(!gTestRunner);
     gTestRunner = TestRunner::create(testPathChars, pixelsHashChars);
+    ASSERT(!gGCController);
+    gGCController = std::make_unique<GCController>();
 
     WorkQueue::singleton().clear();
 
@@ -37,7 +42,8 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
     (JNIEnv* env, jclass cls, jlong pContext, jlong pWindowObject,
     jobject eventSender)
 {
-    ASSERT(gTestRunner);
+    if(!gTestRunner || !gGCController)
+        return;
     ASSERT(pContext);
     ASSERT(pWindowObject);
     ASSERT(eventSender);
@@ -56,6 +62,8 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
     makeEventSender(context, windowObject, jlEventSender, &exception);
     ASSERT(!exception);
     WebCoreTestSupport::injectInternalsObject(context);
+    gGCController->makeWindowObject(context, windowObject, &exception);
+    ASSERT(!exception);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dispose
@@ -63,6 +71,8 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dispose
 {
     ASSERT(gTestRunner);
     gTestRunner = nullptr;
+    ASSERT(gGCController);
+    gGCController = nullptr;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_dumpAsText

@@ -29,13 +29,14 @@
 
 [
     Conditional=STREAMS_API,
-    CustomConstructor(any properties),
-    NoInterfaceObject,
-    SkipVTableValidation
+    CustomConstructor,
+    GlobalContext=DOMWindow&WorkerGlobalScope,
+    JSBuiltin,
+    NoInterfaceObject
 ] interface ReadableStreamReader {
     Promise read();
-    Promise cancel([Default=Undefined] optional any reason);
-    [RaisesException] void releaseLock();
+    Promise cancel(optional any reason);
+    void releaseLock();
 
-    [CustomGetter] readonly attribute Promise closed;
+    readonly attribute Promise closed;
 };

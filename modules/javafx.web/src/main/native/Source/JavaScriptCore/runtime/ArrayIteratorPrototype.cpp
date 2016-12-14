@@ -48,7 +48,7 @@ const ClassInfo ArrayIteratorPrototype::s_info = { "Array Iterator", &Base::s_in
 
 /* Source for ArrayIteratorPrototype.lut.h
 @begin arrayIteratorPrototypeTable
-  next      arrayIteratorProtoFuncNext  DontEnum|Function 0
+  next      JSBuiltin  DontEnum|Function 0
 @end
 */
 
@@ -56,6 +56,7 @@ void ArrayIteratorPrototype::finishCreation(VM& vm, JSGlobalObject*)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(info()));
+    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "Array Iterator"), DontEnum | ReadOnly);
     vm.prototypeMap.addPrototype(this);
 }
 

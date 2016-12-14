@@ -33,6 +33,7 @@
 
 #include "CharacterData.h"
 #include "StaticNodeList.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -123,7 +124,7 @@ private:
 
 class MutationRecordWithNullOldValue : public MutationRecord {
 public:
-    MutationRecordWithNullOldValue(PassRefPtr<MutationRecord> record)
+    MutationRecordWithNullOldValue(MutationRecord& record)
         : m_record(record)
     {
     }
@@ -140,47 +141,47 @@ private:
 
     virtual String oldValue() override { return String(); }
 
-    RefPtr<MutationRecord> m_record;
+    Ref<MutationRecord> m_record;
 };
 
 const AtomicString& ChildListRecord::type()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, childList, ("childList", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> childList("childList", AtomicString::ConstructFromLiteral);
     return childList;
 }
 
 const AtomicString& AttributesRecord::type()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, attributes, ("attributes", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> attributes("attributes", AtomicString::ConstructFromLiteral);
     return attributes;
 }
 
 const AtomicString& CharacterDataRecord::type()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, characterData, ("characterData", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> characterData("characterData", AtomicString::ConstructFromLiteral);
     return characterData;
 }
 
 } // namespace
 
-PassRefPtr<MutationRecord> MutationRecord::createChildList(ContainerNode& target, PassRefPtr<NodeList> added, PassRefPtr<NodeList> removed, PassRefPtr<Node> previousSibling, PassRefPtr<Node> nextSibling)
+Ref<MutationRecord> MutationRecord::createChildList(ContainerNode& target, PassRefPtr<NodeList> added, PassRefPtr<NodeList> removed, PassRefPtr<Node> previousSibling, PassRefPtr<Node> nextSibling)
 {
-    return adoptRef(static_cast<MutationRecord*>(new ChildListRecord(target, added, removed, previousSibling, nextSibling)));
+    return adoptRef(static_cast<MutationRecord&>(*new ChildListRecord(target, added, removed, previousSibling, nextSibling)));
 }
 
-PassRefPtr<MutationRecord> MutationRecord::createAttributes(Element& target, const QualifiedName& name, const AtomicString& oldValue)
+Ref<MutationRecord> MutationRecord::createAttributes(Element& target, const QualifiedName& name, const AtomicString& oldValue)
 {
-    return adoptRef(static_cast<MutationRecord*>(new AttributesRecord(target, name, oldValue)));
+    return adoptRef(static_cast<MutationRecord&>(*new AttributesRecord(target, name, oldValue)));
 }
 
-PassRefPtr<MutationRecord> MutationRecord::createCharacterData(CharacterData& target, const String& oldValue)
+Ref<MutationRecord> MutationRecord::createCharacterData(CharacterData& target, const String& oldValue)
 {
-    return adoptRef(static_cast<MutationRecord*>(new CharacterDataRecord(target, oldValue)));
+    return adoptRef(static_cast<MutationRecord&>(*new CharacterDataRecord(target, oldValue)));
 }
 
-PassRefPtr<MutationRecord> MutationRecord::createWithNullOldValue(PassRefPtr<MutationRecord> record)
+Ref<MutationRecord> MutationRecord::createWithNullOldValue(MutationRecord& record)
 {
-    return adoptRef(static_cast<MutationRecord*>(new MutationRecordWithNullOldValue(record)));
+    return adoptRef(static_cast<MutationRecord&>(*new MutationRecordWithNullOldValue(record)));
 }
 
 MutationRecord::~MutationRecord()

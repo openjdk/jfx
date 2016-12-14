@@ -32,7 +32,7 @@
 #include "ExceptionCode.h"
 #include "PannerNode.h"
 #include <memory>
-#include <mutex>
+#include <wtf/Lock.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 
@@ -45,7 +45,7 @@ class AudioContext;
 
 class AudioBufferSourceNode : public AudioScheduledSourceNode {
 public:
-    static Ref<AudioBufferSourceNode> create(AudioContext*, float sampleRate);
+    static Ref<AudioBufferSourceNode> create(AudioContext&, float sampleRate);
 
     virtual ~AudioBufferSourceNode();
 
@@ -102,7 +102,7 @@ public:
     virtual void finish() override;
 
 private:
-    AudioBufferSourceNode(AudioContext*, float sampleRate);
+    AudioBufferSourceNode(AudioContext&, float sampleRate);
 
     virtual double tailTime() const override { return 0; }
     virtual double latencyTime() const override { return 0; }
@@ -159,7 +159,7 @@ private:
     PannerNode* m_pannerNode;
 
     // This synchronizes process() with setBuffer() which can cause dynamic channel count changes.
-    mutable std::mutex m_processMutex;
+    mutable Lock m_processMutex;
 };
 
 } // namespace WebCore

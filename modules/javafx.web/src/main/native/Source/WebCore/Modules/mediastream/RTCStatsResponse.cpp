@@ -39,16 +39,17 @@ RTCStatsResponse::RTCStatsResponse()
 {
 }
 
-PassRefPtr<RTCStatsReport> RTCStatsResponse::namedItem(const AtomicString& name)
+RefPtr<RTCStatsReport> RTCStatsResponse::namedItem(const AtomicString& name)
 {
     if (m_idmap.find(name) != m_idmap.end())
         return m_result[m_idmap.get(name)];
     return nullptr;
 }
 
-bool RTCStatsResponse::canGetItemsForName(const AtomicString& name)
+Vector<AtomicString> WebCore::RTCStatsResponse::supportedPropertyNames()
 {
-    return m_idmap.contains(name);
+    // FIXME: Should be implemented.
+    return Vector<AtomicString>();
 }
 
 size_t RTCStatsResponse::addReport(String id, String type, double timestamp)

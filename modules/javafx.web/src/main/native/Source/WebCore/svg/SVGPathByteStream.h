@@ -50,15 +50,26 @@ public:
     SVGPathByteStream() { }
     SVGPathByteStream(const Data& data) : m_data(data) { }
 
+    bool operator==(const SVGPathByteStream& other) const
+    {
+        return m_data == other.m_data;
+    }
+
+    bool operator!=(const SVGPathByteStream& other) const
+    {
+        return !(*this == other);
+    }
+
     std::unique_ptr<SVGPathByteStream> copy() const
     {
         return std::make_unique<SVGPathByteStream>(m_data);
     }
 
-    DataIterator begin() { return m_data.begin(); }
-    DataIterator end() { return m_data.end(); }
+    DataIterator begin() const { return m_data.begin(); }
+    DataIterator end() const { return m_data.end(); }
+
     void append(unsigned char byte) { m_data.append(byte); }
-    void append(SVGPathByteStream& other)
+    void append(const SVGPathByteStream& other)
     {
         for (auto stream : other)
             append(stream);

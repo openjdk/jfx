@@ -27,6 +27,7 @@
 #include "Event.h"
 #include "EventNames.h"
 #include "HTMLNames.h"
+#include "HTMLParserIdioms.h"
 #include "Text.h"
 #include <wtf/Ref.h>
 
@@ -78,19 +79,19 @@ void HTMLScriptElement::finishedInsertingSubtree()
     ScriptElement::finishedInsertingSubtree();
 }
 
-void HTMLScriptElement::setText(const String &value)
+void HTMLScriptElement::setText(const String& value)
 {
     Ref<HTMLScriptElement> protectFromMutationEvents(*this);
 
     if (hasOneChild() && is<Text>(*firstChild())) {
-        downcast<Text>(*firstChild()).setData(value, IGNORE_EXCEPTION);
+        downcast<Text>(*firstChild()).setData(value);
         return;
     }
 
     if (hasChildNodes())
         removeChildren();
 
-    appendChild(document().createTextNode(value.impl()), IGNORE_EXCEPTION);
+    appendChild(document().createTextNode(value), IGNORE_EXCEPTION);
 }
 
 void HTMLScriptElement::setAsync(bool async)
@@ -102,6 +103,16 @@ void HTMLScriptElement::setAsync(bool async)
 bool HTMLScriptElement::async() const
 {
     return fastHasAttribute(asyncAttr) || forceAsync();
+}
+
+void HTMLScriptElement::setCrossOrigin(const AtomicString& value)
+{
+    setAttributeWithoutSynchronization(crossoriginAttr, value);
+}
+
+String HTMLScriptElement::crossOrigin() const
+{
+    return parseCORSSettingsAttribute(fastGetAttribute(crossoriginAttr));
 }
 
 URL HTMLScriptElement::src() const
@@ -169,9 +180,9 @@ void HTMLScriptElement::dispatchLoadEvent()
     dispatchEvent(Event::create(eventNames().loadEvent, false, false));
 }
 
-RefPtr<Element> HTMLScriptElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
+Ref<Element> HTMLScriptElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
 {
-    return adoptRef(new HTMLScriptElement(tagQName(), targetDocument, false, alreadyStarted()));
+    return adoptRef(*new HTMLScriptElement(tagQName(), targetDocument, false, alreadyStarted()));
 }
 
 }

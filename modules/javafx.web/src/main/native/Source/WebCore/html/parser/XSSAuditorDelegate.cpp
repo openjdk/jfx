@@ -87,7 +87,7 @@ PassRefPtr<FormData> XSSAuditorDelegate::generateViolationReport(const XSSInfo& 
     reportDetails->setString("request-body", httpBody);
 
     Ref<InspectorObject> reportObject = InspectorObject::create();
-    reportObject->setObject("xss-report", WTF::move(reportDetails));
+    reportObject->setObject("xss-report", WTFMove(reportDetails));
 
     return FormData::create(reportObject->toJSONString().utf8().data());
 }
@@ -108,11 +108,11 @@ void XSSAuditorDelegate::didBlockScript(const XSSInfo& xssInfo)
         frameLoader.client().didDetectXSS(m_document.url(), xssInfo.m_didBlockEntirePage);
 
         if (!m_reportURL.isEmpty())
-            PingLoader::sendViolationReport(*m_document.frame(), m_reportURL, generateViolationReport(xssInfo));
+            PingLoader::sendViolationReport(*m_document.frame(), m_reportURL, generateViolationReport(xssInfo), ViolationReportType::XSSAuditor);
     }
 
     if (xssInfo.m_didBlockEntirePage)
-        m_document.frame()->navigationScheduler().scheduleLocationChange(&m_document, m_document.securityOrigin(), SecurityOrigin::urlWithUniqueSecurityOrigin(), String());
+        m_document.frame()->navigationScheduler().schedulePageBlock(m_document);
 }
 
 } // namespace WebCore

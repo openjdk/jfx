@@ -40,7 +40,6 @@
 #include "DOMWindow.h"
 #include "Document.h"
 #include "Event.h"
-#include "EventException.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
@@ -184,7 +183,7 @@ RefPtr<WebSocket> WebSocket::create(ScriptExecutionContext& context, const Strin
     if (ec)
         return nullptr;
 
-    return WTF::move(webSocket);
+    return webSocket;
 }
 
 RefPtr<WebSocket> WebSocket::create(ScriptExecutionContext& context, const String& url, const String& protocol, ExceptionCode& ec)
@@ -239,12 +238,7 @@ void WebSocket::connect(const String& url, const Vector<String>& protocols, Exce
     }
 
     // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
-    bool shouldBypassMainWorldContentSecurityPolicy = false;
-    if (is<Document>(*scriptExecutionContext())) {
-        Document& document = downcast<Document>(*scriptExecutionContext());
-        shouldBypassMainWorldContentSecurityPolicy = document.frame()->script().shouldBypassMainWorldContentSecurityPolicy();
-    }
-    if (!scriptExecutionContext()->contentSecurityPolicy()->allowConnectToSource(m_url, shouldBypassMainWorldContentSecurityPolicy)) {
+    if (!scriptExecutionContext()->contentSecurityPolicy()->allowConnectToSource(m_url, scriptExecutionContext()->shouldBypassMainWorldContentSecurityPolicy())) {
         m_state = CLOSED;
 
         // FIXME: Should this be throwing an exception?
@@ -284,12 +278,13 @@ void WebSocket::connect(const String& url, const Vector<String>& protocols, Exce
         if (!document.frame()->loader().mixedContentChecker().canRunInsecureContent(document.securityOrigin(), m_url)) {
             // Balanced by the call to ActiveDOMObject::unsetPendingActivity() in WebSocket::stop().
             ActiveDOMObject::setPendingActivity(this);
+
             // We must block this connection. Instead of throwing an exception, we indicate this
             // using the error event. But since this code executes as part of the WebSocket's
             // constructor, we have to wait until the constructor has completed before firing the
             // event; otherwise, users can't connect to the event.
             RunLoop::main().dispatch([this]() {
-                dispatchEvent(Event::create(eventNames().errorEvent, false, false));
+                dispatchOrQueueErrorEvent();
                 stop();
             });
             return;
@@ -479,7 +474,7 @@ void WebSocket::contextDestroyed()
     ActiveDOMObject::contextDestroyed();
 }
 
-bool WebSocket::canSuspendForPageCache() const
+bool WebSocket::canSuspendForDocumentSuspension() const
 {
     return true;
 }
@@ -571,7 +566,7 @@ void WebSocket::didReceiveBinaryData(Vector<char>&& binaryData)
     switch (m_binaryType) {
     case BinaryTypeBlob: {
         // FIXME: We just received the data from NetworkProcess, and are sending it back. This is inefficient.
-        RefPtr<Blob> blob = Blob::create(WTF::move(binaryData), emptyString());
+        RefPtr<Blob> blob = Blob::create(WTFMove(binaryData), emptyString());
         dispatchEvent(MessageEvent::create(blob.release(), SecurityOrigin::create(m_url)->toString()));
         break;
     }
@@ -587,7 +582,7 @@ void WebSocket::didReceiveMessageError()
     LOG(Network, "WebSocket %p didReceiveErrorMessage()", this);
     m_state = CLOSED;
     ASSERT(scriptExecutionContext());
-    dispatchOrQueueEvent(Event::create(eventNames().errorEvent, false, false));
+    dispatchOrQueueErrorEvent();
 }
 
 void WebSocket::didUpdateBufferedAmount(unsigned long bufferedAmount)
@@ -638,12 +633,21 @@ size_t WebSocket::getFramingOverhead(size_t payloadSize)
     return overhead;
 }
 
+void WebSocket::dispatchOrQueueErrorEvent()
+{
+    if (m_dispatchedErrorEvent)
+        return;
+
+    m_dispatchedErrorEvent = true;
+    dispatchOrQueueEvent(Event::create(eventNames().errorEvent, false, false));
+}
+
 void WebSocket::dispatchOrQueueEvent(Ref<Event>&& event)
 {
     if (m_shouldDelayEventFiring)
-        m_pendingEvents.append(WTF::move(event));
+        m_pendingEvents.append(WTFMove(event));
     else
-        dispatchEvent(WTF::move(event));
+        dispatchEvent(event);
 }
 
 }  // namespace WebCore

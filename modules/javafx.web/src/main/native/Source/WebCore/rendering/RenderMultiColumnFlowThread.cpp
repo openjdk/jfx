@@ -39,7 +39,7 @@ namespace WebCore {
 bool RenderMultiColumnFlowThread::gShiftingSpanner = false;
 
 RenderMultiColumnFlowThread::RenderMultiColumnFlowThread(Document& document, Ref<RenderStyle>&& style)
-    : RenderFlowThread(document, WTF::move(style))
+    : RenderFlowThread(document, WTFMove(style))
     , m_lastSetWorkedOn(nullptr)
     , m_columnCount(1)
     , m_columnWidth(0)
@@ -149,7 +149,7 @@ void RenderMultiColumnFlowThread::populate()
     // Reparent children preceding the flow thread into the flow thread. It's multicol content
     // now. At this point there's obviously nothing after the flow thread, but renderers (column
     // sets and spanners) will be inserted there as we insert elements into the flow thread.
-    LayoutStateDisabler layoutStateDisabler(&view());
+    LayoutStateDisabler layoutStateDisabler(view());
     multicolContainer->moveChildrenTo(this, multicolContainer->firstChild(), this, true);
 }
 
@@ -161,7 +161,7 @@ void RenderMultiColumnFlowThread::evacuateAndDestroy()
     // Delete the line box tree.
     deleteLines();
 
-    LayoutStateDisabler layoutStateDisabler(&view());
+    LayoutStateDisabler layoutStateDisabler(view());
 
     // First promote all children of the flow thread. Before we move them to the flow thread's
     // container, we need to unregister the flow thread, so that they aren't just re-added again to
@@ -376,10 +376,11 @@ void RenderMultiColumnFlowThread::flowThreadDescendantInserted(RenderObject* des
 
                 // We have to nuke the placeholder, since the ancestor already lost the mapping to it when
                 // we shifted the placeholder down into this flow thread.
-                if (subtreeRoot == descendant)
-                    subtreeRoot = spanner;
+                placeholder.flowThread()->m_spannerMap.remove(spanner);
                 placeholder.parent()->removeChild(placeholder);
 
+                if (subtreeRoot == descendant)
+                    subtreeRoot = spanner;
                 // Now we process the spanner.
                 descendant = processPossibleSpannerDescendant(subtreeRoot, spanner);
                 continue;

@@ -39,14 +39,14 @@ namespace WebCore {
 
 class MockCDMSession : public CDMSession {
 public:
-    MockCDMSession();
+    MockCDMSession(CDMSessionClient*);
     virtual ~MockCDMSession() { }
 
     virtual void setClient(CDMSessionClient* client) override { m_client = client; }
     virtual const String& sessionId() const override { return m_sessionId; }
-    virtual PassRefPtr<Uint8Array> generateKeyRequest(const String& mimeType, Uint8Array* initData, String& destinationURL, unsigned short& errorCode, unsigned long& systemCode) override;
+    virtual RefPtr<Uint8Array> generateKeyRequest(const String& mimeType, Uint8Array* initData, String& destinationURL, unsigned short& errorCode, uint32_t& systemCode) override;
     virtual void releaseKeys() override;
-    virtual bool update(Uint8Array*, RefPtr<Uint8Array>& nextMessage, unsigned short& errorCode, unsigned long& systemCode) override;
+    virtual bool update(Uint8Array*, RefPtr<Uint8Array>& nextMessage, unsigned short& errorCode, uint32_t& systemCode) override;
 
 protected:
     CDMSessionClient* m_client;
@@ -55,7 +55,7 @@ protected:
 
 bool MockCDM::supportsKeySystem(const String& keySystem)
 {
-    return equalIgnoringCase(keySystem, "com.webcore.mock");
+    return equalLettersIgnoringASCIICase(keySystem, "com.webcore.mock");
 }
 
 bool MockCDM::supportsKeySystemAndMimeType(const String& keySystem, const String& mimeType)
@@ -63,17 +63,17 @@ bool MockCDM::supportsKeySystemAndMimeType(const String& keySystem, const String
     if (!supportsKeySystem(keySystem))
         return false;
 
-    return equalIgnoringCase(mimeType, "video/mock");
+    return equalLettersIgnoringASCIICase(mimeType, "video/mock");
 }
 
 bool MockCDM::supportsMIMEType(const String& mimeType)
 {
-    return equalIgnoringCase(mimeType, "video/mock");
+    return equalLettersIgnoringASCIICase(mimeType, "video/mock");
 }
 
-std::unique_ptr<CDMSession> MockCDM::createSession()
+std::unique_ptr<CDMSession> MockCDM::createSession(CDMSessionClient* client)
 {
-    return std::make_unique<MockCDMSession>();
+    return std::make_unique<MockCDMSession>(client);
 }
 
 static Uint8Array* initDataPrefix()
@@ -106,17 +106,18 @@ static String generateSessionId()
     return String::number(monotonicallyIncreasingSessionId++);
 }
 
-MockCDMSession::MockCDMSession()
-    : m_sessionId(generateSessionId())
+MockCDMSession::MockCDMSession(CDMSessionClient* client)
+    : m_client(client)
+    , m_sessionId(generateSessionId())
 {
 }
 
-PassRefPtr<Uint8Array> MockCDMSession::generateKeyRequest(const String&, Uint8Array* initData, String&, unsigned short& errorCode, unsigned long&)
+RefPtr<Uint8Array> MockCDMSession::generateKeyRequest(const String&, Uint8Array* initData, String&, unsigned short& errorCode, uint32_t&)
 {
     for (unsigned i = 0; i < initDataPrefix()->length(); ++i) {
         if (!initData || i >= initData->length() || initData->item(i) != initDataPrefix()->item(i)) {
             errorCode = MediaKeyError::MEDIA_KEYERR_UNKNOWN;
-            return 0;
+            return nullptr;
         }
     }
     return keyRequest();
@@ -127,7 +128,7 @@ void MockCDMSession::releaseKeys()
     // no-op
 }
 
-bool MockCDMSession::update(Uint8Array* key, RefPtr<Uint8Array>&, unsigned short& errorCode, unsigned long&)
+bool MockCDMSession::update(Uint8Array* key, RefPtr<Uint8Array>&, unsigned short& errorCode, uint32_t&)
 {
     for (unsigned i = 0; i < keyPrefix()->length(); ++i) {
         if (i >= key->length() || key->item(i) != keyPrefix()->item(i)) {

@@ -23,224 +23,192 @@
 
 namespace WebCore {
 
-    class FrameLoaderClientJava : public FrameLoaderClient, public ProgressTrackerClient {
-    public:
-        FrameLoaderClientJava(const JLObject &webPage);
-        virtual void frameLoaderDestroyed();
+class FrameLoaderClientJava : public FrameLoaderClient, public ProgressTrackerClient {
+public:
+    FrameLoaderClientJava(const JLObject &webPage);
+    void frameLoaderDestroyed() override;
 
-        virtual bool hasWebView() const;
+    bool hasWebView() const override;
 
-        virtual bool privateBrowsingEnabled() const;
+    void makeRepresentation(DocumentLoader*) override;
+    void forceLayoutForNonHTML() override;
 
-        virtual void makeDocumentView();
-        virtual void makeRepresentation(DocumentLoader*);
-        virtual void setDocumentViewFromCachedPage(CachedPage*);
-        virtual void forceLayout();
-        virtual void forceLayoutForNonHTML();
+    void setCopiesOnScroll() override;
 
-        virtual void setCopiesOnScroll();
+    void detachedFromParent2() override;
+    void detachedFromParent3() override;
 
-        virtual void detachedFromParent1();
-        virtual void detachedFromParent2();
-        virtual void detachedFromParent3();
-        virtual void detachedFromParent4();
+    void assignIdentifierToInitialRequest(unsigned long identifier, DocumentLoader*, const ResourceRequest&) override;
 
-        virtual void loadedFromCachedPage();
+    void dispatchWillSendRequest(DocumentLoader*, unsigned long  identifier, ResourceRequest&, const ResourceResponse& redirectResponse) override;
+    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long identifier, const AuthenticationChallenge&) override;
+    void dispatchDidCancelAuthenticationChallenge(DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge&) override;
+    void dispatchDidReceiveResponse(DocumentLoader*, unsigned long  identifier, const ResourceResponse&) override;
+    void dispatchDidReceiveContentLength(DocumentLoader*, unsigned long identifier, int lengthReceived) override;
+    void dispatchDidFinishLoading(DocumentLoader*, unsigned long  identifier) override;
+    void dispatchDidFailLoading(DocumentLoader*, unsigned long  identifier, const ResourceError&) override;
+    bool dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int length) override;
 
-        virtual void assignIdentifierToInitialRequest(unsigned long identifier, DocumentLoader*, const ResourceRequest&);
+    void dispatchDidDispatchOnloadEvents() override;
+    void dispatchDidPushStateWithinPage() override;
+    void dispatchDidReplaceStateWithinPage() override;
+    void dispatchDidPopStateWithinPage() override;
+    void dispatchDidReceiveServerRedirectForProvisionalLoad() override;
+    void dispatchDidCancelClientRedirect() override;
+    void dispatchWillPerformClientRedirect(const URL&, double, double) override;
+    void dispatchDidChangeLocationWithinPage() override;
+    void dispatchWillClose() override;
+    void dispatchDidReceiveIcon() override;
+    void dispatchDidStartProvisionalLoad() override;
+    void dispatchDidReceiveTitle(const StringWithDirection&) override;
+    void dispatchDidChangeIcons(IconType) override;
+    void dispatchDidCommitLoad() override;
+    void dispatchDidFailProvisionalLoad(const ResourceError&) override;
+    void dispatchDidFailLoad(const ResourceError&) override;
+    void dispatchDidFinishDocumentLoad() override;
+    void dispatchDidFinishLoad() override;
+    void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&) override;
 
-        virtual void dispatchWillSendRequest(DocumentLoader*, unsigned long  identifier, ResourceRequest&, const ResourceResponse& redirectResponse);
-        virtual void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long identifier, const AuthenticationChallenge&);
-        virtual void dispatchDidCancelAuthenticationChallenge(DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge&);
-        virtual void dispatchDidReceiveResponse(DocumentLoader*, unsigned long  identifier, const ResourceResponse&);
-        virtual void dispatchDidReceiveContentLength(DocumentLoader*, unsigned long identifier, int lengthReceived);
-        virtual void dispatchDidFinishLoading(DocumentLoader*, unsigned long  identifier);
-        virtual void dispatchDidFailLoading(DocumentLoader*, unsigned long  identifier, const ResourceError&);
-        virtual bool dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int length);
-//        virtual void dispatchDidLoadResourceByXMLHttpRequest(unsigned long identifier, const String&);
+    Frame* dispatchCreatePage(const NavigationAction&) override;
+    void dispatchShow() override;
 
-        virtual void dispatchDidHandleOnloadEvents();
-        virtual void dispatchDidPushStateWithinPage();
-        virtual void dispatchDidReplaceStateWithinPage();
-        virtual void dispatchDidPopStateWithinPage();
-        virtual void dispatchDidChangeBackForwardIndex() const;
-        virtual void dispatchDidReceiveServerRedirectForProvisionalLoad();
-        virtual void dispatchDidCancelClientRedirect();
-        virtual void dispatchWillPerformClientRedirect(const URL&, double, double);
-        virtual void dispatchDidChangeLocationWithinPage();
-        virtual void dispatchWillClose();
-        virtual void dispatchDidReceiveIcon();
-        virtual void dispatchDidStartProvisionalLoad();
-        virtual void dispatchDidReceiveTitle(const StringWithDirection&);
-        virtual void dispatchDidChangeIcons(IconType);
-        virtual void dispatchDidCommitLoad();
-        virtual void dispatchDidFailProvisionalLoad(const ResourceError&);
-        virtual void dispatchDidFailLoad(const ResourceError&);
-        virtual void dispatchDidFinishDocumentLoad();
-        virtual void dispatchDidFinishLoad();
-        virtual void dispatchDidFirstLayout();
-        virtual void dispatchDidFirstVisuallyNonEmptyLayout();
-        virtual void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&);
+    void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, FramePolicyFunction) override;
+    void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, const String&, FramePolicyFunction) override;
+    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, FramePolicyFunction) override;
+    void cancelPolicyCheck() override;
 
-        virtual Frame* dispatchCreatePage(const NavigationAction&);
-        virtual void dispatchShow();
+    void dispatchUnableToImplementPolicy(const ResourceError&) override;
 
-        virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, FramePolicyFunction);
-        virtual void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, const String&, FramePolicyFunction);
-        virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, FramePolicyFunction);
-        virtual void cancelPolicyCheck();
+    void dispatchWillSendSubmitEvent(PassRefPtr<FormState>) override {}
+    void dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction) override;
 
-        virtual void dispatchUnableToImplementPolicy(const ResourceError&);
+    void dispatchDidLoadMainResource(DocumentLoader*);
 
-        virtual void dispatchWillSendSubmitEvent(PassRefPtr<FormState>) {};
-        virtual void dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction);
+    void revertToProvisionalState(DocumentLoader*) override;
+    void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
 
-        virtual void dispatchDidLoadMainResource(DocumentLoader*);
+    // ProgressTrackerClient methods
+    void progressStarted(Frame& originatingProgressFrame) override;
+    void progressEstimateChanged(Frame& originatingProgressFrame) override;
+    void progressFinished(Frame& originatingProgressFrame) override;
+    void progressTrackerDestroyed() override;
 
-        virtual void dispatchDidChangeIcons() {}
+    RefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
+                               const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) override;
+    ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
+    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
+    void recreatePlugin(Widget*) override {}
+    void redirectDataToPlugin(Widget* pluginWidget) override;
+    PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) override;
+    String overrideMediaType() const override;
 
-        virtual void revertToProvisionalState(DocumentLoader*);
-        virtual void setMainDocumentError(DocumentLoader*, const ResourceError&);
-        virtual void clearUnarchivingState(DocumentLoader*);
+    void setMainFrameDocumentReady(bool) override;
 
-        // ProgressTrackerClient methods
-        virtual void progressStarted(Frame& originatingProgressFrame);
-        virtual void progressEstimateChanged(Frame& originatingProgressFrame);
-        virtual void progressFinished(Frame& originatingProgressFrame);
-        virtual void progressTrackerDestroyed();
+    void startDownload(const ResourceRequest&, const String& suggestedName = String()) override;
 
-        virtual RefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
-                                   const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight);
-        virtual RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually);
-        virtual void recreatePlugin(Widget*) { }
-        virtual void redirectDataToPlugin(Widget* pluginWidget);
-        virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues);
-        virtual String overrideMediaType() const;
+    void willChangeTitle(DocumentLoader*) override;
+    void didChangeTitle(DocumentLoader*) override;
 
-        virtual ObjectContentType objectContentType(const URL&, const String& mimeType, bool shouldPreferPlugInsForImages);
+    void committedLoad(DocumentLoader*, const char*, int) override;
+    void finishedLoading(DocumentLoader*) override;
 
-        virtual void setMainFrameDocumentReady(bool);
+    void updateGlobalHistory() override;
+    void updateGlobalHistoryRedirectLinks() override;
 
-        virtual void download(ResourceHandle*, const ResourceRequest&, const ResourceResponse&);
-        virtual void startDownload(const ResourceRequest&, const String& suggestedName = String());
+    bool shouldGoToHistoryItem(HistoryItem*) const override;
 
-        virtual void willChangeTitle(DocumentLoader*);
-        virtual void didChangeTitle(DocumentLoader*);
+    // This frame has displayed inactive content (such as an image) from an
+    // insecure source.  Inactive content cannot spread to other frames.
+    void didDisplayInsecureContent() override;
 
-        virtual void committedLoad(DocumentLoader*, const char*, int);
-        virtual void finishedLoading(DocumentLoader*);
-        virtual void finalSetupForReplace(DocumentLoader*);
+    // The indicated security origin has run active content (such as a
+    // script) from an insecure source.  Note that the insecure content can
+    // spread to other frames in the same origin.
+    void didRunInsecureContent(SecurityOrigin*, const URL&) override;
+    void didDetectXSS(const URL&, bool) override;
 
-        virtual void updateGlobalHistory();
-        virtual void updateGlobalHistoryRedirectLinks();
+    ResourceError cancelledError(const ResourceRequest&) override;
+    ResourceError blockedByContentBlockerError(const ResourceRequest& request) override;
+    ResourceError blockedError(const ResourceRequest&) override;
+    ResourceError cannotShowURLError(const ResourceRequest&) override;
+    ResourceError interruptedForPolicyChangeError(const ResourceRequest&) override;
 
-        virtual bool shouldGoToHistoryItem(HistoryItem*) const;
-        virtual bool shouldStopLoadingForHistoryItem(HistoryItem*) const;
-        virtual void dispatchDidAddBackForwardItem(HistoryItem*) const;
-        virtual void dispatchDidRemoveBackForwardItem(HistoryItem*) const;
+    ResourceError cannotShowMIMETypeError(const ResourceResponse&) override;
+    ResourceError fileDoesNotExistError(const ResourceResponse&) override;
+    ResourceError pluginWillHandleLoadError(const ResourceResponse&) override;
 
+    bool shouldFallBack(const ResourceError&) override;
 
-        // This frame has displayed inactive content (such as an image) from an
-        // insecure source.  Inactive content cannot spread to other frames.
-        virtual void didDisplayInsecureContent();
+    bool shouldUseCredentialStorage(DocumentLoader*, unsigned long identifier) override;
 
-        // The indicated security origin has run active content (such as a
-        // script) from an insecure source.  Note that the insecure content can
-        // spread to other frames in the same origin.
-        virtual void didRunInsecureContent(SecurityOrigin*, const URL&);
-        virtual void didDetectXSS(const URL&, bool);
+    bool canHandleRequest(const ResourceRequest&) const override;
+    bool canShowMIMEType(const String&) const override;
+    bool canShowMIMETypeAsHTML(const String& MIMEType) const override;
+    bool representationExistsForURLScheme(const String&) const override;
+    String generatedMIMETypeForURLScheme(const String&) const override;
 
-        virtual ResourceError cancelledError(const ResourceRequest&);
-        virtual ResourceError blockedError(const ResourceRequest&);
-        virtual ResourceError cannotShowURLError(const ResourceRequest&);
-        virtual ResourceError interruptedForPolicyChangeError(const ResourceRequest&);
+    void frameLoadCompleted() override;
+    void saveViewStateToItem(HistoryItem*) override;
+    void restoreViewState() override;
+    void provisionalLoadStarted() override;
+    void didFinishLoad() override;
+    void prepareForDataSourceReplacement() override;
 
-        virtual ResourceError cannotShowMIMETypeError(const ResourceResponse&);
-        virtual ResourceError fileDoesNotExistError(const ResourceResponse&);
-        virtual ResourceError pluginWillHandleLoadError(const ResourceResponse&);
+    Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&) override;
+    void setTitle(const StringWithDirection& title, const URL&) override;
 
-        virtual bool shouldFallBack(const ResourceError&);
+    void willReplaceMultipartContent() override;
+    void didReplaceMultipartContent() override;
+    void updateCachedDocumentLoader(DocumentLoader&) override;
 
-        virtual bool shouldUseCredentialStorage(DocumentLoader*, unsigned long identifier);
+    String userAgent(const URL&) override;
 
-        virtual bool isArchiveLoadPending(ResourceLoader*) const;
-        virtual void cancelPendingArchiveLoad(ResourceLoader*);
-        virtual void clearArchivedResources();
+    void savePlatformDataToCachedFrame(CachedFrame*) override;
+    void transitionToCommittedFromCachedFrame(CachedFrame*) override;
+    void transitionToCommittedForNewPage() override;
 
-        virtual bool canHandleRequest(const ResourceRequest&) const;
-        virtual bool canShowMIMEType(const String&) const;
-        virtual bool canShowMIMETypeAsHTML(const String& MIMEType) const;
-        virtual bool representationExistsForURLScheme(const String&) const;
-        virtual String generatedMIMETypeForURLScheme(const String&) const;
+    bool canCachePage() const override;
+    void convertMainResourceLoadToDownload(DocumentLoader*, SessionID, const ResourceRequest&, const ResourceResponse&) override;
 
-        virtual void frameLoadCompleted();
-        virtual void saveViewStateToItem(HistoryItem*);
-        virtual void restoreViewState();
-        virtual void provisionalLoadStarted();
-        virtual void didFinishLoad();
-        virtual void prepareForDataSourceReplacement();
+    void didSaveToPageCache() override;
+    void didRestoreFromPageCache() override;
 
-        virtual Ref<DocumentLoader> createDocumentLoader(const ResourceRequest&, const SubstituteData&);
-        virtual void setTitle(const StringWithDirection& title, const URL&);
+    void dispatchDidBecomeFrameset(bool); // Can change due to navigation or DOM modification override.
 
-        void willReplaceMultipartContent() override;
-        void didReplaceMultipartContent() override;
-        void updateCachedDocumentLoader(DocumentLoader&) override;
+    PassRefPtr<FrameNetworkingContext> createNetworkingContext() override;
 
-        virtual String userAgent(const URL&);
+    void registerForIconNotification(bool listen = true) override;
 
-        virtual void savePlatformDataToCachedFrame(CachedFrame*);
-        virtual void transitionToCommittedFromCachedFrame(CachedFrame*);
-        virtual void transitionToCommittedForNewPage();
+    void setFrame(Frame* frame);
 
-        virtual bool canCachePage() const;
-        virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&);
+    bool isJavaFrameLoaderClient() override { return true; }
+    void prefetchDNS(const String&) override;
+private:
+    Page* m_page;
+    Frame* m_frame;
+    ResourceResponse m_response;
+    unsigned long m_mainResourceRequestID;
+    bool m_isPageRedirected;
+    bool m_hasRepresentation;
+    bool m_FrameLoaderClientDestroyed;
+    bool m_ProgressTrackerClientDestroyed;
 
-        virtual void didSaveToPageCache();
-        virtual void didRestoreFromPageCache();
+    JGObject m_webPage;
 
-        virtual void dispatchDidBecomeFrameset(bool); // Can change due to navigation or DOM modification.
+    Page* page();
+    Frame* frame();
 
-        virtual void didTransferChildFrameToNewDocument(Page* oldPage);
-        virtual void transferLoadingResourceFromPage(ResourceLoader*, const ResourceRequest&, Page*);
-        virtual PassRefPtr<FrameNetworkingContext> createNetworkingContext();
+    void setRequestURL(Frame* f, int identifier, String url);
+    void removeRequestURL(Frame* f, int identifier);
 
-        virtual void documentElementAvailable();
-        // "Navigation" here means a transition from one page to another that ends up in the back/forward list.
-        virtual void didPerformFirstNavigation() const;
+    void postLoadEvent(Frame* f, int state, String url, String contentType, double progress, int errorCode = 0);
+    void postResourceLoadEvent(Frame* f, int state, int id, String contentType, double progress, int errorCode = 0);
 
-        virtual void registerForIconNotification(bool listen = true);
+    void destroyIfNeeded();
 
-        void setFrame(Frame* frame);
-
-        virtual bool isJavaFrameLoaderClient() override { return true; }
-    private:
-        Page* m_page;
-        Frame* m_frame;
-        ResourceResponse m_response;
-        int mainResourceRequestID;
-        bool m_isPageRedirected;
-        bool m_hasRepresentation;
-        bool m_FrameLoaderClientDestroyed;
-        bool m_ProgressTrackerClientDestroyed;
-
-        JGObject m_webPage;
-
-        Page* page();
-        Frame* frame();
-
-        void setRequestURL(Frame* f, int identifier, String url);
-        void removeRequestURL(Frame* f, int identifier);
-
-        void postLoadEvent(Frame* f, int state, String url, String contentType, double progress, int errorCode = 0);
-        void postResourceLoadEvent(Frame* f, int state, int id, String contentType, double progress, int errorCode = 0);
-
-        void destroyIfNeeded();
-
-        // Plugin widget for handling data redirection
+    // Plugin widget for handling data redirection
 //        PluginWidgetJava* m_pluginWidget;
-    };
-
+};
 }
 
 #endif

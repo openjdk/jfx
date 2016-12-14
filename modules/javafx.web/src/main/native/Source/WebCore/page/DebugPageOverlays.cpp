@@ -107,7 +107,7 @@ bool MouseWheelRegionOverlay::updateRegion()
     region->translate(m_overlay->viewToOverlayOffset());
 
     bool regionChanged = !m_region || !(*m_region == *region);
-    m_region = WTF::move(region);
+    m_region = WTFMove(region);
     return regionChanged;
 }
 
@@ -137,7 +137,7 @@ bool NonFastScrollableRegionOverlay::updateRegion()
     }
 
     bool regionChanged = !m_region || !(*m_region == *region);
-    m_region = WTF::move(region);
+    m_region = WTFMove(region);
     return regionChanged;
 }
 
@@ -190,7 +190,7 @@ void RegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, const IntRe
         return;
 
     GraphicsContextStateSaver saver(context);
-    context.setFillColor(m_color, ColorSpaceSRGB);
+    context.setFillColor(m_color);
     for (auto rect : m_region->rects()) {
 
         if (rect.intersects(dirtyRect))
@@ -243,7 +243,7 @@ RegionOverlay& DebugPageOverlays::ensureRegionOverlayForFrame(MainFrame& frame, 
     RefPtr<RegionOverlay> visualizer = RegionOverlay::create(frame, regionType);
     visualizers[indexOf(regionType)] = visualizer;
 
-    m_frameRegionOverlays.add(&frame, WTF::move(visualizers));
+    m_frameRegionOverlays.add(&frame, WTFMove(visualizers));
     return *visualizer;
 }
 

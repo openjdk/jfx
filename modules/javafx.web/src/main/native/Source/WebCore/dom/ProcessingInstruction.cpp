@@ -22,6 +22,7 @@
 #include "config.h"
 #include "ProcessingInstruction.h"
 
+#include "AuthorStyleSheets.h"
 #include "CSSStyleSheet.h"
 #include "CachedCSSStyleSheet.h"
 #include "CachedResourceLoader.h"
@@ -41,14 +42,6 @@ namespace WebCore {
 inline ProcessingInstruction::ProcessingInstruction(Document& document, const String& target, const String& data)
     : CharacterData(document, data, CreateOther)
     , m_target(target)
-    , m_cachedSheet(0)
-    , m_loading(false)
-    , m_alternate(false)
-    , m_createdByParser(false)
-    , m_isCSS(false)
-#if ENABLE(XSLT)
-    , m_isXSL(false)
-#endif
 {
 }
 
@@ -66,7 +59,7 @@ ProcessingInstruction::~ProcessingInstruction()
         m_cachedSheet->removeClient(this);
 
     if (inDocument())
-        document().styleSheetCollection().removeStyleSheetCandidateNode(*this);
+        document().authorStyleSheets().removeStyleSheetCandidateNode(*this);
 }
 
 String ProcessingInstruction::nodeName() const
@@ -79,7 +72,7 @@ Node::NodeType ProcessingInstruction::nodeType() const
     return PROCESSING_INSTRUCTION_NODE;
 }
 
-RefPtr<Node> ProcessingInstruction::cloneNodeInternal(Document& targetDocument, CloningOperation)
+Ref<Node> ProcessingInstruction::cloneNodeInternal(Document& targetDocument, CloningOperation)
 {
     // FIXME: Is it a problem that this does not copy m_localHref?
     // What about other data members?
@@ -134,7 +127,7 @@ void ProcessingInstruction::checkStyleSheet()
         } else {
             if (m_cachedSheet) {
                 m_cachedSheet->removeClient(this);
-                m_cachedSheet = 0;
+                m_cachedSheet = nullptr;
             }
 
             String url = document().completeURL(href).string();
@@ -142,7 +135,7 @@ void ProcessingInstruction::checkStyleSheet()
                 return;
 
             m_loading = true;
-            document().styleSheetCollection().addPendingSheet();
+            document().authorStyleSheets().addPendingSheet();
 
             CachedResourceRequest request(ResourceRequest(document().completeURL(href)));
 #if ENABLE(XSLT)
@@ -163,7 +156,7 @@ void ProcessingInstruction::checkStyleSheet()
             else {
                 // The request may have been denied if (for example) the stylesheet is local and the document is remote.
                 m_loading = false;
-                document().styleSheetCollection().removePendingSheet();
+                document().authorStyleSheets().removePendingSheet();
             }
         }
     }
@@ -181,7 +174,7 @@ bool ProcessingInstruction::isLoading() const
 bool ProcessingInstruction::sheetLoaded()
 {
     if (!isLoading()) {
-        document().styleSheetCollection().removePendingSheet();
+        document().authorStyleSheets().removePendingSheet();
         return true;
     }
     return false;
@@ -202,7 +195,7 @@ void ProcessingInstruction::setCSSStyleSheet(const String& href, const URL& base
     cssSheet.get().setTitle(m_title);
     cssSheet.get().setMediaQueries(MediaQuerySet::create(m_media));
 
-    m_sheet = WTF::move(cssSheet);
+    m_sheet = WTFMove(cssSheet);
 
     // We don't need the cross-origin security check here because we are
     // getting the sheet text in "strict" mode. This enforces a valid CSS MIME
@@ -231,7 +224,7 @@ void ProcessingInstruction::parseStyleSheet(const String& sheet)
 
     if (m_cachedSheet)
         m_cachedSheet->removeClient(this);
-    m_cachedSheet = 0;
+    m_cachedSheet = nullptr;
 
     m_loading = false;
 
@@ -241,15 +234,6 @@ void ProcessingInstruction::parseStyleSheet(const String& sheet)
     else if (m_isXSL)
         downcast<XSLStyleSheet>(*m_sheet).checkLoaded();
 #endif
-}
-
-void ProcessingInstruction::setCSSStyleSheet(PassRefPtr<CSSStyleSheet> sheet)
-{
-    ASSERT(!m_cachedSheet);
-    ASSERT(!m_loading);
-    m_sheet = sheet;
-    sheet->setTitle(m_title);
-    sheet->setDisabled(m_alternate);
 }
 
 void ProcessingInstruction::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
@@ -265,7 +249,7 @@ Node::InsertionNotificationRequest ProcessingInstruction::insertedInto(Container
     CharacterData::insertedInto(insertionPoint);
     if (!insertionPoint.inDocument())
         return InsertionDone;
-    document().styleSheetCollection().addStyleSheetCandidateNode(*this, m_createdByParser);
+    document().authorStyleSheets().addStyleSheetCandidateNode(*this, m_createdByParser);
     checkStyleSheet();
     return InsertionDone;
 }
@@ -276,7 +260,7 @@ void ProcessingInstruction::removedFrom(ContainerNode& insertionPoint)
     if (!insertionPoint.inDocument())
         return;
 
-    document().styleSheetCollection().removeStyleSheetCandidateNode(*this);
+    document().authorStyleSheets().removeStyleSheetCandidateNode(*this);
 
     if (m_sheet) {
         ASSERT(m_sheet->ownerNode() == this);

@@ -32,7 +32,7 @@
 #ifndef ScrollAnimator_h
 #define ScrollAnimator_h
 
-#include "FloatSize.h"
+#include "FloatPoint.h"
 #include "LayoutUnit.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollTypes.h"
@@ -85,22 +85,23 @@ public:
 #endif
 
     void setCurrentPosition(const FloatPoint&);
-    FloatPoint currentPosition() const;
+    const FloatPoint& currentPosition() const { return m_currentPosition; }
 
     virtual void cancelAnimations() { }
     virtual void serviceScrollAnimations() { }
 
     virtual void contentAreaWillPaint() const { }
-    virtual void mouseEnteredContentArea() const { }
-    virtual void mouseExitedContentArea() const { }
-    virtual void mouseMovedInContentArea() const { }
+    virtual void mouseEnteredContentArea() { }
+    virtual void mouseExitedContentArea() { }
+    virtual void mouseMovedInContentArea() { }
     virtual void mouseEnteredScrollbar(Scrollbar*) const { }
     virtual void mouseExitedScrollbar(Scrollbar*) const { }
+    virtual void mouseIsDownInScrollbar(Scrollbar*, bool) const { }
     virtual void willStartLiveResize() { }
     virtual void contentsResized() const { }
     virtual void willEndLiveResize() { }
-    virtual void contentAreaDidShow() const { }
-    virtual void contentAreaDidHide() const { }
+    virtual void contentAreaDidShow() { }
+    virtual void contentAreaDidHide() { }
 
     virtual void lockOverlayScrollbarStateToHidden(bool) { }
     virtual bool scrollbarsCanBeActive() const { return true; }
@@ -149,8 +150,7 @@ protected:
 #if ENABLE(CSS_SCROLL_SNAP) || ENABLE(RUBBER_BANDING)
     ScrollController m_scrollController;
 #endif
-    float m_currentPosX; // We avoid using a FloatPoint in order to reduce
-    float m_currentPosY; // subclass code complexity.
+    FloatPoint m_currentPosition;
 };
 
 } // namespace WebCore

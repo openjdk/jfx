@@ -69,42 +69,42 @@ namespace JSC {
 class MacroAssembler : public MacroAssemblerBase {
 public:
 
-    static RegisterID nextRegister(RegisterID reg)
+    static constexpr RegisterID nextRegister(RegisterID reg)
     {
         return static_cast<RegisterID>(reg + 1);
     }
 
-    static FPRegisterID nextFPRegister(FPRegisterID reg)
+    static constexpr FPRegisterID nextFPRegister(FPRegisterID reg)
     {
         return static_cast<FPRegisterID>(reg + 1);
     }
 
-    static unsigned numberOfRegisters()
+    static constexpr unsigned numberOfRegisters()
     {
         return lastRegister() - firstRegister() + 1;
     }
 
-    static unsigned registerIndex(RegisterID reg)
+    static constexpr unsigned registerIndex(RegisterID reg)
     {
         return reg - firstRegister();
     }
 
-    static unsigned numberOfFPRegisters()
+    static constexpr unsigned numberOfFPRegisters()
     {
         return lastFPRegister() - firstFPRegister() + 1;
     }
 
-    static unsigned fpRegisterIndex(FPRegisterID reg)
+    static constexpr unsigned fpRegisterIndex(FPRegisterID reg)
     {
         return reg - firstFPRegister();
     }
 
-    static unsigned registerIndex(FPRegisterID reg)
+    static constexpr unsigned registerIndex(FPRegisterID reg)
     {
         return fpRegisterIndex(reg) + numberOfRegisters();
     }
 
-    static unsigned totalNumberOfRegisters()
+    static constexpr unsigned totalNumberOfRegisters()
     {
         return numberOfRegisters() + numberOfFPRegisters();
     }
@@ -167,10 +167,9 @@ public:
             return DoubleGreaterThanOrEqual;
         case DoubleLessThanOrEqualOrUnordered:
             return DoubleGreaterThan;
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-            return DoubleEqual; // make compiler happy
         }
+        RELEASE_ASSERT_NOT_REACHED();
+        return DoubleEqual; // make compiler happy
     }
 
     static bool isInvertible(ResultCondition cond)
@@ -178,6 +177,8 @@ public:
         switch (cond) {
         case Zero:
         case NonZero:
+        case Signed:
+        case PositiveOrZero:
             return true;
         default:
             return false;
@@ -191,9 +192,79 @@ public:
             return NonZero;
         case NonZero:
             return Zero;
+        case Signed:
+            return PositiveOrZero;
+        case PositiveOrZero:
+            return Signed;
         default:
             RELEASE_ASSERT_NOT_REACHED();
             return Zero; // Make compiler happy for release builds.
+        }
+    }
+
+    static RelationalCondition flip(RelationalCondition cond)
+    {
+        switch (cond) {
+        case Equal:
+        case NotEqual:
+            return cond;
+        case Above:
+            return Below;
+        case AboveOrEqual:
+            return BelowOrEqual;
+        case Below:
+            return Above;
+        case BelowOrEqual:
+            return AboveOrEqual;
+        case GreaterThan:
+            return LessThan;
+        case GreaterThanOrEqual:
+            return LessThanOrEqual;
+        case LessThan:
+            return GreaterThan;
+        case LessThanOrEqual:
+            return GreaterThanOrEqual;
+        }
+
+        RELEASE_ASSERT_NOT_REACHED();
+        return Equal;
+    }
+
+    // True if this:
+    //     branch8(cond, value, value)
+    // Is the same as this:
+    //     branch32(cond, signExt8(value), signExt8(value))
+    static bool isSigned(RelationalCondition cond)
+    {
+        switch (cond) {
+        case Equal:
+        case NotEqual:
+        case GreaterThan:
+        case GreaterThanOrEqual:
+        case LessThan:
+        case LessThanOrEqual:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    // True if this:
+    //     branch8(cond, value, value)
+    // Is the same as this:
+    //     branch32(cond, zeroExt8(value), zeroExt8(value))
+    static bool isUnsigned(RelationalCondition cond)
+    {
+        switch (cond) {
+        case Equal:
+        case NotEqual:
+        case Above:
+        case AboveOrEqual:
+        case Below:
+        case BelowOrEqual:
+            return true;
+        default:
+            return false;
         }
     }
 #endif
@@ -406,6 +477,18 @@ public:
         ASSERT(condition == Equal || condition == NotEqual);
         return condition;
     }
+
+    void oops()
+    {
+        abortWithReason(B3Oops);
+    }
+
+    // B3 has additional pseudo-opcodes for returning, when it wants to signal that the return
+    // consumes some register in some way.
+    void ret32(RegisterID) { ret(); }
+    void ret64(RegisterID) { ret(); }
+    void retFloat(FPRegisterID) { ret(); }
+    void retDouble(FPRegisterID) { ret(); }
 
     static const unsigned BlindingModulus = 64;
     bool shouldConsiderBlinding()
@@ -880,6 +963,11 @@ public:
         store64(TrustedImm64(imm), address);
     }
 
+    void storePtr(TrustedImm32 imm, ImplicitAddress address)
+    {
+        store64(imm, address);
+    }
+
     void storePtr(TrustedImmPtr imm, BaseIndex address)
     {
         store64(TrustedImm64(imm), address);
@@ -1226,6 +1314,30 @@ public:
 
 #endif // !CPU(X86_64)
 
+#if ENABLE(B3_JIT)
+    // We should implement this the right way eventually, but for now, it's fine because it arises so
+    // infrequently.
+    void compareDouble(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
+    {
+        move(TrustedImm32(0), dest);
+        Jump falseCase = branchDouble(invert(cond), left, right);
+        move(TrustedImm32(1), dest);
+        falseCase.link(this);
+    }
+    void compareFloat(DoubleCondition cond, FPRegisterID left, FPRegisterID right, RegisterID dest)
+    {
+        move(TrustedImm32(0), dest);
+        Jump falseCase = branchFloat(invert(cond), left, right);
+        move(TrustedImm32(1), dest);
+        falseCase.link(this);
+    }
+#endif
+
+    void lea(Address address, RegisterID dest)
+    {
+        addPtr(TrustedImm32(address.offset), address.base, dest);
+    }
+
     bool shouldBlind(Imm32 imm)
     {
 #if ENABLE(FORCED_JIT_BLINDING)
@@ -1525,7 +1637,7 @@ public:
         return branchAdd32(cond, src, imm.asTrustedImm32(), dest);
     }
 
-    Jump branchMul32(ResultCondition cond, Imm32 imm, RegisterID src, RegisterID dest)
+    Jump branchMul32(ResultCondition cond, RegisterID src, Imm32 imm, RegisterID dest)
     {
         if (src == dest)
             ASSERT(haveScratchRegisterForBlinding());
@@ -1538,7 +1650,7 @@ public:
             loadXorBlindedConstant(xorBlindConstant(imm), dest);
             return branchMul32(cond, src, dest);
         }
-        return branchMul32(cond, imm.asTrustedImm32(), src, dest);
+        return branchMul32(cond, src, imm.asTrustedImm32(), dest);
     }
 
     // branchSub32 takes a scratch register as 32 bit platforms make use of this,
@@ -1583,11 +1695,34 @@ public:
     {
         urshift32(src, trustedImm32ForShift(amount), dest);
     }
+
+#if ENABLE(MASM_PROBE)
+    using MacroAssemblerBase::probe;
+
+    // Let's you print from your JIT generated code.
+    // See comments in MacroAssemblerPrinter.h for examples of how to use this.
+    template<typename... Arguments>
+    void print(Arguments... args);
+
+    void probe(std::function<void (ProbeContext*)>);
+#endif
 };
 
 } // namespace JSC
 
+namespace WTF {
+
+class PrintStream;
+
+void printInternal(PrintStream&, JSC::MacroAssembler::RelationalCondition);
+void printInternal(PrintStream&, JSC::MacroAssembler::ResultCondition);
+void printInternal(PrintStream&, JSC::MacroAssembler::DoubleCondition);
+
+} // namespace WTF
+
 #else // ENABLE(ASSEMBLER)
+
+namespace JSC {
 
 // If there is no assembler for this platform, at least allow code to make references to
 // some of the things it would otherwise define, albeit without giving that code any way
@@ -1601,6 +1736,8 @@ public:
     enum RegisterID { NoRegister };
     enum FPRegisterID { NoFPRegister };
 };
+
+} // namespace JSC
 
 #endif // ENABLE(ASSEMBLER)
 

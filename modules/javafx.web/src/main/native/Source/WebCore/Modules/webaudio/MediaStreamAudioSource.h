@@ -30,6 +30,7 @@
 
 #include "AudioDestinationConsumer.h"
 #include "RealtimeMediaSource.h"
+#include <wtf/Lock.h>
 #include <wtf/RefCounted.h>
 #include <wtf/ThreadingPrimitives.h>
 #include <wtf/Vector.h>
@@ -46,10 +47,8 @@ public:
 
     ~MediaStreamAudioSource() { }
 
-    virtual bool useIDForTrackID() const { return true; }
-
-    virtual RefPtr<RealtimeMediaSourceCapabilities> capabilities() const;
-    virtual const RealtimeMediaSourceStates& states();
+    RefPtr<RealtimeMediaSourceCapabilities> capabilities() override;
+    const RealtimeMediaSourceSettings& settings() override;
 
     const String& deviceId() const { return m_deviceId; }
     void setDeviceId(const String& deviceId) { m_deviceId = deviceId; }
@@ -64,10 +63,12 @@ public:
 private:
     MediaStreamAudioSource();
 
+    AudioSourceProvider* audioSourceProvider() override;
+
     String m_deviceId;
-    Mutex m_audioConsumersLock;
+    Lock m_audioConsumersLock;
     Vector<RefPtr<AudioDestinationConsumer>> m_audioConsumers;
-    RealtimeMediaSourceStates m_currentStates;
+    RealtimeMediaSourceSettings m_currentSettings;
 };
 
 } // namespace WebCore

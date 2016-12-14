@@ -28,27 +28,24 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "FTLAbbreviations.h"
-#include "FTLValueFormat.h"
+#include "DataFormat.h"
+#include "FTLAbbreviatedTypes.h"
 
 namespace JSC { namespace FTL {
 
 // This class is mostly used for OSR; it's a way of specifying how a value is formatted
 // in cases where it wouldn't have been obvious from looking at other indicators (like
-// the type of the LLVMValueRef or the type of the DFG::Node). Typically this arises
-// because LLVMValueRef doesn't give us the granularity we need to begin with, and we
-// use this in situations where there is no good way to say what node the value came
-// from.
+// the type of the B3::Value* or the type of the DFG::Node).
 
 class FormattedValue {
 public:
     FormattedValue()
-        : m_format(InvalidValueFormat)
+        : m_format(DataFormatNone)
         , m_value(0)
     {
     }
 
-    FormattedValue(ValueFormat format, LValue value)
+    FormattedValue(DataFormat format, LValue value)
         : m_format(format)
         , m_value(value)
     {
@@ -56,23 +53,23 @@ public:
 
     bool operator!() const
     {
-        ASSERT((m_format == InvalidValueFormat) == !m_value);
-        return m_format == InvalidValueFormat;
+        ASSERT((m_format == DataFormatNone) == !m_value);
+        return m_format == DataFormatNone;
     }
 
-    ValueFormat format() const { return m_format; }
+    DataFormat format() const { return m_format; }
     LValue value() const { return m_value; }
 
 private:
-    ValueFormat m_format;
+    DataFormat m_format;
     LValue m_value;
 };
 
 static inline FormattedValue noValue() { return FormattedValue(); }
-static inline FormattedValue int32Value(LValue value) { return FormattedValue(ValueFormatInt32, value); }
-static inline FormattedValue booleanValue(LValue value) { return FormattedValue(ValueFormatBoolean, value); }
-static inline FormattedValue jsValueValue(LValue value) { return FormattedValue(ValueFormatJSValue, value); }
-static inline FormattedValue doubleValue(LValue value) { return FormattedValue(ValueFormatDouble, value); }
+static inline FormattedValue int32Value(LValue value) { return FormattedValue(DataFormatInt32, value); }
+static inline FormattedValue booleanValue(LValue value) { return FormattedValue(DataFormatBoolean, value); }
+static inline FormattedValue jsValueValue(LValue value) { return FormattedValue(DataFormatJS, value); }
+static inline FormattedValue doubleValue(LValue value) { return FormattedValue(DataFormatDouble, value); }
 
 } } // namespace JSC::FTL
 

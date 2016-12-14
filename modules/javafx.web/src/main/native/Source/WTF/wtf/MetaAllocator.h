@@ -31,13 +31,13 @@
 
 #include <wtf/Assertions.h>
 #include <wtf/HashMap.h>
+#include <wtf/Lock.h>
 #include <wtf/MetaAllocatorHandle.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PageBlock.h>
 #include <wtf/RedBlackTree.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/SpinLock.h>
 
 namespace WTF {
 
@@ -96,6 +96,9 @@ public:
     // This is meant only for implementing tests. Never call this in release
     // builds.
     WTF_EXPORT_PRIVATE size_t debugFreeSpaceSize();
+
+    WTF_EXPORT_PRIVATE Lock& getLock() { return m_lock; }
+    WTF_EXPORT_PRIVATE bool isInAllocatedMemory(const LockHolder&, void* address);
 
 #if ENABLE(META_ALLOCATOR_PROFILE)
     void dumpProfile();
@@ -183,7 +186,7 @@ private:
     size_t m_bytesReserved;
     size_t m_bytesCommitted;
 
-    SpinLock m_lock;
+    Lock m_lock;
 
     MetaAllocatorTracker* m_tracker;
 

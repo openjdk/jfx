@@ -128,11 +128,7 @@ String DebuggerCallFrame::functionName() const
     ASSERT(isValid());
     if (!isValid())
         return String();
-    JSFunction* function = jsDynamicCast<JSFunction*>(m_callFrame->callee());
-    if (!function)
-        return String();
-
-    return getCalculatedDisplayName(m_callFrame, function);
+    return m_callFrame->friendlyFunctionName();
 }
 
 DebuggerScope* DebuggerCallFrame::scope()
@@ -196,7 +192,7 @@ JSValue DebuggerCallFrame::evaluate(const String& script, NakedPtr<Exception>& e
     VariableEnvironment variablesUnderTDZ;
     JSScope::collectVariablesUnderTDZ(scope()->jsScope(), variablesUnderTDZ);
 
-    EvalExecutable* eval = EvalExecutable::create(callFrame, makeSource(script), codeBlock.isStrictMode(), thisTDZMode, &variablesUnderTDZ);
+    EvalExecutable* eval = EvalExecutable::create(callFrame, makeSource(script), codeBlock.isStrictMode(), thisTDZMode, codeBlock.unlinkedCodeBlock()->derivedContextType(), codeBlock.unlinkedCodeBlock()->isArrowFunction(), &variablesUnderTDZ);
     if (vm.exception()) {
         exception = vm.exception();
         vm.clearException();
@@ -242,7 +238,7 @@ SourceID DebuggerCallFrame::sourceIDForCallFrame(CallFrame* callFrame)
     CodeBlock* codeBlock = callFrame->codeBlock();
     if (!codeBlock)
         return noSourceID;
-    return codeBlock->ownerExecutable()->sourceID();
+    return codeBlock->ownerScriptExecutable()->sourceID();
 }
 
 JSValue DebuggerCallFrame::thisValueForCallFrame(CallFrame* callFrame)

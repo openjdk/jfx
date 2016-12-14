@@ -38,184 +38,34 @@
 #include "ParserModes.h"
 #include "RegExp.h"
 #include "SpecialPointer.h"
-#include "SymbolTable.h"
+#include "UnlinkedFunctionExecutable.h"
 #include "VariableEnvironment.h"
 #include "VirtualRegister.h"
-
+#include <wtf/FastBitVector.h>
 #include <wtf/RefCountedArray.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
 
 class Debugger;
-class FunctionBodyNode;
+class FunctionMetadataNode;
 class FunctionExecutable;
 class JSScope;
 class ParserError;
 class ScriptExecutable;
 class SourceCode;
 class SourceProvider;
-class SymbolTable;
 class UnlinkedCodeBlock;
 class UnlinkedFunctionCodeBlock;
+class UnlinkedFunctionExecutable;
 class UnlinkedInstructionStream;
+struct ExecutableInfo;
 
 typedef unsigned UnlinkedValueProfile;
 typedef unsigned UnlinkedArrayProfile;
 typedef unsigned UnlinkedArrayAllocationProfile;
 typedef unsigned UnlinkedObjectAllocationProfile;
 typedef unsigned UnlinkedLLIntCallLinkInfo;
-
-struct ExecutableInfo {
-    ExecutableInfo(bool needsActivation, bool usesEval, bool isStrictMode, bool isConstructor, bool isBuiltinFunction, ConstructorKind constructorKind)
-        : m_needsActivation(needsActivation)
-        , m_usesEval(usesEval)
-        , m_isStrictMode(isStrictMode)
-        , m_isConstructor(isConstructor)
-        , m_isBuiltinFunction(isBuiltinFunction)
-        , m_constructorKind(static_cast<unsigned>(constructorKind))
-    {
-        ASSERT(m_constructorKind == static_cast<unsigned>(constructorKind));
-    }
-
-    bool needsActivation() const { return m_needsActivation; }
-    bool usesEval() const { return m_usesEval; }
-    bool isStrictMode() const { return m_isStrictMode; }
-    bool isConstructor() const { return m_isConstructor; }
-    bool isBuiltinFunction() const { return m_isBuiltinFunction; }
-    ConstructorKind constructorKind() const { return static_cast<ConstructorKind>(m_constructorKind); }
-
-private:
-    unsigned m_needsActivation : 1;
-    unsigned m_usesEval : 1;
-    unsigned m_isStrictMode : 1;
-    unsigned m_isConstructor : 1;
-    unsigned m_isBuiltinFunction : 1;
-    unsigned m_constructorKind : 2;
-};
-
-enum UnlinkedFunctionKind {
-    UnlinkedNormalFunction,
-    UnlinkedBuiltinFunction,
-};
-
-class UnlinkedFunctionExecutable final : public JSCell {
-public:
-    friend class BuiltinExecutables;
-    friend class CodeCache;
-    friend class VM;
-
-    typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-
-    static UnlinkedFunctionExecutable* create(VM* vm, const SourceCode& source, FunctionBodyNode* node, UnlinkedFunctionKind unlinkedFunctionKind, ConstructAbility constructAbility, VariableEnvironment& parentScopeTDZVariables, RefPtr<SourceProvider>&& sourceOverride = nullptr)
-    {
-        UnlinkedFunctionExecutable* instance = new (NotNull, allocateCell<UnlinkedFunctionExecutable>(vm->heap))
-            UnlinkedFunctionExecutable(vm, vm->unlinkedFunctionExecutableStructure.get(), source, WTF::move(sourceOverride), node, unlinkedFunctionKind, constructAbility, parentScopeTDZVariables);
-        instance->finishCreation(*vm);
-        return instance;
-    }
-
-    const Identifier& name() const { return m_name; }
-    const Identifier& inferredName() const { return m_inferredName; }
-    JSString* nameValue() const { return m_nameValue.get(); }
-    unsigned parameterCount() const { return m_parameterCount; };
-    FunctionParseMode parseMode() const { return m_parseMode; };
-    bool isInStrictContext() const { return m_isInStrictContext; }
-    FunctionMode functionMode() const { return static_cast<FunctionMode>(m_functionMode); }
-    ConstructorKind constructorKind() const { return static_cast<ConstructorKind>(m_constructorKind); }
-
-    unsigned unlinkedFunctionNameStart() const { return m_unlinkedFunctionNameStart; }
-    unsigned unlinkedBodyStartColumn() const { return m_unlinkedBodyStartColumn; }
-    unsigned unlinkedBodyEndColumn() const { return m_unlinkedBodyEndColumn; }
-    unsigned startOffset() const { return m_startOffset; }
-    unsigned sourceLength() { return m_sourceLength; }
-    unsigned parametersStartOffset() const { return m_parametersStartOffset; }
-    unsigned typeProfilingStartOffset() const { return m_typeProfilingStartOffset; }
-    unsigned typeProfilingEndOffset() const { return m_typeProfilingEndOffset; }
-
-    UnlinkedFunctionCodeBlock* codeBlockFor(
-        VM&, const SourceCode&, CodeSpecializationKind, DebuggerMode, ProfilerMode,
-        ParserError&);
-
-    static UnlinkedFunctionExecutable* fromGlobalCode(
-        const Identifier&, ExecState&, const SourceCode&, JSObject*& exception,
-        int overrideLineNumber);
-
-    FunctionExecutable* link(VM&, const SourceCode&, int overrideLineNumber = -1);
-
-    void clearCodeForRecompilation()
-    {
-        m_codeBlockForCall.clear();
-        m_codeBlockForConstruct.clear();
-    }
-
-    void recordParse(CodeFeatures features, bool hasCapturedVariables)
-    {
-        m_features = features;
-        m_hasCapturedVariables = hasCapturedVariables;
-    }
-
-    CodeFeatures features() const { return m_features; }
-    bool hasCapturedVariables() const { return m_hasCapturedVariables; }
-
-    static const bool needsDestruction = true;
-    static void destroy(JSCell*);
-
-    bool isBuiltinFunction() const { return m_isBuiltinFunction; }
-    ConstructAbility constructAbility() const { return static_cast<ConstructAbility>(m_constructAbility); }
-    bool isClassConstructorFunction() const { return constructorKind() != ConstructorKind::None; }
-    const VariableEnvironment* parentScopeTDZVariables() const { return &m_parentScopeTDZVariables; }
-
-private:
-    UnlinkedFunctionExecutable(VM*, Structure*, const SourceCode&, RefPtr<SourceProvider>&& sourceOverride, FunctionBodyNode*, UnlinkedFunctionKind, ConstructAbility, VariableEnvironment&);
-    WriteBarrier<UnlinkedFunctionCodeBlock> m_codeBlockForCall;
-    WriteBarrier<UnlinkedFunctionCodeBlock> m_codeBlockForConstruct;
-
-    Identifier m_name;
-    Identifier m_inferredName;
-    WriteBarrier<JSString> m_nameValue;
-    RefPtr<SourceProvider> m_sourceOverride;
-    VariableEnvironment m_parentScopeTDZVariables;
-    unsigned m_firstLineOffset;
-    unsigned m_lineCount;
-    unsigned m_unlinkedFunctionNameStart;
-    unsigned m_unlinkedBodyStartColumn;
-    unsigned m_unlinkedBodyEndColumn;
-    unsigned m_startOffset;
-    unsigned m_sourceLength;
-    unsigned m_parametersStartOffset;
-    unsigned m_typeProfilingStartOffset;
-    unsigned m_typeProfilingEndOffset;
-    unsigned m_parameterCount;
-    FunctionParseMode m_parseMode;
-
-    CodeFeatures m_features;
-
-    unsigned m_isInStrictContext : 1;
-    unsigned m_hasCapturedVariables : 1;
-    unsigned m_isBuiltinFunction : 1;
-    unsigned m_constructAbility: 1;
-    unsigned m_constructorKind : 2;
-    unsigned m_functionMode : 1; // FunctionMode
-
-protected:
-    void finishCreation(VM& vm)
-    {
-        Base::finishCreation(vm);
-        m_nameValue.set(vm, this, jsString(&vm, name().string()));
-    }
-
-    static void visitChildren(JSCell*, SlotVisitor&);
-
-public:
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(UnlinkedFunctionExecutableType, StructureFlags), info());
-    }
-
-    DECLARE_EXPORT_INFO;
-};
 
 struct UnlinkedStringJumpTable {
     typedef HashMap<RefPtr<StringImpl>, int32_t> StringOffsetTable;
@@ -267,8 +117,11 @@ public:
     bool isConstructor() const { return m_isConstructor; }
     bool isStrictMode() const { return m_isStrictMode; }
     bool usesEval() const { return m_usesEval; }
-
-    bool needsFullScopeChain() const { return m_needsFullScopeChain; }
+    SourceParseMode parseMode() const { return m_parseMode; }
+    bool isArrowFunction() const { return m_parseMode == SourceParseMode::ArrowFunctionMode; }
+    DerivedContextType derivedContextType() const { return static_cast<DerivedContextType>(m_derivedContextType); }
+    bool isArrowFunctionContext() const { return m_isArrowFunctionContext; }
+    bool isClassContext() const { return m_isClassContext; }
 
     void addExpressionInfo(unsigned instructionOffset, int divot,
         int startOffset, int endOffset, unsigned line, unsigned column);
@@ -276,11 +129,11 @@ public:
     void addTypeProfilerExpressionInfo(unsigned instructionOffset, unsigned startDivot, unsigned endDivot);
 
     bool hasExpressionInfo() { return m_expressionInfo.size(); }
+    const Vector<ExpressionRangeInfo>& expressionInfo() { return m_expressionInfo; }
 
     // Special registers
     void setThisRegister(VirtualRegister thisRegister) { m_thisRegister = thisRegister; }
     void setScopeRegister(VirtualRegister scopeRegister) { m_scopeRegister = scopeRegister; }
-    void setActivationRegister(VirtualRegister activationRegister) { m_lexicalEnvironmentRegister = activationRegister; }
 
     bool usesGlobalObject() const { return m_globalObjectRegister.isValid(); }
     void setGlobalObjectRegister(VirtualRegister globalObjectRegister) { m_globalObjectRegister = globalObjectRegister; }
@@ -295,7 +148,7 @@ public:
     {
         createRareDataIfNecessary();
         unsigned size = m_rareData->m_regexps.size();
-        m_rareData->m_regexps.append(WriteBarrier<RegExp>(*m_vm, this, r));
+        m_rareData->m_regexps.append(WriteBarrier<RegExp>(*vm(), this, r));
         return size;
     }
     unsigned numberOfRegExps() const
@@ -317,7 +170,7 @@ public:
     {
         unsigned result = m_constantRegisters.size();
         m_constantRegisters.append(WriteBarrier<Unknown>());
-        m_constantRegisters.last().set(*m_vm, this, v);
+        m_constantRegisters.last().set(*vm(), this, v);
         m_constantsSourceCodeRepresentation.append(sourceCodeRepresentation);
         return result;
     }
@@ -352,6 +205,7 @@ public:
     bool isBuiltinFunction() const { return m_isBuiltinFunction; }
 
     ConstructorKind constructorKind() const { return static_cast<ConstructorKind>(m_constructorKind); }
+    SuperBinding superBinding() const { return static_cast<SuperBinding>(m_superBinding); }
 
     void shrinkToFit()
     {
@@ -364,9 +218,6 @@ public:
         m_propertyAccessInstructions.shrinkToFit();
         m_expressionInfo.shrinkToFit();
 
-#if ENABLE(BYTECODE_COMMENTS)
-        m_bytecodeComments.shrinkToFit();
-#endif
         if (m_rareData) {
             m_rareData->m_exceptionHandlers.shrinkToFit();
             m_rareData->m_regexps.shrinkToFit();
@@ -382,7 +233,7 @@ public:
 
     int m_numVars;
     int m_numCapturedVars;
-    int m_numCalleeRegisters;
+    int m_numCalleeLocals;
 
     // Jump Tables
 
@@ -398,7 +249,7 @@ public:
     {
         unsigned size = m_functionDecls.size();
         m_functionDecls.append(WriteBarrier<UnlinkedFunctionExecutable>());
-        m_functionDecls.last().set(*m_vm, this, n);
+        m_functionDecls.last().set(*vm(), this, n);
         return size;
     }
     UnlinkedFunctionExecutable* functionDecl(int index) { return m_functionDecls[index].get(); }
@@ -407,7 +258,7 @@ public:
     {
         unsigned size = m_functionExprs.size();
         m_functionExprs.append(WriteBarrier<UnlinkedFunctionExecutable>());
-        m_functionExprs.last().set(*m_vm, this, n);
+        m_functionExprs.last().set(*vm(), this, n);
         return size;
     }
     UnlinkedFunctionExecutable* functionExpr(int index) { return m_functionExprs[index].get(); }
@@ -418,10 +269,7 @@ public:
     void addExceptionHandler(const UnlinkedHandlerInfo& handler) { createRareDataIfNecessary(); return m_rareData->m_exceptionHandlers.append(handler); }
     UnlinkedHandlerInfo& exceptionHandler(int index) { ASSERT(m_rareData); return m_rareData->m_exceptionHandlers[index]; }
 
-    void setSymbolTableConstantIndex(int index) { m_symbolTableConstantIndex = index; }
-    int symbolTableConstantIndex() const { return m_symbolTableConstantIndex; }
-
-    VM* vm() const { return m_vm; }
+    VM* vm() const;
 
     UnlinkedArrayProfile addArrayProfile() { return m_arrayProfileCount++; }
     unsigned numberOfArrayProfiles() { return m_arrayProfileCount; }
@@ -439,8 +287,6 @@ public:
 
     VirtualRegister thisRegister() const { return m_thisRegister; }
     VirtualRegister scopeRegister() const { return m_scopeRegister; }
-    VirtualRegister activationRegister() const { return m_lexicalEnvironmentRegister; }
-    bool hasActivationRegister() const { return m_lexicalEnvironmentRegister.isValid(); }
 
     void addPropertyAccessInstruction(unsigned propertyAccessInstruction)
     {
@@ -499,8 +345,16 @@ public:
     ALWAYS_INLINE unsigned startColumn() const { return 0; }
     unsigned endColumn() const { return m_endColumn; }
 
-    void addOpProfileControlFlowBytecodeOffset(size_t offset) { m_opProfileControlFlowBytecodeOffsets.append(offset); }
-    const Vector<size_t>& opProfileControlFlowBytecodeOffsets() const { return m_opProfileControlFlowBytecodeOffsets; }
+    void addOpProfileControlFlowBytecodeOffset(size_t offset)
+    {
+        createRareDataIfNecessary();
+        m_rareData->m_opProfileControlFlowBytecodeOffsets.append(offset);
+    }
+    const Vector<size_t>& opProfileControlFlowBytecodeOffsets() const
+    {
+        ASSERT(m_rareData);
+        return m_rareData->m_opProfileControlFlowBytecodeOffsets;
+    }
 
     void dumpExpressionRangeInfo(); // For debugging purpose only.
 
@@ -511,9 +365,6 @@ protected:
     void finishCreation(VM& vm)
     {
         Base::finishCreation(vm);
-        if (codeType() == GlobalCode)
-            return;
-        m_symbolTable.set(vm, this, SymbolTable::create(vm));
     }
 
 private:
@@ -526,51 +377,44 @@ private:
 
     void getLineAndColumn(ExpressionRangeInfo&, unsigned& line, unsigned& column);
 
-    std::unique_ptr<UnlinkedInstructionStream> m_unlinkedInstructions;
-
     int m_numParameters;
-    VM* m_vm;
+
+    std::unique_ptr<UnlinkedInstructionStream> m_unlinkedInstructions;
 
     VirtualRegister m_thisRegister;
     VirtualRegister m_scopeRegister;
-    VirtualRegister m_lexicalEnvironmentRegister;
     VirtualRegister m_globalObjectRegister;
 
-    unsigned m_needsFullScopeChain : 1;
     unsigned m_usesEval : 1;
     unsigned m_isStrictMode : 1;
     unsigned m_isConstructor : 1;
     unsigned m_hasCapturedVariables : 1;
     unsigned m_isBuiltinFunction : 1;
     unsigned m_constructorKind : 2;
-
+    unsigned m_superBinding : 1;
+    unsigned m_derivedContextType : 2;
+    unsigned m_isArrowFunctionContext : 1;
+    unsigned m_isClassContext : 1;
     unsigned m_firstLine;
     unsigned m_lineCount;
     unsigned m_endColumn;
 
+    SourceParseMode m_parseMode;
     CodeFeatures m_features;
     CodeType m_codeType;
 
     Vector<unsigned> m_jumpTargets;
 
+    Vector<unsigned> m_propertyAccessInstructions;
+
     // Constant Pools
     Vector<Identifier> m_identifiers;
     Vector<WriteBarrier<Unknown>> m_constantRegisters;
     Vector<SourceCodeRepresentation> m_constantsSourceCodeRepresentation;
-    std::array<unsigned, LinkTimeConstantCount> m_linkTimeConstants;
     typedef Vector<WriteBarrier<UnlinkedFunctionExecutable>> FunctionExpressionVector;
     FunctionExpressionVector m_functionDecls;
     FunctionExpressionVector m_functionExprs;
-
-    WriteBarrier<SymbolTable> m_symbolTable;
-    int m_symbolTableConstantIndex { 0 };
-
-    Vector<unsigned> m_propertyAccessInstructions;
-
-#if ENABLE(BYTECODE_COMMENTS)
-    Vector<Comment>  m_bytecodeComments;
-    size_t m_bytecodeCommentIterator;
-#endif
+    std::array<unsigned, LinkTimeConstantCount> m_linkTimeConstants;
 
     unsigned m_arrayProfileCount;
     unsigned m_arrayAllocationProfileCount;
@@ -595,20 +439,22 @@ public:
         Vector<UnlinkedStringJumpTable> m_stringSwitchJumpTables;
 
         Vector<ExpressionRangeInfo::FatPosition> m_expressionInfoFatPositions;
+
+        struct TypeProfilerExpressionRange {
+            unsigned m_startDivot;
+            unsigned m_endDivot;
+        };
+        HashMap<unsigned, TypeProfilerExpressionRange> m_typeProfilerInfoMap;
+        Vector<size_t> m_opProfileControlFlowBytecodeOffsets;
     };
 
 private:
     std::unique_ptr<RareData> m_rareData;
     Vector<ExpressionRangeInfo> m_expressionInfo;
-    struct TypeProfilerExpressionRange {
-        unsigned m_startDivot;
-        unsigned m_endDivot;
-    };
-    HashMap<unsigned, TypeProfilerExpressionRange> m_typeProfilerInfoMap;
-    Vector<size_t> m_opProfileControlFlowBytecodeOffsets;
 
 protected:
     static void visitChildren(JSCell*, SlotVisitor&);
+    static size_t estimatedSize(JSCell*);
 
 public:
     DECLARE_INFO;
@@ -646,6 +492,9 @@ public:
     void setVariableDeclarations(const VariableEnvironment& environment) { m_varDeclarations = environment; }
     const VariableEnvironment& variableDeclarations() const { return m_varDeclarations; }
 
+    void setLexicalDeclarations(const VariableEnvironment& environment) { m_lexicalDeclarations = environment; }
+    const VariableEnvironment& lexicalDeclarations() const { return m_lexicalDeclarations; }
+
     static void visitChildren(JSCell*, SlotVisitor&);
 
 private:
@@ -655,11 +504,77 @@ private:
     }
 
     VariableEnvironment m_varDeclarations;
+    VariableEnvironment m_lexicalDeclarations;
 
 public:
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
     {
         return Structure::create(vm, globalObject, proto, TypeInfo(UnlinkedProgramCodeBlockType, StructureFlags), info());
+    }
+
+    DECLARE_INFO;
+};
+
+class UnlinkedModuleProgramCodeBlock final : public UnlinkedGlobalCodeBlock {
+private:
+    friend class CodeCache;
+    static UnlinkedModuleProgramCodeBlock* create(VM* vm, const ExecutableInfo& info)
+    {
+        UnlinkedModuleProgramCodeBlock* instance = new (NotNull, allocateCell<UnlinkedModuleProgramCodeBlock>(vm->heap)) UnlinkedModuleProgramCodeBlock(vm, vm->unlinkedModuleProgramCodeBlockStructure.get(), info);
+        instance->finishCreation(*vm);
+        return instance;
+    }
+
+public:
+    typedef UnlinkedGlobalCodeBlock Base;
+    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
+
+    static void destroy(JSCell*);
+
+    static void visitChildren(JSCell*, SlotVisitor&);
+
+    // This offset represents the constant register offset to the stored symbol table that represents the layout of the
+    // module environment. This symbol table is created by the byte code generator since the module environment includes
+    // the top-most lexical captured variables inside the module code. This means that, once the module environment is
+    // allocated and instantiated from this symbol table, it is titely coupled with the specific unlinked module program
+    // code block and the stored symbol table. So before executing the module code, we should not clear the unlinked module
+    // program code block in the module executable. This requirement is met because the garbage collector only clears
+    // unlinked code in (1) unmarked executables and (2) function executables.
+    //
+    // Since the function code may be executed repeatedly and the environment of each function execution is different,
+    // the function code need to allocate and instantiate the environment in the prologue of the function code. On the
+    // other hand, the module code is executed only once. So we can instantiate the module environment outside the module
+    // code. At that time, we construct the module environment by using the symbol table that is held by the module executable.
+    // The symbol table held by the executable is the cloned one from one in the unlinked code block. Instantiating the module
+    // environment before executing and linking the module code is required to link the imported bindings between the modules.
+    //
+    // The unlinked module program code block only holds the pre-cloned symbol table in its constant register pool. It does
+    // not hold the instantiated module environment. So while the module environment requires the specific unlinked module
+    // program code block, the unlinked module code block can be used for the module environment instantiated from this
+    // unlinked code block. There is 1:N relation between the unlinked module code block and the module environments. So the
+    // unlinked module program code block can be cached.
+    //
+    // On the other hand, the linked code block for the module environment includes the resolved references to the imported
+    // bindings. The imported binding references the other module environment, so the linked code block is titly coupled
+    // with the specific set of the module environments. Thus, the linked code block should not be cached.
+    int moduleEnvironmentSymbolTableConstantRegisterOffset() { return m_moduleEnvironmentSymbolTableConstantRegisterOffset; }
+    void setModuleEnvironmentSymbolTableConstantRegisterOffset(int offset)
+    {
+        m_moduleEnvironmentSymbolTableConstantRegisterOffset = offset;
+    }
+
+private:
+    UnlinkedModuleProgramCodeBlock(VM* vm, Structure* structure, const ExecutableInfo& info)
+        : Base(vm, structure, ModuleCode, info)
+    {
+    }
+
+    int m_moduleEnvironmentSymbolTableConstantRegisterOffset { 0 };
+
+public:
+    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
+    {
+        return Structure::create(vm, globalObject, proto, TypeInfo(UnlinkedModuleProgramCodeBlockType, StructureFlags), info());
     }
 
     DECLARE_INFO;

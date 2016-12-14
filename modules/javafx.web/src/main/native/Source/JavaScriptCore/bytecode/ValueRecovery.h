@@ -31,6 +31,7 @@
 #if ENABLE(JIT)
 #include "GPRInfo.h"
 #include "FPRInfo.h"
+#include "Reg.h"
 #endif
 #include "JSCJSValue.h"
 #include "MacroAssembler.h"
@@ -55,6 +56,7 @@ enum ValueRecoveryTechnique {
     InPair,
 #endif
     InFPR,
+    UnboxedDoubleInFPR,
     // It's in the stack, but at a different location.
     DisplacedInJSStack,
     // It's in the stack, at a different location, and it's unboxed.
@@ -82,6 +84,19 @@ public:
 
     bool isSet() const { return m_technique != DontKnow; }
     bool operator!() const { return !isSet(); }
+
+#if ENABLE(JIT)
+    static ValueRecovery inRegister(Reg reg, DataFormat dataFormat)
+    {
+        if (reg.isGPR())
+            return inGPR(reg.gpr(), dataFormat);
+
+        ASSERT(reg.isFPR());
+        return inFPR(reg.fpr(), dataFormat);
+    }
+#endif
+
+    explicit operator bool() const { return isSet(); }
 
     static ValueRecovery inGPR(MacroAssembler::RegisterID gpr, DataFormat dataFormat)
     {
@@ -117,10 +132,14 @@ public:
     }
 #endif
 
-    static ValueRecovery inFPR(MacroAssembler::FPRegisterID fpr)
+    static ValueRecovery inFPR(MacroAssembler::FPRegisterID fpr, DataFormat dataFormat)
     {
+        ASSERT(dataFormat == DataFormatDouble || dataFormat & DataFormatJS);
         ValueRecovery result;
-        result.m_technique = InFPR;
+        if (dataFormat == DataFormatDouble)
+            result.m_technique = UnboxedDoubleInFPR;
+        else
+            result.m_technique = InFPR;
         result.m_source.fpr = fpr;
         return result;
     }
@@ -190,7 +209,7 @@ public:
 
     bool isConstant() const { return m_technique == Constant; }
 
-    bool isInRegisters() const
+    bool isInGPR() const
     {
         switch (m_technique) {
         case InGPR:
@@ -199,19 +218,81 @@ public:
         case UnboxedCellInGPR:
         case UnboxedInt52InGPR:
         case UnboxedStrictInt52InGPR:
-#if USE(JSVALUE32_64)
-        case InPair:
-#endif
-        case InFPR:
             return true;
         default:
             return false;
         }
     }
 
+    bool isInFPR() const
+    {
+        switch (m_technique) {
+        case InFPR:
+        case UnboxedDoubleInFPR:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    bool isInRegisters() const
+    {
+        return isInJSValueRegs() || isInGPR() || isInFPR();
+    }
+
+    bool isInJSStack() const
+    {
+        switch (m_technique) {
+        case DisplacedInJSStack:
+        case Int32DisplacedInJSStack:
+        case Int52DisplacedInJSStack:
+        case StrictInt52DisplacedInJSStack:
+        case DoubleDisplacedInJSStack:
+        case CellDisplacedInJSStack:
+        case BooleanDisplacedInJSStack:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    DataFormat dataFormat() const
+    {
+        switch (m_technique) {
+        case InGPR:
+        case InFPR:
+        case DisplacedInJSStack:
+        case Constant:
+#if USE(JSVALUE32_64)
+        case InPair:
+#endif
+            return DataFormatJS;
+        case UnboxedInt32InGPR:
+        case Int32DisplacedInJSStack:
+            return DataFormatInt32;
+        case UnboxedInt52InGPR:
+        case Int52DisplacedInJSStack:
+            return DataFormatInt52;
+        case UnboxedStrictInt52InGPR:
+        case StrictInt52DisplacedInJSStack:
+            return DataFormatStrictInt52;
+        case UnboxedBooleanInGPR:
+        case BooleanDisplacedInJSStack:
+            return DataFormatBoolean;
+        case UnboxedCellInGPR:
+        case CellDisplacedInJSStack:
+            return DataFormatCell;
+        case UnboxedDoubleInFPR:
+        case DoubleDisplacedInJSStack:
+            return DataFormatDouble;
+        default:
+            return DataFormatNone;
+        }
+    }
+
     MacroAssembler::RegisterID gpr() const
     {
-        ASSERT(m_technique == InGPR || m_technique == UnboxedInt32InGPR || m_technique == UnboxedBooleanInGPR || m_technique == UnboxedInt52InGPR || m_technique == UnboxedStrictInt52InGPR || m_technique == UnboxedCellInGPR);
+        ASSERT(isInGPR());
         return m_source.gpr;
     }
 
@@ -227,17 +308,35 @@ public:
         ASSERT(m_technique == InPair);
         return m_source.pair.payloadGPR;
     }
-#endif
+
+    bool isInJSValueRegs() const
+    {
+        return m_technique == InPair;
+    }
+
+#if ENABLE(JIT)
+    JSValueRegs jsValueRegs() const
+    {
+        ASSERT(isInJSValueRegs());
+        return JSValueRegs(tagGPR(), payloadGPR());
+    }
+#endif // ENABLE(JIT)
+#else
+    bool isInJSValueRegs() const
+    {
+        return isInGPR();
+    }
+#endif // USE(JSVALUE32_64)
 
     MacroAssembler::FPRegisterID fpr() const
     {
-        ASSERT(m_technique == InFPR);
+        ASSERT(isInFPR());
         return m_source.fpr;
     }
 
     VirtualRegister virtualRegister() const
     {
-        ASSERT(m_technique == DisplacedInJSStack || m_technique == Int32DisplacedInJSStack || m_technique == DoubleDisplacedInJSStack || m_technique == CellDisplacedInJSStack || m_technique == BooleanDisplacedInJSStack || m_technique == Int52DisplacedInJSStack || m_technique == StrictInt52DisplacedInJSStack);
+        ASSERT(isInJSStack());
         return VirtualRegister(m_source.virtualReg);
     }
 
@@ -264,7 +363,7 @@ public:
 
     JSValue constant() const
     {
-        ASSERT(m_technique == Constant);
+        ASSERT(isConstant());
         return JSValue::decode(m_source.constant);
     }
 

@@ -41,16 +41,16 @@
 
 namespace WebCore {
 
+namespace DisplayList {
+class DisplayList;
+}
+
 class FloatRoundedRect;
 class Image;
 class TransformState;
 
 class GraphicsLayerCA : public GraphicsLayer, public PlatformCALayerClient {
 public:
-    // The width and height of a single tile in a tiled layer. Should be large enough to
-    // avoid lots of small tiles (and therefore lots of drawing callbacks), but small enough
-    // to keep the overall tile cost low.
-    static const int kTiledLayerTileSize = 512;
 
     WEBCORE_EXPORT explicit GraphicsLayerCA(Type, GraphicsLayerClient&);
     WEBCORE_EXPORT virtual ~GraphicsLayerCA();
@@ -90,6 +90,7 @@ public:
     WEBCORE_EXPORT virtual void setDrawsContent(bool) override;
     WEBCORE_EXPORT virtual void setContentsVisible(bool) override;
     WEBCORE_EXPORT virtual void setAcceleratesDrawing(bool) override;
+    WEBCORE_EXPORT virtual void setUsesDisplayListDrawing(bool) override;
 
     WEBCORE_EXPORT virtual void setBackgroundColor(const Color&) override;
 
@@ -181,6 +182,7 @@ private:
     // PlatformCALayerClient overrides
     virtual void platformCALayerLayoutSublayersOfLayer(PlatformCALayer*) override { }
     virtual bool platformCALayerRespondsToLayoutChanges() const override { return false; }
+    WEBCORE_EXPORT void platformCALayerCustomSublayersChanged(PlatformCALayer*) override;
 
     WEBCORE_EXPORT void platformCALayerAnimationStarted(const String& animationKey, CFTimeInterval beginTime) override;
     WEBCORE_EXPORT void platformCALayerAnimationEnded(const String& animationKey) override;
@@ -198,11 +200,18 @@ private:
     WEBCORE_EXPORT virtual float platformCALayerContentsScaleMultiplierForNewTiles(PlatformCALayer*) const override;
     WEBCORE_EXPORT virtual bool platformCALayerShouldAggressivelyRetainTiles(PlatformCALayer*) const override;
     WEBCORE_EXPORT virtual bool platformCALayerShouldTemporarilyRetainTileCohorts(PlatformCALayer*) const override;
+    WEBCORE_EXPORT virtual IntSize platformCALayerTileSize() const override;
 
     virtual bool isCommittingChanges() const override { return m_isCommittingChanges; }
+    virtual bool isUsingDisplayListDrawing(PlatformCALayer*) const override { return m_usesDisplayListDrawing; }
 
     WEBCORE_EXPORT virtual void setIsViewportConstrained(bool) override;
     virtual bool isViewportConstrained() const override { return m_isViewportConstrained; }
+
+    WEBCORE_EXPORT virtual String displayListAsText(DisplayList::AsTextFlags) const override;
+
+    WEBCORE_EXPORT virtual void setIsTrackingDisplayListReplay(bool) override;
+    WEBCORE_EXPORT virtual String replayDisplayListAsText(DisplayList::AsTextFlags) const override;
 
     WEBCORE_EXPORT virtual double backingStoreMemoryEstimate() const override;
 
@@ -367,6 +376,8 @@ private:
     void ensureCloneLayers(CloneID, RefPtr<PlatformCALayer>& primaryLayer, RefPtr<PlatformCALayer>& structuralLayer,
         RefPtr<PlatformCALayer>& contentsLayer, RefPtr<PlatformCALayer>& contentsClippingLayer, RefPtr<PlatformCALayer>& contentsShapeMaskLayer, RefPtr<PlatformCALayer>& shapeMaskLayer, CloneLevel);
 
+    static void clearClones(std::unique_ptr<LayerMap>&);
+
     bool hasCloneLayers() const { return !!m_layerClones; }
     void removeCloneLayers();
     FloatPoint positionForCloneRootLayer() const;
@@ -521,6 +532,7 @@ private:
     bool m_usingBackdropLayerType : 1;
     bool m_isViewportConstrained : 1;
     bool m_intersectsCoverageRect : 1;
+    bool m_hasEverPainted : 1;
 
     Color m_contentsSolidColor;
 
@@ -568,6 +580,8 @@ private:
     AnimationsMap m_runningAnimations;
 
     Vector<FloatRect> m_dirtyRects;
+
+    std::unique_ptr<DisplayList::DisplayList> m_displayList;
 
     FloatSize m_pixelAlignmentOffset;
 

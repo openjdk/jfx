@@ -62,7 +62,7 @@ static std::unique_ptr<Shape> createEllipseShape(const FloatPoint& center, const
 
 static std::unique_ptr<Shape> createPolygonShape(std::unique_ptr<Vector<FloatPoint>> vertices, WindRule fillRule)
 {
-    return std::make_unique<PolygonShape>(WTF::move(vertices), fillRule);
+    return std::make_unique<PolygonShape>(WTFMove(vertices), fillRule);
 }
 
 static inline FloatRect physicalRectToLogical(const FloatRect& rect, float logicalBoxHeight, WritingMode writingMode)
@@ -135,7 +135,7 @@ std::unique_ptr<Shape> Shape::createShape(const BasicShape& basicShape, const La
             (*vertices)[i / 2] = physicalPointToLogical(vertex, logicalBoxSize.height(), writingMode);
         }
 
-        shape = createPolygonShape(WTF::move(vertices), polygon.windRule());
+        shape = createPolygonShape(WTFMove(vertices), polygon.windRule());
         break;
     }
 
@@ -179,11 +179,13 @@ std::unique_ptr<Shape> Shape::createRasterShape(Image* image, float threshold, c
     IntRect imageRect = snappedIntRect(imageR);
     IntRect marginRect = snappedIntRect(marginR);
     auto intervals = std::make_unique<RasterShapeIntervals>(marginRect.height(), -marginRect.y());
-    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(imageRect.size());
+    // FIXME (149420): This buffer should not be unconditionally unaccelerated.
+    std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(imageRect.size(), Unaccelerated);
 
     if (imageBuffer) {
-        GraphicsContext* graphicsContext = imageBuffer->context();
-        graphicsContext->drawImage(image, ColorSpaceDeviceRGB, IntRect(IntPoint(), imageRect.size()));
+        GraphicsContext& graphicsContext = imageBuffer->context();
+        if (image)
+            graphicsContext.drawImage(*image, IntRect(IntPoint(), imageRect.size()));
 
         RefPtr<Uint8ClampedArray> pixelArray = imageBuffer->getUnmultipliedImageData(IntRect(IntPoint(), imageRect.size()));
         unsigned pixelArrayLength = pixelArray->length();
@@ -214,10 +216,10 @@ std::unique_ptr<Shape> Shape::createRasterShape(Image* image, float threshold, c
         }
     }
 
-    auto rasterShape = std::make_unique<RasterShape>(WTF::move(intervals), marginRect.size());
+    auto rasterShape = std::make_unique<RasterShape>(WTFMove(intervals), marginRect.size());
     rasterShape->m_writingMode = writingMode;
     rasterShape->m_margin = margin;
-    return WTF::move(rasterShape);
+    return WTFMove(rasterShape);
 }
 
 std::unique_ptr<Shape> Shape::createBoxShape(const RoundedRect& roundedRect, WritingMode writingMode, float margin)
@@ -230,7 +232,7 @@ std::unique_ptr<Shape> Shape::createBoxShape(const RoundedRect& roundedRect, Wri
     shape->m_writingMode = writingMode;
     shape->m_margin = margin;
 
-    return WTF::move(shape);
+    return WTFMove(shape);
 }
 
 } // namespace WebCore

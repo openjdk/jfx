@@ -268,7 +268,7 @@ void JSCallbackObject<Parent>::put(JSCell* cell, ExecState* exec, PropertyName p
 
             if (OpaqueJSClassStaticFunctionsTable* staticFunctions = jsClass->staticFunctions(exec)) {
                 if (StaticFunctionEntry* entry = staticFunctions->get(name)) {
-                    PropertySlot getSlot(thisObject);
+                    PropertySlot getSlot(thisObject, PropertySlot::InternalMethodType::VMInquiry);
                     if (Parent::getOwnPropertySlot(thisObject, exec, propertyName, getSlot))
                         return Parent::put(thisObject, exec, propertyName, value, slot);
                     if (entry->attributes & kJSPropertyAttributeReadOnly)
@@ -600,12 +600,12 @@ JSValue JSCallbackObject<Parent>::getStaticValue(ExecState* exec, PropertyName p
 }
 
 template <class Parent>
-EncodedJSValue JSCallbackObject<Parent>::staticFunctionGetter(ExecState* exec, JSObject* slotParent, EncodedJSValue, PropertyName propertyName)
+EncodedJSValue JSCallbackObject<Parent>::staticFunctionGetter(ExecState* exec, EncodedJSValue thisValue, PropertyName propertyName)
 {
-    JSCallbackObject* thisObj = asCallbackObject(slotParent);
+    JSCallbackObject* thisObj = asCallbackObject(thisValue);
 
     // Check for cached or override property.
-    PropertySlot slot2(thisObj);
+    PropertySlot slot2(thisObj, PropertySlot::InternalMethodType::VMInquiry);
     if (Parent::getOwnPropertySlot(thisObj, exec, propertyName, slot2))
         return JSValue::encode(slot2.getValue(exec, propertyName));
 
@@ -628,9 +628,9 @@ EncodedJSValue JSCallbackObject<Parent>::staticFunctionGetter(ExecState* exec, J
 }
 
 template <class Parent>
-EncodedJSValue JSCallbackObject<Parent>::callbackGetter(ExecState* exec, JSObject* slotParent, EncodedJSValue, PropertyName propertyName)
+EncodedJSValue JSCallbackObject<Parent>::callbackGetter(ExecState* exec, EncodedJSValue thisValue, PropertyName propertyName)
 {
-    JSCallbackObject* thisObj = asCallbackObject(slotParent);
+    JSCallbackObject* thisObj = asCallbackObject(thisValue);
 
     JSObjectRef thisRef = toRef(thisObj);
     RefPtr<OpaqueJSString> propertyNameRef;

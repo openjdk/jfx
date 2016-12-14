@@ -80,18 +80,18 @@ RefPtr<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext* context, R
         ec = NOT_SUPPORTED_ERR;
         return nullptr;
     }
-    return adoptRef(*new RTCDataChannel(context, WTF::move(handler)));
+    return adoptRef(*new RTCDataChannel(context, WTFMove(handler)));
 }
 
 Ref<RTCDataChannel> RTCDataChannel::create(ScriptExecutionContext* context, std::unique_ptr<RTCDataChannelHandler> handler)
 {
     ASSERT(handler);
-    return adoptRef(*new RTCDataChannel(context, WTF::move(handler)));
+    return adoptRef(*new RTCDataChannel(context, WTFMove(handler)));
 }
 
 RTCDataChannel::RTCDataChannel(ScriptExecutionContext* context, std::unique_ptr<RTCDataChannelHandler> handler)
     : m_scriptExecutionContext(context)
-    , m_handler(WTF::move(handler))
+    , m_handler(WTFMove(handler))
     , m_stopped(false)
     , m_readyState(ReadyStateConnecting)
     , m_binaryType(BinaryTypeArrayBuffer)
@@ -304,9 +304,9 @@ void RTCDataChannel::stop()
     m_scriptExecutionContext = nullptr;
 }
 
-void RTCDataChannel::scheduleDispatchEvent(PassRefPtr<Event> event)
+void RTCDataChannel::scheduleDispatchEvent(Ref<Event>&& event)
 {
-    m_scheduledEvents.append(event);
+    m_scheduledEvents.append(WTFMove(event));
 
     if (!m_scheduledEventTimer.isActive())
         m_scheduledEventTimer.startOneShot(0);
@@ -317,11 +317,11 @@ void RTCDataChannel::scheduledEventTimerFired()
     if (m_stopped)
         return;
 
-    Vector<RefPtr<Event>> events;
+    Vector<Ref<Event>> events;
     events.swap(m_scheduledEvents);
 
     for (auto& event : events)
-        dispatchEvent(event.release());
+        dispatchEvent(event);
 }
 
 } // namespace WebCore

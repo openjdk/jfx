@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #ifndef MapData_h
 #define MapData_h
 
+#include "CopyBarrier.h"
 #include "JSCell.h"
 #include "WeakGCMapInlines.h"
 #include <wtf/HashFunctions.h>
@@ -87,6 +88,7 @@ public:
         const MapDataImpl* m_mapData;
         mutable int32_t m_index;
     };
+    STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(IteratorData);
 
     struct KeyType {
         ALWAYS_INLINE KeyType() { }
@@ -94,7 +96,7 @@ public:
         JSValue value;
     };
 
-    MapDataImpl(VM&);
+    MapDataImpl(VM&, JSCell* owner);
 
     void set(ExecState*, JSCell* owner, KeyType, JSValue);
     JSValue get(ExecState*, KeyType);
@@ -109,6 +111,8 @@ public:
     void visitChildren(JSCell* owner, SlotVisitor&);
     void copyBackingStore(CopyVisitor&, CopyToken);
 
+    size_t capacityInBytes() const { return m_capacity * sizeof(Entry); }
+
 private:
     typedef WTF::UnsignedWithZeroKeyHashTraits<int32_t> IndexTraits;
 
@@ -116,8 +120,6 @@ private:
     typedef HashMap<EncodedJSValue, int32_t, EncodedJSValueHash, EncodedJSValueHashTraits, IndexTraits> ValueKeyedMap;
     typedef HashMap<StringImpl*, int32_t, typename WTF::DefaultHash<StringImpl*>::Hash, WTF::HashTraits<StringImpl*>, IndexTraits> StringKeyedMap;
     typedef HashMap<SymbolImpl*, int32_t, typename WTF::PtrHash<SymbolImpl*>, WTF::HashTraits<SymbolImpl*>, IndexTraits> SymbolKeyedMap;
-
-    size_t capacityInBytes() { return m_capacity * sizeof(Entry); }
 
     ALWAYS_INLINE Entry* find(ExecState*, KeyType);
     ALWAYS_INLINE Entry* add(ExecState*, JSCell* owner, KeyType);
@@ -136,16 +138,17 @@ private:
     int32_t m_capacity;
     int32_t m_size;
     int32_t m_deletedCount;
-    Entry* m_entries;
+    JSCell* m_owner;
+    CopyBarrier<Entry> m_entries;
     WeakGCMap<JSIterator*, JSIterator> m_iterators;
 };
 
 template<typename Entry, typename JSIterator>
-ALWAYS_INLINE MapDataImpl<Entry, JSIterator>::MapDataImpl(VM& vm)
+ALWAYS_INLINE MapDataImpl<Entry, JSIterator>::MapDataImpl(VM& vm, JSCell* owner)
     : m_capacity(0)
     , m_size(0)
     , m_deletedCount(0)
-    , m_entries(nullptr)
+    , m_owner(owner)
     , m_iterators(vm)
 {
 }
@@ -182,7 +185,7 @@ ALWAYS_INLINE bool MapDataImpl<Entry, JSIterator>::IteratorData::next(WTF::KeyVa
 {
     if (!ensureSlot())
         return false;
-    Entry* entry = &m_mapData->m_entries[m_index];
+    Entry* entry = &m_mapData->m_entries.get(m_mapData->m_owner)[m_index];
     pair = WTF::KeyValuePair<JSValue, JSValue>(entry->key().get(), entry->value().get());
     m_index += 1;
     return true;
@@ -204,7 +207,7 @@ ALWAYS_INLINE int32_t MapDataImpl<Entry, JSIterator>::IteratorData::refreshCurso
     if (isFinished())
         return m_index;
 
-    Entry* entries = m_mapData->m_entries;
+    Entry* entries = m_mapData->m_entries.get(m_mapData->m_owner);
     size_t end = m_mapData->m_size;
     while (static_cast<size_t>(m_index) < end && !entries[m_index].key())
         m_index++;

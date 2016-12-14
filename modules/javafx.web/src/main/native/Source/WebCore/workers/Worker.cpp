@@ -31,8 +31,8 @@
 
 #include "DOMWindow.h"
 #include "CachedResourceLoader.h"
+#include "ContentSecurityPolicy.h"
 #include "Document.h"
-#include "EventException.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
@@ -41,6 +41,7 @@
 #include "InspectorInstrumentation.h"
 #include "MessageEvent.h"
 #include "NetworkStateNotifier.h"
+#include "SecurityOrigin.h"
 #include "TextEncoding.h"
 #include "WorkerGlobalScopeProxy.h"
 #include "WorkerScriptLoader.h"
@@ -82,17 +83,20 @@ RefPtr<Worker> Worker::create(ScriptExecutionContext& context, const String& url
 
     worker->suspendIfNeeded();
 
-    URL scriptURL = worker->resolveURL(url, ec);
+    bool shouldBypassMainWorldContentSecurityPolicy = context.shouldBypassMainWorldContentSecurityPolicy();
+    URL scriptURL = worker->resolveURL(url, shouldBypassMainWorldContentSecurityPolicy, ec);
     if (scriptURL.isEmpty())
         return nullptr;
+
+    worker->m_shouldBypassMainWorldContentSecurityPolicy = shouldBypassMainWorldContentSecurityPolicy;
 
     // The worker context does not exist while loading, so we must ensure that the worker object is not collected, nor are its event listeners.
     worker->setPendingActivity(worker.ptr());
 
     worker->m_scriptLoader = WorkerScriptLoader::create();
-    worker->m_scriptLoader->loadAsynchronously(&context, scriptURL, DenyCrossOriginRequests, worker.ptr());
-
-    return WTF::move(worker);
+    auto contentSecurityPolicyEnforcement = shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceChildSrcDirective;
+    worker->m_scriptLoader->loadAsynchronously(&context, scriptURL, DenyCrossOriginRequests, contentSecurityPolicyEnforcement, worker.ptr());
+    return WTFMove(worker);
 }
 
 Worker::~Worker()
@@ -117,7 +121,7 @@ void Worker::postMessage(PassRefPtr<SerializedScriptValue> message, const Messag
     std::unique_ptr<MessagePortChannelArray> channels = MessagePort::disentanglePorts(ports, ec);
     if (ec)
         return;
-    m_contextProxy->postMessageToWorkerGlobalScope(message, WTF::move(channels));
+    m_contextProxy->postMessageToWorkerGlobalScope(message, WTFMove(channels));
 }
 
 void Worker::terminate()
@@ -125,7 +129,7 @@ void Worker::terminate()
     m_contextProxy->terminateWorkerGlobalScope();
 }
 
-bool Worker::canSuspendForPageCache() const
+bool Worker::canSuspendForDocumentSuspension() const
 {
     // FIXME: It is not currently possible to suspend a worker, so pages with workers can not go into page cache.
     return false;
@@ -151,8 +155,11 @@ void Worker::notifyNetworkStateChange(bool isOnLine)
     m_contextProxy->notifyNetworkStateChange(isOnLine);
 }
 
-void Worker::didReceiveResponse(unsigned long identifier, const ResourceResponse&)
+void Worker::didReceiveResponse(unsigned long identifier, const ResourceResponse& response)
 {
+    const URL& responseURL = response.url();
+    if (!responseURL.protocolIs("blob") && !responseURL.protocolIs("file") && !SecurityOrigin::create(responseURL)->isUnique())
+        m_contentSecurityPolicyResponseHeaders = ContentSecurityPolicyResponseHeaders(response);
     InspectorInstrumentation::didReceiveScriptResponse(scriptExecutionContext(), identifier);
 }
 
@@ -161,10 +168,8 @@ void Worker::notifyFinished()
     if (m_scriptLoader->failed())
         dispatchEvent(Event::create(eventNames().errorEvent, false, true));
     else {
-        WorkerThreadStartMode startMode = DontPauseWorkerGlobalScopeOnStart;
-        if (InspectorInstrumentation::shouldPauseDedicatedWorkerOnStart(scriptExecutionContext()))
-            startMode = PauseWorkerGlobalScopeOnStart;
-        m_contextProxy->startWorkerGlobalScope(m_scriptLoader->url(), scriptExecutionContext()->userAgent(m_scriptLoader->url()), m_scriptLoader->script(), startMode);
+        const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders = m_contentSecurityPolicyResponseHeaders ? m_contentSecurityPolicyResponseHeaders.value() : scriptExecutionContext()->contentSecurityPolicy()->responseHeaders();
+        m_contextProxy->startWorkerGlobalScope(m_scriptLoader->url(), scriptExecutionContext()->userAgent(m_scriptLoader->url()), m_scriptLoader->script(), contentSecurityPolicyResponseHeaders, m_shouldBypassMainWorldContentSecurityPolicy, DontPauseWorkerGlobalScopeOnStart);
         InspectorInstrumentation::scriptImported(scriptExecutionContext(), m_scriptLoader->identifier(), m_scriptLoader->script());
     }
     m_scriptLoader = nullptr;

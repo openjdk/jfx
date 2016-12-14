@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012, 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2012, 2014-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,10 @@
 #include "CodeLocation.h"
 #include "MacroAssemblerCodeRef.h"
 #include "Options.h"
-#include "WeakRandom.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/SharedTask.h>
+#include <wtf/WeakRandom.h>
 
 #if ENABLE(ASSEMBLER)
 
@@ -66,23 +67,38 @@ inline bool isX86()
 #endif
 }
 
+inline bool isX86_64()
+{
+#if CPU(X86_64)
+    return true;
+#else
+    return false;
+#endif
+}
+
 inline bool optimizeForARMv7IDIVSupported()
 {
-    return isARMv7IDIVSupported() && Options::enableArchitectureSpecificOptimizations();
+    return isARMv7IDIVSupported() && Options::useArchitectureSpecificOptimizations();
 }
 
 inline bool optimizeForARM64()
 {
-    return isARM64() && Options::enableArchitectureSpecificOptimizations();
+    return isARM64() && Options::useArchitectureSpecificOptimizations();
 }
 
 inline bool optimizeForX86()
 {
-    return isX86() && Options::enableArchitectureSpecificOptimizations();
+    return isX86() && Options::useArchitectureSpecificOptimizations();
 }
 
+inline bool optimizeForX86_64()
+{
+    return isX86_64() && Options::useArchitectureSpecificOptimizations();
+}
+
+class AllowMacroScratchRegisterUsage;
+class DisallowMacroScratchRegisterUsage;
 class LinkBuffer;
-class RepatchBuffer;
 class Watchpoint;
 namespace DFG {
 struct OSRExit;
@@ -103,11 +119,11 @@ public:
     typedef typename AssemblerType::RegisterID RegisterID;
     typedef typename AssemblerType::FPRegisterID FPRegisterID;
 
-    static RegisterID firstRegister() { return AssemblerType::firstRegister(); }
-    static RegisterID lastRegister() { return AssemblerType::lastRegister(); }
+    static constexpr RegisterID firstRegister() { return AssemblerType::firstRegister(); }
+    static constexpr RegisterID lastRegister() { return AssemblerType::lastRegister(); }
 
-    static FPRegisterID firstFPRegister() { return AssemblerType::firstFPRegister(); }
-    static FPRegisterID lastFPRegister() { return AssemblerType::lastFPRegister(); }
+    static constexpr FPRegisterID firstFPRegister() { return AssemblerType::firstFPRegister(); }
+    static constexpr FPRegisterID lastFPRegister() { return AssemblerType::lastFPRegister(); }
 
     // Section 1: MacroAssembler operand types
     //
@@ -380,6 +396,8 @@ public:
             masm->invalidateAllTempRegisters();
         }
 
+        bool operator==(const Label& other) const { return m_label == other.m_label; }
+
         bool isSet() const { return m_label.isSet(); }
     private:
         AssemblerLabel m_label;
@@ -507,7 +525,9 @@ public:
             None = 0x0,
             Linkable = 0x1,
             Near = 0x2,
+            Tail = 0x4,
             LinkableNear = 0x3,
+            LinkableNearTail = 0x7,
         };
 
         Call()
@@ -850,7 +870,7 @@ public:
         FOR_EACH_CPU_REGISTER(DECLARE_REGISTER)
         #undef DECLARE_REGISTER
 
-        static const char* registerName(RegisterID regID)
+        static const char* gprName(RegisterID regID)
         {
             switch (regID) {
                 #define DECLARE_REGISTER(_type, _regName) \
@@ -858,11 +878,12 @@ public:
                     return #_regName;
                 FOR_EACH_CPU_GPREGISTER(DECLARE_REGISTER)
                 #undef DECLARE_REGISTER
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
             }
-            RELEASE_ASSERT_NOT_REACHED();
         }
 
-        static const char* registerName(FPRegisterID regID)
+        static const char* fprName(FPRegisterID regID)
         {
             switch (regID) {
                 #define DECLARE_REGISTER(_type, _regName) \
@@ -870,11 +891,12 @@ public:
                     return #_regName;
                 FOR_EACH_CPU_FPREGISTER(DECLARE_REGISTER)
                 #undef DECLARE_REGISTER
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
             }
-            RELEASE_ASSERT_NOT_REACHED();
         }
 
-        void* registerValue(RegisterID regID)
+        void*& gpr(RegisterID regID)
         {
             switch (regID) {
                 #define DECLARE_REGISTER(_type, _regName) \
@@ -882,11 +904,12 @@ public:
                     return _regName;
                 FOR_EACH_CPU_GPREGISTER(DECLARE_REGISTER)
                 #undef DECLARE_REGISTER
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
             }
-            RELEASE_ASSERT_NOT_REACHED();
         }
 
-        double registerValue(FPRegisterID regID)
+        double& fpr(FPRegisterID regID)
         {
             switch (regID) {
                 #define DECLARE_REGISTER(_type, _regName) \
@@ -894,10 +917,10 @@ public:
                     return _regName;
                 FOR_EACH_CPU_FPREGISTER(DECLARE_REGISTER)
                 #undef DECLARE_REGISTER
+            default:
+                RELEASE_ASSERT_NOT_REACHED();
             }
-            RELEASE_ASSERT_NOT_REACHED();
         }
-
     };
 
     struct ProbeContext;
@@ -909,97 +932,12 @@ public:
         void* arg2;
         CPUState cpu;
 
-        void print(int indentation = 0)
-        {
-            #define INDENT MacroAssemblerType::printIndent(indentation)
-
-            INDENT, dataLogF("ProbeContext %p {\n", this);
-            indentation++;
-            {
-                INDENT, dataLogF("probeFunction: %p\n", probeFunction);
-                INDENT, dataLogF("arg1: %p %llu\n", arg1, reinterpret_cast<int64_t>(arg1));
-                INDENT, dataLogF("arg2: %p %llu\n", arg2, reinterpret_cast<int64_t>(arg2));
-                MacroAssemblerType::printCPU(cpu, indentation);
-            }
-            indentation--;
-            INDENT, dataLog("}\n");
-
-            #undef INDENT
-        }
+        // Convenience methods:
+        void*& gpr(RegisterID regID) { return cpu.gpr(regID); }
+        double& fpr(FPRegisterID regID) { return cpu.fpr(regID); }
+        const char* gprName(RegisterID regID) { return cpu.gprName(regID); }
+        const char* fprName(FPRegisterID regID) { return cpu.fprName(regID); }
     };
-
-    static void printIndent(int indentation)
-    {
-        for (; indentation > 0; indentation--)
-            dataLog("    ");
-    }
-
-    static void printCPU(CPUState& cpu, int indentation = 0)
-    {
-        #define INDENT printIndent(indentation)
-
-        INDENT, dataLog("cpu: {\n");
-        MacroAssemblerType::printCPURegisters(cpu, indentation + 1);
-        INDENT, dataLog("}\n");
-
-        #undef INDENT
-    }
-
-    // This is a marker type only used with print(). See print() below for details.
-    struct AllRegisters { };
-
-    // Emits code which will print debugging info at runtime. The type of values that
-    // can be printed is encapsulated in the PrintArg struct below. Here are some
-    // examples:
-    //
-    //      print("Hello world\n"); // Emits code to print the string.
-    //
-    //      CodeBlock* cb = ...;
-    //      print(cb);              // Emits code to print the pointer value.
-    //
-    //      RegisterID regID = ...;
-    //      print(regID);           // Emits code to print the register value (not the id).
-    //
-    //      // Emits code to print all registers.  Unlike other items, this prints
-    //      // multiple lines as follows:
-    //      //      cpu {
-    //      //          eax: 0x123456789
-    //      //          ebx: 0x000000abc
-    //      //          ...
-    //      //      }
-    //      print(AllRegisters());
-    //
-    //      // Print multiple things at once. This incurs the probe overhead only once
-    //      // to print all the items.
-    //      print("cb:", cb, " regID:", regID, " cpu:\n", AllRegisters());
-
-    template<typename... Arguments>
-    void print(Arguments... args)
-    {
-        printInternal(static_cast<MacroAssemblerType*>(this), args...);
-    }
-
-    // This function will be called by printCPU() to print the contents of the
-    // target specific registers which are saved away in the CPUState struct.
-    // printCPURegisters() should make use of printIndentation() to print the
-    // registers with the appropriate amount of indentation.
-    //
-    // Note: printCPURegisters() should be implemented by the target specific
-    // MacroAssembler. This prototype is only provided here to document the
-    // interface.
-
-    static void printCPURegisters(CPUState&, int indentation = 0);
-
-    // This function will be called by print() to print the contents of a
-    // specific register (from the CPUState) in line with other items in the
-    // print stream. Hence, no indentation is needed.
-    //
-    // Note: printRegister() should be implemented by the target specific
-    // MacroAssembler. These prototypes are only provided here to document their
-    // interface.
-
-    static void printRegister(CPUState&, RegisterID);
-    static void printRegister(CPUState&, FPRegisterID);
 
     // This function emits code to preserve the CPUState (e.g. registers),
     // call a user supplied probe function, and restore the CPUState before
@@ -1020,11 +958,85 @@ public:
     // Note: probe() should be implemented by the target specific MacroAssembler.
     // This prototype is only provided here to document the interface.
 
-    void probe(ProbeFunction, void* arg1 = 0, void* arg2 = 0);
+    void probe(ProbeFunction, void* arg1, void* arg2);
 
 #endif // ENABLE(MASM_PROBE)
 
     AssemblerType m_assembler;
+
+    static void linkJump(void* code, Jump jump, CodeLocationLabel target)
+    {
+        AssemblerType::linkJump(code, jump.m_label, target.dataLocation());
+    }
+
+    static void linkPointer(void* code, AssemblerLabel label, void* value)
+    {
+        AssemblerType::linkPointer(code, label, value);
+    }
+
+    static void* getLinkerAddress(void* code, AssemblerLabel label)
+    {
+        return AssemblerType::getRelocatedAddress(code, label);
+    }
+
+    static unsigned getLinkerCallReturnOffset(Call call)
+    {
+        return AssemblerType::getCallReturnOffset(call.m_label);
+    }
+
+    static void repatchJump(CodeLocationJump jump, CodeLocationLabel destination)
+    {
+        AssemblerType::relinkJump(jump.dataLocation(), destination.dataLocation());
+    }
+
+    static void repatchNearCall(CodeLocationNearCall nearCall, CodeLocationLabel destination)
+    {
+        switch (nearCall.callMode()) {
+        case NearCallMode::Tail:
+            AssemblerType::relinkJump(nearCall.dataLocation(), destination.executableAddress());
+            return;
+        case NearCallMode::Regular:
+            AssemblerType::relinkCall(nearCall.dataLocation(), destination.executableAddress());
+            return;
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    static void repatchCompact(CodeLocationDataLabelCompact dataLabelCompact, int32_t value)
+    {
+        AssemblerType::repatchCompact(dataLabelCompact.dataLocation(), value);
+    }
+
+    static void repatchInt32(CodeLocationDataLabel32 dataLabel32, int32_t value)
+    {
+        AssemblerType::repatchInt32(dataLabel32.dataLocation(), value);
+    }
+
+    static void repatchPointer(CodeLocationDataLabelPtr dataLabelPtr, void* value)
+    {
+        AssemblerType::repatchPointer(dataLabelPtr.dataLocation(), value);
+    }
+
+    static void* readPointer(CodeLocationDataLabelPtr dataLabelPtr)
+    {
+        return AssemblerType::readPointer(dataLabelPtr.dataLocation());
+    }
+
+    static void replaceWithLoad(CodeLocationConvertibleLoad label)
+    {
+        AssemblerType::replaceWithLoad(label.dataLocation());
+    }
+
+    static void replaceWithAddressComputation(CodeLocationConvertibleLoad label)
+    {
+        AssemblerType::replaceWithAddressComputation(label.dataLocation());
+    }
+
+    template<typename Functor>
+    void addLinkTask(const Functor& functor)
+    {
+        m_linkTasks.append(createSharedTask<void(LinkBuffer&)>(functor));
+    }
 
 protected:
     AbstractMacroAssembler()
@@ -1119,206 +1131,14 @@ protected:
         m_tempRegistersValidBits |= registerMask;
     }
 
+    friend class AllowMacroScratchRegisterUsage;
+    friend class DisallowMacroScratchRegisterUsage;
     unsigned m_tempRegistersValidBits;
+    bool m_allowScratchRegister { true };
+
+    Vector<RefPtr<SharedTask<void(LinkBuffer&)>>> m_linkTasks;
 
     friend class LinkBuffer;
-    friend class RepatchBuffer;
-
-    static void linkJump(void* code, Jump jump, CodeLocationLabel target)
-    {
-        AssemblerType::linkJump(code, jump.m_label, target.dataLocation());
-    }
-
-    static void linkPointer(void* code, AssemblerLabel label, void* value)
-    {
-        AssemblerType::linkPointer(code, label, value);
-    }
-
-    static void* getLinkerAddress(void* code, AssemblerLabel label)
-    {
-        return AssemblerType::getRelocatedAddress(code, label);
-    }
-
-    static unsigned getLinkerCallReturnOffset(Call call)
-    {
-        return AssemblerType::getCallReturnOffset(call.m_label);
-    }
-
-    static void repatchJump(CodeLocationJump jump, CodeLocationLabel destination)
-    {
-        AssemblerType::relinkJump(jump.dataLocation(), destination.dataLocation());
-    }
-
-    static void repatchNearCall(CodeLocationNearCall nearCall, CodeLocationLabel destination)
-    {
-        AssemblerType::relinkCall(nearCall.dataLocation(), destination.executableAddress());
-    }
-
-    static void repatchCompact(CodeLocationDataLabelCompact dataLabelCompact, int32_t value)
-    {
-        AssemblerType::repatchCompact(dataLabelCompact.dataLocation(), value);
-    }
-
-    static void repatchInt32(CodeLocationDataLabel32 dataLabel32, int32_t value)
-    {
-        AssemblerType::repatchInt32(dataLabel32.dataLocation(), value);
-    }
-
-    static void repatchPointer(CodeLocationDataLabelPtr dataLabelPtr, void* value)
-    {
-        AssemblerType::repatchPointer(dataLabelPtr.dataLocation(), value);
-    }
-
-    static void* readPointer(CodeLocationDataLabelPtr dataLabelPtr)
-    {
-        return AssemblerType::readPointer(dataLabelPtr.dataLocation());
-    }
-
-    static void replaceWithLoad(CodeLocationConvertibleLoad label)
-    {
-        AssemblerType::replaceWithLoad(label.dataLocation());
-    }
-
-    static void replaceWithAddressComputation(CodeLocationConvertibleLoad label)
-    {
-        AssemblerType::replaceWithAddressComputation(label.dataLocation());
-    }
-
-private:
-
-#if ENABLE(MASM_PROBE)
-
-    struct PrintArg {
-
-        enum class Type {
-            AllRegisters,
-            RegisterID,
-            FPRegisterID,
-            ConstCharPtr,
-            ConstVoidPtr,
-            IntptrValue,
-            UintptrValue,
-        };
-
-        PrintArg(AllRegisters&)
-            : type(Type::AllRegisters)
-        {
-        }
-
-        PrintArg(RegisterID regID)
-            : type(Type::RegisterID)
-        {
-            u.gpRegisterID = regID;
-        }
-
-        PrintArg(FPRegisterID regID)
-            : type(Type::FPRegisterID)
-        {
-            u.fpRegisterID = regID;
-        }
-
-        PrintArg(const char* ptr)
-            : type(Type::ConstCharPtr)
-        {
-            u.constCharPtr = ptr;
-        }
-
-        PrintArg(const void* ptr)
-            : type(Type::ConstVoidPtr)
-        {
-            u.constVoidPtr = ptr;
-        }
-
-        PrintArg(int value)
-            : type(Type::IntptrValue)
-        {
-            u.intptrValue = value;
-        }
-
-        PrintArg(unsigned value)
-            : type(Type::UintptrValue)
-        {
-            u.intptrValue = value;
-        }
-
-        PrintArg(intptr_t value)
-            : type(Type::IntptrValue)
-        {
-            u.intptrValue = value;
-        }
-
-        PrintArg(uintptr_t value)
-            : type(Type::UintptrValue)
-        {
-            u.uintptrValue = value;
-        }
-
-        Type type;
-        union {
-            RegisterID gpRegisterID;
-            FPRegisterID fpRegisterID;
-            const char* constCharPtr;
-            const void* constVoidPtr;
-            intptr_t intptrValue;
-            uintptr_t uintptrValue;
-        } u;
-    };
-
-    typedef Vector<PrintArg> PrintArgsList;
-
-    template<typename FirstArg, typename... Arguments>
-    static void appendPrintArg(PrintArgsList* argsList, FirstArg& firstArg, Arguments... otherArgs)
-    {
-        argsList->append(PrintArg(firstArg));
-        appendPrintArg(argsList, otherArgs...);
-    }
-
-    static void appendPrintArg(PrintArgsList*) { }
-
-
-    template<typename... Arguments>
-    static void printInternal(MacroAssemblerType* masm, Arguments... args)
-    {
-        auto argsList = std::make_unique<PrintArgsList>();
-        appendPrintArg(argsList.get(), args...);
-        masm->probe(printCallback, argsList.release());
-    }
-
-    static void printCallback(ProbeContext* context)
-    {
-        typedef PrintArg Arg;
-        PrintArgsList& argsList =
-            *reinterpret_cast<PrintArgsList*>(context->arg1);
-        for (size_t i = 0; i < argsList.size(); i++) {
-            auto& arg = argsList[i];
-            switch (arg.type) {
-            case Arg::Type::AllRegisters:
-                MacroAssemblerType::printCPU(context->cpu);
-                break;
-            case Arg::Type::RegisterID:
-                MacroAssemblerType::printRegister(context->cpu, arg.u.gpRegisterID);
-                break;
-            case Arg::Type::FPRegisterID:
-                MacroAssemblerType::printRegister(context->cpu, arg.u.fpRegisterID);
-                break;
-            case Arg::Type::ConstCharPtr:
-                dataLog(arg.u.constCharPtr);
-                break;
-            case Arg::Type::ConstVoidPtr:
-                dataLogF("%p", arg.u.constVoidPtr);
-                break;
-            case Arg::Type::IntptrValue:
-                dataLog(arg.u.intptrValue);
-                break;
-            case Arg::Type::UintptrValue:
-                dataLog(arg.u.uintptrValue);
-                break;
-            }
-        }
-    }
-
-#endif // ENABLE(MASM_PROBE)
-
 }; // class AbstractMacroAssembler
 
 } // namespace JSC

@@ -1,27 +1,10 @@
 cmake_minimum_required(VERSION 2.8.12)
 project(WebKit)
 
-# -----------------------------------------------------------------------------
-# Default library type
-# -----------------------------------------------------------------------------
-set(BMALLOC_DIR "${CMAKE_SOURCE_DIR}/Source/bmalloc")
-set(WTF_DIR "${CMAKE_SOURCE_DIR}/Source/WTF")
-set(JAVASCRIPTCORE_DIR "${CMAKE_SOURCE_DIR}/Source/JavaScriptCore")
-set(WEBCORE_DIR "${CMAKE_SOURCE_DIR}/Source/WebCore")
-set(WEBKIT_DIR "${CMAKE_SOURCE_DIR}/Source/WebKit")
-set(WEBKIT2_DIR "${CMAKE_SOURCE_DIR}/Source/WebKit2")
-set(THIRDPARTY_DIR "${CMAKE_SOURCE_DIR}/Source/ThirdParty")
-
-set(TOOLS_DIR "${CMAKE_SOURCE_DIR}/Tools")
-
-set(DERIVED_SOURCES_DIR "${CMAKE_BINARY_DIR}/DerivedSources")
-set(DERIVED_SOURCES_JAVASCRIPTCORE_DIR "${CMAKE_BINARY_DIR}/DerivedSources/JavaScriptCore")
-set(DERIVED_SOURCES_WEBCORE_DIR "${CMAKE_BINARY_DIR}/DerivedSources/WebCore")
-set(DERIVED_SOURCES_WEBKITLEGACY_DIR "${CMAKE_BINARY_DIR}/DerivedSources/WebKitLegacy")
-set(DERIVED_SOURCES_WEBKIT_DIR "${CMAKE_BINARY_DIR}/DerivedSources/WebKit")
-set(DERIVED_SOURCES_WEBKIT2_DIR "${CMAKE_BINARY_DIR}/DerivedSources/WebKit2")
-set(DERIVED_SOURCES_WEBINSPECTORUI_DIR "${CMAKE_BINARY_DIR}/DerivedSources/WebInspectorUI")
-set(DERIVED_SOURCES_WTF_DIR "${CMAKE_BINARY_DIR}/DerivedSources/WTF")
+# This should be removed once we require CMake 3.3.
+if (POLICY CMP0058)
+    cmake_policy(SET CMP0058 NEW)
+endif ()
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/Source/cmake")
 
@@ -29,19 +12,13 @@ if (NOT DEFINED ENABLE_WEBKIT)
     set(ENABLE_WEBKIT ON)
 endif ()
 
-if (NOT DEFINED ENABLE_TOOLS AND EXISTS ${TOOLS_DIR})
+if (NOT DEFINED ENABLE_TOOLS AND EXISTS "${CMAKE_SOURCE_DIR}/Tools")
     set(ENABLE_TOOLS ON)
 endif ()
-
-include(WebKitMacros)
-include(WebKitFS)
-include(WebKitHelpers)
-include(WebKitFeatures)
 
 # -----------------------------------------------------------------------------
 # Determine which port will be built
 # -----------------------------------------------------------------------------
-message(STATUS "####=== PORT ${PORT}")
 set(ALL_PORTS Efl GTK AppleWin WinCairo Mac Java)
 set(PORT "NOPORT" CACHE STRING "choose which WebKit port to build (one of ${ALL_PORTS})")
 
@@ -51,30 +28,6 @@ if (${RET} EQUAL -1)
 endif ()
 
 string(TOLOWER ${PORT} WEBKIT_PORT_DIR)
-
-# -----------------------------------------------------------------------------
-# Find common packages (used by all ports)
-# -----------------------------------------------------------------------------
-find_package(BISON 2.3 REQUIRED)
-if (!APPLE)
-    find_package(FLEX 2.5.34 REQUIRED)
-endif ()
-
-# TODO Enforce version requirement for gperf
-find_package(Gperf 3.0.1 REQUIRED)
-
-# TODO Enforce version requirement for perl
-find_package(Perl 5.10.0 REQUIRED)
-
-find_package(PythonInterp 2.7.0 REQUIRED)
-
-# We cannot check for RUBY_FOUND because it is set only when the full package is installed and
-# the only thing we need is the interpreter. Unlike Python, cmake does not provide a macro
-# for finding only the Ruby interpreter.
-find_package(Ruby 1.8.7)
-if (NOT RUBY_EXECUTABLE OR RUBY_VERSION VERSION_LESS 1.8.7)
-    message(FATAL_ERROR "Ruby 1.8.7 or higher is required.")
-endif ()
 
 # -----------------------------------------------------------------------------
 # Determine the target processor
@@ -154,17 +107,16 @@ set(WebCoreTestSupport_LIBRARY_TYPE STATIC)
 option(SHOULD_INSTALL_JS_SHELL "generate an installation rule to install the built JavaScript shell")
 
 # -----------------------------------------------------------------------------
-# Common options
+# Default output directories, which can be overwritten by ports
 #------------------------------------------------------------------------------
-include(OptionsCommon)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # -----------------------------------------------------------------------------
-# Port-specific options
-# -----------------------------------------------------------------------------
-include(Options${PORT})
+# Common configuration
+#------------------------------------------------------------------------------
+include(WebKitCommon)
 
 # -----------------------------------------------------------------------------
 # Enable API unit tests and create a target for the test runner
@@ -194,8 +146,3 @@ endif ()
 # Print the features list last, for maximum visibility.
 # -----------------------------------------------------------------------------
 PRINT_WEBKIT_OPTIONS()
-
-# -----------------------------------------------------------------------------
-# Create the configuration header
-# -----------------------------------------------------------------------------
-CREATE_CONFIGURATION_HEADER()

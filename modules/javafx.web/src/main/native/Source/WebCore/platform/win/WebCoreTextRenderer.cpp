@@ -49,9 +49,9 @@ static void doDrawTextAtPoint(GraphicsContext& context, const String& text, cons
 {
     TextRun run(text);
 
-    context.setFillColor(color, ColorSpaceDeviceRGB);
+    context.setFillColor(color);
     if (isOneLeftToRightRun(run))
-        font.drawText(&context, run, point);
+        font.drawText(context, run, point);
     else
         context.drawBidiText(font, run, point);
 
@@ -71,7 +71,7 @@ static void doDrawTextAtPoint(GraphicsContext& context, const String& text, cons
         IntPoint underlinePoint(point);
         underlinePoint.move(beforeWidth, 1);
 
-        context.setStrokeColor(color, ColorSpaceDeviceRGB);
+        context.setStrokeColor(color);
         context.drawLineForText(underlinePoint, underlinedWidth, false);
     }
 }
@@ -91,7 +91,7 @@ void WebCoreDrawDoubledTextAtPoint(GraphicsContext& context, const String& text,
 
 float WebCoreTextFloatWidth(const String& text, const FontCascade& font)
 {
-    return StringTruncator::width(text, font, StringTruncator::EnableRoundingHacks);
+    return StringTruncator::width(text, font);
 }
 
 void WebCoreSetShouldUseFontSmoothing(bool smooth)

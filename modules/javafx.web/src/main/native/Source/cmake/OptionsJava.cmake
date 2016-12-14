@@ -19,35 +19,11 @@ else ()
     SET_AND_EXPOSE_TO_BUILD(USE_JAVA_UNICODE TRUE)
 endif ()
 
-# IndexedDB support requires GCC 4.9, see https://bugs.webkit.org/show_bug.cgi?id=98932.
-# if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-#     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.9.0")
-#         message(FATAL_ERROR "GCC 4.9.0 is required to build WebKitGTK+, use a newer GCC version or clang")
-#     endif ()
-# endif ()
-
-# # Libtool library version, not to be confused with API version.
-# # See http://www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html
-# CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(WEBKIT2 46 0 9)
-# CALCULATE_LIBRARY_VERSIONS_FROM_LIBTOOL_TRIPLE(JAVASCRIPTCORE 20 3 2)
-
 # These are shared variables, but we special case their definition so that we can use the
 # CMAKE_INSTALL_* variables that are populated by the GNUInstallDirs macro.
 set(LIB_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBDIR}" CACHE PATH "Absolute path to library installation directory")
 set(EXEC_INSTALL_DIR "${CMAKE_INSTALL_FULL_BINDIR}" CACHE PATH "Absolute path to executable installation directory")
-# set(LIBEXEC_INSTALL_DIR "${CMAKE_INSTALL_FULL_LIBEXECDIR}/webkit2gtk-${WEBKITGTK_API_VERSION}" CACHE PATH "Absolute path to install executables executed by the library")
 
-# set(DATA_BUILD_DIR "${CMAKE_BINARY_DIR}/share/${WebKit_OUTPUT_NAME}")
-# set(DATA_INSTALL_DIR "${CMAKE_INSTALL_DATADIR}/webkitgtk-${WEBKITGTK_API_VERSION}")
-# set(WEBKITGTK_HEADER_INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/webkitgtk-${WEBKITGTK_API_VERSION}")
-# set(INTROSPECTION_INSTALL_GIRDIR "${CMAKE_INSTALL_FULL_DATADIR}/gir-1.0")
-# set(INTROSPECTION_INSTALL_TYPELIBDIR "${LIB_INSTALL_DIR}/girepository-1.0")
-
-# find_package(Cairo 1.10.2 REQUIRED)
-# find_package(Fontconfig 2.8.0 REQUIRED)
-# find_package(Freetype2 2.4.2 REQUIRED)
-# find_package(HarfBuzz 0.9.2 REQUIRED)
-# Set Hints to find third party modules.
 file(TO_CMAKE_PATH $ENV{WEBKIT_OUTPUTDIR}/import/include IMPORT_INCLUDE_DIR)
 file(TO_CMAKE_PATH $ENV{WEBKIT_OUTPUTDIR}/import/lib IMPORT_LIBRARIES_DIR)
 if (WIN32)
@@ -110,19 +86,8 @@ else ()
     message(FATAL_ERROR "Set thirdparty lib, inc paths")
 endif ()
 
-# find_package(ICU REQUIRED)
 find_package(JNI REQUIRED)
-# find_package(JPEG REQUIRED)
-# find_package(LibSoup 2.42.0 REQUIRED)
-# find_package(PNG REQUIRED)
 find_package(Threads REQUIRED)
-# find_package(ZLIB REQUIRED)
-# find_package(ATK REQUIRED)
-# find_package(WebP REQUIRED)
-# find_package(ATSPI 2.5.3)
-# find_package(EGL)
-# find_package(OpenGL)
-# find_package(OpenGLES2)
 
 if (WIN32)
     # Set output dir to lib directory
@@ -137,6 +102,8 @@ if (WIN32)
         /wd4291 /wd4305 /wd4309 /wd4344 /wd4355 /wd4389 /wd4396 /wd4481 /wd4503 /wd4505 /wd4510 /wd4512 /wd4530 /wd4610 /wd4702
         /wd4706 /wd4800 /wd4819 /wd4951 /wd4952 /wd4996 /wd6011 /wd6031 /wd6211 /wd6246 /wd6255 /wd6387
     )
+    # https://lists.webkit.org/pipermail/webkit-dev/2016-April/028135.html
+    add_definitions(/vmg)
     if (NOT ${CMAKE_GENERATOR} MATCHES "Ninja")
         add_definitions(/MP)
     endif ()
@@ -157,29 +124,6 @@ WEBKIT_OPTION_BEGIN()
 # What we select here automatically is if we use OPENGL (ENABLE_GLES2=OFF)
 # or OPENGLES2 (ENABLE_GLES2=ON) for building the feature.
 # set(ENABLE_GLES2_DEFAULT OFF)
-
-# if (NOT OPENGL_FOUND AND OPENGLES2_FOUND)
-#     set(ENABLE_GLES2_DEFAULT ON)
-# endif ()
-
-# #//XXX WEBKIT_OPTION_DEFAULT_PORT_VALUE
-
-# WEBKIT_OPTION_DEFINE(ENABLE_GLES2 "Whether to enable OpenGL ES 2.0." PUBLIC ${ENABLE_GLES2_DEFAULT})
-# WEBKIT_OPTION_DEFINE(ENABLE_GTKDOC "Whether or not to use generate gtkdoc." PUBLIC OFF)
-# WEBKIT_OPTION_DEFINE(ENABLE_INTROSPECTION "Whether to enable GObject introspection." PUBLIC ON)
-# WEBKIT_OPTION_DEFINE(ENABLE_OPENGL "Whether to use OpenGL." PUBLIC ON)
-# WEBKIT_OPTION_DEFINE(ENABLE_PLUGIN_PROCESS_GTK2 "Whether to build WebKitPluginProcess2 to load GTK2 based plugins." PUBLIC ON)
-# WEBKIT_OPTION_DEFINE(ENABLE_X11_TARGET "Whether to enable support for the X11 windowing target." PUBLIC ON)
-# WEBKIT_OPTION_DEFINE(ENABLE_WAYLAND_TARGET "Whether to enable support for the Wayland windowing target." PUBLIC OFF)
-# WEBKIT_OPTION_DEFINE(USE_LIBNOTIFY "Whether to enable the default web notification implementation." PUBLIC ON)
-# WEBKIT_OPTION_DEFINE(USE_LIBHYPHEN "Whether to enable the default automatic hyphenation implementation." PUBLIC ON)
-
-# WEBKIT_OPTION_DEFINE(USE_GSTREAMER_GL "Whether to enable support for GStreamer GL" PRIVATE OFF)
-# WEBKIT_OPTION_DEFINE(USE_GSTREAMER_MPEGTS "Whether to enable support for MPEG-TS" PRIVATE OFF)
-# WEBKIT_OPTION_DEFINE(USE_REDIRECTED_XCOMPOSITE_WINDOW "Whether to use a Redirected XComposite Window for accelerated compositing in X11." PRIVATE ON)
-
-# # FIXME: Can we use cairo-glesv2 to avoid this conflict?
-# WEBKIT_OPTION_CONFLICT(ENABLE_ACCELERATED_2D_CANVAS ENABLE_GLES2)
 
 # WEBKIT_OPTION_DEPEND(ENABLE_3D_TRANSFORMS ENABLE_OPENGL)
 # WEBKIT_OPTION_DEPEND(ENABLE_ACCELERATED_2D_CANVAS ENABLE_OPENGL)
@@ -210,16 +154,6 @@ WEBKIT_OPTION_BEGIN()
 #     WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_MEMORY_SAMPLER PUBLIC OFF)
 # endif ()
 
-# if (OPENGL_FOUND)
-#     if (GLX_FOUND)
-#         list(APPEND CAIROGL_COMPONENTS cairo-glx)
-#     endif ()
-#     if (EGL_FOUND)
-#         list(APPEND CAIROGL_COMPONENTS cairo-egl)
-#     endif ()
-# endif ()
-# find_package(CairoGL 1.10.2 COMPONENTS ${CAIROGL_COMPONENTS})
-
 # # Normally we do not set the value of options automatically. However, CairoGL is special. Currently
 # # most major distros compile Cario with --enable-gl, but Debian and derivitives are a major
 # # exception. You very probably want accelerated 2D canvas if Cario has been compiled with CarioGL,
@@ -237,8 +171,8 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_CSS_COMPOSITING PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_DRAG_SUPPORT PUBLIC ON)
 # WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_GEOLOCATION PUBLIC ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_ICONDATABASE PUBLIC OFF)
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_JIT PRIVATE OFF)
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_DFG_JIT PRIVATE OFF)
+# WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_JIT PRIVATE OFF)
+# WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_DFG_JIT PRIVATE OFF)
 # WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_SPELLCHECK PUBLIC ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_TOUCH_EVENTS PUBLIC OFF)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_VIDEO PUBLIC ON)
@@ -297,9 +231,6 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_VIDEO_TRACK PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_VIEW_MODE_CSS_MEDIA PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEB_TIMING PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_WEBGL PRIVATE OFF)
-WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_XHR_TIMEOUT PRIVATE ON)
-# WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_NETWORK_PROCESS PRIVATE ON)
-# WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_THREADED_COMPOSITOR PRIVATE OFF)
 
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_INPUT_TYPE_DATE PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_INPUT_TYPE_DATETIMELOCAL PRIVATE ON)
@@ -308,6 +239,8 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_INPUT_TYPE_MONTH PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_INPUT_TYPE_TIME PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_INPUT_TYPE_WEEK PRIVATE ON)
 WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_LEGACY_NOTIFICATIONS PRIVATE ON)
+WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_SVG_OTF_CONVERTER PRIVATE OFF)
+
 
 
 # Finalize the value for all options. Do not attempt to use an option before
@@ -315,43 +248,15 @@ WEBKIT_OPTION_DEFAULT_PORT_VALUE(ENABLE_LEGACY_NOTIFICATIONS PRIVATE ON)
 WEBKIT_OPTION_END()
 
 
-# set(USE_UDIS86 ON)
 set(ENABLE_WEBKIT OFF)
 set(ENABLE_WEBKIT2 OFF)
-# set(ENABLE_PLUGIN_PROCESS ${ENABLE_X11_TARGET})
-# set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-all-symbols")
 add_definitions(-DBUILDING_JAVA__=1)
 add_definitions(-DDATA_DIR="${CMAKE_INSTALL_DATADIR}")
 # add_definitions(-DUSE_CROSS_PLATFORM_CONTEXT_MENUS=1)
-# add_definitions(-DGETTEXT_PACKAGE="WebKit2GTK-${WEBKITGTK_API_VERSION}")
-# add_definitions(-DUSER_AGENT_GTK_MAJOR_VERSION=602)
-# add_definitions(-DUSER_AGENT_GTK_MINOR_VERSION=1)
-# add_definitions(-DWEBKITGTK_API_VERSION_STRING="${WEBKITGTK_API_VERSION}")
-
-if (ENABLE_X11_TARGET)
-    message(STATUS "======= XXX: ENABLE_X11_TARGET")
-    # if (NOT GTK3_SUPPORTS_X11)
-    #     message(FATAL_ERROR "Recompile GTK+ with X11 backend to use ENABLE_X11_TARGET")
-    # endif ()
-
-    find_package(X11 REQUIRED)
-    if (NOT X11_Xcomposite_FOUND)
-        message(FATAL_ERROR "libXcomposite is required for ENABLE_X11_TARGET")
-    elseif (NOT X11_Xdamage_FOUND)
-        message(FATAL_ERROR "libXdamage is required for ENABLE_X11_TARGET")
-    elseif (NOT X11_Xrender_FOUND)
-        message(FATAL_ERROR "libXrender is required for ENABLE_X11_TARGET")
-    elseif (NOT X11_Xt_FOUND)
-        message(FATAL_ERROR "libXt is required for ENABLE_X11_TARGET")
-    endif ()
-endif ()
 
 set(FORWARDING_HEADERS_DIR ${DERIVED_SOURCES_DIR}/ForwardingHeaders)
 
 
-# set(SHOULD_INSTALL_JS_SHELL ON)
-
-#//XXX ?
 set(WTF_LIBRARY_TYPE STATIC)
 # set(JavaScriptCore_LIBRARY_TYPE OBJECT)
 # set(WebCore_LIBRARY_TYPE OBJECT)

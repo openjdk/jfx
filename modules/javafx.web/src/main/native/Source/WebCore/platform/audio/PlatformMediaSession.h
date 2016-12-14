@@ -63,6 +63,7 @@ public:
 
     enum State {
         Idle,
+        Autoplaying,
         Playing,
         Paused,
         Interrupted,
@@ -71,20 +72,24 @@ public:
     void setState(State);
 
     enum InterruptionType {
+        NoInterruption,
         SystemSleep,
         EnteringBackground,
         SystemInterruption,
+        SuspendedUnderLock,
+        InvisibleAutoplay,
     };
+    InterruptionType interruptionType() const { return m_interruptionType; }
+
     enum EndInterruptionFlags {
         NoFlags = 0,
         MayResumePlaying = 1 << 0,
     };
+
     void beginInterruption(InterruptionType);
     void endInterruption(EndInterruptionFlags);
 
-    void applicationWillEnterForeground() const;
-    void applicationWillEnterBackground() const;
-
+    void clientWillBeginAutoplaying();
     bool clientWillBeginPlayback();
     bool clientWillPausePlayback();
 
@@ -92,9 +97,11 @@ public:
 
     void visibilityChanged();
 
+#if ENABLE(VIDEO)
     String title() const;
     double duration() const;
     double currentTime() const;
+#endif
 
     enum RemoteControlCommandType {
         NoCommand,
@@ -120,18 +127,24 @@ public:
     bool isHidden() const;
 
     virtual bool canPlayToWirelessPlaybackTarget() const { return false; }
-    virtual bool isPlayingToWirelessPlaybackTarget() const { return false; }
+    virtual bool isPlayingToWirelessPlaybackTarget() const { return m_isPlayingToWirelessPlaybackTarget; }
+    void isPlayingToWirelessPlaybackTargetChanged(bool);
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     // MediaPlaybackTargetClient
     virtual void setPlaybackTarget(Ref<MediaPlaybackTarget>&&) override { }
     virtual void externalOutputDeviceAvailableDidChange(bool) override { }
     virtual void setShouldPlayToPlaybackTarget(bool) override { }
+    virtual void customPlaybackActionSelected() override { }
 #endif
 
 #if PLATFORM(IOS)
     virtual bool requiresPlaybackTargetRouteMonitoring() const { return false; }
 #endif
+
+    bool activeAudioSessionRequired();
+    bool canProduceAudio() const { return m_canProduceAudio; }
+    void setCanProduceAudio(bool);
 
 protected:
     PlatformMediaSessionClient& client() const { return m_client; }
@@ -144,8 +157,11 @@ private:
     Timer m_clientDataBufferingTimer;
     State m_state;
     State m_stateToRestore;
+    InterruptionType m_interruptionType { NoInterruption };
     int m_interruptionCount { 0 };
     bool m_notifyingClient;
+    bool m_isPlayingToWirelessPlaybackTarget { false };
+    bool m_canProduceAudio { false };
 
     friend class PlatformMediaSessionManager;
 };
@@ -159,12 +175,15 @@ public:
     virtual PlatformMediaSession::MediaType presentationType() const = 0;
     virtual PlatformMediaSession::DisplayType displayType() const { return PlatformMediaSession::Normal; }
 
+    virtual void resumeAutoplaying() { }
     virtual void mayResumePlayback(bool shouldResume) = 0;
     virtual void suspendPlayback() = 0;
 
+#if ENABLE(VIDEO)
     virtual String mediaSessionTitle() const;
     virtual double mediaSessionDuration() const;
     virtual double mediaSessionCurrentTime() const;
+#endif
 
     virtual bool canReceiveRemoteControlCommands() const = 0;
     virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType) = 0;
@@ -172,13 +191,14 @@ public:
     virtual void setShouldBufferData(bool) { }
     virtual bool elementIsHidden() const { return false; }
 
-    virtual bool overrideBackgroundPlaybackRestriction() const = 0;
+    virtual bool shouldOverrideBackgroundPlaybackRestriction(PlatformMediaSession::InterruptionType) const = 0;
 
     virtual void wirelessRoutesAvailableDidChange() { }
     virtual void setWirelessPlaybackTarget(Ref<MediaPlaybackTarget>&&) { }
     virtual bool canPlayToWirelessPlaybackTarget() const { return false; }
     virtual bool isPlayingToWirelessPlaybackTarget() const { return false; }
     virtual void setShouldPlayToPlaybackTarget(bool) { }
+    virtual void customPlaybackActionSelected() { }
 
     virtual const Document* hostingDocument() const = 0;
 

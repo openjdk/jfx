@@ -52,43 +52,28 @@ using namespace Inspector;
 namespace WebCore {
 
 PageScriptDebugServer::PageScriptDebugServer(Page& page)
-    : ScriptDebugServer(false)
+    : ScriptDebugServer(WebCore::JSDOMWindowBase::commonVM())
     , m_page(page)
 {
 }
 
-void PageScriptDebugServer::addListener(ScriptDebugListener* listener)
+void PageScriptDebugServer::attachDebugger()
 {
-    if (!listener)
-        return;
-
-    bool wasEmpty = m_listeners.isEmpty();
-    m_listeners.add(listener);
-
-    if (wasEmpty) {
-        m_page.setDebugger(this);
-        recompileAllJSFunctions();
-    }
+    m_page.setDebugger(this);
+    recompileAllJSFunctions();
 }
 
-void PageScriptDebugServer::removeListener(ScriptDebugListener* listener, bool isBeingDestroyed)
+void PageScriptDebugServer::detachDebugger(bool isBeingDestroyed)
 {
-    if (!listener)
-        return;
-
-    m_listeners.remove(listener);
-
-    if (m_listeners.isEmpty()) {
-        m_page.setDebugger(nullptr);
-        if (!isBeingDestroyed)
-            recompileAllJSFunctions();
-    }
+    m_page.setDebugger(nullptr);
+    if (!isBeingDestroyed)
+        recompileAllJSFunctions();
 }
 
 void PageScriptDebugServer::recompileAllJSFunctions()
 {
-    JSLockHolder lock(JSDOMWindow::commonVM());
-    Debugger::recompileAllJSFunctions(&JSDOMWindow::commonVM());
+    JSLockHolder lock(vm());
+    Debugger::recompileAllJSFunctions();
 }
 
 void PageScriptDebugServer::didPause(JSGlobalObject*)
@@ -109,7 +94,7 @@ void PageScriptDebugServer::runEventLoopWhilePaused()
     // we need to gracefully handle releasing and reacquiring the lock.
     if (WebThreadIsEnabled()) {
         ASSERT(WebThreadIsLockedOrDisabled());
-        JSC::JSLock::DropAllLocks dropAllLocks(WebCore::JSDOMWindowBase::commonVM());
+        JSC::JSLock::DropAllLocks dropAllLocks(vm());
         WebRunLoopEnableNested();
 
         runEventLoopWhilePausedInternal();
@@ -146,11 +131,8 @@ void PageScriptDebugServer::setJavaScriptPaused(const PageGroup& pageGroup, bool
 {
     setMainThreadCallbacksPaused(paused);
 
-    const HashSet<Page*>& pages = pageGroup.pages();
-
-    HashSet<Page*>::const_iterator end = pages.end();
-    for (HashSet<Page*>::const_iterator it = pages.begin(); it != end; ++it)
-        setJavaScriptPaused(*it, paused);
+    for (auto& page : pageGroup.pages())
+        setJavaScriptPaused(page, paused);
 }
 
 void PageScriptDebugServer::setJavaScriptPaused(Page* page, bool paused)

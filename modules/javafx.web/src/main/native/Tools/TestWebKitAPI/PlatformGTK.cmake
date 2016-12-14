@@ -1,3 +1,6 @@
+set(TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/TestWebKitAPI")
+set(TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY_WTF "${TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY}/WTF")
+
 # This is necessary because it is possible to build TestWebKitAPI with WebKit2
 # disabled and this triggers the inclusion of the WebKit2 headers.
 add_definitions(-DBUILDING_WEBKIT2__)
@@ -105,8 +108,10 @@ add_executable(TestWebKit2
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/UserMedia.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/UserMessage.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WillSendSubmitEvent.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKPageCopySessionStateWithFiltering.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKPageGetScaleFactorNotZero.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKPreferences.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKRetainPtr.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKString.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKStringJSString.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebKit2/WKURL.cpp
@@ -140,6 +145,7 @@ add_executable(TestWebCore
     ${test_main_SOURCES}
     ${TestWebCoreGtk_SOURCES}
     ${TESTWEBKITAPI_DIR}/TestsController.cpp
+    ${TESTWEBKITAPI_DIR}/Tests/WebCore/HTMLParserIdioms.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebCore/LayoutUnit.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebCore/URL.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WebCore/SharedBuffer.cpp
@@ -155,7 +161,6 @@ set_tests_properties(TestWebCore PROPERTIES TIMEOUT 60)
 set_target_properties(TestWebCore PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${TESTWEBKITAPI_RUNTIME_OUTPUT_DIRECTORY}/WebCore)
 
 list(APPEND TestWTF_SOURCES
-    ${TESTWEBKITAPI_DIR}/Tests/WTF/glib/GMainLoopSource.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/glib/GUniquePtr.cpp
     ${TESTWEBKITAPI_DIR}/Tests/WTF/glib/WorkQueueGLib.cpp
 )

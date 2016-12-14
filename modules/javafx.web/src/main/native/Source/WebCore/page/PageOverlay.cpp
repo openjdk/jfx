@@ -53,14 +53,10 @@ Ref<PageOverlay> PageOverlay::create(Client& client, OverlayType overlayType)
 
 PageOverlay::PageOverlay(Client& client, OverlayType overlayType)
     : m_client(client)
-    , m_page(nullptr)
     , m_fadeAnimationTimer(*this, &PageOverlay::fadeAnimationTimerFired)
-    , m_fadeAnimationStartTime(0)
     , m_fadeAnimationDuration(fadeAnimationDuration)
-    , m_fadeAnimationType(NoAnimation)
-    , m_fractionFadedIn(1)
+    , m_needsSynchronousScrolling(overlayType == OverlayType::View)
     , m_overlayType(overlayType)
-    , m_backgroundColor(Color::transparent)
     , m_pageOverlayID(generatePageOverlayID())
 {
 }
@@ -79,7 +75,7 @@ PageOverlayController* PageOverlay::controller() const
 IntRect PageOverlay::bounds() const
 {
     if (!m_overrideFrame.isEmpty())
-        return IntRect(IntPoint(), m_overrideFrame.size());
+        return { { }, m_overrideFrame.size() };
 
     FrameView* frameView = m_page->mainFrame().view();
 
@@ -91,7 +87,7 @@ IntRect PageOverlay::bounds() const
         int width = frameView->width();
         int height = frameView->height();
 
-        if (!ScrollbarTheme::theme()->usesOverlayScrollbars()) {
+        if (!ScrollbarTheme::theme().usesOverlayScrollbars()) {
             if (frameView->verticalScrollbar())
                 width -= frameView->verticalScrollbar()->width();
             if (frameView->horizontalScrollbar())
@@ -163,7 +159,8 @@ void PageOverlay::setPage(Page* page)
 void PageOverlay::setNeedsDisplay(const IntRect& dirtyRect)
 {
     if (auto pageOverlayController = controller()) {
-        pageOverlayController->setPageOverlayOpacity(*this, m_fractionFadedIn);
+        if (m_fadeAnimationType != FadeAnimationType::NoAnimation)
+            pageOverlayController->setPageOverlayOpacity(*this, m_fractionFadedIn);
         pageOverlayController->setPageOverlayNeedsDisplay(*this, dirtyRect);
     }
 }
@@ -181,6 +178,15 @@ void PageOverlay::drawRect(GraphicsContext& graphicsContext, const IntRect& dirt
         return;
 
     GraphicsContextStateSaver stateSaver(graphicsContext);
+
+    if (m_overlayType == PageOverlay::OverlayType::Document) {
+        if (FrameView* frameView = m_page->mainFrame().view()) {
+            auto offset = frameView->scrollOrigin();
+            graphicsContext.translate(toFloatSize(offset));
+            paintRect.moveBy(-offset);
+        }
+    }
+
     m_client.drawRect(*this, graphicsContext, paintRect);
 }
 
@@ -190,9 +196,10 @@ bool PageOverlay::mouseEvent(const PlatformMouseEvent& mouseEvent)
 
     if (m_overlayType == PageOverlay::OverlayType::Document)
         mousePositionInOverlayCoordinates = m_page->mainFrame().view()->windowToContents(mousePositionInOverlayCoordinates);
+    mousePositionInOverlayCoordinates.moveBy(-frame().location());
 
     // Ignore events outside the bounds.
-    if (!bounds().contains(mousePositionInOverlayCoordinates))
+    if (m_shouldIgnoreMouseEventsOutsideBounds && !bounds().contains(mousePositionInOverlayCoordinates))
         return false;
 
     return m_client.mouseEvent(*this, mouseEvent);

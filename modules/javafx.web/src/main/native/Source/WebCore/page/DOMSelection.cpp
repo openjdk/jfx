@@ -283,43 +283,43 @@ void DOMSelection::modify(const String& alterString, const String& directionStri
         return;
 
     FrameSelection::EAlteration alter;
-    if (equalIgnoringCase(alterString, "extend"))
+    if (equalLettersIgnoringASCIICase(alterString, "extend"))
         alter = FrameSelection::AlterationExtend;
-    else if (equalIgnoringCase(alterString, "move"))
+    else if (equalLettersIgnoringASCIICase(alterString, "move"))
         alter = FrameSelection::AlterationMove;
     else
         return;
 
     SelectionDirection direction;
-    if (equalIgnoringCase(directionString, "forward"))
+    if (equalLettersIgnoringASCIICase(directionString, "forward"))
         direction = DirectionForward;
-    else if (equalIgnoringCase(directionString, "backward"))
+    else if (equalLettersIgnoringASCIICase(directionString, "backward"))
         direction = DirectionBackward;
-    else if (equalIgnoringCase(directionString, "left"))
+    else if (equalLettersIgnoringASCIICase(directionString, "left"))
         direction = DirectionLeft;
-    else if (equalIgnoringCase(directionString, "right"))
+    else if (equalLettersIgnoringASCIICase(directionString, "right"))
         direction = DirectionRight;
     else
         return;
 
     TextGranularity granularity;
-    if (equalIgnoringCase(granularityString, "character"))
+    if (equalLettersIgnoringASCIICase(granularityString, "character"))
         granularity = CharacterGranularity;
-    else if (equalIgnoringCase(granularityString, "word"))
+    else if (equalLettersIgnoringASCIICase(granularityString, "word"))
         granularity = WordGranularity;
-    else if (equalIgnoringCase(granularityString, "sentence"))
+    else if (equalLettersIgnoringASCIICase(granularityString, "sentence"))
         granularity = SentenceGranularity;
-    else if (equalIgnoringCase(granularityString, "line"))
+    else if (equalLettersIgnoringASCIICase(granularityString, "line"))
         granularity = LineGranularity;
-    else if (equalIgnoringCase(granularityString, "paragraph"))
+    else if (equalLettersIgnoringASCIICase(granularityString, "paragraph"))
         granularity = ParagraphGranularity;
-    else if (equalIgnoringCase(granularityString, "lineboundary"))
+    else if (equalLettersIgnoringASCIICase(granularityString, "lineboundary"))
         granularity = LineBoundary;
-    else if (equalIgnoringCase(granularityString, "sentenceboundary"))
+    else if (equalLettersIgnoringASCIICase(granularityString, "sentenceboundary"))
         granularity = SentenceBoundary;
-    else if (equalIgnoringCase(granularityString, "paragraphboundary"))
+    else if (equalLettersIgnoringASCIICase(granularityString, "paragraphboundary"))
         granularity = ParagraphBoundary;
-    else if (equalIgnoringCase(granularityString, "documentboundary"))
+    else if (equalLettersIgnoringASCIICase(granularityString, "documentboundary"))
         granularity = DocumentBoundary;
     else
         return;
@@ -438,7 +438,7 @@ void DOMSelection::deleteFromDocument()
 
     selectedRange->deleteContents(ASSERT_NO_EXCEPTION);
 
-    setBaseAndExtent(selectedRange->startContainer(ASSERT_NO_EXCEPTION), selectedRange->startOffset(), selectedRange->startContainer(), selectedRange->startOffset(), ASSERT_NO_EXCEPTION);
+    setBaseAndExtent(&selectedRange->startContainer(), selectedRange->startOffset(), &selectedRange->startContainer(), selectedRange->startOffset(), ASSERT_NO_EXCEPTION);
 }
 
 bool DOMSelection::containsNode(Node* n, bool allowPartial) const
@@ -460,14 +460,14 @@ bool DOMSelection::containsNode(Node* n, bool allowPartial) const
     unsigned nodeIndex = node->computeNodeIndex();
 
     ExceptionCode ec = 0;
-    bool nodeFullySelected = Range::compareBoundaryPoints(parentNode, nodeIndex, selectedRange->startContainer(), selectedRange->startOffset(), ec) >= 0 && !ec
-        && Range::compareBoundaryPoints(parentNode, nodeIndex + 1, selectedRange->endContainer(), selectedRange->endOffset(), ec) <= 0 && !ec;
+    bool nodeFullySelected = Range::compareBoundaryPoints(parentNode, nodeIndex, &selectedRange->startContainer(), selectedRange->startOffset(), ec) >= 0 && !ec
+        && Range::compareBoundaryPoints(parentNode, nodeIndex + 1, &selectedRange->endContainer(), selectedRange->endOffset(), ec) <= 0 && !ec;
     ASSERT(!ec);
     if (nodeFullySelected)
         return true;
 
-    bool nodeFullyUnselected = (Range::compareBoundaryPoints(parentNode, nodeIndex, selectedRange->endContainer(), selectedRange->endOffset(), ec) > 0 && !ec)
-        || (Range::compareBoundaryPoints(parentNode, nodeIndex + 1, selectedRange->startContainer(), selectedRange->startOffset(), ec) < 0 && !ec);
+    bool nodeFullyUnselected = (Range::compareBoundaryPoints(parentNode, nodeIndex, &selectedRange->endContainer(), selectedRange->endOffset(), ec) > 0 && !ec)
+        || (Range::compareBoundaryPoints(parentNode, nodeIndex + 1, &selectedRange->startContainer(), selectedRange->startOffset(), ec) < 0 && !ec);
     ASSERT(!ec);
     if (nodeFullyUnselected)
         return false;

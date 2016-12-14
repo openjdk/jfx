@@ -40,11 +40,14 @@
 
 namespace WebCore {
 
-static bool shouldUseCoreText(const UChar* buffer, unsigned bufferLength, const Font* fontData)
+static bool shouldUseCoreText(const UChar* buffer, unsigned bufferLength, const Font& fontData)
 {
-    if (fontData->platformData().isCompositeFontReference())
+    // This needs to be kept in sync with GlyphPage::fill(). Currently, the CoreText paths are not able to handle
+    // every situtation. Returning true from this function in a new situation will require you to explicitly add
+    // handling for that situation in the CoreText paths of GlyphPage::fill().
+    if (fontData.platformData().isSystemFont())
         return true;
-    if (fontData->platformData().widthVariant() != RegularWidth || fontData->hasVerticalGlyphs()) {
+    if (fontData.platformData().isForTextCombine() || fontData.hasVerticalGlyphs()) {
         // Ideographs don't have a vertical variant or width variants.
         for (unsigned i = 0; i < bufferLength; ++i) {
             if (!FontCascade::isCJKIdeograph(buffer[i]))
@@ -55,133 +58,40 @@ static bool shouldUseCoreText(const UChar* buffer, unsigned bufferLength, const 
     return false;
 }
 
-bool GlyphPage::mayUseMixedFontsWhenFilling(const UChar* buffer, unsigned bufferLength, const Font* fontData)
+bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
 {
-#if USE(APPKIT)
-    // FIXME: This is only really needed for composite font references.
-    return shouldUseCoreText(buffer, bufferLength, fontData);
-#else
-    UNUSED_PARAM(buffer);
-    UNUSED_PARAM(bufferLength);
-    UNUSED_PARAM(fontData);
-    return false;
-#endif
-}
+    ASSERT(bufferLength == GlyphPage::size || bufferLength == 2 * GlyphPage::size);
 
-bool GlyphPage::fill(unsigned offset, unsigned length, UChar* buffer, unsigned bufferLength, const Font* fontData)
-{
-    bool haveGlyphs = false;
-
+    const Font& font = this->font();
     Vector<CGGlyph, 512> glyphs(bufferLength);
-    if (!shouldUseCoreText(buffer, bufferLength, fontData)) {
+    unsigned glyphStep;
+    if (!shouldUseCoreText(buffer, bufferLength, font)) {
         // We pass in either 256 or 512 UTF-16 characters: 256 for U+FFFF and less, 512 (double character surrogates)
         // for U+10000 and above. It is indeed possible to get back 512 glyphs back from the API, so the glyph buffer
         // we pass in must be 512. If we get back more than 256 glyphs though we'll ignore all the ones after 256,
         // this should not happen as the only time we pass in 512 characters is when they are surrogates.
-        CGFontGetGlyphsForUnichars(fontData->platformData().cgFont(), buffer, glyphs.data(), bufferLength);
-        for (unsigned i = 0; i < length; ++i) {
-            if (!glyphs[i])
-                setGlyphDataForIndex(offset + i, 0, 0);
-            else {
-                setGlyphDataForIndex(offset + i, glyphs[i], fontData);
-                haveGlyphs = true;
-            }
-        }
-    } else if (!fontData->platformData().isCompositeFontReference() && ((fontData->platformData().widthVariant() == RegularWidth)
-        ? CTFontGetVerticalGlyphsForCharacters(fontData->platformData().ctFont(), buffer, glyphs.data(), bufferLength)
-        : CTFontGetGlyphsForCharacters(fontData->platformData().ctFont(), buffer, glyphs.data(), bufferLength))) {
+        CGFontGetGlyphsForUnichars(font.platformData().cgFont(), buffer, glyphs.data(), bufferLength);
+        glyphStep = 1;
+    } else {
+        // Because we know the implementation of shouldUseCoreText(), if the font isn't for text combine and it isn't a system font,
+        // we know it must have vertical glyphs.
+        if (font.platformData().isForTextCombine() || font.platformData().isSystemFont())
+            CTFontGetGlyphsForCharacters(font.platformData().ctFont(), buffer, glyphs.data(), bufferLength);
+        else
+            CTFontGetVerticalGlyphsForCharacters(font.platformData().ctFont(), buffer, glyphs.data(), bufferLength);
+
         // When buffer consists of surrogate pairs, CTFontGetVerticalGlyphsForCharacters and CTFontGetGlyphsForCharacters
         // place the glyphs at indices corresponding to the first character of each pair.
-        ASSERT(!(bufferLength % length) && (bufferLength / length == 1 || bufferLength / length == 2));
-        unsigned glyphStep = bufferLength / length;
-        for (unsigned i = 0; i < length; ++i) {
-            if (!glyphs[i * glyphStep])
-                setGlyphDataForIndex(offset + i, 0, 0);
-            else {
-                setGlyphDataForIndex(offset + i, glyphs[i * glyphStep], fontData);
-                haveGlyphs = true;
-            }
-        }
-    } else {
-        // We ask CoreText for possible vertical variant glyphs
-        RetainPtr<CFStringRef> string = adoptCF(CFStringCreateWithCharactersNoCopy(kCFAllocatorDefault, buffer, bufferLength, kCFAllocatorNull));
-        RetainPtr<CFAttributedStringRef> attributedString = adoptCF(CFAttributedStringCreate(kCFAllocatorDefault, string.get(), fontData->getCFStringAttributes(0, fontData->hasVerticalGlyphs() ? Vertical : Horizontal)));
-        RetainPtr<CTLineRef> line = adoptCF(CTLineCreateWithAttributedString(attributedString.get()));
-
-        CFArrayRef runArray = CTLineGetGlyphRuns(line.get());
-        CFIndex runCount = CFArrayGetCount(runArray);
-
-        // Initialize glyph entries
-        for (unsigned index = 0; index < length; ++index)
-            setGlyphDataForIndex(offset + index, 0, 0);
-
-        Vector<CGGlyph, 512> glyphVector;
-        Vector<CFIndex, 512> indexVector;
-        bool done = false;
-
-        RetainPtr<CFTypeRef> fontEqualityObject = fontData->platformData().objectForEqualityCheck();
-
-        for (CFIndex r = 0; r < runCount && !done ; ++r) {
-            // CTLine could map characters over multiple fonts using its own font fallback list.
-            // We need to pick runs that use the exact font we need, i.e., fontData->platformData().ctFont().
-            CTRunRef ctRun = static_cast<CTRunRef>(CFArrayGetValueAtIndex(runArray, r));
-            ASSERT(CFGetTypeID(ctRun) == CTRunGetTypeID());
-
-            CFDictionaryRef attributes = CTRunGetAttributes(ctRun);
-            CTFontRef runFont = static_cast<CTFontRef>(CFDictionaryGetValue(attributes, kCTFontAttributeName));
-            bool gotBaseFont = CFEqual(fontEqualityObject.get(), FontPlatformData::objectForEqualityCheck(runFont).get());
-            if (gotBaseFont || fontData->platformData().isCompositeFontReference()) {
-                // This run uses the font we want. Extract glyphs.
-                CFIndex glyphCount = CTRunGetGlyphCount(ctRun);
-                const CGGlyph* glyphs = CTRunGetGlyphsPtr(ctRun);
-                if (!glyphs) {
-                    glyphVector.resize(glyphCount);
-                    CTRunGetGlyphs(ctRun, CFRangeMake(0, 0), glyphVector.data());
-                    glyphs = glyphVector.data();
-                }
-                const CFIndex* stringIndices = CTRunGetStringIndicesPtr(ctRun);
-                if (!stringIndices) {
-                    indexVector.resize(glyphCount);
-                    CTRunGetStringIndices(ctRun, CFRangeMake(0, 0), indexVector.data());
-                    stringIndices = indexVector.data();
-                }
-
-                // When buffer consists of surrogate pairs, CTRunGetStringIndicesPtr and CTRunGetStringIndices
-                // place the glyphs at indices corresponding to the first character of each pair.
-                ASSERT(!(bufferLength % length) && (bufferLength / length == 1 || bufferLength / length == 2));
-                unsigned glyphStep = bufferLength / length;
-                if (gotBaseFont) {
-                    for (CFIndex i = 0; i < glyphCount; ++i) {
-                        if (stringIndices[i] >= static_cast<CFIndex>(bufferLength)) {
-                            done = true;
-                            break;
-                        }
-                        if (glyphs[i]) {
-                            setGlyphDataForIndex(offset + (stringIndices[i] / glyphStep), glyphs[i], fontData);
-                            haveGlyphs = true;
-                        }
-                    }
-#if USE(APPKIT)
-                } else {
-                    const Font* runSimple = fontData->compositeFontReferenceFont((NSFont *)runFont);
-                    if (runSimple) {
-                        for (CFIndex i = 0; i < glyphCount; ++i) {
-                            if (stringIndices[i] >= static_cast<CFIndex>(bufferLength)) {
-                                done = true;
-                                break;
-                            }
-                            if (glyphs[i]) {
-                                setGlyphDataForIndex(offset + (stringIndices[i] / glyphStep), glyphs[i], runSimple);
-                                haveGlyphs = true;
-                            }
-                        }
-                    }
-#endif
-                }
-            }
-        }
+        glyphStep = bufferLength / GlyphPage::size;
     }
 
+    bool haveGlyphs = false;
+    for (unsigned i = 0; i < GlyphPage::size; ++i) {
+        if (glyphs[i * glyphStep]) {
+            setGlyphForIndex(i, glyphs[i * glyphStep]);
+            haveGlyphs = true;
+        }
+    }
     return haveGlyphs;
 }
 

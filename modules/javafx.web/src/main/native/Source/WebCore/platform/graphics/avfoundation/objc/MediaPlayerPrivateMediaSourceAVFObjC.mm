@@ -28,6 +28,7 @@
 
 #if ENABLE(MEDIA_SOURCE) && USE(AVFOUNDATION)
 
+#import "CDMSessionAVStreamSession.h"
 #import "CDMSessionMediaSourceAVFObjC.h"
 #import "FileSystem.h"
 #import "Logging.h"
@@ -42,6 +43,10 @@
 #import <objc_runtime.h>
 #import <wtf/MainThread.h>
 #import <wtf/NeverDestroyed.h>
+
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+#import "VideoFullscreenLayerManager.h"
+#endif
 
 #pragma mark - Soft Linking
 
@@ -136,7 +141,7 @@ MediaPlayerPrivateMediaSourceAVFObjC::MediaPlayerPrivateMediaSourceAVFObjC(Media
     : m_player(player)
     , m_weakPtrFactory(this)
     , m_synchronizer(adoptNS([allocAVSampleBufferRenderSynchronizerInstance() init]))
-    , m_seekTimer(*this, &MediaPlayerPrivateMediaSourceAVFObjC::seekTimerFired)
+    , m_seekTimer(*this, &MediaPlayerPrivateMediaSourceAVFObjC::seekInternal)
     , m_session(nullptr)
     , m_networkState(MediaPlayer::Empty)
     , m_readyState(MediaPlayer::HaveNothing)
@@ -145,6 +150,9 @@ MediaPlayerPrivateMediaSourceAVFObjC::MediaPlayerPrivateMediaSourceAVFObjC(Media
     , m_seeking(false)
     , m_seekCompleted(true)
     , m_loadingProgressed(false)
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    , m_videoFullscreenLayerManager(VideoFullscreenLayerManager::create())
+#endif
 {
     CMTimebaseRef timebase = [m_synchronizer timebase];
     CMNotificationCenterRef nc = CMNotificationCenterGetDefaultLocalCenter();
@@ -210,9 +218,9 @@ bool MediaPlayerPrivateMediaSourceAVFObjC::isAvailable()
         && class_getInstanceMethod(getAVSampleBufferAudioRendererClass(), @selector(setMuted:));
 }
 
-static const HashSet<String>& mimeTypeCache()
+static const HashSet<String, ASCIICaseInsensitiveHash>& mimeTypeCache()
 {
-    static NeverDestroyed<HashSet<String>> cache;
+    static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> cache;
     static bool typeListInitialized = false;
 
     if (typeListInitialized)
@@ -226,7 +234,7 @@ static const HashSet<String>& mimeTypeCache()
     return cache;
 }
 
-void MediaPlayerPrivateMediaSourceAVFObjC::getSupportedTypes(HashSet<String>& types)
+void MediaPlayerPrivateMediaSourceAVFObjC::getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types)
 {
     types = mimeTypeCache();
 }
@@ -240,7 +248,8 @@ MediaPlayer::SupportsType MediaPlayerPrivateMediaSourceAVFObjC::supportsType(con
     if (parameters.isMediaStream)
         return MediaPlayer::IsNotSupported;
 #endif
-    if (!mimeTypeCache().contains(parameters.type))
+
+    if (parameters.type.isEmpty() || !mimeTypeCache().contains(parameters.type))
         return MediaPlayer::IsNotSupported;
 
     // The spec says:
@@ -294,7 +303,11 @@ PlatformMedia MediaPlayerPrivateMediaSourceAVFObjC::platformMedia() const
 
 PlatformLayer* MediaPlayerPrivateMediaSourceAVFObjC::platformLayer() const
 {
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    return m_videoFullscreenLayerManager->videoInlineLayer();
+#else
     return m_sampleBufferDisplayLayer.get();
+#endif
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::play()
@@ -421,11 +434,6 @@ void MediaPlayerPrivateMediaSourceAVFObjC::seekWithTolerance(const MediaTime& ti
     m_seekTimer.startOneShot(0);
 }
 
-void MediaPlayerPrivateMediaSourceAVFObjC::seekTimerFired()
-{
-    seekInternal();
-}
-
 void MediaPlayerPrivateMediaSourceAVFObjC::seekInternal()
 {
     std::unique_ptr<PendingSeek> pendingSeek;
@@ -529,12 +537,12 @@ void MediaPlayerPrivateMediaSourceAVFObjC::setSize(const IntSize&)
     // No-op.
 }
 
-void MediaPlayerPrivateMediaSourceAVFObjC::paint(GraphicsContext*, const FloatRect&)
+void MediaPlayerPrivateMediaSourceAVFObjC::paint(GraphicsContext&, const FloatRect&)
 {
     // FIXME(125157): Implement painting.
 }
 
-void MediaPlayerPrivateMediaSourceAVFObjC::paintCurrentFrameInContext(GraphicsContext*, const FloatRect&)
+void MediaPlayerPrivateMediaSourceAVFObjC::paintCurrentFrameInContext(GraphicsContext&, const FloatRect&)
 {
     // FIXME(125157): Implement painting.
 }
@@ -707,19 +715,15 @@ AVStreamSession* MediaPlayerPrivateMediaSourceAVFObjC::streamSession()
 
 void MediaPlayerPrivateMediaSourceAVFObjC::setCDMSession(CDMSession* session)
 {
-    if (m_session) {
-        for (auto& sourceBuffer : m_mediaSourcePrivate->sourceBuffers())
-            m_session->removeSourceBuffer(sourceBuffer.get());
-        m_session = nullptr;
-    }
+    if (session == m_session)
+        return;
 
     m_session = toCDMSessionMediaSourceAVFObjC(session);
 
-    if (m_session) {
-        m_session->setStreamSession(m_streamSession.get());
-        for (auto& sourceBuffer : m_mediaSourcePrivate->sourceBuffers())
-            m_session->addSourceBuffer(sourceBuffer.get());
-    }
+    if (CDMSessionAVStreamSession* cdmStreamSession = toCDMSessionAVStreamSession(m_session))
+        cdmStreamSession->setStreamSession(streamSession());
+    for (auto& sourceBuffer : m_mediaSourcePrivate->sourceBuffers())
+        sourceBuffer->setCDMSession(m_session);
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::keyNeeded(Uint8Array* initData)
@@ -764,6 +768,10 @@ void MediaPlayerPrivateMediaSourceAVFObjC::addDisplayLayer(AVSampleBufferDisplay
 
     // FIXME: move this somewhere appropriate:
     m_player->firstVideoFrameAvailable();
+
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    m_videoFullscreenLayerManager->setVideoLayer(m_sampleBufferDisplayLayer.get(), snappedIntRect(m_player->client().mediaPlayerContentBoxRect()).size());
+#endif
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::removeDisplayLayer(AVSampleBufferDisplayLayer* displayLayer)
@@ -778,6 +786,10 @@ void MediaPlayerPrivateMediaSourceAVFObjC::removeDisplayLayer(AVSampleBufferDisp
 
     m_sampleBufferDisplayLayer = nullptr;
     m_player->client().mediaPlayerRenderingModeChanged(m_player);
+
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    m_videoFullscreenLayerManager->didDestroyVideoLayer();
+#endif
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::addAudioRenderer(AVSampleBufferAudioRenderer* audioRenderer)
@@ -815,10 +827,22 @@ void MediaPlayerPrivateMediaSourceAVFObjC::characteristicsChanged()
     m_player->characteristicChanged();
 }
 
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+void MediaPlayerPrivateMediaSourceAVFObjC::setVideoFullscreenLayer(PlatformLayer *videoFullscreenLayer)
+{
+    m_videoFullscreenLayerManager->setVideoFullscreenLayer(videoFullscreenLayer);
+}
+
+void MediaPlayerPrivateMediaSourceAVFObjC::setVideoFullscreenFrame(FloatRect frame)
+{
+    m_videoFullscreenLayerManager->setVideoFullscreenFrame(frame);
+}
+#endif
+
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 void MediaPlayerPrivateMediaSourceAVFObjC::setWirelessPlaybackTarget(Ref<MediaPlaybackTarget>&& target)
 {
-    m_playbackTarget = WTF::move(target);
+    m_playbackTarget = WTFMove(target);
 }
 
 void MediaPlayerPrivateMediaSourceAVFObjC::setShouldPlayToPlaybackTarget(bool shouldPlayToTarget)

@@ -33,8 +33,8 @@ var ALL = 'ALL';
 var FORWARD = 'forward';
 var BACKWARD = 'backward';
 var GTEST_MODIFIERS = ['FLAKY', 'FAILS', 'MAYBE', 'DISABLED'];
-var TEST_URL_BASE_PATH_TRAC = 'http://trac.webkit.org/browser/trunk/LayoutTests/';
-var TEST_URL_BASE_PATH = "http://svn.webkit.org/repository/webkit/trunk/LayoutTests/";
+var TEST_URL_BASE_PATH_TRAC = 'https://trac.webkit.org/browser/trunk/LayoutTests/';
+var TEST_URL_BASE_PATH = "https://svn.webkit.org/repository/webkit/trunk/LayoutTests/";
 var EXPECTATIONS_URL_BASE_PATH = TEST_URL_BASE_PATH + "platform/";
 
 var PLATFORMS = {
@@ -43,12 +43,6 @@ var PLATFORMS = {
             'MAC': {
                 expectationsDirectory: 'mac',
                 subPlatforms: {
-                    'MAVERICKS': {
-                        subPlatforms: {
-                            'WK1': { fallbackPlatforms: ['APPLE_MAC_MAVERICKS', 'APPLE_MAC'] },
-                            'WK2': { fallbackPlatforms: ['APPLE_MAC_MAVERICKS', 'APPLE_MAC', 'WK2'], expectationsDirectory: 'mac-wk2'}
-                        }
-                    },
                     'YOSEMITE': {
                         subPlatforms: {
                             'WK1': { fallbackPlatforms: ['APPLE_MAC_YOSEMITE', 'APPLE_MAC'] },
@@ -354,7 +348,7 @@ function determineBuilderPlatform(builderNameUpperCase)
     if (string.contains(builderNameUpperCase, 'WIN XP'))
         return 'APPLE_WIN_XP';
 
-    if (string.contains(builderNameUpperCase, 'ELCAPITAN'))
+    if (string.contains(builderNameUpperCase, 'EL CAPITAN'))
         return determineWKPlatform(builderNameUpperCase, 'APPLE_ELCAPITAN');
     if (string.contains(builderNameUpperCase, 'YOSEMITE'))
         return determineWKPlatform(builderNameUpperCase, 'APPLE_YOSEMITE');
@@ -362,6 +356,8 @@ function determineBuilderPlatform(builderNameUpperCase)
         return determineWKPlatform(builderNameUpperCase, 'APPLE_MAVERICKS');
     if (string.contains(builderNameUpperCase, 'LION'))
         return determineWKPlatform(builderNameUpperCase, 'APPLE_MAC_LION');
+    if (string.contains(builderNameUpperCase, ' IOS ') && string.contains(builderNameUpperCase, 'SIMULATOR'))
+        return determineWKPlatform(builderNameUpperCase, 'APPLE_IOS_SIMULATOR');
     if (string.contains(builderNameUpperCase, 'GTK LINUX'))
         return determineWKPlatform(builderNameUpperCase, 'GTK_LINUX');
     if (string.contains(builderNameUpperCase, 'EFL'))
@@ -1092,7 +1088,7 @@ function processMissingAndExtraExpectations(resultsForTest)
 }
 
 
-var BUG_URL_PREFIX = '<a href="http://';
+var BUG_URL_PREFIX = '<a href="https://';
 var BUG_URL_POSTFIX = '/$1">crbug.com/$1</a> ';
 var WEBKIT_BUG_URL_POSTFIX = '/$1">webkit.org/b/$1</a> ';
 var INTERNAL_BUG_REPLACE_VALUE = BUG_URL_PREFIX + 'b' + BUG_URL_POSTFIX;
@@ -1182,7 +1178,7 @@ function showPopupForBuild(e, builder, index, opt_testName)
     html += '<ul><li>' + linkHTMLToOpenWindow(buildBasePath, 'Build log') +
         '</li><li>' +
         createBlameListHTML(g_resultsByBuilder[builder].webkitRevision, index,
-            'http://trac.webkit.org/log/?verbose=on&rev=', '&stop_rev=',
+            'https://trac.webkit.org/log/?verbose=on&rev=', '&stop_rev=',
             'WebKit') +
         '</li>';
 
@@ -1857,14 +1853,14 @@ function addExpectationItem(expectationsContainers, parentContainer, platform, p
     };
 
     var url = base + platformPart + path;
-    if (isImage || !string.startsWith(base, 'http://svn.webkit.org')) {
+    if (isImage || !string.startsWith(base, 'https://svn.webkit.org')) {
         var dummyNode = document.createElement(isImage ? 'img' : 'script');
         dummyNode.src = url;
         dummyNode.onload = function() {
             var item;
             if (isImage) {
                 item = dummyNode;
-                if (string.startsWith(base, 'http://svn.webkit.org'))
+                if (string.startsWith(base, 'https://svn.webkit.org'))
                     maybeAddPngChecksum(item, url);
             } else {
                 item = document.createElement('iframe');

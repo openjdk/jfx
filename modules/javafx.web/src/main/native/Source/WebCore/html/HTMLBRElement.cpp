@@ -61,7 +61,7 @@ void HTMLBRElement::collectStyleForPresentationAttribute(const QualifiedName& na
         // If the string is empty, then don't add the clear property.
         // <br clear> and <br clear=""> are just treated like <br> by Gecko, Mac IE, etc. -dwh
         if (!value.isEmpty()) {
-            if (equalIgnoringCase(value, "all"))
+            if (equalLettersIgnoringASCIICase(value, "all"))
                 addPropertyToPresentationAttributeStyle(style, CSSPropertyClear, CSSValueBoth);
             else
                 addPropertyToPresentationAttributeStyle(style, CSSPropertyClear, value);
@@ -73,9 +73,9 @@ void HTMLBRElement::collectStyleForPresentationAttribute(const QualifiedName& na
 RenderPtr<RenderElement> HTMLBRElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
     if (style.get().hasContent())
-        return RenderElement::createFor(*this, WTF::move(style));
+        return RenderElement::createFor(*this, WTFMove(style));
 
-    return createRenderer<RenderLineBreak>(*this, WTF::move(style));
+    return createRenderer<RenderLineBreak>(*this, WTFMove(style));
 }
 
 }

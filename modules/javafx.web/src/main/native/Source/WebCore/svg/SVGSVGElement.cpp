@@ -68,7 +68,7 @@ inline SVGSVGElement::SVGSVGElement(const QualifiedName& tagName, Document& docu
 {
     ASSERT(hasTagName(SVGNames::svgTag));
     registerAnimatedPropertiesForSVGSVGElement();
-    document.registerForPageCacheSuspensionCallbacks(this);
+    document.registerForDocumentSuspensionCallbacks(this);
 }
 
 Ref<SVGSVGElement> SVGSVGElement::create(const QualifiedName& tagName, Document& document)
@@ -85,15 +85,15 @@ SVGSVGElement::~SVGSVGElement()
 {
     if (m_viewSpec)
         m_viewSpec->resetContextElement();
-    document().unregisterForPageCacheSuspensionCallbacks(this);
+    document().unregisterForDocumentSuspensionCallbacks(this);
     document().accessSVGExtensions().removeTimeContainer(this);
 }
 
 void SVGSVGElement::didMoveToNewDocument(Document* oldDocument)
 {
     if (oldDocument)
-        oldDocument->unregisterForPageCacheSuspensionCallbacks(this);
-    document().registerForPageCacheSuspensionCallbacks(this);
+        oldDocument->unregisterForDocumentSuspensionCallbacks(this);
+    document().registerForDocumentSuspensionCallbacks(this);
     SVGGraphicsElement::didMoveToNewDocument(oldDocument);
 }
 
@@ -416,9 +416,9 @@ AffineTransform SVGSVGElement::localCoordinateSpaceTransform(SVGLocatable::CTMSc
 
             // Respect scroll offset.
             if (FrameView* view = document().view()) {
-                LayoutSize scrollOffset = view->scrollOffset();
-                scrollOffset.scale(zoomFactor);
-                transform.translate(-scrollOffset.width(), -scrollOffset.height());
+                LayoutPoint scrollPosition = view->scrollPosition();
+                scrollPosition.scale(zoomFactor, zoomFactor);
+                transform.translate(-scrollPosition.x(), -scrollPosition.y());
             }
         }
     }
@@ -442,8 +442,8 @@ bool SVGSVGElement::rendererIsNeeded(const RenderStyle& style)
 RenderPtr<RenderElement> SVGSVGElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
     if (isOutermostSVGSVGElement())
-        return createRenderer<RenderSVGRoot>(*this, WTF::move(style));
-    return createRenderer<RenderSVGViewportContainer>(*this, WTF::move(style));
+        return createRenderer<RenderSVGRoot>(*this, WTFMove(style));
+    return createRenderer<RenderSVGViewportContainer>(*this, WTFMove(style));
 }
 
 Node::InsertionNotificationRequest SVGSVGElement::insertedInto(ContainerNode& rootParent)
@@ -658,12 +658,12 @@ void SVGSVGElement::inheritViewAttributes(const SVGViewElement& viewElement)
         view.setZoomAndPanBaseValue(zoomAndPan());
 }
 
-void SVGSVGElement::documentWillSuspendForPageCache()
+void SVGSVGElement::prepareForDocumentSuspension()
 {
     pauseAnimations();
 }
 
-void SVGSVGElement::documentDidResumeFromPageCache()
+void SVGSVGElement::resumeFromDocumentSuspension()
 {
     unpauseAnimations();
 }
@@ -676,7 +676,7 @@ Element* SVGSVGElement::getElementById(const AtomicString& id)
     if (element && element->isDescendantOf(this))
         return element;
     if (treeScope().containsMultipleElementsWithId(id)) {
-        for (auto element : *treeScope().getAllElementsById(id)) {
+        for (auto* element : *treeScope().getAllElementsById(id)) {
             if (element->isDescendantOf(this))
                 return element;
         }

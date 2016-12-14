@@ -215,6 +215,15 @@ class Device(object):
         Simulator.wait_until_device_is_in_state(device_udid, Simulator.DeviceState.SHUTDOWN)
         return Simulator().find_device_by_udid(device_udid)
 
+    @classmethod
+    def delete(cls, udid):
+        """
+        Delete the given CoreSimulator device.
+        :param udid: The udid of the device.
+        :type udid: str
+        """
+        subprocess.call(['xcrun', 'simctl', 'delete', udid])
+
     def __eq__(self, other):
         return self.udid == other.udid
 
@@ -234,15 +243,18 @@ class Device(object):
 #        We should find a better way to query for simulator device state and capabilities. Maybe take a similiar
 #        approach as in webkitdirs.pm and utilize the parsed output from the device.plist files in the sub-
 #        directories of ~/Library/Developer/CoreSimulator/Devices?
+#        Also, simctl has the option to output in JSON format (xcrun simctl list --json).
 class Simulator(object):
     """
     Represents the iOS Simulator infrastructure under the currently select Xcode.app bundle.
     """
     device_type_re = re.compile('(?P<name>[^(]+)\((?P<identifier>[^)]+)\)')
+    # FIXME: runtime_re parses the version from the runtime name, but that does not contain the full version number
+    # (it can omit the revision). We should instead parse the version from the number contained in parentheses.
     runtime_re = re.compile(
-        'iOS (?P<version>[0-9]+\.[0-9])(?P<internal> Internal)? \([0-9]+\.[0-9]+ - (?P<build_version>[^)]+)\) \((?P<identifier>[^)]+)\)( \((?P<availability>[^)]+)\))?')
+        '(i|watch|tv)OS (?P<version>\d+\.\d)(?P<internal> Internal)? \(\d+\.\d+(\.\d+)? - (?P<build_version>[^)]+)\) \((?P<identifier>[^)]+)\)( \((?P<availability>[^)]+)\))?')
     unavailable_version_re = re.compile('-- Unavailable: (?P<identifier>[^ ]+) --')
-    version_re = re.compile('-- iOS (?P<version>[0-9]+\.[0-9]+)(?P<internal> Internal)? --')
+    version_re = re.compile('-- (i|watch|tv)OS (?P<version>\d+\.\d+)(?P<internal> Internal)? --')
     devices_re = re.compile(
         '\s*(?P<name>[^(]+ )\((?P<udid>[^)]+)\) \((?P<state>[^)]+)\)( \((?P<availability>[^)]+)\))?')
 
@@ -262,6 +274,16 @@ class Simulator(object):
         SHUTTING_DOWN = 4
 
     @staticmethod
+    def wait_until_device_is_booted(udid, timeout_seconds=60 * 5):
+        Simulator.wait_until_device_is_in_state(udid, Simulator.DeviceState.BOOTED, timeout_seconds)
+        with timeout(seconds=timeout_seconds):
+            while True:
+                state = subprocess.check_output(['xcrun', 'simctl', 'spawn', udid, 'launchctl', 'print', 'system']).strip()
+                if re.search("A[\s]+com.apple.springboard.services", state):
+                    return
+                time.sleep(1)
+
+    @staticmethod
     def wait_until_device_is_in_state(udid, wait_until_state, timeout_seconds=60 * 5):
         with timeout(seconds=timeout_seconds):
             while (Simulator.device_state(udid) != wait_until_state):
@@ -278,23 +300,9 @@ class Simulator(object):
     def device_directory(udid):
         return os.path.realpath(os.path.expanduser(os.path.join('~/Library/Developer/CoreSimulator/Devices', udid)))
 
-    @staticmethod
-    def _boot_and_shutdown_simulator_device(host, udid):
-        exit_code = host.executive.run_command(['xcrun', 'simctl', 'boot', udid], return_exit_code=True)
-        if exit_code:
-            return exit_code
-        exit_code = host.executive.run_command(['xcrun', 'simctl', 'shutdown', udid], return_exit_code=True)
-        return exit_code
-
-    @staticmethod
-    def check_simulator_device_and_erase_if_needed(host, udid):
-        exit_code = Simulator._boot_and_shutdown_simulator_device(host, udid)
-        if not exit_code:
-            return True  # Can boot device
-        # Try erasing the simulator device to restore it to a known good state.
-        if not host.executive.run_command(['xcrun', 'simctl', 'erase', udid], return_exit_code=True):
-            return Simulator._boot_and_shutdown_simulator_device(host, udid) == 0  # Can boot device
-        return False  # Cannot boot or erase device
+    def delete_device(self, udid):
+        Simulator.wait_until_device_is_in_state(udid, Simulator.DeviceState.SHUTDOWN)
+        Device.delete(udid)
 
     def refresh(self):
         """

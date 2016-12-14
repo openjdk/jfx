@@ -28,24 +28,12 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "B3OpaqueByproducts.h"
 #include "DFGCommonData.h"
-#include "FTLDataSection.h"
+#include "FTLLazySlowPath.h"
 #include "FTLOSRExit.h"
-#include "FTLStackMaps.h"
-#include "FTLUnwindInfo.h"
 #include "JITCode.h"
-#include "LLVMAPI.h"
 #include <wtf/RefCountedArray.h>
-
-#if OS(DARWIN)
-#define SECTION_NAME_PREFIX "__"
-#elif OS(LINUX)
-#define SECTION_NAME_PREFIX "."
-#else
-#error "Unsupported platform"
-#endif
-
-#define SECTION_NAME(NAME) (SECTION_NAME_PREFIX NAME)
 
 namespace JSC {
 
@@ -58,40 +46,40 @@ public:
     JITCode();
     ~JITCode();
 
-    CodePtr addressForCall(VM&, ExecutableBase*, ArityCheckMode, RegisterPreservationMode) override;
+    CodePtr addressForCall(ArityCheckMode) override;
     void* executableAddressAtOffset(size_t offset) override;
     void* dataAddressAtOffset(size_t offset) override;
     unsigned offsetOf(void* pointerIntoCode) override;
     size_t size() override;
     bool contains(void*) override;
 
-    void initializeExitThunks(CodeRef);
-    void addHandle(PassRefPtr<ExecutableMemoryHandle>);
-    void addDataSection(PassRefPtr<DataSection>);
-    void initializeArityCheckEntrypoint(CodeRef);
+    void initializeB3Code(CodeRef);
+    void initializeB3Byproducts(std::unique_ptr<B3::OpaqueByproducts>);
     void initializeAddressForCall(CodePtr);
+    void initializeArityCheckEntrypoint(CodeRef);
 
     void validateReferences(const TrackedReferences&) override;
 
-    const Vector<RefPtr<ExecutableMemoryHandle>>& handles() const { return m_handles; }
-    const Vector<RefPtr<DataSection>>& dataSections() const { return m_dataSections; }
+    RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) override;
 
-    CodePtr exitThunks();
+    Optional<CodeOrigin> findPC(CodeBlock*, void* pc) override;
+
+    CodeRef b3Code() const { return m_b3Code; }
 
     JITCode* ftl() override;
     DFG::CommonData* dfgCommon() override;
+    static ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
 
     DFG::CommonData common;
     SegmentedVector<OSRExit, 8> osrExit;
-    StackMaps stackmaps;
-    UnwindInfo unwindInfo;
+    SegmentedVector<OSRExitDescriptor, 8> osrExitDescriptors;
+    Vector<std::unique_ptr<LazySlowPath>> lazySlowPaths;
 
 private:
-    Vector<RefPtr<DataSection>> m_dataSections;
-    Vector<RefPtr<ExecutableMemoryHandle>> m_handles;
     CodePtr m_addressForCall;
+    CodeRef m_b3Code;
+    std::unique_ptr<B3::OpaqueByproducts> m_b3Byproducts;
     CodeRef m_arityCheckEntrypoint;
-    CodeRef m_exitThunks;
 };
 
 } } // namespace JSC::FTL

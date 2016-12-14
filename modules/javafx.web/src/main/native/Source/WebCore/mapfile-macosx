@@ -99,6 +99,7 @@
                __ZN3JSC16slowValidateCellEPNS_6JSCellE
                __ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue
                __ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue
+               __ZN3JSC20failNextNewCodeBlockEPK15OpaqueJSContext
                __ZN3JSC17JSArrayBufferView6s_infoE
                __ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext
                _Java_com_sun_webkit_dom_AttrImpl_getNameImpl
@@ -533,7 +534,6 @@
                _Java_com_sun_webkit_dom_DocumentImpl_querySelectorAllImpl
                _Java_com_sun_webkit_dom_DocumentImpl_querySelectorImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setBodyImpl
-               _Java_com_sun_webkit_dom_DocumentImpl_setCharsetImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setCookieImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnabortImpl
                _Java_com_sun_webkit_dom_DocumentImpl_setOnbeforecopyImpl
@@ -980,7 +980,6 @@
                _Java_com_sun_webkit_dom_HTMLElementImpl_setWebkitdropzoneImpl
                _Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_checkValidityImpl
                _Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getDisabledImpl
-               _Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getElementsImpl
                _Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getFormImpl
                _Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getNameImpl
                _Java_com_sun_webkit_dom_HTMLFieldSetElementImpl_getTypeImpl
@@ -1095,7 +1094,6 @@
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getMarginHeightImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getMarginWidthImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getNameImpl
-               _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getSandboxImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getScrollingImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getSrcImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_getSrcdocImpl
@@ -1107,7 +1105,6 @@
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setMarginHeightImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setMarginWidthImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setNameImpl
-               _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setSandboxImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setScrollingImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setSrcImpl
                _Java_com_sun_webkit_dom_HTMLIFrameElementImpl_setSrcdocImpl
@@ -1815,7 +1812,6 @@
                _Java_com_sun_webkit_WCPluginWidget_twkInvalidateWindowlessPluginRect
                _Java_com_sun_webkit_WCPluginWidget_twkSetPlugunFocused
                _Java_com_sun_webkit_WCWidget_initIDs
-               _Java_com_sun_webkit_WatchdogTimer_twkFire
                _Java_com_sun_webkit_WebPage_twkAddJavaScriptBinding
                _Java_com_sun_webkit_WebPage_twkAdjustFrameHeight
                _Java_com_sun_webkit_WebPage_twkBeginPrinting
@@ -1859,6 +1855,7 @@
                _Java_com_sun_webkit_WebPage_twkGetVisibleRect
                _Java_com_sun_webkit_WebPage_twkGetZoomFactor
                _Java_com_sun_webkit_WebPage_twkGoBackForward
+               _Java_com_sun_webkit_WebPage_twkInitWebCore
                _Java_com_sun_webkit_WebPage_twkInit
                _Java_com_sun_webkit_WebPage_twkIsContextMenuEnabled
                _Java_com_sun_webkit_WebPage_twkIsEditable
@@ -1867,6 +1864,7 @@
                _Java_com_sun_webkit_WebPage_twkIsLoading
                _Java_com_sun_webkit_WebPage_twkOpen
                _Java_com_sun_webkit_WebPage_twkOverridePreference
+               _Java_com_sun_webkit_WebPage_twkResetToConsistentStateBeforeTesting
                _Java_com_sun_webkit_WebPage_twkPostPaint
                _Java_com_sun_webkit_WebPage_twkPrePaint
                _Java_com_sun_webkit_WebPage_twkPrint

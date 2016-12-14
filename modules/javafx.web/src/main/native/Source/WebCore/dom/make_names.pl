@@ -978,11 +978,36 @@ END
     ;
 
     my %tagConstructorMap = buildConstructorMap();
+    my $argumentList;
+
+    if ($parameters{namespace} eq "HTML") {
+        $argumentList = "name, document, formElement, createdByParser";
+    } else {
+        $argumentList = "name, document, createdByParser";
+    }
+
+    my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
 
     printConstructors($F, \%tagConstructorMap);
 
     print F <<END
-static NEVER_INLINE void populate$parameters{namespace}FactoryMap(HashMap<AtomicStringImpl*, $parameters{namespace}ConstructorFunction>& map)
+
+struct ConstructorFunctionMapEntry {
+    ConstructorFunctionMapEntry($parameters{namespace}ConstructorFunction function, const QualifiedName& name)
+        : function(function)
+        , qualifiedName(&name)
+    { }
+
+    ConstructorFunctionMapEntry()
+        : function(nullptr)
+        , qualifiedName(nullptr)
+    { }
+
+    $parameters{namespace}ConstructorFunction function;
+    const QualifiedName* qualifiedName; // Use pointer instead of reference so that emptyValue() in HashMap is cheap to create.
+};
+
+static NEVER_INLINE void populate$parameters{namespace}FactoryMap(HashMap<AtomicStringImpl*, ConstructorFunctionMapEntry>& map)
 {
     struct TableEntry {
         const QualifiedName& name;
@@ -999,25 +1024,42 @@ END
     };
 
     for (unsigned i = 0; i < WTF_ARRAY_LENGTH(table); ++i)
-        map.add(table[i].name.localName().impl(), table[i].function);
+        map.add(table[i].name.localName().impl(), ConstructorFunctionMapEntry(table[i].function, table[i].name));
+}
+
+
+static ConstructorFunctionMapEntry find$parameters{namespace}ElementConstructorFunction(const AtomicString& localName)
+{
+    static NeverDestroyed<HashMap<AtomicStringImpl*, ConstructorFunctionMapEntry>> map;
+    if (map.get().isEmpty())
+        populate$parameters{namespace}FactoryMap(map);
+    return map.get().get(localName.impl());
+}
+
+RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createKnownElement(const AtomicString& localName, Document& document$formElementArgumentForDefinition, bool createdByParser)
+{
+    const ConstructorFunctionMapEntry& entry = find$parameters{namespace}ElementConstructorFunction(localName);
+    if (LIKELY(entry.function)) {
+        ASSERT(entry.qualifiedName);
+        const auto& name = *entry.qualifiedName;
+        return entry.function($argumentList);
+    }
+    return nullptr;
+}
+
+Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createElement(const AtomicString& name, Document& document$formElementArgumentForDefinition, bool createdByParser)
+{
+    RefPtr<$parameters{namespace}Element> element = $parameters{namespace}ElementFactory::createKnownElement($argumentList);
+    if (LIKELY(element))
+        return element.releaseNonNull();
+    return $parameters{fallbackInterfaceName}::create(QualifiedName(nullAtom, name, ${lowercaseNamespacePrefix}NamespaceURI), document);
 }
 
 Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createElement(const QualifiedName& name, Document& document$formElementArgumentForDefinition, bool createdByParser)
 {
-    static NeverDestroyed<HashMap<AtomicStringImpl*, $parameters{namespace}ConstructorFunction>> functions;
-    if (functions.get().isEmpty())
-        populate$parameters{namespace}FactoryMap(functions);
-    if ($parameters{namespace}ConstructorFunction function = functions.get().get(name.localName().impl()))
-END
-    ;
-
-    if ($parameters{namespace} eq "HTML") {
-        print F "        return function(name, document, formElement, createdByParser);\n";
-    } else {
-        print F "        return function(name, document, createdByParser);\n";
-    }
-
-    print F <<END
+    const ConstructorFunctionMapEntry& entry = find$parameters{namespace}ElementConstructorFunction(name.localName());
+    if (LIKELY(entry.function))
+        return entry.function($argumentList);
     return $parameters{fallbackInterfaceName}::create(name, document);
 }
 
@@ -1058,7 +1100,13 @@ namespace WebCore {
 END
 ;
 
-print F "        static Ref<$parameters{namespace}Element> createElement(const QualifiedName&, Document&";
+print F "        static RefPtr<$parameters{namespace}Element> createKnownElement(const AtomicString& localName, Document&";
+print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
+print F ", bool createdByParser = false);\n\n";
+print F "        static Ref<$parameters{namespace}Element> createElement(const AtomicString& localName, Document&";
+print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
+print F ", bool createdByParser = false);\n";
+print F "        static Ref<$parameters{namespace}Element> createElement(const QualifiedName& localName, Document&";
 print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
 print F ", bool createdByParser = false);\n";
 
@@ -1103,7 +1151,7 @@ sub printWrapperFunctions
 
         if ($enabledTags{$tagName}{wrapperOnlyIfMediaIsAvailable}) {
             print F <<END
-static JSDOMWrapper* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
         return CREATE_DOM_WRAPPER(globalObject, $parameters{fallbackInterfaceName}, element.get());
@@ -1114,7 +1162,7 @@ END
             ;
         } elsif ($enabledTags{$tagName}{settingsConditional}) {
             print F <<END
-static JSDOMWrapper* create$enabledTags{$tagName}{interfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+static JSDOMObject* create$enabledTags{$tagName}{interfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
         return CREATE_DOM_WRAPPER(globalObject, $parameters{fallbackInterfaceName}, element.get());
@@ -1126,7 +1174,7 @@ END
         } elsif ($enabledTags{$tagName}{runtimeConditional}) {
             my $runtimeConditional = $enabledTags{$tagName}{runtimeConditional};
             print F <<END
-static JSDOMWrapper* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
 {
     if (!RuntimeEnabledFeatures::sharedFeatures().${runtimeConditional}Enabled()) {
         ASSERT(!element || element->is$parameters{fallbackInterfaceName}());
@@ -1139,7 +1187,7 @@ END
     ;
         } else {
             print F <<END
-static JSDOMWrapper* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
 {
     return CREATE_DOM_WRAPPER(globalObject, ${JSInterfaceName}, element.get());
 }
@@ -1192,7 +1240,7 @@ namespace WebCore {
 
 using namespace $parameters{namespace}Names;
 
-typedef JSDOMWrapper* (*Create$parameters{namespace}ElementWrapperFunction)(JSDOMGlobalObject*, PassRefPtr<$parameters{namespace}Element>);
+typedef JSDOMObject* (*Create$parameters{namespace}ElementWrapperFunction)(JSDOMGlobalObject*, PassRefPtr<$parameters{namespace}Element>);
 
 END
 ;
@@ -1245,7 +1293,7 @@ END
         map.add(table[i].name.localName().impl(), table[i].function);
 }
 
-JSDOMWrapper* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
 {
     static NeverDestroyed<HashMap<AtomicStringImpl*, Create$parameters{namespace}ElementWrapperFunction>> functions;
     if (functions.get().isEmpty())
@@ -1283,11 +1331,11 @@ sub printWrapperFactoryHeaderFile
 
 namespace WebCore {
 
-    class JSDOMWrapper;
+    class JSDOMObject;
     class JSDOMGlobalObject;
     class $parameters{namespace}Element;
 
-    JSDOMWrapper* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject*, PassRefPtr<$parameters{namespace}Element>);
+    JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject*, PassRefPtr<$parameters{namespace}Element>);
 
 }
  

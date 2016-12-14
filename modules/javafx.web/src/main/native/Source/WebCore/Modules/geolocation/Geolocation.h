@@ -48,6 +48,7 @@ class GeolocationError;
 class GeolocationPosition;
 class Page;
 class ScriptExecutionContext;
+class SecurityOrigin;
 
 class Geolocation : public ScriptWrappable, public RefCounted<Geolocation>, public ActiveDOMObject
 {
@@ -61,8 +62,8 @@ public:
     Document* document() const;
     WEBCORE_EXPORT Frame* frame() const;
 
-    void getCurrentPosition(PassRefPtr<PositionCallback>, PassRefPtr<PositionErrorCallback>, PassRefPtr<PositionOptions>);
-    int watchPosition(PassRefPtr<PositionCallback>, PassRefPtr<PositionErrorCallback>, PassRefPtr<PositionOptions>);
+    void getCurrentPosition(RefPtr<PositionCallback>&&, RefPtr<PositionErrorCallback>&&, RefPtr<PositionOptions>&&);
+    int watchPosition(RefPtr<PositionCallback>&&, RefPtr<PositionErrorCallback>&&, RefPtr<PositionOptions>&&);
     void clearWatch(int watchID);
 
     WEBCORE_EXPORT void setIsAllowed(bool);
@@ -79,7 +80,7 @@ private:
 
     // ActiveDOMObject
     void stop() override;
-    bool canSuspendForPageCache() const override;
+    bool canSuspendForDocumentSuspension() const override;
     void suspend(ReasonForSuspension) override;
     void resume() override;
     const char* activeDOMObjectName() const override;
@@ -87,13 +88,14 @@ private:
     bool isDenied() const { return m_allowGeolocation == No; }
 
     Page* page() const;
+    SecurityOrigin* securityOrigin() const;
 
     typedef Vector<RefPtr<GeoNotifier>> GeoNotifierVector;
     typedef HashSet<RefPtr<GeoNotifier>> GeoNotifierSet;
 
     class Watchers {
     public:
-        bool add(int id, PassRefPtr<GeoNotifier>);
+        bool add(int id, RefPtr<GeoNotifier>&&);
         GeoNotifier* find(int id);
         void remove(int id);
         void remove(GeoNotifier*);

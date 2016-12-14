@@ -46,7 +46,7 @@
 
 #else // !USE(EXPORT_MACROS)
 
-#if OS(WINDOWS) && !COMPILER(GCC)
+#if OS(WINDOWS) && !COMPILER(GCC_OR_CLANG)
 
 #if PLATFORM(JAVA) && defined(BUILDING_WebCore)
   #define JS_EXPORTDATA

@@ -57,10 +57,7 @@ public:
     T operator->() const { return m_ptr; }
 
     bool operator!() const { return !m_ptr; }
-
-    // This conversion operator allows implicit conversion to bool but not to other integer types.
-    typedef T JSRetainPtr::*UnspecifiedBoolType;
-    operator UnspecifiedBoolType() const { return m_ptr ? &JSRetainPtr::m_ptr : 0; }
+    explicit operator bool() const { return m_ptr; }
 
     JSRetainPtr& operator=(const JSRetainPtr&);
     template<typename U> JSRetainPtr& operator=(const JSRetainPtr<U>&);

@@ -145,12 +145,12 @@ bool SearchPopupMenuJava::enabled()
     return false;
 }
 
-void SearchPopupMenuJava::saveRecentSearches(const AtomicString& name, const Vector<String>& searchItems)
+void SearchPopupMenuJava::saveRecentSearches(const AtomicString& name, const Vector<RecentSearch>&)
 {
     notImplemented();
 }
 
-void SearchPopupMenuJava::loadRecentSearches(const AtomicString& name, Vector<String>& searchItems)
+void SearchPopupMenuJava::loadRecentSearches(const AtomicString& name, Vector<RecentSearch>&)
 {
     notImplemented();
 }
@@ -193,99 +193,6 @@ Color focusRingColor()
     notImplemented();
     return Color();
 }
-
-
-// SharedBuffer
-// RefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePath) {
-//     notImplemented();
-//     return adoptRef(new SharedBuffer); //XXX remove adoptRef? PassRefPtr - > RefPtr
-// }
-
-// SVG
-/*
-void SVGPaintServer::renderPath(GraphicsContext*&, RenderObject const*,
-        SVGPaintTargetType) const
-{
-    notImplemented();
-}
-
-void SVGPaintServer::teardown(GraphicsContext*&, RenderObject const*,
-        SVGPaintTargetType, bool) const
-{
-    notImplemented();
-}
-
-void SVGPaintServer::draw(GraphicsContext*&, RenderObject const*,
-        SVGPaintTargetType) const
-{
-    notImplemented();
-}
-
-bool SVGPaintServerGradient::setup(GraphicsContext*&, RenderObject const*,
-        SVGPaintTargetType, bool) const
-{
-    notImplemented();
-    return false;
-}
-
-void SVGResourceMasker::applyMask(GraphicsContext*, FloatRect const&)
-{
-    notImplemented();
-}
-
-void SVGResourceClipper::applyClip(GraphicsContext*, FloatRect const&) const
-{
-    notImplemented();
-}
-
-bool SVGPaintServerPattern::setup(GraphicsContext*&, RenderObject const*,
-        SVGPaintTargetType, bool) const
-{
-    notImplemented();
-    return false;
-}
-
-bool SVGPaintServerSolid::setup(GraphicsContext*&, RenderObject const*,
-        SVGPaintTargetType, bool) const
-{
-    notImplemented();
-    return false;
-}
-
-SVGResourceFilterPlatformData* SVGResourceFilter::createPlatformData(void)
-{
-    notImplemented();
-    return new SVGResourceFilterPlatformData();
-}
-
-void SVGResourceFilter::applyFilter(GraphicsContext*&, FloatRect const &)
-{
-    notImplemented();
-}
-
-void SVGResourceFilter::prepareFilter(GraphicsContext*&, FloatRect const &)
-{
-    notImplemented();
-}
-
-*/
-// RenderPath
-/*
-bool RenderPath::strokeContains(FloatPoint const&, bool) const
-{
-    notImplemented();
-    return false;
-}
-
-FloatRect RenderPath::strokeBBox() const
-{
-    notImplemented();
-    return FloatRect(0, 0, 0, 0);
-}
-
-*/
-//bool SVGTransformDistance::isZero()
-//}
 
 bool Path::strokeContains(StrokeStyleApplier*, const FloatPoint&) const
 {

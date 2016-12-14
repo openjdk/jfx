@@ -85,6 +85,7 @@ usesEncodingDetector initial=false
 allowScriptsToCloseWindows initial=false
 canvasUsesAcceleratedDrawing initial=false
 acceleratedDrawingEnabled initial=false
+displayListDrawingEnabled initial=false
 acceleratedFiltersEnabled initial=false
 useLegacyTextAlignPositionedElementBehavior initial=false
 javaScriptRuntimeFlags type=JSC::RuntimeFlags
@@ -103,7 +104,6 @@ experimentalNotificationsEnabled initial=false
 webGLEnabled initial=false
 webGLErrorsToConsoleEnabled initial=true
 openGLMultisamplingEnabled initial=true
-privilegedWebGLExtensionsEnabled initial=false
 forceSoftwareWebGLRendering initial=false
 accelerated2dCanvasEnabled initial=false
 antialiased2dCanvasEnabled initial=true
@@ -128,8 +128,10 @@ allowRunningOfInsecureContent initial=false
 requiresUserGestureForMediaPlayback initial=defaultRequiresUserGestureForMediaPlayback
 audioPlaybackRequiresUserGesture initial=defaultAudioPlaybackRequiresUserGesture
 allowsInlineMediaPlayback initial=defaultAllowsInlineMediaPlayback
+inlineMediaPlaybackRequiresPlaysInlineAttribute initial=defaultInlineMediaPlaybackRequiresPlaysInlineAttribute
 allowsPictureInPictureMediaPlayback initial=defaultAllowsPictureInPictureMediaPlayback
 mediaControlsScaleWithPageZoom initial=defaultMediaControlsScaleWithPageZoom
+invisibleAutoplayNotPermitted initial=false
 passwordEchoEnabled initial=false
 suppressesIncrementalRendering initial=false
 incrementalRenderingSuppressionTimeoutInSeconds type=double, initial=defaultIncrementalRenderingSuppressionTimeoutInSeconds
@@ -163,7 +165,6 @@ DOMPasteAllowed initial=false
 windowFocusRestricted initial=true
 
 diagnosticLoggingEnabled initial=false
-applyDeviceScaleFactorInCompositor initial=true
 delegatesPageScaling initial=false
 plugInSnapshottingEnabled initial=false
 snapshotAllPlugIns initial=false
@@ -201,6 +202,8 @@ simpleLineLayoutDebugBordersEnabled initial=false, setNeedsStyleRecalcInAllFrame
 
 subpixelCSSOMElementMetricsEnabled initial=false
 
+useGiantTiles initial=false
+
 mediaSourceEnabled initial=true, conditional=MEDIA_SOURCE
 
 # FIXME: Rename to allowMultiElementImplicitFormSubmission once we upstream the iOS changes to WebView.mm.
@@ -213,7 +216,7 @@ shouldConvertPositionStyleOnCopy initial=false
 maxParseDuration type=double, initial=-1
 standalone initial=false
 telephoneNumberParsingEnabled initial=false
-mediaDataLoadsAutomatically initial=false
+mediaDataLoadsAutomatically initial=defaultMediaDataLoadsAutomatically
 shouldTransformsAffectOverflow initial=true
 shouldDispatchJavaScriptWindowOnErrorEvents initial=false
 alwaysUseAcceleratedOverflowScroll initial=false
@@ -225,16 +228,13 @@ aggressiveTileRetentionEnabled initial=false
 temporaryTileCohortRetentionEnabled initial=true
 
 useImageDocumentForSubframePDF initial=false
+dataDetectorTypes type=DataDetectorTypes, initial=DataDetectorTypeNone, conditional=DATA_DETECTION
 
 # Allow SourceBuffers to store up to 304MB each, enough for approximately five minutes
 # of 1080p video and stereo audio.
 maximumSourceBufferSize type=int, initial=318767104, conditional=MEDIA_SOURCE
 
-longMousePressEnabled initial=false
-
 serviceControlsEnabled initial=false, conditional=SERVICE_CONTROLS
-
-ignoreViewportScalingConstraints initial=false
 
 appleMailPaginationQuirkEnabled initial=false
 

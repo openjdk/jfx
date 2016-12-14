@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -175,7 +175,7 @@ void Widget::setIsSelected(bool)
     notImplemented();
 }
 
-void Widget::paint(GraphicsContext* gc, IntRect const& r)
+void Widget::paint(GraphicsContext& gc, const IntRect& r)
 {
 /*
     JNIEnv* env = WebCore_GetJavaEnv();

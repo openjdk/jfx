@@ -36,7 +36,7 @@ enum TestEnumType { "", "EnumValue1", "EnumValue2", "EnumValue3" };
 enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
 
 [
-    Constructor(TestCallback testCallback),
+    Constructor(TestCallback testCallback, TestCallbackFunction testCallbackFunction),
     InterfaceName=TestObject
 ] interface TestObj {
     // Attributes
@@ -56,11 +56,18 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     attribute long long                longLongAttr;
     attribute unsigned long long       unsignedLongLongAttr;
     attribute DOMString                stringAttr;
-    attribute TestObj testObjAttr;
+    attribute TestObj                  testObjAttr;
+    [LenientThis] attribute TestObj    lenientTestObjAttr;
+    [Unforgeable] readonly attribute DOMString unforgeableAttr;
+    [TreatNullAs=EmptyString] attribute DOMString stringAttrTreatingNullAsEmptyString;
 
     // WK_ucfirst, WK_lcfirst exceptional cases.
     attribute TestObj                  XMLObjAttr;
     attribute boolean                  create;
+
+    // Readonly Symbol typed attributes.
+    readonly attribute Symbol readOnlySymbolAttr;
+    static readonly attribute Symbol staticReadOnlySymbolAttr;
 
     // Reflected DOM attributes
     [Reflect] attribute DOMString reflectedStringAttr;
@@ -76,6 +83,8 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     // TypedArray attribute
     attribute Float32Array typedArrayAttr;
 
+    iterable<DOMString, TestObj>;
+
     // Methods
     void    voidMethod();
     void    voidMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
@@ -87,11 +96,19 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     long    longMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
     TestObj objMethod();
     TestObj objMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
+    [Unforgeable] long unforgeableMethod();
+    void methodWithArgTreatingNullAsEmptyString([TreatNullAs=EmptyString] DOMString arg);
+
+    // Nullable String return values.
+    DOMString? nullableStringMethod();
+    static DOMString? nullableStringStaticMethod();
+    getter DOMString? nullableStringSpecialMethod(unsigned long index);
 
     void methodWithSequenceArg(sequence<ScriptProfile> sequenceArg);
     sequence<ScriptProfile> methodReturningSequence(long longArg);
 
     void methodWithEnumArg(TestEnumType enumArg);
+    void methodWithOptionalEnumArgAndDefaultValue(optional TestEnumType enumArg = "EnumValue1");
     [RaisesException] TestObj methodThatRequiresAllArgsAndThrows(DOMString strArg, TestObj objArg);
 
     void serializedValue(SerializedScriptValue serializedArg);
@@ -99,15 +116,34 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
 
     // Exceptions
     [RaisesException] void methodWithException();
+    [RaisesExceptionWithMessage] void methodWithExceptionWithMessage();
     [GetterRaisesException] attribute long attrWithGetterException;
+    [GetterRaisesExceptionWithMessage] attribute long attrWithGetterExceptionWithMessage;
     [SetterRaisesException] attribute long attrWithSetterException;
+    [SetterRaisesExceptionWithMessage] attribute long attrWithSetterExceptionWithMessage;
     [GetterRaisesException] attribute DOMString stringAttrWithGetterException;
     [SetterRaisesException] attribute DOMString stringAttrWithSetterException;
+
+    // Strict type checking.
+    [StrictTypeChecking] attribute TestObj strictTypeCheckingAttribute;
 
     // 'Custom' extended attribute
     [Custom] attribute long            customAttr;
     [Custom] void customMethod();
     [Custom] void customMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
+
+    // 'CustomBinding' extended attribute
+    [CustomBinding] void customBindingMethod();
+    [CustomBinding] void customBindingMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
+
+    // 'JSBuiltin' extended attribute
+    [Conditional=Condition3, JSBuiltin] void jsBuiltinMethod();
+    [Conditional=Condition3, JSBuiltin] void jsBuiltinMethodWithArgs(long longArg, DOMString strArg, TestObj objArg);
+    [Conditional=Condition4, JSBuiltin] attribute TestObj jsBuiltinAttribute;
+    [Conditional=Condition4, JSBuiltin] readonly attribute TestObj jsBuiltinReadOnlyAttribute;
+
+    // Private extended attribute
+    [Private] DOMString privateMethod(DOMString argument);
 
     void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
     void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
@@ -125,6 +161,7 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     [CallWith=ScriptArguments&CallStack] void withScriptArgumentsAndCallStack();
 
     [CallWith=ScriptState] attribute long withScriptStateAttribute;
+    [CallWith=ScriptState, SetterCallWith=ActiveWindow&FirstWindow] attribute long withCallWithAndSetterCallWithAttribute;
     [CallWith=ScriptExecutionContext] attribute TestObj withScriptExecutionContextAttribute;
     [CallWith=ScriptState, GetterRaisesException] attribute TestObj withScriptStateAttributeRaises;
     [CallWith=ScriptExecutionContext, GetterRaisesException] attribute TestObj withScriptExecutionContextAttributeRaises;
@@ -133,19 +170,27 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     [CallWith=  ScriptExecutionContext  &  ScriptState  ] attribute TestObj withScriptExecutionContextAndScriptStateWithSpacesAttribute;
     [CallWith=ScriptArguments&CallStack] attribute TestObj withScriptArgumentsAndCallStackAttribute;
 
-    // 'Optional' extended attribute
+    // Optional parameters.
     void    methodWithOptionalArg(optional long opt);
+    void    methodWithOptionalArgAndDefaultValue(optional long opt = 666);
     void    methodWithNonOptionalArgAndOptionalArg(long nonOpt, optional long opt);
     void    methodWithNonOptionalArgAndTwoOptionalArgs(long nonOpt, optional long opt1, optional long opt2);
     void    methodWithOptionalString(optional DOMString str);
+    void    methodWithOptionalStringAndDefaultValue(optional DOMString str = "foo");
     void    methodWithOptionalStringIsUndefined([Default=Undefined] optional DOMString str);
     void    methodWithOptionalStringIsNullString([Default=NullString] optional DOMString str);
 
 #if defined(TESTING_JS)
-    // 'Callback' extended attribute
+    // Callback interface parameters.
     void    methodWithCallbackArg(TestCallback callback);
     void    methodWithNonCallbackArgAndCallbackArg(long nonCallback, TestCallback callback);
     void    methodWithCallbackAndOptionalArg(optional TestCallback callback);
+
+    // Callback function parameters.
+    void    methodWithCallbackFunctionArg(TestCallbackFunction callback);
+    void    methodWithNonCallbackArgAndCallbackFunctionArg(long nonCallback, TestCallbackFunction callback);
+    void    methodWithCallbackFunctionAndOptionalArg(optional TestCallbackFunction callback);
+
     // static methods with 'Callback' extended attribute
     static void    staticMethodWithCallbackAndOptionalArg(optional TestCallback callback);
     static void    staticMethodWithCallbackArg(TestCallback callback);
@@ -218,10 +263,10 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     [CheckSecurityForNode] readonly attribute Document contentDocument;
     [CheckSecurityForNode, RaisesException] SVGDocument getSVGDocument();
 
-    void convert1([TreatReturnedNullStringAs=Null] TestNode value);
-    void convert2([TreatReturnedNullStringAs=Undefined] TestNode value);
-    void convert4([TreatNullAs=NullString] TestNode value);
-    void convert5([TreatNullAs=NullString, TreatUndefinedAs=NullString] TestNode value);
+    void convert1(TestNode value);
+    void convert2(TestNode? value);
+    void convert3(DOMString value);
+    void convert4(DOMString? value);
 
     attribute SVGPoint mutablePoint;
     [Immutable] attribute SVGPoint immutablePoint;
@@ -268,6 +313,7 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     readonly attribute DOMString? nullableStringAttribute;
 
     attribute long? nullableLongSettableAttribute;
+    attribute DOMString? nullableStringSettableAttribute;
 
     [GetterRaisesException] attribute long? nullableStringValue;
 
@@ -277,14 +323,15 @@ enum _optional { "", "OptionalValue1", "OptionalValue2", "OptionalValue3" };
     attribute _optional                attributeWithReservedEnumType;
     void _any(unrestricted float a, long b);
 
-    // Promise attributes
-    [CustomGetter] readonly attribute Promise testPromiseAttr;
-
     // Promise function
     Promise testPromiseFunction();
     Promise testPromiseFunctionWithFloatArgument(float a);
     [RaisesException] Promise testPromiseFunctionWithException();
     Promise testPromiseFunctionWithOptionalIntArgument(optional long a);
+
+    // PutForwards
+    [PutForwards=name] readonly attribute TestNode putForwardsAttribute;
+    [PutForwards=name] readonly attribute TestNode? putForwardsNullableAttribute;
 };
 
 // The following comment should not generate any code.

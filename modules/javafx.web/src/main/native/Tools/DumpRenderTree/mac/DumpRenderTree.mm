@@ -145,12 +145,12 @@ using namespace std;
 @end
 
 #if USE(APPKIT)
-@interface NSSound (Details)
+@interface NSSound ()
 + (void)_setAlertType:(NSUInteger)alertType;
 @end
 #endif
 
-@interface WebView (Details)
+@interface WebView ()
 - (BOOL)_flushCompositingChanges;
 @end
 
@@ -206,6 +206,7 @@ static int forceComplexText;
 static int useAcceleratedDrawing;
 static int gcBetweenTests;
 static int showWebView = NO;
+static int printTestCount = NO;
 static BOOL printSeparators;
 static RetainPtr<CFStringRef> persistentUserStyleSheetLocation;
 static std::set<std::string> allowedHosts;
@@ -359,7 +360,6 @@ static NSSet *allowedFontFamilySet()
         @"Hiragino Kaku Gothic ProN",
         @"Hiragino Kaku Gothic Std",
         @"Hiragino Kaku Gothic StdN",
-        @"Hiragino Maru Gothic Monospaced",
         @"Hiragino Maru Gothic Pro",
         @"Hiragino Maru Gothic ProN",
         @"Hiragino Mincho Pro",
@@ -402,7 +402,6 @@ static NSSet *allowedFontFamilySet()
         @"STKaiti",
         @"STSong",
         @"Symbol",
-        @"System Font",
         @"Tahoma",
         @"Thonburi",
         @"Times New Roman",
@@ -411,6 +410,8 @@ static NSSet *allowedFontFamilySet()
         @"Verdana",
         @"Webdings",
         @"WebKit WeightWatcher",
+        @"FontWithFeaturesOTF",
+        @"FontWithFeaturesTTF",
         @"Wingdings 2",
         @"Wingdings 3",
         @"Wingdings",
@@ -559,7 +560,8 @@ static void activateTestingFonts()
         "WebKitWeightWatcher700.ttf",
         "WebKitWeightWatcher800.ttf",
         "WebKitWeightWatcher900.ttf",
-        "SampleFont.sfont",
+        "FontWithFeatures.ttf",
+        "FontWithFeatures.otf",
         0
     };
 
@@ -630,6 +632,8 @@ static void activateFontsIOS()
     fontData(WeightWatcher700);
     fontData(WeightWatcher800);
     fontData(WeightWatcher900);
+    fontData(FWFTTF);
+    fontData(FWFOTF);
 }
 #endif // !PLATFORM(IOS)
 
@@ -895,7 +899,6 @@ static void resetWebPreferencesToConsistentValues()
     [preferences setPictographFontFamily:@"Apple Color Emoji"];
     [preferences setDefaultFontSize:16];
     [preferences setDefaultFixedFontSize:13];
-    [preferences setAntialiasedFontDilationEnabled:NO];
     [preferences setMinimumFontSize:0];
     [preferences setDefaultTextEncodingName:@"ISO-8859-1"];
     [preferences setJavaEnabled:NO];
@@ -938,6 +941,8 @@ static void resetWebPreferencesToConsistentValues()
 #if PLATFORM(IOS)
     [preferences setMediaPlaybackAllowsInline:YES];
     [preferences setMediaPlaybackRequiresUserGesture:NO];
+    [preferences setMediaDataLoadsAutomatically:YES];
+    [preferences setInvisibleAutoplayNotPermitted:NO];
 
     // Enable the tracker before creating the first WebView will
     // cause initialization to use the correct database paths.
@@ -978,6 +983,9 @@ static void resetWebPreferencesToConsistentValues()
     [preferences setMediaSourceEnabled:YES];
 #endif
 
+    [preferences setHiddenPageDOMTimerThrottlingEnabled:NO];
+    [preferences setHiddenPageCSSAnimationSuspensionEnabled:NO];
+
     [WebPreferences _clearNetworkLoaderSession];
     [WebPreferences _setCurrentNetworkLoaderSessionCookieAcceptPolicy:NSHTTPCookieAcceptPolicyOnlyFromMainDocumentDomain];
 }
@@ -1004,6 +1012,8 @@ static void setDefaultsToConsistentValuesForTesting()
         @"AppleLanguages": @[ @"en" ],
         WebKitEnableFullDocumentTeardownPreferenceKey: @YES,
         WebKitFullScreenEnabledPreferenceKey: @YES,
+        WebKitAllowsInlineMediaPlaybackPreferenceKey: @YES,
+        WebKitInlineMediaPlaybackRequiresPlaysInlineAttributeKey: @NO,
         @"UseWebKitWebInspector": @YES,
 #if !PLATFORM(IOS)
         @"NSPreferredSpellServerLanguage": @"en_US",
@@ -1027,6 +1037,8 @@ static void setDefaultsToConsistentValuesForTesting()
         @"AppleSystemFontOSSubversion": @(10),
 #endif
         @"NSWindowDisplayWithRunLoopObserver": @YES, // Temporary workaround, see <rdar://problem/20351297>.
+        @"AppleEnableSwipeNavigateWithScrolls": @YES,
+        @"com.apple.swipescrolldirection": @1,
     };
 
     [[NSUserDefaults standardUserDefaults] setValuesForKeysWithDictionary:dict];
@@ -1040,6 +1052,7 @@ static void setDefaultsToConsistentValuesForTesting()
         WebDatabaseDirectoryDefaultsKey: [libraryPath stringByAppendingPathComponent:@"Databases"],
         WebStorageDirectoryDefaultsKey: [libraryPath stringByAppendingPathComponent:@"LocalStorage"],
         WebKitLocalCacheDefaultsKey: [libraryPath stringByAppendingPathComponent:@"LocalCache"],
+        WebKitResourceLoadStatisticsDirectoryDefaultsKey: [libraryPath stringByAppendingPathComponent:@"LocalStorage"],
 #if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 101000
         // This needs to also be added to argument domain because of <rdar://problem/20210002>.
         @"AppleSystemFontOSSubversion": @(10),
@@ -1128,6 +1141,7 @@ static void initializeGlobalsFromCommandLineOptions(int argc, const char *argv[]
         {"no-timeout", no_argument, &useTimeoutWatchdog, NO},
         {"allowed-host", required_argument, nullptr, 'a'},
         {"show-webview", no_argument, &showWebView, YES},
+        {"print-test-count", no_argument, &printTestCount, YES},
         {nullptr, 0, nullptr, 0}
     };
 
@@ -1165,6 +1179,7 @@ static void runTestingServerLoop()
     // When DumpRenderTree run in server mode, we just wait around for file names
     // to be passed to us and read each in turn, passing the results back to the client
     char filenameBuffer[2048];
+    unsigned testCount = 0;
     while (fgets(filenameBuffer, sizeof(filenameBuffer), stdin)) {
         char *newLineCharacter = strchr(filenameBuffer, '\n');
         if (newLineCharacter)
@@ -1174,6 +1189,11 @@ static void runTestingServerLoop()
             continue;
 
         runTest(filenameBuffer);
+
+        if (printTestCount) {
+            ++testCount;
+            printf("\nServer mode has completed %u tests.\n\n", testCount);
+        }
     }
 }
 
@@ -1188,7 +1208,6 @@ static void prepareConsistentTestingEnvironment()
 
     [[WebPreferences standardPreferences] setAutosaves:NO];
 
-#if !PLATFORM(IOS)
     // +[WebPreferences _switchNetworkLoaderToNewTestingSession] calls +[NSURLCache sharedURLCache], which initializes a default cache on disk.
     // Making the shared cache memory-only avoids touching the file system.
     RetainPtr<NSURLCache> sharedCache =
@@ -1199,6 +1218,7 @@ static void prepareConsistentTestingEnvironment()
 
     [WebPreferences _switchNetworkLoaderToNewTestingSession];
 
+#if !PLATFORM(IOS)
     adjustFonts();
     registerMockScrollbars();
 
@@ -1798,7 +1818,6 @@ static void resetWebViewToConsistentStateBeforeTesting()
 #if PLATFORM(IOS)
     adjustWebDocumentForStandardViewport(gWebBrowserView, gWebScrollView);
     [webView _setAllowsMessaging:YES];
-    [mainFrame setMediaDataLoadsAutomatically:YES];
 #endif
     [webView setEditable:NO];
     [(EditingDelegate *)[webView editingDelegate] setAcceptsEditing:YES];
@@ -1855,7 +1874,6 @@ static void resetWebViewToConsistentStateBeforeTesting()
     [WebView _setUsesTestModeFocusRingColor:YES];
 #endif
     [WebView _resetOriginAccessWhitelists];
-    [WebView _setAllowsRoundingHacks:NO];
 
     [[MockGeolocationProvider shared] stopTimer];
     [[MockWebNotificationProvider shared] reset];
@@ -1893,25 +1911,42 @@ static void WebThreadLockAfterDelegateCallbacksHaveCompleted()
 }
 #endif
 
-static NSString *testPathFromURL(NSURL* url)
+static NSURL *computeTestURL(NSString *pathOrURLString, NSString **relativeTestPath)
 {
-    if ([url isFileURL]) {
-        NSString *filePath = [url path];
-        NSRange layoutTestsRange = [filePath rangeOfString:@"/LayoutTests/"];
-        if (layoutTestsRange.location == NSNotFound)
-            return nil;
+    *relativeTestPath = nil;
 
-        return [filePath substringFromIndex:NSMaxRange(layoutTestsRange)];
+    if ([pathOrURLString hasPrefix:@"http://"] || [pathOrURLString hasPrefix:@"https://"] || [pathOrURLString hasPrefix:@"file://"])
+        return [NSURL URLWithString:pathOrURLString];
+
+    NSString *absolutePath = [[[NSURL fileURLWithPath:pathOrURLString] absoluteURL] path];
+
+    NSRange layoutTestsRange = [absolutePath rangeOfString:@"/LayoutTests/"];
+    if (layoutTestsRange.location == NSNotFound)
+        return [NSURL fileURLWithPath:absolutePath];
+
+    *relativeTestPath = [absolutePath substringFromIndex:NSMaxRange(layoutTestsRange)];
+
+    // Convert file URLs in LayoutTests/http/tests to HTTP URLs, except for file URLs in LayoutTests/http/tests/local.
+
+    NSRange httpTestsRange = [absolutePath rangeOfString:@"/LayoutTests/http/tests/"];
+    if (httpTestsRange.location == NSNotFound || [absolutePath rangeOfString:@"/LayoutTests/http/tests/local/"].location != NSNotFound)
+        return [NSURL fileURLWithPath:absolutePath];
+
+    auto components = adoptNS([[NSURLComponents alloc] init]);
+    [components setPath:[absolutePath substringFromIndex:NSMaxRange(httpTestsRange) - 1]];
+    [components setHost:@"127.0.0.1"];
+
+    // Paths under /ssl/ should be loaded using HTTPS.
+    BOOL isSecure = [[components path] hasPrefix:@"/ssl/"];
+    if (isSecure) {
+        [components setScheme:@"https"];
+        [components setPort:@(8443)];
+    } else {
+        [components setScheme:@"http"];
+        [components setPort:@(8000)];
     }
 
-    // HTTP test URLs look like: http://127.0.0.1:8000/inspector/resource-tree/resource-request-content-after-loading-and-clearing-cache.html
-    if (![[url scheme] isEqualToString:@"http"] && ![[url scheme] isEqualToString:@"https"])
-        return nil;
-
-    if ([[url host] isEqualToString:@"127.0.0.1"] && ([[url port] intValue] == 8000 || [[url port] intValue] == 8443))
-        return [url path];
-
-    return nil;
+    return [components URL];
 }
 
 static void runTest(const string& inputLine)
@@ -1928,19 +1963,15 @@ static void runTest(const string& inputLine)
         return;
     }
 
-    NSURL *url;
-    if ([pathOrURLString hasPrefix:@"http://"] || [pathOrURLString hasPrefix:@"https://"] || [pathOrURLString hasPrefix:@"file://"])
-        url = [NSURL URLWithString:pathOrURLString];
-    else
-        url = [NSURL fileURLWithPath:pathOrURLString];
+    NSString *testPath;
+    NSURL *url = computeTestURL(pathOrURLString, &testPath);
     if (!url) {
         fprintf(stderr, "Failed to parse \"%s\" as a URL\n", pathOrURL.c_str());
         return;
     }
-
-    NSString *testPath = testPathFromURL(url);
     if (!testPath)
         testPath = [url absoluteString];
+
     NSString *informationString = [@"CRASHING TEST: " stringByAppendingString:testPath];
     WKSetCrashReportApplicationSpecificInformation((CFStringRef)informationString);
 
@@ -2025,6 +2056,13 @@ static void runTest(const string& inputLine)
 
     workQueue.clear();
 
+    // If the test page could have possibly opened the Web Inspector frontend,
+    // then try to close it in case it was accidentally left open.
+    if (shouldEnableDeveloperExtras(pathOrURL.c_str())) {
+        gTestRunner->closeWebInspector();
+        gTestRunner->setDeveloperExtrasEnabled(false);
+    }
+
     if (gTestRunner->closeRemainingWindowsWhenComplete()) {
         NSArray* array = [DumpRenderTreeWindow openWindows];
 
@@ -2046,12 +2084,6 @@ static void runTest(const string& inputLine)
             [webView close];
             [window close];
         }
-    }
-
-    // If developer extras enabled Web Inspector may have been open by the test.
-    if (shouldEnableDeveloperExtras(pathOrURL.c_str())) {
-        gTestRunner->closeWebInspector();
-        gTestRunner->setDeveloperExtrasEnabled(false);
     }
 
     resetWebViewToConsistentStateBeforeTesting();

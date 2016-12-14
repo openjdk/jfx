@@ -123,7 +123,7 @@ public:
     }
 
     Timer(std::function<void ()> function)
-        : m_function(WTF::move(function))
+        : m_function(WTFMove(function))
     {
     }
 
@@ -161,7 +161,7 @@ public:
     }
 
     DeferrableOneShotTimer(std::function<void ()> function, std::chrono::milliseconds delay)
-        : m_function(WTF::move(function))
+        : m_function(WTFMove(function))
         , m_delay(delay)
         , m_shouldRestartWhenTimerFires(false)
     {

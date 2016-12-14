@@ -3,6 +3,9 @@
 //
 inherit
 initial
+unset
+revert
+
 //
 // CSS_PROP_OUTLINE_STYLE
 // CSS_PROP_BORDER_TOP_STYLE
@@ -67,15 +70,53 @@ all
 //normal
 small-caps
 
-// -webkit-font-variant-ligatures:
+// font-variant-ligatures:
 //
-// normal
 common-ligatures
 no-common-ligatures
 discretionary-ligatures
 no-discretionary-ligatures
 historical-ligatures
 no-historical-ligatures
+contextual
+no-contextual
+
+// font-variant-caps
+//
+// FIXME: Unify this with plain font-variant
+// small-caps
+all-small-caps
+petite-caps
+all-petite-caps
+unicase
+titling-caps
+
+// font-variant-numeric
+//
+lining-nums
+oldstyle-nums
+proportional-nums
+tabular-nums
+diagonal-fractions
+stacked-fractions
+ordinal
+slashed-zero
+
+// font-variant-alternates
+//
+historical-forms
+
+// font-variant-east-asian
+//
+jis78
+jis83
+jis90
+jis04
+simplified
+traditional
+full-width
+proportional-width
+ruby
 
 //
 // CSS_PROP_FONT_WEIGHT:
@@ -582,7 +623,7 @@ self-end
 // flex-end
 // left
 // right
-true
+unsafe
 safe
 legacy
 
@@ -791,6 +832,17 @@ content-box
 padding
 padding-box
 
+//
+// CSS_PROP_BREAK_BEFORE/AFTER/INSIDE
+//
+avoid-column
+avoid-page
+avoid-region
+page
+recto
+region
+verso
+
 // CSS_SHAPES
 margin-box
 
@@ -920,10 +972,6 @@ geometricPrecision
 economy
 exact
 
-// -webkit-color-correction
-//default
-sRGB
-
 #if defined(ENABLE_VIEW_MODE_CSS_MEDIA) && ENABLE_VIEW_MODE_CSS_MEDIA
 // (-webkit-view-mode:) media feature:
 floating
@@ -998,6 +1046,7 @@ sideways
 sideways-right
 upright
 vertical-right
+mixed
 
 // -webkit-line-box-contain
 font
@@ -1006,14 +1055,16 @@ inline-box
 initial-letter
 replaced
 
-// -webkit-font-feature-settings
+// font-feature-settings
 on
 off
 
 // image-rendering
 // auto
-// optimizeSpeed
-optimizeQuality
+// optimizeSpeed (deprecated)
+optimizeQuality // ( deprecated)
+crisp-edges
+pixelated
 -webkit-crisp-edges
 -webkit-optimize-contrast
 
@@ -1131,3 +1182,18 @@ from-intrinsic
 // font-synthesis
 weight
 style
+
+// will-change
+scroll-position
+contents
+
+#if defined(ENABLE_TOUCH_EVENTS) && ENABLE_TOUCH_EVENTS
+// touch-action
+manipulation
+#endif
+
+// hanging-punctuation
+allow-end
+first
+force-end
+last

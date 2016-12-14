@@ -160,16 +160,10 @@ Ref<Inspector::Protocol::Array<Inspector::Protocol::GenericTypes::SearchMatch>> 
 
     for (const auto& match : matches) {
         Ref<Inspector::Protocol::GenericTypes::SearchMatch> matchObject = buildObjectForSearchMatch(match.first, match.second);
-        result->addItem(WTF::move(matchObject));
+        result->addItem(WTFMove(matchObject));
     }
 
     return result;
-}
-
-static String scriptCommentPattern(const String& name)
-{
-    // "//# <name>=<value>" and deprecated "//@"
-    return "//[#@][\040\t]" + name + "=[\040\t]*([^\\s\'\"]*)[\040\t]*$";
 }
 
 static String stylesheetCommentPattern(const String& name)
@@ -182,7 +176,7 @@ static String findMagicComment(const String& content, const String& patternStrin
 {
     ASSERT(!content.isNull());
     const char* error = nullptr;
-    JSC::Yarr::YarrPattern pattern(patternString, false, true, &error);
+    JSC::Yarr::YarrPattern pattern(patternString, false, true, false, &error);
     ASSERT(!error);
     BumpPointerAllocator regexAllocator;
     auto bytecodePattern = JSC::Yarr::byteCompile(pattern, &regexAllocator);
@@ -197,16 +191,6 @@ static String findMagicComment(const String& content, const String& patternStrin
 
     ASSERT(matches[2] > 0 && matches[3] > 0);
     return content.substring(matches[2], matches[3] - matches[2]);
-}
-
-String findScriptSourceURL(const String& content)
-{
-    return findMagicComment(content, scriptCommentPattern(ASCIILiteral("sourceURL")));
-}
-
-String findScriptSourceMapURL(const String& content)
-{
-    return findMagicComment(content, scriptCommentPattern(ASCIILiteral("sourceMappingURL")));
 }
 
 String findStylesheetSourceMapURL(const String& content)

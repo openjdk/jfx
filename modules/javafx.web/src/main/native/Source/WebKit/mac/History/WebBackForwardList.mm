@@ -48,6 +48,7 @@
 #import <runtime/InitializeThreading.h>
 #import <wtf/Assertions.h>
 #import <wtf/MainThread.h>
+#import <wtf/NeverDestroyed.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/RunLoop.h>
 #import <wtf/StdLibExtras.h>
@@ -60,7 +61,7 @@ typedef HashMap<BackForwardList*, WebBackForwardList*> BackForwardListMap;
 // with a pointer to a WebBackForwardList in it.
 static BackForwardListMap& backForwardLists()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(BackForwardListMap, staticBackForwardLists, ());
+    static NeverDestroyed<BackForwardListMap> staticBackForwardLists;
     return staticBackForwardLists;
 }
 
@@ -104,7 +105,6 @@ WebBackForwardList *kit(BackForwardList* backForwardList)
     WTF::initializeMainThreadToProcessMainThread();
     RunLoop::initializeMainRunLoop();
 #endif
-    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 - (id)init
@@ -126,20 +126,6 @@ WebBackForwardList *kit(BackForwardList* backForwardList)
     }
 
     [super dealloc];
-}
-
-- (void)finalize
-{
-    WebCoreThreadViolationCheckRoundOne();
-    BackForwardList* backForwardList = core(self);
-    ASSERT(backForwardList);
-    if (backForwardList) {
-        ASSERT(backForwardList->closed());
-        backForwardLists().remove(backForwardList);
-        backForwardList->deref();
-    }
-
-    [super finalize];
 }
 
 - (void)_close

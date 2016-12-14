@@ -53,25 +53,23 @@ public:
         Ambient
     };
 
-    static Ref<MediaSession> create(ScriptExecutionContext& context, const String& kind)
+    static Ref<MediaSession> create(ScriptExecutionContext& context, const String& kind = String())
     {
         return adoptRef(*new MediaSession(context, kind));
     }
 
-    explicit MediaSession(Document&);
-    MediaSession(ScriptExecutionContext&, const String&);
     ~MediaSession();
 
     String kind() const;
     Kind kindEnum() const { return m_kind; }
-    MediaRemoteControls* controls(bool& isNull);
+    MediaRemoteControls* controls();
 
     WEBCORE_EXPORT State currentState() const { return m_currentState; }
     bool hasActiveMediaElements() const;
 
     void setMetadata(const Dictionary&);
 
-    void releaseSession();
+    void deactivate();
 
     // Runs the media session invocation algorithm and returns true on success.
     bool invoke();
@@ -86,8 +84,12 @@ public:
     void skipToNextTrack();
     void skipToPreviousTrack();
 
+    void controlIsEnabledDidChange();
+
 private:
     friend class HTMLMediaElement;
+
+    MediaSession(ScriptExecutionContext&, const String&);
 
     static Kind parseKind(const String&);
 

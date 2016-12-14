@@ -66,7 +66,7 @@ protected:
     explicit HTMLDocumentParser(HTMLDocument&);
 
     virtual void insert(const SegmentedString&) override final;
-    virtual void append(PassRefPtr<StringImpl>) override;
+    virtual void append(RefPtr<StringImpl>&&) override;
     virtual void finish() override;
 
     HTMLTreeBuilder& treeBuilder();
@@ -102,8 +102,8 @@ private:
     Document* contextForParsingSession();
 
     enum SynchronousMode { AllowYield, ForceSynchronous };
-    bool canTakeNextToken(SynchronousMode, PumpSession&);
     void pumpTokenizer(SynchronousMode);
+    bool pumpTokenizerLoop(SynchronousMode, bool parsingFragment, PumpSession&);
     void pumpTokenizerIfPossible(SynchronousMode);
     void constructTreeFromHTMLToken(HTMLTokenizer::TokenPtr&);
 

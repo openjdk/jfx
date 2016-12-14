@@ -23,6 +23,7 @@
 
 #include "CachedResourceClient.h"
 #include "CachedResourceHandle.h"
+#include "Timer.h"
 #include <wtf/text/TextPosition.h>
 #include <wtf/text/WTFString.h>
 

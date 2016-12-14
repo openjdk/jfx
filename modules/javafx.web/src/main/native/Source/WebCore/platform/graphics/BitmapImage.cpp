@@ -33,6 +33,7 @@
 #include "ImageObserver.h"
 #include "IntRect.h"
 #include "MIMETypeRegistry.h"
+#include "TextStream.h"
 #include "Timer.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/Vector.h>
@@ -95,13 +96,6 @@ void BitmapImage::startTimer(double delay)
     m_frameTimer->startOneShot(delay);
 }
 
-#if !USE(CG)
-bool BitmapImage::decodedDataIsPurgeable() const
-{
-    return false;
-}
-#endif
-
 bool BitmapImage::haveFrameAtIndex(size_t index)
 {
     if (index >= frameCount())
@@ -148,11 +142,6 @@ void BitmapImage::destroyDecodedDataIfNecessary(bool destroyAll)
 #else
     const unsigned largeAnimationCutoff = 5242880;
 #endif
-
-    // If decoded data is purgeable, the operating system will
-    // take care of throwing it away when the system is under pressure.
-    if (decodedDataIsPurgeable())
-        return;
 
     // If we have decoded frames but there is no encoded data, we shouldn't destroy
     // the decoded image since we won't be able to reconstruct it later.
@@ -605,18 +594,18 @@ void BitmapImage::resetAnimation()
     destroyDecodedDataIfNecessary(true);
 }
 
-void BitmapImage::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, const AffineTransform& transform,
-    const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator op, const FloatRect& destRect, BlendMode blendMode)
+void BitmapImage::drawPattern(GraphicsContext& ctxt, const FloatRect& tileRect, const AffineTransform& transform,
+    const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op, const FloatRect& destRect, BlendMode blendMode)
 {
     if (tileRect.isEmpty())
         return;
 
-    if (!ctxt->drawLuminanceMask()) {
-        Image::drawPattern(ctxt, tileRect, transform, phase, styleColorSpace, op, destRect, blendMode);
+    if (!ctxt.drawLuminanceMask()) {
+        Image::drawPattern(ctxt, tileRect, transform, phase, spacing, op, destRect, blendMode);
         return;
     }
     if (!m_cachedImage) {
-        std::unique_ptr<ImageBuffer> buffer = ImageBuffer::create(expandedIntSize(tileRect.size()));
+        std::unique_ptr<ImageBuffer> buffer = ctxt.createCompatibleBuffer(expandedIntSize(tileRect.size()));
         if (!buffer)
             return;
 
@@ -626,7 +615,7 @@ void BitmapImage::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, 
         // Temporarily reset image observer, we don't want to receive any changeInRect() calls due to this relayout.
         setImageObserver(nullptr);
 
-        draw(buffer->context(), tileRect, tileRect, styleColorSpace, op, blendMode, ImageOrientationDescription());
+        draw(buffer->context(), tileRect, tileRect, op, blendMode, ImageOrientationDescription());
 
         setImageObserver(observer);
         buffer->convertToLuminanceMask();
@@ -634,12 +623,10 @@ void BitmapImage::drawPattern(GraphicsContext* ctxt, const FloatRect& tileRect, 
         m_cachedImage = buffer->copyImage(DontCopyBackingStore, Unscaled);
         if (!m_cachedImage)
             return;
-
-        m_cachedImage->setSpaceSize(spaceSize());
     }
 
-    ctxt->setDrawLuminanceMask(false);
-    m_cachedImage->drawPattern(ctxt, tileRect, transform, phase, styleColorSpace, op, destRect, blendMode);
+    ctxt.setDrawLuminanceMask(false);
+    m_cachedImage->drawPattern(ctxt, tileRect, transform, phase, spacing, op, destRect, blendMode);
 }
 
 
@@ -709,6 +696,27 @@ Color BitmapImage::solidColor() const
 bool BitmapImage::canAnimate()
 {
     return shouldAnimate() && frameCount() > 1;
+}
+
+void BitmapImage::dump(TextStream& ts) const
+{
+    Image::dump(ts);
+
+    ts.dumpProperty("type", m_source.filenameExtension());
+
+    if (isAnimated()) {
+        ts.dumpProperty("frame-count", m_frameCount);
+        ts.dumpProperty("repetitions", m_repetitionCount);
+        ts.dumpProperty("current-frame", m_currentFrame);
+    }
+
+    if (allowSubsampling())
+        ts.dumpProperty("allow-subsampling", allowSubsampling());
+    if (m_isSolidColor)
+        ts.dumpProperty("solid-color", m_isSolidColor);
+
+    if (m_imageOrientation != OriginTopLeft)
+        ts.dumpProperty("orientation", m_imageOrientation);
 }
 
 }

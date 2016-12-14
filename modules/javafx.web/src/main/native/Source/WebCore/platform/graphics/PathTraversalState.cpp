@@ -26,6 +26,8 @@
 
 namespace WebCore {
 
+static const float kPathSegmentLengthTolerance = 0.00001f;
+
 static inline FloatPoint midPoint(const FloatPoint& first, const FloatPoint& second)
 {
     return FloatPoint((first.x() + second.x()) / 2.0f, (first.y() + second.y()) / 2.0f);
@@ -139,11 +141,11 @@ static float curveLength(const PathTraversalState& traversalState, const CurveTy
     double curveScaleForToleranceSquared = originalCurve.magnitudeSquared();
     if (curveScaleForToleranceSquared < pathSegmentLengthToleranceSquared)
         return 0;
+
     while (true) {
         float length = curve.approximateDistance();
         double lengthDiscrepancy = length - distanceLine(curve.start, curve.end);
 
-        // Note : 8163582
         if ((lengthDiscrepancy * lengthDiscrepancy) / curveScaleForToleranceSquared > pathSegmentLengthToleranceSquared && curve.splitDepth < curveStackDepthLimit) {
             CurveType leftCurve;
             CurveType rightCurve;
@@ -280,3 +282,4 @@ bool PathTraversalState::processPathElement(PathElementType type, const FloatPoi
 }
 
 }
+

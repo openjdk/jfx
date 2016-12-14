@@ -125,7 +125,7 @@ public:
         return result;
     }
 
-    static ExitValue recovery(RecoveryOpcode opcode, unsigned leftArgument, unsigned rightArgument, ValueFormat format)
+    static ExitValue recovery(RecoveryOpcode opcode, unsigned leftArgument, unsigned rightArgument, DataFormat format)
     {
         ExitValue result;
         result.m_kind = ExitValueRecovery;
@@ -157,6 +157,7 @@ public:
     bool isArgument() const { return kind() == ExitValueArgument; }
     bool isRecovery() const { return kind() == ExitValueRecovery; }
     bool isObjectMaterialization() const { return kind() == ExitValueMaterializeNewObject; }
+    bool hasIndexInStackmapLocations() const { return isArgument() || isRecovery(); }
 
     ExitArgument exitArgument() const
     {
@@ -176,10 +177,22 @@ public:
         return u.recovery.rightArgument;
     }
 
-    ValueFormat recoveryFormat() const
+    void adjustStackmapLocationsIndexByOffset(unsigned offset)
+    {
+        ASSERT(hasIndexInStackmapLocations());
+        if (isArgument())
+            u.argument.argument += offset;
+        else {
+            ASSERT(isRecovery());
+            u.recovery.rightArgument += offset;
+            u.recovery.leftArgument += offset;
+        }
+    }
+
+    DataFormat recoveryFormat() const
     {
         ASSERT(isRecovery());
-        return static_cast<ValueFormat>(u.recovery.format);
+        return static_cast<DataFormat>(u.recovery.format);
     }
 
     RecoveryOpcode recoveryOpcode() const
@@ -221,7 +234,7 @@ public:
     // that is compatible with exitArgument().format(). If it's a constant or it's dead, it
     // will claim to be a JSValue. If it's an argument then it will tell you the argument's
     // format.
-    ValueFormat valueFormat() const;
+    DataFormat dataFormat() const;
 
     void dump(PrintStream&) const;
     void dumpInContext(PrintStream&, DumpContext*) const;

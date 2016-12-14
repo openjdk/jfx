@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,9 +41,8 @@ using namespace Inspector;
 
 namespace WebCore {
 
-WebConsoleAgent::WebConsoleAgent(WebInjectedScriptManager* injectedScriptManager)
-    : InspectorConsoleAgent(injectedScriptManager)
-    , m_monitoringXHREnabled(false)
+WebConsoleAgent::WebConsoleAgent(AgentContext& context)
+    : InspectorConsoleAgent(context)
 {
 }
 
@@ -54,25 +53,24 @@ void WebConsoleAgent::setMonitoringXHREnabled(ErrorString&, bool enabled)
 
 void WebConsoleAgent::frameWindowDiscarded(DOMWindow* window)
 {
-    size_t messageCount = m_consoleMessages.size();
-    for (size_t i = 0; i < messageCount; ++i) {
-        JSC::ExecState* exec = m_consoleMessages[i]->scriptState();
+    for (auto& message : m_consoleMessages) {
+        JSC::ExecState* exec = message->scriptState();
         if (!exec)
             continue;
         if (domWindowFromExecState(exec) != window)
             continue;
-        m_consoleMessages[i]->clear();
+        message->clear();
     }
 
-    static_cast<WebInjectedScriptManager*>(m_injectedScriptManager)->discardInjectedScriptsFor(window);
+    static_cast<WebInjectedScriptManager&>(m_injectedScriptManager).discardInjectedScriptsFor(window);
 }
 
 void WebConsoleAgent::didFinishXHRLoading(unsigned long requestIdentifier, const String& url, const String& sendURL, unsigned sendLineNumber, unsigned sendColumnNumber)
 {
-    if (!m_injectedScriptManager->inspectorEnvironment().developerExtrasEnabled())
+    if (!m_injectedScriptManager.inspectorEnvironment().developerExtrasEnabled())
         return;
 
-    if (m_frontendDispatcher && m_monitoringXHREnabled) {
+    if (m_monitoringXHREnabled) {
         String message = "XHR finished loading: \"" + url + "\".";
         addMessageToConsole(std::make_unique<ConsoleMessage>(MessageSource::Network, MessageType::Log, MessageLevel::Debug, message, sendURL, sendLineNumber, sendColumnNumber, nullptr, requestIdentifier));
     }
@@ -80,7 +78,7 @@ void WebConsoleAgent::didFinishXHRLoading(unsigned long requestIdentifier, const
 
 void WebConsoleAgent::didReceiveResponse(unsigned long requestIdentifier, const ResourceResponse& response)
 {
-    if (!m_injectedScriptManager->inspectorEnvironment().developerExtrasEnabled())
+    if (!m_injectedScriptManager.inspectorEnvironment().developerExtrasEnabled())
         return;
 
     if (response.httpStatusCode() >= 400) {
@@ -91,7 +89,7 @@ void WebConsoleAgent::didReceiveResponse(unsigned long requestIdentifier, const 
 
 void WebConsoleAgent::didFailLoading(unsigned long requestIdentifier, const ResourceError& error)
 {
-    if (!m_injectedScriptManager->inspectorEnvironment().developerExtrasEnabled())
+    if (!m_injectedScriptManager.inspectorEnvironment().developerExtrasEnabled())
         return;
 
     // Report failures only.

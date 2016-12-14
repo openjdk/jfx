@@ -56,11 +56,11 @@ void JSGlobalObjectDebuggable::connect(FrontendChannel* frontendChannel, bool au
     m_globalObject.inspectorController().connectFrontend(frontendChannel, automaticInspection);
 }
 
-void JSGlobalObjectDebuggable::disconnect()
+void JSGlobalObjectDebuggable::disconnect(FrontendChannel* frontendChannel)
 {
     JSLockHolder locker(&m_globalObject.vm());
 
-    m_globalObject.inspectorController().disconnectFrontend(DisconnectReason::InspectorDestroyed);
+    m_globalObject.inspectorController().disconnectFrontend(frontendChannel);
 }
 
 void JSGlobalObjectDebuggable::pause()
@@ -70,7 +70,7 @@ void JSGlobalObjectDebuggable::pause()
     m_globalObject.inspectorController().pause();
 }
 
-void JSGlobalObjectDebuggable::dispatchMessageFromRemoteFrontend(const String& message)
+void JSGlobalObjectDebuggable::dispatchMessageFromRemote(const String& message)
 {
     JSLockHolder locker(&m_globalObject.vm());
 
@@ -80,7 +80,7 @@ void JSGlobalObjectDebuggable::dispatchMessageFromRemoteFrontend(const String& m
 void JSGlobalObjectDebuggable::pauseWaitingForAutomaticInspection()
 {
     JSC::JSLock::DropAllLocks dropAllLocks(&m_globalObject.vm());
-    RemoteInspectorDebuggable::pauseWaitingForAutomaticInspection();
+    RemoteInspectionTarget::pauseWaitingForAutomaticInspection();
 }
 
 } // namespace JSC

@@ -36,7 +36,9 @@
 #include "ContextMenuProvider.h"
 #include "DOMWrapperWorld.h"
 #include "Document.h"
+#include "Editor.h"
 #include "Event.h"
+#include "FocusController.h"
 #include "HitTestResult.h"
 #include "InspectorFrontendClient.h"
 #include "JSMainThreadExecState.h"
@@ -59,9 +61,9 @@ namespace WebCore {
 #if ENABLE(CONTEXT_MENUS)
 class FrontendMenuProvider : public ContextMenuProvider {
 public:
-    static PassRefPtr<FrontendMenuProvider> create(InspectorFrontendHost* frontendHost, Deprecated::ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
+    static Ref<FrontendMenuProvider> create(InspectorFrontendHost* frontendHost, Deprecated::ScriptObject frontendApiObject, const Vector<ContextMenuItem>& items)
     {
-        return adoptRef(new FrontendMenuProvider(frontendHost, frontendApiObject, items));
+        return adoptRef(*new FrontendMenuProvider(frontendHost, frontendApiObject, items));
     }
 
     void disconnect()
@@ -85,15 +87,15 @@ private:
 
     virtual void populateContextMenu(ContextMenu* menu) override
     {
-        for (size_t i = 0; i < m_items.size(); ++i)
-            menu->appendItem(m_items[i]);
+        for (auto& item : m_items)
+            menu->appendItem(item);
     }
 
-    virtual void contextMenuItemSelected(ContextMenuItem* item) override
+    virtual void contextMenuItemSelected(ContextMenuAction action, const String&) override
     {
         if (m_frontendHost) {
             UserGestureIndicator gestureIndicator(DefinitelyProcessingUserGesture);
-            int itemNumber = item->action() - ContextMenuItemBaseCustomTag;
+            int itemNumber = action - ContextMenuItemBaseCustomTag;
 
             Deprecated::ScriptFunctionCall function(m_frontendApiObject, "contextMenuItemSelected", WebCore::functionCallHandlerFromAnyThread);
             function.appendArgument(itemNumber);
@@ -174,15 +176,24 @@ void InspectorFrontendHost::bringToFront()
         m_client->bringToFront();
 }
 
-void InspectorFrontendHost::setZoomFactor(float zoom)
-{
-    m_frontendPage->mainFrame().setPageAndTextZoomFactors(zoom, 1);
-}
-
 void InspectorFrontendHost::inspectedURLChanged(const String& newURL)
 {
     if (m_client)
         m_client->inspectedURLChanged(newURL);
+}
+
+void InspectorFrontendHost::setZoomFactor(float zoom)
+{
+    if (m_frontendPage)
+        m_frontendPage->mainFrame().setPageAndTextZoomFactors(zoom, 1);
+}
+
+float InspectorFrontendHost::zoomFactor()
+{
+    if (m_frontendPage)
+        return m_frontendPage->mainFrame().pageZoomFactor();
+
+    return 1.0;
 }
 
 void InspectorFrontendHost::setAttachedWindowHeight(unsigned height)
@@ -195,12 +206,6 @@ void InspectorFrontendHost::setAttachedWindowWidth(unsigned width)
 {
     if (m_client)
         m_client->changeAttachedWindowWidth(width);
-}
-
-void InspectorFrontendHost::setToolbarHeight(unsigned height)
-{
-    if (m_client)
-        m_client->setToolbarHeight(height);
 }
 
 void InspectorFrontendHost::startWindowDrag()
@@ -225,9 +230,55 @@ String InspectorFrontendHost::debuggableType()
     return ASCIILiteral("web");
 }
 
+unsigned InspectorFrontendHost::inspectionLevel()
+{
+    return m_client ? m_client->inspectionLevel() : 1;
+}
+
+String InspectorFrontendHost::platform()
+{
+#if PLATFORM(MAC) || PLATFORM(IOS)
+    return ASCIILiteral("mac");
+#elif OS(WINDOWS)
+    return ASCIILiteral("windows");
+#elif OS(LINUX)
+    return ASCIILiteral("linux");
+#elif OS(FREEBSD)
+    return ASCIILiteral("freebsd");
+#elif OS(OPENBSD)
+    return ASCIILiteral("openbsd");
+#elif OS(SOLARIS)
+    return ASCIILiteral("solaris");
+#else
+    return ASCIILiteral("unknown");
+#endif
+}
+
+String InspectorFrontendHost::port()
+{
+#if PLATFORM(GTK)
+    return ASCIILiteral("gtk");
+#elif PLATFORM(EFL)
+    return ASCIILiteral("efl");
+#else
+    return ASCIILiteral("unknown");
+#endif
+}
+
 void InspectorFrontendHost::copyText(const String& text)
 {
     Pasteboard::createForCopyAndPaste()->writePlainText(text, Pasteboard::CannotSmartReplace);
+}
+
+void InspectorFrontendHost::killText(const String& text, bool shouldPrependToKillRing, bool shouldStartNewSequence)
+{
+    if (!m_frontendPage)
+        return;
+
+    Editor& editor = m_frontendPage->focusController().focusedOrMainFrame().editor();
+    editor.setStartNewKillRingSequence(shouldStartNewSequence);
+    Editor::KillRingInsertionMode insertionMode = shouldPrependToKillRing ? Editor::KillRingInsertionMode::PrependText : Editor::KillRingInsertionMode::AppendText;
+    editor.addTextToKillRing(text, insertionMode);
 }
 
 void InspectorFrontendHost::openInNewTab(const String& url)
@@ -308,22 +359,12 @@ bool InspectorFrontendHost::isUnderTest()
 void InspectorFrontendHost::unbufferedLog(const String& message)
 {
     // This is used only for debugging inspector tests.
-    WTFLogAlways("InspectorTest: %s", message.utf8().data());
+    WTFLogAlways("%s", message.utf8().data());
 }
 
 void InspectorFrontendHost::beep()
 {
     systemBeep();
-}
-
-bool InspectorFrontendHost::canSaveAs()
-{
-    return false;
-}
-
-bool InspectorFrontendHost::canInspectWorkers()
-{
-    return false;
 }
 
 } // namespace WebCore

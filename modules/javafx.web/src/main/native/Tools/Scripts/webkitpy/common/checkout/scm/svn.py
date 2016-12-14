@@ -144,6 +144,13 @@ class SVN(SCM, SVNRepository):
         # FIXME: What about files which are not committed yet?
         return self._run_svn(["diff"], cwd=self.checkout_root, decode_output=False) != ""
 
+    def untracked_files(self, include_ignored_files=False):
+        status_command = [self.executable_name, "status"]
+        if include_ignored_files:
+            status_command.append("--no-ignore")
+        status_command.extend(self._patch_directories)
+        return self.run_status_and_extract_filenames(status_command, self._status_regexp("I?"))
+
     def discard_working_directory_changes(self):
         # Make sure there are no locks lying around from a previously aborted svn invocation.
         # This is slightly dangerous, as it's possible the user is running another svn process
@@ -273,10 +280,9 @@ class SVN(SCM, SVNRepository):
         elif changed_files == None:
             changed_files = []
         script_path = self._filesystem.join(self.checkout_root, "Tools", "Scripts", "svn-create-patch")
-        return self.fix_changelog_patch(
-                self.run([script_path, "--no-style"] + changed_files,
-                    cwd=self.checkout_root, return_stderr=False,
-                    decode_output=False))
+        return self.run([script_path, "--no-style"] + changed_files,
+            cwd=self.checkout_root, return_stderr=False,
+            decode_output=False)
 
     def committer_email_for_revision(self, revision):
         return self._run_svn(["propget", "svn:author", "--revprop", "-r", revision]).rstrip()

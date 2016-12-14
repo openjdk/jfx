@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,8 +43,28 @@ public:
 
     void dump(PrintStream& out) const
     {
-        for (typename T::const_iterator iter = m_list.begin(); iter != m_list.end(); ++iter)
+        for (auto iter = m_list.begin(); iter != m_list.end(); ++iter)
             out.print(m_comma, *iter);
+    }
+
+private:
+    const T& m_list;
+    CommaPrinter m_comma;
+};
+
+template<typename T>
+class PointerListDump {
+public:
+    PointerListDump(const T& list, const char* comma)
+        : m_list(list)
+        , m_comma(comma)
+    {
+    }
+
+    void dump(PrintStream& out) const
+    {
+        for (auto iter = m_list.begin(); iter != m_list.end(); ++iter)
+            out.print(m_comma, pointerDump(*iter));
     }
 
 private:
@@ -64,7 +84,7 @@ public:
 
     void dump(PrintStream& out) const
     {
-        for (typename T::const_iterator iter = m_map.begin(); iter != m_map.end(); ++iter)
+        for (auto iter = m_map.begin(); iter != m_map.end(); ++iter)
             out.print(m_comma, iter->key, m_arrow, iter->value);
     }
 
@@ -78,6 +98,12 @@ template<typename T>
 ListDump<T> listDump(const T& list, const char* comma = ", ")
 {
     return ListDump<T>(list, comma);
+}
+
+template<typename T>
+PointerListDump<T> pointerListDump(const T& list, const char* comma = ", ")
+{
+    return PointerListDump<T>(list, comma);
 }
 
 template<typename T, typename Comparator>
@@ -109,7 +135,7 @@ template<typename T, typename Comparator>
 CString sortedMapDump(const T& map, const Comparator& comparator, const char* arrow = "=>", const char* comma = ", ")
 {
     Vector<typename T::KeyType> keys;
-    for (typename T::const_iterator iter = map.begin(); iter != map.end(); ++iter)
+    for (auto iter = map.begin(); iter != map.end(); ++iter)
         keys.append(iter->key);
     std::sort(keys.begin(), keys.end(), comparator);
     StringPrintStream out;
@@ -131,7 +157,7 @@ public:
 
     void dump(PrintStream& out) const
     {
-        for (typename T::const_iterator iter = m_list.begin(); iter != m_list.end(); ++iter)
+        for (auto iter = m_list.begin(); iter != m_list.end(); ++iter)
             out.print(m_comma, inContext(*iter, m_context));
     }
 

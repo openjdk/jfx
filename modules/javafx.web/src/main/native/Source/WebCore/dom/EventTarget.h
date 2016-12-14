@@ -34,6 +34,7 @@
 #include "EventListenerMap.h"
 #include "EventNames.h"
 #include "EventTargetInterfaces.h"
+#include "ScriptWrappable.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -108,7 +109,7 @@ DOM_EVENT_TARGET_INTERFACES_FOR_EACH(DOM_EVENT_INTERFACE_DECLARE)
 
 };
 
-class EventTarget {
+class EventTarget : public ScriptWrappable {
 public:
     void ref() { refEventTarget(); }
     void deref() { derefEventTarget(); }
@@ -120,11 +121,11 @@ public:
     virtual DOMWindow* toDOMWindow();
     virtual bool isMessagePort() const;
 
-    virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture);
+    virtual bool addEventListener(const AtomicString& eventType, RefPtr<EventListener>&&, bool useCapture);
     virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture);
     virtual void removeAllEventListeners();
-    virtual bool dispatchEvent(PassRefPtr<Event>);
-    bool dispatchEvent(PassRefPtr<Event>, ExceptionCode&); // DOM API
+    virtual bool dispatchEvent(Event&);
+    bool dispatchEventForBindings(Event*, ExceptionCode&); // DOM API
     virtual void uncaughtExceptionInEventHandler();
 
     // Used for legacy "onEvent" attribute APIs.
@@ -137,7 +138,7 @@ public:
     bool hasCapturingEventListeners(const AtomicString& eventType);
     const EventListenerVector& getEventListeners(const AtomicString& eventType);
 
-    bool fireEventListeners(Event*);
+    bool fireEventListeners(Event&);
     bool isFiringEventListeners();
 
     void visitJSEventListeners(JSC::SlotVisitor&);
@@ -153,7 +154,7 @@ private:
     virtual void refEventTarget() = 0;
     virtual void derefEventTarget() = 0;
 
-    void fireEventListeners(Event*, EventTargetData*, EventListenerVector&);
+    void fireEventListeners(Event&, EventTargetData*, EventListenerVector&);
 
     friend class EventListenerIterator;
 };

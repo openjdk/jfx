@@ -98,7 +98,7 @@ struct VectorMover<false, T>
     static void move(T* src, T* srcEnd, T* dst)
     {
         while (src != srcEnd) {
-            new (NotNull, dst) T(WTF::move(*src));
+            new (NotNull, dst) T(WTFMove(*src));
             src->~T();
             ++dst;
             ++src;
@@ -113,7 +113,7 @@ struct VectorMover<false, T>
             while (src != srcEnd) {
                 --srcEnd;
                 --dstEnd;
-                new (NotNull, dstEnd) T(WTF::move(*srcEnd));
+                new (NotNull, dstEnd) T(WTFMove(*srcEnd));
                 srcEnd->~T();
             }
         }
@@ -185,7 +185,7 @@ struct VectorFiller<true, T>
     static void uninitializedFill(T* dst, T* dstEnd, const T& val)
     {
         static_assert(sizeof(T) == 1, "Size of type T should be equal to one!");
-#if COMPILER(GCC) && defined(_FORTIFY_SOURCE)
+#if COMPILER(GCC_OR_CLANG) && defined(_FORTIFY_SOURCE)
         if (!__builtin_constant_p(dstEnd - dst) || (!(dstEnd - dst)))
 #endif
             memset(dst, val, dstEnd - dst);
@@ -702,7 +702,7 @@ public:
 
     T takeLast()
     {
-        T result = WTF::move(last());
+        T result = WTFMove(last());
         removeLast();
         return result;
     }

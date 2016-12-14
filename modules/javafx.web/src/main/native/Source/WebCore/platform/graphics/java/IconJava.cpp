@@ -8,7 +8,7 @@
 #include "Icon.h"
 #include "IntRect.h"
 #include "JavaEnv.h"
-#include "JavaRef.h"
+#include <wtf/java/JavaRef.h>
 #include "NotImplemented.h"
 
 #include <wtf/RefPtr.h>

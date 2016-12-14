@@ -79,6 +79,14 @@ jclass PG_GetFontClass(JNIEnv* env)
     return fontCls;
 }
 
+jclass PG_GetGlyphBufferClass(JNIEnv* env)
+{
+    static JGClass glyphBufferCls(
+        env->FindClass("com/sun/webkit/graphics/WCGlyphBuffer"));
+    ASSERT(glyphBufferCls);
+    return glyphBufferCls;
+}
+
 jclass PG_GetFontCustomPlatformDataClass(JNIEnv* env)
 {
     static JGClass fontCustomPlatformDataCls(env->FindClass(

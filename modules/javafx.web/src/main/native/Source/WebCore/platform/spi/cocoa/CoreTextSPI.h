@@ -26,6 +26,7 @@
 #ifndef CoreTextSPI_h
 #define CoreTextSPI_h
 
+#include "CoreGraphicsSPI.h"
 #include <CoreText/CoreText.h>
 
 #if USE(APPLE_INTERNAL_SDK)
@@ -49,6 +50,7 @@ typedef const UniChar* (*CTUniCharProviderCallback)(CFIndex stringIndex, CFIndex
 typedef void (*CTUniCharDisposeCallback)(const UniChar* chars, void* refCon);
 
 extern const CFStringRef kCTFontReferenceURLAttribute;
+extern const CFStringRef kCTFontOpticalSizeAttribute;
 
 #if PLATFORM(COCOA)
 #if !USE(APPLE_INTERNAL_SDK)
@@ -66,16 +68,13 @@ CTLineRef CTLineCreateWithUniCharProvider(CTUniCharProviderCallback provide, CTU
 CTTypesetterRef CTTypesetterCreateWithUniCharProviderAndOptions(CTUniCharProviderCallback provide, CTUniCharDisposeCallback dispose, void* refCon, CFDictionaryRef options);
 bool CTFontGetVerticalGlyphsForCharacters(CTFontRef, const UniChar characters[], CGGlyph glyphs[], CFIndex count);
 #if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED > 101000
-#if defined(CORETEXT_HAS_CTFontSetRenderingStyle) && CORETEXT_HAS_CTFontSetRenderingStyle == 1
 bool CTFontSetRenderingStyle(CTFontRef, CGContextRef, CGFontRenderingStyle* originalStyle, CGSize* originalDilation);
-#else
-void CTFontSetRenderingParameters(CTFontRef, CGContextRef);
-#endif
 #endif
 
 CTFontDescriptorRef CTFontDescriptorCreateForUIType(CTFontUIFontType, CGFloat size, CFStringRef language);
 CTFontDescriptorRef CTFontDescriptorCreateWithTextStyle(CFStringRef style, CFStringRef size, CFStringRef language);
 CTFontDescriptorRef CTFontDescriptorCreateCopyWithSymbolicTraits(CTFontDescriptorRef original, CTFontSymbolicTraits symTraitValue, CTFontSymbolicTraits symTraitMask);
+CFBitVectorRef CTFontCopyGlyphCoverageForFeature(CTFontRef, CFDictionaryRef feature);
 
 #if PLATFORM(COCOA)
 #if !USE(APPLE_INTERNAL_SDK)
@@ -91,8 +90,9 @@ CTFontDescriptorRef CTFontDescriptorCreateWithAttributesAndOptions(CFDictionaryR
 
 bool CTFontDescriptorIsSystemUIFont(CTFontDescriptorRef);
 CTFontRef CTFontCreateForCSS(CFStringRef name, uint16_t weight, CTFontSymbolicTraits, CGFloat size);
+CTFontRef CTFontCreateForCharactersWithLanguage(CTFontRef currentFont, const UTF16Char *characters, CFIndex length, CFStringRef language, CFIndex *coveredLength);
 
-#if PLATFORM(IOS) || __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+#if PLATFORM(COCOA)
 extern const CFStringRef kCTUIFontTextStyleShortHeadline;
 extern const CFStringRef kCTUIFontTextStyleShortBody;
 extern const CFStringRef kCTUIFontTextStyleShortSubhead;
@@ -110,7 +110,7 @@ extern const CFStringRef kCTUIFontTextStyleCaption2;
 extern const CFStringRef kCTFontDescriptorTextStyleEmphasized;
 #endif
 
-#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90000
+#if PLATFORM(IOS)
 extern const CFStringRef kCTUIFontTextStyleTitle1;
 extern const CFStringRef kCTUIFontTextStyleTitle2;
 extern const CFStringRef kCTUIFontTextStyleTitle3;
@@ -120,7 +120,6 @@ CTFontDescriptorRef CTFontCreatePhysicalFontDescriptorForCharactersWithLanguage(
 CTFontRef CTFontCreatePhysicalFontForCharactersWithLanguage(CTFontRef, const UTF16Char* characters, CFIndex length, CFStringRef language, CFIndex* coveredLength);
 bool CTFontIsAppleColorEmoji(CTFontRef);
 bool CTFontDescriptorIsSystemUIFont(CTFontDescriptorRef);
-CTFontRef CTFontCreateForCSS(CFStringRef name, uint16_t weight, CTFontSymbolicTraits, CGFloat size);
 CTFontRef CTFontCreateForCharacters(CTFontRef currentFont, const UTF16Char *characters, CFIndex length, CFIndex *coveredLength);
 
 }

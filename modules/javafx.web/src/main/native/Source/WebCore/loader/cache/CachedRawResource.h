@@ -46,6 +46,10 @@ public:
 
     void clear();
 
+    bool canReuse(const ResourceRequest&) const;
+
+    bool wasRedirected() const { return !m_redirectChain.isEmpty(); };
+
 private:
     virtual void didAddClient(CachedResourceClient*) override;
     virtual void addDataBuffer(SharedBuffer&) override;
@@ -57,12 +61,11 @@ private:
 
     virtual void redirectReceived(ResourceRequest&, const ResourceResponse&) override;
     virtual void responseReceived(const ResourceResponse&) override;
+    virtual bool shouldCacheResponse(const ResourceResponse&) override;
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
 
     virtual void switchClientsToRevalidatedResource() override;
     virtual bool mayTryReplaceEncodedData() const override { return m_allowEncodedDataReplacement; }
-
-    virtual bool canReuse(const ResourceRequest&) const override;
 
     const char* calculateIncrementalDataChunk(SharedBuffer*, unsigned& incrementalDataLength);
     void notifyClientsDataWasReceived(const char* data, unsigned length);

@@ -49,55 +49,55 @@ static const int invalidTrackIndex = -1;
 
 const AtomicString& TextTrack::subtitlesKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, subtitles, ("subtitles", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> subtitles("subtitles", AtomicString::ConstructFromLiteral);
     return subtitles;
 }
 
 const AtomicString& TextTrack::captionsKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, captions, ("captions", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> captions("captions", AtomicString::ConstructFromLiteral);
     return captions;
 }
 
 const AtomicString& TextTrack::descriptionsKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, descriptions, ("descriptions", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> descriptions("descriptions", AtomicString::ConstructFromLiteral);
     return descriptions;
 }
 
 const AtomicString& TextTrack::chaptersKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, chapters, ("chapters", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> chapters("chapters", AtomicString::ConstructFromLiteral);
     return chapters;
 }
 
 const AtomicString& TextTrack::metadataKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, metadata, ("metadata", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> metadata("metadata", AtomicString::ConstructFromLiteral);
     return metadata;
 }
 
 const AtomicString& TextTrack::forcedKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, forced, ("forced", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> forced("forced", AtomicString::ConstructFromLiteral);
     return forced;
 }
 
 const AtomicString& TextTrack::disabledKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, open, ("disabled", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> open("disabled", AtomicString::ConstructFromLiteral);
     return open;
 }
 
 const AtomicString& TextTrack::hiddenKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, closed, ("hidden", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> closed("hidden", AtomicString::ConstructFromLiteral);
     return closed;
 }
 
 const AtomicString& TextTrack::showingKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, ended, ("showing", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> ended("showing", AtomicString::ConstructFromLiteral);
     return ended;
 }
 
@@ -116,9 +116,7 @@ TextTrack* TextTrack::captionMenuAutomaticItem()
 TextTrack::TextTrack(ScriptExecutionContext* context, TextTrackClient* client, const AtomicString& kind, const AtomicString& id, const AtomicString& label, const AtomicString& language, TextTrackType type)
     : TrackBase(TrackBase::TextTrack, id, label, language)
     , m_cues(0)
-#if ENABLE(WEBVTT_REGIONS)
     , m_regions(0)
-#endif
     , m_scriptExecutionContext(context)
     , m_mode(disabledKeyword().string())
     , m_client(client)
@@ -139,12 +137,10 @@ TextTrack::~TextTrack()
 
         for (size_t i = 0; i < m_cues->length(); ++i)
             m_cues->item(i)->setTrack(0);
-#if ENABLE(WEBVTT_REGIONS)
         if (m_regions) {
             for (size_t i = 0; i < m_regions->length(); ++i)
                 m_regions->item(i)->setTrack(0);
         }
-#endif
     }
     clearClient();
 }
@@ -342,7 +338,6 @@ void TextTrack::removeCue(TextTrackCue* cue, ExceptionCode& ec)
         m_client->textTrackRemoveCue(this, cue);
 }
 
-#if ENABLE(VIDEO_TRACK) && ENABLE(WEBVTT_REGIONS)
 VTTRegionList* TextTrack::ensureVTTRegionList()
 {
     if (!m_regions)
@@ -414,7 +409,6 @@ void TextTrack::removeRegion(VTTRegion* region, ExceptionCode &ec)
 
     region->setTrack(0);
 }
-#endif
 
 void TextTrack::cueWillChange(TextTrackCue* cue)
 {
@@ -542,48 +536,6 @@ bool TextTrack::hasCue(TextTrackCue* cue, TextTrackCue::CueMatchRules match)
     return false;
 }
 
-#if USE(PLATFORM_TEXT_TRACK_MENU)
-PassRefPtr<PlatformTextTrack> TextTrack::platformTextTrack()
-{
-    if (m_platformTextTrack)
-        return m_platformTextTrack;
-
-    PlatformTextTrack::TrackKind platformKind = PlatformTextTrack::Caption;
-    if (kind() == subtitlesKeyword())
-        platformKind = PlatformTextTrack::Subtitle;
-    else if (kind() == captionsKeyword())
-        platformKind = PlatformTextTrack::Caption;
-    else if (kind() == descriptionsKeyword())
-        platformKind = PlatformTextTrack::Description;
-    else if (kind() == chaptersKeyword())
-        platformKind = PlatformTextTrack::Chapter;
-    else if (kind() == metadataKeyword())
-        platformKind = PlatformTextTrack::MetaData;
-    else if (kind() == forcedKeyword())
-        platformKind = PlatformTextTrack::Forced;
-
-    PlatformTextTrack::TrackType type = PlatformTextTrack::OutOfBand;
-    if (m_trackType == TrackElement)
-        type = PlatformTextTrack::OutOfBand;
-    else if (m_trackType == AddTrack)
-        type = PlatformTextTrack::Script;
-    else if (m_trackType == InBand)
-        type = PlatformTextTrack::InBand;
-
-    PlatformTextTrack::TrackMode platformMode = PlatformTextTrack::Disabled;
-    if (TextTrack::hiddenKeyword() == mode())
-        platformMode = PlatformTextTrack::Hidden;
-    else if (TextTrack::disabledKeyword() == mode())
-        platformMode = PlatformTextTrack::Disabled;
-    else if (TextTrack::showingKeyword() == mode())
-        platformMode = PlatformTextTrack::Showing;
-
-    m_platformTextTrack = PlatformTextTrack::create(this, label(), language(), platformMode, platformKind, type, uniqueId());
-
-    return m_platformTextTrack;
-}
-#endif
-
 bool TextTrack::isMainProgramContent() const
 {
     // "Main program" content is intrinsic to the presentation of the media file, regardless of locale. Content such as
@@ -591,6 +543,11 @@ bool TextTrack::isMainProgramContent() const
     // a way to express this in a machine-reable form, it is typically done with the track label, so we assume that caption
     // tracks are main content and all other track types are not.
     return kind() == captionsKeyword();
+}
+
+bool TextTrack::containsOnlyForcedSubtitles() const
+{
+    return kind() == forcedKeyword();
 }
 
 #if ENABLE(MEDIA_SOURCE)

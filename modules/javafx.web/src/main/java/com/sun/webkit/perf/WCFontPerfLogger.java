@@ -28,6 +28,7 @@ package com.sun.webkit.perf;
 import java.util.logging.Logger;
 
 import com.sun.webkit.graphics.WCFont;
+import com.sun.webkit.graphics.WCGlyphBuffer;
 
 public final class WCFontPerfLogger extends WCFont {
     private static final Logger log =
@@ -71,6 +72,13 @@ public final class WCFontPerfLogger extends WCFont {
         return res;
     }
 
+    public WCGlyphBuffer getGlyphsAndAdvances(String str, int from, int to,
+                                              boolean rtl) {
+        logger.resumeCount("GETGLYPHSANDADVANCESFORCOMPLEXTEXT");
+        WCGlyphBuffer adv = fnt.getGlyphsAndAdvances(str, from, to, rtl);
+        logger.suspendCount("GETGLYPHSANDADVANCESFORCOMPLEXTEXT");
+        return adv;
+    }
 
     public int[] getGlyphCodes(char[] chars) {
         logger.resumeCount("GETGLYPHCODES");

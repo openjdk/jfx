@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #ifndef HeapInlines_h
 #define HeapInlines_h
 
+#include "CopyBarrier.h"
 #include "Heap.h"
 #include "JSCell.h"
 #include "Structure.h"
@@ -38,9 +39,13 @@ inline bool Heap::shouldCollect()
 {
     if (isDeferred())
         return false;
+    if (!m_isSafeToCollect)
+        return false;
+    if (m_operationInProgress != NoOperation)
+        return false;
     if (Options::gcMaxHeapSize())
-        return m_bytesAllocatedThisCycle > Options::gcMaxHeapSize() && m_isSafeToCollect && m_operationInProgress == NoOperation;
-    return m_bytesAllocatedThisCycle > m_maxEdenSize && m_isSafeToCollect && m_operationInProgress == NoOperation;
+        return m_bytesAllocatedThisCycle > Options::gcMaxHeapSize();
+    return m_bytesAllocatedThisCycle > m_maxEdenSize;
 }
 
 inline bool Heap::isBusy()
@@ -70,14 +75,6 @@ inline bool Heap::isLive(const void* cell)
     return MarkedBlock::blockFor(cell)->isLiveCell(cell);
 }
 
-inline bool Heap::isRemembered(const void* ptr)
-{
-    const JSCell* cell = static_cast<const JSCell*>(ptr);
-    ASSERT(cell);
-    ASSERT(!Options::enableConcurrentJIT() || !isCompilationThread());
-    return cell->isRemembered();
-}
-
 inline bool Heap::isMarked(const void* cell)
 {
     return MarkedBlock::blockFor(cell)->isMarked(cell);
@@ -93,28 +90,14 @@ inline void Heap::setMarked(const void* cell)
     MarkedBlock::blockFor(cell)->setMarked(cell);
 }
 
-inline bool Heap::isWriteBarrierEnabled()
-{
-#if ENABLE(WRITE_BARRIER_PROFILING) || ENABLE(GGC)
-    return true;
-#else
-    return false;
-#endif
-}
-
 inline void Heap::writeBarrier(const JSCell* from, JSValue to)
 {
 #if ENABLE(WRITE_BARRIER_PROFILING)
     WriteBarrierCounters::countWriteBarrier();
 #endif
-#if ENABLE(GGC)
     if (!to.isCell())
         return;
     writeBarrier(from, to.asCell());
-#else
-    UNUSED_PARAM(from);
-    UNUSED_PARAM(to);
-#endif
 }
 
 inline void Heap::writeBarrier(const JSCell* from, JSCell* to)
@@ -122,35 +105,19 @@ inline void Heap::writeBarrier(const JSCell* from, JSCell* to)
 #if ENABLE(WRITE_BARRIER_PROFILING)
     WriteBarrierCounters::countWriteBarrier();
 #endif
-#if ENABLE(GGC)
-    if (!from || !from->isMarked()) {
-        ASSERT(!from || !isMarked(from));
+    if (!from || from->cellState() != CellState::OldBlack)
         return;
-    }
-    if (!to || to->isMarked()) {
-        ASSERT(!to || isMarked(to));
+    if (!to || to->cellState() != CellState::NewWhite)
         return;
-    }
     addToRememberedSet(from);
-#else
-    UNUSED_PARAM(from);
-    UNUSED_PARAM(to);
-#endif
 }
 
 inline void Heap::writeBarrier(const JSCell* from)
 {
-#if ENABLE(GGC)
     ASSERT_GC_OBJECT_LOOKS_VALID(const_cast<JSCell*>(from));
-    if (!from || !from->isMarked()) {
-        ASSERT(!from || !isMarked(from));
+    if (!from || from->cellState() != CellState::OldBlack)
         return;
-    }
-    ASSERT(isMarked(from));
     addToRememberedSet(from);
-#else
-    UNUSED_PARAM(from);
-#endif
 }
 
 inline void Heap::reportExtraMemoryAllocated(size_t size)
@@ -159,33 +126,33 @@ inline void Heap::reportExtraMemoryAllocated(size_t size)
         reportExtraMemoryAllocatedSlowCase(size);
 }
 
-inline void Heap::reportExtraMemoryVisited(JSCell* owner, size_t size)
+inline void Heap::reportExtraMemoryVisited(CellState dataBeforeVisiting, size_t size)
 {
-#if ENABLE(GGC)
     // We don't want to double-count the extra memory that was reported in previous collections.
-    if (operationInProgress() == EdenCollection && Heap::isRemembered(owner))
+    if (operationInProgress() == EdenCollection && dataBeforeVisiting == CellState::OldGrey)
         return;
-#else
-    UNUSED_PARAM(owner);
-#endif
 
     size_t* counter = &m_extraMemorySize;
 
-#if ENABLE(COMPARE_AND_SWAP)
     for (;;) {
         size_t oldSize = *counter;
-        if (WTF::weakCompareAndSwapSize(counter, oldSize, oldSize + size))
+        if (WTF::weakCompareAndSwap(counter, oldSize, oldSize + size))
             return;
     }
-#else
-    (*counter) += size;
-#endif
 }
 
 inline void Heap::deprecatedReportExtraMemory(size_t size)
 {
     if (size > minExtraMemory)
         deprecatedReportExtraMemorySlowCase(size);
+}
+
+template<typename Functor> inline void Heap::forEachCodeBlock(Functor& functor)
+{
+    // We don't know the full set of CodeBlocks until compilation has terminated.
+    completeAllDFGPlans();
+
+    return m_codeBlocks.iterate<Functor>(functor);
 }
 
 template<typename Functor> inline typename Functor::ReturnType Heap::forEachProtectedCell(Functor& functor)
@@ -201,11 +168,6 @@ template<typename Functor> inline typename Functor::ReturnType Heap::forEachProt
 {
     Functor functor;
     return forEachProtectedCell(functor);
-}
-
-template<typename Functor> inline void Heap::forEachCodeBlock(Functor& functor)
-{
-    return m_codeBlocks.iterate<Functor>(functor);
 }
 
 inline void* Heap::allocateWithDestructor(size_t bytes)
@@ -298,7 +260,7 @@ inline void Heap::ascribeOwner(JSCell* intendedOwner, void* storage)
 template <typename T>
 inline void Heap::releaseSoon(RetainPtr<T>&& object)
 {
-    m_delayedReleaseObjects.append(WTF::move(object));
+    m_delayedReleaseObjects.append(WTFMove(object));
 }
 #endif
 
@@ -316,9 +278,6 @@ inline void Heap::decrementDeferralDepth()
 
 inline bool Heap::collectIfNecessaryOrDefer()
 {
-    if (isDeferred())
-        return false;
-
     if (!shouldCollect())
         return false;
 
@@ -341,12 +300,57 @@ inline HashSet<MarkedArgumentBuffer*>& Heap::markListSet()
 
 inline void Heap::registerWeakGCMap(void* weakGCMap, std::function<void()> pruningCallback)
 {
-    m_weakGCMaps.add(weakGCMap, WTF::move(pruningCallback));
+    m_weakGCMaps.add(weakGCMap, WTFMove(pruningCallback));
 }
 
 inline void Heap::unregisterWeakGCMap(void* weakGCMap)
 {
     m_weakGCMaps.remove(weakGCMap);
+}
+
+inline void Heap::didAllocateBlock(size_t capacity)
+{
+#if ENABLE(RESOURCE_USAGE)
+    m_blockBytesAllocated += capacity;
+#else
+    UNUSED_PARAM(capacity);
+#endif
+}
+
+inline void Heap::didFreeBlock(size_t capacity)
+{
+#if ENABLE(RESOURCE_USAGE)
+    m_blockBytesAllocated -= capacity;
+#else
+    UNUSED_PARAM(capacity);
+#endif
+}
+
+inline bool Heap::isPointerGCObject(TinyBloomFilter filter, MarkedBlockSet& markedBlockSet, void* pointer)
+{
+    MarkedBlock* candidate = MarkedBlock::blockFor(pointer);
+    if (filter.ruleOut(bitwise_cast<Bits>(candidate))) {
+        ASSERT(!candidate || !markedBlockSet.set().contains(candidate));
+        return false;
+    }
+
+    if (!MarkedBlock::isAtomAligned(pointer))
+        return false;
+
+    if (!markedBlockSet.set().contains(candidate))
+        return false;
+
+    if (!candidate->isLiveCell(pointer))
+        return false;
+
+    return true;
+}
+
+inline bool Heap::isValueGCObject(TinyBloomFilter filter, MarkedBlockSet& markedBlockSet, JSValue value)
+{
+    if (!value.isCell())
+        return false;
+    return isPointerGCObject(filter, markedBlockSet, static_cast<void*>(value.asCell()));
 }
 
 } // namespace JSC

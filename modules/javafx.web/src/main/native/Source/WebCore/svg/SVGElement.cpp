@@ -488,9 +488,9 @@ SVGUseElement* SVGElement::correspondingUseElement() const
     auto* root = containingShadowRoot();
     if (!root)
         return nullptr;
-    if (root->type() != ShadowRoot::UserAgentShadowRoot)
+    if (root->type() != ShadowRoot::Type::UserAgent)
         return nullptr;
-    auto* host = root->hostElement();
+    auto* host = root->host();
     if (!is<SVGUseElement>(host))
         return nullptr;
     return &downcast<SVGUseElement>(*host);
@@ -502,7 +502,8 @@ void SVGElement::setCorrespondingElement(SVGElement* correspondingElement)
         if (SVGElement* oldCorrespondingElement = m_svgRareData->correspondingElement())
             oldCorrespondingElement->m_svgRareData->instances().remove(this);
     }
-    ensureSVGRareData().setCorrespondingElement(correspondingElement);
+    if (m_svgRareData || correspondingElement)
+        ensureSVGRareData().setCorrespondingElement(correspondingElement);
     if (correspondingElement)
         correspondingElement->ensureSVGRareData().instances().add(this);
 }
@@ -515,12 +516,11 @@ void SVGElement::parseAttribute(const QualifiedName& name, const AtomicString& v
     }
 
     if (name == HTMLNames::tabindexAttr) {
-        int tabindex = 0;
         if (value.isEmpty())
             clearTabIndexExplicitlyIfNeeded();
-        else if (parseHTMLInteger(value, tabindex)) {
+        else if (Optional<int> tabIndex = parseHTMLInteger(value)) {
             // Clamp tabindex to the range of 'short' to match Firefox's behavior.
-            setTabIndexExplicitly(std::max(static_cast<int>(std::numeric_limits<short>::min()), std::min(tabindex, static_cast<int>(std::numeric_limits<short>::max()))));
+            setTabIndexExplicitly(std::max(static_cast<int>(std::numeric_limits<short>::min()), std::min(tabIndex.value(), static_cast<int>(std::numeric_limits<short>::max()))));
         }
         return;
     }
@@ -570,12 +570,10 @@ bool SVGElement::haveLoadedRequiredResources()
     return true;
 }
 
-bool SVGElement::addEventListener(const AtomicString& eventType, PassRefPtr<EventListener> prpListener, bool useCapture)
+bool SVGElement::addEventListener(const AtomicString& eventType, RefPtr<EventListener>&& listener, bool useCapture)
 {
-    RefPtr<EventListener> listener = prpListener;
-
     // Add event listener to regular DOM element
-    if (!Node::addEventListener(eventType, listener, useCapture))
+    if (!Node::addEventListener(eventType, listener.copyRef(), useCapture))
         return false;
 
     if (containingShadowRoot())
@@ -585,7 +583,7 @@ bool SVGElement::addEventListener(const AtomicString& eventType, PassRefPtr<Even
     ASSERT(!instanceUpdatesBlocked());
     for (auto* instance : instances()) {
         ASSERT(instance->correspondingElement() == this);
-        bool result = instance->Node::addEventListener(eventType, listener, useCapture);
+        bool result = instance->Node::addEventListener(eventType, listener.copyRef(), useCapture);
         ASSERT_UNUSED(result, result);
     }
 
@@ -790,12 +788,13 @@ void SVGElement::synchronizeSystemLanguage(SVGElement* contextElement)
     contextElement->synchronizeSystemLanguage();
 }
 
-RefPtr<RenderStyle> SVGElement::customStyleForRenderer(RenderStyle& parentStyle)
+RefPtr<RenderStyle> SVGElement::customStyleForRenderer(RenderStyle& parentStyle, RenderStyle*)
 {
-    if (!correspondingElement())
-        return document().ensureStyleResolver().styleForElement(this, &parentStyle);
+    // If the element is in a <use> tree we get the style from the definition tree.
+    if (auto* styleElement = this->correspondingElement())
+        return styleElement->styleResolver().styleForElement(*styleElement, &parentStyle);
 
-    return document().ensureStyleResolver().styleForElement(correspondingElement(), &parentStyle, DisallowStyleSharing);
+    return resolveStyle(&parentStyle);
 }
 
 MutableStyleProperties* SVGElement::animatedSMILStyleProperties() const
@@ -827,7 +826,7 @@ RenderStyle* SVGElement::computedStyle(PseudoId pseudoElementSpecifier)
             parentStyle = &renderer->style();
     }
 
-    return m_svgRareData->overrideComputedStyle(this, parentStyle);
+    return m_svgRareData->overrideComputedStyle(*this, parentStyle);
 }
 
 static void addQualifiedName(HashMap<AtomicString, QualifiedName>& map, const QualifiedName& name)

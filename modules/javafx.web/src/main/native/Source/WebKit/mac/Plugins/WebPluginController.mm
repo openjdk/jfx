@@ -119,23 +119,6 @@ static void initializeAudioSession()
 
 @implementation WebPluginController
 
-#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED < 80000
-+ (id)plugInViewWithArguments:(NSDictionary *)arguments fromPluginPackage:(WebPluginPackage *)pluginPackage
-{
-    initializeAudioSession();
-    [pluginPackage load];
-    Class viewFactory = [pluginPackage viewFactory];
-
-    id view = nil;
-
-    if ([viewFactory respondsToSelector:@selector(plugInViewWithArguments:)]) {
-        JSC::JSLock::DropAllLocks dropAllLocks(JSDOMWindowBase::commonVM());
-        view = [viewFactory plugInViewWithArguments:arguments];
-    }
-
-    return view;
-}
-#else
 - (NSView *)plugInViewWithArguments:(NSDictionary *)arguments fromPluginPackage:(WebPluginPackage *)pluginPackage
 {
 #if PLATFORM(IOS)
@@ -174,7 +157,6 @@ static void initializeAudioSession()
 
     return view;
 }
-#endif
 
 #if PLATFORM(IOS)
 + (void)addPlugInView:(NSView *)view
@@ -200,7 +182,7 @@ static void initializeAudioSession()
         return nil;
     _documentView = view;
     _views = [[NSMutableArray alloc] init];
-    _checksInProgress = (NSMutableSet *)CFMakeCollectable(CFSetCreateMutable(NULL, 0, NULL));
+    _checksInProgress = (NSMutableSet *)CFSetCreateMutable(NULL, 0, NULL);
     return self;
 }
 
@@ -671,15 +653,21 @@ static alertDidEndIMP original_TSUpdateCheck_alertDidEnd_returnCode_contextInfo_
 
 static void WebKit_TSUpdateCheck_alertDidEnd_returnCode_contextInfo_(id object, SEL selector, NSAlert *alert, NSInteger returnCode, void* contextInfo)
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [[(TSUpdateCheck *)object delegate] autorelease];
+#pragma clang diagnostic pop
 
     original_TSUpdateCheck_alertDidEnd_returnCode_contextInfo_(object, selector, alert, returnCode, contextInfo);
 }
 
 static void WebKit_NSAlert_beginSheetModalForWindow_modalDelegate_didEndSelector_contextInfo_(id object, SEL selector, NSWindow *window, id modalDelegate, SEL didEndSelector, void* contextInfo)
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     if (isKindOfClass(modalDelegate, @"TSUpdateCheck"))
         [[(TSUpdateCheck *)modalDelegate delegate] retain];
+#pragma clang diagnostic pop
 
     original_NSAlert_beginSheetModalForWindow_modalDelegate_didEndSelector_contextInfo_(object, selector, window, modalDelegate, didEndSelector, contextInfo);
 }

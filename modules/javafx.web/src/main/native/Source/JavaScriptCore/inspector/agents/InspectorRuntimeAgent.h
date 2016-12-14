@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -68,22 +68,18 @@ public:
     virtual void getCollectionEntries(ErrorString&, const String& objectId, const String* objectGroup, const int* startIndex, const int* numberToFetch, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::CollectionEntry>>& entries) override final;
     virtual void saveResult(ErrorString&, const Inspector::InspectorObject& callArgument, const int* executionContextId, Inspector::Protocol::OptOutput<int>* savedResultIndex) override final;
     virtual void releaseObjectGroup(ErrorString&, const String& objectGroup) override final;
-    virtual void run(ErrorString&) override;
     virtual void getRuntimeTypesForVariablesAtOffsets(ErrorString&, const Inspector::InspectorArray& locations, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::TypeDescription>>&) override;
     virtual void enableTypeProfiler(ErrorString&) override;
     virtual void disableTypeProfiler(ErrorString&) override;
     virtual void getBasicBlocks(ErrorString&, const String& in_sourceID, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Runtime::BasicBlock>>& out_basicBlocks) override;
 
-    void setScriptDebugServer(ScriptDebugServer* scriptDebugServer) { m_scriptDebugServer = scriptDebugServer; }
-
     bool enabled() const { return m_enabled; }
 
 protected:
-    InspectorRuntimeAgent(InjectedScriptManager*);
+    InspectorRuntimeAgent(AgentContext&);
 
-    InjectedScriptManager* injectedScriptManager() { return m_injectedScriptManager; }
+    InjectedScriptManager& injectedScriptManager() { return m_injectedScriptManager; }
 
-    virtual JSC::VM& globalVM() = 0;
     virtual InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) = 0;
 
     virtual void muteConsole() = 0;
@@ -92,10 +88,11 @@ protected:
 private:
     void setTypeProfilerEnabledState(bool);
 
-    InjectedScriptManager* m_injectedScriptManager;
-    ScriptDebugServer* m_scriptDebugServer;
-    bool m_enabled;
-    bool m_isTypeProfilingEnabled;
+    InjectedScriptManager& m_injectedScriptManager;
+    ScriptDebugServer& m_scriptDebugServer;
+    JSC::VM& m_vm;
+    bool m_enabled {false};
+    bool m_isTypeProfilingEnabled {false};
 };
 
 } // namespace Inspector

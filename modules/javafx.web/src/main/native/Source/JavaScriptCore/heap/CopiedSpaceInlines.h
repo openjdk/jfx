@@ -30,7 +30,6 @@
 #include "CopiedSpace.h"
 #include "Heap.h"
 #include "VM.h"
-#include <wtf/CheckedBoolean.h>
 
 namespace JSC {
 
@@ -98,37 +97,35 @@ inline void CopiedSpace::recycleEvacuatedBlock(CopiedBlock* block, HeapOperation
     ASSERT(block->canBeRecycled());
     ASSERT(!block->m_isPinned);
     {
-        SpinLockHolder locker(&m_toSpaceLock);
+        LockHolder locker(&m_toSpaceLock);
         m_blockSet.remove(block);
         if (collectionType == EdenCollection)
             m_newGen.fromSpace->remove(block);
         else
             m_oldGen.fromSpace->remove(block);
     }
-    CopiedBlock::destroy(block);
+    CopiedBlock::destroy(*heap(), block);
 }
 
 inline void CopiedSpace::recycleBorrowedBlock(CopiedBlock* block)
 {
-    CopiedBlock::destroy(block);
+    CopiedBlock::destroy(*heap(), block);
 
     {
-        MutexLocker locker(m_loanedBlocksLock);
+        LockHolder locker(m_loanedBlocksLock);
         ASSERT(m_numberOfLoanedBlocks > 0);
         ASSERT(m_inCopyingPhase);
         m_numberOfLoanedBlocks--;
-        if (!m_numberOfLoanedBlocks)
-            m_loanedBlocksCondition.signal();
     }
 }
 
 inline CopiedBlock* CopiedSpace::allocateBlockForCopyingPhase()
 {
     ASSERT(m_inCopyingPhase);
-    CopiedBlock* block = CopiedBlock::createNoZeroFill();
+    CopiedBlock* block = CopiedBlock::createNoZeroFill(*m_heap);
 
     {
-        MutexLocker locker(m_loanedBlocksLock);
+        LockHolder locker(m_loanedBlocksLock);
         m_numberOfLoanedBlocks++;
     }
 
@@ -142,7 +139,7 @@ inline void CopiedSpace::allocateBlock()
 
     m_allocator.resetCurrentBlock();
 
-    CopiedBlock* block = CopiedBlock::create();
+    CopiedBlock* block = CopiedBlock::create(*m_heap);
 
     m_newGen.toSpace->push(block);
     m_newGen.blockFilter.add(reinterpret_cast<Bits>(block));
@@ -234,14 +231,14 @@ inline void CopiedSpace::startedCopying()
         } else {
             oversizeBlocks->remove(block);
             m_blockSet.remove(block);
-            CopiedBlock::destroy(block);
+            CopiedBlock::destroy(*heap(), block);
         }
         block = next;
     }
 
     double markedSpaceBytes = m_heap->objectSpace().capacity();
-    double totalFragmentation = static_cast<double>(totalLiveBytes + markedSpaceBytes) / static_cast<double>(totalUsableBytes + markedSpaceBytes);
-    m_shouldDoCopyPhase = m_heap->operationInProgress() == EdenCollection || totalFragmentation <= Options::minHeapUtilization();
+    double totalUtilization = static_cast<double>(totalLiveBytes + markedSpaceBytes) / static_cast<double>(totalUsableBytes + markedSpaceBytes);
+    m_shouldDoCopyPhase = m_heap->operationInProgress() == EdenCollection || totalUtilization <= Options::minHeapUtilization();
     if (!m_shouldDoCopyPhase) {
         if (Options::logGC())
             dataLog("Skipped copying, ");
@@ -259,4 +256,3 @@ inline void CopiedSpace::startedCopying()
 } // namespace JSC
 
 #endif // CopiedSpaceInlines_h
-

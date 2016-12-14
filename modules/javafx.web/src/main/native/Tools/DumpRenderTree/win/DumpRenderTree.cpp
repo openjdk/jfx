@@ -1147,6 +1147,13 @@ static void runTest(const string& inputLine)
     // EventSendingController clearSavedEvents
     workQueue.clear();
 
+    // If the test page could have possibly opened the Web Inspector frontend,
+    // then try to close it in case it was accidentally left open.
+    if (shouldEnableDeveloperExtras(pathOrURL.c_str())) {
+        ::gTestRunner->closeWebInspector();
+        ::gTestRunner->setDeveloperExtrasEnabled(false);
+    }
+
     if (::gTestRunner->closeRemainingWindowsWhenComplete()) {
         Vector<HWND> windows = openWindows();
         unsigned size = windows.size();
@@ -1159,11 +1166,6 @@ static void runTest(const string& inputLine)
 
             ::DestroyWindow(window);
         }
-    }
-
-    if (shouldEnableDeveloperExtras(pathOrURL.c_str())) {
-        ::gTestRunner->closeWebInspector();
-        ::gTestRunner->setDeveloperExtrasEnabled(false);
     }
 
     resetWebViewToConsistentStateBeforeTesting();
@@ -1232,6 +1234,7 @@ IWebView* createWebViewAndOffscreenWindow(HWND* webViewWindow)
 
     viewPrivate->setShouldApplyMacFontAscentHack(TRUE);
     viewPrivate->setAlwaysUsesComplexTextCodePath(forceComplexText);
+    viewPrivate->setCustomBackingScaleFactor(1.0);
 
     _bstr_t pluginPath = _bstr_t(exePath().data()) + TestPluginDir;
     if (FAILED(viewPrivate->addAdditionalPluginDirectory(pluginPath.GetBSTR())))
@@ -1294,13 +1297,6 @@ RetainPtr<CFURLCacheRef> sharedCFURLCache()
     return nullptr;
 }
 #endif
-
-static LONG WINAPI exceptionFilter(EXCEPTION_POINTERS*)
-{
-    fputs("#CRASHED\n", stderr);
-    fflush(stderr);
-    return EXCEPTION_CONTINUE_SEARCH;
-}
 
 static Vector<const char*> initializeGlobalsFromCommandLineOptions(int argc, const char* argv[])
 {
@@ -1412,8 +1408,6 @@ int main(int argc, const char* argv[])
     // error mode here to work around Cygwin's behavior. See <http://webkit.org/b/55222>.
     ::SetErrorMode(0);
 
-    ::SetUnhandledExceptionFilter(exceptionFilter);
-
     leakChecking = false;
 
     _setmode(1, _O_BINARY);
@@ -1439,7 +1433,7 @@ int main(int argc, const char* argv[])
     prepareConsistentTestingEnvironment(standardPreferences.get(), standardPreferencesPrivate.get());
 
     if (printSupportedFeatures) {
-        BOOL acceleratedCompositingAvailable;
+        BOOL acceleratedCompositingAvailable = FALSE;
         standardPreferences->acceleratedCompositingEnabled(&acceleratedCompositingAvailable);
 
 #if ENABLE(3D_TRANSFORMS)

@@ -74,15 +74,59 @@ EncodedJSValue JSC_HOST_CALL boundFunctionConstruct(ExecState* exec)
     return JSValue::encode(construct(exec, targetFunction, constructType, constructData, args));
 }
 
+EncodedJSValue JSC_HOST_CALL isBoundFunction(ExecState* exec)
+{
+    return JSValue::encode(JSValue(static_cast<bool>(jsDynamicCast<JSBoundFunction*>(exec->uncheckedArgument(0)))));
+}
+
+EncodedJSValue JSC_HOST_CALL hasInstanceBoundFunction(ExecState* exec)
+{
+    JSBoundFunction* boundObject = jsCast<JSBoundFunction*>(exec->uncheckedArgument(0));
+    JSValue value = exec->uncheckedArgument(1);
+
+    return JSValue::encode(jsBoolean(boundObject->targetFunction()->hasInstance(exec, value)));
+}
+
+inline Structure* getBoundFunctionStructure(VM& vm, JSGlobalObject* globalObject, JSObject* targetFunction)
+{
+    JSValue prototype = targetFunction->structure(vm)->storedPrototype();
+    JSFunction* targetJSFunction = jsDynamicCast<JSFunction*>(targetFunction);
+
+    // We only cache the structure of the bound function if the bindee is a JSFunction since there
+    // isn't any good place to put the structure on Internal Functions.
+    if (targetJSFunction) {
+        Structure* structure = targetJSFunction->rareData(vm)->getBoundFunctionStructure();
+        if (structure && structure->storedPrototype() == prototype && structure->globalObject() == globalObject)
+            return structure;
+    }
+
+    Structure* result = globalObject->boundFunctionStructure();
+
+    // It would be nice if the structure map was keyed global objects in addition to the other things. Unfortunately, it is not
+    // currently. Whoever works on caching structure changes for prototype transistions should consider this problem as well.
+    // See: https://bugs.webkit.org/show_bug.cgi?id=152738
+    if (prototype.isObject() && prototype.getObject()->globalObject() == globalObject) {
+        result = vm.prototypeMap.emptyStructureForPrototypeFromBaseStructure(prototype.getObject(), result);
+        ASSERT_WITH_SECURITY_IMPLICATION(result->globalObject() == globalObject);
+    } else
+        result = Structure::create(vm, globalObject, prototype, result->typeInfo(), result->classInfo());
+
+    if (targetJSFunction)
+        targetJSFunction->rareData(vm)->setBoundFunctionStructure(vm, result);
+
+    return result;
+}
+
 JSBoundFunction* JSBoundFunction::create(VM& vm, JSGlobalObject* globalObject, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs, int length, const String& name)
 {
     ConstructData constructData;
     ConstructType constructType = JSC::getConstructData(targetFunction, constructData);
     bool canConstruct = constructType != ConstructTypeNone;
-    NativeExecutable* executable = vm.getHostFunction(boundFunctionCall, canConstruct ? boundFunctionConstruct : callHostFunctionAsConstructor);
-    JSBoundFunction* function = new (NotNull, allocateCell<JSBoundFunction>(vm.heap)) JSBoundFunction(vm, globalObject, globalObject->boundFunctionStructure(), targetFunction, boundThis, boundArgs);
+    NativeExecutable* executable = vm.getHostFunction(boundFunctionCall, canConstruct ? boundFunctionConstruct : callHostFunctionAsConstructor, ASCIILiteral("Function.prototype.bind result"));
+    Structure* structure = getBoundFunctionStructure(vm, globalObject, targetFunction);
+    JSBoundFunction* function = new (NotNull, allocateCell<JSBoundFunction>(vm.heap)) JSBoundFunction(vm, globalObject, structure, targetFunction, boundThis, boundArgs);
 
-    function->finishCreation(vm, executable, length, name);
+    function->finishCreation(vm, executable, length, makeString("bound ", name));
     return function;
 }
 
@@ -117,6 +161,11 @@ void JSBoundFunction::visitChildren(JSCell* cell, SlotVisitor& visitor)
     visitor.append(&thisObject->m_targetFunction);
     visitor.append(&thisObject->m_boundThis);
     visitor.append(&thisObject->m_boundArgs);
+}
+
+String JSBoundFunction::toStringName(ExecState* exec)
+{
+    return m_targetFunction->get(exec, exec->vm().propertyNames->name).toWTFString(exec);
 }
 
 } // namespace JSC

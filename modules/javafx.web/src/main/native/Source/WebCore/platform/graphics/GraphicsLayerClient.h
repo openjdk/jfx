@@ -26,6 +26,8 @@
 #ifndef GraphicsLayerClient_h
 #define GraphicsLayerClient_h
 
+#include "IntSize.h"
+#include "TiledBacking.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -55,7 +57,7 @@ enum AnimatedPropertyID {
     AnimatedPropertyTransform,
     AnimatedPropertyOpacity,
     AnimatedPropertyBackgroundColor,
-    AnimatedPropertyWebkitFilter
+    AnimatedPropertyFilter
 #if ENABLE(FILTERS_LEVEL_2)
     , AnimatedPropertyWebkitBackdropFilter
 #endif
@@ -117,6 +119,8 @@ public:
 
     virtual bool shouldAggressivelyRetainTiles(const GraphicsLayer*) const { return false; }
     virtual bool shouldTemporarilyRetainTileCohorts(const GraphicsLayer*) const { return true; }
+
+    virtual IntSize tileSize() const { return defaultTileSize(); }
 
     virtual bool needsPixelAligment() const { return false; }
 

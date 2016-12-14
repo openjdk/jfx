@@ -71,7 +71,7 @@
 #include <unistd.h>
 #endif
 
-#if OS(DARWIN) || (OS(LINUX) && !defined(__UCLIBC__))
+#if OS(DARWIN) || (OS(LINUX) && defined(__GLIBC__) && !defined(__UCLIBC__))
 #include <cxxabi.h>
 #include <dlfcn.h>
 #include <execinfo.h>
@@ -143,7 +143,7 @@ static void vprintf_stderr_common(const char* format, va_list args)
     vfprintf(stderr, format, args);
 }
 
-#if COMPILER(CLANG) || COMPILER(GCC)
+#if COMPILER(GCC_OR_CLANG)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
 #endif
@@ -176,7 +176,7 @@ static void vprintf_stderr_with_trailing_newline(const char* format, va_list arg
     vprintf_stderr_common(formatWithNewline.get(), args);
 }
 
-#if COMPILER(CLANG) || COMPILER(GCC)
+#if COMPILER(GCC_OR_CLANG)
 #pragma GCC diagnostic pop
 #endif
 
@@ -228,7 +228,7 @@ void WTFReportArgumentAssertionFailure(const char* file, int line, const char* f
 
 void WTFGetBacktrace(void** stack, int* size)
 {
-#if OS(DARWIN) || (OS(LINUX) && !defined(__UCLIBC__))
+#if OS(DARWIN) || (OS(LINUX) && defined(__GLIBC__) && !defined(__UCLIBC__))
     *size = backtrace(stack, *size);
 #elif OS(WINDOWS)
     // The CaptureStackBackTrace function is available in XP, but it is not defined
@@ -315,6 +315,7 @@ void WTFSetCrashHook(WTFCrashHookFunction function)
     globalHook = function;
 }
 
+#if !defined(NDEBUG) || !OS(DARWIN)
 void WTFCrash()
 {
     if (globalHook)
@@ -326,26 +327,26 @@ void WTFCrash()
 #else
     *(int *)(uintptr_t)0xbbadbeef = 0;
     // More reliable, but doesn't say BBADBEEF.
-#if COMPILER(CLANG) || COMPILER(GCC)
+#if COMPILER(GCC_OR_CLANG)
     __builtin_trap();
 #else
     ((void(*)())0)();
 #endif
 #endif
 }
+#else
+// We need to keep WTFCrash() around (even on non-debug OS(DARWIN) builds) as a workaround
+// for presently shipping (circa early 2016) SafariForWebKitDevelopment binaries which still
+// expects to link to it.
+void WTFCrash()
+{
+    CRASH();
+}
+#endif // !defined(NDEBUG) || !OS(DARWIN)
 
 void WTFCrashWithSecurityImplication()
 {
-    if (globalHook)
-        globalHook();
-    WTFReportBacktrace();
-    *(int *)(uintptr_t)0xfbadbeef = 0;
-    // More reliable, but doesn't say fbadbeef.
-#if COMPILER(CLANG) || COMPILER(GCC)
-    __builtin_trap();
-#else
-    ((void(*)())0)();
-#endif
+    CRASH();
 }
 
 #if HAVE(SIGNAL_H)
@@ -461,7 +462,7 @@ void WTFLogAlwaysAndCrash(const char* format, ...)
     va_start(args, format);
     WTFLogAlwaysV(format, args);
     va_end(args);
-    WTFCrash();
+    CRASH();
 }
 
 WTFLogChannel* WTFLogChannelByName(WTFLogChannel* channels[], size_t count, const char* name)
@@ -496,7 +497,7 @@ void WTFInitializeLogChannelStatesFromString(WTFLogChannel* channels[], size_t c
             component = component.substring(1);
         }
 
-        if (equalIgnoringCase(component, "all")) {
+        if (equalLettersIgnoringASCIICase(component, "all")) {
             setStateOfAllChannels(channels, count, logChannelState);
             continue;
         }

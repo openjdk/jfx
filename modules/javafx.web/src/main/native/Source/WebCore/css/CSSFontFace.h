@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #define CSSFontFace_h
 
 #include "CSSFontFaceRule.h"
-#include "CSSFontFaceSource.h"
+#include "FontFeatureSettings.h"
 #include "TextFlags.h"
 #include <memory>
 #include <wtf/Forward.h>
@@ -35,37 +35,100 @@
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
+
+namespace JSC {
+class ExecState;
+}
 
 namespace WebCore {
 
+class CSSFontFaceSource;
+class CSSFontSelector;
 class CSSSegmentedFontFace;
+class CSSValue;
+class CSSValueList;
+class Document;
 class FontDescription;
 class Font;
+class FontFace;
 
-class CSSFontFace : public RefCounted<CSSFontFace> {
+class CSSFontFace final : public RefCounted<CSSFontFace> {
 public:
-    static Ref<CSSFontFace> create(FontTraitsMask traitsMask, PassRefPtr<CSSFontFaceRule> rule, bool isLocalFallback = false) { return adoptRef(*new CSSFontFace(traitsMask, rule, isLocalFallback)); }
+    static Ref<CSSFontFace> create(CSSFontSelector* fontSelector, StyleRuleFontFace* cssConnection = nullptr, FontFace* wrapper = nullptr, bool isLocalFallback = false)
+    {
+        return adoptRef(*new CSSFontFace(fontSelector, cssConnection, wrapper, isLocalFallback));
+    }
+    virtual ~CSSFontFace();
 
-    FontTraitsMask traitsMask() const { return m_traitsMask; }
+    bool setFamilies(CSSValue&);
+    bool setStyle(CSSValue&);
+    bool setWeight(CSSValue&);
+    bool setUnicodeRange(CSSValue&);
+    bool setVariantLigatures(CSSValue&);
+    bool setVariantPosition(CSSValue&);
+    bool setVariantCaps(CSSValue&);
+    bool setVariantNumeric(CSSValue&);
+    bool setVariantAlternates(CSSValue&);
+    bool setVariantEastAsian(CSSValue&);
+    bool setFeatureSettings(CSSValue&);
 
+    enum class Status;
     struct UnicodeRange;
-
-    void addRange(UChar32 from, UChar32 to) { m_ranges.append(UnicodeRange(from, to)); }
+    const CSSValueList* families() const { return m_families.get(); }
+    FontTraitsMask traitsMask() const { return m_traitsMask; }
     const Vector<UnicodeRange>& ranges() const { return m_ranges; }
-
-    void addedToSegmentedFontFace(CSSSegmentedFontFace*);
-    void removedFromSegmentedFontFace(CSSSegmentedFontFace*);
-
-    bool isLoaded() const;
-    bool isValid() const;
-
+    const FontFeatureSettings& featureSettings() const { return m_featureSettings; }
+    const FontVariantSettings& variantSettings() const { return m_variantSettings; }
+    void setVariantSettings(const FontVariantSettings& variantSettings) { m_variantSettings = variantSettings; }
+    void setTraitsMask(FontTraitsMask traitsMask) { m_traitsMask = traitsMask; }
     bool isLocalFallback() const { return m_isLocalFallback; }
+    Status status() const { return m_status; }
+    StyleRuleFontFace* cssConnection() const { return m_cssConnection.get(); }
 
-    void addSource(std::unique_ptr<CSSFontFaceSource>);
+    static Optional<FontTraitsMask> calculateStyleMask(CSSValue& style);
+    static Optional<FontTraitsMask> calculateWeightMask(CSSValue& weight);
 
-    void fontLoaded(CSSFontFaceSource*);
+    class Client;
+    void addClient(Client&);
+    void removeClient(Client&);
 
+    bool allSourcesFailed() const;
+
+    void adoptSource(std::unique_ptr<CSSFontFaceSource>&&);
+    void sourcesPopulated() { m_sourcesPopulated = true; }
+
+    void fontLoaded(CSSFontFaceSource&);
+
+    void load();
     RefPtr<Font> font(const FontDescription&, bool syntheticBold, bool syntheticItalic);
+
+    static void appendSources(CSSFontFace&, CSSValueList&, Document*, bool isInitiatingElementInUserAgentShadowTree);
+
+    class Client {
+    public:
+        virtual ~Client() { }
+        virtual void fontLoaded(CSSFontFace&) { };
+        virtual void fontStateChanged(CSSFontFace&, Status oldState, Status newState) { UNUSED_PARAM(oldState); UNUSED_PARAM(newState); };
+        virtual void fontPropertyChanged(CSSFontFace&, CSSValueList* oldFamilies = nullptr) { UNUSED_PARAM(oldFamilies); };
+    };
+
+    // Pending => Loading  => TimedOut
+    //              ||  \\    //  ||
+    //              ||   \\  //   ||
+    //              ||    \\//    ||
+    //              ||     //     ||
+    //              ||    //\\    ||
+    //              ||   //  \\   ||
+    //              \/  \/    \/  \/
+    //             Success    Failure
+    enum class Status {
+        Pending,
+        Loading,
+        TimedOut,
+        Success,
+        Failure
+    };
 
     struct UnicodeRange {
         UnicodeRange(UChar32 from, UChar32 to)
@@ -82,40 +145,33 @@ public:
         UChar32 m_to;
     };
 
+    // We don't guarantee that the FontFace wrapper will be the same every time you ask for it.
+    Ref<FontFace> wrapper(JSC::ExecState&);
+
 #if ENABLE(SVG_FONTS)
     bool hasSVGFontFaceSource() const;
 #endif
 
-#if ENABLE(FONT_LOAD_EVENTS)
-    enum LoadState { NotLoaded, Loading, Loaded, Error };
-    LoadState loadState() const { return m_loadState; }
-#endif
-
 private:
-    CSSFontFace(FontTraitsMask traitsMask, PassRefPtr<CSSFontFaceRule> rule, bool isLocalFallback)
-        : m_traitsMask(traitsMask)
-        , m_activeSource(0)
-        , m_isLocalFallback(isLocalFallback)
-#if ENABLE(FONT_LOAD_EVENTS)
-        , m_loadState(isLocalFallback ? Loaded : NotLoaded)
-        , m_rule(rule)
-#endif
-    {
-        UNUSED_PARAM(rule);
-    }
+    CSSFontFace(CSSFontSelector*, StyleRuleFontFace*, FontFace*, bool isLocalFallback);
 
-    FontTraitsMask m_traitsMask;
+    size_t pump();
+    void setStatus(Status);
+    void notifyClientsOfFontPropertyChange();
+
+    RefPtr<CSSValueList> m_families;
+    FontTraitsMask m_traitsMask { static_cast<FontTraitsMask>(FontStyleNormalMask | FontWeight400Mask) };
     Vector<UnicodeRange> m_ranges;
-    HashSet<CSSSegmentedFontFace*> m_segmentedFontFaces;
+    FontFeatureSettings m_featureSettings;
+    FontVariantSettings m_variantSettings;
     Vector<std::unique_ptr<CSSFontFaceSource>> m_sources;
-    CSSFontFaceSource* m_activeSource;
-    bool m_isLocalFallback;
-#if ENABLE(FONT_LOAD_EVENTS)
-    LoadState m_loadState;
-    RefPtr<CSSFontFaceRule> m_rule;
-    void notifyFontLoader(LoadState);
-    void notifyLoadingDone();
-#endif
+    RefPtr<CSSFontSelector> m_fontSelector;
+    RefPtr<StyleRuleFontFace> m_cssConnection;
+    HashSet<Client*> m_clients;
+    WeakPtr<FontFace> m_wrapper;
+    Status m_status { Status::Pending };
+    bool m_isLocalFallback { false };
+    bool m_sourcesPopulated { false };
 };
 
 }

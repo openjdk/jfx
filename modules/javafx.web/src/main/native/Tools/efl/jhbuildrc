@@ -22,18 +22,9 @@ import platform
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../jhbuild") )
 import jhbuildrc_common
 
-# Setting use_lib64 to False is necessary, otherwise CMake will not find
-# the lib64/cmake/<name> folder that contains the <Name>Config.cmake files.
-use_lib64 = False
-
 jhbuildrc_common.init(globals(), "efl") 
 
 addpath('XDG_DATA_DIRS', '/usr/share')
 addpath('XDG_CONFIG_DIRS', '/etc/xdg')
-
-if not 'ACCESSIBILITY_EAIL_LIBRARY_PATH' in os.environ:
-    _libeail_path = os.path.join(os.environ['CMAKE_LIBRARY_PATH'], 'libeail.so')
-    if os.path.isfile(_libeail_path):
-        os.environ['ACCESSIBILITY_EAIL_LIBRARY_PATH'] = _libeail_path
 
 partial_build = False

@@ -65,7 +65,7 @@ public:
 
 private:
     // engine support
-    static void getSupportedTypes(HashSet<String>& types);
+    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
 
     static void getSitesInMediaCache(Vector<String>&);
@@ -127,8 +127,8 @@ private:
 
     virtual bool hasAvailableVideoFrame() const override;
 
-    void paint(GraphicsContext*, const FloatRect&) override;
-    void paintCurrentFrameInContext(GraphicsContext*, const FloatRect&) override;
+    void paint(GraphicsContext&, const FloatRect&) override;
+    void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override;
     virtual void prepareForRendering() override;
 
     bool supportsAcceleratedRendering() const override;

@@ -182,14 +182,14 @@ enum ClipboardDataType { ClipboardDataTypeNone, ClipboardDataTypeURL, ClipboardD
 
 static ClipboardDataType clipboardTypeFromMIMEType(const String& type)
 {
-    String qType = type.stripWhiteSpace().lower();
+    String strippedType = type.stripWhiteSpace();
 
     // two special cases for IE compatibility
-    if (qType == "text" || qType == "text/plain" || qType.startsWith("text/plain;"))
+    if (equalLettersIgnoringASCIICase(strippedType, "text") || equalLettersIgnoringASCIICase(strippedType, "text/plain") || strippedType.startsWith("text/plain;", false))
         return ClipboardDataTypeText;
-    if (qType == "url" || qType == "text/uri-list")
+    if (equalLettersIgnoringASCIICase(strippedType, "url") || equalLettersIgnoringASCIICase(strippedType, "text/uri-list"))
         return ClipboardDataTypeURL;
-    if (qType == "text/html")
+    if (equalLettersIgnoringASCIICase(strippedType, "text/html"))
         return ClipboardDataTypeTextHTML;
 
     return ClipboardDataTypeNone;
@@ -426,7 +426,7 @@ void Pasteboard::writeRangeToDataObject(Range& selectedRange, Frame& frame)
 
     Vector<char> data;
     markupToCFHTML(createMarkup(selectedRange, 0, AnnotateForInterchange),
-        selectedRange.startContainer()->document().url().string(), data);
+        selectedRange.startContainer().document().url().string(), data);
     medium.hGlobal = createGlobalData(data);
     if (medium.hGlobal && FAILED(m_writableDataObject->SetData(htmlFormat(), &medium, TRUE)))
         ::GlobalFree(medium.hGlobal);
@@ -451,7 +451,7 @@ void Pasteboard::writeSelection(Range& selectedRange, bool canSmartCopyOrDelete,
     if (::OpenClipboard(m_owner)) {
         Vector<char> data;
         markupToCFHTML(createMarkup(selectedRange, 0, AnnotateForInterchange),
-            selectedRange.startContainer()->document().url().string(), data);
+            selectedRange.startContainer().document().url().string(), data);
         HGLOBAL cbData = createGlobalData(data);
         if (!::SetClipboardData(HTMLClipboardFormat, cbData))
             ::GlobalFree(cbData);

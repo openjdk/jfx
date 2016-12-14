@@ -25,6 +25,8 @@
 
 #include "config.h"
 #include "InlineCallFrameSet.h"
+
+#include "InlineCallFrame.h"
 #include "JSCInlines.h"
 
 namespace JSC {
@@ -35,12 +37,6 @@ InlineCallFrameSet::~InlineCallFrameSet() { }
 InlineCallFrame* InlineCallFrameSet::add()
 {
     return m_frames.add();
-}
-
-void InlineCallFrameSet::visitAggregate(SlotVisitor& visitor)
-{
-    for (InlineCallFrame* callFrame : m_frames)
-        callFrame->visitAggregate(visitor);
 }
 
 } // namespace JSC

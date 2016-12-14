@@ -36,7 +36,6 @@
 namespace JSC {
 
 class JITStubRoutineSet;
-class RepatchBuffer;
 
 // This is a base-class for JIT stub routines, and also the class you want
 // to instantiate directly if you have a routine that does not need any
@@ -67,6 +66,7 @@ public:
     }
 
     virtual ~JITStubRoutine();
+    virtual void aboutToDie() { }
 
     // MacroAssemblerCodeRef is copyable, but at the cost of reference
     // counting churn. Returning a reference is a good way of reducing
@@ -144,7 +144,7 @@ public:
     // Return true if you are still valid after. Return false if you are now invalid. If you return
     // false, you will usually not do any clearing because the idea is that you will simply be
     // destroyed.
-    virtual bool visitWeak(RepatchBuffer&);
+    virtual bool visitWeak(VM&);
 
 protected:
     virtual void observeZeroRefCount();

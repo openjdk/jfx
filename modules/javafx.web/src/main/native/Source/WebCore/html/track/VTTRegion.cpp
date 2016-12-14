@@ -32,7 +32,7 @@
 #include "config.h"
 #include "VTTRegion.h"
 
-#if ENABLE(VIDEO_TRACK) && ENABLE(WEBVTT_REGIONS)
+#if ENABLE(VIDEO_TRACK)
 
 #include "ClientRect.h"
 #include "DOMTokenList.h"
@@ -188,7 +188,7 @@ void VTTRegion::setViewportAnchorY(double value, ExceptionCode& ec)
 
 const AtomicString VTTRegion::scroll() const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, upScrollValueKeyword, ("up", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> upScrollValueKeyword("up", AtomicString::ConstructFromLiteral);
 
     if (m_scroll)
         return upScrollValueKeyword;
@@ -198,7 +198,7 @@ const AtomicString VTTRegion::scroll() const
 
 void VTTRegion::setScroll(const AtomicString& value, ExceptionCode& ec)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, upScrollValueKeyword, ("up", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> upScrollValueKeyword("up", AtomicString::ConstructFromLiteral);
 
     if (value != emptyString() && value != upScrollValueKeyword) {
         ec = SYNTAX_ERR;
@@ -268,7 +268,7 @@ static inline bool parsedEntireRun(const VTTScanner& input, const VTTScanner::Ru
 
 void VTTRegion::parseSettingValue(RegionSetting setting, VTTScanner& input)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, scrollUpValueKeyword, ("up", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> scrollUpValueKeyword("up", AtomicString::ConstructFromLiteral);
 
     VTTScanner::Run valueRun = input.collectUntil<isHTMLSpace<UChar>>();
 
@@ -312,7 +312,7 @@ void VTTRegion::parseSettingValue(RegionSetting setting, VTTScanner& input)
         break;
     }
     case Scroll:
-        if (input.scanRun(valueRun, scrollUpValueKeyword))
+        if (input.scanRun(valueRun, scrollUpValueKeyword.get()))
             m_scroll = true;
         else
             LOG(Media, "VTTRegion::parseSettingValue, invalid Scroll");
@@ -326,23 +326,21 @@ void VTTRegion::parseSettingValue(RegionSetting setting, VTTScanner& input)
 
 const AtomicString& VTTRegion::textTrackCueContainerScrollingClass()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, trackRegionCueContainerScrollingClass, ("scrolling", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> trackRegionCueContainerScrollingClass("scrolling", AtomicString::ConstructFromLiteral);
 
     return trackRegionCueContainerScrollingClass;
 }
 
 const AtomicString& VTTRegion::textTrackCueContainerShadowPseudoId()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, trackRegionCueContainerPseudoId,
-        ("-webkit-media-text-track-region-container", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> trackRegionCueContainerPseudoId("-webkit-media-text-track-region-container", AtomicString::ConstructFromLiteral);
 
     return trackRegionCueContainerPseudoId;
 }
 
 const AtomicString& VTTRegion::textTrackRegionShadowPseudoId()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, trackRegionShadowPseudoId,
-        ("-webkit-media-text-track-region", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> trackRegionShadowPseudoId("-webkit-media-text-track-region", AtomicString::ConstructFromLiteral);
 
     return trackRegionShadowPseudoId;
 }
@@ -354,7 +352,7 @@ void VTTRegion::appendTextTrackCueBox(PassRefPtr<VTTCueBox> displayBox)
     if (m_cueContainer->contains(displayBox.get()))
         return;
 
-    m_cueContainer->appendChild(displayBox, ASSERT_NO_EXCEPTION);
+    m_cueContainer->appendChild(*displayBox, ASSERT_NO_EXCEPTION);
     displayLastTextTrackCueBox();
 }
 
@@ -404,14 +402,14 @@ void VTTRegion::willRemoveTextTrackCueBox(VTTCueBox* box)
     m_cueContainer->setInlineStyleProperty(CSSPropertyTop, m_currentTop, CSSPrimitiveValue::CSS_PX);
 }
 
-PassRefPtr<HTMLDivElement> VTTRegion::getDisplayTree()
+HTMLDivElement& VTTRegion::getDisplayTree()
 {
     if (!m_regionDisplayTree) {
         m_regionDisplayTree = HTMLDivElement::create(*ownerDocument());
         prepareRegionDisplayTree();
     }
 
-    return m_regionDisplayTree;
+    return *m_regionDisplayTree;
 }
 
 void VTTRegion::prepareRegionDisplayTree()
@@ -453,7 +451,7 @@ void VTTRegion::prepareRegionDisplayTree()
     m_cueContainer->setInlineStyleProperty(CSSPropertyTop, 0.0f, CSSPrimitiveValue::CSS_PX);
 
     m_cueContainer->setPseudo(textTrackCueContainerShadowPseudoId());
-    m_regionDisplayTree->appendChild(m_cueContainer);
+    m_regionDisplayTree->appendChild(*m_cueContainer);
 
     // 7.5 Every WebVTT region object is initialised with the following CSS
     m_regionDisplayTree->setPseudo(textTrackRegionShadowPseudoId());

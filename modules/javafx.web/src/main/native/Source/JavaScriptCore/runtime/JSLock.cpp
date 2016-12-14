@@ -26,25 +26,21 @@
 #include "JSGlobalObject.h"
 #include "JSObject.h"
 #include "JSCInlines.h"
+#include "SamplingProfiler.h"
 #include <thread>
 
 namespace JSC {
 
-std::mutex* GlobalJSLock::s_sharedInstanceMutex;
+StaticLock GlobalJSLock::s_sharedInstanceMutex;
 
 GlobalJSLock::GlobalJSLock()
 {
-    s_sharedInstanceMutex->lock();
+    s_sharedInstanceMutex.lock();
 }
 
 GlobalJSLock::~GlobalJSLock()
 {
-    s_sharedInstanceMutex->unlock();
-}
-
-void GlobalJSLock::initialize()
-{
-    s_sharedInstanceMutex = new std::mutex();
+    s_sharedInstanceMutex.unlock();
 }
 
 JSLockHolder::JSLockHolder(ExecState* exec)
@@ -145,6 +141,12 @@ void JSLock::didAcquireLock()
     ASSERT(m_entryAtomicStringTable);
 
     m_vm->heap.machineThreads().addCurrentThread();
+
+#if ENABLE(SAMPLING_PROFILER)
+    // Note: this must come after addCurrentThread().
+    if (SamplingProfiler* samplingProfiler = m_vm->samplingProfiler())
+        samplingProfiler->noticeJSLockAcquisition();
+#endif
 }
 
 void JSLock::unlock()

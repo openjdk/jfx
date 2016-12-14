@@ -33,6 +33,9 @@ public abstract class WCFont extends Ref {
 
     public abstract int getOffsetForPosition(String str, float x);
 
+    public abstract WCGlyphBuffer getGlyphsAndAdvances(String str, int from,
+                                                       int to, boolean rtl);
+
     public abstract int[] getGlyphCodes(char[] chars);
 
     public abstract float getXHeight();

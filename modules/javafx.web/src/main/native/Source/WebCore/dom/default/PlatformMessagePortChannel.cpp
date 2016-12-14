@@ -39,7 +39,7 @@ namespace WebCore {
 
 PlatformMessagePortChannel::EventData::EventData(PassRefPtr<SerializedScriptValue> message, std::unique_ptr<MessagePortChannelArray> channels)
     : m_message(message)
-    , m_channels(WTF::move(channels))
+    , m_channels(WTFMove(channels))
 {
 }
 
@@ -54,8 +54,8 @@ void MessagePortChannel::createChannel(PassRefPtr<MessagePort> port1, PassRefPtr
     channel1->m_channel->m_entangledChannel = channel2->m_channel;
     channel2->m_channel->m_entangledChannel = channel1->m_channel;
 
-    port1->entangle(WTF::move(channel2));
-    port2->entangle(WTF::move(channel1));
+    port1->entangle(WTFMove(channel2));
+    port2->entangle(WTFMove(channel1));
 }
 
 MessagePortChannel::MessagePortChannel(PassRefPtr<PlatformMessagePortChannel> channel)
@@ -83,22 +83,22 @@ void MessagePortChannel::disentangle()
 {
     RefPtr<PlatformMessagePortChannel> remote = m_channel->entangledChannel();
     if (remote)
-        remote->setRemotePort(0);
+        remote->setRemotePort(nullptr);
 }
 
 void MessagePortChannel::postMessageToRemote(PassRefPtr<SerializedScriptValue> message, std::unique_ptr<MessagePortChannelArray> channels)
 {
-    MutexLocker lock(m_channel->m_mutex);
+    LockHolder lock(m_channel->m_mutex);
     if (!m_channel->m_outgoingQueue)
         return;
-    bool wasEmpty = m_channel->m_outgoingQueue->appendAndCheckEmpty(std::make_unique<PlatformMessagePortChannel::EventData>(message, WTF::move(channels)));
+    bool wasEmpty = m_channel->m_outgoingQueue->appendAndCheckEmpty(std::make_unique<PlatformMessagePortChannel::EventData>(message, WTFMove(channels)));
     if (wasEmpty && m_channel->m_remotePort)
         m_channel->m_remotePort->messageAvailable();
 }
 
 bool MessagePortChannel::tryGetMessageFromRemote(RefPtr<SerializedScriptValue>& message, std::unique_ptr<MessagePortChannelArray>& channels)
 {
-    MutexLocker lock(m_channel->m_mutex);
+    LockHolder lock(m_channel->m_mutex);
     auto result = m_channel->m_incomingQueue->tryGetMessage();
     if (!result)
         return false;
@@ -121,20 +121,20 @@ void MessagePortChannel::close()
 bool MessagePortChannel::isConnectedTo(MessagePort* port)
 {
     // FIXME: What guarantees that the result remains the same after we release the lock?
-    MutexLocker lock(m_channel->m_mutex);
+    LockHolder lock(m_channel->m_mutex);
     return m_channel->m_remotePort == port;
 }
 
 bool MessagePortChannel::hasPendingActivity()
 {
     // FIXME: What guarantees that the result remains the same after we release the lock?
-    MutexLocker lock(m_channel->m_mutex);
+    LockHolder lock(m_channel->m_mutex);
     return !m_channel->m_incomingQueue->isEmpty();
 }
 
 MessagePort* MessagePortChannel::locallyEntangledPort(const ScriptExecutionContext* context)
 {
-    MutexLocker lock(m_channel->m_mutex);
+    LockHolder lock(m_channel->m_mutex);
     // See if both contexts are run by the same thread (are the same context, or are both documents).
     if (m_channel->m_remotePort) {
         // The remote port's ScriptExecutionContext is guaranteed not to change here - MessagePort::contextDestroyed()
@@ -154,7 +154,6 @@ Ref<PlatformMessagePortChannel> PlatformMessagePortChannel::create(PassRefPtr<Me
 PlatformMessagePortChannel::PlatformMessagePortChannel(PassRefPtr<MessagePortQueue> incoming, PassRefPtr<MessagePortQueue> outgoing)
     : m_incomingQueue(incoming)
     , m_outgoingQueue(outgoing)
-    , m_remotePort(0)
 {
 }
 
@@ -164,24 +163,24 @@ PlatformMessagePortChannel::~PlatformMessagePortChannel()
 
 void PlatformMessagePortChannel::setRemotePort(MessagePort* port)
 {
-    MutexLocker lock(m_mutex);
+    LockHolder lock(m_mutex);
     // Should never set port if it is already set.
     ASSERT(!port || !m_remotePort);
     m_remotePort = port;
 }
 
-PassRefPtr<PlatformMessagePortChannel> PlatformMessagePortChannel::entangledChannel()
+RefPtr<PlatformMessagePortChannel> PlatformMessagePortChannel::entangledChannel()
 {
     // FIXME: What guarantees that the result remains the same after we release the lock?
     // This lock only guarantees that the returned pointer will not be pointing to released memory,
     // but not that it will still be pointing to this object's entangled port channel.
-    MutexLocker lock(m_mutex);
+    LockHolder lock(m_mutex);
     return m_entangledChannel;
 }
 
 void PlatformMessagePortChannel::closeInternal()
 {
-    MutexLocker lock(m_mutex);
+    LockHolder lock(m_mutex);
     // Disentangle ourselves from the other end. We still maintain a reference to our incoming queue, since previously-existing messages should still be delivered.
     m_remotePort = nullptr;
     m_entangledChannel = nullptr;

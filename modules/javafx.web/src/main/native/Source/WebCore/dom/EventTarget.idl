@@ -20,14 +20,13 @@
 
 // Introduced in DOM Level 2:
 [
-    NoInterfaceObject,
     ObjCProtocol,
     CPPPureInterface,
     CustomToJSObject,
     JSCustomToNativeObject,
-    EventTarget,
+    JSCustomHeader,
 ] interface EventTarget {
     [ObjCLegacyUnnamedParameters] void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
     [ObjCLegacyUnnamedParameters] void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
-    [RaisesException] boolean dispatchEvent(Event event);
+    [ImplementedAs=dispatchEventForBindings, RaisesException] boolean dispatchEvent(Event event);
 };

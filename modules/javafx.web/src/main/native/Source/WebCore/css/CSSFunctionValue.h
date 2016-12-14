@@ -32,6 +32,7 @@ namespace WebCore {
 
 class CSSValueList;
 struct CSSParserFunction;
+struct CSSParserValue;
 
 class CSSFunctionValue : public CSSValue {
 public:
@@ -50,6 +51,8 @@ public:
     bool equals(const CSSFunctionValue&) const;
 
     CSSValueList* arguments() const { return m_args.get(); }
+
+    bool buildParserValueSubstitutingVariables(CSSParserValue*, const CustomPropertyValueMap& customProperties) const;
 
 private:
     explicit CSSFunctionValue(CSSParserFunction*);

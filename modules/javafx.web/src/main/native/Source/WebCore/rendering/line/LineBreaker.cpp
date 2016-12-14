@@ -48,7 +48,7 @@ void LineBreaker::skipTrailingWhitespace(InlineIterator& iterator, const LineInf
     while (!iterator.atEnd() && !requiresLineBox(iterator, lineInfo, TrailingWhitespace)) {
         RenderObject& object = *iterator.renderer();
         if (object.isOutOfFlowPositioned())
-            setStaticPositions(m_block, downcast<RenderBox>(object));
+            setStaticPositions(m_block, downcast<RenderBox>(object), DoNotIndentText);
         else if (object.isFloating())
             m_block.insertFloatingObject(downcast<RenderBox>(object));
         iterator.increment();
@@ -60,13 +60,13 @@ void LineBreaker::skipLeadingWhitespace(InlineBidiResolver& resolver, LineInfo& 
     while (!resolver.position().atEnd() && !requiresLineBox(resolver.position(), lineInfo, LeadingWhitespace)) {
         RenderObject& object = *resolver.position().renderer();
         if (object.isOutOfFlowPositioned()) {
-            setStaticPositions(m_block, downcast<RenderBox>(object));
+            setStaticPositions(m_block, downcast<RenderBox>(object), width.shouldIndentText());
             if (object.style().isOriginalDisplayInlineType()) {
                 resolver.runs().addRun(new BidiRun(0, 1, object, resolver.context(), resolver.dir()));
                 lineInfo.incrementRunsFromLeadingWhitespace();
             }
         } else if (object.isFloating())
-            m_block.positionNewFloatOnLine(m_block.insertFloatingObject(downcast<RenderBox>(object)), lastFloatFromPreviousLine, lineInfo, width);
+            m_block.positionNewFloatOnLine(*m_block.insertFloatingObject(downcast<RenderBox>(object)), lastFloatFromPreviousLine, lineInfo, width);
         else if (object.style().hasTextCombine() && is<RenderCombineText>(object)) {
             downcast<RenderCombineText>(object).combineText();
             if (downcast<RenderCombineText>(object).isCombined())
@@ -77,7 +77,7 @@ void LineBreaker::skipLeadingWhitespace(InlineBidiResolver& resolver, LineInfo& 
     resolver.commitExplicitEmbedding();
 }
 
-InlineIterator LineBreaker::nextLineBreak(InlineBidiResolver& resolver, LineInfo& lineInfo, RenderTextInfo& renderTextInfo, FloatingObject* lastFloatFromPreviousLine, unsigned consecutiveHyphenatedLines, WordMeasurements& wordMeasurements)
+InlineIterator LineBreaker::nextLineBreak(InlineBidiResolver& resolver, LineInfo& lineInfo, LineLayoutState& layoutState, RenderTextInfo& renderTextInfo, FloatingObject* lastFloatFromPreviousLine, unsigned consecutiveHyphenatedLines, WordMeasurements& wordMeasurements)
 {
     reset();
 
@@ -92,7 +92,7 @@ InlineIterator LineBreaker::nextLineBreak(InlineBidiResolver& resolver, LineInfo
     if (resolver.position().atEnd())
         return resolver.position();
 
-    BreakingContext context(*this, resolver, lineInfo, width, renderTextInfo, lastFloatFromPreviousLine, appliedStartWidth, m_block);
+    BreakingContext context(*this, resolver, lineInfo, layoutState, width, renderTextInfo, lastFloatFromPreviousLine, appliedStartWidth, m_block);
 
     while (context.currentObject()) {
         context.initializeForCurrentObject();

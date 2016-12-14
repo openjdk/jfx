@@ -46,9 +46,14 @@ public:
         return WTF::adoptRef(*new OpaqueJSScript(vm, url, startingLineNumber, source));
     }
 
-    virtual const String& source() const override
+    unsigned hash() const override
     {
-        return m_source;
+        return m_source.get().hash();
+    }
+
+    StringView source() const override
+    {
+        return m_source.get();
     }
 
     VM* vm() const { return m_vm; }
@@ -57,21 +62,21 @@ private:
     OpaqueJSScript(VM* vm, const String& url, int startingLineNumber, const String& source)
         : SourceProvider(url, TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber::first()))
         , m_vm(vm)
-        , m_source(source)
+        , m_source(source.isNull() ? *StringImpl::empty() : *source.impl())
     {
     }
 
     virtual ~OpaqueJSScript() { }
 
     VM* m_vm;
-    String m_source;
+    Ref<StringImpl> m_source;
 };
 
 static bool parseScript(VM* vm, const SourceCode& source, ParserError& error)
 {
     return !!JSC::parse<JSC::ProgramNode>(
         vm, source, Identifier(), JSParserBuiltinMode::NotBuiltin,
-        JSParserStrictMode::NotStrict, JSParserCodeType::Program,
+        JSParserStrictMode::NotStrict, SourceParseMode::ProgramMode, SuperBinding::NotNeeded,
         error);
 }
 

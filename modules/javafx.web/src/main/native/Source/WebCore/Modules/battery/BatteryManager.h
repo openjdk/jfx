@@ -46,7 +46,7 @@ public:
     double dischargingTime();
     double level();
 
-    void didChangeBatteryStatus(PassRefPtr<Event>, PassRefPtr<BatteryStatus>);
+    void didChangeBatteryStatus(Event&, PassRefPtr<BatteryStatus>);
     void updateBatteryStatus(PassRefPtr<BatteryStatus>);
     void batteryControllerDestroyed() { m_batteryController = nullptr; }
 
@@ -61,7 +61,7 @@ private:
     explicit BatteryManager(Navigator*);
 
     // ActiveDOMObject API.
-    bool canSuspendForPageCache() const override;
+    bool canSuspendForDocumentSuspension() const override;
     void suspend(ReasonForSuspension) override;
     void resume() override;
     void stop() override;

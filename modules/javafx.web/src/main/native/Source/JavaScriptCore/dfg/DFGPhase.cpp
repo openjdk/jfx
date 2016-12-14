@@ -33,6 +33,11 @@
 
 namespace JSC { namespace DFG {
 
+void Phase::validate()
+{
+    DFG::validate(m_graph, DumpGraph, m_graphDumpBeforePhase);
+}
+
 void Phase::beginPhase()
 {
     if (Options::verboseValidationFailure()) {
@@ -41,7 +46,7 @@ void Phase::beginPhase()
         m_graphDumpBeforePhase = out.toCString();
     }
 
-    if (!shouldDumpGraphAtEachPhase())
+    if (!shouldDumpGraphAtEachPhase(m_graph.m_plan.mode))
         return;
 
     dataLog("Beginning DFG phase ", m_name, ".\n");
@@ -53,7 +58,7 @@ void Phase::endPhase()
 {
     if (!Options::validateGraphAtEachPhase())
         return;
-    validate(m_graph, DumpGraph, m_graphDumpBeforePhase);
+    validate();
 }
 
 } } // namespace JSC::DFG

@@ -33,10 +33,7 @@
 #include "HTMLTrackElement.h"
 #include "ScriptExecutionContext.h"
 #include "TextTrackCueList.h"
-
-#if ENABLE(WEBVTT_REGIONS)
 #include "VTTRegionList.h"
-#endif
 
 namespace WebCore {
 
@@ -113,9 +110,9 @@ void LoadableTextTrack::newCuesAvailable(TextTrackLoader* loader)
     if (!m_cues)
         m_cues = TextTrackCueList::create();
 
-    for (size_t i = 0; i < newCues.size(); ++i) {
-        newCues[i]->setTrack(this);
-        m_cues->add(newCues[i]);
+    for (auto& newCue : newCues) {
+        newCue->setTrack(this);
+        m_cues->add(newCue);
     }
 
     if (client())
@@ -132,7 +129,6 @@ void LoadableTextTrack::cueLoadingCompleted(TextTrackLoader* loader, bool loadin
     m_trackElement->didCompleteLoad(loadingFailed ? HTMLTrackElement::Failure : HTMLTrackElement::Success);
 }
 
-#if ENABLE(WEBVTT_REGIONS)
 void LoadableTextTrack::newRegionsAvailable(TextTrackLoader* loader)
 {
     ASSERT_UNUSED(loader, m_loader.get() == loader);
@@ -140,12 +136,11 @@ void LoadableTextTrack::newRegionsAvailable(TextTrackLoader* loader)
     Vector<RefPtr<VTTRegion>> newRegions;
     m_loader->getNewRegions(newRegions);
 
-    for (size_t i = 0; i < newRegions.size(); ++i) {
-        newRegions[i]->setTrack(this);
-        regions()->add(newRegions[i]);
+    for (auto& newRegion : newRegions) {
+        newRegion->setTrack(this);
+        regions()->add(newRegion);
     }
 }
-#endif
 
 AtomicString LoadableTextTrack::id() const
 {

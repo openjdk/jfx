@@ -32,6 +32,7 @@ namespace WebCore {
 
 class CachedResource;
 class StyleSheetContents;
+enum CSSPropertyID : uint16_t;
 
 // FIXME: The current CSSValue and subclasses should be turned into internal types (StyleValue).
 // The few subtypes that are actually exposed in CSSOM can be seen in the cloneForCSSOM() function.
@@ -45,8 +46,9 @@ public:
         CSS_PRIMITIVE_VALUE = 1,
         CSS_VALUE_LIST = 2,
         CSS_CUSTOM = 3,
-        CSS_INITIAL = 4
-
+        CSS_INITIAL = 4,
+        CSS_UNSET = 5,
+        CSS_REVERT = 6
     };
 
     // Override RefCounted's deref() to ensure operator delete is called on
@@ -60,6 +62,7 @@ public:
     Type cssValueType() const;
 
     String cssText() const;
+
     void setCssText(const String&, ExceptionCode&) { } // FIXME: Not implemented.
 
     bool isPrimitiveValue() const { return m_classType == PrimitiveClass; }
@@ -73,6 +76,10 @@ public:
     bool isCanvasValue() const { return m_classType == CanvasClass; }
     bool isCrossfadeValue() const { return m_classType == CrossfadeClass; }
     bool isCursorImageValue() const { return m_classType == CursorImageClass; }
+    bool isCustomPropertyValue() const { return m_classType == CustomPropertyClass; }
+    bool isInvalidCustomPropertyValue() const;
+    bool isVariableDependentValue() const { return m_classType == VariableDependentClass; }
+    bool isVariableValue() const { return m_classType == VariableClass; }
     bool isFunctionValue() const { return m_classType == FunctionClass; }
     bool isFontFeatureValue() const { return m_classType == FontFeatureClass; }
     bool isFontFaceSrcValue() const { return m_classType == FontFaceSrcClass; }
@@ -87,6 +94,10 @@ public:
     bool isImplicitInitialValue() const;
     bool isInheritedValue() const { return m_classType == InheritedClass; }
     bool isInitialValue() const { return m_classType == InitialClass; }
+    bool isUnsetValue() const { return m_classType == UnsetClass; }
+    bool isRevertValue() const { return m_classType == RevertClass; }
+    bool treatAsInitialValue(CSSPropertyID) const;
+    bool treatAsInheritedValue(CSSPropertyID) const;
     bool isLinearGradientValue() const { return m_classType == LinearGradientClass; }
     bool isRadialGradientValue() const { return m_classType == RadialGradientClass; }
     bool isReflectValue() const { return m_classType == ReflectClass; }
@@ -119,7 +130,7 @@ public:
             || isValueList();
     }
 
-    PassRefPtr<CSSValue> cloneForCSSOM() const;
+    RefPtr<CSSValue> cloneForCSSOM() const;
 
     void addSubresourceStyleURLs(ListHashSet<URL>&, const StyleSheetContents*) const;
 
@@ -159,6 +170,8 @@ protected:
 
         InheritedClass,
         InitialClass,
+        UnsetClass,
+        RevertClass,
 
         ReflectClass,
         ShadowClass,
@@ -176,6 +189,9 @@ protected:
 #endif
 
         CSSContentDistributionClass,
+        CustomPropertyClass,
+        VariableDependentClass,
+        VariableClass,
 
         // List class types must appear after ValueListClass.
         ValueListClass,
@@ -233,6 +249,8 @@ protected:
 
 private:
     unsigned m_classType : ClassTypeBits; // ClassType
+
+friend class CSSValueList;
 };
 
 template<typename CSSValueType>
@@ -263,6 +281,8 @@ inline bool compareCSSValue(const Ref<CSSValueType>& first, const Ref<CSSValueTy
 {
     return first.get().equals(second);
 }
+
+typedef HashMap<AtomicString, RefPtr<CSSValue>> CustomPropertyValueMap;
 
 } // namespace WebCore
 

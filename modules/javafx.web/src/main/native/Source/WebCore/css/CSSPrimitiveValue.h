@@ -30,7 +30,7 @@
 #include <utility>
 #include <wtf/Forward.h>
 #include <wtf/MathExtras.h>
-#include <wtf/PassRefPtr.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -44,6 +44,7 @@ class RGBColor;
 class Rect;
 class RenderStyle;
 class CSSBasicShape;
+struct CSSParserValue;
 
 #if ENABLE(CSS_SCROLL_SNAP)
 class LengthRepeat;
@@ -153,7 +154,10 @@ public:
         CSS_FONT_FAMILY = 116,
 
         CSS_PROPERTY_ID = 117,
-        CSS_VALUE_ID = 118
+        CSS_VALUE_ID = 118,
+
+        // More internal parse stuff for CSS variables
+        CSS_PARSER_WHITESPACE = 119
     };
 
     // This enum follows the CSSParser::Units enum augmented with UNIT_FREQUENCY for frequencies.
@@ -206,6 +210,7 @@ public:
 #if ENABLE(CSS_SCROLL_SNAP)
     bool isLengthRepeat() const { return m_primitiveUnitType == CSS_LENGTH_REPEAT; }
 #endif
+    bool isPropertyID() const { return m_primitiveUnitType == CSS_PROPERTY_ID; }
     bool isRGBColor() const { return m_primitiveUnitType == CSS_RGBCOLOR; }
     bool isShape() const { return m_primitiveUnitType == CSS_SHAPE; }
     bool isString() const { return m_primitiveUnitType == CSS_STRING; }
@@ -231,6 +236,9 @@ public:
     bool isViewportPercentageMin() const { return m_primitiveUnitType == CSS_VMIN; }
     bool isValueID() const { return m_primitiveUnitType == CSS_VALUE_ID; }
     bool isFlex() const { return primitiveType() == CSS_FR; }
+
+    bool isParserOperator() const { return primitiveType() == CSS_PARSER_OPERATOR; }
+    int parserOperator() const { return isParserOperator() ? m_value.parserOperator : 0; }
 
     static Ref<CSSPrimitiveValue> createIdentifier(CSSValueID valueID) { return adoptRef(*new CSSPrimitiveValue(valueID)); }
     static Ref<CSSPrimitiveValue> createIdentifier(CSSPropertyID propertyID) { return adoptRef(*new CSSPrimitiveValue(propertyID)); }
@@ -265,6 +273,8 @@ public:
     unsigned short primitiveType() const;
 
     double computeDegrees() const;
+
+    bool buildParserValue(CSSParserValue*) const;
 
     enum TimeUnit { Seconds, Milliseconds };
     template <typename T, TimeUnit timeUnit> T computeTime() const
@@ -359,11 +369,11 @@ public:
 
     String customCSSText() const;
 
-    bool isQuirkValue() { return m_isQuirkValue; }
+    bool isQuirkValue() const { return m_isQuirkValue; }
 
     void addSubresourceStyleURLs(ListHashSet<URL>&, const StyleSheetContents*) const;
 
-    PassRefPtr<CSSPrimitiveValue> cloneForCSSOM() const;
+    RefPtr<CSSPrimitiveValue> cloneForCSSOM() const;
     void setCSSOMSafe() { m_isCSSOMSafe = true; }
 
     bool equals(const CSSPrimitiveValue&) const;
@@ -372,7 +382,16 @@ public:
     static double conversionToCanonicalUnitsScaleFactor(unsigned short unitType);
 
     static double computeNonCalcLengthDouble(const CSSToLengthConversionData&, unsigned short primitiveType, double value);
+
+#if COMPILER(MSVC)
+    // FIXME: This should be private, but for some reason MSVC then fails to invoke it from LazyNeverDestroyed::construct.
+public:
+#else
 private:
+    friend class CSSValuePool;
+    friend class LazyNeverDestroyed<CSSPrimitiveValue>;
+#endif
+
     CSSPrimitiveValue(CSSValueID);
     CSSPrimitiveValue(CSSPropertyID);
     // FIXME: int vs. unsigned overloading is too subtle to distinguish the color and operator cases.
@@ -389,13 +408,13 @@ private:
     template<typename T> CSSPrimitiveValue(RefPtr<T>&& value)
         : CSSValue(PrimitiveClass)
     {
-        init(WTF::move(value));
+        init(WTFMove(value));
     }
 
     template<typename T> CSSPrimitiveValue(Ref<T>&& value)
         : CSSValue(PrimitiveClass)
     {
-        init(WTF::move(value));
+        init(WTFMove(value));
     }
 
     static void create(int); // compile-time guard

@@ -67,8 +67,8 @@ int SocketStreamHandle::platformSend(const char* data, int length)
 
     auto copy = createCopy(data, length);
 
-    std::lock_guard<std::mutex> lock(m_mutexSend);
-    m_sendData.append(SocketData { WTF::move(copy), length });
+    std::lock_guard<Lock> lock(m_mutexSend);
+    m_sendData.append(SocketData { WTFMove(copy), length });
 
     return length;
 }
@@ -97,7 +97,7 @@ bool SocketStreamHandle::readData(CURL* curlHandle)
 
     if (ret == CURLE_OK && bytesRead >= 0) {
         m_mutexReceive.lock();
-        m_receiveData.append(SocketData { WTF::move(data), static_cast<int>(bytesRead) });
+        m_receiveData.append(SocketData { WTFMove(data), static_cast<int>(bytesRead) });
         m_mutexReceive.unlock();
 
         ref();
@@ -146,8 +146,8 @@ bool SocketStreamHandle::sendData(CURL* curlHandle)
             const int restLength = sendData.size - totalBytesSent;
             auto copy = createCopy(sendData.data.get() + totalBytesSent, restLength);
 
-            std::lock_guard<std::mutex> lock(m_mutexSend);
-            m_sendData.prepend(SocketData { WTF::move(copy), restLength });
+            std::lock_guard<Lock> lock(m_mutexSend);
+            m_sendData.prepend(SocketData { WTFMove(copy), restLength });
 
             return false;
         }
@@ -251,7 +251,7 @@ void SocketStreamHandle::didReceiveData()
 
     m_mutexReceive.lock();
 
-    auto receiveData = WTF::move(m_receiveData);
+    auto receiveData = WTFMove(m_receiveData);
 
     m_mutexReceive.unlock();
 
@@ -279,7 +279,7 @@ std::unique_ptr<char[]> SocketStreamHandle::createCopy(const char* data, int len
     std::unique_ptr<char[]> copy(new char[length]);
     memcpy(copy.get(), data, length);
 
-    return WTF::move(copy);
+    return WTFMove(copy);
 }
 
 void SocketStreamHandle::didReceiveAuthenticationChallenge(const AuthenticationChallenge&)

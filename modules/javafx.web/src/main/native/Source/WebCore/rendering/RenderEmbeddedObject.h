@@ -50,7 +50,7 @@ public:
     WEBCORE_EXPORT void setPluginUnavailabilityReasonWithDescription(PluginUnavailabilityReason, const String& description);
 
     bool isPluginUnavailable() const { return m_isPluginUnavailable; }
-    bool showsUnavailablePluginIndicator() const { return isPluginUnavailable() && !m_isUnavailablePluginIndicatorHidden; }
+    bool showsUnavailablePluginIndicator() const { return isPluginUnavailable() && m_isUnavailablePluginIndicatorState == UnavailablePluginIndicatorState::Visible; }
 
     WEBCORE_EXPORT void setUnavailablePluginIndicatorIsHidden(bool);
 
@@ -73,7 +73,7 @@ private:
     virtual const char* renderName() const override { return "RenderEmbeddedObject"; }
     virtual bool isEmbeddedObject() const override final { return true; }
 
-    void paintSnapshotImage(PaintInfo&, const LayoutPoint&, Image*);
+    void paintSnapshotImage(PaintInfo&, const LayoutPoint&, Image&);
     virtual void paintContents(PaintInfo&, const LayoutPoint&) override final;
 
     virtual bool requiresLayer() const override final;
@@ -93,7 +93,8 @@ private:
     virtual bool canHaveWidget() const { return true; }
 
     bool m_isPluginUnavailable;
-    bool m_isUnavailablePluginIndicatorHidden;
+    enum class UnavailablePluginIndicatorState { Uninitialized, Hidden, Visible };
+    UnavailablePluginIndicatorState m_isUnavailablePluginIndicatorState { UnavailablePluginIndicatorState::Uninitialized };
     PluginUnavailabilityReason m_pluginUnavailabilityReason;
     String m_unavailablePluginReplacementText;
     bool m_unavailablePluginIndicatorIsPressed;

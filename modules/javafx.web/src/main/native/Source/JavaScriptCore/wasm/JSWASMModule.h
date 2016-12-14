@@ -29,6 +29,7 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "JSDestructibleObject.h"
+#include "WASMFormat.h"
 
 namespace JSC {
 
@@ -36,9 +37,28 @@ class JSWASMModule : public JSDestructibleObject {
 public:
     typedef JSDestructibleObject Base;
 
-    static JSWASMModule* create(VM& vm, Structure* structure)
+    union GlobalVariable {
+        GlobalVariable(int32_t value)
+            : intValue(value)
+        {
+        }
+        GlobalVariable(float value)
+            : floatValue(value)
+        {
+        }
+        GlobalVariable(double value)
+            : doubleValue(value)
+        {
+        }
+
+        int32_t intValue;
+        float floatValue;
+        double doubleValue;
+    };
+
+    static JSWASMModule* create(VM& vm, Structure* structure, JSArrayBuffer* arrayBuffer)
     {
-        JSWASMModule* module = new (NotNull, allocateCell<JSWASMModule>(vm.heap)) JSWASMModule(vm, structure);
+        JSWASMModule* module = new (NotNull, allocateCell<JSWASMModule>(vm.heap)) JSWASMModule(vm, structure, arrayBuffer);
         module->finishCreation(vm);
         return module;
     }
@@ -50,15 +70,45 @@ public:
         return Structure::create(vm, globalObject, jsNull(), TypeInfo(ObjectType, StructureFlags), info());
     }
 
+    static void destroy(JSCell*);
     static void visitChildren(JSCell*, SlotVisitor&);
 
-private:
-    JSWASMModule(VM& vm, Structure* structure)
-        : Base(vm, structure)
-    {
-    }
+    Vector<uint32_t>& i32Constants() { return m_i32Constants; }
+    Vector<float>& f32Constants() { return m_f32Constants; }
+    Vector<double>& f64Constants() { return m_f64Constants; }
+    Vector<WASMSignature>& signatures() { return m_signatures; }
+    Vector<WASMFunctionImport>& functionImports() { return m_functionImports; }
+    Vector<WASMFunctionImportSignature>& functionImportSignatures() { return m_functionImportSignatures; }
+    Vector<WASMType>& globalVariableTypes() { return m_globalVariableTypes; }
+    Vector<WASMFunctionDeclaration>& functionDeclarations() { return m_functionDeclarations; }
+    Vector<WASMFunctionPointerTable>& functionPointerTables() { return m_functionPointerTables; }
 
+    const JSArrayBuffer* arrayBuffer() const { return m_arrayBuffer.get(); }
+    Vector<WriteBarrier<JSFunction>>& functions() { return m_functions; }
+    Vector<unsigned>& functionStartOffsetsInSource() { return m_functionStartOffsetsInSource; }
+    Vector<unsigned>& functionStackHeights() { return m_functionStackHeights; }
+    Vector<GlobalVariable>& globalVariables() { return m_globalVariables; }
+    Vector<WriteBarrier<JSFunction>>& importedFunctions() { return m_importedFunctions; }
+
+private:
+    JSWASMModule(VM&, Structure*, JSArrayBuffer*);
+
+    Vector<uint32_t> m_i32Constants;
+    Vector<float> m_f32Constants;
+    Vector<double> m_f64Constants;
+    Vector<WASMSignature> m_signatures;
+    Vector<WASMFunctionImport> m_functionImports;
+    Vector<WASMFunctionImportSignature> m_functionImportSignatures;
+    Vector<WASMType> m_globalVariableTypes;
+    Vector<WASMFunctionDeclaration> m_functionDeclarations;
+    Vector<WASMFunctionPointerTable> m_functionPointerTables;
+
+    WriteBarrier<JSArrayBuffer> m_arrayBuffer;
     Vector<WriteBarrier<JSFunction>> m_functions;
+    Vector<unsigned> m_functionStartOffsetsInSource;
+    Vector<unsigned> m_functionStackHeights;
+    Vector<GlobalVariable> m_globalVariables;
+    Vector<WriteBarrier<JSFunction>> m_importedFunctions;
 };
 
 } // namespace JSC

@@ -22,6 +22,9 @@
 #include "config.h"
 #include "FillLayer.h"
 
+#include "TextStream.h"
+#include <wtf/PointerComparison.h>
+
 namespace WebCore {
 
 struct SameSizeAsFillLayer {
@@ -62,8 +65,8 @@ FillLayer::FillLayer(EFillLayerType type)
     , m_xPosSet(false)
     , m_yPosSet(false)
     , m_backgroundOriginSet(false)
-    , m_backgroundXOrigin(LeftEdge)
-    , m_backgroundYOrigin(TopEdge)
+    , m_backgroundXOrigin(static_cast<unsigned>(Edge::Left))
+    , m_backgroundYOrigin(static_cast<unsigned>(Edge::Top))
     , m_compositeSet(type == MaskFillLayer)
     , m_blendModeSet(false)
     , m_maskSourceTypeSet(false)
@@ -107,7 +110,7 @@ FillLayer::FillLayer(const FillLayer& o)
 FillLayer::~FillLayer()
 {
     // Delete the layers in a loop rather than allowing recursive calls to the destructors.
-    for (std::unique_ptr<FillLayer> next = WTF::move(m_next); next; next = WTF::move(next->m_next)) { }
+    for (std::unique_ptr<FillLayer> next = WTFMove(m_next); next; next = WTFMove(next->m_next)) { }
 }
 
 FillLayer& FillLayer::operator=(const FillLayer& o)
@@ -152,7 +155,7 @@ bool FillLayer::operator==(const FillLayer& o) const
 {
     // We do not check the "isSet" booleans for each property, since those are only used during initial construction
     // to propagate patterns into layers. All layer comparisons happen after values have all been filled in anyway.
-    return StyleImage::imagesEquivalent(m_image.get(), o.m_image.get()) && m_xPosition == o.m_xPosition && m_yPosition == o.m_yPosition
+    return arePointingToEqualData(m_image.get(), o.m_image.get()) && m_xPosition == o.m_xPosition && m_yPosition == o.m_yPosition
         && m_backgroundXOrigin == o.m_backgroundXOrigin && m_backgroundYOrigin == o.m_backgroundYOrigin
         && m_attachment == o.m_attachment && m_clip == o.m_clip && m_composite == o.m_composite
         && m_blendMode == o.m_blendMode && m_origin == o.m_origin && m_repeatX == o.m_repeatX
@@ -391,6 +394,43 @@ bool FillLayer::imagesIdentical(const FillLayer* layer1, const FillLayer* layer2
     }
 
     return !layer1 && !layer2;
+}
+
+TextStream& operator<<(TextStream& ts, FillSize fillSize)
+{
+    return ts << fillSize.type << " " << fillSize.size;
+}
+
+TextStream& operator<<(TextStream& ts, const FillLayer& layer)
+{
+    TextStream::GroupScope scope(ts);
+    ts << "fill-layer";
+
+    ts.startGroup();
+    ts << "position " << layer.xPosition() << " " << layer.yPosition();
+    ts.endGroup();
+
+    ts.dumpProperty("size", layer.size());
+
+    ts.startGroup();
+    ts << "background-origin " << layer.backgroundXOrigin() << " " << layer.backgroundYOrigin();
+    ts.endGroup();
+
+    ts.startGroup();
+    ts << "repeat " << layer.repeatX() << " " << layer.repeatY();
+    ts.endGroup();
+
+    ts.dumpProperty("clip", layer.clip());
+    ts.dumpProperty("origin", layer.origin());
+
+    ts.dumpProperty("composite", layer.composite());
+    ts.dumpProperty("blend-mode", layer.blendMode());
+    ts.dumpProperty("mask-type", layer.maskSourceType());
+
+    if (layer.next())
+        ts << *layer.next();
+
+    return ts;
 }
 
 } // namespace WebCore

@@ -10,7 +10,7 @@
 #include "DragActions.h"
 #include "DragClient.h"
 #include <wtf/Vector.h>
-#include <WTFString.h>
+#include <wtf/text/WTFString.h>
 
 #include "JavaEnv.h"
 #include "DragClientJava.h"

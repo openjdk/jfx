@@ -35,10 +35,10 @@
 
 namespace WebCore {
 
-ScrollbarTheme* ScrollbarTheme::nativeTheme()
+ScrollbarTheme& ScrollbarTheme::nativeTheme()
 {
     static NeverDestroyed<ScrollbarThemeIOS> theme;
-    return &theme.get();
+    return theme;
 }
 
 void ScrollbarThemeIOS::registerScrollbar(Scrollbar&)
@@ -109,11 +109,6 @@ IntRect ScrollbarThemeIOS::trackRect(Scrollbar&, bool /*painting*/)
 int ScrollbarThemeIOS::minimumThumbLength(Scrollbar&)
 {
     return 0;
-}
-
-bool ScrollbarThemeIOS::shouldCenterOnThumb(Scrollbar&, const PlatformMouseEvent&)
-{
-    return false;
 }
 
 bool ScrollbarThemeIOS::paint(Scrollbar&, GraphicsContext&, const IntRect& /*damageRect*/)

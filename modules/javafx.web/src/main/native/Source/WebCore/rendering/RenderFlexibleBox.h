@@ -45,7 +45,7 @@ public:
     virtual const char* renderName() const override;
 
     virtual bool avoidsFloats() const override final { return true; }
-    virtual bool canCollapseAnonymousBlockChild() const override final { return false; }
+    virtual bool canDropAnonymousBlockChild() const override final { return false; }
     virtual void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0) override final;
 
     virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
@@ -98,7 +98,7 @@ private:
     LayoutUnit mainAxisExtent() const;
     LayoutUnit crossAxisContentExtent() const;
     LayoutUnit mainAxisContentExtent(LayoutUnit contentLogicalHeight);
-    LayoutUnit computeMainAxisExtentForChild(RenderBox& child, SizeType, const Length& size);
+    Optional<LayoutUnit> computeMainAxisExtentForChild(RenderBox& child, SizeType, const Length& size);
     WritingMode transformedWritingMode() const;
     LayoutUnit flowAwareBorderStart() const;
     LayoutUnit flowAwareBorderEnd() const;
@@ -122,6 +122,7 @@ private:
     LayoutUnit mainAxisBorderAndPaddingExtentForChild(RenderBox& child) const;
     LayoutUnit mainAxisScrollbarExtentForChild(RenderBox& child) const;
     LayoutUnit preferredMainAxisContentExtentForChild(RenderBox& child, bool hasInfiniteLineLength);
+    EOverflow mainAxisOverflowForChild(RenderBox&) const;
 
     void layoutFlexItems(bool relayoutChildren, Vector<LineContext>&);
     LayoutUnit autoMarginOffsetInMainAxis(const OrderedFlexItemList&, LayoutUnit& availableFreeSpace);
@@ -156,6 +157,11 @@ private:
     void applyStretchAlignmentToChild(RenderBox&, LayoutUnit lineCrossAxisExtent);
     void flipForRightToLeftColumn();
     void flipForWrapReverse(const Vector<LineContext>&, LayoutUnit crossAxisStartEdge);
+
+    bool mainAxisExtentIsDefinite() const;
+    bool mainAxisLengthIsIndefinite(const Length& flexBasis) const;
+
+    virtual bool isFlexibleBoxImpl() const { return false; };
 
     mutable OrderIterator m_orderIterator;
     int m_numberOfInFlowChildrenOnFirstLine;

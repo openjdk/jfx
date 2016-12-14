@@ -28,13 +28,14 @@
 
 #include "WorkerThread.h"
 
+#include "ContentSecurityPolicyResponseHeaders.h"
 #include "DedicatedWorkerGlobalScope.h"
-#include "InspectorInstrumentation.h"
 #include "ScriptSourceCode.h"
 #include "SecurityOrigin.h"
 #include "ThreadGlobalData.h"
 #include "URL.h"
 #include <utility>
+#include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/WTFString.h>
@@ -49,19 +50,13 @@
 extern JavaVM* jvm;
 #endif
 
+#if PLATFORM(GTK)
+#include <wtf/glib/GRefPtr.h>
+#endif
+
 namespace WebCore {
 
-static std::mutex& threadSetMutex()
-{
-    static std::once_flag onceFlag;
-    static LazyNeverDestroyed<std::mutex> mutex;
-
-    std::call_once(onceFlag, []{
-        mutex.construct();
-    });
-
-    return mutex;
-}
+static StaticLock threadSetMutex;
 
 static HashSet<WorkerThread*>& workerThreads()
 {
@@ -72,7 +67,7 @@ static HashSet<WorkerThread*>& workerThreads()
 
 unsigned WorkerThread::workerThreadCount()
 {
-    std::lock_guard<std::mutex> lock(threadSetMutex());
+    std::lock_guard<StaticLock> lock(threadSetMutex);
 
     return workerThreads().size();
 }
@@ -80,45 +75,45 @@ unsigned WorkerThread::workerThreadCount()
 struct WorkerThreadStartupData {
     WTF_MAKE_NONCOPYABLE(WorkerThreadStartupData); WTF_MAKE_FAST_ALLOCATED;
 public:
-    WorkerThreadStartupData(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, const SecurityOrigin* topOrigin);
+    WorkerThreadStartupData(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, const SecurityOrigin* topOrigin);
 
     URL m_scriptURL;
     String m_userAgent;
     String m_sourceCode;
     WorkerThreadStartMode m_startMode;
-    String m_contentSecurityPolicy;
-    ContentSecurityPolicy::HeaderType m_contentSecurityPolicyType;
+    ContentSecurityPolicyResponseHeaders m_contentSecurityPolicyResponseHeaders;
+    bool m_shouldBypassMainWorldContentSecurityPolicy;
     RefPtr<SecurityOrigin> m_topOrigin;
 };
 
-WorkerThreadStartupData::WorkerThreadStartupData(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode startMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, const SecurityOrigin* topOrigin)
+WorkerThreadStartupData::WorkerThreadStartupData(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode startMode, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders, bool shouldBypassMainWorldContentSecurityPolicy, const SecurityOrigin* topOrigin)
     : m_scriptURL(scriptURL.isolatedCopy())
     , m_userAgent(userAgent.isolatedCopy())
     , m_sourceCode(sourceCode.isolatedCopy())
     , m_startMode(startMode)
-    , m_contentSecurityPolicy(contentSecurityPolicy.isolatedCopy())
-    , m_contentSecurityPolicyType(contentSecurityPolicyType)
+    , m_contentSecurityPolicyResponseHeaders(contentSecurityPolicyResponseHeaders.isolatedCopy())
+    , m_shouldBypassMainWorldContentSecurityPolicy(shouldBypassMainWorldContentSecurityPolicy)
     , m_topOrigin(topOrigin ? &topOrigin->isolatedCopy().get() : nullptr)
 {
 }
 
-WorkerThread::WorkerThread(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerReportingProxy& workerReportingProxy, WorkerThreadStartMode startMode, const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType contentSecurityPolicyType, const SecurityOrigin* topOrigin)
+WorkerThread::WorkerThread(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerLoaderProxy& workerLoaderProxy, WorkerReportingProxy& workerReportingProxy, WorkerThreadStartMode startMode, const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders, bool shouldBypassMainWorldContentSecurityPolicy, const SecurityOrigin* topOrigin)
     : m_threadID(0)
     , m_workerLoaderProxy(workerLoaderProxy)
     , m_workerReportingProxy(workerReportingProxy)
-    , m_startupData(std::make_unique<WorkerThreadStartupData>(scriptURL, userAgent, sourceCode, startMode, contentSecurityPolicy, contentSecurityPolicyType, topOrigin))
+    , m_startupData(std::make_unique<WorkerThreadStartupData>(scriptURL, userAgent, sourceCode, startMode, contentSecurityPolicyResponseHeaders, shouldBypassMainWorldContentSecurityPolicy, topOrigin))
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     , m_notificationClient(0)
 #endif
 {
-    std::lock_guard<std::mutex> lock(threadSetMutex());
+    std::lock_guard<StaticLock> lock(threadSetMutex);
 
     workerThreads().add(this);
 }
 
 WorkerThread::~WorkerThread()
 {
-    std::lock_guard<std::mutex> lock(threadSetMutex());
+    std::lock_guard<StaticLock> lock(threadSetMutex);
 
     ASSERT(workerThreads().contains(this));
     workerThreads().remove(this);
@@ -127,7 +122,7 @@ WorkerThread::~WorkerThread()
 bool WorkerThread::start()
 {
     // Mutex protection is necessary to ensure that m_threadID is initialized when the thread starts.
-    MutexLocker lock(m_threadCreationMutex);
+    LockHolder lock(m_threadCreationMutex);
 
     if (m_threadID)
         return true;
@@ -155,9 +150,14 @@ void WorkerThread::workerThread()
     FloatingPointEnvironment::singleton().propagateMainThreadEnvironment();
 #endif
 
+#if PLATFORM(GTK)
+    GRefPtr<GMainContext> mainContext = adoptGRef(g_main_context_new());
+    g_main_context_push_thread_default(mainContext.get());
+#endif
+
     {
-        MutexLocker lock(m_threadCreationMutex);
-        m_workerGlobalScope = createWorkerGlobalScope(m_startupData->m_scriptURL, m_startupData->m_userAgent, m_startupData->m_contentSecurityPolicy, m_startupData->m_contentSecurityPolicyType, m_startupData->m_topOrigin.release());
+        LockHolder lock(m_threadCreationMutex);
+        m_workerGlobalScope = createWorkerGlobalScope(m_startupData->m_scriptURL, m_startupData->m_userAgent, m_startupData->m_contentSecurityPolicyResponseHeaders, m_startupData->m_shouldBypassMainWorldContentSecurityPolicy, m_startupData->m_topOrigin.release());
 
         if (m_runLoop.terminated()) {
             // The worker was terminated before the thread had a chance to run. Since the context didn't exist yet,
@@ -167,7 +167,6 @@ void WorkerThread::workerThread()
     }
 
     WorkerScriptController* script = m_workerGlobalScope->script();
-    InspectorInstrumentation::willEvaluateWorkerScript(workerGlobalScope(), m_startupData->m_startMode);
     script->evaluate(ScriptSourceCode(m_startupData->m_sourceCode, m_startupData->m_scriptURL));
     // Free the startup data to cause its member variable deref's happen on the worker's thread (since
     // all ref/derefs of these objects are happening on the thread at this point). Note that
@@ -175,6 +174,10 @@ void WorkerThread::workerThread()
     m_startupData = nullptr;
 
     runEventLoop();
+
+#if PLATFORM(GTK)
+    g_main_context_pop_thread_default(mainContext.get());
+#endif
 
     ThreadIdentifier threadID = m_threadID;
 
@@ -204,7 +207,7 @@ void WorkerThread::runEventLoop()
 void WorkerThread::stop()
 {
     // Mutex protection is necessary because stop() can be called before the context is fully created.
-    MutexLocker lock(m_threadCreationMutex);
+    LockHolder lock(m_threadCreationMutex);
 
     // Ensure that tasks are being handled by thread event loop. If script execution weren't forbidden, a while(1) loop in JS could keep the thread alive forever.
     if (m_workerGlobalScope) {
@@ -237,7 +240,7 @@ void WorkerThread::stop()
 
 void WorkerThread::releaseFastMallocFreeMemoryInAllThreads()
 {
-    std::lock_guard<std::mutex> lock(threadSetMutex());
+    std::lock_guard<StaticLock> lock(threadSetMutex);
 
     for (auto* workerThread : workerThreads()) {
         workerThread->runLoop().postTask([] (ScriptExecutionContext&) {

@@ -53,7 +53,6 @@ public:
 
     virtual unsigned length() const override;
     virtual Node* item(unsigned index) const override;
-    virtual Node* namedItem(const AtomicString&) const override;
 
 private:
     StaticNodeList() { }
@@ -63,11 +62,11 @@ private:
 
 class StaticElementList final : public NodeList {
 public:
-    static PassRefPtr<StaticElementList> adopt(Vector<Ref<Element>>& elements)
+    static Ref<StaticElementList> adopt(Vector<Ref<Element>>& elements)
     {
-        RefPtr<StaticElementList> nodeList = adoptRef(new StaticElementList);
+        Ref<StaticElementList> nodeList = adoptRef(*new StaticElementList);
         nodeList->m_elements.swap(elements);
-        return nodeList.release();
+        return nodeList;
     }
 
     static Ref<StaticElementList> createEmpty()
@@ -76,8 +75,7 @@ public:
     }
 
     virtual unsigned length() const override;
-    virtual Node* item(unsigned index) const override;
-    virtual Node* namedItem(const AtomicString&) const override;
+    virtual Element* item(unsigned index) const override;
 
 private:
     StaticElementList()

@@ -23,12 +23,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+enum ImageSmoothingQuality { "low", "medium", "high" };
 enum CanvasWindingRule { "nonzero", "evenodd" };
 
 interface CanvasRenderingContext2D : CanvasRenderingContext {
 
     void save();
     void restore();
+
+    [Custom] void commit();
 
     void scale(unrestricted float sx, unrestricted float sy);
     void rotate(unrestricted float angle);
@@ -39,20 +42,22 @@ interface CanvasRenderingContext2D : CanvasRenderingContext {
         unrestricted float dx, unrestricted float dy);
 
     attribute unrestricted float globalAlpha;
-    [TreatNullAs=NullString] attribute DOMString globalCompositeOperation;
+
+    // FIXME: This should not have [TreatNullAs=EmptyString].
+    [TreatNullAs=EmptyString] attribute DOMString globalCompositeOperation;
 
     [RaisesException] CanvasGradient createLinearGradient(float x0, float y0, float x1, float y1);
     [RaisesException] CanvasGradient createRadialGradient(float x0, float y0, float r0, float x1, float y1, float r1);
 
     attribute unrestricted float lineWidth;
-    [TreatNullAs=NullString] attribute DOMString lineCap;
-    [TreatNullAs=NullString] attribute DOMString lineJoin;
+    attribute DOMString lineCap;
+    attribute DOMString lineJoin;
     attribute unrestricted float miterLimit;
 
     attribute unrestricted float shadowOffsetX;
     attribute unrestricted float shadowOffsetY;
     attribute unrestricted float shadowBlur;
-    [TreatNullAs=NullString] attribute DOMString shadowColor;
+    attribute DOMString shadowColor;
 
     void setLineDash(sequence<unrestricted float> dash);
     sequence<unrestricted float> getLineDash();
@@ -80,18 +85,18 @@ interface CanvasRenderingContext2D : CanvasRenderingContext {
         unrestricted float endAngle, [Default=Undefined] optional boolean anticlockwise);
     [RaisesException] void ellipse(unrestricted float x, unrestricted float y, unrestricted float radiusX, unrestricted float radiusY, unrestricted float rotation, unrestricted float startAngle, unrestricted float endAngle, [Default=Undefined] optional boolean anticlockwise);
 
-    void fill(DOMPath path, optional CanvasWindingRule winding);
+    void fill(DOMPath path, optional CanvasWindingRule winding = "nonzero");
     void stroke(DOMPath path);
-    void clip(DOMPath path, optional CanvasWindingRule winding);
+    void clip(DOMPath path, optional CanvasWindingRule winding = "nonzero");
 
-    void fill(optional CanvasWindingRule winding);
+    void fill(optional CanvasWindingRule winding = "nonzero");
     void stroke();
-    void clip(optional CanvasWindingRule winding);
+    void clip(optional CanvasWindingRule winding = "nonzero");
 
-    boolean isPointInPath(DOMPath path, unrestricted float x, unrestricted float y, optional CanvasWindingRule winding);
+    boolean isPointInPath(DOMPath path, unrestricted float x, unrestricted float y, optional CanvasWindingRule winding = "nonzero");
     boolean isPointInStroke(DOMPath path, unrestricted float x, unrestricted float y);
 
-    boolean isPointInPath(unrestricted float x, unrestricted float y, optional CanvasWindingRule winding);
+    boolean isPointInPath(unrestricted float x, unrestricted float y, optional CanvasWindingRule winding = "nonzero");
     boolean isPointInStroke(unrestricted float x, unrestricted float y);
 
     // text
@@ -167,8 +172,8 @@ interface CanvasRenderingContext2D : CanvasRenderingContext {
     [RaisesException] void webkitPutImageDataHD(ImageData? imagedata, float dx, float dy);
     [RaisesException] void webkitPutImageDataHD(ImageData? imagedata, float dx, float dy, float dirtyX, float dirtyY, float dirtyWidth, float dirtyHeight);
 
-    [RaisesException] CanvasPattern createPattern(HTMLCanvasElement? canvas, [TreatNullAs=NullString] DOMString repetitionType);
-    [RaisesException] CanvasPattern createPattern(HTMLImageElement? image, [TreatNullAs=NullString] DOMString repetitionType);
+    [RaisesException] CanvasPattern createPattern(HTMLCanvasElement? canvas, [TreatNullAs=EmptyString] DOMString repetitionType);
+    [RaisesException] CanvasPattern createPattern(HTMLImageElement? image, [TreatNullAs=EmptyString] DOMString repetitionType);
     [RaisesException] ImageData createImageData(ImageData? imagedata);
     [RaisesException] ImageData createImageData(float sw, float sh);
 
@@ -186,6 +191,8 @@ interface CanvasRenderingContext2D : CanvasRenderingContext {
 
     readonly attribute float webkitBackingStorePixelRatio;
 
-    attribute boolean webkitImageSmoothingEnabled;
+    attribute boolean imageSmoothingEnabled;
+    [ImplementedAs=imageSmoothingEnabled] attribute boolean webkitImageSmoothingEnabled;
+    attribute ImageSmoothingQuality imageSmoothingQuality;
 };
 

@@ -101,6 +101,8 @@ InternalSettings::Backup::Backup(Settings& settings)
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     , m_allowsAirPlayForMediaPlayback(settings.allowsAirPlayForMediaPlayback())
 #endif
+    , m_allowsInlineMediaPlayback(settings.allowsInlineMediaPlayback())
+    , m_inlineMediaPlaybackRequiresPlaysInlineAttribute(settings.inlineMediaPlaybackRequiresPlaysInlineAttribute())
 {
 }
 
@@ -165,6 +167,8 @@ void InternalSettings::Backup::restoreTo(Settings& settings)
 #if ENABLE(TOUCH_EVENTS)
     settings.setTouchEventEmulationEnabled(m_touchEventEmulationEnabled);
 #endif
+    settings.setAllowsInlineMediaPlayback(m_allowsInlineMediaPlayback);
+    settings.setInlineMediaPlaybackRequiresPlaysInlineAttribute(m_inlineMediaPlaybackRequiresPlaysInlineAttribute);
     RuntimeEnabledFeatures::sharedFeatures().setPluginReplacementEnabled(m_pluginReplacementEnabled);
 }
 
@@ -375,13 +379,13 @@ void InternalSettings::setWirelessPlaybackDisabled(bool available)
 void InternalSettings::setEditingBehavior(const String& editingBehavior, ExceptionCode& ec)
 {
     InternalSettingsGuardForSettings();
-    if (equalIgnoringCase(editingBehavior, "win"))
+    if (equalLettersIgnoringASCIICase(editingBehavior, "win"))
         settings()->setEditingBehaviorType(EditingWindowsBehavior);
-    else if (equalIgnoringCase(editingBehavior, "mac"))
+    else if (equalLettersIgnoringASCIICase(editingBehavior, "mac"))
         settings()->setEditingBehaviorType(EditingMacBehavior);
-    else if (equalIgnoringCase(editingBehavior, "unix"))
+    else if (equalLettersIgnoringASCIICase(editingBehavior, "unix"))
         settings()->setEditingBehaviorType(EditingUnixBehavior);
-    else if (equalIgnoringCase(editingBehavior, "ios"))
+    else if (equalLettersIgnoringASCIICase(editingBehavior, "ios"))
         settings()->setEditingBehaviorType(EditingIOSBehavior);
     else
         ec = SYNTAX_ERR;
@@ -394,14 +398,14 @@ void InternalSettings::setShouldDisplayTrackKind(const String& kind, bool enable
 #if ENABLE(VIDEO_TRACK)
     if (!page())
         return;
-    CaptionUserPreferences* captionPreferences = page()->group().captionPreferences();
 
-    if (equalIgnoringCase(kind, "Subtitles"))
-        captionPreferences->setUserPrefersSubtitles(enabled);
-    else if (equalIgnoringCase(kind, "Captions"))
-        captionPreferences->setUserPrefersCaptions(enabled);
-    else if (equalIgnoringCase(kind, "TextDescriptions"))
-        captionPreferences->setUserPrefersTextDescriptions(enabled);
+    auto& captionPreferences = page()->group().captionPreferences();
+    if (equalLettersIgnoringASCIICase(kind, "subtitles"))
+        captionPreferences.setUserPrefersSubtitles(enabled);
+    else if (equalLettersIgnoringASCIICase(kind, "captions"))
+        captionPreferences.setUserPrefersCaptions(enabled);
+    else if (equalLettersIgnoringASCIICase(kind, "textdescriptions"))
+        captionPreferences.setUserPrefersTextDescriptions(enabled);
     else
         ec = SYNTAX_ERR;
 #else
@@ -417,14 +421,14 @@ bool InternalSettings::shouldDisplayTrackKind(const String& kind, ExceptionCode&
 #if ENABLE(VIDEO_TRACK)
     if (!page())
         return false;
-    CaptionUserPreferences* captionPreferences = page()->group().captionPreferences();
 
-    if (equalIgnoringCase(kind, "Subtitles"))
-        return captionPreferences->userPrefersSubtitles();
-    if (equalIgnoringCase(kind, "Captions"))
-        return captionPreferences->userPrefersCaptions();
-    if (equalIgnoringCase(kind, "TextDescriptions"))
-        return captionPreferences->userPrefersTextDescriptions();
+    auto& captionPreferences = page()->group().captionPreferences();
+    if (equalLettersIgnoringASCIICase(kind, "subtitles"))
+        return captionPreferences.userPrefersSubtitles();
+    if (equalLettersIgnoringASCIICase(kind, "captions"))
+        return captionPreferences.userPrefersCaptions();
+    if (equalLettersIgnoringASCIICase(kind, "textdescriptions"))
+        return captionPreferences.userPrefersTextDescriptions();
 
     ec = SYNTAX_ERR;
     return false;
@@ -522,6 +526,18 @@ void InternalSettings::setScrollingTreeIncludesFrames(bool enabled, ExceptionCod
 {
     InternalSettingsGuardForSettings();
     settings()->setScrollingTreeIncludesFrames(enabled);
+}
+
+void InternalSettings::setAllowsInlineMediaPlayback(bool allows, ExceptionCode& ec)
+{
+    InternalSettingsGuardForSettings();
+    settings()->setAllowsInlineMediaPlayback(allows);
+}
+
+void InternalSettings::setInlineMediaPlaybackRequiresPlaysInlineAttribute(bool requires, ExceptionCode& ec)
+{
+    InternalSettingsGuardForSettings();
+    settings()->setInlineMediaPlaybackRequiresPlaysInlineAttribute(requires);
 }
 
 // If you add to this list, make sure that you update the Backup class for test reproducability!

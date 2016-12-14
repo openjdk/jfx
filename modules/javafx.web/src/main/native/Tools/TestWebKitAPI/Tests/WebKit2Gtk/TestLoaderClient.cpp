@@ -116,6 +116,14 @@ static void testLoadRequest(LoadTrackingTest* test, gconstpointer)
     assertNormalLoadHappened(test->m_loadEvents);
 }
 
+static void testLoadFromGResource(LoadTrackingTest* test, gconstpointer)
+{
+    GRefPtr<WebKitURIRequest> request(webkit_uri_request_new("resource:///org/webkit/webkit2gtk/tests/boring.html"));
+    test->loadRequest(request.get());
+    test->waitUntilLoadFinished();
+    assertNormalLoadHappened(test->m_loadEvents);
+}
+
 class LoadStopTrackingTest : public LoadTrackingTest {
 public:
     MAKE_GLIB_TEST_FIXTURE(LoadStopTrackingTest);
@@ -404,6 +412,20 @@ static void testURIRequestHTTPHeaders(WebViewTest* test, gconstpointer)
     g_assert(!strncmp(mainResourceData, "1", mainResourceDataSize));
 }
 
+static void testURIRequestHTTPMethod(WebViewTest* test, gconstpointer)
+{
+    GRefPtr<WebKitURIRequest> uriRequest = adoptGRef(webkit_uri_request_new("file:///foo/bar"));
+    g_assert(uriRequest.get());
+    g_assert_cmpstr(webkit_uri_request_get_uri(uriRequest.get()), ==, "file:///foo/bar");
+    g_assert(!webkit_uri_request_get_http_method(uriRequest.get()));
+
+    webkit_uri_request_set_uri(uriRequest.get(), kServer->getURIForPath("/http-get-method").data());
+    test->loadRequest(uriRequest.get());
+    test->waitUntilLoadFinished();
+
+    test->runJavaScriptAndWaitUntilFinished("xhr = new XMLHttpRequest; xhr.open('POST', '/http-post-method', false); xhr.send();", nullptr);
+}
+
 static void testURIResponseHTTPHeaders(WebViewTest* test, gconstpointer)
 {
     test->loadHtml("<html><body>No HTTP headers</body></html>", "file:///");
@@ -455,7 +477,7 @@ static void serverCallback(SoupServer* server, SoupMessage* message, const char*
 
     soup_message_set_status(message, SOUP_STATUS_OK);
 
-    if (g_str_has_prefix(path, "/normal"))
+    if (g_str_has_prefix(path, "/normal") || g_str_has_prefix(path, "/http-get-method"))
         soup_message_body_append(message->response_body, SOUP_MEMORY_STATIC, responseString, strlen(responseString));
     else if (g_str_equal(path, "/error"))
         soup_message_set_status(message, SOUP_STATUS_CANT_CONNECT);
@@ -503,6 +525,7 @@ void beforeAll()
     LoadTrackingTest::add("WebKitWebView", "load-plain-text", testLoadPlainText);
     LoadTrackingTest::add("WebKitWebView", "load-bytes", testLoadBytes);
     LoadTrackingTest::add("WebKitWebView", "load-request", testLoadRequest);
+    LoadTrackingTest::add("WebKitWebView", "load-gresource", testLoadFromGResource);
     LoadStopTrackingTest::add("WebKitWebView", "stop-loading", testLoadCancelled);
     LoadTrackingTest::add("WebKitWebView", "title", testWebViewTitle);
     LoadTrackingTest::add("WebKitWebView", "progress", testLoadProgress);
@@ -516,6 +539,7 @@ void beforeAll()
     ViewIsLoadingTest::add("WebKitWebView", "is-loading", testWebViewIsLoading);
     WebPageURITest::add("WebKitWebPage", "get-uri", testWebPageURI);
     WebViewTest::add("WebKitURIRequest", "http-headers", testURIRequestHTTPHeaders);
+    WebViewTest::add("WebKitURIRequest", "http-method", testURIRequestHTTPMethod);
     WebViewTest::add("WebKitURIResponse", "http-headers", testURIResponseHTTPHeaders);
     WebViewTest::add("WebKitWebPage", "redirect-to-data-uri", testRedirectToDataURI);
 }

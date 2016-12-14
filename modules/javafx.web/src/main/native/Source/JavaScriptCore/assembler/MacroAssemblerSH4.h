@@ -1091,6 +1091,7 @@ public:
     static bool supportsFloatingPointTruncate() { return true; }
     static bool supportsFloatingPointSqrt() { return true; }
     static bool supportsFloatingPointAbs() { return true; }
+    static bool supportsFloatingPointRounding() { return false; }
 
     void moveDoubleToInts(FPRegisterID src, RegisterID dest1, RegisterID dest2)
     {
@@ -1574,6 +1575,18 @@ public:
         m_assembler.dabs(dest);
     }
 
+    NO_RETURN_DUE_TO_CRASH void ceilDouble(FPRegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsFloatingPointRounding());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void floorDouble(FPRegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsFloatingPointRounding());
+        CRASH();
+    }
+
     Jump branchTest8(ResultCondition cond, Address address, TrustedImm32 mask = TrustedImm32(-1))
     {
         RegisterID addressTempRegister = claimScratch();
@@ -2040,7 +2053,7 @@ public:
         ASSERT((cond == Overflow) || (cond == Signed) || (cond == Zero) || (cond == NonZero));
 
         if (cond == Overflow)
-            return branchMul32(cond, TrustedImm32(-1), srcDest, srcDest);
+            return branchMul32(cond, srcDest, TrustedImm32(-1), srcDest);
 
         neg32(srcDest);
 
@@ -2244,7 +2257,7 @@ public:
         return (cond == NonZero) ? branchFalse() : branchTrue();
     }
 
-    Jump branchMul32(ResultCondition cond, TrustedImm32 imm, RegisterID src, RegisterID dest)
+    Jump branchMul32(ResultCondition cond, RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         ASSERT((cond == Overflow) || (cond == Signed) || (cond == Zero) || (cond == NonZero));
 
@@ -2401,6 +2414,11 @@ public:
     Call call()
     {
         return Call(m_assembler.call(), Call::Linkable);
+    }
+
+    Call nearTailCall()
+    {
+        return Call(m_assembler.jump(), Call::LinkableNearTail);
     }
 
     Call nearCall()
@@ -2604,11 +2622,13 @@ protected:
     }
 private:
     friend class LinkBuffer;
-    friend class RepatchBuffer;
 
     static void linkCall(void* code, Call call, FunctionPtr function)
     {
-        SH4Assembler::linkCall(code, call.m_label, function.value());
+        if (call.isFlagSet(Call::Tail))
+            SH4Assembler::linkJump(code, call.m_label, function.value());
+        else
+            SH4Assembler::linkCall(code, call.m_label, function.value());
     }
 
     static void repatchCall(CodeLocationCall call, CodeLocationLabel destination)

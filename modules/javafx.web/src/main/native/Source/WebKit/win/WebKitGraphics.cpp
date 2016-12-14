@@ -52,7 +52,7 @@ static FontCascade makeFont(const WebFontDescription& description)
 
     String fontFamilyString(description.family, description.familyLength);
 
-    FontDescription f;
+    FontCascadeDescription f;
     f.setOneFamily(fontFamilyString);
     f.setSpecifiedSize(description.size);
     f.setComputedSize(description.size);
@@ -62,7 +62,7 @@ static FontCascade makeFont(const WebFontDescription& description)
 
     FontSmoothingType smoothingType;
     if (SUCCEEDED(WebPreferences::sharedStandardPreferences()->fontSmoothing(&smoothingType)))
-        f.setRenderingMode(smoothingType == FontSmoothingTypeWindows ? AlternateRenderingMode : NormalRenderingMode);
+        f.setRenderingMode(smoothingType == FontSmoothingTypeWindows ? FontRenderingMode::Alternate : FontRenderingMode::Normal);
 
     FontCascade font(f, 0, 0);
     font.update(0);
@@ -113,7 +113,7 @@ unsigned CenterTruncateStringToWidth(LPCTSTR text, int length, const WebFontDesc
 {
     ASSERT(buffer);
 
-    String result = StringTruncator::centerTruncate(String(text, length), width, makeFont(description), StringTruncator::EnableRoundingHacks);
+    String result = StringTruncator::centerTruncate(String(text, length), width, makeFont(description));
     StringView(result).getCharactersWithUpconvert(buffer);
     buffer[result.length()] = '\0';
     return result.length();
@@ -123,7 +123,7 @@ unsigned RightTruncateStringToWidth(LPCTSTR text, int length, const WebFontDescr
 {
     ASSERT(buffer);
 
-    String result = StringTruncator::rightTruncate(String(text, length), width, makeFont(description), StringTruncator::EnableRoundingHacks);
+    String result = StringTruncator::rightTruncate(String(text, length), width, makeFont(description));
     StringView(result).getCharactersWithUpconvert(buffer);
     buffer[result.length()] = '\0';
     return result.length();

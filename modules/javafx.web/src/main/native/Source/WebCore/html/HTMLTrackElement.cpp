@@ -102,7 +102,7 @@ void HTMLTrackElement::parseAttribute(const QualifiedName& name, const AtomicStr
         // 4.8.10.12.3 Sourcing out-of-band text tracks
         // As the kind, label, and srclang attributes are set, changed, or removed, the text track must update accordingly...
         } else if (name == kindAttr)
-            track()->setKind(value.lower());
+            track()->setKind(value.convertToASCIILowercase());
         else if (name == labelAttr)
             track()->setLabel(value);
         else if (name == srclangAttr)
@@ -157,8 +157,8 @@ void HTMLTrackElement::setIsDefault(bool isDefault)
 LoadableTextTrack& HTMLTrackElement::ensureTrack()
 {
     if (!m_track) {
-        // The kind attribute is an enumerated attribute, limited only to know values. It defaults to 'subtitles' if missing or invalid.
-        String kind = getAttribute(kindAttr).lower();
+        // The kind attribute is an enumerated attribute, limited only to known values. It defaults to 'subtitles' if missing or invalid.
+        String kind = fastGetAttribute(kindAttr).convertToASCIILowercase();
         if (!TextTrack::isValidKindKeyword(kind))
             kind = TextTrack::subtitlesKeyword();
         m_track = LoadableTextTrack::create(this, kind, label(), srclang());
@@ -260,7 +260,7 @@ void HTMLTrackElement::didCompleteLoad(LoadStatus status)
 
     if (status == Failure) {
         setReadyState(HTMLTrackElement::TRACK_ERROR);
-        dispatchEvent(Event::create(eventNames().errorEvent, false, false), IGNORE_EXCEPTION);
+        dispatchEvent(Event::create(eventNames().errorEvent, false, false));
         return;
     }
 
@@ -271,7 +271,7 @@ void HTMLTrackElement::didCompleteLoad(LoadStatus status)
 
     //     2. If the file was successfully processed, fire a simple event named load at the
     //        track element.
-    dispatchEvent(Event::create(eventNames().loadEvent, false, false), IGNORE_EXCEPTION);
+    dispatchEvent(Event::create(eventNames().loadEvent, false, false));
 }
 
 // NOTE: The values in the TextTrack::ReadinessState enum must stay in sync with those in HTMLTrackElement::ReadyState.

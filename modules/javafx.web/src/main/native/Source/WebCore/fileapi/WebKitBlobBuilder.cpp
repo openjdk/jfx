@@ -39,7 +39,6 @@
 #include "TextEncoding.h"
 #include <runtime/ArrayBuffer.h>
 #include <runtime/ArrayBufferView.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomicString.h>
 #include <wtf/text/CString.h>
@@ -77,7 +76,7 @@ void BlobBuilder::append(ArrayBuffer* arrayBuffer)
     m_appendableData.append(static_cast<const char*>(arrayBuffer->data()), arrayBuffer->byteLength());
 }
 
-void BlobBuilder::append(PassRefPtr<ArrayBufferView> arrayBufferView)
+void BlobBuilder::append(RefPtr<ArrayBufferView>&& arrayBufferView)
 {
     if (!arrayBufferView)
         return;
@@ -90,15 +89,15 @@ void BlobBuilder::append(Blob* blob)
     if (!blob)
         return;
     if (!m_appendableData.isEmpty())
-        m_items.append(BlobPart(WTF::move(m_appendableData)));
+        m_items.append(BlobPart(WTFMove(m_appendableData)));
     m_items.append(BlobPart(blob->url()));
 }
 
 Vector<BlobPart> BlobBuilder::finalize()
 {
     if (!m_appendableData.isEmpty())
-        m_items.append(BlobPart(WTF::move(m_appendableData)));
-    return WTF::move(m_items);
+        m_items.append(BlobPart(WTFMove(m_appendableData)));
+    return WTFMove(m_items);
 }
 
 } // namespace WebCore

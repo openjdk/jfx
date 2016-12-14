@@ -27,6 +27,7 @@
 #include "ClonedArguments.h"
 
 #include "GetterSetter.h"
+#include "InlineCallFrame.h"
 #include "JSCInlines.h"
 
 namespace JSC {
@@ -132,15 +133,32 @@ bool ClonedArguments::getOwnPropertySlot(JSObject* object, ExecState* exec, Prop
     ClonedArguments* thisObject = jsCast<ClonedArguments*>(object);
     VM& vm = exec->vm();
 
-    if (ident == vm.propertyNames->callee
-        || ident == vm.propertyNames->caller
-        || ident == vm.propertyNames->iteratorSymbol)
-        thisObject->materializeSpecialsIfNecessary(exec);
+    if (!thisObject->specialsMaterialized()) {
+        FunctionExecutable* executable = jsCast<FunctionExecutable*>(thisObject->m_callee->executable());
+        bool isStrictMode = executable->isStrictMode();
 
-    if (Base::getOwnPropertySlot(thisObject, exec, ident, slot))
-        return true;
+        if (isStrictMode) {
+            if (ident == vm.propertyNames->callee) {
+                slot.setGetterSlot(thisObject, DontDelete | DontEnum | Accessor, thisObject->globalObject()->throwTypeErrorGetterSetter(vm));
+                return true;
+            }
+            if (ident == vm.propertyNames->caller) {
+                slot.setGetterSlot(thisObject, DontDelete | DontEnum | Accessor, thisObject->globalObject()->throwTypeErrorGetterSetter(vm));
+                return true;
+            }
 
-    return false;
+        } else if (ident == vm.propertyNames->callee) {
+            slot.setValue(thisObject, 0, thisObject->m_callee.get());
+            return true;
+        }
+
+        if (ident == vm.propertyNames->iteratorSymbol) {
+            slot.setValue(thisObject, DontEnum, thisObject->globalObject()->arrayProtoValuesFunction());
+            return true;
+        }
+    }
+
+    return Base::getOwnPropertySlot(thisObject, exec, ident, slot);
 }
 
 void ClonedArguments::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& array, EnumerationMode mode)

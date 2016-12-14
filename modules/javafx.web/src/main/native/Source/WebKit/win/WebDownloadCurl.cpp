@@ -79,21 +79,35 @@ void WebDownload::init(const URL& url, IWebDownloadDelegate* delegate)
 
 // IWebDownload -------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebDownload::initWithRequest(
+HRESULT WebDownload::initWithRequest(
         /* [in] */ IWebURLRequest* request,
         /* [in] */ IWebDownloadDelegate* delegate)
 {
+    if (!request)
+        return E_POINTER;
+
+    COMPtr<WebMutableURLRequest> webRequest;
+    if (FAILED(request->QueryInterface(&webRequest)))
+        return E_FAIL;
+
     BString url;
 
     if (!SUCCEEDED(request->URL(&url)))
         return E_FAIL;
 
-    init(URL(ParsedURLString, String(url)), delegate);
+    ResourceRequest resourceRequest;
+    resourceRequest.setURL(URL(ParsedURLString, String(url)));
+
+    const HTTPHeaderMap& headerMap = webRequest->httpHeaderFields();
+    for (HTTPHeaderMap::const_iterator it = headerMap.begin(); it != headerMap.end(); ++it)
+        resourceRequest.setHTTPHeaderField(it->key, it->value);
+
+    init(nullptr, resourceRequest, ResourceResponse(), delegate);
 
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::initToResumeWithBundle(
+HRESULT WebDownload::initToResumeWithBundle(
         /* [in] */ BSTR bundlePath,
         /* [in] */ IWebDownloadDelegate* delegate)
 {
@@ -101,7 +115,7 @@ HRESULT STDMETHODCALLTYPE WebDownload::initToResumeWithBundle(
    return E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::start()
+HRESULT WebDownload::start()
 {
     if (!m_download)
         return E_FAIL;
@@ -115,7 +129,7 @@ HRESULT STDMETHODCALLTYPE WebDownload::start()
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::cancel()
+HRESULT WebDownload::cancel()
 {
     if (!m_download)
         return E_FAIL;
@@ -129,13 +143,13 @@ HRESULT STDMETHODCALLTYPE WebDownload::cancel()
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::cancelForResume()
+HRESULT WebDownload::cancelForResume()
 {
    notImplemented();
    return E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::deletesFileUponFailure(
+HRESULT WebDownload::deletesFileUponFailure(
         /* [out, retval] */ BOOL* result)
 {
     if (!m_download)
@@ -145,7 +159,7 @@ HRESULT STDMETHODCALLTYPE WebDownload::deletesFileUponFailure(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::setDeletesFileUponFailure(
+HRESULT WebDownload::setDeletesFileUponFailure(
         /* [in] */ BOOL deletesFileUponFailure)
 {
     if (!m_download)
@@ -155,7 +169,7 @@ HRESULT STDMETHODCALLTYPE WebDownload::setDeletesFileUponFailure(
     return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::setDestination(
+HRESULT WebDownload::setDestination(
         /* [in] */ BSTR path,
         /* [in] */ BOOL allowOverwrite)
 {
@@ -170,21 +184,21 @@ HRESULT STDMETHODCALLTYPE WebDownload::setDestination(
 
 // IWebURLAuthenticationChallengeSender -------------------------------------------------------------------
 
-HRESULT STDMETHODCALLTYPE WebDownload::cancelAuthenticationChallenge(
+HRESULT WebDownload::cancelAuthenticationChallenge(
         /* [in] */ IWebURLAuthenticationChallenge*)
 {
    notImplemented();
    return E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::continueWithoutCredentialForAuthenticationChallenge(
+HRESULT WebDownload::continueWithoutCredentialForAuthenticationChallenge(
         /* [in] */ IWebURLAuthenticationChallenge* challenge)
 {
    notImplemented();
    return E_FAIL;
 }
 
-HRESULT STDMETHODCALLTYPE WebDownload::useCredential(
+HRESULT WebDownload::useCredential(
         /* [in] */ IWebURLCredential* credential,
         /* [in] */ IWebURLAuthenticationChallenge* challenge)
 {

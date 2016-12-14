@@ -22,7 +22,6 @@
 #include "NodeFilterCondition.h"
 
 #include "WebKitDOMNodeFilter.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/glib/GRefPtr.h>
 
@@ -37,7 +36,7 @@ public:
         return adoptRef(*new GObjectNodeFilterCondition(filter));
     }
 
-    virtual short acceptNode(JSC::ExecState*, Node*) const;
+    virtual short acceptNode(Node*) const override;
 
 private:
     GObjectNodeFilterCondition(WebKitDOMNodeFilter* filter)

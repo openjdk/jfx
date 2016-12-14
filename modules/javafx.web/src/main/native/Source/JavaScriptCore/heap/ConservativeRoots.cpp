@@ -30,14 +30,16 @@
 #include "CodeBlockSet.h"
 #include "CopiedSpace.h"
 #include "CopiedSpaceInlines.h"
+#include "HeapInlines.h"
 #include "JSCell.h"
 #include "JSObject.h"
 #include "JSCInlines.h"
 #include "Structure.h"
+#include <wtf/OSAllocator.h>
 
 namespace JSC {
 
-ConservativeRoots::ConservativeRoots(const MarkedBlockSet* blocks, CopiedSpace* copiedSpace)
+ConservativeRoots::ConservativeRoots(MarkedBlockSet* blocks, CopiedSpace* copiedSpace)
     : m_roots(m_inlineRoots)
     , m_size(0)
     , m_capacity(inlineCapacity)
@@ -70,19 +72,7 @@ inline void ConservativeRoots::genericAddPointer(void* p, TinyBloomFilter filter
 
     m_copiedSpace->pinIfNecessary(p);
 
-    MarkedBlock* candidate = MarkedBlock::blockFor(p);
-    if (filter.ruleOut(reinterpret_cast<Bits>(candidate))) {
-        ASSERT(!candidate || !m_blocks->set().contains(candidate));
-        return;
-    }
-
-    if (!MarkedBlock::isAtomAligned(p))
-        return;
-
-    if (!m_blocks->set().contains(candidate))
-        return;
-
-    if (!candidate->isLiveCell(p))
+    if (!Heap::isPointerGCObject(filter, *m_blocks, p))
         return;
 
     if (m_size == m_capacity)
@@ -92,6 +82,7 @@ inline void ConservativeRoots::genericAddPointer(void* p, TinyBloomFilter filter
 }
 
 template<typename MarkHook>
+SUPPRESS_ASAN
 void ConservativeRoots::genericAddSpan(void* begin, void* end, MarkHook& markHook)
 {
     if (begin > end) {
@@ -124,30 +115,32 @@ void ConservativeRoots::add(void* begin, void* end, JITStubRoutineSet& jitStubRo
     genericAddSpan(begin, end, jitStubRoutines);
 }
 
-template<typename T, typename U>
 class CompositeMarkHook {
 public:
-    CompositeMarkHook(T& first, U& second)
-        : m_first(first)
-        , m_second(second)
+    CompositeMarkHook(JITStubRoutineSet& stubRoutines, CodeBlockSet& codeBlocks, const LockHolder& locker)
+        : m_stubRoutines(stubRoutines)
+        , m_codeBlocks(codeBlocks)
+        , m_codeBlocksLocker(locker)
     {
     }
 
     void mark(void* address)
     {
-        m_first.mark(address);
-        m_second.mark(address);
+        m_stubRoutines.mark(address);
+        m_codeBlocks.mark(m_codeBlocksLocker, address);
     }
 
 private:
-    T& m_first;
-    U& m_second;
+    JITStubRoutineSet& m_stubRoutines;
+    CodeBlockSet& m_codeBlocks;
+    const LockHolder& m_codeBlocksLocker;
 };
 
 void ConservativeRoots::add(
     void* begin, void* end, JITStubRoutineSet& jitStubRoutines, CodeBlockSet& codeBlocks)
 {
-    CompositeMarkHook<JITStubRoutineSet, CodeBlockSet> markHook(jitStubRoutines, codeBlocks);
+    LockHolder locker(codeBlocks.getLock());
+    CompositeMarkHook markHook(jitStubRoutines, codeBlocks, locker);
     genericAddSpan(begin, end, markHook);
 }
 

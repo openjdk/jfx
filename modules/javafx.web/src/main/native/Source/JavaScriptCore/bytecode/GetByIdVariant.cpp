@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,21 +34,21 @@ namespace JSC {
 
 GetByIdVariant::GetByIdVariant(
     const StructureSet& structureSet, PropertyOffset offset,
-    const IntendedStructureChain* chain, std::unique_ptr<CallLinkStatus> callLinkStatus)
+    const ObjectPropertyConditionSet& conditionSet,
+    std::unique_ptr<CallLinkStatus> callLinkStatus,
+    JSFunction* intrinsicFunction)
     : m_structureSet(structureSet)
-    , m_alternateBase(nullptr)
+    , m_conditionSet(conditionSet)
     , m_offset(offset)
-    , m_callLinkStatus(WTF::move(callLinkStatus))
+    , m_callLinkStatus(WTFMove(callLinkStatus))
+    , m_intrinsicFunction(intrinsicFunction)
 {
     if (!structureSet.size()) {
         ASSERT(offset == invalidOffset);
-        ASSERT(!chain);
+        ASSERT(conditionSet.isEmpty());
     }
-
-    if (chain && chain->size()) {
-        m_alternateBase = chain->terminalPrototype();
-        chain->gatherChecks(m_constantChecks);
-    }
+    if (intrinsicFunction)
+        ASSERT(intrinsic() != NoIntrinsic);
 }
 
 GetByIdVariant::~GetByIdVariant() { }
@@ -62,9 +62,9 @@ GetByIdVariant::GetByIdVariant(const GetByIdVariant& other)
 GetByIdVariant& GetByIdVariant::operator=(const GetByIdVariant& other)
 {
     m_structureSet = other.m_structureSet;
-    m_constantChecks = other.m_constantChecks;
-    m_alternateBase = other.m_alternateBase;
+    m_conditionSet = other.m_conditionSet;
     m_offset = other.m_offset;
+    m_intrinsicFunction = other.m_intrinsicFunction;
     if (other.m_callLinkStatus)
         m_callLinkStatus = std::make_unique<CallLinkStatus>(*other.m_callLinkStatus);
     else
@@ -72,28 +72,48 @@ GetByIdVariant& GetByIdVariant::operator=(const GetByIdVariant& other)
     return *this;
 }
 
-StructureSet GetByIdVariant::baseStructure() const
+inline bool GetByIdVariant::canMergeIntrinsicStructures(const GetByIdVariant& other) const
 {
-    if (!m_alternateBase)
-        return structureSet();
+    if (m_intrinsicFunction != other.m_intrinsicFunction)
+        return false;
+    switch (intrinsic()) {
+    case TypedArrayByteLengthIntrinsic: {
+        // We can merge these sets as long as the element size of the two sets is the same.
+        TypedArrayType thisType = (*m_structureSet.begin())->classInfo()->typedArrayStorageType;
+        TypedArrayType otherType = (*other.m_structureSet.begin())->classInfo()->typedArrayStorageType;
 
-    Structure* structure = structureFor(m_constantChecks, m_alternateBase);
-    RELEASE_ASSERT(structure);
-    return structure;
+        ASSERT(isTypedView(thisType) && isTypedView(otherType));
+
+        return logElementSize(thisType) == logElementSize(otherType);
+    }
+
+    default:
+        return true;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 bool GetByIdVariant::attemptToMerge(const GetByIdVariant& other)
 {
-    if (m_alternateBase != other.m_alternateBase)
-        return false;
     if (m_offset != other.m_offset)
         return false;
     if (m_callLinkStatus || other.m_callLinkStatus)
         return false;
-    if (!areCompatible(m_constantChecks, other.m_constantChecks))
+
+    if (!canMergeIntrinsicStructures(other))
         return false;
 
-    mergeInto(other.m_constantChecks, m_constantChecks);
+    if (m_conditionSet.isEmpty() != other.m_conditionSet.isEmpty())
+        return false;
+
+    ObjectPropertyConditionSet mergedConditionSet;
+    if (!m_conditionSet.isEmpty()) {
+        mergedConditionSet = m_conditionSet.mergedWith(other.m_conditionSet);
+        if (!mergedConditionSet.isValid() || !mergedConditionSet.hasOneSlotBaseCondition())
+            return false;
+    }
+    m_conditionSet = mergedConditionSet;
+
     m_structureSet.merge(other.m_structureSet);
 
     return true;
@@ -112,13 +132,12 @@ void GetByIdVariant::dumpInContext(PrintStream& out, DumpContext* context) const
     }
 
     out.print(
-        "<", inContext(structureSet(), context), ", ",
-        "[", listDumpInContext(m_constantChecks, context), "]");
-    if (m_alternateBase)
-        out.print(", alternateBase = ", inContext(JSValue(m_alternateBase), context));
+        "<", inContext(structureSet(), context), ", ", inContext(m_conditionSet, context));
     out.print(", offset = ", offset());
     if (m_callLinkStatus)
         out.print(", call = ", *m_callLinkStatus);
+    if (m_intrinsicFunction)
+        out.print(", intrinsic = ", *m_intrinsicFunction);
     out.print(">");
 }
 

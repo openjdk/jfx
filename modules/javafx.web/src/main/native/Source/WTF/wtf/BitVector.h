@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2014, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -152,10 +152,22 @@ public:
         return quickGet(bit);
     }
 
+    bool contains(size_t bit) const
+    {
+        return get(bit);
+    }
+
     bool set(size_t bit)
     {
         ensureSize(bit + 1);
         return quickSet(bit);
+    }
+
+    // This works like the add methods of sets. Instead of returning the previous value, like set(),
+    // it returns whether the bit transitioned from false to true.
+    bool add(size_t bit)
+    {
+        return !set(bit);
     }
 
     bool ensureSizeAndSet(size_t bit, size_t size)
@@ -169,6 +181,11 @@ public:
         if (bit >= size())
             return false;
         return quickClear(bit);
+    }
+
+    bool remove(size_t bit)
+    {
+        return clear(bit);
     }
 
     bool set(size_t bit, bool value)
@@ -269,57 +286,45 @@ public:
         return IntHash<uintptr_t>::hash(value);
     }
 
-    class SetBitsIterable {
+    class iterator {
     public:
-        SetBitsIterable(const BitVector& bitVector)
-            : m_bitVector(bitVector)
+        iterator()
+            : m_bitVector(nullptr)
+            , m_index(0)
         {
         }
 
-        class iterator {
-        public:
-            iterator()
-                : m_bitVector(nullptr)
-                , m_index(0)
-            {
-            }
+        iterator(const BitVector& bitVector, size_t index)
+            : m_bitVector(&bitVector)
+            , m_index(index)
+        {
+        }
 
-            iterator(const BitVector& bitVector, size_t index)
-                : m_bitVector(&bitVector)
-                , m_index(index)
-            {
-            }
+        size_t operator*() const { return m_index; }
 
-            size_t operator*() const { return m_index; }
+        iterator& operator++()
+        {
+            m_index = m_bitVector->findBit(m_index + 1, true);
+            return *this;
+        }
 
-            iterator& operator++()
-            {
-                m_index = m_bitVector->findBit(m_index + 1, true);
-                return *this;
-            }
+        bool operator==(const iterator& other) const
+        {
+            return m_index == other.m_index;
+        }
 
-            bool operator==(const iterator& other) const
-            {
-                return m_index == other.m_index;
-            }
-
-            bool operator!=(const iterator& other) const
-            {
-                return !(*this == other);
-            }
-        private:
-            const BitVector* m_bitVector;
-            size_t m_index;
-        };
-
-        iterator begin() const { return iterator(m_bitVector, m_bitVector.findBit(0, true)); }
-        iterator end() const { return iterator(m_bitVector, m_bitVector.size()); }
-
+        bool operator!=(const iterator& other) const
+        {
+            return !(*this == other);
+        }
     private:
-        const BitVector& m_bitVector;
+        const BitVector* m_bitVector;
+        size_t m_index;
     };
 
-    SetBitsIterable setBits() const { return SetBitsIterable(*this); }
+    // Use this to iterate over set bits.
+    iterator begin() const { return iterator(*this, findBit(0, true)); }
+    iterator end() const { return iterator(*this, size()); }
 
 private:
     static unsigned bitsInPointer()

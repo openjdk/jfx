@@ -28,6 +28,7 @@
 
 #if ENABLE(VIDEO) && USE(AVFOUNDATION)
 
+#include "MediaPlaybackTarget.h"
 #include "MediaPlayerPrivateAVFoundation.h"
 #include <wtf/HashMap.h>
 
@@ -56,7 +57,11 @@ OBJC_CLASS AVAssetResourceLoadingRequest;
 
 typedef struct CGImage *CGImageRef;
 typedef struct __CVBuffer *CVPixelBufferRef;
-typedef struct OpaqueVTPixelTransferSession* VTPixelTransferSessionRef;
+#if PLATFORM(IOS)
+typedef struct  __CVOpenGLESTextureCache *CVOpenGLESTextureCacheRef;
+#else
+typedef struct __CVOpenGLTextureCache* CVOpenGLTextureCacheRef;
+#endif
 
 namespace WebCore {
 
@@ -64,10 +69,16 @@ class AudioSourceProviderAVFObjC;
 class AudioTrackPrivateAVFObjC;
 class InbandMetadataTextTrackPrivateAVF;
 class InbandTextTrackPrivateAVFObjC;
-class MediaPlaybackTarget;
 class MediaSelectionGroupAVFObjC;
+class PixelBufferConformerCV;
 class VideoTrackPrivateAVFObjC;
 class WebCoreAVFResourceLoader;
+class TextureCacheCV;
+class VideoTextureCopierCV;
+
+#if PLATFORM(IOS) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+class VideoFullscreenLayerManager;
+#endif
 
 class MediaPlayerPrivateAVFoundationObjC : public MediaPlayerPrivateAVFoundation {
 public:
@@ -136,7 +147,7 @@ public:
 
 private:
     // engine support
-    static void getSupportedTypes(HashSet<String>& types);
+    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
     static bool supportsKeySystem(const String& keySystem, const String& mimeType);
 
@@ -152,15 +163,17 @@ private:
     virtual MediaTime currentMediaTime() const override;
     virtual void setVolume(float) override;
     virtual void setClosedCaptionsVisible(bool) override;
-    virtual void paint(GraphicsContext*, const FloatRect&) override;
-    virtual void paintCurrentFrameInContext(GraphicsContext*, const FloatRect&) override;
+    virtual void paint(GraphicsContext&, const FloatRect&) override;
+    virtual void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override;
     virtual PlatformLayer* platformLayer() const override;
-#if PLATFORM(IOS)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
     virtual void setVideoFullscreenLayer(PlatformLayer*) override;
     virtual void setVideoFullscreenFrame(FloatRect) override;
     virtual void setVideoFullscreenGravity(MediaPlayer::VideoGravity) override;
     virtual void setVideoFullscreenMode(MediaPlayer::VideoFullscreenMode) override;
+#endif
 
+#if PLATFORM(IOS)
     virtual NSArray *timedMetadata() const override;
     virtual String accessLog() const override;
     virtual String errorLog() const override;
@@ -205,7 +218,8 @@ private:
 
     virtual void updateVideoLayerGravity() override;
 
-    virtual bool hasSingleSecurityOrigin() const override;
+    bool hasSingleSecurityOrigin() const override;
+    bool didPassCORSAccessCheck() const override;
 
     MediaTime getStartDate() const override;
 
@@ -224,7 +238,7 @@ private:
     void createImageGenerator();
     void destroyImageGenerator();
     RetainPtr<CGImageRef> createImageForTimeInRect(float, const FloatRect&);
-    void paintWithImageGenerator(GraphicsContext*, const FloatRect&);
+    void paintWithImageGenerator(GraphicsContext&, const FloatRect&);
 
 #if HAVE(AVFOUNDATION_VIDEO_OUTPUT)
     void createVideoOutput();
@@ -232,9 +246,15 @@ private:
     RetainPtr<CVPixelBufferRef> createPixelBuffer();
     void updateLastImage();
     bool videoOutputHasAvailableFrame();
-    void paintWithVideoOutput(GraphicsContext*, const FloatRect&);
+    void paintWithVideoOutput(GraphicsContext&, const FloatRect&);
     virtual PassNativeImagePtr nativeImageForCurrentTime() override;
     void waitForVideoOutputMediaDataWillChange();
+
+    void createOpenGLVideoOutput();
+    void destroyOpenGLVideoOutput();
+    void updateLastOpenGLImage();
+
+    bool copyVideoTextureToPlatformTexture(GraphicsContext3D*, Platform3DObject, GC3Denum target, GC3Dint level, GC3Denum internalFormat, GC3Denum format, GC3Denum type, bool premultiplyAlpha, bool flipY) override;
 #endif
 
 #if ENABLE(ENCRYPTED_MEDIA)
@@ -244,7 +264,7 @@ private:
 #endif
 
 #if ENABLE(ENCRYPTED_MEDIA_V2)
-    std::unique_ptr<CDMSession> createSession(const String& keySystem) override;
+    std::unique_ptr<CDMSession> createSession(const String& keySystem, CDMSessionClient*) override;
 #endif
 
     virtual String languageOfPrimaryAudioTrack() const override;
@@ -304,10 +324,8 @@ private:
     RetainPtr<AVPlayer> m_avPlayer;
     RetainPtr<AVPlayerItem> m_avPlayerItem;
     RetainPtr<AVPlayerLayer> m_videoLayer;
-#if PLATFORM(IOS)
-    RetainPtr<PlatformLayer> m_videoInlineLayer;
-    RetainPtr<PlatformLayer> m_videoFullscreenLayer;
-    FloatRect m_videoFullscreenFrame;
+#if PLATFORM(IOS) || (PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE))
+    std::unique_ptr<VideoFullscreenLayerManager> m_videoFullscreenLayerManager;
     MediaPlayer::VideoGravity m_videoFullscreenGravity;
     RetainPtr<PlatformLayer> m_textTrackRepresentationLayer;
 #endif
@@ -327,11 +345,14 @@ private:
     RetainPtr<WebCoreAVFPullDelegate> m_videoOutputDelegate;
     RetainPtr<CGImageRef> m_lastImage;
     dispatch_semaphore_t m_videoOutputSemaphore;
+
+    RetainPtr<AVPlayerItemVideoOutput> m_openGLVideoOutput;
+    std::unique_ptr<TextureCacheCV> m_textureCache;
+    std::unique_ptr<VideoTextureCopierCV> m_videoTextureCopier;
+    RetainPtr<CVPixelBufferRef> m_lastOpenGLImage;
 #endif
 
-#if USE(VIDEOTOOLBOX)
-    RetainPtr<VTPixelTransferSessionRef> m_pixelTransferSession;
-#endif
+    std::unique_ptr<PixelBufferConformerCV> m_pixelBufferConformer;
 
 #if HAVE(AVFOUNDATION_LOADER_DELEGATE)
     friend class WebCoreAVFResourceLoader;
@@ -362,6 +383,7 @@ private:
 
 #if PLATFORM(MAC) && ENABLE(WIRELESS_PLAYBACK_TARGET)
     RetainPtr<AVOutputContext> m_outputContext;
+    RefPtr<MediaPlaybackTarget> m_playbackTarget { nullptr };
 #endif
 
     mutable RetainPtr<NSArray> m_cachedSeekableRanges;

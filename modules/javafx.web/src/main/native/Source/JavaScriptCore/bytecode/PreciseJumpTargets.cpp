@@ -54,6 +54,7 @@ static void getJumpTargetsForBytecodeOffset(CodeBlock* codeBlock, Interpreter* i
     case op_jnlesseq:
     case op_jngreater:
     case op_jngreatereq:
+    case op_save: // The jump of op_save is purely for calculating liveness.
         out.append(bytecodeOffset + current[3].u.operand);
         break;
     case op_switch_imm:
@@ -73,9 +74,6 @@ static void getJumpTargetsForBytecodeOffset(CodeBlock* codeBlock, Interpreter* i
         out.append(bytecodeOffset + current[2].u.operand);
         break;
     }
-    case op_check_has_instance:
-        out.append(bytecodeOffset + current[4].u.operand);
-        break;
     case op_loop_hint:
         out.append(bytecodeOffset);
         break;
@@ -93,8 +91,11 @@ void computePreciseJumpTargets(CodeBlock* codeBlock, Vector<unsigned, 32>& out)
     if (!codeBlock->numberOfJumpTargets())
         return;
 
-    for (unsigned i = codeBlock->numberOfExceptionHandlers(); i--;)
+    for (unsigned i = codeBlock->numberOfExceptionHandlers(); i--;) {
         out.append(codeBlock->exceptionHandler(i).target);
+        out.append(codeBlock->exceptionHandler(i).start);
+        out.append(codeBlock->exceptionHandler(i).end);
+    }
 
     Interpreter* interpreter = codeBlock->vm()->interpreter;
     Instruction* instructionsBegin = codeBlock->instructions().begin();
@@ -119,6 +120,7 @@ void computePreciseJumpTargets(CodeBlock* codeBlock, Vector<unsigned, 32>& out)
         lastValue = value;
     }
     out.resize(toIndex);
+    out.shrinkToFit();
 }
 
 void findJumpTargetsForBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset, Vector<unsigned, 1>& out)

@@ -57,7 +57,7 @@ public:
         // for sunken PutStacks in the presence of interesting control flow merges, and where the
         // value being PutStack'd is also otherwise live in the DFG code. We could work around this
         // by doing the sinking over CPS, or maybe just by doing really smart hoisting. It's also
-        // possible that the duplicate Phi graph can be deduplicated by LLVM. It would be best if we
+        // possible that the duplicate Phi graph can be deduplicated by B3. It would be best if we
         // could observe that there is already a Phi graph in place that does what we want. In
         // principle if we have a request to place a Phi at a particular place, we could just check
         // if there is already a Phi that does what we want. Because PutStackSinkingPhase runs just
@@ -75,6 +75,8 @@ public:
             dataLog("Graph before PutStack sinking:\n");
             m_graph.dump();
         }
+
+        m_graph.ensureDominators();
 
         SSACalculator ssaCalculator(m_graph);
         InsertionSet insertionSet(m_graph);
@@ -106,31 +108,29 @@ public:
                     if (verbose)
                         dataLog("Live at ", node, ": ", live, "\n");
 
+                    Vector<VirtualRegister, 4> reads;
+                    Vector<VirtualRegister, 4> writes;
                     auto escapeHandler = [&] (VirtualRegister operand) {
                         if (operand.isHeader())
                             return;
                         if (verbose)
                             dataLog("    ", operand, " is live at ", node, "\n");
-                        live.operand(operand) = true;
+                        reads.append(operand);
                     };
 
-                    // FIXME: This might mishandle LoadVarargs and ForwardVarargs. It might make us
-                    // think that the locals being written are stack-live here. They aren't. This
-                    // should be harmless since we overwrite them anyway, but still, it's sloppy.
-                    // https://bugs.webkit.org/show_bug.cgi?id=145295
+                    auto writeHandler = [&] (VirtualRegister operand) {
+                        RELEASE_ASSERT(node->op() == PutStack || node->op() == LoadVarargs || node->op() == ForwardVarargs);
+                        writes.append(operand);
+                    };
+
                     preciseLocalClobberize(
-                        m_graph, node, escapeHandler, escapeHandler,
-                        [&] (VirtualRegister operand, LazyNode source) {
-                            RELEASE_ASSERT(source.isNode());
+                        m_graph, node, escapeHandler, writeHandler,
+                        [&] (VirtualRegister, LazyNode) { });
 
-                            if (source.asNode() == node) {
-                                // This is a load. Ignore it.
-                                return;
-                            }
-
-                            RELEASE_ASSERT(node->op() == PutStack);
-                            live.operand(operand) = false;
-                        });
+                    for (VirtualRegister operand : writes)
+                        live.operand(operand) = false;
+                    for (VirtualRegister operand : reads)
+                        live.operand(operand) = true;
                 }
 
                 if (live == liveAtHead[block])
@@ -203,10 +203,13 @@ public:
         //     Represents the fact that the original code would have done a PutStack but we haven't
         //     identified an operation that would have observed that PutStack.
         //
-        // This code has some interesting quirks because of the fact that neither liveness nor
-        // deferrals are very precise. They are only precise enough to be able to correctly tell us
-        // when we may [sic] need to execute PutStacks. This means that they may report the need to
-        // execute a PutStack in cases where we actually don't really need it, and that's totally OK.
+        // We need to be precise about liveness in this phase because not doing so
+        // could cause us to insert a PutStack before a node we thought may escape a
+        // value that it doesn't really escape. Sinking this PutStack above such a node may
+        // cause us to insert a GetStack that we forward to the Phi we're feeding into the
+        // sunken PutStack. Inserting such a GetStack could cause us to load garbage and
+        // can confuse the AI to claim untrue things (like that the program will exit when
+        // it really won't).
         BlockMap<Operands<FlushFormat>> deferredAtHead(m_graph);
         BlockMap<Operands<FlushFormat>> deferredAtTail(m_graph);
 
@@ -217,7 +220,8 @@ public:
                 Operands<FlushFormat>(OperandsLike, block->variablesAtHead);
         }
 
-        deferredAtHead.atIndex(0).fill(ConflictingFlush);
+        for (unsigned local = deferredAtHead.atIndex(0).numberOfLocals(); local--;)
+            deferredAtHead.atIndex(0).local(local) = ConflictingFlush;
 
         do {
             changed = false;
@@ -230,30 +234,65 @@ public:
                         dataLog("Deferred at ", node, ":", deferred, "\n");
 
                     if (node->op() == GetStack) {
+                        // Handle the case that the input doesn't match our requirements. This is
+                        // really a bug, but it's a benign one if we simply don't run this phase.
+                        // It usually arises because of patterns like:
+                        //
+                        // if (thing)
+                        //     PutStack()
+                        // ...
+                        // if (thing)
+                        //     GetStack()
+                        //
+                        // Or:
+                        //
+                        // if (never happens)
+                        //     GetStack()
+                        //
+                        // Because this phase runs early in SSA, it should be sensible to enforce
+                        // that no such code pattern has arisen yet. So, when validation is
+                        // enabled, we assert that we aren't seeing this. But with validation
+                        // disabled we silently let this fly and we just abort this phase.
+                        // FIXME: Get rid of all remaining cases of conflicting GetStacks.
+                        // https://bugs.webkit.org/show_bug.cgi?id=150398
+
+                        bool isConflicting =
+                            deferred.operand(node->stackAccessData()->local) == ConflictingFlush;
+
+                        if (validationEnabled())
+                            DFG_ASSERT(m_graph, node, !isConflicting);
+
+                        if (isConflicting) {
+                            // Oh noes! Abort!!
+                            return false;
+                        }
+
                         // A GetStack doesn't affect anything, since we know which local we are reading
                         // from.
+                        continue;
+                    } else if (node->op() == PutStack) {
+                        VirtualRegister operand = node->stackAccessData()->local;
+                        deferred.operand(operand) = node->stackAccessData()->format;
                         continue;
                     }
 
                     auto escapeHandler = [&] (VirtualRegister operand) {
+                        if (verbose)
+                            dataLog("For ", node, " escaping ", operand, "\n");
                         if (operand.isHeader())
                             return;
                         // We will materialize just before any reads.
                         deferred.operand(operand) = DeadFlush;
                     };
 
+                    auto writeHandler = [&] (VirtualRegister operand) {
+                        RELEASE_ASSERT(node->op() == LoadVarargs || node->op() == ForwardVarargs);
+                        deferred.operand(operand) = DeadFlush;
+                    };
+
                     preciseLocalClobberize(
-                        m_graph, node, escapeHandler, escapeHandler,
-                        [&] (VirtualRegister operand, LazyNode source) {
-                            RELEASE_ASSERT(source.isNode());
-
-                            if (source.asNode() == node) {
-                                // This is a load. Ignore it.
-                                return;
-                            }
-
-                            deferred.operand(operand) = node->stackAccessData()->format;
-                        });
+                        m_graph, node, escapeHandler, writeHandler,
+                        [&] (VirtualRegister, LazyNode) { });
                 }
 
                 if (deferred == deferredAtTail[block])
@@ -313,13 +352,13 @@ public:
             indexToOperand.append(operand);
         }
 
-        HashSet<Node*> putLocalsToSink;
+        HashSet<Node*> putStacksToSink;
 
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             for (Node* node : *block) {
                 switch (node->op()) {
                 case PutStack:
-                    putLocalsToSink.add(node);
+                    putStacksToSink.add(node);
                     ssaCalculator.newDef(
                         operandToVariable.operand(node->stackAccessData()->local),
                         block, node->child1().node());
@@ -351,7 +390,7 @@ public:
                 if (verbose)
                     dataLog("Adding Phi for ", operand, " at ", pointerDump(block), "\n");
 
-                Node* phiNode = m_graph.addNode(SpecHeapTop, Phi, NodeOrigin());
+                Node* phiNode = m_graph.addNode(SpecHeapTop, Phi, block->at(0)->origin.withInvalidExit());
                 phiNode->mergeFlags(resultFor(format));
                 return phiNode;
             });
@@ -406,6 +445,10 @@ public:
                     StackAccessData* data = node->stackAccessData();
                     FlushFormat format = deferred.operand(data->local);
                     if (!isConcrete(format)) {
+                        DFG_ASSERT(
+                            m_graph, node,
+                            deferred.operand(data->local) != ConflictingFlush);
+
                         // This means there is no deferral. No deferral means that the most
                         // authoritative value for this stack slot is what is stored in the stack. So,
                         // keep the GetStack.
@@ -427,12 +470,18 @@ public:
 
                 default: {
                     auto escapeHandler = [&] (VirtualRegister operand) {
+                        if (verbose)
+                            dataLog("For ", node, " escaping ", operand, "\n");
+
                         if (operand.isHeader())
                             return;
 
                         FlushFormat format = deferred.operand(operand);
-                        if (!isConcrete(format))
+                        if (!isConcrete(format)) {
+                            // It's dead now, rather than conflicting.
+                            deferred.operand(operand) = DeadFlush;
                             return;
+                        }
 
                         // Gotta insert a PutStack.
                         if (verbose)
@@ -444,13 +493,23 @@ public:
                         insertionSet.insertNode(
                             nodeIndex, SpecNone, PutStack, node->origin,
                             OpInfo(m_graph.m_stackAccessData.add(operand, format)),
-                            Edge(incoming, useKindFor(format)));
+                            Edge(incoming, uncheckedUseKindFor(format)));
 
                         deferred.operand(operand) = DeadFlush;
                     };
 
+                    auto writeHandler = [&] (VirtualRegister operand) {
+                        // LoadVarargs and ForwardVarargs are unconditional writes to the stack
+                        // locations they claim to write to. They do not read from the stack
+                        // locations they write to. This makes those stack locations dead right
+                        // before a LoadVarargs/ForwardVarargs. This means we should never sink
+                        // PutStacks right to this point.
+                        RELEASE_ASSERT(node->op() == LoadVarargs || node->op() == ForwardVarargs);
+                        deferred.operand(operand) = DeadFlush;
+                    };
+
                     preciseLocalClobberize(
-                        m_graph, node, escapeHandler, escapeHandler,
+                        m_graph, node, escapeHandler, writeHandler,
                         [&] (VirtualRegister, LazyNode) { });
                     break;
                 } }
@@ -468,7 +527,7 @@ public:
                         dataLog("Creating Upsilon for ", operand, " at ", pointerDump(block), "->", pointerDump(successorBlock), "\n");
                     FlushFormat format = deferredAtHead[successorBlock].operand(operand);
                     DFG_ASSERT(m_graph, nullptr, isConcrete(format));
-                    UseKind useKind = useKindFor(format);
+                    UseKind useKind = uncheckedUseKindFor(format);
 
                     // We need to get a value for the stack slot. This phase doesn't really have a
                     // good way of determining if a stack location got clobbered. It just knows if
@@ -499,21 +558,16 @@ public:
         }
 
         // Finally eliminate the sunken PutStacks by turning them into Checks. This keeps whatever
-        // type check they were doing. Also prepend KillStacks to them to ensure that we know that
-        // the relevant value was *not* stored to the stack.
+        // type check they were doing.
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                 Node* node = block->at(nodeIndex);
 
-                if (!putLocalsToSink.contains(node))
+                if (!putStacksToSink.contains(node))
                     continue;
 
-                insertionSet.insertNode(
-                    nodeIndex, SpecNone, KillStack, node->origin, OpInfo(node->stackAccessData()->local.offset()));
                 node->remove();
             }
-
-            insertionSet.execute(block);
         }
 
         if (verbose) {

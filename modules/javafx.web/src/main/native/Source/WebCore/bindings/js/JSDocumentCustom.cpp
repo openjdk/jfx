@@ -20,6 +20,7 @@
 #include "config.h"
 #include "JSDocument.h"
 
+#include "CustomElementDefinitions.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -35,6 +36,7 @@
 #include "SVGDocument.h"
 #include "ScriptController.h"
 #include "TouchList.h"
+#include "XMLDocument.h"
 #include <wtf/GetPtr.h>
 
 #if ENABLE(WEBGL)
@@ -50,36 +52,34 @@ using namespace JSC;
 
 namespace WebCore {
 
-JSValue JSDocument::location(ExecState* exec) const
+static inline JSValue createNewDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObject, Document& document)
 {
-    RefPtr<Frame> frame = impl().frame();
-    if (!frame)
-        return jsNull();
+    JSObject* wrapper;
+    if (document.isHTMLDocument())
+        wrapper = CREATE_DOM_WRAPPER(&globalObject, HTMLDocument, &document);
+    else if (document.isSVGDocument())
+        wrapper = CREATE_DOM_WRAPPER(&globalObject, SVGDocument, &document);
+    else if (document.isXMLDocument())
+        wrapper = CREATE_DOM_WRAPPER(&globalObject, XMLDocument, &document);
+    else
+        wrapper = CREATE_DOM_WRAPPER(&globalObject, Document, &document);
 
-    RefPtr<Location> location = frame->document()->domWindow()->location();
-    if (JSObject* wrapper = getCachedWrapper(globalObject()->world(), location.get()))
-        return wrapper;
+    // Make sure the document is kept around by the window object, and works right with the
+    // back/forward cache.
+    if (!document.frame()) {
+        size_t nodeCount = 0;
+        for (Node* n = &document; n; n = NodeTraversal::next(*n))
+            ++nodeCount;
 
-    JSLocation* jsLocation = JSLocation::create(getDOMStructure<JSLocation>(exec->vm(), globalObject()), globalObject(), *location);
-    cacheWrapper(globalObject()->world(), location.get(), jsLocation);
-    return jsLocation;
+        // FIXME: Adopt reportExtraMemoryVisited, and switch to reportExtraMemoryAllocated.
+        // https://bugs.webkit.org/show_bug.cgi?id=142595
+        state.heap()->deprecatedReportExtraMemory(nodeCount * sizeof(Node));
+    }
+
+    return wrapper;
 }
 
-void JSDocument::setLocation(ExecState* exec, JSValue value)
-{
-    String locationString = value.toString(exec)->value(exec);
-    if (exec->hadException())
-        return;
-
-    RefPtr<Frame> frame = impl().frame();
-    if (!frame)
-        return;
-
-    if (RefPtr<Location> location = frame->document()->domWindow()->location())
-        location->setHref(locationString, activeDOMWindow(exec), firstDOMWindow(exec));
-}
-
-JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* document)
+JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, Document* document)
 {
     if (!document)
         return jsNull();
@@ -89,62 +89,89 @@ JSValue toJS(ExecState* exec, JSDOMGlobalObject* globalObject, Document* documen
         return wrapper;
 
     if (DOMWindow* domWindow = document->domWindow()) {
-        globalObject = toJSDOMWindow(toJS(exec, domWindow));
+        globalObject = toJSDOMWindow(toJS(state, domWindow));
         // Creating a wrapper for domWindow might have created a wrapper for document as well.
         wrapper = getCachedWrapper(globalObject->world(), document);
         if (wrapper)
             return wrapper;
     }
 
-    if (document->isHTMLDocument())
-        wrapper = CREATE_DOM_WRAPPER(globalObject, HTMLDocument, document);
-    else if (document->isSVGDocument())
-        wrapper = CREATE_DOM_WRAPPER(globalObject, SVGDocument, document);
-    else
-        wrapper = CREATE_DOM_WRAPPER(globalObject, Document, document);
-
-    // Make sure the document is kept around by the window object, and works right with the
-    // back/forward cache.
-    if (!document->frame()) {
-        size_t nodeCount = 0;
-        for (Node* n = document; n; n = NodeTraversal::next(*n))
-            nodeCount++;
-
-        // FIXME: Adopt reportExtraMemoryVisited, and switch to reportExtraMemoryAllocated.
-        // https://bugs.webkit.org/show_bug.cgi?id=142595
-        exec->heap()->deprecatedReportExtraMemory(nodeCount * sizeof(Node));
-    }
-
-    return wrapper;
+    return createNewDocumentWrapper(*state, *globalObject, *document);
 }
 
-JSValue JSDocument::prepend(ExecState* state)
+JSValue toJSNewlyCreated(ExecState* state, JSDOMGlobalObject* globalObject, Document* document)
+{
+    return document ? createNewDocumentWrapper(*state, *globalObject, *document) : jsNull();
+}
+
+JSValue JSDocument::prepend(ExecState& state)
 {
     ExceptionCode ec = 0;
-    impl().prepend(toNodeOrStringVector(*state), ec);
-    setDOMException(state, ec);
+    wrapped().prepend(toNodeOrStringVector(state), ec);
+    setDOMException(&state, ec);
 
     return jsUndefined();
 }
 
-JSValue JSDocument::append(ExecState* state)
+JSValue JSDocument::append(ExecState& state)
 {
     ExceptionCode ec = 0;
-    impl().append(toNodeOrStringVector(*state), ec);
-    setDOMException(state, ec);
+    wrapped().append(toNodeOrStringVector(state), ec);
+    setDOMException(&state, ec);
 
     return jsUndefined();
 }
 
 #if ENABLE(TOUCH_EVENTS)
-JSValue JSDocument::createTouchList(ExecState* exec)
+JSValue JSDocument::createTouchList(ExecState& state)
 {
     RefPtr<TouchList> touchList = TouchList::create();
 
-    for (size_t i = 0; i < exec->argumentCount(); i++)
-        touchList->append(JSTouch::toWrapped(exec->argument(i)));
+    for (size_t i = 0; i < state.argumentCount(); i++)
+        touchList->append(JSTouch::toWrapped(state.argument(i)));
 
-    return toJS(exec, globalObject(), touchList.release());
+    return toJS(&state, globalObject(), touchList.release());
+}
+#endif
+
+#if ENABLE(CUSTOM_ELEMENTS)
+JSValue JSDocument::defineCustomElement(ExecState& state)
+{
+    AtomicString tagName(state.argument(0).toString(&state)->toAtomicString(&state));
+    if (UNLIKELY(state.hadException()))
+        return jsUndefined();
+
+    JSObject* object = state.argument(1).getObject();
+    ConstructData callData;
+    if (!object || object->methodTable()->getConstructData(object, callData) == ConstructTypeNone)
+        return throwTypeError(&state, "The second argument must be a constructor");
+
+    Document& document = wrapped();
+    switch (CustomElementDefinitions::checkName(tagName)) {
+    case CustomElementDefinitions::NameStatus::Valid:
+        break;
+    case CustomElementDefinitions::NameStatus::ConflictsWithBuiltinNames:
+        return throwSyntaxError(&state, "Custom element name cannot be same as one of the builtin elements");
+    case CustomElementDefinitions::NameStatus::NoHyphen:
+        return throwSyntaxError(&state, "Custom element name must contain a hyphen");
+    case CustomElementDefinitions::NameStatus::ContainsUpperCase:
+        return throwSyntaxError(&state, "Custom element name cannot contain an upper case letter");
+    }
+
+    QualifiedName name(nullAtom, tagName, HTMLNames::xhtmlNamespaceURI);
+    auto& definitions = document.ensureCustomElementDefinitions();
+    if (definitions.findInterface(tagName)) {
+        ExceptionCodeWithMessage ec;
+        ec.code = NOT_SUPPORTED_ERR;
+        ec.message = "Cannot define multiple custom elements with the same tag name";
+        setDOMException(&state, ec);
+        return jsUndefined();
+    }
+    definitions.defineElement(name, JSCustomElementInterface::create(object, globalObject()));
+    PrivateName uniquePrivateName;
+    globalObject()->putDirect(globalObject()->vm(), uniquePrivateName, object);
+
+    return jsUndefined();
 }
 #endif
 

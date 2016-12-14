@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2007, 2008 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003, 2007, 2008, 2016 Apple Inc. All Rights Reserved.
  *  Copyright (C) 2009 Torch Mobile, Inc.
  *
  *  This library is free software; you can redistribute it and/or
@@ -23,30 +23,32 @@
 #include "RegExpConstructor.h"
 
 #include "Error.h"
+#include "GetterSetter.h"
 #include "JSCInlines.h"
 #include "RegExpMatchesArray.h"
 #include "RegExpPrototype.h"
+#include "StructureInlines.h"
 
 namespace JSC {
 
-static EncodedJSValue regExpConstructorInput(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorMultiline(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorLastMatch(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorLastParen(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorLeftContext(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorRightContext(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar1(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar2(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar3(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar4(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar5(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar6(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar7(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar8(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-static EncodedJSValue regExpConstructorDollar9(ExecState*, JSObject*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorInput(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorMultiline(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorLastMatch(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorLastParen(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorLeftContext(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorRightContext(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar1(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar2(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar3(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar4(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar5(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar6(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar7(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar8(ExecState*, EncodedJSValue, PropertyName);
+static EncodedJSValue regExpConstructorDollar9(ExecState*, EncodedJSValue, PropertyName);
 
-static void setRegExpConstructorInput(ExecState*, JSObject*, EncodedJSValue, EncodedJSValue);
-static void setRegExpConstructorMultiline(ExecState*, JSObject*, EncodedJSValue, EncodedJSValue);
+static void setRegExpConstructorInput(ExecState*, EncodedJSValue, EncodedJSValue);
+static void setRegExpConstructorMultiline(ExecState*, EncodedJSValue, EncodedJSValue);
 
 } // namespace JSC
 
@@ -89,7 +91,7 @@ RegExpConstructor::RegExpConstructor(VM& vm, Structure* structure, RegExpPrototy
 {
 }
 
-void RegExpConstructor::finishCreation(VM& vm, RegExpPrototype* regExpPrototype)
+void RegExpConstructor::finishCreation(VM& vm, RegExpPrototype* regExpPrototype, GetterSetter* speciesSymbol)
 {
     Base::finishCreation(vm, regExpPrototype->classInfo()->className);
     ASSERT(inherits(info()));
@@ -99,6 +101,8 @@ void RegExpConstructor::finishCreation(VM& vm, RegExpPrototype* regExpPrototype)
 
     // no. of arguments for constructor
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(2), ReadOnly | DontDelete | DontEnum);
+
+    putDirectNonIndexAccessor(vm, vm.propertyNames->speciesSymbol, speciesSymbol, Accessor | ReadOnly | DontEnum);
 }
 
 void RegExpConstructor::destroy(JSCell* cell)
@@ -155,95 +159,103 @@ bool RegExpConstructor::getOwnPropertySlot(JSObject* object, ExecState* exec, Pr
     return getStaticValueSlot<RegExpConstructor, InternalFunction>(exec, regExpConstructorTable, jsCast<RegExpConstructor*>(object), propertyName, slot);
 }
 
-EncodedJSValue regExpConstructorDollar1(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar1(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 1));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 1));
 }
 
-EncodedJSValue regExpConstructorDollar2(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar2(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 2));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 2));
 }
 
-EncodedJSValue regExpConstructorDollar3(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar3(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 3));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 3));
 }
 
-EncodedJSValue regExpConstructorDollar4(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar4(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 4));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 4));
 }
 
-EncodedJSValue regExpConstructorDollar5(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar5(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 5));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 5));
 }
 
-EncodedJSValue regExpConstructorDollar6(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar6(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 6));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 6));
 }
 
-EncodedJSValue regExpConstructorDollar7(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar7(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 7));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 7));
 }
 
-EncodedJSValue regExpConstructorDollar8(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar8(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 8));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 8));
 }
 
-EncodedJSValue regExpConstructorDollar9(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorDollar9(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 9));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 9));
 }
 
-EncodedJSValue regExpConstructorInput(ExecState*, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorInput(ExecState*, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->input());
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->input());
 }
 
-EncodedJSValue regExpConstructorMultiline(ExecState*, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorMultiline(ExecState*, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(jsBoolean(asRegExpConstructor(slotBase)->multiline()));
+    return JSValue::encode(jsBoolean(asRegExpConstructor(JSValue::decode(thisValue))->multiline()));
 }
 
-EncodedJSValue regExpConstructorLastMatch(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorLastMatch(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getBackref(exec, 0));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getBackref(exec, 0));
 }
 
-EncodedJSValue regExpConstructorLastParen(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorLastParen(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getLastParen(exec));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getLastParen(exec));
 }
 
-EncodedJSValue regExpConstructorLeftContext(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorLeftContext(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getLeftContext(exec));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getLeftContext(exec));
 }
 
-EncodedJSValue regExpConstructorRightContext(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName)
+EncodedJSValue regExpConstructorRightContext(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
-    return JSValue::encode(asRegExpConstructor(slotBase)->getRightContext(exec));
+    return JSValue::encode(asRegExpConstructor(JSValue::decode(thisValue))->getRightContext(exec));
 }
 
-void setRegExpConstructorInput(ExecState* exec, JSObject* baseObject, EncodedJSValue, EncodedJSValue value)
+void setRegExpConstructorInput(ExecState* exec, EncodedJSValue thisValue, EncodedJSValue value)
 {
-    if (auto constructor = jsDynamicCast<RegExpConstructor*>(baseObject))
+    if (auto constructor = jsDynamicCast<RegExpConstructor*>(JSValue::decode(thisValue)))
         constructor->setInput(exec, JSValue::decode(value).toString(exec));
 }
 
-void setRegExpConstructorMultiline(ExecState* exec, JSObject* baseObject, EncodedJSValue, EncodedJSValue value)
+void setRegExpConstructorMultiline(ExecState* exec, EncodedJSValue thisValue, EncodedJSValue value)
 {
-    if (auto constructor = jsDynamicCast<RegExpConstructor*>(baseObject))
+    if (auto constructor = jsDynamicCast<RegExpConstructor*>(JSValue::decode(thisValue)))
         constructor->setMultiline(JSValue::decode(value).toBoolean(exec));
 }
 
+inline Structure* getRegExpStructure(ExecState* exec, JSGlobalObject* globalObject, JSValue newTarget)
+{
+    Structure* structure = globalObject->regExpStructure();
+    if (newTarget != jsUndefined())
+        structure = InternalFunction::createSubclassStructure(exec, newTarget, structure);
+    return structure;
+}
+
 // ECMA 15.10.4
-JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args, bool callAsConstructor)
+JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const ArgList& args, JSValue newTarget)
 {
     JSValue arg0 = args.at(0);
     JSValue arg1 = args.at(1);
@@ -252,9 +264,13 @@ JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const A
         if (!arg1.isUndefined())
             return exec->vm().throwException(exec, createTypeError(exec, ASCIILiteral("Cannot supply flags when constructing one RegExp from another.")));
         // If called as a function, this just returns the first argument (see 15.10.3.1).
-        if (callAsConstructor) {
+        if (newTarget != jsUndefined()) {
             RegExp* regExp = static_cast<RegExpObject*>(asObject(arg0))->regExp();
-            return RegExpObject::create(exec->vm(), globalObject->regExpStructure(), regExp);
+            Structure* structure = getRegExpStructure(exec, globalObject, newTarget);
+            if (exec->hadException())
+                return nullptr;
+
+            return RegExpObject::create(exec->vm(), structure, regExp);
         }
         return asObject(arg0);
     }
@@ -276,13 +292,17 @@ JSObject* constructRegExp(ExecState* exec, JSGlobalObject* globalObject, const A
     RegExp* regExp = RegExp::create(vm, pattern, flags);
     if (!regExp->isValid())
         return vm.throwException(exec, createSyntaxError(exec, regExp->errorMessage()));
-    return RegExpObject::create(vm, globalObject->regExpStructure(), regExp);
+
+    Structure* structure = getRegExpStructure(exec, globalObject, newTarget);
+    if (exec->hadException())
+        return nullptr;
+    return RegExpObject::create(vm, structure, regExp);
 }
 
 static EncodedJSValue JSC_HOST_CALL constructWithRegExpConstructor(ExecState* exec)
 {
     ArgList args(exec);
-    return JSValue::encode(constructRegExp(exec, asInternalFunction(exec->callee())->globalObject(), args, true));
+    return JSValue::encode(constructRegExp(exec, asInternalFunction(exec->callee())->globalObject(), args, exec->newTarget()));
 }
 
 ConstructType RegExpConstructor::getConstructData(JSCell*, ConstructData& constructData)

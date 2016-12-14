@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -35,7 +35,6 @@
 #include <inspector/InspectorEnvironment.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace Inspector {
@@ -52,25 +51,24 @@ class InspectorDOMDebuggerAgent;
 class InspectorDOMStorageAgent;
 class InspectorDatabaseAgent;
 class InspectorLayerTreeAgent;
+class InspectorNetworkAgent;
 class InspectorPageAgent;
-class InspectorResourceAgent;
 class InspectorReplayAgent;
 class InspectorTimelineAgent;
-class InspectorWorkerAgent;
 class Page;
 class PageDebuggerAgent;
 class PageRuntimeAgent;
 class WebConsoleAgent;
-class WorkerGlobalScope;
-class WorkerRuntimeAgent;
 
 class InstrumentingAgents : public RefCounted<InstrumentingAgents> {
     WTF_MAKE_NONCOPYABLE(InstrumentingAgents);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    static PassRefPtr<InstrumentingAgents> create(Inspector::InspectorEnvironment& environment)
+    // FIXME: InstrumentingAgents could be uniquely owned by InspectorController if instrumentation
+    // cookies kept only a weak reference to InstrumentingAgents. Then, reset() would be unnecessary.
+    static Ref<InstrumentingAgents> create(Inspector::InspectorEnvironment& environment)
     {
-        return adoptRef(new InstrumentingAgents(environment));
+        return adoptRef(*new InstrumentingAgents(environment));
     }
     ~InstrumentingAgents() { }
     void reset();
@@ -92,14 +90,11 @@ public:
     InspectorDOMAgent* inspectorDOMAgent() const { return m_inspectorDOMAgent; }
     void setInspectorDOMAgent(InspectorDOMAgent* agent) { m_inspectorDOMAgent = agent; }
 
-    InspectorResourceAgent* inspectorResourceAgent() const { return m_inspectorResourceAgent; }
-    void setInspectorResourceAgent(InspectorResourceAgent* agent) { m_inspectorResourceAgent = agent; }
+    InspectorNetworkAgent* inspectorNetworkAgent() const { return m_inspectorNetworkAgent; }
+    void setInspectorNetworkAgent(InspectorNetworkAgent* agent) { m_inspectorNetworkAgent = agent; }
 
     PageRuntimeAgent* pageRuntimeAgent() const { return m_pageRuntimeAgent; }
     void setPageRuntimeAgent(PageRuntimeAgent* agent) { m_pageRuntimeAgent = agent; }
-
-    WorkerRuntimeAgent* workerRuntimeAgent() const { return m_workerRuntimeAgent; }
-    void setWorkerRuntimeAgent(WorkerRuntimeAgent* agent) { m_workerRuntimeAgent = agent; }
 
     InspectorTimelineAgent* inspectorTimelineAgent() const { return m_inspectorTimelineAgent; }
     void setInspectorTimelineAgent(InspectorTimelineAgent* agent) { m_inspectorTimelineAgent = agent; }
@@ -130,9 +125,6 @@ public:
     InspectorDOMDebuggerAgent* inspectorDOMDebuggerAgent() const { return m_inspectorDOMDebuggerAgent; }
     void setInspectorDOMDebuggerAgent(InspectorDOMDebuggerAgent* agent) { m_inspectorDOMDebuggerAgent = agent; }
 
-    InspectorWorkerAgent* inspectorWorkerAgent() const { return m_inspectorWorkerAgent; }
-    void setInspectorWorkerAgent(InspectorWorkerAgent* agent) { m_inspectorWorkerAgent = agent; }
-
     InspectorLayerTreeAgent* inspectorLayerTreeAgent() const { return m_inspectorLayerTreeAgent; }
     void setInspectorLayerTreeAgent(InspectorLayerTreeAgent* agent) { m_inspectorLayerTreeAgent = agent; }
 
@@ -141,29 +133,27 @@ private:
 
     Inspector::InspectorEnvironment& m_environment;
 
-    Inspector::InspectorAgent* m_inspectorAgent;
-    InspectorPageAgent* m_inspectorPageAgent;
-    InspectorCSSAgent* m_inspectorCSSAgent;
-    InspectorLayerTreeAgent* m_inspectorLayerTreeAgent;
-    WebConsoleAgent* m_webConsoleAgent;
-    InspectorDOMAgent* m_inspectorDOMAgent;
-    InspectorResourceAgent* m_inspectorResourceAgent;
-    PageRuntimeAgent* m_pageRuntimeAgent;
-    WorkerRuntimeAgent* m_workerRuntimeAgent;
-    InspectorTimelineAgent* m_inspectorTimelineAgent;
-    InspectorTimelineAgent* m_persistentInspectorTimelineAgent;
-    InspectorDOMStorageAgent* m_inspectorDOMStorageAgent;
+    Inspector::InspectorAgent* m_inspectorAgent { nullptr };
+    InspectorPageAgent* m_inspectorPageAgent { nullptr };
+    InspectorCSSAgent* m_inspectorCSSAgent { nullptr };
+    InspectorLayerTreeAgent* m_inspectorLayerTreeAgent { nullptr };
+    WebConsoleAgent* m_webConsoleAgent { nullptr };
+    InspectorDOMAgent* m_inspectorDOMAgent { nullptr };
+    InspectorNetworkAgent* m_inspectorNetworkAgent { nullptr };
+    PageRuntimeAgent* m_pageRuntimeAgent { nullptr };
+    InspectorTimelineAgent* m_inspectorTimelineAgent { nullptr };
+    InspectorTimelineAgent* m_persistentInspectorTimelineAgent { nullptr };
+    InspectorDOMStorageAgent* m_inspectorDOMStorageAgent { nullptr };
 #if ENABLE(WEB_REPLAY)
-    InspectorReplayAgent* m_inspectorReplayAgent;
+    InspectorReplayAgent* m_inspectorReplayAgent { nullptr };
 #endif
-    InspectorDatabaseAgent* m_inspectorDatabaseAgent;
-    InspectorApplicationCacheAgent* m_inspectorApplicationCacheAgent;
-    Inspector::InspectorDebuggerAgent* m_inspectorDebuggerAgent;
-    PageDebuggerAgent* m_pageDebuggerAgent;
-    InspectorDOMDebuggerAgent* m_inspectorDOMDebuggerAgent;
-    InspectorWorkerAgent* m_inspectorWorkerAgent;
+    InspectorDatabaseAgent* m_inspectorDatabaseAgent { nullptr };
+    InspectorApplicationCacheAgent* m_inspectorApplicationCacheAgent { nullptr };
+    Inspector::InspectorDebuggerAgent* m_inspectorDebuggerAgent { nullptr };
+    PageDebuggerAgent* m_pageDebuggerAgent { nullptr };
+    InspectorDOMDebuggerAgent* m_inspectorDOMDebuggerAgent { nullptr };
 };
 
-}
+} // namespace WebCore
 
 #endif // !defined(InstrumentingAgents_h)

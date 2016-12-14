@@ -35,8 +35,8 @@ class HTMLTextAreaElement final : public HTMLTextFormControlElement {
 public:
     static Ref<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
-    int cols() const { return m_cols; }
-    int rows() const { return m_rows; }
+    unsigned cols() const { return m_cols; }
+    unsigned rows() const { return m_rows; }
 
     bool shouldWrapText() const { return m_wrap != NoWrap; }
 
@@ -45,8 +45,8 @@ public:
     String defaultValue() const;
     void setDefaultValue(const String&);
     int textLength() const { return value().length(); }
-    virtual int maxLength() const override;
-    void setMaxLength(int, ExceptionCode&);
+    int maxLengthForBindings() const { return m_maxLength; }
+    int effectiveMaxLength() const { return m_maxLength; }
     // For ValidityState
     virtual String validationMessage() const override;
     virtual bool valueMissing() const override;
@@ -54,11 +54,12 @@ public:
     bool isValidValue(const String&) const;
 
     virtual TextControlInnerTextElement* innerTextElement() const override;
+    virtual Ref<RenderStyle> createInnerTextStyle(const RenderStyle&) const override;
 
     void rendererWillBeDestroyed();
 
-    void setCols(int);
-    void setRows(int);
+    void setCols(unsigned);
+    void setRows(unsigned);
 
     virtual bool willRespondToMouseClickEvents() override;
 
@@ -68,6 +69,9 @@ private:
     enum WrapMethod { NoWrap, SoftWrap, HardWrap };
 
     virtual void didAddUserAgentShadowRoot(ShadowRoot*) override;
+    virtual bool canHaveUserAgentShadowRoot() const override final { return true; }
+
+    void maxLengthAttributeChanged(const AtomicString& newValue);
 
     void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent*) const;
     static String sanitizeUserInputValue(const String&, unsigned maxLength);
@@ -107,7 +111,7 @@ private:
     virtual bool hasCustomFocusLogic() const override;
     virtual bool isMouseFocusable() const override;
     virtual bool isKeyboardFocusable(KeyboardEvent*) const override;
-    virtual void updateFocusAppearance(bool restorePreviousSelection) override;
+    virtual void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode) override;
 
     virtual void accessKeyAction(bool sendMouseEvents) override;
 
@@ -117,8 +121,9 @@ private:
     bool valueMissing(const String& value) const { return isRequiredFormControl() && !isDisabledOrReadOnly() && value.isEmpty(); }
     bool tooLong(const String&, NeedsToCheckDirtyFlag) const;
 
-    int m_rows;
-    int m_cols;
+    unsigned m_rows;
+    unsigned m_cols;
+    int m_maxLength { -1 };
     WrapMethod m_wrap;
     HTMLElement* m_placeholder;
     mutable String m_value;

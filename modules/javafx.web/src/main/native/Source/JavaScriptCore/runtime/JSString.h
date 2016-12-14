@@ -47,8 +47,6 @@ JSString* jsSingleCharacterString(VM*, UChar);
 JSString* jsSingleCharacterString(ExecState*, UChar);
 JSString* jsSubstring(VM*, const String&, unsigned offset, unsigned length);
 JSString* jsSubstring(ExecState*, const String&, unsigned offset, unsigned length);
-JSString* jsSubstring8(VM*, const String&, unsigned offset, unsigned length);
-JSString* jsSubstring8(ExecState*, const String&, unsigned offset, unsigned length);
 
 // Non-trivial strings are two or more characters long.
 // These functions are faster than just calling jsString.
@@ -64,6 +62,7 @@ JSString* jsOwnedString(ExecState*, const String&);
 
 JSRopeString* jsStringBuilder(VM*);
 
+bool isJSString(JSCell*);
 bool isJSString(JSValue);
 JSString* asString(JSValue);
 
@@ -108,7 +107,6 @@ private:
         Base::finishCreation(vm);
         m_length = length;
         setIs8Bit(m_value.impl()->is8Bit());
-        vm.m_newStringsSinceLastHashCons++;
     }
 
     void finishCreation(VM& vm, size_t length, size_t cost)
@@ -118,7 +116,6 @@ private:
         m_length = length;
         setIs8Bit(m_value.impl()->is8Bit());
         Heap::heap(this)->reportExtraMemoryAllocated(cost);
-        vm.m_newStringsSinceLastHashCons++;
     }
 
 protected:
@@ -127,7 +124,6 @@ protected:
         Base::finishCreation(vm);
         m_length = 0;
         setIs8Bit(true);
-        vm.m_newStringsSinceLastHashCons++;
     }
 
 public:
@@ -176,10 +172,7 @@ public:
     bool canGetIndex(unsigned i) { return i < m_length; }
     JSString* getIndex(ExecState*, unsigned);
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(StringType, StructureFlags), info());
-    }
+    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static size_t offsetOfLength() { return OBJECT_OFFSETOF(JSString, m_length); }
     static size_t offsetOfFlags() { return OBJECT_OFFSETOF(JSString, m_flags); }
@@ -188,11 +181,10 @@ public:
     DECLARE_EXPORT_INFO;
 
     static void dumpToStream(const JSCell*, PrintStream&);
+    static size_t estimatedSize(JSCell*);
     static void visitChildren(JSCell*, SlotVisitor&);
 
     enum {
-        HashConsLock = 1u << 2,
-        IsHashConsSingleton = 1u << 1,
         Is8Bit = 1u
     };
 
@@ -209,12 +201,6 @@ protected:
         else
             m_flags &= ~Is8Bit;
     }
-    bool shouldTryHashCons();
-    bool isHashConsSingleton() const { return m_flags & IsHashConsSingleton; }
-    void clearHashConsSingleton() { m_flags &= ~IsHashConsSingleton; }
-    void setHashConsSingleton() { m_flags |= IsHashConsSingleton; }
-    bool tryHashConsLock();
-    void releaseHashConsLock();
 
     mutable unsigned m_flags;
 
@@ -446,19 +432,23 @@ private:
 
 class JSString::SafeView {
 public:
-    SafeView();
     explicit SafeView(ExecState&, const JSString&);
-    operator StringView() const;
     StringView get() const;
 
+    bool is8Bit() const { return m_string->is8Bit(); }
+    unsigned length() const { return m_string->length(); }
+    const LChar* characters8() const { return get().characters8(); }
+    const UChar* characters16() const { return get().characters16(); }
+    UChar operator[](unsigned index) const { return get()[index]; }
+
 private:
-    ExecState* m_state { nullptr };
+    ExecState& m_state;
 
     // The following pointer is marked "volatile" to make the compiler leave it on the stack
     // or in a register as long as this object is alive, even after the last use of the pointer.
     // That's needed to prevent garbage collecting the string and possibly deleting the block
     // with the characters in it, and then using the StringView after that.
-    const JSString* volatile m_string { nullptr };
+    const JSString* volatile m_string;
 };
 
 JS_EXPORT_PRIVATE JSString* jsStringWithCacheSlowCase(VM&, StringImpl&);
@@ -565,21 +555,6 @@ inline JSString* jsSubstring(ExecState* exec, JSString* s, unsigned offset, unsi
     return JSRopeString::create(*exec, *s, offset, length);
 }
 
-inline JSString* jsSubstring8(VM* vm, const String& s, unsigned offset, unsigned length)
-{
-    ASSERT(offset <= static_cast<unsigned>(s.length()));
-    ASSERT(length <= static_cast<unsigned>(s.length()));
-    ASSERT(offset + length <= static_cast<unsigned>(s.length()));
-    if (!length)
-        return vm->smallStrings.emptyString();
-    if (length == 1) {
-        UChar c = s.characterAt(offset);
-        if (c <= maxSingleCharacterString)
-            return vm->smallStrings.singleCharacterString(c);
-    }
-    return JSString::createHasOtherOwner(*vm, StringImpl::createSubstringSharingImpl8(s.impl(), offset, length));
-}
-
 inline JSString* jsSubstring(VM* vm, const String& s, unsigned offset, unsigned length)
 {
     ASSERT(offset <= static_cast<unsigned>(s.length()));
@@ -616,10 +591,9 @@ inline JSRopeString* jsStringBuilder(VM* vm)
 inline JSString* jsEmptyString(ExecState* exec) { return jsEmptyString(&exec->vm()); }
 inline JSString* jsString(ExecState* exec, const String& s) { return jsString(&exec->vm(), s); }
 inline JSString* jsSingleCharacterString(ExecState* exec, UChar c) { return jsSingleCharacterString(&exec->vm(), c); }
-inline JSString* jsSubstring8(ExecState* exec, const String& s, unsigned offset, unsigned length) { return jsSubstring8(&exec->vm(), s, offset, length); }
 inline JSString* jsSubstring(ExecState* exec, const String& s, unsigned offset, unsigned length) { return jsSubstring(&exec->vm(), s, offset, length); }
 inline JSString* jsNontrivialString(ExecState* exec, const String& s) { return jsNontrivialString(&exec->vm(), s); }
-inline JSString* jsNontrivialString(ExecState* exec, String&& s) { return jsNontrivialString(&exec->vm(), WTF::move(s)); }
+inline JSString* jsNontrivialString(ExecState* exec, String&& s) { return jsNontrivialString(&exec->vm(), WTFMove(s)); }
 inline JSString* jsOwnedString(ExecState* exec, const String& s) { return jsOwnedString(&exec->vm(), s); }
 
 ALWAYS_INLINE JSString* jsStringWithCache(ExecState* exec, const String& s)
@@ -674,9 +648,14 @@ ALWAYS_INLINE bool JSString::getStringPropertySlot(ExecState* exec, unsigned pro
     return false;
 }
 
+inline bool isJSString(JSCell* cell)
+{
+    return cell->type() == StringType;
+}
+
 inline bool isJSString(JSValue v)
 {
-    return v.isCell() && v.asCell()->type() == StringType;
+    return v.isCell() && isJSString(v.asCell());
 }
 
 ALWAYS_INLINE StringView JSRopeString::unsafeView(ExecState& state) const
@@ -721,24 +700,15 @@ inline bool JSString::isSubstring() const
     return isRope() && static_cast<const JSRopeString*>(this)->isSubstring();
 }
 
-inline JSString::SafeView::SafeView()
-{
-}
-
 inline JSString::SafeView::SafeView(ExecState& state, const JSString& string)
-    : m_state(&state)
+    : m_state(state)
     , m_string(&string)
 {
 }
 
-inline JSString::SafeView::operator StringView() const
-{
-    return m_string->unsafeView(*m_state);
-}
-
 inline StringView JSString::SafeView::get() const
 {
-    return *this;
+    return m_string->unsafeView(m_state);
 }
 
 ALWAYS_INLINE JSString::SafeView JSString::view(ExecState* exec) const
@@ -763,7 +733,16 @@ inline JSString* JSValue::toString(ExecState* exec) const
 {
     if (isString())
         return jsCast<JSString*>(asCell());
-    return toStringSlowCase(exec);
+    bool returnEmptyStringOnError = true;
+    return toStringSlowCase(exec, returnEmptyStringOnError);
+}
+
+inline JSString* JSValue::toStringOrNull(ExecState* exec) const
+{
+    if (isString())
+        return jsCast<JSString*>(asCell());
+    bool returnEmptyStringOnError = false;
+    return toStringSlowCase(exec, returnEmptyStringOnError);
 }
 
 inline String JSValue::toWTFString(ExecState* exec) const

@@ -35,13 +35,12 @@ namespace WebCore {
 class WebMediaSessionManagerMac : public WebMediaSessionManager {
     friend class NeverDestroyed<WebMediaSessionManagerMac>;
 public:
-    WEBCORE_EXPORT static WebMediaSessionManager& singleton();
 
 private:
     WebMediaSessionManagerMac();
     virtual ~WebMediaSessionManagerMac();
 
-    virtual WebCore::MediaPlaybackTargetPicker& targetPicker();
+    virtual WebCore::MediaPlaybackTargetPicker& platformPicker();
 
     std::unique_ptr<WebCore::MediaPlaybackTargetPicker> m_targetPicker;
 };

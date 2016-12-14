@@ -89,14 +89,14 @@ static void registerAnimatedPropertiesFor##OwnerType() \
 // Property definition helpers (used in SVG*.cpp files)
 #define DEFINE_ANIMATED_PROPERTY(AnimatedPropertyTypeEnum, OwnerType, DOMAttribute, SVGDOMAttributeIdentifier, UpperProperty, LowerProperty) \
 const SVGPropertyInfo* OwnerType::LowerProperty##PropertyInfo() { \
-    DEPRECATED_DEFINE_STATIC_LOCAL(const SVGPropertyInfo, s_propertyInfo, \
+    static NeverDestroyed<const SVGPropertyInfo> s_propertyInfo = SVGPropertyInfo \
                         (AnimatedPropertyTypeEnum, \
                          PropertyIsReadWrite, \
                          DOMAttribute, \
                          SVGDOMAttributeIdentifier, \
                          &OwnerType::synchronize##UpperProperty, \
-                         &OwnerType::lookupOrCreate##UpperProperty##Wrapper)); \
-    return &s_propertyInfo; \
+                         &OwnerType::lookupOrCreate##UpperProperty##Wrapper); \
+    return &s_propertyInfo.get(); \
 }
 
 // Property declaration helpers (used in SVG*.h files)
@@ -123,7 +123,7 @@ public: \
     static const SVGPropertyInfo* LowerProperty##PropertyInfo(); \
     PropertyType& LowerProperty() const \
     { \
-        if (TearOffType* wrapper = SVGAnimatedProperty::lookupWrapper<UseOwnerType, TearOffType>(this, LowerProperty##PropertyInfo())) { \
+        if (auto wrapper = SVGAnimatedProperty::lookupWrapper<UseOwnerType, TearOffType>(this, LowerProperty##PropertyInfo())) { \
             if (wrapper->isAnimating()) \
                 return wrapper->currentAnimatedValue(); \
         } \
@@ -184,7 +184,7 @@ private: \
 DECLARE_ANIMATED_PROPERTY(TearOffType, PropertyType, UpperProperty, LowerProperty, ) \
 void detachAnimated##UpperProperty##ListWrappers(unsigned newListSize) \
 { \
-    if (TearOffType* wrapper = SVGAnimatedProperty::lookupWrapper<UseOwnerType, TearOffType>(this, LowerProperty##PropertyInfo())) \
+    if (auto wrapper = SVGAnimatedProperty::lookupWrapper<UseOwnerType, TearOffType>(this, LowerProperty##PropertyInfo())) \
         wrapper->detachListWrappers(newListSize); \
 }
 

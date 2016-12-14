@@ -3,6 +3,10 @@
  */
 #include "config.h"
 
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "GraphicsContext.h"
 #include "JavaEnv.h"
 #include "MediaPlayerPrivateJava.h"
@@ -164,12 +168,12 @@ std::unique_ptr<MediaPlayerPrivateInterface> MediaPlayerPrivate::CreateMediaEngi
     return std::unique_ptr<MediaPlayerPrivate>(new MediaPlayerPrivate(player));
 }
 
-void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String>& types)
+void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types)
 {
     LOG_TRACE0(">>MediaEngineSupportedTypes\n");
-    HashSet<String>& supportedTypes = GetSupportedTypes();
-    for (HashSet<String>::const_iterator it = supportedTypes.begin(); it != supportedTypes.end(); ++it) {
-        types.add(*it);
+    HashSet<String, ASCIICaseInsensitiveHash>& supportedTypes = GetSupportedTypes();
+    for (const auto& type : supportedTypes) {
+        types.add(type);
     }
     LOG_TRACE0("<<MediaEngineSupportedTypes\n");
 }
@@ -190,9 +194,9 @@ MediaPlayer::SupportsType MediaPlayerPrivate::MediaEngineSupportsType(const Medi
     return MediaPlayer::IsNotSupported;
 }
 
-HashSet<String>& MediaPlayerPrivate::GetSupportedTypes()
+HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes()
 {
-    static HashSet<String> supportedTypes;
+    static HashSet<String, ASCIICaseInsensitiveHash> supportedTypes;
     // TODO: refresh after change
 
     if (!supportedTypes.isEmpty()) {
@@ -227,14 +231,15 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
     : m_player(player)
     , m_networkState(MediaPlayer::Empty)
     , m_readyState(MediaPlayer::HaveNothing)
-    , m_didLoadingProgress(false)
     , m_isVisible(false)
     , m_hasVideo(false)
     , m_hasAudio(false)
     , m_paused(true)
     , m_seeking(false)
+    , m_seekTime(0)
     , m_duration(0)
     , m_bytesLoaded(0)
+    , m_didLoadingProgress(false)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
@@ -536,10 +541,10 @@ void MediaPlayerPrivate::setSize(const IntSize& size)
     CheckAndClearException(env);
 }
 
-void MediaPlayerPrivate::paint(GraphicsContext* gc, const FloatRect& r)
+void MediaPlayerPrivate::paint(GraphicsContext& gc, const FloatRect& r)
 {
 //    PLOG_TRACE4(">>MediaPlayerPrivate paint (%d, %d), [%d x %d]\n", r.x(), r.y(), r.width(), r.height());
-    if (!gc || gc->paintingDisabled()) {
+    if (gc.paintingDisabled()) {
         PLOG_TRACE0("<<MediaPlayerPrivate paint (!gc or paintingDisabled)\n");
         return;
     }
@@ -548,7 +553,7 @@ void MediaPlayerPrivate::paint(GraphicsContext* gc, const FloatRect& r)
         return;
     }
 
-    gc->platformContext()->rq().freeSpace(24)
+    gc.platformContext()->rq().freeSpace(24)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIAPLAYER
     << m_jPlayer << (jint)r.x() <<  (jint)r.y()
     << (jint)r.width() << (jint)r.height();
@@ -735,7 +740,7 @@ void MediaPlayerPrivate::notifyNewFrame()
 void MediaPlayerPrivate::notifyBufferChanged(std::unique_ptr<PlatformTimeRanges> timeRanges, int bytesLoaded)
 {
     PLOG_TRACE0("MediaPlayerPrivate notifyBufferChanged\n");
-    m_buffered = WTF::move(timeRanges);
+    m_buffered = std::move(timeRanges);
     m_bytesLoaded = bytesLoaded;
     m_didLoadingProgress = true;
 }

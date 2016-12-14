@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2011, 2016 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,8 @@
 #define WIRHostApplicationIdentifierKey         @"WIRHostApplicationIdentifierKey"
 #define WIRHostApplicationNameKey               @"WIRHostApplicationNameKey"
 #define WIRConnectionIdentifierKey              @"WIRConnectionIdentifierKey"
-#define WIRPageIdentifierKey                    @"WIRPageIdentifierKey"
+// COMPATABILITY(iOS 9): The key string is intentionally mismatched to support old relays.
+#define WIRTargetIdentifierKey                  @"WIRPageIdentifierKey"
 #define WIRHasLocalDebuggerKey                  @"WIRHasLocalDebuggerKey"
 #define WIRTitleKey                             @"WIRTitleKey"
 #define WIRURLKey                               @"WIRURLKey"
@@ -67,11 +68,13 @@
 #define WIRRawDataKey                           @"WIRRawDataKey"
 #define WIRListingMessage                       @"WIRListingMessage"
 #define WIRListingKey                           @"WIRListingKey"
+#define WIRRemoteAutomationEnabledKey           @"WIRRemoteAutomationEnabledKey"
 #define WIRDestinationKey                       @"WIRDestinationKey"
 #define WIRConnectionDiedMessage                @"WIRConnectionDiedMessage"
 #define WIRTypeKey                              @"WIRTypeKey"
 #define WIRTypeJavaScript                       @"WIRTypeJavaScript"
 #define WIRTypeWeb                              @"WIRTypeWeb"
+#define WIRTypeAutomation                       @"WIRTypeAutomation"
 #define WIRAutomaticallyPause                   @"WIRAutomaticallyPause"
 
 #define WIRAutomaticInspectionEnabledKey           @"WIRAutomaticInspectionEnabledKey"
@@ -79,6 +82,10 @@
 #define WIRAutomaticInspectionConfigurationMessage @"WIRAutomaticInspectionConfigurationMessage"
 #define WIRAutomaticInspectionRejectMessage        @"WIRAutomaticInspectionRejectMessage"
 #define WIRAutomaticInspectionCandidateMessage     @"WIRAutomaticInspectionCandidateMessage"
+
+#define WIRAutomationTargetIsPairedKey             @"WIRAutomationTargetIsPairedKey"
+#define WIRSessionIdentifierKey                    @"WIRSessionIdentifierKey"
+#define WIRAutomationSessionRequestMessage         @"WIRAutomationSessionRequestMessage"
 
 // These definitions are shared with a Simulator webinspectord and
 // OS X process communicating with it.

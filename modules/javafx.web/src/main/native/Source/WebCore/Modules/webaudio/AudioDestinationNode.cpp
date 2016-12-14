@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-AudioDestinationNode::AudioDestinationNode(AudioContext* context, float sampleRate)
+AudioDestinationNode::AudioDestinationNode(AudioContext& context, float sampleRate)
     : AudioNode(context, sampleRate)
     , m_currentSampleFrame(0)
     , m_isSilent(true)
@@ -53,27 +53,23 @@ AudioDestinationNode::~AudioDestinationNode()
     uninitialize();
 }
 
-void AudioDestinationNode::render(AudioBus* sourceBus, AudioBus* destinationBus, size_t numberOfFrames)
+void AudioDestinationNode::render(AudioBus*, AudioBus* destinationBus, size_t numberOfFrames)
 {
     // We don't want denormals slowing down any of the audio processing
     // since they can very seriously hurt performance.
     // This will take care of all AudioNodes because they all process within this scope.
     DenormalDisabler denormalDisabler;
 
-    context()->setAudioThread(currentThread());
+    context().setAudioThread(currentThread());
 
-    if (!context()->isInitialized()) {
+    if (!context().isInitialized()) {
         destinationBus->zero();
         setIsSilent(true);
         return;
     }
 
     // Let the context take care of any business at the start of each render quantum.
-    context()->handlePreRenderTasks();
-
-    // Prepare the local audio input provider for this render quantum.
-    if (sourceBus)
-        m_localAudioInputProvider.set(sourceBus);
+    context().handlePreRenderTasks();
 
     // This will cause the node(s) connected to us to process, which in turn will pull on their input(s),
     // all the way backwards through the rendering graph.
@@ -87,10 +83,10 @@ void AudioDestinationNode::render(AudioBus* sourceBus, AudioBus* destinationBus,
     }
 
     // Process nodes which need a little extra help because they are not connected to anything, but still need to process.
-    context()->processAutomaticPullNodes(numberOfFrames);
+    context().processAutomaticPullNodes(numberOfFrames);
 
     // Let the context take care of any business at the end of each render quantum.
-    context()->handlePostRenderTasks();
+    context().handlePostRenderTasks();
 
     // Advance current sample-frame.
     m_currentSampleFrame += numberOfFrames;
@@ -124,8 +120,7 @@ void AudioDestinationNode::updateIsEffectivelyPlayingAudio()
         return;
 
     m_isEffectivelyPlayingAudio = isEffectivelyPlayingAudio;
-    if (context())
-        context()->isPlayingAudioDidChange();
+    context().isPlayingAudioDidChange();
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
+#include <mutex>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -50,7 +51,7 @@ void ScrollingThread::dispatch(std::function<void ()> function)
     scrollingThread.createThreadIfNeeded();
 
     {
-        std::lock_guard<std::mutex> lock(singleton().m_functionsMutex);
+        std::lock_guard<Lock> lock(scrollingThread.m_functionsMutex);
         scrollingThread.m_functions.append(function);
     }
 
@@ -60,7 +61,7 @@ void ScrollingThread::dispatch(std::function<void ()> function)
 void ScrollingThread::dispatchBarrier(std::function<void ()> function)
 {
     dispatch([function]() mutable {
-        callOnMainThread(WTF::move(function));
+        callOnMainThread(WTFMove(function));
     });
 }
 
@@ -78,7 +79,7 @@ void ScrollingThread::createThreadIfNeeded()
 
     // Wait for the thread to initialize the run loop.
     {
-        std::unique_lock<std::mutex> lock(m_initializeRunLoopMutex);
+        std::unique_lock<Lock> lock(m_initializeRunLoopMutex);
 
         m_threadIdentifier = createThread(threadCallback, this, "WebCore: Scrolling");
 
@@ -106,8 +107,8 @@ void ScrollingThread::dispatchFunctionsFromScrollingThread()
     Vector<std::function<void ()>> functions;
 
     {
-        std::lock_guard<std::mutex> lock(m_functionsMutex);
-        functions = WTF::move(m_functions);
+        std::lock_guard<Lock> lock(m_functionsMutex);
+        functions = WTFMove(m_functions);
     }
 
     for (auto& function : functions)

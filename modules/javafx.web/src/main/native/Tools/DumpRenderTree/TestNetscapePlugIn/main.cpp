@@ -41,10 +41,17 @@ extern "C" void GlobalToLocal(Point*);
 
 using namespace std;
 
+#if defined(__GNUC__)
+#define CRASH() do { \
+    *(int *)(uintptr_t)0xbbadbeef = 0; \
+    __builtin_trap(); /* More reliable, but doesn't say BBADBEEF. */ \
+} while (false)
+#else
 #define CRASH() do { \
     *(int *)(uintptr_t)0xbbadbeef = 0; \
     ((void(*)())0)(); /* More reliable, but doesn't say BBADBEEF */ \
-} while(false)
+} while (false)
+#endif
 
 static bool getEntryPointsWasCalled;
 static bool initializeWasCalled;
@@ -116,6 +123,7 @@ NPError STDCALL NP_GetEntryPoints(NPPluginFuncs *pluginFuncs)
     pluginFuncs->print = NPP_Print;
     pluginFuncs->event = NPP_HandleEvent;
     pluginFuncs->urlnotify = NPP_URLNotify;
+    pluginFuncs->urlredirectnotify = NPP_URLRedirectNotify;
     pluginFuncs->getvalue = NPP_GetValue;
     pluginFuncs->setvalue = NPP_SetValue;
 
@@ -348,27 +356,28 @@ NPError NPP_SetWindow(NPP instance, NPWindow *window)
 {
     PluginObject* obj = static_cast<PluginObject*>(instance->pdata);
 
-    if (obj) {
-        obj->lastWindow = *window;
+    if (!obj)
+        return NPERR_GENERIC_ERROR;
 
-        if (obj->logSetWindow) {
-            pluginLog(instance, "NPP_SetWindow: %d %d", (int)window->width, (int)window->height);
-            obj->logSetWindow = FALSE;
-            executeScript(obj, "testRunner.notifyDone();");
-        }
+    obj->lastWindow = *window;
 
-        if (obj->onSetWindow)
-            executeScript(obj, obj->onSetWindow);
+    if (obj->logSetWindow) {
+        pluginLog(instance, "NPP_SetWindow: %d %d", (int)window->width, (int)window->height);
+        obj->logSetWindow = FALSE;
+        executeScript(obj, "testRunner.notifyDone();");
+    }
 
-        if (obj->testWindowOpen) {
-            testWindowOpen(instance);
-            obj->testWindowOpen = FALSE;
-        }
+    if (obj->onSetWindow)
+        executeScript(obj, obj->onSetWindow);
 
-        if (obj->testKeyboardFocusForPlugins) {
-            obj->eventLogging = true;
-            executeScript(obj, "eventSender.keyDown('A');");
-        }
+    if (obj->testWindowOpen) {
+        testWindowOpen(instance);
+        obj->testWindowOpen = FALSE;
+    }
+
+    if (obj->testKeyboardFocusForPlugins) {
+        obj->eventLogging = true;
+        executeScript(obj, "eventSender.keyDown('A');");
     }
 
     return obj->pluginTest->NPP_SetWindow(window);
@@ -797,6 +806,12 @@ void NPP_URLNotify(NPP instance, const char *url, NPReason reason, void *notifyD
          executeScript(obj, obj->onURLNotify);
 
     handleCallback(obj, url, reason, notifyData);
+}
+
+void NPP_URLRedirectNotify(NPP instance, const char *url, int32_t status, void *notifyData)
+{
+    PluginObject* obj = static_cast<PluginObject*>(instance->pdata);
+    obj->pluginTest->NPP_URLRedirectNotify(url, status, notifyData);
 }
 
 NPError NPP_GetValue(NPP instance, NPPVariable variable, void *value)

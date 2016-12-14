@@ -112,7 +112,7 @@ public:
 #if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
     static bool convertOverflowScrolling(StyleResolver&, CSSValue&);
 #endif
-    static RefPtr<FontFeatureSettings> convertFontFeatureSettings(StyleResolver&, CSSValue&);
+    static FontFeatureSettings convertFontFeatureSettings(StyleResolver&, CSSValue&);
     static SVGLength convertSVGLength(StyleResolver&, CSSValue&);
     static Vector<SVGLength> convertSVGLengthVector(StyleResolver&, CSSValue&);
     static Vector<SVGLength> convertStrokeDashArray(StyleResolver&, CSSValue&);
@@ -126,6 +126,17 @@ public:
     static EGlyphOrientation convertGlyphOrientationOrAuto(StyleResolver&, CSSValue&);
     static Optional<Length> convertLineHeight(StyleResolver&, CSSValue&, float multiplier = 1.f);
     static FontSynthesis convertFontSynthesis(StyleResolver&, CSSValue&);
+
+    static BreakBetween convertPageBreakBetween(StyleResolver&, CSSValue&);
+    static BreakInside convertPageBreakInside(StyleResolver&, CSSValue&);
+    static BreakBetween convertColumnBreakBetween(StyleResolver&, CSSValue&);
+    static BreakInside convertColumnBreakInside(StyleResolver&, CSSValue&);
+#if ENABLE(CSS_REGIONS)
+    static BreakBetween convertRegionBreakBetween(StyleResolver&, CSSValue&);
+    static BreakInside convertRegionBreakInside(StyleResolver&, CSSValue&);
+#endif
+
+    static HangingPunctuation convertHangingPunctuation(StyleResolver&, CSSValue&);
 
 private:
     friend class StyleBuilderCustom;
@@ -235,6 +246,9 @@ inline T StyleBuilderConverter::convertLineWidth(StyleResolver& styleResolver, C
             if (originalLength >= 1.0)
                 return 1;
         }
+        float minimumLineWidth = 1 / styleResolver.document().deviceScaleFactor();
+        if (result > 0 && result < minimumLineWidth)
+            return minimumLineWidth;
         return result;
     }
     default:
@@ -553,7 +567,7 @@ inline PassRefPtr<StyleReflection> StyleBuilderConverter::convertReflection(Styl
         return nullptr;
     }
 
-    CSSReflectValue& reflectValue = downcast<CSSReflectValue>(value);
+    auto& reflectValue = downcast<CSSReflectValue>(value);
 
     RefPtr<StyleReflection> reflection = StyleReflection::create();
     reflection->setDirection(*reflectValue.direction());
@@ -872,12 +886,12 @@ inline void StyleBuilderConverter::createImplicitNamedGridLinesFromGridArea(cons
         GridSpan areaSpan = direction == ForRows ? area.value.rows : area.value.columns;
         {
             auto& startVector = namedGridLines.add(area.key + "-start", Vector<unsigned>()).iterator->value;
-            startVector.append(areaSpan.resolvedInitialPosition.toInt());
+            startVector.append(areaSpan.resolvedInitialPosition());
             std::sort(startVector.begin(), startVector.end());
         }
         {
             auto& endVector = namedGridLines.add(area.key + "-end", Vector<unsigned>()).iterator->value;
-            endVector.append(areaSpan.resolvedFinalPosition.next().toInt());
+            endVector.append(areaSpan.resolvedFinalPosition());
             std::sort(endVector.begin(), endVector.end());
         }
     }
@@ -902,8 +916,8 @@ inline GridAutoFlow StyleBuilderConverter::convertGridAutoFlow(StyleResolver&, C
     if (!list.length())
         return RenderStyle::initialGridAutoFlow();
 
-    CSSPrimitiveValue& first = downcast<CSSPrimitiveValue>(*list.item(0));
-    CSSPrimitiveValue* second = downcast<CSSPrimitiveValue>(list.item(1));
+    auto& first = downcast<CSSPrimitiveValue>(*list.item(0));
+    auto* second = downcast<CSSPrimitiveValue>(list.item(1));
 
     GridAutoFlow autoFlow = RenderStyle::initialGridAutoFlow();
     switch (first.getValueID()) {
@@ -1004,25 +1018,25 @@ inline Optional<FilterOperations> StyleBuilderConverter::convertFilterOperations
     return Nullopt;
 }
 
-inline RefPtr<FontFeatureSettings> StyleBuilderConverter::convertFontFeatureSettings(StyleResolver&, CSSValue& value)
+inline FontFeatureSettings StyleBuilderConverter::convertFontFeatureSettings(StyleResolver&, CSSValue& value)
 {
     if (is<CSSPrimitiveValue>(value)) {
         ASSERT(downcast<CSSPrimitiveValue>(value).getValueID() == CSSValueNormal);
-        return nullptr;
+        return { };
     }
 
-    RefPtr<FontFeatureSettings> settings = FontFeatureSettings::create();
+    FontFeatureSettings settings;
     for (auto& item : downcast<CSSValueList>(value)) {
         auto& feature = downcast<CSSFontFeatureValue>(item.get());
-        settings->append(FontFeature(feature.tag(), feature.value()));
+        settings.insert(FontFeature(feature.tag(), feature.value()));
     }
-    return WTF::move(settings);
+    return settings;
 }
 
 #if PLATFORM(IOS)
 inline bool StyleBuilderConverter::convertTouchCallout(StyleResolver&, CSSValue& value)
 {
-    return !equalIgnoringCase(downcast<CSSPrimitiveValue>(value).getStringValue(), "none");
+    return !equalLettersIgnoringASCIICase(downcast<CSSPrimitiveValue>(value).getStringValue(), "none");
 }
 #endif
 
@@ -1208,6 +1222,72 @@ FontSynthesis StyleBuilderConverter::convertFontSynthesis(StyleResolver&, CSSVal
         }
     }
 
+    return result;
+}
+
+inline BreakBetween StyleBuilderConverter::convertPageBreakBetween(StyleResolver&, CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.getValueID() == CSSValueAlways)
+        return PageBreakBetween;
+    if (primitiveValue.getValueID() == CSSValueAvoid)
+        return AvoidPageBreakBetween;
+    return primitiveValue;
+}
+
+inline BreakInside StyleBuilderConverter::convertPageBreakInside(StyleResolver&, CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.getValueID() == CSSValueAvoid)
+        return AvoidPageBreakInside;
+    return primitiveValue;
+}
+
+inline BreakBetween StyleBuilderConverter::convertColumnBreakBetween(StyleResolver&, CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.getValueID() == CSSValueAlways)
+        return ColumnBreakBetween;
+    if (primitiveValue.getValueID() == CSSValueAvoid)
+        return AvoidColumnBreakBetween;
+    return primitiveValue;
+}
+
+inline BreakInside StyleBuilderConverter::convertColumnBreakInside(StyleResolver&, CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.getValueID() == CSSValueAvoid)
+        return AvoidColumnBreakInside;
+    return primitiveValue;
+}
+
+#if ENABLE(CSS_REGIONS)
+inline BreakBetween StyleBuilderConverter::convertRegionBreakBetween(StyleResolver&, CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.getValueID() == CSSValueAlways)
+        return RegionBreakBetween;
+    if (primitiveValue.getValueID() == CSSValueAvoid)
+        return AvoidRegionBreakBetween;
+    return primitiveValue;
+}
+
+inline BreakInside StyleBuilderConverter::convertRegionBreakInside(StyleResolver&, CSSValue& value)
+{
+    auto& primitiveValue = downcast<CSSPrimitiveValue>(value);
+    if (primitiveValue.getValueID() == CSSValueAvoid)
+        return AvoidRegionBreakInside;
+    return primitiveValue;
+}
+#endif
+
+inline HangingPunctuation StyleBuilderConverter::convertHangingPunctuation(StyleResolver&, CSSValue& value)
+{
+    HangingPunctuation result = RenderStyle::initialHangingPunctuation();
+    if (is<CSSValueList>(value)) {
+        for (auto& currentValue : downcast<CSSValueList>(value))
+            result |= downcast<CSSPrimitiveValue>(currentValue.get());
+    }
     return result;
 }
 

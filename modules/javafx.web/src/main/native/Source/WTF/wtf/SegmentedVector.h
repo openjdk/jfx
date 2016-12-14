@@ -91,6 +91,7 @@ namespace WTF {
     class SegmentedVector {
         friend class SegmentedVectorIterator<T, SegmentSize>;
         WTF_MAKE_NONCOPYABLE(SegmentedVector);
+        WTF_MAKE_FAST_ALLOCATED;
 
     public:
         typedef SegmentedVectorIterator<T, SegmentSize> Iterator;
@@ -131,18 +132,19 @@ namespace WTF {
             return at(size() - 1);
         }
 
-        template <typename U> void append(U&& value)
+        template<typename... Args>
+        void append(Args&&... args)
         {
             ++m_size;
             if (!segmentExistsFor(m_size - 1))
                 allocateSegment();
-            new (NotNull, &last()) T(std::forward<U>(value));
+            new (NotNull, &last()) T(std::forward<Args>(args)...);
         }
 
         template<typename... Args>
-        T& alloc(Args... args)
+        T& alloc(Args&&... args)
         {
-            append<T>(T(args...));
+            append(std::forward<Args>(args)...);
             return last();
         }
 

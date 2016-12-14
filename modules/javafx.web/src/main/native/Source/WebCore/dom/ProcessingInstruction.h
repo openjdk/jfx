@@ -45,7 +45,6 @@ public:
 
     const String& localHref() const { return m_localHref; }
     StyleSheet* sheet() const { return m_sheet.get(); }
-    void setCSSStyleSheet(PassRefPtr<CSSStyleSheet>);
 
     bool isCSS() const { return m_isCSS; }
 #if ENABLE(XSLT)
@@ -58,7 +57,7 @@ private:
 
     virtual String nodeName() const override;
     virtual NodeType nodeType() const override;
-    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    virtual Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
     virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
     virtual void removedFrom(ContainerNode&) override;
@@ -80,14 +79,14 @@ private:
     String m_localHref;
     String m_title;
     String m_media;
-    CachedResourceHandle<CachedResource> m_cachedSheet;
+    CachedResourceHandle<CachedResource> m_cachedSheet { nullptr };
     RefPtr<StyleSheet> m_sheet;
-    bool m_loading;
-    bool m_alternate;
-    bool m_createdByParser;
-    bool m_isCSS;
+    bool m_loading { false };
+    bool m_alternate { false };
+    bool m_createdByParser { false };
+    bool m_isCSS { false };
 #if ENABLE(XSLT)
-    bool m_isXSL;
+    bool m_isXSL { false };
 #endif
 };
 

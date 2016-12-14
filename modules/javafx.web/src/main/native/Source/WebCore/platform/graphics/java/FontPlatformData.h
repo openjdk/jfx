@@ -6,7 +6,7 @@
 
 #include <algorithm>
 #include "FontDescription.h"
-#include "TextFlags.h" //XXX: #include "FontOrientation.h"
+#include "TextFlags.h"
 #include "JavaEnv.h"
 #include "RQRef.h"
 
