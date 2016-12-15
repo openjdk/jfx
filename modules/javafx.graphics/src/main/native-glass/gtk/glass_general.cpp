@@ -321,16 +321,6 @@ JNI_OnLoad(JavaVM *jvm, void *reserved)
     jApplicationGetName = env->GetMethodID(jApplicationCls, "getName", "()Ljava/lang/String;");
     if (env->ExceptionCheck()) return JNI_ERR;
 
-    // Before doing anything with GTK we validate that the DISPLAY can be opened
-    display = XOpenDisplay(NULL);
-    if (display != NULL) {
-        XCloseDisplay(display);
-        displayValid = JNI_TRUE;
-    } else {
-        // Invalid DISPLAY, skip initialization
-        return JNI_VERSION_1_6;
-    }
-
     return JNI_VERSION_1_6;
 }
 
@@ -500,4 +490,452 @@ jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files) {
     }
     g_strfreev(uris);
     return result;
+}
+
+//***************************************************************************
+
+typedef struct _DeviceGrabContext {
+    GdkWindow * window;
+    gboolean grabbed;
+} DeviceGrabContext;
+
+gboolean disableGrab = FALSE;
+static gboolean configure_transparent_window(GtkWidget *window);
+static void configure_opaque_window(GtkWidget *window);
+
+static void grab_mouse_device(GdkDevice *device, DeviceGrabContext *context);
+static void ungrab_mouse_device(GdkDevice *device);
+
+gint glass_gdk_visual_get_depth (GdkVisual * visual)
+{
+    // gdk_visual_get_depth is GTK 2.2 +
+    return gdk_visual_get_depth(visual);
+}
+
+GdkScreen * glass_gdk_window_get_screen(GdkWindow * gdkWindow)
+{
+#ifdef GLASS_GTK3
+        GdkVisual * gdkVisual = gdk_window_get_visual(gdkWindow);
+        return gdk_visual_get_screen(gdkVisual);
+#else
+        return gdk_window_get_screen(gdkWindow);
+#endif
+}
+
+gboolean
+glass_gdk_mouse_devices_grab(GdkWindow *gdkWindow) {
+#ifdef GLASS_GTK3
+        if (disableGrab) {
+            return TRUE;
+        }
+        DeviceGrabContext context;
+        GList *devices = gdk_device_manager_list_devices (
+                             gdk_display_get_device_manager(
+                                 gdk_display_get_default()),
+                                 GDK_DEVICE_TYPE_MASTER);
+
+        context.window = gdkWindow;
+        context.grabbed = FALSE;
+        g_list_foreach(devices, (GFunc) grab_mouse_device, &context);
+
+        return context.grabbed;
+#else
+    return glass_gdk_mouse_devices_grab_with_cursor(gdkWindow, NULL, TRUE);
+#endif
+}
+
+gboolean
+glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor, gboolean owner_events) {
+    if (disableGrab) {
+        return TRUE;
+    }
+    GdkGrabStatus status = gdk_pointer_grab(gdkWindow, owner_events, (GdkEventMask)
+                                            (GDK_POINTER_MOTION_MASK
+                                                | GDK_POINTER_MOTION_HINT_MASK
+                                                | GDK_BUTTON_MOTION_MASK
+                                                | GDK_BUTTON1_MOTION_MASK
+                                                | GDK_BUTTON2_MOTION_MASK
+                                                | GDK_BUTTON3_MOTION_MASK
+                                                | GDK_BUTTON_PRESS_MASK
+                                                | GDK_BUTTON_RELEASE_MASK),
+                                            NULL, cursor, GDK_CURRENT_TIME);
+
+    return (status == GDK_GRAB_SUCCESS) ? TRUE : FALSE;
+}
+
+void
+glass_gdk_mouse_devices_ungrab() {
+#ifdef GLASS_GTK3
+        GList *devices = gdk_device_manager_list_devices(
+                             gdk_display_get_device_manager(
+                                 gdk_display_get_default()),
+                                 GDK_DEVICE_TYPE_MASTER);
+        g_list_foreach(devices, (GFunc) ungrab_mouse_device, NULL);
+#else
+        gdk_pointer_ungrab(GDK_CURRENT_TIME);
+#endif
+}
+
+void
+glass_gdk_master_pointer_grab(GdkWindow *window, GdkCursor *cursor) {
+    if (disableGrab) {
+        gdk_window_set_cursor(window, cursor);
+        return;
+    }
+#ifdef GLASS_GTK3
+        gdk_device_grab(gdk_device_manager_get_client_pointer(
+                    gdk_display_get_device_manager(
+                        gdk_display_get_default())),
+                    window, GDK_OWNERSHIP_NONE, FALSE, GDK_ALL_EVENTS_MASK,
+                    cursor, GDK_CURRENT_TIME);
+#else
+        gdk_pointer_grab(window, FALSE, (GdkEventMask)
+                         (GDK_POINTER_MOTION_MASK
+                             | GDK_BUTTON_MOTION_MASK
+                             | GDK_BUTTON1_MOTION_MASK
+                             | GDK_BUTTON2_MOTION_MASK
+                             | GDK_BUTTON3_MOTION_MASK
+                             | GDK_BUTTON_RELEASE_MASK),
+                         NULL, cursor, GDK_CURRENT_TIME);
+#endif
+}
+
+void
+glass_gdk_master_pointer_ungrab() {
+#ifdef GLASS_GTK3
+        gdk_device_ungrab(gdk_device_manager_get_client_pointer(
+                              gdk_display_get_device_manager(
+                                  gdk_display_get_default())),
+                          GDK_CURRENT_TIME);
+#else
+        gdk_pointer_ungrab(GDK_CURRENT_TIME);
+#endif
+}
+
+void
+glass_gdk_master_pointer_get_position(gint *x, gint *y) {
+#ifdef GLASS_GTK3
+        gdk_device_get_position(gdk_device_manager_get_client_pointer(
+                                    gdk_display_get_device_manager(
+                                        gdk_display_get_default())),
+                                NULL, x, y);
+#else
+        gdk_display_get_pointer(gdk_display_get_default(), NULL, x, y, NULL);
+#endif
+}
+
+gboolean
+glass_gdk_device_is_grabbed(GdkDevice *device) {
+#ifdef GLASS_GTK3
+        return gdk_display_device_is_grabbed(gdk_display_get_default(), device);
+#else
+        (void) device;
+        return gdk_display_pointer_is_grabbed(gdk_display_get_default());
+#endif
+}
+
+void
+glass_gdk_device_ungrab(GdkDevice *device) {
+#ifdef GLASS_GTK3
+        gdk_device_ungrab(device, GDK_CURRENT_TIME);
+#else
+        (void) device;
+        gdk_pointer_ungrab(GDK_CURRENT_TIME);
+#endif
+}
+
+GdkWindow *
+glass_gdk_device_get_window_at_position(GdkDevice *device, gint *x, gint *y) {
+#ifdef GLASS_GTK3
+        return gdk_device_get_window_at_position(device, x, y);
+#else
+        (void) device;
+        return gdk_display_get_window_at_pointer(gdk_display_get_default(), x, y);
+#endif
+}
+
+void
+glass_gtk_configure_transparency_and_realize(GtkWidget *window,
+                                             gboolean transparent) {
+        gboolean isTransparent = glass_configure_window_transparency(window, transparent);
+        gtk_widget_realize(window);
+
+#ifdef GLASS_GTK3
+        if (isTransparent) {
+            GdkRGBA rgba = { 1.0, 1.0, 1.0, 0.0 };
+            gdk_window_set_background_rgba(gtk_widget_get_window(window), &rgba);
+        }
+#endif
+}
+
+void
+glass_gtk_window_configure_from_visual(GtkWidget *widget, GdkVisual *visual) {
+    glass_widget_set_visual(widget, visual);
+}
+
+static gboolean
+configure_transparent_window(GtkWidget *window) {
+    GdkScreen *default_screen = gdk_screen_get_default();
+    GdkDisplay *default_display = gdk_display_get_default();
+
+#ifdef GLASS_GTK3
+        GdkVisual *visual = gdk_screen_get_rgba_visual(default_screen);
+        if (visual
+                && gdk_display_supports_composite(default_display)
+                && gdk_screen_is_composited(default_screen)) {
+            glass_widget_set_visual(window, visual);
+            return TRUE;
+        }
+#else
+        GdkColormap *colormap = gdk_screen_get_rgba_colormap(default_screen);
+        if (colormap
+                && gdk_display_supports_composite(default_display)
+                && gdk_screen_is_composited(default_screen)) {
+            gtk_widget_set_colormap(window, colormap);
+            return TRUE;
+        }
+#endif
+
+    return FALSE;
+}
+
+void
+glass_gdk_window_get_size(GdkWindow *window, gint *w, gint *h) {
+    *w = gdk_window_get_width(window);
+    *h = gdk_window_get_height(window);
+}
+
+void
+glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y) {
+#ifdef GLASS_GTK3
+        gdk_device_get_position(
+            gdk_device_manager_get_client_pointer(
+                gdk_display_get_device_manager(display)), NULL , x, y);
+#else
+        gdk_display_get_pointer(display, NULL, x, y, NULL);
+#endif
+}
+
+
+const guchar*
+glass_gtk_selection_data_get_data_with_length(
+        GtkSelectionData * selectionData,
+        gint * length) {
+    if (selectionData == NULL) {
+        return NULL;
+    }
+
+    *length = gtk_selection_data_get_length(selectionData);
+    return gtk_selection_data_get_data(selectionData);
+}
+
+static void
+configure_opaque_window(GtkWidget *window) {
+    (void) window;
+/* We need to pick a visual that really is glx compatible
+ * instead of using the default visual
+ */
+ /* see: JDK-8087516 for why this is commented out
+    glass_widget_set_visual(window,
+                          gdk_screen_get_system_visual(
+                              gdk_screen_get_default()));
+  */
+}
+
+gboolean
+glass_configure_window_transparency(GtkWidget *window, gboolean transparent) {
+    if (transparent) {
+        if (configure_transparent_window(window)) {
+            return TRUE;
+        }
+
+        fprintf(stderr,"Can't create transparent stage, because your screen doesn't"
+               " support alpha channel."
+               " You need to enable XComposite extension.\n");
+        fflush(stderr);
+    }
+
+    configure_opaque_window(window);
+    return FALSE;
+}
+
+static void
+grab_mouse_device(GdkDevice *device, DeviceGrabContext *context) {
+    GdkInputSource source = gdk_device_get_source(device);
+    if (source == GDK_SOURCE_MOUSE) {
+#ifdef GLASS_GTK3
+        GdkGrabStatus status = gdk_device_grab(device,
+                                               context->window,
+                                               GDK_OWNERSHIP_NONE,
+                                               TRUE,
+                                               GDK_ALL_EVENTS_MASK,
+                                               NULL,
+                                               GDK_CURRENT_TIME);
+#else
+        GdkGrabStatus status = GDK_GRAB_SUCCESS;
+/* FIXME reachable by 2?
+        GdkGrabStatus status = gdk_device_grab(device,
+                                               context->window,
+                                               GDK_OWNERSHIP_NONE,
+                                               TRUE,
+                                               GDK_ALL_EVENTS_MASK,
+                                               NULL,
+                                               GDK_CURRENT_TIME);
+                                       */
+#endif
+        if (status == GDK_GRAB_SUCCESS) {
+            context->grabbed = TRUE;
+        }
+    }
+}
+
+static void
+ungrab_mouse_device(GdkDevice *device) {
+#ifdef GLASS_GTK3
+    GdkInputSource source = gdk_device_get_source(device);
+    if (source == GDK_SOURCE_MOUSE) {
+        gdk_device_ungrab(device, GDK_CURRENT_TIME);
+    }
+#else
+    (void) device;
+    // not used on the GTK2 path
+#endif
+}
+
+GdkPixbuf *
+glass_pixbuf_from_window(GdkWindow *window,
+    gint srcx, gint srcy,
+    gint width, gint height)
+{
+    GdkPixbuf * ret = NULL;
+
+#ifdef GLASS_GTK3
+        ret = gdk_pixbuf_get_from_window (window, srcx, srcy, width, height);
+#else
+        ret = gdk_pixbuf_get_from_drawable (NULL,
+            window,
+            NULL,
+            srcx, srcy,
+            0, 0,
+            width, height);
+#endif
+    return ret;
+}
+
+void
+glass_window_apply_shape_mask(GdkWindow *window,
+    void* data, uint width, uint height)
+{
+#ifdef GLASS_GTK3
+        cairo_surface_t * shape = cairo_image_surface_create_for_data(
+                 (unsigned char *)data,
+                 CAIRO_FORMAT_ARGB32,
+                 width, height,
+                 width * 4
+                 );
+        cairo_region_t *region = gdk_cairo_region_create_from_surface (shape);
+
+        gdk_window_shape_combine_region (window, region, 0, 0);
+
+        gdk_window_input_shape_combine_region (window, region, 0, 0);
+
+        cairo_region_destroy(region);
+        cairo_surface_finish (shape);
+#else
+        GdkPixbuf* pixbuf = gdk_pixbuf_new_from_data((guchar *) data,
+                GDK_COLORSPACE_RGB, TRUE, 8, width, height, width * 4, NULL, NULL);
+
+        if (GDK_IS_PIXBUF(pixbuf)) {
+            GdkBitmap* mask = NULL;
+            gdk_pixbuf_render_pixmap_and_mask(pixbuf, NULL, &mask, 128);
+
+            gdk_window_input_shape_combine_mask(window, mask, 0, 0);
+
+            g_object_unref(pixbuf);
+            if (mask) {
+                g_object_unref(mask);
+            }
+        }
+#endif
+}
+
+void
+glass_window_reset_input_shape_mask(GdkWindow *window)
+{
+#ifdef GLASS_GTK3
+        gdk_window_input_shape_combine_region(window, NULL, 0, 0);
+#else
+        gdk_window_input_shape_combine_mask(window, NULL, 0, 0);
+#endif
+}
+
+GdkWindow *
+glass_gdk_drag_context_get_dest_window (GdkDragContext * context)
+{
+    return ((context != NULL) ? gdk_drag_context_get_dest_window(context) : NULL);
+}
+
+
+void glass_gdk_x11_display_set_window_scale (GdkDisplay *display,
+                          gint scale)
+{
+#ifdef GLASS_GTK3
+    // Optional call, if it does not exist then GTK3 is not yet
+    // doing automatic scaling of coordinates so we do not need
+    // to override it.
+    wrapped_gdk_x11_display_set_window_scale(display, scale);
+#else
+    (void) display;
+    (void) scale;
+#endif
+}
+
+//-------- Glass utility ----------------------------------------
+
+void
+glass_widget_set_visual(GtkWidget *widget, GdkVisual *visual)
+{
+#ifdef GLASS_GTK3
+        gtk_widget_set_visual (widget, visual);
+#else
+        GdkColormap *colormap = gdk_colormap_new(visual, TRUE);
+        gtk_widget_set_colormap (widget, colormap);
+#endif
+}
+
+guint glass_settings_get_guint_opt (const gchar *schema_name,
+                    const gchar *key_name,
+                    int defval)
+{
+    GSettingsSchemaSource *default_schema_source =
+            wrapped_g_settings_schema_source_get_default();
+    if (default_schema_source == NULL) {
+        if (gtk_verbose) {
+            fprintf(stderr, "No schema source dir found!\n");
+        }
+        return defval;
+    }
+    GSettingsSchema *the_schema =
+            wrapped_g_settings_schema_source_lookup(default_schema_source, schema_name, TRUE);
+    if (the_schema == NULL) {
+        if (gtk_verbose) {
+            fprintf(stderr, "schema '%s' not found!\n", schema_name);
+        }
+        return defval;
+    }
+    if (!wrapped_g_settings_schema_has_key(the_schema, key_name)) {
+        if (gtk_verbose) {
+            fprintf(stderr, "key '%s' not found in schema '%s'!\n", key_name, schema_name);
+        }
+        return defval;
+    }
+    if (gtk_verbose) {
+        fprintf(stderr, "found schema '%s' and key '%s'\n", schema_name, key_name);
+    }
+
+    GSettings *gset = g_settings_new(schema_name);
+
+    wrapped_g_settings_schema_unref(the_schema);
+
+    return g_settings_get_uint(gset, key_name);
 }

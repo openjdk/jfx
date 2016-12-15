@@ -40,6 +40,9 @@
 #include <cairo-xlib.h>
 #include <gdk/gdkx.h>
 #include <gdk/gdk.h>
+#ifdef GLASS_GTK3
+#include <gtk/gtkx.h>
+#endif
 
 #include <string.h>
 
@@ -351,6 +354,11 @@ void WindowContextBase::process_mouse_scroll(GdkEventScroll* event) {
 
     // converting direction to change in pixels
     switch (event->direction) {
+#if GTK_CHECK_VERSION(3, 4, 0)
+        case GDK_SCROLL_SMOOTH:
+            //FIXME 3.4 ???
+            break;
+#endif
         case GDK_SCROLL_UP:
             dy = 1;
             break;
@@ -416,7 +424,21 @@ void WindowContextBase::process_key(GdkEventKey* event) {
     if (key >= 'a' && key <= 'z' && (event->state & GDK_CONTROL_MASK)) {
         key = key - 'a' + 1; // map 'a' to ctrl-a, and so on.
     } else {
-        key = glass_gtk_fixup_typed_key(key, event->keyval);
+#ifdef GLASS_GTK2
+        if (key == 0) {
+            // Work around "bug" fixed in gtk-3.0:
+            // http://mail.gnome.org/archives/commits-list/2011-March/msg06832.html
+            switch (event->keyval) {
+            case 0xFF08 /* Backspace */: key =  '\b';
+            case 0xFF09 /* Tab       */: key =  '\t';
+            case 0xFF0A /* Linefeed  */: key =  '\n';
+            case 0xFF0B /* Vert. Tab */: key =  '\v';
+            case 0xFF0D /* Return    */: key =  '\r';
+            case 0xFF1B /* Escape    */: key =  '\033';
+            case 0xFFFF /* Delete    */: key =  '\177';
+            }
+        }
+#endif
     }
 
     if (key > 0) {
@@ -474,7 +496,11 @@ void WindowContextBase::paint(void* data, jint width, jint height)
     applyShapeMask(data, width, height);
 
     cairo_set_source_surface(context, cairo_surface, 0, 0);
+#ifndef GLASS_GTK3
+    // for some reason, GTK3 does not like this operator
+    // without this, the operation is CAIRO_OPERATOR_OVER
     cairo_set_operator (context, CAIRO_OPERATOR_SOURCE);
+#endif
     cairo_paint(context);
 
     cairo_destroy(context);
@@ -1454,7 +1480,9 @@ WindowContextPlug::WindowContextPlug(jobject _jwindow, void* _owner) :
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
-    gtk_widget = gtk_plug_new((GdkNativeWindow)PTR_TO_JLONG(_owner));
+    WindowContext* parent = ((WindowContext*)JLONG_TO_PTR(_owner));
+    Window win = GDK_WINDOW_XID(parent->get_gdk_window());
+    gtk_widget = gtk_plug_new(win);
 
     g_signal_connect(G_OBJECT(gtk_widget), "configure-event", G_CALLBACK(plug_configure), this);
 
@@ -1780,7 +1808,11 @@ void WindowContextChild::enter_fullscreen() {
                                                 NORMAL, (GdkWMFunction) 0);
     int x, y, w, h;
     gdk_window_get_origin(gdk_window, &x, &y);
+#ifdef GLASS_GTK3
+    gdk_window_get_geometry(gdk_window, NULL, NULL, &w, &h);
+#else
     gdk_window_get_geometry(gdk_window, NULL, NULL, &w, &h, NULL);
+#endif
     full_screen_window->set_bounds(x, y, true, true, w, h, -1, -1);
 
     if (WindowContextBase::sm_grab_window == this) {

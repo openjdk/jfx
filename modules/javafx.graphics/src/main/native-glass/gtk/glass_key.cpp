@@ -27,9 +27,7 @@
 #include <com_sun_glass_ui_gtk_GtkApplication.h>
 
 #include <glib.h>
-#include <gdk/gdk.h>
-#include <gtk/gtk.h>
-#include "glass_wrapper.h"
+#include "glass_general.h"
 #include <gdk/gdkkeysyms.h>
 
 static gboolean key_initialized = FALSE;

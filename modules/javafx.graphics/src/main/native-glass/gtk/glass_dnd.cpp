@@ -34,7 +34,6 @@
 
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
-#include "glass_wrapper.h"
 #include <gdk/gdkkeysyms.h>
 
 /************************* COMMON *********************************************/
@@ -691,7 +690,7 @@ static gboolean dnd_source_set_image(GdkWindow *requestor, GdkAtom property, Gdk
     mainEnv->CallVoidMethod(pixels, jPixelsAttachData, PTR_TO_JLONG(&pixbuf));
 
     if (!EXCEPTION_OCCURED(mainEnv)
-            && glass_gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &size, type, NULL)) {
+            && gdk_pixbuf_save_to_buffer(pixbuf, &buffer, &size, type, NULL, NULL)) {
         gdk_property_change(requestor, property, target,
                 8, GDK_PROP_MODE_REPLACE, (guchar *)buffer, size);
         result = TRUE;
@@ -788,9 +787,12 @@ static void process_dnd_source_selection_req(GdkWindow *window, GdkEventSelectio
 {
     (void)window;
 
-    GdkWindow *requestor = gdk_x11_window_foreign_new_for_display(
-            gdk_display_get_default(),
-            event->requestor);
+#ifdef GLASS_GTK3
+    GdkWindow *requestor = (event->requestor);
+#else
+    GdkWindow *requestor =
+        gdk_x11_window_foreign_new_for_display(gdk_display_get_default(), event->requestor);
+#endif
 
     gboolean is_data_set = FALSE;
     if (event->target == TARGET_UTF8_STRING_ATOM

@@ -30,9 +30,17 @@
 #include <stdint.h>
 #include <X11/Xlib.h>
 #include <gdk/gdk.h>
+#include <gdk/gdkx.h>
 #include <gtk/gtk.h>
 
-#include "glass_wrapper.h"
+#include "wrapped.h"
+
+#if GTK_CHECK_VERSION(3, 0, 0)
+#if ! GTK_CHECK_VERSION(3, 8, 0)
+#error GTK development version is not the minimum 3.8
+#endif
+#define GLASS_GTK3
+#endif
 
 #define JLONG_TO_PTR(value) ((void*)(intptr_t)(value))
 #define PTR_TO_JLONG(value) ((jlong)(intptr_t)(value))
@@ -43,6 +51,8 @@
 
 extern JNIEnv* mainEnv; // Use only with main loop thread!!!
 extern JavaVM* javaVM;
+
+#define GLASS_GDK_KEY_CONSTANT(key) (GDK_KEY_ ## key)
 
 #include <exception>
 
@@ -249,5 +259,96 @@ private:
 
     jobject uris_to_java(JNIEnv *env, gchar **uris, gboolean files);
 
-#endif        /* GLASS_GENERAL_H */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+extern jboolean gtk_verbose;
+
+void
+glass_widget_set_visual (GtkWidget *widget, GdkVisual *visual);
+
+gint
+glass_gdk_visual_get_depth (GdkVisual * visual);
+
+GdkScreen *
+glass_gdk_window_get_screen(GdkWindow * gdkWindow);
+
+gboolean
+glass_gdk_mouse_devices_grab(GdkWindow * gdkWindow);
+
+gboolean
+glass_gdk_mouse_devices_grab_with_cursor(GdkWindow * gdkWindow, GdkCursor *cursor, gboolean owner_events);
+
+void
+glass_gdk_mouse_devices_ungrab();
+
+void
+glass_gdk_master_pointer_grab(GdkWindow *window, GdkCursor *cursor);
+
+void
+glass_gdk_master_pointer_ungrab();
+
+void
+glass_gdk_master_pointer_get_position(gint *x, gint *y);
+
+gboolean
+glass_gdk_device_is_grabbed(GdkDevice *device);
+
+void
+glass_gdk_device_ungrab(GdkDevice *device);
+
+GdkWindow *
+glass_gdk_device_get_window_at_position(
+               GdkDevice *device, gint *x, gint *y);
+
+void
+glass_gtk_configure_transparency_and_realize(GtkWidget *window,
+                                                  gboolean transparent);
+
+const guchar *
+glass_gtk_selection_data_get_data_with_length(
+        GtkSelectionData * selectionData,
+        gint * length);
+
+void
+glass_gtk_window_configure_from_visual(GtkWidget *widget, GdkVisual *visual);
+
+void
+glass_gdk_window_get_size(GdkWindow *window, gint *w, gint *h);
+
+void
+glass_gdk_display_get_pointer(GdkDisplay* display, gint* x, gint *y);
+
+void
+glass_gdk_x11_display_set_window_scale(GdkDisplay *display, gint scale);
+
+gboolean
+glass_configure_window_transparency(GtkWidget *window, gboolean transparent);
+
+GdkPixbuf *
+glass_pixbuf_from_window(GdkWindow *window,
+    gint srcx, gint srcy,
+    gint width, gint height);
+
+void
+glass_window_apply_shape_mask(GdkWindow *window,
+    void* data, uint width, uint height);
+
+void
+glass_window_reset_input_shape_mask(GdkWindow *window);
+
+GdkWindow *
+glass_gdk_drag_context_get_dest_window (GdkDragContext * context);
+
+guint
+glass_settings_get_guint_opt (const gchar *schema_name,
+                    const gchar *key_name,
+                    int defval);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif        /* GLASS_GENERAL_H */

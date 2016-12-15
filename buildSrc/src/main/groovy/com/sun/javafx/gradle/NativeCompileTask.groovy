@@ -82,7 +82,7 @@ class NativeCompileTask extends DefaultTask {
         // Get the existing native-dependencies file from build/dependency-cache and load its contents into
         // memory. If the file doesn't exist, then we will just have an empty dependency map.
         final Map<String, Map> dependencies = new ConcurrentHashMap<>();
-        final File nativeDependenciesFile = project.file("$project.buildDir/dependency-cache/native-dependencies");
+        final File nativeDependenciesFile = project.file("$project.buildDir/dependency-cache/native-dependencies-${output.getName()}");
         if (nativeDependenciesFile.exists()) {
             nativeDependenciesFile.splitEachLine("\t", { strings ->
                 try {

@@ -37,6 +37,7 @@ import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.javafx.util.Logging;
+import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
 import sun.util.logging.PlatformLogger;
 
@@ -48,6 +49,7 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.lang.annotation.Native;
 
 final class GtkApplication extends Application implements
                                     InvokeLaterDispatcher.InvokeLaterSubmitter {
@@ -142,13 +144,6 @@ final class GtkApplication extends Application implements
 
     GtkApplication() {
 
-        // Check whether the Display is valid and throw an exception if not.
-        // We use UnsupportedOperationException rather than HeadlessException
-        // so as not to introduce a dependency on AWT.
-        if (!isDisplayValid()) {
-            throw new UnsupportedOperationException("Unable to open DISPLAY");
-        }
-
         final int gtkVersion = forcedGtkVersion == 0 ?
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
                 String v = System.getProperty("jdk.gtk.version","2");
@@ -170,6 +165,32 @@ final class GtkApplication extends Application implements
         } else {
             overrideUIScale = -1.0f;
         }
+
+        int libraryToLoad = _queryLibrary(gtkVersion, gtkVersionVerbose);
+
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (libraryToLoad == QUERY_NO_DISPLAY) {
+                throw new UnsupportedOperationException("Unable to open DISPLAY");
+            } else if (libraryToLoad == QUERY_USE_CURRENT) {
+                if (gtkVersionVerbose) {
+                    System.out.println("Glass GTK library to load is already loaded");
+                }
+            } else if (libraryToLoad == QUERY_LOAD_GTK2) {
+                if (gtkVersionVerbose) {
+                    System.out.println("Glass GTK library to load is glassgtk2");
+                }
+                NativeLibLoader.loadLibrary("glassgtk2");
+            } else if (libraryToLoad == QUERY_LOAD_GTK3) {
+                if (gtkVersionVerbose) {
+                    System.out.println("Glass GTK library to load is glassgtk3");
+                }
+                NativeLibLoader.loadLibrary("glassgtk3");
+            } else {
+                throw new UnsupportedOperationException("Internal Error");
+            }
+            return null;
+        });
+
         int version = _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
 
         if (version == -1) {
@@ -187,11 +208,18 @@ final class GtkApplication extends Application implements
         }
     }
 
-    private static native int _initGTK(int version, boolean verbose, float overrideUIScale);
+    @Native private static final int QUERY_ERROR = -2;
+    @Native private static final int QUERY_NO_DISPLAY = -1;
+    @Native private static final int QUERY_USE_CURRENT = 1;
+    @Native private static final int QUERY_LOAD_GTK2 = 2;
+    @Native private static final int QUERY_LOAD_GTK3 = 3;
+    /*
+     * check the system and return an indication of which library to load
+     *  return values are the QUERY_ constants
+     */
+    private static native int _queryLibrary(int version, boolean verbose);
 
-    private static boolean isDisplayValid() {
-        return _isDisplayValid();
-    }
+    private static native int _initGTK(int version, boolean verbose, float overrideUIScale);
 
     private void initDisplay() {
         Map ds = getDeviceDetails();
@@ -265,8 +293,6 @@ final class GtkApplication extends Application implements
     @Override public boolean shouldUpdateWindow() {
         return true;
     }
-
-    private static native boolean _isDisplayValid();
 
     private native void _terminateLoop();
 
