@@ -29,6 +29,7 @@ import com.oracle.tools.packager.*;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
+import com.oracle.tools.packager.Log;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -408,6 +409,7 @@ public class Main {
                     addResources(createBssParams, srcdir, srcfiles);
                     css2Bin = true;
                 } else if (args[0].equalsIgnoreCase("-signJar")) {
+                    Log.info("Warning: -signJar has been deprecated and will be removed in a future release.");
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.equalsIgnoreCase("-keyStore")) {
