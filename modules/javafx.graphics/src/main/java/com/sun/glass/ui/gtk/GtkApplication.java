@@ -36,9 +36,12 @@ import com.sun.glass.ui.Size;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.javafx.util.Logging;
 import com.sun.prism.impl.PrismSettings;
+import sun.util.logging.PlatformLogger;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
@@ -46,9 +49,60 @@ import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
-final class GtkApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
+final class GtkApplication extends Application implements
+                                    InvokeLaterDispatcher.InvokeLaterSubmitter {
+    private static final String SWT_INTERNAL_CLASS =
+            "org.eclipse.swt.internal.gtk.OS";
+    private static final int forcedGtkVersion;
 
-    static {
+
+    static  {
+        //check for SWT-GTK lib presence
+        Class<?> OS = AccessController.
+                doPrivileged((PrivilegedAction<Class<?>>) () -> {
+                    try {
+                        return Class.forName(SWT_INTERNAL_CLASS, true,
+                                ClassLoader.getSystemClassLoader());
+                    } catch (Exception e) {}
+                    try {
+                        return Class.forName(SWT_INTERNAL_CLASS, true,
+                                Thread.currentThread().getContextClassLoader());
+                    } catch (Exception e) {}
+                    return null;
+                });
+        if (OS != null) {
+            PlatformLogger logger = Logging.getJavaFXLogger();
+            logger.fine("SWT-GTK library found. Try to obtain GTK version.");
+            Method method = AccessController.
+                    doPrivileged((PrivilegedAction<Method>) () -> {
+                        try {
+                            return OS.getMethod("gtk_major_version");
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    });
+            int ver = 0;
+            if (method != null) {
+                try {
+                    ver = ((Number)method.invoke(OS)).intValue();
+                } catch (Exception e) {
+                    logger.warning("Method gtk_major_version() of " +
+                         "the org.eclipse.swt.internal.gtk.OS class " +
+                         "returns error. SWT GTK version cannot be detected. " +
+                         "GTK3 will be used as default.");
+                    ver = 3;
+                }
+            }
+            if (ver < 2 || ver > 3) {
+                logger.warning("SWT-GTK uses unsupported major GTK version "
+                        + ver + ". GTK3 will be used as default.");
+                ver = 3;
+            }
+            forcedGtkVersion = ver;
+        } else {
+            forcedGtkVersion = 0;
+        }
+
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Application.loadNativeLibrary();
             return null;
@@ -95,17 +149,17 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
             throw new UnsupportedOperationException("Unable to open DISPLAY");
         }
 
-        int gtkVersion =
-                AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
-            String v = System.getProperty("jdk.gtk.version","2");
-            int ret = 0;
-            if ("3".equals(v) || v.startsWith("3.")) {
-                ret = 3;
-            } else if ("2".equals(v) || v.startsWith("2.")) {
-                ret = 2;
-            }
-            return ret;
-        });
+        final int gtkVersion = forcedGtkVersion == 0 ?
+            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
+                String v = System.getProperty("jdk.gtk.version","2");
+                int ret = 0;
+                if ("3".equals(v) || v.startsWith("3.")) {
+                    ret = 3;
+                } else if ("2".equals(v) || v.startsWith("2.")) {
+                    ret = 2;
+                }
+                return ret;
+            }) : forcedGtkVersion;
         boolean gtkVersionVerbose =
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             return Boolean.getBoolean("jdk.gtk.verbose");
