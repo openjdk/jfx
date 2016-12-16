@@ -306,7 +306,8 @@ public final class JLinkBundlerHelper {
         }
 
         ModuleHelper moduleHelper = new ModuleHelper(modulePath, addModules, limitModules);
-        addModules.addAll(moduleHelper.modules());
+        Set<String> redistModules = removeInvalidModules(modulePath, moduleHelper.modules());
+        addModules.addAll(redistModules);
 
         //--------------------------------------------------------------------
         // Jars
@@ -389,6 +390,31 @@ public final class JLinkBundlerHelper {
         }
 
         return files;
+    }
+
+    private static Set<String> removeInvalidModules(List<Path> modulePath, Set<String> modules) {
+        Set<String> result = new LinkedHashSet();
+        ModuleManager mm = new ModuleManager(modulePath);
+        List<Module> lmodules = mm.getModules(EnumSet.of(ModuleManager.SearchType.ModularJar,
+                                             ModuleManager.SearchType.Jmod,
+                                             ModuleManager.SearchType.ExplodedModule));
+
+        HashMap<String, Module> validModules = new HashMap<>();
+
+        for (Module module : lmodules) {
+            validModules.put(module.getModuleName(), module);
+        }
+
+        for (String name : modules) {
+            if (validModules.containsKey(name)) {
+                result.add(name);
+            }
+            else {
+                Log.info(MessageFormat.format(I18N.getString("warning.module.does.not.exist"), name));
+            }
+        }
+
+        return result;
     }
 
     private static class ModuleHelper {

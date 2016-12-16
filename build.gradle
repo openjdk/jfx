@@ -2647,63 +2647,21 @@ project(":fxpackager") {
         ].flatten()
     }
 
-    task buildRedistributableFiles() {
-        def projectDir = "tools/java/redistributable-files"
-        def sourceDir = "src/$projectDir"
-        def buildDir = "build/$projectDir"
-
-        doLast {
-            exec {
-                commandLine(JAVAC)
-                args("-d")
-                args("$buildDir")
-                args("$sourceDir/RedistributableFiles.java")
-            }
-        }
-    }
-
-    task runRedistributableFiles() {
+    task copyRedistributableFiles() {
         def projectDir = "tools/java/redistributable-files"
         def sourceDir = "src/$projectDir"
         def buildDir = "build/$projectDir"
         def resourceDir = "${moduleDir}/jdk/packager/internal/resources/tools/redistributable-files"
 
         doLast {
-            def fxmodules = ""
-
-            if (!file("$JDK_JMODS/jdk.packager.jmod").exists()) {
-                moduleProjList.each { project ->
-                    if (fxmodules.isEmpty()) {
-                        fxmodules = project.ext.moduleName
-                    }
-                    else {
-                        fxmodules += "," + project.ext.moduleName
-                    }
-                }
-            }
-
-            exec {
-                commandLine(JAVA)
-                args("-classpath")
-                args("$buildDir")
-                args("RedistributableFiles")
-                args("--module-path")
-                args("$JDK_JMODS")
-                args("--exclude-filelist")
-                args("$sourceDir/exclude_modules.list")
-                args("--out-file")
-                args("$resourceDir/redistributable.list")
-
-                if (!fxmodules.isEmpty()) {
-                    args("--add-modules")
-                    args("$fxmodules")
-                }
+            copy {
+                from "$sourceDir/redistributable.list"
+                into project.file("$resourceDir/redistributable.list")
             }
         }
     }
 
-    runRedistributableFiles.dependsOn buildRedistributableFiles
-    processResources.dependsOn runRedistributableFiles
+    processResources.dependsOn copyRedistributableFiles
 }
 
 project(":media") {
