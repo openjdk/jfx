@@ -25,6 +25,7 @@
 
 package com.sun.javafx.application;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -170,9 +171,7 @@ public abstract class HostServicesDelegate {
             String osName = System.getProperty("os.name");
             try {
                 if (osName.startsWith("Mac OS")) {
-                    Class.forName("com.apple.eio.FileManager").getDeclaredMethod(
-                            "openURL", new Class[]{String.class}).invoke(null,
-                            new Object[]{uri});
+                    Desktop.getDesktop().browse(URI.create(uri));
                 } else if (osName.startsWith("Windows")) {
                     Runtime.getRuntime().exec(
                             "rundll32 url.dll,FileProtocolHandler " + uri);
