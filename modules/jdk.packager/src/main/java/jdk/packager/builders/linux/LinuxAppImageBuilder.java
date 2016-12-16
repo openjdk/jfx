@@ -193,6 +193,9 @@ public class LinuxAppImageBuilder extends AbstractAppImageBuilder {
             for (Map<String, ? super Object> entryPoint : entryPoints) {
                 Map<String, ? super Object> tmp = new HashMap<>(originalParams);
                 tmp.putAll(entryPoint);
+                // remove name.fs that was calculated for main launcher.
+                // otherwise, wrong launcher name will be selected.
+                tmp.remove(APP_FS_NAME.getID());
                 createLauncherForEntryPoint(tmp, root);
             }
 
