@@ -995,6 +995,10 @@ g_ptr_array_set_free_func (GPtrArray      *array,
   GRealPtrArray *rarray = (GRealPtrArray *)array;
 
   g_return_if_fail (array);
+#ifdef GSTREAMER_LITE
+  if (array == NULL)
+    return;
+#endif // GSTREAMER_LITE
 
   rarray->element_free_func = element_free_func;
 }
@@ -1593,6 +1597,10 @@ g_byte_array_new_take (guint8 *data,
   GRealArray *real;
 
   array = g_byte_array_new ();
+#ifdef GSTREAMER_LITE
+  if (array == NULL)
+    return NULL;
+#endif // GSTREAMER_LITE
   real = (GRealArray *)array;
   g_assert (real->data == NULL);
   g_assert (real->len == 0);
