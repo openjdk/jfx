@@ -143,7 +143,7 @@ void CSSCrossfadeValue::loadSubimages(CachedResourceLoader& cachedResourceLoader
     m_crossfadeSubimageObserver.setReady(true);
 }
 
-PassRefPtr<Image> CSSCrossfadeValue::image(RenderElement* renderer, const FloatSize& size)
+RefPtr<Image> CSSCrossfadeValue::image(RenderElement* renderer, const FloatSize& size)
 {
     if (size.isEmpty())
         return nullptr;
@@ -165,9 +165,9 @@ PassRefPtr<Image> CSSCrossfadeValue::image(RenderElement* renderer, const FloatS
     if (!fromImage || !toImage)
         return Image::nullImage();
 
-    m_generatedImage = CrossfadeGeneratedImage::create(fromImage, toImage, m_percentageValue->getFloatValue(), fixedSize(renderer), size);
+    m_generatedImage = CrossfadeGeneratedImage::create(*fromImage, *toImage, m_percentageValue->getFloatValue(), fixedSize(renderer), size);
 
-    return m_generatedImage.release();
+    return m_generatedImage;
 }
 
 void CSSCrossfadeValue::crossfadeChanged(const IntRect&)
@@ -191,7 +191,7 @@ bool CSSCrossfadeValue::traverseSubresources(const std::function<bool (const Cac
     return false;
 }
 
-PassRefPtr<CSSCrossfadeValue> CSSCrossfadeValue::blend(const CSSCrossfadeValue& from, double progress) const
+RefPtr<CSSCrossfadeValue> CSSCrossfadeValue::blend(const CSSCrossfadeValue& from, double progress) const
 {
     ASSERT(equalInputImages(from));
     RefPtr<StyleCachedImage> toStyledImage = StyleCachedImage::create(m_cachedToImage.get());
@@ -200,7 +200,7 @@ PassRefPtr<CSSCrossfadeValue> CSSCrossfadeValue::blend(const CSSCrossfadeValue& 
     auto fromImageValue = CSSImageValue::create(m_cachedFromImage->url(), fromStyledImage.get());
     auto toImageValue = CSSImageValue::create(m_cachedToImage->url(), toStyledImage.get());
 
-    RefPtr<CSSCrossfadeValue> crossfadeValue = CSSCrossfadeValue::create(WTF::move(fromImageValue), WTF::move(toImageValue));
+    RefPtr<CSSCrossfadeValue> crossfadeValue = CSSCrossfadeValue::create(WTFMove(fromImageValue), WTFMove(toImageValue));
 
     double fromPercentage = from.m_percentageValue->getDoubleValue();
     if (from.m_percentageValue->isPercentage())
@@ -209,7 +209,7 @@ PassRefPtr<CSSCrossfadeValue> CSSCrossfadeValue::blend(const CSSCrossfadeValue& 
     if (m_percentageValue->isPercentage())
         toPercentage /= 100.0;
     crossfadeValue->setPercentage(CSSPrimitiveValue::create(blendFunc(fromPercentage, toPercentage, progress), CSSPrimitiveValue::CSS_NUMBER));
-    return crossfadeValue.release();
+    return crossfadeValue;
 }
 
 bool CSSCrossfadeValue::equals(const CSSCrossfadeValue& other) const

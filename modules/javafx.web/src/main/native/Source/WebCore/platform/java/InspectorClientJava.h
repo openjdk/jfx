@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef InspectorClientJava_h
 #define InspectorClientJava_h
@@ -10,23 +10,23 @@
 
 namespace WebCore {
 
-class InspectorClientJava
+class InspectorClientJava final
     : public InspectorClient,
-      public InspectorFrontendChannel
+      public Inspector::FrontendChannel
 {
 public:
     InspectorClientJava(const JLObject &webPage);
 
-    virtual void inspectorDestroyed();
+    void inspectedPageDestroyed() override;
 
-    virtual InspectorFrontendChannel* openInspectorFrontend(InspectorController*);
-    virtual void closeInspectorFrontend();
-    virtual void bringFrontendToFront();
+    Inspector::FrontendChannel* openLocalFrontend(InspectorController*) override;
+    void bringFrontendToFront() override;
 
-    virtual void highlight();
-    virtual void hideHighlight();
+    void highlight() override;
+    void hideHighlight() override;
 
-    virtual bool sendMessageToFrontend(const String& message);
+    ConnectionType connectionType() const override { return Inspector::FrontendChannel::ConnectionType::Local; }
+    bool sendMessageToFrontend(const String& message) override;
 
 private:
     JGObject m_webPage;

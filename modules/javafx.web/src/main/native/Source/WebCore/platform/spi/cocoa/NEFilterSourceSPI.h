@@ -23,7 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define HAVE_MODERN_NE_FILTER_SOURCE (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90000)
+#define HAVE_MODERN_NE_FILTER_SOURCE (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100) || PLATFORM(IOS)
 
 #if USE(APPLE_INTERNAL_SDK)
 
@@ -36,6 +36,8 @@ typedef NS_ENUM(NSInteger, NEFilterSourceStatus) {
     NEFilterSourceStatusBlock = 2,
     NEFilterSourceStatusNeedsMoreData = 3,
     NEFilterSourceStatusError = 4,
+    NEFilterSourceStatusWhitelisted = 5,
+    NEFilterSourceStatusBlacklisted = 6,
 };
 
 typedef NS_ENUM(NSInteger, NEFilterSourceDirection) {

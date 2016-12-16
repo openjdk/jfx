@@ -21,15 +21,14 @@
 #define ListableHandler_h
 
 #include <stdint.h>
+#include <wtf/Lock.h>
 #include <wtf/Locker.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/SpinLock.h>
 #include <wtf/ThreadingPrimitives.h>
 
 namespace JSC {
 
-class MarkStack;
-class MarkStackThreadSharedData;
+class Heap;
 class SlotVisitor;
 
 template<typename T>
@@ -51,8 +50,7 @@ protected:
 
 private:
     // Allow these classes to use ListableHandler::List.
-    friend class MarkStack;
-    friend class GCThreadSharedData;
+    friend class Heap;
     friend class SlotVisitor;
 
     class List {
@@ -65,7 +63,7 @@ private:
 
         void addThreadSafe(T* handler)
         {
-            SpinLockHolder locker(&m_lock);
+            LockHolder locker(&m_lock);
             addNotThreadSafe(handler);
         }
 
@@ -103,7 +101,7 @@ private:
             m_first = handler;
         }
 
-        SpinLock m_lock;
+        Lock m_lock;
         T* m_first;
     };
 

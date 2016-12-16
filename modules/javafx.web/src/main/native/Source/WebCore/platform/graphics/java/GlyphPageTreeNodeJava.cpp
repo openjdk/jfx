@@ -5,18 +5,15 @@
 
 #include "GlyphPage.h"
 #include "GraphicsContextJava.h"
-#include "Font.h" //XXX: SimpleFontData.h -> Font.h
+#include "Font.h"
 
 namespace WebCore {
 
-bool GlyphPage::fill(
-    unsigned offset, unsigned length,
-    UChar* buffer, unsigned bufferLength,
-    const Font* fontData)
+bool GlyphPage::fill(UChar* buffer, unsigned bufferLength)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
-    RefPtr<RQRef> jFont = fontData->platformData().nativeFontData();
+    RefPtr<RQRef> jFont = this->font().platformData().nativeFontData();
     if (!jFont)
         return false;
 
@@ -43,22 +40,22 @@ bool GlyphPage::fill(
     ASSERT(glyphs);
 
     unsigned step;  // 1 for BMP, 2 for non-BMP
-    if (bufferLength == length) {
+    if (bufferLength == GlyphPage::size) {
         step = 1;
-    } else if (bufferLength == 2 * length) {
+    } else if (bufferLength == 2 * GlyphPage::size) {
         step = 2;
     } else {
         ASSERT_NOT_REACHED();
     }
 
     bool haveGlyphs = false;
-    for (unsigned i = 0; i < length; i++) {
+    for (unsigned i = 0; i < GlyphPage::size; i++) {
         Glyph glyph = glyphs[i * step];
         if (glyph) {
             haveGlyphs = true;
-            setGlyphDataForIndex(offset + i, glyph, fontData);
+            setGlyphForIndex(i, glyph);
         } else
-            setGlyphDataForIndex(offset + i, 0, 0);
+            setGlyphForIndex(i, 0);
     }
     env->ReleasePrimitiveArrayCritical(jglyphs, glyphs, JNI_ABORT);
 

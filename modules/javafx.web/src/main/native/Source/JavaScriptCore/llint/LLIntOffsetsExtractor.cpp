@@ -34,13 +34,13 @@
 #include "Executable.h"
 #include "Heap.h"
 #include "Interpreter.h"
-#include "JITStubs.h"
 #include "JSArray.h"
 #include "JSCell.h"
 #include "JSFunction.h"
 #include "VM.h"
 #include "JSEnvironmentRecord.h"
 #include "JSGlobalObject.h"
+#include "JSModuleRecord.h"
 #include "JSObject.h"
 #include "JSStack.h"
 #include "JSString.h"
@@ -55,6 +55,7 @@
 #include "TypeProfilerLog.h"
 #include "VMEntryRecord.h"
 #include "ValueProfile.h"
+#include "Watchdog.h"
 #include <wtf/text/StringImpl.h>
 
 

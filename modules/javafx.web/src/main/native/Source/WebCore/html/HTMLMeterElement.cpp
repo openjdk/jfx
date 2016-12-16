@@ -60,9 +60,9 @@ Ref<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Doc
 RenderPtr<RenderElement> HTMLMeterElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
     if (!document().page()->theme().supportsMeter(style.get().appearance()))
-        return RenderElement::createFor(*this, WTF::move(style));
+        return RenderElement::createFor(*this, WTFMove(style));
 
-    return createRenderer<RenderMeter>(*this, WTF::move(style));
+    return createRenderer<RenderMeter>(*this, WTFMove(style));
 }
 
 bool HTMLMeterElement::childShouldCreateRenderer(const Node& child) const
@@ -229,16 +229,16 @@ void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
     ASSERT(!m_value);
 
-    RefPtr<MeterInnerElement> inner = MeterInnerElement::create(document());
-    root->appendChild(inner);
+    Ref<MeterInnerElement> inner = MeterInnerElement::create(document());
+    root->appendChild(inner.copyRef());
 
-    RefPtr<MeterBarElement> bar = MeterBarElement::create(document());
+    Ref<MeterBarElement> bar = MeterBarElement::create(document());
     m_value = MeterValueElement::create(document());
     m_value->setWidthPercentage(0);
     m_value->updatePseudo();
-    bar->appendChild(m_value, ASSERT_NO_EXCEPTION);
+    bar->appendChild(*m_value, ASSERT_NO_EXCEPTION);
 
-    inner->appendChild(bar, ASSERT_NO_EXCEPTION);
+    inner->appendChild(WTFMove(bar), ASSERT_NO_EXCEPTION);
 }
 
 } // namespace

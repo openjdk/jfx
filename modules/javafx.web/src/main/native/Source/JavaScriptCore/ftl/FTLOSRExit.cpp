@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,46 +28,90 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "AirGenerationContext.h"
+#include "B3StackmapGenerationParams.h"
+#include "B3StackmapValue.h"
 #include "CodeBlock.h"
 #include "DFGBasicBlock.h"
 #include "DFGNode.h"
 #include "FTLExitArgument.h"
-#include "FTLExitArgumentList.h"
 #include "FTLJITCode.h"
+#include "FTLLocation.h"
+#include "FTLState.h"
 #include "JSCInlines.h"
 
 namespace JSC { namespace FTL {
 
+using namespace B3;
 using namespace DFG;
 
-OSRExit::OSRExit(
-    ExitKind exitKind, ValueFormat profileValueFormat,
-    MethodOfGettingAValueProfile valueProfile, CodeOrigin codeOrigin,
-    CodeOrigin originForProfile, unsigned numberOfArguments,
-    unsigned numberOfLocals)
-    : OSRExitBase(exitKind, codeOrigin, originForProfile)
-    , m_profileValueFormat(profileValueFormat)
+OSRExitDescriptor::OSRExitDescriptor(
+    DataFormat profileDataFormat, MethodOfGettingAValueProfile valueProfile,
+    unsigned numberOfArguments, unsigned numberOfLocals)
+    : m_profileDataFormat(profileDataFormat)
     , m_valueProfile(valueProfile)
-    , m_patchableCodeOffset(0)
     , m_values(numberOfArguments, numberOfLocals)
 {
 }
 
-CodeLocationJump OSRExit::codeLocationForRepatch(CodeBlock* ftlCodeBlock) const
-{
-    return CodeLocationJump(
-        reinterpret_cast<char*>(
-            ftlCodeBlock->jitCode()->ftl()->exitThunks().dataLocation()) +
-        m_patchableCodeOffset);
-}
-
-void OSRExit::validateReferences(const TrackedReferences& trackedReferences)
+void OSRExitDescriptor::validateReferences(const TrackedReferences& trackedReferences)
 {
     for (unsigned i = m_values.size(); i--;)
         m_values[i].validateReferences(trackedReferences);
 
     for (ExitTimeObjectMaterialization* materialization : m_materializations)
         materialization->validateReferences(trackedReferences);
+}
+
+RefPtr<OSRExitHandle> OSRExitDescriptor::emitOSRExit(
+    State& state, ExitKind exitKind, const NodeOrigin& nodeOrigin, CCallHelpers& jit,
+    const StackmapGenerationParams& params, unsigned offset)
+{
+    RefPtr<OSRExitHandle> handle =
+        prepareOSRExitHandle(state, exitKind, nodeOrigin, params, offset);
+    handle->emitExitThunk(state, jit);
+    return handle;
+}
+
+RefPtr<OSRExitHandle> OSRExitDescriptor::emitOSRExitLater(
+    State& state, ExitKind exitKind, const NodeOrigin& nodeOrigin,
+    const StackmapGenerationParams& params, unsigned offset)
+{
+    RefPtr<OSRExitHandle> handle =
+        prepareOSRExitHandle(state, exitKind, nodeOrigin, params, offset);
+    params.addLatePath(
+        [handle, &state] (CCallHelpers& jit) {
+            handle->emitExitThunk(state, jit);
+        });
+    return handle;
+}
+
+RefPtr<OSRExitHandle> OSRExitDescriptor::prepareOSRExitHandle(
+    State& state, ExitKind exitKind, const NodeOrigin& nodeOrigin,
+    const StackmapGenerationParams& params, unsigned offset)
+{
+    unsigned index = state.jitCode->osrExit.size();
+    OSRExit& exit = state.jitCode->osrExit.alloc(
+        this, exitKind, nodeOrigin.forExit, nodeOrigin.semantic);
+    RefPtr<OSRExitHandle> handle = adoptRef(new OSRExitHandle(index, exit));
+    for (unsigned i = offset; i < params.size(); ++i)
+        exit.m_valueReps.append(params[i]);
+    exit.m_valueReps.shrinkToFit();
+    return handle;
+}
+
+OSRExit::OSRExit(
+    OSRExitDescriptor* descriptor,
+    ExitKind exitKind, CodeOrigin codeOrigin, CodeOrigin codeOriginForExitProfile)
+    : OSRExitBase(exitKind, codeOrigin, codeOriginForExitProfile)
+    , m_descriptor(descriptor)
+{
+}
+
+CodeLocationJump OSRExit::codeLocationForRepatch(CodeBlock* ftlCodeBlock) const
+{
+    UNUSED_PARAM(ftlCodeBlock);
+    return m_patchableJump;
 }
 
 } } // namespace JSC::FTL

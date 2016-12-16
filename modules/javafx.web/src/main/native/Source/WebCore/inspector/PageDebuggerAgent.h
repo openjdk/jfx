@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,27 +32,26 @@
 #ifndef PageDebuggerAgent_h
 #define PageDebuggerAgent_h
 
-#include "PageScriptDebugServer.h"
 #include "WebDebuggerAgent.h"
 
 namespace WebCore {
 
 class InspectorOverlay;
 class InspectorPageAgent;
-class InstrumentingAgents;
 class Page;
-class PageScriptDebugServer;
 
 class PageDebuggerAgent final : public WebDebuggerAgent {
     WTF_MAKE_NONCOPYABLE(PageDebuggerAgent);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    PageDebuggerAgent(Inspector::InjectedScriptManager*, InstrumentingAgents*, InspectorPageAgent*, InspectorOverlay*);
+    PageDebuggerAgent(PageAgentContext&, InspectorPageAgent*, InspectorOverlay*);
     virtual ~PageDebuggerAgent() { }
 
     void didClearMainFrameWindowObject();
 
-    virtual PageScriptDebugServer& scriptDebugServer() override;
+    void mainFrameStartedLoading();
+    void mainFrameStoppedLoading();
+    void mainFrameNavigated();
 
 protected:
     virtual void enable() override;
@@ -60,8 +60,6 @@ protected:
     virtual String sourceMapURLForScript(const Script&) override;
 
 private:
-    virtual void startListeningScriptDebugServer() override;
-    virtual void stopListeningScriptDebugServer(bool isBeingDestroyed) override;
     virtual void muteConsole() override;
     virtual void unmuteConsole() override;
 
@@ -70,9 +68,10 @@ private:
     virtual Inspector::InjectedScript injectedScriptForEval(ErrorString&, const int* executionContextId) override;
     virtual void setOverlayMessage(ErrorString&, const String*) override;
 
+    Page& m_page;
+
     InspectorPageAgent* m_pageAgent;
-    InspectorOverlay* m_overlay;
-    PageScriptDebugServer m_scriptDebugServer;
+    InspectorOverlay* m_overlay { nullptr };
 };
 
 } // namespace WebCore

@@ -3,14 +3,17 @@
  */
 #include "config.h"
 
-#include "NotImplemented.h"
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
-#include "AtomicString.h"
+#include "NotImplemented.h"
+#include <wtf/text/AtomicString.h>
 #include "Font.h"
 #include "FontCache.h"
-#include "FontRanges.h" //XXX: FontData.h -> FontRanges.h
+#include "FontRanges.h"
 #include "FontPlatformData.h"
-#include "Font.h" //XXX: SimpleFontData.h -> Font.h
+#include "Font.h"
 
 namespace WebCore {
 
@@ -20,18 +23,19 @@ void FontCache::platformInit()
 
 RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& fontDescription, const Font*, bool, const UChar* characters, unsigned length)
 {
-    return 0;
+    return nullptr;
 }
 
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family)
-{
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomicString& family, const FontFeatureSettings*, const FontVariantSettings*) {
+
     return FontPlatformData::create(fontDescription, family);
 }
 
-void FontCache::getTraitsInFamily(AtomicString const&, WTF::Vector<unsigned int,0>&)
+Vector<FontTraitsMask> FontCache::getTraitsInFamily(const AtomicString&)
 {
     notImplemented();
+    return Vector<FontTraitsMask>();
 }
 
 Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
@@ -39,7 +43,7 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
     // We want to return a fallback font here, otherwise the logic preventing FontConfig
     // matches for non-fallback fonts might return 0. See isFallbackFontAllowed.
     static AtomicString timesStr("serif");
-    return *fontForFamily(fontDescription, timesStr, false);
+    return *fontForFamily(fontDescription, timesStr);
 }
 
 Vector<String> FontCache::systemFontFamilies()

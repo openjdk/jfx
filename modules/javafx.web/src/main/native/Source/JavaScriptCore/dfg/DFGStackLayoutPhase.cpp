@@ -129,7 +129,7 @@ public:
         }
 
         Vector<unsigned> allocation(usedLocals.size());
-        m_graph.m_nextMachineLocal = 0;
+        m_graph.m_nextMachineLocal = codeBlock()->calleeSaveSpaceAsVirtualRegisters();
         for (unsigned i = 0; i < usedLocals.size(); ++i) {
             if (!usedLocals.get(i)) {
                 allocation[i] = UINT_MAX;
@@ -173,8 +173,6 @@ public:
             data->machineLocal = assign(allocation, data->local);
         }
 
-        // This register is never valid for DFG code blocks.
-        codeBlock()->setActivationRegister(VirtualRegister());
         if (LIKELY(!m_graph.hasDebuggerEnabled()))
             codeBlock()->setScopeRegister(VirtualRegister());
         else

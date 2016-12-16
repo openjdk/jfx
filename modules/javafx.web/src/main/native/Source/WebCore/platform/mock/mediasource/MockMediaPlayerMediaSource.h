@@ -42,7 +42,7 @@ public:
 
     // MediaPlayer Engine Support
     WEBCORE_EXPORT static void registerMediaEngine(MediaEngineRegistrar);
-    static void getSupportedTypes(HashSet<String>& types);
+    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
 
     virtual ~MockMediaPlayerMediaSource();
@@ -77,7 +77,7 @@ private:
     virtual std::unique_ptr<PlatformTimeRanges> buffered() const override;
     virtual bool didLoadingProgress() const override;
     virtual void setSize(const IntSize&) override;
-    virtual void paint(GraphicsContext*, const FloatRect&) override;
+    virtual void paint(GraphicsContext&, const FloatRect&) override;
     virtual MediaTime currentMediaTime() const override;
     virtual MediaTime durationMediaTime() const override;
     virtual void seekWithTolerance(const MediaTime&, const MediaTime&, const MediaTime&) override;

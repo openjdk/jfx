@@ -44,7 +44,7 @@
 namespace WebCore {
 
 RenderSVGImage::RenderSVGImage(SVGImageElement& element, Ref<RenderStyle>&& style)
-    : RenderSVGModelObject(element, WTF::move(style))
+    : RenderSVGModelObject(element, WTFMove(style))
     , m_needsBoundariesUpdate(true)
     , m_needsTransformUpdate(true)
     , m_imageResource(std::make_unique<RenderImageResource>())
@@ -131,7 +131,7 @@ void RenderSVGImage::layout()
 
 void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint&)
 {
-    if (paintInfo.context->paintingDisabled() || paintInfo.phase != PaintPhaseForeground
+    if (paintInfo.context().paintingDisabled() || paintInfo.phase != PaintPhaseForeground
         || style().visibility() == HIDDEN || !imageResource().hasImage())
         return;
 
@@ -140,14 +140,14 @@ void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint&)
         return;
 
     PaintInfo childPaintInfo(paintInfo);
-    GraphicsContextStateSaver stateSaver(*childPaintInfo.context);
+    GraphicsContextStateSaver stateSaver(childPaintInfo.context());
     childPaintInfo.applyTransform(m_localTransform);
 
     if (childPaintInfo.phase == PaintPhaseForeground) {
         SVGRenderingContext renderingContext(*this, childPaintInfo);
 
         if (renderingContext.isRenderingPrepared()) {
-            if (style().svgStyle().bufferedRendering() == BR_STATIC  && renderingContext.bufferForeground(m_bufferedForeground))
+            if (style().svgStyle().bufferedRendering() == BR_STATIC && renderingContext.bufferForeground(m_bufferedForeground))
                 return;
 
             paintForeground(childPaintInfo);
@@ -161,12 +161,15 @@ void RenderSVGImage::paint(PaintInfo& paintInfo, const LayoutPoint&)
 void RenderSVGImage::paintForeground(PaintInfo& paintInfo)
 {
     RefPtr<Image> image = imageResource().image();
+    if (!image)
+        return;
+
     FloatRect destRect = m_objectBoundingBox;
     FloatRect srcRect(0, 0, image->width(), image->height());
 
     imageElement().preserveAspectRatio().transformRect(destRect, srcRect);
 
-    paintInfo.context->drawImage(image.get(), ColorSpaceDeviceRGB, destRect, srcRect);
+    paintInfo.context().drawImage(*image, destRect, srcRect);
 }
 
 void RenderSVGImage::invalidateBufferedForeground()
@@ -183,7 +186,7 @@ bool RenderSVGImage::nodeAtFloatPoint(const HitTestRequest& request, HitTestResu
     PointerEventsHitRules hitRules(PointerEventsHitRules::SVG_IMAGE_HITTESTING, request, style().pointerEvents());
     bool isVisible = (style().visibility() == VISIBLE);
     if (isVisible || !hitRules.requireVisible) {
-        FloatPoint localPoint = localToParentTransform().inverse().mapPoint(pointInParent);
+        FloatPoint localPoint = localToParentTransform().inverse().valueOr(AffineTransform()).mapPoint(pointInParent);
 
         if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
             return false;
@@ -219,10 +222,10 @@ void RenderSVGImage::imageChanged(WrappedImagePtr, const IntRect*)
     repaint();
 }
 
-void RenderSVGImage::addFocusRingRects(Vector<IntRect>& rects, const LayoutPoint&, const RenderLayerModelObject*)
+void RenderSVGImage::addFocusRingRects(Vector<LayoutRect>& rects, const LayoutPoint&, const RenderLayerModelObject*)
 {
     // this is called from paint() after the localTransform has already been applied
-    IntRect contentRect = enclosingIntRect(repaintRectInLocalCoordinates());
+    LayoutRect contentRect = LayoutRect(repaintRectInLocalCoordinates());
     if (!contentRect.isEmpty())
         rects.append(contentRect);
 }

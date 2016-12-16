@@ -27,18 +27,19 @@
 #include "Disassembler.h"
 
 #include "MacroAssemblerCodeRef.h"
+#include <wtf/Condition.h>
 #include <wtf/DataLog.h>
 #include <wtf/Deque.h>
+#include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/Threading.h>
-#include <wtf/ThreadingPrimitives.h>
 
 namespace JSC {
 
-void disassemble(const MacroAssemblerCodePtr& codePtr, size_t size, const char* prefix, PrintStream& out, InstructionSubsetHint subsetHint)
+void disassemble(const MacroAssemblerCodePtr& codePtr, size_t size, const char* prefix, PrintStream& out)
 {
-    if (tryToDisassemble(codePtr, size, prefix, out, subsetHint))
+    if (tryToDisassemble(codePtr, size, prefix, out))
         return;
 
     out.printf("%sdisassembly not available for range %p...%p\n", prefix, codePtr.executableAddress(), static_cast<char*>(codePtr.executableAddress()) + size);
@@ -66,7 +67,6 @@ public:
     MacroAssemblerCodeRef codeRef;
     size_t size { 0 };
     const char* prefix { nullptr };
-    InstructionSubsetHint subsetHint { MacroAssemblerSubset };
 };
 
 class AsynchronousDisassembler {
@@ -78,14 +78,14 @@ public:
 
     void enqueue(std::unique_ptr<DisassemblyTask> task)
     {
-        MutexLocker locker(m_lock);
-        m_queue.append(WTF::move(task));
-        m_condition.broadcast();
+        LockHolder locker(m_lock);
+        m_queue.append(WTFMove(task));
+        m_condition.notifyAll();
     }
 
     void waitUntilEmpty()
     {
-        MutexLocker locker(m_lock);
+        LockHolder locker(m_lock);
         while (!m_queue.isEmpty() || m_working)
             m_condition.wait(m_lock);
     }
@@ -96,9 +96,9 @@ private:
         for (;;) {
             std::unique_ptr<DisassemblyTask> task;
             {
-                MutexLocker locker(m_lock);
+                LockHolder locker(m_lock);
                 m_working = false;
-                m_condition.broadcast();
+                m_condition.notifyAll();
                 while (m_queue.isEmpty())
                     m_condition.wait(m_lock);
                 task = m_queue.takeFirst();
@@ -106,14 +106,12 @@ private:
             }
 
             dataLog(task->header);
-            disassemble(
-                task->codeRef.code(), task->size, task->prefix, WTF::dataFile(),
-                task->subsetHint);
+            disassemble(task->codeRef.code(), task->size, task->prefix, WTF::dataFile());
         }
     }
 
-    Mutex m_lock;
-    ThreadCondition m_condition;
+    Lock m_lock;
+    Condition m_condition;
     Deque<std::unique_ptr<DisassemblyTask>> m_queue;
     bool m_working { false };
 };
@@ -130,17 +128,15 @@ AsynchronousDisassembler& asynchronousDisassembler()
 } // anonymous namespace
 
 void disassembleAsynchronously(
-    const CString& header, const MacroAssemblerCodeRef& codeRef, size_t size, const char* prefix,
-    InstructionSubsetHint subsetHint)
+    const CString& header, const MacroAssemblerCodeRef& codeRef, size_t size, const char* prefix)
 {
     std::unique_ptr<DisassemblyTask> task = std::make_unique<DisassemblyTask>();
     task->header = strdup(header.data()); // Yuck! We need this because CString does racy refcounting.
     task->codeRef = codeRef;
     task->size = size;
     task->prefix = prefix;
-    task->subsetHint = subsetHint;
 
-    asynchronousDisassembler().enqueue(WTF::move(task));
+    asynchronousDisassembler().enqueue(WTFMove(task));
 }
 
 void waitForAsynchronousDisassembly()

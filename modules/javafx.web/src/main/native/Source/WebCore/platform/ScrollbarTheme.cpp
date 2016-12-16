@@ -26,18 +26,29 @@
 #include "config.h"
 #include "ScrollbarTheme.h"
 
+#include "PlatformMouseEvent.h"
 #include "ScrollbarThemeMock.h"
 #include "Settings.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-ScrollbarTheme* ScrollbarTheme::theme()
+ScrollbarTheme& ScrollbarTheme::theme()
 {
     if (Settings::mockScrollbarsEnabled()) {
-        DEPRECATED_DEFINE_STATIC_LOCAL(ScrollbarThemeMock, mockTheme, ());
-        return &mockTheme;
+        static NeverDestroyed<ScrollbarThemeMock> mockTheme;
+        return mockTheme;
     }
     return nativeTheme();
+}
+
+ScrollbarButtonPressAction ScrollbarTheme::handleMousePressEvent(Scrollbar&, const PlatformMouseEvent& event, ScrollbarPart pressedPart)
+{
+    if (event.button() == RightButton)
+        return ScrollbarButtonPressAction::None;
+    if (pressedPart == ThumbPart)
+        return ScrollbarButtonPressAction::StartDrag;
+    return ScrollbarButtonPressAction::Scroll;
 }
 
 }

@@ -29,6 +29,10 @@
 #include "Frame.h"
 #include <wtf/Vector.h>
 
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/MainFrameIncludes.h>
+#endif
+
 namespace WebCore {
 
 class DiagnosticLoggingClient;
@@ -36,7 +40,7 @@ class PageConfiguration;
 class PageOverlayController;
 class ScrollLatchingState;
 class ServicesOverlayController;
-class WheelEventDeltaTracker;
+class WheelEventDeltaFilter;
 
 class MainFrame final : public Frame {
 public:
@@ -47,7 +51,7 @@ public:
     void selfOnlyRef();
     void selfOnlyDeref();
 
-    WheelEventDeltaTracker* wheelEventDeltaTracker() { return m_recentWheelEventDeltaTracker.get(); }
+    WheelEventDeltaFilter* wheelEventDeltaFilter() { return m_recentWheelEventDeltaFilter.get(); }
     PageOverlayController& pageOverlayController() { return *m_pageOverlayController; }
 
 #if PLATFORM(MAC)
@@ -59,9 +63,14 @@ public:
     void pushNewLatchingState();
     void popLatchingState();
     void resetLatchingState();
+    void removeLatchingStateForTarget(Element&);
 #endif // PLATFORM(MAC)
 
     WEBCORE_EXPORT DiagnosticLoggingClient& diagnosticLoggingClient() const;
+
+#if USE(APPLE_INTERNAL_SDK)
+#include <WebKitAdditions/MainFrameMembers.h>
+#endif
 
 private:
     MainFrame(Page&, PageConfiguration&);
@@ -77,7 +86,7 @@ private:
 #endif
 #endif
 
-    std::unique_ptr<WheelEventDeltaTracker> m_recentWheelEventDeltaTracker;
+    std::unique_ptr<WheelEventDeltaFilter> m_recentWheelEventDeltaFilter;
     std::unique_ptr<PageOverlayController> m_pageOverlayController;
     DiagnosticLoggingClient* m_diagnosticLoggingClient;
 };

@@ -240,10 +240,10 @@ Page* WebChromeClient::createWindow(Frame* frame, const FrameLoadRequest&, const
 #endif
 
     if ([delegate respondsToSelector:@selector(webView:createWebViewWithRequest:windowFeatures:)]) {
-        NSNumber *x = features.xSet ? [[NSNumber alloc] initWithFloat:features.x] : nil;
-        NSNumber *y = features.ySet ? [[NSNumber alloc] initWithFloat:features.y] : nil;
-        NSNumber *width = features.widthSet ? [[NSNumber alloc] initWithFloat:features.width] : nil;
-        NSNumber *height = features.heightSet ? [[NSNumber alloc] initWithFloat:features.height] : nil;
+        NSNumber *x = features.x ? [[NSNumber alloc] initWithFloat:*features.x] : nil;
+        NSNumber *y = features.y ? [[NSNumber alloc] initWithFloat:*features.y] : nil;
+        NSNumber *width = features.width ? [[NSNumber alloc] initWithFloat:*features.width] : nil;
+        NSNumber *height = features.height ? [[NSNumber alloc] initWithFloat:*features.height] : nil;
         NSNumber *menuBarVisible = [[NSNumber alloc] initWithBool:features.menuBarVisible];
         NSNumber *statusBarVisible = [[NSNumber alloc] initWithBool:features.statusBarVisible];
         NSNumber *toolBarVisible = [[NSNumber alloc] initWithBool:features.toolBarVisible];
@@ -910,7 +910,7 @@ void WebChromeClient::scheduleCompositingLayerFlush()
 
 #if ENABLE(VIDEO)
 
-bool WebChromeClient::supportsVideoFullscreen()
+bool WebChromeClient::supportsVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode)
 {
 #if PLATFORM(IOS)
     if (!Settings::avKitEnabled())
@@ -1032,7 +1032,7 @@ void WebChromeClient::removePlaybackTargetPickerClient(uint64_t contextId)
     [m_webView _removePlaybackTargetPickerClient:contextId];
 }
 
-void WebChromeClient::showPlaybackTargetPicker(uint64_t contextId, const WebCore::IntPoint& location, bool hasVideo)
+void WebChromeClient::showPlaybackTargetPicker(uint64_t contextId, const WebCore::IntPoint& location, bool hasVideo, const String&)
 {
     [m_webView _showPlaybackTargetPicker:contextId location:location hasVideo:hasVideo];
 }
@@ -1041,4 +1041,15 @@ void WebChromeClient::playbackTargetPickerClientStateDidChange(uint64_t contextI
 {
     [m_webView _playbackTargetPickerClientStateDidChange:contextId state:state];
 }
+
+void WebChromeClient::setMockMediaPlaybackTargetPickerEnabled(bool enabled)
+{
+    [m_webView _setMockMediaPlaybackTargetPickerEnabled:enabled];
+}
+
+void WebChromeClient::setMockMediaPlaybackTargetPickerState(const String& name, MediaPlaybackTargetContext::State state)
+{
+    [m_webView _setMockMediaPlaybackTargetPickerName:name state:state];
+}
+
 #endif

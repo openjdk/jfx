@@ -15,10 +15,10 @@ attachment conditional=ATTACHMENT_ELEMENT, settingsConditional=attachmentElement
 audio wrapperOnlyIfMediaIsAvailable, conditional=VIDEO, constructorNeedsCreatedByParser, customTypeHelper
 b interfaceName=HTMLElement
 base
-basefont interfaceName=HTMLBaseFontElement
+basefont interfaceName=HTMLUnknownElement
 bdi interfaceName=HTMLBDIElement, JSInterfaceName=HTMLElement
 bdo interfaceName=HTMLElement
-bgsound interfaceName=HTMLElement
+bgsound interfaceName=HTMLUnknownElement
 big interfaceName=HTMLElement
 blockquote interfaceName=HTMLQuoteElement
 body
@@ -33,6 +33,7 @@ col interfaceName=HTMLTableColElement
 colgroup interfaceName=HTMLTableColElement
 command interfaceName=HTMLElement
 webkitShadowContent interfaceName=HTMLElement, noConstructor
+data
 datalist interfaceName=HTMLDataListElement, conditional=DATALIST_ELEMENT
 dd interfaceName=HTMLElement
 del interfaceName=HTMLModElement
@@ -97,6 +98,7 @@ option
 output constructorNeedsFormElement
 p interfaceName=HTMLParagraphElement
 param
+picture interfaceName=HTMLPictureElement
 plaintext interfaceName=HTMLElement
 pre
 progress interfaceName=HTMLProgressElement
@@ -111,8 +113,9 @@ samp interfaceName=HTMLElement
 script constructorNeedsCreatedByParser
 section interfaceName=HTMLElement
 select constructorNeedsFormElement
+slot conditional=SHADOW_DOM
 small interfaceName=HTMLElement
-source wrapperOnlyIfMediaIsAvailable, conditional=VIDEO
+source
 span
 strike interfaceName=HTMLElement
 strong interfaceName=HTMLElement
@@ -122,13 +125,13 @@ summary interfaceName=HTMLSummaryElement, JSInterfaceName=HTMLElement, condition
 sup interfaceName=HTMLElement
 table
 tbody interfaceName=HTMLTableSectionElement
-td interfaceName=HTMLTableCellElement
+td interfaceName=HTMLTableDataCellElement
 template conditional=TEMPLATE_ELEMENT
 textarea interfaceName=HTMLTextAreaElement, constructorNeedsFormElement
 tfoot interfaceName=HTMLTableSectionElement
-th interfaceName=HTMLTableCellElement
+th interfaceName=HTMLTableHeaderCellElement
 thead interfaceName=HTMLTableSectionElement
-time interfaceName=HTMLElement
+time
 title
 tr interfaceName=HTMLTableRowElement
 track wrapperOnlyIfMediaIsAvailable, conditional=VIDEO_TRACK

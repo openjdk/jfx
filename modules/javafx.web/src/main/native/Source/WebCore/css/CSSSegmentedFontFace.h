@@ -26,6 +26,8 @@
 #ifndef CSSSegmentedFontFace_h
 #define CSSSegmentedFontFace_h
 
+#include "CSSFontFace.h"
+#include "FontCache.h"
 #include "FontRanges.h"
 #include <wtf/HashMap.h>
 #include <wtf/PassRefPtr.h>
@@ -34,50 +36,26 @@
 
 namespace WebCore {
 
-class CSSFontFace;
 class CSSFontSelector;
 class FontDescription;
 
-class CSSSegmentedFontFace : public RefCounted<CSSSegmentedFontFace> {
+class CSSSegmentedFontFace final : public CSSFontFace::Client {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
-    static Ref<CSSSegmentedFontFace> create(CSSFontSelector* selector) { return adoptRef(*new CSSSegmentedFontFace(selector)); }
+    CSSSegmentedFontFace();
     ~CSSSegmentedFontFace();
 
-    CSSFontSelector* fontSelector() const { return m_fontSelector; }
-
-    void fontLoaded(CSSFontFace*);
-
-    void appendFontFace(PassRefPtr<CSSFontFace>);
+    void appendFontFace(Ref<CSSFontFace>&&);
 
     FontRanges fontRanges(const FontDescription&);
 
-#if ENABLE(FONT_LOAD_EVENTS)
-    class LoadFontCallback : public RefCounted<LoadFontCallback> {
-    public:
-        virtual ~LoadFontCallback() { }
-        virtual void notifyLoaded() = 0;
-        virtual void notifyError() = 0;
-    };
-
-    bool checkFont() const;
-    void loadFont(const FontDescription&, PassRefPtr<LoadFontCallback> loadCallback);
-#endif
+    Vector<Ref<CSSFontFace>, 1>& constituentFaces() { return m_fontFaces; }
 
 private:
-    CSSSegmentedFontFace(CSSFontSelector*);
+    virtual void fontLoaded(CSSFontFace&) override;
 
-    void pruneTable();
-    bool isValid() const;
-#if ENABLE(FONT_LOAD_EVENTS)
-    bool isLoading() const;
-#endif
-
-    CSSFontSelector* m_fontSelector;
-    HashMap<unsigned, FontRanges> m_descriptionToRangesMap;
-    Vector<RefPtr<CSSFontFace>, 1> m_fontFaces;
-#if ENABLE(FONT_LOAD_EVENTS)
-    Vector<RefPtr<LoadFontCallback>> m_callbacks;
-#endif
+    HashMap<FontDescriptionKey, FontRanges, FontDescriptionKeyHash, WTF::SimpleClassHashTraits<FontDescriptionKey>> m_cache;
+    Vector<Ref<CSSFontFace>, 1> m_fontFaces;
 };
 
 } // namespace WebCore

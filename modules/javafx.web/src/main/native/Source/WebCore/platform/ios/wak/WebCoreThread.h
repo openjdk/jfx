@@ -30,6 +30,11 @@
 
 #import <CoreGraphics/CoreGraphics.h>
 
+// Use __has_include here so that things work when rewritten into WebKitLegacy headers.
+#if __has_include(<WebCore/PlatformExportMacros.h>)
+#import <WebCore/PlatformExportMacros.h>
+#endif
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
@@ -80,8 +85,8 @@ WEBCORE_EXPORT void WebThreadUnlockGuardForMail();
 static inline bool WebThreadShouldYield(void) { return webThreadShouldYield; }
 static inline void WebThreadSetShouldYield() { webThreadShouldYield = true; }
 
-WEBCORE_EXPORT CFRunLoopRef WebThreadRunLoop(void);
-NSRunLoop* WebThreadNSRunLoop(void);
+CFRunLoopRef WebThreadRunLoop(void);
+WEBCORE_EXPORT NSRunLoop* WebThreadNSRunLoop(void);
 WebThreadContext *WebThreadCurrentContext(void);
 bool WebThreadContextIsCurrent(void);
 

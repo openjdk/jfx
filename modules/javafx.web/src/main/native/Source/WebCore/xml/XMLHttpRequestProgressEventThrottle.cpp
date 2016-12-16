@@ -81,7 +81,7 @@ void XMLHttpRequestProgressEventThrottle::dispatchThrottledProgressEvent(bool le
     m_hasThrottledProgressEvent = true;
 }
 
-void XMLHttpRequestProgressEventThrottle::dispatchReadyStateChangeEvent(PassRefPtr<Event> event, ProgressEventAction progressEventAction)
+void XMLHttpRequestProgressEventThrottle::dispatchReadyStateChangeEvent(Event& event, ProgressEventAction progressEventAction)
 {
     if (progressEventAction == FlushProgressEvent)
         flushProgressEvent();
@@ -89,11 +89,10 @@ void XMLHttpRequestProgressEventThrottle::dispatchReadyStateChangeEvent(PassRefP
     dispatchEvent(event);
 }
 
-void XMLHttpRequestProgressEventThrottle::dispatchEvent(PassRefPtr<Event> event)
+void XMLHttpRequestProgressEventThrottle::dispatchEvent(Event& event)
 {
-    ASSERT(event);
     if (m_deferEvents) {
-        if (m_deferredEvents.size() > 1 && event->type() == eventNames().readystatechangeEvent && event->type() == m_deferredEvents.last()->type()) {
+        if (m_deferredEvents.size() > 1 && event.type() == eventNames().readystatechangeEvent && event.type() == m_deferredEvents.last()->type()) {
             // Readystatechange events are state-less so avoid repeating two identical events in a row on resume.
             return;
         }
@@ -120,8 +119,7 @@ void XMLHttpRequestProgressEventThrottle::flushProgressEvent()
 {
     if (m_deferEvents && m_deferredProgressEvent) {
         // Move the progress event to the queue, to get it in the right order on resume.
-        m_deferredEvents.append(m_deferredProgressEvent);
-        m_deferredProgressEvent = nullptr;
+        m_deferredEvents.append(m_deferredProgressEvent.releaseNonNull());
         return;
     }
 
@@ -133,7 +131,7 @@ void XMLHttpRequestProgressEventThrottle::flushProgressEvent()
     // We stop the timer as this is called when no more events are supposed to occur.
     stop();
 
-    dispatchEvent(WTF::move(event));
+    dispatchEvent(WTFMove(event));
 }
 
 void XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents()
@@ -142,18 +140,17 @@ void XMLHttpRequestProgressEventThrottle::dispatchDeferredEvents()
     m_deferEvents = false;
 
     // Take over the deferred events before dispatching them which can potentially add more.
-    auto deferredEvents = WTF::move(m_deferredEvents);
+    auto deferredEvents = WTFMove(m_deferredEvents);
 
-    RefPtr<Event> deferredProgressEvent = m_deferredProgressEvent;
-    m_deferredProgressEvent = nullptr;
+    RefPtr<Event> deferredProgressEvent = WTFMove(m_deferredProgressEvent);
 
     for (auto& deferredEvent : deferredEvents)
-        dispatchEvent(deferredEvent.release());
+        dispatchEvent(deferredEvent);
 
     // The progress event will be in the m_deferredEvents vector if the load was finished while suspended.
     // If not, just send the most up-to-date progress on resume.
     if (deferredProgressEvent)
-        dispatchEvent(deferredProgressEvent);
+        dispatchEvent(*deferredProgressEvent);
 }
 
 void XMLHttpRequestProgressEventThrottle::fired()

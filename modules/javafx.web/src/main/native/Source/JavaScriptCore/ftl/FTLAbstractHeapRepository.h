@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "B3Value.h"
 #include "DFGArrayMode.h"
 #include "FTLAbstractHeap.h"
 #include "IndexingType.h"
@@ -52,12 +53,13 @@ namespace JSC { namespace FTL {
     macro(JSArrayBufferView_length, JSArrayBufferView::offsetOfLength()) \
     macro(JSArrayBufferView_mode, JSArrayBufferView::offsetOfMode()) \
     macro(JSArrayBufferView_vector, JSArrayBufferView::offsetOfVector()) \
+    macro(JSCell_cellState, JSCell::cellStateOffset()) \
+    macro(JSCell_header, 0) \
+    macro(JSCell_indexingType, JSCell::indexingTypeOffset()) \
     macro(JSCell_structureID, JSCell::structureIDOffset()) \
-    macro(JSCell_usefulBytes, JSCell::indexingTypeOffset()) \
     macro(JSCell_typeInfoFlags, JSCell::typeInfoFlagsOffset()) \
     macro(JSCell_typeInfoType, JSCell::typeInfoTypeOffset()) \
-    macro(JSCell_indexingType, JSCell::indexingTypeOffset()) \
-    macro(JSCell_gcData, JSCell::gcDataOffset()) \
+    macro(JSCell_usefulBytes, JSCell::indexingTypeOffset()) \
     macro(JSFunction_executable, JSFunction::offsetOfExecutable()) \
     macro(JSFunction_scope, JSFunction::offsetOfScopeChain()) \
     macro(JSFunction_rareData, JSFunction::offsetOfRareData()) \
@@ -75,7 +77,6 @@ namespace JSC { namespace FTL {
     macro(JSSymbolTableObject_symbolTable, JSSymbolTableObject::offsetOfSymbolTable()) \
     macro(JSWrapperObject_internalValue, JSWrapperObject::internalValueOffset()) \
     macro(MarkedAllocator_freeListHead, MarkedAllocator::offsetOfFreeListHead()) \
-    macro(MarkedBlock_markBits, MarkedBlock::offsetOfMarks()) \
     macro(ScopedArguments_overrodeThings, ScopedArguments::offsetOfOverrodeThings()) \
     macro(ScopedArguments_scope, ScopedArguments::offsetOfScope()) \
     macro(ScopedArguments_table, ScopedArguments::offsetOfTable()) \
@@ -87,7 +88,8 @@ namespace JSC { namespace FTL {
     macro(Structure_classInfo, Structure::classInfoOffset()) \
     macro(Structure_globalObject, Structure::globalObjectOffset()) \
     macro(Structure_prototype, Structure::prototypeOffset()) \
-    macro(Structure_structureID, Structure::structureIDOffset())
+    macro(Structure_structureID, Structure::structureIDOffset()) \
+    macro(Symbol_privateName, Symbol::offsetOfPrivateName())
 
 #define FOR_EACH_INDEXED_ABSTRACT_HEAP(macro) \
     macro(DirectArguments_storage, DirectArguments::storageOffset(), sizeof(EncodedJSValue)) \
@@ -118,7 +120,7 @@ namespace JSC { namespace FTL {
 class AbstractHeapRepository {
     WTF_MAKE_NONCOPYABLE(AbstractHeapRepository);
 public:
-    AbstractHeapRepository(LContext);
+    AbstractHeapRepository();
     ~AbstractHeapRepository();
 
     AbstractHeap root;
@@ -127,11 +129,11 @@ public:
     FOR_EACH_ABSTRACT_HEAP(ABSTRACT_HEAP_DECLARATION)
 #undef ABSTRACT_HEAP_DECLARATION
 
-#define ABSTRACT_FIELD_DECLARATION(name, offset) AbstractField name;
+#define ABSTRACT_FIELD_DECLARATION(name, offset) AbstractHeap name;
     FOR_EACH_ABSTRACT_FIELD(ABSTRACT_FIELD_DECLARATION)
 #undef ABSTRACT_FIELD_DECLARATION
 
-    AbstractField& JSCell_freeListNext;
+    AbstractHeap& JSCell_freeListNext;
 
 #define INDEXED_ABSTRACT_HEAP_DECLARATION(name, offset, size) IndexedAbstractHeap name;
     FOR_EACH_INDEXED_ABSTRACT_HEAP(INDEXED_ABSTRACT_HEAP_DECLARATION)
@@ -186,11 +188,36 @@ public:
         }
     }
 
-private:
-    friend class AbstractHeap;
+    void decorateMemory(const AbstractHeap*, B3::Value*);
+    void decorateCCallRead(const AbstractHeap*, B3::Value*);
+    void decorateCCallWrite(const AbstractHeap*, B3::Value*);
+    void decoratePatchpointRead(const AbstractHeap*, B3::Value*);
+    void decoratePatchpointWrite(const AbstractHeap*, B3::Value*);
 
-    LContext m_context;
-    unsigned m_tbaaKind;
+    void computeRangesAndDecorateInstructions();
+
+private:
+
+    struct HeapForValue {
+        HeapForValue()
+        {
+        }
+
+        HeapForValue(const AbstractHeap* heap, B3::Value* value)
+            : heap(heap)
+            , value(value)
+        {
+        }
+
+        const AbstractHeap* heap { nullptr };
+        B3::Value* value { nullptr };
+    };
+
+    Vector<HeapForValue> m_heapForMemory;
+    Vector<HeapForValue> m_heapForCCallRead;
+    Vector<HeapForValue> m_heapForCCallWrite;
+    Vector<HeapForValue> m_heapForPatchpointRead;
+    Vector<HeapForValue> m_heapForPatchpointWrite;
 };
 
 } } // namespace JSC::FTL

@@ -31,6 +31,7 @@
 #import <CoreLocation/CoreLocation.h>
 #import <objc/objc-runtime.h>
 #import <wtf/MathExtras.h>
+#import <wtf/NeverDestroyed.h>
 #import <wtf/PassRefPtr.h>
 #import <wtf/RetainPtr.h>
 
@@ -68,8 +69,8 @@ static const double kGravity = 9.80665;
 
 + (WebCoreMotionManager *)sharedManager
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(RetainPtr<WebCoreMotionManager>, sharedMotionManager, ([[WebCoreMotionManager alloc] init]));
-    return sharedMotionManager.get();
+    static NeverDestroyed<RetainPtr<WebCoreMotionManager>> sharedMotionManager([[WebCoreMotionManager alloc] init]);
+    return sharedMotionManager.get().get();
 }
 
 - (id)init
@@ -77,6 +78,7 @@ static const double kGravity = 9.80665;
     self = [super init];
     if (self)
         [self performSelectorOnMainThread:@selector(initializeOnMainThread) withObject:nil waitUntilDone:NO];
+
     return self;
 }
 
@@ -103,25 +105,29 @@ static const double kGravity = 9.80665;
 - (void)addMotionClient:(WebCore::DeviceMotionClientIOS *)client
 {
     m_deviceMotionClients.add(client);
-    [self checkClientStatus];
+    if (m_initialized)
+        [self checkClientStatus];
 }
 
 - (void)removeMotionClient:(WebCore::DeviceMotionClientIOS *)client
 {
     m_deviceMotionClients.remove(client);
-    [self checkClientStatus];
+    if (m_initialized)
+        [self checkClientStatus];
 }
 
 - (void)addOrientationClient:(WebCore::DeviceOrientationClientIOS *)client
 {
     m_deviceOrientationClients.add(client);
-    [self checkClientStatus];
+    if (m_initialized)
+        [self checkClientStatus];
 }
 
 - (void)removeOrientationClient:(WebCore::DeviceOrientationClientIOS *)client
 {
     m_deviceOrientationClients.remove(client);
-    [self checkClientStatus];
+    if (m_initialized)
+        [self checkClientStatus];
 }
 
 - (BOOL)gyroAvailable
@@ -149,6 +155,8 @@ static const double kGravity = 9.80665;
 
     m_locationManager = [allocCLLocationManagerInstance() init];
     m_headingAvailable = [getCLLocationManagerClass() headingAvailable];
+
+    m_initialized = YES;
 
     [self checkClientStatus];
 }

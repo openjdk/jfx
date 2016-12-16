@@ -31,6 +31,7 @@
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/StringHash.h>
 
@@ -139,17 +140,17 @@ static const TypeExtensionPair commonMediaTypes[] = {
     { "audio/x-wav", "wav" }
 };
 
-static HashSet<String>* supportedImageResourceMIMETypes;
-static HashSet<String>* supportedImageMIMETypes;
-static HashSet<String>* supportedImageMIMETypesForEncoding;
-static HashSet<String>* supportedJavaScriptMIMETypes;
-static HashSet<String>* supportedNonImageMIMETypes;
-static HashSet<String>* supportedMediaMIMETypes;
-static HashSet<String>* pdfMIMETypes;
-static HashSet<String>* pdfAndPostScriptMIMETypes;
-static HashSet<String>* unsupportedTextMIMETypes;
+static HashSet<String, ASCIICaseInsensitiveHash>* supportedImageResourceMIMETypes;
+static HashSet<String, ASCIICaseInsensitiveHash>* supportedImageMIMETypes;
+static HashSet<String, ASCIICaseInsensitiveHash>* supportedImageMIMETypesForEncoding;
+static HashSet<String, ASCIICaseInsensitiveHash>* supportedJavaScriptMIMETypes;
+static HashSet<String, ASCIICaseInsensitiveHash>* supportedNonImageMIMETypes;
+static HashSet<String, ASCIICaseInsensitiveHash>* supportedMediaMIMETypes;
+static HashSet<String, ASCIICaseInsensitiveHash>* pdfMIMETypes;
+static HashSet<String, ASCIICaseInsensitiveHash>* pdfAndPostScriptMIMETypes;
+static HashSet<String, ASCIICaseInsensitiveHash>* unsupportedTextMIMETypes;
 
-typedef HashMap<String, Vector<String>*, CaseFoldingHash> MediaMIMETypeMap;
+typedef HashMap<String, Vector<String>*, ASCIICaseInsensitiveHash> MediaMIMETypeMap;
 
 static void initializeSupportedImageMIMETypes()
 {
@@ -209,9 +210,9 @@ static void initializeSupportedImageMIMETypes()
         "image/x-bmp", "image/x-win-bitmap", "image/x-windows-bmp", "image/ms-bmp", "image/x-ms-bmp",
         "application/bmp", "application/x-bmp", "application/x-win-bitmap",
     };
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(malformedMIMETypes); ++i) {
-        supportedImageMIMETypes->add(malformedMIMETypes[i]);
-        supportedImageResourceMIMETypes->add(malformedMIMETypes[i]);
+    for (auto& type : malformedMIMETypes) {
+        supportedImageMIMETypes->add(type);
+        supportedImageResourceMIMETypes->add(type);
     }
 #endif
 
@@ -227,9 +228,9 @@ static void initializeSupportedImageMIMETypes()
         "image/x-icon",    // ico
         "image/x-xbitmap"  // xbm
     };
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(types); ++i) {
-        supportedImageMIMETypes->add(types[i]);
-        supportedImageResourceMIMETypes->add(types[i]);
+    for (auto& type : types) {
+        supportedImageMIMETypes->add(type);
+        supportedImageResourceMIMETypes->add(type);
     }
 
 #if USE(WEBP)
@@ -242,7 +243,7 @@ static void initializeSupportedImageMIMETypes()
 
 static void initializeSupportedImageMIMETypesForEncoding()
 {
-    supportedImageMIMETypesForEncoding = new HashSet<String>;
+    supportedImageMIMETypesForEncoding = new HashSet<String, ASCIICaseInsensitiveHash>;
 
 #if USE(CG)
 #if PLATFORM(COCOA)
@@ -281,28 +282,27 @@ static void initializeSupportedImageMIMETypesForEncoding()
 
 static void initializeSupportedJavaScriptMIMETypes()
 {
-    /*
-        Mozilla 1.8 and WinIE 7 both accept text/javascript and text/ecmascript.
-        Mozilla 1.8 accepts application/javascript, application/ecmascript, and application/x-javascript, but WinIE 7 doesn't.
-        WinIE 7 accepts text/javascript1.1 - text/javascript1.3, text/jscript, and text/livescript, but Mozilla 1.8 doesn't.
-        Mozilla 1.8 allows leading and trailing whitespace, but WinIE 7 doesn't.
-        Mozilla 1.8 and WinIE 7 both accept the empty string, but neither accept a whitespace-only string.
-        We want to accept all the values that either of these browsers accept, but not other values.
-     */
+    // https://html.spec.whatwg.org/multipage/scripting.html#javascript-mime-type
     static const char* types[] = {
         "text/javascript",
         "text/ecmascript",
         "application/javascript",
         "application/ecmascript",
         "application/x-javascript",
+        "application/x-ecmascript",
+        "text/javascript1.0",
         "text/javascript1.1",
         "text/javascript1.2",
         "text/javascript1.3",
+        "text/javascript1.4",
+        "text/javascript1.5",
         "text/jscript",
         "text/livescript",
+        "text/x-javascript",
+        "text/x-ecmascript"
     };
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(types); ++i)
-      supportedJavaScriptMIMETypes->add(types[i]);
+    for (auto* type : types)
+        supportedJavaScriptMIMETypes->add(type);
 }
 
 static void initializePDFMIMETypes()
@@ -311,8 +311,8 @@ static void initializePDFMIMETypes()
         "application/pdf",
         "text/pdf"
     };
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(types); ++i)
-        pdfMIMETypes->add(types[i]);
+    for (auto& type : types)
+        pdfMIMETypes->add(type);
 }
 
 static void initializePostScriptMIMETypes()
@@ -341,14 +341,12 @@ static void initializeSupportedNonImageMimeTypes()
         "application/x-ftp-directory",
 #endif
         "multipart/x-mixed-replace"
-        // Note: ADDING a new type here will probably render it as HTML. This can
-        // result in cross-site scripting.
+        // Note: Adding a new type here will probably render it as HTML.
+        // This can result in cross-site scripting vulnerabilities.
     };
-    COMPILE_ASSERT(sizeof(types) / sizeof(types[0]) <= 16,
-                   nonimage_mime_types_must_be_less_than_or_equal_to_16);
 
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(types); ++i)
-        supportedNonImageMIMETypes->add(types[i]);
+    for (auto& type : types)
+        supportedNonImageMIMETypes->add(type);
 
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
     ArchiveFactory::registerKnownArchiveMIMETypes();
@@ -357,16 +355,16 @@ static void initializeSupportedNonImageMimeTypes()
 
 static MediaMIMETypeMap& mediaMIMETypeMap()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(MediaMIMETypeMap, mediaMIMETypeForExtensionMap, ());
+    static NeverDestroyed<MediaMIMETypeMap> mediaMIMETypeForExtensionMap;
 
-    if (!mediaMIMETypeForExtensionMap.isEmpty())
+    if (!mediaMIMETypeForExtensionMap.get().isEmpty())
         return mediaMIMETypeForExtensionMap;
 
     const unsigned numPairs = sizeof(commonMediaTypes) / sizeof(commonMediaTypes[0]);
     for (unsigned ndx = 0; ndx < numPairs; ++ndx) {
 
-        if (mediaMIMETypeForExtensionMap.contains(commonMediaTypes[ndx].extension))
-            mediaMIMETypeForExtensionMap.get(commonMediaTypes[ndx].extension)->append(commonMediaTypes[ndx].type);
+        if (mediaMIMETypeForExtensionMap.get().contains(commonMediaTypes[ndx].extension))
+            mediaMIMETypeForExtensionMap.get().get(commonMediaTypes[ndx].extension)->append(commonMediaTypes[ndx].type);
         else {
             Vector<String>* synonyms = new Vector<String>;
 
@@ -376,7 +374,7 @@ static MediaMIMETypeMap& mediaMIMETypeMap()
             if (!systemType.isEmpty() && commonMediaTypes[ndx].type != systemType)
                 synonyms->append(systemType);
             synonyms->append(commonMediaTypes[ndx].type);
-            mediaMIMETypeForExtensionMap.add(commonMediaTypes[ndx].extension, synonyms);
+            mediaMIMETypeForExtensionMap.get().add(commonMediaTypes[ndx].extension, synonyms);
         }
     }
 
@@ -418,7 +416,7 @@ Vector<String> MIMETypeRegistry::getMediaMIMETypesForExtension(const String& ext
 
 static void initializeSupportedMediaMIMETypes()
 {
-    supportedMediaMIMETypes = new HashSet<String>;
+    supportedMediaMIMETypes = new HashSet<String, ASCIICaseInsensitiveHash>;
 #if ENABLE(VIDEO)
     MediaPlayer::getSupportedTypes(*supportedMediaMIMETypes);
 #endif
@@ -445,29 +443,29 @@ static void initializeUnsupportedTextMIMETypes()
         "text/vnd.sun.j2me.app-descriptor",
 #endif
     };
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(types); ++i)
-      unsupportedTextMIMETypes->add(types[i]);
+    for (auto& type : types)
+        unsupportedTextMIMETypes->add(type);
 }
 
 static void initializeMIMETypeRegistry()
 {
-    supportedJavaScriptMIMETypes = new HashSet<String>;
+    supportedJavaScriptMIMETypes = new HashSet<String, ASCIICaseInsensitiveHash>;
     initializeSupportedJavaScriptMIMETypes();
 
-    supportedNonImageMIMETypes = new HashSet<String>(*supportedJavaScriptMIMETypes);
+    supportedNonImageMIMETypes = new HashSet<String, ASCIICaseInsensitiveHash>(*supportedJavaScriptMIMETypes);
     initializeSupportedNonImageMimeTypes();
 
-    supportedImageResourceMIMETypes = new HashSet<String>;
-    supportedImageMIMETypes = new HashSet<String>;
+    supportedImageResourceMIMETypes = new HashSet<String, ASCIICaseInsensitiveHash>;
+    supportedImageMIMETypes = new HashSet<String, ASCIICaseInsensitiveHash>;
     initializeSupportedImageMIMETypes();
 
-    pdfMIMETypes = new HashSet<String>;
+    pdfMIMETypes = new HashSet<String, ASCIICaseInsensitiveHash>;
     initializePDFMIMETypes();
 
-    pdfAndPostScriptMIMETypes = new HashSet<String>(*pdfMIMETypes);
+    pdfAndPostScriptMIMETypes = new HashSet<String, ASCIICaseInsensitiveHash>(*pdfMIMETypes);
     initializePostScriptMIMETypes();
 
-    unsupportedTextMIMETypes = new HashSet<String>;
+    unsupportedTextMIMETypes = new HashSet<String, ASCIICaseInsensitiveHash>;
     initializeUnsupportedTextMIMETypes();
 }
 
@@ -588,35 +586,35 @@ bool MIMETypeRegistry::canShowMIMEType(const String& mimeType)
     return false;
 }
 
-HashSet<String>& MIMETypeRegistry::getSupportedImageMIMETypes()
+HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::getSupportedImageMIMETypes()
 {
     if (!supportedImageMIMETypes)
         initializeMIMETypeRegistry();
     return *supportedImageMIMETypes;
 }
 
-HashSet<String>& MIMETypeRegistry::getSupportedImageResourceMIMETypes()
+HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::getSupportedImageResourceMIMETypes()
 {
     if (!supportedImageResourceMIMETypes)
         initializeMIMETypeRegistry();
     return *supportedImageResourceMIMETypes;
 }
 
-HashSet<String>& MIMETypeRegistry::getSupportedImageMIMETypesForEncoding()
+HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::getSupportedImageMIMETypesForEncoding()
 {
     if (!supportedImageMIMETypesForEncoding)
         initializeSupportedImageMIMETypesForEncoding();
     return *supportedImageMIMETypesForEncoding;
 }
 
-HashSet<String>& MIMETypeRegistry::getSupportedNonImageMIMETypes()
+HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::getSupportedNonImageMIMETypes()
 {
     if (!supportedNonImageMIMETypes)
         initializeMIMETypeRegistry();
     return *supportedNonImageMIMETypes;
 }
 
-HashSet<String>& MIMETypeRegistry::getSupportedMediaMIMETypes()
+HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::getSupportedMediaMIMETypes()
 {
     if (!supportedMediaMIMETypes)
         initializeSupportedMediaMIMETypes();
@@ -624,21 +622,21 @@ HashSet<String>& MIMETypeRegistry::getSupportedMediaMIMETypes()
 }
 
 
-HashSet<String>& MIMETypeRegistry::getPDFMIMETypes()
+HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::getPDFMIMETypes()
 {
     if (!pdfMIMETypes)
         initializeMIMETypeRegistry();
     return *pdfMIMETypes;
 }
 
-HashSet<String>& MIMETypeRegistry::getPDFAndPostScriptMIMETypes()
+HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::getPDFAndPostScriptMIMETypes()
 {
     if (!pdfAndPostScriptMIMETypes)
         initializeMIMETypeRegistry();
     return *pdfAndPostScriptMIMETypes;
 }
 
-HashSet<String>& MIMETypeRegistry::getUnsupportedTextMIMETypes()
+HashSet<String, ASCIICaseInsensitiveHash>& MIMETypeRegistry::getUnsupportedTextMIMETypes()
 {
     if (!unsupportedTextMIMETypes)
         initializeMIMETypeRegistry();
@@ -647,19 +645,22 @@ HashSet<String>& MIMETypeRegistry::getUnsupportedTextMIMETypes()
 
 const String& defaultMIMEType()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const String, defaultMIMEType, (ASCIILiteral("application/octet-stream")));
+    static NeverDestroyed<const String> defaultMIMEType(ASCIILiteral("application/octet-stream"));
     return defaultMIMEType;
 }
 
 #if !USE(CURL)
+
+// FIXME: Not sure why it makes sense to have a cross-platform function when only CURL has the concept
+// of a "normalized" MIME type.
 String MIMETypeRegistry::getNormalizedMIMEType(const String& mimeType)
 {
     return mimeType;
 }
-#endif
 
-#if USE(CURL)
-typedef HashMap<String, String> MIMETypeAssociationMap;
+#else
+
+typedef HashMap<String, String, ASCIICaseInsensitiveHash> MIMETypeAssociationMap;
 
 static const MIMETypeAssociationMap& mimeTypeAssociationMap()
 {
@@ -667,8 +668,11 @@ static const MIMETypeAssociationMap& mimeTypeAssociationMap()
     if (mimeTypeMap)
         return *mimeTypeMap;
 
+    // FIXME: Should not allocate this on the heap; use NeverDestroyed instead.
     mimeTypeMap = new MIMETypeAssociationMap;
 
+    // FIXME: Writing the function out like this will create a giant function.
+    // Should use a loop instead.
     mimeTypeMap->add(ASCIILiteral("image/x-ms-bmp"), ASCIILiteral("image/bmp"));
     mimeTypeMap->add(ASCIILiteral("image/x-windows-bmp"), ASCIILiteral("image/bmp"));
     mimeTypeMap->add(ASCIILiteral("image/x-bmp"), ASCIILiteral("image/bmp"));
@@ -720,13 +724,12 @@ static const MIMETypeAssociationMap& mimeTypeAssociationMap()
 
 String MIMETypeRegistry::getNormalizedMIMEType(const String& mimeType)
 {
-    MIMETypeAssociationMap::const_iterator it = mimeTypeAssociationMap().find(mimeType);
-
+    auto it = mimeTypeAssociationMap().find(mimeType);
     if (it != mimeTypeAssociationMap().end())
         return it->value;
-
     return mimeType;
 }
+
 #endif
 
 } // namespace WebCore

@@ -27,7 +27,6 @@
 #define FilterOperation_h
 
 #include "Color.h"
-#include "FilterEffect.h"
 #include "LayoutSize.h"
 #include "Length.h"
 #include <wtf/RefCounted.h>
@@ -44,6 +43,7 @@ namespace WebCore {
 // CSS Filters
 
 class CachedSVGDocumentReference;
+class FilterEffect;
 
 class FilterOperation : public RefCounted<FilterOperation> {
 public:
@@ -188,7 +188,7 @@ public:
     CachedSVGDocumentReference* getOrCreateCachedSVGDocumentReference();
 
     FilterEffect* filterEffect() const { return m_filterEffect.get(); }
-    void setFilterEffect(PassRefPtr<FilterEffect> filterEffect) { m_filterEffect = filterEffect; }
+    void setFilterEffect(PassRefPtr<FilterEffect>);
 
 private:
     ReferenceFilterOperation(const String& url, const String& fragment);
@@ -270,7 +270,7 @@ class WEBCORE_EXPORT BlurFilterOperation : public FilterOperation {
 public:
     static PassRefPtr<BlurFilterOperation> create(Length stdDeviation)
     {
-        return adoptRef(new BlurFilterOperation(WTF::move(stdDeviation)));
+        return adoptRef(new BlurFilterOperation(WTFMove(stdDeviation)));
     }
 
     virtual PassRefPtr<FilterOperation> clone() const override
@@ -290,7 +290,7 @@ private:
 
     BlurFilterOperation(Length stdDeviation)
         : FilterOperation(BLUR)
-        , m_stdDeviation(WTF::move(stdDeviation))
+        , m_stdDeviation(WTFMove(stdDeviation))
     {
     }
 
@@ -335,6 +335,8 @@ private:
     int m_stdDeviation;
     Color m_color;
 };
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const FilterOperation&);
 
 } // namespace WebCore
 

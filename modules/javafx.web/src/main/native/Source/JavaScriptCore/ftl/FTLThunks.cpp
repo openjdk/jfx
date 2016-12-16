@@ -29,8 +29,10 @@
 #if ENABLE(FTL_JIT)
 
 #include "AssemblyHelpers.h"
+#include "DFGOSRExitCompilerCommon.h"
 #include "FPRInfo.h"
 #include "FTLOSRExitCompiler.h"
+#include "FTLOperations.h"
 #include "FTLSaveRestore.h"
 #include "GPRInfo.h"
 #include "LinkBuffer.h"
@@ -39,11 +41,22 @@ namespace JSC { namespace FTL {
 
 using namespace DFG;
 
-MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
+enum class FrameAndStackAdjustmentRequirement {
+    Needed,
+    NotNeeded
+};
+
+static MacroAssemblerCodeRef genericGenerationThunkGenerator(
+    VM* vm, FunctionPtr generationFunction, const char* name, unsigned extraPopsToRestore, FrameAndStackAdjustmentRequirement frameAndStackAdjustmentRequirement)
 {
     AssemblyHelpers jit(vm, 0);
 
-    // Note that the "return address" will be the OSR exit ID.
+    if (frameAndStackAdjustmentRequirement == FrameAndStackAdjustmentRequirement::Needed) {
+        // This needs to happen before we use the scratch buffer because this function also uses the scratch buffer.
+        adjustFrameAndStackInOSRExitCompilerThunk<FTL::JITCode>(jit, vm, JITCode::FTLJIT);
+    }
+
+    // Note that the "return address" will be the ID that we pass to the generation function.
 
     ptrdiff_t stackMisalignment = MacroAssembler::pushToSaveByteOffset();
 
@@ -66,8 +79,8 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
     saveAllRegisters(jit, buffer);
 
     // Tell GC mark phase how much of the scratch buffer is active during call.
-    jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), GPRInfo::nonArgGPR1);
-    jit.storePtr(MacroAssembler::TrustedImmPtr(requiredScratchMemorySizeInBytes()), GPRInfo::nonArgGPR1);
+    jit.move(MacroAssembler::TrustedImmPtr(scratchBuffer->activeLengthPtr()), GPRInfo::nonArgGPR0);
+    jit.storePtr(MacroAssembler::TrustedImmPtr(requiredScratchMemorySizeInBytes()), GPRInfo::nonArgGPR0);
 
     jit.loadPtr(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
     jit.peek(
@@ -91,10 +104,13 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
         jit.popToRestore(GPRInfo::regT1);
     jit.popToRestore(MacroAssembler::framePointerRegister);
 
-    // At this point we're sitting on the return address - so if we did a jump right now, the
-    // tail-callee would be happy. Instead we'll stash the callee in the return address and then
-    // restore all registers.
+    // When we came in here, there was an additional thing pushed to the stack. Some clients want it
+    // popped before proceeding.
+    while (extraPopsToRestore--)
+        jit.popToRestore(GPRInfo::regT1);
 
+    // Put the return address wherever the return instruction wants it. On all platforms, this
+    // ensures that the return address is out of the way of register restoration.
     jit.restoreReturnAddressBeforeReturn(GPRInfo::regT0);
 
     restoreAllRegisters(jit, buffer);
@@ -102,8 +118,22 @@ MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
     jit.ret();
 
     LinkBuffer patchBuffer(*vm, jit, GLOBAL_THUNK_ID);
-    patchBuffer.link(functionCall, compileFTLOSRExit);
-    return FINALIZE_CODE(patchBuffer, ("FTL OSR exit generation thunk"));
+    patchBuffer.link(functionCall, generationFunction);
+    return FINALIZE_CODE(patchBuffer, ("%s", name));
+}
+
+MacroAssemblerCodeRef osrExitGenerationThunkGenerator(VM* vm)
+{
+    unsigned extraPopsToRestore = 0;
+    return genericGenerationThunkGenerator(
+        vm, compileFTLOSRExit, "FTL OSR exit generation thunk", extraPopsToRestore, FrameAndStackAdjustmentRequirement::Needed);
+}
+
+MacroAssemblerCodeRef lazySlowPathGenerationThunkGenerator(VM* vm)
+{
+    unsigned extraPopsToRestore = 1;
+    return genericGenerationThunkGenerator(
+        vm, compileFTLLazySlowPath, "FTL lazy slow path generation thunk", extraPopsToRestore, FrameAndStackAdjustmentRequirement::NotNeeded);
 }
 
 static void registerClobberCheck(AssemblyHelpers& jit, RegisterSet dontClobber)

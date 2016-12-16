@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,11 @@
 #include <stdio.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StdLibExtras.h>
+
+namespace WTF {
+class StringBuilder;
+}
+using WTF::StringBuilder;
 
 namespace JSC {
 
@@ -80,11 +85,13 @@ public:
 
     bool init(const char*);
     bool isInRange(unsigned);
-    const char* rangeString() const { return (m_state > InitError) ? m_rangeString : "<null>"; }
+    const char* rangeString() const { return (m_state > InitError) ? m_rangeString : s_nullRangeStr; }
 
     void dump(PrintStream& out) const;
 
 private:
+    static const char* const s_nullRangeStr;
+
     RangeState m_state;
     const char* m_rangeString;
     unsigned m_lowLimit;
@@ -95,7 +102,8 @@ typedef OptionRange optionRange;
 typedef const char* optionString;
 
 #define JSC_OPTIONS(v) \
-    v(unsigned, showOptions, 0, "shows JSC options (0 = None, 1 = Overridden only, 2 = All, 3 = Verbose)") \
+    v(bool, validateOptions, false, "crashes if mis-typed JSC options were passed to the VM") \
+    v(unsigned, dumpOptions, 0, "dumps JSC options (0 = None, 1 = Overridden only, 2 = All, 3 = Verbose)") \
     \
     v(bool, useLLInt,  true, "allows the LLINT to be used if true") \
     v(bool, useJIT,    true, "allows the baseline JIT to be used if true") \
@@ -109,10 +117,13 @@ typedef const char* optionString;
     v(unsigned, errorModeReservedZoneSize, 64 * KB, nullptr) \
     \
     v(bool, crashIfCantAllocateJITMemory, false, nullptr) \
-    v(unsigned, jitMemoryReservationSize, 0, nullptr) \
+    v(unsigned, jitMemoryReservationSize, 0, "Set this number to change the executable allocation size in ExecutableAllocatorFixedVMPool. (In bytes.)") \
     \
-    v(bool, forceDFGCodeBlockLiveness, false, nullptr) \
+    v(bool, forceCodeBlockLiveness, false, nullptr) \
     v(bool, forceICFailure, false, nullptr) \
+    \
+    v(unsigned, repatchCountForCoolDown, 10, nullptr) \
+    v(unsigned, initialCoolDownCount, 20, nullptr) \
     \
     v(bool, dumpGeneratedBytecodes, false, nullptr) \
     v(bool, dumpBytecodeLivenessResults, false, nullptr) \
@@ -120,20 +131,26 @@ typedef const char* optionString;
     v(bool, forceDebuggerBytecodeGeneration, false, nullptr) \
     v(bool, forceProfilerBytecodeGeneration, false, nullptr) \
     \
-    v(bool, enableFunctionDotArguments, true, nullptr) \
+    v(bool, useFunctionDotArguments, true, nullptr) \
+    v(bool, useTailCalls, true, nullptr) \
     \
-    /* showDisassembly implies showDFGDisassembly. */ \
-    v(bool, showDisassembly, false, "dumps disassembly of all JIT compiled code upon compilation") \
+    /* dumpDisassembly implies dumpDFGDisassembly. */ \
+    v(bool, dumpDisassembly, false, "dumps disassembly of all JIT compiled code upon compilation") \
     v(bool, asyncDisassembly, false, nullptr) \
-    v(bool, showDFGDisassembly, false, "dumps disassembly of DFG function upon compilation") \
-    v(bool, showFTLDisassembly, false, "dumps disassembly of FTL function upon compilation") \
-    v(bool, showAllDFGNodes, false, nullptr) \
+    v(bool, dumpDFGDisassembly, false, "dumps disassembly of DFG function upon compilation") \
+    v(bool, dumpFTLDisassembly, false, "dumps disassembly of FTL function upon compilation") \
+    v(bool, dumpAllDFGNodes, false, nullptr) \
     v(optionRange, bytecodeRangeToDFGCompile, 0, "bytecode size range to allow DFG compilation on, e.g. 1:100") \
+    v(optionRange, bytecodeRangeToFTLCompile, 0, "bytecode size range to allow FTL compilation on, e.g. 1:100") \
     v(optionString, dfgWhitelist, nullptr, "file with list of function signatures to allow DFG compilation on") \
     v(bool, dumpSourceAtDFGTime, false, "dumps source code of JS function being DFG compiled") \
     v(bool, dumpBytecodeAtDFGTime, false, "dumps bytecode of JS function being DFG compiled") \
     v(bool, dumpGraphAfterParsing, false, nullptr) \
     v(bool, dumpGraphAtEachPhase, false, nullptr) \
+    v(bool, dumpDFGGraphAtEachPhase, false, "dumps the DFG graph at each phase DFG of complitaion (note this excludes DFG graphs during FTL compilation)") \
+    v(bool, dumpDFGFTLGraphAtEachPhase, false, "dumps the DFG graph at each phase DFG of complitaion when compiling FTL code") \
+    v(bool, dumpB3GraphAtEachPhase, false, "dumps the B3 graph at each phase of compilation") \
+    v(bool, dumpAirGraphAtEachPhase, false, "dumps the Air graph at each phase of compilation") \
     v(bool, verboseDFGByteCodeParsing, false, nullptr) \
     v(bool, verboseCompilation, false, nullptr) \
     v(bool, verboseFTLCompilation, false, nullptr) \
@@ -155,55 +172,44 @@ typedef const char* optionString;
     v(bool, alwaysComputeHash, false, nullptr) \
     v(bool, testTheFTL, false, nullptr) \
     v(bool, verboseSanitizeStack, false, nullptr) \
-    v(bool, alwaysDoFullCollection, false, nullptr) \
+    v(bool, useGenerationalGC, true, nullptr) \
     v(bool, eagerlyUpdateTopCallFrame, false, nullptr) \
     \
-    v(bool, enableOSREntryToDFG, true, nullptr) \
-    v(bool, enableOSREntryToFTL, true, nullptr) \
+    v(bool, useOSREntryToDFG, true, nullptr) \
+    v(bool, useOSREntryToFTL, true, nullptr) \
     \
     v(bool, useFTLJIT, true, "allows the FTL JIT to be used if true") \
     v(bool, useFTLTBAA, true, nullptr) \
-    v(bool, enableLLVMFastISel, false, nullptr) \
-    v(bool, useLLVMSmallCodeModel, false, nullptr) \
-    v(bool, dumpLLVMIR, false, nullptr) \
     v(bool, validateFTLOSRExitLiveness, false, nullptr) \
-    v(bool, llvmAlwaysFailsBeforeCompile, false, nullptr) \
-    v(bool, llvmAlwaysFailsBeforeLink, false, nullptr) \
-    v(bool, llvmSimpleOpt, true, nullptr) \
-    v(unsigned, llvmBackendOptimizationLevel, 2, nullptr) \
-    v(unsigned, llvmOptimizationLevel, 2, nullptr) \
-    v(unsigned, llvmSizeLevel, 0, nullptr) \
-    v(unsigned, llvmMaxStackSize, 128 * KB, nullptr) \
-    v(bool, llvmDisallowAVX, true, nullptr) \
+    v(bool, b3AlwaysFailsBeforeCompile, false, nullptr) \
+    v(bool, b3AlwaysFailsBeforeLink, false, nullptr) \
     v(bool, ftlCrashes, false, nullptr) /* fool-proof way of checking that you ended up in the FTL. ;-) */\
-    v(bool, ftlCrashesIfCantInitializeLLVM, false, nullptr) \
     v(bool, clobberAllRegsInFTLICSlowPath, !ASSERT_DISABLED, nullptr) \
-    v(bool, assumeAllRegsInFTLICAreLive, false, nullptr) \
-    v(bool, enableAccessInlining, true, nullptr) \
-    v(bool, enablePolyvariantDevirtualization, true, nullptr) \
-    v(bool, enablePolymorphicAccessInlining, true, nullptr) \
-    v(bool, enablePolymorphicCallInlining, true, nullptr) \
+    v(bool, useAccessInlining, true, nullptr) \
+    v(unsigned, maxAccessVariantListSize, 8, nullptr) \
+    v(bool, usePolyvariantDevirtualization, true, nullptr) \
+    v(bool, usePolymorphicAccessInlining, true, nullptr) \
+    v(bool, usePolymorphicCallInlining, true, nullptr) \
     v(unsigned, maxPolymorphicCallVariantListSize, 15, nullptr) \
     v(unsigned, maxPolymorphicCallVariantListSizeForTopTier, 5, nullptr) \
     v(unsigned, maxPolymorphicCallVariantsForInlining, 5, nullptr) \
     v(unsigned, frequentCallThreshold, 2, nullptr) \
     v(double, minimumCallToKnownRate, 0.51, nullptr) \
-    v(bool, optimizeNativeCalls, false, nullptr) \
-    v(bool, enableMovHintRemoval, true, nullptr) \
-    v(bool, enableObjectAllocationSinking, true, nullptr) \
+    v(bool, createPreHeaders, true, nullptr) \
+    v(bool, useMovHintRemoval, true, nullptr) \
+    v(bool, usePutStackSinking, true, nullptr) \
+    v(bool, useObjectAllocationSinking, true, nullptr) \
+    v(bool, useCopyBarrierOptimization, true, nullptr) \
     \
-    v(bool, enableConcurrentJIT, true, "allows the DFG / FTL compilation in threads other than the executing JS thread") \
+    v(bool, useConcurrentJIT, true, "allows the DFG / FTL compilation in threads other than the executing JS thread") \
     v(unsigned, numberOfDFGCompilerThreads, computeNumberOfWorkerThreads(2, 2) - 1, nullptr) \
     v(unsigned, numberOfFTLCompilerThreads, computeNumberOfWorkerThreads(8, 2) - 1, nullptr) \
     v(int32, priorityDeltaOfDFGCompilerThreads, computePriorityDeltaOfWorkerThreads(-1, 0), nullptr) \
     v(int32, priorityDeltaOfFTLCompilerThreads, computePriorityDeltaOfWorkerThreads(-2, 0), nullptr) \
     \
-    v(bool, enableProfiler, false, nullptr) \
+    v(bool, useProfiler, false, nullptr) \
     \
-    v(bool, forceUDis86Disassembler, false, nullptr) \
-    v(bool, forceLLVMDisassembler, false, nullptr) \
-    \
-    v(bool, enableArchitectureSpecificOptimizations, true, nullptr) \
+    v(bool, useArchitectureSpecificOptimizations, true, nullptr) \
     \
     v(bool, breakOnThrow, false, nullptr) \
     \
@@ -219,16 +225,16 @@ typedef const char* optionString;
     v(unsigned, maximumInliningDepth, 5, "maximum allowed inlining depth.  Depth of 1 means no inlining") \
     v(unsigned, maximumInliningRecursion, 2, nullptr) \
     \
-    v(unsigned, maximumLLVMInstructionCountForNativeInlining, 80, nullptr) \
-    \
     /* Maximum size of a caller for enabling inlining. This is purely to protect us */\
     /* from super long compiles that take a lot of memory. */\
     v(unsigned, maximumInliningCallerSize, 10000, nullptr) \
     \
     v(unsigned, maximumVarargsForInlining, 100, nullptr) \
     \
-    v(bool, enablePolyvariantCallInlining, true, nullptr) \
-    v(bool, enablePolyvariantByIdInlining, true, nullptr) \
+    v(bool, usePolyvariantCallInlining, true, nullptr) \
+    v(bool, usePolyvariantByIdInlining, true, nullptr) \
+    \
+    v(bool, useMaximalFlushInsertionPhase, false, "Setting to true allows the DFG's MaximalFlushInsertionPhase to run.") \
     \
     v(unsigned, maximumBinaryStringSwitchCaseLength, 50, nullptr) \
     v(unsigned, maximumBinaryStringSwitchTotalLength, 2000, nullptr) \
@@ -266,6 +272,9 @@ typedef const char* optionString;
     \
     v(unsigned, reoptimizationRetryCounterMax, 0, nullptr)  \
     \
+    v(bool, assertICSizing, false, "crash if estimated IC sizes are inadequate")  \
+    v(bool, dumpFailedICSizing, false, "dumps a log entry if estimated IC sizes are inadequate")  \
+    \
     v(unsigned, minimumOptimizationDelay, 1, nullptr) \
     v(unsigned, maximumOptimizationDelay, 5, nullptr) \
     v(double, desiredProfileLivenessRate, 0.75, nullptr) \
@@ -291,36 +300,92 @@ typedef const char* optionString;
     v(unsigned, forcedWeakRandomSeed, 0, nullptr) \
     \
     v(bool, useZombieMode, false, "debugging option to scribble over dead objects with 0xdeadbeef") \
-    v(bool, objectsAreImmortal, false, "debugging option to keep all objects alive forever") \
-    v(bool, showObjectStatistics, false, nullptr) \
+    v(bool, useImmortalObjects, false, "debugging option to keep all objects alive forever") \
+    v(bool, dumpObjectStatistics, false, nullptr) \
     \
     v(gcLogLevel, logGC, GCLogging::None, "debugging option to log GC activity (0 = None, 1 = Basic, 2 = Verbose)") \
-    v(bool, disableGC, false, nullptr) \
+    v(bool, useGC, true, nullptr) \
+    v(bool, gcAtEnd, false, "If true, the jsc CLI will do a GC before exiting") \
+    v(bool, forceGCSlowPaths, false, "If true, we will force all JIT fast allocations down their slow paths.")\
     v(unsigned, gcMaxHeapSize, 0, nullptr) \
     v(unsigned, forceRAMSize, 0, nullptr) \
     v(bool, recordGCPauseTimes, false, nullptr) \
     v(bool, logHeapStatisticsAtExit, false, nullptr) \
-    v(bool, enableTypeProfiler, false, nullptr) \
-    v(bool, enableControlFlowProfiler, false, nullptr) \
+    v(bool, useTypeProfiler, false, nullptr) \
+    v(bool, useControlFlowProfiler, false, nullptr) \
+    v(bool, useSamplingProfiler, false, nullptr) \
+    v(bool, alwaysGeneratePCToCodeOriginMap, false, "This will make sure we always generate a PCToCodeOriginMap for JITed code.") \
     \
     v(bool, verifyHeap, false, nullptr) \
     v(unsigned, numberOfGCCyclesToRecordForVerification, 3, nullptr) \
     \
-    v(bool, enableExceptionFuzz, false, nullptr) \
+    v(bool, useExceptionFuzz, false, nullptr) \
     v(unsigned, fireExceptionFuzzAt, 0, nullptr) \
+    v(bool, validateDFGExceptionHandling, false, "Causes the DFG to emit code validating exception handling for each node that can exit") /* This is true by default on Debug builds */\
     \
-    v(bool, enableExecutableAllocationFuzz, false, nullptr) \
+    v(bool, useExecutableAllocationFuzz, false, nullptr) \
     v(unsigned, fireExecutableAllocationFuzzAt, 0, nullptr) \
     v(unsigned, fireExecutableAllocationFuzzAtOrAfter, 0, nullptr) \
     v(bool, verboseExecutableAllocationFuzz, false, nullptr) \
     \
-    v(bool, enableOSRExitFuzz, false, nullptr) \
+    v(bool, useOSRExitFuzz, false, nullptr) \
     v(unsigned, fireOSRExitFuzzAtStatic, 0, nullptr) \
     v(unsigned, fireOSRExitFuzzAt, 0, nullptr) \
     v(unsigned, fireOSRExitFuzzAtOrAfter, 0, nullptr) \
     \
-    v(bool, enableDollarVM, false, "installs the $vm debugging tool in global objects") \
+    v(bool, logB3PhaseTimes, false, nullptr) \
+    v(double, rareBlockPenalty, 0.001, nullptr) \
+    v(bool, airSpillsEverything, false, nullptr) \
+    v(bool, logAirRegisterPressure, false, nullptr) \
+    v(unsigned, maxB3TailDupBlockSize, 3, nullptr) \
+    v(unsigned, maxB3TailDupBlockSuccessors, 3, nullptr) \
+    \
+    v(bool, useDollarVM, false, "installs the $vm debugging tool in global objects") \
     v(optionString, functionOverrides, nullptr, "file with debugging overrides for function bodies") \
+    \
+    v(unsigned, watchdog, 0, "watchdog timeout (0 = Disabled, N = a timeout period of N milliseconds)") \
+    \
+    v(bool, dumpModuleRecord, false, nullptr) \
+    v(bool, dumpModuleLoadingState, false, nullptr) \
+    v(bool, exposeInternalModuleLoader, false, "expose the internal module loader object to the global space for debugging") \
+
+enum OptionEquivalence {
+    SameOption,
+    InvertedOption,
+};
+
+#define JSC_ALIASED_OPTIONS(v) \
+    v(enableFunctionDotArguments, useFunctionDotArguments, SameOption) \
+    v(enableTailCalls, useTailCalls, SameOption) \
+    v(showDisassembly, dumpDisassembly, SameOption) \
+    v(showDFGDisassembly, dumpDFGDisassembly, SameOption) \
+    v(showFTLDisassembly, dumpFTLDisassembly, SameOption) \
+    v(showAllDFGNodes, dumpAllDFGNodes, SameOption) \
+    v(alwaysDoFullCollection, useGenerationalGC, InvertedOption) \
+    v(enableOSREntryToDFG, useOSREntryToDFG, SameOption) \
+    v(enableOSREntryToFTL, useOSREntryToFTL, SameOption) \
+    v(enableAccessInlining, useAccessInlining, SameOption) \
+    v(enablePolyvariantDevirtualization, usePolyvariantDevirtualization, SameOption) \
+    v(enablePolymorphicAccessInlining, usePolymorphicAccessInlining, SameOption) \
+    v(enablePolymorphicCallInlining, usePolymorphicCallInlining, SameOption) \
+    v(enableMovHintRemoval, useMovHintRemoval, SameOption) \
+    v(enableObjectAllocationSinking, useObjectAllocationSinking, SameOption) \
+    v(enableCopyBarrierOptimization, useCopyBarrierOptimization, SameOption) \
+    v(enableConcurrentJIT, useConcurrentJIT, SameOption) \
+    v(enableProfiler, useProfiler, SameOption) \
+    v(enableArchitectureSpecificOptimizations, useArchitectureSpecificOptimizations, SameOption) \
+    v(enablePolyvariantCallInlining, usePolyvariantCallInlining, SameOption) \
+    v(enablePolyvariantByIdInlining, usePolyvariantByIdInlining, SameOption) \
+    v(enableMaximalFlushInsertionPhase, useMaximalFlushInsertionPhase, SameOption) \
+    v(objectsAreImmortal, useImmortalObjects, SameOption) \
+    v(showObjectStatistics, dumpObjectStatistics, SameOption) \
+    v(disableGC, useGC, InvertedOption) \
+    v(enableTypeProfiler, useTypeProfiler, SameOption) \
+    v(enableControlFlowProfiler, useControlFlowProfiler, SameOption) \
+    v(enableExceptionFuzz, useExceptionFuzz, SameOption) \
+    v(enableExecutableAllocationFuzz, useExecutableAllocationFuzz, SameOption) \
+    v(enableOSRExitFuzz, useOSRExitFuzz, SameOption) \
+    v(enableDollarVM, useDollarVM, SameOption) \
 
 class Options {
 public:
@@ -356,11 +421,17 @@ public:
 
     JS_EXPORT_PRIVATE static void initialize();
 
+    // Parses a string of options where each option is of the format "--<optionName>=<value>"
+    // and are separated by a space. The leading "--" is optional and will be ignored.
+    JS_EXPORT_PRIVATE static bool setOptions(const char* optionsList);
+
     // Parses a single command line option in the format "<optionName>=<value>"
     // (no spaces allowed) and set the specified option if appropriate.
     JS_EXPORT_PRIVATE static bool setOption(const char* arg);
-    JS_EXPORT_PRIVATE static void dumpAllOptions(DumpLevel, const char* title = nullptr, FILE* stream = stdout);
-    static void dumpOption(DumpLevel, OptionID, FILE* stream = stdout, const char* header = "", const char* footer = "");
+
+    JS_EXPORT_PRIVATE static void dumpAllOptions(FILE*, DumpLevel, const char* title = nullptr);
+    JS_EXPORT_PRIVATE static void dumpAllOptionsInALine(StringBuilder&);
+
     JS_EXPORT_PRIVATE static void ensureOptionsAreCoherent();
 
     // Declare accessors for each option:
@@ -392,6 +463,20 @@ private:
 
     Options();
 
+    enum DumpDefaultsOption {
+        DontDumpDefaults,
+        DumpDefaults
+    };
+    static void dumpOptionsIfNeeded();
+    static void dumpAllOptions(StringBuilder&, DumpLevel, const char* title,
+        const char* separator, const char* optionHeader, const char* optionFooter, DumpDefaultsOption);
+    static void dumpOption(StringBuilder&, DumpLevel, OptionID,
+        const char* optionHeader, const char* optionFooter, DumpDefaultsOption);
+
+    static bool setOptionWithoutAlias(const char* arg);
+    static bool setAliasedOption(const char* arg);
+    static bool overrideAliasedOptionWithHeuristic(const char* name);
+
     // Declare the singleton instance of the options store:
     JS_EXPORTDATA static Entry s_options[numberOfOptions];
     static Entry s_defaultOptions[numberOfOptions];
@@ -408,7 +493,8 @@ public:
     {
     }
 
-    void dump(FILE*) const;
+    void dump(StringBuilder&) const;
+
     bool operator==(const Option& other) const;
     bool operator!=(const Option& other) const { return !(*this == other); }
 

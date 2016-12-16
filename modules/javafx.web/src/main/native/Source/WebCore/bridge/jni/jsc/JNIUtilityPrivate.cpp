@@ -251,7 +251,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                         static JGClass nodeImplClass = env->FindClass("com/sun/webkit/dom/NodeImpl");
                         static jmethodID getImplID = env->GetStaticMethodID(nodeImplClass, "getCachedImpl",
                                                                      "(J)Lorg/w3c/dom/Node;");
-                        WebCore::Node *peer = &jsnode->impl();
+                        WebCore::Node *peer = &jsnode->wrapped();
                         peer->ref(); //deref is in NodeImpl disposer
                         result.l = env->CallStaticObjectMethod(
                             nodeImplClass,

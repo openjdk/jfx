@@ -25,10 +25,10 @@
 
 [
     Conditional=INDEXED_DATABASE,
-    EventTarget,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
     EnabledAtRuntime=IndexedDB,
+    SkipVTableValidation,
 ] interface IDBOpenDBRequest : IDBRequest {
     attribute EventHandler onblocked;
     attribute EventHandler onupgradeneeded;

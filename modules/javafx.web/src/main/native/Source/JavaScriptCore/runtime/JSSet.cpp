@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSSet.h"
 
+#include "CopiedBlockInlines.h"
 #include "JSCJSValueInlines.h"
 #include "JSSetIterator.h"
 #include "MapDataInlines.h"
@@ -40,6 +41,13 @@ void JSSet::destroy(JSCell* cell)
 {
     JSSet* thisObject = jsCast<JSSet*>(cell);
     thisObject->JSSet::~JSSet();
+}
+
+size_t JSSet::estimatedSize(JSCell* cell)
+{
+    JSSet* thisObject = jsCast<JSSet*>(cell);
+    size_t setDataSize = thisObject->m_setData.capacityInBytes();
+    return Base::estimatedSize(cell) + setDataSize;
 }
 
 void JSSet::visitChildren(JSCell* cell, SlotVisitor& visitor)

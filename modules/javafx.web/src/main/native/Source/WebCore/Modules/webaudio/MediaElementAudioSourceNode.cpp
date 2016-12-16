@@ -40,13 +40,13 @@ const unsigned maxSampleRate = 192000;
 
 namespace WebCore {
 
-Ref<MediaElementAudioSourceNode> MediaElementAudioSourceNode::create(AudioContext* context, HTMLMediaElement* mediaElement)
+Ref<MediaElementAudioSourceNode> MediaElementAudioSourceNode::create(AudioContext& context, HTMLMediaElement* mediaElement)
 {
     return adoptRef(*new MediaElementAudioSourceNode(context, mediaElement));
 }
 
-MediaElementAudioSourceNode::MediaElementAudioSourceNode(AudioContext* context, HTMLMediaElement* mediaElement)
-    : AudioNode(context, context->sampleRate())
+MediaElementAudioSourceNode::MediaElementAudioSourceNode(AudioContext& context, HTMLMediaElement* mediaElement)
+    : AudioNode(context, context.sampleRate())
     , m_mediaElement(mediaElement)
     , m_sourceNumberOfChannels(0)
     , m_sourceSampleRate(0)
@@ -92,7 +92,7 @@ void MediaElementAudioSourceNode::setFormat(size_t numberOfChannels, float sourc
 
         {
             // The context must be locked when changing the number of output channels.
-            AudioContext::AutoLocker contextLocker(*context());
+            AudioContext::AutoLocker contextLocker(context());
 
             // Do any necesssary re-configuration to the output's number of channels.
             output(0)->setNumberOfChannels(numberOfChannels);
@@ -112,7 +112,7 @@ void MediaElementAudioSourceNode::process(size_t numberOfFrames)
     // Use a std::try_to_lock to avoid contention in the real-time audio thread.
     // If we fail to acquire the lock then the HTMLMediaElement must be in the middle of
     // reconfiguring its playback engine, so we output silence in this case.
-    std::unique_lock<std::mutex> lock(m_processMutex, std::try_to_lock);
+    std::unique_lock<Lock> lock(m_processMutex, std::try_to_lock);
     if (!lock.owns_lock()) {
         // We failed to acquire the lock.
         outputBus->zero();

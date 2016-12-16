@@ -19,9 +19,9 @@
 #include "config.h"
 #include "WebKitDOMCustom.h"
 
+#include "DOMTokenList.h"
 #include "JSMainThreadExecState.h"
 #include "SerializedScriptValue.h"
-#include "WebKitDOMDOMSettableTokenListPrivate.h"
 #include "WebKitDOMDOMWindowPrivate.h"
 #include "WebKitDOMHTMLInputElement.h"
 #include "WebKitDOMHTMLInputElementPrivate.h"
@@ -99,5 +99,5 @@ void webkit_dom_html_link_element_set_sizes(WebKitDOMHTMLLinkElement* linkElemen
     g_return_if_fail(WEBKIT_DOM_IS_HTML_LINK_ELEMENT(linkElement));
     g_return_if_fail(value);
 
-    core(linkElement)->setSizes(String::fromUTF8(value));
+    core(linkElement)->sizes().setValue(String::fromUTF8(value));
 }

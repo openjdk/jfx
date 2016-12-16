@@ -50,16 +50,12 @@ public:
 
     virtual void contextMenuDestroyed() override;
 
-    virtual NSMutableArray* getCustomMenuFromDefaultItems(WebCore::ContextMenu*) override;
-    virtual void contextMenuItemSelected(WebCore::ContextMenuItem*, const WebCore::ContextMenu*) override;
-
     virtual void downloadURL(const WebCore::URL&) override;
     virtual void searchWithGoogle(const WebCore::Frame*) override;
     virtual void lookUpInDictionary(WebCore::Frame*) override;
     virtual bool isSpeaking() override;
     virtual void speak(const WTF::String&) override;
     virtual void stopSpeaking() override;
-    virtual WebCore::ContextMenuItem shareMenuItem(const WebCore::HitTestResult&) override;
     virtual void searchWithSpotlight() override;
     virtual void showContextMenu() override;
 

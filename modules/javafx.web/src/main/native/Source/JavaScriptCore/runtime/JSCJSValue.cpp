@@ -56,6 +56,18 @@ double JSValue::toIntegerPreserveNaN(ExecState* exec) const
     return trunc(toNumber(exec));
 }
 
+double JSValue::toLength(ExecState* exec) const
+{
+    // ECMA 7.1.15
+    // http://www.ecma-international.org/ecma-262/6.0/#sec-tolength
+    double d = toInteger(exec);
+    if (d <= 0)
+        return 0.0;
+    if (std::isinf(d))
+        return 9007199254740991.0; // 2 ** 53 - 1
+    return std::min(d, 9007199254740991.0);
+}
+
 double JSValue::toNumberSlowCase(ExecState* exec) const
 {
     ASSERT(!isInt32() && !isDouble());
@@ -157,7 +169,7 @@ void JSValue::putToPrimitive(ExecState* exec, PropertyName propertyName, JSValue
             }
 
             if (gs.isCustomGetterSetter()) {
-                callCustomSetter(exec, gs, obj, slot.thisValue(), value);
+                callCustomSetter(exec, gs, attributes & CustomAccessor, obj, slot.thisValue(), value);
                 return;
             }
 
@@ -349,8 +361,14 @@ bool JSValue::isValidCallee()
     return asObject(asCell())->globalObject();
 }
 
-JSString* JSValue::toStringSlowCase(ExecState* exec) const
+JSString* JSValue::toStringSlowCase(ExecState* exec, bool returnEmptyStringOnError) const
 {
+    auto errorValue = [&] () -> JSString* {
+        if (returnEmptyStringOnError)
+            return jsEmptyString(exec);
+        return nullptr;
+    };
+
     VM& vm = exec->vm();
     ASSERT(!isString());
     if (isInt32()) {
@@ -371,15 +389,18 @@ JSString* JSValue::toStringSlowCase(ExecState* exec) const
         return vm.smallStrings.undefinedString();
     if (isSymbol()) {
         throwTypeError(exec);
-        return jsEmptyString(exec);
+        return errorValue();
     }
 
     ASSERT(isCell());
     JSValue value = asCell()->toPrimitive(exec, PreferString);
-    if (exec->hadException())
-        return jsEmptyString(exec);
+    if (vm.exception())
+        return errorValue();
     ASSERT(!value.isObject());
-    return value.toString(exec);
+    JSString* result = value.toString(exec);
+    if (vm.exception())
+        return errorValue();
+    return result;
 }
 
 String JSValue::toWTFStringSlowCase(ExecState* exec) const

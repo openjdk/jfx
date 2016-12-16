@@ -55,6 +55,7 @@ enum FilterConsumer {
 };
 
 class FilterEffectRendererHelper {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     FilterEffectRendererHelper(bool haveFilterEffect)
         : m_renderLayer(0)
@@ -68,7 +69,7 @@ public:
 
     bool prepareFilterEffect(RenderLayer*, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect);
     bool beginFilterEffect();
-    void applyFilterEffect(GraphicsContext* destinationContext);
+    void applyFilterEffect(GraphicsContext& destinationContext);
 
     GraphicsContext* filterContext() const;
 

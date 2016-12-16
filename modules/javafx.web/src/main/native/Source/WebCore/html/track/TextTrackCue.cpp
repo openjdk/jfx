@@ -47,12 +47,9 @@
 #include "TextTrack.h"
 #include "TextTrackCueList.h"
 #include "VTTCue.h"
+#include "VTTRegionList.h"
 #include <wtf/MathExtras.h>
 #include <wtf/text/StringBuilder.h>
-
-#if ENABLE(WEBVTT_REGIONS)
-#include "VTTRegionList.h"
-#endif
 
 namespace WebCore {
 
@@ -193,7 +190,7 @@ void TextTrackCue::invalidateCueIndex()
     m_cueIndex = invalidCueIndex;
 }
 
-bool TextTrackCue::dispatchEvent(PassRefPtr<Event> event)
+bool TextTrackCue::dispatchEvent(Event& event)
 {
     // When a TextTrack's mode is disabled: no cues are active, no events fired.
     if (!track() || track()->mode() == TextTrack::disabledKeyword())

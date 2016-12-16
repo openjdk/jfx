@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -71,6 +71,7 @@ namespace JSC { namespace DFG {
     \
     macro(MovHint, NodeMustGenerate) \
     macro(ZombieHint, NodeMustGenerate) \
+    macro(ExitOK, NodeMustGenerate) /* Indicates that exit state is intact. */ \
     macro(Phantom, NodeMustGenerate) \
     macro(Check, NodeMustGenerate) /* Used if we want just a type check but not liveness. Non-checking uses will be removed. */\
     macro(Upsilon, 0) \
@@ -151,7 +152,10 @@ namespace JSC { namespace DFG {
     macro(ArithMax, NodeResultNumber) \
     macro(ArithFRound, NodeResultNumber) \
     macro(ArithPow, NodeResultNumber) \
+    macro(ArithRandom, NodeResultDouble | NodeMustGenerate) \
     macro(ArithRound, NodeResultNumber) \
+    macro(ArithFloor, NodeResultNumber) \
+    macro(ArithCeil, NodeResultNumber) \
     macro(ArithSqrt, NodeResultNumber) \
     macro(ArithSin, NodeResultNumber) \
     macro(ArithCos, NodeResultNumber) \
@@ -159,6 +163,9 @@ namespace JSC { namespace DFG {
     \
     /* Add of values may either be arithmetic, or result in string concatenation. */\
     macro(ValueAdd, NodeResultJS | NodeMustGenerate) \
+    \
+    /* Add of values that always convers its inputs to strings. May have two or three kids. */\
+    macro(StrCat, NodeResultJS | NodeMustGenerate) \
     \
     /* Property access. */\
     /* PutByValAlias indicates a 'put' aliases a prior write to the same property. */\
@@ -175,14 +182,20 @@ namespace JSC { namespace DFG {
     macro(GetById, NodeResultJS | NodeMustGenerate) \
     macro(GetByIdFlush, NodeResultJS | NodeMustGenerate) \
     macro(PutById, NodeMustGenerate) \
-    macro(PutByIdFlush, NodeMustGenerate | NodeMustGenerate) \
+    macro(PutByIdFlush, NodeMustGenerate) \
     macro(PutByIdDirect, NodeMustGenerate) \
+    macro(PutGetterById, NodeMustGenerate) \
+    macro(PutSetterById, NodeMustGenerate) \
+    macro(PutGetterSetterById, NodeMustGenerate) \
+    macro(PutGetterByVal, NodeMustGenerate) \
+    macro(PutSetterByVal, NodeMustGenerate) \
     macro(CheckStructure, NodeMustGenerate) \
     macro(GetExecutable, NodeResultJS) \
     macro(PutStructure, NodeMustGenerate) \
     macro(AllocatePropertyStorage, NodeMustGenerate | NodeResultStorage) \
     macro(ReallocatePropertyStorage, NodeMustGenerate | NodeResultStorage) \
     macro(GetButterfly, NodeResultStorage) \
+    macro(GetButterflyReadOnly, NodeResultStorage) /* A node used to replace GetButterfly at the bitter end of compilation. */\
     macro(CheckArray, NodeMustGenerate) \
     macro(Arrayify, NodeMustGenerate) \
     macro(ArrayifyToStructure, NodeMustGenerate) \
@@ -202,13 +215,16 @@ namespace JSC { namespace DFG {
     macro(GetClosureVar, NodeResultJS) \
     macro(PutClosureVar, NodeMustGenerate) \
     macro(GetGlobalVar, NodeResultJS) \
-    macro(PutGlobalVar, NodeMustGenerate) \
+    macro(GetGlobalLexicalVariable, NodeResultJS) \
+    macro(PutGlobalVariable, NodeMustGenerate) \
     macro(NotifyWrite, NodeMustGenerate) \
     macro(VarInjectionWatchpoint, NodeMustGenerate) \
     macro(CheckCell, NodeMustGenerate) \
     macro(CheckNotEmpty, NodeMustGenerate) \
     macro(CheckBadCell, NodeMustGenerate) \
     macro(CheckInBounds, NodeMustGenerate) \
+    macro(CheckIdent, NodeMustGenerate) \
+    macro(CheckTypeInfoFlags, NodeMustGenerate) /* Takes an OpInfo with the flags you want to test are set */\
     \
     /* Optimizations for array mutation. */\
     macro(ArrayPush, NodeResultJS | NodeMustGenerate) \
@@ -217,6 +233,7 @@ namespace JSC { namespace DFG {
     /* Optimizations for regular expression matching. */\
     macro(RegExpExec, NodeResultJS | NodeMustGenerate) \
     macro(RegExpTest, NodeResultJS | NodeMustGenerate) \
+    macro(StringReplace, NodeResultJS | NodeMustGenerate) \
     \
     /* Optimizations for string access */ \
     macro(StringCharCodeAt, NodeResultInt32) \
@@ -229,7 +246,6 @@ namespace JSC { namespace DFG {
     macro(CompareGreater, NodeResultBoolean | NodeMustGenerate) \
     macro(CompareGreaterEq, NodeResultBoolean | NodeMustGenerate) \
     macro(CompareEq, NodeResultBoolean | NodeMustGenerate) \
-    macro(CompareEqConstant, NodeResultBoolean) \
     macro(CompareStrictEq, NodeResultBoolean) \
     \
     /* Calls. */\
@@ -239,8 +255,9 @@ namespace JSC { namespace DFG {
     macro(CallForwardVarargs, NodeResultJS | NodeMustGenerate) \
     macro(ConstructVarargs, NodeResultJS | NodeMustGenerate) \
     macro(ConstructForwardVarargs, NodeResultJS | NodeMustGenerate) \
-    macro(NativeCall, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
-    macro(NativeConstruct, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
+    macro(TailCallInlinedCaller, NodeResultJS | NodeMustGenerate | NodeHasVarArgs) \
+    macro(TailCallVarargsInlinedCaller, NodeResultJS | NodeMustGenerate) \
+    macro(TailCallForwardVarargsInlinedCaller, NodeResultJS | NodeMustGenerate) \
     \
     /* Allocations. */\
     macro(NewObject, NodeResultJS) \
@@ -249,6 +266,9 @@ namespace JSC { namespace DFG {
     macro(NewArrayBuffer, NodeResultJS) \
     macro(NewTypedArray, NodeResultJS | NodeMustGenerate) \
     macro(NewRegexp, NodeResultJS) \
+    /* Rest Parameter */\
+    macro(GetRestLength, NodeResultInt32) \
+    macro(CopyRest, NodeMustGenerate) \
     \
     /* Support for allocation sinking. */\
     macro(PhantomNewObject, NodeResultJS | NodeMustGenerate) \
@@ -256,6 +276,7 @@ namespace JSC { namespace DFG {
     macro(CheckStructureImmediate, NodeMustGenerate) \
     macro(MaterializeNewObject, NodeResultJS | NodeHasVarArgs) \
     macro(PhantomNewFunction, NodeResultJS | NodeMustGenerate) \
+    macro(PhantomNewGeneratorFunction, NodeResultJS | NodeMustGenerate) \
     macro(PhantomCreateActivation, NodeResultJS | NodeMustGenerate) \
     macro(MaterializeCreateActivation, NodeResultJS | NodeHasVarArgs) \
     \
@@ -263,8 +284,9 @@ namespace JSC { namespace DFG {
     macro(Breakpoint, NodeMustGenerate) \
     macro(ProfileWillCall, NodeMustGenerate) \
     macro(ProfileDidCall, NodeMustGenerate) \
-    macro(CheckHasInstance, NodeMustGenerate) \
+    macro(OverridesHasInstance, NodeMustGenerate | NodeResultBoolean) \
     macro(InstanceOf, NodeResultBoolean) \
+    macro(InstanceOfCustom, NodeMustGenerate | NodeResultBoolean) \
     macro(IsUndefined, NodeResultBoolean) \
     macro(IsBoolean, NodeResultBoolean) \
     macro(IsNumber, NodeResultBoolean) \
@@ -295,6 +317,9 @@ namespace JSC { namespace DFG {
     \
     macro(NewFunction, NodeResultJS) \
     \
+    macro(NewArrowFunction, NodeResultJS) \
+    macro(NewGeneratorFunction, NodeResultJS) \
+    \
     /* These aren't terminals but always exit */ \
     macro(Throw, NodeMustGenerate) \
     macro(ThrowReferenceError, NodeMustGenerate) \
@@ -304,6 +329,9 @@ namespace JSC { namespace DFG {
     macro(Branch, NodeMustGenerate) \
     macro(Switch, NodeMustGenerate) \
     macro(Return, NodeMustGenerate) \
+    macro(TailCall, NodeMustGenerate | NodeHasVarArgs) \
+    macro(TailCallVarargs, NodeMustGenerate) \
+    macro(TailCallForwardVarargs, NodeMustGenerate) \
     macro(Unreachable, NodeMustGenerate) \
     \
     /* Count execution. */\
@@ -319,8 +347,7 @@ namespace JSC { namespace DFG {
     /* flow. */\
     macro(BottomValue, NodeResultJS) \
     \
-    /* Checks the watchdog timer. If the timer has fired, we OSR exit to the */ \
-    /* baseline JIT to redo the watchdog timer check, and service the timer. */ \
+    /* Checks the watchdog timer. If the timer has fired, we call operation operationHandleWatchdogTimer*/ \
     macro(CheckWatchdogTimer, NodeMustGenerate) \
     /* Write barriers ! */\
     macro(StoreBarrier, NodeMustGenerate) \

@@ -40,6 +40,7 @@
 
 namespace WebCore {
 
+    class ContentSecurityPolicyResponseHeaders;
     class DedicatedWorkerThread;
     class ScriptExecutionContext;
     class Worker;
@@ -51,23 +52,18 @@ namespace WebCore {
 
         // Implementations of WorkerGlobalScopeProxy.
         // (Only use these methods in the worker object thread.)
-        virtual void startWorkerGlobalScope(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode) override;
+        virtual void startWorkerGlobalScope(const URL& scriptURL, const String& userAgent, const String& sourceCode, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, WorkerThreadStartMode) override;
         virtual void terminateWorkerGlobalScope() override;
         virtual void postMessageToWorkerGlobalScope(PassRefPtr<SerializedScriptValue>, std::unique_ptr<MessagePortChannelArray>) override;
         virtual bool hasPendingActivity() const override;
         virtual void workerObjectDestroyed() override;
         virtual void notifyNetworkStateChange(bool isOnline) override;
 
-        virtual void connectToInspector(WorkerGlobalScopeProxy::PageInspector*) override;
-        virtual void disconnectFromInspector() override;
-        virtual void sendMessageToInspector(const String&) override;
-
         // Implementations of WorkerObjectProxy.
         // (Only use these methods in the worker context thread.)
         virtual void postMessageToWorkerObject(PassRefPtr<SerializedScriptValue>, std::unique_ptr<MessagePortChannelArray>) override;
         virtual void postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) override;
         virtual void postConsoleMessageToWorkerObject(MessageSource, MessageLevel, const String& message, int lineNumber, int columnNumber, const String& sourceURL) override;
-        virtual void postMessageToPageInspector(const String&) override;
         virtual void confirmMessageFromWorkerObject(bool hasPendingActivity) override;
         virtual void reportPendingActivity(bool hasPendingActivity) override;
         virtual void workerGlobalScopeClosed() override;
@@ -89,7 +85,6 @@ namespace WebCore {
 
     private:
         friend class MessageWorkerTask;
-        friend class PostMessageToPageInspectorTask;
         friend class WorkerGlobalScopeDestroyedTask;
         friend class WorkerExceptionTask;
         friend class WorkerThreadActivityReportTask;
@@ -109,7 +104,6 @@ namespace WebCore {
         bool m_askedToTerminate;
 
         Vector<std::unique_ptr<ScriptExecutionContext::Task>> m_queuedEarlyTasks; // Tasks are queued here until there's a thread object created.
-        WorkerGlobalScopeProxy::PageInspector* m_pageInspector;
     };
 
 } // namespace WebCore

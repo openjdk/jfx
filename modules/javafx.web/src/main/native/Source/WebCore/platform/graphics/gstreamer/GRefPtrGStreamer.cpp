@@ -27,7 +27,7 @@ namespace WTF {
 
 template <> GRefPtr<GstElement> adoptGRef(GstElement* ptr)
 {
-    ASSERT(!ptr || !g_object_is_floating(G_OBJECT(ptr)));
+    ASSERT(!ptr || !g_object_is_floating(ptr));
     return GRefPtr<GstElement>(ptr, GRefPtrAdopt);
 }
 
@@ -47,7 +47,7 @@ template <> void derefGPtr<GstElement>(GstElement* ptr)
 
 template <> GRefPtr<GstPad> adoptGRef(GstPad* ptr)
 {
-    ASSERT(!ptr || !g_object_is_floating(G_OBJECT(ptr)));
+    ASSERT(!ptr || !g_object_is_floating(ptr));
     return GRefPtr<GstPad>(ptr, GRefPtrAdopt);
 }
 
@@ -67,7 +67,7 @@ template <> void derefGPtr<GstPad>(GstPad* ptr)
 
 template <> GRefPtr<GstPadTemplate> adoptGRef(GstPadTemplate* ptr)
 {
-    ASSERT(!ptr || !g_object_is_floating(G_OBJECT(ptr)));
+    ASSERT(!ptr || !g_object_is_floating(ptr));
     return GRefPtr<GstPadTemplate>(ptr, GRefPtrAdopt);
 }
 
@@ -103,10 +103,29 @@ template <> void derefGPtr<GstCaps>(GstCaps* ptr)
         gst_caps_unref(ptr);
 }
 
+template <> GRefPtr<GstContext> adoptGRef(GstContext* ptr)
+{
+    ASSERT(!g_object_is_floating(ptr));
+    return GRefPtr<GstContext>(ptr, GRefPtrAdopt);
+}
+
+template <> GstContext* refGPtr<GstContext>(GstContext* ptr)
+{
+    if (ptr)
+        gst_context_ref(ptr);
+    return ptr;
+}
+
+template <> void derefGPtr<GstContext>(GstContext* ptr)
+{
+    if (ptr)
+        gst_context_unref(ptr);
+}
 
 template <> GRefPtr<GstTask> adoptGRef(GstTask* ptr)
 {
-    ASSERT(!g_object_is_floating(G_OBJECT(ptr)));
+    // There is no need to check the object reference is floating here because
+    // gst_task_init() always sinks it.
     return GRefPtr<GstTask>(ptr, GRefPtrAdopt);
 }
 
@@ -126,7 +145,7 @@ template <> void derefGPtr<GstTask>(GstTask* ptr)
 
 template <> GRefPtr<GstBus> adoptGRef(GstBus* ptr)
 {
-    ASSERT(!g_object_is_floating(G_OBJECT(ptr)));
+    ASSERT(!ptr || !g_object_is_floating(ptr));
     return GRefPtr<GstBus>(ptr, GRefPtrAdopt);
 }
 
@@ -146,7 +165,7 @@ template <> void derefGPtr<GstBus>(GstBus* ptr)
 
 template <> GRefPtr<GstElementFactory> adoptGRef(GstElementFactory* ptr)
 {
-    ASSERT(!g_object_is_floating(G_OBJECT(ptr)));
+    ASSERT(!ptr || !g_object_is_floating(ptr));
     return GRefPtr<GstElementFactory>(ptr, GRefPtrAdopt);
 }
 
@@ -181,6 +200,25 @@ template<> void derefGPtr<GstBuffer>(GstBuffer* ptr)
 {
     if (ptr)
         gst_buffer_unref(ptr);
+}
+
+template<> GRefPtr<GstBufferList> adoptGRef(GstBufferList* ptr)
+{
+    return GRefPtr<GstBufferList>(ptr, GRefPtrAdopt);
+}
+
+template<> GstBufferList* refGPtr<GstBufferList>(GstBufferList* ptr)
+{
+    if (ptr)
+        gst_buffer_list_ref(ptr);
+
+    return ptr;
+}
+
+template<> void derefGPtr<GstBufferList>(GstBufferList* ptr)
+{
+    if (ptr)
+        gst_buffer_list_unref(ptr);
 }
 
 template<> GRefPtr<GstSample> adoptGRef(GstSample* ptr)
@@ -258,5 +296,66 @@ template<> void derefGPtr<GstToc>(GstToc* ptr)
     if (ptr)
         gst_toc_unref(ptr);
 }
+
+template<> GRefPtr<GstMessage> adoptGRef(GstMessage* ptr)
+{
+    return GRefPtr<GstMessage>(ptr, GRefPtrAdopt);
 }
+
+template<> GstMessage* refGPtr<GstMessage>(GstMessage* ptr)
+{
+    if (ptr)
+        return gst_message_ref(ptr);
+
+    return ptr;
+}
+
+template<> void derefGPtr<GstMessage>(GstMessage* ptr)
+{
+    if (ptr)
+        gst_message_unref(ptr);
+}
+
+template <> GRefPtr<WebKitVideoSink> adoptGRef(WebKitVideoSink* ptr)
+{
+    ASSERT(!ptr || !g_object_is_floating(ptr));
+    return GRefPtr<WebKitVideoSink>(ptr, GRefPtrAdopt);
+}
+
+template <> WebKitVideoSink* refGPtr<WebKitVideoSink>(WebKitVideoSink* ptr)
+{
+    if (ptr)
+        gst_object_ref_sink(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<WebKitVideoSink>(WebKitVideoSink* ptr)
+{
+    if (ptr)
+        gst_object_unref(GST_OBJECT(ptr));
+}
+
+template <> GRefPtr<WebKitWebSrc> adoptGRef(WebKitWebSrc* ptr)
+{
+    ASSERT(!ptr || !g_object_is_floating(ptr));
+    return GRefPtr<WebKitWebSrc>(ptr, GRefPtrAdopt);
+}
+
+template <> WebKitWebSrc* refGPtr<WebKitWebSrc>(WebKitWebSrc* ptr)
+{
+    if (ptr)
+        gst_object_ref_sink(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template <> void derefGPtr<WebKitWebSrc>(WebKitWebSrc* ptr)
+{
+    if (ptr)
+        gst_object_unref(GST_OBJECT(ptr));
+}
+
+} // namespace WTF
+
 #endif // USE(GSTREAMER)

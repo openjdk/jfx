@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011-2013 University of Washington. All rights reserved.
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -76,13 +76,13 @@ static Ref<Inspector::Protocol::Replay::ReplaySession> buildInspectorObjectForSe
 {
     auto segments = Inspector::Protocol::Array<SegmentIdentifier>::create();
 
-    for (auto it = session->begin(); it != session->end(); ++it)
-        segments->addItem((*it)->identifier());
+    for (auto& segment : *session)
+        segments->addItem(static_cast<int>(segment->identifier()));
 
     return Inspector::Protocol::Replay::ReplaySession::create()
         .setId(session->identifier())
         .setTimestamp(session->timestamp())
-        .setSegments(WTF::move(segments))
+        .setSegments(WTFMove(segments))
         .release();
 }
 
@@ -124,10 +124,10 @@ public:
         LOG(WebReplay, "%-25s Writing %5zu: %s\n", "[SerializeInput]", index, input->type().ascii().data());
 
         if (RefPtr<Inspector::Protocol::Replay::ReplayInput> serializedInput = buildInspectorObjectForInput(*input, index))
-            m_inputs->addItem(WTF::move(serializedInput));
+            m_inputs->addItem(WTFMove(serializedInput));
     }
 
-    ReturnType returnValue() { return WTF::move(m_inputs); }
+    ReturnType returnValue() { return WTFMove(m_inputs); }
 private:
     RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Replay::ReplayInput>> m_inputs;
 };
@@ -146,19 +146,21 @@ static Ref<Inspector::Protocol::Replay::SessionSegment> buildInspectorObjectForS
             .setType(EncodingTraits<InputQueue>::encodeValue(queue).convertTo<String>())
             .setInputs(queueInputs)
             .release();
-        queuesObject->addItem(WTF::move(queueObject));
+        queuesObject->addItem(WTFMove(queueObject));
     }
 
     return Inspector::Protocol::Replay::SessionSegment::create()
         .setId(segment->identifier())
         .setTimestamp(segment->timestamp())
-        .setQueues(WTF::move(queuesObject))
+        .setQueues(WTFMove(queuesObject))
         .release();
 }
 
-InspectorReplayAgent::InspectorReplayAgent(InstrumentingAgents* instrumentingAgents, InspectorPageAgent* pageAgent)
-    : InspectorAgentBase(ASCIILiteral("Replay"), instrumentingAgents)
-    , m_page(*pageAgent->page())
+InspectorReplayAgent::InspectorReplayAgent(PageAgentContext& context)
+    : InspectorAgentBase(ASCIILiteral("Replay"), context)
+    , m_frontendDispatcher(std::make_unique<Inspector::ReplayFrontendDispatcher>(context.frontendRouter))
+    , m_backendDispatcher(Inspector::ReplayBackendDispatcher::create(context.backendDispatcher, this))
+    , m_page(context.inspectedPage)
 {
 }
 
@@ -173,12 +175,9 @@ WebCore::SessionState InspectorReplayAgent::sessionState() const
     return m_page.replayController().sessionState();
 }
 
-void InspectorReplayAgent::didCreateFrontendAndBackend(Inspector::FrontendChannel* frontendChannel, Inspector::BackendDispatcher* backendDispatcher)
+void InspectorReplayAgent::didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*)
 {
-    m_frontendDispatcher = std::make_unique<Inspector::ReplayFrontendDispatcher>(frontendChannel);
-    m_backendDispatcher = Inspector::ReplayBackendDispatcher::create(backendDispatcher, this);
-
-    m_instrumentingAgents->setInspectorReplayAgent(this);
+    m_instrumentingAgents.setInspectorReplayAgent(this);
     ASSERT(sessionState() == WebCore::SessionState::Inactive);
 
     // Keep track of the (default) session currently loaded by ReplayController,
@@ -186,16 +185,13 @@ void InspectorReplayAgent::didCreateFrontendAndBackend(Inspector::FrontendChanne
     RefPtr<ReplaySession> session = m_page.replayController().loadedSession();
     m_sessionsMap.add(session->identifier(), session);
 
-    for (auto it = session->begin(); it != session->end(); ++it)
-        m_segmentsMap.add((*it)->identifier(), *it);
+    for (auto& segment : *session)
+        m_segmentsMap.add(segment->identifier(), segment);
 }
 
 void InspectorReplayAgent::willDestroyFrontendAndBackend(Inspector::DisconnectReason)
 {
-    m_frontendDispatcher = nullptr;
-    m_backendDispatcher = nullptr;
-
-    m_instrumentingAgents->setInspectorReplayAgent(nullptr);
+    m_instrumentingAgents.setInspectorReplayAgent(nullptr);
 
     // Drop references to all sessions and segments.
     m_sessionsMap.clear();
@@ -393,7 +389,7 @@ void InspectorReplayAgent::switchSession(ErrorString& errorString, Inspector::Pr
     if (!session)
         return;
 
-    m_page.replayController().switchSession(WTF::move(session));
+    m_page.replayController().switchSession(WTFMove(session));
 }
 
 void InspectorReplayAgent::insertSessionSegment(ErrorString& errorString, Inspector::Protocol::Replay::SessionIdentifier sessionIdentifier, SegmentIdentifier segmentIdentifier, int segmentIndex)
@@ -418,8 +414,8 @@ void InspectorReplayAgent::insertSessionSegment(ErrorString& errorString, Inspec
         return;
     }
 
-    session->insertSegment(segmentIndex, WTF::move(segment));
-    sessionModified(WTF::move(session));
+    session->insertSegment(segmentIndex, WTFMove(segment));
+    sessionModified(WTFMove(session));
 }
 
 void InspectorReplayAgent::removeSessionSegment(ErrorString& errorString, Inspector::Protocol::Replay::SessionIdentifier identifier, int segmentIndex)
@@ -443,7 +439,7 @@ void InspectorReplayAgent::removeSessionSegment(ErrorString& errorString, Inspec
     }
 
     session->removeSegment(segmentIndex);
-    sessionModified(WTF::move(session));
+    sessionModified(WTFMove(session));
 }
 
 RefPtr<ReplaySession> InspectorReplayAgent::findSession(ErrorString& errorString, SessionIdentifier identifier)
@@ -499,7 +495,7 @@ void InspectorReplayAgent::getSessionData(ErrorString& errorString, Inspector::P
         return;
     }
 
-    serializedObject = buildInspectorObjectForSession(WTF::move(session));
+    serializedObject = buildInspectorObjectForSession(WTFMove(session));
 }
 
 void InspectorReplayAgent::getSegmentData(ErrorString& errorString, Inspector::Protocol::Replay::SegmentIdentifier identifier, RefPtr<Inspector::Protocol::Replay::SessionSegment>& serializedObject)
@@ -510,7 +506,7 @@ void InspectorReplayAgent::getSegmentData(ErrorString& errorString, Inspector::P
         return;
     }
 
-    serializedObject = buildInspectorObjectForSegment(WTF::move(segment));
+    serializedObject = buildInspectorObjectForSegment(WTFMove(segment));
 }
 
 } // namespace WebCore

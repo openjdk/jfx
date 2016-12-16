@@ -38,7 +38,7 @@ using std::min;
 namespace WebCore {
 
 FontPlatformData::FontPlatformData(GDIObject<HFONT> font, float size, bool bold, bool oblique, bool useGDI)
-    : m_font(SharedGDIObject<HFONT>::create(WTF::move(font)))
+    : m_font(SharedGDIObject<HFONT>::create(WTFMove(font)))
     , m_size(size)
     , m_orientation(Horizontal)
     , m_widthVariant(RegularWidth)
@@ -48,7 +48,6 @@ FontPlatformData::FontPlatformData(GDIObject<HFONT> font, float size, bool bold,
     , m_scaledFont(0)
 #endif
     , m_isColorBitmapFont(false)
-    , m_isCompositeFontReference(false)
     , m_syntheticBold(bold)
     , m_syntheticOblique(oblique)
     , m_useGDI(useGDI)

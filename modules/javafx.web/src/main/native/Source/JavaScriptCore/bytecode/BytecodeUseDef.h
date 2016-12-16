@@ -32,7 +32,7 @@ namespace JSC {
 
 template<typename Functor>
 void computeUsesForBytecodeOffset(
-    CodeBlock* codeBlock, unsigned bytecodeOffset, const Functor& functor)
+    CodeBlock* codeBlock, BytecodeBasicBlock* block, unsigned bytecodeOffset, const Functor& functor)
 {
     Interpreter* interpreter = codeBlock->vm()->interpreter;
     Instruction* instructionsBegin = codeBlock->instructions().begin();
@@ -53,7 +53,10 @@ void computeUsesForBytecodeOffset(
     case op_profile_control_flow:
     case op_create_direct_arguments:
     case op_create_out_of_band_arguments:
+    case op_get_rest_length:
+    case op_watchdog:
         return;
+    case op_assert:
     case op_get_scope:
     case op_to_this:
     case op_check_tdz:
@@ -68,7 +71,9 @@ void computeUsesForBytecodeOffset(
     case op_jeq_null:
     case op_jneq_null:
     case op_dec:
-    case op_inc: {
+    case op_inc:
+    case op_resume: {
+        ASSERT(opcodeLengths[opcodeID] > 1);
         functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
         return;
     }
@@ -79,51 +84,63 @@ void computeUsesForBytecodeOffset(
     case op_jnlesseq:
     case op_jngreater:
     case op_jngreatereq:
-    case op_jless: {
+    case op_jless:
+    case op_copy_rest: {
+        ASSERT(opcodeLengths[opcodeID] > 2);
         functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         return;
     }
     case op_put_by_val_direct:
     case op_put_by_val: {
+        ASSERT(opcodeLengths[opcodeID] > 3);
         functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[3].u.operand);
         return;
     }
     case op_put_by_index:
-    case op_put_by_id_transition_direct:
-    case op_put_by_id_transition_direct_out_of_line:
-    case op_put_by_id_transition_normal:
-    case op_put_by_id_transition_normal_out_of_line:
-    case op_put_by_id_out_of_line:
     case op_put_by_id:
-    case op_put_getter_by_id:
-    case op_put_setter_by_id:
     case op_put_to_scope:
     case op_put_to_arguments: {
+        ASSERT(opcodeLengths[opcodeID] > 3);
         functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[3].u.operand);
         return;
     }
-    case op_put_getter_setter: {
+    case op_put_getter_by_id:
+    case op_put_setter_by_id: {
+        ASSERT(opcodeLengths[opcodeID] > 4);
         functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
-        functor(codeBlock, instruction, opcodeID, instruction[3].u.operand);
+        functor(codeBlock, instruction, opcodeID, instruction[4].u.operand);
+        return;
+    }
+    case op_put_getter_setter_by_id: {
+        ASSERT(opcodeLengths[opcodeID] > 5);
+        functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
+        functor(codeBlock, instruction, opcodeID, instruction[4].u.operand);
+        functor(codeBlock, instruction, opcodeID, instruction[5].u.operand);
+        return;
+    }
+    case op_put_getter_by_val:
+    case op_put_setter_by_val: {
+        ASSERT(opcodeLengths[opcodeID] > 4);
+        functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
+        functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[4].u.operand);
         return;
     }
     case op_get_property_enumerator:
     case op_get_enumerable_length:
     case op_new_func_exp:
+    case op_new_generator_func_exp:
+    case op_new_arrow_func_exp:
     case op_to_index_string:
-    case op_push_name_scope:
-    case op_push_with_scope:
     case op_create_lexical_environment:
     case op_resolve_scope:
     case op_get_from_scope:
     case op_to_primitive:
     case op_get_by_id:
-    case op_get_by_id_out_of_line:
     case op_get_array_length:
     case op_typeof:
     case op_is_undefined:
@@ -145,9 +162,11 @@ void computeUsesForBytecodeOffset(
     case op_del_by_id:
     case op_unsigned:
     case op_new_func:
+    case op_new_generator_func:
     case op_get_parent_scope:
     case op_create_scoped_arguments:
     case op_get_from_arguments: {
+        ASSERT(opcodeLengths[opcodeID] > 2);
         functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         return;
     }
@@ -157,8 +176,8 @@ void computeUsesForBytecodeOffset(
     case op_enumerator_generic_pname:
     case op_get_by_val:
     case op_in:
+    case op_overrides_has_instance:
     case op_instanceof:
-    case op_check_has_instance:
     case op_add:
     case op_mul:
     case op_div:
@@ -178,20 +197,26 @@ void computeUsesForBytecodeOffset(
     case op_stricteq:
     case op_neq:
     case op_eq:
+    case op_push_with_scope:
     case op_del_by_val: {
+        ASSERT(opcodeLengths[opcodeID] > 3);
         functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[3].u.operand);
         return;
     }
+    case op_instanceof_custom:
     case op_has_structure_property:
     case op_construct_varargs:
-    case op_call_varargs: {
+    case op_call_varargs:
+    case op_tail_call_varargs: {
+        ASSERT(opcodeLengths[opcodeID] > 4);
         functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[3].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[4].u.operand);
         return;
     }
     case op_get_direct_pname: {
+        ASSERT(opcodeLengths[opcodeID] > 5);
         functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[3].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[4].u.operand);
@@ -201,6 +226,7 @@ void computeUsesForBytecodeOffset(
     case op_switch_string:
     case op_switch_char:
     case op_switch_imm: {
+        ASSERT(opcodeLengths[opcodeID] > 3);
         functor(codeBlock, instruction, opcodeID, instruction[3].u.operand);
         return;
     }
@@ -214,13 +240,30 @@ void computeUsesForBytecodeOffset(
     }
     case op_construct:
     case op_call_eval:
-    case op_call: {
+    case op_call:
+    case op_tail_call: {
         functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         int argCount = instruction[3].u.operand;
         int registerOffset = -instruction[4].u.operand;
         int lastArg = registerOffset + CallFrame::thisArgumentOffset();
         for (int i = 0; i < argCount; i++)
             functor(codeBlock, instruction, opcodeID, lastArg + i);
+        return;
+    }
+    case op_save: {
+        functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
+        unsigned mergePointBytecodeOffset = bytecodeOffset + instruction[3].u.operand;
+        BytecodeBasicBlock* mergePointBlock = nullptr;
+        for (BytecodeBasicBlock* successor : block->successors()) {
+            if (successor->leaderBytecodeOffset() == mergePointBytecodeOffset) {
+                mergePointBlock = successor;
+                break;
+            }
+        }
+        ASSERT(mergePointBlock);
+        mergePointBlock->in().forEachSetBit([&](unsigned local) {
+            functor(codeBlock, instruction, opcodeID, virtualRegisterForLocal(local).offset());
+        });
         return;
     }
     default:
@@ -230,7 +273,7 @@ void computeUsesForBytecodeOffset(
 }
 
 template<typename Functor>
-void computeDefsForBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset, const Functor& functor)
+void computeDefsForBytecodeOffset(CodeBlock* codeBlock, BytecodeBasicBlock* block, unsigned bytecodeOffset, const Functor& functor)
 {
     Interpreter* interpreter = codeBlock->vm()->interpreter;
     Instruction* instructionsBegin = codeBlock->instructions().begin();
@@ -238,12 +281,15 @@ void computeDefsForBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset,
     OpcodeID opcodeID = interpreter->getOpcodeID(instruction->u.opcode);
     switch (opcodeID) {
     // These don't define anything.
+    case op_copy_rest:
     case op_put_to_scope:
     case op_end:
     case op_profile_will_call:
     case op_profile_did_call:
     case op_throw:
     case op_throw_static_error:
+    case op_save:
+    case op_assert:
     case op_debug:
     case op_ret:
     case op_jmp:
@@ -265,20 +311,18 @@ void computeDefsForBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset,
     case op_switch_char:
     case op_switch_string:
     case op_put_by_id:
-    case op_put_by_id_out_of_line:
-    case op_put_by_id_transition_direct:
-    case op_put_by_id_transition_direct_out_of_line:
-    case op_put_by_id_transition_normal:
-    case op_put_by_id_transition_normal_out_of_line:
     case op_put_getter_by_id:
     case op_put_setter_by_id:
-    case op_put_getter_setter:
+    case op_put_getter_setter_by_id:
+    case op_put_getter_by_val:
+    case op_put_setter_by_val:
     case op_put_by_val:
     case op_put_by_val_direct:
     case op_put_by_index:
     case op_profile_type:
     case op_profile_control_flow:
     case op_put_to_arguments:
+    case op_watchdog:
 #define LLINT_HELPER_OPCODES(opcode, length) case opcode:
         FOR_EACH_LLINT_OPCODE_EXTENSION(LLINT_HELPER_OPCODES);
 #undef LLINT_HELPER_OPCODES
@@ -294,7 +338,6 @@ void computeDefsForBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset,
     case op_enumerator_structure_pname:
     case op_enumerator_generic_pname:
     case op_get_parent_scope:
-    case op_push_name_scope:
     case op_push_with_scope:
     case op_create_lexical_environment:
     case op_resolve_scope:
@@ -307,17 +350,22 @@ void computeDefsForBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset,
     case op_new_regexp:
     case op_new_func:
     case op_new_func_exp:
+    case op_new_generator_func:
+    case op_new_generator_func_exp:
+    case op_new_arrow_func_exp:
     case op_call_varargs:
+    case op_tail_call_varargs:
     case op_construct_varargs:
     case op_get_from_scope:
     case op_call:
+    case op_tail_call:
     case op_call_eval:
     case op_construct:
     case op_get_by_id:
-    case op_get_by_id_out_of_line:
     case op_get_array_length:
-    case op_check_has_instance:
+    case op_overrides_has_instance:
     case op_instanceof:
+    case op_instanceof_custom:
     case op_get_by_val:
     case op_typeof:
     case op_is_undefined:
@@ -366,11 +414,14 @@ void computeDefsForBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset,
     case op_del_by_id:
     case op_del_by_val:
     case op_unsigned:
-    case op_get_from_arguments: {
+    case op_get_from_arguments:
+    case op_get_rest_length: {
+        ASSERT(opcodeLengths[opcodeID] > 1);
         functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
         return;
     }
     case op_catch: {
+        ASSERT(opcodeLengths[opcodeID] > 2);
         functor(codeBlock, instruction, opcodeID, instruction[1].u.operand);
         functor(codeBlock, instruction, opcodeID, instruction[2].u.operand);
         return;
@@ -379,7 +430,15 @@ void computeDefsForBytecodeOffset(CodeBlock* codeBlock, unsigned bytecodeOffset,
         for (unsigned i = codeBlock->m_numVars; i--;)
             functor(codeBlock, instruction, opcodeID, virtualRegisterForLocal(i).offset());
         return;
-    } }
+    }
+    case op_resume: {
+        RELEASE_ASSERT(block->successors().size() == 1);
+        block->successors()[0]->in().forEachSetBit([&](unsigned local) {
+            functor(codeBlock, instruction, opcodeID, virtualRegisterForLocal(local).offset());
+        });
+        return;
+    }
+    }
 }
 
 } // namespace JSC

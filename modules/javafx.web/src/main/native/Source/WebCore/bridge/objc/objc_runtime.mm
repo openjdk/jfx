@@ -146,8 +146,8 @@ void ObjcField::setValueToInstance(ExecState* exec, const Instance* instance, JS
 
 // ---------------------- ObjcArray ----------------------
 
-ObjcArray::ObjcArray(ObjectStructPtr a, PassRefPtr<RootObject> rootObject)
-    : Array(rootObject)
+ObjcArray::ObjcArray(ObjectStructPtr a, RefPtr<RootObject>&& rootObject)
+    : Array(WTFMove(rootObject))
     , _array(a)
 {
 }

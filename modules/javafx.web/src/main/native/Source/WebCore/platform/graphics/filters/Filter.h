@@ -37,7 +37,7 @@ public:
     { }
     virtual ~Filter() { }
 
-    void setSourceImage(std::unique_ptr<ImageBuffer> sourceImage) { m_sourceImage = WTF::move(sourceImage); }
+    void setSourceImage(std::unique_ptr<ImageBuffer> sourceImage) { m_sourceImage = WTFMove(sourceImage); }
     ImageBuffer* sourceImage() { return m_sourceImage.get(); }
 
     FloatSize filterResolution() const { return m_filterResolution; }
@@ -47,7 +47,7 @@ public:
     void setFilterScale(float scale) { m_filterScale = scale; }
 
     const AffineTransform& absoluteTransform() const { return m_absoluteTransform; }
-    FloatPoint mapAbsolutePointToLocalPoint(const FloatPoint& point) const { return m_absoluteTransform.inverse().mapPoint(point); }
+    FloatPoint mapAbsolutePointToLocalPoint(const FloatPoint& point) const { return m_absoluteTransform.inverse().valueOr(AffineTransform()).mapPoint(point); }
 
     RenderingMode renderingMode() const { return m_renderingMode; }
     void setRenderingMode(RenderingMode renderingMode) { m_renderingMode = renderingMode; }

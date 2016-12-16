@@ -75,20 +75,6 @@ static gboolean call_runnable (gpointer data)
 
 extern "C" {
 
-/*
- * Class:     com_sun_glass_ui_gtk_GtkApplication
- * Method:    _isDisplayValid
- * Signature: ()Z
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1isDisplayValid
-  (JNIEnv * env, jclass clazz)
-{
-    (void)env;
-    (void)clazz;
-
-    return is_display_valid();
-}
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 static void init_threads() {
@@ -105,6 +91,7 @@ static void init_threads() {
 }
 #pragma GCC diagnostic pop
 
+jboolean gtk_verbose = JNI_FALSE;
 
 /*
  * Class:     com_sun_glass_ui_gtk_GtkApplication
@@ -115,14 +102,10 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
   (JNIEnv *env, jclass clazz, jint version, jboolean verbose, jfloat uiScale)
 {
     (void) clazz;
+    (void) version;
 
     OverrideUIScale = uiScale;
-
-    int ret = wrapper_load_symbols(version, verbose);
-
-    if (ret == -1) {
-        return -1;
-    }
+    gtk_verbose = verbose;
 
     env->ExceptionClear();
     init_threads();
@@ -130,7 +113,36 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1initGTK
     gdk_threads_enter();
     gtk_init(NULL, NULL);
 
-    return ret;
+    return JNI_TRUE;
+}
+
+/*
+ * Class:     com_sun_glass_ui_gtk_GtkApplication
+ * Method:    _queryLibrary
+ * Signature: Signature: (IZ)I
+ */
+JNIEXPORT jint JNICALL Java_com_sun_glass_ui_gtk_GtkApplication__1queryLibrary
+  (JNIEnv *env, jclass clazz, jint suggestedVersion, jboolean verbose)
+{
+    // If we are being called, then the launcher is
+    // not in use, and we are in the proper glass library already.
+    // This can be done by renaming the gtk versioned native
+    // libraries to be libglass.so
+    // Note: we will make no effort to complain if the suggestedVersion
+    // is out of phase.
+
+    (void)env;
+    (void)clazz;
+    (void)suggestedVersion;
+    (void)verbose;
+
+    Display *display = XOpenDisplay(NULL);
+    if (display == NULL) {
+        return com_sun_glass_ui_gtk_GtkApplication_QUERY_NO_DISPLAY;
+    }
+    XCloseDisplay(display);
+
+    return com_sun_glass_ui_gtk_GtkApplication_QUERY_USE_CURRENT;
 }
 
 /*

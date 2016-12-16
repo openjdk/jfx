@@ -57,14 +57,13 @@ my %stringTypeHash = ("DOMString" => 1, "AtomicString" => 1);
 
 # WebCore types used directly in IDL files.
 my %webCoreTypeHash = (
-    "CompareHow" => 1,
     "SerializedScriptValue" => 1,
     "Dictionary" => 1
 );
 
 my %enumTypeHash = ();
 
-my %nonPointerTypeHash = ("DOMTimeStamp" => 1, "CompareHow" => 1);
+my %nonPointerTypeHash = ("DOMTimeStamp" => 1);
 
 my %svgAttributesInHTMLHash = ("class" => 1, "id" => 1, "onabort" => 1, "onclick" => 1,
                                "onerror" => 1, "onload" => 1, "onmousedown" => 1,
@@ -233,6 +232,20 @@ sub IDLFileForInterface
     }
 
     return $idlFiles->{$interfaceName};
+}
+
+sub GetAttributeFromInterface()
+{
+    my $object = shift;
+    my $outerInterface = shift;
+    my $interfaceName = shift;
+    my $attributeName = shift;
+
+    my $interface = $object->ParseInterface($outerInterface, $interfaceName);
+    for my $attribute (@{$interface->attributes}) {
+        return $attribute if $attribute->signature->name eq $attributeName;
+    }
+    die("Could not find attribute '$attributeName' on interface '$interfaceName'.");
 }
 
 sub ParseInterface
@@ -463,6 +476,7 @@ sub AssertNotSequenceType
     die "Sequences must not be used as the type of an attribute, constant or exception field." if $object->GetSequenceType($type);
 }
 
+# These match WK_lcfirst and WK_ucfirst defined in builtins_generator.py.
 # Uppercase the first letter while respecting WebKit style guidelines.
 # E.g., xmlEncoding becomes XMLEncoding, but xmlllang becomes Xmllang.
 sub WK_ucfirst
@@ -487,6 +501,7 @@ sub WK_lcfirst
     $ret =~ s/xML/xml/ if $ret =~ /^xML/;
     $ret =~ s/xSLT/xslt/ if $ret =~ /^xSLT/;
     $ret =~ s/cSS/css/ if $ret =~ /^cSS/;
+    $ret =~ s/rTC/rtc/ if $ret =~ /^rTC/;
 
     # For HTML5 FileSystem API Flags attributes.
     # (create is widely used to instantiate an object and must be avoided.)
@@ -494,6 +509,13 @@ sub WK_lcfirst
     $ret =~ s/^exclusive/isExclusive/ if $ret =~ /^exclusive$/;
 
     return $ret;
+}
+
+sub trim
+{
+    my $string = shift;
+    $string =~ s/^\s+|\s+$//g;
+    return $string;
 }
 
 # Return the C++ namespace that a given attribute name string is defined in.
@@ -596,12 +618,8 @@ sub SetterExpression
 
     my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute);
 
-    print "tav>> interfaceName=$interfaceName\n";
 
     if (!$contentAttributeName) {
-
-	print "tav>> here\n";
-
         return ("set" . $generator->WK_ucfirst($generator->AttributeNameForGetterAndSetter($attribute)));
     }
 
@@ -619,8 +637,6 @@ sub SetterExpression
     } else {
         $functionName = "setAttributeWithoutSynchronization";
     }
-
-    print "tav>> functionName=$functionName\n";
 
     return ($functionName, $contentAttributeName);
 }
@@ -642,6 +658,37 @@ sub IsWrapperType
     return 1;
 }
 
+sub getInterfaceExtendedAttributesFromName
+{
+    my $object = shift;
+    my $interfaceName = shift;
+
+    my $idlFile = $object->IDLFileForInterface($interfaceName)
+      or die("Could NOT find IDL file for interface \"$interfaceName\"!\n");
+
+    open FILE, "<", $idlFile;
+    my @lines = <FILE>;
+    close FILE;
+
+    my $fileContents = join('', @lines);
+
+    my $extendedAttributes = {};
+
+    if ($fileContents =~ /\[(.*)\]\s+(callback interface|interface|exception)\s+(\w+)/gs) {
+        my @parts = split(',', $1);
+        foreach my $part (@parts) {
+            my @keyValue = split('=', $part);
+            my $key = trim($keyValue[0]);
+            next unless length($key);
+            my $value = "VALUE_IS_MISSING";
+            $value = trim($keyValue[1]) if @keyValue > 1;
+            $extendedAttributes->{$key} = $value;
+        }
+    }
+
+    return $extendedAttributes;
+}
+
 sub IsCallbackInterface
 {
   my $object = shift;
@@ -658,6 +705,40 @@ sub IsCallbackInterface
 
   my $fileContents = join('', @lines);
   return ($fileContents =~ /callback\s+interface\s+(\w+)/gs);
+}
+
+# Callback interface with [Callback=FunctionOnly].
+# FIXME: This should be a callback function:
+# https://heycam.github.io/webidl/#idl-callback-functions
+sub IsFunctionOnlyCallbackInterface
+{
+  my $object = shift;
+  my $type = shift;
+
+  return 0 unless $object->IsCallbackInterface($type);
+
+  my $idlFile = $object->IDLFileForInterface($type)
+      or die("Could NOT find IDL file for interface \"$type\"!\n");
+
+  open FILE, "<", $idlFile;
+  my @lines = <FILE>;
+  close FILE;
+
+  my $fileContents = join('', @lines);
+  if ($fileContents =~ /\[(.*)\]\s+callback\s+interface\s+(\w+)/gs) {
+      my @parts = split(',', $1);
+      foreach my $part (@parts) {
+          my @keyValue = split('=', $part);
+          my $key = trim($keyValue[0]);
+          next unless length($key);
+          my $value = "VALUE_IS_MISSING";
+          $value = trim($keyValue[1]) if @keyValue > 1;
+
+          return 1 if ($key eq "Callback" && $value eq "FunctionOnly");
+      }
+  }
+
+  return 0;
 }
 
 sub GenerateConditionalString

@@ -56,16 +56,21 @@ RenderStyle* Editor::styleForSelectionStart(Frame* frame, Node *&nodeToRemove)
     if (!typingStyle || !typingStyle->style())
         return &position.deprecatedNode()->renderer()->style();
 
-    RefPtr<Element> styleElement = frame->document()->createElement(HTMLNames::spanTag, false);
+    Ref<Element> styleElement = frame->document()->createElement(HTMLNames::spanTag, false);
 
     String styleText = typingStyle->style()->asText() + " display: inline";
     styleElement->setAttribute(HTMLNames::styleAttr, styleText);
 
     styleElement->appendChild(frame->document()->createEditingTextNode(""), ASSERT_NO_EXCEPTION);
 
-    position.deprecatedNode()->parentNode()->appendChild(styleElement, ASSERT_NO_EXCEPTION);
+    ContainerNode* parentNode = position.deprecatedNode()->parentNode();
 
-    nodeToRemove = styleElement.get();
+    if (!parentNode->ensurePreInsertionValidity(styleElement.copyRef(), nullptr, IGNORE_EXCEPTION))
+        return nullptr; 
+
+    parentNode->appendChild(styleElement.copyRef(), ASSERT_NO_EXCEPTION);
+
+    nodeToRemove = styleElement.ptr();
 
     frame->document()->updateStyleIfNeeded();
     return styleElement->renderer() ? &styleElement->renderer()->style() : nullptr;
@@ -78,9 +83,9 @@ void Editor::getTextDecorationAttributesRespectingTypingStyle(RenderStyle& style
         RefPtr<CSSValue> value = typingStyle->style()->getPropertyCSSValue(CSSPropertyWebkitTextDecorationsInEffect);
         if (value && value->isValueList()) {
             CSSValueList& valueList = downcast<CSSValueList>(*value);
-            if (valueList.hasValue(cssValuePool().createIdentifierValue(CSSValueLineThrough).ptr()))
+            if (valueList.hasValue(CSSValuePool::singleton().createIdentifierValue(CSSValueLineThrough).ptr()))
                 [result setObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSStrikethroughStyleAttributeName];
-            if (valueList.hasValue(cssValuePool().createIdentifierValue(CSSValueUnderline).ptr()))
+            if (valueList.hasValue(CSSValuePool::singleton().createIdentifierValue(CSSValueUnderline).ptr()))
                 [result setObject:[NSNumber numberWithInt:NSUnderlineStyleSingle] forKey:NSUnderlineStyleAttributeName];
         }
     } else {

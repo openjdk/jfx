@@ -36,6 +36,11 @@ namespace WebCore {
 class TextureMapperPlatformLayer;
 typedef TextureMapperPlatformLayer PlatformLayer;
 };
+#elif USE(COORDINATED_GRAPHICS_THREADED)
+namespace WebCore {
+class TextureMapperPlatformLayerProxyProvider;
+typedef TextureMapperPlatformLayerProxyProvider PlatformLayer;
+};
 #elif USE(TEXTURE_MAPPER)
 namespace WebCore {
 class TextureMapperPlatformLayer;

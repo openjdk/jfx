@@ -22,6 +22,8 @@
 #include "config.h"
 #include "BitmapTextureGL.h"
 
+#if USE(TEXTURE_MAPPER_GL)
+
 #include "Extensions3D.h"
 #include "FilterOperations.h"
 #include "GraphicsContext.h"
@@ -42,12 +44,8 @@
 #include <wtf/text/CString.h>
 #endif
 
-#if !USE(TEXMAP_OPENGL_ES_2)
-// FIXME: Move to Extensions3D.h.
+#if OS(DARWIN)
 #define GL_UNSIGNED_INT_8_8_8_8_REV 0x8367
-#define GL_UNPACK_ROW_LENGTH 0x0CF2
-#define GL_UNPACK_SKIP_PIXELS 0x0CF4
-#define GL_UNPACK_SKIP_ROWS 0x0CF3
 #endif
 
 namespace WebCore {
@@ -67,19 +65,23 @@ BitmapTextureGL::BitmapTextureGL(PassRefPtr<GraphicsContext3D> context3D)
     , m_depthBufferObject(0)
     , m_shouldClear(true)
     , m_context3D(context3D)
-{
-}
-
-bool BitmapTextureGL::canReuseWith(const IntSize& contentsSize, Flags)
-{
-    return contentsSize == m_textureSize;
-}
-
 #if OS(DARWIN)
-#define DEFAULT_TEXTURE_PIXEL_TRANSFER_TYPE GL_UNSIGNED_INT_8_8_8_8_REV
+    , m_type(GL_UNSIGNED_INT_8_8_8_8_REV)
 #else
-#define DEFAULT_TEXTURE_PIXEL_TRANSFER_TYPE GraphicsContext3D::UNSIGNED_BYTE
+    , m_type(GraphicsContext3D::UNSIGNED_BYTE)
 #endif
+{
+    // If GL_EXT_texture_format_BGRA8888 is supported in the OpenGLES
+    // internal and external formats need to be BGRA
+    m_internalFormat = GraphicsContext3D::RGBA;
+    m_format = GraphicsContext3D::BGRA;
+    if (m_context3D->isGLES2Compliant()) {
+        if (m_context3D->getExtensions()->supports("GL_EXT_texture_format_BGRA8888"))
+            m_internalFormat = GraphicsContext3D::BGRA;
+        else
+            m_format = GraphicsContext3D::RGBA;
+    }
+}
 
 static void swizzleBGRAToRGBA(uint32_t* data, const IntRect& rect, int stride = 0)
 {
@@ -89,18 +91,6 @@ static void swizzleBGRAToRGBA(uint32_t* data, const IntRect& rect, int stride = 
         for (int x = rect.x(); x < rect.maxX(); ++x)
             p[x] = ((p[x] << 16) & 0xff0000) | ((p[x] >> 16) & 0xff) | (p[x] & 0xff00ff00);
     }
-}
-
-// If GL_EXT_texture_format_BGRA8888 is supported in the OpenGLES
-// internal and external formats need to be BGRA
-static bool driverSupportsExternalTextureBGRA(GraphicsContext3D* context)
-{
-    if (context->isGLES2Compliant()) {
-        static bool supportsExternalTextureBGRA = context->getExtensions()->supports("GL_EXT_texture_format_BGRA8888");
-        return supportsExternalTextureBGRA;
-    }
-
-    return true;
 }
 
 static bool driverSupportsSubImage(GraphicsContext3D* context)
@@ -122,7 +112,6 @@ void BitmapTextureGL::didReset()
     if (m_textureSize == contentSize())
         return;
 
-
     m_textureSize = contentSize();
     m_context3D->bindTexture(GraphicsContext3D::TEXTURE_2D, m_id);
     m_context3D->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_MIN_FILTER, GraphicsContext3D::LINEAR);
@@ -130,16 +119,7 @@ void BitmapTextureGL::didReset()
     m_context3D->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_WRAP_S, GraphicsContext3D::CLAMP_TO_EDGE);
     m_context3D->texParameteri(GraphicsContext3D::TEXTURE_2D, GraphicsContext3D::TEXTURE_WRAP_T, GraphicsContext3D::CLAMP_TO_EDGE);
 
-    Platform3DObject internalFormat = GraphicsContext3D::RGBA;
-    Platform3DObject externalFormat = GraphicsContext3D::BGRA;
-    if (m_context3D->isGLES2Compliant()) {
-        if (driverSupportsExternalTextureBGRA(m_context3D.get()))
-            internalFormat = GraphicsContext3D::BGRA;
-        else
-            externalFormat = GraphicsContext3D::RGBA;
-    }
-
-    m_context3D->texImage2DDirect(GraphicsContext3D::TEXTURE_2D, 0, internalFormat, m_textureSize.width(), m_textureSize.height(), 0, externalFormat, DEFAULT_TEXTURE_PIXEL_TRANSFER_TYPE, 0);
+    m_context3D->texImage2DDirect(GraphicsContext3D::TEXTURE_2D, 0, m_internalFormat, m_textureSize.width(), m_textureSize.height(), 0, m_format, m_type, 0);
 }
 
 void BitmapTextureGL::updateContentsNoSwizzle(const void* srcData, const IntRect& targetRect, const IntPoint& sourceOffset, int bytesPerLine, unsigned bytesPerPixel, Platform3DObject glFormat)
@@ -148,24 +128,23 @@ void BitmapTextureGL::updateContentsNoSwizzle(const void* srcData, const IntRect
     // For ES drivers that don't support sub-images.
     if (driverSupportsSubImage(m_context3D.get())) {
         // Use the OpenGL sub-image extension, now that we know it's available.
-        m_context3D->pixelStorei(GL_UNPACK_ROW_LENGTH, bytesPerLine / bytesPerPixel);
-        m_context3D->pixelStorei(GL_UNPACK_SKIP_ROWS, sourceOffset.y());
-        m_context3D->pixelStorei(GL_UNPACK_SKIP_PIXELS, sourceOffset.x());
+        m_context3D->pixelStorei(GraphicsContext3D::UNPACK_ROW_LENGTH, bytesPerLine / bytesPerPixel);
+        m_context3D->pixelStorei(GraphicsContext3D::UNPACK_SKIP_ROWS, sourceOffset.y());
+        m_context3D->pixelStorei(GraphicsContext3D::UNPACK_SKIP_PIXELS, sourceOffset.x());
     }
 
-    m_context3D->texSubImage2D(GraphicsContext3D::TEXTURE_2D, 0, targetRect.x(), targetRect.y(), targetRect.width(), targetRect.height(), glFormat, DEFAULT_TEXTURE_PIXEL_TRANSFER_TYPE, srcData);
+    m_context3D->texSubImage2D(GraphicsContext3D::TEXTURE_2D, 0, targetRect.x(), targetRect.y(), targetRect.width(), targetRect.height(), glFormat, m_type, srcData);
 
     // For ES drivers that don't support sub-images.
     if (driverSupportsSubImage(m_context3D.get())) {
-        m_context3D->pixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        m_context3D->pixelStorei(GL_UNPACK_SKIP_ROWS, 0);
-        m_context3D->pixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+        m_context3D->pixelStorei(GraphicsContext3D::UNPACK_ROW_LENGTH, 0);
+        m_context3D->pixelStorei(GraphicsContext3D::UNPACK_SKIP_ROWS, 0);
+        m_context3D->pixelStorei(GraphicsContext3D::UNPACK_SKIP_PIXELS, 0);
     }
 }
 
 void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetRect, const IntPoint& sourceOffset, int bytesPerLine, UpdateContentsFlag updateContentsFlag)
 {
-    Platform3DObject glFormat = GraphicsContext3D::RGBA;
     m_context3D->bindTexture(GraphicsContext3D::TEXTURE_2D, m_id);
 
     const unsigned bytesPerPixel = 4;
@@ -178,7 +157,7 @@ void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetR
         && !(bytesPerLine == static_cast<int>(targetRect.width() * bytesPerPixel) && adjustedSourceOffset == IntPoint::zero());
 
     // prepare temporaryData if necessary
-    if ((!driverSupportsExternalTextureBGRA(m_context3D.get()) && updateContentsFlag == UpdateCannotModifyOriginalImageData) || requireSubImageBuffer) {
+    if ((m_format == GraphicsContext3D::RGBA && updateContentsFlag == UpdateCannotModifyOriginalImageData) || requireSubImageBuffer) {
         temporaryData.resize(targetRect.width() * targetRect.height() * bytesPerPixel);
         data = temporaryData.data();
         const char* bits = static_cast<const char*>(srcData);
@@ -195,12 +174,10 @@ void BitmapTextureGL::updateContents(const void* srcData, const IntRect& targetR
         adjustedSourceOffset = IntPoint(0, 0);
     }
 
-    if (driverSupportsExternalTextureBGRA(m_context3D.get()))
-        glFormat = GraphicsContext3D::BGRA;
-    else
+    if (m_format == GraphicsContext3D::RGBA)
         swizzleBGRAToRGBA(reinterpret_cast_ptr<uint32_t*>(data), IntRect(adjustedSourceOffset, targetRect.size()), bytesPerLine / bytesPerPixel);
 
-    updateContentsNoSwizzle(data, targetRect, adjustedSourceOffset, bytesPerLine, bytesPerPixel, glFormat);
+    updateContentsNoSwizzle(data, targetRect, adjustedSourceOffset, bytesPerLine, bytesPerPixel, m_format);
 }
 
 void BitmapTextureGL::updateContents(Image* image, const IntRect& targetRect, const IntPoint& offset, UpdateContentsFlag updateContentsFlag)
@@ -244,13 +221,13 @@ static unsigned getPassesRequiredForFilter(FilterOperation::OperationType type)
     }
 }
 
-PassRefPtr<BitmapTexture> BitmapTextureGL::applyFilters(TextureMapper* textureMapper, const FilterOperations& filters)
+PassRefPtr<BitmapTexture> BitmapTextureGL::applyFilters(TextureMapper& textureMapper, const FilterOperations& filters)
 {
     if (filters.isEmpty())
         return this;
 
-    TextureMapperGL* texmapGL = static_cast<TextureMapperGL*>(textureMapper);
-    RefPtr<BitmapTexture> previousSurface = texmapGL->currentSurface();
+    TextureMapperGL& texmapGL = static_cast<TextureMapperGL&>(textureMapper);
+    RefPtr<BitmapTexture> previousSurface = texmapGL.currentSurface();
     RefPtr<BitmapTexture> resultSurface = this;
     RefPtr<BitmapTexture> intermediateSurface;
     RefPtr<BitmapTexture> spareSurface;
@@ -266,8 +243,8 @@ PassRefPtr<BitmapTexture> BitmapTextureGL::applyFilters(TextureMapper* textureMa
             bool last = (i == filters.size() - 1) && (j == numPasses - 1);
             if (!last) {
                 if (!intermediateSurface)
-                    intermediateSurface = texmapGL->acquireTextureFromPool(contentSize());
-                texmapGL->bindSurface(intermediateSurface.get());
+                    intermediateSurface = texmapGL.acquireTextureFromPool(contentSize());
+                texmapGL.bindSurface(intermediateSurface.get());
             }
 
             if (last) {
@@ -275,7 +252,7 @@ PassRefPtr<BitmapTexture> BitmapTextureGL::applyFilters(TextureMapper* textureMa
                 break;
             }
 
-            texmapGL->drawFiltered(*resultSurface.get(), spareSurface.get(), *filter, j);
+            texmapGL.drawFiltered(*resultSurface.get(), spareSurface.get(), *filter, j);
             if (!j && filter->type() == FilterOperation::DROP_SHADOW) {
                 spareSurface = resultSurface;
                 resultSurface = nullptr;
@@ -284,7 +261,7 @@ PassRefPtr<BitmapTexture> BitmapTextureGL::applyFilters(TextureMapper* textureMa
         }
     }
 
-    texmapGL->bindSurface(previousSurface.get());
+    texmapGL.bindSurface(previousSurface.get());
     return resultSurface;
 }
 
@@ -295,11 +272,7 @@ void BitmapTextureGL::initializeStencil()
 
     m_rbo = m_context3D->createRenderbuffer();
     m_context3D->bindRenderbuffer(GraphicsContext3D::RENDERBUFFER, m_rbo);
-#ifdef TEXMAP_OPENGL_ES_2
     m_context3D->renderbufferStorage(GraphicsContext3D::RENDERBUFFER, GraphicsContext3D::STENCIL_INDEX8, m_textureSize.width(), m_textureSize.height());
-#else
-    m_context3D->renderbufferStorage(GraphicsContext3D::RENDERBUFFER, GraphicsContext3D::DEPTH_STENCIL, m_textureSize.width(), m_textureSize.height());
-#endif
     m_context3D->bindRenderbuffer(GraphicsContext3D::RENDERBUFFER, 0);
     m_context3D->framebufferRenderbuffer(GraphicsContext3D::FRAMEBUFFER, GraphicsContext3D::STENCIL_ATTACHMENT, GraphicsContext3D::RENDERBUFFER, m_rbo);
     m_context3D->clearStencil(0);
@@ -323,8 +296,8 @@ void BitmapTextureGL::clearIfNeeded()
     if (!m_shouldClear)
         return;
 
-    m_clipStack.reset(IntRect(IntPoint::zero(), m_textureSize), TextureMapperGL::ClipStack::DefaultYAxis);
-    m_clipStack.applyIfNeeded(m_context3D.get());
+    m_clipStack.reset(IntRect(IntPoint::zero(), m_textureSize), ClipStack::YAxisMode::Default);
+    m_clipStack.applyIfNeeded(*m_context3D);
     m_context3D->clearColor(0, 0, 0, 0);
     m_context3D->clear(GraphicsContext3D::COLOR_BUFFER_BIT);
     m_shouldClear = false;
@@ -348,7 +321,7 @@ void BitmapTextureGL::bindAsSurface(GraphicsContext3D* context3D)
     context3D->bindFramebuffer(GraphicsContext3D::FRAMEBUFFER, m_fbo);
     context3D->viewport(0, 0, m_textureSize.width(), m_textureSize.height());
     clearIfNeeded();
-    m_clipStack.apply(m_context3D.get());
+    m_clipStack.apply(*m_context3D);
 }
 
 BitmapTextureGL::~BitmapTextureGL()
@@ -377,3 +350,5 @@ IntSize BitmapTextureGL::size() const
 }
 
 }; // namespace WebCore
+
+#endif // USE(TEXTURE_MAPPER_GL)

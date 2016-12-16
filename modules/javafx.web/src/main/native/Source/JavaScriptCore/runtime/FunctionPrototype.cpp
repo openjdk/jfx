@@ -53,7 +53,7 @@ void FunctionPrototype::finishCreation(VM& vm, const String& name)
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), DontDelete | ReadOnly | DontEnum);
 }
 
-void FunctionPrototype::addFunctionProperties(ExecState* exec, JSGlobalObject* globalObject, JSFunction** callFunction, JSFunction** applyFunction)
+void FunctionPrototype::addFunctionProperties(ExecState* exec, JSGlobalObject* globalObject, JSFunction** callFunction, JSFunction** applyFunction, JSFunction** hasInstanceSymbolFunction)
 {
     VM& vm = exec->vm();
 
@@ -62,6 +62,7 @@ void FunctionPrototype::addFunctionProperties(ExecState* exec, JSGlobalObject* g
 
     *applyFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().applyPublicName(), functionPrototypeApplyCodeGenerator(vm), DontEnum);
     *callFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().callPublicName(), functionPrototypeCallCodeGenerator(vm), DontEnum);
+    *hasInstanceSymbolFunction = putDirectBuiltinFunction(vm, globalObject, vm.propertyNames->hasInstanceSymbol, functionPrototypeSymbolHasInstanceCodeGenerator(vm), DontDelete | ReadOnly | DontEnum);
 
     JSFunction* bindFunction = JSFunction::create(vm, globalObject, 1, vm.propertyNames->bind.string(), functionProtoFuncBind);
     putDirectWithoutTransition(vm, vm.propertyNames->bind, bindFunction, DontEnum);
@@ -84,19 +85,39 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState* exec)
     JSValue thisValue = exec->thisValue();
     if (thisValue.inherits(JSFunction::info())) {
         JSFunction* function = jsCast<JSFunction*>(thisValue);
-        if (function->isHostOrBuiltinFunction())
-            return JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(exec), "() {\n    [native code]\n}"));
+        if (function->isHostOrBuiltinFunction()) {
+            String name;
+            if (JSBoundFunction* boundFunction = jsDynamicCast<JSBoundFunction*>(function))
+                name = boundFunction->toStringName(exec);
+            else
+                name = function->name(exec);
+            return JSValue::encode(jsMakeNontrivialString(exec, "function ", name, "() {\n    [native code]\n}"));
+        }
 
         FunctionExecutable* executable = function->jsExecutable();
-        String source = executable->source().provider()->getRange(
+
+        String functionHeader = executable->isArrowFunction() ? "" : "function ";
+
+        StringView source = executable->source().provider()->getRange(
             executable->parametersStartOffset(),
-            executable->typeProfilingEndOffset() + 1); // Type profiling end offset is the character before the '}'.
-        return JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(exec), source));
+            executable->parametersStartOffset() + executable->source().length());
+        return JSValue::encode(jsMakeNontrivialString(exec, functionHeader, function->name(exec), source));
     }
 
     if (thisValue.inherits(InternalFunction::info())) {
         InternalFunction* function = asInternalFunction(thisValue);
         return JSValue::encode(jsMakeNontrivialString(exec, "function ", function->name(exec), "() {\n    [native code]\n}"));
+    }
+
+    if (thisValue.isObject()) {
+        JSObject* object = asObject(thisValue);
+        if (object->inlineTypeFlags() & TypeOfShouldCallGetCallData) {
+            CallData callData;
+            if (object->methodTable(exec->vm())->getCallData(object, callData) != CallTypeNone) {
+                if (auto* classInfo = object->classInfo())
+                    return JSValue::encode(jsMakeNontrivialString(exec, "function ", classInfo->className, "() {\n    [native code]\n}"));
+            }
+        }
     }
 
     return throwVMTypeError(exec);
@@ -132,13 +153,18 @@ EncodedJSValue JSC_HOST_CALL functionProtoFuncBind(ExecState* exec)
     // If the [[Class]] internal property of Target is "Function", then ...
     // Else set the length own property of F to 0.
     unsigned length = 0;
-    if (targetObject->inherits(JSFunction::info())) {
-        ASSERT(target.get(exec, exec->propertyNames().length).isNumber());
+    if (targetObject->hasOwnProperty(exec, exec->propertyNames().length)) {
+        if (exec->hadException())
+            return JSValue::encode(jsUndefined());
+
         // a. Let L be the length property of Target minus the length of A.
         // b. Set the length own property of F to either 0 or L, whichever is larger.
-        unsigned targetLength = (unsigned)target.get(exec, exec->propertyNames().length).asNumber();
-        if (targetLength > numBoundArgs)
-            length = targetLength - numBoundArgs;
+        JSValue lengthValue = target.get(exec, exec->propertyNames().length);
+        if (lengthValue.isNumber()) {
+            unsigned targetLength = (unsigned)lengthValue.asNumber();
+            if (targetLength > numBoundArgs)
+                length = targetLength - numBoundArgs;
+        }
     }
 
     JSString* name = target.get(exec, exec->propertyNames().name).toString(exec);

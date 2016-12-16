@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -88,10 +88,10 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
     VM& vm, Structure* structure, PassRefPtr<ArrayBuffer> arrayBuffer,
     unsigned byteOffset, unsigned length)
     : m_structure(structure)
-    , m_vector(static_cast<uint8_t*>(arrayBuffer->data()) + byteOffset)
     , m_length(length)
     , m_mode(WastefulTypedArray)
 {
+    m_vector = static_cast<uint8_t*>(arrayBuffer->data()) + byteOffset;
     IndexingHeader indexingHeader;
     indexingHeader.setArrayBuffer(arrayBuffer.get());
     m_butterfly = Butterfly::create(vm, 0, 0, 0, true, indexingHeader, 0);
@@ -101,19 +101,19 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
     Structure* structure, PassRefPtr<ArrayBuffer> arrayBuffer,
     unsigned byteOffset, unsigned length, DataViewTag)
     : m_structure(structure)
-    , m_vector(static_cast<uint8_t*>(arrayBuffer->data()) + byteOffset)
     , m_length(length)
     , m_mode(DataViewMode)
     , m_butterfly(0)
 {
+    m_vector = static_cast<uint8_t*>(arrayBuffer->data()) + byteOffset;
 }
 
 JSArrayBufferView::JSArrayBufferView(VM& vm, ConstructionContext& context)
     : Base(vm, context.structure(), context.butterfly())
-    , m_vector(context.vector())
     , m_length(context.length())
     , m_mode(context.mode())
 {
+    m_vector.setWithoutBarrier(static_cast<char*>(context.vector()));
 }
 
 void JSArrayBufferView::finishCreation(VM& vm)
@@ -140,10 +140,6 @@ bool JSArrayBufferView::getOwnPropertySlot(
     JSObject* object, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(object);
-    if (propertyName == exec->propertyNames().byteOffset) {
-        slot.setValue(thisObject, DontDelete | ReadOnly, jsNumber(thisObject->byteOffset()));
-        return true;
-    }
 
     if (propertyName == exec->propertyNames().buffer) {
         slot.setValue(
@@ -160,9 +156,7 @@ void JSArrayBufferView::put(
     PutPropertySlot& slot)
 {
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(cell);
-    if (propertyName == exec->propertyNames().byteLength
-        || propertyName == exec->propertyNames().byteOffset
-        || propertyName == exec->propertyNames().buffer) {
+    if (propertyName == exec->propertyNames().buffer) {
         reject(exec, slot.isStrictMode(), "Attempting to write to read-only typed array property.");
         return;
     }
@@ -175,9 +169,7 @@ bool JSArrayBufferView::defineOwnProperty(
     const PropertyDescriptor& descriptor, bool shouldThrow)
 {
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(object);
-    if (propertyName == exec->propertyNames().byteLength
-        || propertyName == exec->propertyNames().byteOffset
-        || propertyName == exec->propertyNames().buffer)
+    if (propertyName == exec->propertyNames().buffer)
         return reject(exec, shouldThrow, "Attempting to define read-only typed array property.");
 
     return Base::defineOwnProperty(thisObject, exec, propertyName, descriptor, shouldThrow);
@@ -187,9 +179,7 @@ bool JSArrayBufferView::deleteProperty(
     JSCell* cell, ExecState* exec, PropertyName propertyName)
 {
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(cell);
-    if (propertyName == exec->propertyNames().byteLength
-        || propertyName == exec->propertyNames().byteOffset
-        || propertyName == exec->propertyNames().buffer)
+    if (propertyName == exec->propertyNames().buffer)
         return false;
 
     return Base::deleteProperty(thisObject, exec, propertyName);
@@ -200,12 +190,9 @@ void JSArrayBufferView::getOwnNonIndexPropertyNames(
 {
     JSArrayBufferView* thisObject = jsCast<JSArrayBufferView*>(object);
 
-    // length/byteOffset/byteLength are DontEnum, at least in Firefox.
-    if (mode.includeDontEnumProperties()) {
-        array.add(exec->propertyNames().byteOffset);
-        array.add(exec->propertyNames().byteLength);
+    if (mode.includeDontEnumProperties())
         array.add(exec->propertyNames().buffer);
-    }
+
 
     Base::getOwnNonIndexPropertyNames(thisObject, exec, array, mode);
 }
@@ -215,8 +202,33 @@ void JSArrayBufferView::finalize(JSCell* cell)
     JSArrayBufferView* thisObject = static_cast<JSArrayBufferView*>(cell);
     ASSERT(thisObject->m_mode == OversizeTypedArray || thisObject->m_mode == WastefulTypedArray);
     if (thisObject->m_mode == OversizeTypedArray)
-        fastFree(thisObject->m_vector);
+        fastFree(thisObject->m_vector.getWithoutBarrier());
 }
 
 } // namespace JSC
+
+namespace WTF {
+
+using namespace JSC;
+
+void printInternal(PrintStream& out, TypedArrayMode mode)
+{
+    switch (mode) {
+    case FastTypedArray:
+        out.print("FastTypedArray");
+        return;
+    case OversizeTypedArray:
+        out.print("OversizeTypedArray");
+        return;
+    case WastefulTypedArray:
+        out.print("WastefulTypedArray");
+        return;
+    case DataViewMode:
+        out.print("DataViewMode");
+        return;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+} // namespace WTF
 

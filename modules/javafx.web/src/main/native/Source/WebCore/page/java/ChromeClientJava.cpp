@@ -3,6 +3,10 @@
  */
 #include "config.h"
 
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "ChromeClientJava.h"
 #if ENABLE(INPUT_TYPE_COLOR)
 #include "ColorChooserJava.h"
@@ -33,6 +37,7 @@
 #include "Widget.h"
 #include "WindowFeatures.h"
 #include "DragController.h"
+#include <wtf/text/StringBuilder.h>
 
 //MVM -ready initialization
 #define DECLARE_STATIC_CLASS(getFunctionName, sClassPath) \

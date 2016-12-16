@@ -30,10 +30,13 @@
  */
 
 #include "config.h"
+
+#if ENABLE(WEB_TIMING)
 #include "Performance.h"
 
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "Frame.h"
 #include "PerformanceEntry.h"
 #include "PerformanceNavigation.h"
 #include "PerformanceResourceTiming.h"
@@ -42,22 +45,18 @@
 #include "ResourceResponse.h"
 #include <wtf/CurrentTime.h>
 
-#if ENABLE(WEB_TIMING)
-
-#include "Frame.h"
-
 namespace WebCore {
 
 #if ENABLE(RESOURCE_TIMING)
 static const size_t defaultResourceTimingBufferSize = 150;
 #endif
 
-Performance::Performance(Frame* frame)
-    : DOMWindowProperty(frame)
+Performance::Performance(Frame& frame)
+    : DOMWindowProperty(&frame)
 #if ENABLE(RESOURCE_TIMING)
     , m_resourceTimingBufferSize(defaultResourceTimingBufferSize)
 #endif // ENABLE(RESOURCE_TIMING)
-    , m_referenceTime(frame->document()->loader()->timing().referenceMonotonicTime())
+    , m_referenceTime(frame.document()->loader() ? frame.document()->loader()->timing().referenceMonotonicTime() : monotonicallyIncreasingTime())
 #if ENABLE(USER_TIMING)
     , m_userTiming(nullptr)
 #endif // ENABLE(USER_TIMING)
@@ -72,7 +71,7 @@ Performance::~Performance()
 ScriptExecutionContext* Performance::scriptExecutionContext() const
 {
     if (!frame())
-        return 0;
+        return nullptr;
     return frame()->document();
 }
 
@@ -117,19 +116,20 @@ PassRefPtr<PerformanceEntryList> Performance::webkitGetEntriesByType(const Strin
     RefPtr<PerformanceEntryList> entries = PerformanceEntryList::create();
 
 #if ENABLE(RESOURCE_TIMING)
-    if (equalIgnoringCase(entryType, "resource"))
+    if (equalLettersIgnoringASCIICase(entryType, "resource")) {
         for (auto& resource : m_resourceTimingBuffer)
             entries->append(resource);
-#endif // ENABLE(RESOURCE_TIMING)
+    }
+#endif
 
 #if ENABLE(USER_TIMING)
     if (m_userTiming) {
-        if (equalIgnoringCase(entryType, "mark"))
+        if (equalLettersIgnoringASCIICase(entryType, "mark"))
             entries->appendAll(m_userTiming->getMarks());
-        else if (equalIgnoringCase(entryType, "measure"))
+        else if (equalLettersIgnoringASCIICase(entryType, "measure"))
             entries->appendAll(m_userTiming->getMeasures());
     }
-#endif // ENABLE(USER_TIMING)
+#endif
 
     entries->sort();
     return entries;
@@ -140,21 +140,22 @@ PassRefPtr<PerformanceEntryList> Performance::webkitGetEntriesByName(const Strin
     RefPtr<PerformanceEntryList> entries = PerformanceEntryList::create();
 
 #if ENABLE(RESOURCE_TIMING)
-    if (entryType.isNull() || equalIgnoringCase(entryType, "resource"))
+    if (entryType.isNull() || equalLettersIgnoringASCIICase(entryType, "resource")) {
         for (auto& resource : m_resourceTimingBuffer) {
             if (resource->name() == name)
                 entries->append(resource);
         }
-#endif // ENABLE(RESOURCE_TIMING)
+    }
+#endif
 
 #if ENABLE(USER_TIMING)
     if (m_userTiming) {
-        if (entryType.isNull() || equalIgnoringCase(entryType, "mark"))
+        if (entryType.isNull() || equalLettersIgnoringASCIICase(entryType, "mark"))
             entries->appendAll(m_userTiming->getMarks(name));
-        if (entryType.isNull() || equalIgnoringCase(entryType, "measure"))
+        if (entryType.isNull() || equalLettersIgnoringASCIICase(entryType, "measure"))
             entries->appendAll(m_userTiming->getMeasures(name));
     }
-#endif // ENABLE(USER_TIMING)
+#endif
 
     entries->sort();
     return entries;
@@ -231,7 +232,7 @@ void Performance::webkitClearMeasures(const String& measureName)
 
 double Performance::now() const
 {
-    double nowSeconds = WTF::monotonicallyIncreasingTime() - m_referenceTime;
+    double nowSeconds = monotonicallyIncreasingTime() - m_referenceTime;
     const double resolutionSeconds = 0.000005;
     return 1000.0 * floor(nowSeconds / resolutionSeconds) * resolutionSeconds;
 }

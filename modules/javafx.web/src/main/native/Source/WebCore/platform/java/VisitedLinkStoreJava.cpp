@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2011, 2015, 2016 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
+
 
 #include "config.h"
 #include "VisitedLinkStoreJava.h"
@@ -49,7 +50,6 @@ void VisitedLinkStoreJava::removeAllVisitedLinks()
 {
     for (auto& visitedLinkStore : visitedLinkStores())
         visitedLinkStore->removeVisitedLinkHashes();
-    PageCache::singleton().markPagesForVisitedLinkStyleRecalc();
 }
 
 void VisitedLinkStoreJava::addVisitedLink(const String& urlString)
@@ -86,7 +86,6 @@ void VisitedLinkStoreJava::addVisitedLinkHash(LinkHash linkHash)
     m_visitedLinkHashes.add(linkHash);
 
     invalidateStylesForLink(linkHash);
-    PageCache::singleton().markPagesForVisitedLinkStyleRecalc();
 }
 
 void VisitedLinkStoreJava::removeVisitedLinkHashes()
@@ -98,3 +97,4 @@ void VisitedLinkStoreJava::removeVisitedLinkHashes()
 
     invalidateStylesForAllLinks();
 }
+

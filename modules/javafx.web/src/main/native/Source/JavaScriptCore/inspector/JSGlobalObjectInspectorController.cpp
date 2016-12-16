@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,6 +35,9 @@
 #include "InspectorAgent.h"
 #include "InspectorBackendDispatcher.h"
 #include "InspectorFrontendChannel.h"
+#include "InspectorFrontendRouter.h"
+#include "InspectorHeapAgent.h"
+#include "InspectorScriptProfilerAgent.h"
 #include "JSGlobalObject.h"
 #include "JSGlobalObjectConsoleAgent.h"
 #include "JSGlobalObjectConsoleClient.h"
@@ -63,57 +66,68 @@ namespace Inspector {
 JSGlobalObjectInspectorController::JSGlobalObjectInspectorController(JSGlobalObject& globalObject)
     : m_globalObject(globalObject)
     , m_injectedScriptManager(std::make_unique<InjectedScriptManager>(*this, InjectedScriptHost::create()))
-    , m_frontendChannel(nullptr)
     , m_executionStopwatch(Stopwatch::create())
-    , m_includeNativeCallStackWithExceptions(true)
-    , m_isAutomaticInspection(false)
-#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
-    , m_augmentingClient(nullptr)
-#endif
+    , m_scriptDebugServer(globalObject)
+    , m_frontendRouter(FrontendRouter::create())
+    , m_backendDispatcher(BackendDispatcher::create(m_frontendRouter.copyRef()))
 {
-    auto inspectorAgent = std::make_unique<InspectorAgent>(*this);
-    auto runtimeAgent = std::make_unique<JSGlobalObjectRuntimeAgent>(m_injectedScriptManager.get(), m_globalObject);
-    auto consoleAgent = std::make_unique<JSGlobalObjectConsoleAgent>(m_injectedScriptManager.get());
-    auto debuggerAgent = std::make_unique<JSGlobalObjectDebuggerAgent>(m_injectedScriptManager.get(), m_globalObject, consoleAgent.get());
+    AgentContext baseContext = {
+        *this,
+        *m_injectedScriptManager,
+        m_frontendRouter.get(),
+        m_backendDispatcher.get()
+    };
+
+    JSAgentContext context = {
+        baseContext,
+        globalObject
+    };
+
+    auto inspectorAgent = std::make_unique<InspectorAgent>(context);
+    auto runtimeAgent = std::make_unique<JSGlobalObjectRuntimeAgent>(context);
+    auto consoleAgent = std::make_unique<JSGlobalObjectConsoleAgent>(context);
+    auto debuggerAgent = std::make_unique<JSGlobalObjectDebuggerAgent>(context, consoleAgent.get());
 
     m_inspectorAgent = inspectorAgent.get();
     m_debuggerAgent = debuggerAgent.get();
     m_consoleAgent = consoleAgent.get();
     m_consoleClient = std::make_unique<JSGlobalObjectConsoleClient>(m_consoleAgent);
 
-    runtimeAgent->setScriptDebugServer(&debuggerAgent->scriptDebugServer());
-
-    m_agents.append(WTF::move(inspectorAgent));
-    m_agents.append(WTF::move(runtimeAgent));
-    m_agents.append(WTF::move(consoleAgent));
-    m_agents.append(WTF::move(debuggerAgent));
+    m_agents.append(WTFMove(inspectorAgent));
+    m_agents.append(WTFMove(runtimeAgent));
+    m_agents.append(WTFMove(consoleAgent));
+    m_agents.append(WTFMove(debuggerAgent));
+    m_agents.append(std::make_unique<InspectorHeapAgent>(context));
+    m_agents.append(std::make_unique<InspectorScriptProfilerAgent>(context));
 
     m_executionStopwatch->start();
 }
 
 JSGlobalObjectInspectorController::~JSGlobalObjectInspectorController()
 {
-    m_agents.discardAgents();
 }
 
 void JSGlobalObjectInspectorController::globalObjectDestroyed()
 {
-    disconnectFrontend(DisconnectReason::InspectedTargetDestroyed);
+    disconnectAllFrontends();
 
     m_injectedScriptManager->disconnect();
 }
 
 void JSGlobalObjectInspectorController::connectFrontend(FrontendChannel* frontendChannel, bool isAutomaticInspection)
 {
-    ASSERT(!m_frontendChannel);
-    ASSERT(!m_backendDispatcher);
+    ASSERT_ARG(frontendChannel, frontendChannel);
 
     m_isAutomaticInspection = isAutomaticInspection;
 
-    m_frontendChannel = frontendChannel;
-    m_backendDispatcher = BackendDispatcher::create(frontendChannel);
+    bool connectedFirstFrontend = !m_frontendRouter->hasFrontends();
+    m_frontendRouter->connectFrontend(frontendChannel);
 
-    m_agents.didCreateFrontendAndBackend(frontendChannel, m_backendDispatcher.get());
+    if (!connectedFirstFrontend)
+        return;
+
+    // FIXME: change this to notify agents which frontend has connected (by id).
+    m_agents.didCreateFrontendAndBackend(nullptr, nullptr);
 
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
     m_inspectorAgent->activateExtraDomains(m_agents.extraDomains());
@@ -123,16 +137,33 @@ void JSGlobalObjectInspectorController::connectFrontend(FrontendChannel* fronten
 #endif
 }
 
-void JSGlobalObjectInspectorController::disconnectFrontend(DisconnectReason reason)
+void JSGlobalObjectInspectorController::disconnectFrontend(FrontendChannel* frontendChannel)
 {
-    if (!m_frontendChannel)
+    ASSERT_ARG(frontendChannel, frontendChannel);
+
+    // FIXME: change this to notify agents which frontend has disconnected (by id).
+    m_agents.willDestroyFrontendAndBackend(DisconnectReason::InspectorDestroyed);
+
+    m_frontendRouter->disconnectFrontend(frontendChannel);
+
+    m_isAutomaticInspection = false;
+
+    bool disconnectedLastFrontend = !m_frontendRouter->hasFrontends();
+    if (!disconnectedLastFrontend)
         return;
 
-    m_agents.willDestroyFrontendAndBackend(reason);
+#if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
+    if (m_augmentingClient)
+        m_augmentingClient->inspectorDisconnected();
+#endif
+}
 
-    m_backendDispatcher->clearFrontend();
-    m_backendDispatcher = nullptr;
-    m_frontendChannel = nullptr;
+void JSGlobalObjectInspectorController::disconnectAllFrontends()
+{
+    // FIXME: change this to notify agents which frontend has disconnected (by id).
+    m_agents.willDestroyFrontendAndBackend(DisconnectReason::InspectedTargetDestroyed);
+
+    m_frontendRouter->disconnectAllFrontends();
 
     m_isAutomaticInspection = false;
 
@@ -144,15 +175,11 @@ void JSGlobalObjectInspectorController::disconnectFrontend(DisconnectReason reas
 
 void JSGlobalObjectInspectorController::dispatchMessageFromFrontend(const String& message)
 {
-    if (m_backendDispatcher)
-        m_backendDispatcher->dispatch(message);
+    m_backendDispatcher->dispatch(message);
 }
 
 void JSGlobalObjectInspectorController::pause()
 {
-    if (!m_frontendChannel)
-        return;
-
     ErrorString dummyError;
     m_debuggerAgent->enable(dummyError);
     m_debuggerAgent->pause(dummyError);
@@ -257,18 +284,27 @@ Ref<Stopwatch> JSGlobalObjectInspectorController::executionStopwatch()
     return m_executionStopwatch.copyRef();
 }
 
+JSGlobalObjectScriptDebugServer& JSGlobalObjectInspectorController::scriptDebugServer()
+{
+    return m_scriptDebugServer;
+}
+
+VM& JSGlobalObjectInspectorController::vm()
+{
+    return m_globalObject.vm();
+}
+
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
 void JSGlobalObjectInspectorController::appendExtraAgent(std::unique_ptr<InspectorAgentBase> agent)
 {
     String domainName = agent->domainName();
 
-    if (m_frontendChannel)
-        agent->didCreateFrontendAndBackend(m_frontendChannel, m_backendDispatcher.get());
+    // FIXME: change this to notify agents which frontend has connected (by id).
+    agent->didCreateFrontendAndBackend(nullptr, nullptr);
 
-    m_agents.appendExtraAgent(WTF::move(agent));
+    m_agents.appendExtraAgent(WTFMove(agent));
 
-    if (m_frontendChannel)
-        m_inspectorAgent->activateExtraDomain(domainName);
+    m_inspectorAgent->activateExtraDomain(domainName);
 }
 #endif
 

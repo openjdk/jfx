@@ -3,19 +3,138 @@
  */
 #include "config.h"
 
-#include "NotImplemented.h"
-
+#include "ContextMenuJava.h"
 #include "ContextMenu.h"
+#include "ContextMenuController.h"
 #include "ContextMenuItem.h"
-#include "Frame.h"
-#include "FrameView.h"
 #include "JavaEnv.h"
-#include "Page.h"
-#include "WebPage.h"
 
 #include "com_sun_webkit_ContextMenu.h"
+#include "com_sun_webkit_ContextMenuItem.h"
 
-#include "FrameTree.h"
+
+namespace WebCore {
+
+static jclass getJContextMenuItemClass()
+{
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static JGClass jContextMenuItemClass = JLClass(env->FindClass("com/sun/webkit/ContextMenuItem"));
+    ASSERT(jContextMenuItemClass);
+    return (jclass)jContextMenuItemClass;
+}
+
+static JGObject createJavaMenuItem()
+{
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    static jmethodID createContextMenuItemMID = env->GetStaticMethodID(getJContextMenuItemClass(), "fwkCreateContextMenuItem",
+                                                      "()Lcom/sun/webkit/ContextMenuItem;");
+    ASSERT(createContextMenuItemMID);
+
+    JGObject jContextMenuItem(env->CallStaticObjectMethod(getJContextMenuItemClass(), createContextMenuItemMID));
+    CheckAndClearException(env);
+    return jContextMenuItem;
+}
+
+class ContextMenuItemJava {
+  private:
+    JGObject m_menuItem;
+  public:
+    ContextMenuItemJava()
+      : m_menuItem(createJavaMenuItem()) {
+    }
+
+    void setType(ContextMenuItemType type)
+    {
+        if (!m_menuItem) {
+            return;
+        }
+        JNIEnv* env = WebCore_GetJavaEnv();
+        static jmethodID setTypeMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetType", "(I)V");
+        ASSERT(setTypeMID);
+
+        jint jtype = com_sun_webkit_ContextMenuItem_ACTION_TYPE;
+        if (SeparatorType == type) {
+            jtype = com_sun_webkit_ContextMenuItem_SEPARATOR_TYPE;
+        } else if (SubmenuType == type) {
+            jtype = com_sun_webkit_ContextMenuItem_SUBMENU_TYPE;
+        }
+        env->CallVoidMethod(m_menuItem, setTypeMID, jtype);
+        CheckAndClearException(env);
+    }
+
+    void setAction(ContextMenuAction action)
+    {
+        if (!m_menuItem) {
+            return;
+        }
+        JNIEnv* env = WebCore_GetJavaEnv();
+
+        static jmethodID setActionMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetAction", "(I)V");
+        ASSERT(setActionMID);
+        env->CallVoidMethod(m_menuItem, setActionMID, action);
+        CheckAndClearException(env);
+    }
+
+    void setTitle(const String& title)
+    {
+        if (!m_menuItem) {
+            return;
+        }
+        JNIEnv* env = WebCore_GetJavaEnv();
+
+        static jmethodID setTitleMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetTitle", "(Ljava/lang/String;)V");
+        ASSERT(setTitleMID);
+
+        env->CallVoidMethod(m_menuItem, setTitleMID, title.isEmpty() ? NULL : (jstring)title.toJavaString(env));
+        CheckAndClearException(env);
+    }
+
+    void setSubMenu(JGObject obj)
+    {
+        if (!m_menuItem) {
+            return;
+        }
+        JNIEnv* env = WebCore_GetJavaEnv();
+
+        static jmethodID setSubmenuMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetSubmenu",
+                                         "(Lcom/sun/webkit/ContextMenu;)V");
+        ASSERT(setSubmenuMID);
+        JLObject submenu(obj);
+        env->CallVoidMethod(m_menuItem, setSubmenuMID, (jobject)submenu);
+        CheckAndClearException(env);
+    }
+
+    void setChecked(bool checked)
+    {
+        if (!m_menuItem) {
+            return;
+        }
+        JNIEnv* env = WebCore_GetJavaEnv();
+        static jmethodID setCheckedMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetChecked", "(Z)V");
+        ASSERT(setCheckedMID);
+
+        env->CallVoidMethod(m_menuItem, setCheckedMID, bool_to_jbool(checked));
+        CheckAndClearException(env);
+    }
+
+    void setEnabled(bool enabled)
+    {
+        if (!m_menuItem) {
+            return;
+        }
+        JNIEnv* env = WebCore_GetJavaEnv();
+        static jmethodID setEnabledMID = env->GetMethodID(getJContextMenuItemClass(), "fwkSetEnabled", "(Z)V");
+        ASSERT(setEnabledMID);
+
+        env->CallVoidMethod(m_menuItem, setEnabledMID, bool_to_jbool(enabled));
+        CheckAndClearException(env);
+    }
+
+    operator jobject() const {
+      return (jobject)m_menuItem;
+    }
+};
 
 static jclass getJContextMenuClass()
 {
@@ -25,7 +144,7 @@ static jclass getJContextMenuClass()
     return (jclass)jContextMenuClass;
 }
 
-static JLObject createPlatformMenuDescription()
+static JLObject createJavaContextMenu()
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -41,154 +160,59 @@ static JLObject createPlatformMenuDescription()
     return jContextMenu;
 }
 
-namespace WebCore {
-
-// ContextMenu is a utility class to create/configure instance of
-// PlatformMenuDescription.  So, instance of ContextMenu owns
-// instance of PlatformMenuDescription which is stored in
-// m_platformDescription field. It can loose the ownership or
-// get ownership of another PlatformMenuDescription and
-// PlatformMenuItemDescription. See method's comments for more
-// information about the ownership.
-ContextMenu::ContextMenu()
-    : m_platformDescription(createPlatformMenuDescription())
+ContextMenuJava::ContextMenuJava(const Vector<ContextMenuItem>& items)
+    : m_contextMenu(createJavaContextMenu())
 {
-}
-
-ContextMenu::ContextMenu(const PlatformMenuDescription descr)
-    : m_platformDescription(descr)
-{
-    // Note: the ctor seems to be useless.
-}
-
-ContextMenu::~ContextMenu()
-{
-}
-
-// This method transfers ownership of platform description of provided CMI
-// from the CMI to this ContextMenu.
-// Note: the method is not called.
-void ContextMenu::insertItem(unsigned position, ContextMenuItem& menuItem)
-{
-    if (!m_platformDescription || !menuItem.isSupportedByPlatform()) {
+    if (!m_contextMenu) {
         return;
     }
+
     JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(getJContextMenuClass(),
-        "fwkInsertItem", "(Lcom/sun/webkit/ContextMenuItem;I)V");
-    ASSERT(mid);
-
-    JLObject item(menuItem.releasePlatformDescription());
-    env->CallVoidMethod(m_platformDescription, mid, (jobject)item, position);
-    CheckAndClearException(env);
-}
-
-
-// This method transfers ownership of platform description of provided CMI
-// from the CMI to this ContextMenu.
-void ContextMenu::appendItem(ContextMenuItem& menuItem)
-{
-    if (!m_platformDescription || !menuItem.isSupportedByPlatform()) {
-        return;
-    }
-    JNIEnv* env = WebCore_GetJavaEnv();
-
     static jmethodID mid = env->GetMethodID(getJContextMenuClass(),
         "fwkAppendItem", "(Lcom/sun/webkit/ContextMenuItem;)V");
     ASSERT(mid);
 
-    JLObject item(menuItem.releasePlatformDescription());
-    env->CallVoidMethod(m_platformDescription, mid, (jobject)item);
-    CheckAndClearException(env);
-}
-
-// This method should find an item with specified action, clone it,
-// and return ContextMenuItem wrapped around this clone.
-ContextMenuItem* ContextMenu::itemWithAction(unsigned)
-{
-    // most likely we do not need this method.  at least for now it
-    // is only used in Windows port of WebKit
-    notImplemented();
-    return 0;
-}
-
-ContextMenuItem* ContextMenu::itemAtIndex(unsigned, const PlatformMenuDescription)
-{
-    // we do not need to implement this method since it is only used in Windows port
-    // see http://bugs.webkit.org/show_bug.cgi?id=17366
-    notImplemented();
-    return 0;
-}
-
-unsigned ContextMenu::itemCount() const
-{
-    if (!m_platformDescription) {
-        return 0;
-    }
-
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(getJContextMenuClass(),
-        "fwkGetItemCount", "()I");
-    ASSERT(mid);
-
-    jint count = env->CallIntMethod(m_platformDescription, mid);
-    CheckAndClearException(env);
-
-    return count;
-}
-
-void ContextMenu::show(ContextMenuController* ctrl, const IntPoint& loc)
-{
-    ASSERT(m_platformDescription);
-    if (m_platformDescription) {
-        JNIEnv* env = WebCore_GetJavaEnv();
-
-        static jmethodID mid = env->GetMethodID(
-                getJContextMenuClass(),
-                "fwkShow",
-                "(Lcom/sun/webkit/WebPage;JII)V");
-        ASSERT(mid);
-
-        env->CallVoidMethod(
-                m_platformDescription,
-                mid,
-                (jobject) WebPage::jobjectFromPage(&ctrl->page()),
-                ptr_to_jlong(ctrl),
-                loc.x(),
-                loc.y());
+    for (const auto& item : items) {
+        if (item.isNull() ||
+              (item.type() != SeparatorType && item.title().isEmpty())) {
+            continue;
+        }
+        ContextMenuItemJava menuItem;
+        menuItem.setType(item.type());
+        menuItem.setAction(item.action());
+        menuItem.setTitle(item.title());
+        menuItem.setEnabled(item.enabled());
+        menuItem.setChecked(item.checked());
+        // Call recursively
+        menuItem.setSubMenu(ContextMenuJava(item.subMenuItems()).m_contextMenu);
+        env->CallVoidMethod(m_contextMenu, mid, (jobject)menuItem);
         CheckAndClearException(env);
     }
 }
 
-PlatformMenuDescription ContextMenu::platformDescription() const
+void ContextMenuJava::show(ContextMenuController* ctrl, jobject page, const IntPoint& loc) const
 {
-    return m_platformDescription;
-}
-
-void ContextMenu::setPlatformDescription(PlatformMenuDescription descr)
-{
-    if (descr != m_platformDescription) {
-        m_platformDescription = descr;
+    if (!m_contextMenu) {
+        return;
     }
+
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID mid = env->GetMethodID(
+            getJContextMenuClass(),
+            "fwkShow",
+            "(Lcom/sun/webkit/WebPage;JII)V");
+    ASSERT(mid);
+
+    env->CallVoidMethod(
+            m_contextMenu,
+            mid,
+            page,
+            ptr_to_jlong(ctrl),
+            loc.x(),
+            loc.y());
+    CheckAndClearException(env);
 }
 
-Vector<ContextMenuItem> contextMenuItemVector(PlatformMenuDescription menu)
-{
-    Vector<ContextMenuItem> menuItemVector;
-    notImplemented();
-    return menuItemVector;
-}
-
-// Returns (lost ownership of) current platform description
-// and reset the state of the CM to the default one.
-PlatformMenuDescription ContextMenu::releasePlatformDescription()
-{
-    PlatformMenuDescription descr = m_platformDescription;
-    m_platformDescription = createPlatformMenuDescription();
-    return descr;
-}
 } // namespace WebCore
 
 using namespace WebCore;
@@ -198,16 +222,10 @@ extern "C" {
 #endif
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_ContextMenu_twkHandleItemSelected
-    (JNIEnv* env, jobject self, jlong menuCtrlPData, jint itemAction)
+    (JNIEnv*, jobject, jlong menuCtrlPData, jint itemAction)
 {
     ContextMenuController* cmc = static_cast<ContextMenuController*>jlong_to_ptr(menuCtrlPData);
-
-    // This item is used to pass the action to the menu controller.
-    // TODO: this doesn't look good, consider refactoring.
-    static ContextMenuItem contextMenuItem(ActionType, ContextMenuItemTagNoAction, String("aux"));
-    contextMenuItem.setAction((ContextMenuAction)itemAction);
-
-    cmc->contextMenuItemSelected(&contextMenuItem);
+    cmc->contextMenuItemSelected((ContextMenuAction)itemAction, "aux");
 }
 
 #ifdef __cplusplus

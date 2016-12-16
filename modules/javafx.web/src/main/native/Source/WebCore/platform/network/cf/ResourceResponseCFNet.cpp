@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2007, 2016 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,19 +28,15 @@
 
 #if USE(CFNETWORK)
 
+#include "CFNetworkSPI.h"
+
 #include "HTTPParsers.h"
 #include "MIMETypeRegistry.h"
-#include <CFNetwork/CFURLResponsePriv.h>
 #include <wtf/RetainPtr.h>
 
 #if PLATFORM(COCOA)
 #include "WebCoreSystemInterface.h"
 #endif
-
-// We would like a better value for a maximum time_t,
-// but there is no way to do that in C with any certainty.
-// INT_MAX should work well enough for our purposes.
-#define MAX_TIME_T ((time_t)INT_MAX)
 
 namespace WebCore {
 
@@ -90,6 +86,7 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
 
         CFHTTPMessageRef httpResponse = CFURLResponseGetHTTPResponse(m_cfResponse.get());
         if (httpResponse) {
+            m_httpVersion = String(adoptCF(CFHTTPMessageCopyVersion(httpResponse)).get()).convertToASCIIUppercase();
             m_httpStatusCode = CFHTTPMessageGetResponseStatusCode(httpResponse);
 
             if (initLevel < AllFields) {
@@ -118,13 +115,12 @@ void ResourceResponse::platformLazyInit(InitLevel initLevel)
     m_initLevel = initLevel;
 }
 
+#if !PLATFORM(COCOA)
 CertificateInfo ResourceResponse::platformCertificateInfo() const
 {
-#if PLATFORM(COCOA)
-    return CertificateInfo(adoptCF(wkCopyNSURLResponseCertificateChain(nsURLResponse())));
-#endif
-    return CertificateInfo();
+    return { };
 }
+#endif
 
 String ResourceResponse::platformSuggestedFilename() const
 {

@@ -31,6 +31,7 @@
 #include "FloatRect.h" //XXX: use forward declaration
 #include <array>
 #include <wtf/FastMalloc.h>
+#include <wtf/Optional.h>
 
 #if USE(CG)
 typedef struct CGAffineTransform CGAffineTransform;
@@ -47,6 +48,7 @@ class FloatSize;
 class IntPoint;
 class IntSize;
 class IntRect;
+class TextStream;
 class TransformationMatrix;
 
 class AffineTransform {
@@ -117,9 +119,8 @@ public:
     WEBCORE_EXPORT double xScale() const;
     WEBCORE_EXPORT double yScale() const;
 
-    double det() const;
-    WEBCORE_EXPORT bool isInvertible() const;
-    WEBCORE_EXPORT AffineTransform inverse() const;
+    bool isInvertible() const; // If you call this this, you're probably doing it wrong.
+    WEBCORE_EXPORT Optional<AffineTransform> inverse() const;
 
     void blend(const AffineTransform& from, double progress);
 
@@ -193,6 +194,8 @@ private:
 };
 
 AffineTransform makeMapBetweenRects(const FloatRect& source, const FloatRect& dest);
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const AffineTransform&);
 
 }
 

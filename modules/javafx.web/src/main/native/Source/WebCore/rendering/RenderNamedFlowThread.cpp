@@ -26,11 +26,11 @@
 #include "config.h"
 #include "RenderNamedFlowThread.h"
 
+#include "ComposedTreeAncestorIterator.h"
 #include "ExceptionCodePlaceholder.h"
 #include "FlowThreadController.h"
 #include "InlineTextBox.h"
 #include "InspectorInstrumentation.h"
-#include "NodeRenderingTraversal.h"
 #include "NodeTraversal.h"
 #include "Position.h"
 #include "Range.h"
@@ -47,10 +47,10 @@
 namespace WebCore {
 
 RenderNamedFlowThread::RenderNamedFlowThread(Document& document, Ref<RenderStyle>&& style, Ref<WebKitNamedFlow>&& namedFlow)
-    : RenderFlowThread(document, WTF::move(style))
+    : RenderFlowThread(document, WTFMove(style))
     , m_hasRegionsWithStyling(false)
     , m_dispatchRegionOversetChangeEvent(false)
-    , m_namedFlow(WTF::move(namedFlow))
+    , m_namedFlow(WTFMove(namedFlow))
     , m_regionOversetChangeEventTimer(*this, &RenderNamedFlowThread::regionOversetChangeEventTimerFired)
 {
 }
@@ -94,7 +94,7 @@ void RenderNamedFlowThread::updateWritingMode()
     // The first region defines the principal writing mode for the entire flow.
     auto newStyle = RenderStyle::clone(&style());
     newStyle.get().setWritingMode(firstFragment->style().writingMode());
-    setStyle(WTF::move(newStyle));
+    setStyle(WTFMove(newStyle));
 }
 
 RenderElement* RenderNamedFlowThread::nextRendererForElement(Element& element) const
@@ -547,7 +547,7 @@ bool RenderNamedFlowThread::isChildAllowed(const RenderObject& child, const Rend
 
     ASSERT(is<Element>(*child.node()));
 
-    Node* originalParent = NodeRenderingTraversal::parent(child.node());
+    auto* originalParent = composedTreeAncestors(*child.node()).first();
     if (!is<Element>(originalParent) || !originalParent->renderer())
         return true;
 
@@ -696,7 +696,7 @@ void RenderNamedFlowThread::getRanges(Vector<RefPtr<Range>>& rangeObjects, const
                     if (!startsAboveRegion) {
                         if (range->intersectsNode(node, IGNORE_EXCEPTION))
                             range->setEndBefore(node, IGNORE_EXCEPTION);
-                        rangeObjects.append(range->cloneRange(IGNORE_EXCEPTION));
+                        rangeObjects.append(range->cloneRange());
                         range = Range::create(contentElement->document());
                         startsAboveRegion = true;
                     } else

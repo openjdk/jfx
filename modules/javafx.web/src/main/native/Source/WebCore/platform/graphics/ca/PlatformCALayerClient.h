@@ -39,6 +39,8 @@ public:
     virtual void platformCALayerLayoutSublayersOfLayer(PlatformCALayer*) { }
     virtual bool platformCALayerRespondsToLayoutChanges() const { return false; }
 
+    virtual void platformCALayerCustomSublayersChanged(PlatformCALayer*) { }
+
     virtual void platformCALayerAnimationStarted(const String& /*animationKey*/, CFTimeInterval) { }
     virtual void platformCALayerAnimationEnded(const String& /*animationKey*/) { }
     virtual GraphicsLayer::CompositingCoordinatesOrientation platformCALayerContentsOrientation() const { return GraphicsLayer::CompositingCoordinatesTopDown; }
@@ -49,7 +51,7 @@ public:
 
     virtual bool platformCALayerContentsOpaque() const = 0;
     virtual bool platformCALayerDrawsContent() const = 0;
-    virtual void platformCALayerLayerDidDisplay(PlatformCALayer*)  { }
+    virtual void platformCALayerLayerDidDisplay(PlatformCALayer*) { }
 
     virtual void platformCALayerSetNeedsToRevalidateTiles() { }
     virtual float platformCALayerDeviceScaleFactor() const = 0;
@@ -58,7 +60,11 @@ public:
     virtual bool platformCALayerShouldAggressivelyRetainTiles(PlatformCALayer*) const { return false; }
     virtual bool platformCALayerShouldTemporarilyRetainTileCohorts(PlatformCALayer*) const { return true; }
 
+    virtual IntSize platformCALayerTileSize() const { return defaultTileSize(); }
+
     virtual bool isCommittingChanges() const { return false; }
+
+    virtual bool isUsingDisplayListDrawing(PlatformCALayer*) const { return false; }
 
 protected:
     virtual ~PlatformCALayerClient() {}

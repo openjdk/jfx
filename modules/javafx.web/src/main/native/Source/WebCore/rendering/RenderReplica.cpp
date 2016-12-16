@@ -35,7 +35,7 @@
 namespace WebCore {
 
 RenderReplica::RenderReplica(Document& document, Ref<RenderStyle>&& style)
-    : RenderBox(document, WTF::move(style), 0)
+    : RenderBox(document, WTFMove(style), 0)
 {
     // This is a hack. Replicas are synthetic, and don't pick up the attributes of the
     // renderers being replicated, so they always report that they are inline, non-replaced.
@@ -76,7 +76,7 @@ void RenderReplica::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
         RenderLayer* rootPaintingLayer = layer()->transform() ? layer()->parent() : layer()->enclosingTransformedAncestor();
         RenderLayer::LayerPaintingInfo paintingInfo(rootPaintingLayer, paintInfo.rect, PaintBehaviorNormal, LayoutSize(), 0);
         RenderLayer::PaintLayerFlags flags = RenderLayer::PaintLayerHaveTransparency | RenderLayer::PaintLayerAppliedTransform | RenderLayer::PaintLayerTemporaryClipRects | RenderLayer::PaintLayerPaintingReflection;
-        layer()->parent()->paintLayer(paintInfo.context, paintingInfo, flags);
+        layer()->parent()->paintLayer(paintInfo.context(), paintingInfo, flags);
     } else if (paintInfo.phase == PaintPhaseMask)
         paintMask(paintInfo, adjustedPaintOffset);
 }

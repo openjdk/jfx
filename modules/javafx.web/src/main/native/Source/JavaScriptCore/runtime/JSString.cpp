@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2004, 2007, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2004, 2007, 2008, 2015 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -35,6 +35,11 @@ namespace JSC {
 
 const ClassInfo JSString::s_info = { "string", 0, 0, CREATE_METHOD_TABLE(JSString) };
 
+Structure* JSString::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
+{
+    return Structure::create(vm, globalObject, proto, TypeInfo(StringType, StructureFlags), info());
+}
+
 void JSRopeString::RopeBuilder::expand()
 {
     ASSERT(m_index == JSRopeString::s_maxInternalRopeLength);
@@ -67,6 +72,14 @@ void JSString::dumpToStream(const JSCell* cell, PrintStream& out)
     out.printf(">");
 }
 
+size_t JSString::estimatedSize(JSCell* cell)
+{
+    JSString* thisObject = jsCast<JSString*>(cell);
+    if (thisObject->isRope())
+        return Base::estimatedSize(cell);
+    return Base::estimatedSize(cell) + thisObject->m_value.impl()->costDuringGC();
+}
+
 void JSString::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSString* thisObject = jsCast<JSString*>(cell);
@@ -77,7 +90,7 @@ void JSString::visitChildren(JSCell* cell, SlotVisitor& visitor)
     else {
         StringImpl* impl = thisObject->m_value.impl();
         ASSERT(impl);
-        visitor.reportExtraMemoryVisited(thisObject, impl->costDuringGC());
+        visitor.reportExtraMemoryVisited(impl->costDuringGC());
     }
 }
 
@@ -232,7 +245,7 @@ void JSRopeString::resolveRope(ExecState* exec) const
 
     if (isSubstring()) {
         ASSERT(!substringBase()->isRope());
-        m_value = substringBase()->m_value.substring(substringOffset(), m_length);
+        m_value = substringBase()->m_value.substringSharingImpl(substringOffset(), m_length);
         substringBase().clear();
         return;
     }
@@ -373,13 +386,13 @@ JSValue JSString::toPrimitive(ExecState*, PreferredPrimitiveType) const
 bool JSString::getPrimitiveNumber(ExecState* exec, double& number, JSValue& result) const
 {
     result = this;
-    number = jsToNumber(view(exec));
+    number = jsToNumber(unsafeView(*exec));
     return false;
 }
 
 double JSString::toNumber(ExecState* exec) const
 {
-    return jsToNumber(view(exec));
+    return jsToNumber(unsafeView(*exec));
 }
 
 inline StringObject* StringObject::create(VM& vm, JSGlobalObject* globalObject, JSString* string)

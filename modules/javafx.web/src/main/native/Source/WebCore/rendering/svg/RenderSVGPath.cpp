@@ -34,7 +34,7 @@
 namespace WebCore {
 
 RenderSVGPath::RenderSVGPath(SVGGraphicsElement& element, Ref<RenderStyle>&& style)
-    : RenderSVGShape(element, WTF::move(style))
+    : RenderSVGShape(element, WTFMove(style))
 {
 }
 
@@ -64,17 +64,17 @@ FloatRect RenderSVGPath::calculateUpdatedStrokeBoundingBox() const
     return strokeBoundingBox;
 }
 
-static void useStrokeStyleToFill(GraphicsContext* context)
+static void useStrokeStyleToFill(GraphicsContext& context)
 {
-    if (Gradient* gradient = context->strokeGradient())
-        context->setFillGradient(*gradient);
-    else if (Pattern* pattern = context->strokePattern())
-        context->setFillPattern(*pattern);
+    if (Gradient* gradient = context.strokeGradient())
+        context.setFillGradient(*gradient);
+    else if (Pattern* pattern = context.strokePattern())
+        context.setFillPattern(*pattern);
     else
-        context->setFillColor(context->strokeColor(), context->strokeColorSpace());
+        context.setFillColor(context.strokeColor());
 }
 
-void RenderSVGPath::strokeShape(GraphicsContext* context) const
+void RenderSVGPath::strokeShape(GraphicsContext& context) const
 {
     if (!style().svgStyle().hasVisibleStroke())
         return;
@@ -90,13 +90,13 @@ void RenderSVGPath::strokeShape(GraphicsContext* context) const
     if (hasNonScalingStroke())
         nonScalingTransform = nonScalingStrokeTransform();
 
-    GraphicsContextStateSaver stateSaver(*context, true);
+    GraphicsContextStateSaver stateSaver(context, true);
     useStrokeStyleToFill(context);
     for (size_t i = 0; i < m_zeroLengthLinecapLocations.size(); ++i) {
         usePath = zeroLengthLinecapPath(m_zeroLengthLinecapLocations[i]);
         if (hasNonScalingStroke())
             usePath = nonScalingStrokePath(usePath, nonScalingTransform);
-        context->fillPath(*usePath);
+        context.fillPath(*usePath);
     }
 }
 
@@ -131,15 +131,15 @@ bool RenderSVGPath::shouldStrokeZeroLengthSubpath() const
 
 Path* RenderSVGPath::zeroLengthLinecapPath(const FloatPoint& linecapPosition) const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(Path, tempPath, ());
+    static NeverDestroyed<Path> tempPath;
 
-    tempPath.clear();
+    tempPath.get().clear();
     if (style().svgStyle().capStyle() == SquareCap)
-        tempPath.addRect(zeroLengthSubpathRect(linecapPosition, this->strokeWidth()));
+        tempPath.get().addRect(zeroLengthSubpathRect(linecapPosition, this->strokeWidth()));
     else
-        tempPath.addEllipse(zeroLengthSubpathRect(linecapPosition, this->strokeWidth()));
+        tempPath.get().addEllipse(zeroLengthSubpathRect(linecapPosition, this->strokeWidth()));
 
-    return &tempPath;
+    return &tempPath.get();
 }
 
 FloatRect RenderSVGPath::zeroLengthSubpathRect(const FloatPoint& linecapPosition, float strokeWidth) const
@@ -155,7 +155,9 @@ void RenderSVGPath::updateZeroLengthSubpaths()
         return;
 
     SVGSubpathData subpathData(m_zeroLengthLinecapLocations);
-    path().apply(&subpathData, SVGSubpathData::updateFromPathElement);
+    path().apply([&subpathData](const PathElement& pathElement) {
+        SVGSubpathData::updateFromPathElement(subpathData, pathElement);
+    });
     subpathData.pathIsDone();
 }
 

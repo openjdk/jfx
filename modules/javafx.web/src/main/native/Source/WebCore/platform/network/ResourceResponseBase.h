@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 #include "CacheValidation.h"
 #include "CertificateInfo.h"
 #include "HTTPHeaderMap.h"
+#include "ParsedContentRange.h"
 #include "ResourceLoadTiming.h"
 #include "URL.h"
 
@@ -72,6 +73,10 @@ public:
     WEBCORE_EXPORT const String& httpStatusText() const;
     WEBCORE_EXPORT void setHTTPStatusText(const String&);
 
+    WEBCORE_EXPORT const String& httpVersion() const;
+    WEBCORE_EXPORT void setHTTPVersion(const String&);
+    bool isHttpVersion0_9() const;
+
     WEBCORE_EXPORT const HTTPHeaderMap& httpHeaderFields() const;
 
     String httpHeaderField(const String& name) const;
@@ -106,8 +111,10 @@ public:
     WEBCORE_EXPORT Optional<std::chrono::microseconds> age() const;
     WEBCORE_EXPORT Optional<std::chrono::system_clock::time_point> expires() const;
     WEBCORE_EXPORT Optional<std::chrono::system_clock::time_point> lastModified() const;
+    ParsedContentRange& contentRange() const;
 
-    enum class Source { Unknown, Network, DiskCache, DiskCacheAfterValidation };
+    // This is primarily for testing support. It is not necessarily accurate in all scenarios.
+    enum class Source { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation };
     WEBCORE_EXPORT Source source() const;
     WEBCORE_EXPORT void setSource(Source);
 
@@ -156,6 +163,7 @@ protected:
     long long m_expectedContentLength;
     AtomicString m_textEncodingName;
     AtomicString m_httpStatusText;
+    AtomicString m_httpVersion;
     HTTPHeaderMap m_httpHeaderFields;
     mutable ResourceLoadTiming m_resourceLoadTiming;
 
@@ -169,6 +177,7 @@ private:
     mutable Optional<std::chrono::system_clock::time_point> m_date;
     mutable Optional<std::chrono::system_clock::time_point> m_expires;
     mutable Optional<std::chrono::system_clock::time_point> m_lastModified;
+    mutable ParsedContentRange m_contentRange;
     mutable CacheControlDirectives m_cacheControlDirectives;
 
     mutable bool m_haveParsedCacheControlHeader { false };
@@ -176,6 +185,7 @@ private:
     mutable bool m_haveParsedDateHeader { false };
     mutable bool m_haveParsedExpiresHeader { false };
     mutable bool m_haveParsedLastModifiedHeader { false };
+    mutable bool m_haveParsedContentRangeHeader { false };
 
     Source m_source { Source::Unknown };
 };
@@ -196,6 +206,7 @@ void ResourceResponseBase::encode(Encoder& encoder) const
     encoder << static_cast<int64_t>(m_expectedContentLength);
     encoder << m_textEncodingName;
     encoder << m_httpStatusText;
+    encoder << m_httpVersion;
     encoder << m_httpHeaderFields;
     encoder << m_resourceLoadTiming;
     encoder << m_httpStatusCode;
@@ -229,6 +240,8 @@ bool ResourceResponseBase::decode(Decoder& decoder, ResourceResponseBase& respon
         return false;
     if (!decoder.decode(response.m_httpStatusText))
         return false;
+    if (!decoder.decode(response.m_httpVersion))
+        return false;
     if (!decoder.decode(response.m_httpHeaderFields))
         return false;
     if (!decoder.decode(response.m_resourceLoadTiming))
@@ -258,6 +271,7 @@ public:
     String m_textEncodingName;
     int m_httpStatusCode;
     String m_httpStatusText;
+    String m_httpVersion;
     std::unique_ptr<CrossThreadHTTPHeaderMapData> m_httpHeaders;
     ResourceLoadTiming m_resourceLoadTiming;
 };

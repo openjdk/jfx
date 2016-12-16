@@ -38,7 +38,7 @@ namespace WebCore {
 
 const size_t renderQuantumSize = 128;
 
-OfflineAudioDestinationNode::OfflineAudioDestinationNode(AudioContext* context, AudioBuffer* renderTarget)
+OfflineAudioDestinationNode::OfflineAudioDestinationNode(AudioContext& context, AudioBuffer* renderTarget)
     : AudioDestinationNode(context, renderTarget->sampleRate())
     , m_renderTarget(renderTarget)
     , m_renderThread(0)
@@ -102,7 +102,7 @@ void OfflineAudioDestinationNode::offlineRender()
     if (!m_renderBus.get())
         return;
 
-    bool isAudioContextInitialized = context()->isInitialized();
+    bool isAudioContextInitialized = context().isInitialized();
     ASSERT(isAudioContextInitialized);
     if (!isAudioContextInitialized)
         return;
@@ -140,23 +140,15 @@ void OfflineAudioDestinationNode::offlineRender()
     }
 
     // Our work is done. Let the AudioContext know.
-    callOnMainThread(notifyCompleteDispatch, this);
-}
-
-void OfflineAudioDestinationNode::notifyCompleteDispatch(void* userData)
-{
-    OfflineAudioDestinationNode* destinationNode = static_cast<OfflineAudioDestinationNode*>(userData);
-    ASSERT(destinationNode);
-    if (!destinationNode)
-        return;
-
-    destinationNode->notifyComplete();
-    destinationNode->deref();
+    callOnMainThread([this] {
+        notifyComplete();
+        deref();
+    });
 }
 
 void OfflineAudioDestinationNode::notifyComplete()
 {
-    context()->fireCompletionEvent();
+    context().fireCompletionEvent();
 }
 
 } // namespace WebCore

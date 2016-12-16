@@ -80,7 +80,9 @@ public:
 
     virtual void setJavaScriptPaused(bool) { }
 
-    virtual PassRefPtr<JSC::Bindings::Instance> bindingInstance() { return nullptr; }
+    virtual RefPtr<JSC::Bindings::Instance> bindingInstance() { return nullptr; }
+
+    virtual void willDetatchRenderer() { }
 
 protected:
     explicit PluginViewBase(PlatformWidget widget = 0) : Widget(widget) { }

@@ -45,15 +45,15 @@ GenericEventQueue::~GenericEventQueue()
 {
 }
 
-void GenericEventQueue::enqueueEvent(PassRefPtr<Event> event)
+void GenericEventQueue::enqueueEvent(RefPtr<Event>&& event)
 {
     if (m_isClosed)
         return;
 
     if (event->target() == &m_owner)
-        event->setTarget(0);
+        event->setTarget(nullptr);
 
-    m_pendingEvents.append(event);
+    m_pendingEvents.append(WTFMove(event));
 
     if (m_isSuspended)
         return;
@@ -100,7 +100,7 @@ void GenericEventQueue::dispatchOneEvent()
     Ref<EventTarget> protect(m_owner);
     RefPtr<Event> event = m_pendingEvents.takeFirst();
     EventTarget& target = event->target() ? *event->target() : m_owner;
-    target.dispatchEvent(event.release());
+    target.dispatchEvent(*event);
 }
 
 void GenericEventQueue::close()

@@ -29,9 +29,13 @@
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
 
 #include "DisplayRefreshMonitorClient.h"
-#include "DisplayRefreshMonitorIOS.h"
-#include "DisplayRefreshMonitorMac.h"
 #include "DisplayRefreshMonitorManager.h"
+
+#if PLATFORM(IOS)
+#include "DisplayRefreshMonitorIOS.h"
+#else
+#include "DisplayRefreshMonitorMac.h"
+#endif
 
 namespace WebCore {
 
@@ -89,7 +93,7 @@ void DisplayRefreshMonitor::displayDidRefresh()
     double monotonicAnimationStartTime;
 
     {
-        MutexLocker lock(m_mutex);
+        LockHolder lock(m_mutex);
         if (!m_scheduled)
             ++m_unscheduledFireCount;
         else
@@ -121,7 +125,7 @@ void DisplayRefreshMonitor::displayDidRefresh()
         m_clientsToBeNotified = nullptr;
 
     {
-        MutexLocker lock(m_mutex);
+        LockHolder lock(m_mutex);
         m_previousFrameDone = true;
     }
 

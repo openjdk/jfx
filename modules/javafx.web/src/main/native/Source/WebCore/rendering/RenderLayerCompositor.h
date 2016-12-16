@@ -80,8 +80,9 @@ enum {
     CompositingReasonBlendingWithCompositedDescendants      = 1 << 20,
     CompositingReasonPerspective                            = 1 << 21,
     CompositingReasonPreserve3D                             = 1 << 22,
-    CompositingReasonRoot                                   = 1 << 23,
-    CompositingReasonIsolatesCompositedBlendingDescendants  = 1 << 24,
+    CompositingReasonWillChange                             = 1 << 23,
+    CompositingReasonRoot                                   = 1 << 24,
+    CompositingReasonIsolatesCompositedBlendingDescendants  = 1 << 25,
 };
 typedef unsigned CompositingReasons;
 
@@ -259,6 +260,7 @@ public:
     void layerTiledBackingUsageChanged(const GraphicsLayer*, bool /*usingTiledBacking*/);
 
     bool acceleratedDrawingEnabled() const { return m_acceleratedDrawingEnabled; }
+    bool displayListDrawingEnabled() const { return m_displayListDrawingEnabled; }
 
     void deviceOrPageScaleFactorChanged();
 
@@ -311,6 +313,10 @@ public:
 
     void setRootExtendedBackgroundColor(const Color&);
     Color rootExtendedBackgroundColor() const { return m_rootExtendedBackgroundColor; }
+
+#if ENABLE(CSS_SCROLL_SNAP)
+    void updateScrollSnapPropertiesWithFrameView(const FrameView&);
+#endif
 
     // For testing.
     WEBCORE_EXPORT void startTrackingLayerFlushes();
@@ -422,6 +428,7 @@ private:
     bool requiresCompositingForPlugin(RenderLayerModelObject&) const;
     bool requiresCompositingForFrame(RenderLayerModelObject&) const;
     bool requiresCompositingForFilters(RenderLayerModelObject&) const;
+    bool requiresCompositingForWillChange(RenderLayerModelObject&) const;
     bool requiresCompositingForScrollableFrame() const;
     bool requiresCompositingForPosition(RenderLayerModelObject&, const RenderLayer&, RenderLayer::ViewportConstrainedNotCompositedReason* = nullptr) const;
     bool requiresCompositingForOverflowScrolling(const RenderLayer&) const;
@@ -483,33 +490,34 @@ private:
     std::unique_ptr<GraphicsLayer> m_rootContentLayer;
     Timer m_updateCompositingLayersTimer;
 
-    bool m_hasAcceleratedCompositing;
-    ChromeClient::CompositingTriggerFlags m_compositingTriggers;
+    ChromeClient::CompositingTriggerFlags m_compositingTriggers { static_cast<ChromeClient::CompositingTriggerFlags>(ChromeClient::AllTriggers) };
+    bool m_hasAcceleratedCompositing { true };
 
-    bool m_showDebugBorders;
-    bool m_showRepaintCounter;
-    bool m_acceleratedDrawingEnabled;
+    bool m_showDebugBorders { false };
+    bool m_showRepaintCounter { false };
+    bool m_acceleratedDrawingEnabled { false };
+    bool m_displayListDrawingEnabled { false };
 
     // When true, we have to wait until layout has happened before we can decide whether to enter compositing mode,
     // because only then do we know the final size of plugins and iframes.
-    mutable bool m_reevaluateCompositingAfterLayout;
+    mutable bool m_reevaluateCompositingAfterLayout { false };
 
-    bool m_compositing;
-    bool m_compositingLayersNeedRebuild;
-    bool m_flushingLayers;
-    bool m_shouldFlushOnReattach;
-    bool m_forceCompositingMode;
-    bool m_inPostLayoutUpdate; // true when it's OK to trust layout information (e.g. layer sizes and positions)
-    bool m_subframeScrollLayersNeedReattach;
+    bool m_compositing { false };
+    bool m_compositingLayersNeedRebuild { false };
+    bool m_flushingLayers { false };
+    bool m_shouldFlushOnReattach { false };
+    bool m_forceCompositingMode { false };
+    bool m_inPostLayoutUpdate { false }; // true when it's OK to trust layout information (e.g. layer sizes and positions)
+    bool m_subframeScrollLayersNeedReattach { false };
 
-    bool m_isTrackingRepaints; // Used for testing.
+    bool m_isTrackingRepaints { false }; // Used for testing.
 
     int m_compositedLayerCount { 0 };
     unsigned m_layersWithTiledBackingCount { 0 };
     unsigned m_layerFlushCount { 0 };
     unsigned m_compositingUpdateCount { 0 };
 
-    RootLayerAttachment m_rootLayerAttachment;
+    RootLayerAttachment m_rootLayerAttachment { RootLayerUnattached };
 
     // Enclosing clipping layer for iframe content
     std::unique_ptr<GraphicsLayer> m_clipLayer;
@@ -540,14 +548,14 @@ private:
 
     std::unique_ptr<GraphicsLayerUpdater> m_layerUpdater; // Updates tiled layer visible area periodically while animations are running.
 
+    Timer m_paintRelatedMilestonesTimer;
     Timer m_layerFlushTimer;
-    bool m_layerFlushThrottlingEnabled;
-    bool m_layerFlushThrottlingTemporarilyDisabledForInteraction;
-    bool m_hasPendingLayerFlush;
+
+    bool m_layerFlushThrottlingEnabled { false };
+    bool m_layerFlushThrottlingTemporarilyDisabledForInteraction { false };
+    bool m_hasPendingLayerFlush { false };
     bool m_layerNeedsCompositingUpdate { false };
     bool m_viewBackgroundIsTransparent { false };
-
-    Timer m_paintRelatedMilestonesTimer;
 
 #if !LOG_DISABLED
     int m_rootLayerUpdateCount { 0 };
@@ -562,6 +570,7 @@ private:
     HashMap<ScrollingNodeID, RenderLayer*> m_scrollingNodeToLayerMap;
 };
 
+void paintScrollbar(Scrollbar*, GraphicsContext&, const IntRect& clip);
 
 } // namespace WebCore
 

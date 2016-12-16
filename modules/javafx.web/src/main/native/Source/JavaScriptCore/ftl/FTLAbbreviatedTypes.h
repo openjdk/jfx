@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,22 +28,19 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "LLVMAPI.h"
+#include "DFGCommon.h"
+
+namespace JSC { namespace B3 {
+class BasicBlock;
+class Value;
+enum Type : int8_t;
+} }
 
 namespace JSC { namespace FTL {
 
-typedef LLVMAtomicOrdering LAtomicOrdering;
-typedef LLVMBasicBlockRef LBasicBlock;
-typedef LLVMBuilderRef LBuilder;
-typedef LLVMCallConv LCallConv;
-typedef LLVMContextRef LContext;
-typedef LLVMIntPredicate LIntPredicate;
-typedef LLVMLinkage LLinkage;
-typedef LLVMModuleRef LModule;
-typedef LLVMRealPredicate LRealPredicate;
-typedef LLVMTypeRef LType;
-typedef LLVMValueRef LValue;
-typedef LLVMMemoryBufferRef LMemoryBuffer;
+typedef B3::BasicBlock* LBasicBlock;
+typedef B3::Type LType;
+typedef B3::Value* LValue;
 
 } } // namespace JSC::FTL
 

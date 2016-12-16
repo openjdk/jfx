@@ -31,7 +31,6 @@
 #include "ActiveDOMObject.h"
 #include "DOMTimer.h"
 #include "ResourceRequest.h"
-#include "ScheduledAction.h"
 #include "SecurityContext.h"
 #include "Supplementable.h"
 #include <runtime/ConsoleTypes.h>
@@ -83,12 +82,14 @@ public:
 
     virtual SecurityOrigin* topOrigin() const = 0;
 
+    virtual bool shouldBypassMainWorldContentSecurityPolicy() const { return false; }
+
     PublicURLManager& publicURLManager();
 
     // Active objects are not garbage collected even if inaccessible, e.g. because their activity may result in callbacks being invoked.
-    WEBCORE_EXPORT bool canSuspendActiveDOMObjectsForPageCache(Vector<ActiveDOMObject*>* unsuspendableObjects = nullptr);
+    WEBCORE_EXPORT bool canSuspendActiveDOMObjectsForDocumentSuspension(Vector<ActiveDOMObject*>* unsuspendableObjects = nullptr);
 
-    // Active objects can be asked to suspend even if canSuspendActiveDOMObjectsForPageCache() returns 'false' -
+    // Active objects can be asked to suspend even if canSuspendActiveDOMObjectsForDocumentSuspension() returns 'false' -
     // step-by-step JS debugging is one example.
     virtual void suspendActiveDOMObjects(ActiveDOMObject::ReasonForSuspension);
     virtual void resumeActiveDOMObjects(ActiveDOMObject::ReasonForSuspension);
@@ -125,7 +126,7 @@ public:
 
         template<typename T, typename = typename std::enable_if<!std::is_base_of<Task, T>::value && std::is_convertible<T, std::function<void (ScriptExecutionContext&)>>::value>::type>
         Task(T task)
-            : m_task(WTF::move(task))
+            : m_task(WTFMove(task))
             , m_isCleanupTask(false)
         {
         }
@@ -138,13 +139,13 @@ public:
 
         template<typename T, typename = typename std::enable_if<std::is_convertible<T, std::function<void (ScriptExecutionContext&)>>::value>::type>
         Task(CleanupTaskTag, T task)
-            : m_task(WTF::move(task))
+            : m_task(WTFMove(task))
             , m_isCleanupTask(true)
         {
         }
 
         Task(Task&& other)
-            : m_task(WTF::move(other.m_task))
+            : m_task(WTFMove(other.m_task))
             , m_isCleanupTask(other.m_isCleanupTask)
         {
         }

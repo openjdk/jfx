@@ -37,7 +37,7 @@ namespace JSC {
 class Symbol final : public JSCell {
 public:
     typedef JSCell Base;
-    static const unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | StructureIsImmortal;
+    static const unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
     DECLARE_EXPORT_INFO;
 
@@ -78,6 +78,8 @@ public:
     bool getPrimitiveNumber(ExecState*, double& number, JSValue&) const;
     JSObject* toObject(ExecState*, JSGlobalObject*) const;
     double toNumber(ExecState*) const;
+
+    static size_t offsetOfPrivateName() { return OBJECT_OFFSETOF(Symbol, m_privateName); }
 
 protected:
     static void destroy(JSCell*);

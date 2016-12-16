@@ -29,16 +29,11 @@
  */
 
 #include "config.h"
-
 #include "AbstractWorker.h"
 
 #include "ContentSecurityPolicy.h"
-#include "ErrorEvent.h"
 #include "Event.h"
-#include "EventException.h"
-#include "EventNames.h"
 #include "ExceptionCode.h"
-#include "InspectorInstrumentation.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 
@@ -48,7 +43,7 @@ AbstractWorker::~AbstractWorker()
 {
 }
 
-URL AbstractWorker::resolveURL(const String& url, ExceptionCode& ec)
+URL AbstractWorker::resolveURL(const String& url, bool shouldBypassMainWorldContentSecurityPolicy, ExceptionCode& ec)
 {
     if (url.isEmpty()) {
         ec = SYNTAX_ERR;
@@ -67,7 +62,8 @@ URL AbstractWorker::resolveURL(const String& url, ExceptionCode& ec)
         return URL();
     }
 
-    if (scriptExecutionContext()->contentSecurityPolicy() && !scriptExecutionContext()->contentSecurityPolicy()->allowScriptFromSource(scriptURL)) {
+    ASSERT(scriptExecutionContext()->contentSecurityPolicy());
+    if (!scriptExecutionContext()->contentSecurityPolicy()->allowChildContextFromSource(scriptURL, shouldBypassMainWorldContentSecurityPolicy)) {
         ec = SECURITY_ERR;
         return URL();
     }

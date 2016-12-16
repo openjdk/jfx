@@ -34,8 +34,10 @@ def enter_jhbuild_environment_if_available(platform):
     source_path = os.path.join(get_dependencies_path(platform), "Source", "jhbuild")
     sys.path.insert(0, source_path)
 
-    # When loading jhbuild from the source checkout it fails if the SRCDIR variable is not set.
+    # When loading jhbuild from the source checkout it fails if the SRCDIR, PKGDATADIR or DATADIR aren't present.
     __builtin__.__dict__['SRCDIR'] = source_path
+    __builtin__.__dict__['PKGDATADIR'] = None
+    __builtin__.__dict__['DATADIR'] = None
 
     # We don't know the Python version, so we just assume that we can safely take the first one in the list.
     site_packages_path = glob.glob(os.path.join(get_dependencies_path(platform), "Root", "lib", "*", "site-packages"))
@@ -46,7 +48,7 @@ def enter_jhbuild_environment_if_available(platform):
     try:
         import jhbuild.config
         from jhbuild.errors import FatalError
-        config = jhbuild.config.Config(get_config_file_for_platform(platform))
+        config = jhbuild.config.Config(get_config_file_for_platform(platform), [])
     except FatalError, exception:
         sys.stderr.write('Could not load jhbuild config file: %s\n' % exception.args[0])
         return False

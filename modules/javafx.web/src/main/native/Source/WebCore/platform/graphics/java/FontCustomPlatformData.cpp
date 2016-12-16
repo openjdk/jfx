@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 #include "FontCustomPlatformData.h"
@@ -19,15 +19,11 @@ FontCustomPlatformData::~FontCustomPlatformData()
 }
 
 FontPlatformData FontCustomPlatformData::fontPlatformData(
-        int size,
-        bool bold,
-        bool italic,
-        FontOrientation,
-        FontWidthVariant,
-        FontRenderingMode)
+        const FontDescription& fontDescription, bool bold, bool italic)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
+    int size = fontDescription.computedPixelSize();
     static jmethodID mid = env->GetMethodID(
             PG_GetFontCustomPlatformDataClass(env),
             "createFont",
@@ -83,9 +79,9 @@ std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffe
 
 bool FontCustomPlatformData::supportsFormat(const String& format)
 {
-    return equalIgnoringCase(format, "truetype")
-            || equalIgnoringCase(format, "opentype")
-            || equalIgnoringCase(format, "woff");
+    return equalLettersIgnoringASCIICase(format, "truetype")
+            || equalLettersIgnoringASCIICase(format, "opentype")
+            || equalLettersIgnoringASCIICase(format, "woff");
 }
 
 }

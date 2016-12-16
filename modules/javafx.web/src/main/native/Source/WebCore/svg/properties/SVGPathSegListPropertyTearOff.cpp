@@ -31,7 +31,7 @@ void SVGPathSegListPropertyTearOff::clearContextAndRoles()
 {
     ASSERT(m_values);
     for (auto& item : *m_values) {
-        static_cast<SVGPathSegWithContext*>(item.get())->setContextAndRole(0, PathSegUndefinedRole);
+        static_cast<SVGPathSegWithContext*>(item.get())->setContextAndRole(nullptr, PathSegUndefinedRole);
     }
 }
 
@@ -66,7 +66,7 @@ SVGPathSegListPropertyTearOff::PtrListItemType SVGPathSegListPropertyTearOff::re
     if (index < m_values->size()) {
         ListItemType replacedItem = m_values->at(index);
         ASSERT(replacedItem);
-        static_cast<SVGPathSegWithContext*>(replacedItem.get())->setContextAndRole(0, PathSegUndefinedRole);
+        static_cast<SVGPathSegWithContext*>(replacedItem.get())->setContextAndRole(nullptr, PathSegUndefinedRole);
     }
 
     return Base::replaceItemValues(newItem, index, ec);
@@ -76,7 +76,7 @@ SVGPathSegListPropertyTearOff::PtrListItemType SVGPathSegListPropertyTearOff::re
 {
     SVGPathSegListPropertyTearOff::ListItemType removedItem = SVGPathSegListPropertyTearOff::Base::removeItemValues(index, ec);
     if (removedItem)
-        static_cast<SVGPathSegWithContext*>(removedItem.get())->setContextAndRole(0, PathSegUndefinedRole);
+        static_cast<SVGPathSegWithContext*>(removedItem.get())->setContextAndRole(nullptr, PathSegUndefinedRole);
     return removedItem;
 }
 
@@ -90,7 +90,7 @@ SVGPathElement* SVGPathSegListPropertyTearOff::contextElement() const
 bool SVGPathSegListPropertyTearOff::processIncomingListItemValue(const ListItemType& newItem, unsigned* indexToModify)
 {
     SVGPathSegWithContext* newItemWithContext = static_cast<SVGPathSegWithContext*>(newItem.get());
-    SVGAnimatedProperty* animatedPropertyOfItem = newItemWithContext->animatedProperty();
+    RefPtr<SVGAnimatedProperty> animatedPropertyOfItem = newItemWithContext->animatedProperty();
 
     // Alter the role, after calling animatedProperty(), as that may influence the returned animated property.
     newItemWithContext->setContextAndRole(contextElement(), m_pathSegRole);
@@ -106,7 +106,7 @@ bool SVGPathSegListPropertyTearOff::processIncomingListItemValue(const ListItemT
     // Spec: If newItem is already in a list, it is removed from its previous list before it is inserted into this list.
     // 'newItem' is already living in another list. If it's not our list, synchronize the other lists wrappers after the removal.
     bool livesInOtherList = animatedPropertyOfItem != m_animatedProperty;
-    SVGAnimatedPathSegListPropertyTearOff* propertyTearOff = static_cast<SVGAnimatedPathSegListPropertyTearOff*>(animatedPropertyOfItem);
+    RefPtr<SVGAnimatedPathSegListPropertyTearOff> propertyTearOff = static_pointer_cast<SVGAnimatedPathSegListPropertyTearOff>(animatedPropertyOfItem);
     int indexToRemove = propertyTearOff->findItem(newItem.get());
     ASSERT(indexToRemove != -1);
 

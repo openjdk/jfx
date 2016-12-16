@@ -35,7 +35,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 RenderFieldset::RenderFieldset(HTMLFieldSetElement& element, Ref<RenderStyle>&& style)
-    : RenderBlockFlow(element, WTF::move(style))
+    : RenderBlockFlow(element, WTFMove(style))
 {
 }
 
@@ -159,7 +159,7 @@ void RenderFieldset::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint
         paintRect.setX(paintRect.x() + xOff);
     }
 
-    if (!boxShadowShouldBeAppliedToBackground(paintRect.location(), determineBackgroundBleedAvoidance(paintInfo.context)))
+    if (!boxShadowShouldBeAppliedToBackground(paintRect.location(), determineBackgroundBleedAvoidance(paintInfo.context())))
         paintBoxShadow(paintInfo, paintRect, style(), Normal);
     paintFillLayers(paintInfo, style().visitedDependentColor(CSSPropertyBackgroundColor), style().backgroundLayers(), paintRect);
     paintBoxShadow(paintInfo, paintRect, style(), Inset);
@@ -168,8 +168,8 @@ void RenderFieldset::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint
         return;
 
     // Create a clipping region around the legend and paint the border as normal
-    GraphicsContext* graphicsContext = paintInfo.context;
-    GraphicsContextStateSaver stateSaver(*graphicsContext);
+    GraphicsContext& graphicsContext = paintInfo.context();
+    GraphicsContextStateSaver stateSaver(graphicsContext);
 
     // FIXME: We need to work with "rl" and "bt" block flow directions.  In those
     // cases the legend is embedded in the right and bottom borders respectively.
@@ -186,7 +186,7 @@ void RenderFieldset::paintBoxDecorations(PaintInfo& paintInfo, const LayoutPoint
         clipRect.setWidth(std::max<LayoutUnit>(style().borderLeftWidth(), legend->width()));
         clipRect.setHeight(legend->height());
     }
-    graphicsContext->clipOut(snapRectToDevicePixels(clipRect, document().deviceScaleFactor()));
+    graphicsContext.clipOut(snapRectToDevicePixels(clipRect, document().deviceScaleFactor()));
 
     paintBorder(paintInfo, paintRect, style());
 }

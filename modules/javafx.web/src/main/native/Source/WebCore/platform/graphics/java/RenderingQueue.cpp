@@ -4,7 +4,7 @@
 #include "config.h"
 #include "RenderingQueue.h"
 #include "RQRef.h"
-#include "JavaRef.h"
+#include <wtf/java/JavaRef.h>
 #include "JavaEnv.h"
 #include <wtf/HashMap.h>
 

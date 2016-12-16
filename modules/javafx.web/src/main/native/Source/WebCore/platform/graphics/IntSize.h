@@ -57,13 +57,10 @@ typedef struct _NSSize NSSize;
 typedef struct tagSIZE SIZE;
 #endif
 
-namespace WTF {
-class PrintStream;
-}
-
 namespace WebCore {
 
 class FloatSize;
+class TextStream;
 
 class IntSize {
 public:
@@ -158,8 +155,6 @@ public:
     operator SIZE() const;
 #endif
 
-    void dump(WTF::PrintStream& out) const;
-
 private:
     int m_width, m_height;
 };
@@ -202,6 +197,8 @@ inline bool operator!=(const IntSize& a, const IntSize& b)
 {
     return a.width() != b.width() || a.height() != b.height();
 }
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const IntSize&);
 
 } // namespace WebCore
 

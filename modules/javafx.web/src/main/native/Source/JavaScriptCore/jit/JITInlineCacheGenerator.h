@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "JSCJSValue.h"
 #include "PutKind.h"
 #include "RegisterSet.h"
+#include "StructureStubInfo.h"
 
 namespace JSC {
 
@@ -41,7 +42,7 @@ class CodeBlock;
 class JITInlineCacheGenerator {
 protected:
     JITInlineCacheGenerator() { }
-    JITInlineCacheGenerator(CodeBlock*, CodeOrigin);
+    JITInlineCacheGenerator(CodeBlock*, CodeOrigin, CallSiteIndex, AccessType);
 
 public:
     StructureStubInfo* stubInfo() const { return m_stubInfo; }
@@ -56,8 +57,8 @@ protected:
     JITByIdGenerator() { }
 
     JITByIdGenerator(
-        CodeBlock*, CodeOrigin, const RegisterSet&, JSValueRegs base, JSValueRegs value,
-        SpillRegistersMode spillMode);
+        CodeBlock*, CodeOrigin, CallSiteIndex, AccessType, const RegisterSet&, JSValueRegs base,
+        JSValueRegs value);
 
 public:
     void reportSlowPathCall(MacroAssembler::Label slowPathBegin, MacroAssembler::Call call)
@@ -73,14 +74,13 @@ public:
     void finalize(LinkBuffer&);
 
 protected:
-    void generateFastPathChecks(MacroAssembler&, GPRReg butterfly);
+    void generateFastPathChecks(MacroAssembler&);
 
     JSValueRegs m_base;
     JSValueRegs m_value;
 
     MacroAssembler::DataLabel32 m_structureImm;
     MacroAssembler::PatchableJump m_structureCheck;
-    MacroAssembler::ConvertibleLoadLabel m_propertyStorageLoad;
     AssemblerLabel m_loadOrStore;
 #if USE(JSVALUE32_64)
     AssemblerLabel m_tagLoadOrStore;
@@ -95,8 +95,8 @@ public:
     JITGetByIdGenerator() { }
 
     JITGetByIdGenerator(
-        CodeBlock*, CodeOrigin, const RegisterSet& usedRegisters, JSValueRegs base,
-        JSValueRegs value, SpillRegistersMode spillMode);
+        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, JSValueRegs base,
+        JSValueRegs value);
 
     void generateFastPath(MacroAssembler&);
 };
@@ -106,15 +106,14 @@ public:
     JITPutByIdGenerator() { }
 
     JITPutByIdGenerator(
-        CodeBlock*, CodeOrigin, const RegisterSet& usedRegisters, JSValueRegs base,
-        JSValueRegs, GPRReg scratch, SpillRegistersMode spillMode, ECMAMode, PutKind);
+        CodeBlock*, CodeOrigin, CallSiteIndex, const RegisterSet& usedRegisters, JSValueRegs base,
+        JSValueRegs, GPRReg scratch, ECMAMode, PutKind);
 
     void generateFastPath(MacroAssembler&);
 
     V_JITOperation_ESsiJJI slowPathFunction();
 
 private:
-    GPRReg m_scratch;
     ECMAMode m_ecmaMode;
     PutKind m_putKind;
 };

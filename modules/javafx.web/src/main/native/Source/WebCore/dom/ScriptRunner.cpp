@@ -28,7 +28,6 @@
 
 #include "CachedScript.h"
 #include "Element.h"
-#include "MicroTask.h"
 #include "PendingScript.h"
 #include "ScriptElement.h"
 
@@ -110,10 +109,9 @@ void ScriptRunner::timerFired()
     if (numInOrderScriptsToExecute)
         m_scriptsToExecuteInOrder.remove(0, numInOrderScriptsToExecute);
 
-    size_t size = scripts.size();
-    for (size_t i = 0; i < size; ++i) {
-        CachedScript* cachedScript = scripts[i].cachedScript();
-        RefPtr<Element> element = scripts[i].releaseElementAndClear();
+    for (auto& script : scripts) {
+        CachedScript* cachedScript = script.cachedScript();
+        RefPtr<Element> element = script.releaseElementAndClear();
         ASSERT(element);
         // Paper over https://bugs.webkit.org/show_bug.cgi?id=144050
         if (!element)
@@ -121,7 +119,6 @@ void ScriptRunner::timerFired()
         toScriptElementIfPossible(element.get())->execute(cachedScript);
         m_document.decrementLoadEventDelayCount();
     }
-    MicroTaskQueue::singleton().runMicroTasks();
 }
 
 }

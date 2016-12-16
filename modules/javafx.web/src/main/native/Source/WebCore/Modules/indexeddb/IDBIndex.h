@@ -1,26 +1,26 @@
 /*
- * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
  *
- * 1.  Redistributions of source code must retain the above copyright
- *     notice, this list of conditions and the following disclaimer.
- * 2.  Redistributions in binary form must reproduce the above copyright
- *     notice, this list of conditions and the following disclaimer in the
- *     documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY APPLE AND ITS CONTRIBUTORS "AS IS" AND ANY
- * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL APPLE OR ITS CONTRIBUTORS BE LIABLE FOR ANY
- * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
- * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY APPLE INC. AND ITS CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL APPLE INC. OR ITS CONTRIBUTORS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifndef IDBIndex_h
@@ -28,7 +28,6 @@
 
 #include "IDBCursor.h"
 #include "IDBDatabase.h"
-#include "IDBDatabaseMetadata.h"
 #include "IDBKeyPath.h"
 #include "IDBKeyRange.h"
 #include "IDBObjectStore.h"
@@ -43,55 +42,50 @@ namespace WebCore {
 
 class IDBObjectStore;
 
-class IDBIndex : public ScriptWrappable, public RefCounted<IDBIndex> {
+class IDBIndex {
 public:
-    static Ref<IDBIndex> create(const IDBIndexMetadata& metadata, IDBObjectStore* objectStore, IDBTransaction* transaction)
-    {
-        return adoptRef(*new IDBIndex(metadata, objectStore, transaction));
-    }
-    ~IDBIndex();
+    virtual ~IDBIndex() { }
 
     // Implement the IDL
-    const String name() const { return m_metadata.name; }
-    PassRefPtr<IDBObjectStore> objectStore() const { return m_objectStore; }
-    PassRefPtr<IDBAny> keyPathAny() const { return IDBAny::create(m_metadata.keyPath); }
-    const IDBKeyPath keyPath() const { return m_metadata.keyPath; }
-    bool unique() const { return m_metadata.unique; }
-    bool multiEntry() const { return m_metadata.multiEntry; }
-    int64_t id() const { return m_metadata.id; }
+    virtual const String& name() const = 0;
+    virtual RefPtr<IDBObjectStore> objectStore() = 0;
+    virtual RefPtr<IDBAny> keyPathAny() const = 0;
+    virtual const IDBKeyPath& keyPath() const = 0;
+    virtual bool unique() const = 0;
+    virtual bool multiEntry() const = 0;
 
-    // FIXME: Try to modify the code generator so this is unneeded.
-    PassRefPtr<IDBRequest> openCursor(ScriptExecutionContext* context, ExceptionCode& ec) { return openCursor(context, static_cast<IDBKeyRange*>(nullptr), ec); }
-    PassRefPtr<IDBRequest> openCursor(ScriptExecutionContext* context, PassRefPtr<IDBKeyRange> keyRange, ExceptionCode& ec) { return openCursor(context, keyRange, IDBCursor::directionNext(), ec); }
-    PassRefPtr<IDBRequest> openCursor(ScriptExecutionContext* context, const Deprecated::ScriptValue& key, ExceptionCode& ec) { return openCursor(context, key, IDBCursor::directionNext(), ec); }
-    PassRefPtr<IDBRequest> openCursor(ScriptExecutionContext*, PassRefPtr<IDBKeyRange>, const String& direction, ExceptionCode&);
-    PassRefPtr<IDBRequest> openCursor(ScriptExecutionContext*, const Deprecated::ScriptValue& key, const String& direction, ExceptionCode&);
-    PassRefPtr<IDBRequest> count(ScriptExecutionContext* context, ExceptionCode& ec) { return count(context, static_cast<IDBKeyRange*>(nullptr), ec); }
-    PassRefPtr<IDBRequest> count(ScriptExecutionContext*, PassRefPtr<IDBKeyRange>, ExceptionCode&);
-    PassRefPtr<IDBRequest> count(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCode&);
+    virtual RefPtr<IDBRequest> openCursor(ScriptExecutionContext*, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> openCursor(ScriptExecutionContext*, IDBKeyRange*, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> openCursor(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> openCursor(ScriptExecutionContext*, IDBKeyRange*, const String& direction, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> openCursor(ScriptExecutionContext*, const Deprecated::ScriptValue& key, const String& direction, ExceptionCodeWithMessage&) = 0;
 
-    PassRefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext* context, ExceptionCode& ec) { return openKeyCursor(context, static_cast<IDBKeyRange*>(nullptr), ec); }
-    PassRefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext* context, PassRefPtr<IDBKeyRange> keyRange, ExceptionCode& ec) { return openKeyCursor(context, keyRange, IDBCursor::directionNext(), ec); }
-    PassRefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext* context, const Deprecated::ScriptValue& key, ExceptionCode& ec) { return openKeyCursor(context, key, IDBCursor::directionNext(), ec); }
-    PassRefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext*, PassRefPtr<IDBKeyRange>, const String& direction, ExceptionCode&);
-    PassRefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext*, const Deprecated::ScriptValue& key, const String& direction, ExceptionCode&);
+    virtual RefPtr<IDBRequest> count(ScriptExecutionContext*, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> count(ScriptExecutionContext*, IDBKeyRange*, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> count(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCodeWithMessage&) = 0;
 
-    PassRefPtr<IDBRequest> get(ScriptExecutionContext*, PassRefPtr<IDBKeyRange>, ExceptionCode&);
-    PassRefPtr<IDBRequest> get(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCode&);
-    PassRefPtr<IDBRequest> getKey(ScriptExecutionContext*, PassRefPtr<IDBKeyRange>, ExceptionCode&);
-    PassRefPtr<IDBRequest> getKey(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCode&);
+    virtual RefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext*, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext*, IDBKeyRange*, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext*, IDBKeyRange*, const String& direction, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> openKeyCursor(ScriptExecutionContext*, const Deprecated::ScriptValue& key, const String& direction, ExceptionCodeWithMessage&) = 0;
 
-    void markDeleted() { m_deleted = true; }
+    virtual RefPtr<IDBRequest> get(ScriptExecutionContext*, IDBKeyRange*, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> get(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCodeWithMessage&) = 0;
 
-    IDBDatabaseBackend* backendDB() const;
+    virtual RefPtr<IDBRequest> getKey(ScriptExecutionContext*, IDBKeyRange*, ExceptionCodeWithMessage&) = 0;
+    virtual RefPtr<IDBRequest> getKey(ScriptExecutionContext*, const Deprecated::ScriptValue& key, ExceptionCodeWithMessage&) = 0;
 
-private:
-    IDBIndex(const IDBIndexMetadata&, IDBObjectStore*, IDBTransaction*);
+    virtual bool isModern() const { return false; }
 
-    IDBIndexMetadata m_metadata;
-    RefPtr<IDBObjectStore> m_objectStore;
-    RefPtr<IDBTransaction> m_transaction;
-    bool m_deleted;
+    // We use our own ref/deref function because Legacy IDB and Modern IDB have very different
+    // lifetime management of their indexes.
+    // This will go away once Legacy IDB is dropped.
+    virtual void ref() = 0;
+    virtual void deref() = 0;
+
+protected:
+    IDBIndex();
 };
 
 } // namespace WebCore

@@ -52,12 +52,12 @@ DetailsMarkerControl::DetailsMarkerControl(Document& document)
 
 RenderPtr<RenderElement> DetailsMarkerControl::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderDetailsMarker>(*this, WTF::move(style));
+    return createRenderer<RenderDetailsMarker>(*this, WTFMove(style));
 }
 
 bool DetailsMarkerControl::rendererIsNeeded(const RenderStyle& style)
 {
-    return downcast<HTMLSummaryElement>(shadowHost())->isMainSummary() && HTMLDivElement::rendererIsNeeded(style);
+    return downcast<HTMLSummaryElement>(shadowHost())->isActiveSummary() && HTMLDivElement::rendererIsNeeded(style);
 }
 
 }

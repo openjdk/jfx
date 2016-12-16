@@ -33,16 +33,13 @@
 
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
-#include "FrameLoaderTypes.h"
 #include "ThreadableLoader.h"
-#include <wtf/Forward.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
     class CachedRawResource;
+    class ContentSecurityPolicy;
     class Document;
     class URL;
     class ResourceRequest;
@@ -52,8 +49,12 @@ namespace WebCore {
     class DocumentThreadableLoader : public RefCounted<DocumentThreadableLoader>, public ThreadableLoader, private CachedRawResourceClient  {
         WTF_MAKE_FAST_ALLOCATED;
     public:
+        static void loadResourceSynchronously(Document&, const ResourceRequest&, ThreadableLoaderClient&, const ThreadableLoaderOptions&, std::unique_ptr<ContentSecurityPolicy>&&);
         static void loadResourceSynchronously(Document&, const ResourceRequest&, ThreadableLoaderClient&, const ThreadableLoaderOptions&);
+
+        static PassRefPtr<DocumentThreadableLoader> create(Document&, ThreadableLoaderClient&, const ResourceRequest&, const ThreadableLoaderOptions&, std::unique_ptr<ContentSecurityPolicy>&&);
         static PassRefPtr<DocumentThreadableLoader> create(Document&, ThreadableLoaderClient&, const ResourceRequest&, const ThreadableLoaderOptions&);
+
         virtual ~DocumentThreadableLoader();
 
         virtual void cancel() override;
@@ -72,7 +73,7 @@ namespace WebCore {
             LoadAsynchronously
         };
 
-        DocumentThreadableLoader(Document&, ThreadableLoaderClient&, BlockingBehavior, const ResourceRequest&, const ThreadableLoaderOptions&);
+        DocumentThreadableLoader(Document&, ThreadableLoaderClient&, BlockingBehavior, const ResourceRequest&, const ThreadableLoaderOptions&, std::unique_ptr<ContentSecurityPolicy>&&);
 
         void clearResource();
 
@@ -91,14 +92,16 @@ namespace WebCore {
         void makeSimpleCrossOriginAccessRequest(const ResourceRequest& request);
         void makeCrossOriginAccessRequestWithPreflight(const ResourceRequest& request);
         void preflightSuccess();
-        void preflightFailure(unsigned long identifier, const String& url, const String& errorDescription);
+        void preflightFailure(unsigned long identifier, const URL&, const String& errorDescription);
 
         void loadRequest(const ResourceRequest&, SecurityCheckPolicy);
         bool isAllowedRedirect(const URL&);
+        bool isAllowedByContentSecurityPolicy(const URL&);
 
         bool isXMLHttpRequest() const override final;
 
         SecurityOrigin* securityOrigin() const;
+        const ContentSecurityPolicy& contentSecurityPolicy() const;
 
         CachedResourceHandle<CachedRawResource> m_resource;
         ThreadableLoaderClient* m_client;
@@ -108,6 +111,7 @@ namespace WebCore {
         bool m_simpleRequest;
         bool m_async;
         std::unique_ptr<ResourceRequest> m_actualRequest; // non-null during Access Control preflight checks
+        std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
     };
 
 } // namespace WebCore

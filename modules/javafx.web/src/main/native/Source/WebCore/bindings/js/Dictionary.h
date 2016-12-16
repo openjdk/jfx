@@ -52,16 +52,21 @@ public:
     template <typename Result>
     bool get(const String& propertyName, Result&) const;
 
+    template <typename Result>
+    Optional<Result> get(const char* propertyName) const;
+
     template <typename T>
-    PassRefPtr<EventListener> getEventListener(const char* propertyName, T* target) const;
+    RefPtr<EventListener> getEventListener(const char* propertyName, T* target) const;
     template <typename T>
-    PassRefPtr<EventListener> getEventListener(const String& propertyName, T* target) const;
+    RefPtr<EventListener> getEventListener(const String& propertyName, T* target) const;
 
     bool isObject() const { return m_dictionary.isValid(); }
     bool isUndefinedOrNull() const { return !m_dictionary.isValid(); }
     bool getOwnPropertiesAsStringHashMap(HashMap<String, String>&) const;
     bool getOwnPropertyNames(Vector<String>&) const;
     bool getWithUndefinedOrNullCheck(const char* propertyName, String& value) const;
+
+    JSC::ExecState* execState() const { return m_dictionary.execState(); }
 
 private:
     template <typename T>
@@ -85,25 +90,36 @@ bool Dictionary::get(const String& propertyName, Result& result) const
     return get(propertyName.utf8().data(), result);
 }
 
+template<typename Result>
+Optional<Result> Dictionary::get(const char* propertyName) const
+{
+    Result result;
+
+    if (!get(propertyName, result))
+        return Nullopt;
+
+    return result;
+}
+
 template <typename T>
-PassRefPtr<EventListener> Dictionary::getEventListener(const char* propertyName, T* target) const
+RefPtr<EventListener> Dictionary::getEventListener(const char* propertyName, T* target) const
 {
     if (!m_dictionary.isValid())
-        return 0;
+        return nullptr;
 
     Deprecated::ScriptValue eventListener;
     if (!m_dictionary.tryGetProperty(propertyName, eventListener))
-        return 0;
+        return nullptr;
     if (eventListener.hasNoValue())
-        return 0;
+        return nullptr;
     if (!eventListener.isObject())
-        return 0;
+        return nullptr;
 
     return JSEventListener::create(asObject(eventListener.jsValue()), asJSObject(target), true, currentWorld(m_dictionary.execState()));
 }
 
 template <typename T>
-PassRefPtr<EventListener> Dictionary::getEventListener(const String& propertyName, T* target) const
+RefPtr<EventListener> Dictionary::getEventListener(const String& propertyName, T* target) const
 {
     return getEventListener(propertyName.utf8().data(), target);
 }

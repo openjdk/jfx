@@ -47,6 +47,7 @@ protected:
     virtual void paintThumb(GraphicsContext&, Scrollbar&, const IntRect&) override;
     virtual int maxOverlapBetweenPages() override { return 40; }
 
+    virtual bool usesOverlayScrollbars() const override;
 private:
     virtual bool isMockTheme() const override { return true; }
 };

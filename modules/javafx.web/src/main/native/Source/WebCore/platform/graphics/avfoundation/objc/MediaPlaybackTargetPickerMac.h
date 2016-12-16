@@ -30,7 +30,6 @@
 
 #include "MediaPlaybackTargetPicker.h"
 #include <wtf/RetainPtr.h>
-#include <wtf/RunLoop.h>
 
 OBJC_CLASS AVOutputDeviceMenuController;
 OBJC_CLASS WebAVOutputDeviceMenuControllerHelper;
@@ -40,36 +39,24 @@ namespace WebCore {
 class MediaPlaybackTargetPickerMac final : public MediaPlaybackTargetPicker {
     WTF_MAKE_NONCOPYABLE(MediaPlaybackTargetPickerMac);
 public:
+    explicit MediaPlaybackTargetPickerMac(MediaPlaybackTargetPicker::Client&);
+
     virtual ~MediaPlaybackTargetPickerMac();
 
-    WEBCORE_EXPORT static std::unique_ptr<MediaPlaybackTargetPickerMac> create(MediaPlaybackTargetPicker::Client&);
+    virtual void showPlaybackTargetPicker(const FloatRect&, bool checkActiveRoute, const String&) override;
 
-    void showPlaybackTargetPicker(const FloatRect&, bool checkActiveRoute) override;
     void startingMonitoringPlaybackTargets() override;
     void stopMonitoringPlaybackTargets() override;
     void invalidatePlaybackTargets() override;
 
-    void availableDevicesDidChange();
-    void currentDeviceDidChange();
-
 private:
-    explicit MediaPlaybackTargetPickerMac(MediaPlaybackTargetPicker::Client&);
+    bool externalOutputDeviceAvailable() override;
+    Ref<MediaPlaybackTarget> playbackTarget() override;
 
     AVOutputDeviceMenuController *devicePicker();
 
-    enum ActionType {
-        OutputDeviceAvailabilityChanged = 1 << 0,
-        CurrentDeviceDidChange = 1 << 1,
-    };
-    typedef unsigned PendingActionFlags;
-
-    void addPendingAction(PendingActionFlags);
-    void pendingActionTimerFired();
-
-    PendingActionFlags m_pendingActionFlags { 0 };
     RetainPtr<AVOutputDeviceMenuController> m_outputDeviceMenuController;
     RetainPtr<WebAVOutputDeviceMenuControllerHelper> m_outputDeviceMenuControllerDelegate;
-    RunLoop::Timer<MediaPlaybackTargetPickerMac> m_pendingActionTimer;
     bool m_showingMenu { false };
 };
 

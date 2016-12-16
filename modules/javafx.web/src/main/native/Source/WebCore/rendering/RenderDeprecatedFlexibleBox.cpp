@@ -118,7 +118,7 @@ private:
 };
 
 RenderDeprecatedFlexibleBox::RenderDeprecatedFlexibleBox(Element& element, Ref<RenderStyle>&& style)
-    : RenderBlock(element, WTF::move(style), 0)
+    : RenderBlock(element, WTFMove(style), 0)
 {
     setChildrenInline(false); // All of our children must be block-level
     m_stretchingChildren = false;
@@ -321,7 +321,7 @@ void RenderDeprecatedFlexibleBox::layoutBlock(bool relayoutChildren, LayoutUnit)
     if (previousSize.height() != height())
         relayoutChildren = true;
 
-    layoutPositionedObjects(relayoutChildren || isRoot());
+    layoutPositionedObjects(relayoutChildren || isDocumentElementRenderer());
 
     computeOverflow(oldClientAfterEdge);
 
@@ -987,8 +987,8 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
             continue;
 
         const UChar ellipsisAndSpace[2] = { horizontalEllipsis, ' ' };
-        DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, ellipsisAndSpaceStr, (ellipsisAndSpace, 2));
-        DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, ellipsisStr, (&horizontalEllipsis, 1));
+        static NeverDestroyed<AtomicString> ellipsisAndSpaceStr(ellipsisAndSpace, 2);
+        static NeverDestroyed<AtomicString> ellipsisStr(&horizontalEllipsis, 1);
         const RenderStyle& lineStyle = numVisibleLines == 1 ? firstLineStyle() : style();
         const FontCascade& font = lineStyle.fontCascade();
 
@@ -1014,13 +1014,13 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
         if (!leftToRight)
             continue;
 
-        LayoutUnit blockRightEdge = destBlock.logicalRightOffsetForLine(lastVisibleLine->y(), false);
+        LayoutUnit blockRightEdge = destBlock.logicalRightOffsetForLine(lastVisibleLine->y(), DoNotIndentText);
         if (!lastVisibleLine->lineCanAccommodateEllipsis(leftToRight, blockRightEdge, lastVisibleLine->x() + lastVisibleLine->logicalWidth(), totalWidth))
             continue;
 
         // Let the truncation code kick in.
         // FIXME: the text alignment should be recomputed after the width changes due to truncation.
-        LayoutUnit blockLeftEdge = destBlock.logicalLeftOffsetForLine(lastVisibleLine->y(), false);
+        LayoutUnit blockLeftEdge = destBlock.logicalLeftOffsetForLine(lastVisibleLine->y(), DoNotIndentText);
         lastVisibleLine->placeEllipsis(anchorBox ? ellipsisAndSpaceStr : ellipsisStr, leftToRight, blockLeftEdge, blockRightEdge, totalWidth, anchorBox);
         destBlock.setHasMarkupTruncation(true);
     }

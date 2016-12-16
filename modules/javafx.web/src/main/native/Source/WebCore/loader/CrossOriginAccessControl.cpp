@@ -56,9 +56,9 @@ bool isOnAccessControlSimpleRequestHeaderWhitelist(HTTPHeaderName name, const St
     case HTTPHeaderName::ContentType: {
         // Preflight is required for MIME types that can not be sent via form submission.
         String mimeType = extractMIMETypeFromMediaType(value);
-        return equalIgnoringCase(mimeType, "application/x-www-form-urlencoded")
-            || equalIgnoringCase(mimeType, "multipart/form-data")
-            || equalIgnoringCase(mimeType, "text/plain");
+        return equalIgnoringASCIICase(mimeType, "application/x-www-form-urlencoded")
+            || equalIgnoringASCIICase(mimeType, "multipart/form-data")
+            || equalIgnoringASCIICase(mimeType, "text/plain");
     }
     default:
         return false;
@@ -127,7 +127,7 @@ ResourceRequest createAccessControlPreflightRequest(const ResourceRequest& reque
             headerBuffer.append(headerField.key);
         }
 
-        preflightRequest.setHTTPHeaderField(HTTPHeaderName::AccessControlRequestHeaders, headerBuffer.toString().lower());
+        preflightRequest.setHTTPHeaderField(HTTPHeaderName::AccessControlRequestHeaders, headerBuffer.toString().convertToASCIILowercase());
     }
 
     return preflightRequest;
@@ -140,11 +140,6 @@ bool passesAccessControlCheck(const ResourceResponse& response, StoredCredential
     const String& accessControlOriginString = response.httpHeaderField(HTTPHeaderName::AccessControlAllowOrigin);
     if (accessControlOriginString == "*" && includeCredentials == DoNotAllowStoredCredentials)
         return true;
-
-    if (securityOrigin->isUnique()) {
-        errorDescription = "Cannot make any requests from " + securityOrigin->toString() + ".";
-        return false;
-    }
 
     // FIXME: Access-Control-Allow-Origin can contain a list of origins.
     if (accessControlOriginString != securityOrigin->toString()) {
@@ -170,8 +165,8 @@ void parseAccessControlExposeHeadersAllowList(const String& headerValue, HTTPHea
 {
     Vector<String> headers;
     headerValue.split(',', false, headers);
-    for (unsigned headerCount = 0; headerCount < headers.size(); headerCount++) {
-        String strippedHeader = headers[headerCount].stripWhiteSpace();
+    for (auto& header : headers) {
+        String strippedHeader = header.stripWhiteSpace();
         if (!strippedHeader.isEmpty())
             headerSet.add(strippedHeader);
     }

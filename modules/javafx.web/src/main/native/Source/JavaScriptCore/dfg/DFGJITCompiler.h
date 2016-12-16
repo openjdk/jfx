@@ -38,10 +38,12 @@
 #include "DFGRegisterBank.h"
 #include "FPRInfo.h"
 #include "GPRInfo.h"
+#include "HandlerInfo.h"
 #include "JITCode.h"
 #include "JITInlineCacheGenerator.h"
 #include "LinkBuffer.h"
 #include "MacroAssembler.h"
+#include "PCToCodeOriginMap.h"
 #include "TempRegisterSet.h"
 
 namespace JSC {
@@ -117,6 +119,7 @@ public:
     // Methods to set labels for the disassembler.
     void setStartOfCode()
     {
+        m_pcToCodeOriginMapBuilder.appendItem(labelIgnoringWatchpoints(), CodeOrigin(0, nullptr));
         if (LIKELY(!m_disassembler))
             return;
         m_disassembler->setStartOfCode(labelIgnoringWatchpoints());
@@ -136,25 +139,23 @@ public:
         m_disassembler->setForNode(node, labelIgnoringWatchpoints());
     }
 
-    void setEndOfMainPath()
-    {
-        if (LIKELY(!m_disassembler))
-            return;
-        m_disassembler->setEndOfMainPath(labelIgnoringWatchpoints());
-    }
+    void setEndOfMainPath();
+    void setEndOfCode();
 
-    void setEndOfCode()
+    CallSiteIndex addCallSite(CodeOrigin codeOrigin)
     {
-        if (LIKELY(!m_disassembler))
-            return;
-        m_disassembler->setEndOfCode(labelIgnoringWatchpoints());
+        return m_jitCode->common.addCodeOrigin(codeOrigin);
     }
 
     void emitStoreCodeOrigin(CodeOrigin codeOrigin)
     {
-        unsigned index = m_jitCode->common.addCodeOrigin(codeOrigin);
-        unsigned locationBits = CallFrame::Location::encodeAsCodeOriginIndex(index);
-        store32(TrustedImm32(locationBits), tagFor(static_cast<VirtualRegister>(JSStack::ArgumentCount)));
+        CallSiteIndex callSite = addCallSite(codeOrigin);
+        emitStoreCallSiteIndex(callSite);
+    }
+
+    void emitStoreCallSiteIndex(CallSiteIndex callSite)
+    {
+        store32(TrustedImm32(callSite.bits()), tagFor(static_cast<VirtualRegister>(JSStack::ArgumentCount)));
     }
 
     // Add a call out from JIT code, without an exception check.
@@ -165,15 +166,7 @@ public:
         return functionCall;
     }
 
-    void exceptionCheck(Jump jumpToHandler)
-    {
-        m_exceptionChecks.append(jumpToHandler);
-    }
-
-    void exceptionCheck()
-    {
-        m_exceptionChecks.append(emitExceptionCheck());
-    }
+    void exceptionCheck();
 
     void exceptionCheckWithCallFrameRollback()
     {
@@ -255,27 +248,23 @@ public:
 #endif
     }
 
-    template<typename T>
-    Jump branchStructurePtr(RelationalCondition cond, T left, Structure* structure)
-    {
-#if USE(JSVALUE64)
-        return branch32(cond, left, TrustedImm32(structure->id()));
-#else
-        return branchPtr(cond, left, TrustedImmPtr(structure));
-#endif
-    }
-
     void noticeOSREntry(BasicBlock&, JITCompiler::Label blockHead, LinkBuffer&);
 
     RefPtr<JITCode> jitCode() { return m_jitCode; }
 
     Vector<Label>& blockHeads() { return m_blockHeads; }
 
+    CallSiteIndex recordCallSiteAndGenerateExceptionHandlingOSRExitIfNeeded(const CodeOrigin&, unsigned eventStreamIndex);
+
+    PCToCodeOriginMapBuilder& pcToCodeOriginMapBuilder() { return m_pcToCodeOriginMapBuilder; }
+
 private:
     friend class OSRExitJumpPlaceholder;
 
     // Internal implementation to compile.
     void compileEntry();
+    void compileSetupRegistersForEntry();
+    void compileEntryExecutionFlag();
     void compileBody();
     void link(LinkBuffer&);
 
@@ -283,6 +272,8 @@ private:
     void compileExceptionHandlers();
     void linkOSRExits();
     void disassemble(LinkBuffer&);
+
+    void appendExceptionHandlingOSRExit(ExitKind, unsigned eventStreamIndex, CodeOrigin, HandlerInfo* exceptionHandler, CallSiteIndex, MacroAssembler::JumpList jumpsToFail = MacroAssembler::JumpList());
 
     // The dataflow graph currently being generated.
     Graph& m_graph;
@@ -321,9 +312,17 @@ private:
     SegmentedVector<OSRExitCompilationInfo, 4> m_exitCompilationInfo;
     Vector<Vector<Label>> m_exitSiteLabels;
 
+    struct ExceptionHandlingOSRExitInfo {
+        OSRExitCompilationInfo& exitInfo;
+        HandlerInfo baselineExceptionHandler;
+        CallSiteIndex callSiteIndex;
+    };
+    Vector<ExceptionHandlingOSRExitInfo> m_exceptionHandlerOSRExitCallSites;
+
     Call m_callArityFixup;
     Label m_arityCheck;
     std::unique_ptr<SpeculativeJIT> m_speculative;
+    PCToCodeOriginMapBuilder m_pcToCodeOriginMapBuilder;
 };
 
 } } // namespace JSC::DFG

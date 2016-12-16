@@ -1,4 +1,5 @@
 # Copyright (c) 2011, Google Inc. All rights reserved.
+# Copyright (c) 2015, Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -32,7 +33,8 @@ import re
 
 class CrashLogs(object):
 
-    PID_LINE_REGEX = re.compile(r'\s+Global\s+PID:\s+\[(?P<pid>\d+)\]')
+    GLOBAL_PID_REGEX = re.compile(r'\s+Global\s+PID:\s+\[(?P<pid>\d+)\]')
+    EXIT_PROCESS_PID_REGEX = re.compile(r'Exit process \d+:(?P<pid>\w+), code')
 
     def __init__(self, host, results_directory=None):
         self._host = host
@@ -43,6 +45,11 @@ class CrashLogs(object):
             return self._find_newest_log_darwin(process_name, pid, include_errors, newer_than)
         elif self._host.platform.is_win():
             return self._find_newest_log_win(process_name, pid, include_errors, newer_than)
+        return None
+
+    def find_all_logs(self, include_errors=False, newer_than=None):
+        if self._host.platform.is_mac():
+            return self._find_all_logs_darwin(include_errors, newer_than)
         return None
 
     def _log_directory_darwin(self):
@@ -90,10 +97,15 @@ class CrashLogs(object):
             try:
                 if not newer_than or self._host.filesystem.mtime(path) > newer_than:
                     log_file = self._host.filesystem.read_binary_file(path).decode('ascii', 'ignore')
-                    match = self.PID_LINE_REGEX.search(log_file)
+                    match = self.GLOBAL_PID_REGEX.search(log_file)
+                    if match:
+                        if int(match.group('pid')) == pid:
+                            return errors + log_file
+                    match = self.EXIT_PROCESS_PID_REGEX.search(log_file)
                     if match is None:
                         continue
-                    if int(match.group('pid')) == pid:
+                    # Note: This output comes from a program that shows PID in hex:
+                    if int(match.group('pid'), 16) == pid:
                         return errors + log_file
             except IOError, e:
                 print "IOError %s" % str(e)
@@ -111,3 +123,38 @@ class CrashLogs(object):
         if include_errors and errors:
             return errors
         return None
+
+    def _find_all_logs_darwin(self, include_errors, newer_than):
+        def is_crash_log(fs, dirpath, basename):
+            return basename.endswith(".crash")
+
+        log_directory = self._log_directory_darwin()
+        logs = self._host.filesystem.files_under(log_directory, file_filter=is_crash_log)
+        first_line_regex = re.compile(r'^Process:\s+(?P<process_name>.*) \[(?P<pid>\d+)\]$')
+        errors = ''
+        crash_logs = {}
+        for path in reversed(sorted(logs)):
+            try:
+                if not newer_than or self._host.filesystem.mtime(path) > newer_than:
+                    result_name = "Unknown"
+                    pid = 0
+                    log_contents = self._host.filesystem.read_text_file(path)
+                    match = first_line_regex.match(log_contents[0:log_contents.find('\n')])
+                    if match:
+                        process_name = match.group('process_name')
+                        pid = str(match.group('pid'))
+                        result_name = process_name + "-" + pid
+
+                    while result_name in crash_logs:
+                        result_name = result_name + "-1"
+                    crash_logs[result_name] = errors + log_contents
+            except IOError, e:
+                if include_errors:
+                    errors += "ERROR: Failed to read '%s': %s\n" % (path, str(e))
+            except OSError, e:
+                if include_errors:
+                    errors += "ERROR: Failed to read '%s': %s\n" % (path, str(e))
+
+        if include_errors and errors and len(crash_logs) == 0:
+            return errors
+        return crash_logs

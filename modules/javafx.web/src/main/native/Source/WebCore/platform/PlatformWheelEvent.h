@@ -100,7 +100,7 @@ namespace WebCore {
             , m_directionInvertedFromDevice(false)
 #if PLATFORM(COCOA)
             , m_hasPreciseScrollingDeltas(false)
-           , m_phase(PlatformWheelEventPhaseNone)
+            , m_phase(PlatformWheelEventPhaseNone)
             , m_momentumPhase(PlatformWheelEventPhaseNone)
             , m_scrollCount(0)
             , m_unacceleratedScrollingDeltaX(0)
@@ -121,17 +121,11 @@ namespace WebCore {
             return copy;
         }
 
-        PlatformWheelEvent copyIgnoringHorizontalDelta() const
+        PlatformWheelEvent copyWithDeltas(float deltaX, float deltaY) const
         {
             PlatformWheelEvent copy = *this;
-            copy.m_deltaX = 0;
-            return copy;
-        }
-
-        PlatformWheelEvent copyIgnoringVerticalDelta() const
-        {
-            PlatformWheelEvent copy = *this;
-            copy.m_deltaY = 0;
+            copy.m_deltaX = deltaX;
+            copy.m_deltaY = deltaY;
             return copy;
         }
 
@@ -194,7 +188,7 @@ namespace WebCore {
         bool m_directionInvertedFromDevice;
 #if PLATFORM(COCOA)
         bool m_hasPreciseScrollingDeltas;
-         PlatformWheelEventPhase m_phase;
+        PlatformWheelEventPhase m_phase;
         PlatformWheelEventPhase m_momentumPhase;
         unsigned m_scrollCount;
         float m_unacceleratedScrollingDeltaX;

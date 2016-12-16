@@ -42,13 +42,16 @@
 #endif
 
 #if PLATFORM(GTK)
-#if PLATFORM(X11)
+#include <gdk/gdk.h>
+#endif
+
+#if PLATFORM(GTK) && PLATFORM(X11)
 #include <gdk/gdkx.h>
 #endif
-#if PLATFORM(WAYLAND) && !defined(GTK_API_VERSION_2)
+
+#if PLATFORM(GTK) && PLATFORM(WAYLAND) && !defined(GTK_API_VERSION_2)
 #include <gdk/gdkwayland.h>
 #endif
-#endif // PLATFORM(GTK)
 
 #if PLATFORM(EFL) && defined(HAVE_ECORE_X)
 #include <Ecore_X.h>
@@ -129,6 +132,12 @@ void PlatformDisplay::initializeEGLDisplay()
     m_eglDisplayInitialized = true;
 
     if (m_eglDisplay == EGL_NO_DISPLAY) {
+// EGL is optionally soft linked on Windows.
+#if PLATFORM(WIN)
+        auto eglGetDisplay = eglGetDisplayPtr();
+        if (!eglGetDisplay)
+            return;
+#endif
         m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
         if (m_eglDisplay == EGL_NO_DISPLAY)
             return;

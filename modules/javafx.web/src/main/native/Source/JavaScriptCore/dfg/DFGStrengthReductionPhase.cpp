@@ -36,6 +36,7 @@
 #include "DFGPredictionPropagationPhase.h"
 #include "DFGVariableAccessDataDump.h"
 #include "JSCInlines.h"
+#include <cstdlib>
 
 namespace JSC { namespace DFG {
 
@@ -74,7 +75,7 @@ private:
         case BitOr:
             handleCommutativity();
 
-            if (m_node->child2()->isInt32Constant() && !m_node->child2()->asInt32()) {
+            if (m_node->child1().useKind() != UntypedUse && m_node->child2()->isInt32Constant() && !m_node->child2()->asInt32()) {
                 convertToIdentityOverChild1();
                 break;
             }
@@ -88,7 +89,7 @@ private:
         case BitLShift:
         case BitRShift:
         case BitURShift:
-            if (m_node->child2()->isInt32Constant() && !(m_node->child2()->asInt32() & 0x1f)) {
+            if (m_node->child1().useKind() != UntypedUse && m_node->child2()->isInt32Constant() && !(m_node->child2()->asInt32() & 0x1f)) {
                 convertToIdentityOverChild1();
                 break;
             }
@@ -114,10 +115,36 @@ private:
             }
             break;
 
-        case ArithMul:
+        case ArithMul: {
             handleCommutativity();
+            Edge& child2 = m_node->child2();
+            if (child2->isNumberConstant() && child2->asNumber() == 2) {
+                switch (m_node->binaryUseKind()) {
+                case DoubleRepUse:
+                    // It is always valuable to get rid of a double multiplication by 2.
+                    // We won't have half-register dependencies issues on x86 and we won't have to load the constants.
+                    m_node->setOp(ArithAdd);
+                    child2.setNode(m_node->child1().node());
+                    m_changed = true;
+                    break;
+#if USE(JSVALUE64)
+                case Int52RepUse:
+#endif
+                case Int32Use:
+                    // For integers, we can only convert compatible modes.
+                    // ArithAdd does handle do negative zero check for example.
+                    if (m_node->arithMode() == Arith::CheckOverflow || m_node->arithMode() == Arith::Unchecked) {
+                        m_node->setOp(ArithAdd);
+                        child2.setNode(m_node->child1().node());
+                        m_changed = true;
+                    }
+                    break;
+                default:
+                    break;
+                }
+            }
             break;
-
+        }
         case ArithSub:
             if (m_node->child2()->isInt32Constant()
                 && m_node->isBinaryUseKind(Int32Use)) {
@@ -143,6 +170,21 @@ private:
                     m_node->convertToArithSqrt();
                     m_changed = true;
                 }
+            }
+            break;
+
+        case ArithMod:
+            // On Integers
+            // In: ArithMod(ArithMod(x, const1), const2)
+            // Out: Identity(ArithMod(x, const1))
+            //     if const1 <= const2.
+            if (m_node->binaryUseKind() == Int32Use
+                && m_node->child2()->isInt32Constant()
+                && m_node->child1()->op() == ArithMod
+                && m_node->child1()->binaryUseKind() == Int32Use
+                && m_node->child1()->child2()->isInt32Constant()
+                && std::abs(m_node->child1()->child2()->asInt32()) <= std::abs(m_node->child2()->asInt32())) {
+                    convertToIdentityOverChild1();
             }
             break;
 
@@ -227,6 +269,26 @@ private:
             m_node->convertFlushToPhantomLocal();
             m_graph.dethread();
             m_changed = true;
+            break;
+        }
+
+        // FIXME: we should probably do this in constant folding but this currently relies on an OSR exit rule.
+        // https://bugs.webkit.org/show_bug.cgi?id=154832
+        case OverridesHasInstance: {
+            if (!m_node->child2().node()->isCellConstant())
+                break;
+
+            if (m_node->child2().node()->asCell() != m_graph.globalObjectFor(m_node->origin.semantic)->functionProtoHasInstanceSymbolFunction()) {
+                m_graph.convertToConstant(m_node, jsBoolean(true));
+                m_changed = true;
+
+            } else if (!m_graph.hasExitSite(m_node->origin.semantic, BadTypeInfoFlags)) {
+                // We optimistically assume that we will not see a function that has a custom instanceof operation as they should be rare.
+                m_insertionSet.insertNode(m_nodeIndex, SpecNone, CheckTypeInfoFlags, m_node->origin, OpInfo(ImplementsDefaultHasInstance), Edge(m_node->child1().node(), CellUse));
+                m_graph.convertToConstant(m_node, jsBoolean(false));
+                m_changed = true;
+            }
+
             break;
         }
 

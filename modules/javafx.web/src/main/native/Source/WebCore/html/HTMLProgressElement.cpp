@@ -59,9 +59,9 @@ Ref<HTMLProgressElement> HTMLProgressElement::create(const QualifiedName& tagNam
 RenderPtr<RenderElement> HTMLProgressElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
     if (!style.get().hasAppearance())
-        return RenderElement::createFor(*this, WTF::move(style));
+        return RenderElement::createFor(*this, WTFMove(style));
 
-    return createRenderer<RenderProgress>(*this, WTF::move(style));
+    return createRenderer<RenderProgress>(*this, WTFMove(style));
 }
 
 bool HTMLProgressElement::childShouldCreateRenderer(const Node& child) const
@@ -149,16 +149,16 @@ void HTMLProgressElement::didAddUserAgentShadowRoot(ShadowRoot* root)
 {
     ASSERT(!m_value);
 
-    RefPtr<ProgressInnerElement> inner = ProgressInnerElement::create(document());
-    root->appendChild(inner);
+    Ref<ProgressInnerElement> inner = ProgressInnerElement::create(document());
+    root->appendChild(inner.copyRef());
 
-    RefPtr<ProgressBarElement> bar = ProgressBarElement::create(document());
-    RefPtr<ProgressValueElement> value = ProgressValueElement::create(document());
-    m_value = value.get();
+    Ref<ProgressBarElement> bar = ProgressBarElement::create(document());
+    Ref<ProgressValueElement> value = ProgressValueElement::create(document());
+    m_value = value.ptr();
     m_value->setWidthPercentage(HTMLProgressElement::IndeterminatePosition * 100);
-    bar->appendChild(m_value, ASSERT_NO_EXCEPTION);
+    bar->appendChild(*m_value, ASSERT_NO_EXCEPTION);
 
-    inner->appendChild(bar, ASSERT_NO_EXCEPTION);
+    inner->appendChild(WTFMove(bar), ASSERT_NO_EXCEPTION);
 }
 
 bool HTMLProgressElement::shouldAppearIndeterminate() const

@@ -60,7 +60,7 @@
 #include <wtf/RetainPtr.h>
 OBJC_CLASS CALayer;
 OBJC_CLASS WebGLLayer;
-#elif PLATFORM(GTK) || PLATFORM(EFL)
+#elif PLATFORM(GTK) || PLATFORM(EFL) || PLATFORM(WIN_CAIRO)
 typedef unsigned int GLuint;
 #endif
 
@@ -504,6 +504,7 @@ public:
         FLOAT_MAT4x3 = 0x8B6A,
         SRGB = 0x8C40,
         SRGB8 = 0x8C41,
+        SRGB_ALPHA = 0x8C42,
         SRGB8_ALPHA8 = 0x8C43,
         COMPARE_REF_TO_TEXTURE = 0x884E,
         RGBA32F = 0x8814,
@@ -1128,8 +1129,7 @@ public:
     void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight,
                        int canvasWidth, int canvasHeight, PlatformContextCairo* context);
 #elif USE(CG)
-    void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight,
-                       int canvasWidth, int canvasHeight, GraphicsContext*);
+    void paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight, int canvasWidth, int canvasHeight, GraphicsContext&);
 #endif
 
     void markContextChanged();
@@ -1294,6 +1294,7 @@ private:
 
     bool reshapeFBOs(const IntSize&);
     void resolveMultisamplingIfNecessary(const IntRect& = IntRect());
+    void attachDepthAndStencilBufferIfNeeded(GLuint internalDepthStencilFormat, int width, int height);
 #if PLATFORM(EFL) && USE(GRAPHICS_SURFACE)
     void createGraphicsSurfaces(const IntSize&);
 #endif
@@ -1418,6 +1419,9 @@ private:
     GC3Duint m_texture;
     GC3Duint m_compositorTexture;
     GC3Duint m_fbo;
+#if USE(COORDINATED_GRAPHICS_THREADED)
+    GC3Duint m_compositorFBO;
+#endif
 
     GC3Duint m_depthBuffer;
     GC3Duint m_stencilBuffer;

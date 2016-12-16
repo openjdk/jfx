@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "MapConstructor.h"
 
 #include "Error.h"
+#include "GetterSetter.h"
 #include "IteratorOperations.h"
 #include "JSCJSValueInlines.h"
 #include "JSCellInlines.h"
@@ -39,22 +40,25 @@ namespace JSC {
 
 const ClassInfo MapConstructor::s_info = { "Function", &Base::s_info, 0, CREATE_METHOD_TABLE(MapConstructor) };
 
-void MapConstructor::finishCreation(VM& vm, MapPrototype* mapPrototype)
+void MapConstructor::finishCreation(VM& vm, MapPrototype* mapPrototype, GetterSetter* speciesSymbol)
 {
     Base::finishCreation(vm, mapPrototype->classInfo()->className);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, mapPrototype, DontEnum | DontDelete | ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), ReadOnly | DontEnum | DontDelete);
+    putDirectNonIndexAccessor(vm, vm.propertyNames->speciesSymbol, speciesSymbol, Accessor | ReadOnly | DontEnum);
 }
 
 static EncodedJSValue JSC_HOST_CALL callMap(ExecState* exec)
 {
-    return JSValue::encode(throwTypeError(exec, ASCIILiteral("Map cannot be called as a function")));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(exec, "Map"));
 }
 
 static EncodedJSValue JSC_HOST_CALL constructMap(ExecState* exec)
 {
     JSGlobalObject* globalObject = asInternalFunction(exec->callee())->globalObject();
-    Structure* mapStructure = globalObject->mapStructure();
+    Structure* mapStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), globalObject->mapStructure());
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
     JSMap* map = JSMap::create(exec, mapStructure);
     JSValue iterable = exec->argument(0);
     if (iterable.isUndefinedOrNull())

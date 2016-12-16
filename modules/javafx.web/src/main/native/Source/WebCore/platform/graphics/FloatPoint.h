@@ -53,6 +53,7 @@ class AffineTransform;
 class TransformationMatrix;
 class IntPoint;
 class IntSize;
+class TextStream;
 
 class FloatPoint {
 public:
@@ -120,19 +121,21 @@ public:
         return m_x * m_x + m_y * m_y;
     }
 
+    WEBCORE_EXPORT FloatPoint constrainedBetween(const FloatPoint& min, const FloatPoint& max) const;
+
     FloatPoint shrunkTo(const FloatPoint& other) const
     {
-        return FloatPoint(std::min(m_x, other.m_x), std::min(m_y, other.m_y));
+        return { std::min(m_x, other.m_x), std::min(m_y, other.m_y) };
     }
 
     FloatPoint expandedTo(const FloatPoint& other) const
     {
-        return FloatPoint(std::max(m_x, other.m_x), std::max(m_y, other.m_y));
+        return { std::max(m_x, other.m_x), std::max(m_y, other.m_y) };
     }
 
     FloatPoint transposedPoint() const
     {
-        return FloatPoint(m_y, m_x);
+        return { m_y, m_x };
     }
 
 #if USE(CG)
@@ -147,8 +150,6 @@ public:
 
     FloatPoint matrixTransform(const TransformationMatrix&) const;
     FloatPoint matrixTransform(const AffineTransform&) const;
-
-    void dump(WTF::PrintStream& out) const;
 
 private:
     float m_x, m_y;
@@ -258,6 +259,8 @@ inline bool areEssentiallyEqual(const FloatPoint& a, const FloatPoint& b)
 {
     return WTF::areEssentiallyEqual(a.x(), b.x()) && WTF::areEssentiallyEqual(a.y(), b.y());
 }
+
+WEBCORE_EXPORT TextStream& operator<<(TextStream&, const FloatPoint&);
 
 }
 

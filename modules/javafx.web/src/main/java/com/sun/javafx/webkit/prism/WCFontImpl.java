@@ -39,6 +39,7 @@ import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutWidth;
 import static com.sun.javafx.webkit.prism.TextUtilities.getLayoutBounds;
 import com.sun.prism.GraphicsPipeline;
 import com.sun.webkit.graphics.WCFont;
+import com.sun.webkit.graphics.WCGlyphBuffer;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -107,6 +108,43 @@ final class WCFontImpl extends WCFont {
                     str, str.length(), x, offset));
         }
         return offset;
+    }
+
+    @Override public WCGlyphBuffer getGlyphsAndAdvances(String str, int from, int to, boolean rtl) {
+        if (log.isLoggable(Level.FINE)) {
+            log.fine(String.format(
+                    "str='%s' (length=%d), from=%d, to=%d, rtl=%b",
+                    str, str.length(), from, to, rtl));
+        }
+        TextLayout layout = TextUtilities.createLayout(
+                str.substring(from, to), getPlatformFont());
+        int count = 0;
+        GlyphList[] runs = layout.getRuns();
+        for (GlyphList run: runs) {
+            count += run.getGlyphCount();
+        }
+
+        int[] glyphs = new int[count];
+        float[] adv = new float[count];
+        count = 0;
+        for (GlyphList run: layout.getRuns()) {
+            int gc = run.getGlyphCount();
+            for (int i = 0; i < gc; i++) {
+                glyphs[count] = run.getGlyphCode(i);
+                adv[count] = run.getPosX(i + 1) - run.getPosX(i);
+                count++;
+            }
+        }
+
+        // inital advance (see RT-29908)
+        float x = 0;
+        if (rtl) {
+            x += (TextUtilities.getLayoutWidth(str.substring(from), getPlatformFont()) -
+                  layout.getBounds().getWidth());
+        } else {
+            x += TextUtilities.getLayoutWidth(str.substring(0, from), getPlatformFont());
+        }
+        return new WCGlyphBuffer(glyphs, adv, x);
     }
 
     private FontStrike strike;

@@ -35,6 +35,10 @@
 #include "ScrollingStateStickyNode.h"
 #include <wtf/text/CString.h>
 
+#ifndef NDEBUG
+#include <stdio.h>
+#endif
+
 namespace WebCore {
 
 ScrollingStateTree::ScrollingStateTree(AsyncScrollingCoordinator* scrollingCoordinator)
@@ -229,7 +233,7 @@ void ScrollingStateTree::willRemoveNode(ScrollingStateNode* node)
 
 void ScrollingStateTree::setRemovedNodes(HashSet<ScrollingNodeID> nodes)
 {
-    m_nodesRemovedSinceLastCommit = WTF::move(nodes);
+    m_nodesRemovedSinceLastCommit = WTFMove(nodes);
 }
 
 ScrollingStateNode* ScrollingStateTree::stateNodeForID(ScrollingNodeID scrollLayerID)

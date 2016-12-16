@@ -29,9 +29,6 @@ public:
     // A method asking if the theme's controls actually care about redrawing when hovered.
     virtual bool supportsHover(const RenderStyle& style) const { return true; }
 
-    // System fonts.
-    virtual void systemFont(CSSValueID, FontDescription&) const;
-
     static RefPtr<RenderTheme> sm_defaultInstance;
 
 protected:
@@ -54,7 +51,7 @@ protected:
     virtual bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) override;
 
     virtual void adjustMenuListButtonStyle(StyleResolver&, RenderStyle&, Element*) const override;
-    virtual bool paintMenuListButtonDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    virtual bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
 
     virtual void adjustTextAreaStyle(StyleResolver&, RenderStyle&, Element* e) const override;
     virtual bool paintTextArea(const RenderObject&, const PaintInfo&, const FloatRect&) override;
@@ -132,7 +129,7 @@ protected:
 
 
 private:
-    virtual void updateCachedSystemFontDescription(CSSValueID, FontDescription&) const override;
+    virtual void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
 
     int createWidgetState(const RenderObject& o);
     bool paintWidget(int widgetIndex, const RenderObject& o,

@@ -24,6 +24,43 @@
 
 require 'risc'
 
+# GPR conventions, to match the baseline JIT
+#
+# $a0 => a0
+# $a1 => a1
+# $a2 => a2
+# $a3 => a3
+# $v0 => t0, r0
+# $v1 => t1, r1
+# $t0 =>            (scratch)
+# $t1 =>            (scratch)
+# $t2 =>         t2
+# $t3 =>         t3
+# $t4 =>         t4
+# $t5 =>         t5
+# $t6 =>         t6
+# $t7 =>            (scratch)
+# $t8 =>            (scratch)
+# $t9 =>            (stores the callee of a call opcode)
+# $gp =>            (globals)
+# $s4 =>            (callee-save used to preserve $gp across calls)
+# $ra => lr
+# $sp => sp
+# $fp => cfr
+#
+# FPR conventions, to match the baseline JIT
+# We don't have fa2 or fa3!
+#  $f0 => ft0, fr
+#  $f2 => ft1
+#  $f4 => ft2
+#  $f6 => ft3
+#  $f8 => ft4
+# $f10 => ft5
+# $f12 =>        fa0
+# $f14 =>        fa1
+# $f16 =>            (scratch)
+# $f18 =>            (scratch)
+
 class Assembler
     def putStr(str)
         @outp.puts str
@@ -57,8 +94,7 @@ class SpecialRegister < NoChildren
     end
 end
 
-MIPS_TEMP_GPRS = [SpecialRegister.new("$t5"), SpecialRegister.new("$t6"), SpecialRegister.new("$t7"),
-                    SpecialRegister.new("$t8")]
+MIPS_TEMP_GPRS = [SpecialRegister.new("$t0"), SpecialRegister.new("$t1"), SpecialRegister.new("$t7"), SpecialRegister.new("$t8")]
 MIPS_ZERO_REG = SpecialRegister.new("$zero")
 MIPS_GP_REG = SpecialRegister.new("$gp")
 MIPS_GPSAVE_REG = SpecialRegister.new("$s4")
@@ -85,24 +121,18 @@ class RegisterID
             "$a2"
         when "a3"
             "$a3"
-        when "r0", "t0"
+        when "t0", "r0"
             "$v0"
-        when "r1", "t1"
+        when "t1", "r1"
             "$v1"
         when "t2"
             "$t2"
         when "t3"
-            "$s3"
-        when "t4"   # PC reg in llint
-            "$s2"
+            "$t3"
+        when "t4"
+            "$t4"
         when "t5"
             "$t5"
-        when "t6"
-            "$t6"
-        when "t7"
-            "$t7"
-        when "t8"
-            "$t8"
         when "cfr"
             "$fp"
         when "lr"
@@ -494,6 +524,8 @@ def mipsLowerMisplacedImmediates(list)
                 end
             when /^(addi|subi)/
                 newList << node.riscLowerMalformedImmediatesRecurse(newList, -0x7fff..0x7fff)
+            when "andi", "andp", "ori", "orp", "xori", "xorp"
+                newList << node.riscLowerMalformedImmediatesRecurse(newList, 0..0xffff)
             else
                 newList << node
             end
@@ -1001,13 +1033,14 @@ class Instruction
             $asm.puts "movz #{operands[0].mipsOperand}, #{operands[1].mipsOperand}, #{operands[2].mipsOperand}"
         when "movn"
             $asm.puts "movn #{operands[0].mipsOperand}, #{operands[1].mipsOperand}, #{operands[2].mipsOperand}"
+        when "setcallreg"
+            $asm.puts "move #{MIPS_CALL_REG.mipsOperand}, #{operands[0].mipsOperand}"
         when "slt", "sltb"
             $asm.puts "slt #{operands[0].mipsOperand}, #{operands[1].mipsOperand}, #{operands[2].mipsOperand}"
         when "sltu", "sltub"
             $asm.puts "sltu #{operands[0].mipsOperand}, #{operands[1].mipsOperand}, #{operands[2].mipsOperand}"
         when "pichdr"
             $asm.putStr("OFFLINE_ASM_CPLOAD(#{MIPS_CALL_REG.mipsOperand})")
-            $asm.puts "move #{MIPS_GPSAVE_REG.mipsOperand}, #{MIPS_GP_REG.mipsOperand}"
         when "memfence"
             $asm.puts "sync"
         else

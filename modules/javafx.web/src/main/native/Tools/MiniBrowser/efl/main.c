@@ -47,6 +47,7 @@ static char *background_color_string = NULL;
 static Eina_Bool encoding_detector_enabled = EINA_FALSE;
 static Eina_Bool frame_flattening_enabled = EINA_FALSE;
 static Eina_Bool local_storage_enabled = EINA_TRUE;
+static Eina_Bool offline_web_application_cache_enabled = EINA_TRUE;
 static Eina_Bool fullscreen_enabled = EINA_FALSE;
 static Eina_Bool spell_checking_enabled = EINA_FALSE;
 static Eina_Bool web_security_enabled = EINA_TRUE;
@@ -177,6 +178,8 @@ static const Ecore_Getopt options = {
         ECORE_GETOPT_STORE_DEF_BOOL
             ('l', "local-storage", "Enable/disable HTML5 local storage.", EINA_TRUE),
         ECORE_GETOPT_STORE_DEF_BOOL
+            ('o', "offline-web-application-cache", "Enable/disable offline web application cache.", EINA_TRUE),
+        ECORE_GETOPT_STORE_DEF_BOOL
             ('F', "full-screen", "Start in full-screen.", EINA_FALSE),
         ECORE_GETOPT_STORE_DEF_BOOL
             ('t', "text-checking", "Enable/disable text spell checking.", EINA_FALSE),
@@ -189,7 +192,7 @@ static const Ecore_Getopt options = {
         ECORE_GETOPT_STORE_DEF_BOOL
             ('w', "web-security", "enable/disable web security.", EINA_TRUE),
         ECORE_GETOPT_STORE_DEF_BOOL
-            ('S', "separate-process", "Create new window in separated web process.", EINA_TRUE),
+            ('S', "separate-process", "Create new window in separated web process.", EINA_FALSE),
         ECORE_GETOPT_VERSION
             ('V', "version"),
         ECORE_GETOPT_COPYRIGHT
@@ -201,7 +204,8 @@ static const Ecore_Getopt options = {
 };
 
 static Eina_Stringshare *show_file_entry_dialog(Browser_Window *window, const char *label_tag, const char *default_text);
-static Browser_Window *window_create(Evas_Object* opener, int width, int height);
+static Browser_Window *window_create(Ewk_View_Configuration* configuration, int width, int height);
+static Ewk_View_Configuration* configuration();
 
 static Browser_Window *window_find_with_elm_window(Evas_Object *elm_window)
 {
@@ -597,7 +601,7 @@ on_key_down(void *user_data, Evas *e, Evas_Object *ewk_view, void *event_info)
         toggle_window_fullscreen(window, !elm_win_fullscreen_get(window->elm_window));
     } else if (!strcmp(ev->key, "n") && ctrlPressed) {
         INFO("Create new window (Ctrl+n) was pressed.");
-        Browser_Window *window = window_create(NULL, 0, 0);
+        Browser_Window *window = window_create(configuration(), 0, 0);
         ewk_view_url_set(window->ewk_view, DEFAULT_URL);
         // 0 equals default width and height.
         windows = eina_list_append(windows, window);
@@ -1019,6 +1023,7 @@ quit(Eina_Bool success, const char *msg)
         success ? INFO("%s", msg) : ERROR("%s", msg);
 
     eina_log_domain_unregister(_log_domain_id);
+    ewk_object_unref(configuration());
     ewk_shutdown();
     elm_shutdown();
 
@@ -1530,6 +1535,12 @@ on_javascript_prompt(Ewk_View_Smart_Data *smartData, const char *message, const 
     return prompt_text;
 }
 
+static Eina_Bool
+on_javascript_before_unload_confirm(Ewk_View_Smart_Data *smartData, const char *message)
+{
+    return on_javascript_confirm(smartData, "Will you leave this page?");
+}
+
 static void
 on_popup_menu_item_clicked(void *user_data, Evas_Object *obj, void *event_info)
 {
@@ -1705,7 +1716,7 @@ static Eina_Bool on_fullscreen_exit(Ewk_View_Smart_Data *sd)
 }
 
 static Evas_Object *
-on_window_create(Ewk_View_Smart_Data *smartData, const Ewk_Window_Features *window_features)
+on_window_create(Ewk_View_Smart_Data *smartData, Ewk_View_Configuration* configuration, const Ewk_Window_Features *window_features)
 {
     int x = 0;
     int y = 0;
@@ -1720,7 +1731,7 @@ on_window_create(Ewk_View_Smart_Data *smartData, const Ewk_Window_Features *wind
     if (!height)
         height = window_height;
 
-    Browser_Window *window = window_create(smartData->self, width, height);
+    Browser_Window *window = window_create(configuration, width, height);
     Evas_Object *new_view = window->ewk_view;
 
     windows = eina_list_append(windows, window);
@@ -2031,7 +2042,8 @@ on_home_button_clicked(void *user_data, Evas_Object *home_button, void *event_in
 static void
 on_window_deletion(void *user_data, Evas_Object *elm_window, void *event_info)
 {
-    window_close(window_find_with_elm_window(elm_window));
+    Browser_Window *window = (Browser_Window *)user_data;
+    ewk_view_try_close(window->ewk_view);
 }
 
 static Evas_Object *
@@ -2050,7 +2062,7 @@ create_toolbar_button(Evas_Object *elm_window, const char *icon_name)
     return button;
 }
 
-static Browser_Window *window_create(Evas_Object *opener, int width, int height)
+static Browser_Window *window_create(Ewk_View_Configuration* configuration, int width, int height)
 {
     Browser_Window *window = calloc(1, sizeof(Browser_Window));
     if (!window) {
@@ -2067,7 +2079,7 @@ static Browser_Window *window_create(Evas_Object *opener, int width, int height)
     /* Create window */
     window->elm_window = elm_win_add(NULL, "minibrowser-window", ELM_WIN_BASIC);
     elm_win_title_set(window->elm_window, APP_NAME);
-    evas_object_smart_callback_add(window->elm_window, "delete,request", on_window_deletion, &window);
+    evas_object_smart_callback_add(window->elm_window, "delete,request", on_window_deletion, window);
 
     /* Create window background */
     Evas_Object *bg = elm_bg_add(window->elm_window);
@@ -2076,11 +2088,17 @@ static Browser_Window *window_create(Evas_Object *opener, int width, int height)
     elm_win_resize_object_add(window->elm_window, bg);
     evas_object_show(bg);
 
+    /* Create conformant widget. */
+    Evas_Object *conformant = elm_conformant_add(window->elm_window);
+    evas_object_size_hint_weight_set(conformant, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+    elm_win_resize_object_add(window->elm_window, conformant);
+    evas_object_show(conformant);
+
     /* Create vertical layout */
     window->vertical_layout = elm_box_add(window->elm_window);
+    elm_object_content_set(conformant, window->vertical_layout);
     elm_box_padding_set(window->vertical_layout, 0, 2);
     evas_object_size_hint_weight_set(window->vertical_layout, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-    elm_win_resize_object_add(window->elm_window, window->vertical_layout);
     evas_object_show(window->vertical_layout);
 
     /* Create horizontal layout for top bar */
@@ -2244,6 +2262,7 @@ static Browser_Window *window_create(Evas_Object *opener, int width, int height)
     ewkViewClass->run_javascript_alert = on_javascript_alert;
     ewkViewClass->run_javascript_confirm = on_javascript_confirm;
     ewkViewClass->run_javascript_prompt = on_javascript_prompt;
+    ewkViewClass->run_javascript_before_unload_confirm = on_javascript_before_unload_confirm;
     ewkViewClass->window_geometry_get = on_window_geometry_get;
     ewkViewClass->window_geometry_set = on_window_geometry_set;
     ewkViewClass->fullscreen_enter = on_fullscreen_enter;
@@ -2259,17 +2278,9 @@ static Browser_Window *window_create(Evas_Object *opener, int width, int height)
 
     Evas *evas = evas_object_evas_get(window->elm_window);
     Evas_Smart *smart = evas_smart_class_new(&ewkViewClass->sc);
-    Ewk_Context *context;
-    if (opener)
-        context = ewk_view_context_get(opener);
-    else if (extensions_path)
-        context = ewk_context_new_with_extensions_path(extensions_path);
-    else
-        context = ewk_context_default_get();
+    window->ewk_view = ewk_view_add_with_configuration(evas, smart, configuration);
 
-    Ewk_Page_Group *pageGroup = opener ? ewk_view_page_group_get(opener) : ewk_page_group_create("");
-    window->ewk_view = ewk_view_smart_add(evas, smart, context, pageGroup);
-
+    Ewk_Context *context = ewk_view_context_get(window->ewk_view);
     ewk_favicon_database_icon_change_callback_add(ewk_context_favicon_database_get(context), on_icon_changed_cb, window);
 
     ewk_view_theme_set(window->ewk_view, DEFAULT_THEME_DIR "/default.edj");
@@ -2293,17 +2304,8 @@ static Browser_Window *window_create(Evas_Object *opener, int width, int height)
     /* Set the zoom level to default */
     window->current_zoom_level = DEFAULT_ZOOM_LEVEL;
 
-    Ewk_Settings *settings = ewk_page_group_settings_get(pageGroup);
-    ewk_settings_file_access_from_file_urls_allowed_set(settings, EINA_TRUE);
-    ewk_settings_encoding_detector_enabled_set(settings, encoding_detector_enabled);
-    ewk_settings_frame_flattening_enabled_set(settings, frame_flattening_enabled);
-    ewk_settings_local_storage_enabled_set(settings, local_storage_enabled);
-    INFO("HTML5 local storage is %s for this view.", local_storage_enabled ? "enabled" : "disabled");
     elm_win_fullscreen_set(window->elm_window, fullscreen_enabled);
-    ewk_settings_developer_extras_enabled_set(settings, EINA_TRUE);
-    ewk_settings_preferred_minimum_contents_width_set(settings, 0);
-    ewk_text_checker_continuous_spell_checking_enabled_set(spell_checking_enabled);
-    ewk_settings_web_security_enabled_set(settings, web_security_enabled);
+
     evas_object_smart_callback_add(window->ewk_view, "authentication,request", on_authentication_request, window);
     evas_object_smart_callback_add(window->ewk_view, "file,chooser,request", on_file_chooser_request, window);
     evas_object_smart_callback_add(window->ewk_view, "load,error", on_error, window);
@@ -2345,6 +2347,30 @@ static Browser_Window *window_create(Evas_Object *opener, int width, int height)
     elm_button_autorepeat_initial_timeout_set(window->forward_button, LONGPRESS_INTERVAL_SECONDS);
 
     return window;
+}
+
+static Ewk_View_Configuration* configuration()
+{
+    static Ewk_View_Configuration* default_configuration = 0;
+
+    if (default_configuration)
+        return default_configuration;
+
+    default_configuration = ewk_view_configuration_new();
+
+    Ewk_Settings* settings = ewk_view_configuration_settings_get(default_configuration);
+    ewk_settings_file_access_from_file_urls_allowed_set(settings, EINA_TRUE);
+    ewk_settings_encoding_detector_enabled_set(settings, encoding_detector_enabled);
+    ewk_settings_frame_flattening_enabled_set(settings, frame_flattening_enabled);
+    ewk_settings_local_storage_enabled_set(settings, local_storage_enabled);
+    ewk_settings_offline_web_application_cache_enabled_set(settings, offline_web_application_cache_enabled);
+    INFO("HTML5 local storage is %s for this view.", local_storage_enabled ? "enabled" : "disabled");
+    ewk_settings_developer_extras_enabled_set(settings, EINA_TRUE);
+    ewk_settings_preferred_minimum_contents_width_set(settings, 0);
+    ewk_text_checker_continuous_spell_checking_enabled_set(spell_checking_enabled);
+    ewk_settings_web_security_enabled_set(settings, web_security_enabled);
+
+    return default_configuration;
 }
 
 static Ewk_Cookie_Accept_Policy
@@ -2404,6 +2430,7 @@ elm_main(int argc, char *argv[])
         ECORE_GETOPT_VALUE_STR(background_color_string),
         ECORE_GETOPT_VALUE_BOOL(frame_flattening_enabled),
         ECORE_GETOPT_VALUE_BOOL(local_storage_enabled),
+        ECORE_GETOPT_VALUE_BOOL(offline_web_application_cache_enabled),
         ECORE_GETOPT_VALUE_BOOL(fullscreen_enabled),
         ECORE_GETOPT_VALUE_BOOL(spell_checking_enabled),
         ECORE_GETOPT_VALUE_BOOL(touch_events_enabled),
@@ -2438,14 +2465,14 @@ elm_main(int argc, char *argv[])
     if (evas_engine_name)
         elm_config_accel_preference_set(evas_engine_name);
     else {
-        evas_engine_name = "opengl";
+        evas_engine_name = "opengl:depth24:stencil8";
         elm_config_accel_preference_set(evas_engine_name);
     }
 
     Ewk_Context *context = ewk_context_default_get();
 
     if (separated_process_enabled)
-        ewk_context_process_model_set(context, EWK_PROCESS_MODEL_MULTIPLE_SECONDARY);
+        ewk_context_web_process_count_limit_set(context, 0);
 
     // Enable favicon database.
     ewk_context_favicon_database_directory_set(context, NULL);
@@ -2469,7 +2496,7 @@ elm_main(int argc, char *argv[])
     if (window_size_string)
         parse_window_size(window_size_string, &window_width, &window_height);
 
-    window = window_create(NULL, 0, 0);
+    window = window_create(configuration(), 0, 0);
     if (!window)
         return quit(EINA_FALSE, "Could not create browser window.");
 

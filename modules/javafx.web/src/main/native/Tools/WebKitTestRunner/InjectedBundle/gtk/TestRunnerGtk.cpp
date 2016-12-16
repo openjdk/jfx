@@ -40,16 +40,15 @@ void TestRunner::platformInitialize()
 
 void TestRunner::invalidateWaitToDumpWatchdogTimer()
 {
-    m_waitToDumpWatchdogTimer.cancel();
+    m_waitToDumpWatchdogTimer.stop();
 }
 
 void TestRunner::initializeWaitToDumpWatchdogTimerIfNeeded()
 {
-    if (m_waitToDumpWatchdogTimer.isScheduled())
+    if (m_waitToDumpWatchdogTimer.isActive())
         return;
 
-    m_waitToDumpWatchdogTimer.scheduleAfterDelay("[WTR] waitToDumpWatchdogTimerCallback", [this] { waitToDumpWatchdogTimerFired(); },
-        std::chrono::milliseconds(m_timeout));
+    m_waitToDumpWatchdogTimer.startOneShot(m_timeout / 1000.0);
 }
 
 JSRetainPtr<JSStringRef> TestRunner::pathToLocalResource(JSStringRef url)
@@ -65,6 +64,11 @@ JSRetainPtr<JSStringRef> TestRunner::pathToLocalResource(JSStringRef url)
     GUniquePtr<gchar> testPath(g_build_filename(WTR::topLevelPath().data(), layoutTestsSuffix, nullptr));
     GUniquePtr<gchar> testURI(g_filename_to_uri(testPath.get(), 0, 0));
     return JSStringCreateWithUTF8CString(testURI.get());
+}
+
+JSRetainPtr<JSStringRef> TestRunner::inspectorTestStubURL()
+{
+    return JSStringCreateWithUTF8CString("resource:///org/webkitgtk/inspector/UserInterface/TestStub.html");
 }
 
 } // namespace WTR

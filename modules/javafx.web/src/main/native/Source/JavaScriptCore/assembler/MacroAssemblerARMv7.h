@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2010, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2010, 2014-2015 Apple Inc. All rights reserved.
  * Copyright (C) 2010 University of Szeged
  *
  * Redistribution and use in source and binary forms, with or without
@@ -341,6 +341,24 @@ public:
         store32(dataTempRegister, addressTempRegister);
     }
 
+    void or32(TrustedImm32 imm, AbsoluteAddress address)
+    {
+        ARMThumbImmediate armImm = ARMThumbImmediate::makeEncodedImm(imm.m_value);
+        if (armImm.isValid()) {
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            load32(addressTempRegister, dataTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, armImm);
+            store32(dataTempRegister, addressTempRegister);
+        } else {
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            load32(addressTempRegister, dataTempRegister);
+            move(imm, addressTempRegister);
+            m_assembler.orr(dataTempRegister, dataTempRegister, addressTempRegister);
+            move(TrustedImmPtr(address.m_ptr), addressTempRegister);
+            store32(dataTempRegister, addressTempRegister);
+        }
+    }
+
     void or32(TrustedImm32 imm, Address address)
     {
         load32(address, dataTempRegister);
@@ -364,6 +382,7 @@ public:
         if (armImm.isValid())
             m_assembler.orr(dest, src, armImm);
         else {
+            ASSERT(src != dataTempRegister);
             move(imm, dataTempRegister);
             m_assembler.orr(dest, src, dataTempRegister);
         }
@@ -381,7 +400,10 @@ public:
 
     void rshift32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        m_assembler.asr(dest, src, imm.m_value & 0x1f);
+        if (!imm.m_value)
+            move(src, dest);
+        else
+            m_assembler.asr(dest, src, imm.m_value & 0x1f);
     }
 
     void rshift32(RegisterID shiftAmount, RegisterID dest)
@@ -406,7 +428,10 @@ public:
 
     void urshift32(RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
-        m_assembler.lsr(dest, src, imm.m_value & 0x1f);
+        if (!imm.m_value)
+            move(src, dest);
+        else
+            m_assembler.lsr(dest, src, imm.m_value & 0x1f);
     }
 
     void urshift32(RegisterID shiftAmount, RegisterID dest)
@@ -845,6 +870,7 @@ public:
     static bool supportsFloatingPointTruncate() { return true; }
     static bool supportsFloatingPointSqrt() { return true; }
     static bool supportsFloatingPointAbs() { return true; }
+    static bool supportsFloatingPointRounding() { return false; }
 
     void loadDouble(ImplicitAddress address, FPRegisterID dest)
     {
@@ -1033,6 +1059,18 @@ public:
     void negateDouble(FPRegisterID src, FPRegisterID dest)
     {
         m_assembler.vneg(dest, src);
+    }
+
+    NO_RETURN_DUE_TO_CRASH void ceilDouble(FPRegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsFloatingPointRounding());
+        CRASH();
+    }
+
+    NO_RETURN_DUE_TO_CRASH void floorDouble(FPRegisterID, FPRegisterID)
+    {
+        ASSERT(!supportsFloatingPointRounding());
+        CRASH();
     }
 
     void convertInt32ToDouble(RegisterID src, FPRegisterID dest)
@@ -1604,7 +1642,7 @@ public:
         return branchMul32(cond, src, dest, dest);
     }
 
-    Jump branchMul32(ResultCondition cond, TrustedImm32 imm, RegisterID src, RegisterID dest)
+    Jump branchMul32(ResultCondition cond, RegisterID src, TrustedImm32 imm, RegisterID dest)
     {
         move(imm, dataTempRegister);
         return branchMul32(cond, dataTempRegister, src, dest);
@@ -1675,6 +1713,12 @@ public:
     {
         moveFixedWidthEncoding(TrustedImm32(0), dataTempRegister);
         return Call(m_assembler.blx(dataTempRegister), Call::LinkableNear);
+    }
+
+    ALWAYS_INLINE Call nearTailCall()
+    {
+        moveFixedWidthEncoding(TrustedImm32(0), dataTempRegister);
+        return Call(m_assembler.bx(dataTempRegister), Call::LinkableNearTail);
     }
 
     ALWAYS_INLINE Call call()
@@ -1901,13 +1945,18 @@ public:
         UNREACHABLE_FOR_PLATFORM();
     }
 
+    static void repatchCall(CodeLocationCall call, CodeLocationLabel destination)
+    {
+        ARMv7Assembler::relinkCall(call.dataLocation(), destination.executableAddress());
+    }
+
+    static void repatchCall(CodeLocationCall call, FunctionPtr destination)
+    {
+        ARMv7Assembler::relinkCall(call.dataLocation(), destination.executableAddress());
+    }
+
 #if ENABLE(MASM_PROBE)
-    // Methods required by the MASM_PROBE mechanism as defined in
-    // AbstractMacroAssembler.h.
-    static void printCPURegisters(CPUState&, int indentation = 0);
-    static void printRegister(CPUState&, RegisterID);
-    static void printRegister(CPUState&, FPRegisterID);
-    void probe(ProbeFunction, void* arg1 = 0, void* arg2 = 0);
+    void probe(ProbeFunction, void* arg1, void* arg2);
 #endif // ENABLE(MASM_PROBE)
 
 protected:
@@ -2003,21 +2052,13 @@ protected:
 
 private:
     friend class LinkBuffer;
-    friend class RepatchBuffer;
 
     static void linkCall(void* code, Call call, FunctionPtr function)
     {
-        ARMv7Assembler::linkCall(code, call.m_label, function.value());
-    }
-
-    static void repatchCall(CodeLocationCall call, CodeLocationLabel destination)
-    {
-        ARMv7Assembler::relinkCall(call.dataLocation(), destination.executableAddress());
-    }
-
-    static void repatchCall(CodeLocationCall call, FunctionPtr destination)
-    {
-        ARMv7Assembler::relinkCall(call.dataLocation(), destination.executableAddress());
+        if (call.isFlagSet(Call::Tail))
+            ARMv7Assembler::linkJump(code, call.m_label, function.value());
+        else
+            ARMv7Assembler::linkCall(code, call.m_label, function.value());
     }
 
 #if ENABLE(MASM_PROBE)

@@ -47,8 +47,12 @@
 
 #if ENABLE(MEDIA_SESSION)
 namespace WebCore {
-struct MediaSessionMetadata;
+class MediaSessionMetadata;
 }
+#endif
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+#include "MediaPlaybackTargetContext.h"
 #endif
 
 #if PLATFORM(IOS)
@@ -80,6 +84,7 @@ class GraphicsContext3D;
 class GraphicsLayer;
 class GraphicsLayerFactory;
 class HTMLInputElement;
+class HTMLMediaElement;
 class HTMLVideoElement;
 class HitTestResult;
 class IntRect;
@@ -281,6 +286,7 @@ public:
 
     virtual void elementDidFocus(const Node*) { };
     virtual void elementDidBlur(const Node*) { };
+    virtual void elementDidRefocus(const Node*) { };
 
     virtual bool shouldPaintEntireContents() const { return false; }
     virtual bool hasStablePageScaleFactor() const { return true; }
@@ -332,11 +338,13 @@ public:
     virtual GraphicsDeviceAdapter* graphicsDeviceAdapter() const { return 0; }
 #endif
 
-    virtual bool supportsVideoFullscreen() { return false; }
+    virtual bool supportsVideoFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) { return false; }
 #if ENABLE(VIDEO)
     virtual void enterVideoFullscreenForVideoElement(HTMLVideoElement&, HTMLMediaElementEnums::VideoFullscreenMode) { }
+    virtual void setUpVideoControlsManager(HTMLVideoElement&) { }
 #endif
     virtual void exitVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&) { }
+    virtual void exitVideoFullscreenToModeWithoutAnimation(WebCore::HTMLVideoElement&, HTMLMediaElementEnums::VideoFullscreenMode /*targetMode*/) { }
     virtual bool requiresFullscreenForVideoPlayback() { return false; }
 
 #if ENABLE(FULLSCREEN_API)
@@ -403,10 +411,6 @@ public:
     virtual bool isPointerLocked() { return false; }
 #endif
 
-    virtual void didBeginTrackingPotentialLongMousePress(const IntPoint& mouseDownPosition, const HitTestResult&) { UNUSED_PARAM(mouseDownPosition); }
-    virtual void didRecognizeLongMousePress() { }
-    virtual void didCancelTrackingPotentialLongMousePress() { }
-
     virtual FloatSize minimumWindowSize() const { return FloatSize(100, 100); };
 
     virtual bool isEmptyChromeClient() const { return false; }
@@ -424,11 +428,12 @@ public:
 
     virtual bool shouldUseTiledBackingForFrameView(const FrameView*) const { return false; }
 
-    virtual void isPlayingMediaDidChange(MediaProducer::MediaStateFlags) { }
+    virtual void isPlayingMediaDidChange(MediaProducer::MediaStateFlags, uint64_t) { }
 
 #if ENABLE(MEDIA_SESSION)
     virtual void hasMediaSessionWithActiveMediaElementsDidChange(bool) { }
     virtual void mediaSessionMetadataDidChange(const WebCore::MediaSessionMetadata&) { }
+    virtual void focusedContentMediaElementDidChange(uint64_t) { }
 #endif
 
     virtual void setPageActivityState(PageActivityState::Flags) { }
@@ -453,16 +458,21 @@ public:
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
     virtual void addPlaybackTargetPickerClient(uint64_t /*contextId*/) { }
     virtual void removePlaybackTargetPickerClient(uint64_t /*contextId*/) { }
-    virtual void showPlaybackTargetPicker(uint64_t /*contextId*/, const WebCore::IntPoint&, bool /* isVideo */) { }
+
+    virtual void showPlaybackTargetPicker(uint64_t /*contextId*/, const WebCore::IntPoint&, bool /* isVideo */, const String& /*customMenuItemTitle*/) { }
+
     virtual void playbackTargetPickerClientStateDidChange(uint64_t /*contextId*/, MediaProducer::MediaStateFlags) { }
+    virtual void setMockMediaPlaybackTargetPickerEnabled(bool)  { }
+    virtual void setMockMediaPlaybackTargetPickerState(const String&, WebCore::MediaPlaybackTargetContext::State) { }
 #endif
 
-#if ENABLE(VIDEO)
-    virtual void mediaDocumentNaturalSizeChanged(const WebCore::IntSize&) { }
-#if USE(GSTREAMER)
-    virtual void requestInstallMissingMediaPlugins(const String& /*details*/, MediaPlayerRequestInstallMissingPluginsCallback&) { };
+    virtual void imageOrMediaDocumentSizeChanged(const WebCore::IntSize&) { }
+
+#if ENABLE(VIDEO) && USE(GSTREAMER)
+    virtual void requestInstallMissingMediaPlugins(const String& /*details*/, const String& /*description*/, MediaPlayerRequestInstallMissingPluginsCallback&) { }
 #endif
-#endif
+
+    virtual void didInvalidateDocumentMarkerRects() { }
 
 protected:
     virtual ~ChromeClient() { }

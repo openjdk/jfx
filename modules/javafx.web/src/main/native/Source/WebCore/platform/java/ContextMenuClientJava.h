@@ -9,29 +9,24 @@
 
 namespace WebCore {
 
-    class ContextMenu;
+class ContextMenu;
 
-    class ContextMenuClientJava : public ContextMenuClient
-    {
-    public:
-        ContextMenuClientJava(const JLObject &webPage);
+class ContextMenuClientJava : public ContextMenuClient {
+public:
+    ContextMenuClientJava(const JLObject &webPage);
 
-        virtual void contextMenuDestroyed();
+    void contextMenuDestroyed() override;
 
-        virtual PlatformMenuDescription getCustomMenuFromDefaultItems(ContextMenu*);
-        virtual void contextMenuItemSelected(ContextMenuItem*, const ContextMenu*);
+    void downloadURL(const URL& url) override;
+    void searchWithGoogle(const Frame*) override;
+    void lookUpInDictionary(Frame*) override;
+    bool isSpeaking() override;
+    void speak(const String&) override;
+    void stopSpeaking() override;
 
-        virtual void downloadURL(const URL& url);
-        virtual void searchWithGoogle(const Frame*);
-        virtual void lookUpInDictionary(Frame*);
-        virtual bool isSpeaking();
-        virtual void speak(const String&);
-        virtual void stopSpeaking();
-
-        virtual ContextMenuItem shareMenuItem(const HitTestResult&) override;
-    private:
-        JGObject m_webPage;
-    };
+private:
+    JGObject m_webPage;
+};
 }
 
 #endif

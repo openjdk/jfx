@@ -685,7 +685,7 @@ _RE_PATTERN_CLEANSE_LINE_ESCAPES = re.compile(
 # Matches strings.  Escape codes should already be removed by ESCAPES.
 _RE_PATTERN_CLEANSE_LINE_DOUBLE_QUOTES = re.compile(r'"[^"]*"')
 # Matches characters.  Escape codes should already be removed by ESCAPES.
-_RE_PATTERN_CLEANSE_LINE_SINGLE_QUOTES = re.compile(r"'.'")
+_RE_PATTERN_CLEANSE_LINE_SINGLE_QUOTES = re.compile(r"'[^']{1,4}'")
 # Matches multi-line C++ comments.
 # This RE is a little bit more complicated than one might expect, because we
 # have to take care of space removals tools so we can handle comments inside
@@ -1240,7 +1240,7 @@ class _EnumState(object):
         # and identifiers for the value of the enumerator, but do not accept any other constant
         # expressions. However, this is sufficient for now (11/27/2012).
         expr_all_uppercase = r'\s*[A-Z0-9_]+\s*(?:=\s*[a-zA-Z0-9]+\s*)?,?\s*$'
-        expr_starts_lowercase = r'\s*[a-z]'
+        expr_starts_lowercase = r'\s*[a-jl-z]'
         expr_enum_end = r'}\s*(?:[a-zA-Z0-9]+\s*(?:=\s*[a-zA-Z0-9]+)?)?\s*;\s*'
         expr_enum_start = r'\s*(?:enum(?:\s+class)?(?:\s+[a-zA-Z0-9]+)?)\s*\{?\s*'
         if self.in_enum_decl:
@@ -1642,24 +1642,6 @@ def _check_parameter_name_against_text(parameter, text, error):
         return False
     return True
 
-
-def check_function_definition_and_pass_ptr(type_text, row, error):
-    """Check that function definitions for use Pass*Ptr instead of *Ptr.
-
-    Args:
-       type_text: A string containing the type.
-       row: The row number of the type.
-       error: The function to call with any errors found.
-    """
-    match_ref_ptr = '(?=\W|^)RefPtr(?=\W)'
-    bad_type_usage = search(match_ref_ptr, type_text)
-    if not bad_type_usage or type_text.endswith('&') or type_text.endswith('*'):
-        return
-    type_name = bad_type_usage.group(0)
-    error(row, 'readability/pass_ptr', 5,
-          'The parameter type should use Pass%s instead of %s.' % (type_name, type_name))
-
-
 def check_function_definition(filename, file_extension, clean_lines, line_number, function_state, error):
     """Check that function definitions for style issues.
 
@@ -1678,8 +1660,6 @@ def check_function_definition(filename, file_extension, clean_lines, line_number
 
     parameter_list = function_state.parameter_list()
     for parameter in parameter_list:
-        check_function_definition_and_pass_ptr(parameter.type, parameter.row, error)
-
         # Do checks specific to function declarations and parameter names.
         if not function_state.is_declaration or not parameter.name:
             continue
@@ -1693,32 +1673,6 @@ def check_function_definition(filename, file_extension, clean_lines, line_number
         # Check the parameter name against the type.
         if not _check_parameter_name_against_text(parameter, parameter.type, error):
             continue  # Since an error was noted for this name, move to the next parameter.
-
-
-def check_pass_ptr_usage(clean_lines, line_number, function_state, error):
-    """Check for proper usage of Pass*Ptr.
-
-    Currently this is limited to detecting declarations of Pass*Ptr
-    variables inside of functions.
-
-    Args:
-      clean_lines: A CleansedLines instance containing the file.
-      line_number: The number of the line to check.
-      function_state: Current function name and lines in body so far.
-      error: The function to call with any errors found.
-    """
-    if not function_state.in_a_function:
-        return
-
-    lines = clean_lines.lines
-    line = lines[line_number]
-    if line_number > function_state.body_start_position.row:
-        matched_pass_ptr = match(r'^\s*Pass([A-Z][A-Za-z]*)Ptr<', line)
-        if matched_pass_ptr:
-            type_name = 'Pass%sPtr' % matched_pass_ptr.group(1)
-            error(line_number, 'readability/pass_ptr', 5,
-                  'Local variables should never be %s (see '
-                  'http://webkit.org/coding/RefPtr.html).' % type_name)
 
 
 def check_for_leaky_patterns(clean_lines, line_number, function_state, error):
@@ -2177,7 +2131,7 @@ def check_enum_casing(clean_lines, line_number, enum_state, error):
     line = clean_lines.elided[line_number]  # Get rid of comments and strings.
     if not enum_state.process_clean_line(line):
         error(line_number, 'readability/enum_casing', 4,
-              'enum members should use InterCaps with an initial capital letter.')
+              'enum members should use InterCaps with an initial capital letter or initial \'k\' for C-style enums.')
 
 def check_directive_indentation(clean_lines, line_number, file_state, error):
     """Looks for indentation of preprocessor directives.
@@ -2302,7 +2256,7 @@ def check_max_min_macros(clean_lines, line_number, file_state, error):
 
 
 def check_wtf_move(clean_lines, line_number, file_state, error):
-    """Looks for use of 'std::move()' which should be replaced with 'WTF::move()'.
+    """Looks for use of 'std::move()' which should be replaced with 'WTFMove()'.
 
     Args:
       clean_lines: A CleansedLines instance containing the file.
@@ -2322,7 +2276,7 @@ def check_wtf_move(clean_lines, line_number, file_state, error):
     if not using_std_move:
         return
 
-    error(line_number, 'runtime/wtf_move', 4, "Use 'WTF::move()' instead of 'std::move()'.")
+    error(line_number, 'runtime/wtf_move', 4, "Use 'WTFMove()' instead of 'std::move()'.")
 
 
 def check_ctype_functions(clean_lines, line_number, file_state, error):
@@ -3752,7 +3706,6 @@ def process_line(filename, file_extension,
     if asm_state.is_in_asm():  # Ignore further checks because asm blocks formatted differently.
         return
     check_function_definition(filename, file_extension, clean_lines, line, function_state, error)
-    check_pass_ptr_usage(clean_lines, line, function_state, error)
     check_for_leaky_patterns(clean_lines, line, function_state, error)
     check_for_multiline_comments_and_strings(clean_lines, line, error)
     check_style(clean_lines, line, file_extension, class_state, file_state, enum_state, error)
@@ -3864,7 +3817,6 @@ class CppChecker(object):
         'readability/naming',
         'readability/naming/underscores',
         'readability/null',
-        'readability/pass_ptr',
         'readability/streams',
         'readability/todo',
         'readability/utf8',

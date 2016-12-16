@@ -3,6 +3,10 @@
  */
 #include "config.h"
 
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "JavaDOMUtils.h"
 #include "JavaEnv.h"
 #include "JavaEventListener.h"

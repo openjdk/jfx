@@ -46,6 +46,7 @@ namespace WebCore {
     class ResourceRequest;
     class ResourceResponse;
     class SessionID;
+    class ThreadSafeDataBuffer;
     struct CrossThreadResourceResponseData;
     struct CrossThreadResourceRequestData;
     struct ThreadableLoaderOptions;
@@ -139,6 +140,11 @@ namespace WebCore {
         static Type copy(const SessionID&);
     };
 
+    template<> struct CrossThreadCopierBase<false, false, ThreadSafeDataBuffer> {
+        typedef ThreadSafeDataBuffer Type;
+        static Type copy(const ThreadSafeDataBuffer&);
+    };
+
 #if ENABLE(INDEXED_DATABASE)
     namespace IndexedDB {
         enum class TransactionMode;
@@ -155,25 +161,13 @@ namespace WebCore {
         WEBCORE_EXPORT static IndexedDB::CursorType copy(const IndexedDB::CursorType&);
     };
 
-    struct IDBDatabaseMetadata;
-    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBDatabaseMetadata> {
-        typedef IDBDatabaseMetadata Type;
-        static Type copy(const IDBDatabaseMetadata&);
-    };
-
-    struct IDBGetResult;
+    class IDBGetResult;
     template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBGetResult> {
         typedef IDBGetResult Type;
         static Type copy(const IDBGetResult&);
     };
 
-    struct IDBIndexMetadata;
-    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBIndexMetadata> {
-        typedef IDBIndexMetadata Type;
-        static Type copy(const IDBIndexMetadata&);
-    };
-
-    struct IDBKeyData;
+    class IDBKeyData;
     template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBKeyData> {
         typedef IDBKeyData Type;
         static Type copy(const IDBKeyData&);
@@ -185,11 +179,54 @@ namespace WebCore {
         static Type copy(const IDBKeyRangeData&);
     };
 
-    struct IDBObjectStoreMetadata;
-    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBObjectStoreMetadata> {
-        typedef IDBObjectStoreMetadata Type;
-        static Type copy(const IDBObjectStoreMetadata&);
+    class IDBDatabaseInfo;
+    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBDatabaseInfo> {
+        typedef IDBDatabaseInfo Type;
+        static Type copy(const IDBDatabaseInfo&);
     };
+
+    class IDBDatabaseIdentifier;
+    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBDatabaseIdentifier> {
+        typedef IDBDatabaseIdentifier Type;
+        static Type copy(const IDBDatabaseIdentifier&);
+    };
+
+    class IDBError;
+    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBError> {
+        typedef IDBError Type;
+        static Type copy(const IDBError&);
+    };
+
+    class IDBResourceIdentifier;
+    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBResourceIdentifier> {
+        typedef IDBResourceIdentifier Type;
+        static Type copy(const IDBResourceIdentifier&);
+    };
+
+    class IDBTransactionInfo;
+    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBTransactionInfo> {
+        typedef IDBTransactionInfo Type;
+        static Type copy(const IDBTransactionInfo&);
+    };
+
+    class IDBObjectStoreInfo;
+    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBObjectStoreInfo> {
+        typedef IDBObjectStoreInfo Type;
+        static Type copy(const IDBObjectStoreInfo&);
+    };
+
+    class IDBIndexInfo;
+    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBIndexInfo> {
+        typedef IDBIndexInfo Type;
+        static Type copy(const IDBIndexInfo&);
+    };
+
+    class IDBCursorInfo;
+    template<> struct WEBCORE_EXPORT CrossThreadCopierBase<false, false, IDBCursorInfo> {
+        typedef IDBCursorInfo Type;
+        static Type copy(const IDBCursorInfo&);
+    };
+
 #endif
 
     template<typename T>

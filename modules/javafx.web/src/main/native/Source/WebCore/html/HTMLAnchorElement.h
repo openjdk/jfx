@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-class RelList;
+class AttributeDOMTokenList;
 
 // Link relation bitmask values.
 // FIXME: Uncomment as the various link relations are implemented.
@@ -72,6 +72,12 @@ public:
 
     String host() const;
     void setHost(const String&);
+
+    String username() const;
+    void setUsername(const String&);
+
+    String password() const;
+    void setPassword(const String&);
 
     String hostname() const;
     void setHostname(const String&);
@@ -145,7 +151,7 @@ private:
     uint32_t m_linkRelations : 30;
     mutable LinkHash m_cachedVisitedLinkHash;
 
-    std::unique_ptr<RelList> m_relList;
+    std::unique_ptr<AttributeDOMTokenList> m_relList;
 };
 
 inline LinkHash HTMLAnchorElement::visitedLinkHash() const

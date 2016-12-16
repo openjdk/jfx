@@ -24,8 +24,9 @@
 #include "ExceptionCode.h"
 #include "JSBlob.h"
 #include "JSDOMBinding.h"
-#include "TestOverloadedConstructors.h"
+#include "JSDOMConstructor.h"
 #include <runtime/Error.h>
+#include <runtime/FunctionPrototype.h>
 #include <wtf/GetPtr.h>
 
 using namespace JSC;
@@ -34,7 +35,8 @@ namespace WebCore {
 
 // Attributes
 
-JSC::EncodedJSValue jsTestOverloadedConstructorsConstructor(JSC::ExecState*, JSC::JSObject*, JSC::EncodedJSValue, JSC::PropertyName);
+JSC::EncodedJSValue jsTestOverloadedConstructorsConstructor(JSC::ExecState*, JSC::EncodedJSValue, JSC::PropertyName);
+void setJSTestOverloadedConstructorsConstructor(JSC::ExecState*, JSC::EncodedJSValue, JSC::EncodedJSValue);
 
 class JSTestOverloadedConstructorsPrototype : public JSC::JSNonFinalObject {
 public:
@@ -61,138 +63,105 @@ private:
     void finishCreation(JSC::VM&);
 };
 
-class JSTestOverloadedConstructorsConstructor : public DOMConstructorObject {
-private:
-    JSTestOverloadedConstructorsConstructor(JSC::Structure*, JSDOMGlobalObject*);
-    void finishCreation(JSC::VM&, JSDOMGlobalObject*);
+typedef JSDOMConstructor<JSTestOverloadedConstructors> JSTestOverloadedConstructorsConstructor;
 
-public:
-    typedef DOMConstructorObject Base;
-    static JSTestOverloadedConstructorsConstructor* create(JSC::VM& vm, JSC::Structure* structure, JSDOMGlobalObject* globalObject)
-    {
-        JSTestOverloadedConstructorsConstructor* ptr = new (NotNull, JSC::allocateCell<JSTestOverloadedConstructorsConstructor>(vm.heap)) JSTestOverloadedConstructorsConstructor(structure, globalObject);
-        ptr->finishCreation(vm, globalObject);
-        return ptr;
-    }
-
-    DECLARE_INFO;
-    static JSC::Structure* createStructure(JSC::VM& vm, JSC::JSGlobalObject* globalObject, JSC::JSValue prototype)
-    {
-        return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
-    }
-protected:
-    static JSC::EncodedJSValue JSC_HOST_CALL constructJSTestOverloadedConstructors(JSC::ExecState*);
-    static JSC::EncodedJSValue JSC_HOST_CALL constructJSTestOverloadedConstructors1(JSC::ExecState*);
-    static JSC::EncodedJSValue JSC_HOST_CALL constructJSTestOverloadedConstructors2(JSC::ExecState*);
-    static JSC::EncodedJSValue JSC_HOST_CALL constructJSTestOverloadedConstructors3(JSC::ExecState*);
-    static JSC::EncodedJSValue JSC_HOST_CALL constructJSTestOverloadedConstructors4(JSC::ExecState*);
-    static JSC::EncodedJSValue JSC_HOST_CALL constructJSTestOverloadedConstructors5(JSC::ExecState*);
-    static JSC::ConstructType getConstructData(JSC::JSCell*, JSC::ConstructData&);
-};
-
-EncodedJSValue JSC_HOST_CALL JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors1(ExecState* exec)
+static inline EncodedJSValue constructJSTestOverloadedConstructors1(ExecState* state)
 {
-    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(exec->callee());
-    if (UNLIKELY(exec->argumentCount() < 1))
-        return throwVMError(exec, createNotEnoughArgumentsError(exec));
-    ArrayBuffer* arrayBuffer = toArrayBuffer(exec->argument(0));
-    if (UNLIKELY(exec->hadException()))
+    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(state->callee());
+    if (UNLIKELY(state->argumentCount() < 1))
+        return throwVMError(state, createNotEnoughArgumentsError(state));
+    ArrayBuffer* arrayBuffer = toArrayBuffer(state->argument(0));
+    if (UNLIKELY(state->hadException()))
         return JSValue::encode(jsUndefined());
     RefPtr<TestOverloadedConstructors> object = TestOverloadedConstructors::create(arrayBuffer);
-    return JSValue::encode(asObject(toJS(exec, castedThis->globalObject(), object.get())));
+    return JSValue::encode(asObject(toJS(state, castedThis->globalObject(), object.get())));
 }
 
-EncodedJSValue JSC_HOST_CALL JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors2(ExecState* exec)
+static inline EncodedJSValue constructJSTestOverloadedConstructors2(ExecState* state)
 {
-    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(exec->callee());
-    if (UNLIKELY(exec->argumentCount() < 1))
-        return throwVMError(exec, createNotEnoughArgumentsError(exec));
-    RefPtr<ArrayBufferView> arrayBufferView = toArrayBufferView(exec->argument(0));
-    if (UNLIKELY(exec->hadException()))
+    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(state->callee());
+    if (UNLIKELY(state->argumentCount() < 1))
+        return throwVMError(state, createNotEnoughArgumentsError(state));
+    RefPtr<ArrayBufferView> arrayBufferView = toArrayBufferView(state->argument(0));
+    if (UNLIKELY(state->hadException()))
         return JSValue::encode(jsUndefined());
     RefPtr<TestOverloadedConstructors> object = TestOverloadedConstructors::create(arrayBufferView);
-    return JSValue::encode(asObject(toJS(exec, castedThis->globalObject(), object.get())));
+    return JSValue::encode(asObject(toJS(state, castedThis->globalObject(), object.get())));
 }
 
-EncodedJSValue JSC_HOST_CALL JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors3(ExecState* exec)
+static inline EncodedJSValue constructJSTestOverloadedConstructors3(ExecState* state)
 {
-    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(exec->callee());
-    if (UNLIKELY(exec->argumentCount() < 1))
-        return throwVMError(exec, createNotEnoughArgumentsError(exec));
-    Blob* blob = JSBlob::toWrapped(exec->argument(0));
-    if (UNLIKELY(exec->hadException()))
+    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(state->callee());
+    if (UNLIKELY(state->argumentCount() < 1))
+        return throwVMError(state, createNotEnoughArgumentsError(state));
+    Blob* blob = JSBlob::toWrapped(state->argument(0));
+    if (UNLIKELY(state->hadException()))
         return JSValue::encode(jsUndefined());
     RefPtr<TestOverloadedConstructors> object = TestOverloadedConstructors::create(blob);
-    return JSValue::encode(asObject(toJS(exec, castedThis->globalObject(), object.get())));
+    return JSValue::encode(asObject(toJS(state, castedThis->globalObject(), object.get())));
 }
 
-EncodedJSValue JSC_HOST_CALL JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors4(ExecState* exec)
+static inline EncodedJSValue constructJSTestOverloadedConstructors4(ExecState* state)
 {
-    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(exec->callee());
-    if (UNLIKELY(exec->argumentCount() < 1))
-        return throwVMError(exec, createNotEnoughArgumentsError(exec));
-    String string = exec->argument(0).toString(exec)->value(exec);
-    if (UNLIKELY(exec->hadException()))
+    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(state->callee());
+    if (UNLIKELY(state->argumentCount() < 1))
+        return throwVMError(state, createNotEnoughArgumentsError(state));
+    String string = state->argument(0).toString(state)->value(state);
+    if (UNLIKELY(state->hadException()))
         return JSValue::encode(jsUndefined());
     RefPtr<TestOverloadedConstructors> object = TestOverloadedConstructors::create(string);
-    return JSValue::encode(asObject(toJS(exec, castedThis->globalObject(), object.get())));
+    return JSValue::encode(asObject(toJS(state, castedThis->globalObject(), object.get())));
 }
 
-EncodedJSValue JSC_HOST_CALL JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors5(ExecState* exec)
+static inline EncodedJSValue constructJSTestOverloadedConstructors5(ExecState* state)
 {
-    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(exec->callee());
-    Vector<int> longArgs = toNativeArguments<int>(exec, 0);
-    if (UNLIKELY(exec->hadException()))
+    auto* castedThis = jsCast<JSTestOverloadedConstructorsConstructor*>(state->callee());
+    Vector<int> longArgs = toNativeArguments<int>(state, 0);
+    if (UNLIKELY(state->hadException()))
         return JSValue::encode(jsUndefined());
     RefPtr<TestOverloadedConstructors> object = TestOverloadedConstructors::create(longArgs);
-    return JSValue::encode(asObject(toJS(exec, castedThis->globalObject(), object.get())));
+    return JSValue::encode(asObject(toJS(state, castedThis->globalObject(), object.get())));
 }
 
-EncodedJSValue JSC_HOST_CALL JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors(ExecState* exec)
+template<> EncodedJSValue JSC_HOST_CALL JSTestOverloadedConstructorsConstructor::construct(ExecState* state)
 {
-    size_t argsCount = std::min<size_t>(1, exec->argumentCount());
-    JSValue arg0(exec->argument(0));
+    size_t argsCount = std::min<size_t>(1, state->argumentCount());
+    JSValue arg0(state->argument(0));
     if ((argsCount == 1 && ((arg0.isObject() && asObject(arg0)->inherits(JSArrayBuffer::info())))))
-        return JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors1(exec);
+        return constructJSTestOverloadedConstructors1(state);
     if ((argsCount == 1 && ((arg0.isObject() && asObject(arg0)->inherits(JSArrayBufferView::info())))))
-        return JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors2(exec);
+        return constructJSTestOverloadedConstructors2(state);
     if ((argsCount == 1 && ((arg0.isObject() && asObject(arg0)->inherits(JSBlob::info())))))
-        return JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors3(exec);
+        return constructJSTestOverloadedConstructors3(state);
     if (argsCount == 1)
-        return JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors4(exec);
+        return constructJSTestOverloadedConstructors4(state);
     if ()
-        return JSTestOverloadedConstructorsConstructor::constructJSTestOverloadedConstructors5(exec);
+        return constructJSTestOverloadedConstructors5(state);
     if (argsCount < 1)
-        return throwVMError(exec, createNotEnoughArgumentsError(exec));
-    return throwVMTypeError(exec);
+        return throwVMError(state, createNotEnoughArgumentsError(state));
+    return throwVMTypeError(state);
 }
 
-const ClassInfo JSTestOverloadedConstructorsConstructor::s_info = { "TestOverloadedConstructorsConstructor", &Base::s_info, 0, CREATE_METHOD_TABLE(JSTestOverloadedConstructorsConstructor) };
-
-JSTestOverloadedConstructorsConstructor::JSTestOverloadedConstructorsConstructor(Structure* structure, JSDOMGlobalObject* globalObject)
-    : DOMConstructorObject(structure, globalObject)
+template<> JSValue JSTestOverloadedConstructorsConstructor::prototypeForStructure(JSC::VM& vm, const JSDOMGlobalObject& globalObject)
 {
+    UNUSED_PARAM(vm);
+    return globalObject.functionPrototype();
 }
 
-void JSTestOverloadedConstructorsConstructor::finishCreation(VM& vm, JSDOMGlobalObject* globalObject)
+template<> void JSTestOverloadedConstructorsConstructor::initializeProperties(VM& vm, JSDOMGlobalObject& globalObject)
 {
-    Base::finishCreation(vm);
-    ASSERT(inherits(info()));
-    putDirect(vm, vm.propertyNames->prototype, JSTestOverloadedConstructors::getPrototype(vm, globalObject), DontDelete | ReadOnly);
-    putDirect(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontDelete | DontEnum);
+    putDirect(vm, vm.propertyNames->prototype, JSTestOverloadedConstructors::getPrototype(vm, &globalObject), DontDelete | ReadOnly | DontEnum);
+    putDirect(vm, vm.propertyNames->name, jsNontrivialString(&vm, String(ASCIILiteral("TestOverloadedConstructors"))), ReadOnly | DontEnum);
+    putDirect(vm, vm.propertyNames->length, jsNumber(0), ReadOnly | DontEnum);
 }
 
-ConstructType JSTestOverloadedConstructorsConstructor::getConstructData(JSCell*, ConstructData& constructData)
-{
-    constructData.native.function = constructJSTestOverloadedConstructors;
-    return ConstructTypeHost;
-}
+template<> const ClassInfo JSTestOverloadedConstructorsConstructor::s_info = { "TestOverloadedConstructors", &Base::s_info, 0, CREATE_METHOD_TABLE(JSTestOverloadedConstructorsConstructor) };
 
 /* Hash table for prototype */
 
 static const HashTableValue JSTestOverloadedConstructorsPrototypeTableValues[] =
 {
-    { "constructor", DontEnum | ReadOnly, NoIntrinsic, (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestOverloadedConstructorsConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(0) },
+    { "constructor", DontEnum, NoIntrinsic, { (intptr_t)static_cast<PropertySlot::GetValueFunc>(jsTestOverloadedConstructorsConstructor), (intptr_t) static_cast<PutPropertySlot::PutValueFunc>(setJSTestOverloadedConstructorsConstructor) } },
 };
 
 const ClassInfo JSTestOverloadedConstructorsPrototype::s_info = { "TestOverloadedConstructorsPrototype", &Base::s_info, 0, CREATE_METHOD_TABLE(JSTestOverloadedConstructorsPrototype) };
@@ -205,9 +174,8 @@ void JSTestOverloadedConstructorsPrototype::finishCreation(VM& vm)
 
 const ClassInfo JSTestOverloadedConstructors::s_info = { "TestOverloadedConstructors", &Base::s_info, 0, CREATE_METHOD_TABLE(JSTestOverloadedConstructors) };
 
-JSTestOverloadedConstructors::JSTestOverloadedConstructors(Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestOverloadedConstructors>&& impl)
-    : JSDOMWrapper(structure, globalObject)
-    , m_impl(&impl.leakRef())
+JSTestOverloadedConstructors::JSTestOverloadedConstructors(Structure* structure, JSDOMGlobalObject& globalObject, Ref<TestOverloadedConstructors>&& impl)
+    : JSDOMWrapper<TestOverloadedConstructors>(structure, globalObject, WTFMove(impl))
 {
 }
 
@@ -227,22 +195,29 @@ void JSTestOverloadedConstructors::destroy(JSC::JSCell* cell)
     thisObject->JSTestOverloadedConstructors::~JSTestOverloadedConstructors();
 }
 
-JSTestOverloadedConstructors::~JSTestOverloadedConstructors()
+EncodedJSValue jsTestOverloadedConstructorsConstructor(ExecState* state, EncodedJSValue thisValue, PropertyName)
 {
-    releaseImpl();
-}
-
-EncodedJSValue jsTestOverloadedConstructorsConstructor(ExecState* exec, JSObject* baseValue, EncodedJSValue, PropertyName)
-{
-    JSTestOverloadedConstructorsPrototype* domObject = jsDynamicCast<JSTestOverloadedConstructorsPrototype*>(baseValue);
+    JSTestOverloadedConstructorsPrototype* domObject = jsDynamicCast<JSTestOverloadedConstructorsPrototype*>(JSValue::decode(thisValue));
     if (!domObject)
-        return throwVMTypeError(exec);
-    return JSValue::encode(JSTestOverloadedConstructors::getConstructor(exec->vm(), domObject->globalObject()));
+        return throwVMTypeError(state);
+    return JSValue::encode(JSTestOverloadedConstructors::getConstructor(state->vm(), domObject->globalObject()));
 }
 
-JSValue JSTestOverloadedConstructors::getConstructor(VM& vm, JSGlobalObject* globalObject)
+void setJSTestOverloadedConstructorsConstructor(ExecState* state, EncodedJSValue thisValue, EncodedJSValue encodedValue)
 {
-    return getDOMConstructor<JSTestOverloadedConstructorsConstructor>(vm, jsCast<JSDOMGlobalObject*>(globalObject));
+    JSValue value = JSValue::decode(encodedValue);
+    JSTestOverloadedConstructorsPrototype* domObject = jsDynamicCast<JSTestOverloadedConstructorsPrototype*>(JSValue::decode(thisValue));
+    if (UNLIKELY(!domObject)) {
+        throwVMTypeError(state);
+        return;
+    }
+    // Shadowing a built-in constructor
+    domObject->putDirect(state->vm(), state->propertyNames().constructor, value);
+}
+
+JSValue JSTestOverloadedConstructors::getConstructor(VM& vm, const JSGlobalObject* globalObject)
+{
+    return getDOMConstructor<JSTestOverloadedConstructorsConstructor>(vm, *jsCast<const JSDOMGlobalObject*>(globalObject));
 }
 
 bool JSTestOverloadedConstructorsOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, SlotVisitor& visitor)
@@ -256,7 +231,7 @@ void JSTestOverloadedConstructorsOwner::finalize(JSC::Handle<JSC::Unknown> handl
 {
     auto* jsTestOverloadedConstructors = jsCast<JSTestOverloadedConstructors*>(handle.slot()->asCell());
     auto& world = *static_cast<DOMWrapperWorld*>(context);
-    uncacheWrapper(world, &jsTestOverloadedConstructors->impl(), jsTestOverloadedConstructors);
+    uncacheWrapper(world, &jsTestOverloadedConstructors->wrapped(), jsTestOverloadedConstructors);
 }
 
 #if ENABLE(BINDING_INTEGRITY)
@@ -267,6 +242,14 @@ extern "C" { extern void (*const __identifier("??_7TestOverloadedConstructors@We
 extern "C" { extern void* _ZTVN7WebCore26TestOverloadedConstructorsE[]; }
 #endif
 #endif
+
+JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject* globalObject, TestOverloadedConstructors* impl)
+{
+    if (!impl)
+        return jsNull();
+    return createNewWrapper<JSTestOverloadedConstructors>(globalObject, impl);
+}
+
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject* globalObject, TestOverloadedConstructors* impl)
 {
     if (!impl)
@@ -298,7 +281,7 @@ JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject* globalObject, TestOverload
 TestOverloadedConstructors* JSTestOverloadedConstructors::toWrapped(JSC::JSValue value)
 {
     if (auto* wrapper = jsDynamicCast<JSTestOverloadedConstructors*>(value))
-        return &wrapper->impl();
+        return &wrapper->wrapped();
     return nullptr;
 }
 

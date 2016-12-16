@@ -61,13 +61,12 @@ public:
     virtual Color platformInactiveListBoxSelectionBackgroundColor() const override;
     virtual Color platformInactiveListBoxSelectionForegroundColor() const override;
     virtual Color platformFocusRingColor() const override;
-    virtual int platformFocusRingMaxWidth() const override;
 
     virtual ScrollbarControlSize scrollbarControlSizeForPart(ControlPart) override { return SmallScrollbar; }
 
     virtual void platformColorsDidChange() override;
 
-    virtual int minimumMenuListSize(RenderStyle&) const override;
+    virtual int minimumMenuListSize(const RenderStyle&) const override;
 
     virtual void adjustSliderThumbSize(RenderStyle&, Element*) const override;
 
@@ -76,10 +75,10 @@ public:
     virtual int sliderTickOffsetFromTrackCenter() const override;
 #endif
 
-    virtual int popupInternalPaddingLeft(RenderStyle&) const override;
-    virtual int popupInternalPaddingRight(RenderStyle&) const override;
-    virtual int popupInternalPaddingTop(RenderStyle&) const override;
-    virtual int popupInternalPaddingBottom(RenderStyle&) const override;
+    virtual int popupInternalPaddingLeft(const RenderStyle&) const override;
+    virtual int popupInternalPaddingRight(const RenderStyle&) const override;
+    virtual int popupInternalPaddingTop(const RenderStyle&) const override;
+    virtual int popupInternalPaddingBottom(const RenderStyle&) const override;
     virtual PopupMenuStyle::PopupMenuSize popupMenuSize(const RenderStyle&, IntRect&) const override;
 
     virtual bool popsMenuByArrowKeys() const override { return true; }
@@ -101,14 +100,12 @@ public:
     // A view associated to the contained document.
     NSView* documentViewFor(const RenderObject&) const;
 
-    virtual bool defaultButtonHasAnimation() const override;
-
 protected:
     RenderThemeMac();
     virtual ~RenderThemeMac();
 
     // System fonts.
-    virtual void updateCachedSystemFontDescription(CSSValueID, FontDescription&) const override;
+    virtual void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
 
 #if ENABLE(VIDEO)
     // Media controls
@@ -131,7 +128,7 @@ protected:
     virtual bool paintMenuList(const RenderObject&, const PaintInfo&, const FloatRect&) override;
     virtual void adjustMenuListStyle(StyleResolver&, RenderStyle&, Element*) const override;
 
-    virtual bool paintMenuListButtonDecorations(const RenderObject&, const PaintInfo&, const FloatRect&) override;
+    virtual bool paintMenuListButtonDecorations(const RenderBox&, const PaintInfo&, const FloatRect&) override;
     virtual void adjustMenuListButtonStyle(StyleResolver&, RenderStyle&, Element*) const override;
 
     virtual void adjustProgressBarStyle(StyleResolver&, RenderStyle&, Element*) const override;
@@ -147,16 +144,16 @@ protected:
     virtual void adjustSearchFieldStyle(StyleResolver&, RenderStyle&, Element*) const override;
 
     virtual void adjustSearchFieldCancelButtonStyle(StyleResolver&, RenderStyle&, Element*) const override;
-    virtual bool paintSearchFieldCancelButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    virtual bool paintSearchFieldCancelButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
 
     virtual void adjustSearchFieldDecorationPartStyle(StyleResolver&, RenderStyle&, Element*) const override;
     virtual bool paintSearchFieldDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
     virtual void adjustSearchFieldResultsDecorationPartStyle(StyleResolver&, RenderStyle&, Element*) const override;
-    virtual bool paintSearchFieldResultsDecorationPart(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    virtual bool paintSearchFieldResultsDecorationPart(const RenderBox&, const PaintInfo&, const IntRect&) override;
 
     virtual void adjustSearchFieldResultsButtonStyle(StyleResolver&, RenderStyle&, Element*) const override;
-    virtual bool paintSearchFieldResultsButton(const RenderObject&, const PaintInfo&, const IntRect&) override;
+    virtual bool paintSearchFieldResultsButton(const RenderBox&, const PaintInfo&, const IntRect&) override;
 
 #if ENABLE(VIDEO)
     virtual bool supportsClosedCaptioning() const override { return true; }
@@ -175,18 +172,16 @@ protected:
 private:
     virtual String fileListNameForWidth(const FileList*, const FontCascade&, int width, bool multipleFilesAllowed) const override;
 
-    FloatRect convertToPaintingRect(const RenderObject& inputRenderer, const RenderObject& partRenderer, const FloatRect& inputRect, const IntRect&) const;
-
     virtual Color systemColor(CSSValueID) const override;
 
     // Get the control size based off the font. Used by some of the controls (like buttons).
-    NSControlSize controlSizeForFont(RenderStyle&) const;
-    NSControlSize controlSizeForSystemFont(RenderStyle&) const;
+    NSControlSize controlSizeForFont(const RenderStyle&) const;
+    NSControlSize controlSizeForSystemFont(const RenderStyle&) const;
     NSControlSize controlSizeForCell(NSCell*, const IntSize* sizes, const IntSize& minSize, float zoomLevel = 1.0f) const;
     void setControlSize(NSCell*, const IntSize* sizes, const IntSize& minSize, float zoomLevel = 1.0f);
     void setSizeFromFont(RenderStyle&, const IntSize* sizes) const;
-    IntSize sizeForFont(RenderStyle&, const IntSize* sizes) const;
-    IntSize sizeForSystemFont(RenderStyle&, const IntSize* sizes) const;
+    IntSize sizeForFont(const RenderStyle&, const IntSize* sizes) const;
+    IntSize sizeForSystemFont(const RenderStyle&, const IntSize* sizes) const;
     void setFontFromControlSize(StyleResolver&, RenderStyle&, NSControlSize) const;
 
     void updateCheckedState(NSCell*, const RenderObject&);
@@ -196,6 +191,7 @@ private:
 
     // Helpers for adjusting appearance and for painting
 
+    void paintCellAndSetFocusedElementNeedsRepaintIfNecessary(NSCell*, const RenderObject&, const PaintInfo&, const FloatRect&);
     void setPopupButtonCellState(const RenderObject&, const IntSize&);
     const IntSize* popupButtonSizes() const;
     const int* popupButtonMargins() const;
@@ -221,7 +217,7 @@ private:
     NSLevelIndicatorCell *levelIndicatorFor(const RenderMeter&) const;
 #endif
 
-    int minimumProgressBarHeight(RenderStyle&) const;
+    int minimumProgressBarHeight(const RenderStyle&) const;
     const IntSize* progressBarSizes() const;
     const int* progressBarMargins(NSControlSize) const;
 

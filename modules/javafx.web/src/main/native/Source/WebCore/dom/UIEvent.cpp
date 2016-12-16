@@ -27,33 +27,19 @@
 
 namespace WebCore {
 
-UIEventInit::UIEventInit()
-    : view(0)
-    , detail(0)
-{
-}
-
-UIEventInit::UIEventInit(bool bubbles, bool cancelable)
-    : EventInit(bubbles, cancelable)
-    , view(0)
-    , detail(0)
-{
-}
-
-
 UIEvent::UIEvent()
     : m_detail(0)
 {
 }
 
-UIEvent::UIEvent(const AtomicString& eventType, bool canBubbleArg, bool cancelableArg, PassRefPtr<AbstractView> viewArg, int detailArg)
+UIEvent::UIEvent(const AtomicString& eventType, bool canBubbleArg, bool cancelableArg, AbstractView* viewArg, int detailArg)
     : Event(eventType, canBubbleArg, cancelableArg)
     , m_view(viewArg)
     , m_detail(detailArg)
 {
 }
 
-UIEvent::UIEvent(const AtomicString& eventType, bool canBubbleArg, bool cancelableArg, double timestamp, PassRefPtr<AbstractView> viewArg, int detailArg)
+UIEvent::UIEvent(const AtomicString& eventType, bool canBubbleArg, bool cancelableArg, double timestamp, AbstractView* viewArg, int detailArg)
     : Event(eventType, canBubbleArg, cancelableArg, timestamp)
     , m_view(viewArg)
     , m_detail(detailArg)
@@ -62,7 +48,7 @@ UIEvent::UIEvent(const AtomicString& eventType, bool canBubbleArg, bool cancelab
 
 UIEvent::UIEvent(const AtomicString& eventType, const UIEventInit& initializer)
     : Event(eventType, initializer)
-    , m_view(initializer.view)
+    , m_view(initializer.view.get())
     , m_detail(initializer.detail)
 {
 }
@@ -71,7 +57,7 @@ UIEvent::~UIEvent()
 {
 }
 
-void UIEvent::initUIEvent(const AtomicString& typeArg, bool canBubbleArg, bool cancelableArg, PassRefPtr<AbstractView> viewArg, int detailArg)
+void UIEvent::initUIEvent(const AtomicString& typeArg, bool canBubbleArg, bool cancelableArg, AbstractView* viewArg, int detailArg)
 {
     if (dispatched())
         return;

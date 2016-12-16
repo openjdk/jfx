@@ -2647,63 +2647,21 @@ project(":fxpackager") {
         ].flatten()
     }
 
-    task buildRedistributableFiles() {
-        def projectDir = "tools/java/redistributable-files"
-        def sourceDir = "src/$projectDir"
-        def buildDir = "build/$projectDir"
-
-        doLast {
-            exec {
-                commandLine(JAVAC)
-                args("-d")
-                args("$buildDir")
-                args("$sourceDir/RedistributableFiles.java")
-            }
-        }
-    }
-
-    task runRedistributableFiles() {
+    task copyRedistributableFiles() {
         def projectDir = "tools/java/redistributable-files"
         def sourceDir = "src/$projectDir"
         def buildDir = "build/$projectDir"
         def resourceDir = "${moduleDir}/jdk/packager/internal/resources/tools/redistributable-files"
 
         doLast {
-            def fxmodules = ""
-
-            if (!file("$JDK_JMODS/jdk.packager.jmod").exists()) {
-                moduleProjList.each { project ->
-                    if (fxmodules.isEmpty()) {
-                        fxmodules = project.ext.moduleName
-                    }
-                    else {
-                        fxmodules += "," + project.ext.moduleName
-                    }
-                }
-            }
-
-            exec {
-                commandLine(JAVA)
-                args("-classpath")
-                args("$buildDir")
-                args("RedistributableFiles")
-                args("--module-path")
-                args("$JDK_JMODS")
-                args("--exclude-filelist")
-                args("$sourceDir/exclude_modules.list")
-                args("--out-file")
-                args("$resourceDir/redistributable.list")
-
-                if (!fxmodules.isEmpty()) {
-                    args("--add-modules")
-                    args("$fxmodules")
-                }
+            copy {
+                from "$sourceDir/redistributable.list"
+                into project.file("$resourceDir")
             }
         }
     }
 
-    runRedistributableFiles.dependsOn buildRedistributableFiles
-    processResources.dependsOn runRedistributableFiles
+    processResources.dependsOn copyRedistributableFiles
 }
 
 project(":media") {
@@ -3854,37 +3812,6 @@ compileTargets { t ->
                 def policyFile = file("${policyDir}/java.policy")
                 if (policyFile.exists()) outputPolicyFile << policyFile.text
             }
-
-            // ----------------------------------------------
-            // FIXME: Begin temporary jake support
-            // ----------------------------------------------
-
-            // Copy modules_src into modules_src_jake, replacing
-            // module-info.java with a jake-compatible version
-
-            def modulesSrcJakeDir = "${modularSdkDir}/modules_src_jake"
-            copy {
-                from modulesSrcDir
-                into modulesSrcJakeDir
-            }
-
-            moduleProjList.each { project ->
-                def moduleName = project.ext.moduleName
-                def dstModulesSrcJakeDir = "${modulesSrcJakeDir}/${moduleName}"
-
-                // Copy src/main/jake/module-info.java to modules_src_jake
-                def srcJakeModuleInfoFile = "${project.projectDir}/src/main/jake/module-info.java"
-                copy {
-                    from srcJakeModuleInfoFile
-                    into dstModulesSrcJakeDir
-                    if (project.hasProperty("sourceFilter")) {
-                        filter(project.sourceFilter)
-                    }
-                }
-            }
-            // ----------------------------------------------
-            // FIXME: End temporary jake support
-            // ----------------------------------------------
         }
     }
     zipTask.dependsOn(buildModulesTask);

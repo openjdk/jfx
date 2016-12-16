@@ -44,6 +44,8 @@
 #include "RenderTableCell.h"
 #include "RenderTableSection.h"
 
+#include <wtf/Deque.h>
+
 namespace WebCore {
 
 using namespace HTMLNames;
@@ -99,17 +101,15 @@ HTMLTableElement* AccessibilityTable::tableElement() const
     if (is<HTMLTableElement>(table.element()))
         return downcast<HTMLTableElement>(table.element());
 
+    table.forceSectionsRecalc();
+
     // If the table has a display:table-row-group, then the RenderTable does not have a pointer to it's HTMLTableElement.
     // We can instead find it by asking the firstSection for its parent.
     RenderTableSection* firstBody = table.firstBody();
     if (!firstBody || !firstBody->element())
         return nullptr;
 
-    Element* actualTable = firstBody->element()->parentElement();
-    if (!is<HTMLTableElement>(actualTable))
-        return nullptr;
-
-    return downcast<HTMLTableElement>(actualTable);
+    return ancestorsOfType<HTMLTableElement>(*(firstBody->element())).first();
 }
 
 bool AccessibilityTable::isDataTable() const
@@ -328,20 +328,7 @@ bool AccessibilityTable::computeIsTableExposableThroughAccessibility() const
     if (hasARIARole())
         return false;
 
-    if (isDataTable())
-        return true;
-
-    // Gtk+ ATs used to expect all tables to be exposed as tables.
-    // N.B. Efl may wish to follow suit and also defer to WebCore. In the meantime, the following
-    // check fails for data tables with display:table-row-group. By checking for data tables first,
-    // we can handle that edge case without introducing regressions prior to switching to WebCore's
-    // default behavior for table exposure.
-#if PLATFORM(EFL)
-    Element* tableNode = downcast<RenderTable>(*m_renderer).element();
-    return is<HTMLTableElement>(tableNode);
-#endif
-
-    return false;
+    return isDataTable();
 }
 
 void AccessibilityTable::clearChildren()
@@ -421,6 +408,29 @@ void AccessibilityTable::addChildren()
 
 }
 
+void AccessibilityTable::addTableCellChild(AccessibilityObject* rowObject, HashSet<AccessibilityObject*>& appendedRows, unsigned& columnCount)
+{
+    if (!rowObject || !is<AccessibilityTableRow>(*rowObject))
+        return;
+
+    auto& row = downcast<AccessibilityTableRow>(*rowObject);
+    // We need to check every cell for a new row, because cell spans
+    // can cause us to miss rows if we just check the first column.
+    if (appendedRows.contains(&row))
+        return;
+
+    row.setRowIndex(static_cast<int>(m_rows.size()));
+    m_rows.append(&row);
+    if (!row.accessibilityIsIgnored())
+        m_children.append(&row);
+    appendedRows.add(&row);
+
+    // store the maximum number of columns
+    unsigned rowCellCount = row.children().size();
+    if (rowCellCount > columnCount)
+        columnCount = rowCellCount;
+}
+
 void AccessibilityTable::addChildrenFromSection(RenderTableSection* tableSection, unsigned& maxColumnCount)
 {
     ASSERT(tableSection);
@@ -437,20 +447,23 @@ void AccessibilityTable::addChildrenFromSection(RenderTableSection* tableSection
             continue;
 
         AccessibilityObject& rowObject = *axCache->getOrCreate(renderRow);
-        if (!is<AccessibilityTableRow>(rowObject))
-            continue;
 
-        auto& row = downcast<AccessibilityTableRow>(rowObject);
-        // We need to check every cell for a new row, because cell spans
-        // can cause us to miss rows if we just check the first column.
-        if (appendedRows.contains(&row))
-            continue;
+        // If the row is anonymous, we should dive deeper into the descendants to try to find a valid row.
+        if (renderRow->isAnonymous()) {
+            Deque<AccessibilityObject*> queue;
+            queue.append(&rowObject);
 
-        row.setRowIndex(static_cast<int>(m_rows.size()));
-        m_rows.append(&row);
-        if (!row.accessibilityIsIgnored())
-            m_children.append(&row);
-        appendedRows.add(&row);
+            while (!queue.isEmpty()) {
+                AccessibilityObject* obj = queue.takeFirst();
+                if (obj->node() && is<AccessibilityTableRow>(*obj)) {
+                    addTableCellChild(obj, appendedRows, maxColumnCount);
+                    continue;
+                }
+                for (auto* child = obj->firstChild(); child; child = child->nextSibling())
+                    queue.append(child);
+            }
+        } else
+            addTableCellChild(&rowObject, appendedRows, maxColumnCount);
     }
 
     maxColumnCount = std::max(tableSection->numColumns(), maxColumnCount);
@@ -489,7 +502,10 @@ void AccessibilityTable::columnHeaders(AccessibilityChildrenVector& headers)
 
     updateChildrenIfNecessary();
 
-    for (const auto& column : m_columns) {
+    // Sometimes m_columns can be reset during the iteration, we cache it here to be safe.
+    AccessibilityChildrenVector columnsCopy = m_columns;
+
+    for (const auto& column : columnsCopy) {
         if (AccessibilityObject* header = downcast<AccessibilityTableColumn>(*column).headerObject())
             headers.append(header);
     }
@@ -502,7 +518,10 @@ void AccessibilityTable::rowHeaders(AccessibilityChildrenVector& headers)
 
     updateChildrenIfNecessary();
 
-    for (const auto& row : m_rows) {
+    // Sometimes m_rows can be reset during the iteration, we cache it here to be safe.
+    AccessibilityChildrenVector rowsCopy = m_rows;
+
+    for (const auto& row : rowsCopy) {
         if (AccessibilityObject* header = downcast<AccessibilityTableRow>(*row).headerObject())
             headers.append(header);
     }
@@ -645,6 +664,32 @@ String AccessibilityTable::title() const
         title = AccessibilityRenderObject::title();
 
     return title;
+}
+
+int AccessibilityTable::ariaColumnCount() const
+{
+    const AtomicString& colCountValue = getAttribute(aria_colcountAttr);
+
+    int colCountInt = colCountValue.toInt();
+    // If only a portion of the columns is present in the DOM at a given moment, this attribute is needed to
+    // provide an explicit indication of the number of columns in the full table.
+    if (colCountInt > (int)m_columns.size())
+        return colCountInt;
+
+    return -1;
+}
+
+int AccessibilityTable::ariaRowCount() const
+{
+    const AtomicString& rowCountValue = getAttribute(aria_rowcountAttr);
+
+    int rowCountInt = rowCountValue.toInt();
+    // If only a portion of the rows is present in the DOM at a given moment, this attribute is needed to
+    // provide an explicit indication of the number of rows in the full table.
+    if (rowCountInt > (int)m_rows.size())
+        return rowCountInt;
+
+    return -1;
 }
 
 } // namespace WebCore

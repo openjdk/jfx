@@ -71,10 +71,10 @@ bool PluginPackage::isPluginBlacklisted()
 
         if (compareFileVersion(slPluginMinRequired) < 0)
             return true;
-    } else if (equalIgnoringCase(fileName(), "npmozax.dll")) {
+    } else if (equalLettersIgnoringASCIICase(fileName(), "npmozax.dll")) {
         // Bug 15217: Mozilla ActiveX control complains about missing xpcom_core.dll
         return true;
-    } else if (equalIgnoringCase(fileName(), "npwpf.dll")) {
+    } else if (equalLettersIgnoringASCIICase(fileName(), "npwpf.dll")) {
         // Bug 57119: Microsoft Windows Presentation Foundation (WPF) plug-in complains about missing xpcom.dll
         return true;
     } else if (name() == "Yahoo Application State Plugin") {
@@ -200,7 +200,7 @@ bool PluginPackage::fetchInfo()
     getVersionInfo(versionInfoData.get(), "FileOpenName").split('|', descriptions);
 
     for (unsigned i = 0; i < types.size(); i++) {
-        String type = types[i].lower();
+        String type = types[i].convertToASCIILowercase();
         String description = i < descriptions.size() ? descriptions[i] : "";
         String extensionList = i < extensionLists.size() ? extensionLists[i] : "";
 
@@ -319,8 +319,8 @@ bool PluginPackage::equal(const PluginPackage& a, const PluginPackage& b)
     if (a.m_mimeToExtensions.size() != b.m_mimeToExtensions.size())
         return false;
 
-    MIMEToExtensionsMap::const_iterator::Keys end = a.m_mimeToExtensions.end().keys();
-    for (MIMEToExtensionsMap::const_iterator::Keys it = a.m_mimeToExtensions.begin().keys(); it != end; ++it) {
+    auto end = a.m_mimeToExtensions.end().keys();
+    for (auto it = a.m_mimeToExtensions.begin().keys(); it != end; ++it) {
         if (!b.m_mimeToExtensions.contains(*it))
             return false;
     }

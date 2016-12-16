@@ -30,6 +30,7 @@
 
 #include "AssemblyHelpers.h"
 #include "GPRInfo.h"
+#include "StackAlignment.h"
 
 namespace JSC {
 
@@ -61,6 +62,8 @@ public:
         functor(GPRInfo::nonArgGPR0);
         poke(GPRInfo::nonArgGPR0, POKE_ARGUMENT_OFFSET + argumentIndex - GPRInfo::numberOfArgumentRegisters);
     }
+
+    void setupArgumentsWithExecState() { setupArgumentsExecState(); }
 
     // These methods used to sort arguments into the correct registers.
     // On X86 we use cdecl calling conventions, which pass all arguments on the
@@ -209,6 +212,15 @@ public:
         addCallArgument(arg2);
     }
 
+    ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImmPtr arg2, GPRReg arg3)
+    {
+        resetCallArguments();
+        addCallArgument(GPRInfo::callFrameRegister);
+        addCallArgument(arg1);
+        addCallArgument(arg2);
+        addCallArgument(arg3);
+    }
+
     ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImm32 arg2)
     {
         resetCallArguments();
@@ -302,13 +314,14 @@ public:
         addCallArgument(arg3);
     }
 
-    ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImmPtr arg2, GPRReg arg3)
+    ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImmPtr arg2, GPRReg arg3, TrustedImm32 arg4)
     {
         resetCallArguments();
         addCallArgument(GPRInfo::callFrameRegister);
         addCallArgument(arg1);
         addCallArgument(arg2);
         addCallArgument(arg3);
+        addCallArgument(arg4);
     }
 
     ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImm32 arg2, TrustedImmPtr arg3)
@@ -656,6 +669,16 @@ public:
     }
 
     ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImmPtr arg2, GPRReg arg3, GPRReg arg4)
+    {
+        resetCallArguments();
+        addCallArgument(GPRInfo::callFrameRegister);
+        addCallArgument(arg1);
+        addCallArgument(arg2);
+        addCallArgument(arg3);
+        addCallArgument(arg4);
+    }
+
+    ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImm32 arg2, GPRReg arg3, GPRReg arg4)
     {
         resetCallArguments();
         addCallArgument(GPRInfo::callFrameRegister);
@@ -1085,12 +1108,12 @@ public:
         poke(arg3, 4);
     }
 
-    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImm32 arg1, FPRReg arg2, GPRReg arg3)
+    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImm32, FPRReg arg2, GPRReg arg3)
     {
         setupArgumentsWithExecState(arg2, arg3);
     }
 
-    ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, GPRReg arg2, TrustedImm32 arg3, FPRReg arg4)
+    ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, GPRReg arg2, TrustedImm32, FPRReg arg4)
     {
         setupArgumentsWithExecState(arg1, arg2, arg4);
     }
@@ -1665,6 +1688,12 @@ public:
         setupArgumentsWithExecState(arg1, arg2, arg3);
     }
 
+    ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImm32 arg2, GPRReg arg3, GPRReg arg4)
+    {
+        poke(arg4, POKE_ARGUMENT_OFFSET);
+        setupArgumentsWithExecState(arg1, arg2, arg3);
+    }
+
     ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, GPRReg arg2, TrustedImm32 arg3, GPRReg arg4, GPRReg arg5)
     {
         poke(arg5, POKE_ARGUMENT_OFFSET + 1);
@@ -1694,6 +1723,13 @@ public:
     }
 
     ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImmPtr arg1, GPRReg arg2, TrustedImm32 arg3, GPRReg arg4, GPRReg arg5)
+    {
+        poke(arg5, POKE_ARGUMENT_OFFSET + 1);
+        poke(arg4, POKE_ARGUMENT_OFFSET);
+        setupArgumentsWithExecState(arg1, arg2, arg3);
+    }
+
+    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImm32 arg1, GPRReg arg2, TrustedImm32 arg3, GPRReg arg4, GPRReg arg5)
     {
         poke(arg5, POKE_ARGUMENT_OFFSET + 1);
         poke(arg4, POKE_ARGUMENT_OFFSET);
@@ -1881,6 +1917,15 @@ public:
         setupArgumentsWithExecState(arg1, arg2, arg3);
     }
 
+    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImm32 arg1, GPRReg arg2, GPRReg arg3, GPRReg arg4, TrustedImm32 arg5, GPRReg arg6, GPRReg arg7)
+    {
+        poke(arg7, POKE_ARGUMENT_OFFSET + 3);
+        poke(arg6, POKE_ARGUMENT_OFFSET + 2);
+        poke(arg5, POKE_ARGUMENT_OFFSET + 1);
+        poke(arg4, POKE_ARGUMENT_OFFSET);
+        setupArgumentsWithExecState(arg1, arg2, arg3);
+    }
+
     ALWAYS_INLINE void setupArguments(GPRReg arg1, GPRReg arg2, TrustedImmPtr arg3, TrustedImm32 arg4, GPRReg arg5)
     {
         poke(arg5, POKE_ARGUMENT_OFFSET);
@@ -1913,6 +1958,14 @@ public:
     ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImmPtr arg2, TrustedImm32 arg3, GPRReg arg4)
     {
         setupTwoStubArgsGPR<GPRInfo::argumentGPR1, GPRInfo::argumentGPR4>(arg1, arg4);
+        move(arg2, GPRInfo::argumentGPR2);
+        move(arg3, GPRInfo::argumentGPR3);
+        move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
+    }
+
+    ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImmPtr arg2, TrustedImm32 arg3, GPRReg arg4, GPRReg arg5)
+    {
+        setupThreeStubArgsGPR<GPRInfo::argumentGPR1, GPRInfo::argumentGPR4, GPRInfo::argumentGPR5>(arg1, arg4, arg5);
         move(arg2, GPRInfo::argumentGPR2);
         move(arg3, GPRInfo::argumentGPR3);
         move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR0);
@@ -2059,11 +2112,99 @@ public:
 
     void jumpToExceptionHandler()
     {
-        // genericUnwind() leaves the handler CallFrame* in vm->callFrameForThrow,
-        // the topVMEntryFrame for the handler in vm->vmEntryFrameForThrow,
+        // genericUnwind() leaves the handler CallFrame* in vm->callFrameForCatch,
         // and the address of the handler in vm->targetMachinePCForThrow.
         loadPtr(&vm()->targetMachinePCForThrow, GPRInfo::regT1);
         jump(GPRInfo::regT1);
+    }
+
+    void prepareForTailCallSlow(GPRReg calleeGPR = InvalidGPRReg)
+    {
+        GPRReg temp1 = calleeGPR == GPRInfo::regT0 ? GPRInfo::regT3 : GPRInfo::regT0;
+        GPRReg temp2 = calleeGPR == GPRInfo::regT1 ? GPRInfo::regT3 : GPRInfo::regT1;
+        GPRReg temp3 = calleeGPR == GPRInfo::regT2 ? GPRInfo::regT3 : GPRInfo::regT2;
+
+        GPRReg newFramePointer = temp1;
+        GPRReg newFrameSizeGPR = temp2;
+        {
+            // The old frame size is its number of arguments (or number of
+            // parameters in case of arity fixup), plus the frame header size,
+            // aligned
+            GPRReg oldFrameSizeGPR = temp2;
+            {
+                GPRReg argCountGPR = oldFrameSizeGPR;
+                load32(Address(framePointerRegister, JSStack::ArgumentCount * static_cast<int>(sizeof(Register)) + PayloadOffset), argCountGPR);
+
+                {
+                    GPRReg numParametersGPR = temp1;
+                    {
+                        GPRReg codeBlockGPR = numParametersGPR;
+                        loadPtr(Address(framePointerRegister, JSStack::CodeBlock * static_cast<int>(sizeof(Register))), codeBlockGPR);
+                        load32(Address(codeBlockGPR, CodeBlock::offsetOfNumParameters()), numParametersGPR);
+                    }
+
+                    ASSERT(numParametersGPR != argCountGPR);
+                    Jump argumentCountWasNotFixedUp = branch32(BelowOrEqual, numParametersGPR, argCountGPR);
+                    move(numParametersGPR, argCountGPR);
+                    argumentCountWasNotFixedUp.link(this);
+                }
+
+                add32(TrustedImm32(stackAlignmentRegisters() + JSStack::CallFrameHeaderSize - 1), argCountGPR, oldFrameSizeGPR);
+                and32(TrustedImm32(-stackAlignmentRegisters()), oldFrameSizeGPR);
+                // We assume < 2^28 arguments
+                mul32(TrustedImm32(sizeof(Register)), oldFrameSizeGPR, oldFrameSizeGPR);
+            }
+
+            // The new frame pointer is at framePointer + oldFrameSize - newFrameSize
+            ASSERT(newFramePointer != oldFrameSizeGPR);
+            move(framePointerRegister, newFramePointer);
+            addPtr(oldFrameSizeGPR, newFramePointer);
+
+            // The new frame size is just the number of arguments plus the
+            // frame header size, aligned
+            ASSERT(newFrameSizeGPR != newFramePointer);
+            load32(Address(stackPointerRegister, JSStack::ArgumentCount * static_cast<int>(sizeof(Register)) + PayloadOffset - sizeof(CallerFrameAndPC)),
+                newFrameSizeGPR);
+            add32(TrustedImm32(stackAlignmentRegisters() + JSStack::CallFrameHeaderSize - 1), newFrameSizeGPR);
+            and32(TrustedImm32(-stackAlignmentRegisters()), newFrameSizeGPR);
+            // We assume < 2^28 arguments
+            mul32(TrustedImm32(sizeof(Register)), newFrameSizeGPR, newFrameSizeGPR);
+        }
+
+        GPRReg tempGPR = temp3;
+        ASSERT(tempGPR != newFramePointer && tempGPR != newFrameSizeGPR);
+
+        // We don't need the current frame beyond this point. Masquerade as our
+        // caller.
+#if CPU(ARM) || CPU(SH4) || CPU(ARM64)
+        loadPtr(Address(framePointerRegister, sizeof(void*)), linkRegister);
+        subPtr(TrustedImm32(2 * sizeof(void*)), newFrameSizeGPR);
+#elif CPU(MIPS)
+        loadPtr(Address(framePointerRegister, sizeof(void*)), returnAddressRegister);
+        subPtr(TrustedImm32(2 * sizeof(void*)), newFrameSizeGPR);
+#elif CPU(X86) || CPU(X86_64)
+        loadPtr(Address(framePointerRegister, sizeof(void*)), tempGPR);
+        push(tempGPR);
+        subPtr(TrustedImm32(sizeof(void*)), newFrameSizeGPR);
+#else
+        UNREACHABLE_FOR_PLATFORM();
+#endif
+        subPtr(newFrameSizeGPR, newFramePointer);
+        loadPtr(Address(framePointerRegister), framePointerRegister);
+
+
+        // We need to move the newFrameSizeGPR slots above the stack pointer by
+        // newFramePointer registers. We use pointer-sized chunks.
+        MacroAssembler::Label copyLoop(label());
+
+        subPtr(TrustedImm32(sizeof(void*)), newFrameSizeGPR);
+        loadPtr(BaseIndex(stackPointerRegister, newFrameSizeGPR, TimesOne), tempGPR);
+        storePtr(tempGPR, BaseIndex(newFramePointer, newFrameSizeGPR, TimesOne));
+
+        branchTest32(MacroAssembler::NonZero, newFrameSizeGPR).linkTo(copyLoop, this);
+
+        // Ready for a jump!
+        move(newFramePointer, stackPointerRegister);
     }
 };
 

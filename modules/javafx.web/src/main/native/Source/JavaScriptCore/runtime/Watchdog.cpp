@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,176 +32,157 @@
 
 namespace JSC {
 
-#define NO_LIMIT std::chrono::microseconds::max()
+const std::chrono::microseconds Watchdog::noTimeLimit = std::chrono::microseconds::max();
+
+static std::chrono::microseconds currentWallClockTime()
+{
+    auto steadyTimeSinceEpoch = std::chrono::steady_clock::now().time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::microseconds>(steadyTimeSinceEpoch);
+}
 
 Watchdog::Watchdog()
     : m_timerDidFire(false)
-    , m_didFire(false)
-    , m_limit(NO_LIMIT)
-    , m_startTime(0)
-    , m_elapsedTime(0)
-    , m_reentryCount(0)
-    , m_isStopped(true)
+    , m_timeLimit(noTimeLimit)
+    , m_cpuDeadline(noTimeLimit)
+    , m_wallClockDeadline(noTimeLimit)
     , m_callback(0)
     , m_callbackData1(0)
     , m_callbackData2(0)
+    , m_timerQueue(WorkQueue::create("jsc.watchdog.queue", WorkQueue::Type::Serial, WorkQueue::QOS::Utility))
 {
-    initTimer();
+    m_timerHandler = [this] {
+        {
+            LockHolder locker(m_lock);
+            this->m_timerDidFire = true;
+        }
+        this->deref();
+    };
 }
 
-Watchdog::~Watchdog()
-{
-    ASSERT(!isArmed());
-    stopCountdown();
-    destroyTimer();
-}
-
-void Watchdog::setTimeLimit(VM& vm, std::chrono::microseconds limit,
+void Watchdog::setTimeLimit(std::chrono::microseconds limit,
     ShouldTerminateCallback callback, void* data1, void* data2)
 {
-    bool wasEnabled = isEnabled();
+    LockHolder locker(m_lock);
 
-    if (!m_isStopped)
-        stopCountdown();
-
-    m_didFire = false; // Reset the watchdog.
-
-    m_limit = limit;
+    m_timeLimit = limit;
     m_callback = callback;
     m_callbackData1 = data1;
     m_callbackData2 = data2;
 
-    // If this is the first time that timeout is being enabled, then any
-    // previously JIT compiled code will not have the needed polling checks.
-    // Hence, we need to flush all the pre-existing compiled code.
-    //
-    // However, if the timeout is already enabled, and we're just changing the
-    // timeout value, then any existing JITted code will have the appropriate
-    // polling checks. Hence, there is no need to re-do this flushing.
-    if (!wasEnabled) {
-        // And if we've previously compiled any functions, we need to revert
-        // them because they don't have the needed polling checks yet.
-        vm.releaseExecutableMemory();
-    }
-
-    startCountdownIfNeeded();
+    if (m_hasEnteredVM && hasTimeLimit())
+        startTimer(locker, m_timeLimit);
 }
 
-bool Watchdog::didFire(ExecState* exec)
+JS_EXPORT_PRIVATE void Watchdog::terminateSoon()
 {
-    if (m_didFire)
+    LockHolder locker(m_lock);
+
+    m_timeLimit = std::chrono::microseconds(0);
+    m_cpuDeadline = std::chrono::microseconds(0);
+    m_wallClockDeadline = std::chrono::microseconds(0);
+    m_timerDidFire = true;
+}
+
+bool Watchdog::shouldTerminateSlow(ExecState* exec)
+{
+    {
+        LockHolder locker(m_lock);
+
+        ASSERT(m_timerDidFire);
+        m_timerDidFire = false;
+
+        if (currentWallClockTime() < m_wallClockDeadline)
+            return false; // Just a stale timer firing. Nothing to do.
+
+        // Set m_wallClockDeadline to noTimeLimit here so that we can reject all future
+        // spurious wakes.
+        m_wallClockDeadline = noTimeLimit;
+
+        auto cpuTime = currentCPUTime();
+        if (cpuTime < m_cpuDeadline) {
+            auto remainingCPUTime = m_cpuDeadline - cpuTime;
+            startTimer(locker, remainingCPUTime);
+            return false;
+        }
+    }
+
+    // Note: we should not be holding the lock while calling the callbacks. The callbacks may
+    // call setTimeLimit() which will try to lock as well.
+
+    // If m_callback is not set, then we terminate by default.
+    // Else, we let m_callback decide if we should terminate or not.
+    bool needsTermination = !m_callback
+        || m_callback(exec, m_callbackData1, m_callbackData2);
+    if (needsTermination)
         return true;
 
-    if (!m_timerDidFire)
-        return false;
-    m_timerDidFire = false;
+    {
+        LockHolder locker(m_lock);
 
-#if PLATFORM(JAVA)
-    if (m_isStopped) {
-        // If the timer is stopped, it is not counting and m_startTime
-        // is junk so it does not make any sense to proceed
-        return false;
+        // If we get here, then the callback above did not want to terminate execution. As a
+        // result, the callback may have done one of the following:
+        //   1. cleared the time limit (i.e. watchdog is disabled),
+        //   2. set a new time limit via Watchdog::setTimeLimit(), or
+        //   3. did nothing (i.e. allow another cycle of the current time limit).
+        //
+        // In the case of 1, we don't have to do anything.
+        // In the case of 2, Watchdog::setTimeLimit() would already have started the timer.
+        // In the case of 3, we need to re-start the timer here.
+
+        ASSERT(m_hasEnteredVM);
+        bool callbackAlreadyStartedTimer = (m_cpuDeadline != noTimeLimit);
+        if (hasTimeLimit() && !callbackAlreadyStartedTimer)
+            startTimer(locker, m_timeLimit);
     }
-#endif
-
-    stopCountdown();
-
-    auto currentTime = currentCPUTime();
-    auto deltaTime = currentTime - m_startTime;
-    auto totalElapsedTime = m_elapsedTime + deltaTime;
-    if (totalElapsedTime > m_limit) {
-        // Case 1: the allowed CPU time has elapsed.
-
-        // If m_callback is not set, then we terminate by default.
-        // Else, we let m_callback decide if we should terminate or not.
-        bool needsTermination = !m_callback
-            || m_callback(exec, m_callbackData1, m_callbackData2);
-        if (needsTermination) {
-            m_didFire = true;
-            return true;
-        }
-
-        // The m_callback may have set a new limit. So, we may need to restart
-        // the countdown.
-        startCountdownIfNeeded();
-
-    } else {
-        // Case 2: the allowed CPU time has NOT elapsed.
-
-        // Tell the timer to alarm us again when it thinks we've reached the
-        // end of the allowed time.
-        auto remainingTime = m_limit - totalElapsedTime;
-        m_elapsedTime = totalElapsedTime;
-        m_startTime = currentTime;
-        startCountdown(remainingTime);
-    }
-
     return false;
 }
 
-bool Watchdog::isEnabled()
+bool Watchdog::hasTimeLimit()
 {
-    return (m_limit != NO_LIMIT);
+    return (m_timeLimit != noTimeLimit);
 }
 
-void Watchdog::fire()
+void Watchdog::enteredVM()
 {
-    m_didFire = true;
-}
-
-void Watchdog::arm()
-{
-    m_reentryCount++;
-    if (m_reentryCount == 1)
-        startCountdownIfNeeded();
-}
-
-void Watchdog::disarm()
-{
-    ASSERT(m_reentryCount > 0);
-#if PLATFORM(JAVA)
-    if (m_reentryCount == 1) {
-        stopCountdown();
-        // Now that the timer is going out of scope the m_didFire
-        // flag needs to be reset as otherwise the timer would
-        // remain "fired" forever
-        m_didFire = false;
-    }
-#else
-    if (m_reentryCount == 1)
-        stopCountdown();
-#endif
-    m_reentryCount--;
-}
-
-void Watchdog::startCountdownIfNeeded()
-{
-    if (!m_isStopped)
-        return; // Already started.
-
-    if (!isArmed())
-        return; // Not executing JS script. No need to start.
-
-    if (isEnabled()) {
-        m_elapsedTime = std::chrono::microseconds::zero();
-        m_startTime = currentCPUTime();
-        startCountdown(m_limit);
+    m_hasEnteredVM = true;
+    if (hasTimeLimit()) {
+        LockHolder locker(m_lock);
+        startTimer(locker, m_timeLimit);
     }
 }
 
-void Watchdog::startCountdown(std::chrono::microseconds limit)
+void Watchdog::exitedVM()
 {
-    ASSERT(m_isStopped);
-    m_isStopped = false;
-    startTimer(limit);
+    ASSERT(m_hasEnteredVM);
+    LockHolder locker(m_lock);
+    stopTimer(locker);
+    m_hasEnteredVM = false;
 }
 
-void Watchdog::stopCountdown()
+void Watchdog::startTimer(LockHolder&, std::chrono::microseconds timeLimit)
 {
-    if (m_isStopped)
-        return;
-    stopTimer();
-    m_isStopped = true;
+    ASSERT(m_hasEnteredVM);
+    ASSERT(hasTimeLimit());
+    ASSERT(timeLimit <= m_timeLimit);
+
+    m_cpuDeadline = currentCPUTime() + timeLimit;
+    auto wallClockTime = currentWallClockTime();
+    auto wallClockDeadline = wallClockTime + timeLimit;
+
+    if ((wallClockTime < m_wallClockDeadline)
+        && (m_wallClockDeadline <= wallClockDeadline))
+        return; // Wait for the current active timer to expire before starting a new one.
+
+    // Else, the current active timer won't fire soon enough. So, start a new timer.
+    this->ref(); // m_timerHandler will deref to match later.
+    m_wallClockDeadline = wallClockDeadline;
+
+    m_timerQueue->dispatchAfter(std::chrono::nanoseconds(timeLimit), m_timerHandler);
+}
+
+void Watchdog::stopTimer(LockHolder&)
+{
+    m_cpuDeadline = noTimeLimit;
 }
 
 } // namespace JSC

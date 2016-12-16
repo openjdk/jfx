@@ -46,6 +46,11 @@ using namespace JSC;
 
 namespace WebCore {
 
+enum class HashRequirement {
+    Optional,
+    Required,
+};
+
 bool JSCryptoAlgorithmDictionary::getAlgorithmIdentifier(ExecState* exec, JSValue value, CryptoAlgorithmIdentifier& algorithmIdentifier)
 {
     // typedef (Algorithm or DOMString) AlgorithmIdentifier;
@@ -90,7 +95,7 @@ bool JSCryptoAlgorithmDictionary::getAlgorithmIdentifier(ExecState* exec, JSValu
 static JSValue getProperty(ExecState* exec, JSObject* object, const char* name)
 {
     Identifier identifier = Identifier::fromString(exec, name);
-    PropertySlot slot(object);
+    PropertySlot slot(object, PropertySlot::InternalMethodType::Get);
 
     if (object->getPropertySlot(exec, identifier, slot))
         return slot.getValue(exec, identifier);
@@ -98,7 +103,7 @@ static JSValue getProperty(ExecState* exec, JSObject* object, const char* name)
     return jsUndefined();
 }
 
-static bool getHashAlgorithm(JSDictionary& dictionary, CryptoAlgorithmIdentifier& result)
+static bool getHashAlgorithm(JSDictionary& dictionary, CryptoAlgorithmIdentifier& result, HashRequirement isRequired)
 {
     // FXIME: Teach JSDictionary how to return JSValues, and use that to get hash element value.
 
@@ -106,14 +111,14 @@ static bool getHashAlgorithm(JSDictionary& dictionary, CryptoAlgorithmIdentifier
     JSObject* object = dictionary.initializerObject();
 
     Identifier identifier = Identifier::fromString(exec, "hash");
-    PropertySlot slot(object);
 
     JSValue hash = getProperty(exec, object, "hash");
     if (exec->hadException())
         return false;
 
     if (hash.isUndefinedOrNull()) {
-        setDOMException(exec, NOT_SUPPORTED_ERR);
+        if (isRequired == HashRequirement::Required)
+            setDOMException(exec, NOT_SUPPORTED_ERR);
         return false;
     }
 
@@ -146,7 +151,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createAesCbcParams(ExecState* 
 
     memcpy(result->iv.data(), ivData.first, ivData.second);
 
-    return WTF::move(result);
+    return WTFMove(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createAesKeyGenParams(ExecState* exec, JSValue value)
@@ -164,7 +169,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createAesKeyGenParams(ExecStat
 
     result->length = toUInt16(exec, lengthValue, EnforceRange);
 
-    return WTF::move(result);
+    return WTFMove(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createHmacParams(ExecState* exec, JSValue value)
@@ -177,12 +182,12 @@ static std::unique_ptr<CryptoAlgorithmParameters> createHmacParams(ExecState* ex
     JSDictionary jsDictionary(exec, value.getObject());
     auto result = std::make_unique<CryptoAlgorithmHmacParams>();
 
-    if (!getHashAlgorithm(jsDictionary, result->hash)) {
+    if (!getHashAlgorithm(jsDictionary, result->hash, HashRequirement::Required)) {
         ASSERT(exec->hadException());
         return nullptr;
     }
 
-    return WTF::move(result);
+    return WTFMove(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createHmacKeyParams(ExecState* exec, JSValue value)
@@ -195,7 +200,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createHmacKeyParams(ExecState*
     JSDictionary jsDictionary(exec, value.getObject());
     auto result = std::make_unique<CryptoAlgorithmHmacKeyParams>();
 
-    if (!getHashAlgorithm(jsDictionary, result->hash)) {
+    if (!getHashAlgorithm(jsDictionary, result->hash, HashRequirement::Required)) {
         ASSERT(exec->hadException());
         return nullptr;
     }
@@ -204,7 +209,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createHmacKeyParams(ExecState*
     if (exec->hadException())
         return nullptr;
 
-    return WTF::move(result);
+    return WTFMove(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createRsaKeyGenParams(ExecState* exec, JSValue value)
@@ -214,6 +219,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaKeyGenParams(ExecStat
         return nullptr;
     }
 
+    JSDictionary jsDictionary(exec, value.getObject());
     auto result = std::make_unique<CryptoAlgorithmRsaKeyGenParams>();
 
     JSValue modulusLengthValue = getProperty(exec, value.getObject(), "modulusLength");
@@ -236,7 +242,9 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaKeyGenParams(ExecStat
     }
     result->publicExponent.append(publicExponentArray->data(), publicExponentArray->byteLength());
 
-    return WTF::move(result);
+    result->hasHash = getHashAlgorithm(jsDictionary, result->hash, HashRequirement::Optional);
+
+    return WTFMove(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createRsaKeyParamsWithHash(ExecState*, JSValue)
@@ -255,7 +263,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaOaepParams(ExecState*
     JSDictionary jsDictionary(exec, value.getObject());
     auto result = std::make_unique<CryptoAlgorithmRsaOaepParams>();
 
-    if (!getHashAlgorithm(jsDictionary, result->hash)) {
+    if (!getHashAlgorithm(jsDictionary, result->hash, HashRequirement::Required)) {
         ASSERT(exec->hadException());
         return nullptr;
     }
@@ -266,7 +274,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaOaepParams(ExecState*
 
     result->hasLabel = !labelValue.isUndefinedOrNull();
     if (!result->hasLabel)
-        return WTF::move(result);
+        return WTFMove(result);
 
     CryptoOperationData labelData;
     if (!cryptoOperationDataFromJSValue(exec, labelValue, labelData)) {
@@ -276,7 +284,7 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaOaepParams(ExecState*
 
     result->label.append(labelData.first, labelData.second);
 
-    return WTF::move(result);
+    return WTFMove(result);
 }
 
 static std::unique_ptr<CryptoAlgorithmParameters> createRsaSsaParams(ExecState* exec, JSValue value)
@@ -289,12 +297,12 @@ static std::unique_ptr<CryptoAlgorithmParameters> createRsaSsaParams(ExecState* 
     JSDictionary jsDictionary(exec, value.getObject());
     auto result = std::make_unique<CryptoAlgorithmRsaSsaParams>();
 
-    if (!getHashAlgorithm(jsDictionary, result->hash)) {
+    if (!getHashAlgorithm(jsDictionary, result->hash, HashRequirement::Required)) {
         ASSERT(exec->hadException());
         return nullptr;
     }
 
-    return WTF::move(result);
+    return WTFMove(result);
 }
 
 std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createParametersForEncrypt(ExecState* exec, CryptoAlgorithmIdentifier algorithm, JSValue value)
@@ -597,11 +605,8 @@ std::unique_ptr<CryptoAlgorithmParameters> JSCryptoAlgorithmDictionary::createPa
 {
     switch (algorithm) {
     case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5:
-        return std::make_unique<CryptoAlgorithmParameters>();
     case CryptoAlgorithmIdentifier::RSASSA_PKCS1_v1_5:
-        return createRsaKeyParamsWithHash(exec, value);
     case CryptoAlgorithmIdentifier::RSA_PSS:
-        return std::make_unique<CryptoAlgorithmParameters>();
     case CryptoAlgorithmIdentifier::RSA_OAEP:
         return createRsaKeyParamsWithHash(exec, value);
     case CryptoAlgorithmIdentifier::ECDSA:

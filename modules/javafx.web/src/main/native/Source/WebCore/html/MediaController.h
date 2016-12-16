@@ -84,7 +84,7 @@ public:
     enum PlaybackState { WAITING, PLAYING, ENDED };
     const AtomicString& playbackState() const;
 
-    virtual bool supportsFullscreen() const override { return false; }
+    virtual bool supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) const override { return false; }
     virtual bool isFullscreen() const override { return false; }
     virtual void enterFullscreen() override { }
 
@@ -127,7 +127,6 @@ private:
     void clearPositionTimerFired();
     bool hasEnded() const;
     void scheduleTimeupdateEvent();
-    void timeupdateTimerFired();
     void startTimeupdateTimer();
 
     // EventTarget
@@ -146,7 +145,7 @@ private:
     bool m_muted;
     ReadyState m_readyState;
     PlaybackState m_playbackState;
-    Vector<RefPtr<Event>> m_pendingEvents;
+    Vector<Ref<Event>> m_pendingEvents;
     Timer m_asyncEventTimer;
     mutable Timer m_clearPositionTimer;
     String m_mediaGroup;
@@ -155,6 +154,7 @@ private:
     ScriptExecutionContext& m_scriptExecutionContext;
     Timer m_timeupdateTimer;
     double m_previousTimeupdateTime;
+    bool m_resetCurrentTimeInNextPlay { false };
 };
 
 } // namespace WebCore

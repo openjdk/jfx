@@ -200,6 +200,12 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (BOOL)acceleratedDrawingEnabled;
 - (void)setAcceleratedDrawingEnabled:(BOOL)enabled;
 
+- (BOOL)displayListDrawingEnabled;
+- (void)setDisplayListDrawingEnabled:(BOOL)enabled;
+
+- (BOOL)resourceLoadStatisticsEnabled;
+- (void)setResourceLoadStatisticsEnabled:(BOOL)enabled;
+
 - (BOOL)canvasUsesAcceleratedDrawing;
 - (void)setCanvasUsesAcceleratedDrawing:(BOOL)enabled;
 
@@ -245,8 +251,17 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (void)setMediaPlaybackRequiresUserGesture:(BOOL)flag;
 - (BOOL)mediaPlaybackRequiresUserGesture;
 
+- (void)setAudioPlaybackRequiresUserGesture:(BOOL)flag;
+- (BOOL)audioPlaybackRequiresUserGesture;
+
 - (void)setMediaPlaybackAllowsInline:(BOOL)flag;
 - (BOOL)mediaPlaybackAllowsInline;
+
+- (void)setInlineMediaPlaybackRequiresPlaysInlineAttribute:(BOOL)flag;
+- (BOOL)inlineMediaPlaybackRequiresPlaysInlineAttribute;
+
+- (void)setInvisibleAutoplayNotPermitted:(BOOL)flag;
+- (BOOL)invisibleAutoplayNotPermitted;
 
 - (void)setMediaControlsScaleWithPageZoom:(BOOL)flag;
 - (BOOL)mediaControlsScaleWithPageZoom;
@@ -358,6 +373,9 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (void)setAVFoundationEnabled:(BOOL)flag;
 - (BOOL)isAVFoundationEnabled;
 
+- (void)setAVFoundationNSURLSessionEnabled:(BOOL)flag;
+- (BOOL)isAVFoundationNSURLSessionEnabled;
+
 - (void)setQTKitEnabled:(BOOL)flag;
 - (BOOL)isQTKitEnabled;
 
@@ -440,19 +458,16 @@ extern NSString *WebPreferencesCacheModelChangedInternalNotification;
 - (void)setMediaKeysStorageDirectory:(NSString *)directory;
 - (NSString *)mediaKeysStorageDirectory;
 
-- (void)setAntialiasedFontDilationEnabled:(BOOL)flag;
-- (BOOL)antialiasedFontDilationEnabled;
-
 - (void)setMetaRefreshEnabled:(BOOL)flag;
 - (BOOL)metaRefreshEnabled;
 
 - (void)setHTTPEquivEnabled:(BOOL)flag;
 - (BOOL)httpEquivEnabled;
 
-@property (nonatomic) BOOL javaScriptMarkupEnabled;
+- (void)setMockCaptureDevicesEnabled:(BOOL)flag;
+- (BOOL)mockCaptureDevicesEnabled;
 
-#if TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MIN_REQUIRED < 80000
-- (void)_setAllowCompositingLayerVisualDegradation:(BOOL)flag;
-#endif
+@property (nonatomic) BOOL javaScriptMarkupEnabled;
+@property (nonatomic) BOOL mediaDataLoadsAutomatically;
 
 @end

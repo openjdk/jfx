@@ -66,17 +66,47 @@ String CachedScript::encoding() const
 
 String CachedScript::mimeType() const
 {
-    return extractMIMETypeFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType)).lower();
+    return extractMIMETypeFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType)).convertToASCIILowercase();
 }
 
-const String& CachedScript::script()
+StringView CachedScript::script()
 {
-    if (!m_script && m_data) {
+    if (!m_data)
+        return { };
+
+    if (m_decodingState == NeverDecoded
+        && TextEncoding(encoding()).isByteBasedEncoding()
+        && m_data->size()
+        && charactersAreAllASCII(reinterpret_cast<const LChar*>(m_data->data()), m_data->size())) {
+
+        m_decodingState = DataAndDecodedStringHaveSameBytes;
+
+        // If the encoded and decoded data are the same, there is no decoded data cost!
+        setDecodedSize(0);
+        m_decodedDataDeletionTimer.stop();
+
+        m_scriptHash = StringHasher::computeHashAndMaskTop8Bits(reinterpret_cast<const LChar*>(m_data->data()), m_data->size());
+    }
+
+    if (m_decodingState == DataAndDecodedStringHaveSameBytes)
+        return { reinterpret_cast<const LChar*>(m_data->data()), m_data->size() };
+
+    if (!m_script) {
         m_script = m_decoder->decodeAndFlush(m_data->data(), encodedSize());
+        m_scriptHash = m_script.impl()->hash();
+        m_decodingState = DataAndDecodedStringHaveDifferentBytes;
         setDecodedSize(m_script.sizeInBytes());
     }
+
     m_decodedDataDeletionTimer.restart();
     return m_script;
+}
+
+unsigned CachedScript::scriptHash()
+{
+    if (m_decodingState == NeverDecoded)
+        script();
+    return m_scriptHash;
 }
 
 void CachedScript::finishLoading(SharedBuffer* data)

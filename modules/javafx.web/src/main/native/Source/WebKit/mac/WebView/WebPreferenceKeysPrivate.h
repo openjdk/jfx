@@ -99,6 +99,7 @@
 #define WebKitJavaScriptCanAccessClipboardPreferenceKey @"WebKitJavaScriptCanAccessClipboard"
 #define WebKitXSSAuditorEnabledPreferenceKey @"WebKitXSSAuditorEnabled"
 #define WebKitAcceleratedDrawingEnabledPreferenceKey @"WebKitAcceleratedDrawingEnabled"
+#define WebKitDisplayListDrawingEnabledPreferenceKey @"WebKitDisplayListDrawingEnabled"
 #define WebKitCanvasUsesAcceleratedDrawingPreferenceKey @"WebKitCanvasUsesAcceleratedDrawing"
 #define WebKitAcceleratedCompositingEnabledPreferenceKey @"WebKitAcceleratedCompositingEnabled"
 #define WebKitCSSRegionsEnabledPreferenceKey @"WebKitCSSRegionsEnabled"
@@ -118,9 +119,13 @@
 #define WebKitAsynchronousSpellCheckingEnabledPreferenceKey @"WebKitAsynchronousSpellCheckingEnabled"
 #define WebKitHyperlinkAuditingEnabledPreferenceKey @"WebKitHyperlinkAuditingEnabled"
 #define WebKitAVFoundationEnabledKey @"WebKitAVFoundationEnabled"
+#define WebKitAVFoundationNSURLSessionEnabledKey @"WebKitAVFoundationNSURLSessionEnabled"
 #define WebKitHixie76WebSocketProtocolEnabledKey @"WebKitHixie76WebSocketProtocolEnabled"
 #define WebKitRequiresUserGestureForMediaPlaybackPreferenceKey @"WebKitMediaPlaybackRequiresUserGesture"
+#define WebKitRequiresUserGestureForAudioPlaybackPreferenceKey @"WebKitAudioPlaybackRequiresUserGesture"
 #define WebKitAllowsInlineMediaPlaybackPreferenceKey @"WebKitMediaPlaybackAllowsInline"
+#define WebKitInlineMediaPlaybackRequiresPlaysInlineAttributeKey @"InlineMediaPlaybackRequiresPlaysInlineAttribute"
+#define WebKitInvisibleAutoplayNotPermittedKey @"InvisibleAutoplayNotPermitted"
 #define WebKitAllowsPictureInPictureMediaPlaybackPreferenceKey @"WebKitAllowsPictureInPictureMediaPlayback"
 #define WebKitAllowsAirPlayForMediaPlaybackPreferenceKey @"WebKitMediaPlaybackAllowsAirPlay"
 #define WebKitMediaControlsScaleWithPageZoomPreferenceKey @"WebKitMediaControlsScaleWithPageZoom"
@@ -131,6 +136,7 @@
 #define WebKitNotificationsEnabledKey @"WebKitNotificationsEnabled"
 #define WebKitSuppressesIncrementalRenderingKey @"WebKitSuppressesIncrementalRendering"
 #define WebKitSubpixelCSSOMElementMetricsEnabledPreferenceKey @"WebKitSubpixelCSSOMElementMetricsEnabled"
+#define WebKitResourceLoadStatisticsEnabledPreferenceKey @"WebKitResourceLoadStatisticsEnabled"
 #if TARGET_OS_IPHONE
 #define WebKitAudioSessionCategoryOverride @"WebKitAudioSessionCategoryOverride"
 #define WebKitAVKitEnabled @"WebKitAVKitEnabled"
@@ -172,7 +178,6 @@
 #define WebKitWantsBalancedSetDefersLoadingBehaviorKey @"WebKitWantsBalancedSetDefersLoadingBehavior"
 #define WebKitDebugFullPageZoomPreferenceKey @"WebKitDebugFullPageZoomPreferenceKey"
 #define WebKitMinimumZoomFontSizePreferenceKey @"WebKitMinimumZoomFontSizePreferenceKey"
-#define WebKitAntialiasedFontDilationEnabledKey @"AntialiasedFontDilationEnabled"
 #define WebKitHTTPEquivEnabledPreferenceKey @"WebKitHTTPEquivEnabled"
 
 #if TARGET_OS_IPHONE
@@ -192,3 +197,6 @@
 #endif
 
 #define WebKitEnableInheritURIQueryComponentPreferenceKey @"WebKitEnableInheritURIQueryComponent"
+#define WebKitMediaDataLoadsAutomaticallyPreferenceKey @"WebKitMediaDataLoadsAutomatically"
+#define WebKitMockCaptureDevicesEnabledPreferenceKey @"WebKitMockCaptureDevicesEnabled"
+

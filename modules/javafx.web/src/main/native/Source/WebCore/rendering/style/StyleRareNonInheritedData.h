@@ -26,6 +26,7 @@
 #define StyleRareNonInheritedData_h
 
 #include "BasicShapes.h"
+#include "CSSPropertyNames.h"
 #include "ClipPathOperation.h"
 #include "CounterDirectives.h"
 #include "CursorData.h"
@@ -36,6 +37,7 @@
 #include "ShapeValue.h"
 #include "StyleContentAlignmentData.h"
 #include "StyleSelfAlignmentData.h"
+#include "WillChangeData.h"
 #include <memory>
 #include <wtf/PassRefPtr.h>
 #include <wtf/Vector.h>
@@ -90,11 +92,7 @@ public:
     bool operator!=(const StyleRareNonInheritedData& o) const { return !(*this == o); }
 
     bool contentDataEquivalent(const StyleRareNonInheritedData&) const;
-    bool counterDataEquivalent(const StyleRareNonInheritedData&) const;
-    bool shadowDataEquivalent(const StyleRareNonInheritedData&) const;
-    bool reflectionDataEquivalent(const StyleRareNonInheritedData&) const;
-    bool animationDataEquivalent(const StyleRareNonInheritedData&) const;
-    bool transitionDataEquivalent(const StyleRareNonInheritedData&) const;
+
     bool hasFilters() const;
 #if ENABLE(FILTERS_LEVEL_2)
     bool hasBackdropFilters() const;
@@ -145,6 +143,8 @@ public:
 
     std::unique_ptr<ShadowData> m_boxShadow; // For box-shadow decorations.
 
+    RefPtr<WillChangeData> m_willChange; // Null indicates 'auto'.
+
     RefPtr<StyleReflection> m_boxReflect;
 
     std::unique_ptr<AnimationList> m_animations;
@@ -184,15 +184,15 @@ public:
     StyleSelfAlignmentData m_justifyItems;
     StyleSelfAlignmentData m_justifySelf;
 
+#if ENABLE(TOUCH_EVENTS)
+    unsigned m_touchAction : 1; // TouchAction
+#endif
+
 #if ENABLE(CSS_SCROLL_SNAP)
     unsigned m_scrollSnapType : 2; // ScrollSnapType
 #endif
 
     unsigned m_regionFragment : 1; // RegionFragment
-
-    unsigned m_regionBreakAfter : 2; // EPageBreak
-    unsigned m_regionBreakBefore : 2; // EPageBreak
-    unsigned m_regionBreakInside : 2; // EPageBreak
 
     unsigned m_pageSizeType : 2; // PageSizeType
     unsigned m_transformStyle3D : 1; // ETransformStyle3D
@@ -219,6 +219,10 @@ public:
 #endif
 
     unsigned m_objectFit : 3; // ObjectFit
+
+    unsigned m_breakBefore : 4; // BreakBetween
+    unsigned m_breakAfter : 4;
+    unsigned m_breakInside : 3; // BreakInside
 
 private:
     StyleRareNonInheritedData();

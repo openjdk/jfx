@@ -36,18 +36,18 @@ using namespace JSC;
 
 namespace WebCore {
 
-static JSValue namedItems(ExecState* exec, JSHTMLAllCollection* collection, PropertyName propertyName)
+static JSValue namedItems(ExecState& state, JSHTMLAllCollection* collection, PropertyName propertyName)
 {
-    Vector<Ref<Element>> namedItems = collection->impl().namedItems(propertyNameToAtomicString(propertyName));
+    Vector<Ref<Element>> namedItems = collection->wrapped().namedItems(propertyNameToAtomicString(propertyName));
 
     if (namedItems.isEmpty())
         return jsUndefined();
     if (namedItems.size() == 1)
-        return toJS(exec, collection->globalObject(), namedItems[0].ptr());
+        return toJS(&state, collection->globalObject(), namedItems[0].ptr());
 
     // FIXME: HTML5 specification says this should be a HTMLCollection.
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/common-dom-interfaces.html#htmlallcollection
-    return toJS(exec, collection->globalObject(), StaticElementList::adopt(namedItems).get());
+    return toJS(&state, collection->globalObject(), StaticElementList::adopt(namedItems).get());
 }
 
 // HTMLAllCollections are strange objects, they support both get and call.
@@ -58,22 +58,26 @@ static EncodedJSValue JSC_HOST_CALL callHTMLAllCollection(ExecState* exec)
 
     // Do not use thisObj here. It can be the JSHTMLDocument, in the document.forms(i) case.
     JSHTMLAllCollection* jsCollection = jsCast<JSHTMLAllCollection*>(exec->callee());
-    HTMLAllCollection& collection = jsCollection->impl();
+    HTMLAllCollection& collection = jsCollection->wrapped();
 
     // Also, do we need the TypeError test here ?
 
     if (exec->argumentCount() == 1) {
         // Support for document.all(<index>) etc.
         String string = exec->argument(0).toString(exec)->value(exec);
+        if (exec->hadException())
+            return JSValue::encode(jsUndefined());
         if (Optional<uint32_t> index = parseIndex(*string.impl()))
             return JSValue::encode(toJS(exec, jsCollection->globalObject(), collection.item(index.value())));
 
         // Support for document.images('<name>') etc.
-        return JSValue::encode(namedItems(exec, jsCollection, Identifier::fromString(exec, string)));
+        return JSValue::encode(namedItems(*exec, jsCollection, Identifier::fromString(exec, string)));
     }
 
     // The second arg, if set, is the index of the item we want
     String string = exec->argument(0).toString(exec)->value(exec);
+    if (exec->hadException())
+        return JSValue::encode(jsUndefined());
     if (Optional<uint32_t> index = parseIndex(*exec->argument(1).toWTFString(exec).impl())) {
         if (auto* item = collection.namedItemWithIndex(string, index.value()))
             return JSValue::encode(toJS(exec, jsCollection->globalObject(), item));
@@ -88,27 +92,26 @@ CallType JSHTMLAllCollection::getCallData(JSCell*, CallData& callData)
     return CallTypeHost;
 }
 
-bool JSHTMLAllCollection::canGetItemsForName(ExecState*, HTMLAllCollection* collection, PropertyName propertyName)
+bool JSHTMLAllCollection::nameGetter(ExecState* state, PropertyName propertyName, JSValue& value)
 {
-    return collection->hasNamedItem(propertyNameToAtomicString(propertyName));
+    JSValue items = namedItems(*state, this, propertyName);
+    if (items.isUndefined())
+        return false;
+
+    value = items;
+    return true;
 }
 
-EncodedJSValue JSHTMLAllCollection::nameGetter(ExecState* exec, JSObject* slotBase, EncodedJSValue, PropertyName propertyName)
+JSValue JSHTMLAllCollection::item(ExecState& state)
 {
-    JSHTMLAllCollection* thisObj = jsCast<JSHTMLAllCollection*>(slotBase);
-    return JSValue::encode(namedItems(exec, thisObj, propertyName));
+    if (Optional<uint32_t> index = parseIndex(*state.argument(0).toString(&state)->value(&state).impl()))
+        return toJS(&state, globalObject(), wrapped().item(index.value()));
+    return namedItems(state, this, Identifier::fromString(&state, state.argument(0).toString(&state)->value(&state)));
 }
 
-JSValue JSHTMLAllCollection::item(ExecState* exec)
+JSValue JSHTMLAllCollection::namedItem(ExecState& state)
 {
-    if (Optional<uint32_t> index = parseIndex(*exec->argument(0).toString(exec)->value(exec).impl()))
-        return toJS(exec, globalObject(), impl().item(index.value()));
-    return namedItems(exec, this, Identifier::fromString(exec, exec->argument(0).toString(exec)->value(exec)));
-}
-
-JSValue JSHTMLAllCollection::namedItem(ExecState* exec)
-{
-    JSValue value = namedItems(exec, this, Identifier::fromString(exec, exec->argument(0).toString(exec)->value(exec)));
+    JSValue value = namedItems(state, this, Identifier::fromString(&state, state.argument(0).toString(&state)->value(&state)));
     return value.isUndefined() ? jsNull() : value;
 }
 

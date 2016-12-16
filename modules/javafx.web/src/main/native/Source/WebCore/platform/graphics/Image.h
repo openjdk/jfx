@@ -28,7 +28,6 @@
 #define Image_h
 
 #include "Color.h"
-#include "ColorSpace.h"
 #include "FloatRect.h"
 #include "FloatSize.h"
 #include "GraphicsTypes.h"
@@ -80,12 +79,16 @@ public:
     WEBCORE_EXPORT static PassRefPtr<Image> loadPlatformResource(const char* name);
     WEBCORE_EXPORT static bool supportsType(const String&);
 
-    virtual bool isSVGImage() const { return false; }
     virtual bool isBitmapImage() const { return false; }
+    virtual bool isGeneratedImage() const { return false; }
+    virtual bool isCrossfadeGeneratedImage() const { return false; }
+    virtual bool isNamedImageGeneratedImage() const { return false; }
+    virtual bool isGradientImage() const { return false; }
+    virtual bool isSVGImage() const { return false; }
     virtual bool isPDFDocumentImage() const { return false; }
-    virtual bool currentFrameKnownToBeOpaque() = 0;
 
-    virtual bool isAnimated() { return false; }
+    virtual bool currentFrameKnownToBeOpaque() = 0;
+    virtual bool isAnimated() const { return false; }
 
     // Derived classes should override this if they can assure that
     // the image contains only resources from its own security origin.
@@ -116,7 +119,6 @@ public:
     virtual String filenameExtension() const { return String(); } // null string if unknown
 
     virtual void destroyDecodedData(bool destroyAll = true) = 0;
-    virtual bool decodedDataIsPurgeable() const { return false; }
 
     SharedBuffer* data() { return m_encodedImageData.get(); }
 
@@ -150,7 +152,6 @@ public:
     virtual CGImageRef getCGImageRef() { return 0; }
     virtual CGImageRef getFirstCGImageRefOfSize(const IntSize&) { return 0; }
     virtual RetainPtr<CFArrayRef> getCGImageArray() { return 0; }
-    static RetainPtr<CGImageRef> imageWithColorSpace(CGImageRef originalImage, ColorSpace);
 #endif
 
 #if PLATFORM(WIN)
@@ -164,15 +165,15 @@ public:
 
 #if PLATFORM(JAVA)
     virtual NativeImagePtr javaImage() { return nativeImageForCurrentFrame(); }
-    virtual void drawImage(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode);
+    virtual void drawImage(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator, BlendMode);
 #endif
 
 #if PLATFORM(EFL)
     virtual Evas_Object* getEvasObject(Evas*) { return 0; }
 #endif
 
-    virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
-        const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal);
+    virtual void drawPattern(GraphicsContext&, const FloatRect& srcRect, const AffineTransform& patternTransform,
+        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal);
 
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)
     FloatRect adjustSourceRectForDownSampling(const FloatRect& srcRect, const IntSize& scaledSize) const;
@@ -182,24 +183,19 @@ public:
     virtual bool notSolidColor() { return true; }
 #endif
 
-    FloatSize spaceSize() const { return m_space; }
-    void setSpaceSize(const FloatSize& space)
-    {
-        m_space = space;
-    }
+    virtual void dump(TextStream&) const;
+
 protected:
     Image(ImageObserver* = nullptr);
 
-    static void fillWithSolidColor(GraphicsContext*, const FloatRect& dstRect, const Color&, ColorSpace styleColorSpace, CompositeOperator);
+    static void fillWithSolidColor(GraphicsContext&, const FloatRect& dstRect, const Color&, CompositeOperator);
 
-    // The ColorSpace parameter will only be used for untagged images.
 #if PLATFORM(WIN)
-    virtual void drawFrameMatchingSourceSize(GraphicsContext*, const FloatRect& dstRect, const IntSize& srcSize, ColorSpace styleColorSpace, CompositeOperator) { }
+    virtual void drawFrameMatchingSourceSize(GraphicsContext&, const FloatRect& dstRect, const IntSize& srcSize, CompositeOperator) { }
 #endif
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription);
-    void drawTiled(GraphicsContext*, const FloatRect& dstRect, const FloatPoint& srcPoint, const FloatSize& tileSize, ColorSpace styleColorSpace,
-        CompositeOperator , BlendMode);
-    void drawTiled(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, ColorSpace styleColorSpace, CompositeOperator);
+    virtual void draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator, BlendMode, ImageOrientationDescription) = 0;
+    void drawTiled(GraphicsContext&, const FloatRect& dstRect, const FloatPoint& srcPoint, const FloatSize& tileSize, const FloatSize& spacing, CompositeOperator, BlendMode);
+    void drawTiled(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, CompositeOperator);
 
     // Supporting tiled drawing
     virtual bool mayFillWithSolidColor() { return false; }
@@ -208,8 +204,9 @@ protected:
 private:
     RefPtr<SharedBuffer> m_encodedImageData;
     ImageObserver* m_imageObserver;
-    FloatSize m_space;
 };
+
+TextStream& operator<<(TextStream&, const Image&);
 
 } // namespace WebCore
 

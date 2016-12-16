@@ -37,6 +37,17 @@
 #include "WAKWindow.h"
 #include <algorithm>
 #include <functional>
+#include <wtf/NeverDestroyed.h>
+
+#if USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/LayerBackingStoreAdditions.mm>
+#else
+namespace WebCore {
+static void setBackingStoreFormat(CALayer *)
+{
+}
+} // namespace WebCore
+#endif
 
 namespace WebCore {
 
@@ -60,6 +71,7 @@ LegacyTileGridTile::LegacyTileGridTile(LegacyTileGrid* tileGrid, const IntRect& 
         m_tileLayer = adoptNS([[LegacyTileLayer alloc] init]);
     }
     LegacyTileLayer* layer = m_tileLayer.get();
+    setBackingStoreFormat(layer);
     [layer setTileGrid:tileGrid];
     [layer setOpaque:m_tileGrid->tileCache().tilesOpaque()];
     [layer setEdgeAntialiasingMask:0];
@@ -117,7 +129,7 @@ void LegacyTileGridTile::showBorder(bool flag)
 {
     LegacyTileLayer* layer = m_tileLayer.get();
     if (flag) {
-        [layer setBorderColor:cachedCGColor(m_tileGrid->tileCache().colorForGridTileBorder(m_tileGrid), ColorSpaceDeviceRGB)];
+        [layer setBorderColor:cachedCGColor(m_tileGrid->tileCache().colorForGridTileBorder(m_tileGrid))];
         [layer setBorderWidth:0.5f];
     } else {
         [layer setBorderColor:nil];

@@ -87,7 +87,7 @@ public:
 
     LayoutSize offsetForInFlowPositionedInline(const RenderBox* child) const;
 
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) override final;
+    virtual void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) override final;
     void paintOutline(PaintInfo&, const LayoutPoint&);
 
     using RenderBoxModelObject::continuation;
@@ -104,6 +104,7 @@ public:
 protected:
     virtual void willBeDestroyed() override;
 
+    void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     virtual void updateFromStyle() override;
@@ -136,7 +137,7 @@ private:
 
     virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override final;
 
-    virtual bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath(); }
+    virtual bool requiresLayer() const override { return isInFlowPositioned() || createsGroup() || hasClipPath() || willChangeCreatesStackingContext(); }
 
     virtual LayoutUnit offsetLeft() const override final;
     virtual LayoutUnit offsetTop() const override final;
@@ -145,7 +146,7 @@ private:
 
     virtual LayoutRect clippedOverflowRectForRepaint(const RenderLayerModelObject* repaintContainer) const override;
     virtual LayoutRect rectWithOutlineForRepaint(const RenderLayerModelObject* repaintContainer, LayoutUnit outlineWidth) const override final;
-    virtual void computeRectForRepaint(const RenderLayerModelObject* repaintContainer, LayoutRect&, bool fixed) const override final;
+    virtual LayoutRect computeRectForRepaint(const LayoutRect&, const RenderLayerModelObject* repaintContainer, bool fixed) const override final;
 
     virtual void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, MapCoordinatesFlags, bool* wasFixed) const override;
     virtual const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
@@ -173,9 +174,14 @@ private:
 
     RenderPtr<RenderInline> clone() const;
 
-    void paintOutlineForLine(GraphicsContext*, const LayoutPoint&, const LayoutRect& prevLine, const LayoutRect& thisLine,
+    void paintOutlineForLine(GraphicsContext&, const LayoutPoint&, const LayoutRect& prevLine, const LayoutRect& thisLine,
                              const LayoutRect& nextLine, const Color);
     RenderBoxModelObject* continuationBefore(RenderObject* beforeChild);
+
+    bool willChangeCreatesStackingContext() const
+    {
+        return style().willChange() && style().willChange()->canCreateStackingContext();
+    }
 
     RenderLineBoxList m_lineBoxes;   // All of the line boxes created for this inline flow.  For example, <i>Hello<br>world.</i> will have two <i> line boxes.
 };

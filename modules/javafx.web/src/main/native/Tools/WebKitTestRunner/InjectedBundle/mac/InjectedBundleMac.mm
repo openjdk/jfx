@@ -31,7 +31,7 @@
 +(void)setAllowsAnyHTTPSCertificate:(BOOL)allow forHost:(NSString *)host;
 @end
 
-@interface NSSound (Details)
+@interface NSSound ()
 + (void)_setAlertType:(NSUInteger)alertType;
 @end
 
@@ -41,6 +41,15 @@ void InjectedBundle::platformInitialize(WKTypeRef)
 {
     static const int NoFontSmoothing = 0;
     static const int BlueTintedAppearance = 1;
+
+    // Work around missing /etc/catalog <rdar://problem/4292995>.
+    setenv("XML_CATALOG_FILES", "", 0);
+    setenv("XTYPE_ALLOW_AUTOACTIVATION", "1", 0);
+
+    // Language was set up earlier in main(). Don't clobber it.
+    NSArray *languages = [[[NSUserDefaults standardUserDefaults] volatileDomainForName:NSArgumentDomain] valueForKey:@"AppleLanguages"];
+    if (!languages)
+        languages = @[ @"en" ];
 
     NSDictionary *dict = @{
         @"AppleAntiAliasingThreshold": @4,
@@ -56,7 +65,7 @@ void InjectedBundle::platformInitialize(WKTypeRef)
         @"NSButtonAnimationsEnabled": @NO, // Ideally, we should find a way to test animations, but for now, make sure that the dumped snapshot matches actual state.
         // FIXME (<rdar://problem/13396515>): It is too late to set AppleLanguages here, as loaded frameworks localizations cannot be changed.
         // This breaks some accessibility tests on machines with non-English user language.
-        @"AppleLanguages": @[ @"en" ],
+        @"AppleLanguages": languages,
         @"NSPreferredSpellServerLanguage": @"en_US",
         @"NSUserDictionaryReplacementItems": @[],
         @"NSTestCorrectionDictionary": @{
@@ -69,6 +78,8 @@ void InjectedBundle::platformInitialize(WKTypeRef)
 #if __MAC_OS_X_VERSION_MIN_REQUIRED > 101000
         @"AppleSystemFontOSSubversion": @(10),
 #endif
+        @"AppleEnableSwipeNavigateWithScrolls": @YES,
+        @"com.apple.swipescrolldirection": @1,
     };
 
     [[NSUserDefaults standardUserDefaults] setVolatileDomain:dict forName:NSArgumentDomain];

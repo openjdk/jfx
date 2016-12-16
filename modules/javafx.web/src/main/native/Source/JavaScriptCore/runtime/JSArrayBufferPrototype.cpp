@@ -82,7 +82,8 @@ void JSArrayBufferPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject
 {
     Base::finishCreation(vm);
 
-    JSC_NATIVE_FUNCTION(vm.propertyNames->slice, arrayBufferProtoFuncSlice, DontEnum, 2);
+    JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->slice, arrayBufferProtoFuncSlice, DontEnum, 2);
+    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "ArrayBuffer"), DontEnum | ReadOnly);
 }
 
 JSArrayBufferPrototype* JSArrayBufferPrototype::create(VM& vm, JSGlobalObject* globalObject, Structure* structure)

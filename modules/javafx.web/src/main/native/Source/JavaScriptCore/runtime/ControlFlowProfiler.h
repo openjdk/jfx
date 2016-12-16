@@ -87,9 +87,11 @@ struct BasicBlockRange {
     int m_startOffset;
     int m_endOffset;
     bool m_hasExecuted;
+    size_t m_executionCount;
 };
 
 class ControlFlowProfiler {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     ControlFlowProfiler();
     ~ControlFlowProfiler();
@@ -97,7 +99,8 @@ public:
     JS_EXPORT_PRIVATE void dumpData() const;
     Vector<BasicBlockRange> getBasicBlocksForSourceID(intptr_t sourceID, VM&) const;
     BasicBlockLocation* dummyBasicBlock() { return &m_dummyBasicBlock; }
-    JS_EXPORT_PRIVATE bool hasBasicBlockAtTextOffsetBeenExecuted(int, intptr_t, VM&); // This function exists for testing.
+    JS_EXPORT_PRIVATE bool hasBasicBlockAtTextOffsetBeenExecuted(int, intptr_t, VM&);  // This function exists for testing.
+    JS_EXPORT_PRIVATE size_t basicBlockExecutionCountAtTextOffset(int, intptr_t, VM&); // This function exists for testing.
 
 private:
     typedef HashMap<BasicBlockKey, BasicBlockLocation*> BlockLocationCache;

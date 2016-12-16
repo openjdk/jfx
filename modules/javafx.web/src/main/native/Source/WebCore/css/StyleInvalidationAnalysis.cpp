@@ -31,6 +31,7 @@
 #include "ElementIterator.h"
 #include "ElementRuleCollector.h"
 #include "SelectorFilter.h"
+#include "ShadowRoot.h"
 #include "StyleRuleImport.h"
 #include "StyleSheetContents.h"
 
@@ -74,26 +75,37 @@ static bool shouldDirtyAllStyle(const Vector<StyleSheetContents*>& sheets)
 }
 
 StyleInvalidationAnalysis::StyleInvalidationAnalysis(const Vector<StyleSheetContents*>& sheets, const MediaQueryEvaluator& mediaQueryEvaluator)
-    : m_dirtiesAllStyle(shouldDirtyAllStyle(sheets))
+    : m_ownedRuleSet(std::make_unique<RuleSet>())
+    , m_ruleSet(*m_ownedRuleSet)
+    , m_dirtiesAllStyle(shouldDirtyAllStyle(sheets))
 {
     if (m_dirtiesAllStyle)
         return;
 
-    m_ruleSets.resetAuthorStyle();
+    m_ownedRuleSet->disableAutoShrinkToFit();
     for (auto& sheet : sheets)
-        m_ruleSets.authorStyle()->addRulesFromSheet(sheet, mediaQueryEvaluator);
+        m_ownedRuleSet->addRulesFromSheet(*sheet, mediaQueryEvaluator);
 
-    // FIXME: We don't descent into shadow trees or otherwise handle shadow pseudo elements.
-    if (m_ruleSets.authorStyle()->hasShadowPseudoElementRules())
-        m_dirtiesAllStyle = true;
+    m_hasShadowPseudoElementRulesInAuthorSheet = m_ruleSet.hasShadowPseudoElementRules();
 }
 
-enum class CheckDescendants { Yes, No };
-static CheckDescendants invalidateIfNeeded(Element& element, SelectorFilter& filter, const DocumentRuleSets& ruleSets)
+StyleInvalidationAnalysis::StyleInvalidationAnalysis(const RuleSet& ruleSet)
+    : m_ruleSet(ruleSet)
+    , m_hasShadowPseudoElementRulesInAuthorSheet(ruleSet.hasShadowPseudoElementRules())
 {
+}
+
+StyleInvalidationAnalysis::CheckDescendants StyleInvalidationAnalysis::invalidateIfNeeded(Element& element, const SelectorFilter* filter)
+{
+    if (m_hasShadowPseudoElementRulesInAuthorSheet) {
+        // FIXME: This could do actual rule matching too.
+        if (element.shadowRoot())
+            element.setNeedsStyleRecalc();
+    }
+
     switch (element.styleChangeType()) {
     case NoStyleChange: {
-        ElementRuleCollector ruleCollector(element, nullptr, ruleSets, filter);
+        ElementRuleCollector ruleCollector(element, m_ruleSet, filter);
         ruleCollector.setMode(SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements);
         ruleCollector.matchAuthorRules(false);
 
@@ -112,9 +124,9 @@ static CheckDescendants invalidateIfNeeded(Element& element, SelectorFilter& fil
     return CheckDescendants::Yes;
 }
 
-static void invalidateStyleForTree(Element& root, SelectorFilter& filter, const DocumentRuleSets& ruleSets)
+void StyleInvalidationAnalysis::invalidateStyleForTree(Element& root, SelectorFilter* filter)
 {
-    if (invalidateIfNeeded(root, filter, ruleSets) == CheckDescendants::No)
+    if (invalidateIfNeeded(root, filter) == CheckDescendants::No)
         return;
 
     Vector<Element*, 20> parentStack;
@@ -126,41 +138,43 @@ static void invalidateStyleForTree(Element& root, SelectorFilter& filter, const 
         if (parentStack.isEmpty() || parentStack.last() != parent) {
             if (parent == previousElement) {
                 parentStack.append(parent);
-                filter.pushParent(parent);
+                if (filter)
+                    filter->pushParent(parent);
             } else {
                 while (parentStack.last() != parent) {
                     parentStack.removeLast();
-                    filter.popParent();
+                    if (filter)
+                        filter->popParent();
                 }
             }
         }
         previousElement = &descendant;
 
-        if (invalidateIfNeeded(descendant, filter, ruleSets) == CheckDescendants::Yes)
+        if (invalidateIfNeeded(descendant, filter) == CheckDescendants::Yes)
             it.traverseNext();
         else
             it.traverseNextSkippingChildren();
-    }
-
-    while (!parentStack.isEmpty()) {
-        parentStack.removeLast();
-        filter.popParent();
     }
 }
 
 void StyleInvalidationAnalysis::invalidateStyle(Document& document)
 {
     ASSERT(!m_dirtiesAllStyle);
-    if (!m_ruleSets.authorStyle())
-        return;
 
     Element* documentElement = document.documentElement();
     if (!documentElement)
         return;
 
     SelectorFilter filter;
-    filter.setupParentStack(documentElement);
-    invalidateStyleForTree(*documentElement, filter, m_ruleSets);
+    invalidateStyleForTree(*documentElement, &filter);
+}
+
+void StyleInvalidationAnalysis::invalidateStyle(Element& element)
+{
+    ASSERT(!m_dirtiesAllStyle);
+
+    // Don't use SelectorFilter as the rule sets here tend to be small and the filter would have setup cost deep in the tree.
+    invalidateStyleForTree(element, nullptr);
 }
 
 }

@@ -53,7 +53,7 @@
 namespace WebCore {
 
 RenderFlowThread::RenderFlowThread(Document& document, Ref<RenderStyle>&& style)
-    : RenderBlockFlow(document, WTF::move(style))
+    : RenderBlockFlow(document, WTFMove(style))
     , m_previousRegionCount(0)
     , m_autoLogicalHeightRegionsCount(0)
     , m_currentRegionMaintainer(nullptr)
@@ -106,7 +106,7 @@ void RenderFlowThread::removeRegionFromThread(RenderRegion* renderRegion)
     m_regionList.remove(renderRegion);
 }
 
-void RenderFlowThread::invalidateRegions()
+void RenderFlowThread::invalidateRegions(MarkingBehavior markingParents)
 {
     ASSERT(!inFinalLayoutPhase());
 
@@ -125,7 +125,7 @@ void RenderFlowThread::invalidateRegions()
     if (m_lineToRegionMap)
         m_lineToRegionMap->clear();
     m_layersToRegionMappingsDirty = true;
-    setNeedsLayout();
+    setNeedsLayout(markingParents);
 
     m_regionsInvalidated = true;
 }
@@ -383,7 +383,7 @@ void RenderFlowThread::repaintRectangleInRegions(const LayoutRect& repaintRect) 
     if (!shouldRepaint(repaintRect) || !hasValidRegionInfo())
         return;
 
-    LayoutStateDisabler layoutStateDisabler(&view()); // We can't use layout state to repaint, since the regions are somewhere else.
+    LayoutStateDisabler layoutStateDisabler(view()); // We can't use layout state to repaint, since the regions are somewhere else.
 
     for (auto& region : m_regionList)
         region->repaintFlowThreadContent(repaintRect);
@@ -584,8 +584,9 @@ void RenderFlowThread::removeRenderBoxRegionInfo(RenderBox* box)
 
 #ifndef NDEBUG
     // We have to make sure we did not leave any RenderBoxRegionInfo attached.
-    for (auto& region : m_regionList)
+    for (auto& region : m_regionList) {
         ASSERT(!region->renderBoxRegionInfo(box));
+    }
 #endif
 
     m_regionRangeMap.remove(box);
@@ -1094,7 +1095,7 @@ bool RenderFlowThread::addForcedRegionBreak(const RenderBlock* block, LayoutUnit
         hasComputedAutoHeight = true;
 
         // Compute the region height pretending that the offsetBreakInCurrentRegion is the logicalHeight for the auto-height region.
-        LayoutUnit regionComputedAutoHeight = namedFlowFragment.constrainContentBoxLogicalHeightByMinMax(offsetBreakInCurrentRegion, -1);
+        LayoutUnit regionComputedAutoHeight = namedFlowFragment.constrainContentBoxLogicalHeightByMinMax(offsetBreakInCurrentRegion, Nullopt);
 
         // The new height of this region needs to be smaller than the initial value, the max height. A forced break is the only way to change the initial
         // height of an auto-height region besides content ending.

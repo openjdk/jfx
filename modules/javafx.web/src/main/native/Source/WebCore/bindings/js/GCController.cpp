@@ -26,6 +26,7 @@
 #include "config.h"
 #include "GCController.h"
 
+#include "DOMWindow.h"
 #include "JSDOMWindow.h"
 #include <runtime/VM.h>
 #include <runtime/JSLock.h>
@@ -57,12 +58,10 @@ GCController::GCController()
 
 void GCController::garbageCollectSoon()
 {
-    // We only use reportAbandonedObjectGraph on systems with CoreFoundation
-    // since it uses a run-loop-based timer that is currently only available on
-    // systems with CoreFoundation. If and when the notion of a run loop is pushed
-    // down into WTF so that more platforms can take advantage of it, we will be
-    // able to use reportAbandonedObjectGraph on more platforms.
-#if USE(CF)
+    // We only use reportAbandonedObjectGraph for systems for which there's an implementation
+    // of the garbage collector timers in JavaScriptCore. We wouldn't need this if JavaScriptCore
+    // used a timer implementation from WTF like RunLoop::Timer.
+#if USE(CF) || USE(GLIB)
     JSLockHolder lock(JSDOMWindow::commonVM());
     JSDOMWindow::commonVM().heap.reportAbandonedObjectGraph();
 #else
@@ -92,7 +91,7 @@ void GCController::garbageCollectNow()
 
 void GCController::garbageCollectNowIfNotDoneRecently()
 {
-#if USE(CF)
+#if USE(CF) || USE(GLIB)
     JSLockHolder lock(JSDOMWindow::commonVM());
     if (!JSDOMWindow::commonVM().heap.isBusy())
         JSDOMWindow::commonVM().heap.collectAllGarbageIfNotDoneRecently();
@@ -113,28 +112,21 @@ void GCController::garbageCollectOnAlternateThreadForDebugging(bool waitUntilDon
     detachThread(threadID);
 }
 
-void GCController::releaseExecutableMemory()
-{
-    JSLockHolder lock(JSDOMWindow::commonVM());
-
-    // We shouldn't have any JavaScript running on our stack when this function is called.
-    // The following line asserts that, but to be safe we check this in release builds anyway.
-    ASSERT(!JSDOMWindow::commonVM().entryScope);
-    if (JSDOMWindow::commonVM().entryScope)
-        return;
-
-    JSDOMWindow::commonVM().releaseExecutableMemory();
-}
-
 void GCController::setJavaScriptGarbageCollectorTimerEnabled(bool enable)
 {
     JSDOMWindow::commonVM().heap.setGarbageCollectionTimerEnabled(enable);
 }
 
-void GCController::discardAllCompiledCode()
+void GCController::deleteAllCode()
 {
     JSLockHolder lock(JSDOMWindow::commonVM());
-    JSDOMWindow::commonVM().discardAllCode();
+    JSDOMWindow::commonVM().deleteAllCode();
+}
+
+void GCController::deleteAllLinkedCode()
+{
+    JSLockHolder lock(JSDOMWindow::commonVM());
+    JSDOMWindow::commonVM().deleteAllLinkedCode();
 }
 
 } // namespace WebCore

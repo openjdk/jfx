@@ -23,6 +23,7 @@ use strict;
 use File::Basename;
 use Getopt::Long;
 use Cwd;
+use Config;
 
 my $defines;
 my $preprocessor;
@@ -49,9 +50,19 @@ die('Must specify an output file using --workerGlobalScopeConstructorsFile.') un
 die('Must specify an output file using --dedicatedWorkerGlobalScopeConstructorsFile.') unless defined($dedicatedWorkerGlobalScopeConstructorsFile);
 die('Must specify the file listing all IDLs using --idlFilesList.') unless defined($idlFilesList);
 
+$supplementalDependencyFile = CygwinPathIfNeeded($supplementalDependencyFile);
+$windowConstructorsFile = CygwinPathIfNeeded($windowConstructorsFile);
+$workerGlobalScopeConstructorsFile = CygwinPathIfNeeded($workerGlobalScopeConstructorsFile);
+$dedicatedWorkerGlobalScopeConstructorsFile = CygwinPathIfNeeded($dedicatedWorkerGlobalScopeConstructorsFile);
+$supplementalMakefileDeps = CygwinPathIfNeeded($supplementalMakefileDeps);
+
 open FH, "< $idlFilesList" or die "Cannot open $idlFilesList\n";
-my @idlFiles = <FH>;
-chomp(@idlFiles);
+my @idlFilesIn = <FH>;
+chomp(@idlFilesIn);
+my @idlFiles = ();
+foreach (@idlFilesIn) {
+    push @idlFiles, CygwinPathIfNeeded($_);
+}
 close FH;
 
 my %interfaceNameToIdlFile;
@@ -97,10 +108,15 @@ foreach my $idlFile (sort keys %idlFileHash) {
             $supplementalDependencies{$implementedIdlFile} = [$interfaceName];
         }
     }
-    # Handle [NoInterfaceObject].
-    unless (isCallbackInterfaceFromIDL($idlFileContents)) {
-        my $extendedAttributes = getInterfaceExtendedAttributesFromIDL($idlFileContents);
-        unless ($extendedAttributes->{"NoInterfaceObject"}) {
+
+    # For every interface that is exposed in a given ECMAScript global environment and:
+    # - is a callback interface that has constants declared on it, or
+    # - is a non-callback interface that is not declared with the [NoInterfaceObject] extended attribute, a corresponding
+    #   property must exist on the ECMAScript environment's global object.
+    # See https://heycam.github.io/webidl/#es-interfaces
+    my $extendedAttributes = getInterfaceExtendedAttributesFromIDL($idlFileContents);
+    unless ($extendedAttributes->{"NoInterfaceObject"}) {
+        if (!isCallbackInterfaceFromIDL($idlFileContents) || interfaceHasConstantAttribute($idlFileContents)) {
             my @globalContexts = split("&", $extendedAttributes->{"GlobalContext"} || "DOMWindow");
             my $attributeCode = GenerateConstructorAttribute($interfaceName, $extendedAttributes);
             $windowConstructorsCode .= $attributeCode if grep(/^DOMWindow$/, @globalContexts);
@@ -159,6 +175,21 @@ if ($supplementalMakefileDeps) {
     }
 
     WriteFileIfChanged($supplementalMakefileDeps, $makefileDeps);
+}
+
+my $cygwinPathAdded;
+sub CygwinPathIfNeeded
+{
+    my $path = shift;
+    if ($path && $Config{osname} eq "cygwin") {
+        if (not $cygwinPathAdded) {
+            $ENV{PATH} = "$ENV{PATH}:/cygdrive/c/cygwin/bin";
+            $cygwinPathAdded = 1; 
+        }
+        chomp($path = `cygpath -u '$path'`);
+        $path =~ s/[\r\n]//;
+    }
+    return $path;
 }
 
 sub WriteFileIfChanged
@@ -279,7 +310,7 @@ sub getInterfaceExtendedAttributesFromIDL
 
     my $extendedAttributes = {};
 
-    if ($fileContents =~ /\[(.*)\]\s+(interface|exception)\s+(\w+)/gs) {
+    if ($fileContents =~ /\[(.*)\]\s+(callback interface|interface|exception)\s+(\w+)/gs) {
         my @parts = split(',', $1);
         foreach my $part (@parts) {
             my @keyValue = split('=', $part);
@@ -292,4 +323,11 @@ sub getInterfaceExtendedAttributesFromIDL
             }
 
     return $extendedAttributes;
+}
+
+sub interfaceHasConstantAttribute
+{
+    my $fileContents = shift;
+
+    return $fileContents =~ /\s+const[\s\w]+=\s+[\w]+;/gs;
 }

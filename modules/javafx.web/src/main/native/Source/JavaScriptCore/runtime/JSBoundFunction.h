@@ -32,11 +32,13 @@ namespace JSC {
 
 EncodedJSValue JSC_HOST_CALL boundFunctionCall(ExecState*);
 EncodedJSValue JSC_HOST_CALL boundFunctionConstruct(ExecState*);
+EncodedJSValue JSC_HOST_CALL isBoundFunction(ExecState*);
+EncodedJSValue JSC_HOST_CALL hasInstanceBoundFunction(ExecState*);
 
 class JSBoundFunction : public JSFunction {
 public:
     typedef JSFunction Base;
-    const static unsigned StructureFlags = OverridesHasInstance | Base::StructureFlags;
+    const static unsigned StructureFlags = ~ImplementsDefaultHasInstance & Base::StructureFlags;
 
     static JSBoundFunction* create(VM&, JSGlobalObject*, JSObject* targetFunction, JSValue boundThis, JSValue boundArgs, int, const String&);
 
@@ -45,6 +47,8 @@ public:
     JSObject* targetFunction() { return m_targetFunction.get(); }
     JSValue boundThis() { return m_boundThis.get(); }
     JSValue boundArgs() { return m_boundArgs.get(); }
+
+    String toStringName(ExecState*);
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {

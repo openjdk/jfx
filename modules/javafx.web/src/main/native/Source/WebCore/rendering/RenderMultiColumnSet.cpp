@@ -37,7 +37,7 @@
 namespace WebCore {
 
 RenderMultiColumnSet::RenderMultiColumnSet(RenderFlowThread& flowThread, Ref<RenderStyle>&& style)
-    : RenderRegionSet(flowThread.document(), WTF::move(style), flowThread)
+    : RenderRegionSet(flowThread.document(), WTFMove(style), flowThread)
     , m_computedColumnCount(1)
     , m_computedColumnWidth(0)
     , m_computedColumnHeight(0)
@@ -362,7 +362,7 @@ void RenderMultiColumnSet::prepareForLayout(bool initial)
     // Start with "infinite" flow thread portion height until height is known.
     setLogicalBottomInFlowThread(RenderFlowThread::maxLogicalHeight());
 
-    setNeedsLayout();
+    setNeedsLayout(MarkOnlyThis);
 }
 
 void RenderMultiColumnSet::beginFlow(RenderBlock* container)
@@ -414,11 +414,8 @@ LayoutUnit RenderMultiColumnSet::calculateMaxColumnHeight() const
     const RenderStyle& multicolStyle = multicolBlock->style();
     LayoutUnit availableHeight = multiColumnFlowThread()->columnHeightAvailable();
     LayoutUnit maxColumnHeight = availableHeight ? availableHeight : RenderFlowThread::maxLogicalHeight();
-    if (!multicolStyle.logicalMaxHeight().isUndefined()) {
-        LayoutUnit logicalMaxHeight = multicolBlock->computeContentLogicalHeight(multicolStyle.logicalMaxHeight(), -1);
-        if (logicalMaxHeight != -1 && maxColumnHeight > logicalMaxHeight)
-            maxColumnHeight = logicalMaxHeight;
-    }
+    if (!multicolStyle.logicalMaxHeight().isUndefined())
+        maxColumnHeight = std::min(maxColumnHeight, multicolBlock->computeContentLogicalHeight(MaxSize, multicolStyle.logicalMaxHeight(), Nullopt).valueOr(maxColumnHeight));
     return heightAdjustedForSetOffset(maxColumnHeight);
 }
 
@@ -573,14 +570,14 @@ LayoutRect RenderMultiColumnSet::flowThreadPortionOverflowRect(const LayoutRect&
 
 void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
-    if (paintInfo.context->paintingDisabled())
+    if (paintInfo.context().paintingDisabled())
         return;
 
     RenderMultiColumnFlowThread* flowThread = multiColumnFlowThread();
     const RenderStyle& blockStyle = parent()->style();
     const Color& ruleColor = blockStyle.visitedDependentColor(CSSPropertyColumnRuleColor);
     bool ruleTransparent = blockStyle.columnRuleIsTransparent();
-    EBorderStyle ruleStyle = blockStyle.columnRuleStyle();
+    EBorderStyle ruleStyle = collapsedBorderStyle(blockStyle.columnRuleStyle());
     LayoutUnit ruleThickness = blockStyle.columnRuleWidth();
     LayoutUnit colGap = columnGap();
     bool renderRule = ruleStyle > BHIDDEN && !ruleTransparent;
@@ -591,7 +588,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     if (colCount <= 1)
         return;
 
-    bool antialias = shouldAntialiasLines(paintInfo.context);
+    bool antialias = shouldAntialiasLines(paintInfo.context());
 
     if (flowThread->progressionIsInline()) {
         bool leftToRight = style().isLeftToRightDirection() ^ flowThread->progressionIsReversed();
@@ -620,7 +617,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
                 LayoutUnit ruleTop = isHorizontalWritingMode() ? paintOffset.y() + borderTop() + paddingTop() : paintOffset.y() + ruleLogicalLeft - ruleThickness / 2 + ruleAdd;
                 LayoutUnit ruleBottom = isHorizontalWritingMode() ? ruleTop + contentHeight() : ruleTop + ruleThickness;
                 IntRect pixelSnappedRuleRect = snappedIntRect(ruleLeft, ruleTop, ruleRight - ruleLeft, ruleBottom - ruleTop);
-                drawLineForBoxSide(paintInfo.context, pixelSnappedRuleRect.x(), pixelSnappedRuleRect.y(), pixelSnappedRuleRect.maxX(), pixelSnappedRuleRect.maxY(), boxSide, ruleColor, ruleStyle, 0, 0, antialias);
+                drawLineForBoxSide(paintInfo.context(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
             }
 
             ruleLogicalLeft = currLogicalLeftOffset;
@@ -651,7 +648,7 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
         for (unsigned i = 1; i < colCount; i++) {
             ruleRect.move(step);
             IntRect pixelSnappedRuleRect = snappedIntRect(ruleRect);
-            drawLineForBoxSide(paintInfo.context, pixelSnappedRuleRect.x(), pixelSnappedRuleRect.y(), pixelSnappedRuleRect.maxX(), pixelSnappedRuleRect.maxY(), boxSide, ruleColor, ruleStyle, 0, 0, antialias);
+            drawLineForBoxSide(paintInfo.context(), pixelSnappedRuleRect, boxSide, ruleColor, ruleStyle, 0, 0, antialias);
         }
     }
 }

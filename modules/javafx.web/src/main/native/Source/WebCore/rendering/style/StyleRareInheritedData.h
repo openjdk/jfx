@@ -26,7 +26,9 @@
 #define StyleRareInheritedData_h
 
 #include "Color.h"
+#include "DataRef.h"
 #include "Length.h"
+#include "StyleCustomPropertyData.h"
 #include <wtf/RefCounted.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/text/AtomicString.h>
@@ -56,7 +58,6 @@ public:
     {
         return !(*this == o);
     }
-    bool shadowDataEquivalent(const StyleRareInheritedData&) const;
 
     RefPtr<StyleImage> listStyleImage;
 
@@ -76,6 +77,8 @@ public:
     float m_effectiveZoom;
 
     Length wordSpacing;
+
+    DataRef<StyleCustomPropertyData> m_customProperties;
 
     // Paged media properties.
     short widows;
@@ -107,7 +110,7 @@ public:
 #if ENABLE(CSS_IMAGE_ORIENTATION)
     unsigned m_imageOrientation : 4; // ImageOrientationEnum
 #endif
-    unsigned m_imageRendering : 2; // EImageRendering
+    unsigned m_imageRendering : 3; // EImageRendering
     unsigned m_lineSnap : 2; // LineSnap
     unsigned m_lineAlign : 1; // LineAlign
 #if ENABLE(ACCELERATED_OVERFLOW_SCROLLING)
@@ -134,12 +137,12 @@ public:
     unsigned trailingWord : 1;
 #endif
 
+    unsigned m_hangingPunctuation : 4;
+
     AtomicString hyphenationString;
     short hyphenationLimitBefore;
     short hyphenationLimitAfter;
     short hyphenationLimitLines;
-
-    AtomicString locale;
 
     AtomicString textEmphasisCustomMark;
     RefPtr<QuotesData> quotes;

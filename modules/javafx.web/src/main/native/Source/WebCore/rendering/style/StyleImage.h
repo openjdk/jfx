@@ -63,7 +63,7 @@ public:
     virtual void setContainerSizeForRenderer(const RenderElement*, const FloatSize&, float) = 0;
     virtual void addClient(RenderElement*) = 0;
     virtual void removeClient(RenderElement*) = 0;
-    virtual PassRefPtr<Image> image(RenderElement*, const FloatSize&) const = 0;
+    virtual RefPtr<Image> image(RenderElement*, const FloatSize&) const = 0;
     virtual WrappedImagePtr data() const = 0;
     virtual float imageScaleFactor() const { return 1; }
     virtual bool knownToBeOpaque(const RenderElement*) const = 0;
@@ -73,11 +73,6 @@ public:
     ALWAYS_INLINE bool isPendingImage() const { return m_isPendingImage; }
     ALWAYS_INLINE bool isGeneratedImage() const { return m_isGeneratedImage; }
     ALWAYS_INLINE bool isCachedImageSet() const { return m_isCachedImageSet; }
-
-    static bool imagesEquivalent(StyleImage* image1, StyleImage* image2)
-    {
-        return image1 == image2 || (image1 && image2 && *image1 == *image2);
-    }
 
 protected:
     StyleImage()

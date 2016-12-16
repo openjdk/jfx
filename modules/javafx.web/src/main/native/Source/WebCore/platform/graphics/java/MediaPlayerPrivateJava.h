@@ -19,12 +19,12 @@ namespace WebCore {
         //typedef MediaPlayer::SupportsType (*MediaEngineSupportsType)(const String& type, const String& codecs);
         //typedef void (*MediaEngineRegistrar)(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType);
         static std::unique_ptr<MediaPlayerPrivateInterface> CreateMediaEnginePlayer(MediaPlayer *player);
-        static void MediaEngineSupportedTypes(HashSet<String>& types);
+        static void MediaEngineSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types);
 
         static MediaPlayer::SupportsType MediaEngineSupportsType(const MediaEngineSupportParameters&);
 
         // the method caches the set
-        static HashSet<String>& GetSupportedTypes();
+        static HashSet<String, ASCIICaseInsensitiveHash>& GetSupportedTypes();
 
 
     private:
@@ -87,7 +87,7 @@ namespace WebCore {
 
         virtual void setSize(const IntSize&);
 
-        virtual void paint(GraphicsContext*, const FloatRect&);
+        virtual void paint(GraphicsContext&, const FloatRect&);
 
         //virtual void paintCurrentFrameInContext(GraphicsContext* c, const IntRect& r) { paint(c, r); }
 
@@ -141,7 +141,6 @@ namespace WebCore {
         FloatSize m_naturalSize;
         bool m_paused;
         bool m_seeking;
-        bool m_finished;
         float m_seekTime;   // valid only when m_seeking is true
         float m_duration;
         std::unique_ptr<PlatformTimeRanges> m_buffered;

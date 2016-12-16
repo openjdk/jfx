@@ -127,7 +127,9 @@ IntRect PluginView::windowClipRect() const
 
     // Take our element and get the clip rect from the enclosing layer and frame view.
     FrameView* parentView = m_element->document().view();
-    clipRect.intersect(parentView->windowClipRectForFrameOwner(m_element, true));
+    IntRect windowClipRect = parentView->windowClipRectForFrameOwner(m_element, true);
+    windowClipRect.scale(deviceScaleFactor());
+    clipRect.intersect(windowClipRect);
 
     return clipRect;
 }
@@ -458,7 +460,7 @@ void PluginView::requestTimerFired()
     ASSERT(!m_requests.isEmpty());
     ASSERT(!m_isJavaScriptPaused);
 
-    std::unique_ptr<PluginRequest> request = WTF::move(m_requests[0]);
+    std::unique_ptr<PluginRequest> request = WTFMove(m_requests[0]);
     m_requests.remove(0);
 
     // Schedule a new request before calling performRequest since the call to
@@ -471,7 +473,7 @@ void PluginView::requestTimerFired()
 
 void PluginView::scheduleRequest(std::unique_ptr<PluginRequest> request)
 {
-    m_requests.append(WTF::move(request));
+    m_requests.append(WTFMove(request));
 
     if (!m_isJavaScriptPaused)
         m_requestTimer.startOneShot(0);
@@ -670,18 +672,18 @@ NPObject* PluginView::npObject()
 }
 #endif
 
-PassRefPtr<JSC::Bindings::Instance> PluginView::bindingInstance()
+RefPtr<JSC::Bindings::Instance> PluginView::bindingInstance()
 {
 #if ENABLE(NETSCAPE_PLUGIN_API)
     NPObject* object = npObject();
     if (!object)
-        return 0;
+        return nullptr;
 
     if (hasOneRef()) {
         // The renderer for the PluginView was destroyed during the above call, and
         // the PluginView will be destroyed when this function returns, so we
         // return null.
-        return 0;
+        return nullptr;
     }
 
     RefPtr<JSC::Bindings::RootObject> root = m_parentFrame->script().createRootObject(this);
@@ -689,9 +691,9 @@ PassRefPtr<JSC::Bindings::Instance> PluginView::bindingInstance()
 
     _NPN_ReleaseObject(object);
 
-    return instance.release();
+    return instance;
 #else
-    return 0;
+    return nullptr;
 #endif
 }
 
@@ -713,7 +715,7 @@ void PluginView::setParameters(const Vector<String>& paramNames, const Vector<St
     m_paramValues = reinterpret_cast<char**>(fastMalloc(sizeof(char*) * size));
 
     for (unsigned i = 0; i < size; i++) {
-        if (m_plugin->quirks().contains(PluginQuirkRemoveWindowlessVideoParam) && equalIgnoringCase(paramNames[i], "windowlessvideo"))
+        if (m_plugin->quirks().contains(PluginQuirkRemoveWindowlessVideoParam) && equalLettersIgnoringASCIICase(paramNames[i], "windowlessvideo"))
             continue;
 
         if (paramNames[i] == "pluginspage")
@@ -1081,7 +1083,7 @@ NPError PluginView::handlePost(const char* url, const char* target, uint32_t len
 
     frameLoadRequest.resourceRequest().setHTTPMethod("POST");
     frameLoadRequest.resourceRequest().setURL(makeURL(m_parentFrame->document()->baseURL(), url));
-    frameLoadRequest.resourceRequest().setHTTPHeaderFields(WTF::move(headerFields));
+    frameLoadRequest.resourceRequest().setHTTPHeaderFields(WTFMove(headerFields));
     frameLoadRequest.resourceRequest().setHTTPBody(FormData::create(postData, postDataLength));
     frameLoadRequest.setFrameName(target);
 
@@ -1102,7 +1104,7 @@ void PluginView::invalidateWindowlessPluginRect(const IntRect& rect)
     renderer.repaintRectangle(dirtyRect);
 }
 
-void PluginView::paintMissingPluginIcon(GraphicsContext* context, const IntRect& rect)
+void PluginView::paintMissingPluginIcon(GraphicsContext& context, const IntRect& rect)
 {
     static RefPtr<Image> nullPluginImage;
     if (!nullPluginImage)
@@ -1118,10 +1120,10 @@ void PluginView::paintMissingPluginIcon(GraphicsContext* context, const IntRect&
     if (!rect.intersects(imageRect))
         return;
 
-    context->save();
-    context->clip(windowClipRect());
-    context->drawImage(nullPluginImage.get(), ColorSpaceDeviceRGB, imageRect.location());
-    context->restore();
+    context.save();
+    context.clip(windowClipRect());
+    context.drawImage(*nullPluginImage, imageRect.location());
+    context.restore();
 }
 
 static const char* MozillaUserAgent = "Mozilla/5.0 ("

@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-int computeUnderlineOffset(TextUnderlinePosition underlinePosition, const FontMetrics& fontMetrics, InlineTextBox* inlineTextBox, int textDecorationThickness)
+int computeUnderlineOffset(TextUnderlinePosition underlinePosition, const FontMetrics& fontMetrics, const InlineTextBox* inlineTextBox, int textDecorationThickness)
 {
     // This represents the gap between the baseline and the closest edge of the underline.
     int gap = std::max<int>(1, ceilf(textDecorationThickness / 2.0));
@@ -97,7 +97,7 @@ static inline void extendIntToFloat(int& extendMe, float extendTo)
     extendMe = std::max(extendMe, static_cast<int>(ceilf(extendTo)));
 }
 
-GlyphOverflow visualOverflowForDecorations(const RenderStyle& lineStyle, InlineTextBox* inlineTextBox)
+GlyphOverflow visualOverflowForDecorations(const RenderStyle& lineStyle, const InlineTextBox* inlineTextBox)
 {
     ASSERT(!inlineTextBox || inlineTextBox->lineStyle() == lineStyle);
 
@@ -123,7 +123,9 @@ GlyphOverflow visualOverflowForDecorations(const RenderStyle& lineStyle, InlineT
 
     // These metrics must match where underlines get drawn.
     if (decoration & TextDecorationUnderline) {
-        float underlineOffset = computeUnderlineOffset(lineStyle.textUnderlinePosition(), lineStyle.fontMetrics(), inlineTextBox, strokeThickness);
+        // Compensate for the integral ceiling in GraphicsContext::computeLineBoundsAndAntialiasingModeForText()
+        int underlineOffset = 1;
+        underlineOffset += computeUnderlineOffset(lineStyle.textUnderlinePosition(), lineStyle.fontMetrics(), inlineTextBox, strokeThickness);
         if (decorationStyle == TextDecorationStyleWavy) {
             extendIntToFloat(overflowResult.bottom, underlineOffset + wavyOffset + controlPointDistance + strokeThickness - height);
             extendIntToFloat(overflowResult.top, -(underlineOffset + wavyOffset - controlPointDistance - strokeThickness));

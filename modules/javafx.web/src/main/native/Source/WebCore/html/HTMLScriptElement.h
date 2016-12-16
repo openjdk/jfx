@@ -41,6 +41,9 @@ public:
     void setAsync(bool);
     bool async() const;
 
+    void setCrossOrigin(const AtomicString&);
+    String crossOrigin() const;
+
 private:
     HTMLScriptElement(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted);
 
@@ -65,7 +68,7 @@ private:
 
     virtual void dispatchLoadEvent() override;
 
-    virtual RefPtr<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
+    virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&) override;
 };
 
 } //namespace

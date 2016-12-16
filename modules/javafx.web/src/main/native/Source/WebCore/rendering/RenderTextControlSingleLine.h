@@ -34,9 +34,6 @@ class RenderTextControlSingleLine : public RenderTextControl {
 public:
     RenderTextControlSingleLine(HTMLInputElement&, Ref<RenderStyle>&&);
     virtual ~RenderTextControlSingleLine();
-    // FIXME: Move create*Style() to their classes.
-    virtual Ref<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const override;
-    Ref<RenderStyle> createInnerBlockStyle(const RenderStyle* startStyle) const;
 
 protected:
     virtual void centerContainerIfNeeded(RenderBox*) const { }
@@ -79,8 +76,6 @@ private:
     bool textShouldBeTruncated() const;
 
     HTMLElement* innerSpinButtonElement() const;
-
-    LayoutUnit m_desiredInnerTextLogicalHeight;
 };
 
 inline HTMLElement* RenderTextControlSingleLine::containerElement() const
@@ -98,13 +93,14 @@ inline HTMLElement* RenderTextControlSingleLine::innerBlockElement() const
 class RenderTextControlInnerBlock final : public RenderBlockFlow {
 public:
     RenderTextControlInnerBlock(Element& element, Ref<RenderStyle>&& style)
-        : RenderBlockFlow(element, WTF::move(style))
+        : RenderBlockFlow(element, WTFMove(style))
     {
     }
 
 private:
     virtual bool hasLineIfEmpty() const override { return true; }
     virtual bool isTextControlInnerBlock() const override { return true; }
+    virtual bool canBeProgramaticallyScrolled() const override { return true; }
 };
 
 } // namespace WebCore

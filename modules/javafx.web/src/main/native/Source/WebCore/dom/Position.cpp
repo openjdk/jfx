@@ -44,12 +44,16 @@
 #include "RuntimeEnabledFeatures.h"
 #include "Text.h"
 #include "TextIterator.h"
+#include "TextStream.h"
 #include "VisiblePosition.h"
 #include "VisibleUnits.h"
 #include "htmlediting.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
 #include <wtf/unicode/CharacterNames.h>
+#if ENABLE(TREE_DEBUGGING)
+#include <wtf/text/StringBuilder.h>
+#endif
 
 namespace WebCore {
 
@@ -710,7 +714,7 @@ Position Position::upstream(EditingBoundaryCrossingRule rule) const
 
             unsigned textOffset = currentPos.offsetInLeafNode();
             auto lastTextBox = textRenderer.lastTextBox();
-            for (auto box = textRenderer.firstTextBox(); box; box = box->nextTextBox()) {
+            for (auto* box = textRenderer.firstTextBox(); box; box = box->nextTextBox()) {
                 if (textOffset <= box->start() + box->len()) {
                     if (textOffset > box->start())
                         return currentPos;
@@ -838,7 +842,7 @@ Position Position::downstream(EditingBoundaryCrossingRule rule) const
 
             unsigned textOffset = currentPos.offsetInLeafNode();
             auto lastTextBox = textRenderer.lastTextBox();
-            for (auto box = textRenderer.firstTextBox(); box; box = box->nextTextBox()) {
+            for (auto* box = textRenderer.firstTextBox(); box; box = box->nextTextBox()) {
                 if (textOffset <= box->end()) {
                     if (textOffset >= box->start())
                         return currentPos;
@@ -925,7 +929,7 @@ bool Position::hasRenderedNonAnonymousDescendantsWithHeight(const RenderElement&
             continue;
         }
         if (is<RenderBox>(*o)) {
-            if (downcast<RenderBox>(*o).pixelSnappedLogicalHeight())
+            if (roundToInt(downcast<RenderBox>(*o).logicalHeight()))
                 return true;
             continue;
         }
@@ -1449,6 +1453,136 @@ void Position::showTreeForThis() const
 }
 
 #endif
+
+bool Position::equals(const Position& other) const
+{
+    if (!m_anchorNode)
+        return !m_anchorNode == !other.m_anchorNode;
+    if (!other.m_anchorNode)
+        return false;
+
+    switch (anchorType()) {
+    case PositionIsBeforeChildren:
+        ASSERT(!m_anchorNode->isTextNode());
+        switch (other.anchorType()) {
+        case PositionIsBeforeChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return m_anchorNode == other.m_anchorNode;
+        case PositionIsAfterChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return m_anchorNode == other.m_anchorNode && !m_anchorNode->hasChildNodes();
+        case PositionIsOffsetInAnchor:
+            return m_anchorNode == other.m_anchorNode && !other.m_offset;
+        case PositionIsBeforeAnchor:
+            return m_anchorNode->firstChild() == other.m_anchorNode;
+        case PositionIsAfterAnchor:
+            return false;
+        }
+        break;
+    case PositionIsAfterChildren:
+        ASSERT(!m_anchorNode->isTextNode());
+        switch (other.anchorType()) {
+        case PositionIsBeforeChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return m_anchorNode == other.m_anchorNode && !m_anchorNode->hasChildNodes();
+        case PositionIsAfterChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return m_anchorNode == other.m_anchorNode;
+        case PositionIsOffsetInAnchor:
+            return m_anchorNode == other.m_anchorNode && m_anchorNode->countChildNodes() == static_cast<unsigned>(m_offset);
+        case PositionIsBeforeAnchor:
+            return false;
+        case PositionIsAfterAnchor:
+            return m_anchorNode->lastChild() == other.m_anchorNode;
+        }
+        break;
+    case PositionIsOffsetInAnchor:
+        switch (other.anchorType()) {
+        case PositionIsBeforeChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return m_anchorNode == other.m_anchorNode && !m_offset;
+        case PositionIsAfterChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return m_anchorNode == other.m_anchorNode && m_offset == static_cast<int>(other.m_anchorNode->countChildNodes());
+        case PositionIsOffsetInAnchor:
+            return m_anchorNode == other.m_anchorNode && m_offset == other.m_offset;
+        case PositionIsBeforeAnchor:
+            return m_anchorNode->traverseToChildAt(m_offset) == other.m_anchorNode;
+        case PositionIsAfterAnchor:
+            return m_offset && m_anchorNode->traverseToChildAt(m_offset - 1) == other.m_anchorNode;
+        }
+        break;
+    case PositionIsBeforeAnchor:
+        switch (other.anchorType()) {
+        case PositionIsBeforeChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return m_anchorNode == other.m_anchorNode->firstChild();
+        case PositionIsAfterChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return false;
+        case PositionIsOffsetInAnchor:
+            return m_anchorNode == other.m_anchorNode->traverseToChildAt(other.m_offset);
+        case PositionIsBeforeAnchor:
+            return m_anchorNode == other.m_anchorNode;
+        case PositionIsAfterAnchor:
+            return m_anchorNode->previousSibling() == other.m_anchorNode;
+        }
+        break;
+    case PositionIsAfterAnchor:
+        switch (other.anchorType()) {
+        case PositionIsBeforeChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return false;
+        case PositionIsAfterChildren:
+            ASSERT(!other.m_anchorNode->isTextNode());
+            return m_anchorNode == other.m_anchorNode->lastChild();
+        case PositionIsOffsetInAnchor:
+            return other.m_offset && m_anchorNode == other.m_anchorNode->traverseToChildAt(other.m_offset - 1);
+        case PositionIsBeforeAnchor:
+            return m_anchorNode->nextSibling() == other.m_anchorNode;
+        case PositionIsAfterAnchor:
+            return m_anchorNode == other.m_anchorNode;
+        }
+        break;
+    }
+
+    ASSERT_NOT_REACHED();
+    return false;
+}
+
+static TextStream& operator<<(TextStream& stream, Position::AnchorType anchorType)
+{
+    switch (anchorType) {
+    case Position::PositionIsOffsetInAnchor:
+        stream << "offset in anchor";
+        break;
+    case Position::PositionIsBeforeAnchor:
+        stream << "before anchor";
+        break;
+    case Position::PositionIsAfterAnchor:
+        stream << "after anchor";
+        break;
+    case Position::PositionIsBeforeChildren:
+        stream << "before children";
+        break;
+    case Position::PositionIsAfterChildren:
+        stream << "after children";
+        break;
+    }
+    return stream;
+}
+
+TextStream& operator<<(TextStream& stream, const Position& position)
+{
+    TextStream::GroupScope scope(stream);
+    stream << "Position " << &position;
+
+    stream.dumpProperty("anchor node", position.anchorNode());
+    stream.dumpProperty("offset", position.offsetInContainerNode());
+    stream.dumpProperty("anchor type", position.anchorType());
+
+    return stream;
+}
 
 } // namespace WebCore
 

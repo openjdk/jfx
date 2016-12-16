@@ -35,7 +35,6 @@ public:
     virtual ~RenderTextControl();
 
     WEBCORE_EXPORT HTMLTextFormControlElement& textFormControlElement() const;
-    virtual Ref<RenderStyle> createInnerTextStyle(const RenderStyle* startStyle) const = 0;
 
 #if PLATFORM(IOS)
     bool canScroll() const;
@@ -51,7 +50,6 @@ protected:
     TextControlInnerTextElement* innerTextElement() const;
 
     int scrollbarThickness() const;
-    void adjustInnerTextStyle(const RenderStyle* startStyle, RenderStyle& textBlockStyle) const;
 
     virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
@@ -80,7 +78,7 @@ private:
     virtual bool avoidsFloats() const override { return true; }
     virtual bool canHaveGeneratedChildren() const override { return false; }
 
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) override;
+    virtual void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = 0) override;
 
     virtual bool canBeProgramaticallyScrolled() const override { return true; }
 
@@ -94,7 +92,7 @@ private:
 class RenderTextControlInnerContainer final : public RenderFlexibleBox {
 public:
     explicit RenderTextControlInnerContainer(Element& element, Ref<RenderStyle>&& style)
-        : RenderFlexibleBox(element, WTF::move(style))
+        : RenderFlexibleBox(element, WTFMove(style))
     { }
     virtual ~RenderTextControlInnerContainer() { }
 
@@ -105,6 +103,8 @@ public:
     virtual Optional<int> firstLineBaseline() const override { return RenderBlock::firstLineBaseline(); }
     virtual Optional<int> inlineBlockBaseline(LineDirectionMode direction) const override { return RenderBlock::inlineBlockBaseline(direction); }
 
+private:
+    bool isFlexibleBoxImpl() const override { return true; }
 };
 
 } // namespace WebCore

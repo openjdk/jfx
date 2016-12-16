@@ -12,7 +12,6 @@
       <dep package="freetype6"/>
       <dep package="harfbuzz"/>
       <dep package="glib"/>
-      <dep package="gnutls"/>
       <dep package="glib-networking"/>
       <dep package="libsoup"/>
       <dep package="elementary"/>
@@ -52,12 +51,6 @@
       href="http://download.enlightenment.org"/>
   <repository type="tarball" name="gstreamer"
       href="http://gstreamer.freedesktop.org/src/"/>
-  <repository type="svn" name="llvm.org"
-      href="http://llvm.org/svn/llvm-project/"/>
-  <repository type="tarball" name="llvm-tar"
-      href="http://llvm.org"/>
-  <repository type="tarball" name="gnutls"
-      href="ftp://ftp.gnutls.org"/>
 
   <autotools id="cairo" autogen-sh="configure"
              makeargs="CFLAGS='-fno-lto' CXXFLAGS='-fno-lto' LDFLAGS='-fno-lto'">
@@ -65,15 +58,18 @@
       <dep package="fontconfig"/>
       <dep package="pixman"/>
     </dependencies>
-    <branch module="releases/cairo-1.12.4.tar.xz" version="1.12.4"
+    <branch module="releases/cairo-1.14.2.tar.xz" version="1.14.2"
             repo="cairographics.org"
-            hash="sha256:a467b2e1f04bfd3f848370ce5e82cfe0a7f712bac05a04d133bc34c94f677a28"
-            md5sum="a64bb8774a1e476e5cdd69e635794dfb">
+            hash="sha256:c919d999ddb1bbbecd4bbe65299ca2abd2079c7e13d224577895afa7005ecceb"
+            md5sum="e1cdfaf1c6c995c4d4c54e07215b0118">
     </branch>
   </autotools>
 
+  <!-- FIXME: Pixman 0.32.6 isn't buildable with Clang, but disable-mmx option fixes
+              the build. This workaround can be removed once the original bug is fixed.
+              Details can be found here: https://bugs.webkit.org/show_bug.cgi?id=151441 -->
   <autotools id="pixman" autogen-sh="configure"
-             autogenargs="--enable-gtk=no">
+             autogenargs="--enable-gtk=no --disable-arm-iwmmxt --disable-mmx">
     <branch module="releases/pixman-0.32.6.tar.gz" version="0.32.6"
             repo="cairographics.org"
             hash="sha256:3dfed13b8060eadabf0a4945c7045b7793cc7e3e910e748a8bb0f0dc3e794904"
@@ -128,13 +124,6 @@
             md5sum="9636f60e99b98fd0fdb5239f905ac008"/>
   </autotools>
 
-  <autotools id="gnutls" autogen-sh="configure">
-    <branch module="/gcrypt/gnutls/v3.3/gnutls-3.3.0.tar.xz" version="3.3"
-            repo="gnutls"
-            hash="sha256:7b87a4319f74cae3a5f204b810000f06b8efa1ed0f57c684b9bc454f444fdf13"
-            md5sum="4aeb8014feb4016c73a60f4e1ac73c9f"/>
-  </autotools>
-
   <autotools id="glib-networking">
     <dependencies>
       <dep package="glib"/>
@@ -157,36 +146,6 @@
     </branch>
   </autotools>
 
-  <autotools id="llvm-3.5-for-AArch64"
-             autogen-sh="configure"
-             autogenargs="--enable-optimized=yes --enable-backtraces=no --enable-targets=host --enable-zlib=no --enable-terminfo=no --enable-crash-overrides=no --disable-expensive-checks --disable-debug-runtime --disable-assertions">
-    <branch repo="llvm-tar"
-            module="/releases/3.5.0/llvm-3.5.0.src.tar.xz" version="3.5.0" checkoutdir="llvm-3.5.0"
-            hash="sha256:28e199f368ef0a4666708f31c7991ad3bcc3a578342b0306526dd35f07595c03">
-      <patch file="llvm-elf-allow-fde-references-outside-the-2gb-range-arm64.patch" strip="1"/>
-      <patch file="llvm-elf-add-stackmaps-arm64.patch" strip="1"/>
-      <patch file="llvm-version-arm64.patch" strip="1"/>
-    </branch>
-  </autotools>
-
-  <autotools id="llvm-3.6-for-X86_64"
-             autogen-sh="configure"
-             autogenargs="--enable-optimized=yes --enable-backtraces=no --enable-targets=host --enable-zlib=no --enable-terminfo=no --enable-crash-overrides=no --disable-expensive-checks --disable-debug-runtime --disable-assertions">
-    <branch repo="llvm-tar"
-            module="/releases/3.6.0/llvm-3.6.0.src.tar.xz" version="3.6.0" checkoutdir="llvm-3.6.0"
-            hash="sha256:b39a69e501b49e8f73ff75c9ad72313681ee58d6f430bfad4d81846fe92eb9ce">
-    </branch>
-  </autotools>
-
-  <autotools id="clang"
-             skip-autogen="true">
-    <dependencies>
-      <dep package="llvm"/>
-    </dependencies>
-    <branch repo="llvm.org" module="/cfe/tags/RELEASE_350/final" version="3.5.0" checkoutdir="llvm/tools/clang">
-    </branch>
-  </autotools>
-
   <autotools id="fontconfig" 
              autogen-sh="configure"
              autogenargs="--enable-libxml2">
@@ -201,11 +160,10 @@
   </autotools>
 
  <autotools id="harfbuzz" autogen-sh="configure">
-   <branch module="software/harfbuzz/release/harfbuzz-0.9.14.tar.bz2" version="0.9.14"
-           checkoutdir="harfbuzz-0.9.14"
+   <branch module="software/harfbuzz/release/harfbuzz-0.9.35.tar.bz2" version="0.9.35"
+           checkoutdir="harfbuzz-0.9.35"
            repo="freedesktop.org"
-           hash="sha256:d07c0ffdbbbfdfbb6c65e73fe9c76466e87dbf04b094cbd0abf5fd7d571a4004"
-           md5sum="7e1990b79060e98e2d31f677a0ac9eed">
+           hash="sha256:0aa1a8aba6f502321cf6fef3c9d2c73dde48389c5ed1d3615a7691944c2a06ed">
    </branch>
  </autotools>
 
@@ -216,9 +174,9 @@
       <dep package="gstreamer"/>
       <dep package="gst-plugins-base"/>
     </dependencies>
-    <branch module="rel/libs/efl/efl-1.14.0.tar.gz" version="1.14.0"
+    <branch module="rel/libs/efl/efl-1.16.1.tar.gz" version="1.16.1"
             repo="download.enlightenment.org"
-            hash="sha256:30a8a239449e0d068a39787b5a4769dd26ddf0476f58f094c85e65b108086269">
+            hash="sha256:acdff08f72f62bb838f2412de29d0828f9884c30033a3e873902709c78a06198">
       <patch file="ecore_remove_warnings.patch" strip="1"/>
     </branch>
   </autotools>
@@ -226,9 +184,9 @@
   <autotools id="elementary"
              autogen-sh="configure"
              autogenargs="--disable-emap --disable-eweather --with-elementary-web-backend=none">
-    <branch module="rel/libs/elementary/elementary-1.14.0.tar.gz" version="1.14.0"
+    <branch module="rel/libs/elementary/elementary-1.16.1.tar.gz" version="1.16.1"
             repo="download.enlightenment.org"
-            hash="sha256:aa06ca1b332b3cd29ffd136c1f10edf08a06906b3532785ce7e390c1cad6090e">
+            hash="sha256:0707b14d4330b2305ef28ca4387036013a0047a0471b9f36cbaccc89a19113c6">
     </branch>
     <dependencies>
         <dep package="efl"/>
@@ -244,7 +202,17 @@
             md5sum="9c0cfef285d5c4a5c80d00904ddab380"/>
   </autotools>
 
+  <autotools id="orc" autogenargs="--disable-gtk-doc" autogen-sh="configure">
+    <branch module="orc/orc-0.4.17.tar.gz" version="0.4.17"
+            repo="gstreamer"
+            hash="sha256:4fc7cca48c59fff23afee78fb642cdbde001f56401c8f47b95a16578d1d5d7e8"
+            md5sum="af1bf3dab9e69f3c36f389285e2a12a1"/>
+  </autotools>
+
   <autotools id="gstreamer" autogenargs="--disable-gtk-doc" autogen-sh="configure">
+    <dependencies>
+      <dep package="orc"/>
+    </dependencies>
     <branch module="gstreamer/gstreamer-1.4.4.tar.xz" version="1.4.4"
             repo="gstreamer"
             hash="sha256:f0e305d91a93d05bf9e332cd4256ca07d77f5186a4d73847b7ae6db218f2c237"
@@ -277,7 +245,7 @@
     </branch>
   </autotools>
 
-  <autotools id="gst-plugins-bad" autogenargs="--disable-examples --disable-gtk-doc" autogen-sh="configure">
+  <autotools id="gst-plugins-bad" autogenargs="--disable-examples --disable-gtk-doc">
     <dependencies>
       <dep package="gst-plugins-base"/>
     </dependencies>
@@ -319,10 +287,9 @@
     </dependencies>
   </autotools>
 
-  <autotools id="libusrsctp" autogen-sh="./bootstrap; ./configure">
-    <branch repo="github.com" module="ossy-szeged/sctp-refimpl/archive/libusrsctp-r9168c.tar.gz" version="r9168" checkoutdir="libusrsctp"
-            hash="sha256:5f8913e07dd48ddec71a38f7654b16a1f0c776ab9d491ece624fddd7cefc0e71"
-            md5sum="1cbb17cc8cbe518f7e0a99745b232936" size="629581">
+  <autotools id="libusrsctp" autogen-sh="./bootstrap; ./configure --disable-warnings-as-errors">
+    <branch repo="github.com" module="sctplab/usrsctp/archive/078ff3252f73327e0ac11d6fd5eff62011f6646e.tar.gz" version="078ff3252f73327e0ac11d6fd5eff62011f6646e" checkoutdir="libusrsctp"
+            hash="sha256:175938887dc7554e000152055c818bdd15dd0e4ccc94ef93e38e9f952ea82edc" size="648925">
     </branch>
   </autotools>
 
@@ -334,6 +301,7 @@
    <branch repo="github.com" module="EricssonResearch/openwebrtc-gst-plugins/archive/e359b67484af90f416ea35e301205d2b53c77a14.tar.gz" checkoutdir="gst-plugins-openwebrtc" version="gst-plugins-openwebrtc-20150317"
            hash="sha256:a456425efb88de39c16a4f8ac4214aaf53157f9df1323f08de375c77f227b6b7"
            md5sum="827f13634ffa83cccf1a6312effbceaa" size="92883">
+      <patch file="openwebrtc-gst-plugins-clang-warning-fix.patch" strip="1"/>
    </branch>
   </autotools>
 
@@ -355,6 +323,7 @@
     <branch repo="github.com" module="EricssonResearch/openwebrtc/archive/13516c7f79a0c48bb411464f7613d4b426c70f5b.tar.gz" checkoutdir="openwebrtc" version="13516c7f79a0c48bb411464f7613d4b426c70f5b"
             hash="sha256:c849d36d97c17a198a5d9c180f13f14c7897c9236e2384ea11029e23b09b59ac"
             md5sum="13516c7f79a0c48bb411464f7613d4b426c70f5b.tar.gz" size="258936">
+      <patch file="openwebrtc-clang-warning-fix.patch" strip="1"/>
     </branch>
   </autotools>
 

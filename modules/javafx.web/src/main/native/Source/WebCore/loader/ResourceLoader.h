@@ -77,10 +77,10 @@ public:
 #endif
 
     WEBCORE_EXPORT FrameLoader* frameLoader() const;
-    FrameLoader& dataProtocolFrameLoader() const;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
     const ResourceRequest& originalRequest() const { return m_originalRequest; }
 
+    WEBCORE_EXPORT void start();
     WEBCORE_EXPORT void cancel(const ResourceError&);
     WEBCORE_EXPORT ResourceError cancelledError();
     ResourceError blockedError();
@@ -99,8 +99,7 @@ public:
 
     virtual bool isSubresourceLoader();
 
-    virtual void willSendRequest(ResourceRequest&, const ResourceResponse& redirectResponse);
-    virtual void willSendRequest(ResourceRequest&&, const ResourceResponse& redirectResponse, std::function<void(ResourceRequest&)> callback);
+    virtual void willSendRequest(ResourceRequest&&, const ResourceResponse& redirectResponse, std::function<void(ResourceRequest&&)>&& callback);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
     virtual void didReceiveResponse(const ResourceResponse&);
     virtual void didReceiveData(const char*, unsigned, long long encodedDataLength, DataPayloadType);
@@ -141,18 +140,13 @@ public:
 
     void willSwitchToSubstituteResource();
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA) && !USE(CFNETWORK)
     void schedule(WTF::SchedulePair&);
     void unschedule(WTF::SchedulePair&);
 #endif
 
 protected:
     ResourceLoader(DocumentLoader*, ResourceLoaderOptions);
-
-    friend class ResourceLoadScheduler; // for access to start()
-    // start() actually sends the load to the network (unless the load is being
-    // deferred) and should only be called by ResourceLoadScheduler or setDefersLoading().
-    void start();
 
     void didFinishLoadingOnePart(double finishTime);
     void cleanupForError(const ResourceError&);
@@ -170,6 +164,8 @@ protected:
     virtual CFCachedURLResponseRef willCacheResponse(ResourceHandle*, CFCachedURLResponseRef) override;
 #endif
 
+    virtual void willSendRequestInternal(ResourceRequest&, const ResourceResponse& redirectResponse);
+
     RefPtr<ResourceHandle> m_handle;
     RefPtr<Frame> m_frame;
     RefPtr<DocumentLoader> m_documentLoader;
@@ -180,7 +176,8 @@ private:
     virtual void didCancel(const ResourceError&) = 0;
 
     void addDataOrBuffer(const char*, unsigned, SharedBuffer*, DataPayloadType);
-    virtual bool isPlugInStreamLoader() { return false; }
+    void loadDataURL();
+    void finishNetworkLoad();
 
     // ResourceHandleClient
     virtual void willSendRequest(ResourceHandle*, ResourceRequest&, const ResourceResponse& redirectResponse) override;

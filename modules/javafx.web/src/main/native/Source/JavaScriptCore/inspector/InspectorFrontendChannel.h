@@ -30,9 +30,19 @@
 
 namespace Inspector {
 
+// Represents a one-way connection from an Inspection or Automation target to
+// a local or remote controller (such as a debugger or UI automation script).
+
 class FrontendChannel {
 public:
+
+    enum class ConnectionType {
+        Remote,
+        Local
+    };
+
     virtual ~FrontendChannel() { }
+    virtual ConnectionType connectionType() const = 0;
     virtual bool sendMessageToFrontend(const String& message) = 0;
 };
 

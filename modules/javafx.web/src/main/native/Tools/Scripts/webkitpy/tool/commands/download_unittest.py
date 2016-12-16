@@ -76,7 +76,7 @@ class DownloadCommandsTest(CommandsTest):
     def _default_options(self):
         options = MockOptions()
         options.build = True
-        options.build_style = True
+        options.build_style = "release"
         options.check_style = True
         options.check_style_filter = None
         options.clean = True
@@ -88,6 +88,7 @@ class DownloadCommandsTest(CommandsTest):
         options.test = True
         options.update = True
         options.architecture = 'MOCK ARCH'
+        options.iterate_on_new_tests = 0
         return options
 
     def test_build(self):
@@ -101,7 +102,6 @@ Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
 Running bindings generation tests
-Running WebKit unit tests
 Running run-webkit-tests
 """
         self.assert_execute_outputs(BuildAndTest(), [], options=self._default_options(), expected_logs=expected_logs)
@@ -143,7 +143,6 @@ Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
 Running bindings generation tests
-Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Updating bug 50000
@@ -172,8 +171,6 @@ Running JavaScriptCore tests
 MOCK run_and_throw_if_fail: ['mock-run-javacriptcore-tests'], cwd=/mock-checkout
 Running bindings generation tests
 MOCK run_and_throw_if_fail: ['mock-run-bindings-tests'], cwd=/mock-checkout
-Running WebKit unit tests
-MOCK run_and_throw_if_fail: ['mock-run-webkit-unit-tests'], cwd=/mock-checkout
 Running run-webkit-tests
 MOCK run_and_throw_if_fail: ['mock-run-webkit-tests', '--quiet'], cwd=/mock-checkout
 Committed r49824: <http://trac.webkit.org/changeset/49824>
@@ -192,7 +189,6 @@ Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
 Running bindings generation tests
-Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Updating bug 50000
@@ -224,7 +220,6 @@ Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
 Running bindings generation tests
-Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Not closing bug 50000 as attachment 10000 has review=+.  Assuming there are more patches to land from this bug.
@@ -242,7 +237,6 @@ Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
 Running bindings generation tests
-Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Not closing bug 50000 as attachment 10000 has review=+.  Assuming there are more patches to land from this bug.
@@ -253,7 +247,6 @@ Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
 Running bindings generation tests
-Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Not closing bug 50000 as attachment 10000 has review=+.  Assuming there are more patches to land from this bug.
@@ -271,7 +264,6 @@ Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
 Running bindings generation tests
-Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Not closing bug 50000 as attachment 10000 has review=+.  Assuming there are more patches to land from this bug.
@@ -282,7 +274,6 @@ Running Python unit tests
 Running Perl unit tests
 Running JavaScriptCore tests
 Running bindings generation tests
-Running WebKit unit tests
 Running run-webkit-tests
 Committed r49824: <http://trac.webkit.org/changeset/49824>
 Not closing bug 50000 as attachment 10000 has review=+.  Assuming there are more patches to land from this bug.

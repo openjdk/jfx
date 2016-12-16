@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009, 2015 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -24,6 +24,7 @@
 #define JSCell_h
 
 #include "CallData.h"
+#include "CellState.h"
 #include "ConstructData.h"
 #include "EnumerationMode.h"
 #include "Heap.h"
@@ -133,6 +134,10 @@ public:
 
     void dump(PrintStream&) const;
     JS_EXPORT_PRIVATE static void dumpToStream(const JSCell*, PrintStream&);
+
+    size_t estimatedSizeInBytes() const;
+    JS_EXPORT_PRIVATE static size_t estimatedSize(JSCell*);
+
     static void visitChildren(JSCell*, SlotVisitor&);
     JS_EXPORT_PRIVATE static void copyBackingStore(JSCell*, CopyVisitor&, CopyToken);
 
@@ -154,36 +159,12 @@ public:
     static bool canUseFastGetOwnProperty(const Structure&);
     JSValue fastGetOwnProperty(VM&, Structure&, PropertyName);
 
-    enum GCData : uint8_t {
-        Marked = 0, // The object has survived a GC and is in the old gen.
-        NotMarked = 1, // The object is new and in the eden gen.
-        MarkedAndRemembered = 2, // The object is in the GC's remembered set.
+    // The recommended idiom for using cellState() is to switch on it or perform an == comparison on it
+    // directly. We deliberately avoid helpers for this, because we want transparency about how the various
+    // CellState values influences our various algorithms.
+    CellState cellState() const { return m_cellState; }
 
-        // The object being in the GC's remembered set implies that it is also
-        // Marked. This is because objects are only added to the remembered sets
-        // by write barriers, and write barriers are only interested in old gen
-        // objects that point to potential eden gen objects.
-    };
-
-    void setMarked() { m_gcData = Marked; }
-    void setRemembered(bool remembered)
-    {
-        ASSERT(m_gcData == (remembered ? Marked : MarkedAndRemembered));
-        m_gcData = remembered ? MarkedAndRemembered : Marked;
-    }
-    bool isMarked() const
-    {
-        switch (m_gcData) {
-        case Marked:
-        case MarkedAndRemembered:
-            return true;
-        case NotMarked:
-            return false;
-        }
-        RELEASE_ASSERT_NOT_REACHED();
-        return false;
-    }
-    bool isRemembered() const { return m_gcData == MarkedAndRemembered; }
+    void setCellState(CellState data) const { const_cast<JSCell*>(this)->m_cellState = data; }
 
     static ptrdiff_t structureIDOffset()
     {
@@ -205,9 +186,9 @@ public:
         return OBJECT_OFFSETOF(JSCell, m_indexingType);
     }
 
-    static ptrdiff_t gcDataOffset()
+    static ptrdiff_t cellStateOffset()
     {
-        return OBJECT_OFFSETOF(JSCell, m_gcData);
+        return OBJECT_OFFSETOF(JSCell, m_cellState);
     }
 
     static const TypedArrayType TypedArrayStorageType = NotTypedArray;
@@ -225,6 +206,9 @@ protected:
     static uint32_t getEnumerableLength(ExecState*, JSObject*);
     static NO_RETURN_DUE_TO_CRASH void getStructurePropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
     static NO_RETURN_DUE_TO_CRASH void getGenericPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode);
+    static NO_RETURN_DUE_TO_CRASH bool preventExtensions(JSObject*, ExecState*);
+    static NO_RETURN_DUE_TO_CRASH bool isExtensible(JSObject*, ExecState*);
+    static NO_RETURN_DUE_TO_CRASH bool setPrototype(JSObject*, ExecState*, JSValue);
 
     static String className(const JSObject*);
     JS_EXPORT_PRIVATE static bool customHasInstance(JSObject*, ExecState*, JSValue);
@@ -241,7 +225,7 @@ private:
     IndexingType m_indexingType;
     JSType m_type;
     TypeInfo::InlineTypeFlags m_flags;
-    uint8_t m_gcData;
+    CellState m_cellState;
 };
 
 template<typename To, typename From>

@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Ericsson AB. All rights reserved.
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -41,13 +41,13 @@
 #include "Document.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
+#include "JSMediaDeviceInfo.h"
 #include "JSMediaStream.h"
 #include "JSNavigatorUserMediaError.h"
+#include "MainFrame.h"
 #include "MediaConstraintsImpl.h"
 #include "MediaStream.h"
 #include "MediaStreamPrivate.h"
-#include "NavigatorUserMediaErrorCallback.h"
-#include "NavigatorUserMediaSuccessCallback.h"
 #include "RealtimeMediaSourceCenter.h"
 #include "SecurityOrigin.h"
 #include "UserMediaController.h"
@@ -89,7 +89,7 @@ void UserMediaRequest::start(Document* document, const Dictionary& options, Medi
         return;
     }
 
-    Ref<UserMediaRequest> request = adoptRef(*new UserMediaRequest(document, userMedia, audioConstraints.release(), videoConstraints.release(), WTF::move(promise)));
+    Ref<UserMediaRequest> request = adoptRef(*new UserMediaRequest(document, userMedia, audioConstraints.release(), videoConstraints.release(), WTFMove(promise)));
     request->start();
 }
 
@@ -98,7 +98,7 @@ UserMediaRequest::UserMediaRequest(ScriptExecutionContext* context, UserMediaCon
     , m_audioConstraints(audioConstraints)
     , m_videoConstraints(videoConstraints)
     , m_controller(controller)
-    , m_promise(WTF::move(promise))
+    , m_promise(WTFMove(promise))
 {
 }
 
@@ -106,12 +106,25 @@ UserMediaRequest::~UserMediaRequest()
 {
 }
 
-SecurityOrigin* UserMediaRequest::securityOrigin() const
+SecurityOrigin* UserMediaRequest::userMediaDocumentOrigin() const
 {
     if (m_scriptExecutionContext)
         return m_scriptExecutionContext->securityOrigin();
 
     return nullptr;
+}
+
+SecurityOrigin* UserMediaRequest::topLevelDocumentOrigin() const
+{
+    if (!m_scriptExecutionContext)
+        return nullptr;
+
+    if (Frame* frame = downcast<Document>(*scriptExecutionContext()).frame()) {
+        if (frame->isMainFrame())
+            return nullptr;
+    }
+
+    return m_scriptExecutionContext->topOrigin();
 }
 
 void UserMediaRequest::start()
@@ -121,26 +134,30 @@ void UserMediaRequest::start()
     RealtimeMediaSourceCenter::singleton().validateRequestConstraints(this, m_audioConstraints, m_videoConstraints);
 }
 
-void UserMediaRequest::constraintsValidated(const Vector<RefPtr<RealtimeMediaSource>>& videoTracks, const Vector<RefPtr<RealtimeMediaSource>>& audioTracks)
+void UserMediaRequest::constraintsValidated(const Vector<RefPtr<RealtimeMediaSource>>& audioTracks, const Vector<RefPtr<RealtimeMediaSource>>& videoTracks)
 {
     for (auto& audioTrack : audioTracks)
-        m_audioDeviceUIDs.append(audioTrack->id());
+        m_audioDeviceUIDs.append(audioTrack->persistentID());
     for (auto& videoTrack : videoTracks)
-        m_videoDeviceUIDs.append(videoTrack->id());
+        m_videoDeviceUIDs.append(videoTrack->persistentID());
+
     RefPtr<UserMediaRequest> protectedThis(this);
     callOnMainThread([protectedThis] {
         // 2 - The constraints are valid, ask the user for access to media.
         if (UserMediaController* controller = protectedThis->m_controller)
-            controller->requestPermission(*protectedThis.get());
+            controller->requestUserMediaAccess(*protectedThis.get());
     });
 }
 
-void UserMediaRequest::userMediaAccessGranted()
+void UserMediaRequest::userMediaAccessGranted(const String& audioDeviceUID, const String& videoDeviceUID)
 {
+    m_allowedVideoDeviceUID = videoDeviceUID;
+    m_audioDeviceUIDAllowed = audioDeviceUID;
+
     RefPtr<UserMediaRequest> protectedThis(this);
-    callOnMainThread([protectedThis] {
+    callOnMainThread([protectedThis, audioDeviceUID, videoDeviceUID] {
         // 3 - the user granted access, ask platform to create the media stream descriptors.
-        RealtimeMediaSourceCenter::singleton().createMediaStream(protectedThis.get(), protectedThis->m_audioConstraints, protectedThis->m_videoConstraints);
+        RealtimeMediaSourceCenter::singleton().createMediaStream(protectedThis.get(), audioDeviceUID, videoDeviceUID);
     });
 }
 
@@ -161,10 +178,18 @@ void UserMediaRequest::didCreateStream(PassRefPtr<MediaStreamPrivate> privateStr
 
     // 4 - Create the MediaStream and pass it to the success callback.
     RefPtr<MediaStream> stream = MediaStream::create(*m_scriptExecutionContext, privateStream);
-    for (auto& track : stream->getAudioTracks())
-        track->applyConstraints(*m_audioConstraints);
-    for (auto& track : stream->getVideoTracks())
-        track->applyConstraints(*m_videoConstraints);
+    if (m_audioConstraints) {
+        for (auto& track : stream->getAudioTracks()) {
+            track->applyConstraints(*m_audioConstraints);
+            track->source().startProducingData();
+        }
+    }
+    if (m_videoConstraints) {
+        for (auto& track : stream->getVideoTracks()) {
+            track->applyConstraints(*m_videoConstraints);
+            track->source().startProducingData();
+        }
+    }
 
     m_promise.resolve(stream);
 }
@@ -192,7 +217,7 @@ void UserMediaRequest::contextDestroyed()
     Ref<UserMediaRequest> protect(*this);
 
     if (m_controller) {
-        m_controller->cancelRequest(*this);
+        m_controller->cancelUserMediaAccessRequest(*this);
         m_controller = nullptr;
     }
 

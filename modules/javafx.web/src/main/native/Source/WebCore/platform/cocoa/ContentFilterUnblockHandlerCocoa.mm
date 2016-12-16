@@ -57,16 +57,16 @@ static NSString * const unreachableURLKey { @"unreachableURL" };
 namespace WebCore {
 
 ContentFilterUnblockHandler::ContentFilterUnblockHandler(String unblockURLHost, UnblockRequesterFunction unblockRequester)
-    : m_unblockURLHost { WTF::move(unblockURLHost) }
-    , m_unblockRequester { WTF::move(unblockRequester) }
+    : m_unblockURLHost { WTFMove(unblockURLHost) }
+    , m_unblockRequester { WTFMove(unblockRequester) }
 {
     LOG(ContentFiltering, "Creating ContentFilterUnblockHandler with an unblock requester and unblock URL host <%s>.\n", unblockURLHost.ascii().data());
 }
 
 #if HAVE(PARENTAL_CONTROLS) && PLATFORM(IOS)
 ContentFilterUnblockHandler::ContentFilterUnblockHandler(String unblockURLHost, RetainPtr<WebFilterEvaluator> evaluator)
-    : m_unblockURLHost { WTF::move(unblockURLHost) }
-    , m_webFilterEvaluator { WTF::move(evaluator) }
+    : m_unblockURLHost { WTFMove(unblockURLHost) }
+    , m_webFilterEvaluator { WTFMove(evaluator) }
 {
     LOG(ContentFiltering, "Creating ContentFilterUnblockHandler with a WebFilterEvaluator and unblock URL host <%s>.\n", unblockURLHost.ascii().data());
 }
@@ -133,7 +133,7 @@ bool ContentFilterUnblockHandler::canHandleRequest(const ResourceRequest& reques
 #endif
     }
 
-    bool isUnblockRequest = request.url().protocolIs(ContentFilter::urlScheme()) && equalIgnoringCase(request.url().host(), m_unblockURLHost);
+    bool isUnblockRequest = request.url().protocolIs(ContentFilter::urlScheme()) && equalIgnoringASCIICase(request.url().host(), m_unblockURLHost);
 #if !LOG_DISABLED
     if (isUnblockRequest)
         LOG(ContentFiltering, "ContentFilterUnblockHandler will handle <%s> as an unblock request.\n", request.url().string().ascii().data());

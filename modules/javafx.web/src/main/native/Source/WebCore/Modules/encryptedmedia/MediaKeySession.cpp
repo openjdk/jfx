@@ -52,11 +52,10 @@ MediaKeySession::MediaKeySession(ScriptExecutionContext* context, MediaKeys* key
     , m_keys(keys)
     , m_keySystem(keySystem)
     , m_asyncEventQueue(*this)
-    , m_session(keys->cdm()->createSession())
+    , m_session(keys->cdm()->createSession(this))
     , m_keyRequestTimer(*this, &MediaKeySession::keyRequestTimerFired)
     , m_addKeyTimer(*this, &MediaKeySession::addKeyTimerFired)
 {
-    m_session->setClient(this);
 }
 
 MediaKeySession::~MediaKeySession()
@@ -112,14 +111,14 @@ void MediaKeySession::keyRequestTimerFired()
         // 2. Let destinationURL be null.
         String destinationURL;
         MediaKeyError::Code errorCode = 0;
-        unsigned long systemCode = 0;
+        uint32_t systemCode = 0;
 
         // 3. Use cdm to generate a key request and follow the steps for the first matching condition from the following list:
 
         RefPtr<Uint8Array> keyRequest = m_session->generateKeyRequest(request.mimeType, request.initData.get(), destinationURL, errorCode, systemCode);
 
         // Otherwise [if a request is not successfully generated]:
-        if (!keyRequest) {
+        if (errorCode) {
             // 3.1. Create a new MediaKeyError object with the following attributes:
             //      code = the appropriate MediaKeyError code
             //      systemCode = a Key System-specific value, if provided, and 0 otherwise
@@ -134,7 +133,8 @@ void MediaKeySession::keyRequestTimerFired()
         //    The event is of type MediaKeyMessageEvent and has:
         //    message = key request
         //    destinationURL = destinationURL
-        sendMessage(keyRequest.get(), destinationURL);
+        if (keyRequest)
+            sendMessage(keyRequest.get(), destinationURL);
     }
 }
 
@@ -163,7 +163,7 @@ void MediaKeySession::addKeyTimerFired()
     while (!m_pendingKeys.isEmpty()) {
         RefPtr<Uint8Array> pendingKey = m_pendingKeys.takeFirst();
         unsigned short errorCode = 0;
-        unsigned long systemCode = 0;
+        uint32_t systemCode = 0;
 
         // NOTE: Continued from step 2. of MediaKeySession::update()
         // 2.1. Let cdm be the cdm loaded in the MediaKeys constructor.
@@ -209,17 +209,12 @@ void MediaKeySession::addKeyTimerFired()
 
 void MediaKeySession::sendMessage(Uint8Array* message, String destinationURL)
 {
-    MediaKeyMessageEventInit init;
-    init.bubbles = false;
-    init.cancelable = false;
-    init.message = message;
-    init.destinationURL = destinationURL;
-    RefPtr<MediaKeyMessageEvent> event = MediaKeyMessageEvent::create(eventNames().webkitkeymessageEvent, init);
+    RefPtr<MediaKeyMessageEvent> event = MediaKeyMessageEvent::create(eventNames().webkitkeymessageEvent, message, destinationURL);
     event->setTarget(this);
     m_asyncEventQueue.enqueueEvent(event.release());
 }
 
-void MediaKeySession::sendError(CDMSessionClient::MediaKeyErrorCode errorCode, unsigned long systemCode)
+void MediaKeySession::sendError(CDMSessionClient::MediaKeyErrorCode errorCode, uint32_t systemCode)
 {
     Ref<MediaKeyError> error = MediaKeyError::create(errorCode, systemCode).get();
     setError(error.ptr());
@@ -265,7 +260,7 @@ const char* MediaKeySession::activeDOMObjectName() const
     return "MediaKeySession";
 }
 
-bool MediaKeySession::canSuspendForPageCache() const
+bool MediaKeySession::canSuspendForDocumentSuspension() const
 {
     // FIXME: We should try and do better here.
     return false;

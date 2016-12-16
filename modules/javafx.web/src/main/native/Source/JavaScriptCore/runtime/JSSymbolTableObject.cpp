@@ -31,7 +31,6 @@
 
 #include "JSGlobalObject.h"
 #include "JSLexicalEnvironment.h"
-#include "JSNameScope.h"
 #include "JSCInlines.h"
 #include "PropertyNameArray.h"
 
@@ -48,7 +47,7 @@ void JSSymbolTableObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
 bool JSSymbolTableObject::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
 {
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(cell);
-    if (thisObject->symbolTable()->contains(propertyName.publicName()))
+    if (thisObject->symbolTable()->contains(propertyName.uid()))
         return false;
 
     return JSObject::deleteProperty(thisObject, exec, propertyName);

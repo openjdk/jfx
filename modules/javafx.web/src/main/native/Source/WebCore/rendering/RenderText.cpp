@@ -230,7 +230,7 @@ bool RenderText::isTextFragment() const
 bool RenderText::computeUseBackslashAsYenSymbol() const
 {
     const RenderStyle& style = this->style();
-    const FontDescription& fontDescription = style.fontCascade().fontDescription();
+    const auto& fontDescription = style.fontDescription();
     if (style.fontCascade().useBackslashAsYenSymbol())
         return true;
     if (fontDescription.isSpecifiedFont())
@@ -460,7 +460,7 @@ ALWAYS_INLINE float RenderText::widthFromCache(const FontCascade& f, int start, 
             return combineText.combinedTextWidth(f);
     }
 
-    if (f.isFixedPitch() && !f.isSmallCaps() && m_isAllASCII && (!glyphOverflow || !glyphOverflow->computeBounds)) {
+    if (f.isFixedPitch() && f.fontDescription().variantSettings().isAllNormal() && m_isAllASCII && (!glyphOverflow || !glyphOverflow->computeBounds)) {
         float monospaceCharacterWidth = f.spaceWidth();
         float w = 0;
         bool isSpace;
@@ -500,6 +500,32 @@ ALWAYS_INLINE float RenderText::widthFromCache(const FontCascade& f, int start, 
     run.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
     run.setXPos(xPos);
     return f.width(run, fallbackFonts, glyphOverflow);
+}
+
+inline bool isHangablePunctuationAtLineStart(UChar c)
+{
+    return U_GET_GC_MASK(c) & (U_GC_PS_MASK | U_GC_PI_MASK | U_GC_PF_MASK);
+}
+
+inline bool isHangablePunctuationAtLineEnd(UChar c)
+{
+    return U_GET_GC_MASK(c) & (U_GC_PE_MASK | U_GC_PI_MASK | U_GC_PF_MASK);
+}
+
+float RenderText::hangablePunctuationStartWidth() const
+{
+    if (!textLength())
+        return 0;
+
+    ASSERT(m_text);
+    StringImpl& text = *m_text.impl();
+    if (!isHangablePunctuationAtLineStart(text[0]))
+        return 0;
+
+    const RenderStyle& style = this->style();
+    const FontCascade& font = style.fontCascade();
+
+    return widthFromCache(font, 0, 1, 0, 0, 0, style);
 }
 
 void RenderText::trimmedPrefWidths(float leadWidth,
@@ -737,6 +763,10 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
     Optional<int> firstGlyphLeftOverflow;
 
     bool breakNBSP = style.autoWrap() && style.nbspMode() == SPACE;
+
+    // Note the deliberate omission of word-wrap and overflow-wrap from this breakAll check. Those
+    // do not affect minimum preferred sizes. Note that break-word is a non-standard value for
+    // word-break, but we support it as though it means break-all.
     bool breakAll = (style.wordBreak() == BreakAllWordBreak || style.wordBreak() == BreakWordBreak) && style.autoWrap();
     bool keepAllWords = style.wordBreak() == KeepAllWordBreak;
     bool isLooseCJKMode = breakIterator.isLooseCJKMode();
@@ -1031,10 +1061,10 @@ void applyTextTransform(const RenderStyle& style, String& text, UChar previousCh
         makeCapitalized(&text, previousCharacter);
         break;
     case UPPERCASE:
-        text = text.upper(style.locale());
+        text = text.convertToUppercaseWithLocale(style.locale());
         break;
     case LOWERCASE:
-        text = text.lower(style.locale());
+        text = text.convertToLowercaseWithLocale(style.locale());
         break;
     }
 }
@@ -1321,11 +1351,8 @@ LayoutRect RenderText::collectSelectionRectsForLineBoxes(const RenderLayerModelO
     }
 
     if (clipToVisibleContent)
-        computeRectForRepaint(repaintContainer, resultRect);
-    else
-        resultRect = localToContainerQuad(FloatRect(resultRect), repaintContainer).enclosingBoundingBox();
-
-    return resultRect;
+        return computeRectForRepaint(resultRect, repaintContainer);
+    return localToContainerQuad(FloatRect(resultRect), repaintContainer).enclosingBoundingBox();
 }
 
 LayoutRect RenderText::collectSelectionRectsForLineBoxes(const RenderLayerModelObject* repaintContainer, bool clipToVisibleContent, Vector<LayoutRect>& rects)

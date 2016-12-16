@@ -46,13 +46,16 @@ public:
     virtual ~GradientImage();
 
 protected:
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription) override;
-    virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
-        const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode) override;
+    virtual void draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator, BlendMode, ImageOrientationDescription) override;
+    virtual void drawPattern(GraphicsContext&, const FloatRect& srcRect, const AffineTransform& patternTransform,
+        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, const FloatRect& destRect, BlendMode) override;
 
     GradientImage(PassRefPtr<Gradient>, const FloatSize&);
 
 private:
+    virtual bool isGradientImage() const override { return true; }
+    virtual void dump(TextStream&) const override;
+
     RefPtr<Gradient> m_gradient;
     std::unique_ptr<ImageBuffer> m_cachedImageBuffer;
     FloatSize m_cachedAdjustedSize;

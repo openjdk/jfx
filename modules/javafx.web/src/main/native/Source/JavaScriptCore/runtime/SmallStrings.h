@@ -48,7 +48,6 @@ class StringImpl;
 
 namespace JSC {
 
-class HeapRootVisitor;
 class VM;
 class JSString;
 class SmallStringsStorage;
@@ -110,6 +109,7 @@ public:
         return nullptr;
     }
 
+    JSString* objectStringStart() const { return m_objectStringStart; }
     JSString* nullObjectString() const { return m_nullObjectString; }
     JSString* undefinedObjectString() const { return m_undefinedObjectString; }
 
@@ -123,8 +123,8 @@ public:
 private:
     static const unsigned singleCharacterStringCount = maxSingleCharacterString + 1;
 
-    JS_EXPORT_PRIVATE void createEmptyString(VM*);
-    JS_EXPORT_PRIVATE void createSingleCharacterString(VM*, unsigned char);
+    void createEmptyString(VM*);
+    void createSingleCharacterString(VM*, unsigned char);
 
     void initialize(VM*, JSString*&, const char* value);
 
@@ -132,6 +132,7 @@ private:
 #define JSC_COMMON_STRINGS_ATTRIBUTE_DECLARATION(name) JSString* m_##name;
     JSC_COMMON_STRINGS_EACH_NAME(JSC_COMMON_STRINGS_ATTRIBUTE_DECLARATION)
 #undef JSC_COMMON_STRINGS_ATTRIBUTE_DECLARATION
+    JSString* m_objectStringStart;
     JSString* m_nullObjectString;
     JSString* m_undefinedObjectString;
     JSString* m_singleCharacterStrings[singleCharacterStringCount];

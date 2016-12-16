@@ -30,6 +30,7 @@
 
 #include "DFGGraph.h"
 #include "DFGInsertionSet.h"
+#include "DFGNaturalLoops.h"
 #include "DFGPhase.h"
 #include "FTLCapabilities.h"
 #include "JSCInlines.h"
@@ -53,20 +54,25 @@ public:
         if (m_graph.m_profiledBlock->m_didFailFTLCompilation)
             return false;
 
+        if (!Options::bytecodeRangeToFTLCompile().isInRange(m_graph.m_profiledBlock->instructionCount()))
+            return false;
+
 #if ENABLE(FTL_JIT)
         FTL::CapabilityLevel level = FTL::canCompile(m_graph);
         if (level == FTL::CannotCompile)
             return false;
 
-        if (!Options::enableOSREntryToFTL())
+        if (!Options::useOSREntryToFTL())
             level = FTL::CanCompile;
 
         // First we find all the loops that contain a LoopHint for which we cannot OSR enter.
         // We use that information to decide if we need CheckTierUpAndOSREnter or CheckTierUpWithNestedTriggerAndOSREnter.
-        NaturalLoops& naturalLoops = m_graph.m_naturalLoops;
-        naturalLoops.computeIfNecessary(m_graph);
+        m_graph.ensureNaturalLoops();
+        NaturalLoops& naturalLoops = *m_graph.m_naturalLoops;
 
         HashSet<const NaturalLoop*> loopsContainingLoopHintWithoutOSREnter = findLoopsContainingLoopHintWithoutOSREnter(naturalLoops, level);
+
+        bool canTierUpAndOSREnter = false;
 
         InsertionSet insertionSet(m_graph);
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
@@ -81,6 +87,7 @@ public:
 
                 NodeOrigin origin = node->origin;
                 if (canOSREnterAtLoopHint(level, block, nodeIndex)) {
+                    canTierUpAndOSREnter = true;
                     const NaturalLoop* loop = naturalLoops.innerMostLoopOf(block);
                     if (loop && loopsContainingLoopHintWithoutOSREnter.contains(loop))
                         insertionSet.insertNode(nodeIndex + 1, SpecNone, CheckTierUpWithNestedTriggerAndOSREnter, origin);
@@ -92,7 +99,7 @@ public:
             }
 
             NodeAndIndex terminal = block->findTerminal();
-            if (terminal.node->op() == Return) {
+            if (terminal.node->isFunctionTerminal()) {
                 insertionSet.insertNode(
                     terminal.index, SpecNone, CheckTierUpAtReturn, terminal.node->origin);
             }
@@ -100,6 +107,7 @@ public:
             insertionSet.execute(block);
         }
 
+        m_graph.m_plan.canTierUpAndOSREnter = canTierUpAndOSREnter;
         m_graph.m_plan.willTryToTierUp = true;
         return true;
 #else // ENABLE(FTL_JIT)

@@ -42,21 +42,12 @@ bool JSNodeListOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handl
     JSNodeList* jsNodeList = jsCast<JSNodeList*>(handle.slot()->asCell());
     if (!jsNodeList->hasCustomProperties())
         return false;
-    if (jsNodeList->impl().isLiveNodeList())
-        return visitor.containsOpaqueRoot(root(static_cast<LiveNodeList&>(jsNodeList->impl()).ownerNode()));
-    if (jsNodeList->impl().isChildNodeList())
-        return visitor.containsOpaqueRoot(root(static_cast<ChildNodeList&>(jsNodeList->impl()).ownerNode()));
-    if (jsNodeList->impl().isEmptyNodeList())
-        return visitor.containsOpaqueRoot(root(static_cast<EmptyNodeList&>(jsNodeList->impl()).ownerNode()));
-    return false;
-}
-
-bool JSNodeList::getOwnPropertySlotDelegate(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
-{
-    if (Node* item = impl().namedItem(propertyNameToAtomicString(propertyName))) {
-        slot.setValue(this, ReadOnly | DontDelete | DontEnum, toJS(exec, globalObject(), item));
-        return true;
-    }
+    if (jsNodeList->wrapped().isLiveNodeList())
+        return visitor.containsOpaqueRoot(root(static_cast<LiveNodeList&>(jsNodeList->wrapped()).ownerNode()));
+    if (jsNodeList->wrapped().isChildNodeList())
+        return visitor.containsOpaqueRoot(root(static_cast<ChildNodeList&>(jsNodeList->wrapped()).ownerNode()));
+    if (jsNodeList->wrapped().isEmptyNodeList())
+        return visitor.containsOpaqueRoot(root(static_cast<EmptyNodeList&>(jsNodeList->wrapped()).ownerNode()));
     return false;
 }
 
@@ -66,6 +57,14 @@ JSC::JSValue createWrapper(JSDOMGlobalObject& globalObject, NodeList& nodeList)
     // https://bugs.webkit.org/show_bug.cgi?id=142595
     globalObject.vm().heap.deprecatedReportExtraMemory(nodeList.memoryCost());
     return createNewWrapper<JSNodeList>(&globalObject, &nodeList);
+}
+
+JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject* globalObject, NodeList* nodeList)
+{
+    if (!nodeList)
+        return JSC::jsNull();
+
+    return createWrapper(*globalObject, *nodeList);
 }
 
 } // namespace WebCore

@@ -25,12 +25,11 @@
 
 #import "WebImmediateActionController.h"
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+#if PLATFORM(MAC)
 
 #import "DOMElementInternal.h"
 #import "DOMNodeInternal.h"
 #import "DOMRangeInternal.h"
-#import "DictionaryPopupInfo.h"
 #import "WebElementDictionary.h"
 #import "WebFrameInternal.h"
 #import "WebHTMLView.h"
@@ -105,7 +104,7 @@ using namespace WebCore;
 {
     [_currentQLPreviewMenuItem close];
     [self _clearImmediateActionState];
-    [_webView _clearTextIndicatorWithAnimation:TextIndicatorDismissalAnimation::None];
+    [_webView _clearTextIndicatorWithAnimation:TextIndicatorWindowDismissalAnimation::None];
 }
 
 - (NSImmediateActionGestureRecognizer *)immediateActionRecognizer
@@ -120,7 +119,7 @@ using namespace WebCore;
     [_immediateActionRecognizer setEnabled:YES];
 
     [self _clearImmediateActionState];
-    [_webView _clearTextIndicatorWithAnimation:TextIndicatorDismissalAnimation::FadeOut];
+    [_webView _clearTextIndicatorWithAnimation:TextIndicatorWindowDismissalAnimation::FadeOut];
 }
 
 - (void)_clearImmediateActionState
@@ -159,12 +158,17 @@ using namespace WebCore;
     if (!_webView)
         return;
 
+    NSView *documentView = [[[_webView _selectedOrMainFrame] frameView] documentView];
+    if (![documentView isKindOfClass:[WebHTMLView class]]) {
+        [self _cancelImmediateAction];
+        return;
+    }
+
     if (immediateActionRecognizer != _immediateActionRecognizer)
         return;
 
     [_webView _setMaintainsInactiveSelection:YES];
 
-    WebHTMLView *documentView = [[[_webView _selectedOrMainFrame] frameView] documentView];
     NSPoint locationInDocumentView = [immediateActionRecognizer locationInView:documentView];
     [self performHitTestAtPoint:locationInDocumentView];
     [self _updateImmediateActionItem];
@@ -209,13 +213,22 @@ using namespace WebCore;
     if (immediateActionRecognizer != _immediateActionRecognizer)
         return;
 
-    Frame* coreFrame = core([[[[_webView _selectedOrMainFrame] frameView] documentView] _frame]);
-    if (coreFrame)
-        coreFrame->eventHandler().setImmediateActionStage(ImmediateActionStage::ActionCancelled);
+    NSView *documentView = [[[_webView _selectedOrMainFrame] frameView] documentView];
+    if (![documentView isKindOfClass:[WebHTMLView class]])
+        return;
+
+    Frame* coreFrame = core([(WebHTMLView *)documentView _frame]);
+    if (coreFrame) {
+        ImmediateActionStage lastStage = coreFrame->eventHandler().immediateActionStage();
+        if (lastStage == ImmediateActionStage::ActionUpdated)
+            coreFrame->eventHandler().setImmediateActionStage(ImmediateActionStage::ActionCancelledAfterUpdate);
+        else
+            coreFrame->eventHandler().setImmediateActionStage(ImmediateActionStage::ActionCancelledWithoutUpdate);
+    }
 
     [_webView _setTextIndicatorAnimationProgress:0];
     [self _clearImmediateActionState];
-    [_webView _clearTextIndicatorWithAnimation:TextIndicatorDismissalAnimation::None];
+    [_webView _clearTextIndicatorWithAnimation:TextIndicatorWindowDismissalAnimation::None];
     [_webView _setMaintainsInactiveSelection:NO];
 }
 
@@ -259,9 +272,9 @@ using namespace WebCore;
             _type = WebImmediateActionLinkPreview;
 
             RefPtr<Range> linkRange = rangeOfContents(*_hitTestResult.URLElement());
-            RefPtr<TextIndicator> indicator = TextIndicator::createWithRange(*linkRange, TextIndicatorPresentationTransition::FadeIn);
+            auto indicator = TextIndicator::createWithRange(*linkRange, TextIndicatorOptionDefault, TextIndicatorPresentationTransition::FadeIn);
             if (indicator)
-                [_webView _setTextIndicator:*indicator withLifetime:TextIndicatorLifetime::Permanent];
+                [_webView _setTextIndicator:*indicator withLifetime:TextIndicatorWindowLifetime::Permanent];
 
             QLPreviewMenuItem *item = [NSMenuItem standardQuickLookMenuItem];
             item.previewStyle = QLPreviewStylePopover;
@@ -339,7 +352,7 @@ using namespace WebCore;
 - (void)menuItemDidClose:(NSMenuItem *)menuItem
 {
     [self _clearImmediateActionState];
-    [_webView _clearTextIndicatorWithAnimation:TextIndicatorDismissalAnimation::FadeOut];
+    [_webView _clearTextIndicatorWithAnimation:TextIndicatorWindowDismissalAnimation::FadeOut];
 }
 
 static IntRect elementBoundingBoxInWindowCoordinatesFromNode(Node* node)
@@ -416,14 +429,14 @@ static IntRect elementBoundingBoxInWindowCoordinatesFromNode(Node* node)
             return nil;
     }
 
-    RefPtr<TextIndicator> detectedDataTextIndicator = TextIndicator::createWithRange(*detectedDataRange, TextIndicatorPresentationTransition::FadeIn);
+    auto indicator = TextIndicator::createWithRange(*detectedDataRange, TextIndicatorOptionDefault, TextIndicatorPresentationTransition::FadeIn);
 
     _currentActionContext = [actionContext contextForView:_webView altMode:YES interactionStartedHandler:^() {
     } interactionChangedHandler:^() {
-        if (detectedDataTextIndicator)
-            [_webView _setTextIndicator:*detectedDataTextIndicator withLifetime:TextIndicatorLifetime::Permanent];
+        if (indicator)
+            [_webView _setTextIndicator:*indicator withLifetime:TextIndicatorWindowLifetime::Permanent];
     } interactionStoppedHandler:^() {
-        [_webView _clearTextIndicatorWithAnimation:TextIndicatorDismissalAnimation::FadeOut];
+        [_webView _clearTextIndicatorWithAnimation:TextIndicatorWindowDismissalAnimation::FadeOut];
     }];
 
     [_currentActionContext setHighlightFrame:[_webView.window convertRectToScreen:detectedDataBoundingBox]];
@@ -448,14 +461,14 @@ static IntRect elementBoundingBoxInWindowCoordinatesFromNode(Node* node)
     RefPtr<Range> linkRange = rangeOfContents(*_hitTestResult.URLElement());
     if (!linkRange)
         return nullptr;
-    RefPtr<TextIndicator> indicator = TextIndicator::createWithRange(*linkRange, TextIndicatorPresentationTransition::FadeIn);
+    auto indicator = TextIndicator::createWithRange(*linkRange, TextIndicatorOptionDefault, TextIndicatorPresentationTransition::FadeIn);
 
     _currentActionContext = [actionContext contextForView:_webView altMode:YES interactionStartedHandler:^() {
     } interactionChangedHandler:^() {
         if (indicator)
-            [_webView _setTextIndicator:*indicator withLifetime:TextIndicatorLifetime::Permanent];
+            [_webView _setTextIndicator:*indicator withLifetime:TextIndicatorWindowLifetime::Permanent];
     } interactionStoppedHandler:^() {
-        [_webView _clearTextIndicatorWithAnimation:TextIndicatorDismissalAnimation::FadeOut];
+        [_webView _clearTextIndicatorWithAnimation:TextIndicatorWindowDismissalAnimation::FadeOut];
     }];
 
     [_currentActionContext setHighlightFrame:[_webView.window convertRectToScreen:elementBoundingBoxInWindowCoordinatesFromNode(_hitTestResult.URLElement())]];
@@ -475,11 +488,11 @@ static DictionaryPopupInfo dictionaryPopupInfoForRange(Frame* frame, Range& rang
     if (range.text().stripWhiteSpace().isEmpty())
         return popupInfo;
 
-    RenderObject* renderer = range.startContainer()->renderer();
+    RenderObject* renderer = range.startContainer().renderer();
     const RenderStyle& style = renderer->style();
 
     Vector<FloatQuad> quads;
-    range.textQuads(quads);
+    range.absoluteTextQuads(quads);
     if (quads.isEmpty())
         return popupInfo;
 
@@ -505,7 +518,9 @@ static DictionaryPopupInfo dictionaryPopupInfoForRange(Frame* frame, Range& rang
     }];
 
     popupInfo.attributedString = scaledNSAttributedString.get();
-    popupInfo.textIndicator = TextIndicator::createWithRange(range, presentationTransition);
+
+    if (auto textIndicator = TextIndicator::createWithRange(range, TextIndicatorOptionDefault, presentationTransition))
+        popupInfo.textIndicator = textIndicator->data();
     return popupInfo;
 }
 
@@ -523,7 +538,7 @@ static DictionaryPopupInfo dictionaryPopupInfoForRange(Frame* frame, Range& rang
         return nil;
 
     NSDictionary *options = nil;
-    RefPtr<Range> dictionaryRange = rangeForDictionaryLookupAtHitTestResult(_hitTestResult, &options);
+    RefPtr<Range> dictionaryRange = DictionaryLookup::rangeAtHitTestResult(_hitTestResult, &options);
     if (!dictionaryRange)
         return nil;
 
@@ -537,4 +552,4 @@ static DictionaryPopupInfo dictionaryPopupInfoForRange(Frame* frame, Range& rang
 
 @end
 
-#endif // PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+#endif // PLATFORM(MAC)

@@ -44,14 +44,14 @@
 
 namespace WebCore {
 
-CDMSessionAVFoundationCF::CDMSessionAVFoundationCF(MediaPlayerPrivateAVFoundationCF* parent)
+CDMSessionAVFoundationCF::CDMSessionAVFoundationCF(MediaPlayerPrivateAVFoundationCF* parent, CDMSessionClient* client)
     : m_parent(parent)
-    , m_client(nullptr)
+    , m_client(client)
     , m_sessionId(createCanonicalUUIDString())
 {
 }
 
-PassRefPtr<Uint8Array> CDMSessionAVFoundationCF::generateKeyRequest(const String& mimeType, Uint8Array* initData, String& destinationURL, unsigned short& errorCode, unsigned long& systemCode)
+RefPtr<Uint8Array> CDMSessionAVFoundationCF::generateKeyRequest(const String& mimeType, Uint8Array* initData, String& destinationURL, unsigned short& errorCode, uint32_t& systemCode)
 {
     UNUSED_PARAM(mimeType);
 
@@ -107,7 +107,7 @@ void CDMSessionAVFoundationCF::releaseKeys()
 {
 }
 
-bool CDMSessionAVFoundationCF::update(Uint8Array* key, RefPtr<Uint8Array>& nextMessage, unsigned short& errorCode, unsigned long& systemCode)
+bool CDMSessionAVFoundationCF::update(Uint8Array* key, RefPtr<Uint8Array>& nextMessage, unsigned short& errorCode, uint32_t& systemCode)
 {
     RetainPtr<CFMutableDataRef> keyData = adoptCF(CFDataCreateMutable(kCFAllocatorDefault, key->byteLength()));
     CFDataAppendBytes(keyData.get(), reinterpret_cast<const UInt8*>(key->baseAddress()), key->byteLength());

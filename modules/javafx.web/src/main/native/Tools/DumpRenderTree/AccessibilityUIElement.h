@@ -226,6 +226,9 @@ public:
     bool scrollPageDown();
     bool scrollPageLeft();
     bool scrollPageRight();
+
+    bool hasContainedByFieldsetTrait();
+    AccessibilityUIElement fieldsetAncestorElement();
 #endif
 
 #if PLATFORM(GTK) || PLATFORM(EFL)
@@ -257,6 +260,16 @@ public:
     AccessibilityUIElement accessibilityElementForTextMarker(AccessibilityTextMarker*);
     AccessibilityTextMarker startTextMarker();
     AccessibilityTextMarker endTextMarker();
+    AccessibilityTextMarkerRange leftWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarkerRange rightWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarker previousWordStartTextMarkerForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarker nextWordEndTextMarkerForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarkerRange paragraphTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarker previousParagraphStartTextMarkerForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarker nextParagraphEndTextMarkerForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarkerRange sentenceTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarker previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker*);
+    AccessibilityTextMarker nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker*);
     AccessibilityTextMarkerRange selectedTextMarkerRange();
     void resetSelectedTextMarkerRange();
     bool setSelectedVisibleTextRange(AccessibilityTextMarkerRange*);
@@ -286,6 +299,10 @@ public:
     AccessibilityUIElement headerElementAtIndex(unsigned);
     // This will simulate the accessibilityDidBecomeFocused API in UIKit.
     void assistiveTechnologySimulatedFocus();
+
+    bool isTextArea() const;
+    bool isSearchField() const;
+
 #endif // PLATFORM(IOS)
 
 #if PLATFORM(MAC) && !PLATFORM(IOS)

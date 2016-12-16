@@ -167,13 +167,6 @@ enum ScrollbarOverlayStyle {
     ScrollbarOverlayStyleLight
 };
 
-enum ScrollbarOverlayState {
-    ScrollbarOverlayStateHidden,
-    ScrollbarOverlayStateThumbShown,
-    ScrollbarOverlayStateAllShown,
-    ScrollbarOverlayStatePulseThumb
-};
-
 typedef unsigned ScrollbarControlPartMask;
 
 enum ScrollPinningBehavior {
@@ -185,6 +178,13 @@ enum ScrollPinningBehavior {
 enum ScrollBehaviorForFixedElements {
     StickToDocumentBounds,
     StickToViewportBounds
+};
+
+enum class ScrollbarButtonPressAction {
+    None,
+    CenterOnThumb,
+    StartDrag,
+    Scroll
 };
 
 }

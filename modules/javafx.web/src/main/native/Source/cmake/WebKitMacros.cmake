@@ -78,67 +78,38 @@ macro(GENERATE_BINDINGS _output_source _input_files _base_dir _idl_includes _fea
     foreach (_file ${_input_files})
         get_filename_component(_name ${_file} NAME_WE)
 
-        add_custom_command(
-            OUTPUT ${_destination}/${_prefix}${_name}.${_extension} ${_destination}/${_prefix}${_name}.h
-            MAIN_DEPENDENCY ${_file}
-            DEPENDS ${COMMON_GENERATOR_DEPENDENCIES}
-            COMMAND ${PERL_EXECUTABLE} -I${WEBCORE_DIR}/bindings/scripts ${BINDING_GENERATOR} --defines "${_features}" --generator ${_generator} ${_idl_includes} --outputDir "${_destination}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --idlAttributesFile ${_idl_attributes_file} ${_supplemental_dependency} ${_file}
-            WORKING_DIRECTORY ${_base_dir}
-            VERBATIM)
-
-        list(APPEND ${_output_source} ${_destination}/${_prefix}${_name}.${_extension})
-    endforeach ()
-endmacro()
-
-#//XXX: remove dup code
-# Helper macro which wraps generate-bindings.pl script.
-#   _output_source is a list name which will contain generated sources.(eg. WebCore_SOURCES)
-#   _input_files are IDL files to generate.
-#   _base_dir is base directory where script is called.
-#   _idl_includes is value of --include argument. (eg. --include=${WEBCORE_DIR}/bindings/js)
-#   _features is a value of --defines argument.
-#   _destination is a value of --outputDir argument.
-#   _prefix is a prefix of output files. (eg. JS - it makes JSXXX.cpp JSXXX.h from XXX.idl)
-#   _generator is a value of --generator argument.
-#   _supplemental_dependency_file is a value of --supplementalDependencyFile. (optional)
-macro(GENERATE_BINDINGS_JAVA _output_source _input_files _base_dir _idl_includes _features _destination _prefix _generator _extension _idl_attributes_file)
-    set(BINDING_GENERATOR ${WEBCORE_DIR}/bindings/scripts/generate-bindings.pl)
-    set(_args ${ARGN})
-    list(LENGTH _args _argCount)
-    if (_argCount GREATER 0)
-        list(GET _args 0 _supplemental_dependency_file)
-        if (_supplemental_dependency_file)
-            set(_supplemental_dependency --supplementalDependencyFile ${_supplemental_dependency_file})
+        # Not all ObjC bindings generate a .mm file, and not all .mm files generated should be compiled.
+        if (${_generator} STREQUAL "ObjC")
+            list(FIND ObjC_BINDINGS_NO_MM ${_name} _no_mm_index)
+            if (${_no_mm_index} EQUAL -1)
+                set(_no_mm 0)
+            else ()
+                set(_no_mm 1)
+            endif ()
+        else ()
+            set(_no_mm 0)
         endif ()
-        list(GET _args 1 _additional_dependencies)
-    endif ()
 
-    set(COMMON_GENERATOR_DEPENDENCIES
-        ${BINDING_GENERATOR}
-        ${WEBCORE_DIR}/bindings/scripts/CodeGenerator.pm
-        ${SCRIPTS_BINDINGS_JAVA}
-        ${_supplemental_dependency_file}
-        ${_idl_attributes_file}
-    )
-    list(APPEND COMMON_GENERATOR_DEPENDENCIES ${_additional_dependencies})
+        if (${_no_mm})
+            add_custom_command(
+                OUTPUT ${_destination}/${_prefix}${_name}.h
+                MAIN_DEPENDENCY ${_file}
+                DEPENDS ${COMMON_GENERATOR_DEPENDENCIES}
+                COMMAND ${PERL_EXECUTABLE} -I${WEBCORE_DIR}/bindings/scripts ${BINDING_GENERATOR} --defines "${_features}" --generator ${_generator} ${_idl_includes} --outputDir "${_destination}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --idlAttributesFile ${_idl_attributes_file} ${_supplemental_dependency} ${_file}
+                WORKING_DIRECTORY ${_base_dir}
+                VERBATIM)
 
-    if (EXISTS ${WEBCORE_DIR}/bindings/scripts/CodeGenerator${_generator}.pm)
-        list(APPEND COMMON_GENERATOR_DEPENDENCIES ${WEBCORE_DIR}/bindings/scripts/CodeGenerator${_generator}.pm)
-    endif ()
-
-    message("==================== COMMON_GENERATOR_DEPENDENCIES ${COMMON_GENERATOR_DEPENDENCIES}")
-    foreach (_file ${_input_files})
-        get_filename_component(_name ${_file} NAME_WE)
-
-        add_custom_command(
-            OUTPUT ${_destination}/${_prefix}${_name}.${_extension}
-            MAIN_DEPENDENCY ${_file}
-            DEPENDS ${COMMON_GENERATOR_DEPENDENCIES}
-            COMMAND ${PERL_EXECUTABLE} -I${WEBCORE_DIR}/bindings/scripts ${BINDING_GENERATOR} --defines "${_features}" --generator ${_generator} ${_idl_includes} --outputDir "${_destination}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --idlAttributesFile ${_idl_attributes_file} ${_supplemental_dependency} ${_file}
-            WORKING_DIRECTORY ${_base_dir}
-            VERBATIM)
-
-        list(APPEND ${_output_source} ${_destination}/${_prefix}${_name}.${_extension})
+            list(APPEND ${_output_source} ${_destination}/${_prefix}${_name}.h)
+        else ()
+            add_custom_command(
+                OUTPUT ${_destination}/${_prefix}${_name}.${_extension} ${_destination}/${_prefix}${_name}.h
+                MAIN_DEPENDENCY ${_file}
+                DEPENDS ${COMMON_GENERATOR_DEPENDENCIES}
+                COMMAND ${PERL_EXECUTABLE} -I${WEBCORE_DIR}/bindings/scripts ${BINDING_GENERATOR} --defines "${_features}" --generator ${_generator} ${_idl_includes} --outputDir "${_destination}" --preprocessor "${CODE_GENERATOR_PREPROCESSOR}" --idlAttributesFile ${_idl_attributes_file} ${_supplemental_dependency} ${_file}
+                WORKING_DIRECTORY ${_base_dir}
+                VERBATIM)
+            list(APPEND ${_output_source} ${_destination}/${_prefix}${_name}.${_extension})
+        endif ()
     endforeach ()
 endmacro()
 
@@ -251,7 +222,7 @@ macro(MAKE_HASH_TOOLS _source)
     add_custom_command(
         OUTPUT ${DERIVED_SOURCES_WEBCORE_DIR}/${_name}.cpp ${_hash_tools_h}
         MAIN_DEPENDENCY ${_source}.gperf
-        COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/make-hash-tools.pl ${DERIVED_SOURCES_WEBCORE_DIR} ${_source}.gperf
+        COMMAND ${PERL_EXECUTABLE} ${WEBCORE_DIR}/make-hash-tools.pl ${DERIVED_SOURCES_WEBCORE_DIR} ${_source}.gperf ${GPERF_EXECUTABLE}
         VERBATIM)
 
     unset(_name)
@@ -272,6 +243,36 @@ macro(WEBKIT_WRAP_SOURCELIST)
     source_group("DerivedSources" REGULAR_EXPRESSION "${DERIVED_SOURCES_WEBCORE_DIR}")
 endmacro()
 
+macro(WEBKIT_FRAMEWORK _target)
+    include_directories(${${_target}_INCLUDE_DIRECTORIES})
+    include_directories(SYSTEM ${${_target}_SYSTEM_INCLUDE_DIRECTORIES})
+    add_library(${_target} ${${_target}_LIBRARY_TYPE}
+        ${${_target}_HEADERS}
+        ${${_target}_SOURCES}
+        ${${_target}_DERIVED_SOURCES}
+    )
+    target_link_libraries(${_target} ${${_target}_LIBRARIES})
+    set_target_properties(${_target} PROPERTIES COMPILE_DEFINITIONS "BUILDING_${_target}")
+    set_target_properties(${_target} PROPERTIES FOLDER "${_target}")
+
+    if (${_target}_OUTPUT_NAME)
+        set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${${_target}_OUTPUT_NAME})
+    endif ()
+
+    if (${_target}_PRE_BUILD_COMMAND)
+        add_custom_target(_${_target}_PreBuild COMMAND ${${_target}_PRE_BUILD_COMMAND} VERBATIM)
+        add_dependencies(${_target} _${_target}_PreBuild)
+    endif ()
+
+    if (${_target}_POST_BUILD_COMMAND)
+        add_custom_command(TARGET ${_target} POST_BUILD COMMAND ${${_target}_POST_BUILD_COMMAND} VERBATIM)
+    endif ()
+
+    if (APPLE AND NOT PORT STREQUAL "GTK" AND NOT PORT STREQUAL "Java")
+        set_target_properties(${_target} PROPERTIES FRAMEWORK TRUE)
+        install(TARGETS ${_target} FRAMEWORK DESTINATION ${LIB_INSTALL_DIR})
+    endif ()
+endmacro()
 
 macro(WEBKIT_CREATE_FORWARDING_HEADER _target_directory _file)
     get_filename_component(_source_path "${CMAKE_SOURCE_DIR}/Source/" ABSOLUTE)
@@ -296,35 +297,38 @@ macro(WEBKIT_CREATE_FORWARDING_HEADER _target_directory _file)
 endmacro()
 
 macro(WEBKIT_CREATE_FORWARDING_HEADERS _framework)
-    set(_processing_directories 0)
-    set(_processing_files 0)
-    set(_target_directory "${DERIVED_SOURCES_DIR}/ForwardingHeaders/${_framework}")
+    # On Windows, we copy the entire contents of forwarding headers.
+    if (NOT WIN32)
+        set(_processing_directories 0)
+        set(_processing_files 0)
+        set(_target_directory "${DERIVED_SOURCES_DIR}/ForwardingHeaders/${_framework}")
 
-    file(GLOB _files "${_target_directory}/*.h")
-    foreach (_file ${_files})
-        file(READ "${_file}" _content)
-        string(REGEX MATCH "^#include \"([^\"]*)\"" _matched ${_content})
-        if (_matched AND NOT EXISTS "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}")
-           file(REMOVE "${_file}")
-        endif ()
-    endforeach ()
+        file(GLOB _files "${_target_directory}/*.h")
+        foreach (_file ${_files})
+            file(READ "${_file}" _content)
+            string(REGEX MATCH "^#include \"([^\"]*)\"" _matched ${_content})
+            if (_matched AND NOT EXISTS "${CMAKE_SOURCE_DIR}/Source/${CMAKE_MATCH_1}")
+               file(REMOVE "${_file}")
+            endif ()
+        endforeach ()
 
-    foreach (_currentArg ${ARGN})
-        if ("${_currentArg}" STREQUAL "DIRECTORIES")
-            set(_processing_directories 1)
-            set(_processing_files 0)
-        elseif ("${_currentArg}" STREQUAL "FILES")
-            set(_processing_directories 0)
-            set(_processing_files 1)
-        elseif (_processing_directories)
-            file(GLOB _files "${_currentArg}/*.h")
-            foreach (_file ${_files})
-                WEBKIT_CREATE_FORWARDING_HEADER(${_target_directory} ${_file})
-            endforeach ()
-        elseif (_processing_files)
-            WEBKIT_CREATE_FORWARDING_HEADER(${_target_directory} ${_currentArg})
-        endif ()
-    endforeach ()
+        foreach (_currentArg ${ARGN})
+            if ("${_currentArg}" STREQUAL "DIRECTORIES")
+                set(_processing_directories 1)
+                set(_processing_files 0)
+            elseif ("${_currentArg}" STREQUAL "FILES")
+                set(_processing_directories 0)
+                set(_processing_files 1)
+            elseif (_processing_directories)
+                file(GLOB _files "${_currentArg}/*.h")
+                foreach (_file ${_files})
+                    WEBKIT_CREATE_FORWARDING_HEADER(${_target_directory} ${_file})
+                endforeach ()
+            elseif (_processing_files)
+                WEBKIT_CREATE_FORWARDING_HEADER(${_target_directory} ${_currentArg})
+            endif ()
+        endforeach ()
+    endif ()
 endmacro()
 
 # Helper macro which wraps generate-message-receiver.py and generate-message-header.py scripts
@@ -347,4 +351,26 @@ macro(GENERATE_WEBKIT2_MESSAGE_SOURCES _output_source _input_files)
 
         list(APPEND ${_output_source} ${DERIVED_SOURCES_WEBKIT2_DIR}/${_name}MessageReceiver.cpp)
     endforeach ()
+endmacro()
+
+# Helper macro for using all-in-one builds
+# This macro removes the sources included in the _all_in_one_file from the input _file_list.
+# _file_list is a list of source files
+# _all_in_one_file is an all-in-one cpp file includes other cpp files
+# _result_file_list is the output file list
+macro(PROCESS_ALLINONE_FILE _file_list _all_in_one_file _result_file_list)
+    file(STRINGS ${_all_in_one_file} _all_in_one_file_content)
+    set(${_result_file_list} ${_file_list})
+    foreach (_line ${_all_in_one_file_content})
+        string(REGEX MATCH "^#include [\"<](.*)[\">]" _found ${_line})
+        if (_found)
+            list(APPEND _allins ${CMAKE_MATCH_1})
+        endif ()
+    endforeach ()
+
+    foreach (_allin ${_allins})
+        string(REGEX REPLACE ";[^;]*/${_allin};" ";" _new_result "${${_result_file_list}}")
+        set(${_result_file_list} ${_new_result})
+    endforeach ()
+
 endmacro()

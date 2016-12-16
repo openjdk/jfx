@@ -32,11 +32,9 @@
 #import "PlatformUtilities.h"
 #import "PlatformWebView.h"
 #import "TestBrowsingContextLoadDelegate.h"
-#import "TestProtocol.h"
-#import <WebKit/WebKit2.h>
 #import <WebKit/WKViewPrivate.h>
 
-#if WK_API_ENABLED
+#if WK_API_ENABLED && PLATFORM(MAC)
 
 static bool testFinished = false;
 
@@ -44,9 +42,6 @@ namespace TestWebKitAPI {
 
 TEST(WebKit2, PreventImageLoadWithAutoResizingTest)
 {
-    [NSURLProtocol registerClass:[TestProtocol class]];
-    [WKBrowsingContextController registerSchemeForCustomProtocol:[TestProtocol scheme]];
-
     WKRetainPtr<WKContextRef> context = adoptWK(Util::createContextForInjectedBundleTest("DenyWillSendRequestTest"));
     PlatformWebView webView(context.get());
 

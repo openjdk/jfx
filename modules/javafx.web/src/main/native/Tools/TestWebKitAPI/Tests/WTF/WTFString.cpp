@@ -156,7 +156,7 @@ TEST(WTF, StringReplaceWithLiteral)
 TEST(WTF, StringIsolatedCopy)
 {
     String original = "1234";
-    auto copy = WTF::move(original).isolatedCopy();
+    auto copy = WTFMove(original).isolatedCopy();
     ASSERT_FALSE(original.impl() == copy.impl());
 }
 
@@ -279,6 +279,17 @@ TEST(WTF, StringhasInfixStartingAt)
 
     EXPECT_FALSE(String::fromUTF8("中国").hasInfixStartingAt(String("Te"), 0));
     EXPECT_FALSE(String("Test").hasInfixStartingAt(String::fromUTF8("中"), 2));
+}
+
+TEST(WTF, StringExistingHash)
+{
+    String string1("Template Literal");
+    ASSERT_FALSE(string1.isNull());
+    ASSERT_FALSE(string1.impl()->hasHash());
+    string1.impl()->hash();
+    ASSERT_EQ(string1.existingHash(), string1.impl()->existingHash());
+    String string2;
+    ASSERT_EQ(string2.existingHash(), 0u);
 }
 
 } // namespace TestWebKitAPI

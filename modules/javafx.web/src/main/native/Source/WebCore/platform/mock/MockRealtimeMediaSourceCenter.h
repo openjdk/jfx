@@ -35,15 +35,17 @@ namespace WebCore {
 
 class MockRealtimeMediaSourceCenter final : public RealtimeMediaSourceCenter {
 public:
-    WEBCORE_EXPORT static void registerMockRealtimeMediaSourceCenter();
-
-    virtual void validateRequestConstraints(PassRefPtr<MediaStreamCreationClient>, PassRefPtr<MediaConstraints> audioConstraints, PassRefPtr<MediaConstraints> videoConstraints) override;
-    virtual void createMediaStream(PassRefPtr<MediaStreamCreationClient>, PassRefPtr<MediaConstraints> audioConstraints, PassRefPtr<MediaConstraints> videoConstraints) override;
-    virtual bool getMediaStreamTrackSources(PassRefPtr<MediaStreamTrackSourcesRequestClient>) override;
-    RefPtr<TrackSourceInfo> sourceWithUID(const String&, RealtimeMediaSource::Type, MediaConstraints*) override;
+    WEBCORE_EXPORT static void setMockRealtimeMediaSourceCenterEnabled(bool);
 
 private:
-    MockRealtimeMediaSourceCenter() { }
+    friend NeverDestroyed<MockRealtimeMediaSourceCenter>;
+    MockRealtimeMediaSourceCenter();
+
+    void validateRequestConstraints(MediaStreamCreationClient*, RefPtr<MediaConstraints>& audioConstraints, RefPtr<MediaConstraints>& videoConstraints) override;
+    void createMediaStream(PassRefPtr<MediaStreamCreationClient>, PassRefPtr<MediaConstraints> audioConstraints, PassRefPtr<MediaConstraints> videoConstraints) override;
+    bool getMediaStreamTrackSources(PassRefPtr<MediaStreamTrackSourcesRequestClient>) override;
+    void createMediaStream(MediaStreamCreationClient*, const String& audioDeviceID, const String& videoDeviceID) override;
+    RefPtr<TrackSourceInfo> sourceWithUID(const String&, RealtimeMediaSource::Type, MediaConstraints*) override;
 };
 
 }

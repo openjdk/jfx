@@ -4,7 +4,7 @@
 #ifndef JavaEnv_h
 #define JavaEnv_h
 
-#include "JavaRef.h"
+#include <wtf/java/JavaRef.h>
 
 #include <jni.h>
 
@@ -26,6 +26,7 @@ extern bool CheckAndClearException(JNIEnv* env);
 namespace WebCore {
 
 jclass PG_GetFontClass(JNIEnv* env);
+jclass PG_GetGlyphBufferClass(JNIEnv* env);
 jclass PG_GetFontCustomPlatformDataClass(JNIEnv* env);
 jclass PG_GetGraphicsImageDecoderClass(JNIEnv* env);
 jclass PG_GetGraphicsContextClass(JNIEnv* env);

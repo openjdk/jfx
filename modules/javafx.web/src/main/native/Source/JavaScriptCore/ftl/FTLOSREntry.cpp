@@ -38,6 +38,7 @@
 
 namespace JSC { namespace FTL {
 
+SUPPRESS_ASAN
 void* prepareOSREntry(
     ExecState* exec, CodeBlock* dfgCodeBlock, CodeBlock* entryCodeBlock,
     unsigned bytecodeIndex, unsigned streamIndex)
@@ -71,7 +72,7 @@ void* prepareOSREntry(
         dataLog("    Values at entry: ", values, "\n");
 
     for (int argument = values.numberOfArguments(); argument--;) {
-        JSValue valueOnStack = exec->r(virtualRegisterForArgument(argument).offset()).jsValue();
+        JSValue valueOnStack = exec->r(virtualRegisterForArgument(argument).offset()).asanUnsafeJSValue();
         JSValue reconstructedValue = values.argument(argument);
         if (valueOnStack == reconstructedValue || !argument)
             continue;
@@ -82,7 +83,7 @@ void* prepareOSREntry(
     }
 
     RELEASE_ASSERT(
-        static_cast<int>(values.numberOfLocals()) == baseline->m_numCalleeRegisters);
+        static_cast<int>(values.numberOfLocals()) == baseline->m_numCalleeLocals);
 
     EncodedJSValue* scratch = static_cast<EncodedJSValue*>(
         entryCode->entryBuffer()->dataBuffer());
@@ -99,9 +100,7 @@ void* prepareOSREntry(
 
     exec->setCodeBlock(entryCodeBlock);
 
-    void* result = entryCode->addressForCall(
-        vm, executable, ArityCheckNotRequired,
-        RegisterPreservationNotRequired).executableAddress();
+    void* result = entryCode->addressForCall(ArityCheckNotRequired).executableAddress();
     if (Options::verboseOSR())
         dataLog("    Entry will succeed, going to address", RawPointer(result), "\n");
 

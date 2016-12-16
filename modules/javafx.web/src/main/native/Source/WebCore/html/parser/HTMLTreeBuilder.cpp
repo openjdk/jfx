@@ -34,6 +34,7 @@
 #include "HTMLFormElement.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLParserIdioms.h"
+#include "JSCustomElementInterface.h"
 #include "LocalizedStrings.h"
 #include "NotImplemented.h"
 #include "XLinkNames.h"
@@ -49,6 +50,19 @@
 namespace WebCore {
 
 using namespace HTMLNames;
+
+#if ENABLE(CUSTOM_ELEMENTS)
+
+CustomElementConstructionData::CustomElementConstructionData(Ref<JSCustomElementInterface>&& interface, const AtomicString& name, const Vector<Attribute>& attributes)
+    : interface(WTFMove(interface))
+    , name(name)
+    , attributes(attributes) // FIXME: Avoid copying attributes.
+{ }
+
+CustomElementConstructionData::~CustomElementConstructionData()
+{ }
+
+#endif
 
 namespace {
 
@@ -121,7 +135,7 @@ static bool isNonAnchorFormattingTag(const AtomicString& tagName)
 }
 
 // https://html.spec.whatwg.org/multipage/syntax.html#formatting
-static bool isFormattingTag(const AtomicString& tagName)
+bool HTMLConstructionSite::isFormattingTag(const AtomicString& tagName)
 {
     return tagName == aTag || isNonAnchorFormattingTag(tagName);
 }
@@ -324,7 +338,7 @@ RefPtr<Element> HTMLTreeBuilder::takeScriptToProcess(TextPosition& scriptStartPo
     // We pause the parser to exit the tree builder, and then resume before running scripts.
     scriptStartPosition = m_scriptToProcessStartPosition;
     m_scriptToProcessStartPosition = uninitializedPositionValue1();
-    return WTF::move(m_scriptToProcess);
+    return WTFMove(m_scriptToProcess);
 }
 
 void HTMLTreeBuilder::constructTree(AtomicHTMLToken& token)
@@ -407,7 +421,7 @@ void HTMLTreeBuilder::processDoctypeToken(AtomicHTMLToken& token)
 void HTMLTreeBuilder::processFakeStartTag(const QualifiedName& tagName, Vector<Attribute>&& attributes)
 {
     // FIXME: We'll need a fancier conversion than just "localName" for SVG/MathML tags.
-    AtomicHTMLToken fakeToken(HTMLToken::StartTag, tagName.localName(), WTF::move(attributes));
+    AtomicHTMLToken fakeToken(HTMLToken::StartTag, tagName.localName(), WTFMove(attributes));
     processStartTag(fakeToken);
 }
 
@@ -511,7 +525,7 @@ template <typename TableQualifiedName> static HashMap<AtomicString, QualifiedNam
     for (unsigned i = 0; i < length; ++i) {
         const QualifiedName& name = *names[i];
         const AtomicString& localName = name.localName();
-        AtomicString loweredLocalName = localName.lower();
+        AtomicString loweredLocalName = localName.convertToASCIILowercase();
         if (loweredLocalName != localName)
             map.add(loweredLocalName, name);
     }
@@ -774,10 +788,10 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
         return;
     }
     if (token.name() == inputTag) {
-        Attribute* typeAttribute = findAttribute(token.attributes(), typeAttr);
         m_tree.reconstructTheActiveFormattingElements();
         m_tree.insertSelfClosingHTMLElement(&token);
-        if (!typeAttribute || !equalIgnoringCase(typeAttribute->value(), "hidden"))
+        Attribute* typeAttribute = findAttribute(token.attributes(), typeAttr);
+        if (!typeAttribute || !equalLettersIgnoringASCIICase(typeAttribute->value(), "hidden"))
             m_framesetOk = false;
         return;
     }
@@ -896,8 +910,26 @@ void HTMLTreeBuilder::processStartTagForInBody(AtomicHTMLToken& token)
     }
 #endif
     m_tree.reconstructTheActiveFormattingElements();
-    m_tree.insertHTMLElement(&token);
+    insertGenericHTMLElement(token);
 }
+
+inline void HTMLTreeBuilder::insertGenericHTMLElement(AtomicHTMLToken& token)
+{
+#if ENABLE(CUSTOM_ELEMENTS)
+    auto* interface = m_tree.insertHTMLElementOrFindCustomElementInterface(&token);
+    if (UNLIKELY(interface))
+        m_customElementToConstruct = std::make_unique<CustomElementConstructionData>(*interface, token.name(), token.attributes());
+#else
+    m_tree.insertHTMLElement(&token);
+#endif
+}
+
+#if ENABLE(CUSTOM_ELEMENTS)
+void HTMLTreeBuilder::didCreateCustomOrCallbackElement(Ref<Element>&& element, CustomElementConstructionData& data)
+{
+    m_tree.insertCustomElement(WTFMove(element), data.name, data.attributes);
+}
+#endif
 
 #if ENABLE(TEMPLATE_ELEMENT)
 
@@ -1019,7 +1051,7 @@ void HTMLTreeBuilder::processStartTagForInTable(AtomicHTMLToken& token)
     }
     if (token.name() == inputTag) {
         Attribute* typeAttribute = findAttribute(token.attributes(), typeAttr);
-        if (typeAttribute && equalIgnoringCase(typeAttribute->value(), "hidden")) {
+        if (typeAttribute && equalLettersIgnoringASCIICase(typeAttribute->value(), "hidden")) {
             parseError(token);
             m_tree.insertSelfClosingHTMLElement(&token);
             return;
@@ -1883,7 +1915,7 @@ void HTMLTreeBuilder::processEndTagForInBody(AtomicHTMLToken& token)
         m_tree.openElements().popUntilNumberedHeaderElementPopped();
         return;
     }
-    if (isFormattingTag(token.name())) {
+    if (HTMLConstructionSite::isFormattingTag(token.name())) {
         callTheAdoptionAgency(token);
         return;
     }
@@ -2282,7 +2314,7 @@ void HTMLTreeBuilder::insertPhoneNumberLink(const String& string)
     attributes.append(Attribute(HTMLNames::hrefAttr, ASCIILiteral("tel:") + string));
 
     const AtomicString& aTagLocalName = aTag.localName();
-    AtomicHTMLToken aStartToken(HTMLToken::StartTag, aTagLocalName, WTF::move(attributes));
+    AtomicHTMLToken aStartToken(HTMLToken::StartTag, aTagLocalName, WTFMove(attributes));
     AtomicHTMLToken aEndToken(HTMLToken::EndTag, aTagLocalName);
 
     processStartTag(aStartToken);
@@ -2336,10 +2368,9 @@ void HTMLTreeBuilder::linkifyPhoneNumbers(const String& string)
 }
 
 // Looks at the ancestors of the element to determine whether we're inside an element which disallows parsing phone numbers.
-static inline bool disallowTelephoneNumberParsing(const Node& node)
+static inline bool disallowTelephoneNumberParsing(const ContainerNode& node)
 {
     return node.isLink()
-        || node.nodeType() == Node::COMMENT_NODE
         || node.hasTagName(scriptTag)
         || is<HTMLFormControlElement>(node)
         || node.hasTagName(styleTag)
@@ -2350,12 +2381,10 @@ static inline bool disallowTelephoneNumberParsing(const Node& node)
 
 static inline bool shouldParseTelephoneNumbersInNode(const ContainerNode& node)
 {
-    const ContainerNode* currentNode = &node;
-    do {
-        if (currentNode->isElementNode() && disallowTelephoneNumberParsing(*currentNode))
+    for (const ContainerNode* ancestor = &node; ancestor; ancestor = ancestor->parentNode()) {
+        if (disallowTelephoneNumberParsing(*ancestor))
             return false;
-        currentNode = currentNode->parentNode();
-    } while (currentNode);
+    }
     return true;
 }
 

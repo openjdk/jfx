@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,11 @@
 
 #if ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
 
+#include "GenericTaskQueue.h"
 #include "RealtimeMediaSource.h"
+#include "Timer.h"
 #include <wtf/RetainPtr.h>
+#include <wtf/WeakPtr.h>
 
 OBJC_CLASS AVCaptureAudioDataOutput;
 OBJC_CLASS AVCaptureConnection;
@@ -49,38 +52,54 @@ public:
 
     virtual void captureOutputDidOutputSampleBufferFromConnection(AVCaptureOutput*, CMSampleBufferRef, AVCaptureConnection*) = 0;
 
-    virtual void captureSessionStoppedRunning();
+    virtual void captureSessionIsRunningDidChange(bool);
 
     AVCaptureSession *session() const { return m_session.get(); }
+
+    const RealtimeMediaSourceSettings& settings() override;
+
+    void startProducingData() override;
+    void stopProducingData() override;
+    bool isProducingData() const override { return m_isRunning; }
+
+    WeakPtr<AVMediaCaptureSource> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
 
 protected:
     AVMediaCaptureSource(AVCaptureDevice*, const AtomicString&, RealtimeMediaSource::Type, PassRefPtr<MediaConstraints>);
 
-    virtual const RealtimeMediaSourceStates& states() override;
-
-    virtual void startProducingData() override;
-    virtual void stopProducingData() override;
+    AudioSourceProvider* audioSourceProvider() override;
 
     virtual void setupCaptureSession() = 0;
-    virtual void updateStates() = 0;
+    virtual void shutdownCaptureSession() = 0;
+    virtual void updateSettings(RealtimeMediaSourceSettings&) = 0;
+    virtual void initializeCapabilities(RealtimeMediaSourceCapabilities&) = 0;
+    virtual void initializeSupportedConstraints(RealtimeMediaSourceSupportedConstraints&) = 0;
 
     AVCaptureDevice *device() const { return m_device.get(); }
-    RealtimeMediaSourceStates* currentStates() { return &m_currentStates; }
+
     MediaConstraints* constraints() { return m_constraints.get(); }
+
+    RealtimeMediaSourceSupportedConstraints& supportedConstraints();
+    RefPtr<RealtimeMediaSourceCapabilities> capabilities() override;
 
     void setVideoSampleBufferDelegate(AVCaptureVideoDataOutput*);
     void setAudioSampleBufferDelegate(AVCaptureAudioDataOutput*);
 
+    void scheduleDeferredTask(std::function<void ()>);
+
 private:
     void setupSession();
+    void reset() override;
 
+    RealtimeMediaSourceSettings m_currentSettings;
+    RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
+    WeakPtrFactory<AVMediaCaptureSource> m_weakPtrFactory;
     RetainPtr<WebCoreAVMediaCaptureSourceObserver> m_objcObserver;
     RefPtr<MediaConstraints> m_constraints;
-    RealtimeMediaSourceStates m_currentStates;
+    RefPtr<RealtimeMediaSourceCapabilities> m_capabilities;
     RetainPtr<AVCaptureSession> m_session;
     RetainPtr<AVCaptureDevice> m_device;
-
-    bool m_isRunning;
+    bool m_isRunning { false};
 };
 
 } // namespace WebCore

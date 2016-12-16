@@ -28,21 +28,22 @@
 
 namespace WebCore {
 
-class JSattribute : public JSDOMWrapper {
+class JSattribute : public JSDOMWrapper<attribute> {
 public:
-    typedef JSDOMWrapper Base;
+    typedef JSDOMWrapper<attribute> Base;
     static JSattribute* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<attribute>&& impl)
     {
-        JSattribute* ptr = new (NotNull, JSC::allocateCell<JSattribute>(globalObject->vm().heap)) JSattribute(structure, globalObject, WTF::move(impl));
+        JSattribute* ptr = new (NotNull, JSC::allocateCell<JSattribute>(globalObject->vm().heap)) JSattribute(structure, *globalObject, WTFMove(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
+
+    static const bool hasStaticPropertyTable = false;
 
     static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static JSC::JSObject* getPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static attribute* toWrapped(JSC::JSValue);
     static void destroy(JSC::JSCell*);
-    ~JSattribute();
 
     DECLARE_INFO;
 
@@ -51,14 +52,9 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-    static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
-    attribute& impl() const { return *m_impl; }
-    void releaseImpl() { std::exchange(m_impl, nullptr)->deref(); }
-
-private:
-    attribute* m_impl;
+    static JSC::JSValue getConstructor(JSC::VM&, const JSC::JSGlobalObject*);
 protected:
-    JSattribute(JSC::Structure*, JSDOMGlobalObject*, Ref<attribute>&&);
+    JSattribute(JSC::Structure*, JSDOMGlobalObject&, Ref<attribute>&&);
 
     void finishCreation(JSC::VM& vm)
     {
@@ -80,8 +76,14 @@ inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, attribute*)
     return &owner.get();
 }
 
+inline void* wrapperKey(attribute* wrappableObject)
+{
+    return wrappableObject;
+}
+
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, attribute*);
-inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, attribute& impl) { return toJS(exec, globalObject, &impl); }
+inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, attribute& impl) { return toJS(state, globalObject, &impl); }
+JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject*, attribute*);
 
 
 } // namespace WebCore

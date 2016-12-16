@@ -26,6 +26,7 @@
 #include "config.h"
 #include "JSMap.h"
 
+#include "CopiedBlockInlines.h"
 #include "JSCJSValueInlines.h"
 #include "JSMapIterator.h"
 #include "MapDataInlines.h"
@@ -40,6 +41,13 @@ void JSMap::destroy(JSCell* cell)
 {
     JSMap* thisObject = jsCast<JSMap*>(cell);
     thisObject->JSMap::~JSMap();
+}
+
+size_t JSMap::estimatedSize(JSCell* cell)
+{
+    JSMap* thisObject = jsCast<JSMap*>(cell);
+    size_t mapDataSize = thisObject->m_mapData.capacityInBytes();
+    return Base::estimatedSize(cell) + mapDataSize;
 }
 
 void JSMap::visitChildren(JSCell* cell, SlotVisitor& visitor)

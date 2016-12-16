@@ -36,6 +36,7 @@
 #include "MutationObserverInterestGroup.h"
 #include "MutationRecord.h"
 #include "StaticNodeList.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -43,14 +44,14 @@ namespace WebCore {
 typedef HashMap<ContainerNode*, ChildListMutationAccumulator*> AccumulatorMap;
 static AccumulatorMap& accumulatorMap()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AccumulatorMap, map, ());
+    static NeverDestroyed<AccumulatorMap> map;
     return map;
 }
 
 ChildListMutationAccumulator::ChildListMutationAccumulator(ContainerNode& target, std::unique_ptr<MutationObserverInterestGroup> observers)
     : m_target(target)
     , m_lastAdded(nullptr)
-    , m_observers(WTF::move(observers))
+    , m_observers(WTFMove(observers))
 {
 }
 
@@ -61,7 +62,7 @@ ChildListMutationAccumulator::~ChildListMutationAccumulator()
     accumulatorMap().remove(m_target.ptr());
 }
 
-PassRefPtr<ChildListMutationAccumulator> ChildListMutationAccumulator::getOrCreate(ContainerNode& target)
+RefPtr<ChildListMutationAccumulator> ChildListMutationAccumulator::getOrCreate(ContainerNode& target)
 {
     AccumulatorMap::AddResult result = accumulatorMap().add(&target, nullptr);
     RefPtr<ChildListMutationAccumulator> accumulator;
@@ -71,7 +72,7 @@ PassRefPtr<ChildListMutationAccumulator> ChildListMutationAccumulator::getOrCrea
         accumulator = adoptRef(new ChildListMutationAccumulator(target, MutationObserverInterestGroup::createForChildListMutation(target)));
         result.iterator->value = accumulator.get();
     }
-    return accumulator.release();
+    return accumulator;
 }
 
 inline bool ChildListMutationAccumulator::isAddedNodeInOrder(Node& child)
@@ -130,7 +131,7 @@ void ChildListMutationAccumulator::enqueueMutationRecord()
     RefPtr<NodeList> removedNodes = StaticNodeList::adopt(m_removedNodes);
     RefPtr<MutationRecord> record = MutationRecord::createChildList(m_target, addedNodes.release(), removedNodes.release(), m_previousSibling.release(), m_nextSibling.release());
     m_observers->enqueueMutationRecord(record.release());
-    m_lastAdded = 0;
+    m_lastAdded = nullptr;
     ASSERT(isEmpty());
 }
 

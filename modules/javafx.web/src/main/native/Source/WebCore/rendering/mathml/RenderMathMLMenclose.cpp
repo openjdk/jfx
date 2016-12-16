@@ -23,7 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define _USE_MATH_DEFINES 1
 #include "config.h"
 
 #if ENABLE(MATHML)
@@ -40,7 +39,7 @@ namespace WebCore {
 using namespace MathMLNames;
 
 RenderMathMLMenclose::RenderMathMLMenclose(Element& element, Ref<RenderStyle>&& style)
-    : RenderMathMLRow(element, WTF::move(style))
+    : RenderMathMLRow(element, WTFMove(style))
 {
 }
 
@@ -98,7 +97,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
 {
     RenderMathMLBlock::paint(info, paintOffset);
 
-    if (info.context->paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE)
+    if (info.context().paintingDisabled() || info.phase != PaintPhaseForeground || style().visibility() != VISIBLE)
         return;
 
     MathMLMencloseElement* menclose = downcast<MathMLMencloseElement>(element());
@@ -114,23 +113,23 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
         int halfboxWidth = rect.width() / 2;
         int halfboxHeight = rect.height() / 2;
 
-        GraphicsContextStateSaver stateSaver(*info.context);
-        info.context->setStrokeThickness(1);
-        info.context->setStrokeStyle(SolidStroke);
-        info.context->setStrokeColor(style().visitedDependentColor(CSSPropertyColor), ColorSpaceDeviceRGB);
+        GraphicsContextStateSaver stateSaver(info.context());
+        info.context().setStrokeThickness(1);
+        info.context().setStrokeStyle(SolidStroke);
+        info.context().setStrokeColor(style().visitedDependentColor(CSSPropertyColor));
         // TODO add support for notation value updiagonalarrow https://bugs.webkit.org/show_bug.cgi?id=127466
         for (size_t i = 0; i < notationalValueSize; i++) {
             if (notationValues[i] == "updiagonalstrike")
-                info.context->drawLine(IntPoint(left, top + boxHeight), IntPoint(left + boxWidth, top));
+                info.context().drawLine(IntPoint(left, top + boxHeight), IntPoint(left + boxWidth, top));
             else if (notationValues[i] == "downdiagonalstrike")
-                info.context->drawLine(IntPoint(left, top), IntPoint(left + boxWidth, top + boxHeight));
+                info.context().drawLine(IntPoint(left, top), IntPoint(left + boxWidth, top + boxHeight));
             else if (notationValues[i] == "verticalstrike")
-                info.context->drawLine(IntPoint(left + halfboxWidth, top), IntPoint(left + halfboxWidth, top + boxHeight));
+                info.context().drawLine(IntPoint(left + halfboxWidth, top), IntPoint(left + halfboxWidth, top + boxHeight));
             else if (notationValues[i] == "horizontalstrike")
-                info.context->drawLine(IntPoint(left, top + halfboxHeight), IntPoint(left + boxWidth, top + halfboxHeight));
+                info.context().drawLine(IntPoint(left, top + halfboxHeight), IntPoint(left + boxWidth, top + halfboxHeight));
             else if (notationValues[i] == "circle") {
-                info.context->setFillColor(Color::transparent, ColorSpaceDeviceRGB);
-                info.context->drawEllipse(rect);
+                info.context().setFillColor(Color::transparent);
+                info.context().drawEllipse(rect);
             } else if (notationValues[i] == "longdiv")
                 isDefaultLongDiv = true;
         }
@@ -144,9 +143,9 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
             else
                 midxPoint = style().paddingLeft().value();
             root.addBezierCurveTo(FloatPoint(left, top), FloatPoint(left + midxPoint, top + halfboxHeight), FloatPoint(left, top + boxHeight));
-            info.context->strokePath(root);
+            info.context().strokePath(root);
             if (isDefaultLongDiv)
-                info.context->drawLine(IntPoint(left, top), IntPoint(left + boxWidth + midxPoint, top));
+                info.context().drawLine(IntPoint(left, top), IntPoint(left + boxWidth + midxPoint, top));
         }
     }
 }

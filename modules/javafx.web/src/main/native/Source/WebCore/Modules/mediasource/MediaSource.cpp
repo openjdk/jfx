@@ -95,19 +95,19 @@ MediaSource::~MediaSource()
 
 const AtomicString& MediaSource::openKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, open, ("open", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> open("open", AtomicString::ConstructFromLiteral);
     return open;
 }
 
 const AtomicString& MediaSource::closedKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, closed, ("closed", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> closed("closed", AtomicString::ConstructFromLiteral);
     return closed;
 }
 
 const AtomicString& MediaSource::endedKeyword()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, ended, ("ended", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> ended("ended", AtomicString::ConstructFromLiteral);
     return ended;
 }
 
@@ -115,7 +115,7 @@ void MediaSource::setPrivateAndOpen(Ref<MediaSourcePrivate>&& mediaSourcePrivate
 {
     ASSERT(!m_private);
     ASSERT(m_mediaElement);
-    m_private = WTF::move(mediaSourcePrivate);
+    m_private = WTFMove(mediaSourcePrivate);
     setReadyState(openKeyword());
 }
 
@@ -440,8 +440,8 @@ void MediaSource::endOfStream(const AtomicString& error, ExceptionCode& ec)
 
 void MediaSource::streamEndedWithError(const AtomicString& error, ExceptionCode& ec)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, network, ("network", AtomicString::ConstructFromLiteral));
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, decode, ("decode", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> network("network", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomicString> decode("decode", AtomicString::ConstructFromLiteral);
 
     LOG(MediaSource, "MediaSource::streamEndedWithError(%p) : %s", this, error.string().ascii().data());
 
@@ -732,7 +732,8 @@ bool MediaSource::isTypeSupported(const String& type)
     if (type.isNull() || type.isEmpty())
         return false;
 
-    ContentType contentType(type);
+    // FIXME: Why do we convert to lowercase here, but not in MediaSource::addSourceBuffer?
+    ContentType contentType(type.convertToASCIILowercase());
     String codecs = contentType.parameter("codecs");
 
     // 2. If type does not contain a valid MIME type string, then return false.
@@ -814,7 +815,7 @@ void MediaSource::stop()
     m_private = nullptr;
 }
 
-bool MediaSource::canSuspendForPageCache() const
+bool MediaSource::canSuspendForDocumentSuspension() const
 {
     return isClosed() && !m_asyncEventQueue.hasPendingEvents();
 }

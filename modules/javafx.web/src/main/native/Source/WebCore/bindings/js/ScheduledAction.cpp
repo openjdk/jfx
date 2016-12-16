@@ -101,9 +101,9 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
 
     NakedPtr<Exception> exception;
     if (is<Document>(context))
-        JSMainThreadExecState::call(exec, m_function.get(), callType, callData, thisValue, args, exception);
+        JSMainThreadExecState::profiledCall(exec, JSC::ProfilingReason::Other, m_function.get(), callType, callData, thisValue, args, exception);
     else
-        JSC::call(exec, m_function.get(), callType, callData, thisValue, args, exception);
+        JSC::profiledCall(exec, JSC::ProfilingReason::Other, m_function.get(), callType, callData, thisValue, args, exception);
 
     InspectorInstrumentation::didCallFunction(cookie, &context);
 
@@ -117,7 +117,7 @@ void ScheduledAction::execute(Document& document)
     if (!window)
         return;
 
-    RefPtr<Frame> frame = window->impl().frame();
+    RefPtr<Frame> frame = window->wrapped().frame();
     if (!frame || !frame->script().canExecuteScripts(AboutToExecuteScript))
         return;
 

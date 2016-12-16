@@ -38,24 +38,33 @@ public:
     virtual ~TextureMapperTiledBackingStore() { }
 
     virtual RefPtr<BitmapTexture> texture() const override;
-    virtual void paintToTextureMapper(TextureMapper*, const FloatRect&, const TransformationMatrix&, float) override;
-    virtual void drawBorder(TextureMapper*, const Color&, float borderWidth, const FloatRect&, const TransformationMatrix&) override;
-    virtual void drawRepaintCounter(TextureMapper*, int repaintCount, const Color&, const FloatRect&, const TransformationMatrix&) override;
-    void updateContents(TextureMapper*, Image*, const FloatSize&, const IntRect&, BitmapTexture::UpdateContentsFlag);
-    void updateContents(TextureMapper*, GraphicsLayer*, const FloatSize&, const IntRect&, BitmapTexture::UpdateContentsFlag);
+    virtual void paintToTextureMapper(TextureMapper&, const FloatRect&, const TransformationMatrix&, float) override;
+    virtual void drawBorder(TextureMapper&, const Color&, float borderWidth, const FloatRect&, const TransformationMatrix&) override;
+    virtual void drawRepaintCounter(TextureMapper&, int repaintCount, const Color&, const FloatRect&, const TransformationMatrix&) override;
+
+    void updateContentsScale(float);
+    void updateContentsSize(const FloatSize&);
+
+    void updateContents(TextureMapper&, Image*, const FloatRect& visibleRect, const IntRect& dirtyRect, BitmapTexture::UpdateContentsFlag);
+    void updateContents(TextureMapper&, GraphicsLayer*, const FloatRect& visibleRect, const IntRect& dirtyRect, BitmapTexture::UpdateContentsFlag);
 
     void setContentsToImage(Image* image) { m_image = image; }
 
 private:
-    TextureMapperTiledBackingStore();
-    void createOrDestroyTilesIfNeeded(const FloatSize& backingStoreSize, const IntSize& tileSize, bool hasAlpha);
-    void updateContentsFromImageIfNeeded(TextureMapper*);
+    TextureMapperTiledBackingStore() { }
+
+    void createOrDestroyTilesIfNeeded(const FloatRect& visibleRect, const IntSize& tileSize, bool hasAlpha);
+    void updateContentsFromImageIfNeeded(TextureMapper&);
     TransformationMatrix adjustedTransformForRect(const FloatRect&);
-    inline FloatRect rect() const { return FloatRect(FloatPoint::zero(), m_size); }
 
     Vector<TextureMapperTile> m_tiles;
-    FloatSize m_size;
+    FloatSize m_contentsSize;
+    FloatRect m_visibleRect;
+    FloatRect m_scaledvisibleRect;
     RefPtr<Image> m_image;
+    float m_contentsScale { 1 };
+    bool m_isScaleDirty { false };
+    bool m_isSizeDirty { false };
 };
 
 } // namespace WebCore

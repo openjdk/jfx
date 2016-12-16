@@ -40,6 +40,7 @@
 #include "RenderView.h"
 #include "ScrollAnimator.h"
 #include "Settings.h"
+#include "TextStream.h"
 #include <wtf/MainThread.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -133,7 +134,11 @@ Region ScrollingCoordinator::absoluteNonFastScrollableRegionForFrame(const Frame
             if (scrollableArea->usesAsyncScrolling())
                 continue;
 
-            IntRect box = scrollableArea->scrollableAreaBoundingBox();
+            bool isInsideFixed;
+            IntRect box = scrollableArea->scrollableAreaBoundingBox(&isInsideFixed);
+            if (isInsideFixed)
+                box = IntRect(frameView->fixedScrollableAreaBoundsInflatedForScrolling(LayoutRect(box)));
+
             nonFastScrollableRegion.unite(box);
         }
     }
@@ -155,9 +160,7 @@ Region ScrollingCoordinator::absoluteNonFastScrollableRegionForFrame(const Frame
 
         Region subframeRegion = absoluteNonFastScrollableRegionForFrame(*subframe);
         // Map from the frame document to our document.
-        IntPoint offset = subframeView->contentsToView(IntPoint());
-        offset = subframeView->convertToContainingView(offset);
-        offset = frameView->viewToContents(offset);
+        IntPoint offset = subframeView->contentsToContainingViewContents(IntPoint());
 
         // FIXME: this translation ignores non-trival transforms on the frame.
         subframeRegion.translate(toIntSize(offset));
@@ -167,11 +170,9 @@ Region ScrollingCoordinator::absoluteNonFastScrollableRegionForFrame(const Frame
     Document::RegionFixedPair wheelHandlerRegion = frame.document()->absoluteRegionForEventTargets(frame.document()->wheelEventTargets());
     bool wheelHandlerInFixedContent = wheelHandlerRegion.second;
     if (wheelHandlerInFixedContent) {
-        // FIXME: if a fixed element has a wheel event handler, for now just cover the entire document
-        // with the slow-scrolling region. This could be improved.
         // FIXME: need to handle position:sticky here too.
-        bool inFixed;
-        wheelHandlerRegion.first.unite(enclosingIntRect(frame.document()->absoluteEventHandlerBounds(inFixed)));
+        LayoutRect inflatedWheelHandlerBounds = frameView->fixedScrollableAreaBoundsInflatedForScrolling(LayoutRect(wheelHandlerRegion.first.bounds()));
+        wheelHandlerRegion.first.unite(enclosingIntRect(inflatedWheelHandlerBounds));
     }
 
     nonFastScrollableRegion.unite(wheelHandlerRegion.first);
@@ -419,6 +420,25 @@ String ScrollingCoordinator::synchronousScrollingReasonsAsText() const
         return synchronousScrollingReasonsAsText(synchronousScrollingReasons(*frameView));
 
     return String();
+}
+
+TextStream& operator<<(TextStream& ts, ScrollingNodeType nodeType)
+{
+    switch (nodeType) {
+    case FrameScrollingNode:
+        ts << "frame-scrolling";
+        break;
+    case OverflowScrollingNode:
+        ts << "overflow-scrolling";
+        break;
+    case FixedNode:
+        ts << "fixed";
+        break;
+    case StickyNode:
+        ts << "sticky";
+        break;
+    }
+    return ts;
 }
 
 } // namespace WebCore

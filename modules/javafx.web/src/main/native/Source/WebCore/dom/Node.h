@@ -30,7 +30,6 @@
 #include "LayoutRect.h"
 #include "MutationObserver.h"
 #include "RenderStyleConstants.h"
-#include "ScriptWrappable.h"
 #include "TreeScope.h"
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
@@ -42,48 +41,27 @@
 
 namespace WebCore {
 
-class Attribute;
-class ClassNodeList;
 class ContainerNode;
-class DOMSettableTokenList;
 class Document;
 class Element;
-class Event;
-class EventListener;
 class FloatPoint;
-class Frame;
-class HTMLInputElement;
 class HTMLQualifiedName;
-class IntRect;
-class KeyboardEvent;
+class HTMLSlotElement;
 class MathMLQualifiedName;
-class NSResolver;
-class NameNodeList;
 class NamedNodeMap;
 class NodeList;
 class NodeListsNodeData;
 class NodeOrString;
 class NodeRareData;
 class QualifiedName;
-class RadioNodeList;
-class RegisteredEventListener;
 class RenderBox;
 class RenderBoxModelObject;
 class RenderObject;
 class RenderStyle;
 class SVGQualifiedName;
 class ShadowRoot;
-class TagNodeList;
-
-#if ENABLE(INDIE_UI)
-class UIRequestEvent;
-#endif
-
-#if ENABLE(TOUCH_EVENTS) && !PLATFORM(IOS)
 class TouchEvent;
-#endif
-
-typedef int ExceptionCode;
+class UIRequestEvent;
 
 const int nodeStyleChangeShift = 14;
 
@@ -112,7 +90,7 @@ private:
     RenderObject* m_renderer;
 };
 
-class Node : public EventTarget, public ScriptWrappable {
+class Node : public EventTarget {
     WTF_MAKE_FAST_ALLOCATED;
 
     friend class Document;
@@ -124,16 +102,15 @@ public:
         ATTRIBUTE_NODE = 2,
         TEXT_NODE = 3,
         CDATA_SECTION_NODE = 4,
-        ENTITY_REFERENCE_NODE = 5,
-        ENTITY_NODE = 6,
         PROCESSING_INSTRUCTION_NODE = 7,
         COMMENT_NODE = 8,
         DOCUMENT_NODE = 9,
         DOCUMENT_TYPE_NODE = 10,
         DOCUMENT_FRAGMENT_NODE = 11,
-        XPATH_NAMESPACE_NODE = 13,
     };
     enum DeprecatedNodeType {
+        ENTITY_REFERENCE_NODE = 5,
+        ENTITY_NODE = 6,
         NOTATION_NODE = 12,
     };
     enum DocumentPosition {
@@ -146,7 +123,8 @@ public:
         DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC = 0x20,
     };
 
-    static bool isSupported(const String& feature, const String& version);
+    // Only used by ObjC / GObject bindings.
+    static bool isSupportedForBindings(const String& feature, const String& version);
 
     WEBCORE_EXPORT static void startIgnoringLeaks();
     WEBCORE_EXPORT static void stopIgnoringLeaks();
@@ -182,7 +160,7 @@ public:
     Node* pseudoAwareFirstChild() const;
     Node* pseudoAwareLastChild() const;
 
-    virtual URL baseURI() const;
+    URL baseURI() const;
 
     void getSubresourceURLs(ListHashSet<URL>&) const;
 
@@ -201,8 +179,9 @@ public:
         SelfWithTemplateContent,
         Everything,
     };
-    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) = 0;
-    RefPtr<Node> cloneNode(bool deep) { return cloneNodeInternal(document(), deep ? CloningOperation::Everything : CloningOperation::OnlySelf); }
+    virtual Ref<Node> cloneNodeInternal(Document&, CloningOperation) = 0;
+    Ref<Node> cloneNode(bool deep) { return cloneNodeInternal(document(), deep ? CloningOperation::Everything : CloningOperation::OnlySelf); }
+    RefPtr<Node> cloneNodeForBindings(bool deep, ExceptionCode&);
 
     virtual const AtomicString& localName() const;
     virtual const AtomicString& namespaceURI() const;
@@ -257,7 +236,6 @@ public:
     virtual bool isCharacterDataNode() const { return false; }
     virtual bool isFrameOwnerElement() const { return false; }
     virtual bool isPluginElement() const { return false; }
-    virtual bool isInsertionPointNode() const { return false; }
 #if ENABLE(SERVICE_CONTROLS)
     virtual bool isImageControlsRootElement() const { return false; }
     virtual bool isImageControlsButtonElement() const { return false; }
@@ -267,11 +245,6 @@ public:
     bool isTreeScope() const;
     bool isDocumentFragment() const { return getFlag(IsDocumentFragmentFlag); }
     bool isShadowRoot() const { return isDocumentFragment() && isTreeScope(); }
-    bool isInsertionPoint() const { return getFlag(NeedsNodeRenderingTraversalSlowPathFlag) && isInsertionPointNode(); }
-    // Returns Node rather than InsertionPoint. Should be used only for language bindings.
-    Node* insertionParentForBinding() const;
-
-    bool needsNodeRenderingTraversalSlowPath() const;
 
     bool isNamedFlowContentNode() const { return getFlag(IsNamedFlowContentNodeFlag); }
     bool hasCustomStyleResolveCallbacks() const { return getFlag(HasCustomStyleResolveCallbacksFlag); }
@@ -286,6 +259,15 @@ public:
     WEBCORE_EXPORT Node* deprecatedShadowAncestorNode() const;
     ShadowRoot* containingShadowRoot() const;
     ShadowRoot* shadowRoot() const;
+
+#if ENABLE(SHADOW_DOM)
+    HTMLSlotElement* assignedSlot() const;
+#endif
+
+#if ENABLE(CUSTOM_ELEMENTS)
+    bool isCustomElement() const { return getFlag(IsCustomElement); }
+    void setIsCustomElement() { return setFlag(IsCustomElement); }
+#endif
 
     // Returns null, a child of ShadowRoot, or a legacy shadow root.
     Node* nonBoundaryShadowTreeRootNode();
@@ -391,7 +373,6 @@ public:
     // A Document node returns itself.
     Document& document() const
     {
-        ASSERT(this);
         return treeScope().documentScope();
     }
 
@@ -412,7 +393,6 @@ public:
     bool isInShadowTree() const { return getFlag(IsInShadowTreeFlag); }
     bool isInTreeScope() const { return getFlag(static_cast<NodeFlags>(InDocumentFlag | IsInShadowTreeFlag)); }
 
-    bool isReadOnlyNode() const { return nodeType() == ENTITY_REFERENCE_NODE; }
     bool isDocumentTypeNode() const { return nodeType() == DOCUMENT_TYPE_NODE; }
     virtual bool childTypeAllowed(NodeType) const { return false; }
     unsigned countChildNodes() const;
@@ -515,30 +495,32 @@ public:
     WEBCORE_EXPORT unsigned short compareDocumentPosition(Node*);
 
     virtual Node* toNode() override;
-    virtual HTMLInputElement* toInputElement();
-    const HTMLInputElement* toInputElement() const { return const_cast<Node*>(this)->toInputElement(); }
 
     virtual EventTargetInterface eventTargetInterface() const override;
     virtual ScriptExecutionContext* scriptExecutionContext() const override final; // Implemented in Document.h
 
-    virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture) override;
+    virtual bool addEventListener(const AtomicString& eventType, RefPtr<EventListener>&&, bool useCapture) override;
     virtual bool removeEventListener(const AtomicString& eventType, EventListener*, bool useCapture) override;
 
     using EventTarget::dispatchEvent;
-    virtual bool dispatchEvent(PassRefPtr<Event>) override;
+    virtual bool dispatchEvent(Event&) override;
 
-    void dispatchScopedEvent(PassRefPtr<Event>);
+    void dispatchScopedEvent(Event&);
 
     virtual void handleLocalEvents(Event&);
 
     void dispatchSubtreeModifiedEvent();
     bool dispatchDOMActivateEvent(int detail, PassRefPtr<Event> underlyingEvent);
 
+#if ENABLE(TOUCH_EVENTS)
+    virtual bool allowsDoubleTapGesture() const { return true; }
+#endif
+
 #if ENABLE(TOUCH_EVENTS) && !PLATFORM(IOS)
-    bool dispatchTouchEvent(PassRefPtr<TouchEvent>);
+    bool dispatchTouchEvent(TouchEvent&);
 #endif
 #if ENABLE(INDIE_UI)
-    bool dispatchUIRequestEvent(PassRefPtr<UIRequestEvent>);
+    bool dispatchUIRequestEvent(UIRequestEvent&);
 #endif
 
     bool dispatchBeforeLoadEvent(const String& sourceURL);
@@ -618,7 +600,7 @@ protected:
         HasSyntheticAttrChildNodesFlag = 1 << 19,
         HasCustomStyleResolveCallbacksFlag = 1 << 20,
         HasEventTargetDataFlag = 1 << 21,
-        NeedsNodeRenderingTraversalSlowPathFlag = 1 << 22,
+        IsCustomElement = 1 << 22,
         IsInShadowTreeFlag = 1 << 23,
         IsMathMLFlag = 1 << 24,
 
@@ -645,14 +627,13 @@ protected:
         CreateText = DefaultNodeFlags | IsTextFlag,
         CreateContainer = DefaultNodeFlags | IsContainerFlag,
         CreateElement = CreateContainer | IsElementFlag,
-        CreatePseudoElement =  CreateElement | InDocumentFlag | NeedsNodeRenderingTraversalSlowPathFlag,
-        CreateShadowRoot = CreateContainer | IsDocumentFragmentFlag | NeedsNodeRenderingTraversalSlowPathFlag | IsInShadowTreeFlag,
+        CreatePseudoElement =  CreateElement | InDocumentFlag,
+        CreateShadowRoot = CreateContainer | IsDocumentFragmentFlag | IsInShadowTreeFlag,
         CreateDocumentFragment = CreateContainer | IsDocumentFragmentFlag,
         CreateStyledElement = CreateElement | IsStyledElementFlag,
         CreateHTMLElement = CreateStyledElement | IsHTMLFlag,
         CreateSVGElement = CreateStyledElement | IsSVGFlag | HasCustomStyleResolveCallbacksFlag,
         CreateDocument = CreateContainer | InDocumentFlag,
-        CreateInsertionPoint = CreateHTMLElement | NeedsNodeRenderingTraversalSlowPathFlag,
         CreateEditingText = CreateText | IsEditingTextFlag,
         CreateMathMLElement = CreateStyledElement | IsMathMLFlag
     };
@@ -671,8 +652,6 @@ protected:
     void clearEventTargetData();
 
     void setHasCustomStyleResolveCallbacks() { setFlag(true, HasCustomStyleResolveCallbacksFlag); }
-
-    void setNeedsNodeRenderingTraversalSlowPath(bool flag) { setFlag(flag, NeedsNodeRenderingTraversalSlowPathFlag); }
 
     void setTreeScope(TreeScope& scope) { m_treeScope = &scope; }
 
@@ -702,14 +681,13 @@ private:
     int m_refCount;
     mutable uint32_t m_nodeFlags;
 
-    ContainerNode* m_parentNode;
-    TreeScope* m_treeScope;
-    Node* m_previous;
-    Node* m_next;
+    ContainerNode* m_parentNode { nullptr };
+    TreeScope* m_treeScope { nullptr };
+    Node* m_previous { nullptr };
+    Node* m_next { nullptr };
     // When a node has rare data we move the renderer into the rare data.
     union DataUnion {
-        DataUnion() : m_renderer(0) { }
-        RenderObject* m_renderer;
+        RenderObject* m_renderer { nullptr };
         NodeRareDataBase* m_rareData;
     } m_data;
 

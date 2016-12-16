@@ -139,8 +139,17 @@ public final class WebPage {
                     CookieHandler.setDefault(new CookieManager());
                 }
             }
+
+            final boolean useJIT = Boolean.valueOf(System.getProperty(
+                    "com.sun.webkit.useJIT", "true"));
+            final boolean useDFGJIT = Boolean.valueOf(System.getProperty(
+                    "com.sun.webkit.useDFGJIT", "true"));
+
+            // Initialize WTF, WebCore and JavaScriptCore.
+            twkInitWebCore(useJIT, useDFGJIT);
             return null;
         });
+
     }
 
     private static boolean firstWebPageCreated = false;
@@ -1417,6 +1426,15 @@ public final class WebPage {
         }
     }
 
+    public void resetToConsistentStateBeforeTesting() {
+        lockPage();
+        try {
+            twkResetToConsistentStateBeforeTesting(getPage());
+        } finally {
+            unlockPage();
+        }
+    }
+
     public float getZoomFactor(boolean textOnly) {
         lockPage();
         try {
@@ -2499,6 +2517,7 @@ public final class WebPage {
     // Native methods
     // *************************************************************************
 
+    private static native void twkInitWebCore(boolean useJIT, boolean useDFGJIT);
     private native long twkCreatePage(boolean editable);
     private native void twkInit(long pPage, boolean usePlugins, float devicePixelScale);
     private native void twkDestroyPage(long pPage);
@@ -2519,6 +2538,7 @@ public final class WebPage {
 
     private native void twkOpen(long pFrame, String url);
     private native void twkOverridePreference(long pPage, String key, String value);
+    private native void twkResetToConsistentStateBeforeTesting(long pPage);
     private native void twkLoad(long pFrame, String text, String contentType);
     private native boolean twkIsLoading(long pFrame);
     private native void twkStop(long pFrame);

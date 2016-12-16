@@ -31,6 +31,7 @@
 #include "CodeBlock.h"
 #include "DFGJITCode.h"
 #include "DFGValueSource.h"
+#include "InlineCallFrame.h"
 #include "JSCInlines.h"
 #include <wtf/DataLog.h>
 #include <wtf/HashMap.h>
@@ -122,9 +123,9 @@ void VariableEventStream::reconstruct(
 
     unsigned numVariables;
     if (codeOrigin.inlineCallFrame)
-        numVariables = baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame)->m_numCalleeRegisters + VirtualRegister(codeOrigin.inlineCallFrame->stackOffset).toLocal() + 1;
+        numVariables = baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame)->m_numCalleeLocals + VirtualRegister(codeOrigin.inlineCallFrame->stackOffset).toLocal() + 1;
     else
-        numVariables = baselineCodeBlock->m_numCalleeRegisters;
+        numVariables = baselineCodeBlock->m_numCalleeLocals;
 
     // Crazy special case: if we're at index == 0 then this must be an argument check
     // failure, in which case all variables are already set up. The recoveries should
@@ -208,7 +209,7 @@ void VariableEventStream::reconstruct(
 
         if (info.filled) {
             if (info.format == DataFormatDouble) {
-                valueRecoveries[i] = ValueRecovery::inFPR(info.u.fpr);
+                valueRecoveries[i] = ValueRecovery::inFPR(info.u.fpr, DataFormatDouble);
                 continue;
             }
 #if USE(JSVALUE32_64)

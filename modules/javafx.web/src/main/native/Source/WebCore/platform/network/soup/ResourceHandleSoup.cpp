@@ -244,13 +244,14 @@ static void continueAfterDidReceiveResponse(ResourceHandle*);
 
 static bool gIgnoreSSLErrors = false;
 
-static HashSet<String>& allowsAnyHTTPSCertificateHosts()
+typedef HashSet<String, ASCIICaseInsensitiveHash> HostsSet;
+static HostsSet& allowsAnyHTTPSCertificateHosts()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(HashSet<String>, hosts, ());
+    DEPRECATED_DEFINE_STATIC_LOCAL(HostsSet, hosts, ());
     return hosts;
 }
 
-typedef HashMap<String, HostTLSCertificateSet> CertificatesMap;
+typedef HashMap<String, HostTLSCertificateSet, ASCIICaseInsensitiveHash> CertificatesMap;
 static CertificatesMap& clientCertificates()
 {
     DEPRECATED_DEFINE_STATIC_LOCAL(CertificatesMap, certificates, ());
@@ -322,12 +323,12 @@ static bool handleUnignoredTLSErrors(ResourceHandle* handle, SoupMessage* messag
     if (!tlsErrors)
         return false;
 
-    String lowercaseHostURL = handle->firstRequest().url().host().lower();
-    if (allowsAnyHTTPSCertificateHosts().contains(lowercaseHostURL))
+    String host = handle->firstRequest().url().host();
+    if (allowsAnyHTTPSCertificateHosts().contains(host))
         return false;
 
     // We aren't ignoring errors globally, but the user may have already decided to accept this certificate.
-    auto it = clientCertificates().find(lowercaseHostURL);
+    auto it = clientCertificates().find(host);
     if (it != clientCertificates().end() && it->value.contains(certificate))
         return false;
 
@@ -338,11 +339,11 @@ static bool handleUnignoredTLSErrors(ResourceHandle* handle, SoupMessage* messag
 
 static void tlsErrorsChangedCallback(SoupMessage* message, GParamSpec*, gpointer data)
 {
-    ResourceHandle* handle = static_cast<ResourceHandle*>(data);
+    RefPtr<ResourceHandle> handle = static_cast<ResourceHandle*>(data);
     if (!handle || handle->cancelledOrClientless())
         return;
 
-    if (handleUnignoredTLSErrors(handle, message))
+    if (handleUnignoredTLSErrors(handle.get(), message))
         handle->cancel();
 }
 
@@ -506,7 +507,7 @@ static void doRedirect(ResourceHandle* handle)
         // or if current redirection says so
         if (message->method == SOUP_METHOD_GET || shouldRedirectAsGET(message, newURL, crossOrigin)) {
             newRequest.setHTTPMethod("GET");
-            newRequest.setHTTPBody(0);
+            newRequest.setHTTPBody(nullptr);
             newRequest.clearHTTPContentType();
         }
     }
@@ -601,7 +602,7 @@ static void cleanupSoupRequestOperation(ResourceHandle* handle, bool isDestroyin
         d->m_soupMessage.clear();
     }
 
-    d->m_timeoutSource.cancel();
+    d->m_timeoutSource.stop();
 
     if (!isDestroying)
         handle->deref();
@@ -1049,19 +1050,20 @@ RefPtr<ResourceHandle> ResourceHandle::releaseForDownload(ResourceHandleClient* 
     return newHandle;
 }
 
+void ResourceHandle::timeoutFired()
+{
+    client()->didFail(this, ResourceError::timeoutError(firstRequest().url()));
+    cancel();
+}
+
 void ResourceHandle::sendPendingRequest()
 {
 #if ENABLE(WEB_TIMING)
     m_requestTime = monotonicallyIncreasingTime();
 #endif
 
-    if (d->m_firstRequest.timeoutInterval() > 0) {
-        d->m_timeoutSource.scheduleAfterDelay("[WebKit] ResourceHandle request timeout", [this] {
-            client()->didFail(this, ResourceError::timeoutError(firstRequest().url().string()));
-            cancel();
-        }, std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(d->m_firstRequest.timeoutInterval())),
-        G_PRIORITY_DEFAULT, nullptr, g_main_context_get_thread_default());
-    }
+    if (d->m_firstRequest.timeoutInterval() > 0)
+        d->m_timeoutSource.startOneShot(d->m_firstRequest.timeoutInterval());
 
     // Balanced by a deref() in cleanupSoupRequestOperation, which should always run.
     ref();
@@ -1086,12 +1088,12 @@ bool ResourceHandle::shouldUseCredentialStorage()
 
 void ResourceHandle::setHostAllowsAnyHTTPSCertificate(const String& host)
 {
-    allowsAnyHTTPSCertificateHosts().add(host.lower());
+    allowsAnyHTTPSCertificateHosts().add(host);
 }
 
 void ResourceHandle::setClientCertificate(const String& host, GTlsCertificate* certificate)
 {
-    clientCertificates().add(host.lower(), HostTLSCertificateSet()).iterator->value.add(certificate);
+    clientCertificates().add(host, HostTLSCertificateSet()).iterator->value.add(certificate);
 }
 
 void ResourceHandle::setIgnoreSSLErrors(bool ignoreSSLErrors)
@@ -1265,7 +1267,7 @@ void ResourceHandle::platformSetDefersLoading(bool defersLoading)
 
     // Except when canceling a possible timeout timer, we only need to take action here to UN-defer loading.
     if (defersLoading) {
-        d->m_timeoutSource.cancel();
+        d->m_timeoutSource.stop();
         return;
     }
 

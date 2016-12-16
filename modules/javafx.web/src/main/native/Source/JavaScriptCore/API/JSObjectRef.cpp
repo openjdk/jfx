@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2007, 2008, 2016 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Kelvin W Sherlock (ksherlock@gmail.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -117,7 +117,7 @@ JSObjectRef JSObjectMake(JSContextRef ctx, JSClassRef jsClass, void* data)
 
     JSCallbackObject<JSDestructibleObject>* object = JSCallbackObject<JSDestructibleObject>::create(exec, exec->lexicalGlobalObject(), exec->lexicalGlobalObject()->callbackObjectStructure(), jsClass, data);
     if (JSObject* prototype = jsClass->prototype(exec))
-        object->setPrototype(exec->vm(), prototype);
+        object->setPrototypeDirect(exec->vm(), prototype);
 
     return toRef(object);
 }
@@ -212,7 +212,7 @@ JSObjectRef JSObjectMakeDate(JSContextRef ctx, size_t argumentCount, const JSVal
     for (size_t i = 0; i < argumentCount; ++i)
         argList.append(toJS(exec, arguments[i]));
 
-    JSObject* result = constructDate(exec, exec->lexicalGlobalObject(), argList);
+    JSObject* result = constructDate(exec, exec->lexicalGlobalObject(), JSValue(), argList);
     if (handleExceptionIfNeeded(exec, exception) == ExceptionStatus::DidThrow)
         result = 0;
 
@@ -291,7 +291,7 @@ void JSObjectSetPrototype(JSContextRef ctx, JSObjectRef object, JSValueRef value
         // Someday we might use proxies for something other than JSGlobalObjects, but today is not that day.
         RELEASE_ASSERT_NOT_REACHED();
     }
-    jsObject->setPrototypeWithCycleCheck(exec, jsValue.isObject() ? jsValue : jsNull());
+    jsObject->setPrototype(exec->vm(), exec, jsValue.isObject() ? jsValue : jsNull());
 }
 
 bool JSObjectHasProperty(JSContextRef ctx, JSObjectRef object, JSStringRef propertyName)
@@ -556,7 +556,7 @@ JSValueRef JSObjectCallAsFunction(JSContextRef ctx, JSObjectRef object, JSObject
     if (callType == CallTypeNone)
         return 0;
 
-    JSValueRef result = toRef(exec, call(exec, jsObject, callType, callData, jsThisObject, argList));
+    JSValueRef result = toRef(exec, profiledCall(exec, ProfilingReason::API, jsObject, callType, callData, jsThisObject, argList));
     if (handleExceptionIfNeeded(exec, exception) == ExceptionStatus::DidThrow)
         result = 0;
     return result;
@@ -589,7 +589,8 @@ JSObjectRef JSObjectCallAsConstructor(JSContextRef ctx, JSObjectRef object, size
     MarkedArgumentBuffer argList;
     for (size_t i = 0; i < argumentCount; i++)
         argList.append(toJS(exec, arguments[i]));
-    JSObjectRef result = toRef(construct(exec, jsObject, constructType, constructData, argList));
+
+    JSObjectRef result = toRef(profiledConstruct(exec, ProfilingReason::API, jsObject, constructType, constructData, argList));
     if (handleExceptionIfNeeded(exec, exception) == ExceptionStatus::DidThrow)
         result = 0;
     return result;

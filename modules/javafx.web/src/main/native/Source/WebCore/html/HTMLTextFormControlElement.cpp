@@ -26,6 +26,7 @@
 #include "HTMLTextFormControlElement.h"
 
 #include "AXObjectCache.h"
+#include "CSSPrimitiveValueMappings.h"
 #include "ChromeClient.h"
 #include "Document.h"
 #include "Event.h"
@@ -36,6 +37,7 @@
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
+#include "HTMLParserIdioms.h"
 #include "NodeTraversal.h"
 #include "Page.h"
 #include "RenderBlockFlow.h"
@@ -78,12 +80,12 @@ bool HTMLTextFormControlElement::childShouldCreateRenderer(const Node& child) co
 
 Node::InsertionNotificationRequest HTMLTextFormControlElement::insertedInto(ContainerNode& insertionPoint)
 {
-    HTMLFormControlElementWithState::insertedInto(insertionPoint);
+    InsertionNotificationRequest insertionNotificationRequest = HTMLFormControlElementWithState::insertedInto(insertionPoint);
     if (!insertionPoint.inDocument())
-        return InsertionDone;
+        return insertionNotificationRequest;
     String initialValue = value();
     setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? emptyString() : initialValue);
-    return InsertionDone;
+    return insertionNotificationRequest;
 }
 
 void HTMLTextFormControlElement::dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection direction)
@@ -91,7 +93,7 @@ void HTMLTextFormControlElement::dispatchFocusEvent(RefPtr<Element>&& oldFocused
     if (supportsPlaceholder())
         updatePlaceholderVisibility();
     handleFocusEvent(oldFocusedElement.get(), direction);
-    HTMLFormControlElementWithState::dispatchFocusEvent(WTF::move(oldFocusedElement), direction);
+    HTMLFormControlElementWithState::dispatchFocusEvent(WTFMove(oldFocusedElement), direction);
 }
 
 void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
@@ -99,7 +101,7 @@ void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedE
     if (supportsPlaceholder())
         updatePlaceholderVisibility();
     handleBlurEvent();
-    HTMLFormControlElementWithState::dispatchBlurEvent(WTF::move(newFocusedElement));
+    HTMLFormControlElementWithState::dispatchBlurEvent(WTFMove(newFocusedElement));
 }
 
 void HTMLTextFormControlElement::didEditInnerTextValue()
@@ -244,12 +246,12 @@ void HTMLTextFormControlElement::setRangeText(const String& replacement, unsigne
 
     subtreeHasChanged();
 
-    if (equalIgnoringCase(selectionMode, "select")) {
+    if (equalLettersIgnoringASCIICase(selectionMode, "select")) {
         newSelectionStart = start;
         newSelectionEnd = start + replacementLength;
-    } else if (equalIgnoringCase(selectionMode, "start"))
+    } else if (equalLettersIgnoringASCIICase(selectionMode, "start"))
         newSelectionStart = newSelectionEnd = start;
-    else if (equalIgnoringCase(selectionMode, "end"))
+    else if (equalLettersIgnoringASCIICase(selectionMode, "end"))
         newSelectionStart = newSelectionEnd = start + replacementLength;
     else {
         // Default is "preserve".
@@ -375,9 +377,9 @@ int HTMLTextFormControlElement::computeSelectionEnd() const
 
 static const AtomicString& directionString(TextFieldSelectionDirection direction)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, none, ("none", AtomicString::ConstructFromLiteral));
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, forward, ("forward", AtomicString::ConstructFromLiteral));
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, backward, ("backward", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> none("none", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomicString> forward("forward", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomicString> backward("backward", AtomicString::ConstructFromLiteral);
 
     switch (direction) {
     case SelectionHasNoDirection:
@@ -745,10 +747,10 @@ String HTMLTextFormControlElement::directionForFormData() const
         if (dirAttributeValue.isNull())
             continue;
 
-        if (equalIgnoringCase(dirAttributeValue, "rtl") || equalIgnoringCase(dirAttributeValue, "ltr"))
+        if (equalLettersIgnoringASCIICase(dirAttributeValue, "rtl") || equalLettersIgnoringASCIICase(dirAttributeValue, "ltr"))
             return dirAttributeValue;
 
-        if (equalIgnoringCase(dirAttributeValue, "auto")) {
+        if (equalLettersIgnoringASCIICase(dirAttributeValue, "auto")) {
             bool isAuto;
             TextDirection textDirection = static_cast<const HTMLElement*>(element)->directionalityIfhasDirAutoAttribute(isAuto);
             return textDirection == RTL ? "rtl" : "ltr";
@@ -756,6 +758,58 @@ String HTMLTextFormControlElement::directionForFormData() const
     }
 
     return "ltr";
+}
+
+void HTMLTextFormControlElement::setMaxLengthForBindings(int maxLength, ExceptionCode& ec)
+{
+    if (maxLength < 0)
+        ec = INDEX_SIZE_ERR;
+    else
+        setIntegralAttribute(maxlengthAttr, maxLength);
+}
+
+void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentStyle, RenderStyle& textBlockStyle) const
+{
+    // The inner block, if present, always has its direction set to LTR,
+    // so we need to inherit the direction and unicode-bidi style from the element.
+    textBlockStyle.setDirection(parentStyle.direction());
+    textBlockStyle.setUnicodeBidi(parentStyle.unicodeBidi());
+
+    if (HTMLElement* innerText = innerTextElement()) {
+        if (const StyleProperties* properties = innerText->presentationAttributeStyle()) {
+            RefPtr<CSSValue> value = properties->getPropertyCSSValue(CSSPropertyWebkitUserModify);
+            if (is<CSSPrimitiveValue>(value.get()))
+                textBlockStyle.setUserModify(downcast<CSSPrimitiveValue>(*value));
+        }
+    }
+
+    if (isDisabledFormControl())
+        textBlockStyle.setColor(document().page()->theme().disabledTextColor(textBlockStyle.visitedDependentColor(CSSPropertyColor), parentStyle.visitedDependentColor(CSSPropertyBackgroundColor)));
+#if PLATFORM(IOS)
+    if (textBlockStyle.textSecurity() != TSNONE && !textBlockStyle.isLeftToRightDirection()) {
+        // Preserve the alignment but force the direction to LTR so that the last-typed, unmasked character
+        // (which cannot have RTL directionality) will appear to the right of the masked characters. See <rdar://problem/7024375>.
+
+        switch (textBlockStyle.textAlign()) {
+        case TASTART:
+        case JUSTIFY:
+            textBlockStyle.setTextAlign(RIGHT);
+            break;
+        case TAEND:
+            textBlockStyle.setTextAlign(LEFT);
+            break;
+        case LEFT:
+        case RIGHT:
+        case CENTER:
+        case WEBKIT_LEFT:
+        case WEBKIT_RIGHT:
+        case WEBKIT_CENTER:
+            break;
+        }
+
+        textBlockStyle.setDirection(LTR);
+    }
+#endif
 }
 
 } // namespace Webcore

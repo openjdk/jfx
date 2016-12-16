@@ -65,10 +65,10 @@ void HTTPHeaderMap::adopt(std::unique_ptr<CrossThreadHTTPHeaderMapData> data)
     m_uncommonHeaders.clear();
 
     for (auto& header : data->commonHeaders)
-        m_commonHeaders.add(header.first, WTF::move(header.second));
+        m_commonHeaders.add(header.first, WTFMove(header.second));
 
     for (auto& header : data->uncommonHeaders)
-        m_uncommonHeaders.add(WTF::move(header.first), WTF::move(header.second));
+        m_uncommonHeaders.add(WTFMove(header.first), WTFMove(header.second));
 }
 
 String HTTPHeaderMap::get(const String& name) const
@@ -99,6 +99,22 @@ void HTTPHeaderMap::add(const String& name, const String& value)
         return;
     }
     add(headerName, value);
+}
+
+bool HTTPHeaderMap::contains(const String& name) const
+{
+    HTTPHeaderName headerName;
+    if (findHTTPHeaderName(name, headerName))
+        return contains(headerName);
+    return m_uncommonHeaders.contains(name);
+}
+
+bool HTTPHeaderMap::remove(const String& name)
+{
+    HTTPHeaderName headerName;
+    if (findHTTPHeaderName(name, headerName))
+        return remove(headerName);
+    return m_uncommonHeaders.remove(name);
 }
 
 String HTTPHeaderMap::get(HTTPHeaderName name) const

@@ -29,6 +29,7 @@
 
 #import "PlatformUtilities.h"
 #import <WebKit/WKNavigationActionPrivate.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <wtf/RetainPtr.h>
 
 #if WK_API_ENABLED
@@ -79,7 +80,7 @@ TEST(WebKit2, ShouldOpenExternalURLsInWindowOpen)
     [webView setNavigationDelegate:controller.get()];
     [webView setUIDelegate:controller.get()];
 
-    [webView loadHTMLString:@"<body onclick=\"window.open('http://webkit.org/destination')\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
+    [webView loadHTMLString:@"<body onclick=\"window.open('https://webkit.org/destination')\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
     TestWebKitAPI::Util::run(&finishedNavigation);
     finishedNavigation = false;
 
@@ -90,7 +91,7 @@ TEST(WebKit2, ShouldOpenExternalURLsInWindowOpen)
     TestWebKitAPI::Util::run(&createdWebView);
     createdWebView = false;
 
-    // User-initiated window.open to the same scheme, host and port should allow external schemes but not App Links.
+    // User-initiated window.open to the same host should allow external schemes but not App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_FALSE([action _shouldOpenAppLinks]);
 
@@ -99,11 +100,11 @@ TEST(WebKit2, ShouldOpenExternalURLsInWindowOpen)
     TestWebKitAPI::Util::run(&decidedPolicy);
     decidedPolicy = false;
 
-    // User-initiated window.open to the same scheme, host and port should allow external schemes but not App Links.
+    // User-initiated window.open to the same host should allow external schemes but not App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_FALSE([action _shouldOpenAppLinks]);
 
-    [webView loadHTMLString:@"<body onclick=\"window.open('https://webkit.org/destination')\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
+    [webView loadHTMLString:@"<body onclick=\"window.open('http://apple.com/destination')\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
     TestWebKitAPI::Util::run(&finishedNavigation);
     finishedNavigation = false;
 
@@ -112,7 +113,7 @@ TEST(WebKit2, ShouldOpenExternalURLsInWindowOpen)
     TestWebKitAPI::Util::run(&createdWebView);
     createdWebView = false;
 
-    // User-initiated window.open to different scheme, host or port should allow external schemes and App Links.
+    // User-initiated window.open to different host should allow external schemes and App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_TRUE([action _shouldOpenAppLinks]);
 
@@ -121,7 +122,7 @@ TEST(WebKit2, ShouldOpenExternalURLsInWindowOpen)
     TestWebKitAPI::Util::run(&decidedPolicy);
     decidedPolicy = false;
 
-    // User-initiated window.open to different scheme, host or port should allow external schemes and App Links.
+    // User-initiated window.open to different host should allow external schemes and App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_TRUE([action _shouldOpenAppLinks]);
 
@@ -140,7 +141,7 @@ TEST(WebKit2, ShouldOpenExternalURLsInTargetedLink)
     [webView setNavigationDelegate:controller.get()];
     [webView setUIDelegate:controller.get()];
 
-    [webView loadHTMLString:@"<a style=\"display: block; height: 100%\" href=\"destination.html\" target=\"_blank\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
+    [webView loadHTMLString:@"<a style=\"display: block; height: 100%\" href=\"https://webkit.org/destination.html\" target=\"_blank\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
     TestWebKitAPI::Util::run(&finishedNavigation);
     finishedNavigation = false;
 
@@ -152,14 +153,14 @@ TEST(WebKit2, ShouldOpenExternalURLsInTargetedLink)
     TestWebKitAPI::Util::run(&decidedPolicy);
     decidedPolicy = false;
 
-    // User-initiated targeted navigation to the same scheme, host and port should allow external schemes but not App Links.
+    // User-initiated targeted navigation to the same host should allow external schemes but not App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_FALSE([action _shouldOpenAppLinks]);
 
     TestWebKitAPI::Util::run(&createdWebView);
     createdWebView = false;
 
-    // User-initiated targeted navigation to the same scheme, host and port should allow external schemes but not App Links.
+    // User-initiated targeted navigation to the same host should allow external schemes but not App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_FALSE([action _shouldOpenAppLinks]);
 
@@ -168,11 +169,11 @@ TEST(WebKit2, ShouldOpenExternalURLsInTargetedLink)
     TestWebKitAPI::Util::run(&decidedPolicy);
     decidedPolicy = false;
 
-    // User-initiated targeted navigation to the same scheme, host and port should allow external schemes but not App Links.
+    // User-initiated targeted navigation to the same host should allow external schemes but not App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_FALSE([action _shouldOpenAppLinks]);
 
-    [webView loadHTMLString:@"<a style=\"display: block; height: 100%\" href=\"https://webkit.org/destination.html\" target=\"_blank\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
+    [webView loadHTMLString:@"<a style=\"display: block; height: 100%\" href=\"http://apple.com/destination.html\" target=\"_blank\">" baseURL:[NSURL URLWithString:@"http://webkit.org"]];
     TestWebKitAPI::Util::run(&finishedNavigation);
     finishedNavigation = false;
 
@@ -182,14 +183,14 @@ TEST(WebKit2, ShouldOpenExternalURLsInTargetedLink)
     TestWebKitAPI::Util::run(&decidedPolicy);
     decidedPolicy = false;
 
-    // User-initiated targeted navigation to different scheme, host or port should allow external schemes and App Links.
+    // User-initiated targeted navigation to different host should allow external schemes and App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_TRUE([action _shouldOpenAppLinks]);
 
     TestWebKitAPI::Util::run(&createdWebView);
     createdWebView = false;
 
-    // User-initiated targeted navigation to different scheme, host or port should allow external schemes and App Links.
+    // User-initiated targeted navigation to different host should allow external schemes and App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_TRUE([action _shouldOpenAppLinks]);
 
@@ -198,13 +199,55 @@ TEST(WebKit2, ShouldOpenExternalURLsInTargetedLink)
     TestWebKitAPI::Util::run(&decidedPolicy);
     decidedPolicy = false;
 
-    // User-initiated targeted navigation to different scheme, host or port should allow external schemes and App Links.
+    // User-initiated targeted navigation to different host should allow external schemes and App Links.
     ASSERT_TRUE([action _shouldOpenExternalSchemes]);
     ASSERT_TRUE([action _shouldOpenAppLinks]);
 
     newWebView = nullptr;
     action = nullptr;
 }
+
+TEST(WebKit2, RestoreShouldOpenExternalURLsPolicyAfterCrash)
+{
+    auto webView = adoptNS([[WKWebView alloc] initWithFrame:NSMakeRect(0, 0, 800, 600)]);
+    auto window = adoptNS([[NSWindow alloc] initWithContentRect:[webView frame] styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES]);
+    [[window contentView] addSubview:webView.get()];
+    auto controller = adoptNS([[ShouldOpenExternalURLsInNewWindowActionsController alloc] init]);
+    [webView setNavigationDelegate:controller.get()];
+    [webView setUIDelegate:controller.get()];
+
+    finishedNavigation = false;
+    NSURLRequest *request = [NSURLRequest requestWithURL:[[NSBundle mainBundle] URLForResource:@"should-open-external-schemes" withExtension:@"html" subdirectory:@"TestWebKitAPI.resources"]];
+    [webView loadRequest:request];
+    TestWebKitAPI::Util::run(&finishedNavigation);
+    finishedNavigation = false;
+
+    // Before crash
+    decidedPolicy = false;
+    [webView evaluateJavaScript:@"navigateToTelURLInNestedZeroTimer()" completionHandler:nil]; // Non-user initiated navigation because it is performed in a nested timer callback.
+    TestWebKitAPI::Util::run(&decidedPolicy);
+    decidedPolicy = false;
+
+    ASSERT_TRUE([action _shouldOpenExternalSchemes]);
+    ASSERT_FALSE([action _shouldOpenAppLinks]);
+
+    // Crash
+    [webView _killWebContentProcessAndResetState];
+    [webView reload];
+
+    finishedNavigation = false;
+    TestWebKitAPI::Util::run(&finishedNavigation);
+    finishedNavigation = false;
+
+    // After crash
+    decidedPolicy = false;
+    [webView evaluateJavaScript:@"navigateToTelURLInNestedZeroTimer()" completionHandler:nil]; // Non-user initiated navigation because it is performed in a nested timer callback.
+    TestWebKitAPI::Util::run(&decidedPolicy);
+    decidedPolicy = false;
+
+    ASSERT_TRUE([action _shouldOpenExternalSchemes]);
+    ASSERT_FALSE([action _shouldOpenAppLinks]);
+};
 
 #endif
 

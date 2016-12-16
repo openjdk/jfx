@@ -47,10 +47,13 @@
 #include "FrameWin.h"
 #endif
 
+#if PLATFORM(COCOA)
+OBJC_CLASS NSArray;
+#endif
+
 #if PLATFORM(IOS)
 OBJC_CLASS DOMCSSStyleDeclaration;
 OBJC_CLASS DOMNode;
-OBJC_CLASS NSArray;
 OBJC_CLASS NSString;
 #endif
 
@@ -138,7 +141,7 @@ namespace WebCore {
         void disconnectOwnerElement();
 
         MainFrame& mainFrame() const;
-        bool isMainFrame() const;
+        WEBCORE_EXPORT bool isMainFrame() const;
 
         Page* page() const;
         HTMLFrameOwnerElement* ownerElement() const;
@@ -185,6 +188,11 @@ namespace WebCore {
         WEBCORE_EXPORT float frameScaleFactor() const;
 
         void deviceOrPageScaleFactorChanged();
+
+#if ENABLE(DATA_DETECTION)
+        void setDataDetectionResults(NSArray *results) { m_dataDetectionResults = results; }
+        NSArray *dataDetectionResults() const { return m_dataDetectionResults.get(); }
+#endif
 
 #if PLATFORM(IOS)
         const ViewportArguments& viewportArguments() const;
@@ -242,8 +250,10 @@ namespace WebCore {
         WEBCORE_EXPORT NSRect rectForScrollToVisible() const;
         WEBCORE_EXPORT DOMCSSStyleDeclaration* styleAtSelectionStart() const;
         WEBCORE_EXPORT unsigned formElementsCharacterCount() const;
+
+        // This function is used by Legacy WebKit.
         WEBCORE_EXPORT void setTimersPaused(bool);
-        bool timersPaused() const { return m_timersPausedCount; }
+
         WEBCORE_EXPORT void dispatchPageHideEventBeforePause();
         WEBCORE_EXPORT void dispatchPageShowEventBeforeResume();
         WEBCORE_EXPORT void setRangedSelectionBaseToCurrentSelection();
@@ -290,6 +300,9 @@ namespace WebCore {
         const std::unique_ptr<EventHandler> m_eventHandler;
         const std::unique_ptr<AnimationController> m_animationController;
 
+#if ENABLE(DATA_DETECTION)
+        RetainPtr<NSArray> m_dataDetectionResults;
+#endif
 #if PLATFORM(IOS)
         void betterApproximateNode(const IntPoint& testPoint, NodeQualifier, Node*& best, Node* failedNode, IntPoint& bestPoint, IntRect& bestRect, const IntRect& testRect);
         bool hitTestResultAtViewportLocation(const FloatPoint& viewportLocation, HitTestResult&, IntPoint& center);
@@ -306,7 +319,6 @@ namespace WebCore {
         IntPoint m_overflowAutoScrollPos;
         ViewportArguments m_viewportArguments;
         bool m_selectionChangeCallbacksDisabled;
-        int m_timersPausedCount;
         VisibleSelection m_rangedSelectionBase;
         VisibleSelection m_rangedSelectionInitialExtent;
 #endif

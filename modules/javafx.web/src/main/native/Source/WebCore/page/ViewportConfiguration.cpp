@@ -32,7 +32,7 @@
 #include <wtf/text/CString.h>
 
 #if PLATFORM(IOS)
-#include "WebCoreSystemInterface.h"
+#include "PlatformScreen.h"
 #endif
 
 namespace WebCore {
@@ -58,7 +58,7 @@ ViewportConfiguration::ViewportConfiguration()
 void ViewportConfiguration::setDefaultConfiguration(const ViewportConfiguration::Parameters& defaultConfiguration)
 {
     ASSERT(!constraintsAreAllRelative(m_configuration));
-    ASSERT(!m_defaultConfiguration.initialScaleIsSet || defaultConfiguration.initialScale > 0);
+    ASSERT(!defaultConfiguration.initialScaleIsSet || defaultConfiguration.initialScale > 0);
     ASSERT(defaultConfiguration.minimumScale > 0);
     ASSERT(defaultConfiguration.maximumScale >= defaultConfiguration.minimumScale);
 
@@ -66,31 +66,44 @@ void ViewportConfiguration::setDefaultConfiguration(const ViewportConfiguration:
     updateConfiguration();
 }
 
-void ViewportConfiguration::setContentsSize(const IntSize& contentSize)
+bool ViewportConfiguration::setContentsSize(const IntSize& contentSize)
 {
     if (m_contentSize == contentSize)
-        return;
+        return false;
 
     m_contentSize = contentSize;
     updateConfiguration();
+    return true;
 }
 
-void ViewportConfiguration::setMinimumLayoutSize(const FloatSize& minimumLayoutSize)
+bool ViewportConfiguration::setMinimumLayoutSize(const FloatSize& minimumLayoutSize)
 {
     if (m_minimumLayoutSize == minimumLayoutSize)
-        return;
+        return false;
 
     m_minimumLayoutSize = minimumLayoutSize;
     updateConfiguration();
+    return true;
 }
 
-void ViewportConfiguration::setViewportArguments(const ViewportArguments& viewportArguments)
+bool ViewportConfiguration::setViewportArguments(const ViewportArguments& viewportArguments)
 {
     if (m_viewportArguments == viewportArguments)
-        return;
+        return false;
 
     m_viewportArguments = viewportArguments;
     updateConfiguration();
+    return true;
+}
+
+bool ViewportConfiguration::setCanIgnoreScalingConstraints(bool canIgnoreScalingConstraints)
+{
+    if (canIgnoreScalingConstraints == m_canIgnoreScalingConstraints)
+        return false;
+
+    m_canIgnoreScalingConstraints = canIgnoreScalingConstraints;
+    updateConfiguration();
+    return true;
 }
 
 IntSize ViewportConfiguration::layoutSize() const
@@ -213,7 +226,7 @@ ViewportConfiguration::Parameters ViewportConfiguration::textDocumentParameters(
     Parameters parameters;
 
 #if PLATFORM(IOS)
-    parameters.width = static_cast<int>(wkGetScreenSize().width);
+    parameters.width = static_cast<int>(screenSize().width());
 #else
     // FIXME: this needs to be unified with ViewportArguments on all ports.
     parameters.width = 320;
@@ -399,139 +412,60 @@ int ViewportConfiguration::layoutHeight() const
 }
 
 #ifndef NDEBUG
-class ViewportConfigurationTextStream : public TextStream {
-public:
-    ViewportConfigurationTextStream()
-        : m_indent(0)
-    {
-    }
 
-    using TextStream::operator<<;
-
-    ViewportConfigurationTextStream& operator<<(const ViewportConfiguration::Parameters&);
-    ViewportConfigurationTextStream& operator<<(const ViewportArguments&);
-
-    void increaseIndent() { ++m_indent; }
-    void decreaseIndent() { --m_indent; ASSERT(m_indent >= 0); }
-
-    void writeIndent();
-
-private:
-    int m_indent;
-};
-
-template <typename T>
-static void dumpProperty(ViewportConfigurationTextStream& ts, String name, T value)
+TextStream& operator<<(TextStream& ts, const ViewportConfiguration::Parameters& parameters)
 {
-    ts << "\n";
-    ts.increaseIndent();
-    ts.writeIndent();
-    ts << "(" << name << " ";
-    ts << value << ")";
-    ts.decreaseIndent();
-}
+    ts.startGroup();
+    ts << "width " << parameters.width << ", set: " << (parameters.widthIsSet ? "true" : "false");
+    ts.endGroup();
 
-void ViewportConfigurationTextStream::writeIndent()
-{
-    for (int i = 0; i < m_indent; ++i)
-        *this << "  ";
-}
+    ts.startGroup();
+    ts << "height " << parameters.height << ", set: " << (parameters.heightIsSet ? "true" : "false");
+    ts.endGroup();
 
-ViewportConfigurationTextStream& ViewportConfigurationTextStream::operator<<(const ViewportConfiguration::Parameters& parameters)
-{
-    ViewportConfigurationTextStream& ts = *this;
+    ts.startGroup();
+    ts << "initialScale " << parameters.initialScale << ", set: " << (parameters.initialScaleIsSet ? "true" : "false");
+    ts.endGroup();
 
-    ts.increaseIndent();
-    ts << "\n";
-    ts.writeIndent();
-    ts << "(width " << parameters.width << ", set: " << (parameters.widthIsSet ? "true" : "false") << ")";
-
-    ts << "\n";
-    ts.writeIndent();
-    ts << "(height " << parameters.height << ", set: " << (parameters.heightIsSet ? "true" : "false") << ")";
-
-    ts << "\n";
-    ts.writeIndent();
-    ts << "(initialScale " << parameters.width << ", set: " << (parameters.initialScaleIsSet ? "true" : "false") << ")";
-    ts.decreaseIndent();
-
-    dumpProperty(ts, "minimumScale", parameters.minimumScale);
-    dumpProperty(ts, "maximumScale", parameters.maximumScale);
-    dumpProperty(ts, "allowsUserScaling", parameters.allowsUserScaling);
-    dumpProperty(ts, "allowsShrinkToFit", parameters.allowsShrinkToFit);
-
-    return ts;
-}
-
-ViewportConfigurationTextStream& ViewportConfigurationTextStream::operator<<(const ViewportArguments& viewportArguments)
-{
-    ViewportConfigurationTextStream& ts = *this;
-
-    ts.increaseIndent();
-
-    ts << "\n";
-    ts.writeIndent();
-    ts << "(width " << viewportArguments.width << ", minWidth " << viewportArguments.minWidth << ", maxWidth " << viewportArguments.maxWidth << ")";
-
-    ts << "\n";
-    ts.writeIndent();
-    ts << "(height " << viewportArguments.height << ", minHeight " << viewportArguments.minHeight << ", maxHeight " << viewportArguments.maxHeight << ")";
-
-    ts << "\n";
-    ts.writeIndent();
-    ts << "(zoom " << viewportArguments.zoom << ", minZoom " << viewportArguments.minZoom << ", maxZoom " << viewportArguments.maxZoom << ")";
-    ts.decreaseIndent();
+    ts.dumpProperty("minimumScale", parameters.minimumScale);
+    ts.dumpProperty("maximumScale", parameters.maximumScale);
+    ts.dumpProperty("allowsUserScaling", parameters.allowsUserScaling);
+    ts.dumpProperty("allowsShrinkToFit", parameters.allowsShrinkToFit);
 
     return ts;
 }
 
 CString ViewportConfiguration::description() const
 {
-    ViewportConfigurationTextStream ts;
+    TextStream ts;
 
-    ts << "(viewport-configuration " << (void*)this;
-    ts << "\n";
-    ts.increaseIndent();
-    ts.writeIndent();
-    ts << "(viewport arguments";
-    ts << m_viewportArguments;
-    ts << ")";
-    ts.decreaseIndent();
+    ts.startGroup();
+    ts << "viewport-configuration " << (void*)this;
+    {
+        TextStream::GroupScope scope(ts);
+        ts << "viewport arguments";
+        ts << m_viewportArguments;
+    }
+    {
+        TextStream::GroupScope scope(ts);
+        ts << "configuration";
+        ts << m_configuration;
+    }
+    {
+        TextStream::GroupScope scope(ts);
+        ts << "default configuration";
+        ts << m_defaultConfiguration;
+    }
 
-    ts << "\n";
-    ts.increaseIndent();
-    ts.writeIndent();
-    ts << "(configuration";
-    ts << m_configuration;
-    ts << ")";
-    ts.decreaseIndent();
+    ts.dumpProperty("contentSize", m_contentSize);
+    ts.dumpProperty("minimumLayoutSize", m_minimumLayoutSize);
+    ts.dumpProperty("computed initial scale", initialScale());
+    ts.dumpProperty("computed minimum scale", minimumScale());
+    ts.dumpProperty("computed layout size", layoutSize());
+    ts.dumpProperty("ignoring horizontal scaling constraints", shouldIgnoreHorizontalScalingConstraints() ? "true" : "false");
+    ts.dumpProperty("ignoring vertical scaling constraints", shouldIgnoreVerticalScalingConstraints() ? "true" : "false");
 
-    ts << "\n";
-    ts.increaseIndent();
-    ts.writeIndent();
-    ts << "(default configuration";
-    ts << m_defaultConfiguration;
-    ts << ")";
-    ts.decreaseIndent();
-
-    dumpProperty(ts, "contentSize", m_contentSize);
-    dumpProperty(ts, "minimumLayoutSize", m_minimumLayoutSize);
-
-    ts << "\n";
-    ts.increaseIndent();
-    ts.writeIndent();
-    ts << "(computed initial scale " << initialScale() << ")\n";
-    ts.writeIndent();
-    ts << "(computed minimum scale " << minimumScale() << ")\n";
-    ts.writeIndent();
-    ts << "(computed layout size " << layoutSize() << ")\n";
-    ts.writeIndent();
-    ts << "(ignoring horizontal scaling constraints " << (shouldIgnoreHorizontalScalingConstraints() ? "true" : "false") << ")\n";
-    ts.writeIndent();
-    ts << "(ignoring vertical scaling constraints " << (shouldIgnoreVerticalScalingConstraints() ? "true" : "false") << ")";
-    ts.decreaseIndent();
-
-    ts << ")\n";
+    ts.endGroup();
 
     return ts.release().utf8();
 }

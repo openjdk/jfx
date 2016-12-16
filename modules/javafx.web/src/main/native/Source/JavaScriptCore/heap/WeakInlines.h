@@ -65,7 +65,7 @@ template<typename T> inline void Weak<T>::swap(Weak& other)
 
 template<typename T> inline auto Weak<T>::operator=(Weak&& other) -> Weak&
 {
-    Weak weak = WTF::move(other);
+    Weak weak = WTFMove(other);
     swap(weak);
     return *this;
 }
@@ -99,9 +99,9 @@ template<typename T> inline bool Weak<T>::operator!() const
     return !m_impl || !m_impl->jsValue() || m_impl->state() != WeakImpl::Live;
 }
 
-template<typename T> inline Weak<T>::operator UnspecifiedBoolType*() const
+template<typename T> inline Weak<T>::operator bool() const
 {
-    return reinterpret_cast<UnspecifiedBoolType*>(!!*this);
+    return !!*this;
 }
 
 template<typename T> inline WeakImpl* Weak<T>::leakImpl()

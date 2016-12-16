@@ -42,8 +42,8 @@ static inline bool fallbackURLLongerThan(const std::pair<URL, URL>& lhs, const s
 }
 
 ApplicationCache::ApplicationCache()
-    : m_group(0)
-    , m_manifest(0)
+    : m_group(nullptr)
+    , m_manifest(nullptr)
     , m_estimatedSizeInStorage(0)
     , m_storageID(0)
 {
@@ -124,20 +124,14 @@ ApplicationCacheResource* ApplicationCache::resourceForURL(const String& url)
 
 bool ApplicationCache::requestIsHTTPOrHTTPSGet(const ResourceRequest& request)
 {
-    if (!request.url().protocolIsInHTTPFamily())
-        return false;
-
-    if (!equalIgnoringCase(request.httpMethod(), "GET"))
-        return false;
-
-    return true;
+    return request.url().protocolIsInHTTPFamily() && equalLettersIgnoringASCIICase(request.httpMethod(), "get");
 }
 
 ApplicationCacheResource* ApplicationCache::resourceForRequest(const ResourceRequest& request)
 {
     // We only care about HTTP/HTTPS GET requests.
     if (!requestIsHTTPOrHTTPSGet(request))
-        return 0;
+        return nullptr;
 
     URL url(request.url());
     if (url.hasFragmentIdentifier())
@@ -154,9 +148,8 @@ void ApplicationCache::setOnlineWhitelist(const Vector<URL>& onlineWhitelist)
 
 bool ApplicationCache::isURLInOnlineWhitelist(const URL& url)
 {
-    size_t whitelistSize = m_onlineWhitelist.size();
-    for (size_t i = 0; i < whitelistSize; ++i) {
-        if (protocolHostAndPortAreEqual(url, m_onlineWhitelist[i]) && url.string().startsWith(m_onlineWhitelist[i].string()))
+    for (auto& whitelistURL : m_onlineWhitelist) {
+        if (protocolHostAndPortAreEqual(url, whitelistURL) && url.string().startsWith(whitelistURL.string()))
             return true;
     }
     return false;
@@ -172,11 +165,10 @@ void ApplicationCache::setFallbackURLs(const FallbackURLVector& fallbackURLs)
 
 bool ApplicationCache::urlMatchesFallbackNamespace(const URL& url, URL* fallbackURL)
 {
-    size_t fallbackCount = m_fallbackURLs.size();
-    for (size_t i = 0; i < fallbackCount; ++i) {
-        if (protocolHostAndPortAreEqual(url, m_fallbackURLs[i].first) && url.string().startsWith(m_fallbackURLs[i].first.string())) {
+    for (auto& fallback : m_fallbackURLs) {
+        if (protocolHostAndPortAreEqual(url, fallback.first) && url.string().startsWith(fallback.first.string())) {
             if (fallbackURL)
-                *fallbackURL = m_fallbackURLs[i].second;
+                *fallbackURL = fallback.second;
             return true;
         }
     }

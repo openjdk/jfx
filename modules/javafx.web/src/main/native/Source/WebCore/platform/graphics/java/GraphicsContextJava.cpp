@@ -1,19 +1,25 @@
 /*
- * Copyright (c) 2011, 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
+
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include <math.h>
 #include <stdio.h>
 #include <wtf/MathExtras.h>
 #include <wtf/Vector.h>
 
 #include "AffineTransform.h"
+#include "DisplayListRecorder.h"
 #include "Color.h"
 #include "FloatRect.h"
 #include "FloatSize.h"
 #include "FloatRoundedRect.h"
 #include "Font.h"
-#include "FontRanges.h" //XXX: FontData.h -> FontRanges.h
+#include "FontRanges.h"
 #include "GraphicsContext.h"
 #include "GraphicsContextJava.h"
 #include "Gradient.h"
@@ -25,7 +31,7 @@
 #include "Pattern.h"
 #include "PlatformContextJava.h"
 #include "RenderingQueue.h"
-#include "Font.h" //XXX: SimpleFontData.h -> Font.h
+#include "Font.h"
 #include "TransformationMatrix.h"
 
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
@@ -41,7 +47,7 @@ namespace WebCore {
 
 static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, jint id)
 {
-    Vector<Gradient::ColorStop, 2> stops = gradient.getStops(); //XXX recheck;
+    Vector<Gradient::ColorStop, 2> stops = gradient.getStops(); // TODO-java: recheck;
     int nStops = stops.size();
 
     AffineTransform gt = gradient.gradientSpaceTransform();
@@ -82,7 +88,7 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
 class GraphicsContextPlatformPrivate : public PlatformGraphicsContext {
 };
 
-void GraphicsContext::platformInit(PlatformGraphicsContext* context) //XXX , bool shouldUseContextColors) // todo tav new param
+void GraphicsContext::platformInit(PlatformGraphicsContext* context) // TODO-java: , bool shouldUseContextColors) // todo tav new param
 {
     m_data = static_cast<GraphicsContextPlatformPrivate *>(context);
 }
@@ -126,38 +132,6 @@ void GraphicsContext::drawRect(const FloatRect& rect, float borderThickness) // 
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
 }
 
-// FIXME: Now that this is refactored, it should be shared by all contexts.
-static void adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2, float strokeWidth, StrokeStyle style)
-{
-    // For odd widths, we add in 0.5 to the appropriate x/y so that the float arithmetic
-    // works out.  For example, with a border width of 3, KHTML will pass us (y1+y2)/2, e.g.,
-    // (50+53)/2 = 103/2 = 51 when we want 51.5.  It is always true that an even width gave
-    // us a perfect position, but an odd width gave us a position that is off by exactly 0.5.
-    if (style == DottedStroke || style == DashedStroke) {
-        if (p1.x() == p2.x()) {
-            p1.setY(p1.y() + strokeWidth);
-            p2.setY(p2.y() - strokeWidth);
-        }
-        else {
-            p1.setX(p1.x() + strokeWidth);
-            p2.setX(p2.x() - strokeWidth);
-        }
-    }
-
-    if (static_cast<int>(strokeWidth) % 2) {
-        if (p1.x() == p2.x()) {
-            // We're a vertical line.  Adjust our x.
-            p1.setX(p1.x() + 0.5);
-            p2.setX(p2.x() + 0.5);
-        }
-        else {
-            // We're a horizontal line. Adjust our y.
-            p1.setY(p1.y() + 0.5);
-            p2.setY(p2.y() + 0.5);
-        }
-    }
-}
-
 // This is only used to draw borders.
 void GraphicsContext::drawLine(const FloatPoint& point1, const FloatPoint& point2) // todo tav points changed from IntPoint to FloatPoint
 {
@@ -177,7 +151,7 @@ void GraphicsContext::drawEllipse(const FloatRect& rect)
 
     platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWELLIPSE
-    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height(); //XXX float to int conversion
+    << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height(); // TODO-java: float to int conversion
 }
 
 // FIXME: This function needs to be adjusted to match the functionality on the Mac side.
@@ -192,25 +166,7 @@ void GraphicsContext::drawEllipse(const FloatRect& rect)
 //    << (jint)startAngle << (jint)angleSpan;
 //}
 
-void GraphicsContext::drawConvexPolygon(size_t npoints, const FloatPoint* points, bool shouldAntialias)
-{
-    if (paintingDisabled() || npoints <= 1)
-        return;
-
-    Path path;
-    path.moveTo(FloatPoint(points[0].x(), points[0].y()));
-    for (int i = 1; i < npoints; i++) {
-        path.addLineTo(FloatPoint(points[i].x(), points[i].y()));
-    }
-    path.closeSubpath();
-    platformContext()->rq().freeSpace(12)
-    << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPOLYGON
-    << copyPath(path.platformPath())
-    << (jint)com_sun_webkit_graphics_WCPath_RULE_NONZERO // default rule for the path
-    << (jint)((shouldAntialias)?-1:0);
-}
-
-void GraphicsContext::fillRect(const FloatRect& rect, const Color& color, ColorSpace)
+void GraphicsContext::fillRect(const FloatRect& rect, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -235,11 +191,11 @@ void GraphicsContext::fillRect(const FloatRect& rect)
             m_state.fillPattern->repeatX() ? rect.width() : img->width(),
             m_state.fillPattern->repeatY() ? rect.height() : img->height());
         img->drawPattern(
-            this,
+            *this,
             FloatRect(0., 0., img->width(), img->height()),
             m_state.fillPattern->getPatternSpaceTransform(),
             FloatPoint(),
-            ColorSpaceDeviceRGB, //any
+            FloatSize(),
             CompositeCopy, //any
             destRect);
     } else {
@@ -268,39 +224,23 @@ void GraphicsContext::clip(const FloatRect& rect)
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
 }
 
+void GraphicsContext::clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect)
+{
+    notImplemented();
+}
+
 IntRect GraphicsContext::clipBounds() const
 {
     // Transformation has inverse effect on clip bounds.
-    return enclosingIntRect(m_state.transform.inverse().mapRect(m_state.clipBounds));
+    return enclosingIntRect(m_state.transform.inverse()->mapRect(m_state.clipBounds));
 }
 
-void GraphicsContext::clipConvexPolygon(size_t numberOfPoints, const FloatPoint* points, bool antialias)
-{
-    if (paintingDisabled() || numberOfPoints <= 1)
-        return;
-
-    bool oldAntialias = shouldAntialias();
-    if (oldAntialias != antialias)
-        setPlatformShouldAntialias(antialias);
-
-    Path path;
-    path.moveTo(points[0]);
-    for (size_t i = 1; i < numberOfPoints; ++i)
-        path.addLineTo(points[i]);
-    path.closeSubpath();
-
-    clipPath(path, RULE_NONZERO);
-
-    if (oldAntialias != antialias)
-        setPlatformShouldAntialias(oldAntialias);
-}
-
-void GraphicsContext::drawFocusRing(const Path&, int width, int offset, const Color&)
+void GraphicsContext::drawFocusRing(const Path&, float width, float offset, const Color&)
 {
     //utaTODO: IMPLEMENT!!!
 }
 
-void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int offset, const Color& color)
+void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -315,10 +255,10 @@ void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int
     // intersecting rects, while leaving standalone rects as is.
     Vector<IntRect> toDraw;
     for (unsigned i = 0; i < rectCount; i++) {
-        IntRect focusRect = rects[i];
+        IntRect focusRect = enclosingIntRect(rects[i]);
         focusRect.inflate(offset);
         bool needAdd = true;
-        for (int j = 0; j < toDraw.size(); j++) {
+        for (size_t j = 0; j < toDraw.size(); j++) {
             IntRect rect = toDraw[j];
             if (rect.contains(focusRect)) {
                 needAdd = false;
@@ -335,8 +275,8 @@ void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int
         }
     }
 
-    platformContext()->rq().freeSpace(24*toDraw.size());
-    for (int i = 0; i < toDraw.size(); i++) {
+    platformContext()->rq().freeSpace(24 * toDraw.size());
+    for (size_t i = 0; i < toDraw.size(); i++) {
         IntRect focusRect = toDraw[i];
         platformContext()->rq() << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWFOCUSRING
         << (jint)focusRect.x() << (jint)focusRect.y()
@@ -345,15 +285,13 @@ void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int
     }
 }
 
-FloatRect GraphicsContext::computeLineBoundsForText(const FloatPoint& point, float width, bool printing)
-{
-  //    NotImplemented(); // todo tav implement
-    return FloatRect();
-}
-
 void GraphicsContext::updateDocumentMarkerResources()
 {
   //    NotImplemented(); // todo tav implement
+}
+
+void GraphicsContext::drawLinesForText(const FloatPoint&, const DashArray& widths, bool printing, bool doubleLines) {
+    notImplemented();
 }
 
 void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool printing, bool doubleLines)
@@ -454,19 +392,22 @@ static inline void drawErrorUnderline(GraphicsContext &gc, double x, double y, d
 void GraphicsContext::drawLineForDocumentMarker(const FloatPoint& origin, float width, DocumentMarkerLineStyle style)
 {
     savePlatformState(); //fake stroke
-    switch (style) { //XXX: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
+    switch (style) { // TODO-java: DocumentMarkerAutocorrectionReplacementLineStyle not handled in switch
     case DocumentMarkerSpellingLineStyle:
         {
             static Color red(255, 0, 0);
-            setStrokeColor(red, ColorSpaceDeviceRGB);
+            setStrokeColor(red);
         }
         break;
     case DocumentMarkerGrammarLineStyle:
         {
             static Color green(0, 255, 0);
-            setStrokeColor(green, ColorSpaceDeviceRGB);
+            setStrokeColor(green);
         }
         break;
+    default:
+        {
+        }
     }
     drawErrorUnderline(*this, origin.x(), origin.y(), width, cMisspellingLineThickness);
     restorePlatformState(); //fake stroke
@@ -493,7 +434,7 @@ void GraphicsContext::translate(float x, float y)
     << x << y;
 }
 
-void GraphicsContext::setPlatformFillColor(const Color& col, ColorSpace)
+void GraphicsContext::setPlatformFillColor(const Color& col)
 {
     if (paintingDisabled())
         return;
@@ -534,7 +475,7 @@ void GraphicsContext::setPlatformStrokeStyle(StrokeStyle style)
     << (jint)style;
 }
 
-void GraphicsContext::setPlatformStrokeColor(const Color& col, ColorSpace)
+void GraphicsContext::setPlatformStrokeColor(const Color& col)
 {
     if (paintingDisabled())
         return;
@@ -554,14 +495,9 @@ void GraphicsContext::setPlatformStrokeThickness(float strokeThickness)
     << strokeThickness;
 }
 
-void GraphicsContext::setImageInterpolationQuality(InterpolationQuality interpolationQuality)
+void GraphicsContext::setPlatformImageInterpolationQuality(InterpolationQuality interpolationQuality)
 {
-    m_state.interpolationQuality = interpolationQuality;
-}
-
-InterpolationQuality GraphicsContext::imageInterpolationQuality() const
-{
-    return m_state.interpolationQuality;
+    notImplemented();
 }
 
 void GraphicsContext::setPlatformShouldAntialias(bool b)
@@ -598,7 +534,7 @@ void GraphicsContext::concatCTM(const AffineTransform& at)
 //    clipPath(path, RULE_EVENODD);
 //}
 
-void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Color& color, ColorSpace)
+void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -618,7 +554,7 @@ void GraphicsContext::setPlatformShadow(const FloatSize& s, float blur, const Co
 
 void GraphicsContext::clearPlatformShadow()
 {
-    setPlatformShadow(FloatSize(0, 0), 0, Color(), ColorSpaceDeviceRGB /* ? */);
+    setPlatformShadow(FloatSize(0, 0), 0, Color());
 }
 
 bool GraphicsContext::supportsTransparencyLayers()
@@ -722,17 +658,11 @@ void GraphicsContext::setMiterLimit(float limit)
     << (jfloat)limit;
 }
 
-void GraphicsContext::setAlpha(float alpha)
+void GraphicsContext::setPlatformAlpha(float alpha)
 {
-    m_state.globalAlpha = alpha;
     platformContext()->rq().freeSpace(8)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETALPHA
     << alpha;
-}
-
-float GraphicsContext::getAlpha()
-{
-    return m_state.globalAlpha;
 }
 
 void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode bm)
@@ -771,7 +701,7 @@ static void setClipPath(
     WindRule wrule,
     bool isOut)
 {
-    if (gc.paintingDisabled())
+    if (gc.paintingDisabled() || path.isEmpty())
         return;
 
     state.clipBounds.intersect(state.transform.mapRect(path.fastBoundingRect()));
@@ -786,12 +716,7 @@ static void setClipPath(
 
 void GraphicsContext::canvasClip(const Path& path, WindRule fillRule)
 {
-    clip(path, fillRule);
-}
-
-void GraphicsContext::clip(const Path& path, WindRule wrule)
-{
-    setClipPath(*this, m_state, path, wrule, false);
+    clipPath(path, fillRule);
 }
 
 void GraphicsContext::clipPath(const Path &path, WindRule wrule)
@@ -811,6 +736,24 @@ void GraphicsContext::clipOut(const FloatRect& rect)
     clipOut(path);
 }
 
+void GraphicsContext::drawPattern(Image& image, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op, const FloatRect& destRect, BlendMode blendMode)
+{
+    if (paintingDisabled())
+        return;
+
+    if (isRecording()) {
+        m_displayListRecorder->drawPattern(image, tileRect, patternTransform, phase, spacing, op, destRect, blendMode);
+        return;
+    }
+
+    auto surface = image.nativeImageForCurrentFrame();
+    if (!surface) // If it's too early we won't have an image yet.
+        return;
+
+    image.drawPattern(*this, tileRect, patternTransform, phase, spacing,
+                       op, destRect, blendMode);
+}
+
 void GraphicsContext::fillPath(const Path& path)
 {
     if (paintingDisabled())
@@ -828,11 +771,11 @@ void GraphicsContext::fillPath(const Path& path)
             m_state.fillPattern->repeatX() ? rect.width() : img->width(),
             m_state.fillPattern->repeatY() ? rect.height() : img->height());
         img->drawPattern(
-            this,
+            *this,
             FloatRect(0., 0., img->width(), img->height()),
             m_state.fillPattern->getPatternSpaceTransform(),
             FloatPoint(),
-            ColorSpaceDeviceRGB, //any
+            FloatSize(),
             CompositeCopy, //any
             destRect);
         restorePlatformState();
@@ -874,7 +817,7 @@ void GraphicsContext::scale(const FloatSize& size)
     << size.width() << size.height();
 }
 
-void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, ColorSpace, BlendMode) // todo tav Int to Float
+void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode) // todo tav Int to Float
 {
     if (paintingDisabled())
         return;
@@ -888,6 +831,32 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
     << (jfloat)rect.radii().bottomLeft().width() << (jfloat)rect.radii().bottomLeft().height()
     << (jfloat)rect.radii().bottomRight().width() << (jfloat)rect.radii().bottomRight().height()
     << (jint)color.rgb();
+}
+
+void GraphicsContext::fillRectWithRoundedHole(const FloatRect& frect, const FloatRoundedRect& roundedHoleRect, const Color& color)
+{
+    if (paintingDisabled())
+        return;
+
+    const IntRect rect = enclosingIntRect(frect);
+    Path path;
+    path.addRect(rect);
+
+    if (!roundedHoleRect.radii().isZero())
+        path.addRoundedRect(roundedHoleRect);
+    else
+        path.addRect(roundedHoleRect.rect());
+
+    WindRule oldFillRule = fillRule();
+    Color oldFillColor = fillColor();
+
+    setFillRule(RULE_EVENODD);
+    setFillColor(color);
+
+    fillPath(path);
+
+    setFillRule(oldFillRule);
+    setFillColor(oldFillColor);
 }
 
 #if ENABLE(3D_RENDERING) && USE(TEXTURE_MAPPER)

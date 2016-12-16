@@ -123,7 +123,7 @@ private:
                 break;
             }
 
-            if (mayExit(m_graph, node)) {
+            if (mayExit(m_graph, node) != DoesNotExit) {
                 currentEpoch.bump();
                 lastExitingIndex = nodeIndex;
             }
@@ -161,9 +161,12 @@ private:
                     // increment the ref count.
                     killedNode->postfixRef();
 
+                    Node* lastExitingNode = block->at(lastExitingIndex);
+
                     m_insertionSet.insertNode(
                         lastExitingIndex + 1, SpecNone, Phantom,
-                        block->at(lastExitingIndex)->origin, killedNode->defaultEdge());
+                        lastExitingNode->origin.forInsertingAfter(m_graph, lastExitingNode),
+                        killedNode->defaultEdge());
             });
         }
 

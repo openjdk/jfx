@@ -89,7 +89,7 @@ private:
 
     virtual void layout() override;
 
-    virtual void addFocusRingRects(Vector<IntRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = nullptr) override;
+    virtual void addFocusRingRects(Vector<LayoutRect>&, const LayoutPoint& additionalOffset, const RenderLayerModelObject* paintContainer = nullptr) override;
 
     virtual bool canBeProgramaticallyScrolled() const override { return true; }
     virtual void autoscroll(const IntPoint&) override;
@@ -110,8 +110,10 @@ private:
 
     // ScrollableArea interface.
     virtual int scrollSize(ScrollbarOrientation) const override;
-    virtual int scrollPosition(Scrollbar*) const override;
-    virtual void setScrollOffset(const IntPoint&) override;
+    virtual int scrollOffset(ScrollbarOrientation) const override;
+    virtual void setScrollOffset(const ScrollOffset&) override;
+    virtual ScrollPosition minimumScrollPosition() const override;
+    virtual ScrollPosition maximumScrollPosition() const override;
     virtual void invalidateScrollbarRect(Scrollbar*, const IntRect&) override;
     virtual bool isActive() const override;
     virtual bool isScrollCornerVisible() const override { return false; } // We don't support resize on list boxes yet. If we did these would have to change.
@@ -133,7 +135,9 @@ private:
     virtual ScrollableArea* enclosingScrollableArea() const override;
     virtual bool isScrollableOrRubberbandable() override;
     virtual bool hasScrollableOrRubberbandableAncestor() override;
-    virtual IntRect scrollableAreaBoundingBox() const override;
+    virtual IntRect scrollableAreaBoundingBox(bool* = nullptr) const override;
+    bool usesMockScrollAnimator() const override;
+    void logMockScrollAnimatorMessage(const String&) const override;
 
     // NOTE: This should only be called by the overriden setScrollOffset from ScrollableArea.
     void scrollTo(int newOffset);

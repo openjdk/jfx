@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2009, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -139,7 +139,7 @@ public:
     virtual void scrollRectIntoView(const WebCore::IntRect&) const { }
 
 #if ENABLE(VIDEO)
-    virtual bool supportsVideoFullscreen();
+    virtual bool supportsVideoFullscreen(WebCore::HTMLMediaElementEnums::VideoFullscreenMode);
     virtual void enterVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&);
     virtual void exitVideoFullscreenForVideoElement(WebCore::HTMLVideoElement&);
 #endif
@@ -170,6 +170,8 @@ public:
 
     virtual void AXStartFrameLoad();
     virtual void AXFinishFrameLoad();
+
+    bool shouldUseTiledBackingForFrameView(const WebCore::FrameView*) const override;
 
 private:
     COMPtr<IWebUIDelegate> uiDelegate();

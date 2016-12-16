@@ -38,14 +38,17 @@
 #include "FormController.h"
 #include "FormDataList.h"
 #include "Frame.h"
+#include "GenericCachedHTMLCollection.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
 #include "HTMLOptionElement.h"
 #include "HTMLOptionsCollection.h"
+#include "HTMLParserIdioms.h"
 #include "KeyboardEvent.h"
 #include "LocalizedStrings.h"
 #include "MouseEvent.h"
+#include "NodeRareData.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "RenderListBox.h"
@@ -95,8 +98,8 @@ void HTMLSelectElement::didRecalcStyle(Style::Change styleChange)
 
 const AtomicString& HTMLSelectElement::formControlType() const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, selectMultiple, ("select-multiple", AtomicString::ConstructFromLiteral));
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, selectOne, ("select-one", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> selectMultiple("select-multiple", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomicString> selectOne("select-one", AtomicString::ConstructFromLiteral);
     return m_multiple ? selectMultiple : selectOne;
 }
 
@@ -225,7 +228,7 @@ void HTMLSelectElement::add(HTMLElement* element, HTMLElement* beforeElement, Ex
     // Make sure the element is ref'd and deref'd so we don't leak it.
     Ref<HTMLElement> protectNewChild(*element);
 
-    insertBefore(element, beforeElement, ec);
+    insertBefore(*element, beforeElement, ec);
     updateValidity();
 }
 
@@ -300,17 +303,8 @@ bool HTMLSelectElement::isPresentationAttribute(const QualifiedName& name) const
 void HTMLSelectElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (name == sizeAttr) {
-        int oldSize = m_size;
-        // Set the attribute value to a number.
-        // This is important since the style rules for this attribute can determine the appearance property.
-        int size = value.toInt();
-        AtomicString attrSize = AtomicString::number(size);
-        if (attrSize != value) {
-            // FIXME: This is horribly factored.
-            if (Attribute* sizeAttribute = ensureUniqueElementData().findAttributeByName(sizeAttr))
-                sizeAttribute->setValue(attrSize);
-        }
-        size = std::max(size, 0);
+        unsigned oldSize = m_size;
+        unsigned size = limitToOnlyHTMLNonNegative(value);
 
         // Ensure that we've determined selectedness of the items at least once prior to changing the size.
         if (oldSize != size)
@@ -354,10 +348,10 @@ RenderPtr<RenderElement> HTMLSelectElement::createElementRenderer(Ref<RenderStyl
 {
 #if !PLATFORM(IOS)
     if (usesMenuList())
-        return createRenderer<RenderMenuList>(*this, WTF::move(style));
-    return createRenderer<RenderListBox>(*this, WTF::move(style));
+        return createRenderer<RenderMenuList>(*this, WTFMove(style));
+    return createRenderer<RenderListBox>(*this, WTFMove(style));
 #else
-    return createRenderer<RenderMenuList>(*this, WTF::move(style));
+    return createRenderer<RenderMenuList>(*this, WTFMove(style));
 #endif
 }
 
@@ -374,12 +368,12 @@ bool HTMLSelectElement::childShouldCreateRenderer(const Node& child) const
 
 Ref<HTMLCollection> HTMLSelectElement::selectedOptions()
 {
-    return ensureCachedHTMLCollection(SelectedOptions);
+    return ensureRareData().ensureNodeLists().addCachedCollection<GenericCachedHTMLCollection<CollectionTypeTraits<SelectedOptions>::traversalType>>(*this, SelectedOptions);
 }
 
 Ref<HTMLOptionsCollection> HTMLSelectElement::options()
 {
-    return downcast<HTMLOptionsCollection>(ensureCachedHTMLCollection(SelectOptions).get());
+    return ensureRareData().ensureNodeLists().addCachedCollection<HTMLOptionsCollection>(*this, SelectOptions);
 }
 
 void HTMLSelectElement::updateListItemSelectedStates()
@@ -426,19 +420,19 @@ void HTMLSelectElement::setMultiple(bool multiple)
         setSelectedIndex(oldSelectedIndex);
 }
 
-void HTMLSelectElement::setSize(int size)
+void HTMLSelectElement::setSize(unsigned size)
 {
-    setIntegralAttribute(sizeAttr, size);
+    setUnsignedIntegralAttribute(sizeAttr, limitToOnlyHTMLNonNegative(size));
 }
 
 HTMLOptionElement* HTMLSelectElement::namedItem(const AtomicString& name)
 {
-    return downcast<HTMLOptionElement>(options()->namedItem(name));
+    return options()->namedItem(name);
 }
 
 HTMLOptionElement* HTMLSelectElement::item(unsigned index)
 {
-    return downcast<HTMLOptionElement>(options()->item(index));
+    return options()->item(index);
 }
 
 void HTMLSelectElement::setOption(unsigned index, HTMLOptionElement* option, ExceptionCode& ec)
@@ -447,13 +441,13 @@ void HTMLSelectElement::setOption(unsigned index, HTMLOptionElement* option, Exc
     if (index > maxSelectItems - 1)
         index = maxSelectItems - 1;
     int diff = index - length();
-    RefPtr<HTMLElement> before = 0;
+    RefPtr<HTMLOptionElement> before;
     // Out of array bounds? First insert empty dummies.
     if (diff > 0) {
         setLength(index, ec);
         // Replace an existing entry?
     } else if (diff < 0) {
-        before = downcast<HTMLElement>(options()->item(index + 1));
+        before = item(index + 1);
         removeByIndex(index);
     }
     // Finally add the new element.
@@ -484,12 +478,12 @@ void HTMLSelectElement::setLength(unsigned newLen, ExceptionCode& ec)
 
         // Removing children fires mutation events, which might mutate the DOM further, so we first copy out a list
         // of elements that we intend to remove then attempt to remove them one at a time.
-        Vector<RefPtr<Element>> itemsToRemove;
+        Vector<Ref<Element>> itemsToRemove;
         size_t optionIndex = 0;
         for (auto& item : items) {
             if (is<HTMLOptionElement>(*item) && optionIndex++ >= newLen) {
                 ASSERT(item->parentNode());
-                itemsToRemove.append(item);
+                itemsToRemove.append(*item);
             }
         }
 
@@ -606,11 +600,8 @@ void HTMLSelectElement::saveLastSelection()
     }
 
     m_lastOnChangeSelection.clear();
-    const Vector<HTMLElement*>& items = listItems();
-    for (unsigned i = 0; i < items.size(); ++i) {
-        HTMLElement* element = items[i];
+    for (auto& element : listItems())
         m_lastOnChangeSelection.append(is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected());
-    }
 }
 
 void HTMLSelectElement::setActiveSelectionAnchorIndex(int index)
@@ -621,11 +612,8 @@ void HTMLSelectElement::setActiveSelectionAnchorIndex(int index)
     // selection pivots around this anchor index.
     m_cachedStateForActiveSelection.clear();
 
-    const Vector<HTMLElement*>& items = listItems();
-    for (unsigned i = 0; i < items.size(); ++i) {
-        HTMLElement* element = items[i];
+    for (auto& element : listItems())
         m_cachedStateForActiveSelection.append(is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected());
-    }
 }
 
 void HTMLSelectElement::setActiveSelectionEndIndex(int index)
@@ -841,9 +829,7 @@ int HTMLSelectElement::selectedIndex() const
     unsigned index = 0;
 
     // Return the number of the first option selected.
-    const Vector<HTMLElement*>& items = listItems();
-    for (size_t i = 0; i < items.size(); ++i) {
-        HTMLElement* element = items[i];
+    for (auto& element : listItems()) {
         if (is<HTMLOptionElement>(*element)) {
             if (downcast<HTMLOptionElement>(*element).selected())
                 return index;
@@ -893,6 +879,8 @@ void HTMLSelectElement::selectOption(int optionIndex, SelectOptionFlags flags)
         downcast<HTMLOptionElement>(*element).setSelectedState(true);
     }
 
+    updateValidity();
+
     // For the menu list case, this is what makes the selected element appear.
     if (auto* renderer = this->renderer())
         renderer->updateFromElement();
@@ -910,8 +898,6 @@ void HTMLSelectElement::selectOption(int optionIndex, SelectOptionFlags flags)
                 downcast<RenderListBox>(*renderer).selectionChanged();
         }
     }
-
-    updateValidity();
 }
 
 int HTMLSelectElement::optionToListIndex(int optionIndex) const
@@ -955,7 +941,7 @@ void HTMLSelectElement::dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, 
     // dispatching change events during blur event dispatch.
     if (usesMenuList())
         saveLastSelection();
-    HTMLFormControlElementWithState::dispatchFocusEvent(WTF::move(oldFocusedElement), direction);
+    HTMLFormControlElementWithState::dispatchFocusEvent(WTFMove(oldFocusedElement), direction);
 }
 
 void HTMLSelectElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
@@ -965,14 +951,12 @@ void HTMLSelectElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
     // This matches other browsers' behavior.
     if (usesMenuList())
         dispatchChangeEventForMenuList();
-    HTMLFormControlElementWithState::dispatchBlurEvent(WTF::move(newFocusedElement));
+    HTMLFormControlElementWithState::dispatchBlurEvent(WTFMove(newFocusedElement));
 }
 
 void HTMLSelectElement::deselectItemsWithoutValidation(HTMLElement* excludeElement)
 {
-    const Vector<HTMLElement*>& items = listItems();
-    for (unsigned i = 0; i < items.size(); ++i) {
-        HTMLElement* element = items[i];
+    for (auto& element : listItems()) {
         if (element != excludeElement && is<HTMLOptionElement>(*element))
             downcast<HTMLOptionElement>(*element).setSelectedState(false);
     }
@@ -980,13 +964,11 @@ void HTMLSelectElement::deselectItemsWithoutValidation(HTMLElement* excludeEleme
 
 FormControlState HTMLSelectElement::saveFormControlState() const
 {
-    const Vector<HTMLElement*>& items = listItems();
-    size_t length = items.size();
     FormControlState state;
-    for (unsigned i = 0; i < length; ++i) {
-        if (!is<HTMLOptionElement>(*items[i]))
+    for (auto& element : listItems()) {
+        if (!is<HTMLOptionElement>(*element))
             continue;
-        HTMLOptionElement& option = downcast<HTMLOptionElement>(*items[i]);
+        HTMLOptionElement& option = downcast<HTMLOptionElement>(*element);
         if (!option.selected())
             continue;
         state.append(option.value());
@@ -1018,10 +1000,10 @@ void HTMLSelectElement::restoreFormControlState(const FormControlState& state)
     if (!itemsSize)
         return;
 
-    for (size_t i = 0; i < itemsSize; ++i) {
-        if (!is<HTMLOptionElement>(*items[i]))
+    for (auto& element : items) {
+        if (!is<HTMLOptionElement>(*element))
             continue;
-        downcast<HTMLOptionElement>(*items[i]).setSelectedState(false);
+        downcast<HTMLOptionElement>(*element).setSelectedState(false);
     }
 
     if (!multiple()) {
@@ -1062,10 +1044,7 @@ bool HTMLSelectElement::appendFormData(FormDataList& list, bool)
         return false;
 
     bool successful = false;
-    const Vector<HTMLElement*>& items = listItems();
-
-    for (unsigned i = 0; i < items.size(); ++i) {
-        HTMLElement* element = items[i];
+    for (auto& element : listItems()) {
         if (is<HTMLOptionElement>(*element) && downcast<HTMLOptionElement>(*element).selected() && !downcast<HTMLOptionElement>(*element).isDisabledFormControl()) {
             list.appendData(name, downcast<HTMLOptionElement>(*element).value());
             successful = true;
@@ -1083,9 +1062,7 @@ void HTMLSelectElement::reset()
     HTMLOptionElement* firstOption = nullptr;
     HTMLOptionElement* selectedOption = nullptr;
 
-    const Vector<HTMLElement*>& items = listItems();
-    for (unsigned i = 0; i < items.size(); ++i) {
-        HTMLElement* element = items[i];
+    for (auto& element : listItems()) {
         if (!is<HTMLOptionElement>(*element))
             continue;
 
@@ -1591,8 +1568,7 @@ Node::InsertionNotificationRequest HTMLSelectElement::insertedInto(ContainerNode
     // items yet - but for innerHTML and related methods, this method is called
     // after the whole subtree is constructed.
     recalcListItems();
-    HTMLFormControlElementWithState::insertedInto(insertionPoint);
-    return InsertionDone;
+    return HTMLFormControlElementWithState::insertedInto(insertionPoint);
 }
 
 void HTMLSelectElement::accessKeySetSelectedIndex(int index)

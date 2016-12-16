@@ -33,20 +33,26 @@
     macro(ArrayIterator) \
     macro(BYTES_PER_ELEMENT) \
     macro(Boolean) \
+    macro(Collator) \
     macro(Date) \
+    macro(DateTimeFormat) \
     macro(Error) \
     macro(EvalError) \
     macro(Function) \
+    macro(GeneratorFunction) \
     macro(Infinity) \
     macro(Intl) \
     macro(JSON) \
+    macro(Loader) \
     macro(Map)\
     macro(MapIterator)\
     macro(Math) \
     macro(NaN) \
     macro(Number) \
+    macro(NumberFormat) \
     macro(Object) \
     macro(Promise) \
+    macro(Proxy) \
     macro(RangeError) \
     macro(ReferenceError) \
     macro(Reflect) \
@@ -69,6 +75,7 @@
     macro(additionalJettisonReason) \
     macro(anonymous) \
     macro(arguments) \
+    macro(as) \
     macro(assign) \
     macro(back) \
     macro(bind) \
@@ -80,11 +87,14 @@
     macro(bytecodeIndex) \
     macro(bytecodes) \
     macro(bytecodesID) \
+    macro(calendar) \
     macro(callee) \
     macro(caller) \
+    macro(caseFirst) \
     macro(clear) \
     macro(close) \
     macro(closed) \
+    macro(collation) \
     macro(column) \
     macro(compilationKind) \
     macro(compilations) \
@@ -93,6 +103,7 @@
     macro(constructor) \
     macro(count) \
     macro(counters) \
+    macro(day) \
     macro(defineProperty) \
     macro(description) \
     macro(descriptions) \
@@ -101,6 +112,7 @@
     macro(done) \
     macro(entries) \
     macro(enumerable) \
+    macro(era) \
     macro(eval) \
     macro(exec) \
     macro(executionCount) \
@@ -108,7 +120,10 @@
     macro(flags) \
     macro(focus) \
     macro(forEach) \
+    macro(formatMatcher) \
     macro(forward) \
+    macro(frames) \
+    macro(from) \
     macro(fromCharCode) \
     macro(get) \
     macro(global) \
@@ -117,15 +132,19 @@
     macro(hasOwnProperty) \
     macro(hash) \
     macro(header) \
+    macro(hour) \
+    macro(hour12) \
     macro(href) \
     macro(id) \
     macro(ignoreCase) \
+    macro(ignorePunctuation) \
     macro(index) \
     macro(indexedDB) \
     macro(inferredName) \
     macro(input) \
     macro(instructionCount) \
     macro(isArray) \
+    macro(isEnabled) \
     macro(isPrototypeOf) \
     macro(isView) \
     macro(isWatchpoint) \
@@ -135,7 +154,12 @@
     macro(lastIndex) \
     macro(length) \
     macro(line) \
+    macro(locale) \
+    macro(localeMatcher) \
+    macro(location) \
     macro(message) \
+    macro(minute) \
+    macro(month) \
     macro(multiline) \
     macro(name) \
     macro(next) \
@@ -143,11 +167,15 @@
     macro(numInlinedCalls) \
     macro(numInlinedGetByIds) \
     macro(numInlinedPutByIds) \
+    macro(numberingSystem) \
+    macro(numeric) \
     macro(of) \
     macro(opcode) \
+    macro(opener) \
     macro(origin) \
     macro(osrExitSites) \
     macro(osrExits) \
+    macro(parent) \
     macro(parse) \
     macro(parseInt) \
     macro(postMessage) \
@@ -158,18 +186,23 @@
     macro(reload) \
     macro(replace) \
     macro(resolve) \
+    macro(second) \
+    macro(self) \
+    macro(sensitivity) \
     macro(set) \
     macro(showModalDialog) \
     macro(size) \
     macro(slice) \
     macro(source) \
-    macro(sourceURL) \
     macro(sourceCode) \
+    macro(sourceURL) \
     macro(stack) \
     macro(subarray) \
     macro(target) \
     macro(test) \
     macro(then) \
+    macro(timeZone) \
+    macro(timeZoneName) \
     macro(toExponential) \
     macro(toFixed) \
     macro(toISOString) \
@@ -177,13 +210,18 @@
     macro(toLocaleString) \
     macro(toPrecision) \
     macro(toString) \
+    macro(top) \
+    macro(unicode) \
+    macro(usage) \
     macro(value) \
     macro(valueOf) \
     macro(values) \
     macro(webkit) \
     macro(webkitIndexedDB) \
+    macro(weekday) \
     macro(window) \
-    macro(writable)
+    macro(writable) \
+    macro(year)
 
 #define JSC_COMMON_IDENTIFIERS_EACH_KEYWORD(macro) \
     macro(break) \
@@ -234,32 +272,26 @@
     macro(yield)
 
 #define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL_NOT_IMPLEMENTED_YET(macro)\
-    macro(hasInstance) \
     macro(isConcatSpreadable) \
     macro(match) \
     macro(replace) \
-    macro(search) \
-    macro(species) \
     macro(split) \
-    macro(toPrimitive) \
-    macro(toStringTag)
+    macro(toPrimitive)
 
 #define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(macro) \
+    macro(hasInstance) \
     macro(iterator) \
+    macro(search) \
+    macro(species) \
+    macro(toStringTag) \
     macro(unscopables)
 
-#define JSC_COMMON_BYTECODE_INTRINSICS_EACH_NAME(macro) \
-    macro(putByValDirect) \
-    macro(toString)
-
 #define JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_PROPERTY_NAME(macro) \
-    JSC_COMMON_BYTECODE_INTRINSICS_EACH_NAME(macro) \
+    JSC_COMMON_BYTECODE_INTRINSIC_FUNCTIONS_EACH_NAME(macro) \
+    JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(macro) \
     macro(iteratedObject) \
     macro(arrayIteratorNextIndex) \
     macro(arrayIterationKind) \
-    macro(arrayIterationKindKey) \
-    macro(arrayIterationKindValue) \
-    macro(arrayIterationKindKeyValue) \
     macro(charCodeAt) \
     macro(iteratedString) \
     macro(stringIteratorNextIndex) \
@@ -275,27 +307,69 @@
     macro(Number) \
     macro(Array) \
     macro(String) \
+    macro(RegExp) \
+    macro(Map) \
     macro(Promise) \
+    macro(InternalPromise) \
     macro(abs) \
     macro(floor) \
     macro(isFinite) \
+    macro(isNaN) \
     macro(getPrototypeOf) \
     macro(getOwnPropertyNames) \
+    macro(RangeError) \
     macro(TypeError) \
-    macro(undefined) \
+    macro(typedArrayLength) \
+    macro(typedArraySort) \
+    macro(typedArrayGetOriginalConstructor) \
     macro(BuiltinLog) \
     macro(homeObject) \
     macro(getTemplateObject) \
     macro(enqueueJob) \
     macro(handler) \
     macro(promiseState) \
-    macro(promisePending) \
-    macro(promiseFulfilled) \
-    macro(promiseRejected) \
     macro(promiseFulfillReactions) \
     macro(promiseRejectReactions) \
     macro(promiseResult) \
+    macro(push) \
     macro(capabilities) \
+    macro(starDefault) \
+    macro(InspectorInstrumentation) \
+    macro(get) \
+    macro(set) \
+    macro(shift) \
+    macro(allocateTypedArray) \
+    macro(Int8Array) \
+    macro(Int16Array) \
+    macro(Int32Array) \
+    macro(Uint8Array) \
+    macro(Uint8ClampedArray) \
+    macro(Uint16Array) \
+    macro(Uint32Array) \
+    macro(Float32Array) \
+    macro(Float64Array) \
+    macro(generator) \
+    macro(generatorNext) \
+    macro(generatorState) \
+    macro(generatorFrame) \
+    macro(generatorValue) \
+    macro(generatorThis) \
+    macro(generatorResumeMode) \
+    macro(Collator) \
+    macro(DateTimeFormat) \
+    macro(NumberFormat) \
+    macro(thisTimeValue) \
+    macro(newTargetLocal) \
+    macro(derivedConstructor) \
+    macro(isBoundFunction) \
+    macro(hasInstanceBoundFunction) \
+    macro(instanceOf) \
+    macro(isSet) \
+    macro(isMap) \
+    macro(SetIterator) \
+    macro(setIteratorNext) \
+    macro(MapIterator) \
+    macro(mapIteratorNext) \
 
 
 namespace JSC {
@@ -316,6 +390,7 @@ namespace JSC {
         const Identifier underscoreProto;
         const Identifier thisIdentifier;
         const Identifier useStrictIdentifier;
+        const Identifier timesIdentifier;
     private:
         std::unique_ptr<BuiltinNames> m_builtinNames;
 
@@ -341,13 +416,12 @@ namespace JSC {
         bool isPrivateName(UniquedStringImpl& uid) const;
         bool isPrivateName(const Identifier&) const;
 
-        const Identifier* getPrivateName(const Identifier&) const;
-        Identifier getPublicName(const Identifier&) const;
+        const Identifier* lookUpPrivateName(const Identifier&) const;
+        Identifier lookUpPublicName(const Identifier&) const;
 
-        const BytecodeIntrinsicRegistry& bytecodeIntrinsicRegistry() const { return m_bytecodeIntrinsicRegistry; }
-
-    private:
-        BytecodeIntrinsicRegistry m_bytecodeIntrinsicRegistry;
+        // Callers of this method should make sure that identifiers given to this method
+        // survive the lifetime of CommonIdentifiers and related VM.
+        JS_EXPORT_PRIVATE void appendExternalName(const Identifier& publicName, const Identifier& privateName);
     };
 
 } // namespace JSC

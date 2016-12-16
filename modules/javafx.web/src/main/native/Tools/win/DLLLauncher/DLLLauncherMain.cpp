@@ -178,10 +178,26 @@ static wstring getLastErrorString(HRESULT hr)
     return errorMessage;
 }
 
+static bool shouldUseHighDPI()
+{
+#ifdef WIN_CAIRO
+    return true;
+#else
+    int argc = 0;
+    WCHAR** argv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    for (int i = 1; i < argc; ++i) {
+        if (!wcsicmp(argv[i], L"--highDPI"))
+            return true;
+    }
+
+    return false;
+#endif
+}
+
 #if USE_CONSOLE_ENTRY_POINT
 int main(int argc, const char* argv[])
 #else
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpstrCmdLine, int nCmdShow)
+int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPWSTR lpstrCmdLine, _In_ int nCmdShow)
 #endif
 {
 #if defined(_M_X64) || defined(__x86_64__)
@@ -193,8 +209,10 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpstrCm
     _set_FMA3_enable(0);
 #endif
 
-    BOOL didIt = SetProcessDPIAware();
-    _ASSERT(didIt);
+    if (shouldUseHighDPI()) {
+        BOOL didIt = SetProcessDPIAware();
+        _ASSERT(didIt);
+    }
 
 #ifdef _CRTDBG_MAP_ALLOC
     _CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
@@ -218,7 +236,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpstrCm
         return 1;
 
     // Load our corresponding DLL.
-    wstring dllName = programName + L".dll";
+    wstring dllName = programName + L"Lib.dll";
     if (!::PathRemoveFileSpecW(exePath))
         return fatalError(programName, L"::PathRemoveFileSpecW failed: " + getLastErrorString(::GetLastError()));
     if (!::PathAppendW(exePath, dllName.c_str()))

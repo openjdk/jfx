@@ -27,6 +27,7 @@
 
 #include <wtf/AutodrainedPool.h>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(JAVA)
 #include <jni.h>
@@ -38,7 +39,7 @@ namespace WebCore {
 static HashSet<StorageThread*>& activeStorageThreads()
 {
     ASSERT(isMainThread());
-    DEPRECATED_DEFINE_STATIC_LOCAL(HashSet<StorageThread*>, threads, ());
+    static NeverDestroyed<HashSet<StorageThread*>> threads;
     return threads;
 }
 

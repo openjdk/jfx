@@ -39,9 +39,9 @@
 #include "DocumentLoader.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
-#include "FrameLoaderStateMachine.h"
 #include "FrameView.h"
 #include "HistoryController.h"
+#include "IgnoreOpensDuringUnloadCountIncrementer.h"
 #include "Logging.h"
 #include "MainFrame.h"
 #include "MemoryPressureHandler.h"
@@ -58,43 +58,9 @@
 #include "DeviceProximityController.h"
 #endif
 
-#if PLATFORM(IOS)
-#include "MemoryPressureHandler.h"
-#endif
-
 namespace WebCore {
 
-#if !defined(NDEBUG)
-
 #define PCLOG(...) LOG(PageCache, "%*s%s", indentLevel*4, "", makeString(__VA_ARGS__).utf8().data())
-
-#else
-
-#define PCLOG(...) ((void)0)
-
-#endif // !defined(NDEBUG)
-
-// Used in histograms, please only add at the end, and do not remove elements (renaming e.g. to "FooEnumUnused1" is fine).
-// This is because statistics may be gathered from histograms between versions over time, and re-using values causes collisions.
-enum ReasonFrameCannotBeInPageCache {
-    NoDocumentLoader = 0,
-    MainDocumentError,
-    IsErrorPage,
-    HasPlugins,
-    IsHttpsAndCacheControlled,
-    HasDatabaseHandles, // FIXME: Remove.
-    HasSharedWorkers, // FIXME: Remove.
-    NoHistoryItem,
-    QuickRedirectComing,
-    IsLoading,
-    IsStopping,
-    CannotSuspendActiveDOMObjects,
-    DocumentLoaderUsesApplicationCache,
-    ClientDeniesCaching,
-    NumberOfReasonsFramesCannotBeInPageCache,
-    IsInProvisionalLoadStage,
-};
-COMPILE_ASSERT(NumberOfReasonsFramesCannotBeInPageCache <= sizeof(unsigned)*8, ReasonFrameCannotBeInPageCacheDoesNotFitInBitmap);
 
 static inline void logPageCacheFailureDiagnosticMessage(DiagnosticLoggingClient& client, const String& reason)
 {
@@ -109,75 +75,82 @@ static inline void logPageCacheFailureDiagnosticMessage(Page* page, const String
     logPageCacheFailureDiagnosticMessage(page->mainFrame().diagnosticLoggingClient(), reason);
 }
 
-static unsigned logCanCacheFrameDecision(Frame& frame, DiagnosticLoggingClient& diagnosticLoggingClient, unsigned indentLevel)
+static bool canCacheFrame(Frame& frame, DiagnosticLoggingClient& diagnosticLoggingClient, unsigned indentLevel)
 {
     PCLOG("+---");
-    if (!frame.isMainFrame() && frame.loader().state() == FrameStateProvisional) {
+    FrameLoader& frameLoader = frame.loader();
+
+    // Prevent page caching if a subframe is still in provisional load stage.
+    // We only do this check for subframes because the main frame is reused when navigating to a new page.
+    if (!frame.isMainFrame() && frameLoader.state() == FrameStateProvisional) {
         PCLOG("   -Frame is in provisional load stage");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::provisionalLoadKey());
-        return 1 << IsInProvisionalLoadStage;
-    }
-    if (!frame.loader().documentLoader()) {
-        PCLOG("   -There is no DocumentLoader object");
-        logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::noDocumentLoaderKey());
-        return 1 << NoDocumentLoader;
+        return false;
     }
 
-    URL currentURL = frame.loader().documentLoader()->url();
-    URL newURL = frame.loader().provisionalDocumentLoader() ? frame.loader().provisionalDocumentLoader()->url() : URL();
+    DocumentLoader* documentLoader = frameLoader.documentLoader();
+    if (!documentLoader) {
+        PCLOG("   -There is no DocumentLoader object");
+        logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::noDocumentLoaderKey());
+        return false;
+    }
+
+    URL currentURL = documentLoader->url();
+    URL newURL = frameLoader.provisionalDocumentLoader() ? frameLoader.provisionalDocumentLoader()->url() : URL();
     if (!newURL.isEmpty())
         PCLOG(" Determining if frame can be cached navigating from (", currentURL.string(), ") to (", newURL.string(), "):");
     else
         PCLOG(" Determining if subframe with URL (", currentURL.string(), ") can be cached:");
 
-    unsigned rejectReasons = 0;
-    if (!frame.loader().documentLoader()->mainDocumentError().isNull()) {
+    bool isCacheable = true;
+    if (!documentLoader->mainDocumentError().isNull()) {
         PCLOG("   -Main document has an error");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::mainDocumentErrorKey());
 
-        if (frame.loader().documentLoader()->mainDocumentError().isCancellation() && frame.loader().documentLoader()->subresourceLoadersArePageCacheAcceptable())
+        if (documentLoader->mainDocumentError().isCancellation() && documentLoader->subresourceLoadersArePageCacheAcceptable())
             PCLOG("    -But, it was a cancellation and all loaders during the cancelation were loading images or XHR.");
         else
-            rejectReasons |= 1 << MainDocumentError;
+            isCacheable = false;
     }
-    if (frame.loader().documentLoader()->substituteData().isValid() && frame.loader().documentLoader()->substituteData().failingURL().isEmpty()) {
+    // Do not cache error pages (these can be recognized as pages with substitute data or unreachable URLs).
+    if (documentLoader->substituteData().isValid() && !documentLoader->substituteData().failingURL().isEmpty()) {
         PCLOG("   -Frame is an error page");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isErrorPageKey());
-        rejectReasons |= 1 << IsErrorPage;
+        isCacheable = false;
     }
-    if (frame.loader().subframeLoader().containsPlugins() && !frame.page()->settings().pageCacheSupportsPlugins()) {
+    if (frameLoader.subframeLoader().containsPlugins() && !frame.page()->settings().pageCacheSupportsPlugins()) {
         PCLOG("   -Frame contains plugins");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::hasPluginsKey());
-        rejectReasons |= 1 << HasPlugins;
+        isCacheable = false;
     }
-    if (frame.isMainFrame() && frame.document()->url().protocolIs("https") && frame.loader().documentLoader()->response().cacheControlContainsNoStore()) {
+    if (frame.isMainFrame() && frame.document() && frame.document()->url().protocolIs("https") && documentLoader->response().cacheControlContainsNoStore()) {
         PCLOG("   -Frame is HTTPS, and cache control prohibits storing");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::httpsNoStoreKey());
-        rejectReasons |= 1 << IsHttpsAndCacheControlled;
+        isCacheable = false;
     }
-    if (!frame.loader().history().currentItem()) {
-        PCLOG("   -No current history item");
+    if (frame.isMainFrame() && !frameLoader.history().currentItem()) {
+        PCLOG("   -Main frame has no current history item");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::noCurrentHistoryItemKey());
-        rejectReasons |= 1 << NoHistoryItem;
+        isCacheable = false;
     }
-    if (frame.loader().quickRedirectComing()) {
+    if (frameLoader.quickRedirectComing()) {
         PCLOG("   -Quick redirect is coming");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::quirkRedirectComingKey());
-        rejectReasons |= 1 << QuickRedirectComing;
+        isCacheable = false;
     }
-    if (frame.loader().documentLoader()->isLoading()) {
+    if (documentLoader->isLoading()) {
         PCLOG("   -DocumentLoader is still loading");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isLoadingKey());
-        rejectReasons |= 1 << IsLoading;
+        isCacheable = false;
     }
-    if (frame.loader().documentLoader()->isStopping()) {
+    if (documentLoader->isStopping()) {
         PCLOG("   -DocumentLoader is in the middle of stopping");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::documentLoaderStoppingKey());
-        rejectReasons |= 1 << IsStopping;
+        isCacheable = false;
     }
 
     Vector<ActiveDOMObject*> unsuspendableObjects;
-    if (!frame.document()->canSuspendActiveDOMObjectsForPageCache(&unsuspendableObjects)) {
+    if (frame.document() && !frame.document()->canSuspendActiveDOMObjectsForDocumentSuspension(&unsuspendableObjects)) {
         PCLOG("   -The document cannot suspend its active DOM Objects");
         for (auto* activeDOMObject : unsuspendableObjects) {
             PCLOG("    - Unsuspendable: ", activeDOMObject->activeDOMObjectName());
@@ -185,108 +158,113 @@ static unsigned logCanCacheFrameDecision(Frame& frame, DiagnosticLoggingClient& 
             UNUSED_PARAM(activeDOMObject);
         }
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::cannotSuspendActiveDOMObjectsKey());
-        rejectReasons |= 1 << CannotSuspendActiveDOMObjects;
+        isCacheable = false;
     }
-    if (!frame.loader().documentLoader()->applicationCacheHost()->canCacheInPageCache()) {
+    // FIXME: We should investigating caching frames that have an associated
+    // application cache. <rdar://problem/5917899> tracks that work.
+    if (!documentLoader->applicationCacheHost()->canCacheInPageCache()) {
         PCLOG("   -The DocumentLoader uses an application cache");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::applicationCacheKey());
-        rejectReasons |= 1 << DocumentLoaderUsesApplicationCache;
+        isCacheable = false;
     }
-    if (!frame.loader().client().canCachePage()) {
+    if (!frameLoader.client().canCachePage()) {
         PCLOG("   -The client says this frame cannot be cached");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::deniedByClientKey());
-        rejectReasons |= 1 << ClientDeniesCaching;
+        isCacheable = false;
     }
 
-    for (Frame* child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
-        rejectReasons |= logCanCacheFrameDecision(*child, diagnosticLoggingClient, indentLevel + 1);
+    for (Frame* child = frame.tree().firstChild(); child; child = child->tree().nextSibling()) {
+        if (!canCacheFrame(*child, diagnosticLoggingClient, indentLevel + 1))
+            isCacheable = false;
+    }
 
-    PCLOG(rejectReasons ? " Frame CANNOT be cached" : " Frame CAN be cached");
+    PCLOG(isCacheable ? " Frame CAN be cached" : " Frame CANNOT be cached");
     PCLOG("+---");
 
-    return rejectReasons;
+    return isCacheable;
 }
 
-// Used in histograms, please only add at the end, and do not remove elements (renaming e.g. to "FooEnumUnused1" is fine).
-// This is because statistics may be gathered from histograms between versions over time, and re-using values causes collisions.
-enum ReasonPageCannotBeInPageCache {
-    FrameCannotBeInPageCache = 0,
-    DisabledBackForwardList,
-    DisabledPageCache,
-    UsesDeviceMotion,
-    UsesDeviceOrientation,
-    IsReload,
-    IsReloadFromOrigin,
-    IsSameLoad,
-    NumberOfReasonsPagesCannotBeInPageCache,
-};
-COMPILE_ASSERT(NumberOfReasonsPagesCannotBeInPageCache <= sizeof(unsigned)*8, ReasonPageCannotBeInPageCacheDoesNotFitInBitmap);
-
-static void logCanCachePageDecision(Page& page)
+static bool canCachePage(Page& page)
 {
-    // Only bother logging for main frames that have actually loaded and have content.
-    if (page.mainFrame().loader().stateMachine().creatingInitialEmptyDocument())
-        return;
-    URL currentURL = page.mainFrame().loader().documentLoader() ? page.mainFrame().loader().documentLoader()->url() : URL();
-    if (currentURL.isEmpty())
-        return;
-
     unsigned indentLevel = 0;
     PCLOG("--------\n Determining if page can be cached:");
 
-    unsigned rejectReasons = 0;
     MainFrame& mainFrame = page.mainFrame();
     DiagnosticLoggingClient& diagnosticLoggingClient = mainFrame.diagnosticLoggingClient();
-    unsigned frameRejectReasons = logCanCacheFrameDecision(mainFrame, diagnosticLoggingClient, indentLevel + 1);
-    if (frameRejectReasons)
-        rejectReasons |= 1 << FrameCannotBeInPageCache;
+    bool isCacheable = canCacheFrame(mainFrame, diagnosticLoggingClient, indentLevel + 1);
 
     if (!page.settings().usesPageCache()) {
         PCLOG("   -Page settings says b/f cache disabled");
-        rejectReasons |= 1 << DisabledPageCache;
+        logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::isDisabledKey());
+        isCacheable = false;
     }
 #if ENABLE(DEVICE_ORIENTATION) && !PLATFORM(IOS)
-    if (DeviceMotionController::isActiveAt(page)) {
+    if (DeviceMotionController::isActiveAt(&page)) {
         PCLOG("   -Page is using DeviceMotion");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::deviceMotionKey());
-        rejectReasons |= 1 << UsesDeviceMotion;
+        isCacheable = false;
     }
-    if (DeviceOrientationController::isActiveAt(page)) {
+    if (DeviceOrientationController::isActiveAt(&page)) {
         PCLOG("   -Page is using DeviceOrientation");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::deviceOrientationKey());
-        rejectReasons |= 1 << UsesDeviceOrientation;
+        isCacheable = false;
     }
 #endif
 #if ENABLE(PROXIMITY_EVENTS)
     if (DeviceProximityController::isActiveAt(page)) {
         PCLOG("   -Page is using DeviceProximity");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, deviceProximityKey);
-        rejectReasons |= 1 << UsesDeviceMotion;
+        isCacheable = false;
     }
 #endif
     FrameLoadType loadType = page.mainFrame().loader().loadType();
-    if (loadType == FrameLoadType::Reload) {
+    switch (loadType) {
+    case FrameLoadType::Reload:
+        // No point writing to the cache on a reload, since we will just write over it again when we leave that page.
         PCLOG("   -Load type is: Reload");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::reloadKey());
-        rejectReasons |= 1 << IsReload;
-    }
-    if (loadType == FrameLoadType::ReloadFromOrigin) {
-        PCLOG("   -Load type is: Reload from origin");
-        logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::reloadFromOriginKey());
-        rejectReasons |= 1 << IsReloadFromOrigin;
-    }
-    if (loadType == FrameLoadType::Same) {
+        isCacheable = false;
+        break;
+    case FrameLoadType::Same: // user loads same URL again (but not reload button)
+        // No point writing to the cache on a same load, since we will just write over it again when we leave that page.
         PCLOG("   -Load type is: Same");
         logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::sameLoadKey());
-        rejectReasons |= 1 << IsSameLoad;
+        isCacheable = false;
+        break;
+    case FrameLoadType::RedirectWithLockedBackForwardList:
+        // Don't write to the cache if in the middle of a redirect, since we will want to store the final page we end up on.
+        PCLOG("   -Load type is: RedirectWithLockedBackForwardList");
+        logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::redirectKey());
+        isCacheable = false;
+        break;
+    case FrameLoadType::Replace:
+        // No point writing to the cache on a replace, since we will just write over it again when we leave that page.
+        PCLOG("   -Load type is: Replace");
+        logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::replaceKey());
+        isCacheable = false;
+        break;
+    case FrameLoadType::ReloadFromOrigin: {
+        // No point writing to the cache on a reload, since we will just write over it again when we leave that page.
+        PCLOG("   -Load type is: ReloadFromOrigin");
+        logPageCacheFailureDiagnosticMessage(diagnosticLoggingClient, DiagnosticLoggingKeys::reloadFromOriginKey());
+        isCacheable = false;
+        break;
+    }
+    case FrameLoadType::Standard:
+    case FrameLoadType::Back:
+    case FrameLoadType::Forward:
+    case FrameLoadType::IndexedBackForward: // a multi-item hop in the backforward list
+        // Cacheable.
+        break;
     }
 
-    if (rejectReasons)
-        PCLOG(" Page CANNOT be cached\n--------");
-    else
+    if (isCacheable)
         PCLOG(" Page CAN be cached\n--------");
+    else
+        PCLOG(" Page CANNOT be cached\n--------");
 
-    diagnosticLoggingClient.logDiagnosticMessageWithResult(DiagnosticLoggingKeys::pageCacheKey(), emptyString(), rejectReasons ? DiagnosticLoggingResultFail : DiagnosticLoggingResultPass, ShouldSample::Yes);
+    diagnosticLoggingClient.logDiagnosticMessageWithResult(DiagnosticLoggingKeys::pageCacheKey(), DiagnosticLoggingKeys::canCacheKey(), isCacheable ? DiagnosticLoggingResultPass : DiagnosticLoggingResultFail, ShouldSample::Yes);
+    return isCacheable;
 }
 
 PageCache& PageCache::singleton()
@@ -295,71 +273,19 @@ PageCache& PageCache::singleton()
     return globalPageCache;
 }
 
-bool PageCache::canCachePageContainingThisFrame(Frame& frame)
+bool PageCache::canCache(Page& page) const
 {
-    for (Frame* child = frame.tree().firstChild(); child; child = child->tree().nextSibling()) {
-        if (!canCachePageContainingThisFrame(*child))
-            return false;
+    if (!m_maxSize) {
+        logPageCacheFailureDiagnosticMessage(&page, DiagnosticLoggingKeys::isDisabledKey());
+        return false;
     }
 
-    FrameLoader& frameLoader = frame.loader();
-
-    // Prevent page caching if a subframe is still in provisional load stage.
-    // We only do this check for subframes because the main frame is reused when navigating to a new page.
-    if (!frame.isMainFrame() && frameLoader.state() == FrameStateProvisional)
+    if (MemoryPressureHandler::singleton().isUnderMemoryPressure()) {
+        logPageCacheFailureDiagnosticMessage(&page, DiagnosticLoggingKeys::underMemoryPressureKey());
         return false;
+    }
 
-    DocumentLoader* documentLoader = frameLoader.documentLoader();
-    Document* document = frame.document();
-
-    return documentLoader
-        && (documentLoader->mainDocumentError().isNull() || (documentLoader->mainDocumentError().isCancellation() && documentLoader->subresourceLoadersArePageCacheAcceptable()))
-        // Do not cache error pages (these can be recognized as pages with substitute data or unreachable URLs).
-        && !(documentLoader->substituteData().isValid() && !documentLoader->substituteData().failingURL().isEmpty())
-        && (!frameLoader.subframeLoader().containsPlugins() || frame.page()->settings().pageCacheSupportsPlugins())
-        && !(frame.isMainFrame() && document->url().protocolIs("https") && documentLoader->response().cacheControlContainsNoStore())
-        && frameLoader.history().currentItem()
-        && !frameLoader.quickRedirectComing()
-        && !documentLoader->isLoading()
-        && !documentLoader->isStopping()
-        && document->canSuspendActiveDOMObjectsForPageCache()
-        // FIXME: We should investigating caching frames that have an associated
-        // application cache. <rdar://problem/5917899> tracks that work.
-        && documentLoader->applicationCacheHost()->canCacheInPageCache()
-        && frameLoader.client().canCachePage();
-}
-
-bool PageCache::canCache(Page* page) const
-{
-    if (!page)
-        return false;
-
-    logCanCachePageDecision(*page);
-
-    if (MemoryPressureHandler::singleton().isUnderMemoryPressure())
-        return false;
-
-    // Cache the page, if possible.
-    // Don't write to the cache if in the middle of a redirect, since we will want to
-    // store the final page we end up on.
-    // No point writing to the cache on a reload or loadSame, since we will just write
-    // over it again when we leave that page.
-    FrameLoadType loadType = page->mainFrame().loader().loadType();
-
-    return m_maxSize > 0
-        && canCachePageContainingThisFrame(page->mainFrame())
-        && page->settings().usesPageCache()
-#if ENABLE(DEVICE_ORIENTATION) && !PLATFORM(IOS)
-        && !DeviceMotionController::isActiveAt(page)
-        && !DeviceOrientationController::isActiveAt(page)
-#endif
-#if ENABLE(PROXIMITY_EVENTS)
-        && !DeviceProximityController::isActiveAt(page)
-#endif
-        && (loadType == FrameLoadType::Standard
-            || loadType == FrameLoadType::Back
-            || loadType == FrameLoadType::Forward
-            || loadType == FrameLoadType::IndexedBackForward);
+    return canCachePage(page);
 }
 
 void PageCache::pruneToSizeNow(unsigned size, PruningReason pruningReason)
@@ -383,23 +309,6 @@ unsigned PageCache::frameCount() const
     }
 
     return frameCount;
-}
-
-void PageCache::markPagesForVisitedLinkStyleRecalc()
-{
-    for (auto& item : m_items) {
-        ASSERT(item->m_cachedPage);
-        item->m_cachedPage->markForVisitedLinkStyleRecalc();
-    }
-}
-
-void PageCache::markPagesForFullStyleRecalc(Page& page)
-{
-    for (auto& item : m_items) {
-        CachedPage& cachedPage = *item->m_cachedPage;
-        if (&page.mainFrame() == &cachedPage.cachedMainFrame()->view()->frame())
-            cachedPage.markForFullStyleRecalc();
-    }
 }
 
 void PageCache::markPagesForDeviceOrPageScaleChanged(Page& page)
@@ -446,14 +355,57 @@ static String pruningReasonToDiagnosticLoggingKey(PruningReason pruningReason)
     return emptyString();
 }
 
-void PageCache::add(HistoryItem& item, Page& page)
+static void setInPageCache(Page& page, bool isInPageCache)
 {
-    ASSERT(canCache(&page));
+    for (Frame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (auto* document = frame->document())
+            document->setInPageCache(isInPageCache);
+    }
+}
 
-    // Remove stale cache entry if necessary.
-    remove(item);
+static void firePageHideEventRecursively(Frame& frame)
+{
+    auto* document = frame.document();
+    if (!document)
+        return;
 
-    item.m_cachedPage = std::make_unique<CachedPage>(page);
+    // stopLoading() will fire the pagehide event in each subframe and the HTML specification states
+    // that the parent document's ignore-opens-during-unload counter should be incremented while the
+    // pagehide event is being fired in its subframes:
+    // https://html.spec.whatwg.org/multipage/browsers.html#unload-a-document
+    IgnoreOpensDuringUnloadCountIncrementer ignoreOpensDuringUnloadCountIncrementer(document);
+
+    frame.loader().stopLoading(UnloadEventPolicyUnloadAndPageHide);
+
+    for (RefPtr<Frame> child = frame.tree().firstChild(); child; child = child->tree().nextSibling())
+        firePageHideEventRecursively(*child);
+}
+
+void PageCache::addIfCacheable(HistoryItem& item, Page* page)
+{
+    if (item.isInPageCache())
+        return;
+
+    if (!page || !canCache(*page))
+        return;
+
+    // Make sure all the documents know they are being added to the PageCache.
+    setInPageCache(*page, true);
+
+    // Fire the pagehide event in all frames.
+    firePageHideEventRecursively(page->mainFrame());
+
+    // Check that the page is still page-cacheable after firing the pagehide event. The JS event handlers
+    // could have altered the page in a way that could prevent caching.
+    if (!canCache(*page)) {
+        setInPageCache(*page, false);
+        return;
+    }
+
+    // Make sure we no longer fire any JS events past this point.
+    NoEventDispatchAssertion assertNoEventDispatch;
+
+    item.m_cachedPage = std::make_unique<CachedPage>(*page);
     item.m_pruningReason = PruningReason::None;
     m_items.add(&item);
 
@@ -468,8 +420,8 @@ std::unique_ptr<CachedPage> PageCache::take(HistoryItem& item, Page* page)
         return nullptr;
     }
 
-    std::unique_ptr<CachedPage> cachedPage = WTF::move(item.m_cachedPage);
     m_items.remove(&item);
+    std::unique_ptr<CachedPage> cachedPage = WTFMove(item.m_cachedPage);
 
     if (cachedPage->hasExpired()) {
         LOG(PageCache, "Not restoring page for %s from back/forward cache because cache entry has expired", item.url().string().ascii().data());
@@ -504,17 +456,16 @@ void PageCache::remove(HistoryItem& item)
     if (!item.m_cachedPage)
         return;
 
-    item.m_cachedPage = nullptr;
     m_items.remove(&item);
+    item.m_cachedPage = nullptr;
 }
 
 void PageCache::prune(PruningReason pruningReason)
 {
     while (pageCount() > maxSize()) {
-        auto& oldestItem = m_items.first();
+        auto oldestItem = m_items.takeFirst();
         oldestItem->m_cachedPage = nullptr;
         oldestItem->m_pruningReason = pruningReason;
-        m_items.removeFirst();
     }
 }
 

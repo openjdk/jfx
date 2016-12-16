@@ -45,6 +45,8 @@ public:
 private:
     ScrollingTreeFrameScrollingNodeMac(ScrollingTree&, ScrollingNodeID);
 
+    void releaseReferencesToScrollbarPaintersOnTheMainThread();
+
     // ScrollingTreeNode member functions.
     virtual void updateBeforeChildren(const ScrollingStateNode&) override;
     virtual void updateAfterChildren(const ScrollingStateNode&) override;
@@ -58,7 +60,6 @@ private:
     bool canScrollHorizontally() override;
     bool canScrollVertically() override;
     bool shouldRubberBandInDirection(ScrollDirection) override;
-    IntPoint absoluteScrollPosition() override;
     void immediateScrollBy(const FloatSize&) override;
     void immediateScrollByWithoutContentEdgeConstraints(const FloatSize&) override;
     void stopSnapRubberbandTimer() override;

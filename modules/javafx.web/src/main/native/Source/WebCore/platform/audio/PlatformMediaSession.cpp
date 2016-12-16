@@ -26,7 +26,7 @@
 #include "config.h"
 #include "PlatformMediaSession.h"
 
-#if ENABLE(VIDEO)
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
 #include "HTMLMediaElement.h"
 #include "Logging.h"
 #include "MediaPlayer.h"
@@ -39,12 +39,29 @@ const double kClientDataBufferingTimerThrottleDelay = 0.1;
 #if !LOG_DISABLED
 static const char* stateName(PlatformMediaSession::State state)
 {
-#define CASE(state) case PlatformMediaSession::state: return #state
+#define STATE_CASE(state) case PlatformMediaSession::state: return #state
     switch (state) {
-    CASE(Idle);
-    CASE(Playing);
-    CASE(Paused);
-    CASE(Interrupted);
+    STATE_CASE(Idle);
+    STATE_CASE(Autoplaying);
+    STATE_CASE(Playing);
+    STATE_CASE(Paused);
+    STATE_CASE(Interrupted);
+    }
+
+    ASSERT_NOT_REACHED();
+    return "";
+}
+
+static const char* interruptionName(PlatformMediaSession::InterruptionType type)
+{
+#define INTERRUPTION_CASE(type) case PlatformMediaSession::type: return #type
+    switch (type) {
+    INTERRUPTION_CASE(NoInterruption);
+    INTERRUPTION_CASE(SystemSleep);
+    INTERRUPTION_CASE(EnteringBackground);
+    INTERRUPTION_CASE(SystemInterruption);
+    INTERRUPTION_CASE(SuspendedUnderLock);
+    INTERRUPTION_CASE(InvisibleAutoplay);
     }
 
     ASSERT_NOT_REACHED();
@@ -81,14 +98,18 @@ void PlatformMediaSession::setState(State state)
 
 void PlatformMediaSession::beginInterruption(InterruptionType type)
 {
-    LOG(Media, "PlatformMediaSession::beginInterruption(%p), state = %s, interruption count = %i", this, stateName(m_state), m_interruptionCount);
+    LOG(Media, "PlatformMediaSession::beginInterruption(%p), state = %s, interruption type = %s, interruption count = %i", this, stateName(m_state), interruptionName(type), m_interruptionCount);
 
-    if (++m_interruptionCount > 1 || (type == EnteringBackground && client().overrideBackgroundPlaybackRestriction()))
+    if (++m_interruptionCount > 1)
+        return;
+
+    if (client().shouldOverrideBackgroundPlaybackRestriction(type))
         return;
 
     m_stateToRestore = state();
     m_notifyingClient = true;
     setState(Interrupted);
+    m_interruptionType = type;
     client().suspendPlayback();
     m_notifyingClient = false;
 }
@@ -107,10 +128,30 @@ void PlatformMediaSession::endInterruption(EndInterruptionFlags flags)
 
     State stateToRestore = m_stateToRestore;
     m_stateToRestore = Idle;
+    m_interruptionType = NoInterruption;
     setState(Paused);
+
+    if (stateToRestore == Autoplaying)
+        client().resumeAutoplaying();
 
     bool shouldResume = flags & MayResumePlaying && stateToRestore == Playing;
     client().mayResumePlayback(shouldResume);
+}
+
+void PlatformMediaSession::clientWillBeginAutoplaying()
+{
+    if (m_notifyingClient)
+        return;
+
+    LOG(Media, "PlatformMediaSession::clientWillBeginAutoplaying(%p)- state = %s", this, stateName(m_state));
+    if (state() == Interrupted) {
+        m_stateToRestore = Autoplaying;
+        LOG(Media, "      setting stateToRestore to \"Autoplaying\"");
+        return;
+    }
+
+    setState(Autoplaying);
+    updateClientDataBuffering();
 }
 
 bool PlatformMediaSession::clientWillBeginPlayback()
@@ -164,6 +205,7 @@ PlatformMediaSession::MediaType PlatformMediaSession::presentationType() const
     return m_client.presentationType();
 }
 
+#if ENABLE(VIDEO)
 String PlatformMediaSession::title() const
 {
     return m_client.mediaSessionTitle();
@@ -178,6 +220,7 @@ double PlatformMediaSession::currentTime() const
 {
     return m_client.mediaSessionCurrentTime();
 }
+#endif
 
 bool PlatformMediaSession::canReceiveRemoteControlCommands() const
 {
@@ -201,6 +244,10 @@ void PlatformMediaSession::clientDataBufferingTimerFired()
 
     updateClientDataBuffering();
 
+#if PLATFORM(IOS)
+    PlatformMediaSessionManager::sharedManager().configureWireLessTargetMonitoring();
+#endif
+
     if (m_state != Playing || !m_client.elementIsHidden())
         return;
 
@@ -222,11 +269,39 @@ bool PlatformMediaSession::isHidden() const
     return m_client.elementIsHidden();
 }
 
+void PlatformMediaSession::isPlayingToWirelessPlaybackTargetChanged(bool isWireless)
+{
+    if (isWireless == m_isPlayingToWirelessPlaybackTarget)
+        return;
+
+    m_isPlayingToWirelessPlaybackTarget = isWireless;
+    PlatformMediaSessionManager::sharedManager().sessionIsPlayingToWirelessPlaybackTargetChanged(*this);
+}
+
 PlatformMediaSession::DisplayType PlatformMediaSession::displayType() const
 {
     return m_client.displayType();
 }
 
+bool PlatformMediaSession::activeAudioSessionRequired()
+{
+    if (mediaType() == PlatformMediaSession::None)
+        return false;
+    if (state() != PlatformMediaSession::State::Playing)
+        return false;
+    return m_canProduceAudio;
+}
+
+void PlatformMediaSession::setCanProduceAudio(bool canProduceAudio)
+{
+    if (m_canProduceAudio == canProduceAudio)
+        return;
+    m_canProduceAudio = canProduceAudio;
+
+    PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged(*this);
+}
+
+#if ENABLE(VIDEO)
 String PlatformMediaSessionClient::mediaSessionTitle() const
 {
     return String();
@@ -241,5 +316,7 @@ double PlatformMediaSessionClient::mediaSessionCurrentTime() const
 {
     return MediaPlayer::invalidTime();
 }
+#endif
+
 }
 #endif

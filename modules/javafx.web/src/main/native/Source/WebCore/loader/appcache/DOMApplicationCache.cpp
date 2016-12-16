@@ -30,7 +30,6 @@
 #include "Document.h"
 #include "DocumentLoader.h"
 #include "Event.h"
-#include "EventException.h"
 #include "EventListener.h"
 #include "EventNames.h"
 #include "ExceptionCode.h"
@@ -47,16 +46,16 @@ DOMApplicationCache::DOMApplicationCache(Frame* frame)
         cacheHost->setDOMApplicationCache(this);
 }
 
-void DOMApplicationCache::disconnectFrameForPageCache()
+void DOMApplicationCache::disconnectFrameForDocumentSuspension()
 {
     if (ApplicationCacheHost* cacheHost = applicationCacheHost())
-        cacheHost->setDOMApplicationCache(0);
-    DOMWindowProperty::disconnectFrameForPageCache();
+        cacheHost->setDOMApplicationCache(nullptr);
+    DOMWindowProperty::disconnectFrameForDocumentSuspension();
 }
 
-void DOMApplicationCache::reconnectFrameFromPageCache(Frame* frame)
+void DOMApplicationCache::reconnectFrameFromDocumentSuspension(Frame* frame)
 {
-    DOMWindowProperty::reconnectFrameFromPageCache(frame);
+    DOMWindowProperty::reconnectFrameFromDocumentSuspension(frame);
     if (ApplicationCacheHost* cacheHost = applicationCacheHost())
         cacheHost->setDOMApplicationCache(this);
 }
@@ -64,14 +63,14 @@ void DOMApplicationCache::reconnectFrameFromPageCache(Frame* frame)
 void DOMApplicationCache::willDestroyGlobalObjectInFrame()
 {
     if (ApplicationCacheHost* cacheHost = applicationCacheHost())
-        cacheHost->setDOMApplicationCache(0);
+        cacheHost->setDOMApplicationCache(nullptr);
     DOMWindowProperty::willDestroyGlobalObjectInFrame();
 }
 
 ApplicationCacheHost* DOMApplicationCache::applicationCacheHost() const
 {
     if (!m_frame || !m_frame->loader().documentLoader())
-        return 0;
+        return nullptr;
     return m_frame->loader().documentLoader()->applicationCacheHost();
 }
 
@@ -108,7 +107,7 @@ ScriptExecutionContext* DOMApplicationCache::scriptExecutionContext() const
 {
     if (m_frame)
         return m_frame->document();
-    return 0;
+    return nullptr;
 }
 
 const AtomicString& DOMApplicationCache::toEventType(ApplicationCacheHost::EventID id)

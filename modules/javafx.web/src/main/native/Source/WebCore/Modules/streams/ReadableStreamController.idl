@@ -30,12 +30,13 @@
 [
     Conditional=STREAMS_API,
     CustomConstructor,
-    ImplementationLacksVTable,
+    GlobalContext=DOMWindow&WorkerGlobalScope,
+    JSBuiltin,
     NoInterfaceObject
 ] interface ReadableStreamController {
-    [CallWith=ScriptState] void enqueue([Default=Undefined] optional any chunk);
-    [RaisesException] void close();
-    [CallWith=ScriptState, RaisesException] void error([Default=Undefined] optional any error);
+    void enqueue(optional any chunk);
+    void close();
+    void error(optional any error);
 
     readonly attribute double desiredSize;
 };

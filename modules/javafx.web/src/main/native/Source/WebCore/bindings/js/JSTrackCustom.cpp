@@ -44,11 +44,11 @@ TrackBase* toTrack(JSValue value)
 
     JSObject* object = asObject(value);
     if (object->inherits(JSTextTrack::info()))
-        return &jsCast<JSTextTrack*>(object)->impl();
+        return &jsCast<JSTextTrack*>(object)->wrapped();
     if (object->inherits(JSAudioTrack::info()))
-        return &jsCast<JSAudioTrack*>(object)->impl();
+        return &jsCast<JSAudioTrack*>(object)->wrapped();
     if (object->inherits(JSVideoTrack::info()))
-        return &jsCast<JSVideoTrack*>(object)->impl();
+        return &jsCast<JSVideoTrack*>(object)->wrapped();
 
     return 0;
 }
@@ -58,10 +58,6 @@ JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject* globalObject, TrackBase* t
     if (!track)
         return jsNull();
 
-    JSObject* wrapper = getCachedWrapper(globalObject->world(), track);
-    if (wrapper)
-        return wrapper;
-
     switch (track->type()) {
     case TrackBase::BaseTrack:
         // This should never happen.
@@ -69,12 +65,18 @@ JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject* globalObject, TrackBase* t
         break;
 
     case TrackBase::AudioTrack:
+        if (auto* wrapper = getCachedWrapper(globalObject->world(), toAudioTrack(track)))
+            return wrapper;
         return CREATE_DOM_WRAPPER(globalObject, AudioTrack, track);
 
     case TrackBase::VideoTrack:
+        if (auto* wrapper = getCachedWrapper(globalObject->world(), toVideoTrack(track)))
+            return wrapper;
         return CREATE_DOM_WRAPPER(globalObject, VideoTrack, track);
 
     case TrackBase::TextTrack:
+        if (auto* wrapper = getCachedWrapper(globalObject->world(), toTextTrack(track)))
+            return wrapper;
         return CREATE_DOM_WRAPPER(globalObject, TextTrack, track);
     }
 

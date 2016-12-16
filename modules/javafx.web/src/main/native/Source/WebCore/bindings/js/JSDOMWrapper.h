@@ -33,7 +33,7 @@ static const uint8_t JSNodeType = JSC::LastJSCObjectType + 1;
 static const uint8_t JSDocumentWrapperType = JSC::LastJSCObjectType + 2;
 static const uint8_t JSElementType = JSC::LastJSCObjectType + 3;
 
-class JSDOMWrapper : public JSC::JSDestructibleObject {
+class JSDOMObject : public JSC::JSDestructibleObject {
 public:
     typedef JSC::JSDestructibleObject Base;
 
@@ -41,11 +41,26 @@ public:
     ScriptExecutionContext* scriptExecutionContext() const { return globalObject()->scriptExecutionContext(); }
 
 protected:
-    JSDOMWrapper(JSC::Structure* structure, JSC::JSGlobalObject* globalObject)
-        : JSDestructibleObject(globalObject->vm(), structure)
+    JSDOMObject(JSC::Structure* structure, JSC::JSGlobalObject& globalObject)
+        : Base(globalObject.vm(), structure)
     {
         ASSERT(scriptExecutionContext());
     }
+};
+
+template<typename ImplementationClass> class JSDOMWrapper : public JSDOMObject {
+public:
+    typedef JSDOMObject Base;
+
+    ImplementationClass& wrapped() const { return const_cast<ImplementationClass&>(m_wrapped.get()); }
+
+protected:
+    JSDOMWrapper(JSC::Structure* structure, JSC::JSGlobalObject& globalObject, Ref<ImplementationClass>&& impl)
+        : Base(structure, globalObject)
+        , m_wrapped(WTFMove(impl)) { }
+
+private:
+    Ref<ImplementationClass> m_wrapped;
 };
 
 } // namespace WebCore

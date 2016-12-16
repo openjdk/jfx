@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-# Copyright (C) 2011 Apple Inc. All rights reserved.
+# Copyright (C) 2011, 2016 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -52,11 +52,25 @@ class Assembler
 
     def enterAsm
         @outp.puts "OFFLINE_ASM_BEGIN" if !$emitWinAsm
+
+        if !$emitWinAsm
+            @outp.puts "OFFLINE_ASM_GLOBAL_LABEL(llintPCRangeStart)"
+        else
+            putsProc("llintPCRangeStart", "")
+            putsProcEndIfNeeded
+        end
         @state = :asm
+        SourceFile.outputDotFileList(@outp) if $enableDebugAnnotations
     end
     
     def leaveAsm
         putsProcEndIfNeeded if $emitWinAsm
+        if !$emitWinAsm
+            @outp.puts "OFFLINE_ASM_GLOBAL_LABEL(llintPCRangeEnd)"
+        else
+            putsProc("llintPCRangeEnd", "")
+            putsProcEndIfNeeded
+        end
         putsLastComment
         @outp.puts "OFFLINE_ASM_END" if !$emitWinAsm
         @state = :cpp
@@ -271,8 +285,13 @@ class Assembler
     def comment(text)
         @comment = text
     end
+
     def annotation(text)
         @annotation = text
+    end
+
+    def debugAnnotation(text)
+        @outp.puts text
     end
 end
 
@@ -282,13 +301,16 @@ asmFile = ARGV.shift
 offsetsFile = ARGV.shift
 outputFlnm = ARGV.shift
 
-$stderr.puts "offlineasm: Parsing #{asmFile} and #{offsetsFile} and creating assembly file #{outputFlnm}."
-
 begin
     configurationList = offsetsAndConfigurationIndex(offsetsFile)
 rescue MissingMagicValuesException
     $stderr.puts "offlineasm: No magic values found. Skipping assembly file generation."
     exit 0
+end
+
+# The MS compiler doesn't accept DWARF2 debug annotations.
+if isMSVC
+    $enableDebugAnnotations = false
 end
 
 $emitWinAsm = isMSVC ? outputFlnm.index(".asm") != nil : false
@@ -335,6 +357,3 @@ File.open(outputFlnm, "w") {
         }
     }
 }
-
-$stderr.puts "offlineasm: Assembly file #{outputFlnm} successfully generated."
-

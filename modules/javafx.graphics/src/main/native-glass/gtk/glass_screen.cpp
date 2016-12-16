@@ -27,7 +27,6 @@
 
 #include "glass_screen.h"
 #include "glass_general.h"
-#include "glass_wrapper.h"
 
 #include <X11/Xatom.h>
 #include <gdk/gdk.h>

@@ -51,49 +51,48 @@ CachedSVGFont::CachedSVGFont(const ResourceRequest& resourceRequest, SessionID s
 {
 }
 
-RefPtr<Font> CachedSVGFont::createFont(const FontDescription& fontDescription, const AtomicString& remoteURI, bool syntheticBold, bool syntheticItalic, bool externalSVG)
+RefPtr<Font> CachedSVGFont::createFont(const FontDescription& fontDescription, const AtomicString& remoteURI, bool syntheticBold, bool syntheticItalic, const FontFeatureSettings& fontFaceFeatures, const FontVariantSettings& fontFaceVariantSettings)
 {
 #if ENABLE(SVG_OTF_CONVERTER)
-    if (!externalSVG || firstFontFace(remoteURI))
-        return CachedFont::createFont(fontDescription, remoteURI, syntheticBold, syntheticItalic, externalSVG);
+    if (firstFontFace(remoteURI))
+        return CachedFont::createFont(fontDescription, remoteURI, syntheticBold, syntheticItalic, fontFaceFeatures, fontFaceVariantSettings);
 #else
-    if (!externalSVG)
-        return CachedFont::createFont(fontDescription, remoteURI, syntheticBold, syntheticItalic, externalSVG);
-
+    UNUSED_PARAM(fontFaceFeatures);
+    UNUSED_PARAM(fontFaceVariantSettings);
     if (SVGFontFaceElement* firstFontFace = this->firstFontFace(remoteURI))
         return Font::create(std::make_unique<SVGFontData>(firstFontFace), fontDescription.computedPixelSize(), syntheticBold, syntheticItalic);
 #endif
     return nullptr;
 }
 
-FontPlatformData CachedSVGFont::platformDataFromCustomData(float size, bool bold, bool italic, FontOrientation orientation, FontWidthVariant widthVariant, FontRenderingMode renderingMode)
+FontPlatformData CachedSVGFont::platformDataFromCustomData(const FontDescription& fontDescription, bool bold, bool italic, const FontFeatureSettings& fontFaceFeatures, const FontVariantSettings& fontFaceVariantSettings)
 {
     if (m_externalSVGDocument)
-        return FontPlatformData(size, bold, italic);
-    return CachedFont::platformDataFromCustomData(size, bold, italic, orientation, widthVariant, renderingMode);
+        return FontPlatformData(fontDescription.computedPixelSize(), bold, italic);
+    return CachedFont::platformDataFromCustomData(fontDescription, bold, italic, fontFaceFeatures, fontFaceVariantSettings);
 }
 
-bool CachedSVGFont::ensureCustomFontData(bool externalSVG, const AtomicString& remoteURI)
+bool CachedSVGFont::ensureCustomFontData(const AtomicString& remoteURI)
 {
-    if (!externalSVG)
-        return CachedFont::ensureCustomFontData(externalSVG, remoteURI);
-
     if (!m_externalSVGDocument && !errorOccurred() && !isLoading() && m_data) {
         m_externalSVGDocument = SVGDocument::create(nullptr, URL());
         RefPtr<TextResourceDecoder> decoder = TextResourceDecoder::create("application/xml");
         m_externalSVGDocument->setContent(decoder->decodeAndFlush(m_data->data(), m_data->size()));
-#if !ENABLE(SVG_OTF_CONVERTER)
         if (decoder->sawError())
             m_externalSVGDocument = nullptr;
-#else
-        if (decoder->sawError())
-            m_externalSVGDocument = nullptr;
-        else
+#if ENABLE(SVG_OTF_CONVERTER)
+        if (m_externalSVGDocument)
             maybeInitializeExternalSVGFontElement(remoteURI);
         if (!m_externalSVGFontElement)
             return false;
-        Vector<char> convertedFont = convertSVGToOTFFont(*m_externalSVGFontElement);
-        m_convertedFont = SharedBuffer::adoptVector(convertedFont);
+        if (auto convertedFont = convertSVGToOTFFont(*m_externalSVGFontElement))
+            m_convertedFont = SharedBuffer::adoptVector(convertedFont.value());
+        else {
+            m_externalSVGDocument = nullptr;
+            return false;
+        }
+#else
+        UNUSED_PARAM(remoteURI);
 #endif
     }
 

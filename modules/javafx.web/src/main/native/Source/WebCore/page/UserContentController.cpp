@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,15 @@
 
 #include "DOMWrapperWorld.h"
 #include "Document.h"
+#include "DocumentLoader.h"
+#include "ExtensionStyleSheets.h"
 #include "MainFrame.h"
 #include "Page.h"
 #include "ResourceLoadInfo.h"
 #include "UserScript.h"
 #include "UserStyleSheet.h"
+#include <runtime/JSCellInlines.h>
+#include <runtime/StructureInlines.h>
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
 #include "UserMessageHandlerDescriptor.h"
@@ -78,7 +82,7 @@ void UserContentController::addUserScript(DOMWrapperWorld& world, std::unique_pt
     auto& scriptsInWorld = m_userScripts->add(&world, nullptr).iterator->value;
     if (!scriptsInWorld)
         scriptsInWorld = std::make_unique<UserScriptVector>();
-    scriptsInWorld->append(WTF::move(userScript));
+    scriptsInWorld->append(WTFMove(userScript));
 }
 
 void UserContentController::removeUserScript(DOMWrapperWorld& world, const URL& url)
@@ -116,7 +120,7 @@ void UserContentController::addUserStyleSheet(DOMWrapperWorld& world, std::uniqu
     auto& styleSheetsInWorld = m_userStyleSheets->add(&world, nullptr).iterator->value;
     if (!styleSheetsInWorld)
         styleSheetsInWorld = std::make_unique<UserStyleSheetVector>();
-    styleSheetsInWorld->append(WTF::move(userStyleSheet));
+    styleSheetsInWorld->append(WTFMove(userStyleSheet));
 
     if (injectionTime == InjectInExistingDocuments)
         invalidateInjectedStyleSheetCacheInAllFrames();
@@ -204,23 +208,35 @@ void UserContentController::removeAllUserContentExtensions()
     m_contentExtensionBackend->removeAllContentExtensions();
 }
 
-void UserContentController::processContentExtensionRulesForLoad(Page& page, ResourceRequest& request, ResourceType resourceType, DocumentLoader& initiatingDocumentLoader)
+static bool contentExtensionsEnabled(const DocumentLoader& documentLoader)
 {
-    if (!m_contentExtensionBackend)
-        return;
+    if (auto frame = documentLoader.frame()) {
+        if (frame->isMainFrame())
+            return documentLoader.userContentExtensionsEnabled();
+        if (auto mainDocumentLoader = frame->mainFrame().loader().documentLoader())
+            return mainDocumentLoader->userContentExtensionsEnabled();
+    }
 
-    if (!page.userContentExtensionsEnabled())
-        return;
-
-    m_contentExtensionBackend->processContentExtensionRulesForLoad(request, resourceType, initiatingDocumentLoader);
+    return true;
 }
 
-Vector<ContentExtensions::Action> UserContentController::actionsForResourceLoad(Page& page, const ResourceLoadInfo& resourceLoadInfo)
+ContentExtensions::BlockedStatus UserContentController::processContentExtensionRulesForLoad(ResourceRequest& request, ResourceType resourceType, DocumentLoader& initiatingDocumentLoader)
+{
+    if (!m_contentExtensionBackend)
+        return ContentExtensions::BlockedStatus::NotBlocked;
+
+    if (!contentExtensionsEnabled(initiatingDocumentLoader))
+        return ContentExtensions::BlockedStatus::NotBlocked;
+
+    return m_contentExtensionBackend->processContentExtensionRulesForLoad(request, resourceType, initiatingDocumentLoader);
+}
+
+Vector<ContentExtensions::Action> UserContentController::actionsForResourceLoad(const ResourceLoadInfo& resourceLoadInfo, DocumentLoader& initiatingDocumentLoader)
 {
     if (!m_contentExtensionBackend)
         return Vector<ContentExtensions::Action>();
 
-    if (!page.userContentExtensionsEnabled())
+    if (!contentExtensionsEnabled(initiatingDocumentLoader))
         return Vector<ContentExtensions::Action>();
 
     return m_contentExtensionBackend->actionsForResourceLoad(resourceLoadInfo);
@@ -241,7 +257,7 @@ void UserContentController::invalidateInjectedStyleSheetCacheInAllFrames()
 {
     for (auto& page : m_pages) {
         for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
-            frame->document()->styleSheetCollection().invalidateInjectedStyleSheetCache();
+            frame->document()->extensionStyleSheets().invalidateInjectedStyleSheetCache();
             frame->document()->styleResolverChanged(DeferRecalcStyle);
         }
     }

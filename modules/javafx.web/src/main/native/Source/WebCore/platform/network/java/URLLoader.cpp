@@ -2,8 +2,12 @@
  * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
-#include "URLLoader.h"
 
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
+#include "URLLoader.h"
 #include "FrameNetworkingContextJava.h"
 #include "HTTPParsers.h"
 #include "JavaEnv.h"
@@ -377,7 +381,7 @@ static void setupResponse(ResourceResponse& response,
     }
     if (!contentTypeString.isEmpty()) {
         response.setMimeType(
-                extractMIMETypeFromMediaType(contentTypeString).lower());
+                extractMIMETypeFromMediaType(contentTypeString).convertToLowercaseWithoutLocale());
     }
 
     String contentEncodingString(env, contentEncoding);
@@ -505,7 +509,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_network_URLLoader_twkDidFail
     target->didFail(ResourceError(
             String(),
             errorCode,
-            String(env, url),
+            URL(env, url),
             String(env, message)));
 }
 

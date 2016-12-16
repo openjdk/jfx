@@ -27,6 +27,7 @@ package com.sun.javafx.tools.ant;
 
 import com.sun.javafx.tools.packager.PackagerLib;
 import com.sun.javafx.tools.packager.SignJarParams;
+import com.oracle.tools.packager.Log;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,9 +69,11 @@ public class FXSignJarTask extends Task {
     private boolean verbose = false;
 
     public FXSignJarTask() {
+        Log.info("Warning: <fx:signjar> has been deprecated and will be removed in a future release.");
         packager = new PackagerLib();
         signJarParams = new SignJarParams();
     }
+
     @Override
     public void execute() throws BuildException {
         signJarParams.setKeyStore(keyStore);

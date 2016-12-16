@@ -39,17 +39,17 @@
 #include "MainFrame.h"
 #include "ProgressEvent.h"
 #include "ResourceHandle.h"
-#include "ResourceLoader.h"
 #include "ResourceRequest.h"
 #include "Settings.h"
+#include "SubresourceLoader.h"
 
 namespace WebCore {
 
 ApplicationCacheHost::ApplicationCacheHost(DocumentLoader& documentLoader)
-    : m_domApplicationCache(0)
+    : m_domApplicationCache(nullptr)
     , m_documentLoader(documentLoader)
     , m_defersEvents(true)
-    , m_candidateApplicationCacheGroup(0)
+    , m_candidateApplicationCacheGroup(nullptr)
 {
 }
 
@@ -305,10 +305,8 @@ void ApplicationCacheHost::stopLoadingInFrame(Frame* frame)
 void ApplicationCacheHost::stopDeferringEvents()
 {
     Ref<DocumentLoader> protect(m_documentLoader);
-    for (unsigned i = 0; i < m_deferredEvents.size(); ++i) {
-        const DeferredEvent& deferred = m_deferredEvents[i];
-        dispatchDOMEvent(deferred.eventID, deferred.progressTotal, deferred.progressDone);
-    }
+    for (auto& event : m_deferredEvents)
+        dispatchDOMEvent(event.eventID, event.progressTotal, event.progressDone);
     m_deferredEvents.clear();
     m_defersEvents = false;
 }
@@ -352,7 +350,7 @@ void ApplicationCacheHost::dispatchDOMEvent(EventID id, int total, int done)
             event = ProgressEvent::create(eventType, true, done, total);
         else
             event = Event::create(eventType, false, false);
-        m_domApplicationCache->dispatchEvent(event, ASSERT_NO_EXCEPTION);
+        m_domApplicationCache->dispatchEvent(*event);
     }
 }
 
@@ -366,7 +364,7 @@ void ApplicationCacheHost::setApplicationCache(PassRefPtr<ApplicationCache> appl
 {
     if (m_candidateApplicationCacheGroup) {
         ASSERT(!m_applicationCache);
-        m_candidateApplicationCacheGroup = 0;
+        m_candidateApplicationCacheGroup = nullptr;
     }
 
     m_applicationCache = applicationCache;
@@ -380,7 +378,7 @@ bool ApplicationCacheHost::shouldLoadResourceFromApplicationCache(const Resource
 
     // If the resource is not to be fetched using the HTTP GET mechanism or equivalent, or if its URL has a different
     // <scheme> component than the application cache's manifest, then fetch the resource normally.
-    if (!ApplicationCache::requestIsHTTPOrHTTPSGet(request) || !equalIgnoringCase(request.url().protocol(), cache->manifestResource()->url().protocol()))
+    if (!ApplicationCache::requestIsHTTPOrHTTPSGet(request) || !equalIgnoringASCIICase(request.url().protocol(), cache->manifestResource()->url().protocol()))
         return false;
 
     // If the resource's URL is an master entry, the manifest, an explicit entry, or a fallback entry

@@ -21,7 +21,12 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 
-#include "<DEVELOPER_DIR>/AppleInternal/XcodeConfig/AspenFamily.xcconfig"
+#include "../../../../../Internal/Configurations/HaveInternalSDK.xcconfig"
+
+USE_INTERNAL_SDK = $(USE_INTERNAL_SDK_$(CONFIGURATION));
+USE_INTERNAL_SDK_Production = YES;
+USE_INTERNAL_SDK_Debug = $(HAVE_INTERNAL_SDK);
+USE_INTERNAL_SDK_Release = $(HAVE_INTERNAL_SDK);
 
 CLANG_CXX_LANGUAGE_STANDARD = gnu++0x;
 CLANG_CXX_LIBRARY = libc++;
@@ -59,7 +64,6 @@ GCC_WARN_UNDECLARED_SELECTOR = YES;
 GCC_WARN_64_TO_32_BIT_CONVERSION[arch=arm64] = NO;
 GCC_WARN_64_TO_32_BIT_CONVERSION[arch=x86_64] = NO;
 WARNING_CFLAGS = -Wall -W -Wno-unused-parameter -Wundef
-LINKER_DISPLAYS_MANGLED_NAMES = YES;
 
 DEBUG_DEFINES_debug = ;
 DEBUG_DEFINES_normal = NDEBUG;
@@ -71,7 +75,7 @@ SDKROOT = macosx.internal;
 
 WEBKIT_SYSTEM_INTERFACE_LIBRARY = WebKitSystemInterface
 
-SUPPORTED_PLATFORMS = macosx iphoneos iphonesimulator;
+SUPPORTED_PLATFORMS = iphoneos iphonesimulator macosx tvos tvsimulator watchos watchsimulator;
 
 OTHER_CFLAGS = $(ASAN_OTHER_CFLAGS);
 OTHER_CPLUSPLUSFLAGS = $(ASAN_OTHER_CPLUSPLUSFLAGS);

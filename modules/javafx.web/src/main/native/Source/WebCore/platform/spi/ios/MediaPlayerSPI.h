@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,22 +55,28 @@ typedef NSInteger MPRouteDiscoveryMode;
 @interface MPAVRoutingController : NSObject
 @end
 
-@interface MPAVRoutingController (Details)
+@interface MPAVRoutingController ()
 - (instancetype)initWithName:(NSString *)name;
 @property (nonatomic, assign) MPRouteDiscoveryMode discoveryMode;
 @end
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 @interface MPAudioVideoRoutingPopoverController : UIPopoverController
 @end
+#pragma clang diagnostic pop
 
-@interface MPAudioVideoRoutingPopoverController (Details)
+@interface MPAudioVideoRoutingPopoverController ()
 - (id)initWithType:(MPAVItemType)avItemType;
 @end
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 @interface MPAudioVideoRoutingActionSheet : UIActionSheet
 @end
+#pragma clang diagnostic pop
 
-@interface MPAudioVideoRoutingActionSheet (Details)
+@interface MPAudioVideoRoutingActionSheet ()
 - (id)initWithType:(MPAVItemType)avItemType;
 - (void)showWithValidInterfaceOrientationMaskBlock:(UIInterfaceOrientationMask (^)(void))block completionHandler:(void (^)())completionHandler;
 @end

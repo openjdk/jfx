@@ -156,12 +156,13 @@ public:
     bool canAccessPluginStorage(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin); }
     bool canAccessApplicationCache(const SecurityOrigin* topOrigin) const { return canAccessStorage(topOrigin); }
     bool canAccessCookies() const { return !isUnique(); }
+    bool canRequestGeolocation() const { return !isUnique(); }
     Policy canShowNotifications() const;
 
     // The local SecurityOrigin is the most privileged SecurityOrigin.
     // The local SecurityOrigin can script any document, navigate to local
     // resources, and can set arbitrary headers on XMLHttpRequests.
-    bool isLocal() const;
+    WEBCORE_EXPORT bool isLocal() const;
 
     // The origin is a globally unique identifier assigned when the Document is
     // created. http://www.whatwg.org/specs/web-apps/current-work/#sandboxOrigin

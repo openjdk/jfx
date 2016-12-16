@@ -41,14 +41,13 @@
 #include "SourceProvider.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TemporaryChange.h>
-#include <wtf/text/WTFString.h>
 
 using namespace JSC;
 
 namespace Inspector {
 
-ScriptDebugServer::ScriptDebugServer(bool isInWorkerThread)
-    : Debugger(isInWorkerThread)
+ScriptDebugServer::ScriptDebugServer(VM& vm)
+    : Debugger(vm)
 {
 }
 
@@ -61,7 +60,7 @@ JSC::BreakpointID ScriptDebugServer::setBreakpoint(JSC::SourceID sourceID, const
     if (!sourceID)
         return JSC::noBreakpointID;
 
-    JSC::Breakpoint breakpoint(sourceID, scriptBreakpoint.lineNumber, scriptBreakpoint.columnNumber, scriptBreakpoint.condition, scriptBreakpoint.autoContinue);
+    JSC::Breakpoint breakpoint(sourceID, scriptBreakpoint.lineNumber, scriptBreakpoint.columnNumber, scriptBreakpoint.condition, scriptBreakpoint.autoContinue, scriptBreakpoint.ignoreCount);
     JSC::BreakpointID id = Debugger::setBreakpoint(breakpoint, *actualLineNumber, *actualColumnNumber);
     if (id != JSC::noBreakpointID && !scriptBreakpoint.actions.isEmpty()) {
 #ifndef NDEBUG
@@ -144,14 +143,13 @@ void ScriptDebugServer::dispatchBreakpointActionLog(ExecState* exec, const Strin
     if (m_callingListeners)
         return;
 
-    ListenerSet& listeners = getListeners();
-    if (listeners.isEmpty())
+    if (m_listeners.isEmpty())
         return;
 
     TemporaryChange<bool> change(m_callingListeners, true);
 
     Vector<ScriptDebugListener*> listenersCopy;
-    copyToVector(listeners, listenersCopy);
+    copyToVector(m_listeners, listenersCopy);
     for (auto* listener : listenersCopy)
         listener->breakpointActionLog(exec, message);
 }
@@ -161,14 +159,13 @@ void ScriptDebugServer::dispatchBreakpointActionSound(ExecState*, int breakpoint
     if (m_callingListeners)
         return;
 
-    ListenerSet& listeners = getListeners();
-    if (listeners.isEmpty())
+    if (m_listeners.isEmpty())
         return;
 
     TemporaryChange<bool> change(m_callingListeners, true);
 
     Vector<ScriptDebugListener*> listenersCopy;
-    copyToVector(listeners, listenersCopy);
+    copyToVector(m_listeners, listenersCopy);
     for (auto* listener : listenersCopy)
         listener->breakpointActionSound(breakpointActionIdentifier);
 }
@@ -178,8 +175,7 @@ void ScriptDebugServer::dispatchBreakpointActionProbe(ExecState* exec, const Scr
     if (m_callingListeners)
         return;
 
-    ListenerSet& listeners = getListeners();
-    if (listeners.isEmpty())
+    if (m_listeners.isEmpty())
         return;
 
     TemporaryChange<bool> change(m_callingListeners, true);
@@ -187,7 +183,7 @@ void ScriptDebugServer::dispatchBreakpointActionProbe(ExecState* exec, const Scr
     unsigned sampleId = m_nextProbeSampleId++;
 
     Vector<ScriptDebugListener*> listenersCopy;
-    copyToVector(listeners, listenersCopy);
+    copyToVector(m_listeners, listenersCopy);
     for (auto* listener : listenersCopy)
         listener->breakpointActionProbe(exec, action, m_currentProbeBatchId, sampleId, sampleValue);
 }
@@ -203,10 +199,12 @@ void ScriptDebugServer::dispatchDidParseSource(const ListenerSet& listeners, Sou
 
     ScriptDebugListener::Script script;
     script.url = sourceProvider->url();
-    script.source = sourceProvider->source();
+    script.source = sourceProvider->source().toString();
     script.startLine = sourceProvider->startPosition().m_line.zeroBasedInt();
     script.startColumn = sourceProvider->startPosition().m_column.zeroBasedInt();
     script.isContentScript = isContentScript;
+    script.sourceURL = sourceProvider->sourceURL();
+    script.sourceMappingURL = sourceProvider->sourceMappingURL();
 
     int sourceLength = script.source.length();
     int lineCount = 1;
@@ -233,7 +231,7 @@ void ScriptDebugServer::dispatchDidParseSource(const ListenerSet& listeners, Sou
 void ScriptDebugServer::dispatchFailedToParseSource(const ListenerSet& listeners, SourceProvider* sourceProvider, int errorLine, const String& errorMessage)
 {
     String url = sourceProvider->url();
-    const String& data = sourceProvider->source();
+    String data = sourceProvider->source().toString();
     int firstLine = sourceProvider->startPosition().m_line.oneBasedInt();
 
     Vector<ScriptDebugListener*> copy;
@@ -247,17 +245,16 @@ void ScriptDebugServer::sourceParsed(ExecState* exec, SourceProvider* sourceProv
     if (m_callingListeners)
         return;
 
-    ListenerSet& listeners = getListeners();
-    if (listeners.isEmpty())
+    if (m_listeners.isEmpty())
         return;
 
     TemporaryChange<bool> change(m_callingListeners, true);
 
     bool isError = errorLine != -1;
     if (isError)
-        dispatchFailedToParseSource(listeners, sourceProvider, errorLine, errorMessage);
+        dispatchFailedToParseSource(m_listeners, sourceProvider, errorLine, errorMessage);
     else
-        dispatchDidParseSource(listeners, sourceProvider, isContentScript(exec));
+        dispatchDidParseSource(m_listeners, sourceProvider, isContentScript(exec));
 }
 
 void ScriptDebugServer::dispatchFunctionToListeners(JavaScriptExecutionCallback callback)
@@ -265,11 +262,12 @@ void ScriptDebugServer::dispatchFunctionToListeners(JavaScriptExecutionCallback 
     if (m_callingListeners)
         return;
 
+    if (m_listeners.isEmpty())
+        return;
+
     TemporaryChange<bool> change(m_callingListeners, true);
 
-    ListenerSet& listeners = getListeners();
-    if (!listeners.isEmpty())
-        dispatchFunctionToListeners(listeners, callback);
+    dispatchFunctionToListeners(m_listeners, callback);
 }
 
 void ScriptDebugServer::dispatchFunctionToListeners(const ListenerSet& listeners, JavaScriptExecutionCallback callback)
@@ -331,6 +329,29 @@ const BreakpointActions& ScriptDebugServer::getActionsForBreakpoint(JSC::Breakpo
     return emptyActionVector;
 }
 
+void ScriptDebugServer::addListener(ScriptDebugListener* listener)
+{
+    ASSERT(listener);
+
+    bool wasEmpty = m_listeners.isEmpty();
+    m_listeners.add(listener);
+
+    // First listener. Attach the debugger.
+    if (wasEmpty)
+        attachDebugger();
+}
+
+void ScriptDebugServer::removeListener(ScriptDebugListener* listener, bool isBeingDestroyed)
+{
+    ASSERT(listener);
+
+    m_listeners.remove(listener);
+
+    // Last listener. Detach the debugger.
+    if (m_listeners.isEmpty())
+        detachDebugger(isBeingDestroyed);
+}
+
 Deprecated::ScriptValue ScriptDebugServer::exceptionOrCaughtValue(JSC::ExecState* state)
 {
     if (reasonForPause() == PausedForException)
@@ -340,7 +361,7 @@ Deprecated::ScriptValue ScriptDebugServer::exceptionOrCaughtValue(JSC::ExecState
     while (debuggerCallFrame) {
         DebuggerScope* scope = debuggerCallFrame->scope();
         if (scope->isCatchScope())
-            return Deprecated::ScriptValue(state->vm(), scope->caughtValue());
+            return Deprecated::ScriptValue(state->vm(), scope->caughtValue(state));
         debuggerCallFrame = debuggerCallFrame->callerFrame();
     }
 

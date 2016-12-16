@@ -26,6 +26,8 @@
 #ifndef DFACombiner_h
 #define DFACombiner_h
 
+#if ENABLE(CONTENT_EXTENSIONS)
+
 #include "DFA.h"
 #include <wtf/Vector.h>
 
@@ -45,11 +47,13 @@ private:
 inline void DFACombiner::addDFA(DFA&& dfa)
 {
     dfa.minimize();
-    m_dfas.append(WTF::move(dfa));
+    m_dfas.append(WTFMove(dfa));
 }
 
 }
 
 } // namespace WebCore
+
+#endif
 
 #endif

@@ -26,18 +26,14 @@
 #include "config.h"
 #include "FTLValueRange.h"
 
-#include "FTLAbbreviations.h"
-
 #if ENABLE(FTL_JIT)
 
 namespace JSC { namespace FTL {
 
-void ValueRange::decorateInstruction(
-    LContext context, LValue loadInstruction, unsigned rangeKind) const
+void ValueRange::decorateInstruction(LValue loadInstruction, unsigned rangeKind) const
 {
-    if (!m_rangeMetadata)
-        m_rangeMetadata = mdNode(context, m_begin, m_end);
-    setMetadata(loadInstruction, rangeKind, m_rangeMetadata);
+    UNUSED_PARAM(loadInstruction);
+    UNUSED_PARAM(rangeKind);
 }
 
 } } // namespace JSC::FTL

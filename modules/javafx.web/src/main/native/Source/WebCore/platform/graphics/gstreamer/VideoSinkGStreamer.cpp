@@ -35,8 +35,8 @@
 #include <glib.h>
 #include <gst/gst.h>
 #include <gst/video/gstvideometa.h>
-#include <wtf/glib/GMutexLocker.h>
-#include <wtf/glib/GThreadSafeMainLoopSource.h>
+#include <wtf/Condition.h>
+#include <wtf/RunLoop.h>
 
 using namespace WebCore;
 
@@ -67,38 +67,110 @@ enum {
 
 static guint webkitVideoSinkSignals[LAST_SIGNAL] = { 0, };
 
+static void webkitVideoSinkRepaintRequested(WebKitVideoSink*, GstSample*);
+static GRefPtr<GstSample> webkitVideoSinkRequestRender(WebKitVideoSink*, GstBuffer*);
+
+class VideoRenderRequestScheduler {
+public:
+    VideoRenderRequestScheduler()
+#if !USE(COORDINATED_GRAPHICS_THREADED)
+        : m_timer(RunLoop::main(), this, &VideoRenderRequestScheduler::render)
+#endif
+    {
+#if PLATFORM(GTK) && !USE(COORDINATED_GRAPHICS_THREADED)
+        // Use a higher priority than WebCore timers (G_PRIORITY_HIGH_IDLE + 20).
+        m_timer.setPriority(G_PRIORITY_HIGH_IDLE + 19);
+#endif
+    }
+
+    void start()
+    {
+        LockHolder locker(m_sampleMutex);
+        m_unlocked = false;
+    }
+
+    void stop()
+    {
+        LockHolder locker(m_sampleMutex);
+        m_sample = nullptr;
+        m_unlocked = true;
+#if !USE(COORDINATED_GRAPHICS_THREADED)
+        m_timer.stop();
+        m_dataCondition.notifyOne();
+#endif
+    }
+
+    bool requestRender(WebKitVideoSink* sink, GstBuffer* buffer)
+    {
+        LockHolder locker(m_sampleMutex);
+        if (m_unlocked)
+            return true;
+
+        m_sample = webkitVideoSinkRequestRender(sink, buffer);
+        if (!m_sample)
+            return false;
+
+#if USE(COORDINATED_GRAPHICS_THREADED)
+        if (LIKELY(GST_IS_SAMPLE(m_sample.get())))
+            webkitVideoSinkRepaintRequested(sink, m_sample.get());
+        m_sample = nullptr;
+#else
+        m_sink = sink;
+        m_timer.startOneShot(0);
+        m_dataCondition.wait(m_sampleMutex);
+#endif
+        return true;
+    }
+
+private:
+
+#if !USE(COORDINATED_GRAPHICS_THREADED)
+    void render()
+    {
+        LockHolder locker(m_sampleMutex);
+        GRefPtr<GstSample> sample = WTFMove(m_sample);
+        GRefPtr<WebKitVideoSink> sink = WTFMove(m_sink);
+        if (sample && !m_unlocked && LIKELY(GST_IS_SAMPLE(sample.get())))
+            webkitVideoSinkRepaintRequested(sink.get(), sample.get());
+        m_dataCondition.notifyOne();
+    }
+#endif
+
+    Lock m_sampleMutex;
+    GRefPtr<GstSample> m_sample;
+
+#if !USE(COORDINATED_GRAPHICS_THREADED)
+    RunLoop::Timer<VideoRenderRequestScheduler> m_timer;
+    Condition m_dataCondition;
+    GRefPtr<WebKitVideoSink> m_sink;
+#endif
+
+    // If this is true all processing should finish ASAP
+    // This is necessary because there could be a race between
+    // unlock() and render(), where unlock() wins, signals the
+    // Condition, then render() tries to render a frame although
+    // everything else isn't running anymore. This will lead
+    // to deadlocks because render() holds the stream lock.
+    //
+    // Protected by the sample mutex
+    bool m_unlocked { false };
+};
+
 struct _WebKitVideoSinkPrivate {
     _WebKitVideoSinkPrivate()
     {
-        g_mutex_init(&sampleMutex);
-        g_cond_init(&dataCondition);
         gst_video_info_init(&info);
     }
 
     ~_WebKitVideoSinkPrivate()
     {
-        g_mutex_clear(&sampleMutex);
-        g_cond_clear(&dataCondition);
+        if (currentCaps)
+            gst_caps_unref(currentCaps);
     }
 
-    GstSample* sample;
-    GThreadSafeMainLoopSource timeoutSource;
-    GMutex sampleMutex;
-    GCond dataCondition;
-
+    VideoRenderRequestScheduler scheduler;
     GstVideoInfo info;
-
     GstCaps* currentCaps;
-
-    // If this is TRUE all processing should finish ASAP
-    // This is necessary because there could be a race between
-    // unlock() and render(), where unlock() wins, signals the
-    // GCond, then render() tries to render a frame although
-    // everything else isn't running anymore. This will lead
-    // to deadlocks because render() holds the stream lock.
-    //
-    // Protected by the sample mutex
-    bool unlocked;
 };
 
 #define webkit_video_sink_parent_class parent_class
@@ -112,42 +184,20 @@ static void webkit_video_sink_init(WebKitVideoSink* sink)
     new (sink->priv) WebKitVideoSinkPrivate();
 }
 
-static void webkitVideoSinkTimeoutCallback(WebKitVideoSink* sink)
+static void webkitVideoSinkRepaintRequested(WebKitVideoSink* sink, GstSample* sample)
 {
-    WebKitVideoSinkPrivate* priv = sink->priv;
-
-    WTF::GMutexLocker<GMutex> lock(priv->sampleMutex);
-    GstSample* sample = priv->sample;
-    priv->sample = 0;
-
-    if (!sample || priv->unlocked || UNLIKELY(!GST_IS_SAMPLE(sample))) {
-        g_cond_signal(&priv->dataCondition);
-        return;
-    }
-
     g_signal_emit(sink, webkitVideoSinkSignals[REPAINT_REQUESTED], 0, sample);
-    gst_sample_unref(sample);
-    g_cond_signal(&priv->dataCondition);
 }
 
-static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buffer)
+static GRefPtr<GstSample> webkitVideoSinkRequestRender(WebKitVideoSink* sink, GstBuffer* buffer)
 {
-    WebKitVideoSink* sink = WEBKIT_VIDEO_SINK(baseSink);
     WebKitVideoSinkPrivate* priv = sink->priv;
-
-    WTF::GMutexLocker<GMutex> lock(priv->sampleMutex);
-
-    if (priv->unlocked)
-        return GST_FLOW_OK;
-
-    priv->sample = gst_sample_new(buffer, priv->currentCaps, 0, 0);
+    GRefPtr<GstSample> sample = adoptGRef(gst_sample_new(buffer, priv->currentCaps, nullptr, nullptr));
 
     // The video info structure is valid only if the sink handled an allocation query.
     GstVideoFormat format = GST_VIDEO_INFO_FORMAT(&priv->info);
-    if (format == GST_VIDEO_FORMAT_UNKNOWN) {
-        gst_sample_unref(priv->sample);
-        return GST_FLOW_ERROR;
-    }
+    if (format == GST_VIDEO_FORMAT_UNKNOWN)
+        return nullptr;
 
 #if !(USE(TEXTURE_MAPPER_GL) && !USE(COORDINATED_GRAPHICS))
     // Cairo's ARGB has pre-multiplied alpha while GStreamer's doesn't.
@@ -163,7 +213,7 @@ static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buf
         // Check if allocation failed.
         if (UNLIKELY(!newBuffer)) {
             gst_buffer_unref(buffer);
-            return GST_FLOW_ERROR;
+            return nullptr;
         }
 
         // We don't use Color::premultipliedARGBFromColor() here because
@@ -174,14 +224,13 @@ static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buf
         GstVideoFrame destinationFrame;
 
         if (!gst_video_frame_map(&sourceFrame, &priv->info, buffer, GST_MAP_READ)) {
-            gst_sample_unref(priv->sample);
             gst_buffer_unref(newBuffer);
-            return GST_FLOW_ERROR;
+            return nullptr;
         }
         if (!gst_video_frame_map(&destinationFrame, &priv->info, newBuffer, GST_MAP_WRITE)) {
             gst_video_frame_unmap(&sourceFrame);
             gst_buffer_unref(newBuffer);
-            return GST_FLOW_ERROR;
+            return nullptr;
         }
 
         const guint8* source = static_cast<guint8*>(GST_VIDEO_FRAME_PLANE_DATA(&sourceFrame, 0));
@@ -209,20 +258,17 @@ static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buf
 
         gst_video_frame_unmap(&sourceFrame);
         gst_video_frame_unmap(&destinationFrame);
-        gst_sample_unref(priv->sample);
-        priv->sample = gst_sample_new(newBuffer, priv->currentCaps, 0, 0);
+        sample = adoptGRef(gst_sample_new(newBuffer, priv->currentCaps, nullptr, nullptr));
     }
 #endif
 
-    // This should likely use a lower priority, but glib currently starves
-    // lower priority sources.
-    // See: https://bugzilla.gnome.org/show_bug.cgi?id=610830.
-    gst_object_ref(sink);
-    priv->timeoutSource.schedule("[WebKit] webkitVideoSinkTimeoutCallback", std::function<void()>(std::bind(webkitVideoSinkTimeoutCallback, sink)), G_PRIORITY_DEFAULT,
-        [sink] { gst_object_unref(sink); });
+    return sample;
+}
 
-    g_cond_wait(&priv->dataCondition, &priv->sampleMutex);
-    return GST_FLOW_OK;
+static GstFlowReturn webkitVideoSinkRender(GstBaseSink* baseSink, GstBuffer* buffer)
+{
+    WebKitVideoSink* sink = WEBKIT_VIDEO_SINK(baseSink);
+    return sink->priv->scheduler.requestRender(sink, buffer) ? GST_FLOW_OK : GST_FLOW_ERROR;
 }
 
 static void webkitVideoSinkFinalize(GObject* object)
@@ -231,25 +277,11 @@ static void webkitVideoSinkFinalize(GObject* object)
     G_OBJECT_CLASS(parent_class)->finalize(object);
 }
 
-static void unlockSampleMutex(WebKitVideoSinkPrivate* priv)
-{
-    WTF::GMutexLocker<GMutex> lock(priv->sampleMutex);
-
-    if (priv->sample) {
-        gst_sample_unref(priv->sample);
-        priv->sample = 0;
-    }
-
-    priv->unlocked = true;
-
-    g_cond_signal(&priv->dataCondition);
-}
-
 static gboolean webkitVideoSinkUnlock(GstBaseSink* baseSink)
 {
-    WebKitVideoSink* sink = WEBKIT_VIDEO_SINK(baseSink);
+    WebKitVideoSinkPrivate* priv = WEBKIT_VIDEO_SINK(baseSink)->priv;
 
-    unlockSampleMutex(sink->priv);
+    priv->scheduler.stop();
 
     return GST_CALL_PARENT_WITH_DEFAULT(GST_BASE_SINK_CLASS, unlock, (baseSink), TRUE);
 }
@@ -258,10 +290,7 @@ static gboolean webkitVideoSinkUnlockStop(GstBaseSink* baseSink)
 {
     WebKitVideoSinkPrivate* priv = WEBKIT_VIDEO_SINK(baseSink)->priv;
 
-    {
-        WTF::GMutexLocker<GMutex> lock(priv->sampleMutex);
-        priv->unlocked = false;
-    }
+    priv->scheduler.start();
 
     return GST_CALL_PARENT_WITH_DEFAULT(GST_BASE_SINK_CLASS, unlock_stop, (baseSink), TRUE);
 }
@@ -270,11 +299,10 @@ static gboolean webkitVideoSinkStop(GstBaseSink* baseSink)
 {
     WebKitVideoSinkPrivate* priv = WEBKIT_VIDEO_SINK(baseSink)->priv;
 
-    unlockSampleMutex(priv);
-
+    priv->scheduler.stop();
     if (priv->currentCaps) {
         gst_caps_unref(priv->currentCaps);
-        priv->currentCaps = 0;
+        priv->currentCaps = nullptr;
     }
 
     return TRUE;
@@ -284,8 +312,8 @@ static gboolean webkitVideoSinkStart(GstBaseSink* baseSink)
 {
     WebKitVideoSinkPrivate* priv = WEBKIT_VIDEO_SINK(baseSink)->priv;
 
-    WTF::GMutexLocker<GMutex> lock(priv->sampleMutex);
-    priv->unlocked = false;
+    priv->scheduler.start();
+
     return TRUE;
 }
 

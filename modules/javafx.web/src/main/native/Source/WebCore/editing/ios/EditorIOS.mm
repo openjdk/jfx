@@ -122,7 +122,7 @@ void Editor::setTextAlignmentForChangedBaseWritingDirection(WritingDirection dir
     if (!value)
         return;
 
-    const char *newValue = NULL;
+    const char *newValue = nullptr;
     ETextAlign textAlign = *value;
     switch (textAlign) {
         case TASTART:
@@ -192,19 +192,16 @@ const Font* Editor::fontForSelection(bool& hasMultipleFonts) const
         RenderStyle* style = styleForSelectionStart(&m_frame, nodeToRemove); // sets nodeToRemove
 
         const Font* result = nullptr;
-        if (style)
+        if (style) {
             result = &style->fontCascade().primaryFont();
-
-        if (nodeToRemove) {
-            ExceptionCode ec;
-            nodeToRemove->remove(ec);
-            ASSERT(!ec);
+            if (nodeToRemove)
+                nodeToRemove->remove(ASSERT_NO_EXCEPTION);
         }
 
         return result;
     }
 
-    const Font* font = 0;
+    const Font* font = nullptr;
     RefPtr<Range> range = m_frame.selection().toNormalizedRange();
     if (Node* startNode = adjustedSelectionStartForStyleComputation(m_frame.selection().selection()).deprecatedNode()) {
         Node* pastEnd = range->pastLastNode();
@@ -264,7 +261,7 @@ void Editor::removeUnchangeableStyles()
     // FIXME: it'd be nice if knowledge about which styles were unchangeable was not hard-coded here.
     defaultStyle->removeProperty(CSSPropertyFontWeight);
     defaultStyle->removeProperty(CSSPropertyFontStyle);
-    defaultStyle->removeProperty(CSSPropertyFontVariant);
+    defaultStyle->removeProperty(CSSPropertyFontVariantCaps);
     // FIXME: we should handle also pasted quoted text, strikethrough, etc. <rdar://problem/9255115>
     defaultStyle->removeProperty(CSSPropertyTextDecoration);
     defaultStyle->removeProperty(CSSPropertyWebkitTextDecorationsInEffect); // implements underline
@@ -397,7 +394,7 @@ void Editor::WebContentReader::addFragment(PassRefPtr<DocumentFragment> newFragm
     if (fragment) {
         if (newFragment && newFragment->firstChild()) {
             ExceptionCode ec;
-            fragment->appendChild(newFragment->firstChild(), ec);
+            fragment->appendChild(*newFragment->firstChild(), ec);
         }
     } else
         fragment = newFragment;
@@ -494,12 +491,12 @@ bool Editor::WebContentReader::readURL(const URL& url, const String&)
             return fragment;
         }
     } else {
-        RefPtr<Element> anchor = frame.document()->createElement(HTMLNames::aTag, false);
+        Ref<Element> anchor = frame.document()->createElement(HTMLNames::aTag, false);
         anchor->setAttribute(HTMLNames::hrefAttr, url.string());
         anchor->appendChild(frame.document()->createTextNode([[(NSURL *)url absoluteString] precomposedStringWithCanonicalMapping]));
 
         RefPtr<DocumentFragment> newFragment = frame.document()->createDocumentFragment();
-        newFragment->appendChild(anchor.release());
+        newFragment->appendChild(WTFMove(anchor));
         addFragment(newFragment);
         return true;
     }
@@ -549,7 +546,7 @@ void Editor::pasteWithPasteboard(Pasteboard* pasteboard, bool allowPlainText, Ma
     }
 
     if (fragment && shouldInsertFragment(fragment, range, EditorInsertActionPasted))
-        pasteAsFragment(fragment, canSmartReplaceWithPasteboard(*pasteboard), false, mailBlockquoteHandling);
+        pasteAsFragment(fragment.releaseNonNull(), canSmartReplaceWithPasteboard(*pasteboard), false, mailBlockquoteHandling);
 }
 
 PassRefPtr<DocumentFragment> Editor::createFragmentAndAddResources(NSAttributedString *string)
@@ -568,8 +565,8 @@ PassRefPtr<DocumentFragment> Editor::createFragmentAndAddResources(NSAttributedS
     RefPtr<DocumentFragment> fragment = client()->documentFragmentFromAttributedString(string, resources);
 
     if (DocumentLoader* loader = m_frame.loader().documentLoader()) {
-        for (size_t i = 0, size = resources.size(); i < size; ++i)
-            loader->addArchiveResource(resources[i]);
+        for (auto& resource : resources)
+            loader->addArchiveResource(resource);
     }
 
     if (!wasDeferringCallbacks)
@@ -583,7 +580,7 @@ PassRefPtr<DocumentFragment> Editor::createFragmentForImageResourceAndAddResourc
     if (!resource)
         return nullptr;
 
-    RefPtr<Element> imageElement = m_frame.document()->createElement(HTMLNames::imgTag, false);
+    Ref<Element> imageElement = m_frame.document()->createElement(HTMLNames::imgTag, false);
     // FIXME: The code in createFragmentAndAddResources calls setDefersLoading(true). Don't we need that here?
     if (DocumentLoader* loader = m_frame.loader().documentLoader())
         loader->addArchiveResource(resource.get());
@@ -592,7 +589,7 @@ PassRefPtr<DocumentFragment> Editor::createFragmentForImageResourceAndAddResourc
     imageElement->setAttribute(HTMLNames::srcAttr, [URL isFileURL] ? [URL absoluteString] : resource->url());
 
     RefPtr<DocumentFragment> fragment = m_frame.document()->createDocumentFragment();
-    fragment->appendChild(imageElement.release());
+    fragment->appendChild(WTFMove(imageElement));
 
     return fragment.release();
 }
@@ -605,7 +602,7 @@ void Editor::replaceSelectionWithAttributedString(NSAttributedString *attributed
     if (m_frame.selection().selection().isContentRichlyEditable()) {
         RefPtr<DocumentFragment> fragment = createFragmentAndAddResources(attributedString);
         if (fragment && shouldInsertFragment(fragment, selectedRange(), EditorInsertActionPasted))
-            pasteAsFragment(fragment, false, false, mailBlockquoteHandling);
+            pasteAsFragment(fragment.releaseNonNull(), false, false, mailBlockquoteHandling);
     } else {
         String text = [attributedString string];
         if (shouldInsertText(text, selectedRange().get(), EditorInsertActionPasted))

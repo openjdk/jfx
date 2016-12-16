@@ -54,6 +54,14 @@ function isUInt32(obj)
     return "" + (obj >>> 0) === obj;
 }
 
+function endsWith(str, suffix)
+{
+    var position = str.length - suffix.length;
+    if (position < 0)
+        return false;
+    return str.indexOf(suffix, position) === position;
+}
+
 function isSymbol(obj)
 {
     return typeof obj === "symbol";
@@ -487,7 +495,7 @@ InjectedScript.prototype = {
             var expressionFunction = evalFunction.call(object, boundExpressionFunctionString);
             var result = expressionFunction.apply(null, parameters);
 
-            if (objectGroup === "console" && saveResult)
+            if (saveResult)
                 this._saveResult(result);
 
             return result;
@@ -507,7 +515,7 @@ InjectedScript.prototype = {
 
             var result = evalFunction.call(inspectedGlobalObject, expression);
 
-            if (objectGroup === "console" && saveResult)
+            if (saveResult)
                 this._saveResult(result);
 
             return result;
@@ -680,8 +688,10 @@ InjectedScript.prototype = {
                     continue;
                 }
 
-                if (descriptor.hasOwnProperty("get") && descriptor.hasOwnProperty("set") && !descriptor.get && !descriptor.set) {
-                    // FIXME: <https://webkit.org/b/140575> Web Inspector: Native Bindings Descriptors are Incomplete
+                if (endsWith(String(descriptor.get), "[native code]\n}") ||
+                     (!descriptor.get && descriptor.hasOwnProperty("get") && !descriptor.set && descriptor.hasOwnProperty("set"))) {
+                    // FIXME: Some Native Bindings Descriptors are Incomplete
+                    // <https://webkit.org/b/141585> Some IDL attributes appear on the instances instead of on prototypes
                     // Developers may create such a descriptors, so we should be resilient:
                     // var x = {}; Object.defineProperty(x, "p", {get:undefined}); Object.getOwnPropertyDescriptor(x, "p")
                     var fakeDescriptor = createFakeValueDescriptor(name, symbol, descriptor, isOwnProperty, true);
@@ -810,8 +820,8 @@ InjectedScript.prototype = {
         case 1: // Node.ELEMENT_NODE
             if (node.id)
                 return "<" + nodeName + " id=\"" + node.id + "\">";
-            if (node.className)
-                return "<" + nodeName + " class=\"" + node.className + "\">";
+            if (node.classList.length)
+                return "<" + nodeName + " class=\"" + node.classList.toString().replace(/\s+/, " ") + "\">";
             if (nodeName === "input" && node.type)
                 return "<" + nodeName + " type=\"" + node.type + "\">";
             return "<" + nodeName + ">";
@@ -1018,7 +1028,7 @@ InjectedScript.RemoteObject = function(object, objectGroupName, forceValueType, 
 }
 
 InjectedScript.RemoteObject.prototype = {
-    _emptyPreview: function()
+    _initialPreview: function()
     {
         var preview = {
             type: this.type,
@@ -1040,9 +1050,24 @@ InjectedScript.RemoteObject.prototype = {
         return preview;
     },
 
-    _createObjectPreviewForValue: function(value)
+    _emptyPreview: function()
     {
-        var remoteObject = new InjectedScript.RemoteObject(value, undefined, false, true, undefined);
+        var preview = this._initialPreview();
+
+        if (this.subtype === "map" || this.subtype === "set" || this.subtype === "weakmap" || this.subtype === "weakset" || this.subtype === "iterator") {
+            if (this.size) {
+                preview.entries = [];
+                preview.lossless = false;
+                preview.overflow = true;
+            }
+        }
+
+        return preview;
+    },
+
+    _createObjectPreviewForValue: function(value, generatePreview)
+    {
+        var remoteObject = new InjectedScript.RemoteObject(value, undefined, false, generatePreview, undefined);
         if (remoteObject.objectId)
             injectedScript.releaseObject(remoteObject.objectId);
         if (remoteObject.classPrototype && remoteObject.classPrototype.objectId)
@@ -1053,12 +1078,7 @@ InjectedScript.RemoteObject.prototype = {
 
     _generatePreview: function(object, firstLevelKeys, secondLevelKeys)
     {
-        var preview = this._emptyPreview();
-
-        // Primitives just have a value.
-        if (this.type !== "object")
-            return;
-
+        var preview = this._initialPreview();
         var isTableRowsRequest = secondLevelKeys === null || secondLevelKeys;
         var firstLevelKeysCount = firstLevelKeys ? firstLevelKeys.length : 0;
 
@@ -1077,7 +1097,7 @@ InjectedScript.RemoteObject.prototype = {
             // Internal Properties.
             var internalPropertyDescriptors = injectedScript._internalPropertyDescriptors(object, true);
             if (internalPropertyDescriptors) {
-                this._appendPropertyPreviews(preview, internalPropertyDescriptors, true, propertiesThreshold, firstLevelKeys, secondLevelKeys);
+                this._appendPropertyPreviews(object, preview, internalPropertyDescriptors, true, propertiesThreshold, firstLevelKeys, secondLevelKeys);
                 if (propertiesThreshold.indexes < 0 || propertiesThreshold.properties < 0)
                     return preview;
             }
@@ -1087,7 +1107,7 @@ InjectedScript.RemoteObject.prototype = {
 
             // Properties.
             var descriptors = injectedScript._propertyDescriptors(object, InjectedScript.CollectionMode.AllProperties);
-            this._appendPropertyPreviews(preview, descriptors, false, propertiesThreshold, firstLevelKeys, secondLevelKeys);
+            this._appendPropertyPreviews(object, preview, descriptors, false, propertiesThreshold, firstLevelKeys, secondLevelKeys);
             if (propertiesThreshold.indexes < 0 || propertiesThreshold.properties < 0)
                 return preview;
         } catch (e) {
@@ -1097,7 +1117,7 @@ InjectedScript.RemoteObject.prototype = {
         return preview;
     },
 
-    _appendPropertyPreviews: function(preview, descriptors, internal, propertiesThreshold, firstLevelKeys, secondLevelKeys)
+    _appendPropertyPreviews: function(object, preview, descriptors, internal, propertiesThreshold, firstLevelKeys, secondLevelKeys)
     {
         for (var descriptor of descriptors) {
             // Seen enough.
@@ -1170,7 +1190,7 @@ InjectedScript.RemoteObject.prototype = {
                     preview.lossless = false;
                 }
                 this._appendPropertyPreview(preview, internal, {name, type, value: symbolString}, propertiesThreshold);
-                return;
+                continue;
             }
 
             // Object.
@@ -1180,9 +1200,9 @@ InjectedScript.RemoteObject.prototype = {
                 property.subtype = subtype;
 
             // Second level.
-            if ((secondLevelKeys === null || secondLevelKeys) || this._isPreviewableObject(value)) {
+            if ((secondLevelKeys === null || secondLevelKeys) || this._isPreviewableObject(value, object)) {
                 // FIXME: If we want secondLevelKeys filter to continue we would need some refactoring.
-                var subPreview = this._createObjectPreviewForValue(value);
+                var subPreview = this._createObjectPreviewForValue(value, value !== object);
                 property.valuePreview = subPreview;
                 if (!subPreview.lossless)
                     preview.lossless = false;
@@ -1240,17 +1260,25 @@ InjectedScript.RemoteObject.prototype = {
             preview.lossless = false;
         }
 
+        function updateMainPreview(subPreview) {
+            if (!subPreview.lossless)
+                preview.lossless = false;
+        }
+
         preview.entries = entries.map(function(entry) {
-            entry.value = this._createObjectPreviewForValue(entry.value);
-            if ("key" in entry)
-                entry.key = this._createObjectPreviewForValue(entry.key);
+            entry.value = this._createObjectPreviewForValue(entry.value, entry.value !== object);
+            updateMainPreview(entry.value);
+            if ("key" in entry) {
+                entry.key = this._createObjectPreviewForValue(entry.key, entry.key !== object);
+                updateMainPreview(entry.key);
+            }
             return entry;
         }, this);
     },
 
-    _isPreviewableObject: function(object)
+    _isPreviewableObject: function(value, object)
     {
-        return this._isPreviewableObjectInternal(object, new Set, 1);
+        return this._isPreviewableObjectInternal(value, new Set([object]), 1);
     },
 
     _isPreviewableObjectInternal: function(object, knownObjects, depth)
@@ -1321,7 +1349,7 @@ InjectedScript.RemoteObject.prototype = {
 InjectedScript.CallFrameProxy = function(ordinal, callFrame)
 {
     this.callFrameId = "{\"ordinal\":" + ordinal + ",\"injectedScriptId\":" + injectedScriptId + "}";
-    this.functionName = (callFrame.type === "function" ? callFrame.functionName : "");
+    this.functionName = callFrame.functionName;
     this.location = {scriptId: String(callFrame.sourceID), lineNumber: callFrame.line, columnNumber: callFrame.column};
     this.scopeChain = this._wrapScopeChain(callFrame);
     this.this = injectedScript._wrapObject(callFrame.thisObject, "backtrace");
@@ -1340,11 +1368,12 @@ InjectedScript.CallFrameProxy.prototype = {
 
 InjectedScript.CallFrameProxy._scopeTypeNames = {
     0: "global", // GLOBAL_SCOPE
-    1: "local", // LOCAL_SCOPE
-    2: "with", // WITH_SCOPE
-    3: "closure", // CLOSURE_SCOPE
-    4: "catch", // CATCH_SCOPE
-    5: "functionName", // FUNCTION_NAME_SCOPE
+    1: "with", // WITH_SCOPE
+    2: "closure", // CLOSURE_SCOPE
+    3: "catch", // CATCH_SCOPE
+    4: "functionName", // FUNCTION_NAME_SCOPE
+    5: "globalLexicalEnvironment", // GLOBAL_LEXICAL_ENVIRONMENT_SCOPE
+    6: "nestedLexical", // NESTED_LEXICAL_SCOPE
 }
 
 InjectedScript.CallFrameProxy._createScopeJson = function(scopeTypeCode, scopeObject, groupId)

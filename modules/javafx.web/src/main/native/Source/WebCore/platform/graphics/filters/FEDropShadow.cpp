@@ -20,7 +20,6 @@
 #include "config.h"
 #include "FEDropShadow.h"
 
-#include "ColorSpace.h"
 #include "FEGaussianBlur.h"
 #include "Filter.h"
 #include "GraphicsContext.h"
@@ -88,14 +87,15 @@ void FEDropShadow::platformApplySoftware()
     drawingRegionWithOffset.move(offset);
 
     ImageBuffer* sourceImage = in->asImageBuffer();
-    ASSERT(sourceImage);
-    GraphicsContext* resultContext = resultImage->context();
-    ASSERT(resultContext);
-    resultContext->setAlpha(m_shadowOpacity);
-    resultContext->drawImageBuffer(sourceImage, ColorSpaceDeviceRGB, drawingRegionWithOffset);
-    resultContext->setAlpha(1);
+    if (!sourceImage)
+        return;
 
-    ShadowBlur contextShadow(blurRadius, offset, m_shadowColor, ColorSpaceDeviceRGB);
+    GraphicsContext& resultContext = resultImage->context();
+    resultContext.setAlpha(m_shadowOpacity);
+    resultContext.drawImageBuffer(*sourceImage, drawingRegionWithOffset);
+    resultContext.setAlpha(1);
+
+    ShadowBlur contextShadow(blurRadius, offset, m_shadowColor);
 
     // TODO: Direct pixel access to ImageBuffer would avoid copying the ImageData.
     IntRect shadowArea(IntPoint(), resultImage->internalSize());
@@ -105,11 +105,11 @@ void FEDropShadow::platformApplySoftware()
 
     resultImage->putByteArray(Premultiplied, srcPixelArray.get(), shadowArea.size(), shadowArea, IntPoint(), ImageBuffer::BackingStoreCoordinateSystem);
 
-    resultContext->setCompositeOperation(CompositeSourceIn);
-    resultContext->fillRect(FloatRect(FloatPoint(), absolutePaintRect().size()), m_shadowColor, ColorSpaceDeviceRGB);
-    resultContext->setCompositeOperation(CompositeDestinationOver);
+    resultContext.setCompositeOperation(CompositeSourceIn);
+    resultContext.fillRect(FloatRect(FloatPoint(), absolutePaintRect().size()), m_shadowColor);
+    resultContext.setCompositeOperation(CompositeDestinationOver);
 
-    resultImage->context()->drawImageBuffer(sourceImage, ColorSpaceDeviceRGB, drawingRegion);
+    resultImage->context().drawImageBuffer(*sourceImage, drawingRegion);
 }
 
 void FEDropShadow::dump()

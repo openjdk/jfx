@@ -950,7 +950,7 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
     if (isContextLostOrPending())
         return nullptr;
 
-    if (equalIgnoringCase(name, "WEBKIT_EXT_texture_filter_anisotropic")
+    if ((equalIgnoringASCIICase(name, "EXT_texture_filter_anisotropic") || equalIgnoringASCIICase(name, "WEBKIT_EXT_texture_filter_anisotropic"))
         && m_context->getExtensions()->supports("GL_EXT_texture_filter_anisotropic")) {
         if (!m_extTextureFilterAnisotropic) {
             m_context->getExtensions()->ensureEnabled("GL_EXT_texture_filter_anisotropic");
@@ -958,7 +958,7 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
         }
         return m_extTextureFilterAnisotropic.get();
     }
-    if (equalIgnoringCase(name, "OES_texture_float")
+    if (equalIgnoringASCIICase(name, "OES_texture_float")
         && m_context->getExtensions()->supports("GL_OES_texture_float")) {
         if (!m_oesTextureFloat) {
             m_context->getExtensions()->ensureEnabled("GL_OES_texture_float");
@@ -966,7 +966,7 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
         }
         return m_oesTextureFloat.get();
     }
-    if (equalIgnoringCase(name, "OES_texture_float_linear")
+    if (equalIgnoringASCIICase(name, "OES_texture_float_linear")
         && m_context->getExtensions()->supports("GL_OES_texture_float_linear")) {
         if (!m_oesTextureFloatLinear) {
             m_context->getExtensions()->ensureEnabled("GL_OES_texture_float_linear");
@@ -974,7 +974,7 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
         }
         return m_oesTextureFloatLinear.get();
     }
-    if (equalIgnoringCase(name, "OES_texture_half_float")
+    if (equalIgnoringASCIICase(name, "OES_texture_half_float")
         && m_context->getExtensions()->supports("GL_OES_texture_half_float")) {
         if (!m_oesTextureHalfFloat) {
             m_context->getExtensions()->ensureEnabled("GL_OES_texture_half_float");
@@ -982,7 +982,7 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
         }
         return m_oesTextureHalfFloat.get();
     }
-    if (equalIgnoringCase(name, "OES_texture_half_float_linear")
+    if (equalIgnoringASCIICase(name, "OES_texture_half_float_linear")
         && m_context->getExtensions()->supports("GL_OES_texture_half_float_linear")) {
         if (!m_oesTextureHalfFloatLinear) {
             m_context->getExtensions()->ensureEnabled("GL_OES_texture_half_float_linear");
@@ -990,30 +990,30 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
         }
         return m_oesTextureHalfFloatLinear.get();
     }
-    if (equalIgnoringCase(name, "WEBGL_lose_context")) {
+    if (equalIgnoringASCIICase(name, "WEBGL_lose_context")) {
         if (!m_webglLoseContext)
             m_webglLoseContext = std::make_unique<WebGLLoseContext>(this);
         return m_webglLoseContext.get();
     }
-    if ((equalIgnoringCase(name, "WEBKIT_WEBGL_compressed_texture_atc"))
+    if ((equalIgnoringASCIICase(name, "WEBKIT_WEBGL_compressed_texture_atc"))
         && WebGLCompressedTextureATC::supported(this)) {
         if (!m_webglCompressedTextureATC)
             m_webglCompressedTextureATC = std::make_unique<WebGLCompressedTextureATC>(this);
         return m_webglCompressedTextureATC.get();
     }
-    if ((equalIgnoringCase(name, "WEBKIT_WEBGL_compressed_texture_pvrtc"))
+    if ((equalIgnoringASCIICase(name, "WEBKIT_WEBGL_compressed_texture_pvrtc"))
         && WebGLCompressedTexturePVRTC::supported(this)) {
         if (!m_webglCompressedTexturePVRTC)
             m_webglCompressedTexturePVRTC = std::make_unique<WebGLCompressedTexturePVRTC>(this);
         return m_webglCompressedTexturePVRTC.get();
     }
-    if (equalIgnoringCase(name, "WEBGL_compressed_texture_s3tc")
+    if (equalIgnoringASCIICase(name, "WEBGL_compressed_texture_s3tc")
         && WebGLCompressedTextureS3TC::supported(this)) {
         if (!m_webglCompressedTextureS3TC)
             m_webglCompressedTextureS3TC = std::make_unique<WebGLCompressedTextureS3TC>(this);
         return m_webglCompressedTextureS3TC.get();
     }
-    if (equalIgnoringCase(name, "WEBGL_depth_texture")
+    if (equalIgnoringASCIICase(name, "WEBGL_depth_texture")
         && WebGLDepthTexture::supported(graphicsContext3D())) {
         if (!m_webglDepthTexture) {
             m_context->getExtensions()->ensureEnabled("GL_CHROMIUM_depth_texture");
@@ -1021,18 +1021,16 @@ WebGLExtension* WebGL2RenderingContext::getExtension(const String& name)
         }
         return m_webglDepthTexture.get();
     }
-    if (allowPrivilegedExtensions()) {
-        if (equalIgnoringCase(name, "WEBGL_debug_renderer_info")) {
-            if (!m_webglDebugRendererInfo)
-                m_webglDebugRendererInfo = std::make_unique<WebGLDebugRendererInfo>(this);
-            return m_webglDebugRendererInfo.get();
-        }
-        if (equalIgnoringCase(name, "WEBGL_debug_shaders")
-            && m_context->getExtensions()->supports("GL_ANGLE_translated_shader_source")) {
-            if (!m_webglDebugShaders)
-                m_webglDebugShaders = std::make_unique<WebGLDebugShaders>(this);
-            return m_webglDebugShaders.get();
-        }
+    if (equalIgnoringASCIICase(name, "WEBGL_debug_renderer_info")) {
+        if (!m_webglDebugRendererInfo)
+            m_webglDebugRendererInfo = std::make_unique<WebGLDebugRendererInfo>(this);
+        return m_webglDebugRendererInfo.get();
+    }
+    if (equalIgnoringASCIICase(name, "WEBGL_debug_shaders")
+        && m_context->getExtensions()->supports("GL_ANGLE_translated_shader_source")) {
+        if (!m_webglDebugShaders)
+            m_webglDebugShaders = std::make_unique<WebGLDebugShaders>(this);
+        return m_webglDebugShaders.get();
     }
 
     return nullptr;
@@ -1064,11 +1062,9 @@ Vector<String> WebGL2RenderingContext::getSupportedExtensions()
     if (WebGLDepthTexture::supported(graphicsContext3D()))
         result.append("WEBGL_depth_texture");
     result.append("WEBGL_lose_context");
-    if (allowPrivilegedExtensions()) {
-        if (m_context->getExtensions()->supports("GL_ANGLE_translated_shader_source"))
-            result.append("WEBGL_debug_shaders");
-        result.append("WEBGL_debug_renderer_info");
-    }
+    if (m_context->getExtensions()->supports("GL_ANGLE_translated_shader_source"))
+        result.append("WEBGL_debug_shaders");
+    result.append("WEBGL_debug_renderer_info");
 
     return result;
 }
@@ -1423,8 +1419,11 @@ void WebGL2RenderingContext::texSubImage2D(GC3Denum target, GC3Dint level, GC3Di
         return;
 
     RefPtr<Image> imageForRender = image->cachedImage()->imageForRenderer(image->renderer());
+    if (!imageForRender)
+        return;
+
     if (imageForRender->isSVGImage())
-        imageForRender = drawImageIntoBuffer(imageForRender.get(), image->width(), image->height(), 1);
+        imageForRender = drawImageIntoBuffer(*imageForRender, image->width(), image->height(), 1);
 
     if (!imageForRender || !validateTexFunc("texSubImage2D", TexSubImage, SourceHTMLImageElement, target, level, GraphicsContext3D::NONE, imageForRender->width(), imageForRender->height(), 0, format, type, xoffset, yoffset))
         return;

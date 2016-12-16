@@ -437,13 +437,6 @@ public:
         return symbolTable;
     }
 
-    static SymbolTable* createNameScopeTable(VM& vm, const Identifier& ident, unsigned attributes)
-    {
-        SymbolTable* result = create(vm);
-        result->add(ident.impl(), SymbolTableEntry(VarOffset(ScopeOffset(0)), attributes));
-        return result;
-    }
-
     static const bool needsDestruction = true;
     static void destroy(JSCell*);
 
@@ -646,10 +639,21 @@ public:
     RefPtr<TypeSet> globalTypeSetForOffset(const ConcurrentJITLocker&, VarOffset, VM&);
     RefPtr<TypeSet> globalTypeSetForVariable(const ConcurrentJITLocker&, UniquedStringImpl* key, VM&);
 
-    bool usesNonStrictEval() { return m_usesNonStrictEval; }
+    bool usesNonStrictEval() const { return m_usesNonStrictEval; }
     void setUsesNonStrictEval(bool usesNonStrictEval) { m_usesNonStrictEval = usesNonStrictEval; }
-    ALWAYS_INLINE bool correspondsToLexicalScope() { return m_correspondsToLexicalScope; }
-    void setDoesCorrespondToLexicalScope() { m_correspondsToLexicalScope = true; }
+
+    bool isNestedLexicalScope() const { return m_nestedLexicalScope; }
+    void markIsNestedLexicalScope() { ASSERT(scopeType() == LexicalScope); m_nestedLexicalScope = true; }
+
+    enum ScopeType {
+        VarScope,
+        GlobalLexicalScope,
+        LexicalScope,
+        CatchScope,
+        FunctionNameScope
+    };
+    void setScopeType(ScopeType type) { m_scopeType = type; }
+    ScopeType scopeType() const { return static_cast<ScopeType>(m_scopeType); }
 
     SymbolTable* cloneScopePart(VM&);
 
@@ -678,7 +682,8 @@ private:
     std::unique_ptr<TypeProfilingRareData> m_typeProfilingRareData;
 
     bool m_usesNonStrictEval : 1;
-    bool m_correspondsToLexicalScope : 1;
+    bool m_nestedLexicalScope : 1; // Non-function LexicalScope.
+    unsigned m_scopeType : 3; // ScopeType
 
     WriteBarrier<ScopedArgumentsTable> m_arguments;
     WriteBarrier<InferredValue> m_singletonScope;

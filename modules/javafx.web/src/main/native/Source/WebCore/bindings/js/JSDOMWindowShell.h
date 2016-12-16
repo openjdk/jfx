@@ -29,12 +29,12 @@
 #ifndef JSDOMWindowShell_h
 #define JSDOMWindowShell_h
 
+#include "DOMWindow.h"
 #include "JSDOMWindow.h"
 #include <runtime/JSProxy.h>
 
 namespace WebCore {
 
-    class DOMWindow;
     class Frame;
 
     class JSDOMWindowShell : public JSC::JSProxy {
@@ -48,7 +48,7 @@ namespace WebCore {
 
         DECLARE_INFO;
 
-        DOMWindow& impl() const;
+        DOMWindow& wrapped() const;
 
         static JSDOMWindowShell* create(JSC::VM& vm, PassRefPtr<DOMWindow> window, JSC::Structure* structure, DOMWrapperWorld& world)
         {

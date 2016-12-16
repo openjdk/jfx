@@ -73,13 +73,21 @@ static WKWebViewConfiguration *defaultConfiguration()
     self.window.title = @"WebEditor [WK2]";
 
     _textFinder = [[NSTextFinder alloc] init];
-    _textFinder.client = (id<NSTextFinderClient>)_webView;
+    _textFinder.incrementalSearchingEnabled = YES;
+    _textFinder.incrementalSearchingShouldDimContentView = YES;
+    _textFinder.client = _webView;
     _textFinder.findBarContainer = self;
 }
 
 - (void)loadHTMLString:(NSString *)content
 {
-    [_webView loadHTMLString:content baseURL:nil];
+    NSStringEncoding encoding = NSUnicodeStringEncoding;
+
+    NSData *data = [content dataUsingEncoding:encoding];
+    CFStringEncoding cfEncoding = CFStringConvertNSStringEncodingToEncoding(encoding);
+    NSString *textEncodingName = (__bridge NSString *)CFStringConvertEncodingToIANACharSetName(cfEncoding);
+
+    [_webView _loadData:data MIMEType:@"text/html" characterEncodingName:textEncodingName baseURL:[NSURL URLWithString:@"x-webdoc:/klsadfgjlfsdj/"] userData:nil];
 }
 
 - (void)performTextFinderAction:(id)sender
@@ -100,6 +108,11 @@ static WKWebViewConfiguration *defaultConfiguration()
     _findBarVisible = YES;
     [containerView addSubview:_textFindBarView];
     [self layout];
+}
+
+- (NSView *)contentView
+{
+    return _webView;
 }
 
 - (BOOL)isFindBarVisible

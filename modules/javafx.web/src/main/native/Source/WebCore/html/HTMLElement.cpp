@@ -29,7 +29,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "CSSValuePool.h"
-#include "DOMSettableTokenList.h"
+#include "DOMTokenList.h"
 #include "DocumentFragment.h"
 #include "ElementAncestorIterator.h"
 #include "Event.h"
@@ -73,11 +73,13 @@ Ref<HTMLElement> HTMLElement::create(const QualifiedName& tagName, Document& doc
 
 String HTMLElement::nodeName() const
 {
-    // FIXME: Would be nice to have an atomicstring lookup based off uppercase
-    // chars that does not have to copy the string on a hit in the hash.
-    // FIXME: We should have a way to detect XHTML elements and replace the hasPrefix() check with it.
-    if (document().isHTMLDocument() && !tagQName().hasPrefix())
-        return tagQName().localNameUpper();
+    // FIXME: Would be nice to have an AtomicString lookup based off uppercase
+    // ASCII characters that does not have to copy the string on a hit in the hash.
+    if (document().isHTMLDocument()) {
+        if (LIKELY(!tagQName().hasPrefix()))
+            return tagQName().localNameUpper();
+        return Element::nodeName().convertToASCIIUppercase();
+    }
     return Element::nodeName();
 }
 
@@ -131,10 +133,10 @@ static inline CSSValueID unicodeBidiAttributeForDirAuto(HTMLElement& element)
 
 unsigned HTMLElement::parseBorderWidthAttribute(const AtomicString& value) const
 {
-    unsigned borderWidth = 0;
-    if (value.isEmpty() || !parseHTMLNonNegativeInteger(value, borderWidth))
-        return hasTagName(tableTag) ? 1 : borderWidth;
-    return borderWidth;
+    if (Optional<int> borderWidth = parseHTMLNonNegativeInteger(value))
+        return borderWidth.value();
+
+    return hasTagName(tableTag) ? 1 : 0;
 }
 
 void HTMLElement::applyBorderAttributeToStyle(const AtomicString& value, MutableStyleProperties& style)
@@ -163,7 +165,7 @@ bool HTMLElement::isPresentationAttribute(const QualifiedName& name) const
 
 static bool isLTROrRTLIgnoringCase(const AtomicString& dirAttributeValue)
 {
-    return equalIgnoringCase(dirAttributeValue, "rtl") || equalIgnoringCase(dirAttributeValue, "ltr");
+    return equalLettersIgnoringASCIICase(dirAttributeValue, "rtl") || equalLettersIgnoringASCIICase(dirAttributeValue, "ltr");
 }
 
 enum class ContentEditableType {
@@ -177,11 +179,11 @@ static inline ContentEditableType contentEditableType(const AtomicString& value)
 {
     if (value.isNull())
         return ContentEditableType::Inherit;
-    if (value.isEmpty() || equalIgnoringCase(value, "true"))
+    if (value.isEmpty() || equalLettersIgnoringASCIICase(value, "true"))
         return ContentEditableType::True;
-    if (equalIgnoringCase(value, "false"))
+    if (equalLettersIgnoringASCIICase(value, "false"))
         return ContentEditableType::False;
-    if (equalIgnoringCase(value, "plaintext-only"))
+    if (equalLettersIgnoringASCIICase(value, "plaintext-only"))
         return ContentEditableType::PlaintextOnly;
 
     return ContentEditableType::Inherit;
@@ -195,7 +197,7 @@ static ContentEditableType contentEditableType(const HTMLElement& element)
 void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
-        if (equalIgnoringCase(value, "middle"))
+        if (equalLettersIgnoringASCIICase(value, "middle"))
             addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, CSSValueCenter);
         else
             addPropertyToPresentationAttributeStyle(style, CSSPropertyTextAlign, value);
@@ -223,13 +225,13 @@ void HTMLElement::collectStyleForPresentationAttribute(const QualifiedName& name
     } else if (name == hiddenAttr) {
         addPropertyToPresentationAttributeStyle(style, CSSPropertyDisplay, CSSValueNone);
     } else if (name == draggableAttr) {
-        if (equalIgnoringCase(value, "true")) {
+        if (equalLettersIgnoringASCIICase(value, "true")) {
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserDrag, CSSValueElement);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserSelect, CSSValueNone);
-        } else if (equalIgnoringCase(value, "false"))
+        } else if (equalLettersIgnoringASCIICase(value, "false"))
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWebkitUserDrag, CSSValueNone);
     } else if (name == dirAttr) {
-        if (equalIgnoringCase(value, "auto"))
+        if (equalLettersIgnoringASCIICase(value, "auto"))
             addPropertyToPresentationAttributeStyle(style, CSSPropertyUnicodeBidi, unicodeBidiAttributeForDirAuto(*this));
         else {
             if (isLTROrRTLIgnoringCase(value))
@@ -312,6 +314,7 @@ HTMLElement::EventHandlerNameMap HTMLElement::createEventHandlerNameMap()
         &onprogressAttr,
         &onratechangeAttr,
         &onresetAttr,
+        &onresizeAttr,
         &onscrollAttr,
         &onsearchAttr,
         &onseekedAttr,
@@ -384,7 +387,7 @@ void HTMLElement::populateEventHandlerNameMap(EventHandlerNameMap& map, const Qu
         // using pointers from eventNames(), the passed-in table can be initialized at compile time.
         AtomicString eventName = attributeName.string().substring(2);
 
-        map.add(attributeName.impl(), WTF::move(eventName));
+        map.add(attributeName.impl(), WTFMove(eventName));
     }
 }
 
@@ -448,12 +451,11 @@ void HTMLElement::parseAttribute(const QualifiedName& name, const AtomicString& 
     }
 
     if (name == tabindexAttr) {
-        int tabIndex = 0;
         if (value.isEmpty())
             clearTabIndexExplicitlyIfNeeded();
-        else if (parseHTMLInteger(value, tabIndex)) {
+        else if (Optional<int> tabIndex = parseHTMLInteger(value)) {
             // Clamp tab index to a 16-bit value to match Firefox's behavior.
-            setTabIndexExplicitly(std::max(-0x8000, std::min(tabIndex, 0x7FFF)));
+            setTabIndexExplicitly(std::max(-0x8000, std::min(tabIndex.value(), 0x7FFF)));
         }
         return;
     }
@@ -524,12 +526,11 @@ static inline const AtomicString& toValidDirValue(const AtomicString& value)
     static NeverDestroyed<AtomicString> ltrValue("ltr", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> rtlValue("rtl", AtomicString::ConstructFromLiteral);
     static NeverDestroyed<AtomicString> autoValue("auto", AtomicString::ConstructFromLiteral);
-
-    if (equalIgnoringCase(value, ltrValue))
+    if (equalLettersIgnoringASCIICase(value, "ltr"))
         return ltrValue;
-    if (equalIgnoringCase(value, rtlValue))
+    if (equalLettersIgnoringASCIICase(value, "rtl"))
         return rtlValue;
-    if (equalIgnoringCase(value, autoValue))
+    if (equalLettersIgnoringASCIICase(value, "auto"))
         return autoValue;
     return nullAtom;
 }
@@ -584,9 +585,9 @@ void HTMLElement::setInnerText(const String& text, ExceptionCode& ec)
 
     // Add text nodes and <br> elements.
     ec = 0;
-    RefPtr<DocumentFragment> fragment = textToFragment(text, ec);
+    Ref<DocumentFragment> fragment = textToFragment(text, ec);
     if (!ec)
-        replaceChildrenWithFragment(*this, fragment.release(), ec);
+        replaceChildrenWithFragment(*this, WTFMove(fragment), ec);
 }
 
 void HTMLElement::setOuterText(const String& text, ExceptionCode& ec)
@@ -621,7 +622,7 @@ void HTMLElement::setOuterText(const String& text, ExceptionCode& ec)
         ec = HIERARCHY_REQUEST_ERR;
     if (ec)
         return;
-    parent->replaceChild(newChild.release(), this, ec);
+    parent->replaceChild(newChild.releaseNonNull(), *this, ec);
 
     RefPtr<Node> node = next ? next->previousSibling() : nullptr;
     if (!ec && is<Text>(node.get()))
@@ -630,7 +631,7 @@ void HTMLElement::setOuterText(const String& text, ExceptionCode& ec)
         mergeWithNextTextNode(downcast<Text>(*prev), ec);
 }
 
-Node* HTMLElement::insertAdjacent(const String& where, Node* newChild, ExceptionCode& ec)
+Node* HTMLElement::insertAdjacent(const String& where, Ref<Node>&& newChild, ExceptionCode& ec)
 {
     // In Internet Explorer if the element has no parent and where is "beforeBegin" or "afterEnd",
     // a document fragment is created and the elements appended in the correct order. This document
@@ -639,20 +640,20 @@ Node* HTMLElement::insertAdjacent(const String& where, Node* newChild, Exception
     // This is impossible for us to implement as the DOM tree does not allow for such structures,
     // Opera also appears to disallow such usage.
 
-    if (equalIgnoringCase(where, "beforeBegin")) {
+    if (equalLettersIgnoringASCIICase(where, "beforebegin")) {
         ContainerNode* parent = this->parentNode();
-        return (parent && parent->insertBefore(newChild, this, ec)) ? newChild : nullptr;
+        return (parent && parent->insertBefore(newChild.copyRef(), this, ec)) ? newChild.ptr() : nullptr;
     }
 
-    if (equalIgnoringCase(where, "afterBegin"))
-        return insertBefore(newChild, firstChild(), ec) ? newChild : nullptr;
+    if (equalLettersIgnoringASCIICase(where, "afterbegin"))
+        return insertBefore(newChild.copyRef(), firstChild(), ec) ? newChild.ptr() : nullptr;
 
-    if (equalIgnoringCase(where, "beforeEnd"))
-        return appendChild(newChild, ec) ? newChild : nullptr;
+    if (equalLettersIgnoringASCIICase(where, "beforeend"))
+        return appendChild(newChild.copyRef(), ec) ? newChild.ptr() : nullptr;
 
-    if (equalIgnoringCase(where, "afterEnd")) {
+    if (equalLettersIgnoringASCIICase(where, "afterend")) {
         ContainerNode* parent = this->parentNode();
-        return (parent && parent->insertBefore(newChild, nextSibling(), ec)) ? newChild : nullptr;
+        return (parent && parent->insertBefore(newChild.copyRef(), nextSibling(), ec)) ? newChild.ptr() : nullptr;
     }
 
     // IE throws COM Exception E_INVALIDARG; this is the best DOM exception alternative.
@@ -668,7 +669,7 @@ Element* HTMLElement::insertAdjacentElement(const String& where, Element* newChi
         return nullptr;
     }
 
-    Node* returnValue = insertAdjacent(where, newChild, ec);
+    Node* returnValue = insertAdjacent(where, *newChild, ec);
     ASSERT_WITH_SECURITY_IMPLICATION(!returnValue || is<Element>(*returnValue));
     return downcast<Element>(returnValue);
 }
@@ -676,7 +677,7 @@ Element* HTMLElement::insertAdjacentElement(const String& where, Element* newChi
 // Step 3 of http://www.whatwg.org/specs/web-apps/current-work/multipage/apis-in-html-documents.html#insertadjacenthtml()
 static Element* contextElementForInsertion(const String& where, Element* element, ExceptionCode& ec)
 {
-    if (equalIgnoringCase(where, "beforeBegin") || equalIgnoringCase(where, "afterEnd")) {
+    if (equalLettersIgnoringASCIICase(where, "beforebegin") || equalLettersIgnoringASCIICase(where, "afterend")) {
         ContainerNode* parent = element->parentNode();
         if (parent && !is<Element>(*parent)) {
             ec = NO_MODIFICATION_ALLOWED_ERR;
@@ -685,7 +686,7 @@ static Element* contextElementForInsertion(const String& where, Element* element
         ASSERT_WITH_SECURITY_IMPLICATION(!parent || is<Element>(*parent));
         return downcast<Element>(parent);
     }
-    if (equalIgnoringCase(where, "afterBegin") || equalIgnoringCase(where, "beforeEnd"))
+    if (equalLettersIgnoringASCIICase(where, "afterbegin") || equalLettersIgnoringASCIICase(where, "beforeend"))
         return element;
     ec =  SYNTAX_ERR;
     return nullptr;
@@ -699,13 +700,12 @@ void HTMLElement::insertAdjacentHTML(const String& where, const String& markup, 
     RefPtr<DocumentFragment> fragment = createFragmentForInnerOuterHTML(markup, contextElement, AllowScriptingContent, ec);
     if (!fragment)
         return;
-    insertAdjacent(where, fragment.get(), ec);
+    insertAdjacent(where, fragment.releaseNonNull(), ec);
 }
 
 void HTMLElement::insertAdjacentText(const String& where, const String& text, ExceptionCode& ec)
 {
-    RefPtr<Text> textNode = document().createTextNode(text);
-    insertAdjacent(where, textNode.get(), ec);
+    insertAdjacent(where, document().createTextNode(text), ec);
 }
 
 void HTMLElement::applyAlignmentAttributeToStyle(const AtomicString& alignment, MutableStyleProperties& style)
@@ -715,25 +715,25 @@ void HTMLElement::applyAlignmentAttributeToStyle(const AtomicString& alignment, 
     CSSValueID floatValue = CSSValueInvalid;
     CSSValueID verticalAlignValue = CSSValueInvalid;
 
-    if (equalIgnoringCase(alignment, "absmiddle"))
+    if (equalLettersIgnoringASCIICase(alignment, "absmiddle"))
         verticalAlignValue = CSSValueMiddle;
-    else if (equalIgnoringCase(alignment, "absbottom"))
+    else if (equalLettersIgnoringASCIICase(alignment, "absbottom"))
         verticalAlignValue = CSSValueBottom;
-    else if (equalIgnoringCase(alignment, "left")) {
+    else if (equalLettersIgnoringASCIICase(alignment, "left")) {
         floatValue = CSSValueLeft;
         verticalAlignValue = CSSValueTop;
-    } else if (equalIgnoringCase(alignment, "right")) {
+    } else if (equalLettersIgnoringASCIICase(alignment, "right")) {
         floatValue = CSSValueRight;
         verticalAlignValue = CSSValueTop;
-    } else if (equalIgnoringCase(alignment, "top"))
+    } else if (equalLettersIgnoringASCIICase(alignment, "top"))
         verticalAlignValue = CSSValueTop;
-    else if (equalIgnoringCase(alignment, "middle"))
+    else if (equalLettersIgnoringASCIICase(alignment, "middle"))
         verticalAlignValue = CSSValueWebkitBaselineMiddle;
-    else if (equalIgnoringCase(alignment, "center"))
+    else if (equalLettersIgnoringASCIICase(alignment, "center"))
         verticalAlignValue = CSSValueMiddle;
-    else if (equalIgnoringCase(alignment, "bottom"))
+    else if (equalLettersIgnoringASCIICase(alignment, "bottom"))
         verticalAlignValue = CSSValueBaseline;
-    else if (equalIgnoringCase(alignment, "texttop"))
+    else if (equalLettersIgnoringASCIICase(alignment, "texttop"))
         verticalAlignValue = CSSValueTextTop;
 
     if (floatValue != CSSValueInvalid)
@@ -770,13 +770,13 @@ String HTMLElement::contentEditable() const
 
 void HTMLElement::setContentEditable(const String& enabled, ExceptionCode& ec)
 {
-    if (equalIgnoringCase(enabled, "true"))
+    if (equalLettersIgnoringASCIICase(enabled, "true"))
         setAttribute(contenteditableAttr, AtomicString("true", AtomicString::ConstructFromLiteral));
-    else if (equalIgnoringCase(enabled, "false"))
+    else if (equalLettersIgnoringASCIICase(enabled, "false"))
         setAttribute(contenteditableAttr, AtomicString("false", AtomicString::ConstructFromLiteral));
-    else if (equalIgnoringCase(enabled, "plaintext-only"))
+    else if (equalLettersIgnoringASCIICase(enabled, "plaintext-only"))
         setAttribute(contenteditableAttr, AtomicString("plaintext-only", AtomicString::ConstructFromLiteral));
-    else if (equalIgnoringCase(enabled, "inherit"))
+    else if (equalLettersIgnoringASCIICase(enabled, "inherit"))
         removeAttribute(contenteditableAttr);
     else
         ec = SYNTAX_ERR;
@@ -784,7 +784,7 @@ void HTMLElement::setContentEditable(const String& enabled, ExceptionCode& ec)
 
 bool HTMLElement::draggable() const
 {
-    return equalIgnoringCase(fastGetAttribute(draggableAttr), "true");
+    return equalLettersIgnoringASCIICase(fastGetAttribute(draggableAttr), "true");
 }
 
 void HTMLElement::setDraggable(bool value)
@@ -808,7 +808,7 @@ void HTMLElement::setSpellcheck(bool enable)
 
 void HTMLElement::click()
 {
-    dispatchSimulatedClick(nullptr, SendNoEvents, DoNotShowPressedLook);
+    dispatchSimulatedClickForBindings(nullptr);
 }
 
 void HTMLElement::accessKeyAction(bool sendMouseEvents)
@@ -834,9 +834,9 @@ TranslateAttributeMode HTMLElement::translateAttributeMode() const
 
     if (value.isNull())
         return TranslateAttributeInherit;
-    if (equalIgnoringCase(value, "yes") || value.isEmpty())
+    if (equalLettersIgnoringASCIICase(value, "yes") || value.isEmpty())
         return TranslateAttributeYes;
-    if (equalIgnoringCase(value, "no"))
+    if (equalLettersIgnoringASCIICase(value, "no"))
         return TranslateAttributeNo;
 
     return TranslateAttributeInherit;
@@ -869,7 +869,7 @@ bool HTMLElement::rendererIsNeeded(const RenderStyle& style)
             return false;
     } else if (hasTagName(noembedTag)) {
         Frame* frame = document().frame();
-        if (frame && frame->loader().subframeLoader().allowPlugins(NotAboutToInstantiatePlugin))
+        if (frame && frame->loader().subframeLoader().allowPlugins())
             return false;
     }
     return StyledElement::rendererIsNeeded(style);
@@ -877,7 +877,7 @@ bool HTMLElement::rendererIsNeeded(const RenderStyle& style)
 
 RenderPtr<RenderElement> HTMLElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return RenderElement::createFor(*this, WTF::move(style));
+    return RenderElement::createFor(*this, WTFMove(style));
 }
 
 HTMLFormElement* HTMLElement::virtualForm() const
@@ -925,7 +925,7 @@ void HTMLElement::childrenChanged(const ChildChange& change)
 bool HTMLElement::hasDirectionAuto() const
 {
     const AtomicString& direction = fastGetAttribute(dirAttr);
-    return (hasTagName(bdiTag) && direction.isNull()) || equalIgnoringCase(direction, "auto");
+    return (hasTagName(bdiTag) && direction.isNull()) || equalLettersIgnoringASCIICase(direction, "auto");
 }
 
 TextDirection HTMLElement::directionalityIfhasDirAutoAttribute(bool& isAuto) const
@@ -953,7 +953,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
     Node* node = firstChild();
     while (node) {
         // Skip bdi, script, style and text form controls.
-        if (equalIgnoringCase(node->nodeName(), "bdi") || node->hasTagName(scriptTag) || node->hasTagName(styleTag)
+        if (equalLettersIgnoringASCIICase(node->nodeName(), "bdi") || node->hasTagName(scriptTag) || node->hasTagName(styleTag)
             || (is<Element>(*node) && downcast<Element>(*node).isTextFormControl())) {
             node = NodeTraversal::nextSkippingChildren(*node, this);
             continue;
@@ -962,7 +962,7 @@ TextDirection HTMLElement::directionality(Node** strongDirectionalityTextNode) c
         // Skip elements with valid dir attribute
         if (is<Element>(*node)) {
             AtomicString dirAttributeValue = downcast<Element>(*node).fastGetAttribute(dirAttr);
-            if (isLTROrRTLIgnoringCase(dirAttributeValue) || equalIgnoringCase(dirAttributeValue, "auto")) {
+            if (isLTROrRTLIgnoringCase(dirAttributeValue) || equalLettersIgnoringASCIICase(dirAttributeValue, "auto")) {
                 node = NodeTraversal::nextSkippingChildren(*node, this);
                 continue;
             }
@@ -991,7 +991,7 @@ void HTMLElement::dirAttributeChanged(const AtomicString& value)
     if (is<HTMLElement>(parent) && parent->selfOrAncestorHasDirAutoAttribute())
         downcast<HTMLElement>(*parent).adjustDirectionalityIfNeededAfterChildAttributeChanged(this);
 
-    if (equalIgnoringCase(value, "auto"))
+    if (equalLettersIgnoringASCIICase(value, "auto"))
         calculateAndAdjustDirectionality();
 }
 
@@ -1142,7 +1142,7 @@ void HTMLElement::addHTMLColorToStyle(MutableStyleProperties& style, CSSProperty
     String colorString = attributeValue.stripWhiteSpace();
 
     // "transparent" doesn't apply a color either.
-    if (equalIgnoringCase(colorString, "transparent"))
+    if (equalLettersIgnoringASCIICase(colorString, "transparent"))
         return;
 
     // If the string is a named CSS color or a 3/6-digit hex color, use that.
@@ -1150,7 +1150,7 @@ void HTMLElement::addHTMLColorToStyle(MutableStyleProperties& style, CSSProperty
     if (!parsedColor.isValid())
         parsedColor.setRGB(parseColorStringWithCrazyLegacyRules(colorString));
 
-    style.setProperty(propertyID, cssValuePool().createColorValue(parsedColor.rgb()));
+    style.setProperty(propertyID, CSSValuePool::singleton().createColorValue(parsedColor.rgb()));
 }
 
 bool HTMLElement::willRespondToMouseMoveEvents()

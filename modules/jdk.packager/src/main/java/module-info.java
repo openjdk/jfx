@@ -40,20 +40,19 @@ module jdk.packager {
     uses com.oracle.tools.packager.Bundler;
     uses com.oracle.tools.packager.Bundlers;
 
-    provides com.oracle.tools.packager.Bundlers with com.oracle.tools.packager.BasicBundlers;
+    provides com.oracle.tools.packager.Bundlers with
+        com.oracle.tools.packager.BasicBundlers;
 
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.jnlp.JNLPBundler;
-
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.linux.LinuxAppBundler;
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.linux.LinuxDebBundler;
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.linux.LinuxRpmBundler;
-
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.mac.MacAppBundler;
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.mac.MacAppStoreBundler;
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.mac.MacDmgBundler;
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.mac.MacPkgBundler;
-
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.windows.WinAppBundler;
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.windows.WinExeBundler;
-    provides com.oracle.tools.packager.Bundler with com.oracle.tools.packager.windows.WinMsiBundler;
+    provides com.oracle.tools.packager.Bundler with
+        com.oracle.tools.packager.jnlp.JNLPBundler,
+        com.oracle.tools.packager.linux.LinuxAppBundler,
+        com.oracle.tools.packager.linux.LinuxDebBundler,
+        com.oracle.tools.packager.linux.LinuxRpmBundler,
+        com.oracle.tools.packager.mac.MacAppBundler,
+        com.oracle.tools.packager.mac.MacAppStoreBundler,
+        com.oracle.tools.packager.mac.MacDmgBundler,
+        com.oracle.tools.packager.mac.MacPkgBundler,
+        com.oracle.tools.packager.windows.WinAppBundler,
+        com.oracle.tools.packager.windows.WinExeBundler,
+        com.oracle.tools.packager.windows.WinMsiBundler;
 }

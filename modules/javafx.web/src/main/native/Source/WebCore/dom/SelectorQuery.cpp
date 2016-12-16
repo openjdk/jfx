@@ -118,7 +118,7 @@ inline bool SelectorDataList::selectorMatches(const SelectorData& selectorData, 
     SelectorChecker::CheckingContext selectorCheckingContext(SelectorChecker::Mode::QueryingRules);
     selectorCheckingContext.scope = rootNode.isDocumentNode() ? nullptr : &rootNode;
     unsigned ignoredSpecificity;
-    return selectorChecker.match(selectorData.selector, &element, selectorCheckingContext, ignoredSpecificity);
+    return selectorChecker.match(*selectorData.selector, element, selectorCheckingContext, ignoredSpecificity);
 }
 
 inline Element* SelectorDataList::selectorClosest(const SelectorData& selectorData, Element& element, const ContainerNode& rootNode) const
@@ -126,18 +126,16 @@ inline Element* SelectorDataList::selectorClosest(const SelectorData& selectorDa
     SelectorChecker selectorChecker(element.document());
     SelectorChecker::CheckingContext selectorCheckingContext(SelectorChecker::Mode::QueryingRules);
     selectorCheckingContext.scope = rootNode.isDocumentNode() ? nullptr : &rootNode;
-    Element* currentNode = &element;
     unsigned ignoredSpecificity;
-    if (!selectorChecker.match(selectorData.selector, currentNode, selectorCheckingContext, ignoredSpecificity))
+    if (!selectorChecker.match(*selectorData.selector, element, selectorCheckingContext, ignoredSpecificity))
         return nullptr;
-    return currentNode;
+    return &element;
 }
 
 bool SelectorDataList::matches(Element& targetElement) const
 {
-    unsigned selectorCount = m_selectors.size();
-    for (unsigned i = 0; i < selectorCount; ++i) {
-        if (selectorMatches(m_selectors[i], targetElement, targetElement))
+    for (auto& selctor : m_selectors) {
+        if (selectorMatches(selctor, targetElement, targetElement))
             return true;
     }
     return false;
@@ -220,12 +218,10 @@ ALWAYS_INLINE void SelectorDataList::executeFastPathForIdSelector(const Containe
     if (UNLIKELY(rootNode.treeScope().containsMultipleElementsWithId(idToMatch))) {
         const Vector<Element*>* elements = rootNode.treeScope().getAllElementsById(idToMatch);
         ASSERT(elements);
-        size_t count = elements->size();
         bool rootNodeIsTreeScopeRoot = isTreeScopeRoot(rootNode);
-        for (size_t i = 0; i < count; ++i) {
-            Element& element = *elements->at(i);
-            if ((rootNodeIsTreeScopeRoot || element.isDescendantOf(&rootNode)) && selectorMatches(selectorData, element, rootNode)) {
-                SelectorQueryTrait::appendOutputForElement(output, &element);
+        for (auto& element : *elements) {
+            if ((rootNodeIsTreeScopeRoot || element->isDescendantOf(&rootNode)) && selectorMatches(selectorData, *element, rootNode)) {
+                SelectorQueryTrait::appendOutputForElement(output, element);
                 if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
                     return;
             }
@@ -385,10 +381,9 @@ ALWAYS_INLINE void SelectorDataList::executeSingleSelectorData(const ContainerNo
 template <typename SelectorQueryTrait>
 ALWAYS_INLINE void SelectorDataList::executeSingleMultiSelectorData(const ContainerNode& rootNode, typename SelectorQueryTrait::OutputType& output) const
 {
-    unsigned selectorCount = m_selectors.size();
     for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
-        for (unsigned i = 0; i < selectorCount; ++i) {
-            if (selectorMatches(m_selectors[i], element, rootNode)) {
+        for (auto& selector : m_selectors) {
+            if (selectorMatches(selector, element, rootNode)) {
                 SelectorQueryTrait::appendOutputForElement(output, &element);
                 if (SelectorQueryTrait::shouldOnlyMatchFirstElement)
                     return;
@@ -441,20 +436,19 @@ ALWAYS_INLINE void SelectorDataList::executeCompiledSingleMultiSelectorData(cons
 {
     SelectorChecker::CheckingContext checkingContext(SelectorChecker::Mode::QueryingRules);
     checkingContext.scope = rootNode.isDocumentNode() ? nullptr : &rootNode;
-    unsigned selectorCount = m_selectors.size();
     for (auto& element : elementDescendants(const_cast<ContainerNode&>(rootNode))) {
-        for (unsigned i = 0; i < selectorCount; ++i) {
+        for (auto& selector : m_selectors) {
 #if CSS_SELECTOR_JIT_PROFILING
-            m_selectors[i].compiledSelectorUsed();
+            selector.compiledSelectorUsed();
 #endif
             bool matched = false;
-            void* compiledSelectorChecker = m_selectors[i].compiledSelectorCodeRef.code().executableAddress();
-            if (m_selectors[i].compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker) {
-                SelectorCompiler::QuerySelectorSimpleSelectorChecker selectorChecker = SelectorCompiler::querySelectorSimpleSelectorCheckerFunction(compiledSelectorChecker, m_selectors[i].compilationStatus);
+            void* compiledSelectorChecker = selector.compiledSelectorCodeRef.code().executableAddress();
+            if (selector.compilationStatus == SelectorCompilationStatus::SimpleSelectorChecker) {
+                auto selectorChecker = SelectorCompiler::querySelectorSimpleSelectorCheckerFunction(compiledSelectorChecker, selector.compilationStatus);
                 matched = selectorChecker(&element);
             } else {
-                ASSERT(m_selectors[i].compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
-                SelectorCompiler::QuerySelectorSelectorCheckerWithCheckingContext selectorChecker = SelectorCompiler::querySelectorSelectorCheckerFunctionWithCheckingContext(compiledSelectorChecker, m_selectors[i].compilationStatus);
+                ASSERT(selector.compilationStatus == SelectorCompilationStatus::SelectorCheckerWithCheckingContext);
+                auto selectorChecker = SelectorCompiler::querySelectorSelectorCheckerFunctionWithCheckingContext(compiledSelectorChecker, selector.compilationStatus);
                 matched = selectorChecker(&element, &checkingContext);
             }
             if (matched) {
@@ -579,9 +573,8 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, typename S
     case CompilableMultipleSelectorMatch:
 #if ENABLE(CSS_SELECTOR_JIT)
         {
-        unsigned selectorCount = m_selectors.size();
-        for (unsigned i = 0; i < selectorCount; ++i) {
-            if (!compileSelector(m_selectors[i], *searchRootNode)) {
+        for (auto& selector : m_selectors) {
+            if (!compileSelector(selector, *searchRootNode)) {
                 m_matchType = MultipleSelectorMatch;
                 goto MultipleSelectorMatch;
             }
@@ -610,7 +603,7 @@ ALWAYS_INLINE void SelectorDataList::execute(ContainerNode& rootNode, typename S
 }
 
 SelectorQuery::SelectorQuery(CSSSelectorList&& selectorList)
-    : m_selectorList(WTF::move(selectorList))
+    : m_selectorList(WTFMove(selectorList))
     , m_selectors(m_selectorList)
 {
 }
@@ -640,7 +633,7 @@ SelectorQuery* SelectorQueryCache::add(const String& selectors, Document& docume
     if (m_entries.size() == maximumSelectorQueryCacheSize)
         m_entries.remove(m_entries.begin());
 
-    return m_entries.add(selectors, std::make_unique<SelectorQuery>(WTF::move(selectorList))).iterator->value.get();
+    return m_entries.add(selectors, std::make_unique<SelectorQuery>(WTFMove(selectorList))).iterator->value.get();
 }
 
 }

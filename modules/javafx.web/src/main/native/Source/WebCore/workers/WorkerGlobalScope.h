@@ -27,7 +27,6 @@
 #ifndef WorkerGlobalScope_h
 #define WorkerGlobalScope_h
 
-#include "ContentSecurityPolicy.h"
 #include "EventListener.h"
 #include "EventTarget.h"
 #include "ScriptExecutionContext.h"
@@ -42,11 +41,15 @@
 #include <wtf/TypeCasts.h>
 #include <wtf/text/AtomicStringHash.h>
 
+namespace Inspector {
+class ConsoleMessage;
+}
+
 namespace WebCore {
 
     class Blob;
+    class ContentSecurityPolicyResponseHeaders;
     class ScheduledAction;
-    class WorkerInspectorController;
     class WorkerLocation;
     class WorkerNavigator;
     class WorkerThread;
@@ -67,6 +70,8 @@ namespace WebCore {
         virtual String userAgent(const URL&) const override;
 
         virtual void disableEval(const String& errorMessage) override;
+
+        bool shouldBypassMainWorldContentSecurityPolicy() const override final { return m_shouldBypassMainWorldContentSecurityPolicy; }
 
         WorkerScriptController* script() { return m_script.get(); }
         void clearScript() { m_script = nullptr; }
@@ -94,8 +99,6 @@ namespace WebCore {
 
         virtual bool isContextThread() const override;
         virtual bool isJSExecutionForbidden() const override;
-
-        WorkerInspectorController& workerInspectorController() { return *m_workerInspectorController; }
 
         // These methods are used for GC marking. See JSWorkerGlobalScope::visitChildrenVirtual(SlotVisitor&) in
         // JSWorkerGlobalScopeCustom.cpp.
@@ -125,6 +128,7 @@ namespace WebCore {
 
         virtual SecurityOrigin* topOrigin() const override { return m_topOrigin.get(); }
 
+        void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>);
         virtual void addConsoleMessage(MessageSource, MessageLevel, const String& message, unsigned long requestIdentifier = 0) override;
 
 #if ENABLE(SUBTLE_CRYPTO)
@@ -133,10 +137,11 @@ namespace WebCore {
 #endif
 
     protected:
-        WorkerGlobalScope(const URL&, const String& userAgent, WorkerThread&, PassRefPtr<SecurityOrigin> topOrigin);
-        void applyContentSecurityPolicyFromString(const String& contentSecurityPolicy, ContentSecurityPolicy::HeaderType);
+        WorkerGlobalScope(const URL&, const String& userAgent, WorkerThread&, bool shouldBypassMainWorldContentSecurityPolicy, PassRefPtr<SecurityOrigin> topOrigin);
+        void applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders&);
 
         virtual void logExceptionToConsole(const String& errorMessage, const String& sourceURL, int lineNumber, int columnNumber, RefPtr<Inspector::ScriptCallStack>&&) override;
+        void addMessageToWorkerConsole(std::unique_ptr<Inspector::ConsoleMessage>);
         void addMessageToWorkerConsole(MessageSource, MessageLevel, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, RefPtr<Inspector::ScriptCallStack>&&, JSC::ExecState* = 0, unsigned long requestIdentifier = 0);
 
     private:
@@ -161,8 +166,8 @@ namespace WebCore {
         std::unique_ptr<WorkerScriptController> m_script;
         WorkerThread& m_thread;
 
-        const std::unique_ptr<WorkerInspectorController> m_workerInspectorController;
         bool m_closing;
+        bool m_shouldBypassMainWorldContentSecurityPolicy;
 
         HashSet<Observer*> m_workerObservers;
 

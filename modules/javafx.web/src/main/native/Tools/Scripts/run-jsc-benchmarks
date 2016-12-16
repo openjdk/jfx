@@ -2819,22 +2819,31 @@ begin
   else
     config = {}
   end
-  OCTANE_PATH = config["OctanePath"]
-  BROWSERMARK_PATH = config["BrowserMarkPath"]
-  BROWSERMARK_JS_PATH = config["BrowserMarkJSPath"]
-  BROWSERMARK_DOM_PATH = config["BrowserMarkDOMPath"]
-  ASMBENCH_PATH = config["AsmBenchPath"]
-  COMPRESSIONBENCH_PATH = config["CompressionBenchPath"]
-  DSPJS_FILTRR_PATH = config["DSPJSFiltrrPath"]
-  DSPJS_ROUTE9_PATH = config["DSPJSRoute9Path"]
-  DSPJS_STARFIELD_PATH = config["DSPJSStarfieldPath"]
-  DSPJS_QUAKE3_PATH = config["DSPJSQuake3Path"]
-  DSPJS_MANDELBROT_PATH = config["DSPJSMandelbrotPath"]
-  DSPJS_JSLINUX_PATH = config["DSPJSLinuxPath"]
-  DSPJS_AMMOJS_ASMJS_PATH = config["DSPJSAmmoJSAsmJSPath"]
-  DSPJS_AMMOJS_REGULAR_PATH = config["DSPJSAmmoJSRegularPath"]
-  JSBENCH_PATH = config["JSBenchPath"]
-  KRAKEN_PATH = config["KrakenPath"]
+
+  def pathname_if_exist config
+    if config
+      Pathname.new config
+    else
+      config
+    end
+  end
+
+  OCTANE_PATH = pathname_if_exist(config["OctanePath"])
+  BROWSERMARK_PATH = pathname_if_exist(config["BrowserMarkPath"])
+  BROWSERMARK_JS_PATH = pathname_if_exist(config["BrowserMarkJSPath"])
+  BROWSERMARK_DOM_PATH = pathname_if_exist(config["BrowserMarkDOMPath"])
+  ASMBENCH_PATH = pathname_if_exist(config["AsmBenchPath"])
+  COMPRESSIONBENCH_PATH = pathname_if_exist(config["CompressionBenchPath"])
+  DSPJS_FILTRR_PATH = pathname_if_exist(config["DSPJSFiltrrPath"])
+  DSPJS_ROUTE9_PATH = pathname_if_exist(config["DSPJSRoute9Path"])
+  DSPJS_STARFIELD_PATH = pathname_if_exist(config["DSPJSStarfieldPath"])
+  DSPJS_QUAKE3_PATH = pathname_if_exist(config["DSPJSQuake3Path"])
+  DSPJS_MANDELBROT_PATH = pathname_if_exist(config["DSPJSMandelbrotPath"])
+  DSPJS_JSLINUX_PATH = pathname_if_exist(config["DSPJSLinuxPath"])
+  DSPJS_AMMOJS_ASMJS_PATH = pathname_if_exist(config["DSPJSAmmoJSAsmJSPath"])
+  DSPJS_AMMOJS_REGULAR_PATH = pathname_if_exist(config["DSPJSAmmoJSRegularPath"])
+  JSBENCH_PATH = pathname_if_exist(config["JSBenchPath"])
+  KRAKEN_PATH = pathname_if_exist(config["KrakenPath"])
   
   # If the --dont-copy-vms option was passed, it overrides the --force-vm-copy option.
   if $dontCopyVMs
@@ -2921,7 +2930,7 @@ begin
    [["raytrace"], "raytrace", 2, true, false, 32],
    [["richards"], "richards", 2, true, false, 32],
    [["splay"], "splay", 2, true, false, 32],
-   [["regexp"], "regexp", 2, false, false, 16],
+   [["regexp"], "regexp", 2, true, false, 16],
    [["pdfjs"], "pdfjs", 2, false, false, 4],
    [["mandreel"], "mandreel", 2, false, false, 4],
    [["gbemu-part1", "gbemu-part2"], "gbemu", 2, false, false, 4],

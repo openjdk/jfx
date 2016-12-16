@@ -23,7 +23,10 @@
 [
     JSGenerateToNativeObject,
 ] interface SVGElement : Element {
-    [TreatNullAs=NullString, SetterRaisesException] attribute DOMString xmlbase;
+    // FIXME: the xmlbase attribute is no longer part of SVG2 and Chrome already dropped it.
+    // FIXME: This should not use [TreatNullAs=LegacyNullString].
+    [TreatNullAs=LegacyNullString, SetterRaisesException] attribute DOMString xmlbase;
+
     readonly attribute SVGSVGElement ownerSVGElement;
     readonly attribute SVGElement viewportElement;
 
@@ -31,7 +34,7 @@
     attribute DOMString xmlspace;
 
     readonly attribute SVGAnimatedString className;
-    readonly attribute CSSStyleDeclaration style;
+    [ImplementedAs=cssomStyle] readonly attribute CSSStyleDeclaration style;
 
     attribute long tabIndex;
 

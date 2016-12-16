@@ -113,7 +113,7 @@ public:
     void setDocument(Document* document) { m_document = document; }
 
     DocumentLoader* documentLoader() const { return m_documentLoader; }
-    void clearDocumentLoader() { m_documentLoader = 0; }
+    void clearDocumentLoader() { m_documentLoader = nullptr; }
     SessionID sessionID() const;
 
     void removeCachedResource(CachedResource&);
@@ -150,16 +150,17 @@ private:
     void requestPreload(CachedResource::Type, CachedResourceRequest&, const String& charset);
 
     enum RevalidationPolicy { Use, Revalidate, Reload, Load };
-    RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, ResourceRequest&, bool forPreload, CachedResource* existingResource, CachedResourceRequest::DeferOption) const;
+    RevalidationPolicy determineRevalidationPolicy(CachedResource::Type, CachedResourceRequest&, CachedResource* existingResource) const;
 
     bool shouldContinueAfterNotifyingLoadedFromMemoryCache(const CachedResourceRequest&, CachedResource*);
     bool checkInsecureContent(CachedResource::Type, const URL&) const;
 
-    void garbageCollectDocumentResourcesTimerFired();
     void performPostLoadActions();
 
     bool clientDefersImage(const URL&) const;
     void reloadImagesIfNotDeferred();
+
+    bool canRequestInContentDispositionAttachmentSandbox(CachedResource::Type, const URL&) const;
 
     HashSet<String> m_validatedURLs;
     mutable DocumentResourceMap m_documentResources;

@@ -15,8 +15,8 @@ set(DumpRenderTree_SOURCES
 set(DumpRenderTree_LIBRARIES
     WebCore
     ${JAVA_JVM_LIBRARY}
-    ${ICU_LIBRARIES}
     ${ICU_I18N_LIBRARIES}
+    ${ICU_LIBRARIES}
 )
 
 set(DumpRenderTree_INCLUDE_DIRECTORIES

@@ -33,6 +33,7 @@
 #include "JSDOMGlobalObjectTask.h"
 #include "JSDedicatedWorkerGlobalScope.h"
 #include "JSWorkerGlobalScope.h"
+#include "Language.h"
 #include "WorkerGlobalScope.h"
 #include <runtime/JSCJSValueInlines.h>
 #include <runtime/Microtask.h>
@@ -43,11 +44,11 @@ namespace WebCore {
 
 const ClassInfo JSWorkerGlobalScopeBase::s_info = { "WorkerGlobalScope", &JSDOMGlobalObject::s_info, 0, CREATE_METHOD_TABLE(JSWorkerGlobalScopeBase) };
 
-const GlobalObjectMethodTable JSWorkerGlobalScopeBase::s_globalObjectMethodTable = { &allowsAccessFrom, &supportsProfiling, &supportsRichSourceInfo, &shouldInterruptScript, &javaScriptRuntimeFlags, &queueTaskToEventLoop, &shouldInterruptScriptBeforeTimeout };
+const GlobalObjectMethodTable JSWorkerGlobalScopeBase::s_globalObjectMethodTable = { &allowsAccessFrom, &supportsLegacyProfiling, &supportsRichSourceInfo, &shouldInterruptScript, &javaScriptRuntimeFlags, &queueTaskToEventLoop, &shouldInterruptScriptBeforeTimeout, nullptr, nullptr, nullptr, nullptr, nullptr, &defaultLanguage };
 
 JSWorkerGlobalScopeBase::JSWorkerGlobalScopeBase(JSC::VM& vm, JSC::Structure* structure, PassRefPtr<WorkerGlobalScope> impl)
     : JSDOMGlobalObject(vm, structure, &normalWorld(vm), &s_globalObjectMethodTable)
-    , m_impl(impl)
+    , m_wrapped(impl)
 {
 }
 
@@ -64,7 +65,7 @@ void JSWorkerGlobalScopeBase::destroy(JSCell* cell)
 
 ScriptExecutionContext* JSWorkerGlobalScopeBase::scriptExecutionContext() const
 {
-    return m_impl.get();
+    return m_wrapped.get();
 }
 
 bool JSWorkerGlobalScopeBase::allowsAccessFrom(const JSGlobalObject* object, ExecState* exec)
@@ -72,9 +73,9 @@ bool JSWorkerGlobalScopeBase::allowsAccessFrom(const JSGlobalObject* object, Exe
     return JSGlobalObject::allowsAccessFrom(object, exec);
 }
 
-bool JSWorkerGlobalScopeBase::supportsProfiling(const JSGlobalObject* object)
+bool JSWorkerGlobalScopeBase::supportsLegacyProfiling(const JSGlobalObject* object)
 {
-    return JSGlobalObject::supportsProfiling(object);
+    return JSGlobalObject::supportsLegacyProfiling(object);
 }
 
 bool JSWorkerGlobalScopeBase::supportsRichSourceInfo(const JSGlobalObject* object)
@@ -97,7 +98,7 @@ RuntimeFlags JSWorkerGlobalScopeBase::javaScriptRuntimeFlags(const JSGlobalObjec
     return JSGlobalObject::javaScriptRuntimeFlags(object);
 }
 
-void JSWorkerGlobalScopeBase::queueTaskToEventLoop(const JSGlobalObject* object, PassRefPtr<Microtask> task)
+void JSWorkerGlobalScopeBase::queueTaskToEventLoop(const JSGlobalObject* object, PassRefPtr<JSC::Microtask> task)
 {
     const JSWorkerGlobalScopeBase* thisObject = static_cast<const JSWorkerGlobalScopeBase*>(object);
     thisObject->scriptExecutionContext()->postTask(JSGlobalObjectTask((JSDOMGlobalObject*)thisObject, task));

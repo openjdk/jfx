@@ -46,12 +46,12 @@ PeriodicWave* OscillatorNode::s_periodicWaveSquare = nullptr;
 PeriodicWave* OscillatorNode::s_periodicWaveSawtooth = nullptr;
 PeriodicWave* OscillatorNode::s_periodicWaveTriangle = nullptr;
 
-Ref<OscillatorNode> OscillatorNode::create(AudioContext* context, float sampleRate)
+Ref<OscillatorNode> OscillatorNode::create(AudioContext& context, float sampleRate)
 {
     return adoptRef(*new OscillatorNode(context, sampleRate));
 }
 
-OscillatorNode::OscillatorNode(AudioContext* context, float sampleRate)
+OscillatorNode::OscillatorNode(AudioContext& context, float sampleRate)
     : AudioScheduledSourceNode(context, sampleRate)
     , m_type(SINE)
     , m_firstRender(true)
@@ -231,7 +231,7 @@ void OscillatorNode::process(size_t framesToProcess)
         return;
 
     // The audio thread can't block on this lock, so we use std::try_to_lock instead.
-    std::unique_lock<std::mutex> lock(m_processMutex, std::try_to_lock);
+    std::unique_lock<Lock> lock(m_processMutex, std::try_to_lock);
     if (!lock.owns_lock()) {
         // Too bad - the try_lock() failed. We must be in the middle of changing wave-tables.
         outputBus->zero();
@@ -340,7 +340,7 @@ void OscillatorNode::setPeriodicWave(PeriodicWave* periodicWave)
     ASSERT(isMainThread());
 
     // This synchronizes with process().
-    std::lock_guard<std::mutex> lock(m_processMutex);
+    std::lock_guard<Lock> lock(m_processMutex);
     m_periodicWave = periodicWave;
     m_type = CUSTOM;
 }

@@ -99,6 +99,12 @@ JSDataViewPrototype* JSDataViewPrototype::create(VM& vm, Structure* structure)
     return prototype;
 }
 
+void JSDataViewPrototype::finishCreation(JSC::VM& vm)
+{
+    Base::finishCreation(vm);
+    putDirectWithoutTransition(vm, vm.propertyNames->toStringTagSymbol, jsString(&vm, "DataView"), DontEnum | ReadOnly);
+}
+
 Structure* JSDataViewPrototype::createStructure(
     VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
@@ -115,7 +121,7 @@ bool JSDataViewPrototype::getOwnPropertySlot(
 }
 
 template<typename Adaptor>
-EncodedJSValue ATTR_USED getData(ExecState* exec)
+EncodedJSValue getData(ExecState* exec)
 {
     JSDataView* dataView = jsDynamicCast<JSDataView*>(exec->thisValue());
     if (!dataView)
@@ -160,7 +166,7 @@ EncodedJSValue ATTR_USED getData(ExecState* exec)
 }
 
 template<typename Adaptor>
-EncodedJSValue ATTR_USED setData(ExecState* exec)
+EncodedJSValue setData(ExecState* exec)
 {
     JSDataView* dataView = jsDynamicCast<JSDataView*>(exec->thisValue());
     if (!dataView)

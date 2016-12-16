@@ -47,7 +47,7 @@ SecurityContext::~SecurityContext()
 
 void SecurityContext::setSecurityOriginPolicy(RefPtr<SecurityOriginPolicy>&& securityOriginPolicy)
 {
-    m_securityOriginPolicy = WTF::move(securityOriginPolicy);
+    m_securityOriginPolicy = WTFMove(securityOriginPolicy);
     m_haveInitializedSecurityOrigin = true;
 }
 
@@ -61,7 +61,7 @@ SecurityOrigin* SecurityContext::securityOrigin() const
 
 void SecurityContext::setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy> contentSecurityPolicy)
 {
-    m_contentSecurityPolicy = WTF::move(contentSecurityPolicy);
+    m_contentSecurityPolicy = WTFMove(contentSecurityPolicy);
 }
 
 bool SecurityContext::isSecureTransitionTo(const URL& url) const
@@ -104,18 +104,18 @@ SandboxFlags SecurityContext::parseSandboxPolicy(const String& policy, String& i
 
         // Turn off the corresponding sandbox flag if it's set as "allowed".
         String sandboxToken = policy.substring(start, end - start);
-        if (equalIgnoringCase(sandboxToken, "allow-same-origin"))
+        if (equalLettersIgnoringASCIICase(sandboxToken, "allow-same-origin"))
             flags &= ~SandboxOrigin;
-        else if (equalIgnoringCase(sandboxToken, "allow-forms"))
+        else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-forms"))
             flags &= ~SandboxForms;
-        else if (equalIgnoringCase(sandboxToken, "allow-scripts")) {
+        else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-scripts")) {
             flags &= ~SandboxScripts;
             flags &= ~SandboxAutomaticFeatures;
-        } else if (equalIgnoringCase(sandboxToken, "allow-top-navigation"))
+        } else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-top-navigation"))
             flags &= ~SandboxTopNavigation;
-        else if (equalIgnoringCase(sandboxToken, "allow-popups"))
+        else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-popups"))
             flags &= ~SandboxPopups;
-        else if (equalIgnoringCase(sandboxToken, "allow-pointer-lock"))
+        else if (equalLettersIgnoringASCIICase(sandboxToken, "allow-pointer-lock"))
             flags &= ~SandboxPointerLock;
         else {
             if (numberOfTokenErrors)

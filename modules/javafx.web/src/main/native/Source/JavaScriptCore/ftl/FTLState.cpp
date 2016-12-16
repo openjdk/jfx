@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,38 +32,18 @@
 #include "FTLForOSREntryJITCode.h"
 #include "FTLJITCode.h"
 #include "FTLJITFinalizer.h"
-#include <llvm/InitializeLLVM.h>
+#include "FTLPatchpointExceptionHandle.h"
 #include <stdio.h>
-
-#if ENABLE(FTL_NATIVE_CALL_INLINING)
-#include "InlineRuntimeSymbolTable.h"
-#endif
 
 namespace JSC { namespace FTL {
 
+using namespace B3;
 using namespace DFG;
 
 State::State(Graph& graph)
     : graph(graph)
-    , context(llvm->ContextCreate())
-    , module(0)
-    , function(0)
     , generatedFunction(0)
-    , handleStackOverflowExceptionStackmapID(UINT_MAX)
-    , handleExceptionStackmapID(UINT_MAX)
-    , capturedStackmapID(UINT_MAX)
-    , varargsSpillSlotsStackmapID(UINT_MAX)
-    , unwindDataSection(0)
-    , unwindDataSectionSize(0)
 {
-
-#if ENABLE(FTL_NATIVE_CALL_INLINING)
-#define SYMBOL_TABLE_ADD(symbol, file) \
-    symbolTable.fastAdd(symbol, file);
-    FOR_EACH_LIBRARY_SYMBOL(SYMBOL_TABLE_ADD)
-#undef SYMBOL_TABLE_ADD
-#endif
-
     switch (graph.m_plan.mode) {
     case FTLMode: {
         jitCode = adoptRef(new JITCode());
@@ -71,7 +51,7 @@ State::State(Graph& graph)
     }
     case FTLForOSREntryMode: {
         RefPtr<ForOSREntryJITCode> code = adoptRef(new ForOSREntryJITCode());
-        code->initializeEntryBuffer(graph.m_vm, graph.m_profiledBlock->m_numCalleeRegisters);
+        code->initializeEntryBuffer(graph.m_vm, graph.m_profiledBlock->m_numCalleeLocals);
         code->setBytecodeIndex(graph.m_plan.osrEntryBytecodeIndex);
         jitCode = code;
         break;
@@ -83,22 +63,19 @@ State::State(Graph& graph)
 
     graph.m_plan.finalizer = std::make_unique<JITFinalizer>(graph.m_plan);
     finalizer = static_cast<JITFinalizer*>(graph.m_plan.finalizer.get());
+
+    proc = std::make_unique<Procedure>();
+
+    proc->setOriginPrinter(
+        [this] (PrintStream& out, B3::Origin origin) {
+            out.print("DFG:", bitwise_cast<Node*>(origin.data()));
+        });
+
+    proc->setFrontendData(&graph);
 }
 
 State::~State()
 {
-    llvm->ContextDispose(context);
-}
-
-void State::dumpState(const char* when)
-{
-    dumpState(module, when);
-}
-
-void State::dumpState(LModule module, const char* when)
-{
-    dataLog("LLVM IR for ", CodeBlockWithJITType(graph.m_codeBlock, FTL::JITCode::FTLJIT), " ", when, ":\n");
-    dumpModule(module);
 }
 
 } } // namespace JSC::FTL

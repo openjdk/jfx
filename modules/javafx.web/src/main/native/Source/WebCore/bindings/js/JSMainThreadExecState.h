@@ -68,6 +68,24 @@ public:
         return evaluate(exec, source, thisValue, unused);
     };
 
+    static JSC::JSValue profiledCall(JSC::ExecState* exec, JSC::ProfilingReason reason, JSC::JSValue functionObject, JSC::CallType callType, const JSC::CallData& callData, JSC::JSValue thisValue, const JSC::ArgList& args, NakedPtr<JSC::Exception>& returnedException)
+    {
+        JSMainThreadExecState currentState(exec);
+        return JSC::profiledCall(exec, reason, functionObject, callType, callData, thisValue, args, returnedException);
+    }
+
+    static JSC::JSValue profiledEvaluate(JSC::ExecState* exec, JSC::ProfilingReason reason, const JSC::SourceCode& source, JSC::JSValue thisValue, NakedPtr<JSC::Exception>& returnedException)
+    {
+        JSMainThreadExecState currentState(exec);
+        return JSC::profiledEvaluate(exec, reason, source, thisValue, returnedException);
+    }
+
+    static JSC::JSValue profiledEvaluate(JSC::ExecState* exec, JSC::ProfilingReason reason, const JSC::SourceCode& source, JSC::JSValue thisValue = JSC::JSValue())
+    {
+        NakedPtr<JSC::Exception> unused;
+        return profiledEvaluate(exec, reason, source, thisValue, unused);
+    }
+
     static void runTask(JSC::ExecState* exec, JSC::Microtask& task)
     {
         JSMainThreadExecState currentState(exec);
@@ -75,6 +93,7 @@ public:
     }
 
     static InspectorInstrumentationCookie instrumentFunctionCall(ScriptExecutionContext*, JSC::CallType, const JSC::CallData&);
+    static InspectorInstrumentationCookie instrumentFunctionConstruct(ScriptExecutionContext*, JSC::ConstructType, const JSC::ConstructData&);
 
 private:
     explicit JSMainThreadExecState(JSC::ExecState* exec)
@@ -97,6 +116,8 @@ private:
         if (didExitJavaScript)
             didLeaveScriptContext();
     }
+
+    template<typename Type, Type jsType, typename DataType> static InspectorInstrumentationCookie instrumentFunctionInternal(ScriptExecutionContext*, Type, const DataType&);
 
     static JSC::ExecState* s_mainThreadState;
     JSC::ExecState* m_previousState;

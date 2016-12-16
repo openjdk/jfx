@@ -31,7 +31,7 @@
 namespace WebCore {
 
 RenderSVGInline::RenderSVGInline(SVGGraphicsElement& element, Ref<RenderStyle>&& style)
-    : RenderInline(element, WTF::move(style))
+    : RenderInline(element, WTFMove(style))
 {
     setAlwaysCreateLineBoxes();
 }
@@ -40,7 +40,7 @@ std::unique_ptr<InlineFlowBox> RenderSVGInline::createInlineFlowBox()
 {
     auto box = std::make_unique<SVGInlineFlowBox>(*this);
     box->setHasVirtualLogicalHeight();
-    return WTF::move(box);
+    return WTFMove(box);
 }
 
 FloatRect RenderSVGInline::objectBoundingBox() const
@@ -72,9 +72,9 @@ LayoutRect RenderSVGInline::clippedOverflowRectForRepaint(const RenderLayerModel
     return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
 }
 
-void RenderSVGInline::computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect& repaintRect, bool fixed) const
+FloatRect RenderSVGInline::computeFloatRectForRepaint(const FloatRect& repaintRect, const RenderLayerModelObject* repaintContainer, bool fixed) const
 {
-    SVGRenderSupport::computeFloatRectForRepaint(*this, repaintContainer, repaintRect, fixed);
+    return SVGRenderSupport::computeFloatRectForRepaint(*this, repaintRect, repaintContainer, fixed);
 }
 
 void RenderSVGInline::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags, bool* wasFixed) const

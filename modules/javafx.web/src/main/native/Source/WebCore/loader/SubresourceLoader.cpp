@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2007, 2009, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,10 +40,12 @@
 #include "MainFrame.h"
 #include "MemoryCache.h"
 #include "Page.h"
+#include "ResourceLoadObserver.h"
 #include "Settings.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TemporaryChange.h>
 #include <wtf/text/CString.h>
 
 #if PLATFORM(IOS)
@@ -152,7 +154,7 @@ bool SubresourceLoader::isSubresourceLoader()
     return true;
 }
 
-void SubresourceLoader::willSendRequest(ResourceRequest& newRequest, const ResourceResponse& redirectResponse)
+void SubresourceLoader::willSendRequestInternal(ResourceRequest& newRequest, const ResourceResponse& redirectResponse)
 {
     // Store the previous URL because the call to ResourceLoader::willSendRequest will modify it.
     URL previousURL = request().url();
@@ -201,9 +203,12 @@ void SubresourceLoader::willSendRequest(ResourceRequest& newRequest, const Resou
     if (newRequest.isNull() || reachedTerminalState())
         return;
 
-    ResourceLoader::willSendRequest(newRequest, redirectResponse);
+    ResourceLoader::willSendRequestInternal(newRequest, redirectResponse);
     if (newRequest.isNull())
         cancel();
+
+    if (Settings::resourceLoadStatisticsEnabled())
+        ResourceLoadObserver::sharedObserver().logSubresourceLoading(!redirectResponse.isNull(), redirectResponse.url(), newRequest.url(), m_frame ? m_frame->mainFrame().document()->url() : URL());
 }
 
 void SubresourceLoader::didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
@@ -224,6 +229,14 @@ void SubresourceLoader::didReceiveResponse(const ResourceResponse& response)
 
     if (shouldIncludeCertificateInfo())
         response.includeCertificateInfo();
+
+    if (response.isHttpVersion0_9()) {
+        if (m_frame) {
+            String message = "Sandboxing '" + response.url().string() + "' because it is using HTTP/0.9.";
+            m_frame->document()->addConsoleMessage(MessageSource::Security, MessageLevel::Error, message, identifier());
+            frameLoader()->forceSandboxFlags(SandboxScripts | SandboxPlugins);
+        }
+    }
 
     if (m_resource->resourceToRevalidate()) {
         if (response.httpStatusCode() == 304) {
@@ -481,7 +494,7 @@ void SubresourceLoader::releaseResources()
     if (m_state != Uninitialized)
 #endif
         m_resource->clearLoader();
-    m_resource = 0;
+    m_resource = nullptr;
     ResourceLoader::releaseResources();
 }
 

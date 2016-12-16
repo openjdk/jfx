@@ -23,6 +23,7 @@
 #define Debugger_h
 
 #include "Breakpoint.h"
+#include "CallData.h"
 #include "DebuggerCallFrame.h"
 #include "DebuggerPrimitives.h"
 #include "JSCJSValue.h"
@@ -44,8 +45,10 @@ typedef ExecState CallFrame;
 
 class JS_EXPORT_PRIVATE Debugger {
 public:
-    Debugger(bool isInWorkerThread = false);
+    Debugger(VM&);
     virtual ~Debugger();
+
+    VM& vm() { return m_vm; }
 
     JSC::DebuggerCallFrame* currentDebuggerCallFrame() const;
     bool hasHandlerForExceptionCallback() const
@@ -108,6 +111,9 @@ public:
     bool isPaused() const { return m_isPaused; }
     bool isStepping() const { return m_steppingMode == SteppingModeEnabled; }
 
+    bool suppressAllPauses() const { return m_suppressAllPauses; }
+    void setSuppressAllPauses(bool suppress) { m_suppressAllPauses = suppress; }
+
     virtual void sourceParsed(ExecState*, SourceProvider*, int errorLineNumber, const WTF::String& errorMessage) = 0;
 
     void exception(CallFrame*, JSValue exceptionValue, bool hasCatchHandler);
@@ -118,9 +124,23 @@ public:
     void didExecuteProgram(CallFrame*);
     void didReachBreakpoint(CallFrame*);
 
-    void recompileAllJSFunctions(VM*);
+    virtual void recompileAllJSFunctions();
 
     void registerCodeBlock(CodeBlock*);
+
+    class ProfilingClient {
+    public:
+        virtual ~ProfilingClient() { }
+        virtual bool isAlreadyProfiling() const = 0;
+        virtual double willEvaluateScript() = 0;
+        virtual void didEvaluateScript(double startTime, ProfilingReason) = 0;
+    };
+
+    void setProfilingClient(ProfilingClient*);
+    bool hasProfilingClient() const { return m_profilingClient != nullptr; }
+    bool isAlreadyProfiling() const { return m_profilingClient && m_profilingClient->isAlreadyProfiling(); }
+    double willEvaluateScript();
+    void didEvaluateScript(double startTime, ProfilingReason);
 
 protected:
     virtual bool needPauseHandling(JSGlobalObject*) { return false; }
@@ -185,9 +205,7 @@ private:
 
     void clearDebuggerRequests(JSGlobalObject*);
 
-    template<typename Functor> inline void forEachCodeBlock(Functor&);
-
-    VM* m_vm;
+    VM& m_vm;
     HashSet<JSGlobalObject*> m_globalObjects;
 
     PauseOnExceptionsState m_pauseOnExceptionsState;
@@ -195,7 +213,7 @@ private:
     bool m_isPaused : 1;
     bool m_breakpointsActivated : 1;
     bool m_hasHandlerForExceptionCallback : 1;
-    bool m_isInWorkerThread : 1;
+    bool m_suppressAllPauses : 1;
     unsigned m_steppingMode : 1; // SteppingMode
 
     ReasonForPause m_reasonForPause;
@@ -211,6 +229,8 @@ private:
     SourceIDToBreakpointsMap m_sourceIDToBreakpoints;
 
     RefPtr<JSC::DebuggerCallFrame> m_currentDebuggerCallFrame;
+
+    ProfilingClient* m_profilingClient { nullptr };
 
     friend class DebuggerPausedScope;
     friend class TemporaryPausedState;

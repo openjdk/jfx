@@ -452,7 +452,7 @@ inline void FEGaussianBlur::platformApply(Uint8ClampedArray* srcPixelArray, Uint
                 int adjustedBlockHeight = job < jobsWithExtra ? blockHeight + 1 : blockHeight;
 
                 currentY += adjustedBlockHeight;
-                    sourceOffset = extraHeight * scanline;
+                sourceOffset = extraHeight * scanline;
                 destinationOffset = currentY * scanline;
                 size = adjustedBlockHeight * scanline;
 

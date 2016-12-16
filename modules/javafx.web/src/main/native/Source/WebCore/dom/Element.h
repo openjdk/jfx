@@ -32,17 +32,19 @@
 #include "RegionOversetState.h"
 #include "ScrollTypes.h"
 #include "SimulatedClickOptions.h"
-#include "StyleResolveTree.h"
+#include "StyleChange.h"
 
 namespace WebCore {
 
 class ClientRect;
 class ClientRectList;
 class DatasetDOMStringMap;
+class Dictionary;
 class DOMTokenList;
 class ElementRareData;
 class HTMLDocument;
 class IntSize;
+class KeyboardEvent;
 class Locale;
 class PlatformKeyboardEvent;
 class PlatformMouseEvent;
@@ -50,7 +52,6 @@ class PlatformWheelEvent;
 class PseudoElement;
 class RenderNamedFlowFragment;
 class RenderTreePosition;
-class ShadowRoot;
 
 enum SpellcheckAttributeState {
     SpellcheckAttributeTrue,
@@ -178,7 +179,7 @@ public:
 
     const Vector<RefPtr<Attr>>& attrNodeList();
 
-    virtual CSSStyleDeclaration* style();
+    virtual CSSStyleDeclaration* cssomStyle();
 
     const QualifiedName& tagQName() const { return m_tagName; }
 #if ENABLE(CSS_SELECTOR_JIT)
@@ -197,12 +198,10 @@ public:
     virtual const AtomicString& prefix() const override final { return m_tagName.prefix(); }
     virtual const AtomicString& namespaceURI() const override final { return m_tagName.namespaceURI(); }
 
-    virtual URL baseURI() const override final;
-
     virtual String nodeName() const override;
 
-    RefPtr<Element> cloneElementWithChildren(Document&);
-    RefPtr<Element> cloneElementWithoutChildren(Document&);
+    Ref<Element> cloneElementWithChildren(Document&);
+    Ref<Element> cloneElementWithoutChildren(Document&);
 
     void normalizeAttributes();
     String nodeNamePreservingCase() const;
@@ -249,6 +248,9 @@ public:
     WEBCORE_EXPORT ShadowRoot* shadowRoot() const;
     WEBCORE_EXPORT RefPtr<ShadowRoot> createShadowRoot(ExceptionCode&);
 
+    ShadowRoot* shadowRootForBindings(JSC::ExecState&) const;
+    RefPtr<ShadowRoot> attachShadow(const Dictionary&, ExceptionCode&);
+
     ShadowRoot* userAgentShadowRoot() const;
     WEBCORE_EXPORT ShadowRoot& ensureUserAgentShadowRoot();
 
@@ -264,6 +266,7 @@ public:
     virtual void setHovered(bool flag = true);
     virtual void setFocus(bool flag);
 
+    bool tabIndexSetExplicitly() const;
     virtual bool supportsFocus() const;
     virtual bool isFocusable() const;
     virtual bool isKeyboardFocusable(KeyboardEvent*) const;
@@ -276,6 +279,8 @@ public:
     virtual Element* focusDelegate();
 
     virtual RenderStyle* computedStyle(PseudoId = NOPSEUDO) override;
+
+    bool needsStyleInvalidation() const;
 
     // Methods for indicating the style is affected by dynamic updates (e.g., children changing, our position changing in our sibling list, etc.)
     bool styleAffectedByEmpty() const { return hasRareData() && rareDataStyleAffectedByEmpty(); }
@@ -325,7 +330,7 @@ public:
     static AXTextStateChangeIntent defaultFocusTextStateChangeIntent() { return AXTextStateChangeIntent(AXTextStateChangeTypeSelectionMove, AXTextSelection { AXTextSelectionDirectionDiscontiguous, AXTextSelectionGranularityUnknown, true }); }
     void updateFocusAppearanceAfterAttachIfNeeded();
     virtual void focus(bool restorePreviousSelection = true, FocusDirection = FocusDirectionNone);
-    virtual void updateFocusAppearance(bool restorePreviousSelection);
+    virtual void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode = SelectionRevealMode::Reveal);
     virtual void blur();
 
     String innerHTML() const;
@@ -344,8 +349,8 @@ public:
     void setMinimumSizeForResizing(const LayoutSize&);
 
     // Use Document::registerForDocumentActivationCallbacks() to subscribe to these
-    virtual void documentWillSuspendForPageCache() { }
-    virtual void documentDidResumeFromPageCache() { }
+    virtual void prepareForDocumentSuspension() { }
+    virtual void resumeFromDocumentSuspension() { }
 
     // Use Document::registerForMediaVolumeCallbacks() to subscribe to this
     virtual void mediaVolumeDidChange() { }
@@ -353,6 +358,8 @@ public:
     // Use Document::registerForPrivateBrowsingStateChangedCallbacks() to subscribe to this.
     virtual void privateBrowsingStateDidChange() { }
 
+    virtual void willBecomeFullscreenElement();
+    virtual void ancestorWillEnterFullscreen() { }
     virtual void didBecomeFullscreenElement() { }
     virtual void willStopBeingFullscreenElement() { }
 
@@ -450,13 +457,14 @@ public:
     bool hasName() const;
     const SpaceSplitString& classNames() const;
 
-    IntSize savedLayerScrollOffset() const;
-    void setSavedLayerScrollOffset(const IntSize&);
+    IntPoint savedLayerScrollPosition() const;
+    void setSavedLayerScrollPosition(const IntPoint&);
 
     bool dispatchMouseEvent(const PlatformMouseEvent&, const AtomicString& eventType, int clickCount = 0, Element* relatedTarget = nullptr);
     bool dispatchWheelEvent(const PlatformWheelEvent&);
     bool dispatchKeyEvent(const PlatformKeyboardEvent&);
     void dispatchSimulatedClick(Event* underlyingEvent, SimulatedClickMouseEventOptions = SendNoEvents, SimulatedClickVisualOptions = ShowPressedLook);
+    void dispatchSimulatedClickForBindings(Event* underlyingEvent);
     void dispatchFocusInEvent(const AtomicString& eventType, RefPtr<Element>&& oldFocusedElement);
     void dispatchFocusOutEvent(const AtomicString& eventType, RefPtr<Element>&& newFocusedElement);
     virtual void dispatchFocusEvent(RefPtr<Element>&& oldFocusedElement, FocusDirection);
@@ -471,7 +479,7 @@ public:
     virtual void didAttachRenderers();
     virtual void willDetachRenderers();
     virtual void didDetachRenderers();
-    virtual RefPtr<RenderStyle> customStyleForRenderer(RenderStyle& parentStyle);
+    virtual RefPtr<RenderStyle> customStyleForRenderer(RenderStyle& parentStyle, RenderStyle* shadowHostStyle);
 
     LayoutRect absoluteEventHandlerBounds(bool& includesFixedPositionElements) override;
 
@@ -484,6 +492,18 @@ public:
     void clearHoverAndActiveStatusBeforeDetachingRenderer();
 
     WEBCORE_EXPORT URL absoluteLinkURL() const;
+
+#if ENABLE(TOUCH_EVENTS)
+    virtual bool allowsDoubleTapGesture() const override;
+#endif
+
+    StyleResolver& styleResolver();
+    Ref<RenderStyle> resolveStyle(RenderStyle* parentStyle);
+
+    virtual void isVisibleInViewportChanged() { }
+
+    using ContainerNode::setAttributeEventListener;
+    void setAttributeEventListener(const AtomicString& eventType, const QualifiedName& attributeName, const AtomicString& value);
 
 protected:
     Element(const QualifiedName&, Document&, ConstructionType);
@@ -502,6 +522,8 @@ protected:
     // svgAttributeChanged (called when element.className.baseValue is set)
     void classAttributeChanged(const AtomicString& newClassString);
 
+    void addShadowRoot(Ref<ShadowRoot>&&);
+
     static void mergeWithNextTextNode(Text& node, ExceptionCode&);
 
 private:
@@ -511,8 +533,6 @@ private:
     bool isUserActionElementActive() const;
     bool isUserActionElementFocused() const;
     bool isUserActionElementHovered() const;
-
-    void resetNeedsNodeRenderingTraversalSlowPath();
 
     virtual void didAddUserAgentShadowRoot(ShadowRoot*) { }
     virtual bool alwaysCreateUserAgentShadowRoot() const { return false; }
@@ -563,11 +583,13 @@ private:
 
     // cloneNode is private so that non-virtual cloneElementWithChildren and cloneElementWithoutChildren
     // are used instead.
-    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) override;
-    virtual RefPtr<Element> cloneElementWithoutAttributesAndChildren(Document&);
+    virtual Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document&);
 
-    void addShadowRoot(Ref<ShadowRoot>&&);
     void removeShadowRoot();
+
+    RenderStyle* existingComputedStyle();
+    RenderStyle& resolveComputedStyle();
 
     bool rareDataStyleAffectedByEmpty() const;
     bool rareDataChildrenAffectedByHover() const;

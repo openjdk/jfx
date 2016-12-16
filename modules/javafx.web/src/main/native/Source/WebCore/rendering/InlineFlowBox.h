@@ -214,6 +214,7 @@ public:
 
     bool hasAnonymousInlineBlock() const { return m_hasAnonymousInlineBlock; }
     void setHasAnonymousInlineBlock(bool b) { m_hasAnonymousInlineBlock = b; }
+    RenderBlockFlow* anonymousInlineBlock() const;
 
     void checkConsistency() const;
     void setHasBadChildList();
@@ -308,6 +309,7 @@ private:
     void addBoxShadowVisualOverflow(LayoutRect& logicalVisualOverflow);
     void addBorderOutsetVisualOverflow(LayoutRect& logicalVisualOverflow);
     void addTextBoxVisualOverflow(InlineTextBox&, GlyphOverflowAndFallbackFontsMap&, LayoutRect& logicalVisualOverflow);
+    void addOutlineVisualOverflow(LayoutRect& logicalVisualOverflow);
     void addReplacedChildOverflow(const InlineBox*, LayoutRect& logicalLayoutOverflow, LayoutRect& logicalVisualOverflow);
     void constrainToLineTopAndBottomIfNeeded(LayoutRect&) const;
 

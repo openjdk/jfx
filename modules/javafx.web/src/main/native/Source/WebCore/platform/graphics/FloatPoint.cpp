@@ -30,15 +30,23 @@
 #include "AffineTransform.h"
 #include "FloatConversion.h"
 #include "IntPoint.h"
+#include "TextStream.h"
 #include "TransformationMatrix.h"
 #include <limits>
 #include <math.h>
-#include <wtf/PrintStream.h>
 
 namespace WebCore {
 
 FloatPoint::FloatPoint(const IntPoint& p) : m_x(p.x()), m_y(p.y())
 {
+}
+
+FloatPoint FloatPoint::constrainedBetween(const FloatPoint& min, const FloatPoint& max) const
+{
+    return {
+        std::max(min.x(), std::min(max.x(), m_x)),
+        std::max(min.y(), std::min(max.y(), m_y))
+    };
 }
 
 void FloatPoint::normalize()
@@ -80,9 +88,9 @@ FloatPoint FloatPoint::narrowPrecision(double x, double y)
     return FloatPoint(narrowPrecisionToFloat(x), narrowPrecisionToFloat(y));
 }
 
-void FloatPoint::dump(PrintStream& out) const
+TextStream& operator<<(TextStream& ts, const FloatPoint& p)
 {
-    out.printf("(%f, %f)", x(), y());
+    return ts << "(" << TextStream::FormatNumberRespectingIntegers(p.x()) << "," << TextStream::FormatNumberRespectingIntegers(p.y()) << ")";
 }
 
 }

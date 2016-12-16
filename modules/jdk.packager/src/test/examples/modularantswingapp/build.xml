@@ -51,7 +51,7 @@
                verbose="true"
                versionCheck="false">
 
-        <fx:runtime detect-modules="true" strip-native-commands="false">
+        <fx:runtime strip-native-commands="false">
             <fx:add-modules value="java.base"/>
             <fx:add-modules value="jdk.packager.services,javafx.controls"/>
             <fx:limit-modules value="java.sql"/>

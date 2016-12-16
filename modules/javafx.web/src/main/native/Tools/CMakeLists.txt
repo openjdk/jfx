@@ -29,10 +29,12 @@ endif ()
 
 if ("${PORT}" STREQUAL "Java")
     add_subdirectory(DumpRenderTree/java)
+else ()
+if (WIN32)
+    add_subdirectory(DumpRenderTree)
+    add_subdirectory(TestWebKitAPI)
+    add_subdirectory(MiniBrowser/win)
 endif ()
-if (WIN32 AND NOT "${PORT}" STREQUAL "Java")
-    # FIXME: Get DumpRenderTree working with CMake.
-    add_subdirectory(WinLauncher)
 endif ()
 
 if (ENABLE_WEBKIT2 AND ENABLE_API_TESTS)

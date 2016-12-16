@@ -71,6 +71,7 @@ struct _BrowserWindow {
     GtkWindow *parentWindow;
     guint fullScreenMessageLabelId;
     guint resetEntryProgressTimeoutId;
+    gchar *sessionFile;
 };
 
 struct _BrowserWindowClass {
@@ -454,6 +455,10 @@ static gboolean webViewDecidePermissionRequest(WebKitWebView *webView, WebKitPer
                 dialog_message = "audio";
         } else if (is_for_video_device)
             dialog_message = "video";
+    } else if (WEBKIT_IS_INSTALL_MISSING_MEDIA_PLUGINS_PERMISSION_REQUEST(request)) {
+        dialog_title = "Media plugin missing request";
+        dialog_message_format = "The media backend was unable to find a plugin to play the requested media:\n%s.\nAllow to search and install the missing plugin?";
+        dialog_message = webkit_install_missing_media_plugins_permission_request_get_description(WEBKIT_INSTALL_MISSING_MEDIA_PLUGINS_PERMISSION_REQUEST(request));
     } else
         return FALSE;
 
@@ -775,6 +780,8 @@ static void browserWindowFinalize(GObject *gObject)
     if (window->resetEntryProgressTimeoutId)
         g_source_remove(window->resetEntryProgressTimeoutId);
 
+    g_free(window->sessionFile);
+
     G_OBJECT_CLASS(browser_window_parent_class)->finalize(gObject);
 
     if (g_atomic_int_dec_and_test(&windowCount))
@@ -814,21 +821,21 @@ static void browserWindowSetupEditorToolbar(BrowserWindow *window)
     gtk_toolbar_set_style(GTK_TOOLBAR(toolbar), GTK_TOOLBAR_BOTH_HORIZ);
 
     GtkToolItem *item = gtk_toggle_tool_button_new_from_stock(GTK_STOCK_BOLD);
-    window->boldItem = item;
+    window->boldItem = GTK_WIDGET(item);
     gtk_widget_set_name(GTK_WIDGET(item), "Bold");
     g_signal_connect(G_OBJECT(item), "toggled", G_CALLBACK(editingCommandCallback), window);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), item, -1);
     gtk_widget_show(GTK_WIDGET(item));
 
     item = gtk_toggle_tool_button_new_from_stock(GTK_STOCK_ITALIC);
-    window->italicItem = item;
+    window->italicItem = GTK_WIDGET(item);
     gtk_widget_set_name(GTK_WIDGET(item), "Italic");
     g_signal_connect(G_OBJECT(item), "toggled", G_CALLBACK(editingCommandCallback), window);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), item, -1);
     gtk_widget_show(GTK_WIDGET(item));
 
     item = gtk_toggle_tool_button_new_from_stock(GTK_STOCK_UNDERLINE);
-    window->underlineItem = item;
+    window->underlineItem = GTK_WIDGET(item);
     gtk_widget_set_name(GTK_WIDGET(item), "Underline");
     g_signal_connect(G_OBJECT(item), "toggled", G_CALLBACK(editingCommandCallback), window);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), item, -1);
@@ -836,7 +843,7 @@ static void browserWindowSetupEditorToolbar(BrowserWindow *window)
 
     item = gtk_toggle_tool_button_new_from_stock(GTK_STOCK_STRIKETHROUGH);
     gtk_widget_set_name(GTK_WIDGET(item), "Strikethrough");
-    window->strikethroughItem = item;
+    window->strikethroughItem = GTK_WIDGET(item);
     g_signal_connect(G_OBJECT(item), "toggled", G_CALLBACK(editingCommandCallback), window);
     gtk_toolbar_insert(GTK_TOOLBAR(toolbar), item, -1);
     gtk_widget_show(GTK_WIDGET(item));
@@ -1092,6 +1099,7 @@ static void browserWindowConstructed(GObject *gObject)
     g_signal_connect(window->webView, "notify::estimated-load-progress", G_CALLBACK(webViewLoadProgressChanged), window);
     g_signal_connect(window->webView, "notify::title", G_CALLBACK(webViewTitleChanged), window);
     g_signal_connect(window->webView, "create", G_CALLBACK(webViewCreate), window);
+    g_signal_connect(window->webView, "close", G_CALLBACK(webViewClose), window);
     g_signal_connect(window->webView, "load-failed", G_CALLBACK(webViewLoadFailed), window);
     g_signal_connect(window->webView, "load-failed-with-tls-errors", G_CALLBACK(webViewLoadFailedWithTLSerrors), window);
     g_signal_connect(window->webView, "decide-policy", G_CALLBACK(webViewDecidePolicy), window);
@@ -1146,6 +1154,26 @@ static void browserWindowConstructed(GObject *gObject)
         webkit_web_view_load_html(window->webView, "<html></html>", "file:///");
 }
 
+static void browserWindowSaveSession(BrowserWindow *window)
+{
+    if (!window->sessionFile)
+        return;
+
+    WebKitWebViewSessionState *state = webkit_web_view_get_session_state(window->webView);
+    GBytes *bytes = webkit_web_view_session_state_serialize(state);
+    webkit_web_view_session_state_unref(state);
+    g_file_set_contents(window->sessionFile, g_bytes_get_data(bytes, NULL), g_bytes_get_size(bytes), NULL);
+    g_bytes_unref(bytes);
+}
+
+static gboolean browserWindowDeleteEvent(GtkWidget *widget, GdkEventAny* event)
+{
+    BrowserWindow *window = BROWSER_WINDOW(widget);
+    browserWindowSaveSession(window);
+    webkit_web_view_try_close(window->webView);
+    return TRUE;
+}
+
 static void browser_window_class_init(BrowserWindowClass *klass)
 {
     GObjectClass *gobjectClass = G_OBJECT_CLASS(klass);
@@ -1154,6 +1182,9 @@ static void browser_window_class_init(BrowserWindowClass *klass)
     gobjectClass->get_property = browserWindowGetProperty;
     gobjectClass->set_property = browserWindowSetProperty;
     gobjectClass->finalize = browserWindowFinalize;
+
+    GtkWidgetClass *widgetClass = GTK_WIDGET_CLASS(klass);
+    widgetClass->delete_event = browserWindowDeleteEvent;
 
     g_object_class_install_property(gobjectClass,
                                     PROP_VIEW,
@@ -1200,6 +1231,34 @@ void browser_window_load_uri(BrowserWindow *window, const char *uri)
     }
 
     webkit_web_view_run_javascript(window->webView, strstr(uri, "javascript:"), NULL, NULL, NULL);
+}
+
+void browser_window_load_session(BrowserWindow *window, const char *sessionFile)
+{
+    g_return_if_fail(BROWSER_IS_WINDOW(window));
+    g_return_if_fail(sessionFile);
+
+    window->sessionFile = g_strdup(sessionFile);
+    gchar *data = NULL;
+    gsize dataLength;
+    if (g_file_get_contents(sessionFile, &data, &dataLength, NULL)) {
+        GBytes *bytes = g_bytes_new_take(data, dataLength);
+        WebKitWebViewSessionState *state = webkit_web_view_session_state_new(bytes);
+        g_bytes_unref(bytes);
+
+        if (state) {
+            webkit_web_view_restore_session_state(window->webView, state);
+            webkit_web_view_session_state_unref(state);
+        }
+    }
+
+    WebKitBackForwardList *bfList = webkit_web_view_get_back_forward_list(window->webView);
+    WebKitBackForwardListItem *item = webkit_back_forward_list_get_current_item(bfList);
+    if (item)
+        webkit_web_view_go_to_back_forward_list_item(window->webView, item);
+    else
+        webkit_web_view_load_uri(window->webView, BROWSER_DEFAULT_URL);
+
 }
 
 void browser_window_set_background_color(BrowserWindow *window, GdkRGBA *rgba)

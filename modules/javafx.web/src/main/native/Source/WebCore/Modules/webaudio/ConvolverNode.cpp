@@ -32,6 +32,7 @@
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
+#include "ExceptionCode.h"
 #include "Reverb.h"
 #include <wtf/MainThread.h>
 
@@ -45,7 +46,7 @@ const size_t MaxFFTSize = 32768;
 
 namespace WebCore {
 
-ConvolverNode::ConvolverNode(AudioContext* context, float sampleRate)
+ConvolverNode::ConvolverNode(AudioContext& context, float sampleRate)
     : AudioNode(context, sampleRate)
     , m_normalize(true)
 {
@@ -73,7 +74,7 @@ void ConvolverNode::process(size_t framesToProcess)
     ASSERT(outputBus);
 
     // Synchronize with possible dynamic changes to the impulse response.
-    std::unique_lock<std::mutex> lock(m_processMutex, std::try_to_lock);
+    std::unique_lock<Lock> lock(m_processMutex, std::try_to_lock);
     if (!lock.owns_lock()) {
         // Too bad - the try_lock() failed. We must be in the middle of setting a new impulse response.
         outputBus->zero();
@@ -93,7 +94,7 @@ void ConvolverNode::process(size_t framesToProcess)
 
 void ConvolverNode::reset()
 {
-    std::lock_guard<std::mutex> lock(m_processMutex);
+    std::lock_guard<Lock> lock(m_processMutex);
     if (m_reverb)
         m_reverb->reset();
 }
@@ -115,12 +116,17 @@ void ConvolverNode::uninitialize()
     AudioNode::uninitialize();
 }
 
-void ConvolverNode::setBuffer(AudioBuffer* buffer)
+void ConvolverNode::setBuffer(AudioBuffer* buffer, ExceptionCode& ec)
 {
     ASSERT(isMainThread());
 
     if (!buffer)
         return;
+
+    if (buffer->sampleRate() != context().sampleRate()) {
+        ec = NOT_SUPPORTED_ERR;
+        return;
+    }
 
     unsigned numberOfChannels = buffer->numberOfChannels();
     size_t bufferLength = buffer->length();
@@ -140,13 +146,13 @@ void ConvolverNode::setBuffer(AudioBuffer* buffer)
     bufferBus->setSampleRate(buffer->sampleRate());
 
     // Create the reverb with the given impulse response.
-    bool useBackgroundThreads = !context()->isOfflineContext();
+    bool useBackgroundThreads = !context().isOfflineContext();
     auto reverb = std::make_unique<Reverb>(bufferBus.get(), AudioNode::ProcessingSizeInFrames, MaxFFTSize, 2, useBackgroundThreads, m_normalize);
 
     {
         // Synchronize with process().
-        std::lock_guard<std::mutex> lock(m_processMutex);
-        m_reverb = WTF::move(reverb);
+        std::lock_guard<Lock> lock(m_processMutex);
+        m_reverb = WTFMove(reverb);
         m_buffer = buffer;
     }
 }

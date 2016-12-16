@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2009, 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2009, 2013-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,9 @@
 #include "DateInstanceCache.h"
 #include "ExecutableAllocator.h"
 #include "FunctionHasExecutedCache.h"
+#if ENABLE(JIT)
+#include "GPRInfo.h"
+#endif
 #include "Heap.h"
 #include "Intrinsic.h"
 #include "JITThunks.h"
@@ -50,9 +53,7 @@
 #include "ThunkGenerators.h"
 #include "TypedArrayController.h"
 #include "VMEntryRecord.h"
-#include "Watchdog.h"
 #include "Watchpoint.h"
-#include "WeakRandom.h"
 #include <wtf/Bag.h>
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/DateMath.h>
@@ -62,9 +63,11 @@
 #include <wtf/HashSet.h>
 #include <wtf/SimpleStats.h>
 #include <wtf/StackBounds.h>
+#include <wtf/Stopwatch.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/WTFThreadData.h>
+#include <wtf/WeakRandom.h>
 #include <wtf/text/SymbolRegistry.h>
 #include <wtf/text/WTFString.h>
 #if ENABLE(REGEXP_TRACING)
@@ -73,30 +76,35 @@
 
 namespace JSC {
 
-class ArityCheckFailReturnThunks;
 class BuiltinExecutables;
+class BytecodeIntrinsicRegistry;
 class CodeBlock;
 class CodeCache;
 class CommonIdentifiers;
+class CustomGetterSetter;
 class ExecState;
 class Exception;
 class HandleStack;
 class TypeProfiler;
 class TypeProfilerLog;
+class HeapProfiler;
 class Identifier;
 class Interpreter;
+class JSBoundSlotBaseFunction;
 class JSGlobalObject;
 class JSObject;
-class Keywords;
 class LLIntOffsetsExtractor;
 class LegacyProfiler;
 class NativeExecutable;
 class RegExpCache;
+class RegisterAtOffsetList;
+#if ENABLE(SAMPLING_PROFILER)
+class SamplingProfiler;
+#endif
 class ScriptExecutable;
 class SourceProvider;
 class SourceProviderCache;
 struct StackFrame;
-class Stringifier;
 class Structure;
 #if ENABLE(REGEXP_TRACING)
 class RegExp;
@@ -105,8 +113,10 @@ class UnlinkedCodeBlock;
 class UnlinkedEvalCodeBlock;
 class UnlinkedFunctionExecutable;
 class UnlinkedProgramCodeBlock;
+class UnlinkedModuleProgramCodeBlock;
 class VirtualRegister;
 class VMEntryScope;
+class Watchdog;
 class Watchpoint;
 class WatchpointSet;
 
@@ -237,6 +247,17 @@ public:
     static Ref<VM> createContextGroup(HeapType = SmallHeap);
     JS_EXPORT_PRIVATE ~VM();
 
+    JS_EXPORT_PRIVATE Watchdog& ensureWatchdog();
+    JS_EXPORT_PRIVATE Watchdog* watchdog() { return m_watchdog.get(); }
+
+    JS_EXPORT_PRIVATE HeapProfiler* heapProfiler() const { return m_heapProfiler.get(); }
+    JS_EXPORT_PRIVATE HeapProfiler& ensureHeapProfiler();
+
+#if ENABLE(SAMPLING_PROFILER)
+    JS_EXPORT_PRIVATE SamplingProfiler* samplingProfiler() { return m_samplingProfiler.get(); }
+    JS_EXPORT_PRIVATE void ensureSamplingProfiler(RefPtr<Stopwatch>&&);
+#endif
+
 private:
     RefPtr<JSLock> m_apiLock;
 
@@ -259,8 +280,6 @@ public:
     ClientData* clientData;
     VMEntryFrame* topVMEntryFrame;
     ExecState* topCallFrame;
-    std::unique_ptr<Watchdog> watchdog;
-
     Strong<Structure> structureStructure;
     Strong<Structure> structureRareDataStructure;
     Strong<Structure> terminatedExecutionErrorStructure;
@@ -278,6 +297,10 @@ public:
     Strong<Structure> evalExecutableStructure;
     Strong<Structure> programExecutableStructure;
     Strong<Structure> functionExecutableStructure;
+#if ENABLE(WEBASSEMBLY)
+    Strong<Structure> webAssemblyExecutableStructure;
+#endif
+    Strong<Structure> moduleProgramExecutableStructure;
     Strong<Structure> regExpStructure;
     Strong<Structure> symbolStructure;
     Strong<Structure> symbolTableStructure;
@@ -289,12 +312,24 @@ public:
     Strong<Structure> unlinkedProgramCodeBlockStructure;
     Strong<Structure> unlinkedEvalCodeBlockStructure;
     Strong<Structure> unlinkedFunctionCodeBlockStructure;
+    Strong<Structure> unlinkedModuleProgramCodeBlockStructure;
     Strong<Structure> propertyTableStructure;
     Strong<Structure> weakMapDataStructure;
     Strong<Structure> inferredValueStructure;
+    Strong<Structure> inferredTypeStructure;
+    Strong<Structure> inferredTypeTableStructure;
     Strong<Structure> functionRareDataStructure;
+    Strong<Structure> generatorFrameStructure;
     Strong<Structure> exceptionStructure;
     Strong<Structure> promiseDeferredStructure;
+    Strong<Structure> internalPromiseDeferredStructure;
+    Strong<Structure> nativeStdFunctionCellStructure;
+    Strong<Structure> programCodeBlockStructure;
+    Strong<Structure> moduleProgramCodeBlockStructure;
+    Strong<Structure> evalCodeBlockStructure;
+    Strong<Structure> functionCodeBlockStructure;
+    Strong<Structure> webAssemblyCodeBlockStructure;
+
     Strong<JSCell> iterationTerminator;
     Strong<JSCell> emptyPropertyNameEnumerator;
 
@@ -306,6 +341,7 @@ public:
     NumericStrings numericStrings;
     DateInstanceCache dateInstanceCache;
     WTF::SimpleStats machineCodeBytesPerBytecodeWordForBaselineJIT;
+    WeakGCMap<std::pair<CustomGetterSetter*, int>, JSBoundSlotBaseFunction> customGetterSetterFunctionMap;
     WeakGCMap<StringImpl*, JSString, PtrHash<StringImpl*>> stringCache;
     Strong<JSString> lastCachedString;
 
@@ -346,42 +382,43 @@ public:
 
     typedef HashMap<RefPtr<SourceProvider>, RefPtr<SourceProviderCache>> SourceProviderCacheMap;
     SourceProviderCacheMap sourceProviderCacheMap;
-    std::unique_ptr<Keywords> keywords;
     Interpreter* interpreter;
 #if ENABLE(JIT)
+#if NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
+    intptr_t calleeSaveRegistersBuffer[NUMBER_OF_CALLEE_SAVES_REGISTERS];
+
+    static ptrdiff_t calleeSaveRegistersBufferOffset()
+    {
+        return OBJECT_OFFSETOF(VM, calleeSaveRegistersBuffer);
+    }
+#endif // NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
+
     std::unique_ptr<JITThunks> jitStubs;
     MacroAssemblerCodeRef getCTIStub(ThunkGenerator generator)
     {
         return jitStubs->ctiStub(this, generator);
     }
-    NativeExecutable* getHostFunction(NativeFunction, Intrinsic);
+    NativeExecutable* getHostFunction(NativeFunction, Intrinsic, const String& name);
 
-    std::unique_ptr<ArityCheckFailReturnThunks> arityCheckFailReturnThunks;
+    std::unique_ptr<RegisterAtOffsetList> allCalleeSaveRegisterOffsets;
+
+    RegisterAtOffsetList* getAllCalleeSaveRegisterOffsets() { return allCalleeSaveRegisterOffsets.get(); }
+
 #endif // ENABLE(JIT)
     std::unique_ptr<CommonSlowPaths::ArityCheckData> arityCheckData;
 #if ENABLE(FTL_JIT)
     std::unique_ptr<FTL::Thunks> ftlThunks;
 #endif
-    NativeExecutable* getHostFunction(NativeFunction, NativeFunction constructor);
+    NativeExecutable* getHostFunction(NativeFunction, NativeFunction constructor, const String& name);
 
     static ptrdiff_t exceptionOffset()
     {
         return OBJECT_OFFSETOF(VM, m_exception);
     }
 
-    static ptrdiff_t vmEntryFrameForThrowOffset()
+    static ptrdiff_t callFrameForCatchOffset()
     {
-        return OBJECT_OFFSETOF(VM, vmEntryFrameForThrow);
-    }
-
-    static ptrdiff_t topVMEntryFrameOffset()
-    {
-        return OBJECT_OFFSETOF(VM, topVMEntryFrame);
-    }
-
-    static ptrdiff_t callFrameForThrowOffset()
-    {
-        return OBJECT_OFFSETOF(VM, callFrameForThrow);
+        return OBJECT_OFFSETOF(VM, callFrameForCatch);
     }
 
     static ptrdiff_t targetMachinePCForThrowOffset()
@@ -389,14 +426,12 @@ public:
         return OBJECT_OFFSETOF(VM, targetMachinePCForThrow);
     }
 
+    void restorePreviousException(Exception* exception) { setException(exception); }
+
     void clearException() { m_exception = nullptr; }
     void clearLastException() { m_lastException = nullptr; }
 
-    void setException(Exception* exception)
-    {
-        m_exception = exception;
-        m_lastException = exception;
-    }
+    ExecState** addressOfCallFrameForCatch() { return &callFrameForCatch; }
 
     Exception* exception() const { return m_exception; }
     JSCell** addressOfException() { return reinterpret_cast<JSCell**>(&m_exception); }
@@ -407,6 +442,14 @@ public:
     JS_EXPORT_PRIVATE void throwException(ExecState*, Exception*);
     JS_EXPORT_PRIVATE JSValue throwException(ExecState*, JSValue);
     JS_EXPORT_PRIVATE JSObject* throwException(ExecState*, JSObject*);
+
+    void setFailNextNewCodeBlock() { m_failNextNewCodeBlock = true; }
+    bool getAndClearFailNextNewCodeBlock()
+    {
+        bool result = m_failNextNewCodeBlock;
+        m_failNextNewCodeBlock = false;
+        return result;
+    }
 
     void* stackPointerAtVMEntry() const { return m_stackPointerAtVMEntry; }
     void setStackPointerAtVMEntry(void*);
@@ -435,7 +478,7 @@ public:
     }
 
     void* lastStackTop() { return m_lastStackTop; }
-    void setLastStackTop(void* lastStackTop) { m_lastStackTop = lastStackTop; }
+    void setLastStackTop(void*);
 
     const ClassInfo* const jsArrayClassInfo;
     const ClassInfo* const jsFinalObjectClassInfo;
@@ -443,14 +486,15 @@ public:
     JSValue hostCallReturnValue;
     unsigned varargsLength;
     ExecState* newCallFrameReturnValue;
-    VMEntryFrame* vmEntryFrameForThrow;
-    ExecState* callFrameForThrow;
+    ExecState* callFrameForCatch;
     void* targetMachinePCForThrow;
     Instruction* targetInterpreterPCForThrow;
     uint32_t osrExitIndex;
     void* osrExitJumpDestination;
     Vector<ScratchBuffer*> scratchBuffers;
     size_t sizeOfLastScratchBuffer;
+
+    bool isExecutingInRegExpJIT { false };
 
     ScratchBuffer* scratchBufferForSize(size_t size)
     {
@@ -472,6 +516,14 @@ public:
         ScratchBuffer* result = scratchBuffers.last();
         result->setActiveLength(0);
         return result;
+    }
+
+    EncodedJSValue* exceptionFuzzingBuffer(size_t size)
+    {
+        ASSERT(Options::useExceptionFuzz());
+        if (!m_exceptionFuzzBuffer)
+            m_exceptionFuzzBuffer = MallocPtr<EncodedJSValue>::malloc(size);
+        return m_exceptionFuzzBuffer.get();
     }
 
     void gatherConservativeRoots(ConservativeRoots&);
@@ -512,30 +564,24 @@ public:
     JS_EXPORT_PRIVATE void dumpRegExpTrace();
 
     bool isCollectorBusy() { return heap.isBusy(); }
-    JS_EXPORT_PRIVATE void releaseExecutableMemory();
 
 #if ENABLE(GC_VALIDATION)
     bool isInitializingObject() const;
     void setInitializingObjectClass(const ClassInfo*);
 #endif
 
-    unsigned m_newStringsSinceLastHashCons;
-
-    static const unsigned s_minNumberOfNewStringsToHashCons = 100;
-
-    bool haveEnoughNewStringsToHashCons() { return m_newStringsSinceLastHashCons > s_minNumberOfNewStringsToHashCons; }
-    void resetNewStringsSinceLastHashCons() { m_newStringsSinceLastHashCons = 0; }
-
     bool currentThreadIsHoldingAPILock() const { return m_apiLock->currentThreadIsHoldingLock(); }
 
     JSLock& apiLock() { return *m_apiLock; }
     CodeCache* codeCache() { return m_codeCache.get(); }
 
-    void prepareToDiscardCode();
+    JS_EXPORT_PRIVATE void whenIdle(std::function<void()>);
 
-    JS_EXPORT_PRIVATE void discardAllCode();
+    JS_EXPORT_PRIVATE void deleteAllCode();
+    JS_EXPORT_PRIVATE void deleteAllLinkedCode();
 
     void registerWatchpointForImpureProperty(const Identifier&, Watchpoint*);
+
     // FIXME: Use AtomicString once it got merged with Identifier.
     JS_EXPORT_PRIVATE void addImpureProperty(const String&);
 
@@ -555,17 +601,31 @@ public:
 
     JS_EXPORT_PRIVATE void queueMicrotask(JSGlobalObject*, PassRefPtr<Microtask>);
     JS_EXPORT_PRIVATE void drainMicrotasks();
+    JS_EXPORT_PRIVATE void setShouldRewriteConstAsVar(bool shouldRewrite) { m_shouldRewriteConstAsVar = shouldRewrite; }
+    ALWAYS_INLINE bool shouldRewriteConstAsVar() { return m_shouldRewriteConstAsVar; }
+
+    inline bool shouldTriggerTermination(ExecState*);
+
+    void setShouldBuildPCToCodeOriginMapping() { m_shouldBuildPCToCodeOriginMapping = true; }
+    bool shouldBuilderPCToCodeOriginMapping() const { return m_shouldBuildPCToCodeOriginMapping; }
+
+    BytecodeIntrinsicRegistry& bytecodeIntrinsicRegistry() { return *m_bytecodeIntrinsicRegistry; }
 
 private:
     friend class LLIntOffsetsExtractor;
     friend class ClearExceptionScope;
-    friend class RecursiveAllocationScope;
 
     VM(VMType, HeapType);
     static VM*& sharedInstanceInternal();
     void createNativeThunk();
 
     void updateStackLimit();
+
+    void setException(Exception* exception)
+    {
+        m_exception = exception;
+        m_lastException = exception;
+    }
 
 #if ENABLE(ASSEMBLER)
     bool m_canUseAssembler;
@@ -599,7 +659,10 @@ private:
     void* m_lastStackTop;
     Exception* m_exception { nullptr };
     Exception* m_lastException { nullptr };
+    bool m_failNextNewCodeBlock { false };
     bool m_inDefineOwnProperty;
+    bool m_shouldRewriteConstAsVar { false };
+    bool m_shouldBuildPCToCodeOriginMapping { false };
     std::unique_ptr<CodeCache> m_codeCache;
     LegacyProfiler* m_enabledProfiler;
     std::unique_ptr<BuiltinExecutables> m_builtinExecutables;
@@ -611,6 +674,13 @@ private:
     std::unique_ptr<ControlFlowProfiler> m_controlFlowProfiler;
     unsigned m_controlFlowProfilerEnabledCount;
     Deque<std::unique_ptr<QueuedTask>> m_microtaskQueue;
+    MallocPtr<EncodedJSValue> m_exceptionFuzzBuffer;
+    RefPtr<Watchdog> m_watchdog;
+    std::unique_ptr<HeapProfiler> m_heapProfiler;
+#if ENABLE(SAMPLING_PROFILER)
+    RefPtr<SamplingProfiler> m_samplingProfiler;
+#endif
+    std::unique_ptr<BytecodeIntrinsicRegistry> m_bytecodeIntrinsicRegistry;
 };
 
 #if ENABLE(GC_VALIDATION)

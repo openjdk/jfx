@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #ifndef HeapTimer_h
 #define HeapTimer_h
 
+#include <wtf/Lock.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Threading.h>
 
@@ -37,8 +38,13 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
+#if USE(GLIB) && !PLATFORM(EFL)
+#include <wtf/glib/GRefPtr.h>
+#endif
+
 namespace JSC {
 
+class JSLock;
 class VM;
 
 class HeapTimer {
@@ -63,12 +69,16 @@ protected:
     RetainPtr<CFRunLoopRef> m_runLoop;
     CFRunLoopTimerContext m_context;
 
-    Mutex m_shutdownMutex;
+    Lock m_shutdownMutex;
 #elif PLATFORM(EFL)
     static bool timerEvent(void*);
     Ecore_Timer* add(double delay, void* agent);
     void stop();
     Ecore_Timer* m_timer;
+#elif USE(GLIB)
+    void timerDidFire();
+    RefPtr<JSLock> m_apiLock;
+    GRefPtr<GSource> m_timer;
 #endif
 
 private:

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel (eric@webkit.org)
- * Copyright (C) 2008, 2009, 2010, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2012, 2015 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
@@ -84,7 +84,7 @@ public:
     virtual void focusedElementChanged(Element*) override { }
     virtual void focusedFrameChanged(Frame*) override { }
 
-    virtual Page* createWindow(Frame*, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) override { return 0; }
+    virtual Page* createWindow(Frame*, const FrameLoadRequest&, const WindowFeatures&, const NavigationAction&) override { return nullptr; }
     virtual void show() override { }
 
     virtual bool canRunModal() override { return false; }
@@ -130,10 +130,10 @@ public:
     virtual void invalidateContentsForSlowScroll(const IntRect&) override { }
     virtual void scroll(const IntSize&, const IntRect&, const IntRect&) override { }
 #if USE(COORDINATED_GRAPHICS)
-    virtual void delegatedScrollRequested(const IntPoint&) { }
+    virtual void delegatedScrollRequested(const IntPoint&) override { }
 #endif
 #if ENABLE(REQUEST_ANIMATION_FRAME) && !USE(REQUEST_ANIMATION_FRAME_TIMER)
-    virtual void scheduleAnimation() { }
+    virtual void scheduleAnimation() override { }
 #endif
 
     virtual IntPoint screenToRootView(const IntPoint& p) const override { return p; }
@@ -250,7 +250,7 @@ public:
     virtual void detachedFromParent2() override { }
     virtual void detachedFromParent3() override { }
 
-    virtual void convertMainResourceLoadToDownload(DocumentLoader*, const ResourceRequest&, const ResourceResponse&) override { }
+    virtual void convertMainResourceLoadToDownload(DocumentLoader*, SessionID, const ResourceRequest&, const ResourceResponse&) override { }
 
     virtual void assignIdentifierToInitialRequest(unsigned long, DocumentLoader*, const ResourceRequest&) override { }
     virtual bool shouldUseCredentialStorage(DocumentLoader*, unsigned long) override { return false; }
@@ -268,10 +268,13 @@ public:
     virtual void dispatchDidReceiveResponse(DocumentLoader*, unsigned long, const ResourceResponse&) override { }
     virtual void dispatchDidReceiveContentLength(DocumentLoader*, unsigned long, int) override { }
     virtual void dispatchDidFinishLoading(DocumentLoader*, unsigned long) override { }
+#if ENABLE(DATA_DETECTION)
+    virtual void dispatchDidFinishDataDetection(NSArray *) override { }
+#endif
     virtual void dispatchDidFailLoading(DocumentLoader*, unsigned long, const ResourceError&) override { }
     virtual bool dispatchDidLoadResourceFromMemoryCache(DocumentLoader*, const ResourceRequest&, const ResourceResponse&, int) override { return false; }
 
-    virtual void dispatchDidHandleOnloadEvents() override { }
+    virtual void dispatchDidDispatchOnloadEvents() override { }
     virtual void dispatchDidReceiveServerRedirectForProvisionalLoad() override { }
     virtual void dispatchDidCancelClientRedirect() override { }
     virtual void dispatchWillPerformClientRedirect(const URL&, double, double) override { }
@@ -291,7 +294,7 @@ public:
     virtual void dispatchDidFinishLoad() override { }
     virtual void dispatchDidLayout(LayoutMilestones) override { }
 
-    virtual Frame* dispatchCreatePage(const NavigationAction&) override { return 0; }
+    virtual Frame* dispatchCreatePage(const NavigationAction&) override { return nullptr; }
     virtual void dispatchShow() override { }
 
     virtual void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, FramePolicyFunction) override { }
@@ -320,14 +323,15 @@ public:
     virtual void committedLoad(DocumentLoader*, const char*, int) override { }
     virtual void finishedLoading(DocumentLoader*) override { }
 
-    virtual ResourceError cancelledError(const ResourceRequest&) override { ResourceError error("", 0, "", ""); error.setIsCancellation(true); return error; }
-    virtual ResourceError blockedError(const ResourceRequest&) override { return ResourceError("", 0, "", ""); }
-    virtual ResourceError cannotShowURLError(const ResourceRequest&) override { return ResourceError("", 0, "", ""); }
-    virtual ResourceError interruptedForPolicyChangeError(const ResourceRequest&) override { return ResourceError("", 0, "", ""); }
+    virtual ResourceError cancelledError(const ResourceRequest&) override { ResourceError error("", 0, URL(), ""); error.setIsCancellation(true); return error; }
+    virtual ResourceError blockedError(const ResourceRequest&) override { return ResourceError("", 0, URL(), ""); }
+    virtual ResourceError blockedByContentBlockerError(const ResourceRequest&) override { return ResourceError("", 0, URL(), ""); }
+    virtual ResourceError cannotShowURLError(const ResourceRequest&) override { return ResourceError("", 0, URL(), ""); }
+    virtual ResourceError interruptedForPolicyChangeError(const ResourceRequest&) override { return ResourceError("", 0, URL(), ""); }
 
-    virtual ResourceError cannotShowMIMETypeError(const ResourceResponse&) override { return ResourceError("", 0, "", ""); }
-    virtual ResourceError fileDoesNotExistError(const ResourceResponse&) override { return ResourceError("", 0, "", ""); }
-    virtual ResourceError pluginWillHandleLoadError(const ResourceResponse&) override { return ResourceError("", 0, "", ""); }
+    virtual ResourceError cannotShowMIMETypeError(const ResourceResponse&) override { return ResourceError("", 0, URL(), ""); }
+    virtual ResourceError fileDoesNotExistError(const ResourceResponse&) override { return ResourceError("", 0, URL(), ""); }
+    virtual ResourceError pluginWillHandleLoadError(const ResourceResponse&) override { return ResourceError("", 0, URL(), ""); }
 
     virtual bool shouldFallBack(const ResourceError&) override { return false; }
 
@@ -375,7 +379,7 @@ public:
     virtual void recreatePlugin(Widget*) override;
     virtual PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL&, const Vector<String>&, const Vector<String>&) override;
 
-    virtual ObjectContentType objectContentType(const URL&, const String&, bool) override { return ObjectContentType(); }
+    virtual ObjectContentType objectContentType(const URL&, const String&) override { return ObjectContentType(); }
     virtual String overrideMediaType() const override { return String(); }
 
     virtual void redirectDataToPlugin(Widget*) override { }
@@ -384,7 +388,7 @@ public:
     virtual void registerForIconNotification(bool) override { }
 
 #if PLATFORM(COCOA)
-    virtual RemoteAXObjectRef accessibilityRemoteObject() override { return 0; }
+    virtual RemoteAXObjectRef accessibilityRemoteObject() override { return nullptr; }
     virtual NSCachedURLResponse* willCacheResponse(DocumentLoader*, unsigned long, NSCachedURLResponse* response) const override { return response; }
 #endif
 #if PLATFORM(WIN) && USE(CFNETWORK)
@@ -399,6 +403,8 @@ public:
 #endif
 
     virtual bool isEmptyFrameLoaderClient() override { return true; }
+
+    virtual void prefetchDNS(const String&) override { }
 };
 
 class EmptyTextCheckerClient : public TextCheckerClient {
@@ -492,11 +498,11 @@ public:
 #endif
 
 #if PLATFORM(COCOA)
-    virtual NSString* userVisibleString(NSURL*) override { return 0; }
-    virtual DocumentFragment* documentFragmentFromAttributedString(NSAttributedString*, Vector<RefPtr<ArchiveResource>>&) override { return 0; };
+    virtual NSString* userVisibleString(NSURL*) override { return nullptr; }
+    virtual DocumentFragment* documentFragmentFromAttributedString(NSAttributedString*, Vector<RefPtr<ArchiveResource>>&) override { return nullptr; };
     virtual void setInsertionPasteboard(const String&) override { };
-    virtual NSURL *canonicalizeURL(NSURL*) override { return 0; }
-    virtual NSURL *canonicalizeURLString(NSString*) override { return 0; }
+    virtual NSURL *canonicalizeURL(NSURL*) override { return nullptr; }
+    virtual NSURL *canonicalizeURLString(NSString*) override { return nullptr; }
 #endif
 
 #if USE(APPKIT)
@@ -546,21 +552,12 @@ public:
     virtual ~EmptyContextMenuClient() {  }
     virtual void contextMenuDestroyed() override { }
 
-#if USE(CROSS_PLATFORM_CONTEXT_MENUS)
-    virtual std::unique_ptr<ContextMenu> customizeMenu(std::unique_ptr<ContextMenu>) override;
-#else
-    virtual PlatformMenuDescription getCustomMenuFromDefaultItems(ContextMenu*) override { return 0; }
-#endif
-    virtual void contextMenuItemSelected(ContextMenuItem*, const ContextMenu*) override { }
-
     virtual void downloadURL(const URL&) override { }
     virtual void searchWithGoogle(const Frame*) override { }
     virtual void lookUpInDictionary(Frame*) override { }
     virtual bool isSpeaking() override { return false; }
     virtual void speak(const String&) override { }
     virtual void stopSpeaking() override { }
-
-    virtual ContextMenuItem shareMenuItem(const HitTestResult&) override { return ContextMenuItem(); }
 
 #if PLATFORM(COCOA)
     virtual void searchWithSpotlight() override { }
@@ -593,10 +590,9 @@ public:
     EmptyInspectorClient() { }
     virtual ~EmptyInspectorClient() { }
 
-    virtual void inspectorDestroyed() override { }
+    virtual void inspectedPageDestroyed() override { }
 
-    virtual Inspector::FrontendChannel* openInspectorFrontend(InspectorController*) override { return 0; }
-    virtual void closeInspectorFrontend() override { }
+    virtual Inspector::FrontendChannel* openLocalFrontend(InspectorController*) override { return nullptr; }
     virtual void bringFrontendToFront() override { }
 
     virtual void highlight() override { }
@@ -612,14 +608,14 @@ public:
 class EmptyDeviceMotionClient : public DeviceMotionClient {
 public:
     virtual void setController(DeviceMotionController*) override { }
-    virtual DeviceMotionData* lastMotion() const override { return 0; }
+    virtual DeviceMotionData* lastMotion() const override { return nullptr; }
     virtual void deviceMotionControllerDestroyed() override { }
 };
 
 class EmptyDeviceOrientationClient : public DeviceOrientationClient {
 public:
     virtual void setController(DeviceOrientationController*) override { }
-    virtual DeviceOrientationData* lastOrientation() const override { return 0; }
+    virtual DeviceOrientationData* lastOrientation() const override { return nullptr; }
     virtual void deviceOrientationControllerDestroyed() override { }
 };
 

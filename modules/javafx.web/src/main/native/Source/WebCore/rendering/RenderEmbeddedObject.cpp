@@ -97,9 +97,8 @@ static const Color& unavailablePluginBorderColor()
 }
 
 RenderEmbeddedObject::RenderEmbeddedObject(HTMLFrameOwnerElement& element, Ref<RenderStyle>&& style)
-    : RenderWidget(element, WTF::move(style))
+    : RenderWidget(element, WTFMove(style))
     , m_isPluginUnavailable(false)
-    , m_isUnavailablePluginIndicatorHidden(false)
     , m_unavailablePluginIndicatorIsPressed(false)
     , m_mouseDownWasInUnavailablePluginIndicator(false)
 {
@@ -114,7 +113,7 @@ RenderEmbeddedObject::~RenderEmbeddedObject()
 
 RenderPtr<RenderEmbeddedObject> RenderEmbeddedObject::createForApplet(HTMLAppletElement& applet, Ref<RenderStyle>&& style)
 {
-    auto renderer = createRenderer<RenderEmbeddedObject>(applet, WTF::move(style));
+    auto renderer = createRenderer<RenderEmbeddedObject>(applet, WTFMove(style));
     renderer->setInline(true);
     return renderer;
 }
@@ -192,19 +191,18 @@ void RenderEmbeddedObject::setUnavailablePluginIndicatorIsPressed(bool pressed)
 {
     if (m_unavailablePluginIndicatorIsPressed == pressed)
         return;
-
     m_unavailablePluginIndicatorIsPressed = pressed;
     repaint();
 }
 
-void RenderEmbeddedObject::paintSnapshotImage(PaintInfo& paintInfo, const LayoutPoint& paintOffset, Image* image)
+void RenderEmbeddedObject::paintSnapshotImage(PaintInfo& paintInfo, const LayoutPoint& paintOffset, Image& image)
 {
     LayoutUnit cWidth = contentWidth();
     LayoutUnit cHeight = contentHeight();
     if (!cWidth || !cHeight)
         return;
 
-    GraphicsContext* context = paintInfo.context;
+    GraphicsContext& context = paintInfo.context();
     LayoutSize contentSize(cWidth, cHeight);
     LayoutPoint contentLocation = location() + paintOffset;
     contentLocation.move(borderLeft() + paddingLeft(), borderTop() + paddingTop());
@@ -214,12 +212,9 @@ void RenderEmbeddedObject::paintSnapshotImage(PaintInfo& paintInfo, const Layout
     if (alignedRect.width() <= 0 || alignedRect.height() <= 0)
         return;
 
-    bool useLowQualityScaling = shouldPaintAtLowQuality(context, image, image, alignedRect.size());
-    ImageOrientationDescription orientationDescription(shouldRespectImageOrientation());
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-    orientationDescription.setImageOrientationEnum(style().imageOrientation());
-#endif
-    context->drawImage(image, style().colorSpace(), alignedRect, ImagePaintingOptions(orientationDescription, useLowQualityScaling));
+    InterpolationQuality interpolation = chooseInterpolationQuality(context, image, &image, alignedRect.size());
+    ImageOrientationDescription orientationDescription(shouldRespectImageOrientation(), style().imageOrientation());
+    context.drawImage(image, alignedRect, ImagePaintingOptions(orientationDescription, interpolation));
 }
 
 void RenderEmbeddedObject::paintContents(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -239,7 +234,7 @@ void RenderEmbeddedObject::paintContents(PaintInfo& paintInfo, const LayoutPoint
         return;
 
     if (Image* snapshot = downcast<HTMLPlugInImageElement>(plugInElement).snapshotImage())
-        paintSnapshotImage(paintInfo, paintOffset, snapshot);
+        paintSnapshotImage(paintInfo, paintOffset, *snapshot);
 }
 
 void RenderEmbeddedObject::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -262,9 +257,9 @@ void RenderEmbeddedObject::paint(PaintInfo& paintInfo, const LayoutPoint& paintO
     RenderWidget::paint(paintInfo, paintOffset);
 }
 
-static void drawReplacementArrow(GraphicsContext* context, const FloatRect& insideRect)
+static void drawReplacementArrow(GraphicsContext& context, const FloatRect& insideRect)
 {
-    GraphicsContextStateSaver stateSaver(*context);
+    GraphicsContextStateSaver stateSaver(context);
 
     FloatRect rect(insideRect);
     rect.inflate(-replacementArrowPadding);
@@ -272,9 +267,9 @@ static void drawReplacementArrow(GraphicsContext* context, const FloatRect& insi
     FloatPoint center(rect.center());
     FloatPoint arrowTip(rect.maxX(), center.y());
 
-    context->setStrokeThickness(2);
-    context->setLineCap(RoundCap);
-    context->setLineJoin(RoundJoin);
+    context.setStrokeThickness(2);
+    context.setLineCap(RoundCap);
+    context.setLineJoin(RoundJoin);
 
     Path path;
     path.moveTo(FloatPoint(rect.x(), center.y()));
@@ -282,7 +277,7 @@ static void drawReplacementArrow(GraphicsContext* context, const FloatRect& insi
     path.addLineTo(FloatPoint(center.x(), rect.y()));
     path.moveTo(arrowTip);
     path.addLineTo(FloatPoint(center.x(), rect.maxY()));
-    context->strokePath(path);
+    context.strokePath(path);
 }
 
 void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -293,8 +288,8 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
     if (paintInfo.phase == PaintPhaseSelection)
         return;
 
-    GraphicsContext* context = paintInfo.context;
-    if (context->paintingDisabled())
+    GraphicsContext& context = paintInfo.context();
+    if (context.paintingDisabled())
         return;
 
     FloatRect contentRect;
@@ -310,45 +305,45 @@ void RenderEmbeddedObject::paintReplaced(PaintInfo& paintInfo, const LayoutPoint
     Path background;
     background.addRoundedRect(indicatorRect, FloatSize(replacementTextRoundedRectRadius, replacementTextRoundedRectRadius));
 
-    GraphicsContextStateSaver stateSaver(*context);
-    context->clip(contentRect);
-    context->setFillColor(m_unavailablePluginIndicatorIsPressed ? replacementTextRoundedRectPressedColor() : replacementTextRoundedRectColor(), style().colorSpace());
-    context->fillPath(background);
+    GraphicsContextStateSaver stateSaver(context);
+    context.clip(contentRect);
+    context.setFillColor(m_unavailablePluginIndicatorIsPressed ? replacementTextRoundedRectPressedColor() : replacementTextRoundedRectColor());
+    context.fillPath(background);
 
     Path strokePath;
     FloatRect strokeRect(indicatorRect);
     strokeRect.inflate(1);
     strokePath.addRoundedRect(strokeRect, FloatSize(replacementTextRoundedRectRadius + 1, replacementTextRoundedRectRadius + 1));
 
-    context->setStrokeColor(unavailablePluginBorderColor(), style().colorSpace());
-    context->setStrokeThickness(2);
-    context->strokePath(strokePath);
+    context.setStrokeColor(unavailablePluginBorderColor());
+    context.setStrokeThickness(2);
+    context.strokePath(strokePath);
 
     const FontMetrics& fontMetrics = font.fontMetrics();
     float labelX = roundf(replacementTextRect.location().x() + replacementTextRoundedRectLeftTextMargin);
     float labelY = roundf(replacementTextRect.location().y() + (replacementTextRect.size().height() - fontMetrics.height()) / 2 + fontMetrics.ascent() + replacementTextRoundedRectTopTextMargin);
-    context->setFillColor(replacementTextColor(), style().colorSpace());
-    context->drawBidiText(font, run, FloatPoint(labelX, labelY));
+    context.setFillColor(replacementTextColor());
+    context.drawBidiText(font, run, FloatPoint(labelX, labelY));
 
     if (shouldUnavailablePluginMessageBeButton(document(), m_pluginUnavailabilityReason)) {
         arrowRect.inflate(-replacementArrowCirclePadding);
 
-        context->beginTransparencyLayer(1.0);
-        context->setFillColor(replacementTextColor(), style().colorSpace());
-        context->fillEllipse(arrowRect);
+        context.beginTransparencyLayer(1.0);
+        context.setFillColor(replacementTextColor());
+        context.fillEllipse(arrowRect);
 
-        context->setCompositeOperation(CompositeClear);
+        context.setCompositeOperation(CompositeClear);
         drawReplacementArrow(context, arrowRect);
-        context->endTransparencyLayer();
+        context.endTransparencyLayer();
     }
 }
 
 void RenderEmbeddedObject::setUnavailablePluginIndicatorIsHidden(bool hidden)
 {
-    if (m_isUnavailablePluginIndicatorHidden == hidden)
+    auto newState = hidden ? UnavailablePluginIndicatorState::Hidden : UnavailablePluginIndicatorState::Visible;
+    if (m_isUnavailablePluginIndicatorState == newState)
         return;
-
-    m_isUnavailablePluginIndicatorHidden = hidden;
+    m_isUnavailablePluginIndicatorState = newState;
     repaint();
 }
 
@@ -359,7 +354,7 @@ bool RenderEmbeddedObject::getReplacementTextGeometry(const LayoutPoint& accumul
     contentRect = contentBoxRect();
     contentRect.moveBy(roundedIntPoint(accumulatedOffset));
 
-    FontDescription fontDescription;
+    FontCascadeDescription fontDescription;
     RenderTheme::defaultTheme()->systemFont(CSSValueWebkitSmallControl, fontDescription);
     fontDescription.setWeight(FontWeightBold);
     fontDescription.setRenderingMode(frame().settings().fontRenderingMode());

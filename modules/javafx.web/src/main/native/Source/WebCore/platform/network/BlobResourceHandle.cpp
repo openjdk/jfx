@@ -38,6 +38,7 @@
 #include "FileSystem.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
+#include "ParsedContentRange.h"
 #include "URL.h"
 #include "ResourceError.h"
 #include "ResourceHandleClient.h"
@@ -50,7 +51,6 @@
 namespace WebCore {
 
 static const unsigned bufferSize = 512 * 1024;
-static const long long positionNotSpecified = -1;
 
 static const int httpOK = 200;
 static const int httpPartialContent = 206;
@@ -137,15 +137,15 @@ void BlobResourceSynchronousLoader::didFail(ResourceHandle*, const ResourceError
 PassRefPtr<BlobResourceHandle> BlobResourceHandle::createAsync(BlobData* blobData, const ResourceRequest& request, ResourceHandleClient* client)
 {
     // FIXME: Should probably call didFail() instead of blocking the load without explanation.
-    if (!equalIgnoringCase(request.httpMethod(), "GET"))
-        return 0;
+    if (!equalLettersIgnoringASCIICase(request.httpMethod(), "get"))
+        return nullptr;
 
     return adoptRef(new BlobResourceHandle(blobData, request, client, true));
 }
 
 void BlobResourceHandle::loadResourceSynchronously(BlobData* blobData, const ResourceRequest& request, ResourceError& error, ResourceResponse& response, Vector<char>& data)
 {
-    if (!equalIgnoringCase(request.httpMethod(), "GET")) {
+    if (!equalLettersIgnoringASCIICase(request.httpMethod(), "get")) {
         error = ResourceError(webKitBlobResourceDomain, methodNotAllowed, response.url(), "Request method must be GET");
         return;
     }
@@ -156,19 +156,9 @@ void BlobResourceHandle::loadResourceSynchronously(BlobData* blobData, const Res
 }
 
 BlobResourceHandle::BlobResourceHandle(BlobData* blobData, const ResourceRequest& request, ResourceHandleClient* client, bool async)
-    : ResourceHandle(0, request, client, false, false)
+    : ResourceHandle(nullptr, request, client, false, false)
     , m_blobData(blobData)
     , m_async(async)
-    , m_errorCode(0)
-    , m_aborted(false)
-    , m_rangeOffset(positionNotSpecified)
-    , m_rangeEnd(positionNotSpecified)
-    , m_rangeSuffixLength(positionNotSpecified)
-    , m_totalRemainingSize(0)
-    , m_currentItemReadSize(0)
-    , m_sizeItemCount(0)
-    , m_readItemCount(0)
-    , m_fileOpened(false)
 {
     if (m_async)
         m_asyncStream = std::make_unique<AsyncFileStream>(*this);
@@ -300,6 +290,7 @@ void BlobResourceHandle::didGetSize(long long size)
     m_itemLengthList.append(size);
 
     // Count the size.
+    m_totalSize += size;
     m_totalRemainingSize += size;
     m_sizeItemCount++;
 
@@ -312,13 +303,13 @@ void BlobResourceHandle::seek()
     ASSERT(isMainThread());
 
     // Convert from the suffix length to the range.
-    if (m_rangeSuffixLength != positionNotSpecified) {
+    if (m_rangeSuffixLength != kPositionNotSpecified) {
         m_rangeOffset = m_totalRemainingSize - m_rangeSuffixLength;
         m_rangeEnd = m_rangeOffset + m_rangeSuffixLength - 1;
     }
 
     // Bail out if the range is not provided.
-    if (m_rangeOffset == positionNotSpecified)
+    if (m_rangeOffset == kPositionNotSpecified)
         return;
 
     // Skip the initial items that are not in the range.
@@ -330,7 +321,7 @@ void BlobResourceHandle::seek()
     m_currentItemReadSize = offset;
 
     // Adjust the total remaining size in order not to go beyond the range.
-    if (m_rangeEnd != positionNotSpecified) {
+    if (m_rangeEnd != kPositionNotSpecified) {
         long long rangeSize = m_rangeEnd - m_rangeOffset + 1;
         if (m_totalRemainingSize > rangeSize)
             m_totalRemainingSize = rangeSize;
@@ -583,10 +574,12 @@ void BlobResourceHandle::notifyResponseOnSuccess()
 {
     ASSERT(isMainThread());
 
-    bool isRangeRequest = m_rangeOffset != positionNotSpecified;
+    bool isRangeRequest = m_rangeOffset != kPositionNotSpecified;
     ResourceResponse response(firstRequest().url(), m_blobData->contentType(), m_totalRemainingSize, String());
     response.setHTTPStatusCode(isRangeRequest ? httpPartialContent : httpOK);
     response.setHTTPStatusText(isRangeRequest ? httpPartialContentText : httpOKText);
+    if (isRangeRequest)
+        response.setHTTPHeaderField(HTTPHeaderName::ContentRange, ParsedContentRange(m_rangeOffset, m_rangeEnd, m_totalSize).headerValue());
     // FIXME: If a resource identified with a blob: URL is a File object, user agents must use that file's name attribute,
     // as if the response had a Content-Disposition header with the filename parameter set to the File's name attribute.
     // Notably, this will affect a name suggested in "File Save As".
@@ -594,7 +587,7 @@ void BlobResourceHandle::notifyResponseOnSuccess()
     // BlobResourceHandle cannot be used with downloading, and doesn't even wait for continueDidReceiveResponse.
     // It's currently client's responsibility to know that didReceiveResponseAsync cannot be used to convert a
     // load into a download or blobs.
-    if (client()->usesAsyncCallbacks())
+    if (usesAsyncCallbacks())
         client()->didReceiveResponseAsync(this, response);
     else
         client()->didReceiveResponse(this, response);
@@ -626,7 +619,7 @@ void BlobResourceHandle::notifyResponseOnError()
 
     // Note that we don't wait for continueDidReceiveResponse when using didReceiveResponseAsync.
     // This is not formally correct, but the client has to be a no-op anyway, because blobs can't be downloaded.
-    if (client()->usesAsyncCallbacks())
+    if (usesAsyncCallbacks())
         client()->didReceiveResponseAsync(this, response);
     else
         client()->didReceiveResponse(this, response);
@@ -644,29 +637,31 @@ void BlobResourceHandle::notifyFail(int errorCode)
         client()->didFail(this, ResourceError(webKitBlobResourceDomain, errorCode, firstRequest().url(), String()));
 }
 
-static void doNotifyFinish(void* context)
+static void doNotifyFinish(BlobResourceHandle& handle)
 {
-    BlobResourceHandle* handle = static_cast<BlobResourceHandle*>(context);
-    if (!handle->aborted() && handle->client())
-        handle->client()->didFinishLoading(handle, 0);
+    if (handle.aborted())
+        return;
 
-    // Balance the ref() in BlobResourceHandle::notfyFinish().
-    handle->deref();
+    if (!handle.client())
+        return;
+
+    handle.client()->didFinishLoading(&handle, 0);
 }
 
 void BlobResourceHandle::notifyFinish()
 {
-    // Balanced in doNotifyFinish().
-    ref();
-
-    if (m_async) {
-        // Schedule to notify the client from a standalone function because the client might dispose the handle immediately from the callback function
-        // while we still have BlobResourceHandle calls in the stack.
-        callOnMainThread(doNotifyFinish, this);
+    if (!m_async) {
+        doNotifyFinish(*this);
         return;
     }
 
-    doNotifyFinish(this);
+    // Schedule to notify the client from a standalone function because the client might dispose the handle immediately from the callback function
+    // while we still have BlobResourceHandle calls in the stack.
+    RefPtr<BlobResourceHandle> handle(this);
+    callOnMainThread([handle] {
+        doNotifyFinish(*handle);
+    });
+
 }
 
 } // namespace WebCore

@@ -29,6 +29,7 @@
 #import "AuthenticationChallenge.h"
 #import "AuthenticationMac.h"
 #import "BlockExceptions.h"
+#import "CFNetworkSPI.h"
 #import "CookieStorage.h"
 #import "CredentialStorage.h"
 #import "CachedResourceLoader.h"
@@ -38,6 +39,7 @@
 #import "HTTPHeaderNames.h"
 #import "Logging.h"
 #import "MIMETypeRegistry.h"
+#import "NSURLConnectionSPI.h"
 #import "NetworkingContext.h"
 #import "Page.h"
 #import "ResourceError.h"
@@ -56,7 +58,7 @@
 #import <wtf/text/CString.h>
 
 #if USE(CFNETWORK)
-#if __has_include(<CFNetwork/CFURLConnectionPriv.h>)
+#if USE(APPLE_INTERNAL_SDK)
 #import <CFNetwork/CFURLConnectionPriv.h>
 #endif
 typedef struct _CFURLConnection* CFURLConnectionRef;
@@ -65,23 +67,12 @@ CFDictionaryRef _CFURLConnectionCopyTimingData(CFURLConnectionRef);
 }
 #endif // USE(CFNETWORK)
 
-#if __has_include(<Foundation/NSURLConnectionPrivate.h>)
-#import <Foundation/NSURLConnectionPrivate.h>
-#else
-@interface NSURLConnection (TimingData)
-#if !HAVE(TIMINGDATAOPTIONS)
-+ (void)_setCollectsTimingData:(BOOL)collect;
-#endif
-- (NSDictionary *)_timingData;
-@end
-#endif
-
 #if PLATFORM(IOS)
 #import "CFNetworkSPI.h"
 #import "RuntimeApplicationChecksIOS.h"
 #import "WebCoreThreadRun.h"
 
-@interface NSURLRequest (iOSDetails)
+@interface NSURLRequest ()
 - (CFURLRequestRef) _CFURLRequest;
 @end
 #endif
@@ -92,7 +83,7 @@ CFDictionaryRef _CFURLConnectionCopyTimingData(CFURLConnectionRef);
 
 using namespace WebCore;
 
-@interface NSURLConnection (Details)
+@interface NSURLConnection ()
 -(id)_initWithRequest:(NSURLRequest *)request delegate:(id)delegate usesCache:(BOOL)usesCacheFlag maxContentLength:(long long)maxContentLength startImmediately:(BOOL)startImmediately connectionProperties:(NSDictionary *)connectionProperties;
 @end
 
@@ -144,7 +135,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
 void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, SchedulingBehavior schedulingBehavior, NSDictionary *connectionProperties)
 #endif
 {
-#if ENABLE(WEB_TIMING)
+#if ENABLE(WEB_TIMING) && !HAVE(TIMINGDATAOPTIONS)
     setCollectsTimingData();
 #endif
 
@@ -177,7 +168,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
     NSURLRequest *nsRequest = firstRequest().nsURLRequest(UpdateHTTPBody);
     if (!shouldContentSniff) {
         NSMutableURLRequest *mutableRequest = [[nsRequest mutableCopy] autorelease];
-        wkSetNSURLRequestShouldContentSniff(mutableRequest, NO);
+        [mutableRequest _setProperty:@(NO) forKey:(NSString *)_kCFURLConnectionPropertyShouldSniff];
         nsRequest = mutableRequest;
     }
 
@@ -223,8 +214,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
     const bool usesCache = true;
 #endif
 #if HAVE(TIMINGDATAOPTIONS)
-    const int64_t TimingDataOptionsEnableW3CNavigationTiming = (1 << 0);
-    [propertyDictionary setObject:@{@"_kCFURLConnectionPropertyTimingDataOptions": @(TimingDataOptionsEnableW3CNavigationTiming)} forKey:@"kCFURLConnectionURLConnectionProperties"];
+    [propertyDictionary setObject:@{@"_kCFURLConnectionPropertyTimingDataOptions": @(_TimingDataOptionsEnableW3CNavigationTiming)} forKey:@"kCFURLConnectionURLConnectionProperties"];
 #endif
     d->m_connection = adoptNS([[NSURLConnection alloc] _initWithRequest:nsRequest delegate:delegate usesCache:usesCache maxContentLength:0 startImmediately:NO connectionProperties:propertyDictionary]);
 }
@@ -274,7 +264,7 @@ bool ResourceHandle::start()
         }
     }
 
-    if (client() && client()->usesAsyncCallbacks()) {
+    if (d->m_usesAsyncCallbacks) {
         ASSERT(!scheduled);
         [connection() setDelegateQueue:operationQueueForAsyncClients()];
         scheduled = true;
@@ -297,7 +287,7 @@ bool ResourceHandle::start()
 
     if (d->m_connection) {
         if (d->m_defersLoading)
-            wkSetNSURLConnectionDefersCallbacks(connection(), YES);
+            connection().defersCallbacks = YES;
 
         return true;
     }
@@ -321,10 +311,10 @@ void ResourceHandle::cancel()
 void ResourceHandle::platformSetDefersLoading(bool defers)
 {
     if (d->m_connection)
-        wkSetNSURLConnectionDefersCallbacks(d->m_connection.get(), defers);
+        [d->m_connection setDefersCallbacks:defers];
 }
 
-#if PLATFORM(MAC)
+#if !USE(CFNETWORK)
 
 void ResourceHandle::schedule(SchedulePair& pair)
 {
@@ -351,7 +341,7 @@ id ResourceHandle::makeDelegate(bool shouldUseCredentialStorage)
     ASSERT(!d->m_delegate);
 
     id <NSURLConnectionDelegate> delegate;
-    if (client() && client()->usesAsyncCallbacks()) {
+    if (d->m_usesAsyncCallbacks) {
         if (shouldUseCredentialStorage)
             delegate = [[WebCoreResourceHandleAsOperationQueueDelegate alloc] initWithHandle:this];
         else
@@ -446,11 +436,11 @@ void ResourceHandle::willSendRequest(ResourceRequest& request, const ResourceRes
 
     if (redirectResponse.httpStatusCode() == 307) {
         String lastHTTPMethod = d->m_lastHTTPMethod;
-        if (!equalIgnoringCase(lastHTTPMethod, request.httpMethod())) {
+        if (!equalIgnoringASCIICase(lastHTTPMethod, request.httpMethod())) {
             request.setHTTPMethod(lastHTTPMethod);
 
             FormData* body = d->m_firstRequest.httpBody();
-            if (!equalIgnoringCase(lastHTTPMethod, "GET") && body && !body->isEmpty())
+            if (!equalLettersIgnoringASCIICase(lastHTTPMethod, "get") && body && !body->isEmpty())
                 request.setHTTPBody(body);
 
             String originalContentType = d->m_firstRequest.httpContentType();
@@ -488,7 +478,7 @@ void ResourceHandle::willSendRequest(ResourceRequest& request, const ResourceRes
         }
     }
 
-    if (client()->usesAsyncCallbacks()) {
+    if (d->m_usesAsyncCallbacks) {
         client()->willSendRequestAsync(this, request, redirectResponse);
     } else {
         Ref<ResourceHandle> protect(*this);
@@ -502,8 +492,7 @@ void ResourceHandle::willSendRequest(ResourceRequest& request, const ResourceRes
 
 void ResourceHandle::continueWillSendRequest(const ResourceRequest& request)
 {
-    ASSERT(client());
-    ASSERT(client()->usesAsyncCallbacks());
+    ASSERT(d->m_usesAsyncCallbacks);
 
     // Client call may not preserve the session, especially if the request is sent over IPC.
     ResourceRequest newRequest = request;
@@ -514,15 +503,14 @@ void ResourceHandle::continueWillSendRequest(const ResourceRequest& request)
 
 void ResourceHandle::continueDidReceiveResponse()
 {
-    ASSERT(client());
-    ASSERT(client()->usesAsyncCallbacks());
+    ASSERT(d->m_usesAsyncCallbacks);
 
     [delegate() continueDidReceiveResponse];
 }
 
 bool ResourceHandle::shouldUseCredentialStorage()
 {
-    ASSERT(!client()->usesAsyncCallbacks());
+    ASSERT(!d->m_usesAsyncCallbacks);
     return client() && client()->shouldUseCredentialStorage(this);
 }
 
@@ -631,17 +619,21 @@ void ResourceHandle::didCancelAuthenticationChallenge(const AuthenticationChalle
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
 bool ResourceHandle::canAuthenticateAgainstProtectionSpace(const ProtectionSpace& protectionSpace)
 {
-    if (client()->usesAsyncCallbacks()) {
-        client()->canAuthenticateAgainstProtectionSpaceAsync(this, protectionSpace);
+    ResourceHandleClient* client = this->client();
+    if (d->m_usesAsyncCallbacks) {
+        if (client)
+            client->canAuthenticateAgainstProtectionSpaceAsync(this, protectionSpace);
+        else
+            continueCanAuthenticateAgainstProtectionSpace(false);
         return false; // Ignored by caller.
-    } else
-        return client() && client()->canAuthenticateAgainstProtectionSpace(this, protectionSpace);
+    }
+
+    return client && client->canAuthenticateAgainstProtectionSpace(this, protectionSpace);
 }
 
 void ResourceHandle::continueCanAuthenticateAgainstProtectionSpace(bool result)
 {
-    ASSERT(client());
-    ASSERT(client()->usesAsyncCallbacks());
+    ASSERT(d->m_usesAsyncCallbacks);
 
     [(id)delegate() continueCanAuthenticateAgainstProtectionSpace:result];
 }
@@ -728,8 +720,7 @@ void ResourceHandle::receivedChallengeRejection(const AuthenticationChallenge& c
 
 void ResourceHandle::continueWillCacheResponse(NSCachedURLResponse *response)
 {
-    ASSERT(client());
-    ASSERT(client()->usesAsyncCallbacks());
+    ASSERT(d->m_usesAsyncCallbacks);
 
     [(id)delegate() continueWillCacheResponse:response];
 }
@@ -738,54 +729,18 @@ void ResourceHandle::continueWillCacheResponse(NSCachedURLResponse *response)
 
 #if ENABLE(WEB_TIMING)
 
-void ResourceHandle::getConnectionTimingData(NSDictionary *timingData, ResourceLoadTiming& timing)
-{
-    if (!timingData)
-        return;
-
-    // This is not the navigationStart time in monotonic time, but the other times are relative to this time
-    // and only the differences between times are stored.
-    double referenceStart = [[timingData valueForKey:@"_kCFNTimingDataFetchStart"] doubleValue];
-
-    double domainLookupStart = [[timingData valueForKey:@"_kCFNTimingDataDomainLookupStart"] doubleValue];
-    double domainLookupEnd = [[timingData valueForKey:@"_kCFNTimingDataDomainLookupEnd"] doubleValue];
-    double connectStart = [[timingData valueForKey:@"_kCFNTimingDataConnectStart"] doubleValue];
-    double secureConnectionStart = [[timingData valueForKey:@"_kCFNTimingDataSecureConnectionStart"] doubleValue];
-    double connectEnd = [[timingData valueForKey:@"_kCFNTimingDataConnectEnd"] doubleValue];
-    double requestStart = [[timingData valueForKey:@"_kCFNTimingDataRequestStart"] doubleValue];
-    double responseStart = [[timingData valueForKey:@"_kCFNTimingDataResponseStart"] doubleValue];
-
-    timing.domainLookupStart = domainLookupStart <= 0 ? -1 : (domainLookupStart - referenceStart) * 1000;
-    timing.domainLookupEnd = domainLookupEnd <= 0 ? -1 : (domainLookupEnd - referenceStart) * 1000;
-    timing.connectStart = connectStart <= 0 ? -1 : (connectStart - referenceStart) * 1000;
-    timing.secureConnectionStart = secureConnectionStart <= 0 ? -1 : (secureConnectionStart - referenceStart) * 1000;
-    timing.connectEnd = connectEnd <= 0 ? -1 : (connectEnd - referenceStart) * 1000;
-    timing.requestStart = requestStart <= 0 ? 0 : (requestStart - referenceStart) * 1000;
-    timing.responseStart = responseStart <= 0 ? 0 : (responseStart - referenceStart) * 1000;
-}
-
-void ResourceHandle::setCollectsTimingData()
-{
-#if !HAVE(TIMINGDATAOPTIONS)
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        [NSURLConnection _setCollectsTimingData:YES];
-    });
-#endif
-}
-
 #if USE(CFNETWORK)
 
 void ResourceHandle::getConnectionTimingData(CFURLConnectionRef connection, ResourceLoadTiming& timing)
 {
-    getConnectionTimingData((__bridge NSDictionary*)(adoptCF(_CFURLConnectionCopyTimingData(connection)).get()), timing);
+    copyTimingData((__bridge NSDictionary*)adoptCF(_CFURLConnectionCopyTimingData(connection)).get(), timing);
 }
 
 #else
 
 void ResourceHandle::getConnectionTimingData(NSURLConnection *connection, ResourceLoadTiming& timing)
 {
-    getConnectionTimingData([connection _timingData], timing);
+    copyTimingData([connection _timingData], timing);
 }
 
 #endif

@@ -89,7 +89,7 @@ static inline bool pageIsBeingDismissed(Document& document)
 
 ImageLoader::ImageLoader(Element& element)
     : m_element(element)
-    , m_image(0)
+    , m_image(nullptr)
     , m_derefElementTimer(*this, &ImageLoader::timerFired)
     , m_hasPendingBeforeLoadEvent(false)
     , m_hasPendingLoadEvent(false)
@@ -170,7 +170,7 @@ void ImageLoader::updateFromElement()
 
     // Do not load any image if the 'src' attribute is missing or if it is
     // an empty string.
-    CachedResourceHandle<CachedImage> newImage = 0;
+    CachedResourceHandle<CachedImage> newImage = nullptr;
     if (!attr.isNull() && !stripLeadingAndTrailingHTMLSpaces(attr).isEmpty()) {
         ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
         options.setContentSecurityPolicyImposition(element().isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck);
@@ -180,7 +180,7 @@ void ImageLoader::updateFromElement()
 
         String crossOriginMode = element().fastGetAttribute(HTMLNames::crossoriginAttr);
         if (!crossOriginMode.isNull()) {
-            StoredCredentials allowCredentials = equalIgnoringCase(crossOriginMode, "use-credentials") ? AllowStoredCredentials : DoNotAllowStoredCredentials;
+            StoredCredentials allowCredentials = equalLettersIgnoringASCIICase(crossOriginMode, "use-credentials") ? AllowStoredCredentials : DoNotAllowStoredCredentials;
             updateRequestForAccessControl(request.mutableResourceRequest(), document.securityOrigin(), allowCredentials);
         }
 
@@ -289,7 +289,7 @@ void ImageLoader::notifyFinished(CachedResource* resource)
         m_hasPendingErrorEvent = true;
         errorEventSender().dispatchEventSoon(*this);
 
-        DEPRECATED_DEFINE_STATIC_LOCAL(String, consoleMessage, (ASCIILiteral("Cross-origin image load denied by Cross-Origin Resource Sharing policy.")));
+        static NeverDestroyed<String> consoleMessage(ASCIILiteral("Cross-origin image load denied by Cross-Origin Resource Sharing policy."));
         element().document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, consoleMessage);
 
         ASSERT(!m_hasPendingLoadEvent);

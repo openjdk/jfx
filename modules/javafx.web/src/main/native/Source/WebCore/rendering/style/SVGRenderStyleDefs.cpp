@@ -31,6 +31,7 @@
 
 #include "RenderStyle.h"
 #include "SVGRenderStyle.h"
+#include <wtf/PointerComparison.h>
 
 namespace WebCore {
 
@@ -216,16 +217,11 @@ Ref<StyleShadowSVGData> StyleShadowSVGData::copy() const
 
 bool StyleShadowSVGData::operator==(const StyleShadowSVGData& other) const
 {
-    if ((!shadow && other.shadow) || (shadow && !other.shadow))
-        return false;
-    if (shadow && other.shadow && (*shadow != *other.shadow))
-        return false;
-    return true;
+    return arePointingToEqualData(shadow, other.shadow);
 }
 
 StyleResourceData::StyleResourceData()
     : clipper(SVGRenderStyle::initialClipperResource())
-    , filter(SVGRenderStyle::initialFilterResource())
     , masker(SVGRenderStyle::initialMaskerResource())
 {
 }
@@ -233,7 +229,6 @@ StyleResourceData::StyleResourceData()
 inline StyleResourceData::StyleResourceData(const StyleResourceData& other)
     : RefCounted<StyleResourceData>()
     , clipper(other.clipper)
-    , filter(other.filter)
     , masker(other.masker)
 {
 }
@@ -246,7 +241,6 @@ Ref<StyleResourceData> StyleResourceData::copy() const
 bool StyleResourceData::operator==(const StyleResourceData& other) const
 {
     return clipper == other.clipper
-        && filter == other.filter
         && masker == other.masker;
 }
 

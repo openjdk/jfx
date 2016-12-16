@@ -37,7 +37,7 @@ namespace WebCore {
 
 URL PreloadRequest::completeURL(Document& document)
 {
-    return document.completeURL(m_resourceURL, m_baseURL.isEmpty() ? document.url() : m_baseURL);
+    return document.completeURL(m_resourceURL, m_baseURL.isEmpty() ? document.baseURL() : m_baseURL);
 }
 
 CachedResourceRequest PreloadRequest::resourceRequest(Document& document)
@@ -55,7 +55,7 @@ CachedResourceRequest PreloadRequest::resourceRequest(Document& document)
 void HTMLResourcePreloader::preload(PreloadRequestStream requests)
 {
     for (auto& request : requests)
-        preload(WTF::move(request));
+        preload(WTFMove(request));
 }
 
 static bool mediaAttributeMatches(Frame* frame, RenderStyle* renderStyle, const String& attributeValue)

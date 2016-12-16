@@ -34,8 +34,8 @@ SVGAnimatedPathAnimator::SVGAnimatedPathAnimator(SVGAnimationElement* animationE
 std::unique_ptr<SVGAnimatedType> SVGAnimatedPathAnimator::constructFromString(const String& string)
 {
     auto byteStream = std::make_unique<SVGPathByteStream>();
-    buildSVGPathByteStreamFromString(string, byteStream.get(), UnalteredParsing);
-    return SVGAnimatedType::createPath(WTF::move(byteStream));
+    buildSVGPathByteStreamFromString(string, *byteStream, UnalteredParsing);
+    return SVGAnimatedType::createPath(WTFMove(byteStream));
 }
 
 std::unique_ptr<SVGAnimatedType> SVGAnimatedPathAnimator::startAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
@@ -45,7 +45,7 @@ std::unique_ptr<SVGAnimatedType> SVGAnimatedPathAnimator::startAnimValAnimation(
     // Build initial path byte stream.
     auto byteStream = std::make_unique<SVGPathByteStream>();
     resetAnimValToBaseVal(animatedTypes, byteStream.get());
-    return SVGAnimatedType::createPath(WTF::move(byteStream));
+    return SVGAnimatedType::createPath(WTFMove(byteStream));
 }
 
 void SVGAnimatedPathAnimator::stopAnimValAnimation(const SVGElementAnimatedPropertyList& animatedTypes)
@@ -58,7 +58,7 @@ void SVGAnimatedPathAnimator::resetAnimValToBaseVal(const SVGElementAnimatedProp
     SVGAnimatedPathSegListPropertyTearOff* property = castAnimatedPropertyToActualType<SVGAnimatedPathSegListPropertyTearOff>(animatedTypes[0].properties[0].get());
     const SVGPathSegList& baseValue = property->currentBaseValue();
 
-    buildSVGPathByteStreamFromSVGPathSegList(baseValue, byteStream, UnalteredParsing);
+    buildSVGPathByteStreamFromSVGPathSegList(baseValue, *byteStream, UnalteredParsing);
 
     Vector<RefPtr<SVGAnimatedPathSegListPropertyTearOff>> result;
 
@@ -76,12 +76,11 @@ void SVGAnimatedPathAnimator::resetAnimValToBaseVal(const SVGElementAnimatedProp
     }
 }
 
-void SVGAnimatedPathAnimator::resetAnimValToBaseVal(const SVGElementAnimatedPropertyList& animatedTypes, SVGAnimatedType* type)
+void SVGAnimatedPathAnimator::resetAnimValToBaseVal(const SVGElementAnimatedPropertyList& animatedTypes, SVGAnimatedType& type)
 {
     ASSERT(animatedTypes.size() >= 1);
-    ASSERT(type);
-    ASSERT(type->type() == m_type);
-    resetAnimValToBaseVal(animatedTypes, type->path());
+    ASSERT(type.type() == m_type);
+    resetAnimValToBaseVal(animatedTypes, type.path());
 }
 
 void SVGAnimatedPathAnimator::animValWillChange(const SVGElementAnimatedPropertyList& animatedTypes)
@@ -104,7 +103,7 @@ void SVGAnimatedPathAnimator::addAnimatedTypes(SVGAnimatedType* from, SVGAnimate
     unsigned fromPathSize = fromPath->size();
     if (!fromPathSize || fromPathSize != toPath->size())
         return;
-    addToSVGPathByteStream(toPath, fromPath);
+    addToSVGPathByteStream(*toPath, *fromPath);
 }
 
 void SVGAnimatedPathAnimator::calculateAnimatedValue(float percentage, unsigned repeatCount, SVGAnimatedType* from, SVGAnimatedType* to, SVGAnimatedType* toAtEndOfDuration, SVGAnimatedType* animated)
@@ -133,15 +132,15 @@ void SVGAnimatedPathAnimator::calculateAnimatedValue(float percentage, unsigned 
     if (!m_animationElement->adjustFromToListValues<SVGPathByteStream>(*fromPath, *toPath, *animatedPath, percentage, false))
         return;
 
-    buildAnimatedSVGPathByteStream(fromPath, toPath, animatedPath, percentage);
+    buildAnimatedSVGPathByteStream(*fromPath, *toPath, *animatedPath, percentage);
 
     // Handle additive='sum'.
     if (lastAnimatedPath)
-        addToSVGPathByteStream(animatedPath, lastAnimatedPath.get());
+        addToSVGPathByteStream(*animatedPath, *lastAnimatedPath);
 
     // Handle accumulate='sum'.
     if (m_animationElement->isAccumulated() && repeatCount)
-        addToSVGPathByteStream(animatedPath, toAtEndOfDurationPath, repeatCount);
+        addToSVGPathByteStream(*animatedPath, *toAtEndOfDurationPath, repeatCount);
 }
 
 float SVGAnimatedPathAnimator::calculateDistance(const String&, const String&)

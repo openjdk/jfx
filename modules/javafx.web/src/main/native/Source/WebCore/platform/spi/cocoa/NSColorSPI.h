@@ -25,15 +25,13 @@
 
 #import <AppKit/NSColor.h>
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
-
 #if PLATFORM(MAC) && USE(APPLE_INTERNAL_SDK)
 
 #import <AppKit/NSColor_Private.h>
 
 #else
 
-@interface NSColor (Details)
+@interface NSColor ()
 + (NSColor *)systemRedColor;
 + (NSColor *)systemGreenColor;
 + (NSColor *)systemBlueColor;
@@ -44,7 +42,5 @@
 + (NSColor *)systemPurpleColor;
 + (NSColor *)systemGrayColor;
 @end
-
-#endif
 
 #endif

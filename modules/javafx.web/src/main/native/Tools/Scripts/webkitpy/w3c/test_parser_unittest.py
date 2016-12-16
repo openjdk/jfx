@@ -1,4 +1,5 @@
 # Copyright (C) 2013 Adobe Systems Incorporated. All rights reserved.
+# Copyright (C) 2015 Apple Inc. All Rights Reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -42,8 +43,8 @@ class TestParserTest(unittest.TestCase):
 <link rel="match" href="green-box-ref.xht" />
 </head>
 """
-        test_path = '/some/madeup/path/'
-        parser = TestParser(options, test_path + 'somefile.html')
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
         test_info = parser.analyze_test(test_contents=test_html)
 
         self.assertNotEqual(test_info, None, 'did not find a test')
@@ -63,8 +64,8 @@ class TestParserTest(unittest.TestCase):
         oc = OutputCapture()
         oc.capture_output()
         try:
-            test_path = '/some/madeup/path/'
-            parser = TestParser(options, test_path + 'somefile.html')
+            test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+            parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
             test_info = parser.analyze_test(test_contents=test_html)
         finally:
             _, _, logs = oc.restore_output()
@@ -89,8 +90,8 @@ class TestParserTest(unittest.TestCase):
         oc.capture_output()
 
         try:
-            test_path = '/some/madeup/path/'
-            parser = TestParser(options, test_path + 'somefile.html')
+            test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+            parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
             test_info = parser.analyze_test(test_contents=test_html)
         finally:
             _, _, logs = oc.restore_output()
@@ -123,8 +124,8 @@ class TestParserTest(unittest.TestCase):
 </body>
 </html>
 """
-        test_path = '/some/madeup/path/'
-        parser = TestParser(options, test_path + 'somefile.html')
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
         test_info = parser.analyze_test(test_contents=test_html, ref_contents=ref_html)
 
         self.assertNotEqual(test_info, None, 'did not find a test')
@@ -143,8 +144,8 @@ class TestParserTest(unittest.TestCase):
 <script src="/resources/testharness.js"></script>
 </head>
 """
-        test_path = '/some/madeup/path/'
-        parser = TestParser(options, test_path + 'somefile.html')
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
         test_info = parser.analyze_test(test_contents=test_html)
 
         self.assertNotEqual(test_info, None, 'test_info is None')
@@ -161,11 +162,11 @@ class TestParserTest(unittest.TestCase):
 <script src="/resources/testharness.js"></script>
 </head>
 """
-        test_path = '/some/madeup/path/'
-        parser = TestParser(options, test_path + 'somefile-manual.html')
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'somefile-manual.html'))
         test_info = parser.analyze_test(test_contents=test_html)
 
-        self.assertEqual(test_info, None, 'test_info is None')
+        self.assertTrue(test_info['manualtest'], 'test_info is None')
 
     def test_analyze_pixel_test_all_true(self):
         """ Tests analyze_test() using a test that is neither a reftest or jstest with all=False """
@@ -186,8 +187,8 @@ CONTENT OF TEST
         # Set options to 'all' so this gets found
         options['all'] = True
 
-        test_path = '/some/madeup/path/'
-        parser = TestParser(options, test_path + 'somefile.html')
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
         test_info = parser.analyze_test(test_contents=test_html)
 
         self.assertNotEqual(test_info, None, 'test_info is None')
@@ -215,8 +216,8 @@ CONTENT OF TEST
         # Set all to false so this gets skipped
         options['all'] = False
 
-        test_path = '/some/madeup/path/'
-        parser = TestParser(options, test_path + 'somefile.html')
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'somefile.html'))
         test_info = parser.analyze_test(test_contents=test_html)
 
         self.assertEqual(test_info, None, 'test should have been skipped')
@@ -227,3 +228,26 @@ CONTENT OF TEST
         parser = TestParser(options, os.path.join(os.path.dirname(__file__), 'test_parser.py'))
         test_info = parser.analyze_test()
         self.assertEqual(test_info, None, 'no tests should have been found in this file')
+
+    def test_reference_test(self):
+        """ Tests analyze_test() using a test that is a reference file having a <link rel="match"> tag"""
+
+        test_html = """<html>
+<head>
+<title>CSS Test: DESCRIPTION OF TEST</title>
+<link rel="match" href="test-ref.html" />
+<link rel="author" title="NAME_OF_AUTHOR" />
+<style type="text/css"><![CDATA[
+CSS FOR TEST
+]]></style>
+</head>
+<body>
+CONTENT OF TEST
+</body>
+</html>
+"""
+        test_path = os.path.join(os.path.sep, 'some', 'madeup', 'path')
+        parser = TestParser(options, os.path.join(test_path, 'test-ref.html'))
+        test_info = parser.analyze_test(test_contents=test_html)
+
+        self.assertTrue('referencefile' in test_info, 'test should be detected as reference file')

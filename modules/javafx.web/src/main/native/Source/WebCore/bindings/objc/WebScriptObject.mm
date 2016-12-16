@@ -43,14 +43,14 @@
 #import <JavaScriptCore/JSContextInternal.h>
 #import <JavaScriptCore/JSValueInternal.h>
 #import <interpreter/CallFrame.h>
+#import <runtime/Completion.h>
 #import <runtime/InitializeThreading.h>
 #import <runtime/JSGlobalObject.h>
 #import <runtime/JSLock.h>
-#import <runtime/Completion.h>
-#import <runtime/Completion.h>
-#import <wtf/SpinLock.h>
+#import <wtf/HashMap.h>
+#import <wtf/Lock.h>
+#import <wtf/NeverDestroyed.h>
 #import <wtf/Threading.h>
-#import <wtf/spi/cocoa/NSMapTableSPI.h>
 #import <wtf/text/WTFString.h>
 
 using namespace JSC::Bindings;
@@ -71,47 +71,44 @@ using JSC::makeSource;
 
 namespace WebCore {
 
-static NSMapTable* JSWrapperCache;
-static StaticSpinLock spinLock;
+static StaticLock spinLock;
+
+static HashMap<JSObject*, NSObject *>& wrapperCache()
+{
+    static NeverDestroyed<HashMap<JSObject*, NSObject *>> map;
+    return map;
+}
 
 NSObject* getJSWrapper(JSObject* impl)
 {
     ASSERT(isMainThread());
-    SpinLockHolder holder(&spinLock);
+    LockHolder holder(&spinLock);
 
-    if (!JSWrapperCache)
-        return nil;
-    NSObject* wrapper = static_cast<NSObject*>(NSMapGet(JSWrapperCache, impl));
+    NSObject* wrapper = wrapperCache().get(impl);
     return wrapper ? [[wrapper retain] autorelease] : nil;
 }
 
 void addJSWrapper(NSObject* wrapper, JSObject* impl)
 {
     ASSERT(isMainThread());
-    SpinLockHolder holder(&spinLock);
+    LockHolder holder(&spinLock);
 
-    if (!JSWrapperCache)
-        JSWrapperCache = createWrapperCache();
-    NSMapInsert(JSWrapperCache, impl, wrapper);
+    wrapperCache().set(impl, wrapper);
 }
 
 void removeJSWrapper(JSObject* impl)
 {
-    SpinLockHolder holder(&spinLock);
+    LockHolder holder(&spinLock);
 
-    if (!JSWrapperCache)
-        return;
-    NSMapRemove(JSWrapperCache, impl);
+    wrapperCache().remove(impl);
 }
 
 static void removeJSWrapperIfRetainCountOne(NSObject* wrapper, JSObject* impl)
 {
-    SpinLockHolder holder(&spinLock);
+    LockHolder holder(&spinLock);
 
-    if (!JSWrapperCache)
-        return;
     if ([wrapper retainCount] == 1)
-        NSMapRemove(JSWrapperCache, impl);
+        wrapperCache().remove(impl);
 }
 
 id createJSWrapper(JSC::JSObject* object, PassRefPtr<JSC::Bindings::RootObject> origin, PassRefPtr<JSC::Bindings::RootObject> root)
@@ -150,7 +147,6 @@ static void addExceptionToConsole(ExecState* exec)
     JSC::initializeThreading();
     WTF::initializeMainThreadToProcessMainThread();
 #endif // !USE(WEB_THREAD)
-    WebCoreObjCFinalizeOnMainThread(self);
 }
 
 + (id)scriptObjectForJSObject:(JSObjectRef)jsObject originRootObject:(RootObject*)originRootObject rootObject:(RootObject*)rootObject
@@ -252,7 +248,7 @@ static void addExceptionToConsole(ExecState* exec)
     // JSDOMWindowBase* isn't the right object to represent the currently executing
     // JavaScript. Instead, we should use ExecState, like we do elsewhere.
     JSDOMWindowBase* target = jsCast<JSDOMWindowBase*>(root->globalObject());
-    return BindingSecurity::shouldAllowAccessToDOMWindow(_private->originRootObject->globalObject()->globalExec(), target->impl());
+    return BindingSecurity::shouldAllowAccessToDOMWindow(_private->originRootObject->globalObject()->globalExec(), target->wrapped());
 }
 
 - (JSGlobalContextRef)_globalContextRef
@@ -288,20 +284,6 @@ static void addExceptionToConsole(ExecState* exec)
     [_private release];
 
     [super dealloc];
-}
-
-- (void)finalize
-{
-    if (_private->rootObject && _private->rootObject->isValid())
-        _private->rootObject->gcUnprotect(_private->imp);
-
-    if (_private->rootObject)
-        _private->rootObject->deref();
-
-    if (_private->originRootObject)
-        _private->originRootObject->deref();
-
-    [super finalize];
 }
 
 + (BOOL)throwException:(NSString *)exceptionMessage
@@ -343,7 +325,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
         return nil;
 
     NakedPtr<JSC::Exception> exception;
-    JSC::JSValue result = JSMainThreadExecState::call(exec, function, callType, callData, [self _imp], argList, exception);
+    JSC::JSValue result = JSMainThreadExecState::profiledCall(exec, JSC::ProfilingReason::Other, function, callType, callData, [self _imp], argList, exception);
 
     if (exception) {
         addExceptionToConsole(exec, exception);
@@ -366,7 +348,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 
     JSLockHolder lock(exec);
 
-    JSC::JSValue returnValue = JSMainThreadExecState::evaluate(exec, makeSource(String(script)), JSC::JSValue());
+    JSC::JSValue returnValue = JSMainThreadExecState::profiledEvaluate(exec, JSC::ProfilingReason::Other, makeSource(String(script)), JSC::JSValue());
 
     id resultObj = [WebScriptObject _convertValueToObjcValue:returnValue originRootObject:[self _originRootObject] rootObject:[self _rootObject]];
 
@@ -541,7 +523,7 @@ static void getListFromNSArray(ExecState *exec, NSArray *array, RootObject* root
 
         if (object->inherits(JSHTMLElement::info())) {
             // Plugin elements cache the instance internally.
-            if (ObjcInstance* instance = static_cast<ObjcInstance*>(pluginInstance(jsCast<JSHTMLElement*>(object)->impl())))
+            if (ObjcInstance* instance = static_cast<ObjcInstance*>(pluginInstance(jsCast<JSHTMLElement*>(object)->wrapped())))
                 return instance->getObject();
         } else if (object->inherits(ObjCRuntimeObject::info())) {
             ObjCRuntimeObject* runtimeObject = static_cast<ObjCRuntimeObject*>(object);

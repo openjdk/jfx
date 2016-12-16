@@ -4,8 +4,8 @@
 #include "config.h"
 
 #include <cstdio>
-//#include <wtf/HashSet.h>
 #include <wtf/Vector.h>
+#include <wtf/text/StringBuilder.h>
 
 #include "Chrome.h"
 #include "ChromeClientJava.h"
@@ -151,7 +151,7 @@ bool RenderThemeJava::paintWidget(
     const IntRect &rect)
 {
     // platformContext() returns 0 when printing
-    if (!m_jTheme || paintInfo.context->paintingDisabled() || !paintInfo.context->platformContext()) {
+    if (!m_jTheme || paintInfo.context().paintingDisabled() || !paintInfo.context().platformContext()) {
         return false;
     }
 
@@ -247,7 +247,7 @@ bool RenderThemeJava::paintWidget(
     CheckAndClearException(env);
 
     // widgetRef will go into rq's inner refs vector.
-    paintInfo.context->platformContext()->rq().freeSpace(20)
+    paintInfo.context().platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWWIDGET
     << (jint)*m_jTheme
     << widgetRef
@@ -398,18 +398,18 @@ static float systemFontSizeForControlSize(JavaControlSize controlSize)
     return sizes[controlSize];
 }
 
-void RenderThemeJava::systemFont(CSSValueID propId, FontDescription& fontDescription) const
+void RenderThemeJava::updateCachedSystemFontDescription(CSSValueID propId, FontCascadeDescription& fontDescription) const
 {
     // This logic owes much to RenderThemeSafari.cpp.
-    static FontDescription systemFont;
-    static FontDescription smallSystemFont;
-    static FontDescription menuFont;
-    static FontDescription labelFont;
-    static FontDescription miniControlFont;
-    static FontDescription smallControlFont;
-    static FontDescription controlFont;
+    static FontCascadeDescription systemFont;
+    static FontCascadeDescription smallSystemFont;
+    static FontCascadeDescription menuFont;
+    static FontCascadeDescription labelFont;
+    static FontCascadeDescription miniControlFont;
+    static FontCascadeDescription smallControlFont;
+    static FontCascadeDescription controlFont;
 
-    FontDescription* cachedDesc;
+    FontCascadeDescription* cachedDesc;
     float fontSize = 0;
     switch (propId) {
         case CSSValueSmallCaption:
@@ -450,7 +450,7 @@ void RenderThemeJava::systemFont(CSSValueID propId, FontDescription& fontDescrip
 
     if (fontSize) {
         cachedDesc->setIsAbsoluteSize(true);
-        // cachedDesc->setGenericFamily(FontDescription::NoFamily); //XXX: removed
+        // cachedDesc->setGenericFamily(FontCascadeDescription::NoFamily); //XXX: removed
         //cachedDesc->setOneFamily("Lucida Grande");
         cachedDesc->setOneFamily("Tahoma");
         cachedDesc->setSpecifiedSize(fontSize);
@@ -458,12 +458,6 @@ void RenderThemeJava::systemFont(CSSValueID propId, FontDescription& fontDescrip
         cachedDesc->setItalic(FontItalicOff);
     }
     fontDescription = *cachedDesc;
-}
-
-
-void RenderThemeJava::updateCachedSystemFontDescription(CSSValueID, FontDescription& fontDescription) const
-{
-    //XXX: implement
 }
 
 void RenderThemeJava::adjustSliderTrackStyle(StyleResolver& selector, RenderStyle& style, Element* element) const
@@ -551,7 +545,7 @@ void RenderThemeJava::adjustMenuListButtonStyle(StyleResolver& selector, RenderS
     adjustMenuListStyle(selector, style, e);
 }
 
-bool RenderThemeJava::paintMenuListButtonDecorations(const RenderObject& o, const PaintInfo& i, const FloatRect& r)
+bool RenderThemeJava::paintMenuListButtonDecorations(const RenderBox& o, const PaintInfo& i, const FloatRect& r)
 {
     IntRect rect(r.x() + r.width(), r.y(), r.height(), r.height());
 
@@ -685,7 +679,7 @@ bool RenderThemeJava::paintMediaSliderTrack(const RenderObject&o, const PaintInf
 
     RefPtr<TimeRanges> timeRanges = mediaElement->buffered();
 
-    paintInfo.context->platformContext()->rq().freeSpace(4
+    paintInfo.context().platformContext()->rq().freeSpace(4
         + 4                 // number of timeRange pairs
         + timeRanges->length() * 4 *2   // timeRange pairs
         + 4 + 4             // duration and currentTime
@@ -697,11 +691,11 @@ bool RenderThemeJava::paintMediaSliderTrack(const RenderObject&o, const PaintInf
     //utatodo: need [double] support
     ExceptionCode ex;
     for (int i=0; i<timeRanges->length(); i++) {
-        paintInfo.context->platformContext()->rq()
+        paintInfo.context().platformContext()->rq()
         << (jfloat)timeRanges->start(i, ex) << (jfloat)timeRanges->end(i, ex);
     }
 
-    paintInfo.context->platformContext()->rq()
+    paintInfo.context().platformContext()->rq()
     << (jfloat)mediaElement->duration()
     << (jfloat)mediaElement->currentTime()
     << (jint)r.x() <<  (jint)r.y() << (jint)r.width() << (jint)r.height();
@@ -724,7 +718,7 @@ bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& o, const P
     if (mediaElement == NULL)
         return false;
 
-    paintInfo.context->platformContext()->rq().freeSpace(28)
+    paintInfo.context().platformContext()->rq().freeSpace(28)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIA_VOLUMETRACK
     << (jfloat)mediaElement->volume()
     << (jint)(mediaElement->hasAudio() && !mediaElement->muted() ? 0 : 1)   // muted
@@ -764,7 +758,7 @@ bool RenderThemeJava::paintMediaTimeRemaining(const RenderObject& o, const Paint
 
 bool RenderThemeJava::paintMediaControl(jint type, const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
 {
-    paintInfo.context->platformContext()->rq().freeSpace(24)
+    paintInfo.context().platformContext()->rq().freeSpace(24)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIACONTROL
     << type << (jint)r.x() <<  (jint)r.y()
     << (jint)r.width() << (jint)r.height();

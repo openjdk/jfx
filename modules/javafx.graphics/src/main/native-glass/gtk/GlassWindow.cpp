@@ -82,8 +82,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createWindow
 {
     (void)env;
 
+    WindowContext* parent = JLONG_TO_WINDOW_CTX(owner);
+
     WindowContext* ctx = new WindowContextTop(obj,
-            (WindowContext*)JLONG_TO_PTR(owner),
+            parent,
             screen,
             glass_mask_to_window_frame_type(mask),
             glass_mask_to_window_type(mask),
@@ -108,9 +110,11 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_gtk_GtkWindow__1createChildWindow
     WindowContextPlug *parent_ctx = NULL;
     WindowContext *ctx = NULL;
 
+    WindowContext* parent = JLONG_TO_WINDOW_CTX(owner);
+
     parent_window = gdk_x11_window_lookup_for_display(
                         gdk_display_get_default(),
-                        (GdkNativeWindow)PTR_TO_JLONG(owner));
+                        GDK_WINDOW_XID(ctx->get_gdk_window()));
 
     if (parent_window != NULL) {
         parent_ctx = (WindowContextPlug *)g_object_get_data(G_OBJECT(parent_window), GDK_WINDOW_DATA_CONTEXT);

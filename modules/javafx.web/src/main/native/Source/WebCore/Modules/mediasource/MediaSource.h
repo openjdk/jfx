@@ -49,7 +49,7 @@ namespace WebCore {
 
 class GenericEventQueue;
 
-class MediaSource : public MediaSourcePrivateClient, public ActiveDOMObject, public EventTargetWithInlineData, public ScriptWrappable, public URLRegistrable {
+class MediaSource : public MediaSourcePrivateClient, public ActiveDOMObject, public EventTargetWithInlineData, public URLRegistrable {
 public:
     static void setRegistry(URLRegistry*);
     static MediaSource* lookup(const String& url) { return s_registry ? static_cast<MediaSource*>(s_registry->lookup(url)) : 0; }
@@ -119,7 +119,7 @@ protected:
 
     // ActiveDOMObject API.
     void stop() override;
-    bool canSuspendForPageCache() const override;
+    bool canSuspendForDocumentSuspension() const override;
     const char* activeDOMObjectName() const override;
 
     void onReadyStateChange(const AtomicString& oldState, const AtomicString& newState);

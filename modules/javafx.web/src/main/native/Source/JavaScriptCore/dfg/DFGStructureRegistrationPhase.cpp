@@ -44,6 +44,13 @@ public:
 
     bool run()
     {
+        // FIXME: This phase shouldn't exist. We should have registered all structures by now, since
+        // we may already have done optimizations that rely on structures having been registered.
+        // Currently, we still have places where we don't register structures prior to this phase,
+        // but structures don't end up being used for optimization prior to this phase. That's a
+        // pretty fragile situation and we should fix it eventually.
+        // https://bugs.webkit.org/show_bug.cgi?id=147889
+
         // We need to set this before this phase finishes. This phase doesn't do anything
         // conditioned on this field, except for assertIsRegistered() below. We intend for that
         // method to behave as if the phase was already finished. So, we set this up here.
@@ -54,10 +61,11 @@ public:
         // watchable and so we will assert if they aren't watched.
         registerStructure(m_graph.m_vm.structureStructure.get());
         registerStructure(m_graph.m_vm.stringStructure.get());
+        registerStructure(m_graph.m_vm.symbolStructure.get());
         registerStructure(m_graph.m_vm.getterSetterStructure.get());
 
         for (FrozenValue* value : m_graph.m_frozenValues)
-            m_graph.assertIsRegistered(value->structure());
+            assertIsRegistered(value->structure());
 
         for (BlockIndex blockIndex = m_graph.numBlocks(); blockIndex--;) {
             BasicBlock* block = m_graph.block(blockIndex);
@@ -69,7 +77,7 @@ public:
 
                 switch (node->op()) {
                 case CheckStructure:
-                    registerStructures(node->structureSet());
+                    assertAreRegistered(node->structureSet());
                     break;
 
                 case NewObject:
@@ -86,15 +94,8 @@ public:
                     break;
 
                 case MultiGetByOffset:
-                    for (unsigned i = node->multiGetByOffsetData().variants.size(); i--;) {
-                        GetByIdVariant& variant = node->multiGetByOffsetData().variants[i];
-                        registerStructures(variant.structureSet());
-                        // Don't need to watch anything in the structure chain because that would
-                        // have been decomposed into CheckStructure's. Don't need to watch the
-                        // callLinkStatus because we wouldn't use MultiGetByOffset if any of the
-                        // variants did that.
-                        ASSERT(!variant.callLinkStatus());
-                    }
+                    for (const MultiGetByOffsetCase& getCase : node->multiGetByOffsetData().cases)
+                        registerStructures(getCase.set());
                     break;
 
                 case MultiPutByOffset:
@@ -108,8 +109,12 @@ public:
 
                 case NewArray:
                 case NewArrayBuffer:
-                    registerStructure(m_graph.globalObjectFor(node->origin.semantic)->arrayStructureForIndexingTypeDuringAllocation(node->indexingType()));
+                case NewArrayWithSize: {
+                    JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
+                    registerStructure(globalObject->arrayStructureForIndexingTypeDuringAllocation(node->indexingType()));
+                    registerStructure(globalObject->originalArrayStructureForIndexingType(ArrayWithSlowPutArrayStorage));
                     break;
+                }
 
                 case NewTypedArray:
                     registerStructure(m_graph.globalObjectFor(node->origin.semantic)->typedArrayStructure(node->typedArrayType()));
@@ -135,9 +140,14 @@ public:
                 case NewRegexp:
                     registerStructure(m_graph.globalObjectFor(node->origin.semantic)->regExpStructure());
                     break;
-
+                case NewArrowFunction:
+                    registerStructure(m_graph.globalObjectFor(node->origin.semantic)->functionStructure());
+                    break;
                 case NewFunction:
                     registerStructure(m_graph.globalObjectFor(node->origin.semantic)->functionStructure());
+                    break;
+                case NewGeneratorFunction:
+                    registerStructure(m_graph.globalObjectFor(node->origin.semantic)->generatorFunctionStructure());
                     break;
 
                 default:
@@ -152,14 +162,26 @@ public:
 private:
     void registerStructures(const StructureSet& set)
     {
-        for (unsigned i = set.size(); i--;)
-            registerStructure(set[i]);
+        for (Structure* structure : set)
+            registerStructure(structure);
     }
 
     void registerStructure(Structure* structure)
     {
         if (structure)
             m_graph.registerStructure(structure);
+    }
+
+    void assertAreRegistered(const StructureSet& set)
+    {
+        for (Structure* structure : set)
+            assertIsRegistered(structure);
+    }
+
+    void assertIsRegistered(Structure* structure)
+    {
+        if (structure)
+            m_graph.assertIsRegistered(structure);
     }
 };
 

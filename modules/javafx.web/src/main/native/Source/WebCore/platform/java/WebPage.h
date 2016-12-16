@@ -13,7 +13,7 @@
 #include "ScrollTypes.h"
 
 #include <jni.h> // todo tav remove when building w/ pch
-#include <JavaRef.h>
+#include <wtf/java/JavaRef.h>
 
 
 namespace WebCore {

@@ -29,6 +29,7 @@
 #if ENABLE(CONTEXT_MENUS)
 
 #include "ContextMenuContext.h"
+#include "ContextMenuItem.h"
 #include <wtf/Noncopyable.h>
 #include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
@@ -58,7 +59,7 @@ public:
     void showContextMenu(Event*, PassRefPtr<ContextMenuProvider>);
 
     void populate();
-    WEBCORE_EXPORT void contextMenuItemSelected(ContextMenuItem*);
+    WEBCORE_EXPORT void contextMenuItemSelected(ContextMenuAction, const String& title);
     void addInspectElementItem();
 
     WEBCORE_EXPORT void checkOrEnableIfNeeded(ContextMenuItem&) const;
@@ -66,10 +67,6 @@ public:
     void setContextMenuContext(const ContextMenuContext& context) { m_context = context; }
     const ContextMenuContext& context() const { return m_context; }
     const HitTestResult& hitTestResult() const { return m_context.hitTestResult(); }
-
-#if PLATFORM(JAVA)
-        Page* page() const { return &m_page; }
-#endif
 
 #if USE(ACCESSIBILITY_CONTEXT_MENUS)
     void showContextMenuAt(Frame*, const IntPoint& clickPoint);

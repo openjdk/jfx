@@ -188,7 +188,8 @@
             "properties": [
                 { "name": "startOffset", "type": "integer", "description": "Start offset of the basic block." },
                 { "name": "endOffset", "type": "integer", "description": "End offset of the basic block." },
-                { "name": "hasExecuted", "type": "boolean", "description": "Indicates if the basic block has executed before." }
+                { "name": "hasExecuted", "type": "boolean", "description": "Indicates if the basic block has executed before." },
+                { "name": "executionCount", "type": "integer", "description": "Indicates how many times the basic block has executed." }
             ]
         }
     ],
@@ -302,10 +303,6 @@
                 { "name": "objectGroup", "type": "string", "description": "Symbolic object group name." }
             ],
             "description": "Releases all remote objects that belong to a given group."
-        },
-        {
-            "name": "run",
-            "description": "Tells inspected instance(worker or page) that it can run in case it was started paused."
         },
         {
             "name": "enable",

@@ -45,7 +45,7 @@ namespace WebCore {
     public:
         void updateDocument();
 
-        DOMWindow& impl() const { return *m_impl; }
+        DOMWindow& wrapped() const { return *m_wrapped; }
         ScriptExecutionContext* scriptExecutionContext() const;
 
         // Called just before removing this window from the JSDOMWindowShell.
@@ -60,7 +60,7 @@ namespace WebCore {
 
         static const JSC::GlobalObjectMethodTable s_globalObjectMethodTable;
 
-        static bool supportsProfiling(const JSC::JSGlobalObject*);
+        static bool supportsLegacyProfiling(const JSC::JSGlobalObject*);
         static bool supportsRichSourceInfo(const JSC::JSGlobalObject*);
         static bool shouldInterruptScript(const JSC::JSGlobalObject*);
         static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
@@ -73,12 +73,17 @@ namespace WebCore {
 
         static JSC::VM& commonVM();
         static void fireFrameClearedWatchpointsForWindow(DOMWindow*);
+        static void visitChildren(JSC::JSCell*, JSC::SlotVisitor&);
 
     protected:
         JSC::WatchpointSet m_windowCloseWatchpoints;
 
     private:
-        RefPtr<DOMWindow> m_impl;
+        static JSC::JSInternalPromise* moduleLoaderResolve(JSC::JSGlobalObject*, JSC::ExecState*, JSC::JSValue, JSC::JSValue);
+        static JSC::JSInternalPromise* moduleLoaderFetch(JSC::JSGlobalObject*, JSC::ExecState*, JSC::JSValue);
+        static JSC::JSValue moduleLoaderEvaluate(JSC::JSGlobalObject*, JSC::ExecState*, JSC::JSValue, JSC::JSValue);
+
+        RefPtr<DOMWindow> m_wrapped;
         JSDOMWindowShell* m_shell;
     };
 

@@ -2,6 +2,7 @@
  * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
  * Copyright (C) 2013 Google Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,12 +32,14 @@
  */
 
 #include "config.h"
+#include "MediaStreamPrivate.h"
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "MediaStreamPrivate.h"
-
+#include "GraphicsContext.h"
+#include "IntRect.h"
 #include "UUID.h"
+#include <wtf/MainThread.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -44,44 +47,58 @@ namespace WebCore {
 
 RefPtr<MediaStreamPrivate> MediaStreamPrivate::create(const Vector<RefPtr<RealtimeMediaSource>>& audioSources, const Vector<RefPtr<RealtimeMediaSource>>& videoSources)
 {
-    Vector<RefPtr<MediaStreamTrackPrivate>> tracks;
+    MediaStreamTrackPrivateVector tracks;
     tracks.reserveCapacity(audioSources.size() + videoSources.size());
 
     for (auto source : audioSources)
-        tracks.append(MediaStreamTrackPrivate::create(WTF::move(source)));
+        tracks.append(MediaStreamTrackPrivate::create(WTFMove(source)));
 
     for (auto source : videoSources)
-        tracks.append(MediaStreamTrackPrivate::create(WTF::move(source)));
+        tracks.append(MediaStreamTrackPrivate::create(WTFMove(source)));
 
     return MediaStreamPrivate::create(tracks);
 }
 
-RefPtr<MediaStreamPrivate> MediaStreamPrivate::create(const Vector<RefPtr<MediaStreamTrackPrivate>>& tracks)
+RefPtr<MediaStreamPrivate> MediaStreamPrivate::create(const MediaStreamTrackPrivateVector& tracks)
 {
     return adoptRef(new MediaStreamPrivate(createCanonicalUUIDString(), tracks));
 }
 
-RefPtr<MediaStreamPrivate> MediaStreamPrivate::create()
-{
-    return MediaStreamPrivate::create(Vector<RefPtr<MediaStreamTrackPrivate>>());
-}
-
-MediaStreamPrivate::MediaStreamPrivate(const String& id, const Vector<RefPtr<MediaStreamTrackPrivate>>& tracks)
-    : m_client(0)
+MediaStreamPrivate::MediaStreamPrivate(const String& id, const MediaStreamTrackPrivateVector& tracks)
+    : m_weakPtrFactory(this)
     , m_id(id)
-    , m_isActive(false)
 {
-    ASSERT(m_id.length());
+    ASSERT(!m_id.isEmpty());
 
-    for (auto& track : tracks)
+    for (auto& track : tracks) {
+        track->addObserver(*this);
         m_trackSet.add(track->id(), track);
+    }
 
     updateActiveState(NotifyClientOption::DontNotify);
 }
 
-Vector<RefPtr<MediaStreamTrackPrivate>> MediaStreamPrivate::tracks() const
+MediaStreamPrivate::~MediaStreamPrivate()
 {
-    Vector<RefPtr<MediaStreamTrackPrivate>> tracks;
+    for (auto& track : m_trackSet.values())
+        track->removeObserver(*this);
+}
+
+void MediaStreamPrivate::addObserver(MediaStreamPrivate::Observer& observer)
+{
+    m_observers.append(&observer);
+}
+
+void MediaStreamPrivate::removeObserver(MediaStreamPrivate::Observer& observer)
+{
+    size_t pos = m_observers.find(&observer);
+    if (pos != notFound)
+        m_observers.remove(pos);
+}
+
+MediaStreamTrackPrivateVector MediaStreamPrivate::tracks() const
+{
+    MediaStreamTrackPrivateVector tracks;
     tracks.reserveCapacity(m_trackSet.size());
     copyValuesToVector(m_trackSet, tracks);
 
@@ -90,7 +107,6 @@ Vector<RefPtr<MediaStreamTrackPrivate>> MediaStreamPrivate::tracks() const
 
 void MediaStreamPrivate::updateActiveState(NotifyClientOption notifyClientOption)
 {
-    // A stream is active if it has at least one un-ended track.
     bool newActiveState = false;
     for (auto& track : m_trackSet.values()) {
         if (!track->ended()) {
@@ -99,12 +115,18 @@ void MediaStreamPrivate::updateActiveState(NotifyClientOption notifyClientOption
         }
     }
 
+    updateActiveVideoTrack();
+
+    // A stream is active if it has at least one un-ended track.
     if (newActiveState == m_isActive)
         return;
+
     m_isActive = newActiveState;
 
-    if (m_client && notifyClientOption == NotifyClientOption::Notify)
-        m_client->activeStatusChanged();
+    if (notifyClientOption == NotifyClientOption::Notify) {
+        for (auto& observer : m_observers)
+            observer->activeStatusChanged();
+    }
 }
 
 void MediaStreamPrivate::addTrack(RefPtr<MediaStreamTrackPrivate>&& track, NotifyClientOption notifyClientOption)
@@ -112,12 +134,15 @@ void MediaStreamPrivate::addTrack(RefPtr<MediaStreamTrackPrivate>&& track, Notif
     if (m_trackSet.contains(track->id()))
         return;
 
+    track->addObserver(*this);
     m_trackSet.add(track->id(), track);
 
-    if (m_client && notifyClientOption == NotifyClientOption::Notify)
-        m_client->didAddTrackToPrivate(*track.get());
+    if (notifyClientOption == NotifyClientOption::Notify) {
+        for (auto& observer : m_observers)
+            observer->didAddTrack(*track.get());
+    }
 
-    updateActiveState(NotifyClientOption::Notify);
+    updateActiveState(notifyClientOption);
 }
 
 void MediaStreamPrivate::removeTrack(MediaStreamTrackPrivate& track, NotifyClientOption notifyClientOption)
@@ -125,10 +150,156 @@ void MediaStreamPrivate::removeTrack(MediaStreamTrackPrivate& track, NotifyClien
     if (!m_trackSet.remove(track.id()))
         return;
 
-    if (m_client && notifyClientOption == NotifyClientOption::Notify)
-        m_client->didRemoveTrackFromPrivate(track);
+    track.removeObserver(*this);
+
+    if (notifyClientOption == NotifyClientOption::Notify) {
+        for (auto& observer : m_observers)
+            observer->didRemoveTrack(track);
+    }
 
     updateActiveState(NotifyClientOption::Notify);
+}
+
+void MediaStreamPrivate::startProducingData()
+{
+    for (auto& track : m_trackSet.values())
+        track->startProducingData();
+}
+
+void MediaStreamPrivate::stopProducingData()
+{
+    for (auto& track : m_trackSet.values())
+        track->stopProducingData();
+}
+
+bool MediaStreamPrivate::isProducingData() const
+{
+    for (auto& track : m_trackSet.values()) {
+        if (track->isProducingData())
+            return true;
+    }
+    return false;
+}
+
+bool MediaStreamPrivate::hasVideo()
+{
+    for (auto& track : m_trackSet.values()) {
+        if (track->type() == RealtimeMediaSource::Type::Video && track->enabled() && !track->ended())
+            return true;
+    }
+    return false;
+}
+
+bool MediaStreamPrivate::hasAudio()
+{
+    for (auto& track : m_trackSet.values()) {
+        if (track->type() == RealtimeMediaSource::Type::Audio && track->enabled() && !track->ended())
+            return true;
+    }
+    return false;
+}
+
+FloatSize MediaStreamPrivate::intrinsicSize() const
+{
+    FloatSize size;
+
+    if (m_activeVideoTrack) {
+        const RealtimeMediaSourceSettings& setting = m_activeVideoTrack->settings();
+        size.setWidth(setting.width());
+        size.setHeight(setting.height());
+    }
+
+    return size;
+}
+
+PlatformLayer* MediaStreamPrivate::platformLayer() const
+{
+    if (!m_activeVideoTrack)
+        return nullptr;
+
+    return m_activeVideoTrack->source().platformLayer();
+}
+
+void MediaStreamPrivate::paintCurrentFrameInContext(GraphicsContext& context, const FloatRect& rect)
+{
+    if (context.paintingDisabled())
+        return;
+
+    if (active() && m_activeVideoTrack)
+        m_activeVideoTrack->paintCurrentFrameInContext(context, rect);
+    else {
+        GraphicsContextStateSaver stateSaver(context);
+        context.translate(rect.x(), rect.y() + rect.height());
+        context.scale(FloatSize(1, -1));
+        IntRect paintRect(IntPoint(0, 0), IntSize(rect.width(), rect.height()));
+        context.fillRect(paintRect, Color::black);
+    }
+}
+
+RefPtr<Image> MediaStreamPrivate::currentFrameImage()
+{
+    if (!active() || !m_activeVideoTrack)
+        return nullptr;
+
+    return m_activeVideoTrack->source().currentFrameImage();
+}
+
+void MediaStreamPrivate::updateActiveVideoTrack()
+{
+    m_activeVideoTrack = nullptr;
+    for (auto& track : m_trackSet.values()) {
+        if (!track->ended() && track->type() == RealtimeMediaSource::Type::Video && !track->ended()) {
+            m_activeVideoTrack = track.get();
+            break;
+        }
+    }
+}
+
+void MediaStreamPrivate::characteristicsChanged()
+{
+    for (auto& observer : m_observers)
+        observer->characteristicsChanged();
+}
+
+void MediaStreamPrivate::trackMutedChanged(MediaStreamTrackPrivate&)
+{
+    scheduleDeferredTask([this] {
+        characteristicsChanged();
+    });
+}
+
+void MediaStreamPrivate::trackSettingsChanged(MediaStreamTrackPrivate&)
+{
+    characteristicsChanged();
+}
+
+void MediaStreamPrivate::trackEnabledChanged(MediaStreamTrackPrivate&)
+{
+    updateActiveVideoTrack();
+
+    scheduleDeferredTask([this] {
+        characteristicsChanged();
+    });
+}
+
+void MediaStreamPrivate::trackEnded(MediaStreamTrackPrivate&)
+{
+    scheduleDeferredTask([this] {
+        updateActiveState(NotifyClientOption::Notify);
+        characteristicsChanged();
+    });
+}
+
+void MediaStreamPrivate::scheduleDeferredTask(std::function<void()> function)
+{
+    ASSERT(function);
+    auto weakThis = createWeakPtr();
+    callOnMainThread([weakThis, function] {
+        if (!weakThis)
+            return;
+
+        function();
+    });
 }
 
 } // namespace WebCore

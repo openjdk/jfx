@@ -119,12 +119,14 @@ public:
     //      }
     WEBCORE_EXPORT unsigned getSomeData(const char*& data, unsigned position = 0) const;
 
-    void tryReplaceContentsWithPlatformBuffer(SharedBuffer&);
+    bool tryReplaceContentsWithPlatformBuffer(SharedBuffer&);
     WEBCORE_EXPORT bool hasPlatformData() const;
 
     struct DataBuffer : public ThreadSafeRefCounted<DataBuffer> {
         Vector<char> data;
     };
+
+    void hintMemoryNotNeededSoon();
 
 private:
     WEBCORE_EXPORT SharedBuffer();

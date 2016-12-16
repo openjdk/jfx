@@ -94,12 +94,16 @@ public:
 
     void enqueueTask(TaskFunction task)
     {
-        ASSERT(!m_isClosed);
+        if (m_isClosed)
+            return;
+
         ++m_pendingTasks;
         auto weakThis = m_weakPtrFactory.createWeakPtr();
         m_dispatcher.postTask([weakThis, task] {
             if (!weakThis)
                 return;
+            ASSERT(weakThis->m_pendingTasks);
+            --weakThis->m_pendingTasks;
             task();
         });
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 #include "InspectorClientJava.h"
@@ -42,21 +42,16 @@ InspectorClientJava::InspectorClientJava(const JLObject &webPage)
 {
 }
 
-void InspectorClientJava::inspectorDestroyed()
+void InspectorClientJava::inspectedPageDestroyed()
 {
     delete this;
 }
 
-InspectorFrontendChannel* InspectorClientJava::openInspectorFrontend(InspectorController*)
+Inspector::FrontendChannel* InspectorClientJava::openLocalFrontend(InspectorController*)
 {
     //FIXME: need to be realized!
     notImplemented();
     return this;
-}
-
-void InspectorClientJava::closeInspectorFrontend()
-{
-    notImplemented();
 }
 
 void InspectorClientJava::bringFrontendToFront()

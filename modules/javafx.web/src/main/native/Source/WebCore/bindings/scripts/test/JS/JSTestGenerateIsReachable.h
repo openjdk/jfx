@@ -27,21 +27,22 @@
 
 namespace WebCore {
 
-class JSTestGenerateIsReachable : public JSDOMWrapper {
+class JSTestGenerateIsReachable : public JSDOMWrapper<TestGenerateIsReachable> {
 public:
-    typedef JSDOMWrapper Base;
+    typedef JSDOMWrapper<TestGenerateIsReachable> Base;
     static JSTestGenerateIsReachable* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestGenerateIsReachable>&& impl)
     {
-        JSTestGenerateIsReachable* ptr = new (NotNull, JSC::allocateCell<JSTestGenerateIsReachable>(globalObject->vm().heap)) JSTestGenerateIsReachable(structure, globalObject, WTF::move(impl));
+        JSTestGenerateIsReachable* ptr = new (NotNull, JSC::allocateCell<JSTestGenerateIsReachable>(globalObject->vm().heap)) JSTestGenerateIsReachable(structure, *globalObject, WTFMove(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
+
+    static const bool hasStaticPropertyTable = false;
 
     static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static JSC::JSObject* getPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static TestGenerateIsReachable* toWrapped(JSC::JSValue);
     static void destroy(JSC::JSCell*);
-    ~JSTestGenerateIsReachable();
 
     DECLARE_INFO;
 
@@ -50,14 +51,9 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-    static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
-    TestGenerateIsReachable& impl() const { return *m_impl; }
-    void releaseImpl() { std::exchange(m_impl, nullptr)->deref(); }
-
-private:
-    TestGenerateIsReachable* m_impl;
+    static JSC::JSValue getConstructor(JSC::VM&, const JSC::JSGlobalObject*);
 protected:
-    JSTestGenerateIsReachable(JSC::Structure*, JSDOMGlobalObject*, Ref<TestGenerateIsReachable>&&);
+    JSTestGenerateIsReachable(JSC::Structure*, JSDOMGlobalObject&, Ref<TestGenerateIsReachable>&&);
 
     void finishCreation(JSC::VM& vm)
     {
@@ -79,8 +75,14 @@ inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestGenerateIsReacha
     return &owner.get();
 }
 
+inline void* wrapperKey(TestGenerateIsReachable* wrappableObject)
+{
+    return wrappableObject;
+}
+
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestGenerateIsReachable*);
-inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TestGenerateIsReachable& impl) { return toJS(exec, globalObject, &impl); }
+inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, TestGenerateIsReachable& impl) { return toJS(state, globalObject, &impl); }
+JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject*, TestGenerateIsReachable*);
 
 
 } // namespace WebCore

@@ -27,21 +27,22 @@
 
 namespace WebCore {
 
-class JSTestNondeterministic : public JSDOMWrapper {
+class JSTestNondeterministic : public JSDOMWrapper<TestNondeterministic> {
 public:
-    typedef JSDOMWrapper Base;
+    typedef JSDOMWrapper<TestNondeterministic> Base;
     static JSTestNondeterministic* create(JSC::Structure* structure, JSDOMGlobalObject* globalObject, Ref<TestNondeterministic>&& impl)
     {
-        JSTestNondeterministic* ptr = new (NotNull, JSC::allocateCell<JSTestNondeterministic>(globalObject->vm().heap)) JSTestNondeterministic(structure, globalObject, WTF::move(impl));
+        JSTestNondeterministic* ptr = new (NotNull, JSC::allocateCell<JSTestNondeterministic>(globalObject->vm().heap)) JSTestNondeterministic(structure, *globalObject, WTFMove(impl));
         ptr->finishCreation(globalObject->vm());
         return ptr;
     }
+
+    static const bool hasStaticPropertyTable = false;
 
     static JSC::JSObject* createPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static JSC::JSObject* getPrototype(JSC::VM&, JSC::JSGlobalObject*);
     static TestNondeterministic* toWrapped(JSC::JSValue);
     static void destroy(JSC::JSCell*);
-    ~JSTestNondeterministic();
 
     DECLARE_INFO;
 
@@ -50,14 +51,9 @@ public:
         return JSC::Structure::create(vm, globalObject, prototype, JSC::TypeInfo(JSC::ObjectType, StructureFlags), info());
     }
 
-    static JSC::JSValue getConstructor(JSC::VM&, JSC::JSGlobalObject*);
-    TestNondeterministic& impl() const { return *m_impl; }
-    void releaseImpl() { std::exchange(m_impl, nullptr)->deref(); }
-
-private:
-    TestNondeterministic* m_impl;
+    static JSC::JSValue getConstructor(JSC::VM&, const JSC::JSGlobalObject*);
 protected:
-    JSTestNondeterministic(JSC::Structure*, JSDOMGlobalObject*, Ref<TestNondeterministic>&&);
+    JSTestNondeterministic(JSC::Structure*, JSDOMGlobalObject&, Ref<TestNondeterministic>&&);
 
     void finishCreation(JSC::VM& vm)
     {
@@ -79,8 +75,14 @@ inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld&, TestNondeterministic
     return &owner.get();
 }
 
+inline void* wrapperKey(TestNondeterministic* wrappableObject)
+{
+    return wrappableObject;
+}
+
 JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestNondeterministic*);
-inline JSC::JSValue toJS(JSC::ExecState* exec, JSDOMGlobalObject* globalObject, TestNondeterministic& impl) { return toJS(exec, globalObject, &impl); }
+inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, TestNondeterministic& impl) { return toJS(state, globalObject, &impl); }
+JSC::JSValue toJSNewlyCreated(JSC::ExecState*, JSDOMGlobalObject*, TestNondeterministic*);
 
 
 } // namespace WebCore

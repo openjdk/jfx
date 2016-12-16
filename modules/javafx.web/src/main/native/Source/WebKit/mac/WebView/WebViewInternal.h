@@ -58,13 +58,14 @@ class RenderBox;
 class TextIndicator;
 class URL;
 struct DictationAlternative;
+struct DictionaryPopupInfo;
 }
 
-struct DictionaryPopupInfo;
 class WebMediaPlaybackTargetPicker;
 class WebSelectionServiceController;
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
+#import <WebCore/MediaPlaybackTargetContext.h>
 #import <WebCore/MediaProducer.h>
 #endif
 
@@ -266,14 +267,12 @@ OBJC_CLASS NSTextAlternatives;
 
 #if PLATFORM(MAC) && defined(__cplusplus)
 - (void)_setTextIndicator:(WebCore::TextIndicator&)textIndicator;
-- (void)_setTextIndicator:(WebCore::TextIndicator&)textIndicator withLifetime:(WebCore::TextIndicatorLifetime)lifetime;
-- (void)_clearTextIndicatorWithAnimation:(WebCore::TextIndicatorDismissalAnimation)animation;
+- (void)_setTextIndicator:(WebCore::TextIndicator&)textIndicator withLifetime:(WebCore::TextIndicatorWindowLifetime)lifetime;
+- (void)_clearTextIndicatorWithAnimation:(WebCore::TextIndicatorWindowDismissalAnimation)animation;
 - (void)_setTextIndicatorAnimationProgress:(float)progress;
-- (void)_showDictionaryLookupPopup:(const DictionaryPopupInfo&)dictionaryPopupInfo;
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
-- (id)_animationControllerForDictionaryLookupPopupInfo:(const DictionaryPopupInfo&)dictionaryPopupInfo;
+- (void)_showDictionaryLookupPopup:(const WebCore::DictionaryPopupInfo&)dictionaryPopupInfo;
+- (id)_animationControllerForDictionaryLookupPopupInfo:(const WebCore::DictionaryPopupInfo&)dictionaryPopupInfo;
 - (WebImmediateActionController *)_immediateActionController;
-#endif
 - (NSEvent *)_pressureEvent;
 - (void)_setPressureEvent:(NSEvent *)event;
 #endif
@@ -284,6 +283,13 @@ OBJC_CLASS NSTextAlternatives;
 - (void)_removePlaybackTargetPickerClient:(uint64_t)contextId;
 - (void)_showPlaybackTargetPicker:(uint64_t)contextId location:(const WebCore::IntPoint&)location hasVideo:(BOOL)hasVideo;
 - (void)_playbackTargetPickerClientStateDidChange:(uint64_t)contextId state:(WebCore::MediaProducer::MediaStateFlags)state;
+- (void)_setMockMediaPlaybackTargetPickerEnabled:(bool)enabled;
+- (void)_setMockMediaPlaybackTargetPickerName:(NSString *)name state:(WebCore::MediaPlaybackTargetContext::State)state;
 #endif
 
+@end
+
+@interface WebView (WebUpdateWebViewAdditions)
+- (void)updateWebViewAdditions;
+- (void)showCandidates:(NSArray *)candidates forString:(NSString *)string inRect:(NSRect)rectOfTypedString view:(NSView *)view completionHandler:(void (^)(NSTextCheckingResult *acceptedCandidate))completionBlock;
 @end

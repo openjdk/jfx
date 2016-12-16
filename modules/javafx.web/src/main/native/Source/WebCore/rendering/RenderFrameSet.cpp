@@ -46,7 +46,7 @@
 namespace WebCore {
 
 RenderFrameSet::RenderFrameSet(HTMLFrameSetElement& frameSet, Ref<RenderStyle>&& style)
-    : RenderBox(frameSet, WTF::move(style), 0)
+    : RenderBox(frameSet, WTFMove(style), 0)
     , m_isResizing(false)
     , m_isChildResizing(false)
 {
@@ -90,15 +90,14 @@ void RenderFrameSet::paintColumnBorder(const PaintInfo& paintInfo, const IntRect
     // FIXME: We should do something clever when borders from distinct framesets meet at a join.
 
     // Fill first.
-    GraphicsContext* context = paintInfo.context;
-    ColorSpace colorSpace = style().colorSpace();
-    context->fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColor(CSSPropertyBorderLeftColor) : borderFillColor(), colorSpace);
+    GraphicsContext& context = paintInfo.context();
+    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColor(CSSPropertyBorderLeftColor) : borderFillColor());
 
     // Now stroke the edges but only if we have enough room to paint both edges with a little
     // bit of the fill color showing through.
     if (borderRect.width() >= 3) {
-        context->fillRect(IntRect(borderRect.location(), IntSize(1, height())), borderStartEdgeColor(), colorSpace);
-        context->fillRect(IntRect(IntPoint(borderRect.maxX() - 1, borderRect.y()), IntSize(1, height())), borderEndEdgeColor(), colorSpace);
+        context.fillRect(IntRect(borderRect.location(), IntSize(1, height())), borderStartEdgeColor());
+        context.fillRect(IntRect(IntPoint(borderRect.maxX() - 1, borderRect.y()), IntSize(1, height())), borderEndEdgeColor());
     }
 }
 
@@ -110,15 +109,14 @@ void RenderFrameSet::paintRowBorder(const PaintInfo& paintInfo, const IntRect& b
     // FIXME: We should do something clever when borders from distinct framesets meet at a join.
 
     // Fill first.
-    GraphicsContext* context = paintInfo.context;
-    ColorSpace colorSpace = style().colorSpace();
-    context->fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColor(CSSPropertyBorderLeftColor) : borderFillColor(), colorSpace);
+    GraphicsContext& context = paintInfo.context();
+    context.fillRect(borderRect, frameSetElement().hasBorderColor() ? style().visitedDependentColor(CSSPropertyBorderLeftColor) : borderFillColor());
 
     // Now stroke the edges but only if we have enough room to paint both edges with a little
     // bit of the fill color showing through.
     if (borderRect.height() >= 3) {
-        context->fillRect(IntRect(borderRect.location(), IntSize(width(), 1)), borderStartEdgeColor(), colorSpace);
-        context->fillRect(IntRect(IntPoint(borderRect.x(), borderRect.maxY() - 1), IntSize(width(), 1)), borderEndEdgeColor(), colorSpace);
+        context.fillRect(IntRect(borderRect.location(), IntSize(width(), 1)), borderStartEdgeColor());
+        context.fillRect(IntRect(IntPoint(borderRect.x(), borderRect.maxY() - 1), IntSize(width(), 1)), borderEndEdgeColor());
     }
 }
 

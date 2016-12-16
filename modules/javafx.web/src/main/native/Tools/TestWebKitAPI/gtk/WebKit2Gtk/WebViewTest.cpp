@@ -23,7 +23,6 @@
 
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <WebCore/GUniquePtrGtk.h>
-#include <wtf/glib/GMainLoopSource.h>
 
 WebViewTest::WebViewTest(WebKitUserContentManager* userContentManager)
     : m_webView(WEBKIT_WEB_VIEW(g_object_ref_sink(g_object_new(WEBKIT_TYPE_WEB_VIEW, "web-context", m_webContext.get(), "user-content-manager", userContentManager, nullptr))))
@@ -182,8 +181,10 @@ void WebViewTest::quitMainLoopAfterProcessingPendingEvents()
 
 void WebViewTest::wait(double seconds)
 {
-    GMainLoopSource::scheduleAfterDelayAndDeleteOnDestroy("WebViewTest wait", [this] { quitMainLoop(); },
-        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(seconds)));
+    g_timeout_add(seconds * 1000, [](gpointer userData) -> gboolean {
+        static_cast<WebViewTest*>(userData)->quitMainLoop();
+        return G_SOURCE_REMOVE;
+    }, this);
     g_main_loop_run(m_mainLoop);
 }
 

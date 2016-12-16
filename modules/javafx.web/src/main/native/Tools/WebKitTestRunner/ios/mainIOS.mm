@@ -25,8 +25,10 @@
 
 #import "config.h"
 
+#import "HIDEventGenerator.h"
 #import "TestController.h"
-
+#import "UIKitSPI.h"
+#import <UIKit/UIKit.h>
 
 static int _argc;
 static const char **_argv;
@@ -58,7 +60,6 @@ static const char **_argv;
     };
 
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
-
         NSTimeInterval timeRemaining;
         while (true) {
             timeRemaining = [application backgroundTimeRemaining];
@@ -69,6 +70,11 @@ static const char **_argv;
             sleep(5);
         }
     });
+}
+
+- (void)_handleHIDEvent:(IOHIDEventRef)event
+{
+    [[HIDEventGenerator sharedHIDEventGenerator] markerEventReceived:event];
 }
 
 @end

@@ -48,14 +48,18 @@ SOFT_LINK_CLASS_OPTIONAL(Lookup, LULookupDefinitionModule)
 
 #endif // !USE(APPLE_INTERNAL_SDK)
 
-#if  __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
-
-@interface LULookupDefinitionModule (AnimationController)
+@interface LULookupDefinitionModule ()
 
 + (id<NSImmediateActionAnimationController>)lookupAnimationControllerForTerm:(NSAttributedString *)term atLocation:(NSPoint)screenPoint options:(NSDictionary *)options;
 
++ (id<NSImmediateActionAnimationController>)lookupAnimationControllerForTerm:(NSAttributedString *)term relativeToRect:(NSRect)positioningRect ofView:(NSView *)positioningView options:(NSDictionary *)options;
+
 @end
 
-#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+@interface LULookupDefinitionModule ()
+
++ (void)showDefinitionForTerm:(NSAttributedString *)term relativeToRect:(NSRect)positioningRect ofView:(NSView *)positioningView options:(NSDictionary *)options;
+
+@end
 
 #endif // PLATFORM(MAC)

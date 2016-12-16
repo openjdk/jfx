@@ -44,7 +44,7 @@
 namespace WebCore {
 
 RenderSVGResourceFilter::RenderSVGResourceFilter(SVGFilterElement& element, Ref<RenderStyle>&& style)
-    : RenderSVGResourceContainer(element, WTF::move(style))
+    : RenderSVGResourceContainer(element, WTFMove(style))
 {
 }
 
@@ -87,11 +87,12 @@ std::unique_ptr<SVGFilterBuilder> RenderSVGResourceFilter::buildPrimitives(SVGFi
             builder->clearEffects();
             return nullptr;
         }
-        builder->appendEffectToEffectReferences(effect, element.renderer());
+        builder->appendEffectToEffectReferences(effect.copyRef(), element.renderer());
         element.setStandardAttributes(effect.get());
         effect->setEffectBoundaries(SVGLengthContext::resolveRectangle<SVGFilterPrimitiveStandardAttributes>(&element, filterElement().primitiveUnits(), targetBoundingBox));
-        effect->setOperatingColorSpace(element.renderer()->style().svgStyle().colorInterpolationFilters() == CI_LINEARRGB ? ColorSpaceLinearRGB : ColorSpaceDeviceRGB);
-        builder->add(element.result(), effect.release());
+        if (element.renderer())
+            effect->setOperatingColorSpace(element.renderer()->style().svgStyle().colorInterpolationFilters() == CI_LINEARRGB ? ColorSpaceLinearRGB : ColorSpaceSRGB);
+        builder->add(element.result(), WTFMove(effect));
     }
     return builder;
 }
@@ -176,7 +177,7 @@ bool RenderSVGResourceFilter::applyResource(RenderElement& renderer, const Rende
     if (filterData->drawingRegion.isEmpty()) {
         ASSERT(!m_filter.contains(&renderer));
         filterData->savedContext = context;
-        m_filter.set(&renderer, WTF::move(filterData));
+        m_filter.set(&renderer, WTFMove(filterData));
         return false;
     }
 
@@ -191,23 +192,22 @@ bool RenderSVGResourceFilter::applyResource(RenderElement& renderer, const Rende
     if (!sourceGraphic) {
         ASSERT(!m_filter.contains(&renderer));
         filterData->savedContext = context;
-        m_filter.set(&renderer, WTF::move(filterData));
+        m_filter.set(&renderer, WTFMove(filterData));
         return false;
     }
 
     // Set the rendering mode from the page's settings.
     filterData->filter->setRenderingMode(renderingMode);
 
-    GraphicsContext* sourceGraphicContext = sourceGraphic->context();
-    ASSERT(sourceGraphicContext);
+    GraphicsContext& sourceGraphicContext = sourceGraphic->context();
 
-    filterData->sourceGraphicBuffer = WTF::move(sourceGraphic);
+    filterData->sourceGraphicBuffer = WTFMove(sourceGraphic);
     filterData->savedContext = context;
 
-    context = sourceGraphicContext;
+    context = &sourceGraphicContext;
 
     ASSERT(!m_filter.contains(&renderer));
-    m_filter.set(&renderer, WTF::move(filterData));
+    m_filter.set(&renderer, WTFMove(filterData));
 
     return true;
 }
@@ -255,7 +255,7 @@ void RenderSVGResourceFilter::postApplyResource(RenderElement& renderer, Graphic
         // initial filtering process. We just take the stored filter result on a
         // second drawing.
         if (filterData->state != FilterData::Built)
-            filterData->filter->setSourceImage(WTF::move(filterData->sourceGraphicBuffer));
+            filterData->filter->setSourceImage(WTFMove(filterData->sourceGraphicBuffer));
 
         // Always true if filterData is just built (filterData->state == FilterData::Built).
         if (!lastEffect->hasResult()) {
@@ -268,10 +268,10 @@ void RenderSVGResourceFilter::postApplyResource(RenderElement& renderer, Graphic
 
         ImageBuffer* resultImage = lastEffect->asImageBuffer();
         if (resultImage) {
-            context->concatCTM(filterData->shearFreeAbsoluteTransform.inverse());
+            context->concatCTM(filterData->shearFreeAbsoluteTransform.inverse().valueOr(AffineTransform()));
 
             context->scale(FloatSize(1 / filterData->filter->filterResolution().width(), 1 / filterData->filter->filterResolution().height()));
-            context->drawImageBuffer(resultImage, renderer.style().colorSpace(), lastEffect->absolutePaintRect());
+            context->drawImageBuffer(*resultImage, lastEffect->absolutePaintRect());
             context->scale(filterData->filter->filterResolution());
 
             context->concatCTM(filterData->shearFreeAbsoluteTransform);

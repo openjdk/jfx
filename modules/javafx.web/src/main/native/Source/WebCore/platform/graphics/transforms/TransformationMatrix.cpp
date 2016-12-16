@@ -32,7 +32,7 @@
 #include "FloatQuad.h"
 #include "IntRect.h"
 #include "LayoutRect.h"
-
+#include "TextStream.h"
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
 
@@ -1445,7 +1445,7 @@ bool TransformationMatrix::isInvertible() const
     return true;
 }
 
-TransformationMatrix TransformationMatrix::inverse() const
+Optional<TransformationMatrix> TransformationMatrix::inverse() const
 {
     if (isIdentityOrTranslation()) {
         // identity matrix
@@ -1460,9 +1460,10 @@ TransformationMatrix TransformationMatrix::inverse() const
     }
 
     TransformationMatrix invMat;
-    bool inverted = WebCore::inverse(m_matrix, invMat.m_matrix);
-    if (!inverted)
-        return TransformationMatrix();
+    // FIXME: Use LU decomposition to apply the inverse instead of calculating the inverse explicitly.
+    // Calculating the inverse of a 4x4 matrix using cofactors is numerically unstable and unnecessary to apply the inverse transformation to a point.
+    if (!WebCore::inverse(m_matrix, invMat.m_matrix))
+        return Nullopt;
 
     return invMat;
 }
@@ -1740,6 +1741,22 @@ bool TransformationMatrix::isBackFaceVisible() const
     double zComponentOfTransformedNormal = cofactor33 / determinant;
 
     return zComponentOfTransformedNormal < 0;
+}
+
+TextStream& operator<<(TextStream& ts, const TransformationMatrix& transform)
+{
+    ts << "\n";
+    ts.increaseIndent();
+    ts.writeIndent();
+    ts << "[" << transform.m11() << " " << transform.m12() << " " << transform.m13() << " " << transform.m14() << "]\n";
+    ts.writeIndent();
+    ts << "[" << transform.m21() << " " << transform.m22() << " " << transform.m23() << " " << transform.m24() << "]\n";
+    ts.writeIndent();
+    ts << "[" << transform.m31() << " " << transform.m32() << " " << transform.m33() << " " << transform.m34() << "]\n";
+    ts.writeIndent();
+    ts << "[" << transform.m41() << " " << transform.m42() << " " << transform.m43() << " " << transform.m44() << "]";
+    ts.decreaseIndent();
+    return ts;
 }
 
 }

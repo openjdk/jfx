@@ -44,9 +44,9 @@ public:
     void garbageCollectOnNextRunLoop();
 
     WEBCORE_EXPORT void garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone); // Used for stress testing.
-    WEBCORE_EXPORT void releaseExecutableMemory();
     WEBCORE_EXPORT void setJavaScriptGarbageCollectorTimerEnabled(bool);
-    WEBCORE_EXPORT void discardAllCompiledCode();
+    WEBCORE_EXPORT void deleteAllCode();
+    WEBCORE_EXPORT void deleteAllLinkedCode();
 
 private:
     GCController(); // Use singleton() instead.

@@ -34,6 +34,7 @@
 #include "SSLKeyGenerator.h"
 #include "ShadowRoot.h"
 #include "Text.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 
 using namespace WebCore;
@@ -53,12 +54,12 @@ protected:
     KeygenSelectElement(Document& document)
         : HTMLSelectElement(selectTag, document, 0)
     {
-        DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, pseudoId, ("-webkit-keygen-select", AtomicString::ConstructFromLiteral));
+        static NeverDestroyed<AtomicString> pseudoId("-webkit-keygen-select", AtomicString::ConstructFromLiteral);
         setPseudo(pseudoId);
     }
 
 private:
-    virtual RefPtr<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) override
+    virtual Ref<Element> cloneElementWithoutAttributesAndChildren(Document& targetDocument) override
     {
         return create(targetDocument);
     }
@@ -73,14 +74,14 @@ inline HTMLKeygenElement::HTMLKeygenElement(const QualifiedName& tagName, Docume
     Vector<String> keys;
     getSupportedKeySizes(keys);
 
-    RefPtr<HTMLSelectElement> select = KeygenSelectElement::create(document);
-    for (size_t i = 0; i < keys.size(); ++i) {
-        RefPtr<HTMLOptionElement> option = HTMLOptionElement::create(document);
-        select->appendChild(option, IGNORE_EXCEPTION);
-        option->appendChild(Text::create(document, keys[i]), IGNORE_EXCEPTION);
+    Ref<HTMLSelectElement> select = KeygenSelectElement::create(document);
+    for (auto& key : keys) {
+        Ref<HTMLOptionElement> option = HTMLOptionElement::create(document);
+        select->appendChild(option.copyRef(), IGNORE_EXCEPTION);
+        option->appendChild(Text::create(document, key), IGNORE_EXCEPTION);
     }
 
-    ensureUserAgentShadowRoot().appendChild(select, IGNORE_EXCEPTION);
+    ensureUserAgentShadowRoot().appendChild(WTFMove(select), IGNORE_EXCEPTION);
 }
 
 Ref<HTMLKeygenElement> HTMLKeygenElement::create(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
@@ -101,7 +102,7 @@ bool HTMLKeygenElement::appendFormData(FormDataList& encoded_values, bool)
 {
     // Only RSA is supported at this time.
     const AtomicString& keyType = fastGetAttribute(keytypeAttr);
-    if (!keyType.isNull() && !equalIgnoringCase(keyType, "rsa"))
+    if (!keyType.isNull() && !equalLettersIgnoringASCIICase(keyType, "rsa"))
         return false;
     String value = signedPublicKeyAndChallengeString(shadowSelect()->selectedIndex(), fastGetAttribute(challengeAttr), document().baseURL());
     if (value.isNull())
@@ -112,7 +113,7 @@ bool HTMLKeygenElement::appendFormData(FormDataList& encoded_values, bool)
 
 const AtomicString& HTMLKeygenElement::formControlType() const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, keygen, ("keygen", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> keygen("keygen", AtomicString::ConstructFromLiteral);
     return keygen;
 }
 

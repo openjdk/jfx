@@ -349,12 +349,10 @@ void ScrollController::snapRubberBandTimerFired()
                 m_stretchScrollForce = FloatSize();
                 m_startTime = 0;
                 m_startStretch = FloatSize();
-                m_origOrigin = FloatPoint();
                 m_origVelocity = FloatSize();
                 return;
             }
 
-            m_origOrigin = m_client.absoluteScrollPosition() - m_startStretch;
             m_origVelocity = m_momentumVelocity;
 
             // Just like normal scrolling, prefer vertical rubberbanding
@@ -387,7 +385,6 @@ void ScrollController::snapRubberBandTimerFired()
             m_stretchScrollForce = FloatSize();
             m_startTime = 0;
             m_startStretch = FloatSize();
-            m_origOrigin = FloatPoint();
             m_origVelocity = FloatSize();
         }
     } else {
@@ -451,7 +448,6 @@ void ScrollController::snapRubberBand()
 
     m_startTime = [NSDate timeIntervalSinceReferenceDate];
     m_startStretch = FloatSize();
-    m_origOrigin = FloatPoint();
     m_origVelocity = FloatSize();
 
     startSnapRubberbandTimer();
@@ -554,15 +550,18 @@ void ScrollController::processWheelEventForScrollSnapOnAxis(ScrollEventAxis axis
     case WheelEventStatus::InertialScrolling:
         // This check for DestinationReached ensures that we don't receive another set of momentum events after ending the last glide.
         if (snapState.m_currentState != ScrollSnapState::Gliding && snapState.m_currentState != ScrollSnapState::DestinationReached) {
-            if (snapState.m_numWheelDeltasTracked < snapState.wheelDeltaWindowSize && wheelDelta)
+            if (snapState.wheelDeltaTrackingIsInProgress() && wheelDelta)
                 snapState.pushInitialWheelDelta(wheelDelta);
 
-            if ((snapState.m_numWheelDeltasTracked == snapState.wheelDeltaWindowSize) && snapState.averageInitialWheelDelta())
+            if (snapState.hasFinishedTrackingWheelDeltas() && snapState.averageInitialWheelDelta())
                 beginScrollSnapAnimation(axis, ScrollSnapState::Gliding);
         }
         break;
 
     case WheelEventStatus::InertialScrollEnd:
+        if (snapState.wheelDeltaTrackingIsInProgress() && snapState.averageInitialWheelDelta())
+            beginScrollSnapAnimation(axis, ScrollSnapState::Gliding);
+
         snapState.clearInitialWheelDeltaWindow();
         snapState.m_shouldOverrideWheelEvent = false;
         break;

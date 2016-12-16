@@ -33,7 +33,8 @@
 #include <gst/gst.h>
 #include <gst/pbutils/install-plugins.h>
 #include <wtf/Forward.h>
-#include <wtf/glib/GThreadSafeMainLoopSource.h>
+#include <wtf/RunLoop.h>
+#include <wtf/WeakPtr.h>
 
 #if ENABLE(VIDEO_TRACK) && USE(GSTREAMER_MPEGTS)
 #include <wtf/text/AtomicStringHash.h>
@@ -67,7 +68,7 @@ public:
     ~MediaPlayerPrivateGStreamer();
 
     static void registerMediaEngine(MediaEngineRegistrar);
-    gboolean handleMessage(GstMessage*);
+    void handleMessage(GstMessage*);
     void handlePluginInstallerResult(GstInstallPluginsReturn);
 
     bool hasVideo() const override { return m_hasVideo; }
@@ -113,25 +114,8 @@ public:
     void durationChanged();
     void loadingFailed(MediaPlayer::NetworkState);
 
-    void videoChanged();
-    void videoCapsChanged();
-    void audioChanged();
-    void notifyPlayerOfVideo();
-    void notifyPlayerOfVideoCaps();
-    void notifyPlayerOfAudio();
-
-#if ENABLE(VIDEO_TRACK)
-    void textChanged();
-    void notifyPlayerOfText();
-
-    void newTextSample();
-    void notifyPlayerOfNewTextSample();
-#endif
-
     void sourceChanged();
     GstElement* audioSink() const override;
-
-    void setAudioStreamProperties(GObject*);
 
     void simulateAudioInterruption() override;
 
@@ -142,10 +126,12 @@ public:
 #endif
 
 private:
-    static void getSupportedTypes(HashSet<String>&);
+    static void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>&);
     static MediaPlayer::SupportsType supportsType(const MediaEngineSupportParameters&);
 
     static bool isAvailable();
+
+    WeakPtr<MediaPlayerPrivateGStreamer> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
 
     GstElement* createAudioSink() override;
 
@@ -172,7 +158,6 @@ private:
     bool doSeek(gint64 position, float rate, GstSeekFlags seekType);
     void updatePlaybackRate();
 
-
     String engineDescription() const override { return "GStreamer"; }
     bool isLiveStream() const override { return m_isStreaming; }
     bool didPassCORSAccessCheck() const override;
@@ -186,7 +171,32 @@ private:
     MediaTime totalFrameDelay() override { return MediaTime::zeroTime(); }
 #endif
 
-private:
+    void readyTimerFired();
+
+    void notifyPlayerOfVideo();
+    void notifyPlayerOfVideoCaps();
+    void notifyPlayerOfAudio();
+
+#if ENABLE(VIDEO_TRACK)
+    void notifyPlayerOfText();
+    void newTextSample();
+#endif
+
+    void setAudioStreamProperties(GObject*);
+
+    static void setAudioStreamPropertiesCallback(MediaPlayerPrivateGStreamer*, GObject*);
+
+    static void sourceChangedCallback(MediaPlayerPrivateGStreamer*);
+    static void videoChangedCallback(MediaPlayerPrivateGStreamer*);
+    static void videoSinkCapsChangedCallback(MediaPlayerPrivateGStreamer*);
+    static void audioChangedCallback(MediaPlayerPrivateGStreamer*);
+#if ENABLE(VIDEO_TRACK)
+    static void textChangedCallback(MediaPlayerPrivateGStreamer*);
+    static GstFlowReturn newTextSampleCallback(MediaPlayerPrivateGStreamer*);
+#endif
+
+    WeakPtrFactory<MediaPlayerPrivateGStreamer> m_weakPtrFactory;
+
     GRefPtr<GstElement> m_source;
 #if ENABLE(VIDEO_TRACK)
     GRefPtr<GstElement> m_textAppSink;
@@ -194,7 +204,6 @@ private:
 #endif
     float m_seekTime;
     bool m_changingRate;
-    float m_endTime;
     bool m_isEndReached;
     mutable bool m_isStreaming;
     GstStructure* m_mediaLocations;
@@ -222,11 +231,7 @@ private:
     bool m_volumeAndMuteInitialized;
     bool m_hasVideo;
     bool m_hasAudio;
-    GThreadSafeMainLoopSource m_audioTimerHandler;
-    GThreadSafeMainLoopSource m_textTimerHandler;
-    GThreadSafeMainLoopSource m_videoTimerHandler;
-    GThreadSafeMainLoopSource m_videoCapsTimerHandler;
-    GThreadSafeMainLoopSource m_readyTimerHandler;
+    RunLoop::Timer<MediaPlayerPrivateGStreamer> m_readyTimerHandler;
     mutable unsigned long long m_totalBytes;
     URL m_url;
     bool m_preservesPitch;

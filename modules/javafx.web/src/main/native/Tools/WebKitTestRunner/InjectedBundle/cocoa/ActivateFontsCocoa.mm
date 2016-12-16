@@ -109,7 +109,6 @@ static NSSet *allowedFontFamilySet()
         @"Hiragino Kaku Gothic ProN",
         @"Hiragino Kaku Gothic Std",
         @"Hiragino Kaku Gothic StdN",
-        @"Hiragino Maru Gothic Monospaced",
         @"Hiragino Maru Gothic Pro",
         @"Hiragino Maru Gothic ProN",
         @"Hiragino Mincho Pro",
@@ -152,7 +151,6 @@ static NSSet *allowedFontFamilySet()
         @"STKaiti",
         @"STSong",
         @"Symbol",
-        @"System Font",
         @"Tahoma",
         @"Thonburi",
         @"Times New Roman",
@@ -161,6 +159,8 @@ static NSSet *allowedFontFamilySet()
         @"Verdana",
         @"Webdings",
         @"WebKit WeightWatcher",
+        @"FontWithFeaturesOTF",
+        @"FontWithFeaturesTTF",
         @"Wingdings 2",
         @"Wingdings 3",
         @"Wingdings",
@@ -300,7 +300,8 @@ void activateFonts()
         "WebKitWeightWatcher700.ttf",
         "WebKitWeightWatcher800.ttf",
         "WebKitWeightWatcher900.ttf",
-        "SampleFont.sfont",
+        "FontWithFeatures.otf",
+        "FontWithFeatures.ttf",
         0
     };
 

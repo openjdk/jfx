@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-WebMediaSessionManager& WebMediaSessionManagerMac::singleton()
+WebMediaSessionManager& WebMediaSessionManager::shared()
 {
     static NeverDestroyed<WebMediaSessionManagerMac> sharedManager;
     return sharedManager;
@@ -48,10 +48,10 @@ WebMediaSessionManagerMac::~WebMediaSessionManagerMac()
 {
 }
 
-WebCore::MediaPlaybackTargetPicker& WebMediaSessionManagerMac::targetPicker()
+WebCore::MediaPlaybackTargetPicker& WebMediaSessionManagerMac::platformPicker()
 {
     if (!m_targetPicker)
-        m_targetPicker = MediaPlaybackTargetPickerMac::create(*this);
+        m_targetPicker = std::make_unique<MediaPlaybackTargetPickerMac>(*this);
 
     return *m_targetPicker.get();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,6 +55,20 @@ struct OSRExitBase {
 
     CodeOrigin m_codeOrigin;
     CodeOrigin m_codeOriginForExitProfile;
+    CallSiteIndex m_exceptionHandlerCallSiteIndex;
+
+    ALWAYS_INLINE bool isExceptionHandler() const
+    {
+        return m_kind == ExceptionCheck || m_kind == GenericUnwind;
+    }
+
+    // True if this exit is used as an exception handler for unwinding. This happens to only be set when
+    // isExceptionHandler is true, but all this actually means is that the OSR exit will assume that the
+    // machine state is as it would be coming out of genericUnwind.
+    ALWAYS_INLINE bool isGenericUnwindHandler() const
+    {
+        return m_kind == GenericUnwind;
+    }
 
 protected:
     void considerAddingAsFrequentExitSite(CodeBlock* profiledCodeBlock, ExitingJITType jitType)

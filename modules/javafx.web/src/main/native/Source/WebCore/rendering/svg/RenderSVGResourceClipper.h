@@ -47,7 +47,7 @@ public:
     // clipPath can be clipped too, but don't have a boundingBox or repaintRect. So we can't call
     // applyResource directly and use the rects from the object, since they are empty for RenderSVGResources
     // FIXME: We made applyClippingToContext public because we cannot call applyResource on HTML elements (it asserts on RenderObject::objectBoundingBox)
-    bool applyClippingToContext(RenderElement&, const FloatRect&, const FloatRect&, GraphicsContext*);
+    bool applyClippingToContext(RenderElement&, const FloatRect&, const FloatRect&, GraphicsContext&);
     virtual FloatRect resourceBoundingBox(const RenderObject&) override;
 
     virtual RenderSVGResourceType resourceType() const override { return ClipperResourceType; }
@@ -63,8 +63,9 @@ private:
     void element() const = delete;
 
     virtual const char* renderName() const override { return "RenderSVGResourceClipper"; }
+    bool isSVGResourceClipper() const override { return true; }
 
-    bool pathOnlyClipping(GraphicsContext*, const AffineTransform&, const FloatRect&);
+    bool pathOnlyClipping(GraphicsContext&, const AffineTransform&, const FloatRect&);
     bool drawContentIntoMaskImage(const ClipperMaskImage&, const FloatRect& objectBoundingBox);
     void calculateClipContentRepaintRect();
     ClipperMaskImage& addRendererToClipper(const RenderObject&);
@@ -75,6 +76,9 @@ private:
 
 }
 
-SPECIALIZE_TYPE_TRAITS_RENDER_SVG_RESOURCE(RenderSVGResourceClipper, ClipperResourceType)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderSVGResourceClipper)
+static bool isType(const WebCore::RenderObject& renderer) { return renderer.isSVGResourceClipper(); }
+static bool isType(const WebCore::RenderSVGResource& resource) { return resource.resourceType() == WebCore::ClipperResourceType; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

@@ -22,6 +22,7 @@
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import imp
+import optparse
 import sys
 import time
 import unittest
@@ -38,43 +39,45 @@ from webkitpy.layout_tests.servers.web_platform_test_server import WebPlatformTe
 class TestWebPlatformTestServer(unittest.TestCase):
     def test_previously_spawned_instance(self):
         host = MockHost()
-        port = Port(host, "test")
-        server = WebPlatformTestServer(port, "wpttest", "/mock/output_dir", "/mock/output_dir/pid.txt")
+        options = optparse.Values()
+        options.ensure_value("results_directory", "/mock/output_dir")
+        port = Port(host, "test", options)
+        server = WebPlatformTestServer(port, "wpttest", "/mock/output_dir/pid.txt")
         server._check_that_all_ports_are_available = lambda: True
         server._is_server_running_on_all_ports = lambda: True
+        host.filesystem.write_text_file("/mock-checkout/LayoutTests/resources/testharness.js", "0")
+        host.filesystem.write_text_file("/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/resources/testharness.js", "0")
 
         host.filesystem.write_text_file("/mock_output_dir/pid.txt", "0")
         server.start()
         server.stop()
 
-    def test_import_web_platform_test_modules(self):
-        fs = FileSystem()
-        current_dir, name = fs.split(fs.realpath(__file__))
-        doc_root_dir = fs.join(current_dir, "..", "..", "..", "..", "..", "LayoutTests", "imported", "w3c", "web-platform-tests")
-        tools_dir = fs.join(doc_root_dir, "tools")
+    def test_custom_layout_tests_directory(self):
+        host = MockHost()
+        options = optparse.Values()
+        options.ensure_value("layout_tests_dir", "/mock-layout-tests-directory/LayoutTests")
+        options.ensure_value("results_directory", "/mock/output_dir")
+        port = Port(host, "test", options)
+        server = WebPlatformTestServer(port, "wpttest", "/mock/output_dir/pid.txt")
+        server._check_that_all_ports_are_available = lambda: True
+        server._is_server_running_on_all_ports = lambda: True
+        host.filesystem.write_text_file("/mock-layout-tests-directory/LayoutTests/resources/testharness.js", "0")
+        host.filesystem.write_text_file("/mock-layout-tests-directory/LayoutTests/imported/w3c/web-platform-tests/resources/testharness.js", "0")
 
-        sys.path.insert(0, doc_root_dir)
-        try:
-            file, pathname, description = imp.find_module("tools")
-        except ImportError, e:
-            self.fail(e)
-        self.assertEqual(pathname, tools_dir)
-        sys.path.pop(0)
-
-        sys.path.insert(0, tools_dir)
-        try:
-            file, pathname, description = imp.find_module("scripts")
-        except ImportError, e:
-            self.fail(e)
-        self.assertEqual(pathname, fs.join(tools_dir, "scripts"))
-        sys.path.pop(0)
+        host.filesystem.write_text_file("/mock_output_dir/pid.txt", "0")
+        server.start()
+        server.stop()
 
     def test_corrupted_subserver_files(self):
         host = MockHost()
-        port = Port(host, "test")
-        server = WebPlatformTestServer(port, "wpttest", "/mock/output_dir", "/mock/output_dir/pid.txt")
+        options = optparse.Values()
+        options.ensure_value("results_directory", "/mock/output_dir")
+        port = Port(host, "test", options)
+        server = WebPlatformTestServer(port, "wpttest", "/mock/output_dir/pid.txt")
         server._check_that_all_ports_are_available = lambda: True
         server._is_server_running_on_all_ports = lambda: True
+        host.filesystem.write_text_file("/mock-checkout/LayoutTests/resources/testharness.js", "0")
+        host.filesystem.write_text_file("/mock-checkout/LayoutTests/imported/w3c/web-platform-tests/resources/testharness.js", "0")
 
         host.filesystem.write_text_file("/mock_output_dir/wpttest_servers.json", "0")
         server.stop()

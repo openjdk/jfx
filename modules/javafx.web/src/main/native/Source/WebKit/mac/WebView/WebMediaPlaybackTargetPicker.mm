@@ -29,7 +29,7 @@
 
 #import <WebCore/MediaPlaybackTarget.h>
 #import <WebCore/Page.h>
-#import <WebCore/WebMediaSessionManagerMac.h>
+#import <WebCore/WebMediaSessionManager.h>
 
 std::unique_ptr<WebMediaPlaybackTargetPicker> WebMediaPlaybackTargetPicker::create(WebCore::Page& page)
 {
@@ -43,22 +43,32 @@ WebMediaPlaybackTargetPicker::WebMediaPlaybackTargetPicker(WebCore::Page& page)
 
 void WebMediaPlaybackTargetPicker::addPlaybackTargetPickerClient(uint64_t contextId)
 {
-    WebCore::WebMediaSessionManagerMac::singleton().addPlaybackTargetPickerClient(*this, contextId);
+    WebCore::WebMediaSessionManager::shared().addPlaybackTargetPickerClient(*this, contextId);
 }
 
 void WebMediaPlaybackTargetPicker::removePlaybackTargetPickerClient(uint64_t contextId)
 {
-    WebCore::WebMediaSessionManagerMac::singleton().removePlaybackTargetPickerClient(*this, contextId);
+    WebCore::WebMediaSessionManager::shared().removePlaybackTargetPickerClient(*this, contextId);
 }
 
-void WebMediaPlaybackTargetPicker::showPlaybackTargetPicker(uint64_t contextId, const WebCore::FloatRect& rect, bool hasVideo)
+void WebMediaPlaybackTargetPicker::showPlaybackTargetPicker(uint64_t contextId, const WebCore::FloatRect& rect, bool hasVideo, const String& customMenuItemTitle)
 {
-    WebCore::WebMediaSessionManagerMac::singleton().showPlaybackTargetPicker(*this, contextId, WebCore::IntRect(rect), hasVideo);
+    WebCore::WebMediaSessionManager::shared().showPlaybackTargetPicker(*this, contextId, WebCore::IntRect(rect), hasVideo, customMenuItemTitle);
 }
 
 void WebMediaPlaybackTargetPicker::playbackTargetPickerClientStateDidChange(uint64_t contextId, WebCore::MediaProducer::MediaStateFlags state)
 {
-    WebCore::WebMediaSessionManagerMac::singleton().clientStateDidChange(*this, contextId, state);
+    WebCore::WebMediaSessionManager::shared().clientStateDidChange(*this, contextId, state);
+}
+
+void WebMediaPlaybackTargetPicker::setMockMediaPlaybackTargetPickerEnabled(bool enabled)
+{
+    WebCore::WebMediaSessionManager::shared().setMockMediaPlaybackTargetPickerEnabled(enabled);
+}
+
+void WebMediaPlaybackTargetPicker::setMockMediaPlaybackTargetPickerState(const String& name, WebCore::MediaPlaybackTargetContext::State state)
+{
+    WebCore::WebMediaSessionManager::shared().setMockMediaPlaybackTargetPickerState(name, state);
 }
 
 void WebMediaPlaybackTargetPicker::setPlaybackTarget(uint64_t contextId, Ref<WebCore::MediaPlaybackTarget>&& target)
@@ -66,7 +76,7 @@ void WebMediaPlaybackTargetPicker::setPlaybackTarget(uint64_t contextId, Ref<Web
     if (!m_page)
         return;
 
-    m_page->setPlaybackTarget(contextId, WTF::move(target));
+    m_page->setPlaybackTarget(contextId, WTFMove(target));
 }
 
 void WebMediaPlaybackTargetPicker::externalOutputDeviceAvailableDidChange(uint64_t contextId, bool available)
@@ -85,10 +95,18 @@ void WebMediaPlaybackTargetPicker::setShouldPlayToPlaybackTarget(uint64_t contex
     m_page->setShouldPlayToPlaybackTarget(contextId, shouldPlay);
 }
 
+void WebMediaPlaybackTargetPicker::customPlaybackActionSelected(uint64_t contextId)
+{
+    if (!m_page)
+        return;
+
+    m_page->customPlaybackActionSelected(contextId);
+}
+
 void WebMediaPlaybackTargetPicker::invalidate()
 {
     m_page = nullptr;
-    WebCore::WebMediaSessionManagerMac::singleton().removeAllPlaybackTargetPickerClients(*this);
+    WebCore::WebMediaSessionManager::shared().removeAllPlaybackTargetPickerClients(*this);
 }
 
 #endif

@@ -40,7 +40,7 @@
 namespace WebCore {
 
 RenderSVGModelObject::RenderSVGModelObject(SVGElement& element, Ref<RenderStyle>&& style)
-    : RenderElement(element, WTF::move(style), 0)
+    : RenderElement(element, WTFMove(style), 0)
     , m_hasSVGShadow(false)
 {
 }
@@ -50,9 +50,9 @@ LayoutRect RenderSVGModelObject::clippedOverflowRectForRepaint(const RenderLayer
     return SVGRenderSupport::clippedOverflowRectForRepaint(*this, repaintContainer);
 }
 
-void RenderSVGModelObject::computeFloatRectForRepaint(const RenderLayerModelObject* repaintContainer, FloatRect& repaintRect, bool fixed) const
+FloatRect RenderSVGModelObject::computeFloatRectForRepaint(const FloatRect& repaintRect, const RenderLayerModelObject* repaintContainer, bool fixed) const
 {
-    SVGRenderSupport::computeFloatRectForRepaint(*this, repaintContainer, repaintRect, fixed);
+    return SVGRenderSupport::computeFloatRectForRepaint(*this, repaintRect, repaintContainer, fixed);
 }
 
 void RenderSVGModelObject::mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState& transformState, MapCoordinatesFlags, bool* wasFixed) const

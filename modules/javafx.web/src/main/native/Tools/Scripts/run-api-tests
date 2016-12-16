@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-# Copyright (C) 2010-2012, 2014 Apple Inc. All rights reserved.
+# Copyright (C) 2010-2012, 2014-2015 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@ use FindBin;
 use Getopt::Long qw(:config pass_through);
 use IPC::Open3;
 use lib $FindBin::Bin;
+use sigtrap qw(die normal-signals);
 use webkitdirs;
 use VCSUtils;
 
@@ -40,7 +41,8 @@ sub listAllTests();
 sub runTest($$);
 sub runTestsBySuite(\@);
 sub prepareEnvironmentForRunningTestTool();
-sub testToolPath();
+sub archCommandLineArgumentsForRestrictedEnvironmentVariables();
+sub testToolPaths();
 
 # Defined in VCSUtils.
 sub possiblyColored($$);
@@ -52,6 +54,7 @@ my $showHelp = 0;
 my $verbose = 0;
 my $showLeaks = 0;
 my $dumpTests = 0;
+my $disableTimeout = 0;
 my $build = 1;
 my $root;
 my $buildDefault = $build ? "build" : "do not build";
@@ -67,6 +70,7 @@ Usage: $programName [options] [suite or test prefixes]
   --[no-]build          Build (or do not build) unit tests prior to running (default: $buildDefault)
   --root=               Path to the pre-built root containing TestWebKitAPI
   --show-leaks          Show leaks in the output
+  --no-timeout          Disable test timeouts
 
 Platform options:
   --ios-simulator       Run tests in the iOS Simulator
@@ -87,6 +91,7 @@ my $getOptionsResult = GetOptions(
     'help' => \$showHelp,
     'verbose|v' => \$verbose,
     'show-leaks' => \$showLeaks,
+    'no-timeout' => \$disableTimeout,
     'dump|d' => \$dumpTests,
     'build!' => \$build,
     'root=s' => \$root
@@ -103,6 +108,12 @@ setConfigurationProductDir(Cwd::abs_path($root)) if (defined($root));
 
 buildTestTool() if $build && !defined($root);
 setPathForRunningWebKitApp(\%ENV);
+
+my $simulatorDevice;
+if (willUseIOSSimulatorSDK()) {
+    $simulatorDevice = findOrCreateSimulatorForIOSDevice(SIMULATOR_DEVICE_SUFFIX_FOR_WEBKIT_DEVELOPMENT);
+    restartIOSSimulatorDevice($simulatorDevice);
+}
 my @testsToRun = listAllTests();
 
 @testsToRun = grep { my $test = $_; grep { $test =~ m/^\Q$_\E/ } @ARGV; } @testsToRun if @ARGV;
@@ -111,6 +122,8 @@ if ($dumpTests) {
     dumpTestsBySuite(@testsToRun);
     exit 0;
 }
+
+END { shutDownIOSSimulatorDevice($simulatorDevice) if $simulatorDevice; }
 
 exit runTestsBySuite(@testsToRun);
 
@@ -184,50 +197,57 @@ sub runTest($$)
         $childErr = ">&DEVNULL";
     }
 
+    foreach(testToolPaths()) {
+        my $pid;
+        my @commonArguments = ($_, $gtestArg, @ARGV);
+        if (willUseIOSSimulatorSDK()) {
+            $pid = open3($childIn, $childOut, $childErr, qw(xcrun --sdk iphonesimulator simctl spawn), $simulatorDevice->{UDID}, @commonArguments) or die "Failed to run test: $test.";
+        } elsif (isAppleMacWebKit() && architecture()) {
+            $pid = open3($childIn, $childOut, $childErr, "arch", "-" . architecture(), archCommandLineArgumentsForRestrictedEnvironmentVariables(), @commonArguments) or die "Failed to run test: $test.";
+        } else {
+            $pid = open3($childIn, $childOut, $childErr, @commonArguments) or die "Failed to run test: $test.";
+        }
 
-    my $pid;
-    my @commonArguments = (testToolPath(), $gtestArg, @ARGV);
-    if (isIOSWebKit()) {
-        $pid = open3($childIn, $childOut, $childErr, qw(xcrun -sdk iphonesimulator sim --environment=merge), @commonArguments) or die "Failed to run test: $test.";
-    } elsif (isAppleMacWebKit() && architecture()) {
-        $pid = open3($childIn, $childOut, $childErr, "arch", "-" . architecture(), @commonArguments) or die "Failed to run test: $test.";
-    } else {
-        $pid = open3($childIn, $childOut, $childErr, @commonArguments) or die "Failed to run test: $test.";
+        eval {
+            if ($disableTimeout) {
+                waitpid($pid, 0);    
+            } else {
+                local $SIG{ALRM} = sub { die "alarm\n" };
+                alarm $timeout;
+                waitpid($pid, 0);
+                alarm 0;
+            }
+            $result = $?;
+        };
+        if ($@) {
+            die unless $@ eq "alarm\n";
+            kill SIGTERM, $pid or kill SIGKILL, $pid;
+            $timedOut = 1;
+        }
+
+        my @testOutput = <$childOut>;
+        @testOutput = grep { !/^LEAK:/ } @testOutput unless $showLeaks;
+        map { s/\*\*PASS\*\*/possiblyColored("bold green", "PASS")/eg } @testOutput;
+        map { s/\*\*FAIL\*\*/possiblyColored("bold red", "FAIL")/eg } @testOutput;
+        print STDOUT @testOutput;
+
+        close($childIn);
+        close($childOut);
+        close($childErr) unless ($verbose || $showLeaks);
+        close(DEVNULL) unless ($verbose || $showLeaks);
+
+        if ($result) {
+            push @testsFailed, $test;
+        }
+        if ($timedOut) {
+            push @testsTimedOut, $test;
+            print possiblyColored("bold yellow", "TIMEOUT"), " $test\n";
+        }
+        if ($timedOut || $result) {
+            return $timedOut || $result;
+        }
     }
-
-    eval {
-        local $SIG{ALRM} = sub { die "alarm\n" };
-        alarm $timeout;
-        waitpid($pid, 0);
-        alarm 0;
-        $result = $?;
-    };
-    if ($@) {
-        die unless $@ eq "alarm\n";
-        kill SIGTERM, $pid or kill SIGKILL, $pid;
-        $timedOut = 1;
-    }
-
-    my @testOutput = <$childOut>;
-    @testOutput = grep { !/^LEAK:/ } @testOutput unless $showLeaks;
-    map { s/\*\*PASS\*\*/possiblyColored("bold green", "PASS")/eg } @testOutput;
-    map { s/\*\*FAIL\*\*/possiblyColored("bold red", "FAIL")/eg } @testOutput;
-    print STDOUT @testOutput;
-
-    close($childIn);
-    close($childOut);
-    close($childErr) unless ($verbose || $showLeaks);
-    close(DEVNULL) unless ($verbose || $showLeaks);
-
-    if ($result) {
-        push @testsFailed, $test;
-    }
-    if ($timedOut) {
-        push @testsTimedOut, $test;
-        print possiblyColored("bold yellow", "TIMEOUT"), " $test\n";
-    }
-
-    return $timedOut || $result;
+    return 0;
 }
 
 sub listAllTests()
@@ -248,44 +268,45 @@ sub listAllTests()
         $childErr = ">&DEVNULL";
     }
 
-    my $pid;
-    my @commonArguments = (testToolPath(), "--gtest_list_tests");
-    if (isIOSWebKit()) {
-        $pid = open3($childIn, $childOut, $childErr, qw(xcrun -sdk iphonesimulator sim --environment=merge), @commonArguments) or die "Failed to build list of tests!";
-    } elsif (isAppleMacWebKit() && architecture()) {
-        $pid = open3($childIn, $childOut, $childErr, "arch", "-" . architecture(), @commonArguments) or die "Failed to build list of tests!";
-    } else {
-        $pid = open3($childIn, $childOut, $childErr, @commonArguments) or die "Failed to build list of tests!";
-    }
-
-    close($childIn);
-    @toolOutput = <$childOut>;
-    close($childOut);
-    close($childErr);
-    close(DEVNULL) unless ($verbose);
-
-    waitpid($pid, 0);
-    my $result = $?;
-
-    if ($result) {
-        print STDERR "Failed to build list of tests!\n";
-        exit exitStatus($result);
-    }
-
     my @tests = ();
-    my $suite;
-    for my $line (@toolOutput) {
-       $line =~ s/[\r\n]*$//;
-       if ($line =~ m/\.$/) {
-          $suite = $line; # "SuiteName."
-       } else {
-          # Disabling WebKit2 API test on Windows since we will be disabling WebKit2 on Windows.
-          next if (isAppleWinWebKit() && $suite =~ m/WebKit2*/);       
-          $line =~ s/^\s*//; # "TestName"
-          push @tests, $suite . $line; # "SuiteName.TestName"
+    foreach(testToolPaths()) {
+        my $pid;
+        my @commonArguments = ($_, "--gtest_list_tests");
+        if (isIOSWebKit()) {
+            $pid = open3($childIn, $childOut, $childErr, qw(xcrun --sdk iphonesimulator simctl spawn), $simulatorDevice->{UDID}, @commonArguments) or die "Failed to build list of tests!";
+        } elsif (isAppleMacWebKit() && architecture()) {
+            $pid = open3($childIn, $childOut, $childErr, "arch", "-" . architecture(), archCommandLineArgumentsForRestrictedEnvironmentVariables(), @commonArguments) or die "Failed to build list of tests!";
+        } else {
+            $pid = open3($childIn, $childOut, $childErr, @commonArguments) or die "Failed to build list of tests!";
+        }
+
+        close($childIn);
+        @toolOutput = <$childOut>;
+        close($childOut);
+        close($childErr);
+        close(DEVNULL) unless ($verbose);
+
+        waitpid($pid, 0);
+        my $result = $?;
+
+        if ($result) {
+            print STDERR "Failed to build list of tests!--\n";
+            exit exitStatus($result);
+        }
+
+        my $suite;
+        for my $line (@toolOutput) {
+           $line =~ s/[\r\n]*$//;
+           if ($line =~ m/\.$/) {
+              $suite = $line; # "SuiteName."
+           } else {
+              # Disabling WebKit2 API test on Windows since we will be disabling WebKit2 on Windows.
+              next if (isAppleWinWebKit() && $suite =~ m/WebKit2*/);       
+              $line =~ s/^\s*//; # "TestName"
+              push @tests, $suite . $line; # "SuiteName.TestName"
+            }
         }
     }
-
     return @tests;
 }
 
@@ -334,13 +355,42 @@ sub prepareEnvironmentForRunningTestTool()
 {
     return unless isAppleMacWebKit();
 
+    if (willUseIOSSimulatorSDK()) {
+        my %simulatorENV;
+        {
+            local %ENV;
+            setupIOSWebKitEnvironment(productDir());
+            %simulatorENV = %ENV;
+        }
+        # Prefix the environment variables with SIMCTL_CHILD_ per `xcrun simctl help launch`.
+        foreach my $key (keys %simulatorENV) {
+            $ENV{"SIMCTL_CHILD_$key"} = $simulatorENV{$key};
+        }
+        return;
+    }
     setupMacWebKitEnvironment(productDir());
 }
 
-sub testToolPath()
+sub archCommandLineArgumentsForRestrictedEnvironmentVariables()
+{
+    my @arguments = ();
+    foreach my $key (keys(%ENV)) {
+        if ($key =~ /^DYLD_/) {
+            push @arguments, "-e", "$key=$ENV{$key}";
+        }
+    }
+    return @arguments;
+}
+
+sub testToolPaths()
 {
     my $path = File::Spec->catfile(productDir(), "TestWebKitAPI");
-    return $path unless isAppleWinWebKit();
+    return ($path) unless isAppleWinWebKit();
+
+    my $binDir = isWin64() ? "bin64" : "bin32";
+    my $pathWTF = File::Spec->catfile(productDir(), $binDir, "TestWTF");
+    my $pathWebCore = File::Spec->catfile(productDir(), $binDir, "TestWebCore");
+    my $pathWebKit = File::Spec->catfile(productDir(), $binDir, "TestWebKit");
 
     my $suffix;
     if (configuration() eq "Debug_All") {
@@ -348,5 +398,5 @@ sub testToolPath()
     } else {
         $suffix = "";
     }
-    return "$path$suffix.exe";
+    return ("$pathWTF$suffix.exe", "$pathWebCore$suffix.exe", "$pathWebKit$suffix.exe");
 }

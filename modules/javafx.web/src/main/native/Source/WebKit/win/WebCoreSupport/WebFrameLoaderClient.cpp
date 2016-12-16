@@ -60,6 +60,7 @@
 #include <JavaScriptCore/APICast.h>
 #include <WebCore/BackForwardController.h>
 #include <WebCore/CachedFrame.h>
+#include <WebCore/DNS.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FormState.h>
 #include <WebCore/Frame.h>
@@ -79,9 +80,9 @@
 #include <WebCore/PolicyChecker.h>
 #include <WebCore/RenderWidget.h>
 #include <WebCore/ResourceHandle.h>
-#include <WebCore/ResourceLoader.h>
 #include <WebCore/ScriptController.h>
 #include <WebCore/Settings.h>
+#include <WebCore/SubresourceLoader.h>
 
 using namespace WebCore;
 using namespace HTMLNames;
@@ -150,7 +151,7 @@ void WebFrameLoaderClient::detachedFromParent3()
     notImplemented();
 }
 
-void WebFrameLoaderClient::convertMainResourceLoadToDownload(DocumentLoader* documentLoader, const ResourceRequest& request, const ResourceResponse& response)
+void WebFrameLoaderClient::convertMainResourceLoadToDownload(DocumentLoader* documentLoader, SessionID, const ResourceRequest& request, const ResourceResponse& response)
 {
     COMPtr<IWebDownloadDelegate> downloadDelegate;
     COMPtr<IWebView> webView;
@@ -322,7 +323,7 @@ bool WebFrameLoaderClient::shouldCacheResponse(DocumentLoader* loader, unsigned 
     return true;
 }
 
-void WebFrameLoaderClient::dispatchDidHandleOnloadEvents()
+void WebFrameLoaderClient::dispatchDidDispatchOnloadEvents()
 {
     WebView* webView = m_webFrame->webView();
     COMPtr<IWebFrameLoadDelegatePrivate> frameLoadDelegatePriv;
@@ -850,37 +851,42 @@ ResourceError WebFrameLoaderClient::cancelledError(const ResourceRequest& reques
 {
     // FIXME: Need ChickenCat to include CFNetwork/CFURLError.h to get these values
     // Alternatively, we could create our own error domain/codes.
-    return ResourceError(String(WebURLErrorDomain), -999, request.url().string(), String("Cancelled"));
+    return ResourceError(String(WebURLErrorDomain), -999, request.url(), String("Cancelled"));
 }
 
 ResourceError WebFrameLoaderClient::blockedError(const ResourceRequest& request)
 {
-    return ResourceError(String(WebKitErrorDomain), WebKitErrorCannotUseRestrictedPort, request.url().string(), WEB_UI_STRING("Not allowed to use restricted network port", "WebKitErrorCannotUseRestrictedPort description"));
+    return ResourceError(String(WebKitErrorDomain), WebKitErrorCannotUseRestrictedPort, request.url(), WEB_UI_STRING("Not allowed to use restricted network port", "WebKitErrorCannotUseRestrictedPort description"));
+}
+
+ResourceError WebFrameLoaderClient::blockedByContentBlockerError(const ResourceRequest& request)
+{
+    RELEASE_ASSERT_NOT_REACHED(); // Content Blockers are not enabled for WK1.
 }
 
 ResourceError WebFrameLoaderClient::cannotShowURLError(const ResourceRequest& request)
 {
-    return ResourceError(String(WebKitErrorDomain), WebKitErrorCannotShowURL, request.url().string(), WEB_UI_STRING("The URL can\xE2\x80\x99t be shown", "WebKitErrorCannotShowURL description"));
+    return ResourceError(String(WebKitErrorDomain), WebKitErrorCannotShowURL, request.url(), WEB_UI_STRING("The URL can\xE2\x80\x99t be shown", "WebKitErrorCannotShowURL description"));
 }
 
 ResourceError WebFrameLoaderClient::interruptedForPolicyChangeError(const ResourceRequest& request)
 {
-    return ResourceError(String(WebKitErrorDomain), WebKitErrorFrameLoadInterruptedByPolicyChange, request.url().string(), WEB_UI_STRING("Frame load interrupted", "WebKitErrorFrameLoadInterruptedByPolicyChange description"));
+    return ResourceError(String(WebKitErrorDomain), WebKitErrorFrameLoadInterruptedByPolicyChange, request.url(), WEB_UI_STRING("Frame load interrupted", "WebKitErrorFrameLoadInterruptedByPolicyChange description"));
 }
 
 ResourceError WebFrameLoaderClient::cannotShowMIMETypeError(const ResourceResponse& response)
 {
-    return ResourceError(String(), WebKitErrorCannotShowMIMEType, response.url().string(), WEB_UI_STRING("Content with specified MIME type can\xE2\x80\x99t be shown", "WebKitErrorCannotShowMIMEType description"));
+    return ResourceError(String(), WebKitErrorCannotShowMIMEType, response.url(), WEB_UI_STRING("Content with specified MIME type can\xE2\x80\x99t be shown", "WebKitErrorCannotShowMIMEType description"));
 }
 
 ResourceError WebFrameLoaderClient::fileDoesNotExistError(const ResourceResponse& response)
 {
-    return ResourceError(String(WebURLErrorDomain), -1100, response.url().string(), String("File does not exist."));
+    return ResourceError(String(WebURLErrorDomain), -1100, response.url(), String("File does not exist."));
 }
 
 ResourceError WebFrameLoaderClient::pluginWillHandleLoadError(const ResourceResponse& response)
 {
-    return ResourceError(String(WebKitErrorDomain), WebKitErrorPlugInWillHandleLoad, response.url().string(), WEB_UI_STRING("Plug-in handled load", "WebKitErrorPlugInWillHandleLoad description"));
+    return ResourceError(String(WebKitErrorDomain), WebKitErrorPlugInWillHandleLoad, response.url(), WEB_UI_STRING("Plug-in handled load", "WebKitErrorPlugInWillHandleLoad description"));
 }
 
 bool WebFrameLoaderClient::shouldFallBack(const ResourceError& error)
@@ -956,7 +962,7 @@ Ref<DocumentLoader> WebFrameLoaderClient::createDocumentLoader(const ResourceReq
     COMPtr<WebDataSource> dataSource(AdoptCOM, WebDataSource::createInstance(loader.ptr()));
 
     loader->setDataSource(dataSource.get());
-    return WTF::move(loader);
+    return WTFMove(loader);
 }
 
 void WebFrameLoaderClient::setTitle(const StringWithDirection& title, const URL& url)
@@ -1079,7 +1085,7 @@ RefPtr<Frame> WebFrameLoaderClient::createFrame(const URL& URL, const String& na
     return childFrame;
 }
 
-ObjectContentType WebFrameLoaderClient::objectContentType(const URL& url, const String& mimeTypeIn, bool shouldPreferPlugInsForImages)
+ObjectContentType WebFrameLoaderClient::objectContentType(const URL& url, const String& mimeTypeIn)
 {
     String mimeType = mimeTypeIn;
 
@@ -1097,7 +1103,7 @@ ObjectContentType WebFrameLoaderClient::objectContentType(const URL& url, const 
     bool plugInSupportsMIMEType = PluginDatabase::installedPlugins()->isMIMETypeRegistered(mimeType);
 
     if (MIMETypeRegistry::isSupportedImageMIMEType(mimeType))
-        return shouldPreferPlugInsForImages && plugInSupportsMIMEType ? WebCore::ObjectContentNetscapePlugin : WebCore::ObjectContentImage;
+        return WebCore::ObjectContentImage;
 
     if (plugInSupportsMIMEType)
         return WebCore::ObjectContentNetscapePlugin;
@@ -1160,7 +1166,7 @@ void WebFrameLoaderClient::dispatchDidFailToStartPlugin(const PluginView* plugin
             ASSERT_NOT_REACHED();
     }
 
-    ResourceError resourceError(String(WebKitErrorDomain), errorCode, pluginView->url().string(), String());
+    ResourceError resourceError(String(WebKitErrorDomain), errorCode, pluginView->url(), String());
     COMPtr<IWebError> error(AdoptCOM, WebError::createInstance(resourceError, userInfoBag.get()));
 
     resourceLoadDelegate->plugInFailedWithError(webView, error.get(), getWebDataSource(frame->loader().documentLoader()));
@@ -1238,7 +1244,7 @@ PassRefPtr<Widget> WebFrameLoaderClient::createJavaAppletWidget(const IntSize& p
 
     COMPtr<CFDictionaryPropertyBag> userInfoBag = CFDictionaryPropertyBag::createInstance();
 
-    ResourceError resourceError(String(WebKitErrorDomain), WebKitErrorJavaUnavailable, String(), WEB_UI_STRING("Java is unavailable", "WebKitErrorJavaUnavailable description"));
+    ResourceError resourceError(String(WebKitErrorDomain), WebKitErrorJavaUnavailable, URL(), WEB_UI_STRING("Java is unavailable", "WebKitErrorJavaUnavailable description"));
     COMPtr<IWebError> error(AdoptCOM, WebError::createInstance(resourceError, userInfoBag.get()));
 
     Frame* coreFrame = core(m_webFrame);
@@ -1360,4 +1366,9 @@ void WebFrameLoaderClient::receivedPolicyDecision(PolicyAction action)
     ASSERT(coreFrame);
 
     function(action);
+}
+
+void WebFrameLoaderClient::prefetchDNS(const String& hostname)
+{
+    WebCore::prefetchDNS(hostname);
 }

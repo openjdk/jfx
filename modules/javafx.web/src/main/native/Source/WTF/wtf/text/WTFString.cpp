@@ -343,32 +343,40 @@ String String::convertToASCIILowercase() const
     return m_impl->convertToASCIILowercase();
 }
 
-String String::lower() const
+String String::convertToASCIIUppercase() const
 {
+    // FIXME: Should this function, and the many others like it, be inlined?
     if (!m_impl)
         return String();
-    return m_impl->lower();
+    return m_impl->convertToASCIIUppercase();
 }
 
-String String::upper() const
+String String::convertToLowercaseWithoutLocale() const
 {
     if (!m_impl)
         return String();
-    return m_impl->upper();
+    return m_impl->convertToLowercaseWithoutLocale();
 }
 
-String String::lower(const AtomicString& localeIdentifier) const
+String String::convertToUppercaseWithoutLocale() const
 {
     if (!m_impl)
         return String();
-    return m_impl->lower(localeIdentifier);
+    return m_impl->convertToUppercaseWithoutLocale();
 }
 
-String String::upper(const AtomicString& localeIdentifier) const
+String String::convertToLowercaseWithLocale(const AtomicString& localeIdentifier) const
 {
     if (!m_impl)
         return String();
-    return m_impl->upper(localeIdentifier);
+    return m_impl->convertToLowercaseWithLocale(localeIdentifier);
+}
+
+String String::convertToUppercaseWithLocale(const AtomicString& localeIdentifier) const
+{
+    if (!m_impl)
+        return String();
+    return m_impl->convertToUppercaseWithLocale(localeIdentifier);
 }
 
 String String::stripWhiteSpace() const
@@ -663,7 +671,7 @@ String String::isolatedCopy() &&
     if (isSafeToSendToAnotherThread()) {
         // Since we know that our string is a temporary that will be destroyed
         // we can just steal the m_impl from it, thus avoiding a copy.
-        return String(WTF::move(*this));
+        return String(WTFMove(*this));
     }
 
     if (!m_impl)
@@ -795,6 +803,11 @@ CString String::utf8(ConversionMode mode) const
         return CString("", 0);
 
     return m_impl->utf8(mode);
+}
+
+CString String::utf8() const
+{
+    return utf8(LenientConversion);
 }
 
 String String::make8BitFrom16BitSource(const UChar* source, size_t length)

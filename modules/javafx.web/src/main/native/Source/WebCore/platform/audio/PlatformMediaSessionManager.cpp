@@ -26,7 +26,7 @@
 #include "config.h"
 #include "PlatformMediaSessionManager.h"
 
-#if ENABLE(VIDEO)
+#if ENABLE(VIDEO) || ENABLE(WEB_AUDIO)
 
 #include "AudioSession.h"
 #include "Document.h"
@@ -37,10 +37,18 @@
 namespace WebCore {
 
 #if !PLATFORM(IOS)
+static PlatformMediaSessionManager* platformMediaSessionManager = nullptr;
+
 PlatformMediaSessionManager& PlatformMediaSessionManager::sharedManager()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(PlatformMediaSessionManager, manager, ());
-    return manager;
+    if (!platformMediaSessionManager)
+        platformMediaSessionManager = new PlatformMediaSessionManager;
+    return *platformMediaSessionManager;
+}
+
+PlatformMediaSessionManager* PlatformMediaSessionManager::sharedManagerIfExists()
+{
+    return platformMediaSessionManager;
 }
 #endif
 
@@ -72,7 +80,17 @@ bool PlatformMediaSessionManager::has(PlatformMediaSession::MediaType type) cons
 bool PlatformMediaSessionManager::activeAudioSessionRequired() const
 {
     for (auto* session : m_sessions) {
-        if (session->mediaType() != PlatformMediaSession::None && session->state() == PlatformMediaSession::State::Playing)
+        if (session->activeAudioSessionRequired())
+            return true;
+    }
+
+    return false;
+}
+
+bool PlatformMediaSessionManager::canProduceAudio() const
+{
+    for (auto* session : m_sessions) {
+        if (session->canProduceAudio())
             return true;
     }
 
@@ -190,7 +208,9 @@ bool PlatformMediaSessionManager::sessionWillBeginPlayback(PlatformMediaSession&
     for (auto* oneSession : sessions) {
         if (oneSession == &session)
             continue;
-        if (oneSession->mediaType() == sessionType && restrictions & ConcurrentPlaybackNotPermitted)
+        if (oneSession->mediaType() == sessionType
+            && restrictions & ConcurrentPlaybackNotPermitted
+            && oneSession->state() == PlatformMediaSession::Playing)
             oneSession->pauseSession();
     }
 
@@ -259,15 +279,6 @@ PlatformMediaSession* PlatformMediaSessionManager::currentSession()
     return m_sessions[0];
 }
 
-bool PlatformMediaSessionManager::sessionRestrictsInlineVideoPlayback(const PlatformMediaSession& session) const
-{
-    PlatformMediaSession::MediaType sessionType = session.presentationType();
-    if (sessionType != PlatformMediaSession::Video)
-        return false;
-
-    return m_restrictions[sessionType] & InlineVideoPlaybackRestricted;
-}
-
 bool PlatformMediaSessionManager::sessionCanLoadMedia(const PlatformMediaSession& session) const
 {
     return session.state() == PlatformMediaSession::Playing || !session.isHidden() || session.isPlayingToWirelessPlaybackTarget();
@@ -276,6 +287,12 @@ bool PlatformMediaSessionManager::sessionCanLoadMedia(const PlatformMediaSession
 void PlatformMediaSessionManager::applicationWillEnterBackground() const
 {
     LOG(Media, "PlatformMediaSessionManager::applicationWillEnterBackground");
+
+    if (m_isApplicationInBackground)
+        return;
+
+    m_isApplicationInBackground = true;
+
     Vector<PlatformMediaSession*> sessions = m_sessions;
     for (auto* session : sessions) {
         if (m_restrictions[session->mediaType()] & BackgroundProcessPlaybackRestricted)
@@ -283,14 +300,34 @@ void PlatformMediaSessionManager::applicationWillEnterBackground() const
     }
 }
 
-void PlatformMediaSessionManager::applicationWillEnterForeground() const
+void PlatformMediaSessionManager::applicationDidEnterForeground() const
 {
-    LOG(Media, "PlatformMediaSessionManager::applicationWillEnterForeground");
+    LOG(Media, "PlatformMediaSessionManager::applicationDidEnterForeground");
+
+    if (!m_isApplicationInBackground)
+        return;
+
+    m_isApplicationInBackground = false;
+
     Vector<PlatformMediaSession*> sessions = m_sessions;
     for (auto* session : sessions) {
         if (m_restrictions[session->mediaType()] & BackgroundProcessPlaybackRestricted)
             session->endInterruption(PlatformMediaSession::MayResumePlaying);
     }
+}
+
+void PlatformMediaSessionManager::sessionIsPlayingToWirelessPlaybackTargetChanged(PlatformMediaSession& session)
+{
+    if (!m_isApplicationInBackground || !(m_restrictions[session.mediaType()] & BackgroundProcessPlaybackRestricted))
+        return;
+
+    if (session.state() != PlatformMediaSession::Interrupted)
+        session.beginInterruption(PlatformMediaSession::EnteringBackground);
+}
+
+void PlatformMediaSessionManager::sessionCanProduceAudioChanged(PlatformMediaSession&)
+{
+    updateSessionState();
 }
 
 #if !PLATFORM(COCOA)
@@ -312,7 +349,7 @@ void PlatformMediaSessionManager::systemWillSleep()
     if (m_interrupted)
         return;
 
-    for (auto session : m_sessions)
+    for (auto* session : m_sessions)
         session->beginInterruption(PlatformMediaSession::SystemSleep);
 }
 
@@ -321,7 +358,7 @@ void PlatformMediaSessionManager::systemDidWake()
     if (m_interrupted)
         return;
 
-    for (auto session : m_sessions)
+    for (auto* session : m_sessions)
         session->endInterruption(PlatformMediaSession::MayResumePlaying);
 }
 

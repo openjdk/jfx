@@ -34,17 +34,16 @@ FloatSize SVGImageForContainer::size() const
     return FloatSize(roundedIntSize(scaledContainerSize));
 }
 
-void SVGImageForContainer::draw(GraphicsContext* context, const FloatRect& dstRect,
-    const FloatRect& srcRect, ColorSpace colorSpace, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription)
+void SVGImageForContainer::draw(GraphicsContext& context, const FloatRect& dstRect,
+    const FloatRect& srcRect, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription)
 {
-    m_image->drawForContainer(context, m_containerSize, m_zoom, dstRect, srcRect, colorSpace, compositeOp, blendMode);
+    m_image->drawForContainer(context, m_containerSize, m_zoom, dstRect, srcRect, compositeOp, blendMode);
 }
 
-void SVGImageForContainer::drawPattern(GraphicsContext* context, const FloatRect& srcRect, const AffineTransform& patternTransform,
-    const FloatPoint& phase, ColorSpace colorSpace, CompositeOperator compositeOp, const FloatRect& dstRect, BlendMode blendMode)
+void SVGImageForContainer::drawPattern(GraphicsContext& context, const FloatRect& srcRect, const AffineTransform& patternTransform,
+    const FloatPoint& phase, const FloatSize& spacing, CompositeOperator compositeOp, const FloatRect& dstRect, BlendMode blendMode)
 {
-    m_image->setSpaceSize(spaceSize());
-    m_image->drawPatternForContainer(context, m_containerSize, m_zoom, srcRect, patternTransform, phase, colorSpace, compositeOp, dstRect, blendMode);
+    m_image->drawPatternForContainer(context, m_containerSize, m_zoom, srcRect, patternTransform, phase, spacing, compositeOp, dstRect, blendMode);
 }
 
 PassNativeImagePtr SVGImageForContainer::nativeImageForCurrentFrame()

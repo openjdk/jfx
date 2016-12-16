@@ -35,26 +35,27 @@
 
 namespace WebCore {
 
-class GraphicsContext;
-class IntRect;
-class FontDescription;
+class FontCascadeDescription;
 class FontPlatformData;
 class FontSelector;
+class GraphicsContext;
+class IntRect;
+class MixedFontGlyphPage;
 
 class FontCascadeFonts : public RefCounted<FontCascadeFonts> {
     WTF_MAKE_NONCOPYABLE(FontCascadeFonts);
 public:
-    static Ref<FontCascadeFonts> create(PassRefPtr<FontSelector> fontSelector) { return adoptRef(*new FontCascadeFonts(fontSelector)); }
+    static Ref<FontCascadeFonts> create(RefPtr<FontSelector>&& fontSelector) { return adoptRef(*new FontCascadeFonts(WTFMove(fontSelector))); }
     static Ref<FontCascadeFonts> createForPlatformFont(const FontPlatformData& platformData) { return adoptRef(*new FontCascadeFonts(platformData)); }
 
     WEBCORE_EXPORT ~FontCascadeFonts();
 
     bool isForPlatformFont() const { return m_isForPlatformFont; }
 
-    GlyphData glyphDataForCharacter(UChar32, const FontDescription&, FontVariant);
+    GlyphData glyphDataForCharacter(UChar32, const FontCascadeDescription&, FontVariant);
 
-    bool isFixedPitch(const FontDescription&);
-    void determinePitch(const FontDescription&);
+    bool isFixedPitch(const FontCascadeDescription&);
+    void determinePitch(const FontCascadeDescription&);
 
     bool isLoadingCustomFonts() const;
 
@@ -66,24 +67,44 @@ public:
     WidthCache& widthCache() { return m_widthCache; }
     const WidthCache& widthCache() const { return m_widthCache; }
 
-    const Font& primaryFont(const FontDescription&);
-    WEBCORE_EXPORT const FontRanges& realizeFallbackRangesAt(const FontDescription&, unsigned fallbackIndex);
+    const Font& primaryFont(const FontCascadeDescription&);
+    WEBCORE_EXPORT const FontRanges& realizeFallbackRangesAt(const FontCascadeDescription&, unsigned fallbackIndex);
 
     void pruneSystemFallbacks();
 
 private:
-    FontCascadeFonts(PassRefPtr<FontSelector>);
+    FontCascadeFonts(RefPtr<FontSelector>&&);
     FontCascadeFonts(const FontPlatformData&);
 
-    GlyphData glyphDataForSystemFallback(UChar32, const FontDescription&, FontVariant);
-    GlyphData glyphDataForNormalVariant(UChar32, const FontDescription&);
-    GlyphData glyphDataForVariant(UChar32, const FontDescription&, FontVariant, unsigned fallbackIndex);
+    GlyphData glyphDataForSystemFallback(UChar32, const FontCascadeDescription&, FontVariant);
+    GlyphData glyphDataForNormalVariant(UChar32, const FontCascadeDescription&);
+    GlyphData glyphDataForVariant(UChar32, const FontCascadeDescription&, FontVariant, unsigned fallbackIndex);
 
     Vector<FontRanges, 1> m_realizedFallbackRanges;
     unsigned m_lastRealizedFallbackIndex { 0 };
 
-    RefPtr<GlyphPage> m_cachedPageZero;
-    HashMap<int, RefPtr<GlyphPage>> m_cachedPages;
+    class GlyphPageCacheEntry {
+    public:
+        GlyphData glyphDataForCharacter(UChar32);
+
+        void setSingleFontPage(RefPtr<GlyphPage>&&);
+        void setGlyphDataForCharacter(UChar32, GlyphData);
+
+        bool isNull() const { return !m_singleFont && !m_mixedFont; }
+        bool isMixedFont() const { return !!m_mixedFont; }
+
+    private:
+        // Only one of these is non-null.
+        RefPtr<GlyphPage> m_singleFont;
+#if ENABLE(CXX_11_FIX)
+        std::shared_ptr<MixedFontGlyphPage> m_mixedFont;
+#else
+        std::unique_ptr<MixedFontGlyphPage> m_mixedFont;
+#endif
+    };
+
+    GlyphPageCacheEntry m_cachedPageZero;
+    HashMap<int, GlyphPageCacheEntry> m_cachedPages;
 
     HashSet<RefPtr<Font>> m_systemFallbackFontSet;
 
@@ -98,14 +119,14 @@ private:
     bool m_isForPlatformFont { false };
 };
 
-inline bool FontCascadeFonts::isFixedPitch(const FontDescription& description)
+inline bool FontCascadeFonts::isFixedPitch(const FontCascadeDescription& description)
 {
     if (m_pitch == UnknownPitch)
         determinePitch(description);
     return m_pitch == FixedPitch;
 };
 
-inline const Font& FontCascadeFonts::primaryFont(const FontDescription& description)
+inline const Font& FontCascadeFonts::primaryFont(const FontCascadeDescription& description)
 {
     ASSERT(isMainThread());
     if (!m_cachedPrimaryFont) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "SetConstructor.h"
 
 #include "Error.h"
+#include "GetterSetter.h"
 #include "IteratorOperations.h"
 #include "JSCJSValueInlines.h"
 #include "JSCellInlines.h"
@@ -40,22 +41,25 @@ namespace JSC {
 
 const ClassInfo SetConstructor::s_info = { "Function", &Base::s_info, 0, CREATE_METHOD_TABLE(SetConstructor) };
 
-void SetConstructor::finishCreation(VM& vm, SetPrototype* setPrototype)
+void SetConstructor::finishCreation(VM& vm, SetPrototype* setPrototype, GetterSetter* speciesSymbol)
 {
     Base::finishCreation(vm, setPrototype->classInfo()->className);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, setPrototype, DontEnum | DontDelete | ReadOnly);
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(0), ReadOnly | DontEnum | DontDelete);
+    putDirectNonIndexAccessor(vm, vm.propertyNames->speciesSymbol, speciesSymbol, Accessor | ReadOnly | DontEnum);
 }
 
 static EncodedJSValue JSC_HOST_CALL callSet(ExecState* exec)
 {
-    return JSValue::encode(throwTypeError(exec, ASCIILiteral("Set cannot be called as a function")));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(exec, "Set"));
 }
 
 static EncodedJSValue JSC_HOST_CALL constructSet(ExecState* exec)
 {
     JSGlobalObject* globalObject = asInternalFunction(exec->callee())->globalObject();
-    Structure* setStructure = globalObject->setStructure();
+    Structure* setStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), globalObject->setStructure());
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
     JSSet* set = JSSet::create(exec, setStructure);
     JSValue iterable = exec->argument(0);
     if (iterable.isUndefinedOrNull())

@@ -54,7 +54,7 @@ void RuntimeMethod::finishCreation(VM& vm, const String& ident)
     ASSERT(inherits(info()));
 }
 
-EncodedJSValue RuntimeMethod::lengthGetter(ExecState* exec, JSObject*, EncodedJSValue thisValue, PropertyName)
+EncodedJSValue RuntimeMethod::lengthGetter(ExecState* exec, EncodedJSValue thisValue, PropertyName)
 {
     RuntimeMethod* thisObject = jsDynamicCast<RuntimeMethod*>(JSValue::decode(thisValue));
     if (!thisObject)
@@ -91,7 +91,7 @@ static EncodedJSValue JSC_HOST_CALL callRuntimeMethod(ExecState* exec)
     } else {
         // Calling a runtime object of a plugin element?
         if (thisValue.inherits(JSHTMLElement::info()))
-            instance = pluginInstance(jsCast<JSHTMLElement*>(asObject(thisValue))->impl());
+            instance = pluginInstance(jsCast<JSHTMLElement*>(asObject(thisValue))->wrapped());
         if (!instance)
             return throwVMTypeError(exec);
     }

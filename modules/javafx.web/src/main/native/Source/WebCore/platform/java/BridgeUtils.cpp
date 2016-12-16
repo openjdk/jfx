@@ -9,7 +9,7 @@
 #include "Frame.h"
 #include "JavaInstanceJSC.h"
 #include "JavaArrayJSC.h"
-#include "JavaRef.h"
+#include <wtf/java/JavaRef.h>
 #include "JavaRuntimeObject.h"
 #include "JNIUtilityPrivate.h"
 #include "JSDOMBinding.h"

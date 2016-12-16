@@ -89,7 +89,7 @@ void SpinButtonElement::defaultEventHandler(Event* event)
     MouseEvent& mouseEvent = downcast<MouseEvent>(*event);
     IntPoint local = roundedIntPoint(box->absoluteToLocal(mouseEvent.absoluteLocation(), UseTransforms));
     if (mouseEvent.type() == eventNames().mousedownEvent && mouseEvent.button() == LeftButton) {
-        if (box->pixelSnappedBorderBoxRect().contains(local)) {
+        if (box->borderBoxRect().contains(local)) {
             // The following functions of HTMLInputElement may run JavaScript
             // code which detaches this shadow node. We need to take a reference
             // and check renderer() after such function calls.
@@ -112,7 +112,7 @@ void SpinButtonElement::defaultEventHandler(Event* event)
     } else if (mouseEvent.type() == eventNames().mouseupEvent && mouseEvent.button() == LeftButton)
         stopRepeatingTimer();
     else if (mouseEvent.type() == eventNames().mousemoveEvent) {
-        if (box->pixelSnappedBorderBoxRect().contains(local)) {
+        if (box->borderBoxRect().contains(local)) {
             if (!m_capturing) {
                 if (Frame* frame = document().frame()) {
                     frame->eventHandler().setCapturingMouseEventsElement(this);
@@ -207,8 +207,8 @@ bool SpinButtonElement::matchesReadWritePseudoClass() const
 void SpinButtonElement::startRepeatingTimer()
 {
     m_pressStartingState = m_upDownState;
-    ScrollbarTheme* theme = ScrollbarTheme::theme();
-    m_repeatingTimer.start(theme->initialAutoscrollTimerDelay(), theme->autoscrollTimerDelay());
+    ScrollbarTheme& theme = ScrollbarTheme::theme();
+    m_repeatingTimer.start(theme.initialAutoscrollTimerDelay(), theme.autoscrollTimerDelay());
 }
 
 void SpinButtonElement::stopRepeatingTimer()

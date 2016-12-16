@@ -225,6 +225,8 @@ public:
     PassRefPtr<AccessibilityUIElement> verticalScrollbar() const;
 
     void scrollToMakeVisible();
+    void scrollToGlobalPoint(int x, int y);
+    void scrollToMakeVisibleWithSubFocus(int x, int y, int width, int height);
 
     // Text markers.
     PassRefPtr<AccessibilityTextMarkerRange> lineTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
@@ -249,6 +251,16 @@ public:
     PassRefPtr<AccessibilityTextMarker> startTextMarker();
     PassRefPtr<AccessibilityTextMarker> endTextMarker();
     bool setSelectedVisibleTextRange(AccessibilityTextMarkerRange*);
+    PassRefPtr<AccessibilityTextMarkerRange> leftWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarkerRange> rightWordTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarker> previousWordStartTextMarkerForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarker> nextWordEndTextMarkerForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarkerRange> paragraphTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarker> nextParagraphEndTextMarkerForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarker> previousParagraphStartTextMarkerForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarkerRange> sentenceTextMarkerRangeForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarker> nextSentenceEndTextMarkerForTextMarker(AccessibilityTextMarker*);
+    PassRefPtr<AccessibilityTextMarker> previousSentenceStartTextMarkerForTextMarker(AccessibilityTextMarker*);
 
     // Returns an ordered list of supported actions for an element.
     JSRetainPtr<JSStringRef> supportedActions() const;
@@ -274,11 +286,17 @@ public:
     PassRefPtr<AccessibilityUIElement> linkedElement();
     PassRefPtr<AccessibilityUIElement> headerElementAtIndex(unsigned index);
     void assistiveTechnologySimulatedFocus();
+    bool isSearchField() const;
+    bool isTextArea() const;
 
     bool scrollPageUp();
     bool scrollPageDown();
     bool scrollPageLeft();
     bool scrollPageRight();
+
+    // Fieldset
+    bool hasContainedByFieldsetTrait();
+    PassRefPtr<AccessibilityUIElement> fieldsetAncestorElement();
 
 private:
     AccessibilityUIElement(PlatformUIElement);

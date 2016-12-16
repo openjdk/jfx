@@ -44,7 +44,7 @@
 #include <wtf/RetainPtr.h>
 #endif
 
-#if __has_include(<ImageIO/CGImageSourcePrivate.h>)
+#if USE(APPLE_INTERNAL_SDK)
 #import <ImageIO/CGImageSourcePrivate.h>
 #else
 const CFStringRef kCGImageSourceSubsampleFactor = CFSTR("kCGImageSourceSubsampleFactor");
@@ -367,13 +367,6 @@ CGImageRef ImageSource::createFrameAtIndex(size_t index, SubsamplingLevel subsam
 
     if (!imageUTI)
         return image.leakRef();
-
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
-    if (CFEqual(imageUTI, kUTTypeGIF)) {
-        CGImageSetCachingFlags(image.get(), kCGImageCachingTransient);
-        return image.leakRef();
-    }
-#endif
 
     if (!CFEqual(imageUTI, xbmUTI))
         return image.leakRef();

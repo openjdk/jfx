@@ -43,7 +43,7 @@ typedef int ExceptionCode;
 class NavigatorContentUtils final : public Supplement<Page> {
 public:
     explicit NavigatorContentUtils(std::unique_ptr<NavigatorContentUtilsClient> client)
-        : m_client(WTF::move(client))
+        : m_client(WTFMove(client))
     { }
 
     virtual ~NavigatorContentUtils();
@@ -51,11 +51,11 @@ public:
     static const char* supplementName();
     static NavigatorContentUtils* from(Page*);
 
-    static void registerProtocolHandler(Navigator*, const String& scheme, const String& url, const String& title, ExceptionCode&);
+    static void registerProtocolHandler(Navigator&, const String& scheme, const String& url, const String& title, ExceptionCode&);
 
 #if ENABLE(CUSTOM_SCHEME_HANDLER)
-    static String isProtocolHandlerRegistered(Navigator*, const String& scheme, const String& url, ExceptionCode&);
-    static void unregisterProtocolHandler(Navigator*, const String& scheme, const String& url, ExceptionCode&);
+    static String isProtocolHandlerRegistered(Navigator&, const String& scheme, const String& url, ExceptionCode&);
+    static void unregisterProtocolHandler(Navigator&, const String& scheme, const String& url, ExceptionCode&);
 #endif
 
 private:

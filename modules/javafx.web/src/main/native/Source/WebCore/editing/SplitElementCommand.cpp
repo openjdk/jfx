@@ -47,25 +47,24 @@ void SplitElementCommand::executeApply()
     if (m_atChild->parentNode() != m_element2)
         return;
 
-    Vector<RefPtr<Node>> children;
+    Vector<Ref<Node>> children;
     for (Node* node = m_element2->firstChild(); node != m_atChild; node = node->nextSibling())
-        children.append(node);
+        children.append(*node);
 
     ExceptionCode ec = 0;
 
     ContainerNode* parent = m_element2->parentNode();
     if (!parent || !parent->hasEditableStyle())
         return;
-    parent->insertBefore(m_element1.get(), m_element2.get(), ec);
+    parent->insertBefore(*m_element1, m_element2.get(), ec);
     if (ec)
         return;
 
     // Delete id attribute from the second element because the same id cannot be used for more than one element
     m_element2->removeAttribute(HTMLNames::idAttr);
 
-    size_t size = children.size();
-    for (size_t i = 0; i < size; ++i)
-        m_element1->appendChild(children[i], ec);
+    for (auto& child : children)
+        m_element1->appendChild(WTFMove(child), ec);
 }
 
 void SplitElementCommand::doApply()
@@ -80,15 +79,14 @@ void SplitElementCommand::doUnapply()
     if (!m_element1 || !m_element1->hasEditableStyle() || !m_element2->hasEditableStyle())
         return;
 
-    Vector<RefPtr<Node>> children;
+    Vector<Ref<Node>> children;
     for (Node* node = m_element1->firstChild(); node; node = node->nextSibling())
-        children.append(node);
+        children.append(*node);
 
     RefPtr<Node> refChild = m_element2->firstChild();
 
-    size_t size = children.size();
-    for (size_t i = 0; i < size; ++i)
-        m_element2->insertBefore(children[i].get(), refChild.get(), IGNORE_EXCEPTION);
+    for (auto& child : children)
+        m_element2->insertBefore(WTFMove(child), refChild.get(), IGNORE_EXCEPTION);
 
     // Recover the id attribute of the original element.
     const AtomicString& id = m_element1->getIdAttribute();

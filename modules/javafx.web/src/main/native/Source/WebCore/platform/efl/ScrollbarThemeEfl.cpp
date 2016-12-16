@@ -33,15 +33,16 @@
 #include "NotImplemented.h"
 #include "Page.h"
 #include "RenderThemeEfl.h"
+#include "Settings.h"
 
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-ScrollbarTheme* ScrollbarTheme::nativeTheme()
+ScrollbarTheme& ScrollbarTheme::nativeTheme()
 {
     static ScrollbarThemeEfl theme;
-    return &theme;
+    return theme;
 }
 
 static const int defaultThickness = 10;
@@ -61,6 +62,11 @@ ScrollbarThemeEfl::~ScrollbarThemeEfl()
 int ScrollbarThemeEfl::scrollbarThickness(ScrollbarControlSize)
 {
     return defaultThickness;
+}
+
+bool ScrollbarThemeEfl::usesOverlayScrollbars() const
+{
+    return Settings::usesOverlayScrollbars();
 }
 
 bool ScrollbarThemeEfl::hasThumb(Scrollbar& scrollbar)

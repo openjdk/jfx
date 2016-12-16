@@ -28,7 +28,7 @@
 
 #if ENABLE(FTL_JIT)
 
-#include "FTLAbbreviations.h"
+#include "FTLAbbreviatedTypes.h"
 #include "FTLAbstractHeap.h"
 
 namespace JSC { namespace FTL {
@@ -53,7 +53,7 @@ public:
         return !m_heap;
     }
 
-    const AbstractHeap& heap() const { return *m_heap; }
+    const AbstractHeap* heap() const { return m_heap; }
     LValue value() const { return m_value; }
 
 private:

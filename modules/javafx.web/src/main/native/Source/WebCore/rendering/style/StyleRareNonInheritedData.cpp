@@ -31,6 +31,8 @@
 #include "StyleImage.h"
 #include "StyleResolver.h"
 #include "StyleScrollSnapPoints.h"
+#include <wtf/PointerComparison.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -59,8 +61,8 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
 #if ENABLE(CSS_SCROLL_SNAP)
     , m_scrollSnapPoints(StyleScrollSnapPoints::create())
 #endif
+    , m_willChange(RenderStyle::initialWillChange())
     , m_mask(FillLayer(MaskFillLayer))
-    , m_pageSize()
 #if ENABLE(CSS_SHAPES)
     , m_shapeOutside(RenderStyle::initialShapeOutside())
     , m_shapeMargin(RenderStyle::initialShapeMargin())
@@ -77,13 +79,13 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , m_justifyContent(RenderStyle::initialContentAlignment())
     , m_justifyItems(RenderStyle::initialSelfAlignment())
     , m_justifySelf(RenderStyle::initialSelfAlignment())
+#if ENABLE(TOUCH_EVENTS)
+    , m_touchAction(static_cast<unsigned>(RenderStyle::initialTouchAction()))
+#endif
 #if ENABLE(CSS_SCROLL_SNAP)
     , m_scrollSnapType(static_cast<unsigned>(RenderStyle::initialScrollSnapType()))
 #endif
     , m_regionFragment(RenderStyle::initialRegionFragment())
-    , m_regionBreakAfter(RenderStyle::initialPageBreak())
-    , m_regionBreakBefore(RenderStyle::initialPageBreak())
-    , m_regionBreakInside(RenderStyle::initialPageBreak())
     , m_pageSizeType(PAGE_SIZE_AUTO)
     , m_transformStyle3D(RenderStyle::initialTransformStyle3D())
     , m_backfaceVisibility(RenderStyle::initialBackfaceVisibility())
@@ -102,6 +104,9 @@ StyleRareNonInheritedData::StyleRareNonInheritedData()
     , m_isolation(RenderStyle::initialIsolation())
 #endif
     , m_objectFit(RenderStyle::initialObjectFit())
+    , m_breakBefore(RenderStyle::initialBreakBetween())
+    , m_breakAfter(RenderStyle::initialBreakBetween())
+    , m_breakInside(RenderStyle::initialBreakInside())
 {
     m_maskBoxImage.setMaskDefaults();
 }
@@ -136,6 +141,7 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , m_counterDirectives(o.m_counterDirectives ? clone(*o.m_counterDirectives) : nullptr)
     , m_altText(o.m_altText)
     , m_boxShadow(o.m_boxShadow ? std::make_unique<ShadowData>(*o.m_boxShadow) : nullptr)
+    , m_willChange(o.m_willChange)
     , m_boxReflect(o.m_boxReflect)
     , m_animations(o.m_animations ? std::make_unique<AnimationList>(*o.m_animations) : nullptr)
     , m_transitions(o.m_transitions ? std::make_unique<AnimationList>(*o.m_transitions) : nullptr)
@@ -165,13 +171,13 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , m_justifyContent(o.m_justifyContent)
     , m_justifyItems(o.m_justifyItems)
     , m_justifySelf(o.m_justifySelf)
+#if ENABLE(TOUCH_EVENTS)
+    , m_touchAction(o.m_touchAction)
+#endif
 #if ENABLE(CSS_SCROLL_SNAP)
     , m_scrollSnapType(o.m_scrollSnapType)
 #endif
     , m_regionFragment(o.m_regionFragment)
-    , m_regionBreakAfter(o.m_regionBreakAfter)
-    , m_regionBreakBefore(o.m_regionBreakBefore)
-    , m_regionBreakInside(o.m_regionBreakInside)
     , m_pageSizeType(o.m_pageSizeType)
     , m_transformStyle3D(o.m_transformStyle3D)
     , m_backfaceVisibility(o.m_backfaceVisibility)
@@ -190,6 +196,9 @@ inline StyleRareNonInheritedData::StyleRareNonInheritedData(const StyleRareNonIn
     , m_isolation(o.m_isolation)
 #endif
     , m_objectFit(o.m_objectFit)
+    , m_breakBefore(o.m_breakBefore)
+    , m_breakAfter(o.m_breakAfter)
+    , m_breakInside(o.m_breakInside)
 {
 }
 
@@ -232,20 +241,21 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_scrollSnapPoints == o.m_scrollSnapPoints
 #endif
         && contentDataEquivalent(o)
-        && counterDataEquivalent(o)
-        && shadowDataEquivalent(o)
-        && reflectionDataEquivalent(o)
-        && animationDataEquivalent(o)
-        && transitionDataEquivalent(o)
+        && arePointingToEqualData(m_counterDirectives, o.m_counterDirectives)
+        && arePointingToEqualData(m_boxShadow, o.m_boxShadow)
+        && arePointingToEqualData(m_willChange, o.m_willChange)
+        && arePointingToEqualData(m_boxReflect, o.m_boxReflect)
+        && arePointingToEqualData(m_animations, o.m_animations)
+        && arePointingToEqualData(m_transitions, o.m_transitions)
         && m_mask == o.m_mask
         && m_maskBoxImage == o.m_maskBoxImage
         && m_pageSize == o.m_pageSize
 #if ENABLE(CSS_SHAPES)
-        && m_shapeOutside == o.m_shapeOutside
+        && arePointingToEqualData(m_shapeOutside, o.m_shapeOutside)
         && m_shapeMargin == o.m_shapeMargin
         && m_shapeImageThreshold == o.m_shapeImageThreshold
 #endif
-        && m_clipPath == o.m_clipPath
+        && arePointingToEqualData(m_clipPath, o.m_clipPath)
         && m_textDecorationColor == o.m_textDecorationColor
         && m_visitedLinkTextDecorationColor == o.m_visitedLinkTextDecorationColor
         && m_visitedLinkBackgroundColor == o.m_visitedLinkBackgroundColor
@@ -264,9 +274,6 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_justifySelf == o.m_justifySelf
         && m_regionThread == o.m_regionThread
         && m_regionFragment == o.m_regionFragment
-        && m_regionBreakAfter == o.m_regionBreakAfter
-        && m_regionBreakBefore == o.m_regionBreakBefore
-        && m_regionBreakInside == o.m_regionBreakInside
         && m_pageSizeType == o.m_pageSizeType
         && m_transformStyle3D == o.m_transformStyle3D
         && m_backfaceVisibility == o.m_backfaceVisibility
@@ -278,6 +285,9 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_borderFit == o.m_borderFit
         && m_textCombine == o.m_textCombine
         && m_textDecorationStyle == o.m_textDecorationStyle
+#if ENABLE(TOUCH_EVENTS)
+        && m_touchAction == o.m_touchAction
+#endif
 #if ENABLE(CSS_SCROLL_SNAP)
         && m_scrollSnapType == o.m_scrollSnapType
 #endif
@@ -287,7 +297,10 @@ bool StyleRareNonInheritedData::operator==(const StyleRareNonInheritedData& o) c
         && m_isolation == o.m_isolation
 #endif
         && m_aspectRatioType == o.m_aspectRatioType
-        && m_objectFit == o.m_objectFit;
+        && m_objectFit == o.m_objectFit
+        && m_breakAfter == o.m_breakAfter
+        && m_breakBefore == o.m_breakBefore
+        && m_breakInside == o.m_breakInside;
 }
 
 bool StyleRareNonInheritedData::contentDataEquivalent(const StyleRareNonInheritedData& o) const
@@ -301,54 +314,6 @@ bool StyleRareNonInheritedData::contentDataEquivalent(const StyleRareNonInherite
     }
 
     return !a && !b;
-}
-
-bool StyleRareNonInheritedData::counterDataEquivalent(const StyleRareNonInheritedData& o) const
-{
-    if (m_counterDirectives.get() == o.m_counterDirectives.get())
-        return true;
-
-    if (m_counterDirectives && o.m_counterDirectives && *m_counterDirectives == *o.m_counterDirectives)
-        return true;
-
-    return false;
-}
-
-bool StyleRareNonInheritedData::shadowDataEquivalent(const StyleRareNonInheritedData& o) const
-{
-    if ((!m_boxShadow && o.m_boxShadow) || (m_boxShadow && !o.m_boxShadow))
-        return false;
-    if (m_boxShadow && o.m_boxShadow && (*m_boxShadow != *o.m_boxShadow))
-        return false;
-    return true;
-}
-
-bool StyleRareNonInheritedData::reflectionDataEquivalent(const StyleRareNonInheritedData& o) const
-{
-    if (m_boxReflect != o.m_boxReflect) {
-        if (!m_boxReflect || !o.m_boxReflect)
-            return false;
-        return *m_boxReflect == *o.m_boxReflect;
-    }
-    return true;
-}
-
-bool StyleRareNonInheritedData::animationDataEquivalent(const StyleRareNonInheritedData& o) const
-{
-    if ((!m_animations && o.m_animations) || (m_animations && !o.m_animations))
-        return false;
-    if (m_animations && o.m_animations && (*m_animations != *o.m_animations))
-        return false;
-    return true;
-}
-
-bool StyleRareNonInheritedData::transitionDataEquivalent(const StyleRareNonInheritedData& o) const
-{
-    if ((!m_transitions && o.m_transitions) || (m_transitions && !o.m_transitions))
-        return false;
-    if (m_transitions && o.m_transitions && (*m_transitions != *o.m_transitions))
-        return false;
-    return true;
 }
 
 bool StyleRareNonInheritedData::hasFilters() const

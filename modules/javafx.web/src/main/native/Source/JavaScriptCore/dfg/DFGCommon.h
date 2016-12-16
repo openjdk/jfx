@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,11 +40,6 @@ struct Node;
 typedef uint32_t BlockIndex;
 static const BlockIndex NoBlock = UINT_MAX;
 
-struct NodePointerTraits {
-    static Node* defaultValue() { return 0; }
-    static bool isEmptyForDump(Node* value) { return !value; }
-};
-
 // Use RefChildren if the child ref counts haven't already been adjusted using
 // other means and either of the following is true:
 // - The node you're creating is MustGenerate.
@@ -79,9 +74,11 @@ inline bool logCompilationChanges(CompilationMode mode = DFGMode)
     return verboseCompilationEnabled(mode) || Options::logCompilationChanges();
 }
 
-inline bool shouldDumpGraphAtEachPhase()
+inline bool shouldDumpGraphAtEachPhase(CompilationMode mode)
 {
-    return Options::dumpGraphAtEachPhase();
+    if (isFTL(mode))
+        return Options::dumpGraphAtEachPhase() || Options::dumpDFGFTLGraphAtEachPhase();
+    return Options::dumpGraphAtEachPhase() || Options::dumpDFGGraphAtEachPhase();
 }
 
 inline bool validationEnabled()
@@ -107,7 +104,7 @@ enum NoResultTag { NoResult };
 // The prediction propagator effectively does four passes, with the last pass
 // being done by the separate FixuPhase.
 enum PredictionPass {
-    // We're converging in a straght-forward forward flow fixpoint. This is the
+    // We're converging in a straight-forward forward flow fixpoint. This is the
     // most conventional part of the propagator - it makes only monotonic decisions
     // based on value profiles and rare case profiles. It ignores baseline JIT rare
     // case profiles. The goal here is to develop a good guess of which variables
@@ -371,10 +368,10 @@ inline CapabilityLevel leastUpperBound(CapabilityLevel a, CapabilityLevel b)
 }
 
 // Unconditionally disable DFG disassembly support if the DFG is not compiled in.
-inline bool shouldShowDisassembly(CompilationMode mode = DFGMode)
+inline bool shouldDumpDisassembly(CompilationMode mode = DFGMode)
 {
 #if ENABLE(DFG_JIT)
-    return Options::showDisassembly() || Options::showDFGDisassembly() || (isFTL(mode) && Options::showFTLDisassembly());
+    return Options::dumpDisassembly() || Options::dumpDFGDisassembly() || (isFTL(mode) && Options::dumpFTLDisassembly());
 #else
     UNUSED_PARAM(mode);
     return false;

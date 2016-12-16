@@ -74,6 +74,7 @@ chomp($featureDefines);
 $ENV{'FEATURE_DEFINES'} = $featureDefines;
 $ENV{'InspectorScripts'} = File::Spec->catdir($XDSTROOT, 'include', 'private', 'JavaScriptCore');
 $ENV{'WebReplayScripts'} = File::Spec->catdir($XDSTROOT, 'include', 'private', 'JavaScriptCore');
+$ENV{'GenerateJSBuiltinsScripts'} = File::Spec->catdir($XDSTROOT, 'include', 'private', 'JavaScriptCore');
 
 if ($ARGV[2] eq 'cairo') {
     $ENV{'PLATFORM_FEATURE_DEFINES'} = File::Spec->catfile($SDKROOT, 'tools', 'vsprops', 'FeatureDefinesCairo.props');
@@ -83,6 +84,11 @@ if ($ARGV[2] eq 'cairo') {
 
 if ($Config{osname} eq 'MSWin32') {
     my $ccPath = `where $ARGV[4]`;
+
+    # Visual Studio 2015 gives us a list of cl executables separated by newlines, and we want the last one.
+    my @ccPaths = split("\n", $ccPath);
+    $ccPath = @ccPaths[scalar(@ccPaths) - 1];
+
     chomp($ccPath);
     $ENV{CC} = $ccPath;
 }

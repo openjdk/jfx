@@ -67,12 +67,13 @@ public:
 private:
     virtual bool isRenderMathMLBlock() const override final { return true; }
     virtual const char* renderName() const override;
+    bool isFlexibleBoxImpl() const override { return true; }
 };
 
 class RenderMathMLTable final : public RenderTable {
 public:
     explicit RenderMathMLTable(Element& element, Ref<RenderStyle>&& style)
-        : RenderTable(element, WTF::move(style))
+        : RenderTable(element, WTFMove(style))
     {
     }
 

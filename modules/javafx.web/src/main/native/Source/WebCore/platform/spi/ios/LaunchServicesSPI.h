@@ -30,25 +30,35 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 90000
 #import <MobileCoreServices/LSAppLinkPriv.h>
-#endif
 
 #endif
 
+@class LSAppLink;
+typedef void (^LSAppLinkCompletionHandler)(LSAppLink *appLink, NSError *error);
 typedef void (^LSAppLinkOpenCompletionHandler)(BOOL success, NSError *error);
 
 #if !USE(APPLE_INTERNAL_SDK)
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 90000
+@interface LSResourceProxy : NSObject <NSCopying, NSSecureCoding>
+@end
+
+@interface LSBundleProxy : LSResourceProxy <NSSecureCoding>
+@end
+
+@interface LSApplicationProxy : LSBundleProxy <NSSecureCoding>
+- (NSString *)localizedNameForContext:(NSString *)context;
+@end
+
 @interface LSAppLink : NSObject <NSSecureCoding>
 @end
 
-@interface LSAppLink (Details)
+@interface LSAppLink ()
++ (void)getAppLinkWithURL:(NSURL *)aURL completionHandler:(LSAppLinkCompletionHandler)completionHandler;
 + (void)openWithURL:(NSURL *)aURL completionHandler:(LSAppLinkOpenCompletionHandler)completionHandler;
 - (void)openInWebBrowser:(BOOL)inWebBrowser setAppropriateOpenStrategyAndWebBrowserState:(NSDictionary<NSString *, id> *)state completionHandler:(LSAppLinkOpenCompletionHandler)completionHandler;
+@property (readonly, strong) LSApplicationProxy *targetApplicationProxy;
 @end
-#endif
 
 #endif
 

@@ -82,7 +82,7 @@ void HTMLBodyElement::collectStyleForPresentationAttribute(const QualifiedName& 
         if (!url.isEmpty()) {
             auto imageValue = CSSImageValue::create(document().completeURL(url).string());
             imageValue.get().setInitiator(localName());
-            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, WTF::move(imageValue)));
+            style.setProperty(CSSProperty(CSSPropertyBackgroundImage, WTFMove(imageValue)));
         }
     } else if (name == marginwidthAttr || name == leftmarginAttr) {
         addHTMLLengthToStyle(style, CSSPropertyMarginRight, value);
@@ -95,7 +95,7 @@ void HTMLBodyElement::collectStyleForPresentationAttribute(const QualifiedName& 
     } else if (name == textAttr) {
         addHTMLColorToStyle(style, CSSPropertyColor, value);
     } else if (name == bgpropertiesAttr) {
-        if (equalIgnoringCase(value, "fixed"))
+        if (equalLettersIgnoringASCIICase(value, "fixed"))
            addPropertyToPresentationAttributeStyle(style, CSSPropertyBackgroundAttachment, CSSValueFixed);
     } else
         HTMLElement::collectStyleForPresentationAttribute(name, value, style);

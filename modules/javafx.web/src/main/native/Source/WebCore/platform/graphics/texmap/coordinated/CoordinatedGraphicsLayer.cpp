@@ -30,9 +30,9 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
+#include "GraphicsLayerFactory.h"
 #include "Page.h"
 #include "ScrollableArea.h"
-#include "TextureMapperPlatformLayer.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/HashMap.h>
 #ifndef NDEBUG
@@ -41,6 +41,14 @@
 #include <wtf/text/CString.h>
 
 namespace WebCore {
+
+std::unique_ptr<GraphicsLayer> GraphicsLayer::create(GraphicsLayerFactory* factory, GraphicsLayerClient& client, Type layerType)
+{
+    if (!factory)
+        return std::make_unique<CoordinatedGraphicsLayer>(layerType, client);
+
+    return factory->createGraphicsLayer(layerType, client);
+}
 
 static CoordinatedLayerID toCoordinatedLayerID(GraphicsLayer* layer)
 {
@@ -120,6 +128,9 @@ CoordinatedGraphicsLayer::CoordinatedGraphicsLayer(Type layerType, GraphicsLayer
 #if USE(GRAPHICS_SURFACE)
     , m_isValidPlatformLayer(false)
     , m_pendingPlatformLayerOperation(None)
+#endif
+#if USE(COORDINATED_GRAPHICS_THREADED)
+    , m_shouldSyncPlatformLayer(false)
 #endif
     , m_coordinator(0)
     , m_compositedNativeImagePtr(0)
@@ -375,6 +386,9 @@ void CoordinatedGraphicsLayer::setContentsNeedsDisplay()
 #if USE(GRAPHICS_SURFACE)
     if (m_platformLayer)
         m_pendingPlatformLayerOperation |= SyncPlatformLayer;
+#elif USE(COORDINATED_GRAPHICS_THREADED)
+    if (m_platformLayer)
+        m_shouldSyncPlatformLayer = true;
 #endif
 
     notifyFlushRequired();
@@ -405,6 +419,12 @@ void CoordinatedGraphicsLayer::setContentsToPlatformLayer(PlatformLayer* platfor
     m_platformLayerToken = m_platformLayer ? m_platformLayer->graphicsSurfaceToken() : GraphicsSurfaceToken();
     ASSERT(!(!m_platformLayerToken.isValid() && m_platformLayer));
 
+    notifyFlushRequired();
+#elif USE(COORDINATED_GRAPHICS_THREADED)
+    if (m_platformLayer != platformLayer)
+        m_shouldSyncPlatformLayer = true;
+
+    m_platformLayer = platformLayer;
     notifyFlushRequired();
 #else
     UNUSED_PARAM(platformLayer);
@@ -694,9 +714,9 @@ void CoordinatedGraphicsLayer::syncAnimations()
     m_layerState.animationsChanged = true;
 }
 
-#if USE(GRAPHICS_SURFACE)
 void CoordinatedGraphicsLayer::syncPlatformLayer()
 {
+#if USE(GRAPHICS_SURFACE)
     destroyPlatformLayerIfNeeded();
     createPlatformLayerIfNeeded();
 
@@ -711,8 +731,20 @@ void CoordinatedGraphicsLayer::syncPlatformLayer()
     ASSERT(m_platformLayer);
     m_layerState.platformLayerFrontBuffer = m_platformLayer->copyToGraphicsSurface();
     m_layerState.platformLayerShouldSwapBuffers = true;
+#elif USE(COORDINATED_GRAPHICS_THREADED)
+    if (!m_shouldSyncPlatformLayer)
+        return;
+
+    m_shouldSyncPlatformLayer = false;
+    m_layerState.platformLayerChanged = true;
+    if (m_platformLayer) {
+        m_platformLayer->swapBuffersIfNeeded();
+        m_layerState.platformLayerProxy = m_platformLayer->proxy();
+    }
+#endif
 }
 
+#if USE(GRAPHICS_SURFACE)
 void CoordinatedGraphicsLayer::destroyPlatformLayerIfNeeded()
 {
     if (!(m_pendingPlatformLayerOperation & DestroyPlatformLayer))
@@ -763,9 +795,7 @@ void CoordinatedGraphicsLayer::flushCompositingStateForThisLayerOnly(bool)
     computeTransformedVisibleRect();
     syncChildren();
     syncFilters();
-#if USE(GRAPHICS_SURFACE)
     syncPlatformLayer();
-#endif
 
     // Only unset m_movingVisibleRect after we have updated the visible rect after the animation stopped.
     if (!hasActiveTransformAnimation)
@@ -798,7 +828,7 @@ void CoordinatedGraphicsLayer::resetLayerState()
 bool CoordinatedGraphicsLayer::imageBackingVisible()
 {
     ASSERT(m_coordinatedImageBacking);
-    return tiledBackingStoreVisibleRect().intersects(IntRect(contentsRect()));
+    return transformedVisibleRect().intersects(IntRect(contentsRect()));
 }
 
 void CoordinatedGraphicsLayer::releaseImageBackingIfNeeded()
@@ -857,10 +887,10 @@ void CoordinatedGraphicsLayer::adjustContentsScale()
     // we do not want to drop the previous one as that might result in
     // briefly seeing flickering as the old tiles may be dropped before
     // something replaces them.
-    m_previousBackingStore = WTF::move(m_mainBackingStore);
+    m_previousBackingStore = WTFMove(m_mainBackingStore);
 
     // No reason to save the previous backing store for non-visible areas.
-    m_previousBackingStore->removeAllNonVisibleTiles();
+    m_previousBackingStore->removeAllNonVisibleTiles(transformedVisibleRect(), IntRect(0, 0, size().width(), size().height()));
 }
 
 void CoordinatedGraphicsLayer::createBackingStore()
@@ -869,11 +899,11 @@ void CoordinatedGraphicsLayer::createBackingStore()
     m_mainBackingStore->setSupportsAlpha(!contentsOpaque());
 }
 
-void CoordinatedGraphicsLayer::tiledBackingStorePaint(GraphicsContext* context, const IntRect& rect)
+void CoordinatedGraphicsLayer::tiledBackingStorePaint(GraphicsContext& context, const IntRect& rect)
 {
     if (rect.isEmpty())
         return;
-    paintGraphicsLayerContents(*context, rect);
+    paintGraphicsLayerContents(context, rect);
 }
 
 void CoordinatedGraphicsLayer::didUpdateTileBuffers()
@@ -891,25 +921,20 @@ void CoordinatedGraphicsLayer::tiledBackingStoreHasPendingTileCreation()
     notifyFlushRequired();
 }
 
-IntRect CoordinatedGraphicsLayer::tiledBackingStoreContentsRect()
-{
-    return IntRect(0, 0, size().width(), size().height());
-}
-
-static void clampToContentsRectIfRectIsInfinite(FloatRect& rect, const IntRect& contentsRect)
+static void clampToContentsRectIfRectIsInfinite(FloatRect& rect, const FloatSize& contentsSize)
 {
     if (rect.width() >= LayoutUnit::nearlyMax() || rect.width() <= LayoutUnit::nearlyMin()) {
-        rect.setX(contentsRect.x());
-        rect.setWidth(contentsRect.width());
+        rect.setX(0);
+        rect.setWidth(contentsSize.width());
     }
 
     if (rect.height() >= LayoutUnit::nearlyMax() || rect.height() <= LayoutUnit::nearlyMin()) {
-        rect.setY(contentsRect.y());
-        rect.setHeight(contentsRect.height());
+        rect.setY(0);
+        rect.setHeight(contentsSize.height());
     }
 }
 
-IntRect CoordinatedGraphicsLayer::tiledBackingStoreVisibleRect()
+IntRect CoordinatedGraphicsLayer::transformedVisibleRect()
 {
     // Non-invertible layers are not visible.
     if (!m_layerTransform.combined().isInvertible())
@@ -918,9 +943,9 @@ IntRect CoordinatedGraphicsLayer::tiledBackingStoreVisibleRect()
     // Return a projection of the visible rect (surface coordinates) onto the layer's plane (layer coordinates).
     // The resulting quad might be squewed and the visible rect is the bounding box of this quad,
     // so it might spread further than the real visible area (and then even more amplified by the cover rect multiplier).
-    ASSERT(m_cachedInverseTransform == m_layerTransform.combined().inverse());
+    ASSERT(m_cachedInverseTransform == m_layerTransform.combined().inverse().valueOr(TransformationMatrix()));
     FloatRect rect = m_cachedInverseTransform.clampedBoundsOfProjectedQuad(FloatQuad(m_coordinator->visibleContentsRect()));
-    clampToContentsRectIfRectIsInfinite(rect, tiledBackingStoreContentsRect());
+    clampToContentsRectIfRectIsInfinite(rect, size());
     return enclosingIntRect(rect);
 }
 
@@ -997,7 +1022,7 @@ void CoordinatedGraphicsLayer::updateContentBuffers()
 
     if (m_pendingVisibleRectAdjustment) {
         m_pendingVisibleRectAdjustment = false;
-        m_mainBackingStore->coverWithTilesIfNeeded();
+        m_mainBackingStore->createTilesIfNeeded(transformedVisibleRect(), IntRect(0, 0, size().width(), size().height()));
     }
 
     m_mainBackingStore->updateTileBuffers();
@@ -1110,7 +1135,7 @@ void CoordinatedGraphicsLayer::computeTransformedVisibleRect()
     m_layerTransform.setChildrenTransform(childrenTransform());
     m_layerTransform.combineTransforms(parent() ? toCoordinatedGraphicsLayer(parent())->m_layerTransform.combinedForChildren() : TransformationMatrix());
 
-    m_cachedInverseTransform = m_layerTransform.combined().inverse();
+    m_cachedInverseTransform = m_layerTransform.combined().inverse().valueOr(TransformationMatrix());
 
     // The combined transform will be used in tiledBackingStoreVisibleRect.
     setNeedsVisibleRectAdjustment();
@@ -1150,7 +1175,7 @@ bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, 
 {
     ASSERT(!keyframesName.isEmpty());
 
-    if (!anim || anim->isEmptyOrZeroDuration() || valueList.size() < 2 || (valueList.property() != AnimatedPropertyTransform && valueList.property() != AnimatedPropertyOpacity && valueList.property() != AnimatedPropertyWebkitFilter))
+    if (!anim || anim->isEmptyOrZeroDuration() || valueList.size() < 2 || (valueList.property() != AnimatedPropertyTransform && valueList.property() != AnimatedPropertyOpacity && valueList.property() != AnimatedPropertyFilter))
         return false;
 
     bool listsMatch = false;
@@ -1160,7 +1185,7 @@ bool CoordinatedGraphicsLayer::addAnimation(const KeyframeValueList& valueList, 
         listsMatch = validateTransformOperations(valueList, ignoredHasBigRotation) >= 0;
 
     m_lastAnimationStartTime = monotonicallyIncreasingTime() - delayAsNegativeTimeOffset;
-    m_animations.add(TextureMapperAnimation(keyframesName, valueList, boxSize, anim, m_lastAnimationStartTime, listsMatch));
+    m_animations.add(TextureMapperAnimation(keyframesName, valueList, boxSize, *anim, listsMatch, m_lastAnimationStartTime, 0, TextureMapperAnimation::AnimationState::Playing));
     m_animationStartedTimer.startOneShot(0);
     didChangeAnimations();
     return true;
@@ -1194,5 +1219,17 @@ void CoordinatedGraphicsLayer::animationStartedTimerFired()
 {
     client().notifyAnimationStarted(this, "", m_lastAnimationStartTime);
 }
+
+#if USE(COORDINATED_GRAPHICS_THREADED)
+void CoordinatedGraphicsLayer::platformLayerWillBeDestroyed()
+{
+}
+
+void CoordinatedGraphicsLayer::setPlatformLayerNeedsDisplay()
+{
+}
+#endif
+
 } // namespace WebCore
+
 #endif // USE(COORDINATED_GRAPHICS)

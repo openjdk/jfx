@@ -21,9 +21,10 @@
 #include "config.h"
 #include "FontCustomPlatformData.h"
 
+#include "FontDescription.h"
+#include "FontPlatformData.h"
 #include "OpenTypeUtilities.h"
 #include "SharedBuffer.h"
-#include "FontPlatformData.h"
 
 #include <cairo-win32.h>
 #include <wtf/RetainPtr.h>
@@ -38,14 +39,17 @@ FontCustomPlatformData::~FontCustomPlatformData()
         RemoveFontMemResourceEx(m_fontReference);
 }
 
-FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, bool italic, FontOrientation, FontWidthVariant, FontRenderingMode renderingMode)
+FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& fontDescription, bool bold, bool italic)
 {
+    int size = fontDescription.computedPixelSize();
+    FontRenderingMode renderingMode = fontDescription.renderingMode();
+
     LOGFONT logFont;
     memset(&logFont, 0, sizeof(LOGFONT));
     wcsncpy(logFont.lfFaceName, m_name.charactersWithNullTermination().data(), LF_FACESIZE - 1);
 
     logFont.lfHeight = -size;
-    if (renderingMode == NormalRenderingMode)
+    if (renderingMode == FontRenderingMode::Normal)
         logFont.lfHeight *= 32;
     logFont.lfWidth = 0;
     logFont.lfEscapement = 0;
@@ -63,7 +67,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, b
 
     cairo_font_face_t* fontFace = cairo_win32_font_face_create_for_hfont(hfont.get());
 
-    FontPlatformData fontPlatformData(WTF::move(hfont), fontFace, size, bold, italic);
+    FontPlatformData fontPlatformData(WTFMove(hfont), fontFace, size, bold, italic);
 
     cairo_font_face_destroy(fontFace);
 
@@ -93,7 +97,9 @@ std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffe
 
 bool FontCustomPlatformData::supportsFormat(const String& format)
 {
-    return equalIgnoringCase(format, "truetype") || equalIgnoringCase(format, "opentype");
+    return equalLettersIgnoringASCIICase(format, "truetype")
+        || equalLettersIgnoringASCIICase(format, "opentype")
+        || equalLettersIgnoringASCIICase(format, "woff");
 }
 
 }

@@ -21,6 +21,7 @@
 #include "config.h"
 #include "CSSStyleSheet.h"
 
+#include "AuthorStyleSheets.h"
 #include "CSSCharsetRule.h"
 #include "CSSFontFaceRule.h"
 #include "CSSImportRule.h"
@@ -30,8 +31,8 @@
 #include "CSSStyleRule.h"
 #include "CachedCSSStyleSheet.h"
 #include "Document.h"
-#include "DocumentStyleSheetCollection.h"
 #include "ExceptionCode.h"
+#include "ExtensionStyleSheets.h"
 #include "HTMLNames.h"
 #include "HTMLStyleElement.h"
 #include "MediaList.h"
@@ -77,38 +78,40 @@ static bool isAcceptableCSSStyleSheetParent(Node* parentNode)
 
 Ref<CSSStyleSheet> CSSStyleSheet::create(Ref<StyleSheetContents>&& sheet, CSSImportRule* ownerRule)
 {
-    return adoptRef(*new CSSStyleSheet(WTF::move(sheet), ownerRule));
+    return adoptRef(*new CSSStyleSheet(WTFMove(sheet), ownerRule));
 }
 
 Ref<CSSStyleSheet> CSSStyleSheet::create(Ref<StyleSheetContents>&& sheet, Node* ownerNode)
 {
-    return adoptRef(*new CSSStyleSheet(WTF::move(sheet), ownerNode, false));
+    return adoptRef(*new CSSStyleSheet(WTFMove(sheet), ownerNode, TextPosition::minimumPosition(), false));
 }
 
-Ref<CSSStyleSheet> CSSStyleSheet::createInline(Node& ownerNode, const URL& baseURL, const String& encoding)
+Ref<CSSStyleSheet> CSSStyleSheet::createInline(Node& ownerNode, const URL& baseURL, const TextPosition& startPosition, const String& encoding)
 {
     CSSParserContext parserContext(ownerNode.document(), baseURL, encoding);
-    return adoptRef(*new CSSStyleSheet(StyleSheetContents::create(baseURL.string(), parserContext), &ownerNode, true));
+    return adoptRef(*new CSSStyleSheet(StyleSheetContents::create(baseURL.string(), parserContext), &ownerNode, startPosition, true));
 }
 
 CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, CSSImportRule* ownerRule)
-    : m_contents(WTF::move(contents))
+    : m_contents(WTFMove(contents))
     , m_isInlineStylesheet(false)
     , m_isDisabled(false)
     , m_mutatedRules(false)
     , m_ownerNode(0)
     , m_ownerRule(ownerRule)
+    , m_startPosition()
 {
     m_contents->registerClient(this);
 }
 
-CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Node* ownerNode, bool isInlineStylesheet)
-    : m_contents(WTF::move(contents))
+CSSStyleSheet::CSSStyleSheet(Ref<StyleSheetContents>&& contents, Node* ownerNode, const TextPosition& startPosition, bool isInlineStylesheet)
+    : m_contents(WTFMove(contents))
     , m_isInlineStylesheet(isInlineStylesheet)
     , m_isDisabled(false)
     , m_mutatedRules(false)
     , m_ownerNode(ownerNode)
     , m_ownerRule(0)
+    , m_startPosition(startPosition)
 {
     ASSERT(isAcceptableCSSStyleSheetParent(ownerNode));
     m_contents->registerClient(this);
@@ -168,7 +171,7 @@ void CSSStyleSheet::didMutateRules(RuleMutationType mutationType, WhetherContent
     if (!owner)
         return;
 
-    if (mutationType == RuleInsertion && !contentsWereClonedForMutation && !owner->styleSheetCollection().activeStyleSheetsContains(this)) {
+    if (mutationType == RuleInsertion && !contentsWereClonedForMutation && !owner->authorStyleSheets().activeStyleSheetsContains(this)) {
         if (insertedKeyframesRule) {
             if (StyleResolver* resolver = owner->styleResolverIfExists())
                 resolver->addKeyframeStyle(insertedKeyframesRule);
@@ -271,10 +274,10 @@ bool CSSStyleSheet::canAccessRules() const
     return false;
 }
 
-PassRefPtr<CSSRuleList> CSSStyleSheet::rules()
+RefPtr<CSSRuleList> CSSStyleSheet::rules()
 {
     if (!canAccessRules())
-        return 0;
+        return nullptr;
     // IE behavior.
     RefPtr<StaticCSSRuleList> nonCharsetRules = StaticCSSRuleList::create();
     unsigned ruleCount = length();
@@ -284,7 +287,7 @@ PassRefPtr<CSSRuleList> CSSStyleSheet::rules()
             continue;
         nonCharsetRules->rules().append(rule);
     }
-    return nonCharsetRules.release();
+    return nonCharsetRules;
 }
 
 unsigned CSSStyleSheet::insertRule(const String& ruleString, unsigned index, ExceptionCode& ec)
@@ -358,10 +361,10 @@ int CSSStyleSheet::addRule(const String& selector, const String& style, Exceptio
 }
 
 
-PassRefPtr<CSSRuleList> CSSStyleSheet::cssRules()
+RefPtr<CSSRuleList> CSSStyleSheet::cssRules()
 {
     if (!canAccessRules())
-        return 0;
+        return nullptr;
     if (!m_ruleListCSSOMWrapper)
         m_ruleListCSSOMWrapper = std::make_unique<StyleSheetCSSRuleList>(this);
     return m_ruleListCSSOMWrapper.get();

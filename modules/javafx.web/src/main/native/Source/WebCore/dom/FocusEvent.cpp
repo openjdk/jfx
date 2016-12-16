@@ -30,11 +30,6 @@
 
 namespace WebCore {
 
-FocusEventInit::FocusEventInit()
-    : relatedTarget(0)
-{
-}
-
 EventInterface FocusEvent::eventInterface() const
 {
     return FocusEventInterfaceType;
@@ -45,13 +40,9 @@ bool FocusEvent::isFocusEvent() const
     return true;
 }
 
-FocusEvent::FocusEvent()
-{
-}
-
-FocusEvent::FocusEvent(const AtomicString& type, bool canBubble, bool cancelable, RefPtr<AbstractView>&& view, int detail, RefPtr<EventTarget>&& relatedTarget)
-    : UIEvent(type, canBubble, cancelable, WTF::move(view), detail)
-    , m_relatedTarget(WTF::move(relatedTarget))
+FocusEvent::FocusEvent(const AtomicString& type, bool canBubble, bool cancelable, AbstractView* view, int detail, RefPtr<EventTarget>&& relatedTarget)
+    : UIEvent(type, canBubble, cancelable, view, detail)
+    , m_relatedTarget(WTFMove(relatedTarget))
 {
 }
 

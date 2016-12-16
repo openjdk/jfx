@@ -24,11 +24,11 @@
 
 #include "ActiveDOMObject.h"
 #include "EventListener.h"
-#include "EventTarget.h"
 #include "FormData.h"
 #include "ResourceResponse.h"
 #include "ScriptWrappable.h"
 #include "ThreadableLoaderClient.h"
+#include "XMLHttpRequestEventTarget.h"
 #include "XMLHttpRequestProgressEventThrottle.h"
 #include <wtf/text/AtomicStringHash.h>
 #include <wtf/text/StringBuilder.h>
@@ -49,7 +49,7 @@ class SharedBuffer;
 class TextResourceDecoder;
 class ThreadableLoader;
 
-class XMLHttpRequest final : public ScriptWrappable, public RefCounted<XMLHttpRequest>, public EventTargetWithInlineData, private ThreadableLoaderClient, public ActiveDOMObject {
+class XMLHttpRequest final : public RefCounted<XMLHttpRequest>, public XMLHttpRequestEventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     static Ref<XMLHttpRequest> create(ScriptExecutionContext&);
@@ -76,9 +76,7 @@ public:
     };
     static const ResponseTypeCode FirstBinaryResponseType = ResponseTypeBlob;
 
-#if ENABLE(XHR_TIMEOUT)
-    virtual void didTimeout();
-#endif
+    virtual void didReachTimeout();
 
     virtual EventTargetInterface eventTargetInterface() const override { return XMLHttpRequestEventTargetInterfaceType; }
     virtual ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
@@ -113,10 +111,8 @@ public:
     Document* optionalResponseXML() const { return m_responseDocument.get(); }
     Blob* responseBlob();
     Blob* optionalResponseBlob() const { return m_responseBlob.get(); }
-#if ENABLE(XHR_TIMEOUT)
-    unsigned long timeout() const { return m_timeoutMilliseconds; }
-    void setTimeout(unsigned long timeout, ExceptionCode&);
-#endif
+    unsigned timeout() const { return m_timeoutMilliseconds; }
+    void setTimeout(unsigned timeout, ExceptionCode&);
 
     bool responseCacheIsValid() const { return m_responseCacheIsValid; }
     void didCacheResponseJSON();
@@ -152,7 +148,7 @@ private:
 
     // ActiveDOMObject
     void contextDestroyed() override;
-    bool canSuspendForPageCache() const override;
+    bool canSuspendForDocumentSuspension() const override;
     void suspend(ReasonForSuspension) override;
     void resume() override;
     void stop() override;
@@ -179,9 +175,6 @@ private:
 
     bool initSend(ExceptionCode&);
     void sendBytesData(const void*, size_t, ExceptionCode&);
-
-    String getRequestHeader(const String& name) const;
-    void setRequestHeaderInternal(const String& name, const String& value);
 
     void changeState(State newState);
     void callReadyStateChangeListener();
@@ -216,13 +209,11 @@ private:
     String m_mimeTypeOverride;
     bool m_async;
     bool m_includeCredentials;
-#if ENABLE(XHR_TIMEOUT)
-    unsigned long m_timeoutMilliseconds;
-#endif
     RefPtr<Blob> m_responseBlob;
 
     RefPtr<ThreadableLoader> m_loader;
     State m_state;
+    bool m_sendFlag { false };
 
     ResourceResponse m_response;
     String m_responseEncoding;
@@ -259,6 +250,13 @@ private:
 
     Timer m_resumeTimer;
     bool m_dispatchErrorOnResuming;
+
+    Timer m_networkErrorTimer;
+    void networkErrorTimerFired();
+
+    unsigned m_timeoutMilliseconds { 0 };
+    std::chrono::steady_clock::time_point m_sendingTime;
+    Timer m_timeoutTimer;
 };
 
 } // namespace WebCore

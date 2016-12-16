@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef ResourceError_h
 #define ResourceError_h
@@ -13,7 +13,7 @@ public:
     ResourceError() {}
 
     ResourceError(const String& domain, int errorCode,
-                  const String& failingURL, const String& localizedDescription)
+                  const URL& failingURL, const String& localizedDescription)
         : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription)
     {
     }

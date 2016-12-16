@@ -53,14 +53,14 @@ NavigatorGamepad* NavigatorGamepad::from(Navigator* navigator)
     if (!supplement) {
         auto newSupplement = std::make_unique<NavigatorGamepad>();
         supplement = newSupplement.get();
-        provideTo(navigator, supplementName(), WTF::move(newSupplement));
+        provideTo(navigator, supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
 
-GamepadList* NavigatorGamepad::webkitGetGamepads(Navigator* navigator)
+GamepadList* NavigatorGamepad::webkitGetGamepads(Navigator& navigator)
 {
-    return NavigatorGamepad::from(navigator)->gamepads();
+    return NavigatorGamepad::from(&navigator)->gamepads();
 }
 
 GamepadList* NavigatorGamepad::gamepads()

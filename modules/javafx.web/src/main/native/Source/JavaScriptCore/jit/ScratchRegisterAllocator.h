@@ -40,11 +40,13 @@ struct ScratchBuffer;
 
 class ScratchRegisterAllocator {
 public:
+    ScratchRegisterAllocator() { }
     ScratchRegisterAllocator(const RegisterSet& usedRegisters);
     ~ScratchRegisterAllocator();
 
-    void lock(GPRReg reg);
-    void lock(FPRReg reg);
+    void lock(GPRReg);
+    void lock(FPRReg);
+    void lock(JSValueRegs);
 
     template<typename BankInfo>
     typename BankInfo::RegisterType allocateScratch();
@@ -62,16 +64,39 @@ public:
         return m_numberOfReusedRegisters;
     }
 
-    void preserveReusedRegistersByPushing(MacroAssembler& jit);
-    void restoreReusedRegistersByPopping(MacroAssembler& jit);
+    RegisterSet usedRegisters() const { return m_usedRegisters; }
+
+    enum class ExtraStackSpace { SpaceForCCall, NoExtraSpace };
+
+    struct PreservedState {
+        PreservedState()
+            : numberOfBytesPreserved(std::numeric_limits<unsigned>::max())
+            , extraStackSpaceRequirement(ExtraStackSpace::SpaceForCCall)
+        { }
+
+        PreservedState(unsigned numberOfBytes, ExtraStackSpace extraStackSpace)
+            : numberOfBytesPreserved(numberOfBytes)
+            , extraStackSpaceRequirement(extraStackSpace)
+        { }
+
+        explicit operator bool() const { return numberOfBytesPreserved != std::numeric_limits<unsigned>::max(); }
+
+        unsigned numberOfBytesPreserved;
+        ExtraStackSpace extraStackSpaceRequirement;
+    };
+
+    PreservedState preserveReusedRegistersByPushing(MacroAssembler& jit, ExtraStackSpace);
+    void restoreReusedRegistersByPopping(MacroAssembler& jit, const PreservedState&);
 
     RegisterSet usedRegistersForCall() const;
 
     unsigned desiredScratchBufferSizeForCall() const;
 
     void preserveUsedRegistersToScratchBufferForCall(MacroAssembler& jit, ScratchBuffer* scratchBuffer, GPRReg scratchGPR = InvalidGPRReg);
-
     void restoreUsedRegistersFromScratchBufferForCall(MacroAssembler& jit, ScratchBuffer* scratchBuffer, GPRReg scratchGPR = InvalidGPRReg);
+
+    static unsigned preserveRegistersToStackForCall(MacroAssembler& jit, const RegisterSet& usedRegisters, unsigned extraPaddingInBytes);
+    static void restoreRegistersFromStackForCall(MacroAssembler& jit, const RegisterSet& usedRegisters, const RegisterSet& ignore, unsigned numberOfStackBytesUsedForRegisterPreservation, unsigned extraPaddingInBytes);
 
 private:
     RegisterSet m_usedRegisters;

@@ -76,15 +76,9 @@ void Deallocator::processObjectLog()
     std::lock_guard<StaticMutex> lock(PerProcess<Heap>::mutex());
     Heap* heap = PerProcess<Heap>::getFastCase();
 
-    for (auto object : m_objectLog) {
-        if (isSmall(object)) {
-            SmallLine* line = SmallLine::get(object);
-            heap->derefSmallLine(lock, line);
-        } else {
-            BASSERT(isMedium(object));
-            MediumLine* line = MediumLine::get(object);
-            heap->derefMediumLine(lock, line);
-        }
+    for (auto* object : m_objectLog) {
+        SmallLine* line = SmallLine::get(object);
+        heap->derefSmallLine(lock, line);
     }
 
     m_objectLog.clear();
@@ -103,7 +97,7 @@ void Deallocator::deallocateSlowCase(void* object)
     if (!object)
         return;
 
-    if (isSmallOrMedium(object)) {
+    if (isSmall(object)) {
         processObjectLog();
         m_objectLog.push(object);
         return;

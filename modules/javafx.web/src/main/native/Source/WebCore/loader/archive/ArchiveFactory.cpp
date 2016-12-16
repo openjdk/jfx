@@ -47,7 +47,7 @@
 namespace WebCore {
 
 typedef PassRefPtr<Archive> RawDataCreationFunction(const URL&, SharedBuffer*);
-typedef HashMap<String, RawDataCreationFunction*, CaseFoldingHash> ArchiveMIMETypesMap;
+typedef HashMap<String, RawDataCreationFunction*, ASCIICaseInsensitiveHash> ArchiveMIMETypesMap;
 
 // The create functions in the archive classes return PassRefPtr to concrete subclasses
 // of Archive. This adaptor makes the functions have a uniform return type.
@@ -86,14 +86,13 @@ bool ArchiveFactory::isArchiveMimeType(const String& mimeType)
 PassRefPtr<Archive> ArchiveFactory::create(const URL& url, SharedBuffer* data, const String& mimeType)
 {
     RawDataCreationFunction* function = mimeType.isEmpty() ? 0 : archiveMIMETypes().get(mimeType);
-    return function ? function(url, data) : PassRefPtr<Archive>(0);
+    return function ? function(url, data) : PassRefPtr<Archive>(nullptr);
 }
 
 void ArchiveFactory::registerKnownArchiveMIMETypes()
 {
-    HashSet<String>& mimeTypes = MIMETypeRegistry::getSupportedNonImageMIMETypes();
-
-    for (const auto& mimeType : archiveMIMETypes().keys())
+    auto& mimeTypes = MIMETypeRegistry::getSupportedNonImageMIMETypes();
+    for (auto& mimeType : archiveMIMETypes().keys())
         mimeTypes.add(mimeType);
 }
 

@@ -46,7 +46,7 @@ class MutationObserverInterestGroup;
 // ChildListMutationAccumulator is not meant to be used directly; ChildListMutationScope is the public interface.
 class ChildListMutationAccumulator : public RefCounted<ChildListMutationAccumulator> {
 public:
-    static PassRefPtr<ChildListMutationAccumulator> getOrCreate(ContainerNode&);
+    static RefPtr<ChildListMutationAccumulator> getOrCreate(ContainerNode&);
     ~ChildListMutationAccumulator();
 
     void childAdded(Node&);
@@ -81,6 +81,8 @@ public:
         if (target.document().hasMutationObserversOfType(MutationObserver::ChildList))
             m_accumulator = ChildListMutationAccumulator::getOrCreate(target);
     }
+
+    bool canObserve() const { return m_accumulator; }
 
     void childAdded(Node& child)
     {

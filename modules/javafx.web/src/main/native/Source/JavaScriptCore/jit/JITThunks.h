@@ -57,16 +57,12 @@ public:
 
     MacroAssemblerCodeRef ctiStub(VM*, ThunkGenerator);
 
-    NativeExecutable* hostFunctionStub(VM*, NativeFunction, NativeFunction constructor);
-    NativeExecutable* hostFunctionStub(VM*, NativeFunction, ThunkGenerator, Intrinsic);
+    NativeExecutable* hostFunctionStub(VM*, NativeFunction, NativeFunction constructor, const String& name);
+    NativeExecutable* hostFunctionStub(VM*, NativeFunction, ThunkGenerator, Intrinsic, const String& name);
 
     void clearHostFunctionStubs();
 
 private:
-    // Main thread can hold this lock for a while, so use an adaptive mutex.
-    typedef Mutex Lock;
-    typedef MutexLocker Locker;
-
     void finalize(Handle<Unknown>, void* context) override;
 
     typedef HashMap<ThunkGenerator, MacroAssemblerCodeRef> CTIStubMap;

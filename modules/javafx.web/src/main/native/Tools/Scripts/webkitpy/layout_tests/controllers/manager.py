@@ -49,6 +49,7 @@ from webkitpy.layout_tests.layout_package import json_layout_results_generator
 from webkitpy.layout_tests.layout_package import json_results_generator
 from webkitpy.layout_tests.models import test_expectations
 from webkitpy.layout_tests.models import test_failures
+from webkitpy.layout_tests.models import test_results
 from webkitpy.layout_tests.models import test_run_results
 from webkitpy.layout_tests.models.test_input import TestInput
 from webkitpy.layout_tests.models.test_run_results import INTERRUPTED_EXIT_STATUS
@@ -134,6 +135,19 @@ class Manager(object):
     def needs_servers(self, test_names):
         return any(self._is_http_test(test_name) for test_name in test_names) and self._options.http
 
+    def _get_test_inputs(self, tests_to_run, repeat_each, iterations):
+        test_inputs = []
+        for _ in xrange(iterations):
+            for test in tests_to_run:
+                for _ in xrange(repeat_each):
+                    test_inputs.append(self._test_input_for_file(test))
+        return test_inputs
+
+    def _update_worker_count(self, test_names):
+        test_inputs = self._get_test_inputs(test_names, self._options.repeat_each, self._options.iterations)
+        worker_count = self._runner.get_worker_count(test_inputs, int(self._options.child_processes))
+        self._options.child_processes = worker_count
+
     def _set_up_run(self, test_names):
         self._printer.write_update("Checking build ...")
         if not self._port.check_build(self.needs_servers(test_names)):
@@ -146,6 +160,7 @@ class Manager(object):
         if not self._port.start_helper(self._options.pixel_tests):
             return False
 
+        self._update_worker_count(test_names)
         self._port.reset_preferences()
 
         # Check that the system dependencies (themes, fonts, ...) are correct.
@@ -179,18 +194,18 @@ class Manager(object):
 
         tests_to_run, tests_to_skip = self._prepare_lists(paths, test_names)
         self._printer.print_found(len(test_names), len(tests_to_run), self._options.repeat_each, self._options.iterations)
+        start_time = time.time()
 
         # Check to make sure we're not skipping every test.
         if not tests_to_run:
             _log.critical('No tests to run.')
             return test_run_results.RunDetails(exit_code=-1)
 
-        if not self._set_up_run(tests_to_run):
-            return test_run_results.RunDetails(exit_code=-1)
-
-        start_time = time.time()
-        enabled_pixel_tests_in_retry = False
         try:
+            if not self._set_up_run(tests_to_run):
+                return test_run_results.RunDetails(exit_code=-1)
+
+            enabled_pixel_tests_in_retry = False
             initial_results = self._run_tests(tests_to_run, tests_to_skip, self._options.repeat_each, self._options.iterations,
                 int(self._options.child_processes), retrying=False)
 
@@ -250,11 +265,7 @@ class Manager(object):
         needs_web_platform_test_server = any(self._is_web_platform_test(test) for test in tests_to_run)
         needs_websockets = any(self._is_websocket_test(test) for test in tests_to_run)
 
-        test_inputs = []
-        for _ in xrange(iterations):
-            for test in tests_to_run:
-                for _ in xrange(repeat_each):
-                    test_inputs.append(self._test_input_for_file(test))
+        test_inputs = self._get_test_inputs(tests_to_run, repeat_each, iterations)
         return self._runner.run_tests(self._expectations, test_inputs, tests_to_skip, num_workers, needs_http, needs_websockets, needs_web_platform_test_server, retrying)
 
     def _clean_up_run(self):
@@ -304,6 +315,14 @@ class Manager(object):
             for test, crash_log in crash_logs.iteritems():
                 writer = TestResultWriter(self._port._filesystem, self._port, self._port.results_directory(), test)
                 writer.write_crash_log(crash_log)
+
+                # Check if this crashing 'test' is already in list of crashed_processes, if not add it to the run_results
+                if not any(process[0] == test for process in crashed_processes):
+                    result = test_results.TestResult(test)
+                    result.type = test_expectations.CRASH
+                    result.is_other_crash = True
+                    run_results.add(result, expected=False, test_is_slow=False)
+                    _log.debug("Adding results for other crash: " + str(test))
 
     def _clobber_old_results(self):
         # Just clobber the actual test results directories since the other
@@ -362,6 +381,7 @@ class Manager(object):
             _log.debug("Finished writing JSON file for the test results server.")
         else:
             _log.debug("Failed to generate JSON file for the test results server.")
+            return
 
         json_files = ["incremental_results.json", "full_results.json", "times_ms.json"]
 

@@ -111,14 +111,14 @@ struct SourceBuffer::TrackBuffer {
 
 Ref<SourceBuffer> SourceBuffer::create(Ref<SourceBufferPrivate>&& sourceBufferPrivate, MediaSource* source)
 {
-    RefPtr<SourceBuffer> sourceBuffer(adoptRef(new SourceBuffer(WTF::move(sourceBufferPrivate), source)));
+    RefPtr<SourceBuffer> sourceBuffer(adoptRef(new SourceBuffer(WTFMove(sourceBufferPrivate), source)));
     sourceBuffer->suspendIfNeeded();
     return sourceBuffer.releaseNonNull();
 }
 
 SourceBuffer::SourceBuffer(Ref<SourceBufferPrivate>&& sourceBufferPrivate, MediaSource* source)
     : ActiveDOMObject(source->scriptExecutionContext())
-    , m_private(WTF::move(sourceBufferPrivate))
+    , m_private(WTFMove(sourceBufferPrivate))
     , m_source(source)
     , m_asyncEventQueue(*this)
     , m_mode(segmentsKeyword())
@@ -510,7 +510,7 @@ void SourceBuffer::stop()
     m_removeTimer.stop();
 }
 
-bool SourceBuffer::canSuspendForPageCache() const
+bool SourceBuffer::canSuspendForDocumentSuspension() const
 {
     return !hasPendingActivity();
 }
@@ -1022,8 +1022,10 @@ void SourceBuffer::sourceBufferPrivateDidReceiveInitializationSegment(SourceBuff
 
     // 2. If the initialization segment has no audio, video, or text tracks, then run the append error algorithm
     // with the decode error parameter set to true and abort these steps.
-    if (!segment.audioTracks.size() && !segment.videoTracks.size() && !segment.textTracks.size())
+    if (segment.audioTracks.isEmpty() && segment.videoTracks.isEmpty() && segment.textTracks.isEmpty()) {
         appendError(true);
+        return;
+    }
 
     // 3. If the first initialization segment flag is true, then run the following steps:
     if (m_receivedFirstInitializationSegment) {

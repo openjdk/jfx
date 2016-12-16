@@ -21,6 +21,7 @@
 #include "config.h"
 #include "FontCustomPlatformData.h"
 
+#include "FontDescription.h"
 #include "FontPlatformData.h"
 #include "OpenTypeUtilities.h"
 #include "SharedBuffer.h"
@@ -40,15 +41,18 @@ FontCustomPlatformData::~FontCustomPlatformData()
             RemoveFontMemResourceEx(m_fontReference);
 }
 
-FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, bool italic, FontOrientation, FontWidthVariant, FontRenderingMode renderingMode)
+FontPlatformData FontCustomPlatformData::fontPlatformData(const FontDescription& fontDescription, bool bold, bool italic)
 {
+    int size = fontDescription.computedPixelSize();
+    FontRenderingMode renderingMode = fontDescription.renderingMode();
+
     ASSERT(m_fontReference);
 
     LOGFONT& logFont = *static_cast<LOGFONT*>(malloc(sizeof(LOGFONT)));
     memcpy(logFont.lfFaceName, m_name.charactersWithNullTermination().data(), sizeof(logFont.lfFaceName[0]) * std::min<size_t>(static_cast<size_t>(LF_FACESIZE), 1 + m_name.length()));
 
     logFont.lfHeight = -size;
-    if (renderingMode == NormalRenderingMode)
+    if (renderingMode == FontRenderingMode::Normal)
         logFont.lfHeight *= 32;
     logFont.lfWidth = 0;
     logFont.lfEscapement = 0;
@@ -65,7 +69,7 @@ FontPlatformData FontCustomPlatformData::fontPlatformData(int size, bool bold, b
     auto hfont = adoptGDIObject(::CreateFontIndirect(&logFont));
 
     RetainPtr<CGFontRef> cgFont = adoptCF(CGFontCreateWithPlatformFont(&logFont));
-    return FontPlatformData(WTF::move(hfont), cgFont.get(), size, bold, italic, renderingMode == AlternateRenderingMode);
+    return FontPlatformData(WTFMove(hfont), cgFont.get(), size, bold, italic, renderingMode == FontRenderingMode::Alternate);
 }
 
 // Creates a unique and unpredictable font name, in order to avoid collisions and to
@@ -92,7 +96,9 @@ std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffe
 
 bool FontCustomPlatformData::supportsFormat(const String& format)
 {
-    return equalIgnoringCase(format, "truetype") || equalIgnoringCase(format, "opentype") || equalIgnoringCase(format, "woff");
+    return equalLettersIgnoringASCIICase(format, "truetype")
+        || equalLettersIgnoringASCIICase(format, "opentype")
+        || equalLettersIgnoringASCIICase(format, "woff");
 }
 
 }

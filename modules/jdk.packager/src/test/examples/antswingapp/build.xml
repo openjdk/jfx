@@ -57,6 +57,8 @@
                         mainClass="HelloWorld">
         </fx:application>
 
+        <fx:runtime strip-native-commands="false"/>
+
         <resources>
             <fileset dir="${build.dir}/jars" includes="**/*"/>
         </resources>
@@ -69,6 +71,8 @@
                   license="3 Clause BSD">
         </fx:info>
 
+        <fx:bundleArgument arg="mainJar" value="hello.world.jar"/>
+        <fx:bundleArgument arg="classpath" value="hello.world.jar"/>
         <fx:bundleArgument arg="win.exe.systemWide" value="true"/>
         <fx:bundleArgument arg="win.menuGroup" value="Games"/>
         <fx:bundleArgument arg="mac.dmg.simple" value="true"/>

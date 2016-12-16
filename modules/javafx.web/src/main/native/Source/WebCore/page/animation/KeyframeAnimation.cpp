@@ -49,7 +49,7 @@ KeyframeAnimation::KeyframeAnimation(Animation& animation, RenderElement* render
 {
     // Get the keyframe RenderStyles
     if (m_object && m_object->element())
-        m_object->document().ensureStyleResolver().keyframeStylesForAnimation(m_object->element(), unanimatedStyle, m_keyframes);
+        m_object->element()->styleResolver().keyframeStylesForAnimation(*m_object->element(), unanimatedStyle, m_keyframes);
 
     // Update the m_transformFunctionListValid flag based on whether the function lists in the keyframes match.
     validateTransformFunctionList();
@@ -100,9 +100,6 @@ void KeyframeAnimation::fetchIntervalEndpointsForProperty(CSSPropertyID property
         prevIndex = i;
     }
 
-    double scale = 1;
-    double offset = 0;
-
     if (prevIndex == -1)
         prevIndex = 0;
 
@@ -122,8 +119,8 @@ void KeyframeAnimation::fetchIntervalEndpointsForProperty(CSSPropertyID property
     fromStyle = prevKeyframe.style();
     toStyle = nextKeyframe.style();
 
-    offset = prevKeyframe.key();
-    scale = 1.0 / (nextKeyframe.key() - prevKeyframe.key());
+    double offset = prevKeyframe.key();
+    double scale = 1.0 / (nextKeyframe.key() - prevKeyframe.key());
 
     prog = progress(scale, offset, prevKeyframe.timingFunction(name()));
 }
@@ -406,7 +403,7 @@ void KeyframeAnimation::checkForMatchingFilterFunctionLists()
 {
     m_filterFunctionListsMatch = false;
 
-    if (m_keyframes.size() < 2 || !m_keyframes.containsProperty(CSSPropertyWebkitFilter))
+    if (m_keyframes.size() < 2 || !m_keyframes.containsProperty(CSSPropertyFilter))
         return;
 
     // Empty filters match anything, so find the first non-empty entry as the reference

@@ -44,7 +44,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 inline HTMLEmbedElement::HTMLEmbedElement(const QualifiedName& tagName, Document& document, bool createdByParser)
-    : HTMLPlugInImageElement(tagName, document, createdByParser, ShouldPreferPlugInsForImages)
+    : HTMLPlugInImageElement(tagName, document, createdByParser)
 {
     ASSERT(hasTagName(embedTag));
 }
@@ -90,7 +90,7 @@ bool HTMLEmbedElement::isPresentationAttribute(const QualifiedName& name) const
 void HTMLEmbedElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == hiddenAttr) {
-        if (equalIgnoringCase(value, "yes") || equalIgnoringCase(value, "true")) {
+        if (equalLettersIgnoringASCIICase(value, "yes") || equalLettersIgnoringASCIICase(value, "true")) {
             addPropertyToPresentationAttributeStyle(style, CSSPropertyWidth, 0, CSSPrimitiveValue::CSS_PX);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyHeight, 0, CSSPrimitiveValue::CSS_PX);
         }
@@ -101,7 +101,7 @@ void HTMLEmbedElement::collectStyleForPresentationAttribute(const QualifiedName&
 void HTMLEmbedElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (name == typeAttr) {
-        m_serviceType = value.string().left(value.find(';')).lower();
+        m_serviceType = value.string().left(value.find(';')).convertToASCIILowercase();
         // FIXME: The only difference between this and HTMLObjectElement's corresponding
         // code is that HTMLObjectElement does setNeedsWidgetUpdate(true). Consider moving
         // this up to the HTMLPlugInImageElement to be shared.
@@ -183,6 +183,9 @@ void HTMLEmbedElement::updateWidget(PluginCreationOption pluginCreationOption)
 
 bool HTMLEmbedElement::rendererIsNeeded(const RenderStyle& style)
 {
+    if (!fastHasAttribute(typeAttr) && !fastHasAttribute(srcAttr))
+        return false;
+
     if (isImageType())
         return HTMLPlugInImageElement::rendererIsNeeded(style);
 

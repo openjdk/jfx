@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2010, 2016 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2009 Adam Barth. All rights reserved.
@@ -298,6 +298,31 @@ private:
     bool m_haveToldClient;
 };
 
+class ScheduledPageBlock final : public ScheduledNavigation {
+public:
+    ScheduledPageBlock(Document& originDocument)
+        : ScheduledNavigation(0, LockHistory::Yes, LockBackForwardList::Yes, false, false)
+        , m_originDocument(originDocument)
+    {
+    }
+
+    void fire(Frame& frame) override
+    {
+        UserGestureIndicator gestureIndicator(wasUserGesture() ? DefinitelyProcessingUserGesture : DefinitelyNotProcessingUserGesture);
+
+        ResourceResponse replacementResponse(m_originDocument.url(), ASCIILiteral("text/plain"), 0, ASCIILiteral("UTF-8"));
+        SubstituteData replacementData(SharedBuffer::create(), m_originDocument.url(), replacementResponse, SubstituteData::SessionHistoryVisibility::Hidden);
+
+        ResourceRequest resourceRequest(m_originDocument.url(), emptyString(), ReloadIgnoringCacheData);
+        FrameLoadRequest frameRequest(m_originDocument.securityOrigin(), resourceRequest, lockHistory(), lockBackForwardList(), MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, m_shouldOpenExternalURLsPolicy);
+        frameRequest.setSubstituteData(replacementData);
+        frame.loader().load(frameRequest);
+    }
+
+private:
+    Document& m_originDocument;
+};
+
 class ScheduledSubstituteDataLoad : public ScheduledNavigation {
 public:
     ScheduledSubstituteDataLoad(const URL& baseURL, const SubstituteData& substituteData)
@@ -380,7 +405,7 @@ LockBackForwardList NavigationScheduler::mustLockBackForwardList(Frame& targetFr
 {
     // Non-user navigation before the page has finished firing onload should not create a new back/forward item.
     // See https://webkit.org/b/42861 for the original motivation for this.
-    if (!ScriptController::processingUserGesture() && targetFrame.loader().documentLoader() && !targetFrame.loader().documentLoader()->wasOnloadHandled())
+    if (!ScriptController::processingUserGesture() && targetFrame.loader().documentLoader() && !targetFrame.loader().documentLoader()->wasOnloadDispatched())
         return LockBackForwardList::Yes;
 
     // Navigation of a subframe during loading of an ancestor frame does not create a new back/forward item.
@@ -480,6 +505,12 @@ void NavigationScheduler::scheduleSubstituteDataLoad(const URL& baseURL, const S
         schedule(std::make_unique<ScheduledSubstituteDataLoad>(baseURL, substituteData));
 }
 
+void NavigationScheduler::schedulePageBlock(Document& originDocument)
+{
+    if (shouldScheduleNavigation())
+        schedule(std::make_unique<ScheduledPageBlock>(originDocument));
+}
+
 void NavigationScheduler::timerFired()
 {
     if (!m_frame.page())
@@ -491,7 +522,7 @@ void NavigationScheduler::timerFired()
 
     Ref<Frame> protect(m_frame);
 
-    std::unique_ptr<ScheduledNavigation> redirect = WTF::move(m_redirect);
+    std::unique_ptr<ScheduledNavigation> redirect = WTFMove(m_redirect);
     redirect->fire(m_frame);
     InspectorInstrumentation::frameClearedScheduledNavigation(m_frame);
 }
@@ -512,7 +543,7 @@ void NavigationScheduler::schedule(std::unique_ptr<ScheduledNavigation> redirect
     }
 
     cancel();
-    m_redirect = WTF::move(redirect);
+    m_redirect = WTFMove(redirect);
 
     if (!m_frame.loader().isComplete() && m_redirect->isLocationChange())
         m_frame.loader().completed();
@@ -546,7 +577,7 @@ void NavigationScheduler::cancel(bool newLoadInProgress)
         InspectorInstrumentation::frameClearedScheduledNavigation(m_frame);
     m_timer.stop();
 
-    if (std::unique_ptr<ScheduledNavigation> redirect = WTF::move(m_redirect))
+    if (std::unique_ptr<ScheduledNavigation> redirect = WTFMove(m_redirect))
         redirect->didStopTimer(m_frame, newLoadInProgress);
 }
 

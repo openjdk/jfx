@@ -55,14 +55,14 @@ NavigatorMediaDevices* NavigatorMediaDevices::from(Navigator* navigator)
     if (!supplement) {
         auto newSupplement = std::make_unique<NavigatorMediaDevices>(navigator->frame());
         supplement = newSupplement.get();
-        provideTo(navigator, supplementName(), WTF::move(newSupplement));
+        provideTo(navigator, supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
 
-MediaDevices* NavigatorMediaDevices::mediaDevices(Navigator* navigator)
+MediaDevices* NavigatorMediaDevices::mediaDevices(Navigator& navigator)
 {
-    return NavigatorMediaDevices::from(navigator)->mediaDevices();
+    return NavigatorMediaDevices::from(&navigator)->mediaDevices();
 }
 
 MediaDevices* NavigatorMediaDevices::mediaDevices() const

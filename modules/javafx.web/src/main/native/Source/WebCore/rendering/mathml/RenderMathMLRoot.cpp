@@ -56,12 +56,12 @@ namespace WebCore {
 // We will allow the IndexWrapper to be empty and it will always contain the last child of the <mroot> if there are at least 2 elements.
 
 RenderMathMLRoot::RenderMathMLRoot(Element& element, Ref<RenderStyle>&& style)
-    : RenderMathMLBlock(element, WTF::move(style))
+    : RenderMathMLBlock(element, WTFMove(style))
 {
 }
 
 RenderMathMLRoot::RenderMathMLRoot(Document& document, Ref<RenderStyle>&& style)
-    : RenderMathMLBlock(document, WTF::move(style))
+    : RenderMathMLBlock(document, WTFMove(style))
 {
 }
 
@@ -227,14 +227,14 @@ void RenderMathMLRoot::updateStyle()
     auto radical = radicalWrapper();
     auto radicalStyle = RenderStyle::createAnonymousStyleWithDisplay(&style(), FLEX);
     radicalStyle.get().setMarginTop(Length(0, Fixed)); // This will be updated in RenderMathMLRoot::layout().
-    radical->setStyle(WTF::move(radicalStyle));
+    radical->setStyle(WTFMove(radicalStyle));
     radical->setNeedsLayoutAndPrefWidthsRecalc();
 
     auto base = baseWrapper();
     auto baseStyle = RenderStyle::createAnonymousStyleWithDisplay(&style(), FLEX);
     baseStyle.get().setMarginTop(Length(0, Fixed)); // This will be updated in RenderMathMLRoot::layout().
     baseStyle.get().setAlignItemsPosition(ItemPositionBaseline);
-    base->setStyle(WTF::move(baseStyle));
+    base->setStyle(WTFMove(baseStyle));
     base->setNeedsLayoutAndPrefWidthsRecalc();
 
     if (!isRenderMathMLSquareRoot()) {
@@ -245,7 +245,7 @@ void RenderMathMLRoot::updateStyle()
         indexStyle.get().setMarginStart(Length(kernBeforeDegree, Fixed));
         indexStyle.get().setMarginEnd(Length(kernAfterDegree, Fixed));
         indexStyle.get().setAlignItemsPosition(ItemPositionBaseline);
-        index->setStyle(WTF::move(indexStyle));
+        index->setStyle(WTFMove(indexStyle));
         index->setNeedsLayoutAndPrefWidthsRecalc();
     }
 }
@@ -319,7 +319,7 @@ void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
 {
     RenderMathMLBlock::paint(info, paintOffset);
 
-    if (isEmpty() || info.context->paintingDisabled() || style().visibility() != VISIBLE)
+    if (isEmpty() || info.context().paintingDisabled() || style().visibility() != VISIBLE)
         return;
 
     auto base = baseWrapper();
@@ -328,16 +328,16 @@ void RenderMathMLRoot::paint(PaintInfo& info, const LayoutPoint& paintOffset)
         return;
 
     // We draw the radical line.
-    GraphicsContextStateSaver stateSaver(*info.context);
+    GraphicsContextStateSaver stateSaver(info.context());
 
-    info.context->setStrokeThickness(m_ruleThickness);
-    info.context->setStrokeStyle(SolidStroke);
-    info.context->setStrokeColor(style().visitedDependentColor(CSSPropertyColor), ColorSpaceDeviceRGB);
+    info.context().setStrokeThickness(m_ruleThickness);
+    info.context().setStrokeStyle(SolidStroke);
+    info.context().setStrokeColor(style().visitedDependentColor(CSSPropertyColor));
 
     // The preferred width of the radical is sometimes incorrect, so we draw a slightly longer line to ensure it touches the radical symbol (https://bugs.webkit.org/show_bug.cgi?id=130326).
     LayoutUnit sizeError = radical->trailingSpaceError();
     IntPoint adjustedPaintOffset = roundedIntPoint(paintOffset + location() + base->location() + LayoutPoint(-sizeError, -(m_verticalGap + m_ruleThickness / 2)));
-    info.context->drawLine(adjustedPaintOffset, IntPoint(adjustedPaintOffset.x() + base->pixelSnappedOffsetWidth() + sizeError, adjustedPaintOffset.y()));
+    info.context().drawLine(adjustedPaintOffset, roundedIntPoint(LayoutPoint(adjustedPaintOffset.x() + base->offsetWidth() + sizeError, adjustedPaintOffset.y())));
 }
 
 RenderPtr<RenderMathMLRootWrapper> RenderMathMLRootWrapper::createAnonymousWrapper(RenderMathMLRoot* renderObject)

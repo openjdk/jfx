@@ -62,6 +62,7 @@
 #import <WebKitLegacy/DOMHTMLInputElement.h>
 #import <yarr/RegularExpression.h>
 #import <wtf/Assertions.h>
+#import <wtf/NeverDestroyed.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/text/StringBuilder.h>
 
@@ -86,13 +87,12 @@ using JSC::Yarr::RegularExpression;
 
 @implementation WebHTMLRepresentation
 
-static NSMutableArray *newArrayWithStrings(const HashSet<String>& set) NS_RETURNS_RETAINED;
-static NSMutableArray *newArrayWithStrings(const HashSet<String>& set)
+static NSMutableArray *newArrayWithStrings(const HashSet<String, ASCIICaseInsensitiveHash>&) NS_RETURNS_RETAINED;
+static NSMutableArray *newArrayWithStrings(const HashSet<String, ASCIICaseInsensitiveHash>& set)
 {
     NSMutableArray *array = [[NSMutableArray alloc] initWithCapacity:set.size()];
-    HashSet<String>::const_iterator end = set.end();
-    for (HashSet<String>::const_iterator it = set.begin(); it != end; ++it)
-        [array addObject:(NSString *)(*it)];
+    for (auto& string : set)
+        [array addObject:(NSString *)string];
     return array;
 }
 
@@ -154,14 +154,6 @@ static NSMutableArray *newArrayByConcatenatingArrays(NSArray *first, NSArray *se
     [_private release];
 
     [super dealloc];
-}
-
-- (void)finalize
-{
-    if (_private && _private->includedInWebKitStatistics)
-        --WebHTMLRepresentationCount;
-
-    [super finalize];
 }
 
 - (void)_redirectDataToManualLoader:(id<WebPluginManualLoader>)manualLoader forPluginView:(NSView *)pluginView
@@ -371,15 +363,15 @@ static RegularExpression* regExpForLabels(NSArray *labels)
     // that the app will use is equal to the number of locales is used in searching.
     static const unsigned int regExpCacheSize = 4;
     static NSMutableArray* regExpLabels = nil;
-    DEPRECATED_DEFINE_STATIC_LOCAL(Vector<RegularExpression*>, regExps, ());
-    DEPRECATED_DEFINE_STATIC_LOCAL(RegularExpression, wordRegExp, ("\\w", TextCaseSensitive));
+    static NeverDestroyed<Vector<RegularExpression*>> regExps;
+    static NeverDestroyed<RegularExpression> wordRegExp("\\w", TextCaseSensitive);
 
     RegularExpression* result;
     if (!regExpLabels)
         regExpLabels = [[NSMutableArray alloc] initWithCapacity:regExpCacheSize];
     CFIndex cacheHit = [regExpLabels indexOfObject:labels];
     if (cacheHit != NSNotFound)
-        result = regExps.at(cacheHit);
+        result = regExps.get().at(cacheHit);
     else {
         StringBuilder pattern;
         pattern.append('(');
@@ -391,8 +383,8 @@ static RegularExpression* regExpForLabels(NSArray *labels)
             bool startsWithWordChar = false;
             bool endsWithWordChar = false;
             if (label.length() != 0) {
-                startsWithWordChar = wordRegExp.match(label.substring(0, 1)) >= 0;
-                endsWithWordChar = wordRegExp.match(label.substring(label.length() - 1, 1)) >= 0;
+                startsWithWordChar = wordRegExp.get().match(label.substring(0, 1)) >= 0;
+                endsWithWordChar = wordRegExp.get().match(label.substring(label.length() - 1, 1)) >= 0;
             }
 
             if (i != 0)
@@ -415,16 +407,16 @@ static RegularExpression* regExpForLabels(NSArray *labels)
         if (cacheHit != NSNotFound) {
             // remove from old spot
             [regExpLabels removeObjectAtIndex:cacheHit];
-            regExps.remove(cacheHit);
+            regExps.get().remove(cacheHit);
         }
         // add to start
         [regExpLabels insertObject:labels atIndex:0];
-        regExps.insert(0, result);
+        regExps.get().insert(0, result);
         // trim if too big
         if ([regExpLabels count] > regExpCacheSize) {
             [regExpLabels removeObjectAtIndex:regExpCacheSize];
-            RegularExpression* last = regExps.last();
-            regExps.removeLast();
+            RegularExpression* last = regExps.get().last();
+            regExps.get().removeLast();
             delete last;
         }
     }

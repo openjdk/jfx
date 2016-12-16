@@ -135,6 +135,8 @@ private:
 
             case CallVarargs:
             case ConstructVarargs:
+            case TailCallVarargs:
+            case TailCallVarargsInlinedCaller:
                 if (node->child1() == candidate || node->child3() == candidate) {
                     if (verbose)
                         dataLog("    Escape at ", node, "\n");
@@ -281,6 +283,18 @@ private:
                 if (node->child2() != candidate)
                     break;
                 node->setOpAndDefaultFlags(ConstructForwardVarargs);
+                break;
+
+            case TailCallVarargs:
+                if (node->child2() != candidate)
+                    break;
+                node->setOpAndDefaultFlags(TailCallForwardVarargs);
+                break;
+
+            case TailCallVarargsInlinedCaller:
+                if (node->child2() != candidate)
+                    break;
+                node->setOpAndDefaultFlags(TailCallForwardVarargsInlinedCaller);
                 break;
 
             case SetLocal:

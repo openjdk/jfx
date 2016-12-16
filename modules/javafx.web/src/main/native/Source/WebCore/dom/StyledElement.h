@@ -46,7 +46,7 @@ public:
     virtual const StyleProperties* additionalPresentationAttributeStyle() { return 0; }
     void invalidateStyleAttribute();
 
-    const StyleProperties* inlineStyle() const { return elementData() ? elementData()->m_inlineStyle.get() : 0; }
+    const StyleProperties* inlineStyle() const { return elementData() ? elementData()->m_inlineStyle.get() : nullptr; }
 
     bool setInlineStyleProperty(CSSPropertyID, CSSValueID identifier, bool important = false);
     bool setInlineStyleProperty(CSSPropertyID, CSSPropertyID identifier, bool important = false);
@@ -58,7 +58,7 @@ public:
     static void synchronizeStyleAttributeInternal(StyledElement*);
     void synchronizeStyleAttributeInternal() const { StyledElement::synchronizeStyleAttributeInternal(const_cast<StyledElement*>(this)); }
 
-    virtual CSSStyleDeclaration* style() override final;
+    virtual CSSStyleDeclaration* cssomStyle() override final;
 
     const StyleProperties* presentationAttributeStyle();
     virtual void collectStyleForPresentationAttribute(const QualifiedName&, const AtomicString&, MutableStyleProperties&) { }
@@ -97,6 +97,7 @@ inline void StyledElement::invalidateStyleAttribute()
 {
     ASSERT(elementData());
     elementData()->setStyleAttributeIsDirty(true);
+    setNeedsStyleRecalc(InlineStyleChange);
 }
 
 inline const StyleProperties* StyledElement::presentationAttributeStyle()

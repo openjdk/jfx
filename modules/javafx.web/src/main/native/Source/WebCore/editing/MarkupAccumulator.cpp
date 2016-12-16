@@ -40,6 +40,7 @@
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -206,8 +207,8 @@ void MarkupAccumulator::appendEndTag(const Element& element)
 size_t MarkupAccumulator::totalLength(const Vector<String>& strings)
 {
     size_t length = 0;
-    for (size_t i = 0; i < strings.size(); ++i)
-        length += strings[i].length();
+    for (auto& string : strings)
+        length += string.length();
     return length;
 }
 
@@ -259,8 +260,8 @@ bool MarkupAccumulator::shouldAddNamespaceElement(const Element& element)
     if (prefix.isEmpty())
         return !element.hasAttribute(xmlnsAtom);
 
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, xmlnsWithColon, (ASCIILiteral("xmlns:")));
-    return !element.hasAttribute(xmlnsWithColon + prefix);
+    static NeverDestroyed<String> xmlnsWithColon(ASCIILiteral("xmlns:"));
+    return !element.hasAttribute(xmlnsWithColon.get() + prefix);
 }
 
 bool MarkupAccumulator::shouldAddNamespaceAttribute(const Attribute& attribute, Namespaces& namespaces)
@@ -327,7 +328,7 @@ EntityMask MarkupAccumulator::entityMaskForText(const Text& text) const
     if (!text.document().isHTMLDocument())
         return EntityMaskInPCDATA;
 
-    const QualifiedName* parentName = 0;
+    const QualifiedName* parentName = nullptr;
     if (text.parentElement())
         parentName = &text.parentElement()->tagQName();
 
@@ -343,9 +344,9 @@ void MarkupAccumulator::appendText(StringBuilder& result, const Text& text)
     unsigned length = textData.length();
 
     if (m_range) {
-        if (&text == m_range->endContainer())
+        if (&text == &m_range->endContainer())
             length = m_range->endOffset();
-        if (&text == m_range->startContainer()) {
+        if (&text == &m_range->startContainer()) {
             start = m_range->startOffset();
             length -= start;
         }
@@ -573,9 +574,6 @@ void MarkupAccumulator::appendStartMarkup(StringBuilder& result, const Node& nod
         appendCDATASection(result, downcast<CDATASection>(node).data());
         break;
     case Node::ATTRIBUTE_NODE:
-    case Node::ENTITY_NODE:
-    case Node::ENTITY_REFERENCE_NODE:
-    case Node::XPATH_NAMESPACE_NODE:
         ASSERT_NOT_REACHED();
         break;
     }

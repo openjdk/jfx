@@ -28,7 +28,6 @@
 
 #include "JSLexicalEnvironment.h"
 #include "JSCInlines.h"
-#include "JSNameScope.h"
 #include "JSWithScope.h"
 
 namespace JSC {
@@ -167,7 +166,7 @@ void DebuggerScope::invalidateChain()
 
 bool DebuggerScope::isCatchScope() const
 {
-    return m_scope->isCatchScopeObject();
+    return m_scope->isCatchScope();
 }
 
 bool DebuggerScope::isFunctionNameScope() const
@@ -185,18 +184,35 @@ bool DebuggerScope::isGlobalScope() const
     return m_scope->isGlobalObject();
 }
 
-bool DebuggerScope::isFunctionOrEvalScope() const
+bool DebuggerScope::isGlobalLexicalEnvironment() const
+{
+    return m_scope->isGlobalLexicalEnvironment();
+}
+
+bool DebuggerScope::isClosureScope() const
 {
     // In the current debugger implementation, every function or eval will create an
     // lexical environment object. Hence, a lexical environment object implies a
     // function or eval scope.
-    return m_scope->isActivationObject();
+    return m_scope->isVarScope() || m_scope->isLexicalScope();
 }
 
-JSValue DebuggerScope::caughtValue() const
+bool DebuggerScope::isNestedLexicalScope() const
+{
+    return m_scope->isNestedLexicalScope();
+}
+
+JSValue DebuggerScope::caughtValue(ExecState* exec) const
 {
     ASSERT(isCatchScope());
-    return reinterpret_cast<JSNameScope*>(m_scope.get())->value();
+    JSLexicalEnvironment* catchEnvironment = jsCast<JSLexicalEnvironment*>(m_scope.get());
+    SymbolTable* catchSymbolTable = catchEnvironment->symbolTable();
+    RELEASE_ASSERT(catchSymbolTable->size() == 1);
+    PropertyName errorName(catchSymbolTable->begin(catchSymbolTable->m_lock)->key.get());
+    PropertySlot slot(m_scope.get(), PropertySlot::InternalMethodType::Get);
+    bool success = catchEnvironment->getOwnPropertySlot(catchEnvironment, exec, errorName, slot);
+    RELEASE_ASSERT(success && slot.isValue());
+    return slot.getValue(exec, errorName);
 }
 
 } // namespace JSC

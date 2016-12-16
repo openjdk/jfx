@@ -66,7 +66,8 @@ public:
 
     void done();
     void setAudioResult(WKDataRef audioData) { m_audioResult = audioData; }
-    void setPixelResult(WKImageRef image) { m_pixelResult = image; }
+    void setPixelResult(WKImageRef image) { m_pixelResult = image; m_pixelResultIsPending = false; }
+    void setPixelResultIsPending(bool isPending) { m_pixelResultIsPending = isPending; }
     void setRepaintRects(WKArrayRef rects) { m_repaintRects = rects; }
 
     bool isTestRunning() { return m_state == Testing; }
@@ -91,9 +92,11 @@ public:
     void setGeolocationPermission(bool);
     void setMockGeolocationPosition(double latitude, double longitude, double accuracy, bool providesAltitude, double altitude, bool providesAltitudeAccuracy, double altitudeAccuracy, bool providesHeading, double heading, bool providesSpeed, double speed);
     void setMockGeolocationPositionUnavailableError(WKStringRef errorMessage);
+    bool isGeolocationProviderActive() const;
 
     // MediaStream.
     void setUserMediaPermission(bool);
+    void setUserMediaPermissionForOrigin(bool permission, WKStringRef origin, WKStringRef parentOrigin);
 
     // Policy delegate.
     void setCustomPolicyDelegate(bool enabled, bool permissive);
@@ -163,6 +166,7 @@ private:
     bool m_useWaitToDumpWatchdogTimer;
     bool m_useWorkQueue;
     int m_timeout;
+    bool m_pixelResultIsPending { false };
 
     WKRetainPtr<WKDataRef> m_audioResult;
     WKRetainPtr<WKImageRef> m_pixelResult;

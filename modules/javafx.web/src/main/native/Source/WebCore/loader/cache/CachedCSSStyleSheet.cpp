@@ -78,9 +78,9 @@ String CachedCSSStyleSheet::encoding() const
     return m_decoder->encoding().name();
 }
 
-const String CachedCSSStyleSheet::sheetText(bool* hasValidMIMEType) const
+const String CachedCSSStyleSheet::sheetText(MIMETypeCheck mimeTypeCheck, bool* hasValidMIMEType) const
 {
-    if (!m_data || m_data->isEmpty() || !canUseSheet(hasValidMIMEType))
+    if (!m_data || m_data->isEmpty() || !canUseSheet(mimeTypeCheck, hasValidMIMEType))
         return String();
 
     if (!m_decodedSheetText.isNull())
@@ -113,10 +113,13 @@ void CachedCSSStyleSheet::checkNotify()
         c->setCSSStyleSheet(m_resourceRequest.url(), m_response.url(), m_decoder->encoding().name(), this);
 }
 
-bool CachedCSSStyleSheet::canUseSheet(bool* hasValidMIMEType) const
+bool CachedCSSStyleSheet::canUseSheet(MIMETypeCheck mimeTypeCheck, bool* hasValidMIMEType) const
 {
     if (errorOccurred())
         return false;
+
+    if (mimeTypeCheck == MIMETypeCheck::Lax)
+        return true;
 
     // This check exactly matches Firefox.  Note that we grab the Content-Type
     // header directly because we want to see what the value is BEFORE content
@@ -126,7 +129,7 @@ bool CachedCSSStyleSheet::canUseSheet(bool* hasValidMIMEType) const
     // This code defaults to allowing the stylesheet for non-HTTP protocols so
     // folks can use standards mode for local HTML documents.
     String mimeType = extractMIMETypeFromMediaType(response().httpHeaderField(HTTPHeaderName::ContentType));
-    bool typeOK = mimeType.isEmpty() || equalIgnoringCase(mimeType, "text/css") || equalIgnoringCase(mimeType, "application/x-unknown-content-type");
+    bool typeOK = mimeType.isEmpty() || equalLettersIgnoringASCIICase(mimeType, "text/css") || equalLettersIgnoringASCIICase(mimeType, "application/x-unknown-content-type");
     if (hasValidMIMEType)
         *hasValidMIMEType = typeOK;
     return typeOK;
@@ -171,7 +174,7 @@ void CachedCSSStyleSheet::saveParsedStyleSheet(Ref<StyleSheetContents>&& sheet)
 
     if (m_parsedStyleSheetCache)
         m_parsedStyleSheetCache->removedFromMemoryCache();
-    m_parsedStyleSheetCache = WTF::move(sheet);
+    m_parsedStyleSheetCache = WTFMove(sheet);
     m_parsedStyleSheetCache->addedToMemoryCache();
 
     setDecodedSize(m_parsedStyleSheetCache->estimatedSizeInBytes());

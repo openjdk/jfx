@@ -27,10 +27,9 @@ enum MediaStreamTrackState { "new", "live", "ended" };
 
 [
     Conditional=MEDIA_STREAM,
-    EventTarget,
     ActiveDOMObject,
     SkipVTableValidation,
-] interface MediaStreamTrack {
+] interface MediaStreamTrack : EventTarget {
     readonly attribute DOMString kind;
     readonly attribute DOMString id;
     readonly attribute DOMString label;
@@ -47,15 +46,10 @@ enum MediaStreamTrackState { "new", "live", "ended" };
     [ImplementedAs=stopProducingData] void stop();
 
     MediaTrackConstraints getConstraints();
-    MediaSourceStates states();
-    MediaStreamCapabilities getCapabilities(); // returns either AllVideoCapabilities or AllAudioCapabilities
+    [Custom] MediaSourceSettings getSettings();
+    [Custom] MediaTrackCapabilities getCapabilities();
     void applyConstraints(Dictionary constraints);
 
     attribute EventHandler onoverconstrained;
-
-    // EventTarget interface
-    void addEventListener(DOMString type, EventListener listener, optional boolean useCapture);
-    void removeEventListener(DOMString type, EventListener listener, optional boolean useCapture);
-    [RaisesException] boolean dispatchEvent(Event event);
 };
 

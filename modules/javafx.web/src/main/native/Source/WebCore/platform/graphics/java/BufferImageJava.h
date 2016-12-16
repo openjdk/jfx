@@ -26,27 +26,25 @@ public:
         return adoptRef(new BufferImage(rqoImage, rq, w, h));
     }
 
-    virtual void destroyDecodedData(bool destroyAll = true) { }
-    virtual unsigned decodedSize() const { return 0; }
+    void destroyDecodedData(bool destroyAll = true) override { }
 
     //utatodo: callback to Java
-    virtual bool currentFrameKnownToBeOpaque() { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}
+    bool currentFrameKnownToBeOpaque() override { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}
 
-    virtual FloatSize size() const override { return FloatSize(m_width, m_height); }
+    FloatSize size() const override { return FloatSize(m_width, m_height); }
 
-    virtual void draw(GraphicsContext* gc, const FloatRect& dstRect,
-                      const FloatRect& srcRect, ColorSpace styleColorSpace,
-                      CompositeOperator op, BlendMode bm, ImageOrientationDescription);
+    void draw(GraphicsContext& gc, const FloatRect& dstRect,
+              const FloatRect& srcRect, CompositeOperator op, BlendMode bm, ImageOrientationDescription) override;
 
-    virtual void drawPattern(GraphicsContext* gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
-                             const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);
+    void drawPattern(GraphicsContext& gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
+                     const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal) override;
 
     virtual NativeImagePtr nativeImageForCurrentFrame();
 
 private:
     BufferImage(PassRefPtr<RQRef> rqoImage, PassRefPtr<RenderingQueue> rq, int w, int h);
 
-    void flushImageRQ(GraphicsContext *gc);
+    void flushImageRQ(GraphicsContext& gc);
 
     int m_width, m_height;
     RefPtr<RenderingQueue> m_rq;

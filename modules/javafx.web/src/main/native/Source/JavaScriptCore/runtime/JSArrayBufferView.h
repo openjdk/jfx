@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -159,9 +159,18 @@ public:
 
     ArrayBuffer* buffer();
     PassRefPtr<ArrayBufferView> impl();
+    bool isNeutered() { return hasArrayBuffer() && !vector(); }
     void neuter();
 
-    void* vector() { return m_vector; }
+    void* vector()
+    {
+        return m_vector.getPredicated(
+            this,
+            [this] () -> bool {
+                return mode() == FastTypedArray;
+            });
+    }
+
     unsigned byteOffset();
     unsigned length() const { return m_length; }
 
@@ -177,12 +186,18 @@ private:
 protected:
     ArrayBuffer* existingBufferInButterfly();
 
-    void* m_vector;
+    CopyBarrier<char> m_vector; // this is really a void*, but void would not work here.
     uint32_t m_length;
     TypedArrayMode m_mode;
 };
 
 } // namespace JSC
+
+namespace WTF {
+
+void printInternal(PrintStream&, JSC::TypedArrayMode);
+
+} // namespace WTF
 
 #endif // JSArrayBufferView_h
 

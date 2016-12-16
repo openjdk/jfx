@@ -84,6 +84,7 @@ class AtomicHTMLToken;
 class Document;
 class Element;
 class HTMLFormElement;
+class JSCustomElementInterface;
 
 class HTMLConstructionSite {
     WTF_MAKE_NONCOPYABLE(HTMLConstructionSite);
@@ -103,6 +104,10 @@ public:
     void insertCommentOnDocument(AtomicHTMLToken*);
     void insertCommentOnHTMLHtmlElement(AtomicHTMLToken*);
     void insertHTMLElement(AtomicHTMLToken*);
+#if ENABLE(CUSTOM_ELEMENTS)
+    JSCustomElementInterface* insertHTMLElementOrFindCustomElementInterface(AtomicHTMLToken*);
+    void insertCustomElement(Ref<Element>&&, const AtomicString& localName, Vector<Attribute>&);
+#endif
     void insertSelfClosingHTMLElement(AtomicHTMLToken*);
     void insertFormattingElement(AtomicHTMLToken*);
     void insertHTMLHeadElement(AtomicHTMLToken*);
@@ -124,7 +129,7 @@ public:
     void insertAlreadyParsedChild(HTMLStackItem& newParent, HTMLElementStack::ElementRecord& child);
     void takeAllChildren(HTMLStackItem& newParent, HTMLElementStack::ElementRecord& oldParent);
 
-    PassRefPtr<HTMLStackItem> createElementFromSavedToken(HTMLStackItem*);
+    Ref<HTMLStackItem> createElementFromSavedToken(HTMLStackItem*);
 
     bool shouldFosterParent() const;
     void fosterParent(PassRefPtr<Node>);
@@ -180,6 +185,8 @@ public:
         bool m_wasRedirectingBefore;
     };
 
+    static bool isFormattingTag(const AtomicString&);
+
 private:
     // In the common case, this queue will have only one task because most
     // tokens produce only one DOM mutation.
@@ -192,8 +199,9 @@ private:
 
     void findFosterSite(HTMLConstructionSiteTask&);
 
-    PassRefPtr<Element> createHTMLElement(AtomicHTMLToken*);
-    PassRefPtr<Element> createElement(AtomicHTMLToken*, const AtomicString& namespaceURI);
+    RefPtr<Element> createHTMLElementOrFindCustomElementInterface(AtomicHTMLToken*, JSCustomElementInterface**);
+    Ref<Element> createHTMLElement(AtomicHTMLToken*);
+    Ref<Element> createElement(AtomicHTMLToken*, const AtomicString& namespaceURI);
 
     void mergeAttributesFromTokenIntoElement(AtomicHTMLToken*, Element*);
     void dispatchDocumentElementAvailableIfNeeded();

@@ -28,7 +28,6 @@
 #define ShadowRoot_h
 
 #include "ContainerNode.h"
-#include "ContentDistributor.h"
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "Element.h"
@@ -37,56 +36,91 @@
 
 namespace WebCore {
 
+class AuthorStyleSheets;
+class HTMLSlotElement;
+class SlotAssignment;
+
 class ShadowRoot final : public DocumentFragment, public TreeScope {
 public:
-    enum ShadowRootType {
-        UserAgentShadowRoot = 0,
+    enum class Type : uint8_t {
+        UserAgent = 0,
+        Closed,
+        Open,
     };
 
-    static Ref<ShadowRoot> create(Document& document, ShadowRootType type)
+    static Ref<ShadowRoot> create(Document& document, Type type)
     {
         return adoptRef(*new ShadowRoot(document, type));
     }
 
+#if ENABLE(SHADOW_DOM) || ENABLE(DETAILS_ELEMENT)
+    static Ref<ShadowRoot> create(Document& document, std::unique_ptr<SlotAssignment>&& assignment)
+    {
+        return adoptRef(*new ShadowRoot(document, WTFMove(assignment)));
+    }
+#endif
+
     virtual ~ShadowRoot();
+
+    StyleResolver& styleResolver();
+    AuthorStyleSheets& authorStyleSheets();
+
+    void updateStyle();
+    void resetStyleResolver();
 
     bool resetStyleInheritance() const { return m_resetStyleInheritance; }
     void setResetStyleInheritance(bool);
 
-    Element* hostElement() const { return m_hostElement; }
-    void setHostElement(Element* hostElement) { m_hostElement = hostElement; }
+    Element* host() const { return m_host; }
+    void setHost(Element* host) { m_host = host; }
 
     String innerHTML() const;
     void setInnerHTML(const String&, ExceptionCode&);
 
     Element* activeElement() const;
 
-    ShadowRootType type() const { return static_cast<ShadowRootType>(m_type); }
-
-    PassRefPtr<Node> cloneNode(bool, ExceptionCode&);
-
-    ContentDistributor& distributor() { return m_distributor; }
-    void invalidateDistribution() { m_distributor.invalidateDistribution(hostElement()); }
+    Type type() const { return m_type; }
 
     virtual void removeAllEventListeners() override;
 
-private:
-    ShadowRoot(Document&, ShadowRootType);
+#if ENABLE(SHADOW_DOM) || ENABLE(DETAILS_ELEMENT)
+    HTMLSlotElement* findAssignedSlot(const Node&);
 
-    virtual bool childTypeAllowed(NodeType) const override;
-    virtual void childrenChanged(const ChildChange&) override;
+    void addSlotElementByName(const AtomicString&, HTMLSlotElement&);
+    void removeSlotElementByName(const AtomicString&, HTMLSlotElement&);
 
-    virtual RefPtr<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    void invalidateSlotAssignments();
+    void invalidateDefaultSlotAssignments();
+
+    const Vector<Node*>* assignedNodesForSlot(const HTMLSlotElement&);
+#endif
+
+protected:
+    ShadowRoot(Document&, Type);
+
+#if ENABLE(SHADOW_DOM) || ENABLE(DETAILS_ELEMENT)
+    ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
+#endif
 
     // FIXME: This shouldn't happen. https://bugs.webkit.org/show_bug.cgi?id=88834
-    bool isOrphan() const { return !hostElement(); }
+    bool isOrphan() const { return !m_host; }
 
-    unsigned m_resetStyleInheritance : 1;
-    unsigned m_type : 1;
+private:
+    virtual bool childTypeAllowed(NodeType) const override;
 
-    Element* m_hostElement;
+    virtual Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
 
-    ContentDistributor m_distributor;
+    bool m_resetStyleInheritance { false };
+    Type m_type { Type::UserAgent };
+
+    Element* m_host { nullptr };
+
+    std::unique_ptr<StyleResolver> m_styleResolver;
+    std::unique_ptr<AuthorStyleSheets> m_authorStyleSheets;
+
+#if ENABLE(SHADOW_DOM) || ENABLE(DETAILS_ELEMENT)
+    std::unique_ptr<SlotAssignment> m_slotAssignment;
+#endif
 };
 
 inline Element* ShadowRoot::activeElement() const
@@ -105,7 +139,7 @@ inline ContainerNode* Node::parentOrShadowHostNode() const
 {
     ASSERT(isMainThreadOrGCThread());
     if (is<ShadowRoot>(*this))
-        return downcast<ShadowRoot>(*this).hostElement();
+        return downcast<ShadowRoot>(*this).host();
     return parentNode();
 }
 

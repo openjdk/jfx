@@ -70,8 +70,8 @@ public:
     StyleImage* image() const { return m_image.get(); }
     const Length& xPosition() const { return m_xPosition; }
     const Length& yPosition() const { return m_yPosition; }
-    BackgroundEdgeOrigin backgroundXOrigin() const { return static_cast<BackgroundEdgeOrigin>(m_backgroundXOrigin); }
-    BackgroundEdgeOrigin backgroundYOrigin() const { return static_cast<BackgroundEdgeOrigin>(m_backgroundYOrigin); }
+    Edge backgroundXOrigin() const { return static_cast<Edge>(m_backgroundXOrigin); }
+    Edge backgroundYOrigin() const { return static_cast<Edge>(m_backgroundYOrigin); }
     EFillAttachment attachment() const { return static_cast<EFillAttachment>(m_attachment); }
     EFillBox clip() const { return static_cast<EFillBox>(m_clip); }
     EFillBox origin() const { return static_cast<EFillBox>(m_origin); }
@@ -102,10 +102,10 @@ public:
     bool isMaskSourceTypeSet() const { return m_maskSourceTypeSet; }
 
     void setImage(PassRefPtr<StyleImage> image) { m_image = image; m_imageSet = true; }
-    void setXPosition(Length length) { m_xPosition = WTF::move(length); m_xPosSet = true; }
-    void setYPosition(Length length) { m_yPosition = WTF::move(length); m_yPosSet = true; }
-    void setBackgroundXOrigin(BackgroundEdgeOrigin o) { m_backgroundXOrigin = o; m_backgroundOriginSet = true; }
-    void setBackgroundYOrigin(BackgroundEdgeOrigin o) { m_backgroundYOrigin = o; m_backgroundOriginSet = true; }
+    void setXPosition(Length length) { m_xPosition = WTFMove(length); m_xPosSet = true; }
+    void setYPosition(Length length) { m_yPosition = WTFMove(length); m_yPosSet = true; }
+    void setBackgroundXOrigin(Edge o) { m_backgroundXOrigin = static_cast<unsigned>(o); m_backgroundOriginSet = true; }
+    void setBackgroundYOrigin(Edge o) { m_backgroundYOrigin = static_cast<unsigned>(o); m_backgroundOriginSet = true; }
     void setAttachment(EFillAttachment attachment) { m_attachment = attachment; m_attachmentSet = true; }
     void setClip(EFillBox b) { m_clip = b; m_clipSet = true; }
     void setOrigin(EFillBox b) { m_origin = b; m_originSet = true; }
@@ -133,7 +133,7 @@ public:
     void clearSize() { m_sizeType = SizeNone; }
     void clearMaskSourceType() { m_maskSourceTypeSet = false; }
 
-    void setNext(std::unique_ptr<FillLayer> next) { m_next = WTF::move(next); }
+    void setNext(std::unique_ptr<FillLayer> next) { m_next = WTFMove(next); }
 
     FillLayer& operator=(const FillLayer&);
     FillLayer(const FillLayer&);
@@ -202,8 +202,8 @@ private:
     unsigned m_xPosSet : 1;
     unsigned m_yPosSet : 1;
     unsigned m_backgroundOriginSet : 1;
-    unsigned m_backgroundXOrigin : 2; // BackgroundEdgeOrigin
-    unsigned m_backgroundYOrigin : 2; // BackgroundEdgeOrigin
+    unsigned m_backgroundXOrigin : 2; // Edge
+    unsigned m_backgroundYOrigin : 2; // Edge
     unsigned m_compositeSet : 1;
     unsigned m_blendModeSet : 1;
     unsigned m_maskSourceTypeSet : 1;
@@ -212,6 +212,9 @@ private:
 
     mutable unsigned m_clipMax : 2; // EFillBox, maximum m_clip value from this to bottom layer
 };
+
+TextStream& operator<<(TextStream&, FillSize);
+TextStream& operator<<(TextStream&, const FillLayer&);
 
 } // namespace WebCore
 

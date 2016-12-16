@@ -38,7 +38,6 @@
 #include "Dictionary.h"
 #include "Document.h"
 #include "Event.h"
-#include "EventException.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "HTTPHeaderNames.h"
@@ -64,7 +63,7 @@ inline EventSource::EventSource(ScriptExecutionContext& context, const URL& url,
     , m_withCredentials(false)
     , m_state(CONNECTING)
     , m_decoder(TextResourceDecoder::create("text/plain", "UTF-8"))
-    , m_connectTimer(*this, &EventSource::connectTimerFired)
+    , m_connectTimer(*this, &EventSource::connect)
     , m_discardTrailingNewline(false)
     , m_requestInFlight(false)
     , m_reconnectDelay(defaultReconnectDelay)
@@ -86,12 +85,7 @@ RefPtr<EventSource> EventSource::create(ScriptExecutionContext& context, const S
     }
 
     // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
-    bool shouldBypassMainWorldContentSecurityPolicy = false;
-    if (is<Document>(context)) {
-        Document& document = downcast<Document>(context);
-        shouldBypassMainWorldContentSecurityPolicy = document.frame()->script().shouldBypassMainWorldContentSecurityPolicy();
-    }
-    if (!context.contentSecurityPolicy()->allowConnectToSource(fullURL, shouldBypassMainWorldContentSecurityPolicy)) {
+    if (!context.contentSecurityPolicy()->allowConnectToSource(fullURL, context.shouldBypassMainWorldContentSecurityPolicy())) {
         // FIXME: Should this be throwing an exception?
         ec = SECURITY_ERR;
         return nullptr;
@@ -130,10 +124,12 @@ void EventSource::connect()
     options.setSendLoadCallbacks(SendCallbacks);
     options.setSniffContent(DoNotSniffContent);
     options.setAllowCredentials((origin->canRequest(m_url) || m_withCredentials) ? AllowStoredCredentials : DoNotAllowStoredCredentials);
+    options.setCredentialRequest(m_withCredentials ? ClientRequestedCredentials : ClientDidNotRequestCredentials);
     options.preflightPolicy = PreventPreflight;
     options.crossOriginRequestPolicy = UseAccessControl;
     options.setDataBufferingPolicy(DoNotBufferData);
     options.securityOrigin = origin;
+    options.contentSecurityPolicyEnforcement = scriptExecutionContext()->shouldBypassMainWorldContentSecurityPolicy() ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceConnectSrcDirective;
 
     m_loader = ThreadableLoader::create(scriptExecutionContext(), this, request, options);
 
@@ -167,11 +163,6 @@ void EventSource::scheduleReconnect()
     m_state = CONNECTING;
     m_connectTimer.startOneShot(m_reconnectDelay / 1000.0);
     dispatchEvent(Event::create(eventNames().errorEvent, false, false));
-}
-
-void EventSource::connectTimerFired()
-{
-    connect();
 }
 
 String EventSource::url() const
@@ -220,7 +211,7 @@ void EventSource::didReceiveResponse(unsigned long, const ResourceResponse& resp
     if (responseIsValid) {
         const String& charset = response.textEncodingName();
         // If we have a charset, the only allowed value is UTF-8 (case-insensitive).
-        responseIsValid = charset.isEmpty() || equalIgnoringCase(charset, "UTF-8");
+        responseIsValid = charset.isEmpty() || equalLettersIgnoringASCIICase(charset, "utf-8");
         if (!responseIsValid) {
             String message = makeString("EventSource's response has a charset (\"", charset, "\") that is not UTF-8. Aborting the connection.");
             // FIXME: We are missing the source line.
@@ -283,7 +274,7 @@ void EventSource::didFail(const ResourceError& error)
 
 void EventSource::didFailAccessControlCheck(const ResourceError& error)
 {
-    String message = makeString("EventSource cannot load ", error.failingURL(), ". ", error.localizedDescription());
+    String message = makeString("EventSource cannot load ", error.failingURL().string(), ". ", error.localizedDescription());
     scriptExecutionContext()->addConsoleMessage(MessageSource::JS, MessageLevel::Error, message);
 
     abortConnectionAttempt();
@@ -414,17 +405,15 @@ const char* EventSource::activeDOMObjectName() const
     return "EventSource";
 }
 
-bool EventSource::canSuspendForPageCache() const
+bool EventSource::canSuspendForDocumentSuspension() const
 {
     // FIXME: We should try and do better here.
     return false;
 }
 
-PassRefPtr<MessageEvent> EventSource::createMessageEvent()
+Ref<MessageEvent> EventSource::createMessageEvent()
 {
-    RefPtr<MessageEvent> event = MessageEvent::create();
-    event->initMessageEvent(m_eventName.isEmpty() ? eventNames().messageEvent : AtomicString(m_eventName), false, false, SerializedScriptValue::create(String::adopt(m_data)), m_eventStreamOrigin, m_lastEventId, 0, 0);
-    return event.release();
+    return MessageEvent::create(m_eventName.isEmpty() ? eventNames().messageEvent : AtomicString(m_eventName), false, false, SerializedScriptValue::create(String::adopt(m_data)), m_eventStreamOrigin, m_lastEventId);
 }
 
 } // namespace WebCore

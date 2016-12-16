@@ -126,8 +126,6 @@ public:
 #endif
     virtual ~BitmapImage();
 
-    virtual bool isBitmapImage() const override { return true; }
-
     virtual bool hasSingleSecurityOrigin() const override;
 
     // FloatSize due to override.
@@ -147,8 +145,8 @@ public:
     virtual void stopAnimation() override;
     virtual void resetAnimation() override;
 
-    virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
-        const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal) override;
+    virtual void drawPattern(GraphicsContext&, const FloatRect& srcRect, const AffineTransform& patternTransform,
+        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, const FloatRect& destRect, BlendMode = BlendModeNormal) override;
 
     // Accessors for native image formats.
 
@@ -184,14 +182,18 @@ public:
 
     virtual bool currentFrameKnownToBeOpaque() override;
 
-    virtual bool isAnimated() override { return m_frameCount > 1; }
+    virtual bool isAnimated() const override { return m_frameCount > 1; }
 
     bool canAnimate();
 
     bool allowSubsampling() const { return m_allowSubsampling; }
     void setAllowSubsampling(bool allowSubsampling) { m_allowSubsampling = allowSubsampling; }
 
+    size_t currentFrame() const { return m_currentFrame; }
+
 private:
+    virtual bool isBitmapImage() const override { return true; }
+
     void updateSize(ImageOrientationDescription = ImageOrientationDescription()) const;
     void determineMinimumSubsamplingLevel() const;
 
@@ -206,16 +208,15 @@ protected:
     WEBCORE_EXPORT BitmapImage(ImageObserver* = 0);
 
 #if PLATFORM(WIN)
-    virtual void drawFrameMatchingSourceSize(GraphicsContext*, const FloatRect& dstRect, const IntSize& srcSize, ColorSpace styleColorSpace, CompositeOperator) override;
+    virtual void drawFrameMatchingSourceSize(GraphicsContext&, const FloatRect& dstRect, const IntSize& srcSize, CompositeOperator) override;
 #endif
-    virtual void draw(GraphicsContext*, const FloatRect& dstRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator, BlendMode, ImageOrientationDescription) override;
+    virtual void draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator, BlendMode, ImageOrientationDescription) override;
 
 #if USE(WINGDI)
-    virtual void drawPattern(GraphicsContext*, const FloatRect& srcRect, const AffineTransform& patternTransform,
-        const FloatPoint& phase, ColorSpace styleColorSpace, CompositeOperator, const FloatRect& destRect);
+    virtual void drawPattern(GraphicsContext&, const FloatRect& srcRect, const AffineTransform& patternTransform,
+        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator, const FloatRect& destRect);
 #endif
 
-    size_t currentFrame() const { return m_currentFrame; }
     size_t frameCount();
 
     PassNativeImagePtr frameAtIndex(size_t, float presentationScaleHint = 1);
@@ -292,9 +293,10 @@ protected:
 #endif
 
 private:
-    virtual bool decodedDataIsPurgeable() const override;
     void clearTimer();
     void startTimer(double delay);
+
+    virtual void dump(TextStream&) const override;
 
     ImageSource m_source;
     mutable IntSize m_size; // The size to use for the overall image (will just be the size of the first image).

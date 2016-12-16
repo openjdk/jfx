@@ -54,6 +54,7 @@ if (!IS_64) {
 def ccFlags = [
         commonFlags, "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c",
         IS_DEBUG_NATIVE ? ["-ggdb", "-DVERBOSE"] : ["-O2", "-DNDEBUG"]].flatten()
+def ccFlagsGTK3 = ccFlags
 //ccFlags.addAll(["-Wnon-virtual-dtor", "-Woverloaded-virtual", "-std=c++0x"])
 def linkFlags = ["-shared", commonFlags].flatten()
 
@@ -61,26 +62,64 @@ if (IS_DEBUG_NATIVE) {
     linkFlags += "-g"
 }
 
-// Create $buildDir/linux_tools.properties file and load props from it
-setupTools("linux_tools",
-    { propFile ->
-        ByteArrayOutputStream results = new ByteArrayOutputStream();
-        exec {
-            commandLine("pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst");
-            setStandardOutput(results);
-        }
-        propFile << "cflags=" << results.toString().trim() << "\n";
+def gtk2CCFlags = [  ];
+def gtk3CCFlags = [ "-Wno-deprecated-declarations" ];
+def gtk2LinkFlags = [ ];
+def gtk3LinkFlags = [ ];
+LINUX.buildGTK3 = true
 
-        results = new ByteArrayOutputStream();
+// Create $buildDir/linux_tools.properties file and load props from it
+setupTools("linux_gtk2",
+    { propFile ->
+        ByteArrayOutputStream results1 = new ByteArrayOutputStream();
         exec {
-            commandLine "pkg-config", "--libs", "pangocairo", "gio-2.0", "gthread-2.0", "xtst"
-            standardOutput = results
+            commandLine("pkg-config", "--cflags", "gtk+-2.0", "gthread-2.0", "xtst")
+            setStandardOutput(results1);
         }
-        propFile << "libs=" << results.toString().trim();
+        propFile << "cflagsGTK2=" << results1.toString().trim() << "\n";
+
+        ByteArrayOutputStream results3 = new ByteArrayOutputStream();
+        exec {
+            commandLine("pkg-config", "--libs", "gtk+-2.0", "gthread-2.0", "xtst")
+            setStandardOutput(results3);
+        }
+        propFile << "libsGTK2=" << results3.toString().trim()  << "\n";
     },
     { properties ->
-        ccFlags.addAll(properties.getProperty("cflags").split(" "))
-        linkFlags.addAll(properties.getProperty("libs").split(" "))
+        gtk2CCFlags.addAll(properties.getProperty("cflagsGTK2").split(" "))
+        gtk2LinkFlags.addAll(properties.getProperty("libsGTK2").split(" "))
+    }
+)
+
+setupTools("linux_gtk3",
+    { propFile ->
+        ByteArrayOutputStream results2 = new ByteArrayOutputStream();
+        exec {
+            commandLine("pkg-config", "--cflags", "gtk+-3.0", "gthread-2.0", "xtst")
+            setStandardOutput(results2);
+            ignoreExitValue(true)
+        }
+        propFile << "cflagsGTK3=" << results2.toString().trim() << "\n";
+
+        ByteArrayOutputStream results4 = new ByteArrayOutputStream();
+        exec {
+            commandLine("pkg-config", "--libs", "gtk+-3.0", "gthread-2.0", "xtst")
+            setStandardOutput(results4);
+            ignoreExitValue(true)
+        }
+        propFile << "libsGTK3=" << results4.toString().trim()  << "\n";
+
+    },
+    { properties ->
+        String ccflags =  properties.getProperty("cflagsGTK3")
+        String ldflags =  properties.getProperty("libsGTK3")
+        if (ccflags != null && ! ccflags.equals("")) {
+            gtk3CCFlags.addAll(properties.getProperty("cflagsGTK3").split(" "))
+            gtk3LinkFlags.addAll(properties.getProperty("libsGTK3").split(" "))
+        } else {
+            logger.info("Warning: GTK3 development packages not found, not building GTK3 support");
+            LINUX.buildGTK3 = false
+        }
     }
 )
 
@@ -137,16 +176,45 @@ def compiler = IS_COMPILE_PARFAIT ? "parfait-gcc" : "gcc";
 def linker = IS_COMPILE_PARFAIT ? "parfait-g++" : "g++";
 
 LINUX.glass = [:]
-LINUX.glass.javahInclude = [
-    "com/sun/glass/events/**",
-    "com/sun/glass/ui/*",
-    "com/sun/glass/ui/gtk/*"]
-LINUX.glass.nativeSource = file("${project(":graphics").projectDir}/src/main/native-glass/gtk")
-LINUX.glass.compiler = compiler
-LINUX.glass.ccFlags = [ccFlags, "-Werror"].flatten()
-LINUX.glass.linker = linker
-LINUX.glass.linkFlags = [linkFlags ].flatten()
-LINUX.glass.lib = "glass"
+LINUX.glass.variants = ["glass", "glassgtk2"]
+if (LINUX.buildGTK3) {
+    logger.info("Building libglassgtk3")
+    LINUX.glass.variants += "glassgtk3"
+} else {
+    logger.warning("NOT Building libglassgtk3")
+}
+
+FileTree ft_gtk_launcher = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk/") {
+    include("**/launcher.c")
+}
+
+FileTree ft_gtk = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk/") {
+    exclude("**/launcher.c")
+}
+
+LINUX.glass.glass = [:]
+LINUX.glass.glass.nativeSource = ft_gtk_launcher.getFiles()
+LINUX.glass.glass.compiler = compiler
+LINUX.glass.glass.ccFlags = [ccFlags, gtk2CCFlags,  "-Werror"].flatten()
+LINUX.glass.glass.linker = linker
+LINUX.glass.glass.linkFlags = [linkFlags, "-lX11", "-ldl" ].flatten()
+LINUX.glass.glass.lib = "glass"
+
+LINUX.glass.glassgtk2 = [:]
+LINUX.glass.glassgtk2.nativeSource =  ft_gtk.getFiles()
+LINUX.glass.glassgtk2.compiler = compiler
+LINUX.glass.glassgtk2.ccFlags = [ccFlags, gtk2CCFlags, "-Werror"].flatten()
+LINUX.glass.glassgtk2.linker = linker
+LINUX.glass.glassgtk2.linkFlags = [linkFlags, gtk2LinkFlags ].flatten()
+LINUX.glass.glassgtk2.lib = "glassgtk2"
+
+LINUX.glass.glassgtk3 = [:]
+LINUX.glass.glassgtk3.nativeSource =  ft_gtk.getFiles()
+LINUX.glass.glassgtk3.compiler = compiler
+LINUX.glass.glassgtk3.ccFlags = [ccFlags, gtk3CCFlags, "-Werror"].flatten()
+LINUX.glass.glassgtk3.linker = linker
+LINUX.glass.glassgtk3.linkFlags = [linkFlags, gtk3LinkFlags ].flatten()
+LINUX.glass.glassgtk3.lib = "glassgtk3"
 
 LINUX.decora = [:]
 LINUX.decora.compiler = compiler
@@ -156,7 +224,6 @@ LINUX.decora.linkFlags = [linkFlags].flatten()
 LINUX.decora.lib = "decora_sse"
 
 LINUX.prism = [:]
-LINUX.prism.javahInclude = ["com/sun/prism/impl/**/*", "com/sun/prism/PresentableState*"]
 LINUX.prism.nativeSource = file("${project(":graphics").projectDir}/src/main/native-prism")
 LINUX.prism.compiler = compiler
 LINUX.prism.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
@@ -165,7 +232,6 @@ LINUX.prism.linkFlags = [linkFlags].flatten()
 LINUX.prism.lib = "prism_common"
 
 LINUX.prismSW = [:]
-LINUX.prismSW.javahInclude = ["com/sun/pisces/**/*"]
 LINUX.prismSW.nativeSource = file("${project(":graphics").projectDir}/src/main/native-prism-sw")
 LINUX.prismSW.compiler = compiler
 LINUX.prismSW.ccFlags = [ccFlags, "-DINLINE=inline"].flatten()
@@ -194,7 +260,6 @@ if (!IS_64) {
 }
 
 LINUX.iio = [:]
-LINUX.iio.javahInclude = ["com/sun/javafx/iio/**/*"]
 LINUX.iio.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-iio"),
     file("${project("graphics").projectDir}/src/main/native-iio/libjpeg7")]
@@ -205,7 +270,6 @@ LINUX.iio.linkFlags = [linkFlags].flatten()
 LINUX.iio.lib = "javafx_iio"
 
 LINUX.prismES2 = [:]
-LINUX.prismES2.javahInclude = ["com/sun/prism/es2/**/*"]
 LINUX.prismES2.nativeSource = [
     file("${project("graphics").projectDir}/src/main/native-prism-es2"),
     file("${project("graphics").projectDir}/src/main/native-prism-es2/GL"),
@@ -219,9 +283,6 @@ LINUX.prismES2.lib = "prism_es2"
 
 def closedDir = file("$projectDir/../rt-closed")
 LINUX.font = [:]
-LINUX.font.javahInclude = [
-     "com/sun/javafx/font/**/*",
-     "com/sun/javafx/text/**/*"]
 LINUX.font.compiler = compiler
 LINUX.font.nativeSource = [file("${project("graphics").projectDir}/src/main/native-font")]
 LINUX.font.ccFlags = ["-DJFXFONT_PLUS", ccFlags].flatten()
@@ -230,7 +291,6 @@ LINUX.font.linkFlags = [linkFlags].flatten()
 LINUX.font.lib = "javafx_font"
 
 LINUX.fontT2K = [:]
-LINUX.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
 LINUX.fontT2K.nativeSource = [
         file("$closedDir/javafx-font-t2k-native/src"),
         file("$closedDir/javafx-font-t2k-native/src/layout")]
@@ -241,7 +301,6 @@ LINUX.fontT2K.linkFlags = [linkFlags].flatten()
 LINUX.fontT2K.lib = "javafx_font_t2k"
 
 LINUX.fontFreetype = [:]
-LINUX.fontFreetype.javahInclude = ["com/sun/javafx/font/freetype/OSFreetype.class"]
 LINUX.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
 LINUX.fontFreetype.compiler = compiler
 LINUX.fontFreetype.ccFlags = ["-DJFXFONT_PLUS", ccFlags, freetypeCCFlags].flatten()
@@ -250,7 +309,6 @@ LINUX.fontFreetype.linkFlags = [linkFlags, freetypeLinkFlags].flatten()
 LINUX.fontFreetype.lib = "javafx_font_freetype"
 
 LINUX.fontPango = [:]
-LINUX.fontPango.javahInclude = ["com/sun/javafx/font/freetype/OSPango.class"]
 LINUX.fontPango.nativeSource = ["src/main/native-font/pango.c"]
 LINUX.fontPango.compiler = compiler
 LINUX.fontPango.ccFlags = ["-DJFXFONT_PLUS", ccFlags, pangoCCFlags].flatten()

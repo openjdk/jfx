@@ -85,9 +85,19 @@ void Font::initGDIFont()
     OUTLINETEXTMETRIC metrics;
     GetOutlineTextMetrics(hdc, sizeof(metrics), &metrics);
     TEXTMETRIC& textMetrics = metrics.otmTextMetrics;
-    float ascent = textMetrics.tmAscent;
-    float descent = textMetrics.tmDescent;
-    float lineGap = textMetrics.tmExternalLeading;
+    float ascent, descent, lineGap;
+    // The Open Font Format describes the OS/2 USE_TYPO_METRICS flag as follows:
+    // "If set, it is strongly recommended to use OS/2.sTypoAscender - OS/2.sTypoDescender+ OS/2.sTypoLineGap as a value for default line spacing for this font."
+    const UINT useTypoMetricsMask = 1 << 7;
+    if (metrics.otmfsSelection & useTypoMetricsMask) {
+        ascent = metrics.otmAscent;
+        descent = metrics.otmDescent;
+        lineGap = metrics.otmLineGap;
+    } else {
+        ascent = textMetrics.tmAscent;
+        descent = textMetrics.tmDescent;
+        lineGap = textMetrics.tmExternalLeading;
+    }
     m_fontMetrics.setAscent(ascent);
     m_fontMetrics.setDescent(descent);
     m_fontMetrics.setLineGap(lineGap);
@@ -122,7 +132,7 @@ void Font::platformDestroy()
     delete m_scriptFontProperties;
 }
 
-PassRefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescription, float scaleFactor) const
+RefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {
     float scaledSize = scaleFactor * m_platformData.size();
     if (isCustomFont()) {
@@ -135,7 +145,7 @@ PassRefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescr
     GetObject(m_platformData.hfont(), sizeof(LOGFONT), &winfont);
     winfont.lfHeight = -lroundf(scaledSize * (m_platformData.useGDI() ? 1 : 32));
     auto hfont = adoptGDIObject(::CreateFontIndirect(&winfont));
-    return Font::create(FontPlatformData(WTF::move(hfont), scaledSize, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.useGDI()), isCustomFont(), false);
+    return Font::create(FontPlatformData(WTFMove(hfont), scaledSize, m_platformData.syntheticBold(), m_platformData.syntheticOblique(), m_platformData.useGDI()), isCustomFont(), false);
 }
 
 void Font::determinePitch()

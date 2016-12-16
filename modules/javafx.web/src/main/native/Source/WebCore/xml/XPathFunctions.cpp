@@ -291,7 +291,7 @@ void Function::setArguments(const String& name, Vector<std::unique_ptr<Expressio
     if (name != "lang" && !arguments.isEmpty())
         setIsContextNodeSensitive(false);
 
-    setSubexpressions(WTF::move(arguments));
+    setSubexpressions(WTFMove(arguments));
 }
 
 Value FunLast::evaluate() const
@@ -355,13 +355,11 @@ Value FunId::evaluate() const
 
     result.markSorted(false);
 
-    return Value(WTF::move(result));
+    return Value(WTFMove(result));
 }
 
 static inline String expandedNameLocalPart(Node* node)
 {
-    // The local part of an XPath expanded-name matches DOM local name for most node types, except for namespace nodes and processing instruction nodes.
-    ASSERT(node->nodeType() != Node::XPATH_NAMESPACE_NODE); // Not supported yet.
     if (is<ProcessingInstruction>(*node))
         return downcast<ProcessingInstruction>(*node).target();
     return node->localName().string();
@@ -598,7 +596,7 @@ Value FunLang::evaluate() const
 
     String langValue = languageAttribute->value();
     while (true) {
-        if (equalIgnoringCase(langValue, lang))
+        if (equalIgnoringASCIICase(langValue, lang))
             return true;
 
         // Remove suffixes one by one.
@@ -737,7 +735,7 @@ std::unique_ptr<Function> Function::create(const String& name, Vector<std::uniqu
 {
     std::unique_ptr<Function> function = create(name, arguments.size());
     if (function)
-        function->setArguments(name, WTF::move(arguments));
+        function->setArguments(name, WTFMove(arguments));
     return function;
 }
 

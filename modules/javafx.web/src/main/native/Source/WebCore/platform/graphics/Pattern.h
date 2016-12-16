@@ -44,7 +44,7 @@ typedef cairo_pattern_t* PlatformPatternPtr;
 typedef void* PlatformPatternPtr;
 #elif PLATFORM(JAVA)
 #include <jni.h>
-#include <JavaRef.h> // todo tav remove when building w/ pch
+#include <wtf/java/JavaRef.h> // todo tav remove when building w/ pch
 typedef JGObject PlatformPatternPtr;
 #endif
 

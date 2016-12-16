@@ -63,7 +63,7 @@ public:
     virtual void detachedFromParent2() override;
     virtual void detachedFromParent3() override;
 
-    virtual void convertMainResourceLoadToDownload(WebCore::DocumentLoader*, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&) override;
+    virtual void convertMainResourceLoadToDownload(WebCore::DocumentLoader*, WebCore::SessionID, const WebCore::ResourceRequest&, const WebCore::ResourceResponse&) override;
     virtual void assignIdentifierToInitialRequest(unsigned long identifier, WebCore::DocumentLoader*, const WebCore::ResourceRequest&);
 
     virtual void dispatchWillSendRequest(WebCore::DocumentLoader*, unsigned long identifier, WebCore::ResourceRequest&, const WebCore::ResourceResponse& redirectResponse) override;
@@ -76,7 +76,7 @@ public:
     virtual void dispatchDidFailLoading(WebCore::DocumentLoader*, unsigned long identifier, const WebCore::ResourceError&) override;
     virtual bool shouldCacheResponse(WebCore::DocumentLoader*, unsigned long identifier, const WebCore::ResourceResponse&, const unsigned char* data, unsigned long long length);
 
-    virtual void dispatchDidHandleOnloadEvents() override;
+    virtual void dispatchDidDispatchOnloadEvents() override;
     virtual void dispatchDidReceiveServerRedirectForProvisionalLoad() override;
     virtual void dispatchDidCancelClientRedirect() override;
     virtual void dispatchWillPerformClientRedirect(const WebCore::URL&, double interval, double fireDate) override;
@@ -141,6 +141,7 @@ public:
 
     virtual WebCore::ResourceError cancelledError(const WebCore::ResourceRequest&) override;
     virtual WebCore::ResourceError blockedError(const WebCore::ResourceRequest&) override;
+    virtual WebCore::ResourceError blockedByContentBlockerError(const WebCore::ResourceRequest&) override;
     virtual WebCore::ResourceError cannotShowURLError(const WebCore::ResourceRequest&) override;
     virtual WebCore::ResourceError interruptedForPolicyChangeError(const WebCore::ResourceRequest&) override;
     virtual WebCore::ResourceError cannotShowMIMETypeError(const WebCore::ResourceResponse&) override;
@@ -188,7 +189,7 @@ public:
 
     virtual PassRefPtr<WebCore::Widget> createJavaAppletWidget(const WebCore::IntSize&, WebCore::HTMLAppletElement*, const WebCore::URL& baseURL, const Vector<WTF::String>& paramNames, const Vector<WTF::String>& paramValues) override;
 
-    virtual WebCore::ObjectContentType objectContentType(const WebCore::URL&, const WTF::String& mimeType, bool shouldPreferPlugInsForImages) override;
+    virtual WebCore::ObjectContentType objectContentType(const WebCore::URL&, const WTF::String& mimeType) override;
     virtual WTF::String overrideMediaType() const override;
 
     virtual void dispatchDidClearWindowObjectInWorld(WebCore::DOMWrapperWorld&) override;
@@ -201,6 +202,8 @@ public:
     virtual bool shouldAlwaysUsePluginDocument(const WTF::String& mimeType) const;
 
     virtual void dispatchDidFailToStartPlugin(const WebCore::PluginView*) const;
+
+    void prefetchDNS(const String&) override;
 
 protected:
     class WebFramePolicyListenerPrivate;

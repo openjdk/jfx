@@ -27,6 +27,7 @@
 #include "UserContentURLPattern.h"
 
 #include "URL.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WebCore {
@@ -62,7 +63,7 @@ bool UserContentURLPattern::matchesPatterns(const URL& url, const Vector<String>
 
 bool UserContentURLPattern::parse(const String& pattern)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const String, schemeSeparator, (ASCIILiteral("://")));
+    static NeverDestroyed<const String> schemeSeparator(ASCIILiteral("://"));
 
     size_t schemeEndPos = pattern.find(schemeSeparator);
     if (schemeEndPos == notFound)
@@ -70,13 +71,13 @@ bool UserContentURLPattern::parse(const String& pattern)
 
     m_scheme = pattern.left(schemeEndPos);
 
-    unsigned hostStartPos = schemeEndPos + schemeSeparator.length();
+    unsigned hostStartPos = schemeEndPos + schemeSeparator.get().length();
     if (hostStartPos >= pattern.length())
         return false;
 
     int pathStartPos = 0;
 
-    if (equalIgnoringCase(m_scheme, "file"))
+    if (equalLettersIgnoringASCIICase(m_scheme, "file"))
         pathStartPos = hostStartPos;
     else {
         size_t hostEndPos = pattern.find('/', hostStartPos);
@@ -113,10 +114,10 @@ bool UserContentURLPattern::matches(const URL& test) const
     if (m_invalid)
         return false;
 
-    if (!equalIgnoringCase(test.protocol(), m_scheme))
+    if (!equalIgnoringASCIICase(test.protocol(), m_scheme))
         return false;
 
-    if (!equalIgnoringCase(m_scheme, "file") && !matchesHost(test))
+    if (!equalLettersIgnoringASCIICase(m_scheme, "file") && !matchesHost(test))
         return false;
 
     return matchesPath(test);
@@ -125,7 +126,7 @@ bool UserContentURLPattern::matches(const URL& test) const
 bool UserContentURLPattern::matchesHost(const URL& test) const
 {
     const String& host = test.host();
-    if (equalIgnoringCase(host, m_host))
+    if (equalIgnoringASCIICase(host, m_host))
         return true;
 
     if (!m_matchSubdomains)

@@ -39,6 +39,14 @@ enum class TransactionMode {
 };
 const unsigned TransactionModeMaximum = 2;
 
+enum class TransactionState {
+    Active,
+    Inactive,
+    Committing,
+    Aborting,
+    Finished,
+};
+
 enum class CursorDirection {
     Next = 0,
     NextNoDuplicate = 1,
@@ -53,9 +61,48 @@ enum class CursorType {
 };
 const unsigned CursorTypeMaximum = 1;
 
+enum class CursorSource {
+    Index,
+    ObjectStore,
+};
+
 enum class VersionNullness {
     Null,
     NonNull,
+};
+
+enum class KeyPathType {
+    Null,
+    String,
+    Array,
+};
+
+enum class ObjectStoreOverwriteMode {
+    Overwrite,
+    OverwriteForCursor,
+    NoOverwrite,
+};
+
+enum class IndexRecordType {
+    Key,
+    Value,
+};
+
+// In order of the least to the highest precedent in terms of sort order.
+enum KeyType {
+    Max = -1,
+    Invalid = 0,
+    Array,
+    String,
+    Date,
+    Number,
+    Min,
+};
+
+enum class RequestType {
+    Open,
+    Delete,
+    Other,
 };
 
 } // namespace IndexedDB

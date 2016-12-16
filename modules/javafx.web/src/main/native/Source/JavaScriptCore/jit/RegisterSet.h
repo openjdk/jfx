@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,14 +45,27 @@ public:
         setMany(regs...);
     }
 
-    static RegisterSet stackRegisters();
-    static RegisterSet reservedHardwareRegisters();
+    JS_EXPORT_PRIVATE static RegisterSet stackRegisters();
+    JS_EXPORT_PRIVATE static RegisterSet reservedHardwareRegisters();
     static RegisterSet runtimeRegisters();
     static RegisterSet specialRegisters(); // The union of stack, reserved hardware, and runtime registers.
     static RegisterSet calleeSaveRegisters();
-    static RegisterSet allGPRs();
-    static RegisterSet allFPRs();
+    static RegisterSet vmCalleeSaveRegisters(); // Callee save registers that might be saved and used by any tier.
+    static RegisterSet llintBaselineCalleeSaveRegisters(); // Registers saved and used by the LLInt.
+    static RegisterSet dfgCalleeSaveRegisters(); // Registers saved and used by the DFG JIT.
+    static RegisterSet ftlCalleeSaveRegisters(); // Registers that might be saved and used by the FTL JIT.
+#if ENABLE(WEBASSEMBLY)
+    static RegisterSet webAssemblyCalleeSaveRegisters(); // Registers saved and used by the WebAssembly JIT.
+#endif
+    static RegisterSet volatileRegistersForJSCall();
+    static RegisterSet stubUnavailableRegisters(); // The union of callee saves and special registers.
+    JS_EXPORT_PRIVATE static RegisterSet macroScratchRegisters();
+    JS_EXPORT_PRIVATE static RegisterSet allGPRs();
+    JS_EXPORT_PRIVATE static RegisterSet allFPRs();
     static RegisterSet allRegisters();
+
+    static RegisterSet registersToNotSaveForJSCall();
+    static RegisterSet registersToNotSaveForCCall();
 
     void set(Reg reg, bool value = true)
     {
@@ -60,11 +73,11 @@ public:
         m_vector.set(reg.index(), value);
     }
 
-    void set(JSValueRegs regs)
+    void set(JSValueRegs regs, bool value = true)
     {
         if (regs.tagGPR() != InvalidGPRReg)
-            set(regs.tagGPR());
-        set(regs.payloadGPR());
+            set(regs.tagGPR(), value);
+        set(regs.payloadGPR(), value);
     }
 
     void clear(Reg reg)
@@ -77,6 +90,13 @@ public:
     {
         ASSERT(!!reg);
         return m_vector.get(reg.index());
+    }
+
+    template<typename Iterable>
+    void setAll(const Iterable& iterable)
+    {
+        for (Reg reg : iterable)
+            set(reg);
     }
 
     void merge(const RegisterSet& other) { m_vector.merge(other.m_vector); }
@@ -107,6 +127,13 @@ public:
 
     bool operator==(const RegisterSet& other) const { return m_vector == other.m_vector; }
     unsigned hash() const { return m_vector.hash(); }
+
+    template<typename Functor>
+    void forEach(const Functor& functor) const
+    {
+        for (size_t index : m_vector)
+            functor(Reg::fromIndex(index));
+    }
 
 private:
     void setAny(Reg reg) { set(reg); }

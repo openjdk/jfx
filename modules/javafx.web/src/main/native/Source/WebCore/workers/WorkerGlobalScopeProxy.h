@@ -38,6 +38,7 @@
 
 namespace WebCore {
 
+    class ContentSecurityPolicyResponseHeaders;
     class URL;
     class Worker;
 
@@ -48,7 +49,7 @@ namespace WebCore {
 
         virtual ~WorkerGlobalScopeProxy() { }
 
-        virtual void startWorkerGlobalScope(const URL& scriptURL, const String& userAgent, const String& sourceCode, WorkerThreadStartMode) = 0;
+        virtual void startWorkerGlobalScope(const URL& scriptURL, const String& userAgent, const String& sourceCode, const ContentSecurityPolicyResponseHeaders&, bool shouldBypassMainWorldContentSecurityPolicy, WorkerThreadStartMode) = 0;
 
         virtual void terminateWorkerGlobalScope() = 0;
 
@@ -59,15 +60,6 @@ namespace WebCore {
         virtual void workerObjectDestroyed() = 0;
 
         virtual void notifyNetworkStateChange(bool isOnline) = 0;
-
-        class PageInspector {
-        public:
-            virtual ~PageInspector() { }
-            virtual void dispatchMessageFromWorker(const String&) = 0;
-        };
-        virtual void connectToInspector(PageInspector*) { }
-        virtual void disconnectFromInspector() { }
-        virtual void sendMessageToInspector(const String&) { }
     };
 
 } // namespace WebCore

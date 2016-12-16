@@ -38,11 +38,11 @@
 #include "JSEnvironmentRecord.h"
 #include "JSFunction.h"
 #include "LinkBuffer.h"
-#include "RepatchBuffer.h"
 #include "ResultType.h"
 #include "SamplingTool.h"
 #include "ScopedArguments.h"
 #include "ScopedArgumentsTable.h"
+#include "SlowPathCall.h"
 #include <wtf/StringPrintStream.h>
 
 
@@ -53,7 +53,7 @@ JIT::CodeRef JIT::stringGetByValStubGenerator(VM* vm)
 {
     JSInterfaceJIT jit(vm);
     JumpList failures;
-    failures.append(JSC::branchStructure(jit,
+    failures.append(jit.branchStructure(
         NotEqual,
         Address(regT0, JSCell::structureIDOffset()),
         vm->stringStructure.get()));
@@ -98,9 +98,14 @@ void JIT::emit_op_get_by_val(Instruction* currentInstruction)
     int base = currentInstruction[2].u.operand;
     int property = currentInstruction[3].u.operand;
     ArrayProfile* profile = currentInstruction[4].u.arrayProfile;
+    ByValInfo* byValInfo = m_codeBlock->addByValInfo();
 
     emitGetVirtualRegisters(base, regT0, property, regT1);
-    emitJumpSlowCaseIfNotImmediateInteger(regT1);
+
+    emitJumpSlowCaseIfNotJSCell(regT0, base);
+
+    PatchableJump notIndex = emitPatchableJumpIfNotInt(regT1);
+    addSlowCase(notIndex);
 
     // This is technically incorrect - we're zero-extending an int32.  On the hot path this doesn't matter.
     // We check the value as if it was a uint32 against the m_vectorLength - which will always fail if
@@ -110,7 +115,6 @@ void JIT::emit_op_get_by_val(Instruction* currentInstruction)
     // extending since it makes it easier to re-tag the value in the slow case.
     zeroExtend32ToPtr(regT1, regT1);
 
-    emitJumpSlowCaseIfNotJSCell(regT0, base);
     emitArrayProfilingSiteWithCell(regT0, regT2, profile);
     and32(TrustedImm32(IndexingShapeMask), regT2);
 
@@ -150,7 +154,9 @@ void JIT::emit_op_get_by_val(Instruction* currentInstruction)
     emitValueProfilingSite();
     emitPutVirtualRegister(dst);
 
-    m_byValCompilationInfo.append(ByValCompilationInfo(m_bytecodeOffset, badType, mode, done));
+    Label nextHotPath = label();
+
+    m_byValCompilationInfo.append(ByValCompilationInfo(byValInfo, m_bytecodeOffset, notIndex, badType, mode, profile, done, nextHotPath));
 }
 
 JIT::JumpList JIT::emitDoubleLoad(Instruction*, PatchableJump& badType)
@@ -159,6 +165,7 @@ JIT::JumpList JIT::emitDoubleLoad(Instruction*, PatchableJump& badType)
 
     badType = patchableBranch32(NotEqual, regT2, TrustedImm32(DoubleShape));
     loadPtr(Address(regT0, JSObject::butterflyOffset()), regT2);
+    slowCases.append(branchIfNotToSpace(regT2));
     slowCases.append(branch32(AboveOrEqual, regT1, Address(regT2, Butterfly::offsetOfPublicLength())));
     loadDouble(BaseIndex(regT2, regT1, TimesEight), fpRegT0);
     slowCases.append(branchDouble(DoubleNotEqualOrUnordered, fpRegT0, fpRegT0));
@@ -172,6 +179,7 @@ JIT::JumpList JIT::emitContiguousLoad(Instruction*, PatchableJump& badType, Inde
 
     badType = patchableBranch32(NotEqual, regT2, TrustedImm32(expectedShape));
     loadPtr(Address(regT0, JSObject::butterflyOffset()), regT2);
+    slowCases.append(branchIfNotToSpace(regT2));
     slowCases.append(branch32(AboveOrEqual, regT1, Address(regT2, Butterfly::offsetOfPublicLength())));
     load64(BaseIndex(regT2, regT1, TimesEight), regT0);
     slowCases.append(branchTest64(Zero, regT0));
@@ -187,6 +195,7 @@ JIT::JumpList JIT::emitArrayStorageLoad(Instruction*, PatchableJump& badType)
     badType = patchableBranch32(Above, regT3, TrustedImm32(SlowPutArrayStorageShape - ArrayStorageShape));
 
     loadPtr(Address(regT0, JSObject::butterflyOffset()), regT2);
+    slowCases.append(branchIfNotToSpace(regT2));
     slowCases.append(branch32(AboveOrEqual, regT1, Address(regT2, ArrayStorage::vectorLengthOffset())));
 
     load64(BaseIndex(regT2, regT1, TimesEight, ArrayStorage::vectorOffset()), regT0);
@@ -195,15 +204,43 @@ JIT::JumpList JIT::emitArrayStorageLoad(Instruction*, PatchableJump& badType)
     return slowCases;
 }
 
+JITGetByIdGenerator JIT::emitGetByValWithCachedId(Instruction* currentInstruction, const Identifier& propertyName, Jump& fastDoneCase, Jump& slowDoneCase, JumpList& slowCases)
+{
+    // base: regT0
+    // property: regT1
+    // scratch: regT3
+
+    int dst = currentInstruction[1].u.operand;
+
+    slowCases.append(emitJumpIfNotJSCell(regT1));
+    emitIdentifierCheck(regT1, regT3, propertyName, slowCases);
+
+    JITGetByIdGenerator gen(
+        m_codeBlock, CodeOrigin(m_bytecodeOffset), CallSiteIndex(m_bytecodeOffset), RegisterSet::stubUnavailableRegisters(),
+        JSValueRegs(regT0), JSValueRegs(regT0));
+    gen.generateFastPath(*this);
+
+    fastDoneCase = jump();
+
+    Label coldPathBegin = label();
+    gen.slowPathJump().link(this);
+
+    Call call = callOperation(WithProfile, operationGetByIdOptimize, dst, gen.stubInfo(), regT0, propertyName.impl());
+    gen.reportSlowPathCall(coldPathBegin, call);
+    slowDoneCase = jump();
+
+    return gen;
+}
+
 void JIT::emitSlow_op_get_by_val(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
     int dst = currentInstruction[1].u.operand;
     int base = currentInstruction[2].u.operand;
     int property = currentInstruction[3].u.operand;
-    ArrayProfile* profile = currentInstruction[4].u.arrayProfile;
+    ByValInfo* byValInfo = m_byValCompilationInfo[m_byValInstructionIndex].byValInfo;
 
-    linkSlowCase(iter); // property int32 check
     linkSlowCaseIfNotJSCell(iter, base); // base cell check
+    linkSlowCase(iter); // property int32 check
     Jump nonCell = jump();
     linkSlowCase(iter); // base array check
     Jump notString = branchStructure(NotEqual,
@@ -217,6 +254,7 @@ void JIT::emitSlow_op_get_by_val(Instruction* currentInstruction, Vector<SlowCas
     notString.link(this);
     nonCell.link(this);
 
+    linkSlowCase(iter); // read barrier
     linkSlowCase(iter); // vector length check
     linkSlowCase(iter); // empty value
 
@@ -224,7 +262,7 @@ void JIT::emitSlow_op_get_by_val(Instruction* currentInstruction, Vector<SlowCas
 
     emitGetVirtualRegister(base, regT0);
     emitGetVirtualRegister(property, regT1);
-    Call call = callOperation(operationGetByValDefault, dst, regT0, regT1, profile);
+    Call call = callOperation(operationGetByValOptimize, dst, regT0, regT1, byValInfo);
 
     m_byValCompilationInfo[m_byValInstructionIndex].slowPathTarget = slowPath;
     m_byValCompilationInfo[m_byValInstructionIndex].returnAddress = call;
@@ -233,42 +271,19 @@ void JIT::emitSlow_op_get_by_val(Instruction* currentInstruction, Vector<SlowCas
     emitValueProfilingSite();
 }
 
-void JIT::compileGetDirectOffset(RegisterID base, RegisterID result, RegisterID offset, RegisterID scratch, FinalObjectMode finalObjectMode)
-{
-    ASSERT(sizeof(JSValue) == 8);
-
-    if (finalObjectMode == MayBeFinal) {
-        Jump isInline = branch32(LessThan, offset, TrustedImm32(firstOutOfLineOffset));
-        loadPtr(Address(base, JSObject::butterflyOffset()), scratch);
-        neg32(offset);
-        Jump done = jump();
-        isInline.link(this);
-        addPtr(TrustedImm32(JSObject::offsetOfInlineStorage() - (firstOutOfLineOffset - 2) * sizeof(EncodedJSValue)), base, scratch);
-        done.link(this);
-    } else {
-        if (!ASSERT_DISABLED) {
-            Jump isOutOfLine = branch32(GreaterThanOrEqual, offset, TrustedImm32(firstOutOfLineOffset));
-            abortWithReason(JITOffsetIsNotOutOfLine);
-            isOutOfLine.link(this);
-        }
-        loadPtr(Address(base, JSObject::butterflyOffset()), scratch);
-        neg32(offset);
-    }
-    signExtend32ToPtr(offset, offset);
-    load64(BaseIndex(scratch, offset, TimesEight, (firstOutOfLineOffset - 2) * sizeof(EncodedJSValue)), result);
-}
-
 void JIT::emit_op_put_by_val(Instruction* currentInstruction)
 {
     int base = currentInstruction[1].u.operand;
     int property = currentInstruction[2].u.operand;
     ArrayProfile* profile = currentInstruction[4].u.arrayProfile;
+    ByValInfo* byValInfo = m_codeBlock->addByValInfo();
 
     emitGetVirtualRegisters(base, regT0, property, regT1);
-    emitJumpSlowCaseIfNotImmediateInteger(regT1);
+    emitJumpSlowCaseIfNotJSCell(regT0, base);
+    PatchableJump notIndex = emitPatchableJumpIfNotInt(regT1);
+    addSlowCase(notIndex);
     // See comment in op_get_by_val.
     zeroExtend32ToPtr(regT1, regT1);
-    emitJumpSlowCaseIfNotJSCell(regT0, base);
     emitArrayProfilingSiteWithCell(regT0, regT2, profile);
     and32(TrustedImm32(IndexingShapeMask), regT2);
 
@@ -299,8 +314,7 @@ void JIT::emit_op_put_by_val(Instruction* currentInstruction)
 
     Label done = label();
 
-    m_byValCompilationInfo.append(ByValCompilationInfo(m_bytecodeOffset, badType, mode, done));
-
+    m_byValCompilationInfo.append(ByValCompilationInfo(byValInfo, m_bytecodeOffset, notIndex, badType, mode, profile, done, done));
 }
 
 JIT::JumpList JIT::emitGenericContiguousPutByVal(Instruction* currentInstruction, PatchableJump& badType, IndexingType indexingShape)
@@ -313,17 +327,18 @@ JIT::JumpList JIT::emitGenericContiguousPutByVal(Instruction* currentInstruction
     badType = patchableBranch32(NotEqual, regT2, TrustedImm32(indexingShape));
 
     loadPtr(Address(regT0, JSObject::butterflyOffset()), regT2);
+    slowCases.append(branchIfNotToSpace(regT2));
     Jump outOfBounds = branch32(AboveOrEqual, regT1, Address(regT2, Butterfly::offsetOfPublicLength()));
 
     Label storeResult = label();
     emitGetVirtualRegister(value, regT3);
     switch (indexingShape) {
     case Int32Shape:
-        slowCases.append(emitJumpIfNotImmediateInteger(regT3));
+        slowCases.append(emitJumpIfNotInt(regT3));
         store64(regT3, BaseIndex(regT2, regT1, TimesEight));
         break;
     case DoubleShape: {
-        Jump notInt = emitJumpIfNotImmediateInteger(regT3);
+        Jump notInt = emitJumpIfNotInt(regT3);
         convertInt32ToDouble(regT3, fpRegT0);
         Jump ready = jump();
         notInt.link(this);
@@ -368,6 +383,7 @@ JIT::JumpList JIT::emitArrayStoragePutByVal(Instruction* currentInstruction, Pat
 
     badType = patchableBranch32(NotEqual, regT2, TrustedImm32(ArrayStorageShape));
     loadPtr(Address(regT0, JSObject::butterflyOffset()), regT2);
+    slowCases.append(branchIfNotToSpace(regT2));
     slowCases.append(branch32(AboveOrEqual, regT1, Address(regT2, ArrayStorage::vectorLengthOffset())));
 
     Jump empty = branchTest64(Zero, BaseIndex(regT2, regT1, TimesEight, OBJECT_OFFSETOF(ArrayStorage, m_vector[0])));
@@ -393,16 +409,53 @@ JIT::JumpList JIT::emitArrayStoragePutByVal(Instruction* currentInstruction, Pat
     return slowCases;
 }
 
+JITPutByIdGenerator JIT::emitPutByValWithCachedId(Instruction* currentInstruction, PutKind putKind, const Identifier& propertyName, JumpList& doneCases, JumpList& slowCases)
+{
+    // base: regT0
+    // property: regT1
+    // scratch: regT2
+
+    int base = currentInstruction[1].u.operand;
+    int value = currentInstruction[3].u.operand;
+
+    slowCases.append(emitJumpIfNotJSCell(regT1));
+    emitIdentifierCheck(regT1, regT1, propertyName, slowCases);
+
+    // Write barrier breaks the registers. So after issuing the write barrier,
+    // reload the registers.
+    emitWriteBarrier(base, value, ShouldFilterValue);
+    emitGetVirtualRegisters(base, regT0, value, regT1);
+
+    JITPutByIdGenerator gen(
+        m_codeBlock, CodeOrigin(m_bytecodeOffset), CallSiteIndex(m_bytecodeOffset), RegisterSet::stubUnavailableRegisters(),
+        JSValueRegs(regT0), JSValueRegs(regT1), regT2, m_codeBlock->ecmaMode(), putKind);
+    gen.generateFastPath(*this);
+    doneCases.append(jump());
+
+    Label coldPathBegin = label();
+    gen.slowPathJump().link(this);
+
+    Call call = callOperation(gen.slowPathFunction(), gen.stubInfo(), regT1, regT0, propertyName.impl());
+    gen.reportSlowPathCall(coldPathBegin, call);
+    doneCases.append(jump());
+
+    return gen;
+}
+
 void JIT::emitSlow_op_put_by_val(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
     int base = currentInstruction[1].u.operand;
     int property = currentInstruction[2].u.operand;
     int value = currentInstruction[3].u.operand;
     ArrayProfile* profile = currentInstruction[4].u.arrayProfile;
+    ByValInfo* byValInfo = m_byValCompilationInfo[m_byValInstructionIndex].byValInfo;
 
-    linkSlowCase(iter); // property int32 check
     linkSlowCaseIfNotJSCell(iter, base); // base cell check
+    linkSlowCase(iter); // property int32 check
     linkSlowCase(iter); // base not array check
+
+    linkSlowCase(iter); // read barrier
+    linkSlowCase(iter); // out of bounds
 
     JITArrayMode mode = chooseArrayMode(profile);
     switch (mode) {
@@ -414,17 +467,13 @@ void JIT::emitSlow_op_put_by_val(Instruction* currentInstruction, Vector<SlowCas
         break;
     }
 
-    Jump skipProfiling = jump();
-    linkSlowCase(iter); // out of bounds
-    emitArrayProfileOutOfBoundsSpecialCase(profile);
-    skipProfiling.link(this);
-
     Label slowPath = label();
 
+    emitGetVirtualRegister(base, regT0);
     emitGetVirtualRegister(property, regT1);
     emitGetVirtualRegister(value, regT2);
     bool isDirect = m_interpreter->getOpcodeID(currentInstruction->u.opcode) == op_put_by_val_direct;
-    Call call = callOperation(isDirect ? operationDirectPutByVal : operationPutByVal, regT0, regT1, regT2, profile);
+    Call call = callOperation(isDirect ? operationDirectPutByValOptimize : operationPutByValOptimize, regT0, regT1, regT2, byValInfo);
 
     m_byValCompilationInfo[m_byValInstructionIndex].slowPathTarget = slowPath;
     m_byValCompilationInfo[m_byValInstructionIndex].returnAddress = call;
@@ -441,23 +490,44 @@ void JIT::emit_op_put_by_index(Instruction* currentInstruction)
 void JIT::emit_op_put_getter_by_id(Instruction* currentInstruction)
 {
     emitGetVirtualRegister(currentInstruction[1].u.operand, regT0);
-    emitGetVirtualRegister(currentInstruction[3].u.operand, regT1);
-    callOperation(operationPutGetterById, regT0, &m_codeBlock->identifier(currentInstruction[2].u.operand), regT1);
+    int32_t options = currentInstruction[3].u.operand;
+    emitGetVirtualRegister(currentInstruction[4].u.operand, regT1);
+    callOperation(operationPutGetterById, regT0, m_codeBlock->identifier(currentInstruction[2].u.operand).impl(), options, regT1);
 }
 
 void JIT::emit_op_put_setter_by_id(Instruction* currentInstruction)
 {
     emitGetVirtualRegister(currentInstruction[1].u.operand, regT0);
-    emitGetVirtualRegister(currentInstruction[3].u.operand, regT1);
-    callOperation(operationPutSetterById, regT0, &m_codeBlock->identifier(currentInstruction[2].u.operand), regT1);
+    int32_t options = currentInstruction[3].u.operand;
+    emitGetVirtualRegister(currentInstruction[4].u.operand, regT1);
+    callOperation(operationPutSetterById, regT0, m_codeBlock->identifier(currentInstruction[2].u.operand).impl(), options, regT1);
 }
 
-void JIT::emit_op_put_getter_setter(Instruction* currentInstruction)
+void JIT::emit_op_put_getter_setter_by_id(Instruction* currentInstruction)
 {
     emitGetVirtualRegister(currentInstruction[1].u.operand, regT0);
-    emitGetVirtualRegister(currentInstruction[3].u.operand, regT1);
+    int32_t attribute = currentInstruction[3].u.operand;
+    emitGetVirtualRegister(currentInstruction[4].u.operand, regT1);
+    emitGetVirtualRegister(currentInstruction[5].u.operand, regT2);
+    callOperation(operationPutGetterSetter, regT0, m_codeBlock->identifier(currentInstruction[2].u.operand).impl(), attribute, regT1, regT2);
+}
+
+void JIT::emit_op_put_getter_by_val(Instruction* currentInstruction)
+{
+    emitGetVirtualRegister(currentInstruction[1].u.operand, regT0);
+    emitGetVirtualRegister(currentInstruction[2].u.operand, regT1);
+    int32_t attributes = currentInstruction[3].u.operand;
     emitGetVirtualRegister(currentInstruction[4].u.operand, regT2);
-    callOperation(operationPutGetterSetter, regT0, &m_codeBlock->identifier(currentInstruction[2].u.operand), regT1, regT2);
+    callOperation(operationPutGetterByVal, regT0, regT1, attributes, regT2);
+}
+
+void JIT::emit_op_put_setter_by_val(Instruction* currentInstruction)
+{
+    emitGetVirtualRegister(currentInstruction[1].u.operand, regT0);
+    emitGetVirtualRegister(currentInstruction[2].u.operand, regT1);
+    int32_t attributes = currentInstruction[3].u.operand;
+    emitGetVirtualRegister(currentInstruction[4].u.operand, regT2);
+    callOperation(operationPutSetterByVal, regT0, regT1, attributes, regT2);
 }
 
 void JIT::emit_op_del_by_id(Instruction* currentInstruction)
@@ -483,15 +553,14 @@ void JIT::emit_op_get_by_id(Instruction* currentInstruction)
         emitArrayProfilingSiteForBytecodeIndexWithCell(regT0, regT1, m_bytecodeOffset);
 
     JITGetByIdGenerator gen(
-        m_codeBlock, CodeOrigin(m_bytecodeOffset), RegisterSet::specialRegisters(),
-        JSValueRegs(regT0), JSValueRegs(regT0), DontSpill);
+        m_codeBlock, CodeOrigin(m_bytecodeOffset), CallSiteIndex(m_bytecodeOffset), RegisterSet::stubUnavailableRegisters(),
+        JSValueRegs(regT0), JSValueRegs(regT0));
     gen.generateFastPath(*this);
     addSlowCase(gen.slowPathJump());
     m_getByIds.append(gen);
 
     emitValueProfilingSite();
     emitPutVirtualRegister(resultVReg);
-    assertStackPointerOffset();
 }
 
 void JIT::emitSlow_op_get_by_id(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
@@ -516,7 +585,7 @@ void JIT::emit_op_put_by_id(Instruction* currentInstruction)
 {
     int baseVReg = currentInstruction[1].u.operand;
     int valueVReg = currentInstruction[3].u.operand;
-    unsigned direct = currentInstruction[8].u.operand;
+    unsigned direct = currentInstruction[8].u.putByIdFlags & PutByIdIsDirect;
 
     emitWriteBarrier(baseVReg, valueVReg, ShouldFilterBase);
 
@@ -526,12 +595,11 @@ void JIT::emit_op_put_by_id(Instruction* currentInstruction)
 
     emitGetVirtualRegisters(baseVReg, regT0, valueVReg, regT1);
 
-    // Jump to a slow case if either the base object is an immediate, or if the Structure does not match.
     emitJumpSlowCaseIfNotJSCell(regT0, baseVReg);
 
     JITPutByIdGenerator gen(
-        m_codeBlock, CodeOrigin(m_bytecodeOffset), RegisterSet::specialRegisters(),
-        JSValueRegs(regT0), JSValueRegs(regT1), regT2, DontSpill, m_codeBlock->ecmaMode(),
+        m_codeBlock, CodeOrigin(m_bytecodeOffset), CallSiteIndex(m_bytecodeOffset), RegisterSet::stubUnavailableRegisters(),
+        JSValueRegs(regT0), JSValueRegs(regT1), regT2, m_codeBlock->ecmaMode(),
         direct ? Direct : NotDirect);
 
     gen.generateFastPath(*this);
@@ -558,42 +626,6 @@ void JIT::emitSlow_op_put_by_id(Instruction* currentInstruction, Vector<SlowCase
     gen.reportSlowPathCall(coldPathBegin, call);
 }
 
-// Compile a store into an object's property storage.  May overwrite the
-// value in objectReg.
-void JIT::compilePutDirectOffset(RegisterID base, RegisterID value, PropertyOffset cachedOffset)
-{
-    if (isInlineOffset(cachedOffset)) {
-        store64(value, Address(base, JSObject::offsetOfInlineStorage() + sizeof(JSValue) * offsetInInlineStorage(cachedOffset)));
-        return;
-    }
-
-    loadPtr(Address(base, JSObject::butterflyOffset()), base);
-    store64(value, Address(base, sizeof(JSValue) * offsetInButterfly(cachedOffset)));
-}
-
-// Compile a load from an object's property storage.  May overwrite base.
-void JIT::compileGetDirectOffset(RegisterID base, RegisterID result, PropertyOffset cachedOffset)
-{
-    if (isInlineOffset(cachedOffset)) {
-        load64(Address(base, JSObject::offsetOfInlineStorage() + sizeof(JSValue) * offsetInInlineStorage(cachedOffset)), result);
-        return;
-    }
-
-    loadPtr(Address(base, JSObject::butterflyOffset()), result);
-    load64(Address(result, sizeof(JSValue) * offsetInButterfly(cachedOffset)), result);
-}
-
-void JIT::compileGetDirectOffset(JSObject* base, RegisterID result, PropertyOffset cachedOffset)
-{
-    if (isInlineOffset(cachedOffset)) {
-        load64(base->locationForOffset(cachedOffset), result);
-        return;
-    }
-
-    loadPtr(base->butterflyAddress(), result);
-    load64(Address(result, offsetInButterfly(cachedOffset) * sizeof(WriteBarrier<Unknown>)), result);
-}
-
 void JIT::emitVarInjectionCheck(bool needsVarInjectionChecks)
 {
     if (!needsVarInjectionChecks)
@@ -617,39 +649,90 @@ void JIT::emit_op_resolve_scope(Instruction* currentInstruction)
     ResolveType resolveType = static_cast<ResolveType>(currentInstruction[4].u.operand);
     unsigned depth = currentInstruction[5].u.operand;
 
+    auto emitCode = [&] (ResolveType resolveType) {
+        switch (resolveType) {
+        case GlobalProperty:
+        case GlobalVar:
+        case GlobalPropertyWithVarInjectionChecks:
+        case GlobalVarWithVarInjectionChecks:
+        case GlobalLexicalVar:
+        case GlobalLexicalVarWithVarInjectionChecks: {
+            JSScope* constantScope = JSScope::constantScopeForCodeBlock(resolveType, m_codeBlock);
+            RELEASE_ASSERT(constantScope);
+            emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
+            move(TrustedImmPtr(constantScope), regT0);
+            emitPutVirtualRegister(dst);
+            break;
+        }
+        case ClosureVar:
+        case ClosureVarWithVarInjectionChecks:
+            emitResolveClosure(dst, scope, needsVarInjectionChecks(resolveType), depth);
+            break;
+        case ModuleVar:
+            move(TrustedImmPtr(currentInstruction[6].u.jsCell.get()), regT0);
+            emitPutVirtualRegister(dst);
+            break;
+        case Dynamic:
+            addSlowCase(jump());
+            break;
+        case LocalClosureVar:
+        case UnresolvedProperty:
+        case UnresolvedPropertyWithVarInjectionChecks:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+    };
+
     switch (resolveType) {
-    case GlobalProperty:
-    case GlobalVar:
-    case GlobalPropertyWithVarInjectionChecks:
-    case GlobalVarWithVarInjectionChecks:
-        emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
-        move(TrustedImmPtr(m_codeBlock->globalObject()), regT0);
-        emitPutVirtualRegister(dst);
-        break;
-    case ClosureVar:
-    case ClosureVarWithVarInjectionChecks:
-        emitResolveClosure(dst, scope, needsVarInjectionChecks(resolveType), depth);
-        break;
-    case Dynamic:
+    case UnresolvedProperty:
+    case UnresolvedPropertyWithVarInjectionChecks: {
+        JumpList skipToEnd;
+        load32(&currentInstruction[4], regT0);
+
+        Jump notGlobalProperty = branch32(NotEqual, regT0, TrustedImm32(GlobalProperty));
+        emitCode(GlobalProperty);
+        skipToEnd.append(jump());
+        notGlobalProperty.link(this);
+
+        Jump notGlobalPropertyWithVarInjections = branch32(NotEqual, regT0, TrustedImm32(GlobalPropertyWithVarInjectionChecks));
+        emitCode(GlobalPropertyWithVarInjectionChecks);
+        skipToEnd.append(jump());
+        notGlobalPropertyWithVarInjections.link(this);
+
+        Jump notGlobalLexicalVar = branch32(NotEqual, regT0, TrustedImm32(GlobalLexicalVar));
+        emitCode(GlobalLexicalVar);
+        skipToEnd.append(jump());
+        notGlobalLexicalVar.link(this);
+
+        Jump notGlobalLexicalVarWithVarInjections = branch32(NotEqual, regT0, TrustedImm32(GlobalLexicalVarWithVarInjectionChecks));
+        emitCode(GlobalLexicalVarWithVarInjectionChecks);
+        skipToEnd.append(jump());
+        notGlobalLexicalVarWithVarInjections.link(this);
+
         addSlowCase(jump());
+        skipToEnd.link(this);
         break;
-    case LocalClosureVar:
-        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    default:
+        emitCode(resolveType);
+        break;
     }
 }
 
 void JIT::emitSlow_op_resolve_scope(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    int dst = currentInstruction[1].u.operand;
     ResolveType resolveType = static_cast<ResolveType>(currentInstruction[4].u.operand);
-
-    if (resolveType == GlobalProperty || resolveType == GlobalVar || resolveType == ClosureVar)
+    if (resolveType == GlobalProperty || resolveType == GlobalVar || resolveType == ClosureVar || resolveType == GlobalLexicalVar || resolveType == ModuleVar)
         return;
 
+    if (resolveType == UnresolvedProperty || resolveType == UnresolvedPropertyWithVarInjectionChecks) {
+        linkSlowCase(iter); // var injections check for GlobalPropertyWithVarInjectionChecks.
+        linkSlowCase(iter); // var injections check for GlobalLexicalVarWithVarInjectionChecks.
+    }
+
     linkSlowCase(iter);
-    int32_t scope = currentInstruction[2].u.operand;
-    int32_t identifierIndex = currentInstruction[3].u.operand;
-    callOperation(operationResolveScope, dst, scope, identifierIndex);
+    JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_resolve_scope);
+    slowPathCall.call();
 }
 
 void JIT::emitLoadWithStructureCheck(int scope, Structure** structureSlot)
@@ -661,15 +744,15 @@ void JIT::emitLoadWithStructureCheck(int scope, Structure** structureSlot)
     addSlowCase(branch32(NotEqual, Address(regT0, JSCell::structureIDOffset()), regT1));
 }
 
-void JIT::emitGetGlobalProperty(uintptr_t* operandSlot)
+void JIT::emitGetVarFromPointer(JSValue* operand, GPRReg reg)
 {
-    load32(operandSlot, regT1);
-    compileGetDirectOffset(regT0, regT0, regT1, regT2, KnownNotFinal);
+    loadPtr(operand, reg);
 }
 
-void JIT::emitGetGlobalVar(uintptr_t operand)
+void JIT::emitGetVarFromIndirectPointer(JSValue** operand, GPRReg reg)
 {
-    loadPtr(reinterpret_cast<void*>(operand), regT0);
+    loadPtr(operand, reg);
+    loadPtr(reg, reg);
 }
 
 void JIT::emitGetClosureVar(int scope, uintptr_t operand)
@@ -682,31 +765,94 @@ void JIT::emit_op_get_from_scope(Instruction* currentInstruction)
 {
     int dst = currentInstruction[1].u.operand;
     int scope = currentInstruction[2].u.operand;
-    ResolveType resolveType = ResolveModeAndType(currentInstruction[4].u.operand).type();
+    ResolveType resolveType = GetPutInfo(currentInstruction[4].u.operand).resolveType();
     Structure** structureSlot = currentInstruction[5].u.structure.slot();
     uintptr_t* operandSlot = reinterpret_cast<uintptr_t*>(&currentInstruction[6].u.pointer);
 
+    auto emitCode = [&] (ResolveType resolveType, bool indirectLoadForOperand) {
+        switch (resolveType) {
+        case GlobalProperty:
+        case GlobalPropertyWithVarInjectionChecks: {
+            emitLoadWithStructureCheck(scope, structureSlot); // Structure check covers var injection.
+            GPRReg base = regT0;
+            GPRReg result = regT0;
+            GPRReg offset = regT1;
+            GPRReg scratch = regT2;
+
+            load32(operandSlot, offset);
+            if (!ASSERT_DISABLED) {
+                Jump isOutOfLine = branch32(GreaterThanOrEqual, offset, TrustedImm32(firstOutOfLineOffset));
+                abortWithReason(JITOffsetIsNotOutOfLine);
+                isOutOfLine.link(this);
+            }
+            loadPtr(Address(base, JSObject::butterflyOffset()), scratch);
+            addSlowCase(branchIfNotToSpace(scratch));
+            neg32(offset);
+            signExtend32ToPtr(offset, offset);
+            load64(BaseIndex(scratch, offset, TimesEight, (firstOutOfLineOffset - 2) * sizeof(EncodedJSValue)), result);
+            break;
+        }
+        case GlobalVar:
+        case GlobalVarWithVarInjectionChecks:
+        case GlobalLexicalVar:
+        case GlobalLexicalVarWithVarInjectionChecks:
+            emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
+            if (indirectLoadForOperand)
+                emitGetVarFromIndirectPointer(bitwise_cast<JSValue**>(operandSlot), regT0);
+            else
+                emitGetVarFromPointer(bitwise_cast<JSValue*>(*operandSlot), regT0);
+            if (resolveType == GlobalLexicalVar || resolveType == GlobalLexicalVarWithVarInjectionChecks) // TDZ check.
+                addSlowCase(branchTest64(Zero, regT0));
+            break;
+        case ClosureVar:
+        case ClosureVarWithVarInjectionChecks:
+            emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
+            emitGetClosureVar(scope, *operandSlot);
+            break;
+        case Dynamic:
+            addSlowCase(jump());
+            break;
+        case LocalClosureVar:
+        case ModuleVar:
+        case UnresolvedProperty:
+        case UnresolvedPropertyWithVarInjectionChecks:
+            RELEASE_ASSERT_NOT_REACHED();
+        }
+    };
+
     switch (resolveType) {
-    case GlobalProperty:
-    case GlobalPropertyWithVarInjectionChecks:
-        emitLoadWithStructureCheck(scope, structureSlot); // Structure check covers var injection.
-        emitGetGlobalProperty(operandSlot);
-        break;
-    case GlobalVar:
-    case GlobalVarWithVarInjectionChecks:
-        emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
-        emitGetGlobalVar(*operandSlot);
-        break;
-    case ClosureVar:
-    case ClosureVarWithVarInjectionChecks:
-        emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
-        emitGetClosureVar(scope, *operandSlot);
-        break;
-    case Dynamic:
+    case UnresolvedProperty:
+    case UnresolvedPropertyWithVarInjectionChecks: {
+        JumpList skipToEnd;
+        load32(&currentInstruction[4], regT0);
+        and32(TrustedImm32(GetPutInfo::typeBits), regT0); // Load ResolveType into T0
+
+        Jump isGlobalProperty = branch32(Equal, regT0, TrustedImm32(GlobalProperty));
+        Jump notGlobalPropertyWithVarInjections = branch32(NotEqual, regT0, TrustedImm32(GlobalPropertyWithVarInjectionChecks));
+        isGlobalProperty.link(this);
+        emitCode(GlobalProperty, false);
+        skipToEnd.append(jump());
+        notGlobalPropertyWithVarInjections.link(this);
+
+        Jump notGlobalLexicalVar = branch32(NotEqual, regT0, TrustedImm32(GlobalLexicalVar));
+        emitCode(GlobalLexicalVar, true);
+        skipToEnd.append(jump());
+        notGlobalLexicalVar.link(this);
+
+        Jump notGlobalLexicalVarWithVarInjections = branch32(NotEqual, regT0, TrustedImm32(GlobalLexicalVarWithVarInjectionChecks));
+        emitCode(GlobalLexicalVarWithVarInjectionChecks, true);
+        skipToEnd.append(jump());
+        notGlobalLexicalVarWithVarInjections.link(this);
+
         addSlowCase(jump());
+
+        skipToEnd.link(this);
         break;
-    case LocalClosureVar:
-        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    default:
+        emitCode(resolveType, false);
+        break;
     }
     emitPutVirtualRegister(dst);
     emitValueProfilingSite();
@@ -715,32 +861,49 @@ void JIT::emit_op_get_from_scope(Instruction* currentInstruction)
 void JIT::emitSlow_op_get_from_scope(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
     int dst = currentInstruction[1].u.operand;
-    ResolveType resolveType = ResolveModeAndType(currentInstruction[4].u.operand).type();
+    ResolveType resolveType = GetPutInfo(currentInstruction[4].u.operand).resolveType();
 
     if (resolveType == GlobalVar || resolveType == ClosureVar)
         return;
 
-    if (resolveType == GlobalProperty || resolveType == GlobalPropertyWithVarInjectionChecks)
+    if (resolveType == GlobalProperty || resolveType == GlobalPropertyWithVarInjectionChecks) {
+        linkSlowCase(iter); // bad structure
+        linkSlowCase(iter); // read barrier
+    }
+
+    if (resolveType == GlobalLexicalVarWithVarInjectionChecks) // Var injections check.
         linkSlowCase(iter);
+
+    if (resolveType == UnresolvedProperty || resolveType == UnresolvedPropertyWithVarInjectionChecks) {
+        // GlobalProperty/GlobalPropertyWithVarInjectionChecks
+        linkSlowCase(iter); // emitLoadWithStructureCheck
+        linkSlowCase(iter); // emitLoadWithStructureCheck
+        linkSlowCase(iter); // read barrier
+        // GlobalLexicalVar
+        linkSlowCase(iter); // TDZ check.
+        // GlobalLexicalVarWithVarInjectionChecks.
+        linkSlowCase(iter); // var injection check.
+        linkSlowCase(iter); // TDZ check.
+    }
+
     linkSlowCase(iter);
+
     callOperation(WithProfile, operationGetFromScope, dst, currentInstruction);
 }
 
-void JIT::emitPutGlobalProperty(uintptr_t* operandSlot, int value)
-{
-    emitGetVirtualRegister(value, regT2);
-
-    loadPtr(Address(regT0, JSObject::butterflyOffset()), regT0);
-    loadPtr(operandSlot, regT1);
-    negPtr(regT1);
-    storePtr(regT2, BaseIndex(regT0, regT1, TimesEight, (firstOutOfLineOffset - 2) * sizeof(EncodedJSValue)));
-}
-
-void JIT::emitPutGlobalVar(uintptr_t operand, int value, WatchpointSet* set)
+void JIT::emitPutGlobalVariable(JSValue* operand, int value, WatchpointSet* set)
 {
     emitGetVirtualRegister(value, regT0);
     emitNotifyWrite(set);
-    storePtr(regT0, reinterpret_cast<void*>(operand));
+    storePtr(regT0, operand);
+}
+void JIT::emitPutGlobalVariableIndirect(JSValue** addressOfOperand, int value, WatchpointSet** indirectWatchpointSet)
+{
+    emitGetVirtualRegister(value, regT0);
+    loadPtr(indirectWatchpointSet, regT1);
+    emitNotifyWrite(regT1);
+    loadPtr(addressOfOperand, regT1);
+    storePtr(regT0, regT1);
 }
 
 void JIT::emitPutClosureVar(int scope, uintptr_t operand, int value, WatchpointSet* set)
@@ -755,52 +918,148 @@ void JIT::emit_op_put_to_scope(Instruction* currentInstruction)
 {
     int scope = currentInstruction[1].u.operand;
     int value = currentInstruction[3].u.operand;
-    ResolveType resolveType = ResolveModeAndType(currentInstruction[4].u.operand).type();
+    GetPutInfo getPutInfo = GetPutInfo(currentInstruction[4].u.operand);
+    ResolveType resolveType = getPutInfo.resolveType();
     Structure** structureSlot = currentInstruction[5].u.structure.slot();
     uintptr_t* operandSlot = reinterpret_cast<uintptr_t*>(&currentInstruction[6].u.pointer);
 
+    auto emitCode = [&] (ResolveType resolveType, bool indirectLoadForOperand) {
+        switch (resolveType) {
+        case GlobalProperty:
+        case GlobalPropertyWithVarInjectionChecks: {
+            emitWriteBarrier(m_codeBlock->globalObject(), value, ShouldFilterValue);
+            emitLoadWithStructureCheck(scope, structureSlot); // Structure check covers var injection.
+            emitGetVirtualRegister(value, regT2);
+
+            loadPtr(Address(regT0, JSObject::butterflyOffset()), regT0);
+            addSlowCase(branchIfNotToSpace(regT0));
+            loadPtr(operandSlot, regT1);
+            negPtr(regT1);
+            storePtr(regT2, BaseIndex(regT0, regT1, TimesEight, (firstOutOfLineOffset - 2) * sizeof(EncodedJSValue)));
+            break;
+        }
+        case GlobalVar:
+        case GlobalVarWithVarInjectionChecks:
+        case GlobalLexicalVar:
+        case GlobalLexicalVarWithVarInjectionChecks: {
+            JSScope* constantScope = JSScope::constantScopeForCodeBlock(resolveType, m_codeBlock);
+            RELEASE_ASSERT(constantScope);
+            emitWriteBarrier(constantScope, value, ShouldFilterValue);
+            emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
+            if (getPutInfo.initializationMode() != Initialization && (resolveType == GlobalLexicalVar || resolveType == GlobalLexicalVarWithVarInjectionChecks)) {
+                // We need to do a TDZ check here because we can't always prove we need to emit TDZ checks statically.
+                if (indirectLoadForOperand)
+                    emitGetVarFromIndirectPointer(bitwise_cast<JSValue**>(operandSlot), regT0);
+                else
+                    emitGetVarFromPointer(bitwise_cast<JSValue*>(*operandSlot), regT0);
+                addSlowCase(branchTest64(Zero, regT0));
+            }
+            if (indirectLoadForOperand)
+                emitPutGlobalVariableIndirect(bitwise_cast<JSValue**>(operandSlot), value, bitwise_cast<WatchpointSet**>(&currentInstruction[5]));
+            else
+                emitPutGlobalVariable(bitwise_cast<JSValue*>(*operandSlot), value, currentInstruction[5].u.watchpointSet);
+            break;
+        }
+        case LocalClosureVar:
+        case ClosureVar:
+        case ClosureVarWithVarInjectionChecks:
+            emitWriteBarrier(scope, value, ShouldFilterValue);
+            emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
+            emitPutClosureVar(scope, *operandSlot, value, currentInstruction[5].u.watchpointSet);
+            break;
+        case ModuleVar:
+        case Dynamic:
+            addSlowCase(jump());
+            break;
+        case UnresolvedProperty:
+        case UnresolvedPropertyWithVarInjectionChecks:
+            RELEASE_ASSERT_NOT_REACHED();
+            break;
+        }
+    };
+
     switch (resolveType) {
-    case GlobalProperty:
-    case GlobalPropertyWithVarInjectionChecks:
-        emitWriteBarrier(m_codeBlock->globalObject(), value, ShouldFilterValue);
-        emitLoadWithStructureCheck(scope, structureSlot); // Structure check covers var injection.
-        emitPutGlobalProperty(operandSlot, value);
-        break;
-    case GlobalVar:
-    case GlobalVarWithVarInjectionChecks:
-        emitWriteBarrier(m_codeBlock->globalObject(), value, ShouldFilterValue);
-        emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
-        emitPutGlobalVar(*operandSlot, value, currentInstruction[5].u.watchpointSet);
-        break;
-    case LocalClosureVar:
-    case ClosureVar:
-    case ClosureVarWithVarInjectionChecks:
-        emitWriteBarrier(scope, value, ShouldFilterValue);
-        emitVarInjectionCheck(needsVarInjectionChecks(resolveType));
-        emitPutClosureVar(scope, *operandSlot, value, currentInstruction[5].u.watchpointSet);
-        break;
-    case Dynamic:
+    case UnresolvedProperty:
+    case UnresolvedPropertyWithVarInjectionChecks: {
+        JumpList skipToEnd;
+        load32(&currentInstruction[4], regT0);
+        and32(TrustedImm32(GetPutInfo::typeBits), regT0); // Load ResolveType into T0
+
+        Jump isGlobalProperty = branch32(Equal, regT0, TrustedImm32(GlobalProperty));
+        Jump notGlobalPropertyWithVarInjections = branch32(NotEqual, regT0, TrustedImm32(GlobalPropertyWithVarInjectionChecks));
+        isGlobalProperty.link(this);
+        emitCode(GlobalProperty, false);
+        skipToEnd.append(jump());
+        notGlobalPropertyWithVarInjections.link(this);
+
+        Jump notGlobalLexicalVar = branch32(NotEqual, regT0, TrustedImm32(GlobalLexicalVar));
+        emitCode(GlobalLexicalVar, true);
+        skipToEnd.append(jump());
+        notGlobalLexicalVar.link(this);
+
+        Jump notGlobalLexicalVarWithVarInjections = branch32(NotEqual, regT0, TrustedImm32(GlobalLexicalVarWithVarInjectionChecks));
+        emitCode(GlobalLexicalVarWithVarInjectionChecks, true);
+        skipToEnd.append(jump());
+        notGlobalLexicalVarWithVarInjections.link(this);
+
         addSlowCase(jump());
+
+        skipToEnd.link(this);
+        break;
+    }
+
+    default:
+        emitCode(resolveType, false);
         break;
     }
 }
 
 void JIT::emitSlow_op_put_to_scope(Instruction* currentInstruction, Vector<SlowCaseEntry>::iterator& iter)
 {
-    ResolveType resolveType = ResolveModeAndType(currentInstruction[4].u.operand).type();
+    GetPutInfo getPutInfo = GetPutInfo(currentInstruction[4].u.operand);
+    ResolveType resolveType = getPutInfo.resolveType();
     unsigned linkCount = 0;
-    if (resolveType != GlobalVar && resolveType != ClosureVar && resolveType != LocalClosureVar)
+    if (resolveType != GlobalVar && resolveType != ClosureVar && resolveType != LocalClosureVar && resolveType != GlobalLexicalVar)
         linkCount++;
-    if ((resolveType == GlobalVar || resolveType == GlobalVarWithVarInjectionChecks || resolveType == LocalClosureVar)
+    if ((resolveType == GlobalVar || resolveType == GlobalVarWithVarInjectionChecks
+         || resolveType == GlobalLexicalVar || resolveType == GlobalLexicalVarWithVarInjectionChecks
+         || resolveType == LocalClosureVar)
         && currentInstruction[5].u.watchpointSet->state() != IsInvalidated)
         linkCount++;
-    if (resolveType == GlobalProperty || resolveType == GlobalPropertyWithVarInjectionChecks)
+    if (resolveType == GlobalProperty || resolveType == GlobalPropertyWithVarInjectionChecks) {
+        linkCount++; // bad structure
+        linkCount++; // read barrier
+    }
+    if (getPutInfo.initializationMode() != Initialization && (resolveType == GlobalLexicalVar || resolveType == GlobalLexicalVarWithVarInjectionChecks)) // TDZ check.
         linkCount++;
+    if (resolveType == UnresolvedProperty || resolveType == UnresolvedPropertyWithVarInjectionChecks) {
+        // GlobalProperty/GlobalPropertyWithVarInjectionsCheck
+        linkCount++; // emitLoadWithStructureCheck
+        linkCount++; // emitLoadWithStructureCheck
+        linkCount++; // read barrier
+
+        // GlobalLexicalVar
+        bool needsTDZCheck = getPutInfo.initializationMode() != Initialization;
+        if (needsTDZCheck)
+            linkCount++;
+        linkCount++; // Notify write check.
+
+        // GlobalLexicalVarWithVarInjectionsCheck
+        linkCount++; // var injection check.
+        if (needsTDZCheck)
+            linkCount++;
+        linkCount++; // Notify write check.
+    }
     if (!linkCount)
         return;
     while (linkCount--)
         linkSlowCase(iter);
-    callOperation(operationPutToScope, currentInstruction);
+
+    if (resolveType == ModuleVar) {
+        JITSlowPathCall slowPathCall(this, currentInstruction, slow_path_throw_strict_mode_readonly_property_write_error);
+        slowPathCall.call();
+    } else
+        callOperation(operationPutToScope, currentInstruction);
 }
 
 void JIT::emit_op_get_from_arguments(Instruction* currentInstruction)
@@ -833,7 +1092,6 @@ void JIT::emit_op_put_to_arguments(Instruction* currentInstruction)
 #if USE(JSVALUE64)
 void JIT::emitWriteBarrier(unsigned owner, unsigned value, WriteBarrierMode mode)
 {
-#if ENABLE(GGC)
     Jump valueNotCell;
     if (mode == ShouldFilterValue || mode == ShouldFilterBaseAndValue) {
         emitGetVirtualRegister(value, regT0);
@@ -853,16 +1111,10 @@ void JIT::emitWriteBarrier(unsigned owner, unsigned value, WriteBarrierMode mode
         ownerNotCell.link(this);
     if (mode == ShouldFilterValue || mode == ShouldFilterBaseAndValue)
         valueNotCell.link(this);
-#else
-    UNUSED_PARAM(owner);
-    UNUSED_PARAM(value);
-    UNUSED_PARAM(mode);
-#endif
 }
 
 void JIT::emitWriteBarrier(JSCell* owner, unsigned value, WriteBarrierMode mode)
 {
-#if ENABLE(GGC)
     emitGetVirtualRegister(value, regT0);
     Jump valueNotCell;
     if (mode == ShouldFilterValue)
@@ -872,18 +1124,12 @@ void JIT::emitWriteBarrier(JSCell* owner, unsigned value, WriteBarrierMode mode)
 
     if (mode == ShouldFilterValue)
         valueNotCell.link(this);
-#else
-    UNUSED_PARAM(owner);
-    UNUSED_PARAM(value);
-    UNUSED_PARAM(mode);
-#endif
 }
 
 #else // USE(JSVALUE64)
 
 void JIT::emitWriteBarrier(unsigned owner, unsigned value, WriteBarrierMode mode)
 {
-#if ENABLE(GGC)
     Jump valueNotCell;
     if (mode == ShouldFilterValue || mode == ShouldFilterBaseAndValue) {
         emitLoadTag(value, regT0);
@@ -903,16 +1149,10 @@ void JIT::emitWriteBarrier(unsigned owner, unsigned value, WriteBarrierMode mode
         ownerNotCell.link(this);
     if (mode == ShouldFilterValue || mode == ShouldFilterBaseAndValue)
         valueNotCell.link(this);
-#else
-    UNUSED_PARAM(owner);
-    UNUSED_PARAM(value);
-    UNUSED_PARAM(mode);
-#endif
 }
 
 void JIT::emitWriteBarrier(JSCell* owner, unsigned value, WriteBarrierMode mode)
 {
-#if ENABLE(GGC)
     Jump valueNotCell;
     if (mode == ShouldFilterValue) {
         emitLoadTag(value, regT0);
@@ -923,27 +1163,30 @@ void JIT::emitWriteBarrier(JSCell* owner, unsigned value, WriteBarrierMode mode)
 
     if (mode == ShouldFilterValue)
         valueNotCell.link(this);
-#else
-    UNUSED_PARAM(owner);
-    UNUSED_PARAM(value);
-    UNUSED_PARAM(mode);
-#endif
 }
 
 #endif // USE(JSVALUE64)
 
 void JIT::emitWriteBarrier(JSCell* owner)
 {
-#if ENABLE(GGC)
     if (!MarkedBlock::blockFor(owner)->isMarked(owner)) {
         Jump ownerIsRememberedOrInEden = jumpIfIsRememberedOrInEden(owner);
         callOperation(operationUnconditionalWriteBarrier, owner);
         ownerIsRememberedOrInEden.link(this);
     } else
         callOperation(operationUnconditionalWriteBarrier, owner);
-#else
-    UNUSED_PARAM(owner);
-#endif // ENABLE(GGC)
+}
+
+void JIT::emitIdentifierCheck(RegisterID cell, RegisterID scratch, const Identifier& propertyName, JumpList& slowCases)
+{
+    if (propertyName.isSymbol()) {
+        slowCases.append(branchStructure(NotEqual, Address(cell, JSCell::structureIDOffset()), m_vm->symbolStructure.get()));
+        loadPtr(Address(cell, Symbol::offsetOfPrivateName()), scratch);
+    } else {
+        slowCases.append(branchStructure(NotEqual, Address(cell, JSCell::structureIDOffset()), m_vm->stringStructure.get()));
+        loadPtr(Address(cell, JSString::offsetOfValue()), scratch);
+    }
+    slowCases.append(branchPtr(NotEqual, scratch, TrustedImmPtr(propertyName.impl())));
 }
 
 void JIT::privateCompileGetByVal(ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
@@ -994,9 +1237,39 @@ void JIT::privateCompileGetByVal(ByValInfo* byValInfo, ReturnAddressPtr returnAd
         m_codeBlock, patchBuffer,
         ("Baseline get_by_val stub for %s, return point %p", toCString(*m_codeBlock).data(), returnAddress.value()));
 
-    RepatchBuffer repatchBuffer(m_codeBlock);
-    repatchBuffer.relink(byValInfo->badTypeJump, CodeLocationLabel(byValInfo->stubRoutine->code().code()));
-    repatchBuffer.relinkCallerToFunction(returnAddress, FunctionPtr(operationGetByValGeneric));
+    MacroAssembler::repatchJump(byValInfo->badTypeJump, CodeLocationLabel(byValInfo->stubRoutine->code().code()));
+    MacroAssembler::repatchCall(CodeLocationCall(MacroAssemblerCodePtr(returnAddress)), FunctionPtr(operationGetByValGeneric));
+}
+
+void JIT::privateCompileGetByValWithCachedId(ByValInfo* byValInfo, ReturnAddressPtr returnAddress, const Identifier& propertyName)
+{
+    Instruction* currentInstruction = m_codeBlock->instructions().begin() + byValInfo->bytecodeIndex;
+
+    Jump fastDoneCase;
+    Jump slowDoneCase;
+    JumpList slowCases;
+
+    JITGetByIdGenerator gen = emitGetByValWithCachedId(currentInstruction, propertyName, fastDoneCase, slowDoneCase, slowCases);
+
+    ConcurrentJITLocker locker(m_codeBlock->m_lock);
+    LinkBuffer patchBuffer(*m_vm, *this, m_codeBlock);
+    patchBuffer.link(slowCases, CodeLocationLabel(MacroAssemblerCodePtr::createFromExecutableAddress(returnAddress.value())).labelAtOffset(byValInfo->returnAddressToSlowPath));
+    patchBuffer.link(fastDoneCase, byValInfo->badTypeJump.labelAtOffset(byValInfo->badTypeJumpToDone));
+    patchBuffer.link(slowDoneCase, byValInfo->badTypeJump.labelAtOffset(byValInfo->badTypeJumpToNextHotPath));
+
+    for (const auto& callSite : m_calls) {
+        if (callSite.to)
+            patchBuffer.link(callSite.from, FunctionPtr(callSite.to));
+    }
+    gen.finalize(patchBuffer);
+
+    byValInfo->stubRoutine = FINALIZE_CODE_FOR_STUB(
+        m_codeBlock, patchBuffer,
+        ("Baseline get_by_val with cached property name '%s' stub for %s, return point %p", propertyName.impl()->utf8().data(), toCString(*m_codeBlock).data(), returnAddress.value()));
+    byValInfo->stubInfo = gen.stubInfo();
+
+    MacroAssembler::repatchJump(byValInfo->notIndexJump, CodeLocationLabel(byValInfo->stubRoutine->code().code()));
+    MacroAssembler::repatchCall(CodeLocationCall(MacroAssemblerCodePtr(returnAddress)), FunctionPtr(operationGetByValGeneric));
 }
 
 void JIT::privateCompilePutByVal(ByValInfo* byValInfo, ReturnAddressPtr returnAddress, JITArrayMode arrayMode)
@@ -1006,9 +1279,7 @@ void JIT::privateCompilePutByVal(ByValInfo* byValInfo, ReturnAddressPtr returnAd
     PatchableJump badType;
     JumpList slowCases;
 
-#if ENABLE(GGC)
     bool needsLinkForWriteBarrier = false;
-#endif
 
     switch (arrayMode) {
     case JITInt32:
@@ -1019,15 +1290,11 @@ void JIT::privateCompilePutByVal(ByValInfo* byValInfo, ReturnAddressPtr returnAd
         break;
     case JITContiguous:
         slowCases = emitContiguousPutByVal(currentInstruction, badType);
-#if ENABLE(GGC)
         needsLinkForWriteBarrier = true;
-#endif
         break;
     case JITArrayStorage:
         slowCases = emitArrayStoragePutByVal(currentInstruction, badType);
-#if ENABLE(GGC)
         needsLinkForWriteBarrier = true;
-#endif
         break;
     default:
         TypedArrayType type = typedArrayTypeForJITArrayMode(arrayMode);
@@ -1044,12 +1311,10 @@ void JIT::privateCompilePutByVal(ByValInfo* byValInfo, ReturnAddressPtr returnAd
     patchBuffer.link(badType, CodeLocationLabel(MacroAssemblerCodePtr::createFromExecutableAddress(returnAddress.value())).labelAtOffset(byValInfo->returnAddressToSlowPath));
     patchBuffer.link(slowCases, CodeLocationLabel(MacroAssemblerCodePtr::createFromExecutableAddress(returnAddress.value())).labelAtOffset(byValInfo->returnAddressToSlowPath));
     patchBuffer.link(done, byValInfo->badTypeJump.labelAtOffset(byValInfo->badTypeJumpToDone));
-#if ENABLE(GGC)
     if (needsLinkForWriteBarrier) {
         ASSERT(m_calls.last().to == operationUnconditionalWriteBarrier);
         patchBuffer.link(m_calls.last().from, operationUnconditionalWriteBarrier);
     }
-#endif
 
     bool isDirect = m_interpreter->getOpcodeID(currentInstruction->u.opcode) == op_put_by_val_direct;
     if (!isDirect) {
@@ -1062,10 +1327,38 @@ void JIT::privateCompilePutByVal(ByValInfo* byValInfo, ReturnAddressPtr returnAd
             m_codeBlock, patchBuffer,
             ("Baseline put_by_val_direct stub for %s, return point %p", toCString(*m_codeBlock).data(), returnAddress.value()));
     }
-    RepatchBuffer repatchBuffer(m_codeBlock);
-    repatchBuffer.relink(byValInfo->badTypeJump, CodeLocationLabel(byValInfo->stubRoutine->code().code()));
-    repatchBuffer.relinkCallerToFunction(returnAddress, FunctionPtr(isDirect ? operationDirectPutByValGeneric : operationPutByValGeneric));
+    MacroAssembler::repatchJump(byValInfo->badTypeJump, CodeLocationLabel(byValInfo->stubRoutine->code().code()));
+    MacroAssembler::repatchCall(CodeLocationCall(MacroAssemblerCodePtr(returnAddress)), FunctionPtr(isDirect ? operationDirectPutByValGeneric : operationPutByValGeneric));
 }
+
+void JIT::privateCompilePutByValWithCachedId(ByValInfo* byValInfo, ReturnAddressPtr returnAddress, PutKind putKind, const Identifier& propertyName)
+{
+    Instruction* currentInstruction = m_codeBlock->instructions().begin() + byValInfo->bytecodeIndex;
+
+    JumpList doneCases;
+    JumpList slowCases;
+
+    JITPutByIdGenerator gen = emitPutByValWithCachedId(currentInstruction, putKind, propertyName, doneCases, slowCases);
+
+    ConcurrentJITLocker locker(m_codeBlock->m_lock);
+    LinkBuffer patchBuffer(*m_vm, *this, m_codeBlock);
+    patchBuffer.link(slowCases, CodeLocationLabel(MacroAssemblerCodePtr::createFromExecutableAddress(returnAddress.value())).labelAtOffset(byValInfo->returnAddressToSlowPath));
+    patchBuffer.link(doneCases, byValInfo->badTypeJump.labelAtOffset(byValInfo->badTypeJumpToDone));
+    for (const auto& callSite : m_calls) {
+        if (callSite.to)
+            patchBuffer.link(callSite.from, FunctionPtr(callSite.to));
+    }
+    gen.finalize(patchBuffer);
+
+    byValInfo->stubRoutine = FINALIZE_CODE_FOR_STUB(
+        m_codeBlock, patchBuffer,
+        ("Baseline put_by_val%s with cached property name '%s' stub for %s, return point %p", (putKind == Direct) ? "_direct" : "", propertyName.impl()->utf8().data(), toCString(*m_codeBlock).data(), returnAddress.value()));
+    byValInfo->stubInfo = gen.stubInfo();
+
+    MacroAssembler::repatchJump(byValInfo->notIndexJump, CodeLocationLabel(byValInfo->stubRoutine->code().code()));
+    MacroAssembler::repatchCall(CodeLocationCall(MacroAssemblerCodePtr(returnAddress)), FunctionPtr(putKind == Direct ? operationDirectPutByValGeneric : operationPutByValGeneric));
+}
+
 
 JIT::JumpList JIT::emitDirectArgumentsGetByVal(Instruction*, PatchableJump& badType)
 {
@@ -1161,23 +1454,23 @@ JIT::JumpList JIT::emitIntTypedArrayGetByVal(Instruction*, PatchableJump& badTyp
     load8(Address(base, JSCell::typeInfoTypeOffset()), scratch);
     badType = patchableBranch32(NotEqual, scratch, TrustedImm32(typeForTypedArrayType(type)));
     slowCases.append(branch32(AboveOrEqual, property, Address(base, JSArrayBufferView::offsetOfLength())));
-    loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), base);
+    slowCases.append(loadTypedArrayVector(base, scratch));
 
     switch (elementSize(type)) {
     case 1:
-        if (isSigned(type))
-            load8SignedExtendTo32(BaseIndex(base, property, TimesOne), resultPayload);
+        if (JSC::isSigned(type))
+            load8SignedExtendTo32(BaseIndex(scratch, property, TimesOne), resultPayload);
         else
-            load8(BaseIndex(base, property, TimesOne), resultPayload);
+            load8(BaseIndex(scratch, property, TimesOne), resultPayload);
         break;
     case 2:
-        if (isSigned(type))
-            load16SignedExtendTo32(BaseIndex(base, property, TimesTwo), resultPayload);
+        if (JSC::isSigned(type))
+            load16SignedExtendTo32(BaseIndex(scratch, property, TimesTwo), resultPayload);
         else
-            load16(BaseIndex(base, property, TimesTwo), resultPayload);
+            load16(BaseIndex(scratch, property, TimesTwo), resultPayload);
         break;
     case 4:
-        load32(BaseIndex(base, property, TimesFour), resultPayload);
+        load32(BaseIndex(scratch, property, TimesFour), resultPayload);
         break;
     default:
         CRASH();
@@ -1232,15 +1525,15 @@ JIT::JumpList JIT::emitFloatTypedArrayGetByVal(Instruction*, PatchableJump& badT
     load8(Address(base, JSCell::typeInfoTypeOffset()), scratch);
     badType = patchableBranch32(NotEqual, scratch, TrustedImm32(typeForTypedArrayType(type)));
     slowCases.append(branch32(AboveOrEqual, property, Address(base, JSArrayBufferView::offsetOfLength())));
-    loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), base);
+    slowCases.append(loadTypedArrayVector(base, scratch));
 
     switch (elementSize(type)) {
     case 4:
-        loadFloat(BaseIndex(base, property, TimesFour), fpRegT0);
+        loadFloat(BaseIndex(scratch, property, TimesFour), fpRegT0);
         convertFloatToDouble(fpRegT0, fpRegT0);
         break;
     case 8: {
-        loadDouble(BaseIndex(base, property, TimesEight), fpRegT0);
+        loadDouble(BaseIndex(scratch, property, TimesEight), fpRegT0);
         break;
     }
     default:
@@ -1291,7 +1584,7 @@ JIT::JumpList JIT::emitIntTypedArrayPutByVal(Instruction* currentInstruction, Pa
 
 #if USE(JSVALUE64)
     emitGetVirtualRegister(value, earlyScratch);
-    slowCases.append(emitJumpIfNotImmediateInteger(earlyScratch));
+    slowCases.append(emitJumpIfNotInt(earlyScratch));
 #else
     emitLoad(value, lateScratch, earlyScratch);
     slowCases.append(branch32(NotEqual, lateScratch, TrustedImm32(JSValue::Int32Tag)));
@@ -1299,11 +1592,11 @@ JIT::JumpList JIT::emitIntTypedArrayPutByVal(Instruction* currentInstruction, Pa
 
     // We would be loading this into base as in get_by_val, except that the slow
     // path expects the base to be unclobbered.
-    loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), lateScratch);
+    slowCases.append(loadTypedArrayVector(base, lateScratch));
 
     if (isClamped(type)) {
         ASSERT(elementSize(type) == 1);
-        ASSERT(!isSigned(type));
+        ASSERT(!JSC::isSigned(type));
         Jump inBounds = branch32(BelowOrEqual, earlyScratch, TrustedImm32(0xff));
         Jump tooBig = branch32(GreaterThan, earlyScratch, TrustedImm32(0xff));
         xor32(earlyScratch, earlyScratch);
@@ -1363,11 +1656,11 @@ JIT::JumpList JIT::emitFloatTypedArrayPutByVal(Instruction* currentInstruction, 
 
 #if USE(JSVALUE64)
     emitGetVirtualRegister(value, earlyScratch);
-    Jump doubleCase = emitJumpIfNotImmediateInteger(earlyScratch);
+    Jump doubleCase = emitJumpIfNotInt(earlyScratch);
     convertInt32ToDouble(earlyScratch, fpRegT0);
     Jump ready = jump();
     doubleCase.link(this);
-    slowCases.append(emitJumpIfNotImmediateNumber(earlyScratch));
+    slowCases.append(emitJumpIfNotNumber(earlyScratch));
     add64(tagTypeNumberRegister, earlyScratch);
     move64ToDouble(earlyScratch, fpRegT0);
     ready.link(this);
@@ -1384,7 +1677,7 @@ JIT::JumpList JIT::emitFloatTypedArrayPutByVal(Instruction* currentInstruction, 
 
     // We would be loading this into base as in get_by_val, except that the slow
     // path expects the base to be unclobbered.
-    loadPtr(Address(base, JSArrayBufferView::offsetOfVector()), lateScratch);
+    slowCases.append(loadTypedArrayVector(base, lateScratch));
 
     switch (elementSize(type)) {
     case 4:

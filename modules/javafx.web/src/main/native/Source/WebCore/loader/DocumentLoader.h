@@ -56,6 +56,10 @@
 #include "QuickLook.h"
 #endif
 
+#if PLATFORM(COCOA) && !USE(CFNETWORK)
+#include <wtf/SchedulePair.h>
+#endif
+
 namespace WebCore {
 
     class ApplicationCacheHost;
@@ -70,6 +74,7 @@ namespace WebCore {
     class Page;
     class ResourceLoader;
     class SharedBuffer;
+    class SubresourceLoader;
     class SubstituteResource;
 
 #if ENABLE(CONTENT_FILTERING)
@@ -94,7 +99,7 @@ namespace WebCore {
         WEBCORE_EXPORT virtual void detachFromFrame();
 
         WEBCORE_EXPORT FrameLoader* frameLoader() const;
-        WEBCORE_EXPORT ResourceLoader* mainResourceLoader() const;
+        WEBCORE_EXPORT SubresourceLoader* mainResourceLoader() const;
         WEBCORE_EXPORT PassRefPtr<SharedBuffer> mainResourceData() const;
 
         DocumentWriter& writer() const { return m_writer; }
@@ -137,13 +142,13 @@ namespace WebCore {
 
         bool isClientRedirect() const { return m_isClientRedirect; }
         void setIsClientRedirect(bool isClientRedirect) { m_isClientRedirect = isClientRedirect; }
-        void handledOnloadEvents();
-        bool wasOnloadHandled() { return m_wasOnloadHandled; }
+        void dispatchOnloadEvents();
+        bool wasOnloadDispatched() { return m_wasOnloadDispatched; }
         WEBCORE_EXPORT bool isLoadingInAPISense() const;
         WEBCORE_EXPORT void setTitle(const StringWithDirection&);
         const String& overrideEncoding() const { return m_overrideEncoding; }
 
-#if PLATFORM(MAC)
+#if PLATFORM(COCOA) && !USE(CFNETWORK)
         void schedule(SchedulePair&);
         void unschedule(SchedulePair&);
 #endif
@@ -160,7 +165,7 @@ namespace WebCore {
         void scheduleSubstituteResourceLoad(ResourceLoader&, SubstituteResource&);
 
         // Return the ArchiveResource for the URL only when loading an Archive
-        ArchiveResource* archiveResourceForURL(const URL&) const;
+        WEBCORE_EXPORT ArchiveResource* archiveResourceForURL(const URL&) const;
 
         WEBCORE_EXPORT PassRefPtr<ArchiveResource> mainResource() const;
 
@@ -226,10 +231,13 @@ namespace WebCore {
         void stopLoadingPlugIns();
         void stopLoadingSubresources();
 
+        bool userContentExtensionsEnabled() const { return m_userContentExtensionsEnabled; }
+        void setUserContentExtensionsEnabled(bool enabled) { m_userContentExtensionsEnabled = enabled; }
+
         void addSubresourceLoader(ResourceLoader*);
         void removeSubresourceLoader(ResourceLoader*);
-        WEBCORE_EXPORT void addPlugInStreamLoader(ResourceLoader*);
-        WEBCORE_EXPORT void removePlugInStreamLoader(ResourceLoader*);
+        void addPlugInStreamLoader(ResourceLoader&);
+        void removePlugInStreamLoader(ResourceLoader&);
 
         void subresourceLoaderFinishedLoadingOnePart(ResourceLoader*);
 
@@ -265,7 +273,7 @@ namespace WebCore {
         URL documentURL() const;
 
 #if USE(QUICK_LOOK)
-        void setQuickLookHandle(std::unique_ptr<QuickLookHandle> quickLookHandle) { m_quickLookHandle = WTF::move(quickLookHandle); }
+        void setQuickLookHandle(std::unique_ptr<QuickLookHandle> quickLookHandle) { m_quickLookHandle = WTFMove(quickLookHandle); }
         QuickLookHandle* quickLookHandle() const { return m_quickLookHandle.get(); }
 #endif
 
@@ -316,7 +324,6 @@ namespace WebCore {
         bool isPostOrRedirectAfterPost(const ResourceRequest&, const ResourceResponse&);
 
         void continueAfterNavigationPolicy(const ResourceRequest&, bool shouldContinue);
-
         void continueAfterContentPolicy(PolicyAction);
 
         void stopLoadingForPolicyChange();
@@ -336,10 +343,13 @@ namespace WebCore {
 
         void clearMainResource();
 
+        void cancelPolicyCheckIfNeeded();
+        void becomeMainResourceClient();
+
 #if ENABLE(CONTENT_FILTERING)
-        void becomeMainResourceClientIfFilterAllows();
+        friend class ContentFilter;
         void installContentFilterUnblockHandler(ContentFilter&);
-        void contentFilterDidDecide();
+        void contentFilterDidBlock();
 #endif
 
         Frame* m_frame;
@@ -380,9 +390,9 @@ namespace WebCore {
         bool m_isClientRedirect;
         bool m_isLoadingMultipartContent;
 
-        // FIXME: Document::m_processingLoadEvent and DocumentLoader::m_wasOnloadHandled are roughly the same
+        // FIXME: Document::m_processingLoadEvent and DocumentLoader::m_wasOnloadDispatched are roughly the same
         // and should be merged.
-        bool m_wasOnloadHandled;
+        bool m_wasOnloadDispatched;
 
         StringWithDirection m_pageTitle;
 
@@ -425,7 +435,8 @@ namespace WebCore {
         unsigned long m_identifierForLoadWithoutResourceLoader;
 
         DocumentLoaderTimer m_dataLoadTimer;
-        bool m_waitingForContentPolicy;
+        bool m_waitingForContentPolicy { false };
+        bool m_waitingForNavigationPolicy { false };
 
         RefPtr<IconLoadDecisionCallback> m_iconLoadDecisionCallback;
         RefPtr<IconDataCallback> m_iconDataCallback;
@@ -447,6 +458,7 @@ namespace WebCore {
         HashMap<String, RefPtr<StyleSheetContents>> m_pendingNamedContentExtensionStyleSheets;
         HashMap<String, Vector<std::pair<String, uint32_t>>> m_pendingContentExtensionDisplayNoneSelectors;
 #endif
+        bool m_userContentExtensionsEnabled { true };
 
 #ifndef NDEBUG
         bool m_hasEverBeenAttached { false };

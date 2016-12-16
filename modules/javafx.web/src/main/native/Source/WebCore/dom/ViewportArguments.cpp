@@ -33,6 +33,7 @@
 #include "IntSize.h"
 #include "Page.h"
 #include "ScriptableDocumentParser.h"
+#include "TextStream.h"
 
 namespace WebCore {
 
@@ -285,48 +286,57 @@ void restrictScaleFactorToInitialScaleIfNotUserScalable(ViewportAttributes& resu
         result.maximumScale = result.minimumScale = result.initialScale;
 }
 
-static float numericPrefix(const String& keyString, const String& valueString, Document* document, bool* ok = 0)
+static void reportViewportWarning(Document&, ViewportErrorCode, StringView replacement1 = { }, StringView replacement2 = { });
+
+static float numericPrefix(Document& document, StringView key, StringView value, bool* ok = nullptr)
 {
     size_t parsedLength;
-    float value;
-    if (valueString.is8Bit())
-        value = charactersToFloat(valueString.characters8(), valueString.length(), parsedLength);
+    float numericValue;
+    if (value.is8Bit())
+        numericValue = charactersToFloat(value.characters8(), value.length(), parsedLength);
     else
-        value = charactersToFloat(valueString.characters16(), valueString.length(), parsedLength);
+        numericValue = charactersToFloat(value.characters16(), value.length(), parsedLength);
     if (!parsedLength) {
-        reportViewportWarning(document, UnrecognizedViewportArgumentValueError, valueString, keyString);
+        reportViewportWarning(document, UnrecognizedViewportArgumentValueError, value, key);
         if (ok)
             *ok = false;
         return 0;
     }
-    if (parsedLength < valueString.length())
-        reportViewportWarning(document, TruncatedViewportArgumentValueError, valueString, keyString);
+    if (parsedLength < value.length())
+        reportViewportWarning(document, TruncatedViewportArgumentValueError, value, key);
     if (ok)
         *ok = true;
-    return value;
+    return numericValue;
 }
 
-static float findSizeValue(const String& keyString, const String& valueString, Document* document)
+static float findSizeValue(Document& document, StringView key, StringView value, bool* valueWasExplicit = nullptr)
 {
     // 1) Non-negative number values are translated to px lengths.
     // 2) Negative number values are translated to auto.
     // 3) device-width and device-height are used as keywords.
     // 4) Other keywords and unknown values translate to 0.0.
 
-    if (equalIgnoringCase(valueString, "device-width"))
+    if (valueWasExplicit)
+        *valueWasExplicit = true;
+
+    if (equalLettersIgnoringASCIICase(value, "device-width"))
         return ViewportArguments::ValueDeviceWidth;
-    if (equalIgnoringCase(valueString, "device-height"))
+
+    if (equalLettersIgnoringASCIICase(value, "device-height"))
         return ViewportArguments::ValueDeviceHeight;
 
-    float value = numericPrefix(keyString, valueString, document);
+    float sizeValue = numericPrefix(document, key, value);
 
-    if (value < 0)
+    if (sizeValue < 0) {
+        if (valueWasExplicit)
+            *valueWasExplicit = false;
         return ViewportArguments::ValueAuto;
+    }
 
-    return value;
+    return sizeValue;
 }
 
-static float findScaleValue(const String& keyString, const String& valueString, Document* document)
+static float findScaleValue(Document& document, StringView key, StringView value)
 {
     // 1) Non-negative number values are translated to <number> values.
     // 2) Negative number values are translated to auto.
@@ -334,74 +344,68 @@ static float findScaleValue(const String& keyString, const String& valueString, 
     // 4) device-width and device-height are translated to 10.0.
     // 5) no and unknown values are translated to 0.0
 
-    if (equalIgnoringCase(valueString, "yes"))
+    if (equalLettersIgnoringASCIICase(value, "yes"))
         return 1;
-    if (equalIgnoringCase(valueString, "no"))
+    if (equalLettersIgnoringASCIICase(value, "no"))
         return 0;
-    if (equalIgnoringCase(valueString, "device-width"))
+    if (equalLettersIgnoringASCIICase(value, "device-width"))
         return 10;
-    if (equalIgnoringCase(valueString, "device-height"))
+    if (equalLettersIgnoringASCIICase(value, "device-height"))
         return 10;
 
-    float value = numericPrefix(keyString, valueString, document);
+    float numericValue = numericPrefix(document, key, value);
 
-    if (value < 0)
+    if (numericValue < 0)
         return ViewportArguments::ValueAuto;
 
-    if (value > 10.0)
-        reportViewportWarning(document, MaximumScaleTooLargeError, String(), String());
+    if (numericValue > 10.0)
+        reportViewportWarning(document, MaximumScaleTooLargeError);
 
-    return value;
+    return numericValue;
 }
 
-static float findBooleanValue(const String& keyString, const String& valueString, Document* document)
+// FIXME: It's kind of bizarre to use floating point values of 1 and 0 to represent true and false.
+static float findBooleanValue(Document& document, StringView key, StringView value)
 {
     // yes and no are used as keywords.
     // Numbers >= 1, numbers <= -1, device-width and device-height are mapped to yes.
     // Numbers in the range <-1, 1>, and unknown values, are mapped to no.
 
-    if (equalIgnoringCase(valueString, "yes"))
+    if (equalLettersIgnoringASCIICase(value, "yes"))
         return 1;
-    if (equalIgnoringCase(valueString, "no"))
+    if (equalLettersIgnoringASCIICase(value, "no"))
         return 0;
-    if (equalIgnoringCase(valueString, "device-width"))
+    if (equalLettersIgnoringASCIICase(value, "device-width"))
         return 1;
-    if (equalIgnoringCase(valueString, "device-height"))
+    if (equalLettersIgnoringASCIICase(value, "device-height"))
         return 1;
-
-    float value = numericPrefix(keyString, valueString, document);
-
-    if (fabs(value) < 1)
-        return 0;
-
-    return 1;
+    return std::abs(numericPrefix(document, key, value)) >= 1 ? 1 : 0;
 }
 
-void setViewportFeature(const String& keyString, const String& valueString, Document* document, void* data)
+void setViewportFeature(ViewportArguments& arguments, Document& document, StringView key, StringView value)
 {
-    ViewportArguments* arguments = static_cast<ViewportArguments*>(data);
-
-    if (keyString == "width")
-        arguments->width = findSizeValue(keyString, valueString, document);
-    else if (keyString == "height")
-        arguments->height = findSizeValue(keyString, valueString, document);
-    else if (keyString == "initial-scale")
-        arguments->zoom = findScaleValue(keyString, valueString, document);
-    else if (keyString == "minimum-scale")
-        arguments->minZoom = findScaleValue(keyString, valueString, document);
-    else if (keyString == "maximum-scale")
-        arguments->maxZoom = findScaleValue(keyString, valueString, document);
-    else if (keyString == "user-scalable")
-        arguments->userZoom = findBooleanValue(keyString, valueString, document);
+    if (equalLettersIgnoringASCIICase(key, "width"))
+        arguments.width = findSizeValue(document, key, value, &arguments.widthWasExplicit);
+    else if (equalLettersIgnoringASCIICase(key, "height"))
+        arguments.height = findSizeValue(document, key, value);
+    else if (equalLettersIgnoringASCIICase(key, "initial-scale"))
+        arguments.zoom = findScaleValue(document, key, value);
+    else if (equalLettersIgnoringASCIICase(key, "minimum-scale"))
+        arguments.minZoom = findScaleValue(document, key, value);
+    else if (equalLettersIgnoringASCIICase(key, "maximum-scale"))
+        arguments.maxZoom = findScaleValue(document, key, value);
+    else if (equalLettersIgnoringASCIICase(key, "user-scalable"))
+        arguments.userZoom = findBooleanValue(document, key, value);
 #if PLATFORM(IOS)
-    else if (keyString == "minimal-ui")
-        // FIXME: Ignore silently for now. This should eventually fall back to the warning.
-        { }
+    else if (equalLettersIgnoringASCIICase(key, "minimal-ui")) {
+        // FIXME: Ignore silently for now. This code should eventually be removed
+        // so we start giving the warning in the web inspector as for other unimplemented keys.
+    }
 #endif
-    else if (keyString == "shrink-to-fit")
-        arguments->shrinkToFit = findBooleanValue(keyString, valueString, document);
+    else if (equalLettersIgnoringASCIICase(key, "shrink-to-fit"))
+        arguments.shrinkToFit = findBooleanValue(document, key, value);
     else
-        reportViewportWarning(document, UnrecognizedViewportArgumentKeyError, keyString, String());
+        reportViewportWarning(document, UnrecognizedViewportArgumentKeyError, key);
 }
 
 static const char* viewportErrorMessageTemplate(ViewportErrorCode errorCode)
@@ -431,23 +435,44 @@ static MessageLevel viewportErrorMessageLevel(ViewportErrorCode errorCode)
     return MessageLevel::Error;
 }
 
-void reportViewportWarning(Document* document, ViewportErrorCode errorCode, const String& replacement1, const String& replacement2)
+void reportViewportWarning(Document& document, ViewportErrorCode errorCode, StringView replacement1, StringView replacement2)
 {
-    Frame* frame = document->frame();
-    if (!frame)
+    // FIXME: Why is this null check needed? Can't addConsoleMessage deal with this?
+    if (!document.frame())
         return;
 
     String message = viewportErrorMessageTemplate(errorCode);
     if (!replacement1.isNull())
-        message.replace("%replacement1", replacement1);
+        message.replace("%replacement1", replacement1.toStringWithoutCopying());
+    // FIXME: This will do the wrong thing if replacement1 contains the substring "%replacement2".
     if (!replacement2.isNull())
-        message.replace("%replacement2", replacement2);
+        message.replace("%replacement2", replacement2.toStringWithoutCopying());
 
-    if ((errorCode == UnrecognizedViewportArgumentValueError || errorCode == TruncatedViewportArgumentValueError) && replacement1.find(';') != WTF::notFound)
+    if ((errorCode == UnrecognizedViewportArgumentValueError || errorCode == TruncatedViewportArgumentValueError) && replacement1.contains(';'))
         message.append(" Note that ';' is not a separator in viewport values. The list should be comma-separated.");
 
     // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
-    document->addConsoleMessage(MessageSource::Rendering, viewportErrorMessageLevel(errorCode), message);
+    document.addConsoleMessage(MessageSource::Rendering, viewportErrorMessageLevel(errorCode), message);
+}
+
+TextStream& operator<<(TextStream& ts, const ViewportArguments& viewportArguments)
+{
+    ts.increaseIndent();
+
+    ts << "\n";
+    ts.writeIndent();
+    ts << "(width " << viewportArguments.width << ", minWidth " << viewportArguments.minWidth << ", maxWidth " << viewportArguments.maxWidth << ")";
+
+    ts << "\n";
+    ts.writeIndent();
+    ts << "(height " << viewportArguments.height << ", minHeight " << viewportArguments.minHeight << ", maxHeight " << viewportArguments.maxHeight << ")";
+
+    ts << "\n";
+    ts.writeIndent();
+    ts << "(zoom " << viewportArguments.zoom << ", minZoom " << viewportArguments.minZoom << ", maxZoom " << viewportArguments.maxZoom << ")";
+    ts.decreaseIndent();
+
+    return ts;
 }
 
 } // namespace WebCore

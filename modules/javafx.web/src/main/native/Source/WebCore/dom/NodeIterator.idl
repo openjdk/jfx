@@ -26,12 +26,14 @@
     readonly attribute Node root;
     readonly attribute unsigned long whatToShow;
     readonly attribute NodeFilter filter;
+#if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C || defined(LANGUAGE_JAVA) && LANGUAGE_JAVA
     readonly attribute boolean expandEntityReferences;
+#endif
     readonly attribute Node referenceNode;
     readonly attribute boolean pointerBeforeReferenceNode;
 
-    [CallWith=ScriptState, RaisesException] Node nextNode();
-    [CallWith=ScriptState, RaisesException] Node previousNode();
+    Node nextNode();
+    Node previousNode();
     void detach();
 };
 

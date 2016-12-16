@@ -39,15 +39,13 @@ void SVGResourcesCache::addResourcesFromRenderer(RenderElement& renderer, const 
 {
     ASSERT(!m_cache.contains(&renderer));
 
-    const SVGRenderStyle& svgStyle = style.svgStyle();
-
     // Build a list of all resources associated with the passed RenderObject
     auto newResources = std::make_unique<SVGResources>();
-    if (!newResources->buildCachedResources(renderer, svgStyle))
+    if (!newResources->buildCachedResources(renderer, style))
         return;
 
     // Put object in cache.
-    SVGResources& resources = *m_cache.add(&renderer, WTF::move(newResources)).iterator->value;
+    SVGResources& resources = *m_cache.add(&renderer, WTFMove(newResources)).iterator->value;
 
     // Run cycle-detection _afterwards_, so self-references can be caught as well.
     SVGResourcesCycleSolver solver(renderer, resources);

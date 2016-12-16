@@ -27,6 +27,7 @@
 #include "JSDictionary.h"
 
 #include "ArrayValue.h"
+#include "DOMWindow.h"
 #include "Dictionary.h"
 #include "JSCSSFontFaceRule.h"
 #include "JSDOMError.h"
@@ -47,9 +48,14 @@
 #include "JSMediaKeyError.h"
 #endif
 
+#if ENABLE(FETCH_API)
+#include "JSFetchHeaders.h"
+#endif
+
 #if ENABLE(MEDIA_STREAM)
 #include "JSMediaStream.h"
 #include "JSMediaStreamTrack.h"
+#include "JSRTCRtpReceiver.h"
 #endif
 
 #if ENABLE(GAMEPAD)
@@ -64,7 +70,7 @@ JSDictionary::GetPropertyResult JSDictionary::tryGetProperty(const char* propert
 {
     ASSERT(isValid());
     Identifier identifier = Identifier::fromString(m_exec, propertyName);
-    PropertySlot slot(m_initializerObject.get());
+    PropertySlot slot(m_initializerObject.get(), PropertySlot::InternalMethodType::Get);
 
     if (!m_initializerObject.get()->getPropertySlot(m_exec, identifier, slot))
         return NoPropertyFound;
@@ -176,7 +182,7 @@ void JSDictionary::convertValue(ExecState*, JSValue value, RefPtr<Storage>& resu
 void JSDictionary::convertValue(ExecState* exec, JSValue value, MessagePortArray& result)
 {
     ArrayBufferArray arrayBuffers;
-    fillMessagePortArray(exec, value, result, arrayBuffers);
+    fillMessagePortArray(*exec, value, result, arrayBuffers);
 }
 
 #if ENABLE(VIDEO_TRACK)
@@ -226,6 +232,13 @@ void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<Medi
 }
 #endif
 
+#if ENABLE(FETCH_API)
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<FetchHeaders>& result)
+{
+    result = JSFetchHeaders::toWrapped(value);
+}
+#endif
+
 #if ENABLE(MEDIA_STREAM)
 void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<MediaStream>& result)
 {
@@ -235,6 +248,11 @@ void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<Medi
 void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<MediaStreamTrack>& result)
 {
     result = JSMediaStreamTrack::toWrapped(value);
+}
+
+void JSDictionary::convertValue(JSC::ExecState*, JSC::JSValue value, RefPtr<RTCRtpReceiver>& result)
+{
+    result = JSRTCRtpReceiver::toWrapped(value);
 }
 #endif
 

@@ -34,6 +34,7 @@
 #include "RotateTransformOperation.h"
 #include "TextStream.h"
 #include <wtf/HashMap.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -47,7 +48,7 @@ namespace WebCore {
 typedef HashMap<const GraphicsLayer*, Vector<FloatRect>> RepaintMap;
 static RepaintMap& repaintRectMap()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(RepaintMap, map, ());
+    static NeverDestroyed<RepaintMap> map;
     return map;
 }
 
@@ -58,17 +59,17 @@ void KeyframeValueList::insert(std::unique_ptr<const AnimationValue> value)
         if (curValue->keyTime() == value->keyTime()) {
             ASSERT_NOT_REACHED();
             // insert after
-            m_values.insert(i + 1, WTF::move(value));
+            m_values.insert(i + 1, WTFMove(value));
             return;
         }
         if (curValue->keyTime() > value->keyTime()) {
             // insert before
-            m_values.insert(i, WTF::move(value));
+            m_values.insert(i, WTFMove(value));
             return;
         }
     }
 
-    m_values.append(WTF::move(value));
+    m_values.append(WTFMove(value));
 }
 
 #if !USE(CA)
@@ -121,10 +122,12 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& client)
     , m_drawsContent(false)
     , m_contentsVisible(true)
     , m_acceleratesDrawing(false)
+    , m_usesDisplayListDrawing(false)
     , m_appliesPageScale(false)
     , m_showDebugBorder(false)
     , m_showRepaintCounter(false)
     , m_isMaskLayer(false)
+    , m_isTrackingDisplayListReplay(false)
     , m_paintingPhase(GraphicsLayerPaintAllWithOverflowClip)
     , m_contentsOrientation(CompositingCoordinatesTopDown)
     , m_parent(nullptr)
@@ -510,9 +513,9 @@ static inline const FilterOperations& filterOperationsAt(const KeyframeValueList
 int GraphicsLayer::validateFilterOperations(const KeyframeValueList& valueList)
 {
 #if ENABLE(FILTERS_LEVEL_2)
-    ASSERT(valueList.property() == AnimatedPropertyWebkitFilter || valueList.property() == AnimatedPropertyWebkitBackdropFilter);
+    ASSERT(valueList.property() == AnimatedPropertyFilter || valueList.property() == AnimatedPropertyWebkitBackdropFilter);
 #else
-    ASSERT(valueList.property() == AnimatedPropertyWebkitFilter);
+    ASSERT(valueList.property() == AnimatedPropertyFilter);
 #endif
 
     if (valueList.size() < 2)
@@ -873,6 +876,29 @@ void GraphicsLayer::dumpProperties(TextStream& ts, int indent, LayerTreeAsTextBe
             ts << childrenStream.release();
         }
     }
+}
+
+TextStream& operator<<(TextStream& ts, const Vector<GraphicsLayer::PlatformLayerID>& layers)
+{
+    for (size_t i = 0; i < layers.size(); ++i) {
+        if (i)
+            ts << " ";
+        ts << layers[i];
+    }
+
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const WebCore::GraphicsLayer::CustomAppearance& customAppearance)
+{
+    switch (customAppearance) {
+    case GraphicsLayer::CustomAppearance::NoCustomAppearance: ts << "none"; break;
+    case GraphicsLayer::CustomAppearance::ScrollingOverhang: ts << "scrolling-overhang"; break;
+    case GraphicsLayer::CustomAppearance::ScrollingShadow: ts << "scrolling-shadow"; break;
+    case GraphicsLayer::CustomAppearance::LightBackdropAppearance: ts << "light-backdrop"; break;
+    case GraphicsLayer::CustomAppearance::DarkBackdropAppearance: ts << "dark-backdrop"; break;
+    }
+    return ts;
 }
 
 String GraphicsLayer::layerTreeAsText(LayerTreeAsTextBehavior behavior) const

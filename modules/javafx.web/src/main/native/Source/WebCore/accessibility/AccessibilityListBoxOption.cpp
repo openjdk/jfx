@@ -64,7 +64,7 @@ bool AccessibilityListBoxOption::isEnabled() const
     if (is<HTMLOptGroupElement>(m_optionElement))
         return false;
 
-    if (equalIgnoringCase(getAttribute(aria_disabledAttr), "true"))
+    if (equalLettersIgnoringASCIICase(getAttribute(aria_disabledAttr), "true"))
         return false;
 
     if (m_optionElement->fastHasAttribute(disabledAttr))
@@ -148,7 +148,7 @@ String AccessibilityListBoxOption::stringValue() const
         return ariaLabel;
 
     if (is<HTMLOptionElement>(*m_optionElement))
-        return downcast<HTMLOptionElement>(*m_optionElement).text();
+        return downcast<HTMLOptionElement>(*m_optionElement).label();
 
     if (is<HTMLOptGroupElement>(*m_optionElement))
         return downcast<HTMLOptGroupElement>(*m_optionElement).groupLabelText();

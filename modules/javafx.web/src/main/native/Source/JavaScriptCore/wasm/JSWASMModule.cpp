@@ -28,6 +28,9 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#include "JSArrayBuffer.h"
+#include "JSCJSValueInlines.h"
+#include "JSCellInlines.h"
 #include "JSFunction.h"
 #include "SlotVisitorInlines.h"
 
@@ -35,13 +38,29 @@ namespace JSC {
 
 const ClassInfo JSWASMModule::s_info = { "WASMModule", &Base::s_info, 0, CREATE_METHOD_TABLE(JSWASMModule) };
 
+JSWASMModule::JSWASMModule(VM& vm, Structure* structure, JSArrayBuffer* arrayBuffer)
+    : Base(vm, structure)
+{
+    if (arrayBuffer)
+        m_arrayBuffer.set(vm, this, arrayBuffer);
+}
+
+void JSWASMModule::destroy(JSCell* cell)
+{
+    JSWASMModule* thisObject = jsCast<JSWASMModule*>(cell);
+    thisObject->JSWASMModule::~JSWASMModule();
+}
+
 void JSWASMModule::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSWASMModule* thisObject = jsCast<JSWASMModule*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
+    visitor.append(&thisObject->m_arrayBuffer);
     for (auto function : thisObject->m_functions)
         visitor.append(&function);
+    for (auto importedFunction : thisObject->m_importedFunctions)
+        visitor.append(&importedFunction);
 }
 
 } // namespace JSC

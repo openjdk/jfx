@@ -213,6 +213,7 @@ public:
 
     virtual bool shouldAggressivelyRetainTiles(const GraphicsLayer*) const override;
     virtual bool shouldTemporarilyRetainTileCohorts(const GraphicsLayer*) const override;
+    virtual IntSize tileSize() const override;
     virtual bool needsPixelAligment() const override { return !m_isMainFrameRenderViewLayer; }
 
 #if PLATFORM(IOS)
@@ -240,10 +241,17 @@ public:
     // Return an estimate of the backing store area (in pixels) allocated by this object's GraphicsLayers.
     WEBCORE_EXPORT double backingStoreMemoryEstimate() const;
 
+    // For testing only.
+    WEBCORE_EXPORT void setUsesDisplayListDrawing(bool);
+    WEBCORE_EXPORT String displayListAsText(DisplayList::AsTextFlags) const;
+
+    WEBCORE_EXPORT void setIsTrackingDisplayListReplay(bool);
+    WEBCORE_EXPORT String replayDisplayListAsText(DisplayList::AsTextFlags) const;
+
     LayoutSize devicePixelFractionFromRenderer() const { return m_devicePixelFractionFromRenderer; }
 
 private:
-    FloatRect backgroundBoxForPainting() const;
+    FloatRect backgroundBoxForSimpleContainerPainting() const;
 
     void createPrimaryGraphicsLayer();
     void destroyGraphicsLayers();
@@ -255,6 +263,7 @@ private:
     std::unique_ptr<GraphicsLayer> createGraphicsLayer(const String&, GraphicsLayer::Type = GraphicsLayer::Type::Normal);
 
     RenderLayerModelObject& renderer() const { return m_owningLayer.renderer(); }
+    RenderBox* renderBox() const { return m_owningLayer.renderBox(); }
     RenderLayerCompositor& compositor() const { return m_owningLayer.compositor(); }
 
     void updateInternalHierarchy();
@@ -300,7 +309,7 @@ private:
 
     bool isMainFrameRenderViewLayer() const;
 
-    bool paintsBoxDecorations() const;
+    bool paintsNonDirectCompositedBoxDecoration() const;
     bool paintsChildren() const;
 
     // Returns true if this compositing layer has no visible content.
@@ -325,7 +334,7 @@ private:
     bool hasTiledBackingFlatteningLayer() const { return (m_childContainmentLayer && m_usingTiledCacheLayer); }
     GraphicsLayer* tileCacheFlatteningLayer() const { return m_usingTiledCacheLayer ? m_childContainmentLayer.get() : nullptr; }
 
-    void paintIntoLayer(const GraphicsLayer*, GraphicsContext*, const IntRect& paintDirtyRect, PaintBehavior, GraphicsLayerPaintingPhase);
+    void paintIntoLayer(const GraphicsLayer*, GraphicsContext&, const IntRect& paintDirtyRect, PaintBehavior, GraphicsLayerPaintingPhase);
 
     // Helper function for updateGeometry.
     void adjustAncestorCompositingBoundsForFlowThread(LayoutRect& ancestorCompositingBounds, const RenderLayer* compositingAncestor) const;

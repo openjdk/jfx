@@ -155,7 +155,7 @@ void BitmapImage::checkForSolidColor()
     // Currently we only check for solid color in the important special case of a 1x1 image.
     if (CGImageGetWidth(image) == 1 && CGImageGetHeight(image) == 1) {
         unsigned char pixel[4]; // RGBA
-        RetainPtr<CGContextRef> bitmapContext = adoptCF(CGBitmapContextCreate(pixel, 1, 1, 8, sizeof(pixel), deviceRGBColorSpaceRef(),
+        RetainPtr<CGContextRef> bitmapContext = adoptCF(CGBitmapContextCreate(pixel, 1, 1, 8, sizeof(pixel), sRGBColorSpaceRef(),
             kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big));
         if (!bitmapContext)
             return;
@@ -203,7 +203,7 @@ RetainPtr<CFArrayRef> BitmapImage::getCGImageArray()
     return adoptCF(array);
 }
 
-void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& destRect, const FloatRect& srcRect, ColorSpace styleColorSpace, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription description)
+void BitmapImage::draw(GraphicsContext& ctxt, const FloatRect& destRect, const FloatRect& srcRect, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription description)
 {
 #if PLATFORM(IOS)
     startAnimation(DoNotCatchUp);
@@ -213,10 +213,10 @@ void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& destRect, const F
 
     RetainPtr<CGImageRef> image;
     // Never use subsampled images for drawing into PDF contexts.
-    if (wkCGContextIsPDFContext(ctxt->platformContext()))
+    if (wkCGContextIsPDFContext(ctxt.platformContext()))
         image = adoptCF(copyUnscaledFrameAtIndex(m_currentFrame));
     else {
-        CGRect transformedDestinationRect = CGRectApplyAffineTransform(destRect, CGContextGetCTM(ctxt->platformContext()));
+        CGRect transformedDestinationRect = CGRectApplyAffineTransform(destRect, CGContextGetCTM(ctxt.platformContext()));
         float subsamplingScale = std::min<float>(1, std::max(transformedDestinationRect.size.width / srcRect.width(), transformedDestinationRect.size.height / srcRect.height()));
 
         image = frameAtIndex(m_currentFrame, subsamplingScale);
@@ -226,7 +226,7 @@ void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& destRect, const F
         return;
 
     if (mayFillWithSolidColor()) {
-        fillWithSolidColor(ctxt, destRect, solidColor(), styleColorSpace, compositeOp);
+        fillWithSolidColor(ctxt, destRect, solidColor(), compositeOp);
         return;
     }
 
@@ -245,7 +245,7 @@ void BitmapImage::draw(GraphicsContext* ctxt, const FloatRect& destRect, const F
     if (description.respectImageOrientation() == RespectImageOrientation)
         orientation = frameOrientationAtIndex(m_currentFrame);
 
-    ctxt->drawNativeImage(image.get(), imageSize, styleColorSpace, destRect, scaledSrcRect, compositeOp, blendMode, orientation);
+    ctxt.drawNativeImage(image.get(), imageSize, destRect, scaledSrcRect, compositeOp, blendMode, orientation);
 
     if (imageObserver())
         imageObserver()->didDraw(this);
@@ -263,13 +263,6 @@ PassNativeImagePtr BitmapImage::copyUnscaledFrameAtIndex(size_t index)
         return CGImageRetain(m_frames[index].m_frame);
 
     return m_source.createFrameAtIndex(index);
-}
-
-bool BitmapImage::decodedDataIsPurgeable() const
-{
-    return m_frames.size() >= 1
-        && m_frames[0].m_frame
-        && CGImageGetCachingFlags(m_frames[0].m_frame) & kCGImageCachingTransient;
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include "Timer.h"
 #include <functional>
 #include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/WeakPtr.h>
 
@@ -184,8 +185,8 @@ protected:
     virtual std::unique_ptr<PlatformTimeRanges> buffered() const override;
     virtual bool didLoadingProgress() const override;
     virtual void setSize(const IntSize&) override;
-    virtual void paint(GraphicsContext*, const FloatRect&) override = 0;
-    virtual void paintCurrentFrameInContext(GraphicsContext*, const FloatRect&) override = 0;
+    virtual void paint(GraphicsContext&, const FloatRect&) override = 0;
+    virtual void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override = 0;
     virtual void setPreload(MediaPlayer::Preload) override;
     virtual PlatformLayer* platformLayer() const override { return 0; }
     virtual bool supportsAcceleratedRendering() const override = 0;
@@ -258,7 +259,7 @@ protected:
     virtual void updateVideoLayerGravity() = 0;
 
     static bool isUnsupportedMIMEType(const String&);
-    static const HashSet<String>& staticMIMETypeList();
+    static const HashSet<String, ASCIICaseInsensitiveHash>& staticMIMETypeList();
 
 protected:
     void updateStates();
@@ -287,7 +288,7 @@ protected:
     virtual void tearDownVideoRendering();
     bool hasSetUpVideoRendering() const;
 
-    static void mainThreadCallback(void*);
+    void mainThreadCallback();
 
     void invalidateCachedDuration();
 
@@ -307,7 +308,7 @@ protected:
     void clearTextTracks();
     Vector<RefPtr<InbandTextTrackPrivateAVF>> m_textTracks;
 
-virtual URL resolvedURL() const;
+    virtual URL resolvedURL() const;
 
 private:
     MediaPlayer* m_player;
@@ -317,7 +318,7 @@ private:
     std::function<void()> m_pendingSeek;
 
     Vector<Notification> m_queuedNotifications;
-    mutable Mutex m_queueMutex;
+    mutable Lock m_queueMutex;
 
     mutable std::unique_ptr<PlatformTimeRanges> m_cachedLoadedTimeRanges;
 

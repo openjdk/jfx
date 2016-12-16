@@ -20,24 +20,34 @@
 
 [
     CustomNamedGetter,
+    OverrideBuiltins,
 ] interface HTMLFormElement : HTMLElement {
     [Reflect=accept_charset] attribute DOMString acceptCharset;
     [Reflect, URL] attribute DOMString action;
-    [Reflect] attribute DOMString autocomplete;
-    [TreatNullAs=NullString] attribute DOMString enctype;
-    [TreatNullAs=NullString] attribute DOMString encoding;
-    [TreatNullAs=NullString] attribute DOMString method;
+    attribute DOMString autocomplete;
+
+    // FIXME: These should not have [TreatNullAs=LegacyNullString].
+    [TreatNullAs=LegacyNullString] attribute DOMString enctype;
+    [TreatNullAs=LegacyNullString] attribute DOMString encoding;
+    [TreatNullAs=LegacyNullString] attribute DOMString method;
+
     [Reflect] attribute DOMString name;
     [Reflect] attribute boolean noValidate;
     [Reflect] attribute DOMString target;
 
-    readonly attribute HTMLCollection elements;
+#if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C || defined(LANGUAGE_GOBJECT) && LANGUAGE_GOBJECT || defined(LANGUAGE_JAVA) && LANGUAGE_JAVA
+    [ImplementedAs=elementsForNativeBindings] readonly attribute HTMLCollection elements;
+#else
+    readonly attribute HTMLFormControlsCollection elements;
+#endif
     readonly attribute long length;
 
     getter Element (unsigned long index);
 
     [Conditional=IOS_AUTOCORRECT_AND_AUTOCAPITALIZE] attribute boolean autocorrect;
-    [Conditional=IOS_AUTOCORRECT_AND_AUTOCAPITALIZE, TreatNullAs=NullString] attribute DOMString autocapitalize;
+
+    // FIXME: This should not use [TreatNullAs=LegacyNullString].
+    [Conditional=IOS_AUTOCORRECT_AND_AUTOCAPITALIZE, TreatNullAs=LegacyNullString] attribute DOMString autocapitalize;
 
 #if defined(LANGUAGE_JAVASCRIPT) && LANGUAGE_JAVASCRIPT
     [ImplementedAs=submitFromJavaScript] void submit();

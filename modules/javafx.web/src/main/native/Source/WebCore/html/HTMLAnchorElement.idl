@@ -22,10 +22,13 @@ interface HTMLAnchorElement : HTMLElement {
     [Reflect] attribute DOMString charset;
     [Reflect] attribute DOMString coords;
     [Conditional=DOWNLOAD_ATTRIBUTE, Reflect] attribute DOMString download;
-    [Reflect, URL] attribute DOMString href;
     [Reflect] attribute DOMString hreflang;
     [Reflect] attribute DOMString name;
+
+    // FIXME: This is supposed to be:
+    // [PutForwards=value] readonly attribute DOMTokenList ping;
     [Reflect] attribute DOMString ping;
+
     [Reflect] attribute DOMString rel;
     [Reflect] attribute DOMString rev;
     [Reflect] attribute DOMString shape;
@@ -37,23 +40,8 @@ interface HTMLAnchorElement : HTMLElement {
 #endif
 
 #if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C
-    readonly attribute DOMString hash;
-    readonly attribute DOMString host;
-    readonly attribute DOMString hostname;
-    readonly attribute DOMString pathname;
-    readonly attribute DOMString port;
-    readonly attribute DOMString protocol;
-    readonly attribute DOMString search;
     readonly attribute DOMString text;
 #else
-    [TreatNullAs=NullString] attribute DOMString hash;
-    [TreatNullAs=NullString] attribute DOMString host;
-    [TreatNullAs=NullString] attribute DOMString hostname;
-    [TreatNullAs=NullString] attribute DOMString pathname;
-    [TreatNullAs=NullString] attribute DOMString port;
-    [TreatNullAs=NullString] attribute DOMString protocol;
-    [TreatNullAs=NullString] attribute DOMString search;
-    [TreatNullAs=NullString] readonly attribute DOMString origin;
     [SetterRaisesException]  attribute DOMString text;
 #endif
 
@@ -66,6 +54,7 @@ interface HTMLAnchorElement : HTMLElement {
     readonly attribute URL absoluteLinkURL;
 #endif
 
-    readonly attribute DOMTokenList relList;
+    [PutForwards=value] readonly attribute DOMTokenList relList;
 };
 
+HTMLAnchorElement implements HTMLHyperlinkElementUtils;

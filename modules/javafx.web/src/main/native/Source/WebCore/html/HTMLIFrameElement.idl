@@ -26,7 +26,13 @@ interface HTMLIFrameElement : HTMLElement {
     [Reflect] attribute DOMString marginHeight;
     [Reflect] attribute DOMString marginWidth;
     [Reflect] attribute DOMString name;
+
+#if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C || defined(LANGUAGE_GOBJECT) && LANGUAGE_GOBJECT
     [Reflect] attribute DOMString sandbox;
+#else
+    [PutForwards=value] readonly attribute DOMTokenList sandbox;
+#endif
+
     [Reflect] attribute DOMString scrolling;
     [Reflect, URL] attribute DOMString src;
     [Reflect] attribute DOMString srcdoc;

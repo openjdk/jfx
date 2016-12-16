@@ -57,7 +57,7 @@ static JSObject* pluginScriptObjectFromPluginViewBase(HTMLPlugInElement& pluginE
 
 static JSObject* pluginScriptObjectFromPluginViewBase(JSHTMLElement* jsHTMLElement)
 {
-    HTMLElement& element = jsHTMLElement->impl();
+    HTMLElement& element = jsHTMLElement->wrapped();
     if (!is<HTMLPlugInElement>(element))
         return nullptr;
 
@@ -67,7 +67,7 @@ static JSObject* pluginScriptObjectFromPluginViewBase(JSHTMLElement* jsHTMLEleme
 
 JSObject* pluginScriptObject(ExecState* exec, JSHTMLElement* jsHTMLElement)
 {
-    HTMLElement& element = jsHTMLElement->impl();
+    HTMLElement& element = jsHTMLElement->wrapped();
     if (!is<HTMLPlugInElement>(element))
         return nullptr;
 
@@ -94,7 +94,7 @@ JSObject* pluginScriptObject(ExecState* exec, JSHTMLElement* jsHTMLElement)
     return instance->createRuntimeObject(exec);
 }
 
-EncodedJSValue pluginElementPropertyGetter(ExecState* exec, JSObject*, EncodedJSValue thisValue, PropertyName propertyName)
+EncodedJSValue pluginElementPropertyGetter(ExecState* exec, EncodedJSValue thisValue, PropertyName propertyName)
 {
 
     JSHTMLElement* thisObject = jsDynamicCast<JSHTMLElement*>(JSValue::decode(thisValue));
@@ -165,7 +165,7 @@ CallType pluginElementGetCallData(JSHTMLElement* element, CallData& callData)
         return CallTypeHost;
     }
 
-    Instance* instance = pluginInstance(element->impl());
+    Instance* instance = pluginInstance(element->wrapped());
     if (!instance || !instance->supportsInvokeDefaultMethod())
         return CallTypeNone;
     callData.native.function = callPlugin;

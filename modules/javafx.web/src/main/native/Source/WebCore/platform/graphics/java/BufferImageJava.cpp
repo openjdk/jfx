@@ -1,7 +1,10 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 #include "ImageObserver.h"
 #include "BufferImageJava.h"
@@ -24,13 +27,13 @@ NativeImagePtr BufferImage::nativeImageForCurrentFrame()
     return m_rqoImage;
 }
 
-void BufferImage::flushImageRQ(GraphicsContext *gc)
+void BufferImage::flushImageRQ(GraphicsContext& gc)
 {
-    if (!gc || gc->paintingDisabled()) {
+    if (gc.paintingDisabled()) {
         return;
     }
 
-    RenderingQueue &rqScreen = gc->platformContext()->rq();
+    RenderingQueue &rqScreen = gc.platformContext()->rq();
 
     if (!m_rq->isEmpty()) {
         // 1. Drawing is flushed to the buffered image's RenderQueue.
@@ -43,19 +46,19 @@ void BufferImage::flushImageRQ(GraphicsContext *gc)
     }
 }
 
-void BufferImage::drawPattern(GraphicsContext *gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
-                        const FloatPoint& phase, ColorSpace cs, CompositeOperator co, const FloatRect& destRect)
+void BufferImage::drawPattern(GraphicsContext& gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
+                        const FloatPoint& phase, const FloatSize& spacing, CompositeOperator co, const FloatRect& destRect, BlendMode bm)
 {
     flushImageRQ(gc);
     Image::drawPattern(gc, srcRect, patternTransform,
-                        phase, cs, co, destRect);
+                        phase, spacing, co, destRect, bm);
 }
 
-void BufferImage::draw(GraphicsContext* gc, const FloatRect& dstRect,
-                       const FloatRect& srcRect, ColorSpace cs, CompositeOperator co, BlendMode bm, ImageOrientationDescription)
+void BufferImage::draw(GraphicsContext& gc, const FloatRect& dstRect,
+                       const FloatRect& srcRect, CompositeOperator co, BlendMode bm, ImageOrientationDescription)
 {
     flushImageRQ(gc);
-    Image::drawImage(gc, dstRect, srcRect, cs, co, bm);
+    Image::drawImage(gc, dstRect, srcRect, co, bm);
 }
 
 

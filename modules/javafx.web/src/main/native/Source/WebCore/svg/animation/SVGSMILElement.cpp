@@ -30,6 +30,7 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventListener.h"
+#include "EventSender.h"
 #include "FloatConversion.h"
 #include "FrameView.h"
 #include "HTMLNames.h"
@@ -45,6 +46,18 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
+
+static SMILEventSender& smilBeginEventSender()
+{
+    static NeverDestroyed<SMILEventSender> sender(eventNames().beginEventEvent);
+    return sender;
+}
+
+static SMILEventSender& smilEndEventSender()
+{
+    static NeverDestroyed<SMILEventSender> sender(eventNames().endEventEvent);
+    return sender;
+}
 
 // This is used for duration type time values that can't be negative.
 static const double invalidCachedTime = -1.;
@@ -135,6 +148,8 @@ SVGSMILElement::SVGSMILElement(const QualifiedName& tagName, Document& doc)
 SVGSMILElement::~SVGSMILElement()
 {
     clearResourceReferences();
+    smilBeginEventSender().cancelEvent(*this);
+    smilEndEventSender().cancelEvent(*this);
     disconnectConditions();
     if (m_timeContainer && m_targetElement && hasValidAttributeName())
         m_timeContainer->unschedule(this, m_targetElement, m_attributeName);
@@ -314,7 +329,7 @@ SMILTime SVGSMILElement::parseClockValue(const String& data)
 
     String parse = data.stripWhiteSpace();
 
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, indefiniteValue, ("indefinite", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> indefiniteValue("indefinite", AtomicString::ConstructFromLiteral);
     if (parse == indefiniteValue)
         return SMILTime::indefinite();
 
@@ -437,19 +452,19 @@ void SVGSMILElement::parseBeginOrEnd(const String& parseString, BeginOrEnd begin
 
 bool SVGSMILElement::isSupportedAttribute(const QualifiedName& attrName)
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(HashSet<QualifiedName>, supportedAttributes, ());
-    if (supportedAttributes.isEmpty()) {
-        supportedAttributes.add(SVGNames::beginAttr);
-        supportedAttributes.add(SVGNames::endAttr);
-        supportedAttributes.add(SVGNames::durAttr);
-        supportedAttributes.add(SVGNames::repeatDurAttr);
-        supportedAttributes.add(SVGNames::repeatCountAttr);
-        supportedAttributes.add(SVGNames::minAttr);
-        supportedAttributes.add(SVGNames::maxAttr);
-        supportedAttributes.add(SVGNames::attributeNameAttr);
-        supportedAttributes.add(XLinkNames::hrefAttr);
+    static NeverDestroyed<HashSet<QualifiedName>> supportedAttributes;
+    if (supportedAttributes.get().isEmpty()) {
+        supportedAttributes.get().add(SVGNames::beginAttr);
+        supportedAttributes.get().add(SVGNames::endAttr);
+        supportedAttributes.get().add(SVGNames::durAttr);
+        supportedAttributes.get().add(SVGNames::repeatDurAttr);
+        supportedAttributes.get().add(SVGNames::repeatCountAttr);
+        supportedAttributes.get().add(SVGNames::minAttr);
+        supportedAttributes.get().add(SVGNames::maxAttr);
+        supportedAttributes.get().add(SVGNames::attributeNameAttr);
+        supportedAttributes.get().add(XLinkNames::hrefAttr);
     }
-    return supportedAttributes.contains<SVGAttributeHashTranslator>(attrName);
+    return supportedAttributes.get().contains<SVGAttributeHashTranslator>(attrName);
 }
 
 void SVGSMILElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
@@ -472,7 +487,11 @@ void SVGSMILElement::parseAttribute(const QualifiedName& name, const AtomicStrin
         parseBeginOrEnd(value.string(), End);
         if (inDocument())
             connectConditions();
-    } else
+    } else if (name == SVGNames::onendAttr)
+        setAttributeEventListener(eventNames().endEventEvent, name, value);
+    else if (name == SVGNames::onbeginAttr)
+        setAttributeEventListener(eventNames().beginEventEvent, name, value);
+    else
         SVGElement::parseAttribute(name, value);
 }
 
@@ -624,8 +643,8 @@ bool SVGSMILElement::isFrozen() const
 
 SVGSMILElement::Restart SVGSMILElement::restart() const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, never, ("never", AtomicString::ConstructFromLiteral));
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, whenNotActive, ("whenNotActive", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> never("never", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<const AtomicString> whenNotActive("whenNotActive", AtomicString::ConstructFromLiteral);
     const AtomicString& value = fastGetAttribute(SVGNames::restartAttr);
     if (value == never)
         return RestartNever;
@@ -636,7 +655,7 @@ SVGSMILElement::Restart SVGSMILElement::restart() const
 
 SVGSMILElement::FillMode SVGSMILElement::fill() const
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, freeze, ("freeze", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> freeze("freeze", AtomicString::ConstructFromLiteral);
     const AtomicString& value = fastGetAttribute(SVGNames::fillAttr);
     return value == freeze ? FillFreeze : FillRemove;
 }
@@ -669,7 +688,7 @@ SMILTime SVGSMILElement::repeatCount() const
     if (value.isNull())
         return SMILTime::unresolved();
 
-    DEPRECATED_DEFINE_STATIC_LOCAL(const AtomicString, indefiniteValue, ("indefinite", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<const AtomicString> indefiniteValue("indefinite", AtomicString::ConstructFromLiteral);
     if (value == indefiniteValue)
         return SMILTime::indefinite();
     bool ok;
@@ -1048,9 +1067,6 @@ bool SVGSMILElement::progress(SMILTime elapsed, SVGSMILElement* resultElement, b
     ASSERT(m_timeContainer);
     ASSERT(m_isWaitingForFirstInterval || m_intervalBegin.isFinite());
 
-    if (!m_conditionsConnected)
-        connectConditions();
-
     if (!m_intervalBegin.isFinite()) {
         ASSERT(m_activeState == Inactive);
         m_nextProgressTime = SMILTime::unresolved();
@@ -1107,9 +1123,17 @@ bool SVGSMILElement::progress(SMILTime elapsed, SVGSMILElement* resultElement, b
     }
 
     if (oldActiveState == Active && m_activeState != Active) {
+        smilEndEventSender().dispatchEventSoon(*this);
         endedActiveInterval();
         if (m_activeState != Frozen)
             clearAnimatedType(m_targetElement);
+    } else if (oldActiveState != Active && m_activeState == Active)
+        smilBeginEventSender().dispatchEventSoon(*this);
+
+    // Triggering all the pending events if the animation timeline is changed.
+    if (seekToTime) {
+        if (m_activeState == Inactive || m_activeState == Frozen)
+            smilEndEventSender().dispatchEventSoon(*this);
     }
 
     m_nextProgressTime = calculateNextProgressTime(elapsed);
@@ -1119,16 +1143,16 @@ bool SVGSMILElement::progress(SMILTime elapsed, SVGSMILElement* resultElement, b
 void SVGSMILElement::notifyDependentsIntervalChanged(NewOrExistingInterval newOrExisting)
 {
     ASSERT(m_intervalBegin.isFinite());
-    DEPRECATED_DEFINE_STATIC_LOCAL(HashSet<SVGSMILElement*>, loopBreaker, ());
-    if (loopBreaker.contains(this))
+    static NeverDestroyed<HashSet<SVGSMILElement*>> loopBreaker;
+    if (loopBreaker.get().contains(this))
         return;
-    loopBreaker.add(this);
+    loopBreaker.get().add(this);
 
     for (auto& dependent : m_timeDependents) {
         dependent->createInstanceTimesFromSyncbase(this, newOrExisting);
     }
 
-    loopBreaker.remove(this);
+    loopBreaker.get().remove(this);
 }
 
 void SVGSMILElement::createInstanceTimesFromSyncbase(SVGSMILElement* syncbase, NewOrExistingInterval)
@@ -1185,6 +1209,13 @@ void SVGSMILElement::endedActiveInterval()
 {
     clearTimesWithDynamicOrigins(m_beginTimes);
     clearTimesWithDynamicOrigins(m_endTimes);
+}
+
+void SVGSMILElement::dispatchPendingEvent(SMILEventSender* eventSender)
+{
+    ASSERT(eventSender == &smilBeginEventSender() || eventSender == &smilEndEventSender());
+    const AtomicString& eventType = eventSender->eventType();
+    dispatchEvent(Event::create(eventType, false, false));
 }
 
 }

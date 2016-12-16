@@ -24,8 +24,8 @@
  */
 
 module javafx.swing {
-    requires public java.desktop;
-    requires public javafx.graphics;
+    requires transitive java.desktop;
+    requires transitive javafx.graphics;
 
     requires java.datatransfer;
     requires javafx.base;

@@ -117,6 +117,59 @@ void AbstractValue::setType(Graph& graph, SpeculatedType type)
     checkConsistency();
 }
 
+void AbstractValue::set(Graph& graph, const InferredType::Descriptor& descriptor)
+{
+    switch (descriptor.kind()) {
+    case InferredType::Bottom:
+        clear();
+        return;
+    case InferredType::Boolean:
+        setType(SpecBoolean);
+        return;
+    case InferredType::Other:
+        setType(SpecOther);
+        return;
+    case InferredType::Int32:
+        setType(SpecInt32);
+        return;
+    case InferredType::Number:
+        setType(SpecBytecodeNumber);
+        return;
+    case InferredType::String:
+        set(graph, graph.m_vm.stringStructure.get());
+        return;
+    case InferredType::Symbol:
+        set(graph, graph.m_vm.symbolStructure.get());
+        return;
+    case InferredType::ObjectWithStructure:
+        set(graph, descriptor.structure());
+        return;
+    case InferredType::ObjectWithStructureOrOther:
+        set(graph, descriptor.structure());
+        merge(SpecOther);
+        return;
+    case InferredType::Object:
+        setType(graph, SpecObject);
+        return;
+    case InferredType::ObjectOrOther:
+        setType(graph, SpecObject | SpecOther);
+        return;
+    case InferredType::Top:
+        makeHeapTop();
+        return;
+    }
+
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+void AbstractValue::set(
+    Graph& graph, const InferredType::Descriptor& descriptor, StructureClobberState clobberState)
+{
+    set(graph, descriptor);
+    if (clobberState == StructuresAreClobbered)
+        clobberStructures();
+}
+
 void AbstractValue::fixTypeForRepresentation(Graph& graph, NodeFlags representation, Node* node)
 {
     if (representation == NodeResultDouble) {
@@ -189,8 +242,22 @@ bool AbstractValue::mergeOSREntryValue(Graph& graph, JSValue value)
     return oldMe != *this;
 }
 
-FiltrationResult AbstractValue::filter(Graph& graph, const StructureSet& other)
+bool AbstractValue::isType(Graph& graph, const InferredType::Descriptor& inferredType) const
 {
+    AbstractValue typeValue;
+    typeValue.set(graph, inferredType);
+
+    AbstractValue mergedValue = *this;
+    mergedValue.merge(typeValue);
+
+    return mergedValue == typeValue;
+}
+
+FiltrationResult AbstractValue::filter(
+    Graph& graph, const StructureSet& other, SpeculatedType admittedTypes)
+{
+    ASSERT(!(admittedTypes & SpecCell));
+
     if (isClear())
         return FiltrationOK;
 
@@ -198,7 +265,7 @@ FiltrationResult AbstractValue::filter(Graph& graph, const StructureSet& other)
     // having structures, array modes, or a specific value.
     // https://bugs.webkit.org/show_bug.cgi?id=109663
 
-    m_type &= other.speculationFromStructures();
+    m_type &= other.speculationFromStructures() | admittedTypes;
     m_arrayModes &= other.arrayModesFromStructures();
     m_structure.filter(other);
 
@@ -315,6 +382,13 @@ FiltrationResult AbstractValue::filter(const AbstractValue& other)
     return Contradiction;
 }
 
+FiltrationResult AbstractValue::filter(Graph& graph, const InferredType::Descriptor& descriptor)
+{
+    AbstractValue filterValue;
+    filterValue.set(graph, descriptor);
+    return filter(filterValue);
+}
+
 void AbstractValue::filterValueByType()
 {
     // We could go further, and ensure that if the futurePossibleStructure contravenes
@@ -422,6 +496,22 @@ void AbstractValue::assertIsRegistered(Graph& graph) const
     m_structure.assertIsRegistered(graph);
 }
 #endif
+
+ResultType AbstractValue::resultType() const
+{
+    ASSERT(isType(SpecBytecodeTop));
+    if (isType(SpecBoolean))
+        return ResultType::booleanType();
+    if (isType(SpecInt32))
+        return ResultType::numberTypeIsInt32();
+    if (isType(SpecBytecodeNumber))
+        return ResultType::numberType();
+    if (isType(SpecString))
+        return ResultType::stringType();
+    if (isType(SpecString | SpecBytecodeNumber))
+        return ResultType::stringOrNumberType();
+    return ResultType::unknownType();
+}
 
 void AbstractValue::dump(PrintStream& out) const
 {

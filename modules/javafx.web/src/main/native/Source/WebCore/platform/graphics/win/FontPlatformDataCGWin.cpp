@@ -121,10 +121,9 @@ FontPlatformData::FontPlatformData(GDIObject<HFONT> hfont, CGFontRef font, float
     , m_orientation(Horizontal)
     , m_size(size)
     , m_widthVariant(RegularWidth)
-    , m_font(SharedGDIObject<HFONT>::create(WTF::move(hfont)))
+    , m_font(SharedGDIObject<HFONT>::create(WTFMove(hfont)))
     , m_cgFont(font)
     , m_isColorBitmapFont(false)
-    , m_isCompositeFontReference(false)
     , m_useGDI(useGDI)
 {
 }

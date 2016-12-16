@@ -82,13 +82,13 @@ Ref<SVGFilterElement> SVGFilterElement::create(const QualifiedName& tagName, Doc
 
 const AtomicString& SVGFilterElement::filterResXIdentifier()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGFilterResX", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> s_identifier("SVGFilterResX", AtomicString::ConstructFromLiteral);
     return s_identifier;
 }
 
 const AtomicString& SVGFilterElement::filterResYIdentifier()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(AtomicString, s_identifier, ("SVGFilterResY", AtomicString::ConstructFromLiteral));
+    static NeverDestroyed<AtomicString> s_identifier("SVGFilterResY", AtomicString::ConstructFromLiteral);
     return s_identifier;
 }
 
@@ -185,7 +185,7 @@ void SVGFilterElement::childrenChanged(const ChildChange& change)
 
 RenderPtr<RenderElement> SVGFilterElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderSVGResourceFilter>(*this, WTF::move(style));
+    return createRenderer<RenderSVGResourceFilter>(*this, WTFMove(style));
 }
 
 bool SVGFilterElement::childShouldCreateRenderer(const Node& child) const

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003, 2008, 2016 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -46,17 +46,15 @@ void BooleanConstructor::finishCreation(VM& vm, BooleanPrototype* booleanPrototy
 }
 
 // ECMA 15.6.2
-JSObject* constructBoolean(ExecState* exec, const ArgList& args)
-{
-    BooleanObject* obj = BooleanObject::create(exec->vm(), asInternalFunction(exec->callee())->globalObject()->booleanObjectStructure());
-    obj->setInternalValue(exec->vm(), jsBoolean(args.at(0).toBoolean(exec)));
-    return obj;
-}
-
 static EncodedJSValue JSC_HOST_CALL constructWithBooleanConstructor(ExecState* exec)
 {
-    ArgList args(exec);
-    return JSValue::encode(constructBoolean(exec, args));
+    JSValue boolean = jsBoolean(exec->argument(0).toBoolean(exec));
+    Structure* booleanStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), asInternalFunction(exec->callee())->globalObject()->booleanObjectStructure());
+    if (exec->hadException())
+        return JSValue::encode(JSValue());
+    BooleanObject* obj = BooleanObject::create(exec->vm(), booleanStructure);
+    obj->setInternalValue(exec->vm(), boolean);
+    return JSValue::encode(obj);
 }
 
 ConstructType BooleanConstructor::getConstructData(JSCell*, ConstructData& constructData)

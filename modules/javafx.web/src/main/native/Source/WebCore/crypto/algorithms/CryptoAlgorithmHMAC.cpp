@@ -67,7 +67,7 @@ bool CryptoAlgorithmHMAC::keyAlgorithmMatches(const CryptoAlgorithmHmacParams& p
     return true;
 }
 
-void CryptoAlgorithmHMAC::sign(const CryptoAlgorithmParameters& parameters, const CryptoKey& key, const CryptoOperationData& data, VectorCallback callback, VoidCallback failureCallback, ExceptionCode& ec)
+void CryptoAlgorithmHMAC::sign(const CryptoAlgorithmParameters& parameters, const CryptoKey& key, const CryptoOperationData& data, VectorCallback&& callback, VoidCallback&& failureCallback, ExceptionCode& ec)
 {
     const CryptoAlgorithmHmacParams& hmacParameters = downcast<CryptoAlgorithmHmacParams>(parameters);
 
@@ -76,10 +76,10 @@ void CryptoAlgorithmHMAC::sign(const CryptoAlgorithmParameters& parameters, cons
         return;
     }
 
-    platformSign(hmacParameters, downcast<CryptoKeyHMAC>(key), data, WTF::move(callback), WTF::move(failureCallback), ec);
+    platformSign(hmacParameters, downcast<CryptoKeyHMAC>(key), data, WTFMove(callback), WTFMove(failureCallback), ec);
 }
 
-void CryptoAlgorithmHMAC::verify(const CryptoAlgorithmParameters& parameters, const CryptoKey& key, const CryptoOperationData& expectedSignature, const CryptoOperationData& data, BoolCallback callback, VoidCallback failureCallback, ExceptionCode& ec)
+void CryptoAlgorithmHMAC::verify(const CryptoAlgorithmParameters& parameters, const CryptoKey& key, const CryptoOperationData& expectedSignature, const CryptoOperationData& data, BoolCallback&& callback, VoidCallback&& failureCallback, ExceptionCode& ec)
 {
     const CryptoAlgorithmHmacParams& hmacParameters = downcast<CryptoAlgorithmHmacParams>(parameters);
 
@@ -88,10 +88,10 @@ void CryptoAlgorithmHMAC::verify(const CryptoAlgorithmParameters& parameters, co
         return;
     }
 
-    platformVerify(hmacParameters, downcast<CryptoKeyHMAC>(key), expectedSignature, data, WTF::move(callback), WTF::move(failureCallback), ec);
+    platformVerify(hmacParameters, downcast<CryptoKeyHMAC>(key), expectedSignature, data, WTFMove(callback), WTFMove(failureCallback), ec);
 }
 
-void CryptoAlgorithmHMAC::generateKey(const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsage usages, KeyOrKeyPairCallback callback, VoidCallback failureCallback, ExceptionCode&)
+void CryptoAlgorithmHMAC::generateKey(const CryptoAlgorithmParameters& parameters, bool extractable, CryptoKeyUsage usages, KeyOrKeyPairCallback&& callback, VoidCallback&& failureCallback, ExceptionCode&)
 {
     const CryptoAlgorithmHmacKeyParams& hmacParameters = downcast<CryptoAlgorithmHmacKeyParams>(parameters);
 
@@ -104,7 +104,7 @@ void CryptoAlgorithmHMAC::generateKey(const CryptoAlgorithmParameters& parameter
     callback(result.get(), nullptr);
 }
 
-void CryptoAlgorithmHMAC::importKey(const CryptoAlgorithmParameters& parameters, const CryptoKeyData& keyData, bool extractable, CryptoKeyUsage usage, KeyCallback callback, VoidCallback, ExceptionCode& ec)
+void CryptoAlgorithmHMAC::importKey(const CryptoAlgorithmParameters& parameters, const CryptoKeyData& keyData, bool extractable, CryptoKeyUsage usage, KeyCallback&& callback, VoidCallback&&, ExceptionCode& ec)
 {
     if (!is<CryptoKeyDataOctetSequence>(keyData)) {
         ec = NOT_SUPPORTED_ERR;

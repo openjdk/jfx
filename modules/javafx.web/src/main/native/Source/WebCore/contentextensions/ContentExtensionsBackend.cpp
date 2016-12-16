@@ -34,7 +34,9 @@
 #include "DFABytecodeInterpreter.h"
 #include "Document.h"
 #include "DocumentLoader.h"
+#include "ExtensionStyleSheets.h"
 #include "Frame.h"
+#include "FrameLoaderClient.h"
 #include "MainFrame.h"
 #include "ResourceLoadInfo.h"
 #include "URL.h"
@@ -58,7 +60,7 @@ void ContentExtensionsBackend::addContentExtension(const String& identifier, Ref
     }
 
     RefPtr<ContentExtension> extension = ContentExtension::create(identifier, adoptRef(*compiledContentExtension.leakRef()));
-    m_contentExtensions.set(identifier, WTF::move(extension));
+    m_contentExtensions.set(identifier, WTFMove(extension));
 }
 
 void ContentExtensionsBackend::removeContentExtension(const String& identifier)
@@ -144,7 +146,7 @@ StyleSheetContents* ContentExtensionsBackend::globalDisplayNoneStyleSheet(const 
     return contentExtension ? contentExtension->globalDisplayNoneStyleSheet() : nullptr;
 }
 
-void ContentExtensionsBackend::processContentExtensionRulesForLoad(ResourceRequest& request, ResourceType resourceType, DocumentLoader& initiatingDocumentLoader)
+BlockedStatus ContentExtensionsBackend::processContentExtensionRulesForLoad(ResourceRequest& request, ResourceType resourceType, DocumentLoader& initiatingDocumentLoader)
 {
     Document* currentDocument = nullptr;
     URL mainDocumentURL;
@@ -176,7 +178,7 @@ void ContentExtensionsBackend::processContentExtensionRulesForLoad(ResourceReque
             if (resourceType == ResourceType::Document)
                 initiatingDocumentLoader.addPendingContentExtensionDisplayNoneSelector(action.extensionIdentifier(), action.stringArgument(), action.actionID());
             else if (currentDocument)
-                currentDocument->styleSheetCollection().addDisplayNoneSelector(action.extensionIdentifier(), action.stringArgument(), action.actionID());
+                currentDocument->extensionStyleSheets().addDisplayNoneSelector(action.extensionIdentifier(), action.stringArgument(), action.actionID());
             break;
         case ContentExtensions::ActionType::CSSDisplayNoneStyleSheet: {
             StyleSheetContents* styleSheetContents = globalDisplayNoneStyleSheet(action.stringArgument());
@@ -184,7 +186,26 @@ void ContentExtensionsBackend::processContentExtensionRulesForLoad(ResourceReque
                 if (resourceType == ResourceType::Document)
                     initiatingDocumentLoader.addPendingContentExtensionSheet(action.stringArgument(), *styleSheetContents);
                 else if (currentDocument)
-                    currentDocument->styleSheetCollection().maybeAddContentExtensionSheet(action.stringArgument(), *styleSheetContents);
+                    currentDocument->extensionStyleSheets().maybeAddContentExtensionSheet(action.stringArgument(), *styleSheetContents);
+            }
+            break;
+        }
+        case ContentExtensions::ActionType::MakeHTTPS: {
+            const URL originalURL = request.url();
+            if (originalURL.protocolIs("http") && (!originalURL.hasPort() || isDefaultPortForProtocol(originalURL.port(), originalURL.protocol()))) {
+                URL newURL = originalURL;
+                newURL.setProtocol("https");
+                if (originalURL.hasPort())
+                    newURL.setPort(defaultPortForProtocol("https"));
+                request.setURL(newURL);
+
+                if (resourceType == ResourceType::Document && initiatingDocumentLoader.isLoadingMainResource()) {
+                    // This is to make sure the correct 'new' URL shows in the location bar.
+                    initiatingDocumentLoader.request().setURL(newURL);
+                    initiatingDocumentLoader.frameLoader()->client().dispatchDidChangeProvisionalURL();
+                }
+                if (currentDocument)
+                    currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Content blocker promoted URL from ", originalURL.string(), " to ", newURL.string()));
             }
             break;
         }
@@ -197,8 +218,9 @@ void ContentExtensionsBackend::processContentExtensionRulesForLoad(ResourceReque
     if (willBlockLoad) {
         if (currentDocument)
             currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Content blocker prevented frame displaying ", mainDocumentURL.string(), " from loading a resource from ", request.url().string()));
-        request = ResourceRequest();
+        return BlockedStatus::Blocked;
     }
+    return BlockedStatus::NotBlocked;
 }
 
 const String& ContentExtensionsBackend::displayNoneCSSRule()

@@ -28,6 +28,7 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "CodeBlock.h"
 #include "CompilationResult.h"
 #include "DFGCommonData.h"
 #include "DFGMinifiedGraph.h"
@@ -115,6 +116,17 @@ public:
 
     void shrinkToFit();
 
+    RegisterSet liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) override;
+#if ENABLE(FTL_JIT)
+    CodeBlock* osrEntryBlock() { return m_osrEntryBlock.get(); }
+    void setOSREntryBlock(VM& vm, const JSCell* owner, CodeBlock* osrEntryBlock) { m_osrEntryBlock.set(vm, owner, osrEntryBlock); }
+    void clearOSREntryBlock() { m_osrEntryBlock.clear(); }
+#endif
+
+    static ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
+
+    Optional<CodeOrigin> findPC(CodeBlock*, void* pc) override;
+
 private:
     friend class JITCompiler; // Allow JITCompiler to call setCodeRef().
 
@@ -127,8 +139,9 @@ public:
     DFG::MinifiedGraph minifiedDFG;
 #if ENABLE(FTL_JIT)
     uint8_t nestedTriggerIsSet { 0 };
+    uint8_t neverExecutedEntry { 1 };
     UpperTierExecutionCounter tierUpCounter;
-    RefPtr<CodeBlock> osrEntryBlock;
+    WriteBarrier<CodeBlock> m_osrEntryBlock;
     unsigned osrEntryRetry;
     bool abandonOSREntry;
 #endif // ENABLE(FTL_JIT)

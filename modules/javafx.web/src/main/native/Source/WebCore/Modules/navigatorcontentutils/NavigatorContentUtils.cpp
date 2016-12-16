@@ -39,15 +39,6 @@
 
 namespace WebCore {
 
-static HashSet<String>* protocolWhitelist;
-
-static void initProtocolHandlerWhitelist()
-{
-    protocolWhitelist = new HashSet<String>;
-    for (auto* protocol : { "bitcoin", "geo", "im", "irc", "ircs", "magnet", "mailto", "mms", "news", "nntp", "sip", "sms", "smsto", "ssh", "tel", "urn", "webcal", "wtai", "xmpp" })
-        protocolWhitelist->add(protocol);
-}
-
 static bool verifyCustomHandlerURL(const URL& baseURL, const String& url, ExceptionCode& ec)
 {
     // The specification requires that it is a SYNTAX_ERR if the "%s" token is
@@ -74,11 +65,15 @@ static bool verifyCustomHandlerURL(const URL& baseURL, const String& url, Except
     return true;
 }
 
-static bool isProtocolWhitelisted(const String& scheme)
+static inline bool isProtocolWhitelisted(const String& scheme)
 {
-    if (!protocolWhitelist)
-        initProtocolHandlerWhitelist();
-    return protocolWhitelist->contains(scheme.convertToASCIILowercase());
+    static NeverDestroyed<HashSet<String, ASCIICaseInsensitiveHash>> protocolWhitelist = []() {
+        HashSet<String, ASCIICaseInsensitiveHash> set;
+        for (auto* protocol : { "bitcoin", "geo", "im", "irc", "ircs", "magnet", "mailto", "mms", "news", "nntp", "sip", "sms", "smsto", "ssh", "tel", "urn", "webcal", "wtai", "xmpp" })
+            set.add(protocol);
+        return set;
+    }();
+    return protocolWhitelist.get().contains(scheme);
 }
 
 static bool verifyProtocolHandlerScheme(const String& scheme, ExceptionCode& ec)
@@ -86,6 +81,7 @@ static bool verifyProtocolHandlerScheme(const String& scheme, ExceptionCode& ec)
     if (isProtocolWhitelisted(scheme))
         return true;
 
+    // FIXME: Should this be case sensitive, or should it be ASCII case-insensitive?
     if (scheme.startsWith("web+")) {
         // The specification requires that the length of scheme is at least five characters (including 'web+' prefix).
         if (scheme.length() >= 5 && isValidProtocol(scheme))
@@ -105,12 +101,12 @@ NavigatorContentUtils::~NavigatorContentUtils()
 {
 }
 
-void NavigatorContentUtils::registerProtocolHandler(Navigator* navigator, const String& scheme, const String& url, const String& title, ExceptionCode& ec)
+void NavigatorContentUtils::registerProtocolHandler(Navigator& navigator, const String& scheme, const String& url, const String& title, ExceptionCode& ec)
 {
-    if (!navigator->frame())
+    if (!navigator.frame())
         return;
 
-    URL baseURL = navigator->frame()->document()->baseURL();
+    URL baseURL = navigator.frame()->document()->baseURL();
 
     if (!verifyCustomHandlerURL(baseURL, url, ec))
         return;
@@ -118,7 +114,7 @@ void NavigatorContentUtils::registerProtocolHandler(Navigator* navigator, const 
     if (!verifyProtocolHandlerScheme(scheme, ec))
         return;
 
-    NavigatorContentUtils::from(navigator->frame()->page())->client()->registerProtocolHandler(scheme, baseURL, URL(ParsedURLString, url), navigator->frame()->displayStringModifiedByEncoding(title));
+    NavigatorContentUtils::from(navigator.frame()->page())->client()->registerProtocolHandler(scheme, baseURL, URL(ParsedURLString, url), navigator.frame()->displayStringModifiedByEncoding(title));
 }
 
 #if ENABLE(CUSTOM_SCHEME_HANDLER)
@@ -141,14 +137,14 @@ static String customHandlersStateString(const NavigatorContentUtilsClient::Custo
     return String();
 }
 
-String NavigatorContentUtils::isProtocolHandlerRegistered(Navigator* navigator, const String& scheme, const String& url, ExceptionCode& ec)
+String NavigatorContentUtils::isProtocolHandlerRegistered(Navigator& navigator, const String& scheme, const String& url, ExceptionCode& ec)
 {
     static NeverDestroyed<String> declined(ASCIILiteral("declined"));
 
-    if (!navigator->frame())
+    if (!navigator.frame())
         return declined;
 
-    URL baseURL = navigator->frame()->document()->baseURL();
+    URL baseURL = navigator.frame()->document()->baseURL();
 
     if (!verifyCustomHandlerURL(baseURL, url, ec))
         return declined;
@@ -156,15 +152,15 @@ String NavigatorContentUtils::isProtocolHandlerRegistered(Navigator* navigator, 
     if (!verifyProtocolHandlerScheme(scheme, ec))
         return declined;
 
-    return customHandlersStateString(NavigatorContentUtils::from(navigator->frame()->page())->client()->isProtocolHandlerRegistered(scheme, baseURL, URL(ParsedURLString, url)));
+    return customHandlersStateString(NavigatorContentUtils::from(navigator.frame()->page())->client()->isProtocolHandlerRegistered(scheme, baseURL, URL(ParsedURLString, url)));
 }
 
-void NavigatorContentUtils::unregisterProtocolHandler(Navigator* navigator, const String& scheme, const String& url, ExceptionCode& ec)
+void NavigatorContentUtils::unregisterProtocolHandler(Navigator& navigator, const String& scheme, const String& url, ExceptionCode& ec)
 {
-    if (!navigator->frame())
+    if (!navigator.frame())
         return;
 
-    URL baseURL = navigator->frame()->document()->baseURL();
+    URL baseURL = navigator.frame()->document()->baseURL();
 
     if (!verifyCustomHandlerURL(baseURL, url, ec))
         return;
@@ -172,7 +168,7 @@ void NavigatorContentUtils::unregisterProtocolHandler(Navigator* navigator, cons
     if (!verifyProtocolHandlerScheme(scheme, ec))
         return;
 
-    NavigatorContentUtils::from(navigator->frame()->page())->client()->unregisterProtocolHandler(scheme, baseURL, URL(ParsedURLString, url));
+    NavigatorContentUtils::from(navigator.frame()->page())->client()->unregisterProtocolHandler(scheme, baseURL, URL(ParsedURLString, url));
 }
 #endif
 
@@ -183,7 +179,7 @@ const char* NavigatorContentUtils::supplementName()
 
 void provideNavigatorContentUtilsTo(Page* page, std::unique_ptr<NavigatorContentUtilsClient> client)
 {
-    NavigatorContentUtils::provideTo(page, NavigatorContentUtils::supplementName(), std::make_unique<NavigatorContentUtils>(WTF::move(client)));
+    NavigatorContentUtils::provideTo(page, NavigatorContentUtils::supplementName(), std::make_unique<NavigatorContentUtils>(WTFMove(client)));
 }
 
 } // namespace WebCore

@@ -5,13 +5,13 @@
 #include "config.h"
 #include "PlatformStrategiesJava.h"
 
+#include "WebKit/WebCoreSupport/WebResourceLoadScheduler.h"
+#include <WebCore/BlobRegistryImpl.h>
 #include "NotImplemented.h"
 #include "Page.h"
 #include "PageGroup.h"
 #include "PlatformCookieJar.h"
 #include "LinkHash.h"
-// #include "PluginDatabase.h" //XXX became Windows only
-// #include "PluginPackage.h"
 
 using namespace WebCore;
 
@@ -37,7 +37,7 @@ CookiesStrategy* PlatformStrategiesJava::createCookiesStrategy()
 
 LoaderStrategy* PlatformStrategiesJava::createLoaderStrategy()
 {
-    return this;
+    return new WebResourceLoadScheduler;
 }
 
 PasteboardStrategy* PlatformStrategiesJava::createPasteboardStrategy()
@@ -56,20 +56,10 @@ void PlatformStrategiesJava::getWebVisiblePluginInfo(const Page*, Vector<PluginI
 
 }
 
-// SharedWorkerStrategy* PlatformStrategiesJava::createSharedWorkerStrategy()
-// {
-//     return this;
-// }
-
-// StorageStrategy* PlatformStrategiesJava::createStorageStrategy()
-// {
-//     return this;
-// }
-
-// VisitedLinkStrategy* PlatformStrategiesJava::createVisitedLinkStrategy()
-// {
-//     return this;
-// }
+WebCore::BlobRegistry* PlatformStrategiesJava::createBlobRegistry()
+{
+    return new WebCore::BlobRegistryImpl;
+}
 
 // CookiesStrategy
 String PlatformStrategiesJava::cookiesForDOM(const NetworkStorageSession& session, const URL& firstParty, const URL& url)

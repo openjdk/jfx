@@ -38,7 +38,9 @@
 #include "HTMLTextAreaElement.h"
 #include "RenderBox.h"
 #include "RenderTheme.h"
+#include "StyleTreeResolver.h"
 #include "ValidationMessage.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/Ref.h>
 #include <wtf/Vector.h>
 
@@ -48,6 +50,7 @@ using namespace HTMLNames;
 
 HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : LabelableElement(tagName, document)
+    , FormAssociatedElement(form)
     , m_disabled(false)
     , m_isReadOnly(false)
     , m_isRequired(false)
@@ -60,7 +63,6 @@ HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Doc
     , m_wasChangedSinceLastFormControlChangeEvent(false)
     , m_hasAutofocused(false)
 {
-    setForm(form);
     setHasCustomStyleResolveCallbacks();
 }
 
@@ -100,6 +102,19 @@ void HTMLFormControlElement::setFormMethod(const String& value)
 bool HTMLFormControlElement::formNoValidate() const
 {
     return fastHasAttribute(formnovalidateAttr);
+}
+
+String HTMLFormControlElement::formAction() const
+{
+    const AtomicString& value = fastGetAttribute(formactionAttr);
+    if (value.isEmpty())
+        return document().url();
+    return getURLAttribute(formactionAttr);
+}
+
+void HTMLFormControlElement::setFormAction(const AtomicString& value)
+{
+    setAttributeWithoutSynchronization(formactionAttr, value);
 }
 
 bool HTMLFormControlElement::computeIsDisabledByFieldsetAncestor() const
@@ -260,8 +275,12 @@ Node::InsertionNotificationRequest HTMLFormControlElement::insertedInto(Containe
     setNeedsWillValidateCheck();
     HTMLElement::insertedInto(insertionPoint);
     FormAssociatedElement::insertedInto(insertionPoint);
+    return InsertionShouldCallFinishedInsertingSubtree;
+}
 
-    return InsertionDone;
+void HTMLFormControlElement::finishedInsertingSubtree()
+{
+    resetFormOwner();
 }
 
 void HTMLFormControlElement::removedFrom(ContainerNode& insertionPoint)
@@ -528,7 +547,7 @@ bool HTMLFormControlElement::validationMessageShadowTreeContains(const Node& nod
 
 void HTMLFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
 {
-    HTMLElement::dispatchBlurEvent(WTF::move(newFocusedElement));
+    HTMLElement::dispatchBlurEvent(WTFMove(newFocusedElement));
     hideVisibleValidationMessage();
 }
 
@@ -543,13 +562,14 @@ bool HTMLFormControlElement::isDefaultButtonForForm() const
 }
 
 #if ENABLE(IOS_AUTOCORRECT_AND_AUTOCAPITALIZE)
-// FIXME: We should look to share these methods with class HTMLFormElement instead of duplicating them.
+
+// FIXME: We should look to share this code with class HTMLFormElement instead of duplicating the logic.
 
 bool HTMLFormControlElement::autocorrect() const
 {
     const AtomicString& autocorrectValue = fastGetAttribute(autocorrectAttr);
     if (!autocorrectValue.isEmpty())
-        return !equalIgnoringCase(autocorrectValue, "off");
+        return !equalLettersIgnoringASCIICase(autocorrectValue, "off");
     if (HTMLFormElement* form = this->form())
         return form->autocorrect();
     return true;
@@ -579,6 +599,7 @@ void HTMLFormControlElement::setAutocapitalize(const AtomicString& value)
 {
     setAttribute(autocapitalizeAttr, value);
 }
+
 #endif
 
 HTMLFormControlElement* HTMLFormControlElement::enclosingFormControlElement(Node* node)
@@ -588,6 +609,169 @@ HTMLFormControlElement* HTMLFormControlElement::enclosingFormControlElement(Node
             return downcast<HTMLFormControlElement>(node);
     }
     return nullptr;
+}
+
+static inline bool isContactToken(const AtomicString& token)
+{
+    return token == "home" || token == "work" || token == "mobile" || token == "fax" || token == "pager";
+}
+
+enum class AutofillCategory {
+    Invalid,
+    Off,
+    Automatic,
+    Normal,
+    Contact,
+};
+
+static inline AutofillCategory categoryForAutofillFieldToken(const AtomicString& token)
+{
+    static NeverDestroyed<HashMap<AtomicString, AutofillCategory>> map;
+    if (map.get().isEmpty()) {
+        map.get().add(AtomicString("off", AtomicString::ConstructFromLiteral), AutofillCategory::Off);
+        map.get().add(AtomicString("on", AtomicString::ConstructFromLiteral), AutofillCategory::Automatic);
+
+        map.get().add(AtomicString("name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("honorific-prefix", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("given-name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("additional-name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("family-name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("honorific-suffix", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("nickname", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("username", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("new-password", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("current-password", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("organization-title", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("organization", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("street-address", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("address-line1", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("address-line2", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("address-line3", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("address-level4", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("address-level3", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("address-level2", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("address-level1", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("country", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("country-name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("postal-code", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-given-name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-additional-name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-family-name", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-number", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-exp", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-exp-month", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-exp-year", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-csc", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("cc-type", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("transaction-currency", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("transaction-amount", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("language", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("bday", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("bday-day", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("bday-month", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("bday-year", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("sex", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("url", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+        map.get().add(AtomicString("photo", AtomicString::ConstructFromLiteral), AutofillCategory::Normal);
+
+        map.get().add(AtomicString("tel", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("tel-country-code", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("tel-national", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("tel-area-code", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("tel-local", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("tel-local-prefix", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("tel-local-suffix", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("tel-extension", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("email", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+        map.get().add(AtomicString("impp", AtomicString::ConstructFromLiteral), AutofillCategory::Contact);
+    }
+
+    return map.get().get(token);
+}
+
+static inline unsigned maxTokensForAutofillFieldCategory(AutofillCategory category)
+{
+    switch (category) {
+    case AutofillCategory::Invalid:
+        return 0;
+
+    case AutofillCategory::Automatic:
+    case AutofillCategory::Off:
+        return 1;
+
+    case AutofillCategory::Normal:
+        return 3;
+
+    case AutofillCategory::Contact:
+        return 4;
+    }
+    ASSERT_NOT_REACHED();
+    return 0;
+}
+
+// https://html.spec.whatwg.org/multipage/forms.html#processing-model-3
+String HTMLFormControlElement::autocomplete() const
+{
+    bool wearingAutofillAnchorMantle = is<HTMLInputElement>(*this) && downcast<HTMLInputElement>(this)->isInputTypeHidden();
+
+    const AtomicString& attributeValue = fastGetAttribute(autocompleteAttr);
+    SpaceSplitString tokens(attributeValue, true);
+    if (tokens.isEmpty()) {
+        if (wearingAutofillAnchorMantle)
+            return String();
+        return form() ? form()->autocomplete() : ASCIILiteral("on");
+    }
+
+    size_t currentTokenIndex = tokens.size() - 1;
+    const auto& fieldToken = tokens[currentTokenIndex];
+    auto category = categoryForAutofillFieldToken(fieldToken);
+    if (category == AutofillCategory::Invalid)
+        return String();
+
+    if (tokens.size() > maxTokensForAutofillFieldCategory(category))
+        return String();
+
+    if ((category == AutofillCategory::Off || category == AutofillCategory::Automatic) && wearingAutofillAnchorMantle)
+        return String();
+
+    if (category == AutofillCategory::Off)
+        return ASCIILiteral("off");
+
+    if (category == AutofillCategory::Automatic)
+        return ASCIILiteral("on");
+
+    String result = fieldToken;
+    if (!currentTokenIndex--)
+        return result;
+
+    const auto& contactToken = tokens[currentTokenIndex];
+    if (category == AutofillCategory::Contact && isContactToken(contactToken)) {
+        result = contactToken + " " + result;
+        if (!currentTokenIndex--)
+            return result;
+    }
+
+    const auto& modeToken = tokens[currentTokenIndex];
+    if (modeToken == "shipping" || modeToken == "billing") {
+        result = modeToken + " " + result;
+        if (!currentTokenIndex--)
+            return result;
+    }
+
+    if (currentTokenIndex)
+        return String();
+
+    const auto& sectionToken = tokens[currentTokenIndex];
+    if (!sectionToken.startsWith("section-"))
+        return String();
+
+    return sectionToken + " " + result;
+}
+
+void HTMLFormControlElement::setAutocomplete(const String& value)
+{
+    setAttribute(autocompleteAttr, value);
 }
 
 } // namespace Webcore

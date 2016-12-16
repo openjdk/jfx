@@ -21,16 +21,6 @@ void ContextMenuClientJava::contextMenuDestroyed()
     delete this;
 }
 
-PlatformMenuDescription ContextMenuClientJava::getCustomMenuFromDefaultItems(ContextMenu* contextMenu)
-{
-    return contextMenu->platformDescription();
-}
-
-void ContextMenuClientJava::contextMenuItemSelected(ContextMenuItem*, const ContextMenu*)
-{
-    notImplemented();
-}
-
 void ContextMenuClientJava::downloadURL(const URL& url)
 {
     notImplemented();
@@ -60,10 +50,6 @@ void ContextMenuClientJava::speak(const String&)
 void ContextMenuClientJava::stopSpeaking()
 {
     notImplemented();
-}
-
-ContextMenuItem ContextMenuClientJava::shareMenuItem(const HitTestResult&) {
-    return ContextMenuItem(); //XXX: check implementation
 }
 
 }

@@ -34,7 +34,7 @@
 namespace WebCore {
 
 RenderSVGEllipse::RenderSVGEllipse(SVGGraphicsElement& element, Ref<RenderStyle>&& style)
-    : RenderSVGShape(element, WTF::move(style))
+    : RenderSVGShape(element, WTFMove(style))
     , m_usePathFallback(false)
 {
 }
@@ -93,16 +93,16 @@ void RenderSVGEllipse::calculateRadiiAndCenter()
         lengthContext.valueForLength(style().svgStyle().ry(), LengthModeHeight));
 }
 
-void RenderSVGEllipse::fillShape(GraphicsContext* context) const
+void RenderSVGEllipse::fillShape(GraphicsContext& context) const
 {
     if (m_usePathFallback) {
         RenderSVGShape::fillShape(context);
         return;
     }
-    context->fillEllipse(m_fillBoundingBox);
+    context.fillEllipse(m_fillBoundingBox);
 }
 
-void RenderSVGEllipse::strokeShape(GraphicsContext* context) const
+void RenderSVGEllipse::strokeShape(GraphicsContext& context) const
 {
     if (!style().svgStyle().hasVisibleStroke())
         return;
@@ -110,7 +110,7 @@ void RenderSVGEllipse::strokeShape(GraphicsContext* context) const
         RenderSVGShape::strokeShape(context);
         return;
     }
-    context->strokeEllipse(m_fillBoundingBox);
+    context.strokeEllipse(m_fillBoundingBox);
 }
 
 bool RenderSVGEllipse::shapeDependentStrokeContains(const FloatPoint& point)

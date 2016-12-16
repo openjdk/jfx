@@ -34,6 +34,7 @@
 #import <WebCore/LayerFlushSchedulerClient.h>
 #import <WebCore/WebCoreKeyboardUIMode.h>
 #import <wtf/HashMap.h>
+#import <wtf/Lock.h>
 #import <wtf/RetainPtr.h>
 #import <wtf/ThreadingPrimitives.h>
 #import <wtf/text/WTFString.h>
@@ -94,6 +95,10 @@ class WebViewGroup;
 
 #if ENABLE(SERVICE_CONTROLS)
 class WebSelectionServiceController;
+#endif
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200 && USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WebViewDataAdditionsDeclarations.h>
 #endif
 
 class WebViewLayerFlushScheduler : public WebCore::LayerFlushScheduler {
@@ -167,9 +172,12 @@ private:
     WebNodeHighlight *currentNodeHighlight;
 
 #if PLATFORM(MAC)
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
     WebImmediateActionController *immediateActionController;
-#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200 && USE(APPLE_INTERNAL_SDK)
+#import <WebKitAdditions/WebViewDataAdditions.h>
+#endif
+
     std::unique_ptr<WebCore::TextIndicatorWindow> textIndicatorWindow;
     BOOL hasInitializedLookupObserver;
     RetainPtr<WebWindowVisibilityObserver> windowVisibilityObserver;
@@ -249,7 +257,7 @@ private:
     CGSize fixedLayoutSize;
     BOOL mainViewIsScrollingOrZooming;
     int32_t didDrawTiles;
-    WTF::Mutex pendingFixedPositionLayoutRectMutex;
+    WTF::Lock pendingFixedPositionLayoutRectMutex;
     CGRect pendingFixedPositionLayoutRect;
 #endif
 

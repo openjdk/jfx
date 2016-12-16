@@ -77,7 +77,7 @@ using namespace WebCore;
     if (!is<RenderBox>(*renderer) || !renderer->hasOverflowClip())
         return 0;
 
-    return downcast<RenderBox>(*renderer).layer()->scrollXOffset();
+    return downcast<RenderBox>(*renderer).layer()->scrollOffset().x();
 }
 
 - (int)scrollYOffset
@@ -91,7 +91,7 @@ using namespace WebCore;
     if (!is<RenderBox>(*renderer) || !renderer->hasOverflowClip())
         return 0;
 
-    return downcast<RenderBox>(*renderer).layer()->scrollYOffset();
+    return downcast<RenderBox>(*renderer).layer()->scrollOffset().y();
 }
 
 - (void)setScrollXOffset:(int)x scrollYOffset:(int)y
@@ -113,12 +113,13 @@ using namespace WebCore;
     RenderLayer* layer = downcast<RenderBox>(*renderer).layer();
     if (adjustForIOSCaret)
         layer->setAdjustForIOSCaretWhenScrolling(true);
-    layer->scrollToOffset(IntSize(x, y));
+    layer->scrollToOffset(ScrollOffset(x, y));
     if (adjustForIOSCaret)
         layer->setAdjustForIOSCaretWhenScrolling(false);
 }
 
-- (void)absolutePosition:(int *)x :(int *)y :(int *)w :(int *)h {
+- (void)absolutePosition:(int *)x :(int *)y :(int *)w :(int *)h
+{
     RenderBox *renderer = core(self)->renderBox();
     if (renderer) {
         if (w)
@@ -146,13 +147,13 @@ using namespace WebCore;
 
 - (DOMDocumentFragment *)createDocumentFragmentWithMarkupString:(NSString *)markupString baseURL:(NSURL *)baseURL
 {
-    return kit(createFragmentFromMarkup(*core(self), markupString, [baseURL absoluteString]).get());
+    return kit(createFragmentFromMarkup(*core(self), markupString, [baseURL absoluteString]).ptr());
 }
 
 - (DOMDocumentFragment *)createDocumentFragmentWithText:(NSString *)text
 {
     // FIXME: Since this is not a contextual fragment, it won't handle whitespace properly.
-    return kit(createFragmentFromText(core(self)->createRange(), text).get());
+    return kit(createFragmentFromText(core(self)->createRange(), text).ptr());
 }
 
 @end

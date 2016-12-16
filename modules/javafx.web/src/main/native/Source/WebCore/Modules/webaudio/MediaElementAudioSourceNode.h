@@ -32,7 +32,7 @@
 #include "HTMLMediaElement.h"
 #include "MultiChannelResampler.h"
 #include <memory>
-#include <mutex>
+#include <wtf/Lock.h>
 #include <wtf/PassRefPtr.h>
 
 namespace WebCore {
@@ -41,7 +41,7 @@ class AudioContext;
 
 class MediaElementAudioSourceNode : public AudioNode, public AudioSourceProviderClient {
 public:
-    static Ref<MediaElementAudioSourceNode> create(AudioContext*, HTMLMediaElement*);
+    static Ref<MediaElementAudioSourceNode> create(AudioContext&, HTMLMediaElement*);
 
     virtual ~MediaElementAudioSourceNode();
 
@@ -58,7 +58,7 @@ public:
     void unlock();
 
 private:
-    MediaElementAudioSourceNode(AudioContext*, HTMLMediaElement*);
+    MediaElementAudioSourceNode(AudioContext&, HTMLMediaElement*);
 
     virtual double tailTime() const override { return 0; }
     virtual double latencyTime() const override { return 0; }
@@ -67,7 +67,7 @@ private:
     virtual bool propagatesSilence() const override { return false; }
 
     RefPtr<HTMLMediaElement> m_mediaElement;
-    std::mutex m_processMutex;
+    Lock m_processMutex;
 
     unsigned m_sourceNumberOfChannels;
     double m_sourceSampleRate;

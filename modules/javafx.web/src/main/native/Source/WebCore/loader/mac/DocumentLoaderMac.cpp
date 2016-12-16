@@ -29,11 +29,11 @@
 #include "config.h"
 #include "DocumentLoader.h"
 
-#include "ResourceLoader.h"
+#include "SubresourceLoader.h"
 
 namespace WebCore {
 
-#if PLATFORM(MAC)
+#if !USE(CFNETWORK)
 
 static void scheduleAll(const ResourceLoaderMap& loaders, SchedulePair& pair)
 {

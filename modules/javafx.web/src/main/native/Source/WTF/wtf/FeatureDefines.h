@@ -134,6 +134,14 @@
 #define ENABLE_RESPECT_EXIF_ORIENTATION 1
 #endif
 
+#if !defined(ENABLE_SHADOW_DOM)
+#define ENABLE_SHADOW_DOM 1
+#endif
+
+#if !defined(ENABLE_CUSTOM_ELEMENTS)
+#define ENABLE_CUSTOM_ELEMENTS 1
+#endif
+
 #if !defined(ENABLE_TEXT_CARET)
 #define ENABLE_TEXT_CARET 0
 #endif
@@ -162,12 +170,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 
 #if !defined(ENABLE_WEBGL)
 #define ENABLE_WEBGL 1
-#endif
-
-/* FIXME: Remove this logic and always enable XSLT once we support XSLT when building against
-the public iOS SDK. We will also need to update the FeatureDefines.xcconfig files. */
-#if !defined(ENABLE_XSLT) && !USE(APPLE_INTERNAL_SDK)
-#define ENABLE_XSLT 0
 #endif
 
 #if !defined(ENABLE_PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC)
@@ -202,14 +204,12 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_FULLSCREEN_API 1
 #endif
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 #if !defined(ENABLE_REMOTE_INSPECTOR)
 #define ENABLE_REMOTE_INSPECTOR 1
 #endif
 
 #if !defined(ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS)
 #define ENABLE_INSPECTOR_ALTERNATE_DISPATCHERS 1
-#endif
 #endif
 
 #if !defined(ENABLE_SMOOTH_SCROLLING)
@@ -258,7 +258,27 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_PRIMARY_SNAPSHOTTED_PLUGIN_HEURISTIC 1
 #endif
 
+#if !defined(ENABLE_SHADOW_DOM)
+#define ENABLE_SHADOW_DOM 1
+#endif
+
+#if !defined(ENABLE_CUSTOM_ELEMENTS)
+#define ENABLE_CUSTOM_ELEMENTS 1
+#endif
+
+#if !defined(ENABLE_MAC_GESTURE_EVENTS) && USE(APPLE_INTERNAL_SDK)
+#define ENABLE_MAC_GESTURE_EVENTS 1
+#endif
+
 #endif /* PLATFORM(MAC) */
+
+#if PLATFORM(COCOA)
+
+#if !defined(ENABLE_DATA_DETECTION)
+#define ENABLE_DATA_DETECTION 1
+#endif
+
+#endif /* PLATFORM(COCOA) */
 
 /* --------- Apple Windows port --------- */
 #if PLATFORM(WIN) && !PLATFORM(WIN_CAIRO)
@@ -272,12 +292,7 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #endif
 
 #if !defined(ENABLE_WEBGL)
-// FIXME: Get WebGL working on Windows with CMake. https://bugs.webkit.org/show_bug.cgi?id=143311
-#if defined(BUILDING_WITH_CMAKE)
 #define ENABLE_WEBGL 0
-#else
-#define ENABLE_WEBGL 0
-#endif
 #endif
 
 #if !defined(ENABLE_GEOLOCATION)
@@ -300,12 +315,7 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #endif
 
 #if !defined(ENABLE_WEBGL)
-// FIXME: Get WebGL working on Windows with CMake. https://bugs.webkit.org/show_bug.cgi?id=143311
-#if defined(BUILDING_WITH_CMAKE)
-#define ENABLE_WEBGL 0
-#else
 #define ENABLE_WEBGL 1
-#endif
 #endif
 
 #if !defined(ENABLE_GEOLOCATION)
@@ -363,6 +373,14 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 
 #if !defined(ENABLE_ES6_CLASS_SYNTAX)
 #define ENABLE_ES6_CLASS_SYNTAX 1
+#endif
+
+#if !defined(ENABLE_ES6_CLASS_SYNTAX)
+#define ENABLE_ES6_GENERATORS 1
+#endif
+
+#if !defined(ENABLE_ES6_MODULES)
+#define ENABLE_ES6_MODULES 0
 #endif
 
 #if !defined(ENABLE_ES6_TEMPLATE_LITERAL_SYNTAX)
@@ -453,6 +471,10 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_ENCRYPTED_MEDIA_V2 0
 #endif
 
+#if !defined(ENABLE_FETCH_API)
+#define ENABLE_FETCH_API 1
+#endif
+
 #if !defined(ENABLE_FILTERS_LEVEL_2)
 #define ENABLE_FILTERS_LEVEL_2 0
 #endif
@@ -479,10 +501,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 
 #if !defined(ENABLE_GEOLOCATION)
 #define ENABLE_GEOLOCATION 0
-#endif
-
-#if !defined(ENABLE_HIDDEN_PAGE_DOM_TIMER_THROTTLING)
-#define ENABLE_HIDDEN_PAGE_DOM_TIMER_THROTTLING 0
 #endif
 
 #if !defined(ENABLE_ICONDATABASE)
@@ -635,10 +653,6 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_NOTIFICATIONS 0
 #endif
 
-#if !defined(ENABLE_OPENCL)
-#define ENABLE_OPENCL 0
-#endif
-
 #if !defined(ENABLE_OPENTYPE_VERTICAL)
 #define ENABLE_OPENTYPE_VERTICAL 0
 #endif
@@ -681,8 +695,12 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_RUBBER_BANDING 0
 #endif
 
-#if !defined(ENABLE_SATURATED_LAYOUT_ARITHMETIC)
-#define ENABLE_SATURATED_LAYOUT_ARITHMETIC 1
+#if !defined(ENABLE_SHADOW_DOM)
+#define ENABLE_SHADOW_DOM 0
+#endif
+
+#if !defined(ENABLE_CUSTOM_ELEMENTS)
+#define ENABLE_CUSTOM_ELEMENTS 0
 #endif
 
 #if !defined(ENABLE_SMOOTH_SCROLLING)
@@ -698,7 +716,11 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #endif
 
 #if !defined(ENABLE_STREAMS_API)
+#if PLATFORM(WIN)
+#define ENABLE_STREAMS_API 0
+#else
 #define ENABLE_STREAMS_API 1
+#endif
 #endif
 
 #if !defined(ENABLE_SVG_FONTS)
@@ -769,6 +791,10 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_GRAPHICS_CONTEXT_3D ENABLE_WEBGL
 #endif
 
+#if !defined(ENABLE_WEB_ANIMATIONS)
+#define ENABLE_WEB_ANIMATIONS 1
+#endif
+
 #if !defined(ENABLE_WEB_ARCHIVE)
 #define ENABLE_WEB_ARCHIVE 0
 #endif
@@ -785,20 +811,12 @@ the public iOS SDK. We will also need to update the FeatureDefines.xcconfig file
 #define ENABLE_WEB_SOCKETS 1
 #endif
 
-#if !defined(ENABLE_PICTURE_SIZES)
-#define ENABLE_PICTURE_SIZES 0
-#endif
-
 #if !defined(ENABLE_WEB_TIMING)
 #define ENABLE_WEB_TIMING 0
 #endif
 
 #if !defined(ENABLE_WILL_REVEAL_EDGE_EVENTS)
 #define ENABLE_WILL_REVEAL_EDGE_EVENTS 1
-#endif
-
-#if !defined(ENABLE_XHR_TIMEOUT)
-#define ENABLE_XHR_TIMEOUT 0
 #endif
 
 #if !defined(ENABLE_XSLT)

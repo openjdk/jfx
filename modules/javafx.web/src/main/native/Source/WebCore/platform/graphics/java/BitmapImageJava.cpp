@@ -56,10 +56,10 @@ void BitmapImage::determineMinimumSubsamplingLevel() const
     m_minimumSubsamplingLevel = 0;
 }
 
-void BitmapImage::draw(GraphicsContext *gc, const FloatRect &dstRect, const FloatRect &srcRect,
-                       ColorSpace cs, CompositeOperator co, BlendMode bm, ImageOrientationDescription id) // todo tav new param
+void BitmapImage::draw(GraphicsContext& gc, const FloatRect& dstRect, const FloatRect& srcRect,
+                       CompositeOperator co, BlendMode bm, ImageOrientationDescription id) // todo tav new param
 {
-    Image::drawImage(gc, dstRect, srcRect, cs, co, bm);
+    Image::drawImage(gc, dstRect, srcRect, co, bm);
     startAnimation();
 }
 

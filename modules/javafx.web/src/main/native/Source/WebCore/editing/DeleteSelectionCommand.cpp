@@ -83,10 +83,6 @@ DeleteSelectionCommand::DeleteSelectionCommand(Document& document, bool smartDel
     , m_pruneStartBlockIfNecessary(false)
     , m_startsAtEmptyLine(false)
     , m_sanitizeMarkup(sanitizeMarkup)
-    , m_startBlock(0)
-    , m_endBlock(0)
-    , m_typingStyle(0)
-    , m_deleteIntoBlockquoteStyle(0)
 {
 }
 
@@ -102,17 +98,13 @@ DeleteSelectionCommand::DeleteSelectionCommand(const VisibleSelection& selection
     , m_startsAtEmptyLine(false)
     , m_sanitizeMarkup(sanitizeMarkup)
     , m_selectionToDelete(selection)
-    , m_startBlock(0)
-    , m_endBlock(0)
-    , m_typingStyle(0)
-    , m_deleteIntoBlockquoteStyle(0)
 {
 }
 
 void DeleteSelectionCommand::initializeStartEnd(Position& start, Position& end)
 {
-    Node* startSpecialContainer = 0;
-    Node* endSpecialContainer = 0;
+    Node* startSpecialContainer = nullptr;
+    Node* endSpecialContainer = nullptr;
 
     start = m_selectionToDelete.start();
     end = m_selectionToDelete.end();
@@ -129,8 +121,8 @@ void DeleteSelectionCommand::initializeStartEnd(Position& start, Position& end)
         return;
 
     while (1) {
-        startSpecialContainer = 0;
-        endSpecialContainer = 0;
+        startSpecialContainer = nullptr;
+        endSpecialContainer = nullptr;
 
         Position s = positionBeforeContainingSpecialElement(start, &startSpecialContainer);
         Position e = positionAfterContainingSpecialElement(end, &endSpecialContainer);
@@ -184,6 +176,11 @@ void DeleteSelectionCommand::initializePositionData()
 {
     Position start, end;
     initializeStartEnd(start, end);
+
+    if (!isEditablePosition(start, ContentIsEditable))
+        start = firstEditablePositionAfterPositionInRoot(start, highestEditableRoot(start));
+    if (!isEditablePosition(end, ContentIsEditable))
+        end = lastEditablePositionBeforePositionInRoot(end, highestEditableRoot(start));
 
     m_upstreamStart = start.upstream();
     m_downstreamStart = start.downstream();
@@ -632,7 +629,7 @@ void DeleteSelectionCommand::mergeParagraphs()
 
     // We need to merge into m_upstreamStart's block, but it's been emptied out and collapsed by deletion.
     if (!mergeDestination.deepEquivalent().deprecatedNode() || !mergeDestination.deepEquivalent().deprecatedNode()->isDescendantOf(enclosingBlock(m_upstreamStart.containerNode())) || m_startsAtEmptyLine) {
-        insertNodeAt(createBreakElement(document()).get(), m_upstreamStart);
+        insertNodeAt(createBreakElement(document()).ptr(), m_upstreamStart);
         mergeDestination = VisiblePosition(m_upstreamStart);
     }
 
@@ -855,7 +852,7 @@ void DeleteSelectionCommand::doApply()
 
     removePreviouslySelectedEmptyTableRows();
 
-    RefPtr<Node> placeholder = m_needPlaceholder ? createBreakElement(document()).get() : 0;
+    RefPtr<Node> placeholder = m_needPlaceholder ? createBreakElement(document()).ptr() : nullptr;
 
     if (placeholder) {
         if (m_sanitizeMarkup)

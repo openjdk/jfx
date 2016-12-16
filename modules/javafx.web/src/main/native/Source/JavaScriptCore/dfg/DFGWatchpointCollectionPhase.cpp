@@ -73,7 +73,6 @@ private:
     void handle()
     {
         switch (m_node->op()) {
-        case CompareEqConstant:
         case IsUndefined:
             handleMasqueradesAsUndefined();
             break;
@@ -81,7 +80,8 @@ private:
         case CompareEq:
             if (m_node->isBinaryUseKind(ObjectUse)
                 || (m_node->child1().useKind() == ObjectUse && m_node->child2().useKind() == ObjectOrOtherUse)
-                || (m_node->child1().useKind() == ObjectOrOtherUse && m_node->child2().useKind() == ObjectUse))
+                || (m_node->child1().useKind() == ObjectOrOtherUse && m_node->child2().useKind() == ObjectUse)
+                || (m_node->child1().useKind() == OtherUse || m_node->child2().useKind() == OtherUse))
                 handleMasqueradesAsUndefined();
             break;
 
@@ -95,13 +95,6 @@ private:
             default:
                 break;
             }
-            break;
-
-        case NewArray:
-        case NewArrayWithSize:
-        case NewArrayBuffer:
-            if (!globalObject()->isHavingABadTime() && !hasAnyArrayStorage(m_node->indexingType()))
-                addLazily(globalObject()->havingABadTimeWatchpoint());
             break;
 
         case VarInjectionWatchpoint:

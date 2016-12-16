@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -54,7 +54,7 @@ public:
         RELEASE_ASSERT(bytecodeIndex != UINT_MAX);
 
         // Needed by createPreHeader().
-        m_graph.m_dominators.computeIfNecessary(m_graph);
+        m_graph.ensureDominators();
 
         CodeBlock* baseline = m_graph.m_profiledBlock;
 
@@ -89,10 +89,12 @@ public:
         // executionCount to use best judgement - but that seems unnecessary since we know for
         // sure what the executionCount should be in this case.
         BasicBlock* newRoot = insertionSet.insert(0, 1);
-        NodeOrigin origin = target->at(0)->origin;
 
-        Vector<Node*> locals(baseline->m_numCalleeRegisters);
-        for (int local = 0; local < baseline->m_numCalleeRegisters; ++local) {
+        // We'd really like to use an unset origin, but ThreadedCPS won't allow that.
+        NodeOrigin origin = NodeOrigin(CodeOrigin(0), CodeOrigin(0), false);
+
+        Vector<Node*> locals(baseline->m_numCalleeLocals);
+        for (int local = 0; local < baseline->m_numCalleeLocals; ++local) {
             Node* previousHead = target->variablesAtHead.local(local);
             if (!previousHead)
                 continue;
@@ -106,6 +108,10 @@ public:
                 Edge(locals[local]));
         }
 
+        // Now use the origin of the target, since it's not OK to exit, and we will probably hoist
+        // type checks to here.
+        origin = target->at(0)->origin;
+
         for (int argument = 0; argument < baseline->numParameters(); ++argument) {
             Node* oldNode = target->variablesAtHead.argument(argument);
             if (!oldNode) {
@@ -118,7 +124,7 @@ public:
             m_graph.m_arguments[argument] = node;
         }
 
-        for (int local = 0; local < baseline->m_numCalleeRegisters; ++local) {
+        for (int local = 0; local < baseline->m_numCalleeLocals; ++local) {
             Node* previousHead = target->variablesAtHead.local(local);
             if (!previousHead)
                 continue;

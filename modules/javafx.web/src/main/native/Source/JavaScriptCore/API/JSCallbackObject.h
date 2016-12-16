@@ -79,6 +79,8 @@ public:
     void* privateData;
     JSClassRef jsClass;
     struct JSPrivatePropertyMap {
+        WTF_MAKE_FAST_ALLOCATED;
+    public:
         JSValue getPrivateProperty(const Identifier& propertyName) const
         {
             PrivatePropertyMap::const_iterator location = m_propertyMap.find(propertyName.impl());
@@ -125,7 +127,7 @@ protected:
 
 public:
     typedef Parent Base;
-    static const unsigned StructureFlags = Base::StructureFlags | ProhibitsPropertyCaching | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | ImplementsHasInstance | OverridesHasInstance | OverridesGetPropertyNames | TypeOfShouldCallGetCallData;
+    static const unsigned StructureFlags = Base::StructureFlags | ProhibitsPropertyCaching | OverridesGetOwnPropertySlot | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero | ImplementsHasInstance | OverridesGetPropertyNames | TypeOfShouldCallGetCallData;
 
     ~JSCallbackObject();
 
@@ -209,8 +211,8 @@ private:
     static EncodedJSValue JSC_HOST_CALL construct(ExecState*);
 
     JSValue getStaticValue(ExecState*, PropertyName);
-    static EncodedJSValue staticFunctionGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
-    static EncodedJSValue callbackGetter(ExecState*, JSObject*, EncodedJSValue, PropertyName);
+    static EncodedJSValue staticFunctionGetter(ExecState*, EncodedJSValue, PropertyName);
+    static EncodedJSValue callbackGetter(ExecState*, EncodedJSValue, PropertyName);
 
     std::unique_ptr<JSCallbackObjectData> m_callbackObjectData;
 };

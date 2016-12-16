@@ -1,9 +1,9 @@
 if (${WTF_PLATFORM_WIN_CAIRO})
     add_definitions(-DUSE_CAIRO=1 -DUSE_CURL=1 -DWEBKIT_EXPORTS=1)
     list(APPEND WebKit_INCLUDE_DIRECTORIES
-        "$ENV{WEBKIT_LIBRARIES}/include"
-        "$ENV{WEBKIT_LIBRARIES}/include/cairo"
-        "$ENV{WEBKIT_LIBRARIES}/include/sqlite"
+        "${WEBKIT_LIBRARIES_DIR}/include"
+        "${WEBKIT_LIBRARIES_DIR}/include/cairo"
+        "${WEBKIT_LIBRARIES_DIR}/include/sqlite"
         "${WEBCORE_DIR}/platform/graphics/cairo"
     )
     list(APPEND WebKit_SOURCES_Classes
@@ -11,39 +11,56 @@ if (${WTF_PLATFORM_WIN_CAIRO})
         win/WebURLAuthenticationChallengeSenderCURL.cpp
     )
     list(APPEND WebKit_LIBRARIES
-        libeay32.lib
-        ssleay32.lib
+        PRIVATE libeay32.lib
+        PRIVATE mfuuid.lib
+        PRIVATE ssleay32.lib
+        PRIVATE strmiids.lib
+    )
+else ()
+    list(APPEND WebKit_SOURCES_Classes
+        win/WebDownloadCFNet.cpp
+        win/WebURLAuthenticationChallengeSenderCFNet.cpp
+    )
+    list(APPEND WebKit_LIBRARIES
+        PRIVATE CFNetwork${DEBUG_SUFFIX}
+        PRIVATE CoreFoundation${DEBUG_SUFFIX}
+        PRIVATE CoreGraphics${DEBUG_SUFFIX}
+        PRIVATE SQLite3${DEBUG_SUFFIX}
+        PRIVATE WebKitSystemInterface${DEBUG_SUFFIX}
+        PRIVATE libdispatch${DEBUG_SUFFIX}
+        PRIVATE libicuin${DEBUG_SUFFIX}
+        PRIVATE libicuuc${DEBUG_SUFFIX}
+        PRIVATE libxml2${DEBUG_SUFFIX}
+        PRIVATE libxslt${DEBUG_SUFFIX}
+        PRIVATE zdll${DEBUG_SUFFIX}
     )
 endif ()
 
+add_custom_command(
+    OUTPUT ${DERIVED_SOURCES_WEBKIT_DIR}/WebKitVersion.h
+    MAIN_DEPENDENCY ${WEBKIT_DIR}/scripts/generate-webkitversion.pl
+    DEPENDS ${WEBKIT_DIR}/mac/Configurations/Version.xcconfig
+    COMMAND ${PERL_EXECUTABLE} ${WEBKIT_DIR}/scripts/generate-webkitversion.pl --config ${WEBKIT_DIR}/mac/Configurations/Version.xcconfig --outputDir ${DERIVED_SOURCES_WEBKIT_DIR}
+    VERBATIM)
+list(APPEND WebKit_SOURCES ${DERIVED_SOURCES_WEBKIT_DIR}/WebKitVersion.h)
+
 list(APPEND WebKit_INCLUDE_DIRECTORIES
-    Storage
+    "${CMAKE_BINARY_DIR}/../include/private"
+    "${CMAKE_BINARY_DIR}/../include/private/JavaScriptCore"
+    "${CMAKE_BINARY_DIR}/../include/private/WebCore"
     win
     win/plugins
     win/WebCoreSupport
-    WebCoreSupport
     WebKit.vcxproj/WebKit
+    "${WEBKIT_DIR}/.."
     "${DERIVED_SOURCES_WEBKIT_DIR}/include"
-    "${CMAKE_SOURCE_DIR}/Source"
-    "${DERIVED_SOURCES_WEBKIT_DIR}/include/WebCore"
-    "${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}"
-    "${DERIVED_SOURCES_WEBCORE_DIR}"
-    "${DERIVED_SOURCES_DIR}"
-    "${JAVASCRIPTCORE_DIR}/dfg"
-    "${WEBCORE_DIR}/style"
-    "${WEBCORE_DIR}/loader/archive"
-    "${WEBCORE_DIR}/loader/archive/cf"
-    "${WEBCORE_DIR}/page/scrolling"
-    "${WEBCORE_DIR}/platform/cf"
-    "${WEBCORE_DIR}/platform/graphics/win"
-    "${WEBCORE_DIR}/platform/graphics/filters"
-    "${WEBCORE_DIR}/platform/audio"
-    "${WEBCORE_DIR}/platform/win"
-    "${WEBCORE_DIR}/rendering/line"
-    "${WEBCORE_DIR}/html/shadow"
-    "${WEBCORE_DIR}/modules/websockets"
     "${DERIVED_SOURCES_WEBKIT_DIR}/Interfaces"
-    "${DERIVED_SOURCES_JAVASCRIPTCORE_DIR}/inspector"
+    "${DERIVED_SOURCES_DIR}"
+    "${DERIVED_SOURCES_DIR}/ForwardingHeaders/ANGLE"
+    "${DERIVED_SOURCES_DIR}/ForwardingHeaders/ANGLE/include"
+    "${DERIVED_SOURCES_DIR}/ForwardingHeaders/ANGLE/include/egl"
+    "${DERIVED_SOURCES_DIR}/ForwardingHeaders/ANGLE/include/khr"
+    "${DERIVED_SOURCES_DIR}/WebKit"
 )
 
 list(APPEND WebKit_INCLUDES
@@ -117,15 +134,6 @@ list(APPEND WebKit_INCLUDES
 )
 
 list(APPEND WebKit_SOURCES_Classes
-    Storage/StorageAreaImpl.cpp
-    Storage/StorageAreaSync.cpp
-    Storage/StorageNamespaceImpl.cpp
-    Storage/StorageSyncManager.cpp
-    Storage/StorageThread.cpp
-    Storage/StorageTracker.cpp
-    Storage/WebDatabaseProvider.cpp
-    Storage/WebStorageNamespaceProvider.cpp
-
     cf/WebCoreSupport/WebInspectorClientCF.cpp
 
     win/AccessibleBase.cpp
@@ -208,9 +216,7 @@ list(APPEND WebKit_SOURCES_Classes
 )
 
 list(APPEND WebKit_SOURCES_WebCoreSupport
-    WebCoreSupport/WebViewGroup.cpp
-    WebCoreSupport/WebViewGroup.h
-
+    win/WebCoreSupport/AcceleratedCompositingContext.cpp
     win/WebCoreSupport/EmbeddedWidget.cpp
     win/WebCoreSupport/EmbeddedWidget.h
     win/WebCoreSupport/WebChromeClient.cpp
@@ -238,6 +244,13 @@ list(APPEND WebKit_SOURCES_WebCoreSupport
     win/WebCoreSupport/WebVisitedLinkStore.cpp
     win/WebCoreSupport/WebVisitedLinkStore.h
 )
+
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+    enable_language(ASM_MASM)
+    list(APPEND WebKit_SOURCES
+        win/plugins/PaintHooks.asm
+    )
+endif ()
 
 list(APPEND WebKit_SOURCES ${WebKit_INCLUDES} ${WebKit_SOURCES_Classes} ${WebKit_SOURCES_WebCoreSupport})
 
@@ -359,7 +372,7 @@ set(WEBKIT_IDL_DEPENDENCIES
 add_custom_command(
     OUTPUT ${DERIVED_SOURCES_WEBKIT_DIR}/autoversion.h
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    COMMAND ${PERL_EXECUTABLE} ${CMAKE_SOURCE_DIR}/WebKitLibraries/win/tools/scripts/auto-version.pl ${DERIVED_SOURCES_WEBKIT_DIR}
+    COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/auto-version.pl ${DERIVED_SOURCES_WEBKIT_DIR}
     VERBATIM)
 
 GENERATE_INTERFACE(win/Interfaces/WebKit.idl ${MIDL_DEFINES} "${WEBKIT_IDL_DEPENDENCIES}")
@@ -393,12 +406,51 @@ add_library(WebKitGUID STATIC
     "${DERIVED_SOURCES_WEBKIT_DIR}/Interfaces/AccessibleText_i.c"
     "${DERIVED_SOURCES_WEBKIT_DIR}/Interfaces/AccessibleText2_i.c"
 )
+set_target_properties(WebKitGUID PROPERTIES OUTPUT_NAME WebKitGUID${DEBUG_SUFFIX})
 set_target_properties(WebKitGUID PROPERTIES FOLDER "WebKit")
 
 list(APPEND WebKit_LIBRARIES
-    WebKitGUID
-    comsupp.lib
+    PRIVATE Comctl32
+    PRIVATE Comsupp
+    PRIVATE Crypt32
+    PRIVATE Iphlpapi
+    PRIVATE Psapi
+    PRIVATE Rpcrt4
+    PRIVATE Shlwapi
+    PRIVATE Usp10
+    PRIVATE Version
+    PRIVATE Winmm
+    PRIVATE WebKitGUID${DEBUG_SUFFIX}
 )
+
+if (ENABLE_GRAPHICS_CONTEXT_3D)
+    list(APPEND WebKit_LIBRARIES
+        libANGLE${DEBUG_SUFFIX}
+        libEGL${DEBUG_SUFFIX}
+        libGLESv2${DEBUG_SUFFIX}
+    )
+endif ()
+
+set(WebKit_LIBRARY_TYPE SHARED)
+
+# Make sure incremental linking is turned off, as it creates unacceptably long link times.
+string(REPLACE "INCREMENTAL:YES" "INCREMENTAL:NO" replace_CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS})
+set(CMAKE_SHARED_LINKER_FLAGS "${replace_CMAKE_SHARED_LINKER_FLAGS} /INCREMENTAL:NO")
+string(REPLACE "INCREMENTAL:YES" "INCREMENTAL:NO" replace_CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS})
+set(CMAKE_EXE_LINKER_FLAGS "${replace_CMAKE_EXE_LINKER_FLAGS} /INCREMENTAL:NO")
+
+string(REPLACE "INCREMENTAL:YES" "INCREMENTAL:NO" replace_CMAKE_SHARED_LINKER_FLAGS_DEBUG ${CMAKE_SHARED_LINKER_FLAGS_DEBUG})
+set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${replace_CMAKE_SHARED_LINKER_FLAGS_DEBUG} /INCREMENTAL:NO")
+string(REPLACE "INCREMENTAL:YES" "INCREMENTAL:NO" replace_CMAKE_EXE_LINKER_FLAGS_DEBUG ${CMAKE_EXE_LINKER_FLAGS_DEBUG})
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${replace_CMAKE_EXE_LINKER_FLAGS_DEBUG} /INCREMENTAL:NO")
+
+string(REPLACE "INCREMENTAL:YES" "INCREMENTAL:NO" replace_CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO ${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO})
+set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${replace_CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} /INCREMENTAL:NO")
+string(REPLACE "INCREMENTAL:YES" "INCREMENTAL:NO" replace_CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO ${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO})
+set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${replace_CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} /INCREMENTAL:NO")
+
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
 
 # We need the webkit libraries to come before the system default libraries to prevent symbol conflicts with uuid.lib.
 # To do this we add system default libs as webkit libs and zero out system default libs.
@@ -406,17 +458,26 @@ string(REPLACE " " "\;" CXX_LIBS ${CMAKE_CXX_STANDARD_LIBRARIES})
 list(APPEND WebKit_LIBRARIES ${CXX_LIBS})
 set(CMAKE_CXX_STANDARD_LIBRARIES "")
 
-set(CMAKE_SHARED_LINKER_FLAGS ${CMAKE_SHARED_LINKER_FLAGS} "/NODEFAULTLIB:LIBCMT")
+if (${WTF_PLATFORM_WIN_CAIRO})
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD")
+else ()
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT /NODEFAULTLIB:MSVCRTD")
+endif ()
 
 # If this directory isn't created before midl runs and attempts to output WebKit.tlb,
 # It fails with an unusual error - midl failed - failed to save all changes
 file(MAKE_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 file(MAKE_DIRECTORY ${DERIVED_SOURCES_WEBKIT_DIR}/Interfaces)
 
-set(WebKit_FORWARDING_HEADERS
-    "${DERIVED_SOURCES_WEBKIT_DIR}/Interfaces/WebKit.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/win/WebKitCOMAPI.h"
-    "win/CFDictionaryPropertyBag.h"
-)
+set(WebKitGUID_PRE_BUILD_COMMAND "${CMAKE_BINARY_DIR}/DerivedSources/WebKit/preBuild.cmd")
+file(WRITE "${WebKitGUID_PRE_BUILD_COMMAND}" "@xcopy /y /d /f \"${CMAKE_CURRENT_SOURCE_DIR}/win/WebKitCOMAPI.h\" \"${DERIVED_SOURCES_DIR}/ForwardingHeaders/WebKit\" >nul 2>nul\n@xcopy /y /d /f \"${CMAKE_CURRENT_SOURCE_DIR}/win/CFDictionaryPropertyBag.h\" \"${DERIVED_SOURCES_DIR}/ForwardingHeaders/WebKit\" >nul 2>nul\n")
+file(MAKE_DIRECTORY ${DERIVED_SOURCES_DIR}/ForwardingHeaders/WebKit)
+add_custom_command(TARGET WebKitGUID PRE_BUILD COMMAND ${WebKitGUID_PRE_BUILD_COMMAND} VERBATIM)
 
-WEBKIT_CREATE_FORWARDING_HEADERS(WebKit FILES ${WebKit_FORWARDING_HEADERS})
+set(WebKitGUID_POST_BUILD_COMMAND "${CMAKE_BINARY_DIR}/DerivedSources/WebKit/postBuild.cmd")
+file(WRITE "${WebKitGUID_POST_BUILD_COMMAND}" "@xcopy /y /d /f \"${DERIVED_SOURCES_WEBKIT_DIR}/Interfaces/*.h\" \"${DERIVED_SOURCES_DIR}/ForwardingHeaders/WebKit\" >nul 2>nul")
+add_custom_command(TARGET WebKitGUID POST_BUILD COMMAND ${WebKitGUID_POST_BUILD_COMMAND} VERBATIM)
+
+set(WebKit_OUTPUT_NAME
+    WebKit${DEBUG_SUFFIX}
+)

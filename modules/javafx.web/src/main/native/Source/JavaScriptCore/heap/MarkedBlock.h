@@ -30,7 +30,6 @@
 #include <wtf/DoublyLinkedList.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/Vector.h>
 
 // Set to log state transitions of blocks.
 #define HEAP_LOG_BLOCK_STATE_TRANSITIONS 0
@@ -54,8 +53,6 @@ namespace JSC {
 
     typedef uintptr_t Bits;
 
-    static const size_t MB = 1024 * 1024;
-
     bool isZapped(const JSCell*);
 
     // A marked block is a page-aligned container for heap-allocated objects.
@@ -72,14 +69,13 @@ namespace JSC {
         friend struct VerifyMarkedOrRetired;
     public:
         static const size_t atomSize = 16; // bytes
-        static const size_t atomShiftAmount = 4; // log_2(atomSize) FIXME: Change atomSize to 16.
         static const size_t blockSize = 16 * KB;
         static const size_t blockMask = ~(blockSize - 1); // blockSize must be a power of two.
 
         static const size_t atomsPerBlock = blockSize / atomSize;
-        static const size_t atomMask = atomsPerBlock - 1;
 
-        static const size_t markByteShiftAmount = 3; // log_2(word size for m_marks) FIXME: Change word size for m_marks to uint8_t.
+        static_assert(!(MarkedBlock::atomSize & (MarkedBlock::atomSize - 1)), "MarkedBlock::atomSize must be a power of two.");
+        static_assert(!(MarkedBlock::blockSize & (MarkedBlock::blockSize - 1)), "MarkedBlock::blockSize must be a power of two.");
 
         struct FreeCell {
             FreeCell* next;
@@ -110,8 +106,8 @@ namespace JSC {
             ReturnType m_count;
         };
 
-        static MarkedBlock* create(MarkedAllocator*, size_t capacity, size_t cellSize, bool needsDestruction);
-        static void destroy(MarkedBlock*);
+        static MarkedBlock* create(Heap&, MarkedAllocator*, size_t capacity, size_t cellSize, bool needsDestruction);
+        static void destroy(Heap&, MarkedBlock*);
 
         static bool isAtomAligned(const void*);
         static MarkedBlock* blockFor(const void*);
@@ -138,8 +134,6 @@ namespace JSC {
         void didConsumeFreeList(); // Call this once you've allocated all the items in the free list.
         void stopAllocating(const FreeList&);
         FreeList resumeAllocating(); // Call this if you canonicalized a block for some non-collection related purpose.
-        void didConsumeEmptyFreeList(); // Call this if you sweep a block, but the returned FreeList is empty.
-        void didSweepToNoAvail(); // Call this if you sweep a block and get an empty free list back.
 
         // Returns true if the "newly allocated" bitmap was non-null
         // and was successfully cleared and false otherwise.
@@ -161,21 +155,18 @@ namespace JSC {
         bool testAndSetMarked(const void*);
         bool isLive(const JSCell*);
         bool isLiveCell(const void*);
+        bool isAtom(const void*);
         bool isMarkedOrNewlyAllocated(const JSCell*);
         void setMarked(const void*);
         void clearMarked(const void*);
-
-        void setRemembered(const void*);
-        void clearRemembered(const void*);
-        void atomicClearRemembered(const void*);
-        bool isRemembered(const void*);
 
         bool isNewlyAllocated(const void*);
         void setNewlyAllocated(const void*);
         void clearNewlyAllocated(const void*);
 
         bool isAllocated() const;
-        bool needsSweeping();
+        bool isMarkedOrRetired() const;
+        bool needsSweeping() const;
         void didRetireBlock(const FreeList&);
         void willRemoveBlock();
 
@@ -183,10 +174,8 @@ namespace JSC {
         template <typename Functor> IterationStatus forEachLiveCell(Functor&);
         template <typename Functor> IterationStatus forEachDeadCell(Functor&);
 
-        static ptrdiff_t offsetOfMarks() { return OBJECT_OFFSETOF(MarkedBlock, m_marks); }
-
     private:
-        static const size_t atomAlignmentMask = atomSize - 1; // atomSize must be a power of two.
+        static const size_t atomAlignmentMask = atomSize - 1;
 
         enum BlockState { New, FreeListed, Allocated, Marked, Retired };
         template<bool callDestructors> FreeList sweepHelper(SweepMode = SweepOnly);
@@ -204,11 +193,7 @@ namespace JSC {
 
         size_t m_atomsPerCell;
         size_t m_endAtom; // This is a fuzzy end. Always test for < m_endAtom.
-#if ENABLE(PARALLEL_GC)
         WTF::Bitmap<atomsPerBlock, WTF::BitmapAtomic, uint8_t> m_marks;
-#else
-        WTF::Bitmap<atomsPerBlock, WTF::BitmapNotAtomic, uint8_t> m_marks;
-#endif
         std::unique_ptr<WTF::Bitmap<atomsPerBlock>> m_newlyAllocated;
 
         size_t m_capacity;
@@ -296,15 +281,6 @@ namespace JSC {
 
         ASSERT(m_state == FreeListed);
         m_state = Allocated;
-    }
-
-    inline void MarkedBlock::didConsumeEmptyFreeList()
-    {
-        HEAP_LOG_BLOCK_STATE_TRANSITION(this);
-
-        ASSERT(!m_newlyAllocated);
-        ASSERT(m_state == FreeListed);
-        m_state = Marked;
     }
 
     inline size_t MarkedBlock::markCount()
@@ -413,7 +389,7 @@ namespace JSC {
         return false;
     }
 
-    inline bool MarkedBlock::isLiveCell(const void* p)
+    inline bool MarkedBlock::isAtom(const void* p)
     {
         ASSERT(MarkedBlock::isAtomAligned(p));
         size_t atomNumber = this->atomNumber(p);
@@ -424,7 +400,13 @@ namespace JSC {
             return false;
         if (atomNumber >= m_endAtom) // Filters pointers into invalid cells out of the range.
             return false;
+        return true;
+    }
 
+    inline bool MarkedBlock::isLiveCell(const void* p)
+    {
+        if (!isAtom(p))
+            return false;
         return isLive(static_cast<const JSCell*>(p));
     }
 
@@ -464,7 +446,7 @@ namespace JSC {
         return IterationStatus::Continue;
     }
 
-    inline bool MarkedBlock::needsSweeping()
+    inline bool MarkedBlock::needsSweeping() const
     {
         return m_state == Marked;
     }
@@ -472,6 +454,11 @@ namespace JSC {
     inline bool MarkedBlock::isAllocated() const
     {
         return m_state == Allocated;
+    }
+
+    inline bool MarkedBlock::isMarkedOrRetired() const
+    {
+        return m_state == Marked || m_state == Retired;
     }
 
 } // namespace JSC

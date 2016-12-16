@@ -52,6 +52,7 @@
     [[WebPreferences standardPreferences] setDeveloperExtrasEnabled:YES];
     [[WebPreferences standardPreferences] setImageControlsEnabled:YES];
     [[WebPreferences standardPreferences] setServiceControlsEnabled:YES];
+    [[WebPreferences standardPreferences] setJavaScriptCanOpenWindowsAutomatically:YES];
 
     [_webView _listenForLayoutMilestones:WebDidFirstLayout | WebDidFirstVisuallyNonEmptyLayout | WebDidHitRelevantRepaintedObjectsAreaThreshold];
 
@@ -258,10 +259,13 @@
     [[WebPreferences standardPreferences] setSimpleLineLayoutDebugBordersEnabled:settings.simpleLineLayoutDebugBordersEnabled];
     [[WebPreferences standardPreferences] setShowRepaintCounter:settings.layerBordersVisible];
     [[WebPreferences standardPreferences] setSuppressesIncrementalRendering:settings.incrementalRenderingSuppressed];
+    [[WebPreferences standardPreferences] setAcceleratedDrawingEnabled:settings.acceleratedDrawingEnabled];
+    [[WebPreferences standardPreferences] setResourceLoadStatisticsEnabled:settings.resourceLoadStatisticsEnabled];
 
     BOOL useTransparentWindows = settings.useTransparentWindows;
     if (useTransparentWindows != !self.window.isOpaque) {
         [self.window setOpaque:!useTransparentWindows];
+        [self.window setBackgroundColor:[NSColor clearColor]];
         [self.window setHasShadow:!useTransparentWindows];
 
         [_webView setBackgroundColor:useTransparentWindows ? [NSColor clearColor] : [NSColor whiteColor]];
@@ -278,6 +282,11 @@
         } else
             [_webView _setPaginationMode:WebPaginationModeUnpaginated];
     }
+}
+
+- (IBAction)printWebView:(id)sender
+{
+    [[[[_webView mainFrame] frameView] printOperationWithPrintInfo:[NSPrintInfo sharedPrintInfo]] runOperationModalForWindow:self.window delegate:nil didRunSelector:nil contextInfo:nil];
 }
 
 - (void)webView:(WebView *)sender didLayout:(WebLayoutMilestones)milestones
@@ -312,6 +321,14 @@
     [self.window setTitle:[title stringByAppendingString:@" [WK1]"]];
 }
 
+- (WebView *)webView:(WebView *)sender createWebViewWithRequest:(NSURLRequest *)request
+{
+    WK1BrowserWindowController *newBrowserWindowController = [[WK1BrowserWindowController alloc] initWithWindowNibName:@"BrowserWindow"];
+    [newBrowserWindowController.window makeKeyAndOrderFront:self];
+
+    return newBrowserWindowController->_webView;
+}
+
 - (void)webView:(WebView *)sender didCommitLoadForFrame:(WebFrame *)frame
 {
     if (frame != [sender mainFrame])
@@ -329,6 +346,11 @@
         return;
 
     [self updateTitle:title];
+}
+
+- (NSArray *)webView:(WebView *)sender contextMenuItemsForElement:(NSDictionary *)element defaultMenuItems:(NSArray *)defaultMenuItems
+{
+    return defaultMenuItems;
 }
 
 - (void)webView:(WebView *)sender runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WebFrame *)frame

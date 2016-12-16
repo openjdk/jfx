@@ -31,6 +31,7 @@
 import codecs
 import errno
 import exceptions
+import filecmp
 import glob
 import hashlib
 import os
@@ -49,6 +50,15 @@ class FileSystem(object):
     pardir = os.pardir
 
     def abspath(self, path):
+        # FIXME: This gross hack is needed while we transition from Cygwin to native Windows, because we
+        # have some mixing of file conventions from different tools:
+        if sys.platform == 'cygwin':
+            path = os.path.normpath(path)
+            path_components = path.split(os.sep)
+            if path_components and len(path_components[0]) == 2 and path_components[0][1] == ':':
+                path_components[0] = path_components[0][0]
+                path = os.path.join('/', 'cygdrive', *path_components)
+
         return os.path.abspath(path)
 
     def realpath(self, path):
@@ -295,3 +305,6 @@ class FileSystem(object):
     def splitext(self, path):
         """Return (dirname + os.sep + basename, '.' + ext)"""
         return os.path.splitext(path)
+
+    def compare(self, path1, path2):
+        return filecmp.cmp(path1, path2)

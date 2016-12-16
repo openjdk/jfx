@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,35 +28,13 @@
 
 #include "DOMTokenList.h"
 #include "SpaceSplitString.h"
-#include <wtf/RefCounted.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
 
-typedef int ExceptionCode;
-
-class DOMSettableTokenList final : public DOMTokenList, public RefCounted<DOMSettableTokenList> {
+// Only used by ObjC bindings.
+class DOMSettableTokenList : public DOMTokenList {
     WTF_MAKE_FAST_ALLOCATED;
-public:
-    static Ref<DOMSettableTokenList> create()
-    {
-        return adoptRef(*new DOMSettableTokenList);
-    }
-
-    virtual void ref() override;
-    virtual void deref() override;
-
-    virtual unsigned length() const override;
-    virtual const AtomicString item(unsigned index) const override;
-
-    virtual AtomicString value() const override;
-    virtual void setValue(const AtomicString&) override;
-
-private:
-    virtual bool containsInternal(const AtomicString&) const override;
-
-    AtomicString m_value;
-    SpaceSplitString m_tokens;
 };
 
 } // namespace WebCore

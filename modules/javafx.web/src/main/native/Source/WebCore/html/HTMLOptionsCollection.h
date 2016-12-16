@@ -24,7 +24,7 @@
 #ifndef HTMLOptionsCollection_h
 #define HTMLOptionsCollection_h
 
-#include "HTMLCollection.h"
+#include "CachedHTMLCollection.h"
 #include "HTMLSelectElement.h"
 
 namespace WebCore {
@@ -33,12 +33,15 @@ class HTMLOptionElement;
 
 typedef int ExceptionCode;
 
-class HTMLOptionsCollection final : public HTMLCollection {
+class HTMLOptionsCollection final : public CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<SelectOptions>::traversalType> {
 public:
     static Ref<HTMLOptionsCollection> create(HTMLSelectElement&, CollectionType);
 
     HTMLSelectElement& selectElement() { return downcast<HTMLSelectElement>(ownerNode()); }
     const HTMLSelectElement& selectElement() const { return downcast<HTMLSelectElement>(ownerNode()); }
+
+    virtual HTMLOptionElement* item(unsigned offset) const override;
+    virtual HTMLOptionElement* namedItem(const AtomicString& name) const override;
 
     void add(HTMLElement*, HTMLElement* beforeElement, ExceptionCode&);
     void add(HTMLElement*, int beforeIndex, ExceptionCode&);
@@ -52,9 +55,28 @@ public:
 #if PLATFORM(JAVA)
     virtual bool isHTMLOptionsCollection() const override { return true; }
 #endif
+
+    // For CachedHTMLCollection.
+    bool elementMatches(Element&) const;
+
 private:
     explicit HTMLOptionsCollection(HTMLSelectElement&);
 };
+
+inline HTMLOptionElement* HTMLOptionsCollection::item(unsigned offset) const
+{
+    return downcast<HTMLOptionElement>(CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<SelectOptions>::traversalType>::item(offset));
+}
+
+inline HTMLOptionElement* HTMLOptionsCollection::namedItem(const AtomicString& name) const
+{
+    return downcast<HTMLOptionElement>(CachedHTMLCollection<HTMLOptionsCollection, CollectionTypeTraits<SelectOptions>::traversalType>::namedItem(name));
+}
+
+inline bool HTMLOptionsCollection::elementMatches(Element& element) const
+{
+    return element.hasTagName(HTMLNames::optionTag);
+}
 
 } // namespace WebCore
 

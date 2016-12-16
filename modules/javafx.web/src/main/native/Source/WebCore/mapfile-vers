@@ -101,6 +101,7 @@ SUNWprivate_1.0 {
                _ZN3JSC16slowValidateCellEPNS_6JSCellE;
                _ZN3JSC14setNeverInlineEPK15OpaqueJSContextPK13OpaqueJSValue;
                _ZN3JSC19numberOfDFGCompilesEPK15OpaqueJSContextPK13OpaqueJSValue;
+               _ZN3JSC20failNextNewCodeBlockEPK15OpaqueJSContext;
                _ZN3JSC17JSArrayBufferView6s_infoE;
                _ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext;
                Java_com_sun_webkit_dom_AttrImpl_getNameImpl;
@@ -1882,6 +1883,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WebPage_twkGetVisibleRect;
                Java_com_sun_webkit_WebPage_twkGetZoomFactor;
                Java_com_sun_webkit_WebPage_twkGoBackForward;
+               Java_com_sun_webkit_WebPage_twkInitWebCore;
                Java_com_sun_webkit_WebPage_twkInit;
                Java_com_sun_webkit_WebPage_twkIsContextMenuEnabled;
                Java_com_sun_webkit_WebPage_twkIsEditable;
@@ -1889,6 +1891,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_WebPage_twkLoad;
                Java_com_sun_webkit_WebPage_twkOpen;
                Java_com_sun_webkit_WebPage_twkOverridePreference;
+               Java_com_sun_webkit_WebPage_twkResetToConsistentStateBeforeTesting;
                Java_com_sun_webkit_WebPage_twkIsLoading;
                Java_com_sun_webkit_WebPage_twkPostPaint;
                Java_com_sun_webkit_WebPage_twkPrePaint;

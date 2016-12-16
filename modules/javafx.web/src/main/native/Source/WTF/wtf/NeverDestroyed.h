@@ -65,7 +65,7 @@ private:
     // and hand out chunks of it to NeverDestroyed instead, to reduce fragmentation.
     typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_storage;
 
-    template <typename PtrType, bool ShouldRelax = std::is_base_of<RefCounted<PtrType>, PtrType>::value> struct MaybeRelax {
+    template <typename PtrType, bool ShouldRelax = std::is_base_of<RefCountedBase, PtrType>::value> struct MaybeRelax {
         explicit MaybeRelax(PtrType*) { }
     };
     template <typename PtrType> struct MaybeRelax<PtrType, true> {
@@ -94,6 +94,8 @@ public:
     operator T&() { return *asPtr(); }
     T& get() { return *asPtr(); }
 
+    T* operator->() { return asPtr(); }
+
 private:
     typedef typename std::remove_const<T>::type* PointerType;
 
@@ -108,7 +110,7 @@ private:
     // and hand out chunks of it to NeverDestroyed instead, to reduce fragmentation.
     typename std::aligned_storage<sizeof(T), std::alignment_of<T>::value>::type m_storage;
 
-    template <typename PtrType, bool ShouldRelax = std::is_base_of<RefCounted<PtrType>, PtrType>::value> struct MaybeRelax {
+    template <typename PtrType, bool ShouldRelax = std::is_base_of<RefCountedBase, PtrType>::value> struct MaybeRelax {
         explicit MaybeRelax(PtrType*) { }
     };
     template <typename PtrType> struct MaybeRelax<PtrType, true> {

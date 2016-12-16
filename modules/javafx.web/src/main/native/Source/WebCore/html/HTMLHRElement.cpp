@@ -59,10 +59,10 @@ bool HTMLHRElement::isPresentationAttribute(const QualifiedName& name) const
 void HTMLHRElement::collectStyleForPresentationAttribute(const QualifiedName& name, const AtomicString& value, MutableStyleProperties& style)
 {
     if (name == alignAttr) {
-        if (equalIgnoringCase(value, "left")) {
+        if (equalLettersIgnoringASCIICase(value, "left")) {
             addPropertyToPresentationAttributeStyle(style, CSSPropertyMarginLeft, 0, CSSPrimitiveValue::CSS_PX);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyMarginRight, CSSValueAuto);
-        } else if (equalIgnoringCase(value, "right")) {
+        } else if (equalLettersIgnoringASCIICase(value, "right")) {
             addPropertyToPresentationAttributeStyle(style, CSSPropertyMarginLeft, CSSValueAuto);
             addPropertyToPresentationAttributeStyle(style, CSSPropertyMarginRight, 0, CSSPrimitiveValue::CSS_PX);
         } else {
@@ -84,7 +84,7 @@ void HTMLHRElement::collectStyleForPresentationAttribute(const QualifiedName& na
         if (!fastHasAttribute(colorAttr)) {
             addPropertyToPresentationAttributeStyle(style, CSSPropertyBorderStyle, CSSValueSolid);
 
-            RefPtr<CSSPrimitiveValue> darkGrayValue = cssValuePool().createColorValue(Color::darkGray);
+            RefPtr<CSSPrimitiveValue> darkGrayValue = CSSValuePool::singleton().createColorValue(Color::darkGray);
             style.setProperty(CSSPropertyBorderColor, darkGrayValue);
             style.setProperty(CSSPropertyBackgroundColor, darkGrayValue);
         }

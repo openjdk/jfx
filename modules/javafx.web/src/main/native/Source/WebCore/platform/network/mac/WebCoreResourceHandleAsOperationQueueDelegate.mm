@@ -31,6 +31,7 @@
 #import "AuthenticationChallenge.h"
 #import "AuthenticationMac.h"
 #import "Logging.h"
+#import "NSURLRequestSPI.h"
 #import "ResourceHandle.h"
 #import "ResourceHandleClient.h"
 #import "ResourceRequest.h"
@@ -38,10 +39,6 @@
 #import "SharedBuffer.h"
 #import "WebCoreURLResponse.h"
 #import <wtf/MainThread.h>
-
-@interface NSURLRequest (Details)
-- (id)_propertyForKey:(NSString *)key;
-@end
 
 using namespace WebCore;
 
@@ -199,7 +196,7 @@ using namespace WebCore;
     RetainPtr<id> protector(self);
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!m_handle) {
+        if (!m_handle || !m_handle->client()) {
             dispatch_semaphore_signal(m_semaphore);
             return;
         }

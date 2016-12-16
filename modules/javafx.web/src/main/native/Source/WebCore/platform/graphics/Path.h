@@ -30,32 +30,43 @@
 
 #include "FloatRect.h"
 #include "WindRule.h"
+#include <functional>
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
+#include <wtf/Vector.h>
 
 #if USE(CG)
+
 #include <wtf/RetainPtr.h>
 #include <CoreGraphics/CGPath.h>
 typedef struct CGPath PlatformPath;
+
 #elif USE(CAIRO)
+
 namespace WebCore {
 class CairoPath;
 }
 typedef WebCore::CairoPath PlatformPath;
+
 #elif USE(WINGDI)
+
 namespace WebCore {
-    class PlatformPath;
+class PlatformPath;
 }
 typedef WebCore::PlatformPath PlatformPath;
+
 #elif PLATFORM(JAVA)
-#include "wtf/RefPtr.h"
+#include <wtf/RefPtr.h>
 #include "RQRef.h"
 namespace WebCore {
     class RQRef;
 }
 typedef RefPtr<WebCore::RQRef> PlatformPath;
+
 #else
+
 typedef void PlatformPath;
+
 #endif
 
 #if PLATFORM(JAVA)
@@ -74,6 +85,7 @@ namespace WebCore {
     class PathTraversalState;
     class RoundedRect;
     class StrokeStyleApplier;
+    class TextStream;
 
     enum PathElementType {
         PathElementMoveToPoint, // The points member will contain 1 value.
@@ -91,7 +103,7 @@ namespace WebCore {
         FloatPoint* points;
     };
 
-    typedef void (*PathApplierFunction)(void* info, const PathElement*);
+    typedef std::function<void (const PathElement&)> PathApplierFunction;
 
     class Path {
         WTF_MAKE_FAST_ALLOCATED;
@@ -104,6 +116,8 @@ namespace WebCore {
 
         WEBCORE_EXPORT Path(const Path&);
         WEBCORE_EXPORT Path& operator=(const Path&);
+
+        static Path polygonPathFromPoints(const Vector<FloatPoint>&);
 
         bool contains(const FloatPoint&, WindRule rule = RULE_NONZERO) const;
         bool strokeContains(StrokeStyleApplier*, const FloatPoint&) const;
@@ -157,7 +171,7 @@ namespace WebCore {
         // ensurePlatformPath() will allocate a PlatformPath if it has not yet been and will never return null.
         WEBCORE_EXPORT PlatformPathPtr ensurePlatformPath();
 
-        WEBCORE_EXPORT void apply(void* info, PathApplierFunction) const;
+        WEBCORE_EXPORT void apply(const PathApplierFunction&) const;
         void transform(const AffineTransform&);
 
         void addBeziersForRoundedRect(const FloatRect&, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius);
@@ -166,9 +180,15 @@ namespace WebCore {
         void platformAddPathForRoundedRect(const FloatRect&, const FloatSize& topLeftRadius, const FloatSize& topRightRadius, const FloatSize& bottomLeftRadius, const FloatSize& bottomRightRadius);
 #endif
 
+#ifndef NDEBUG
+        void dump() const;
+#endif
+
     private:
         PlatformPathPtr m_path;
     };
+
+TextStream& operator<<(TextStream&, const Path&);
 
 }
 

@@ -56,11 +56,20 @@ union ConstructData {
     } js;
 };
 
+// Convenience wrapper so you don't need to deal with CallData and CallType unless you are going to use them.
+JSObject* construct(ExecState*, JSValue functionObject, const ArgList&, const String& errorMessage);
 JS_EXPORT_PRIVATE JSObject* construct(ExecState*, JSValue constructor, ConstructType, const ConstructData&, const ArgList&, JSValue newTarget);
 
 ALWAYS_INLINE JSObject* construct(ExecState* exec, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args)
 {
     return construct(exec, constructorObject, constructType, constructData, args, constructorObject);
+}
+
+JS_EXPORT_PRIVATE JSObject* profiledConstruct(ExecState*, ProfilingReason, JSValue constructor, ConstructType, const ConstructData&, const ArgList&, JSValue newTarget);
+
+ALWAYS_INLINE JSObject* profiledConstruct(ExecState* exec, ProfilingReason reason, JSValue constructorObject, ConstructType constructType, const ConstructData& constructData, const ArgList& args)
+{
+    return profiledConstruct(exec, reason, constructorObject, constructType, constructData, args, constructorObject);
 }
 
 } // namespace JSC

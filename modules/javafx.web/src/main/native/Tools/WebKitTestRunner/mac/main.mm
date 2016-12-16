@@ -25,6 +25,8 @@
 
 #import "config.h"
 
+#if PLATFORM(MAC)
+
 #import "TestController.h"
 
 static void setDefaultsToConsistentValuesForTesting()
@@ -33,7 +35,10 @@ static void setDefaultsToConsistentValuesForTesting()
         @"AppleKeyboardUIMode": @1,
         // FIXME: This is likely insufficient, as tests change (and don't reset) these settings via Internals.
         @"WebAutomaticQuoteSubstitutionEnabled": @NO,
-        @"WebAutomaticDashSubstitutionEnabled": @NO
+        @"WebAutomaticDashSubstitutionEnabled": @NO,
+        @"NSFakeForceTouchDevice" : @YES,
+        @"AppleEnableSwipeNavigateWithScrolls": @YES,
+        @"com.apple.swipescrolldirection": @1,
     };
 
     [[NSUserDefaults standardUserDefaults] setValuesForKeysWithDictionary:dict];
@@ -59,3 +64,12 @@ int main(int argc, const char* argv[])
     [pool drain];
     return 0;
 }
+
+#else
+
+int main(int, const char*[])
+{
+    return 0;
+}
+
+#endif // PLATFORM(MAC)

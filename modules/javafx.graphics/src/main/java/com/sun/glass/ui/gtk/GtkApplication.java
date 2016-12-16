@@ -36,19 +36,75 @@ import com.sun.glass.ui.Size;
 import com.sun.glass.ui.Timer;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
+import com.sun.javafx.util.Logging;
+import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
+import sun.util.logging.PlatformLogger;
 
 import java.io.File;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.lang.annotation.Native;
 
-final class GtkApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
+final class GtkApplication extends Application implements
+                                    InvokeLaterDispatcher.InvokeLaterSubmitter {
+    private static final String SWT_INTERNAL_CLASS =
+            "org.eclipse.swt.internal.gtk.OS";
+    private static final int forcedGtkVersion;
 
-    static {
+
+    static  {
+        //check for SWT-GTK lib presence
+        Class<?> OS = AccessController.
+                doPrivileged((PrivilegedAction<Class<?>>) () -> {
+                    try {
+                        return Class.forName(SWT_INTERNAL_CLASS, true,
+                                ClassLoader.getSystemClassLoader());
+                    } catch (Exception e) {}
+                    try {
+                        return Class.forName(SWT_INTERNAL_CLASS, true,
+                                Thread.currentThread().getContextClassLoader());
+                    } catch (Exception e) {}
+                    return null;
+                });
+        if (OS != null) {
+            PlatformLogger logger = Logging.getJavaFXLogger();
+            logger.fine("SWT-GTK library found. Try to obtain GTK version.");
+            Method method = AccessController.
+                    doPrivileged((PrivilegedAction<Method>) () -> {
+                        try {
+                            return OS.getMethod("gtk_major_version");
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    });
+            int ver = 0;
+            if (method != null) {
+                try {
+                    ver = ((Number)method.invoke(OS)).intValue();
+                } catch (Exception e) {
+                    logger.warning("Method gtk_major_version() of " +
+                         "the org.eclipse.swt.internal.gtk.OS class " +
+                         "returns error. SWT GTK version cannot be detected. " +
+                         "GTK3 will be used as default.");
+                    ver = 3;
+                }
+            }
+            if (ver < 2 || ver > 3) {
+                logger.warning("SWT-GTK uses unsupported major GTK version "
+                        + ver + ". GTK3 will be used as default.");
+                ver = 3;
+            }
+            forcedGtkVersion = ver;
+        } else {
+            forcedGtkVersion = 0;
+        }
+
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             Application.loadNativeLibrary();
             return null;
@@ -88,24 +144,17 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
 
     GtkApplication() {
 
-        // Check whether the Display is valid and throw an exception if not.
-        // We use UnsupportedOperationException rather than HeadlessException
-        // so as not to introduce a dependency on AWT.
-        if (!isDisplayValid()) {
-            throw new UnsupportedOperationException("Unable to open DISPLAY");
-        }
-
-        int gtkVersion =
-                AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
-            String v = System.getProperty("jdk.gtk.version","2");
-            int ret = 0;
-            if ("3".equals(v) || v.startsWith("3.")) {
-                ret = 3;
-            } else if ("2".equals(v) || v.startsWith("2.")) {
-                ret = 2;
-            }
-            return ret;
-        });
+        final int gtkVersion = forcedGtkVersion == 0 ?
+            AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
+                String v = System.getProperty("jdk.gtk.version","2");
+                int ret = 0;
+                if ("3".equals(v) || v.startsWith("3.")) {
+                    ret = 3;
+                } else if ("2".equals(v) || v.startsWith("2.")) {
+                    ret = 2;
+                }
+                return ret;
+            }) : forcedGtkVersion;
         boolean gtkVersionVerbose =
                 AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
             return Boolean.getBoolean("jdk.gtk.verbose");
@@ -116,6 +165,32 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         } else {
             overrideUIScale = -1.0f;
         }
+
+        int libraryToLoad = _queryLibrary(gtkVersion, gtkVersionVerbose);
+
+        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+            if (libraryToLoad == QUERY_NO_DISPLAY) {
+                throw new UnsupportedOperationException("Unable to open DISPLAY");
+            } else if (libraryToLoad == QUERY_USE_CURRENT) {
+                if (gtkVersionVerbose) {
+                    System.out.println("Glass GTK library to load is already loaded");
+                }
+            } else if (libraryToLoad == QUERY_LOAD_GTK2) {
+                if (gtkVersionVerbose) {
+                    System.out.println("Glass GTK library to load is glassgtk2");
+                }
+                NativeLibLoader.loadLibrary("glassgtk2");
+            } else if (libraryToLoad == QUERY_LOAD_GTK3) {
+                if (gtkVersionVerbose) {
+                    System.out.println("Glass GTK library to load is glassgtk3");
+                }
+                NativeLibLoader.loadLibrary("glassgtk3");
+            } else {
+                throw new UnsupportedOperationException("Internal Error");
+            }
+            return null;
+        });
+
         int version = _initGTK(gtkVersion, gtkVersionVerbose, overrideUIScale);
 
         if (version == -1) {
@@ -133,11 +208,18 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
         }
     }
 
-    private static native int _initGTK(int version, boolean verbose, float overrideUIScale);
+    @Native private static final int QUERY_ERROR = -2;
+    @Native private static final int QUERY_NO_DISPLAY = -1;
+    @Native private static final int QUERY_USE_CURRENT = 1;
+    @Native private static final int QUERY_LOAD_GTK2 = 2;
+    @Native private static final int QUERY_LOAD_GTK3 = 3;
+    /*
+     * check the system and return an indication of which library to load
+     *  return values are the QUERY_ constants
+     */
+    private static native int _queryLibrary(int version, boolean verbose);
 
-    private static boolean isDisplayValid() {
-        return _isDisplayValid();
-    }
+    private static native int _initGTK(int version, boolean verbose, float overrideUIScale);
 
     private void initDisplay() {
         Map ds = getDeviceDetails();
@@ -211,8 +293,6 @@ final class GtkApplication extends Application implements InvokeLaterDispatcher.
     @Override public boolean shouldUpdateWindow() {
         return true;
     }
-
-    private static native boolean _isDisplayValid();
 
     private native void _terminateLoop();
 

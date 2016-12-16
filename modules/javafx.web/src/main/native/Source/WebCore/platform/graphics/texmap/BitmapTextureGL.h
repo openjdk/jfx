@@ -21,7 +21,10 @@
 #ifndef BitmapTextureGL_h
 #define BitmapTextureGL_h
 
+#if USE(TEXTURE_MAPPER_GL)
+
 #include "BitmapTexture.h"
+#include "ClipStack.h"
 #include "FilterOperation.h"
 #include "GraphicsContext3D.h"
 #include "IntSize.h"
@@ -40,7 +43,6 @@ public:
 
     virtual IntSize size() const override;
     virtual bool isValid() const override;
-    virtual bool canReuseWith(const IntSize& contentsSize, Flags = 0) override;
     virtual void didReset() override;
     void bindAsSurface(GraphicsContext3D*);
     void initializeStencil();
@@ -53,7 +55,7 @@ public:
     void updateContentsNoSwizzle(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine, unsigned bytesPerPixel = 4, Platform3DObject glFormat = GraphicsContext3D::RGBA);
     virtual bool isBackedByOpenGL() const override { return true; }
 
-    virtual PassRefPtr<BitmapTexture> applyFilters(TextureMapper*, const FilterOperations&) override;
+    virtual PassRefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&) override;
     struct FilterInfo {
         RefPtr<FilterOperation> filter;
         unsigned pass;
@@ -66,7 +68,9 @@ public:
             { }
     };
     const FilterInfo* filterInfo() const { return &m_filterInfo; }
-    TextureMapperGL::ClipStack& clipStack() { return m_clipStack; }
+    ClipStack& clipStack() { return m_clipStack; }
+
+    GC3Dint internalFormat() const { return m_internalFormat; }
 
 private:
 
@@ -77,7 +81,7 @@ private:
     Platform3DObject m_rbo;
     Platform3DObject m_depthBufferObject;
     bool m_shouldClear;
-    TextureMapperGL::ClipStack m_clipStack;
+    ClipStack m_clipStack;
     RefPtr<GraphicsContext3D> m_context3D;
 
     BitmapTextureGL();
@@ -86,10 +90,16 @@ private:
     void createFboIfNeeded();
 
     FilterInfo m_filterInfo;
+
+    GC3Dint m_internalFormat;
+    GC3Denum m_format;
+    GC3Denum m_type;
 };
 
 BitmapTextureGL* toBitmapTextureGL(BitmapTexture*);
 
 }
+
+#endif // USE(TEXTURE_MAPPER_GL)
 
 #endif // BitmapTextureGL_h

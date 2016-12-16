@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2011, 2015 Ericsson AB. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
  *
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,7 @@
 
 namespace WebCore {
 
-class MediaStream final : public URLRegistrable, public ScriptWrappable, public MediaStreamPrivateClient, public EventTargetWithInlineData, public ContextDestructionObserver, public MediaStreamTrack::Observer {
+class MediaStream final : public URLRegistrable, public EventTargetWithInlineData, public ContextDestructionObserver, public MediaStreamTrack::Observer, public MediaStreamPrivate::Observer, public RefCounted<MediaStream> {
 public:
     class Observer {
     public:
@@ -54,7 +54,7 @@ public:
 
     static Ref<MediaStream> create(ScriptExecutionContext&);
     static Ref<MediaStream> create(ScriptExecutionContext&, MediaStream*);
-    static Ref<MediaStream> create(ScriptExecutionContext&, const Vector<RefPtr<MediaStreamTrack>>&);
+    static Ref<MediaStream> create(ScriptExecutionContext&, const MediaStreamTrackVector&);
     static Ref<MediaStream> create(ScriptExecutionContext&, RefPtr<MediaStreamPrivate>&&);
     virtual ~MediaStream();
 
@@ -64,9 +64,9 @@ public:
     void removeTrack(MediaStreamTrack*);
     MediaStreamTrack* getTrackById(String);
 
-    Vector<RefPtr<MediaStreamTrack>> getAudioTracks();
-    Vector<RefPtr<MediaStreamTrack>> getVideoTracks();
-    Vector<RefPtr<MediaStreamTrack>> getTracks() const;
+    MediaStreamTrackVector getAudioTracks() const;
+    MediaStreamTrackVector getVideoTracks() const;
+    MediaStreamTrackVector getTracks() const;
 
     RefPtr<MediaStream> clone();
 
@@ -78,8 +78,8 @@ public:
     virtual EventTargetInterface eventTargetInterface() const final { return MediaStreamEventTargetInterfaceType; }
     virtual ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
 
-    using RefCounted<MediaStreamPrivateClient>::ref;
-    using RefCounted<MediaStreamPrivateClient>::deref;
+    using RefCounted<MediaStream>::ref;
+    using RefCounted<MediaStream>::deref;
 
     // URLRegistrable
     virtual URLRegistry& registry() const override;
@@ -88,7 +88,7 @@ public:
     void removeObserver(Observer*);
 
 protected:
-    MediaStream(ScriptExecutionContext&, const Vector<RefPtr<MediaStreamTrack>>&);
+    MediaStream(ScriptExecutionContext&, const MediaStreamTrackVector&);
     MediaStream(ScriptExecutionContext&, RefPtr<MediaStreamPrivate>&&);
 
     // ContextDestructionObserver
@@ -104,18 +104,19 @@ private:
     // MediaStreamTrack::Observer
     virtual void trackDidEnd() override final;
 
-    // MediaStreamPrivateClient
+    // MediaStreamPrivate::Observer
     virtual void activeStatusChanged() override final;
-    virtual void didAddTrackToPrivate(MediaStreamTrackPrivate&) override final;
-    virtual void didRemoveTrackFromPrivate(MediaStreamTrackPrivate&) override final;
+    virtual void didAddTrack(MediaStreamTrackPrivate&) override final;
+    virtual void didRemoveTrack(MediaStreamTrackPrivate&) override final;
 
     bool internalAddTrack(RefPtr<MediaStreamTrack>&&, StreamModifier);
     bool internalRemoveTrack(RefPtr<MediaStreamTrack>&&, StreamModifier);
 
     void scheduleActiveStateChange();
     void activityEventTimerFired();
+    void setIsActive(bool);
 
-    Vector<RefPtr<MediaStreamTrack>> trackVectorForType(RealtimeMediaSource::Type) const;
+    MediaStreamTrackVector trackVectorForType(RealtimeMediaSource::Type) const;
 
     RefPtr<MediaStreamPrivate> m_private;
 
@@ -123,7 +124,7 @@ private:
     HashMap<String, RefPtr<MediaStreamTrack>> m_trackSet;
 
     Timer m_activityEventTimer;
-    Vector<RefPtr<Event>> m_scheduledActivityEvents;
+    Vector<Ref<Event>> m_scheduledActivityEvents;
 
     Vector<Observer*> m_observers;
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -9,7 +9,6 @@
 #include "Image.h"
 #include "ImageObserver.h"
 #include "ImageBuffer.h"
-#include "ImageDecoder.h"
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "TransformationMatrix.h"
@@ -23,12 +22,12 @@ class ImageBuffer;
 
 namespace WebCore {
 
-void Image::drawPattern(GraphicsContext *gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
-                        const FloatPoint& phase, ColorSpace, CompositeOperator, const FloatRect& destRect, BlendMode)
+void Image::drawPattern(GraphicsContext& gc, const FloatRect& srcRect, const AffineTransform& patternTransform,
+                        const FloatPoint& phase, const FloatSize& /*spacing*/, CompositeOperator, const FloatRect& destRect, BlendMode)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
-    if (!gc || gc->paintingDisabled() || srcRect.isEmpty()) {
+    if (gc.paintingDisabled() || srcRect.isEmpty()) {
         return;
     }
 
@@ -48,7 +47,7 @@ void Image::drawPattern(GraphicsContext *gc, const FloatRect& srcRect, const Aff
     ASSERT(transform);
     CheckAndClearException(env);
 
-    gc->platformContext()->rq().freeSpace(13 * 4)
+    gc.platformContext()->rq().freeSpace(13 * 4)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN
     << currFrame
     << srcRect.x() << srcRect.y() << srcRect.width() << srcRect.height()
@@ -60,12 +59,12 @@ void Image::drawPattern(GraphicsContext *gc, const FloatRect& srcRect, const Aff
         imageObserver()->didDraw(this);
 }
 
-void Image::drawImage(GraphicsContext *gc, const FloatRect &dstRect, const FloatRect &srcRect,
-                       ColorSpace, CompositeOperator, BlendMode)
+void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const FloatRect &srcRect,
+                       CompositeOperator, BlendMode)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
-    if (!gc || gc->paintingDisabled()) {
+    if (gc.paintingDisabled()) {
         return;
     }
 
@@ -74,7 +73,7 @@ void Image::drawImage(GraphicsContext *gc, const FloatRect &dstRect, const Float
         return;
     }
 
-    gc->platformContext()->rq().freeSpace(72)
+    gc.platformContext()->rq().freeSpace(72)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
     << currFrame
     << dstRect.x() << dstRect.y()

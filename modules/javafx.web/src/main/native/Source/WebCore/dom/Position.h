@@ -44,6 +44,7 @@ class Range;
 class RenderElement;
 class RenderObject;
 class Text;
+class TextStream;
 
 enum PositionMoveType {
     CodePoint,       // Move by a single code point.
@@ -128,11 +129,11 @@ public:
     // will be treated as before ignoredNode (thus node() is really after the position, not containing it).
     Node* deprecatedNode() const { return m_anchorNode.get(); }
 
-    Document* document() const { return m_anchorNode ? &m_anchorNode->document() : 0; }
+    Document* document() const { return m_anchorNode ? &m_anchorNode->document() : nullptr; }
     Element* rootEditableElement() const
     {
         Node* container = containerNode();
-        return container ? container->rootEditableElement() : 0;
+        return container ? container->rootEditableElement() : nullptr;
     }
 
     // These should only be used for PositionIsOffsetInAnchor positions, unless
@@ -208,6 +209,9 @@ public:
     void showTreeForThis() const;
 #endif
 
+    // This is a tentative enhancement of operator== to account for different position types.
+    // FIXME: Combine this function with operator==
+    bool equals(const Position&) const;
 private:
     WEBCORE_EXPORT int offsetForPositionAfterAnchor() const;
 
@@ -339,6 +343,8 @@ inline bool offsetIsBeforeLastNodeOffset(int offset, Node* anchorNode)
 
     return offset < currentOffset;
 }
+
+TextStream& operator<<(TextStream&, const Position&);
 
 } // namespace WebCore
 

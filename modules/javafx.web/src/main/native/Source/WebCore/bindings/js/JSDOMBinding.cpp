@@ -31,6 +31,7 @@
 #include "ExceptionInterfaces.h"
 #include "Frame.h"
 #include "HTMLParserIdioms.h"
+#include "IDBDatabaseException.h"
 #include "JSDOMWindowCustom.h"
 #include "JSExceptionBase.h"
 #include "SecurityOrigin.h"
@@ -106,6 +107,13 @@ String valueToStringWithNullCheck(ExecState* exec, JSValue value)
     return value.toString(exec)->value(exec);
 }
 
+String valueToStringTreatingNullAsEmptyString(ExecState* exec, JSValue value)
+{
+    if (value.isNull())
+        return emptyString();
+    return value.toString(exec)->value(exec);
+}
+
 String valueToStringWithUndefinedOrNullCheck(ExecState* exec, JSValue value)
 {
     if (value.isUndefinedOrNull())
@@ -159,7 +167,7 @@ void reportException(ExecState* exec, JSValue exceptionValue, CachedScript* cach
     reportException(exec, exception, cachedScript);
 }
 
-void reportException(ExecState* exec, Exception* exception, CachedScript* cachedScript)
+void reportException(ExecState* exec, Exception* exception, CachedScript* cachedScript, ExceptionDetails* exceptionDetails)
 {
     RELEASE_ASSERT(exec->vm().currentThreadIsHoldingAPILock());
     if (isTerminatedExecutionException(exception))
@@ -173,7 +181,7 @@ void reportException(ExecState* exec, Exception* exception, CachedScript* cached
 
     JSDOMGlobalObject* globalObject = jsCast<JSDOMGlobalObject*>(exec->lexicalGlobalObject());
     if (JSDOMWindow* window = jsDynamicCast<JSDOMWindow*>(globalObject)) {
-        if (!window->impl().isCurrentlyDisplayedInFrame())
+        if (!window->wrapped().isCurrentlyDisplayedInFrame())
             return;
     }
 
@@ -202,6 +210,13 @@ void reportException(ExecState* exec, Exception* exception, CachedScript* cached
 
     ScriptExecutionContext* scriptExecutionContext = globalObject->scriptExecutionContext();
     scriptExecutionContext->reportException(errorMessage, lineNumber, columnNumber, exceptionSourceURL, callStack->size() ? callStack : 0, cachedScript);
+
+    if (exceptionDetails) {
+        exceptionDetails->message = errorMessage;
+        exceptionDetails->lineNumber = lineNumber;
+        exceptionDetails->columnNumber = columnNumber;
+        exceptionDetails->sourceURL = exceptionSourceURL;
+    }
 }
 
 void reportCurrentException(ExecState* exec)
@@ -216,17 +231,23 @@ void reportCurrentException(ExecState* exec)
         errorObject = toJS(exec, globalObject, interfaceName::create(description)); \
         break;
 
-JSValue createDOMException(ExecState* exec, ExceptionCode ec)
+static JSValue createDOMException(ExecState* exec, ExceptionCode ec, const String* message)
 {
     if (!ec)
         return jsUndefined();
 
     // FIXME: Handle other WebIDL exception types.
-    if (ec == TypeError)
-        return createTypeError(exec);
-    if (ec == RangeError)
-        return createRangeError(exec, ASCIILiteral("Bad value"));
+    if (ec == TypeError) {
+        if (!message || message->isEmpty())
+            return createTypeError(exec);
+        return createTypeError(exec, *message);
+    }
 
+    if (ec == RangeError) {
+        if (!message || message->isEmpty())
+            return createRangeError(exec, ASCIILiteral("Bad value"));
+        return createRangeError(exec, *message);
+    }
 
     // FIXME: All callers to setDOMException need to pass in the right global object
     // for now, we're going to assume the lexicalGlobalObject.  Which is wrong in cases like this:
@@ -235,14 +256,36 @@ JSValue createDOMException(ExecState* exec, ExceptionCode ec)
 
     ExceptionCodeDescription description(ec);
 
+    CString messageCString;
+    if (message)
+        messageCString = message->utf8();
+    if (message && !message->isEmpty()) {
+        // It is safe to do this because the char* contents of the CString are copied into a new WTF::String before the CString is destroyed.
+        description.description = messageCString.data();
+    }
+
     JSValue errorObject;
     switch (description.type) {
         DOM_EXCEPTION_INTERFACES_FOR_EACH(TRY_TO_CREATE_EXCEPTION)
+#if ENABLE(INDEXED_DATABASE)
+    case IDBDatabaseExceptionType:
+        errorObject = toJS(exec, globalObject, DOMCoreException::createWithDescriptionAsMessage(description));
+#endif
     }
 
     ASSERT(errorObject);
     addErrorInfo(exec, asObject(errorObject), true);
     return errorObject;
+}
+
+static JSValue createDOMException(ExecState* exec, ExceptionCode ec, const String& message)
+{
+    return createDOMException(exec, ec, &message);
+}
+
+JSValue createDOMException(ExecState* exec, ExceptionCode ec)
+{
+    return createDOMException(exec, ec, nullptr);
 }
 
 void setDOMException(ExecState* exec, ExceptionCode ec)
@@ -251,6 +294,14 @@ void setDOMException(ExecState* exec, ExceptionCode ec)
         return;
 
     exec->vm().throwException(exec, createDOMException(exec, ec));
+}
+
+void setDOMException(JSC::ExecState* exec, const ExceptionCodeWithMessage& ec)
+{
+    if (!ec.code || exec->hadException())
+        return;
+
+    exec->vm().throwException(exec, createDOMException(exec, ec.code, ec.message));
 }
 
 #undef TRY_TO_CREATE_EXCEPTION
@@ -290,22 +341,17 @@ void printErrorMessageForFrame(Frame* frame, const String& message)
     frame->document()->domWindow()->printErrorMessage(message);
 }
 
-EncodedJSValue objectToStringFunctionGetter(ExecState* exec, JSObject*, EncodedJSValue, PropertyName propertyName)
+Structure* getCachedDOMStructure(JSDOMGlobalObject& globalObject, const ClassInfo* classInfo)
 {
-    return JSValue::encode(JSFunction::create(exec->vm(), exec->lexicalGlobalObject(), 0, propertyName.publicName(), objectProtoFuncToString));
-}
-
-Structure* getCachedDOMStructure(JSDOMGlobalObject* globalObject, const ClassInfo* classInfo)
-{
-    JSDOMStructureMap& structures = globalObject->structures();
+    JSDOMStructureMap& structures = globalObject.structures();
     return structures.get(classInfo).get();
 }
 
-Structure* cacheDOMStructure(JSDOMGlobalObject* globalObject, Structure* structure, const ClassInfo* classInfo)
+Structure* cacheDOMStructure(JSDOMGlobalObject& globalObject, Structure* structure, const ClassInfo* classInfo)
 {
-    JSDOMStructureMap& structures = globalObject->structures();
+    JSDOMStructureMap& structures = globalObject.structures();
     ASSERT(!structures.contains(classInfo));
-    return structures.set(classInfo, WriteBarrier<Structure>(globalObject->vm(), globalObject, structure)).iterator->value.get();
+    return structures.set(classInfo, WriteBarrier<Structure>(globalObject.vm(), &globalObject, structure)).iterator->value.get();
 }
 
 static const int32_t kMaxInt32 = 0x7fffffff;
@@ -313,15 +359,20 @@ static const int32_t kMinInt32 = -kMaxInt32 - 1;
 static const uint32_t kMaxUInt32 = 0xffffffffU;
 static const int64_t kJSMaxInteger = 0x20000000000000LL - 1; // 2^53 - 1, largest integer exactly representable in ECMAScript.
 
+static String rangeErrorString(double value, double min, double max)
+{
+    return makeString("Value ", String::numberToStringECMAScript(value), " is outside the range [", String::numberToStringECMAScript(min), ", ", String::numberToStringECMAScript(max), "]");
+}
+
 static double enforceRange(ExecState* exec, double x, double minimum, double maximum)
 {
     if (std::isnan(x) || std::isinf(x)) {
-        throwTypeError(exec);
+        exec->vm().throwException(exec, createTypeError(exec, rangeErrorString(x, minimum, maximum)));
         return 0;
     }
     x = trunc(x);
     if (x < minimum || x > maximum) {
-        throwTypeError(exec);
+        exec->vm().throwException(exec, createTypeError(exec, rangeErrorString(x, minimum, maximum)));
         return 0;
     }
     return x;
@@ -508,12 +559,12 @@ uint64_t toUInt64(ExecState* exec, JSValue value, IntegerConversionConfiguration
 
 DOMWindow& activeDOMWindow(ExecState* exec)
 {
-    return asJSDOMWindow(exec->lexicalGlobalObject())->impl();
+    return asJSDOMWindow(exec->lexicalGlobalObject())->wrapped();
 }
 
 DOMWindow& firstDOMWindow(ExecState* exec)
 {
-    return asJSDOMWindow(exec->vmEntryGlobalObject())->impl();
+    return asJSDOMWindow(exec->vmEntryGlobalObject())->wrapped();
 }
 
 static inline bool canAccessDocument(JSC::ExecState* state, Document* targetDocument, SecurityReportingOption reportingOption = ReportSecurityError)
@@ -644,6 +695,38 @@ void throwSetterTypeError(JSC::ExecState& state, const char* interfaceName, cons
 EncodedJSValue throwThisTypeError(JSC::ExecState& state, const char* interfaceName, const char* functionName)
 {
     return throwTypeError(state, makeString("Can only call ", interfaceName, '.', functionName, " on instances of ", interfaceName));
+}
+
+void callFunctionWithCurrentArguments(JSC::ExecState& state, JSC::JSObject& thisObject, JSC::JSFunction& function)
+{
+    JSC::CallData callData;
+    JSC::CallType callType = JSC::getCallData(&function, callData);
+    ASSERT(callType != CallTypeNone);
+
+    JSC::MarkedArgumentBuffer arguments;
+    for (unsigned i = 0; i < state.argumentCount(); ++i)
+        arguments.append(state.uncheckedArgument(i));
+    JSC::call(&state, &function, callType, callData, &thisObject, arguments);
+}
+
+void DOMConstructorJSBuiltinObject::visitChildren(JSC::JSCell* cell, JSC::SlotVisitor& visitor)
+{
+    auto* thisObject = jsCast<DOMConstructorJSBuiltinObject*>(cell);
+    ASSERT_GC_OBJECT_INHERITS(thisObject, info());
+    Base::visitChildren(thisObject, visitor);
+    visitor.append(&thisObject->m_initializeFunction);
+}
+
+static EncodedJSValue JSC_HOST_CALL callThrowTypeError(ExecState* exec)
+{
+    throwTypeError(exec, ASCIILiteral("Constructor requires 'new' operator"));
+    return JSValue::encode(jsNull());
+}
+
+CallType DOMConstructorObject::getCallData(JSCell*, CallData& callData)
+{
+    callData.native.function = callThrowTypeError;
+    return CallTypeHost;
 }
 
 } // namespace WebCore

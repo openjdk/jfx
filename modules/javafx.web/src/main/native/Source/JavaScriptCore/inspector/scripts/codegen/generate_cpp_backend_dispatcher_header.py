@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2014 Apple Inc. All rights reserved.
+# Copyright (c) 2014, 2015 Apple Inc. All rights reserved.
 # Copyright (c) 2014 University of Washington. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -67,7 +67,8 @@ class CppBackendDispatcherHeaderGenerator(Generator):
         sections = []
         sections.append(self.generate_license())
         sections.append(Template(CppTemplates.HeaderPrelude).substitute(None, **header_args))
-        sections.append(self._generate_alternate_handler_forward_declarations_for_domains(domains))
+        if self.model().framework.setting('alternate_dispatchers', False):
+            sections.append(self._generate_alternate_handler_forward_declarations_for_domains(domains))
         sections.extend(map(self._generate_handler_declarations_for_domain, domains))
         sections.extend(map(self._generate_dispatcher_declarations_for_domain, domains))
         sections.append(Template(CppTemplates.HeaderPostlude).substitute(None, **header_args))
@@ -196,6 +197,14 @@ class CppBackendDispatcherHeaderGenerator(Generator):
             declarations.append('private:')
         declarations.extend(map(self._generate_dispatcher_declaration_for_command, domain.commands))
 
+        declaration_args = {
+            'domainName': domain.domain_name,
+        }
+
+        # Add in a few more declarations at the end if needed.
+        if self.model().framework.setting('alternate_dispatchers', False):
+            declarations.append(Template(CppTemplates.BackendDispatcherHeaderDomainDispatcherAlternatesDeclaration).substitute(None, **declaration_args))
+
         handler_args = {
             'classAndExportMacro': " ".join(classComponents),
             'domainName': domain.domain_name,
@@ -205,4 +214,4 @@ class CppBackendDispatcherHeaderGenerator(Generator):
         return self.wrap_with_guard_for_domain(domain, Template(CppTemplates.BackendDispatcherHeaderDomainDispatcherDeclaration).substitute(None, **handler_args))
 
     def _generate_dispatcher_declaration_for_command(self, command):
-        return "    void %s(long callId, const InspectorObject& message);" % command.command_name
+        return "    void %s(long requestId, RefPtr<InspectorObject>&& parameters);" % command.command_name

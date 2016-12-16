@@ -43,7 +43,7 @@ namespace WebCore {
 
 const double AudioScheduledSourceNode::UnknownTime = -1;
 
-AudioScheduledSourceNode::AudioScheduledSourceNode(AudioContext* context, float sampleRate)
+AudioScheduledSourceNode::AudioScheduledSourceNode(AudioContext& context, float sampleRate)
     : AudioNode(context, sampleRate)
     , m_playbackState(UNSCHEDULED_STATE)
     , m_startTime(0)
@@ -71,7 +71,7 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize,
     // quantumEndFrame       : End frame of the current time quantum.
     // startFrame            : Start frame for this source.
     // endFrame              : End frame for this source.
-    size_t quantumStartFrame = context()->currentSampleFrame();
+    size_t quantumStartFrame = context().currentSampleFrame();
     size_t quantumEndFrame = quantumStartFrame + quantumFrameSize;
     size_t startFrame = AudioUtilities::timeToSampleFrame(m_startTime, sampleRate);
     size_t endFrame = m_endTime == UnknownTime ? 0 : AudioUtilities::timeToSampleFrame(m_endTime, sampleRate);
@@ -91,7 +91,7 @@ void AudioScheduledSourceNode::updateSchedulingInfo(size_t quantumFrameSize,
     if (m_playbackState == SCHEDULED_STATE) {
         // Increment the active source count only if we're transitioning from SCHEDULED_STATE to PLAYING_STATE.
         m_playbackState = PLAYING_STATE;
-        context()->incrementActiveSourceCount();
+        context().incrementActiveSourceCount();
     }
 
     quantumFrameOffset = startFrame > quantumStartFrame ? startFrame - quantumStartFrame : 0;
@@ -146,7 +146,7 @@ void AudioScheduledSourceNode::start(double when, ExceptionCode& ec)
 {
     ASSERT(isMainThread());
 
-    context()->nodeWillBeginPlayback();
+    context().nodeWillBeginPlayback();
 
     if (m_playbackState != UNSCHEDULED_STATE) {
         ec = INVALID_STATE_ERR;
@@ -199,9 +199,9 @@ void AudioScheduledSourceNode::finish()
 {
     if (m_playbackState != FINISHED_STATE) {
         // Let the context dereference this AudioNode.
-        context()->notifyNodeFinishedProcessing(this);
+        context().notifyNodeFinishedProcessing(this);
         m_playbackState = FINISHED_STATE;
-        context()->decrementActiveSourceCount();
+        context().decrementActiveSourceCount();
     }
 
     if (m_hasEndedListener) {
@@ -211,9 +211,9 @@ void AudioScheduledSourceNode::finish()
     }
 }
 
-bool AudioScheduledSourceNode::addEventListener(const AtomicString& eventType, PassRefPtr<EventListener> listener, bool useCapture)
+bool AudioScheduledSourceNode::addEventListener(const AtomicString& eventType, RefPtr<EventListener>&& listener, bool useCapture)
 {
-    bool success = AudioNode::addEventListener(eventType, listener, useCapture);
+    bool success = AudioNode::addEventListener(eventType, WTFMove(listener), useCapture);
     if (success && eventType == eventNames().endedEvent)
         m_hasEndedListener = hasEventListeners(eventNames().endedEvent);
     return success;

@@ -25,6 +25,7 @@
 #include "config.h"
 #include "HTMLIFrameElement.h"
 
+#include "AttributeDOMTokenList.h"
 #include "CSSPropertyNames.h"
 #include "Frame.h"
 #include "HTMLDocument.h"
@@ -45,6 +46,13 @@ inline HTMLIFrameElement::HTMLIFrameElement(const QualifiedName& tagName, Docume
 Ref<HTMLIFrameElement> HTMLIFrameElement::create(const QualifiedName& tagName, Document& document)
 {
     return adoptRef(*new HTMLIFrameElement(tagName, document));
+}
+
+DOMTokenList& HTMLIFrameElement::sandbox()
+{
+    if (!m_sandbox)
+        m_sandbox = std::make_unique<AttributeDOMTokenList>(*this, sandboxAttr);
+    return *m_sandbox;
 }
 
 bool HTMLIFrameElement::isPresentationAttribute(const QualifiedName& name) const
@@ -76,6 +84,9 @@ void HTMLIFrameElement::collectStyleForPresentationAttribute(const QualifiedName
 void HTMLIFrameElement::parseAttribute(const QualifiedName& name, const AtomicString& value)
 {
     if (name == sandboxAttr) {
+        if (m_sandbox)
+            m_sandbox->attributeValueChanged(value);
+
         String invalidTokens;
         setSandboxFlags(value.isNull() ? SandboxNone : SecurityContext::parseSandboxPolicy(value, invalidTokens));
         if (!invalidTokens.isNull())
@@ -91,7 +102,7 @@ bool HTMLIFrameElement::rendererIsNeeded(const RenderStyle& style)
 
 RenderPtr<RenderElement> HTMLIFrameElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderIFrame>(*this, WTF::move(style));
+    return createRenderer<RenderIFrame>(*this, WTFMove(style));
 }
 
 }

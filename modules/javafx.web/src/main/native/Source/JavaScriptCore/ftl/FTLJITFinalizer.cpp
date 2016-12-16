@@ -30,6 +30,7 @@
 
 #include "CodeBlockWithJITType.h"
 #include "DFGPlan.h"
+#include "FTLState.h"
 #include "FTLThunks.h"
 #include "ProfilerDatabase.h"
 
@@ -50,17 +51,11 @@ size_t JITFinalizer::codeSize()
 {
     size_t result = 0;
 
-    if (exitThunksLinkBuffer)
-        result += exitThunksLinkBuffer->size();
+    if (b3CodeLinkBuffer)
+        result += b3CodeLinkBuffer->size();
+
     if (entrypointLinkBuffer)
         result += entrypointLinkBuffer->size();
-    if (sideCodeLinkBuffer)
-        result += sideCodeLinkBuffer->size();
-    if (handleExceptionsLinkBuffer)
-        result += handleExceptionsLinkBuffer->size();
-
-    for (unsigned i = jitCode->handles().size(); i--;)
-        result += jitCode->handles()[i]->sizeInBytes();
 
     return result;
 }
@@ -73,75 +68,19 @@ bool JITFinalizer::finalize()
 
 bool JITFinalizer::finalizeFunction()
 {
-    for (unsigned i = jitCode->handles().size(); i--;) {
-        MacroAssembler::cacheFlush(
-            jitCode->handles()[i]->start(), jitCode->handles()[i]->sizeInBytes());
-    }
+    bool dumpDisassembly = shouldDumpDisassembly() || Options::asyncDisassembly();
 
-    if (exitThunksLinkBuffer) {
-        StackMaps::RecordMap recordMap = jitCode->stackmaps.computeRecordMap();
-
-        for (unsigned i = 0; i < osrExit.size(); ++i) {
-            OSRExitCompilationInfo& info = osrExit[i];
-            OSRExit& exit = jitCode->osrExit[i];
-            StackMaps::RecordMap::iterator iter = recordMap.find(exit.m_stackmapID);
-            if (iter == recordMap.end()) {
-                // It's OK, it was optimized out.
-                continue;
-            }
-
-            exitThunksLinkBuffer->link(
-                info.m_thunkJump,
-                CodeLocationLabel(
-                    m_plan.vm.getCTIStub(osrExitGenerationThunkGenerator).code()));
-        }
-
-        jitCode->initializeExitThunks(
-            FINALIZE_DFG_CODE(
-                *exitThunksLinkBuffer,
-                ("FTL exit thunks for %s", toCString(CodeBlockWithJITType(m_plan.codeBlock.get(), JITCode::FTLJIT)).data())));
-    } // else this function had no OSR exits, so no exit thunks.
-
-    if (sideCodeLinkBuffer) {
-        // Side code is for special slow paths that we generate ourselves, like for inline
-        // caches.
-
-        for (unsigned i = slowPathCalls.size(); i--;) {
-            SlowPathCall& call = slowPathCalls[i];
-            sideCodeLinkBuffer->link(
-                call.call(),
-                CodeLocationLabel(m_plan.vm.ftlThunks->getSlowPathCallThunk(m_plan.vm, call.key()).code()));
-        }
-
-        jitCode->addHandle(FINALIZE_DFG_CODE(
-            *sideCodeLinkBuffer,
-            ("FTL side code for %s",
-                toCString(CodeBlockWithJITType(m_plan.codeBlock.get(), JITCode::FTLJIT)).data()))
-            .executableMemory());
-    }
-
-    if (handleExceptionsLinkBuffer) {
-        jitCode->addHandle(FINALIZE_DFG_CODE(
-            *handleExceptionsLinkBuffer,
-            ("FTL exception handler for %s",
-                toCString(CodeBlockWithJITType(m_plan.codeBlock.get(), JITCode::FTLJIT)).data()))
-            .executableMemory());
-    }
-
-    for (unsigned i = 0; i < outOfLineCodeInfos.size(); ++i) {
-        jitCode->addHandle(FINALIZE_DFG_CODE(
-            *outOfLineCodeInfos[i].m_linkBuffer,
-            ("FTL out of line code for %s", outOfLineCodeInfos[i].m_codeDescription)).executableMemory());
-    }
+    jitCode->initializeB3Code(
+        FINALIZE_CODE_IF(
+            dumpDisassembly, *b3CodeLinkBuffer,
+            ("FTL B3 code for %s", toCString(CodeBlockWithJITType(m_plan.codeBlock, JITCode::FTLJIT)).data())));
 
     jitCode->initializeArityCheckEntrypoint(
-        FINALIZE_DFG_CODE(
-            *entrypointLinkBuffer,
-            ("FTL entrypoint thunk for %s with LLVM generated code at %p", toCString(CodeBlockWithJITType(m_plan.codeBlock.get(), JITCode::FTLJIT)).data(), function)));
+        FINALIZE_CODE_IF(
+            dumpDisassembly, *entrypointLinkBuffer,
+            ("FTL entrypoint thunk for %s with B3 generated code at %p", toCString(CodeBlockWithJITType(m_plan.codeBlock, JITCode::FTLJIT)).data(), function)));
 
     m_plan.codeBlock->setJITCode(jitCode);
-
-    m_plan.vm.updateFTLLargestStackSize(jitCode->stackmaps.stackSize());
 
     if (m_plan.compilation)
         m_plan.vm.m_perBytecodeProfiler->addCompilation(m_plan.compilation);

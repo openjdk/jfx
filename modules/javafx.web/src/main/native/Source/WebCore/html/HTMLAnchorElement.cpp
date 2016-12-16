@@ -24,7 +24,7 @@
 #include "config.h"
 #include "HTMLAnchorElement.h"
 
-#include "DNS.h"
+#include "AttributeDOMTokenList.h"
 #include "ElementIterator.h"
 #include "EventHandler.h"
 #include "EventNames.h"
@@ -40,7 +40,6 @@
 #include "MouseEvent.h"
 #include "PingLoader.h"
 #include "PlatformMouseEvent.h"
-#include "RelList.h"
 #include "RenderImage.h"
 #include "ResourceRequest.h"
 #include "SVGImage.h"
@@ -96,12 +95,9 @@ bool HTMLAnchorElement::supportsFocus() const
 
 bool HTMLAnchorElement::isMouseFocusable() const
 {
-#if !(PLATFORM(EFL) || PLATFORM(GTK))
     // Only allow links with tabIndex or contentEditable to be mouse focusable.
-    // This is our rule for the Mac platform; on many other platforms we focus any link you click on.
     if (isLink())
         return HTMLElement::supportsFocus();
-#endif
 
     return HTMLElement::isMouseFocusable();
 }
@@ -121,9 +117,8 @@ static bool hasNonEmptyBox(RenderBoxModelObject* renderer)
     // pass in 0,0 for the layout point instead of calling localToAbsolute?
     Vector<IntRect> rects;
     renderer->absoluteRects(rects, flooredLayoutPoint(renderer->localToAbsolute()));
-    size_t size = rects.size();
-    for (size_t i = 0; i < size; ++i) {
-        if (!rects[i].isEmpty())
+    for (auto& rect : rects) {
+        if (!rect.isEmpty())
             return true;
     }
 
@@ -253,9 +248,9 @@ void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomicSt
             setNeedsStyleRecalc();
         if (isLink()) {
             String parsedURL = stripLeadingAndTrailingHTMLSpaces(value);
-            if (document().isDNSPrefetchEnabled()) {
+            if (document().isDNSPrefetchEnabled() && document().frame()) {
                 if (protocolIsInHTTPFamily(parsedURL) || parsedURL.startsWith("//"))
-                    prefetchDNS(document().completeURL(parsedURL).host());
+                    document().frame()->loader().client().prefetchDNS(document().completeURL(parsedURL).host());
             }
         }
         invalidateCachedVisitedLinkHash();
@@ -265,7 +260,7 @@ void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomicSt
         if (SpaceSplitString::spaceSplitStringContainsValue(value, "noreferrer", true))
             m_linkRelations |= RelationNoReferrer;
         if (m_relList)
-            m_relList->updateRelAttribute(value);
+            m_relList->attributeValueChanged(value);
     }
     else
         HTMLElement::parseAttribute(name, value);
@@ -290,11 +285,10 @@ bool HTMLAnchorElement::canStartSelection() const
 
 bool HTMLAnchorElement::draggable() const
 {
-    // Should be draggable if we have an href attribute.
     const AtomicString& value = fastGetAttribute(draggableAttr);
-    if (equalIgnoringCase(value, "true"))
+    if (equalLettersIgnoringASCIICase(value, "true"))
         return true;
-    if (equalIgnoringCase(value, "false"))
+    if (equalLettersIgnoringASCIICase(value, "false"))
         return false;
     return hasAttribute(hrefAttr);
 }
@@ -317,7 +311,7 @@ bool HTMLAnchorElement::hasRel(uint32_t relation) const
 DOMTokenList& HTMLAnchorElement::relList()
 {
     if (!m_relList)
-        m_relList = std::make_unique<RelList>(*this);
+        m_relList = std::make_unique<AttributeDOMTokenList>(*this, HTMLNames::relAttr);
     return *m_relList;
 }
 
@@ -394,6 +388,30 @@ void HTMLAnchorElement::setHost(const String& value)
                 url.setHostAndPort(value.substring(0, portEnd));
         }
     }
+    setHref(url.string());
+}
+
+String HTMLAnchorElement::username() const
+{
+    return href().encodedUser();
+}
+
+void HTMLAnchorElement::setUsername(const String& value)
+{
+    URL url = href();
+    url.setUser(value);
+    setHref(url.string());
+}
+
+String HTMLAnchorElement::password() const
+{
+    return href().encodedPass();
+}
+
+void HTMLAnchorElement::setPassword(const String& value)
+{
+    URL url = href();
+    url.setPass(value);
     setHref(url.string());
 }
 
@@ -621,7 +639,7 @@ typedef HashMap<const HTMLAnchorElement*, RefPtr<Element>> RootEditableElementMa
 
 static RootEditableElementMap& rootEditableElementMap()
 {
-    DEPRECATED_DEFINE_STATIC_LOCAL(RootEditableElementMap, map, ());
+    static NeverDestroyed<RootEditableElementMap> map;
     return map;
 }
 

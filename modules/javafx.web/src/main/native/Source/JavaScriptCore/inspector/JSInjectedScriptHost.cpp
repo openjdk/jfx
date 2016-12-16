@@ -40,6 +40,7 @@
 #include "JSMap.h"
 #include "JSMapIterator.h"
 #include "JSPromise.h"
+#include "JSPropertyNameIterator.h"
 #include "JSSet.h"
 #include "JSSetIterator.h"
 #include "JSStringIterator.h"
@@ -47,6 +48,7 @@
 #include "JSWeakMap.h"
 #include "JSWeakSet.h"
 #include "ObjectConstructor.h"
+#include "ProxyObject.h"
 #include "RegExpObject.h"
 #include "ScopedArguments.h"
 #include "SourceCode.h"
@@ -59,9 +61,9 @@ namespace Inspector {
 
 const ClassInfo JSInjectedScriptHost::s_info = { "InjectedScriptHost", &Base::s_info, 0, CREATE_METHOD_TABLE(JSInjectedScriptHost) };
 
-JSInjectedScriptHost::JSInjectedScriptHost(VM& vm, Structure* structure, PassRefPtr<InjectedScriptHost> impl)
+JSInjectedScriptHost::JSInjectedScriptHost(VM& vm, Structure* structure, Ref<InjectedScriptHost>&& impl)
     : JSDestructibleObject(vm, structure)
-    , m_impl(impl.leakRef())
+    , m_wrapped(WTFMove(impl))
 {
 }
 
@@ -80,17 +82,6 @@ void JSInjectedScriptHost::destroy(JSC::JSCell* cell)
 {
     JSInjectedScriptHost* thisObject = static_cast<JSInjectedScriptHost*>(cell);
     thisObject->JSInjectedScriptHost::~JSInjectedScriptHost();
-}
-
-void JSInjectedScriptHost::releaseImpl()
-{
-    if (auto impl = std::exchange(m_impl, nullptr))
-        impl->deref();
-}
-
-JSInjectedScriptHost::~JSInjectedScriptHost()
-{
-    releaseImpl();
 }
 
 JSValue JSInjectedScriptHost::evaluate(ExecState* exec) const
@@ -165,7 +156,8 @@ JSValue JSInjectedScriptHost::subtype(ExecState* exec)
     if (value.inherits(JSArrayIterator::info())
         || value.inherits(JSMapIterator::info())
         || value.inherits(JSSetIterator::info())
-        || value.inherits(JSStringIterator::info()))
+        || value.inherits(JSStringIterator::info())
+        || value.inherits(JSPropertyNameIterator::info()))
         return jsNontrivialString(exec, ASCIILiteral("iterator"));
 
     if (value.inherits(JSInt8Array::info()) || value.inherits(JSInt16Array::info()) || value.inherits(JSInt32Array::info()))
@@ -269,6 +261,14 @@ JSValue JSInjectedScriptHost::getInternalProperties(ExecState* exec)
         return array;
     }
 
+    if (ProxyObject* proxy = jsDynamicCast<ProxyObject*>(value)) {
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(exec, nullptr, 2);
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, ASCIILiteral("target"), proxy->target()));
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, ASCIILiteral("handler"), proxy->handler()));
+        return array;
+    }
+
     if (JSArrayIterator* arrayIterator = jsDynamicCast<JSArrayIterator*>(value)) {
         String kind;
         switch (arrayIterator->kind(exec)) {
@@ -333,6 +333,13 @@ JSValue JSInjectedScriptHost::getInternalProperties(ExecState* exec)
         unsigned index = 0;
         JSArray* array = constructEmptyArray(exec, nullptr, 1);
         array->putDirectIndex(exec, index++, constructInternalProperty(exec, "string", stringIterator->iteratedValue(exec)));
+        return array;
+    }
+
+    if (JSPropertyNameIterator* propertyNameIterator = jsDynamicCast<JSPropertyNameIterator*>(value)) {
+        unsigned index = 0;
+        JSArray* array = constructEmptyArray(exec, nullptr, 1);
+        array->putDirectIndex(exec, index++, constructInternalProperty(exec, "object", propertyNameIterator->iteratedValue()));
         return array;
     }
 
@@ -441,6 +448,8 @@ JSValue JSInjectedScriptHost::iteratorEntries(ExecState* exec)
         iterator = setIterator->clone(exec);
     else if (JSStringIterator* stringIterator = jsDynamicCast<JSStringIterator*>(value))
         iterator = stringIterator->clone(exec);
+    else if (JSPropertyNameIterator* propertyNameIterator = jsDynamicCast<JSPropertyNameIterator*>(value))
+        iterator = propertyNameIterator->clone(exec);
     else
         return jsUndefined();
 
@@ -471,23 +480,6 @@ JSValue JSInjectedScriptHost::iteratorEntries(ExecState* exec)
     iteratorClose(exec, iterator);
 
     return array;
-}
-
-JSValue toJS(ExecState* exec, JSGlobalObject* globalObject, InjectedScriptHost* impl)
-{
-    if (!impl)
-        return jsNull();
-
-    JSObject* prototype = JSInjectedScriptHost::createPrototype(exec->vm(), globalObject);
-    Structure* structure = JSInjectedScriptHost::createStructure(exec->vm(), globalObject, prototype);
-    JSInjectedScriptHost* injectedScriptHost = JSInjectedScriptHost::create(exec->vm(), structure, impl);
-
-    return injectedScriptHost;
-}
-
-JSInjectedScriptHost* toJSInjectedScriptHost(JSValue value)
-{
-    return value.inherits(JSInjectedScriptHost::info()) ? jsCast<JSInjectedScriptHost*>(value) : nullptr;
 }
 
 } // namespace Inspector

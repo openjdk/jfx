@@ -30,7 +30,7 @@
 namespace WebCore {
 
 RenderSVGResourceMasker::RenderSVGResourceMasker(SVGMaskElement& element, Ref<RenderStyle>&& style)
-    : RenderSVGResourceContainer(element, WTF::move(style))
+    : RenderSVGResourceContainer(element, WTFMove(style))
 {
 }
 
@@ -68,7 +68,8 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
 
     if (!maskerData->maskImage && !repaintRect.isEmpty()) {
         const SVGRenderStyle& svgStyle = style().svgStyle();
-        ColorSpace colorSpace = svgStyle.colorInterpolation() == CI_LINEARRGB ? ColorSpaceLinearRGB : ColorSpaceDeviceRGB;
+        ColorSpace colorSpace = svgStyle.colorInterpolation() == CI_LINEARRGB ? ColorSpaceLinearRGB : ColorSpaceSRGB;
+        // FIXME (149470): This image buffer should not be unconditionally unaccelerated. Making it match the context breaks alpha masking, though.
         maskerData->maskImage = SVGRenderingContext::createImageBuffer(repaintRect, absoluteTransform, colorSpace, Unaccelerated);
         if (!maskerData->maskImage)
             return false;
@@ -80,14 +81,13 @@ bool RenderSVGResourceMasker::applyResource(RenderElement& renderer, const Rende
     if (!maskerData->maskImage)
         return false;
 
-    SVGRenderingContext::clipToImageBuffer(context, absoluteTransform, repaintRect, maskerData->maskImage, missingMaskerData);
+    SVGRenderingContext::clipToImageBuffer(*context, absoluteTransform, repaintRect, maskerData->maskImage, missingMaskerData);
     return true;
 }
 
 bool RenderSVGResourceMasker::drawContentIntoMaskImage(MaskerData* maskerData, ColorSpace colorSpace, RenderObject* object)
 {
-    GraphicsContext* maskImageContext = maskerData->maskImage->context();
-    ASSERT(maskImageContext);
+    GraphicsContext& maskImageContext = maskerData->maskImage->context();
 
     // Eventually adjust the mask image context according to the target objectBoundingBox.
     AffineTransform maskContentTransformation;
@@ -95,7 +95,7 @@ bool RenderSVGResourceMasker::drawContentIntoMaskImage(MaskerData* maskerData, C
         FloatRect objectBoundingBox = object->objectBoundingBox();
         maskContentTransformation.translate(objectBoundingBox.x(), objectBoundingBox.y());
         maskContentTransformation.scaleNonUniform(objectBoundingBox.width(), objectBoundingBox.height());
-        maskImageContext->concatCTM(maskContentTransformation);
+        maskImageContext.concatCTM(maskContentTransformation);
     }
 
     // Draw the content into the ImageBuffer.

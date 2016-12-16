@@ -68,22 +68,22 @@ static CGContextRef CGContextWithHDC(HDC hdc, bool hasAlpha)
 }
 
 GraphicsContext::GraphicsContext(HDC hdc, bool hasAlpha)
-    : m_updatingControlTints(false),
-      m_transparencyCount(0)
 {
     platformInit(hdc, hasAlpha);
 }
 
 void GraphicsContext::platformInit(HDC hdc, bool hasAlpha)
 {
+    if (!hdc)
+        return;
+
     m_data = new GraphicsContextPlatformPrivate(CGContextWithHDC(hdc, hasAlpha));
     CGContextRelease(m_data->m_cgContext.get());
     m_data->m_hdc = hdc;
-    setPaintingDisabled(!m_data->m_cgContext);
     if (m_data->m_cgContext) {
         // Make sure the context starts in sync with our state.
-        setPlatformFillColor(fillColor(), fillColorSpace());
-        setPlatformStrokeColor(strokeColor(), strokeColorSpace());
+        setPlatformFillColor(fillColor());
+        setPlatformStrokeColor(strokeColor());
     }
 }
 
@@ -130,21 +130,21 @@ void GraphicsContext::drawWindowsBitmap(WindowsBitmap* image, const IntPoint& po
     CGContextDrawImage(m_data->m_cgContext.get(), CGRectMake(point.x(), point.y(), image->size().width(), image->size().height()), cgImage.get());
 }
 
-void GraphicsContext::drawFocusRing(const Path& path, int width, int offset, const Color& color)
+void GraphicsContext::drawFocusRing(const Path& path, float width, float offset, const Color& color)
 {
     // FIXME: implement
 }
 
 // FIXME: This is nearly identical to the GraphicsContext::drawFocusRing function in GraphicsContextMac.mm.
 // The code could move to GraphicsContextCG.cpp and be shared.
-void GraphicsContext::drawFocusRing(const Vector<IntRect>& rects, int width, int offset, const Color& color)
+void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
 {
     if (paintingDisabled())
         return;
 
     float radius = (width - 1) / 2.0f;
     offset += radius;
-    CGColorRef colorRef = color.isValid() ? cachedCGColor(color, ColorSpaceDeviceRGB) : 0;
+    CGColorRef colorRef = color.isValid() ? cachedCGColor(color) : nullptr;
 
     CGMutablePathRef focusRingPath = CGPathCreateMutable();
     unsigned rectCount = rects.size();

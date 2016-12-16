@@ -39,28 +39,26 @@
 #include "WorkerThread.h"
 #include <wtf/CurrentTime.h>
 
+#if PLATFORM(GTK)
+#include <glib.h>
+#endif
+
 namespace WebCore {
 
-class WorkerSharedTimer : public SharedTimer {
+class WorkerSharedTimer final : public SharedTimer {
 public:
-    WorkerSharedTimer()
-        : m_sharedTimerFunction(0)
-        , m_nextFireTime(0)
-    {
-    }
-
     // SharedTimer interface.
-    virtual void setFiredFunction(void (*function)()) { m_sharedTimerFunction = function; }
-    virtual void setFireInterval(double interval) { m_nextFireTime = interval + currentTime(); }
-    virtual void stop() { m_nextFireTime = 0; }
+    virtual void setFiredFunction(std::function<void()>&& function) override { m_sharedTimerFunction = WTFMove(function); }
+    virtual void setFireInterval(double interval) override { m_nextFireTime = interval + currentTime(); }
+    virtual void stop() override { m_nextFireTime = 0; }
 
     bool isActive() { return m_sharedTimerFunction && m_nextFireTime; }
     double fireTime() { return m_nextFireTime; }
     void fire() { m_sharedTimerFunction(); }
 
 private:
-    void (*m_sharedTimerFunction)();
-    double m_nextFireTime;
+    std::function<void()> m_sharedTimerFunction;
+    double m_nextFireTime { 0 };
 };
 
 class ModePredicate {
@@ -148,9 +146,27 @@ MessageQueueWaitResult WorkerRunLoop::runInMode(WorkerGlobalScope* context, cons
     ASSERT(context);
     ASSERT(context->thread().threadID() == currentThread());
 
+#if PLATFORM(GTK)
+    GMainContext* mainContext = g_main_context_get_thread_default();
+    if (g_main_context_pending(mainContext))
+        g_main_context_iteration(mainContext, FALSE);
+#endif
+
+    double deadline = MessageQueue<Task>::infiniteTime();
+
+#if USE(CF)
+    CFAbsoluteTime nextCFRunLoopTimerFireDate = CFRunLoopGetNextTimerFireDate(CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+    double timeUntilNextCFRunLoopTimerInSeconds = nextCFRunLoopTimerFireDate - CFAbsoluteTimeGetCurrent();
+    deadline = currentTime() + std::max(0.0, timeUntilNextCFRunLoopTimerInSeconds);
+#endif
+
     double absoluteTime = 0.0;
-    if (waitMode == WaitForMessage)
-        absoluteTime = (predicate.isDefaultMode() && m_sharedTimer->isActive()) ? m_sharedTimer->fireTime() : MessageQueue<Task>::infiniteTime();
+    if (waitMode == WaitForMessage) {
+        if (predicate.isDefaultMode() && m_sharedTimer->isActive())
+            absoluteTime = std::min(deadline, m_sharedTimer->fireTime());
+        else
+            absoluteTime = deadline;
+    }
     MessageQueueWaitResult result;
     auto task = m_messageQueue.waitForMessageFilteredWithTimeout(result, predicate, absoluteTime);
 
@@ -167,6 +183,10 @@ MessageQueueWaitResult WorkerRunLoop::runInMode(WorkerGlobalScope* context, cons
     case MessageQueueTimeout:
         if (!context->isClosing())
             m_sharedTimer->fire();
+#if USE(CF)
+        if (nextCFRunLoopTimerFireDate <= CFAbsoluteTimeGetCurrent())
+            CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, /*returnAfterSourceHandled*/ false);
+#endif
         break;
     }
 
@@ -194,17 +214,17 @@ void WorkerRunLoop::terminate()
 
 void WorkerRunLoop::postTask(ScriptExecutionContext::Task task)
 {
-    postTaskForMode(WTF::move(task), defaultMode());
+    postTaskForMode(WTFMove(task), defaultMode());
 }
 
 void WorkerRunLoop::postTaskAndTerminate(ScriptExecutionContext::Task task)
 {
-    m_messageQueue.appendAndKill(std::make_unique<Task>(WTF::move(task), defaultMode()));
+    m_messageQueue.appendAndKill(std::make_unique<Task>(WTFMove(task), defaultMode()));
 }
 
 void WorkerRunLoop::postTaskForMode(ScriptExecutionContext::Task task, const String& mode)
 {
-    m_messageQueue.append(std::make_unique<Task>(WTF::move(task), mode));
+    m_messageQueue.append(std::make_unique<Task>(WTFMove(task), mode));
 }
 
 void WorkerRunLoop::Task::performTask(const WorkerRunLoop& runLoop, WorkerGlobalScope* context)
@@ -214,7 +234,7 @@ void WorkerRunLoop::Task::performTask(const WorkerRunLoop& runLoop, WorkerGlobal
 }
 
 WorkerRunLoop::Task::Task(ScriptExecutionContext::Task task, const String& mode)
-    : m_task(WTF::move(task))
+    : m_task(WTFMove(task))
     , m_mode(mode.isolatedCopy())
 {
 }

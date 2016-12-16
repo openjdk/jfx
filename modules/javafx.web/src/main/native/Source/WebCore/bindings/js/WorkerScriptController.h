@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2015 Apple Inc. All Rights Reserved.
  * Copyright (C) 2012 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,8 +31,8 @@
 #include <debugger/Debugger.h>
 #include <heap/Strong.h>
 #include <wtf/Forward.h>
+#include <wtf/Lock.h>
 #include <wtf/NakedPtr.h>
-#include <wtf/Threading.h>
 
 namespace Deprecated {
 class ScriptValue;
@@ -46,6 +46,7 @@ namespace WebCore {
 
     class JSWorkerGlobalScope;
     class ScriptSourceCode;
+    class WorkerConsoleClient;
     class WorkerGlobalScope;
 
     class WorkerScriptController {
@@ -71,7 +72,7 @@ namespace WebCore {
         // forbidExecution()/isExecutionForbidden() to guard against reentry into JS.
         // Can be called from any thread.
         void scheduleExecutionTermination();
-        bool isExecutionTerminating() const;
+        bool isTerminatingExecution() const;
 
         // Called on Worker thread when JS exits with termination exception caused by forbidExecution() request,
         // or by Worker thread termination code to prevent future entry into JS.
@@ -96,8 +97,10 @@ namespace WebCore {
         RefPtr<JSC::VM> m_vm;
         WorkerGlobalScope* m_workerGlobalScope;
         JSC::Strong<JSWorkerGlobalScope> m_workerGlobalScopeWrapper;
+        std::unique_ptr<WorkerConsoleClient> m_consoleClient;
         bool m_executionForbidden;
-        mutable Mutex m_scheduledTerminationMutex;
+        bool m_isTerminatingExecution { false };
+        mutable Lock m_scheduledTerminationMutex;
     };
 
 } // namespace WebCore

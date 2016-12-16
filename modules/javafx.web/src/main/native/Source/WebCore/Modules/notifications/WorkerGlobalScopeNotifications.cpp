@@ -56,14 +56,14 @@ WorkerGlobalScopeNotifications* WorkerGlobalScopeNotifications::from(WorkerGloba
     if (!supplement) {
         auto newSupplement = std::make_unique<WorkerGlobalScopeNotifications>(context);
         supplement = newSupplement.get();
-        provideTo(context, supplementName(), WTF::move(newSupplement));
+        provideTo(context, supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
 
-NotificationCenter* WorkerGlobalScopeNotifications::webkitNotifications(WorkerGlobalScope* context)
+NotificationCenter* WorkerGlobalScopeNotifications::webkitNotifications(WorkerGlobalScope& context)
 {
-    return WorkerGlobalScopeNotifications::from(context)->webkitNotifications();
+    return WorkerGlobalScopeNotifications::from(&context)->webkitNotifications();
 }
 
 NotificationCenter* WorkerGlobalScopeNotifications::webkitNotifications()

@@ -27,8 +27,10 @@
 #include "TileController.h"
 
 #include "IntRect.h"
+#include "Logging.h"
 #include "PlatformCALayer.h"
 #include "Region.h"
+#include "TextStream.h"
 #include "TileCoverageMap.h"
 #include "TileGrid.h"
 #include <utility>
@@ -54,7 +56,6 @@ String TileController::zoomedOutTileGridContainerLayerName()
 TileController::TileController(PlatformCALayer* rootPlatformLayer)
     : m_tileCacheLayer(rootPlatformLayer)
     , m_tileGrid(std::make_unique<TileGrid>(*this))
-    , m_tileSize(defaultTileWidth, defaultTileHeight)
     , m_tileRevalidationTimer(*this, &TileController::tileRevalidationTimerFired)
     , m_zoomedOutContentsScale(0)
     , m_deviceScaleFactor(owningGraphicsLayer()->platformCALayerDeviceScaleFactor())
@@ -70,7 +71,7 @@ TileController::TileController(PlatformCALayer* rootPlatformLayer)
     , m_tilesAreOpaque(false)
     , m_hasTilesWithTemporaryScaleFactor(false)
     , m_tileDebugBorderWidth(0)
-    , m_indicatorMode(AsyncScrollingIndication)
+    , m_indicatorMode(SynchronousScrollingBecauseOfLackOfScrollingCoordinatorIndication)
     , m_topContentInset(0)
 {
 }
@@ -93,7 +94,7 @@ void TileController::tileCacheLayerBoundsChanged()
 void TileController::setNeedsDisplay()
 {
     tileGrid().setNeedsDisplay();
-    m_zoomedOutTileGrid = nullptr;
+    clearZoomedOutTileGrid();
 }
 
 void TileController::setNeedsDisplayInRect(const IntRect& rect)
@@ -123,16 +124,18 @@ void TileController::setContentsScale(float scale)
         m_coverageMap->setDeviceScaleFactor(deviceScaleFactor);
 
     if (m_zoomedOutTileGrid && m_zoomedOutTileGrid->scale() == scale) {
-        m_tileGrid = WTF::move(m_zoomedOutTileGrid);
+        m_tileGrid = WTFMove(m_zoomedOutTileGrid);
         m_tileGrid->setIsZoomedOutTileGrid(false);
-        m_tileGrid->revalidateTiles(0);
+        m_tileGrid->revalidateTiles();
+        tileGridsChanged();
         return;
     }
 
     if (m_zoomedOutContentsScale && m_zoomedOutContentsScale == tileGrid().scale() && tileGrid().scale() != scale && !m_hasTilesWithTemporaryScaleFactor) {
-        m_zoomedOutTileGrid = WTF::move(m_tileGrid);
+        m_zoomedOutTileGrid = WTFMove(m_tileGrid);
         m_zoomedOutTileGrid->setIsZoomedOutTileGrid(true);
         m_tileGrid = std::make_unique<TileGrid>(*this);
+        tileGridsChanged();
     }
 
     tileGrid().setScale(scale);
@@ -161,7 +164,7 @@ void TileController::setZoomedOutContentsScale(float scale)
     m_zoomedOutContentsScale = scale;
 
     if (m_zoomedOutTileGrid && m_zoomedOutTileGrid->scale() != m_zoomedOutContentsScale)
-        m_zoomedOutTileGrid = nullptr;
+        clearZoomedOutTileGrid();
 }
 
 void TileController::setAcceleratesDrawing(bool acceleratesDrawing)
@@ -184,7 +187,11 @@ void TileController::setTilesOpaque(bool opaque)
 
 void TileController::setVisibleRect(const FloatRect& rect)
 {
+    if (rect == m_visibleRect)
+        return;
+
     m_visibleRect = rect;
+    updateTileCoverageMap();
 }
 
 void TileController::setCoverageRect(const FloatRect& rect)
@@ -224,8 +231,9 @@ void TileController::setTiledScrollingIndicatorPosition(const FloatPoint& positi
 {
     if (!m_coverageMap)
         return;
+
     m_coverageMap->setPosition(position);
-    m_coverageMap->update();
+    updateTileCoverageMap();
 }
 
 void TileController::prepopulateRect(const FloatRect& rect)
@@ -261,7 +269,7 @@ void TileController::setTileCoverage(TileCoverage coverage)
 void TileController::revalidateTiles()
 {
     ASSERT(owningGraphicsLayer()->isCommittingChanges());
-    tileGrid().revalidateTiles(0);
+    tileGrid().revalidateTiles();
 }
 
 void TileController::forceRepaint()
@@ -313,21 +321,51 @@ IntRect TileController::boundsAtLastRevalidateWithoutMargin() const
     return boundsWithoutMargin;
 }
 
-FloatRect TileController::computeTileCoverageRect(const FloatSize& newSize, const FloatRect& previousVisibleRect, const FloatRect& visibleRect, float contentsScale) const
+#if !PLATFORM(IOS)
+// Return 'rect' padded evenly on all sides to achieve 'newSize', but make the padding uneven to contain within constrainingRect.
+static FloatRect expandRectWithinRect(const FloatRect& rect, const FloatSize& newSize, const FloatRect& constrainingRect)
+{
+    ASSERT(newSize.width() >= rect.width() && newSize.height() >= rect.height());
+
+    FloatSize extraSize = newSize - rect.size();
+
+    FloatRect expandedRect = rect;
+    expandedRect.inflateX(extraSize.width() / 2);
+    expandedRect.inflateY(extraSize.height() / 2);
+
+    if (expandedRect.x() < constrainingRect.x())
+        expandedRect.setX(constrainingRect.x());
+    else if (expandedRect.maxX() > constrainingRect.maxX())
+        expandedRect.setX(constrainingRect.maxX() - expandedRect.width());
+
+    if (expandedRect.y() < constrainingRect.y())
+        expandedRect.setY(constrainingRect.y());
+    else if (expandedRect.maxY() > constrainingRect.maxY())
+        expandedRect.setY(constrainingRect.maxY() - expandedRect.height());
+
+    return intersection(expandedRect, constrainingRect);
+}
+#endif
+
+void TileController::adjustTileCoverageRect(FloatRect& coverageRect, const FloatSize& newSize, const FloatRect& previousVisibleRect, const FloatRect& visibleRect, float contentsScale) const
 {
     // If the page is not in a window (for example if it's in a background tab), we limit the tile coverage rect to the visible rect.
-    if (!m_isInWindow)
-        return visibleRect;
+    if (!m_isInWindow) {
+        coverageRect = visibleRect;
+        return;
+    }
 
 #if PLATFORM(IOS)
     // FIXME: unify the iOS and Mac code.
     UNUSED_PARAM(previousVisibleRect);
 
-    if (m_tileCoverage == CoverageForVisibleArea || MemoryPressureHandler::singleton().isUnderMemoryPressure())
-        return visibleRect;
+    if (m_tileCoverage == CoverageForVisibleArea || MemoryPressureHandler::singleton().isUnderMemoryPressure()) {
+        coverageRect = visibleRect;
+        return;
+    }
 
-    double horizontalMargin = defaultTileWidth / contentsScale;
-    double verticalMargin = defaultTileHeight / contentsScale;
+    double horizontalMargin = tileSize().width() / contentsScale;
+    double verticalMargin = tileSize().height() / contentsScale;
 
     double currentTime = monotonicallyIncreasingTime();
     double timeDelta = currentTime - m_velocity.lastUpdateTime;
@@ -350,8 +388,10 @@ FloatRect TileController::computeTileCoverageRect(const FloatSize& newSize, cons
     }
 
     if (!m_velocity.horizontalVelocity && !m_velocity.verticalVelocity) {
-        if (m_velocity.scaleChangeRate > 0)
-            return visibleRect;
+        if (m_velocity.scaleChangeRate > 0) {
+            coverageRect = visibleRect;
+            return;
+        }
         futureRect.setWidth(futureRect.width() + horizontalMargin);
         futureRect.setHeight(futureRect.height() + verticalMargin);
         futureRect.setX(futureRect.x() - horizontalMargin / 2);
@@ -370,41 +410,35 @@ FloatRect TileController::computeTileCoverageRect(const FloatSize& newSize, cons
     if (futureRect.y() < 0)
         futureRect.setY(0);
 
-    return futureRect;
+    coverageRect.unite(futureRect);
+    return;
 #else
     UNUSED_PARAM(contentsScale);
 
     // FIXME: look at how far the document can scroll in each dimension.
-    float coverageHorizontalSize = visibleRect.width();
-    float coverageVerticalSize = visibleRect.height();
+    FloatSize coverageSize = visibleRect.size();
 
     bool largeVisibleRectChange = !previousVisibleRect.isEmpty() && !visibleRect.intersects(previousVisibleRect);
 
     // Inflate the coverage rect so that it covers 2x of the visible width and 3x of the visible height.
     // These values were chosen because it's more common to have tall pages and to scroll vertically,
     // so we keep more tiles above and below the current area.
+    float widthScale = 1;
+    float heightScale = 1;
 
     if (m_tileCoverage & CoverageForHorizontalScrolling && !largeVisibleRectChange)
-        coverageHorizontalSize *= 2;
+        widthScale = 2;
 
     if (m_tileCoverage & CoverageForVerticalScrolling && !largeVisibleRectChange)
-        coverageVerticalSize *= 3;
+        heightScale = 3;
 
-    coverageVerticalSize += topMarginHeight() + bottomMarginHeight();
-    coverageHorizontalSize += leftMarginWidth() + rightMarginWidth();
+    coverageSize.scale(widthScale, heightScale);
 
-    // Can't use m_tileCacheLayer->bounds() here, because the size of the underlying platform layer
-    // hasn't been updated for the current commit.
     FloatRect coverageBounds = boundsForSize(newSize);
-    float coverageLeft = visibleRect.x() - (coverageHorizontalSize - visibleRect.width()) / 2;
-    coverageLeft = std::min(coverageLeft, coverageBounds.maxX() - coverageHorizontalSize);
-    coverageLeft = std::max(coverageLeft, coverageBounds.x());
 
-    float coverageTop = visibleRect.y() - (coverageVerticalSize - visibleRect.height()) / 2;
-    coverageTop = std::min(coverageTop, coverageBounds.maxY() - coverageVerticalSize);
-    coverageTop = std::max(coverageTop, coverageBounds.y());
-
-    return FloatRect(coverageLeft, coverageTop, coverageHorizontalSize, coverageVerticalSize);
+    FloatRect coverage = expandRectWithinRect(visibleRect, coverageSize, coverageBounds);
+    LOG_WITH_STREAM(Scrolling, stream << "TileController::computeTileCoverageRect newSize=" << newSize << " mode " << m_tileCoverage << " expanded to " << coverageSize << " bounds with margin " << coverageBounds << " coverage " << coverage);
+    coverageRect.unite(coverage);
 #endif
 }
 
@@ -426,6 +460,22 @@ bool TileController::shouldTemporarilyRetainTileCohorts() const
     return owningGraphicsLayer()->platformCALayerShouldTemporarilyRetainTileCohorts(m_tileCacheLayer);
 }
 
+IntSize TileController::tileSize() const
+{
+    return owningGraphicsLayer()->platformCALayerTileSize();
+}
+
+void TileController::clearZoomedOutTileGrid()
+{
+    m_zoomedOutTileGrid = nullptr;
+    tileGridsChanged();
+}
+
+void TileController::tileGridsChanged()
+{
+    return owningGraphicsLayer()->platformCALayerCustomSublayersChanged(m_tileCacheLayer);
+}
+
 void TileController::tileRevalidationTimerFired()
 {
     if (!owningGraphicsLayer())
@@ -436,7 +486,7 @@ void TileController::tileRevalidationTimerFired()
         return;
     }
     // If we are not visible get rid of the zoomed-out tiles.
-    m_zoomedOutTileGrid = nullptr;
+    clearZoomedOutTileGrid();
 
     TileGrid::TileValidationPolicy validationPolicy = (shouldAggressivelyRetainTiles() ? 0 : TileGrid::PruneSecondaryTiles) | TileGrid::UnparentAllTiles;
 
@@ -483,7 +533,7 @@ void TileController::setNeedsRevalidateTiles()
 void TileController::updateTileCoverageMap()
 {
     if (m_coverageMap)
-        m_coverageMap->update();
+        m_coverageMap->setNeedsUpdate();
 }
 
 IntRect TileController::tileGridExtent() const

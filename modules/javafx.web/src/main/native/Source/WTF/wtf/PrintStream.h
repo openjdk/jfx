@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2014, 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,10 +26,12 @@
 #ifndef PrintStream_h
 #define PrintStream_h
 
+#include <memory>
 #include <stdarg.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RawPointer.h>
+#include <wtf/RefPtr.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -38,6 +40,7 @@ class AtomicStringImpl;
 class CString;
 class String;
 class StringImpl;
+class StringView;
 class UniquedStringImpl;
 
 class PrintStream {
@@ -68,17 +71,20 @@ public:
 };
 
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const char*);
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const StringView&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const CString&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const String&);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const StringImpl*);
 inline void printInternal(PrintStream& out, const AtomicStringImpl* value) { printInternal(out, bitwise_cast<const StringImpl*>(value)); }
 inline void printInternal(PrintStream& out, const UniquedStringImpl* value) { printInternal(out, bitwise_cast<const StringImpl*>(value)); }
+inline void printInternal(PrintStream& out, const UniquedStringImpl& value) { printInternal(out, &value); }
 inline void printInternal(PrintStream& out, char* value) { printInternal(out, static_cast<const char*>(value)); }
 inline void printInternal(PrintStream& out, CString& value) { printInternal(out, static_cast<const CString&>(value)); }
 inline void printInternal(PrintStream& out, String& value) { printInternal(out, static_cast<const String&>(value)); }
 inline void printInternal(PrintStream& out, StringImpl* value) { printInternal(out, static_cast<const StringImpl*>(value)); }
 inline void printInternal(PrintStream& out, AtomicStringImpl* value) { printInternal(out, static_cast<const AtomicStringImpl*>(value)); }
 inline void printInternal(PrintStream& out, UniquedStringImpl* value) { printInternal(out, static_cast<const UniquedStringImpl*>(value)); }
+inline void printInternal(PrintStream& out, UniquedStringImpl& value) { printInternal(out, &value); }
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, bool);
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, signed char); // NOTE: this prints as a number, not as a character; use CharacterDump if you want the character
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, unsigned char); // NOTE: see above.
@@ -161,6 +167,18 @@ private:
 
 template<typename T>
 PointerDump<T> pointerDump(const T* ptr) { return PointerDump<T>(ptr); }
+
+template<typename T>
+void printInternal(PrintStream& out, const std::unique_ptr<T>& value)
+{
+    out.print(pointerDump(value.get()));
+}
+
+template<typename T>
+void printInternal(PrintStream& out, const RefPtr<T>& value)
+{
+    out.print(pointerDump(value.get()));
+}
 
 template<typename T, typename U>
 class ValueInContext {

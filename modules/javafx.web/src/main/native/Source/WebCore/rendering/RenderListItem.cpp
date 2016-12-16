@@ -45,7 +45,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 RenderListItem::RenderListItem(Element& element, Ref<RenderStyle>&& style)
-    : RenderBlockFlow(element, WTF::move(style))
+    : RenderBlockFlow(element, WTFMove(style))
     , m_marker(nullptr)
     , m_hasExplicitValue(false)
     , m_isValueUpToDate(false)
@@ -80,12 +80,12 @@ void RenderListItem::styleDidChange(StyleDifference diff, const RenderStyle* old
     // up (e.g., in some deeply nested line box). See CSS3 spec.
     newStyle.get().inheritFrom(&style());
     if (!m_marker) {
-        m_marker = createRenderer<RenderListMarker>(*this, WTF::move(newStyle)).leakPtr();
+        m_marker = createRenderer<RenderListMarker>(*this, WTFMove(newStyle)).leakPtr();
         m_marker->initializeStyle();
     } else {
         // Do not alter our marker's style unless our style has actually changed.
         if (diff != StyleDifferenceEqual)
-            m_marker->setStyle(WTF::move(newStyle));
+            m_marker->setStyle(WTFMove(newStyle));
     }
 }
 
@@ -291,7 +291,7 @@ void RenderListItem::insertOrMoveMarkerRendererIfNeeded()
     if (newParent != currentParent) {
         // Removing and adding the marker can trigger repainting in
         // containers other than ourselves, so we need to disable LayoutState.
-        LayoutStateDisabler layoutStateDisabler(&view());
+        LayoutStateDisabler layoutStateDisabler(view());
         m_marker->removeFromParent();
         newParent->addChild(m_marker, firstNonMarkerChild(*newParent));
         m_marker->updateMarginsAndContent();
@@ -351,7 +351,7 @@ void RenderListItem::positionListMarker()
 
         // FIXME: Need to account for relative positioning in the layout overflow.
         if (style().isLeftToRightDirection()) {
-            LayoutUnit leftLineOffset = logicalLeftOffsetForLine(blockOffset, logicalLeftOffsetForLine(blockOffset, false), false);
+            LayoutUnit leftLineOffset = logicalLeftOffsetForLine(blockOffset, logicalLeftOffsetForLine(blockOffset, DoNotIndentText), false);
             markerLogicalLeft = leftLineOffset - lineOffset - paddingStart() - borderStart() + m_marker->marginStart();
             m_marker->inlineBoxWrapper()->adjustLineDirectionPosition(markerLogicalLeft - markerOldLogicalLeft);
             for (InlineFlowBox* box = m_marker->inlineBoxWrapper()->parent(); box; box = box->parent()) {
@@ -374,7 +374,7 @@ void RenderListItem::positionListMarker()
                     hitSelfPaintingLayer = true;
             }
         } else {
-            LayoutUnit rightLineOffset = logicalRightOffsetForLine(blockOffset, logicalRightOffsetForLine(blockOffset, false), false);
+            LayoutUnit rightLineOffset = logicalRightOffsetForLine(blockOffset, logicalRightOffsetForLine(blockOffset, DoNotIndentText), false);
             markerLogicalLeft = rightLineOffset - lineOffset + paddingStart() + borderStart() + m_marker->marginEnd();
             m_marker->inlineBoxWrapper()->adjustLineDirectionPosition(markerLogicalLeft - markerOldLogicalLeft);
             for (InlineFlowBox* box = m_marker->inlineBoxWrapper()->parent(); box; box = box->parent()) {

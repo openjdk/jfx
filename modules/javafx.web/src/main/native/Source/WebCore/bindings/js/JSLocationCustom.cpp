@@ -32,7 +32,7 @@ namespace WebCore {
 
 bool JSLocation::getOwnPropertySlotDelegate(ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {
-    Frame* frame = impl().frame();
+    Frame* frame = wrapped().frame();
     if (!frame) {
         slot.setUndefined();
         return true;
@@ -47,24 +47,12 @@ bool JSLocation::getOwnPropertySlotDelegate(ExecState* exec, PropertyName proper
     if (shouldAllowAccessToFrame(exec, frame, message))
         return false;
 
-    // Check for the few functions that we allow, even when called cross-domain.
-    // Make these read-only / non-configurable to prevent writes via defineProperty.
+    // We only allow access to Location.replace() cross origin.
+    // Make it read-only / non-configurable to prevent writes via defineProperty.
     if (propertyName == exec->propertyNames().replace) {
-        slot.setCustom(this, ReadOnly | DontDelete | DontEnum, nonCachingStaticFunctionGetter<jsLocationPrototypeFunctionReplace, 1>);
+        slot.setCustom(this, ReadOnly | DontDelete | DontEnum, nonCachingStaticFunctionGetter<jsLocationInstanceFunctionReplace, 1>);
         return true;
     }
-    if (propertyName == exec->propertyNames().reload) {
-        slot.setCustom(this, ReadOnly | DontDelete | DontEnum, nonCachingStaticFunctionGetter<jsLocationPrototypeFunctionReload, 0>);
-        return true;
-    }
-    if (propertyName == exec->propertyNames().assign) {
-        slot.setCustom(this, ReadOnly | DontDelete | DontEnum, nonCachingStaticFunctionGetter<jsLocationPrototypeFunctionAssign, 1>);
-        return true;
-    }
-
-    // FIXME: Other implementers of the Window cross-domain scheme (Window, History) allow toString,
-    // but for now we have decided not to, partly because it seems silly to return "[Object Location]" in
-    // such cases when normally the string form of Location would be the URL.
 
     printErrorMessageForFrame(frame, message);
     slot.setUndefined();
@@ -73,7 +61,7 @@ bool JSLocation::getOwnPropertySlotDelegate(ExecState* exec, PropertyName proper
 
 bool JSLocation::putDelegate(ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
-    Frame* frame = impl().frame();
+    Frame* frame = wrapped().frame();
     if (!frame)
         return true;
 
@@ -82,6 +70,7 @@ bool JSLocation::putDelegate(ExecState* exec, PropertyName propertyName, JSValue
 
     bool sameDomainAccess = shouldAllowAccessToFrame(exec, frame);
 
+    static_assert(hasStaticPropertyTable, "The implementation dereferences ClassInfo::staticPropHashTable without null check");
     const HashTableValue* entry = JSLocation::info()->staticPropHashTable->entry(propertyName);
     if (!entry) {
         if (sameDomainAccess)
@@ -102,7 +91,7 @@ bool JSLocation::deleteProperty(JSCell* cell, ExecState* exec, PropertyName prop
 {
     JSLocation* thisObject = jsCast<JSLocation*>(cell);
     // Only allow deleting by frames in the same origin.
-    if (!shouldAllowAccessToFrame(exec, thisObject->impl().frame()))
+    if (!shouldAllowAccessToFrame(exec, thisObject->wrapped().frame()))
         return false;
     return Base::deleteProperty(thisObject, exec, propertyName);
 }
@@ -111,7 +100,7 @@ bool JSLocation::deletePropertyByIndex(JSCell* cell, ExecState* exec, unsigned p
 {
     JSLocation* thisObject = jsCast<JSLocation*>(cell);
     // Only allow deleting by frames in the same origin.
-    if (!shouldAllowAccessToFrame(exec, thisObject->impl().frame()))
+    if (!shouldAllowAccessToFrame(exec, thisObject->wrapped().frame()))
         return false;
     return Base::deletePropertyByIndex(thisObject, exec, propertyName);
 }
@@ -120,7 +109,7 @@ void JSLocation::getOwnPropertyNames(JSObject* object, ExecState* exec, Property
 {
     JSLocation* thisObject = jsCast<JSLocation*>(object);
     // Only allow the location object to enumerated by frames in the same origin.
-    if (!shouldAllowAccessToFrame(exec, thisObject->impl().frame()))
+    if (!shouldAllowAccessToFrame(exec, thisObject->wrapped().frame()))
         return;
     Base::getOwnPropertyNames(thisObject, exec, propertyNames, mode);
 }
@@ -132,103 +121,13 @@ bool JSLocation::defineOwnProperty(JSObject* object, ExecState* exec, PropertyNa
     return Base::defineOwnProperty(object, exec, propertyName, descriptor, throwException);
 }
 
-void JSLocation::setHref(ExecState* exec, JSValue value)
+JSValue JSLocation::toStringFunction(ExecState& state)
 {
-    String href = value.toString(exec)->value(exec);
-    if (exec->hadException())
-        return;
-    impl().setHref(href, activeDOMWindow(exec), firstDOMWindow(exec));
-}
-
-void JSLocation::setProtocol(ExecState* exec, JSValue value)
-{
-    String protocol = value.toString(exec)->value(exec);
-    if (exec->hadException())
-        return;
-    ExceptionCode ec = 0;
-    impl().setProtocol(protocol, activeDOMWindow(exec), firstDOMWindow(exec), ec);
-    setDOMException(exec, ec);
-}
-
-void JSLocation::setHost(ExecState* exec, JSValue value)
-{
-    String host = value.toString(exec)->value(exec);
-    if (exec->hadException())
-        return;
-    impl().setHost(host, activeDOMWindow(exec), firstDOMWindow(exec));
-}
-
-void JSLocation::setHostname(ExecState* exec, JSValue value)
-{
-    String hostname = value.toString(exec)->value(exec);
-    if (exec->hadException())
-        return;
-    impl().setHostname(hostname, activeDOMWindow(exec), firstDOMWindow(exec));
-}
-
-void JSLocation::setPort(ExecState* exec, JSValue value)
-{
-    String port = value.toWTFString(exec);
-    if (exec->hadException())
-        return;
-    impl().setPort(port, activeDOMWindow(exec), firstDOMWindow(exec));
-}
-
-void JSLocation::setPathname(ExecState* exec, JSValue value)
-{
-    String pathname = value.toString(exec)->value(exec);
-    if (exec->hadException())
-        return;
-    impl().setPathname(pathname, activeDOMWindow(exec), firstDOMWindow(exec));
-}
-
-void JSLocation::setSearch(ExecState* exec, JSValue value)
-{
-    String pathname = value.toString(exec)->value(exec);
-    if (exec->hadException())
-        return;
-    impl().setSearch(pathname, activeDOMWindow(exec), firstDOMWindow(exec));
-}
-
-void JSLocation::setHash(ExecState* exec, JSValue value)
-{
-    String hash = value.toString(exec)->value(exec);
-    if (exec->hadException())
-        return;
-    impl().setHash(hash, activeDOMWindow(exec), firstDOMWindow(exec));
-}
-
-JSValue JSLocation::replace(ExecState* exec)
-{
-    String urlString = exec->argument(0).toString(exec)->value(exec);
-    if (exec->hadException())
-        return jsUndefined();
-    impl().replace(urlString, activeDOMWindow(exec), firstDOMWindow(exec));
-    return jsUndefined();
-}
-
-JSValue JSLocation::reload(ExecState* exec)
-{
-    impl().reload(activeDOMWindow(exec));
-    return jsUndefined();
-}
-
-JSValue JSLocation::assign(ExecState* exec)
-{
-    String urlString = exec->argument(0).toString(exec)->value(exec);
-    if (exec->hadException())
-        return jsUndefined();
-    impl().assign(urlString, activeDOMWindow(exec), firstDOMWindow(exec));
-    return jsUndefined();
-}
-
-JSValue JSLocation::toStringFunction(ExecState* exec)
-{
-    Frame* frame = impl().frame();
-    if (!frame || !shouldAllowAccessToFrame(exec, frame))
+    Frame* frame = wrapped().frame();
+    if (!frame || !shouldAllowAccessToFrame(&state, frame))
         return jsUndefined();
 
-    return jsStringWithCache(exec, impl().toString());
+    return jsStringWithCache(&state, wrapped().toString());
 }
 
 bool JSLocationPrototype::putDelegate(ExecState* exec, PropertyName propertyName, JSValue, PutPropertySlot&)

@@ -22,7 +22,7 @@
 #ifndef ElementRareData_h
 #define ElementRareData_h
 
-#include "ClassList.h"
+#include "AttributeDOMTokenList.h"
 #include "DatasetDOMStringMap.h"
 #include "NamedNodeMap.h"
 #include "NodeRareData.h"
@@ -84,31 +84,25 @@ public:
 
     void clearShadowRoot() { m_shadowRoot = nullptr; }
     ShadowRoot* shadowRoot() const { return m_shadowRoot.get(); }
-    void setShadowRoot(RefPtr<ShadowRoot>&& shadowRoot) { m_shadowRoot = WTF::move(shadowRoot); }
+    void setShadowRoot(RefPtr<ShadowRoot>&& shadowRoot) { m_shadowRoot = WTFMove(shadowRoot); }
 
     NamedNodeMap* attributeMap() const { return m_attributeMap.get(); }
-    void setAttributeMap(std::unique_ptr<NamedNodeMap> attributeMap) { m_attributeMap = WTF::move(attributeMap); }
+    void setAttributeMap(std::unique_ptr<NamedNodeMap> attributeMap) { m_attributeMap = WTFMove(attributeMap); }
 
     RenderStyle* computedStyle() const { return m_computedStyle.get(); }
-    void setComputedStyle(Ref<RenderStyle>&& computedStyle) { m_computedStyle = WTF::move(computedStyle); }
+    void setComputedStyle(Ref<RenderStyle>&& computedStyle) { m_computedStyle = WTFMove(computedStyle); }
 
-    ClassList* classList() const { return m_classList.get(); }
-    void setClassList(std::unique_ptr<ClassList> classList) { m_classList = WTF::move(classList); }
-    void clearClassListValueForQuirksMode()
-    {
-        if (!m_classList)
-            return;
-        m_classList->clearValueForQuirksMode();
-    }
+    AttributeDOMTokenList* classList() const { return m_classList.get(); }
+    void setClassList(std::unique_ptr<AttributeDOMTokenList> classList) { m_classList = WTFMove(classList); }
 
     DatasetDOMStringMap* dataset() const { return m_dataset.get(); }
-    void setDataset(std::unique_ptr<DatasetDOMStringMap> dataset) { m_dataset = WTF::move(dataset); }
+    void setDataset(std::unique_ptr<DatasetDOMStringMap> dataset) { m_dataset = WTFMove(dataset); }
 
     LayoutSize minimumSizeForResizing() const { return m_minimumSizeForResizing; }
     void setMinimumSizeForResizing(LayoutSize size) { m_minimumSizeForResizing = size; }
 
-    IntSize savedLayerScrollOffset() const { return m_savedLayerScrollOffset; }
-    void setSavedLayerScrollOffset(IntSize size) { m_savedLayerScrollOffset = size; }
+    IntPoint savedLayerScrollPosition() const { return m_savedLayerScrollPosition; }
+    void setSavedLayerScrollPosition(IntPoint position) { m_savedLayerScrollPosition = position; }
 
     bool hasPendingResources() const { return m_hasPendingResources; }
     void setHasPendingResources(bool has) { m_hasPendingResources = has; }
@@ -136,11 +130,11 @@ private:
     RegionOversetState m_regionOversetState;
 
     LayoutSize m_minimumSizeForResizing;
-    IntSize m_savedLayerScrollOffset;
+    IntPoint m_savedLayerScrollPosition;
     RefPtr<RenderStyle> m_computedStyle;
 
     std::unique_ptr<DatasetDOMStringMap> m_dataset;
-    std::unique_ptr<ClassList> m_classList;
+    std::unique_ptr<AttributeDOMTokenList> m_classList;
     RefPtr<ShadowRoot> m_shadowRoot;
     std::unique_ptr<NamedNodeMap> m_attributeMap;
 
@@ -187,13 +181,13 @@ inline ElementRareData::~ElementRareData()
 inline void ElementRareData::setBeforePseudoElement(RefPtr<PseudoElement>&& pseudoElement)
 {
     ASSERT(!m_beforePseudoElement || !pseudoElement);
-    m_beforePseudoElement = WTF::move(pseudoElement);
+    m_beforePseudoElement = WTFMove(pseudoElement);
 }
 
 inline void ElementRareData::setAfterPseudoElement(RefPtr<PseudoElement>&& pseudoElement)
 {
     ASSERT(!m_afterPseudoElement || !pseudoElement);
-    m_afterPseudoElement = WTF::move(pseudoElement);
+    m_afterPseudoElement = WTFMove(pseudoElement);
 }
 
 inline void ElementRareData::resetComputedStyle()

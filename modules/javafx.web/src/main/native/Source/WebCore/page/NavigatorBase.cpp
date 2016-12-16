@@ -28,6 +28,7 @@
 #include "NavigatorBase.h"
 
 #include "NetworkStateNotifier.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/WTFString.h>
 
 #if OS(LINUX)
@@ -36,12 +37,12 @@
 #endif
 
 #if PLATFORM(IOS)
-#include "WebCoreSystemInterface.h"
+#include "Device.h"
 #endif
 
 #ifndef WEBCORE_NAVIGATOR_PLATFORM
 #if PLATFORM(IOS)
-#define WEBCORE_NAVIGATOR_PLATFORM ""
+#define WEBCORE_NAVIGATOR_PLATFORM deviceName()
 #elif OS(MAC_OS_X) && (CPU(PPC) || CPU(PPC64))
 #define WEBCORE_NAVIGATOR_PLATFORM "MacPPC"
 #elif OS(MAC_OS_X) && (CPU(X86) || CPU(X86_64))
@@ -69,7 +70,6 @@
 #define WEBCORE_NAVIGATOR_VENDOR_SUB ""
 #endif // ifndef WEBCORE_NAVIGATOR_VENDOR_SUB
 
-
 namespace WebCore {
 
 NavigatorBase::~NavigatorBase()
@@ -94,7 +94,7 @@ String NavigatorBase::platform() const
     if (!String(WEBCORE_NAVIGATOR_PLATFORM).isEmpty())
         return WEBCORE_NAVIGATOR_PLATFORM;
     struct utsname osname;
-    DEPRECATED_DEFINE_STATIC_LOCAL(String, platformName, (uname(&osname) >= 0 ? String(osname.sysname) + String(" ") + String(osname.machine) : emptyString()));
+    static NeverDestroyed<String> platformName(uname(&osname) >= 0 ? String(osname.sysname) + String(" ") + String(osname.machine) : emptyString());
     return platformName;
 #else
     return WEBCORE_NAVIGATOR_PLATFORM;

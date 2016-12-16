@@ -23,6 +23,7 @@
 #include "config.h"
 #include "Attr.h"
 
+#include "AttributeChangeInvalidation.h"
 #include "Event.h"
 #include "ExceptionCode.h"
 #include "ScopedEventQueue.h"
@@ -41,16 +42,13 @@ Attr::Attr(Element* element, const QualifiedName& name)
     : ContainerNode(element->document())
     , m_element(element)
     , m_name(name)
-    , m_ignoreChildrenChanged(0)
 {
 }
 
 Attr::Attr(Document& document, const QualifiedName& name, const AtomicString& standaloneValue)
     : ContainerNode(document)
-    , m_element(0)
     , m_name(name)
     , m_standaloneValue(standaloneValue)
-    , m_ignoreChildrenChanged(0)
 {
 }
 
@@ -111,9 +109,10 @@ void Attr::setValue(const AtomicString& value)
     EventQueueScope scope;
     m_ignoreChildrenChanged++;
     removeChildren();
-    if (m_element)
+    if (m_element) {
+        Style::AttributeChangeInvalidation styleInvalidation(*m_element, qualifiedName(), elementAttribute().value(), value);
         elementAttribute().setValue(value);
-    else
+    } else
         m_standaloneValue = value;
     createTextChild();
     m_ignoreChildrenChanged--;
@@ -138,23 +137,17 @@ void Attr::setNodeValue(const String& v, ExceptionCode& ec)
     setValue(v, ec);
 }
 
-RefPtr<Node> Attr::cloneNodeInternal(Document& targetDocument, CloningOperation)
+Ref<Node> Attr::cloneNodeInternal(Document& targetDocument, CloningOperation)
 {
-    RefPtr<Attr> clone = adoptRef(new Attr(targetDocument, qualifiedName(), value()));
-    cloneChildNodes(clone.get());
-    return clone.release();
+    Ref<Attr> clone = adoptRef(*new Attr(targetDocument, qualifiedName(), value()));
+    cloneChildNodes(clone);
+    return WTFMove(clone);
 }
 
 // DOM Section 1.1.1
 bool Attr::childTypeAllowed(NodeType type) const
 {
-    switch (type) {
-        case TEXT_NODE:
-        case ENTITY_REFERENCE_NODE:
-            return true;
-        default:
-            return false;
-    }
+    return type == TEXT_NODE;
 }
 
 void Attr::childrenChanged(const ChildChange&)
@@ -172,9 +165,10 @@ void Attr::childrenChanged(const ChildChange&)
     if (m_element)
         m_element->willModifyAttribute(qualifiedName(), oldValue, newValue);
 
-    if (m_element)
+    if (m_element) {
+        Style::AttributeChangeInvalidation styleInvalidation(*m_element, qualifiedName(), oldValue, newValue);
         elementAttribute().setValue(newValue);
-    else
+    } else
         m_standaloneValue = newValue;
 
     if (m_element)
@@ -215,7 +209,7 @@ void Attr::detachFromElementWithValue(const AtomicString& value)
     ASSERT(m_element);
     ASSERT(m_standaloneValue.isNull());
     m_standaloneValue = value;
-    m_element = 0;
+    m_element = nullptr;
 }
 
 void Attr::attachToElement(Element* element)

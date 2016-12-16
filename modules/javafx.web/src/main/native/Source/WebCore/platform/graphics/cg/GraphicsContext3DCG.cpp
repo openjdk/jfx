@@ -358,7 +358,7 @@ bool GraphicsContext3D::ImageExtractor::extractImage(bool premultiplyAlpha, bool
         // alpha channel. Creation of a bitmap context with an alpha channel
         // doesn't seem to work unless it's premultiplied.
         bitmapContext = adoptCF(CGBitmapContextCreate(0, m_imageWidth, m_imageHeight, 8, m_imageWidth * 4,
-            deviceRGBColorSpaceRef(), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host));
+            sRGBColorSpaceRef(), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host));
         if (!bitmapContext)
             return false;
 
@@ -503,14 +503,14 @@ static void releaseImageData(void*, const void* data, size_t)
     fastFree(const_cast<void*>(data));
 }
 
-void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight, int canvasWidth, int canvasHeight, GraphicsContext* context)
+void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imageWidth, int imageHeight, int canvasWidth, int canvasHeight, GraphicsContext& context)
 {
-    if (!imagePixels || imageWidth <= 0 || imageHeight <= 0 || canvasWidth <= 0 || canvasHeight <= 0 || !context)
+    if (!imagePixels || imageWidth <= 0 || imageHeight <= 0 || canvasWidth <= 0 || canvasHeight <= 0)
         return;
     int rowBytes = imageWidth * 4;
     RetainPtr<CGDataProviderRef> dataProvider;
 
-    if (context->isAcceleratedContext()) {
+    if (context.isAcceleratedContext()) {
         unsigned char* copiedPixels;
 
         if (!tryFastCalloc(imageHeight, rowBytes).getValue(copiedPixels))
@@ -521,7 +521,7 @@ void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imag
     } else
         dataProvider = adoptCF(CGDataProviderCreateWithData(0, imagePixels, rowBytes * imageHeight, 0));
 
-    RetainPtr<CGImageRef> cgImage = adoptCF(CGImageCreate(imageWidth, imageHeight, 8, 32, rowBytes, deviceRGBColorSpaceRef(), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host,
+    RetainPtr<CGImageRef> cgImage = adoptCF(CGImageCreate(imageWidth, imageHeight, 8, 32, rowBytes, sRGBColorSpaceRef(), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host,
         dataProvider.get(), 0, false, kCGRenderingIntentDefault));
 
     // CSS styling may cause the canvas's content to be resized on
@@ -532,11 +532,11 @@ void GraphicsContext3D::paintToCanvas(const unsigned char* imagePixels, int imag
     // We want to completely overwrite the previous frame's
     // rendering results.
 
-    GraphicsContextStateSaver stateSaver(*context);
-    context->scale(FloatSize(1, -1));
-    context->translate(0, -imageHeight);
-    context->setImageInterpolationQuality(InterpolationNone);
-    context->drawNativeImage(cgImage.get(), imageSize, ColorSpaceDeviceRGB, canvasRect, FloatRect(FloatPoint(), imageSize), CompositeCopy);
+    GraphicsContextStateSaver stateSaver(context);
+    context.scale(FloatSize(1, -1));
+    context.translate(0, -imageHeight);
+    context.setImageInterpolationQuality(InterpolationNone);
+    context.drawNativeImage(cgImage.get(), imageSize, canvasRect, FloatRect(FloatPoint(), imageSize), CompositeCopy);
 }
 
 } // namespace WebCore

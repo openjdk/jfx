@@ -31,16 +31,21 @@
 find_package(PkgConfig)
 pkg_check_modules(CAIROGL cairo-gl)
 
+if (CAIROGL_FOUND)
 # At the moment CairoGL does not add any extra cflags and libraries, so we can
 # safely ignore CAIROGL_LIBRARIES and CAIROGL_INCLUDE_DIRS for the moment.
 foreach (_component ${CairoGL_FIND_COMPONENTS})
     string(TOUPPER ${_component} _UPPER_NAME)
     string(REGEX REPLACE "-" "_" _UPPER_NAME ${_UPPER_NAME})
     pkg_check_modules(${_UPPER_NAME} ${_component})
-    set(CAIROGL_INCLUDE_DIRS ${CAIROGL_INCLUDE_DIRS} ${_UPPER_NAME}_INCLUDE_DIRS)
-    set(CAIROGL_LIBRARIES ${CAIROGL_LIBRARIES} ${_UPPER_NAME}_LIBRARIES)
+    if (${_UPPER_NAME}_INCLUDE_DIRS)
+      set(CAIROGL_INCLUDE_DIRS ${CAIROGL_INCLUDE_DIRS} ${_UPPER_NAME}_INCLUDE_DIRS)
+    endif ()
+    if (${_UPPER_NAME}_LIBRARIES)
+      set(CAIROGL_LIBRARIES ${CAIROGL_LIBRARIES} ${_UPPER_NAME}_LIBRARIES)
+    endif ()
 endforeach ()
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(CairoGL DEFAULT_MSG CAIROGL_INCLUDE_DIRS CAIROGL_LIBRARIES)
-
+endif ()

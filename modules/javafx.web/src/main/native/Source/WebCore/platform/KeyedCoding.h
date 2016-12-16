@@ -35,10 +35,11 @@ namespace WebCore {
 class SharedBuffer;
 
 class KeyedDecoder {
-protected:
+public:
+    WEBCORE_EXPORT static std::unique_ptr<KeyedDecoder> decoder(const uint8_t* data, size_t);
+
     virtual ~KeyedDecoder() { }
 
-public:
     virtual bool decodeBytes(const String& key, const uint8_t*&, size_t&) = 0;
     virtual bool decodeBool(const String& key, bool&) = 0;
     virtual bool decodeUInt32(const String& key, uint32_t&) = 0;
@@ -117,12 +118,17 @@ public:
                 result = false;
                 break;
             }
-            objects.append(WTF::move(element));
+            objects.append(WTFMove(element));
             endArrayElement();
         }
 
         endArray();
         return result;
+    }
+
+protected:
+    KeyedDecoder()
+    {
     }
 
 private:
@@ -136,10 +142,11 @@ private:
 };
 
 class KeyedEncoder {
-protected:
+public:
+    WEBCORE_EXPORT static std::unique_ptr<KeyedEncoder> encoder();
+
     virtual ~KeyedEncoder() { }
 
-public:
     virtual void encodeBytes(const String& key, const uint8_t*, size_t) = 0;
     virtual void encodeBool(const String& key, bool) = 0;
     virtual void encodeUInt32(const String& key, uint32_t) = 0;
@@ -186,6 +193,11 @@ public:
             endArrayElement();
         }
         endArray();
+    }
+
+protected:
+    KeyedEncoder()
+    {
     }
 
 private:

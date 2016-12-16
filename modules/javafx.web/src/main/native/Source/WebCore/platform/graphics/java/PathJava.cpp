@@ -3,6 +3,10 @@
  */
 #include "config.h"
 
+#if COMPILER(GCC)
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 #include "Path.h"
 #include "FloatRect.h"
 #include "StrokeStyleApplier.h"
@@ -21,10 +25,10 @@
 namespace WebCore
 {
 
-static GraphicsContext* scratchContext()
+static GraphicsContext& scratchContext()
 {
-    static std::unique_ptr<ImageBuffer> img = ImageBuffer::create(FloatSize(1.f, 1.f)); //XXX recheck adoptPtr usage
-    static GraphicsContext *context = img->context();
+    static std::unique_ptr<ImageBuffer> img = ImageBuffer::create(FloatSize(1.f, 1.f), Unaccelerated);
+    static GraphicsContext &context = img->context();
     return context;
 }
 
@@ -134,11 +138,11 @@ FloatRect Path::strokeBoundingRect(StrokeStyleApplier *applier) const
 
         float thickness;
         if (applier) {
-            GraphicsContext *gc = scratchContext();
-            gc->save();
-            applier->strokeStyle(gc);
-            thickness = gc->strokeThickness();
-            gc->restore();
+            GraphicsContext& gc = scratchContext();
+            gc.save();
+            applier->strokeStyle(&gc);
+            thickness = gc.strokeThickness();
+            gc.restore();
             bounds.inflate(thickness / 2);
         }
         return bounds;
@@ -379,7 +383,7 @@ void Path::transform(const AffineTransform &at)
     CheckAndClearException(env);
 }
 
-void Path::apply(void *info, PathApplierFunction function) const
+void Path::apply(const PathApplierFunction& function) const
 {
     ASSERT(m_path);
 
@@ -421,29 +425,29 @@ void Path::apply(void *info, PathApplierFunction function) const
             case com_sun_webkit_graphics_WCPathIterator_SEG_MOVETO:
                 pelement.type = PathElementMoveToPoint;
                 pelement.points[0] = FloatPoint(data[0],data[1]);
-                function(info, &pelement);
+                function(pelement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_LINETO:
                 pelement.type = PathElementAddLineToPoint;
                 pelement.points[0] = FloatPoint(data[0],data[1]);
-                function(info, &pelement);
+                function(pelement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_QUADTO:
                 pelement.type = PathElementAddQuadCurveToPoint;
                 pelement.points[0] = FloatPoint(data[0],data[1]);
                 pelement.points[1] = FloatPoint(data[2],data[3]);
-                function(info, &pelement);
+                function(pelement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_CUBICTO:
                 pelement.type = PathElementAddCurveToPoint;
                 pelement.points[0] = FloatPoint(data[0],data[1]);
                 pelement.points[1] = FloatPoint(data[2],data[3]);
                 pelement.points[2] = FloatPoint(data[4],data[5]);
-                function(info, &pelement);
+                function(pelement);
                 break;
             case com_sun_webkit_graphics_WCPathIterator_SEG_CLOSE:
                 pelement.type = PathElementCloseSubpath;
-                function(info, &pelement);
+                function(pelement);
                 break;
             }
             env->ReleaseDoubleArrayElements(coords, data, JNI_ABORT);
