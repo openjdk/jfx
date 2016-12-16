@@ -269,14 +269,20 @@ PassRefPtr<Uint8ClampedArray> getImageData(
     return result;
 }
 
-PassRefPtr<Uint8ClampedArray> ImageBuffer::getUnmultipliedImageData(const IntRect& rect, CoordinateSystem) const
+PassRefPtr<Uint8ClampedArray> ImageBuffer::getUnmultipliedImageData(const IntRect& rect, CoordinateSystem coordinateSystem) const
 {
-    return getImageData(Unmultiplied, m_data, rect, m_size);
+    IntRect srcRect = rect;
+    if (coordinateSystem == LogicalCoordinateSystem)
+        srcRect.scale(m_resolutionScale);
+    return getImageData(Unmultiplied, m_data, srcRect, m_size);
 }
 
-PassRefPtr<Uint8ClampedArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect, CoordinateSystem) const
+PassRefPtr<Uint8ClampedArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect, CoordinateSystem coordinateSystem) const
 {
-    return getImageData(Premultiplied, m_data, rect, m_size);
+    IntRect srcRect = rect;
+    if (coordinateSystem == LogicalCoordinateSystem)
+        srcRect.scale(m_resolutionScale);
+    return getImageData(Premultiplied, m_data, srcRect, m_size);
 }
 
 void ImageBuffer::putByteArray(
@@ -285,39 +291,46 @@ void ImageBuffer::putByteArray(
     const IntSize& sourceSize,
     const IntRect& sourceRect,
     const IntPoint& destPoint,
-    CoordinateSystem)
+    CoordinateSystem coordinateSystem)
 {
     // This code was adapted from the CG implementation
 
-    ASSERT(sourceRect.width() > 0);
-    ASSERT(sourceRect.height() > 0);
+    IntRect scaledSourceRect = sourceRect;
+    IntSize scaledSourceSize = sourceSize;
+    if (coordinateSystem == LogicalCoordinateSystem) {
+        scaledSourceRect.scale(m_resolutionScale);
+        scaledSourceSize.scale(m_resolutionScale);
+    }
 
-    int originx = sourceRect.x();
-    int destx = destPoint.x() + sourceRect.x();
+    ASSERT(scaledSourceRect.width() > 0);
+    ASSERT(scaledSourceRect.height() > 0);
+
+    int originx = scaledSourceRect.x();
+    int destx = destPoint.x() + scaledSourceRect.x();
     ASSERT(destx >= 0);
     ASSERT(destx < m_size.width());
     ASSERT(originx >= 0);
-    ASSERT(originx <= sourceRect.maxX());
+    ASSERT(originx <= scaledSourceRect.maxX());
 
-    int endx = destPoint.x() + sourceRect.maxX();
+    int endx = destPoint.x() + scaledSourceRect.maxX();
     ASSERT(endx <= m_size.width());
     int width = endx - destx;
 
-    int originy = sourceRect.y();
-    int desty = destPoint.y() + sourceRect.y();
+    int originy = scaledSourceRect.y();
+    int desty = destPoint.y() + scaledSourceRect.y();
     ASSERT(desty >= 0);
     ASSERT(desty < m_size.height());
     ASSERT(originy >= 0);
-    ASSERT(originy <= sourceRect.maxY());
+    ASSERT(originy <= scaledSourceRect.maxY());
 
-    int endy = destPoint.y() + sourceRect.maxY();
+    int endy = destPoint.y() + scaledSourceRect.maxY();
     ASSERT(endy <= m_size.height());
     int height = endy - desty;
 
     if (width <= 0 || height <= 0)
         return;
 
-    unsigned srcBytesPerRow = 4 * sourceSize.width();
+    unsigned srcBytesPerRow = 4 * scaledSourceSize.width();
     unsigned char* srcRows =
             source->data() + originy * srcBytesPerRow + originx * 4;
     unsigned dstBytesPerRow = 4 * m_size.width();
