@@ -2656,7 +2656,7 @@ project(":fxpackager") {
         doLast {
             copy {
                 from "$sourceDir/redistributable.list"
-                into project.file("$resourceDir/redistributable.list")
+                into project.file("$resourceDir")
             }
         }
     }
