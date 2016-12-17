@@ -44,6 +44,11 @@ public final class FloatMath implements MarlinConst {
         return (a >= b) ? a : b;
     }
 
+    static double max(final double a, final double b) {
+        // no NaN handling
+        return (a >= b) ? a : b;
+    }
+
     public static int max(final int a, final int b) {
         return (a >= b) ? a : b;
     }
@@ -73,6 +78,26 @@ public final class FloatMath implements MarlinConst {
     }
 
     /**
+     * Faster alternative to ceil(double) optimized for the integer domain
+     * and supporting NaN and +/-Infinity.
+     *
+     * @param a a value.
+     * @return the largest (closest to positive infinity) integer value
+     * that less than or equal to the argument and is equal to a mathematical
+     * integer.
+     */
+    public static int ceil_int(final double a) {
+        final int intpart = (int) a;
+
+        if (a <= intpart
+                || (CHECK_OVERFLOW && intpart == Integer.MAX_VALUE)
+                || CHECK_NAN && Double.isNaN(a)) {
+            return intpart;
+        }
+        return intpart + 1;
+    }
+
+    /**
      * Faster alternative to floor(float) optimized for the integer domain
      * and supporting NaN and +/-Infinity.
      *
@@ -87,6 +112,26 @@ public final class FloatMath implements MarlinConst {
         if (a >= intpart
                 || (CHECK_OVERFLOW && intpart == Integer.MIN_VALUE)
                 || CHECK_NAN && Float.isNaN(a)) {
+            return intpart;
+        }
+        return intpart - 1;
+    }
+
+    /**
+     * Faster alternative to floor(double) optimized for the integer domain
+     * and supporting NaN and +/-Infinity.
+     *
+     * @param a a value.
+     * @return the largest (closest to positive infinity) floating-point value
+     * that less than or equal to the argument and is equal to a mathematical
+     * integer.
+     */
+    public static int floor_int(final double a) {
+        final int intpart = (int) a;
+
+        if (a >= intpart
+                || (CHECK_OVERFLOW && intpart == Integer.MIN_VALUE)
+                || CHECK_NAN && Double.isNaN(a)) {
             return intpart;
         }
         return intpart - 1;

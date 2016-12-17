@@ -46,7 +46,7 @@ import com.sun.marlin.ArrayCacheConst.CacheStats;
 // % sed -e 's/(b\yte)[ ]*//g' -e 's/b\yte/int/g' -e 's/B\yte/Int/g' < B\yteArrayCache.java > IntArrayCache.java
 // % sed -e 's/(b\yte)[ ]*/(float) /g' -e 's/b\yte/float/g' -e 's/B\yte/Float/g' < B\yteArrayCache.java > FloatArrayCache.java
 
-final class ByteArrayCache implements MarlinConst {
+public final class ByteArrayCache implements MarlinConst {
 
     final boolean clean;
     private final int bucketCapacity;
@@ -246,8 +246,8 @@ final class ByteArrayCache implements MarlinConst {
         }
     }
 
-    static void check(final byte[] array, final int fromIndex,
-                      final int toIndex, final byte value)
+    public static void check(final byte[] array, final int fromIndex,
+                             final int toIndex, final byte value)
     {
         if (DO_CHECKS) {
             // check zero on full array:

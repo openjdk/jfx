@@ -56,6 +56,7 @@ public final class PrismSettings {
     public static final int prismStatFrequency;
     public static final boolean doNativePisces;
     public static final boolean useMarlinRasterizer;
+    public static final boolean useMarlinRasterizerDP;
     public static final String refType;
     public static final boolean forceRepaint;
     public static final boolean noFallback;
@@ -215,7 +216,8 @@ public final class PrismSettings {
 
         tryOrder = Collections.unmodifiableList(Arrays.asList(tryOrderArr));
 
-        useMarlinRasterizer = getBoolean(systemProperties, "prism.marlinrasterizer", false);
+        useMarlinRasterizer   = getBoolean(systemProperties, "prism.marlinrasterizer", false);
+        useMarlinRasterizerDP = getBoolean(systemProperties, "prism.marlin.double", true);
         if (useMarlinRasterizer) {
             doNativePisces = false;
         } else {
@@ -262,7 +264,8 @@ public final class PrismSettings {
             }
             System.out.println("");
             if (useMarlinRasterizer) {
-                System.out.println("Using Marlin rasterizer");
+                String prectype = (useMarlinRasterizerDP ? "double" : "float");
+                System.out.println("Using Marlin rasterizer (" + prectype +')');
             } else {
                 String piscestype = (doNativePisces ? "native" : "java");
                 System.out.println("Using " + piscestype + "-based Pisces rasterizer");

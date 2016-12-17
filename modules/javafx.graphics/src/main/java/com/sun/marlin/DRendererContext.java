@@ -33,7 +33,7 @@ import com.sun.marlin.ArrayCacheConst.CacheStats;
 /**
  * This class is a renderer context dedicated to a single thread
  */
-public final class RendererContext extends ReentrantContext implements MarlinConst {
+public final class DRendererContext extends ReentrantContext implements MarlinConst {
 
     // RendererContext creation counter
     private static final AtomicInteger CTX_COUNT = new AtomicInteger(1);
@@ -43,8 +43,8 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
      *
      * @return new RendererContext instance
      */
-    public static RendererContext createContext() {
-        return new RendererContext("ctx"
+    public static DRendererContext createContext() {
+        return new DRendererContext("ctx"
                        + Integer.toString(CTX_COUNT.getAndIncrement()));
     }
 
@@ -55,15 +55,15 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
     // shared data
     public final float[] float6 = new float[6];
     // shared curve (dirty) (Renderer / Stroker)
-    final Curve curve = new Curve();
+    final DCurve curve = new DCurve();
     // MarlinRenderingEngine.TransformingPathConsumer2D
-    public final TransformingPathConsumer2D transformerPC2D;
-    public final Renderer renderer;
-    private RendererNoAA rendererNoAA = null;
-    public final Stroker stroker;
+    public final DTransformingPathConsumer2D transformerPC2D;
+    public final DRenderer renderer;
+    private DRendererNoAA rendererNoAA = null;
+    public final DStroker stroker;
     // Simplifies out collinear lines
-    public final CollinearSimplifier simplifier = new CollinearSimplifier();
-    public final Dasher dasher;
+    public final DCollinearSimplifier simplifier = new DCollinearSimplifier();
+    public final DDasher dasher;
     // flag indicating the shape is stroked (1) or filled (0)
     int stroking = 0;
 
@@ -78,8 +78,8 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
     private final IntArrayCache cleanIntCache = new IntArrayCache(true, 5);
     /* dirty int[] cache = 4 refs */
     private final IntArrayCache dirtyIntCache = new IntArrayCache(false, 4);
-    /* dirty float[] cache = 3 refs */
-    private final FloatArrayCache dirtyFloatCache = new FloatArrayCache(false, 3);
+    /* dirty double[] cache = 3 refs */
+    private final DoubleArrayCache dirtyDoubleCache = new DoubleArrayCache(false, 3);
     /* dirty byte[] cache = 1 ref */
     private final ByteArrayCache dirtyByteCache = new ByteArrayCache(false, 1);
 
@@ -91,7 +91,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
      *
      * @param name context name (debugging)
      */
-    RendererContext(final String name) {
+    DRendererContext(final String name) {
         if (LOG_CREATE_CONTEXT) {
             MarlinUtils.logInfo("new RendererContext = " + name);
         }
@@ -102,20 +102,20 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
             stats = RendererStats.createInstance(cleanerObj, name);
             // push cache stats:
             stats.cacheStats = new CacheStats[] { cleanIntCache.stats,
-                dirtyIntCache.stats, dirtyFloatCache.stats, dirtyByteCache.stats
+                dirtyIntCache.stats, dirtyDoubleCache.stats, dirtyByteCache.stats
             };
         } else {
             stats = null;
         }
 
         // MarlinRenderingEngine.TransformingPathConsumer2D
-        transformerPC2D = new TransformingPathConsumer2D();
+        transformerPC2D = new DTransformingPathConsumer2D();
 
         // Renderer:
-        renderer = new Renderer(this);
+        renderer = new DRenderer(this);
 
-        stroker = new Stroker(this);
-        dasher = new Dasher(this);
+        stroker = new DStroker(this);
+        dasher = new DDasher(this);
     }
 
     /**
@@ -145,9 +145,9 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         }
     }
 
-    public RendererNoAA getRendererNoAA() {
+    public DRendererNoAA getRendererNoAA() {
         if (rendererNoAA == null) {
-            rendererNoAA = new RendererNoAA(this);
+            rendererNoAA = new DRendererNoAA(this);
         }
         return rendererNoAA;
     }
@@ -167,8 +167,8 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         return dirtyIntCache.createRef(initialSize);
     }
 
-    FloatArrayCache.Reference newDirtyFloatArrayRef(final int initialSize) {
-        return dirtyFloatCache.createRef(initialSize);
+    DoubleArrayCache.Reference newDirtyDoubleArrayRef(final int initialSize) {
+        return dirtyDoubleCache.createRef(initialSize);
     }
 
     ByteArrayCache.Reference newDirtyByteArrayRef(final int initialSize) {

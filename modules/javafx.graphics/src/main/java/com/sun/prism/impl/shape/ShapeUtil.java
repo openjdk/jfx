@@ -36,7 +36,11 @@ public class ShapeUtil {
     private static final ShapeRasterizer shapeRasterizer;
     static {
         if (PrismSettings.useMarlinRasterizer) {
-            shapeRasterizer = new MarlinRasterizer();
+            if (PrismSettings.useMarlinRasterizerDP) {
+                shapeRasterizer = new DMarlinRasterizer();
+            } else {
+                shapeRasterizer = new MarlinRasterizer();
+            }
         } else if (PrismSettings.doNativePisces) {
             shapeRasterizer = new NativePiscesRasterizer();
         } else {
