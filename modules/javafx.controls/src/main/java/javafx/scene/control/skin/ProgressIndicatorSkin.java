@@ -645,10 +645,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         }
 
         private void rebuildTimeline() {
-            if (!NodeHelper.isTreeShowing(control)) {
-                return;
-            }
-
             if (spinEnabled) {
                 if (indeterminateTransition == null) {
                     indeterminateTransition = new Timeline();
