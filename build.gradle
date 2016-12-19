@@ -3748,6 +3748,18 @@ compileTargets { t ->
                     from srcMakeDir
                     into dstMakeDir
                 }
+
+                // FIXME: The following is a temporary fix for JDK-8171450.
+                // It should be removed once the rest of the build logic is
+                // updated to look for native libs in the lib/ directory on
+                // Linux and not in lib/$ARCH/
+                if (IS_LINUX) {
+                    copy {
+                        from "${modulesLibsDir}/${moduleName}/$OS_ARCH"
+                        into "${modulesLibsDir}/${moduleName}"
+                        include "*.so"
+                    }
+                }
             }
 
             // Copy dependencies/*/module-info.java.extra
