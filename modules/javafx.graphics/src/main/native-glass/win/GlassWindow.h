@@ -120,6 +120,13 @@ private:
     };
     State m_state;
 
+    enum WinChangingReason {
+        Unknown,
+        WasMoved,
+        WasSized
+    };
+    WinChangingReason m_winChangingReason;
+
     // -1 for x or y indicate the values aren't set
     POINT m_minSize;
     POINT m_maxSize;
@@ -173,6 +180,7 @@ private:
 
     void HandleDestroyEvent();
     // if pRect == NULL => get position/size by GetWindowRect
+    void HandleWindowPosChangingEvent(WINDOWPOS *pWinPos);
     void HandleMoveEvent(RECT *pRect);
     // if pRect == NULL => get position/size by GetWindowRect
     void HandleSizeEvent(int type, RECT *pRect);

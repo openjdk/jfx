@@ -332,76 +332,8 @@ class WindowStage extends GlassStage {
         if (isAppletStage) {
             xSet = ySet = false;
         }
-        float pScaleX = platformWindow.getPlatformScaleX();
-        float pScaleY = platformWindow.getPlatformScaleY();
-        int px, py;
-        if (xSet || ySet) {
-            Screen screen = platformWindow.getScreen();
-            List<Screen> screens = Screen.getScreens();
-            if (screens.size() > 1) {
-                float winfxW = (w > 0) ? w : (platformWindow.getWidth() / pScaleX);
-                float winfxH = (h > 0) ? h : (platformWindow.getHeight()/ pScaleY);
-                float winfxX = xSet ? x :
-                        screen.getX() + (platformWindow.getX() - screen.getPlatformX()) / pScaleX;
-                float winfxY = ySet ? y :
-                        screen.getY() + (platformWindow.getY() - screen.getPlatformY()) / pScaleY;
-                float winfxCX = winfxX + winfxW/2f;
-                float winfxCY = winfxY + winfxH/2f;
-                // If the center point of the window (winfxCX,Y) is on any
-                // screen, then use that screen.  Otherwise, use the screen
-                // whose center is closest to the window center.
-                int scrX = screen.getX();
-                int scrY = screen.getY();
-                int scrW = screen.getWidth();
-                int scrH = screen.getHeight();
-                if (winfxCX < scrX ||
-                    winfxCY < scrY ||
-                    winfxCX >= scrX + scrW ||
-                    winfxCY >= scrY + scrH)
-                {
-                    float relx = scrX + scrW / 2.0f - winfxCX;
-                    float rely = scrY + scrH / 2.0f - winfxCY;
-                    float distsq = relx * relx + rely * rely;
-                    for (Screen s : Screen.getScreens()) {
-                        scrX = s.getX();
-                        scrY = s.getY();
-                        scrW = s.getWidth();
-                        scrH = s.getHeight();
-                        if (winfxCX >= scrX &&
-                            winfxCY >= scrY &&
-                            winfxCX < scrX + scrW &&
-                            winfxCY < scrY + scrH)
-                        {
-                            screen = s;
-                            break;
-                        }
-                        relx = scrX + scrW / 2.0f - winfxCX;
-                        rely = scrY + scrH / 2.0f - winfxCY;
-                        float distsq2 = relx * relx + rely * rely;
-                        if (distsq2 < distsq) {
-                            screen = s;
-                            distsq = distsq2;
-                        }
-                    }
-                }
-            }
-            float sx = screen == null ? 0 : screen.getX();
-            float sy = screen == null ? 0 : screen.getY();
-            float sScaleX = screen.getPlatformScaleX();
-            float sScaleY = screen.getPlatformScaleY();
-            px = xSet ? Math.round(screen.getPlatformX() + (x - sx) * sScaleX) : 0;
-            py = ySet ? Math.round(screen.getPlatformY() + (y - sy) * sScaleY) : 0;
-        } else {
-            px = py = 0;
-        }
         if (xSet || ySet || w > 0 || h > 0 || cw > 0 || ch > 0) {
-            int pw = (int) (w > 0 ? Math.ceil(w * pScaleX) : w);
-            int ph = (int) (h > 0 ? Math.ceil(h * pScaleY) : h);
-            int pcw = (int) (cw > 0 ? Math.ceil(cw * pScaleX) : cw);
-            int pch = (int) (ch > 0 ? Math.ceil(ch * pScaleY) : ch);
-            platformWindow.setBounds(px, py, xSet, ySet,
-                                     pw, ph, pcw, pch,
-                                     xGravity, yGravity);
+            platformWindow.setBounds(x, y, xSet, ySet, w, h, cw, ch, xGravity, yGravity);
         }
     }
 

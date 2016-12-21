@@ -195,21 +195,21 @@ public abstract class Window {
     private final boolean isDecorated;
     private boolean shouldStartUndecoratedMove = false;
 
-    private View view = null;
-    private Screen screen = null;
+    protected View view = null;
+    protected Screen screen = null;
     private MenuBar menubar = null;
     private String title = "";
     private UndecoratedMoveResizeHelper helper = null;
 
     private int state = State.NORMAL;
     private int level = Level.NORMAL;
-    private int x = 0;
-    private int y = 0;
-    private int width = 0;
-    private int height = 0;
+    protected int x = 0;
+    protected int y = 0;
+    protected int width = 0;
+    protected int height = 0;
     private float alpha = 1.0f;
-    private float platformScaleX = 1.0f;
-    private float platformScaleY = 1.0f;
+    protected float platformScaleX = 1.0f;
+    protected float platformScaleY = 1.0f;
     private float outputScaleX = 1.0f;
     private float outputScaleY = 1.0f;
     private float renderScaleX = 1.0f;
@@ -604,28 +604,39 @@ public abstract class Window {
      * @param xGravity the xGravity coefficient
      * @param yGravity the yGravity coefficient
      */
-    public void setBounds(int x, int y, boolean xSet, boolean ySet,
-                          int w, int h, int cw, int ch,
+    public void setBounds(float x, float y, boolean xSet, boolean ySet,
+                          float w, float h, float cw, float ch,
                           float xGravity, float yGravity)
     {
         Application.checkEventThread();
         checkNotClosed();
-        _setBounds(ptr, x, y, xSet, ySet, w, h, cw, ch, xGravity, yGravity);
+        float pScaleX = platformScaleX;
+        float pScaleY = platformScaleY;
+        int px = screen.getPlatformX() + Math.round((x - screen.getX()) * pScaleX);
+        int py = screen.getPlatformY() + Math.round((y - screen.getY()) * pScaleY);
+        int pw = (int) (w > 0 ? Math.ceil(w * pScaleX) : w);
+        int ph = (int) (h > 0 ? Math.ceil(h * pScaleY) : h);
+        int pcw = (int) (cw > 0 ? Math.ceil(cw * pScaleX) : cw);
+        int pch = (int) (ch > 0 ? Math.ceil(ch * pScaleY) : ch);
+        _setBounds(ptr, px, py, xSet, ySet, pw, ph, pcw, pch, xGravity, yGravity);
     }
 
     public void setPosition(int x, int y) {
         Application.checkEventThread();
-        setBounds(x, y, true, true, 0, 0, 0, 0, 0, 0);
+        checkNotClosed();
+        _setBounds(ptr, x, y, true, true, 0, 0, 0, 0, 0, 0);
     }
 
     public void setSize(int w, int h) {
         Application.checkEventThread();
-        setBounds(0, 0, false, false, w, h, 0, 0, 0, 0);
+        checkNotClosed();
+        _setBounds(ptr, 0, 0, false, false, w, h, 0, 0, 0, 0);
     }
 
     public void setContentSize(int cw, int ch) {
         Application.checkEventThread();
-        setBounds(0, 0, false, false, 0, 0, cw, ch, 0, 0);
+        checkNotClosed();
+        _setBounds(ptr, 0, 0, false, false, 0, 0, cw, ch, 0, 0);
     }
 
     public boolean isVisible() {
