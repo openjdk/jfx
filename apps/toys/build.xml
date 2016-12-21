@@ -12,6 +12,7 @@
     <target description="Build the toys" name="jar" depends="swingJar">
         <ant dir="Hello" target="jar" inheritAll="true"/>
         <ant dir="FX8-3DFeatures" target="jar" inheritAll="true"/>
+        <ant dir="LayoutDemo" target="jar" inheritAll="true"/>
         <ant dir="PickTest3D" target="jar" inheritAll="true"/>
         <ant dir="Shape3DToy" target="jar" inheritAll="true"/>
         <ant dir="TouchSuite" target="jar" inheritAll="true"/>
@@ -21,6 +22,7 @@
         <ant dir="Hello" target="clean" inheritAll="true"/>
         <ant dir="ColorCube" target="clean" inheritAll="true"/>
         <ant dir="FX8-3DFeatures" target="clean" inheritAll="true"/>
+        <ant dir="LayoutDemo" target="clean" inheritAll="true"/>
         <ant dir="PickTest3D" target="clean" inheritAll="true"/>
         <ant dir="Shape3DToy" target="clean" inheritAll="true"/>
         <ant dir="TouchSuite" target="clean" inheritAll="true"/>
