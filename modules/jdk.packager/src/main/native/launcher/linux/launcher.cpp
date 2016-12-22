@@ -45,16 +45,13 @@ typedef void (*stop_launcher)();
 #define MAX_PATH 1024
 
 std::string GetProgramPath() {
+    size_t len = 0;
     std::string result;
-    char *buffer = new char[MAX_PATH];
+    char buffer[MAX_PATH] = {0};
 
-    if (buffer != NULL) {
-        if (readlink("/proc/self/exe", buffer, MAX_PATH - 1) != -1) {
-            buffer[MAX_PATH - 1] = '\0';
-            result = buffer;
-        }
-
-        delete[] buffer;
+    if ((len = readlink("/proc/self/exe", buffer, MAX_PATH - 1)) != -1) {
+        buffer[len] = '\0';
+        result = buffer;
     }
 
     return result;

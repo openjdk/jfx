@@ -51,6 +51,7 @@
 static LPCTSTR szGlassWindowClassName = TEXT("GlassWindowClass");
 
 static jmethodID midNotifyClose;
+static jmethodID midNotifyMoving;
 static jmethodID midNotifyMove;
 static jmethodID midNotifyResize;
 static jmethodID midNotifyScaleChanged;
@@ -64,6 +65,7 @@ static HWND activeTouchWindow = NULL;
 GlassWindow::GlassWindow(jobject jrefThis, bool isTransparent, bool isDecorated, bool isUnified, bool isChild, HWND parentOrOwner)
     : BaseWnd(parentOrOwner),
     ViewContainer(),
+    m_winChangingReason(Unknown),
     m_state(Normal),
     m_isFocusable(true),
     m_isFocused(false),
@@ -246,12 +248,12 @@ char *StringForMsg(UINT msg) {
     switch (msg) {
         case WM_DPICHANGED: return "WM_DPICHANGED";
         case WM_ERASEBKGND: return "WM_ERASEBKGND";
-        case WM_WINDOWPOSCHANGING: return "WM_WINDOWPOSCHANGING";
         case WM_NCPAINT: return "WM_NCPAINT";
         case WM_SETCURSOR: return "WM_SETCURSOR";
         case WM_NCMOUSEMOVE: return "WM_NCMOUSEMOVE";
         case WM_NCHITTEST: return "WM_NCHITTEST";
         case WM_NCMOUSELEAVE: return "WM_NCMOUSELEAVE";
+        case WM_ENTERSIZEMOVE: return "WM_ENTERSIZEMOVE";
         case WM_EXITSIZEMOVE: return "WM_EXITSIZEMOVE";
         case WM_CREATE: return "WM_CREATE";
         case WM_NCDESTROY: return "WM_NCDESTROY";
@@ -268,9 +270,11 @@ char *StringForMsg(UINT msg) {
 
         case WM_SHOWWINDOW: return "WM_SHOWWINDOW";
         case WM_DWMCOMPOSITIONCHANGED: return "WM_DWMCOMPOSITIONCHANGED";
+        case WM_SIZING: return "WM_SIZING";
         case WM_SIZE: return "WM_SIZE";
         case WM_MOVING: return "WM_MOVING";
         case WM_MOVE: return "WM_MOVE";
+        case WM_WINDOWPOSCHANGING: return "WM_WINDOWPOSCHANGING";
         case WM_WINDOWPOSCHANGED: return "WM_WINDOWPOSCHANGED";
         case WM_CLOSE: return "WM_CLOSE";
         case WM_DESTROY: return "WM_DESTROY";
@@ -322,10 +326,12 @@ char *StringForMsg(UINT msg) {
 
 LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
 {
-//    fprintf(stderr, "msg = 0x%04x (%s)\n", msg, StringForMsg(msg));
+//    fprintf(stdout, "msg = 0x%04x (%s)\n", msg, StringForMsg(msg));
+//    fflush(stdout);
     MessageResult commonResult = BaseWnd::CommonWindowProc(msg, wParam, lParam);
     if (commonResult.processed) {
-//        fprintf(stderr, "   (handled by CommonWindowProc)\n");
+//        fprintf(stdout, "   (handled by CommonWindowProc)\n");
+//        fflush(stdout);
         return commonResult.result;
     }
 
@@ -358,6 +364,9 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             //No predefined WM_SIZE event type for this, so using -1 as parameters
             HandleViewSizeEvent(GetHWND(), -1, -1, -1);
             break;
+        case WM_SIZING:
+            m_winChangingReason = WasSized;
+            break;
         case WM_SIZE:
             switch (wParam) {
                 case SIZE_RESTORED:
@@ -379,20 +388,17 @@ LRESULT GlassWindow::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             HandleViewSizeEvent(GetHWND(), msg, wParam, lParam);
             break;
-//        case WM_MOVING:
-//            HandleMoveEvent((RECT *)lParam);
-//            break;
+        case WM_MOVING:
+            m_winChangingReason = WasMoved;
+            break;
         case WM_MOVE:
             if (!::IsIconic(GetHWND())) {
                 HandleMoveEvent(NULL);
             }
             break;
-        case WM_WINDOWPOSCHANGED:
-            HandleWindowPosChangedEvent();
+        case WM_WINDOWPOSCHANGING:
+            HandleWindowPosChangingEvent((WINDOWPOS *)lParam);
             break;
-        case WM_DPICHANGED:
-            HandleDPIEvent(wParam, lParam);
-            return 0;
         case WM_CLOSE:
             HandleCloseEvent();
             return 0;
@@ -617,6 +623,128 @@ void GlassWindow::HandleDestroyEvent()
     CheckAndClearException(env);
 }
 
+#if 0
+#define _PFLAG(name) \
+    if ((flags & SWP_ ## name) != 0) { \
+        fprintf(stdout, ", " #name); \
+        flags &= ~SWP_ ## name; \
+    }
+void printFlags(int flags)
+{
+    _PFLAG(NOMOVE);
+    _PFLAG(NOSIZE);
+    _PFLAG(DRAWFRAME);
+    _PFLAG(FRAMECHANGED);
+    _PFLAG(HIDEWINDOW);
+    _PFLAG(NOACTIVATE);
+    _PFLAG(NOCOPYBITS);
+    _PFLAG(NOOWNERZORDER);
+    _PFLAG(NOREDRAW);
+    _PFLAG(NOREPOSITION);
+    _PFLAG(NOSENDCHANGING);
+    _PFLAG(NOZORDER);
+    _PFLAG(SHOWWINDOW);
+    if (flags != 0) {
+        fprintf(stdout, ", unrecognized flags = 0x%08x", flags);
+    }
+}
+#undef _PFLAG
+#endif
+
+void GlassWindow::HandleWindowPosChangingEvent(WINDOWPOS *pWinPos)
+{
+//    fprintf(stdout, "WM_POSCHANGING enter: (%d, %d), [%d x %d]",
+//            pWinPos->x, pWinPos->y, pWinPos->cx, pWinPos->cy);
+//    printFlags(pWinPos->flags);
+//    fprintf(stdout, "\n");
+//    fflush(stdout);
+
+    jint resizeMode = (m_winChangingReason == WasSized)
+            ? com_sun_glass_ui_win_WinWindow_RESIZE_DISABLE
+            : com_sun_glass_ui_win_WinWindow_RESIZE_AROUND_ANCHOR;
+    m_winChangingReason = Unknown;
+
+    jboolean noMove = ((pWinPos->flags & SWP_NOMOVE) != 0);
+    jboolean noSize = ((pWinPos->flags & SWP_NOSIZE) != 0);
+    // Only evaluate bounds if they have changed...
+    if (noMove && noSize) return;
+
+    JNIEnv* env = GetEnv();
+    HWND hWnd = GetHWND();
+
+    POINT anchor;
+    if (hWnd == ::GetCapture()) {
+        if (::GetCursorPos(&anchor)) {
+            anchor.x -= pWinPos->x;
+            anchor.y -= pWinPos->y;
+        } else {
+            anchor.x = anchor.y = 0;
+        }
+    } else {
+        anchor.x = anchor.y = 0;
+    }
+
+    if (noMove || noSize) {
+        RECT wBounds;
+        ::GetWindowRect(hWnd, &wBounds);
+        if (noMove) {
+            pWinPos->x = wBounds.left;
+            pWinPos->y = wBounds.top;
+        }
+        if (noSize) {
+            pWinPos->cx = wBounds.right - wBounds.left;
+            pWinPos->cy = wBounds.bottom - wBounds.top;
+        }
+    }
+
+    UpdateInsets();
+
+    jintArray jret = (jintArray) env->CallObjectMethod(m_grefThis, midNotifyMoving,
+                                                       pWinPos->x, pWinPos->y,
+                                                       pWinPos->cx, pWinPos->cy,
+                                                       0, 0, anchor.x, anchor.y,
+                                                       resizeMode,
+                                                       m_insets.left, m_insets.top,
+                                                       m_insets.right, m_insets.bottom);
+    if (CheckAndClearException(env)) {
+//        fprintf(stderr, "Exception from upcall");
+    } else if (jret == NULL) {
+//        fprintf(stdout, "ret val is null\n");
+//        fflush(stdout);
+    } else {
+        if (env->GetArrayLength(jret) != 4) {
+            fprintf(stderr, "bad array length = %d\n", env->GetArrayLength(jret));
+        } else {
+            jint ret[4];
+            env->GetIntArrayRegion(jret, 0, 4, ret);
+            if (!CheckAndClearException(env)) {
+                if (noMove &&
+                    (pWinPos->x != ret[0] ||
+                     pWinPos->y != ret[1]))
+                {
+                    pWinPos->flags &= ~SWP_NOMOVE;
+                }
+                pWinPos->x  = ret[0];
+                pWinPos->y  = ret[1];
+                if (noSize &&
+                    (pWinPos->cx != ret[2] ||
+                     pWinPos->cy != ret[3]))
+                {
+                    pWinPos->flags &= ~SWP_NOSIZE;
+                }
+                pWinPos->cx = ret[2];
+                pWinPos->cy = ret[3];
+//                fprintf(stdout, "WM_POSCHANGING override: (%d, %d), [%d x %d]",
+//                        pWinPos->x, pWinPos->y, pWinPos->cx, pWinPos->cy);
+//                printFlags(pWinPos->flags);
+//                fprintf(stdout, "\n");
+//                fflush(stdout);
+            }
+        }
+        env->DeleteLocalRef(jret);
+    }
+}
+
 // if pRect == NULL => get position/size by GetWindowRect
 void GlassWindow::HandleMoveEvent(RECT *pRect)
 {
@@ -646,110 +774,6 @@ void GlassWindow::HandleSizeEvent(int type, RECT *pRect)
     env->CallVoidMethod(m_grefThis, midNotifyResize,
                         type, pRect->right-pRect->left, pRect->bottom-pRect->top);
     CheckAndClearException(env);
-}
-
-void GlassWindow::HandleDPIEvent(WPARAM wParam, LPARAM lParam) {
-    HWND hWnd = GetHWND();
-
-    if (GlassApplication::IsUIScaleOverridden()) {
-        return;
-    }
-
-    UINT xDPI = LOWORD(wParam);
-    UINT yDPI = HIWORD(wParam);
-
-    JNIEnv* env = GetEnv();
-    jfloat xScale = xDPI / ((float) USER_DEFAULT_SCREEN_DPI);
-    jfloat yScale = yDPI / ((float) USER_DEFAULT_SCREEN_DPI);
-    env->CallVoidMethod(m_grefThis, midNotifyScaleChanged, xScale, yScale, xScale, yScale);
-    CheckAndClearException(env);
-
-    // Windows provides new bounds for the window, but they assume that
-    // all parts (client and non-client) will be rescaled equally.
-    // Unfortunately, the basic window decoration support does not scale
-    // so we need to adjust the new bounds to represent the new intended
-    // client dimensions padded for the unchanging frame border.
-    LPRECT lprcNewBounds = (LPRECT) lParam;
-    RECT oldBounds, oldClient, padding, newClient, newBounds;
-    ::GetWindowRect(hWnd, &oldBounds);
-    ::GetClientRect(hWnd, &oldClient);
-    float rescaleX = ((float) (lprcNewBounds->right - lprcNewBounds->left)) /
-                              (oldBounds.right - oldBounds.left);
-    float rescaleY = ((float) (lprcNewBounds->bottom - lprcNewBounds->top)) /
-                              (oldBounds.bottom - oldBounds.top);
-
-    // First compute the padding between non-client and client for the old
-    // values for the window.  This is the size of the frame border
-    // decorations.  These will remain unchanged after the change in DPI.
-    padding.left   = oldClient.left   - oldBounds.left;
-    padding.top    = oldClient.top    - oldBounds.top;
-    padding.right  = oldBounds.right  - oldClient.right;
-    padding.bottom = oldBounds.bottom - oldClient.bottom;
-
-    // Next compute the correctly scaled new dimensions for the client
-    // area, based on the ratio of the old window bounds to the suggested
-    // new window bounds.
-    jint newClientW = (jint) ceil((oldClient.right - oldClient.left) * rescaleX);
-    jint newClientH = (jint) ceil((oldClient.bottom - oldClient.top) * rescaleY);
-
-    // Next compute the new client bounds implied by the values provided by
-    // the WM event data
-    newClient.left   = lprcNewBounds->left   + padding.left;
-    newClient.top    = lprcNewBounds->top    + padding.top;
-    newClient.right  = newClient.left + newClientW;
-    newClient.bottom = newClient.top  + newClientH;
-
-    // Finally, compute the new bounds of the window by padding out the
-    // correctly scaled new client region.
-    newBounds.left   = newClient.left   - padding.left;
-    newBounds.top    = newClient.top    - padding.top;
-    newBounds.right  = newClient.right  + padding.right;
-    newBounds.bottom = newClient.bottom + padding.bottom;
-#if 0
-    POINT cursor;
-    ::GetCursorPos(&cursor);
-    fprintf(stderr, "    @ %d, %d\n", cursor.x, cursor.y);
-    fprintf(stderr, "    (%d, %d, %d, %d) [%d x %d] in (%d, %d, %d, %d) [%d x %d]\n",
-            oldClient.left,   oldClient.top,  oldClient.right,   oldClient.bottom,
-            oldClient.right - oldClient.left, oldClient.bottom - oldClient.top,
-            oldBounds.left,   oldBounds.top,  oldBounds.right,   oldBounds.bottom,
-            oldBounds.right - oldBounds.left, oldBounds.bottom - oldBounds.top);
-    fprintf(stderr, "    => (suggested) (%d, %d, %d, %d) [%d x %d]\n",
-            lprcNewBounds->left,   lprcNewBounds->top,  lprcNewBounds->right,   lprcNewBounds->bottom,
-            lprcNewBounds->right - lprcNewBounds->left, lprcNewBounds->bottom - lprcNewBounds->top);
-    fprintf(stderr, "    => (recomputed) (%d, %d, %d, %d) [%d x %d] in (%d, %d, %d, %d) [%d x %d]\n",
-            newClient.left,   newClient.top,  newClient.right,   newClient.bottom,
-            newClient.right - newClient.left, newClient.bottom - newClient.top,
-            newBounds.left,   newBounds.top,  newBounds.right,   newBounds.bottom,
-            newBounds.right - newBounds.left, newBounds.bottom - newBounds.top);
-#endif
-    ::SetWindowPos(hWnd, HWND_TOP,
-                   newBounds.left,
-                   newBounds.top,
-                   newBounds.right  - newBounds.left,
-                   newBounds.bottom - newBounds.top,
-                   SWP_NOZORDER | SWP_NOACTIVATE);
-
-    // Relative scales will have changed, which affect the xy offset of the view within the window
-    GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
-    if (::IsWindowVisible(hWnd)) {
-        pWindow->NotifyViewMoved(hWnd);
-    }
-}
-
-void GlassWindow::HandleWindowPosChangedEvent()
-{
-    JNIEnv* env = GetEnv();
-
-    HMONITOR toMonitor = ::MonitorFromWindow(GetHWND(), MONITOR_DEFAULTTOPRIMARY);
-    HMONITOR fromMonitor = GetMonitor();
-    if (toMonitor != fromMonitor) {
-//        fprintf(stderr, "Monitor changed!\n");
-        env->CallVoidMethod(m_grefThis, midNotifyMoveToAnotherScreen,
-                            GlassScreen::GetJavaMonitor(env, toMonitor));
-        CheckAndClearException(env);
-        SetMonitor(toMonitor);
-    }
 }
 
 void GlassWindow::HandleActivateEvent(jint event)
@@ -1144,6 +1168,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
      ASSERT(midNotifyClose);
      if (env->ExceptionCheck()) return;
 
+     midNotifyMoving = env->GetMethodID(cls, "notifyMoving", "(IIIIFFIIIIIII)[I")
+     ASSERT(midNotifyMoving);
+     if (env->ExceptionCheck()) return;
+
      midNotifyMove = env->GetMethodID(cls, "notifyMove", "(II)V");
      ASSERT(midNotifyMove);
      if (env->ExceptionCheck()) return;
@@ -1297,16 +1325,23 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1createChildWindow
 
         if (!hWnd) {
             delete pWindow;
+        } else {
+            HMONITOR toMonitor = ::MonitorFromWindow(hWnd, MONITOR_DEFAULTTOPRIMARY);
+            env->CallVoidMethod(jThis, midNotifyMoveToAnotherScreen,
+                                GlassScreen::GetJavaMonitor(env, toMonitor));
+            CheckAndClearException(env);
+            pWindow->SetMonitor(toMonitor);
         }
-        pWindow->HandleWindowPosChangedEvent();
 
         return (jlong)hWnd;
     }
     DECL_jobject(jThis);
+    JNIEnv *env;
     HWND parent;
     LEAVE_MAIN_THREAD;
 
     ARG(jThis) = jThis;
+    ARG(env) = env;
     ARG(parent) = (HWND)parentPtr;
 
     return PERFORM_AND_RETURN();
@@ -1517,6 +1552,51 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground
 
 /*
  * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _getAnchor
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1getAnchor
+    (JNIEnv *env, jobject jThis, jlong ptr)
+{
+    HWND hWnd = (HWND) ptr;
+    if (!::IsWindow(hWnd)) return 0L;
+
+    RECT wRect;
+    POINT anchor;
+    if (hWnd == ::GetCapture()) {
+        if (::GetCursorPos(&anchor) && ::GetWindowRect(hWnd, &wRect)) {
+            anchor.x -= wRect.left;
+            anchor.y -= wRect.top;
+            return ((((jlong) anchor.x) << 32) |
+                    (((jlong) anchor.y) & 0xffffffffL));
+        }
+    }
+    return com_sun_glass_ui_win_WinWindow_ANCHOR_NO_CAPTURE;
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinWindow
+ * Method:    _getInsets
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_win_WinWindow__1getInsets
+    (JNIEnv *env, jobject jThis, jlong ptr)
+{
+    HWND hWnd = (HWND) ptr;
+    if (!::IsWindow(hWnd)) return 0L;
+    GlassWindow *pWindow = GlassWindow::FromHandle(hWnd);
+
+    pWindow->UpdateInsets();
+    RECT is = pWindow->GetInsets();
+
+    return ((((jlong) is.left)  << 48) |
+            (((jlong) is.top)   << 32) |
+            (((jlong) is.right) << 16) |
+            (((jlong) is.bottom)     ));
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinWindow
  * Method:    _setBounds
  * Signature: (JIIZZIIIIFF)Z
  */
@@ -1546,10 +1626,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBounds
 
         if (xSet || ySet) {
             ::SetWindowPos(hWnd, NULL, newX, newY, newW, newH,
-                           SWP_NOACTIVATE | SWP_NOZORDER);
+                           SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSENDCHANGING);
         } else {
             ::SetWindowPos(hWnd, NULL, 0, 0, newW, newH,
-                           SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE);
+                           SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE | SWP_NOSENDCHANGING);
         }
     }
     jint x, y;

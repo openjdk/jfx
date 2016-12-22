@@ -91,11 +91,11 @@ public abstract class AnimationTimer {
     public abstract void handle(long now);
 
     /**
-     * Starts the {@code AnimationTimers}. Once it is started, the
-     * {@link #handle(long)} method of this {@code AnimationTimers} will be
+     * Starts the {@code AnimationTimer}. Once it is started, the
+     * {@link #handle(long)} method of this {@code AnimationTimer} will be
      * called in every frame.
      *
-     * The {@code AnimationTimers} can be stopped by calling {@link #stop()}.
+     * The {@code AnimationTimer} can be stopped by calling {@link #stop()}.
      */
     public void start() {
         if (!active) {
@@ -107,7 +107,7 @@ public abstract class AnimationTimer {
     }
 
     /**
-     * Stops the {@code AnimationTimers}. It can be activated again by calling
+     * Stops the {@code AnimationTimer}. It can be activated again by calling
      * {@link #start()}.
      */
     public void stop() {

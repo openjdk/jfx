@@ -436,9 +436,24 @@ jint originOffsetFromRanges(jint aV0, jint aV1,
                             jint mV0, jint mV1,
                             jfloat aScale, jfloat mScale)
 {
-    jint v0 = (aV0 > mV0) ? aV0 : mV0;
-    jint v1 = (aV1 < mV1) ? aV1 : mV1;
-    jfloat mid = (v0 + v1) / 2.0f;
+    // Find a "midpoint" of the overlap of the screens around which
+    // to calculate their new scaled bounds
+    // Special case: If either the first or last coords are equal,
+    // those will be the "midpoint" to align the rectangles, otherwise
+    // use the midpoint of the overlap.
+    jfloat mid;
+    if (aV0 == mV0) {
+        // Top coords match, use them as the anchor
+        // mid == aV0 and mid == mV0 means rel = 0, so just return 0
+        return 0;
+    } else if (aV1 == mV1) {
+        // Bottom coords match, use those as the anchor
+        mid = (jfloat) aV1;
+    } else {
+        jint v0 = (aV0 > mV0) ? aV0 : mV0;
+        jint v1 = (aV1 < mV1) ? aV1 : mV1;
+        mid = (v0 + v1) / 2.0f;
+    }
     jfloat rel = (mid - aV0) / aScale - (mid - mV0) / mScale;
     return (jint) floorf(rel + 0.5f);
 }

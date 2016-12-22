@@ -811,6 +811,10 @@ public abstract class View {
         return this.inFullscreen;
     }
 
+    public void updateLocation() {
+        notifyView(ViewEvent.MOVE);
+    }
+
 
     //-------- DELEGATE NOTIFICATIONS --------//
 

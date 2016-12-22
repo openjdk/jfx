@@ -85,10 +85,12 @@ TCHAR* LinuxPlatform::ConvertFileSystemStringToString(TCHAR* Source, bool &relea
 }
 
 TString LinuxPlatform::GetModuleFileName() {
+    size_t len = 0;
     TString result;
     DynamicBuffer<TCHAR> buffer(MAX_PATH);
 
-    if (readlink("/proc/self/exe", buffer.GetData(), MAX_PATH - 1) != -1) {
+    if ((len = readlink("/proc/self/exe", buffer.GetData(), MAX_PATH - 1)) != -1) {
+        buffer[len] = '\0';
         result = buffer.GetData();
     }
 

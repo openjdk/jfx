@@ -135,6 +135,13 @@ jboolean queryGLX13(Display *display) {
     return JNI_TRUE;
 }
 
+static int x11errorhit = 0;
+
+static int x11errorDetector (Display *dpy, XErrorEvent *error)
+{
+    x11errorhit = JNI_TRUE;
+}
+
 /*
  * Class:     com_sun_prism_es2_X11GLFactory
  * Method:    nInitialize
@@ -223,7 +230,25 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
         return 0;
     }
 
+    int (*old_error_handler) (Display *, XErrorEvent *);
+    old_error_handler = XSetErrorHandler(x11errorDetector);
+
     ctx = glXCreateNewContext(display, fbConfigList[0], GLX_RGBA_TYPE, NULL, True);
+
+    XSync(display, 0); // sync needed for the GLX error detection.
+
+
+    if (x11errorhit) {
+        // An X11 Error was hit along the way. This would happen if GLX is
+        // disabled which recently became the X11 default for remote connections
+        printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,
+                "Error in glXCreateNewContext, remote GLX is likely disabled");
+        XSync(display, 0); // sync needed for the GLX error detection.
+        XSetErrorHandler(old_error_handler);
+        return 0;
+    }
+
+    XSetErrorHandler(old_error_handler);
 
     if (ctx == NULL) {
         printAndReleaseResources(display, fbConfigList, visualInfo, win, ctx, cmap,

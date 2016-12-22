@@ -1091,10 +1091,22 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
     }
 
     @Override
-    public void drawScrollbar(ScrollBarTheme theme, Ref widget, int x, int y,
+    public void drawScrollbar(final ScrollBarTheme theme, final Ref widget, int x, int y,
                               int pressedPart, int hoveredPart)
     {
-        theme.paint(this, widget, x, y, pressedPart, hoveredPart);
+        if (log.isLoggable(Level.FINE)) {
+            log.fine(String.format("drawScrollbar(%s, %s, x = %d, y = %d)", theme, widget, x, y));
+        }
+
+        WCSize s = theme.getWidgetSize(widget);
+        if (!shouldRenderRect(x, y, s.getWidth(), s.getHeight(), null, null)) {
+            return;
+        }
+        new Composite() {
+            @Override void doPaint(Graphics g) {
+                theme.paint(WCGraphicsPrismContext.this, widget, x, y, pressedPart, hoveredPart);
+            }
+        }.paint();
     }
 
     private static Rectangle intersect(Rectangle what, Rectangle with) {

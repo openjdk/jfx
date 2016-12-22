@@ -225,6 +225,47 @@ public final class Screen {
         return this.platformHeight;
     }
 
+    public float fromPlatformX(int px) {
+        return this.x + (px - platformX) / platformScaleX;
+    }
+
+    public float fromPlatformY(int py) {
+        return this.y + (py - platformY) / platformScaleY;
+    }
+
+    public int toPlatformX(float ux) {
+        return platformX + Math.round((ux - this.x) * platformScaleX);
+    }
+
+    public int toPlatformY(float uy) {
+        return platformY + Math.round((uy - this.y) * platformScaleY);
+    }
+
+    public float portionIntersectsPlatformRect(int x, int y, int w, int h) {
+        int x0 = Math.max(x, platformX);
+        int y0 = Math.max(y, platformY);
+        int x1 = Math.min(x + w, platformX + platformWidth);
+        int y1 = Math.min(y + h, platformY + platformHeight);
+        if ((x1 -= x0) <= 0) return 0.0f;
+        if ((y1 -= y0) <= 0) return 0.0f;
+        float ret = x1 * y1;
+        return (ret / w) / h;
+    }
+
+    public boolean containsPlatformRect(int x, int y, int w, int h) {
+        if (!containsPlatformCoords(x, y)) return false;
+        if (w <= 0 || h <= 0) return true;
+        return (x + w <= platformX + platformWidth &&
+                y + h <= platformY + platformHeight);
+    }
+
+    public boolean containsPlatformCoords(int x, int y) {
+        x -= platformX;
+        y -= platformY;
+        return (x >= 0 && x < platformWidth &&
+                y >= 0 && y < platformHeight);
+    }
+
     /**
      * Returns the horizontal scaling of the UI (window sizes and event
      * coordinates) from FX logical units to the platform units.
