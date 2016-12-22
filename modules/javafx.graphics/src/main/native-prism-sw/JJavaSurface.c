@@ -125,17 +125,36 @@ initializeSurfaceFieldIds(JNIEnv* env, jobject objectHandle) {
 
 static void
 surface_acquire(AbstractSurface* surface, JNIEnv* env, jobject surfaceHandle) {
+    jint width = 0;
+    jint height = 0;
+    jint dataArrayLength = 0;
+
     ((JavaSurface *) surface)->dataHandle = (*env)->GetObjectField(env, surfaceHandle,
                                 ((JavaSurface *) surface)->javaArrayFieldID);
+
+    dataArrayLength = (*env)->GetArrayLength(env, ((JavaSurface *) surface)->dataHandle);
+
+    width = surface->super.width;
+    height = surface->super.height;
+    if (width < 0 || height < 0 || dataArrayLength / width < height) {
+        // Set data to NULL indicating invalid width and height
+        surface->super.data = NULL;
+        ((JavaSurface *) surface)->dataHandle = NULL;
+        JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Out of range access of buffer");
+        return;
+    }
+
     surface->super.data =
         (void *)(*env)->GetPrimitiveArrayCritical(env, ((JavaSurface *) surface)->dataHandle, NULL);
     if (surface->super.data == NULL) {
+        ((JavaSurface *) surface)->dataHandle = NULL;
         setMemErrorFlag();
     }
 }
 
 static void
 surface_release(AbstractSurface* surface, JNIEnv* env, jobject surfaceHandle) {
+    if (surface->super.data == NULL) return;
     (*env)->ReleasePrimitiveArrayCritical(env, ((JavaSurface *) surface)->dataHandle, surface->super.data, 0);
     ((JavaSurface *) surface)->dataHandle = NULL;
 }
