@@ -826,7 +826,12 @@ void
 glass_window_apply_shape_mask(GdkWindow *window,
     void* data, uint width, uint height)
 {
-#ifndef GLASS_GTK3
+#ifdef GLASS_GTK3
+    (void) window;
+    (void) data;
+    (void) width;
+    (void) height;
+#else
         GdkPixbuf* pixbuf = gdk_pixbuf_new_from_data((guchar *) data,
                 GDK_COLORSPACE_RGB, TRUE, 8, width, height, width * 4, NULL, NULL);
 
