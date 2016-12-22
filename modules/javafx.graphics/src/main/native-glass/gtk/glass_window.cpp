@@ -483,7 +483,10 @@ void WindowContextBase::paint(void* data, jint width, jint height)
     if (!is_visible()) {
         return;
     }
-
+#ifdef GLASS_GTK3
+    cairo_region_t *region = gdk_window_get_clip_region(gdk_window);
+    gdk_window_begin_paint_region(gdk_window, region);
+#endif
     cairo_t* context;
     context = gdk_cairo_create(gdk_window);
 
@@ -496,12 +499,12 @@ void WindowContextBase::paint(void* data, jint width, jint height)
     applyShapeMask(data, width, height);
 
     cairo_set_source_surface(context, cairo_surface, 0, 0);
-#ifndef GLASS_GTK3
-    // for some reason, GTK3 does not like this operator
-    // without this, the operation is CAIRO_OPERATOR_OVER
     cairo_set_operator (context, CAIRO_OPERATOR_SOURCE);
-#endif
     cairo_paint(context);
+#ifdef GLASS_GTK3
+    gdk_window_end_paint(gdk_window);
+    cairo_region_destroy(region);
+#endif
 
     cairo_destroy(context);
     cairo_surface_destroy(cairo_surface);

@@ -826,22 +826,7 @@ void
 glass_window_apply_shape_mask(GdkWindow *window,
     void* data, uint width, uint height)
 {
-#ifdef GLASS_GTK3
-        cairo_surface_t * shape = cairo_image_surface_create_for_data(
-                 (unsigned char *)data,
-                 CAIRO_FORMAT_ARGB32,
-                 width, height,
-                 width * 4
-                 );
-        cairo_region_t *region = gdk_cairo_region_create_from_surface (shape);
-
-        gdk_window_shape_combine_region (window, region, 0, 0);
-
-        gdk_window_input_shape_combine_region (window, region, 0, 0);
-
-        cairo_region_destroy(region);
-        cairo_surface_finish (shape);
-#else
+#ifndef GLASS_GTK3
         GdkPixbuf* pixbuf = gdk_pixbuf_new_from_data((guchar *) data,
                 GDK_COLORSPACE_RGB, TRUE, 8, width, height, width * 4, NULL, NULL);
 
