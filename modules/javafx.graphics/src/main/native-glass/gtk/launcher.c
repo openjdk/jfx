@@ -111,6 +111,17 @@ static int try_opening_libraries(char *names[3])
     return 1;
 }
 
+static int try_libraries_noload(char *names[3])
+{
+#ifdef RTLD_NOLOAD
+    void *gtk;
+    gtk = dlopen(names[1], RTLD_LAZY | RTLD_NOLOAD);
+    return gtk ? 1 : 0;
+#else
+    return 0;
+#endif
+}
+
 static int sniffLibs(int wantVersion) {
 
      if (gtk_versionDebug) {
@@ -118,40 +129,38 @@ static int sniffLibs(int wantVersion) {
      }
 
      int success = 1;
-     char *** use_chain;
-     int gtk_version;
+     char *** use_chain = two_to_three;
+     int i, found = 0;
 
-     if (wantVersion == 0 || wantVersion == 2) {
-         use_chain = two_to_three;
-         gtk_version = 2;
-     } else if (wantVersion == 3) {
-         use_chain = three_to_two;
-         gtk_version = 3;
-     } else {
-         // Note, this should never happen, java should be protecting us
-         if (gtk_versionDebug) {
-            printf("bad GTK version specified, assuming 2\n");
-         }
-         wantVersion = 2;
-         use_chain = two_to_three;
-         gtk_version = 2;
+     //at first try to detect already loaded GTK version
+     for (i = 0; use_chain[i] && !found; i++) {
+        found = try_libraries_noload(use_chain[i]);
+        if (found && gtk_versionDebug) {
+            printf("found already loaded GTK library %s\n", use_chain[i][1]);
+        }
      }
 
-    int i, found = 0;
-    for(i = 0; use_chain[i] && !found; i++) {
-        if (gtk_versionDebug) {
-            printf("trying GTK library %s\n", use_chain[i][1]);
-        }
-        found = try_opening_libraries(use_chain[i]);
+     if (!found) {
+         if (wantVersion == 0 || wantVersion == 2) {
+             use_chain = two_to_three;
+         } else if (wantVersion == 3) {
+             use_chain = three_to_two;
+         } else {
+             // Note, this should never happen, java should be protecting us
+             if (gtk_versionDebug) {
+                 printf("bad GTK version specified, assuming 2\n");
+             }
+             wantVersion = 2;
+             use_chain = two_to_three;
+         }
 
-        if (found) {
-            if (use_chain[i][0][0] == '2') {
-                gtk_version = 2;
-            } else {
-                gtk_version = 3;
-            }
-        }
-    }
+         for (i = 0; use_chain[i] && !found; i++) {
+             if (gtk_versionDebug) {
+                 printf("trying GTK library %s\n", use_chain[i][1]);
+             }
+             found = try_opening_libraries(use_chain[i]);
+         }
+     }
 
     if (found) {
         if (gtk_versionDebug) {
@@ -159,11 +168,14 @@ static int sniffLibs(int wantVersion) {
             printf("using GTK library version %s set %s\n",
                  use_chain[i][0],
                  use_chain[i][1]);
+            fflush(stdout);
         }
         return use_chain[i][0][0];
     }
-
-     return -1;
+    if (gtk_versionDebug) {
+        fflush(stdout);
+    }
+    return -1;
 }
 
 /*
