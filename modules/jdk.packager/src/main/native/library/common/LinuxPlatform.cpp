@@ -130,11 +130,11 @@ ISectionalPropertyContainer* LinuxPlatform::GetConfigFile(TString FileName) {
 
 TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
     TString result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-        "lib/"JAVAARCH"/jli/libjli.so";
+        "lib/jli/libjli.so";
 
     if (FilePath::FileExists(result) == false) {
         result = FilePath::IncludeTrailingSeparater(RuntimePath) +
-            "lib/"JAVAARCH"/jli/libjli.so";
+            "lib/jli/libjli.so";
     }
 
     return result;
