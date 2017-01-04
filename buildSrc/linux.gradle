@@ -181,7 +181,7 @@ if (LINUX.buildGTK3) {
     logger.info("Building libglassgtk3")
     LINUX.glass.variants += "glassgtk3"
 } else {
-    logger.warning("NOT Building libglassgtk3")
+    logger.warn("NOT Building libglassgtk3")
 }
 
 FileTree ft_gtk_launcher = fileTree("${project(":graphics").projectDir}/src/main/native-glass/gtk/") {
