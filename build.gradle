@@ -257,7 +257,7 @@ ext.BUILD_CLOSED = buildClosed
 
 ext.RUNARGSFILE = "run.args"
 ext.COMPILEARGSFILE = "compile.args"
-ext.JAVAPOLICYFILE = 'run.java.policy'
+ext.RUNJAVAPOLICYFILE = 'run.java.policy'
 
 ext.TESTCOMPILEARGSFILE = "testcompile.args"
 ext.TESTRUNARGSFILE = "testrun.args"
@@ -3218,7 +3218,7 @@ project(":systemTests") {
 
     commonModuleSetup(project, [ 'base', 'graphics', 'controls', 'media', 'web', 'swing', 'fxml' ])
 
-    File javaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE);
+    File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE);
     File testRunArgsFile = new File(rootProject.buildDir,TESTRUNARGSFILE);
 
     File stRunArgsFile = new File(project.buildDir,"st.run.args");
@@ -3259,7 +3259,7 @@ project(":systemTests") {
         // Properties passed to test.util.Util
         systemProperties 'worker.debug': IS_WORKER_DEBUG
         systemProperties 'worker.patchmodule.file': cygpath(stRunArgsFile.path)
-        systemProperties 'worker.patch.policy': cygpath(javaPolicyFile.path)
+        systemProperties 'worker.patch.policy': cygpath(testJavaPolicyFile.path)
         systemProperties 'worker.java.cmd': JAVA
 
         if (!IS_USE_ROBOT) {
@@ -4114,10 +4114,13 @@ compileTargets { t ->
         File testCompileArgsFile = new File(rootProject.buildDir, TESTCOMPILEARGSFILE)
         // And a test java.policy file
         File testJavaPolicyFile = new File(rootProject.buildDir, TESTJAVAPOLICYFILE)
+        // and the non-test version to go with run.args
+        File runJavaPolicyFile = new File(rootProject.buildDir, RUNJAVAPOLICYFILE);
 
         outputs.file(testRunArgsFile)
         outputs.file(testCompileArgsFile)
         outputs.file(testJavaPolicyFile)
+        outputs.file(runJavaPolicyFile)
 
         doLast() {
             rootProject.buildDir.mkdir()
@@ -4150,6 +4153,12 @@ compileTargets { t ->
 
                     String themod = dir.toURI()
                     testJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
+                    "    permission java.security.AllPermission;\n" +
+                    "};\n"
+
+                    dir = new File(rootProject.buildDir, "modular-sdk/modules/${project.ext.moduleName}")
+                    themod = dir.toURI()
+                    runJavaPolicyFile <<  "grant codeBase \"${themod}\" {\n" +
                     "    permission java.security.AllPermission;\n" +
                     "};\n"
                 }
