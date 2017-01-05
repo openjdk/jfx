@@ -3950,8 +3950,7 @@ compileTargets { t ->
                               "${ctrlbld}/resources/android")
                     } else if (t.name == 'ios') {
                         from ("${webbld}/classes/ios",
-                              "${webbld}/resources/ios",
-                              "modules/extensions/build/classes/ios")
+                              "${webbld}/resources/ios")
                     } else {
                         from ("${webbld}/classes/main",
                               "${webbld}resources/main")
