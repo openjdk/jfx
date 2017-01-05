@@ -35,8 +35,7 @@ LINUX.compileSWT = true;
 LINUX.compileFXPackager = true;
 
 // Libraries end up in the lib/$OS_ARCH directory for Linux
-LINUX.libDest = "lib/$OS_ARCH"
-LINUX.modulesArch = "$OS_ARCH"
+LINUX.libDest = "lib"
 
 // Lambda for naming the generated libs
 LINUX.library = { name -> return "lib${name}.so" as String }
