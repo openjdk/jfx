@@ -101,7 +101,7 @@ ANDROID.compileSWT = false;
 ANDROID.compileFXPackager = false;
 ANDROID.glassPlatform = "android"
 ANDROID.armArch = armArchs[0]
-ANDROID.libDest = "lib/${ANDROID.armArch}"
+ANDROID.libDest = "lib"
 ANDROID.jfxdvklib = "jfxdvk.jar"
 ANDROID.library = { name -> return "lib${name}.so" as String }
 

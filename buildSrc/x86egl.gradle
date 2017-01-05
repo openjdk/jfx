@@ -83,14 +83,12 @@ X86EGL.includeGTK = true
 
 X86EGL.javafxPlatformDefault="monocle"
 
-// Libraries end up in the sdk/lib/[i386|amd46] directory depending on machine arch
 if (rootProject.hasProperty("X86EGL_ARCH")) {
     X86EGL.arch = X86EGL_ARCH
-    X86EGL.libDest = "lib/${X86EGL_ARCH}"
 } else {
     X86EGL.arch = OS_ARCH
-    X86EGL.libDest = "lib/${OS_ARCH}"
 }
+X86EGL.libDest = "lib"
 
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags

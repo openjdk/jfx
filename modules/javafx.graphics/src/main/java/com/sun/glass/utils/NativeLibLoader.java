@@ -186,7 +186,7 @@ public class NativeLibLoader {
                 } else if (osName.startsWith("Mac")) {
                     relativeDir = ".";
                 } else if (osName.startsWith("Linux")) {
-                    relativeDir = "./" + System.getProperty("os.arch");
+                    relativeDir = ".";
                 }
 
                 // Location of native libraries relative to jar file

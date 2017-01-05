@@ -92,7 +92,7 @@ ARMV6SF.javafxPlatformDefault="monocle"
 
 // Libraries end up in the sdk/lib/arm directory for arm builds
 ARMV6SF.arch = "arm"
-ARMV6SF.libDest = "lib/arm"
+ARMV6SF.libDest = "lib"
 
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
