@@ -11,7 +11,6 @@
 #include "HostWindow.h"
 #include "Page.h"
 #include "PlatformContextJava.h"
-#include "PlatformMouseEvent.h"
 #include "Scrollbar.h"
 #include "ScrollbarThemeJava.h"
 #include "ScrollView.h"
@@ -39,7 +38,7 @@ jclass getJScrollBarThemeClass()
     return jScrollbarThemeClass;
 }
 
-JLObject getJScrollBarTheme(Scrollbar& sb)  //XXX: ScrollbarThemeClient replaced by Scrollbar, double recheck
+JLObject getJScrollBarTheme(Scrollbar& sb)
 {
     FrameView* fv = sb.root();
     if (!fv) {
@@ -64,12 +63,48 @@ JLObject getJScrollBarTheme(Scrollbar& sb)  //XXX: ScrollbarThemeClient replaced
     return jScrollbarTheme;
 }
 
+IntRect getPartRect(Scrollbar& scrollbar, ScrollbarPart part) {
+    JLObject jtheme = getJScrollBarTheme(scrollbar);
+    if (!jtheme) {
+        return IntRect();
+    }
+
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID midGetPartRect = env->GetMethodID(
+        getJScrollBarThemeClass(),
+        "getScrollBarPartRect",
+        "(JI[I)V");
+    ASSERT(mid);
+    JLocalRef<jintArray> jrect(env->NewIntArray(4));
+    CheckAndClearException(env); // OOME
+    ASSERT(jrect);
+    env->CallVoidMethod(jtheme,
+            midGetPartRect,
+            ptr_to_jlong(&scrollbar),
+            (jint)part,
+            (jintArray)jrect);
+    CheckAndClearException(env);
+
+    jint *r = (jint*)env->GetPrimitiveArrayCritical(jrect, 0);
+    IntRect rect(r[0], r[1], r[2], r[3]);
+    env->ReleasePrimitiveArrayCritical(jrect, r, 0);
+    if (rect.isEmpty()) {
+        return rect;
+    }
+    // Bounding box should be absolute location, so adjust according to
+    // the position of scrollbar.
+    rect.move(scrollbar.x(), scrollbar.y());
+    return rect;
+}
+
+
 bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const IntRect& damageRect)
 {
     // platformContext() returns 0 when printing
     if (gc.paintingDisabled() || !gc.platformContext()) {
         return true;
     }
+
     JLObject jtheme = getJScrollBarTheme(scrollbar);
     if (!jtheme) {
         return false;
@@ -108,147 +143,27 @@ bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const 
     return false;
 }
 
-ScrollbarPart ScrollbarThemeJava::hitTest(Scrollbar& scrollbar, const IntPoint& pos)
-{
-    JLObject jtheme = getJScrollBarTheme(scrollbar);
-    if (!jtheme) {
-        return (ScrollbarPart)0;
-    }
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(
-        getJScrollBarThemeClass(),
-        "hitTest",
-        "(IIIIIIII)I");
-    ASSERT(mid);
-
-    IntPoint p = scrollbar.convertFromContainingWindow(pos);
-    int part = env->CallIntMethod(
-        jtheme,
-        mid,
-        (jint)scrollbar.width(),
-        (jint)scrollbar.height(),
-        (jint)scrollbar.orientation(),
-        (jint)scrollbar.value(),
-        (jint)scrollbar.visibleSize(),
-        (jint)scrollbar.totalSize(),
-        (jint)p.x(),
-        (jint)p.y());
-    CheckAndClearException(env);
-
-    return (ScrollbarPart)part;
-}
-
 void ScrollbarThemeJava::invalidatePart(Scrollbar& scrollbar, ScrollbarPart)
 {
     // FIXME: Do more precise invalidation.
     scrollbar.invalidate();
 }
 
-int ScrollbarThemeJava::thumbPosition(Scrollbar& scrollbar)
+bool ScrollbarThemeJava::hasThumb(Scrollbar& scrollbar)
 {
-    JLObject jtheme = getJScrollBarTheme(scrollbar);
-    if (!jtheme) {
-        return 0;
-    }
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(
-        getJScrollBarThemeClass(),
-        "getThumbPosition",
-        "(IIIIII)I");
-    ASSERT(mid);
-
-    int pos = env->CallIntMethod(
-        jtheme,
-        mid,
-        (jint)scrollbar.width(),
-        (jint)scrollbar.height(),
-        (jint)scrollbar.orientation(),
-        (jint)scrollbar.value(),
-        (jint)scrollbar.visibleSize(),
-        (jint)scrollbar.totalSize());
-    CheckAndClearException(env);
-
-    return pos;
+    return thumbLength(scrollbar) > 0;
 }
 
-int ScrollbarThemeJava::thumbLength(Scrollbar& scrollbar)
-{
-    JLObject jtheme = getJScrollBarTheme(scrollbar);
-    if (!jtheme) {
-        return 0;
-    }
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(
-        getJScrollBarThemeClass(),
-        "getThumbLength",
-        "(IIIIII)I");
-    ASSERT(mid);
-
-    int len = env->CallIntMethod(
-        jtheme,
-        mid,
-        (jint)scrollbar.width(),
-        (jint)scrollbar.height(),
-        (jint)scrollbar.orientation(),
-        (jint)scrollbar.value(),
-        (jint)scrollbar.visibleSize(),
-        (jint)scrollbar.totalSize());
-    CheckAndClearException(env);
-
-    return len;
+IntRect ScrollbarThemeJava::backButtonRect(Scrollbar& scrollbar, ScrollbarPart part, bool) {
+    return getPartRect(scrollbar, part);
 }
 
-int ScrollbarThemeJava::trackPosition(Scrollbar& scrollbar)
-{
-    JLObject jtheme = getJScrollBarTheme(scrollbar);
-    if (!jtheme) {
-        return 0;
-    }
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(
-        getJScrollBarThemeClass(),
-        "getTrackPosition",
-        "(III)I");
-    ASSERT(mid);
-
-    int pos = env->CallIntMethod(
-        jtheme,
-        mid,
-        (jint)scrollbar.width(),
-        (jint)scrollbar.height(),
-        (jint)scrollbar.orientation());
-    CheckAndClearException(env);
-
-    return pos;
+IntRect ScrollbarThemeJava::forwardButtonRect(Scrollbar& scrollbar, ScrollbarPart part, bool) {
+    return getPartRect(scrollbar, part);
 }
 
-int ScrollbarThemeJava::trackLength(Scrollbar& scrollbar)
-{
-    JLObject jtheme = getJScrollBarTheme(scrollbar);
-    if (!jtheme) {
-        return 0;
-    }
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetMethodID(
-        getJScrollBarThemeClass(),
-        "getTrackLength",
-        "(III)I");
-    ASSERT(mid);
-
-    int len = env->CallIntMethod(
-        jtheme,
-        mid,
-        (jint)scrollbar.width(),
-        (jint)scrollbar.height(),
-        (jint)scrollbar.orientation());
-    CheckAndClearException(env);
-
-    return len;
+IntRect ScrollbarThemeJava::trackRect(Scrollbar& scrollbar, bool) {
+    return getPartRect(scrollbar, TrackBGPart);
 }
 
 int ScrollbarThemeJava::scrollbarThickness(ScrollbarControlSize controlSize)

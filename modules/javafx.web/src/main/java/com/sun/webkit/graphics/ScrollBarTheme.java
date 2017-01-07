@@ -38,6 +38,8 @@ public abstract class ScrollBarTheme extends Ref {
     @Native public static final int FORWARD_TRACK_PART = 1 << 4;
     @Native public static final int BACK_BUTTON_END_PART = 1 << 5;
     @Native public static final int FORWARD_BUTTON_END_PART = 1 << 6;
+    @Native public static final int SCROLLBAR_BG_PART = 1 << 7;
+    @Native public static final int TRACK_BG_PART = 1 << 8;
 
     @Native public static final int HORIZONTAL_SCROLLBAR = 0;
     @Native public static final int VERTICAL_SCROLLBAR = 1;
@@ -56,15 +58,7 @@ public abstract class ScrollBarTheme extends Ref {
 
     public abstract void paint(WCGraphicsContext g, Ref sbRef, int x, int y, int pressedPart, int hoveredPart);
 
-    protected abstract int hitTest(int w, int h, int orientation, int value, int visibleSize, int totalSize, int x, int y);
-
-    protected abstract int getThumbPosition(int w, int h, int orientation, int value, int visibleSize, int totalSize);
-
-    protected abstract int getThumbLength(int w, int h, int orientation, int value, int visibleSize, int totalSize);
-
-    protected abstract int getTrackPosition(int w, int h, int orientation);
-
-    protected abstract int getTrackLength(int w, int h, int orientation);
+    protected abstract void getScrollBarPartRect(long id, int part, int rect[]);
 
     public abstract WCSize getWidgetSize(Ref widget);
 }

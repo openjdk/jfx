@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 
 import com.sun.javafx.util.Utils;
 import javafx.beans.Observable;
+import javafx.geometry.Bounds;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.Control;
@@ -48,7 +49,7 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
 
     private final static Logger log = Logger.getLogger(ScrollBarThemeImpl.class.getName());
 
-    private WeakReference<ScrollBar> testSBRef = // used for hit testing
+    private WeakReference<ScrollBar> testSBRef = // used for scrollbar thickness calculation
             new WeakReference<ScrollBar>(null);
 
     private final Accessor accessor;
@@ -161,7 +162,6 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
             accessor.addChild(sb);
         }
         adjustScrollBar(sb, w, h, orientation, value, visibleSize, totalSize);
-
         return new ScrollBarRef(sb);
     }
 
@@ -192,187 +192,33 @@ public final class ScrollBarThemeImpl extends ScrollBarTheme {
         return new WCSize(0, 0);
     }
 
-    @Override protected int hitTest(int w, int h, int orientation, int value,
-                                    int visibleSize, int totalSize,
-                                    int x, int y)
-    {
-        if (log.isLoggable(Level.FINEST)) {
-            log.log(Level.FINEST, "[{0}, {1} {2}x{3}], {4}",
-                    new Object[] {x, y, w, h, orientation == VERTICAL_SCROLLBAR ?
-                    "VERTICAL" : "HORIZONTAL"});
+    @Override protected void getScrollBarPartRect(long id, int part, int rect[]) {
+        ScrollBar sb = pool.get(id);
+        if (sb == null) {
+            return;
         }
 
-        ScrollBar testSB = testSBRef.get();
-        if (testSB == null) {
-            return NO_PART;
+        Node node = null;
+        if (part == FORWARD_BUTTON_START_PART) {
+            node = getIncButton(sb);
+        } else if (part == BACK_BUTTON_START_PART) {
+            node = getDecButton(sb);
+        } else if (part == TRACK_BG_PART) {
+            node = getTrack(sb);
         }
-        Node thumb = getThumb(testSB);
-        Node track = getTrack(testSB);
-        Node decButton = getDecButton(testSB);
-        Node incButton = getIncButton(testSB);
 
-        adjustScrollBar(testSB, w, h, orientation, value, visibleSize, totalSize);
-
-        int trackX;
-        int trackY;
-        int incBtnX;
-        int incBtnY;
-        int thumbX;
-        int thumbY;
-
-        if (orientation == VERTICAL_SCROLLBAR) {
-            trackX = incBtnX = thumbX = x;
-            trackY = y - (int)decButton.getLayoutBounds().getHeight();
-            thumbY = trackY - thumbPosition();
-            incBtnY = trackY - (int)track.getLayoutBounds().getHeight();
+        assert rect.length >= 4;
+        if (node != null) {
+            Bounds bounds = node.getBoundsInParent();
+            rect[0] = (int)bounds.getMinX();
+            rect[1] = (int)bounds.getMinY();
+            rect[2] = (int)bounds.getWidth();
+            rect[3] = (int)bounds.getHeight();
         } else {
-            trackY = incBtnY = thumbY = y;
-            trackX = x - (int)decButton.getLayoutBounds().getWidth();
-            thumbX = trackX - thumbPosition();
-            incBtnX = trackX - (int)track.getLayoutBounds().getWidth();
+            rect[0] = rect[1] = rect[2] = rect[3] = 0;
         }
-
-        if (thumb != null && thumb.isVisible() && thumb.contains(thumbX, thumbY)) {
-            log.finer("thumb");
-            return THUMB_PART;
-
-        } else if (track != null && track.isVisible() && track.contains(trackX, trackY)) {
-
-            if ((orientation == VERTICAL_SCROLLBAR && thumbPosition() >= trackY) ||
-                (orientation == HORIZONTAL_SCROLLBAR && thumbPosition() >= trackX))
-            {
-                log.finer("back track");
-                return BACK_TRACK_PART;
-
-            } else if ((orientation == VERTICAL_SCROLLBAR && thumbPosition() < trackY) ||
-                       (orientation == HORIZONTAL_SCROLLBAR && thumbPosition() < trackX))
-            {
-                log.finer("forward track");
-                return FORWARD_TRACK_PART;
-            }
-        } else if (decButton != null && decButton.isVisible() && decButton.contains(x, y)) {
-            log.finer("back button");
-            return BACK_BUTTON_START_PART;
-
-        } else if (incButton != null && incButton.isVisible() && incButton.contains(incBtnX, incBtnY)) {
-            log.finer("forward button");
-            return FORWARD_BUTTON_START_PART;
-        }
-
-        log.finer("no part");
-        return NO_PART;
-    }
-
-    private int thumbPosition() {
-        ScrollBar testSB = testSBRef.get();
-        if (testSB == null) {
-            return 0;
-        }
-        // position calculated after ScrollBarSkin.positionThumb()
-        Node thumb = getThumb(testSB);
-        if (thumb == null) {
-            return 0;
-        }
-        double thumbLength = testSB.getOrientation() == Orientation.VERTICAL
-                             ? thumb.getLayoutBounds().getHeight()
-                             : thumb.getLayoutBounds().getWidth();
-
-        Node track = getTrack(testSB);
-        double trackLength = testSB.getOrientation() == Orientation.VERTICAL
-                             ? track.getLayoutBounds().getHeight()
-                             : track.getLayoutBounds().getWidth();
-
-        double clampedValue = Utils.clamp(testSB.getMin(), testSB.getValue(), testSB.getMax());
-        double range = testSB.getMax() - testSB.getMin();
-        return (int) Math.round((range > 0)
-                               ? ((trackLength - thumbLength) * (clampedValue - testSB.getMin()) / range)
-                               : 0);
-    }
-
-    @Override protected int getThumbLength(int w, int h, int orientation,
-                                           int value,
-                                           int visibleSize, int totalSize)
-    {
-        ScrollBar testSB = testSBRef.get();
-        if (testSB == null) {
-            return 0;
-        }
-        Node thumb = getThumb(testSB);
-        if (thumb == null) {
-            return 0;
-        }
-        adjustScrollBar(testSB, w, h, orientation, value, visibleSize, totalSize);
-
-        double len = 0;
-        if (orientation == VERTICAL_SCROLLBAR) {
-            len = thumb.getLayoutBounds().getHeight();
-        } else {
-            len = thumb.getLayoutBounds().getWidth();
-        }
-        log.log(Level.FINEST, "thumb length: {0}", len);
-        return (int)len;
-    }
-
-    @Override protected int getTrackPosition(int w, int h, int orientation) {
-        ScrollBar testSB = testSBRef.get();
-        if (testSB == null) {
-            return 0;
-        }
-        Node decButton = getDecButton(testSB);
-        if (decButton == null) {
-            return 0;
-        }
-        adjustScrollBar(testSB, w, h, orientation);
-
-        double pos = 0;
-        if (orientation == VERTICAL_SCROLLBAR) {
-            pos = decButton.getLayoutBounds().getHeight();
-        } else {
-            pos = decButton.getLayoutBounds().getWidth();
-        }
-        log.log(Level.FINEST, "track position: {0}", pos);
-        return (int)pos;
-    }
-
-    @Override protected int getTrackLength(int w, int h, int orientation) {
-        ScrollBar testSB = testSBRef.get();
-        if (testSB == null) {
-            return 0;
-        }
-        Node track = getTrack(testSB);
-        if (track == null) {
-            return 0;
-        }
-        adjustScrollBar(testSB, w, h, orientation);
-
-        double len = 0;
-        if (orientation == VERTICAL_SCROLLBAR) {
-            len = track.getLayoutBounds().getHeight();
-        } else {
-            len = track.getLayoutBounds().getWidth();
-        }
-        log.log(Level.FINEST, "track length: {0}", len);
-        return (int)len;
-    }
-
-    @Override protected int getThumbPosition(int w, int h, int orientation,
-                                             int value,
-                                             int visibleSize, int totalSize)
-    {
-        ScrollBar testSB = testSBRef.get();
-        if (testSB == null) {
-            return 0;
-        }
-        adjustScrollBar(testSB, w, h, orientation, value, visibleSize, totalSize);
-
-        int pos = thumbPosition();
-        log.log(Level.FINEST, "thumb position: {0}", pos);
-        return pos;
-    }
-
-    private static Node getThumb(ScrollBar scrollBar) {
-//        return ((ScrollBarSkin)scrollBar.getSkin()).getThumb();
-        return findNode(scrollBar, "thumb");
+        log.log(Level.FINEST, "id {0} part {1} bounds {2},{3} {4}x{5}",
+                new Object[] {String.valueOf(id), String.valueOf(part), rect[0], rect[1], rect[2], rect[3]});
     }
 
     private static Node getTrack(ScrollBar scrollBar) {
