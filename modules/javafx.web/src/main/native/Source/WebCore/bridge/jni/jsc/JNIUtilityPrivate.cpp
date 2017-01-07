@@ -70,7 +70,7 @@ static jobject convertArrayInstanceToJavaArray(ExecState* exec, JSArray* jsArray
                 for (unsigned i = 0; i < length; i++) {
                     JSValue item = jsArray->get(exec, i);
                     String stringValue = item.toString(exec)->value(exec);
-                    env->SetObjectArrayElement(jarray, i, env->NewStringUTF(stringValue.utf8().data()));
+                    env->SetObjectArrayElement(jarray, i, stringValue.toJavaString(env).releaseLocal());
                 }
             }
             break;
@@ -276,7 +276,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                 if (value.isString() && !strcmp(javaClassName, "java.lang.Object")) {
                     String stringValue = asString(value)->value(exec);
                     JNIEnv* env = getJNIEnv();
-                    jobject javaString = env->NewStringUTF(stringValue.utf8().data());
+                    jobject javaString = stringValue.toJavaString(env).releaseLocal();
                     result.l = javaString;
                 } else if (value.isString() && !strcmp(javaClassName, "java.lang.Character")) {
                     JNIEnv* env = getJNIEnv();
@@ -316,7 +316,7 @@ jvalue convertValueToJValue(ExecState* exec, RootObject* rootObject, JSValue val
                 if (!value.isNull()) {
                     String stringValue = value.toString(exec)->value(exec);
                     JNIEnv* env = getJNIEnv();
-                    jobject javaString = env->NewStringUTF(stringValue.utf8().data());
+                    jobject javaString = stringValue.toJavaString(env).releaseLocal();
                     result.l = javaString;
                 }
             }
