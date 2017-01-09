@@ -62,6 +62,8 @@ module javafx.graphics {
         javafx.web;
     exports com.sun.javafx.css to
         javafx.controls;
+    exports com.sun.javafx.css.parser to
+        jdk.packager;
     exports com.sun.javafx.cursor to
         javafx.swing;
     exports com.sun.javafx.embed to
