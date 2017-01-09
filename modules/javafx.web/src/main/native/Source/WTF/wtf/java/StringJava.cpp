@@ -43,7 +43,7 @@ JLString String::toJavaString(JNIEnv *env) const
             }
             return env->NewString(jchars.data(), len);
         } else {
-            return env->NewString(characters16(), len);
+            return env->NewString((jchar*)characters16(), len);
         }
     }
 }
