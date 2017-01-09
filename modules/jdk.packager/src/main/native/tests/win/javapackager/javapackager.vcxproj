@@ -79,7 +79,15 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\javapackager\win\ByteBuffer.cpp" />
+    <ClCompile Include="..\..\..\javapackager\win\IconSwap.cpp" />
     <ClCompile Include="..\..\..\javapackager\win\javapackager.cpp" />
+    <ClCompile Include="..\..\..\javapackager\win\VersionInfoSwap.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\javapackager\win\ByteBuffer.h" />
+    <ClInclude Include="..\..\..\javapackager\win\IconSwap.h" />
+    <ClInclude Include="..\..\..\javapackager\win\VersionInfoSwap.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

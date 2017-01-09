@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+* Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 * This code is free software; you can redistribute it and/or modify it
@@ -23,25 +23,34 @@
 * questions.
 */
 
-#include "ByteBuffer.h"
-#include <map>
+#ifndef BYTEBUFFER_H
+#define BYTEBUFFER_H
 
-class VersionInfoSwap
+#include <windows.h>
+#include <vector>
+
+using std::wstring;
+
+class ByteBuffer
 {
 public:
-    VersionInfoSwap(TCHAR *propFileName, TCHAR *exeFileName);
-    ~VersionInfoSwap();
+    ByteBuffer();
+    ~ByteBuffer();
 
-    bool PatchExecutable();
+    LPBYTE getPtr();
+    size_t getPos();
+
+    void AppendString(wstring str);
+    void AppendWORD(WORD word);
+    void AppendBytes(BYTE* ptr, size_t len);
+
+    void ReplaceWORD(size_t offset, WORD word);
+    void ReplaceBytes(size_t offset, BYTE* ptr, size_t len);
+
+    void Align(size_t bytesNumber);
 
 private:
-    wstring m_propFileName;
-    wstring m_exeFileName;
-
-    std::map<wstring, wstring> m_props;
-
-    bool LoadFromPropertyFile();
-    void CreateNewResource(ByteBuffer *buf);
-    bool UpdateResource(LPVOID lpResLock, DWORD size);
-    void FillFixedFileInfo(VS_FIXEDFILEINFO *fxi);
+    std::vector<BYTE> buffer;
 };
+
+#endif // BYTEBUFFER_H

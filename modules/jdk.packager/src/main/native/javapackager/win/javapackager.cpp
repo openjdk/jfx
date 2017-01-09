@@ -28,6 +28,9 @@
 #include <string>
 #include <windows.h>
 
+#include "IconSwap.h"
+#include "VersionInfoSwap.h"
+
 //#define _DEBUG
 
 #ifdef _DEBUG
@@ -507,6 +510,8 @@ int wmain(int argc, wchar_t* argv[]) {
     for (int i = 1; i < argc; i++) {
         std::wstring argument = argv[i];
         std::wstring debug_arg = L"-J-Xdebug:";
+        std::wstring icon_swap_arg = L"--icon-swap";
+        std::wstring version_swap_arg = L"--version-swap";
 
         if (argument.find(L"-J-Xmx", 0) == 0) {
             memory = argument.substr(2, argument.length() - 2);
@@ -514,6 +519,42 @@ int wmain(int argc, wchar_t* argv[]) {
         else if (argument.find(debug_arg, 0) == 0) {
             std::wstring address = argument.substr(debug_arg.length(), argument.length() - debug_arg.length());
             debug = L"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=" + address;
+        }
+        else if (argument.find(icon_swap_arg, 0) == 0) {
+            if (argc != 4) {
+                fwprintf(stderr, TEXT("Usage: javapackager.exe --icon-swap [Icon File Name] [Executable File Name]\n"));
+                return 1;
+            }
+
+            wprintf(L"Icon File Name: %s\n", argv[i + 1]);
+            wprintf(L"Executable File Name: %s\n", argv[i + 2]);
+
+            if (ChangeIcon(argv[i + 1], argv[i + 2]) == true) {
+                return 0;
+            }
+            else {
+                fwprintf(stderr, TEXT("failed\n"));
+                return 1;
+            }
+        }
+        else if (argument.find(version_swap_arg, 0) == 0) {
+            if (argc != 4) {
+                fwprintf(stderr, TEXT("Usage: javapackager.exe --version-swap [Property File Name] [Executable File Name]\n"));
+                return 1;
+            }
+
+            fwprintf(stdout, TEXT("Resource File Name: %s\n"), argv[i + 1]);
+            fwprintf(stdout, TEXT("Executable File Name: %s\n"), argv[i + 2]);
+
+            VersionInfoSwap vs(argv[i + 1], argv[i + 2]);
+
+            if (vs.PatchExecutable()) {
+                return 0;
+            }
+            else {
+                fwprintf(stderr, TEXT("failed\n"));
+                return 1;
+            }
         }
         else {
             args = args + L" \"" + argv[i] + L"\"";

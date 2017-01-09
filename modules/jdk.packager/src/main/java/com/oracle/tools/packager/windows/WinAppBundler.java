@@ -57,8 +57,6 @@ public class WinAppBundler extends AbstractImageBundler {
     private static final ResourceBundle I18N =
             ResourceBundle.getBundle(WinAppBundler.class.getName());
 
-    private static final String TOOL_ICON_SWAP="IconSwap.exe";
-
     public static final BundlerParamInfo<File> ICON_ICO = new StandardBundlerParam<>(
             I18N.getString("param.icon-ico.name"),
             I18N.getString("param.icon-ico.description"),
@@ -108,7 +106,10 @@ public class WinAppBundler extends AbstractImageBundler {
 
         imageBundleValidation(p);
 
-        if (WinResources.class.getResource(TOOL_ICON_SWAP) == null) {
+        // Make sure that javapackager.exe exists.
+        File tool = new File(System.getProperty("java.home") + "\\bin\\javapackager.exe");
+
+        if (!tool.exists()) {
             throw new ConfigException(
                     I18N.getString("error.no-windows-resources"),
                     I18N.getString("error.no-windows-resources.advice"));

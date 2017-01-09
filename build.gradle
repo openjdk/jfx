@@ -2355,44 +2355,7 @@ project(":fxpackager") {
                 }
             }
         }
-        task buildIconSwap(type: CCTask, group: "Build") {
-            description = "Compiles native sources for the application co-bundle launcher"
-            matches = "IconSwap\\.cpp"
-            params.addAll(WIN.iconLauncher.ccFlags)
-            output(file("$buildDir/native/IconSwap"))
-            source file("src/main/native/tools/win/iconswap")
-            compiler = WIN.launcher.compiler
-            exe = true
-            linkerOptions.addAll(WIN.iconLauncher.linkFlags)
-            doLast {
-                copy {
-                    from "$buildDir/native/IconSwap/IconSwap.exe"
-                    into "${buildClassesDir}/com/oracle/tools/packager/windows"
-                }
-            }
-        }
-        task compileVersionInfoSwap(type: CCTask, group: "Build") {
-            description = "Compiles native sources for the VersionInfoSwap tool";
-            matches = ".*\\.cpp"
-            source(file("src/main/native/tools/win/versioninfoswap"));
-            params.addAll(WIN.versionInfoLauncher.ccFlags)
-            output(file("$buildDir/native/VersionInfoSwap/obj"));
-            compiler = WIN.versionInfoLauncher.compiler
-        }
-        task linkVersionInfoSwap(type: LinkTask, group: "Build", dependsOn: compileVersionInfoSwap) {
-            description = "Links native sources for the VersionInfoSwap tool";
-            objectDir = file("$buildDir/native/VersionInfoSwap/obj")
-            linkParams.addAll(WIN.versionInfoLauncher.linkFlags);
-            lib = file("$buildDir/native/VersionInfoSwap/VersionInfoSwap.exe")
-            linker = WIN.versionInfoLauncher.linker
-            doLast {
-                copy {
-                    from "$buildDir/native/VersionInfoSwap/VersionInfoSwap.exe"
-                    into "${buildClassesDir}/com/oracle/tools/packager/windows"
-                }
-            }
-        }
-        task compileLauncher(dependsOn: [buildWinLauncher, linkWinLibrary, buildWinLauncherSvc, buildIconSwap, linkVersionInfoSwap])
+        task compileLauncher(dependsOn: [buildWinLauncher, linkWinLibrary, buildWinLauncherSvc])
     } else if (IS_MAC && COMPILE_FXPACKAGER) {
         task buildMacLauncher(type: CCTask, group: "Build") {
             description = "Compiles native sources for the application co-bundle launcher"
@@ -2460,12 +2423,12 @@ project(":fxpackager") {
     // this is simply moving the existing shell script and ensuring it has proper
     // permissions. For Windows, this includes compiling the native executable
     if (IS_WINDOWS && COMPILE_FXPACKAGER){
-        task buildJavaPackager(type: CCTask, group: "Build") {
+        task compileJavaPackager(type: CCTask, group: "Build") {
             description = "Compiles native sources for javapackager.exe"
-            matches = "javapackager\\.cpp"
+            matches = ".*\\.cpp"
             params.addAll(WIN.fxpackager.ccFlags)
             compiler = WIN.fxpackager.compiler
-            output(file("$buildDir/native/javapackager"))
+            output(file("$buildDir/native/javapackager/obj"))
             source WIN.fxpackager.nativeSource
             doFirst {
                 copy {
@@ -2488,16 +2451,13 @@ project(":fxpackager") {
                     args(WIN.fxpackager.rcSource)
                 }
             }
-            doLast {
-                mkdir "$buildDir/javapackager"
-                exec({
-                    commandLine("$WIN.fxpackager.linker", "/nologo", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib",
-                            "/out:$buildDir/native/javapackager/javapackager.exe",
-                            "$buildDir/native/javapackager/javapackager.obj",
-                            "$buildDir/native/javapackager/javapackager.res")
-                    environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                })
-            }
+        }
+        task linkJavaPackager(type: LinkTask, dependsOn: compileJavaPackager, group: "Build") {
+            description = "Links javapackager.exe"
+            objectDir = file("$buildDir/native/javapackager/obj")
+            linkParams.addAll(WIN.fxpackager.linkFlags);
+            lib = file("$buildDir/native/javapackager/javapackager.exe")
+            linker = WIN.fxpackager.linker
             doLast {
                 exec({
                     commandLine("$MC", "-manifest",
@@ -2511,6 +2471,7 @@ project(":fxpackager") {
                 }
             }
         }
+        task buildJavaPackager(dependsOn: [compileJavaPackager, linkJavaPackager])
     } else {
         task buildJavaPackager(group: "Build") {
             enabled = COMPILE_FXPACKAGER

@@ -273,23 +273,6 @@ WIN.launcherlibrary.linker = linker
 WIN.launcherlibrary.linkFlags = ["/nologo", "/WX", "/DLL", "/SUBSYSTEM:WINDOWS", "user32.lib", "shell32.lib", "advapi32.lib", "ole32.lib"]
 if (IS_DEBUG_NATIVE) WIN.launcherlibrary.linkFlags.add("/debug");
 
-WIN.iconLauncher = [:]
-WIN.iconLauncher.compiler = compiler
-WIN.iconLauncher.ccFlags = ["/nologo", "/W3", "/EHsc", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE",
-        "/O2"]
-WIN.iconLauncher.linker = linker
-WIN.iconLauncher.linkFlags = ["/link", "/nologo", "/SUBSYSTEM:CONSOLE"];
-
-WIN.versionInfoLauncher = [:]
-WIN.versionInfoLauncher.compiler = compiler
-WIN.versionInfoLauncher.ccFlags = ["/nologo", "/W3",
-          "/EHsc", "/c", "/D_WINDOWS", "/DUNICODE", "/D_UNICODE", "/DWIN32",
-          "/D_LITTLE_ENDIAN", "/DWIN32_LEAN_AND_MEAN",
-          ccDebugFlags].flatten();
-WIN.versionInfoLauncher.linker = linker
-WIN.versionInfoLauncher.linkFlags = ["/nologo", "/WX", "/SUBSYSTEM:CONSOLE"];
-if (IS_DEBUG_NATIVE) WIN.versionInfoLauncher.linkFlags.add("/debug");
-
 WIN.fxpackager = [:]
 WIN.fxpackager.nativeSource = [
     file("${project("fxpackager").projectDir}/src/main/native/javapackager/win")]
@@ -300,6 +283,7 @@ WIN.fxpackager.ccFlags = ["/nologo", "/W3", "/EHsc", "/MT", "/GS",  "/DUNICODE",
                     "/I$JDK_HOME/include", "/I$JDK_HOME/include/win32",
                     "/O2", "-c"]
 WIN.fxpackager.linker = linker
+WIN.fxpackager.linkFlags = ["/nologo", "/SUBSYSTEM:CONSOLE", "/opt:REF", "/incremental:no", "/manifest", "kernel32.lib", "advapi32.lib"];
 WIN.fxpackager.rcSource = file("${project("fxpackager").projectDir}/src/main/native/javapackager/win/javapackager.rc")
 WIN.fxpackager.rcCompiler = rcCompiler
 WIN.fxpackager.rcFlags = [

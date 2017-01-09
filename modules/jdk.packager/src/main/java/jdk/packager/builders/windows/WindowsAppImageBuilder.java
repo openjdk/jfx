@@ -79,8 +79,6 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
     private final static String REDIST_MSVCP = "msvcpVS_VER.dll";
 
     private final static String TEMPLATE_APP_ICON ="javalogo_white_48.ico";
-    private static final String TOOL_ICON_SWAP="IconSwap.exe";
-    private static final String TOOL_VERSION_INFO_SWAP="VersionInfoSwap.exe";
 
     private static final String EXECUTABLE_PROPERTIES_TEMPLATE = "WinLauncher.properties";
 
@@ -133,9 +131,6 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
 
         Objects.requireNonNull(imageOutDir);
 
-        //@SuppressWarnings("unchecked")
-        //String img = (String) config.get("jimage.name"); // FIXME constant
-
         this.params = config;
 
         this.root = imageOutDir.resolve(APP_NAME.fetchFrom(params));
@@ -182,9 +177,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
         }
     }
 
-
-
-    //it is static for the sake of sharing with "installer" bundlers
+    // This method is static for the sake of sharing with "installer" bundlers
     // that may skip calls to validate/bundle in this class!
     public static File getRootDir(File outDir, Map<String, ? super Object> p) {
         return new File(outDir, APP_FS_NAME.fetchFrom(p));
@@ -271,7 +264,6 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
                 cleanupConfigFiles(params);
             }
         }
-
     }
 
     private void copyMSVCDLLs() throws IOException {
@@ -328,8 +320,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
     }
 
     private void validateValueAndPut(Map<String, String> data, String key,
-                                     BundlerParamInfo<String> param, Map<String, ? super Object> params)
-    {
+                                     BundlerParamInfo<String> param, Map<String, ? super Object> params) {
         String value = param.fetchFrom(params);
         if (value.contains("\r") || value.contains("\n")) {
             Log.info("Configuration Parameter " + param.getID() + " contains multiple lines of text, ignore it");
@@ -340,8 +331,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
     }
 
     protected void prepareExecutableProperties(Map<String, ? super Object> params)
-            throws IOException
-    {
+            throws IOException {
         Map<String, String> data = new HashMap<>();
 
         // mapping Java parameters in strings for version resource
@@ -389,52 +379,43 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
         // Copy executable root folder
         Path executableFile = root.resolve(getLauncherName(p));
         writeEntry(WinResources.class.getResourceAsStream(EXECUTABLE_NAME), executableFile);
-        executableFile.toFile().setWritable(true, true);
+        File launcher = executableFile.toFile();
+        launcher.setWritable(true, true);
 
-        //Update branding of exe file
-        if (REBRAND_EXECUTABLE.fetchFrom(p) && iconTarget.exists()) {
-            //extract IconSwap helper tool
-            File iconSwapTool = File.createTempFile("iconswap", ".exe");
-            IOUtils.copyFromURL(
-                    WinResources.class.getResource(TOOL_ICON_SWAP),
-                    iconSwapTool,
-                    true);
-            iconSwapTool.setExecutable(true, false);
-            iconSwapTool.deleteOnExit();
+        // Update branding of EXE file
+        if (REBRAND_EXECUTABLE.fetchFrom(p)) {
+            File tool = new File(System.getProperty("java.home") + "\\bin\\javapackager.exe");
 
-            //run it on launcher file
-            executableFile.toFile().setWritable(true);
-            ProcessBuilder pb = new ProcessBuilder(
-                    iconSwapTool.getAbsolutePath(),
-                    iconTarget.getAbsolutePath(),
-                    executableFile.toFile().getAbsolutePath());
-            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
-            executableFile.toFile().setReadOnly();
-            iconSwapTool.delete();
+            // Run tool on launcher file to change the icon and the metadata.
+            try {
+                launcher.setWritable(true);
+
+                if (iconTarget.exists()) {
+                    ProcessBuilder pb = new ProcessBuilder(
+                            tool.getAbsolutePath(),
+                            "--icon-swap",
+                            iconTarget.getAbsolutePath(),
+                            launcher.getAbsolutePath());
+                    IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+                }
+
+                File executableProperties = getConfig_ExecutableProperties(p);
+
+                if (executableProperties.exists()) {
+                    ProcessBuilder pb = new ProcessBuilder(
+                            tool.getAbsolutePath(),
+                            "--version-swap",
+                            executableProperties.getAbsolutePath(),
+                            launcher.getAbsolutePath());
+                    IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+                }
+            }
+            finally {
+                executableFile.toFile().setReadOnly();
+            }
         }
 
         Files.copy(iconTarget.toPath(), root.resolve(APP_NAME.fetchFrom(p) + ".ico"));
-
-        if (REBRAND_EXECUTABLE.fetchFrom(p) && getConfig_ExecutableProperties(p).exists()) {
-            // extract VersionInfoHelper tool
-            File versionInfoTool = File.createTempFile("versioninfoswap", ".exe");
-            IOUtils.copyFromURL(
-                    WinResources.class.getResource(TOOL_VERSION_INFO_SWAP),
-                    versionInfoTool,
-                    true);
-            versionInfoTool.setExecutable(true, false);
-            versionInfoTool.deleteOnExit();
-
-            // run it on launcher file
-            executableFile.toFile().setWritable(true);
-            ProcessBuilder pb = new ProcessBuilder(
-                    versionInfoTool.getAbsolutePath(),
-                    getConfig_ExecutableProperties(p).getAbsolutePath(),
-                    executableFile.toFile().getAbsolutePath());
-            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
-            executableFile.toFile().setReadOnly();
-            versionInfoTool.delete();
-        }
     }
 
     private void copyApplication(Map<String, ? super Object> params) throws IOException {
@@ -457,5 +438,4 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
     protected String getCacheLocation(Map<String, ? super Object> params) {
         return "$CACHEDIR/";
     }
-
 }
