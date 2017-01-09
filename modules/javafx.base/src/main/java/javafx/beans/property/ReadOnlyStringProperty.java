@@ -28,7 +28,7 @@ package javafx.beans.property;
 import javafx.beans.binding.StringExpression;
 
 /**
- * Super class for all readonly properties wrapping an {@code String}.
+ * Superclass for all readonly properties wrapping an {@code String}.
  *
  * @see javafx.beans.value.ObservableStringValue
  * @see javafx.beans.binding.StringExpression

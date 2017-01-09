@@ -84,7 +84,7 @@ import javafx.util.Pair;
  * have its generic type set to represent the type of data in the backing model.
  * Doing this has the benefit of making various methods in the ListView, as well
  * as the supporting classes (mentioned below), type-safe. In addition, making
- * use of the generic supports substantially simplifies development of applications
+ * use of the generic type supports substantially simplified development of applications
  * making use of ListView, as all modern IDEs are able to auto-complete far
  * more successfully with the additional type information.
  *
@@ -102,7 +102,7 @@ import javafx.util.Pair;
  * {@link #itemsProperty() items} {@link ObservableList}. This
  * ObservableList is automatically observed by the ListView, such that any
  * changes that occur inside the ObservableList will be automatically shown in
- * the ListView itself. If passying the <code>ObservableList</code> in to the
+ * the ListView itself. If passing the <code>ObservableList</code> in to the
  * ListView constructor is not feasible, the recommended approach for setting
  * the items is to simply call:
  *
@@ -1039,7 +1039,7 @@ public class ListView<T> extends Control {
 
     /**
      * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

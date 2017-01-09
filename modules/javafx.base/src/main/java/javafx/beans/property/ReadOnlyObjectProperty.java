@@ -31,7 +31,7 @@ import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
 
 /**
- * Super class for all readonly properties wrapping an arbitrary {@code Object}.
+ * Superclass for all readonly properties wrapping an arbitrary {@code Object}.
  *
  * For specialized implementations for {@link ObservableList}, {@link ObservableSet} and
  * {@link ObservableMap} that also report changes inside the collections, see

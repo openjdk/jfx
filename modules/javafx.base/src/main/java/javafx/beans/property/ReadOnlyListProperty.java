@@ -32,7 +32,7 @@ import javafx.beans.binding.ListExpression;
 import javafx.collections.ObservableList;
 
 /**
- * Super class for all readonly properties wrapping an {@link javafx.collections.ObservableList}.
+ * Superclass for all readonly properties wrapping an {@link javafx.collections.ObservableList}.
  *
  * @see javafx.collections.ObservableList
  * @see javafx.beans.value.ObservableListValue

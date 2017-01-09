@@ -31,7 +31,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.LongExpression;
 
 /**
- * Super class for all readonly properties wrapping a {@code long}.
+ * Superclass for all readonly properties wrapping a {@code long}.
  *
  * @see javafx.beans.value.ObservableLongValue
  * @see javafx.beans.binding.LongExpression

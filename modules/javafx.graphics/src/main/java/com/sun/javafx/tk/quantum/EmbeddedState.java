@@ -86,7 +86,7 @@ final class EmbeddedState extends SceneState {
         float scaley = ((EmbeddedScene) scene).getRenderScaleY();
         update(1.0f, 1.0f, scalex, scaley, scalex, scaley);
         if (scene != null) {
-            // These variables and others from the super class need be kept up to date to
+            // These variables and others from the superclass need be kept up to date to
             // minimize rendering.  For now, claim that the embedded scene is always visible
             // and not minimized so that rendering can occur
             isWindowVisible = true;

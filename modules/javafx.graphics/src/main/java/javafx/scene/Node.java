@@ -9043,7 +9043,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
@@ -9062,7 +9062,7 @@ public abstract class Node implements EventTarget, Styleable {
      * a Node's CssMetaData can be accessed without the need for reflection.
      *
      * @return The CssMetaData associated with this node, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      * @since JavaFX 8.0
      */
 
@@ -9755,7 +9755,7 @@ public abstract class Node implements EventTarget, Styleable {
      * <p>
      * This method is commonly overridden by subclasses to implement
      * attributes that are required for a specific role.<br>
-     * If a particular attribute is not handled, the super class implementation
+     * If a particular attribute is not handled, the superclass implementation
      * must be called.
      * </p>
      *
@@ -9790,7 +9790,7 @@ public abstract class Node implements EventTarget, Styleable {
      * <p>
      * This method is commonly overridden by subclasses to implement
      * action that are required for a specific role.<br>
-     * If a particular action is not handled, the super class implementation
+     * If a particular action is not handled, the superclass implementation
      * must be called.
      * </p>
      *

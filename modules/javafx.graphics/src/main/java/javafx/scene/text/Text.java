@@ -1152,7 +1152,7 @@ public class Text extends Shape {
                         y + visualBounds.getHeight(), 0);
                 return tx.transform(bounds, bounds);
             } else {
-                /* Let the super class compute the bounds using shape */
+                /* Let the superclass compute the bounds using shape */
                 return TextHelper.superComputeGeomBounds(this, bounds, tx);
             }
         }
@@ -1411,7 +1411,7 @@ public class Text extends Shape {
 
     /**
      * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

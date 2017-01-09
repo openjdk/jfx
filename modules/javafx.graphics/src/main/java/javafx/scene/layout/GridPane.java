@@ -795,7 +795,7 @@ public class GridPane extends Pane {
     public final double getVgap() { return vgap == null ? 0 : vgap.get(); }
 
     /**
-     * The alignment of of the grid within the gridpane's width and height.
+     * The alignment of the grid within the gridpane's width and height.
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -2470,7 +2470,7 @@ public class GridPane extends Pane {
 
     /**
      * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

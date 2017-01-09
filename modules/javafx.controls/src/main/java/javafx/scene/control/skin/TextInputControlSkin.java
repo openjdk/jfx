@@ -958,7 +958,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     /**
      * Returns the CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;

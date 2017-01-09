@@ -394,7 +394,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
     /**
      * Returns the CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return STYLEABLES;

@@ -34,7 +34,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 
 /**
- * Super class for all readonly properties wrapping an {@link javafx.collections.ObservableSet}.
+ * Superclass for all readonly properties wrapping an {@link javafx.collections.ObservableSet}.
  *
  * @see javafx.collections.ObservableSet
  * @see javafx.beans.value.ObservableSetValue

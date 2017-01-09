@@ -33,7 +33,7 @@ import javafx.beans.binding.MapExpression;
 import javafx.collections.ObservableMap;
 
 /**
- * Super class for all readonly properties wrapping an {@link javafx.collections.ObservableMap}.
+ * Superclass for all readonly properties wrapping an {@link javafx.collections.ObservableMap}.
  *
  * @see javafx.collections.ObservableMap
  * @see javafx.beans.value.ObservableMapValue
