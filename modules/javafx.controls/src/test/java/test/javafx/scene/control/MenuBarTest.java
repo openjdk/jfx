@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,7 @@ import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventGenerator;
 import com.sun.javafx.scene.control.ContextMenuContent;
 import com.sun.javafx.scene.control.MenuBarMenuButtonShim;
@@ -352,6 +353,155 @@ public class MenuBarTest {
         assertTrue(menu3.isShowing());
     }
 
+    @Test public void testKeyNavigationForward() {
+        VBox root = new VBox();
+        Menu menu1 = new Menu("Menu1");
+        Menu menu2 = new Menu("Menu2");
+        Menu menu3 = new Menu("Menu3");
+
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+        MenuItem menuItem2 = new MenuItem("MenuItem2");
+        MenuItem menuItem3 = new MenuItem("MenuItem3");
+
+        menu1.getItems().add(menuItem1);
+        menu2.getItems().add(menuItem2);
+        menu3.getItems().add(menuItem3);
+
+        menuBar.getMenus().addAll(menu1, menu2, menu3);
+        menu2.setDisable(true);
+
+        root.getChildren().addAll(menuBar);
+        startApp(root);
+        tk.firePulse();
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+
+        // Click on menu1 to open it
+        MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        assertTrue(menu1.isShowing());
+
+        // Right key press should skip menu2 that is disabled
+        // and should open up menu3
+        KeyEventFirer keyboard = new KeyEventFirer(mb.getScene());
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        tk.firePulse();
+        assertTrue(menu3.isShowing());
+
+        // Another Right key press should loop back and should open up menu1
+        keyboard.doKeyPress(KeyCode.RIGHT);
+        tk.firePulse();
+        assertTrue(menu1.isShowing());
+    }
+
+    @Test public void testKeyNavigationBackward() {
+        VBox root = new VBox();
+        Menu menu1 = new Menu("Menu1");
+        Menu menu2 = new Menu("Menu2");
+        Menu menu3 = new Menu("Menu3");
+
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+        MenuItem menuItem2 = new MenuItem("MenuItem2");
+        MenuItem menuItem3 = new MenuItem("MenuItem3");
+
+        menu1.getItems().add(menuItem1);
+        menu2.getItems().add(menuItem2);
+        menu3.getItems().add(menuItem3);
+
+        menuBar.getMenus().addAll(menu1, menu2, menu3);
+        menu2.setDisable(true);
+
+        root.getChildren().addAll(menuBar);
+        startApp(root);
+        tk.firePulse();
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+
+        // Click on menu1 to open it
+        MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        assertTrue(menu1.isShowing());
+
+        // Left key press should cycle back and should open up menu3
+        KeyEventFirer keyboard = new KeyEventFirer(mb.getScene());
+        keyboard.doKeyPress(KeyCode.LEFT);
+        tk.firePulse();
+        assertTrue(menu3.isShowing());
+
+        // Another Left key press should skip menu2 that is disabled
+        // and should open up menu1
+        keyboard.doKeyPress(KeyCode.LEFT);
+        tk.firePulse();
+        assertTrue(menu1.isShowing());
+    }
+
+    @Test public void testKeyNavigationWithAllDisabledMenuItems() {
+
+        // Test key navigation with a single disabled menu in menubar
+        VBox root = new VBox();
+        Menu menu1 = new Menu("Menu1");
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+
+        menu1.getItems().add(menuItem1);
+        menuBar.getMenus().addAll(menu1);
+        menu1.setDisable(true);
+
+        root.getChildren().addAll(menuBar);
+        startApp(root);
+        tk.firePulse();
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+        KeyEventFirer keyboard = new KeyEventFirer(mb.getScene());
+
+        // Selection key press
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.ALT);
+        tk.firePulse();
+        assertFalse(menu1.isShowing());
+
+
+        // Test key navigation with multiple disabled menus in menubar
+        Menu menu2 = new Menu("Menu2");
+        Menu menu3 = new Menu("Menu3");
+
+        MenuItem menuItem2 = new MenuItem("MenuItem2");
+        MenuItem menuItem3 = new MenuItem("MenuItem3");
+
+        menu2.getItems().add(menuItem2);
+        menu3.getItems().add(menuItem3);
+
+        menuBar.getMenus().add(menu2);
+        menuBar.getMenus().add(menu3);
+
+        menu2.setDisable(true);
+        menu3.setDisable(true);
+
+        // Selection key press
+        keyboard.doKeyPress(KeyCode.RIGHT, KeyModifier.ALT);
+        tk.firePulse();
+        assertFalse(menu1.isShowing());
+        assertFalse(menu2.isShowing());
+        assertFalse(menu3.isShowing());
+    }
 
      @Test public void testMenuOnShowingEventFiringWithMenuHideOperation() {
         VBox root = new VBox();
