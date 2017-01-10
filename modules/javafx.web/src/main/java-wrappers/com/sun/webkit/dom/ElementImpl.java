@@ -768,6 +768,16 @@ public class ElementImpl extends NodeImpl implements Element {
     }
     native static void setOnresetImpl(long peer, long value);
 
+    public EventListener getOnresize() {
+        return EventListenerImpl.getImpl(getOnresizeImpl(getPeer()));
+    }
+    native static long getOnresizeImpl(long peer);
+
+    public void setOnresize(EventListener value) {
+        setOnresizeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnresizeImpl(long peer, long value);
+
     public EventListener getOnscroll() {
         return EventListenerImpl.getImpl(getOnscrollImpl(getPeer()));
     }
@@ -1136,9 +1146,9 @@ public class ElementImpl extends NodeImpl implements Element {
         , int pages);
 
 
-    public NodeList getElementsByClassName(String name)
+    public HTMLCollection getElementsByClassName(String name)
     {
-        return NodeListImpl.getImpl(getElementsByClassNameImpl(getPeer()
+        return HTMLCollectionImpl.getImpl(getElementsByClassNameImpl(getPeer()
             , name));
     }
     native static long getElementsByClassNameImpl(long peer

@@ -2,7 +2,6 @@
 
 package com.sun.webkit.dom;
 
-import org.w3c.dom.html.HTMLCollection;
 import org.w3c.dom.html.HTMLFieldSetElement;
 import org.w3c.dom.html.HTMLFormElement;
 
@@ -46,11 +45,6 @@ public class HTMLFieldSetElementImpl extends HTMLElementImpl implements HTMLFiel
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
-
-    public HTMLCollection getElements() {
-        return HTMLCollectionImpl.getImpl(getElementsImpl(getPeer()));
-    }
-    native static long getElementsImpl(long peer);
 
     public boolean getWillValidate() {
         return getWillValidateImpl(getPeer());

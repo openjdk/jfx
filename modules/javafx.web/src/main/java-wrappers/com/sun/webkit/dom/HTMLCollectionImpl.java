@@ -4,7 +4,7 @@ package com.sun.webkit.dom;
 
 import com.sun.webkit.Disposer;
 import com.sun.webkit.DisposerRecord;
-import org.w3c.dom.Node;
+import org.w3c.dom.Element;
 import org.w3c.dom.html.HTMLCollection;
 
 public class HTMLCollectionImpl implements HTMLCollection {
@@ -68,18 +68,18 @@ public class HTMLCollectionImpl implements HTMLCollection {
 
 
 //functions
-    public Node item(int index)
+    public Element item(int index)
     {
-        return NodeImpl.getImpl(itemImpl(getPeer()
+        return ElementImpl.getImpl(itemImpl(getPeer()
             , index));
     }
     native static long itemImpl(long peer
         , int index);
 
 
-    public Node namedItem(String name)
+    public Element namedItem(String name)
     {
-        return NodeImpl.getImpl(namedItemImpl(getPeer()
+        return ElementImpl.getImpl(namedItemImpl(getPeer()
             , name));
     }
     native static long namedItemImpl(long peer

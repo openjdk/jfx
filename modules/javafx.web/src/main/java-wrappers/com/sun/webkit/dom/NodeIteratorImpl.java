@@ -4,7 +4,6 @@ package com.sun.webkit.dom;
 
 import com.sun.webkit.Disposer;
 import com.sun.webkit.DisposerRecord;
-import org.w3c.dom.DOMException;
 import org.w3c.dom.Node;
 import org.w3c.dom.traversal.NodeFilter;
 import org.w3c.dom.traversal.NodeIterator;
@@ -89,14 +88,14 @@ public class NodeIteratorImpl implements NodeIterator {
 
 
 //functions
-    public Node nextNode() throws DOMException
+    public Node nextNode()
     {
         return NodeImpl.getImpl(nextNodeImpl(getPeer()));
     }
     native static long nextNodeImpl(long peer);
 
 
-    public Node previousNode() throws DOMException
+    public Node previousNode()
     {
         return NodeImpl.getImpl(previousNodeImpl(getPeer()));
     }

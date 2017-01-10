@@ -67,32 +67,32 @@ public class RangeImpl implements Range {
     public static final int NODE_INSIDE = 3;
 
 //attributes
-    public Node getStartContainer() throws DOMException {
+    public Node getStartContainer() {
         return NodeImpl.getImpl(getStartContainerImpl(getPeer()));
     }
     native static long getStartContainerImpl(long peer);
 
-    public int getStartOffset() throws DOMException {
+    public int getStartOffset() {
         return getStartOffsetImpl(getPeer());
     }
     native static int getStartOffsetImpl(long peer);
 
-    public Node getEndContainer() throws DOMException {
+    public Node getEndContainer() {
         return NodeImpl.getImpl(getEndContainerImpl(getPeer()));
     }
     native static long getEndContainerImpl(long peer);
 
-    public int getEndOffset() throws DOMException {
+    public int getEndOffset() {
         return getEndOffsetImpl(getPeer());
     }
     native static int getEndOffsetImpl(long peer);
 
-    public boolean getCollapsed() throws DOMException {
+    public boolean getCollapsed() {
         return getCollapsedImpl(getPeer());
     }
     native static boolean getCollapsedImpl(long peer);
 
-    public Node getCommonAncestorContainer() throws DOMException {
+    public Node getCommonAncestorContainer() {
         return NodeImpl.getImpl(getCommonAncestorContainerImpl(getPeer()));
     }
     native static long getCommonAncestorContainerImpl(long peer);
@@ -164,7 +164,7 @@ public class RangeImpl implements Range {
         , long refNode);
 
 
-    public void collapse(boolean toStart) throws DOMException
+    public void collapse(boolean toStart)
     {
         collapseImpl(getPeer()
             , toStart);
@@ -242,21 +242,21 @@ public class RangeImpl implements Range {
         , long newParent);
 
 
-    public Range cloneRange() throws DOMException
+    public Range cloneRange()
     {
         return RangeImpl.getImpl(cloneRangeImpl(getPeer()));
     }
     native static long cloneRangeImpl(long peer);
 
 
-    public String toString() throws DOMException
+    public String toString()
     {
         return toStringImpl(getPeer());
     }
     native static String toStringImpl(long peer);
 
 
-    public void detach() throws DOMException
+    public void detach()
     {
         detachImpl(getPeer());
     }
@@ -270,15 +270,6 @@ public class RangeImpl implements Range {
     }
     native static long createContextualFragmentImpl(long peer
         , String html);
-
-
-    public boolean intersectsNode(Node refNode) throws DOMException
-    {
-        return intersectsNodeImpl(getPeer()
-            , NodeImpl.getPeer(refNode));
-    }
-    native static boolean intersectsNodeImpl(long peer
-        , long refNode);
 
 
     public short compareNode(Node refNode) throws DOMException
@@ -300,6 +291,15 @@ public class RangeImpl implements Range {
     native static short comparePointImpl(long peer
         , long refNode
         , int offset);
+
+
+    public boolean intersectsNode(Node refNode) throws DOMException
+    {
+        return intersectsNodeImpl(getPeer()
+            , NodeImpl.getPeer(refNode));
+    }
+    native static boolean intersectsNodeImpl(long peer
+        , long refNode);
 
 
     public boolean isPointInRange(Node refNode

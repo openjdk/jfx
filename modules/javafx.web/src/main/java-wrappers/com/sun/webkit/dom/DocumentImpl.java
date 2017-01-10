@@ -204,11 +204,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static String getCharsetImpl(long peer);
 
-    public void setCharset(String value) {
-        setCharsetImpl(getPeer(), value);
-    }
-    native static void setCharsetImpl(long peer, String value);
-
     public String getDefaultCharset() {
         return getDefaultCharsetImpl(getPeer());
     }
@@ -819,6 +814,16 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static void setOnresetImpl(long peer, long value);
 
+    public EventListener getOnresize() {
+        return EventListenerImpl.getImpl(getOnresizeImpl(getPeer()));
+    }
+    native static long getOnresizeImpl(long peer);
+
+    public void setOnresize(EventListener value) {
+        setOnresizeImpl(getPeer(), EventListenerImpl.getPeer(value));
+    }
+    native static void setOnresizeImpl(long peer, long value);
+
     public EventListener getOnscroll() {
         return EventListenerImpl.getImpl(getOnscrollImpl(getPeer()));
     }
@@ -1118,38 +1123,32 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
 
     public NodeIterator createNodeIterator(Node root
         , int whatToShow
-        , NodeFilter filter
-        , boolean expandEntityReferences) throws DOMException
+        , NodeFilter filter) throws DOMException
     {
         return NodeIteratorImpl.getImpl(createNodeIteratorImpl(getPeer()
             , NodeImpl.getPeer(root)
             , whatToShow
-            , NodeFilterImpl.getPeer(filter)
-            , expandEntityReferences));
+            , NodeFilterImpl.getPeer(filter)));
     }
     native static long createNodeIteratorImpl(long peer
         , long root
         , int whatToShow
-        , long filter
-        , boolean expandEntityReferences);
+        , long filter);
 
 
     public TreeWalker createTreeWalker(Node root
         , int whatToShow
-        , NodeFilter filter
-        , boolean expandEntityReferences) throws DOMException
+        , NodeFilter filter) throws DOMException
     {
         return TreeWalkerImpl.getImpl(createTreeWalkerImpl(getPeer()
             , NodeImpl.getPeer(root)
             , whatToShow
-            , NodeFilterImpl.getPeer(filter)
-            , expandEntityReferences));
+            , NodeFilterImpl.getPeer(filter)));
     }
     native static long createTreeWalkerImpl(long peer
         , long root
         , int whatToShow
-        , long filter
-        , boolean expandEntityReferences);
+        , long filter);
 
 
     public CSSStyleDeclaration getOverrideStyle(Element element
@@ -1306,9 +1305,9 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     native static long createCSSStyleDeclarationImpl(long peer);
 
 
-    public NodeList getElementsByClassName(String classNames)
+    public HTMLCollection getElementsByClassName(String classNames)
     {
-        return NodeListImpl.getImpl(getElementsByClassNameImpl(getPeer()
+        return HTMLCollectionImpl.getImpl(getElementsByClassNameImpl(getPeer()
             , classNames));
     }
     native static long getElementsByClassNameImpl(long peer
