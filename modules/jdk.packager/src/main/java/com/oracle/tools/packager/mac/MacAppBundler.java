@@ -443,7 +443,7 @@ public class MacAppBundler extends AbstractImageBundler {
 //        if (LAUNCHER_CFG_FORMAT.fetchFrom(p).equals(CFG_FORMAT_PROPERTIES)) {
 //            writeCfgFile(p, rootDirectory);
 //        } else {
-//            writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), "$APPDIR/Plug-Ins/Java.runtime");
+//            writeCfgFile(p, new File(rootDirectory, getLauncherCfgName(p)), "$APPDIR/PlugIns/Java.runtime");
 //        }
 //
 //        // Copy executable root folder

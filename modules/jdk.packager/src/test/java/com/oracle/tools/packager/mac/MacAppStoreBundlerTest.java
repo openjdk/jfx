@@ -216,7 +216,7 @@ public class MacAppStoreBundlerTest {
 
         String output = baos.toString();
 
-        Pattern jreInfoPListPattern = Pattern.compile("/Plug-Ins/[^/]+/Contents/Info\\.plist");
+        Pattern jreInfoPListPattern = Pattern.compile("/PlugIns/[^/]+/Contents/Info\\.plist");
         Matcher matcher = jreInfoPListPattern.matcher(output);
         assertTrue("Insure that info.plist is packed in for embedded jre", matcher.find());
 

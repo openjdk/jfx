@@ -244,7 +244,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
             (s, p) -> new File(s));
 
     public MacAppImageBuilder(Map<String, Object> config, Path imageOutDir) throws IOException {
-        super(config, imageOutDir.resolve(APP_NAME.fetchFrom(config) + ".app/Contents/Plug-Ins/Java.runtime/Contents/Home"));
+        super(config, imageOutDir.resolve(APP_NAME.fetchFrom(config) + ".app/Contents/PlugIns/Java.runtime/Contents/Home"));
 
         Objects.requireNonNull(imageOutDir);
 
@@ -259,7 +259,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
         this.javaDir = contentsDir.resolve("Java");
         this.resourcesDir = contentsDir.resolve("Resources");
         this.macOSDir = contentsDir.resolve("MacOS");
-        this.runtimeDir = contentsDir.resolve("Plug-Ins/Java.runtime");
+        this.runtimeDir = contentsDir.resolve("PlugIns/Java.runtime");
         this.runtimeRoot = runtimeDir.resolve("Contents/Home");
         this.mdir = runtimeRoot.resolve("lib");
         Files.createDirectories(javaDir);
@@ -381,7 +381,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
 
         // generate launcher config
 
-        writeCfgFile(params, new File(root.toFile(), getLauncherCfgName(params)), "$APPDIR/Plug-Ins/Java.runtime");
+        writeCfgFile(params, new File(root.toFile(), getLauncherCfgName(params)), "$APPDIR/PlugIns/Java.runtime");
 
         // Copy class path entries to Java folder
         copyClassPathEntries(javaDir);
@@ -511,7 +511,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
         data.put("DEPLOY_BUNDLE_COPYRIGHT",
                 COPYRIGHT.fetchFrom(params) != null ? COPYRIGHT.fetchFrom(params) : "Unknown");
         data.put("DEPLOY_LAUNCHER_NAME", getLauncherName(params));
-        data.put("DEPLOY_JAVA_RUNTIME_NAME", "$APPDIR/Plug-Ins/Java.runtime");
+        data.put("DEPLOY_JAVA_RUNTIME_NAME", "$APPDIR/PlugIns/Java.runtime");
         data.put("DEPLOY_BUNDLE_SHORT_VERSION",
                 VERSION.fetchFrom(params) != null ? VERSION.fetchFrom(params) : "1.0.0");
         data.put("DEPLOY_BUNDLE_CFBUNDLE_VERSION",
@@ -838,7 +838,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
             }
         };
 
-        Path pluginsPath = appLocation.resolve("Contents/Plug-Ins");
+        Path pluginsPath = appLocation.resolve("Contents/PlugIns");
         if (Files.isDirectory(pluginsPath)) {
             Files.list(pluginsPath)
                     .forEach(signIdentifiedByPList);
