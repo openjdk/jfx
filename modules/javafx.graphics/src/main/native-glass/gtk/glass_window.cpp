@@ -1483,9 +1483,7 @@ WindowContextPlug::WindowContextPlug(jobject _jwindow, void* _owner) :
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
-    WindowContext* parent = ((WindowContext*)JLONG_TO_PTR(_owner));
-    Window win = GDK_WINDOW_XID(parent->get_gdk_window());
-    gtk_widget = gtk_plug_new(win);
+    gtk_widget = gtk_plug_new((Window)PTR_TO_JLONG(_owner));
 
     g_signal_connect(G_OBJECT(gtk_widget), "configure-event", G_CALLBACK(plug_configure), this);
 

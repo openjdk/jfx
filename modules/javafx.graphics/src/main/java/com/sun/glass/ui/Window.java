@@ -308,6 +308,17 @@ public abstract class Window {
         if (this.ptr == 0L) {
             throw new RuntimeException("could not create platform window");
         }
+
+        if (screen == null) {
+            screen = Screen.getMainScreen(); // start with a default
+
+            if (PrismSettings.allowHiDPIScaling) {
+                this.platformScaleX = this.screen.getPlatformScaleX();
+                this.platformScaleY = this.screen.getPlatformScaleY();
+                this.outputScaleX = this.screen.getRecommendedOutputScaleX();
+                this.outputScaleY = this.screen.getRecommendedOutputScaleY();
+            }
+        }
     }
 
     public boolean isClosed() {
