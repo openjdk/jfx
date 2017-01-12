@@ -25,8 +25,10 @@
 
 package test.javafx.scene.web;
 
+import com.sun.webkit.dom.JSObjectShim;
 import com.sun.webkit.WebPage;
 import java.io.File;
+import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
@@ -39,12 +41,14 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebView;
 import javafx.util.Duration;
+import netscape.javascript.JSObject;
 import org.junit.Ignore;
 import org.junit.Test;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class LeakTest extends TestBase {
+
+    private static final int SLEEP_TIME = 1000;
 
     @Ignore // RT-26710: javafx.scene.web.LeakTest hangs
     @Test public void testOleg() throws InterruptedException{
@@ -104,4 +108,72 @@ public class LeakTest extends TestBase {
             Thread.sleep(100);
         }
     }
+
+    private static boolean isAllElementsNull(Reference<?>[] array) {
+        for (int j = 0; j < array.length; j++) {
+            if (array[j].get() != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Test public void testJSObjectGarbageCollectability() throws InterruptedException {
+        final int count = 10000;
+        Reference<?>[] willGC = new Reference[count];
+
+        submit(() -> {
+            for (int i = 0; i < count; i++) {
+                JSObject tmpJSObject = (JSObject) getEngine().executeScript("new Object()");
+                willGC[i] = new WeakReference<>(tmpJSObject);
+            }
+        });
+
+        Thread.sleep(SLEEP_TIME);
+
+        for (int i = 0; i < 5; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (isAllElementsNull(willGC)) {
+                break;
+            }
+
+            Thread.sleep(SLEEP_TIME);
+        }
+
+        assertTrue("All JSObjects are GC'ed", isAllElementsNull(willGC));
+    }
+
+    // JDK-8170938
+    @Test public void testJSObjectDisposeCount() throws InterruptedException {
+        final int count = 10000;
+        Reference<?>[] willGC = new Reference[count];
+
+        submit(() -> {
+            for (int i = 0; i < count; i++) {
+                JSObject tmpJSObject = (JSObject) getEngine().executeScript("new Object()");
+                assertTrue(JSObjectShim.test_getPeerCount() > 0);
+                willGC[i] = new WeakReference<>(tmpJSObject);
+            }
+        });
+
+        Thread.sleep(SLEEP_TIME);
+
+        for (int i = 0; i < 5; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (isAllElementsNull(willGC)) {
+                break;
+            }
+
+            Thread.sleep(SLEEP_TIME);
+        }
+
+        // Give disposer a chance to run
+        Thread.sleep(SLEEP_TIME);
+        assertTrue("All JSObjects are disposed", JSObjectShim.test_getPeerCount() == 0);
+    }
+
 }
