@@ -87,7 +87,6 @@ import javafx.css.Styleable;
  * s1.setContent(rect);
  * </code></pre>
  *
- * Implementation of ScrollPane According to JavaFX UI Control API Specification
  * @since JavaFX 2.0
  */
 @DefaultProperty("content")
@@ -470,7 +469,7 @@ public class ScrollPane extends Control {
 
 
     /**
-     * Specify the perferred width of the ScrollPane Viewport.
+     * Specify the preferred width of the ScrollPane Viewport.
      * This is the width that will be available to the content node.
      * The overall width of the ScrollPane is the ViewportWidth + padding
      */
@@ -742,7 +741,7 @@ public class ScrollPane extends Control {
 
     /**
      * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      * @since JavaFX 8.0
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {

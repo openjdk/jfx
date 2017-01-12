@@ -3,11 +3,11 @@
 package com.sun.webkit.dom;
 
 import org.w3c.dom.DOMException;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.w3c.dom.html.HTMLCollection;
 import org.w3c.dom.html.HTMLElement;
 import org.w3c.dom.html.HTMLFormElement;
+import org.w3c.dom.html.HTMLOptionElement;
 import org.w3c.dom.html.HTMLSelectElement;
 
 public class HTMLSelectElementImpl extends HTMLElementImpl implements HTMLSelectElement {
@@ -146,20 +146,30 @@ public class HTMLSelectElementImpl extends HTMLElementImpl implements HTMLSelect
     }
     native static long getLabelsImpl(long peer);
 
+    public String getAutocomplete() {
+        return getAutocompleteImpl(getPeer());
+    }
+    native static String getAutocompleteImpl(long peer);
+
+    public void setAutocomplete(String value) {
+        setAutocompleteImpl(getPeer(), value);
+    }
+    native static void setAutocompleteImpl(long peer, String value);
+
 
 //functions
-    public Node item(int index)
+    public HTMLOptionElement item(int index)
     {
-        return NodeImpl.getImpl(itemImpl(getPeer()
+        return HTMLOptionElementImpl.getImpl(itemImpl(getPeer()
             , index));
     }
     native static long itemImpl(long peer
         , int index);
 
 
-    public Node namedItem(String name)
+    public HTMLOptionElement namedItem(String name)
     {
-        return NodeImpl.getImpl(namedItemImpl(getPeer()
+        return HTMLOptionElementImpl.getImpl(namedItemImpl(getPeer()
             , name));
     }
     native static long namedItemImpl(long peer

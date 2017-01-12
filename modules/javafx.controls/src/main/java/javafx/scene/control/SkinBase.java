@@ -887,7 +887,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /**
      * Returns the CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
@@ -897,7 +897,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * This method should delegate to {@link Node#getClassCssMetaData()} so that
      * a Node's CssMetaData can be accessed without the need for reflection.
      * @return The CssMetaData associated with this node, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      */
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
@@ -953,7 +953,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * <p>
      * This method is commonly overridden by subclasses to implement
      * attributes that are required for a specific role.<br>
-     * If a particular attribute is not handled, the super class implementation
+     * If a particular attribute is not handled, the superclass implementation
      * must be called.
      * </p>
      *
@@ -976,7 +976,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * <p>
      * This method is commonly overridden by subclasses to implement
      * action that are required for a specific role.<br>
-     * If a particular action is not handled, the super class implementation
+     * If a particular action is not handled, the superclass implementation
      * must be called.
      * </p>
      *

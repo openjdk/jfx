@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,13 @@
  * questions.
  */
 
+/**
+ * Defines APIs for the JavaFX / Swing interop support included with the
+ * JavaFX UI toolkit, including {@link javafx.embed.swing.SwingNode} (for
+ * embedding Swing inside a JavaFX application) and
+ * {@link javafx.embed.swing.JFXPanel} (for embedding JavaFX inside a Swing
+ * application).
+ */
 module javafx.swing {
     requires transitive java.desktop;
     requires transitive javafx.graphics;

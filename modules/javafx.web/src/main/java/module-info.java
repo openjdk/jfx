@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,10 @@
  * questions.
  */
 
+/**
+ * Defines APIs for the WebView functionality contained within the the
+ * JavaFX UI toolkit.
+ */
 module javafx.web {
     requires transitive java.xml;
     requires transitive javafx.base;

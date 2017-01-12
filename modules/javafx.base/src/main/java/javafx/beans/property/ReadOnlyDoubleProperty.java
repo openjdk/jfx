@@ -31,7 +31,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.DoubleExpression;
 
 /**
- * Super class for all readonly properties wrapping a {@code double}.
+ * Superclass for all readonly properties wrapping a {@code double}.
  *
  * @see javafx.beans.value.ObservableDoubleValue
  * @see javafx.beans.binding.DoubleExpression

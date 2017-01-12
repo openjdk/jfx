@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+* Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 * This code is free software; you can redistribute it and/or modify it
@@ -23,30 +23,11 @@
 * questions.
 */
 
-#include <windows.h>
-#include <vector>
+#ifndef ICONSWAP_H
+#define ICONSWAP_H
 
-using std::wstring;
+#include <tchar.h>
 
-class ByteBuffer
-{
-public:
-    ByteBuffer();
-    ~ByteBuffer();
+bool ChangeIcon(_TCHAR* iconFileName, _TCHAR* executableFileName);
 
-    LPBYTE getPtr();
-    size_t getPos();
-
-    void AppendString(wstring str);
-    void AppendWORD(WORD word);
-    void AppendBytes(BYTE* ptr, size_t len);
-
-    void ReplaceWORD(size_t offset, WORD word);
-    void ReplaceBytes(size_t offset, BYTE* ptr, size_t len);
-
-    void Align(size_t bytesNumber);
-
-private:
-    std::vector<BYTE> buffer;
-
-};
+#endif // ICONSWAP_H

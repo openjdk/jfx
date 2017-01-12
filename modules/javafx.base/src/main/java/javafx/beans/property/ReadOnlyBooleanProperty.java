@@ -31,7 +31,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.BooleanExpression;
 
 /**
- * Super class for all readonly properties wrapping a {@code boolean}.
+ * Superclass for all readonly properties wrapping a {@code boolean}.
  *
  * @see javafx.beans.value.ObservableBooleanValue
  * @see javafx.beans.binding.BooleanExpression

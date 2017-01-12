@@ -131,6 +131,11 @@ public class EventImpl implements Event {
     }
     native static boolean getDefaultPreventedImpl(long peer);
 
+    public boolean getIsTrusted() {
+        return getIsTrustedImpl(getPeer());
+    }
+    native static boolean getIsTrustedImpl(long peer);
+
     public EventTarget getSrcElement() {
         return (EventTarget)NodeImpl.getImpl(getSrcElementImpl(getPeer()));
     }

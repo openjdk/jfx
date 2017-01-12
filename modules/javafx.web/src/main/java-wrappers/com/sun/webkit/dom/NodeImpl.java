@@ -377,7 +377,7 @@ public class NodeImpl extends JSObject implements Node, EventTarget {
     native static boolean hasChildNodesImpl(long peer);
 
 
-    public Node cloneNode(boolean deep)
+    public Node cloneNode(boolean deep) throws DOMException
     {
         return NodeImpl.getImpl(cloneNodeImpl(getPeer()
             , deep));

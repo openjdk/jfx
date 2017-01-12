@@ -3,8 +3,8 @@
 package com.sun.webkit.dom;
 
 import org.w3c.dom.DOMException;
-import org.w3c.dom.Node;
 import org.w3c.dom.html.HTMLElement;
+import org.w3c.dom.html.HTMLOptionElement;
 
 public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
     HTMLOptionsCollectionImpl(long peer) {
@@ -39,9 +39,9 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
 
 
 //functions
-    public Node namedItem(String name)
+    public HTMLOptionElement namedItem(String name)
     {
-        return NodeImpl.getImpl(namedItemImpl(getPeer()
+        return HTMLOptionElementImpl.getImpl(namedItemImpl(getPeer()
             , name));
     }
     native static long namedItemImpl(long peer

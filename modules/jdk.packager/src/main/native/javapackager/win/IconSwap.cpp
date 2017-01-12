@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -218,27 +218,4 @@ bool ChangeIcon(_TCHAR* iconFileName, _TCHAR* executableFileName)
 
     result = true;
     return result;
-}
-
-int _tmain(int argc, _TCHAR* argv[])
-{
-    bool printUsage = true;
-
-    if (argc == 3)
-    {
-        wprintf(L"Icon File Name: %s\n", argv[1]);
-        wprintf(L"Executable File Name: %s\n", argv[2]);
-
-        if (ChangeIcon(argv[1], argv[2]) == true)
-            printUsage = false;
-        else
-            printf("failed\n");
-    }
-
-    if (printUsage == true)
-    {
-        printf("Usage: iconswap.exe [Icon File Name] [Executable File Name]\n");
-    }
-
-    return 0;
 }

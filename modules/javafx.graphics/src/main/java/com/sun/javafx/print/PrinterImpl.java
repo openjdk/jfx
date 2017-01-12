@@ -43,7 +43,7 @@ import javafx.print.PrintSides;
 
 /*
  * This is called 'PrinterImpl' not because it is a class implementing
- * features of a super class, but because its defines the interfaces
+ * features of a superclass, but because its defines the interfaces
  * required of the delegate implementation class for a Printer.
  * The actual implementation class needs to be discovered at runtime.
  */

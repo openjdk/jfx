@@ -507,6 +507,40 @@ public class JavaScriptBridgeTest extends TestBase {
         });
     }
 
+    // JDK-8165909
+    public @Test void testJSStringToJavaString() {
+        final WebEngine web = getEngine();
+
+        submit(() -> {
+            String str;
+            // emptiness
+            final String emptyString = new String();
+            str = (String)web.executeScript("''");
+            assertEquals(emptyString, str);
+            // null
+            str = (String)web.executeScript("null");
+            assertNull(str);
+            // unicode
+            final String unicodeString = new String(
+                    new char[] {55356, 57221, 55356, 57343});
+            str = (String)web.executeScript(
+                    "String.fromCharCode(55356, 57221, 55356, 57343)");
+            assertEquals(unicodeString, str);
+            // latin-1
+            final String latin1String = new String(
+                    new char[] {0xA1, 0xB1, 0xDF, 0xF6, 0xFF});
+            str = (String)web.executeScript(
+                    "String.fromCharCode(0xA1, 0xB1, 0xDF, 0xF6, 0xFF)");
+            assertEquals(latin1String, str);
+            // ascii
+            final String asciiString = new String(
+                    new char[] {0x41, 0x42, 0x43, 0x21, 0x22, 0x23});
+            str = (String)web.executeScript(
+                    "String.fromCharCode(0x41, 0x42, 0x43, 0x21, 0x22, 0x23)");
+            assertEquals(asciiString, str);
+        });
+    }
+
     public @Test void testBridgeExplicitOverloading() throws InterruptedException {
         final WebEngine web = getEngine();
 

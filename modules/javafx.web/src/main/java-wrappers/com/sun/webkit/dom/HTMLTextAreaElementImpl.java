@@ -28,16 +28,6 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
     }
     native static void setAutofocusImpl(long peer, boolean value);
 
-    public int getCols() {
-        return getColsImpl(getPeer());
-    }
-    native static int getColsImpl(long peer);
-
-    public void setCols(int value) {
-        setColsImpl(getPeer(), value);
-    }
-    native static void setColsImpl(long peer, int value);
-
     public String getDirName() {
         return getDirNameImpl(getPeer());
     }
@@ -123,6 +113,16 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
     }
     native static void setRowsImpl(long peer, int value);
 
+    public int getCols() {
+        return getColsImpl(getPeer());
+    }
+    native static int getColsImpl(long peer);
+
+    public void setCols(int value) {
+        setColsImpl(getPeer(), value);
+    }
+    native static void setColsImpl(long peer, int value);
+
     public String getWrap() {
         return getWrapImpl(getPeer());
     }
@@ -207,6 +207,16 @@ public class HTMLTextAreaElementImpl extends HTMLElementImpl implements HTMLText
         setSelectionDirectionImpl(getPeer(), value);
     }
     native static void setSelectionDirectionImpl(long peer, String value);
+
+    public String getAutocomplete() {
+        return getAutocompleteImpl(getPeer());
+    }
+    native static String getAutocompleteImpl(long peer);
+
+    public void setAutocomplete(String value) {
+        setAutocompleteImpl(getPeer(), value);
+    }
+    native static void setAutocompleteImpl(long peer, String value);
 
 
 //functions

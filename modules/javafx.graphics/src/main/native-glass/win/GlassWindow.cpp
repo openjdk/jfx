@@ -1516,10 +1516,10 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1setAlpha
 
 /*
  * Class:     com_sun_glass_ui_win_WinWindow
- * Method:    _setBackground
+ * Method:    _setBackground2
  * Signature: (JFFF)Z
  */
-JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground
+JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_win_WinWindow__1setBackground2
     (JNIEnv *env, jobject jThis, jlong ptr, jfloat r, jfloat g, jfloat b)
 {
     ENTER_MAIN_THREAD()

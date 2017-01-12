@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+* Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 * This code is free software; you can redistribute it and/or modify it
@@ -23,55 +23,29 @@
 * questions.
 */
 
+#ifndef VERSIONINFOSWAP_H
+#define VERSIONINFOSWAP_H
+
 #include "ByteBuffer.h"
+#include <map>
 
-#include <stdio.h>
+class VersionInfoSwap {
+public:
+    VersionInfoSwap(TCHAR *propFileName, TCHAR *exeFileName);
+    ~VersionInfoSwap();
 
-ByteBuffer::ByteBuffer()
-{
-    buffer.reserve(1024);
-}
+    bool PatchExecutable();
 
-ByteBuffer::~ByteBuffer()
-{
-}
+private:
+    wstring m_propFileName;
+    wstring m_exeFileName;
 
-LPBYTE ByteBuffer::getPtr() {
-    return &buffer[0];
-}
+    std::map<wstring, wstring> m_props;
 
-size_t ByteBuffer::getPos() {
-    return buffer.size();
-}
+    bool LoadFromPropertyFile();
+    void CreateNewResource(ByteBuffer *buf);
+    bool UpdateResource(LPVOID lpResLock, DWORD size);
+    void FillFixedFileInfo(VS_FIXEDFILEINFO *fxi);
+};
 
-void ByteBuffer::AppendString(wstring str) {
-    size_t len = (str.size() + 1) * sizeof WCHAR;
-    AppendBytes((BYTE*)str.c_str(), len);
-}
-
-void ByteBuffer::AppendWORD(WORD word) {
-    AppendBytes((BYTE*)&word, sizeof WORD);
-}
-
-void ByteBuffer::Align(size_t bytesNumber) {
-    size_t pos = getPos();
-    if (pos % bytesNumber) {
-        DWORD dwNull = 0;
-        size_t len = bytesNumber - pos % bytesNumber;
-        AppendBytes((BYTE*)&dwNull, len);
-    }
-}
-
-void ByteBuffer::AppendBytes(BYTE* ptr, size_t len) {
-    buffer.insert(buffer.end(), ptr, ptr + len);
-}
-
-void ByteBuffer::ReplaceWORD(size_t offset, WORD word) {
-    ReplaceBytes(offset, (BYTE*)&word, sizeof WORD);
-}
-
-void ByteBuffer::ReplaceBytes(size_t offset, BYTE* ptr, size_t len) {
-    for (size_t i = 0; i < len; i++) {
-        buffer[offset + i] = *(ptr + i);
-    }
-}
+#endif // VERSIONINFOSWAP_H

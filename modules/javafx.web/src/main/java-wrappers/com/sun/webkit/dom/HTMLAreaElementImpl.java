@@ -35,16 +35,6 @@ public class HTMLAreaElementImpl extends HTMLElementImpl implements HTMLAreaElem
     }
     native static void setCoordsImpl(long peer, String value);
 
-    public String getHref() {
-        return getHrefImpl(getPeer());
-    }
-    native static String getHrefImpl(long peer);
-
-    public void setHref(String value) {
-        setHrefImpl(getPeer(), value);
-    }
-    native static void setHrefImpl(long peer, String value);
-
     public boolean getNoHref() {
         return getNoHrefImpl(getPeer());
     }
@@ -95,40 +85,110 @@ public class HTMLAreaElementImpl extends HTMLElementImpl implements HTMLAreaElem
     }
     native static void setTargetImpl(long peer, String value);
 
-    public String getHash() {
-        return getHashImpl(getPeer());
+    public String getHref() {
+        return getHrefImpl(getPeer());
     }
-    native static String getHashImpl(long peer);
+    native static String getHrefImpl(long peer);
 
-    public String getHost() {
-        return getHostImpl(getPeer());
+    public void setHref(String value) {
+        setHrefImpl(getPeer(), value);
     }
-    native static String getHostImpl(long peer);
+    native static void setHrefImpl(long peer, String value);
 
-    public String getHostname() {
-        return getHostnameImpl(getPeer());
+    public String getOrigin() {
+        return getOriginImpl(getPeer());
     }
-    native static String getHostnameImpl(long peer);
-
-    public String getPathname() {
-        return getPathnameImpl(getPeer());
-    }
-    native static String getPathnameImpl(long peer);
-
-    public String getPort() {
-        return getPortImpl(getPeer());
-    }
-    native static String getPortImpl(long peer);
+    native static String getOriginImpl(long peer);
 
     public String getProtocol() {
         return getProtocolImpl(getPeer());
     }
     native static String getProtocolImpl(long peer);
 
+    public void setProtocol(String value) {
+        setProtocolImpl(getPeer(), value);
+    }
+    native static void setProtocolImpl(long peer, String value);
+
+    public String getUsername() {
+        return getUsernameImpl(getPeer());
+    }
+    native static String getUsernameImpl(long peer);
+
+    public void setUsername(String value) {
+        setUsernameImpl(getPeer(), value);
+    }
+    native static void setUsernameImpl(long peer, String value);
+
+    public String getPassword() {
+        return getPasswordImpl(getPeer());
+    }
+    native static String getPasswordImpl(long peer);
+
+    public void setPassword(String value) {
+        setPasswordImpl(getPeer(), value);
+    }
+    native static void setPasswordImpl(long peer, String value);
+
+    public String getHost() {
+        return getHostImpl(getPeer());
+    }
+    native static String getHostImpl(long peer);
+
+    public void setHost(String value) {
+        setHostImpl(getPeer(), value);
+    }
+    native static void setHostImpl(long peer, String value);
+
+    public String getHostname() {
+        return getHostnameImpl(getPeer());
+    }
+    native static String getHostnameImpl(long peer);
+
+    public void setHostname(String value) {
+        setHostnameImpl(getPeer(), value);
+    }
+    native static void setHostnameImpl(long peer, String value);
+
+    public String getPort() {
+        return getPortImpl(getPeer());
+    }
+    native static String getPortImpl(long peer);
+
+    public void setPort(String value) {
+        setPortImpl(getPeer(), value);
+    }
+    native static void setPortImpl(long peer, String value);
+
+    public String getPathname() {
+        return getPathnameImpl(getPeer());
+    }
+    native static String getPathnameImpl(long peer);
+
+    public void setPathname(String value) {
+        setPathnameImpl(getPeer(), value);
+    }
+    native static void setPathnameImpl(long peer, String value);
+
     public String getSearch() {
         return getSearchImpl(getPeer());
     }
     native static String getSearchImpl(long peer);
+
+    public void setSearch(String value) {
+        setSearchImpl(getPeer(), value);
+    }
+    native static void setSearchImpl(long peer, String value);
+
+    public String getHash() {
+        return getHashImpl(getPeer());
+    }
+    native static String getHashImpl(long peer);
+
+    public void setHash(String value) {
+        setHashImpl(getPeer(), value);
+    }
+    native static void setHashImpl(long peer, String value);
 
 }
 

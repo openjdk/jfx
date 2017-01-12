@@ -87,16 +87,6 @@ public class HTMLIFrameElementImpl extends HTMLElementImpl implements HTMLIFrame
     }
     native static void setNameImpl(long peer, String value);
 
-    public String getSandbox() {
-        return getSandboxImpl(getPeer());
-    }
-    native static String getSandboxImpl(long peer);
-
-    public void setSandbox(String value) {
-        setSandboxImpl(getPeer(), value);
-    }
-    native static void setSandboxImpl(long peer, String value);
-
     public String getScrolling() {
         return getScrollingImpl(getPeer());
     }

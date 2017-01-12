@@ -236,6 +236,19 @@ class WinWindow extends Window {
         super.notifyResize(type, width, height);
     }
 
+    native protected boolean _setBackground2(long ptr, float r, float g, float b);
+    @Override
+    protected boolean _setBackground(long ptr, float r, float g, float b) {
+        // Revert to old behavior for standalone application on Windows as the
+        // call to setBackground causes flickering when resizing window.
+        // For more details see JDK-8171852: JavaFX Stage flickers on resize on
+        // Windows platforms
+        if (this.getAppletMode()) {
+            return _setBackground2(ptr, r, g, b);
+        }
+        return true;
+    }
+
     native private long _getInsets(long ptr);
     native private long _getAnchor(long ptr);
     @Override native protected long _createWindow(long ownerPtr, long screenPtr, int mask);
@@ -253,7 +266,6 @@ class WinWindow extends Window {
     @Override native protected boolean _setTitle(long ptr, String title);
     @Override native protected void _setLevel(long ptr, int level);
     @Override native protected void _setAlpha(long ptr, float alpha);
-    @Override native protected boolean _setBackground(long ptr, float r, float g, float b);
     @Override native protected void _setEnabled(long ptr, boolean enabled);
     @Override native protected boolean _setMinimumSize(long ptr, int width, int height);
     @Override native protected boolean _setMaximumSize(long ptr, int width, int height);

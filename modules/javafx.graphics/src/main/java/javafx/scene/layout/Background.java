@@ -119,7 +119,7 @@ public final class Background {
 
     /**
      * @return The CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return STYLEABLES;

@@ -31,7 +31,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.FloatExpression;
 
 /**
- * Super class for all readonly properties wrapping a {@code float}.
+ * Superclass for all readonly properties wrapping a {@code float}.
  *
  * @see javafx.beans.value.ObservableFloatValue
  * @see javafx.beans.binding.FloatExpression

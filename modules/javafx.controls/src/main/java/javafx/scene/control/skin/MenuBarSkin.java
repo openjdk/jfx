@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1092,20 +1092,35 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     }
 
     private Optional<Pair<Menu,Integer>> findSibling(Direction dir, int startIndex) {
-        final int childCount = container.getChildren().size();
-        int nextIndex = startIndex;
-        if (nextIndex == -1) return Optional.empty();
-        if (dir.isForward() && nextIndex == childCount - 1) {
-            // loop forwards to start
-            nextIndex = 0;
-        } else if (!dir.isForward() && nextIndex == 0) {
-            // loop backwards to end
-            nextIndex = childCount - 1;
-        } else {
-            nextIndex += dir.isForward() ? 1 : -1;
+        if (startIndex == -1) {
+            return Optional.empty();
         }
-        // RT_19359
-        if (getSkinnable().getMenus().get(nextIndex).isDisable()) return findSibling(dir, nextIndex);
+
+        final int totalMenus = getSkinnable().getMenus().size();
+        int i = 0;
+        int nextIndex = 0;
+
+        // Traverse all menus in menubar to find nextIndex
+        while (i < totalMenus) {
+            i++;
+
+            nextIndex = (startIndex + (dir.isForward() ? 1 : -1)) % totalMenus;
+
+            if (nextIndex == -1) {
+                // loop backwards to end
+                nextIndex = totalMenus - 1;
+            }
+
+            // if menu at nextIndex is disabled, skip it
+            if (getSkinnable().getMenus().get(nextIndex).isDisable()) {
+                // Calculate new nextIndex by continuing loop
+                startIndex = nextIndex;
+            } else {
+                // nextIndex is to be highlighted
+                break;
+            }
+        }
+
         clearMenuButtonHover();
         return Optional.of(new Pair<>(getSkinnable().getMenus().get(nextIndex), nextIndex));
     }
@@ -1197,7 +1212,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
     /**
      * Returns the CssMetaData associated with this class, which may include the
-     * CssMetaData of its super classes.
+     * CssMetaData of its superclasses.
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return STYLEABLES;

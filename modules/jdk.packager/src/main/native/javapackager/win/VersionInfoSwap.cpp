@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+* Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
 * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 *
 * This code is free software; you can redistribute it and/or modify it
@@ -53,27 +53,6 @@
  * the existing version resource will be replaced with new one.
  *
  */
-
-int _tmain(int argc, _TCHAR* argv[])
-{
-    bool printUsage = true;
-
-    if (argc == 3) {
-        fwprintf(stdout, TEXT("Resource File Name: %s\n"), argv[1]);
-        fwprintf(stdout, TEXT("Executable File Name: %s\n"), argv[2]);
-
-        VersionInfoSwap vs(argv[1], argv[2]);
-        if (vs.PatchExecutable()) {
-            printUsage = false;
-        }
-    }
-
-    if (printUsage) {
-        fwprintf(stderr, TEXT("Usage: VersionInfoSwap.exe [Property File Name] [Executable File Name]\n"));
-    }
-
-    return 0;
-}
 
 bool VersionInfoSwap::PatchExecutable() {
     bool b = LoadFromPropertyFile();

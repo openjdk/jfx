@@ -33,7 +33,7 @@ import com.sun.scenario.effect.impl.state.LinearConvolveKernel;
 import com.sun.scenario.effect.impl.state.LinearConvolveRenderState;
 
 /**
- * An intermediate mix-in super class that performs the multi-pass filtering
+ * An intermediate mix-in superclass that performs the multi-pass filtering
  * algorithm common to all linear convolution filters such as Gaussian,
  * Box, and Motion Blurs and Shadows.  In particular, it is used for all
  * filters that use the LinearConvolve and LinearConvolveShadow shader peers.

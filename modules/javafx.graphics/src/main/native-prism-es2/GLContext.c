@@ -1153,23 +1153,32 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D1
 (JNIEnv *env, jclass class, jint target, jint level, jint internalFormat,
         jint width, jint height, jint border, jint format, jint type,
         jobject pixels, jint pixelsByteOffset, jboolean useMipmap) {
-    GLvoid *ptr = NULL;
+    char *ptr = NULL;
+    char *ptrPlusOffset = NULL;
     GLenum err;
 
     if (pixels != NULL) {
-        ptr = (GLvoid *) (((char *) (*env)->GetPrimitiveArrayCritical(env, pixels, NULL))
-                + pixelsByteOffset);
+        ptr = (char *) (*env)->GetPrimitiveArrayCritical(env, pixels, NULL);
+        if (ptr == NULL) {
+            fprintf(stderr, "nTexImage2D1: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+            return JNI_FALSE;
+        }
+        ptrPlusOffset = ptr + pixelsByteOffset;
     }
 
     glGetError();
     if (useMipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
     }
+
+    // It is okay if ptrPlusOffset is null.
+    // In this case, a call to glTexImage2D will cause texture memory to be allocated
+    // to accommodate a texture of width and height.
     glTexImage2D((GLenum) translatePrismToGL(target), (GLint) level,
             (GLint) translatePrismToGL(internalFormat),
             (GLsizei) width, (GLsizei) height, (GLint) border,
             (GLenum) translatePrismToGL(format),
-            (GLenum) translatePrismToGL(type), (GLvoid *) ptr);
+            (GLenum) translatePrismToGL(type), (GLvoid *) ptrPlusOffset);
 
     err  = glGetError();
 
@@ -1210,15 +1219,20 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nTexSubImage2D1
 (JNIEnv *env, jclass class, jint target, jint level,
         jint xoffset, jint yoffset, jint width, jint height, jint format,
         jint type, jobject pixels, jint pixelsByteOffset) {
-    GLvoid *ptr = NULL;
+    char *ptr = NULL;
+    char *ptrPlusOffset = NULL;
     if (pixels != NULL) {
-        ptr = (GLvoid *) (((char *) (*env)->GetPrimitiveArrayCritical(env, pixels, NULL))
-                + pixelsByteOffset);
+        ptr = (char *) (*env)->GetPrimitiveArrayCritical(env, pixels, NULL);
+        if (ptr == NULL) {
+            fprintf(stderr, "nTexSubImage2D1: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+            return;
+        }
+        ptrPlusOffset = ptr + pixelsByteOffset;
     }
     glTexSubImage2D((GLenum) translatePrismToGL(target), (GLint) level,
             (GLint) xoffset, (GLint) yoffset,
             (GLsizei) width, (GLsizei) height, (GLenum) translatePrismToGL(format),
-            (GLenum) translatePrismToGL(type), (GLvoid *) ptr);
+            (GLenum) translatePrismToGL(type), (GLvoid *) ptrPlusOffset);
     if (pixels != NULL) {
         (*env)->ReleasePrimitiveArrayCritical(env, pixels, ptr, 0);
     }
@@ -1373,15 +1387,21 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nUniform4fv1
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint location, jint count,
         jobject value, jint valueByteOffset) {
     GLfloat *_ptr2 = NULL;
+    GLfloat *_ptr2PlusOffset = NULL;
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if ((env == NULL) || (ctxInfo == NULL)) {
         return;
     }
     if (value != NULL) {
-        _ptr2 = (GLfloat *) (((char *) (*env)->GetPrimitiveArrayCritical(env, value, NULL))
-                + valueByteOffset);
+        _ptr2 = (GLfloat *) (((char *) (*env)->GetPrimitiveArrayCritical(env, value, NULL)));
+        if (_ptr2 == NULL) {
+            fprintf(stderr, "nUniform4fv1: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+            return;
+        }
+        _ptr2PlusOffset = _ptr2 + valueByteOffset;
+
     }
-    ctxInfo->glUniform4fv((GLint) location, (GLsizei) count, (GLfloat *) _ptr2);
+    ctxInfo->glUniform4fv((GLint) location, (GLsizei) count, (GLfloat *) _ptr2PlusOffset);
     if (value != NULL) {
         (*env)->ReleasePrimitiveArrayCritical(env, value, _ptr2, 0);
     }
@@ -1475,16 +1495,21 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nUniform4iv1
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint location, jint count,
         jobject value, jint valueByteOffset) {
     GLint *_ptr2 = NULL;
+    GLint *_ptr2PlusOffset = NULL;
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if ((ctxInfo == NULL) || (ctxInfo->glUniform4iv == NULL)) {
         return;
     }
 
     if (value != NULL) {
-        _ptr2 = (GLint *) (((char *) (*env)->GetPrimitiveArrayCritical(env, value, NULL))
-                + valueByteOffset);
+        _ptr2 = (GLint *) (((char *) (*env)->GetPrimitiveArrayCritical(env, value, NULL)));
+        if (_ptr2 == NULL) {
+            fprintf(stderr, "nUniform4iv1: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+            return;
+        }
+        _ptr2PlusOffset = (GLint *) (_ptr2 + valueByteOffset);
     }
-    ctxInfo->glUniform4iv((GLint) location, (GLsizei) count, (GLint *) _ptr2);
+    ctxInfo->glUniform4iv((GLint) location, (GLsizei) count, (GLint *) _ptr2PlusOffset);
     if (value != NULL) {
         (*env)->ReleasePrimitiveArrayCritical(env, value, _ptr2, 0);
     }
@@ -1506,6 +1531,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nUniformMatrix4fv
 
     if (values != NULL) {
         _ptr = (float *)(*env)->GetPrimitiveArrayCritical(env, values, NULL);
+        if (_ptr == NULL) {
+            fprintf(stderr, "nUniformMatrix4fv: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+            return;
+        }
     }
     ctxInfo->glUniformMatrix4fv((GLint) location, 1, (GLboolean) transpose, _ptr);
 

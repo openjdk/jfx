@@ -72,6 +72,16 @@ public class HTMLButtonElementImpl extends HTMLElementImpl implements HTMLButton
     }
     native static void setFormMethodImpl(long peer, String value);
 
+    public String getType() {
+        return getTypeImpl(getPeer());
+    }
+    native static String getTypeImpl(long peer);
+
+    public void setType(String value) {
+        setTypeImpl(getPeer(), value);
+    }
+    native static void setTypeImpl(long peer, String value);
+
     public boolean getFormNoValidate() {
         return getFormNoValidateImpl(getPeer());
     }
@@ -101,16 +111,6 @@ public class HTMLButtonElementImpl extends HTMLElementImpl implements HTMLButton
         setNameImpl(getPeer(), value);
     }
     native static void setNameImpl(long peer, String value);
-
-    public String getType() {
-        return getTypeImpl(getPeer());
-    }
-    native static String getTypeImpl(long peer);
-
-    public void setType(String value) {
-        setTypeImpl(getPeer(), value);
-    }
-    native static void setTypeImpl(long peer, String value);
 
     public String getValue() {
         return getValueImpl(getPeer());

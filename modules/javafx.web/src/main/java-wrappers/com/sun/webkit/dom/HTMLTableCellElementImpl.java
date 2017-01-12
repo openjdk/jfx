@@ -20,16 +20,6 @@ public class HTMLTableCellElementImpl extends HTMLElementImpl implements HTMLTab
     }
     native static int getCellIndexImpl(long peer);
 
-    public String getAbbr() {
-        return getAbbrImpl(getPeer());
-    }
-    native static String getAbbrImpl(long peer);
-
-    public void setAbbr(String value) {
-        setAbbrImpl(getPeer(), value);
-    }
-    native static void setAbbrImpl(long peer, String value);
-
     public String getAlign() {
         return getAlignImpl(getPeer());
     }
@@ -90,6 +80,16 @@ public class HTMLTableCellElementImpl extends HTMLElementImpl implements HTMLTab
     }
     native static void setColSpanImpl(long peer, int value);
 
+    public int getRowSpan() {
+        return getRowSpanImpl(getPeer());
+    }
+    native static int getRowSpanImpl(long peer);
+
+    public void setRowSpan(int value) {
+        setRowSpanImpl(getPeer(), value);
+    }
+    native static void setRowSpanImpl(long peer, int value);
+
     public String getHeaders() {
         return getHeadersImpl(getPeer());
     }
@@ -120,26 +120,6 @@ public class HTMLTableCellElementImpl extends HTMLElementImpl implements HTMLTab
     }
     native static void setNoWrapImpl(long peer, boolean value);
 
-    public int getRowSpan() {
-        return getRowSpanImpl(getPeer());
-    }
-    native static int getRowSpanImpl(long peer);
-
-    public void setRowSpan(int value) {
-        setRowSpanImpl(getPeer(), value);
-    }
-    native static void setRowSpanImpl(long peer, int value);
-
-    public String getScope() {
-        return getScopeImpl(getPeer());
-    }
-    native static String getScopeImpl(long peer);
-
-    public void setScope(String value) {
-        setScopeImpl(getPeer(), value);
-    }
-    native static void setScopeImpl(long peer, String value);
-
     public String getVAlign() {
         return getVAlignImpl(getPeer());
     }
@@ -159,6 +139,26 @@ public class HTMLTableCellElementImpl extends HTMLElementImpl implements HTMLTab
         setWidthImpl(getPeer(), value);
     }
     native static void setWidthImpl(long peer, String value);
+
+    public String getAbbr() {
+        return getAbbrImpl(getPeer());
+    }
+    native static String getAbbrImpl(long peer);
+
+    public void setAbbr(String value) {
+        setAbbrImpl(getPeer(), value);
+    }
+    native static void setAbbrImpl(long peer, String value);
+
+    public String getScope() {
+        return getScopeImpl(getPeer());
+    }
+    native static String getScopeImpl(long peer);
+
+    public void setScope(String value) {
+        setScopeImpl(getPeer(), value);
+    }
+    native static void setScopeImpl(long peer, String value);
 
 }
 

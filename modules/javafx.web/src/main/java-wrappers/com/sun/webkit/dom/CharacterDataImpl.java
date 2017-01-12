@@ -23,7 +23,7 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
     }
     native static String getDataImpl(long peer);
 
-    public void setData(String value) throws DOMException {
+    public void setData(String value) {
         setDataImpl(getPeer(), value);
     }
     native static void setDataImpl(long peer, String value);
@@ -57,7 +57,7 @@ public class CharacterDataImpl extends NodeImpl implements CharacterData {
         , int length);
 
 
-    public void appendData(String data) throws DOMException
+    public void appendData(String data)
     {
         appendDataImpl(getPeer()
             , data);

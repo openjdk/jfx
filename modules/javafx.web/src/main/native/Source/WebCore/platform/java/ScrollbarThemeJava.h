@@ -6,24 +6,23 @@
 #define ScrollbarThemeJava_h
 
 #include "JavaEnv.h"
-#include "ScrollbarTheme.h"
+#include "ScrollbarThemeComposite.h"
 
 namespace WebCore {
 
-class ScrollbarThemeJava : public ScrollbarTheme {
+class ScrollbarThemeJava : public ScrollbarThemeComposite {
 public:
-    virtual bool paint(Scrollbar&, GraphicsContext&, const IntRect& /*damageRect*/);
+    bool paint(Scrollbar&, GraphicsContext&, const IntRect& /*damageRect*/) override;
+    void invalidatePart(Scrollbar&, ScrollbarPart) override;
 
-    virtual ScrollbarPart hitTest(Scrollbar&, const IntPoint&);
+    bool hasButtons(Scrollbar&) override { return true; }
+    bool hasThumb(Scrollbar&) override;
 
-    virtual void invalidatePart(Scrollbar&, ScrollbarPart);
+    int scrollbarThickness(ScrollbarControlSize = RegularScrollbar) override;
 
-    virtual int thumbPosition(Scrollbar&);
-    virtual int thumbLength(Scrollbar&);
-    virtual int trackPosition(Scrollbar&);
-    virtual int trackLength(Scrollbar&);
-
-    virtual int scrollbarThickness(ScrollbarControlSize = RegularScrollbar);
+    IntRect backButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;
+    IntRect forwardButtonRect(Scrollbar&, ScrollbarPart, bool painting = false) override;
+    IntRect trackRect(Scrollbar&, bool painting = false) override;
 };
 
 }

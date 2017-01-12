@@ -31,7 +31,7 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.binding.IntegerExpression;
 
 /**
- * Super class for all readonly properties wrapping an {@code int}.
+ * Superclass for all readonly properties wrapping an {@code int}.
  *
  * @see javafx.beans.value.ObservableIntegerValue
  * @see javafx.beans.binding.IntegerExpression

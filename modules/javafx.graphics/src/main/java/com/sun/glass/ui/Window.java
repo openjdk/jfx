@@ -214,6 +214,7 @@ public abstract class Window {
     private float outputScaleY = 1.0f;
     private float renderScaleX = 1.0f;
     private float renderScaleY = 1.0f;
+    private boolean appletMode = false;
 
     // This is a workaround for RT-15970: as for embedded windows we don't
     // receive any MOVE notifications from the native platform, we poll
@@ -962,6 +963,14 @@ public abstract class Window {
     public float getAlpha() {
         Application.checkEventThread();
         return this.alpha;
+    }
+
+    public boolean getAppletMode() {
+        return appletMode;
+    }
+
+    public void setAppletMode(boolean appletMode) {
+        this.appletMode = appletMode;
     }
 
     protected abstract boolean _setBackground(long ptr, float r, float g, float b);

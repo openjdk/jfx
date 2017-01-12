@@ -58,6 +58,7 @@ class GlassAppletWindow implements AppletWindow {
             this.serverName = serverName;
             glassWindow = Application.GetApplication().createWindow(nativeParent);
         }
+        glassWindow.setAppletMode(true);
     }
 
     Window getGlassWindow() {

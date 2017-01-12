@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,6 +23,13 @@
  * questions.
  */
 
+/**
+ * This module defines the core scenegraph APIs for the JavaFX UI toolkit
+ * (such as layout containers, application lifecycle, shapes,
+ * transformations, canvas, input, painting, image handling, and effects),
+ * as well as APIs for animation, css, concurrency, geometry, printing, and
+ * windowing.
+ */
 module javafx.graphics {
     requires transitive javafx.base;
 
@@ -62,6 +69,8 @@ module javafx.graphics {
         javafx.web;
     exports com.sun.javafx.css to
         javafx.controls;
+    exports com.sun.javafx.css.parser to
+        jdk.packager;
     exports com.sun.javafx.cursor to
         javafx.swing;
     exports com.sun.javafx.embed to
