@@ -1153,12 +1153,12 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_GLContext_nTexImage2D1
 (JNIEnv *env, jclass class, jint target, jint level, jint internalFormat,
         jint width, jint height, jint border, jint format, jint type,
         jobject pixels, jint pixelsByteOffset, jboolean useMipmap) {
-    GLvoid *ptr = NULL;
-    GLvoid *ptrPlusOffset = NULL;
+    char *ptr = NULL;
+    char *ptrPlusOffset = NULL;
     GLenum err;
 
     if (pixels != NULL) {
-        ptr = (GLvoid *) (((char *) (*env)->GetPrimitiveArrayCritical(env, pixels, NULL)));
+        ptr = (char *) (*env)->GetPrimitiveArrayCritical(env, pixels, NULL);
         if (ptr == NULL) {
             fprintf(stderr, "nTexImage2D1: GetPrimitiveArrayCritical returns NULL: out of memory\n");
             return JNI_FALSE;
@@ -1219,10 +1219,10 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nTexSubImage2D1
 (JNIEnv *env, jclass class, jint target, jint level,
         jint xoffset, jint yoffset, jint width, jint height, jint format,
         jint type, jobject pixels, jint pixelsByteOffset) {
-    GLvoid *ptr = NULL;
-    GLvoid *ptrPlusOffset = NULL;
+    char *ptr = NULL;
+    char *ptrPlusOffset = NULL;
     if (pixels != NULL) {
-        ptr = (GLvoid *) (((char *) (*env)->GetPrimitiveArrayCritical(env, pixels, NULL)));
+        ptr = (char *) (*env)->GetPrimitiveArrayCritical(env, pixels, NULL);
         if (ptr == NULL) {
             fprintf(stderr, "nTexSubImage2D1: GetPrimitiveArrayCritical returns NULL: out of memory\n");
             return;
