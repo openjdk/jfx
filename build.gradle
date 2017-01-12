@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -3687,6 +3687,15 @@ compileTargets { t ->
                     include "**/*.java"
                     if (project.hasProperty("sourceFilter")) {
                         filter(project.sourceFilter)
+                    }
+                }
+                // Copy .html and other files needed for doc bundles
+                if (copySources) {
+                    copy {
+                        from "${project.projectDir}/src/main/java"
+                        from "${project.projectDir}/src/main/docs"
+                        into "${modulesSrcDir}/${moduleName}"
+                        exclude "**/*.java"
                     }
                 }
 
