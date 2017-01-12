@@ -2,7 +2,6 @@ java.base
 java.compiler
 java.datatransfer
 java.desktop
-java.httpclient
 java.instrument
 java.logging
 java.management
@@ -29,7 +28,6 @@ jdk.attach
 jdk.charsets
 jdk.compiler
 jdk.crypto.ec
-jdk.crypto.pkcs11
 jdk.desktop
 jdk.dynalink
 jdk.editpad
