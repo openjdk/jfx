@@ -464,6 +464,10 @@ _sysmem_copy (GstMemorySystem * mem, gssize offset, gsize size)
     size = mem->mem.size > offset ? mem->mem.size - offset : 0;
 
   copy = _sysmem_new_block (0, size, mem->mem.align, 0, size);
+#ifdef GSTREAMER_LITE
+  if (copy == NULL)
+    return NULL;
+#endif // GSTREAMER_LITE
   GST_CAT_DEBUG (GST_CAT_PERFORMANCE,
       "memcpy %" G_GSIZE_FORMAT " memory %p -> %p", size, mem, copy);
   memcpy (copy->data, mem->data + mem->mem.offset + offset, size);
