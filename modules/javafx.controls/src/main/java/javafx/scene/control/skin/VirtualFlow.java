@@ -1998,13 +1998,13 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
         }
 
         //
-        // RT-36507: viewportLength - offset gives the maximum number of
+        // RT-36507: viewportLength gives the maximum number of
         // additional cells that should ever be able to fit in the viewport if
         // every cell had a height of 1. If index ever exceeds this count,
         // then offset is not incrementing fast enough, or at all, which means
         // there is something wrong with the cell size calculation.
         //
-        final double maxCellCount = viewportLength - offset;
+        final double maxCellCount = viewportLength;
         while (offset < viewportLength) {
             if (index >= cellCount) {
                 if (offset < viewportLength) filledWithNonEmpty = false;
