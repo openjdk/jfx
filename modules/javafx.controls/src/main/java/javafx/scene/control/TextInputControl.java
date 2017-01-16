@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -566,7 +566,7 @@ public abstract class TextInputControl extends Control {
         int endOfUndoChange = undoChange == undoChangeHead ? -1 : undoChange.start + undoChange.newText.length();
         String newText = getText(change.start, change.start + change.text.length() - adjustmentAmount);
         if (createNewUndoRecord || nonEmptySelection || endOfUndoChange == -1 || forceNewUndoRecord ||
-                (endOfUndoChange != change.start && endOfUndoChange != change.end) || change.start - change.end > 1) {
+                (endOfUndoChange != change.start && endOfUndoChange != change.end) || change.end - change.start > 1) {
             undoChange = undoChange.add(change.start, oldText, newText);
         } else if (change.start != change.end && change.text.isEmpty()) {
             // I know I am deleting, and am located at the end of the range of the current undo record

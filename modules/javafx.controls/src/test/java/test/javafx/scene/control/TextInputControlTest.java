@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1789,6 +1789,31 @@ public class TextInputControlTest {
         textInput.deleteNextChar();
     }
 
+    @Test public void test_jdk_8171229_replaceText() {
+        textInput.setText("");
+        assertEquals("", textInput.getText());
+
+        textInput.replaceText(0, 0, "a");
+        assertEquals("a", textInput.getText());
+
+        textInput.replaceText(1, 1, "b");
+        assertEquals("ab", textInput.getText());
+
+        textInput.replaceText(2, 2, "c");
+        assertEquals("abc", textInput.getText());
+
+        textInput.replaceText(3, 3, "d");
+        assertEquals("abcd", textInput.getText());
+
+        textInput.replaceText(3, 4, "efg");
+        assertEquals("abcefg", textInput.getText());
+
+        textInput.replaceText(3, 6, "d");
+        assertEquals("abcd", textInput.getText());
+
+        textInput.replaceText(0, 4, "");
+        assertEquals("", textInput.getText());
+    }
 
     // TODO tests for Content firing event notification properly
 
