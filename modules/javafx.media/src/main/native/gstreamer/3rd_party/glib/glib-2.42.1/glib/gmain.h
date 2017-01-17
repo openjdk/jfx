@@ -525,8 +525,10 @@ GLIB_AVAILABLE_IN_ALL
 GSource *g_child_watch_source_new (GPid pid);
 GLIB_AVAILABLE_IN_ALL
 GSource *g_timeout_source_new     (guint interval);
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 GSource *g_timeout_source_new_seconds (guint interval);
+#endif // GSTREAMER_LITE
 
 /* Miscellaneous functions
  */
@@ -558,6 +560,7 @@ GLIB_AVAILABLE_IN_ALL
 guint    g_timeout_add              (guint           interval,
                                      GSourceFunc     function,
                                      gpointer        data);
+#ifndef GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 guint    g_timeout_add_seconds_full (gint            priority,
                                      guint           interval,
@@ -568,6 +571,7 @@ GLIB_AVAILABLE_IN_ALL
 guint    g_timeout_add_seconds      (guint           interval,
                                      GSourceFunc     function,
                                      gpointer        data);
+#endif // GSTREAMER_LITE
 GLIB_AVAILABLE_IN_ALL
 guint    g_child_watch_add_full     (gint            priority,
                                      GPid            pid,
