@@ -252,6 +252,14 @@ public class MiscellaneousTest extends TestBase {
         });
     }
 
+    // This test case will be removed once we implement Websql feature.
+    @Test public void testWebSQLUndefined() {
+        final WebEngine webEngine = createWebEngine();
+        submit(() -> {
+            assertEquals("undefined", webEngine.executeScript("window.openDatabase"));
+        });
+    }
+
     private WebEngine createWebEngine() {
         return submit(() -> new WebEngine());
     }
