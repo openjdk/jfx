@@ -86,7 +86,19 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             I18N.getString("param.signing-key-pkg.description"),
             "mac.signing-key-pkg",
             String.class,
-            params -> MacBaseInstallerBundler.findKey("3rd Party Mac Developer Installer: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params)),
+            params -> {
+                    String result = MacBaseInstallerBundler.findKey("3rd Party Mac Developer Installer: " + SIGNING_KEY_USER.fetchFrom(params), SIGNING_KEYCHAIN.fetchFrom(params), VERBOSE.fetchFrom(params));
+
+                    if (result != null) {
+                        MacCertificate certificate = new MacCertificate(result, VERBOSE.fetchFrom(params));
+
+                        if (!certificate.isValid()) {
+                            Log.info(MessageFormat.format(I18N.getString("error.certificate.expired"), result));
+                        }
+                    }
+
+                    return result;
+                },
             (s, p) -> s);
 
     public static final StandardBundlerParam<File> MAC_APP_STORE_ENTITLEMENTS  = new StandardBundlerParam<>(
@@ -152,13 +164,15 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
                     + ".pkg");
             outdir.mkdirs();
 
+            String installIdentify = MAC_APP_STORE_PKG_SIGNING_KEY.fetchFrom(p);
+
             List<String> buildOptions = new ArrayList<>();
             buildOptions.add("productbuild");
             buildOptions.add("--component");
             buildOptions.add(appLocation.toString());
             buildOptions.add("/Applications");
             buildOptions.add("--sign");
-            buildOptions.add(MAC_APP_STORE_PKG_SIGNING_KEY.fetchFrom(p));
+            buildOptions.add(installIdentify);
             buildOptions.add("--product");
             buildOptions.add(appLocation + "/Contents/Info.plist");
             String keychainName = SIGNING_KEYCHAIN.fetchFrom(p);

@@ -479,12 +479,11 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
     }
 
     private void writeRuntimeInfoPlist(File file) throws IOException {
-        //FIXME //TODO these values are bogus.
         Map<String, String> data = new HashMap<>();
-        data.put("CF_BUNDLE_INFO", "bundle info");
-        data.put("CF_BUNDLE_IDENTIFIER", "com.oracle.java.8u60.jdk");
-        data.put("CF_BUNDLE_NAME", "Java SE 9");
-        data.put("CF_BUNDLE_VERSION", "1.8.0_60");
+        data.put("CF_BUNDLE_IDENTIFIER", "com.oracle.java." + MAC_CF_BUNDLE_IDENTIFIER.fetchFrom(params));
+        data.put("CF_BUNDLE_NAME", "Java Runtime Image");
+        data.put("CF_BUNDLE_VERSION", VERSION.fetchFrom(params));
+        data.put("CF_BUDNEL_SHORT_VERSION_STRING", VERSION.fetchFrom(params));
 
         Writer w = new BufferedWriter(new FileWriter(file));
         w.write(preprocessTextResource(
