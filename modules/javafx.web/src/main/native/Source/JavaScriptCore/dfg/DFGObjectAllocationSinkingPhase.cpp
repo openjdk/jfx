@@ -486,8 +486,9 @@ public:
             escapeAllocation(identifier);
 
         if (!ASSERT_DISABLED) {
-            for (const auto& entry : m_allocations)
+            for (const auto& entry : m_allocations) {
                 ASSERT_UNUSED(entry, entry.value.isEscapedAllocation() || other.m_allocations.contains(entry.key));
+            }
         }
 
         // If there is no remaining pointer to an allocation, we can

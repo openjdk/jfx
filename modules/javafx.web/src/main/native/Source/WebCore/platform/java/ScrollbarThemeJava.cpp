@@ -74,7 +74,7 @@ IntRect getPartRect(Scrollbar& scrollbar, ScrollbarPart part) {
         getJScrollBarThemeClass(),
         "getScrollBarPartRect",
         "(JI[I)V");
-    ASSERT(mid);
+    ASSERT(midGetPartRect);
     JLocalRef<jintArray> jrect(env->NewIntArray(4));
     CheckAndClearException(env); // OOME
     ASSERT(jrect);
