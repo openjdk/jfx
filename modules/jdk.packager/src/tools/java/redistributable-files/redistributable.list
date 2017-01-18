@@ -37,7 +37,6 @@ jdk.javadoc
 jdk.jconsole
 jdk.jdi
 jdk.jdwp.agent
-jdk.jfr
 jdk.jsobject
 jdk.jstatd
 jdk.jvmstat
@@ -51,7 +50,6 @@ jdk.scripting.nashorn
 jdk.sctp
 jdk.security.auth
 jdk.security.jgss
-jdk.snmp
 jdk.unsupported
 jdk.vm.ci
 jdk.xml.dom
