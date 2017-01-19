@@ -2972,15 +2972,10 @@ project(":web") {
     }
 
     test {
-        /*
-        if (!IS_JIGSAW_TEST) {
-        //TODO: support this in Jake
         // Run web tests in headless mode
         systemProperty 'glass.platform', 'Monocle'
         systemProperty 'monocle.platform', 'Headless'
         systemProperty 'prism.order', 'sw'
-        }
-        */
         dependsOn webArchiveJar
         def testResourceDir = file("$buildDir/testing/resources")
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
