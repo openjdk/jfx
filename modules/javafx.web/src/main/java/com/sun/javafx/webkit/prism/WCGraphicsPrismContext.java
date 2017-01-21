@@ -1712,7 +1712,10 @@ class WCGraphicsPrismContext extends WCGraphicsContext {
             lineWidth,
             BasicStroke.CAP_BUTT,
             BasicStroke.JOIN_MITER,
-            Math.max(1.0f, lineWidth));
+            Math.max(1.0f, lineWidth),
+            state.getStrokeNoClone().getDashSizes(),
+            state.getStrokeNoClone().getDashOffset());
+
         if (!shouldRenderRect(x, y, w, h, null, stroke)) {
             return;
         }
