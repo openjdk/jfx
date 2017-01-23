@@ -1386,24 +1386,24 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nUniform4fv0
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nUniform4fv1
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint location, jint count,
         jobject value, jint valueByteOffset) {
-    GLfloat *_ptr2 = NULL;
-    GLfloat *_ptr2PlusOffset = NULL;
+    char *ptr = NULL;
+    char *ptrPlusOffset = NULL;
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if ((env == NULL) || (ctxInfo == NULL)) {
         return;
     }
     if (value != NULL) {
-        _ptr2 = (GLfloat *) (((char *) (*env)->GetPrimitiveArrayCritical(env, value, NULL)));
-        if (_ptr2 == NULL) {
+        ptr = (char *) (*env)->GetPrimitiveArrayCritical(env, value, NULL);
+        if (ptr == NULL) {
             fprintf(stderr, "nUniform4fv1: GetPrimitiveArrayCritical returns NULL: out of memory\n");
             return;
         }
-        _ptr2PlusOffset = _ptr2 + valueByteOffset;
+        ptrPlusOffset = ptr + valueByteOffset;
 
     }
-    ctxInfo->glUniform4fv((GLint) location, (GLsizei) count, (GLfloat *) _ptr2PlusOffset);
+    ctxInfo->glUniform4fv((GLint) location, (GLsizei) count, (GLfloat *) ptrPlusOffset);
     if (value != NULL) {
-        (*env)->ReleasePrimitiveArrayCritical(env, value, _ptr2, 0);
+        (*env)->ReleasePrimitiveArrayCritical(env, value, ptr, 0);
     }
 }
 
@@ -1494,24 +1494,24 @@ JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nUniform4iv0
 JNIEXPORT void JNICALL Java_com_sun_prism_es2_GLContext_nUniform4iv1
 (JNIEnv *env, jclass class, jlong nativeCtxInfo, jint location, jint count,
         jobject value, jint valueByteOffset) {
-    GLint *_ptr2 = NULL;
-    GLint *_ptr2PlusOffset = NULL;
+    char *ptr = NULL;
+    char *ptrPlusOffset = NULL;
     ContextInfo *ctxInfo = (ContextInfo *) jlong_to_ptr(nativeCtxInfo);
     if ((ctxInfo == NULL) || (ctxInfo->glUniform4iv == NULL)) {
         return;
     }
 
     if (value != NULL) {
-        _ptr2 = (GLint *) (((char *) (*env)->GetPrimitiveArrayCritical(env, value, NULL)));
-        if (_ptr2 == NULL) {
+        ptr = (char *) (*env)->GetPrimitiveArrayCritical(env, value, NULL);
+        if (ptr == NULL) {
             fprintf(stderr, "nUniform4iv1: GetPrimitiveArrayCritical returns NULL: out of memory\n");
             return;
         }
-        _ptr2PlusOffset = (GLint *) (_ptr2 + valueByteOffset);
+        ptrPlusOffset = ptr + valueByteOffset;
     }
-    ctxInfo->glUniform4iv((GLint) location, (GLsizei) count, (GLint *) _ptr2PlusOffset);
+    ctxInfo->glUniform4iv((GLint) location, (GLsizei) count, (GLint *) ptrPlusOffset);
     if (value != NULL) {
-        (*env)->ReleasePrimitiveArrayCritical(env, value, _ptr2, 0);
+        (*env)->ReleasePrimitiveArrayCritical(env, value, ptr, 0);
     }
 }
 
