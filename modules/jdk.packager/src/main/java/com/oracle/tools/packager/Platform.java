@@ -25,6 +25,7 @@
 
 package com.oracle.tools.packager;
 
+import java.util.regex.Pattern;
 
 /**
  * Use <code>Platform</code> to detect the operating system that is currently running.
@@ -46,29 +47,56 @@ package com.oracle.tools.packager;
  */
 
 public enum Platform {UNKNOWN, WINDOWS, LINUX, MAC;
-    private static final Platform FPlatform;
+    private static final Platform platform;
+    private static final int majorVersion;
+    private static final int minorVersion;
 
     static {
         String os = System.getProperty("os.name").toLowerCase();
 
         if (os.indexOf("win") >= 0) {
-            FPlatform = Platform.WINDOWS;
+            platform = Platform.WINDOWS;
         }
         else if (os.indexOf("nix") >= 0 || os.indexOf("nux") >= 0) {
-            FPlatform = Platform.LINUX;
+            platform = Platform.LINUX;
         }
         else if (os.indexOf("mac") >= 0) {
-            FPlatform = Platform.MAC;
+            platform = Platform.MAC;
         }
         else {
-            FPlatform = Platform.UNKNOWN;
+            platform = Platform.UNKNOWN;
+        }
+
+        String version = System.getProperty("os.version").toString();
+        String[] parts = version.split(Pattern.quote("."));
+
+        if (parts.length > 0) {
+            majorVersion = Integer.parseInt(parts[0]);
+
+            if (parts.length > 1) {
+                minorVersion = Integer.parseInt(parts[0]);
+            }
+            else {
+                minorVersion = -1;
+            }
+        }
+        else {
+            majorVersion = -1;
+            minorVersion = -1;
         }
     }
 
     private Platform() {}
 
     public static Platform getPlatform() {
-        return FPlatform;
+        return platform;
+    }
+
+    public static int getMajorVersion() {
+        return majorVersion;
+    }
+
+    public static int getMinorVersion() {
+        return minorVersion;
     }
 }
-
