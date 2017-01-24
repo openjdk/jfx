@@ -1661,6 +1661,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
         if (num_scanlines == 1) {
             jboolean iscopy = FALSE;
             jbyte *body = (*env)->GetPrimitiveArrayCritical(env, barray, &iscopy);
+            if (body == NULL) {
+                fprintf(stderr, "decompressIndirect: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+                return JNI_FALSE;
+            }
             memcpy(body+offset,scanline_ptr, bytes_per_row);
             (*env)->ReleasePrimitiveArrayCritical(env, barray, body, JNI_ABORT);
             offset += bytes_per_row;

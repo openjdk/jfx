@@ -72,7 +72,10 @@ JNIEXPORT jlong JNICALL Java_com_sun_glass_ui_lens_LensCursor__1createNativeCurs
 (JNIEnv *env, jobject jCursor, jint x, jint y,  jintArray srcArray, jint width, jint height) {
 
     jbyte *src = (*env)->GetPrimitiveArrayCritical(env, srcArray, 0);
-
+    if (src == NULL) {
+        fprintf(stderr, "1createNativeCursorInts: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+        return 0;
+    }
 
     jlong res =  glass_cursor_createNativeCursor(env, x, y, src, width, height);
 
