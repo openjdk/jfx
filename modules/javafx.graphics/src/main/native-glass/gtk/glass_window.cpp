@@ -1012,7 +1012,8 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                                              + geometry.extents.bottom;
     gint x, y;
     if (gtk_window_get_decorated(GTK_WINDOW(gtk_widget))) {
-        gtk_window_get_position(GTK_WINDOW(gtk_widget), &x, &y);
+        x = event->x - geometry.extents.left;
+        y = event->y - geometry.extents.top;
     } else {
         x = event->x;
         y = event->y;
