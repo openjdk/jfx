@@ -633,11 +633,19 @@ void WindowContextBase::set_cursor(GdkCursor* cursor) {
 }
 
 void WindowContextBase::set_background(float r, float g, float b) {
+#ifdef GLASS_GTK3
+    GdkRGBA rgba = {0, 0, 0, 1.};
+    rgba.red = r;
+    rgba.green = g;
+    rgba.blue = b;
+    gdk_window_set_background_rgba(gdk_window, &rgba);
+#else
     GdkColor color;
     color.red   = (guint16) (r * 65535);
     color.green = (guint16) (g * 65535);
     color.blue  = (guint16) (b * 65535);
     gtk_widget_modify_bg(gtk_widget, GTK_STATE_NORMAL, &color);
+#endif
 }
 
 WindowContextBase::~WindowContextBase() {
@@ -823,7 +831,6 @@ WindowContextTop::get_frame_extents_property(int *top, int *left,
 
     return false;
 }
-
 
 static int geometry_get_window_width(const WindowGeometry *windowGeometry) {
      return (windowGeometry->final_width.type != BOUNDSTYPE_WINDOW)

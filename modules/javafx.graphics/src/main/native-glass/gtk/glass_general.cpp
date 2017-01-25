@@ -659,13 +659,6 @@ glass_gtk_configure_transparency_and_realize(GtkWidget *window,
                                              gboolean transparent) {
         gboolean isTransparent = glass_configure_window_transparency(window, transparent);
         gtk_widget_realize(window);
-
-#ifdef GLASS_GTK3
-        if (isTransparent) {
-            GdkRGBA rgba = { 1.0, 1.0, 1.0, 0.0 };
-            gdk_window_set_background_rgba(gtk_widget_get_window(window), &rgba);
-        }
-#endif
 }
 
 void
