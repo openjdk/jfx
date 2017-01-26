@@ -39,6 +39,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
 import javafx.stage.Window;
 import javax.swing.JComponent;
+import javax.swing.Timer;
 import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Cursor;
@@ -174,6 +175,7 @@ public class SwingNode extends Node {
 
     private boolean skipBackwardUnrgabNotification;
     private boolean grabbed; // lwframe initiated grab
+    private Timer deactivate; // lwFrame deactivate delay for Linux
 
     {
         // To initialize the class helper at the begining each constructor of this class
@@ -654,6 +656,26 @@ public class SwingNode extends Node {
         if (lwFrame == null) {
             return;
         }
+        if (PlatformUtil.isLinux()) {
+            // Workaround to block FocusOut/FocusIn notifications from Unity
+            // focus grabbing upon Alt press
+            if (deactivate == null || !deactivate.isRunning()) {
+                if (!activate) {
+                    deactivate = new Timer(50, (e) -> {
+                        {
+                            if (lwFrame != null) {
+                                lwFrame.emulateActivation(false);
+                            }
+                        }
+                    });
+                    deactivate.start();
+                    return;
+                }
+            } else {
+                deactivate.stop();
+            }
+        }
+
         SwingFXUtils.runOnEDT(() -> {
             if (lwFrame != null) {
                 lwFrame.emulateActivation(activate);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene.web;
 
+import netscape.javascript.JSObject;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -35,7 +36,7 @@ import static org.junit.Assert.*;
 /**
  * Test the Image to DataURL function
  */
-public class ImageToDataURLTest extends TestBase {
+public class CanvasTest extends TestBase {
 
     private static final String expectedURL = "data:image/png;base64," +
         "iVBORw0KGgoAAAANSUhEUgAAAMgAAABkCAYAAADDhn8LAAACPklEQVR42u3T" +
@@ -89,4 +90,60 @@ public class ImageToDataURLTest extends TestBase {
         });
     }
 
+    // JDK-8162922
+    @Test public void testCanvasStrokeRect() {
+
+        final String htmlCanvasContent = "\n"
+            + "<!DOCTYPE html>\n"
+            + "<html>\n"
+            + "<body>\n"
+            + "<canvas id=\"myCanvas\" width=\"200\" height=\"100\">\n"
+            + "</canvas>\n"
+            + "<script>\n"
+            + "var c = document.getElementById(\"myCanvas\");\n"
+            + "var ctx = c.getContext(\"2d\");\n"
+            + "ctx.lineWidth = 4;\n"
+            + "ctx.setLineDash([4,4]);\n"
+            + "ctx.strokeStyle = '#f00';\n"
+            + "ctx.strokeRect(10,30,70,70);\n"
+            + "var imageData = ctx.getImageData(10, 30, 60, 60);\n"
+            + "window.data = imageData.data;\n"
+            + "</script>\n"
+            + "</body>\n"
+            + "</html>\n";
+
+        loadContent(htmlCanvasContent);
+
+        // Without the fix for JDK-8162922, canvas image data will be like below, which is wrong.
+        /**
+        final int[] wrongPixelArray = {255, 0, 0, 255,
+                                       255, 0, 0, 255,
+                                       255, 0, 0, 255,
+                                       255, 0, 0, 255,
+                                       255, 0, 0, 255,
+                                       255, 0, 0, 255,
+                                       255, 0, 0, 255,
+                                       255, 0, 0, 255,};
+        */
+
+        // Sample pixel array to test against the canvas image data (with fix for JDK-8162922)
+        final int[] expectedPixelArray = {255, 0, 0, 255,
+                                          255, 0, 0, 255,
+                                          255, 0, 0, 255,
+                                          255, 0, 0, 255,
+                                          0, 0, 0, 0,
+                                          0, 0, 0, 0,
+                                          0, 0, 0, 0,
+                                          0, 0, 0, 0};
+
+        submit(() -> {
+            final JSObject obj = (JSObject) getEngine().executeScript("window.data");
+            assertEquals("Device Pixel Ratio should be 1", 1, (int) getEngine().executeScript("window.devicePixelRatio"));
+            // Due to mismatch of first pixel(probably a bug), we are skipping first pixel and testing
+            // from second pixel onwards (from 16th value) till next 3 pixels (till 47th value)
+            for (int i = 16; i < 48; i++) {
+                assertEquals("StrokeRect pixel data is same", expectedPixelArray[i - 16], (int)obj.getSlot(i));
+            }
+        });
+    }
 }

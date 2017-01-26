@@ -38,6 +38,7 @@ import static com.oracle.tools.packager.StandardBundlerParam.SECONDARY_LAUNCHERS
 import static com.oracle.tools.packager.StandardBundlerParam.SERVICE_HINT;
 import static com.oracle.tools.packager.StandardBundlerParam.VERBOSE;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.*;
+import jdk.packager.internal.windows.WindowsDefender;
 
 public class WinExeBundler extends AbstractBundler {
 
@@ -333,8 +334,13 @@ public class WinExeBundler extends AbstractBundler {
         if (!outputDirectory.isDirectory() && !outputDirectory.mkdirs()) {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-create-output-dir"), outputDirectory.getAbsolutePath()));
         }
+
         if (!outputDirectory.canWrite()) {
             throw new RuntimeException(MessageFormat.format(I18N.getString("error.cannot-write-to-output-dir"), outputDirectory.getAbsolutePath()));
+        }
+
+        if (WindowsDefender.isThereAPotentialWindowsDefenderIssue()) {
+            Log.info(MessageFormat.format(I18N.getString("message.potential.windows.defender.issue"), WindowsDefender.getUserTempDirectory()));
         }
 
         // validate we have valid tools before continuing

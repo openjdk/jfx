@@ -164,12 +164,15 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             (nativeBundles == BundleType.JNLP ||
              nativeBundles == BundleType.ALL ||
              nativeBundles == BundleType.NONE)) {
+
+            setAppInfo();
+
             deployParams.setOfflineAllowed(offlineAllowed);
             deployParams.setVerbose(verbose);
             deployParams.setCodebase(codebase);
             deployParams.setSignBundle(signBundle);
 
-            if (app.getModule() == null) {
+            if (app != null && app.getModule() == null) {
                 deployParams.setApplicationClass(app.get().mainClass);
             }
 
@@ -243,30 +246,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                 setRuntime();
             }
 
-            if (appInfo != null) {
-                deployParams.setTitle(appInfo.title);
-                deployParams.setVendor(appInfo.vendor);
-                deployParams.setDescription(appInfo.appDescription);
-                deployParams.setCategory(appInfo.category);
-                deployParams.setLicenseType(appInfo.licenseType);
-                deployParams.setCopyright(appInfo.copyright);
-                deployParams.setEmail(appInfo.email);
-
-                for (Info.Icon i: appInfo.icons) {
-                    if (i instanceof Info.Splash) {
-                       deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
-                            ((Info.Splash) i).mode);
-                    } else {
-                       deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
-                            DeployParams.RunMode.WEBSTART);
-                    }
-                }
-
-                deployParams.addBundleArgument(StandardBundlerParam.FILE_ASSOCIATIONS.getID(),
-                        appInfo.fileAssociations.stream()
-                            .map(FileAssociation::createLauncherMap)
-                            .collect(Collectors.toList()));
-            }
+            setAppInfo();
 
             setPlatform();
             setPreferences();
@@ -294,30 +274,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
                 setRuntime();
             }
 
-            if (appInfo != null) {
-                deployParams.setTitle(appInfo.title);
-                deployParams.setVendor(appInfo.vendor);
-                deployParams.setDescription(appInfo.appDescription);
-                deployParams.setCategory(appInfo.category);
-                deployParams.setLicenseType(appInfo.licenseType);
-                deployParams.setCopyright(appInfo.copyright);
-                deployParams.setEmail(appInfo.email);
-
-                for (Info.Icon i: appInfo.icons) {
-                    if (i instanceof Info.Splash) {
-                       deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
-                            ((Info.Splash) i).mode);
-                    } else {
-                       deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
-                            DeployParams.RunMode.WEBSTART);
-                    }
-                }
-
-                deployParams.addBundleArgument(StandardBundlerParam.FILE_ASSOCIATIONS.getID(),
-                        appInfo.fileAssociations.stream()
-                            .map(FileAssociation::createLauncherMap)
-                            .collect(Collectors.toList()));
-            }
+            setAppInfo();
 
             setPlatform();
             setPreferences();
@@ -671,6 +628,33 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             deployParams.setNeedMenu(prefs.getMenu());
             deployParams.setSystemWide(prefs.getSystemInstall());
             deployParams.setInstalldirChooser(prefs.getInstalldirChooser());
+        }
+    }
+
+    private void setAppInfo() {
+        if (appInfo != null) {
+            deployParams.setTitle(appInfo.title);
+            deployParams.setVendor(appInfo.vendor);
+            deployParams.setDescription(appInfo.appDescription);
+            deployParams.setCategory(appInfo.category);
+            deployParams.setLicenseType(appInfo.licenseType);
+            deployParams.setCopyright(appInfo.copyright);
+            deployParams.setEmail(appInfo.email);
+
+            for (Info.Icon i: appInfo.icons) {
+                if (i instanceof Info.Splash) {
+                   deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
+                        ((Info.Splash) i).mode);
+                } else {
+                   deployParams.addIcon(i.href, i.kind, i.width, i.height, i.depth,
+                        DeployParams.RunMode.WEBSTART);
+                }
+            }
+
+            deployParams.addBundleArgument(StandardBundlerParam.FILE_ASSOCIATIONS.getID(),
+                    appInfo.fileAssociations.stream()
+                        .map(FileAssociation::createLauncherMap)
+                        .collect(Collectors.toList()));
         }
     }
 

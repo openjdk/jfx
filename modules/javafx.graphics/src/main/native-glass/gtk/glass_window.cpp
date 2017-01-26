@@ -633,11 +633,19 @@ void WindowContextBase::set_cursor(GdkCursor* cursor) {
 }
 
 void WindowContextBase::set_background(float r, float g, float b) {
+#ifdef GLASS_GTK3
+    GdkRGBA rgba = {0, 0, 0, 1.};
+    rgba.red = r;
+    rgba.green = g;
+    rgba.blue = b;
+    gdk_window_set_background_rgba(gdk_window, &rgba);
+#else
     GdkColor color;
     color.red   = (guint16) (r * 65535);
     color.green = (guint16) (g * 65535);
     color.blue  = (guint16) (b * 65535);
     gtk_widget_modify_bg(gtk_widget, GTK_STATE_NORMAL, &color);
+#endif
 }
 
 WindowContextBase::~WindowContextBase() {
@@ -824,7 +832,6 @@ WindowContextTop::get_frame_extents_property(int *top, int *left,
     return false;
 }
 
-
 static int geometry_get_window_width(const WindowGeometry *windowGeometry) {
      return (windowGeometry->final_width.type != BOUNDSTYPE_WINDOW)
                    ? windowGeometry->final_width.value
@@ -967,24 +974,16 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
             int newWidth = geometry_get_content_width(&geometry);
             int newHeight = geometry_get_content_height(&geometry);
 
-            if (oldX != newX) {
+            if (oldX != newX || oldY != newY) {
+                windowChangesMask |= CWX | CWY;
                 windowChanges.x = newX;
-                windowChangesMask |= CWX;
-            }
-
-            if (oldY != newY) {
                 windowChanges.y = newY;
-                windowChangesMask |= CWY;
             }
 
-            if (oldWidth != newWidth) {
+            if (oldWidth != newWidth || oldHeight != newHeight) {
+                windowChangesMask |= CWWidth | CWHeight;
                 windowChanges.width = newWidth;
-                windowChangesMask |= CWWidth;
-            }
-
-            if (oldHeight != newHeight) {
                 windowChanges.height = newHeight;
-                windowChangesMask |= CWHeight;
             }
 
             window_configure(&windowChanges, windowChangesMask);
@@ -1005,7 +1004,8 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
                                              + geometry.extents.bottom;
     gint x, y;
     if (gtk_window_get_decorated(GTK_WINDOW(gtk_widget))) {
-        gtk_window_get_position(GTK_WINDOW(gtk_widget), &x, &y);
+        x = event->x - geometry.extents.left;
+        y = event->y - geometry.extents.top;
     } else {
         x = event->x;
         y = event->y;
@@ -1193,86 +1193,42 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
         return;
     }
 
-    Display *display = GDK_DISPLAY_XDISPLAY (gdk_window_get_display (gdk_window));
+    if (windowChangesMask & (CWX | CWY)) {
+        gint newX, newY;
+        gtk_window_get_position(GTK_WINDOW(gtk_widget), &newX, &newY);
 
-    if (!gtk_widget_get_visible(gtk_widget)) {
-        // not visible yet, synchronize with gtk only
-        if (windowChangesMask & (CWX | CWY)) {
-            gint newX, newY;
-            gtk_window_get_position(GTK_WINDOW(gtk_widget), &newX, &newY);
-
-            if (windowChangesMask & CWX) {
-                newX = windowChanges->x;
-            }
-            if (windowChangesMask & CWY) {
-                newY = windowChanges->y;
-            }
-
-            gtk_window_move(GTK_WINDOW(gtk_widget), newX, newY);
+        if (windowChangesMask & CWX) {
+            newX = windowChanges->x;
+        }
+        if (windowChangesMask & CWY) {
+            newY = windowChanges->y;
         }
 
-        if (windowChangesMask & (CWWidth | CWHeight)) {
-            gint newWidth, newHeight;
-            gtk_window_get_size(GTK_WINDOW(gtk_widget),
-                    &newWidth, &newHeight);
-
-            if (windowChangesMask & CWWidth) {
-                newWidth = windowChanges->width;
-            }
-            if (windowChangesMask & CWHeight) {
-                newHeight = windowChanges->height;
-            }
-
-            gtk_window_resize(GTK_WINDOW(gtk_widget), newWidth, newHeight);
-        }
-        stale_config_notifications = 1;
-        return;
+        gtk_window_move(GTK_WINDOW(gtk_widget), newX, newY);
+        stale_config_notifications++;
     }
 
-    ++stale_config_notifications;
+    if (windowChangesMask & (CWWidth | CWHeight)) {
+        gint newWidth, newHeight;
+        gtk_window_get_size(GTK_WINDOW(gtk_widget), &newWidth, &newHeight);
 
-    if (!resizable.value && (windowChangesMask & (CWWidth | CWHeight))) {
-        XSizeHints *sizeHints = XAllocSizeHints();
-        if (sizeHints != NULL) {
-            int fixedWidth = (windowChangesMask & CWWidth)
-                    ? windowChanges->width
-                    : geometry_get_content_width(&geometry);
-            int fixedHeight = (windowChangesMask & CWHeight)
-                    ? windowChanges->height
-                    : geometry_get_content_height(&geometry);
-
-            sizeHints->flags = PMinSize | PMaxSize;
-
-            sizeHints->min_width = 1;
-            sizeHints->min_height = 1;
-            sizeHints->max_width = INT_MAX;
-            sizeHints->max_height = INT_MAX;
-            XSetWMNormalHints(display,
-                    GDK_WINDOW_XID(gdk_window),
-                    sizeHints);
-
-            XConfigureWindow(display,
-                    GDK_WINDOW_XID(gdk_window),
-                    windowChangesMask,
-                    windowChanges);
-
-            sizeHints->min_width = fixedWidth;
-            sizeHints->min_height = fixedHeight;
-            sizeHints->max_width = fixedWidth;
-            sizeHints->max_height = fixedHeight;
-            XSetWMNormalHints(display,
-                    GDK_WINDOW_XID(gdk_window),
-                    sizeHints);
-
-            XFree(sizeHints);
-            return;
+        if (windowChangesMask & CWWidth) {
+            newWidth = windowChanges->width;
         }
-    }
+        if (windowChangesMask & CWHeight) {
+            newHeight = windowChanges->height;
+        }
 
-    XConfigureWindow(display,
-            GDK_WINDOW_XID(gdk_window),
-            windowChangesMask,
-            windowChanges);
+        if (!resizable.value) {
+            GdkGeometry geom;
+            GdkWindowHints hints = (GdkWindowHints)(GDK_HINT_MIN_SIZE | GDK_HINT_MAX_SIZE);
+            geom.min_width = geom.max_width = newWidth;
+            geom.min_height = geom.max_height = newHeight;
+            gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom, hints);
+        }
+        gtk_window_resize(GTK_WINDOW(gtk_widget), newWidth, newHeight);
+        stale_config_notifications++;
+    }
 }
 
 void WindowContextTop::applyShapeMask(void* data, uint width, uint height)

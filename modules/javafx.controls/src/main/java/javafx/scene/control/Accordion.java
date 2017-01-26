@@ -30,11 +30,15 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 import com.sun.javafx.collections.TrackableObservableList;
+import javafx.geometry.Orientation;
+import javafx.scene.Node;
 import javafx.scene.control.skin.AccordionSkin;
 
 import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.value.WritableValue;
 import javafx.css.StyleableProperty;
+
+import java.util.List;
 
 /**
  * <p>An accordion is a group of {@link TitledPane TitlePanes}.  Only one TitledPane can be opened at
@@ -61,6 +65,8 @@ import javafx.css.StyleableProperty;
  * @since JavaFX 2.0
  */
 public class Accordion extends Control {
+    private boolean biasDirty = true;
+    private Orientation bias;
 
     /***************************************************************************
      *                                                                         *
@@ -201,6 +207,32 @@ public class Accordion extends Control {
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new AccordionSkin(this);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void requestLayout() {
+        biasDirty = true;
+        bias = null;
+        super.requestLayout();
+    }
+
+    /** {@inheritDoc} */
+    @Override public Orientation getContentBias() {
+        if (biasDirty) {
+            bias = null;
+            final List<Node> children = getManagedChildren();
+            for (Node child : children) {
+                Orientation contentBias = child.getContentBias();
+                if (contentBias != null) {
+                    bias = contentBias;
+                    if (contentBias == Orientation.HORIZONTAL) {
+                        break;
+                    }
+                }
+            }
+            biasDirty = false;
+        }
+        return bias;
     }
 
     /***************************************************************************

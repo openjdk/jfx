@@ -386,6 +386,10 @@ JNIEXPORT jlong JNICALL OS_NATIVE(g_1utf16_1to_1utf8)
     if (!str) return 0;
     jsize length = (*env)->GetArrayLength(env, str);
     void *ch = (*env)->GetPrimitiveArrayCritical(env, str, 0);
+    if (ch == NULL) {
+        fprintf(stderr, "OS_NATIVE: GetPrimitiveArrayCritical returns NULL: out of memory\n");
+        return 0;
+    }
     jlong result = (jlong)g_utf16_to_utf8((const gunichar2 *)ch, length, NULL, NULL, NULL);
     (*env)->ReleasePrimitiveArrayCritical(env, str, ch, 0);
     return result;

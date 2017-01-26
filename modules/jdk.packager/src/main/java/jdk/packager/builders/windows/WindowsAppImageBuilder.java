@@ -59,6 +59,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
+import jdk.packager.internal.windows.WindowsDefender;
 
 /**
  *
@@ -388,6 +389,10 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
 
             // Run tool on launcher file to change the icon and the metadata.
             try {
+                if (WindowsDefender.isThereAPotentialWindowsDefenderIssue()) {
+                    Log.info(MessageFormat.format(I18N.getString("message.potential.windows.defender.issue"), WindowsDefender.getUserTempDirectory()));
+                }
+
                 launcher.setWritable(true);
 
                 if (iconTarget.exists()) {
