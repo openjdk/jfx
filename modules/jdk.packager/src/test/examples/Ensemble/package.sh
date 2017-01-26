@@ -5,14 +5,15 @@ if [ -z ${JAVA_HOME} ]; then
   exit
 fi
 
-VERSION=1.2
+PLATFORM=`bash ../whichplatform.sh`
+VERSION=1.0
 MAC_APPSTORE_ARGS=""
 
 # Argument parsing.
 ARGS=()
 for i in "$@"; do
   if [[ "$i" == "--MacAppStore" ]]; then
-    MAC_APPSTORE_ARGS="-BappVersion=${VERSION} -Bmac.CFBundleIdentifier=com.oratest.ensemble8 -Bmac.category=\"public.app-category.education\" -Bmac.CFBundleVersion=${VERSION}"
+    MAC_APPSTORE_ARGS="-BappVersion=${VERSION} -Bmac.CFBundleIdentifier=com.oratest.ensemble -Bmac.category=\"public.app-category.education\" -Bmac.CFBundleVersion=${VERSION}"
   else
     ARGS+=("\"$i\"")
   fi
@@ -31,7 +32,6 @@ rm -rf output
 mkdir output
 
 # Generate ICNS file
-PLATFORM=`bash ../whichplatform.sh`
 ICON="";
 
 mkdir jars
@@ -55,10 +55,10 @@ eval ${JAVAPACKAGER} $(IFS=$' '; echo "${ARGS[*]}") \
   -deploy \
   -v \
   -outdir output \
-  -name Ensemble \
+  -name EnsembleFX \
   $ICON \
-  -native image \
-  -BsignBundle=false -Bversion=9.0 \
+  -native \
+  -Bversion=9.0 \
   -Bmac.dmg.simple=true \
   -srcdir jars \
   -srcfiles Ensemble8.jar \

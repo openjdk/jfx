@@ -741,7 +741,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
 
         // sign all dylibs and jars
         Files.walk(appLocation)
-                // while we are searching let's fix permissions
+                // fix permissions
                 .peek(path -> {
                     try {
                         Set<PosixFilePermission> pfp = Files.getPosixFilePermissions(path);
@@ -762,37 +762,45 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
             //noinspection ThrowableResultOfMethodCallIgnored
             if (toThrow.get() != null) return;
 
-            List<String> args = new ArrayList<>();
-            args.addAll(Arrays.asList("codesign",
-                    "-s", signingIdentity, // sign with this key
-                    "--prefix", identifierPrefix, // use the identifier as a prefix
-                    "-vvvv"));
-            if (entitlementsFile != null &&
-                    (p.toString().endsWith(".jar")
-                            || p.toString().endsWith(".dylib"))) {
-                args.add("--entitlements");
-                args.add(entitlementsFile); // entitlements
-            } else if (inheritedEntitlements != null && Files.isExecutable(p)) {
-                args.add("--entitlements");
-                args.add(inheritedEntitlements); // inherited entitlements for executable processes
+            // If p is a symlink then skip the signing process.
+            if (Files.isSymbolicLink(p)) {
+                if (VERBOSE.fetchFrom(params)) {
+                    Log.verbose(MessageFormat.format(I18N.getString("message.ignoring.symlink"), p.toString()));
+                }
             }
-            if (keyChain != null && !keyChain.isEmpty()) {
-                args.add("--keychain");
-                args.add(keyChain);
-            }
-            args.add(p.toString());
+            else {
+                List<String> args = new ArrayList<>();
+                args.addAll(Arrays.asList("codesign",
+                        "-s", signingIdentity, // sign with this key
+                        "--prefix", identifierPrefix, // use the identifier as a prefix
+                        "-vvvv"));
+                if (entitlementsFile != null &&
+                        (p.toString().endsWith(".jar")
+                                || p.toString().endsWith(".dylib"))) {
+                    args.add("--entitlements");
+                    args.add(entitlementsFile); // entitlements
+                } else if (inheritedEntitlements != null && Files.isExecutable(p)) {
+                    args.add("--entitlements");
+                    args.add(inheritedEntitlements); // inherited entitlements for executable processes
+                }
+                if (keyChain != null && !keyChain.isEmpty()) {
+                    args.add("--keychain");
+                    args.add(keyChain);
+                }
+                args.add(p.toString());
 
-            try {
-                Set<PosixFilePermission> oldPermissions = Files.getPosixFilePermissions(p);
-                File f = p.toFile();
-                f.setWritable(true, true);
+                try {
+                    Set<PosixFilePermission> oldPermissions = Files.getPosixFilePermissions(p);
+                    File f = p.toFile();
+                    f.setWritable(true, true);
 
-                ProcessBuilder pb = new ProcessBuilder(args);
-                IOUtils.exec(pb, VERBOSE.fetchFrom(params));
+                    ProcessBuilder pb = new ProcessBuilder(args);
+                    IOUtils.exec(pb, VERBOSE.fetchFrom(params));
 
-                Files.setPosixFilePermissions(p, oldPermissions);
-            } catch (IOException ioe) {
-                toThrow.set(ioe);
+                    Files.setPosixFilePermissions(p, oldPermissions);
+                } catch (IOException ioe) {
+                    toThrow.set(ioe);
+                }
             }
         });
 
