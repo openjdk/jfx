@@ -82,7 +82,7 @@ class WinSystemClipboard extends SystemClipboard {
             }
             return b;
         } else if (data instanceof String) {
-            String st = ((String) data).replace("\n", "\r\n");
+            String st = ((String) data).replaceAll("(\r\n|\r|\n)", "\r\n");
             if (HTML_TYPE.equals(mime)) {
                 try {
                     // NOTE: Transfer of HTML data on Windows uses UTF-8 encoding!
