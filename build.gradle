@@ -2611,6 +2611,16 @@ project(":fxpackager") {
     }
 
     processResources.dependsOn copyRedistributableFiles
+
+    task copyDTtoPackager(type: Copy) {
+        def destDt = "${moduleDir}/com/sun/javafx/tools/resource"
+        from (sourceSets.main.output.resourcesDir) {
+            includes = [ "resources/web-files/**" ]
+        }
+        into new File("$destDt", "dtoolkit")
+    }
+
+    processResources.dependsOn copyDTtoPackager
 }
 
 project(":media") {

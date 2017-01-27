@@ -33,7 +33,7 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.PackagerException;
-import com.sun.javafx.tools.packager.PackagerLib;
+import com.sun.javafx.tools.resource.PackagerResource;
 import com.sun.javafx.tools.packager.TemplatePlaceholders;
 
 import javax.xml.stream.XMLOutputFactory;
@@ -1340,7 +1340,7 @@ public class JNLPBundler extends AbstractBundler {
             "get_javafx.png"
     };
 
-    private static String prefixWebFiles = "/resources/web-files/";
+    private static String prefixWebFiles = "dtoolkit/resources/web-files/";
 
     private boolean extractWebFiles(File outDir) throws PackagerException {
         return doExtractWebFiles(webFiles, outDir, webfilesDir);
@@ -1353,7 +1353,7 @@ public class JNLPBundler extends AbstractBundler {
         for (String s: lst) {
             InputStream is =
                     //FIXME different root?
-                    PackagerLib.class.getResourceAsStream(prefixWebFiles+s);
+                    PackagerResource.class.getResourceAsStream(prefixWebFiles+s);
             if (is == null) {
                 System.err.println("Internal error. Missing resources [" +
                         (prefixWebFiles+s) + "]");
