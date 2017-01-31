@@ -225,7 +225,7 @@ JNIEXPORT jboolean JNICALL OS_NATIVE(FcConfigAppFontAddFile)
         if (text) {
 //            rc = (jboolean)FcConfigAppFontAddFile(arg0, text);
             if (fp) {
-                rc = (jboolean)((jboolean (*)(jlong, const char *))fp)(arg0, text);
+                rc = (jboolean)((jboolean (*)(void *, const char *))fp)(arg0, text);
             }
             (*env)->ReleaseStringUTFChars(env, arg1, text);
         }
