@@ -90,6 +90,35 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachInt
     Java_com_sun_glass_ui_mac_MacPixels__1attachByte(env, jPixels, jPtr, jWidth, jHeight, jBuffer, jArray, 4*jOffset);
 }
 
+NSImage* getImage(u_int8_t* data, int jWidth, int jHeight, int jOffset) {
+    NSImage* image = NULL;
+    CGImageRef cgImage = NULL;
+    if ((data != NULL) && (jWidth > 0) && (jHeight > 0)) {
+        CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+        {
+            size_t width = (size_t) jWidth;
+            size_t height = (size_t) jHeight;
+
+            CGDataProviderRef provider = CGDataProviderCreateWithData(NULL,
+                                            data + jOffset, width * height * 4, NULL);
+            if (provider != NULL) {
+                cgImage = CGImageCreate(width, height, 8, 32, 4 * width, colorSpace,
+                        kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little,
+                        provider, NULL, 1, kCGRenderingIntentDefault);
+                CGDataProviderRelease(provider);
+            }
+        }
+        CGColorSpaceRelease(colorSpace);
+        if (cgImage != NULL) {
+            image = [[NSImage alloc] initWithCGImage : cgImage size : NSMakeSize(jWidth, jHeight)];
+            CGImageRelease(cgImage);
+        } else {
+            image = nil;
+        }
+    }
+    return image;
+}
+
 /*
  * Class:     com_sun_glass_ui_mac_MacPixels
  * Method:    _attachByte
@@ -113,38 +142,12 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacPixels__1attachByte
             data = (*env)->GetDirectBufferAddress(env, jBuffer);
         }
 
-        CGImageRef cgImage = NULL;
-        if ((data != NULL) && (jWidth > 0) && (jHeight > 0))
-        {
-            CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-            {
-                size_t width = (size_t)jWidth;
-                size_t height = (size_t)jHeight;
-                CGDataProviderRef provider = CGDataProviderCreateWithData(NULL, data+jOffset, width*height*4, NULL);
-                if (provider != NULL)
-                {
-                    cgImage = CGImageCreate(width, height, 8, 32, 4*width, colorSpace, kCGImageAlphaPremultipliedFirst|kCGBitmapByteOrder32Little, provider, NULL, 1, kCGRenderingIntentDefault);
-                    CGDataProviderRelease(provider);
-                }
-            }
-            CGColorSpaceRelease(colorSpace);
-        }
+        NSImage **nsImage = (NSImage**)jlong_to_ptr(jPtr);
+        *nsImage = getImage(data, jWidth, jHeight, jOffset);
 
         if (jArray != NULL)
         {
             (*env)->ReleasePrimitiveArrayCritical(env, jArray, data, JNI_ABORT);
-        }
-
-        NSImage **nsImage = (NSImage**)jlong_to_ptr(jPtr);
-        if (cgImage != NULL)
-        {
-            *nsImage = [[NSImage alloc] initWithCGImage:cgImage size:NSMakeSize(jWidth, jHeight)];
-
-            CGImageRelease(cgImage);
-        }
-        else
-        {
-            *nsImage = nil;
         }
     }
     GLASS_CHECK_EXCEPTION(env);

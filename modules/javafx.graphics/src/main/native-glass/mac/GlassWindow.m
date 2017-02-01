@@ -1364,10 +1364,10 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_mac_MacWindow__1minimize
 /*
  * Class:     com_sun_glass_ui_mac_MacWindow
  * Method:    _setIcon
- * Signature: (JLcom/sun/glass/ui/Pixels;)V
+ * Signature: (JLjava/nio/ByteBuffer;II)V
  */
 JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
-(JNIEnv *env, jobject jWindow, jlong jPtr, jobject jPixels)
+(JNIEnv *env, jobject jWindow, jlong jPtr, jobject iconBuffer, jint jWidth, jint jHeight)
 {
     LOG("Java_com_sun_glass_ui_mac_MacWindow__1setIcon");
     if (!jPtr) return;
@@ -1376,10 +1376,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setIcon
     GLASS_POOL_ENTER;
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
-        if (jPixels != NULL)
+
+        if (iconBuffer)
         {
             NSImage *image = nil;
-            (*env)->CallVoidMethod(env, jPixels, jPixelsAttachData, ptr_to_jlong(&image));
+
+            image = getImage(
+                        (*env)->GetDirectBufferAddress(env, iconBuffer),
+                        jHeight, jWidth, 0);
+
             if (image != nil) {
                 // need an explicit window title for the rest of the code to work
                 if ([window->nsWindow title] == nil)

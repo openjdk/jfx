@@ -127,3 +127,4 @@
 
 extern GlassEmbeddedWindow *getGlassEmbeddedWindow(JNIEnv *env, jlong jPtr);
 
+extern NSImage* getImage(u_int8_t* data, int jWidth, int jHeight, int jOffset);
