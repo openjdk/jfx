@@ -2250,10 +2250,12 @@ project(":fxpackager") {
 
     task buildVersionFile() {
         File dir = new File("${project.projectDir}/build/resources/antplugin/resources");
-        dir.mkdirs()
         File versionFile = new File(dir, "/version.properties");
-        if (!versionFile.exists()) {
-            versionFile << "version=$RELEASE_VERSION\n"
+        doLast {
+            dir.mkdirs()
+            if (!versionFile.exists()) {
+                versionFile << "version=$RELEASE_VERSION\n"
+            }
         }
         outputs.file(versionFile)
     }
