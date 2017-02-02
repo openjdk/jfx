@@ -9,6 +9,7 @@
             <test-roots>
                 <root id="test.java.dir"/>
                 <root id="test.resources.dir"/>
+                <root id="test.java2.dir"/>
             </test-roots>
         </data>
         <references xmlns="http://www.netbeans.org/ns/ant-project-references/1">

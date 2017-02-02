@@ -3174,6 +3174,13 @@ project(":web") {
 // when FULL_TEST is specified, and each test runs in its own JVM
 project(":systemTests") {
 
+    sourceSets {
+        test
+
+        // Source sets for jar files (used for launcher tests)
+        testapp1
+    }
+
     project.ext.buildModule = false
     project.ext.moduleRuntime = false
     project.ext.moduleName = "systemTests"
@@ -3222,8 +3229,51 @@ project(":systemTests") {
     test.dependsOn(sts)
     test.dependsOn(createTestArgfiles);
 
+    // Tasks to create the jars for the launcher tests
+    def testapp1JarName = "testapp1.jar"
+    task createTestapp1Jar1(type: Jar) {
+        dependsOn compileTestapp1Java
+        enabled = IS_FULL_TEST
+
+        destinationDir = file("$buildDir/testapp1")
+        archiveName = testapp1JarName
+        includeEmptyDirs = false
+        from project.sourceSets.testapp1.output.classesDir
+        include("testapp/**")
+        include("com/javafx/main/**")
+
+        manifest {
+            attributes(
+                "Main-Class" : "com.javafx.main.Main",
+                "JavaFX-Version" : "2.2",
+                "JavaFX-Application-Class" : "testapp.HelloWorld",
+                "JavaFX-Class-Path" : "jar2.jar"
+            )
+        }
+    }
+
+    task createTestapp1Jar2(type: Jar) {
+        dependsOn compileTestapp1Java
+        enabled = IS_FULL_TEST
+
+        destinationDir = file("$buildDir/testapp1")
+        archiveName = "jar2.jar";
+        includeEmptyDirs = false
+        from project.sourceSets.testapp1.output.classesDir
+        include("pkg2/**")
+    }
+
+    task createTestJarFiles() {
+        dependsOn(createTestapp1Jar1)
+        dependsOn(createTestapp1Jar2)
+    }
+    test.dependsOn(createTestJarFiles);
+
     test {
         enabled = IS_FULL_TEST
+
+        // Properties passed to launcher tests
+        systemProperties 'launchertest.testapp1.jar': "build/testapp1/$testapp1JarName"
 
         // Properties passed to test.util.Util
         systemProperties 'worker.debug': IS_WORKER_DEBUG

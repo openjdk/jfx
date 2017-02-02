@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -161,7 +161,7 @@ public class Util {
             String testPldrName,
             String testPolicy) throws IOException {
 
-        final String classpath = System.getProperty("java.class.path");
+        final boolean isJar = testAppName.endsWith(".jar");
 
         /*
          * note: the "worker" properties are tied into build.gradle
@@ -214,8 +214,15 @@ public class Util {
 
                     File tempFile = null;
                     if (workerDebug) {
+                        String baseAppName = isJar
+                                ? testAppName.substring(0, testAppName.length() - 4)
+                                : testAppName;
+                        final int lastSlashIdx = baseAppName.lastIndexOf("/");
+                        if (lastSlashIdx >= 0) {
+                            baseAppName = baseAppName.substring(lastSlashIdx + 1);
+                        }
                         tempFile = new File(workerPatchPolicy +
-                                "_" + testAppName);
+                                "_" + baseAppName);
                     } else {
                         tempFile = File.createTempFile("java", "policy");
                         tempFile.deleteOnExit();
@@ -248,6 +255,9 @@ public class Util {
 
         }
 
+        if (isJar) {
+            cmd.add("-jar");
+        }
         cmd.add(testAppName);
 
         if (workerDebug) {

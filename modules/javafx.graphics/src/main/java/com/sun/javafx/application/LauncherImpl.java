@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -570,10 +570,6 @@ public class LauncherImpl {
                     }
                 }
 
-                // we have to add the current code source to the new class loader, or the app won't load
-                URL jfxRtURL = LauncherImpl.class.getProtectionDomain().getCodeSource().getLocation();
-                urlList.add(jfxRtURL);
-
                 // and finally append the JavaFX-Class-Path entries
                 urlList.addAll(jcpList);
 
@@ -585,7 +581,7 @@ public class LauncherImpl {
                     }
                     System.err.println("=====");
                 }
-                return new URLClassLoader(urls, null);
+                return new URLClassLoader(urls, ClassLoader.getPlatformClassLoader());
             }
         } catch (Exception ex) {
             if (trace) {
