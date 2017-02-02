@@ -6,7 +6,7 @@ if [ -z ${JAVA_HOME} ]; then
 fi
 
 PLATFORM=`bash ../whichplatform.sh`
-VERSION=1.2
+VERSION=1.3
 MAC_APPSTORE_ARGS=""
 
 # Argument parsing.
