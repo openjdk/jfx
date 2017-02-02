@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -281,12 +281,16 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
                          change:(NSDictionary *)change
                         context:(void *)context {
     if (context == AVFMediaPlayerItemStatusContext) {
-        AVPlayerStatus status = (AVPlayerStatus)[[change objectForKey:NSKeyValueChangeNewKey] longValue];
-        if (status == AVPlayerStatusReadyToPlay) {
-            if (!_movieReady) {
-                // Only send this once, though we'll receive notification a few times
-                [self setPlayerState:kPlayerState_READY];
-                _movieReady = true;
+        // According to docs change[NSKeyValueChangeNewKey] can be NSNull when player.currentItem is nil
+        if (![change[NSKeyValueChangeNewKey] isKindOfClass:[NSNull class]]) {
+            AVPlayerStatus status = (AVPlayerStatus)[[change objectForKey:NSKeyValueChangeNewKey] longValue];
+            if (status == AVPlayerStatusReadyToPlay) {
+                if (!_movieReady) {
+                    LOGGER_DEBUGMSG(([[NSString stringWithFormat:@"Setting player to READY state"] UTF8String]));
+                    // Only send this once, though we'll receive notification a few times
+                    [self setPlayerState:kPlayerState_READY];
+                    _movieReady = true;
+                }
             }
         }
     } else if (context == AVFMediaPlayerItemDurationContext) {
