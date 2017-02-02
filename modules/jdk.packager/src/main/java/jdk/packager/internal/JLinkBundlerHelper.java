@@ -223,12 +223,13 @@ public final class JLinkBundlerHelper {
     public static String getJDKVersion(Map<String, ? super Object> params) {
         String result = "";
         List<Path> modulePath = StandardBundlerParam.MODULE_PATH.fetchFrom(params);
+        Set<String> limitModules = StandardBundlerParam.LIMIT_MODULES.fetchFrom(params);
         Path javaBasePath = findPathOfModule(modulePath, "java.base.jmod");
+        Set<String> addModules = getRedistributableModules(modulePath, StandardBundlerParam.ADD_MODULES.fetchFrom(params), limitModules);
 
         if (javaBasePath != null && javaBasePath.toFile().exists()) {
             result = RedistributableModules.getModuleVersion(javaBasePath.toFile(),
-                        modulePath, StandardBundlerParam.ADD_MODULES.fetchFrom(params),
-                        StandardBundlerParam.LIMIT_MODULES.fetchFrom(params));
+                        modulePath, addModules, limitModules);
         }
 
         return result;
@@ -265,6 +266,11 @@ public final class JLinkBundlerHelper {
         }
 
         return result;
+    }
+
+    private static Set<String> getRedistributableModules(List<Path> modulePath, Set<String> addModules, Set<String> limitModules) {
+        ModuleHelper moduleHelper = new ModuleHelper(modulePath, addModules, limitModules);
+        return removeInvalidModules(modulePath, moduleHelper.modules());
     }
 
     public static void execute(Map<String, ? super Object> params, AbstractAppImageBuilder imageBuilder) throws IOException, Exception {
@@ -305,8 +311,7 @@ public final class JLinkBundlerHelper {
             }
         }
 
-        ModuleHelper moduleHelper = new ModuleHelper(modulePath, addModules, limitModules);
-        Set<String> redistModules = removeInvalidModules(modulePath, moduleHelper.modules());
+        Set<String> redistModules = getRedistributableModules(modulePath, addModules, limitModules);
         addModules.addAll(redistModules);
 
         //--------------------------------------------------------------------
@@ -323,6 +328,16 @@ public final class JLinkBundlerHelper {
         }
 
         Log.info(MessageFormat.format(I18N.getString("message.modules"), addModules.toString()));
+
+        if (StandardBundlerParam.VERBOSE.fetchFrom(params)) {
+            Log.info("outputDir = " + outputDir.toString());
+            Log.info("modulePath = " + modulePath.toString());
+            Log.info("addModules = " + addModules.toString());
+            Log.info("limitModules = " + limitModules.toString());
+            Log.info("excludeFileList = " + excludeFileList);
+            Log.info("stripNativeCommands = " + stripNativeCommands);
+            Log.info("userArguments = " + userArguments.toString());
+        }
 
         AppRuntimeImageBuilder appRuntimeBuilder = new AppRuntimeImageBuilder();
         appRuntimeBuilder.setOutputDir(outputDir);
@@ -396,8 +411,8 @@ public final class JLinkBundlerHelper {
         Set<String> result = new LinkedHashSet();
         ModuleManager mm = new ModuleManager(modulePath);
         List<Module> lmodules = mm.getModules(EnumSet.of(ModuleManager.SearchType.ModularJar,
-                                             ModuleManager.SearchType.Jmod,
-                                             ModuleManager.SearchType.ExplodedModule));
+                                              ModuleManager.SearchType.Jmod,
+                                              ModuleManager.SearchType.ExplodedModule));
 
         HashMap<String, Module> validModules = new HashMap<>();
 
@@ -428,7 +443,6 @@ public final class JLinkBundlerHelper {
         private enum Macros {None, AllModulePath, AllRuntime}
 
         public ModuleHelper(List<Path> paths, Set<String> roots, Set<String> limitMods) {
-            Set<String> lroots = new HashSet<>();
             Macros macro = Macros.None;
 
             for (Iterator<String> iterator = roots.iterator(); iterator.hasNext();) {
@@ -444,7 +458,7 @@ public final class JLinkBundlerHelper {
                         macro = Macros.AllRuntime;
                         break;
                     default:
-                        lroots.add(module);
+                        this.modules.add(module);
                 }
             }
 
@@ -461,8 +475,6 @@ public final class JLinkBundlerHelper {
 
                     break;
             }
-
-            this.modules.addAll(lroots);
         }
 
         public Set<String> modules() {
