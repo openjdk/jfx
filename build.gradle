@@ -2560,7 +2560,8 @@ project(":fxpackager") {
     }
 
     if (!DO_BUILD_SDK_FOR_TEST) {
-        def antJavafxJar = new File(TEST_SDK_DIR, "lib/ant-javafx.jar")
+        def antJavafxJar = new File(rootProject.buildDir,
+            "modular-sdk/modules_libs/${project.ext.moduleName}/ant-javafx.jar")
         [compileTestJava, test].each {
             it.classpath = files(antJavafxJar) + it.classpath
         }
