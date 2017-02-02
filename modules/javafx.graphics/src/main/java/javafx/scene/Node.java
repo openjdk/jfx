@@ -4029,9 +4029,9 @@ public abstract class Node implements EventTarget, Styleable {
         // unnecessary layout for the case of a non-resizable within a group
         Parent p = getParent();
 
-        // Need to propagate layout if this change isn't triggered by its parent
+        // Need to propagate layout if parent isn't part of performing layout
         if (isManaged() && (p != null) && !(p instanceof Group && !isResizable())
-                && !p.isCurrentLayoutChild(this)) {
+                && !p.isPerformingLayout()) {
             // Force its parent to fix the layout since it is a managed child.
             p.requestLayout(true);
         }
