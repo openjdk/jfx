@@ -36,6 +36,30 @@ then
   exit 0
 fi
 
+CYGPATH=''
+platform=''
+case "`uname`" in
+    Darwin*) 
+        platform='mac'
+        ;;
+    CYGWIN*) 
+        platform='cygwin'
+        CYGPATH="cygpath -m"
+        ;;
+    Linux*)  
+        platform='linux'
+        ;;
+esac
+
+doCygpath() {
+    if [ "${CYGPATH}" ]
+    then
+        eval ${CYGPATH} "${1}"
+    else
+        echo "${1}"
+    fi
+}
+
 echo "Comparing rt/build files:"
 (cd "$one";
  find build -type f | sort > /tmp/build-files-one
@@ -66,8 +90,8 @@ do
         jar=${i##*/}
         jar=${jar%.jar}
         echo "Comparing JAR $i $jar"
-        jar tf ${one}/$i | sort > /tmp/files-one-$jar
-        jar tf ${two}/$i | sort > /tmp/files-two-$jar
+        jar tf `doCygpath "${one}/$i"` | sort > /tmp/files-one-$jar
+        jar tf `doCygpath "${two}/$i"` | sort > /tmp/files-two-$jar
         comm -13 /tmp/files-one-$jar /tmp/files-two-$jar | while read f
         do
             echo "    new: ${f}"

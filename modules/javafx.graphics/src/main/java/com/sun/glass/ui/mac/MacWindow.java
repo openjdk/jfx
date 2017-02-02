@@ -32,6 +32,7 @@ import com.sun.glass.ui.Screen;
 import com.sun.glass.ui.View;
 import com.sun.glass.ui.Window;
 import com.sun.glass.ui.Window.State;
+import java.nio.ByteBuffer;
 
 import java.util.Map;
 
@@ -95,7 +96,22 @@ final class MacWindow extends Window {
     @Override native protected void _setEnabled(long ptr, boolean enabled);
     @Override native protected boolean _setMinimumSize(long ptr, int width, int height);
     @Override native protected boolean _setMaximumSize(long ptr, int width, int height);
-    @Override native protected void _setIcon(long ptr, Pixels pixels);
+
+    private ByteBuffer iconBuffer;
+
+    @Override protected void _setIcon(long ptr, Pixels pixels) {
+
+        if (pixels != null) {
+            iconBuffer = pixels.asByteBuffer();
+            _setIcon(ptr, iconBuffer, pixels.getWidth(), pixels.getHeight());
+        } else {
+            iconBuffer = null;
+            _setIcon(ptr, null, 0, 0);
+        }
+    }
+
+    private native void _setIcon(long ptr, Object iconBuffer, int width, int height);
+
     @Override native protected void _toFront(long ptr);
     @Override native protected void _toBack(long ptr);
     @Override native protected void _enterModal(long ptr);

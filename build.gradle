@@ -2250,10 +2250,12 @@ project(":fxpackager") {
 
     task buildVersionFile() {
         File dir = new File("${project.projectDir}/build/resources/antplugin/resources");
-        dir.mkdirs()
         File versionFile = new File(dir, "/version.properties");
-        if (!versionFile.exists()) {
-            versionFile << "version=$RELEASE_VERSION\n"
+        doLast {
+            dir.mkdirs()
+            if (!versionFile.exists()) {
+                versionFile << "version=$RELEASE_VERSION\n"
+            }
         }
         outputs.file(versionFile)
     }
@@ -2558,7 +2560,8 @@ project(":fxpackager") {
     }
 
     if (!DO_BUILD_SDK_FOR_TEST) {
-        def antJavafxJar = new File(TEST_SDK_DIR, "lib/ant-javafx.jar")
+        def antJavafxJar = new File(rootProject.buildDir,
+            "modular-sdk/modules_libs/${project.ext.moduleName}/ant-javafx.jar")
         [compileTestJava, test].each {
             it.classpath = files(antJavafxJar) + it.classpath
         }
@@ -2611,6 +2614,16 @@ project(":fxpackager") {
     }
 
     processResources.dependsOn copyRedistributableFiles
+
+    task copyDTtoPackager(type: Copy) {
+        def destDt = "${moduleDir}/com/sun/javafx/tools/resource"
+        from (sourceSets.main.output.resourcesDir) {
+            includes = [ "resources/web-files/**" ]
+        }
+        into new File("$destDt", "dtoolkit")
+    }
+
+    processResources.dependsOn copyDTtoPackager
 }
 
 project(":media") {

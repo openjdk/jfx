@@ -1,0 +1,153 @@
+#!/bin/bash
+#
+# a script to identify what changed in out output tree between builds
+# Run from the top of the tree (./rt)
+# The first time, sum files will be created in HASHDIR.
+# each time after,
+#  the output files that have changed sums will be listed
+#  and then the sums files will be updated.
+#
+
+TOP="$PWD"
+BLDTOP="${TOP}/build"
+HASHDIR="$BLDTOP/hashes"
+HASHTMP="${HASHDIR}/tmp"
+
+# If blank - will not update the hashes files, allowing reruns for debugging
+COMMITNEW='yes'
+
+USESUM='find * -type f -print0 | xargs --null md5sum | sort'
+CYGPATH=''
+platform=''
+case "`uname`" in
+    Darwin*) 
+        platform='mac'
+        USESUM='find * -type f -print0 | xargs -0 md5 -r | sort'
+        ;;
+    CYGWIN*) 
+        platform='cygwin'
+        CYGPATH="cygpath -m"
+        ;;
+    Linux*)  
+        platform='linux'
+        ;;
+esac
+
+doCygpath() {
+    if [ "${CYGPATH}" ]
+    then
+        eval ${CYGPATH} "${1}"
+    else
+        echo "${1}"
+    fi
+}
+
+if [ "${BLDTOP}" -a ! -d "${BLDTOP}" -o ! -d "${BLDTOP}/modular-sdk" ]
+then
+    echo "Missing build top directory... you in the right place ?"
+    exit -1
+fi
+
+mkdir -p "${HASHDIR}"
+
+if [ ! -d "${HASHDIR}" ]
+then
+    echo "whoops no dir ${HASHDIR}"
+    exit -1
+fi
+
+checkhashdir() {
+    MODNAME="${1}"
+    MODDIR="${2}"
+
+    OLDHASH="${HASHDIR}/${MODNAME}"
+    NEWHASH="${HASHDIR}/${MODNAME}-new"
+
+    if [ -f $NEWHASH ]
+    then
+        echo "Reusing $NEWHASH"
+    else
+    (
+        cd "${MODDIR}"
+        eval "$USESUM" > "${NEWHASH}"
+    )  
+    fi
+
+    if [ -f "$OLDHASH" ]
+    then
+        echo "Comparing changes for ${MODNAME}"
+
+        let changes=0
+
+        comm -13 "$OLDHASH" "$NEWHASH" | {
+        while read s f
+        do
+          grep -q  " $f\$" "$OLDHASH"
+          if [ $? -eq 0 ]
+          then
+              let changes=changes+1
+              echo "  Changed : $f"
+          else
+              echo "  New     : $f"
+              let changes=changes+1
+          fi
+        done 
+        }
+
+        comm -23 "$OLDHASH" "$NEWHASH" | {
+        while read s f
+        do
+          grep -q  " $f\$" "$NEWHASH"
+          if [ $? -eq 1 ]
+          then
+              echo "  Missing : $f"
+              let changes=changes+1
+          fi
+        done 
+        }
+
+        echo "Total changed files: $changes"
+    else 
+        echo "No old hashes to compare against for ${MODNAME}"
+    fi
+
+    if [ ! -f "${OLDHASH}" -o "${COMMITNEW}" ]
+    then
+        mv "${NEWHASH}" "${OLDHASH}"
+    fi
+}
+
+checkhashjar() {
+    MODNAME="${1}"
+    MODJAR="${2}"
+
+    MODJARDIR="${HASHTMP}/${MODNAME}"
+
+    JARPATH=`doCygpath "${TOP}/${MODJAR}"`
+
+    if [ -f "${JARPATH}" ]
+    then
+        if [ -d "${MODJARDIR}" -o -f "${MODJARDIR}" ]
+        then
+            rm -r "${MODJARDIR}"
+        fi
+        mkdir -p "${MODJARDIR}"
+
+        (
+         cd "${MODJARDIR}"
+         jar xf "${JARPATH}"
+        )
+
+        checkhashdir "${MODNAME}" "${MODJARDIR}"
+
+        rm -r "${MODJARDIR}"
+    else
+        echo "Missing JAR ${JARPATH} to compare"
+    fi
+}
+
+checkhashdir "modular-sdk" "build/modular-sdk"
+
+checkhashjar "ant-javafx.jar" "build/modular-sdk/modules_libs/jdk.packager/ant-javafx.jar"
+checkhashjar "javafx-swt.jar" "build/modular-sdk/modules_libs/javafx.graphics/javafx-swt.jar"
+

@@ -36,6 +36,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.Scene;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+import junit.framework.AssertionFailedError;
 import netscape.javascript.JSObject;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -59,6 +60,9 @@ public class JSCallbackMemoryTest {
 
     // Sleep time showing/hiding window in milliseconds
     private static final int SLEEP_TIME = 1000;
+
+    // Sleep time before GC starts again
+    private static final int GCWAIT_TIME = 100;
 
     // Used to launch the application before running any test
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
@@ -86,6 +90,8 @@ public class JSCallbackMemoryTest {
     private final int[] primitiveArray = { 1, 2, 3, 4, 5 };
 
     private final Object[] objectArray = { new Object(), new Object(), new Object(), new Object() };
+
+    private Throwable encounteredException = null;
 
     public final class MyObject {
 
@@ -220,10 +226,42 @@ public class JSCallbackMemoryTest {
         });
     }
 
+    private boolean isAllStagesNull() {
+        for (WeakReference<Object> ref : refs) {
+            if (ref.get() != null) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isAllCallbackStatusTrue() {
+        for (int i = 0; i < NUM_STAGES; i++) {
+            if (callbackStatus[i] == false) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void checkEncounteredException() {
+        if (encounteredException != null) {
+            if (encounteredException instanceof Error) {
+                throw (Error) encounteredException;
+            } else if (encounteredException instanceof RuntimeException) {
+                throw (RuntimeException) encounteredException;
+            } else {
+                AssertionFailedError err = new AssertionFailedError("Unknown execution exception");
+                err.initCause(encounteredException.getCause());
+                throw err;
+            }
+        }
+    }
+
     // ========================== TEST CASES ==========================
 
-    @Test
-    public void testJsCallbackLeak() throws Exception {
+    @Test(timeout = 20000) public void testJsCallbackLeak() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(NUM_STAGES);
 
         Util.runAndWait(() -> {
 
@@ -244,9 +282,15 @@ public class JSCallbackMemoryTest {
 
                 webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                     if (n == Worker.State.SUCCEEDED) {
-                        final JSObject window = (JSObject) webview.getEngine().executeScript("window");
-                        assertNotNull(window);
-                        window.setMember("callback1", stage);
+                        try {
+                            final JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                            assertNotNull(window);
+                            window.setMember("callback1", stage);
+                        } catch (Throwable ex) {
+                            encounteredException = ex;
+                        } finally {
+                            latch.countDown();
+                        }
                     }
                 });
 
@@ -256,7 +300,13 @@ public class JSCallbackMemoryTest {
             }
         });
 
-        Util.sleep(SLEEP_TIME);
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
+        }
+
+        checkEncounteredException();
 
         Util.runAndWait(() -> {
 
@@ -267,33 +317,22 @@ public class JSCallbackMemoryTest {
         });
 
 
-        for (int j = 0; j < 2; j++) {
+        for (int j = 0; j < 5; j++) {
             System.gc();
+            System.runFinalization();
+
+            if (isAllStagesNull()) {
+                break;
+            }
+
             Util.sleep(SLEEP_TIME);
-            Set<WeakReference<Object>> collected = new HashSet<>();
-
-            for (WeakReference<Object> ref : refs) {
-                if (ref.get() == null) {
-                    collected.add(ref);
-                }
-            }
-            refs.removeAll(collected);
-
-            if (j == 0) {
-                // First time GC -> Collected will be equal to NUM_STAGES and refs size (remaining) will be 0
-                assertEquals(NUM_STAGES, collected.size());
-                assertEquals(0, refs.size());
-            }
-            else {
-                // Second time GC -> Collected will be 0 and refs size (remaining) will be 0
-                assertEquals(0, collected.size());
-                assertEquals(0, refs.size());
-            }
         }
+
+        assertTrue("All Stages are null", isAllStagesNull());
     }
 
-    @Test
-    public void testJsCallbackFunction() throws Exception {
+    @Test(timeout = 20000) public void testJsCallbackFunction() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(NUM_STAGES);
 
         Util.runAndWait(() -> {
 
@@ -314,10 +353,16 @@ public class JSCallbackMemoryTest {
 
                 webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                     if (n == Worker.State.SUCCEEDED) {
-                        final JSObject window = (JSObject) webview.getEngine().executeScript("window");
-                        assertNotNull(window);
-                        window.setMember("callback1", stage);
-                        webview.getEngine().executeScript("document.getElementById(\"mybtn1\").click()");
+                        try {
+                            final JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                            assertNotNull(window);
+                            window.setMember("callback1", stage);
+                            webview.getEngine().executeScript("document.getElementById(\"mybtn1\").click()");
+                        } catch (Throwable ex) {
+                            encounteredException = ex;
+                        } finally {
+                            latch.countDown();
+                        }
                     }
                 });
 
@@ -326,15 +371,30 @@ public class JSCallbackMemoryTest {
             }
         });
 
-        Util.sleep(SLEEP_TIME);
-        System.gc();
-        for (int i = 0; i < NUM_STAGES; i++) {
-            assertTrue(callbackStatus[i]);
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
         }
+
+        checkEncounteredException();
+
+        for (int j = 0; j < 5; j++) {
+            System.gc();
+            System.runFinalization();
+
+            if (isAllCallbackStatusTrue()) {
+                break;
+            }
+
+            Util.sleep(SLEEP_TIME);
+        }
+
+        assertTrue("All Button Callback return true", isAllCallbackStatusTrue());
     }
 
-    @Test
-    public void testJsCallbackReleaseFunction() throws Exception {
+    @Test(timeout = 20000) public void testJsCallbackReleaseFunction() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(NUM_STAGES);
 
         Util.runAndWait(() -> {
 
@@ -355,18 +415,24 @@ public class JSCallbackMemoryTest {
 
                 webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                     if (n == Worker.State.SUCCEEDED) {
-                        final JSObject window = (JSObject) webview.getEngine().executeScript("window");
-                        assertNotNull(window);
-                        window.setMember("callback1", stage);
-                        window.setMember("callback4", myObj);
+                        try {
+                            final JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                            assertNotNull(window);
+                            window.setMember("callback1", stage);
+                            window.setMember("callback4", myObj);
 
-                        webview.getEngine().executeScript("document.getElementById(\"mybtn1\").click()");
+                            webview.getEngine().executeScript("document.getElementById(\"mybtn1\").click()");
 
-                        // Below executeScript call will make myObj=null and GC'ed
-                        webview.getEngine().executeScript("document.getElementById(\"mybtn3\").click()");
+                            // Below executeScript call will make myObj=null and GC'ed
+                            webview.getEngine().executeScript("document.getElementById(\"mybtn3\").click()");
 
-                        // Below executeScript call should not execute the JS callback (jsobjcallback) and should not cause crash as above executeScript just made myObj=null;
-                        webview.getEngine().executeScript("document.getElementById(\"mybtn4\").click()");
+                            // Below executeScript call should not execute the JS callback (jsobjcallback) and should not cause crash as above executeScript just made myObj=null;
+                            webview.getEngine().executeScript("document.getElementById(\"mybtn4\").click()");
+                        } catch (Throwable ex) {
+                            encounteredException = ex;
+                        } finally {
+                            latch.countDown();
+                        }
                     }
                 });
 
@@ -375,14 +441,30 @@ public class JSCallbackMemoryTest {
             }
         });
 
-        Util.sleep(SLEEP_TIME);
-        System.gc();
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
+        }
+
+        checkEncounteredException();
+
+        for (int j = 0; j < 5; j++) {
+            System.gc();
+            System.runFinalization();
+
+            if (unexpectedCallback) {
+                break;
+            }
+
+            Util.sleep(GCWAIT_TIME);
+        }
 
         assertFalse(unexpectedCallback);
     }
 
-    @Test
-    public void testJsCallbackConsoleFunction() throws Exception {
+    @Test(timeout = 20000) public void testJsCallbackConsoleFunction() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(NUM_STAGES);
 
         Util.runAndWait(() -> {
 
@@ -403,12 +485,19 @@ public class JSCallbackMemoryTest {
 
                 webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                     if (n == Worker.State.SUCCEEDED) {
-                        final JSObject window = (JSObject) webview.getEngine().executeScript("window");
-                        assertNotNull(window);
+                        try {
+                            final JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                            assertNotNull(window);
 
-                        window.setMember("console", new Object());
-                        System.gc(); System.gc();
-                        webview.getEngine().executeScript("window.console.debug = function() {}");
+                            window.setMember("console", new Object());
+                            System.gc(); System.gc();
+                            System.runFinalization();
+                            webview.getEngine().executeScript("window.console.debug = function() {}");
+                        } catch (Throwable ex) {
+                            encounteredException = ex;
+                        } finally {
+                            latch.countDown();
+                        }
                     }
                 });
 
@@ -417,55 +506,85 @@ public class JSCallbackMemoryTest {
             }
         });
 
-        Util.sleep(SLEEP_TIME);
-        System.gc();
-    }
-
-    @Test
-    public void testJsCallbackStrongRefPrimitiveArrayFunction() throws Exception {
-
-        Util.runAndWait(() -> {
-
-            int stagePosition = 40;
-            for (int i = 0; i < NUM_STAGES; i++) {
-                final Stage stage = new TestStage(i);
-                stages[i] = stage;
-                stage.setTitle("Stage " + i);
-                WebView webview = new WebView();
-                Scene scene = new Scene(webview);
-                scene.setFill(Color.LIGHTYELLOW);
-                stage.setX(stagePosition);
-                stage.setY(stagePosition);
-                stagePosition += OFFSET;
-                stage.setWidth(210);
-                stage.setHeight(180);
-                stage.setScene(scene);
-
-                webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
-                    if (n == Worker.State.SUCCEEDED) {
-                        final JSObject window = (JSObject) webview.getEngine().executeScript("window");
-                        assertNotNull(window);
-                        window.setMember("callback2", stage);
-                        window.setMember("primitiveArray", primitiveArray);
-                        webview.getEngine().executeScript("document.getElementById(\"mybtn2\").onclick = function() {callback2.jscallback2(primitiveArray);}");
-                        webview.getEngine().executeScript("document.getElementById(\"mybtn2\").click()");
-                    }
-                });
-
-                webview.getEngine().loadContent(html);
-                stage.show();
-            }
-        });
-
-        Util.sleep(SLEEP_TIME);
-        System.gc();
-        for (int i = 0; i < NUM_STAGES; i++) {
-            assertTrue(callbackStatus[i]);
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
         }
+
+        checkEncounteredException();
+
+        System.gc();
+        System.runFinalization();
     }
 
-    @Test
-    public void testJsCallbackLocalPrimitiveArrayFunctionWithGC() throws Exception {
+    @Test(timeout = 20000) public void testJsCallbackStrongRefPrimitiveArrayFunction() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(NUM_STAGES);
+
+        Util.runAndWait(() -> {
+
+            int stagePosition = 40;
+            for (int i = 0; i < NUM_STAGES; i++) {
+                final Stage stage = new TestStage(i);
+                stages[i] = stage;
+                stage.setTitle("Stage " + i);
+                WebView webview = new WebView();
+                Scene scene = new Scene(webview);
+                scene.setFill(Color.LIGHTYELLOW);
+                stage.setX(stagePosition);
+                stage.setY(stagePosition);
+                stagePosition += OFFSET;
+                stage.setWidth(210);
+                stage.setHeight(180);
+                stage.setScene(scene);
+
+                webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
+                    if (n == Worker.State.SUCCEEDED) {
+                        try {
+                            final JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                            assertNotNull(window);
+                            window.setMember("callback2", stage);
+                            window.setMember("primitiveArray", primitiveArray);
+                            webview.getEngine().executeScript("document.getElementById(\"mybtn2\").onclick = function() {callback2.jscallback2(primitiveArray);}");
+                            webview.getEngine().executeScript("document.getElementById(\"mybtn2\").click()");
+                        } catch (Throwable ex) {
+                            encounteredException = ex;
+                        } finally {
+                            latch.countDown();
+                        }
+                    }
+                });
+
+                webview.getEngine().loadContent(html);
+                stage.show();
+            }
+        });
+
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
+        }
+
+        checkEncounteredException();
+
+        for (int j = 0; j < 5; j++) {
+            System.gc();
+            System.runFinalization();
+
+            if (isAllCallbackStatusTrue()) {
+                break;
+            }
+
+            Util.sleep(GCWAIT_TIME);
+        }
+
+        assertTrue("All Button Callback return true", isAllCallbackStatusTrue());
+    }
+
+    @Test(timeout = 20000) public void testJsCallbackLocalPrimitiveArrayFunctionWithGC() throws Exception {
+        final CountDownLatch latch1 = new CountDownLatch(NUM_STAGES);
+        final CountDownLatch latch2 = new CountDownLatch(1);
 
         Util.runAndWait(() -> {
 
@@ -488,11 +607,18 @@ public class JSCallbackMemoryTest {
 
                 webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                     if (n == Worker.State.SUCCEEDED) {
-                        final JSObject window = (JSObject) webview.getEngine().executeScript("window");
-                        assertNotNull(window);
-                        window.setMember("callback2", stage);
-                        window.setMember("localPrimitiveArray", new int[] { 1, 2, 3, 4, 5 });
-                        System.gc(); System.gc();
+                        try {
+                            final JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                            assertNotNull(window);
+                            window.setMember("callback2", stage);
+                            window.setMember("localPrimitiveArray", new int[] { 1, 2, 3, 4, 5 });
+                            System.gc(); System.gc();
+                            System.runFinalization();
+                        } catch (Throwable ex) {
+                            encounteredException = ex;
+                        } finally {
+                            latch1.countDown();
+                        }
                     }
                 });
 
@@ -501,23 +627,38 @@ public class JSCallbackMemoryTest {
             }
         });
 
+        try {
+            latch1.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
+        }
+
+        checkEncounteredException();
+
         Util.sleep(SLEEP_TIME);
-        System.gc();
 
         Util.runAndWait(() -> {
 
             for (int i = 0; i < NUM_STAGES; i++) {
                 System.gc();
+                System.runFinalization();
                 webviewArray[i].getEngine().executeScript("document.getElementById(\"mybtn2\").onclick = function() {callback2.jscallback3(localPrimitiveArray);}");
                 webviewArray[i].getEngine().executeScript("document.getElementById(\"mybtn2\").click()");
             }
+            latch2.countDown();
         });
+
+        try {
+            latch2.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
+        }
 
         assertFalse(unexpectedCallback);
     }
 
-    @Test
-    public void testJsCallbackStrongRefObjectArrayFunction() throws Exception {
+    @Test(timeout = 20000) public void testJsCallbackStrongRefObjectArrayFunction() throws Exception {
+        final CountDownLatch latch = new CountDownLatch(NUM_STAGES);
 
         Util.runAndWait(() -> {
 
@@ -538,12 +679,18 @@ public class JSCallbackMemoryTest {
 
                 webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                     if (n == Worker.State.SUCCEEDED) {
-                        final JSObject window = (JSObject) webview.getEngine().executeScript("window");
-                        assertNotNull(window);
-                        window.setMember("callback2", stage);
-                        window.setMember("objectArray", objectArray);
-                        webview.getEngine().executeScript("document.getElementById(\"mybtn2\").onclick = function() {callback2.jscallback4(objectArray);}");
-                        webview.getEngine().executeScript("document.getElementById(\"mybtn2\").click()");
+                        try {
+                            final JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                            assertNotNull(window);
+                            window.setMember("callback2", stage);
+                            window.setMember("objectArray", objectArray);
+                            webview.getEngine().executeScript("document.getElementById(\"mybtn2\").onclick = function() {callback2.jscallback4(objectArray);}");
+                            webview.getEngine().executeScript("document.getElementById(\"mybtn2\").click()");
+                        } catch (Throwable ex) {
+                            encounteredException = ex;
+                        } finally {
+                            latch.countDown();
+                        }
                     }
                 });
 
@@ -552,15 +699,32 @@ public class JSCallbackMemoryTest {
             }
         });
 
-        Util.sleep(SLEEP_TIME);
-        System.gc();
-        for (int i = 0; i < NUM_STAGES; i++) {
-            assertTrue(callbackStatus[i]);
+        try {
+            latch.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
         }
+
+        checkEncounteredException();
+
+        for (int j = 0; j < 5; j++) {
+            System.gc();
+            System.runFinalization();
+
+            if (isAllCallbackStatusTrue()) {
+                break;
+            }
+
+            Util.sleep(GCWAIT_TIME);
+        }
+
+        assertTrue("All Button Callback return true", isAllCallbackStatusTrue());
+
     }
 
-    @Test
-    public void testJsCallbackLocalObjectArrayFunctionWithGC() throws Exception {
+    @Test(timeout = 20000) public void testJsCallbackLocalObjectArrayFunctionWithGC() throws Exception {
+        final CountDownLatch latch1 = new CountDownLatch(NUM_STAGES);
+        final CountDownLatch latch2 = new CountDownLatch(1);
 
         Util.runAndWait(() -> {
 
@@ -582,11 +746,18 @@ public class JSCallbackMemoryTest {
 
                 webview.getEngine().getLoadWorker().stateProperty().addListener((ov, o, n) -> {
                     if (n == Worker.State.SUCCEEDED) {
-                        final JSObject window = (JSObject) webview.getEngine().executeScript("window");
-                        assertNotNull(window);
-                        window.setMember("callback2", stage);
-                        window.setMember("localObjectArray", new Object[] { new Object(), new Object(), new Object(), new Object() });
-                        System.gc(); System.gc();
+                        try {
+                            final JSObject window = (JSObject) webview.getEngine().executeScript("window");
+                            assertNotNull(window);
+                            window.setMember("callback2", stage);
+                            window.setMember("localObjectArray", new Object[] { new Object(), new Object(), new Object(), new Object() });
+                            System.gc(); System.gc();
+                            System.runFinalization();
+                        } catch (Throwable ex) {
+                            encounteredException = ex;
+                        } finally {
+                            latch1.countDown();
+                        }
                     }
                 });
 
@@ -595,17 +766,32 @@ public class JSCallbackMemoryTest {
             }
         });
 
+        try {
+            latch1.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
+        }
+
+        checkEncounteredException();
+
         Util.sleep(SLEEP_TIME);
-        System.gc();
 
         Util.runAndWait(() -> {
 
             for (int i = 0; i < NUM_STAGES; i++) {
                 System.gc();
+                System.runFinalization();
                 webviewArray[i].getEngine().executeScript("document.getElementById(\"mybtn2\").onclick = function() {callback2.jscallback5(localObjectArray);}");
                 webviewArray[i].getEngine().executeScript("document.getElementById(\"mybtn2\").click()");
             }
+            latch2.countDown();
         });
+
+        try {
+            latch2.await();
+        } catch (InterruptedException ex) {
+            throw new AssertionFailedError("Unexpected exception: " + ex);
+        }
 
         assertFalse(unexpectedCallback);
     }
