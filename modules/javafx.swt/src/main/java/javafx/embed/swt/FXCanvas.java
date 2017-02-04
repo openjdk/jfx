@@ -923,7 +923,9 @@ public class FXCanvas extends Canvas {
     private void sendRotateEventToFX(int type, GestureEvent gestureEvent) {
         Point los = toDisplay(gestureEvent.x, gestureEvent.y);
 
-        double totalAngle = gestureEvent.rotation;
+        // SWT uses negative angle values to indicate clockwise rotation, while JavaFX uses positive ones.
+        // We thus have to invert the values here
+        double totalAngle = -gestureEvent.rotation;
         if (type == AbstractEvents.ROTATEEVENT_STARTED) {
             totalAngle = lastTotalAngle = 0.0;
         } else if (type == AbstractEvents.ROTATEEVENT_FINISHED) {
