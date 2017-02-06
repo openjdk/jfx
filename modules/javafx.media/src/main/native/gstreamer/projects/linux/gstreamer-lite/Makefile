@@ -38,7 +38,10 @@ DIRLIST = gstreamer/gst \
 TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
 
 CFLAGS =-fPIC                   \
-	-Werror=implicit-function-declaration \
+        -Wformat                \
+        -Wextra                 \
+        -Wformat-security       \
+        -Werror=implicit-function-declaration \
         -D_GNU_SOURCE           \
         -DGST_REMOVE_DEPRECATED \
         -DGSTREAMER_LITE        \
