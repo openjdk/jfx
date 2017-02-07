@@ -53,7 +53,7 @@ import java.util.function.Function;
  * <code><pre>
  public final class MyButton extends Button {
 
-     private static final{@literal StyleablePropertyFactory<MyButton>} FACTORY = new{@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData());
+     private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY = new {@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData());
 
      MyButton(String labelText) {
          super(labelText);
@@ -61,16 +61,16 @@ import java.util.function.Function;
      }
 
      // Typical JavaFX property implementation
-     public{@literal ObservableValue<Boolean>} selectedProperty() { return ({@literal ObservableValue<Boolean>})selected; }
+     public {@literal ObservableValue<Boolean>} selectedProperty() { return ({@literal ObservableValue<Boolean>})selected; }
      public final boolean isSelected() { return selected.getValue(); }
      public final void setSelected(boolean isSelected) { selected.setValue(isSelected); }
 
      // StyleableProperty implementation reduced to one line
-     private final{@literal StyleableProperty<Boolean>} selected =
-         FACTORY.createStyleableBooleanProperty(this, "selected", "-my-selected", s{@literal ->} s.selected);
+     private final {@literal StyleableProperty<Boolean>} selected =
+         FACTORY.createStyleableBooleanProperty(this, "selected", "-my-selected", s {@literal ->} s.selected);
 
-    {@literal @}Override
-     public{@literal List<CssMetaData<? extends Styleable, ?>>} getControlCssMetaData() {
+     {@literal @}Override
+     public {@literal List<CssMetaData<? extends Styleable, ?>>} getControlCssMetaData() {
          return FACTORY.getCssMetaData();
      }
 
@@ -85,11 +85,11 @@ import java.util.function.Function;
  * <code><pre>
  public final class MyButton extends Button {
 
-     private static final{@literal StyleablePropertyFactory<MyButton>} FACTORY =
-         new{@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData());
+     private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY =
+         new {@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData());
 
-     private static final{@literal CssMetaData<MyButton, Boolean>} SELECTED =
-         FACTORY.createBooleanCssMetaData("-my-selected", s{@literal ->} s.selected, false, false);
+     private static final {@literal CssMetaData<MyButton, Boolean>} SELECTED =
+         FACTORY.createBooleanCssMetaData("-my-selected", s {@literal ->} s.selected, false, false);
 
      MyButton(String labelText) {
          super(labelText);
@@ -97,12 +97,12 @@ import java.util.function.Function;
      }
 
      // Typical JavaFX property implementation
-     public{@literal ObservableValue<Boolean>} selectedProperty() { return ({@literal ObservableValue<Boolean>})selected; }
+     public {@literal ObservableValue<Boolean>} selectedProperty() { return ({@literal ObservableValue<Boolean>})selected; }
      public final boolean isSelected() { return selected.getValue(); }
      public final void setSelected(boolean isSelected) { selected.setValue(isSelected); }
 
      // StyleableProperty implementation reduced to one line
-     private final{@literal StyleableProperty<Boolean>} selected =
+     private final {@literal StyleableProperty<Boolean>} selected =
          new SimpleStyleableBooleanProperty(SELECTED, this, "selected");
 
      public static {@literal List<CssMetaData<? extends Styleable, ?>>} getClassCssMetaData() {
@@ -110,10 +110,9 @@ import java.util.function.Function;
      }
 
      {@literal @}Override
-     public{@literal List<CssMetaData<? extends Styleable, ?>>} getControlCssMetaData() {
+     public {@literal List<CssMetaData<? extends Styleable, ?>>} getControlCssMetaData() {
          return FACTORY.getCssMetaData();
      }
-
  }
  * </pre></code>
  * <p>The same can be accomplished with an inner-class. The previous example called {@code new SimpleStyleableBooleanProperty}
@@ -122,10 +121,10 @@ import java.util.function.Function;
  * <code><pre>
  public final class MyButton extends Button {
 
-     private static final{@literal StyleablePropertyFactory<MyButton>} FACTORY =
-         new{@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData()) {
+     private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY =
+         new {@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData()) {
          {
-             createBooleanCssMetaData("-my-selected", s{@literal ->} s.selected, false, false);
+             createBooleanCssMetaData("-my-selected", s {@literal ->} s.selected, false, false);
          }
      }
 
@@ -136,12 +135,12 @@ import java.util.function.Function;
      }
 
      // Typical JavaFX property implementation
-     public{@literal ObservableValue<Boolean>} selectedProperty() { return ({@literal ObservableValue<Boolean>})selected; }
+     public {@literal ObservableValue<Boolean>} selectedProperty() { return ({@literal ObservableValue<Boolean>})selected; }
      public final boolean isSelected() { return selected.getValue(); }
      public final void setSelected(boolean isSelected) { selected.setValue(isSelected); }
 
      // StyleableProperty implementation reduced to one line
-     private final{@literal StyleableProperty<Boolean>} selected =
+     private final {@literal StyleableProperty<Boolean>} selected =
          new SimpleStyleableBooleanProperty(this, "selected", "my-selected");
 
      public static {@literal List<CssMetaData<? extends Styleable, ?>>} getClassCssMetaData() {
@@ -149,10 +148,9 @@ import java.util.function.Function;
      }
 
      {@literal @}Override
-     public{@literal List<CssMetaData<? extends Styleable, ?>>} getControlCssMetaData() {
+     public {@literal List<CssMetaData<? extends Styleable, ?>>} getControlCssMetaData() {
          return FACTORY.getCssMetaData();
      }
-
  }
  * </pre></code>
  * <p><span class="simpleTagLabel">Caveats:</span></p>
