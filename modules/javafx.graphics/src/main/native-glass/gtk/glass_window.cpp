@@ -1090,16 +1090,15 @@ void WindowContextTop::set_window_resizable(bool res) {
         GdkGeometry geom = {w, h, w, h, 0, 0, 0, 0, 0.0, 0.0, GDK_GRAVITY_NORTH_WEST};
         gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom,
                 static_cast<GdkWindowHints>(GDK_HINT_MIN_SIZE | GDK_HINT_MAX_SIZE));
-        resizable.prev = resizable.value;
         resizable.value = false;
     } else {
-        resizable.prev = resizable.value;
         resizable.value = true;
         update_window_constraints();
     }
 }
 
 void WindowContextTop::set_resizable(bool res) {
+    resizable.prev = false;
     gint w, h;
     gtk_window_get_size(GTK_WINDOW(gtk_widget), &w, &h);
     if (map_received || w > 1 || h > 1) {
@@ -1295,11 +1294,17 @@ void WindowContextTop::set_alpha(double alpha) {
 
 void WindowContextTop::set_enabled(bool enabled) {
     if (enabled) {
-        //set back proper resizable value.
-        set_window_resizable(resizable.prev);
+        if (resizable.prev) {
+            set_window_resizable(true);
+        }
     } else {
-        //disabled window can't be resizable.
-        set_window_resizable(false);
+        if (resizable.value) {
+            set_window_resizable(false);
+            resizable.prev = true;
+        } else if (resizable.request == REQUEST_RESIZABLE) {
+            resizable.request = REQUEST_NOT_RESIZABLE;
+            resizable.prev = true;
+        }
     }
 }
 
