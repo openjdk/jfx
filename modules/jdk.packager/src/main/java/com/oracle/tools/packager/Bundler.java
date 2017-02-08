@@ -116,4 +116,9 @@ public interface Bundler {
      */
     public File execute(Map<String, ? super Object> params, File outputParentDir);
 
+     /**
+     * Removes temporary files that are used for bundling.
+     */
+    public void cleanup(Map<String, ? super Object> params);
+
 }

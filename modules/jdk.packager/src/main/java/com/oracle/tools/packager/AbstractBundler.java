@@ -30,11 +30,13 @@ import com.oracle.tools.packager.windows.WindowsBundlerParam;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.*;
+import com.oracle.tools.packager.IOUtils;
 
 public abstract class AbstractBundler implements Bundler {
 
@@ -143,5 +145,14 @@ public abstract class AbstractBundler implements Bundler {
     @Override
     public String toString() {
         return getName();
+    }
+
+    @Override
+    public void cleanup(Map<String, ? super Object> params) {
+        if (!StandardBundlerParam.VERBOSE.fetchFrom(params)) {
+            try {
+                IOUtils.deleteRecursive(StandardBundlerParam.BUILD_ROOT.fetchFrom(params));
+            } catch (FileNotFoundException ignored) {}
+        }
     }
 }
