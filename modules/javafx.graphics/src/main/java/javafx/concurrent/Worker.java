@@ -33,7 +33,7 @@ import javafx.beans.property.ReadOnlyStringProperty;
 /**
  * <p>
  *     A Worker is an object which performs some work in one or more background
- *     threads, and who's state is observable and available to JavaFX applications
+ *     threads, and whose state is observable and available to JavaFX applications
  *     and is usable from the main JavaFX Application thread. This interface is
  *     primarily implemented by both {@link Task} and {@link Service}, providing
  *     a common API among both classes which makes it easier for libraries and

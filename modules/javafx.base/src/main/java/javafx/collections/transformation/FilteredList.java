@@ -40,7 +40,7 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 
 /**
- * Wraps an ObservableList and filters it's content using the provided Predicate.
+ * Wraps an ObservableList and filters its content using the provided Predicate.
  * All changes in the ObservableList are propagated immediately
  * to the FilteredList.
  *

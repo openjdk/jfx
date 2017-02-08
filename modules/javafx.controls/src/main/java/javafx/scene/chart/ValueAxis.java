@@ -49,7 +49,7 @@ import javafx.util.StringConverter;
 
 
 /**
- * A axis who's data is defined as Numbers. It can also draw minor
+ * An axis whose data is defined as Numbers. It can also draw minor
  * tick-marks between the major ones.
  * @since JavaFX 2.0
  */

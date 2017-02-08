@@ -71,12 +71,12 @@ import javafx.css.StyleableProperty;
  * <code>max</code>, and <code>value</code>. The <code>value</code> should always
  * be a number within the range defined by <code>min</code> and
  * <code>max</code>. <code>min</code> should always be less than or equal to
- * <code>max</code> (although a slider who's <code>min</code> and
+ * <code>max</code> (although a slider whose <code>min</code> and
  * <code>max</code> are equal is a degenerate case that makes no sense).
  * <code>min</code> defaults to 0, whereas <code>max</code> defaults to 100.
  * <p>
- * This first example creates a slider who's range, or span, goes from 0 to 1,
- * and who's value defaults to .5:
+ * This first example creates a slider whose range, or span, goes from 0 to 1,
+ * and whose value defaults to .5:
  *
  * <pre>
  * import javafx.scene.control.Slider;

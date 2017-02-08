@@ -109,7 +109,7 @@ import java.util.jar.JarFile;
  * match a node with the given classname, id, and style class. For example,
  * selectors which may apply are any selector where the simple selector of the selector
  * contains a reference to the id, style class, or classname of the Node, or a
- * compound selector who's "descendant" part is a simple selector which contains
+ * compound selector whose "descendant" part is a simple selector which contains
  * a reference to the id, style class, or classname of the Node. <p> During
  * lookup, we will iterate over all the potential selectors and discover if they
  * apply to this particular node. If so, then we toggle a bit position in the

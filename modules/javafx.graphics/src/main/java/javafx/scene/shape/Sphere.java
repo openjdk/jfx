@@ -91,16 +91,16 @@ public class Sphere extends Shape3D {
     private TriangleMesh mesh;
 
     /**
-     * Creates a new instance of {@code Sphere} of radius of 1.0.
-     * The resolution defaults to MID_RESOLUTION divisions along sphere's axes.
+     * Creates a new instance of {@code Sphere} with radius of 1.0.
+     * The resolution defaults to 64 divisions along the sphere's axes.
      */
     public Sphere() {
         this(DEFAULT_RADIUS, DEFAULT_DIVISIONS);
     }
 
     /**
-     * Creates a new instance of {@code Sphere} of a given radius.
-     * The resolution defaults to MID_RESOLUTION divisions along sphere's axes.
+     * Creates a new instance of {@code Sphere} with the given radius.
+     * The resolution defaults to 64 divisions along the sphere's axes.
      *
      * @param radius Radius
      */
@@ -109,7 +109,7 @@ public class Sphere extends Shape3D {
     }
 
     /**
-     * Creates a new instance of {@code Sphere} of a given radius and number
+     * Creates a new instance of {@code Sphere} with the given radius and number
      * of divisions.
      * The resolution is defined in terms of number of subdivisions along the
      * sphere's axes. More divisions lead to more finely tesselated objects.
