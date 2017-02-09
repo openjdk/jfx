@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -149,7 +149,6 @@ import javafx.util.Callback;
 public class HBox extends Pane {
 
     private boolean biasDirty = true;
-    private boolean performingLayout = false;
     private double minBaselineComplement = Double.NaN;
     private double prefBaselineComplement = Double.NaN;
     private Orientation bias;
@@ -541,9 +540,6 @@ public class HBox extends Pane {
     }
 
     @Override public void requestLayout() {
-        if (performingLayout) {
-            return;
-        }
         biasDirty = true;
         bias = null;
         minBaselineComplement = Double.NaN;
@@ -607,7 +603,6 @@ public class HBox extends Pane {
     }
 
     @Override protected void layoutChildren() {
-        performingLayout = true;
         List<Node> managed = getManagedChildren();
         Insets insets = getInsets();
         Pos align = getAlignmentInternal();
@@ -643,7 +638,6 @@ public class HBox extends Pane {
                     alignHpos, alignVpos);
             x += actualAreaWidths[0][i] + space;
         }
-        performingLayout = false;
     }
 
     private double[][] getTempArray(int size) {

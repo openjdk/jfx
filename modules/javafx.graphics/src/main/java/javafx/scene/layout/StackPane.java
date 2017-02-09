@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,7 +131,6 @@ import javafx.util.Callback;
 public class StackPane extends Pane {
 
     private boolean biasDirty = true;
-    private boolean performingLayout = false;
     private Orientation bias;
 
     /********************************************************************
@@ -310,16 +309,12 @@ public class StackPane extends Pane {
 
 
     @Override public void requestLayout() {
-        if (performingLayout) {
-            return;
-        }
         biasDirty = true;
         bias = null;
         super.requestLayout();
     }
 
     @Override protected void layoutChildren() {
-        performingLayout = true;
         List<Node> managed = getManagedChildren();
         Pos align = getAlignmentInternal();
         HPos alignHpos = align.getHpos();
@@ -344,7 +339,6 @@ public class StackPane extends Pane {
                            childAlignment != null? childAlignment.getHpos() : alignHpos,
                            childAlignment != null? childAlignment.getVpos() : alignVpos);
         }
-        performingLayout = false;
     }
 
     /***************************************************************************

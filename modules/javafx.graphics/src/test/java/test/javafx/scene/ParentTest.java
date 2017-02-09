@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -496,6 +496,66 @@ public class ParentTest {
             layoutCalled = false;
         }
 
+    }
+
+    @Test
+    public void testRequestLayoutCall() {
+        Rectangle rect1 = new Rectangle();
+        Rectangle rect2 = new Rectangle();
+
+        LGroup g = new LGroup();
+        Scene s = new Scene(g);
+        stage.setScene(s);
+        stage.show();
+
+        ParentShim.getChildren(g).addAll(rect1, rect2);
+        toolkit.fireTestPulse();
+
+        g.clear();
+        // set rect1's layoutX to new value
+        rect1.setLayoutX(10);
+        g.assertAndClear(true);
+        toolkit.fireTestPulse();
+
+        // set rect1's layoutX to same value
+        rect1.setLayoutX(10);
+        g.assertAndClear(false);
+        toolkit.fireTestPulse();
+
+        // set rect2's layoutX to new value
+        rect2.setLayoutX(10);
+        g.assertAndClear(true);
+        toolkit.fireTestPulse();
+
+        // set rect2's layoutY to new value
+        rect2.setLayoutY(10);
+        g.assertAndClear(true);
+        toolkit.fireTestPulse();
+
+        // set rect1's layoutX to same value
+        rect1.setLayoutX(10);
+        g.assertAndClear(false);
+        toolkit.fireTestPulse();
+
+        // set rect2's layoutY to same value
+        rect2.setLayoutY(10);
+        g.assertAndClear(false);
+        toolkit.fireTestPulse();
+
+        // set rect1 to new values
+        rect1.resizeRelocate(5, 5, 10, 10);
+        g.assertAndClear(true);
+        toolkit.fireTestPulse();
+
+        // set rect2 to new values
+        rect2.resizeRelocate(5, 5, 10, 10);
+        g.assertAndClear(true);
+        toolkit.fireTestPulse();
+
+        // set rect1 to same values
+        rect1.resizeRelocate(5, 5, 10, 10);
+        g.assertAndClear(false);
+        toolkit.fireTestPulse();
     }
 
     @Test

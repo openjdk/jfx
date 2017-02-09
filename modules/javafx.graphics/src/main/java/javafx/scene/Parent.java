@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -978,17 +978,21 @@ public abstract class Parent extends Node {
      * @since JavaFX 8.0
      */
     public void requestLayout() {
-        requestLayout(false);
+        clearSizeCache();
+        markDirtyLayout(false, forceParentLayout);
     }
 
+    private boolean forceParentLayout = false;
     /**
      * A package scope method used by Node and serves as a helper method for
      * requestLayout() (see above). If forceParentLayout is true it will
      * propagate this force layout flag to its parent.
      */
     void requestLayout(boolean forceParentLayout) {
-        clearSizeCache();
-        markDirtyLayout(false, forceParentLayout);
+        boolean savedForceParentLayout = this.forceParentLayout;
+        this.forceParentLayout = forceParentLayout;
+        requestLayout();
+        this.forceParentLayout = savedForceParentLayout;
     }
 
     /**

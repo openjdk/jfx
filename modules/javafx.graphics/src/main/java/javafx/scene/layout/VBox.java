@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,7 +138,6 @@ import javafx.util.Callback;
 public class VBox extends Pane {
 
     private boolean biasDirty = true;
-    private boolean performingLayout = false;
     private Orientation bias;
     private double[][] tempArray;
 
@@ -529,16 +528,12 @@ public class VBox extends Pane {
     }
 
     @Override public void requestLayout() {
-        if (performingLayout) {
-            return;
-        }
         biasDirty = true;
         bias = null;
         super.requestLayout();
     }
 
     @Override protected void layoutChildren() {
-        performingLayout = true;
         List<Node> managed = getManagedChildren();
         Insets insets = getInsets();
         double width = getWidth();
@@ -567,7 +562,6 @@ public class VBox extends Pane {
                        hpos, vpos);
             y += actualAreaHeights[0][i] + space;
         }
-        performingLayout = false;
     }
 
     private double[][] getTempArray(int size) {
