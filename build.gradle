@@ -2590,12 +2590,12 @@ project(":fxpackager") {
     }
 
     task copyRedistributableFiles(type: Copy) {
-        def projectDir = "tools/java/redistributable-files"
+        def projectDir = "tools/java/legacy"
         def sourceDir = "src/$projectDir"
         def buildDir = "build/$projectDir"
-        def resourceDir = "${moduleDir}/jdk/packager/internal/resources/tools/redistributable-files"
+        def resourceDir = "${moduleDir}/jdk/packager/internal/resources/tools/legacy"
 
-        from "$sourceDir/redistributable.list"
+        from "$sourceDir/jre.list"
         into project.file("$resourceDir")
     }
 

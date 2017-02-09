@@ -1,3 +1,6 @@
+; This file contains a list of all modules in a modular JDK that match
+; a JRE from JDK 8 for backward compatibility with legacy jars.
+
 java.base
 java.compiler
 java.datatransfer
@@ -5,6 +8,7 @@ java.desktop
 java.instrument
 java.logging
 java.management
+java.management.rmi 
 java.naming
 java.prefs
 java.rmi
@@ -24,24 +28,17 @@ javafx.media
 javafx.swing
 javafx.web
 jdk.accessibility
-jdk.attach
 jdk.charsets
-jdk.compiler
 jdk.crypto.ec
-jdk.desktop
 jdk.dynalink
-jdk.editpad
 jdk.httpserver
-jdk.internal.ed
-jdk.javadoc
-jdk.jconsole
-jdk.jdi
 jdk.jdwp.agent
+jdk.jfr
 jdk.jsobject
-jdk.jstatd
 jdk.jvmstat
 jdk.localedata
 jdk.management
+jdk.management.agent 
 jdk.naming.dns
 jdk.naming.rmi
 jdk.net

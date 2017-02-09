@@ -45,6 +45,7 @@ import java.lang.module.ModuleReader;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -55,12 +56,28 @@ import java.util.logging.Logger;
 
 public final class RedistributableModules {
     private static final String JDK_PACKAGER_MODULE = "jdk.packager";
-    private static final String REDISTRIBUTABLE_MODULES_FILENAME = "jdk/packager/internal/resources/tools/redistributable-files/redistributable.list";
+    private static final String LEGACY_JRE_MODULES_FILENAME = "jdk/packager/internal/resources/tools/legacy/jre.list";
 
     private RedistributableModules() {}
 
+    public static String stripComments(String line) {
+        String result = "";
+        int i = line.indexOf(";");
+
+        if (i >= 0) {
+          result = line.substring(0, i);
+          result = result.trim();
+        }
+        else {
+            result = line;
+        }
+
+        return result;
+    }
+
     public static Set<String> getRedistributableModules(List<Path> modulePath) {
         Set<String> result = null;
+
         Set<String> addModules = new HashSet<>();
         Set<String> limitModules = new HashSet<>();
         ModuleFinder finder = AppRuntimeImageBuilder.moduleFinder(modulePath, addModules, limitModules);
@@ -78,7 +95,7 @@ public final class RedistributableModules {
                 Optional<InputStream> stream = null;
 
                 try {
-                    stream = reader.open(REDISTRIBUTABLE_MODULES_FILENAME);
+                    stream = reader.open(LEGACY_JRE_MODULES_FILENAME);
                 } catch (IOException ex) {
                 }
 
@@ -97,7 +114,11 @@ public final class RedistributableModules {
 
                             try {
                                 while ((line = br.readLine()) != null) {
-                                    result.add(line);
+                                    String module = stripComments(line);
+
+                                    if (!module.isEmpty()) {
+                                        result.add(line);
+                                    }
                                 }
                             } catch (IOException ex) {
                             }
