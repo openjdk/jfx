@@ -523,7 +523,7 @@ void WindowContextBase::remove_child(WindowContextTop* child) {
 void WindowContextBase::show_or_hide_children(bool show) {
     std::set<WindowContextTop*>::iterator it;
     for (it = children.begin(); it != children.end(); ++it) {
-        (*it)->set_visible(show);
+        (*it)->set_minimized(!show);
         (*it)->show_or_hide_children(show);
     }
 }
