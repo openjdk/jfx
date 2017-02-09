@@ -45,18 +45,6 @@
 #COMPILE_WEBKIT = true
 #COMPILE_MEDIA = true
 
-# The building of JavaDoc takes time. By default we disable the building of JavaDoc
-# so as to speed up the time in incremental builds. Uncomment this flag in order to
-# build all the JavaDoc
-
-#BUILD_JAVADOC = true
-
-# The building of the javafx-exports bundle takes time. 
-# Uncomment this flag to speed up incremental builds if javafx-exports.zip
-# is not needed
-
-#BUILD_MODULE_ZIP = false
-
 # Specifies whether to include the Null3D pipeline, which can be used for
 # performance debugging.
 # Uncomment this flag in order to include the Null3D pipeline in the build.
