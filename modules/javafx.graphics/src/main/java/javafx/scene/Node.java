@@ -3490,7 +3490,7 @@ public abstract class Node implements EventTarget, Styleable {
      *  values on two different levels. We expose two public immutable
      *  Bounds boundsInParent objects and boundsInLocal. Because they are
      *  immutable and because they may change quite frequently (especially
-     *  in the case of a Parent who's children are animated), it is
+     *  in the case of a Parent whose children are animated), it is
      *  important that the system does not rely on these variables, because
      *  doing so would produce a large amount of garbage. Rather, these
      *  variables are provided solely for the convenience of application

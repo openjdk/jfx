@@ -18,6 +18,9 @@ OBJBASE_DIR = $(BUILD_DIR)/obj/plugins/avplugin
 endif
 
 CFLAGS = -fPIC                   \
+         -Wformat                \
+         -Wextra                 \
+         -Wformat-security       \
          -Werror=implicit-function-declaration \
          -msse2                  \
          -fbuiltin               \

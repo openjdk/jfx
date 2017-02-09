@@ -369,6 +369,7 @@ public class PackagerLib {
             try {
                 if (bundler.validate(localParams)) {
                     File result = bundler.execute(localParams, outdir);
+                    bundler.cleanup(localParams);
                     if (result == null) {
                         throw new PackagerException("MSG_BundlerFailed", bundler.getID(), bundler.getName());
                     }

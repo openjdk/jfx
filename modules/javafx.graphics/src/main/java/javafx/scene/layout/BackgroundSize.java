@@ -30,7 +30,7 @@ import javafx.beans.NamedArg;
 
 /**
  * Defines the size of the area that a BackgroundImage should fill relative
- * to the Region it is styling. There are several properties who's values
+ * to the Region it is styling. There are several properties whose values
  * take precedence over the others. In particular there are 4 key properties,
  * {@code width}, {@code height}, {@code contain}, and {@code cover}. Both width
  * and height are independent of each other, however both interact with

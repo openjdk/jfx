@@ -43,7 +43,7 @@ LINUX.library = { name -> return "lib${name}.so" as String }
 // A set of common parameters to use for both compiling and linking
 def commonFlags = [
         "-fno-strict-aliasing", "-fPIC", "-fno-omit-frame-pointer", // optimization flags
-        "-Wextra", "-Wall", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
+        "-Wextra", "-Wall", "-Wformat-security", "-Wno-unused", "-Wno-parentheses", "-Werror=implicit-function-declaration"] // warning flags
 
 if (!IS_64) {
     commonFlags += "-m32"
@@ -240,7 +240,7 @@ LINUX.prismSW.lib = "prism_sw"
 
 LINUX.launcher = [:]
 LINUX.launcher.compiler = compiler
-LINUX.launcher.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c"]
+LINUX.launcher.ccFlags = ["-Wextra", "-Wformat", "-Wformat-security", "-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c"]
 LINUX.launcher.linker = linker
 LINUX.launcher.linkFlags = ["-ldl"]
 if (!IS_64) {
@@ -250,7 +250,7 @@ if (!IS_64) {
 
 LINUX.launcherlibrary = [:]
 LINUX.launcherlibrary.compiler = compiler
-LINUX.launcherlibrary.ccFlags = ["-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c", "-fPIC"]
+LINUX.launcherlibrary.ccFlags = ["-Wextra", "-Wformat", "-Wformat-security", "-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c", "-fPIC"]
 LINUX.launcherlibrary.linker = linker
 LINUX.launcherlibrary.linkFlags = ["-ldl", "-lpthread", "-shared"]
 if (!IS_64) {

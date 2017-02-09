@@ -15,6 +15,9 @@ DIRLIST = progressbuffer       \
 TARGET = $(BUILD_DIR)/lib$(BASE_NAME).so
 
 CFLAGS = -fPIC                   \
+         -Wformat                \
+         -Wextra                 \
+         -Wformat-security       \
          -Werror=implicit-function-declaration \
          -msse2                  \
          -fbuiltin               \

@@ -37,6 +37,9 @@ ifdef HOST_COMPILE
 	GSTREAMER_LITE_DIR = ../../../gstreamer/gstreamer-lite
 
 	CFLAGS += -fPIC \
+                  -Wformat \
+                  -Wextra \
+                  -Wformat-security \
                   -Werror=implicit-function-declaration \
 		  -msse2 \
 	          -DGSTREAMER_LITE

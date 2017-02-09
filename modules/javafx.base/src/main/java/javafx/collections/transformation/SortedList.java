@@ -41,7 +41,7 @@ import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
 
 /**
- * Wraps an ObservableList and sorts it's content.
+ * Wraps an ObservableList and sorts its content.
  * All changes in the ObservableList are propagated immediately
  * to the SortedList.
  *
