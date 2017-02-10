@@ -3936,13 +3936,10 @@ compileTargets { t ->
                     exclude ("com/sun/glass/ui/lens")
                 }
 
-                // FIXME: JIGSAW -- Figure out what to do with Monocle
-                /*
                 if (!targetProperties.includeMonocle) {
                     exclude ("com/sun/glass/ui/monocle")
                     exclude("com/sun/prism/es2/Monocle*")
                 }
-                */
 
                 if (t.name != 'ios') {
                     exclude ("com/sun/media/jfxmediaimpl/platform/ios",
