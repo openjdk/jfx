@@ -27,7 +27,6 @@ if (APPLE)
     find_library(COREFOUNDATION_LIBRARY CoreFoundation)
     list(APPEND JavaScriptCore_LIBRARIES
         ${COREFOUNDATION_LIBRARY}
-        libicucore.dylib
     )
 endif()
 

@@ -55,7 +55,15 @@ elseif (APPLE)
     # set(USE_CF 1)
     add_definitions(-DUSE_CF=1)
     add_definitions(-DJSC_OBJC_API_ENABLED=0)
-    
+
+    #### ICU ####
+    set(ICU_FOUND TRUE)
+    set(ICU_I18N_FOUND TRUE)
+    set(ICU_INCLUDE_DIRS ${IMPORT_INCLUDE_DIR})
+    set(ICU_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libicuuc.a ${IMPORT_LIBRARIES_DIR}/libicudata.a)
+    set(ICU_I18N_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libicui18n.a)
+    #### ICU-END ####
+
     #### Sqlite3 ####
     set(SQLITE_FOUND TRUE)
     set(SQLITE_INCLUDE_DIR ${IMPORT_INCLUDE_DIR})

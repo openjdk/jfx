@@ -3002,7 +3002,7 @@ project(":web") {
                           IS_64 ? "${t.name}-amd64" : "${t.name}-i586"
         dependencies {
             webkit group: "com.sun.webkit", name: "webview-deps",
-                   version: "1.3.1", classifier: "$classifier", ext: "zip"
+                   version: "1.3.2", classifier: "$classifier", ext: "zip"
         }
 
         def webkitOutputDir = cygpath("$buildDir/${t.name}")
