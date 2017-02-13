@@ -140,6 +140,7 @@ final class URLLoader implements Runnable {
         try {
             int redirectCount = 0;
             boolean streaming = true;
+            boolean connectionResetRetry = true;
             while (true) {
                 // RT-14438
                 String actualUrl = url;
@@ -169,6 +170,12 @@ final class URLLoader implements Runnable {
                         continue; // retry without streaming
                     } else {
                         throw ex;
+                    }
+                } catch (SocketException ex) {
+                    // SocketException: Connection reset, Retry once
+                    if ("Connection reset".equals(ex.getMessage()) && connectionResetRetry) {
+                        connectionResetRetry = false;
+                        continue;
                     }
                 } finally {
                     close(c);
