@@ -727,7 +727,7 @@ static String defaultUserAgent()
         String wkVersion = String::format("%d.%d", WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION);
         userAgentString = makeString("Mozilla/5.0 (", agentOS(),
                                      ") AppleWebKit/", wkVersion,
-                                     " (KHTML, like Gecko) JavaFX/8.0 Safari/", wkVersion);
+                                     " (KHTML, like Gecko) JavaFX/9 Safari/", wkVersion);
     }
     return userAgentString;
 }
