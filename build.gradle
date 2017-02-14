@@ -830,6 +830,9 @@ void commonModuleSetup(Project p, List<String> moduleChain) {
 
     if (p.hasProperty("moduleName")) {
         p.ext.moduleDir = new File (p.sourceSets.main.output.classesDir, "${p.moduleName}")
+        if (p.sourceSets.hasProperty('shims')) {
+            p.ext.moduleShimsDir = new File (p.sourceSets.shims.output.classesDir, "${p.moduleName}")
+        }
     }
 
     def mpa = computeModulePathArgs(p.name, moduleChain, false)
@@ -1261,12 +1264,26 @@ void addJSL(Project project, String name, String pkg, List<String> addExports, C
         from("$project.buildDir/gensrc/jsl-$lowerName") {
             include("**/*.frag")
         }
-        //into project.sourceSets.main.output.resourcesDir
         into project.moduleDir
     }
 
     project.processShaders.dependsOn(processShaders)
     project.sourceSets.shaders.output.dir("$project.buildDir/gensrc/jsl-$lowerName", builtBy: processShaders )
+
+    def processShimsShaders = project.task("process${name}ShimsShaders",
+            dependsOn: [generateShaders, compileHLSLShaders],
+            type: Copy,
+            description: "Copy hlsl / frag shaders to shims") {
+        from("$project.buildDir/hlsl/$name") {
+            include "**/*.obj"
+        }
+        from("$project.buildDir/gensrc/jsl-$lowerName") {
+            include("**/*.frag")
+        }
+        into project.moduleShimsDir
+    }
+
+    project.processShimsShaders.dependsOn(processShimsShaders)
 
 }
 
@@ -1593,6 +1610,12 @@ project(":graphics") {
         // an empty task to hang the prism and decora shaders on
     }
 
+    project.task("processShimsShaders") {
+        // an empty task to hang the prism and decora shaders on
+    }
+
+    compileShimsJava.dependsOn("processShimsShaders")
+
     // Generate the JSLC support grammar
     project.task("generateGrammarSource", type: JavaExec) {
         // use antlr to generate our grammar.
@@ -1632,8 +1655,6 @@ project(":graphics") {
         source += "$buildDir/gensrc/java"
         source += project.sourceSets.shaders.output
 
-        project.sourceSets.shims.java.srcDirs += project.sourceSets.shaders.output
-
         destinationDir = project.sourceSets.main.output.classesDir
         options.compilerArgs.addAll([
             '-h', "$buildDir/gensrc/headers/",  // Note: this creates the native headers
@@ -1642,6 +1663,12 @@ project(":graphics") {
             ] )
     }
     classes.dependsOn(compileFullJava)
+
+    project.sourceSets.shims.java.srcDirs += project.sourceSets.shaders.output
+    project.sourceSets.shims.java.srcDirs += "$buildDir/gensrc/jsl-prism"
+    project.sourceSets.shims.java.srcDirs += "$buildDir/gensrc/jsl-decora"
+
+    compileShimsJava.dependsOn(compileFullJava)
 
     // Create a single "native" task which will depend on all the individual native tasks for graphics
     project.ext.nativeAllTask = task("native", group: "Build", description: "Compiles and Builds all native libraries for Graphics");
@@ -1790,7 +1817,6 @@ project(":graphics") {
                 classpath = configurations.compile + configurations.antlr
                 classpath += files(project.sourceSets.jslc.output.classesDir)
 
-                //classpath += files(project.sourceSets.jslc.resources) // not quite right..
                 classpath += files("${project.projectDir}/src/jslc/resources")
 
                 classpath += files("$buildDir/classes/main")
@@ -1969,7 +1995,7 @@ project(":controls") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
 
-    // TODO Css2Bin really should be moved out and put into buildSrc if it can be
+    // TODO JDK-8174944 Css2Bin really should be moved out and put into buildSrc if it can be
     // TODO could change script to dynamically locate all .css files and create bss for them, probably better
     // TODO also not sure there is any benefit to having css files in the the runtime modules at all
     processResources << {
@@ -1991,6 +2017,14 @@ project(":controls") {
             }
         }
     }
+
+    // TODO - if the above TODO regarding Css2Bin is fixed, this should also
+    // be fixed.
+    processShimsResources.dependsOn(project.task("copyShimBss", type: Copy) {
+        from project.moduleDir
+        into project.moduleShimsDir
+        include "**/*.bss"
+    })
 }
 
 project(":swing") {
@@ -3346,16 +3380,23 @@ allprojects {
                 '--module-source-path', project.moduleSourcePathShim
                 ])
         }
+        project.compileShimsJava.dependsOn(project.compileJava)
 
-        compileTestJava.dependsOn(compileShimsJava)
-
-        def copyGeneratedShimsTask = task("copyGeneratedShims", type: Copy, dependsOn: [compileShimsJava]) {
+        def copyGeneratedShimsTask = task("copyGeneratedShims", type: Copy, dependsOn: [compileShimsJava, processShimsResources]) {
             from project.sourceSets.shims.output.classesDir
             into "${rootProject.buildDir}/shims"
             exclude("*/module-info.class")
         }
 
-        compileTestJava.dependsOn(copyGeneratedShimsTask)
+        project.processShimsResources.dependsOn(project.processResources)
+
+        // shims resources should have the main resouces as a base
+        project.sourceSets.shims.resources.srcDirs += project.sourceSets.main.resources.srcDirs
+
+        // and redirect the resources into the module
+        project.processShimsResources.destinationDir = project.moduleShimsDir
+
+       compileTestJava.dependsOn(copyGeneratedShimsTask)
     }
 
     if (project.hasProperty('modulePathArgs')) {
