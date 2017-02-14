@@ -309,7 +309,7 @@ bool PosixProcess::Wait() {
     bool result = false;
 
     int status = 0;
-    pid_t wpid;
+    pid_t wpid = 0;
 
     //TODO Use waitpid instead of wait
 #ifdef LINUX
