@@ -367,7 +367,6 @@ class WindowContextTop: public WindowContextBase {
     WindowFrameType frame_type;
     struct WindowContext *owner;
     WindowGeometry geometry;
-    int stale_config_notifications;
     struct _Resizable{// we can't use set/get gtk_window_resizable function
         _Resizable(): request(REQUEST_NONE), value(true), prev(false),
                 minw(-1), minh(-1), maxw(-1), maxh(-1){}
