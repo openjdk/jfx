@@ -42,6 +42,40 @@
 #import "GlassLayer3D.h"
 #import "GlassHelper.h"
 
+//#include <stdio.h>
+//#include <stdarg.h>
+//
+//void glass_logf(char *fmt, ...) {
+//    va_list argp;
+//    va_start(argp, fmt);
+//    FILE *f = fopen("/tmp/glass.log", "a");
+//    vfprintf(f, fmt, argp);
+//    fclose(f);
+//}
+//
+//void Sys_out_sprintf(JNIEnv *env, char *fmt, ...) {
+//    va_list argp;
+//    va_start(argp, fmt);
+//    char buffer[4096];
+//    vsprintf(buffer, fmt, argp);
+////    glass_logf("str = %s", buffer);
+////    return;
+//    jclass sysClass = (*env)->FindClass(env, "java/lang/System");
+//    if (!sysClass) { glass_logf("Null finding System class\n"); return; }
+//    jclass psClass = (*env)->FindClass(env, "java/io/PrintStream");
+//    if (!psClass) { glass_logf("Null finding PrintStream class\n"); return; }
+//    jfieldID outField = (*env)->GetStaticFieldID(env, sysClass, "out", "Ljava/io/PrintStream;");
+//    if (!outField) { glass_logf("Null finding System.out field\n"); return; }
+//    jmethodID printMethod = (*env)->GetMethodID(env, psClass, "print", "(Ljava/lang/String;)V");
+//    if (!printMethod) { glass_logf("Null finding print method\n"); return; }
+//    jobject outStream = (*env)->GetStaticObjectField(env, sysClass, outField);
+//    if (!outStream) { glass_logf("Null getting System.out object\n"); return; }
+//    jstring theString = (*env)->NewStringUTF(env, buffer);
+//    if (!theString) { glass_logf("Null creating String object\n"); return; }
+//    (*env)->CallVoidMethod(env, outStream, printMethod, theString);
+//    (*env)->DeleteLocalRef(env, theString);
+//}
+
 //#define VERBOSE
 #ifndef VERBOSE
     #define LOG(MSG, ...)
@@ -553,8 +587,12 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
             if ([GlassEmbeddedWindow exists:parent])
             {
                 window->isLocationAssigned = YES;
-                [window _setBounds:(int)round(parent.frame.origin.x)
-                                 y:(int)round(parent.frame.origin.y)
+                NSScreen *pscreen = [[NSScreen screens] objectAtIndex:0];
+                NSRect screenFrame = pscreen.frame;
+                NSRect frameRect = parent.frame;
+                int invy = (int)round(screenFrame.size.height - frameRect.size.height - frameRect.origin.y);
+                [window _setBounds:(int)round(frameRect.origin.x)
+                                 y:invy
                               xSet:YES ySet:YES w:0 h:0 cw:0 ch:0];
             }
         }
@@ -1545,7 +1583,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedY
 (JNIEnv *env, jobject jWindow, jlong jPtr)
 {
-    LOG("Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedX");
+    LOG("Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedY");
     if (!jPtr) return 0;
 
     jint y = 0;
@@ -1556,7 +1594,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacWindow__1getEmbeddedY
         GlassEmbeddedWindow *window = getGlassEmbeddedWindow(env, jPtr);
         NSRect frameRect = [window frame];
 
-        // flip y coorindate
+        // flip y coordinate
         NSScreen *screen = [[NSScreen screens] objectAtIndex:0];
         NSRect screenFrame = screen.frame;
         y = (int)round(screenFrame.size.height - frameRect.size.height - frameRect.origin.y);
