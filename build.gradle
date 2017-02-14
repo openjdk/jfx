@@ -3666,6 +3666,7 @@ compileTargets { t ->
     def modulesLibsDir = "${modularSdkDir}/modules_libs"
     def modulesSrcDir = "${modularSdkDir}/modules_src"
     def modulesConfDir = "${modularSdkDir}/modules_conf"
+    def modulesLegalDir = "${modularSdkDir}/modules_legal"
     def modulesMakeDir = "${modularSdkDir}/make"
     final File runArgsFile = file("${rootProject.buildDir}/${RUNARGSFILE}")
     final File compileArgsFile = file("${rootProject.buildDir}/${COMPILEARGSFILE}")
@@ -3842,12 +3843,21 @@ compileTargets { t ->
             into dstMakeDir
         }
 
+        // Copy legal files
+        def srcLegalDir = "${project.projectDir}/src/main/legal"
+        def dstLegalDir = "${modulesLegalDir}/${moduleName}"
+        def copyLegalTask = project.task("copyLegal$t.capital", type: Copy, dependsOn: copyBuildPropertiesTask) {
+            from srcLegalDir
+            into dstLegalDir
+        }
+
         buildModulesTask.dependsOn(
             copyClassFilesTask,
             copyLibFilesTask,
             copySourceFilesTask,
             copyDocFiles,
-            copyBuildPropertiesTask)
+            copyBuildPropertiesTask,
+            copyLegalTask)
     }
 
     def buildRunArgsTask = task("buildRunArgs$t.capital",
