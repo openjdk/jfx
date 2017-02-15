@@ -176,6 +176,8 @@ final class URLLoader implements Runnable {
                     if ("Connection reset".equals(ex.getMessage()) && connectionResetRetry) {
                         connectionResetRetry = false;
                         continue;
+                    } else {
+                        throw ex;
                     }
                 } finally {
                     close(c);
