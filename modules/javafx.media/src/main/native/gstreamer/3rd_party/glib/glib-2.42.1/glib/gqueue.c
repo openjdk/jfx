@@ -411,6 +411,11 @@ g_queue_push_tail (GQueue   *queue,
   g_return_if_fail (queue != NULL);
 
   queue->tail = g_list_append (queue->tail, data);
+#ifdef GSTREAMER_LITE
+  if (queue->tail == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   if (queue->tail->next)
     queue->tail = queue->tail->next;
   else
