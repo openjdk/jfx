@@ -1168,7 +1168,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_win_WinWindow__1initIDs
      ASSERT(midNotifyClose);
      if (env->ExceptionCheck()) return;
 
-     midNotifyMoving = env->GetMethodID(cls, "notifyMoving", "(IIIIFFIIIIIII)[I")
+     midNotifyMoving = env->GetMethodID(cls, "notifyMoving", "(IIIIFFIIIIIII)[I");
      ASSERT(midNotifyMoving);
      if (env->ExceptionCheck()) return;
 

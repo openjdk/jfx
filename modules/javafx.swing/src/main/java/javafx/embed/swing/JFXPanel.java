@@ -936,7 +936,7 @@ public class JFXPanel extends JComponent {
                 stagePeer.setSize(pWidth, pHeight);
             }
             invokeOnClientEDT(() -> {
-                if (JFXPanel.this.isFocusOwner()) {
+                if (stagePeer != null && JFXPanel.this.isFocusOwner()) {
                     stagePeer.setFocused(true, AbstractEvents.FOCUSEVENT_ACTIVATED);
                 }
             });

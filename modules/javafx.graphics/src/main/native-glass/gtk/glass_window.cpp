@@ -671,7 +671,6 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             frame_type(_frame_type),
             owner(_owner),
             geometry(),
-            stale_config_notifications(),
             resizable(),
             frame_extents_initialized(),
             map_received(false),
@@ -943,87 +942,60 @@ void WindowContextTop::process_property_notify(GdkEventProperty* event) {
 
     if (event->atom == atom_net_wm_state && event->window == gdk_window) {
         process_net_wm_property();
-    } else if (event->atom == get_net_frame_extents_atom() &&
-            event->window == gdk_window) {
-        int top, left, bottom, right;
-        if (get_frame_extents_property(&top, &left, &bottom, &right)) {
-            int oldX = geometry_get_window_x(&geometry);
-            int oldY = geometry_get_window_y(&geometry);
-            int oldWidth = geometry_get_content_width(&geometry);
-            int oldHeight = geometry_get_content_height(&geometry);
-
-            bool updateWindowConstraints = geometry.extents.top != top
-                    || geometry.extents.left != left
-                    || geometry.extents.bottom != bottom
-                    || geometry.extents.right != right;
-
-            geometry.extents.top = top;
-            geometry.extents.left = left;
-            geometry.extents.bottom = bottom;
-            geometry.extents.right = right;
-
-            if (updateWindowConstraints) {
-                update_window_constraints();
-            }
-
-            XWindowChanges windowChanges;
-            unsigned int windowChangesMask = 0;
-
-            int newX = geometry_get_window_x(&geometry);
-            int newY = geometry_get_window_y(&geometry);
-            int newWidth = geometry_get_content_width(&geometry);
-            int newHeight = geometry_get_content_height(&geometry);
-
-            if (oldX != newX || oldY != newY) {
-                windowChangesMask |= CWX | CWY;
-                windowChanges.x = newX;
-                windowChanges.y = newY;
-            }
-
-            if (oldWidth != newWidth || oldHeight != newHeight) {
-                windowChangesMask |= CWWidth | CWHeight;
-                windowChanges.width = newWidth;
-                windowChanges.height = newHeight;
-            }
-
-            window_configure(&windowChanges, windowChangesMask);
-
-            if (jview) {
-                mainEnv->CallVoidMethod(jview, jViewNotifyView, com_sun_glass_events_ViewEvent_MOVE);
-                CHECK_JNI_EXCEPTION(mainEnv)
-            }
-        }
     }
 }
 
 void WindowContextTop::process_configure(GdkEventConfigure* event) {
-
-    geometry.current_width = event->width + geometry.extents.left
-                                           + geometry.extents.right;
-    geometry.current_height = event->height + geometry.extents.top
-                                             + geometry.extents.bottom;
     gint x, y;
+    bool updateWindowConstraints = false;
     if (gtk_window_get_decorated(GTK_WINDOW(gtk_widget))) {
-        x = event->x - geometry.extents.left;
-        y = event->y - geometry.extents.top;
+        GdkRectangle frame;
+        gint top, left, bottom, right;
+
+        gdk_window_get_frame_extents(gdk_window, &frame);
+        gint contentX, contentY, contentW, contentH;
+        gdk_window_get_origin(gdk_window, &contentX, &contentY);
+#ifdef GLASS_GTK3
+        gdk_window_get_geometry(gdk_window, NULL, NULL, &contentW, &contentH);
+#else
+        gdk_window_get_geometry(gdk_window, NULL, NULL, &contentW, &contentH, NULL);
+#endif
+        x = frame.x;
+        y = frame.y;
+        geometry.current_width = frame.width;
+        geometry.current_height = frame.height;
+
+        top = contentY - frame.y;
+        left = contentX - frame.x;
+        bottom = frame.y + frame.height - (contentY + contentH);
+        right = frame.x + frame.width - (contentX + contentW);
+        if (geometry.extents.top != top
+                || geometry.extents.left != left
+                || geometry.extents.bottom != bottom
+                || geometry.extents.right != right) {
+            updateWindowConstraints = true;
+            geometry.extents.top = top;
+            geometry.extents.left = left;
+            geometry.extents.bottom = bottom;
+            geometry.extents.right = right;
+        }
     } else {
         x = event->x;
         y = event->y;
+        geometry.current_width = event->width;
+        geometry.current_height = event->height;
     }
 
-    if (stale_config_notifications == 0) {
-        if ((geometry_get_content_width(&geometry) != event->width)
-                || (geometry_get_content_height(&geometry) != event->height)) {
-            geometry.final_width.value = event->width;
-            geometry.final_width.type = BOUNDSTYPE_CONTENT;
-            geometry.final_height.value = event->height;
-            geometry.final_height.type = BOUNDSTYPE_CONTENT;
-        }
-        geometry_set_window_x(&geometry, x);
-        geometry_set_window_y(&geometry, y);
-    } else {
-        --stale_config_notifications;
+    if (geometry_get_content_width(&geometry) != event->width
+                 || geometry_get_content_height(&geometry) != event->height) {
+        geometry.final_width.value = event->width;
+        geometry.final_width.type = BOUNDSTYPE_CONTENT;
+        geometry.final_height.value = event->height;
+        geometry.final_height.type = BOUNDSTYPE_CONTENT;
     }
+    geometry_set_window_x(&geometry, x);
+    geometry_set_window_y(&geometry, y);
+
     if (jview) {
         mainEnv->CallVoidMethod(jview, jViewNotifyResize,
                 event->width,
@@ -1059,6 +1031,8 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
     if (resizable.request != REQUEST_NONE) {
         set_window_resizable(resizable.request == REQUEST_RESIZABLE);
         resizable.request = REQUEST_NONE;
+    } else if (updateWindowConstraints) {
+        update_window_constraints();
     }
 }
 
@@ -1204,7 +1178,6 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
         }
 
         gtk_window_move(GTK_WINDOW(gtk_widget), newX, newY);
-        stale_config_notifications++;
     }
 
     if (windowChangesMask & (CWWidth | CWHeight)) {
@@ -1226,7 +1199,6 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom, hints);
         }
         gtk_window_resize(GTK_WINDOW(gtk_widget), newWidth, newHeight);
-        stale_config_notifications++;
     }
 }
 
