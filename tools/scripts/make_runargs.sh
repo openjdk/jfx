@@ -17,7 +17,7 @@ do_cygpath()
     fi
 }
 
-MODULES="javafx.base javafx.deploy javafx.graphics javafx.swing javafx.controls javafx.fxml javafx.media javafx.web"
+MODULES="javafx.base javafx.graphics javafx.swing javafx.controls javafx.fxml javafx.media javafx.web"
 XPATCHFILE=run.args
 
 if [ ! -d "$TOP" ]
@@ -58,8 +58,6 @@ then
     exit -1
 fi
 
-echo "using TOP=$TOP"
-
 echo "#generated from $0" > "${XPATCHFILE}"
 
 JAVA_LIBRARY_PATH=''
@@ -82,8 +80,8 @@ do
         echo "Warning: ${mod} package is missing from $MODTOP/${mod}"
     fi
     mp=`do_cygpath "$MODTOP/${mod}"`
-    echo "--patch-module ${mod}=\"$mp\""
-    echo "--patch-module ${mod}=\"$mp\"" >> "${XPATCHFILE}"
+    echo "--patch-module=\"${mod}=$mp\""
+    echo "--patch-module=\"${mod}=$mp\"" >> "${XPATCHFILE}"
 
     # note: javafx.base exists, but currently does not have any shared libs in it.
     # add it anyway
@@ -104,4 +102,7 @@ then
     echo "${JAVA_LIBRARY_PATH}\"" 
     echo "${JAVA_LIBRARY_PATH}\"" >> "${XPATCHFILE}"
 fi
+
+echo "#"
+echo "#Your run.args file is ${XPATCHFILE}"
 
