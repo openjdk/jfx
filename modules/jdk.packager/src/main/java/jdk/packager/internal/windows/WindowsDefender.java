@@ -67,7 +67,7 @@ public final class WindowsDefender {
     }
 
     public static final String getUserTempDirectory() {
-        String tempDirectory = System.getProperty("user.home").toString() + "\\AppData\\Local\\Temp";
+        String tempDirectory = System.getProperty("java.io.tmpdir");
         return tempDirectory;
     }
 }
