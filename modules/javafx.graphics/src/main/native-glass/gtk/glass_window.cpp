@@ -1054,7 +1054,7 @@ void WindowContextTop::update_window_constraints() {
                     : resizable.maxh - geometry.extents.top - geometry.extents.bottom,
             0, 0, 0, 0, 0.0, 0.0, GDK_GRAVITY_NORTH_WEST
         };
-        gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom,
+        gdk_window_set_geometry_hints(gdk_window, &geom,
                 static_cast<GdkWindowHints> (GDK_HINT_MIN_SIZE | GDK_HINT_MAX_SIZE));
     }
 }
@@ -1067,7 +1067,7 @@ void WindowContextTop::set_window_resizable(bool res) {
             gtk_window_get_size(GTK_WINDOW(gtk_widget), &w, &h);
         }
         GdkGeometry geom = {w, h, w, h, 0, 0, 0, 0, 0.0, 0.0, GDK_GRAVITY_NORTH_WEST};
-        gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom,
+        gdk_window_set_geometry_hints(gdk_window, &geom,
                 static_cast<GdkWindowHints>(GDK_HINT_MIN_SIZE | GDK_HINT_MAX_SIZE));
         resizable.value = false;
     } else {
@@ -1182,7 +1182,7 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             newY = windowChanges->y;
         }
 
-        gtk_window_move(GTK_WINDOW(gtk_widget), newX, newY);
+        gdk_window_move(gdk_window, newX, newY);
     }
 
     if (windowChangesMask & (CWWidth | CWHeight)) {
@@ -1201,9 +1201,9 @@ void WindowContextTop::window_configure(XWindowChanges *windowChanges,
             GdkWindowHints hints = (GdkWindowHints)(GDK_HINT_MIN_SIZE | GDK_HINT_MAX_SIZE);
             geom.min_width = geom.max_width = newWidth;
             geom.min_height = geom.max_height = newHeight;
-            gtk_window_set_geometry_hints(GTK_WINDOW(gtk_widget), NULL, &geom, hints);
+            gdk_window_set_geometry_hints(gdk_window, &geom, hints);
         }
-        gtk_window_resize(GTK_WINDOW(gtk_widget), newWidth, newHeight);
+        gdk_window_resize(gdk_window, newWidth, newHeight);
     }
 }
 
