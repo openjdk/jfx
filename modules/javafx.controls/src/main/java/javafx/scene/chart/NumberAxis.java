@@ -56,8 +56,8 @@ import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /**
- * A axis class that plots a range of numbers with major tick marks every "tickUnit". You can use any Number type with
- * this axis, Long, Double, BigDecimal etc.
+ * An axis class that plots a range of numbers with major tick marks every tickUnit.
+ * You can use any Number type with this axis.
  * @since JavaFX 2.0
  */
 public final class NumberAxis extends ValueAxis<Number> {
@@ -72,7 +72,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     /** When true zero is always included in the visible range. This only has effect if auto-ranging is on. */
     private BooleanProperty forceZeroInRange = new BooleanPropertyBase(true) {
         @Override protected void invalidated() {
-            // This will effect layout if we are auto ranging
+            // This will affect layout if we are auto ranging
             if(isAutoRanging()) {
                 requestAxisLayout();
                 invalidateRange();
@@ -124,16 +124,16 @@ public final class NumberAxis extends ValueAxis<Number> {
     // -------------- CONSTRUCTORS -------------------------------------------------------------------------------------
 
     /**
-     * Create a auto-ranging NumberAxis
+     * Creates an auto-ranging NumberAxis.
      */
     public NumberAxis() {}
 
     /**
-     * Create a non-auto-ranging NumberAxis with the given upper bound, lower bound and tick unit
+     * Creates a non-auto-ranging NumberAxis with the given upper bound, lower bound and tick unit.
      *
-     * @param lowerBound The lower bound for this axis, ie min plottable value
-     * @param upperBound The upper bound for this axis, ie max plottable value
-     * @param tickUnit The tick unit, ie space between tickmarks
+     * @param lowerBound The lower bound for this axis, i.e. min plottable value
+     * @param upperBound The upper bound for this axis, i.e. max plottable value
+     * @param tickUnit The tick unit, i.e. space between tickmarks
      */
     public NumberAxis(double lowerBound, double upperBound, double tickUnit) {
         super(lowerBound, upperBound);
@@ -141,12 +141,12 @@ public final class NumberAxis extends ValueAxis<Number> {
     }
 
     /**
-     * Create a non-auto-ranging NumberAxis with the given upper bound, lower bound and tick unit
+     * Creates a non-auto-ranging NumberAxis with the given lower bound, upper bound and tick unit.
      *
      * @param axisLabel The name to display for this axis
-     * @param lowerBound The lower bound for this axis, ie min plottable value
-     * @param upperBound The upper bound for this axis, ie max plottable value
-     * @param tickUnit The tick unit, ie space between tickmarks
+     * @param lowerBound The lower bound for this axis, i.e. min plottable value
+     * @param upperBound The upper bound for this axis, i.e. max plottable value
+     * @param tickUnit The tick unit, i.e. space between tickmarks
      */
     public NumberAxis(String axisLabel, double lowerBound, double upperBound, double tickUnit) {
         super(lowerBound, upperBound);
@@ -157,7 +157,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     // -------------- PROTECTED METHODS --------------------------------------------------------------------------------
 
     /**
-     * Get the string label name for a tick mark with the given value
+     * Get the string label name for a tick mark with the given value.
      *
      * @param value The value to format into a tick label string
      * @return A formatted string for the given value
@@ -221,7 +221,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     }
 
     /**
-     * Calculate a list of all the data values for each tick mark in range
+     * Calculates a list of all the data values for each tick mark in range
      *
      * @param length The length of the axis in display units
      * @param range A range object returned from autoRange()
@@ -262,7 +262,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     }
 
     /**
-     * Calculate a list of the data values for every minor tick mark
+     * Calculates a list of the data values for every minor tick mark
      *
      * @return List of data values where to draw minor tick marks
      */
@@ -304,7 +304,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     }
 
     /**
-     * Measure the size of the label for given tick mark value. This uses the font that is set for the tick marks
+     * Measures the size of the label for a given tick mark value. This uses the font that is set for the tick marks.
      *
      * @param value tick mark value
      * @param range range to use during calculations
@@ -317,7 +317,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     }
 
     /**
-     * Measure the size of the label for given tick mark value. This uses the font that is set for the tick marks
+     * Measures the size of the label for a given tick mark value. This uses the font that is set for the tick marks.
      *
      * @param value     tick mark value
      * @param rotation  The text rotation
@@ -337,7 +337,7 @@ public final class NumberAxis extends ValueAxis<Number> {
     }
 
     /**
-     * Called to set the upper and lower bound and anything else that needs to be auto-ranged
+     * Called to set the upper and lower bound and anything else that needs to be auto-ranged.
      *
      * @param minValue The min data value that needs to be plotted on this axis
      * @param maxValue The max data value that needs to be plotted on this axis

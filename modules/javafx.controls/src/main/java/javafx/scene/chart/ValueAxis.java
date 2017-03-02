@@ -72,7 +72,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     // -------------- PRIVATE PROPERTIES -------------------------------------------------------------------------------
 
     /**
-     * The current value for the lowerBound of this axis, ie min value.
+     * The current value for the lowerBound of this axis, i.e. min value.
      * This may be the same as lowerBound or different. It is used by NumberAxis to animate the
      * lowerBound from the old value to the new value.
      */
@@ -120,7 +120,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     public final ReadOnlyDoubleProperty scaleProperty() { return scale.getReadOnlyProperty(); }
     ReadOnlyDoubleWrapper scalePropertyImpl() { return scale; }
 
-    /** The value for the upper bound of this axis, ie max value. This is automatically set if auto ranging is on. */
+    /** The value for the upper bound of this axis, i.e. max value. This is automatically set if auto ranging is on. */
     private DoubleProperty upperBound = new DoublePropertyBase(100) {
         @Override protected void invalidated() {
             if(!isAutoRanging()) {
@@ -143,7 +143,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     public final void setUpperBound(double value) { upperBound.set(value); }
     public final DoubleProperty upperBoundProperty() { return upperBound; }
 
-    /** The value for the lower bound of this axis, ie min value. This is automatically set if auto ranging is on. */
+    /** The value for the lower bound of this axis, i.e. min value. This is automatically set if auto ranging is on. */
     private DoubleProperty lowerBound = new DoublePropertyBase(0) {
         @Override protected void invalidated() {
             if(!isAutoRanging()) {
@@ -244,7 +244,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     // -------------- CONSTRUCTORS -------------------------------------------------------------------------------------
 
     /**
-     * Create a auto-ranging ValueAxis
+     * Creates a auto-ranging ValueAxis.
      */
     public ValueAxis() {
         minorTickPath.getStyleClass().add("axis-minor-tick-mark");
@@ -252,10 +252,10 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Create a non-auto-ranging ValueAxis with the given upper & lower bound
+     * Creates a non-auto-ranging ValueAxis with the given lower and upper bound.
      *
-     * @param lowerBound The lower bound for this axis, ie min plottable value
-     * @param upperBound The upper bound for this axis, ie max plottable value
+     * @param lowerBound The lower bound for this axis, i.e. min plottable value
+     * @param upperBound The upper bound for this axis, i.e. max plottable value
      */
     public ValueAxis(double lowerBound, double upperBound) {
         this();
@@ -269,7 +269,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
 
     /**
      * This calculates the upper and lower bound based on the data provided to invalidateRange() method. This must not
-     * effect the state of the axis, changing any properties of the axis. Any results of the auto-ranging should be
+     * affect the state of the axis. Any results of the auto-ranging should be
      * returned in the range object. This will we passed to setRange() if it has been decided to adopt this range for
      * this axis.
      *
@@ -288,7 +288,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Calculate a new scale for this axis. This should not effect any state(properties) of this axis.
+     * Calculates new scale for this axis. This should not affect any properties of this axis.
      *
      * @param length The display length of the axis
      * @param lowerBound The lower bound value
@@ -309,8 +309,8 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Called to set the upper and lower bound and anything else that needs to be auto-ranged. This must not effect
-     * the state of the axis, changing any properties of the axis. Any results of the auto-ranging should be returned
+     * Called to set the upper and lower bound and anything else that needs to be auto-ranged. This must not affect
+     * the state of the axis. Any results of the auto-ranging should be returned
      * in the range object. This will we passed to setRange() if it has been decided to adopt this range for this axis.
      *
      * @param minValue The min data value that needs to be plotted on this axis
@@ -326,7 +326,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Calculate a list of the data values for every minor tick mark
+     * Calculates a list of the data values for every minor tick mark
      *
      * @return List of data values where to draw minor tick marks
      */
@@ -430,7 +430,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     // -------------- METHODS ------------------------------------------------------------------------------------------
 
     /**
-     * Called when data has changed and the range may not be valid any more. This is only called by the chart if
+     * Called when the data has changed and the range may not be valid anymore. This is only called by the chart if
      * isAutoRanging() returns true. If we are auto ranging it will cause layout to be requested and auto ranging to
      * happen on next layout pass.
      *
@@ -454,7 +454,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Get the display position along this axis for a given value.
+     * Gets the display position along this axis for a given value.
      * If the value is not in the current range, the returned value will be an extrapolation of the display
      * position.
      *
@@ -466,7 +466,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Get the data value for the given display position on this axis. If the axis
+     * Gets the data value for the given display position on this axis. If the axis
      * is a CategoryAxis this will be the nearest value.
      *
      * @param  displayPosition A pixel position on this axis
@@ -478,7 +478,7 @@ public abstract class ValueAxis<T extends Number> extends Axis<T> {
     }
 
     /**
-     * Get the display position of the zero line along this axis.
+     * Gets the display position of the zero line along this axis.
      *
      * @return display position or Double.NaN if zero is not in current range;
      */
