@@ -15,7 +15,7 @@
 </div>
 
 <h1>Introduction to FXML</h1>
-<p class="subtitle">Last updated: 9/10/2013</p>
+<p class="subtitle">Last updated: 3/3/2017</p>
 
 <h2>Contents</h2>
 <ul class="contents">
@@ -875,7 +875,21 @@ public class MyController implements Initializable {
 </pre>
 
 <h3><a name="fxml_annotation">@FXML</a></h3>
-<p><assert id="public_controller_access" group="controllers">Note that, in the previous examples, the controller member fields and event handler methods were declared as public so they can be set or invoked by the loader.</assert> In practice, this is not often an issue, since a controller is generally only visible to the FXML loader that creates it. <assert id="FXML_controller_access" group="controllers">However, for developers who prefer more restricted visibility for controller fields or handler methods, the <span class="code">javafx.fxml.FXML</span> annotation can be used. This annotation marks a protected or private class member as accessible to FXML.</assert></span>
+<p><assert id="public_controller_access" group="controllers">Note
+that, in the previous examples, the controller member fields and
+event handler methods were declared as public so they can be set
+or invoked by the loader.</assert> In practice, this is not often
+an issue, since a controller is generally only visible to the FXML
+loader that creates it. <assert id="FXML_controller_access"
+group="controllers">However, for developers who prefer more restricted
+visibility for controller fields or handler methods, the <span
+class="code">javafx.fxml.FXML</span> annotation can be used. This
+annotation marks a protected or private class member as accessible
+to FXML.
+If the class being annotated is part of a named module, the
+module containing that class must <span class="code">open</span>
+the containing package to
+the <span class="code">javafx.fxml</span> module.</assert></span>
 
 <p>For example, the controllers from the previous examples could be rewritten as follows:</p>
 
@@ -909,8 +923,6 @@ public class MyController implements Initializable {
 </pre>
 
 <p>In the first version, the <span class="code">handleButtonAction()</span> is tagged with <span class="code">@FXML</span> to allow markup defined in the controller's document to invoke it. In the second example, the button field is annotated to allow the loader to set its value. The <span class="code">initialize()</span> method is similarly annotated.</p>
-
-<p><assert id="trusted_code_only" group="controllers">Note that the <span class="code">@FXML</span> annotation can currently only be used with trusted code.</assert> Because the FXML loader relies on reflection to set member fields and invoke member methods, it must call <span class="code">setAccessible()</span> on any non-public <span class="code">Field</span>. <span class="code">setAccessible()</span> is a privileged operation that can only be executed in a secure context. This may change in a future release.</p>
 
 <h3><a name="nested_controllers">Nested Controllers</a></h3>
 <p><assert id="nested_fxml_mapping" group="controllers">Controller instances for nested FXML documents loaded via the <span class="code">&lt;fx:include&gt;</span> element are mapped directly to member fields of the including controller.</assert> This allows a developer to easily access functionality defined by an include (such as a dialog window presented by an application's main window controller). For example, given the following code:
