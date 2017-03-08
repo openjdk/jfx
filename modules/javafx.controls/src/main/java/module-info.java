@@ -24,7 +24,7 @@
  */
 
 /**
- * This modules defines the UI controls, charts, and skins that are available
+ * Defines the UI controls, charts, and skins that are available
  * for the JavaFX UI toolkit.
  */
 module javafx.controls {

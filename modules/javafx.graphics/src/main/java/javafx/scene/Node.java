@@ -8676,7 +8676,7 @@ public abstract class Node implements EventTarget, Styleable {
      * hierarchy from the stage to this node. Any event filter encountered will
      * be notified and can consume the event. If not consumed by the filters,
      * the event handlers on this node are notified. If these don't consume the
-     * event eighter, the event will travel back the same path it arrived to
+     * event either, the event will travel back the same path it arrived to
      * this node. All event handlers encountered are called and can consume the
      * event.
      * <p>

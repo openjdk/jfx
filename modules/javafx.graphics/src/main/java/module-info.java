@@ -24,7 +24,7 @@
  */
 
 /**
- * This module defines the core scenegraph APIs for the JavaFX UI toolkit
+ * Defines the core scenegraph APIs for the JavaFX UI toolkit
  * (such as layout containers, application lifecycle, shapes,
  * transformations, canvas, input, painting, image handling, and effects),
  * as well as APIs for animation, css, concurrency, geometry, printing, and
