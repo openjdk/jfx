@@ -100,7 +100,6 @@ public final class ZoomEvent extends GestureEvent {
      * @param altDown true if alt modifier was pressed.
      * @param metaDown true if meta modifier was pressed.
      * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
-     * @param touchCount number of touch points
      * @param inertia if represents inertia of an already finished gesture.
      * @param zoomFactor zoom amount
      * @param totalZoomFactor cumulative zoom amount
@@ -140,7 +139,6 @@ public final class ZoomEvent extends GestureEvent {
      * @param altDown true if alt modifier was pressed.
      * @param metaDown true if meta modifier was pressed.
      * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
-     * @param touchCount number of touch points
      * @param inertia if represents inertia of an already finished gesture.
      * @param zoomFactor zoom amount
      * @param totalZoomFactor cumulative zoom amount
@@ -241,9 +239,9 @@ public final class ZoomEvent extends GestureEvent {
 
     /**
      * Creates a copy of the given event with the given fields substituted.
-     * @param source the new source of the copied event
-     * @param target the new target of the copied event
-     * @param eventType the new eventType
+     * @param newSource the new source of the copied event
+     * @param newTarget the new target of the copied event
+     * @param type the new eventType
      * @return the event copy with the fields substituted
      * @since JavaFX 8.0
      */

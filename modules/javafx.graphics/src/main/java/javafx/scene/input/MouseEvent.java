@@ -49,7 +49,7 @@ import java.io.IOException;
  * screenX,screenY - relative to origin of the screen that
  * contains the mouse pointer.
  *
- * <h4>Dragging gestures</h4>
+ * <h3>Dragging gestures</h3>
  * <p>
  * There are three types of dragging gestures. They are all initiated by
  * a mouse press event and terminated as a result of a mouse released
@@ -94,7 +94,7 @@ import java.io.IOException;
  * {@code isSynthesized()} method may be used to detect the problem and make the
  * dragging handlers behave accordingly.
  *
- * <h4>Mouse enter/exit handling</h4>
+ * <h3>Mouse enter/exit handling</h3>
  * <p>
  * When mouse enters a node, the node gets {@code MOUSE_ENTERED} event, when
  * it leaves, it gets {@code MOUSE_EXITED} event. These events are delivered
@@ -122,7 +122,7 @@ import java.io.IOException;
  * {@code MOUSE_ENTERED_TARGET} event handler will receive the
  * {@code MOUSE_ENTERED} event on target.
  *
- * <h4>Notes</h4>
+ * <h3>Notes</h3>
  * <ul>
  *   <li>For triggering context menus see the {@link ContextMenuEvent}.</li>
  * </ul>
@@ -283,8 +283,8 @@ public class MouseEvent extends InputEvent {
 
     /**
      * Creates a copy of the given event with the given fields substituted.
-     * @param source the new source of the copied event
-     * @param target the new target of the copied event
+     * @param newSource the new source of the copied event
+     * @param newTarget the new target of the copied event
      * @param eventType the new eventType
      * @return the event copy with the fields substituted
      * @since JavaFX 8.0

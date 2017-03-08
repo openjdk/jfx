@@ -209,6 +209,7 @@ public final class PrinterJob {
     /**
      * Property representing the
      * <code>Printer</code> for this job.
+     * @return the <code>Printer</code> for this job
      */
     public final ObjectProperty<Printer> printerProperty() {
         /* The PrinterJob constructor always creates this property,
@@ -484,6 +485,7 @@ public final class PrinterJob {
     /**
      * A read only object property representing the current
      * <code>JobStatus</code>
+     * @return the current <code>JobStatus</code>
      */
     public ReadOnlyObjectProperty<JobStatus> jobStatusProperty() {
         return jobStatus.getReadOnlyProperty();

@@ -67,6 +67,7 @@ public final class PrinterAttributes {
 
     /**
      * The maximum supported number of copies.
+     * @return the maximum supported number of copies
      */
     public int getMaxCopies() {
         return impl.maxCopies();

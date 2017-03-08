@@ -54,9 +54,9 @@ import javafx.css.Styleable;
  * encapsulates the entire set of data required to render the border
  * of a Region. Because this class is immutable, you can freely reuse the same
  * Border on many different Regions. Please refer to
- * {@link ../doc-files/cssref.html JavaFX CSS Reference} for a complete description
- * of the CSS rules for styling the border of a Region.
- * <p/>
+ * <a href="../doc-files/cssref.html">JavaFX CSS Reference Guide</a> for a
+ * complete description of the CSS rules for styling the border of a Region.
+ * <p>
  * Every Border is comprised of {@link #getStrokes() strokes} and / or
  * {@link #getImages() images}. Neither list will ever be null, but either or
  * both may be empty. When rendering, if no images are specified or no
@@ -64,12 +64,12 @@ import javafx.css.Styleable;
  * If any image is specified and succeeds in loading, then no strokes will
  * be drawn, although they will still contribute to the {@link #getInsets() insets}
  * and {@link #getOutsets() outsets} of the Border.
- * <p/>
+ * <p>
  * The Border's {@link #getOutsets() outsets} define any extension of the drawing area of a Region
  * which is necessary to account for all border drawing and positioning. These outsets are defined
  * by both the {@link BorderStroke}s and {@link BorderImage}s specified on this Border.
  * Outsets are strictly non-negative.
- * <p/>
+ * <p>
  * {@link #getInsets()} are used to define the inner-most edge of all of the borders. It also is
  * always strictly non-negative. The Region uses the insets of the {@link Background} and Border
  * and the {@link javafx.scene.layout.Region#getPadding() Region's padding} to determine the
@@ -77,7 +77,7 @@ import javafx.css.Styleable;
  * for any children of the Region. The outsets of a Border together with the outsets of a Background
  * and the width and height of the Region define the geometric bounds of the Region (which in
  * turn contribute to the {@code layoutBounds}, {@code boundsInLocal}, and {@code boundsInParent}).
- * <p/>
+ * <p>
  * A Border is most often used in cases where you want to skin the Region with an image,
  * often used in conjunction with 9-patch scaling techniques. In such cases, you may
  * also specify a stroked border which is only used when the image fails to load for some
@@ -162,6 +162,8 @@ public final class Border {
      * The list of BorderStrokes which together define the stroked portion
      * of this Border. This List is unmodifiable and immutable. It
      * will never be null. It will never contain any null elements.
+     * @return the list of BorderStrokes which together define the stroked
+     * portion of this Border
      */
     public final List<BorderStroke> getStrokes() { return strokes; }
     final List<BorderStroke> strokes;
@@ -175,6 +177,8 @@ public final class Border {
      * <p>
      * This List is unmodifiable and immutable. It will never be null.
      * It will never contain any null elements.
+     * @return the list of BorderImages which together define the images to use
+     * instead of stroke for this Border
      */
     public final List<BorderImage> getImages() { return images; }
     final List<BorderImage> images;
@@ -182,6 +186,8 @@ public final class Border {
     /**
      * The outsets of the border define the outer-most edge of the border to be drawn.
      * The values in these outsets are strictly non-negative.
+     * @return the outsets of the border define the outer-most edge of the
+     * border to be drawn
      */
     public final Insets getOutsets() { return outsets; }
     final Insets outsets;
@@ -190,6 +196,8 @@ public final class Border {
      * The insets define the distance from the edge of the Region to the inner-most edge
      * of the border, if that distance is non-negative. The values in these outsets
      * are strictly non-negative.
+     * @return the insets define the distance from the edge of the Region to the
+     * inner-most edge of the border
      */
     public final Insets getInsets() { return insets; }
     final Insets insets;
@@ -381,7 +389,7 @@ public final class Border {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -396,7 +404,7 @@ public final class Border {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

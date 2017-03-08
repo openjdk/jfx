@@ -31,12 +31,12 @@ package javafx.geometry;
  */
 public enum Orientation {
     /**
-     * The horizontal (right <-> left) orientation
+     * The horizontal (right &lt;-&gt; left) orientation
      */
     HORIZONTAL,
 
     /**
-     * The vertical (top <-> bottom) orientation
+     * The vertical (top &lt;-&gt; bottom) orientation
      */
     VERTICAL
 }

@@ -92,14 +92,14 @@ import sun.util.logging.PlatformLogger.Level;
  * and borders. It is designed to support as much of the CSS3 specification for backgrounds
  * and borders as is relevant to JavaFX.
  * The full specification is available at <a href="http://www.w3.org/TR/2012/CR-css3-background-20120724/">the W3C</a>.
- * <p/>
+ * <p>
  * Every Region has its layout bounds, which are specified to be (0, 0, width, height). A Region might draw outside
  * these bounds. The content area of a Region is the area which is occupied for the layout of its children.
  * This area is, by default, the same as the layout bounds of the Region, but can be modified by either the
  * properties of a border (either with BorderStrokes or BorderImages), and by padding. The padding can
  * be negative, such that the content area of a Region might extend beyond the layout bounds of the Region,
  * but does not affect the layout bounds.
- * <p/>
+ * <p>
  * A Region has a Background, and a Border, although either or both of these might be empty. The Background
  * of a Region is made up of zero or more BackgroundFills, and zero or more BackgroundImages. Likewise, the
  * border of a Region is defined by its Border, which is made up of zero or more BorderStrokes and
@@ -110,36 +110,36 @@ import sun.util.logging.PlatformLogger.Level;
  * These semantics are in line with the CSS 3 specification. The purpose of these semantics are to allow an
  * application to specify a fallback BorderStroke to be displayed in the case that an ImageStroke fails to
  * download or load.
- * <p/>
+ * <p>
  * By default a Region appears as a Rectangle. A BackgroundFill radii might cause the Rectangle to appear rounded.
  * This affects not only making the visuals look like a rounded rectangle, but it also causes the picking behavior
  * of the Region to act like a rounded rectangle, such that locations outside the corner radii are ignored. A
  * Region can be made to use any shape, however, by specifing the {@code shape} property. If a shape is specified,
  * then all BackgroundFills, BackgroundImages, and BorderStrokes will be applied to the shape. BorderImages are
  * not used for Regions which have a shape specified.
- * <p/>
+ * <p>
  * A Region with a shape
- * <p/>
+ * <p>
  * Although the layout bounds of a Region are not influenced by any Border or Background, the content area
  * insets and the picking area of the Region are. The {@code insets} of the Region define the distance
  * between the edge of the layout bounds and the edge of the content area. For example, if the Region
  * layout bounds are (x=0, y=0, width=200, height=100), and the insets are (top=10, right=20, bottom=30, left=40),
  * then the content area bounds will be (x=40, y=10, width=140, height=60). A Region subclass which is laying
  * out its children should compute and honor these content area bounds.
- * <p/>
+ * <p>
  * By default a Region inherits the layout behavior of its superclass, {@link Parent},
  * which means that it will resize any resizable child nodes to their preferred
  * size, but will not reposition them.  If an application needs more specific
  * layout behavior, then it should use one of the Region subclasses:
  * {@link StackPane}, {@link HBox}, {@link VBox}, {@link TilePane}, {@link FlowPane},
  * {@link BorderPane}, {@link GridPane}, or {@link AnchorPane}.
- * <p/>
+ * <p>
  * To implement a more custom layout, a Region subclass must override
  * {@link #computePrefWidth(double) computePrefWidth}, {@link #computePrefHeight(double) computePrefHeight}, and
  * {@link #layoutChildren() layoutChildren}. Note that {@link #layoutChildren() layoutChildren} is called automatically
  * by the scene graph while executing a top-down layout pass and it should not be invoked directly by the
  * region subclass.
- * <p/>
+ * <p>
  * Region subclasses which layout their children will position nodes by setting
  * {@link #setLayoutX(double) layoutX}/{@link #setLayoutY(double) layoutY} and do not alter
  * {@link #setTranslateX(double) translateX}/{@link #setTranslateY(double) translateY}, which are reserved for
@@ -837,6 +837,7 @@ public class Region extends Parent {
      * a Region based on the backgrounds and borders of that region. The values
      * for each of the insets must be real numbers, not NaN or Infinity. If
      * no known insets exist, then the opaqueInsets should be set to null.
+     * @return the opaque insets property
      * @since JavaFX 8.0
      */
     public final ObjectProperty<Insets> opaqueInsetsProperty() {
@@ -1325,15 +1326,14 @@ public class Region extends Parent {
     }
 
     /**
-     * When specified, the {@code shape} will cause the region to be
+     * When specified, the {@code Shape} will cause the region to be
      * rendered as the specified shape rather than as a rounded rectangle.
      * When null, the Region is rendered as a rounded rectangle. When rendered
      * as a Shape, any Background is used to fill the shape, although any
      * background insets are ignored as are background radii. Any BorderStrokes
      * defined are used for stroking the shape. Any BorderImages are ignored.
      *
-     * @default null
-     * @css shape SVG shape string
+     * @defaultValue null
      * @since JavaFX 8.0
      */
     private ObjectProperty<Shape> shape = null;
@@ -1387,8 +1387,7 @@ public class Region extends Parent {
      * means the shape is at its source size, its positioning depends on the value of
      * {@code centerShape}.
      *
-     * @default true
-     * @css shape-size      true | false
+     * @defaultValue true
      * @since JavaFX 8.0
      */
     private BooleanProperty scaleShape = null;
@@ -1416,8 +1415,7 @@ public class Region extends Parent {
      * {@code true} means the shape centered within the Region's width and height,
      * {@code false} means the shape is positioned at its source position.
      *
-     * @default true
-     * @css position-shape      true | false
+     * @defaultValue true
      * @since JavaFX 8.0
      */
     private BooleanProperty centerShape = null;
@@ -1444,8 +1442,7 @@ public class Region extends Parent {
      * Defines a hint to the system indicating that the Shape used to define the region's
      * background is stable and would benefit from caching.
      *
-     * @default true
-     * @css -fx-cache-shape      true | false
+     * @defaultValue true
      * @since JavaFX 8.0
      */
     private BooleanProperty cacheShape = null;
@@ -1666,6 +1663,8 @@ public class Region extends Parent {
      * doesn't have a VERTICAL content bias, then the height parameter can be
      * ignored.
      *
+     * @param height The height of the Region, in case this value might dictate
+     * the maximum width
      * @return the computed maximum width for this region
      */
     protected double computeMaxWidth(double height) {
@@ -1680,6 +1679,8 @@ public class Region extends Parent {
      * doesn't have a HORIZONTAL content bias, then the width parameter can be
      * ignored.
      *
+     * @param width The width of the Region, in case this value might dictate
+     * the maximum height
      * @return the computed maximum height for this region
      */
     protected double computeMaxHeight(double width) {
@@ -2276,6 +2277,7 @@ public class Region extends Parent {
      * @param margin the margin of space to be allocated around the child
      * @param halignment the horizontal alignment for the child within the area
      * @param valignment the vertical alignment for the child within the area
+     * @param isSnapToPixel whether to snap size and position to pixels
      *
      * @since JavaFX 8.0
      */
@@ -3338,7 +3340,7 @@ public class Region extends Parent {
      * period of time, and therefore there should be no expectation around when this method is called.
      * </p>
      *
-     * <code><pre>
+     * <pre><code>
      *
      * package com.example.javafx.app;
      *
@@ -3360,7 +3362,7 @@ public class Region extends Parent {
      *         launch(args);
      *     }
      * }
-     * </pre></code>
+     * </code></pre>
      * For additional information about using CSS with the scene graph,
      * see the <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
      *

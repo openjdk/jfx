@@ -68,8 +68,7 @@ import java.util.List;
  * Example code for displaying images
  * </p>
  *
- * <pre>
- * <code>
+ * <pre>{@code
  * import javafx.application.Application;
  * import javafx.geometry.Rectangle2D;
  * import javafx.scene.Group;
@@ -80,7 +79,7 @@ import java.util.List;
  * import javafx.scene.paint.Color;
  * import javafx.stage.Stage;
  *
- * public class HelloMenu extends Application {
+ * public class HelloImageView extends Application {
  *
  *     &#64;Override public void start(Stage stage) {
  *         // load the image
@@ -129,13 +128,12 @@ import java.util.List;
  *         Application.launch(args);
  *     }
  * }
- * </code>
- * </pre>
+ * }</pre>
  * <p>
  * The code above produces the following:
  * </p>
  * <p>
- * <img src="doc-files/imageview.png"/>
+ * <img src="doc-files/imageview.png" alt="A visual rendering of the ImageView example">
  * </p>
  * @since JavaFX 2.0
  */
@@ -408,9 +406,9 @@ public class ImageView extends Node {
 
     /**
      * The width of the bounding box within which the source image is resized as
-     * necessary to fit. If set to a value <= 0, then the intrinsic width of the
+     * necessary to fit. If set to a value &lt;= 0, then the intrinsic width of the
      * image will be used as the {@code fitWidth}.
-     * <p/>
+     * <p>
      * See {@link #preserveRatio} for information on interaction between image
      * view's {@code fitWidth}, {@code fitHeight} and {@code preserveRatio}
      * attributes.
@@ -455,7 +453,7 @@ public class ImageView extends Node {
 
     /**
      * The height of the bounding box within which the source image is resized
-     * as necessary to fit. If set to a value <= 0, then the intrinsic height of
+     * as necessary to fit. If set to a value &lt;= 0, then the intrinsic height of
      * the image will be used as the {@code fitHeight}.
      * <p>
      * See {@link #preserveRatio} for information on interaction between image
@@ -504,7 +502,7 @@ public class ImageView extends Node {
     /**
      * Indicates whether to preserve the aspect ratio of the source image when
      * scaling to fit the image within the fitting bounding box.
-     * <p/>
+     * <p>
      * If set to {@code true}, it affects the dimensions of this
      * {@code ImageView} in the following way *
      * <ul>
@@ -523,7 +521,7 @@ public class ImageView extends Node {
      * match and height is unchanged;
      * <li>If both are set, the image view is scaled to match both.
      * </ul>
-     * </p>
+     *
      * Note that the dimensions of this node as reported by the node's bounds
      * will be equal to the size of the scaled image and is guaranteed to be
      * contained within {@code fitWidth x fitHeight} bonding box.
@@ -855,11 +853,10 @@ public class ImageView extends Node {
 
     /**
      * {@inheritDoc}
-     *
+     * @return the CssMetaData associated with this class, which may include the
+     * CssMetaData of its super classes.
      * @since JavaFX 8.0
      */
-
-
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();

@@ -79,6 +79,7 @@ public final class TouchPoint implements Serializable{
      * @param y The y with respect to the scene.
      * @param screenX The x coordinate relative to screen.
      * @param screenY The y coordinate relative to screen.
+     * @param target Node or other event target.
      * @param pickResult pick result. Can be null, in this case a 2D pick result
      *                   without any further values is constructed
      *                   based on the scene coordinates and target

@@ -125,7 +125,7 @@ import com.sun.javafx.css.StyleManager;
  *
  * <p><b>Example</b></p>
  * <p>The following example will illustrate a simple JavaFX application.</p>
- * <pre><code>
+ * <pre>{@code
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -143,10 +143,11 @@ public class MyApp extends Application {
         stage.show();
     }
 }
- * </code></pre>
+ * }</pre>
  *
  * <p>The above example will produce the following:</p>
- * <p><img src="doc-files/Application.png"/></p>
+ * <p><img src="doc-files/Application.png" alt="A black circle in the top left
+ * corner of scene"></p>
  *
  * @see Platform
  *
@@ -178,13 +179,11 @@ public abstract class Application {
      *
      * <p>
      * Typical usage is:
-     * <ul>
      * <pre>
-     * public static void main(String[] args) {
-     *     Application.launch(MyApp.class, args);
-     * }
+     *     public static void main(String[] args) {
+     *         Application.launch(MyApp.class, args);
+     *     }
      * </pre>
-     * </ul>
      * where <code>MyApp</code> is a subclass of Application.
      *
      * @param appClass the application class that is constructed and executed
@@ -224,13 +223,11 @@ public abstract class Application {
      *
      * <p>
      * Typical usage is:
-     * <ul>
      * <pre>
-     * public static void main(String[] args) {
-     *     Application.launch(args);
-     * }
+     *     public static void main(String[] args) {
+     *         Application.launch(args);
+     *     }
      * </pre>
-     * </ul>
      *
      * @param args the command line arguments passed to the application.
      *             An application may get these parameters using the
@@ -306,6 +303,7 @@ public abstract class Application {
      * method.
      * An application may construct other JavaFX objects in this method.
      * </p>
+     * @throws java.lang.Exception if something goes wrong
      */
     public void init() throws Exception {
     }
@@ -324,6 +322,7 @@ public abstract class Application {
      * the browser if the application was launched as an applet.
      * Applications may create other stages, if needed, but they will not be
      * primary stages and will not be embedded in the browser.
+     * @throws java.lang.Exception if something goes wrong
      */
     public abstract void start(Stage primaryStage) throws Exception;
 
@@ -338,6 +337,7 @@ public abstract class Application {
      * <p>
      * NOTE: This method is called on the JavaFX Application Thread.
      * </p>
+     * @throws java.lang.Exception if something goes wrong
      */
     public void stop() throws Exception {
     }

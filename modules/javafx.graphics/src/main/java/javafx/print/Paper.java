@@ -67,6 +67,7 @@ public final class Paper {
 
      /** Get the paper name.
      * This may not be directly useful for user display as it is not localized.
+     * @return the paper name
      */
     public final String getName() {
         return name;
@@ -86,6 +87,7 @@ public final class Paper {
 
     /**
      * Get the width of the paper in points (1/72 inch)
+     * @return the width of the paper in points (1/72 inch)
      */
     public final double getWidth() {
         return getSizeInPoints(width);
@@ -93,6 +95,7 @@ public final class Paper {
 
     /**
      * Get the height of the paper in points (1/72 inch)
+     * @return the height of the paper in points (1/72 inch)
      */
     public final double getHeight() {
         return getSizeInPoints(height);

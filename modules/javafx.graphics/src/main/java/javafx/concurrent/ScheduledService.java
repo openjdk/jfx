@@ -98,9 +98,9 @@ import java.util.TimerTask;
  * any updates. Such as ScheduledService might be implemented like this:
  *
  * <pre><code>
- * ScheduledService&lt;Document&gt; svc = new ScheduledService&lt;Document&gt;() {
- *     protected Task&lt;Document&gt; createTask() {
- *         return new Task&lt;Document&gt;() {
+ * {@literal ScheduledService<Document> svc = new ScheduledService<Document>()} {
+ *     {@literal protected Task<Document> createTask()} {
+ *         {@literal return new Task<Document>()} {
  *             protected Document call() {
  *                 // Connect to a Server
  *                 // Get the XML document
@@ -152,7 +152,7 @@ public abstract class ScheduledService<V> extends Service<V> {
      *
      * <p>If the {@code service} is null, then Duration.ZERO is returned. If the period is 0 then
      * the result of this method will simply be {@code Math.exp(currentFailureCount)}. In all other cases,
-     * the returned value is the same as {@code period + (period * Math.exp(currentFailureCount))).</p>
+     * the returned value is the same as {@code period + (period * Math.exp(currentFailureCount))}.</p>
      */
     public static final Callback<ScheduledService<?>, Duration> EXPONENTIAL_BACKOFF_STRATEGY
             = new Callback<ScheduledService<?>, Duration>() {
@@ -172,7 +172,7 @@ public abstract class ScheduledService<V> extends Service<V> {
      *
      * <p>If the {@code service} is null, then Duration.ZERO is returned. If the period is 0 then
      * the result of this method will simply be {@code Math.log1p(currentFailureCount)}. In all other cases,
-     * the returned value is the same as {@code period + (period * Math.log1p(currentFailureCount))).</p>
+     * the returned value is the same as {@code period + (period * Math.log1p(currentFailureCount))}.</p>
      */
     public static final Callback<ScheduledService<?>, Duration> LOGARITHMIC_BACKOFF_STRATEGY
             = new Callback<ScheduledService<?>, Duration>() {
@@ -192,7 +192,7 @@ public abstract class ScheduledService<V> extends Service<V> {
      *
      * <p>If the {@code service} is null, then Duration.ZERO is returned. If the period is 0 then
      * the result of this method will simply be {@code currentFailureCount}. In all other cases,
-     * the returned value is the same as {@code period + (period * currentFailureCount).</p>
+     * the returned value is the same as {@code period + (period * currentFailureCount)}.</p>
      */
     public static final Callback<ScheduledService<?>, Duration> LINEAR_BACKOFF_STRATEGY
             = new Callback<ScheduledService<?>, Duration>() {
@@ -386,7 +386,7 @@ public abstract class ScheduledService<V> extends Service<V> {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      *
      * Implementation Note: Subclasses which override this method must call this super implementation.
      */
@@ -413,7 +413,7 @@ public abstract class ScheduledService<V> extends Service<V> {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      *
      * Implementation Note: Subclasses which override this method must call this super implementation.
      */
@@ -440,7 +440,7 @@ public abstract class ScheduledService<V> extends Service<V> {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      *
      * Implementation Note: Subclasses which override this method must call this super implementation.
      */

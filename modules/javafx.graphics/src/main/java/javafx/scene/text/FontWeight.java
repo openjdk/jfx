@@ -102,6 +102,7 @@ public enum FontWeight {
      * Returns {@code FontWeight} by its name.
      *
      * @param name name of the {@code FontWeight}
+     * @return the FontWeight by its name
      */
     public static FontWeight findByName(String name) {
         if (name == null) return null;
@@ -124,6 +125,7 @@ public enum FontWeight {
      * This lookup is without reference to a font, so this is
      * purely a mapping to the set of {@code FontWeight} instances
      * and does not mean that a font of that weight will be available.
+     * @param weight the weight value
      * @return closest {@code FontWeight}
      */
     public static FontWeight findByWeight(int weight) {

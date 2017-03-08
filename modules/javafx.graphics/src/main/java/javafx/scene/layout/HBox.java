@@ -56,10 +56,10 @@ import javafx.util.Callback;
  * out within those insets.
  * <p>
  * HBox example:
- * <pre><code>
+ * <pre>{@code
  *     HBox hbox = new HBox(8); // spacing = 8
  *     hbox.getChildren().addAll(new Label("Name:), new TextBox());
- * </code></pre>
+ * }</pre>
  *
  * HBox will resize children (if resizable) to their preferred widths and uses its
  * fillHeight property to determine whether to resize their heights to
@@ -76,12 +76,12 @@ import javafx.util.Callback;
  * HBox lays out each managed child regardless of the child's
  * visible property value; unmanaged children are ignored.</p>
  *
- * <h4>Resizable Range</h4>
+ * <h3>Resizable Range</h3>
  *
  * An hbox's parent will resize the hbox within the hbox's resizable range
  * during layout.   By default the hbox computes this range based on its content
  * as outlined in the table below.
- * <table border="1">
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus the sum of each child's min width plus spacing between each child.</td>
@@ -110,12 +110,12 @@ import javafx.util.Callback;
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within the hbox.</p>
  *
- * <h4>Optional Layout Constraints</h4>
+ * <h3>Optional Layout Constraints</h3>
  *
  * An application may set constraints on individual children to customize HBox's layout.
  * For each constraint, HBox provides a static method for setting it on the child.
- * <p>
- * <table border="1">
+ *
+ * <table border="1" summary="">
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>hgrow</td><td>javafx.scene.layout.Priority</td><td>The horizontal grow priority for the child.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
@@ -260,6 +260,7 @@ public class HBox extends Pane {
 
     /**
      * The amount of horizontal space between each child in the hbox.
+     * @return the amount of horizontal space between each child in the hbox
      */
     public final DoubleProperty spacingProperty() {
         if (spacing == null) {
@@ -294,6 +295,8 @@ public class HBox extends Pane {
 
     /**
      * The overall alignment of children within the hbox's width and height.
+     * @return the overall alignment of children within the hbox's width and
+     * height
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -335,6 +338,8 @@ public class HBox extends Pane {
      * or be resized to their preferred height and aligned according to the <code>alignment</code>
      * vpos value.   Note that if the hbox vertical alignment is set to BASELINE, then this
      * property will be ignored and children will be resized to their preferred heights.
+     * @return true if resizable children will be resized to fill the full
+     * height of the hbox
      */
     public final BooleanProperty fillHeightProperty() {
         if (fillHeight == null) {

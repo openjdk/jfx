@@ -210,7 +210,9 @@ public abstract class Interpolator {
      * it's treated as if the out-tangent of that KeyFrame was equal to the value in the KeyFrame.
      *
      * <p>
-     * <img src="doc-files/tangent_interpolator.png"/>
+     * <img src="doc-files/tangent_interpolator.png" alt="A tangent interpolator
+     * defines the behavior to the left and to the right of a key frame,
+     * therefore it is only useful within a Timeline">
      *
      * <p>
      * The parameters define the tangent of the animation curve for the in
@@ -317,6 +319,7 @@ public abstract class Interpolator {
      *            the second data point
      * @param fraction
      *            the fraction in {@code [0.0...1.0]}
+     * @return the interpolated value
      */
     public boolean interpolate(boolean startValue, boolean endValue,
             double fraction) {
@@ -337,6 +340,7 @@ public abstract class Interpolator {
      *            the second data point
      * @param fraction
      *            the fraction in {@code [0.0...1.0]}
+     * @return the interpolated value
      */
     public double interpolate(double startValue, double endValue,
             double fraction) {
@@ -356,6 +360,7 @@ public abstract class Interpolator {
      *            the second data point
      * @param fraction
      *            the fraction in {@code [0.0...1.0]}
+     * @return the interpolated value
      */
     public int interpolate(int startValue, int endValue, double fraction) {
         return startValue
@@ -375,6 +380,7 @@ public abstract class Interpolator {
      *            the second data point
      * @param fraction
      *            the fraction in {@code [0.0...1.0]}
+     * @return the interpolated value
      */
     public long interpolate(long startValue, long endValue,
             double fraction) {
@@ -394,6 +400,7 @@ public abstract class Interpolator {
      *            start of the current interval, while 1.0 is the end of the
      *            current interval. Usually a function that increases
      *            monotonically.
+     * @return the curved value
      */
     protected abstract double curve(double t);
 

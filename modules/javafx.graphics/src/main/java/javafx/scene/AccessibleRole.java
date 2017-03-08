@@ -48,7 +48,7 @@ public enum AccessibleRole {
 
     /**
      * Button role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -62,7 +62,7 @@ public enum AccessibleRole {
 
     /**
      * Check Box role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -78,7 +78,7 @@ public enum AccessibleRole {
 
     /**
      * Check Menu Item role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -96,7 +96,7 @@ public enum AccessibleRole {
 
     /**
      * Combo Box role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -113,35 +113,29 @@ public enum AccessibleRole {
 
     /**
      * Context Menu role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#PARENT_MENU} </li>
      * <li> {@link AccessibleAttribute#VISIBLE} </li>
-     * </ul>
-     * Actions:
-     * <ul>
      * </ul>
      */
     CONTEXT_MENU,
 
     /**
      * Date Picker role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
      * <li> {@link AccessibleAttribute#DATE} </li>
-     * </ul>
-     * Actions:
-     * <ul>
      * </ul>
      */
     DATE_PICKER,
 
     /**
      * Decrement Button role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -155,7 +149,6 @@ public enum AccessibleRole {
 
     /**
      * Hyperlink role.
-     * </p>
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
      * <li> {@link AccessibleAttribute#VISITED} </li>
@@ -169,7 +162,7 @@ public enum AccessibleRole {
 
     /**
      * Increment Button role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -183,17 +176,13 @@ public enum AccessibleRole {
 
     /**
      * Image View role.
-     * </p>
+     * <p>
      * Attributes:
-     * <ul>
-     * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      * <p>
      * It is strongly recommended that a text description of the image be provided
-     * for each {@link ImageView}.  This can be done by setting either
-     * {@link Node#accessibleTextProperty()} for the {@link ImageView}
+     * for each {@link javafx.scene.image.ImageView}.  This can be done by setting either
+     * {@link Node#accessibleTextProperty()} for the {@link javafx.scene.image.ImageView}
      * or by using {@link AccessibleAttribute#LABELED_BY}.
      * </p>
      */
@@ -201,7 +190,7 @@ public enum AccessibleRole {
 
     /**
      * List View role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#ITEM_AT_INDEX} </li>
@@ -222,7 +211,7 @@ public enum AccessibleRole {
 
     /**
      * List Item role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -238,7 +227,7 @@ public enum AccessibleRole {
 
     /**
      * Menu role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -256,19 +245,18 @@ public enum AccessibleRole {
 
     /**
      * Menu Bar role.
-     * </p>
+     * <p>
      * Attributes:
-     * <ul>
-     * </ul>
+     * </p>
+     * <p>
      * Actions:
-     * <ul>
-     * </ul>
-     */
+     * </p>
+    */
     MENU_BAR,
 
     /**
      * Menu Button role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -282,7 +270,7 @@ public enum AccessibleRole {
 
     /**
      * Menu Item role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -299,7 +287,7 @@ public enum AccessibleRole {
 
     /**
      * Node role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#ROLE} </li>
@@ -330,7 +318,7 @@ public enum AccessibleRole {
 
     /**
      * Page role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -345,7 +333,7 @@ public enum AccessibleRole {
 
     /**
      * Pagination role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#ITEM_AT_INDEX} </li>
@@ -353,40 +341,34 @@ public enum AccessibleRole {
      * <li> {@link AccessibleAttribute#FOCUS_ITEM} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     PAGINATION,
 
     /**
      * Parent role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#CHILDREN} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     PARENT,
 
     /**
      * Password Field role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} - must return null or empty string </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     PASSWORD_FIELD,
 
     /**
      * Progress Indicator role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#VALUE} </li>
@@ -395,14 +377,12 @@ public enum AccessibleRole {
      * <li> {@link AccessibleAttribute#INDETERMINATE} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     PROGRESS_INDICATOR,
 
     /**
      * Radio Button role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -417,7 +397,7 @@ public enum AccessibleRole {
 
     /**
      * Radio Menu Item role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -435,7 +415,7 @@ public enum AccessibleRole {
 
     /**
      * Slider role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#VALUE} </li>
@@ -454,7 +434,7 @@ public enum AccessibleRole {
 
     /**
      * Spinner role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -469,7 +449,7 @@ public enum AccessibleRole {
 
     /**
      * Text role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -484,7 +464,7 @@ public enum AccessibleRole {
 
     /**
      * Text Area role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -509,7 +489,7 @@ public enum AccessibleRole {
 
     /**
      * Text Field role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -531,7 +511,7 @@ public enum AccessibleRole {
 
     /**
      * Toggle Button role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -546,19 +526,15 @@ public enum AccessibleRole {
 
     /**
      * Tooltip role.
-     * </p>
+     * <p>
      * Attributes:
-     * <ul>
-     * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     TOOLTIP,
 
     /**
      * Scroll Bar role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#VALUE} </li>
@@ -579,7 +555,7 @@ public enum AccessibleRole {
 
     /**
      * Scroll Pane role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#CONTENTS} </li>
@@ -587,14 +563,12 @@ public enum AccessibleRole {
      * <li> {@link AccessibleAttribute#VERTICAL_SCROLLBAR} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     SCROLL_PANE,
 
     /**
      * Split Menu Button role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -611,7 +585,7 @@ public enum AccessibleRole {
 
     /**
      * Tab Item role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -626,7 +600,7 @@ public enum AccessibleRole {
 
     /**
      * Tab Pane role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#ITEM_AT_INDEX} </li>
@@ -634,14 +608,12 @@ public enum AccessibleRole {
      * <li> {@link AccessibleAttribute#FOCUS_ITEM} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     TAB_PANE,
 
     /**
      * Table Cell role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -658,35 +630,31 @@ public enum AccessibleRole {
 
     /**
      * Table Column role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
      * <li> {@link AccessibleAttribute#INDEX} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     TABLE_COLUMN,
 
     /**
      * Table Row role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
      * <li> {@link AccessibleAttribute#INDEX} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     TABLE_ROW,
 
     /**
      * Table View role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#ROW_COUNT} </li>
@@ -711,20 +679,18 @@ public enum AccessibleRole {
 
     /**
      * Thumb role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#VALUE} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     THUMB,
 
     /**
      * Titled Pane role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -740,20 +706,18 @@ public enum AccessibleRole {
 
     /**
      * Tool Bar role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#OVERFLOW_BUTTON} </li>
      * </ul>
      * Actions:
-     * <ul>
-     * </ul>
      */
     TOOL_BAR,
 
     /**
      * Tree Item role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -777,7 +741,7 @@ public enum AccessibleRole {
 
     /**
      * Tree Table Cell role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#TEXT} </li>
@@ -794,7 +758,7 @@ public enum AccessibleRole {
 
     /**
      * Tree Table Row role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#INDEX} </li>
@@ -815,7 +779,7 @@ public enum AccessibleRole {
 
     /**
      * Tree Table View role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#ROW_COUNT} </li>
@@ -840,7 +804,7 @@ public enum AccessibleRole {
 
     /**
      * Tree View role.
-     * </p>
+     * <p>
      * Attributes:
      * <ul>
      * <li> {@link AccessibleAttribute#ROW_COUNT} </li>

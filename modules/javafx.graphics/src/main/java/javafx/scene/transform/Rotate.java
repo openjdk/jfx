@@ -43,7 +43,7 @@ import javafx.geometry.Point2D;
  * about the new origin (S2), and finally translating so that the
  * intermediate origin is restored to the coordinates of the original
  * anchor point (S3).
- * <p/>
+ * <p>
  * For example, the matrix representing the returned transform of
  *    new Rotate (theta, x, y, z) around the Z-axis
  *
@@ -56,15 +56,15 @@ import javafx.geometry.Point2D;
  * <p>
  * For example, to rotate a text 30 degrees around the Z-axis at
  * anchor point of (50,30):
- * <pre><code>
+ * <pre>{@code
  * Text text = new Text("This is a test");
  * text.setX(10);
  * text.setY(50);
  * text.setFont(new Font(20));
  *
  * text.getTransforms().add(new Rotate(30, 50, 30));
- * </code></pre>
- * </p>
+ * }</pre>
+ *
  * @since JavaFX 2.0
  */
 

@@ -36,7 +36,7 @@ import javafx.beans.NamedArg;
  * for {@code topAsPercentage}, {@code rightAsPercentage}, {@code bottomAsPercentage},
  * {@code leftAsPercentage}. The only allowable negative value for top, right,
  * bottom, and left is {@code AUTO}.
- * <p/>
+ * <p>
  * Because the BorderWidths is immutable, it can safely be used in any
  * cache, and can safely be reused among multiple Regions.
  * @since JavaFX 8.0
@@ -72,6 +72,7 @@ public final class BorderWidths {
      * thickness on the top of the border. This value can be a literal value, or can be
      * treated as a percentage, based on the value of the
      * {@link #isTopAsPercentage() topAsPercentage} property.
+     * @return the border thickness on the top of the border
      */
     public final double getTop() { return top; }
     final double top;
@@ -81,6 +82,7 @@ public final class BorderWidths {
      * thickness on the right of the border. This value can be a literal value, or can be
      * treated as a percentage, based on the value of the
      * {@link #isRightAsPercentage() rightAsPercentage} property.
+     * @return the border thickness on the right of the border
      */
     public final double getRight() { return right; }
     final double right;
@@ -90,6 +92,7 @@ public final class BorderWidths {
      * thickness on the bottom of the border. This value can be a literal value, or can be
      * treated as a percentage, based on the value of the
      * {@link #isBottomAsPercentage() bottomAsPercentage} property.
+     * @return the border thickness on the bottom of the border
      */
     public final double getBottom() { return bottom; }
     final double bottom;
@@ -99,6 +102,7 @@ public final class BorderWidths {
      * thickness on the left of the border. This value can be an literal value, or can be
      * treated as a percentage, based on the value of the
      * {@link #isLeftAsPercentage() leftAsPercentage} property.
+     * @return the border thickness on the left of the border
      */
     public final double getLeft() { return left; }
     final double left;
@@ -106,6 +110,7 @@ public final class BorderWidths {
     /**
      * Specifies whether the {@link #getTop() top} property should be interpreted as a percentage ({@code true})
      * of the region height or not ({@code false}).
+     * @return true if top should be interpreted as a percentage of the region height, otherwise false
      */
     public final boolean isTopAsPercentage() { return topAsPercentage; }
     final boolean topAsPercentage;
@@ -113,6 +118,7 @@ public final class BorderWidths {
     /**
      * Specifies whether the {@link #getRight() right} property should be interpreted as a percentage ({@code true})
      * of the region width or not ({@code false}).
+     * @return true if right should be interpreted as a percentage of the region width, otherwise false
      */
     public final boolean isRightAsPercentage() { return rightAsPercentage; }
     final boolean rightAsPercentage;
@@ -120,6 +126,7 @@ public final class BorderWidths {
     /**
      * Specifies whether the {@link #getBottom() bottom} property should be interpreted as a percentage ({@code true})
      * of the region height or not ({@code false}).
+     * @return true if bottom should be interpreted as a percentage of the region height, otherwise false
      */
     public final boolean isBottomAsPercentage() { return bottomAsPercentage; }
     final boolean bottomAsPercentage;
@@ -127,6 +134,7 @@ public final class BorderWidths {
     /**
      * Specifies whether the {@link #getLeft() left} property should be interpreted as a percentage ({@code true})
      * of the region width or not ({@code false}).
+     * @return true if left should be interpreted as a percentage of the region width, otherwise false
      */
     public final boolean isLeftAsPercentage() { return leftAsPercentage; }
     final boolean leftAsPercentage;
@@ -216,7 +224,7 @@ public final class BorderWidths {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -237,7 +245,7 @@ public final class BorderWidths {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

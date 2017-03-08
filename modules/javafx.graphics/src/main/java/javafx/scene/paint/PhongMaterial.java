@@ -47,8 +47,8 @@ import javafx.scene.image.Image;
  * surface is mathematical function of these four components.
  * <p>
  * The color is computed by the following equation:
- * <p>
- * <ul><pre>
+ *
+ * <pre>{@code
  * for each ambient light source i {
  *     ambient += lightColor[i]
  * }
@@ -61,7 +61,7 @@ import javafx.scene.image.Image;
  * color = (ambient + diffuse) * diffuseColor * diffuseMap
  *             + specular * specularColor * specularMap
  *             + selfIlluminationMap
- * </pre></ul>
+ * }</pre>
  * where
  * {@code lightColor[i]} is the color of light source i,<br>
  * {@code L[i]} is the vector from the surface to light source i,<br>

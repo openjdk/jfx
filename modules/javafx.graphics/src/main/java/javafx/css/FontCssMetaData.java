@@ -38,34 +38,21 @@ import javafx.scene.text.FontWeight;
 /**
  * An partial implementation of CssMetaData for Font properties which
  * includes the font sub-properties: weight, style, family and size.
- * @param S The type of Styleable
+ * @param <S> The type of Styleable
  * @since JavaFX 8.0
  */
 public abstract class FontCssMetaData<S extends Styleable> extends CssMetaData<S, Font> {
 
     /**
-     * The property name is concatenated with &quot;-weight&quot;,
-     * &quot;-style&quot;, &quot;-family&quot; and &quot;-size&quot; to
-     * create the sub-properties. For example,
+     * Constructs a FontCSSMetaData object from the specified property and initial Font.
+     * {@literal The property name is concatenated with "-weight", "-style",
+     * "-family" and "-size" to create the sub-properties.}
+     * For example,
      * {@code new FontCssMetaData<Text>("-fx-font", Font.getDefault());}
-     * will create a CssMetaData for &quot;-fx-font&quot; with
-     * sub-properties: &quot;-fx-font-weight&quot;,
-     * &quot;-fx-font-style&quot;, &quot;-fx-font-family&quot;
-     * and &quot;-fx-font-size&quot;
-     * @param property
-     * @param initial
-     */
-    /**
-     * The property name is concatenated with &quot;-weight&quot;,
-     * &quot;-style&quot;, &quot;-family&quot; and &quot;-size&quot; to
-     * create the sub-properties. For example,
-     * {@code new FontCssMetaData<Text>("-fx-font", Font.getDefault());}
-     * will create a CssMetaData for &quot;-fx-font&quot; with
-     * sub-properties: &quot;-fx-font-weight&quot;,
-     * &quot;-fx-font-style&quot;, &quot;-fx-font-family&quot;
-     * and &quot;-fx-font-size&quot;
-     * @param property
-     * @param initial
+     * {@literal will create a CssMetaData for "-fx-font" with sub-properties:
+     * "-fx-font-weight", "-fx-font-style", "-fx-font-family" and "-fx-font-size"}
+     * @param property the property name
+     * @param initial the initial font
      */
     public FontCssMetaData(String property, Font initial) {
         super(property, FontConverter.getInstance(), initial, true, createSubProperties(property, initial));

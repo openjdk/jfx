@@ -35,12 +35,12 @@ change. Therefore, applications should not invoke layout directly on nodes.
 <p>
 The scene graph supports both resizable and non-resizable node classes.  The
 {@code isResizable()} method on {@link javafx.scene.Node Node} returns whether a
-given node is resizable or not.  A resizable node class is one which supports a range
+given node is resizable or not.  {@literal A resizable node class is one which supports a range
 of acceptable sizes (minimum <= preferred <= maximum), allowing its parent to resize
 it within that range during layout, given the parent's own layout policy and the
-layout needs of sibling nodes.  Node supports the following methods for layout code
+layout needs of sibling nodes.}  Node supports the following methods for layout code
 to determine a node's resizable range:
-<code><pre>
+<pre><code>
     public Orientation getContentBias()
     public double minWidth(double height)
     public double minHeight(double width)
@@ -48,7 +48,7 @@ to determine a node's resizable range:
     public double prefHeight(double width)
     public double maxWidth(double height)
     public double maxHeight(double width)
-</pre></code>
+</code></pre>
 <p>
 Non-resizable node classes, on the other hand, do <em>not</em> have a consistent
 resizing API and so are <em>not</em> resized by their parents during layout.
@@ -72,7 +72,6 @@ needs to set appropriate geometric properties which determine its size:
 <pre><code>    Circle circle = new Circle();
     circle.setRadius(50);
 </code></pre>
-</p>
 
 <h3>Resizable Range</h3>
 
@@ -131,11 +130,11 @@ once all effects, clipping, and transforms have been applied.
 <p>These two bounds properties will often differ for a given node and
 {@code layoutBounds} is computed differently depending on the node class:
 
-<table border="1" padding="4" summary="bounds computations">
+<table border="1" cellpadding="4" summary="bounds computations">
  <thead>
      <tr>
-         <th halign="left">Node Type</th>
-         <th halign="left">Layout Bounds</th>
+         <th>Node Type</th>
+         <th>Layout Bounds</th>
      </tr>
  </thead>
  <tbody>
@@ -167,7 +166,7 @@ once all effects, clipping, and transforms have been applied.
          </td>
      </tr>
  </tbody>
-</table></p>
+</table>
 <p>
 So for example, if a {@link javafx.scene.effect.DropShadow DropShadow} is added to a shape,
 that shadow will <em>not</em>  be factored into layout by default.  Or, if a

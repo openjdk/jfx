@@ -153,7 +153,6 @@ import java.lang.ref.WeakReference;
  *
  * <p>Example:</p>
  *
- * <p>
  * <pre>
 import javafx.scene.*;
 import javafx.scene.paint.*;
@@ -167,7 +166,7 @@ r.setFill(Color.BLUE);
 
 root.getChildren().add(r);
  * </pre>
- * </p>
+ *
  * @since JavaFX 2.0
  */
 @DefaultProperty("root")
@@ -743,6 +742,7 @@ public class Scene implements EventTarget {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * and {@link javafx.scene.SceneAntialiasing SceneAntialiasing}
      * for more information.
+     * @return the SceneAntialiasing for this scene
      * @since JavaFX 8.0
      */
     public final SceneAntialiasing getAntiAliasing() {
@@ -1639,7 +1639,7 @@ public class Scene implements EventTarget {
      * Any leading '/' character of the [path] is ignored and the [path] is treated as a path relative to
      * the root of the application's classpath.
      * </p>
-     * <code><pre>
+     * <pre><code>
      *
      * package com.example.javafx.app;
      *
@@ -1661,7 +1661,7 @@ public class Scene implements EventTarget {
      *         launch(args);
      *     }
      * }
-     * </pre></code>
+     * </code></pre>
      * For additional information about using CSS with the scene graph,
      * see the <a href="doc-files/cssref.html">CSS Reference Guide</a>.
      *
@@ -5625,6 +5625,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when drag gesture
      * enters this {@code Scene}.
+     * @return function to be called when drag gesture enters this scene
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragEnteredProperty() {
         if (onDragEntered == null) {
@@ -5662,6 +5663,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when drag gesture
      * exits this {@code Scene}.
+     * @return the function to be called when drag gesture exits this scene
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragExitedProperty() {
         if (onDragExited == null) {
@@ -5699,6 +5701,8 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when drag gesture progresses
      * within this {@code Scene}.
+     * @return the function to be called when drag gesture progresses within
+     * this scene
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragOverProperty() {
         if (onDragOver == null) {
@@ -5769,6 +5773,8 @@ public class Scene implements EventTarget {
      * on this {@code Scene} during drag and drop gesture. Transfer of data from
      * the {@link DragEvent}'s {@link DragEvent#dragboard dragboard} should
      * happen in this function.
+     * @return the function to be called when the mouse button is released on
+     * this scene during drag and drop gesture
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragDroppedProperty() {
         if (onDragDropped == null) {
@@ -5816,6 +5822,8 @@ public class Scene implements EventTarget {
      * Positional data for the {@code DragEvent} is invalid.  Valid positional
      * data for the {@code DragEvent} is presented in the {@link onDragDropped}
      * event handler.
+     * @return the function to be called when this scene is a drag and drop
+     * gesture source after its data has been dropped on a drop target
      */
     public final ObjectProperty<EventHandler<? super DragEvent>> onDragDoneProperty() {
         if (onDragDone == null) {
@@ -6050,7 +6058,7 @@ public class Scene implements EventTarget {
      * function is not defined in this {@code Node}, then it
      * receives the result string of the input method composition as a
      * series of {@code onKeyTyped} function calls.
-     * </p>
+     * <p>
      * When the {@code Node} loses the input focus, the JavaFX runtime
      * automatically commits the existing composed text if any.
      */
@@ -6313,6 +6321,7 @@ public class Scene implements EventTarget {
     /**
      * The effective node orientation of a scene resolves the inheritance of
      * node orientation, returning either left-to-right or right-to-left.
+     * @return the effective node orientation of this scene
      * @since JavaFX 8.0
      */
     public final ReadOnlyObjectProperty<NodeOrientation>

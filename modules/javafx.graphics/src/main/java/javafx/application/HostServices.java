@@ -88,14 +88,12 @@ public final class HostServices {
      * the resolved URI.
      *
      * <p>Example:</p>
-     * <ul>
      * <pre>
-     * HostServices services = getHostServices();
-     * String myImage = services.resolveURI(services.getDocumentBase(),
-     *                                      "image.jpg");
-     * Image image = new Image(myImage);
+     *     HostServices services = getHostServices();
+     *     String myImage = services.resolveURI(services.getDocumentBase(),
+     *                                          "image.jpg");
+     *     Image image = new Image(myImage);
      * </pre>
-     * </ul>
      *
      * @param base the base URI against which to resolve the relative URI
      *
@@ -136,17 +134,15 @@ public final class HostServices {
      * return null.
      *
      * <p>Example:</p>
-     * <ul>
-     * <pre>
-     * JSObject jsWin = getHostServices().getWebContext();
-     * if (jsWin != null) {
-     *     jsWin.eval("var b = document.body;" +
-     *                "var newdiv = document.createElement('div');" +
-     *                "newdiv.innerHTML = '&lt;br&gt;Hello from JavaScript!';" +
-     *                "b.appendChild(newdiv);");
-     * }
-     * </pre>
-     * </ul>
+     * <pre>{@code
+     *     JSObject jsWin = getHostServices().getWebContext();
+     *     if (jsWin != null) {
+     *         jsWin.eval("var b = document.body;" +
+     *                    "var newdiv = document.createElement('div');" +
+     *                    "newdiv.innerHTML = '<br>Hello from JavaScript!';" +
+     *                    "b.appendChild(newdiv);");
+     *     }
+     * }</pre>
      *
      * @return handle of the enclosing DOM window of the web page containing
      * this application

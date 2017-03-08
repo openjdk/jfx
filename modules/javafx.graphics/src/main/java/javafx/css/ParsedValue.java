@@ -92,6 +92,8 @@ public class ParsedValue<V, T> {
      * does not mean that this particular value needs to be looked up, but
      * that this value contains a value that needs to be looked up.
      *
+     * @return true if this value contains a value that needs to be looked up,
+     * otherwise false
      * @since 9
      */
     public boolean isContainsLookups() { return false; }
@@ -100,6 +102,7 @@ public class ParsedValue<V, T> {
      * If value references another property, then the real value needs to
      * be looked up.
      *
+     * @return true if value references another property, otherwise false
      * @since 9
      */
     public boolean isLookup() { return false; }
@@ -110,6 +113,8 @@ public class ParsedValue<V, T> {
      * If {@code converter} is null, then it is assumed that the type of value
      * {@code V} and the type of target {@code T} are the same and
      * do not need converted.
+     * @param value the value to be converted
+     * @param converter the converter
      */
     protected ParsedValue(V value, StyleConverter<V, T> converter) {
         this.value = value;

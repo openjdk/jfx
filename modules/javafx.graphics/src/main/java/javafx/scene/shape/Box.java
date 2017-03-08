@@ -103,6 +103,9 @@ public class Box extends Shape3D {
     /**
      * Creates a new instance of {@code Box} of dimension width by height
      * by depth.
+     * @param width the width of this box
+     * @param height the height of this box
+     * @param depth the depth of this box
      */
     public Box(double width, double height, double depth) {
         setWidth(width);

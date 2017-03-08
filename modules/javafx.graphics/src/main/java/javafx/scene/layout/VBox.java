@@ -54,10 +54,10 @@ import javafx.util.Callback;
  * out within those insets.
  * <p>
  * VBox example:
- * <pre><code>
+ * <pre>{@code
  *     VBox vbox = new VBox(8); // spacing = 8
  *     vbox.getChildren().addAll(new Button("Cut"), new Button("Copy"), new Button("Paste"));
- * </code></pre>
+ * }</pre>
  *
  * VBox will resize children (if resizable) to their preferred heights and uses its
  * {@link #fillWidth} property to determine whether to resize their widths to
@@ -74,12 +74,12 @@ import javafx.util.Callback;
  * VBox lays out each managed child regardless of the child's
  * visible property value; unmanaged children are ignored.</p>
  *
- * <h4>Resizable Range</h4>
+ * <h3>Resizable Range</h3>
  *
  * A vbox's parent will resize the vbox within the vbox's resizable range
  * during layout.   By default the vbox computes this range based on its content
  * as outlined in the table below.
- * <table border="1">
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus the largest of the children's min widths.</td>
@@ -110,12 +110,12 @@ import javafx.util.Callback;
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within the vbox.</p>
  *
- * <h4>Optional Layout Constraints</h4>
+ * <h3>Optional Layout Constraints</h3>
  *
  * An application may set constraints on individual children to customize VBox's layout.
  * For each constraint, VBox provides a static method for setting it on the child.
- * <p>
- * <table border="1">
+ *
+ * <table border="1" summary="">
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>vgrow</td><td>javafx.scene.layout.Priority</td><td>The vertical grow priority for the child.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
@@ -247,6 +247,7 @@ public class VBox extends Pane {
 
     /**
      * The amount of vertical space between each child in the vbox.
+     * @return the amount of vertical space between each child in the vbox
      */
     public final DoubleProperty spacingProperty() {
         if (spacing == null) {
@@ -281,6 +282,8 @@ public class VBox extends Pane {
 
     /**
      * The overall alignment of children within the vbox's width and height.
+     * @return the overall alignment of children within the vbox's width and
+     * height
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -321,6 +324,8 @@ public class VBox extends Pane {
      * Whether or not resizable children will be resized to fill the full width of the vbox
      * or be resized to their preferred width and aligned according to the <code>alignment</code>
      * hpos value.
+     * @return true if resizable children will be resized to fill the full width
+     * of the vbox
      */
     public final BooleanProperty fillWidthProperty() {
         if (fillWidth == null) {

@@ -37,9 +37,8 @@ public enum FillRule {
      * The even-odd rule specifies that a point lies inside the path if a ray
      * drawn in any direction from that point to infinity is crossed by path
      * segments an odd number of times.
-     * <p>
-     * <img src="doc-files/fillrule-evenodd.png"/>
-     * </p>
+     * <p> <img src="doc-files/fillrule-evenodd.png" alt="A visual illustration
+     * of how EVEN_ODD works"> </p>
      */
     EVEN_ODD, //(GeneralPath.WIND_EVEN_ODD),
 
@@ -50,9 +49,8 @@ public enum FillRule {
      * drawn in any direction from that point to infinity is crossed by path
      * segments a different number of times in the counter-clockwise direction
      * than the clockwise direction.
-     * <p>
-     * <img src="doc-files/fillrule-nonzero.png"/>
-     * </p>
+     * <p> <img src="doc-files/fillrule-nonzero.png" alt="A visual illustration
+     * of how NON_ZERO works"> </p>
      */
     NON_ZERO //(GeneralPath.WIND_NON_ZERO)
 }

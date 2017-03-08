@@ -56,9 +56,9 @@ import javafx.util.Callback;
  * the area using the alignment property, which defaults to Pos.CENTER.
  * <p>
  * StackPane example:
- * <pre><code>     StackPane stack = new StackPane();
+ * <pre>{@code     StackPane stack = new StackPane();
  *     stack.getChildren().addAll(new Rectangle(100,100,Color.BLUE), new Label("Go!));
- * </code></pre>
+ * }</pre>
  * <p>
  * StackPane lays out each managed child regardless of the child's
  * visible property value; unmanaged children are ignored.</p>
@@ -66,13 +66,13 @@ import javafx.util.Callback;
  * StackPane may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} for details.</p>
  *
- * <h4>Resizable Range</h4>
+ * <h3>Resizable Range</h3>
  *
  * A stackpane's parent will resize the stackpane within the stackpane's resizable range
  * during layout.   By default the stackpane computes this range based on its content
  * as outlined in the table below.
- * <p>
- * <table border="1">
+ *
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus the largest of the children's min widths.</td>
@@ -102,12 +102,12 @@ import javafx.util.Callback;
  * bounds may extend outside its own bounds if a child's min size prevents it from
  * being fit within the stackpane.</p>
  *
- * <h4>Optional Layout Constraints</h4>
+ * <h3>Optional Layout Constraints</h3>
  *
  * An application may set constraints on individual children to customize StackPane's layout.
  * For each constraint, StackPane provides a static method for setting it on the child.
- * <p>
- * <table border="1">
+ *
+ * <table border="1" summary="">
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>alignment</td><td>javafx.geometry.Pos</td><td>The alignment of the child within the stackpane.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
@@ -215,6 +215,7 @@ public class StackPane extends Pane {
      * The default alignment of children within the stackpane's width and height.
      * This may be overridden on individual children by setting the child's
      * alignment constraint.
+     * @return the alignment of children within this stackpane
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {

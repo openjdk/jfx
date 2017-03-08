@@ -94,7 +94,7 @@ import java.lang.ref.WeakReference;
  * an UnsupportedOperationException being thrown.
  * </p>
  *
- * <h4>Interaction with coordinate systems</h4>
+ * <h3>Interaction with coordinate systems</h3>
  * Most nodes tend to have only integer translations applied to them and
  * quite often they are defined using integer coordinates as well.  For
  * this common case, fills of shapes with straight line edges tend to be
@@ -207,10 +207,12 @@ public abstract class Shape extends Node {
      * <p>
      * The image shows a shape without stroke and with a thick stroke applied
      * inside, centered and outside.
-     * </p><p>
-     * <img src="doc-files/stroketype.png"/>
      * </p>
+     * <p> <img src="doc-files/stroketype.png" alt="A visual illustration of how
+     * StrokeType works"> </p>
      *
+     * @return the direction that the strokeWidth is applied to the boundary of
+     * the shape
      * @see StrokeType
      * @defaultValue CENTERED
      */
@@ -231,6 +233,7 @@ public abstract class Shape extends Node {
      * Defines a square pen line width. A value of 0.0 specifies a hairline
      * stroke. A value of less than 0.0 will be treated as 0.0.
      *
+     * @return the square pen line width
      * @defaultValue 1.0
      */
     public final DoubleProperty strokeWidthProperty() {
@@ -253,10 +256,10 @@ public abstract class Shape extends Node {
      * {@code StrokeLineJoin.MITER}, {@code StrokeLineJoin.BEVEL},
      * and {@code StrokeLineJoin.ROUND}. The image shows a shape
      * using the values in the mentioned order.
-     * </p><p>
-     * <img src="doc-files/strokelinejoin.png"/>
-     * </p>
+     * <p> <img src="doc-files/strokelinejoin.png" alt="A visual illustration of
+     * StrokeLineJoin using 3 different values"> </p>
      *
+     * @return the decoration applied where path segments meet
      * @see StrokeLineJoin
      * @defaultValue MITER
      */
@@ -279,10 +282,10 @@ public abstract class Shape extends Node {
      * {@code StrokeLineCap.BUTT}, {@code StrokeLineCap.ROUND},
      * and  {@code StrokeLineCap.SQUARE}. The image shows a line
      * using the values in the mentioned order.
-     * </p><p>
-     * <img src="doc-files/strokelinecap.png"/>
-     * </p>
+     * <p> <img src="doc-files/strokelinecap.png" alt="A visual illustration of
+     * StrokeLineCap using 3 different values"> </p>
      *
+     * @return the end cap style of this shape
      * @see StrokeLineCap
      * @defaultValue SQUARE
      */
@@ -310,10 +313,11 @@ public abstract class Shape extends Node {
      * than the given miter limit, the miter is cut at the edge of the shape
      * ({@code B}). For the situation in the image it means that the miter
      * will be cut at {@code B} for limit values less than {@code 4.65}.
-     * </p><p>
-     * <img src="doc-files/strokemiterlimit.png"/>
      * </p>
+     * <p> <img src="doc-files/strokemiterlimit.png" alt="A visual illustration of
+     * the use of StrokeMiterLimit"> </p>
      *
+     * @return the limit for the {@code StrokeLineJoin.MITER} line join style
      * @defaultValue 10.0
      */
     public final DoubleProperty strokeMiterLimitProperty() {
@@ -340,10 +344,12 @@ public abstract class Shape extends Node {
      * a stroke with the same pattern and offset {@code 45} which shifts
      * the pattern about the length of the first dash segment and
      * the following space.
-     * </p><p>
-     * <img src="doc-files/strokedashoffset.png"/>
      * </p>
+     * <p> <img src="doc-files/strokedashoffset.png" alt="A visual illustration of
+     * the use of StrokeDashOffset"> </p>
      *
+     * @return the distance specified in user coordinates that represents an
+     * offset into the dashing pattern
      * @defaultValue 0
      */
     public final DoubleProperty strokeDashOffsetProperty() {
@@ -375,10 +381,12 @@ public abstract class Shape extends Node {
      * and 3 different values for the stroke line cap:
      * {@code StrokeLineCap.BUTT}, {@code StrokeLineCap.SQUARE} (the default),
      * and {@code StrokeLineCap.ROUND}
-     * </p><p>
-     * <img src="doc-files/strokedasharray.png"/>
      * </p>
+     * <p> <img src="doc-files/strokedasharray.png" alt="A visual illustration of
+     * the use of StrokeDashArray using 3 different values for the stroke line
+     * cap"> </p>
      *
+     * @return the array representing the lengths of the dash segments
      * @defaultValue empty
      */
     public final ObservableList<Double> getStrokeDashArray() {
@@ -1560,7 +1568,6 @@ public abstract class Shape extends Node {
      * <p>
      * The resulting shape will include areas that were contained in any of the
      * input shapes.
-     * <p>
 
 <PRE>
 
@@ -1605,7 +1612,6 @@ public abstract class Shape extends Node {
      * <p>
      * The resulting shape will include areas that were contained only in the
      * first shape and not in the second shape.
-     * <p>
 
 <PRE>
 
@@ -1650,7 +1656,6 @@ public abstract class Shape extends Node {
      * <p>
      * The resulting shape will include only areas that were contained in both
      * of the input shapes.
-     * <p>
 
 <PRE>
 

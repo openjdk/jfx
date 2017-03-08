@@ -94,14 +94,14 @@ public abstract class PixelFormat<T extends Buffer> {
      * alpha, red, green, blue.
      * <p>
      * Pixels in this format can be decoded using the following sample code:
-     * <pre>
+     * <pre>{@code
      *     int pixel = array[rowstart + x];
      *
      *     int alpha = ((pixel >> 24) & 0xff);
      *     int red   = ((pixel >> 16) & 0xff);
      *     int green = ((pixel >>  8) & 0xff);
-     *     int blue  = ((pixel      ) & 0xff);
-     * </pre>
+     *     int blue  = ((pixel >>   ) & 0xff);
+     * }</pre>
      *
      * @return a {@code WritabelPixelFormat<IntBuffer>} describing the
      *         indicated pixel format
@@ -117,14 +117,14 @@ public abstract class PixelFormat<T extends Buffer> {
      * alpha, red, green, blue.
      * <p>
      * Pixels in this format can be decoded using the following sample code:
-     * <pre>
+     * <pre>{@code
      *     int pixel = array[rowstart + x];
      *
      *     int alpha = ((pixel >> 24) & 0xff);
      *     int red   = ((pixel >> 16) & 0xff);
      *     int green = ((pixel >>  8) & 0xff);
-     *     int blue  = ((pixel      ) & 0xff);
-     * </pre>
+     *     int blue  = ((pixel >>   ) & 0xff);
+     * }</pre>
      *
      * @return a {@code WritabelPixelFormat<IntBuffer>} describing the
      *         indicated pixel format
@@ -140,14 +140,14 @@ public abstract class PixelFormat<T extends Buffer> {
      * blue, green, red, alpha.
      * <p>
      * Pixels in this format can be decoded using the following sample code:
-     * <pre>
+     * <pre>{@code
      *     int i = rowstart + x * 4;
      *
      *     int blue  = (array[i+0] & 0xff);
      *     int green = (array[i+1] & 0xff);
      *     int red   = (array[i+2] & 0xff);
      *     int alpha = (array[i+3] & 0xff);
-     * </pre>
+     * }</pre>
      *
      * @return a {@code WritablePixelFormat<ByteBuffer>} describing the
      *         indicated pixel format
@@ -163,14 +163,14 @@ public abstract class PixelFormat<T extends Buffer> {
      * blue, green, red, alpha.
      * <p>
      * Pixels in this format can be decoded using the following sample code:
-     * <pre>
+     * <pre>{@code
      *     int i = rowstart + x * 4;
      *
      *     int blue  = (array[i+0] & 0xff);
      *     int green = (array[i+1] & 0xff);
      *     int red   = (array[i+2] & 0xff);
      *     int alpha = (array[i+3] & 0xff);
-     * </pre>
+     * }</pre>
      *
      * @return a {@code WritablePixelFormat<ByteBuffer>} describing the
      *         indicated pixel format
@@ -186,13 +186,13 @@ public abstract class PixelFormat<T extends Buffer> {
      * red, green, blue.
      * <p>
      * Pixels in this format can be decoded using the following sample code:
-     * <pre>
+     * <pre>{@code
      *     int i = rowstart + x * 3;
      *
      *     int red   = (array[i+0] & 0xff);
      *     int green = (array[i+1] & 0xff);
      *     int blue  = (array[i+2] & 0xff);
-     * </pre>
+     * }</pre>
      *
      * @return a {@code PixelFormat<ByteBuffer>} describing the
      *         indicated pixel format
@@ -208,15 +208,15 @@ public abstract class PixelFormat<T extends Buffer> {
      * values in the {@link Type#INT_ARGB_PRE INT_ARGB_PRE} format.
      * <p>
      * Pixels in this format can be decoded using the following sample code:
-     * <pre>
-     *     int pixel = array[rowstart + x] & 0xff;
+     * <pre>{@code
+     *     int pixel = array[rowstart + x] &amp; 0xff;
      *     int argb  = colors[pixel];
      *
      *     int alpha = ((argb >> 24) & 0xff);
      *     int red   = ((argb >> 16) & 0xff);
      *     int green = ((argb >>  8) & 0xff);
      *     int blue  = ((argb      ) & 0xff);
-     * </pre>
+     * }</pre>
      *
      * @param colors an {@code int[]} array of 32-bit color values in
      *               the {@link Type#INT_ARGB_PRE INT_ARGB_PRE} format
@@ -236,15 +236,15 @@ public abstract class PixelFormat<T extends Buffer> {
      * values in the {@link Type#INT_ARGB INT_ARGB} format.
      * <p>
      * Pixels in this format can be decoded using the following sample code:
-     * <pre>
-     *     int pixel = array[rowstart + x] & 0xff;
+     * <pre>{@code
+     *     int pixel = array[rowstart + x] &amp; 0xff;
      *     int argb  = colors[pixel];
      *
      *     int alpha = ((argb >> 24) & 0xff);
      *     int red   = ((argb >> 16) & 0xff);
      *     int green = ((argb >>  8) & 0xff);
      *     int blue  = ((argb      ) & 0xff);
-     * </pre>
+     * }</pre>
      *
      * @param colors an {@code int[]} array of 32-bit color values in
      *               the {@link Type#INT_ARGB INT_ARGB} format
@@ -334,10 +334,10 @@ public abstract class PixelFormat<T extends Buffer> {
      * The color components can be extracted from the returned integer using
      * the following sample code:
      * <pre>
-     *     int alpha = ((retval >> 24) & 0xff);
-     *     int red   = ((retval >> 16) & 0xff);
-     *     int green = ((retval >>  8) & 0xff);
-     *     int blue  = ((retval      ) & 0xff);
+     *     int alpha = ((retval &gt;&gt; 24) &amp; 0xff);
+     *     int red   = ((retval &gt;&gt; 16) &amp; 0xff);
+     *     int green = ((retval &gt;&gt;  8) &amp; 0xff);
+     *     int blue  = ((retval      ) &amp; 0xff);
      * </pre>
      *
      * @param buf the buffer of pixel data

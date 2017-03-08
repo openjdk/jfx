@@ -34,7 +34,7 @@ import javafx.beans.property.SimpleDoubleProperty;
  *
  * This class is used to make a {@link javafx.beans.property.DoubleProperty},
  * that would otherwise be implemented as a {@link SimpleDoubleProperty},
- * style&#8209;able by CSS.
+ * styleable by CSS.
  *
  * @see javafx.beans.property.SimpleDoubleProperty
  * @see CssMetaData

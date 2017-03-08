@@ -38,13 +38,13 @@ import javafx.beans.NamedArg;
  * {@code javafx.scene.paint.RadialGradient}.
  *
  * <p>Example:</p>
- * <pre><code>
+ * <pre>{@code
  * // object bounding box relative (proportional:true, default)
  * Stop[] stops = { new Stop(0, Color.WHITE), new Stop(1, Color.BLACK)};
  * LinearGradient lg = new LinearGradient(0, 0, 1, 0, true, CycleMethod.No_CYCLE, stops);
  * Rectangle r = new Rectangle();
  * r.setFill(lg);
- *</code></pre>
+ * }</pre>
  * @since JavaFX 2.0
  */
 public final class Stop {
@@ -141,7 +141,6 @@ public final class Stop {
      * For radial gradients, it represents a percentage distance from
      * the focus point to the edge of the outermost/largest circle.
      *
-     * @profile common
      * @defaultValue 0.0
      */
     private double offset;
@@ -163,7 +162,6 @@ public final class Stop {
     /**
      * The color of the gradient at this offset.
      *
-     * @profile common
      * @defaultValue Color.BLACK
      */
     private Color color;

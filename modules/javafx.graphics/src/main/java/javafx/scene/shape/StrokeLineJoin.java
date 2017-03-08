@@ -34,9 +34,8 @@ public enum StrokeLineJoin {
     /**
      * Joins path segments by extending their outside edges until they meet.
      *
-     * <p>
-     * <img src="doc-files/strokelinejoin-miter.png"/>
-     * </p>
+     * <p> <img src="doc-files/strokelinejoin-miter.png" alt="A visual rendering
+     * of StrokeLineJoin.MITER"> </p>
      */
     MITER,//(BasicStroke.JOIN_MITER),
 
@@ -44,9 +43,8 @@ public enum StrokeLineJoin {
      * Joins path segments by connecting the outer corners
      * of their wide outlines with a straight segment.
      *
-     * <p>
-     * <img src="doc-files/strokelinejoin-bevel.png"/>
-     * </p>
+     * <p> <img src="doc-files/strokelinejoin-bevel.png" alt="A visual rendering
+     * of StrokeLineJoin.BEVEL"> </p>
      */
     BEVEL,//(BasicStroke.JOIN_BEVEL),
 
@@ -54,9 +52,8 @@ public enum StrokeLineJoin {
      * Joins path segments by rounding off the corner
      * at a radius of half the line width.
      *
-     * <p>
-     * <img src="doc-files/strokelinejoin-round.png"/>
-     * </p>
+     * <p> <img src="doc-files/strokelinejoin-round.png" alt="A visual rendering
+     * of StrokeLineJoin.ROUND"> </p>
      */
     ROUND//(BasicStroke.JOIN_ROUND);
 }

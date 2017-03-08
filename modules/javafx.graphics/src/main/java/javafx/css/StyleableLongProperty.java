@@ -35,7 +35,7 @@ import javafx.beans.value.ObservableValue;
  *
  * This class is used to make a {@link javafx.beans.property.LongProperty},
  * that would otherwise be implemented as a {@link LongPropertyBase},
- * style&#8209;able by CSS.
+ * styleable by CSS.
  *
  * @see javafx.beans.property.LongPropertyBase
  * @see CssMetaData

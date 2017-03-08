@@ -46,7 +46,7 @@ import com.sun.javafx.tk.Toolkit;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * InnerShadow innerShadow = new InnerShadow();
  * innerShadow.setOffsetX(4);
  * innerShadow.setOffsetY(4);
@@ -59,10 +59,11 @@ import com.sun.javafx.tk.Toolkit;
  * text.setText("InnerShadow");
  * text.setFill(Color.ALICEBLUE);
  * text.setFont(Font.font(null, FontWeight.BOLD, 50));
- * </pre></code>
+ * }</pre>
  * <p> The code above produces the following: </p>
  * <p>
- * <img * src="doc-files/innershadow.png"/>
+ * <img src="doc-files/innershadow.png" alt="The visual effect of InnerShadow on
+ * text">
  * </p>
  * @since JavaFX 2.0
  */

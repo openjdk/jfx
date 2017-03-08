@@ -35,7 +35,7 @@ import javafx.beans.value.ObservableValue;
  *
  * This class is used to make a {@link javafx.beans.property.FloatProperty},
  * that would otherwise be implemented as a {@link FloatPropertyBase},
- * style&#8209;able by CSS.
+ * styleable by CSS.
  *
  * @see javafx.beans.property.FloatPropertyBase
  * @see CssMetaData

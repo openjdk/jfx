@@ -42,15 +42,15 @@ import javafx.geometry.HPos;
  * will use those constraint values when computing the column's width and layout.
  * <p>
  * For example, to create a GridPane with 5 columns 100 pixels wide:
- * <pre><code>
+ * <pre>{@code
  *     GridPane gridpane = new GridPane();
  *     for (int i = 0; i < 5; i++) {
  *         ColumnConstraints column = new ColumnConstraints(100);
  *         gridpane.getColumnConstraints().add(column);
  *     }
- * </code></pre>
+ * }</pre>
  * Or, to create a GridPane where columns take 25%, 50%, 25% of its width:
- * <pre><code>
+ * <pre>{@code
  *     GridPane gridpane = new GridPane();
  *     ColumnConstraints col1 = new ColumnConstraints();
  *     col1.setPercentWidth(25);
@@ -59,7 +59,7 @@ import javafx.geometry.HPos;
  *     ColumnConstraints col3 = new ColumnConstraints();
  *     col3.setPercentWidth(25);
  *     gridpane.getColumnConstraints().addAll(col1,col2,col3);
- * </code></pre>
+ * }</pre>
  *
  * Note that adding an empty ColumnConstraints object has the effect of not setting
  * any constraints, leaving the GridPane to compute the column's layout based
@@ -96,6 +96,9 @@ public class ColumnConstraints extends ConstraintsBase {
      * This is a convenience for setting the minimum, preferred, and maximum
      * width constraints.
      *
+     * @param minWidth the minimum width
+     * @param prefWidth the preferred width
+     * @param maxWidth the maximum width
      */
     public ColumnConstraints(double minWidth, double prefWidth, double maxWidth) {
         this();
@@ -108,6 +111,12 @@ public class ColumnConstraints extends ConstraintsBase {
      * Creates a column constraint object with a fixed size range, horizontal
      * grow priority, horizonal alignment, and horizontal fill behavior.
      *
+     * @param minWidth the minimum width
+     * @param prefWidth the preferred width
+     * @param maxWidth the maximum width
+     * @param hgrow the horizontal grow priority
+     * @param halignment the horizonal alignment
+     * @param fillWidth the horizontal fill behavior
      */
     public ColumnConstraints(double minWidth, double prefWidth, double maxWidth, Priority hgrow, HPos halignment, boolean fillWidth) {
         this(minWidth, prefWidth, maxWidth);

@@ -556,7 +556,7 @@ public abstract class Animation {
     /**
      * Defines the number of cycles in this animation. The {@code cycleCount}
      * may be {@code INDEFINITE} for animations that repeat indefinitely, but
-     * must otherwise be > 0.
+     * must otherwise be {@literal >} 0.
      * <p>
      * It is not possible to change the {@code cycleCount} of a running
      * {@code Animation}. If the value of {@code cycleCount} is changed for a
@@ -873,11 +873,11 @@ public abstract class Animation {
      * Plays {@code Animation} from current position in the direction indicated
      * by {@code rate}. If the {@code Animation} is running, it has no effect.
      * <p>
-     * When {@code rate} > 0 (forward play), if an {@code Animation} is already
+     * When {@code rate} {@literal >} 0 (forward play), if an {@code Animation} is already
      * positioned at the end, the first cycle will not be played, it is
      * considered to have already finished. This also applies to a backward (
-     * {@code rate} < 0) cycle if an {@code Animation} is positioned at the beginning.
-     * However, if the {@code Animation} has {@code cycleCount} > 1, following
+     * {@code rate} {@literal <} 0) cycle if an {@code Animation} is positioned at the beginning.
+     * However, if the {@code Animation} has {@code cycleCount} {@literal >} 1, following
      * cycle(s) will be played as usual.
      * <p>
      * When the {@code Animation} reaches the end, the {@code Animation} is stopped and
@@ -939,7 +939,7 @@ public abstract class Animation {
      * <p>
      * <code>
      *      animation.stop();<br>
-     *      animation.setRate = setRate(Math.abs(animation.getRate())); </br>
+     *      animation.setRate = setRate(Math.abs(animation.getRate())); <br>
      *      animation.jumpTo(Duration.ZERO);<br>
      *      animation.play();<br>
      *  </code>

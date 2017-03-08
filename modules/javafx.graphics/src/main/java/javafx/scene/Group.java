@@ -63,7 +63,7 @@ import javafx.scene.shape.*;
 import java.lang.Math;
 
 Group g = new Group();
-for (int i = 0; i < 5; i++) {
+for (int i = 0; i &lt; 5; i++) {
     Rectangle r = new Rectangle();
     r.setY(i * 20);
     r.setWidth(100);
@@ -179,7 +179,7 @@ public  class Group extends Parent {
 
     /**
      * Group defines the preferred width as simply being the width of its layout bounds, which
-     * in turn is simply the sum of the positions & widths of all of its children. That is,
+     * in turn is simply the sum of the positions and widths of all of its children. That is,
      * the preferred width is the one that it is at, because a Group cannot be resized.
      *
      * Note: as the layout bounds in autosize Group depend on the Group to be already laid-out,
@@ -199,7 +199,7 @@ public  class Group extends Parent {
 
     /**
      * Group defines the preferred height as simply being the height of its layout bounds, which
-     * in turn is simply the sum of the positions & heights of all of its children. That is,
+     * in turn is simply the sum of the positions and heights of all of its children. That is,
      * the preferred height is the one that it is at, because a Group cannot be resized.
      *
      * Note: as the layout bounds in autosize Group depend on the Group to be already laid-out,

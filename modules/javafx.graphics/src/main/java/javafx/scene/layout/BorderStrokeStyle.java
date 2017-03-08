@@ -73,6 +73,8 @@ public final class BorderStrokeStyle {
      * Defines the direction (inside, outside, or both) that the strokeWidth
      * is applied to the boundary of the shape.
      *
+     * @return the the direction that the strokeWidth is applied to the boundary
+     * of the shape
      * @defaultValue CENTERED
      */
     public final StrokeType getType() { return type; }
@@ -84,6 +86,7 @@ public final class BorderStrokeStyle {
      * {@code StrokeLineJoin.BEVEL}, {@code StrokeLineJoin.MITER},
      * and {@code StrokeLineJoin.ROUND}.
      *
+     * @return the decoration applied where path segments meet
      * @defaultValue MITER
      */
     public final StrokeLineJoin getLineJoin() { return lineJoin; }
@@ -95,6 +98,7 @@ public final class BorderStrokeStyle {
      * {@code StrokeLineCap.BUTT}, {@code StrokeLineCap.ROUND},
      * and  {@code StrokeLineCap.SQUARE}.
      *
+     * @return the end cap style
      * @defaultValue SQUARE
      */
     public final StrokeLineCap getLineCap() { return lineCap; }
@@ -103,6 +107,7 @@ public final class BorderStrokeStyle {
     /**
      * Defines the limit for the {@code StrokeLineJoin.MITER} line join style.
      *
+     * @return the limit for the StrokeLineJoin.MITER line join style
      * @defaultValue 10
      */
     public final double getMiterLimit() { return miterLimit; }
@@ -114,6 +119,7 @@ public final class BorderStrokeStyle {
      * defines the point in the dashing pattern that will correspond
      * to the beginning of the stroke.
      *
+     * @return the offset into the dashing pattern
      * @defaultValue 0
      */
     public final double getDashOffset() { return dashOffset; }
@@ -129,6 +135,7 @@ public final class BorderStrokeStyle {
      * The pen is opaque when its current cumulative distance maps
      * to an even element of the dash array and transparent otherwise.
      * An empty dashArray indicates a solid line with no spaces.
+     * @return the array representing the lengths of the dash segments
      * @defaultValue empty
      */
     public final List<Double> getDashArray() { return dashArray; }
@@ -195,7 +202,7 @@ public final class BorderStrokeStyle {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public String toString() {
         if (this == NONE) {
@@ -228,7 +235,7 @@ public final class BorderStrokeStyle {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -247,7 +254,7 @@ public final class BorderStrokeStyle {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

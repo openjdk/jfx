@@ -50,7 +50,7 @@ import java.util.function.Function;
  * These methods take a Function&lt;? extends Styleable, StyleableProperty&lt;?&gt;&gt; which returns a
  * reference to the property itself. See the example below. Note that for efficient use of memory and for better
  * CSS performance, creating the <code>StyleablePropertyFactory</code> as a static member, as shown below, is recommended.
- * <code><pre>
+ * <pre><code>
  public final class MyButton extends Button {
 
      private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY = new {@literal StyleablePropertyFactory<>}(Button.getClassCssMetaData());
@@ -75,14 +75,14 @@ import java.util.function.Function;
      }
 
  }
- * </pre></code>
+ * </code></pre>
  * <p>The example above is the simplest use of <code>StyleablePropertyFactory</code>. But, this use does not provide the
  * static CssMetaData that is useful for {@code getClassCssMetaData()}, which is described in the javadoc for
- * {@link CssMetaData)}. Static CssMetaData can, however, be created via <code>StyleablePropertyFactory</code> methods
+ * {@link CssMetaData}. Static CssMetaData can, however, be created via <code>StyleablePropertyFactory</code> methods
  * and will be returned by the methods which create StyleableProperty instances, as the example below illustrates.
  * Note that the static method <code>getClassCssMetaData()</code> is a convention used throughout the JavaFX code base
  * but the <code>getClassCssMetaData()</code> method itself is not used at runtime.</p>
- * <code><pre>
+ * <pre><code>
  public final class MyButton extends Button {
 
      private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY =
@@ -114,11 +114,11 @@ import java.util.function.Function;
          return FACTORY.getCssMetaData();
      }
  }
- * </pre></code>
+ * </code></pre>
  * <p>The same can be accomplished with an inner-class. The previous example called {@code new SimpleStyleableBooleanProperty}
  * to create the <code>selected</code> property. This example uses the factory to access the <code>CssMetaData</code>
  * that was created along with the anonymous inner-class. For all intents and purposes, the two examples are the same.</p>
- * <code><pre>
+ * <pre><code>
  public final class MyButton extends Button {
 
      private static final {@literal StyleablePropertyFactory<MyButton>} FACTORY =
@@ -152,19 +152,18 @@ import java.util.function.Function;
          return FACTORY.getCssMetaData();
      }
  }
- * </pre></code>
+ * </code></pre>
  * <p><span class="simpleTagLabel">Caveats:</span></p>
- * The only option for creating a StyleableProperty with a number value is to create a StyleableProperty&lt;Number&gt;</Number>.
+ * The only option for creating a StyleableProperty with a number value is to create a StyleableProperty&lt;Number&gt;.
  * The return value from the <code>getValue()</code> method of the StyleableProperty is a Number. Therefore,
  * the <code>get</code> method of the JavaFX property needs to call the correct <code>value</code> method for the return type.
  * For example,
- * <code><pre>
+ * <pre>{@code
      public ObservableValue<Double> offsetProperty() { return (ObservableValue<Double>)offset; }
      public Double getOffset() { return offset.getValue().doubleValue(); }
      public void setOffset(Double value) { offset.setValue(value); }
      private final StyleableProperty<Number> offset = FACTORY.createStyleableNumberProperty(this, "offset", "-my-offset", s -> ((MyButton)s).offset);
- * <br>
- * </pre></code>
+ * }</pre>
  * @param <S> The type of Styleable
  * @since JavaFX 8u40
  */
@@ -187,6 +186,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * Get the CssMetaData for the given Styleable. For a Node other than a Control, this method should be
      * called from the {@link javafx.css.Styleable#getCssMetaData()} method. For a Control, this method should be called
      * from the {@link javafx.scene.control.Control#getControlCssMetaData()} method.
+     * @return the CssMetaData for the given Styleable
      */
     public final List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return unmodifiableMetaDataList;
@@ -206,6 +206,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Boolean&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<Boolean> createStyleableBooleanProperty(
             S styleable,
@@ -226,6 +227,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Boolean&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value
      */
     public final StyleableProperty<Boolean> createStyleableBooleanProperty(
             S styleable,
@@ -242,6 +244,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Boolean&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Boolean&gt; that was created by this method call.
+     * @return a StyleableProperty created with default initialValue and inherit flag
      */
     public final StyleableProperty<Boolean> createStyleableBooleanProperty(
             S styleable,
@@ -256,6 +259,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Boolean&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -287,6 +291,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Color&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<Color> createStyleableColorProperty(
             S styleable,
@@ -307,6 +312,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Color&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value
      */
     public final StyleableProperty<Color> createStyleableColorProperty(
             S styleable,
@@ -324,6 +330,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Color&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Color&gt; that was created by this method call.
+     * @return a StyleableProperty created with default initial value and inherit flag
      */
     public final StyleableProperty<Color> createStyleableColorProperty(
             S styleable,
@@ -338,6 +345,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Color&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -369,6 +377,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Duration&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<Duration> createStyleableDurationProperty(
             S styleable,
@@ -389,6 +398,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Duration&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<Duration> createStyleableDurationProperty(
             S styleable,
@@ -406,6 +416,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Duration&gt; that was created by this method call.
+     * @return a StyleableProperty created with default initial value and false inherit flag
      */
     public final StyleableProperty<Duration> createStyleableDurationProperty(
             S styleable,
@@ -420,6 +431,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Duration&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -445,12 +457,14 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a StyleableProperty&lt;Effect&gt; with initial value and inherit flag.
+     * @param <E> The type of StyleableProperty
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Effect&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Effect&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final <E extends Effect> StyleableProperty<E> createStyleableEffectProperty(
             S styleable,
@@ -466,11 +480,13 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a StyleableProperty&lt;Effect&gt; with initial value. The inherit flag defaults to false.
+     * @param <E> The StyleableProperty created with initial value and false inherit flag
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Effect&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Effect&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final <E extends Effect> StyleableProperty<E> createStyleableEffectProperty(
             S styleable,
@@ -483,10 +499,12 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a StyleableProperty&lt;Effect&gt;. The initial value is null and the inherit flag defaults to false.
+     * @param <E> The StyleableProperty created with null initial value and false inherit flag
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Effect&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Effect&gt; that was created by this method call.
+     * @return a StyleableProperty created with null initial value and false inherit flag
      */
     public final <E extends Effect> StyleableProperty<E> createStyleableEffectProperty(
             S styleable,
@@ -501,6 +519,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Effect&gt;
      * @param cssProperty The CSS property name
+     * @return StyleableProperty created using previously created CssMetaData for the given <code>cssProperty</code>
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -527,9 +546,10 @@ public class StyleablePropertyFactory<S extends Styleable> {
     /**
      * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; with initial value and inherit flag.
      * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example,
-     * <code><pre>
-     *     private static final StyleablePropertyFactory&lt;MyControl&gt; FACTORY = new StyleablePropertyFactory&lt;&gt;();
-     *     StyleableProperty&lt;Orientation&gt; orientation =
+     * <pre><code>
+     * {@literal
+     *     private static final StyleablePropertyFactory<MyControl> FACTORY = new StyleablePropertyFactory<>();
+     *     StyleableProperty<Orientation> orientation =
      *         FACTORY.createStyleableEnumProperty(
      *             this,
      *             "orientation",
@@ -538,7 +558,9 @@ public class StyleablePropertyFactory<S extends Styleable> {
      *             Orientation.class,
      *             Orientation.HORIZONTAL,
      *             false);
-     * </pre></code>
+     * }
+     * </code></pre>
+     * @param <E> The StyleableProperty created with initial value and inherit flag
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;
      * @param cssProperty The CSS property name
@@ -546,6 +568,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param enumClass The Enum class that is the type of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final <E extends Enum<E>> StyleableProperty<E> createStyleableEnumProperty(
             S styleable,
@@ -563,9 +586,10 @@ public class StyleablePropertyFactory<S extends Styleable> {
     /**
      * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; with initial value. The inherit flag defaults to false.
      * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example,
-     * <code><pre>
-     *     private static final StyleablePropertyFactory&lt;MyControl&gt; FACTORY = new StyleablePropertyFactory&lt;&gt;();
-     *     StyleableProperty&lt;Orientation&gt; orientation =
+     * <pre><code>
+     * {@literal
+     *     private static final StyleablePropertyFactory<MyControl> FACTORY = new StyleablePropertyFactory<>();
+     *     StyleableProperty<Orientation> orientation =
      *         FACTORY.createStyleableEnumProperty(
      *             this,
      *             "orientation",
@@ -573,13 +597,16 @@ public class StyleablePropertyFactory<S extends Styleable> {
      *             s -> ((MyControl)s).orientation,
      *             Orientation.class,
      *             Orientation.HORIZONTAL);
-     * </pre></code>
+     * }
+     * </code></pre>
+     * @param <E> The StyleableProperty created with initial value and false inherit flag
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; that was created by this method call.
      * @param enumClass The Enum class that is the type of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final <E extends Enum<E>> StyleableProperty<E> createStyleableEnumProperty(
             S styleable,
@@ -594,8 +621,9 @@ public class StyleablePropertyFactory<S extends Styleable> {
     /**
      * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;. The initial value is null and inherit flag defaults to false.
      * The <code>enumClass</code> parameter is the Class of the Enum that is the value of the property. For example,
-     * <code><pre>
-     *     private static final StyleablePropertyFactory&lt;MyControl&gt; FACTORY = new StyleablePropertyFactory&lt;&gt;();
+     * <pre><code>
+     * {@literal
+     *     private static final StyleablePropertyFactory<MyControl> FACTORY = new StyleablePropertyFactory<>();
      *     StyleableProperty&lt;Orientation&gt; orientation =
      *         FACTORY.createStyleableEnumProperty(
      *             this,
@@ -603,12 +631,15 @@ public class StyleablePropertyFactory<S extends Styleable> {
      *             "-my-orientation",
      *             s -> ((MyControl)s).orientation,
      *             Orientation.class);
-     * </pre></code>
+     * }
+     * </code></pre>
+     * @param <E> The StyleableProperty created with null initial value and false inherit flag
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; that was created by this method call.
      * @param enumClass The Enum class that is the type of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;.
+     * @return a StyleableProperty created with null initial value and false inherit flag
      */
     public final <E extends Enum<E>> StyleableProperty<E> createStyleableEnumProperty(
             S styleable,
@@ -621,9 +652,12 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a StyleableProperty&lt;E extends Enum&lt;E&gt;&gt; using previously created CssMetaData for the given <code>cssProperty</code>.
+     * @param <E> The StyleableProperty created using previously created CssMetaData
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;
      * @param cssProperty The CSS property name
+     * @param enumClass The Enum class that is the type of the StyleableProperty&lt;E extends Enum&lt;E&gt;&gt;.
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -656,6 +690,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Font&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<Font> createStyleableFontProperty(
             S styleable,
@@ -676,6 +711,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Font&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and true inherit flag
      */
     public final StyleableProperty<Font> createStyleableFontProperty(
             S styleable,
@@ -693,6 +729,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Font&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Font&gt; that was created by this method call.
+     * @return a StyleableProperty created with default font initial value and true inherit flag
      */
     public final StyleableProperty<Font> createStyleableFontProperty(
             S styleable,
@@ -707,6 +744,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Font&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -738,6 +776,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Inset&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<Insets> createStyleableInsetsProperty(
             S styleable,
@@ -758,6 +797,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Inset&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<Insets> createStyleableInsetsProperty(
             S styleable,
@@ -774,6 +814,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Inset&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Inset&gt; that was created by this method call.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<Insets> createStyleableInsetsProperty(
             S styleable,
@@ -788,6 +829,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Insets&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -819,6 +861,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Paint&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<Paint> createStyleablePaintProperty(
             S styleable,
@@ -839,6 +882,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Paint&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<Paint> createStyleablePaintProperty(
             S styleable,
@@ -855,6 +899,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Paint&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Paint&gt; that was created by this method call.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<Paint> createStyleablePaintProperty(
             S styleable,
@@ -869,6 +914,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Paint&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -900,6 +946,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Number&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<Number> createStyleableNumberProperty(
             S styleable,
@@ -920,6 +967,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Number&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<Number> createStyleableNumberProperty(
             S styleable,
@@ -936,6 +984,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;Number&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;Number&gt; that was created by this method call.
+     * @return a StyleableProperty created with zero initial value and false inherit flag
      */
     public final StyleableProperty<Number> createStyleableNumberProperty(
             S styleable,
@@ -950,6 +999,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;Number&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -981,6 +1031,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;String&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<String> createStyleableStringProperty(
             S styleable,
@@ -1001,6 +1052,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;String&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<String> createStyleableStringProperty(
             S styleable,
@@ -1017,6 +1069,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param propertyName The field name of the StyleableProperty&lt;String&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;String&gt; that was created by this method call.
+     * @return a StyleableProperty created with null initial value and false inherit flag
      */
     public final StyleableProperty<String> createStyleableStringProperty(
             S styleable,
@@ -1031,6 +1084,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;String&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -1056,13 +1110,14 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a StyleableProperty&lt;String&gt; with initial value and inherit flag. Here, the String value represents
-     * a URL converted from a <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("<path>").
+     * a URL converted from a <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("{@literal <path>}").
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;String&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;String&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a StyleableProperty created with initial value and inherit flag
      */
     public final StyleableProperty<String> createStyleableUrlProperty(
             S styleable,
@@ -1079,12 +1134,13 @@ public class StyleablePropertyFactory<S extends Styleable> {
     /**
      * Create a StyleableProperty&lt;String&gt; with initial value. The inherit flag defaults to false.
      * Here, the String value represents a URL converted from a
-     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("<path>").
+     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("{@literal <path>}").
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;String&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;String&gt; that was created by this method call.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<String> createStyleableUrlProperty(
             S styleable,
@@ -1098,11 +1154,12 @@ public class StyleablePropertyFactory<S extends Styleable> {
     /**
      * Create a StyleableProperty&lt;String&gt; with initial value. The inherit flag defaults to false.
      * Here, the String value represents a URL converted from a
-     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("<path>").
+     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("{@literal <path>}").
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;String&gt;
      * @param cssProperty The CSS property name
      * @param function A function that returns the StyleableProperty&lt;String&gt; that was created by this method call.
+     * @return a StyleableProperty created with initial value and false inherit flag
      */
     public final StyleableProperty<String> createStyleableUrlProperty(
             S styleable,
@@ -1117,6 +1174,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param styleable The <code>this</code> reference of the returned property. This is also the property bean.
      * @param propertyName The field name of the StyleableProperty&lt;String&gt;
      * @param cssProperty The CSS property name
+     * @return a StyleableProperty created using previously created CssMetaData
      * @throws java.lang.IllegalArgumentException if <code>cssProperty</code> is null or empty
      * @throws java.util.NoSuchElementException if the CssMetaData for <code>cssProperty</code> was not created prior to this method invocation
      */
@@ -1146,6 +1204,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Boolean&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Boolean>
@@ -1173,6 +1232,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Boolean&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Boolean>
@@ -1185,6 +1245,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * Create a CssMetaData&lt;S, Boolean&gt; with initial value and inherit flag both defaulting to false.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Boolean&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with false initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Boolean>
@@ -1205,6 +1266,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Color&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Color>
@@ -1232,6 +1294,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Color&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Color>
@@ -1244,6 +1307,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * Create a CssMetaData&lt;S, Color&gt; with initial value of Color.BLACK, and inherit flag defaulting to false.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Color&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Color>
@@ -1264,6 +1328,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Duration&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Duration>
@@ -1291,6 +1356,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Duration&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Duration>
@@ -1303,6 +1369,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * Create a CssMetaData&lt;S, Duration&gt; with initial value of Duration.BLACK, and inherit flag defaulting to false.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Duration&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Duration>
@@ -1319,10 +1386,12 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a CssMetaData&lt;S, Effect&gt; with initial value, and inherit flag.
+     * @param <E> The CssMetaData created with initial value and inherit flag
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Effect&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Effect> CssMetaData<S, E>
@@ -1347,9 +1416,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a CssMetaData&lt;S, Effect&gt; with initial value, and inherit flag defaulting to false.
+     * @param <E> The CssMetaData created with initial value and false inherit flag
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Effect&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Effect> CssMetaData<S, E>
@@ -1359,8 +1430,10 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a CssMetaData&lt;S, Effect&gt; with initial value of null, and inherit flag defaulting to false.
+     * @param <E> The CssMetaData created with null initial value and false inherit flag
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Effect&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with null initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Effect> CssMetaData<S, E>
@@ -1376,10 +1449,13 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a CssMetaData&lt;S, Enum&gt; with initial value, and inherit flag.
+     * @param <E> The CssMetaData created with initial value and inherit flag
+     * @param enumClass The Enum class that is the type of the CssMetaData&lt;E extends Enum&lt;E&gt;&gt;.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Enum&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Enum<E>> CssMetaData<S, E>
@@ -1404,9 +1480,12 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a CssMetaData&lt;S, Enum&gt; with initial value, and inherit flag defaulting to false.
+     * @param <E> The CssMetaData created with initial value and false inherit flag
+     * @param enumClass The Enum class that is the type of the CssMetaData&lt;E extends Enum&lt;E&gt;&gt;.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Enum&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Enum<E>> CssMetaData<S, E>
@@ -1416,8 +1495,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     /**
      * Create a CssMetaData&lt;S, Enum&gt; with initial value of null, and inherit flag defaulting to false.
+     * @param <E> The CssMetaData created with null initial value and false inherit flag
+     * @param enumClass The Enum class that is the type of the CssMetaData&lt;E extends Enum&lt;E&gt;&gt;.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Enum&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with null initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final <E extends Enum<E>> CssMetaData<S, E>
@@ -1437,6 +1519,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Font&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Font>
@@ -1464,6 +1547,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Font&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and true inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Font>
@@ -1475,6 +1559,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * Create a CssMetaData&lt;S, Font&gt; with initial value of {@link javafx.scene.text.Font#getDefault()}, and inherit flag defaulting to true.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Font&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with initial value, and true inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Font>
@@ -1494,6 +1579,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Insets&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Insets>
@@ -1521,6 +1607,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Insets&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Insets>
@@ -1530,9 +1617,10 @@ public class StyleablePropertyFactory<S extends Styleable> {
 
     }
     /**
-     * Create a CssMetaData&lt;S, Insets&gt; with initial value of {@link javafx.geometry.Insets.EMPTY}, and inherit flag defaulting to false.
+     * Create a CssMetaData&lt;S, Insets&gt; with initial value of {@link Insets#EMPTY}, and inherit flag defaulting to false.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Insets&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Insets>
@@ -1553,6 +1641,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Paint&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Paint>
@@ -1580,6 +1669,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Paint&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Paint>
@@ -1591,6 +1681,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * Create a CssMetaData&lt;S, Paint&gt; with initial value of Color.BLACK, and inherit flag defaulting to false.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Paint&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Paint>
@@ -1610,6 +1701,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;Number&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Number>
@@ -1637,6 +1729,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Number&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Number>
@@ -1648,6 +1741,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * Create a CssMetaData&lt;S, Number&gt; with initial value of <code>0d</code>, and inherit flag defaulting to false.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;Number&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, Number>
@@ -1667,6 +1761,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param function A function that returns the StyleableProperty&lt;String&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, String>
@@ -1694,6 +1789,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;String&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, String>
@@ -1705,6 +1801,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * Create a CssMetaData&lt;S, String&gt; with initial value of null, and inherit flag defaulting to false.
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;String&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with null initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, String>
@@ -1721,11 +1818,12 @@ public class StyleablePropertyFactory<S extends Styleable> {
     /**
      * Create a CssMetaData&lt;S, String&gt; with initial value, and inherit flag.
      * Here, the String value represents a URL converted from a
-     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("<path>").
+     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url({@literal "<path>"}).
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;String&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
      * @param inherits Whether or not the CSS style can be inherited by child nodes
+     * @return a CssMetaData created with initial value, and inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, String>
@@ -1751,10 +1849,11 @@ public class StyleablePropertyFactory<S extends Styleable> {
     /**
      * Create a CssMetaData&lt;S, String&gt; with initial value, and inherit flag defaulting to false.
      * Here, the String value represents a URL converted from a
-     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("<path>").
+     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url({@literal "<path>"}).
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;String&gt; that corresponds to this CssMetaData.
      * @param initialValue The initial value of the property. CSS may reset the property to this value.
+     * @return a CssMetaData created with initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, String>
@@ -1765,9 +1864,10 @@ public class StyleablePropertyFactory<S extends Styleable> {
     /**
      * Create a CssMetaData&lt;S, String&gt; with initial value of null, and inherit flag defaulting to false.
      * Here, the String value represents a URL converted from a
-     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("<path>").
+     * <a href="http://www.w3.org/TR/CSS21/syndata.html#uri">CSS</a> url("{@literal <path>}").
      * @param property The CSS property name.
      * @param function A function that returns the StyleableProperty&lt;String&gt; that corresponds to this CssMetaData.
+     * @return a CssMetaData created with null initial value, and false inherit flag
      * @throws java.lang.IllegalArgumentException if <code>property</code> is null or an empty string, or <code>function</code> is null.
      */
     public final CssMetaData<S, String>

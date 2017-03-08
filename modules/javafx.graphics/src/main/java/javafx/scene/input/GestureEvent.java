@@ -167,7 +167,7 @@ public class GestureEvent extends InputEvent {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override
     public GestureEvent copyFor(Object newSource, EventTarget newTarget) {

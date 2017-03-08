@@ -42,7 +42,8 @@ import static javafx.scene.layout.Region.positionInArea;
 /**
  * BorderPane lays out children in top, left, right, bottom, and center positions.
  *
- * <p> <img src="doc-files/borderpane.png"/> </p>
+ * <p> <img src="doc-files/borderpane.png" alt="A diagram that shows the position
+ * of each child"> </p>
  *
  * The top and bottom children will be resized to their preferred heights and
  * extend the width of the border pane.  The left and right children will be resized
@@ -81,7 +82,7 @@ import static javafx.scene.layout.Region.positionInArea;
  * BorderPane lays out each child set in the five positions regardless of the child's
  * visible property value; unmanaged children are ignored.</p>
  *
- * <h4>Resizable Range</h4>
+ * <h3>Resizable Range</h3>
  * BorderPane is commonly used as the root of a {@link javafx.scene.Scene Scene},
  * in which case its size will track the size of the scene.  If the scene or stage
  * size has not been directly set by the application, the scene size will be
@@ -89,8 +90,8 @@ import static javafx.scene.layout.Region.positionInArea;
  * has a parent other than the scene, that parent will resize the border pane within
  * the border pane's resizable range during layout.   By default the border pane
  * computes this range based on its content as outlined in the table below.
- * <p>
- * <table border="1">
+ *
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus width required to display right/left children at their pref widths and top/bottom/center with at least their min widths</td>
@@ -122,8 +123,8 @@ import static javafx.scene.layout.Region.positionInArea;
  *
  * An application may set constraints on individual children to customize BorderPane's layout.
  * For each constraint, BorderPane provides a static method for setting it on the child.
- * <p>
- * <table border="1">
+ *
+ * <table border="1" summary="">
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>alignment</td><td>javafx.geometry.Pos</td><td>The alignment of the child within its area of the border pane.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
@@ -249,6 +250,7 @@ public class BorderPane extends Pane {
      * resized to fill the center space (it's not resizable or its max size prevents
      * it) then it will be center aligned unless the child's alignment constraint
      * has been set.
+     * @return the node placed in the center of this border pane
      */
     public final ObjectProperty<Node> centerProperty() {
         if (center == null) {
@@ -267,6 +269,7 @@ public class BorderPane extends Pane {
      * resized to fill the top space (it's not resizable or its max size prevents
      * it) then it will be aligned top-left within the space unless the child's
      * alignment constraint has been set.
+     * @return the node placed on the top edge of this border pane
      */
     public final ObjectProperty<Node> topProperty() {
         if (top == null) {
@@ -285,6 +288,7 @@ public class BorderPane extends Pane {
      * resized to fill the bottom space (it's not resizable or its max size prevents
      * it) then it will be aligned bottom-left within the space unless the child's
      * alignment constraint has been set.
+     * @return the node placed on the bottom edge of this border pane
      */
     public final ObjectProperty<Node> bottomProperty() {
         if (bottom == null) {
@@ -303,6 +307,7 @@ public class BorderPane extends Pane {
      * If the node cannot be resized to fill the left space (it's not resizable
      * or its max size prevents it) then it will be aligned top-left within the space
      * unless the child's alignment constraint has been set.
+     * @return the node placed on the left edge of this border pane
      */
     public final ObjectProperty<Node> leftProperty() {
         if (left == null) {
@@ -321,6 +326,7 @@ public class BorderPane extends Pane {
      * If the node cannot be resized to fill the right space (it's not resizable
      * or its max size prevents it) then it will be aligned top-right within the space
      * unless the child's alignment constraint has been set.
+     * @return the node placed on the right edge of this border pane
      */
     public final ObjectProperty<Node> rightProperty() {
         if (right == null) {

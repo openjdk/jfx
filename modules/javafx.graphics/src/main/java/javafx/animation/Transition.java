@@ -160,6 +160,7 @@ public abstract class Transition extends Animation {
      * Returns the target {@link Node} for animation of this {@code Transition}.
      * This method returns {@code node} if it is set, else returns its
      * {@code parent.getTargetNode()} otherwise null.
+     * @return the target {@code Node}
      */
     protected Node getParentTargetNode() {
         return (parent != null && parent instanceof Transition) ?

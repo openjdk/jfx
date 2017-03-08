@@ -45,7 +45,7 @@ import javafx.beans.NamedArg;
  *
  * <p>If the proportional variable is set to true
  * then the start and end points of the gradient
- * should be specified relative to the unit square (0.0->1.0) and will
+ * should be specified relative to the unit square (0.0-&gt;1.0) and will
  * be stretched across the shape. If the proportional variable is set
  * to false, then the start and end points should be specified
  * in the local coordinate system of the shape and the gradient will
@@ -81,6 +81,7 @@ public final class LinearGradient extends Paint {
      * point on a unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      (
+     * @return the X coordinate of the gradient axis start point
      * @defaultValue 0.0
      */
     public final double getStartX() {
@@ -95,6 +96,7 @@ public final class LinearGradient extends Paint {
      * point on a unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
+     * @return the Y coordinate of the gradient axis start point
      * @defaultValue 0.0
      */
     public final double getStartY() {
@@ -109,6 +111,7 @@ public final class LinearGradient extends Paint {
      * point on a unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
+     * @return the X coordinate of the gradient axis end point
      * @defaultValue 1.0
      */
     public final double getEndX() {
@@ -123,6 +126,7 @@ public final class LinearGradient extends Paint {
      * point on a unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
+     * @return the Y coordinate of the gradient axis end point
      * @defaultValue 1.0
      */
     public final double getEndY() {
@@ -139,6 +143,7 @@ public final class LinearGradient extends Paint {
      * If this flag is false, then the coordinates are specified in the local
      * coordinate system of the node.
      *
+     * @return if true start and end locations are proportional, otherwise absolute
      * @defaultValue true
      */
     public final boolean isProportional() {
@@ -152,6 +157,7 @@ public final class LinearGradient extends Paint {
      * to the {@code LinearGradient}: {@code CycleMethod.NO_CYCLE},
      * {@code CycleMethod.REFLECT}, or {@code CycleMethod.REPEAT}.
      *
+     * @return the cycle method applied to this linear gradient
      * @defaultValue NO_CYCLE
      */
     public final CycleMethod getCycleMethod() {
@@ -172,6 +178,7 @@ public final class LinearGradient extends Paint {
      * <p>The list is unmodifiable and will throw
      * {@code UnsupportedOperationException} on each modification attempt.</p>
      *
+     * @return the list of stop values
      * @defaultValue empty
      */
     public final List<Stop> getStops() {
@@ -179,7 +186,7 @@ public final class LinearGradient extends Paint {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      * @since JavaFX 8.0
      */
     @Override public final boolean isOpaque() {
@@ -369,7 +376,6 @@ public final class LinearGradient extends Paint {
      * &lt;point&gt; = [ [ &lt;length&gt; &lt;length&gt; ] | [ &lt;percentage&gt; | &lt;percentage&gt; ] ]
      * &lt;color-stop&gt; = [ &lt;color&gt; [ &lt;percentage&gt; | &lt;length&gt;]? ]
      * </pre>
-     * </p>
      * <p> Currently length can be only specified in px, the specification of unit can be omited.
      * Format of color representation is the one used in {@link Color#web(String color)}.
      * The linear-gradient keyword can be omited.
@@ -378,7 +384,7 @@ public final class LinearGradient extends Paint {
      * </p>
      *
      * Examples:
-     * <pre><code>
+     * <pre>{@code
      * LinearGradient g
      *      = LinearGradient.valueOf("linear-gradient(from 0% 0% to 100% 100%, red  0% , blue 30%,  black 100%)");
      * LinearGradient g
@@ -387,7 +393,7 @@ public final class LinearGradient extends Paint {
      *      = LinearGradient.valueOf("linear-gradient(from 0px 0px to 200px 0px, #00ff00 0%, 0xff0000 50%, 0x1122ff40 100%)");
      * LinearGradient g
      *      = LinearGradient.valueOf("from 0px 0px to 200px 0px, #00ff00 0%, 0xff0000 50%, 0x1122ff40 100%");
-     * </code></pre>
+     * }</pre>
      *
      * @param value the string to convert
      * @throws NullPointerException if the {@code value} is {@code null}

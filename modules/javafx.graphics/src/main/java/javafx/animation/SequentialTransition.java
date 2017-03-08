@@ -249,6 +249,7 @@ public final class SequentialTransition extends Transition {
      * {@code SequentialTransition}. If the children are changed for a running
      * {@code SequentialTransition}, the animation has to be stopped and started
      * again to pick up the new value.
+     * @return a list of Animations that will be played sequentially
      */
     public final ObservableList<Animation> getChildren() {
         return children;

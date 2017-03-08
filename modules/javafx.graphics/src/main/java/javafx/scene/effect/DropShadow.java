@@ -46,13 +46,13 @@ import com.sun.javafx.tk.Toolkit;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
 
  * DropShadow dropShadow = new DropShadow();
  * dropShadow.setRadius(5.0);
  * dropShadow.setOffsetX(3.0);
  * dropShadow.setOffsetY(3.0);
- * dropShadow.setColor(Color.color(0.4, 0.5, 0.5));  *
+ * dropShadow.setColor(Color.color(0.4, 0.5, 0.5));
  *
  * Text text = new Text();
  * text.setEffect(dropShadow);
@@ -74,13 +74,14 @@ import com.sun.javafx.tk.Toolkit;
  * circle.setRadius(30.0);
  * circle.setFill(Color.STEELBLUE);
  * circle.setCache(true);
- * </pre></code>
+ * }</pre>
  *
  * <p>
  * The code above produces the following:
  * </p>
  * <p>
- * <img src="doc-files/dropshadow.png"/>
+ * <img src="doc-files/dropshadow.png" alt="The visual effect of DropShadow on
+ * cirle and text">
  * </p>
  * @since JavaFX 2.0
  */

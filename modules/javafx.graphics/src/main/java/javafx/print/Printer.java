@@ -95,6 +95,7 @@ public final class Printer {
     /**
      * A read only object property representing the current default printer.
      * If there are no installed printers, the wrapped value will be null.
+     * @return the current default printer
      * @throws SecurityException if the application does not
      * have permission to browse printers.
      */

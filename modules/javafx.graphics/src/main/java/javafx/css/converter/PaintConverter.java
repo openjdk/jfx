@@ -78,7 +78,7 @@ public final class PaintConverter extends StyleConverter<ParsedValue<?, Paint>, 
     }
 
     /**
-     * Convert [<paint]+ to Paint[]
+     * Converts an array of parsed values to an array of Paint objects.
      */
     public static final class SequenceConverter extends StyleConverter<ParsedValue<?, Paint>[], Paint[]> {
 

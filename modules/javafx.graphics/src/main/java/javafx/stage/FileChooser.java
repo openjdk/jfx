@@ -68,7 +68,7 @@ import com.sun.javafx.tk.Toolkit;
  * </p>
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * FileChooser fileChooser = new FileChooser();
  * fileChooser.setTitle("Open Resource File");
  * fileChooser.getExtensionFilters().addAll(
@@ -80,8 +80,8 @@ import com.sun.javafx.tk.Toolkit;
  * if (selectedFile != null) {
  *    mainStage.display(selectedFile);
  * }
- * </code></pre>
- * </p>
+ * }</pre>
+ *
  * @since JavaFX 2.0
  */
 public final class FileChooser {

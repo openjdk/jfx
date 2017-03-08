@@ -42,6 +42,7 @@ public class Rectangle2D {
     /**
      * The x coordinate of the upper-left corner of this {@code Rectangle2D}.
      *
+     * @return the x coordinate of the upper-left corner
      * @defaultValue 0.0
      */
     public double getMinX() { return minX; }
@@ -50,6 +51,7 @@ public class Rectangle2D {
     /**
      * The y coordinate of the upper-left corner of this {@code Rectangle2D}.
      *
+     * @return the y coordinate of the upper-left corner
      * @defaultValue 0.0
      */
     public double getMinY() { return minY; }
@@ -58,6 +60,7 @@ public class Rectangle2D {
     /**
      * The width of this {@code Rectangle2D}.
      *
+     * @return the width
      * @defaultValue 0.0
      */
     public double getWidth() { return width; }
@@ -66,6 +69,7 @@ public class Rectangle2D {
     /**
      * The height of this {@code Rectangle2D}.
      *
+     * @return the height
      * @defaultValue 0.0
      */
     public double getHeight() { return height; }
@@ -74,6 +78,7 @@ public class Rectangle2D {
     /**
      * The x coordinate of the lower-right corner of this {@code Rectangle2D}.
      *
+     * @return the x coordinate of the lower-right corner
      * @defaultValue {@code minX + width}
      */
     public double getMaxX() { return maxX; }
@@ -82,6 +87,7 @@ public class Rectangle2D {
     /**
      * The y coordinate of the lower-right corner of this {@code Rectangle2D}.
      *
+     * @return the y coordinate of the lower-right corner
      * @defaultValue {@code minY + height}
      */
     public double getMaxY() { return maxY; }
@@ -117,7 +123,7 @@ public class Rectangle2D {
     *
     * @param p the specified point to be tested
     * @return true if the specified point is inside the boundary of this
-    * {@code Rectangle2D}; false otherwise.
+    * {@code Rectangle2D}; false otherwise
     */
     public boolean contains(Point2D p) {
         if (p == null) return false;
@@ -131,7 +137,7 @@ public class Rectangle2D {
     * @param x the specified x coordinate to be tested
     * @param y the specified y coordinate to be tested
     * @return true if the specified {@code (x, y)} coordinates are inside the
-    * boundary of this {@code Rectangle2D}; false otherwise.
+    * boundary of this {@code Rectangle2D}; false otherwise
     */
     public boolean contains(double x, double y) {
         return x >= minX && x <= maxX && y >= minY && y <= maxY;
@@ -143,7 +149,7 @@ public class Rectangle2D {
     *
     * @param r The specified Rectangle2D
     * @return true if the specified Rectangle2D, {@code r}, is inside the
-    * boundary of this {@code Rectangle2D}; false otherwise.
+    * boundary of this {@code Rectangle2D}; false otherwise
     */
     public boolean contains(Rectangle2D r) {
         if (r == null) return false;
@@ -161,7 +167,7 @@ public class Rectangle2D {
     * @param w the width of the specified rectangular area
     * @param h the height of the specified rectangular area
     * @return true if the interior of this {@code Rectangle2D} entirely contains
-    * the specified rectangular area; false otherwise.
+    * the specified rectangular area; false otherwise
     */
     public boolean contains(double x, double y, double w, double h) {
         return x >= minX && y >= minY && w <= maxX - x && h <= maxY - y;
@@ -173,7 +179,7 @@ public class Rectangle2D {
     *
     * @param r The specified Rectangle2D
     * @return true if the interior of this {@code Rectangle2D} and the interior
-    * of the specified Rectangle2D, {@code r}, intersect.
+    * of the specified Rectangle2D, {@code r}, intersect
     */
     public boolean intersects(Rectangle2D r) {
         if (r == null) return false;
@@ -191,7 +197,7 @@ public class Rectangle2D {
     * @param w the width of the specified rectangular area
     * @param h the height of the specified rectangular area
     * @return true if the interior of this {@code Rectangle2D} and the interior
-    * of the rectangular area intersect.
+    * of the rectangular area intersect
     */
     public boolean intersects(double x, double y, double w, double h) {
         return x < maxX && y < maxY && x + w > minX && y + h > minY;
@@ -200,7 +206,7 @@ public class Rectangle2D {
     /**
      * Indicates whether some other object is "equal to" this one.
      * @param obj the reference object with which to compare.
-     * @return {@code true} if this object is equal to the {@code obj} argument; {@code false} otherwise.
+     * @return {@code true} if this object is equal to the {@code obj} argument; {@code false} otherwise
      */
     @Override public boolean equals(Object obj) {
         if (obj == this) return true;

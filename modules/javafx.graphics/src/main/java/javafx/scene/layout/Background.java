@@ -53,14 +53,14 @@ import com.sun.javafx.tk.Toolkit;
  * encapsulates the entire set of data required to render the background
  * of a Region. Because this class is immutable, you can freely reuse the same
  * Background on many different Regions. Please refer to
- * {@link ../doc-files/cssref.html JavaFX CSS Reference} for a complete description
- * of the CSS rules for styling the background of a Region.
- * <p/>
+ * <a href="../scene/doc-files/cssref.html">JavaFX CSS Reference Guide</a> for a
+ * complete description of the CSS rules for styling the background of a Region.
+ * <p>
  * Every Background is comprised of {@link #getFills() fills} and / or
  * {@link #getImages() images}. Neither list will ever be null, but either or
  * both may be empty. Each defined {@link BackgroundFill} is rendered in order,
  * followed by each defined {@link BackgroundImage}.
- * <p/>
+ * <p>
  * The Background's {@link #getOutsets() outsets} define any extension of the drawing area of a Region
  * which is necessary to account for all background drawing. These outsets are strictly
  * defined by the BackgroundFills that are specified on this Background, if any, because
@@ -134,6 +134,7 @@ public final class Background {
      * The list of BackgroundFills which together define the filled portion
      * of this Background. This List is unmodifiable and immutable. It
      * will never be null. The elements of this list will also never be null.
+     * @return the list of BackgroundFills
      */
     public final List<BackgroundFill> getFills() { return fills; }
     final List<BackgroundFill> fills;
@@ -142,6 +143,7 @@ public final class Background {
      * The list of BackgroundImages which together define the image portion
      * of this Background. This List is unmodifiable and immutable. It
      * will never be null. The elements of this list will also never be null.
+     * @return the list of BackgroundImages
      */
     public final List<BackgroundImage> getImages() { return images; }
     final List<BackgroundImage> images;
@@ -153,6 +155,7 @@ public final class Background {
      * the distance from the edge of the Region outward. Any BackgroundImages
      * which would extend beyond the outsets will be clipped. Only the
      * BackgroundFills contribute to the outsets.
+     * @return the outsets
      */
     public final Insets getOutsets() { return outsets; }
     final Insets outsets;
@@ -617,7 +620,7 @@ public final class Background {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -632,7 +635,7 @@ public final class Background {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

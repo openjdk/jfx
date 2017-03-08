@@ -249,7 +249,7 @@ public abstract class PopupWindow extends Window {
      * managed by PopupWindow. This method is overridden to throw
      * UnsupportedOperationException. You cannot specify your own scene.
      *
-     * @param scene
+     * @param scene the scene to be rendered on this window
      */
     @Override protected final void setScene(Scene scene) {
         throw new UnsupportedOperationException();
@@ -369,7 +369,7 @@ public abstract class PopupWindow extends Window {
 
     /**
      * Shows the popup at the specified location on the screen. The popup window
-     * is positioned in such way that its anchor point ({@see #anchorLocation})
+     * is positioned in such way that its anchor point ({@link #anchorLocation})
      * is displayed at the specified {@code anchorX} and {@code anchorY}
      * coordinates.
      * <p>
@@ -419,7 +419,7 @@ public abstract class PopupWindow extends Window {
 
     /**
      * Shows the popup at the specified location on the screen. The popup window
-     * is positioned in such way that its anchor point ({@see #anchorLocation})
+     * is positioned in such way that its anchor point ({@link #anchorLocation})
      * is displayed at the specified {@code anchorX} and {@code anchorY}
      * coordinates.
      *

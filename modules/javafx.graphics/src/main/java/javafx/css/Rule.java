@@ -111,7 +111,7 @@ final public class Rule {
      * If the list is not going to be modified, then it is more efficient to
      * call {@link #getUnobservedDeclarationList()}, but the returned list
      * must be treated as unmodifiable.
-     * @return
+     * @return a observable list of declarations
      */
     public final ObservableList<Declaration> getDeclarations() {
 
@@ -130,7 +130,7 @@ final public class Rule {
      * If the list is not going to be modified, then it is more efficient to
      * call {@link #getUnobservedSelectorList()}, but the returned list
      * must be treated as unmodifiable.
-     * @return
+     * @return an observable list of selectors
      */
     public final ObservableList<Selector> getSelectors() {
 
@@ -217,7 +217,9 @@ final public class Rule {
         return mask;
     }
 
-    /** Converts this object to a string. */
+    /** Converts this object to a string.
+     * @return the converted string
+     */
     @Override public String toString() {
         StringBuilder sb = new StringBuilder();
         if (selectors.size()>0) {

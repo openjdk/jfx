@@ -141,7 +141,7 @@ import javafx.stage.Stage;
 
 public class HelloWorld extends Application {
 
-    &#64;Override public void start(Stage stage) {
+    {@literal @Override} public void start(Stage stage) {
         Text text = new Text(10, 40, "Hello World!");
         text.setFont(new Font(40));
         Scene scene = new Scene(new Group(text));
@@ -159,13 +159,16 @@ public class HelloWorld extends Application {
 
  * </code></pre>
  * <p>produces the following on Windows:</p>
- * <p><img src="doc-files/Stage-win.png"/></p>
+ * <p><img src="doc-files/Stage-win.png" alt="A visual rendering
+     * of a JavaFX Stage on Windows"></p>
  *
  * <p>produces the following on Mac OSX:</p>
- * <p><img src="doc-files/Stage-mac.png"/></p>
+ * <p><img src="doc-files/Stage-mac.png" alt="A visual rendering
+     * of a JavaFX Stage on Mac OSX"></p>
  *
  * <p>produces the following on Linux:</p>
- * <p><img src="doc-files/Stage-linux.png"/></p>
+ * <p><img src="doc-files/Stage-linux.png" alt="A visual rendering
+     * of a JavaFX Stage on Linux"></p>
  * @since JavaFX 2.0
  */
 public class Stage extends Window {
@@ -267,7 +270,7 @@ public class Stage extends Window {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public final void show() {
         super.show();
@@ -367,7 +370,6 @@ public class Stage extends Window {
      * <li>the user closes the window via the window system (for example,
      * by pressing the close button in the window decoration)</li>
      * </ul>
-     * </p>
      *
      * <p>
      * After the Stage is hidden, and the application has returned from the
@@ -390,7 +392,6 @@ public class Stage extends Window {
      * after stage1 is hidden and the current event handler, in this case evtHandler2,
      * returns to the event loop. This means that doSomethingElseHere will
      * execute before doSomethingAfterStage1Closed.
-     * </p>
      *
      * <p>
      * More than one stage may be shown with showAndWait. Each call
@@ -402,7 +403,6 @@ public class Stage extends Window {
      * <p>
      * For example, consider the following sequence of operations for different
      * event handlers, assumed to execute in the order shown below:
-     * <ul>
      * <pre>void evtHander1() {
      *     stage1.showAndWait();
      *     doSomethingAfterStage1Closed(...)
@@ -422,7 +422,6 @@ public class Stage extends Window {
      *     stage2.hide();
      *     doSomethingElseHereToo(...)
      * }</pre>
-     * </ul>
      * evtHandler1 will block at the call to stage1.showAndWait, starting up
      * a nested event loop just like in the previous example. evtHandler2 will
      * then block at the call to stage2.showAndWait, starting up another (inner)
@@ -433,7 +432,6 @@ public class Stage extends Window {
      * The order of execution is: stage1.showAndWait, stage2.showAndWait,
      * stage1.hide, doSomethingElseHere, stage2.hide, doSomethingElseHereToo,
      * doSomethingAfterStage2Closed, doSomethingAfterStage1Closed.
-     * </p>
      *
      * <p>
      * This method must not be called on the primary stage or on a stage that

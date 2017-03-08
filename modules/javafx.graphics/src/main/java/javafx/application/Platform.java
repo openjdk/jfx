@@ -126,7 +126,7 @@ public final class Platform {
      * <p>
      * This method must not be called before the FX runtime has been
      * initialized. For standard JavaFX applications that extend
-     * {@see Application}, and use either the Java launcher or one of the
+     * {@link Application}, and use either the Java launcher or one of the
      * launch methods in the Application class to launch the application,
      * the FX runtime is initialized by the launcher before the Application
      * class is loaded.
@@ -143,6 +143,8 @@ public final class Platform {
      * JavaFX Application Thread
      *
      * @throws IllegalStateException if the FX runtime has not been initialized
+     *
+     * @see Application
      */
     public static void runLater(Runnable runnable) {
         PlatformImpl.runLater(runnable);
@@ -244,6 +246,8 @@ public final class Platform {
      * </pre>
      *
      * @param feature the conditional feature in question.
+     * @return true if a specific conditional feature is supported by the
+     * platform, otherwise false
      */
     public static boolean isSupported(ConditionalFeature feature) {
         return PlatformImpl.isSupported(feature);

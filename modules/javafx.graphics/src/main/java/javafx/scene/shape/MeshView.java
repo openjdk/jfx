@@ -96,6 +96,7 @@ public class MeshView extends Shape3D {
     /**
      * Creates a new instance of {@code MeshView} class with the specified {@code Mesh}
      * surface.
+     * @param mesh the mesh surface
      */
     public MeshView(Mesh mesh) {
         setMesh(mesh);

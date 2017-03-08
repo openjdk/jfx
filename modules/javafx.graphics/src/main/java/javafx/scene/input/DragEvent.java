@@ -50,9 +50,8 @@ import java.io.IOException;
  * <p>
  * Drag entered/exited events behave similarly to mouse entered/exited
  * events, please see {@code MouseEvent} overview.
- * <p>
  *
- * <br><h4>Drag sources: initiating a drag and drop gesture</h4>
+ * <h3>Drag sources: initiating a drag and drop gesture</h3>
  *
  * When a drag gesture is detected, an application can decide whether to
  * start a drag and drop gesture or continue with a press-drag-release gesture.
@@ -83,9 +82,9 @@ import java.io.IOException;
  * copying of the data, not moving or referencing.
  * <p>
  * Following example shows a simple drag and drop source:
- * <code><pre>
+ * <pre>
 Rectangle rect = new Rectangle(100, 100);
-rect.setOnDragDetected(new EventHandler<MouseEvent>() {
+rect.setOnDragDetected(new EventHandler&lt;MouseEvent&gt;() {
     &#64;Override public void handle(MouseEvent event) {
         Dragboard db = startDragAndDrop(TransferMode.ANY);
         ClipboardContent content = new ClipboardContent();
@@ -94,9 +93,9 @@ rect.setOnDragDetected(new EventHandler<MouseEvent>() {
         event.consume();
     }
 });
- * </pre></code>
+ * </pre>
  *
- * <br><h4>Potential drop targets</h4>
+ * <br><h3>Potential drop targets</h3>
  *
  * <p>
  * After the drag and drop gesture has been started, any object
@@ -157,10 +156,10 @@ rect.setOnDragDetected(new EventHandler<MouseEvent>() {
  *
  * <p>
  * Following example shows a simple drag and drop target for text data:
- * <code><pre>
+ * <pre>
 Rectangle rect = new Rectangle(100, 100);
 
-rect.setOnDragOver(new EventHandler<DragEvent>() {
+rect.setOnDragOver(new EventHandler&lt;DragEvent&gt;() {
     &#64;Override public void handle(DragEvent event) {
         Dragboard db = event.getDragboard();
         if (db.hasString()) {
@@ -170,7 +169,7 @@ rect.setOnDragOver(new EventHandler<DragEvent>() {
     }
 });
 
-rect.setOnDragDropped(new EventHandler<DragEvent>() {
+rect.setOnDragDropped(new EventHandler&lt;DragEvent&gt;() {
     &#64;Override public void handle(DragEvent event) {
         Dragboard db = event.getDragboard();
         boolean success = false;
@@ -182,9 +181,9 @@ rect.setOnDragDropped(new EventHandler<DragEvent>() {
         event.consume();
     }
 });
- * </pre></code>
+ * </pre>
  *
- * <br><h4>Drag sources: finalizing drag and drop gesture</h4>
+ * <h3>Drag sources: finalizing drag and drop gesture</h3>
  *
  * <p>
  * After the gesture has been finished, whether by successful or unsuccessful
@@ -427,9 +426,9 @@ public final class DragEvent extends InputEvent {
 
     /**
      * Creates a copy of the given drag event with the given fields substituted.
-     * @param source the new source of the copied event
-     * @param target the new target of the copied event
-     * @param eventType the new eventType
+     * @param source source of the copied event
+     * @param target target of the copied event
+     * @param type type of event
      * @return the event copy with the fields
      * @since JavaFX 8.0
      */
@@ -455,7 +454,7 @@ public final class DragEvent extends InputEvent {
      * origin of the DragEvent's source.
      *
      * @return horizontal position of the event relative to the
-     * origin of the DragEvent's source.
+     * origin of the DragEvent's source
      */
     public final double getX() {
         return x;
@@ -472,7 +471,7 @@ public final class DragEvent extends InputEvent {
      * origin of the DragEvent's source.
      *
      * @return vertical position of the event relative to the
-     * origin of the DragEvent's source.
+     * origin of the DragEvent's source
      */
     public final double getY() {
         return y;
@@ -489,7 +488,7 @@ public final class DragEvent extends InputEvent {
      * origin of the MouseEvent's source.
      *
      * @return depth position of the event relative to the
-     * origin of the MouseEvent's source.
+     * origin of the MouseEvent's source
      * @since JavaFX 8.0
      */
     public final double getZ() {
@@ -589,6 +588,7 @@ public final class DragEvent extends InputEvent {
      * Gesture source is the object that started drag and drop operation.
      * The value {@code null} is valid in the case that the gesture comes
      * from another application.
+     * @return the source object of the drag and drop gesture
      */
     public final Object getGestureSource() { return gestureSource; }
     private Object gestureSource;
@@ -599,6 +599,7 @@ public final class DragEvent extends InputEvent {
      * The value {@code null} is valid in the case that the drag and drop
      * gesture has been canceled or completed without a transfer taking place
      * or there is currently no event target accepting the drag events.
+     * @return the target object of the drag and drop gesture
      */
     public final Object getGestureTarget() { return gestureTarget; }
     private Object gestureTarget;
@@ -611,6 +612,7 @@ public final class DragEvent extends InputEvent {
      * the transfer mode accepted by previous DRAG_OVER handler.
      * After the data transfer (in DRAG_DONE event)
      * it determines the actual mode of the transfer done.
+     * @return the data transfer mode
      */
     public final TransferMode getTransferMode() { return transferMode; }
     private TransferMode transferMode;
@@ -619,6 +621,7 @@ public final class DragEvent extends InputEvent {
 
     /**
      * Indicates if this event has been accepted.
+     * @return is this event has been accepted
      * @see #acceptTransferModes
      * @defaultValue false
      */
@@ -626,7 +629,7 @@ public final class DragEvent extends InputEvent {
 
     /**
      * Gets transfer mode accepted by potential target.
-     * @return transfer mode accepted by potential target.
+     * @return transfer mode accepted by potential target
      */
     public final TransferMode getAcceptedTransferMode() {
         return state.acceptedTransferMode;
@@ -634,7 +637,7 @@ public final class DragEvent extends InputEvent {
 
     /**
      * The object that accepted the drag.
-     * @return the object that accepted the drag.
+     * @return the object that accepted the drag
      * @since JavaFX 8.0
      */
     public final Object getAcceptingObject() {
@@ -646,6 +649,7 @@ public final class DragEvent extends InputEvent {
      * Data can be placed onto this dragboard in handler of the
      * {@code DRAG_DETECTED} mouse event. Data can be copied from this
      * dragboard in handler of the {@code DRAG_DROPPED} event.
+     * @return a dragboard that is available to transfer data
      */
     public final Dragboard getDragboard() {
         return dragboard;
@@ -697,6 +701,7 @@ public final class DragEvent extends InputEvent {
      * method and supported by the gesture source. It accepts the default
      * transfer mode if possible, otherwise the most common one of the
      * acceptable modes.
+     * @param transferModes the transfer mode for the drop operation.
      */
     public void acceptTransferModes(TransferMode... transferModes) {
 

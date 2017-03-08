@@ -90,10 +90,9 @@ import sun.util.logging.PlatformLogger;
  * <li> Underlay for background </li>
  * <li> Heads-up display </li>
  * </ul>
- * </p>
  *
  * <p>
- * A default headlight will be added to a {@SubScene} that contains one or more
+ * A default headlight will be added to a {@code SubScene} that contains one or more
  * {@code Shape3D} nodes, but no light nodes. This light source is a
  * {@code Color.WHITE} {@code PointLight} placed at the camera position.
  * </p>
@@ -236,6 +235,7 @@ public class SubScene extends Node {
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * and {@link javafx.scene.SceneAntialiasing SceneAntialiasing}
      * for more information.
+     * @return the SceneAntialiasing for this sub-scene
      * @since JavaFX 8.0
      */
     public final SceneAntialiasing getAntiAliasing() {
@@ -439,7 +439,7 @@ public class SubScene extends Node {
     /**
      * Defines the width of this {@code SubScene}
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty width;
 
@@ -488,7 +488,7 @@ public class SubScene extends Node {
     /**
      * Defines the height of this {@code SubScene}
      *
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty height;
 

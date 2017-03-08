@@ -38,7 +38,7 @@ import javafx.scene.shape.StrokeType;
  * of the stroke are taken into account when computing the Region's
  * insets (for defining the content area). The stroke visuals are
  * not used when any BorderImages are in use.
- * <p/>
+ * <p>
  * When applied to a Region with a defined shape, the border width
  * and stroking information for the {@code top} is used, while the
  * other attributes are ignored.
@@ -69,6 +69,7 @@ public class BorderStroke {
     /**
      * Defines the fill of top side of this border.
      *
+     * @return the fill of top side of this border
      * @defaultValue black
      */
     public final Paint getTopStroke() { return topStroke; }
@@ -81,6 +82,7 @@ public class BorderStroke {
      * Defines the fill of right side of this border. If {@code null} then the
      * topFill is used.
      *
+     * @return the fill of right side of this border
      * @defaultValue null = same as topFill
      */
     public final Paint getRightStroke() { return rightStroke; }
@@ -90,6 +92,7 @@ public class BorderStroke {
      * Defines the fill of bottom side of this border. If {@code null} then the
      * topFill is used.
      *
+     * @return the fill of bottom side of this border
      * @defaultValue null = same as topFill
      */
     public final Paint getBottomStroke() { return bottomStroke; }
@@ -99,6 +102,7 @@ public class BorderStroke {
      * Defines the fill of left side of this border. If {@code null} then the
      * rightFill is used.
      *
+     * @return the fill of left side of this border
      * @defaultValue null = same sa rightFill
      */
     public final Paint getLeftStroke() { return leftStroke; }
@@ -107,6 +111,7 @@ public class BorderStroke {
     /**
      * Defines the style of top side of this border.
      *
+     * @return the style of top side of this border
      * @defaultValue none
      */
     public final BorderStrokeStyle getTopStyle() { return topStyle; }
@@ -116,6 +121,7 @@ public class BorderStroke {
      * Defines the style of right side of this border. If {@code null} then
      * topStyle is used;
      *
+     * @return the style of right side of this border
      * @defaultValue null = same as topStyle
      */
     public final BorderStrokeStyle getRightStyle() { return rightStyle; }
@@ -126,6 +132,7 @@ public class BorderStroke {
      * topStyle is used;  Use BorderStyle.NONE to set the border to
      * have no border style.
      *
+     * @return the style of bottom side of this border
      * @defaultValue null = same as topStyle
      */
     public final BorderStrokeStyle getBottomStyle() { return bottomStyle; }
@@ -136,6 +143,7 @@ public class BorderStroke {
      * rightStyle is used. Use BorderStyle.NONE to set the border to
      * have no border style.
      *
+     * @return the style of left side of this border
      * @defaultValue null = same as rightStyle
      */
     public final BorderStrokeStyle getLeftStyle() { return leftStyle; }
@@ -144,6 +152,7 @@ public class BorderStroke {
     /**
      * Defines the thickness of each side of the BorderStroke. This will never
      * be null, and defaults to DEFAULT_WIDTHS.
+     * @return the thickness of each side of the BorderStroke
      */
     public final BorderWidths getWidths() { return widths; }
     final BorderWidths widths;
@@ -151,6 +160,7 @@ public class BorderStroke {
     /**
      * Defines the insets of each side of the BorderStroke. This will never
      * be null, and defaults to EMPTY.
+     * @return the insets of each side of the BorderStroke
      */
     public final Insets getInsets() { return insets; }
     final Insets insets;
@@ -162,6 +172,7 @@ public class BorderStroke {
     /**
      * Defines the radii for each corner of this BorderStroke. This will never
      * be null, and defaults to CornerRadii.EMPTY.
+     * @return the radii for each corner of this BorderStroke
      */
     public final CornerRadii getRadii() { return radii; }
      /* TODO I should change CornerRadii to be 4 properties, one for each corner,
@@ -345,7 +356,7 @@ public class BorderStroke {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -368,7 +379,7 @@ public class BorderStroke {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

@@ -71,18 +71,18 @@ import javafx.event.EventType;
  * is usually used as the gesture coordinates).
  * <p>
  * For example, scrolling a graphical node can be achieved by following code:
- * <code><pre>
-    node.setOnScroll(new EventHandler<ScrollEvent>() {
-        &#64;Override public void handle(ScrollEvent event) {
+ * <pre><code>
+    {@literal node.setOnScroll(new EventHandler<ScrollEvent>()} {
+        {@literal @Override} public void handle(ScrollEvent event) {
             node.setTranslateX(node.getTranslateX() + event.getDeltaX());
             node.setTranslateY(node.getTranslateY() + event.getDeltaY());
         }
     });
-</pre></code>
+</code></pre>
  * <p>
  * A scroll event handler on text-based component behaving
  * according to system settings on all platforms should contain following logic:
- * <code><pre>
+ * <pre>{@code
     switch(event.getTextDeltaYUnits()) {
         case LINES:
             // scroll about event.getTextDeltaY() lines
@@ -94,7 +94,7 @@ import javafx.event.EventType;
             // scroll about event.getDeltaY() pixels
             break;
     }
- </pre></code>
+ }</pre>
  *
  * @since JavaFX 2.0
  */
@@ -327,7 +327,7 @@ public final class ScrollEvent extends GestureEvent {
      * returned value can be simply added to the content's {@code X}
      * coordinate.
      *
-     * @return Number of pixels to scroll horizontally.
+     * @return Number of pixels to scroll horizontally
      */
     public double getDeltaX() {
         return deltaX;
@@ -346,7 +346,7 @@ public final class ScrollEvent extends GestureEvent {
      * returned value can be simply added to the content's {@code Y}
      * coordinate.
      *
-     * @return Number of pixels to scroll vertically.
+     * @return Number of pixels to scroll vertically
      */
     public double getDeltaY() {
         return deltaY;
@@ -541,9 +541,9 @@ public final class ScrollEvent extends GestureEvent {
 
     /**
      * Creates a copy of the given event with the given fields substituted.
-     * @param source the new source of the copied event
-     * @param target the new target of the copied event
-     * @param eventType the new eventType
+     * @param newSource the new source of the copied event
+     * @param newTarget the new target of the copied event
+     * @param type the new eventType
      * @return the event copy with the fields substituted
      * @since JavaFX 8.0
      */

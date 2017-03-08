@@ -42,18 +42,25 @@ final public class Size {
         this.units = (units != null) ? units : SizeUnits.PX;
     }
 
-    /** */
+    /**
+     * Return the value
+     * @return the value
+     */
     public double getValue() {
         return value;
     }
 
-    /** */
+    /**
+     * Return the units
+     * @return the units
+     */
     public SizeUnits getUnits() {
         return units;
     }
 
     /**
      * Return whether or not this Size is an absolute value or a relative value.
+     * @return true if it is absolute, otherwise false
      */
     public boolean isAbsolute() {
         return units.isAbsolute();
@@ -79,6 +86,7 @@ final public class Size {
       *
       * @param multiplier   The multiplier for PERCENTAGE sizes
       * @param font         The font for EM sizes
+      * @return the size in pixels
       */
     public double pixels(double multiplier, Font font) {
         return units.pixels(value, multiplier, font);
@@ -87,6 +95,8 @@ final public class Size {
     /**
       * If size is not an absolute size, return the product of font size in pixels
       * and value. Otherwise, return the absolute value.
+     * @param font the font
+     * @return the size of pixels
       */
     public double pixels(Font font) {
         return pixels(1.0f, font);
@@ -102,6 +112,7 @@ final public class Size {
 
     /**
       * A convenience method for calling <code>pixels(1)</code>
+      * @return the size in pixels
       */
     public double pixels() {
         return pixels(1.0f, null);

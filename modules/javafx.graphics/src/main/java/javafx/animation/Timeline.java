@@ -88,6 +88,7 @@ public final class Timeline extends Animation {
 
     /**
      * Returns the {@link KeyFrame KeyFrames} of this {@code Timeline}.
+     * @return the {@link KeyFrame KeyFrames}
      */
     public final ObservableList<KeyFrame> getKeyFrames() {
         return keyFrames;

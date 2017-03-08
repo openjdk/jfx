@@ -140,6 +140,7 @@ public final class Font {
      * and SDK fonts.
      * This call has performance considerations as looking up all of the
      * fonts may be an expensive operation the first time.
+     * @param family the font family
      * @return The list containing the fonts for the given family.
      */
     public static List<String> getFontNames(String family) {
@@ -158,9 +159,9 @@ public final class Font {
      * @param family The family of the font
      * @param weight The weight of the font
      * @param posture The posture or posture of the font
-     * @param size The point size of the font. This can be a fractional value,
+     * @param size {@literal The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
-     * used.
+     * used.}
      * @return The font that best fits the specified requirements.
      */
     public static Font font(String family, FontWeight weight,
@@ -181,9 +182,9 @@ public final class Font {
      *
      * @param family The family of the font
      * @param weight The weight of the font
-     * @param size The point size of the font. This can be a fractional value,
+     * @param size {@literal The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
-     * used.
+     * used.}
      * @return The font that best fits the specified requirements.
      */
     public static Font font(String family, FontWeight weight, double size) {
@@ -198,9 +199,9 @@ public final class Font {
      *
      * @param family The family of the font
      * @param posture The posture or posture of the font
-     * @param size The point size of the font. This can be a fractional value,
+     * @param size {@literal The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
-     * used.
+     * used.}
      * @return The font that best fits the specified requirements.
      */
     public static Font font(String family, FontPosture posture, double size) {
@@ -214,9 +215,9 @@ public final class Font {
      * value for family allows the implementation to select any suitable font.
      *
      * @param family The family of the font
-     * @param size The point size of the font. This can be a fractional value,
+     * @param size {@literal The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
-     * used.
+     * used.}
      * @return The font that best fits the specified requirements.
      */
     public static Font font(String family, double size) {
@@ -243,9 +244,9 @@ public final class Font {
      * This method is not guaranteed to return a specific font, but does
      * its best to find one that fits the specified requirements.
      *
-     * @param size The point size of the font. This can be a fractional value,
+     * @param size {@literal The point size of the font. This can be a fractional value,
      * but must not be negative. If the size is < 0 the default size will be
-     * used.
+     * used.}
      * @return The font that best fits the specified requirements.
      */
     public static Font font(double size) {
@@ -276,6 +277,7 @@ public final class Font {
      * then you can use one of the {@link #font} factory methods defined in
      * this class.
      *
+     * @return the full font name
      * @defaultValue empty string
      */
     public final String getName() { return name; }
@@ -297,9 +299,10 @@ public final class Font {
 
     /**
      * The point size for this font. This may be a fractional value such as
-     * {@code 11.5}. If the specified value is < 0 the default size will be
-     * used.
+     * {@code 11.5}. {@literal If the specified value is < 0 the default size will be
+     * used.}
      *
+     * @return the point size for this font
      * @defaultValue 12
      */
     public final double getSize() { return size; }
@@ -386,8 +389,8 @@ public final class Font {
      * <p>
      * The font <code>size</code> parameter is a convenience so that in
      * typical usage the application can directly use the returned (non-null)
-     * font rather than needing to create one via a constructor. Invalid sizes
-     * are those <=0 and will result in a default size.
+     * font rather than needing to create one via a constructor.
+     * {@literal Invalid sizes are those <=0 and will result in a default size.}
      * <p>
      * If the URL represents a local disk file, then no copying is performed
      * and the font file is required to persist for the lifetime of the
@@ -433,8 +436,8 @@ public final class Font {
      * <p>
      * The font <code>size</code> parameter is a convenience so that in
      * typical usage the application can directly use the returned (non-null)
-     * font rather than needing to create one via a constructor. Invalid sizes
-     * are those <=0 and will result in a default size.
+     * font rather than needing to create one via a constructor.
+     * {@literal Invalid sizes are those <=0 and will result in a default size.}
      * <p>
      * If the URL represents a local disk file, then no copying is performed
      * and the font file is required to persist for the lifetime of the
@@ -526,8 +529,8 @@ public final class Font {
      * <p>
      * The font <code>size</code> parameter is a convenience so that in
      * typical usage the application can directly use the returned (non-null)
-     * font rather than needing to create one via a constructor. Invalid sizes
-     * are those <=0 and will result in a default size.
+     * font rather than needing to create one via a constructor.
+     * {@literal Invalid sizes are those <=0 and will result in a default size.}
      * <p>
      * This method does not close the input stream.
      * @param in stream from which to load the font.
@@ -569,8 +572,8 @@ public final class Font {
      * <p>
      * The font <code>size</code> parameter is a convenience so that in
      * typical usage the application can directly use the returned (non-null)
-     * fonts rather than needing to re-create via a constructor. Invalid sizes
-     * are those <=0 and will result in a default size.
+     * fonts rather than needing to re-create via a constructor.
+     * {@literal Invalid sizes are those <=0 and will result in a default size.}
      * <p>
      * This method does not close the input stream.
      * @param in stream from which to load the fonts.

@@ -46,7 +46,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * BoxBlur boxBlur = new BoxBlur();
  * boxBlur.setWidth(10);
  * boxBlur.setHeight(3);
@@ -59,12 +59,12 @@ import com.sun.javafx.scene.BoundsAccessor;
  * text.setX(10);
  * text.setY(50);
  * text.setEffect(boxBlur);
- * </pre></code>
+ * }</pre>
  * <p>
  * The code above produces the following:
  * </p>
  * <p>
- * <img src="doc-files/boxblur.png"/>
+ * <img src="doc-files/boxblur.png" alt="The visual effect of BoxBlur on text">
  * </p>
  * @since JavaFX 2.0
  */

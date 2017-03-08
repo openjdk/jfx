@@ -64,13 +64,13 @@ import javafx.beans.property.SimpleIntegerProperty;
  *
  * <p>
  * Supported image formats are:
+ * </p>
  * <ul>
  * <li><a href="http://msdn.microsoft.com/en-us/library/dd183376(v=vs.85).aspx">BMP</a></li>
  * <li><a href="http://www.w3.org/Graphics/GIF/spec-gif89a.txt">GIF</a></li>
  * <li><a href="http://www.ijg.org">JPEG</a></li>
  * <li><a href="http://www.libpng.org/pub/png/spec/">PNG</a></li>
  * </ul>
- * </p>
  *
  * <p>
  * Images can be resized as they are loaded (for example to reduce the amount of
@@ -239,7 +239,7 @@ public class Image {
      * Gets the width of the bounding box within which the source image is
      * resized as necessary to fit. If set to a value {@code <= 0}, then the
      * intrinsic width of the image will be used.
-     * <p/>
+     * <p>
      * See {@link #preserveRatio} for information on interaction between image's
      * {@code requestedWidth}, {@code requestedHeight} and {@code preserveRatio}
      * attributes.
@@ -254,7 +254,7 @@ public class Image {
      * The height of the bounding box within which the source image is
      * resized as necessary to fit. If set to a value {@code <= 0}, then the
      * intrinsic height of the image will be used.
-     * <p/>
+     * <p>
      * See {@link #preserveRatio} for information on interaction between image's
      * {@code requestedWidth}, {@code requestedHeight} and {@code preserveRatio}
      * attributes.
@@ -267,7 +267,7 @@ public class Image {
      * Gets the height of the bounding box within which the source image is
      * resized as necessary to fit. If set to a value {@code <= 0}, then the
      * intrinsic height of the image will be used.
-     * <p/>
+     * <p>
      * See {@link #preserveRatio} for information on interaction between image's
      * {@code requestedWidth}, {@code requestedHeight} and {@code preserveRatio}
      * attributes.
@@ -361,7 +361,7 @@ public class Image {
      * Indicates whether to preserve the aspect ratio of the original image
      * when scaling to fit the image within the bounding box provided by
      * {@code width} and {@code height}.
-     * <p/>
+     * <p>
      * If set to {@code true}, it affects the dimensions of this {@code Image}
      * in the following way:
      * <ul>
@@ -383,7 +383,6 @@ public class Image {
      *  match and height is unchanged;
      *  <li> If both are set, the image is scaled to match both.
      * </ul>
-     * </p>
      *
      * @defaultValue false
      */
@@ -393,7 +392,7 @@ public class Image {
      * Indicates whether to preserve the aspect ratio of the original image
      * when scaling to fit the image within the bounding box provided by
      * {@code width} and {@code height}.
-     * <p/>
+     * <p>
      * If set to {@code true}, it affects the dimensions of this {@code Image}
      * in the following way:
      * <ul>
@@ -415,7 +414,6 @@ public class Image {
      *  match and height is unchanged;
      *  <li> If both are set, the image is scaled to match both.
      * </ul>
-     * </p>
      *
      * @return true if the aspect ratio of the original image is to be
      *               preserved when scaling to fit the image within the bounding
@@ -1158,7 +1156,7 @@ public class Image {
      * If this method returns null then this image does not support reading
      * at this time.
      * This method will return null if the image is being loaded from a
-     * source and is still incomplete {the progress is still < 1.0) or if
+     * source and is still incomplete {the progress is still &lt;1.0) or if
      * there was an error.
      * This method may also return null for some images in a format that
      * is not supported for reading and writing pixels to.

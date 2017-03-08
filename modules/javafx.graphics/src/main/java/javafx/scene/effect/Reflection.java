@@ -47,7 +47,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * Reflection reflection = new Reflection();
  * reflection.setFraction(0.7);
  *
@@ -59,10 +59,10 @@ import com.sun.javafx.scene.BoundsAccessor;
  * text.setFill(Color.web("0x3b596d"));
  * text.setFont(Font.font(null, FontWeight.BOLD, 40));
  * text.setEffect(reflection);
- * </pre></code>
+ * }</pre>
  * <p> The code above produces the following: </p>
  * <p>
- * <img src="doc-files/reflection.png"/>
+ * <img src="doc-files/reflection.png" alt="The visual effect of Reflection on text">
  * </p>
  * @since JavaFX 2.0
  */

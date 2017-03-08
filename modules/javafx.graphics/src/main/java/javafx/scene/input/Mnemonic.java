@@ -61,11 +61,13 @@ public class Mnemonic {
     private KeyCombination keyCombination;
     /**
      * Returns the {@link KeyCombination}
+     * @return the {@code KeyCombination}
      */
     public KeyCombination getKeyCombination() { return keyCombination; }
 
     /**
      * Sets the {@link KeyCombination}
+     * @param keyCombination the {@code KeyCombination}
      */
     public void setKeyCombination(KeyCombination keyCombination) {
         this.keyCombination = keyCombination;
@@ -75,11 +77,13 @@ public class Mnemonic {
 
     /**
      * Returns the {@link javafx.scene.Node Node}
+     * @return the {@code Node}
      */
     public Node getNode() { return node; }
 
     /**
      * Sets the {@link javafx.scene.Node Node}
+     * @param node the {@code Node}
      * @since JavaFX 2.2
      */
     public void setNode(Node node) {

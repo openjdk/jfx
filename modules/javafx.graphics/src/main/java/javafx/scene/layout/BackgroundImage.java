@@ -38,7 +38,7 @@ import javafx.scene.image.Image;
  * on the Region. For example, the {@code size} might be defined with
  * {@link javafx.scene.layout.BackgroundSize#isCover() cover = true}, meaning the image
  * should be stretched to cover the entire rendering surface of the Region.
- * <p/>
+ * <p>
  * Because the BackgroundImage is immutable, it can safely be used in any
  * cache, and can safely be reused among multiple Regions.
  * @since JavaFX 8.0
@@ -52,6 +52,7 @@ public final class BackgroundImage {
      * The image to be used. This will never be null. If this
      * image fails to load, then the entire BackgroundImage will
      * be skipped at rendering time.
+     * @return the image to be used
      */
     public final Image getImage() { return image; }
     final Image image;
@@ -60,6 +61,8 @@ public final class BackgroundImage {
      * Indicates in what manner (if at all) the background image
      * is to be repeated along the x-axis of the region. This
      * will never be null.
+     * @return the BackgroundRepeat that indicates if the background image
+     * is to be repeated along the x-axis of the region
      */
     public final BackgroundRepeat getRepeatX() { return repeatX; }
     final BackgroundRepeat repeatX;
@@ -68,6 +71,8 @@ public final class BackgroundImage {
      * Indicates in what manner (if at all) the background image
      * is to be repeated along the y-axis of the region. This will
      * never be null.
+     * @return the BackgroundRepeat that indicates if the background image
+     * is to be repeated along the y-axis of the region
      */
     public final BackgroundRepeat getRepeatY() { return repeatY; }
     final BackgroundRepeat repeatY;
@@ -75,12 +80,14 @@ public final class BackgroundImage {
     /**
      * The position of this BackgroundImage relative to the Region. Note that any
      * position outside the background area of the region will be clipped.
+     * @return the position of this BackgroundImage relative to the Region
      */
     public final BackgroundPosition getPosition() { return position; }
     final BackgroundPosition position;
 
     /**
      * The size of this image relative to the Region.
+     * @return the size of this image relative to the Region
      */
     public final BackgroundSize getSize() { return size; }
     final BackgroundSize size;
@@ -132,7 +139,7 @@ public final class BackgroundImage {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -150,7 +157,7 @@ public final class BackgroundImage {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

@@ -32,7 +32,7 @@ import javafx.collections.ObservableIntegerArray;
  * array is encapsulated and there is no direct access available from the outside.
  * Bulk operations are supported but they always do a copy of the data range.
  *
- * @see ArrayChangeListener
+ * @see javafx.collections.ArrayChangeListener
  * @since JavaFX 8.0
  */
 public interface ObservableFaceArray extends ObservableIntegerArray {

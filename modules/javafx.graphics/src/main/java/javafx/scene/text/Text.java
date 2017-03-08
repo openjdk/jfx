@@ -595,6 +595,7 @@ public class Text extends Shape {
      * {@code VPos.TOP} define the origin of the top row while
      * {@code VPos.BOTTOM} defines the origin of the bottom row.
      *
+     * @return the origin of text coordinate system in local coordinates
      * @defaultValue VPos.BASELINE
      */
     public final ObjectProperty<VPos> textOriginProperty() {
@@ -697,6 +698,7 @@ public class Text extends Shape {
     /**
      * Defines if each line of text should have a line below it.
      *
+     * @return if each line of text should have a line below it
      * @defaultValue false
      */
     public final BooleanProperty underlineProperty() {
@@ -717,6 +719,7 @@ public class Text extends Shape {
     /**
      * Defines if each line of text should have a line through it.
      *
+     * @return if each line of text should have a line through it
      * @defaultValue false
      */
     public final BooleanProperty strikethroughProperty() {
@@ -743,6 +746,7 @@ public class Text extends Shape {
      * node is determined by the width of the text, the alignment setting
      * has no effect.
      *
+     * @return the horizontal text alignment in the bounding box
      * @defaultValue TextAlignment.LEFT
      */
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
@@ -763,6 +767,7 @@ public class Text extends Shape {
     /**
      * Defines the vertical space in pixel between lines.
      *
+     * @return the vertical space in pixel between lines
      * @defaultValue 0
      *
      * @since JavaFX 8.0
@@ -780,6 +785,7 @@ public class Text extends Shape {
      * The 'alphabetic' (or roman) baseline offset from the Text node's
      * layoutBounds.minY location.
      * The value typically corresponds to the max ascent of the font.
+     * @return the baseline offset from this text node
      */
     public final ReadOnlyDoubleProperty baselineOffsetProperty() {
         return getTextAttribute().baselineOffsetProperty();
@@ -845,6 +851,7 @@ public class Text extends Shape {
     /**
      * Shape of selection in local coordinates.
      *
+     * @return the shape of selection in local coordinates
      * @since 9
      */
     public final PathElement[] getSelectionShape() {
@@ -859,6 +866,7 @@ public class Text extends Shape {
      * Selection start index in the content.
      * Set to {@code -1} to unset selection.
      *
+     * @param value the selection start index
      * @since 9
      */
     public final void setSelectionStart(int value) {
@@ -884,6 +892,7 @@ public class Text extends Shape {
      * Selection end index in the content.
      * Set to {@code -1} to unset selection.
      *
+     * @param value the selection end index
      * @since 9
      */
     public final void setSelectionEnd(int value) {
@@ -908,6 +917,7 @@ public class Text extends Shape {
     /**
      * The fill color of selected text.
      *
+     * @return the fill color of selected text
      * @since 9
      */
     public final ObjectProperty<Paint> selectionFillProperty() {
@@ -924,6 +934,7 @@ public class Text extends Shape {
     /**
      * Shape of caret in local coordinates.
      *
+     * @return the shape of caret in local coordinates
      * @since 9
      */
     public final PathElement[] getCaretShape() {
@@ -938,6 +949,7 @@ public class Text extends Shape {
      * Caret index in the content.
      * Set to {@code -1} to unset caret.
      *
+     * @param value the caret index in the content
      * @since 9
      */
     public final void setCaretPosition(int value) {
@@ -963,6 +975,7 @@ public class Text extends Shape {
      * caret bias in the content. {@code true} means a bias towards the leading character edge.
      * (true=leading/false=trailing)
      *
+     * @param value the caret bias in the content
      * @since 9
      */
     public final void setCaretBias(boolean value) {
@@ -1033,7 +1046,7 @@ public class Text extends Shape {
      * Returns shape for the range of the text in local coordinates.
      *
      * @param start the beginning character index for the range
-     * @param start the end character index (non-inclusive) for the range
+     * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 9
      */
@@ -1045,7 +1058,7 @@ public class Text extends Shape {
      * Returns shape for the underline in local coordinates.
      *
      * @param start the beginning character index for the range
-     * @param start the end character index (non-inclusive) for the range
+     * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 9
      */

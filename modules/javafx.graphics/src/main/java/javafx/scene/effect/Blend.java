@@ -46,7 +46,7 @@ import com.sun.scenario.effect.Blend.Mode;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * Blend blend = new Blend();
  * blend.setMode(BlendMode.COLOR_BURN);
  *
@@ -76,10 +76,11 @@ import com.sun.scenario.effect.Blend.Mode;
  * Group g = new Group();
  * g.setEffect(blend);
  * g.getChildren().addAll(rect, text);
- * </pre></code>
+ * }</pre>
  *
  * <p> The code above produces the following: </p>
- * <p> <img src="doc-files/blend.png"/> </p>
+ * <p> <img src="doc-files/blend.png" alt="The visual effect of blending color,
+ * gradient and text"> </p>
  * @since JavaFX 2.0
  */
 public class Blend extends Effect {

@@ -411,6 +411,7 @@ public final class JobSettings {
 
     /**
      * <code>StringProperty</code> representing the name of a job.
+     * @return the name of a job
      */
     public final StringProperty jobNameProperty() {
         if (jobName == null) {
@@ -446,7 +447,8 @@ public final class JobSettings {
     }
 
     /**
-     * @return a string representing the name of a job.
+     * Get the name of a job.
+     * @return a string representing the name of a job
      */
     public String getJobName() {
         return jobNameProperty().get();
@@ -454,7 +456,8 @@ public final class JobSettings {
 
 
     /**
-     * @param name string representing the name of a job.
+     * Set the name of a job.
+     * @param name string representing the name of a job
      */
     public void setJobName(String name) {
         jobNameProperty().set(name);
@@ -468,6 +471,7 @@ public final class JobSettings {
     /**
      * <code>IntegerProperty</code> representing the number of
      * copies of the job to print.
+     * @return the number of copies of the job to print
      */
     public final IntegerProperty copiesProperty() {
         if (copies == null) {
@@ -511,14 +515,16 @@ public final class JobSettings {
     }
 
     /**
-     * @return number of copies to print.
+     * Get the number of copies to print.
+     * @return number of copies to print
      */
     public int getCopies() {
          return copiesProperty().get();
     }
 
     /**
-     * @param nCopies number of copies to print.
+     * Set the number of copies to print.
+     * @param nCopies number of copies to print
      */
     public final void setCopies(int nCopies) {
         copiesProperty().set(nCopies);
@@ -544,6 +550,8 @@ public final class JobSettings {
      * <p>
      * Ranges which exceed beyond the number of pages imaged by the job
      * during printing do not cause any error.
+     *
+     * @return the value presents the job pages to print as an array of PageRange
      */
     public final ObjectProperty pageRangesProperty() {
          if (pageRanges == null) {
@@ -632,6 +640,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PrintSides</code>.
+     * @return an instance of <code>PrintSides</code>
      */
     public final ObjectProperty<PrintSides> printSidesProperty() {
          if (sides == null) {
@@ -706,6 +715,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>Collation</code>.
+     * @return an instance of <code>Collation</code>
      */
     public final ObjectProperty<Collation> collationProperty() {
          if (collation == null) {
@@ -762,7 +772,9 @@ public final class JobSettings {
      * of a document sorted in sequence.
      * An uncollated job collects together the multiple copies
      * of the same sheet.
-     * Uncollated (<code>false</false>) is the typical default value.
+     * Uncollated (<code>false</code>) is the typical default value.
+     *
+     * @return the collation
      */
     public Collation getCollation() {
         return collationProperty().get();
@@ -788,6 +800,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PrintColor</code>.
+     * @return an instance of <code>PrintColor</code>
      */
     public final ObjectProperty<PrintColor> printColorProperty() {
          if (color == null) {
@@ -857,6 +870,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PrintQuality</code>.
+     * @return an instance of <code>PrintQuality</code>
      */
     public final ObjectProperty<PrintQuality> printQualityProperty() {
          if (quality == null) {
@@ -935,6 +949,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PrintResolution</code>.
+     * @return an instance of <code>PrintResolution</code>
      */
     public final ObjectProperty<PrintResolution> printResolutionProperty() {
          if (resolution == null) {
@@ -983,6 +998,7 @@ public final class JobSettings {
 
     /**
      *
+     * @return the print resolution
      */
     public PrintResolution getPrintResolution() {
         return printResolutionProperty().get();
@@ -1018,6 +1034,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PaperSource</code>.
+     * @return an instance of <code>PaperSource</code>
      */
     public final ObjectProperty<PaperSource> paperSourceProperty() {
          if (paperSource == null) {
@@ -1089,6 +1106,7 @@ public final class JobSettings {
 
     /**
      * Property representing an instance of <code>PageLayout</code>.
+     * @return an instance of <code>PageLayout</code>
      */
     public final ObjectProperty<PageLayout> pageLayoutProperty() {
          if (layout == null) {
@@ -1143,6 +1161,7 @@ public final class JobSettings {
 
     //////////////// END PAGELAYOUT /////////////////
 
+    @Override
     public String toString() {
         String nl = System.lineSeparator();
         return

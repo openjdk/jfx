@@ -34,7 +34,7 @@ import javafx.beans.property.SimpleBooleanProperty;
  *
  * This class is used to make a {@link javafx.beans.property.BooleanProperty},
  * that would otherwise be implemented as a {@link SimpleBooleanProperty},
- * style&#8209;able by CSS.
+ * styleable by CSS.
  *
  * @see javafx.beans.property.SimpleBooleanProperty
  * @see CssMetaData

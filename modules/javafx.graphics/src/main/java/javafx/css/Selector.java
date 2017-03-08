@@ -78,6 +78,10 @@ abstract public class Selector {
     /**
      * Determines whether the current state of the node and its parents
      * matches the pseudo-classes defined (if any) for this selector.
+     * @param styleable the styleable
+     * @param state the state
+     * @return {@code true} if the current state of the node and its parents
+     * matches the pseudo-classes defined (if any) for this selector
      */
     public abstract boolean stateMatches(Styleable styleable, Set<PseudoClass> state);
 

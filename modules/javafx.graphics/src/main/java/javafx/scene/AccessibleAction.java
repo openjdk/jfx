@@ -49,10 +49,6 @@ public enum AccessibleAction {
      * Request that the node be decremented by a large value.
      * A smaller decrement is requested using {@link #DECREMENT}.
      * <p>Used by Slider, ScrollBar, and others </p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     BLOCK_DECREMENT,
 
@@ -60,20 +56,12 @@ public enum AccessibleAction {
      * Request that the node be incremented by a large value.
      * A smaller increment is requested using {@link #INCREMENT}.
      * <p>Used by Slider, ScrollBar, and others </p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     BLOCK_INCREMENT,
 
     /**
      * Request that the node should become collapsed.
      * <p>Used by TreeItem, TitledPane, and others </p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     COLLAPSE,
 
@@ -81,20 +69,12 @@ public enum AccessibleAction {
      * Request that the node be decremented by a small value.
      * A larger decrement is requested using {@link #BLOCK_DECREMENT}.
      * <p>Used by Slider, ScrollBar, and others </p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     DECREMENT,
 
     /**
      * Request that the node should become expanded.
      * <p>Used by TreeItem, TitledPane, and others </p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     EXPAND,
 
@@ -102,12 +82,7 @@ public enum AccessibleAction {
      * Fires the primary action for the node. For example, a push
      * button will normally send an action event to notify listeners
      * that is has been activated.
-     * *
      * <p>Used by Button, Hyperlink, and others </p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     FIRE,
 
@@ -115,10 +90,6 @@ public enum AccessibleAction {
      * Request that the node be incremented by a small value.
      * A larger increment is requested using {@link #BLOCK_INCREMENT}.
      * <p>Used by Slider, ScrollBar, and others </p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     INCREMENT,
 
@@ -131,12 +102,7 @@ public enum AccessibleAction {
      * on the parent, while the assistive technology focus is on the child.
      * For example, a table may respond to this request by setting focus
      * to a cell inside the table before allowing the default to run.
-     *
      * <p>Used by Node, TabItem, TableCell and others </p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     REQUEST_FOCUS,
 
@@ -212,12 +178,7 @@ public enum AccessibleAction {
      * Request the node to show a menu.  If the node is a control,
      * then the context menu for the control is shown.  If the node
      * is a menu, then the submenu for the menu is shown.
-     *
      * <p>Used by Node, Menu</p>
-     *
-     * Parameters:
-     * <ul>
-     * </ul>
      */
     SHOW_MENU,
 }

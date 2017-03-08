@@ -56,7 +56,7 @@ import javafx.scene.Node;
  * greatly simplifies creating a StyleableProperty and its corresponding CssMetaData.</p>
  * <p>
  * This example is a typical implementation.
- * <code><pre>
+ * <pre><code>
  * private DoubleProperty gapProperty = new StyleableDoubleProperty(0) {
  *     {@literal @}Override
  *      public CssMetaData{@literal <}MyWidget,Number{@literal >} getCssMetaData() {
@@ -104,7 +104,7 @@ import javafx.scene.Node;
  * public List{@literal <}CssMetaData{@literal <}? extends Node, ?{@literal >}{@literal >} getCssMetaData() {
  *     return getClassCssMetaData();
  * }
- * </pre><code>
+ * </code></pre>
  * @param <S> The type of Styleable
  * @param <V> The type into which the parsed value is converted.
  * @since JavaFX 8.0
@@ -116,6 +116,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
      * Set the value of the corresponding property on the given Node.
      * @param styleable The Styleable on which the property value is being set
      * @param value The value to which the property is set
+     * @param origin the origin
      * @deprecated This method is no longer called from CSS code.
      * Use {@link StyleableProperty#applyStyle(javafx.css.StyleOrigin, java.lang.Object)}
      */
@@ -187,6 +188,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
      * return Orientation.VERTICAL. Otherwise, a vertical ScrollBar would be
      * incorrectly set to a horizontal ScrollBar when the initial value is
      * applied.
+     * @param styleable the styleable
      * @return The initial value of the property, possibly null
      */
     public V getInitialValue(S styleable) {
@@ -197,6 +199,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
     /**
      * The sub-properties refers to the constituent properties of this property,
      * if any. For example, "-fx-font-weight" is sub-property of "-fx-font".
+     * @return the list of sub-properties
      */
     public final List<CssMetaData<? extends Styleable, ?>> getSubProperties() {
         return subProperties;
@@ -206,7 +209,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
     /**
      * If true, the value of this property is the same as
      * the parent's computed value of this property.
-     * @default false
+     * @return false by default unless inherits is true
      * @see <a href="http://www.w3.org/TR/css3-cascade/#inheritance">CSS Inheritance</a>
      */
     public final boolean isInherits() {
@@ -284,6 +287,7 @@ public abstract class CssMetaData<S extends Styleable, V> {
 
     /**
      * Two CssMetaData objects are considered to be equal if their {@link #getProperty() property} values are equal.
+     * @return true if the obj is equaled, false otherwise
      */
     @Override
     public boolean equals(Object obj) {

@@ -36,6 +36,7 @@ final public class Style {
     /**
      * A selector might have more than one selector. This is the one that was
      * matched.
+     * @return the matched selector
      */
     public Selector getSelector() {
         return selector;
@@ -45,6 +46,7 @@ final public class Style {
      * The Declaration that is the source of the style that is about
      * to be applied or has just been applied. May be null if the
      * value comes from the CSSProperty's initial (default) value.
+     * @return the declaration
      */
     public Declaration getDeclaration() {
         return declaration;

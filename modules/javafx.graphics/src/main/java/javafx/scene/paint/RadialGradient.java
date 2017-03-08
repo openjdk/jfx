@@ -36,29 +36,29 @@ import javafx.beans.NamedArg;
  * with a circular radial color gradient pattern.
  * The user may specify 2 or more gradient colors,
  * and this paint will provide an interpolation between each color.
- * <p/>
+ * <p>
  * The user must specify the circle controlling the gradient pattern,
  * which is defined by a center point and a radius.
  * The user can also specify a separate focus point within that circle,
  * which controls the location of the first color of the gradient.
  * By default the focus is set to be the center of the circle.
- * <p/>
+ * <p>
  * The center and radius are specified
  * relative to a unit square, unless the <code>proportional</code>
  * variable is false.  By default proportional is true, and the
  * gradient will be scaled to fill whatever shape it is applied to.
  * The focus point is always specified relative to the center point
  * by an angle and a distance relative to the radius.
- * <p/>
+ * <p>
  * This paint will map the first color of the gradient to the focus point,
  * and the last color to the perimeter of the circle,
  * interpolating smoothly for any in-between colors specified by the user.
  * Any line drawn from the focus point to the circumference will
  * thus span all of the gradient colors.
- * <p/>
+ * <p>
  * The focus distance will be clamped to the range {@code (-1, 1)}
  * so that the focus point is always strictly inside the circle.
- * <p/>
+ * <p>
  * The application provides an array of {@code Stop}s specifying how to distribute
  * the colors along the gradient. The {@code Stop#offset} variable must be
  * the range 0.0 to 1.0 and act like keyframes along the gradient.
@@ -71,6 +71,8 @@ public final class RadialGradient extends Paint {
     /**
      * Defines the angle in degrees from the center of the gradient
      * to the focus point to which the first color is mapped.
+     * @return the angle in degrees from the center of the gradient
+     * to the focus point to which the first color is mapped
      */
     public final double getFocusAngle() {
         return focusAngle;
@@ -83,6 +85,8 @@ public final class RadialGradient extends Paint {
      * focus point to which the first color is mapped.
      * A distance of 0.0 will be at the center of the gradient circle.
      * A distance of 1.0 will be on the circumference of the gradient circle.
+     * @return the distance from the center of the gradient to the
+     * focus point to which the first color is mapped
      */
     public final double getFocusDistance() {
         return focusDistance;
@@ -97,6 +101,8 @@ public final class RadialGradient extends Paint {
      * the shape that the gradient fills.
      * The last color of the gradient is mapped to the perimeter of this circle.
      *
+     * @return the X coordinate of the center point of the circle defining the
+     * gradient
      * @defaultValue 0.0
      */
     public final double getCenterX() {
@@ -112,6 +118,8 @@ public final class RadialGradient extends Paint {
      * the shape that the gradient fills.
      * The last color of the gradient is mapped to the perimeter of this circle.
      *
+     * @return the X coordinate of the center point of the circle defining the
+     * gradient
      * @defaultValue 0.0
      */
     public final double getCenterY() {
@@ -126,6 +134,8 @@ public final class RadialGradient extends Paint {
      * size relative to  unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
+     * @return the radius of the circle defining the extents of the color
+     * gradient
      * @defaultValue 1.0
      */
     public final double getRadius() {
@@ -143,6 +153,8 @@ public final class RadialGradient extends Paint {
      * If this flag is false, then the center coordinates and the radius are
      * specified in the local coordinate system of the node.
      *
+     * @return true if the center and radius values are proportional, otherwise
+     * absolute
      * @defaultValue true
      */
     public final boolean isProportional() {
@@ -153,9 +165,10 @@ public final class RadialGradient extends Paint {
 
     /**
      * Defines which of the follwing cycle method is applied
-     * to the {@code LinearGradient}: {@code CycleMethod.NO_CYCLE},
+     * to the {@code RadialGradient}: {@code CycleMethod.NO_CYCLE},
      * {@code CycleMethod.REFLECT}, or {@code CycleMethod.REPEAT}.
      *
+     * @return the cycle method applied to this radial gradient
      * @defaultValue NO_CYCLE
      */
     public final CycleMethod getCycleMethod() {
@@ -176,6 +189,7 @@ public final class RadialGradient extends Paint {
      * <p>The list is unmodifiable and will throw
      * {@code UnsupportedOperationException} on each modification attempt.</p>
      *
+     * @return the list of Stop values
      * @defaultValue empty
      */
     public final List<Stop> getStops() {
@@ -183,7 +197,7 @@ public final class RadialGradient extends Paint {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      * @since JavaFX 8.0
      */
     @Override public final boolean isOpaque() {
@@ -390,7 +404,6 @@ public final class RadialGradient extends Paint {
      * &lt;point&gt; = [ [ &lt;length&gt; &lt;length&gt; ] | [ &lt;percentage&gt; | &lt;percentage&gt; ] ]
      * &lt;color-stop&gt; = [ &lt;color&gt; [ &lt;percentage&gt; | &lt;length&gt;]? ]
      * </pre>
-     * </p>
      * <p>Currently length can be only specified in px, the specification of unit can be omited.
      * Format of color representation is the one used in {@link Color#web(String color)}.
      * The radial-gradient keyword can be omited.
@@ -399,7 +412,7 @@ public final class RadialGradient extends Paint {
      * </p>
      *
      * Examples:
-     * <pre><code>
+     * <pre>{@code
      * RadialGradient g
      *      = RadialGradient.valueOf("radial-gradient(center 100px 100px, radius 200px, red  0%, blue 30%, black 100%)");
      * RadialGradient g
@@ -408,7 +421,7 @@ public final class RadialGradient extends Paint {
      *      = RadialGradient.valueOf("radial-gradient(center 50% 50%, radius 50%,  cyan, violet 75%, magenta)");
      * RadialGradient g
      *      = RadialGradient.valueOf("center 50% 50%, radius 50%,  cyan, violet 75%, magenta");
-     * </code></pre>
+     * }</pre>
      *
      * @param value the string to convert
      * @throws NullPointerException if the {@code value} is {@code null}

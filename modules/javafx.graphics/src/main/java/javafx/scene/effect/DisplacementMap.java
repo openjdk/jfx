@@ -60,15 +60,16 @@ import com.sun.javafx.scene.BoundsAccessor;
  * image by half of its size towards the upper left since each destination
  * pixel would contain the data that comes from the source pixel below and
  * to the right of it.
+ * </p>
  * <p>
  * Also note that this effect does not adjust the coordinates of input
  * events or any methods that measure containment on a {@code Node}.
  * The results of mouse picking and the containment methods are undefined
  * when a {@code Node} has a {@code DisplacementMap} effect in place.
- *
+ * </p>
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * int width = 220;
  * int height = 100;
  *
@@ -94,10 +95,11 @@ import com.sun.javafx.scene.BoundsAccessor;
  * text.setFont(Font.font(null, FontWeight.BOLD, 50));
  * text.setEffect(displacementMap);
  *
- * </pre></code>
+ * }</pre>
  *
  * <p> The code above produces the following: </p>
- * <p> <img src="doc-files/displacementmap.png"/> </p>
+ * <p> <img src="doc-files/displacementmap.png" alt="The visual effect of
+ * DisplacementMap on text"> </p>
  * @since JavaFX 2.0
  */
 public class DisplacementMap extends Effect {

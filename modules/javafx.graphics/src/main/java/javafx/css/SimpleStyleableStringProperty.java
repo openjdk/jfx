@@ -34,7 +34,7 @@ import javafx.beans.property.SimpleStringProperty;
  *
  * This class is used to make a {@link javafx.beans.property.StringProperty},
  * that would otherwise be implemented as a {@link SimpleStringProperty},
- * style&#8209;able by CSS.
+ * styleable by CSS.
  *
  * @see javafx.beans.property.SimpleStringProperty
  * @see CssMetaData

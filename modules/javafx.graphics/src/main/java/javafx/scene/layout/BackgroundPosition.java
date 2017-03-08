@@ -31,7 +31,7 @@ import javafx.geometry.Side;
 /**
  * Represents the position of a {@link BackgroundImage} within the
  * {@link Region}'s drawing area.
- * <p/>
+ * <p>
  * The BackgroundImage can be positioned either from the left or right side
  * along the horizontal axis, and from either the top or bottom side along
  * the vertical axis. The {@link #getHorizontalSide() horizontalSide} and
@@ -41,7 +41,7 @@ import javafx.geometry.Side;
  * and {@link #isHorizontalAsPercentage() horizontalAsPercentage} indicates whether
  * this is as a literal value or a percentage. Similar properties exist for
  * specifying the size relative to the vertical axis.
- * <p/>
+ * <p>
  * For example, suppose I had a BackgroundPosition with a {@code horizontalSide}
  * of {@code Side.RIGHT}, a {@code horizontalPosition} of .05, and a
  * {@code horizontalAsPercentage} of {@code true}. In this case, the right
@@ -68,6 +68,8 @@ public class BackgroundPosition {
     /**
      * The side along the horizontal axis to which the BackgroundImage is
      * anchored. This will only be LEFT or RIGHT and never null.
+     * @return the Side along the horizontal axis to which the BackgroundImage is
+     * anchored
      */
     public final Side getHorizontalSide() { return horizontalSide; }
     final Side horizontalSide;
@@ -75,6 +77,8 @@ public class BackgroundPosition {
     /**
      * The side along the vertical axis to which the BackgroundImage is
      * anchored. This will only be TOP or BOTTOM and never null.
+     * @return the Side along the vertical axis to which the BackgroundImage is
+     * anchored
      */
     public final Side getVerticalSide() { return verticalSide; }
     final Side verticalSide;
@@ -86,6 +90,7 @@ public class BackgroundPosition {
      * is either a literal or a percentage, depending on the
      * {@link #isHorizontalAsPercentage() horizontalAsPercentage} property.
      * Negative values are acceptable.
+     * @return the horizontal position of the BackgroundImage
      */
     public final double getHorizontalPosition() { return horizontalPosition; }
     final double horizontalPosition;
@@ -96,6 +101,7 @@ public class BackgroundPosition {
      * property. This value is either a literal or a percentage, depending on the
      * {@link #isVerticalAsPercentage() verticalAsPercentage} property. Negative
      * values are acceptable.
+     * @return the vertical position of the BackgroundImage
      */
     public final double getVerticalPosition() { return verticalPosition; }
     final double verticalPosition;
@@ -103,6 +109,7 @@ public class BackgroundPosition {
     /**
      * Specifies whether the {@link #getHorizontalPosition() horizontalPosition} should
      * be interpreted as a literal number or as a percentage.
+     * @return true if horizontalPosition should be interpreted as a percentage
      */
     public final boolean isHorizontalAsPercentage() { return horizontalAsPercentage; }
     final boolean horizontalAsPercentage;
@@ -110,6 +117,7 @@ public class BackgroundPosition {
     /**
      * Specifies whether the {@link #getVerticalPosition() verticalPosition} should
      * be interpreted as a literal number or as a percentage.
+     * @return true if verticalPosition should be interpreted as a percentage
      */
     public final boolean isVerticalAsPercentage() { return verticalAsPercentage; }
     final boolean verticalAsPercentage;
@@ -168,7 +176,7 @@ public class BackgroundPosition {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -186,7 +194,7 @@ public class BackgroundPosition {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

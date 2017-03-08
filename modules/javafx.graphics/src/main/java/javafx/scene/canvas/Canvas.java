@@ -49,10 +49,10 @@ import com.sun.javafx.sg.prism.NGNode;
  * A {@code Canvas} node is constructed with a width and height that specifies the size
  * of the image into which the canvas drawing commands are rendered. All drawing
  * operations are clipped to the bounds of that image.
+ * </p>
  *
  * <p>Example:</p>
  *
- * <p>
  * <pre>
 import javafx.scene.*;
 import javafx.scene.paint.*;
@@ -69,7 +69,6 @@ gc.fillRect(75,75,100,100);
 
 root.getChildren().add(canvas);
  * </pre>
- * </p>
  *
  * @since JavaFX 2.2
  */
@@ -166,6 +165,7 @@ public class Canvas extends Node {
 
     /**
      * returns the {@code GraphicsContext} associated with this {@code Canvas}.
+     * @return the {@code GraphicsContext} associated with this {@code Canvas}
      */
     public GraphicsContext getGraphicsContext2D() {
         if (theContext == null) {
@@ -177,8 +177,7 @@ public class Canvas extends Node {
     /**
      * Defines the width of the canvas.
      *
-     * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty width;
 
@@ -220,8 +219,7 @@ public class Canvas extends Node {
     /**
      * Defines the height of the canvas.
      *
-     * @profile common
-     * @defaultvalue 0.0
+     * @defaultValue 0.0
      */
     private DoubleProperty height;
 

@@ -666,8 +666,6 @@ public class Window implements EventTarget {
      * The property is read only because it can be changed externally
      * by the underlying platform and therefore must not be bindable.
      * </p>
-     *
-     * @profile common
      */
     private ReadOnlyBooleanWrapper focused = new ReadOnlyBooleanWrapper() {
         @Override protected void invalidated() {

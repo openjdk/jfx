@@ -49,6 +49,7 @@ public enum FontPosture {
      * Returns {@code FontPosture} by its name.
      *
      * @param name name of the {@code FontPosture}
+     * @return the FontPosture by its name
      */
     public static FontPosture findByName(String name) {
         if (name == null) return null;

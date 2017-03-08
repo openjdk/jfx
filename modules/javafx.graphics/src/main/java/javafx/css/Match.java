@@ -34,7 +34,7 @@ import static javafx.geometry.NodeOrientation.INHERIT;
  * Used by {@link Rule} to determine whether or not the selector applies to a
  * given object.
  *
- * Returned by {@link Selector#matches} in the event of a match.
+ * Returned by {@link Selector} matches in the event of a match.
  *
  * @since 9
  */

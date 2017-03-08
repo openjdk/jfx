@@ -26,7 +26,7 @@
 package javafx.print;
 
 /**
- * Collation specifes whether or not media sheets of each copy
+ * Collation specifies whether or not media sheets of each copy
  * of a printed document in a job are to be in sequence.
  * It has no effect or relevance unless multiple job copies are printed.
  *

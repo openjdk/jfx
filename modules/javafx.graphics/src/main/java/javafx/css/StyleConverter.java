@@ -63,18 +63,22 @@ import java.util.WeakHashMap;
 
 
 /**
- * StyleConverter converts {@code ParsedValue&tl;F,T&gt;} from type F to type T. The
+ * StyleConverter converts {@code ParsedValue<F,T>}
+ * from type {@code F} to type {@code T}. The
  * {@link CssMetaData} API requires a {@code StyleConverter} which is used
- * when computing a value for the {@see StyleableProperty}. There are
+ * when computing a value for the {@code StyleableProperty}. There are
  * a number of predefined converters which are accessible by the static
  * methods of this class.
  *
- * F is the type of the parsed value, T is the converted type of
+ * {@code F} is the type of the parsed value and {@code T} is the converted type of
  * the ParsedValueImpl. For example, a converter from String to Color would
  * be declared
  * <p>&nbsp;&nbsp;&nbsp;&nbsp;
- * <code>public Color convert(ParsedValueImpl&lt;String,Color&gt; value, Font font)</code>
+ * {@code public Color convert(ParsedValueImpl<String,Color> value, Font font)}
  * </p>
+ *
+ * @param <F> the type of the parsed value
+ * @param <T> the converted type of the ParsedValueImpl
  *
  * @see ParsedValue
  * @see StyleableProperty
@@ -89,6 +93,7 @@ public class StyleConverter<F, T> {
      * @param font         The {@link Font} to use when converting a
      * <a href="http://www.w3.org/TR/css3-values/#relative-lengths">relative</a>
      * value.
+     * @return the converted target property type
      */
     @SuppressWarnings("unchecked")
     public T convert(ParsedValue<F,T> value, Font font) {
@@ -97,7 +102,8 @@ public class StyleConverter<F, T> {
     }
 
     /**
-     * @return A {@code StyleConverter} that converts &quot;true&quot; or &quot;false&quot; to {@code Boolean}
+     * Return a {@code StyleConverter} that converts {@literal "true" or "false"} to {@code Boolean}.
+     * @return A {@code StyleConverter} that converts {@literal "true" or "false"} to {@code Boolean}
      * @see Boolean#valueOf(java.lang.String)
      */
     public static StyleConverter<String,Boolean> getBooleanConverter() {
@@ -105,6 +111,8 @@ public class StyleConverter<F, T> {
     }
 
     /**
+     * Return a {@code StyleConverter} that converts a String representation of
+     * a duration to a {@link Duration}.
      * @return A {@code StyleConverter} that converts a String
      * representation of a duration to a {@link Duration}
      *
@@ -115,6 +123,8 @@ public class StyleConverter<F, T> {
     }
 
     /**
+     * Return a {@code StyleConverter} that converts a String representation of
+     * a web color to a {@code Color}.
      * @return A {@code StyleConverter} that converts a String
      * representation of a web color to a {@code Color}
      * @see Color#web(java.lang.String)
@@ -124,6 +134,8 @@ public class StyleConverter<F, T> {
     }
 
     /**
+     * Return a {@code StyleConverter} that converts a parsed representation
+     * of an {@code Effect} to an {@code Effect}
      * @return A {@code StyleConverter} that converts a parsed representation
      * of an {@code Effect} to an {@code Effect}
      * @see Effect
@@ -133,6 +145,10 @@ public class StyleConverter<F, T> {
     }
 
     /**
+     * Return a {@code StyleConverter} that converts a String representation
+     * of an {@code Enum} to an {@code Enum}.
+     * @param <E> the type of the {@code Enum}
+     * @param enumClass the enum Class
      * @return A {@code StyleConverter} that converts a String representation
      * of an {@code Enum} to an {@code Enum}
      * @see Enum#valueOf(java.lang.Class, java.lang.String)
@@ -145,8 +161,10 @@ public class StyleConverter<F, T> {
     }
 
     /**
-     * @return A {@code StyleConverter} that converts a parsed representation
+     * Return a {@code StyleConverter} that converts a parsed representation
      * of a {@code Font} to an {@code Font}.
+     * @return A {@code StyleConverter} that converts a parsed representation
+     * of a {@code Font} to an {@code Font}
      * @see Font#font(java.lang.String, javafx.scene.text.FontWeight, javafx.scene.text.FontPosture, double)
      */
     public static StyleConverter<ParsedValue[], Font> getFontConverter() {
@@ -154,16 +172,20 @@ public class StyleConverter<F, T> {
     }
 
     /**
-     * @return A {@code StyleConverter} that converts a [&lt;length&gt; |
-     * &lt;percentage&gt;]{1,4} to an {@code Insets}.
+     * Return a {@code StyleConverter} that converts a {@literal [<length> |
+     * <percentage>]}{1,4} to an {@code Insets}.
+     * @return A {@code StyleConverter} that converts a {@literal [<length> |
+     * <percentage>]}{1,4} to an {@code Insets}
      */
     public static StyleConverter<ParsedValue[], Insets> getInsetsConverter() {
         return InsetsConverter.getInstance();
     }
 
     /**
-     * @return A {@code StyleConverter} that converts a parsed representation
+     * Return a {@code StyleConverter} that converts a parsed representation
      * of a {@code Paint} to a {@code Paint}.
+     * @return A {@code StyleConverter} that converts a parsed representation
+     * of a {@code Paint} to a {@code Paint}
      */
     public static StyleConverter<ParsedValue<?, Paint>, Paint> getPaintConverter() {
         return PaintConverter.getInstance();
@@ -172,11 +194,10 @@ public class StyleConverter<F, T> {
     /**
      * CSS length and number values are parsed into a Size object that is
      * converted to a Number before the value is applied. If the property is
-     * a {@code Number} type other than Double, the
-     * {@link CssMetaData#set(javafx.scene.Node, java.lang.Object, javafx.css.Origin) set}
-     * method of ({@code CssMetaData} can be over-ridden to convert the Number
+     * a {@code Number} type other than {@code Double}, the set method
+     * of ({@code CssMetaData} can be overridden to convert the {@code Number}
      * to the correct type. For example, if the property is an {@code IntegerProperty}:
-     * <code><pre>
+     * <pre><code>
      *     {@literal @}Override public void set(MyNode node, Number value, Origin origin) {
      *         if (value != null) {
      *             super.set(node, value.intValue(), origin);
@@ -184,10 +205,10 @@ public class StyleConverter<F, T> {
      *             super.set(node, value, origin);
      *         }
      *     }
-     * </pre></code>
+     * </code></pre>
      * @return A {@code StyleConverter} that converts a parsed representation
      * of a CSS length or number value to a {@code Number} that is an instance
-     * of {@code Double}.
+     * of {@code Double}
      */
     public static StyleConverter<?, Number> getSizeConverter() {
         return SizeConverter.getInstance();
@@ -196,7 +217,7 @@ public class StyleConverter<F, T> {
     /**
      * A converter for quoted strings which may have embedded unicode characters.
      * @return A {@code StyleConverter} that converts a representation of a
-     * CSS string value to a {@code String}.
+     * CSS string value to a {@code String}
      */
     public static StyleConverter<String,String> getStringConverter() {
         return StringConverter.getInstance();
@@ -205,7 +226,7 @@ public class StyleConverter<F, T> {
     /**
      * A converter for URL strings.
      * @return A {@code StyleConverter} that converts a representation of a
-     * CSS URL value to a {@code String}.
+     * CSS URL value to a {@code String}
      */
     public static StyleConverter<ParsedValue[], String> getUrlConverter() {
         return URLConverter.getInstance();
@@ -218,6 +239,8 @@ public class StyleConverter<F, T> {
      * Convert from the constituent values to the target property type.
      * Implemented by Types that have Keys with subKeys.
      *
+     * @param convertedValues the constituent values
+     * @return the target property type
      * @since 9
      */
     public T convert(Map<CssMetaData<? extends Styleable, ?>,Object> convertedValues) {
@@ -225,7 +248,10 @@ public class StyleConverter<F, T> {
     }
 
     /**
-     *
+     * Write binary data.
+     * @param os the data output stream
+     * @param sstore the string store
+     * @throws java.io.IOException the exception
      * @since 9
      */
     public void writeBinary(DataOutputStream os, StringStore sstore)
@@ -239,7 +265,7 @@ public class StyleConverter<F, T> {
     private static Map<ParsedValue, Object> cache;
 
     /**
-     *
+     * Clear the cache.
      * @since 9
      */
     public static void clearCache() {
@@ -249,7 +275,9 @@ public class StyleConverter<F, T> {
     }
 
     /**
-     *
+     * Get the cached value for the specified key.
+     * @param key the key
+     * @return the cached value
      * @since 9
      */
     protected T getCachedValue(ParsedValue key) {
@@ -260,7 +288,9 @@ public class StyleConverter<F, T> {
     }
 
     /**
-     *
+     * Cache the value for the specified key.
+     * @param key the key
+     * @param value the value
      * @since 9
      */
     protected void cacheValue(ParsedValue key, Object value) {
@@ -272,7 +302,11 @@ public class StyleConverter<F, T> {
     private static Map<String,StyleConverter<?, ?>> tmap;
 
     /**
-     *
+     * Read binary data stream.
+     * @param is the data input stream
+     * @param strings the strings
+     * @return the style converter
+     * @throws java.io.IOException the exception
      * @since 9
      */
     @SuppressWarnings("rawtypes")
@@ -491,7 +525,7 @@ public class StyleConverter<F, T> {
 
 
     /**
-     *
+     * The StringStore class
      * @since 9
      */
     public static class StringStore {

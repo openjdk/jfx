@@ -46,15 +46,15 @@ import javafx.geometry.Point3D;
  *
  * <p>
  * For example:
- * <pre><code>
+ * <pre>{@code
  * Text text = new Text("Using Shear for pseudo-italic font");
  * text.setX(20);
  * text.setY(50);
  * text.setFont(new Font(20));
  *
  * text.getTransforms().add(new Shear(-0.35, 0));
- * </code></pre>
- * </p>
+ * }</pre>
+ *
  * @since JavaFX 2.0
  */
 public class Shear extends Transform {

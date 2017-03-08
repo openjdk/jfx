@@ -63,10 +63,10 @@ import javafx.geometry.Point3D;
  *
  * <p>Example:</p>
  *
- * <pre><code>
+ * <pre>{@code
  *  Rectangle rect = new Rectangle(50,50, Color.RED);
  *  rect.getTransforms().add(new Rotate(45,0,0)); //rotate by 45 degrees
- * </code></pre>
+ * }</pre>
  * @since JavaFX 2.0
  */
 public abstract class Transform implements Cloneable, EventTarget {
@@ -206,6 +206,9 @@ public abstract class Transform implements Cloneable, EventTarget {
      * <pre>
      *    new Translate(x, y);
      * </pre>
+     * @param x the translate x value
+     * @param y the translate y value
+     * @return the Translate object representing a translation transformation
      */
     public static Translate translate(double x, double y) {
         final Translate translate = new Translate();
@@ -223,6 +226,10 @@ public abstract class Transform implements Cloneable, EventTarget {
      * <pre>
      *    new Rotate(angle, pivotX, pivotY);
      * </pre>
+     * @param angle the rotation angle
+     * @param pivotX the pivot x value
+     * @param pivotY the pivot y value
+     * @return the Rotate object that rotates coordinates around a pivot point
      */
     public static Rotate rotate(double angle, double pivotX, double pivotY) {
         final Rotate rotate = new Rotate();
@@ -240,6 +247,9 @@ public abstract class Transform implements Cloneable, EventTarget {
      * <pre>
      *    new Scale(x, y);
      * </pre>
+     * @param x the scale x value
+     * @param y the scale y value
+     * @return the Scale object representing a scaling transformation
      */
     public static Scale scale(double x, double y) {
         final Scale scale = new Scale();
@@ -257,6 +267,11 @@ public abstract class Transform implements Cloneable, EventTarget {
      * <pre>
      *    new Scale(x, y, pivotX, pivotY);
      * </pre>
+     * @param x the scale x value
+     * @param y the scale y value
+     * @param pivotX the pivot x value
+     * @param pivotY the pivot y value
+     * @return the Scale object representing a scaling transformation
      */
     public static Scale scale(double x, double y, double pivotX, double pivotY) {
         final Scale scale = new Scale();
@@ -275,6 +290,9 @@ public abstract class Transform implements Cloneable, EventTarget {
      * <pre>
      *    new Shear(x, y);
      * </pre>
+     * @param x the shear x value
+     * @param y the shear y value
+     * @return the Shear object representing a shearing transformation
      */
     public static Shear shear(double x, double y) {
         final Shear shear = new Shear();
@@ -290,6 +308,11 @@ public abstract class Transform implements Cloneable, EventTarget {
      * <pre>
      *    new Shear(x, y, pivotX, pivotY);
      * </pre>
+     * @param x the shear x value
+     * @param y the shear y value
+     * @param pivotX the pivot x value
+     * @param pivotY the pivot y value
+     * @return the Shear object representing a shearing transformation
      */
     public static Shear shear(double x, double y, double pivotX, double pivotY) {
         final Shear shear = new Shear();
@@ -317,6 +340,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the X coordinate scaling element of the 3x4 matrix.
      *
+     * @return the X coordinate scaling element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMxx() {
@@ -326,6 +350,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the XY coordinate element of the 3x4 matrix.
      *
+     * @return the XY coordinate element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMxy() {
@@ -335,6 +360,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the XZ coordinate element of the 3x4 matrix.
      *
+     * @return the XZ coordinate element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMxz() {
@@ -344,6 +370,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the X coordinate translation element of the 3x4 matrix.
      *
+     * @return the X coordinate translation element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getTx() {
@@ -353,6 +380,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the YX coordinate element of the 3x4 matrix.
      *
+     * @return the YX coordinate element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMyx() {
@@ -362,6 +390,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the Y coordinate scaling element of the 3x4 matrix.
      *
+     * @return the Y coordinate scaling element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMyy() {
@@ -371,6 +400,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the YZ coordinate element of the 3x4 matrix.
      *
+     * @return the YZ coordinate element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMyz() {
@@ -380,6 +410,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the Y coordinate translation element of the 3x4 matrix.
      *
+     * @return the Y coordinate translation element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getTy() {
@@ -389,6 +420,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the ZX coordinate element of the 3x4 matrix.
      *
+     * @return the ZX coordinate element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMzx() {
@@ -398,6 +430,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the ZY coordinate element of the 3x4 matrix.
      *
+     * @return the ZY coordinate element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMzy() {
@@ -407,6 +440,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the Z coordinate scaling element of the 3x4 matrix.
      *
+     * @return the Z coordinate scaling element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getMzz() {
@@ -416,6 +450,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * Gets the Z coordinate translation element of the 3x4 matrix.
      *
+     * @return the Z coordinate translation element of the 3x4 matrix
      * @since JavaFX 2.2
      */
     public  double getTz() {
@@ -1499,6 +1534,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      * of the affine transformation matrix.
      * @param x vector magnitude in the direction of the X axis
      * @param y vector magnitude in the direction of the Y axis
+     * @param z vector magnitude in the direction of the Z axis
      * @return the transformed relative magnitude vector represented
      *         by a {@code Point3D} instance
      * @since JavaFX 8.0
@@ -1786,6 +1822,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      * of the affine transformation matrix.
      * @param x vector magnitude in the direction of the X axis
      * @param y vector magnitude in the direction of the Y axis
+     * @param z vector magnitude in the direction of the Z axis
      * @return the inversely transformed relative magnitude vector represented
      *         by a {@code Point3D} instance
      * @throws NonInvertibleTransformException if this transform
@@ -1981,6 +2018,7 @@ public abstract class Transform implements Cloneable, EventTarget {
     /**
      * The onTransformChanged event handler is called whenever the transform
      * changes any of its parameters.
+     * @return the onTransformChanged event handler
      * @since JavaFX 8.0
      */
     public final ObjectProperty<EventHandler<? super TransformChangedEvent>>

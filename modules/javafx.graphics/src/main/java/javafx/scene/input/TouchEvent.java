@@ -129,7 +129,6 @@ public final class TouchEvent extends InputEvent {
      * @param controlDown true if control modifier was pressed.
      * @param altDown true if alt modifier was pressed.
      * @param metaDown true if meta modifier was pressed.
-     * @param direct true if the event was caused by direct input device. See {@link #isDirect() }
      * @since JavaFX 8.0
      */
     public TouchEvent(@NamedArg("eventType") EventType<TouchEvent> eventType,
@@ -165,7 +164,8 @@ public final class TouchEvent extends InputEvent {
 
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
+     * @return the event copy with the new source and target
      */
     @Override
     public TouchEvent copyFor(Object newSource, EventTarget newTarget) {
@@ -176,9 +176,9 @@ public final class TouchEvent extends InputEvent {
 
     /**
      * Creates a copy of the given event with the given fields substituted.
-     * @param source the new source of the copied event
-     * @param target the new target of the copied event
-     * @param eventType the new eventType
+     * @param newSource the new source of the copied event
+     * @param newTarget the new target of the copied event
+     * @param type the new eventType
      * @return the event copy with the fields substituted
      * @since JavaFX 8.0
      */

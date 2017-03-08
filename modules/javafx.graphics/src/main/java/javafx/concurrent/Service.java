@@ -101,10 +101,11 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     should expose as properties the input parameters to the work to be done.
  *     For example, suppose I wanted to write a Service which read the first line
  *     from any URL and returned it as a String. Such a Service might be defined,
- *     such that it had a single property, <code>url</code>. It might be implemented
+ *     such that it had a single property, {@code url}. It might be implemented
  *     as:
+ * </p>
  *     <pre><code>
- *     public static class FirstLineService extends Service&lt;String&gt; {
+ *     {@literal public static class FirstLineService extends Service<String>} {
  *         private StringProperty url = new SimpleStringProperty(this, "url");
  *         public final void setUrl(String value) { url.set(value); }
  *         public final String getUrl() { return url.get(); }
@@ -112,7 +113,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *
  *         protected Task createTask() {
  *             final String _url = getUrl();
- *             return new Task&ltString&gt;() {
+ *             {@literal return new Task<String>()} {
  *                 protected String call() throws Exception {
  *                     URL u = new URL(_url);
  *                     BufferedReader in = new BufferedReader(
@@ -125,13 +126,12 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *         }
  *     }
  *     </code></pre>
- * </p>
  * <p>
  *     The Service by default uses a thread pool Executor with some unspecified
  *     default or maximum thread pool size. This is done so that naive code
  *     will not completely swamp the system by creating thousands of Threads.
  * </p>
- * @param <V>
+ * @param <V> the type of object returned by the Service
  * @since JavaFX 2.0
  */
 public abstract class Service<V> implements Worker<V>, EventTarget {
@@ -869,7 +869,7 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      * <pre><code>
      *     protected Task createTask() {
      *         final String url = myService.getUrl();
-     *         return new Task&lt;String&gt;() {
+     *         {@literal return new Task<String>()} {
      *             protected String call() {
      *                 URL u = new URL("http://www.oracle.com");
      *                 BufferedReader in = new BufferedReader(
@@ -889,14 +889,14 @@ public abstract class Service<V> implements Worker<V>, EventTarget {
      *     the Task since its state is completely provided in its constructor.
      * </p>
      *
-     * <pre><code>
+     * <pre>{@code
      *     protected Task createTask() {
      *         // This is safe because getUrl is called on the FX Application
      *         // Thread and the FirstLineReaderTasks stores it as an
      *         // immutable property
      *         return new FirstLineReaderTask(myService.getUrl());
      *     }
-     * </code></pre>
+     * }</pre>
      * @return the Task to execute
      */
     protected abstract Task<V> createTask();

@@ -147,7 +147,7 @@ public abstract class Light {
      *
      * <p>
      * Example:
-     * <pre><code>
+     * <pre>{@code
      * Light.Distant light = new Light.Distant();
      * light.setAzimuth(45.0);
      * light.setElevation(30.0);
@@ -168,10 +168,11 @@ public abstract class Light {
      * Rectangle rect = new Rectangle(300,150);
      * rect.setFill(Color.ALICEBLUE);
      * rect.setEffect(lighting);
-     * </pre></code>
+     * }</pre>
      *
      * <p> The code above produces the following: </p>
-     * <p> <img src="doc-files/lightdistant.png"/> </p>
+     * <p> <img src="doc-files/lightdistant.png" alt="The visual effect of distant
+     * Light on text"> </p>
      * @since JavaFX 2.0
      */
     public static class Distant extends Light {
@@ -300,7 +301,7 @@ public abstract class Light {
      *
      * <p>
      * Example:
-     * <pre><code>
+     * <pre>{@code
      * Light.Point light = new Light.Point();
      * light.setX(100);
      * light.setY(100);
@@ -322,10 +323,11 @@ public abstract class Light {
      * rect.setFill(Color.ALICEBLUE);
      * rect.setEffect(lighting);
      * text.setEffect(lighting);
-     * </pre></code>
+     * }</pre>
      *
      * <p> The code above produces the following: </p>
-     * <p> <img src="doc-files/lightpoint.png"/> </p>
+     * <p> <img src="doc-files/lightpoint.png" alt="The visual effect of point
+     * Light on text"> </p>
      * @since JavaFX 2.0
      */
     public static class Point extends Light {
@@ -498,7 +500,7 @@ public abstract class Light {
      *
      * <p>
      * Example:
-     * <pre><code>
+     * <pre>{@code
      * Light.Spot light = new Light.Spot();
      * light.setX(150);
      * light.setY(100);
@@ -524,10 +526,11 @@ public abstract class Light {
      * Rectangle rect = new Rectangle(200, 150);
      * rect.setFill(Color.ALICEBLUE);
      * rect.setEffect(lighting);
-     * </pre></code>
+     * }</pre>
      *
      * <p> The code above produces the following: </p>
-     * <p> <img src="doc-files/lightspot.png"/> </p>
+     * <p> <img src="doc-files/lightspot.png" alt="The visual effect of spot Light
+     * on text"> </p>
      *
      * @since JavaFX 2.0
      */

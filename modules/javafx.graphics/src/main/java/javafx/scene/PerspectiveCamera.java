@@ -215,6 +215,8 @@ public class PerspectiveCamera extends Camera {
      * transform (move) the camera. Transforming the camera when fixedEyeAtCameraZero
      * is set to false may lead to results that are not intuitive.
      *
+     * @param fixedEyeAtCameraZero true if the the eye position is fixed at
+     * (0, 0, 0) in the local coordinates of the camera.
      * @since JavaFX 8.0
      */
     public PerspectiveCamera(boolean fixedEyeAtCameraZero) {

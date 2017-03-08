@@ -27,8 +27,6 @@ package javafx.scene.text;
 
 import java.text.BreakIterator;
 
-import com.sun.javafx.scene.text.TextLayout;
-
 /**
  * Represents the hit information in a Text node.
  *
@@ -56,12 +54,15 @@ public class HitInfo {
 
     /**
      * The index of the character which this hit information refers to.
+     * @return the index of the character which this hit information refers to
      */
     public int getCharIndex() { return charIndex; }
 
     /**
      * Indicates whether the hit is on the leading edge of the character.
      * If it is false, it represents the trailing edge.
+     * @return if true the hit is on the leading edge of the character, otherwise
+     * the trailing edge
      */
     public boolean isLeading() { return leading; }
 
@@ -69,6 +70,7 @@ public class HitInfo {
 
     /**
      * Returns the index of the insertion position.
+     * @return the index of the insertion position
      */
     public int getInsertionIndex() {
         if (insertionIndex == -1) {

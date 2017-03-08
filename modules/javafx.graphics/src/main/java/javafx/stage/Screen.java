@@ -43,7 +43,7 @@ import com.sun.javafx.tk.Toolkit;
  *
  * <p>
  * For example:
- * <pre><code>
+ * <pre>{@code
  * Rectangle2D primaryScreenBounds = Screen.getPrimary().getVisualBounds();
  *
  * //set Stage boundaries to visible bounds of the main screen
@@ -53,8 +53,8 @@ import com.sun.javafx.tk.Toolkit;
  * stage.setHeight(primaryScreenBounds.getHeight());
  *
  * stage.show();
- * </code></pre>
- * </p>
+ * }</pre>
+ *
  * @since JavaFX 2.0
  */
 public final class Screen {
@@ -180,6 +180,7 @@ public final class Screen {
 
     /**
      * The primary {@code Screen}.
+     * @return the primary screen
      */
     public static Screen getPrimary() {
         checkDirty();
@@ -188,6 +189,7 @@ public final class Screen {
 
     /**
       * The observable list of currently available {@code Screens}.
+      * @return observable list of currently available screens
       */
     public static ObservableList<Screen> getScreens() {
         checkDirty();

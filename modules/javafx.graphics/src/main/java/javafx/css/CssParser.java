@@ -181,8 +181,8 @@ final public class CssParser {
     /**
      * Creates a stylesheet from a CSS document string.
      *
-     *@param stylesheetText the CSS document to parse
-     *@return the Stylesheet
+     * @param stylesheetText the CSS document to parse
+     * @return the Stylesheet
      */
     public Stylesheet parse(final String stylesheetText) {
         final Stylesheet stylesheet = new Stylesheet();
@@ -198,11 +198,13 @@ final public class CssParser {
     }
 
     /**
-     * Creates a stylesheet from a CSS document string using docbase as
-     * the base URL for resolving references within stylesheet.
+     * Creates a stylesheet from a CSS document string using docbase as the base
+     * URL for resolving references within stylesheet.
      *
-     *@param stylesheetText the CSS document to parse
-     *@return the Stylesheet
+     * @param docbase the doc base for resolving URL references
+     * @param stylesheetText the CSS document to parse
+     * @return the Stylesheet
+     * @throws java.io.IOException the exception
      */
     public Stylesheet parse(final String docbase, final String stylesheetText) throws IOException {
         final Stylesheet stylesheet = new Stylesheet(docbase);
@@ -221,7 +223,7 @@ final public class CssParser {
      *
      *@param  url URL of the stylesheet to parse
      *@return the stylesheet
-     *@throws IOException
+     *@throws IOException the exception
      */
     public Stylesheet parse(final URL url) throws IOException {
 
@@ -253,7 +255,10 @@ final public class CssParser {
 
     }
 
-    /** Parse an in-line style from a Node */
+    /** Parse an in-line style from a Node.
+     * @param node the styleable node
+     * @return the style sheet
+     */
     public Stylesheet parseInlineStyle(final Styleable node) {
 
         Stylesheet stylesheet = new Stylesheet();
@@ -292,7 +297,12 @@ final public class CssParser {
         return stylesheet;
     }
 
-    /** convenience method for unit tests */
+    /**
+     * Convenience method for unit tests.
+     * @param property the property
+     * @param expr the expression
+     * @return the parsed value
+     */
     public ParsedValue parseExpr(String property, String expr) {
         if (property == null || expr == null) return null;
 

@@ -45,9 +45,9 @@ import com.sun.javafx.tk.Toolkit;
  * example, cut, copy, and paste operations.
  * <p>
  * To access the general system clipboard, use the following code:
- * <pre><code>
+ * <pre>{@code
  *     Clipboard clipboard = Clipboard.getSystemClipboard();
- * </code></pre>
+ * }</pre>
  * <p>
  * There is only ever one instance of the system clipboard in the application, so it is
  * perfectly acceptable to stash a reference to it somewhere handy if you so choose.
@@ -67,7 +67,7 @@ import com.sun.javafx.tk.Toolkit;
  *     final Clipboard clipboard = Clipboard.getSystemClipboard();
  *     final ClipboardContent content = new ClipboardContent();
  *     content.putString("Some text");
- *     content.putHtml("&lt;b&gt;Some&lt;/b&gt; text");
+ *     {@literal content.putHtml("<b>Some</b> text")};
  *     clipboard.setContent(content);
  * </code></pre>
  * <p>
@@ -92,9 +92,9 @@ import com.sun.javafx.tk.Toolkit;
  * Or for example, if I have a plain text document, then I would simple get a String
  * representation and use that, if available. I can check to see if the clipboard "hasHtml"
  * or "hasString".
- * <pre><code>
+ * <pre>{@code
  *     if (clipboard.hasString()) { ... }
- * </pre></code>
+ * }</pre>
  * <p>
  * In addition to the common or built in types, you may put any arbitrary data onto the
  * clipboard (assuming it is serializable).
@@ -104,11 +104,11 @@ import com.sun.javafx.tk.Toolkit;
  * fields for common DataFormat types. Of course application specific DataFormat types can also be
  * declared and used. The following two methods are equivalent (and the second call
  * will override the first!)
- * <pre><code>
+ * <pre>{@code
  *     ClipboardContent content = new ClipboardContent();
  *     content.putString("some text");
  *     content.put(DataFormat.PLAIN_TEXT, "other text");
- * </pre></code>
+ * }</pre>
  * <p>
  * On embedded platforms that do not have their own windowing system, the
  * Clipboard returned from Clipboard.getSystemClipboard() might not be
@@ -171,7 +171,7 @@ public class Clipboard {
      * the developer subsequently attempts to read the value off the clipboard, this reference
      * is resolved. Or suppose that I want to put a Node on the clipboard, such that the
      * representation of that Node on the clipboard is as an image.
-     * <pre><code>
+     * <pre>{@code
      *     final Node node = ...;
      *     ClipboardReference ref = new ClipboardReference() {
      *         @Override public InputStream get() {
@@ -181,7 +181,7 @@ public class Clipboard {
      *         }
      *     };
      *     clipboard.putReference(DataFormat.IMAGE_TIFF, ref);
-     * </pre></code>
+     * }</code>
      * <p>
      * At the appropriate time, a client reading off the clipboard will ask for the data and
      * the system will invoke the provided callback to stream the image data over to the client.
@@ -269,6 +269,7 @@ public class Clipboard {
     /**
      * Returns the content stored in this clipboard of the given type, or null
      * if there is no content with this type.
+     * @param dataFormat the format type
      * @return The content associated with this type, or null if there is none
      */
     public final Object getContent(DataFormat dataFormat) {
@@ -285,6 +286,7 @@ public class Clipboard {
 
     /**
      * Tests whether there is any content on this clipboard of the given DataFormat type.
+     * @param dataFormat the format type
      * @return true if there is content on this clipboard for this type
      */
     public final boolean hasContent(DataFormat dataFormat) {

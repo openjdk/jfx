@@ -43,22 +43,21 @@ import com.sun.javafx.scene.BoundsAccessor;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * Image image = new Image("boat.jpg");
  * ImageView imageView = new ImageView(image);
  * imageView.setFitWidth(200);
  * imageView.setPreserveRatio(true);
  *
  * imageView.setEffect(new Glow(0.8));
- * </pre></code>
- * <p>
+ * }</pre>
  * <p> The code above applied on this image: </p>
  * <p>
- * <img src="doc-files/photo.png"/>
+ * <img src="doc-files/photo.png" alt="A photo">
  * </p>
  * <p> produces the following: </p>
  * <p>
- * <img src="doc-files/glow.png"/>
+ * <img src="doc-files/glow.png" alt="The visual effect of Glow on photo">
  * </p>
  * @since JavaFX 2.0
  */

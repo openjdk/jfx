@@ -43,7 +43,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * ColorAdjust colorAdjust = new ColorAdjust();
  * colorAdjust.setContrast(0.1);
  * colorAdjust.setHue(-0.05);
@@ -55,14 +55,15 @@ import com.sun.javafx.scene.BoundsAccessor;
  * imageView.setFitWidth(200);
  * imageView.setPreserveRatio(true);
  * imageView.setEffect(colorAdjust);
- * </pre></code>
+ * }</pre>
  * <p> The code above applied on this image: </p>
  * <p>
- * <img src="doc-files/photo.png"/>
+ * <img src="doc-files/photo.png" alt="A photo">
  * </p>
  * <p> produces the following: </p>
  * <p>
- * <img src="doc-files/coloradjust.png"/>
+ * <img src="doc-files/coloradjust.png" alt="The visual effect of ColorAdjust on
+ * photo">
  * </p>
  * @since JavaFX 2.0
  */

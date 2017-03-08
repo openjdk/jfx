@@ -43,8 +43,8 @@ import javafx.util.Duration;
  * interval between successive key frames by providing a target value and an
  * {@link Interpolator} associated with each variable. The variables are
  * interpolated such that they will reach their target value at the specified
- * time. An {@link #onFinished} function is invoked on each {@code KeyFrame} if one
- * is provided. A {@code KeyFrame} can optionally have a {@link #name}, which
+ * time. An {@code onFinished} function is invoked on each {@code KeyFrame} if one
+ * is provided. A {@code KeyFrame} can optionally have a {@code name}, which
  * will result in a cuepoint that is automatically added to the {@code Timeline}.
  *
  * @see Timeline
@@ -63,7 +63,7 @@ public final class KeyFrame {
      *
      * The returned {@link javafx.util.Duration} defines the time offset within
      * a single cycle of a {@link Timeline} at which the {@link KeyValue
-     * KeyValues} will be set and at which the {@link #onFinished} function
+     * KeyValues} will be set and at which the {@code onFinished} function
      * variable will be called.
      * <p>
      * The {@code time} of a {@code KeyFrame} has to be greater than or equal to
@@ -74,6 +74,7 @@ public final class KeyFrame {
      * depends on the underlying operating system and will in general be larger.
      * For example animations on desktop systems usually run with a maximum of
      * 60fps which gives a granularity of ~17 ms.
+     * @return the time offset
      */
     public Duration getTime() {
         return time;
@@ -85,6 +86,7 @@ public final class KeyFrame {
      *
      * A {@code KeyValue} defines a target and the desired value that should be
      * interpolated at the specified time of this {@code KeyFrame}.
+     * @return an immutable {@code Set} of {@link KeyValue} instances
      */
     public Set<KeyValue> getValues() {
         return values;
@@ -99,6 +101,7 @@ public final class KeyFrame {
      * {@code KeyFrame}. The {@code onFinished} function variable will be called
      * if the elapsed time passes the indicated value, even if it never equaled
      * the time value exactly.
+     * @return the {@code onFinished} event handler
      */
     public EventHandler<ActionEvent> getOnFinished() {
         return onFinished;
@@ -109,9 +112,10 @@ public final class KeyFrame {
      * Returns the {@code name} of this {@code KeyFrame}.
      *
      * If a named {@code KeyFrame} is added to a {@link Timeline}, a cuepoint
-     * with the {@code name} and the {@link #time} of the {@code KeyFrame} will
+     * with the {@code name} and the {@code time} of the {@code KeyFrame} will
      * be added automatically. If the {@code KeyFrame} is removed, the cuepoint
      * will also be removed.
+     * @return the {@code name}
      */
     public String getName() {
         return name;
@@ -125,18 +129,18 @@ public final class KeyFrame {
      * be ignored.
      *
      * @param time
-     *            the {@link #time}
+     *            the {@code time}
      * @param name
-     *            the {@link #name}
+     *            the {@code name}
      * @param onFinished
-     *            the {@link #onFinished onFinished-handler}
+     *            the {@code onFinished}
      * @param values
      *            a {@link javafx.collections.ObservableList} of
      *            {@link KeyValue} instances
      * @throws NullPointerException
      *             if {@code time} is null
      * @throws IllegalArgumentException
-     *             if {@code time} is invalid (see {@link #time})
+     *             if {@code time} is invalid (see {@link #getTime time})
      */
     public KeyFrame(@NamedArg("time") Duration time, @NamedArg("name") String name,
             @NamedArg("onFinished") EventHandler<ActionEvent> onFinished, @NamedArg("values") Collection<KeyValue> values) {
@@ -168,17 +172,17 @@ public final class KeyFrame {
      * be ignored.
      *
      * @param time
-     *            the {@link #time}
+     *            the {@code time}
      * @param name
-     *            the {@link #name}
+     *            the {@code name}
      * @param onFinished
-     *            the {@link #onFinished onFinished-handler}
+     *            the {@code onFinished}
      * @param values
      *            the {@link KeyValue} instances
      * @throws NullPointerException
      *             if {@code time} is null
      * @throws IllegalArgumentException
-     *             if {@code time} is invalid (see {@link #time})
+     *             if {@code time} is invalid (see {@link #getTime time})
      */
     public KeyFrame(@NamedArg("time") Duration time, @NamedArg("name") String name,
             @NamedArg("onFinished") EventHandler<ActionEvent> onFinished, @NamedArg("values") KeyValue... values) {
@@ -211,15 +215,15 @@ public final class KeyFrame {
      * Constructor of {@code KeyFrame}
      *
      * @param time
-     *            the {@link #time}
+     *            the {@code time}
      * @param onFinished
-     *            the {@link #onFinished onFinished-handler}
+     *            the {@code onFinished}
      * @param values
      *            the {@link KeyValue} instances
      * @throws NullPointerException
      *             if {@code time} is null
      * @throws IllegalArgumentException
-     *             if {@code time} is invalid (see {@link #time})
+     *             if {@code time} is invalid (see {@link #getTime time})
      */
     public KeyFrame(@NamedArg("time") Duration time, @NamedArg("onFinished") EventHandler<ActionEvent> onFinished,
             @NamedArg("values") KeyValue... values) {
@@ -230,15 +234,15 @@ public final class KeyFrame {
      * Constructor of {@code KeyFrame}
      *
      * @param time
-     *            the {@link #time}
+     *            the {@code time}
      * @param name
-     *            the {@link #name}
+     *            the {@code name}
      * @param values
      *            the {@link KeyValue} instances
      * @throws NullPointerException
      *             if {@code time} is null
      * @throws IllegalArgumentException
-     *             if {@code time} is invalid (see {@link #time})
+     *             if {@code time} is invalid (see {@link #getTime time})
      */
     public KeyFrame(@NamedArg("time") Duration time, @NamedArg("name") String name, @NamedArg("values") KeyValue... values) {
         this(time, name, DEFAULT_ON_FINISHED, values);
@@ -248,13 +252,13 @@ public final class KeyFrame {
      * Constructor of {@code KeyFrame}
      *
      * @param time
-     *            the {@link #time}
+     *            the {@code time}
      * @param values
      *            the {@link KeyValue} instances
      * @throws NullPointerException
      *             if {@code time} is null
      * @throws IllegalArgumentException
-     *             if {@code time} is invalid (see {@link #time})
+     *             if {@code time} is invalid (see {@link #getTime time})
      */
     public KeyFrame(@NamedArg("time") Duration time, @NamedArg("values") KeyValue... values) {
         this(time, DEFAULT_NAME, DEFAULT_ON_FINISHED, values);
@@ -262,7 +266,7 @@ public final class KeyFrame {
 
     /**
      * Returns a string representation of this {@code KeyFrame} object.
-     * @return a string representation of this {@code KeyFrame} object.
+     * @return the string representation
      */
     @Override
     public String toString() {
@@ -272,7 +276,7 @@ public final class KeyFrame {
 
     /**
      * Returns a hash code for this {@code KeyFrame} object.
-     * @return a hash code for this {@code KeyFrame} object.
+     * @return the hash code
      */
     @Override
     public int hashCode() {
@@ -290,8 +294,9 @@ public final class KeyFrame {
     /**
      * Indicates whether some other object is "equal to" this one.
      * Two {@code KeyFrames} are considered equal, if their {@link #getTime()
-     * time}, {@link #onFinished onFinished}, and {@link #getValues() values}
+     * time}, {@link #getOnFinished onFinished}, and {@link #getValues() values}
      * are equal.
+     * @return {@code true} if this is the same as obj, otherwise {@code false}
      */
     @Override
     public boolean equals(Object obj) {

@@ -43,7 +43,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * Bloom bloom = new Bloom();
  * bloom.setThreshold(0.1);
  *
@@ -61,11 +61,11 @@ import com.sun.javafx.scene.BoundsAccessor;
  * text.setX(25);
  * text.setY(65);
  * text.setEffect(bloom);
- * </pre></code>
+ * }</pre>
  *
  * <p> The code above produces the following: </p>
  * <p>
- * <img src="doc-files/bloom.png"/>
+ * <img src="doc-files/bloom.png" alt="The visual effect of applying bloom on text">
  * </p>
  * @since JavaFX 2.0
  */

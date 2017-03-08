@@ -88,6 +88,7 @@ public interface PixelReader {
      * by the number of buffer data elements defined by
      * {@code scanlineStride}.
      *
+     * @param <T> the type of the buffer
      * @param x the X coordinate of the rectangular region to read
      * @param y the Y coordinate of the rectangular region to read
      * @param w the width of the rectangular region to read

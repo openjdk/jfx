@@ -49,96 +49,112 @@ public class CornerRadii {
 
     /**
      * The length of the horizontal radii of the top-left corner.
+     * @return the length of the horizontal radii of the top-left corner
      */
     public final double getTopLeftHorizontalRadius() { return topLeftHorizontalRadius; }
     private double topLeftHorizontalRadius;
 
     /**
      * The length of the vertical radii of the top-left corner.
+     * @return the length of the vertical radii of the top-left corner
      */
     public final double getTopLeftVerticalRadius() { return topLeftVerticalRadius; }
     private double topLeftVerticalRadius;
 
     /**
      * The length of the vertical radii of the top-right corner.
+     * @return the length of the vertical radii of the top-right corner
      */
     public final double getTopRightVerticalRadius() { return topRightVerticalRadius; }
     private double topRightVerticalRadius;
 
     /**
      * The length of the horizontal radii of the top-right corner.
+     * @return the length of the horizontal radii of the top-right corner
      */
     public final double getTopRightHorizontalRadius() { return topRightHorizontalRadius; }
     private double topRightHorizontalRadius;
 
     /**
      * The length of the horizontal radii of the bottom-right corner.
+     * @return the length of the horizontal radii of the bottom-right corner
      */
     public final double getBottomRightHorizontalRadius() { return bottomRightHorizontalRadius; }
     private double bottomRightHorizontalRadius;
 
     /**
      * The length of the vertical radii of the bottom-right corner.
+     * @return the length of the vertical radii of the bottom-right corner
      */
     public final double getBottomRightVerticalRadius() { return bottomRightVerticalRadius; }
     private double bottomRightVerticalRadius;
 
     /**
      * The length of the vertical radii of the bottom-left corner.
+     * @return the length of the vertical radii of the bottom-left corner
      */
     public final double getBottomLeftVerticalRadius() { return bottomLeftVerticalRadius; }
     private double bottomLeftVerticalRadius;
 
     /**
      * The length of the horizontal radii of the bottom-left corner.
+     * @return the length of the horizontal radii of the bottom-left corner
      */
     public final double getBottomLeftHorizontalRadius() { return bottomLeftHorizontalRadius; }
     private double bottomLeftHorizontalRadius;
 
     /**
      * indicates whether {@code topLeftHorizontalRadius} is interpreted as a value or a percentage.
+     * @return if true topLeftHorizontalRadius is in percentage, otherwise a value
      */
     public final boolean isTopLeftHorizontalRadiusAsPercentage() { return topLeftHorizontalRadiusAsPercentage; }
     private final boolean topLeftHorizontalRadiusAsPercentage;
 
     /**
      * indicates whether {@code topLeftVerticalRadius} is interpreted as a value or a percentage.
+     * @return if true topLeftVerticalRadius is in percentage, otherwise a value
      */
     public final boolean isTopLeftVerticalRadiusAsPercentage() { return topLeftVerticalRadiusAsPercentage; }
     private final boolean topLeftVerticalRadiusAsPercentage;
 
     /**
      * indicates whether {@code topRightVerticalRadius} is interpreted as a value or a percentage.
+     * @return if true topRightVerticalRadius is in percentage, otherwise a value
      */
     public final boolean isTopRightVerticalRadiusAsPercentage() { return topRightVerticalRadiusAsPercentage; }
     private final boolean topRightVerticalRadiusAsPercentage;
 
     /**
      * indicates whether {@code topRightHorizontalRadius} is interpreted as a value or a percentage.
+     * @return if true topRightHorizontalRadius is in percentage, otherwise a value
      */
     public final boolean isTopRightHorizontalRadiusAsPercentage() { return topRightHorizontalRadiusAsPercentage; }
     private final boolean topRightHorizontalRadiusAsPercentage;
 
     /**
      * indicates whether {@code bottomRightHorizontalRadius} is interpreted as a value or a percentage.
+     * @return if true bottomRightHorizontalRadius is in percentage, otherwise a value
      */
     public final boolean isBottomRightHorizontalRadiusAsPercentage() { return bottomRightHorizontalRadiusAsPercentage; }
     private final boolean bottomRightHorizontalRadiusAsPercentage;
 
     /**
      * indicates whether {@code bottomRightVerticalRadius} is interpreted as a value or a percentage.
+     * @return if true bottomRightVerticalRadius is in percentage, otherwise a value
      */
     public final boolean isBottomRightVerticalRadiusAsPercentage() { return bottomRightVerticalRadiusAsPercentage; }
     private final boolean bottomRightVerticalRadiusAsPercentage;
 
     /**
      * indicates whether {@code bottomLeftVerticalRadius} is interpreted as a value or a percentage.
+     * @return if true bottomLeftVerticalRadius is in percentage, otherwise a value
      */
     public final boolean isBottomLeftVerticalRadiusAsPercentage() { return bottomLeftVerticalRadiusAsPercentage; }
     private final boolean bottomLeftVerticalRadiusAsPercentage;
 
     /**
      * indicates whether {@code bottomLeftHorizontalRadius} is interpreted as a value or a percentage.
+     * @return if true bottomLeftHorizontalRadius is in percentage, otherwise a value
      */
     public final boolean isBottomLeftHorizontalRadiusAsPercentage() { return bottomLeftHorizontalRadiusAsPercentage; }
     private final boolean bottomLeftHorizontalRadiusAsPercentage;
@@ -148,6 +164,7 @@ public class CornerRadii {
     /**
      * Indicates whether each corner radius is exactly the same, and each are either uniformly percentage-based
      * or not.
+     * @return if true each corner radius is uniformly percentage-based, otherwise not
      */
     public final boolean isUniform() { return uniform; }
     final boolean uniform;
@@ -244,22 +261,22 @@ public class CornerRadii {
      * Creates a new CornerRadii, allowing for specification of each component of each corner
      * radii and whether each component should be treated as a value or percentage.
      *
-     * @param topLeftHorizontalRadius
-     * @param topLeftVerticalRadius
-     * @param topRightVerticalRadius
-     * @param topRightHorizontalRadius
-     * @param bottomRightHorizontalRadius
-     * @param bottomRightVerticalRadius
-     * @param bottomLeftVerticalRadius
-     * @param bottomLeftHorizontalRadius
-     * @param topLeftHorizontalRadiusAsPercent
-     * @param topLeftVerticalRadiusAsPercent
-     * @param topRightVerticalRadiusAsPercent
-     * @param topRightHorizontalRadiusAsPercent
-     * @param bottomRightHorizontalRadiusAsPercent
-     * @param bottomRightVerticalRadiusAsPercent
-     * @param bottomLeftVerticalRadiusAsPercent
-     * @param bottomLeftHorizontalRadiusAsPercent
+     * @param topLeftHorizontalRadius The length of the horizontal radii of the top-left corner
+     * @param topLeftVerticalRadius The length of the vertical radii of the top-left corner
+     * @param topRightVerticalRadius The length of the vertical radii of the top-right corner
+     * @param topRightHorizontalRadius The length of the horizontal radii of the top-right corner
+     * @param bottomRightHorizontalRadius The length of the horizontal radii of the bottom-right corner
+     * @param bottomRightVerticalRadius The length of the vertical radii of the bottom-right corner
+     * @param bottomLeftVerticalRadius The length of the vertical radii of the bottom-left corner
+     * @param bottomLeftHorizontalRadius The length of the horizontal radii of the bottom-left corner
+     * @param topLeftHorizontalRadiusAsPercent Is the horizontal radii of the top-left corner as percentage
+     * @param topLeftVerticalRadiusAsPercent Is the vertical radii of the top-left corner as percentage
+     * @param topRightVerticalRadiusAsPercent Is the vertical radii of the top-right corner as percentage
+     * @param topRightHorizontalRadiusAsPercent Is the horizontal radii of the top-right corner as percentage
+     * @param bottomRightHorizontalRadiusAsPercent Is the horizontal radii of the bottom-right corner as percentage
+     * @param bottomRightVerticalRadiusAsPercent Is the vertical radii of the bottom-right corner as percentage
+     * @param bottomLeftVerticalRadiusAsPercent Is the vertical radii of the bottom-left corner as percentage
+     * @param bottomLeftHorizontalRadiusAsPercent Is the horizontal radii of the bottom-left corner as percentage
      */
     public CornerRadii(
             @NamedArg("topLeftHorizontalRadius") double topLeftHorizontalRadius, @NamedArg("topLeftVerticalRadius") double topLeftVerticalRadius, @NamedArg("topRightVerticalRadius") double topRightVerticalRadius, @NamedArg("topRightHorizontalRadius") double topRightHorizontalRadius,
@@ -341,7 +358,7 @@ public class CornerRadii {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -370,7 +387,7 @@ public class CornerRadii {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

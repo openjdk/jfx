@@ -81,38 +81,38 @@ import javafx.util.Callback;
  * {@link #tileAlignmentProperty() tileAlignment}, which defaults to Pos.CENTER.
  * <p>
  * A horizontal tilepane example:
- * <pre><code>
+ * <pre>{@code
  *    TilePane tile = new TilePane();
  *    tile.setHgap(8);
  *    tile.setPrefColumns(4);
  *    for (int i = 0; i < 20; i++) {
  *        tile.getChildren().add(new ImageView(...));
  *    }
- * </code></pre>
+ * }</pre>
  * <p>
  * A vertical TilePane example:
- * <pre><code>
+ * <pre>{@code
  *    TilePane tile = new TilePane(Orientation.VERTICAL);
  *    tile.setTileAlignment(Pos.CENTER_LEFT);
  *    tile.setPrefRows(10);
  *    for (int i = 0; i < 50; i++) {
  *        tile.getChildren().add(new ImageView(...));
  *    }
- * </code></pre>
+ * }</pre>
  *
  * The TilePane will attempt to resize each child to fill its tile.
  * If the child could not be sized to fill the tile (either because it was not
  * resizable or its size limits prevented it) then it will be aligned within the
  * tile using tileAlignment.
  *
- * <h4>Resizable Range</h4>
+ * <h3>Resizable Range</h3>
  *
  * A tilepane's parent will resize the tilepane within the tilepane's resizable range
  * during layout.   By default the tilepane computes this range based on its content
  * as outlined in the tables below.
  * <p>
  * Horizontal:
- * <table border="1">
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus the tile width.</td>
@@ -125,7 +125,7 @@ import javafx.util.Callback;
  * </table>
  * <p>
  * Vertical:
- * <table border="1">
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus width required to display all tiles when wrapped at a specified height with an hgap between each column.</td>
@@ -143,9 +143,9 @@ import javafx.util.Callback;
  * TilePane provides properties for setting the size range directly.  These
  * properties default to the sentinel value Region.USE_COMPUTED_SIZE, however the
  * application may set them to other values as needed:
- * <pre><code>
+ * <pre>{@code
  *     <b>tilepane.setMaxWidth(500);</b>
- * </code></pre>
+ * }</pre>
  * Applications may restore the computed values by setting these properties back
  * to Region.USE_COMPUTED_SIZE.
  * <p>
@@ -155,19 +155,19 @@ import javafx.util.Callback;
  * is resized smaller than its preferred size, it may not be able to fit all the
  * tiles within its bounds and the content will extend outside.
  *
- * <h4>Optional Layout Constraints</h4>
+ * <h3>Optional Layout Constraints</h3>
  *
  * An application may set constraints on individual children to customize TilePane's layout.
  * For each constraint, TilePane provides a static method for setting it on the child.
- * <p>
- * <table border="1">
+ *
+ * <table border="1" summary="">
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>alignment</td><td>javafx.geometry.Pos</td><td>The alignment of the child within its tile.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
  * </table>
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  *     TilePane tilepane = new TilePane();
  *     for (int i = 0; i < 20; i++) {
  *        Label title = new Label(imageTitle[i]):
@@ -175,7 +175,7 @@ import javafx.util.Callback;
  *        TilePane.setAlignment(label, Pos.BOTTOM_RIGHT);
  *        tilepane.getChildren().addAll(title, imageview);
  *     }
- * </code></pre>
+ * }</pre>
  * @since JavaFX 2.0
  */
 public class TilePane extends Pane {
@@ -256,7 +256,7 @@ public class TilePane extends Pane {
     /**
      * Creates a TilePane layout with the specified orientation,
      * prefColumn/prefRows = 5 and hgap/vgap = 0.
-     * @param orientation the direction the tiles should flow & wrap
+     * @param orientation the direction the tiles should flow &amp; wrap
      */
     public TilePane(Orientation orientation) {
         super();
@@ -278,7 +278,7 @@ public class TilePane extends Pane {
     /**
      * Creates a TilePane layout with the specified orientation, hgap/vgap,
      * and prefRows/prefColumns = 5.
-     * @param orientation the direction the tiles should flow & wrap
+     * @param orientation the direction the tiles should flow &amp; wrap
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      */
@@ -302,7 +302,7 @@ public class TilePane extends Pane {
     /**
      * Creates a TilePane layout with the specified orientation,
      * prefColumn/prefRows = 5 and hgap/vgap = 0.
-     * @param orientation the direction the tiles should flow & wrap
+     * @param orientation the direction the tiles should flow &amp; wrap
      * @param children The initial set of children for this pane.
      * @since JavaFX 8.0
      */
@@ -330,7 +330,7 @@ public class TilePane extends Pane {
     /**
      * Creates a TilePane layout with the specified orientation, hgap/vgap,
      * and prefRows/prefColumns = 5.
-     * @param orientation the direction the tiles should flow & wrap
+     * @param orientation the direction the tiles should flow &amp; wrap
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      * @param children The initial set of children for this pane.
@@ -350,6 +350,7 @@ public class TilePane extends Pane {
      * tiles at the tilepane's width boundary.   A vertical tilepane lays out
      * children in tiles, top to bottom, wrapping at the tilepane's height.
      * The default is horizontal.
+     * @return the orientation of this tilepane
      */
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
@@ -392,6 +393,7 @@ public class TilePane extends Pane {
      * <p>
      * It is recommended that the application initialize this value for a
      * vertical tilepane.
+     * @return the preferred number of rows for a vertical tilepane
      */
     public final IntegerProperty prefRowsProperty() {
         if (prefRows == null) {
@@ -433,6 +435,7 @@ public class TilePane extends Pane {
      * <p>
      * It is recommended that the application initialize this value for a
      * horizontal tilepane.
+     * @return the preferred number of columns for a horizontal tilepane
      */
     public final IntegerProperty prefColumnsProperty() {
         if (prefColumns == null) {
@@ -473,6 +476,7 @@ public class TilePane extends Pane {
      * to value greater than 0, then tiles will be set to that width and the tilepane
      * will attempt to resize children to fit within that width (if they are resizable and
      * their min-max width range allows it).
+     * @return the preferred width of each tile
      */
     public final DoubleProperty prefTileWidthProperty() {
         if (prefTileWidth == null) {
@@ -513,6 +517,7 @@ public class TilePane extends Pane {
      * to value greater than 0, then tiles will be set to that height and the tilepane
      * will attempt to resize children to fit within that height (if they are resizable and
      * their min-max height range allows it).
+     * @return the preferred height of each tile
      */
     public final DoubleProperty prefTileHeightProperty() {
         if (prefTileHeight == null) {
@@ -547,6 +552,7 @@ public class TilePane extends Pane {
 
     /**
      * The actual width of each tile.  This property is read-only.
+     * @return the actual width of each tile
      */
     public final ReadOnlyDoubleProperty tileWidthProperty() {
         if (tileWidth == null) {
@@ -582,6 +588,7 @@ public class TilePane extends Pane {
 
     /**
      * The actual height of each tile.  This property is read-only.
+     * @return the actual height of each tile
      */
     public final ReadOnlyDoubleProperty tileHeightProperty() {
         if (tileHeight == null) {
@@ -617,6 +624,7 @@ public class TilePane extends Pane {
 
     /**
      * The amount of horizontal space between each tile in a row.
+     * @return the amount of horizontal space between each tile in a row
      */
     public final DoubleProperty hgapProperty() {
         if (hgap == null) {
@@ -651,6 +659,7 @@ public class TilePane extends Pane {
 
     /**
      * The amount of vertical space between each tile in a column.
+     * @return the amount of vertical space between each tile in a column
      */
     public final DoubleProperty vgapProperty() {
         if (vgap == null) {
@@ -692,6 +701,8 @@ public class TilePane extends Pane {
      * using the alignment's vpos value, and the columns will be aligned within the
      * tilepane's width using the alignment's hpos value.
      *
+     * @return the overall alignment of the tilepane's content within its width
+     * and height
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -732,6 +743,7 @@ public class TilePane extends Pane {
      * The default alignment of each child within its tile.
      * This may be overridden on individual children by setting the child's
      * alignment constraint.
+     * @return the default alignment of each child within its tile
      */
     public final ObjectProperty<Pos> tileAlignmentProperty() {
         if (tileAlignment == null) {

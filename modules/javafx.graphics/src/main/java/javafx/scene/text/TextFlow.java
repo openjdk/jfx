@@ -92,7 +92,7 @@ import javafx.css.StyleableProperty;
  *
  * <p>
  * Example of a TextFlow:
- * <pre><code>
+ * <pre>{@code
  *     Text text1 = new Text("Big italic red text");
  *     text1.setFill(Color.RED);
  *     text1.setFont(Font.font("Helvetica", FontPosture.ITALIC, 40));
@@ -100,7 +100,7 @@ import javafx.css.StyleableProperty;
  *     text2.setFill(Color.BLUE);
  *     text2.setFont(Font.font("Helvetica", FontWeight.BOLD, 10));
  *     TextFlow textFlow = new TextFlow(text1, text2);
- * </code></pre>
+ * }</pre>
  *
  * <p>
  * TextFlow lays out each managed child regardless of the child's visible property value;
@@ -110,13 +110,13 @@ import javafx.css.StyleableProperty;
  * TextFlow may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
- * <h4>Resizable Range</h4>
+ * <h3>Resizable Range</h3>
  *
  * A textflow's parent will resize the textflow within the textflow's range
  * during layout. By default the textflow computes this range based on its content
  * as outlined in the tables below.
- * <p>
- * <table border="1">
+ *
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets</td>
@@ -205,7 +205,7 @@ public class TextFlow extends Pane {
      * Returns shape of caret in local coordinates.
      *
      * @param charIndex the character index for the caret
-     * @param caretBias whether the caret is biased on the leading edge of the character
+     * @param leading whether the caret is biased on the leading edge of the character
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 9
      */
@@ -217,7 +217,7 @@ public class TextFlow extends Pane {
      * Returns shape for the range of the text in local coordinates.
      *
      * @param start the beginning character index for the range
-     * @param start the end character index (non-inclusive) for the range
+     * @param end the end character index (non-inclusive) for the range
      * @return an array of {@code PathElement} which can be used to create a {@code Shape}
      * @since 9
      */

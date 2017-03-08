@@ -77,11 +77,13 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     a new Thread constructed and executed manually. Finally, since you can
  *     manually create a new Thread, passing it a Runnable, it is possible to use
  *     the following idiom:
- *     <pre><code>
+ * </p>
+ *     <pre>{@code
  *         Thread th = new Thread(task);
  *         th.setDaemon(true);
  *         th.start();
- *     </code></pre>
+ *     }</pre>
+ * <p>
  *     Note that this code sets the daemon flag of the Thread to true. If you
  *     want a background thread to prevent the VM from existing after the last
  *     stage is closed, then you would want daemon to be false. However, if
@@ -151,10 +153,10 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * </p>
  *
  * <pre><code>
- *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
- *         &#64;Override protected Integer call() throws Exception {
+ *     {@literal Task<Integer> task = new Task<Integer>()} {
+ *         {@literal @Override} protected Integer call() throws Exception {
  *             int iterations;
- *             for (iterations = 0; iterations &lt; 100000; iterations++) {
+ *             {@literal for (iterations = 0; iterations < 100000; iterations++)} {
  *                 if (isCancelled()) {
  *                     break;
  *                 }
@@ -197,10 +199,10 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * </p>
  *
  * <pre><code>
- *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
- *         &#64;Override protected Integer call() throws Exception {
+ *     {@literal Task<Integer> task = new Task<Integer>()} {
+ *         {@literal @Override} protected Integer call() throws Exception {
  *             int iterations;
- *             for (iterations = 0; iterations &lt; 10000000; iterations++) {
+ *             {@literal for (iterations = 0; iterations < 10000000; iterations++)} {
  *                 if (isCancelled()) {
  *                     updateMessage("Cancelled");
  *                     break;
@@ -233,10 +235,10 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * </p>
  *
  * <pre><code>
- *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
- *         &#64;Override protected Integer call() throws Exception {
+ *     {@literal Task<Integer> task = new Task<Integer>()} {
+ *         {@literal @Override} protected Integer call() throws Exception {
  *             int iterations;
- *             for (iterations = 0; iterations &lt; 1000; iterations++) {
+ *             {@literal for (iterations = 0; iterations < 1000; iterations++)} {
  *                 if (isCancelled()) {
  *                     updateMessage("Cancelled");
  *                     break;
@@ -289,10 +291,10 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *
  * <pre><code>
  *     final int totalIterations = 9000000;
- *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
- *         &#64;Override protected Integer call() throws Exception {
+ *     {@literal Task<Integer> task = new Task<Integer>()} {
+ *         {@literal @Override} protected Integer call() throws Exception {
  *             int iterations;
- *             for (iterations = 0; iterations &lt; totalIterations; iterations++) {
+ *             {@literal for (iterations = 0; iterations < totalIterations; iterations++)} {
  *                 if (isCancelled()) {
  *                     updateMessage("Cancelled");
  *                     break;
@@ -320,16 +322,16 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * </p>
  *
  * <pre><code>
- *     public class IteratingTask extends Task&lt;Integer&gt; {
+ *     {@literal public class IteratingTask extends Task<Integer>} {
  *         private final int totalIterations;
  *
  *         public IteratingTask(int totalIterations) {
  *             this.totalIterations = totalIterations;
  *         }
  *
- *         &#64;Override protected Integer call() throws Exception {
+ *         {@literal @Override} protected Integer call() throws Exception {
  *             int iterations = 0;
- *             for (iterations = 0; iterations &lt; totalIterations; iterations++) {
+ *             {@literal for (iterations = 0; iterations < totalIterations; iterations++)} {
  *                 if (isCancelled()) {
  *                     updateMessage("Cancelled");
  *                     break;
@@ -344,9 +346,9 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *
  * <p>And then when used:</p>
  *
- * <pre><code>
+ * <pre>{@code
  *     IteratingTask task = new IteratingTask(8000000);
- * </code></pre>
+ * }</pre>
  *
  * <p>In this way, parameters are passed to the IteratingTask in a safe
  * manner, and again, are final. Thus, the <code>call</code> method can
@@ -369,21 +371,21 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * than from the background thread.</p>
  *
  * <pre><code>
- *     public class UpdateCustomerTask extends Task&lt;Customer&gt; {
+ *     {@literal public class UpdateCustomerTask extends Task<Customer>} {
  *         private final Customer customer;
  *
  *         public UpdateCustomerTask(Customer customer) {
  *             this.customer = customer;
  *         }
  *
- *         &#64;Override protected Customer call() throws Exception {
+ *         {@literal @Override} protected Customer call() throws Exception {
  *             // pseudo-code:
  *             //   query the database
  *             //   read the values
  *
  *             // Now update the customer
  *             Platform.runLater(new Runnable() {
- *                 &#64;Override public void run() {
+ *                 {@literal @Override} public void run() {
  *                     customer.setFirstName(rs.getString("FirstName"));
  *                     // etc
  *                 }
@@ -417,8 +419,8 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * <pre><code>
  *     final String filePath = "/foo.txt";
  *     final String contents = "Some contents";
- *     Task&lt;Void&gt; task = new Task&lt;Void&gt;() {
- *         &#64;Override protected Void call() throws Exception {
+ *     {@literal Task<Void> task = new Task<Void>()} {
+ *         {@literal @Override} protected Void call() throws Exception {
  *             File file = new File(filePath);
  *             FileOutputStream out = new FileOutputStream(file);
  *             // ... and other code to write the contents ...
@@ -439,11 +441,11 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * return it at the conclusion of the Task.</p>
  *
  * <pre><code>
- *     Task&lt;ObservableList&lt;Rectangle&gt;&gt; task = new Task&lt;ObservableList&lt;Rectangle&gt;&gt;() {
- *         &#64;Override protected ObservableList&lt;Rectangle&gt; call() throws Exception {
+ *     {@literal Task<ObservableList<Rectangle>> task = new Task<ObservableList<Rectangle>>}() {
+ *         {@literal @Override protected ObservableList<Rectangle> call() throws Exception} {
  *             updateMessage("Creating Rectangles");
- *             ObservableList&lt;Rectangle&gt; results = FXCollections.observableArrayList();
- *             for (int i=0; i<100; i++) {
+ *             {@literal ObservableList<Rectangle> results = FXCollections.observableArrayList();}
+ *             {@literal for (int i=0; i<100; i++)} {
  *                 if (isCancelled()) break;
  *                 Rectangle r = new Rectangle(10, 10);
  *                 r.setX(10 * i);
@@ -476,11 +478,11 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * you like from the background thread but only the most recent set is ultimately set.</p>
  *
  * <pre><code>
- *     Task&lt;Long&gt; task = new Task&lt;Long&gt;() {
- *         &#64;Override protected Long call() throws Exception {
- *             long a=0;
- *             long b=1;
- *             for (long i = 0; i &lt; Long.MAX_VALUE; i++){
+ *     {@literal Task<Long> task = new Task<Long>()} {
+ *         {@literal @Override} protected Long call() throws Exception {
+ *             long a = 0;
+ *             long b = 1;
+ *             {@literal for (long i = 0; i < Long.MAX_VALUE; i++)} {
  *                 updateValue(a);
  *                 a += b;
  *                 b = a - b;
@@ -495,14 +497,14 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * <code>Platform.runLater</code> when updating the partial result.</p>
  *
  * <pre><code>
- *     Task&lt;Long&gt; task = new Task&lt;Long&gt;() {
- *         &#64;Override protected Long call() throws Exception {
- *             long a=0;
- *             long b=1;
- *             for (long i = 0; i &lt; Long.MAX_VALUE; i++){
+ *     {@literal Task<Long> task = new Task<Long>()} {
+ *         {@literal @Override} protected Long call() throws Exception {
+ *             long a = 0;
+ *             long b = 1;
+ *             {@literal for (long i = 0; i < Long.MAX_VALUE; i++)} {
  *                 final long v = a;
  *                 Platform.runLater(new Runnable() {
- *                     &#64;Override public void run() {
+ *                     {@literal @Override} public void run() {
  *                         updateValue(v);
  *                     }
  *                 }
@@ -521,25 +523,25 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * result.</p>
  *
  * <pre><code>
- *     public class PartialResultsTask extends Task&lt;ObservableList&lt;Rectangle&gt;&gt; {
+ *     {@literal public class PartialResultsTask extends Task<ObservableList<Rectangle>>} {
  *         // Uses Java 7 diamond operator
- *         private ReadOnlyObjectWrapper<ObservableList<Rectangle>> partialResults =
- *                 new ReadOnlyObjectWrapper<>(this, "partialResults",
- *                         FXCollections.observableArrayList(new ArrayList<Rectangle>()));
+ *         {@literal private ReadOnlyObjectWrapper<ObservableList<Rectangle>> partialResults =}
+ *                 {@literal new ReadOnlyObjectWrapper<>(this, "partialResults",
+ *                         FXCollections.observableArrayList(new ArrayList<Rectangle>()));}
  *
- *         public final ObservableList<Rectangle> getPartialResults() { return partialResults.get(); }
- *         public final ReadOnlyObjectProperty<ObservableList<Rectangle>> partialResultsProperty() {
+ *         {@literal public final ObservableList<Rectangle> getPartialResults()} { return partialResults.get(); }
+ *         {@literal public final ReadOnlyObjectProperty<ObservableList<Rectangle>> partialResultsProperty()} {
  *             return partialResults.getReadOnlyProperty();
  *         }
  *
- *         &#64;Override protected ObservableList<Rectangle> call() throws Exception {
+ *         {@literal @Override protected ObservableList<Rectangle> call() throws Exception} {
  *             updateMessage("Creating Rectangles...");
- *             for (int i=0; i<100; i++) {
+ *             {@literal for (int i=0; i<100; i++)} {
  *                 if (isCancelled()) break;
  *                 final Rectangle r = new Rectangle(10, 10);
  *                 r.setX(10 * i);
  *                 Platform.runLater(new Runnable() {
- *                     &#64;Override public void run() {
+ *                     {@literal @Override} public void run() {
  *                         partialResults.get().add(r);
  *                     }
  *                 });
@@ -561,14 +563,14 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *
  * <pre><code>
  *     final Group group = new Group();
- *     Task&lt;Void&gt; task = new Task&lt;Void&gt;() {
- *         &#64;Override protected Void call() throws Exception {
- *             for (int i=0; i<100; i++) {
+ *     {@literal Task<Void> task = new Task<Void>()} {
+ *         {@literal @Override} protected Void call() throws Exception {
+ *             {@literal for (int i=0; i<100; i++)} {
  *                 if (isCancelled()) break;
  *                 final Rectangle r = new Rectangle(10, 10);
  *                 r.setX(10 * i);
  *                 Platform.runLater(new Runnable() {
- *                     &#64;Override public void run() {
+ *                     {@literal @Override} public void run() {
  *                         group.getChildren().add(r);
  *                     }
  *                 });
@@ -586,10 +588,10 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  * message on the Task on Failure, Success, Running, or Cancelled state changes.
  * </p>
  * <pre><code>
- *     Task&lt;Integer&gt; task = new Task&lt;Integer&gt;() {
- *         &#64;Override protected Integer call() throws Exception {
+ *     {@literal Task<Integer> task = new Task<Integer>()} {
+ *         {@literal @Override} protected Integer call() throws Exception {
  *             int iterations = 0;
- *             for (iterations = 0; iterations &lt; 100000; iterations++) {
+ *             {@literal for (iterations = 0; iterations < 100000; iterations++)} {
  *                 if (isCancelled()) {
  *                     break;
  *                 }
@@ -598,17 +600,17 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *             return iterations;
  *         }
  *
- *         &#64;Override protected void succeeded() {
+ *         {@literal @Override} protected void succeeded() {
  *             super.succeeded();
  *             updateMessage("Done!");
  *         }
  *
- *         &#64;Override protected void cancelled() {
+ *         {@literal @Override} protected void cancelled() {
  *             super.cancelled();
  *             updateMessage("Cancelled!");
  *         }
  *
- *         &#64;Override protected void failed() {
+ *         {@literal @Override} protected void failed() {
  *             super.failed();
  *             updateMessage("Failed!");
  *         }

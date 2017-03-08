@@ -108,13 +108,13 @@ public class DataFormat {
      * this data format. Typically the ids are one or more mime types. For each
      * id, any data associated with this DataFormat will be registered on the
      * clipboard. For example, suppose I had the following:
-     * <pre><code>
+     * <pre>{@code
      *     DataFormat fmt = new DataFormat("text/foo", "text/bar");
      *     Clipboard clipboard = Clipboard.getSystemClipboard();
      *     ClipboardContent content = new ClipboardContent();
      *     content.put(fmt, "Hello");
      *     clipboard.setContent(content);
-     * </code></pre>
+     * }</pre>
      *
      * With the above code, if I were to look on the clipboard, I'd find the String "Hello"
      * listed both for "text/foo" and "text/bar" on the clipboard.

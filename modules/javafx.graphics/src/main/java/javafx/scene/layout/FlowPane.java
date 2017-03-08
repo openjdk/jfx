@@ -68,7 +68,8 @@ import javafx.util.Callback;
  * rowValignment for horizontal or columnHalignment for vertical.
  * <p>
  * Example of a horizontal flowpane:
- * <pre><code>     Image images[] = { ... };
+ * <pre>{@code
+ *     Image images[] = { ... };
  *     FlowPane flow = new FlowPane();
  *     flow.setVgap(8);
  *     flow.setHgap(4);
@@ -76,17 +77,18 @@ import javafx.util.Callback;
  *     for (int i = 0; i < images.length; i++) {
  *         flow.getChildren().add(new ImageView(image[i]);
  *     }
- * </code></pre>
+ * }</pre>
  *
  *<p>
  * Example of a vertical flowpane:
- * <pre><code>     FlowPane flow = new FlowPane(Orientation.VERTICAL);
+ * <pre>{@code
+ *     FlowPane flow = new FlowPane(Orientation.VERTICAL);
  *     flow.setColumnHalignment(HPos.LEFT); // align labels on left
  *     flow.setPrefWrapLength(200); // preferred height = 200
  *     for (int i = 0; i < titles.size(); i++) {
  *         flow.getChildren().add(new Label(titles[i]);
  *     }
- * </code></pre>
+ * }</pre>
  *
  * <p>
  * FlowPane lays out each managed child regardless of the child's visible property value;
@@ -96,14 +98,14 @@ import javafx.util.Callback;
  * FlowPane may be styled with backgrounds and borders using CSS.  See
  * {@link javafx.scene.layout.Region Region} superclass for details.</p>
  *
- * <h4>Resizable Range</h4>
+ * <h3>Resizable Range</h3>
  *
  * A flowpane's parent will resize the flowpane within the flowpane's resizable range
  * during layout.   By default the flowpane computes this range based on its content
  * as outlined in the tables below.
  * <p>
  * horizontal:
- * <table border="1">
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus largest of children's pref widths</td>
@@ -116,7 +118,7 @@ import javafx.util.Callback;
  * </table>
  * <p>
  * vertical:
- * <table border="1">
+ * <table border="1" summary="">
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus width required to display all children at their preferred widths when wrapped at a specified height</td>
@@ -134,9 +136,9 @@ import javafx.util.Callback;
  * FlowPane provides properties for setting the size range directly.  These
  * properties default to the sentinel value Region.USE_COMPUTED_SIZE, however the
  * application may set them to other values as needed:
- * <pre><code>
+ * <pre>{@code
  *     <b>flowpane.setMaxWidth(500);</b>
- * </code></pre>
+ * }</pre>
  * Applications may restore the computed values by setting these properties back
  * to Region.USE_COMPUTED_SIZE.
  * <p>
@@ -196,7 +198,7 @@ public class FlowPane extends Pane {
 
     /**
      * Creates a FlowPane layout with the specified orientation and hgap/vgap = 0.
-     * @param orientation the direction the tiles should flow & wrap
+     * @param orientation the direction the tiles should flow &amp; wrap
      */
     public FlowPane(Orientation orientation) {
         this();
@@ -216,7 +218,7 @@ public class FlowPane extends Pane {
 
     /**
      * Creates a FlowPane layout with the specified orientation and hgap/vgap.
-     * @param orientation the direction the tiles should flow & wrap
+     * @param orientation the direction the tiles should flow &amp; wrap
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      */
@@ -239,7 +241,7 @@ public class FlowPane extends Pane {
 
     /**
      * Creates a FlowPane layout with the specified orientation and hgap/vgap = 0.
-     * @param orientation the direction the tiles should flow & wrap
+     * @param orientation the direction the tiles should flow &amp; wrap
      * @param children The initial set of children for this pane.
      * @since JavaFX 8.0
      */
@@ -265,7 +267,7 @@ public class FlowPane extends Pane {
 
     /**
      * Creates a FlowPane layout with the specified orientation and hgap/vgap.
-     * @param orientation the direction the tiles should flow & wrap
+     * @param orientation the direction the tiles should flow &amp; wrap
      * @param hgap the amount of horizontal space between each tile
      * @param vgap the amount of vertical space between each tile
      * @param children The initial set of children for this pane.
@@ -285,6 +287,7 @@ public class FlowPane extends Pane {
      * flowpane's width boundary.   A vertical flowpane lays out children top to
      * bottom, wrapping at the flowpane's height.
      * The default is horizontal.
+     * @return the orientation of this flowpane
      */
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
@@ -320,6 +323,8 @@ public class FlowPane extends Pane {
     /**
      * The amount of horizontal space between each node in a horizontal flowpane
      * or the space between columns in a vertical flowpane.
+     * @return the amount of horizontal space between each node in a horizontal
+     * flowpane or the space between columns in a vertical flowpane
      */
     public final DoubleProperty hgapProperty() {
         if (hgap == null) {
@@ -356,6 +361,8 @@ public class FlowPane extends Pane {
     /**
      * The amount of vertical space between each node in a vertical flowpane
      * or the space between rows in a horizontal flowpane.
+     * @return the amount of vertical space between each node in a vertical
+     * flowpane or the space between rows in a horizontal flowpane
      */
     public final DoubleProperty vgapProperty() {
         if (vgap == null) {
@@ -400,6 +407,9 @@ public class FlowPane extends Pane {
      * Applications should initialize this value to define a reasonable span
      * for wrapping the content.
      *
+     * @return the preferred width where content should wrap in a horizontal
+     * flowpane or the preferred height where content should wrap in a vertical
+     * flowpane
      */
     public final DoubleProperty prefWrapLengthProperty() {
         if (prefWrapLength == null) {
@@ -435,6 +445,8 @@ public class FlowPane extends Pane {
      * <p>For a vertical flowpane, each column will be aligned within the flowpane's height
      * using the alignment's vpos value, and the columns will be aligned within the
      * flowpane's width using the alignment's hpos value.
+     * @return the overall alignment of the flowpane's content within its width
+     * and height
      */
     public final ObjectProperty<Pos> alignmentProperty() {
         if (alignment == null) {
@@ -475,6 +487,8 @@ public class FlowPane extends Pane {
     /**
      * The horizontal alignment of nodes within each column of a vertical flowpane.
      * The property is ignored for horizontal flowpanes.
+     * @return the horizontal alignment of nodes within each column of a
+     * vertical flowpane
      */
     public final ObjectProperty<HPos> columnHalignmentProperty() {
         if (columnHalignment == null) {
@@ -518,6 +532,8 @@ public class FlowPane extends Pane {
      * resize children to their preferred heights, rather than expanding heights
      * to fill the row height.
      * The property is ignored for vertical flowpanes.
+     * @return the vertical alignment of nodes within each row of a horizontal
+     * flowpane
      */
     public final ObjectProperty<VPos> rowValignmentProperty() {
         if (rowValignment == null) {

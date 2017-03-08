@@ -39,24 +39,28 @@ public class Insets {
 
     /**
      * The inset on the top side
+     * @return the inset on the top side
      */
     public final double getTop() { return top; }
     private double top;
 
     /**
      * The inset on the right side
+     * @return the inset on the right side
      */
     public final double getRight() { return right; }
     private double right;
 
     /**
      * The inset on the bottom side
+     * @return the inset on the bottom side
      */
     public final double getBottom() { return bottom; }
     private double bottom;
 
     /**
      * The inset on the left side
+     * @return the inset on the left side
      */
     public final double getLeft() { return left; }
     private double left;

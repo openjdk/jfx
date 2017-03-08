@@ -34,7 +34,7 @@ import javafx.beans.property.SimpleIntegerProperty;
  *
  * This class is used to make a {@link javafx.beans.property.IntegerProperty},
  * that would otherwise be implemented as a {@link SimpleIntegerProperty},
- * style&#8209;able by CSS.
+ * styleable by CSS.
  *
  * @see javafx.beans.property.SimpleIntegerProperty
  * @see CssMetaData

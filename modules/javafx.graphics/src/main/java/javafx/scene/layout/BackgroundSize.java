@@ -82,6 +82,8 @@ public final class BackgroundSize {
      * render. If set to AUTO, then {@code widthAsPercentage} is ignored. This value has
      * no meaning if either {@code contain} or {@code cover} are specified. This value
      * cannot be negative, except when set to the value of AUTO.
+     * @return the width of the area within the Region where the associated
+     * BackgroundImage should render
      */
     public final double getWidth() { return width; }
     final double width;
@@ -91,6 +93,8 @@ public final class BackgroundSize {
      * render. If set to AUTO, then {@code heightAsPercentage} is ignored. This value has
      * no meaning if either {@code contain} or {@code cover} are specified. This value
      * cannot be negative, except when set to the value of AUTO.
+     * @return the height of the area within the Region where the associated
+     * BackgroundImage should render
      */
     public final double getHeight() { return height; }
     final double height;
@@ -98,6 +102,7 @@ public final class BackgroundSize {
     /**
      * Specifies whether the value contained in {@code width} should be interpreted
      * as a percentage or as a normal value.
+     * @return true if width should be interpreted as a percentage
      */
     public final boolean isWidthAsPercentage() { return widthAsPercentage; }
     final boolean widthAsPercentage;
@@ -105,6 +110,7 @@ public final class BackgroundSize {
     /**
      * Specifies whether the value contained in {@code height} should be interpreted
      * as a percentage or as a normal value.
+     * @return true if height should be interpreted as a percentage
      */
     public final boolean isHeightAsPercentage() { return heightAsPercentage; }
     final boolean heightAsPercentage;
@@ -113,6 +119,7 @@ public final class BackgroundSize {
      * If true, scale the image, while preserving its intrinsic aspect ratio (if any), to the
      * largest size such that both its width and its height can fit inside the background
      * positioning area.
+     * @return true if the image can fit inside the background positioning area
      */
     public final boolean isContain() { return contain; }
     final boolean contain;
@@ -121,6 +128,7 @@ public final class BackgroundSize {
      * If true, scale the image, while preserving its intrinsic aspect ratio (if any), to the
      * smallest size such that both its width and its height can completely cover the background
      * positioning area.
+     * @return true if image can completely cover the background positioning area
      */
     public final boolean isCover() { return cover; }
     final boolean cover;
@@ -173,7 +181,7 @@ public final class BackgroundSize {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public boolean equals(Object o) {
         if (this == o) return true;
@@ -192,7 +200,7 @@ public final class BackgroundSize {
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     @Override public int hashCode() {
         return hash;

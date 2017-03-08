@@ -43,7 +43,7 @@ import com.sun.javafx.scene.BoundsAccessor;
  *
  * <p>
  * Example:
- * <pre><code>
+ * <pre>{@code
  * MotionBlur motionBlur = new MotionBlur();
  * motionBlur.setRadius(30);
  * motionBlur.setAngle(-15.0);
@@ -55,12 +55,12 @@ import com.sun.javafx.scene.BoundsAccessor;
  * text.setFill(Color.web("0x3b596d"));
  * text.setFont(Font.font(null, FontWeight.BOLD, 60));
  * text.setEffect(motionBlur);
- * </pre></code>
+ * }</pre>
  * <p>
  * The code above produces the following:
  * </p>
  * <p>
- * <img src="doc-files/motionblur.png"/>
+ * <img src="doc-files/motionblur.png" alt="The visual effect of MotionBlur on text">
  * </p>
  * @since JavaFX 2.0
  */

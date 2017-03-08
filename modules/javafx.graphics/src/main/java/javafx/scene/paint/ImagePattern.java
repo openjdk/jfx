@@ -39,7 +39,7 @@ import com.sun.javafx.tk.Toolkit;
  *
  * <p>If the {@code proportional} variable is set to true (the default)
  * then the anchor rectangle should be specified relative to the unit
- * square (0.0->1.0) and will be stretched across the shape.
+ * square (0.0-&gt;1.0) and will be stretched across the shape.
  * If the {@code proportional} variable is set to false, then the anchor
  * rectangle should be specified in the local coordinate system of the shape
  * and the image will be stretched to fit the anchor rectangle. The anchor
@@ -65,7 +65,7 @@ public class HelloImagePattern extends Application {
     private static final String flowerURL = "file:flower.png";
     private static final String dotsURL = "file:dots.png";
 
-    &#64;Override public void start(Stage stage) {
+    {@literal @Override public void start(Stage stage)} {
         stage.setTitle("Image Pattern");
         Group root = new Group();
         Scene scene = new Scene(root, 600, 450);
@@ -123,9 +123,10 @@ public class HelloImagePattern extends Application {
         stage.setScene(scene);
         stage.show();
     }
-</pre></code>
+</code></pre>
  * <p>The code above produces the following:</p>
- * <p><img src="doc-files/ImagePattern.png"/></p>
+ * <p><img src="doc-files/ImagePattern.png" alt="A visual rendering of the
+ * HelloImagePattern example"></p>
  *
  * @since JavaFX 2.2
  */
@@ -228,7 +229,7 @@ public final class ImagePattern extends Paint {
      * @param image the image to be used as the paint.
      * @throws NullPointerException if the image is null.
      * @throws IllegalArgumentException if image is not done loading,
-     * that is if progress is < 1.
+     * that is if progress is &lt; 1.
      */
     public ImagePattern(@NamedArg("image") Image image) {
         if (image == null) {
@@ -251,7 +252,7 @@ public final class ImagePattern extends Paint {
      * to the shape which ImagePattern fills
      * @throws NullPointerException if the image is null.
      * @throws IllegalArgumentException if image is not done loading,
-     * that is if progress is < 1.
+     * that is if progress is &lt; 1.
      */
     public ImagePattern(@NamedArg("image") Image image, @NamedArg("x") double x, @NamedArg("y") double y, @NamedArg("width") double width,
             @NamedArg("height") double height, @NamedArg("proportional") boolean proportional) {
