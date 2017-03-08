@@ -12,6 +12,17 @@ this library:
    - On Linux systems: delete $(JAVA_HOME)/lib/libgstreamer-lite.so
    - On Mac OS X systems: delete $(JAVA_HOME)/lib/libgstreamer-lite.dylib
    - On Windows systems: delete $(JAVA_HOME)\bin\gstreamer-lite.dll
+
+A copy of the Oracle modified GStreamer library source code is located
+in the following OpenJDK Mercurial repository:
+
+   http://hg.openjdk.java.net/openjfx/9/rt
+
+You can use Mercurial to clone the repository or you can browse the
+source using a web browser. The root directory of the GStreamer source
+code is here:
+
+   rt/modules/javafx.media/src/main/native/gstreamer/gstreamer-lite/
 </pre>
 
 ### GNU Lesser General Public License Version 2.1

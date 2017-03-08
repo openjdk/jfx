@@ -10,6 +10,17 @@ this library:
    - On Linux systems: delete $(JAVA_HOME)/lib/libjfxwebkit.so
    - On Mac OS X systems: delete $(JAVA_HOME)/lib/libjfxwebkit.dylib
    - On Windows systems: delete $(JAVA_HOME)\bin\jfxwebkit.dll
+
+A copy of the Oracle modified WebKit library source code is located
+in the following OpenJDK Mercurial repository:
+
+   http://hg.openjdk.java.net/openjfx/9/rt
+
+You can use Mercurial to clone the repository or you can browse the
+source using a web browser. The root directory of the WebKit source
+code is here:
+
+   rt/modules/javafx.web/src/main/native/
 </pre>
 
 ### GNU Lesser General Public License Version 2.1
