@@ -137,8 +137,18 @@ import java.lang.ref.WeakReference;
  * {@code Color.WHITE} {@code PointLight} placed at the camera position.
  *
  * <p>
- * Scene objects must be constructed and modified on the
- * JavaFX Application Thread.
+ * A {@code Scene} may be created and modified on any thread until it is attached
+ * to a {@link Window} that is {@link Window#isShowing showing}.
+ * After that, it must be modified only on the JavaFX Application Thread.
+ * Note that {@code Scene} is not thread-safe; modifying a {@code Scene} on
+ * multiple threads at the same time will lead to unpredictable results and
+ * must be avoided.
+ * </p>
+ *
+ * <p>
+ * The JavaFX Application Thread is created as part of the startup process for
+ * the JavaFX runtime. See the {@link javafx.application.Application} class and
+ * the {@link Platform#startup(Runnable)} method for more information.
  * </p>
  *
  * <p>Example:</p>
@@ -297,10 +307,6 @@ public class Scene implements EventTarget {
      * See {@link Node#depthTestProperty depthTest} for more information. A
      * scene with 3D shapes may enable scene anti-aliasing to improve its
      * rendering quality.
-     * <p>
-     * A Scene can be created and modified on any thread until it is attached to a {@code Window} that is showing
-     * ({@link javafx.stage.Window#isShowing()}. This does not mean the Scene is thread-safe,
-     * so manipulation from multiple threads at the same time is illegal, may lead to unexpected results and must be avoided.
      *
      * @param root The root node of the scene graph
      * @param width The width of the scene

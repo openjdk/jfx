@@ -27,6 +27,7 @@ package javafx.scene;
 
 
 import com.sun.javafx.geometry.BoundsUtils;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.BooleanExpression;
@@ -207,9 +208,16 @@ import sun.util.logging.PlatformLogger.Level;
  * doesn't explicitly remove it.
  * <p>
  * Node objects may be constructed and modified on any thread as long they are
- * not yet attached to a {@code Scene} in a {@code Window} that is showing.
+ * not yet attached to a {@link Scene} in a {@link Window} that is
+ * {@link Window#isShowing showing}.
  * An application must attach nodes to such a Scene or modify them on the JavaFX
  * Application Thread.
+ *
+ * <p>
+ * The JavaFX Application Thread is created as part of the startup process for
+ * the JavaFX runtime. See the {@link javafx.application.Application} class and
+ * the {@link Platform#startup(Runnable)} method for more information.
+ * </p>
  *
  * <p>
  * An application should not extend the Node class directly. Doing so may lead to

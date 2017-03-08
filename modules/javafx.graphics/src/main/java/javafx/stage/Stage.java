@@ -28,6 +28,7 @@ package javafx.stage;
 import java.util.ArrayList;
 import java.util.List;
 
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
@@ -63,6 +64,11 @@ import javafx.beans.value.ObservableValue;
  * <p>
  * Stage objects must be constructed and modified on the
  * JavaFX Application Thread.
+ * </p>
+ * <p>
+ * The JavaFX Application Thread is created as part of the startup process for
+ * the JavaFX runtime. See the {@link javafx.application.Application} class and
+ * the {@link Platform#startup(Runnable)} method for more information.
  * </p>
  * <p>
  * Many of the {@code Stage} properties are read only because they can

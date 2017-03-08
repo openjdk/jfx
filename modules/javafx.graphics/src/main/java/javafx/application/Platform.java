@@ -52,7 +52,7 @@ public final class Platform {
      * <p>
      * This method may or may not return to the caller before the run method
      * of the specified Runnable has been called. In any case, once this method
-     * returns, you may call {@link #runLater} with additional Runnables.
+     * returns, you may call {@link #runLater(Runnable)} with additional Runnables.
      * Those Runnables will be called, also on the JavaFX Application Thread,
      * after the Runnable passed into this method has been called.
      * </p>
@@ -67,13 +67,14 @@ public final class Platform {
      *   <li>For standard JavaFX applications that extend {@link Application}, and
      *   use either the Java launcher or one of the launch methods in the
      *   Application class to launch the application, the FX runtime is
-     *   initialized automatically by the launcher before the Application
+     *   initialized automatically by the launcher before the {@code Application}
      *   class is loaded.</li>
-     *   <li>For Swing applications that use JFXPanel to display FX content, the
-     *   FX runtime is initialized when the first JFXPanel instance is
+     *   <li>For Swing applications that use {@link javafx.embed.swing.JFXPanel}
+     *   to display FX content, the
+     *   FX runtime is initialized when the first {@code JFXPanel} instance is
      *   constructed.</li>
-     *   <li>For SWT application that use FXCanvas to display FX content, the FX
-     *   runtime is initialized when the first FXCanvas instance is
+     *   <li>For SWT application that use {@code FXCanvas} to display FX content,
+     *   the FX runtime is initialized when the first {@code FXCanvas} instance is
      *   constructed.</li>
      * </ul>
      *
@@ -90,7 +91,9 @@ public final class Platform {
      * @throws IllegalStateException if the JavaFX runtime is already running
      *
      * @param runnable the Runnable whose run method will be executed on the
-     * JavaFX Application Thread once it has been started.
+     * JavaFX Application Thread once it has been started
+     *
+     * @see Application
      *
      * @since 9
      */

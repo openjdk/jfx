@@ -50,6 +50,8 @@ import com.sun.javafx.css.StyleManager;
  * launched:
  * </p>
  * <ol>
+ * <li>Starts the JavaFX runtime, if not already started
+ * (see {@link Platform#startup(Runnable)} for more information)</li>
  * <li>Constructs an instance of the specified Application class</li>
  * <li>Calls the {@link #init} method</li>
  * <li>Calls the {@link #start} method</li>
@@ -145,6 +147,9 @@ public class MyApp extends Application {
  *
  * <p>The above example will produce the following:</p>
  * <p><img src="doc-files/Application.png"/></p>
+ *
+ * @see Platform
+ *
  * @since JavaFX 2.0
  */
 public abstract class Application {

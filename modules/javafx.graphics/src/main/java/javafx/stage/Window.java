@@ -29,6 +29,7 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.util.HashMap;
 
+import javafx.application.Platform;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
 import javafx.beans.property.ObjectProperty;
@@ -71,10 +72,17 @@ import com.sun.javafx.scene.SceneHelper;
 
 
 /**
+ * A top level window within which a scene is hosted, and with which the user
+ * interacts. A Window might be a {@link Stage}, {@link PopupWindow}, or other
+ * such top level. A Window is used also for browser plug-in based deployments.
  * <p>
- *     A top level window within which a scene is hosted, and with which the user
- *     interacts. A Window might be a {@link Stage}, {@link PopupWindow}, or other
- *     such top level. A Window is used also for browser plug-in based deployments.
+ * Window objects must be constructed and modified on the
+ * JavaFX Application Thread.
+ * </p>
+ * <p>
+ * The JavaFX Application Thread is created as part of the startup process for
+ * the JavaFX runtime. See the {@link javafx.application.Application} class and
+ * the {@link Platform#startup(Runnable)} method for more information.
  * </p>
  *
  * @since JavaFX 2.0
