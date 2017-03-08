@@ -50,10 +50,13 @@ import sun.util.logging.PlatformLogger;
  * <p> This camera defines a viewing volume for a perspective projection;
  * a truncated right pyramid.
  * The {@code fieldOfView} value can be used to change viewing volume.
- * This camera is always located at center of the scene and looks along the
+ * By default, this camera is located at center of the scene and looks along the
  * positive z-axis. The coordinate system defined by this camera has its
  * origin in the upper left corner of the panel with the Y-axis pointing
  * down and the Z axis pointing away from the viewer (into the screen).
+ * If a {@code PerspectiveCamera} node is added to the scene graph,
+ * the transformed position and orientation of the camera will define the
+ * position of the camera and the direction that the camera is looking.
  *
  * <p> In the default camera, where fixedEyeAtCameraZero is false, the Z value
  * of the eye position is adjusted in Z such that the projection matrix generated
@@ -118,7 +121,7 @@ public class PerspectiveCamera extends Camera {
     }
 
     /**
-     * Specifies the field of view angle of the camera's projection plane,
+     * Specifies the field of view angle of the camera's projection,
      * measured in degrees.
      *
      * @defaultValue 30.0
@@ -146,9 +149,9 @@ public class PerspectiveCamera extends Camera {
     }
 
     /**
-     * Defines whether the {@code fieldOfView} property is to apply to the vertical
-     * dimension of the projection plane. If it is false, {@code fieldOfView} is to
-     * apply to the horizontal dimension of the projection plane.
+     * Defines whether the {@code fieldOfView} property will apply to the vertical
+     * dimension of the projection. If it is false, {@code fieldOfView} will
+     * apply to the horizontal dimension of the projection.
      *
      * @defaultValue true
      * @since JavaFX 8.0
@@ -223,6 +226,17 @@ public class PerspectiveCamera extends Camera {
         this.fixedEyeAtCameraZero = fixedEyeAtCameraZero;
     }
 
+    /**
+     * Returns a flag indicating whether this camera uses a fixed eye position
+     * at the origin of the camera. If {@code fixedEyeAtCameraZero} is {@code true},
+     * the the eye position is fixed at (0, 0, 0) in the local coordinates
+     * of the camera. This attribute is immutable.
+     *
+     * @return a flag indicating whether this camera uses a fixed eye position
+     * at the origin of the camera
+     *
+     * @since JavaFX 8.0
+     */
     public final boolean isFixedEyeAtCameraZero() {
         return fixedEyeAtCameraZero;
     }
