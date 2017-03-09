@@ -303,7 +303,7 @@ final public class CssParser {
      * @param expr the expression
      * @return the parsed value
      */
-    public ParsedValue parseExpr(String property, String expr) {
+    ParsedValue parseExpr(String property, String expr) {
         if (property == null || expr == null) return null;
 
         ParsedValueImpl value = null;

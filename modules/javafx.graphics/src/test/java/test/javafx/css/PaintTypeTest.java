@@ -35,6 +35,7 @@ import javafx.scene.paint.Stop;
 import javafx.scene.text.Font;
 import com.sun.javafx.css.ParsedValueImpl;
 import javafx.css.CssParser;
+import javafx.css.CssParserShim;
 import javafx.css.ParsedValue;
 import javafx.css.Size;
 import javafx.css.SizeUnits;
@@ -196,7 +197,7 @@ public class PaintTypeTest {
         //        radius <length>,
         //        [ [ repeat | reflect ] ,]?
         //        <color-stop>[, <color-stop>]+ )
-        ParsedValue value = new CssParser().parseExpr("-fx-background-color",
+        ParsedValue value = new CssParserShim().parseExpr("-fx-background-color",
                 "radial-gradient(focus-angle 90deg, focus-distance 50%, radius 50, red, green, blue)");
         RadialGradient result = (RadialGradient)((Paint[])value.convert(null))[0];
         RadialGradient expected = new RadialGradient(90, .5, 0, 0, 50,
@@ -206,12 +207,12 @@ public class PaintTypeTest {
                 new Stop(1.0,Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "radial-gradient(focus-angle 1.5708rad, focus-distance 50%, radius 50, red, green, blue)");
         result = (RadialGradient)((Paint[])value.convert(null))[0];
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "radial-gradient(center 0% 10%, radius 50%, reflect, red, green, blue)");
         result = (RadialGradient)((Paint[])value.convert(null))[0];
         expected = new RadialGradient(0, 0, 0, .1, .5,
@@ -230,7 +231,7 @@ public class PaintTypeTest {
         //        <color-stop>[, <color-stop>]+
         // )
         //
-        ParsedValue value = new CssParser().parseExpr("-fx-background-color",
+        ParsedValue value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(to top, red, green, blue)");
         LinearGradient result = (LinearGradient)((Paint[])value.convert(null))[0];
         LinearGradient expected = new LinearGradient(0, 1, 0, 0,
@@ -240,7 +241,7 @@ public class PaintTypeTest {
                 new Stop(1.0, Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(to bottom, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
         expected = new LinearGradient(0, 0, 0, 1,
@@ -250,7 +251,7 @@ public class PaintTypeTest {
                 new Stop(1.0, Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(to left, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
         expected = new LinearGradient(1, 0, 0, 0,
@@ -260,7 +261,7 @@ public class PaintTypeTest {
                 new Stop(1.0, Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(to right, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
         expected = new LinearGradient(0, 0, 1, 0,
@@ -270,7 +271,7 @@ public class PaintTypeTest {
                 new Stop(1.0, Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(to bottom left, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
         expected = new LinearGradient(1, 0, 0, 1,
@@ -280,7 +281,7 @@ public class PaintTypeTest {
                 new Stop(1.0, Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(to bottom right, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
         expected = new LinearGradient(0, 0, 1, 1,
@@ -290,7 +291,7 @@ public class PaintTypeTest {
                 new Stop(1.0, Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(to top left, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
         expected = new LinearGradient(1, 1, 0, 0,
@@ -300,7 +301,7 @@ public class PaintTypeTest {
                 new Stop(1.0, Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(to top right, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
         expected = new LinearGradient(0, 1, 1, 0,
@@ -310,7 +311,7 @@ public class PaintTypeTest {
                 new Stop(1.0, Color.BLUE));
         assertEquals(expected,result);
 
-        value = new CssParser().parseExpr("-fx-background-color",
+        value = new CssParserShim().parseExpr("-fx-background-color",
                 "linear-gradient(from 10% 10% to 90% 90%, reflect, red, green, blue)");
         result = (LinearGradient)((Paint[])value.convert(null))[0];
         expected = new LinearGradient(.1, .1, .9, .9,

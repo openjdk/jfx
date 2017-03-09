@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import javafx.css.CssParser;
+import javafx.css.CssParserShim;
 import javafx.css.Declaration;
 import javafx.css.FontFace;
 
@@ -62,7 +63,8 @@ public class CssParserTest {
         CssParser instance = new CssParser();
 
         // RT-16959 is an infinite loop on incomplete linear gradient
-        ParsedValue result = instance.parseExpr("-fx-background-color", "linear-gradient(from 0% 0% to 0% 100%, )");
+        ParsedValue result = new CssParserShim(instance)
+                .parseExpr("-fx-background-color", "linear-gradient(from 0% 0% to 0% 100%, )");
         assertNull("parseExpr", result);
 
         // The bad syntax should be skipped. The stylesheet should have one
@@ -146,7 +148,7 @@ public class CssParserTest {
         CssParser instance = new CssParser();
 
         // RT-16959 is an infinite loop on incomplete linear gradient
-        ParsedValue result = instance.parseExpr("-fx-font-size", "10ptx");
+        ParsedValue result = new CssParserShim(instance).parseExpr("-fx-font-size", "10ptx");
         assertNull("parseExpr", result);
 
         // The bad syntax should be skipped.
@@ -290,12 +292,12 @@ public class CssParserTest {
 
     @Test public void testRT_32522() {
 
-        ParsedValue value = new CssParser().parseExpr("foo", "1 2em 3 4;");
+        ParsedValue value = new CssParserShim().parseExpr("foo", "1 2em 3 4;");
         Object obj = value.convert(Font.font(13));
         assert obj instanceof Number[];
         assertArrayEquals(new Number[] {1d, 26d, 3d, 4d}, (Number[])obj);
 
-        value = new CssParser().parseExpr("foo", "1;");
+        value = new CssParserShim().parseExpr("foo", "1;");
         obj = value.convert(null);
         assert obj instanceof Number;
         assertEquals(1d, (Number)obj);
@@ -305,11 +307,11 @@ public class CssParserTest {
     @Test public void testRT_38483() {
 
         Duration expected = Duration.millis(42);
-        ParsedValue value = new CssParser().parseExpr("foo", "42ms;");
+        ParsedValue value = new CssParserShim().parseExpr("foo", "42ms;");
         Object observed = value.convert(null);
         assertEquals(expected, observed);
 
-        value = new CssParser().parseExpr("foo", "indefinite;");
+        value = new CssParserShim().parseExpr("foo", "indefinite;");
         observed = value.convert(null);
         assertEquals(Duration.INDEFINITE, observed);
     }
