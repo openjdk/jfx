@@ -69,7 +69,7 @@ import com.sun.javafx.scene.control.skin.resources.ControlResources;
  * <p>The {@link #valueProperty() value} property represents the
  * currently selected {@link java.time.LocalDate}.  An initial date can
  * be set via the {@link #DatePicker(java.time.LocalDate) constructor}
- * or by calling {@link #setValue(java.time.LocalDate) setValue()}.  The
+ * or by calling {@link #setValue setValue(LocalDate)}.  The
  * default value is null.
  *
  * <pre><code>
