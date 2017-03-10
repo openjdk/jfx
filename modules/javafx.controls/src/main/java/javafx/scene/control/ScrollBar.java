@@ -312,9 +312,10 @@ public class ScrollBar extends Control {
      * position of .5 would indicate that we
      * should decrement {@link #valueProperty() value} by {@link #blockIncrementProperty blockIncrement}.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins or Behaviors. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins or Behaviors. It is not common
+     *       for developers or designers to access this function directly.
+     * @param position the position
      */
     public void adjustValue(double position) {
         // figure out the "value" associated with the specified position

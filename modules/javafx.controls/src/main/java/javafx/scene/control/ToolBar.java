@@ -136,6 +136,7 @@ public class ToolBar extends Control {
      * are {@link Button Buttons}, {@link ToggleButton ToggleButtons}, and  {@link Separator Separators},
      * but you are not restricted to just these, and can insert any {@link Node}.
      * The items added must not be null.
+     * @return the list of items
      */
     public final ObservableList<Node> getItems() { return items; }
 

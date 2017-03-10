@@ -74,7 +74,7 @@ import javafx.scene.control.skin.ColorPickerSkin;
  * or
  * <pre><code>
  * colorPicker.getStyleClass().add("split-button");
- * </pre><code>
+ * </code></pre>
  * @since JavaFX 2.2
  */
 public class ColorPicker extends ComboBoxBase<Color> {
@@ -95,6 +95,7 @@ public class ColorPicker extends ComboBoxBase<Color> {
     private ObservableList<Color> customColors = FXCollections.<Color>observableArrayList();
     /**
      * Gets the list of custom colors added to the Color Palette by the user.
+     * @return the list of custom colors
      */
     public final ObservableList<Color>  getCustomColors() {
         return customColors;

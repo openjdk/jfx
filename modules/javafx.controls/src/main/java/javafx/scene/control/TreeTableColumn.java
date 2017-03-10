@@ -68,7 +68,6 @@ import javafx.css.Styleable;
  *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
  *      {@link #sortTypeProperty() sortType})
  * </ul>
- * </p>
  *
  * When creating a TreeTableColumn instance, perhaps the two most important properties
  * to set are the column {@link #textProperty() text} (what to show in the column
@@ -136,6 +135,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
     /**
      * Parent event for any TreeTableColumn edit event.
+     * @param <S> the type of the TreeTableView generic type
+     * @param <T> the type of the content in all cells in this TreeTableColumn
+     * @return the edit event
      */
     @SuppressWarnings("unchecked")
     public static <S,T> EventType<TreeTableColumn.CellEditEvent<S,T>> editAnyEvent() {
@@ -149,6 +151,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * event, or alternatively the
      * {@link TreeTableView#edit(int, javafx.scene.control.TreeTableColumn)}
      * method has been called.
+     * @param <S> the type of the TreeTableView generic type
+     * @param <T> the type of the content in all cells in this TreeTableColumn
+     * @return the edit start event
      */
     @SuppressWarnings("unchecked")
     public static <S,T> EventType<TreeTableColumn.CellEditEvent<S,T>> editStartEvent() {
@@ -160,6 +165,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
     /**
      * Indicates that the editing has been canceled, meaning that no change should
      * be made to the backing data source.
+     * @param <S> the type of the TreeTableView generic type
+     * @param <T> the type of the content in all cells in this TreeTableColumn
+     * @return the edit cancel event
      */
     @SuppressWarnings("unchecked")
     public static <S,T> EventType<TreeTableColumn.CellEditEvent<S,T>> editCancelEvent() {
@@ -172,6 +180,9 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * Indicates that the editing has been committed by the user, meaning that
      * a change should be made to the backing data source to reflect the new
      * data.
+     * @param <S> the type of the TreeTableView generic type
+     * @param <T> the type of the content in all cells in this TreeTableColumn
+     * @return the edit commit event
      */
     @SuppressWarnings("unchecked")
     public static <S,T> EventType<TreeTableColumn.CellEditEvent<S,T>> editCommitEvent() {
@@ -691,6 +702,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
         /**
          * Returns the value passed in to the constructor.
+         * @return the value passed in to the constructor
          */
         public TreeItem<S> getValue() {
             return value;
@@ -698,6 +710,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
         /**
          * Returns the {@link TreeTableColumn} passed in to the constructor.
+         * @return the {@link TreeTableColumn} passed in to the constructor
          */
         public TreeTableColumn<S,T> getTreeTableColumn() {
             return tableColumn;
@@ -705,6 +718,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
 
         /**
          * Returns the {@link TableView} passed in to the constructor.
+         * @return the {@link TableView} passed in to the constructor
          */
         public TreeTableView<S> getTreeTableView() {
             return treeTableView;
@@ -813,6 +827,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          * the TableView {@link TableView#itemsProperty() items} list), for the
          * row contained within the {@link TablePosition} returned in
          * {@link #getTreeTablePosition()}.
+         * @return the row value
          */
         public TreeItem<S> getRowValue() {
 //            List<S> items = getTreeTableView().getItems();

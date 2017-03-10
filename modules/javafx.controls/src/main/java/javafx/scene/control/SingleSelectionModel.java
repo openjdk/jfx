@@ -84,7 +84,7 @@ public abstract class SingleSelectionModel<T> extends SelectionModel<T> {
 
     /**
      * <p>This method will return true if the given index is the currently
-     * selected index in this SingleSelectionModel.</code>.
+     * selected index in this SingleSelectionModel.
      *
      * @param index The index to check as to whether it is currently selected
      *      or not.

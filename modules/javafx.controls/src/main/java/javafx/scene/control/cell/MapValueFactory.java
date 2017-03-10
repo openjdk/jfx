@@ -49,13 +49,13 @@ import javafx.util.Callback;
  * of how to use this class is:
  *
  * <pre><code>
- * ObservableList<Map> personsMapList = ...
+ * {@literal ObservableList<Map> personsMapList = ...
  *
- * TableColumn&lt;Map, String&gt; firstNameColumn = new TableColumn&lt;Map, String&gt;("First Name");
- * firstNameColumn.setCellValueFactory(new MapValueFactory&lt;String&gt;("firstName"));
+ * TableColumn<Map, String> firstNameColumn = new TableColumn<Map, String>("First Name");
+ * firstNameColumn.setCellValueFactory(new MapValueFactory<String>("firstName"));
  *
  * TableView<Map> table = new TableView<Map>(personMapList);
- * tableView.getColumns().setAll(firstNameColumn);
+ * tableView.getColumns().setAll(firstNameColumn);}
  * </code></pre>
  *
  * <p>In this example, there is a list of Map instances, where each Map instance

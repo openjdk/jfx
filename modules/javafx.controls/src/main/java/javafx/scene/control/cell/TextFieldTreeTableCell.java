@@ -35,13 +35,14 @@ import javafx.util.StringConverter;
 import javafx.util.converter.DefaultStringConverter;
 
 /**
- * A class containing a {@link TableCell} implementation that draws a
+ * A class containing a {@link javafx.scene.control.TableCell} implementation that draws a
  * {@link TextField} node inside the cell.
  *
- * <p>By default, the TextFieldTableCell is rendered as a {@link Label} when not
+ * <p>By default, the TextFieldTableCell is rendered as a {@link javafx.scene.control.Label} when not
  * being edited, and as a TextField when in editing mode. The TextField will, by
  * default, stretch to fill the entire table cell.
  *
+ * @param <S> The type of the TreeTableView generic type
  * @param <T> The type of the elements contained within the TreeTableColumn.
  * @since JavaFX 8.0
  */
@@ -60,6 +61,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * This method will only  work on {@link TreeTableColumn} instances which are of
      * type String.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @return A {@link Callback} that can be inserted into the
      *      {@link TreeTableColumn#cellFactoryProperty() cell factory property} of a
      *      TreeTableColumn, that enables textual editing of the content.
@@ -78,6 +80,8 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * in) into an instance of type T. This item will then be passed along to the
      * {@link TreeTableColumn#onEditCommitProperty()} callback.
      *
+     * @param <S> The type of the TreeTableView generic type
+     * @param <T> The type of the elements contained within the TreeTableColumn
      * @param converter A {@link StringConverter} that can convert the given String
      *      (from what the user typed in) into an instance of type T.
      * @return A {@link Callback} that can be inserted into the
@@ -149,6 +153,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -156,6 +161,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -163,6 +169,7 @@ public class TextFieldTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();

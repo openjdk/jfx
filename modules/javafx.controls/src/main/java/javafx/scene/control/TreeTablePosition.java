@@ -111,6 +111,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
 
     /**
      * The TreeTableView that this TreeTablePosition is related to.
+     * @return the TreeTableView that this TreeTablePosition is related to
      */
     public final TreeTableView<S> getTreeTableView() {
         return controlRef.get();
@@ -123,6 +124,7 @@ public class TreeTablePosition<S,T> extends TablePositionBase<TreeTableColumn<S,
 
     /**
      * Returns the {@link TreeItem} that backs the {@link #getRow()} row}.
+     * @return the {@link TreeItem} that backs the {@link #getRow()} row}
      */
     public final TreeItem<S> getTreeItem() {
         return treeItemRef.get();

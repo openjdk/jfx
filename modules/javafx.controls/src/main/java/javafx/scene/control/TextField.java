@@ -153,6 +153,7 @@ public class TextField extends TextInputControl {
 
     /**
      * Returns the character sequence backing the text field's content.
+     * @return the character sequence backing the text field's content
      */
     public CharSequence getCharacters() {
         return ((TextFieldContent)getContent()).characters;
@@ -234,6 +235,7 @@ public class TextField extends TextInputControl {
     /**
      * Specifies how the text should be aligned when there is empty
      * space within the TextField.
+     * @return the alignment property
      * @since JavaFX 2.1
      */
     public final ObjectProperty<Pos> alignmentProperty() {

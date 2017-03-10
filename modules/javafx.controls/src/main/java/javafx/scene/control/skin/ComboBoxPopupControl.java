@@ -212,6 +212,8 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
     /**
      * This method should return the Node that will be displayed when the user
      * clicks on the ComboBox 'button' area.
+     * @return the Node that will be displayed when the user clicks on the
+     * ComboBox 'button' area
      */
     protected abstract Node getPopupContent();
 
@@ -222,6 +224,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
      *
      * Note: ComboBoxListViewSkin should return null if editable is false, even
      * if the ComboBox does have an editor set.
+     * @return the editor
      */
     protected abstract TextField getEditor();
 
@@ -229,6 +232,7 @@ public abstract class ComboBoxPopupControl<T> extends ComboBoxBaseSkin<T> {
      * Subclasses are responsible for getting the converter. This will be
      * removed in FX 9 when the converter property is moved up to ComboBoxBase
      * with JDK-8130354.
+     * @return the string converter
      */
     protected abstract StringConverter<T> getConverter();
 

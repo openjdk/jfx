@@ -72,7 +72,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param <T> The type of the elements contained within the TreeView.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ComboBox} menu is showing. These items must be of the same
-     *      type as the TreeView<T>, such that upon selection, they replace the
+     *      type as the {@literal TreeView<T>}, such that upon selection, they replace the
      *      existing value in the TreeItem {@link TreeItem#valueProperty() value}
      *      property.
      * @return A {@link Callback} that will return a TreeCell that is able to
@@ -117,7 +117,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
      *      type T) to a String for displaying to the user.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ComboBox} menu is showing. These items must be of the same
-     *      type as the TreeView<T>, such that upon selection, they replace the
+     *      type as the {@literal TreeView<T>}, such that upon selection, they replace the
      *      existing value in the TreeItem {@link TreeItem#valueProperty() value}
      *      property.
      * @return A {@link Callback} that will return a TreeCell that is able to
@@ -253,6 +253,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -260,6 +261,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -267,6 +269,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();
@@ -280,6 +283,8 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
     /**
      * A property representing whether the ComboBox, when shown to the user,
      * is editable or not.
+     * @return the property representing whether the ComboBox, when shown to the
+     * user, is editable or not
      */
     public final BooleanProperty comboBoxEditableProperty() {
         return comboBoxEditable;
@@ -288,6 +293,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
     /**
      * Configures the ComboBox to be editable (to allow user input outside of the
      * options provide in the dropdown list).
+     * @param value the editable value to be set for this ComboBox
      */
     public final void setComboBoxEditable(boolean value) {
         comboBoxEditableProperty().set(value);
@@ -295,6 +301,7 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Returns true if the ComboBox is editable.
+     * @return true if the ComboBox is editable
      */
     public final boolean isComboBoxEditable() {
         return comboBoxEditableProperty().get();
@@ -309,7 +316,8 @@ public class ComboBoxTreeCell<T> extends DefaultTreeCell<T> {
      **************************************************************************/
 
     /**
-     * Returns the items to be displayed in the ChoiceBox when it is showing.
+     * Returns the items to be displayed in the ComboBox when it is showing.
+     * @return the items to be displayed in this ComboBox when it is showing
      */
     public ObservableList<T> getItems() {
         return items;

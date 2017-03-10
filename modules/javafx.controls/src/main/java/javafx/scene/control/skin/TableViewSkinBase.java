@@ -251,7 +251,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     /**
      *
-     * @param control
+     * @param control the control
      */
     public TableViewSkinBase(final C control) {
         super(control);

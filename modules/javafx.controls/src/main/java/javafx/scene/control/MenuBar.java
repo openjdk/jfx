@@ -139,6 +139,7 @@ public class MenuBar extends Control {
      * will throw a RuntimeException.  Please use
      * bi-directional binding to this property instead.
      *
+     * @return the use system menu bar property
      * @since JavaFX 2.1
      */
     public final BooleanProperty useSystemMenuBarProperty() {
@@ -190,6 +191,7 @@ public class MenuBar extends Control {
     /**
      * The menus to show within this MenuBar. If this ObservableList is modified at
      * runtime, the MenuBar will update as expected.
+     * @return the list of menus to show within this MenuBar
      * @see Menu
      */
     public final ObservableList<Menu> getMenus() {

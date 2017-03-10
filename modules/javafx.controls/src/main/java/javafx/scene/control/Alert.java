@@ -214,6 +214,7 @@ public class Alert extends Dialog<ButtonType> {
      * the developer may call {@code alert.getDialogPane().setContent(Node)} if
      * they want a more complex alert). If the contentText (or content) properties
      * are not set, there is no useful information presented to end users.
+     * @param alertType an alert with the given AlertType
      */
     public Alert(@NamedArg("alertType") AlertType alertType) {
         this(alertType, "");
@@ -234,6 +235,9 @@ public class Alert extends Dialog<ButtonType> {
      * and {@link #graphicProperty() graphic} properties are set. Once the Alert
      * is instantiated, developers are able to modify the values of the alert as
      * desired.
+     * @param alertType the alert type
+     * @param contentText the content text
+     * @param buttons the button types
      */
     public Alert(@NamedArg("alertType") AlertType alertType,
                  @NamedArg("contentText") String contentText,
@@ -282,6 +286,7 @@ public class Alert extends Dialog<ButtonType> {
     private final ObjectProperty<AlertType> alertType = new SimpleObjectProperty<AlertType>(null) {
         final String[] styleClasses = new String[] { "information", "warning", "error", "confirmation" };
 
+        @Override
         protected void invalidated() {
             String newTitle = "";
             String newHeader = "";
@@ -366,6 +371,8 @@ public class Alert extends Dialog<ButtonType> {
      * but at a high level, each ButtonType instance is converted to
      * a Node (although most commonly a {@link Button}) via the (overridable)
      * {@link DialogPane#createButton(ButtonType)} method on {@link DialogPane}.
+     * @return an {@link ObservableList} of all {@link ButtonType} instances that
+     * are currently set inside this Alert instance
      */
     // --- buttonTypes
     public final ObservableList<ButtonType> getButtonTypes() {

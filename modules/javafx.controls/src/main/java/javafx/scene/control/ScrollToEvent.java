@@ -54,6 +54,7 @@ public class ScrollToEvent<T> extends Event {
 
     /**
      * This event occurs if the user requests scrolling a given index into view.
+     * @return the scroll to event type
      */
     public static EventType<ScrollToEvent<Integer>> scrollToTopIndex() {
         return SCROLL_TO_TOP_INDEX;
@@ -65,6 +66,8 @@ public class ScrollToEvent<T> extends Event {
     /**
      * This event occurs if the user requests scrolling a {@link TableColumnBase}
      * (i.e. {@link TableColumn} or {@link TreeTableColumn}) into view.
+     * @param <T> the type
+     * @return the scroll to event type
      */
     @SuppressWarnings("unchecked")
     public static <T extends TableColumnBase<?, ?>> EventType<ScrollToEvent<T>> scrollToColumn() {
@@ -85,7 +88,7 @@ public class ScrollToEvent<T> extends Event {
      * @param source the event source which sent the event
      * @param target the event source which sent the event
      * @param type the event type
-     * @param target the target of the scroll to operation
+     * @param scrollTarget the target of the scroll to operation
      */
     public ScrollToEvent(@NamedArg("source") Object source, @NamedArg("target") EventTarget target, @NamedArg("type") EventType<ScrollToEvent<T>> type, @NamedArg("scrollTarget") T scrollTarget) {
         super(source, target, type);

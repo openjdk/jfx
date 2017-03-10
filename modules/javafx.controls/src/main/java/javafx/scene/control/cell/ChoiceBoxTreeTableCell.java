@@ -50,6 +50,7 @@ import javafx.util.StringConverter;
  * items that will be shown to the user when the {@link ChoiceBox} menu is
  * showing. These items must be of the same type as the TreeTableColumn.
  *
+ * @param <S> The type of the TreeTableView generic type
  * @param <T> The type of the elements contained within the TreeTableColumn.
  * @since JavaFX 8.0
  */
@@ -67,6 +68,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will,
      * by default, stretch to fill the entire list cell.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the TreeTableColumn.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ChoiceBox} menu is showing. These items must be of the same
@@ -90,6 +92,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox
      * will, by default, stretch to fill the entire list cell.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the TreeTableColumn.
      * @param converter A {@link StringConverter} to convert the given item (of type T)
      *      to a String for displaying to the user.
@@ -117,6 +120,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will,
      * by default, stretch to fill the entire list cell.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the TreeTableColumn.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ChoiceBox} menu is showing. These items must be of the same
@@ -140,6 +144,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * being edited, and as a ChoiceBox when in editing mode. The ChoiceBox will,
      * by default, stretch to fill the entire list cell.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the TreeTableColumn.
      * @param converter A {@link StringConverter} to convert the given item (of type T)
      * to a String for displaying to the user.
@@ -258,6 +263,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -265,6 +271,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -272,6 +279,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();
@@ -287,6 +295,7 @@ public class ChoiceBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Returns the items to be displayed in the ChoiceBox when it is showing.
+     * @return the items to be displayed in the ChoiceBox when it is showing
      */
     public ObservableList<T> getItems() {
         return items;

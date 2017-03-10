@@ -73,8 +73,6 @@ import java.util.List;
  *
  * <p>SpinnerValueFactory classes for some common types are provided with JavaFX, including:
  *
- * <br/>
- *
  * <ul>
  *     <li>{@link SpinnerValueFactory.IntegerSpinnerValueFactory}</li>
  *     <li>{@link SpinnerValueFactory.DoubleSpinnerValueFactory}</li>
@@ -297,6 +295,7 @@ public abstract class SpinnerValueFactory<T> {
         /**
          * Sets the underlying data model for the ListSpinnerValueFactory. Note that it has a generic
          * type that must match the type of the Spinner itself.
+         * @param value the list of items
          */
         public final void setItems(ObservableList<T> value) {
             itemsProperty().set(value);
@@ -318,6 +317,7 @@ public abstract class SpinnerValueFactory<T> {
         /**
          * The underlying data model for the ListView. Note that it has a generic
          * type that must match the type of the ListView itself.
+         * @return the list of items
          */
         public final ObjectProperty<ObservableList<T>> itemsProperty() {
             if (items == null) {
@@ -509,6 +509,7 @@ public abstract class SpinnerValueFactory<T> {
         }
         /**
          * Sets the minimum allowable value for this value factory
+         * @return the minimum allowable value for this value factory
          */
         public final IntegerProperty minProperty() {
             return min;
@@ -542,6 +543,7 @@ public abstract class SpinnerValueFactory<T> {
         }
         /**
          * Sets the maximum allowable value for this value factory
+         * @return the maximum allowable value for this value factory
          */
         public final IntegerProperty maxProperty() {
             return max;
@@ -557,6 +559,7 @@ public abstract class SpinnerValueFactory<T> {
         }
         /**
          * Sets the amount to increment or decrement by, per step.
+         * @return the amount to increment or decrement by, per step
          */
         public final IntegerProperty amountToStepByProperty() {
             return amountToStepBy;
@@ -769,6 +772,7 @@ public abstract class SpinnerValueFactory<T> {
         }
         /**
          * Sets the minimum allowable value for this value factory
+         * @return the minimum allowable value for this value factory
          */
         public final DoubleProperty minProperty() {
             return min;
@@ -802,6 +806,7 @@ public abstract class SpinnerValueFactory<T> {
         }
         /**
          * Sets the maximum allowable value for this value factory
+         * @return the maximum allowable value for this value factory
          */
         public final DoubleProperty maxProperty() {
             return max;
@@ -817,6 +822,7 @@ public abstract class SpinnerValueFactory<T> {
         }
         /**
          * Sets the amount to increment or decrement by, per step.
+         * @return the amount to increment or decrement by, per step
          */
         public final DoubleProperty amountToStepByProperty() {
             return amountToStepBy;

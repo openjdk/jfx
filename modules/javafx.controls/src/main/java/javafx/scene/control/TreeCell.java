@@ -220,12 +220,14 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     /**
      * Returns the TreeItem currently set in this TreeCell.
+     * @return the TreeItem currently set in this TreeCell
      */
     public final TreeItem<T> getTreeItem() { return treeItem.get(); }
 
     /**
      * Each TreeCell represents at most a single {@link TreeItem}, which is
      * represented by this property.
+     * @return the TreeItem property representing this TreeCell
      */
     public final ReadOnlyObjectProperty<TreeItem<T>> treeItemProperty() { return treeItem.getReadOnlyProperty(); }
 
@@ -240,11 +242,13 @@ public class TreeCell<T> extends IndexedCell<T> {
      * an item in the tree which contains child items. If not specified, the
      * TreeCell's Skin implementation is responsible for providing a default
      * disclosure node.
+     * @param value the disclosure node
      */
     public final void setDisclosureNode(Node value) { disclosureNodeProperty().set(value); }
 
     /**
      * Returns the current disclosure node set in this TreeCell.
+     * @return the current disclosure node set in this TreeCell
      */
     public final Node getDisclosureNode() { return disclosureNode.get(); }
 
@@ -252,6 +256,7 @@ public class TreeCell<T> extends IndexedCell<T> {
      * The disclosure node is commonly seen represented as a triangle that rotates
      * on screen to indicate whether or not the TreeItem that it is placed
      * beside is expanded or collapsed.
+     * @return the disclosure node
      */
     public final ObjectProperty<Node> disclosureNodeProperty() { return disclosureNode; }
 
@@ -328,12 +333,14 @@ public class TreeCell<T> extends IndexedCell<T> {
 
     /**
      * Returns the TreeView associated with this TreeCell.
+     * @return the TreeView associated with this TreeCell
      */
     public final TreeView<T> getTreeView() { return treeView.get(); }
 
     /**
      * A TreeCell is explicitly linked to a single {@link TreeView} instance,
      * which is represented by this property.
+     * @return the TreeView property of this TreeCell
      */
     public final ReadOnlyObjectProperty<TreeView<T>> treeViewProperty() { return treeView.getReadOnlyProperty(); }
 
@@ -600,9 +607,9 @@ public class TreeCell<T> extends IndexedCell<T> {
      * Updates the TreeView associated with this TreeCell.
      *
      * @param tree The new TreeView that should be associated with this TreeCell.
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
      */
     public final void updateTreeView(TreeView<T> tree) {
         setTreeView(tree);
@@ -613,9 +620,9 @@ public class TreeCell<T> extends IndexedCell<T> {
      *
      * @param treeItem The new TreeItem that should be associated with this
      *      TreeCell.
-     * @expert This function is intended to be used by experts, primarily
-     *      by those implementing new Skins. It is not common
-     *      for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
      */
     public final void updateTreeItem(TreeItem<T> treeItem) {
         TreeItem<T> _treeItem = getTreeItem();

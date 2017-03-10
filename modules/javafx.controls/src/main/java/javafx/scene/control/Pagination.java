@@ -167,6 +167,7 @@ public class Pagination extends Control {
 
     /**
      * Returns the maximum number of page indicators.
+     * @return the maximum number of page indicators
      */
     public final int getMaxPageIndicatorCount() {
         return maxPageIndicatorCount == null ? DEFAULT_MAX_PAGE_INDICATOR_COUNT : maxPageIndicatorCount.get();
@@ -179,6 +180,7 @@ public class Pagination extends Control {
      * reduced to fit the control if the {@code maxPageIndicatorCount} cannot fit.
      *
      * The default is 10 page indicators.
+     * @return the maximum number of page indicators to use for this pagination control
      */
     public final IntegerProperty maxPageIndicatorCountProperty() {
         if (maxPageIndicatorCount == null) {
@@ -233,6 +235,7 @@ public class Pagination extends Control {
 
     /**
      * Returns the number of pages.
+     * @return the number of pages
      */
     public final int getPageCount() { return pageCount.get(); }
 
@@ -242,6 +245,7 @@ public class Pagination extends Control {
      * should be used as the page count if the total number of pages is unknown.
      *
      * The default is an {@link #INDETERMINATE} number of pages.
+     * @return the number of pages for this pagination control
      */
     public final IntegerProperty pageCountProperty() { return pageCount; }
 
@@ -270,6 +274,7 @@ public class Pagination extends Control {
 
     /**
      * Returns the current page index.
+     * @return the current page index
      */
     public final int getCurrentPageIndex() { return currentPageIndex.get(); }
 
@@ -285,6 +290,7 @@ public class Pagination extends Control {
      * The {@link javafx.beans.property.IntegerProperty#bind(javafx.beans.value.ObservableValue) bind} method
      * throws an UnsupportedOperationException.
      * </p>
+     * @return the current page index property
      */
     public final IntegerProperty currentPageIndexProperty() { return currentPageIndex; }
 
@@ -293,11 +299,13 @@ public class Pagination extends Control {
 
     /**
      * Sets the page factory callback function.
+     * @param value the page factory callback function
      */
     public final void setPageFactory(Callback<Integer, Node> value) { pageFactory.set(value); }
 
     /**
      * Returns the page factory callback function.
+     * @return the page factory callback function
      */
     public final Callback<Integer, Node> getPageFactory() {return pageFactory.get(); }
 
@@ -311,6 +319,7 @@ public class Pagination extends Control {
      * will not change when null is returned.
      *
      * The default is null if there is no page factory set.
+     * @return the page factory property
      */
     public final ObjectProperty<Callback<Integer, Node>> pageFactoryProperty() { return pageFactory; }
 

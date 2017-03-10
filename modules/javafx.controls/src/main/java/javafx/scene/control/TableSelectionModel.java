@@ -43,6 +43,10 @@ public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<
      * 'cell selection' mode (where individual cells can be selected, rather than
      * entire rows), and if the column argument is null, this method should return
      * true only if all cells in the given row are selected.
+     * @param row the row
+     * @param column the column
+     * @return true if the given row and column index is currently selected in
+     * this table instance
      */
     public abstract boolean isSelected(int row, TableColumnBase<T,?> column);
 
@@ -51,6 +55,8 @@ public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<
      * 'cell selection' mode (where individual cells can be selected, rather than
      * entire rows), and if the column argument is null, this method should select
      * all cells in the given row.
+     * @param row the row
+     * @param column the column
      */
     public abstract void select(int row, TableColumnBase<T,?> column);
 
@@ -60,6 +66,8 @@ public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<
      * 'cell selection' mode (where individual cells can be selected, rather than
      * entire rows), and if the column argument is null, this method should select
      * all cells in the given row.
+     * @param row the row
+     * @param column the column
      */
     public abstract void clearAndSelect(int row, TableColumnBase<T,?> column);
 
@@ -70,6 +78,8 @@ public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<
      * 'cell selection' mode (where individual cells can be selected, rather than
      * entire rows), and if the column argument is null, this method should deselect
      * all cells in the given row.
+     * @param row the row
+     * @param column the column
      */
     public abstract void clearSelection(int row, TableColumnBase<T,?> column);
 
@@ -96,6 +106,10 @@ public abstract class TableSelectionModel<T> extends MultipleSelectionModelBase<
     /**
      * Selects the cells in the range (minRow, minColumn) to (maxRow, maxColumn),
      * inclusive.
+     * @param minRow the minRow
+     * @param minColumn the minColumn
+     * @param maxRow the maxRow
+     * @param maxColumn the maxColumn
      */
     public abstract void selectRange(int minRow, TableColumnBase<T,?> minColumn,
                                      int maxRow, TableColumnBase<T,?> maxColumn);

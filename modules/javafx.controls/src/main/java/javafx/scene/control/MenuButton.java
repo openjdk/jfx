@@ -196,6 +196,7 @@ public class MenuButton extends ButtonBase {
      * and of course {@code Menu}, which if added to a menu, will become a sub
      * menu. {@link SeparatorMenuItem} is another commonly used Node in the Menu's items
      * ObservableList.
+     * @return the list of menu items within this buttons menu
      */
     public final ObservableList<MenuItem> getItems() {
         return items;

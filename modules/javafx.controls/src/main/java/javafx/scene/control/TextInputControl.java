@@ -87,16 +87,18 @@ public abstract class TextInputControl extends Control {
         /**
          * Retrieves a subset of the content.
          *
-         * @param start
-         * @param end
+         * @param start the start
+         * @param end the end
+         * @return a subset of the content
          */
         public String get(int start, int end);
 
         /**
          * Inserts a sequence of characters into the content.
          *
-         * @param index
-         * @param text
+         * @param index the index
+         * @param text the text string
+         * @param notifyListeners the notify listener flag
          * @since JavaFX 2.1
          */
         public void insert(int index, String text, boolean notifyListeners);
@@ -104,14 +106,16 @@ public abstract class TextInputControl extends Control {
         /**
          * Removes a sequence of characters from the content.
          *
-         * @param start
-         * @param end
+         * @param start the start
+         * @param end the end
+         * @param notifyListeners the notify listener flag
          * @since JavaFX 2.1
          */
         public void delete(int start, int end, boolean notifyListeners);
 
         /**
          * Returns the number of characters represented by the content.
+         * @return the number of characters
          */
         public int length();
     }
@@ -191,6 +195,7 @@ public abstract class TextInputControl extends Control {
      * rich text then this font may or may not be used depending on the font
      * information embedded in the rich text, but in any case where a default
      * font is required, this font will be used.
+     * @return the font property
      * @since JavaFX 8.0
      */
     public final ObjectProperty<Font> fontProperty() {
@@ -339,6 +344,7 @@ public abstract class TextInputControl extends Control {
     private final Content content;
     /**
      * Returns the text input's content model.
+     * @return the text input's content model
      */
     protected final Content getContent() {
         return content;
@@ -443,6 +449,7 @@ public abstract class TextInputControl extends Control {
      *
      * @param start must be a value between 0 and end - 1.
      * @param end must be less than or equal to the length
+     * @return the subset of the text input's content
      */
     public String getText(int start, int end) {
         if (start > end) {
@@ -880,6 +887,7 @@ public abstract class TextInputControl extends Control {
      * Deletes the character that precedes the current caret position from the
      * text if there is no selection, or deletes the selection if there is one.
      * This function returns true if the deletion succeeded, false otherwise.
+     * @return true if the deletion succeeded, false otherwise
      */
     public boolean deletePreviousChar() {
         boolean failed = true;
@@ -910,6 +918,7 @@ public abstract class TextInputControl extends Control {
      * Deletes the character that follows the current caret position from the
      * text if there is no selection, or deletes the selection if there is one.
      * This function returns true if the deletion succeeded, false otherwise.
+     * @return true if the deletion succeeded, false otherwise
      */
     public boolean deleteNextChar() {
         boolean failed = true;
@@ -970,9 +979,9 @@ public abstract class TextInputControl extends Control {
      * then the caret position is moved to the beginning of the selection and
      * the selection cleared.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins or Behaviors. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins or Behaviors. It is not common
+     *       for developers or designers to access this function directly.
      */
     public void backward() {
         // user has moved caret to the left
@@ -996,6 +1005,7 @@ public abstract class TextInputControl extends Control {
     /**
      * Positions the caret to the position indicated by {@code pos}. This
      * function will also clear the selection.
+     * @param pos the position
      */
     public void positionCaret(int pos) {
         final int p = Utils.clamp(0, pos, getLength());
@@ -1007,6 +1017,7 @@ public abstract class TextInputControl extends Control {
      * the selection, if there is one. If there is no selection, then a
      * selection is formed where the anchor is at the current caret position
      * and the caretPosition is moved to pos.
+     * @param pos the position
      */
     public void selectPositionCaret(int pos) {
         selectRange(getAnchor(), Utils.clamp(0, pos, getLength()));
@@ -1014,6 +1025,8 @@ public abstract class TextInputControl extends Control {
 
     /**
      * Positions the anchor and caretPosition explicitly.
+     * @param anchor the anchor
+     * @param caretPosition the caretPosition
      */
     public void selectRange(int anchor, int caretPosition) {
         caretPosition = Utils.clamp(0, caretPosition, getLength());
@@ -1044,6 +1057,7 @@ public abstract class TextInputControl extends Control {
      * move the caret. Rather, it will reposition the caret and anchor as necessary
      * to ensure that pos becomes the new caret and the far other end of the
      * selection becomes the anchor.
+     * @param pos the position
      */
     public void extendSelection(int pos) {
         final int p = Utils.clamp(0, pos, getLength());
@@ -1082,6 +1096,7 @@ public abstract class TextInputControl extends Control {
      * no selection, then the replacement text is simply inserted at the current
      * caret position. If there was a selection, then the selection is cleared
      * and the given replacement text inserted.
+     * @param replacement the replacement string
      */
     public void replaceSelection(String replacement) {
         replaceText(getSelection(), replacement);

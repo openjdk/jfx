@@ -144,6 +144,7 @@ public abstract class ComboBoxBaseSkin<T> extends SkinBase<ComboBoxBase<T>> {
     /**
      * This method should return a Node that will be positioned within the
      * ComboBox 'button' area.
+     * @return the node that will be positioned within the ComboBox 'button' area
      */
     public abstract Node getDisplayNode();
 

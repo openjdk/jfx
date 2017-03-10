@@ -56,12 +56,15 @@ public class ResizeFeaturesBase<S> {
    * Returns the column upon which the resize is occurring, or null
    * if this ResizeFeatures instance was created as a result of a
    * resize operation.
+   * @return the column upon which the resize is occurring
    */
   public TableColumnBase<S,?> getColumn() { return column; }
 
   /**
    * Returns the amount of horizontal space added or removed in the
    * resize operation.
+   * @return the amount of horizontal space added or removed in the
+   * resize operation
    */
   public Double getDelta() { return delta; }
 }

@@ -128,7 +128,7 @@ public abstract class Chart extends Region {
 
     /**
      * The side of the chart where the title is displayed
-     * @default Side.TOP
+     * @defaultValue Side.TOP
      */
     private ObjectProperty<Side> titleSide = new StyleableObjectProperty<Side>(Side.TOP) {
         @Override protected void invalidated() {
@@ -309,6 +309,7 @@ public abstract class Chart extends Region {
     /**
      * This is used to check if any given animation should run. It returns true if animation is enabled and the node
      * is visible and in a scene.
+     * @return true if animation is enabled and the node is visible and in a scene
      */
     protected final boolean shouldAnimate(){
         return getAnimated() && NodeHelper.isTreeShowing(this);

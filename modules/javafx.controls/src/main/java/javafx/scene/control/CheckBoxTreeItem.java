@@ -74,6 +74,7 @@ import javafx.scene.Node;
  * // set the cell factory
  * treeView.setCellFactory(CheckBoxTreeCell.&lt;String&gt;forTreeView());</code></pre>
  *
+ * @param <T> The type of the value contained within the TreeItem
  * @see CheckBoxTreeCell
  * @see TreeItem
  * @see CheckBox
@@ -99,6 +100,8 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      * </pre>
      *
      * @param <T> The type of the value contained within the TreeItem.
+     * @return the EventType used when the CheckBoxTreeItem selection / indeterminate
+     * state changes
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<TreeModificationEvent<T>> checkBoxSelectionChangedEvent() {
@@ -203,11 +206,23 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
             fireEvent(CheckBoxTreeItem.this, true);
         }
     };
-    /** Sets the selected state of this CheckBoxTreeItem. */
+
+    /**
+     * Sets the selected state of this CheckBoxTreeItem.
+     * @param value the selected state of this CheckBoxTreeItem
+     */
     public final void setSelected(boolean value) { selectedProperty().setValue(value); }
-    /** Returns the selected state of this CheckBoxTreeItem. */
+
+    /**
+     * Returns the selected state of this CheckBoxTreeItem.
+     * @return true if CheckBoxTreeItem is selected
+     */
     public final boolean isSelected() { return selected.getValue(); }
-    /** A {@link BooleanProperty} used to represent the selected state of this CheckBoxTreeItem. */
+
+    /**
+     * A {@link BooleanProperty} used to represent the selected state of this CheckBoxTreeItem.
+     * @return the selected state property of this CheckBoxTreeItem
+     */
     public final BooleanProperty selectedProperty() { return selected; }
 
 
@@ -218,11 +233,23 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
             fireEvent(CheckBoxTreeItem.this, false);
         }
     };
-    /** Sets the indeterminate state of this CheckBoxTreeItem. */
+
+    /**
+     * Sets the indeterminate state of this CheckBoxTreeItem.
+     * @param value the indeterminate state of this CheckBoxTreeItem
+     */
     public final void setIndeterminate(boolean value) { indeterminateProperty().setValue(value); }
-    /** Returns the indeterminate state of this CheckBoxTreeItem. */
+
+    /**
+     * Returns the indeterminate state of this CheckBoxTreeItem.
+     * @return true if CheckBoxTreeItem is indeterminate state
+     */
     public final boolean isIndeterminate() { return indeterminate.getValue(); }
-    /** A {@link BooleanProperty} used to represent the indeterminate state of this CheckBoxTreeItem. */
+
+    /**
+     * A {@link BooleanProperty} used to represent the indeterminate state of this CheckBoxTreeItem.
+     * @return the indeterminate state property of this CheckBoxTreeItem
+     */
     public final BooleanProperty indeterminateProperty() { return indeterminate; }
 
 
@@ -237,6 +264,7 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
      * properties, the state of related CheckBoxTreeItems will possibly be changed.
      * If the independent property is set to true, the state of related CheckBoxTreeItems
      * will <b>never</b> change.
+     * @return the independent state property of this CheckBoxTreeItem
      */
     public final BooleanProperty independentProperty() { return independent; }
     private final BooleanProperty independent = new SimpleBooleanProperty(this, "independent", false);
@@ -340,6 +368,9 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
          * Creates a default TreeModificationEvent instance to represent the
          * change in selection/indeterminate states for the given CheckBoxTreeItem
          * instance.
+         * @param eventType the eventType
+         * @param treeItem the treeItem
+         * @param selectionChanged represents whether the selection has changed
          */
         public TreeModificationEvent(EventType<? extends Event> eventType, CheckBoxTreeItem<T> treeItem, boolean selectionChanged) {
             super(eventType);
@@ -356,17 +387,19 @@ public class CheckBoxTreeItem<T> extends TreeItem<T> {
         }
 
         /**
-         * Indicates the the reason for this event is that the selection on the
+         * Indicates the reason for this event is that the selection on the
          * CheckBoxTreeItem changed (as opposed to it becoming indeterminate).
+         * @return has the CheckBoxTreeItem's selection changed
          */
         public boolean wasSelectionChanged() {
             return selectionChanged;
         }
 
         /**
-         * Indicates the the reason for this event is that the indeterminate
+         * Indicates the reason for this event is that the indeterminate
          * state on the CheckBoxTreeItem changed (as opposed to it becoming
          * selected or unselected).
+         * @return has the CheckBoxTreeItem's indeterminate changed
          */
         public boolean wasIndeterminateChanged() {
             return ! selectionChanged;

@@ -231,6 +231,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      *
      * Setting the value to <code>null</code> will restore the default
      * chronology.
+     * @return a property representing the Chronology being used
      */
     public final ObjectProperty<Chronology> chronologyProperty() {
         return chronology;
@@ -263,6 +264,8 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      *
      * <p>The default value is specified in a resource bundle, and
      * depends on the country of the current locale.
+     * @return true if popup should display a column showing
+     * week numbers
      */
     public final BooleanProperty showWeekNumbersProperty() {
         if (showWeekNumbers == null) {
@@ -319,21 +322,21 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      *         datePicker.setPromptText(pattern.toLowerCase());
      *     }
      *
-     *     &#064;Override public String toString(LocalDate date) {
+     *     {@literal @Override public String toString(LocalDate date) {
      *         if (date != null) {
      *             return dateFormatter.format(date);
      *         } else {
      *             return "";
      *         }
-     *     }
+     *     }}
      *
-     *     &#064;Override public LocalDate fromString(String string) {
+     *     {@literal @Override public LocalDate fromString(String string) {
      *         if (string != null && !string.isEmpty()) {
      *             return LocalDate.parse(string, dateFormatter);
      *         } else {
      *             return null;
      *         }
-     *     }
+     *     }}
      * });
      * </code></pre>
      * <p>Example that wraps the default formatter and catches parse exceptions:
@@ -361,7 +364,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      * The following example modifies the converter's fromString() method to
      * allow a two digit year for birth dates up to 99 years in the past.
      * <pre><code>
-     *   &#064;Override public LocalDate fromString(String text) {
+     *   {@literal @Override public LocalDate fromString(String text) {
      *       if (text != null && !text.isEmpty()) {
      *           Locale locale = Locale.getDefault(Locale.Category.FORMAT);
      *           Chronology chrono = datePicker.getChronology();
@@ -381,9 +384,10 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      *       } else {
      *           return null;
      *       }
-     *   }
+     *   }}
      * </code></pre>
      *
+     * @return the property representing the current LocalDate string converter
      * @see javafx.scene.control.ComboBox#converterProperty
      */
     public final ObjectProperty<StringConverter<LocalDate>> converterProperty() { return converter; }

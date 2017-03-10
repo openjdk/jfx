@@ -441,7 +441,7 @@ public class TextFieldSkin extends TextInputControlSkin<TextField> {
      * @param end The ending index in the range, exclusive. This is one-past the last character to
      *            delete (consistent with the String manipulation methods). This must be &gt; the start,
      *            and &lt;= the length of the text.
-     * @param text The text that is to replace the range. This must not be null.
+     * @param txt The text that is to replace the range. This must not be null.
      * @see TextField#replaceText(int, int, String)
      */
     public void replaceText(int start, int end, String txt) {

@@ -118,6 +118,7 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
      * ObservableList will be updated  by the selection model to always reflect
      * changes in selection. This can be observed by adding a
      * {@link ListChangeListener} to the returned ObservableList.
+     * @return the list of selected indices
      */
     public abstract ObservableList<Integer> getSelectedIndices();
 
@@ -126,6 +127,7 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
      * ObservableList will be updated further by the selection model to always reflect
      * changes in selection. This can be observed by adding a
      * {@link ListChangeListener} to the returned ObservableList.
+     * @return the list of selected items
      */
     public abstract ObservableList<T> getSelectedItems();
 
@@ -141,6 +143,8 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
      *
      * <p>The last valid value given will become the selected index / selected
      * item.
+     * @param index the first index to select
+     * @param indices zero or more additional indices to select
      */
     public abstract void selectIndices(int index, int... indices);
 
@@ -148,7 +152,7 @@ public abstract class MultipleSelectionModel<T> extends SelectionModel<T> {
      * <p>Selects all indices from the given start index to the item before the
      * given end index. This means that the selection is inclusive of the start
      * index, and exclusive of the end index. This method will work regardless
-     * of whether start < end or start > end: the only constant is that the
+     * of whether start &lt; end or start &gt; end: the only constant is that the
      * index before the given end index will become the selected index.
      *
      * <p>If there is already one or more indices selected in this model, calling

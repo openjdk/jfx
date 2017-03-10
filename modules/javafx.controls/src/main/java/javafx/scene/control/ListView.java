@@ -240,6 +240,8 @@ public class ListView<T> extends Control {
      * An EventType that indicates some edit event has occurred. It is the parent
      * type of all other edit events: {@link #EDIT_START_EVENT},
      *  {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT}.
+     * @param <T> the type of the objects stored in this ListView
+     * @return the event type
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<ListView.EditEvent<T>> editAnyEvent() {
@@ -251,6 +253,8 @@ public class ListView<T> extends Control {
     /**
      * An EventType used to indicate that an edit event has started within the
      * ListView upon which the event was fired.
+     * @param <T> the type of the objects stored in this ListView
+     * @return the event type
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<ListView.EditEvent<T>> editStartEvent() {
@@ -262,6 +266,8 @@ public class ListView<T> extends Control {
     /**
      * An EventType used to indicate that an edit event has just been canceled
      * within the ListView upon which the event was fired.
+     * @param <T> the type of the objects stored in this ListView
+     * @return the event type
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<ListView.EditEvent<T>> editCancelEvent() {
@@ -273,6 +279,8 @@ public class ListView<T> extends Control {
     /**
      * An EventType used to indicate that an edit event has been committed
      * within the ListView upon which the event was fired.
+     * @param <T> the type of the objects stored in this ListView
+     * @return the event type
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<ListView.EditEvent<T>> editCommitEvent() {
@@ -326,6 +334,7 @@ public class ListView<T> extends Control {
      *
      * <p>Refer to the {@link ListView} class documentation for details on the
      * default state of other properties.
+     * @param items the list of items
      */
     public ListView(ObservableList<T> items) {
         getStyleClass().setAll(DEFAULT_STYLE_CLASS);
@@ -385,6 +394,7 @@ public class ListView<T> extends Control {
     /**
      * Sets the underlying data model for the ListView. Note that it has a generic
      * type that must match the type of the ListView itself.
+     * @param value the list of items for this ListView
      */
     public final void setItems(ObservableList<T> value) {
         itemsProperty().set(value);
@@ -406,6 +416,7 @@ public class ListView<T> extends Control {
     /**
      * The underlying data model for the ListView. Note that it has a generic
      * type that must match the type of the ListView itself.
+     * @return the items property for this ListView
      */
     public final ObjectProperty<ObservableList<T>> itemsProperty() {
         if (items == null) {
@@ -422,6 +433,7 @@ public class ListView<T> extends Control {
      * This may be the case because the table model has no data in the first
      * place or that a filter has been applied to the list model, resulting
      * in there being nothing to show the user..
+     * @return the placeholder property for this ListView
      * @since JavaFX 8.0
      */
     public final ObjectProperty<Node> placeholderProperty() {
@@ -447,6 +459,7 @@ public class ListView<T> extends Control {
      * to configure it to only allow single selection (see
      * {@link MultipleSelectionModel#setSelectionMode(javafx.scene.control.SelectionMode)}
      * for more information).
+     * @param value the MultipleSelectionModel to be used in this ListView
      */
     public final void setSelectionModel(MultipleSelectionModel<T> value) {
         selectionModelProperty().set(value);
@@ -454,6 +467,7 @@ public class ListView<T> extends Control {
 
     /**
      * Returns the currently installed selection model.
+     * @return the currently installed selection model
      */
     public final MultipleSelectionModel<T> getSelectionModel() {
         return selectionModel == null ? null : selectionModel.get();
@@ -464,6 +478,7 @@ public class ListView<T> extends Control {
      * to select single or multiple items within a ListView, as  well as inspect
      * which items have been selected by the user. Note that it has a generic
      * type that must match the type of the ListView itself.
+     * @return the selectionModel property
      */
     public final ObjectProperty<MultipleSelectionModel<T>> selectionModelProperty() {
         return selectionModel;
@@ -475,6 +490,7 @@ public class ListView<T> extends Control {
 
     /**
      * Sets the {@link FocusModel} to be used in the ListView.
+     * @param value the FocusModel to be used in the ListView
      */
     public final void setFocusModel(FocusModel<T> value) {
         focusModelProperty().set(value);
@@ -482,6 +498,7 @@ public class ListView<T> extends Control {
 
     /**
      * Returns the currently installed {@link FocusModel}.
+     * @return the currently installed FocusModel
      */
     public final FocusModel<T> getFocusModel() {
         return focusModel == null ? null : focusModel.get();
@@ -491,6 +508,7 @@ public class ListView<T> extends Control {
      * The FocusModel provides the API through which it is possible
      * to both get and set the focus on a single item within a ListView. Note
      * that it has a generic type that must match the type of the ListView itself.
+     * @return the FocusModel property
      */
     public final ObjectProperty<FocusModel<T>> focusModelProperty() {
         if (focusModel == null) {
@@ -506,6 +524,7 @@ public class ListView<T> extends Control {
     /**
      * Sets the orientation of the ListView, which dictates whether
      * it scrolls vertically or horizontally.
+     * @param value the orientation of the ListView
      */
     public final void setOrientation(Orientation value) {
         orientationProperty().set(value);
@@ -514,6 +533,7 @@ public class ListView<T> extends Control {
     /**
      * Returns the current orientation of the ListView, which dictates whether
      * it scrolls vertically or horizontally.
+     * @return the current orientation of the ListView
      */
     public final Orientation getOrientation() {
         return orientation == null ? Orientation.VERTICAL : orientation.get();
@@ -522,6 +542,7 @@ public class ListView<T> extends Control {
     /**
      * The orientation of the {@code ListView} - this can either be horizontal
      * or vertical.
+     * @return the orientation property of this ListView
      */
     public final ObjectProperty<Orientation> orientationProperty() {
         if (orientation == null) {
@@ -561,6 +582,7 @@ public class ListView<T> extends Control {
      * Sets a new cell factory to use in the ListView. This forces all old
      * {@link ListCell}'s to be thrown away, and new ListCell's created with
      * the new cell factory.
+     * @param value cell factory to use in this ListView
      */
     public final void setCellFactory(Callback<ListView<T>, ListCell<T>> value) {
         cellFactoryProperty().set(value);
@@ -568,6 +590,7 @@ public class ListView<T> extends Control {
 
     /**
      * Returns the current cell factory.
+     * @return the current cell factory
      */
     public final Callback<ListView<T>, ListCell<T>> getCellFactory() {
         return cellFactory == null ? null : cellFactory.get();
@@ -581,6 +604,7 @@ public class ListView<T> extends Control {
      * which might be usable for representing any item in the ListView.
      *
      * <p>Refer to the {@link Cell} class documentation for more detail.
+     * @return the cell factory property
      */
     public final ObjectProperty<Callback<ListView<T>, ListCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
@@ -638,6 +662,7 @@ public class ListView<T> extends Control {
      * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
      * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
      *
+     * @return the fixed cell size property
      * @since JavaFX 8.0
      */
     public final DoubleProperty fixedCellSizeProperty() {
@@ -672,6 +697,7 @@ public class ListView<T> extends Control {
      * Specifies whether this ListView is editable - only if the ListView and
      * the ListCells within it are both editable will a ListCell be able to go
      * into their editing state.
+     * @return the editable property
      */
     public final BooleanProperty editableProperty() {
         if (editable == null) {
@@ -691,6 +717,7 @@ public class ListView<T> extends Control {
     /**
      * Returns the index of the item currently being edited in the ListView,
      * or -1 if no item is being edited.
+     * @return the index of the item currently being edited
      */
     public final int getEditingIndex() {
         return editingIndex == null ? -1 : editingIndex.get();
@@ -702,6 +729,7 @@ public class ListView<T> extends Control {
      *
      * <p>It is not possible to set the editing index, instead it is required that
      * you call {@link #edit(int)}.
+     * @return the editing index property
      */
     public final ReadOnlyIntegerProperty editingIndexProperty() {
         return editingIndexPropertyImpl().getReadOnlyProperty();
@@ -725,6 +753,8 @@ public class ListView<T> extends Control {
      * <p>This is a convenience method - the same result can be
      * achieved by calling
      * <code>addEventHandler(ListView.EDIT_START_EVENT, eventHandler)</code>.
+     * @param value the EventHandler that will be called when the user begins
+     * an edit
      */
     public final void setOnEditStart(EventHandler<ListView.EditEvent<T>> value) {
         onEditStartProperty().set(value);
@@ -733,6 +763,7 @@ public class ListView<T> extends Control {
     /**
      * Returns the {@link EventHandler} that will be called when the user begins
      * an edit.
+     * @return the EventHandler that will be called when the user begins an edit
      */
     public final EventHandler<ListView.EditEvent<T>> getOnEditStart() {
         return onEditStart == null ? null : onEditStart.get();
@@ -741,6 +772,7 @@ public class ListView<T> extends Control {
     /**
      * This event handler will be fired when the user successfully initiates
      * editing.
+     * @return the onEditStart event handler property
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditStartProperty() {
         if (onEditStart == null) {
@@ -775,6 +807,8 @@ public class ListView<T> extends Control {
      * <p>This is a convenience method - the same result can be
      * achieved by calling
      * <code>addEventHandler(ListView.EDIT_START_EVENT, eventHandler)</code>.
+     * @param value the EventHandler that will be called when the user has
+     * completed their editing
      */
     public final void setOnEditCommit(EventHandler<ListView.EditEvent<T>> value) {
         onEditCommitProperty().set(value);
@@ -783,6 +817,7 @@ public class ListView<T> extends Control {
     /**
      * Returns the {@link EventHandler} that will be called when the user commits
      * an edit.
+     * @return the EventHandler that will be called when the user commits an edit
      */
     public final EventHandler<ListView.EditEvent<T>> getOnEditCommit() {
         return onEditCommit == null ? null : onEditCommit.get();
@@ -796,6 +831,7 @@ public class ListView<T> extends Control {
      * instead call {@link ListCell#commitEdit(java.lang.Object)} from within
      * your custom ListCell. This will handle firing this event, updating the
      * view, and switching out of the editing state.</p>
+     * @return the onEditCommit event handler property
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
@@ -825,6 +861,8 @@ public class ListView<T> extends Control {
     /**
      * Sets the {@link EventHandler} that will be called when the user cancels
      * an edit.
+     * @param value the EventHandler that will be called when the user cancels
+     * an edit
      */
     public final void setOnEditCancel(EventHandler<ListView.EditEvent<T>> value) {
         onEditCancelProperty().set(value);
@@ -833,6 +871,7 @@ public class ListView<T> extends Control {
     /**
      * Returns the {@link EventHandler} that will be called when the user cancels
      * an edit.
+     * @return the EventHandler that will be called when the user cancels an edit
      */
     public final EventHandler<ListView.EditEvent<T>> getOnEditCancel() {
         return onEditCancel == null ? null : onEditCancel.get();
@@ -840,6 +879,7 @@ public class ListView<T> extends Control {
 
     /**
      * This event handler will be fired when the user cancels editing a cell.
+     * @return the onEditCancel event handler property
      */
     public final ObjectProperty<EventHandler<ListView.EditEvent<T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
@@ -1121,6 +1161,10 @@ public class ListView<T> extends Control {
          * Creates a new EditEvent instance to represent an edit event. This
          * event is used for {@link #EDIT_START_EVENT},
          * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.
+         * @param source the source
+         * @param eventType the event type
+         * @param newValue the new value
+         * @param editIndex the edit index
          */
         public EditEvent(ListView<T> source,
                          EventType<? extends ListView.EditEvent<T>> eventType,
@@ -1141,6 +1185,7 @@ public class ListView<T> extends Control {
 
         /**
          * Returns the index in which the edit took place.
+         * @return the index in which the edit took place
          */
         public int getIndex() {
             return editIndex;
@@ -1148,6 +1193,7 @@ public class ListView<T> extends Control {
 
         /**
          * Returns the value of the new input provided by the end user.
+         * @return the value of the new input provided by the end user
          */
         public T getNewValue() {
             return newValue;

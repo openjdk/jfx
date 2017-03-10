@@ -75,6 +75,7 @@ public class ProgressBar extends ProgressIndicator {
 
     /**
      * Creates a new ProgressBar with the given progress value.
+     * @param progress the progress, represented as a value between 0 and 1
      */
     public ProgressBar(double progress) {
         // focusTraversable is styleable through css. Calling setFocusTraversable

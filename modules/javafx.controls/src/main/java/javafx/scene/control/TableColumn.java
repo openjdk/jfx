@@ -74,7 +74,6 @@ import javafx.beans.value.WritableValue;
  *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
  *      {@link #sortTypeProperty() sortType})
  * </ul>
- * </p>
  *
  * When creating a TableColumn instance, perhaps the two most important properties
  * to set are the column {@link #textProperty() text} (what to show in the column
@@ -144,6 +143,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
     /**
      * Parent event for any TableColumn edit event.
+     * @param <S> The type of the TableView generic type
+     * @param <T> The type of the content in all cells in this TableColumn
+     * @return The any TableColumn edit event
      */
     @SuppressWarnings("unchecked")
     public static <S,T> EventType<CellEditEvent<S,T>> editAnyEvent() {
@@ -156,6 +158,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * Indicates that the user has performed some interaction to start an edit
      * event, or alternatively the {@link TableView#edit(int, javafx.scene.control.TableColumn)}
      * method has been called.
+     * @param <S> The type of the TableView generic type
+     * @param <T> The type of the content in all cells in this TableColumn
+     * @return The start an edit event
      */
     @SuppressWarnings("unchecked")
     public static <S,T> EventType<CellEditEvent<S,T>> editStartEvent() {
@@ -167,6 +172,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     /**
      * Indicates that the editing has been canceled, meaning that no change should
      * be made to the backing data source.
+     * @param <S> The type of the TableView generic type
+     * @param <T> The type of the content in all cells in this TableColumn
+     * @return The cancel an edit event
      */
     @SuppressWarnings("unchecked")
     public static <S,T> EventType<CellEditEvent<S,T>> editCancelEvent() {
@@ -179,6 +187,9 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
      * Indicates that the editing has been committed by the user, meaning that
      * a change should be made to the backing data source to reflect the new
      * data.
+     * @param <S> The type of the TableView generic type
+     * @param <T> The type of the content in all cells in this TableColumn
+     * @return The commit an edit event
      */
     @SuppressWarnings("unchecked")
     public static <S,T> EventType<CellEditEvent<S,T>> editCommitEvent() {
@@ -476,6 +487,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     /**
      * This event handler will be fired when the user successfully initiates
      * editing.
+     * @return the on edit start property
      */
     public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditStartProperty() {
         if (onEditStart == null) {
@@ -500,6 +512,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     /**
      * This event handler will be fired when the user successfully commits their
      * editing.
+     * @return the on edit commit property
      */
     public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
@@ -523,6 +536,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
     }
     /**
      * This event handler will be fired when the user cancels editing a cell.
+     * @return the on edit cancel property
      */
     public final ObjectProperty<EventHandler<CellEditEvent<S,T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
@@ -708,6 +722,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
         /**
          * Returns the value passed in to the constructor.
+         * @return the value passed in to the constructor
          */
         public S getValue() {
             return value;
@@ -715,6 +730,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
         /**
          * Returns the {@link TableColumn} passed in to the constructor.
+         * @return the TableColumn passed in to the constructor
          */
         public TableColumn<S,T> getTableColumn() {
             return tableColumn;
@@ -722,6 +738,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
         /**
          * Returns the {@link TableView} passed in to the constructor.
+         * @return the TableView passed in to the constructor
          */
         public TableView<S> getTableView() {
             return tableView;
@@ -732,6 +749,8 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
 
     /**
      * An event that is fired when a user performs an edit on a table cell.
+     * @param <S> The type of the TableView generic type
+     * @param <T> The type of the content in all cells in this TableColumn
      * @since JavaFX 2.0
      */
     public static class CellEditEvent<S,T> extends Event {
@@ -831,6 +850,7 @@ public class TableColumn<S,T> extends TableColumnBase<S,T> implements EventTarge
          * the TableView {@link TableView#itemsProperty() items} list), for the
          * row contained within the {@link TablePosition} returned in
          * {@link #getTablePosition()}.
+         * @return the value for the row
          */
         public S getRowValue() {
             List<S> items = getTableView().getItems();

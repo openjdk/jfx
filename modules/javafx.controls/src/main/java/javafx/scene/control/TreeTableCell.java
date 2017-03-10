@@ -61,8 +61,8 @@ import javafx.scene.control.TreeTableView.TreeTableViewFocusModel;
  *   property is set to true (to represent that it is allowable to select
  *   individual cells (and not just rows of cells)).</li>
  * </ol>
- * </p>
  *
+ * @param <S> The type of the TreeTableView generic type
  * @see TreeTableView
  * @see TreeTableColumn
  * @see Cell
@@ -683,9 +683,10 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
      * Updates the TreeTableView associated with this TreeTableCell. This is typically
      * only done once when the TreeTableCell is first added to the TreeTableView.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
+     * @param tv the TreeTableView associated with this TreeTableCell
      */
     public final void updateTreeTableView(TreeTableView<S> tv) {
         setTreeTableView(tv);
@@ -694,9 +695,10 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     /**
      * Updates the TreeTableRow associated with this TreeTableCell.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
+     * @param treeTableRow the TreeTableRow associated with this TreeTableCell
      */
     public final void updateTreeTableRow(TreeTableRow<S> treeTableRow) {
         this.setTreeTableRow(treeTableRow);
@@ -705,9 +707,10 @@ public class TreeTableCell<S,T> extends IndexedCell<T> {
     /**
      * Updates the TreeTableColumn associated with this TreeTableCell.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
+     * @param col the TreeTableColumn associated with this TreeTableCell
      */
     public final void updateTreeTableColumn(TreeTableColumn<S,T> col) {
         // remove style class of existing tree table column, if it is non-null

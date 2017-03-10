@@ -171,6 +171,7 @@ public class TitledPane extends Labeled {
     /**
      * Sets the expanded state of the TitledPane.  The default is {@code true}.
      *
+     * @param value a flag indicating the expanded state
      */
     public final void setExpanded(boolean value) { expandedProperty().set(value); }
 
@@ -183,6 +184,7 @@ public class TitledPane extends Labeled {
 
     /**
      * The expanded state of the TitledPane.
+     * @return the expanded state property
      */
     public final BooleanProperty expandedProperty() { return expanded; }
 
@@ -211,6 +213,7 @@ public class TitledPane extends Labeled {
      * Specifies how the TitledPane should open and close.  The panel will be
      * animated out when this value is set to {@code true}.  The default is {@code true}.
      *
+     * @param value a flag indicating the animated state
      */
     public final void setAnimated(boolean value) { animatedProperty().set(value); }
 
@@ -223,6 +226,7 @@ public class TitledPane extends Labeled {
 
     /**
      *  The animated state of the TitledPane.
+     * @return the animated state property
      */
     public final BooleanProperty animatedProperty() { return animated; }
 
@@ -250,6 +254,7 @@ public class TitledPane extends Labeled {
     /**
      * Specifies if the TitledPane can be collapsed.  The default is {@code true}.
      *
+     * @param value a flag indicating the collapsible state
      */
     public final void setCollapsible(boolean value) { collapsibleProperty().set(value); }
 
@@ -262,6 +267,7 @@ public class TitledPane extends Labeled {
 
     /**
      * The collapsible state of the TitledPane.
+     * @return the collapsible property
      */
     public final BooleanProperty collapsibleProperty() { return collapsible; }
 

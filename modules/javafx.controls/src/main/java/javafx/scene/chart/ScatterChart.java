@@ -72,7 +72,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
 
     // -------------- METHODS ------------------------------------------------------------------------------------------
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void dataItemAdded(Series<X,Y> series, int itemIndex, Data<X,Y> item) {
         Node symbol = item.getNode();
         // check if symbol has already been created
@@ -98,7 +98,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected  void dataItemRemoved(final Data<X,Y> item, final Series<X,Y> series) {
         final Node symbol = item.getNode();
 
@@ -122,11 +122,11 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void dataItemChanged(Data<X, Y> item) {
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected  void seriesAdded(Series<X,Y> series, int seriesIndex) {
         // handle any data already in series
         for (int j=0; j<series.getData().size(); j++) {
@@ -134,7 +134,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected  void seriesRemoved(final Series<X,Y> series) {
         // remove all symbol nodes
         if (shouldAnimate()) {
@@ -163,7 +163,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void layoutPlotChildren() {
         // update symbol positions
         for (int seriesIndex=0; seriesIndex < getDataSize(); seriesIndex++) {

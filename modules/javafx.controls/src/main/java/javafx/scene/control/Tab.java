@@ -125,6 +125,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * Sets the id of this tab. This simple string identifier is useful for
      * finding a specific Tab within the {@code TabPane}. The default value is {@code null}.
+     * @param value the id of this tab
      */
    public final void setId(String value) { idProperty().set(value); }
 
@@ -138,6 +139,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The id of this tab.
+     * @return the id property of this tab
      */
     public final StringProperty idProperty() {
         if (id == null) {
@@ -158,6 +160,7 @@ public class Tab implements EventTarget, Styleable {
      * Parsing this style might not be supported on some limited
      * platforms. It is recommended to use a standalone CSS file instead.
      *
+     * @param value the style string
      */
    public final void setStyle(String value) { styleProperty().set(value); }
 
@@ -171,6 +174,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The CSS style string associated to this tab.
+     * @return the CSS style string property associated to this tab
      */
     public final StringProperty styleProperty() {
         if (style == null) {
@@ -189,6 +193,7 @@ public class Tab implements EventTarget, Styleable {
      * <p>Represents whether this tab is the currently selected tab,
      * To change the selected Tab use {@code tabPane.getSelectionModel().select()}
      * </p>
+     * @return true if selected
      */
     public final boolean isSelected() {
         return selected == null ? false : selected.get();
@@ -196,6 +201,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The currently selected tab.
+     * @return the selected tab
      */
     public final ReadOnlyBooleanProperty selectedProperty() {
         return selectedPropertyImpl().getReadOnlyProperty();
@@ -232,6 +238,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * <p>A reference to the TabPane that contains this tab instance.</p>
+     * @return the TabPane
      */
     public final TabPane getTabPane() {
         return tabPane == null ? null : tabPane.get();
@@ -239,6 +246,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The TabPane that contains this tab.
+     * @return the TabPane property
      */
     public final ReadOnlyObjectProperty<TabPane> tabPaneProperty() {
         return tabPanePropertyImpl().getReadOnlyProperty();
@@ -276,6 +284,7 @@ public class Tab implements EventTarget, Styleable {
      * <p>Sets the text to show in the tab to allow the user to differentiate between
      * the function of each tab. The text is always visible
      * </p>
+     * @param value the text string
      */
     public final void setText(String value) {
         textProperty().set(value);
@@ -292,6 +301,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The text shown in the tab.
+     * @return the text property
      */
     public final StringProperty textProperty() {
         if (text == null) {
@@ -307,6 +317,7 @@ public class Tab implements EventTarget, Styleable {
      * between the function of each tab. By default the graphic does not rotate
      * based on the TabPane.tabPosition value, but it can be set to rotate by
      * setting TabPane.rotateGraphic to true.</p>
+     * @param value the graphic node
      */
     public final void setGraphic(Node value) {
         graphicProperty().set(value);
@@ -339,6 +350,7 @@ public class Tab implements EventTarget, Styleable {
      * <p>The content to show within the main TabPane area. The content
      * can be any Node such as UI controls or groups of nodes added
      * to a layout container.</p>
+     * @param value the content node
      */
     public final void setContent(Node value) {
         contentProperty().set(value);
@@ -355,6 +367,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * <p>The content associated with the tab.</p>
+     * @return the content property
      */
     public final ObjectProperty<Node> contentProperty() {
         if (content == null) {
@@ -369,6 +382,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * <p>Specifies the context menu to show when the user right-clicks on the tab.
      * </p>
+     * @param value the context menu
      */
     public final void setContextMenu(ContextMenu value) {
         contextMenuProperty().set(value);
@@ -384,6 +398,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The context menu associated with the tab.
+     * @return the context menu property
      */
     public final ObjectProperty<ContextMenu> contextMenuProperty() {
         if (contextMenu == null) {
@@ -421,6 +436,7 @@ public class Tab implements EventTarget, Styleable {
      * property is {@code false}, no 'close' button will be shown on the tab.
      * The default is {@code true}.</p>
      *
+     * @param value the closable value
      */
     public final void setClosable(boolean value) {
         closableProperty().set(value);
@@ -437,6 +453,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The closable state for this tab.
+     * @return the closable property
      */
     public final BooleanProperty closableProperty() {
         if (closable == null) {
@@ -455,6 +472,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when a selection changed has occurred on the tab.
+     * @param value the on selection changed event handler
      */
     public final void setOnSelectionChanged(EventHandler<Event> value) {
         onSelectionChangedProperty().set(value);
@@ -471,6 +489,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The event handler that is associated with a selection on the tab.
+     * @return the on selection changed event handler property
      */
     public final ObjectProperty<EventHandler<Event>> onSelectionChangedProperty() {
         if (onSelectionChanged == null) {
@@ -501,6 +520,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * Defines a function to be called when the tab is closed.
+     * @param value the on closed event handler
      */
     public final void setOnClosed(EventHandler<Event> value) {
         onClosedProperty().set(value);
@@ -517,6 +537,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The event handler that is associated with the tab when the tab is closed.
+     * @return the on closed event handler property
      */
     public final ObjectProperty<EventHandler<Event>> onClosedProperty() {
         if (onClosed == null) {
@@ -543,6 +564,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * <p>Specifies the tooltip to show when the user hovers over the tab.</p>
+     * @param value the tool tip value
      */
     public final void setTooltip(Tooltip value) { tooltipProperty().setValue(value); }
 
@@ -554,6 +576,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * The tooltip associated with this tab.
+     * @return the tool tip property
      */
     public final ObjectProperty<Tooltip> tooltipProperty() {
         if (tooltip == null) {
@@ -580,6 +603,7 @@ public class Tab implements EventTarget, Styleable {
 
     /**
      * Returns {@code true} if this tab is disable.
+     * @return true if this tab is disable
      * @since JavaFX 2.2
      */
     public final boolean isDisable() { return disable == null ? false : disable.get(); }
@@ -589,6 +613,7 @@ public class Tab implements EventTarget, Styleable {
      * or traversable, but the contents remain interactive.  A disable tab
      * can be selected using {@link TabPane#getSelectionModel()}.
      *
+     * @return the disable property
      * @defaultValue false
      * @since JavaFX 2.2
      */
@@ -623,6 +648,7 @@ public class Tab implements EventTarget, Styleable {
     /**
      * Returns true when the {@code Tab} {@link #disableProperty disable} is set to
      * {@code true} or if the {@code TabPane} is disabled.
+     * @return true if the TabPane is disabled
      * @since JavaFX 2.2
      */
     public final boolean isDisabled() {
@@ -634,6 +660,7 @@ public class Tab implements EventTarget, Styleable {
      * will become disabled if {@link #disableProperty disable} is set to {@code true} on either
      * itself or if the {@code TabPane} is disabled.
      *
+     * @return the disabled property
      * @defaultValue false
      * @since JavaFX 2.2
      */

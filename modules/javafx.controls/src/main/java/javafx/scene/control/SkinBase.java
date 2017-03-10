@@ -168,6 +168,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /**
      * Returns the children of the skin.
+     * @return the children of the skin
      */
     public final ObservableList<Node> getChildren() {
         return children;
@@ -175,6 +176,10 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /**
      * Called during the layout pass of the scenegraph.
+     * @param contentX the x position
+     * @param contentY the y position
+     * @param contentWidth the width
+     * @param contentHeight the height
      */
     protected void layoutChildren(final double contentX, final double contentY,
             final double contentWidth, final double contentHeight) {
@@ -189,6 +194,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
 
     /**
      * Determines whether all mouse events should be automatically consumed.
+     * @param value the consume mouse events flag
      */
     protected final void consumeMouseEvents(boolean value) {
         if (value) {
@@ -203,6 +209,8 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * Subclasses can invoke this method to register that they want to listen to
      * property change events for the given property. Registered {@link Consumer} instances
      * will be executed in the order in which they are registered.
+     * @param property the property
+     * @param consumer the consumer
      */
     protected final void registerChangeListener(ObservableValue<?> property, Consumer<ObservableValue<?>> consumer) {
         if (lambdaChangeListenerHandler == null) {
@@ -888,6 +896,8 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
     /**
      * Returns the CssMetaData associated with this class, which may include the
      * CssMetaData of its superclasses.
+     * @return the CssMetaData associated with this class, which may include the
+     * CssMetaData of its superclasses
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return SkinBase.StyleableProperties.STYLEABLES;
@@ -908,7 +918,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      * pseudo-class is used in a CSS selector that matches this Node, CSS will
      * be reapplied. Typically, this method is called from the {@code invalidated}
      * method of a property that is used as a pseudo-class. For example:
-     * <code><pre>
+     * <pre><code>
      *
      *     private static final PseudoClass MY_PSEUDO_CLASS_STATE = PseudoClass.getPseudoClass("my-state");
      *
@@ -926,7 +936,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
      *               return "myPseudoClassState";
      *           }
      *       };
-     * </pre><code>
+     * </code></pre>
      *
      * @see Node#pseudoClassStateChanged
      * @param pseudoClass the pseudo-class that has changed state

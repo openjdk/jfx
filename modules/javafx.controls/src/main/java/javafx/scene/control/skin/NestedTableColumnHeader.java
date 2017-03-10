@@ -264,6 +264,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
     /**
      * Returns an unmodifiable list of the {@link TableColumnHeader} instances
      * that are children of this NestedTableColumnHeader.
+     * @return the unmodifiable list of TableColumnHeader of this NestedTableColumnHeader
      */
     public final ObservableList<TableColumnHeader> getColumnHeaders() {
         if (columnHeaders == null) {
@@ -368,6 +369,7 @@ public class NestedTableColumnHeader extends TableColumnHeader {
      * <strong>Note: </strong>In most circumstances this method should not be overridden, but in some circumstances it
      * makes sense (e.g. testing, or when extreme customization is desired).
      *
+     * @param col the table column
      * @return A new TableColumnHeader instance.
      */
     protected TableColumnHeader createTableColumnHeader(TableColumnBase col) {

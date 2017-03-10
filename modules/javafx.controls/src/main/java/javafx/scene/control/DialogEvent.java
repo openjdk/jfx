@@ -38,7 +38,7 @@ import javafx.event.EventType;
  *   <li>{@link Dialog#onShownProperty()}
  *   <li>{@link Dialog#onHidingProperty()}
  *   <li>{@link Dialog#onCloseRequestProperty()}
- *   <li>{@link Dialog#onHiddenProperty()()}
+ *   <li>{@link Dialog#onHiddenProperty()}
  * </ul>
  *
  * @see Dialog

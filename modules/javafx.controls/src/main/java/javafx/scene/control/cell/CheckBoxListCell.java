@@ -52,7 +52,7 @@ import javafx.util.StringConverter;
  * selected or not. This ObservableValue will be bound bidirectionally (meaning
  * that the CheckBox in the cell will set/unset this property based on user
  * interactions, and the CheckBox will reflect the state of the
- * ObservableValue<Boolean>, if it changes externally).
+ * {@code ObservableValue<Boolean>}, if it changes externally).
  *
  * <p>Note that the CheckBoxListCell renders the CheckBox 'live', meaning that
  * the CheckBox is always interactive and can be directly toggled by the user.
@@ -201,6 +201,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -208,6 +209,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter}
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -215,6 +217,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();
@@ -230,6 +233,8 @@ public class CheckBoxListCell<T> extends ListCell<T> {
     /**
      * Property representing the {@link Callback} that is bound to by the
      * CheckBox shown on screen.
+     * @return the {@link Callback} that is bound to by the CheckBox shown on
+     * screen
      */
     public final ObjectProperty<Callback<T, ObservableValue<Boolean>>> selectedStateCallbackProperty() {
         return selectedStateCallback;
@@ -237,6 +242,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
 
     /**
      * Sets the {@link Callback} that is bound to by the CheckBox shown on screen.
+     * @param value the {@link Callback}
      */
     public final void setSelectedStateCallback(Callback<T, ObservableValue<Boolean>> value) {
         selectedStateCallbackProperty().set(value);
@@ -244,6 +250,7 @@ public class CheckBoxListCell<T> extends ListCell<T> {
 
     /**
      * Returns the {@link Callback} that is bound to by the CheckBox shown on screen.
+     * @return the {@link Callback} that is bound to by the CheckBox shown on screen
      */
     public final Callback<T, ObservableValue<Boolean>> getSelectedStateCallback() {
         return selectedStateCallbackProperty().get();

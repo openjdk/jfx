@@ -111,6 +111,7 @@ public class TablePosition<S,T> extends TablePositionBase<TableColumn<S,T>> {
 
     /**
      * The TableView that this TablePosition is related to.
+     * @return the TableView
      */
     public final TableView<S> getTableView() {
         return controlRef.get();

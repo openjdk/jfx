@@ -57,7 +57,8 @@ import com.sun.javafx.scene.control.Logging;
  * (which is the class type of the TableView
  * {@link TableView#itemsProperty() items} list). Additionally, this method must
  * return a {@link Property} instance. If a method meeting these requirements
- * is found, then the {@link TableCell} is populated with this ObservableValue<T>.
+ * is found, then the {@link TableCell} is populated with this
+ * {@literal ObservableValue<T>}.
  * In addition, the TableView will automatically add an observer to the
  * returned value, such that any changes fired will be observed by the TableView,
  * resulting in the cell immediately updating.
@@ -121,6 +122,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
 
     /**
      * Returns the property name provided in the constructor.
+     * @return the property name provided in the constructor
      */
     public final String getProperty() { return property; }
 

@@ -49,6 +49,7 @@ import javafx.scene.control.skin.SplitMenuButtonSkin;
  *
  * <p>Example:</p>
  * <pre>
+ * {@literal
  * SplitMenuButton m = new SplitMenuButton();
  * m.setText("Shutdown");
  * m.getItems().addAll(new MenuItem("Logout"), new MenuItem("Sleep"));
@@ -57,8 +58,8 @@ import javafx.scene.control.skin.SplitMenuButtonSkin;
  *         System.out.println("Shutdown");
  *     }
  * });
+ * }
  * </pre>
- * <p>
  *
  * <p>
  * MnemonicParsing is enabled by default for SplitMenuButton.

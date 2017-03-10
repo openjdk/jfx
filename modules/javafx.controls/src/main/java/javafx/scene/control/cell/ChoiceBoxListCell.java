@@ -248,6 +248,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -255,6 +256,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -262,6 +264,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();
@@ -277,6 +280,7 @@ public class ChoiceBoxListCell<T> extends ListCell<T> {
 
     /**
      * Returns the items to be displayed in the ChoiceBox when it is showing.
+     * @return the items to be displayed in the ChoiceBox when it is showing
      */
     public ObservableList<T> getItems() {
         return items;

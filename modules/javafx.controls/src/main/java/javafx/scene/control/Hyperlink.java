@@ -105,6 +105,7 @@ public class Hyperlink extends ButtonBase {
      **************************************************************************/
     /**
      * Indicates whether this link has already been "visited".
+     * @return true if this link has already been "visited"
      */
     public final BooleanProperty visitedProperty() {
         if (visited == null) {

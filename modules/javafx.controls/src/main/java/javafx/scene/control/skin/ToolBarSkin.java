@@ -858,6 +858,8 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
     /**
      * Returns the CssMetaData associated with this class, which may include the
      * CssMetaData of its superclasses.
+     * @return the CssMetaData associated with this class, which may include the
+     * CssMetaData of its superclasses
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;

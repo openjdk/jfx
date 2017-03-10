@@ -101,6 +101,7 @@ public abstract class FocusModel<T> {
      * An example would be that a ListView focus model would likely return
      * <code>listView.getItems().size()</code>. The valid range of focusable
      * indices is between 0 and whatever is returned by this method.
+     * @return the number of items in the data model that underpins the control
      */
     protected abstract int getItemCount();
 
@@ -134,7 +135,7 @@ public abstract class FocusModel<T> {
      * Causes the item at the given index to receive the focus. This does not
      * cause the current selection to change. Updates the focusedItem and
      * focusedIndex properties such that <code>focusedIndex = -1</code> unless
-     * <code>0 <= index < model size</code>.
+     * <code>0 &lt;= index &lt; model size</code>.
      *
      * @param index The index of the item to get focus.
      */

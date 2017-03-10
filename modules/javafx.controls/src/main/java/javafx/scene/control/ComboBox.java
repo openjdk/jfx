@@ -183,6 +183,8 @@ import java.lang.ref.WeakReference;
  * <p>Admittedly the above approach is far more verbose, but it offers the
  * required functionality without encountering the scenegraph constraints.
  *
+ * @param <T> The type of the value that has been selected or otherwise entered
+ * in to this ComboBox
  * @see ComboBoxBase
  * @see Cell
  * @see ListCell
@@ -229,6 +231,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
     /**
      * Creates a default ComboBox instance with the provided items list and
      * a default {@link #selectionModelProperty() selection model}.
+     * @param items the list of items
      */
     public ComboBox(ObservableList<T> items) {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
@@ -314,6 +317,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * Converts the user-typed input (when the ComboBox is
      * {@link #editableProperty() editable}) to an object of type T, such that
      * the input may be retrieved via the  {@link #valueProperty() value} property.
+     * @return the converter property
      */
     public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
     private ObjectProperty<StringConverter<T>> converter =
@@ -341,6 +345,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * area. If a cell is set here, it does not change the rendering of the
      * ComboBox popup list - that rendering is controlled via the
      * {@link #cellFactoryProperty() cell factory} API.
+     * @return the button cell property
      * @since JavaFX 2.2
      */
     public ObjectProperty<ListCell<T>> buttonCellProperty() { return buttonCell; }
@@ -413,6 +418,7 @@ public class ComboBox<T> extends ComboBoxBase<T> {
      * This Node is shown to the user when the ComboBox has no content to show.
      * The placeholder node is shown in the ComboBox popup area
      * when the items list is null or empty.
+     * @return the placeholder property
      * @since JavaFX 8.0
      */
     public final ObjectProperty<Node> placeholderProperty() {

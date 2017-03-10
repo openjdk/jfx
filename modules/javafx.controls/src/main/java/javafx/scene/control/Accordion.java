@@ -171,6 +171,7 @@ public class Accordion extends Control {
      * then expanded pane will be set to null, if possible. (This will not be possible
      * if you have manually bound the expanded pane to some value, for example).
      * </p>
+     * @param value the expanded {@link TitledPane}
      */
     public final void setExpandedPane(TitledPane value) { expandedPaneProperty().set(value); }
 

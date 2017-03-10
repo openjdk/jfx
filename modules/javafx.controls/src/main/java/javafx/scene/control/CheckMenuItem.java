@@ -99,6 +99,7 @@ public class CheckMenuItem extends MenuItem {
 
     /**
      * Constructs a CheckMenuItem and sets the display text with the specified text.
+     * @param text the display text
      */
     public CheckMenuItem(String text) {
         this(text,null);
@@ -107,6 +108,8 @@ public class CheckMenuItem extends MenuItem {
     /**
      * Constructs a CheckMenuItem and sets the display text with the specified text
      * and sets the graphic {@link Node} to the given node.
+     * @param text the display text
+     * @param graphic the graphic Node
      */
     public CheckMenuItem(String text, Node graphic) {
         super(text,graphic);

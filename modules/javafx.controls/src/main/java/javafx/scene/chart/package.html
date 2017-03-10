@@ -34,7 +34,7 @@ example is provided later in the document.
 </P>
 <P>Below is a table listing the existing Chart types and a brief
 summary of their intended use.</P>
-<TABLE CELLPADDING=2 CELLSPACING=2>
+<TABLE CELLPADDING=2 CELLSPACING=2 summary="">
 	<TR>
 		<TH>
 			<P>Chart</P>
@@ -124,107 +124,99 @@ tick marks every tickUnit.
 javafx.scene.chart.XYChart.Series} objects. Each series contains
 {@link javafx.scene.chart.XYChart.Data} objects. 
 </P>
-<UL>
-	<PRE CLASS="western">// add data
-XYChart.Series&lt;String,Number&gt; series1 = new XYChart.Series&lt;String,Number&gt;();
-series1.setName(&quot;Data Series 1&quot;);
-series1.getData().add(new XYChart.Data&lt;String,Number&gt;(&ldquo;2007&rdquo;, 567));
-    </PRE>
-</UL>
+<pre>{@code
+    // add data
+    XYChart.Series<String,Number> series1 = new XYChart.Series<String,Number>();
+    series1.setName("Data Series 1");
+    series1.getData().add(new XYChart.Data<String,Number>("2007", 567));
+}</pre>
 <P>We can define more series objects similarly. Following code
 snippet shows how to create a BarChart with 3 categories and its X
 and Y axis: 
 </P>
-<UL>
-	<PRE CLASS="western">static String[] years = {&quot;2007&quot;, &quot;2008&quot;, &quot;2009&quot;};
-final CategoryAxis xAxis = new CategoryAxis();
-final NumberAxis yAxis = new NumberAxis();
-final BarChart&lt;String,Number&gt; bc = new BarChart&lt;String,Number&gt;(xAxis,yAxis);
-xAxis.setCategories(FXCollections.&lt;String&gt;observableArrayList(Arrays.asList(years)));
-bc.getData().addAll(series1, series2, series3);
-   </PRE>
-</UL>
+<pre>{@code
+    static String[] years = {"2007", "2008", "2009"};
+    final CategoryAxis xAxis = new CategoryAxis();
+    final NumberAxis yAxis = new NumberAxis();
+    final BarChart<String,Number> bc = new BarChart<String,Number>(xAxis, yAxis);
+    xAxis.setCategories(FXCollections.<String>observableArrayList(Arrays.asList(years)));
+    bc.getData().addAll(series1, series2, series3);
+}</pre>
 <P>JavaFX charts lends itself very well for real time or dynamic
 Charting (like online stocks, web traffic etc) from live data sets.
 Here is an example of a dynamic chart created with simulated data. A
 {@link javafx.animation.Timeline} is used to simulate dynamic data
 for stock price variations over time(hours). 
 </P>
-<UL>
-	<PRE CLASS="western">private XYChart.Series&lt;Number,Number&gt; hourDataSeries; 
-private NumberAxis xAxis;
-private Timeline animation;
-private double hours = 0; 
-private double timeInHours = 0;
-private double prevY = 10;
-private double y = 10; 
+<pre><code>
+    {@literal private XYChart.Series<Number,Number> hourDataSeries;} 
+    private NumberAxis xAxis;
+    private Timeline animation;
+    private double hours = 0; 
+    private double timeInHours = 0;
+    private double prevY = 10;
+    private double y = 10; 
 
-<FONT FACE="Courier New, monospace">// timeline to add new data every 60<SUP>th</SUP> of a second</FONT>
-<FONT FACE="Courier New, monospace">animation = new Timeline();</FONT>
-<FONT FACE="Courier New, monospace">animation.getKeyFrames().add(new KeyFrame(Duration.millis(1000 / 60), new    EventHandler&lt;ActionEvent&gt;() {</FONT>
-    <FONT FACE="Courier New, monospace">@Override public void handle(ActionEvent actionEvent) {</FONT>
-        <FONT FACE="Courier New, monospace">// 6 minutes data per frame</FONT></PRE>
-	<UL>
-		<PRE CLASS="western">  <FONT FACE="Courier New, monospace">for(int count=0; count &lt; 6; count++) {</FONT></PRE>
-		<UL>
-			<PRE CLASS="western"><FONT FACE="Courier New, monospace">nextTime();</FONT>
-<FONT FACE="Courier New, monospace">plotTime();</FONT></PRE>
-		</UL>
-		<PRE CLASS="western">  <FONT FACE="Courier New, monospace">}</FONT>
-<FONT FACE="Courier New, monospace">}</FONT></PRE>
-	</UL>
-	<PRE CLASS="western"><FONT FACE="Courier New, monospace"><FONT SIZE=2>}));</FONT></FONT>
-<FONT FACE="Courier New, monospace"><FONT SIZE=2>animation.set</FONT></FONT><FONT FACE="Courier New, monospace">CycleCount(Animation.INDEFINITE);</FONT>
+    // timeline to add new data every 60th of a second
+    animation = new Timeline();
+    {@literal animation.getKeyFrames().add(new KeyFrame(Duration.millis(1000 / 60), new EventHandler<ActionEvent>()} {
+        {@literal @Override public void handle(ActionEvent actionEvent)} {
+            // 6 minutes data per frame
+            {@literal for(int count = 0; count < 6; count++)} {
+                nextTime();
+                plotTime();
+            }
+        }
+    }));
+    animation.setCycleCount(Animation.INDEFINITE);
+    xAxis = new NumberAxis(0, 24, 3);
+    final NumberAxis yAxis = new NumberAxis(0, 100, 10);
+    {@literal final LineChart<Number,Number> lc = new LineChart<Number,Number>(xAxis, yAxis)};
 
-<FONT FACE="Courier New, monospace"><FONT SIZE=2>xAxis = new NumberAxis(0,24,3);</FONT></FONT></PRE>
-</UL>
-<PRE CLASS="western">      <FONT FACE="Courier New, monospace">final NumberAxis yAxis = new NumberAxis(0,100,10);</FONT>
-      <FONT FACE="Courier New, monospace">final LineChart&lt;Number,Number&gt; lc = new LineChart&lt;Number,Number&gt;(xAxis,yAxis);</FONT>
+    lc.setCreateSymbols(false);
+    lc.setAnimated(false);
+    lc.setLegendVisible(false);
+    lc.setTitle("ACME Company Stock");
 
-      <FONT FACE="Courier New, monospace">lc.setCreateSymbols(false);</FONT>
-      <FONT FACE="Courier New, monospace">lc.setAnimated(false);</FONT>
-      <FONT FACE="Courier New, monospace">lc.setLegendVisible(false);</FONT>
-      <FONT FACE="Courier New, monospace">lc.setTitle(&quot;ACME Company Stock&quot;);</FONT>
+    xAxis.setLabel("Time");
+    xAxis.setForceZeroInRange(false);
+    yAxis.setLabel("Share Price");
+    yAxis.setTickLabelFormatter(new NumberAxis.DefaultFormatter(yAxis, "$", null));
 
-      <FONT FACE="Courier New, monospace">xAxis.setLabel(&quot;Time&quot;);</FONT>
-      <FONT FACE="Courier New, monospace">xAxis.setForceZeroInRange(false);</FONT>
-      <FONT FACE="Courier New, monospace">yAxis.setLabel(&quot;Share Price&quot;);</FONT>
-      <FONT FACE="Courier New, monospace">yAxis.setTickLabelFormatter(new NumberAxis.DefaultFormatter(yAxis,&quot;$&quot;,null));</FONT>
+    {@literal hourDataSeries = new XYChart.Series<Number,Number>();}
+    hourDataSeries.setName("Hourly Data");
+    {@literal hourDataSeries.getData().add(new XYChart.Data<Number,Number>(timeInHours, prevY));}
+    lc.getData().add(hourDataSeries);
 
-      <FONT FACE="Courier New, monospace">hourDataSeries = new XYChart.Series&lt;Number,Number&gt;();</FONT>
-      <FONT FACE="Courier New, monospace">hourDataSeries.setName(&quot;Hourly Data&quot;);</FONT>
-      <FONT FACE="Courier New, monospace">hourDataSeries.getData().add(new XYChart.Data&lt;Number,Number&gt;(timeInHours,prevY));</FONT>
-      <FONT FACE="Courier New, monospace">lc.getData().add(hourDataSeries);</FONT>
+    private void nextTime() {
+        if (minutes == 59) {
+            hours++;
+            minutes = 0;
+        } else {
+            minutes++;
+        }
+        timeInHours = hours + ((1d/60d) * minutes);
+    }
 
-      <FONT FACE="Courier New, monospace">private void nextTime() {</FONT>
-          <FONT FACE="Courier New, monospace">if (minutes == 59) {</FONT>
-              <FONT FACE="Courier New, monospace">hours ++;</FONT>
-              <FONT FACE="Courier New, monospace">minutes = 0;</FONT>
-          <FONT FACE="Courier New, monospace">} else {</FONT>
-              <FONT FACE="Courier New, monospace">minutes ++;</FONT>
-          <FONT FACE="Courier New, monospace">}</FONT>
-          <FONT FACE="Courier New, monospace">timeInHours = hours + ((1d/60d)*minutes);</FONT>
-      <FONT FACE="Courier New, monospace">}</FONT>
+    private void plotTime() {
+        if ((timeInHours % 1) == 0) {
+            // change of hour
+            double oldY = y;
+            y = prevY - 10 + (Math.random() * 20);
+            prevY = oldY;
+            {@literal while (y < 10 || y > 90) y = y - 10 + (Math.random() * 20);}
+            {@literal hourDataSeries.getData().add(new XYChart.Data<Number, Number>(timeInHours, prevY));}
+            // after 25hours delete old data
+            {@literal if (timeInHours > 25) hourDataSeries.getData().remove(0)};
+            // every hour after 24 move range 1 hour
+            {@literal if (timeInHours > 24)} {
+                xAxis.setLowerBound(xAxis.getLowerBound() + 1);
+                xAxis.setUpperBound(xAxis.getUpperBound() + 1);
+            }
+        }
+    } 
+</code></pre>
 
-      <FONT FACE="Courier New, monospace">private void plotTime() {</FONT>
-          <FONT FACE="Courier New, monospace">if ((timeInHours % 1) == 0) {</FONT>
-              <FONT FACE="Courier New, monospace">// change of hour</FONT>
-              <FONT FACE="Courier New, monospace">double oldY = y;</FONT>
-              <FONT FACE="Courier New, monospace">y = prevY - 10 + (Math.random()*20);</FONT>
-              <FONT FACE="Courier New, monospace">prevY = oldY;</FONT>
-              <FONT FACE="Courier New, monospace">while (y &lt; 10 || y &gt; 90) y = y - 10 + (Math.random()*20);</FONT>
-              <FONT FACE="Courier New, monospace">hourDataSeries.getData().add(new XYChart.Data&lt;Number, Number&gt;(timeInHours, prevY));</FONT>
-              <FONT FACE="Courier New, monospace">// after 25hours delete old data</FONT>
-              <FONT FACE="Courier New, monospace">if (timeInHours &gt; 25) hourDataSeries.getData().remove(0);</FONT>
-              <FONT FACE="Courier New, monospace">// every hour after 24 move range 1 hour</FONT>
-              <FONT FACE="Courier New, monospace">if (timeInHours &gt; 24) {</FONT>
-                  <FONT FACE="Courier New, monospace">xAxis.setLowerBound(xAxis.getLowerBound()+1);</FONT>
-                  <FONT FACE="Courier New, monospace">xAxis.setUpperBound(xAxis.getUpperBound()+1);</FONT>
-              <FONT FACE="Courier New, monospace">}</FONT>
-          <FONT FACE="Courier New, monospace">}</FONT>
-      <FONT FACE="Courier New, monospace">}</FONT></PRE><P STYLE="margin-bottom: 0in">
-<BR>
-</P>
 <P>The start method needs to call animation,.play() to start the
 simulated dynamic chart.</P>
 <P>Please refer to javafx.scene.control package documentation on CSS
@@ -235,8 +227,5 @@ set the chart content background to a certain color:</P>
 <P>.chart-series-line { -fx-stroke: green; -fx-stroke-width: 4px;}</P>
 <P STYLE="margin-bottom: 0in"><BR>
 </P>
-<UL>
-	<PRE CLASS="western" STYLE="margin-bottom: 0.2in">        </PRE>
-</UL>
 </BODY>
 </HTML>

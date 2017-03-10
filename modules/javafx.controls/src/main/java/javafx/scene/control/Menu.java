@@ -255,6 +255,7 @@ public class Menu extends MenuItem {
      * Called just prior to the {@code ContextMenu} being shown, even if the menu has
      * no items to show. Note however that this won't be called if the menu does
      * not have a valid anchor node.
+     * @return the on showing property
      */
     public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
     public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
@@ -279,6 +280,7 @@ public class Menu extends MenuItem {
     // -- On Shown
     /**
      * Called just after the {@link ContextMenu} is shown.
+     * @return the on shown property
      */
     public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
     public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
@@ -303,6 +305,7 @@ public class Menu extends MenuItem {
     // --- On Hiding
     /**
      * Called just prior to the {@link ContextMenu} being hidden.
+     * @return the on hiding property
      */
     public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
     public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
@@ -327,6 +330,7 @@ public class Menu extends MenuItem {
     // --- On Hidden
     /**
      * Called just after the {@link ContextMenu} has been hidden.
+     * @return the on hidden property
      */
     public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
     public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
@@ -394,6 +398,7 @@ public class Menu extends MenuItem {
     /**
      * The items to show within this menu. If this ObservableList is modified at
      * runtime, the Menu will update as expected.
+     * @return the list of items
      */
     public final ObservableList<MenuItem> getItems() {
         return items;

@@ -492,6 +492,11 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     // RT-22480: This is intended as private API for SceneBuilder,
     // pending fix for RT-19857: Keeping menu in the Mac menu bar when
     // there is no more stage
+    /**
+     * Set the default system menu bar. This allows an application to keep menu
+     * in the system menu bar after the last Window is closed.
+     * @param menuBar the menu bar
+     */
     public static void setDefaultSystemMenuBar(final MenuBar menuBar) {
         if (Toolkit.getToolkit().getSystemMenu().isSupported()) {
             wrappedDefaultMenus.clear();
@@ -1213,6 +1218,8 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
     /**
      * Returns the CssMetaData associated with this class, which may include the
      * CssMetaData of its superclasses.
+     * @return the CssMetaData associated with this class, which may include the
+     * CssMetaData of its superclasses
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return STYLEABLES;

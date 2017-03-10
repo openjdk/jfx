@@ -142,7 +142,7 @@ public class TextFormatter<V> {
 
     /**
      * The current value for this formatter. When the formatter is set on a {@code TextInputControl} and has a
-     * @{code valueConverter}, the value is set by the control, when the text is commited.
+     * {@code valueConverter}, the value is set by the control, when the text is commited.
      */
     private final ObjectProperty<V> value = new ObjectPropertyBase<V>() {
 
@@ -237,7 +237,6 @@ public class TextFormatter<V> {
      *         E.g. when some text is being deleted, you can simply replace it by some placeholder text just by setting a new text
      *         ({@code setText("new text")})</li>
      *     </ul>
-     * </p>
      * <p>
      *     The Change is mutable, but not observable. It should be used
      *     only for the life of a single change. It is intended that the

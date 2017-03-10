@@ -146,11 +146,13 @@ public final class ButtonType {
 
     /**
      * Returns the ButtonData specified for this ButtonType in the constructor.
+     * @return the ButtonData specified for this ButtonType in the constructor
      */
     public final ButtonData getButtonData() { return this.buttonData; }
 
     /**
-     * Returns the text specified for this ButtonType in the constructor;
+     * Returns the text specified for this ButtonType in the constructor.
+     * @return the text specified for this ButtonType in the constructor
      */
     public final String getText() {
         if (text == null && key != null) {

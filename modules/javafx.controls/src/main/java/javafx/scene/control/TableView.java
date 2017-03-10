@@ -107,7 +107,6 @@ import javafx.scene.control.skin.TableViewSkin;
  *      the column header (hold down Shift keyboard key whilst clicking on a
  *      header to sort by multiple columns).
  * </ul>
- * </p>
  *
  * <p>Note that TableView is intended to be used to visualize data - it is not
  * intended to be used for laying out your user interface. If you want to lay
@@ -116,11 +115,12 @@ import javafx.scene.control.skin.TableViewSkin;
  *
  * <h2>Creating a TableView</h2>
  *
- * <p>Creating a TableView is a multi-step process, and also depends on the
+ * <p>
+ * {@literal Creating a TableView is a multi-step process, and also depends on the
  * underlying data model needing to be represented. For this example we'll use
  * an ObservableList<Person>, as it is the simplest way of showing data in a
  * TableView. The <code>Person</code> class will consist of a first
- * name and last name properties. That is:
+ * name and last name properties. That is:}
  *
  * <pre>
  * {@code
@@ -148,9 +148,10 @@ import javafx.scene.control.skin.TableViewSkin;
  * {@code
  * TableView<Person> table = new TableView<Person>();}</pre>
  *
+ * {@literal
  * <p>With the basic table defined, we next focus on the data model. As mentioned,
  * for this example, we'll be using a ObservableList<Person>. We can immediately
- * set such a list directly in to the TableView, as such:
+ * set such a list directly in to the TableView, as such:}
  *
  * <pre>
  * {@code
@@ -834,6 +835,7 @@ public class TableView<S> extends Control {
     /**
      * The underlying data model for the TableView. Note that it has a generic
      * type that must match the type of the TableView itself.
+     * @return the items property
      */
     public final ObjectProperty<ObservableList<S>> itemsProperty() { return items; }
     private ObjectProperty<ObservableList<S>> items =
@@ -868,6 +870,7 @@ public class TableView<S> extends Control {
      * in a designated space within the TableView, within which is a radio menu
      * item for each TableColumn in this table. This menu allows for the user to
      * show and hide all TableColumns easily.
+     * @return the tableMenuButtonVisible property
      */
     public final BooleanProperty tableMenuButtonVisibleProperty() {
         if (tableMenuButtonVisible == null) {
@@ -897,6 +900,7 @@ public class TableView<S> extends Control {
      * operation. The two most common policies are available as static functions
      * in the TableView class: {@link #UNCONSTRAINED_RESIZE_POLICY} and
      * {@link #CONSTRAINED_RESIZE_POLICY}.
+     * @return columnResizePolicy property
      */
     public final ObjectProperty<Callback<ResizeFeatures, Boolean>> columnResizePolicyProperty() {
         if (columnResizePolicy == null) {
@@ -941,6 +945,7 @@ public class TableView<S> extends Control {
      * <p>
      * You can create custom TableCell instances per column by assigning the
      * appropriate function to the cellFactory property in the TableColumn class.
+     * @return rowFactory property
      */
     public final ObjectProperty<Callback<TableView<S>, TableRow<S>>> rowFactoryProperty() {
         if (rowFactory == null) {
@@ -964,6 +969,7 @@ public class TableView<S> extends Control {
      * place, that a filter has been applied to the table model, resulting
      * in there being nothing to show the user, or that there are no currently
      * visible columns.
+     * @return placeholder property
      */
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
@@ -1010,6 +1016,7 @@ public class TableView<S> extends Control {
      * to select single or multiple items within a TableView, as  well as inspect
      * which items have been selected by the user. Note that it has a generic
      * type that must match the type of the TableView itself.
+     * @return selectionModel property
      */
     public final ObjectProperty<TableViewSelectionModel<S>> selectionModelProperty() {
         return selectionModel;
@@ -1035,6 +1042,7 @@ public class TableView<S> extends Control {
      * Represents the currently-installed {@link TableViewFocusModel} for this
      * TableView. Under almost all circumstances leaving this as the default
      * focus model will suffice.
+     * @return focusModel property
      */
     public final ObjectProperty<TableViewFocusModel<S>> focusModelProperty() {
         if (focusModel == null) {
@@ -1081,6 +1089,7 @@ public class TableView<S> extends Control {
      * Specifies whether this TableView is editable - only if the TableView, the
      * TableColumn (if applicable) and the TableCells within it are both
      * editable will a TableCell be able to go into their editing state.
+     * @return the editable property
      */
     public final BooleanProperty editableProperty() {
         if (editable == null) {
@@ -1138,6 +1147,7 @@ public class TableView<S> extends Control {
      * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
      * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
      *
+     * @return fixedCellSize property
      * @since JavaFX 8.0
      */
     public final DoubleProperty fixedCellSizeProperty() {
@@ -1172,6 +1182,7 @@ public class TableView<S> extends Control {
     /**
      * Represents the current cell being edited, or null if
      * there is no cell being edited.
+     * @return the editingCell property
      */
     public final ReadOnlyObjectProperty<TablePosition<S,?>> editingCellProperty() {
         return editingCellPropertyImpl().getReadOnlyProperty();
@@ -1303,6 +1314,7 @@ public class TableView<S> extends Control {
      *
      * <p>Note: to display any data in a TableView, there must be at least one
      * TableColumn in this ObservableList.</p>
+     * @return the columns
      */
     public final ObservableList<TableColumn<S,?>> getColumns() {
         return columns;
@@ -1451,6 +1463,9 @@ public class TableView<S> extends Control {
     /**
      * Applies the currently installed resize policy against the given column,
      * resizing it based on the delta value provided.
+     * @param column the column
+     * @param delta the delta
+     * @return true if column resize is allowed
      */
     public boolean resizeColumn(TableColumn<S,?> column, double delta) {
         if (column == null || Double.compare(delta, 0.0) == 0) return false;
@@ -1468,6 +1483,8 @@ public class TableView<S> extends Control {
      *
      * <p><strong>Note:</strong> This method will cancel editing if the given row
      * value is less than zero and the given column is null.</p>
+     * @param row the row
+     * @param column the column
      */
     public void edit(int row, TableColumn<S,?> column) {
         if (!isEditable() || (column != null && ! column.isEditable())) {
@@ -1483,6 +1500,7 @@ public class TableView<S> extends Control {
 
     /**
      * Returns an unmodifiable list containing the currently visible leaf columns.
+     * @return an unmodifiable list containing the currently visible leaf columns
      */
     public ObservableList<TableColumn<S,?>> getVisibleLeafColumns() {
         return unmodifiableVisibleLeafColumns;
@@ -1491,6 +1509,9 @@ public class TableView<S> extends Control {
     /**
      * Returns the position of the given column, relative to all other
      * visible leaf columns.
+     * @param column the column
+     * @return the position of the given column, relative to all other
+     * visible leaf columns
      */
     public int getVisibleLeafIndex(TableColumn<S,?> column) {
         return visibleLeafColumns.indexOf(column);
@@ -1499,6 +1520,9 @@ public class TableView<S> extends Control {
     /**
      * Returns the TableColumn in the given column index, relative to all other
      * visible leaf columns.
+     * @param column the column
+     * @return the TableColumn in the given column index, relative to all other
+     * visible leaf columns
      */
     public TableColumn<S,?> getVisibleLeafColumn(int column) {
         if (column < 0 || column >= visibleLeafColumns.size()) return null;
@@ -1825,6 +1849,7 @@ public class TableView<S> extends Control {
 
         /**
          * Returns the TableView upon which the resize operation is occurring.
+         * @return the TableView
          */
         public TableView<S> getTable() {
             return table;
@@ -1892,6 +1917,8 @@ public class TableView<S> extends Control {
          * A read-only ObservableList representing the currently selected cells
          * in this TableView. Rather than directly modify this list, please
          * use the other methods provided in the TableViewSelectionModel.
+         * @return a read-only ObservableList representing the currently
+         * selected cells in this TableView
          */
         public abstract ObservableList<TablePosition> getSelectedCells();
 
@@ -1911,6 +1938,9 @@ public class TableView<S> extends Control {
         /**
          * Convenience function which tests whether the given row and column index
          * is currently selected in this table instance.
+         * @param row the row
+         * @param column the column
+         * @return true if row and column index is currently selected
          */
         public abstract boolean isSelected(int row, TableColumn<S, ?> column);
 
@@ -1923,6 +1953,8 @@ public class TableView<S> extends Control {
 
         /**
          * Selects the cell at the given row/column intersection.
+         * @param row the row
+         * @param column the column
          */
         public abstract void select(int row, TableColumn<S, ?> column);
 
@@ -1936,6 +1968,8 @@ public class TableView<S> extends Control {
         /**
          * Clears all selection, and then selects the cell at the given row/column
          * intersection.
+         * @param row the row
+         * @param column the column
          */
         public abstract void clearAndSelect(int row, TableColumn<S,?> column);
 
@@ -1950,6 +1984,8 @@ public class TableView<S> extends Control {
          * Removes selection from the specified row/column position (in view indexes).
          * If this particular cell (or row if the column value is -1) is not selected,
          * nothing happens.
+         * @param row the row
+         * @param column the column
          */
         public abstract void clearSelection(int row, TableColumn<S, ?> column);
 
@@ -1975,6 +2011,7 @@ public class TableView<S> extends Control {
 
         /**
          * Returns the TableView instance that this selection model is installed in.
+         * @return the TableView
          */
         public TableView<S> getTableView() {
             return tableView;
@@ -3218,7 +3255,7 @@ public class TableView<S> extends Control {
          * Causes the item at the given index to receive the focus. This does not
          * cause the current selection to change. Updates the focusedItem and
          * focusedIndex properties such that <code>focusedIndex = -1</code> unless
-         * <pre><code>0 <= index < model size</code></pre>.
+         * <pre><code>0 &lt;= index &lt; model size</code></pre>.
          *
          * @param index The index of the item to get focus.
          */

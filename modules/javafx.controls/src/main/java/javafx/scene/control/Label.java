@@ -109,6 +109,7 @@ public class Label extends Labeled {
      * A Label can act as a label for a different Control or
      * Node. This is used for Mnemonics and Accelerator parsing.
      * This allows setting of the target Node.
+     * @return the Node that this label is to be associated with
      */
     public ObjectProperty<Node> labelForProperty() {
         if (labelFor == null) {

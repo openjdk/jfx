@@ -71,6 +71,7 @@ public final class IndexRange {
 
     /**
      * Returns the start position of the range.
+     * @return the start position of the range
      */
     public int getStart() {
         return start;
@@ -78,6 +79,7 @@ public final class IndexRange {
 
     /**
      * Returns the end position of the range (exclusive).
+     * @return the end position of the range (exclusive)
      */
     public int getEnd() {
         return end;
@@ -85,6 +87,7 @@ public final class IndexRange {
 
     /**
      * Returns the length of the range.
+     * @return the length of the range
      */
     public int getLength() {
         return end - start;

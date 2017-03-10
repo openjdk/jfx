@@ -166,7 +166,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param <T> The type of the elements contained within the {@link TreeItem}
      *      instances.
      * @param getSelectedProperty A {@link Callback} that, given an object of
-     *      type TreeItem<T>, will return an {@code ObservableValue<Boolean>}
+     *      type {@literal TreeItem<T>}, will return an {@code ObservableValue<Boolean>}
      *      that represents whether the given item is selected or not. This
      *      {@code ObservableValue<Boolean>} will be bound bidirectionally
      *      (meaning that the CheckBox in the cell will set/unset this property
@@ -202,15 +202,15 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param <T> The type of the elements contained within the {@link TreeItem}
      *      instances.
      * @param getSelectedProperty A Callback that, given an object of
-     *      type TreeItem<T>, will return an {@code ObservableValue<Boolean>}
+     *      type {@literal TreeItem<T>}, will return an {@code ObservableValue<Boolean>}
      *      that represents whether the given item is selected or not. This
      *      {@code ObservableValue<Boolean>} will be bound bidirectionally
      *      (meaning that the CheckBox in the cell will set/unset this property
      *      based on user interactions, and the CheckBox will reflect the state of
      *      the {@code ObservableValue<Boolean>}, if it changes externally).
-     * @param converter A StringConverter that, give an object of type TreeItem<T>,
-     *      will return a String that can be used to represent the object
-     *      visually. The default implementation in {@link #forTreeView(Callback)}
+     * @param converter A StringConverter that, give an object of type
+     *      {@literal TreeItem<T>}, will return a String that can be used to represent the
+     *      object visually. The default implementation in {@link #forTreeView(Callback)}
      *      is to simply call .toString() on all non-null items (and to just
      *      return an empty string in cases where the given item is null).
      * @return A {@link Callback} that will return a TreeCell that is able to
@@ -270,7 +270,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
      * {@link CheckBoxTreeItem}.
      *
      * <p>To call this method, it is necessary to provide a
-     * {@link Callback} that, given an object of type TreeItem<T>, will return
+     * {@link Callback} that, given an object of type {@literal TreeItem<T>}, will return
      * an {@code ObservableValue<Boolean>} that represents whether the given
      * item is selected or not. This {@code ObservableValue<Boolean>} will be
      * bound bidirectionally (meaning that the CheckBox in the cell will
@@ -302,7 +302,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
      * {@link CheckBoxTreeItem}.
      *
      * <p>To call this method, it is necessary to provide a {@link Callback}
-     * that, given an object of type TreeItem<T>, will return an
+     * that, given an object of type {@literal TreeItem<T>}, will return an
      * {@code ObservableValue<Boolean>} that represents whether the given item
      * is selected or not. This {@code ObservableValue<Boolean>} will be bound
      * bidirectionally (meaning that the CheckBox in the cell will set/unset
@@ -321,8 +321,9 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param getSelectedProperty A {@link Callback} that will return an
      *      {@code ObservableValue<Boolean>} that represents whether the given
      *      item is selected or not.
-     * @param converter A StringConverter that, give an object of type TreeItem<T>, will
-     *      return a String that can be used to represent the object visually.
+     * @param converter {@literal A StringConverter that, give an object of type
+     * TreeItem<T>, will return a String that can be used to represent the
+     * object visually.}
      */
     public CheckBoxTreeCell(
             final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedProperty,
@@ -359,6 +360,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<TreeItem<T>>> converterProperty() {
         return converter;
@@ -366,6 +368,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<TreeItem<T>> value) {
         converterProperty().set(value);
@@ -373,6 +376,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<TreeItem<T>> getConverter() {
         return converterProperty().get();
@@ -389,6 +393,8 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
     /**
      * Property representing the {@link Callback} that is bound to by the
      * CheckBox shown on screen.
+     * @return the property representing the {@link Callback} that is bound to
+     * by the CheckBox shown on screen
      */
     public final ObjectProperty<Callback<TreeItem<T>, ObservableValue<Boolean>>> selectedStateCallbackProperty() {
         return selectedStateCallback;
@@ -396,6 +402,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Sets the {@link Callback} that is bound to by the CheckBox shown on screen.
+     * @param value the {@link Callback} that is bound to by the CheckBox shown on screen
      */
     public final void setSelectedStateCallback(Callback<TreeItem<T>, ObservableValue<Boolean>> value) {
         selectedStateCallbackProperty().set(value);
@@ -403,6 +410,7 @@ public class CheckBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Returns the {@link Callback} that is bound to by the CheckBox shown on screen.
+     * @return the {@link Callback} that is bound to by the CheckBox shown on screen
      */
     public final Callback<TreeItem<T>, ObservableValue<Boolean>> getSelectedStateCallback() {
         return selectedStateCallbackProperty().get();

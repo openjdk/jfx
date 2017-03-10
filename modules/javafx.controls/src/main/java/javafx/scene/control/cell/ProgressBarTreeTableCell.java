@@ -51,6 +51,7 @@ public class ProgressBarTreeTableCell<S> extends TreeTableCell<S, Double> {
      * value as it proceeds from 0.0 to 1.0. If the value is -1, the progress
      * bar will appear indeterminate.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @return A {@link Callback} that can be inserted into the
      *      {@link TreeTableColumn#cellFactoryProperty() cell factory property} of a
      *      TreeTableColumn, that enables visualisation of a Number as it progresses

@@ -70,7 +70,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
      * @param <T> The type of the elements contained within the TreeView.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ChoiceBox} menu is showing. These items must be of the same
-     *      type as the TreeView<T>, such that upon selection, they replace the
+     *      type as the {@literal TreeView<T>}, such that upon selection, they replace the
      *      existing value in the TreeItem {@link TreeItem#valueProperty() value}
      *      property.
      * @return A {@link Callback} that will return a TreeCell that is able to
@@ -116,7 +116,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
      *      to a String for displaying to the user.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ChoiceBox} menu is showing. These items must be of the same
-     *      type as the TreeView<T>, such that upon selection, they replace the
+     *      type as the {@literal TreeView<T>}, such that upon selection, they replace the
      *      existing value in the TreeItem {@link TreeItem#valueProperty() value}
      *      property.
      * @return A {@link Callback} that will return a TreeCell that is able to
@@ -254,6 +254,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -261,6 +262,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -268,6 +270,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();
@@ -283,6 +286,7 @@ public class ChoiceBoxTreeCell<T> extends DefaultTreeCell<T> {
 
     /**
      * Returns the items to be displayed in the ChoiceBox when it is showing.
+     * @return the items to be displayed in the ChoiceBox when it is showing
      */
     public ObservableList<T> getItems() {
         return items;

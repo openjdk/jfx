@@ -398,6 +398,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     /**
      * The fill {@code Paint} used for the foreground text color.
+     * @param value the text fill
      */
     protected final void setTextFill(Paint value) {
         textFill.set(value);
@@ -426,6 +427,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     /**
      * The fill {@code Paint} used for the foreground prompt text color.
+     * @param value the prompt text fill
      */
     protected final void setPromptTextFill(Paint value) {
         promptTextFill.set(value);
@@ -461,6 +463,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     /**
      * The fill {@code Paint} used for the background of selected text.
+     * @param value the highlight fill
      */
     protected final void setHighlightFill(Paint value) {
         highlightFill.set(value);
@@ -493,6 +496,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
 
     /**
      * The fill {@code Paint} used for the foreground of selected text.
+     * @param value the highlight text fill
      */
     protected final void setHighlightTextFill(Paint value) {
         highlightTextFill.set(value);
@@ -555,19 +559,26 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      **************************************************************************/
 
     /**
+     * @param start the start
+     * @param end the end
      * @return the path elements describing the shape of the underline for the given range.
      */
     protected abstract PathElement[] getUnderlineShape(int start, int end);
     /**
+     * @param start the start
+     * @param end the end
      * @return the path elements describing the bounding rectangles for the given range of text.
      */
     protected abstract PathElement[] getRangeShape(int start, int end);
     /**
      * Adds highlight for composed text from Input Method.
+     * @param nodes the list of nodes
+     * @param start the start
      */
     protected abstract void addHighlight(List<? extends Node> nodes, int start);
     /**
      * Removes highlight for composed text from Input Method.
+     * @param nodes the list of nodes
      */
     protected abstract void removeHighlight(List<? extends Node> nodes);
 
@@ -595,6 +606,7 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
      * Returns the position to be used for a context menu, based on the location
      * of the caret handle or selection handles. This is supported only on touch
      * displays and does not use the location of the mouse.
+     * @return the position to be used for this context menu
      */
     public Point2D getMenuPosition() {
         if (SHOW_HANDLES) {
@@ -629,22 +641,24 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     /**
      * Returns the insertion point for a given location.
      *
-     * @param x
-     * @param y
+     * @param x the x location
+     * @param y the y location
+     * @return the insertion point for a given location
      */
     protected int getInsertionPoint(double x, double y) { return 0; }
 
     /**
      * Returns the bounds of the character at a given index.
      *
-     * @param index
+     * @param index the index
+     * @return the bounds of the character at a given index
      */
     public Rectangle2D getCharacterBounds(int index) { return null; }
 
     /**
      * Ensures that the character at a given index is visible.
      *
-     * @param index
+     * @param index the index
      */
     protected void scrollCharacterToVisible(int index) {}
 
@@ -959,6 +973,8 @@ public abstract class TextInputControlSkin<T extends TextInputControl> extends S
     /**
      * Returns the CssMetaData associated with this class, which may include the
      * CssMetaData of its superclasses.
+     * @return the CssMetaData associated with this class, which may include the
+     * CssMetaData of its superclasses
      */
     public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
         return StyleableProperties.STYLEABLES;

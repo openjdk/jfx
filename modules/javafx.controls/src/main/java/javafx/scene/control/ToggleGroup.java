@@ -62,6 +62,7 @@ public class ToggleGroup {
 
     /**
      * The list of toggles within the ToggleGroup.
+     * @return the list of toggles within the ToggleGroup
      */
     public final ObservableList<Toggle> getToggles() {
         return toggles;
@@ -156,6 +157,7 @@ public class ToggleGroup {
 
     /**
      * The selected toggle.
+     * @return the selected toggle
      */
     public final ReadOnlyObjectProperty<Toggle> selectedToggleProperty() { return selectedToggle.getReadOnlyProperty(); }
 

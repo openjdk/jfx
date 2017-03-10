@@ -91,6 +91,7 @@ public abstract class ButtonBase extends Labeled {
      * pressed on a Node and has not yet been released. {@code arm} however
      * also takes into account whether the mouse is actually over the
      * button and pressed.
+     * @return the property to indicate that the button has been "armed"
      */
     public final ReadOnlyBooleanProperty armedProperty() { return armed.getReadOnlyProperty(); }
     private void setArmed(boolean value) { armed.set(value); }
@@ -116,6 +117,8 @@ public abstract class ButtonBase extends Labeled {
      * may be due to the user clicking on the button with the mouse, or by
      * a touch event, or by a key press, or if the developer programmatically
      * invokes the {@link #fire()} method.
+     * @return the property to represent the button's action, which is invoked
+     * whenever the button is fired
      */
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
     public final void setOnAction(EventHandler<ActionEvent> value) { onActionProperty().set(value); }
@@ -149,9 +152,9 @@ public abstract class ButtonBase extends Labeled {
      * {@link CheckBox} or some other behavior) on the next expected UI
      * gesture.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins or Behaviors. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins or Behaviors. It is not common
+     *       for developers or designers to access this function directly.
      */
     public void arm() {
         setArmed(true);
@@ -160,9 +163,9 @@ public abstract class ButtonBase extends Labeled {
     /**
      * Disarms the button. See {@link #arm()}.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins or Behaviors. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins or Behaviors. It is not common
+     *       for developers or designers to access this function directly.
      */
     public void disarm() {
         setArmed(false);

@@ -65,6 +65,7 @@ import javafx.util.StringConverter;
  * it is recommended to directly observe the boolean properties that are
  * manipulated by the CheckBox.</p>
  *
+ * @param <S> The type of the TreeTableView generic type
  * @param <T> The type of the elements contained within the TreeTableColumn.
  * @since JavaFX 8.0
  */
@@ -89,6 +90,8 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * CheckBox will reflect the state of the {@code ObservableValue<Boolean>},
      * if it changes externally).
      *
+     * @param <S> The type of the TreeTableView generic type
+     * @param column the TreeTableColumn of type {@link Boolean}
      * @return A {@link Callback} that will return a {@link TreeTableCell} that is
      *      able to work on the type of element contained within the TreeTableColumn.
      */
@@ -105,6 +108,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * <p>When used in a TreeTableColumn, the CheckBoxCell is rendered with a
      * CheckBox centered in the column.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the {@link TreeTableColumn}
      *      instance.
      * @param getSelectedProperty A Callback that, given an object of
@@ -131,6 +135,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * <p>When used in a TreeTableColumn, the CheckBoxCell is rendered with a
      * CheckBox centered in the column.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the {@link TreeTableColumn}
      *      instance.
      * @param getSelectedProperty A Callback that, given an object of
@@ -168,6 +173,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * <p>When used in a TreeTableColumn, the CheckBoxCell is rendered with a
      * CheckBox centered in the column.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the {@link TreeTableColumn}
      *      instance.
      * @param getSelectedProperty A Callback that, given an object of type
@@ -281,6 +287,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -288,6 +295,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -295,6 +303,7 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();
@@ -311,6 +320,8 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     /**
      * Property representing the {@link Callback} that is bound to by the
      * CheckBox shown on screen.
+     * @return the property representing the {@link Callback} that is bound to
+     * by the CheckBox shown on screen
      */
     public final ObjectProperty<Callback<Integer, ObservableValue<Boolean>>> selectedStateCallbackProperty() {
         return selectedStateCallback;
@@ -318,6 +329,8 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Sets the {@link Callback} that is bound to by the CheckBox shown on screen.
+     * @param value the {@link Callback} that is bound to by the CheckBox shown
+     * on screen
      */
     public final void setSelectedStateCallback(Callback<Integer, ObservableValue<Boolean>> value) {
         selectedStateCallbackProperty().set(value);
@@ -325,6 +338,8 @@ public class CheckBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Returns the {@link Callback} that is bound to by the CheckBox shown on screen.
+     * @return the {@link Callback} that is bound to by the CheckBox shown on
+     * screen
      */
     public final Callback<Integer, ObservableValue<Boolean>> getSelectedStateCallback() {
         return selectedStateCallbackProperty().get();

@@ -394,6 +394,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     /**
      * Returns the horizontal {@link ScrollBar} used in this ScrollPaneSkin
      * instance.
+     * @return the horizontal ScrollBar used in this ScrollPaneSkin instance
      */
     public final ScrollBar getHorizontalScrollBar() {
         return hsb;
@@ -402,6 +403,7 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
     /**
      * Returns the vertical {@link ScrollBar} used in this ScrollPaneSkin
      * instance.
+     * @return the vertical ScrollBar used in this ScrollPaneSkin instance
      */
     public final ScrollBar getVerticalScrollBar() {
         return vsb;

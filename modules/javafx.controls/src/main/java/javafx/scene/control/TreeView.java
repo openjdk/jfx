@@ -209,6 +209,7 @@ public class TreeView<T> extends Control {
      * type of all other edit events: {@link #editStartEvent},
      *  {@link #editCommitEvent} and {@link #editCancelEvent}.
      *
+     * @param <T> the type of the TreeItem instances used in this TreeView
      * @return An EventType that indicates some edit event has occurred.
      */
     @SuppressWarnings("unchecked")
@@ -222,6 +223,7 @@ public class TreeView<T> extends Control {
      * An EventType used to indicate that an edit event has started within the
      * TreeView upon which the event was fired.
      *
+     * @param <T> the type of the TreeItem instances used in this TreeView
      * @return An EventType used to indicate that an edit event has started.
      */
     @SuppressWarnings("unchecked")
@@ -235,6 +237,7 @@ public class TreeView<T> extends Control {
      * An EventType used to indicate that an edit event has just been canceled
      * within the TreeView upon which the event was fired.
      *
+     * @param <T> the type of the TreeItem instances used in this TreeView
      * @return An EventType used to indicate that an edit event has just been
      *      canceled.
      */
@@ -250,6 +253,7 @@ public class TreeView<T> extends Control {
      * committed. This means that user has made changes to the data of a
      * TreeItem, and that the UI should be updated.
      *
+     * @param <T> the type of the TreeItem instances used in this TreeView
      * @return An EventType that is used to indicate that an edit in a TreeView
      *      has been committed.
      */
@@ -416,6 +420,7 @@ public class TreeView<T> extends Control {
      * <p>Returns the cell factory that will be used for creating TreeCells,
      * which are used to represent items in the TreeView, or null if no custom
      * cell factory has been set.
+     * @return the cell factory
      */
     public final Callback<TreeView<T>, TreeCell<T>> getCellFactory() {
         return cellFactory == null ? null : cellFactory.get();
@@ -424,6 +429,7 @@ public class TreeView<T> extends Control {
     /**
      * Represents the cell factory that will be used for creating TreeCells,
      * which are used to represent items in the TreeView.
+     * @return the cell factory property
      */
     public final ObjectProperty<Callback<TreeView<T>, TreeCell<T>>> cellFactoryProperty() {
         if (cellFactory == null) {
@@ -480,6 +486,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Property representing the root node of the TreeView.
+     * @return the root node property
      */
     public final ObjectProperty<TreeItem<T>> rootProperty() {
         return root;
@@ -504,6 +511,7 @@ public class TreeView<T> extends Control {
     /**
      * Returns true if the root of the TreeView should be shown, and false if
      * it should not. By default, the root TreeItem is visible in the TreeView.
+     * @return true if the root of the TreeView should be shown
      */
     public final boolean isShowRoot() {
         return showRoot == null ? true : showRoot.get();
@@ -511,6 +519,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Property that represents whether or not the TreeView root node is visible.
+     * @return the show root property
      */
     public final BooleanProperty showRootProperty() {
         if (showRoot == null) {
@@ -534,6 +543,7 @@ public class TreeView<T> extends Control {
      * it is possible to configure it to only allow single selection (see
      * {@link MultipleSelectionModel#setSelectionMode(javafx.scene.control.SelectionMode)}
      * for more information).
+     * @param value the {@link MultipleSelectionModel} to be used
      */
     public final void setSelectionModel(MultipleSelectionModel<TreeItem<T>> value) {
         selectionModelProperty().set(value);
@@ -541,6 +551,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Returns the currently installed selection model.
+     * @return the currently installed selection model
      */
     public final MultipleSelectionModel<TreeItem<T>> getSelectionModel() {
         return selectionModel == null ? null : selectionModel.get();
@@ -551,6 +562,7 @@ public class TreeView<T> extends Control {
      * to select single or multiple items within a TreeView, as  well as inspect
      * which rows have been selected by the user. Note that it has a generic
      * type that must match the type of the TreeView itself.
+     * @return the selection model property
      */
     public final ObjectProperty<MultipleSelectionModel<TreeItem<T>>> selectionModelProperty() {
         if (selectionModel == null) {
@@ -565,6 +577,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Sets the {@link FocusModel} to be used in the TreeView.
+     * @param value the {@link FocusModel} to be used
      */
     public final void setFocusModel(FocusModel<TreeItem<T>> value) {
         focusModelProperty().set(value);
@@ -572,6 +585,7 @@ public class TreeView<T> extends Control {
 
     /**
      * Returns the currently installed {@link FocusModel}.
+     * @return the currently installed {@link FocusModel}
      */
     public final FocusModel<TreeItem<T>> getFocusModel() {
         return focusModel == null ? null : focusModel.get();
@@ -581,6 +595,7 @@ public class TreeView<T> extends Control {
      * The FocusModel provides the API through which it is possible
      * to control focus on zero or one rows of the TreeView. Generally the
      * default implementation should be more than sufficient.
+     * @return the focus model property
      */
     public final ObjectProperty<FocusModel<TreeItem<T>>> focusModelProperty() {
         if (focusModel == null) {
@@ -664,6 +679,7 @@ public class TreeView<T> extends Control {
      * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
      * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
      *
+     * @return the fixed cell size property
      * @since JavaFX 8.0
      */
     public final DoubleProperty fixedCellSizeProperty() {
@@ -698,6 +714,7 @@ public class TreeView<T> extends Control {
      * Specifies whether this TreeView is editable - only if the TreeView and
      * the TreeCells within it are both editable will a TreeCell be able to go
      * into their editing state.
+     * @return the editable property
      */
     public final BooleanProperty editableProperty() {
         if (editable == null) {
@@ -717,6 +734,7 @@ public class TreeView<T> extends Control {
     /**
      * Returns the TreeItem that is currently being edited in the TreeView,
      * or null if no item is being edited.
+     * @return the TreeItem that is currently being edited in the TreeView
      */
     public final TreeItem<T> getEditingItem() {
         return editingItem == null ? null : editingItem.get();
@@ -728,6 +746,7 @@ public class TreeView<T> extends Control {
      *
      * <p>It is not possible to set the editing item, instead it is required that
      * you call {@link #edit(javafx.scene.control.TreeItem)}.
+     * @return the editing item property
      */
     public final ReadOnlyObjectProperty<TreeItem<T>> editingItemProperty() {
         return editingItemPropertyImpl().getReadOnlyProperty();
@@ -747,6 +766,8 @@ public class TreeView<T> extends Control {
     /**
      * Sets the {@link EventHandler} that will be called when the user begins
      * an edit.
+     * @param value the {@link EventHandler} that will be called when the user
+     * begins an edit
      */
     public final void setOnEditStart(EventHandler<EditEvent<T>> value) {
         onEditStartProperty().set(value);
@@ -755,6 +776,7 @@ public class TreeView<T> extends Control {
     /**
      * Returns the {@link EventHandler} that will be called when the user begins
      * an edit.
+     * @return the {@link EventHandler} when the user begins an edit
      */
     public final EventHandler<EditEvent<T>> getOnEditStart() {
         return onEditStart == null ? null : onEditStart.get();
@@ -763,6 +785,7 @@ public class TreeView<T> extends Control {
     /**
      * This event handler will be fired when the user successfully initiates
      * editing.
+     * @return the event handler when the user successfully initiates editing
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditStartProperty() {
         if (onEditStart == null) {
@@ -782,6 +805,8 @@ public class TreeView<T> extends Control {
     /**
      * Sets the {@link EventHandler} that will be called when the user commits
      * an edit.
+     * @param value the {@link EventHandler} that will be called when the user
+     * commits an edit
      */
     public final void setOnEditCommit(EventHandler<EditEvent<T>> value) {
         onEditCommitProperty().set(value);
@@ -790,6 +815,8 @@ public class TreeView<T> extends Control {
     /**
      * Returns the {@link EventHandler} that will be called when the user commits
      * an edit.
+     * @return the {@link EventHandler} that will be called when the user commits
+     * an edit
      */
     public final EventHandler<EditEvent<T>> getOnEditCommit() {
         return onEditCommit == null ? null : onEditCommit.get();
@@ -803,6 +830,8 @@ public class TreeView<T> extends Control {
      * instead call {@link TreeCell#commitEdit(java.lang.Object)} from within
      * your custom TreeCell. This will handle firing this event, updating the
      * view, and switching out of the editing state.</p>
+     * @return the event handler when the user performs an action that result in
+     * their editing input being persisted
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCommitProperty() {
         if (onEditCommit == null) {
@@ -822,6 +851,8 @@ public class TreeView<T> extends Control {
     /**
      * Sets the {@link EventHandler} that will be called when the user cancels
      * an edit.
+     * @param value the {@link EventHandler} that will be called when the user
+     * cancels an edit
      */
     public final void setOnEditCancel(EventHandler<EditEvent<T>> value) {
         onEditCancelProperty().set(value);
@@ -830,6 +861,8 @@ public class TreeView<T> extends Control {
     /**
      * Returns the {@link EventHandler} that will be called when the user cancels
      * an edit.
+     * @return the {@link EventHandler} that will be called when the user cancels
+     * an edit
      */
     public final EventHandler<EditEvent<T>> getOnEditCancel() {
         return onEditCancel == null ? null : onEditCancel.get();
@@ -837,6 +870,8 @@ public class TreeView<T> extends Control {
 
     /**
      * This event handler will be fired when the user cancels editing a cell.
+     * @return the event handler will be fired when the user cancels editing a
+     * cell
      */
     public final ObjectProperty<EventHandler<EditEvent<T>>> onEditCancelProperty() {
         if (onEditCancel == null) {
@@ -1178,6 +1213,11 @@ public class TreeView<T> extends Control {
          * Creates a new EditEvent instance to represent an edit event. This
          * event is used for {@link #EDIT_START_EVENT},
          * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.
+         * @param source the source
+         * @param eventType the eventType
+         * @param treeItem the treeItem
+         * @param oldValue the oldValue
+         * @param newValue the newValue
          */
         public EditEvent(TreeView<T> source,
                          EventType<? extends EditEvent> eventType,
@@ -1198,6 +1238,7 @@ public class TreeView<T> extends Control {
 
         /**
          * Returns the {@link TreeItem} upon which the edit took place.
+         * @return the {@link TreeItem} upon which the edit took place
          */
         public TreeItem<T> getTreeItem() {
             return treeItem;
@@ -1205,6 +1246,7 @@ public class TreeView<T> extends Control {
 
         /**
          * Returns the new value input into the TreeItem by the end user.
+         * @return the new value input into the TreeItem by the end user
          */
         public T getNewValue() {
             return newValue;
@@ -1213,6 +1255,8 @@ public class TreeView<T> extends Control {
         /**
          * Returns the old value that existed in the TreeItem prior to the current
          * edit event.
+         * @return the old value that existed in the TreeItem prior to the current
+         * edit event
          */
         public T getOldValue() {
             return oldValue;

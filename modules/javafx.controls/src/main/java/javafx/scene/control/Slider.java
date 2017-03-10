@@ -572,9 +572,10 @@ public class Slider extends Control {
      * is the main difference between adjustValue and setValue. It also ensures
      * that the value is some valid number between min and max.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins or Behaviors. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins or Behaviors. It is not common
+     *       for developers or designers to access this function directly.
+     * @param newValue the new adjusted value
      */
     public void adjustValue(double newValue) {
         // figure out the "value" associated with the specified position
@@ -618,9 +619,9 @@ public class Slider extends Control {
      * either aligned with a tick, or simply clamp between min & max value,
      * depending on whether snapToTicks is set.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins or Behaviors. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins or Behaviors. It is not common
+     *       for developers or designers to access this function directly.
      */
     private double snapValueToTicks(double val) {
         double v = val;

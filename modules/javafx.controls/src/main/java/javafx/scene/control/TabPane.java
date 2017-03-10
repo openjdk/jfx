@@ -162,6 +162,7 @@ public class TabPane extends Control {
      * selected tab, if it remains within this ObservableList. If the previously
      * selected tab is no longer in the tabs ObservableList, the selected tab will
      * become the first tab in the ObservableList.</p>
+     * @return the list of tabs
      */
     public final ObservableList<Tab> getTabs() {
         return tabs;
@@ -172,16 +173,19 @@ public class TabPane extends Control {
     /**
      * <p>Sets the model used for tab selection.  By changing the model you can alter
      * how the tabs are selected and which tabs are first or last.</p>
+     * @param value the selection model
      */
     public final void setSelectionModel(SingleSelectionModel<Tab> value) { selectionModel.set(value); }
 
     /**
      * <p>Gets the model used for tab selection.</p>
+     * @return the model used for tab selection
      */
     public final SingleSelectionModel<Tab> getSelectionModel() { return selectionModel.get(); }
 
     /**
      * The selection model used for selecting tabs.
+     * @return selection model property
      */
     public final ObjectProperty<SingleSelectionModel<Tab>> selectionModelProperty() { return selectionModel; }
 
@@ -192,6 +196,7 @@ public class TabPane extends Control {
      * the TabPane will immediately update the location of the tabs to reflect
      * this.</p>
      *
+     * @param value the side
      */
     public final void setSide(Side value) {
         sideProperty().set(value);
@@ -209,6 +214,7 @@ public class TabPane extends Control {
 
     /**
      * The position of the tabs in the TabPane.
+     * @return the side property
      */
     public final ObjectProperty<Side> sideProperty() {
         if (side == null) {
@@ -257,6 +263,7 @@ public class TabPane extends Control {
      * <p>Refer to the {@link TabClosingPolicy} enumeration for further details.</p>
      *
      * The default closing policy is TabClosingPolicy.SELECTED_TAB
+     * @param value the closing policy
      */
     public final void setTabClosingPolicy(TabClosingPolicy value) {
         tabClosingPolicyProperty().set(value);
@@ -273,6 +280,7 @@ public class TabPane extends Control {
 
     /**
      * The closing policy for the tabs.
+     * @return the closing policy property
      */
     public final ObjectProperty<TabClosingPolicy> tabClosingPolicyProperty() {
         if (tabClosingPolicy == null) {
@@ -292,6 +300,7 @@ public class TabPane extends Control {
      * rotateGraphic is set to {@code true}, the graphic will rotate such that it
      * rotates with the tab text.</p>
      *
+     * @param value a flag indicating whether to rotate the graphic
      */
     public final void setRotateGraphic(boolean value) {
         rotateGraphicProperty().set(value);
@@ -308,7 +317,8 @@ public class TabPane extends Control {
     }
 
     /**
-     * The rotatedGraphic state of the tabs in the TabPane.
+     * The rotateGraphic state of the tabs in the TabPane.
+     * @return the rotateGraphic property
      */
     public final BooleanProperty rotateGraphicProperty() {
         if (rotateGraphic == null) {
@@ -327,6 +337,7 @@ public class TabPane extends Control {
      * This value can also be set via CSS using {@code -fx-tab-min-width}
      *
      * </p>
+     * @param value the minimum width of the tabs
      */
     public final void setTabMinWidth(double value) {
         tabMinWidthProperty().setValue(value);
@@ -335,7 +346,7 @@ public class TabPane extends Control {
     /**
      * The minimum width of the tabs in the TabPane.
      *
-     * @return The minimum width of the tabs.
+     * @return The minimum width of the tabs
      */
     public final double getTabMinWidth() {
         return tabMinWidth == null ? DEFAULT_TAB_MIN_WIDTH : tabMinWidth.getValue();
@@ -343,6 +354,7 @@ public class TabPane extends Control {
 
     /**
      * The minimum width of the tabs in the TabPane.
+     * @return the minimum width property
      */
     public final DoubleProperty tabMinWidthProperty() {
         if (tabMinWidth == null) {
@@ -383,7 +395,7 @@ public class TabPane extends Control {
     /**
      * The maximum width of the tabs in the TabPane.
      *
-     * @return The maximum width of the tabs.
+     * @return The maximum width of the tabs
      */
     public final double getTabMaxWidth() {
         return tabMaxWidth == null ? DEFAULT_TAB_MAX_WIDTH : tabMaxWidth.getValue();
@@ -391,6 +403,7 @@ public class TabPane extends Control {
 
     /**
      * The maximum width of the tabs in the TabPane.
+     * @return the maximum width property
      */
     public final DoubleProperty tabMaxWidthProperty() {
         if (tabMaxWidth == null) {
@@ -424,6 +437,7 @@ public class TabPane extends Control {
      *
      * This value can also be set via CSS using {@code -fx-tab-min-height}
      * </p>
+     * @param value the minimum height of the tabs
      */
     public final void setTabMinHeight(double value) {
         tabMinHeightProperty().setValue(value);
@@ -432,7 +446,7 @@ public class TabPane extends Control {
     /**
      * The minimum height of the tabs in the TabPane.
      *
-     * @return The minimum height of the tabs.
+     * @return the minimum height of the tabs
      */
     public final double getTabMinHeight() {
         return tabMinHeight == null ? DEFAULT_TAB_MIN_HEIGHT : tabMinHeight.getValue();
@@ -440,6 +454,7 @@ public class TabPane extends Control {
 
     /**
      * The minimum height of the tab.
+     * @return the minimum height property
      */
     public final DoubleProperty tabMinHeightProperty() {
         if (tabMinHeight == null) {
@@ -480,7 +495,7 @@ public class TabPane extends Control {
     /**
      * The maximum height of the tabs in the TabPane.
      *
-     * @return The maximum height of the tabs.
+     * @return The maximum height of the tabs
      */
     public final double getTabMaxHeight() {
         return tabMaxHeight == null ? DEFAULT_TAB_MAX_HEIGHT : tabMaxHeight.getValue();
@@ -488,6 +503,7 @@ public class TabPane extends Control {
 
     /**
      * <p>The maximum height of the tabs in the TabPane.</p>
+     * @return the maximum height of the tabs
      */
     public final DoubleProperty tabMaxHeightProperty() {
         if (tabMaxHeight == null) {

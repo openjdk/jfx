@@ -63,7 +63,6 @@ import javafx.scene.control.TableColumn.CellEditEvent;
  *   property is set to true (to represent that it is allowable to select
  *   individual cells (and not just rows of cells)).</li>
  * </ol>
- * </p>
  *
  * @see TableView
  * @see TableColumn
@@ -210,6 +209,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
     };
     /**
      * The TableColumn instance that backs this TableCell.
+     * @return the TableColumn instance that backs this TableCell
      */
     public final ReadOnlyObjectProperty<TableColumn<S,T>> tableColumnProperty() { return tableColumn.getReadOnlyProperty(); }
     private void setTableColumn(TableColumn<S,T> value) { tableColumn.set(value); }
@@ -227,6 +227,7 @@ public class TableCell<S,T> extends IndexedCell<T> {
 
     /**
      * The TableView associated with this TableCell.
+     * @return the TableView associated with this TableCell
      */
     public final ReadOnlyObjectProperty<TableView<S>> tableViewProperty() {
         return tableViewPropertyImpl().getReadOnlyProperty();
@@ -695,9 +696,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
      * Updates the TableView associated with this TableCell. This is typically
      * only done once when the TableCell is first added to the TableView.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
+     * @param tv the TableView associated with this TableCell
      */
     public final void updateTableView(TableView tv) {
         setTableView(tv);
@@ -706,9 +708,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
     /**
      * Updates the TableRow associated with this TableCell.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
+     * @param tableRow the TableRow associated with this TableCell
      */
     public final void updateTableRow(TableRow tableRow) {
         this.setTableRow(tableRow);
@@ -717,9 +720,10 @@ public class TableCell<S,T> extends IndexedCell<T> {
     /**
      * Updates the TableColumn associated with this TableCell.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
+     * @param col the TableColumn associated with this TableCell
      */
     public final void updateTableColumn(TableColumn col) {
         // remove style class of existing table column, if it is non-null

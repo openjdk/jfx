@@ -460,6 +460,8 @@ public class TextArea extends TextInputControl {
     /**
      * Returns an unmodifiable list of the character sequences that back the
      * text area's content.
+     * @return an unmodifiable list of the character sequences that back the
+     * text area's content
      */
     public ObservableList<CharSequence> getParagraphs() {
         return ((TextAreaContent)getContent()).paragraphList;

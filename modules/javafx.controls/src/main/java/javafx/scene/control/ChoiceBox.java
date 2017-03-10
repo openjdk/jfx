@@ -137,7 +137,7 @@ public class ChoiceBox<T> extends Control {
      * Create a new ChoiceBox with the given set of items. Since it is observable,
      * the content of this list may change over time and the ChoiceBox will
      * be updated accordingly.
-     * @param items
+     * @param items the set of items
      */
     public ChoiceBox(ObservableList<T> items) {
         getStyleClass().setAll("choice-box");
@@ -308,6 +308,7 @@ public class ChoiceBox<T> extends Control {
      * This is useful when using domain objects in a ChoiceBox as this property
      * allows for customization of the representation. Also, any of the pre-built
      * Converters available in the {@link javafx.util.converter} package can be set.
+     * @return the string converter property
      * @since JavaFX 2.1
      */
     public ObjectProperty<StringConverter<T>> converterProperty() { return converter; }
@@ -321,6 +322,7 @@ public class ChoiceBox<T> extends Control {
      * selection model. The valueProperty is synchronized with the selectedItem.
      * This property allows for bi-directional binding of external properties to the
      * ChoiceBox and updates the selection model accordingly.
+     * @return the value property
      * @since JavaFX 2.1
      */
     public ObjectProperty<T> valueProperty() { return value; }
@@ -347,6 +349,7 @@ public class ChoiceBox<T> extends Control {
      * may be due to the value property being programmatically changed or when the
      * user selects an item in a popup menu.
      *
+     * @return the on action property
      * @since JavaFX 8u60
      */
     public final ObjectProperty<EventHandler<ActionEvent>> onActionProperty() { return onAction; }
@@ -372,6 +375,7 @@ public class ChoiceBox<T> extends Control {
     // --- On Showing
     /**
      * Called just prior to the {@code ChoiceBox} popup being shown.
+     * @return the on showing property
      * @since JavaFX 8u60
      */
     public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
@@ -395,6 +399,7 @@ public class ChoiceBox<T> extends Control {
     // -- On Shown
     /**
      * Called just after the {@link ChoiceBox} popup is shown.
+     * @return the on shown property
      * @since JavaFX 8u60
      */
     public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
@@ -418,6 +423,7 @@ public class ChoiceBox<T> extends Control {
     // --- On Hiding
     /**
      * Called just prior to the {@link ChoiceBox} popup being hidden.
+     * @return the on hiding property
      * @since JavaFX 8u60
      */
     public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
@@ -441,6 +447,7 @@ public class ChoiceBox<T> extends Control {
     // --- On Hidden
     /**
      * Called just after the {@link ChoiceBox} popup has been hidden.
+     * @return the on hidden property
      * @since JavaFX 8u60
      */
     public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }

@@ -206,6 +206,8 @@ public abstract class TableRowSkinBase<T,
 
     /**
      * Creates a new cell instance that is suitable for representing the given table column instance.
+     * @param tc the table column
+     * @return the created cell
      */
     protected abstract R createCell(TableColumnBase<T,?> tc);
 
@@ -220,11 +222,13 @@ public abstract class TableRowSkinBase<T,
     /**
      * Returns the {@link TableColumnBase} instance for the given cell instance.
      * @param cell The cell for which a TableColumn is desired.
+     * @return the table column
      */
     protected abstract TableColumnBase<T,?> getTableColumn(R cell);
 
     /**
      * Returns an unmodifiable list containing the currently visible leaf columns.
+     * @return the list of visible leaf columns
      */
     protected abstract ObservableList<? extends TableColumnBase/*<T,?>*/> getVisibleLeafColumns();
 
@@ -241,6 +245,7 @@ public abstract class TableRowSkinBase<T,
      * is acceptable when no graphic should be shown. Commonly this is the
      * graphic associated with a TreeItem (i.e. treeItem.getGraphic()), rather
      * than a graphic associated with a cell.
+     * @return the graphic to draw on the inside of the disclosure node
      */
     protected ObjectProperty<Node> graphicProperty() {
         return null;

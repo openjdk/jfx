@@ -38,8 +38,7 @@ import javafx.geometry.Orientation;
  * This is provided for convenience as groups of {@link MenuItem menuitems} can be separated
  * by a separator. Instead of a creating a {@link CustomMenuItem}  for this purpose, the user
  * can use this class as indicated below.
- * <p>
- * <p>
+ *
 <pre><code>
 SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
 </code></pre>

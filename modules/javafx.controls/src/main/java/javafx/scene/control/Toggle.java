@@ -53,6 +53,7 @@ public interface Toggle {
 
     /**
      * The {@link ToggleGroup} to which this {@code Toggle} belongs.
+     * @return the toggle group property
      */
     ObjectProperty<ToggleGroup> toggleGroupProperty();
 
@@ -71,6 +72,7 @@ public interface Toggle {
 
     /**
      * The selected state for this {@code Toggle}.
+     * @return the selected property
      */
     BooleanProperty selectedProperty();
 

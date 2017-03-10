@@ -87,7 +87,6 @@ radioItem2.setToggleGroup(toggleGroup);
  * selected at any one time, and should
  * the selection change, the ToggleGroup will take care of deselecting the
  * previous item.
-</code></pre>
  *
  * @see MenuItem
  * @see Menu
@@ -110,6 +109,7 @@ public class RadioMenuItem extends MenuItem implements Toggle {
 
     /**
      * Constructs a RadioMenuItem and sets the display text with the specified text.
+     * @param text the display text
      */
     public RadioMenuItem(String text) {
         this(text,null);
@@ -118,6 +118,8 @@ public class RadioMenuItem extends MenuItem implements Toggle {
     /**
      * Constructs a RadioMenuItem and sets the display text with the specified text
      * and sets the graphic {@link Node} to the given node.
+     * @param text the display text
+     * @param graphic the graphic node
      */
     public RadioMenuItem(String text, Node graphic) {
         super(text,graphic);

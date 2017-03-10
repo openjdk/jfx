@@ -148,6 +148,7 @@ public class ContextMenu extends PopupControl {
 
     /**
      * Create a new ContextMenu initialized with the given items
+     * @param items the list of menu items
      */
     public ContextMenu(MenuItem... items) {
         this();
@@ -217,6 +218,7 @@ public class ContextMenu extends PopupControl {
     /**
      * The menu items on the context menu. If this ObservableList is modified at
      * runtime, the ContextMenu will update as expected.
+     * @return the menu items on this context menu
      * @see MenuItem
      */
     public final ObservableList<MenuItem> getItems() { return items; }
@@ -238,6 +240,10 @@ public class ContextMenu extends PopupControl {
      * <p>
      * This function is useful for finely tuning the position of a menu,
      * relative to the parent node to ensure close alignment.
+     * @param anchor the anchor node
+     * @param side the side
+     * @param dx the dx value for the x-axis
+     * @param dy the dy value for the y-axis
      */
     // TODO provide more detail
      public void show(Node anchor, Side side, double dx, double dy) {
@@ -264,7 +270,11 @@ public class ContextMenu extends PopupControl {
      * given its size requirements, the necessary adjustments are made to bring
      * the {@code ContextMenu} back back on screen. This also means that the
      * {@code ContextMenu} will not span multiple monitors.
+     * @param anchor the anchor node
+     * @param screenX the x position of the anchor in screen coordinates
+     * @param screenY the y position of the anchor in screen coordinates
      */
+    @Override
     public void show(Node anchor, double screenX, double screenY) {
         if (anchor == null) return;
         if (getItems().size() == 0) return;

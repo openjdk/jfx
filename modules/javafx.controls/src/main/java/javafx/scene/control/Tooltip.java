@@ -130,6 +130,8 @@ public class Tooltip extends PopupControl {
      * Associates the given {@link Tooltip} with the given {@link Node}. The tooltip
      * can then behave similar to when it is set on any {@link Control}. A single
      * tooltip can be associated with multiple nodes.
+     * @param node the node
+     * @param t the tooltip
      * @see Tooltip
      */
     public static void install(Node node, Tooltip t) {
@@ -140,6 +142,8 @@ public class Tooltip extends PopupControl {
      * Removes the association of the given {@link Tooltip} on the specified
      * {@link Node}. Hence hovering on the node will no longer result in showing of the
      * tooltip.
+     * @param node the node
+     * @param t the tooltip
      * @see Tooltip
      */
     public static void uninstall(Node node, Tooltip t) {
@@ -180,6 +184,7 @@ public class Tooltip extends PopupControl {
     /**
      * The text to display in the tooltip. If the text is set to null, an empty
      * string will be displayed, despite the value being null.
+     * @return the text property
      */
     public final StringProperty textProperty() { return text; }
     public final void setText(String value) {
@@ -204,6 +209,7 @@ public class Tooltip extends PopupControl {
      * Unlike {@link #contentDisplayProperty() contentDisplay} which affects the
      * graphic and text, this setting only affects multiple lines of text
      * relative to the text bounds.
+     * @return the text alignment property
      */
     public final ObjectProperty<TextAlignment> textAlignmentProperty() {
         return textAlignment;
@@ -220,6 +226,7 @@ public class Tooltip extends PopupControl {
     /**
      * Specifies the behavior to use if the text of the {@code Tooltip}
      * exceeds the available space for rendering the text.
+     * @return the text overrun property
      */
     public final ObjectProperty<OverrunStyle> textOverrunProperty() {
         return textOverrun;
@@ -236,6 +243,7 @@ public class Tooltip extends PopupControl {
     /**
      * If a run of text exceeds the width of the Tooltip, then this variable
      * indicates whether the text should wrap onto another line.
+     * @return the wrap text property
      */
     public final BooleanProperty wrapTextProperty() {
         return wrapText;
@@ -255,6 +263,7 @@ public class Tooltip extends PopupControl {
      * rich text then this font may or may not be used depending on the font
      * information embedded in the rich text, but in any case where a default
      * font is required, this font will be used.
+     * @return the font property
      */
     public final ObjectProperty<Font> fontProperty() {
         return font;
@@ -317,8 +326,9 @@ public class Tooltip extends PopupControl {
      * The delay between the mouse entering the hovered node and when the associated tooltip will be shown to the user.
      * The default delay is 1000ms.
      *
+     * @return show delay property
      * @since 9
-     * @defaultvalue 1000ms
+     * @defaultValue 1000ms
      */
     public final ObjectProperty<Duration> showDelayProperty() {
         return showDelayProperty;
@@ -339,8 +349,9 @@ public class Tooltip extends PopupControl {
      * for the duration specified in the {@link #hideDelayProperty()}, even if the remaining time of the showDuration
      * is less than the hideDelay duration. The default value is 5000ms.
      *
+     * @return the show duration property
      * @since 9
-     * @defaultvalue 5000ms
+     * @defaultValue 5000ms
      */
     public final ObjectProperty<Duration> showDurationProperty() {
         return showDurationProperty;
@@ -359,8 +370,9 @@ public class Tooltip extends PopupControl {
      * The duration in which to continue showing the tooltip after the mouse has left the node. Once this time has
      * elapsed the tooltip will hide. The default value is 200ms.
      *
+     * @return the hide delay property
      * @since 9
-     * @defaultvalue 200ms
+     * @defaultValue 200ms
      */
     public final ObjectProperty<Duration> hideDelayProperty() {
         return hideDelayProperty;
@@ -382,6 +394,7 @@ public class Tooltip extends PopupControl {
      * The node specified for this variable cannot appear elsewhere in the
      * scene graph, otherwise the {@code IllegalArgumentException} is thrown.
      * See the class description of {@link javafx.scene.Node Node} for more detail.
+     * @return the graphic property
      */
     public final ObjectProperty<Node> graphicProperty() {
         return graphic;
@@ -510,6 +523,7 @@ public class Tooltip extends PopupControl {
 
     /**
      * Specifies the positioning of the graphic relative to the text.
+     * @return the content display property
      */
     public final ObjectProperty<ContentDisplay> contentDisplayProperty() {
         return contentDisplay;
@@ -525,6 +539,7 @@ public class Tooltip extends PopupControl {
 
     /**
      * The amount of space between the graphic and text
+     * @return the graphic text gap property
      */
     public final DoubleProperty graphicTextGapProperty() {
         return graphicTextGap;

@@ -52,6 +52,7 @@ import javafx.util.StringConverter;
  * items that will be shown to the user when the {@link ComboBox} menu is
  * showing. These items must be of the same type as the TreeTableColumn.
  *
+ * @param <S> The type of the TreeTableView generic type
  * @param <T> The type of the elements contained within the TreeTableColumn.
  * @since JavaFX 8.0
  */
@@ -69,6 +70,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * being edited, and as a ComboBox when in editing mode. The ComboBox will,
      * by default, stretch to fill the entire list cell.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the TreeTableColumn.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ComboBox} menu is showing. These items must be of the same
@@ -93,6 +95,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * being edited, and as a ComboBox when in editing mode. The ComboBox will,
      * by default, stretch to fill the entire list cell.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the TreeTableColumn.
      * @param converter A {@link StringConverter} to convert the given item (of
      *      type T) to a String for displaying to the user.
@@ -120,6 +123,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * being edited, and as a ComboBox when in editing mode. The ComboBox will,
      * by default, stretch to fill the entire list cell.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the TreeTableColumn.
      * @param items Zero or more items that will be shown to the user when the
      *      {@link ComboBox} menu is showing. These items must be of the same
@@ -143,6 +147,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      * being edited, and as a ComboBox when in editing mode. The ComboBox will,
      * by default, stretch to fill the entire list cell.
      *
+     * @param <S> The type of the TreeTableView generic type
      * @param <T> The type of the elements contained within the TreeTableColumn.
      * @param converter A {@link StringConverter} to convert the given item (of
      *      type T) to a String for displaying to the user.
@@ -262,6 +267,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the string converter property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -269,6 +275,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the string converter
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -276,6 +283,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the string converter
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();
@@ -289,6 +297,8 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     /**
      * A property representing whether the ComboBox, when shown to the user,
      * is editable or not.
+     * @return the property representing whether the ComboBox, when shown to the
+     * user, is editable or not
      */
     public final BooleanProperty comboBoxEditableProperty() {
         return comboBoxEditable;
@@ -297,6 +307,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
     /**
      * Configures the ComboBox to be editable (to allow user input outside of the
      * options provide in the dropdown list).
+     * @param value the editable value to be set for this ComboBox
      */
     public final void setComboBoxEditable(boolean value) {
         comboBoxEditableProperty().set(value);
@@ -304,6 +315,7 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
 
     /**
      * Returns true if the ComboBox is editable.
+     * @return true if the ComboBox is editable
      */
     public final boolean isComboBoxEditable() {
         return comboBoxEditableProperty().get();
@@ -318,7 +330,8 @@ public class ComboBoxTreeTableCell<S,T> extends TreeTableCell<S,T> {
      **************************************************************************/
 
     /**
-     * Returns the items to be displayed in the ChoiceBox when it is showing.
+     * Returns the items to be displayed in the ComboBox when it is showing.
+     * @return the items to be displayed in this ComboBox when it is showing
      */
     public ObservableList<T> getItems() {
         return items;

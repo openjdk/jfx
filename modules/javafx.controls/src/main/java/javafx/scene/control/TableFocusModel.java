@@ -53,6 +53,10 @@ public abstract class TableFocusModel<T, TC extends TableColumnBase<T,?>> extend
     /**
      * Tests whether the row / cell at the given location currently has the
      * focus within the UI control.
+     * @param row the row
+     * @param column the column
+     * @return true if the row / cell at the given location currently has the
+     * focus within the UI control
      */
     public abstract boolean isFocused(int row, TC column);
 

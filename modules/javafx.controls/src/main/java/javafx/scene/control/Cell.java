@@ -139,7 +139,7 @@ import javafx.css.StyleableProperty;
  *             double value = item.doubleValue();
  *             setTextFill(isSelected() ? Color.WHITE :
  *                 value == 0 ? Color.BLACK :
- *                 value < 0 ? Color.RED : Color.GREEN);
+ *                 value &lt; 0 ? Color.RED : Color.GREEN);
  *         }
  *     }
  * }</pre>
@@ -393,17 +393,20 @@ public class Cell<T> extends Labeled {
     * <p>This value should only be set in subclasses of Cell by the virtualised
     * user interface controls that know how to properly work with the Cell
     * class.
+     * @return the data value associated with this cell
      */
     public final ObjectProperty<T> itemProperty() { return item; }
 
     /**
      * Sets the item to the given value - should not be called directly as the
      * item is managed by the virtualized control.
+     * @param value the new data value to set in this cell
      */
     public final void setItem(T value) { item.set(value); }
 
     /**
      * Returns the data value associated with this Cell.
+     * @return the data value associated with this cell
      */
     public final T getItem() { return item.get(); }
 
@@ -437,6 +440,7 @@ public class Cell<T> extends Labeled {
      * CSS pseudo class state. For example, it may not receive any
      * alternate row highlighting, or it may not receive hover background
      * fill when hovered.
+     * @return the representation of whether this cell has any contents
      */
     public final ReadOnlyBooleanProperty emptyProperty() { return empty.getReadOnlyProperty(); }
 
@@ -445,6 +449,7 @@ public class Cell<T> extends Labeled {
     /**
      * Returns a boolean representing whether the cell is considered to be empty
      * or not.
+     * @return true if cell is empty, otherwise false
      */
     public final boolean isEmpty() { return empty.get(); }
 
@@ -470,6 +475,7 @@ public class Cell<T> extends Labeled {
     /**
      * Indicates whether or not this cell has been selected. For example, a
      * ListView defines zero or more cells as being the "selected" cells.
+     * @return the representation of whether this cell has been selected
      */
     public final ReadOnlyBooleanProperty selectedProperty() { return selected.getReadOnlyProperty(); }
 
@@ -492,6 +498,8 @@ public class Cell<T> extends Labeled {
 
     /**
      * Represents whether the cell is currently in its editing state or not.
+     * @return true if this cell is currently in its editing state, otherwise
+     * false
      */
     public final boolean isEditing() {
         return editing == null ? false : editing.get();
@@ -499,6 +507,8 @@ public class Cell<T> extends Labeled {
 
     /**
      * Property representing whether this cell is currently in its editing state.
+     * @return the representation of whether this cell is currently in its
+     * editing state
      */
     public final ReadOnlyBooleanProperty editingProperty() {
         return editingPropertyImpl().getReadOnlyProperty();
@@ -532,6 +542,8 @@ public class Cell<T> extends Labeled {
 
     /**
      * Returns whether this cell is allowed to be put into an editing state.
+     * @return true if this cell is allowed to be put into an editing state,
+     * otherwise false
      */
     public final boolean isEditable() {
         return editable == null ? true : editable.get();
@@ -544,6 +556,8 @@ public class Cell<T> extends Labeled {
      * to satisfy additional criteria. For example, ListCell requires that the
      * ListView {@link ListView#editableProperty() editable} property is also
      * true.
+     * @return the representation of whether this cell is allowed to be put into
+     * an editing state
      */
     public final BooleanProperty editableProperty() {
         if (editable == null) {
@@ -673,7 +687,6 @@ public class Cell<T> extends Labeled {
      * @param empty whether or not this cell represents data from the list. If it
      *        is empty, then it does not represent any domain data, but is a cell
      *        being used to render an "empty" row.
-     * @expert
      */
     protected void updateItem(T item, boolean empty) {
         setItem(item);
@@ -685,7 +698,6 @@ public class Cell<T> extends Labeled {
 
     /**
      * Updates whether this cell is in a selected state or not.
-     * @expert
      * @param selected whether or not to select this cell.
      */
     public void updateSelected(boolean selected) {

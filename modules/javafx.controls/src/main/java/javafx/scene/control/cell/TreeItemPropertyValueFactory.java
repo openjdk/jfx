@@ -54,7 +54,8 @@ import sun.util.logging.PlatformLogger.Level;
  * <code>firstNameProperty()</code> method in the <code>Person</code> class type
  * (which is the class type of the TreeTableView). Additionally, this method must
  * return a {@link Property} instance. If a method meeting these requirements
- * is found, then the {@link javafx.scene.control.TreeTableCell} is populated with this ObservableValue<T>.
+ * is found, then the {@link javafx.scene.control.TreeTableCell} is populated
+ * with this {@literal ObservableValue<T>}.
  * In addition, the TreeTableView will automatically add an observer to the
  * returned value, such that any changes fired will be observed by the TreeTableView,
  * resulting in the cell immediately updating.
@@ -74,14 +75,16 @@ import sun.util.logging.PlatformLogger.Level;
  *
  * <pre><code>
  * TreeTableColumn&lt;Person,String&gt; firstNameCol = new TreeTableColumn&lt;Person,String&gt;("First Name");
- * firstNameCol.setCellValueFactory(new Callback&lt;CellDataFeatures&lt;Person, String&gt;, ObservableValue&lt;String&gt;&gt;() {
- *     public ObservableValue&lt;String&gt; call(CellDataFeatures&lt;Person, String&gt; p) {
+ * {@literal
+ * firstNameCol.setCellValueFactory(new Callback<CellDataFeatures<Person, String>, ObservableValue<String>>() {
+ *     public ObservableValue<String> call(CellDataFeatures<Person, String> p) {
  *         // p.getValue() returns the TreeItem<Person> instance for a particular
  *         // TreeTableView row, and the second getValue() call returns the
  *         // Person instance contained within the TreeItem.
  *         return p.getValue().getValue().firstNameProperty();
  *     }
  *  });
+ * }
  * }
  * </code></pre>
  *
@@ -119,6 +122,7 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
 
     /**
      * Returns the property name provided in the constructor.
+     * @return the property name provided in the constructor
      */
     public final String getProperty() { return property; }
 

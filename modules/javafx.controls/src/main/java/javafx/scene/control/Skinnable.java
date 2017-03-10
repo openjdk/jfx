@@ -46,16 +46,19 @@ public interface Skinnable {
      * <p>
      * A skin may be null.
      *
+     * @return the skin property for this control
      */
     public ObjectProperty<Skin<?>> skinProperty();
 
     /**
      * Sets the skin that will render this {@link Control}
+     * @param value the skin value for this control
      */
     public void setSkin(Skin<?> value);
 
     /**
      * Returns the skin that renders this {@link Control}
+     * @return the skin for this control
      */
     public Skin<?> getSkin();
 }

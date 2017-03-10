@@ -133,7 +133,7 @@ import static javafx.scene.control.TreeSortMode.*;
  *
  *          private ObservableList&lt;TreeItem&lt;File&gt;&gt; buildChildren(TreeItem&lt;File&gt; TreeItem) {
  *              File f = TreeItem.getValue();
- *              if (f != null && f.isDirectory()) {
+ *              if (f != null &amp;&amp; f.isDirectory()) {
  *                  File[] files = f.listFiles();
  *                  if (files != null) {
  *                      ObservableList&lt;TreeItem&lt;File&gt;&gt; children = FXCollections.observableArrayList();
@@ -171,17 +171,19 @@ import static javafx.scene.control.TreeSortMode.*;
  * are shown below (follow the links to learn more about each event type):
  *
  * <ul>
- *   <li>{@link TreeItem#treeNotificationEvent() TreeItem.treeNotificationEvent()}</li>
+ *   <li>{@link TreeItem#treeNotificationEvent() TreeItem.treeNotificationEvent()}
  *   <ul>
  *     <li>{@link TreeItem#valueChangedEvent() TreeItem.valueChangedEvent()}</li>
  *     <li>{@link TreeItem#graphicChangedEvent() TreeItem.graphicChangedEvent()}</li>
- *     <li>{@link TreeItem#treeItemCountChangeEvent() TreeItem.treeItemCountChangeEvent()}</li>
+ *     <li>{@link TreeItem#expandedItemCountChangeEvent() TreeItem.expandedItemCountChangeEvent()}
  *     <ul>
  *       <li>{@link TreeItem#branchExpandedEvent() TreeItem.branchExpandedEvent()}</li>
  *       <li>{@link TreeItem#branchCollapsedEvent() TreeItem.branchCollapsedEvent()}</li>
  *       <li>{@link TreeItem#childrenModificationEvent() TreeItem.childrenModificationEvent()}</li>
  *     </ul>
+ *     </li>
  *   </ul>
+ *   </li>
  * </ul>
  *
  * <p>The indentation shown above signifies the relationship between event types.
@@ -220,6 +222,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * at any point in the tree.
      *
      * @param <T> The type of the value contained within the TreeItem.
+     * @return the base EventType when an event has occurred within a TreeItem
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<TreeModificationEvent<T>> treeNotificationEvent() {
@@ -237,6 +240,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * for the three sub-types).
      *
      * @param <T> The type of the value contained within the TreeItem.
+     * @return The general EventType when the TreeItem receives a modification
      * @since JavaFX 8.0
      */
     @SuppressWarnings("unchecked")
@@ -251,6 +255,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * expanded property, such that the TreeItem is now in the expanded state.
      *
      * @param <T> The type of the value contained within the TreeItem.
+     * @return The EventType used when the TreeItem receives a modification
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<TreeModificationEvent<T>> branchExpandedEvent() {
@@ -264,6 +269,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * expanded property, such that the TreeItem is now in the collapsed state.
      *
      * @param <T> The type of the value contained within the TreeItem.
+     * @return The EventType when the TreeItem receives a modification
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<TreeModificationEvent<T>> branchCollapsedEvent() {
@@ -277,6 +283,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * children list.
      *
      * @param <T> The type of the value contained within the TreeItem.
+     * @return The EventType when the TreeItem receives a direct modification to
+     * its children list
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<TreeModificationEvent<T>> childrenModificationEvent() {
@@ -290,6 +298,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * value property.
      *
      * @param <T> The type of the value contained within the TreeItem.
+     * @return The EventType when the TreeItem receives a modification to its
+     * value property
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<TreeModificationEvent<T>> valueChangedEvent() {
@@ -303,6 +313,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * graphic property.
      *
      * @param <T> The type of the value contained within the TreeItem.
+     * @return The EventType when the TreeItem receives a modification to its
+     * graphic property
      */
     @SuppressWarnings("unchecked")
     public static <T> EventType<TreeModificationEvent<T>> graphicChangedEvent() {
@@ -425,6 +437,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
     /**
      * Sets the application-specific data represented by this TreeItem.
+     * @param value the application-specific data
      */
     public final void setValue(T value) { valueProperty().setValue(value); }
 
@@ -437,6 +450,8 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     /**
      * A property representing the application-specific data contained within
      * this TreeItem.
+     * @return the property representing the application-specific data contained
+     * within this TreeItem
      */
     public final ObjectProperty<T> valueProperty() {
         if (value == null) {
@@ -480,6 +495,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     /**
      * The node that is generally shown to the left of the value property. For
      * best effect, this tends to be a 16x16 image.
+     * @return The node that is generally shown to the left of the value property
      */
     public final ObjectProperty<Node> graphicProperty() {
         if (graphic == null) {
@@ -531,6 +547,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
     /**
      * The expanded state of this TreeItem.
+     * @return The expanded state property of this TreeItem
      */
     public final BooleanProperty expandedProperty() {
         if (expanded == null) {
@@ -577,11 +594,13 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * how a TreeItem may be a leaf, but the general premise is the same: a
      * leaf can not be expanded by the user, and as such will not show a
      * disclosure node or respond to expansion requests.
+     * @return true if this TreeItem has no children
      */
     public boolean isLeaf() { return leaf == null ? true : leaf.getValue(); }
 
     /**
      * Represents the TreeItem leaf property, which is true if the TreeItem has no children.
+     * @return the TreeItem leaf property
      */
     public final ReadOnlyBooleanProperty leafProperty() {
         if (leaf == null) {
@@ -605,6 +624,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
     /**
      * A property that represents the parent of this TreeItem.
+     * @return the parent property of this TreeItem
      */
     public final ReadOnlyObjectProperty<TreeItem<T>> parentProperty() { return parent.getReadOnlyProperty(); }
 
@@ -772,6 +792,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * add relevant observers to the TreeCell instances (via a custom cell factory -
      * see the {@link Cell} class documentation for more details).
      *
+     * @param <E> The event
      * @param eventType the type of the events to receive by the handler
      * @param eventHandler the handler to register
      * @throws NullPointerException if the event type or handler is null
@@ -786,6 +807,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
      * caller needs to specify the particular event type from which to
      * unregister the handler.
      *
+     * @param <E> The event
      * @param eventType the event type from which to unregister
      * @param eventHandler the handler to unregister
      * @throws NullPointerException if the event type or handler is null
@@ -959,6 +981,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     /**
      * An {@link Event} that contains relevant information for all forms of
      * TreeItem modifications.
+     * @param <T> The TreeModificationEvent
      * @since JavaFX 2.0
      */
     public static class TreeModificationEvent<T> extends Event {
@@ -1155,30 +1178,40 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         /**
          * Returns true if this event represents a TreeItem expansion event,
          * and false if the TreeItem was not expanded.
+         * @return true if this event represents a TreeItem expansion event,
+         * and false if the TreeItem was not expanded
          */
         public boolean wasExpanded() { return wasExpanded; }
 
         /**
          * Returns true if this event represents a TreeItem collapse event,
          * and false if the TreeItem was not collapsed.
+         * @return true if this event represents a TreeItem collapse event,
+         * and false if the TreeItem was not collapsed
          */
         public boolean wasCollapsed() { return wasCollapsed; }
 
         /**
          * Returns true if this event represents a TreeItem event where children
          * TreeItems were added.
+         * @return true if this event represents a TreeItem event where children
+         * TreeItems were added
          */
         public boolean wasAdded() { return getAddedSize() > 0; }
 
         /**
          * Returns true if this event represents a TreeItem event where children
          * TreeItems were removed.
+         * @return true if this event represents a TreeItem event where children
+         * TreeItems were removed
          */
         public boolean wasRemoved() { return getRemovedSize() > 0; }
 
         /**
          * Returns true if the order of the TreeItem children list has changed,
          * but that there have been no additions or removals.
+         * @return true if the order of the TreeItem children list has changed,
+         * but that there have been no additions or removals
          */
         public boolean wasPermutated() { return wasPermutated; }
 

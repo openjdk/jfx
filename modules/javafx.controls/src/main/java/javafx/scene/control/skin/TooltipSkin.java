@@ -59,6 +59,7 @@ public class TooltipSkin implements Skin<Tooltip> {
 
     /**
      * Creates a new TooltipSkin instance for the given {@link Tooltip}.
+     * @param t the tooltip
      */
     public TooltipSkin(Tooltip t) {
         this.tooltip = t;

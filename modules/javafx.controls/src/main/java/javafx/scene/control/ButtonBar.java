@@ -69,9 +69,9 @@ import java.util.Map;
  * laid out on each of the three operating systems.
  *
  * <p>
- * <strong>Windows:</strong><br/><img src="doc-files/buttonBar-windows.png" /><br>
- * <strong>Mac OS:</strong><br/><img src="doc-files/buttonBar-mac.png" /><br>
- * <strong>Linux:</strong><br/><img src="doc-files/buttonBar-linux.png" /><br>
+ * <strong>Windows:</strong><p><img src="doc-files/buttonBar-windows.png" alt=""></p>
+ * <strong>Mac OS:</strong><p><img src="doc-files/buttonBar-mac.png" alt=""></p>
+ * <strong>Linux:</strong><p><img src="doc-files/buttonBar-linux.png" alt=""></p>
  *
  * <h3>Code Samples</h3>
  * <p>Instantiating and using the ButtonBar is simple, simply do the following:
@@ -102,9 +102,9 @@ import java.util.Map;
  * strings that are shorthand representations for the button order. The built-in
  * orders for Windows, Mac OS and Linux are:
  *
- * <table border="0">
+ * <table border="0" summary="">
  *   <tr>
- *     <td width="75"><strong>Windows:</strong></td>
+ *     <td><strong>Windows:</strong></td>
  *     <td>L_E+U+FBXI_YNOCAH_R</td>
  *   </tr>
  *   <tr>
@@ -317,6 +317,8 @@ public class ButtonBar extends Control {
          * Returns the single character code used to represent the ButtonData
          * annotation in the {@link ButtonBar#buttonOrderProperty() button order}
          * string.
+         * @return the single character code used to represent the ButtonData
+         * annotation
          */
         public String getTypeCode() {
             return typeCode;
@@ -330,6 +332,7 @@ public class ButtonBar extends Control {
          *
          * <p>ButtonData enumeration values that can be the cancel button have a
          * comment stating this in their javadoc.
+         * @return true if this is a 'cancel' button
          */
         public final boolean isCancelButton() {
             return cancelButton;
@@ -343,6 +346,7 @@ public class ButtonBar extends Control {
          *
          * <p>ButtonData enumeration values that can be the default button have
          * a comment stating this in their javadoc.
+         * @return true if this is a 'default' button
          */
         public final boolean isDefaultButton() {
             return defaultButton;
@@ -374,6 +378,7 @@ public class ButtonBar extends Control {
      * was never set, this method will return null.
      *
      * @param button The button to return the previously set ButtonData for.
+     * @return the previously set ButtonData property on the given button
      */
     public static ButtonData getButtonData(Node button) {
         final Map<Object,Object> properties = button.getProperties();
@@ -413,6 +418,8 @@ public class ButtonBar extends Control {
      * Returns whether the given node is part of the uniform sizing calculations
      * or not. By default all nodes that have not opted out (via
      * {@link #setButtonUniformSize(Node, boolean)}) will return true here.
+     * @param button the button
+     * @return true if button is part of the uniform sizing calculations
      */
     public static boolean isButtonUniformSize(Node button) {
         return (boolean) button.getProperties().getOrDefault(Properties.BUTTON_SIZE_INDEPENDENCE, true);
@@ -519,6 +526,7 @@ public class ButtonBar extends Control {
      * one letter per {@link ButtonData} enumeration value. Default button orders
      * for operating systems are also available: {@link #BUTTON_ORDER_WINDOWS},
      * {@link #BUTTON_ORDER_MAC_OS}, and {@link #BUTTON_ORDER_LINUX}.
+     * @return the button order property
      */
     public final StringProperty buttonOrderProperty() {
         return buttonOrderProperty;
@@ -547,6 +555,7 @@ public class ButtonBar extends Control {
     // --- button min width
     /**
      * Specifies the minimum width of all buttons placed in this button bar.
+     * @return the minimum width property
      */
     public final DoubleProperty buttonMinWidthProperty() {
         return buttonMinWidthProperty;
@@ -556,6 +565,7 @@ public class ButtonBar extends Control {
 
     /**
      * Sets the minimum width of all buttons placed in this button bar.
+     * @param value the minimum width value
      */
     public final void setButtonMinWidth(double value) {
         buttonMinWidthProperty.set(value);
@@ -563,6 +573,7 @@ public class ButtonBar extends Control {
 
     /**
      * Returns the minimum width of all buttons placed in this button bar.
+     * @return the minimum width value
      */
     public final double getButtonMinWidth() {
         return buttonMinWidthProperty.get();

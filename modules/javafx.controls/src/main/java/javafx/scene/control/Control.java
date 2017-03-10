@@ -223,6 +223,7 @@ public abstract class Control extends Region implements Skinnable {
      * {@code Control} via the {@link Skin#getSkinnable()} method.
      * <p>
      * A skin may be null.
+     * @return the skin property for this control
      */
     @Override public final ObjectProperty<Skin<?>> skinProperty() { return skin; }
     @Override public final void setSkin(Skin<?> value) {
@@ -342,6 +343,7 @@ public abstract class Control extends Region implements Skinnable {
     // --- tooltip
     /**
      * The ToolTip for this control.
+     * @return the tool tip for this control
      */
     public final ObjectProperty<Tooltip> tooltipProperty() {
         if (tooltip == null) {
@@ -918,6 +920,7 @@ public abstract class Control extends Region implements Skinnable {
      * UI controls are focus traversable, so this method is overridden in Control
      * to set the initial traversable state to true.
      *
+     * @return the initial focus traversable state of this control
      * @since 9
      */
     @Override protected Boolean getInitialFocusTraversable() {

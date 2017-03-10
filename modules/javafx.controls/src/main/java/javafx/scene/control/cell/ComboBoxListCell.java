@@ -247,6 +247,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -254,6 +255,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -261,6 +263,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();
@@ -274,6 +277,8 @@ public class ComboBoxListCell<T> extends ListCell<T> {
     /**
      * A property representing whether the ComboBox, when shown to the user,
      * is editable or not.
+     * @return the property representing whether the ComboBox, when shown to
+     * the user, is editable or not
      */
     public final BooleanProperty comboBoxEditableProperty() {
         return comboBoxEditable;
@@ -282,6 +287,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
     /**
      * Configures the ComboBox to be editable (to allow user input outside of the
      * options provide in the dropdown list).
+     * @param value the editable value for this ComboBox
      */
     public final void setComboBoxEditable(boolean value) {
         comboBoxEditableProperty().set(value);
@@ -289,6 +295,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
     /**
      * Returns true if the ComboBox is editable.
+     * @return true if the ComboBox is editable
      */
     public final boolean isComboBoxEditable() {
         return comboBoxEditableProperty().get();
@@ -304,6 +311,7 @@ public class ComboBoxListCell<T> extends ListCell<T> {
 
     /**
      * Returns the items to be displayed in the ChoiceBox when it is showing.
+     * @return the items to be displayed in the ChoiceBox when it is showing
      */
     public ObservableList<T> getItems() {
         return items;

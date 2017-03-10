@@ -521,7 +521,7 @@ public class PieChart extends Chart {
         }
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void layoutChartChildren(double top, double left, double contentWidth, double contentHeight) {
         double total = 0.0;
         for (Data item = begin; item != null; item = item.next) {
@@ -972,6 +972,7 @@ public class PieChart extends Chart {
         /**
          * Returns the node that represents the pie slice. You can use this to
          * add mouse event listeners etc.
+         * @return the node that represents the pie slice
          */
         public Node getNode() {
             return node.getValue();

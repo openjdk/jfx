@@ -84,6 +84,8 @@ public class IndexedCell<T> extends Cell<T> {
     /**
      * Returns the index that this cell represents in the underlying control
      * data model.
+     * @return the index that this cell represents in the underlying control
+     * data model
      */
     public final int getIndex() { return index.get(); }
 
@@ -94,6 +96,7 @@ public class IndexedCell<T> extends Cell<T> {
      * property. For example,
      * in the case of a {@link ListView}, this means the following:
      * <code>cell.item == listView.getItems().get(cell.getIndex())</code>
+     * @return the location of this cell in the virtualized control
      */
     public final ReadOnlyIntegerProperty indexProperty() { return index.getReadOnlyProperty(); }
 
@@ -106,9 +109,10 @@ public class IndexedCell<T> extends Cell<T> {
     /**
      * Updates the index associated with this IndexedCell.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
+     * @param i the index associated with this indexed cell
      */
     public void updateIndex(int i) {
         final int oldIndex = index.get();

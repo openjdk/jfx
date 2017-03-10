@@ -140,6 +140,7 @@ abstract class MultipleSelectionModelBase<T> extends MultipleSelectionModel<T> {
      * An example would be that a ListView selection model would likely return
      * <code>listView.getItems().size()</code>. The valid range of selectable
      * indices is between 0 and whatever is returned by this method.
+     * @return the number of items in the data model that underpins the control
      */
     protected abstract int getItemCount();
 

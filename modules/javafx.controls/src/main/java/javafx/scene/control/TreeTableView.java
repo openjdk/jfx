@@ -129,7 +129,6 @@ import javafx.util.Callback;
  *      the column header (hold down Shift keyboard key whilst clicking on a
  *      header to sort by multiple columns).
  * </ul>
- * </p>
  *
  * <h2>Creating a TreeTableView</h2>
  *
@@ -420,7 +419,8 @@ public class TreeTableView<S> extends Control {
      * type of all other edit events: {@link #editStartEvent},
      *  {@link #editCommitEvent} and {@link #editCancelEvent}.
      *
-     * @return An EventType that indicates some edit event has occurred.
+     * @param <S> The type of the TreeItem instances used in this TreeTableView
+     * @return An EventType that indicates some edit event has occurred
      */
     @SuppressWarnings("unchecked")
     public static <S> EventType<TreeTableView.EditEvent<S>> editAnyEvent() {
@@ -433,7 +433,8 @@ public class TreeTableView<S> extends Control {
      * An EventType used to indicate that an edit event has started within the
      * TreeTableView upon which the event was fired.
      *
-     * @return An EventType used to indicate that an edit event has started.
+     * @param <S> The type of the TreeItem instances used in this TreeTableView
+     * @return An EventType used to indicate that an edit event has started
      */
     @SuppressWarnings("unchecked")
     public static <S> EventType<TreeTableView.EditEvent<S>> editStartEvent() {
@@ -446,8 +447,9 @@ public class TreeTableView<S> extends Control {
      * An EventType used to indicate that an edit event has just been canceled
      * within the TreeTableView upon which the event was fired.
      *
+     * @param <S> The type of the TreeItem instances used in this TreeTableView
      * @return An EventType used to indicate that an edit event has just been
-     *      canceled.
+     *      canceled
      */
     @SuppressWarnings("unchecked")
     public static <S> EventType<TreeTableView.EditEvent<S>> editCancelEvent() {
@@ -461,8 +463,9 @@ public class TreeTableView<S> extends Control {
      * committed. This means that user has made changes to the data of a
      * TreeItem, and that the UI should be updated.
      *
+     * @param <S> The type of the TreeItem instances used in this TreeTableView
      * @return An EventType that is used to indicate that an edit in a TreeTableView
-     *      has been committed.
+     *      has been committed
      */
     @SuppressWarnings("unchecked")
     public static <S> EventType<TreeTableView.EditEvent<S>> editCommitEvent() {
@@ -937,6 +940,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Property representing the root node of the TreeTableView.
+     * @return the root property
      */
     public final ObjectProperty<TreeItem<S>> rootProperty() {
         return root;
@@ -961,6 +965,7 @@ public class TreeTableView<S> extends Control {
     /**
      * Returns true if the root of the TreeTableView should be shown, and false if
      * it should not. By default, the root TreeItem is visible in the TreeTableView.
+     * @return true if the root of the TreeTableView should be shown
      */
     public final boolean isShowRoot() {
         return showRoot == null ? true : showRoot.get();
@@ -968,6 +973,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Property that represents whether or not the TreeTableView root node is visible.
+     * @return the show root property
      */
     public final BooleanProperty showRootProperty() {
         if (showRoot == null) {
@@ -991,6 +997,7 @@ public class TreeTableView<S> extends Control {
      * the left-most column if this property is null, otherwise it will be the
      * specified column assuming it is non-null and contained within the
      * {@link #getVisibleLeafColumns() visible leaf columns} list.
+     * @return the tree column property
      */
     public final ObjectProperty<TreeTableColumn<S,?>> treeColumnProperty() {
         if (treeColumn == null) {
@@ -1016,6 +1023,7 @@ public class TreeTableView<S> extends Control {
      * it is possible to configure it to only allow single selection (see
      * {@link MultipleSelectionModel#setSelectionMode(javafx.scene.control.SelectionMode)}
      * for more information).
+     * @param value the {@link MultipleSelectionModel} to be used
      */
     public final void setSelectionModel(TreeTableViewSelectionModel<S> value) {
         selectionModelProperty().set(value);
@@ -1023,6 +1031,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Returns the currently installed selection model.
+     * @return the currently installed selection model
      */
     public final TreeTableViewSelectionModel<S> getSelectionModel() {
         return selectionModel == null ? null : selectionModel.get();
@@ -1033,6 +1042,7 @@ public class TreeTableView<S> extends Control {
      * to select single or multiple items within a TreeTableView, as  well as inspect
      * which rows have been selected by the user. Note that it has a generic
      * type that must match the type of the TreeTableView itself.
+     * @return the selection model property
      */
     public final ObjectProperty<TreeTableViewSelectionModel<S>> selectionModelProperty() {
         if (selectionModel == null) {
@@ -1070,6 +1080,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Sets the {@link FocusModel} to be used in the TreeTableView.
+     * @param value the {@link FocusModel} to be used
      */
     public final void setFocusModel(TreeTableViewFocusModel<S> value) {
         focusModelProperty().set(value);
@@ -1077,6 +1088,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Returns the currently installed {@link FocusModel}.
+     * @return the currently installed {@link FocusModel}
      */
     public final TreeTableViewFocusModel<S> getFocusModel() {
         return focusModel == null ? null : focusModel.get();
@@ -1086,6 +1098,7 @@ public class TreeTableView<S> extends Control {
      * The FocusModel provides the API through which it is possible
      * to control focus on zero or one rows of the TreeTableView. Generally the
      * default implementation should be more than sufficient.
+     * @return the focus model property
      */
     public final ObjectProperty<TreeTableViewFocusModel<S>> focusModelProperty() {
         if (focusModel == null) {
@@ -1132,6 +1145,7 @@ public class TreeTableView<S> extends Control {
      * Specifies whether this TreeTableView is editable - only if the TreeTableView and
      * the TreeCells within it are both editable will a TreeCell be able to go
      * into their editing state.
+     * @return the editable property
      */
     public final BooleanProperty editableProperty() {
         if (editable == null) {
@@ -1153,6 +1167,7 @@ public class TreeTableView<S> extends Control {
     /**
      * Represents the current cell being edited, or null if
      * there is no cell being edited.
+     * @return the editing cell property
      */
     public final ReadOnlyObjectProperty<TreeTablePosition<S,?>> editingCellProperty() {
         return editingCellPropertyImpl().getReadOnlyProperty();
@@ -1173,6 +1188,7 @@ public class TreeTableView<S> extends Control {
      * in a designated space within the TableView, within which is a radio menu
      * item for each TreeTableColumn in this table. This menu allows for the user to
      * show and hide all TreeTableColumns easily.
+     * @return the table menu button visible property
      */
     public final BooleanProperty tableMenuButtonVisibleProperty() {
         if (tableMenuButtonVisible == null) {
@@ -1202,6 +1218,7 @@ public class TreeTableView<S> extends Control {
      * operation. The two most common policies are available as static functions
      * in the TableView class: {@link #UNCONSTRAINED_RESIZE_POLICY} and
      * {@link #CONSTRAINED_RESIZE_POLICY}.
+     * @return the column resize policy property
      */
     public final ObjectProperty<Callback<TreeTableView.ResizeFeatures, Boolean>> columnResizePolicyProperty() {
         if (columnResizePolicy == null) {
@@ -1246,6 +1263,7 @@ public class TreeTableView<S> extends Control {
      * <p>
      * You can create custom TableCell instances per column by assigning the
      * appropriate function to the cellFactory property in the TreeTableColumn class.
+     * @return the row factory property
      */
     public final ObjectProperty<Callback<TreeTableView<S>, TreeTableRow<S>>> rowFactoryProperty() {
         if (rowFactory == null) {
@@ -1269,6 +1287,7 @@ public class TreeTableView<S> extends Control {
      * place, that a filter has been applied to the table model, resulting
      * in there being nothing to show the user, or that there are no currently
      * visible columns.
+     * @return the placeholder property
      */
     public final ObjectProperty<Node> placeholderProperty() {
         if (placeholder == null) {
@@ -1332,6 +1351,7 @@ public class TreeTableView<S> extends Control {
      * use -fx-fixed-cell-size, instead of -fx-cell-size. If both properties are
      * specified in CSS, -fx-fixed-cell-size takes precedence.</p>
      *
+     * @return the fixed cell size property
      * @since JavaFX 8.0
      */
     public final DoubleProperty fixedCellSizeProperty() {
@@ -1683,6 +1703,7 @@ public class TreeTableView<S> extends Control {
      *
      * <p>Note: to display any data in a TableView, there must be at least one
      * TreeTableColumn in this ObservableList.</p>
+     * @return the table table column
      */
     public final ObservableList<TreeTableColumn<S,?>> getColumns() {
         return columns;
@@ -1712,6 +1733,9 @@ public class TreeTableView<S> extends Control {
     /**
      * Applies the currently installed resize policy against the given column,
      * resizing it based on the delta value provided.
+     * @param column the column
+     * @param delta the delta
+     * @return true if column resizing is applied
      */
     public boolean resizeColumn(TreeTableColumn<S,?> column, double delta) {
         if (column == null || Double.compare(delta, 0.0) == 0) return false;
@@ -1725,6 +1749,8 @@ public class TreeTableView<S> extends Control {
      * Causes the cell at the given row/column view indexes to switch into
      * its editing state, if it is not already in it, and assuming that the
      * TableView and column are also editable.
+     * @param row the row
+     * @param column the column
      */
     public void edit(int row, TreeTableColumn<S,?> column) {
         if (!isEditable() || (column != null && ! column.isEditable())) {
@@ -1740,6 +1766,7 @@ public class TreeTableView<S> extends Control {
 
     /**
      * Returns an unmodifiable list containing the currently visible leaf columns.
+     * @return an unmodifiable list containing the currently visible leaf columns
      */
     public ObservableList<TreeTableColumn<S,?>> getVisibleLeafColumns() {
         return unmodifiableVisibleLeafColumns;
@@ -1748,6 +1775,9 @@ public class TreeTableView<S> extends Control {
     /**
      * Returns the position of the given column, relative to all other
      * visible leaf columns.
+     * @param column the column
+     * @return the position of the given column, relative to all other
+     * visible leaf columns
      */
     public int getVisibleLeafIndex(TreeTableColumn<S,?> column) {
         return getVisibleLeafColumns().indexOf(column);
@@ -1756,6 +1786,9 @@ public class TreeTableView<S> extends Control {
     /**
      * Returns the TreeTableColumn in the given column index, relative to all other
      * visible leaf columns.
+     * @param column the column
+     * @return the TreeTableColumn in the given column index, relative to all other
+     * visible leaf columns
      */
     public TreeTableColumn<S,?> getVisibleLeafColumn(int column) {
         if (column < 0 || column >= visibleLeafColumns.size()) return null;
@@ -2102,6 +2135,7 @@ public class TreeTableView<S> extends Control {
 
         /**
          * Returns the TreeTableView upon which the resize operation is occurring.
+         * @return the TreeTableView upon which the resize operation is occurring
          */
         public TreeTableView<S> getTable() { return treeTable; }
     }
@@ -2135,6 +2169,11 @@ public class TreeTableView<S> extends Control {
          * Creates a new EditEvent instance to represent an edit event. This
          * event is used for {@link #EDIT_START_EVENT},
          * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.
+         * @param source the source
+         * @param eventType the eventType
+         * @param treeItem the treeItem
+         * @param oldValue the oldValue
+         * @param newValue the newValue
          */
         public EditEvent(TreeTableView<S> source,
                          EventType<? extends TreeTableView.EditEvent> eventType,
@@ -2148,6 +2187,7 @@ public class TreeTableView<S> extends Control {
 
         /**
          * Returns the TreeTableView upon which the edit took place.
+         * @return the TreeTableView upon which the edit took place
          */
         @Override public TreeTableView<S> getSource() {
             return source;
@@ -2155,6 +2195,7 @@ public class TreeTableView<S> extends Control {
 
         /**
          * Returns the {@link TreeItem} upon which the edit took place.
+         * @return the {@link TreeItem} upon which the edit took place
          */
         public TreeItem<S> getTreeItem() {
             return treeItem;
@@ -2162,6 +2203,7 @@ public class TreeTableView<S> extends Control {
 
         /**
          * Returns the new value input into the TreeItem by the end user.
+         * @return the new value input into the TreeItem by the end user
          */
         public S getNewValue() {
             return newValue;
@@ -2170,6 +2212,8 @@ public class TreeTableView<S> extends Control {
         /**
          * Returns the old value that existed in the TreeItem prior to the current
          * edit event.
+         * @return the old value that existed in the TreeItem prior to the current
+         * edit event
          */
         public S getOldValue() {
             return oldValue;
@@ -2229,6 +2273,7 @@ public class TreeTableView<S> extends Control {
          * A read-only ObservableList representing the currently selected cells
          * in this TreeTableView. Rather than directly modify this list, please
          * use the other methods provided in the TreeTableViewSelectionModel.
+         * @return a list of selected cells
          */
         public abstract ObservableList<TreeTablePosition<S,?>> getSelectedCells();
 
@@ -2242,6 +2287,7 @@ public class TreeTableView<S> extends Control {
 
          /**
           * Returns the TreeTableView instance that this selection model is installed in.
+         * @return the TreeTableView instance that this selection model is installed in
           */
          public TreeTableView<S> getTreeTableView() {
              return treeTableView;
@@ -3560,7 +3606,7 @@ public class TreeTableView<S> extends Control {
          * Causes the item at the given index to receive the focus. This does not
          * cause the current selection to change. Updates the focusedItem and
          * focusedIndex properties such that <code>focusedIndex = -1</code> unless
-         * <pre><code>0 <= index < model size</code></pre>.
+         * <pre><code>0 &lt;= index &lt; model size</code></pre>.
          *
          * @param index The index of the item to get focus.
          */

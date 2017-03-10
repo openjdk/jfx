@@ -172,11 +172,17 @@ public abstract class XYChart<X,Y> extends Chart {
     // -------------- PUBLIC PROPERTIES --------------------------------------------------------------------------------
 
     private final Axis<X> xAxis;
-    /** Get the X axis, by default it is along the bottom of the plot */
+    /**
+     * Get the X axis, by default it is along the bottom of the plot
+     * @return the X axis of the chart
+     */
     public Axis<X> getXAxis() { return xAxis; }
 
     private final Axis<Y> yAxis;
-    /** Get the Y axis, by default it is along the left of the plot */
+    /**
+     * Get the Y axis, by default it is along the left of the plot
+     * @return the Y axis of this chart
+     */
     public Axis<Y> getYAxis() { return yAxis; }
 
     /** XYCharts data */
@@ -612,7 +618,10 @@ public abstract class XYChart<X,Y> extends Chart {
      */
     protected abstract void seriesRemoved(Series<X,Y> series);
 
-    /** Called when each atomic change is made to the list of series for this chart */
+    /**
+     * Called when each atomic change is made to the list of series for this chart
+     * @param c a Change instance representing the changes to the series
+     */
     protected void seriesChanged(Change<? extends Series> c) {}
 
     /**
@@ -653,7 +662,7 @@ public abstract class XYChart<X,Y> extends Chart {
      */
     protected abstract void layoutPlotChildren();
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected final void layoutChartChildren(double top, double left, double width, double height) {
         if(getData() == null) return;
         if (!rangeValid) {
@@ -963,12 +972,15 @@ public abstract class XYChart<X,Y> extends Chart {
      * used by XYChart to animate the xValue from the old value to the new value. This is what you should plot
      * in any custom XYChart implementations. Some XYChart chart implementations such as LineChart also use this
      * to animate when data is added or removed.
+     * @param item The XYChart.Data item from which the current X axis data value is obtained
+     * @return The current displayed X data value
      */
     protected final X getCurrentDisplayedXValue(Data<X,Y> item) { return item.getCurrentX(); }
 
     /** Set the current displayed data value plotted on X axis.
      *
      * @param item The XYChart.Data item from which the current X axis data value is obtained.
+     * @param value The X axis data value
      * @see #getCurrentDisplayedXValue
      */
     protected final void setCurrentDisplayedXValue(Data<X,Y> item, X value) { item.setCurrentX(value); }
@@ -986,6 +998,8 @@ public abstract class XYChart<X,Y> extends Chart {
      * used by XYChart to animate the yValue from the old value to the new value. This is what you should plot
      * in any custom XYChart implementations. Some XYChart chart implementations such as LineChart also use this
      * to animate when data is added or removed.
+     * @param item The XYChart.Data item from which the current Y axis data value is obtained
+     * @return The current displayed Y data value
      */
     protected final Y getCurrentDisplayedYValue(Data<X,Y> item) { return item.getCurrentY(); }
 
@@ -993,6 +1007,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * Set the current displayed data value plotted on Y axis.
      *
      * @param item The XYChart.Data item from which the current Y axis data value is obtained.
+     * @param value The Y axis data value
      * @see #getCurrentDisplayedYValue
      */
     protected final void setCurrentDisplayedYValue(Data<X,Y> item, Y value) { item.setCurrentY(value); }
@@ -1009,6 +1024,8 @@ public abstract class XYChart<X,Y> extends Chart {
      * The current displayed data extra value. This may be the same as extraValue or different. It is
      * used by XYChart to animate the extraValue from the old value to the new value. This is what you should plot
      * in any custom XYChart implementations.
+     * @param item The XYChart.Data item from which the current extra value is obtained
+     * @return The current extra value
      */
     protected final Object getCurrentDisplayedExtraValue(Data<X,Y> item) { return item.getCurrentExtraValue(); }
 
@@ -1016,6 +1033,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * Set the current displayed data extra value.
      *
      * @param item The XYChart.Data item from which the current extra value is obtained.
+     * @param value The extra value
      * @see #getCurrentDisplayedExtraValue
      */
     protected final void setCurrentDisplayedExtraValue(Data<X,Y> item, Object value) { item.setCurrentExtraValue(value); }
@@ -1024,7 +1042,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * The current displayed extra value property.
      *
      * @param item The XYChart.Data item from which the current extra value property object is obtained.
-     * @return ObjectProperty<Object> The current extra value ObjectProperty
+     * @return {@literal ObjectProperty<Object> The current extra value ObjectProperty}
      * @see #getCurrentDisplayedExtraValue
      */
     protected final ObjectProperty<Object> currentDisplayedExtraValueProperty(Data<X,Y> item) { return item.currentExtraValueProperty(); }

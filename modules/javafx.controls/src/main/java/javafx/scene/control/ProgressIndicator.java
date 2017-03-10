@@ -90,6 +90,7 @@ public class ProgressIndicator extends Control {
 
     /**
      * Creates a new ProgressIndicator with the given progress value.
+     * @param progress the progress, represented as a value between 0 and 1
      */
     public ProgressIndicator(double progress) {
         // focusTraversable is styleable through css. Calling setFocusTraversable

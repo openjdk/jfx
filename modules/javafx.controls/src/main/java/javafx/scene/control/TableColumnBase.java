@@ -82,7 +82,6 @@ import com.sun.javafx.scene.control.skin.Utils;
  *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
  *      sortType).
  * </ul>
- * </p>
  *
  * When instantiating a concrete subclass of TableColumnBase, perhaps the two
  * most important properties to set are the column {@link #textProperty() text}
@@ -405,6 +404,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * external property, as that will result in the column width not being
      * adjustable by the user through dragging the left and right borders of
      * column headers.
+     * @return the width property
      */
     public final ReadOnlyDoubleProperty widthProperty() { return width.getReadOnlyProperty(); }
     public final double getWidth() { return width.get(); }
@@ -438,6 +438,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     // --- Preferred Width
     /**
      * The preferred width of the TableColumn.
+     * @return preferred width property
      */
     public final DoubleProperty prefWidthProperty() { return prefWidth; }
     public final void setPrefWidth(double value) { prefWidthProperty().set(value); }
@@ -454,6 +455,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
     // so I've arbitrarily chosen a better, smaller number.
     /**
      * The maximum width the table column is permitted to be resized to.
+     * @return maximum width property
      */
     public final DoubleProperty maxWidthProperty() { return maxWidth; }
     public final void setMaxWidth(double value) { maxWidthProperty().set(value); }
@@ -735,6 +737,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * Note however that TableColumnBase is <b>not</b> a Node, and therefore no visual
      * events will be fired on it.
      *
+     * @param <E> The type of event
      * @param eventType the type of the events to receive by the handler
      * @param eventHandler the handler to register
      * @throws NullPointerException if the event type or handler is null
@@ -749,6 +752,7 @@ public abstract class TableColumnBase<S,T> implements EventTarget, Styleable {
      * caller needs to specify the particular event type from which to
      * unregister the handler.
      *
+     * @param <E> The type of event
      * @param eventType the event type from which to unregister
      * @param eventHandler the handler to unregister
      * @throws NullPointerException if the event type or handler is null

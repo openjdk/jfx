@@ -314,7 +314,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         //Note: better animation here, point should move from old position to new position at center point between prev and next symbols
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void dataItemChanged(Data<X, Y> item) {
     }
 
@@ -396,7 +396,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
         }
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void updateAxisRange() {
         // This override is necessary to update axis range based on cumulative Y value for the
         // Y axis instead of the normal way where max value in the data range is used.
@@ -497,7 +497,7 @@ public class StackedAreaChart<X,Y> extends XYChart<X,Y> {
     }
 
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     @Override protected void layoutPlotChildren() {
         ArrayList<DataPointInfo<X, Y>> currentSeriesData = new ArrayList<>();
         // AggregateData hold the data points of both the current and the previous series.

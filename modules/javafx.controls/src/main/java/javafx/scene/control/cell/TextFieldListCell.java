@@ -77,6 +77,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
      * instance of type T. This item will then be passed along to the
      * {@link ListView#onEditCommitProperty()} callback.
      *
+     * @param <T> The type of the item contained within the Cell
      * @param converter A {@link StringConverter} that can convert the given String
      *      (from what the user typed in) into an instance of type T.
      * @return A {@link Callback} that can be inserted into the
@@ -147,6 +148,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
 
     /**
      * The {@link StringConverter} property.
+     * @return the {@link StringConverter} property
      */
     public final ObjectProperty<StringConverter<T>> converterProperty() {
         return converter;
@@ -154,6 +156,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
 
     /**
      * Sets the {@link StringConverter} to be used in this cell.
+     * @param value the {@link StringConverter} to be used in this cell
      */
     public final void setConverter(StringConverter<T> value) {
         converterProperty().set(value);
@@ -161,6 +164,7 @@ public class TextFieldListCell<T> extends ListCell<T> {
 
     /**
      * Returns the {@link StringConverter} used in this cell.
+     * @return the {@link StringConverter} used in this cell
      */
     public final StringConverter<T> getConverter() {
         return converterProperty().get();

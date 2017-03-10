@@ -466,6 +466,7 @@ public class DialogPane extends Pane {
      * area of the DialogPane. It will also result in the DialogPane switching its
      * layout to the 'header' layout - as outlined in the {@link DialogPane} class
      * javadoc.
+     * @return the property representing the header area of the dialog pane
      */
     public final ObjectProperty<Node> headerProperty() {
         return header;
@@ -490,6 +491,7 @@ public class DialogPane extends Pane {
      * <p>When headerText is set to a non-null value, this will result in the
      * DialogPane switching its layout to the 'header' layout - as outlined in
      * the {@link DialogPane} class javadoc.</p>
+     * @param headerText the string to show in the dialog header area
      */
     public final void setHeaderText(String headerText) {
         this.headerText.set(headerText);
@@ -497,6 +499,7 @@ public class DialogPane extends Pane {
 
     /**
      * Returns the currently-set header text for this DialogPane.
+     * @return the currently-set header text for this DialogPane
      */
     public final String getHeaderText() {
         return headerText.get();
@@ -511,6 +514,7 @@ public class DialogPane extends Pane {
      * <p>When headerText is set to a non-null value, this will result in the
      * DialogPane switching its layout to the 'header' layout - as outlined in
      * the {@link DialogPane} class javadoc.</p>
+     * @return the property representing the header text for the dialog pane
      */
     public final StringProperty headerTextProperty() {
         return headerText;
@@ -555,6 +559,7 @@ public class DialogPane extends Pane {
 
     /**
      * Property representing the content area of the dialog.
+     * @return the property representing the content area of the dialog
      */
     public final ObjectProperty<Node> contentProperty() {
         return content;
@@ -574,6 +579,7 @@ public class DialogPane extends Pane {
      * is lower precedence than the {@link #contentProperty() content node}, meaning
      * that if both the content node and the contentText properties are set, the
      * content text will not be displayed in a default DialogPane instance.
+     * @param contentText the string to show in the dialog content area
      */
     public final void setContentText(String contentText) {
         this.contentText.set(contentText);
@@ -581,6 +587,7 @@ public class DialogPane extends Pane {
 
     /**
      * Returns the currently-set content text for this DialogPane.
+     * @return the currently-set content text for this DialogPane
      */
     public final String getContentText() {
         return contentText.get();
@@ -591,6 +598,7 @@ public class DialogPane extends Pane {
      * is lower precedence than the {@link #contentProperty() content node}, meaning
      * that if both the content node and the contentText properties are set, the
      * content text will not be displayed in a default DialogPane instance.
+     * @return the property representing the content text for the dialog pane
      */
     public final StringProperty contentTextProperty() {
         return contentText;
@@ -626,6 +634,7 @@ public class DialogPane extends Pane {
      * can be placed in this area, but it will only be shown when the user
      * clicks the 'Show Details' expandable button. This button will be added
      * automatically when the expandable content property is non-null.
+     * @return the property that represents the dialog expandable content area
      */
     public final ObjectProperty<Node> expandableContentProperty() {
         return expandableContentProperty;
@@ -634,6 +643,7 @@ public class DialogPane extends Pane {
     /**
      * Returns the dialog expandable content node, if one is set, or null
      * otherwise.
+     * @return the dialog expandable content node
      */
     public final Node getExpandableContent() {
         return expandableContentProperty.get();
@@ -642,6 +652,7 @@ public class DialogPane extends Pane {
     /**
      * Sets the dialog expandable content node, or null if no expandable content
      * needs to be shown.
+     * @param content the dialog expandable content node
      */
     public final void setExpandableContent(Node content) {
         this.expandableContentProperty.set(content);
@@ -663,6 +674,7 @@ public class DialogPane extends Pane {
 
     /**
      * Represents whether the dialogPane is expanded.
+     * @return the property representing whether the dialogPane is expanded
      */
     public final BooleanProperty expandedProperty() {
         return expandedProperty;
@@ -743,6 +755,7 @@ public class DialogPane extends Pane {
      *
      * <p>The default implementation of this method creates and returns a new
      * {@link ButtonBar} instance.
+     * @return the created button bar
      */
     protected Node createButtonBar() {
         ButtonBar buttonBar = new ButtonBar();
@@ -794,6 +807,7 @@ public class DialogPane extends Pane {
      *       {@link #expandedProperty() expanded} property, so that you may update
      *       the button visuals.
      * </ol>
+     * @return the created details button
      */
     protected Node createDetailsButton() {
         final Hyperlink detailsButton = new Hyperlink();

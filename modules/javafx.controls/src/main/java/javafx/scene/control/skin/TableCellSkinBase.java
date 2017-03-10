@@ -116,6 +116,7 @@ public abstract class TableCellSkinBase<S, T, C extends IndexedCell<T>> extends 
 
     /**
      * The TableColumnBase instance that is responsible for this Cell.
+     * @return the TableColumnBase instance that is responsible for this Cell
      */
     public abstract ReadOnlyObjectProperty<? extends TableColumnBase<S,T>> tableColumnProperty();
     public final TableColumnBase<S,T> getTableColumn() {

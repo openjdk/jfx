@@ -493,9 +493,10 @@ public class ListCell<T> extends IndexedCell<T> {
     /**
      * Updates the ListView associated with this Cell.
      *
-     * @expert This function is intended to be used by experts, primarily
-     *         by those implementing new Skins. It is not common
-     *         for developers or designers to access this function directly.
+     * Note: This function is intended to be used by experts, primarily
+     *       by those implementing new Skins. It is not common
+     *       for developers or designers to access this function directly.
+     * @param listView the ListView associated with this cell
      */
     public final void updateListView(ListView<T> listView) {
         setListView(listView);

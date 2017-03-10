@@ -900,6 +900,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * Sets a new cell factory to use in the VirtualFlow. This forces all old
      * cells to be thrown away, and new cells to be created with
      * the new cell factory.
+     * @param value the new cell factory
      */
     public final void setCellFactory(Callback<VirtualFlow<T>, T> value) {
         cellFactoryProperty().set(value);
@@ -907,6 +908,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
 
     /**
      * Returns the current cell factory.
+     * @return the current cell factory
      */
     public final Callback<VirtualFlow<T>, T> getCellFactory() {
         return cellFactory == null ? null : cellFactory.get();
@@ -920,6 +922,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * which might be usable for representing any item in the VirtualFlow.
      *
      * <p>Refer to the {@link Cell} class documentation for more detail.
+     * @return  the cell factory property
      */
     public final ObjectProperty<Callback<VirtualFlow<T>, T>> cellFactoryProperty() {
         if (cellFactory == null) {
@@ -1290,6 +1293,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * Get a cell which can be used in the layout. This function will reuse
      * cells from the pile where possible, and will create new cells when
      * necessary.
+     * @param prefIndex the preferred index
+     * @return the available cell
      */
     protected T getAvailableCell(int prefIndex) {
         T cell = null;
@@ -1341,6 +1346,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * viewport (it may be clipped), but does distinguish between cells that
      * have been created and are in use vs. those that are in the pile or
      * not created.
+     * @param index the index
+     * @return the visible cell
      */
     public T getVisibleCell(int index) {
         if (cells.isEmpty()) return null;
@@ -1369,6 +1376,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * Locates and returns the last non-empty IndexedCell that is currently
      * partially or completely visible. This function may return null if there
      * are no cells, or if the viewport length is 0.
+     * @return the last visible cell
      */
     public T getLastVisibleCell() {
         if (cells.isEmpty() || getViewportLength() <= 0) return null;
@@ -1388,6 +1396,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * Locates and returns the first non-empty IndexedCell that is partially or
      * completely visible. This really only ever returns null if there are no
      * cells or the viewport length is 0.
+     * @return the first visible cell
      */
     public T getFirstVisibleCell() {
         if (cells.isEmpty() || getViewportLength() <= 0) return null;
@@ -1399,6 +1408,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * Adjust the position of cells so that the specified cell
      * will be positioned at the start of the viewport. The given cell must
      * already be "live".
+     * @param firstCell the first cell
      */
     public void scrollToTop(T firstCell) {
         if (firstCell != null) {
@@ -1410,6 +1420,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * Adjust the position of cells so that the specified cell
      * will be positioned at the end of the viewport. The given cell must
      * already be "live".
+     * @param lastCell the last cell
      */
     public void scrollToBottom(T lastCell) {
         if (lastCell != null) {
@@ -1420,6 +1431,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Adjusts the cells such that the selected cell will be fully visible in
      * the viewport (but only just).
+     * @param cell the cell
      */
     public void scrollTo(T cell) {
         if (cell != null) {
@@ -1439,6 +1451,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Adjusts the cells such that the cell in the given index will be fully visible in
      * the viewport.
+     * @param index the index
      */
     public void scrollTo(int index) {
         T cell = getVisibleCell(index);
@@ -1454,6 +1467,7 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Adjusts the cells such that the cell in the given index will be fully visible in
      * the viewport, and positioned at the very top of the viewport.
+     * @param index the index
      */
     public void scrollToTop(int index) {
         boolean posSet = false;
@@ -1486,6 +1500,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * to move the VirtualFlow in the given direction (positive is down/right,
      * negative is up/left) the given number of pixels. It returns the number of
      * pixels actually moved.
+     * @param delta the delta value
+     * @return the number of pixels actually moved
      */
     public double scrollPixels(final double delta) {
         // Short cut this method for cases where nothing should be done
@@ -1621,6 +1637,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
      * including beyond the range defined by cellCount, in which case an
      * empty cell will be returned. The returned value should not be stored for
      * any reason.
+     * @param index the index
+     * @return the cell
      */
     public T getCell(int index) {
         // If there are cells, then we will attempt to get an existing cell
@@ -1702,6 +1720,8 @@ public class VirtualFlow<T extends IndexedCell> extends Region {
     /**
      * Return the index for a given cell. This allows subclasses to customise
      * how cell indices are retrieved.
+     * @param cell the cell
+     * @return the index
      */
     protected int getCellIndex(T cell){
         return cell.getIndex();
