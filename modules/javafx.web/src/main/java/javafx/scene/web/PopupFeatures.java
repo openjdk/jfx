@@ -60,6 +60,7 @@ public final class PopupFeatures {
 
     /**
      * Returns whether menu bar should be present.
+     * @return true if the menu bar should be present
      */
     public final boolean hasMenu() {
         return menu;
@@ -67,6 +68,7 @@ public final class PopupFeatures {
 
     /**
      * Returns whether status bar should be present.
+     * @return true if the status bar should be present
      */
     public final boolean hasStatus() {
         return status;
@@ -74,6 +76,7 @@ public final class PopupFeatures {
 
     /**
      * Returns whether tool bar should be present.
+     * @return true if the tool bar should be present
      */
     public final boolean hasToolbar() {
         return toolbar;
@@ -81,6 +84,7 @@ public final class PopupFeatures {
 
     /**
      * Returns whether popup window should be resizable.
+     * @return true if the popup window should be resizable
      */
     public final boolean isResizable() {
         return resizable;

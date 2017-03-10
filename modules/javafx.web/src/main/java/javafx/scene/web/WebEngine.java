@@ -81,7 +81,7 @@ import static com.sun.webkit.LoadListenerClient.*;
  * to the document model of the current page, and enables two-way
  * communication between a Java application and JavaScript code of the page.
  *
- * <h4>Loading Web Pages</h4>
+ * <p><b>Loading Web Pages</b></p>
  * <p>The {@code WebEngine} class provides two ways to load content into a
  * {@code WebEngine} object:
  * <ul>
@@ -98,21 +98,21 @@ import static com.sun.webkit.LoadListenerClient.*;
  *
  * <p>The following example changes the stage title when loading completes
  * successfully:
- * <pre><code>
-import javafx.concurrent.Worker.State;
-final Stage stage;
-webEngine.getLoadWorker().stateProperty().addListener(
-        new ChangeListener&lt;State&gt;() {
+ * <pre>{@code
+    import javafx.concurrent.Worker.State;
+    final Stage stage;
+    webEngine.getLoadWorker().stateProperty().addListener(
+        new ChangeListener<State>() {
             public void changed(ObservableValue ov, State oldState, State newState) {
                 if (newState == State.SUCCEEDED) {
                     stage.setTitle(webEngine.getLocation());
                 }
             }
         });
-webEngine.load("http://javafx.com");
- * </code></pre>
+    webEngine.load("http://javafx.com");
+ * }</pre>
  *
- * <h4>User Interface Callbacks</h4>
+ * <p><b>User Interface Callbacks</b></p>
  * <p>A number of user interface callbacks may be registered with a
  * {@code WebEngine} object. These callbacks are invoked when a script running
  * on the page requests a user interface operation to be performed, for
@@ -123,38 +123,40 @@ webEngine.load("http://javafx.com");
  *
  * <p>The table below shows JavaScript user interface methods and properties
  * with their corresponding {@code WebEngine} callbacks:
- * <table border="1" width="400">
- *     <th>JavaScript method/property
- *     <th>WebEngine callback
- * <tr><td>{@code window.alert()}<td>{@code onAlert}
- * <tr><td>{@code window.confirm()}<td>{@code confirmHandler}
- * <tr><td>{@code window.open()}<td>{@code createPopupHandler}
+ * <table border="1" width="400" summary="">
+ * <tr>
+ *     <th>JavaScript method/property</th>
+ *     <th>WebEngine callback</th>
+ * </tr>
+ * <tr><td>{@code window.alert()}</td><td>{@code onAlert}</td></tr>
+ * <tr><td>{@code window.confirm()}</td><td>{@code confirmHandler}</td></tr>
+ * <tr><td>{@code window.open()}</td><td>{@code createPopupHandler}</td></tr>
  * <tr><td>{@code window.open()} and<br>
- *         {@code window.close()}<td>{@code onVisibilityChanged}
- * <tr><td>{@code window.prompt()}<td>{@code promptHandler}
- * <tr><td>Setting {@code window.status}<td>{@code onStatusChanged}
+ *         {@code window.close()}</td><td>{@code onVisibilityChanged}</td></tr>
+ * <tr><td>{@code window.prompt()}</td><td>{@code promptHandler}</td></tr>
+ * <tr><td>Setting {@code window.status}</td><td>{@code onStatusChanged}</td></tr>
  * <tr><td>Setting any of the following:<br>
  *         {@code window.innerWidth}, {@code window.innerHeight},<br>
  *         {@code window.outerWidth}, {@code window.outerHeight},<br>
  *         {@code window.screenX}, {@code window.screenY},<br>
  *         {@code window.screenLeft}, {@code window.screenTop}
- *         <td>{@code onResized}
+ *         <td>{@code onResized}</td></tr>
  * </table>
  *
  * <p>The following example shows a callback that resizes a browser window:
- * <pre><code>
-Stage stage;
-webEngine.setOnResized(
-        new EventHandler&lt;WebEvent&lt;Rectangle2D&gt;&gt;() {
-            public void handle(WebEvent&lt;Rectangle2D&gt; ev) {
+ * <pre>{@code
+    Stage stage;
+    webEngine.setOnResized(
+        new EventHandler<WebEvent<Rectangle2D>>() {
+            public void handle(WebEvent<Rectangle2D> ev) {
                 Rectangle2D r = ev.getData();
                 stage.setWidth(r.getWidth());
                 stage.setHeight(r.getHeight());
             }
         });
- * </code></pre>
+ * }</pre>
  *
- * <h4>Access to Document Model</h4>
+ * <p><b>Access to Document Model</b></p>
  * <p>The {@code WebEngine} objects create and manage a Document Object Model
  * (DOM) for their Web pages. The model can be accessed and modified using
  * Java DOM Core classes. The {@link #getDocument()} method provides access
@@ -163,29 +165,29 @@ webEngine.setOnResized(
  *
  * <p>The following example attaches a Java event listener to an element of
  * a Web page. Clicking on the element causes the application to exit:
- * <pre><code>
-EventListener listener = new EventListener() {
-    public void handleEvent(Event ev) {
-        Platform.exit();
-    }
-};
+ * <pre>{@code
+    EventListener listener = new EventListener() {
+        public void handleEvent(Event ev) {
+            Platform.exit();
+        }
+    };
 
-Document doc = webEngine.getDocument();
-Element el = doc.getElementById("exit-app");
-((EventTarget) el).addEventListener("click", listener, false);
- * </code></pre>
+    Document doc = webEngine.getDocument();
+    Element el = doc.getElementById("exit-app");
+    ((EventTarget) el).addEventListener("click", listener, false);
+ * }</pre>
  *
- * <h4>Evaluating JavaScript expressions</h4>
+ * <p><b>Evaluating JavaScript expressions</b></p>
  * <p>It is possible to execute arbitrary JavaScript code in the context of
  * the current page using the {@link #executeScript} method. For example:
- * <pre><code>
-webEngine.executeScript("history.back()");
- * </code></pre>
+ * <pre>{@code
+    webEngine.executeScript("history.back()");
+ * }</pre>
  *
  * <p>The execution result is returned to the caller,
  * as described in the next section.
  *
- * <h4>Mapping JavaScript values to Java objects</h4>
+ * <p><b>Mapping JavaScript values to Java objects</b></p>
  *
  * JavaScript values are represented using the obvious Java classes:
  * null becomes Java null; a boolean becomes a {@code java.lang.Boolean};
@@ -223,7 +225,7 @@ webEngine.executeScript("history.back()");
  * For example if setting a Java {@code String} field from a JavaScript
  * expression, then the JavaScript value is converted to a string.
  *
- * <h4>Mapping Java objects to JavaScript values</h4>
+ * <p><b>Mapping Java objects to JavaScript values</b></p>
  *
  * The arguments of the {@code JSObject} methods {@code setMember} and
  * {@code call} pass Java objects to the JavaScript environment.
@@ -244,7 +246,7 @@ webEngine.executeScript("history.back()");
  * can be garbage collected, causing subsequent accesses to the JavaScript
  * objects to have no effect.
  *
- * <h4>Calling back to Java from JavaScript</h4>
+ * <p><b>Calling back to Java from JavaScript</b></p>
  *
  * <p>The {@link netscape.javascript.JSObject#setMember JSObject.setMember}
  * method is useful to enable upcalls from JavaScript
@@ -263,9 +265,9 @@ JSObject window = (JSObject) webEngine.executeScript("window");
 window.setMember("app", javaApp);
  * </code></pre>
  * You can then refer to the object and the method from your HTML page:
- * <pre><code>
-&lt;a href="" onclick="app.exit()"&gt;Click here to exit application&lt;/a&gt;
- * </code></pre>
+ * <pre>{@code
+    <a href="" onclick="app.exit()">Click here to exit application</a>
+ * }</pre>
  * <p>When a user clicks the link the application is closed.
  * <p>
  * Note that in the above example, the application holds a reference
@@ -288,13 +290,13 @@ window.setMember("app", javaApp);
  * chosen if there are multiple ones with the correct number of parameters.
  * <p>
  * You can pick a specific overloaded method by listing the
- * parameter types in an <q>extended method name</q>, which has the
+ * parameter types in an "extended method name", which has the
  * form <code>"<var>method_name</var>(<var>param_type1</var>,...,<var>param_typen</var>)"</code>.  Typically you'd write the JavaScript expression:
  * <pre>
- * <var>receiver</var>["<var>method_name</var>(<var>param_type1</var>,...,<var>param_typeN</var>)"](<var>arg1</var>,...,<var>argN</var>)</code>
+ * <code><var>receiver</var>["<var>method_name</var>(<var>param_type1</var>,...,<var>param_typeN</var>)"](<var>arg1</var>,...,<var>argN</var>)</code>
  * </pre>
  *
- * <h4>Threading</h4>
+ * <p><b>Threading</b></p>
  * <p>{@code WebEngine} objects must be created and accessed solely from the
  * JavaFX Application thread. This rule also applies to any DOM and JavaScript
  * objects obtained from the {@code WebEngine} object.
@@ -349,46 +351,44 @@ final public class WebEngine {
     /**
      * Returns a {@link javafx.concurrent.Worker} object that can be used to
      * track loading progress.
+     *
+     * @return the {@code Worker} object
      */
     public final Worker<Void> getLoadWorker() {
         return loadWorker;
     }
 
 
-    /**
+    /*
      * The final document. This may be null if no document has been loaded.
      */
     private final DocumentProperty document = new DocumentProperty();
 
-    /**
-     * Returns the document object for the current Web page. If the Web page
-     * failed to load, returns {@code null}.
-     */
     public final Document getDocument() { return document.getValue(); }
 
     /**
      * Document object for the current Web page. The value is {@code null}
      * if the Web page failed to load.
+     *
+     * @return the document property
      */
     public final ReadOnlyObjectProperty<Document> documentProperty() {
         return document;
     }
 
 
-    /**
+    /*
      * The location of the current page. This may return null.
      */
     private final ReadOnlyStringWrapper location = new ReadOnlyStringWrapper(this, "location");
 
-    /**
-     * Returns URL of the current Web page. If the current page has no URL,
-     * returns an empty String.
-     */
     public final String getLocation() { return location.getValue(); }
 
     /**
      * URL of the current Web page. If the current page has no URL,
      * the value is an empty String.
+     *
+     * @return the location property
      */
     public final ReadOnlyStringProperty locationProperty() { return location.getReadOnlyProperty(); }
 
@@ -399,20 +399,18 @@ final public class WebEngine {
     }
 
 
-    /**
+    /*
      * The page title.
      */
     private final ReadOnlyStringWrapper title = new ReadOnlyStringWrapper(this, "title");
 
-    /**
-     * Returns title of the current Web page. If the current page has no title,
-     * returns {@code null}.
-     */
     public final String getTitle() { return title.getValue(); }
 
     /**
      * Title of the current Web page. If the current page has no title,
      * the value is {@code null}.
+     *
+     * @return the title property
      */
     public final ReadOnlyStringProperty titleProperty() { return title.getReadOnlyProperty(); }
 
@@ -649,23 +647,14 @@ final public class WebEngine {
     private final ObjectProperty<EventHandler<WebEvent<String>>> onAlert
             = new SimpleObjectProperty<EventHandler<WebEvent<String>>>(this, "onAlert");
 
-    /**
-     * Returns the JavaScript {@code alert} handler.
-     * @see #onAlertProperty
-     * @see #setOnAlert
-     */
     public final EventHandler<WebEvent<String>> getOnAlert() { return onAlert.get(); }
 
-    /**
-     * Sets the JavaScript {@code alert} handler.
-     * @see #onAlertProperty
-     * @see #getOnAlert
-     */
     public final void setOnAlert(EventHandler<WebEvent<String>> handler) { onAlert.set(handler); }
 
     /**
      * JavaScript {@code alert} handler property. This handler is invoked
      * when a script running on the Web page calls the {@code alert} function.
+     * @return the onAlert property
      */
     public final ObjectProperty<EventHandler<WebEvent<String>>> onAlertProperty() { return onAlert; }
 
@@ -673,23 +662,14 @@ final public class WebEngine {
     private final ObjectProperty<EventHandler<WebEvent<String>>> onStatusChanged
             = new SimpleObjectProperty<EventHandler<WebEvent<String>>>(this, "onStatusChanged");
 
-    /**
-     * Returns the JavaScript status handler.
-     * @see #onStatusChangedProperty
-     * @see #setOnStatusChanged
-     */
     public final EventHandler<WebEvent<String>> getOnStatusChanged() { return onStatusChanged.get(); }
 
-    /**
-     * Sets the JavaScript status handler.
-     * @see #onStatusChangedProperty
-     * @see #getOnStatusChanged
-     */
     public final void setOnStatusChanged(EventHandler<WebEvent<String>> handler) { onStatusChanged.set(handler); }
 
     /**
      * JavaScript status handler property. This handler is invoked when
      * a script running on the Web page sets {@code window.status} property.
+     * @return the onStatusChanged property
      */
     public final ObjectProperty<EventHandler<WebEvent<String>>> onStatusChangedProperty() { return onStatusChanged; }
 
@@ -697,24 +677,15 @@ final public class WebEngine {
     private final ObjectProperty<EventHandler<WebEvent<Rectangle2D>>> onResized
             = new SimpleObjectProperty<EventHandler<WebEvent<Rectangle2D>>>(this, "onResized");
 
-    /**
-     * Returns the JavaScript window resize handler.
-     * @see #onResizedProperty
-     * @see #setOnResized
-     */
     public final EventHandler<WebEvent<Rectangle2D>> getOnResized() { return onResized.get(); }
 
-    /**
-     * Sets the JavaScript window resize handler.
-     * @see #onResizedProperty
-     * @see #getOnResized
-     */
     public final void setOnResized(EventHandler<WebEvent<Rectangle2D>> handler) { onResized.set(handler); }
 
     /**
      * JavaScript window resize handler property. This handler is invoked
      * when a script running on the Web page moves or resizes the
      * {@code window} object.
+     * @return the onResized property
      */
     public final ObjectProperty<EventHandler<WebEvent<Rectangle2D>>> onResizedProperty() { return onResized; }
 
@@ -722,24 +693,15 @@ final public class WebEngine {
     private final ObjectProperty<EventHandler<WebEvent<Boolean>>> onVisibilityChanged
             = new SimpleObjectProperty<EventHandler<WebEvent<Boolean>>>(this, "onVisibilityChanged");
 
-    /**
-     * Returns the JavaScript window visibility handler.
-     * @see #onVisibilityChangedProperty
-     * @see #setOnVisibilityChanged
-     */
     public final EventHandler<WebEvent<Boolean>> getOnVisibilityChanged() { return onVisibilityChanged.get(); }
 
-    /**
-     * Sets the JavaScript window visibility handler.
-     * @see #onVisibilityChangedProperty
-     * @see #getOnVisibilityChanged
-     */
     public final void setOnVisibilityChanged(EventHandler<WebEvent<Boolean>> handler) { onVisibilityChanged.set(handler); }
 
     /**
      * JavaScript window visibility handler property. This handler is invoked
      * when a script running on the Web page changes visibility of the
      * {@code window} object.
+     * @return the onVisibilityChanged property
      */
     public final ObjectProperty<EventHandler<WebEvent<Boolean>>> onVisibilityChangedProperty() { return onVisibilityChanged; }
 
@@ -748,19 +710,8 @@ final public class WebEngine {
             = new SimpleObjectProperty<Callback<PopupFeatures, WebEngine>>(this, "createPopupHandler",
             p -> WebEngine.this);
 
-    /**
-     * Returns the JavaScript popup handler.
-     * @see #createPopupHandlerProperty
-     * @see #setCreatePopupHandler
-     */
     public final Callback<PopupFeatures, WebEngine> getCreatePopupHandler() { return createPopupHandler.get(); }
 
-    /**
-     * Sets the JavaScript popup handler.
-     * @see #createPopupHandlerProperty
-     * @see #getCreatePopupHandler
-     * @see PopupFeatures
-     */
     public final void setCreatePopupHandler(Callback<PopupFeatures, WebEngine> handler) { createPopupHandler.set(handler); }
 
     /**
@@ -773,6 +724,8 @@ final public class WebEngine {
      * <p>By default, a popup handler is installed that opens popups in this
      * {@code WebEngine}.
      *
+     * @return the createPopupHandler property
+     *
      * @see PopupFeatures
      */
     public final ObjectProperty<Callback<PopupFeatures, WebEngine>> createPopupHandlerProperty() { return createPopupHandler; }
@@ -781,18 +734,8 @@ final public class WebEngine {
     private final ObjectProperty<Callback<String, Boolean>> confirmHandler
             = new SimpleObjectProperty<Callback<String, Boolean>>(this, "confirmHandler");
 
-    /**
-     * Returns the JavaScript {@code confirm} handler.
-     * @see #confirmHandlerProperty
-     * @see #setConfirmHandler
-     */
     public final Callback<String, Boolean> getConfirmHandler() { return confirmHandler.get(); }
 
-    /**
-     * Sets the JavaScript {@code confirm} handler.
-     * @see #confirmHandlerProperty
-     * @see #getConfirmHandler
-     */
     public final void setConfirmHandler(Callback<String, Boolean> handler) { confirmHandler.set(handler); }
 
     /**
@@ -800,6 +743,8 @@ final public class WebEngine {
      * when a script running on the Web page calls the {@code confirm} function.
      * <p>An implementation may display a dialog box with Yes and No options,
      * and return the user's choice.
+     *
+     * @return the confirmHandler property
      */
     public final ObjectProperty<Callback<String, Boolean>> confirmHandlerProperty() { return confirmHandler; }
 
@@ -807,20 +752,8 @@ final public class WebEngine {
     private final ObjectProperty<Callback<PromptData, String>> promptHandler
             = new SimpleObjectProperty<Callback<PromptData, String>>(this, "promptHandler");
 
-    /**
-     * Returns the JavaScript {@code prompt} handler.
-     * @see #promptHandlerProperty
-     * @see #setPromptHandler
-     * @see PromptData
-     */
     public final Callback<PromptData, String> getPromptHandler() { return promptHandler.get(); }
 
-    /**
-     * Sets the JavaScript {@code prompt} handler.
-     * @see #promptHandlerProperty
-     * @see #getPromptHandler
-     * @see PromptData
-     */
     public final void setPromptHandler(Callback<PromptData, String> handler) { promptHandler.set(handler); }
 
     /**
@@ -829,6 +762,7 @@ final public class WebEngine {
      * <p>An implementation may display a dialog box with an text field,
      * and return the user's input.
      *
+     * @return the promptHandler property
      * @see PromptData
      */
     public final ObjectProperty<Callback<PromptData, String>> promptHandlerProperty() { return promptHandler; }
@@ -864,6 +798,8 @@ final public class WebEngine {
 
     /**
      * Creates a new engine and loads a Web page into it.
+     *
+     * @param url the URL of the web page to load
      */
     public WebEngine(String url) {
         this(url, true);
@@ -931,6 +867,8 @@ final public class WebEngine {
      * String composed in memory, or loaded from some system which cannot be reached via
      * a URL (for example, the HTML text may have come from a database). As with
      * {@link #load(String)}, this method is asynchronous.
+     *
+     * @param content the HTML content to load
      */
     public void loadContent(String content) {
         loadContent(content, "text/html");
@@ -943,6 +881,9 @@ final public class WebEngine {
      * {@link #load(String)}, this method is asynchronous. This method also allows you to
      * specify the content type of the string being loaded, and so may optionally support
      * other types besides just HTML.
+     *
+     * @param content the HTML content to load
+     * @param contentType the type of content to load
      */
     public void loadContent(String content, String contentType) {
         checkThread();
@@ -975,6 +916,8 @@ final public class WebEngine {
 
     /**
      * Executes a script in the context of the current page.
+     *
+     * @param script the script
      * @return execution result, converted to a Java object using the following
      * rules:
      * <ul>

@@ -94,7 +94,7 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
     /**
      * Constructor that takes a class loader.
      *
-     * @param classLoader
+     * @param classLoader the class loader to use when loading classes
      * @since JavaFX 2.1
      */
     public JavaFXBuilderFactory(ClassLoader classLoader) {
@@ -110,9 +110,9 @@ public final class JavaFXBuilderFactory implements BuilderFactory {
      * Returns the builder for the specified type, or null if no builder is
      * used. Most classes will note use a builder.
      *
-     * @param type the class being looked up.
+     * @param type the class being looked up
      *
-     * @return the builder for the class, or null if no builder is use.
+     * @return the builder for the class, or null if no builder is used
      */
     @Override
     public Builder<?> getBuilder(Class<?> type) {

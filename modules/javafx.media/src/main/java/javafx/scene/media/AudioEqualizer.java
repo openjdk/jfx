@@ -61,11 +61,11 @@ public final class AudioEqualizer {
      * ObservableList containing {@link EqualizerBand} elements. The content of
      * the sequence may be changed by adding or removing {@link EqualizerBand}
      * elements. When adding elements, the user must be prepared to catch
-     * {@link IllegalArgumentException}s because the internal list is a
-     * {@link VetoableObservableList} and any change to the list can be vetoed
+     * {@link IllegalArgumentException}s because
+     * any change to the internal list can be vetoed
      * if a newly added instance is not valid.
      *
-     * <p>The constraints for a valid {@link EqualizerBand} instance are:
+     * <p>The constraints for a valid {@link EqualizerBand} instance are:</p>
      * <ul>
      * <li>{@link EqualizerBand#centerFrequencyProperty EqualizerBand.centerFrequency} &gt; 0</li>
      * <li>{@link EqualizerBand#bandwidthProperty EqualizerBand.bandwidth} &gt; 0</li>
@@ -73,11 +73,10 @@ public final class AudioEqualizer {
      * {@link EqualizerBand#gainProperty EqualizerBand.gain} &le;
      * {@link EqualizerBand#MAX_GAIN EqualizerBand.MAX_GAIN}</li>
      * </ul>
-     * </p>
      *
      * <p>The default set of bands is as in the following table; all bands have
      * unity gain (0 dB).
-     * <table border="1">
+     * <table border="1" summary="">
      * <tr><th>Band Index</th><th>Center Frequency (Hz)</th><th>Bandwidth (Hz)</th></tr>
      * <tr><td>0</td><td>32</td><td>19</td></tr>
      * <tr><td>1</td><td>64</td><td>39</td></tr>
@@ -91,7 +90,6 @@ public final class AudioEqualizer {
      * <tr><td>9</td><td>16000</td><td>10000</td></tr>
      * </table>
      *
-     * @throws IllegalArgumentException
      * @return ObservableList containing {@link EqualizerBand} elements.
      */
     public final ObservableList<EqualizerBand> getBands() {
@@ -156,30 +154,25 @@ public final class AudioEqualizer {
         }
     }
 
-    /**
-     * Whether the <code>AudioEqualizer</code> is enabled. The default value is
-     * <code>true</code>.
-     */
     private BooleanProperty enabled;
 
-    /**
-     * Enables or disables <code>AudioEqualizer</code>. If the enabled property
-     * is set to <tt>false</tt>, {@link AudioEqualizer} settings are preserved but
-     * not taken into account during playback, which is equivalent to setting all
-     * {@link EqualizerBand#gainProperty EqualizerBand.gain} properties to zero.
-     */
     public final void setEnabled(boolean value) {
         enabledProperty().set(value);
     }
 
-    /**
-     * Return enabled state of the AudioEqualizer.
-     * @return <tt>true</tt> if AudioEqulizer is enabled, <tt>false</tt> otherwise.
-     */
     public final boolean isEnabled() {
         return enabled == null ? false : enabled.get();
     }
 
+    /**
+     * Enables or disables <code>AudioEqualizer</code>. If the enabled property
+     * is set to {@code false}, {@code AudioEqualizer} settings are preserved but
+     * not taken into account during playback, which is equivalent to setting all
+     * {@link EqualizerBand#gainProperty EqualizerBand.gain} properties to zero.
+     *
+     * @defaultValue {@code true}
+     * @return the enabled property
+     */
     public BooleanProperty enabledProperty() {
         if (enabled == null) {
             enabled = new BooleanPropertyBase() {

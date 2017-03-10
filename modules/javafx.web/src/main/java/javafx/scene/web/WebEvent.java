@@ -80,6 +80,10 @@ final public class WebEvent<T> extends Event {
 
     /**
      * Creates a new event object.
+     *
+     * @param source the event source
+     * @param type the event type
+     * @param data the data item
      */
     public WebEvent(@NamedArg("source") Object source, @NamedArg("type") EventType<WebEvent> type, @NamedArg("data") T data) {
         super(source, null, type);
@@ -88,6 +92,7 @@ final public class WebEvent<T> extends Event {
 
     /**
      * Returns data item carried by this event.
+     * @return the data item
      */
     public T getData() {
         return data;

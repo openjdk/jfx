@@ -60,6 +60,7 @@ public class HTMLEditor extends Control {
 
     /**
      * Returns the HTML content of the editor.
+     * @return the HTML content
      */
     public String getHtmlText() {
         return ((HTMLEditorSkin)getSkin()).getHTMLText();
@@ -67,16 +68,16 @@ public class HTMLEditor extends Control {
 
     /**
      * Sets the HTML content of the editor. Note that if the contentEditable
-     * property on the <body> tag of the provided HTML is not set to true, the
+     * property on the {@code <body>} tag of the provided HTML is not set to true, the
      * HTMLEditor will become read-only. You can ensure that the text remains
      * editable by ensuring the body appears as such:
-     * <code>
-     * &lt;body contentEditable="true"&gt;
-     * </code>
+     * <pre>{@code
+     * <body contentEditable="true">
+     * }</pre>
      *
-     * @param htmlText The full HTML markup to put into the editor. This should
+     * @param htmlText the full HTML markup to put into the editor. This should
      *      include all normal HTML elements, starting with
-     *      <code>&lt;html&gt;</code>, and including a <code>&lt;body&gt;</code>.
+     *      {@code <html>}, and including a {@code <body>}.
      */
     public void setHtmlText(String htmlText) {
         ((HTMLEditorSkin)getSkin()).setHTMLText(htmlText);

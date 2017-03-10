@@ -45,6 +45,8 @@ public final class PromptData {
 
     /**
      * Creates a new instance.
+     * @param message the message carried by this data object
+     * @param defaultValue the default value carried by this data object
      */
     public PromptData(@NamedArg("message") String message, @NamedArg("defaultValue") String defaultValue) {
         this.message = message;
@@ -52,14 +54,16 @@ public final class PromptData {
     }
 
     /**
-     * Returns message carried by this data object.
+     * Returns the message carried by this data object.
+     * @return the message
      */
     public final String getMessage() {
         return message;
     }
 
     /**
-     * Returns default value carried by this data object.
+     * Returns the default value carried by this data object.
+     * @return the default value
      */
     public final String getDefaultValue() {
         return defaultValue;

@@ -13,16 +13,14 @@ three principal classes in the media package:
 {@link javafx.scene.media.MediaView MediaView}.
 </p>
 <h2>Contents</h2>
-<p>
 <ol>
 <li><a href="#SupportedMediaTypes">Supported Media Types</a></li>
 <li><a href="#SupportedProtocols">Supported Protocols</a></li>
 <li><a href="#SupportedMetadataTags">Supported Metadata Tags</a></li>
 <li><a href="#PlayingMediaInJavaFX">Playing Media in Java FX</a></li>
 </ol>
-</p>
 
-<a name="SupportedMediaTypes"/>
+<a name="SupportedMediaTypes"></a>
 <h3>Supported Media Types</h3>
 
 Java FX supports a number of different media types. A media type is considered to
@@ -32,11 +30,12 @@ encoded data.
 
 <h4>Supported Encoding Types</h4>
 
+<p>
 An encoding type specifies how sampled audio or video data are stored. Usually
 the encoding type implies a particular compression algorithm. The following
 table indicates the encoding types supported by Java FX Media.
+</p>
 
-<p>
 <table border="1" summary="encoding types">
 <tr><th>Encoding</th><th>Type</th><th>Description</th></tr>
 <tr><td>AAC</td><td>Audio</td><td>Advanced Audio Coding audio compression</td></tr>
@@ -50,18 +49,20 @@ video compression</td></tr>
 <tr><td>VP6 (*)</td><td>Video</td><td>On2 VP6 video compression</td></tr>
 </table>
 
-<br/>(*) VP6 video encoding is deprecated since JDK 9.
+<p>
+<br>(*) VP6 video encoding is deprecated since JDK 9.
 </p>
 
 <h4>Supported Container Types</h4>
 
+<p>
 A container type specifies the file format used to store the encoded audio,
 video, and other media data. Each container type is associated with one or more
 MIME types, file extensions, and file signatures (the initial bytes in the file).
 The following table indicates the combination of container and encoding types
 supported by Java FX Media.
+</p>
 
-<p>
 <table border="1" summary="container and encoding types combination">
 <tr><th>Container</th><th>Description</th><th>Video Encoding</th>
 <th>Audio Encoding</th><th>MIME Type</th><th>File Extension</th></tr>
@@ -81,15 +82,13 @@ supported by Java FX Media.
     <td>PCM</td><td>audio/x-wav</td><td>.wav</td></tr>
 </table>
 
-<br/>(*) FXM and FLV containers are deprecated since JDK 9.
-<br/>(**) HLS is a protocol rather than a container type but is included here to
+<br>(*) FXM and FLV containers are deprecated since JDK 9.
+<br>(**) HLS is a protocol rather than a container type but is included here to
 aggregate similar attributes.
-</p>
 
-<a name="SupportedProtocols"/>
+<a name="SupportedProtocols"></a>
 <h3>Supported Protocols</h3>
 
-<p>
 <table border="1" summary="supported protocols">
 <tr><th>Protocol</th><th>Description</th><th>Reference</th></tr>
 <tr>
@@ -102,11 +101,11 @@ aggregate similar attributes.
     <td>Hypertext transfer protocol for representation of remote files</td>
     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
 </tr>
+<tr>
     <td>HTTPS</td>
     <td>Hypertext transfer protocol secure for representation of remote files</td>
     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
 </tr>
-<tr>
 <tr>
     <td>JAR</td>
     <td>Representation of media entries in files accessible via the FILE, HTTP or HTTPS protocols</td>
@@ -118,30 +117,31 @@ aggregate similar attributes.
     <td><a href="http://tools.ietf.org/html/draft-pantos-http-live-streaming">Internet-Draft: HTTP Live Streaming</a></td>
 </tr>
 </table>
-<br/>
-</p>
-<p>
+<br>
 <h4>MPEG-4 Playback via HTTP</h4>
+<p>
 It is recommended that MPEG-4 media to be played over HTTP or HTTPS be formatted such that the
 headers required to decode the stream appear at the beginning of the file. Otherwise,
 playback might stall until the entire file is downloaded.
 </p>
-<p>
 <h4>HTTP Live Streaming (HLS)</h4>
+<p>
 HLS playback handles sources with these characteristics:
+</p>
 <ul>
     <li>On-demand and live playlists.</li>
     <li>Elementary MP3 audio streams (audio/mpegurl) and multiplexed MP2T streams
         (application/vnd.apple.mpegurl) with one AAC audio and one H.264/AVC video track.</li>
     <li>Playlists with integer or float duration.</li>
 </ul>
+<p>
 Sources which do not conform to this basic profile are not guaranteed to be handled.
 The playlist contains information about the streams comprising the source and is
 downloaded at the start of playback. Switching between alternate streams, bit rates,
 and video resolutions is handled automatically as a function of network conditions.
 </p>
 
-<a name="SupportedMetadataTags"/>
+<a name="SupportedMetadataTags"></a>
 <h3>Supported Metadata Tags</h3>
 
 A media container may also include certain metadata which describe the media in
@@ -152,7 +152,6 @@ the following table. Note that which tags are available for a given media source
 depend on the metadata actually stored in that source, i.e., not all tags are
 guaranteed to be available.
 
-<p>
 <table border="1" summary="metadata keys and tags">
 <tr><th> Container </th><th> Tag (type String) </th><th> Type </th><th> Description </th></tr>
 <tr><td> FXM, FLV </td><td> audio&nbsp;codec </td><td> java.lang.String </td><td>The encoder used for the audio track.</td></tr>
@@ -178,14 +177,13 @@ guaranteed to be available.
 <tr><td> MP3 </td><td> track&nbsp;count </td><td> java.lang.Integer </td><td>The number of tracks on the album.</td></tr>
 <tr><td> MP3 </td><td> track&nbsp;number </td><td> java.lang.Integer </td><td>The 1-relative index of this track on the disc.</td></tr>
 </table>
-</p>
 
-<p>
-<a name="PlayingMediaInJavaFX"/>
+<a name="PlayingMediaInJavaFX"></a>
 <h3>Playing Media in Java FX</h3>
 <h4>Basic Playback</h4>
 <p>
 The basic steps required to play media in Java FX are:
+</p>
 <ol>
     <li>Create a {@link javafx.scene.media.Media} object for the desired media source.</li>
     <li>Create a {@link javafx.scene.media.MediaPlayer} object from the <code>Media</code> object.</li>
@@ -209,7 +207,6 @@ class documentation. Some things which should be noted are:
     <li>Audio-only media may instead be played using {@link javafx.scene.media.AudioClip}
         (recommended for low latency playback of short clips).</li>
 </ul>
-</p>
 <h4>Error Handling</h4>
 <p>
 Errors using Java FX Media may be either synchronous or asynchronous. In general
@@ -237,8 +234,8 @@ consequence, it is possible to receive multiple notifications of the occurrence
 of a given error, depending on which properties are monitored.
 </p>
 
-<p>The following code snippet illustrates error handling with media:
-<code><pre>
+<p>The following code snippet illustrates error handling with media:</p>
+<pre>{@code
     String source;
     Media media;
     MediaPlayer mediaPlayer;
@@ -277,9 +274,7 @@ of a given error, depending on which properties are monitored.
     } catch (Exception mediaException) {
         // Handle exception in Media constructor.
     }
-</pre></code>
-</p>
-</p>
+}</pre>
 
 </body>
 </html>

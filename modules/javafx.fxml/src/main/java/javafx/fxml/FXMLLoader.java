@@ -1823,192 +1823,193 @@ public class FXMLLoader {
     private static BuilderFactory DEFAULT_BUILDER_FACTORY = new JavaFXBuilderFactory();
 
     /**
-     * The character set used when character set is not explicitly specified
+     * The character set used when character set is not explicitly specified.
      */
     public static final String DEFAULT_CHARSET_NAME = "UTF-8";
 
     /**
-     * The tag name of language processing instruction
+     * The tag name of language processing instruction.
      */
     public static final String LANGUAGE_PROCESSING_INSTRUCTION = "language";
     /**
-     * The tag name of import processing instruction
+     * The tag name of import processing instruction.
      */
     public static final String IMPORT_PROCESSING_INSTRUCTION = "import";
 
     /**
-     * Prefix of 'fx' namespace
+     * Prefix of 'fx' namespace.
      */
     public static final String FX_NAMESPACE_PREFIX = "fx";
     /**
-     * The name of fx:controller attribute of a root
+     * The name of fx:controller attribute of a root.
      */
     public static final String FX_CONTROLLER_ATTRIBUTE = "controller";
     /**
-     * The name of fx:id attribute
+     * The name of fx:id attribute.
      */
     public static final String FX_ID_ATTRIBUTE = "id";
     /**
-     * The name of fx:value attribute
+     * The name of fx:value attribute.
      */
     public static final String FX_VALUE_ATTRIBUTE = "value";
     /**
-     * The tag name of 'fx:constant'
+     * The tag name of 'fx:constant'.
      * @since JavaFX 2.2
      */
     public static final String FX_CONSTANT_ATTRIBUTE = "constant";
     /**
-     * The name of 'fx:factory' attribute
+     * The name of 'fx:factory' attribute.
      */
     public static final String FX_FACTORY_ATTRIBUTE = "factory";
 
     /**
-     * The tag name of &lt;fx:include&gt;
+     * The tag name of {@literal <fx:include>}.
      */
     public static final String INCLUDE_TAG = "include";
     /**
-     * &lt;fx:include&gt; 'source' attribute
+     * The {@literal <fx:include>} 'source' attribute.
      */
     public static final String INCLUDE_SOURCE_ATTRIBUTE = "source";
     /**
-     * &lt;fx:include&gt; 'resources' attribute
+     * The {@literal <fx:include>} 'resources' attribute.
      */
     public static final String INCLUDE_RESOURCES_ATTRIBUTE = "resources";
     /**
-     * &lt;fx:include&gt; 'charset' attribute
+     * The {@literal <fx:include>} 'charset' attribute.
      */
     public static final String INCLUDE_CHARSET_ATTRIBUTE = "charset";
 
     /**
-     * The tag name of &lt;fx:script&gt;
+     * The tag name of {@literal <fx:script>}.
      */
     public static final String SCRIPT_TAG = "script";
     /**
-     * &lt;fx:script&gt; 'source' attribute
+     * The {@literal <fx:script>} 'source' attribute.
      */
     public static final String SCRIPT_SOURCE_ATTRIBUTE = "source";
     /**
-     * &lt;fx:script&gt; 'charset' attribute
+     * The {@literal <fx:script>} 'charset' attribute.
      */
     public static final String SCRIPT_CHARSET_ATTRIBUTE = "charset";
 
     /**
-     * The tag name of &lt;fx:define&gt;
+     * The tag name of {@literal <fx:define>}.
      */
     public static final String DEFINE_TAG = "define";
 
     /**
-     * The tag name of &lt;fx:reference&gt;
+     * The tag name of {@literal <fx:reference>}.
      */
     public static final String REFERENCE_TAG = "reference";
     /**
-     * &ltfx:reference&gt 'source' attribute
+     * The {@literal <fx:reference>} 'source' attribute.
      */
     public static final String REFERENCE_SOURCE_ATTRIBUTE = "source";
 
     /**
-     * The tag name of &lt;fx:root&gt;
+     * The tag name of {@literal <fx:root>}.
      * @since JavaFX 2.2
      */
     public static final String ROOT_TAG = "root";
     /**
-     * &lt;fx:root&gt; 'type' attribute
+     * The {@literal <fx:root>} 'type' attribute.
      * @since JavaFX 2.2
      */
     public static final String ROOT_TYPE_ATTRIBUTE = "type";
 
     /**
-     * The tag name of &lt;fx:copy&gt;
+     * The tag name of {@literal <fx:copy>}.
      */
     public static final String COPY_TAG = "copy";
     /**
-     * &lt;fx:copy&gt; 'source' attribute
+     * The {@literal <fx:copy>} 'source' attribute.
      */
     public static final String COPY_SOURCE_ATTRIBUTE = "source";
 
     /**
-     * The prefix of event handler attributes
+     * The prefix of event handler attributes.
      */
     public static final String EVENT_HANDLER_PREFIX = "on";
     /**
-     * The name of the Event object in event handler scripts
+     * The name of the Event object in event handler scripts.
      */
     public static final String EVENT_KEY = "event";
     /**
-     * Suffix for property change/invalidation handlers
+     * Suffix for property change/invalidation handlers.
      */
     public static final String CHANGE_EVENT_HANDLER_SUFFIX = "Change";
     private static final String COLLECTION_HANDLER_NAME = EVENT_HANDLER_PREFIX + CHANGE_EVENT_HANDLER_SUFFIX;
 
     /**
-     * Value that represents 'null'
+     * Value that represents 'null'.
      */
     public static final String NULL_KEYWORD = "null";
 
     /**
      * Escape prefix for escaping special characters inside attribute values.
      * Serves as an escape for {@link #ESCAPE_PREFIX}, {@link #RELATIVE_PATH_PREFIX},
-     * {@link #RESOURCE_KEY_PREFIX, {@link #EXPRESSION_PREFIX}, {@link #BI_DIRECTIONAL_BINDING_PREFIX}
+     * {@link #RESOURCE_KEY_PREFIX}, {@link #EXPRESSION_PREFIX},
+     * {@link #BI_DIRECTIONAL_BINDING_PREFIX}
      * @since JavaFX 2.1
      */
     public static final String ESCAPE_PREFIX = "\\";
     /**
-     * Prefix for relative location resultion
+     * Prefix for relative location resolution.
      */
     public static final String RELATIVE_PATH_PREFIX = "@";
     /**
-     * Prefix for resource resolution
+     * Prefix for resource resolution.
      */
     public static final String RESOURCE_KEY_PREFIX = "%";
     /**
-     * Prefix for (variable) expression resolution
+     * Prefix for (variable) expression resolution.
      */
     public static final String EXPRESSION_PREFIX = "$";
     /**
-     * Prefix for binding expression resolution
+     * Prefix for binding expression resolution.
      */
     public static final String BINDING_EXPRESSION_PREFIX = "${";
     /**
-     * Suffix for binding expression resolution
+     * Suffix for binding expression resolution.
      */
     public static final String BINDING_EXPRESSION_SUFFIX = "}";
 
     /**
-     * Prefix for bidirectional-binding expression resolution
+     * Prefix for bidirectional-binding expression resolution.
      * @since JavaFX 2.1
      */
     public static final String BI_DIRECTIONAL_BINDING_PREFIX = "#{";
     /**
-     * Suffix for bidirectional-binding expression resolution
+     * Suffix for bidirectional-binding expression resolution.
      * @since JavaFX 2.1
      */
     public static final String BI_DIRECTIONAL_BINDING_SUFFIX = "}";
 
     /**
-     * Delimiter for arrays as values
+     * Delimiter for arrays as values.
      * @since JavaFX 2.1
      */
     public static final String ARRAY_COMPONENT_DELIMITER = ",";
 
     /**
-     * A key for location URL in namespace map
+     * A key for location URL in namespace map.
      * @see #getNamespace()
      * @since JavaFX 2.2
      */
     public static final String LOCATION_KEY = "location";
     /**
-     * A key for ResourceBundle in namespace map
+     * A key for ResourceBundle in namespace map.
      * @see #getNamespace()
      * @since JavaFX 2.2
      */
     public static final String RESOURCES_KEY = "resources";
 
     /**
-     * Prefix for controller method resolution
+     * Prefix for controller method resolution.
      */
     public static final String CONTROLLER_METHOD_PREFIX = "#";
     /**
-     * A key for controller in namespace map
+     * A key for controller in namespace map.
      * @see #getNamespace()
      * @since JavaFX 2.1
      */
@@ -2022,19 +2023,19 @@ public class FXMLLoader {
     public static final String CONTROLLER_SUFFIX = "Controller";
 
     /**
-     * The name of initialize method
+     * The name of initialize method.
      * @since JavaFX 2.2
      */
     public static final String INITIALIZE_METHOD_NAME = "initialize";
 
     /**
-     * Contains the current javafx version
+     * Contains the current javafx version.
      * @since JavaFX 8.0
      */
     public static final String JAVAFX_VERSION;
 
     /**
-     * Contains the current fx namepsace version
+     * Contains the current fx namepsace version.
      * @since JavaFX 8.0
      */
     public static final String FX_NAMESPACE_VERSION = "1";
@@ -2065,7 +2066,7 @@ public class FXMLLoader {
     /**
      * Creates a new FXMLLoader instance.
      *
-     * @param location
+     * @param location the location used to resolve relative path attribute values
      * @since JavaFX 2.1
      */
     public FXMLLoader(URL location) {
@@ -2075,8 +2076,8 @@ public class FXMLLoader {
     /**
      * Creates a new FXMLLoader instance.
      *
-     * @param location
-     * @param resources
+     * @param location the location used to resolve relative path attribute values
+     * @param resources the resources used to resolve resource key attribute values
      * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources) {
@@ -2086,9 +2087,9 @@ public class FXMLLoader {
     /**
      * Creates a new FXMLLoader instance.
      *
-     * @param location
-     * @param resources
-     * @param builderFactory
+     * @param location the location used to resolve relative path attribute values
+     * @param resources resources used to resolve resource key attribute values
+     * @param builderFactory the builder factory used by this loader
      * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources, BuilderFactory builderFactory) {
@@ -2098,10 +2099,10 @@ public class FXMLLoader {
     /**
      * Creates a new FXMLLoader instance.
      *
-     * @param location
-     * @param resources
-     * @param builderFactory
-     * @param controllerFactory
+     * @param location the location used to resolve relative path attribute values
+     * @param resources resources used to resolve resource key attribute values
+     * @param builderFactory the builder factory used by this loader
+     * @param controllerFactory the controller factory used by this loader
      * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources, BuilderFactory builderFactory,
@@ -2112,7 +2113,7 @@ public class FXMLLoader {
     /**
      * Creates a new FXMLLoader instance.
      *
-     * @param charset
+     * @param charset the character set used by this loader
      */
     public FXMLLoader(Charset charset) {
         this(null, null, null, null, charset);
@@ -2121,11 +2122,11 @@ public class FXMLLoader {
     /**
      * Creates a new FXMLLoader instance.
      *
-     * @param location
-     * @param resources
-     * @param builderFactory
-     * @param controllerFactory
-     * @param charset
+     * @param location the location used to resolve relative path attribute values
+     * @param resources resources used to resolve resource key attribute values
+     * @param builderFactory the builder factory used by this loader
+     * @param controllerFactory the controller factory used by this loader
+     * @param charset the character set used by this loader
      * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources, BuilderFactory builderFactory,
@@ -2137,12 +2138,12 @@ public class FXMLLoader {
     /**
      * Creates a new FXMLLoader instance.
      *
-     * @param location
-     * @param resources
-     * @param builderFactory
-     * @param controllerFactory
-     * @param charset
-     * @param loaders
+     * @param location the location used to resolve relative path attribute values
+     * @param resources resources used to resolve resource key attribute values
+     * @param builderFactory the builder factory used by this loader
+     * @param controllerFactory the controller factory used by this loader
+     * @param charset the character set used by this loader
+     * @param loaders list of loaders
      * @since JavaFX 2.1
      */
     public FXMLLoader(URL location, ResourceBundle resources, BuilderFactory builderFactory,
@@ -2159,6 +2160,7 @@ public class FXMLLoader {
 
     /**
      * Returns the location used to resolve relative path attribute values.
+     * @return the location used to resolve relative path attribute values
      */
     public URL getLocation() {
         return location;
@@ -2167,7 +2169,7 @@ public class FXMLLoader {
     /**
      * Sets the location used to resolve relative path attribute values.
      *
-     * @param location
+     * @param location the location
      */
     public void setLocation(URL location) {
         this.location = location;
@@ -2175,6 +2177,7 @@ public class FXMLLoader {
 
     /**
      * Returns the resources used to resolve resource key attribute values.
+     * @return the resources used to resolve resource key attribute values
      */
     public ResourceBundle getResources() {
         return resources;
@@ -2183,7 +2186,7 @@ public class FXMLLoader {
     /**
      * Sets the resources used to resolve resource key attribute values.
      *
-     * @param resources
+     * @param resources the resources
      */
     public void setResources(ResourceBundle resources) {
         this.resources = resources;
@@ -2191,6 +2194,7 @@ public class FXMLLoader {
 
     /**
      * Returns the namespace used by this loader.
+     * @return the namespace
      */
     public ObservableMap<String, Object> getNamespace() {
         return namespace;
@@ -2198,6 +2202,8 @@ public class FXMLLoader {
 
     /**
      * Returns the root of the object hierarchy.
+     * @param <T> the type of the root object
+     * @return the root of the object hierarchy
      */
     @SuppressWarnings("unchecked")
     public <T> T getRoot() {
@@ -2210,8 +2216,8 @@ public class FXMLLoader {
      * must be called prior to loading the document when using
      * <tt>&lt;fx:root&gt;</tt>.
      *
-     * @param root
-     * The root of the object hierarchy.
+     * @param root the root of the object hierarchy
+     *
      * @since JavaFX 2.2
      */
     public void setRoot(Object root) {
@@ -2245,6 +2251,8 @@ public class FXMLLoader {
 
     /**
      * Returns the controller associated with the root object.
+     * @param <T> the type of the controller
+     * @return the controller associated with the root object
      */
     @SuppressWarnings("unchecked")
     public <T> T getController() {
@@ -2258,8 +2266,8 @@ public class FXMLLoader {
      * controller event handlers when an <tt>fx:controller</tt> attribute is not
      * specified in the document.
      *
-     * @param controller
-     * The controller to associate with the root object.
+     * @param controller the controller to associate with the root object
+     *
      * @since JavaFX 2.2
      */
     public void setController(Object controller) {
@@ -2276,6 +2284,7 @@ public class FXMLLoader {
 
     /**
      * Returns the builder factory used by this loader.
+     * @return the builder factory
      */
     public BuilderFactory getBuilderFactory() {
         return builderFactory;
@@ -2284,14 +2293,15 @@ public class FXMLLoader {
     /**
      * Sets the builder factory used by this loader.
      *
-     * @param builderFactory
+     * @param builderFactory the builder factory
      */
     public void setBuilderFactory(BuilderFactory builderFactory) {
         this.builderFactory = builderFactory;
     }
 
     /**
-     * Returns the controller factory used by this serializer.
+     * Returns the controller factory used by this loader.
+     * @return the controller factory
      * @since JavaFX 2.1
      */
     public Callback<Class<?>, Object> getControllerFactory() {
@@ -2299,9 +2309,9 @@ public class FXMLLoader {
     }
 
     /**
-     * Sets the controller factory used by this serializer.
+     * Sets the controller factory used by this loader.
      *
-     * @param controllerFactory
+     * @param controllerFactory the controller factory
      * @since JavaFX 2.1
      */
     public void setControllerFactory(Callback<Class<?>, Object> controllerFactory) {
@@ -2310,15 +2320,16 @@ public class FXMLLoader {
 
     /**
      * Returns the character set used by this loader.
+     * @return the character set
      */
     public Charset getCharset() {
         return charset;
     }
 
     /**
-     * Sets the charset used by this loader.
+     * Sets the character set used by this loader.
      *
-     * @param charset
+     * @param charset the character set
      * @since JavaFX 2.1
      */
     public void setCharset(Charset charset) {
@@ -2330,7 +2341,8 @@ public class FXMLLoader {
     }
 
     /**
-     * Returns the classloader used by this serializer.
+     * Returns the classloader used by this loader.
+     * @return the classloader
      * @since JavaFX 2.1
      */
     public ClassLoader getClassLoader() {
@@ -2345,10 +2357,10 @@ public class FXMLLoader {
     }
 
     /**
-     * Sets the classloader used by this serializer and clears any existing
-     * imports
+     * Sets the classloader used by this loader and clears any existing
+     * imports.
      *
-     * @param classLoader
+     * @param classLoader the classloader
      * @since JavaFX 2.1
      */
     public void setClassLoader(ClassLoader classLoader) {
@@ -2382,6 +2394,8 @@ public class FXMLLoader {
     /**
      * Returns this loader's load listener.
      *
+     * @return the load listener
+     *
      * @since 9
      */
     public LoadListener getLoadListener() {
@@ -2391,6 +2405,8 @@ public class FXMLLoader {
 
     /**
      * Sets this loader's load listener.
+     *
+     * @param loadListener the load listener
      *
      * @since 9
      */
@@ -2404,8 +2420,10 @@ public class FXMLLoader {
      * the document will be loaded must have been set by a prior call to
      * {@link #setLocation(URL)}.
      *
-     * @return
-     * The loaded object hierarchy.
+     * @param <T> the type of the root object
+     * @throws IOException if an error occurs during loading
+     * @return the loaded object hierarchy
+     *
      * @since JavaFX 2.1
      */
     public <T> T load() throws IOException {
@@ -2417,11 +2435,11 @@ public class FXMLLoader {
     /**
      * Loads an object hierarchy from a FXML document.
      *
-     * @param inputStream
-     * An input stream containing the FXML data to load.
+     * @param <T> the type of the root object
+     * @param inputStream an input stream containing the FXML data to load
      *
-     * @return
-     * The loaded object hierarchy.
+     * @throws IOException if an error occurs during loading
+     * @return the loaded object hierarchy
      */
     public <T> T load(InputStream inputStream) throws IOException {
         return loadImpl(inputStream, (System.getSecurityManager() != null)
@@ -2989,8 +3007,11 @@ public class FXMLLoader {
     /**
      * Loads a type using the default class loader.
      *
-     * @param packageName
-     * @param className
+     * @param packageName the package name of the class to load
+     * @param className the name of the class to load
+     *
+     * @throws ClassNotFoundException if the specified class cannot be found
+     * @return the class
      *
      * @deprecated
      * This method now delegates to {@link #getDefaultClassLoader()}.
@@ -3003,7 +3024,9 @@ public class FXMLLoader {
     /**
      * Loads a type using the default class loader.
      *
-     * @param className
+     * @param className the name of the class to load
+     * @throws ClassNotFoundException if the specified class cannot be found
+     * @return the class
      *
      * @deprecated
      * This method now delegates to {@link #getDefaultClassLoader()}.
@@ -3052,6 +3075,7 @@ public class FXMLLoader {
 
     /**
      * Returns the default class loader.
+     * @return the default class loader
      * @since JavaFX 2.1
      */
     public static ClassLoader getDefaultClassLoader() {
@@ -3084,7 +3108,11 @@ public class FXMLLoader {
     /**
      * Loads an object hierarchy from a FXML document.
      *
-     * @param location
+     * @param <T> the type of the root object
+     * @param location the location used to resolve relative path attribute values
+     *
+     * @throws IOException if an error occurs during loading
+     * @return the loaded object hierarchy
      */
     public static <T> T load(URL location) throws IOException {
         return loadImpl(location, (System.getSecurityManager() != null)
@@ -3100,8 +3128,12 @@ public class FXMLLoader {
     /**
      * Loads an object hierarchy from a FXML document.
      *
-     * @param location
-     * @param resources
+     * @param <T> the type of the root object
+     * @param location the location used to resolve relative path attribute values
+     * @param resources the resources used to resolve resource key attribute values
+     *
+     * @throws IOException if an error occurs during loading
+     * @return the loaded object hierarchy
      */
     public static <T> T load(URL location, ResourceBundle resources)
                                      throws IOException {
@@ -3120,9 +3152,13 @@ public class FXMLLoader {
     /**
      * Loads an object hierarchy from a FXML document.
      *
-     * @param location
-     * @param resources
-     * @param builderFactory
+     * @param <T> the type of the root object
+     * @param location the location used to resolve relative path attribute values
+     * @param resources the resources used to resolve resource key attribute values
+     * @param builderFactory the builder factory used to load the document
+     *
+     * @throws IOException if an error occurs during loading
+     * @return the loaded object hierarchy
      */
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory)
@@ -3142,10 +3178,15 @@ public class FXMLLoader {
     /**
      * Loads an object hierarchy from a FXML document.
      *
-     * @param location
-     * @param resources
-     * @param builderFactory
-     * @param controllerFactory
+     * @param <T> the type of the root object
+     * @param location the location used to resolve relative path attribute values
+     * @param resources the resources used to resolve resource key attribute values
+     * @param builderFactory the builder factory used when loading the document
+     * @param controllerFactory the controller factory used when loading the document
+     *
+     * @throws IOException if an error occurs during loading
+     * @return the loaded object hierarchy
+     *
      * @since JavaFX 2.1
      */
     public static <T> T load(URL location, ResourceBundle resources,
@@ -3169,11 +3210,16 @@ public class FXMLLoader {
     /**
      * Loads an object hierarchy from a FXML document.
      *
-     * @param location
-     * @param resources
-     * @param builderFactory
-     * @param controllerFactory
-     * @param charset
+     * @param <T> the type of the root object
+     * @param location the location used to resolve relative path attribute values
+     * @param resources the resources used to resolve resource key attribute values
+     * @param builderFactory the builder factory used when loading the document
+     * @param controllerFactory the controller factory used when loading the document
+     * @param charset the character set used when loading the document
+     *
+     * @throws IOException if an error occurs during loading
+     * @return the loaded object hierarchy
+     *
      * @since JavaFX 2.1
      */
     public static <T> T load(URL location, ResourceBundle resources,

@@ -163,22 +163,21 @@ public final class MediaPlayer {
      * <td><b>UNKNOWN</b></td><td>pre-roll</td><td></td><td></td><td></td><td></td>
      * </tr>
      * <tr>
-     * <td><b>READY</b><td></td></td><td></td><td>autoplay; play()</td><td></td><td></td>
+     * <td><b>READY</b></td><td></td><td></td><td>autoplay; play()</td><td></td><td></td>
      * </tr>
      * <tr>
-     * <td><b>PAUSED</b><td></td></td><td></td><td>play()</td><td></td><td>stop()</td>
+     * <td><b>PAUSED</b></td><td></td><td></td><td>play()</td><td></td><td>stop()</td>
      * </tr>
      * <tr>
-     * <td><b>PLAYING</b><td></td></td><td>pause()</td><td></td><td>buffering data</td><td>stop()</td>
+     * <td><b>PLAYING</b></td><td></td><td>pause()</td><td></td><td>buffering data</td><td>stop()</td>
      * </tr>
      * <tr>
-     * <td><b>STALLED</b><td></td></td><td>pause()</td><td>data buffered</td><td></td><td>stop()</td>
+     * <td><b>STALLED</b></td><td></td><td>pause()</td><td>data buffered</td><td></td><td>stop()</td>
      * </tr>
      * <tr>
-     * <td><b>STOPPED</b><td></td></td><td>pause()</td><td>play()</td><td></td><td></td>
+     * <td><b>STOPPED</b></td><td></td><td>pause()</td><td>play()</td><td></td><td></td>
      * </tr>
      * </table>
-     * </p>
      * <p>The table rows represent the current state of the player and the columns
      * the next state of the player. The cell at the intersection of a given row
      * and column lists the events which can cause a transition from the row
@@ -193,8 +192,8 @@ public final class MediaPlayer {
      * <p>
      * The principal <code>MediaPlayer</code> status values and transitions are
      * depicted in the following diagram:
-     * <br/><br/>
-     * <img src="doc-files/mediaplayerstatus.png" alt="MediaPlayer status diagram"/>
+     * <br><br>
+     * <img src="doc-files/mediaplayerstatus.png" alt="MediaPlayer status diagram">
      * </p>
      * <p>
      * Reaching the end of the media (or the
@@ -1362,7 +1361,8 @@ public final class MediaPlayer {
      * <p>The behavior of <code>seek()</code> is constrained as follows where
      * <i>start time</i> and <i>stop time</i> indicate the effective lower and
      * upper bounds, respectively, of media playback:
-     * <table border="1">
+     * </p>
+     * <table border="1" summary="">
      * <tr><th>seekTime</th><th>seek position</th></tr>
      * <tr><td><code>null</code></td><td>no change</td></tr>
      * <tr><td>{@link Duration#UNKNOWN}</td><td>no change</td></tr>
@@ -1371,7 +1371,6 @@ public final class MediaPlayer {
      * <tr><td>seekTime&nbsp;&gt;&nbsp;stop time</td><td>stop time</td></tr>
      * <tr><td>start time&nbsp;&le;&nbsp;seekTime&nbsp;&le;&nbsp;stop time</td><td>seekTime</td></tr>
      * </table>
-     * </p>
      *
      * @param seekTime the requested playback time
      */
@@ -2353,7 +2352,7 @@ public final class MediaPlayer {
 
     /**
      * Free all resources associated with player. Player SHOULD NOT be used after this function is called.
-     * Player will transition to {@link Status.DISPOSED} after this method is done. This method can be called
+     * Player will transition to {@link Status#DISPOSED} after this method is done. This method can be called
      * anytime and regarding current player status.
      * @since JavaFX 8.0
      */

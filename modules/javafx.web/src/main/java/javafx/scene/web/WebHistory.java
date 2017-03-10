@@ -113,6 +113,7 @@ public final class WebHistory {
 
         /**
          * Defines the title of the page.
+         * @return the title property
          */
         public ReadOnlyObjectProperty<String> titleProperty() {
             return title.getReadOnlyProperty();
@@ -124,6 +125,7 @@ public final class WebHistory {
 
         /**
          * Defines the {@link java.util.Date} the page was last visited.
+         * @return the lastVisitedDate property
          */
         public ReadOnlyObjectProperty<Date> lastVisitedDateProperty() {
             return lastVisitedDate.getReadOnlyProperty();
@@ -216,7 +218,9 @@ public final class WebHistory {
     /**
      * Defines the index of the current {@code Entry} in the history.
      * The current entry is the entry associated with the currently loaded page.
-     * The index belongs to the range of (<tt>index &gt;= 0 && index &lt; getEntries().size()</tt>)
+     * The index belongs to the range of {@code(index >= 0 && index < getEntries().size())}.
+     *
+     * @return the currentIndex property
      */
     public ReadOnlyIntegerProperty currentIndexProperty() {
         return currentIndex.getReadOnlyProperty();
@@ -241,6 +245,7 @@ public final class WebHistory {
      * {@code IllegalArgumentException} is thrown.
      *
      * @defaultValue 100
+     * @return the maxSize property
      */
     public IntegerProperty maxSizeProperty()  {
         if (maxSize == null) {

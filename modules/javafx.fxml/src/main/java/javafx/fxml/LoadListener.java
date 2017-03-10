@@ -34,21 +34,21 @@ public interface LoadListener {
     /**
      * Called when the loader has read an import processing instruction.
      *
-     * @param target
+     * @param target the target of the import
      */
     public void readImportProcessingInstruction(String target);
 
     /**
      * Called when the loader has read a language processing instruction.
      *
-     * @param language
+     * @param language the language instruction
      */
     public void readLanguageProcessingInstruction(String language);
 
     /**
      * Called when the loader has read a comment.
      *
-     * @param comment
+     * @param comment the comment
      */
     public void readComment(String comment);
 
@@ -56,7 +56,7 @@ public interface LoadListener {
      * Called when the loader has begun reading an instance declaration
      * element.
      *
-     * @param type
+     * @param type the type of the element
      */
     public void beginInstanceDeclarationElement(Class<?> type);
 
@@ -64,7 +64,7 @@ public interface LoadListener {
      * Called when the loader has begun reading an instance declaration
      * element for an unknown type.
      *
-     * @param name
+     * @param name the name of the unknown type
      */
     public void beginUnknownTypeElement(String name);
 
@@ -91,8 +91,8 @@ public interface LoadListener {
     /**
      * Called when the loader has begun reading a property element.
      *
-     * @param name
-     * @param sourceType
+     * @param name the name of the property
+     * @param sourceType the type of the property
      */
     public void beginPropertyElement(String name, Class<?> sourceType);
 
@@ -100,8 +100,7 @@ public interface LoadListener {
      * Called when the loader has begun reading a static property element
      * defined by an unknown type.
      *
-     * @param name
-     * @param sourceType
+     * @param name the name of the unknown type
      */
     public void beginUnknownStaticPropertyElement(String name);
 
@@ -118,37 +117,40 @@ public interface LoadListener {
     /**
      * Called when the loader has read an internal attribute.
      *
-     * @param name
-     * @param value
+     * @param name the name of the attribute
+     * @param value the value of the attribute
      */
     public void readInternalAttribute(String name, String value);
 
     /**
      * Called when the loader has read a property attribute.
      *
-     * @param name
-     * @param sourceType
-     * @param value
+     * @param name the name of the attribute
+     * @param sourceType the type of the attribute
+     * @param value the value of the attribute
      */
     public void readPropertyAttribute(String name, Class<?> sourceType, String value);
 
     /**
      * Called when the loader has read an unknown static property attribute.
+     *
+     * @param name the name of the attribute
+     * @param value the value of the attribute
      */
     public void readUnknownStaticPropertyAttribute(String name, String value);
 
     /**
      * Called when the loader has read an event handler attribute.
      *
-     * @param name
-     * @param value
+     * @param name the name of the attribute
+     * @param value the value of the attribute
      */
     public void readEventHandlerAttribute(String name, String value);
 
     /**
      * Called when the loader has finished reading an element.
      *
-     * @param value
+     * @param value the value of the element
      */
     public void endElement(Object value);
 }

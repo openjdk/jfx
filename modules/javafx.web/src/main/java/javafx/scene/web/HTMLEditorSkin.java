@@ -491,6 +491,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
      *     <li>ITALIC</li>
      *     <li>UNDERLINE</li>
      * </ul>
+     * @param command the command
      */
     public void performCommand(final Command command) {
         switch (command) {

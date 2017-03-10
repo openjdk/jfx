@@ -63,7 +63,7 @@ import com.sun.media.jfxmedia.track.VideoResolution;
  * associated with a {@link MediaPlayer} and that player has transitioned to
  * {@link MediaPlayer.Status#READY} status. To be notified when metadata or
  * {@link Track}s are added, observers may be registered with the collections
- * returned by {@link #getMetadata()}and {@link #getTracks()}, respectively.</p>
+ * returned by {@link #getMetadata()}and {@link #getTracks()}, respectively.
  *
  * <p>The same <code>Media</code> object may be shared among multiple
  * <code>MediaPlayer</code> objects. Such a shared instance might manage a single

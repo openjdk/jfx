@@ -59,7 +59,8 @@ import javafx.scene.Parent;
  * <p>The following code snippet provides a simple example of an
  * {@link javafx.application.Application#start(javafx.stage.Stage) Application.start()}
  * method which displays a video:
- * <code><pre>
+ * </p>
+ * <pre>{@code
  * public void start(Stage stage) {
  *     // Create and set the Scene.
  *     Scene scene = new Scene(new Group(), 540, 209);
@@ -81,12 +82,12 @@ import javafx.scene.Parent;
  *     MediaView mediaView = new MediaView(mediaPlayer);
  *     ((Group) scene.getRoot()).getChildren().add(mediaView);
  * }
- * </pre></code>
+ * }</pre>
  * The foregoing code will display the video as:
- * <br/>
- * <br/>
- * <img src="doc-files/mediaview.png" alt="Hello Media"/>
- * </p>
+ * <br>
+ * <br>
+ * <img src="doc-files/mediaview.png" alt="Hello Media">
+ *
  * @since JavaFX 2.0
  */
 public class MediaView extends Node {
@@ -673,10 +674,12 @@ public class MediaView extends Node {
      * resized as necessary to fit. If <code>value &le; 0</code>, then the width
      * of the bounding box will be set to the natural width of the media, but
      * <code>fitWidth</code> will be set to the supplied parameter, even if
-     * non-positive.<p/>
+     * non-positive.
+     * <p>
      * See {@link #preserveRatioProperty preserveRatio} for information on interaction
      * between media views <code>fitWidth</code>, <code>fitHeight</code> and
      * <code>preserveRatio</code> attributes.
+     * </p>
      */
     private DoubleProperty fitWidth;
 
@@ -730,10 +733,12 @@ public class MediaView extends Node {
      * resized as necessary to fit. If <code>value &le; 0</code>, then the height
      * of the bounding box will be set to the natural height of the media, but
      * <code>fitHeight</code> will be set to the supplied parameter, even if
-     * non-positive.<p/>
+     * non-positive.
+     * <p>
      * See {@link #preserveRatioProperty preserveRatio} for information on interaction
      * between media views <code>fitWidth</code>, <code>fitHeight</code> and
      * <code>preserveRatio</code> attributes.
+     * </p>
      */
     private DoubleProperty fitHeight;
 

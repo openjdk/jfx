@@ -127,6 +127,7 @@ final public class WebView extends Parent {
 
     /**
      * Returns the {@code WebEngine} object.
+     * @return the WebEngine
      */
     public final WebEngine getEngine() {
         return engine;
@@ -134,15 +135,13 @@ final public class WebView extends Parent {
 
     private final ReadOnlyDoubleWrapper width = new ReadOnlyDoubleWrapper(this, "width");
 
-    /**
-     * Returns width of this {@code WebView}.
-     */
     public final double getWidth() {
         return width.get();
     }
 
     /**
      * Width of this {@code WebView}.
+     * @return the width property
      */
     public ReadOnlyDoubleProperty widthProperty() {
         return width.getReadOnlyProperty();
@@ -150,46 +149,28 @@ final public class WebView extends Parent {
 
     private final ReadOnlyDoubleWrapper height = new ReadOnlyDoubleWrapper(this, "height");
 
-    /**
-     * Returns height of this {@code WebView}.
-     */
     public final double getHeight() {
         return height.get();
     }
 
     /**
      * Height of this {@code WebView}.
+     * @return the height property
      */
     public ReadOnlyDoubleProperty heightProperty() {
         return height.getReadOnlyProperty();
     }
 
-    /**
-     * Zoom factor applied to the whole page contents.
-     *
-     * @defaultValue 1.0
+    /*
+     * Zoom factor applied to the entire page contents.
      */
     private DoubleProperty zoom;
 
-    /**
-     * Sets current zoom factor applied to the whole page contents.
-     * @param value zoom factor to be set
-     * @see #zoomProperty()
-     * @see #getZoom()
-     * @since JavaFX 8.0
-     */
     public final void setZoom(double value) {
         WebEngine.checkThread();
         zoomProperty().set(value);
     }
 
-    /**
-     * Returns current zoom factor applied to the whole page contents.
-     * @return current zoom factor
-     * @see #zoomProperty()
-     * @see #setZoom(double value)
-     * @since JavaFX 8.0
-     */
     public final double getZoom() {
         return (this.zoom != null)
                 ? this.zoom.get()
@@ -197,10 +178,11 @@ final public class WebView extends Parent {
     }
 
     /**
-     * Returns zoom property object.
-     * @return zoom property object
-     * @see #getZoom()
-     * @see #setZoom(double value)
+     * The current zoom factor applied to the entire page contents.
+     *
+     * @return the zoom property
+     * @defaultValue 1.0
+     *
      * @since JavaFX 8.0
      */
     public final DoubleProperty zoomProperty() {
@@ -376,6 +358,7 @@ final public class WebView extends Parent {
 
     /**
      * Minimum width property.
+     * @return the minWidth property
      */
     public DoubleProperty minWidthProperty() {
         if (minWidth == null) {
@@ -404,16 +387,10 @@ final public class WebView extends Parent {
     }
     private DoubleProperty minWidth;
 
-    /**
-     * Sets minimum width.
-     */
     public final void setMinWidth(double value) {
         minWidthProperty().set(value);
     }
 
-    /**
-     * Returns minimum width.
-     */
     public final double getMinWidth() {
         return (this.minWidth != null)
                 ? this.minWidth.get()
@@ -422,6 +399,7 @@ final public class WebView extends Parent {
 
     /**
      * Minimum height property.
+     * @return the minHeight property
      */
     public DoubleProperty minHeightProperty() {
         if (minHeight == null) {
@@ -450,16 +428,10 @@ final public class WebView extends Parent {
     }
     private DoubleProperty minHeight;
 
-    /**
-     * Sets minimum height.
-     */
     public final void setMinHeight(double value) {
         minHeightProperty().set(value);
     }
 
-    /**
-     * Sets minimum height.
-     */
     public final double getMinHeight() {
         return (this.minHeight != null)
                 ? this.minHeight.get()
@@ -468,6 +440,8 @@ final public class WebView extends Parent {
 
     /**
      * Convenience method for setting minimum width and height.
+     * @param minWidth the minimum width
+     * @param minHeight the minimum height
      */
     public void setMinSize(double minWidth, double minHeight) {
         setMinWidth(minWidth);
@@ -476,6 +450,7 @@ final public class WebView extends Parent {
 
     /**
      * Preferred width property.
+     * @return the prefWidth property
      */
     public DoubleProperty prefWidthProperty() {
         if (prefWidth == null) {
@@ -504,16 +479,10 @@ final public class WebView extends Parent {
     }
     private DoubleProperty prefWidth;
 
-    /**
-     * Sets preferred width.
-     */
     public final void setPrefWidth(double value) {
         prefWidthProperty().set(value);
     }
 
-    /**
-     * Returns preferred width.
-     */
     public final double getPrefWidth() {
         return (this.prefWidth != null)
                 ? this.prefWidth.get()
@@ -522,6 +491,7 @@ final public class WebView extends Parent {
 
     /**
      * Preferred height property.
+     * @return the prefHeight property
      */
     public DoubleProperty prefHeightProperty() {
         if (prefHeight == null) {
@@ -550,16 +520,10 @@ final public class WebView extends Parent {
     }
     private DoubleProperty prefHeight;
 
-    /**
-     * Sets preferred height.
-     */
     public final void setPrefHeight(double value) {
         prefHeightProperty().set(value);
     }
 
-    /**
-     * Returns preferred height.
-     */
     public final double getPrefHeight() {
         return (this.prefHeight != null)
                 ? this.prefHeight.get()
@@ -568,6 +532,8 @@ final public class WebView extends Parent {
 
     /**
      * Convenience method for setting preferred width and height.
+     * @param prefWidth the preferred width
+     * @param prefHeight the preferred height
      */
     public void setPrefSize(double prefWidth, double prefHeight) {
         setPrefWidth(prefWidth);
@@ -576,6 +542,7 @@ final public class WebView extends Parent {
 
     /**
      * Maximum width property.
+     * @return the maxWidth property
      */
     public DoubleProperty maxWidthProperty() {
         if (maxWidth == null) {
@@ -604,16 +571,10 @@ final public class WebView extends Parent {
     }
     private DoubleProperty maxWidth;
 
-    /**
-     * Sets maximum width.
-     */
     public final void setMaxWidth(double value) {
         maxWidthProperty().set(value);
     }
 
-    /**
-     * Returns maximum width.
-     */
     public final double getMaxWidth() {
         return (this.maxWidth != null)
                 ? this.maxWidth.get()
@@ -622,6 +583,7 @@ final public class WebView extends Parent {
 
     /**
      * Maximum height property.
+     * @return the maxHeight property
      */
     public DoubleProperty maxHeightProperty() {
         if (maxHeight == null) {
@@ -650,16 +612,10 @@ final public class WebView extends Parent {
     }
     private DoubleProperty maxHeight;
 
-    /**
-     * Sets maximum height.
-     */
     public final void setMaxHeight(double value) {
         maxHeightProperty().set(value);
     }
 
-    /**
-     * Returns maximum height.
-     */
     public final double getMaxHeight() {
         return (this.maxHeight != null)
                 ? this.maxHeight.get()
@@ -668,6 +624,8 @@ final public class WebView extends Parent {
 
     /**
      * Convenience method for setting maximum width and height.
+     * @param maxWidth the maximum width
+     * @param maxHeight the maximum height
      */
     public void setMaxSize(double maxWidth, double maxHeight) {
         setMaxWidth(maxWidth);
