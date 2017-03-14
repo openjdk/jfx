@@ -102,7 +102,8 @@ import java.util.Map;
  * strings that are shorthand representations for the button order. The built-in
  * orders for Windows, Mac OS and Linux are:
  *
- * <table border="0" summary="">
+ * <table>
+ * <caption>ButtonBar Layout Table</caption>
  *   <tr>
  *     <td><strong>Windows:</strong></td>
  *     <td>L_E+U+FBXI_YNOCAH_R</td>

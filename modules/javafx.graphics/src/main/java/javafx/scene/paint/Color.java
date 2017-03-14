@@ -327,7 +327,8 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * <p>Examples:</p>
      * <div class="classUseContainer">
-     * <table class="overviewSummary" border="0" cellpadding="3" cellspacing="0" summary="">
+     * <table class="overviewSummary">
+     * <caption>Web Color Format Table</caption>
      * <tr>
      * <th class="colFirst">Web Format String</th>
      * <th class="colLast">Equivalent constructor or factory call</th>
@@ -582,7 +583,8 @@ public final class Color extends Paint implements Interpolatable<Color> {
      *
      * <p>Examples:</p>
      * <div class="classUseContainer">
-     * <table class="overviewSummary" border="0" cellpadding="3" cellspacing="0" summary="">
+     * <table class="overviewSummary">
+     * <caption>Web Color Format Table</caption>
      * <tr>
      * <th class="colFirst">Web Format String</th>
      * <th class="colLast">Equivalent constant or factory call</th>

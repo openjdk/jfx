@@ -20,7 +20,7 @@ three principal classes in the media package:
 <li><a href="#PlayingMediaInJavaFX">Playing Media in Java FX</a></li>
 </ol>
 
-<a name="SupportedMediaTypes"></a>
+<a id="SupportedMediaTypes"></a>
 <h3>Supported Media Types</h3>
 
 Java FX supports a number of different media types. A media type is considered to
@@ -36,7 +36,8 @@ the encoding type implies a particular compression algorithm. The following
 table indicates the encoding types supported by Java FX Media.
 </p>
 
-<table border="1" summary="encoding types">
+<table border="1">
+<caption>Media Encoding Table</caption>
 <tr><th>Encoding</th><th>Type</th><th>Description</th></tr>
 <tr><td>AAC</td><td>Audio</td><td>Advanced Audio Coding audio compression</td></tr>
 <tr><td>MP3</td><td>Audio</td>
@@ -63,7 +64,8 @@ The following table indicates the combination of container and encoding types
 supported by Java FX Media.
 </p>
 
-<table border="1" summary="container and encoding types combination">
+<table border="1">
+<caption>Media Container / Encoding Types Table</caption>
 <tr><th>Container</th><th>Description</th><th>Video Encoding</th>
 <th>Audio Encoding</th><th>MIME Type</th><th>File Extension</th></tr>
 <tr><td>AIFF</td><td>Audio Interchange File Format</td><td>N/A</td>
@@ -86,10 +88,11 @@ supported by Java FX Media.
 <br>(**) HLS is a protocol rather than a container type but is included here to
 aggregate similar attributes.
 
-<a name="SupportedProtocols"></a>
+<a id="SupportedProtocols"></a>
 <h3>Supported Protocols</h3>
 
-<table border="1" summary="supported protocols">
+<table border="1">
+<caption>Supported Protocols Table</caption>
 <tr><th>Protocol</th><th>Description</th><th>Reference</th></tr>
 <tr>
     <td>FILE</td>
@@ -141,7 +144,7 @@ downloaded at the start of playback. Switching between alternate streams, bit ra
 and video resolutions is handled automatically as a function of network conditions.
 </p>
 
-<a name="SupportedMetadataTags"></a>
+<a id="SupportedMetadataTags"></a>
 <h3>Supported Metadata Tags</h3>
 
 A media container may also include certain metadata which describe the media in
@@ -152,7 +155,8 @@ the following table. Note that which tags are available for a given media source
 depend on the metadata actually stored in that source, i.e., not all tags are
 guaranteed to be available.
 
-<table border="1" summary="metadata keys and tags">
+<table border="1">
+<caption>"Metadata Keys and Tags Table</caption>
 <tr><th> Container </th><th> Tag (type String) </th><th> Type </th><th> Description </th></tr>
 <tr><td> FXM, FLV </td><td> audio&nbsp;codec </td><td> java.lang.String </td><td>The encoder used for the audio track.</td></tr>
 <tr><td> FXM, FLV </td><td> duration </td><td> javafx.util.Duration </td><td>The duration of the media.</td></tr>
@@ -178,7 +182,7 @@ guaranteed to be available.
 <tr><td> MP3 </td><td> track&nbsp;number </td><td> java.lang.Integer </td><td>The 1-relative index of this track on the disc.</td></tr>
 </table>
 
-<a name="PlayingMediaInJavaFX"></a>
+<a id="PlayingMediaInJavaFX"></a>
 <h3>Playing Media in Java FX</h3>
 <h4>Basic Playback</h4>
 <p>

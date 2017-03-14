@@ -152,9 +152,12 @@ public final class MediaPlayer {
     /**
      * Enumeration describing the different status values of a {@link MediaPlayer}.
      *
+     * <p>
      * The principal <code>MediaPlayer</code> status transitions are given in the
      * following table:
-     * <table border="1" summary="MediaPlayer status transition table">
+     * </p>
+     * <table border="1">
+     * <caption>MediaPlayer Status Transition Table</caption>
      * <tr>
      * <th>Current \ Next</th><th>READY</th><th>PAUSED</th>
      * <th>PLAYING</th><th>STALLED</th><th>STOPPED</th>
@@ -1362,7 +1365,8 @@ public final class MediaPlayer {
      * <i>start time</i> and <i>stop time</i> indicate the effective lower and
      * upper bounds, respectively, of media playback:
      * </p>
-     * <table border="1" summary="">
+     * <table border="1">
+     * <caption>MediaPlayer Seek Table</caption>
      * <tr><th>seekTime</th><th>seek position</th></tr>
      * <tr><td><code>null</code></td><td>no change</td></tr>
      * <tr><td>{@link Duration#UNKNOWN}</td><td>no change</td></tr>

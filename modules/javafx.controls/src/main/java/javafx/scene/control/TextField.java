@@ -208,7 +208,7 @@ public class TextField extends TextInputControl {
 
     /**
      * The action handler associated with this text field, or
-     * <tt>null</tt> if no action handler is assigned.
+     * {@code null} if no action handler is assigned.
      *
      * The action handler is normally called when the user types the ENTER key.
      */

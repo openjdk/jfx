@@ -78,10 +78,13 @@ import javafx.util.Callback;
  *
  * <h3>Resizable Range</h3>
  *
+ * <p>
  * An hbox's parent will resize the hbox within the hbox's resizable range
  * during layout.   By default the hbox computes this range based on its content
  * as outlined in the table below.
- * <table border="1" summary="">
+ * </p>
+ * <table border="1">
+ * <caption>HBox Resize Table</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus the sum of each child's min width plus spacing between each child.</td>
@@ -112,10 +115,13 @@ import javafx.util.Callback;
  *
  * <h3>Optional Layout Constraints</h3>
  *
+ * <p>
  * An application may set constraints on individual children to customize HBox's layout.
  * For each constraint, HBox provides a static method for setting it on the child.
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>HBox Constraint Table</caption>
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>hgrow</td><td>javafx.scene.layout.Priority</td><td>The horizontal grow priority for the child.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>

@@ -83,6 +83,7 @@ import static javafx.scene.layout.Region.positionInArea;
  * visible property value; unmanaged children are ignored.</p>
  *
  * <h3>Resizable Range</h3>
+ * <p>
  * BorderPane is commonly used as the root of a {@link javafx.scene.Scene Scene},
  * in which case its size will track the size of the scene.  If the scene or stage
  * size has not been directly set by the application, the scene size will be
@@ -90,8 +91,10 @@ import static javafx.scene.layout.Region.positionInArea;
  * has a parent other than the scene, that parent will resize the border pane within
  * the border pane's resizable range during layout.   By default the border pane
  * computes this range based on its content as outlined in the table below.
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>BorderPane Resize Table</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus width required to display right/left children at their pref widths and top/bottom/center with at least their min widths</td>
@@ -121,10 +124,13 @@ import static javafx.scene.layout.Region.positionInArea;
  *
  * <h4>Optional Layout Constraints</h4>
  *
+ * <p>
  * An application may set constraints on individual children to customize BorderPane's layout.
  * For each constraint, BorderPane provides a static method for setting it on the child.
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>BorderPane Constraint Table</caption>
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>alignment</td><td>javafx.geometry.Pos</td><td>The alignment of the child within its area of the border pane.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>

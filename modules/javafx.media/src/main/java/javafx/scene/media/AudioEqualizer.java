@@ -76,7 +76,8 @@ public final class AudioEqualizer {
      *
      * <p>The default set of bands is as in the following table; all bands have
      * unity gain (0 dB).
-     * <table border="1" summary="">
+     * <table border="1">
+     * <caption>AudioEqualizer Band Table</caption>
      * <tr><th>Band Index</th><th>Center Frequency (Hz)</th><th>Bandwidth (Hz)</th></tr>
      * <tr><td>0</td><td>32</td><td>19</td></tr>
      * <tr><td>1</td><td>64</td><td>39</td></tr>

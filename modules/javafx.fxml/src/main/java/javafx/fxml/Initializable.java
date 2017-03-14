@@ -45,10 +45,10 @@ public interface Initializable {
      *
      * @param location
      * The location used to resolve relative paths for the root object, or
-     * <tt>null</tt> if the location is not known.
+     * {@code null} if the location is not known.
      *
      * @param resources
-     * The resources used to localize the root object, or <tt>null</tt> if
+     * The resources used to localize the root object, or {@code null} if
      * the root object was not localized.
      */
     public void initialize(URL location, ResourceBundle resources);

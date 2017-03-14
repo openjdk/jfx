@@ -123,7 +123,8 @@ import static com.sun.webkit.LoadListenerClient.*;
  *
  * <p>The table below shows JavaScript user interface methods and properties
  * with their corresponding {@code WebEngine} callbacks:
- * <table border="1" width="400" summary="">
+ * <table border="1">
+ * <caption>JavaScript Callback Table</caption>
  * <tr>
  *     <th>JavaScript method/property</th>
  *     <th>WebEngine callback</th>

@@ -211,7 +211,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
      * @throws IllegalArgumentException if some property of this element
      * prevents it from being added to this list
      * @throws IndexOutOfBoundsException if the index is out of range
-     *         (<tt>index &lt; 0 || index &gt; size()</tt>)
+     *         {@code (index < 0 || index > size())}
      */
     protected abstract void doAdd(int index, E element);
 
@@ -232,7 +232,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
      * @throws IllegalArgumentException if some property of this element
      * prevents it from being added to this list
      * @throws IndexOutOfBoundsException if the index is out of range
-     *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
+     *         {@code (index < 0 || index >= size())}
      */
     protected abstract E doSet(int index, E element);
 
@@ -243,7 +243,7 @@ public abstract class ModifiableObservableListBase<E> extends ObservableListBase
      * @return the removed element
      *
      * @throws IndexOutOfBoundsException if the index is out of range
-     *         (<tt>index &lt; 0 || index &gt;= size()</tt>)
+     *         {@code (index < 0 || index >= size())}
      */
     protected abstract E doRemove(int index);
 

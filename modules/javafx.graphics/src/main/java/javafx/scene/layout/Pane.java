@@ -60,11 +60,14 @@ import javafx.scene.Node;
  *
  * <h3>Resizable Range</h3>
  *
+ * <p>
  * A pane's parent will resize the pane within the pane's resizable range
  * during layout.   By default the pane computes this range based on its content
- * as outlined in the tables below:
+ * as outlined in the table below:
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>Pane Resize Table</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left plus right insets.</td>

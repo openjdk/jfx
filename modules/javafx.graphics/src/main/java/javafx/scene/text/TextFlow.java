@@ -112,11 +112,14 @@ import javafx.css.StyleableProperty;
  *
  * <h3>Resizable Range</h3>
  *
+ * <p>
  * A textflow's parent will resize the textflow within the textflow's range
  * during layout. By default the textflow computes this range based on its content
  * as outlined in the tables below.
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>TextFlow Resize Table</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets</td>

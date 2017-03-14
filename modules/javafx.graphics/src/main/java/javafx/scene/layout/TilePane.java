@@ -107,12 +107,13 @@ import javafx.util.Callback;
  *
  * <h3>Resizable Range</h3>
  *
+ * <p>
  * A tilepane's parent will resize the tilepane within the tilepane's resizable range
  * during layout.   By default the tilepane computes this range based on its content
  * as outlined in the tables below.
- * <p>
- * Horizontal:
- * <table border="1" summary="">
+ * </p>
+ * <table border="1">
+ * <caption>Horizontal</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus the tile width.</td>
@@ -123,9 +124,9 @@ import javafx.util.Callback;
  * <tr><th>maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
- * <p>
- * Vertical:
- * <table border="1" summary="">
+ * <br>
+ * <table border="1">
+ * <caption>Vertical</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus width required to display all tiles when wrapped at a specified height with an hgap between each column.</td>
@@ -157,10 +158,13 @@ import javafx.util.Callback;
  *
  * <h3>Optional Layout Constraints</h3>
  *
+ * <p>
  * An application may set constraints on individual children to customize TilePane's layout.
  * For each constraint, TilePane provides a static method for setting it on the child.
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>TilePane Constraint Table</caption>
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>alignment</td><td>javafx.geometry.Pos</td><td>The alignment of the child within its tile.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>

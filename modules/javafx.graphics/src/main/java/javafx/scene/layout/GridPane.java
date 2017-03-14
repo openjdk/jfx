@@ -84,8 +84,10 @@ import javafx.util.Callback;
  * <h3>Grid Constraints</h3>
  * <p>
  * A child's placement within the grid is defined by it's layout constraints:
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>Grid Constraint Table</caption>
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>columnIndex</td><td>integer</td><td>column where child's layout area starts.</td></tr>
  * <tr><td>rowIndex</td><td>integer</td><td>row where child's layout area starts.</td></tr>
@@ -188,11 +190,14 @@ import javafx.util.Callback;
  * and maximum sizes and grow priorities.
  *
  * <h3>Resizable Range</h3>
+ * <p>
  * A gridpane's parent will resize the gridpane within the gridpane's resizable range
  * during layout.   By default the gridpane computes this range based on its content
  * and row/column constraints as outlined in the table below.
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>GridPane Resize Table</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus the sum of each column's min width.</td>
@@ -224,11 +229,14 @@ import javafx.util.Callback;
  *
  * <h3>Optional Layout Constraints</h3>
  *
+ * <p>
  * An application may set additional constraints on children to customize how the
  * child is sized and positioned within the layout area established by it's row/column
  * indices/spans:
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>GridPane Constraint Table</caption>
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>halignment</td><td>javafx.geometry.HPos</td><td>The horizontal alignment of the child within its layout area.</td></tr>
  * <tr><td>valignment</td><td>javafx.geometry.VPos</td><td>The vertical alignment of the child within its layout area.</td></tr>

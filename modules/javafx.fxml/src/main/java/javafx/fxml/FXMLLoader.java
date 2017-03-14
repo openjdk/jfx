@@ -2212,9 +2212,9 @@ public class FXMLLoader {
 
     /**
      * Sets the root of the object hierarchy. The value passed to this method
-     * is used as the value of the <tt>&lt;fx:root&gt;</tt> tag. This method
+     * is used as the value of the {@code <fx:root>} tag. This method
      * must be called prior to loading the document when using
-     * <tt>&lt;fx:root&gt;</tt>.
+     * {@code <fx:root>}.
      *
      * @param root the root of the object hierarchy
      *
@@ -2261,9 +2261,9 @@ public class FXMLLoader {
 
     /**
      * Sets the controller associated with the root object. The value passed to
-     * this method is used as the value of the <tt>fx:controller</tt> attribute.
+     * this method is used as the value of the {@code fx:controller} attribute.
      * This method must be called prior to loading the document when using
-     * controller event handlers when an <tt>fx:controller</tt> attribute is not
+     * controller event handlers when an {@code fx:controller} attribute is not
      * specified in the document.
      *
      * @param controller the controller to associate with the root object

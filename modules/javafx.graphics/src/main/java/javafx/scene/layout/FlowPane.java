@@ -100,12 +100,13 @@ import javafx.util.Callback;
  *
  * <h3>Resizable Range</h3>
  *
+ * <p>
  * A flowpane's parent will resize the flowpane within the flowpane's resizable range
  * during layout.   By default the flowpane computes this range based on its content
  * as outlined in the tables below.
- * <p>
- * horizontal:
- * <table border="1" summary="">
+ * </p>
+ * <table border="1">
+ * <caption>Horizontal</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus largest of children's pref widths</td>
@@ -116,9 +117,9 @@ import javafx.util.Callback;
  * <tr><th>maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
- * <p>
- * vertical:
- * <table border="1" summary="">
+ * <br>
+ * <table border="1">
+ * <caption>Vertical</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus width required to display all children at their preferred widths when wrapped at a specified height</td>

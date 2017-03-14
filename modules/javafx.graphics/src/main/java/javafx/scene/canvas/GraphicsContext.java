@@ -86,7 +86,8 @@ import javafx.scene.text.FontSmoothingType;
  * <p>
  * The {@code GraphicsContext} maintains the following rendering attributes
  * which affect various subsets of the rendering methods:
- * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto" summary="">
+ * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">
+ * <caption>List of Rendering Attributes</caption>
  * <tr>
  * <th class="colLast" style="width:15%">Attribute</th>
  * <th class="colLast" style="width:10%; text-align:center">Save/Restore?</th>
@@ -94,7 +95,7 @@ import javafx.scene.text.FontSmoothingType;
  * <th class="colLast">Description</th>
  * </tr>
  *
- * <tr><th colspan="3"><a name="comm-attr">Common Rendering Attributes</a></th></tr>
+ * <tr><th colspan="3"><a id="comm-attr">Common Rendering Attributes</a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #clip() Clip}</td>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
@@ -135,7 +136,7 @@ import javafx.scene.text.FontSmoothingType;
  * An {@link Effect} applied individually to each rendering operation.
  * </td></tr>
  *
- * <tr><th colspan="3"><a name="fill-attr">Fill Attributes</a></th></tr>
+ * <tr><th colspan="3"><a id="fill-attr">Fill Attributes</a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #setFill(javafx.scene.paint.Paint) Fill Paint}</td>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
@@ -145,7 +146,7 @@ import javafx.scene.text.FontSmoothingType;
  * fill operation.
  * </td></tr>
  *
- * <tr><th colspan="3"><a name="strk-attr">Stroke Attributes</a></th></tr>
+ * <tr><th colspan="3"><a id="strk-attr">Stroke Attributes</a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #setStroke(javafx.scene.paint.Paint) Stroke Paint}</td>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
@@ -205,7 +206,7 @@ import javafx.scene.text.FontSmoothingType;
  * dashing of the segments in the boundary of shapes in a stroke operation.
  * </td></tr>
  *
- * <tr><th colspan="3"><a name="text-attr">Text Attributes</a></th></tr>
+ * <tr><th colspan="3"><a id="text-attr">Text Attributes</a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #setFont(javafx.scene.text.Font) Font}</td>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
@@ -238,7 +239,7 @@ import javafx.scene.text.FontSmoothingType;
  * for all fill text operations.
  * </td></tr>
  *
- * <tr><th colspan="3"><a name="path-attr">Path Attributes</a></th></tr>
+ * <tr><th colspan="3"><a id="path-attr">Path Attributes</a></th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:15%">{@link #beginPath() Current Path}</td>
  * <td class="colLast" style="width:10%; text-align:center; color:#c00">No</td>
@@ -258,11 +259,12 @@ import javafx.scene.text.FontSmoothingType;
  * </table>
  *
  * <p>
- * <a name="attr-ops-table">
+ * <a id="attr-ops-table">
  * The various rendering methods on the {@code GraphicsContext} use the
  * following sets of rendering attributes:
  * </a>
- * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto" summary="">
+ * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">
+ * <caption>Rendering Attributes Table</caption>
  * <tr>
  * <th class="colLast" style="width:25%">Method</th>
  * <th class="colLast" style="width:15%; text-align:center"><a href="#comm-attr">Common Rendering Attributes</a></th>
@@ -275,7 +277,7 @@ import javafx.scene.text.FontSmoothingType;
  * <tr><th colspan="1">Basic Shape Rendering</th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
- * <a name="fill-basic-ops">
+ * <a id="fill-basic-ops">
  * {@link #fillRect(double, double, double, double) fillRect()},
  * {@link #fillRoundRect(double, double, double, double, double, double) fillRoundRect()},
  * {@link #fillOval(double, double, double, double) fillOval()},
@@ -290,7 +292,7 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
- * <a name="strk-basic-ops">
+ * <a id="strk-basic-ops">
  * {@link #strokeLine(double, double, double, double) strokeLine()},
  * {@link #strokeRect(double, double, double, double) strokeRect()},
  * {@link #strokeRoundRect(double, double, double, double, double, double) strokeRoundRect()},
@@ -336,14 +338,14 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr><td colspan="6">
- * <a name="base-fn-1">[1]</a> Only the Transform, Clip, and Effect apply to clearRect()<br>
- * <a name="base-fn-2">[2]</a> Only the Fill Rule applies to fillPolygon(), the current path is left unchanged
+ * <a id="base-fn-1">[1]</a> Only the Transform, Clip, and Effect apply to clearRect()<br>
+ * <a id="base-fn-2">[2]</a> Only the Fill Rule applies to fillPolygon(), the current path is left unchanged
  * </td></tr>
  *
  * <tr><th colspan="1">Text Rendering</th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
- * <a name="fill-text-ops">
+ * <a id="fill-text-ops">
  * {@link #fillText(java.lang.String, double, double) fillText()},
  * {@link #fillText(java.lang.String, double, double, double) fillText(with maxWidth)}
  * </a>
@@ -356,7 +358,7 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
- * <a name="strk-text-ops">
+ * <a id="strk-text-ops">
  * {@link #strokeText(java.lang.String, double, double) strokeText()},
  * {@link #strokeText(java.lang.String, double, double, double) strokeText(with maxWidth)}
  * </a>
@@ -368,7 +370,7 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr><td colspan="6">
- * <a name="text-fn-3">[3]</a> The Font Smoothing attribute only applies to filled text
+ * <a id="text-fn-3">[3]</a> The Font Smoothing attribute only applies to filled text
  * </td></tr>
  *
  * <tr><th colspan="1">Path Rendering</th></tr>
@@ -393,7 +395,7 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
- * <a name="fill-path-ops">
+ * <a id="fill-path-ops">
  * {@link #fill() fill()}
  * </a>
  * </td>
@@ -405,7 +407,7 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
- * <a name="strk-path-ops">
+ * <a id="strk-path-ops">
  * {@link #stroke() stroke()}
  * </a>
  * </td>
@@ -417,7 +419,7 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
- * <a name="clip-path-ops">
+ * <a id="clip-path-ops">
  * {@link #clip() clip()}
  * </a>
  * </td>
@@ -428,14 +430,14 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * </tr>
  * <tr><td colspan="6">
- * <a name="path-fn-4">[4]</a> Transform applied only during path construction<br>
- * <a name="path-fn-5">[5]</a> Fill Rule only used for fill() and clip()
+ * <a id="path-fn-4">[4]</a> Transform applied only during path construction<br>
+ * <a id="path-fn-5">[5]</a> Fill Rule only used for fill() and clip()
  * </td></tr>
  *
  * <tr><th colspan="1">Image Rendering</th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
- * <a name="draw-img-ops">
+ * <a id="draw-img-ops">
  * {@link #drawImage(javafx.scene.image.Image, double, double) drawImage(all forms)}
  * </a>
  * </td>

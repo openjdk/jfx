@@ -244,12 +244,14 @@ public abstract class Labeled extends Control {
     /**
      * Specifies the string to display for the ellipsis when text is truncated.
      *
-     * <table summary="" border="0" cellpadding="0" cellspacing="0"><tr><th>Examples</th></tr>
-     *   <tr class="altColor"><td align="right">"..."</td>        <td>- Default value for most locales</td>
-     *   <tr class="rowColor"><td align="right">" . . . "</td>    <td></td>
-     *   <tr class="altColor"><td align="right">" [...] "</td>    <td></td>
-     *   <tr class="rowColor"><td align="right">"&#92;u2026"</td> <td>- The Unicode ellipsis character '&hellip;'</td>
-     *   <tr class="altColor"><td align="right">""</td>           <td>- No ellipsis, just display the truncated string</td>
+     * <table>
+     *   <caption>Ellipsis Table</caption>
+     *   <tr><th colspan=2>Examples</th></tr>
+     *   <tr class="altColor"><td>"..." </td>        <td>Default value for most locales</td>
+     *   <tr class="rowColor"><td>" . . . " </td>    <td></td>
+     *   <tr class="altColor"><td>" [...] " </td>    <td></td>
+     *   <tr class="rowColor"><td>"&#92;u2026" </td> <td>The Unicode ellipsis character '&hellip;'</td>
+     *   <tr class="altColor"><td>"" </td>           <td>No ellipsis, just display the truncated string</td>
      * </table>
      *
      * <p>Note that not all fonts support all Unicode characters.

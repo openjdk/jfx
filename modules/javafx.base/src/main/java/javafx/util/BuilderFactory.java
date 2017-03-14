@@ -39,7 +39,7 @@ public interface BuilderFactory {
      * @param type the given type or null
      *
      * @return
-     * A builder for the given type, or <tt>null</tt> if this factory does not
+     * A builder for the given type, or {@code null} if this factory does not
      * produce builders for the type.
      */
     public Builder<?> getBuilder(Class<?> type);

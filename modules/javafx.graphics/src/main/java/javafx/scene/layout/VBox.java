@@ -76,10 +76,13 @@ import javafx.util.Callback;
  *
  * <h3>Resizable Range</h3>
  *
+ * <p>
  * A vbox's parent will resize the vbox within the vbox's resizable range
  * during layout.   By default the vbox computes this range based on its content
  * as outlined in the table below.
- * <table border="1" summary="">
+ * </p>
+ * <table border="1">
+ * <caption>VBox Resize Table</caption>
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus the largest of the children's min widths.</td>
@@ -112,10 +115,13 @@ import javafx.util.Callback;
  *
  * <h3>Optional Layout Constraints</h3>
  *
+ * <p>
  * An application may set constraints on individual children to customize VBox's layout.
  * For each constraint, VBox provides a static method for setting it on the child.
+ * </p>
  *
- * <table border="1" summary="">
+ * <table border="1">
+ * <caption>VBox Constraint Table</caption>
  * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
  * <tr><td>vgrow</td><td>javafx.scene.layout.Priority</td><td>The vertical grow priority for the child.</td></tr>
  * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
