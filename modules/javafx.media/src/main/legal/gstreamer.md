@@ -25,7 +25,7 @@ code is here:
    rt/modules/javafx.media/src/main/native/gstreamer/gstreamer-lite/
 </pre>
 
-### GNU Lesser General Public License Version 2.1
+### LGPL 2.1
 <pre>
                   GNU LESSER GENERAL PUBLIC LICENSE
                        Version 2.1, February 1999
