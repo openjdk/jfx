@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -564,8 +564,8 @@ int wmain(int argc, wchar_t* argv[]) {
 
     cmd += debug +
         L" " + memory +
-        L" -Djavafx.home=" + javafxhome +
-        L" -classpath " + fxlib + L"ant-javafx.jar" +
+        L" -Djavafx.home=\"" + javafxhome +
+        L"\" -classpath \"" + fxlib + L"\"ant-javafx.jar" +
         L" com.sun.javafx.tools.packager.Main" +
         L" " + args;
 
