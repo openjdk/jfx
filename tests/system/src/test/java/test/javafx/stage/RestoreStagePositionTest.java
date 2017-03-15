@@ -24,6 +24,7 @@
  */
 package test.javafx.stage;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -40,6 +41,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class RestoreStagePositionTest {
     static CountDownLatch startupLatch;
@@ -88,6 +90,9 @@ public class RestoreStagePositionTest {
 
     @Test
     public void testUfullscreenPosition() throws Exception {
+        // Disable on Mac until JDK-8176813 is fixed
+        assumeTrue(!PlatformUtil.isMac());
+
         Thread.sleep(200);
         Assert.assertTrue(stage.isShowing());
         Assert.assertFalse(stage.isFullScreen());
@@ -123,6 +128,9 @@ public class RestoreStagePositionTest {
 
     @Test
     public void testDemaximizedPosition() throws Exception {
+        // Disable on Mac until JDK-8089230 is fixed
+        assumeTrue(!PlatformUtil.isMac());
+
         Thread.sleep(200);
         Assert.assertTrue(stage.isShowing());
         Assert.assertFalse(stage.isMaximized());
