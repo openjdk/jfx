@@ -45,6 +45,7 @@ import javafx.scene.Scene;
 import javafx.stage.Window;
 import javax.print.PrintService;
 import javax.print.attribute.HashPrintRequestAttributeSet;
+import javax.print.attribute.PrintRequestAttribute;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.Size2DSyntax;
@@ -76,8 +77,15 @@ import com.sun.javafx.print.PrinterImpl;
 import com.sun.javafx.print.PrinterJobImpl;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
+import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
+
 import com.sun.prism.j2d.PrismPrintGraphics;
+
+import java.lang.reflect.Constructor;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 
 public class J2DPrinterJob implements PrinterJobImpl {
 
@@ -89,6 +97,25 @@ public class J2DPrinterJob implements PrinterJobImpl {
     private JobSettings settings;
     private PrintRequestAttributeSet printReqAttrSet;
     private volatile Object elo = null;
+
+    private static Class onTopClass = null;
+    PrintRequestAttribute getAlwaysOnTop(final long id) {
+        return AccessController.doPrivileged(
+            (PrivilegedAction<PrintRequestAttribute>) () -> {
+
+            PrintRequestAttribute alwaysOnTop = null;
+            try {
+                if (onTopClass == null) {
+                    onTopClass = Class.forName("sun.print.DialogOnTop");
+                }
+                Constructor<PrintRequestAttribute> cons =
+                     onTopClass.getConstructor(long.class);
+                alwaysOnTop = cons.newInstance(id);
+            } catch (Throwable t) {
+            }
+            return alwaysOnTop;
+        });
+    }
 
     public J2DPrinterJob(javafx.print.PrinterJob fxJob) {
 
@@ -103,9 +130,19 @@ public class J2DPrinterJob implements PrinterJobImpl {
         }
         printReqAttrSet = new HashPrintRequestAttributeSet();
         printReqAttrSet.add(DialogTypeSelection.NATIVE);
-
         j2dPageable = new J2DPageable();
         pJob2D.setPageable(j2dPageable);
+    }
+
+    private void setEnabledState(Window owner, boolean state) {
+        if (owner == null) {
+           return;
+        }
+        final TKStage stage = WindowHelper.getPeer(owner);
+        if (stage == null) { // just in case.
+            return;
+        }
+        Application.invokeAndWait(() -> stage.setEnabled(state));
     }
 
     public boolean showPrintDialog(Window owner) {
@@ -118,20 +155,37 @@ public class J2DPrinterJob implements PrinterJobImpl {
             return true;
         }
 
+        if (onTopClass != null) {
+            printReqAttrSet.remove(onTopClass);
+        }
+        if (owner != null) {
+            long id = WindowHelper.getPeer(owner).getRawHandle();
+            PrintRequestAttribute alwaysOnTop = getAlwaysOnTop(id);
+            if (alwaysOnTop != null) {
+                printReqAttrSet.add(alwaysOnTop);
+            }
+        }
+
         boolean rv = false;
         syncSettingsToAttributes();
-        if (!Toolkit.getToolkit().isFxUserThread()) {
-            rv = pJob2D.printDialog(printReqAttrSet);
-        } else {
-            // If we are on the event thread, we need to check whether we are
-            // allowed to call a nested event handler.
-            if (!Toolkit.getToolkit().canStartNestedEventLoop()) {
-                throw new IllegalStateException("Printing is not allowed during animation or layout processing");
+        try {
+            setEnabledState(owner, false);
+            if (!Toolkit.getToolkit().isFxUserThread()) {
+                rv = pJob2D.printDialog(printReqAttrSet);
+            } else {
+                // If we are on the event thread, we need to check whether
+                // we are allowed to call a nested event handler.
+                if (!Toolkit.getToolkit().canStartNestedEventLoop()) {
+                    throw new IllegalStateException(
+              "Printing is not allowed during animation or layout processing");
+                }
+                rv = showPrintDialogWithNestedLoop(owner);
             }
-            rv = showPrintDialogWithNestedLoop(owner);
-        }
-        if (rv) {
-            updateSettingsFromDialog();
+            if (rv) {
+                updateSettingsFromDialog();
+            }
+        } finally {
+            setEnabledState(owner, true);
         }
         return rv;
     }
@@ -171,18 +225,36 @@ public class J2DPrinterJob implements PrinterJobImpl {
         if (GraphicsEnvironment.isHeadless()) {
             return true;
         }
+
+        if (onTopClass != null) {
+            printReqAttrSet.remove(onTopClass);
+        }
+        if (owner != null) {
+            long id = WindowHelper.getPeer(owner).getRawHandle();
+            PrintRequestAttribute alwaysOnTop = getAlwaysOnTop(id);
+            if (alwaysOnTop != null) {
+                printReqAttrSet.add(alwaysOnTop);
+            }
+        }
+
         boolean rv = false;
         syncSettingsToAttributes();
-        if (!Toolkit.getToolkit().isFxUserThread()) {
-            PageFormat pf = pJob2D.pageDialog(printReqAttrSet);
-            rv = pf != null;
-        } else {
-            // If we are on the event thread, we need to check whether we are
-            // allowed to call a nested event handler.
-            if (!Toolkit.getToolkit().canStartNestedEventLoop()) {
-                throw new IllegalStateException("Printing is not allowed during animation or layout processing");
+        try {
+            setEnabledState(owner, false);
+            if (!Toolkit.getToolkit().isFxUserThread()) {
+                PageFormat pf = pJob2D.pageDialog(printReqAttrSet);
+                rv = pf != null;
+            } else {
+                // If we are on the event thread, we need to check whether
+                // we are allowed to call a nested event handler.
+                if (!Toolkit.getToolkit().canStartNestedEventLoop()) {
+                    throw new IllegalStateException(
+               "Printing is not allowed during animation or layout processing");
+                }
+                rv = showPageDialogFromNestedLoop(owner);
             }
-            rv = showPageDialogFromNestedLoop(owner);
+        } finally {
+            setEnabledState(owner, true);
         }
         if (rv) {
             updateSettingsFromDialog();

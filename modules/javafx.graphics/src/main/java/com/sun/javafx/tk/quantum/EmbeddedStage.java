@@ -309,4 +309,15 @@ final class EmbeddedStage extends GlassStage implements EmbeddedStageInterface {
     @Override public void setRTL(boolean b) {
     }
 
+    @Override
+    public void setEnabled(boolean enabled) {
+    }
+
+    @Override
+    public long getRawHandle() {
+        /* Perhaps this could return the ID for the window in which this
+         * stage is embedded, but there is no current requirement for that.
+         */
+        return 0L;
+    }
 }

@@ -375,7 +375,7 @@ public abstract class Window {
      * return the "raw' pointer needed by subclasses to pass to native routines
      * @return the native pointer.
      */
-    protected long getRawHandle() {
+    public long getRawHandle() {
         return ptr;
     }
 
