@@ -353,7 +353,7 @@ public class Modena extends Application {
             saveButton.setOnAction(saveBtnHandler);
 
             Button restartButton = new Button("Restart");
-            retinaButton.setOnAction(event -> restart());
+            restartButton.setOnAction(event -> restart());
 
             ToolBar toolBar = new ToolBar(new HBox(modenaButton, caspianButton), reloadButton, rtlButton,
                     /* embeddedPerformanceButton, new Separator(), */ retinaButton,
