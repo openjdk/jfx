@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -263,6 +263,15 @@ flv_parser_read_audio_tag(FlvParser* parser,
     audio_tag->audio_packet_size = parser->next_block_size
             - FLV_TAG_SUFFIX_SIZE - audio_tag->audio_packet_offset;
 
+    // Make sure packet_offset and size are correct.
+    if (audio_tag->audio_packet_offset > buffer_size)
+        return FLV_PARSER_BUFFER_UNDERRUN;
+
+    if (audio_tag->audio_packet_size <= 0)
+        return FLV_PARSER_BUFFER_UNDERRUN;
+
+    if ((buffer_size - audio_tag->audio_packet_offset) < audio_tag->audio_packet_size)
+        return FLV_PARSER_BUFFER_UNDERRUN;
 
     /* Update parser and return */
     parser->parsed_block_size = parser->next_block_size;
@@ -291,6 +300,16 @@ flv_parser_read_video_tag(FlvParser* parser,
 
     video_tag->video_packet_size = parser->next_block_size
             - FLV_TAG_SUFFIX_SIZE - video_tag->video_packet_offset;
+
+    // Make sure packet_offset and size are correct.
+    if (video_tag->video_packet_offset > buffer_size)
+        return FLV_PARSER_BUFFER_UNDERRUN;
+
+    if (video_tag->video_packet_size <= 0)
+        return FLV_PARSER_BUFFER_UNDERRUN;
+
+    if ((buffer_size - video_tag->video_packet_offset) < video_tag->video_packet_size)
+        return FLV_PARSER_BUFFER_UNDERRUN;
 
     /* Update parser and return */
     parser->parsed_block_size = parser->next_block_size;
