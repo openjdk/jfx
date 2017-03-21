@@ -68,7 +68,7 @@ import java.util.List;
  * Example code for displaying images
  * </p>
  *
- * <pre>{@code
+ * <pre><code>
  * import javafx.application.Application;
  * import javafx.geometry.Rectangle2D;
  * import javafx.scene.Group;
@@ -81,7 +81,7 @@ import java.util.List;
  *
  * public class HelloImageView extends Application {
  *
- *     &#64;Override public void start(Stage stage) {
+ *     {@literal @Override} public void start(Stage stage) {
  *         // load the image
  *         Image image = new Image("flower.png");
  *
@@ -128,7 +128,7 @@ import java.util.List;
  *         Application.launch(args);
  *     }
  * }
- * }</pre>
+ * </code></pre>
  * <p>
  * The code above produces the following:
  * </p>
