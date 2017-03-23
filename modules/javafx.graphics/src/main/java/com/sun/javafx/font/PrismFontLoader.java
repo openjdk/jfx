@@ -51,6 +51,7 @@ public class PrismFontLoader extends FontLoader {
         // locate the META-INF directory and search for a fonts.mf
         // located there
         ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        if (loader == null) return map;
         URL u = loader.getResource("META-INF/fonts.mf");
         if (u == null) return map;
 
