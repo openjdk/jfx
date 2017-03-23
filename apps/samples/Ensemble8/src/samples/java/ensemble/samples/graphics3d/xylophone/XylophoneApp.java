@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,6 +31,11 @@
  */
 package ensemble.samples.graphics3d.xylophone;
 
+import ensemble.samples.media.audioclip.AudioClipApp;
+import java.io.File;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -78,16 +83,55 @@ public class XylophoneApp extends Application {
     private Timeline animation;
     private Timeline animation2;
 
-    private static final String[] urls = {
-        "/ensemble/samples/shared-resources/Note1.wav",
-        "/ensemble/samples/shared-resources/Note2.wav",
-        "/ensemble/samples/shared-resources/Note3.wav",
-        "/ensemble/samples/shared-resources/Note4.wav",
-        "/ensemble/samples/shared-resources/Note5.wav",
-        "/ensemble/samples/shared-resources/Note6.wav",
-        "/ensemble/samples/shared-resources/Note7.wav",
-        "/ensemble/samples/shared-resources/Note8.wav"
-    };
+    /*
+     * See JDK-8177428 for an explanation of why this is here.
+     */
+    private static AudioClip getNoteClip(String name) {
+        // First look for the clips in a directory next to our jar file
+        try {
+            // Get a URI to this class file
+            URI baseURI = XylophoneApp.class.getResource("XylophoneApp.class").toURI();
+
+            // If we have a jar URL, get the embedded http or file URL
+            // and trim off the internal jar path, this will leave us
+            // with a URL to the jar file
+            if (baseURI.getScheme().equals("jar")) {
+                String basePath = baseURI.getSchemeSpecificPart();
+                if (basePath.contains("!/")) {
+                    basePath = basePath.substring(0, basePath.indexOf("!/"));
+                }
+                baseURI = new URI(basePath);
+            }
+
+            URL noteURL = baseURI.resolve("resources/"+name).toURL();
+
+            // check if the resource exists, then try to load it
+            if (noteURL.getProtocol().equals("http")) {
+                HttpURLConnection urlCon = (HttpURLConnection)noteURL.openConnection();
+                urlCon.setRequestMethod("HEAD");
+                urlCon.connect();
+                if (urlCon.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    noteURL = null;
+                }
+                urlCon.disconnect();
+            } else if (noteURL.getProtocol().equals("file")) {
+                File f = new File(noteURL.getPath());
+                if (!f.exists() || !f.isFile()) {
+                    noteURL = null;
+                }
+            } else {
+                // unsupported protocol
+                noteURL = null;
+            }
+            if (noteURL != null) {
+                return new AudioClip(noteURL.toExternalForm());
+            }
+        } catch (Exception e) {} // fail gracefully
+
+        // Fall back on the embedded clips
+        return new AudioClip(
+                AudioClipApp.class.getResource("/ensemble/samples/shared-resources/"+name).toExternalForm());
+    }
 
     public Parent createContent() {
         Xform sceneRoot = new Xform();
@@ -123,8 +167,7 @@ public class XylophoneApp extends Application {
             Color.GREENYELLOW, Color.YELLOW, Color.ORANGE, Color.RED
         };
         for (int i = 0; i < barCubes.length; i++) {
-            String url = getClass().getResource(urls[i]).toString();
-            final AudioClip barNote = new AudioClip(url);
+            final AudioClip barNote = getNoteClip("Note"+(i+1)+".wav");
 
             barCubes[i] = new Box(barWidth, barDepth, 100.0 - (i * 5.0));
             barCubes[i].setTranslateX(xStart + ((1 + i) * xOffset));
