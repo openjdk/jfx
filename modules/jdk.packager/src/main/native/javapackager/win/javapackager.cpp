@@ -564,9 +564,9 @@ int wmain(int argc, wchar_t* argv[]) {
 
     cmd += debug +
         L" " + memory +
-        L" -Djavafx.home=\"" + javafxhome +
-        L"\" -classpath \"" + fxlib + L"\"ant-javafx.jar" +
-        L" com.sun.javafx.tools.packager.Main" +
+        L" -Djavafx.home=\"" + javafxhome + L"\"" +
+        L" -classpath \"" + fxlib + L"ant-javafx.jar\"" +
+        L" -m jdk.packager/com.sun.javafx.tools.packager.Main" +
         L" " + args;
 
 #ifdef _DEBUG
