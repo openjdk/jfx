@@ -197,8 +197,8 @@ public abstract class ButtonBase extends Labeled {
      *                                                                         *
      **************************************************************************/
 
-    @Override
-    public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
+    /** {@inheritDoc} */
+    @Override public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {
             case FIRE:
                 fire();

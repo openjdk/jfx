@@ -52,7 +52,7 @@ import java.util.Map;
  * annotations, as well as the overarching
  * {@link #buttonOrderProperty() button order} specified for the ButtonBar.
  *
- * <strong>Uniform button sizing</strong>
+ * <h3>Uniform button sizing</h3>
  * <p>By default all buttons are uniformly sized in a ButtonBar, meaning that all
  * buttons take the width of the widest button. It is possible to opt-out of this
  * on a per-button basis, but calling the {@link #setButtonUniformSize(Node, boolean)} method with

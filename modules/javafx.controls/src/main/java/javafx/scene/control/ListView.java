@@ -939,7 +939,7 @@ public class ListView<T> extends Control {
     }
 
     /**
-     * Scrolls the TableView so that the given object is visible within the viewport.
+     * Scrolls the ListView so that the given object is visible within the viewport.
      * @param object The object that should be visible to the user.
      * @since JavaFX 8.0
      */
