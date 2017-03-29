@@ -25,7 +25,6 @@
 
 package javafx.application;
 
-import java.lang.reflect.Module;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.List;
@@ -69,7 +68,7 @@ import com.sun.javafx.css.StyleManager;
  * that do nothing.</p>
  * <p>The {@code Application} subclass must be declared public, must have a
  * public no-argument constructor, and the
- * containing package must be {@link Module#isExported(String,Module) exported}
+ * containing package must be exported (see {@code Module.isExported(String,Module)})
  * to the {@code javafx.graphics} module.</p>
  *
  * <p>Calling {@link Platform#exit} is the preferred way to explicitly terminate
@@ -212,8 +211,8 @@ public abstract class Application {
      * This is equivalent to launch(TheClass.class, args) where TheClass is the
      * immediately enclosing class of the method that called launch. It must
      * be a public subclass of Application with a public no-argument
-     * constructor, in a package that is
-     * {@link Module#isExported(String,Module) exported} to at least the
+     * constructor, in a package that is exported
+     * (see {@code Module.isExported(String,Module)}) to at least the
      * {@code javafx.graphics} module, or a RuntimeException will be thrown.
      *
      * <p>

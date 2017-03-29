@@ -35,9 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Layer;
 import java.lang.reflect.Method;
-import java.lang.reflect.Module;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -256,7 +254,7 @@ public class LauncherImpl {
         String preloaderClassName = null;
         String[] appArgs = args;
         ClassLoader appLoader = null;
-        Module mainModule = null;
+        ModuleAccess mainModule = null;
 
         if (launchMode.equals(LAUNCH_MODE_JAR)) {
             Attributes jarAttrs = getJarAttributes(launchName);
@@ -328,14 +326,7 @@ public class LauncherImpl {
                 mainClassName = launchName.substring(i+1);
             }
 
-            // main module is in the boot layer
-            Layer layer = Layer.boot();
-            Optional<Module> om = layer.findModule(moduleName);
-            if (!om.isPresent()) {
-                // should not happen
-                throw new InternalError("Module " + moduleName + " not in boot Layer");
-            }
-            mainModule = om.get();
+            mainModule = ModuleAccess.load(moduleName);
 
             // get main class from module descriptor
             if (mainClassName == null) {
@@ -369,7 +360,7 @@ public class LauncherImpl {
 
                 // then invoke the second part of this launcher using reflection
                 Method lawa = launcherClass.getMethod("launchApplicationWithArgs",
-                        new Class[] { Module.class, String.class, String.class, (new String[0]).getClass()});
+                        new Class[] { ModuleAccess.class, String.class, String.class, (new String[0]).getClass()});
 
                 // set the thread context class loader before we continue, or it won't load properly
                 Thread.currentThread().setContextClassLoader(appLoader);
@@ -385,7 +376,7 @@ public class LauncherImpl {
     // wrapper for Class.forName that handles cases where diacritical marks in the name
     // cause the class to not be loaded, also largely copied from LauncherHelper.java
     // this method returns null if the class cannot be loaded
-    private static Class<?> loadClass(final Module mainModule, final String className) {
+    private static Class<?> loadClass(final ModuleAccess mainModule, final String className) {
         Class<?> clz = null;
         final ClassLoader loader = Thread.currentThread().getContextClassLoader();
 
@@ -394,7 +385,7 @@ public class LauncherImpl {
         // a MF_JAVAFX_CLASS_PATH attribute which is deprecated
 
         if (mainModule != null) {
-            clz = Class.forName(mainModule, className);
+            clz = mainModule.classForName(className);
         } else {
             try {
                 clz = Class.forName(className, true, loader);
@@ -408,7 +399,7 @@ public class LauncherImpl {
             String cn = Normalizer.normalize(className, Normalizer.Form.NFC);
 
             if (mainModule != null) {
-                clz = Class.forName(mainModule, cn);
+                clz = mainModule.classForName(cn);
             } else {
                 try {
                     clz = Class.forName(cn, true, loader);
@@ -420,7 +411,7 @@ public class LauncherImpl {
     }
 
     // Must be public since we could be called from a different class loader
-    public static void launchApplicationWithArgs(final Module mainModule,
+    public static void launchApplicationWithArgs(final ModuleAccess mainModule,
             final String mainClassName,
             final String preloaderClassName, String[] args) {
         try {

@@ -295,7 +295,7 @@ public class TestBase implements ChangeListener, InvalidationListener {
     public boolean isJigsawMode() {
         Class clazz = null;
         try {
-            clazz = Class.forName("java.lang.reflect.Module", false, TestBase.class.getClassLoader());
+            clazz = Class.forName("java.lang.reflect.ModuleDescriptor", false, TestBase.class.getClassLoader());
         } catch (Exception e) { }
 
         return clazz != null;
