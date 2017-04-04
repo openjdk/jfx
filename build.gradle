@@ -3331,21 +3331,6 @@ allprojects {
 
         compile.options.compilerArgs += ["-XDignore.symbol.file", "-encoding", "UTF-8"]
 
-        // If I am a module....
-        if (project.hasProperty('moduleSourcePath') &&
-                (project.hasProperty('buildModule') && project.buildModule)) {
-            project.compileJava {
-                options.compilerArgs.addAll([
-                    '-implicit:none',
-                    '--module-source-path', project.moduleSourcePath
-                    ])
-            }
-            // no jars needed for modules
-            project.jar.enabled = false
-
-            // and redirect the resources into the module
-            project.processResources.destinationDir = project.moduleDir
-        }
         // we use a custom javadoc command
         project.javadoc.enabled = false
 
@@ -3356,6 +3341,22 @@ allprojects {
             }
         }
     } // tasks with javaCompile
+
+    // If I am a module....
+    if (project.hasProperty('moduleSourcePath') &&
+            (project.hasProperty('buildModule') && project.buildModule)) {
+        project.compileJava {
+            options.compilerArgs.addAll([
+                '-implicit:none',
+                '--module-source-path', project.moduleSourcePath
+                ])
+        }
+        // no jars needed for modules
+        project.jar.enabled = false
+
+        // and redirect the resources into the module
+        project.processResources.destinationDir = project.moduleDir
+    }
 
     if (project.hasProperty('moduleSourcePathShim') &&
             project.sourceSets.hasProperty('shims')) {
