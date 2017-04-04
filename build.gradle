@@ -1995,19 +1995,12 @@ project(":controls") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
 
-    // TODO JDK-8174944 Css2Bin really should be moved out and put into buildSrc if it can be
-    // TODO could change script to dynamically locate all .css files and create bss for them, probably better
-    // TODO also not sure there is any benefit to having css files in the the runtime modules at all
     processResources << {
-        ["$moduleDir/com/sun/javafx/scene/control/skin/caspian/caspian.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/embedded.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/fxvk.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/highcontrast.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/modena.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/touch.css"].each { css ->
+        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
+        cssFiles.include "**/*.css"
+        cssFiles.each { css ->
+            logger.info("converting CSS to BSS ${css}");
+
             javaexec {
                 executable = JAVA
                 workingDir = project.projectDir
@@ -2018,8 +2011,6 @@ project(":controls") {
         }
     }
 
-    // TODO - if the above TODO regarding Css2Bin is fixed, this should also
-    // be fixed.
     processShimsResources.dependsOn(project.task("copyShimBss", type: Copy) {
         from project.moduleDir
         into project.moduleShimsDir
