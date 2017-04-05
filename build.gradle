@@ -263,6 +263,9 @@ ext.TESTCOMPILEARGSFILE = "testcompile.args"
 ext.TESTRUNARGSFILE = "testrun.args"
 ext.TESTJAVAPOLICYFILE = 'test.java.policy'
 
+// the file containing "extra" --add-exports
+ext.EXTRAADDEXPORTS = 'buildSrc/addExports'
+
 ext.MODULESOURCEPATH = "modulesourcepath.args"
 
 // These variables indicate what platform is running the build. Is
@@ -858,15 +861,53 @@ void commonModuleSetup(Project p, List<String> moduleChain) {
         addExportsFile.eachLine { line ->
             line = line.trim()
             if (!(line.startsWith("#") || line.equals(""))) {
-                // one line arguments are a bit easier to debug
-                //if (line.startsWith('--add-exports ')) {
-                //    line = line.replaceFirst('--add-exports ', '--add-exports=')
-                //}
-                line = line.replace('--add-exports *', '--add-exports=')
                 ae += line.split(' ')
             }
         }
-        p.ext.addExports  = ae.flatten()
+        p.ext.testAddExports  = ae.flatten()
+    }
+
+    // read in the temporary addExports file EXTRAADDEXPORTS)
+    //
+    // These extra --add-exports will be used in two places and so we
+    // create/modify two items:
+    // p.testAddExports - add the extra items so they are included in test builds
+    //
+    // p.extraAddExports - for use in any other place where we don't automatically update
+    //    for example any non modular, non 'test' compile, any compile that does not
+    //    use a module-source-path that includes the dependent modules
+    //
+    // Note that we don't modify the modular build (main, shims) because they use
+    // module-info directly, and we don't want to cover up any missing items there.
+    //
+    if (!rootProject.hasProperty("EXTRA_ADDEXPORTS_ARGS")) {
+        List<String> extraAddExportsList = []
+        String fullae = ""
+        File tmpaddExportsFile = new File(rootProject.projectDir, EXTRAADDEXPORTS)
+        if (tmpaddExportsFile.exists()) {
+            String nl = System.getProperty("line.separator")
+            tmpaddExportsFile.eachLine { line ->
+                line = line.trim()
+                fullae += line + nl
+                if (!(line.startsWith("#") || line.equals(""))) {
+                    extraAddExportsList += line.split(' ')
+                }
+            }
+        }
+        // This string is used in the creation of the build/*.args files
+        // so we preserve comments
+        if (!extraAddExportsList.isEmpty()) {
+            rootProject.ext.EXTRA_ADDEXPORTS_STRING = fullae
+        }
+        rootProject.ext.EXTRA_ADDEXPORTS_ARGS = extraAddExportsList
+    }
+
+    // use this variable, because it shows we have a non empty addition
+    if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
+        p.ext.extraAddExports = EXTRA_ADDEXPORTS_ARGS.flatten()
+        if (p.hasProperty("testAddExports")) {
+            p.testAddExports += EXTRA_ADDEXPORTS_ARGS.flatten()
+        }
     }
 }
 
@@ -3403,9 +3444,19 @@ allprojects {
         project.test.jvmArgs += testPatchModuleArgs
     }
 
-    if (project.hasProperty('addExports')) {
-        project.compileTestJava.options.compilerArgs.addAll(addExports);
-        project.test.jvmArgs += addExports
+    /* Note: we should not have to add extraAddExports to the normal
+     * modular compile, as it contains all of the module-info files.
+     * In fact doing so might cover up a module-info issue.
+     * so we don't do it, and I will leave this commented out
+     * block as a reminder of this fact.
+    if (project.hasProperty('extraAddExports')) {
+        project.compileJava.options.compilerArgs.addAll(extraAddExports);
+    }
+    */
+
+    if (project.hasProperty('testAddExports')) {
+        project.compileTestJava.options.compilerArgs.addAll(testAddExports);
+        project.test.jvmArgs += testAddExports
     }
 
     if (rootProject.hasProperty("EXTRA_TEST_ARGS") && project.hasProperty('test')) {
@@ -3896,6 +3947,7 @@ compileTargets { t ->
     def buildRunArgsTask = task("buildRunArgs$t.capital",
             group: "Build", dependsOn: buildModulesTask) {
         outputs.file(runArgsFile);
+        inputs.file(EXTRAADDEXPORTS);
         doLast() {
             List<String>libpath = []
             List<String>modpath = []
@@ -3908,6 +3960,11 @@ compileTargets { t ->
 
             writeRunArgsFile(runArgsFile, computeLibraryPath(true), modpath)
             writeRunArgsFile(compileArgsFile, null, modpath)
+
+            if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
+                runArgsFile << EXTRA_ADDEXPORTS_STRING
+                compileArgsFile << EXTRA_ADDEXPORTS_STRING
+            }
         }
     }
     buildModules.dependsOn(buildRunArgsTask)
@@ -4247,6 +4304,7 @@ compileTargets { t ->
         outputs.file(testCompileArgsFile)
         outputs.file(testJavaPolicyFile)
         outputs.file(runJavaPolicyFile)
+        inputs.file(EXTRAADDEXPORTS);
 
         doLast() {
             rootProject.buildDir.mkdir()
@@ -4293,6 +4351,11 @@ compileTargets { t ->
 
             writeRunArgsFile(testCompileArgsFile, null, modpath)
             writeRunArgsFile(testRunArgsFile, computeLibraryPath(true), modpath)
+
+            if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
+                testCompileArgsFile << EXTRA_ADDEXPORTS_STRING
+                testRunArgsFile << EXTRA_ADDEXPORTS_STRING
+            }
         }
     }
     sdk.dependsOn(testArgFiles)
