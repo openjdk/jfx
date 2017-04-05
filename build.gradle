@@ -3890,6 +3890,9 @@ compileTargets { t ->
         def copyLegalTask = project.task("copyLegal$t.capital", type: Copy, dependsOn: copyBuildPropertiesTask) {
             from srcLegalDir
             into dstLegalDir
+
+            // Exclude ANGLE since we (currently) do not use it
+            exclude("angle.md")
         }
 
         buildModulesTask.dependsOn(

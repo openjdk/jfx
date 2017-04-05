@@ -79,7 +79,7 @@
     </target>
 
     <!-- COPY SAMPLE SRC TO BUILD DIR -->
-    <target name="-pre-compile" depends="-copy-cssref">
+    <target name="-pre-compile" depends="-copy-cssref,-copy-legal">
         <echo>Copying all sample source files to build dir</echo>
          <copy todir="${build.classes.dir}">
             <fileset dir="${basedir}/src/samples/java">
@@ -109,6 +109,13 @@
     		match="http://download.java.net/java/jdk9/docs/legal/cpyr.html"
     		replace="http://www.oracle.com/technetwork/java/javase/terms/license/oraclebsd-1603217.txt"
     		byline="true"/>
+    </target>
+
+    <target name="-copy-legal">
+    	<mkdir dir="${build.legal.dir}"/>
+    	<copy todir="${build.legal.dir}">
+    		<fileset dir="${legal.dir}"/>
+    	</copy>
     </target>
 
     <!-- DON'T INCLUDE COMPILE TIME CODE IN APP JAR -->
