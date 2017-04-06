@@ -325,7 +325,7 @@ public class MediaView extends Node {
      * <pre><code>
      * MediaPlayer player; // initialization omitted
      * MediaView view = new MediaView();
-     * view.setPlayer(player);
+     * view.setMediaPlayer(player);
      * </code></pre>
      *
      * @param mediaPlayer the {@link MediaPlayer} the playback of which is to be
