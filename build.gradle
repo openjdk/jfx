@@ -3199,8 +3199,9 @@ project(":systemTests") {
     sourceSets {
         test
 
-        // Source sets for jar files (used for launcher tests)
+        // Source sets for standalone test apps (used for launcher tests)
         testapp1
+        testapp2
     }
 
     project.ext.buildModule = false
@@ -3251,7 +3252,8 @@ project(":systemTests") {
     test.dependsOn(sts)
     test.dependsOn(createTestArgfiles);
 
-    // Tasks to create the jars for the launcher tests
+    // Tasks to create standalone test applications for the launcher tests
+
     def testapp1JarName = "testapp1.jar"
     task createTestapp1Jar1(type: Jar) {
         dependsOn compileTestapp1Java
@@ -3285,17 +3287,28 @@ project(":systemTests") {
         include("pkg2/**")
     }
 
-    task createTestJarFiles() {
+    def List<String> testApp2SourceDirs = []
+    project.sourceSets.testapp2.java.srcDirs.each { dir ->
+        testApp2SourceDirs += dir
+    }
+    compileTestapp2Java.options.compilerArgs.addAll([
+        '-implicit:none',
+        '--module-source-path', testApp2SourceDirs.join(File.pathSeparator)
+        ] )
+
+    task createTestApps() {
         dependsOn(createTestapp1Jar1)
         dependsOn(createTestapp1Jar2)
+        dependsOn(compileTestapp2Java)
     }
-    test.dependsOn(createTestJarFiles);
+    test.dependsOn(createTestApps);
 
     test {
         enabled = IS_FULL_TEST
 
         // Properties passed to launcher tests
         systemProperties 'launchertest.testapp1.jar': "build/testapp1/$testapp1JarName"
+        systemProperties 'launchertest.testapp2.module.path': project.sourceSets.testapp2.output.classesDir
 
         // Properties passed to test.util.Util
         systemProperties 'worker.debug': IS_WORKER_DEBUG

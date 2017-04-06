@@ -161,6 +161,15 @@ public class Util {
             String testPldrName,
             String testPolicy) throws IOException {
 
+        return createApplicationLaunchCommand(testAppName, testPldrName, testPolicy, null);
+    }
+
+    public static ArrayList<String> createApplicationLaunchCommand(
+            String testAppName,
+            String testPldrName,
+            String testPolicy,
+            String[] jvmArgs) throws IOException {
+
         final boolean isJar = testAppName.endsWith(".jar");
 
         /*
@@ -253,6 +262,12 @@ public class Util {
                 throw e;
             }
 
+        }
+
+        if (jvmArgs != null) {
+            for (String arg : jvmArgs) {
+                cmd.add(arg);
+            }
         }
 
         if (isJar) {
