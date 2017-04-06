@@ -263,6 +263,9 @@ ext.TESTCOMPILEARGSFILE = "testcompile.args"
 ext.TESTRUNARGSFILE = "testrun.args"
 ext.TESTJAVAPOLICYFILE = 'test.java.policy'
 
+// the file containing "extra" --add-exports
+ext.EXTRAADDEXPORTS = 'buildSrc/addExports'
+
 ext.MODULESOURCEPATH = "modulesourcepath.args"
 
 // These variables indicate what platform is running the build. Is
@@ -858,15 +861,53 @@ void commonModuleSetup(Project p, List<String> moduleChain) {
         addExportsFile.eachLine { line ->
             line = line.trim()
             if (!(line.startsWith("#") || line.equals(""))) {
-                // one line arguments are a bit easier to debug
-                //if (line.startsWith('--add-exports ')) {
-                //    line = line.replaceFirst('--add-exports ', '--add-exports=')
-                //}
-                line = line.replace('--add-exports *', '--add-exports=')
                 ae += line.split(' ')
             }
         }
-        p.ext.addExports  = ae.flatten()
+        p.ext.testAddExports  = ae.flatten()
+    }
+
+    // read in the temporary addExports file EXTRAADDEXPORTS)
+    //
+    // These extra --add-exports will be used in two places and so we
+    // create/modify two items:
+    // p.testAddExports - add the extra items so they are included in test builds
+    //
+    // p.extraAddExports - for use in any other place where we don't automatically update
+    //    for example any non modular, non 'test' compile, any compile that does not
+    //    use a module-source-path that includes the dependent modules
+    //
+    // Note that we don't modify the modular build (main, shims) because they use
+    // module-info directly, and we don't want to cover up any missing items there.
+    //
+    if (!rootProject.hasProperty("EXTRA_ADDEXPORTS_ARGS")) {
+        List<String> extraAddExportsList = []
+        String fullae = ""
+        File tmpaddExportsFile = new File(rootProject.projectDir, EXTRAADDEXPORTS)
+        if (tmpaddExportsFile.exists()) {
+            String nl = System.getProperty("line.separator")
+            tmpaddExportsFile.eachLine { line ->
+                line = line.trim()
+                fullae += line + nl
+                if (!(line.startsWith("#") || line.equals(""))) {
+                    extraAddExportsList += line.split(' ')
+                }
+            }
+        }
+        // This string is used in the creation of the build/*.args files
+        // so we preserve comments
+        if (!extraAddExportsList.isEmpty()) {
+            rootProject.ext.EXTRA_ADDEXPORTS_STRING = fullae
+        }
+        rootProject.ext.EXTRA_ADDEXPORTS_ARGS = extraAddExportsList
+    }
+
+    // use this variable, because it shows we have a non empty addition
+    if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
+        p.ext.extraAddExports = EXTRA_ADDEXPORTS_ARGS.flatten()
+        if (p.hasProperty("testAddExports")) {
+            p.testAddExports += EXTRA_ADDEXPORTS_ARGS.flatten()
+        }
     }
 }
 
@@ -1995,19 +2036,12 @@ project(":controls") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
 
-    // TODO JDK-8174944 Css2Bin really should be moved out and put into buildSrc if it can be
-    // TODO could change script to dynamically locate all .css files and create bss for them, probably better
-    // TODO also not sure there is any benefit to having css files in the the runtime modules at all
     processResources << {
-        ["$moduleDir/com/sun/javafx/scene/control/skin/caspian/caspian.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/embedded.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/fxvk.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/highcontrast.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/modena.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/touch.css"].each { css ->
+        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
+        cssFiles.include "**/*.css"
+        cssFiles.each { css ->
+            logger.info("converting CSS to BSS ${css}");
+
             javaexec {
                 executable = JAVA
                 workingDir = project.projectDir
@@ -2018,8 +2052,6 @@ project(":controls") {
         }
     }
 
-    // TODO - if the above TODO regarding Css2Bin is fixed, this should also
-    // be fixed.
     processShimsResources.dependsOn(project.task("copyShimBss", type: Copy) {
         from project.moduleDir
         into project.moduleShimsDir
@@ -3340,21 +3372,6 @@ allprojects {
 
         compile.options.compilerArgs += ["-XDignore.symbol.file", "-encoding", "UTF-8"]
 
-        // If I am a module....
-        if (project.hasProperty('moduleSourcePath') &&
-                (project.hasProperty('buildModule') && project.buildModule)) {
-            project.compileJava {
-                options.compilerArgs.addAll([
-                    '-implicit:none',
-                    '--module-source-path', project.moduleSourcePath
-                    ])
-            }
-            // no jars needed for modules
-            project.jar.enabled = false
-
-            // and redirect the resources into the module
-            project.processResources.destinationDir = project.moduleDir
-        }
         // we use a custom javadoc command
         project.javadoc.enabled = false
 
@@ -3365,6 +3382,22 @@ allprojects {
             }
         }
     } // tasks with javaCompile
+
+    // If I am a module....
+    if (project.hasProperty('moduleSourcePath') &&
+            (project.hasProperty('buildModule') && project.buildModule)) {
+        project.compileJava {
+            options.compilerArgs.addAll([
+                '-implicit:none',
+                '--module-source-path', project.moduleSourcePath
+                ])
+        }
+        // no jars needed for modules
+        project.jar.enabled = false
+
+        // and redirect the resources into the module
+        project.processResources.destinationDir = project.moduleDir
+    }
 
     if (project.hasProperty('moduleSourcePathShim') &&
             project.sourceSets.hasProperty('shims')) {
@@ -3411,9 +3444,19 @@ allprojects {
         project.test.jvmArgs += testPatchModuleArgs
     }
 
-    if (project.hasProperty('addExports')) {
-        project.compileTestJava.options.compilerArgs.addAll(addExports);
-        project.test.jvmArgs += addExports
+    /* Note: we should not have to add extraAddExports to the normal
+     * modular compile, as it contains all of the module-info files.
+     * In fact doing so might cover up a module-info issue.
+     * so we don't do it, and I will leave this commented out
+     * block as a reminder of this fact.
+    if (project.hasProperty('extraAddExports')) {
+        project.compileJava.options.compilerArgs.addAll(extraAddExports);
+    }
+    */
+
+    if (project.hasProperty('testAddExports')) {
+        project.compileTestJava.options.compilerArgs.addAll(testAddExports);
+        project.test.jvmArgs += testAddExports
     }
 
     if (rootProject.hasProperty("EXTRA_TEST_ARGS") && project.hasProperty('test')) {
@@ -3907,6 +3950,7 @@ compileTargets { t ->
     def buildRunArgsTask = task("buildRunArgs$t.capital",
             group: "Build", dependsOn: buildModulesTask) {
         outputs.file(runArgsFile);
+        inputs.file(EXTRAADDEXPORTS);
         doLast() {
             List<String>libpath = []
             List<String>modpath = []
@@ -3919,6 +3963,11 @@ compileTargets { t ->
 
             writeRunArgsFile(runArgsFile, computeLibraryPath(true), modpath)
             writeRunArgsFile(compileArgsFile, null, modpath)
+
+            if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
+                runArgsFile << EXTRA_ADDEXPORTS_STRING
+                compileArgsFile << EXTRA_ADDEXPORTS_STRING
+            }
         }
     }
     buildModules.dependsOn(buildRunArgsTask)
@@ -4258,6 +4307,7 @@ compileTargets { t ->
         outputs.file(testCompileArgsFile)
         outputs.file(testJavaPolicyFile)
         outputs.file(runJavaPolicyFile)
+        inputs.file(EXTRAADDEXPORTS);
 
         doLast() {
             rootProject.buildDir.mkdir()
@@ -4304,6 +4354,11 @@ compileTargets { t ->
 
             writeRunArgsFile(testCompileArgsFile, null, modpath)
             writeRunArgsFile(testRunArgsFile, computeLibraryPath(true), modpath)
+
+            if (rootProject.hasProperty("EXTRA_ADDEXPORTS_STRING")) {
+                testCompileArgsFile << EXTRA_ADDEXPORTS_STRING
+                testRunArgsFile << EXTRA_ADDEXPORTS_STRING
+            }
         }
     }
     sdk.dependsOn(testArgFiles)
