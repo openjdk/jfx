@@ -29,6 +29,8 @@
  * transformations, canvas, input, painting, image handling, and effects),
  * as well as APIs for animation, css, concurrency, geometry, printing, and
  * windowing.
+ *
+ * @since 9
  */
 module javafx.graphics {
     requires transitive javafx.base;

@@ -26,6 +26,8 @@
 /**
  * Defines the UI controls, charts, and skins that are available
  * for the JavaFX UI toolkit.
+ *
+ * @since 9
  */
 module javafx.controls {
     requires transitive javafx.base;

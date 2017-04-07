@@ -29,6 +29,8 @@
  * embedding Swing inside a JavaFX application) and
  * {@link javafx.embed.swing.JFXPanel} (for embedding JavaFX inside a Swing
  * application).
+ *
+ * @since 9
  */
 module javafx.swing {
     requires transitive java.desktop;

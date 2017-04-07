@@ -27,6 +27,8 @@
  * Defines APIs for playback of media and audio content, as part of the
  * JavaFX UI toolkit, including {@link javafx.scene.media.MediaView} and
  * {@link javafx.scene.media.MediaPlayer}.
+ *
+ * @since 9
  */
 module javafx.media {
     requires transitive javafx.base;

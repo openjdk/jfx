@@ -25,6 +25,8 @@
 
 /**
  * Defines the FXML APIs for the JavaFX UI toolkit.
+ *
+ * @since 9
  */
 module javafx.fxml {
     requires transitive javafx.base;

@@ -23,7 +23,11 @@
  * questions.
  */
 
-
+/**
+ * Defines the Java packager tool, javapackager.
+ *
+ * @since 9
+ */
 module jdk.packager {
     requires jdk.jlink;
     requires jdk.jdeps;

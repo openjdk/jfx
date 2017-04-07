@@ -23,7 +23,11 @@
  * questions.
  */
 
-
+/**
+ * Defines the services used by the Java packager tool.
+ *
+ * @since 9
+ */
 module jdk.packager.services {
     exports jdk.packager.services;
 
