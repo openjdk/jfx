@@ -38,7 +38,7 @@ import java.lang.module.ModuleDescriptor;
  * An object is reflectively accessible if the module containing that
  * object opens (see {@code Module.isOpen}) the containing package to the
  * {@code javafx.fxml} module, either in its {@link ModuleDescriptor}
- * (e.g., in its module-info.class) or by calling {@link Module#addOpens}.
+ * (e.g., in its module-info.class) or by calling {@code Module.addOpens}.
  * An object is also reflectively accessible if it is declared as a public
  * member, is in a public class, and the module containing that class
  * exports (see {@code Module.isExported(String,Module)})
