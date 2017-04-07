@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,8 @@ import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Side;
 import javafx.scene.Scene;
+import javafx.scene.Group;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Button;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
@@ -259,5 +261,27 @@ public class MenuButtonTest {
         // MenuButton should still be 50%
         assertEquals(.5, mb.getOpacity(), 0.00001);
 
+    }
+
+    @Test public void testSetContentDisplayGraphicOnly() {
+        Button btn = new Button("1234");
+
+        MenuButton mb1 = new MenuButton("Sample Text", btn);
+        mb1.setStyle("-fx-label-padding:0;");
+        mb1.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+
+        MenuButton mb2 = new MenuButton("Sample Text", btn);
+        mb2.setStyle("-fx-label-padding:100;");
+        mb2.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+
+        Scene scene = new Scene(new Group(mb1, mb2), 400, 400);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        Toolkit.getToolkit().firePulse();
+
+        // label-padding should not affect GRAPHIC_ONLY MenuButton size
+        assertEquals(mb1.getWidth(), mb2.getWidth(), 0.00001);
+        assertEquals(mb1.getHeight(), mb2.getHeight(), 0.00001);
     }
 }
