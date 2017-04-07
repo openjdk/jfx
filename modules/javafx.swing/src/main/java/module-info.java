@@ -30,6 +30,7 @@
  * {@link javafx.embed.swing.JFXPanel} (for embedding JavaFX inside a Swing
  * application).
  *
+ * @moduleGraph
  * @since 9
  */
 module javafx.swing {

@@ -26,6 +26,7 @@
 /**
  * Defines the services used by the Java packager tool.
  *
+ * @moduleGraph
  * @since 9
  */
 module jdk.packager.services {

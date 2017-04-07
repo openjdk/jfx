@@ -27,6 +27,7 @@
  * Defines the base APIs for the JavaFX UI toolkit, including APIs for
  * bindings, properties, collections, and events.
  *
+ * @moduleGraph
  * @since 9
  */
 module javafx.base {

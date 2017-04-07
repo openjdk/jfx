@@ -26,6 +26,7 @@
 /**
  * Defines the Java packager tool, javapackager.
  *
+ * @moduleGraph
  * @since 9
  */
 module jdk.packager {

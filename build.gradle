@@ -3502,6 +3502,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     setDestinationDir(new File(buildDir, 'javadoc'));
 
     exclude("com/**/*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
+    options.tags("moduleGraph:X")
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
     options.bottom("${javadocBottom}")

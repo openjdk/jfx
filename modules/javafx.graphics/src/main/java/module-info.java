@@ -30,6 +30,7 @@
  * as well as APIs for animation, css, concurrency, geometry, printing, and
  * windowing.
  *
+ * @moduleGraph
  * @since 9
  */
 module javafx.graphics {

@@ -28,6 +28,7 @@
  * JavaFX UI toolkit, including {@link javafx.scene.media.MediaView} and
  * {@link javafx.scene.media.MediaPlayer}.
  *
+ * @moduleGraph
  * @since 9
  */
 module javafx.media {
