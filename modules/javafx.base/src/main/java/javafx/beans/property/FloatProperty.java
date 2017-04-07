@@ -31,6 +31,10 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableFloatValue;
 import com.sun.javafx.binding.Logging;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 /**
  * This class defines a {@link Property} wrapping a {@code float} value.
  * <p>
@@ -147,6 +151,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
             throw new NullPointerException("Property cannot be null");
         }
         return new FloatPropertyBase() {
+            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, property);
             }
@@ -164,7 +169,10 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
             @Override
             protected void finalize() throws Throwable {
                 try {
-                    BidirectionalBinding.unbindNumber(property, this);
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        BidirectionalBinding.unbindNumber(property, this);
+                        return null;
+                    }, acc);
                 } finally {
                     super.finalize();
                 }
@@ -194,7 +202,7 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
     @Override
     public ObjectProperty<Float> asObject() {
         return new ObjectPropertyBase<Float> () {
-
+            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, FloatProperty.this);
             }
@@ -212,7 +220,10 @@ public abstract class FloatProperty extends ReadOnlyFloatProperty implements
             @Override
             protected void finalize() throws Throwable {
                 try {
-                    BidirectionalBinding.unbindNumber(this, FloatProperty.this);
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        BidirectionalBinding.unbindNumber(this, FloatProperty.this);
+                        return null;
+                    }, acc);
                 } finally {
                     super.finalize();
                 }
