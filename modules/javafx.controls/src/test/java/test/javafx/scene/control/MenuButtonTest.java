@@ -38,6 +38,8 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -283,5 +285,43 @@ public class MenuButtonTest {
         // label-padding should not affect GRAPHIC_ONLY MenuButton size
         assertEquals(mb1.getWidth(), mb2.getWidth(), 0.00001);
         assertEquals(mb1.getHeight(), mb2.getHeight(), 0.00001);
+    }
+
+    boolean onShowingPass;
+    boolean onShownPass;
+    boolean onHidingPass;
+    boolean onHiddenPass;
+    @Test public void test_jdk_8175963_showHideEvents() {
+        MenuItem it1 = new MenuItem("1");
+        MenuButton mbtn = new MenuButton("MenuButton", null, it1);
+
+        mbtn.addEventHandler(MenuButton.ON_SHOWING, event -> {
+            assertEquals("event is not of type MenuButton.ON_SHOWING",
+                event.getEventType(), MenuButton.ON_SHOWING);
+            onShowingPass = true;
+        });
+        mbtn.addEventHandler(MenuButton.ON_SHOWN, event -> {
+            assertEquals("event is not of type MenuButton.ON_SHOWN",
+                event.getEventType(), MenuButton.ON_SHOWN);
+            onShownPass = true;
+        });
+        mbtn.addEventHandler(MenuButton.ON_HIDING, event -> {
+            assertEquals("event is not of type MenuButton.ON_HIDING",
+                event.getEventType(), MenuButton.ON_HIDING);
+            onHidingPass = true;
+        });
+        mbtn.addEventHandler(MenuButton.ON_HIDDEN, event -> {
+            assertEquals("event is not of type  MenuButton.ON_HIDDEN",
+                event.getEventType(), MenuButton.ON_HIDDEN);
+            onHiddenPass = true;
+        });
+
+        mbtn.show();
+        mbtn.hide();
+
+        assertTrue("OnShowing event not received", onShowingPass);
+        assertTrue("onShown event not received", onShownPass);
+        assertTrue("onHiding event not received", onHidingPass);
+        assertTrue("onHidden event not received", onHiddenPass);
     }
 }
