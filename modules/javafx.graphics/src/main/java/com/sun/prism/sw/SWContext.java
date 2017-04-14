@@ -327,16 +327,20 @@ final class SWContext {
 
     SWContext(ResourceFactory factory) {
         this.factory = factory;
-        if (PrismSettings.useMarlinRasterizer) {
-            if (PrismSettings.useMarlinRasterizerDP) {
-                this.shapeRenderer = new DMarlinShapeRenderer();
-            } else {
+        switch (PrismSettings.rasterizerSpec) {
+            case JavaPisces:
+                this.shapeRenderer = new JavaShapeRenderer();
+                break;
+            case NativePisces:
+                this.shapeRenderer = new NativeShapeRenderer();
+                break;
+            case FloatMarlin:
                 this.shapeRenderer = new MarlinShapeRenderer();
-            }
-        } else if (PrismSettings.doNativePisces) {
-            this.shapeRenderer = new NativeShapeRenderer();
-        } else {
-            this.shapeRenderer = new JavaShapeRenderer();
+                break;
+            default:
+            case DoubleMarlin:
+                this.shapeRenderer = new DMarlinShapeRenderer();
+                break;
         }
     }
 
