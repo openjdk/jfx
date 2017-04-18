@@ -3357,7 +3357,7 @@ void BytecodeGenerator::emitComplexPopScopes(RegisterID* scope, ControlFlowConte
 
         Vector<ControlFlowContext> savedScopeContextStack;
         Vector<SwitchInfo> savedSwitchContextStack;
-        Vector<std::unique_ptr<ForInContext>> savedForInContextStack;
+        Vector<RefPtr<ForInContext>> savedForInContextStack;
         Vector<TryContext> poppedTryContexts;
         Vector<SymbolTableStackEntry> savedSymbolTableStack;
         LabelScopeStore savedLabelScopes;
@@ -3386,7 +3386,7 @@ void BytecodeGenerator::emitComplexPopScopes(RegisterID* scope, ControlFlowConte
                 m_switchContextStack.shrink(finallyContext.switchContextStackSize);
             }
             if (flipForIns) {
-                savedForInContextStack.swap(m_forInContextStack);
+                savedForInContextStack = m_forInContextStack;
                 m_forInContextStack.shrink(finallyContext.forInContextStackSize);
             }
             if (flipTries) {
@@ -3436,7 +3436,7 @@ void BytecodeGenerator::emitComplexPopScopes(RegisterID* scope, ControlFlowConte
             if (flipSwitches)
                 m_switchContextStack = savedSwitchContextStack;
             if (flipForIns)
-                m_forInContextStack.swap(savedForInContextStack);
+                m_forInContextStack = savedForInContextStack;
             if (flipTries) {
                 ASSERT(m_tryContextStack.size() == finallyContext.tryContextStackSize);
                 for (unsigned i = poppedTryContexts.size(); i--;) {
@@ -3998,7 +3998,7 @@ void BytecodeGenerator::pushIndexedForInScope(RegisterID* localRegister, Registe
 {
     if (!localRegister)
         return;
-    m_forInContextStack.append(std::make_unique<IndexedForInContext>(localRegister, indexRegister));
+    m_forInContextStack.append(adoptRef(new IndexedForInContext(localRegister, indexRegister)));
 }
 
 void BytecodeGenerator::popIndexedForInScope(RegisterID* localRegister)
@@ -4099,7 +4099,7 @@ void BytecodeGenerator::pushStructureForInScope(RegisterID* localRegister, Regis
 {
     if (!localRegister)
         return;
-    m_forInContextStack.append(std::make_unique<StructureForInContext>(localRegister, indexRegister, propertyRegister, enumeratorRegister));
+    m_forInContextStack.append(adoptRef(new StructureForInContext(localRegister, indexRegister, propertyRegister, enumeratorRegister)));
 }
 
 void BytecodeGenerator::popStructureForInScope(RegisterID* localRegister)
