@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1985,11 +1985,13 @@ is being used to size a border should also be in pixels.
 }
 /* the color over which the user is hovering */
 .color-palette-region > .color-square.hover-square {
-    -fx-background-color: -fx-faint-focus-color, -fx-focus-color;
+    -fx-background-color: -fx-faint-focus-color, white;
     -fx-background-insets: -3,-1;
     -fx-background-radius: 5,0;
     -fx-scale-x: 1.5;
     -fx-scale-y: 1.5;
+    -fx-border-color: -fx-focus-color;
+    -fx-border-insets: -1, -1;
 }
 /* ------- CUSTOM COLOR DIALOG ------- */
 .custom-color-dialog > .color-rect-pane {

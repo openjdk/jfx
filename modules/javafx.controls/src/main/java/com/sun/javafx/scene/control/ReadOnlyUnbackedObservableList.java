@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 import javafx.beans.InvalidationListener;
 import com.sun.javafx.collections.ListListenerHelper;
@@ -288,6 +289,7 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
         throw new UnsupportedOperationException("Not supported.");
     }
 
+    // Iterator to traverse the list of selected indices in both directions.
     private static class SelectionListIterator<E> implements ListIterator<E> {
         private int pos;
         private final ReadOnlyUnbackedObservableList<E> list;
@@ -306,6 +308,9 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
         }
 
         @Override public E next() {
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
             return list.get(pos++);
         }
 
@@ -314,11 +319,14 @@ public abstract class ReadOnlyUnbackedObservableList<E> extends ObservableListBa
         }
 
         @Override public E previous() {
-            return list.get(pos--);
+            if (!hasPrevious()) {
+                throw new NoSuchElementException();
+            }
+            return list.get(--pos);
         }
 
         @Override public int nextIndex() {
-            return pos + 1;
+            return pos;
         }
 
         @Override public int previousIndex() {
