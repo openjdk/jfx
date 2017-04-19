@@ -305,7 +305,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Get the preferred width of the text
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
-        final String string = labeled.getText();
+        String string = labeled.getText();
         boolean emptyText = string == null || string.isEmpty();
         double widthPadding = leftInset + rightInset;
 
@@ -313,7 +313,15 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             widthPadding += leftLabelPadding() + rightLabelPadding();
         }
 
-        double textWidth = emptyText ? 0 : Utils.computeTextWidth(font, string, 0);
+        double textWidth = 0.0;
+        if (!emptyText) {
+            if (labeled.isMnemonicParsing()) {
+                if (string.contains("_") && (string.indexOf("_") != string.length()-1)) {
+                    string = string.replaceFirst("_", "");
+                }
+            }
+            textWidth = Utils.computeTextWidth(font, string, 0);
+        }
 
         // Fix for RT-39889
         double graphicWidth = graphic == null ? 0.0 :
