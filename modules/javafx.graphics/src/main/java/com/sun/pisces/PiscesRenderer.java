@@ -343,14 +343,20 @@ public final class PiscesRenderer {
     public void emitAndClearAlphaRow(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
         int rowNum)
     {
-        if ((pix_x_to - pix_x_from) > alphaDeltas.length) {
+        this.emitAndClearAlphaRow(alphaMap, alphaDeltas, pix_y, pix_x_from, pix_x_to, 0, rowNum);
+    }
+    
+    public void emitAndClearAlphaRow(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
+        int pix_x_off, int rowNum)
+    {
+        if (pix_x_off < 0 || (pix_x_off + (pix_x_to - pix_x_from)) > alphaDeltas.length) {
             throw new IllegalArgumentException("rendering range exceeds length of data");
         }
-        this.emitAndClearAlphaRowImpl(alphaMap, alphaDeltas, pix_y, pix_x_from, pix_x_to, rowNum);
+        this.emitAndClearAlphaRowImpl(alphaMap, alphaDeltas, pix_y, pix_x_from, pix_x_to, pix_x_off, rowNum);
     }
 
     private native void emitAndClearAlphaRowImpl(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
-        int rowNum);
+        int pix_x_off, int rowNum);
 
     public void fillAlphaMask(byte[] mask, int x, int y, int width, int height, int offset, int stride) {
         if (mask == null) {
