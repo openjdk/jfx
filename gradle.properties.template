@@ -189,6 +189,11 @@
 
 #INCREMENTAL = true
 
+# Specify an option to -Xdoclint, such as "none" or "all" (default),
+# used by the javadoc task.
+
+#DOC_LINT = none
+
 # Specify compiler LINT arguments. These values are defined by the javac compiler. You can
 # study the list of available options here https://docs.oracle.com/javase/7/docs/technotes/tools/solaris/javac.html
 # If LINT is empty, then no warning are generated. Otherwise, LINT should be a space or comma separated

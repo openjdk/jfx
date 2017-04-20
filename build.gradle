@@ -443,8 +443,8 @@ ext.IS_DEBUG_NATIVE = CONF == "DebugNative"
 defineProperty("LINT", "none")
 ext.IS_LINT = LINT != "none"
 
-defineProperty("DOC_LINT", "none")
-ext.IS_DOC_LINT = DOC_LINT != "none"
+defineProperty("DOC_LINT", "all")
+ext.IS_DOC_LINT = DOC_LINT != ""
 
 // Specifies whether to use the "useDepend" option when compiling Java sources
 defineProperty("USE_DEPEND", "true")
@@ -3512,7 +3512,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
         options.links(JDK_DOCS);
     }
     options.addBooleanOption("XDignore.symbol.file").setValue(true);
-    options.addBooleanOption("Xdoclint:none").setValue(!IS_DOC_LINT);
+    options.addBooleanOption("Xdoclint:${DOC_LINT}").setValue(IS_DOC_LINT);
     options.addBooleanOption("javafx").setValue(true);
     options.addBooleanOption("use").setValue(true);
 
