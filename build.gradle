@@ -595,7 +595,6 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                 rootProject.dependencies.add(fetchToolsConfig, "javafx:$basename:$ver", {
                     artifact {
                         name = basename
-                        version = ver
                         type = ext
                     }
                 })
@@ -706,7 +705,7 @@ void ant(String conf,   // platform configuration
             commandLine ant, "-Dbuild.compiler=javac1.7"
         }
         if ((conf != null) && !rootProject.defaultHostTarget.equals(conf)) {
-            def targetProperties = rootProject.ext[t.trim().toUpperCase()]
+            def targetProperties = rootProject.ext[conf.trim().toUpperCase()]
             args("-Dcross.platform=$conf")
             if (targetProperties.containsKey('arch')) {
                 args("-Dcross.platform.arch=${targetProperties.arch}")
@@ -988,7 +987,6 @@ compileTargets { t ->
     if (!targetProperties.containsKey('includeSWT')) targetProperties.includeSWT = true
     if (!targetProperties.containsKey('includeSwing')) targetProperties.includeSwing = true
     if (!targetProperties.containsKey('includeNull3d')) targetProperties.includeNull3d = true
-    if (!targetProperties.containsKey('includeLens')) targetProperties.includeLens = false
     if (!targetProperties.containsKey('includeMonocle')) targetProperties.includeMonocle = false
     if (!targetProperties.containsKey('includeEGL')) targetProperties.includeEGL = false
 
@@ -2544,8 +2542,10 @@ project(":fxpackager") {
         }
     }
 
-    assemble.dependsOn compileLauncher;
-    assemble.dependsOn buildJavaPackager
+    if (COMPILE_FXPACKAGER) {
+        assemble.dependsOn compileLauncher;
+        assemble.dependsOn buildJavaPackager
+    }
 
     classes << {
         // Copy all of the download libraries to libs directory for the sake of the IDEs
@@ -4049,10 +4049,6 @@ compileTargets { t ->
                     exclude ("com/sun/prism/es2/EGL*")
                 }
 
-                if (!targetProperties.includeLens) {
-                    exclude ("com/sun/glass/ui/lens")
-                }
-
                 if (!targetProperties.includeMonocle) {
                     exclude ("com/sun/glass/ui/monocle")
                     exclude("com/sun/prism/es2/Monocle*")
@@ -4127,6 +4123,11 @@ compileTargets { t ->
             final File javafxProperties = file("${moduleLibDir}/javafx.properties")
             outputs.file(javafxProperties)
 
+            if (targetProperties.containsKey("javafxPlatformProperties")) {
+                final File javafxPlatformProperties = file("${moduleLibDir}/javafx.platform.properties")
+                outputs.file(javafxPlatformProperties)
+            }
+
             doLast {
                 mkdir moduleLibDir
 
@@ -4147,8 +4148,6 @@ compileTargets { t ->
                 // Embedded builds define this file as well
                 if (targetProperties.containsKey("javafxPlatformProperties")) {
                     final File javafxPlatformProperties = file("${moduleLibDir}/javafx.platform.properties")
-                    outputs.file(javafxPlatformProperties)
-
                     javafxPlatformProperties.delete()
                     javafxPlatformProperties << targetProperties.javafxPlatformProperties
                     javafxPlatformProperties << "\n"
