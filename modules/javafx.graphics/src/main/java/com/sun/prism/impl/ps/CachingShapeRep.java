@@ -380,6 +380,8 @@ class CachingShapeRepState {
     private static final BaseTransform IDENT = BaseTransform.IDENTITY_TRANSFORM;
     // NOTE: need separate MaskCache per context?
     private static final MaskCache maskCache = new MaskCache();
+    // Number of back to back similar renderings before we cache the mask
+    private static final int CACHE_THRESHOLD = 2;
 
     private int renderCount;
     private Boolean tryCache;
@@ -428,14 +430,31 @@ class CachingShapeRepState {
         // The following is safe; this method does not mutate xform
         BaseTransform xform = g.getTransformNoClone();
 
+        boolean doResetMask;
+        boolean doUpdateMask;
+
+        if (lastXform == null) {
+            doResetMask = doUpdateMask = true;
+        } else if (equalsIgnoreTranslation(xform, lastXform)) {
+            doResetMask = false;
+            doUpdateMask = (xform.getMxt() != lastXform.getMxt() ||
+                            xform.getMyt() != lastXform.getMyt());
+        } else {
+            doResetMask = doUpdateMask = true;
+        }
+
         // we need to invalidate our cached MaskTexData if:
         //   - lastXform is null, indicating that we were marked invalid
         //     (due to a geometry or location change), or
         //   - the current transform is significantly different than the last
-        if (lastXform == null || !equalsIgnoreTranslation(xform, lastXform)) {
+        if (doResetMask) {
             invalidateMaskTexData();
-            if (lastXform != null) {
-                renderCount = 0;
+
+            renderCount = 0;
+            if (lastXform == null) {
+                lastXform = xform.copy();
+            } else {
+                lastXform.setTransform(xform);
             }
         }
 
@@ -466,7 +485,7 @@ class CachingShapeRepState {
 
         renderCount++;
         if (tryCache == Boolean.FALSE ||
-            renderCount <= 1 ||
+            renderCount < CACHE_THRESHOLD ||
             (!(g instanceof BaseShaderGraphics)) ||
             ((BaseShaderGraphics)g).isComplexPaint())
         {
@@ -488,7 +507,7 @@ class CachingShapeRepState {
 
         BaseShaderGraphics bsg = (BaseShaderGraphics)g;
         BaseShaderContext context = bsg.getContext();
-        if (lastXform == null || !lastXform.equals(xform)) {
+        if (doUpdateMask || texData.cacheEntry == null) {
             // need to create a new mask texture, or reuse an existing one
             if (xformBounds == null) {
                 if (xform.isIdentity()) {
@@ -510,12 +529,6 @@ class CachingShapeRepState {
                 // matches the given parameters, or failing that, will create
                 // a new mask and put it in the cache
                 maskCache.get(context, texData, shape, stroke, xform, xformBounds, boundsCopy, g.isAntialiasedShape());
-            }
-
-            if (lastXform == null) {
-                lastXform = xform.copy();
-            } else {
-                lastXform.setTransform(xform);
             }
         }
 
