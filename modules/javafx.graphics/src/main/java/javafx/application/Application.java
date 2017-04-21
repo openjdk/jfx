@@ -66,10 +66,8 @@ import com.sun.javafx.css.StyleManager;
  * <p>Note that the {@code start} method is abstract and must be overridden.
  * The {@code init} and {@code stop} methods have concrete implementations
  * that do nothing.</p>
- * <p>The {@code Application} subclass must be declared public, must have a
- * public no-argument constructor, and the
- * containing package must be exported (see {@code Module.isExported(String,Module)})
- * to the {@code javafx.graphics} module.</p>
+ * <p>The {@code Application} subclass must be declared public and must have a
+ * public no-argument constructor.</p>
  *
  * <p>Calling {@link Platform#exit} is the preferred way to explicitly terminate
  * a JavaFX Application. Directly calling {@link System#exit} is
@@ -81,6 +79,27 @@ import com.sun.javafx.css.StyleManager;
  * FX toolkit has terminated or from a ShutdownHook, that is, after the
  * {@link #stop} method returns or {@link System#exit} is called.
  * </p>
+ *
+ * <p><b>Deploying an Application as a Module</b></p>
+ * <p>
+ * If the {@code Application} subclass is in a named module then that class
+ * must be accessible to the {@code javafx.graphics} module.
+ * Otherwise, an exception will be thrown when the application is launched.
+ * This means that
+ * in addition to the class itself being declared public, the module must
+ * {@link Module#isExported(String,Module) export} the containing package to
+ * at least the {@code javafx.graphics} module, either in its
+ * {@code module-info.class} or by calling
+ * {@link Module#addExports}.
+ * </p>
+ * <p>
+ * For example, if the {@code Application} subclass is in the {@code com.foo}
+ * package in the {@code foo.app} module, the {@code module-info.java} might
+ * look like this:
+ * </p>
+ * <pre>{@code module foo.app {
+ *     exports com.foo to javafx.graphics;
+ * }}</pre>
  *
  * <p><b>Parameters</b></p>
  * <p>
@@ -211,8 +230,9 @@ public abstract class Application {
      * This is equivalent to launch(TheClass.class, args) where TheClass is the
      * immediately enclosing class of the method that called launch. It must
      * be a public subclass of Application with a public no-argument
-     * constructor, in a package that is exported
-     * (see {@code Module.isExported(String,Module)}) to at least the
+     * constructor, in a package that is
+     * {@link Module#isExported(String,Module) exported}
+     * (or {@link Module#isOpen(String,Module) opened}) to at least the
      * {@code javafx.graphics} module, or a RuntimeException will be thrown.
      *
      * <p>
