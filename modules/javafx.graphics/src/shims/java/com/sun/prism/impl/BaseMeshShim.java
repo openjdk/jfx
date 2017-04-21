@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,39 +23,19 @@
  * questions.
  */
 
-package com.sun.javafx.sg.prism;
+package com.sun.prism.impl;
 
-import com.sun.prism.impl.BaseMesh;
-
-public class NGTriangleMeshShim extends NGTriangleMesh {
-
-    @Override
-    public int[] test_getFaceSmoothingGroups() {
-        return super.test_getFaceSmoothingGroups();
+public class BaseMeshShim {
+    public static boolean test_isVertexBufferNull(BaseMesh mesh) {
+        return mesh.test_isVertexBufferNull();
     }
 
-    @Override
-    public int[] test_getFaces() {
-        return super.test_getFaces();
+    public static int test_getVertexBufferLength(BaseMesh mesh) {
+        return mesh.test_getVertexBufferLength();
     }
 
-    @Override
-    public float[] test_getPoints() {
-        return super.test_getPoints();
-    }
-
-    @Override
-    public float[] test_getNormals() {
-        return super.test_getNormals();
-    }
-
-    @Override
-    public float[] test_getTexCoords() {
-        return super.test_getTexCoords();
-    }
-
-    public static BaseMesh test_getMesh(NGTriangleMesh triMesh) {
-        return (BaseMesh) triMesh.test_getMesh();
+    public static int test_getNumberOfVertices(BaseMesh mesh) {
+        return mesh.test_getNumberOfVertices();
     }
 
 }
