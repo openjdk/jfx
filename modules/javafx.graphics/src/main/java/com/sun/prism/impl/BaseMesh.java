@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -197,18 +197,20 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
                 mf2vb = vbCount / VERTEX_SIZE_VB;
 
                 if (vertexBuffer.length <= vbCount) {
-                    final int incrementedSize = vbCount + 20; // Let's increment by 20
-                    float[] temp = new float[incrementedSize * VERTEX_SIZE_VB];
+                    int numVertices = vbCount / VERTEX_SIZE_VB;
+                    // Increment by 1/8th of numVertices or 6 (by 2 triangles) which ever is greater
+                    final int newNumVertices = numVertices + Math.max((numVertices >> 3), 6);
+                    float[] temp = new float[newNumVertices * VERTEX_SIZE_VB];
                     System.arraycopy(vertexBuffer, 0, temp, 0, vertexBuffer.length);
                     vertexBuffer = temp;
                     // Enlarge cachedNormals, cachedTangents and cachedBitangents too
-                    temp = new float[incrementedSize * 3];
+                    temp = new float[newNumVertices * 3];
                     System.arraycopy(cachedNormals, 0, temp, 0, cachedNormals.length);
                     cachedNormals = temp;
-                    temp = new float[incrementedSize * 3];
+                    temp = new float[newNumVertices * 3];
                     System.arraycopy(cachedTangents, 0, temp, 0, cachedTangents.length);
                     cachedTangents = temp;
-                    temp = new float[incrementedSize * 3];
+                    temp = new float[newNumVertices * 3];
                     System.arraycopy(cachedBitangents, 0, temp, 0, cachedBitangents.length);
                     cachedBitangents = temp;
                 }
@@ -813,6 +815,21 @@ public abstract class BaseMesh extends BaseGraphicsResource implements Mesh {
         // Assign to 1st smoothing group if smoothing is null.
         face[6] = smoothing != null ? smoothing[fIdx] : 1;
         return face;
+    }
+
+    // Package scope method for testing
+    boolean test_isVertexBufferNull() {
+        return vertexBuffer == null;
+    }
+
+    // Package scope method for testing
+    int test_getVertexBufferLength() {
+        return vertexBuffer.length;
+    }
+
+    // Package scope method for testing
+    int test_getNumberOfVertices() {
+        return numberOfVertices;
     }
 
     class MeshGeomComp2VB {

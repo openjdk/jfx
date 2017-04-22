@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,39 +23,14 @@
  * questions.
  */
 
-package com.sun.javafx.sg.prism;
+package javafx.scene.shape;
 
-import com.sun.prism.impl.BaseMesh;
+import com.sun.javafx.sg.prism.NGTriangleMesh;
 
-public class NGTriangleMeshShim extends NGTriangleMesh {
+public class TriangleMeshShim {
 
-    @Override
-    public int[] test_getFaceSmoothingGroups() {
-        return super.test_getFaceSmoothingGroups();
-    }
-
-    @Override
-    public int[] test_getFaces() {
-        return super.test_getFaces();
-    }
-
-    @Override
-    public float[] test_getPoints() {
-        return super.test_getPoints();
-    }
-
-    @Override
-    public float[] test_getNormals() {
-        return super.test_getNormals();
-    }
-
-    @Override
-    public float[] test_getTexCoords() {
-        return super.test_getTexCoords();
-    }
-
-    public static BaseMesh test_getMesh(NGTriangleMesh triMesh) {
-        return (BaseMesh) triMesh.test_getMesh();
+    public static NGTriangleMesh getNGMesh(Mesh mesh) {
+        return (NGTriangleMesh) mesh.getPGMesh();
     }
 
 }
