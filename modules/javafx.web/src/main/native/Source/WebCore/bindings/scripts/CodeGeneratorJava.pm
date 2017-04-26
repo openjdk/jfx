@@ -263,9 +263,6 @@ my %classData = (
             "Node renameNode(Node n, String namespaceURI, String qualifiedName) throws DOMException",
             "DOMConfiguration getDomConfig()",
             "void normalizeDocument()",
-            # document.documentURI was writable in DOM3 Core, but is read-only in DOM4
-            # (see http://www.w3.org/TR/2011/WD-dom-20110915/#document).
-            "void setDocumentURI(String documentURI)"
         ],
         skip => {
             "webkitExitPointerLock" => 1,

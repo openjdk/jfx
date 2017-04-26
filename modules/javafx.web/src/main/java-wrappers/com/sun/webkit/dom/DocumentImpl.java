@@ -104,6 +104,11 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
     }
     native static String getDocumentURIImpl(long peer);
 
+    public void setDocumentURI(String value) {
+        setDocumentURIImpl(getPeer(), value);
+    }
+    native static void setDocumentURIImpl(long peer, String value);
+
     public AbstractView getDefaultView() {
         return DOMWindowImpl.getImpl(getDefaultViewImpl(getPeer()));
     }
@@ -1377,9 +1382,6 @@ public class DocumentImpl extends NodeImpl implements Document, XPathEvaluator, 
         throw new UnsupportedOperationException("Not supported yet.");
     }
     public void normalizeDocument() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-    public void setDocumentURI(String documentURI) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 }

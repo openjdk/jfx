@@ -79,7 +79,7 @@
 
     [RaisesException] Node               adoptNode([Default=Undefined] optional Node source);
 
-#if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C || defined(LANGUAGE_GOBJECT) && LANGUAGE_GOBJECT
+#if defined(LANGUAGE_OBJECTIVE_C) && LANGUAGE_OBJECTIVE_C || defined(LANGUAGE_GOBJECT) && LANGUAGE_GOBJECT || defined(LANGUAGE_JAVA) && LANGUAGE_JAVA
     // document.documentURI was writable in DOM3 Core, but is read-only in DOM4
     // (see http://www.w3.org/TR/2011/WD-dom-20110915/#document). We need to keep
     // the writable version around for Objective C clients, but are moving to

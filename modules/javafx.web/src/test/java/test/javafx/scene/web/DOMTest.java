@@ -27,9 +27,12 @@ package test.javafx.scene.web;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import javafx.scene.web.WebEngine;
 
 import org.junit.Test;
 import org.w3c.dom.*;
@@ -394,6 +397,21 @@ public class DOMTest extends TestBase {
                     String cssText = r.getCssText();
                 }
             }
+        });
+    }
+
+    // JDK-8179321
+    // Still we are supporting DOM3 interface, need to relook once we move to
+    // DOM4 spec.
+    @Test public void testDocumentURIForDOM3Compliance() {
+        // According to DOM3 spec, page loaded without base url(i.e as String)
+        // must have "document.documentURI" value as null.
+        loadContent("test");
+        submit(() -> {
+            final WebEngine webEngine = getEngine();
+            final Document document = webEngine.getDocument();
+            assertNotNull(document);
+            assertNull(document.getDocumentURI());
         });
     }
 
