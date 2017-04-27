@@ -8,7 +8,7 @@ java.desktop
 java.instrument
 java.logging
 java.management
-java.management.rmi 
+java.management.rmi
 java.naming
 java.prefs
 java.rmi
@@ -35,10 +35,9 @@ jdk.httpserver
 jdk.jdwp.agent
 jdk.jfr
 jdk.jsobject
-jdk.jvmstat
 jdk.localedata
 jdk.management
-jdk.management.agent 
+jdk.management.agent
 jdk.naming.dns
 jdk.naming.rmi
 jdk.net
@@ -48,6 +47,5 @@ jdk.sctp
 jdk.security.auth
 jdk.security.jgss
 jdk.unsupported
-jdk.vm.ci
 jdk.xml.dom
 jdk.zipfs
