@@ -3564,6 +3564,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     }
     options.addBooleanOption("XDignore.symbol.file").setValue(true);
     options.addBooleanOption("Xdoclint:${DOC_LINT}").setValue(IS_DOC_LINT);
+    options.addBooleanOption("html5").setValue(true);
     options.addBooleanOption("javafx").setValue(true);
     options.addBooleanOption("use").setValue(true);
 
