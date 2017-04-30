@@ -345,7 +345,7 @@ public final class PiscesRenderer {
     {
         this.emitAndClearAlphaRow(alphaMap, alphaDeltas, pix_y, pix_x_from, pix_x_to, 0, rowNum);
     }
-    
+
     public void emitAndClearAlphaRow(byte[] alphaMap, int[] alphaDeltas, int pix_y, int pix_x_from, int pix_x_to,
         int pix_x_off, int rowNum)
     {
