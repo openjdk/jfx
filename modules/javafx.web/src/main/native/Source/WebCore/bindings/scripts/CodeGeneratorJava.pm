@@ -1028,12 +1028,17 @@ sub Generate
             push(@contentJava, "        }\n");
             push(@contentJava, "        ${javaClassName} node = (${javaClassName})createInterface(peer);\n");
             push(@contentJava, "        SelfDisposer disposer = new SelfDisposer(node, peer);\n");
+            push(@contentJava, "        Disposer.addRecord(disposer);\n");
             push(@contentJava, "        disposer.next = head;\n");
             push(@contentJava, "        hashTable[hash] = disposer;\n");
             push(@contentJava, "        if (3 * hashCount >= 2 * hashTable.length)\n");
             push(@contentJava, "            rehash();\n");
             push(@contentJava, "        hashCount++;\n");
             push(@contentJava, "        return node;\n");
+            push(@contentJava, "    }\n\n");
+
+            push(@contentJava, "    static int test_getHashCount() {\n");
+            push(@contentJava, "        return hashCount;\n");
             push(@contentJava, "    }\n\n");
 
             push(@contentJava, "    private static void rehash() {\n");

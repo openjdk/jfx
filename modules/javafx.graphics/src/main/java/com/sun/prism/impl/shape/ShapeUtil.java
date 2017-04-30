@@ -35,16 +35,20 @@ public class ShapeUtil {
 
     private static final ShapeRasterizer shapeRasterizer;
     static {
-        if (PrismSettings.useMarlinRasterizer) {
-            if (PrismSettings.useMarlinRasterizerDP) {
-                shapeRasterizer = new DMarlinRasterizer();
-            } else {
+        switch (PrismSettings.rasterizerSpec) {
+            case JavaPisces:
+                shapeRasterizer = new OpenPiscesRasterizer();
+                break;
+            case NativePisces:
+                shapeRasterizer = new NativePiscesRasterizer();
+                break;
+            case FloatMarlin:
                 shapeRasterizer = new MarlinRasterizer();
-            }
-        } else if (PrismSettings.doNativePisces) {
-            shapeRasterizer = new NativePiscesRasterizer();
-        } else {
-            shapeRasterizer = new OpenPiscesRasterizer();
+                break;
+            default:
+            case DoubleMarlin:
+                shapeRasterizer = new DMarlinRasterizer();
+                break;
         }
     }
 

@@ -53,12 +53,17 @@ public class DOMWindowImpl extends JSObject implements AbstractView, EventTarget
         }
         DOMWindowImpl node = (DOMWindowImpl)createInterface(peer);
         SelfDisposer disposer = new SelfDisposer(node, peer);
+        Disposer.addRecord(disposer);
         disposer.next = head;
         hashTable[hash] = disposer;
         if (3 * hashCount >= 2 * hashTable.length)
             rehash();
         hashCount++;
         return node;
+    }
+
+    static int test_getHashCount() {
+        return hashCount;
     }
 
     private static void rehash() {
