@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.property.adapter;
 
+import com.sun.javafx.property.MethodHelper;
 import javafx.beans.property.Property;
 import javafx.beans.property.adapter.ReadOnlyJavaBeanProperty;
 import javafx.beans.value.ChangeListener;
@@ -35,8 +36,6 @@ import java.beans.PropertyVetoException;
 import java.beans.VetoableChangeListener;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
-import sun.reflect.misc.MethodUtil;
 
 /**
  */
@@ -159,7 +158,7 @@ public class PropertyDescriptor extends ReadOnlyPropertyDescriptor {
             } else if (!updating) {
                 updating = true;
                 try {
-                    MethodUtil.invoke(setter, bean, new Object[] {newValue});
+                    MethodHelper.invoke(setter, bean, new Object[] {newValue});
                     property.fireValueChangedEvent();
                 } catch (IllegalAccessException e) {
                     // ignore

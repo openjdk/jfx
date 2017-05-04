@@ -83,6 +83,7 @@ import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
 import static com.sun.javafx.FXPermissions.MODIFY_FXML_CLASS_LOADER_PERMISSION;
 import com.sun.javafx.fxml.FXMLLoaderHelper;
+import com.sun.javafx.fxml.MethodHelper;
 import java.net.MalformedURLException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -95,6 +96,10 @@ import sun.reflect.misc.ReflectUtil;
 
 /**
  * Loads an object hierarchy from an XML document.
+ * For more information, see the
+ * <a href="doc-files/introduction_to_fxml.html">Introduction to FXML</a>
+ * document.
+ *
  * @since JavaFX 2.0
  */
 public class FXMLLoader {
@@ -995,7 +1000,7 @@ public class FXMLLoader {
                 }
 
                 try {
-                    value = MethodUtil.invoke(factoryMethod, null, new Object [] {});
+                    value = MethodHelper.invoke(factoryMethod, null, new Object [] {});
                 } catch (IllegalAccessException exception) {
                     throw constructLoadException(exception);
                 } catch (InvocationTargetException exception) {
@@ -1774,9 +1779,9 @@ public class FXMLLoader {
         public void invoke(Object... params) {
             try {
                 if (type != SupportedType.PARAMETERLESS) {
-                    MethodUtil.invoke(method, controller, params);
+                    MethodHelper.invoke(method, controller, params);
                 } else {
-                    MethodUtil.invoke(method, controller, new Object[] {});
+                    MethodHelper.invoke(method, controller, new Object[] {});
                 }
             } catch (InvocationTargetException exception) {
                 throw new RuntimeException(exception);
@@ -2583,10 +2588,9 @@ public class FXMLLoader {
 
                     if (initializeMethod != null) {
                         try {
-                            MethodUtil.invoke(initializeMethod, controller, new Object [] {});
+                            MethodHelper.invoke(initializeMethod, controller, new Object [] {});
                         } catch (IllegalAccessException exception) {
-                            // TODO Throw when Initializable is deprecated/removed
-                            // throw constructLoadException(exception);
+                            throw constructLoadException(exception);
                         } catch (InvocationTargetException exception) {
                             throw constructLoadException(exception);
                         }

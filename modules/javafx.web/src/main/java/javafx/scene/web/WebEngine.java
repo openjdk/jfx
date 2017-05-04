@@ -297,6 +297,36 @@ window.setMember("app", javaApp);
  * <code><var>receiver</var>["<var>method_name</var>(<var>param_type1</var>,...,<var>param_typeN</var>)"](<var>arg1</var>,...,<var>argN</var>)</code>
  * </pre>
  *
+ * <p>
+ * The Java class and method must both be declared public.
+ * </p>
+ *
+ * <p><b>Deploying an Application as a Module</b></p>
+ * <p>
+ * If any Java class passed to JavaScript is in a named module, then it must
+ * be reflectively accessible to the {@code javafx.web} module.
+ * A class is reflectively accessible if the module
+ * {@link Module#isOpen(String,Module) opens} the containing package to at
+ * least the {@code javafx.web} module.
+ * Otherwise, the method will not be called, and no error or
+ * warning will be produced.
+ * </p>
+ * <p>
+ * For example, if {@code com.foo.MyClass} is in the {@code foo.app} module,
+ * the {@code module-info.java} might
+ * look like this:
+ * </p>
+ *
+<pre>{@code module foo.app {
+    opens com.foo to javafx.web;
+}}</pre>
+ *
+ * <p>
+ * Alternatively, a class is reflectively accessible if the module
+ * {@link Module#isExported(String) exports} the containing package
+ * unconditionally.
+ * </p>
+ *
  * <p><b>Threading</b></p>
  * <p>{@code WebEngine} objects must be created and accessed solely from the
  * JavaFX Application thread. This rule also applies to any DOM and JavaScript

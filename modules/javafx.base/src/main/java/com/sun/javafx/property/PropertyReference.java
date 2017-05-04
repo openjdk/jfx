@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import java.security.PrivilegedAction;
 
 import javafx.beans.property.ReadOnlyProperty;
 
-import sun.reflect.misc.MethodUtil;
 import sun.reflect.misc.ReflectUtil;
 
 /**
@@ -149,7 +148,7 @@ public final class PropertyReference<T> {
                     "Cannot write to readonly property " + name);
         assert setter != null;
         try {
-            MethodUtil.invoke(setter, bean, new Object[] {value});
+            MethodHelper.invoke(setter, bean, new Object[] {value});
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
@@ -172,7 +171,7 @@ public final class PropertyReference<T> {
                     "Cannot read from unreadable property " + name);
         assert getter != null;
         try {
-            return (T)MethodUtil.invoke(getter, bean, (Object[])null);
+            return (T)MethodHelper.invoke(getter, bean, (Object[])null);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
@@ -195,7 +194,7 @@ public final class PropertyReference<T> {
             throw new IllegalStateException("Cannot get property " + name);
         assert propertyGetter != null;
         try {
-            return (ReadOnlyProperty<T>)MethodUtil.invoke(propertyGetter, bean, (Object[])null);
+            return (ReadOnlyProperty<T>)MethodHelper.invoke(propertyGetter, bean, (Object[])null);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
