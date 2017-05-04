@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
@@ -1829,5 +1831,91 @@ public class ListViewTest {
         model.clearAndSelect(2);
         model.clearAndSelect(0);
         model.clearAndSelect(2);
+    }
+
+    @Test public void test_jdk_8145887_selectedIndices_ListIterator() {
+        int selectIndices[] = { 4, 7, 9 };
+        ListView<Integer> lv = new ListView<>();
+        for (int i = 0; i < 10; ++i) {
+            lv.getItems().add(i);
+        }
+
+        MultipleSelectionModel msm = lv.getSelectionModel();
+        msm.setSelectionMode(SelectionMode.MULTIPLE);
+        for (int i = 0 ; i < selectIndices.length; ++i) {
+            msm.select(selectIndices[i]);
+        }
+
+        ListIterator iter = lv.getSelectionModel().getSelectedIndices().listIterator();
+
+        // Step 1. Initial values
+        assertEquals(0, iter.nextIndex());
+        assertEquals(-1, iter.previousIndex());
+        assertEquals(true, iter.hasNext());
+        assertEquals(false, iter.hasPrevious());
+
+        // Step 2. Iterate forward.
+        assertEquals(4, iter.next());
+        assertEquals(1, iter.nextIndex());
+        assertEquals(0, iter.previousIndex());
+        assertEquals(true, iter.hasNext());
+        assertEquals(true, iter.hasPrevious());
+
+        // Step 3. Iterate forward.
+        // Values would be at similar state of Step 2.
+        assertEquals(7, iter.next());
+
+        // Step 4. Iterate forward to Last element.
+        assertEquals(9, iter.next());
+        assertEquals(3, iter.nextIndex());
+        assertEquals(2, iter.previousIndex());
+        assertEquals(false, iter.hasNext());
+        assertEquals(true, iter.hasPrevious());
+
+        // Step 5. Verify NoSuchElementException by next()
+        try {
+            iter.next();
+        } catch (Exception e) {
+            assert(e instanceof NoSuchElementException);
+        }
+
+        // Step 6. Iterate backward to Last element.
+        assertEquals(9, iter.previous());
+        assertEquals(2, iter.nextIndex());
+        assertEquals(1, iter.previousIndex());
+        assertEquals(true, iter.hasNext());
+        assertEquals(true, iter.hasPrevious());
+
+        // Step 7. Iterate forward to Last element.
+        assertEquals(9, iter.next());
+        assertEquals(3, iter.nextIndex());
+        assertEquals(2, iter.previousIndex());
+        assertEquals(false, iter.hasNext());
+        assertEquals(true, iter.hasPrevious());
+
+        // Step 8. Iterate forward to last element.
+        // Values would be at Same state of Step 2.
+        assertEquals(9, iter.previous());
+
+        // Step 9. Iterate backward.
+        assertEquals(7, iter.previous());
+        assertEquals(1, iter.nextIndex());
+        assertEquals(0, iter.previousIndex());
+        assertEquals(true, iter.hasNext());
+        assertEquals(true, iter.hasPrevious());
+
+        // Step 10. Iterate back to first element.
+        assertEquals(4, iter.previous());
+        assertEquals(0, iter.nextIndex());
+        assertEquals(-1, iter.previousIndex());
+        assertEquals(true, iter.hasNext());
+        assertEquals(false, iter.hasPrevious());
+
+        // Step 11. Verify NoSuchElementException by previous()
+        try {
+            iter.previous();
+        } catch (Exception e) {
+            assert(e instanceof NoSuchElementException);
+        }
     }
 }
