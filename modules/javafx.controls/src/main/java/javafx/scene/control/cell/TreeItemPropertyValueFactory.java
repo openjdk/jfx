@@ -30,8 +30,10 @@ import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableColumn.CellDataFeatures;
+import javafx.scene.control.TreeTableView;
 import javafx.util.Callback;
 import com.sun.javafx.property.PropertyReference;
 import com.sun.javafx.scene.control.Logging;
@@ -50,28 +52,38 @@ import sun.util.logging.PlatformLogger.Level;
  * firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory&lt;Person,String&gt;("firstName"));
  * </code></pre>
  *
- * In this example, the "firstName" string is used as a reference to an assumed
- * <code>firstNameProperty()</code> method in the <code>Person</code> class type
- * (which is the class type of the TreeTableView). Additionally, this method must
- * return a {@link Property} instance. If a method meeting these requirements
- * is found, then the {@link javafx.scene.control.TreeTableCell} is populated
- * with this {@literal ObservableValue<T>}.
- * In addition, the TreeTableView will automatically add an observer to the
- * returned value, such that any changes fired will be observed by the TreeTableView,
- * resulting in the cell immediately updating.
- *
- * <p>If no method matching this pattern exists, there is fall-through support
- * for attempting to call get&lt;property&gt;() or is&lt;property&gt;() (that is,
- * <code>getFirstName()</code> or <code>isFirstName()</code> in the example
- * above). If a  method matching this pattern exists, the value returned from this method
- * is wrapped in a {@link ReadOnlyObjectWrapper} and returned to the TreeTableCell.
- * However, in this situation, this means that the TreeTableCell will not be able
- * to observe the ObservableValue for changes (as is the case in the first
- * approach above).
+ * <p>
+ * In this example, {@code Person} is the class type of the {@link TreeItem}
+ * instances used in the {@link TreeTableView}.
+ * The class {@code Person} must be declared public.
+ * {@code TreeItemPropertyValueFactory} uses the constructor argument,
+ * {@code "firstName"}, to assume that {@code Person} has a public method
+ * {@code firstNameProperty} with no formal parameters and a return type of
+ * {@code ObservableValue<String>}.
+ * </p>
+ * <p>
+ * If such a method exists, then it is invoked, and additionally assumed
+ * to return an instance of {@code Property<String>}. The return value is used
+ * to populate the {@link TreeTableCell}. In addition, the {@code TreeTableView}
+ * adds an observer to the return value, such that any changes fired will be
+ * observed by the {@code TreeTableView}, resulting in the cell immediately
+ * updating.
+ * </p>
+ * <p>
+ * If no such method exists, then {@code TreeItemPropertyValueFactory}
+ * assumes that {@code Person} has a public method {@code getFirstName} or
+ * {@code isFirstName} with no formal parameters and a return type of
+ * {@code String}. If such a method exists, then it is invoked, and its return
+ * value is wrapped in a {@link ReadOnlyObjectWrapper}
+ * and returned to the {@code TreeTableCell}. In this situation,
+ * the {@code TreeTableCell} will not be able to observe changes to the property,
+ * unlike in the first approach above.
+ * </p>
  *
  * <p>For reference (and as noted in the TreeTableColumn
  * {@link TreeTableColumn#cellValueFactory cell value factory} documentation), the
  * long form of the code above would be the following:
+ * </p>
  *
  * <pre><code>
  * TreeTableColumn&lt;Person,String&gt; firstNameCol = new TreeTableColumn&lt;Person,String&gt;("First Name");
@@ -88,9 +100,35 @@ import sun.util.logging.PlatformLogger.Level;
  * }
  * </code></pre>
  *
+ * <p><b>Deploying an Application as a Module</b></p>
+ * <p>
+ * If the referenced class is in a named module, then it must be reflectively
+ * accessible to the {@code javafx.base} module.
+ * A class is reflectively accessible if the module
+ * {@link Module#isOpen(String,Module) opens} the containing package to at
+ * least the {@code javafx.base} module.
+ * Otherwise the {@link #call call(TreeTableColumn.CellDataFeatures)} method
+ * will log a warning and return {@code null}.
+ * </p>
+ * <p>
+ * For example, if the {@code Person} class is in the {@code com.foo} package
+ * in the {@code foo.app} module, the {@code module-info.java} might
+ * look like this:
+ * </p>
+ *
+<pre>{@code module foo.app {
+    opens com.foo to javafx.base;
+}}</pre>
+ *
+ * <p>
+ * Alternatively, a class is reflectively accessible if the module
+ * {@link Module#isExported(String) exports} the containing package
+ * unconditionally.
+ * </p>
+ *
  * @see TreeTableColumn
- * @see javafx.scene.control.TreeTableView
- * @see javafx.scene.control.TreeTableCell
+ * @see TreeTableView
+ * @see TreeTableCell
  * @see PropertyValueFactory
  * @see MapValueFactory
  * @since JavaFX 8.0
@@ -143,23 +181,26 @@ public class TreeItemPropertyValueFactory<S,T> implements Callback<TreeTableColu
                 this.propertyRef = new PropertyReference<T>(rowData.getClass(), getProperty());
             }
 
-            return propertyRef.getProperty(rowData);
-        } catch (IllegalStateException e) {
+            if (propertyRef != null) {
+                return propertyRef.getProperty(rowData);
+            }
+        } catch (RuntimeException e) {
             try {
                 // attempt to just get the value
                 T value = propertyRef.get(rowData);
                 return new ReadOnlyObjectWrapper<T>(value);
-            } catch (IllegalStateException e2) {
+            } catch (RuntimeException e2) {
                 // fall through to logged exception below
             }
 
             // log the warning and move on
             final PlatformLogger logger = Logging.getControlsLogger();
             if (logger.isLoggable(Level.WARNING)) {
-               logger.finest("Can not retrieve property '" + getProperty() +
+               logger.warning("Can not retrieve property '" + getProperty() +
                         "' in TreeItemPropertyValueFactory: " + this +
                         " with provided class type: " + rowData.getClass(), e);
             }
+            propertyRef = null;
         }
 
         return null;

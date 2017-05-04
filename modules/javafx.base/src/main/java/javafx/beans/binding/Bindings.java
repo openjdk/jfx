@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -97,6 +97,31 @@ import javafx.collections.ObservableIntegerArray;
  * Fluent API allows to be more specific about the returned type (see
  * {@link javafx.beans.binding.NumberExpression} for more details about implicit
  * casting.
+ * </p>
+ * <p><a id="DeployAppAsModule"></a><b>Deploying an Application as a Module</b></p>
+ * <p>
+ * If any class used in a select-binding (see the various {@code select*}
+ * methods) is in a named module, then it must be reflectively accessible to the
+ * {@code javafx.base} module.
+ * A class is reflectively accessible if the module
+ * {@link Module#isOpen(String,Module) opens} the containing package to at
+ * least the {@code javafx.base} module.
+ * </p>
+ * <p>
+ * For example, if {@code com.foo.MyClass} is in the {@code foo.app} module,
+ * the {@code module-info.java} might
+ * look like this:
+ * </p>
+ *
+<pre>{@code module foo.app {
+    opens com.foo to javafx.base;
+}}</pre>
+ *
+ * <p>
+ * Alternatively, a class is reflectively accessible if the module
+ * {@link Module#isExported(String) exports} the containing package
+ * unconditionally.
+ * </p>
  *
  * @see Binding
  * @see NumberBinding
@@ -403,9 +428,15 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being the right type etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
-     *
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
+     * <p>
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
+     * </p>
      *
      * @param <T> the type of the wrapped {@code Object}
      * @param root
@@ -424,9 +455,15 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
-     *
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
+     * <p>
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
+     * </p>
      *
      * @param root
      *            The root {@link javafx.beans.value.ObservableValue}
@@ -444,9 +481,15 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
-     *
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
+     * <p>
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
+     * </p>
      *
      * @param root
      *            The root {@link javafx.beans.value.ObservableValue}
@@ -464,9 +507,15 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
-     *
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
+     * <p>
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
+     * </p>
      *
      * @param root
      *            The root {@link javafx.beans.value.ObservableValue}
@@ -484,9 +533,15 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
-     *
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
+     * <p>
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
+     * </p>
      *
      * @param root
      *            The root {@link javafx.beans.value.ObservableValue}
@@ -504,9 +559,15 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code boolean} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
-     *
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
+     * <p>
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
+     * </p>
      *
      * @param root
      *            The root {@link javafx.beans.value.ObservableValue}
@@ -524,9 +585,15 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code String} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
-     *
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
+     * <p>
      * Note: since 8.0, JavaBeans properties are supported and might be in the chain.
+     * </p>
      *
      * @param root
      *            The root {@link javafx.beans.value.ObservableValue}
@@ -544,10 +611,17 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being the right type etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
      *
+     * <p>
      * If root has JavaFX properties, this call is equivalent to {@link #select(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
+     * </p>
      *
      * @param <T> the type of the wrapped {@code Object}
      * @param root
@@ -568,10 +642,17 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
      *
+     * <p>
      * If root has JavaFX properties, this call is equivalent to {@link #selectDouble(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
+     * </p>
      *
      * @param root
      *            The root bean.
@@ -591,10 +672,17 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
      *
+     * <p>
      * If root has JavaFX properties, this call is equivalent to {@link #selectFloat(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
+     * </p>
      *
      * @param root
      *            The root bean.
@@ -614,10 +702,17 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
      *
+     * <p>
      * If root has JavaFX properties, this call is equivalent to {@link #selectInteger(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
+     * </p>
      *
      * @param root
      *            The root bean.
@@ -637,10 +732,17 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code Number} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
      *
+     * <p>
      * If root has JavaFX properties, this call is equivalent to {@link #selectLong(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
+     * </p>
      *
      * @param root
      *            The root bean.
@@ -660,10 +762,17 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code boolean} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
      *
+     * <p>
      * If root has JavaFX properties, this call is equivalent to {@link #selectBoolean(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
+     * </p>
      *
      * @param root
      *            The root bean.
@@ -683,10 +792,17 @@ public final class Bindings {
      * be reached (due to {@code b} not having a {@code c} property,
      * {@code b} being {@code null}, or {@code c} not being a {@code String} etc.).
      * <p>
-     * All classes and properties used in a select-binding have to be public.
+     * All classes and properties used in a select-binding have to be
+     * declared public.
+     * Additionally, if any class is in a named module, then it must be
+     * reflectively accessible to the {@code javafx.base} module (see
+     * <a href="#DeployAppAsModule">Deploying an Application as a Module</a>).
+     * </p>
      *
+     * <p>
      * If root has JavaFX properties, this call is equivalent to {@link #selectString(javafx.beans.value.ObservableValue, java.lang.String[])},
      * with the {@code root} and {@code step[0]} being substituted with the relevant property object.
+     * </p>
      *
      * @param root
      *            The root bean.

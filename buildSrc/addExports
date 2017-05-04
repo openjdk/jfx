@@ -1,0 +1,15 @@
+# buildSrc/addExports: temporary --add-exports
+#
+# After a promoted jdk build includes the module-info changes associated
+# with a particular fix, we might eventually remove the --add-exports from
+# this file for that fix, after bumping the minimum jdk to that build.
+#
+# ----------------------------------------------------------------------
+#
+# Qualified exports for JDK-8177566
+--add-exports=javafx.base/com.sun.javafx.reflect=javafx.fxml
+--add-exports=javafx.base/com.sun.javafx.reflect=javafx.web
+#
+# ----------------------------------------------------------------------
+#
+# end temporary --add-exports

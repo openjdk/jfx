@@ -68,6 +68,9 @@ module javafx.base {
         javafx.graphics;
     exports com.sun.javafx.property to
         javafx.controls;
+    exports com.sun.javafx.reflect to
+        javafx.fxml,
+        javafx.web;
     exports com.sun.javafx.runtime to
         javafx.graphics;
 }

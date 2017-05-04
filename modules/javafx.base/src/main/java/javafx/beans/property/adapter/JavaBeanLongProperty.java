@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package javafx.beans.property.adapter;
 
 import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.property.MethodHelper;
 import com.sun.javafx.property.adapter.Disposer;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
 import javafx.beans.InvalidationListener;
@@ -40,16 +41,16 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
-import sun.reflect.misc.MethodUtil;
-
 /**
  * A {@code JavaBeanLongProperty} provides an adapter between a regular
  * Java Bean property of type {@code long} or {@code Long} and a JavaFX
  * {@code LongProperty}. It cannot be created directly, but a
  * {@link JavaBeanLongPropertyBuilder} has to be used.
  * <p>
- * As a minimum, the Java Bean must implement a getter and a setter for the
- * property. If the getter of an instance of this class is called, the property of
+ * As a minimum, the Java Bean class must implement a getter and a setter for the
+ * property.
+ * The class, as well as the getter and a setter methods, must be declared public.
+ * If the getter of an instance of this class is called, the property of
  * the Java Bean is returned. If the setter is called, the value will be passed
  * to the Java Bean property. If the Java Bean property is bound (i.e. it supports
  * PropertyChangeListeners), this {@code JavaBeanLongProperty} will be
@@ -58,6 +59,30 @@ import sun.reflect.misc.MethodUtil;
  * is also constrained (i.e. it supports VetoableChangeListeners), this
  * {@code JavaBeanLongProperty} will reject changes, if it is bound to an
  * {@link javafx.beans.value.ObservableValue ObservableValue&lt;Long&gt;}.
+ * </p>
+ * <p><b>Deploying an Application as a Module</b></p>
+ * <p>
+ * If the Java Bean class is in a named module, then it must be reflectively
+ * accessible to the {@code javafx.base} module.
+ * A class is reflectively accessible if the module
+ * {@link Module#isOpen(String,Module) opens} the containing package to at
+ * least the {@code javafx.base} module.
+ * </p>
+ * <p>
+ * For example, if {@code com.foo.MyBeanClass} is in the {@code foo.app} module,
+ * the {@code module-info.java} might
+ * look like this:
+ * </p>
+ *
+<pre>{@code module foo.app {
+    opens com.foo to javafx.base;
+}}</pre>
+ *
+ * <p>
+ * Alternatively, a class is reflectively accessible if the module
+ * {@link Module#isExported(String) exports} the containing package
+ * unconditionally.
+ * </p>
  *
  * @see javafx.beans.property.LongProperty
  * @see JavaBeanLongPropertyBuilder
@@ -91,7 +116,7 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
     public long get() {
         return AccessController.doPrivileged((PrivilegedAction<Long>) () -> {
             try {
-                return ((Number)MethodUtil.invoke(
+                return ((Number)MethodHelper.invoke(
                     descriptor.getGetter(), getBean(), (Object[])null)).longValue();
             } catch (IllegalAccessException e) {
                 throw new UndeclaredThrowableException(e);
@@ -115,7 +140,7 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
         }
         AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
             try {
-                MethodUtil.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
+                MethodHelper.invoke(descriptor.getSetter(), getBean(), new Object[] {value});
                 ExpressionHelper.fireValueChangedEvent(helper);
             } catch (IllegalAccessException e) {
                 throw new UndeclaredThrowableException(e);

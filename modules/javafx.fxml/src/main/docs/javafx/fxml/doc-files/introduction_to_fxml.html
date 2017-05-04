@@ -15,7 +15,7 @@
 </div>
 
 <h1>Introduction to FXML</h1>
-<p class="subtitle">Last updated: 3/3/2017</p>
+<p class="subtitle">Last updated: 01 May 2017</p>
 
 <h2>Contents</h2>
 <ul class="contents">
@@ -89,6 +89,7 @@
     <li><a href="#custom_components">Custom Components</a></li>
     </ul>
 </li>
+<li><a href="#deploy_as_module">Deploying an Application as a Module</a></li>
 </ul>
 
 <h2><a name="overview">Overview</a></h2>
@@ -886,9 +887,9 @@ visibility for controller fields or handler methods, the <span
 class="code">javafx.fxml.FXML</span> annotation can be used. This
 annotation marks a protected or private class member as accessible
 to FXML.
-If the class being annotated is part of a named module, the
+If the class being annotated is in a named module, the
 module containing that class must <span class="code">open</span>
-the containing package to
+the containing package to at least
 the <span class="code">javafx.fxml</span> module.</assert></span>
 
 <p>For example, the controllers from the previous examples could be rewritten as follows:</p>
@@ -1045,6 +1046,27 @@ hbox.getChildren().add(customControl);
 &lt;/HBox&gt;
 </pre>
 
+<h2><a name="deploy_as_module">Deploying an Application as a Module</a></h2>
+<p>If <span class="code">FXMLLoader</span> is used to load types in a named
+module, the application must ensure that all types that are referenced in the
+FXML files, including the controller class and any custom <span class="code">Node</span>
+classes, are reflectively accessible to the <span class="code">javafx.fxml</span>
+module. A type is reflectively accessible if the module
+<span class="code">opens</span> the containing package to at least the
+<span class="code">javafx.fxml</span> module.
+</p>
+
+<p>For example, if <span class="code">com.foo.MyController</span> is in the
+<span class="code">foo.app</span> module, the
+<span class="code">module-info.java</span> might look like this:
+</p>
+<pre><span class="code">module foo.app {
+    opens com.foo to javafx.fxml;
+}</span></pre>
+
+<p>Alternatively, a type is reflectively accessible if the module
+<span class="code">exports</span> the containing package unconditionally.
+</p>
 <hr>
 <p>
 <font size="-1"><a href="http://bugreport.java.com/bugreport/" target="_blank">Submit a bug or feature</a><br>For further API reference and developer documentation, see <a href="http://download.java.net/java/jdk9/docs/index.html" target="_blank">Java SE Documentation</a>. That documentation contains more detailed, developer-targeted descriptions, with conceptual overviews, definitions of terms, workarounds, and working code examples.<br> <a href="http://download.java.net/java/jdk9/docs/legal/cpyr.html" target="_blank">Copyright</a> &copy; 2008, 2017, Oracle and/or its affiliates. All rights reserved.<br><b>DRAFT 9-ea</b></font>

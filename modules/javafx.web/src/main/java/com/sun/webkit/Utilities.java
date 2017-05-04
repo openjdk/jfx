@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
 import java.util.Map;
-import sun.reflect.misc.MethodUtil;
 
 public abstract class Utilities {
 
@@ -91,7 +90,8 @@ public abstract class Utilities {
                                                AccessControlContext acc)
     throws Throwable {
         try {
-            return AccessController.doPrivileged((PrivilegedExceptionAction<Object>) () -> MethodUtil.invoke(method, instance, args), acc);
+            return AccessController.doPrivileged((PrivilegedExceptionAction<Object>)
+                    () -> MethodHelper.invoke(method, instance, args), acc);
         } catch (PrivilegedActionException ex) {
             Throwable cause = ex.getCause();
             if (cause == null)
@@ -103,4 +103,3 @@ public abstract class Utilities {
         }
     }
 }
-

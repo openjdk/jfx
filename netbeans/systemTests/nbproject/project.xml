@@ -11,6 +11,11 @@
                 <root id="test.resources.dir"/>
                 <root id="test.java2.dir"/>
                 <root id="test.mymod.dir"/>
+                <root id="test.mymod2.dir"/>
+                <root id="test.mymod3.dir"/>
+                <root id="test.mymod4.dir"/>
+                <root id="test.mymod5.dir"/>
+                <root id="test.mymod6.dir"/>
             </test-roots>
         </data>
         <references xmlns="http://www.netbeans.org/ns/ant-project-references/1">
