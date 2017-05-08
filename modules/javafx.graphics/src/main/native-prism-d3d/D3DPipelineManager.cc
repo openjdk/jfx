@@ -34,8 +34,6 @@
 // this state is set if adapter was successfully created
 #define CONTEXT_CREATED 1
 
-static BOOL bNoHwCheck = (getenv("NEWT_D3D_NO_HWCHECK") != NULL);
-
 static const size_t MAX_WARNING_MESSAGE_LEN = 256;
 static char messageBuffer[MAX_WARNING_MESSAGE_LEN];
 static char* warningMessage = NULL;
@@ -181,11 +179,6 @@ D3DPipelineManager::CheckOSVersion()
     }
     RlsTraceLn(NWT_TRACE_ERROR,
                   "D3DPPLM::CheckOSVersion: Windows 2000 or earlier OS detected, failed");
-    if (bNoHwCheck) {
-        RlsTraceLn(NWT_TRACE_WARNING,
-                      "  OS check overridden via NEWT_D3D_NO_HWCHECK");
-        return S_OK;
-    }
     return E_FAIL;
 }
 
@@ -432,9 +425,12 @@ HRESULT D3DPipelineManager::CheckAdaptersInfo(IConfig &cfg)
 
 D3DDEVTYPE D3DPipelineManager::SelectDeviceType()
 {
-    char *pRas = getenv("NEWT_D3D_RASTERIZER");
+    char *pRas = NULL;
+    size_t size = 0;
+
     D3DDEVTYPE dtype = D3DDEVTYPE_HAL;
-    if (pRas != NULL) {
+    if ((_dupenv_s(&pRas, &size, "NWT_D3D_RASTERIZER") == 0)
+            && (pRas != NULL)) {
         RlsTrace(NWT_TRACE_WARNING, "[W] D3DPPLM::SelectDeviceType: ");
         if (strncmp(pRas, "ref", 3) == 0 || strncmp(pRas, "rgb", 3) == 0) {
             RlsTrace(NWT_TRACE_WARNING, "ref rasterizer selected");
@@ -451,6 +447,7 @@ D3DDEVTYPE D3DPipelineManager::SelectDeviceType()
                 "supported, hal selected instead", pRas);
         }
         RlsTrace(NWT_TRACE_WARNING, "\n");
+        free(pRas);
     }
     return dtype;
 }

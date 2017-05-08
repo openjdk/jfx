@@ -74,24 +74,28 @@ void TraceImpl(int level, jboolean cr, const char *string, ...)
     }
 }
 
-void TraceInit()
-{
-    char *decTraceLevelString = getenv("NWT_TRACE_LEVEL");
+void TraceInit() {
+    char *decTraceLevelString = NULL;
+    size_t size = 0;
+
     decTraceLevel = NWT_TRACE_OFF;
-    if (decTraceLevelString) {
+    if ((_dupenv_s(&decTraceLevelString, &size, "NWT_TRACE_LEVEL") == 0)
+            && (decTraceLevelString != NULL)) {
         int traceLevelTmp = -1;
-        int args = sscanf(decTraceLevelString, "%d", &traceLevelTmp);
+        int args = sscanf_s(decTraceLevelString, "%d", &traceLevelTmp);
         if (args > 0 && traceLevelTmp > NWT_TRACE_INVALID) {
             decTraceLevel = traceLevelTmp;
         }
+        free(decTraceLevelString);
     }
 
-    char *decTraceFileName = getenv("NWT_TRACE_FILE");
-    if (decTraceFileName) {
-        decTraceFile = fopen(decTraceFileName, "w");
-        if (!decTraceFile) {
+    char *decTraceFileName = NULL;
+    if ((_dupenv_s(&decTraceFileName, &size, "NWT_TRACE_FILE") == 0)
+            && (decTraceFileName != NULL)) {
+        if (fopen_s(&decTraceFile, decTraceFileName, "w") != 0) {
             printf("(E): Error opening trace file %s\n", decTraceFileName);
         }
+        free(decTraceFileName);
     }
     if (!decTraceFile) {
         decTraceFile = stdout;
