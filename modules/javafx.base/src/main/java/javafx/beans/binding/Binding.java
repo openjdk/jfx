@@ -48,8 +48,8 @@ import javafx.collections.ObservableList;
  * classes already provide most of the needed functionality. See
  * {@link DoubleBinding} for an example.
  *
+ * @param <T> the type of the wrapped value
  * @see DoubleBinding
- *
  *
  * @since JavaFX 2.0
  */

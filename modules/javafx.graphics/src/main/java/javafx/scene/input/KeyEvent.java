@@ -113,7 +113,7 @@ public final class KeyEvent extends InputEvent {
             new EventType<KeyEvent>(KeyEvent.ANY, "KEY_TYPED");
 
     /**
-     * Constructs new KeyEvent event with null source and target and KeyCode object directly specified.
+     * Constructs a new {@code KeyEvent} event from the specified parameters.
      * @param source the source of the event. Can be null.
      * @param target the target of the event. Can be null.
      * @param eventType The type of the event.
@@ -142,7 +142,8 @@ public final class KeyEvent extends InputEvent {
     }
 
     /**
-     * Constructs new KeyEvent event with null source and target and KeyCode object directly specified.
+     * Constructs a new {@code KeyEvent} event from the specified parameters,
+     * with a {@code null} source and target.
      * @param eventType The type of the event.
      * @param character The character or sequence of characters associated with the event
      * @param text A String describing the key code

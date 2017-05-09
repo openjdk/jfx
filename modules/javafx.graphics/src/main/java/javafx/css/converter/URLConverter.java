@@ -44,7 +44,7 @@ import java.security.ProtectionDomain;
 /**
  * Converts a parsed value representing  URL to a URL string that is
  * resolved relative to the location of the stylesheet.
- * The input value is in the form: {@code url("&lt;path&gt;")}.
+ * The input value is in the form: {@code url("<path>")}.
  *
  * @since 9
  */
