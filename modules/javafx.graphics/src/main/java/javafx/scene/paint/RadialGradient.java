@@ -164,8 +164,8 @@ public final class RadialGradient extends Paint {
     private CycleMethod cycleMethod;
 
     /**
-     * Defines which of the follwing cycle method is applied
-     * to the {@code RadialGradient}: {@code CycleMethod.NO_CYCLE},
+     * Defines the cycle method applied
+     * to the {@code RadialGradient}. One of: {@code CycleMethod.NO_CYCLE},
      * {@code CycleMethod.REFLECT}, or {@code CycleMethod.REPEAT}.
      *
      * @return the cycle method applied to this radial gradient

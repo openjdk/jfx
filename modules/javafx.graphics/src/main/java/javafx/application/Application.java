@@ -87,20 +87,18 @@ import com.sun.javafx.css.StyleManager;
  * Otherwise, an exception will be thrown when the application is launched.
  * This means that
  * in addition to the class itself being declared public, the module must
- * {@link Module#isExported(String,Module) export} the containing package to
- * at least the {@code javafx.graphics} module, either in its
- * {@code module-info.class} or by calling
- * {@link Module#addExports}.
+ * {@link Module#isExported(String,Module) export}
+ * (or {@link Module#isOpen(String,Module) open}) the containing package to
+ * at least the {@code javafx.graphics} module.
  * </p>
  * <p>
- * For example, if the {@code Application} subclass is in the {@code com.foo}
- * package in the {@code foo.app} module, the {@code module-info.java} might
- * look like this:
+ * For example, if {@code com.foo.MyApplication} is in the {@code foo.app}
+ * module, the {@code module-info.java} might look like this:
  * </p>
- * <pre>{@code module foo.app {
- *     exports com.foo to javafx.graphics;
- * }}</pre>
- *
+<pre>{@code module foo.app {
+    exports com.foo to javafx.graphics;
+}}</pre>
+*
  * <p><b>Parameters</b></p>
  * <p>
  * Application parameters are available by calling the {@link #getParameters}
@@ -194,6 +192,12 @@ public abstract class Application {
      * The launch method does not return until the application has exited,
      * either via a call to Platform.exit or all of the application windows
      * have been closed.
+     * The class specified by the {@code appClass} argument must be
+     * a public subclass of {@code Application}
+     * with a public no-argument constructor, in a package that is
+     * {@link Module#isExported(String,Module) exported}
+     * (or {@link Module#isOpen(String,Module) open}) to at least the
+     * {@code javafx.graphics} module, or a RuntimeException will be thrown.
      *
      * <p>
      * Typical usage is:
@@ -227,12 +231,13 @@ public abstract class Application {
      * Launch a standalone application. This method is typically called
      * from the main method(). It must not be called more than once or an
      * exception will be thrown.
-     * This is equivalent to launch(TheClass.class, args) where TheClass is the
-     * immediately enclosing class of the method that called launch. It must
-     * be a public subclass of Application with a public no-argument
-     * constructor, in a package that is
+     * This is equivalent to {@code launch(TheClass.class, args)} where
+     * {@code TheClass} is the
+     * immediately enclosing class of the method that called launch.
+     * It must be a public subclass of {@code Application}
+     * with a public no-argument constructor, in a package that is
      * {@link Module#isExported(String,Module) exported}
-     * (or {@link Module#isOpen(String,Module) opened}) to at least the
+     * (or {@link Module#isOpen(String,Module) open}) to at least the
      * {@code javafx.graphics} module, or a RuntimeException will be thrown.
      *
      * <p>

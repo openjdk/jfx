@@ -624,7 +624,7 @@ public class StyleablePropertyFactory<S extends Styleable> {
      * <pre><code>
      * {@literal
      *     private static final StyleablePropertyFactory<MyControl> FACTORY = new StyleablePropertyFactory<>();
-     *     StyleableProperty&lt;Orientation&gt; orientation =
+     *     StyleableProperty<Orientation> orientation =
      *         FACTORY.createStyleableEnumProperty(
      *             this,
      *             "orientation",

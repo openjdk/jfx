@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,20 +42,20 @@ import javafx.scene.paint.Paint;
 
 /**
  * The {@code Circle} class creates a new circle
- * with the specified radius and center location measured in pixels
+ * with the specified radius and center location measured in pixels.
+ * <p>
+ * Example usage. The following code creates a circle with radius of 50 pixels
+ * centered at (100,100).
+ * </p>
  *
- * Example usage. The following code creates a circle with radius 50px centered
- * at (100,100)px.
- *
-<PRE>
-import javafx.scene.shape.*;
+<pre>{@code
+import javafx.scene.shape.Circle;
 
 Circle circle = new Circle();
 circle.setCenterX(100.0f);
 circle.setCenterY(100.0f);
 circle.setRadius(50.0f);
-}
-</PRE>
+}</pre>
  * @since JavaFX 2.0
  */
 public class Circle extends Shape {

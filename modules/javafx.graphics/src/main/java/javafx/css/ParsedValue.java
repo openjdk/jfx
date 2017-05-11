@@ -31,7 +31,7 @@ import javafx.scene.text.Font;
  * A representation of a parsed CSS value. {@code V} is the type of the parsed
  * value, {@code T} is the {@code StyleableProperty} type of the converted value.
  * Instances of {@code ParsedValue} are created by the CSS parser. For example,
- * the parser creates a {@code ParsedValue&lt;String,Color&gt;} when it parses a
+ * the parser creates a {@code ParsedValue<String,Color>} when it parses a
  * web Color.
  * <p>
  * A ParsedValue is meaningful to the code that calculates actual values from

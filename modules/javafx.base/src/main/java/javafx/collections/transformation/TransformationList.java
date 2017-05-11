@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,8 @@ import javafx.collections.ObservableListBase;
 import javafx.collections.WeakListChangeListener;
 
 /**
- * A base class for all lists that wraps other lists in a way that changes the list's
- * elements, order, size or generally it's structure.
+ * A base class for all lists that wrap another list in a way that changes
+ * (transforms) the wrapped list's elements, order, size, or structure.
  *
  * If the source list is observable, a listener is automatically added to it
  * and the events are delegated to {@link #sourceChanged(javafx.collections.ListChangeListener.Change)}

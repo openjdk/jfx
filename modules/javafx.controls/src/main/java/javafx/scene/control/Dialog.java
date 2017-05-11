@@ -344,7 +344,8 @@ public class Dialog<R> implements EventTarget {
     }
 
     /**
-     * Hides the dialog.
+     * Closes this {@code Dialog}.
+     * This call is equivalent to {@link #hide}.
      */
     public final void close() {
         if (isClosing) return;
@@ -416,7 +417,7 @@ public class Dialog<R> implements EventTarget {
     }
 
     /**
-     * closes the dialog.
+     * Hides this {@code Dialog}.
      */
     public final void hide() {
         close();
