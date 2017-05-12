@@ -451,6 +451,8 @@ class CachingShapeRepState {
             invalidateMaskTexData();
 
             renderCount = 0;
+        }
+        if (doResetMask || doUpdateMask) {
             if (lastXform == null) {
                 lastXform = xform.copy();
             } else {
