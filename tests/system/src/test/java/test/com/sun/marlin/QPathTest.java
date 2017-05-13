@@ -76,11 +76,13 @@ public class QPathTest {
 
     static boolean doChecksFailed = false;
 
+    private static final Logger log;
+
     static {
         Locale.setDefault(Locale.US);
 
         // initialize j.u.l Looger:
-        final Logger log = Logger.getLogger("prism.marlin");
+        log = Logger.getLogger("prism.marlin");
         log.addHandler(new Handler() {
             @Override
             public void publish(LogRecord record) {

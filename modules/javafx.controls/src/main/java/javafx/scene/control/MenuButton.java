@@ -214,11 +214,11 @@ public class MenuButton extends ButtonBase {
     };
     private void setShowing(boolean value) {
         // these events will not fire if the showing property is bound
-        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWING) :
-                new Event(ComboBoxBase.ON_HIDING));
+        Event.fireEvent(this, value ? new Event(ON_SHOWING) :
+                new Event(ON_HIDING));
         showing.set(value);
-        Event.fireEvent(this, value ? new Event(ComboBoxBase.ON_SHOWN) :
-                new Event(ComboBoxBase.ON_HIDDEN));
+        Event.fireEvent(this, value ? new Event(ON_SHOWN) :
+                new Event(ON_HIDDEN));
     }
     public final boolean isShowing() { return showing.get(); }
     public final ReadOnlyBooleanProperty showingProperty() { return showing.getReadOnlyProperty(); }

@@ -25,7 +25,9 @@
 
 package test.javafx.scene.web;
 
+import static javafx.concurrent.Worker.State.SUCCEEDED;
 import com.sun.webkit.dom.JSObjectShim;
+import com.sun.webkit.dom.NodeImplShim;
 import com.sun.webkit.WebPage;
 import java.io.File;
 import java.lang.ref.Reference;
@@ -35,6 +37,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.concurrent.Worker.State;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.web.WebEngine;
@@ -44,6 +47,9 @@ import javafx.util.Duration;
 import netscape.javascript.JSObject;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
 import static org.junit.Assert.*;
 
 public class LeakTest extends TestBase {
@@ -176,4 +182,88 @@ public class LeakTest extends TestBase {
         assertTrue("All JSObjects are disposed", JSObjectShim.test_getPeerCount() == 0);
     }
 
+    private State getLoadState() {
+        return submit(() -> getEngine().getLoadWorker().getState());
+    }
+
+    // JDK-8176729
+    @Test public void testDOMNodeDisposeCount() throws InterruptedException {
+        int count = 7;
+        Reference<?>[] willGC = new Reference[count];
+        final String html =
+                "<html>\n" +
+                "<head></head>\n" +
+                "<body> <a href=#>hello</a><p> Paragraph </p>\n" +
+                "<div> Div Block </div> <iframe> iframe </iframe> <br> </body>\n" +
+                "</html>";
+        loadContent(html);
+        WebEngine web = getEngine();
+
+        assertTrue("Load task completed successfully", getLoadState() == SUCCEEDED);
+
+        System.gc();
+        System.runFinalization();
+        Thread.sleep(SLEEP_TIME);
+
+        // Get the initial NodeImpl hashcount (which is "initialHashCount" below), which
+        // can be non-zero if the previous tests leave a strong reference to DOM.
+        int initialHashCount = NodeImplShim.test_getHashCount();
+
+        submit(() -> {
+            Document doc = web.getDocument();
+            assertNotNull("Document should not be null", doc);
+
+            NodeList tagList = doc.getElementsByTagName("html");
+            Element element = (Element) tagList.item(0);;
+            willGC[0] = new WeakReference<>(element);
+            assertEquals("Expected NodeImpl(tag:html) HashCount", initialHashCount+1, NodeImplShim.test_getHashCount());
+
+            tagList = doc.getElementsByTagName("head");
+            element = (Element) tagList.item(0);;
+            willGC[1] = new WeakReference<>(element);
+            assertEquals("Expected NodeImpl(tag:head) HashCount", initialHashCount+2, NodeImplShim.test_getHashCount());
+
+            tagList = doc.getElementsByTagName("body");
+            element = (Element) tagList.item(0);;
+            willGC[2] = new WeakReference<>(element);
+            assertEquals("Expected NodeImpl(tag:body) HashCount", initialHashCount+3, NodeImplShim.test_getHashCount());
+
+            tagList = doc.getElementsByTagName("p");
+            element = (Element) tagList.item(0);
+            willGC[3] = new WeakReference<>(element);
+            assertEquals("Expected NodeImpl(tag:p) HashCount", initialHashCount+4, NodeImplShim.test_getHashCount());
+
+            tagList = doc.getElementsByTagName("div");
+            element = (Element) tagList.item(0);
+            willGC[4] = new WeakReference<>(element);
+            assertEquals("Expected NodeImpl(tag:div) HashCount", initialHashCount+5, NodeImplShim.test_getHashCount());
+
+            tagList = doc.getElementsByTagName("iframe");
+            element = (Element) tagList.item(0);
+            willGC[5] = new WeakReference<>(element);
+            assertEquals("Expected NodeImpl(tag:iframe) HashCount", initialHashCount+6, NodeImplShim.test_getHashCount());
+
+            tagList = doc.getElementsByTagName("br");
+            element = (Element) tagList.item(0);
+            willGC[6] = new WeakReference<>(element);
+            assertEquals("Expected NodeImpl(tag:br) HashCount", initialHashCount+7, NodeImplShim.test_getHashCount());
+        });
+
+        Thread.sleep(SLEEP_TIME);
+
+        for (int i = 0; i < 5; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (isAllElementsNull(willGC)) {
+                break;
+            }
+
+            Thread.sleep(SLEEP_TIME);
+        }
+
+        // Give disposer a chance to run
+        Thread.sleep(SLEEP_TIME);
+        assertEquals("NodeImpl HashCount after dispose", initialHashCount, NodeImplShim.test_getHashCount());
+    }
 }
