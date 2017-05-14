@@ -508,7 +508,6 @@ is being used to size a border should also be in pixels.
 .accordion:disabled > .titled-pane > .title,
 .tab-pane > .tab-header-area > .headers-region > .tab:disabled,
 .menu:disabled,
-.menu-item:disabled > .label,
 .menu-item:disabled,
 .list-cell:filled:selected:focused:disabled,
 .list-cell:filled:selected:disabled,
