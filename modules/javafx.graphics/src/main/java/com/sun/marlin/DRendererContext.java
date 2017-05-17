@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -58,6 +58,8 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
     final DCurve curve = new DCurve();
     // MarlinRenderingEngine.TransformingPathConsumer2D
     public final DTransformingPathConsumer2D transformerPC2D;
+    // shared memory between renderer instances:
+    final DRendererSharedMemory rdrMem;
     public final DRenderer renderer;
     private DRendererNoAA rendererNoAA = null;
     public final DStroker stroker;
@@ -74,8 +76,8 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
     public MaskMarlinAlphaConsumer consumer = null;
 
     // Array caches:
-    /* clean int[] cache (zero-filled) = 5 refs */
-    private final IntArrayCache cleanIntCache = new IntArrayCache(true, 5);
+    /* clean int[] cache (zero-filled) = 4 refs */
+    private final IntArrayCache cleanIntCache = new IntArrayCache(true, 4);
     /* dirty int[] cache = 4 refs */
     private final IntArrayCache dirtyIntCache = new IntArrayCache(false, 4);
     /* dirty double[] cache = 3 refs */
@@ -110,6 +112,9 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
 
         // MarlinRenderingEngine.TransformingPathConsumer2D
         transformerPC2D = new DTransformingPathConsumer2D();
+
+        // Renderer shared memory:
+        rdrMem = new DRendererSharedMemory(this);
 
         // Renderer:
         renderer = new DRenderer(this);
@@ -173,5 +178,49 @@ public final class DRendererContext extends ReentrantContext implements MarlinCo
 
     ByteArrayCache.Reference newDirtyByteArrayRef(final int initialSize) {
         return dirtyByteCache.createRef(initialSize);
+    }
+
+    static final class DRendererSharedMemory {
+
+        // edges [ints] stored in off-heap memory
+        final OffHeapArray edges;
+
+        // edgeBuckets ref (clean)
+        final IntArrayCache.Reference edgeBuckets_ref;
+        // edgeBucketCounts ref (clean)
+        final IntArrayCache.Reference edgeBucketCounts_ref;
+
+        // alphaLine ref (clean)
+        final IntArrayCache.Reference alphaLine_ref;
+
+        // crossings ref (dirty)
+        final IntArrayCache.Reference crossings_ref;
+        // edgePtrs ref (dirty)
+        final IntArrayCache.Reference edgePtrs_ref;
+        // merge sort initial arrays
+        // aux_crossings ref (dirty)
+        final IntArrayCache.Reference aux_crossings_ref;
+        // aux_edgePtrs ref (dirty)
+        final IntArrayCache.Reference aux_edgePtrs_ref;
+
+        // blkFlags ref (clean)
+        final IntArrayCache.Reference blkFlags_ref;
+
+        DRendererSharedMemory(final DRendererContext rdrCtx) {
+            edges = rdrCtx.newOffHeapArray(INITIAL_EDGES_CAPACITY); // 96K
+
+            edgeBuckets_ref      = rdrCtx.newCleanIntArrayRef(INITIAL_BUCKET_ARRAY); // 64K
+            edgeBucketCounts_ref = rdrCtx.newCleanIntArrayRef(INITIAL_BUCKET_ARRAY); // 64K
+
+            // 2048 (pixelsize) pixel large
+            alphaLine_ref = rdrCtx.newCleanIntArrayRef(INITIAL_AA_ARRAY); // 8K
+
+            crossings_ref     = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
+            aux_crossings_ref = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
+            edgePtrs_ref      = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
+            aux_edgePtrs_ref  = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
+
+            blkFlags_ref = rdrCtx.newCleanIntArrayRef(INITIAL_ARRAY); // 1K = 1 tile line
+        }
     }
 }

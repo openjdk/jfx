@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,7 +46,6 @@ import com.sun.prism.ResourceFactory;
 import com.sun.prism.Texture;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.prism.impl.shape.DMarlinPrismUtils;
-import com.sun.prism.impl.shape.DMarlinRasterizer;
 import com.sun.prism.impl.shape.MarlinPrismUtils;
 import com.sun.prism.impl.shape.MaskData;
 import com.sun.prism.impl.shape.OpenPiscesPrismUtils;
@@ -112,7 +111,7 @@ final class SWContext {
         }
     }
 
-    class JavaShapeRenderer implements ShapeRenderer {
+    static final class JavaShapeRenderer implements ShapeRenderer {
         private final DirectRTPiscesAlphaConsumer alphaConsumer = new DirectRTPiscesAlphaConsumer();
 
         public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {

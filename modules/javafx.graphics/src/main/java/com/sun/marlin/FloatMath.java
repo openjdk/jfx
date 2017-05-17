@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,16 +39,6 @@ public final class FloatMath implements MarlinConst {
     }
 
     // faster inlined min/max functions in the branch prediction is high
-    static float max(final float a, final float b) {
-        // no NaN handling
-        return (a >= b) ? a : b;
-    }
-
-    static double max(final double a, final double b) {
-        // no NaN handling
-        return (a >= b) ? a : b;
-    }
-
     public static int max(final int a, final int b) {
         return (a >= b) ? a : b;
     }
