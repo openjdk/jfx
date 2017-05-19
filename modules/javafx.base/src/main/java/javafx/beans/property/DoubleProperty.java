@@ -37,6 +37,10 @@ import javafx.beans.WeakInvalidationListener;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableDoubleValue;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 /**
  * This class defines a {@link Property} wrapping a {@code double} value.
  * <p>
@@ -152,6 +156,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
             throw new NullPointerException("Property cannot be null");
         }
         return new DoublePropertyBase() {
+            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, property);
             }
@@ -169,7 +174,10 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
             @Override
             protected void finalize() throws Throwable {
                 try {
-                    BidirectionalBinding.unbindNumber(property, this);
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        BidirectionalBinding.unbindNumber(property, this);
+                        return null;
+                    }, acc);
                 } finally {
                     super.finalize();
                 }
@@ -199,7 +207,7 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
     @Override
     public ObjectProperty<Double> asObject() {
         return new ObjectPropertyBase<Double> () {
-
+            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, DoubleProperty.this);
             }
@@ -217,7 +225,10 @@ public abstract class DoubleProperty extends ReadOnlyDoubleProperty implements
             @Override
             protected void finalize() throws Throwable {
                 try {
-                    BidirectionalBinding.unbindNumber(this, DoubleProperty.this);
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        BidirectionalBinding.unbindNumber(this, DoubleProperty.this);
+                        return null;
+                    }, acc);
                 } finally {
                     super.finalize();
                 }
