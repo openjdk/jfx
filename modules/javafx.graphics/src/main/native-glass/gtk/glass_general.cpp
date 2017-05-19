@@ -524,7 +524,10 @@ GdkScreen * glass_gdk_window_get_screen(GdkWindow * gdkWindow)
 
 gboolean
 glass_gdk_mouse_devices_grab(GdkWindow *gdkWindow) {
-#ifdef GLASS_GTK3
+#ifdef GLASS_GTK3_DISABLED
+//this GTK 3 approach has synchronization issues covered in JDK-8176844
+// As the approach is also deprecated in GTK 3.20+, revert back to using GTK 2 mechanism
+
         if (disableGrab) {
             return TRUE;
         }
@@ -537,6 +540,7 @@ glass_gdk_mouse_devices_grab(GdkWindow *gdkWindow) {
         context.window = gdkWindow;
         context.grabbed = FALSE;
         g_list_foreach(devices, (GFunc) grab_mouse_device, &context);
+        g_list_free(devices);
 
         return context.grabbed;
 #else
@@ -565,12 +569,15 @@ glass_gdk_mouse_devices_grab_with_cursor(GdkWindow *gdkWindow, GdkCursor *cursor
 
 void
 glass_gdk_mouse_devices_ungrab() {
-#ifdef GLASS_GTK3
+#ifdef GLASS_GTK3_DISABLED
+//this GTK 3 approach has synchronization issues covered in JDK-8176844
+// As the approach is also deprecated in GTK 3.20+, revert back to using GTK 2 mechanism
         GList *devices = gdk_device_manager_list_devices(
                              gdk_display_get_device_manager(
                                  gdk_display_get_default()),
                                  GDK_DEVICE_TYPE_MASTER);
         g_list_foreach(devices, (GFunc) ungrab_mouse_device, NULL);
+        g_list_free(devices);
 #else
         gdk_pointer_ungrab(GDK_CURRENT_TIME);
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ import java.security.PrivilegedAction;
 /**
  * Marlin RendererEngine implementation (derived from Pisces)
  */
-public class MarlinRenderingEngine implements MarlinConst
+public final class MarlinRenderingEngine implements MarlinConst
 {
     /**
      * Private constructor to prevent instantiation.
@@ -198,8 +198,14 @@ public class MarlinRenderingEngine implements MarlinConst
                 + MarlinConst.LOG_UNSAFE_MALLOC);
 
         // quality settings
+        logInfo("prism.marlin.cubic_dec_d2     = "
+                + MarlinProperties.getCubicDecD2());
+        logInfo("prism.marlin.cubic_inc_d1     = "
+                + MarlinProperties.getCubicIncD1());
+        logInfo("prism.marlin.quad_dec_d2      = "
+                + MarlinProperties.getQuadDecD2());
+
         logInfo("Renderer settings:");
-        logInfo("CUB_COUNT_LG = " + Renderer.CUB_COUNT_LG);
         logInfo("CUB_DEC_BND  = " + Renderer.CUB_DEC_BND);
         logInfo("CUB_INC_BND  = " + Renderer.CUB_INC_BND);
         logInfo("QUAD_DEC_BND = " + Renderer.QUAD_DEC_BND);
@@ -207,7 +213,7 @@ public class MarlinRenderingEngine implements MarlinConst
         logInfo("INITIAL_EDGES_CAPACITY        = "
                 + MarlinConst.INITIAL_EDGES_CAPACITY);
         logInfo("INITIAL_CROSSING_COUNT        = "
-                + Renderer.INITIAL_CROSSING_COUNT);
+                + MarlinConst.INITIAL_CROSSING_COUNT);
 
         logInfo("=========================================================="
                 + "=====================");

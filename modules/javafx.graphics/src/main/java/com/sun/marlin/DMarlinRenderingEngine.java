@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ import java.security.PrivilegedAction;
 /**
  * Marlin RendererEngine implementation (derived from Pisces)
  */
-public class DMarlinRenderingEngine implements MarlinConst
+public final class DMarlinRenderingEngine implements MarlinConst
 {
     /**
      * Private constructor to prevent instantiation.
@@ -48,12 +48,12 @@ public class DMarlinRenderingEngine implements MarlinConst
     static {
         if (PathIterator.WIND_NON_ZERO != DMarlinRenderer.WIND_NON_ZERO ||
             PathIterator.WIND_EVEN_ODD != DMarlinRenderer.WIND_EVEN_ODD ||
-            BasicStroke.JOIN_MITER != Stroker.JOIN_MITER ||
-            BasicStroke.JOIN_ROUND != Stroker.JOIN_ROUND ||
-            BasicStroke.JOIN_BEVEL != Stroker.JOIN_BEVEL ||
-            BasicStroke.CAP_BUTT != Stroker.CAP_BUTT ||
-            BasicStroke.CAP_ROUND != Stroker.CAP_ROUND ||
-            BasicStroke.CAP_SQUARE != Stroker.CAP_SQUARE)
+            BasicStroke.JOIN_MITER != DStroker.JOIN_MITER ||
+            BasicStroke.JOIN_ROUND != DStroker.JOIN_ROUND ||
+            BasicStroke.JOIN_BEVEL != DStroker.JOIN_BEVEL ||
+            BasicStroke.CAP_BUTT != DStroker.CAP_BUTT ||
+            BasicStroke.CAP_ROUND != DStroker.CAP_ROUND ||
+            BasicStroke.CAP_SQUARE != DStroker.CAP_SQUARE)
         {
             throw new InternalError("mismatched renderer constants");
         }
@@ -198,8 +198,14 @@ public class DMarlinRenderingEngine implements MarlinConst
                 + MarlinConst.LOG_UNSAFE_MALLOC);
 
         // quality settings
+        logInfo("prism.marlin.cubic_dec_d2     = "
+                + MarlinProperties.getCubicDecD2());
+        logInfo("prism.marlin.cubic_inc_d1     = "
+                + MarlinProperties.getCubicIncD1());
+        logInfo("prism.marlin.quad_dec_d2      = "
+                + MarlinProperties.getQuadDecD2());
+
         logInfo("Renderer settings:");
-        logInfo("CUB_COUNT_LG = " + DRenderer.CUB_COUNT_LG);
         logInfo("CUB_DEC_BND  = " + DRenderer.CUB_DEC_BND);
         logInfo("CUB_INC_BND  = " + DRenderer.CUB_INC_BND);
         logInfo("QUAD_DEC_BND = " + DRenderer.QUAD_DEC_BND);

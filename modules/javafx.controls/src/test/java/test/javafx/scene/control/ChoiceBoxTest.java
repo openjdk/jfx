@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,6 +56,8 @@ import javafx.scene.control.SelectionModelShim;
 import javafx.scene.control.SingleSelectionModel;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import javafx.event.Event;
+import javafx.event.EventHandler;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -530,5 +532,43 @@ public class ChoiceBoxTest {
         sm.selectPrevious();
         assertEquals("selecting previous must move over separator", 1, sm.getSelectedIndex());
         assertEquals("oranges", sm.getSelectedItem());
+    }
+
+    boolean onShowingPass;
+    boolean onShownPass;
+    boolean onHidingPass;
+    boolean onHiddenPass;
+    @Test public void test_jdk_8175963_showHideEvents() {
+        ChoiceBox box = new ChoiceBox();
+        box.getItems().setAll("1");
+
+        box.setOnShowing(event -> {
+            assertEquals("event is not of type ChoiceBox.ON_SHOWING",
+                event.getEventType(), ChoiceBox.ON_SHOWING);
+            onShowingPass = true;
+        });
+        box.setOnShown(event -> {
+            assertEquals("event is not of type ChoiceBox.ON_SHOWN",
+                event.getEventType(), ChoiceBox.ON_SHOWN);
+            onShownPass = true;
+        });
+        box.setOnHiding(event -> {
+            assertEquals("event is not of type ChoiceBox.ON_HIDING",
+                event.getEventType(), ChoiceBox.ON_HIDING);
+            onHidingPass = true;
+        });
+        box.setOnHidden(event -> {
+            assertEquals("event is not of type ChoiceBox.ON_HIDDEN",
+                event.getEventType(), ChoiceBox.ON_HIDDEN);
+            onHiddenPass = true;
+        });
+
+        box.show();
+        box.hide();
+
+        assertTrue("OnShowing event not received", onShowingPass);
+        assertTrue("onShown event not received", onShownPass);
+        assertTrue("onHiding event not received", onHidingPass);
+        assertTrue("onHidden event not received", onHiddenPass);
     }
 }

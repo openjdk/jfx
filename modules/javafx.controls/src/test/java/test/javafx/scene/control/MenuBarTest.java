@@ -552,6 +552,49 @@ public class MenuBarTest {
         assertEquals(menu.showingProperty().get(), false);
     }
 
+    @Test public void testMenuBarUpdateOnMenuVisibilityChange() {
+        VBox root = new VBox();
+        Menu menu1 = new Menu("Menu1");
+        Menu menu2 = new Menu("Menu2");
+
+        menuBar.getMenus().addAll(menu1, menu2);
+
+        root.getChildren().addAll(menuBar);
+        startApp(root);
+        tk.firePulse();
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        // Test menuBar height to be non-zero as both menus are
+        // visible by default
+        int x = Double.compare(menuBar.getHeight(), 0.0);
+        assertTrue(x > 0);
+
+        // Test menubar height to be zero in case all of its
+        // children are invisible
+        menu1.setVisible(false);
+        menu2.setVisible(false);
+        tk.firePulse();
+
+        assertEquals(menuBar.getHeight(), 0.0, 0.0001);
+
+        // Test menuBar height to be non-zero if another menu is added
+        Menu menu3 = new Menu("Menu3");
+        menuBar.getMenus().add(menu3);
+        tk.firePulse();
+
+        x = Double.compare(menuBar.getHeight(), 0.0);
+        assertTrue(x > 0);
+
+        // Test menuBar height to be zero in case all of its
+        // children are invisible
+        menu3.setVisible(false);
+        tk.firePulse();
+
+        assertEquals(menuBar.getHeight(), 0.0, 0.0001);
+    }
+
     @Test public void testRemovingMenuItemFromMenuNotInScene() {
         VBox root = new VBox();
         Menu menu = new Menu("Menu");
