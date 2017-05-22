@@ -3820,6 +3820,11 @@ g_main_context_iterate (GMainContext *context,
       context->cached_poll_array_size = allocated_nfds = nfds;
       context->cached_poll_array = fds = g_new (GPollFD, nfds);
       UNLOCK_CONTEXT (context);
+#ifdef GSTREAMER_LITE
+      if (fds == NULL) {
+        return FALSE;
+      }
+#endif // GSTREAMER_LITE
     }
 
   if (!block)

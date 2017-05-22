@@ -14,7 +14,7 @@
 #define ALIGNOF_UNSIGNED_LONG 8
 
 /* poll doesn't work on devices */
-#define BROKEN_POLL 1
+/* #undef BROKEN_POLL */
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
    systems. This function is required for `alloca.c' support on those systems.
