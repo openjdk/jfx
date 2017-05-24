@@ -75,6 +75,7 @@ list(APPEND WebCore_SOURCES
     platform/java/FileChooserJava.cpp
     platform/java/FileSystemJava.cpp
     platform/java/FrameLoaderClientJava.cpp
+    platform/java/ProgressTrackerClientJava.cpp
     platform/java/VisitedLinkStoreJava.cpp
     platform/java/IDNJava.cpp
     platform/java/InspectorClientJava.cpp
