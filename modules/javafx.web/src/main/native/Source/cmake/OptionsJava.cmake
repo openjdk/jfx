@@ -39,12 +39,6 @@ if (WIN32)
         set(ICU_I18N_LIBRARIES ${IMPORT_LIBRARIES_DIR}/sicuind.lib)
     endif ()
     #### ICU-END ####
-
-    set(LIBXML2_INCLUDE_DIR ${IMPORT_INCLUDE_DIR})
-    set(LIBXML2_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libxml2_a.lib)
-
-    set(LIBXSLT_INCLUDE_DIR ${IMPORT_INCLUDE_DIR})
-    set(LIBXSLT_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libxslt_a.lib)
 elseif (APPLE)
     # set(USE_CF 1)
     add_definitions(-DUSE_CF=1)
