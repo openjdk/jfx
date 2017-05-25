@@ -31,7 +31,7 @@ import javafx.collections.ObservableList;
 import javafx.beans.value.ObservableValue;
 
 /**
- * A {@code IntegerExpression} is a
+ * {@code IntegerExpression} is an
  * {@link javafx.beans.value.ObservableIntegerValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

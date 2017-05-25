@@ -31,7 +31,7 @@ import javafx.beans.value.ObservableValue;
 import com.sun.javafx.binding.StringFormatter;
 
 /**
- * A {@code StringExpression} is a
+ * {@code StringExpression} is an
  * {@link javafx.beans.value.ObservableStringValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

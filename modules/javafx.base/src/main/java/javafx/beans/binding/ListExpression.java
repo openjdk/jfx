@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.ListIterator;
 
 /**
- * A {@code ListExpression} is a
+ * {@code ListExpression} is an
  * {@link javafx.beans.value.ObservableListValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

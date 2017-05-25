@@ -25,7 +25,7 @@
 package javafx.collections;
 
 /**
- * {@code ObservableIntegerArray} is a {@code int[]} array that allows listeners
+ * {@code ObservableIntegerArray} is an {@code int[]} array that allows listeners
  * to track changes when they occur. In order to track changes, the internal
  * array is encapsulated and there is no direct access available from the outside.
  * Bulk operations are supported but they always do a copy of the data range.

@@ -30,7 +30,7 @@ import java.util.Locale;
 import javafx.beans.value.ObservableNumberValue;
 
 /**
- * A {@code NumberExpression} is a
+ * {@code NumberExpression} is an
  * {@link javafx.beans.value.ObservableNumberValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

@@ -32,7 +32,8 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 /**
- * Base class for all readonly properties wrapping a {@link javafx.collections.ObservableList}.
+ * Base class for all readonly properties wrapping an
+ * {@link javafx.collections.ObservableList}.
  * This class provides a default implementation to attach listener.
  *
  * @see ReadOnlyListProperty

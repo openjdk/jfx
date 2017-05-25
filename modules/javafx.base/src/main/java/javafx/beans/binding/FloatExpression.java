@@ -31,7 +31,7 @@ import javafx.collections.ObservableList;
 import javafx.beans.value.ObservableValue;
 
 /**
- * A {@code FloatExpression} is a
+ * {@code FloatExpression} is an
  * {@link javafx.beans.value.ObservableFloatValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

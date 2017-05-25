@@ -32,7 +32,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 
 /**
- * This class provides a full implementation of a {@link Property} wrapping a
+ * This class provides a full implementation of a {@link Property} wrapping an
  * {@link javafx.collections.ObservableSet}.
  *
  * The value of a {@code SetProperty} can be get and set with {@link #get()},

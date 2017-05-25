@@ -33,7 +33,7 @@ import com.sun.javafx.binding.StringFormatter;
 import javafx.beans.value.ObservableValue;
 
 /**
- * A {@code BooleanExpression} is a
+ * {@code BooleanExpression} is an
  * {@link javafx.beans.value.ObservableBooleanValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

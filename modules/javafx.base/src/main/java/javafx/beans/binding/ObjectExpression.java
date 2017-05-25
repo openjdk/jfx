@@ -33,7 +33,7 @@ import javafx.collections.ObservableList;
 import java.util.Locale;
 
 /**
- * A {@code ObjectExpression} is a
+ * {@code ObjectExpression} is an
  * {@link javafx.beans.value.ObservableObjectValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

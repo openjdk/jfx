@@ -30,7 +30,7 @@ import javafx.beans.value.WritableListValue;
 import javafx.collections.ObservableList;
 
 /**
- * This class provides a full implementation of a {@link Property} wrapping a
+ * This class provides a full implementation of a {@link Property} wrapping an
  * {@link javafx.collections.ObservableList}.
  *
  * The value of a {@code ListProperty} can be get and set with {@link #get()},

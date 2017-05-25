@@ -36,7 +36,7 @@ import javafx.beans.value.ObservableNumberValue;
 import com.sun.javafx.binding.StringFormatter;
 
 /**
- * A {@code NumberExpressionBase} contains convenience methods to generate bindings in a fluent style,
+ * {@code NumberExpressionBase} contains convenience methods to generate bindings in a fluent style,
  * that are common to all NumberExpression subclasses.
  * <p>
  * NumberExpressionBase serves as a place for common code of specific NumberExpression subclasses for the

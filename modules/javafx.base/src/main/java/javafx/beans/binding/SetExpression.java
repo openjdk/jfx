@@ -41,7 +41,7 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * A {@code SetExpression} is a
+ * {@code SetExpression} is an
  * {@link javafx.beans.value.ObservableSetValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

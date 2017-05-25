@@ -31,7 +31,7 @@ import javafx.collections.ObservableList;
 import javafx.beans.value.ObservableValue;
 
 /**
- * A {@code LongExpression} is a {@link javafx.beans.value.ObservableLongValue}
+ * {@code LongExpression} is an {@link javafx.beans.value.ObservableLongValue}
  * plus additional convenience methods to generate bindings in a fluent style.
  * <p>
  * A concrete sub-class of {@code LongExpression} has to implement the method

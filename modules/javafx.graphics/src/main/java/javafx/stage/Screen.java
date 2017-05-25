@@ -273,7 +273,7 @@ public final class Screen {
     private double dpi;
     /**
      * Gets the resolution (dots per inch) of this {@code Screen}.
-     * @return The resolution of this @{code Screen}
+     * @return The resolution of this {@code Screen}
      */
     public final double getDpi() {
         return dpi;

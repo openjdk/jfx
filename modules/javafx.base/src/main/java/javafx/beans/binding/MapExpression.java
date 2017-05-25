@@ -39,7 +39,7 @@ import javafx.collections.ObservableMap;
 import java.util.*;
 
 /**
- * A {@code MapExpression} is a
+ * {@code MapExpression} is an
  * {@link javafx.beans.value.ObservableMapValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>

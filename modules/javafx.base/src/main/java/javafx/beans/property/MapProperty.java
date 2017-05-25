@@ -30,7 +30,7 @@ import javafx.beans.value.WritableMapValue;
 import javafx.collections.ObservableMap;
 
 /**
- * This class provides a full implementation of a {@link Property} wrapping a
+ * This class provides a full implementation of a {@link Property} wrapping an
  * {@link javafx.collections.ObservableMap}.
  *
  * The value of a {@code MapProperty} can be get and set with {@link #get()},

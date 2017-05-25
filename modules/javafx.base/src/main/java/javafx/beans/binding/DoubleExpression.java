@@ -32,7 +32,7 @@ import javafx.collections.ObservableList;
 import javafx.beans.value.ObservableValue;
 
 /**
- * A {@code DoubleExpression} is a
+ * {@code DoubleExpression} is an
  * {@link javafx.beans.value.ObservableDoubleValue} plus additional convenience
  * methods to generate bindings in a fluent style.
  * <p>
