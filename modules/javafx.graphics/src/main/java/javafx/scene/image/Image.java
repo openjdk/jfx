@@ -610,7 +610,6 @@ public class Image {
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
-     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @throws NullPointerException if URL is null
      * @throws IllegalArgumentException if URL is invalid or unsupported
      */
@@ -624,7 +623,6 @@ public class Image {
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
-     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @param backgroundLoading indicates whether the image
      *      is being loaded in the background
      * @throws NullPointerException if URL is null
@@ -640,7 +638,6 @@ public class Image {
      *
      * @param url the string representing the URL to use in fetching the pixel
      *      data
-     * @see #Image(java.lang.String, java.io.InputStream, double, double, boolean, boolean, boolean)
      * @param requestedWidth the image's bounding box width
      * @param requestedHeight the image's bounding box height
      * @param preserveRatio indicates whether to preserve the aspect ratio of

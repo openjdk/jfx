@@ -85,7 +85,7 @@ import static javafx.concurrent.WorkerStateEvent.WORKER_STATE_SUCCEEDED;
  *     }</pre>
  * <p>
  *     Note that this code sets the daemon flag of the Thread to true. If you
- *     want a background thread to prevent the VM from existing after the last
+ *     want a background thread to prevent the VM from exiting after the last
  *     stage is closed, then you would want daemon to be false. However, if
  *     you want the background threads to simply terminate after all the
  *     stages are closed, then you must set daemon to true.

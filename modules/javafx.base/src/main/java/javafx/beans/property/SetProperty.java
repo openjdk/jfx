@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableSet;
 
 /**
- * This class provides a full implementation of a {@link Property} wrapping a
+ * This class provides a full implementation of a {@link Property} wrapping an
  * {@link javafx.collections.ObservableSet}.
  *
  * The value of a {@code SetProperty} can be get and set with {@link #get()},

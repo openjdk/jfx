@@ -43,7 +43,7 @@ import com.sun.javafx.sg.prism.NGNode;
 
 /**
  * {@code Canvas} is an image that can be drawn on using a set of graphics
- * commands provided by a {@code GraphicsContext}.
+ * commands provided by a {@link GraphicsContext}.
  *
  * <p>
  * A {@code Canvas} node is constructed with a width and height that specifies the size
@@ -70,6 +70,7 @@ gc.fillRect(75,75,100,100);
 root.getChildren().add(canvas);
  * </pre>
  *
+ * @see GraphicsContext
  * @since JavaFX 2.2
  */
 public class Canvas extends Node {

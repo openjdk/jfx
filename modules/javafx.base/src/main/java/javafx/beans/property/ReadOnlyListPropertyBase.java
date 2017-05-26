@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,8 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 
 /**
- * Base class for all readonly properties wrapping a {@link javafx.collections.ObservableList}.
+ * Base class for all readonly properties wrapping an
+ * {@link javafx.collections.ObservableList}.
  * This class provides a default implementation to attach listener.
  *
  * @see ReadOnlyListProperty

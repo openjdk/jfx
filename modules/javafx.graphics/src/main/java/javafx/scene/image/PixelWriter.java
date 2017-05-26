@@ -103,7 +103,7 @@ public interface PixelWriter {
      *        start of one row of data in the buffer to the start of the
      *        next row of data.
      *
-     * @throws java.lang.NullPointerException if @{code pixelformat} or {@code buffer} is {@code null}
+     * @throws java.lang.NullPointerException if {@code pixelformat} or {@code buffer} is {@code null}
      */
     public <T extends Buffer>
         void setPixels(int x, int y, int w, int h,
@@ -140,7 +140,7 @@ public interface PixelWriter {
      *        start of one row of data in the buffer to the start of the
      *        next row of data
      *
-     * @throws java.lang.NullPointerException if @{code pixelformat} or {@code buffer} is {@code null}
+     * @throws java.lang.NullPointerException if {@code pixelformat} or {@code buffer} is {@code null}
      */
     public void setPixels(int x, int y, int w, int h,
                           PixelFormat<ByteBuffer> pixelformat,
@@ -176,7 +176,7 @@ public interface PixelWriter {
      *        start of one row of data in the buffer to the start of the
      *        next row of data
      *
-     * @throws java.lang.NullPointerException if @{code pixelformat} or {@code buffer} is {@code null}
+     * @throws java.lang.NullPointerException if {@code pixelformat} or {@code buffer} is {@code null}
      */
     public void setPixels(int x, int y, int w, int h,
                           PixelFormat<IntBuffer> pixelformat,
@@ -209,7 +209,7 @@ public interface PixelWriter {
      * @param srcx the X coordinate of the data to read from {@code reader}
      * @param srcy the Y coordinate of the data to read from {@code reader}
      *
-     * @throws java.lang.NullPointerException if @{code reader} is {@code null}
+     * @throws java.lang.NullPointerException if {@code reader} is {@code null}
      */
     public void setPixels(int dstx, int dsty, int w, int h,
                           PixelReader reader, int srcx, int srcy);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 package javafx.collections;
 
 /**
- * {@code ObservableIntegerArray} is a {@code int[]} array that allows listeners
+ * {@code ObservableIntegerArray} is an {@code int[]} array that allows listeners
  * to track changes when they occur. In order to track changes, the internal
  * array is encapsulated and there is no direct access available from the outside.
  * Bulk operations are supported but they always do a copy of the data range.

@@ -65,7 +65,7 @@ import java.util.LinkedList;
 import javafx.scene.text.FontSmoothingType;
 
 /**
- * This class is used to issue draw calls to a {@code Canvas} using a buffer.
+ * This class is used to issue draw calls to a {@link Canvas} using a buffer.
  * <p>
  * Each call pushes the necessary parameters onto the buffer
  * where they will be later rendered onto the image of the {@code Canvas} node
@@ -481,6 +481,7 @@ gc.fillRect(75,75,100,100);
 root.getChildren().add(canvas);
  * </pre>
  *
+ * @see Canvas
  * @since JavaFX 2.2
  */
 public final class GraphicsContext {

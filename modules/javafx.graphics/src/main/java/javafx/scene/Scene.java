@@ -5810,7 +5810,7 @@ public class Scene implements EventTarget {
     }
 
     /**
-     * Defines a function to be called when this @{code Scene} is a
+     * Defines a function to be called when this {@code Scene} is a
      * drag and drop gesture source after its data has
      * been dropped on a drop target. The {@code transferMode} of the
      * event shows what just happened at the drop target.

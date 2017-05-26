@@ -469,25 +469,12 @@ int wmain(int argc, wchar_t* argv[]) {
 
     std::wstring fxlib = javafxhome + L"\\..\\lib\\";
 
-    EnvironmentVariable java_home(L"JAVA_HOME");
     std::wstring javacmd;
     std::wstring javahome;
 
-    if (java_home.exists()) {
-        javahome = java_home.get();
-        javacmd = javahome + L"\\bin\\java.exe";
-        std::wstring javaccmd = javahome + L"\\bin\\javac.exe";
-        if (!fileExists(javacmd) || !fileExists(javaccmd)) {
-            javacmd = L"";
-            javahome = L"";
-        }
-    }
-    else {
-        std::wstring exe = GetCurrentExecutableName();
-        javacmd = ExtractFilePath(exe) + L"\\java.exe";
-    }
+    std::wstring exe = GetCurrentExecutableName();
 
-    if (javacmd.length() <= 0) {
+    if (exe.length() <= 0) {
         JavaVersion * jv2 = GetMaxVersion(HKEY_LOCAL_MACHINE, "SOFTWARE\\JavaSoft\\Java Development Kit");
         if (jv2 != NULL) {
             javacmd = jv2->path;
@@ -496,6 +483,8 @@ int wmain(int argc, wchar_t* argv[]) {
         else {
             javacmd = L"java.exe";
         }
+    } else {
+        javacmd = ExtractFilePath(exe) + L"\\java.exe";
     }
 
     std::wstring cmd = L"\"" + javacmd + L"\"";
