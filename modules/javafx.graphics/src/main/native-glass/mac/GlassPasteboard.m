@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -298,6 +298,25 @@ static inline NSPasteboardItem *NSPasteboardItemFromArray(JNIEnv *env, jobjectAr
     return item;
 }
 
+static inline jobject createUTF(JNIEnv *env, NSString *data) {
+    jclass jcls = (*env)->FindClass(env, "java/lang/String");
+    GLASS_CHECK_EXCEPTION(env);
+    jmethodID String_init_ID = (*env)->
+                    GetMethodID(env, jcls, "<init>", "([BLjava/lang/String;)V");
+    GLASS_CHECK_EXCEPTION(env);
+    NSUInteger len = [data lengthOfBytesUsingEncoding:NSUTF8StringEncoding];
+    jbyteArray ba = (*env)->NewByteArray(env, len);
+    GLASS_CHECK_EXCEPTION(env);
+    (*env)->SetByteArrayRegion(env, ba, 0, len, (jbyte *)[data UTF8String]);
+    jstring charset = (*env)->NewStringUTF(env, "UTF-8");
+    GLASS_CHECK_EXCEPTION(env);
+    jobject jdata = (*env)->NewObject(env, jcls, String_init_ID, ba, charset);
+    GLASS_CHECK_EXCEPTION(env);
+    (*env)->DeleteLocalRef(env, charset);
+    (*env)->DeleteLocalRef(env, jcls);
+    return jdata;
+}
+
 /*
  * Class:     com_sun_glass_ui_mac_MacPasteboard
  * Method:    _initIDs
@@ -461,7 +480,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getUTFs
                         //id property = [item stringForType:type];
                         //if (property != nil) // allow null as the platform itself does
                         {
-                            (*env)->SetObjectArrayElement(env, array, (jsize)j, (*env)->NewStringUTF(env, [type UTF8String]));
+                            (*env)->SetObjectArrayElement(env,
+                                         array, (jsize)j, createUTF(env, type));
                             GLASS_CHECK_EXCEPTION(env);
                         }
                     }
@@ -615,7 +635,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_mac_MacPasteboard__1getItemStrin
                     NSString *str = [item stringForType:utf];
                     if (str != nil)
                     {
-                        string = (jobject)(*env)->NewStringUTF(env, [str UTF8String]);
+                        string = createUTF(env, str);
                     }
                 }
             }

@@ -45,6 +45,7 @@ list(APPEND WebCore_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}/WebCore/generated"
     "${WTF_DIR}"
     "${WEBKIT_DIR}"
+    "${THIRDPARTY_DIR}/sqlite"
 )
 
 list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
@@ -75,6 +76,7 @@ list(APPEND WebCore_SOURCES
     platform/java/FileChooserJava.cpp
     platform/java/FileSystemJava.cpp
     platform/java/FrameLoaderClientJava.cpp
+    platform/java/ProgressTrackerClientJava.cpp
     platform/java/VisitedLinkStoreJava.cpp
     platform/java/IDNJava.cpp
     platform/java/InspectorClientJava.cpp
@@ -173,6 +175,15 @@ if (WIN32)
     list(APPEND WebCore_SOURCES
       platform/win/SystemInfo.cpp
     )
+    list(APPEND WebCore_INCLUDE_DIRECTORIES
+        ${THIRDPARTY_DIR}/libxml/win32/include
+        ${THIRDPARTY_DIR}/libxml/src/include
+        ${THIRDPARTY_DIR}/libxslt
+    )
+    list(APPEND WebCore_LIBRARIES
+        XMLJava
+        XSLTJava
+    )
 elseif(APPLE)
     list(APPEND WebCore_INCLUDE_DIRECTORIES
         ${WEBCORE_DIR}/icu
@@ -195,6 +206,19 @@ elseif(UNIX)
       platform/linux/MemoryPressureHandlerLinux.cpp
     )
 endif()
+
+# System libraries are used on non windows platform
+if (NOT WIN32)
+    list(APPEND WebCore_LIBRARIES
+        ${LIBXML2_LIBRARIES}
+        ${LIBXSLT_LIBRARIES}
+    )
+
+    list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
+        ${LIBXML2_INCLUDE_DIR}
+        ${LIBXSLT_INCLUDE_DIR}
+    )
+endif ()
 
 list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
     ${WEBCORE_DIR}/css/mediaControlsGtk.css
@@ -219,20 +243,9 @@ set(WebCore_FORWARDING_HEADERS_FILES
 )
 
 set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/java/RenderThemeJava.cpp)
-list(APPEND WebCore_LIBRARIES
-    ${LIBXML2_LIBRARIES}
-    ${LIBXSLT_LIBRARIES}
-    ${SQLITE_LIBRARIES}
-)
 
-list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-    ${LIBXML2_INCLUDE_DIR}
-    ${LIBXSLT_INCLUDE_DIR}
-    # ${SQLITE_INCLUDE_DIR}
-    # ${WEBP_INCLUDE_DIRS}
-    ${ZLIB_INCLUDE_DIRS}
-    ${JAVA_INCLUDE_PATH}
-    ${JAVA_INCLUDE_PATH2}
+list(APPEND WebCore_LIBRARIES
+    SqliteJava
 )
 
 include_directories(

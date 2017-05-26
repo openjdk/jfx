@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,31 +56,31 @@ final class DCurve {
              double x3, double y3,
              double x4, double y4)
     {
-        ax = 3d * (x2 - x3) + x4 - x1;
-        ay = 3d * (y2 - y3) + y4 - y1;
-        bx = 3d * (x1 - 2d * x2 + x3);
-        by = 3d * (y1 - 2d * y2 + y3);
-        cx = 3d * (x2 - x1);
-        cy = 3d * (y2 - y1);
+        ax = 3.0d * (x2 - x3) + x4 - x1;
+        ay = 3.0d * (y2 - y3) + y4 - y1;
+        bx = 3.0d * (x1 - 2.0d * x2 + x3);
+        by = 3.0d * (y1 - 2.0d * y2 + y3);
+        cx = 3.0d * (x2 - x1);
+        cy = 3.0d * (y2 - y1);
         dx = x1;
         dy = y1;
-        dax = 3d * ax; day = 3d * ay;
-        dbx = 2d * bx; dby = 2d * by;
+        dax = 3.0d * ax; day = 3.0d * ay;
+        dbx = 2.0d * bx; dby = 2.0d * by;
     }
 
     void set(double x1, double y1,
              double x2, double y2,
              double x3, double y3)
     {
-        ax = 0d; ay = 0d;
-        bx = x1 - 2d * x2 + x3;
-        by = y1 - 2d * y2 + y3;
-        cx = 2d * (x2 - x1);
-        cy = 2d * (y2 - y1);
+        ax = 0.0d; ay = 0.0d;
+        bx = x1 - 2.0d * x2 + x3;
+        by = y1 - 2.0d * y2 + y3;
+        cx = 2.0d * (x2 - x1);
+        cy = 2.0d * (y2 - y1);
         dx = x1;
         dy = y1;
-        dax = 0d; day = 0d;
-        dbx = 2d * bx; dby = 2d * by;
+        dax = 0.0d; day = 0.0d;
+        dbx = 2.0d * bx; dby = 2.0d * by;
     }
 
     double xat(double t) {
@@ -111,7 +111,7 @@ final class DCurve {
         // Fortunately, this turns out to be quadratic, so there are at
         // most 2 inflection points.
         final double a = dax * dby - dbx * day;
-        final double b = 2d * (cy * dax - day * cx);
+        final double b = 2.0d * (cy * dax - day * cx);
         final double c = cy * dbx - cx * dby;
 
         return DHelpers.quadraticRoots(a, b, c, pts, off);
@@ -126,11 +126,11 @@ final class DCurve {
         // these are the coefficients of some multiple of g(t) (not g(t),
         // because the roots of a polynomial are not changed after multiplication
         // by a constant, and this way we save a few multiplications).
-        final double a = 2d * (dax*dax + day*day);
-        final double b = 3d * (dax*dbx + day*dby);
-        final double c = 2d * (dax*cx + day*cy) + dbx*dbx + dby*dby;
+        final double a = 2.0d * (dax*dax + day*day);
+        final double b = 3.0d * (dax*dbx + day*dby);
+        final double c = 2.0d * (dax*cx + day*cy) + dbx*dbx + dby*dby;
         final double d = dbx*cx + dby*cy;
-        return DHelpers.cubicRootsInAB(a, b, c, d, pts, off, 0d, 1d);
+        return DHelpers.cubicRootsInAB(a, b, c, d, pts, off, 0.0d, 1.0d);
     }
 
     // Tries to find the roots of the function ROC(t)-w in [0, 1). It uses
@@ -151,14 +151,14 @@ final class DCurve {
         assert off <= 6 && roots.length >= 10;
         int ret = off;
         int numPerpdfddf = perpendiculardfddf(roots, off);
-        double t0 = 0d, ft0 = ROCsq(t0) - w*w;
-        roots[off + numPerpdfddf] = 1d; // always check interval end points
+        double t0 = 0.0d, ft0 = ROCsq(t0) - w*w;
+        roots[off + numPerpdfddf] = 1.0d; // always check interval end points
         numPerpdfddf++;
         for (int i = off; i < off + numPerpdfddf; i++) {
             double t1 = roots[i], ft1 = ROCsq(t1) - w*w;
-            if (ft0 == 0d) {
+            if (ft0 == 0.0d) {
                 roots[ret++] = t0;
-            } else if (ft1 * ft0 < 0d) { // have opposite signs
+            } else if (ft1 * ft0 < 0.0d) { // have opposite signs
                 // (ROC(t)^2 == w^2) == (ROC(t) == w) is true because
                 // ROC(t) >= 0 for all t.
                 roots[ret++] = falsePositionROCsqMinusX(t0, t1, w*w, err);
@@ -218,7 +218,7 @@ final class DCurve {
 
     private static boolean sameSign(double x, double y) {
         // another way is to test if x*y > 0. This is bad for small x, y.
-        return (x < 0d && y < 0d) || (x > 0d && y > 0d);
+        return (x < 0.0d && y < 0.0d) || (x > 0.0d && y > 0.0d);
     }
 
     // returns the radius of curvature squared at t of this curve
@@ -227,8 +227,8 @@ final class DCurve {
         // dx=xat(t) and dy=yat(t). These calls have been inlined for efficiency
         final double dx = t * (t * dax + dbx) + cx;
         final double dy = t * (t * day + dby) + cy;
-        final double ddx = 2d * dax * t + dbx;
-        final double ddy = 2d * day * t + dby;
+        final double ddx = 2.0d * dax * t + dbx;
+        final double ddy = 2.0d * day * t + dby;
         final double dx2dy2 = dx*dx + dy*dy;
         final double ddx2ddy2 = ddx*ddx + ddy*ddy;
         final double ddxdxddydy = ddx*dx + ddy*dy;

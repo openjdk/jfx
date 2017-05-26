@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -244,6 +244,7 @@ class ColorPalette extends Region {
         }
         for (int i = 0; i < numEmpty; i++) {
             ColorSquare emptySquare = new ColorSquare();
+            emptySquare.setDisable(true);
             customColorGrid.add(emptySquare, customColumnIndex, customRowIndex);
             customColumnIndex++;
         }

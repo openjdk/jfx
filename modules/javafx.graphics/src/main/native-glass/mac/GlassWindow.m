@@ -828,21 +828,23 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1setEnabled
     {
         GlassWindow *window = getGlassWindow(env, jPtr);
         window->isEnabled = (BOOL)isEnabled;
-
-        if (!window->isEnabled) {
-            window->enabledStyleMask = [window->nsWindow styleMask];
-            [window->nsWindow setStyleMask: (window->enabledStyleMask & ~(NSUInteger)(NSMiniaturizableWindowMask | NSResizableWindowMask))];
-
-            //XXX: perhaps we could simply enable/disable the buttons w/o playing with the styles at all
-            NSButton *zoomButton = [window->nsWindow standardWindowButton:NSWindowZoomButton];
-            [zoomButton setEnabled:NO];
-        } else {
+        NSButton *zoomButton = [window->nsWindow standardWindowButton:NSWindowZoomButton];
+        if ((window->isEnabled) && (window->isResizable)){
             [window->nsWindow setStyleMask: window->enabledStyleMask];
-
             if (window->enabledStyleMask & NSResizableWindowMask) {
-                NSButton *zoomButton = [window->nsWindow standardWindowButton:NSWindowZoomButton];
                 [zoomButton setEnabled:YES];
             }
+        }
+        else if((window->isEnabled) && (!window->isResizable)){
+            [window->nsWindow setStyleMask:
+                (window->enabledStyleMask & ~(NSUInteger) NSResizableWindowMask)];
+            [zoomButton setEnabled:NO];
+        }
+        else{
+            window->enabledStyleMask = [window->nsWindow styleMask];
+            [window->nsWindow setStyleMask:
+                (window->enabledStyleMask & ~(NSUInteger)(NSMiniaturizableWindowMask | NSResizableWindowMask))];
+            [zoomButton setEnabled:NO];
         }
     }
     GLASS_POOL_EXIT;
