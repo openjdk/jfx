@@ -2513,6 +2513,11 @@ public final class WebPage {
         addDirtyRect(new WCRectangle(0, 0, width, height));
     }
 
+    // Package scope method for testing
+    int test_getFramesCount() {
+        return frames.size();
+    }
+
     // *************************************************************************
     // Native methods
     // *************************************************************************

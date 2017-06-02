@@ -103,6 +103,8 @@ public final class PopupMenuImpl extends com.sun.webkit.PopupMenu {
             item.setDisable(!isEnabled);
             // TODO: set the rest of properties
         }
+
+        item.setMnemonicParsing(false);
         popupMenu.getItems().add(item);
     }
 

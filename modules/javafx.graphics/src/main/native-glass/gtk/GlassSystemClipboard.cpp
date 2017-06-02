@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,6 +37,12 @@ static GdkAtom MIME_JAVA_IMAGE;
 
 static GdkAtom MIME_FILES_TARGET;
 
+static jmethodID String_init_ID;
+
+static jmethodID String_getBytes_ID;
+
+static jstring charset;
+
 static void init_atoms()
 {
     static int initialized = 0;
@@ -49,6 +55,18 @@ static void init_atoms()
         MIME_JAVA_IMAGE = gdk_atom_intern_static_string("application/x-java-rawimage");
 
         MIME_FILES_TARGET = gdk_atom_intern_static_string("application/x-java-file-list");
+
+        String_init_ID = mainEnv->GetMethodID(jStringCls,
+                                           "<init>", "([BLjava/lang/String;)V");
+
+        String_getBytes_ID = mainEnv->GetMethodID(jStringCls,
+                                          "getBytes", "(Ljava/lang/String;)[B");
+
+        jstring set = mainEnv->NewStringUTF("UTF-8");
+        CHECK_JNI_EXCEPTION(mainEnv);
+        charset = (jstring)mainEnv->NewGlobalRef(set);
+        mainEnv->DeleteLocalRef(set);
+
         initialized = 1;
     }
 }
@@ -65,9 +83,39 @@ static GtkClipboard *get_clipboard() {
     return clipboard;
 }
 
+static jobject createUTF(JNIEnv *env, char *data) {
+    int len;
+    jbyteArray ba;
+    jobject jdata;
+    len = strlen(data);
+    ba = env->NewByteArray(len);
+    EXCEPTION_OCCURED(env);
+    env->SetByteArrayRegion(ba, 0, len, (jbyte *)data);
+    EXCEPTION_OCCURED(env);
+    jdata = env->NewObject(jStringCls, String_init_ID, ba, charset);
+    env->DeleteLocalRef(ba);
+    EXCEPTION_OCCURED(env);
+    return jdata;
+}
+
+static char *getUTF(JNIEnv *env, jstring str) {
+    jbyteArray ba;
+    jsize len;
+    char *data;
+    ba = (jbyteArray) env->CallObjectMethod(str, String_getBytes_ID, charset);
+    EXCEPTION_OCCURED(env);
+    len = env->GetArrayLength(ba);
+    data = (char *)g_malloc(len + 1);
+    env->GetByteArrayRegion(ba, 0, len, (jbyte *)data);
+    env->DeleteLocalRef(ba);
+    EXCEPTION_OCCURED(env);
+    data[len] = 0;
+    return data;
+}
+
 static void add_target_from_jstring(JNIEnv *env, GtkTargetList *list, jstring string)
 {
-    const char *gstring = env->GetStringUTFChars(string, NULL);
+    const char *gstring = getUTF(env, string);
     if (g_strcmp0(gstring, "text/plain") == 0) {
         gtk_target_list_add_text_targets(list, 0);
     } else if (g_strcmp0(gstring, "application/x-java-rawimage") == 0) {
@@ -78,7 +126,7 @@ static void add_target_from_jstring(JNIEnv *env, GtkTargetList *list, jstring st
         gtk_target_list_add(list, gdk_atom_intern(gstring, FALSE), 0, 0);
     }
 
-    env->ReleaseStringUTFChars(string, gstring);
+    g_free((gpointer)gstring);
 }
 
 static void data_to_targets(JNIEnv *env, jobject data, GtkTargetEntry **targets, gint *ntargets)
@@ -105,21 +153,21 @@ static void data_to_targets(JNIEnv *env, jobject data, GtkTargetEntry **targets,
 
 static void set_text_data(GtkSelectionData *selection_data, jstring data)
 {
-    const char *text_data = mainEnv->GetStringUTFChars(data, NULL);
+    const char *text_data = getUTF(mainEnv, data);
     guint ntext_data = strlen(text_data);
 
     gtk_selection_data_set_text(selection_data, text_data, ntext_data);
-    mainEnv->ReleaseStringUTFChars(data, text_data);
+    g_free((gpointer)text_data);
 }
 
 static void set_jstring_data(GtkSelectionData *selection_data, GdkAtom target, jstring data)
 {
-    const char *text_data = mainEnv->GetStringUTFChars(data, NULL);
+    const char *text_data = getUTF(mainEnv, data);
     guint ntext_data = strlen(text_data);
 
     //XXX is target == type ??
     gtk_selection_data_set(selection_data, target, 8, (const guchar *)text_data, ntext_data);
-    mainEnv->ReleaseStringUTFChars(data, text_data);
+    g_free((gpointer)text_data);
 }
 
 static void set_bytebuffer_data(GtkSelectionData *selection_data, GdkAtom target, jobject data)
@@ -149,7 +197,7 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     if (mainEnv->CallBooleanMethod(data, jMapContainsKey, typeString, NULL)) {
         jurl = (jstring) mainEnv->CallObjectMethod(data, jMapGet, typeString, NULL);
         CHECK_JNI_EXCEPTION(mainEnv);
-        url = mainEnv->GetStringUTFChars(jurl, NULL);
+        url = getUTF(mainEnv, jurl);
     }
 
     typeString = mainEnv->NewStringUTF("application/x-java-file-list");
@@ -173,7 +221,7 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
                                             sizeof(gchar*));
     if (!uris) {
         if (url) {
-            mainEnv->ReleaseStringUTFChars(jurl, url);
+            g_free((gpointer)url);
         }
         glass_throw_oom(mainEnv, "Failed to allocate uri data");
         return;
@@ -183,9 +231,9 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     if (files_cnt > 0) {
         for (; i < files_cnt; ++i) {
             jstring string = (jstring) mainEnv->GetObjectArrayElement(files_array, i);
-            const gchar* file = mainEnv->GetStringUTFChars(string, NULL);
+            const gchar* file = getUTF(mainEnv, string);
             uris[i] = g_filename_to_uri(file, NULL, NULL);
-            mainEnv->ReleaseStringUTFChars(string, file);
+            g_free((gpointer)file);
         }
     }
 
@@ -202,7 +250,7 @@ static void set_uri_data(GtkSelectionData *selection_data, jobject data) {
     }
 
     if (url) {
-        mainEnv->ReleaseStringUTFChars(jurl, url);
+        g_free((gpointer)url);
     }
     g_free(uris);
 }
@@ -285,7 +333,7 @@ static jobject get_data_text(JNIEnv *env)
     if (data == NULL) {
         return NULL;
     }
-    jstring jdata = env->NewStringUTF(data);
+    jobject jdata = createUTF(env, data);
     EXCEPTION_OCCURED(env);
     g_free(data);
     return jdata;
@@ -350,7 +398,7 @@ static jobject get_data_raw(JNIEnv *env, const char* mime, gboolean string_data)
     if (data != NULL) {
         raw_data = glass_gtk_selection_data_get_data_with_length(data, &length);
         if (string_data) {
-            result = env->NewStringUTF((const char*)raw_data);
+            result = createUTF(env, (char*)raw_data);
             EXCEPTION_OCCURED(env);
         } else {
             array = env->NewByteArray(length);

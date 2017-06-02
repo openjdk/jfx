@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -141,7 +141,7 @@ public final class DCollinearSimplifier implements DPathConsumer2D {
 
     private static double getSlope(double x1, double y1, double x2, double y2) {
         double dy = y2 - y1;
-        if (dy == 0d) {
+        if (dy == 0.0d) {
             return (x2 > x1) ? Double.POSITIVE_INFINITY
                    : Double.NEGATIVE_INFINITY;
         }

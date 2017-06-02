@@ -23,7 +23,7 @@
 
 namespace WebCore {
 
-class FrameLoaderClientJava : public FrameLoaderClient, public ProgressTrackerClient {
+class FrameLoaderClientJava : public FrameLoaderClient {
 public:
     FrameLoaderClientJava(const JLObject &webPage);
     void frameLoaderDestroyed() override;
@@ -86,12 +86,6 @@ public:
 
     void revertToProvisionalState(DocumentLoader*) override;
     void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
-
-    // ProgressTrackerClient methods
-    void progressStarted(Frame& originatingProgressFrame) override;
-    void progressEstimateChanged(Frame& originatingProgressFrame) override;
-    void progressFinished(Frame& originatingProgressFrame) override;
-    void progressTrackerDestroyed() override;
 
     RefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
                                const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) override;
@@ -190,8 +184,6 @@ private:
     unsigned long m_mainResourceRequestID;
     bool m_isPageRedirected;
     bool m_hasRepresentation;
-    bool m_FrameLoaderClientDestroyed;
-    bool m_ProgressTrackerClientDestroyed;
 
     JGObject m_webPage;
 
@@ -203,9 +195,6 @@ private:
 
     void postLoadEvent(Frame* f, int state, String url, String contentType, double progress, int errorCode = 0);
     void postResourceLoadEvent(Frame* f, int state, int id, String contentType, double progress, int errorCode = 0);
-
-    void destroyIfNeeded();
-
     // Plugin widget for handling data redirection
 //        PluginWidgetJava* m_pluginWidget;
 };

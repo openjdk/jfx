@@ -1,0 +1,6 @@
+1. Download interested libxml tarball from http://xmlsoft.org
+2. Extract contents into src directory
+3. Run configure step with below options
+          cscript configure.js compiler=msvc catalog=no xml_debug=no docb=no ftp=no http=no iconv=no legacy=no mem_debug=no modules=no regexps=no run_debug=no schemas=no schematron=no valid=no xinclude=no xptr=no zlib=no
+4. Copy config.h & xmlversion.h to win32 dir
+4. Remove files & directories which are not relevant to JavaFX WebKit

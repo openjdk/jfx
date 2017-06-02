@@ -394,8 +394,8 @@ public class CacheFilter {
 
         double[][] row = {{xform.getMxx(), xform.getMxy()},
             {xform.getMyx(), xform.getMyy()}};
-        final double xSignum = Math.signum(row[0][0]);
-        final double ySignum = Math.signum(row[1][1]);
+        final double xSignum = unitDir(row[0][0]);
+        final double ySignum = unitDir(row[1][1]);
 
         // Compute X scale factor and normalize first row.
         // tran[U_SCALEX] = V3Length(&row[0]);
@@ -458,6 +458,15 @@ public class CacheFilter {
         retVal[2] = angleRad;
 
         return retVal;
+    }
+
+    /**
+     * Return the unit distance in a direction compatible with the matrix element.
+     * @param v the matrix element representing a scale factor
+     * @return -1.0 if the matrix element is negative, otherwise 1.0
+     */
+    double unitDir(double v) {
+        return v < 0.0 ? -1.0 : 1.0;
     }
 
     /**
