@@ -333,6 +333,7 @@ public class MenuButton extends ButtonBase {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {

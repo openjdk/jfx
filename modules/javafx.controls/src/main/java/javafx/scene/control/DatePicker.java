@@ -492,6 +492,7 @@ public class DatePicker extends ComboBoxBase<LocalDate> {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {

@@ -2052,6 +2052,7 @@ public class TreeTableView<S> extends Control {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {

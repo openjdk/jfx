@@ -88,6 +88,7 @@ public class MenuBarButton extends MenuButton {
         idProperty().unbind();
     }
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {

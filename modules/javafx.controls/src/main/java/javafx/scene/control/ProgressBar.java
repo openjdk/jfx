@@ -131,6 +131,7 @@ public class ProgressBar extends ProgressIndicator {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
