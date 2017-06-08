@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,13 +35,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     private static final int ALL_BUT_LSB = 0xFFFFFFFE;
     private static final int ERR_STEP_MAX = 0x7FFFFFFF; // = 2^31 - 1
 
-    private static final double POWER_2_TO_32 = 0x1.0p32;
-
-    // 2048 (pixelSize) pixels (height) x 8 subpixels = 64K
-    static final int INITIAL_BUCKET_ARRAY = INITIAL_PIXEL_DIM;
-
-    // crossing capacity = edges count / 4 ~ 1024
-    static final int INITIAL_CROSSING_COUNT = INITIAL_EDGES_COUNT >> 2;
+    private static final double POWER_2_TO_32 = 0x1.0p32d;
 
     // common to all types of input path segments.
     // OFFSET as bytes
@@ -59,19 +53,20 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     // curve break into lines
     // cubic error in subpixels to decrement step
     private static final float CUB_DEC_ERR_SUBPIX
-        = 1f * (1f / 8f); // 1 pixel
+        = MarlinProperties.getCubicDecD2() * (1.0f / 8.0f); // 1 pixel
     // cubic error in subpixels to increment step
     private static final float CUB_INC_ERR_SUBPIX
-        = 0.4f * (1f / 8f); // 0.4 pixel
+        = MarlinProperties.getCubicIncD1() * (1.0f / 8.0f); // 0.4 pixel
 
+    // TestNonAARasterization (JDK-8170879): cubics
     // bad paths (59294/100000 == 59,29%, 94335 bad pixels (avg = 1,59), 3966 warnings (avg = 0,07)
 
     // cubic bind length to decrement step
     public static final float CUB_DEC_BND
-        = 8f * CUB_DEC_ERR_SUBPIX;
+        = 8.0f * CUB_DEC_ERR_SUBPIX;
     // cubic bind length to increment step
     public static final float CUB_INC_BND
-        = 8f * CUB_INC_ERR_SUBPIX;
+        = 8.0f * CUB_INC_ERR_SUBPIX;
 
     // cubic countlg
     public static final int CUB_COUNT_LG = 2;
@@ -82,22 +77,23 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     // cubic count^3 = 8^countlg
     private static final int CUB_COUNT_3 = 1 << (3 * CUB_COUNT_LG);
     // cubic dt = 1 / count
-    private static final float CUB_INV_COUNT = 1f / CUB_COUNT;
+    private static final float CUB_INV_COUNT = 1.0f / CUB_COUNT;
     // cubic dt^2 = 1 / count^2 = 1 / 4^countlg
-    private static final float CUB_INV_COUNT_2 = 1f / CUB_COUNT_2;
+    private static final float CUB_INV_COUNT_2 = 1.0f / CUB_COUNT_2;
     // cubic dt^3 = 1 / count^3 = 1 / 8^countlg
-    private static final float CUB_INV_COUNT_3 = 1f / CUB_COUNT_3;
+    private static final float CUB_INV_COUNT_3 = 1.0f / CUB_COUNT_3;
 
     // quad break into lines
     // quadratic error in subpixels
     private static final float QUAD_DEC_ERR_SUBPIX
-        = 0.5f * (1f / 8f); // 0.5 pixel
+        = MarlinProperties.getQuadDecD2() * (1.0f / 8.0f); // 0.5 pixel
 
+    // TestNonAARasterization (JDK-8170879): quads
     // bad paths (62916/100000 == 62,92%, 103818 bad pixels (avg = 1,65), 6514 warnings (avg = 0,10)
 
     // quadratic bind length to decrement step
     public static final float QUAD_DEC_BND
-        = 8f * QUAD_DEC_ERR_SUBPIX;
+        = 8.0f * QUAD_DEC_ERR_SUBPIX;
 
 //////////////////////////////////////////////////////////////////////////////
 //  SCAN LINE
@@ -168,7 +164,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
         while (maxDD >= _DEC_BND) {
             // divide step by half:
-            maxDD /= 4f; // error divided by 2^2 = 4
+            maxDD /= 4.0f; // error divided by 2^2 = 4
 
             count <<= 1;
             if (DO_STATS) {
@@ -178,7 +174,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
         int nL = 0; // line count
         if (count > 1) {
-            final float icount = 1f / count; // dt
+            final float icount = 1.0f / count; // dt
             final float icount2 = icount * icount; // dt^2
 
             final float ddx = c.dbx * icount2;
@@ -225,8 +221,8 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         // the dx and dy refer to forward differencing variables, not the last
         // coefficients of the "points" polynomial
         float dddx, dddy, ddx, ddy, dx, dy;
-        dddx = 2f * c.dax * icount3;
-        dddy = 2f * c.day * icount3;
+        dddx = 2.0f * c.dax * icount3;
+        dddy = 2.0f * c.day * icount3;
         ddx = dddx + c.dbx * icount2;
         ddy = dddy + c.dby * icount2;
         dx = c.ax * icount3 + c.bx * icount2 + c.cx * icount;
@@ -242,12 +238,12 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         while (count > 0) {
             // divide step by half:
             while (Math.abs(ddx) + Math.abs(ddy) >= _DEC_BND) {
-                dddx /= 8f;
-                dddy /= 8f;
-                ddx = ddx/4f - dddx;
-                ddy = ddy/4f - dddy;
-                dx = (dx - ddx) / 2f;
-                dy = (dy - ddy) / 2f;
+                dddx /= 8.0f;
+                dddy /= 8.0f;
+                ddx = ddx / 4.0f - dddx;
+                ddy = ddy / 4.0f - dddy;
+                dx = (dx - ddx) / 2.0f;
+                dy = (dy - ddy) / 2.0f;
 
                 count <<= 1;
                 if (DO_STATS) {
@@ -256,19 +252,16 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
             }
 
             // double step:
-            // TODO: why use first derivative dX|Y instead of second ddX|Y ?
-            // both scale changes should use speed or acceleration to have the same metric.
-
             // can only do this on even "count" values, because we must divide count by 2
             while (count % 2 == 0
                    && Math.abs(dx) + Math.abs(dy) <= _INC_BND)
             {
-                dx = 2f * dx + ddx;
-                dy = 2f * dy + ddy;
-                ddx = 4f * (ddx + dddx);
-                ddy = 4f * (ddy + dddy);
-                dddx *= 8f;
-                dddy *= 8f;
+                dx = 2.0f * dx + ddx;
+                dy = 2.0f * dy + ddy;
+                ddx = 4.0f * (ddx + dddx);
+                ddy = 4.0f * (ddy + dddy);
+                dddx *= 8.0f;
+                dddy *= 8.0f;
 
                 count >>= 1;
                 if (DO_STATS) {
@@ -340,7 +333,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
             return;
         }
 
-        // edge min/max X/Y are in subpixel space (inclusive) within bounds:
+        // edge min/max X/Y are in subpixel space (half-open interval):
         // note: Use integer crossings to ensure consistent range within
         // edgeBuckets / edgeBucketCounts arrays in case of NaN values (int = 0)
         if (firstCrossing < edgeMinY) {
@@ -355,7 +348,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         final double y1d   = y1;
         final double slope = (x1d - x2) / (y1d - y2);
 
-        if (slope >= 0.0) { // <==> x1 < x2
+        if (slope >= 0.0d) { // <==> x1 < x2
             if (x1 < edgeMinX) {
                 edgeMinX = x1;
             }
@@ -453,7 +446,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
         // pointer from bucket
         _unsafe.putInt(addr, _edgeBuckets[bucketIdx]);
         addr += SIZE_INT;
-        // y max (inclusive)
+        // y max (exclusive)
         _unsafe.putInt(addr,  lastCrossing);
 
         // Update buckets:
@@ -508,32 +501,30 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
     RendererNoAA(final RendererContext rdrCtx) {
         this.rdrCtx = rdrCtx;
-
-        this.edges = rdrCtx.newOffHeapArray(INITIAL_EDGES_CAPACITY); // 96K
-
         this.curve = rdrCtx.curve;
 
-        edgeBuckets_ref      = rdrCtx.newCleanIntArrayRef(INITIAL_BUCKET_ARRAY); // 64K
-        edgeBucketCounts_ref = rdrCtx.newCleanIntArrayRef(INITIAL_BUCKET_ARRAY); // 64K
+        this.edges = rdrCtx.rdrMem.edges;
+
+        edgeBuckets_ref      = rdrCtx.rdrMem.edgeBuckets_ref;
+        edgeBucketCounts_ref = rdrCtx.rdrMem.edgeBucketCounts_ref;
 
         edgeBuckets      = edgeBuckets_ref.initial;
         edgeBucketCounts = edgeBucketCounts_ref.initial;
 
-        // 2048 (pixelsize) pixel large
-        alphaLine_ref = rdrCtx.newCleanIntArrayRef(INITIAL_AA_ARRAY); // 8K
+        alphaLine_ref = rdrCtx.rdrMem.alphaLine_ref;
         alphaLine     = alphaLine_ref.initial;
 
-        crossings_ref     = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
-        aux_crossings_ref = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
-        edgePtrs_ref      = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
-        aux_edgePtrs_ref  = rdrCtx.newDirtyIntArrayRef(INITIAL_CROSSING_COUNT); // 2K
+        crossings_ref     = rdrCtx.rdrMem.crossings_ref;
+        aux_crossings_ref = rdrCtx.rdrMem.aux_crossings_ref;
+        edgePtrs_ref      = rdrCtx.rdrMem.edgePtrs_ref;
+        aux_edgePtrs_ref  = rdrCtx.rdrMem.aux_edgePtrs_ref;
 
         crossings     = crossings_ref.initial;
         aux_crossings = aux_crossings_ref.initial;
         edgePtrs      = edgePtrs_ref.initial;
         aux_edgePtrs  = aux_edgePtrs_ref.initial;
 
-        blkFlags_ref = rdrCtx.newCleanIntArrayRef(INITIAL_ARRAY); // 1K = 1 tile line
+        blkFlags_ref = rdrCtx.rdrMem.blkFlags_ref;
         blkFlags     = blkFlags_ref.initial;
     }
 
@@ -1158,6 +1149,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
                                 if (useBlkFlags) {
                                     // flag used blocks:
+                                    // note: block processing handles extra pixel:
                                     _blkFlags[x0 >> _BLK_SIZE_LG] = 1;
                                     _blkFlags[x1 >> _BLK_SIZE_LG] = 1;
                                 }
@@ -1200,6 +1192,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
                                 if (useBlkFlags) {
                                     // flag used blocks:
+                                    // note: block processing handles extra pixel:
                                     _blkFlags[x0 >> _BLK_SIZE_LG] = 1;
                                     _blkFlags[x1 >> _BLK_SIZE_LG] = 1;
                                 }

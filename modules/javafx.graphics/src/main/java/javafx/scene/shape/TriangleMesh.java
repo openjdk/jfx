@@ -552,8 +552,9 @@ public class TriangleMesh extends Mesh {
         if (isDirty() || cachedBounds == null) {
             cachedBounds = new BoxBounds();
             if (validate()) {
-                final double len = points.size();
-                for (int i = 0; i < len; i += getVertexFormat().getPointElementSize()) {
+                final int len = points.size();
+                final int pointElementSize = getVertexFormat().getPointElementSize();
+                for (int i = 0; i < len; i += pointElementSize) {
                     cachedBounds.add(points.get(i), points.get(i + 1), points.get(i + 2));
                 }
             }

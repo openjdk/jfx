@@ -151,39 +151,24 @@ FrameLoaderClientJava::FrameLoaderClientJava(const JLObject &webPage)
     , m_frame(nullptr)
     , m_isPageRedirected(false)
     , m_hasRepresentation(false)
-    , m_FrameLoaderClientDestroyed(false)
-    , m_ProgressTrackerClientDestroyed(false)
     , m_webPage(webPage)
 {
 }
 
-void FrameLoaderClientJava::destroyIfNeeded() {
-    if (m_FrameLoaderClientDestroyed && m_ProgressTrackerClientDestroyed) {
-        WC_GETJAVAENV_CHKRET(env);
-        initRefs(env);
-
-        ASSERT(m_webPage);
-        ASSERT(m_frame);
-        env->CallVoidMethod(m_webPage, frameDestroyedMID, ptr_to_jlong(m_frame));
-        CheckAndClearException(env);
-
-        m_page = 0;
-        m_frame = 0;
-
-        delete this;
-    }
-}
-
 void FrameLoaderClientJava::frameLoaderDestroyed()
 {
-    m_FrameLoaderClientDestroyed = true;
-    destroyIfNeeded();
-}
+    WC_GETJAVAENV_CHKRET(env);
+    initRefs(env);
 
-void FrameLoaderClientJava::progressTrackerDestroyed()
-{
-    m_ProgressTrackerClientDestroyed = true;
-    destroyIfNeeded();
+    ASSERT(m_webPage);
+    ASSERT(m_frame);
+    env->CallVoidMethod(m_webPage, frameDestroyedMID, ptr_to_jlong(m_frame));
+    CheckAndClearException(env);
+
+    m_page = 0;
+    m_frame = 0;
+
+    delete this;
 }
 
 Page* FrameLoaderClientJava::page()
@@ -329,32 +314,7 @@ void FrameLoaderClientJava::dispatchDidCancelAuthenticationChallenge(DocumentLoa
     notImplemented();
 }
 
-void FrameLoaderClientJava::progressStarted(Frame& originatingProgressFrame)
-{
-    // shouldn't post PROGRESS_CHANGED before PAGE_STARTED
-}
-
-void FrameLoaderClientJava::progressEstimateChanged(Frame& originatingProgressFrame)
-{
-    double progress = page()->progress().estimatedProgress();
-    // We have a redundant notification from webkit (with progress == 1)
-    // after PAGE_FINISHED has already been posted.
-    DocumentLoader* dl = frame()->loader().activeDocumentLoader();
-    if (dl && progress < 1) {
-        postLoadEvent(frame(),
-                      com_sun_webkit_LoadListenerClient_PROGRESS_CHANGED,
-                      dl->url(),
-                      dl->responseMIMEType(),
-                      progress);
-    }
-}
-
-void FrameLoaderClientJava::progressFinished(Frame& originatingProgressFrame)
-{
-    // shouldn't post PROGRESS_CHANGED after PAGE_FINISHED
-}
-
-  void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest& request, FramePolicyFunction policyFunction)
+void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest& request, FramePolicyFunction policyFunction)
 {
     PolicyAction action;
 

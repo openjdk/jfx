@@ -371,7 +371,11 @@ public class Tab implements EventTarget, Styleable {
      */
     public final ObjectProperty<Node> contentProperty() {
         if (content == null) {
-            content = new SimpleObjectProperty<Node>(this, "content");
+            content = new SimpleObjectProperty<Node>(this, "content") {
+                @Override protected void invalidated() {
+                    updateDisabled();
+                }
+            };
         }
         return content;
     }

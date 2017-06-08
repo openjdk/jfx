@@ -25,11 +25,12 @@
 
 package com.sun.prism.es2;
 
+import java.lang.annotation.Native;
 import com.sun.glass.ui.monocle.AcceleratedScreen;
 
 class MonocleGLContext extends GLContext {
 
-    private AcceleratedScreen accScreen;
+    @Native private AcceleratedScreen accScreen;
 
     MonocleGLContext(long nativeCtxInfo) {
         this.nativeCtxInfo = nativeCtxInfo;

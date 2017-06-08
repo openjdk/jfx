@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,13 +38,14 @@ import com.sun.marlin.ArrayCacheConst.BucketStats;
 import com.sun.marlin.ArrayCacheConst.CacheStats;
 
 /*
- * Note that the [BYTE/INT/FLOAT]ArrayCache files are nearly identical except
+ * Note that the [BYTE/INT/FLOAT/DOUBLE]ArrayCache files are nearly identical except
  * for a few type and name differences. Typically, the [BYTE]ArrayCache.java file
- * is edited manually and then [INT]ArrayCache.java and [FLOAT]ArrayCache.java
+ * is edited manually and then [INT/FLOAT/DOUBLE]ArrayCache.java
  * files are generated with the following command lines:
  */
 // % sed -e 's/(b\yte)[ ]*//g' -e 's/b\yte/int/g' -e 's/B\yte/Int/g' < B\yteArrayCache.java > IntArrayCache.java
-// % sed -e 's/(b\yte)[ ]*/(float) /g' -e 's/b\yte/float/g' -e 's/B\yte/Float/g' < B\yteArrayCache.java > FloatArrayCache.java
+// % sed -e 's/(b\yte)[ ]*0/0.0f/g' -e 's/(b\yte)[ ]*/(float) /g' -e 's/b\yte/float/g' -e 's/B\yte/Float/g' < B\yteArrayCache.java > FloatArrayCache.java
+// % sed -e 's/(b\yte)[ ]*0/0.0d/g' -e 's/(b\yte)[ ]*/(double) /g' -e 's/b\yte/double/g' -e 's/B\yte/Double/g' < B\yteArrayCache.java > DoubleArrayCache.java
 
 public final class IntArrayCache implements MarlinConst {
 

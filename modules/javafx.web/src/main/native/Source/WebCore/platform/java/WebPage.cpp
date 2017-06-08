@@ -61,6 +61,7 @@
 #include "PlatformTouchEvent.h"
 #include "PlatformStrategiesJava.h"
 #include "PlatformWheelEvent.h"
+#include "ProgressTrackerClientJava.h"
 #include "RenderThemeJava.h"
 #include "RenderTreeAsText.h"
 #include "RenderView.h"
@@ -803,7 +804,6 @@ void WebPage::disableWatchdog() {
     }
 }
 
-
 } // namespace WebCore
 
 using namespace WebCore;
@@ -896,9 +896,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
-    FrameLoaderClientJava* flc = new FrameLoaderClientJava(jlself);
-    pc.loaderClientForMainFrame = flc;
-    pc.progressTrackerClient = flc;
+    pc.loaderClientForMainFrame = new FrameLoaderClientJava(jlself);
+    pc.progressTrackerClient = new ProgressTrackerClientJava(jlself);
 
  //   pc.backForwardClient = BackForwardListImpl::create(NULL);
 

@@ -314,8 +314,23 @@ extern NSSize maxScreenDimensions;
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate
 {
     NSRect frame = [self _constrainFrame:rect];
-    [self _setFlipFrame:frame display:(BOOL)display animate:(BOOL)animate];
+    NSString *const constantRestorePreZoomRect = @"_restorePreZoomedRect";
+    NSArray *syms = [NSThread  callStackSymbols];
+    NSString *callerMethod;
 
+    bool callFlipFrame = true;
+    if ([syms count] > 1) {
+        callerMethod = [syms objectAtIndex:1];
+        if([callerMethod rangeOfString:constantRestorePreZoomRect].location != NSNotFound){
+            callFlipFrame = false;
+        }
+    }
+    if (callFlipFrame) {
+        [self _setFlipFrame:frame display:(BOOL)display animate:(BOOL)animate];
+    }
+    else {
+        [self->nsWindow setFrame:frame display:(BOOL)display animate:(BOOL)animate];
+    }
 }
 
 - (void)_setBounds:(jint)x y:(jint)y xSet:(jboolean)xSet ySet:(jboolean)ySet w:(jint)w h:(jint)h cw:(jint)cw ch:(jint)ch

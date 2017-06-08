@@ -51,10 +51,6 @@
 #include <string.h>
 #include <strings.h>
 
-#if !defined(ANDROID_NDK)
-#include "lensPort.h"
-#endif
-
 #define WRAPPEDAPI
 #include "eglWrapper.h"
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,27 +47,27 @@ final class DHelpers implements MarlinConst {
     {
         int ret = off;
         double t;
-        if (a != 0d) {
+        if (a != 0.0d) {
             final double dis = b*b - 4*a*c;
-            if (dis > 0d) {
+            if (dis > 0.0d) {
                 final double sqrtDis = Math.sqrt(dis);
                 // depending on the sign of b we use a slightly different
                 // algorithm than the traditional one to find one of the roots
                 // so we can avoid adding numbers of different signs (which
                 // might result in loss of precision).
-                if (b >= 0d) {
-                    zeroes[ret++] = (2d * c) / (-b - sqrtDis);
-                    zeroes[ret++] = (-b - sqrtDis) / (2d * a);
+                if (b >= 0.0d) {
+                    zeroes[ret++] = (2.0d * c) / (-b - sqrtDis);
+                    zeroes[ret++] = (-b - sqrtDis) / (2.0d * a);
                 } else {
-                    zeroes[ret++] = (-b + sqrtDis) / (2d * a);
-                    zeroes[ret++] = (2d * c) / (-b + sqrtDis);
+                    zeroes[ret++] = (-b + sqrtDis) / (2.0d * a);
+                    zeroes[ret++] = (2.0d * c) / (-b + sqrtDis);
                 }
-            } else if (dis == 0d) {
-                t = (-b) / (2d * a);
+            } else if (dis == 0.0d) {
+                t = (-b) / (2.0d * a);
                 zeroes[ret++] = t;
             }
         } else {
-            if (b != 0d) {
+            if (b != 0.0d) {
                 t = (-c) / b;
                 zeroes[ret++] = t;
             }
@@ -80,7 +80,7 @@ final class DHelpers implements MarlinConst {
                               double[] pts, final int off,
                               final double A, final double B)
     {
-        if (d == 0d) {
+        if (d == 0.0d) {
             int num = quadraticRoots(a, b, c, pts, off);
             return filterOutNotInAB(pts, off, num, A, B) - off;
         }
@@ -104,8 +104,8 @@ final class DHelpers implements MarlinConst {
         // q = Q/2
         // instead and use those values for simplicity of the code.
         double sq_A = a * a;
-        double p = (1.0/3.0) * ((-1.0/3.0) * sq_A + b);
-        double q = (1.0/2.0) * ((2.0/27.0) * a * sq_A - (1.0/3.0) * a * b + c);
+        double p = (1.0d/3.0d) * ((-1.0d/3.0d) * sq_A + b);
+        double q = (1.0d/2.0d) * ((2.0d/27.0d) * a * sq_A - (1.0d/3.0d) * a * b + c);
 
         // use Cardano's formula
 
@@ -113,14 +113,14 @@ final class DHelpers implements MarlinConst {
         double D = q * q + cb_p;
 
         int num;
-        if (D < 0.0) {
+        if (D < 0.0d) {
             // see: http://en.wikipedia.org/wiki/Cubic_function#Trigonometric_.28and_hyperbolic.29_method
-            final double phi = (1.0/3.0) * acos(-q / sqrt(-cb_p));
-            final double t = 2.0 * sqrt(-p);
+            final double phi = (1.0d/3.0d) * acos(-q / sqrt(-cb_p));
+            final double t = 2.0d * sqrt(-p);
 
-            pts[ off+0 ] =  ( t * cos(phi));
-            pts[ off+1 ] =  (-t * cos(phi + (PI / 3.0)));
-            pts[ off+2 ] =  (-t * cos(phi - (PI / 3.0)));
+            pts[ off+0 ] = ( t * cos(phi));
+            pts[ off+1 ] = (-t * cos(phi + (PI / 3.0d)));
+            pts[ off+2 ] = (-t * cos(phi - (PI / 3.0d)));
             num = 3;
         } else {
             final double sqrt_D = sqrt(D);
@@ -130,13 +130,13 @@ final class DHelpers implements MarlinConst {
             pts[ off ] = (u + v);
             num = 1;
 
-            if (within(D, 0.0, 1e-8)) {
-                pts[off+1] = -(pts[off] / 2d);
+            if (within(D, 0.0d, 1e-8d)) {
+                pts[off+1] = -(pts[off] / 2.0d);
                 num = 2;
             }
         }
 
-        final double sub = (1d/3d) * a;
+        final double sub = (1.0d/3.0d) * a;
 
         for (int i = 0; i < num; ++i) {
             pts[ off+i ] -= sub;
@@ -173,7 +173,7 @@ final class DHelpers implements MarlinConst {
 
     static double polyLineLength(double[] poly, final int off, final int nCoords) {
         assert nCoords % 2 == 0 && poly.length >= off + nCoords : "";
-        double acc = 0d;
+        double acc = 0.0d;
         for (int i = off + 2; i < off + nCoords; i += 2) {
             acc += linelen(poly[i], poly[i+1], poly[i-2], poly[i-1]);
         }
@@ -213,8 +213,8 @@ final class DHelpers implements MarlinConst {
     }
 
     // Most of these are copied from classes in java.awt.geom because we need
-    // double versions of these functions, and Line2D, CubicCurve2D,
-    // QuadCurve2D don't provide them.
+    // both single and double precision variants of these functions, and Line2D,
+    // CubicCurve2D, QuadCurve2D don't provide them.
     /**
      * Subdivides the cubic curve specified by the coordinates
      * stored in the <code>src</code> array at indices <code>srcoff</code>
@@ -263,18 +263,18 @@ final class DHelpers implements MarlinConst {
             right[rightoff + 6] = x2;
             right[rightoff + 7] = y2;
         }
-        x1 = (x1 + ctrlx1) / 2d;
-        y1 = (y1 + ctrly1) / 2d;
-        x2 = (x2 + ctrlx2) / 2d;
-        y2 = (y2 + ctrly2) / 2d;
-        double centerx = (ctrlx1 + ctrlx2) / 2d;
-        double centery = (ctrly1 + ctrly2) / 2d;
-        ctrlx1 = (x1 + centerx) / 2d;
-        ctrly1 = (y1 + centery) / 2d;
-        ctrlx2 = (x2 + centerx) / 2d;
-        ctrly2 = (y2 + centery) / 2d;
-        centerx = (ctrlx1 + ctrlx2) / 2d;
-        centery = (ctrly1 + ctrly2) / 2d;
+        x1 = (x1 + ctrlx1) / 2.0d;
+        y1 = (y1 + ctrly1) / 2.0d;
+        x2 = (x2 + ctrlx2) / 2.0d;
+        y2 = (y2 + ctrly2) / 2.0d;
+        double centerx = (ctrlx1 + ctrlx2) / 2.0d;
+        double centery = (ctrly1 + ctrly2) / 2.0d;
+        ctrlx1 = (x1 + centerx) / 2.0d;
+        ctrly1 = (y1 + centery) / 2.0d;
+        ctrlx2 = (x2 + centerx) / 2.0d;
+        ctrly2 = (y2 + centery) / 2.0d;
+        centerx = (ctrlx1 + ctrlx2) / 2.0d;
+        centery = (ctrly1 + ctrly2) / 2.0d;
         if (left != null) {
             left[leftoff + 2] = x1;
             left[leftoff + 3] = y1;
@@ -362,12 +362,12 @@ final class DHelpers implements MarlinConst {
             right[rightoff + 4] = x2;
             right[rightoff + 5] = y2;
         }
-        x1 = (x1 + ctrlx) / 2d;
-        y1 = (y1 + ctrly) / 2d;
-        x2 = (x2 + ctrlx) / 2d;
-        y2 = (y2 + ctrly) / 2d;
-        ctrlx = (x1 + x2) / 2d;
-        ctrly = (y1 + y2) / 2d;
+        x1 = (x1 + ctrlx) / 2.0d;
+        y1 = (y1 + ctrly) / 2.0d;
+        x2 = (x2 + ctrlx) / 2.0d;
+        y2 = (y2 + ctrly) / 2.0d;
+        ctrlx = (x1 + x2) / 2.0d;
+        ctrly = (y1 + y2) / 2.0d;
         if (left != null) {
             left[leftoff + 2] = x1;
             left[leftoff + 3] = y1;
