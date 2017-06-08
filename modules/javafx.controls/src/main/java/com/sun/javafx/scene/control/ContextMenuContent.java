@@ -1288,11 +1288,11 @@ public class ContextMenuContent extends Region {
                                 hideSubmenu();
                             }
 
+                            selectedBackground = MenuItemContainer.this;
+                            requestFocus();  // request Focus on hover
                             final Menu menu = (Menu) item;
                             if (menu.isDisable()) return;
-                            selectedBackground = MenuItemContainer.this;
                             menu.show();
-                            requestFocus();  // request Focus on hover
                         };
                     } else {
                         removeEventHandler(MouseEvent.MOUSE_ENTERED, mouseEnteredEventHandler);

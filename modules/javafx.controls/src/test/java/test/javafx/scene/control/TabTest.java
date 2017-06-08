@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,6 +48,7 @@ import javafx.scene.control.TabPane;
 import javafx.scene.control.TabShim;
 import javafx.scene.control.Tooltip;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.layout.VBox;
 import static org.junit.Assert.*;
 
 
@@ -470,5 +471,15 @@ public class TabTest {
         dummyTabPane.setDisable(false);
         assertFalse(tab.isDisable());
         assertFalse(tab.isDisabled());
+    }
+
+    @Test public void setDisableOnTabPaneContentAndSeeValue() {
+        VBox vBox = new VBox();
+        dummyTabPane.getTabs().add(tab);
+        tab.setDisable(true);
+        tab.setContent(vBox);
+        assertTrue(vBox.isDisable());
+        assertTrue(vBox.isDisabled());
+        tab.setContent(null);
     }
 }
