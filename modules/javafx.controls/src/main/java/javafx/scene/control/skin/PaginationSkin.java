@@ -1342,6 +1342,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             tooltipVisibleProperty().removeListener(updateTooltipVisibility);
         }
 
+        /** {@inheritDoc} */
         @Override
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
@@ -1351,6 +1352,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             }
         }
 
+        /** {@inheritDoc} */
         @Override
         public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
             switch (action) {

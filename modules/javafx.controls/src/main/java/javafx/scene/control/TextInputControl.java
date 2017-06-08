@@ -1573,6 +1573,7 @@ public abstract class TextInputControl extends Control {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
@@ -1595,6 +1596,7 @@ public abstract class TextInputControl extends Control {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {

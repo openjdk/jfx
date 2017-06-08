@@ -39,6 +39,7 @@ public final class FakeFocusTextField extends TextField {
         setFocused(b);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {

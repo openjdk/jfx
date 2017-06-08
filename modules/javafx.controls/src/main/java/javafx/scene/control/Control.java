@@ -934,6 +934,7 @@ public abstract class Control extends Region implements Skinnable {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
@@ -951,6 +952,7 @@ public abstract class Control extends Region implements Skinnable {
         return super.queryAccessibleAttribute(attribute, parameters);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         if (skinBase != null) {

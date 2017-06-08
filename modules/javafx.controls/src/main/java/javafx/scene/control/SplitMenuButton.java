@@ -142,6 +142,7 @@ public class SplitMenuButton extends MenuButton {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
@@ -150,6 +151,7 @@ public class SplitMenuButton extends MenuButton {
         }
     }
 
+    /** {@inheritDoc} */
     @Override
     public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
         switch (action) {

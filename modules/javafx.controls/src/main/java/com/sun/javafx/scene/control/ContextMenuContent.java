@@ -977,6 +977,7 @@ public class ContextMenuContent extends Region {
             }
         }
 
+        /** {@inheritDoc} */
         @Override
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
@@ -1492,6 +1493,7 @@ public class ContextMenuContent extends Region {
             return null;
         }
 
+        /** {@inheritDoc} */
         @Override
         public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
             switch (attribute) {
@@ -1546,6 +1548,7 @@ public class ContextMenuContent extends Region {
             }
         }
 
+        /** {@inheritDoc} */
         @Override
         public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
             switch (action) {

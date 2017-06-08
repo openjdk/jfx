@@ -1930,6 +1930,7 @@ public abstract class Parent extends Node {
         return alg.processContainerNode(this, ctx);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {

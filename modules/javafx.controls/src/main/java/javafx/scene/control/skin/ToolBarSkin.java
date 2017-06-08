@@ -779,6 +779,7 @@ public class ToolBarSkin extends SkinBase<ToolBar> {
                     /*baseline ignored*/0, HPos.CENTER, VPos.CENTER);
         }
 
+        /** {@inheritDoc} */
         @Override
         public void executeAccessibleAction(AccessibleAction action, Object... parameters) {
             switch (action) {

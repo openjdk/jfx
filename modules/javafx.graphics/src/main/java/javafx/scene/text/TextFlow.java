@@ -603,6 +603,7 @@ public class TextFlow extends Pane {
     }
     /* end of copied code */
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {

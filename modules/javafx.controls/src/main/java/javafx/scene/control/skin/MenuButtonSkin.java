@@ -149,6 +149,7 @@ public class MenuButtonSkin extends MenuButtonSkinBase<MenuButton> {
      *                                                                         *
      **************************************************************************/
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {

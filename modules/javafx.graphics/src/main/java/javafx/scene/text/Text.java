@@ -1860,6 +1860,7 @@ public class Text extends Shape {
         return sb.append("]").toString();
     }
 
+    /** {@inheritDoc} */
     @Override
     public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
         switch (attribute) {
