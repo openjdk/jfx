@@ -1053,6 +1053,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             openMenu = null;
             openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
             openMenuButton.clearHover();
+            openMenuButton.disarm();
             openMenuButton = null;
             menuModeEnd();
         }
