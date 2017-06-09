@@ -53,7 +53,7 @@ import com.sun.javafx.tk.Toolkit;
  * encapsulates the entire set of data required to render the background
  * of a Region. Because this class is immutable, you can freely reuse the same
  * Background on many different Regions. Please refer to
- * <a href="../scene/doc-files/cssref.html">JavaFX CSS Reference Guide</a> for a
+ * <a href="../doc-files/cssref.html">JavaFX CSS Reference Guide</a> for a
  * complete description of the CSS rules for styling the background of a Region.
  * <p>
  * Every Background is comprised of {@link #getFills() fills} and / or
