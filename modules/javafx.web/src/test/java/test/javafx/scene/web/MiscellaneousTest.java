@@ -26,6 +26,7 @@
 package test.javafx.scene.web;
 
 import java.io.File;
+import java.io.FileInputStream;
 import static java.lang.String.format;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import netscape.javascript.JSObject;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -262,5 +264,111 @@ public class MiscellaneousTest extends TestBase {
 
     private WebEngine createWebEngine() {
         return submit(() -> new WebEngine());
+    }
+
+    /**
+     * @test
+     * @bug 8180825
+     * Checks CSS FontFace supports ArrayBuffer and ArrayBufferView arguments.
+     * This test is derived based on a DRT testcase written as part of
+     * WebKit changeset https://trac.webkit.org/changeset/200921/webkit
+    */
+    public class FontFaceTestHelper {
+        private final CountDownLatch latch = new CountDownLatch(1);
+
+        public final byte[] ttfFileContent;
+
+        FontFaceTestHelper(String ttfPath) throws Exception {
+            final File ttfFile = new File(ttfPath);
+            assertNotNull(ttfFile);
+            assertTrue(ttfFile.canRead());
+            assertTrue(ttfFile.length() > 0);
+            final int length = (int) ttfFile.length();
+            ttfFileContent = new byte[length];
+            // Read ttf file contents
+            int offset = 0;
+            final FileInputStream ttfFileStream = new FileInputStream(ttfFile);
+            assertNotNull(ttfFileContent);
+            while (offset < length) {
+                final int available = ttfFileStream.available();
+                ttfFileStream.read(ttfFileContent, (int)offset, available);
+                offset += available;
+            }
+            assertEquals("Offset must equal to file length", length, offset);
+        }
+
+        // Will be called from JS to indicate test complete
+        public void finish() {
+            latch.countDown();
+        }
+
+        private String failureMsg;
+        // Will be called from JS to pass failure message
+        public void failed(String msg) {
+            failureMsg = msg;
+        }
+
+        void waitForCompletion() {
+            try {
+                latch.await();
+            } catch (InterruptedException e) {
+                throw new AssertionError(e);
+            }
+
+            if (failureMsg != null) {
+                fail(failureMsg);
+            }
+        }
+    }
+
+    @Test public void testFontFace() throws Exception {
+        final FontFaceTestHelper fontFaceHelper = new FontFaceTestHelper("src/main/native/Tools/TestWebKitAPI/Tests/mac/Ahem.ttf");
+        loadContent(
+                "<body>\n" +
+                "<span id='probe1' style='font-size: 100px;'>l</span>\n" +
+                "<span id='probe2' style='font-size: 100px;'>l</span>\n" +
+                "</body>\n"
+        );
+        submit(() -> {
+            final JSObject window = (JSObject) getEngine().executeScript("window");
+            assertNotNull(window);
+            assertEquals("undefined", window.getMember("fontFaceHelper"));
+            window.setMember("fontFaceHelper", fontFaceHelper);
+            assertTrue(window.getMember("fontFaceHelper") instanceof FontFaceTestHelper);
+            // Create font-face object from byte[]
+            getEngine().executeScript(
+                "var byteArray = new Uint8Array(fontFaceHelper.ttfFileContent);\n" +
+                "var arrayBuffer = byteArray.buffer;\n" +
+                "window.fontFace1 = new FontFace('WebFont1', arrayBuffer, {});\n" +
+                "window.fontFace2 = new FontFace('WebFont2', byteArray, {});\n"
+            );
+            assertEquals("loaded", getEngine().executeScript("fontFace1.status"));
+            assertEquals("loaded", getEngine().executeScript("fontFace2.status"));
+            // Add font-face to Document, so that it could be usable on styles
+            getEngine().executeScript(
+                "document.fonts.add(fontFace1);\n" +
+                "document.fonts.add(fontFace2);\n" +
+                "document.getElementById('probe1').style.fontFamily = 'WebFont1';\n" +
+                "document.getElementById('probe2').style.fontFamily = 'WebFont2';\n"
+            );
+
+            // Ensure web font is applied by checking width property of bounding rect.
+            assertEquals(100, getEngine().executeScript("document.getElementById('probe1').getBoundingClientRect().width"));
+            assertEquals(100, getEngine().executeScript("document.getElementById('probe2').getBoundingClientRect().width"));
+            getEngine().executeScript(
+                "fontFace1.loaded.then(function() {\n" +
+                "   return fontFace2.loaded;\n" +
+                "}, function() {\n" +
+                "   fontFaceHelper.failed(\"fontFace1's promise should be successful\");\n" +
+                "   fontFaceHelper.finish();\n" +
+                "}).then(function() {\n" +
+                "   fontFaceHelper.finish();\n" +
+                "}, function() {\n" +
+                "   fontFaceHelper.failed(\"fontFace2's promise should be successful\");\n" +
+                "   fontFaceHelper.finish();\n" +
+                "});\n"
+            );
+        });
+        fontFaceHelper.waitForCompletion();
     }
 }

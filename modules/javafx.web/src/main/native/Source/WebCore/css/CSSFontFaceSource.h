@@ -28,6 +28,7 @@
 
 #include "CachedFontClient.h"
 #include "CachedResourceHandle.h"
+#include <runtime/ArrayBufferView.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
@@ -45,7 +46,7 @@ class SharedBuffer;
 class CSSFontFaceSource final : public CachedFontClient {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    CSSFontFaceSource(CSSFontFace& owner, const String& familyNameOrURI, CachedFont* = nullptr, SVGFontFaceElement* = nullptr);
+    CSSFontFaceSource(CSSFontFace& owner, const String& familyNameOrURI, CachedFont* = nullptr, SVGFontFaceElement* = nullptr, RefPtr<JSC::ArrayBufferView>&& = nullptr);
     virtual ~CSSFontFaceSource();
 
     //                      => Success
@@ -83,6 +84,8 @@ private:
     RefPtr<SharedBuffer> m_generatedOTFBuffer;
 #endif
 
+    RefPtr<JSC::ArrayBufferView> m_immediateSource;
+    std::unique_ptr<FontCustomPlatformData> m_immediateFontCustomPlatformData;
 #if ENABLE(SVG_FONTS) || ENABLE(SVG_OTF_CONVERTER)
     RefPtr<SVGFontFaceElement> m_svgFontFaceElement;
     std::unique_ptr<FontCustomPlatformData> m_inDocumentCustomPlatformData;

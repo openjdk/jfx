@@ -27,6 +27,7 @@
 #include "FontFace.h"
 
 #include "CSSFontFace.h"
+#include "CSSFontFaceSource.h"
 #include "CSSFontFeatureValue.h"
 #include "CSSFontSelector.h"
 #include "CSSUnicodeRangeValue.h"
@@ -41,6 +42,8 @@
 #include "ScriptExecutionContext.h"
 #include "StyleProperties.h"
 #include <wtf/text/StringBuilder.h>
+#include <runtime/JSArrayBuffer.h>
+#include <runtime/JSArrayBufferView.h>
 
 namespace WebCore {
 
@@ -57,6 +60,13 @@ static inline Optional<String> valueFromDictionary(const Dictionary& dictionary,
     return result.isNull() ? Nullopt : Optional<String>(result);
 }
 
+static bool populateFontFaceWithArrayBuffer(CSSFontFace& fontFace, RefPtr<JSC::ArrayBufferView>&& arrayBufferView)
+{
+    auto source = std::make_unique<CSSFontFaceSource>(fontFace, String(), nullptr, nullptr, WTFMove(arrayBufferView));
+    fontFace.adoptSource(WTFMove(source));
+    return false;
+}
+
 RefPtr<FontFace> FontFace::create(JSC::ExecState& execState, ScriptExecutionContext& context, const String& family, const Deprecated::ScriptValue& source, const Dictionary& descriptors, ExceptionCode& ec)
 {
     if (!context.isDocument()) {
@@ -70,6 +80,7 @@ RefPtr<FontFace> FontFace::create(JSC::ExecState& execState, ScriptExecutionCont
     if (ec)
         return nullptr;
 
+    bool dataRequiresAsynchronousLoading = true;
     if (source.jsValue().isString()) {
         String sourceString = source.jsValue().toString(&execState)->value(&execState);
         auto value = FontFace::parseString(sourceString, CSSPropertySrc);
@@ -80,6 +91,11 @@ RefPtr<FontFace> FontFace::create(JSC::ExecState& execState, ScriptExecutionCont
             ec = SYNTAX_ERR;
             return nullptr;
         }
+    } else if (auto arrayBufferView = toArrayBufferView(source))
+        dataRequiresAsynchronousLoading = populateFontFaceWithArrayBuffer(result->backing(), arrayBufferView);
+    else if (auto arrayBuffer = JSC::toArrayBuffer(source)) {
+        auto arrayBufferView = JSC::Uint8Array::create(arrayBuffer, 0, arrayBuffer->byteLength());
+        dataRequiresAsynchronousLoading = populateFontFaceWithArrayBuffer(result->backing(), arrayBufferView);
     }
 
     if (auto style = valueFromDictionary(descriptors, "style"))
@@ -107,6 +123,10 @@ RefPtr<FontFace> FontFace::create(JSC::ExecState& execState, ScriptExecutionCont
     if (ec)
         return nullptr;
 
+    if (!dataRequiresAsynchronousLoading) {
+        result->backing().load();
+        ASSERT(result->backing().status() == CSSFontFace::Status::Success);
+    }
     return result.ptr();
 }
 
