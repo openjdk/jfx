@@ -52,7 +52,7 @@ public class Main {
             + " " + PackagerLib.JAVAFX_VERSION + "\n";
     private static final String help = bundle.getString("MSG_Help_1")
                                         + bundle.getString("MSG_Help_2")
-                                        + bundle.getString("MSG_Help_3")
+                                        + MessageFormat.format(bundle.getString("MSG_Help_3"), File.pathSeparator)
                                         + bundle.getString("MSG_Help_4")
                                         + bundle.getString("MSG_Help_5")
                                         + bundle.getString("MSG_Help_6")
