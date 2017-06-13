@@ -731,18 +731,18 @@ public final class QuantumToolkit extends Toolkit {
         return _maxPixelScale;
     }
 
-    @Override public ImageLoader loadImage(String url, int width, int height, boolean preserveRatio, boolean smooth) {
+    @Override public ImageLoader loadImage(String url, double width, double height, boolean preserveRatio, boolean smooth) {
         return new PrismImageLoader2(url, width, height, preserveRatio, getMaxRenderScale(), smooth);
     }
 
-    @Override public ImageLoader loadImage(InputStream stream, int width, int height,
+    @Override public ImageLoader loadImage(InputStream stream, double width, double height,
                                            boolean preserveRatio, boolean smooth) {
         return new PrismImageLoader2(stream, width, height, preserveRatio, smooth);
     }
 
     @Override public AbstractRemoteResource<? extends ImageLoader> loadImageAsync(
             AsyncOperationListener listener, String url,
-            int width, int height, boolean preserveRatio, boolean smooth) {
+            double width, double height, boolean preserveRatio, boolean smooth) {
         return new PrismImageLoader2.AsyncImageLoader(listener, url, width, height, preserveRatio, smooth);
     }
 
@@ -1325,9 +1325,9 @@ public final class QuantumToolkit extends Toolkit {
         @Override
         public int getLoopCount() { return 0; }
         @Override
-        public int getWidth() { return image.getWidth(); }
+        public double getWidth() { return image.getWidth(); }
         @Override
-        public int getHeight() { return image.getHeight(); }
+        public double getHeight() { return image.getHeight(); }
         @Override
         public void factoryReset() { dispose(); }
         @Override
