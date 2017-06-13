@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -335,11 +335,15 @@ static CGEventRef listenTouchEvents(CGEventTapProxy proxy, CGEventType type,
 
     for (NSTouch* touch in touchPoints)
     {
-        const NSPoint pos = touch.normalizedPosition;
-        [self notifyTouch:env
-                        identity:touch.identity
-                        phase:touch.phase
-                        pos:&pos];
+        if (![touch respondsToSelector:@selector(type)]
+            || (NSInteger) [touch performSelector:@selector(type)] == 1 /* NSTouchTypeIndirect */) {
+
+            const NSPoint pos = touch.normalizedPosition;
+            [self notifyTouch:env
+                            identity:touch.identity
+                            phase:touch.phase
+                            pos:&pos];
+        }
     }
 
     if (jGestureSupportClass)
