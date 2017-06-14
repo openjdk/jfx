@@ -31,7 +31,6 @@
  */
 module jdk.packager {
     requires jdk.jlink;
-    requires jdk.jdeps;
 
     requires java.xml;
     requires java.desktop;
