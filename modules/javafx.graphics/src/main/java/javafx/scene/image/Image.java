@@ -1049,7 +1049,7 @@ public class Image {
     private static ImageLoader loadImage(
             String url, double width, double height,
             boolean preserveRatio, boolean smooth) {
-        return Toolkit.getToolkit().loadImage(url, (int) width, (int) height,
+        return Toolkit.getToolkit().loadImage(url, width, height,
                                               preserveRatio, smooth);
 
     }
@@ -1057,7 +1057,7 @@ public class Image {
     private static ImageLoader loadImage(
             InputStream stream, double width, double height,
             boolean preserveRatio, boolean smooth) {
-        return Toolkit.getToolkit().loadImage(stream, (int) width, (int) height,
+        return Toolkit.getToolkit().loadImage(stream, width, height,
                                               preserveRatio, smooth);
 
     }
@@ -1067,7 +1067,7 @@ public class Image {
             String url, double width, double height,
             boolean preserveRatio, boolean smooth) {
         return Toolkit.getToolkit().loadImageAsync(listener, url,
-                                                   (int) width, (int) height,
+                                                   width, height,
                                                    preserveRatio, smooth);
     }
 

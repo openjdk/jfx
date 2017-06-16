@@ -582,7 +582,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_fillRectImpl
  */
 JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRowImpl
   (JNIEnv *env, jobject this, jbyteArray jAlphaMap, jintArray jAlphaDeltas, jint y, jint x_from, jint x_to,
-   jint rowNum)
+   jint x_off, jint rowNum)
 {
     Renderer* rdr;
     Surface* surface;
@@ -617,7 +617,7 @@ JNIEXPORT void JNICALL Java_com_sun_pisces_PiscesRenderer_emitAndClearAlphaRowIm
                 rdr->_rowNum = rowNum;
 
                 rdr->alphaMap = alphaMap;
-                rdr->_rowAAInt = alphaRow;
+                rdr->_rowAAInt = alphaRow + x_off; /* add offset in alpha buffer */
                 rdr->_alphaWidth = x_to - x_from + 1;
 
                 rdr->_currImageOffset = y * surface->width;

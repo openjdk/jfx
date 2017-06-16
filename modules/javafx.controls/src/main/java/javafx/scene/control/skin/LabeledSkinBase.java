@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -305,12 +305,23 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         // Get the preferred width of the text
         final Labeled labeled = getSkinnable();
         final Font font = text.getFont();
-        final String string = labeled.getText();
+        String string = labeled.getText();
         boolean emptyText = string == null || string.isEmpty();
-        double widthPadding = leftInset + leftLabelPadding() +
-                rightInset + rightLabelPadding();
+        double widthPadding = leftInset + rightInset;
 
-        double textWidth = emptyText ? 0 : Utils.computeTextWidth(font, string, 0);
+        if (!isIgnoreText()) {
+            widthPadding += leftLabelPadding() + rightLabelPadding();
+        }
+
+        double textWidth = 0.0;
+        if (!emptyText) {
+            if (labeled.isMnemonicParsing()) {
+                if (string.contains("_") && (string.indexOf("_") != string.length()-1)) {
+                    string = string.replaceFirst("_", "");
+                }
+            }
+            textWidth = Utils.computeTextWidth(font, string, 0);
+        }
 
         // Fix for RT-39889
         double graphicWidth = graphic == null ? 0.0 :
@@ -335,8 +346,12 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final Font font = text.getFont();
         final ContentDisplay contentDisplay = labeled.getContentDisplay();
         final double gap = labeled.getGraphicTextGap();
-        width -= leftInset + leftLabelPadding() +
-                rightInset + rightLabelPadding();
+
+        width -= leftInset + rightInset;
+
+        if (!isIgnoreText()) {
+            width -= leftLabelPadding() + rightLabelPadding();
+        }
 
         String str = labeled.getText();
         if (str != null && str.endsWith("\n")) {
@@ -366,7 +381,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             }
         }
 
-        return topInset + h + bottomInset + topLabelPadding() + bottomLabelPadding();
+        double padding = topInset + bottomInset;
+
+        if (!isIgnoreText()) {
+            padding += topLabelPadding() + bottomLabelPadding();
+        }
+
+        return  h + padding;
     }
 
     /** {@inheritDoc} */
@@ -394,7 +415,11 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             }
         }
 
-        return topInset + topLabelPadding() + h;
+        double offset = topInset + h;
+        if (!isIgnoreText()) {
+            offset += topLabelPadding();
+        }
+        return offset;
     }
 
     /**
@@ -461,10 +486,12 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
         final boolean ignoreGraphic = isIgnoreGraphic();
         final boolean ignoreText = isIgnoreText();
 
-        x += leftLabelPadding();
-        y += topLabelPadding();
-        w -= leftLabelPadding() + rightLabelPadding();
-        h -= topLabelPadding() + bottomLabelPadding();
+        if (!ignoreText) {
+            x += leftLabelPadding();
+            y += topLabelPadding();
+            w -= leftLabelPadding() + rightLabelPadding();
+            h -= topLabelPadding() + bottomLabelPadding();
+        }
 
         // Compute some standard useful numbers for the graphic, text, and gap
         double graphicWidth;
@@ -784,8 +811,12 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             width = Math.max(minTextWidth, graphic.minWidth(-1));
         }
 
-        return width + leftInset + leftLabelPadding() +
-                rightInset + rightLabelPadding();
+        double padding = leftInset + rightInset;
+        if (!isIgnoreText()) {
+            padding += leftLabelPadding() + rightLabelPadding();
+        }
+
+        return width + padding;
     }
 
     private double computeMinLabeledPartHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
@@ -818,7 +849,11 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             }
         }
 
-        return topInset + h + bottomInset + topLabelPadding() - bottomLabelPadding();
+        double padding = topInset + bottomInset;
+        if (!isIgnoreText()) {
+            padding += topLabelPadding() - bottomLabelPadding();
+        }
+        return h + padding;
     }
 
     double topLabelPadding() {
@@ -1019,8 +1054,12 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                     (labeled.getContentDisplay() == ContentDisplay.LEFT ||
                     labeled.getContentDisplay() == ContentDisplay.RIGHT);
 
-            double availableWidth = labeled.getWidth() - snappedLeftInset() - leftLabelPadding() -
-                                    snappedRightInset() - rightLabelPadding();
+            double availableWidth = labeled.getWidth() -
+                    snappedLeftInset() - snappedRightInset();
+
+            if (!isIgnoreText()) {
+                availableWidth -= leftLabelPadding() + rightLabelPadding();
+            }
             availableWidth = Math.max(availableWidth, 0);
 
             if (w == -1) {
@@ -1038,8 +1077,12 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                     (labeled.getContentDisplay() == ContentDisplay.TOP ||
                     labeled.getContentDisplay() == ContentDisplay.BOTTOM);
 
-            double availableHeight = labeled.getHeight() - snappedTopInset() - topLabelPadding() -
-                                     snappedBottomInset() - bottomLabelPadding();
+            double availableHeight = labeled.getHeight() -
+                    snappedTopInset() - snappedBottomInset();
+
+            if (!isIgnoreText()) {
+                availableHeight -= topLabelPadding() + bottomLabelPadding();
+            }
             availableHeight = Math.max(availableHeight, 0);
 
             if (h == -1) {

@@ -254,7 +254,7 @@ public class ImageStorage {
      * <code>null</code> on error.
      */
     public static ImageFrame[] loadAll(InputStream input, ImageLoadListener listener,
-            int width, int height, boolean preserveAspectRatio,
+            double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageLoader loader = null;
         try {
@@ -284,7 +284,7 @@ public class ImageStorage {
      * {@link #loadAll(java.io.InputStream, com.sun.javafx.iio.ImageLoadListener, int, int, boolean, boolean)}.
      */
     public static ImageFrame[] loadAll(String input, ImageLoadListener listener,
-            int width, int height, boolean preserveAspectRatio,
+            double width, double height, boolean preserveAspectRatio,
             float devPixelScale, boolean smooth) throws ImageStorageException {
 
         if (input == null || input.isEmpty()) {
@@ -353,15 +353,17 @@ public class ImageStorage {
     }
 
     private static ImageFrame[] loadAll(ImageLoader loader,
-            int width, int height, boolean preserveAspectRatio,
+            double width, double height, boolean preserveAspectRatio,
             float pixelScale, boolean smooth) throws ImageStorageException {
         ImageFrame[] images = null;
         ArrayList<ImageFrame> list = new ArrayList<ImageFrame>();
         int imageIndex = 0;
         ImageFrame image = null;
+        int imgw = (int) Math.round(width * pixelScale);
+        int imgh = (int) Math.round(height * pixelScale);
         do {
             try {
-                image = loader.load(imageIndex++, width, height, preserveAspectRatio, smooth);
+                image = loader.load(imageIndex++, imgw, imgh, preserveAspectRatio, smooth);
             } catch (Exception e) {
                 // allow partially loaded animated images
                 if (imageIndex > 1) {

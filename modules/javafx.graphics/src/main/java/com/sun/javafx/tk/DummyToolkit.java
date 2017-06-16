@@ -126,17 +126,17 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public ImageLoader loadImage(String url, int width, int height, boolean preserveRatio, boolean smooth) {
+    public ImageLoader loadImage(String url, double width, double height, boolean preserveRatio, boolean smooth) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public ImageLoader loadImage(InputStream stream, int width, int height, boolean preserveRatio, boolean smooth) {
+    public ImageLoader loadImage(InputStream stream, double width, double height, boolean preserveRatio, boolean smooth) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public AsyncOperation loadImageAsync(AsyncOperationListener<? extends ImageLoader> listener, String url, int width, int height, boolean preserveRatio, boolean smooth) {
+    public AsyncOperation loadImageAsync(AsyncOperationListener<? extends ImageLoader> listener, String url, double width, double height, boolean preserveRatio, boolean smooth) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

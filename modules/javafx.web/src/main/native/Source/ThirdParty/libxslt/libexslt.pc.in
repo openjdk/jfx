@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+
+Name: libexslt
+Version: @LIBEXSLT_VERSION@
+Description: EXSLT Extension library
+Requires: libxml-2.0
+Libs: @EXSLT_LIBDIR@ @EXSLT_LIBS@
+Cflags: @EXSLT_INCLUDEDIR@

@@ -564,6 +564,11 @@ public abstract class TextInputControl extends Control {
         final boolean nonEmptySelection = getSelection().getLength() > 0;
         String oldText = getText(change.start, change.end);
         int adjustmentAmount = replaceText(change.start, change.end, change.text, change.getAnchor(), change.getCaretPosition());
+        String newText = getText(change.start, change.start + change.text.length() - adjustmentAmount);
+        if (newText.equals(oldText)) {
+            // Undo record not required as there is no change in the text.
+            return;
+        }
 
         // If you select some stuff and type anything, then we need to
         // create an undo record. If the range is a single character and
@@ -571,7 +576,6 @@ public abstract class TextInputControl extends Control {
         // we don't need to create a new undo record. In all other cases
         // we do.
         int endOfUndoChange = undoChange == undoChangeHead ? -1 : undoChange.start + undoChange.newText.length();
-        String newText = getText(change.start, change.start + change.text.length() - adjustmentAmount);
         if (createNewUndoRecord || nonEmptySelection || endOfUndoChange == -1 || forceNewUndoRecord ||
                 (endOfUndoChange != change.start && endOfUndoChange != change.end) || change.end - change.start > 1) {
             undoChange = undoChange.add(change.start, oldText, newText);

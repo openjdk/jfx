@@ -32,8 +32,8 @@ public final class StubImageLoader implements ImageLoader {
     private final Object source;
 
     private final StubPlatformImageInfo imageInfo;
-    private final int loadWidth;
-    private final int loadHeight;
+    private final double loadWidth;
+    private final double loadHeight;
     private final boolean preserveRatio;
     private final boolean smooth;
 
@@ -41,8 +41,8 @@ public final class StubImageLoader implements ImageLoader {
 
     public StubImageLoader(final Object source,
                            final StubPlatformImageInfo imageInfo,
-                           final int loadWidth,
-                           final int loadHeight,
+                           final double loadWidth,
+                           final double loadHeight,
                            final boolean preserveRatio,
                            final boolean smooth) {
         this.source = source;
@@ -89,12 +89,12 @@ public final class StubImageLoader implements ImageLoader {
     }
 
     @Override
-    public int getWidth() {
+    public double getWidth() {
         return imageInfo.getWidth();
     }
 
     @Override
-    public int getHeight() {
+    public double getHeight() {
         return imageInfo.getHeight();
     }
 
@@ -102,11 +102,11 @@ public final class StubImageLoader implements ImageLoader {
         return imageInfo;
     }
 
-    public int getLoadHeight() {
+    public double getLoadHeight() {
         return loadHeight;
     }
 
-    public int getLoadWidth() {
+    public double getLoadWidth() {
         return loadWidth;
     }
 

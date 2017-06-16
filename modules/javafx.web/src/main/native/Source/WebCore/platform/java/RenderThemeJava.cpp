@@ -530,8 +530,8 @@ bool RenderThemeJava::paintSliderThumb(const RenderObject& object, const PaintIn
 void RenderThemeJava::adjustMenuListStyle(StyleResolver&, RenderStyle& style, Element*) const
 {
     // Add in the padding that we'd like to use.
-    style.setPaddingRight(Length(20, Fixed));
-    style.setPaddingLeft(Length(2, Fixed));
+    style.setPaddingRight(Length(20.0f + style.paddingRight().value(), Fixed));
+    style.setPaddingLeft(Length(2.0f + style.paddingLeft().value(), Fixed));
 }
 
 bool RenderThemeJava::paintMenuList(const RenderObject& o, const PaintInfo& i, const FloatRect& rect)

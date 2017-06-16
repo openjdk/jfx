@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,6 +45,10 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextAlignment;
+import com.sun.javafx.tk.Toolkit;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -1982,6 +1986,40 @@ public class LabelSkinTest {
         label.setPrefHeight(500);
         assertEquals(500, label.maxHeight(-1), 0);
     }
+
+    /* Test for checking width of label with/without mnemonic */
+    @Test public void labelMnemonicTest() {
+        Label l1 = new Label("Hello");
+        Label l2 = new Label("_Hello");
+        Label l3 = new Label("He_llo");
+        Label l4 = new Label("Hello_");
+        Label l5 = new Label("_Hello");
+
+        l1.setMnemonicParsing(true);
+        l2.setMnemonicParsing(true);
+        l3.setMnemonicParsing(true);
+        l4.setMnemonicParsing(true);
+        l5.setMnemonicParsing(false);
+
+        Toolkit tk = Toolkit.getToolkit();
+
+        Scene scene = new Scene(new Group(l1, l2, l3, l4, l5));
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        tk.firePulse();
+
+        assertEquals(l1.getWidth(), l2.getWidth(), 0);
+        assertEquals(l2.getWidth(), l3.getWidth(), 0);
+
+        // l4 label does not have a mnemonic ==> l4 width is greater than l1 width
+        int x = Double.compare(l1.getWidth(), l4.getWidth());
+        assertTrue(x < 0);
+
+        // labels with no mnemonic
+        assertEquals(l4.getWidth(), l5.getWidth(), 0);
+    }
+
 
     /****************************************************************************
      *                                                                          *
