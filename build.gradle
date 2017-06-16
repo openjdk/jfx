@@ -2292,7 +2292,9 @@ project(":fxpackager") {
     compileJava.options.compilerArgs.addAll([
             "--add-exports=java.base/sun.security.timestamp=jdk.packager",
             "--add-exports=java.base/sun.security.x509=jdk.packager",
-            "--add-exports=jdk.jdeps/com.sun.tools.jdeps=jdk.packager",
+
+            // Note: retain jdk.jlink qualified export for cases where the JDK does
+            // not contain the jdk.packager module.
             "--add-exports=jdk.jlink/jdk.tools.jlink.internal.packager=jdk.packager",
 
             // Note: not in extras...

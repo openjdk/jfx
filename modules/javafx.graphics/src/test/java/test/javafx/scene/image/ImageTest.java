@@ -458,8 +458,8 @@ public final class ImageTest {
 
         final StubImageLoader imageLoader =
                 platformImage.getImageLoader();
-        assertEquals(loadWidth, imageLoader.getLoadWidth());
-        assertEquals(loadHeight, imageLoader.getLoadHeight());
+        assertEquals(loadWidth, (int) imageLoader.getLoadWidth());
+        assertEquals(loadHeight, (int) imageLoader.getLoadHeight());
         assertEquals(preserveRatio, imageLoader.getPreserveRatio());
         assertEquals(smooth, imageLoader.getSmooth());
 
