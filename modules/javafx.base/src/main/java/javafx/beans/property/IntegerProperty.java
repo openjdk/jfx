@@ -31,6 +31,10 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableIntegerValue;
 import com.sun.javafx.binding.Logging;
 
+import java.security.AccessControlContext;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+
 /**
  * This class defines a {@link Property} wrapping an {@code int} value.
  * <p>
@@ -147,6 +151,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
             throw new NullPointerException("Property cannot be null");
         }
         return new IntegerPropertyBase() {
+            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, property);
             }
@@ -164,7 +169,10 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
             @Override
             protected void finalize() throws Throwable {
                 try {
-                    BidirectionalBinding.unbindNumber(property, this);
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        BidirectionalBinding.unbindNumber(property, this);
+                        return null;
+                    }, acc);
                 } finally {
                     super.finalize();
                 }
@@ -194,7 +202,7 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
     @Override
     public ObjectProperty<Integer> asObject() {
         return new ObjectPropertyBase<Integer> () {
-
+            private final AccessControlContext acc = AccessController.getContext();
             {
                 BidirectionalBinding.bindNumber(this, IntegerProperty.this);
             }
@@ -212,7 +220,10 @@ public abstract class IntegerProperty extends ReadOnlyIntegerProperty implements
             @Override
             protected void finalize() throws Throwable {
                 try {
-                    BidirectionalBinding.unbindNumber(this, IntegerProperty.this);
+                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
+                        BidirectionalBinding.unbindNumber(this, IntegerProperty.this);
+                        return null;
+                    }, acc);
                 } finally {
                     super.finalize();
                 }
