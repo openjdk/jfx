@@ -2241,6 +2241,12 @@ project(":fxpackager") {
     sourceSets {
         main
         //shims // no test shims needed
+        antplugin {
+            java {
+                compileClasspath += main.output
+                runtimeClasspath += main.output
+            }
+        }
         test
     }
 
@@ -2257,17 +2263,6 @@ project(":fxpackager") {
 
     tasks.all {
         if (!COMPILE_FXPACKAGER) it.enabled = false
-    }
-
-    sourceSets {
-        main
-        antplugin {
-            java {
-                compileClasspath += main.output
-                runtimeClasspath += main.output
-            }
-        }
-        test
     }
 
     // fxpackager has a dependency on ant in order to build the ant jar,
@@ -2764,6 +2759,7 @@ project(":fxpackager") {
                 exclude("*/javapackager$EXE")
                 exclude("*/java$EXE")
                 exclude("*/javac$EXE")
+                exclude("*/jdk.packager.services.jmod")
             }
 
             copy {
@@ -2786,6 +2782,11 @@ project(":fxpackager") {
             copy {
               from "$rootProject.buildDir/modular-sdk/modules_cmds/jdk.packager/javapackager$EXE"
               into "$DEBUGJDK_HOME/bin"
+            }
+
+            copy {
+              from "$DEBUGJDK_HOME/newmodules/jdk.packager.services.jar"
+              into "$DEBUGJDK_HOME/jmods"
             }
         }
     }
