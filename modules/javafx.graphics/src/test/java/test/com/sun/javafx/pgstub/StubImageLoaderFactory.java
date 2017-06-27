@@ -69,12 +69,12 @@ public final class StubImageLoaderFactory {
                 }
 
                 @Override
-                public int getWidth() {
+                public double getWidth() {
                     throw new IllegalStateException();
                 }
 
                 @Override
-                public int getHeight() {
+                public double getHeight() {
                     throw new IllegalStateException();
                 }
             };
@@ -98,8 +98,8 @@ public final class StubImageLoaderFactory {
     }
 
     public ImageLoader createImageLoader(final Object source,
-                                         final int loadWidth,
-                                         final int loadHeight,
+                                         final double loadWidth,
+                                         final double loadHeight,
                                          final boolean preserveRatio,
                                          final boolean smooth) {
         final StubPlatformImageInfo imageInfo = imageInfos.get(source);
@@ -113,7 +113,7 @@ public final class StubImageLoaderFactory {
 
     public AsyncOperation createAsyncImageLoader(
             final AsyncOperationListener listener,
-            final String url, final int loadWidth, final int loadHeight,
+            final String url, final double loadWidth, final double loadHeight,
             final boolean preserveRatio, final boolean smooth) {
         final ImageLoader imageLoader =
                 createImageLoader(url, loadWidth, loadHeight,

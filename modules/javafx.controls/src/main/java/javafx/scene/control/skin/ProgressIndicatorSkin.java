@@ -26,6 +26,7 @@
 package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.skin.Utils;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -55,6 +56,7 @@ import javafx.scene.shape.Arc;
 import javafx.scene.shape.ArcType;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
 import javafx.scene.transform.Scale;
 import javafx.util.Duration;
 import javafx.css.CssMetaData;
@@ -90,12 +92,11 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
      *                                                                         *
      **************************************************************************/
 
-    // JDK-8090129: This constant should not be static, because the
+    // JDK-8149818: This constant should not be static, because the
     // Locale may change between instances.
-    private final String DONE = ControlResources.getString("ProgressIndicator.doneString");
 
-    /** doneText is just used to know the size of done as that is the biggest text we need to allow for */
-    private final Text doneText = new Text(DONE);
+    /** DONE string is just used to know the size of Done as that is the biggest text we need to allow for */
+    private final String DONE = ControlResources.getString("ProgressIndicator.doneString");
 
     final Duration CLIPPED_DELAY = new Duration(300);
     final Duration UNCLIPPED_DELAY = new Duration(0);
@@ -124,8 +125,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         super(control);
 
         this.control = control;
-
-        doneText.getStyleClass().add("text");
 
         // register listeners
         registerChangeListener(control.indeterminateProperty(), e -> initialize());
@@ -432,6 +431,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         private StackPane tick;
         private Arc arcShape;
         private Circle indicatorCircle;
+        private double doneTextWidth;
+        private double doneTextHeight;
 
         public DeterminateIndicator(ProgressIndicator control, ProgressIndicatorSkin s, Paint fillOverride) {
 
@@ -445,6 +446,11 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             text = new Text((control.getProgress() >= 1) ? (DONE) : ("" + intProgress + "%"));
             text.setTextOrigin(VPos.TOP);
             text.getStyleClass().setAll("text", "percentage");
+
+            registerChangeListener(text.fontProperty(), o -> {
+                doneTextWidth = Utils.computeTextWidth(text.getFont(), DONE, 0);
+                doneTextHeight = Utils.computeTextHeight(text.getFont(), DONE, 0, TextBoundsType.LOGICAL_VERTICAL_CENTER);
+            });
 
             // The circular background for the progress pie piece
             indicator = new StackPane();
@@ -503,7 +509,6 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
         @Override protected void layoutChildren() {
             // Position and size the circular background
-            double doneTextHeight = doneText.getLayoutBounds().getHeight();
             final double left = control.snappedLeftInset();
             final double right = control.snappedRightInset();
             final double top = control.snappedTopInset();
@@ -583,7 +588,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             final double tLeft = tick.snappedLeftInset();
             final double tRight = tick.snappedRightInset();
             final double indicatorWidth = indicatorMax + progressMax + tLeft + tRight + progressMax + indicatorMax;
-            return left + Math.max(indicatorWidth, doneText.getLayoutBounds().getWidth()) + right;
+            return left + Math.max(indicatorWidth, doneTextWidth) + right;
         }
 
         @Override protected double computePrefHeight(double width) {
@@ -602,7 +607,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
             final double tTop = tick.snappedTopInset();
             final double tBottom = tick.snappedBottomInset();
             final double indicatorHeight = indicatorMax + progressMax + tTop + tBottom + progressMax + indicatorMax;
-            return top + indicatorHeight + textGap + doneText.getLayoutBounds().getHeight() + bottom;
+            return top + indicatorHeight + textGap + doneTextHeight + bottom;
         }
 
         @Override protected double computeMaxWidth(double height) {

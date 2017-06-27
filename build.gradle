@@ -595,7 +595,6 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
                 rootProject.dependencies.add(fetchToolsConfig, "javafx:$basename:$ver", {
                     artifact {
                         name = basename
-                        version = ver
                         type = ext
                     }
                 })
@@ -706,7 +705,7 @@ void ant(String conf,   // platform configuration
             commandLine ant, "-Dbuild.compiler=javac1.7"
         }
         if ((conf != null) && !rootProject.defaultHostTarget.equals(conf)) {
-            def targetProperties = rootProject.ext[t.trim().toUpperCase()]
+            def targetProperties = rootProject.ext[conf.trim().toUpperCase()]
             args("-Dcross.platform=$conf")
             if (targetProperties.containsKey('arch')) {
                 args("-Dcross.platform.arch=${targetProperties.arch}")
@@ -988,7 +987,6 @@ compileTargets { t ->
     if (!targetProperties.containsKey('includeSWT')) targetProperties.includeSWT = true
     if (!targetProperties.containsKey('includeSwing')) targetProperties.includeSwing = true
     if (!targetProperties.containsKey('includeNull3d')) targetProperties.includeNull3d = true
-    if (!targetProperties.containsKey('includeLens')) targetProperties.includeLens = false
     if (!targetProperties.containsKey('includeMonocle')) targetProperties.includeMonocle = false
     if (!targetProperties.containsKey('includeEGL')) targetProperties.includeEGL = false
 
@@ -2036,19 +2034,12 @@ project(":controls") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
 
-    // TODO JDK-8174944 Css2Bin really should be moved out and put into buildSrc if it can be
-    // TODO could change script to dynamically locate all .css files and create bss for them, probably better
-    // TODO also not sure there is any benefit to having css files in the the runtime modules at all
     processResources << {
-        ["$moduleDir/com/sun/javafx/scene/control/skin/caspian/caspian.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/caspian-no-transparency.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/embedded-qvga.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/embedded.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/fxvk.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/caspian/highcontrast.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/modena.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/modena-no-transparency.css",
-        "$moduleDir/com/sun/javafx/scene/control/skin/modena/touch.css"].each { css ->
+        def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
+        cssFiles.include "**/*.css"
+        cssFiles.each { css ->
+            logger.info("converting CSS to BSS ${css}");
+
             javaexec {
                 executable = JAVA
                 workingDir = project.projectDir
@@ -2059,8 +2050,6 @@ project(":controls") {
         }
     }
 
-    // TODO - if the above TODO regarding Css2Bin is fixed, this should also
-    // be fixed.
     processShimsResources.dependsOn(project.task("copyShimBss", type: Copy) {
         from project.moduleDir
         into project.moduleShimsDir
@@ -2252,6 +2241,12 @@ project(":fxpackager") {
     sourceSets {
         main
         //shims // no test shims needed
+        antplugin {
+            java {
+                compileClasspath += main.output
+                runtimeClasspath += main.output
+            }
+        }
         test
     }
 
@@ -2268,17 +2263,6 @@ project(":fxpackager") {
 
     tasks.all {
         if (!COMPILE_FXPACKAGER) it.enabled = false
-    }
-
-    sourceSets {
-        main
-        antplugin {
-            java {
-                compileClasspath += main.output
-                runtimeClasspath += main.output
-            }
-        }
-        test
     }
 
     // fxpackager has a dependency on ant in order to build the ant jar,
@@ -2303,7 +2287,9 @@ project(":fxpackager") {
     compileJava.options.compilerArgs.addAll([
             "--add-exports=java.base/sun.security.timestamp=jdk.packager",
             "--add-exports=java.base/sun.security.x509=jdk.packager",
-            "--add-exports=jdk.jdeps/com.sun.tools.jdeps=jdk.packager",
+
+            // Note: retain jdk.jlink qualified export for cases where the JDK does
+            // not contain the jdk.packager module.
             "--add-exports=jdk.jlink/jdk.tools.jlink.internal.packager=jdk.packager",
 
             // Note: not in extras...
@@ -2553,8 +2539,10 @@ project(":fxpackager") {
         }
     }
 
-    assemble.dependsOn compileLauncher;
-    assemble.dependsOn buildJavaPackager
+    if (COMPILE_FXPACKAGER) {
+        assemble.dependsOn compileLauncher;
+        assemble.dependsOn buildJavaPackager
+    }
 
     classes << {
         // Copy all of the download libraries to libs directory for the sake of the IDEs
@@ -2662,6 +2650,145 @@ project(":fxpackager") {
                 '-all',
                 packagerDevOpts
         ].flatten()
+    }
+
+    task createPackagerServicesModule(type: Jar) {
+        if (project.hasProperty("DEBUGJDK_HOME")) {
+            def dir = file("$DEBUGJDK_HOME/newmodules")
+            dir.mkdirs()
+
+            includeEmptyDirs = false
+            archiveName = "jdk.packager.services.jar"
+            destinationDir = dir
+
+            from (project.file("$rootProject.buildDir/modular-sdk/modules/jdk.packager.services")) {
+                include "**"
+            }
+
+            from (project.file("$rootProject.buildDir/../modules/jdk.packager/build/classes/main/jdk.packager.services")) {
+                include "module-info.class"
+            }
+        }
+    }
+
+    task createPackagerModule(type: Jar) {
+        if (project.hasProperty("DEBUGJDK_HOME")) {
+            def dir = file("$DEBUGJDK_HOME/newmodules")
+            dir.mkdirs()
+
+            includeEmptyDirs = false
+            archiveName = "jdk.packager.jar"
+            destinationDir = dir
+
+            from (project.file("$rootProject.buildDir/modular-sdk/modules/jdk.packager")) {
+                include "**"
+            }
+
+            from (project.file("$rootProject.buildDir/../modules/jdk.packager/build/classes/main/jdk.packager")) {
+                include "module-info.class"
+            }
+        }
+    }
+
+    task createRunScript() {
+        def TEXT = "DEBUG_ARG=\"-J-Xdebug:\"\n" +
+"\n" +
+"# Argument parsing.\n" +
+"ARGS=()\n" +
+"for i in \"\$@\"; do\n" +
+"    if [[ \"\$i\" == \${DEBUG_ARG}* ]]; then\n" +
+"        ADDRESS=\${i:\${#DEBUG_ARG}}\n" +
+"        DEBUG=\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=\${ADDRESS}\"\n" +
+"    else\n" +
+"        ARGS+=(\"\$i\")\n" +
+"    fi\n" +
+"done\n" +
+"\n" +
+"\${JAVA_HOME}/bin/java.original --upgrade-module-path \${JAVA_HOME}/newmodules \$(IFS=\$\' \'; echo \"\${ARGS[*]}\")\n"
+
+        doLast {
+            new File("$DEBUGJDK_HOME/bin").mkdirs()
+            def runscript = new File("$DEBUGJDK_HOME/bin/java")//.withWriter('utf-8') //{
+            runscript.write(TEXT)
+        }
+
+        doLast {
+            exec {
+                commandLine('chmod',  '+x', "$DEBUGJDK_HOME/bin/java")
+            }
+        }
+    }
+
+    task createBuildScript() {
+        def TEXT = "DEBUG_ARG=\"-J-Xdebug:\"\n" +
+"\n" +
+"# Argument parsing.\n" +
+"ARGS=()\n" +
+"for i in \"\$@\"; do\n" +
+"    if [[ \"\$i\" == \${DEBUG_ARG}* ]]; then\n" +
+"        ADDRESS=\${i:\${#DEBUG_ARG}}\n" +
+"        DEBUG=\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=\${ADDRESS}\"\n" +
+"    else\n" +
+"        ARGS+=(\"\$i\")\n" +
+"    fi\n" +
+"done\n" +
+"\n" +
+"\${JAVA_HOME}/bin/javac.original --upgrade-module-path \${JAVA_HOME}/newmodules \$(IFS=\$\' \'; echo \"\${ARGS[*]}\")\n"
+
+        doLast {
+            new File("$DEBUGJDK_HOME/bin").mkdirs()
+            def buildscript = new File("$DEBUGJDK_HOME/bin/javac")//.withWriter('utf-8') //{
+            buildscript.write(TEXT)
+        }
+
+        doLast {
+            exec {
+                commandLine('chmod',  '+x', "$DEBUGJDK_HOME/bin/javac")
+            }
+        }
+    }
+
+    task createDebugJDK(dependsOn: [createPackagerModule, createPackagerServicesModule, createRunScript, createBuildScript]) {
+        def EXE = IS_WINDOWS ? ".exe" : ""
+
+        doLast {
+            copy {
+                from SOURCEJDK_HOME
+                into DEBUGJDK_HOME
+                exclude("*/ant-javafx.jar")
+                exclude("*/javapackager$EXE")
+                exclude("*/java$EXE")
+                exclude("*/javac$EXE")
+                exclude("*/jdk.packager.services.jmod")
+            }
+
+            copy {
+              from "$SOURCEJDK_HOME/bin/java$EXE"
+              into "$DEBUGJDK_HOME/bin"
+              rename "java$EXE", "java.original$EXE"
+            }
+
+            copy {
+              from "$SOURCEJDK_HOME/bin/javac$EXE"
+              into "$DEBUGJDK_HOME/bin"
+              rename "javac$EXE", "javac.original$EXE"
+            }
+
+            copy {
+              from "$rootProject.buildDir/modular-sdk/modules_libs/jdk.packager/ant-javafx.jar"
+              into "$DEBUGJDK_HOME/lib"
+            }
+
+            copy {
+              from "$rootProject.buildDir/modular-sdk/modules_cmds/jdk.packager/javapackager$EXE"
+              into "$DEBUGJDK_HOME/bin"
+            }
+
+            copy {
+              from "$DEBUGJDK_HOME/newmodules/jdk.packager.services.jar"
+              into "$DEBUGJDK_HOME/jmods"
+            }
+        }
     }
 
     task copyRedistributableFiles(type: Copy) {
@@ -3423,21 +3550,6 @@ allprojects {
 
         compile.options.compilerArgs += ["-XDignore.symbol.file", "-encoding", "UTF-8"]
 
-        // If I am a module....
-        if (project.hasProperty('moduleSourcePath') &&
-                (project.hasProperty('buildModule') && project.buildModule)) {
-            project.compileJava {
-                options.compilerArgs.addAll([
-                    '-implicit:none',
-                    '--module-source-path', project.moduleSourcePath
-                    ])
-            }
-            // no jars needed for modules
-            project.jar.enabled = false
-
-            // and redirect the resources into the module
-            project.processResources.destinationDir = project.moduleDir
-        }
         // we use a custom javadoc command
         project.javadoc.enabled = false
 
@@ -3448,6 +3560,22 @@ allprojects {
             }
         }
     } // tasks with javaCompile
+
+    // If I am a module....
+    if (project.hasProperty('moduleSourcePath') &&
+            (project.hasProperty('buildModule') && project.buildModule)) {
+        project.compileJava {
+            options.compilerArgs.addAll([
+                '-implicit:none',
+                '--module-source-path', project.moduleSourcePath
+                ])
+        }
+        // no jars needed for modules
+        project.jar.enabled = false
+
+        // and redirect the resources into the module
+        project.processResources.destinationDir = project.moduleDir
+    }
 
     if (project.hasProperty('moduleSourcePathShim') &&
             project.sourceSets.hasProperty('shims')) {
@@ -4087,10 +4215,6 @@ compileTargets { t ->
                     exclude ("com/sun/prism/es2/EGL*")
                 }
 
-                if (!targetProperties.includeLens) {
-                    exclude ("com/sun/glass/ui/lens")
-                }
-
                 if (!targetProperties.includeMonocle) {
                     exclude ("com/sun/glass/ui/monocle")
                     exclude("com/sun/prism/es2/Monocle*")
@@ -4165,6 +4289,11 @@ compileTargets { t ->
             final File javafxProperties = file("${moduleLibDir}/javafx.properties")
             outputs.file(javafxProperties)
 
+            if (targetProperties.containsKey("javafxPlatformProperties")) {
+                final File javafxPlatformProperties = file("${moduleLibDir}/javafx.platform.properties")
+                outputs.file(javafxPlatformProperties)
+            }
+
             doLast {
                 mkdir moduleLibDir
 
@@ -4185,8 +4314,6 @@ compileTargets { t ->
                 // Embedded builds define this file as well
                 if (targetProperties.containsKey("javafxPlatformProperties")) {
                     final File javafxPlatformProperties = file("${moduleLibDir}/javafx.platform.properties")
-                    outputs.file(javafxPlatformProperties)
-
                     javafxPlatformProperties.delete()
                     javafxPlatformProperties << targetProperties.javafxPlatformProperties
                     javafxPlatformProperties << "\n"

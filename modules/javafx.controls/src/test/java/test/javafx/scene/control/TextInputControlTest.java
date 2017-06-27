@@ -35,10 +35,15 @@ import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
+import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.text.Font;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
 import java.util.Arrays;
 import java.util.Collection;
 import javafx.scene.control.IndexRange;
@@ -46,11 +51,14 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
+import com.sun.javafx.tk.Toolkit;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
@@ -357,6 +365,37 @@ public class TextInputControlTest {
         textInput.setText("The quick brown fox");
         assertEquals(0, textInput.getCaretPosition());
         assertEquals(0, textInput.getAnchor());
+    }
+
+    // Test for JDK-8178417
+    @Test public void caretPositionUndo() {
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        StackPane root = new StackPane();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        String text = "01234";
+
+        textInput.setText(text);
+        stage.setScene(scene);
+        root.getChildren().removeAll();
+        root.getChildren().add(textInput);
+        stage.show();
+        tk.firePulse();
+
+        KeyEventFirer keyboard = new KeyEventFirer(textInput);
+        keyboard.doKeyPress(KeyCode.HOME);
+
+        for(int i = 1; i < text.length() + 1; ++i) {
+            keyboard.doKeyPress(KeyCode.RIGHT);
+            tk.firePulse();
+        }
+        for(int i = 1; i < text.length() + 1; ++i) {
+            textInput.undo();
+        }
+        assertEquals(text.length(), textInput.getCaretPosition());
+        root.getChildren().removeAll();
+        stage.hide();
+        tk.firePulse();
     }
 
     /******************************************************

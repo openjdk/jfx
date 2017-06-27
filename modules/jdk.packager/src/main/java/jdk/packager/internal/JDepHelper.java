@@ -39,8 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import com.sun.tools.jdeps.Main;
+import java.util.spi.ToolProvider;
+import java.util.Optional;
 import java.io.PrintWriter;
 import java.util.Collection;
 
@@ -52,7 +52,10 @@ public final class JDepHelper {
     private JDepHelper() {}
 
     private static int execute(String[] args, PrintWriter out) {
-        return com.sun.tools.jdeps.Main.run(args, out);
+        Optional<ToolProvider> jdeps = ToolProvider.findFirst("jdeps");
+        if (jdeps.isPresent()) {
+            return jdeps.get().run(out, null, args);
+        } else throw new RuntimeException("jdeps not found");
     }
 
     public static Set<String> calculateModules(Collection<String> Files, List<Path> modulePath) {

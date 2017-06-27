@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -96,6 +96,24 @@ public final class Disposer implements Runnable {
      */
     private synchronized void add(Object target, DisposerRecord rec) {
         records.add(new WeakDisposerRecord(target, rec));
+    }
+
+    /**
+     * Registers the WeakDisposerRecord for later disposal.
+     * @param rec the associated DisposerRecord object
+     * @see DisposerRecord
+     */
+    public static void addRecord(WeakDisposerRecord rec) {
+        disposerInstance.add(rec);
+    }
+
+    /**
+     * Performs the actual registration of the WeakDisposerRecord be disposed.
+     * @param rec the WeakDisposerRecord object
+     * @see DisposerRecord
+     */
+    private synchronized void add(WeakDisposerRecord rec) {
+        records.add(rec);
     }
 
     public void run() {

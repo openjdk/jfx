@@ -516,17 +516,17 @@ public abstract class Toolkit {
     public abstract Future addRenderJob(RenderJob rj);
 
     public abstract ImageLoader loadImage(String url,
-                                          int width, int height,
+                                          double width, double height,
                                           boolean preserveRatio,
                                           boolean smooth);
     public abstract ImageLoader loadImage(InputStream stream,
-                                          int width, int height,
+                                          double width, double height,
                                           boolean preserveRatio,
                                           boolean smooth);
     public abstract AsyncOperation loadImageAsync(
                                           AsyncOperationListener<? extends ImageLoader> listener,
                                           String url,
-                                          int width, int height,
+                                          double width, double height,
                                           boolean preserveRatio,
                                           boolean smooth);
 

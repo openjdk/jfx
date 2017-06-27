@@ -372,7 +372,11 @@ void WindowContextBase::process_mouse_scroll(GdkEventScroll* event) {
             dx = -1;
             break;
     }
-
+    if (event->state & GDK_SHIFT_MASK) {
+        jdouble t = dy;
+        dy = dx;
+        dx = t;
+    }
     if (jview) {
         mainEnv->CallVoidMethod(jview, jViewNotifyScroll,
                 (jint) event->x, (jint) event->y,

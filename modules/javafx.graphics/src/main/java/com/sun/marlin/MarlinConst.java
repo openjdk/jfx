@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,6 +100,9 @@ public interface MarlinConst {
     // edges capacity = 24 x initial edges = 24 * edges count (4096) = 96K
     static final int INITIAL_EDGES_CAPACITY = INITIAL_EDGES_COUNT * 24;
 
+    // crossing capacity = edges count / 4 ~ 1024
+    static final int INITIAL_CROSSING_COUNT = INITIAL_EDGES_COUNT >> 2;
+
     // zero value as byte
     static final byte BYTE_0 = (byte) 0;
 
@@ -113,9 +116,13 @@ public interface MarlinConst {
     public static final int SUBPIXEL_POSITIONS_X = 1 << (SUBPIXEL_LG_POSITIONS_X);
     public static final int SUBPIXEL_POSITIONS_Y = 1 << (SUBPIXEL_LG_POSITIONS_Y);
 
+    // 2048 (pixelSize) pixels (height) x 8 subpixels = 64K
+    static final int INITIAL_BUCKET_ARRAY
+        = INITIAL_PIXEL_DIM * SUBPIXEL_POSITIONS_Y;
+
     public static final float NORM_SUBPIXELS
-        = (float)Math.sqrt(( SUBPIXEL_POSITIONS_X * SUBPIXEL_POSITIONS_X
-                           + SUBPIXEL_POSITIONS_Y * SUBPIXEL_POSITIONS_Y)/2.0);
+        = (float) Math.sqrt(( SUBPIXEL_POSITIONS_X * SUBPIXEL_POSITIONS_X
+                            + SUBPIXEL_POSITIONS_Y * SUBPIXEL_POSITIONS_Y) / 2.0d);
 
     public static final int MAX_AA_ALPHA
         = SUBPIXEL_POSITIONS_X * SUBPIXEL_POSITIONS_Y;

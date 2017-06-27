@@ -39,18 +39,6 @@ if (WIN32)
         set(ICU_I18N_LIBRARIES ${IMPORT_LIBRARIES_DIR}/sicuind.lib)
     endif ()
     #### ICU-END ####
-
-    set(LIBXML2_INCLUDE_DIR ${IMPORT_INCLUDE_DIR})
-    set(LIBXML2_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libxml2_a.lib)
-
-    #### Sqlite3 ####
-    set(SQLITE_FOUND TRUE)
-    set(SQLITE_INCLUDE_DIR ${IMPORT_INCLUDE_DIR})
-    set(SQLITE_LIBRARIES ${IMPORT_LIBRARIES_DIR}/sqlite3.lib)
-    #### Sqlite3-END ####
-
-    set(LIBXSLT_INCLUDE_DIR ${IMPORT_INCLUDE_DIR})
-    set(LIBXSLT_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libxslt_a.lib)
 elseif (APPLE)
     # set(USE_CF 1)
     add_definitions(-DUSE_CF=1)
@@ -64,11 +52,6 @@ elseif (APPLE)
     set(ICU_I18N_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libicui18n.a)
     #### ICU-END ####
 
-    #### Sqlite3 ####
-    set(SQLITE_FOUND TRUE)
-    set(SQLITE_INCLUDE_DIR ${IMPORT_INCLUDE_DIR})
-    set(SQLITE_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libsqlite3.a)
-    #### Sqlite3-END ####
     find_package(LibXml2 2.8.0 REQUIRED)
     find_package(LibXslt 1.1.7 REQUIRED)
     set(CMAKE_SKIP_RPATH TRUE)
@@ -80,12 +63,6 @@ elseif (UNIX)
     set(ICU_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libicuuc.a ${IMPORT_LIBRARIES_DIR}/libicudata.a)
     set(ICU_I18N_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libicui18n.a)
     #### ICU-END ####
-
-    #### Sqlite3 ####
-    set(SQLITE_FOUND TRUE)
-    set(SQLITE_INCLUDE_DIR ${IMPORT_INCLUDE_DIR})
-    set(SQLITE_LIBRARIES ${IMPORT_LIBRARIES_DIR}/libsqlite3.a)
-    #### Sqlite3-END ####
 
     find_package(LibXml2 2.7.0 REQUIRED)
     find_package(LibXslt 1.1.7 REQUIRED)

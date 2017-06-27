@@ -59,29 +59,29 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
     private Image[] images;
     private int[] delayTimes;
     private int loopCount;
-    private int width;
-    private int height;
+    private double width;
+    private double height;
     private float pixelScale;
     private Exception exception;
 
-    public PrismImageLoader2(String url, int width, int height,
+    public PrismImageLoader2(String url, double width, double height,
                              boolean preserveRatio, float pixelScale,
                              boolean smooth)
     {
         loadAll(url, width, height, preserveRatio, pixelScale, smooth);
     }
 
-    public PrismImageLoader2(InputStream stream, int width, int height,
+    public PrismImageLoader2(InputStream stream, double width, double height,
                              boolean preserveRatio, boolean smooth)
     {
         loadAll(stream, width, height, preserveRatio, smooth);
     }
 
-    public int getWidth() {
+    public double getWidth() {
         return width;
     }
 
-    public int getHeight() {
+    public double getHeight() {
         return height;
     }
 
@@ -117,7 +117,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         return exception;
     }
 
-    private void loadAll(String url, int w, int h,
+    private void loadAll(String url, double w, double h,
                          boolean preserveRatio, float pixelScale,
                          boolean smooth)
     {
@@ -133,7 +133,7 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         }
     }
 
-    private void loadAll(InputStream stream, int w, int h,
+    private void loadAll(InputStream stream, double w, double h,
                          boolean preserveRatio, boolean smooth)
     {
         ImageLoadListener listener = new PrismLoadListener();
@@ -230,14 +230,14 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
 
         private final AccessControlContext acc;
 
-        int width, height;
+        double width, height;
         boolean preserveRatio;
         boolean smooth;
 
         public AsyncImageLoader(
                 AsyncOperationListener<PrismImageLoader2> listener,
                 String url,
-                int width, int height, boolean preserveRatio, boolean smooth)
+                double width, double height, boolean preserveRatio, boolean smooth)
         {
             super(url, listener);
             this.width = width;
