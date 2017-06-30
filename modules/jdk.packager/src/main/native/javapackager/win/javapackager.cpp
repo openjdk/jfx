@@ -475,10 +475,10 @@ int wmain(int argc, wchar_t* argv[]) {
     std::wstring exe = GetCurrentExecutableName();
 
     if (exe.length() <= 0) {
-        JavaVersion * jv2 = GetMaxVersion(HKEY_LOCAL_MACHINE, "SOFTWARE\\JavaSoft\\Java Development Kit");
+        JavaVersion * jv2 = GetMaxVersion(HKEY_LOCAL_MACHINE, "SOFTWARE\\JavaSoft\\JDK");
         if (jv2 != NULL) {
-            javacmd = jv2->path;
             javahome = jv2->home;
+            javacmd = javahome + L"\\bin\\" + L"\\java.exe";
         }
         else {
             javacmd = L"java.exe";
