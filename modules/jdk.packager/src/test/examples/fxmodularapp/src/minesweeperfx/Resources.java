@@ -77,7 +77,7 @@ public class Resources {
         loadImage("resources/blankover.png", ImageType.Over);
         loadImage("resources/exposed.png",   ImageType.ExposedTile);
         loadImage("resources/flag.png",      ImageType.Flag);
-        loadImage("resources/flag.png",      ImageType.FlagOver); // TODO create image
+        loadImage("resources/flag.png",      ImageType.FlagOver);
         loadImage("resources/hitmine.png",   ImageType.HitMine);
         loadImage("resources/mine.png",      ImageType.Mine);
         loadImage("resources/wrongmine.png", ImageType.WrongMine);

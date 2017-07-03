@@ -108,9 +108,7 @@ public class Game extends Pane {
                 int y = random(5, 21);
                 newGame(x, y, random(10, random(10, x * y)));
                 break;
-            //TODO fix drawing of larger than 20x20 grid
-            //TODO fix drawing of larger than 20x20 grid            //TODO fix drawing of larger than 20x20 grid
-            //TODO fix drawing of larger than 20x20 grid
+            // fix drawing of larger than 20x20 grid
         }
     }
 
@@ -119,7 +117,6 @@ public class Game extends Pane {
         choices.add(easyMessage);
         choices.add(mediumMessage);
         choices.add(hardMessage);
-        //choices.add(SCrazy); //TODO fix
 
         ChoiceDialog<String> dialog = new ChoiceDialog<>(easyMessage, choices);
         dialog.setTitle("Minsweeper");

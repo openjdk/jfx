@@ -302,8 +302,6 @@ public class MacAppBundler extends AbstractImageBundler {
             return true;
         }
 
-        //TODO warn if MAC_RUNTIME is set
-
         // validate short version
         if (!validCFBundleVersion(MAC_CF_BUNDLE_VERSION.fetchFrom(p))) {
             throw new ConfigException(

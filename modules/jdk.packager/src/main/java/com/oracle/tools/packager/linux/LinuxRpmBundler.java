@@ -152,16 +152,12 @@ public class LinuxRpmBundler extends AbstractBundler {
 
     public static boolean testTool(String toolName, double minVersion) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream(); PrintStream ps = new PrintStream(baos)) {
-            ProcessBuilder pb = new ProcessBuilder(
-                    toolName,
-                    "--version");
-
+            ProcessBuilder pb = new ProcessBuilder(toolName, "--version");
             IOUtils.exec(pb, Log.isDebug(), false, ps); //not interested in the output
-
-            //TODO: Version is ignored; need to extract version string and compare!
             String content = new String(baos.toByteArray());
             Pattern pattern = Pattern.compile(" (\\d+\\.\\d+)");
             Matcher matcher = pattern.matcher(content);
+
             if (matcher.find()) {
                 String v = matcher.group(1);
                 double version = new Double(v);

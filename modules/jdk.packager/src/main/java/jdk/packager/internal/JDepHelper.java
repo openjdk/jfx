@@ -68,7 +68,7 @@ public final class JDepHelper {
                 List<String> arguments = new ArrayList<>();
                 arguments.add("-s");
 
-                // TODO Uncomment out once JDK-8151729 is fixed
+                // Uncomment out once JDK-8151729 is fixed
                 /*if (modulePath != null || !modulePath.isEmpty()) {
                     arguments.add("-modulepath");
                     arguments.add(ListOfPathToString(modulePath));

@@ -60,8 +60,7 @@ Basic approach:
      (package.cfg is property file).
   - Load JVM with requested JVM settings (bundled client JVM if availble, server or installed JVM otherwise).
   - Wait for JVM to exit and then exit from Main
-  - To debug application by set env variable (TODO) or pass "/Debug" option on command line.
-  - TODO: default directory is set to user's Documents and Settings.
+  - To debug application by passing command line argument.
   - Application folder is added to the library path (so LoadLibrary()) works.
 
 Limitations and future work:
@@ -102,7 +101,7 @@ extern "C" {
                     parentProcess = false;
                 }
 #ifdef DEBUG
-//TODO There appears to be a compiler bug on Mac overloading ShowResponseMessage. Investigate.
+                // There is a compiler bug on Mac when overloading ShowResponseMessage.
                 else if (argument == _T("-nativedebug")) {
                     if (platform.ShowResponseMessage(_T("Test"),
                                                      TString(_T("Would you like to debug?\n\nProcessID: ")) +

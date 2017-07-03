@@ -70,8 +70,12 @@ public class FileAssociation extends DataType implements DynamicAttribute {
         putUnlessNull(fileAssociations, FA_ICON.getID(), icon);
 
         for (DeployFXTask.BundleArgument ba : bundleArgumentList) {
-            // TODO check and complain about collisions
-            putUnlessNull(fileAssociations, ba.arg, ba.value);
+            if (!fileAssociations.containsKey(ba.arg)) {
+                putUnlessNull(fileAssociations, ba.arg, ba.value);
+            }
+            else {
+                // TODO check and complain about collisions
+            }
         }
 
         return fileAssociations;

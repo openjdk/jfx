@@ -130,8 +130,12 @@ public class SecondaryLauncher extends DataType implements DynamicAttribute {
 
 
         for (DeployFXTask.BundleArgument ba : bundleArgumentList) {
-            // TODO check and complain about collisions
-            putUnlessNull(bundleParams, ba.arg, ba.value);
+            if (!bundleParams.containsKey(ba.arg)) {
+                putUnlessNull(bundleParams, ba.arg, ba.value);
+            }
+            else {
+                // TODO check and complain about collisions
+            }
         }
 
         return bundleParams;

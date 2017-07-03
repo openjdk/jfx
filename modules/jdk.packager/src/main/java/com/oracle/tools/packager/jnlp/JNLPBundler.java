@@ -764,13 +764,10 @@ public class JNLPBundler extends AbstractBundler {
                 }
                 if (Boolean.TRUE.equals(needMenu)) {
                     xout.writeEmptyElement("menu");
-                    //todo add submenu element
                 }
 
                 xout.writeEndElement();
             }
-
-            //TODO file associations
 
             xout.writeEndElement(); // information
 
@@ -1291,7 +1288,7 @@ public class JNLPBundler extends AbstractBundler {
                 out.write(buf, 0, len);
             }
         } catch (IOException ex) {
-            throw new PackagerException(ex, "ERR_FileCopyFailed", outDir.getPath()); //FIXME I18N
+            throw new PackagerException(ex, "ERR_FileCopyFailed", outDir.getPath());
         }
     }
 
@@ -1351,9 +1348,7 @@ public class JNLPBundler extends AbstractBundler {
         f.mkdirs();
 
         for (String s: lst) {
-            InputStream is =
-                    //FIXME different root?
-                    PackagerResource.class.getResourceAsStream(prefixWebFiles+s);
+            InputStream is = PackagerResource.class.getResourceAsStream(prefixWebFiles+s);
             if (is == null) {
                 System.err.println("Internal error. Missing resources [" +
                         (prefixWebFiles+s) + "]");

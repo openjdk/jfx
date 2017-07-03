@@ -19,6 +19,3 @@ mkdir modules
 
 $JAVAC -d build/hello.world --source-path src `find src -name '*.java'`
 $JAR --create --file=modules/hello.world.jar --main-class=com.greetings.HelloWorld -C build/hello.world .
-
-
-#TODO generate hello.world.jmod

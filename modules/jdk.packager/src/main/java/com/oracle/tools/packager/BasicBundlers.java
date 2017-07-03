@@ -88,8 +88,9 @@ public class BasicBundlers implements Bundlers {
      * or fall back to when their specific parameters are not used.
      * @return an unmodifieable collection of the standard parameters.
      */
+    @Deprecated
     public Collection<BundlerParamInfo> getStandardParameters() {
-        //TODO enumerate the stuff in BundleParams
+        //TODO remove this method
         return null;
     }
 

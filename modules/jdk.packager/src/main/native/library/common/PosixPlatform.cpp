@@ -311,7 +311,6 @@ bool PosixProcess::Wait() {
     int status = 0;
     pid_t wpid = 0;
 
-    //TODO Use waitpid instead of wait
 #ifdef LINUX
     wait();
 #endif

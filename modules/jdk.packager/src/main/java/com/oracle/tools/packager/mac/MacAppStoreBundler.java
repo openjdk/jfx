@@ -324,8 +324,7 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             // hdiutil is always available so there's no need to test for availability.
             //run basic validation to ensure requirements are met
 
-            // Mac App Store apps cannot use the system runtime
-            //TODO
+            //TODO Mac App Store apps cannot use the system runtime
 
             //we are not interested in return code, only possible exception
             validateAppImageAndBundeler(params);

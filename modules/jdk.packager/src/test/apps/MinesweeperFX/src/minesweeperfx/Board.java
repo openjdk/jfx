@@ -88,7 +88,6 @@ public class Board extends GridPane {
         return result;
     }
 
-    // TODO this needs to be rewritten
     public Board(int xDimension, int yDimension, int mineCount) {
         double r = 0.15; // Random value that returns good results.
 
@@ -134,7 +133,7 @@ public class Board extends GridPane {
             }
         }
 
-        //TODO still a small chance minCount is not 0. Implement the
+        // There is a small chance minCount is not 0. Implement the
         // dispersal of the bombs better.
 
         if (Globals.debug) {

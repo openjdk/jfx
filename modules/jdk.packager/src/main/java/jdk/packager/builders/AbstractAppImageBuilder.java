@@ -278,8 +278,6 @@ public abstract class AbstractAppImageBuilder {
     protected abstract String getCacheLocation(Map<String, ? super Object> params);
 
     void prepareAppCDS(Map<String, ? super Object> params, PrintStream out) throws IOException {
-        //TODO check 8u40 or later
-
         File tempDir = Files.createTempDirectory("javapackager").toFile();
         tempDir.deleteOnExit();
         File classList = new File(tempDir, APP_FS_NAME.fetchFrom(params)  + ".classlist");

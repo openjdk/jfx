@@ -87,29 +87,10 @@ public class LinuxAppImageBuilder extends AbstractAppImageBuilder {
             },
             (s, p) -> new File(s));
 
-//    public static final BundlerParamInfo<URL> RAW_EXECUTABLE_URL = new StandardBundlerParam<>(
-//            I18N.getString("param.raw-executable-url.name"),
-//            I18N.getString("param.raw-executable-url.description"),
-//            "linux.launcher.url",
-//            URL.class,
-//            params -> LinuxResources.class.getResource(EXECUTABLE_NAME),
-//            (s, p) -> {
-//                try {
-//                    return new URL(s);
-//                } catch (MalformedURLException e) {
-//                    Log.info(e.toString());
-//                    return null;
-//                }
-//            });
-//
-
     public LinuxAppImageBuilder(Map<String, Object> config, Path imageOutDir) throws IOException {
         super(config, imageOutDir.resolve(APP_NAME.fetchFrom(config) + "/runtime"));
 
         Objects.requireNonNull(imageOutDir);
-
-        //@SuppressWarnings("unchecked")
-        //String img = (String) config.get("jimage.name"); // FIXME constant
 
         this.root = imageOutDir.resolve(APP_NAME.fetchFrom(config));
         this.appDir = root.resolve("app");

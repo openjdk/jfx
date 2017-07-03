@@ -324,8 +324,7 @@ public class PackagerLib {
                                               BundleType.IMAGE.toString(),
                                               deployParams.getTargetFormat());
 
-                        //TODO generate installers referencing disk image
-                        // For now just generate all images.
+                        // Generate installers.
                         generateNativeBundles(deployParams.outdir,
                                               bp.getBundleParamsAsMap(),
                                               BundleType.INSTALLER.toString(),

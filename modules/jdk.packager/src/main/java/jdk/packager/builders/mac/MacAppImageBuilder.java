@@ -248,13 +248,8 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
 
         Objects.requireNonNull(imageOutDir);
 
-        //@SuppressWarnings("unchecked")
-        //String img = (String) config.get("jimage.name"); // FIXME constant
-
         this.params = config;
-
         this.root = imageOutDir.resolve(APP_NAME.fetchFrom(params) + ".app");
-
         this.contentsDir = root.resolve("Contents");
         this.javaDir = contentsDir.resolve("Java");
         this.resourcesDir = contentsDir.resolve("Resources");
@@ -386,10 +381,6 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
         // Copy class path entries to Java folder
         copyClassPathEntries(javaDir);
 
-        //TODO: Need to support adding native libraries.
-        // Copy library path entries to MacOS folder
-        //copyLibraryPathEntries(macOSDirectory);
-
         /*********** Take care of "config" files *******/
         // Copy icon to Resources folder
         File icon = ICON_ICNS.fetchFrom(params);
@@ -460,7 +451,6 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
     }
 
     private String getBundleName(Map<String, ? super Object> params) {
-        //TODO: Check to see what rules/limits are in place for CFBundleName
         if (MAC_CF_BUNDLE_NAME.fetchFrom(params) != null) {
             String bn = MAC_CF_BUNDLE_NAME.fetchFrom(params);
             if (bn.length() > 16) {
@@ -515,9 +505,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
                 VERSION.fetchFrom(params) != null ? VERSION.fetchFrom(params) : "1.0.0");
         data.put("DEPLOY_BUNDLE_CFBUNDLE_VERSION",
                 MAC_CF_BUNDLE_VERSION.fetchFrom(params) != null ? MAC_CF_BUNDLE_VERSION.fetchFrom(params) : "100");
-        data.put("DEPLOY_BUNDLE_CATEGORY",
-                //TODO parameters should provide set of values for IDEs
-                MAC_CATEGORY.fetchFrom(params));
+        data.put("DEPLOY_BUNDLE_CATEGORY", MAC_CATEGORY.fetchFrom(params));
 
         boolean hasMainJar = MAIN_JAR.fetchFrom(params) != null;
         boolean hasMainModule = StandardBundlerParam.MODULE.fetchFrom(params) != null;
@@ -526,7 +514,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
             data.put("DEPLOY_MAIN_JAR_NAME", MAIN_JAR.fetchFrom(params).getIncludedFiles().iterator().next());
         }
         else if (hasMainModule) {
-            //TODO??
+            data.put("DEPLOY_MODULE_NAME", StandardBundlerParam.MODULE.fetchFrom(params));
         }
 
         data.put("DEPLOY_PREFERENCES_ID", PREFERENCES_ID.fetchFrom(params).toLowerCase());
@@ -592,8 +580,6 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
         macroedPath.deleteCharAt(macroedPath.length() - 1);
 
         data.put("DEPLOY_APP_CLASSPATH", macroedPath.toString());
-
-        //TODO: Add remainder of the classpath
 
         StringBuilder bundleDocumentTypes = new StringBuilder();
         StringBuilder exportedTypes = new StringBuilder();

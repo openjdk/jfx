@@ -460,7 +460,7 @@ public class WinExeBundler extends AbstractBundler {
         validateValueAndPut(data, "APPLICATION_NAME", APP_NAME, params);
 
         validateValueAndPut(data, "APPLICATION_VENDOR", VENDOR, params);
-        validateValueAndPut(data, "APPLICATION_VERSION", VERSION, params); // TODO make our own version paraminfo?
+        validateValueAndPut(data, "APPLICATION_VERSION", VERSION, params);
         validateValueAndPut(data, "INSTALLER_FILE_NAME", INSTALLER_FILE_NAME, params);
 
         data.put("APPLICATION_LAUNCHER_FILENAME", innosetupEscape(WinAppBundler.getLauncherName(params)));

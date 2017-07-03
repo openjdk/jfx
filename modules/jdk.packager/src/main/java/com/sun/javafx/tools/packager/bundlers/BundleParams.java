@@ -132,11 +132,13 @@ public class BundleParams {
             Object o = params.get(key);
             if (klass.isInstance(o)) {
                 return (C) o;
-            } else if (params.containsKey(keys) && o == null) {
-                return null;
-                // } else if (o != null) {
-                // TODO log an error.
             }
+            else if (params.containsKey(keys) && o == null) {
+                return null;
+            }
+            //else if (o != null) {
+            //TODO log an error.
+            //}
         }
         return defaultValue;
     }
