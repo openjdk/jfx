@@ -21,9 +21,6 @@ list(APPEND JavaScriptCore_INCLUDE_DIRECTORIES
 )
 
 if (APPLE)
-    list(APPEND JavaScriptCore_INCLUDE_DIRECTORIES
-        "${JAVASCRIPTCORE_DIR}/icu"
-    )
     find_library(COREFOUNDATION_LIBRARY CoreFoundation)
     list(APPEND JavaScriptCore_LIBRARIES
         ${COREFOUNDATION_LIBRARY}
@@ -51,3 +48,5 @@ list(APPEND JavaScriptCore_LIBRARIES
 list(APPEND JavaScriptCore_SYSTEM_INCLUDE_DIRECTORIES
 	${JDK_INCLUDE_DIRS}
 )
+
+add_dependencies(WTF icudatagen)

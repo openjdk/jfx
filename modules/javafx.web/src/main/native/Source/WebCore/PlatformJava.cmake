@@ -186,7 +186,6 @@ if (WIN32)
     )
 elseif(APPLE)
     list(APPEND WebCore_INCLUDE_DIRECTORIES
-        ${WEBCORE_DIR}/icu
         ${WEBCORE_DIR}/platform/mac
     )
     list(APPEND WebCore_SOURCES
@@ -246,6 +245,8 @@ set(WebCore_USER_AGENT_SCRIPTS_DEPENDENCIES ${WEBCORE_DIR}/platform/java/RenderT
 
 list(APPEND WebCore_LIBRARIES
     SqliteJava
+    ${ICU_I18N_LIBRARIES}
+    ${ICU_LIBRARIES}
 )
 
 include_directories(

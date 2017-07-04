@@ -75,3 +75,6 @@ apps/scenebuilder/SceneBuilderApp/src/com/oracle/javafx/scenebuilder/app/about/a
 
 # ignore cmake internal generated files
 modules/javafx.web/src/main/native/__cmake_systeminformation
+
+# ignore icu data library
+icudt*.dat

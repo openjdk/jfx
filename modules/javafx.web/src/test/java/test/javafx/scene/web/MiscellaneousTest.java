@@ -45,6 +45,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 import org.w3c.dom.Document;
@@ -370,5 +371,28 @@ public class MiscellaneousTest extends TestBase {
             );
         });
         fontFaceHelper.waitForCompletion();
+    }
+
+    /**
+     * @test
+     * @bug 8178360
+     * Check for ICU word wrap. Compare element height which has single word vs multiline text which doesn't have
+     * breakable text.
+     */
+    @Test public void testICUTextWrap() {
+        loadContent(
+        "<p id='idword'>Lorem ipsum</p>" +
+        "<p id='idwrap'>Lorem​Ipsum​Dolor​Sit​Amet​Consectetur​Adipiscing​Elit​Sed​Do​Eiusmod​Tempor​Incididunt​Ut​" +
+        "Labore​Et​Dolore​Magna​Aliqua​Ut​Enim​Ad​Minim​Veniam​Quis​Nostrud​Exercitation​Ullamco​Laboris​Nisi​Ut​Aliqu" +
+        "ip​Ex​Ea​Commodo​Consequat​Duis​Aute​Irure​Dolor​In​Reprehenderit​In​Voluptate​Velit​Esse​Cillum​Dolore​Eu​Fug" +
+        "iat​Nulla​Pariatur​Excepteur​Sint​Occaecat​Cupidatat​Non​Proident​Sunt​In​Culpa​Qui​Officia​Deserunt​Mollit" +
+        "​Anim​Id​Est​Laborum</p>"
+        );
+
+        submit(()->{
+            assertFalse("ICU text wrap failed ",
+                (Boolean) getEngine().executeScript(
+                "document.getElementById('idwrap').clientHeight == document.getElementById('idword').clientHeight"));
+        });
     }
 }

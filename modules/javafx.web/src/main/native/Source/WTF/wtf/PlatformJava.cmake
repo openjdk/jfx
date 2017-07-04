@@ -1,7 +1,6 @@
 set(WTF_LIBRARY_TYPE STATIC)
 
 list(APPEND WTF_INCLUDE_DIRECTORIES
-    "${ICU_INCLUDE_DIRS}"
     "${WTF_DIR}/wtf/java"
     "${CMAKE_SOURCE_DIR}/Source"
     "${JAVA_INCLUDE_PATH}"
@@ -27,10 +26,6 @@ list(APPEND WTF_SYSTEM_INCLUDE_DIRECTORIES
 )
 
 if (APPLE)
-    list(APPEND WTF_INCLUDE_DIRECTORIES
-        "${WTF_DIR}/icu"
-    )
-
     list(APPEND WTF_SOURCES
         cocoa/WorkQueueCocoa.cpp
         text/cf/StringImplCF.cpp
