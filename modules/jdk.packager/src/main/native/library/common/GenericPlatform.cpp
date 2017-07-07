@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -176,6 +176,7 @@ std::map<TString, TString> GenericPlatform::GetKeys() {
     keys.insert(std::map<TString, TString>::value_type(CONFIG_SPLASH_KEY,        _T("app.splash")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_MEMORY,        _T("app.memory")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_DEBUG,         _T("app.debug")));
+    keys.insert(std::map<TString, TString>::value_type(CONFIG_APPLICATION_INSTANCE, _T("app.application.instance")));
 
     keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_APPLICATION,    _T("Application")));
     keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_JVMOPTIONS,     _T("JVMOptions")));

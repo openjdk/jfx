@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -47,6 +47,9 @@ class MacPlatform : virtual public Platform, GenericPlatform, PosixPlatform {
 private:
     bool UsePListForConfigFile();
 
+protected:
+    virtual TString getTmpDirString();
+
 public:
     MacPlatform(void);
     virtual ~MacPlatform(void);
@@ -69,6 +72,7 @@ public:
     virtual ISectionalPropertyContainer* GetConfigFile(TString FileName);
     virtual TString GetModuleFileName();
 
+    virtual void reactivateAnotherInstance();
     virtual bool IsMainThread();
     virtual TPlatformNumber GetMemorySize();
 

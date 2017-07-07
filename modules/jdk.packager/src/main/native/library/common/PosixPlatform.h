@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -39,7 +39,12 @@
 #define POSIXPLATFORM_H
 
 
-class PosixPlatform : virtual public Platform{
+class PosixPlatform : virtual public Platform {
+protected:
+    TString SingleInstanceFile;
+
+    virtual TString getTmpDirString() = 0;
+
 public:
     PosixPlatform(void);
     virtual ~PosixPlatform(void);
@@ -50,6 +55,7 @@ public:
 
     virtual void SetCurrentDirectory(TString Value);
 
+    virtual bool CheckForSingleInstance(TString Name);
     virtual Module LoadLibrary(TString FileName);
     virtual void FreeLibrary(Module AModule);
     virtual Procedure GetProcAddress(Module AModule, std::string MethodName);
@@ -57,6 +63,7 @@ public:
     virtual std::vector<TString> FilterOutRuntimeDependenciesForPlatform(std::vector<TString> Imports);
 
     virtual Process* CreateProcess();
+    virtual TString GetTempDirectory();
 };
 
 

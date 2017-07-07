@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -44,6 +44,43 @@
 #include <Windows.h>
 
 
+// the class is used to create and detect single instance of user application
+class SingleInstance {
+private:
+    const int BUF_SIZE;
+
+    DWORD  _lastError;
+    HANDLE _mutex;
+    TString _name;
+    TString _sharedMemoryName;
+    HANDLE _hMapFile;
+    LPCTSTR _pBuf;
+
+    SingleInstance(): BUF_SIZE(0) {}
+
+    SingleInstance(TString& name_);
+
+public:
+    static SingleInstance* getInstance(TString& name) {
+        static SingleInstance* result = NULL;
+
+        if (result == NULL) {
+            result = new SingleInstance(name);
+        }
+
+        return result;
+    }
+
+    ~SingleInstance();
+
+    bool IsAnotherInstanceRunning() {
+        return (ERROR_ALREADY_EXISTS == _lastError);
+    }
+
+    bool writePid(DWORD pid);
+    DWORD readPid();
+};
+
 #pragma warning( push )
 #pragma warning( disable : 4250 ) // C4250 - 'class1' : inherits 'class2::member'
 class WindowsPlatform : virtual public Platform, GenericPlatform {
@@ -80,8 +117,12 @@ public:
 
     virtual Process* CreateProcess();
 
+    virtual void reactivateAnotherInstance();
     virtual bool IsMainThread();
+    virtual bool CheckForSingleInstance(TString Name);
     virtual TPlatformNumber GetMemorySize();
+
+    virtual TString GetTempDirectory();
 
 #ifdef DEBUG
     virtual bool IsNativeDebuggerPresent();

@@ -46,16 +46,23 @@
 
 #include <map>
 #include <list>
+#include <sstream>
 
 
-bool RunVM() {
+bool RunVM(JvmLaunchType type) {
     bool result = false;
     JavaVirtualMachine javavm;
 
-    if (javavm.StartJVM() == true) {
-        result = true;
+    switch (type){
+        case USER_APP_LAUNCH:
+            result = javavm.StartJVM();
+            break;
+        case SINGLE_INSTANCE_NOTIFICATION_LAUNCH:
+            result = javavm.NotifySingleInstance();
+            break;
     }
-    else {
+
+    if (!result) {
         Platform& platform = Platform::GetInstance();
         platform.ShowMessage(_T("Failed to launch JVM\n"));
     }
@@ -63,44 +70,22 @@ bool RunVM() {
     return result;
 }
 
+JavaLibrary::JavaLibrary() : Library(), FCreateProc(NULL)  {
+}
 
-// Private typedef for function pointer casting
-#define LAUNCH_FUNC "JLI_Launch"
-typedef int (JNICALL *JVM_CREATE)(int argc, char ** argv,
-                                    int jargc, const char** jargv,
-                                    int appclassc, const char** appclassv,
-                                    const char* fullversion,
-                                    const char* dotversion,
-                                    const char* pname,
-                                    const char* lname,
-                                    jboolean javaargs,
-                                    jboolean cpwildcard,
-                                    jboolean javaw,
-                                    jint ergo);
-
-class JavaLibrary : public Library {
-    JVM_CREATE FCreateProc;
-
-    JavaLibrary(const TString &FileName);
-
-public:
-    JavaLibrary() : Library() {
-        FCreateProc = NULL;
+bool JavaLibrary::JavaVMCreate(size_t argc, char *argv[]) {
+    if (FCreateProc == NULL) {
+        FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
     }
 
-    bool JavaVMCreate(size_t argc, char *argv[]) {
-        if (FCreateProc == NULL) {
-            FCreateProc = (JVM_CREATE)GetProcAddress(LAUNCH_FUNC);
-        }
+    if (FCreateProc == NULL) {
+        Platform& platform = Platform::GetInstance();
+        Messages& messages = Messages::GetInstance();
+        platform.ShowMessage(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
+        return false;
+    }
 
-        if (FCreateProc == NULL) {
-            Platform& platform = Platform::GetInstance();
-            Messages& messages = Messages::GetInstance();
-            platform.ShowMessage(messages.GetMessage(FAILED_LOCATING_JVM_ENTRY_POINT));
-            return false;
-        }
-
-        return FCreateProc((int)argc, argv,
+    return FCreateProc((int)argc, argv,
             0, NULL,
             0, NULL,
             "",
@@ -111,103 +96,88 @@ public:
             false,
             false,
             0) == 0;
-    }
-};
+}
 
 //--------------------------------------------------------------------------------------------------
 
-struct JavaOptionItem {
-    TString name;
-    TString value;
-    void* extraInfo;
-};
+JavaOptions::JavaOptions(): FOptions(NULL) {
+}
 
-
-class JavaOptions {
-private:
-    std::list<JavaOptionItem> FItems;
-    JavaVMOption* FOptions;
-
-public:
-    JavaOptions() {
-        FOptions = NULL;
-    }
-
-    ~JavaOptions() {
-        if (FOptions != NULL) {
-            for (unsigned int index = 0; index < GetCount(); index++) {
-                delete[] FOptions[index].optionString;
-            }
-
-            delete[] FOptions;
-        }
-    }
-
-    void AppendValue(const TString Key, TString Value, void* Extra) {
-        JavaOptionItem item;
-        item.name = Key;
-        item.value = Value;
-        item.extraInfo = Extra;
-        FItems.push_back(item);
-    }
-
-    void AppendValue(const TString Key, TString Value) {
-        AppendValue(Key, Value, NULL);
-    }
-
-    void AppendValue(const TString Key) {
-        AppendValue(Key, _T(""), NULL);
-    }
-
-    void AppendValues(OrderedMap<TString, TString> Values) {
-        std::vector<TString> orderedKeys = Values.GetKeys();
-
-        for (std::vector<TString>::const_iterator iterator = orderedKeys.begin(); iterator != orderedKeys.end(); iterator++) {
-            TString name = *iterator;
-            TString value;
-
-            if (Values.GetValue(name, value) == true) {
-                AppendValue(name, value);
-            }
-        }
-    }
-
-    void ReplaceValue(const TString Key, TString Value) {
-        for (std::list<JavaOptionItem>::iterator iterator = FItems.begin();
-             iterator != FItems.end(); iterator++) {
-
-            TString lkey = iterator->name;
-
-            if (lkey == Key) {
-                JavaOptionItem item = *iterator;
-                item.value = Value;
-                iterator = FItems.erase(iterator);
-                FItems.insert(iterator, item);
-                break;
-            }
-        }
-    }
-
-    std::list<TString> ToList() {
-        std::list<TString> result;
-        Macros& macros = Macros::GetInstance();
-
-        for (std::list<JavaOptionItem>::const_iterator iterator = FItems.begin();
-             iterator != FItems.end(); iterator++) {
-            TString key = iterator->name;
-            TString value = iterator->value;
-            TString option = Helpers::NameValueToString(key, value);
-            option = macros.ExpandMacros(option);
-            result.push_back(option);
+JavaOptions::~JavaOptions() {
+    if (FOptions != NULL) {
+        for (unsigned int index = 0; index < GetCount(); index++) {
+            delete[] FOptions[index].optionString;
         }
 
-        return result;
+        delete[] FOptions;
+    }
+}
+
+void JavaOptions::AppendValue(const TString Key, TString Value, void* Extra) {
+    JavaOptionItem item;
+    item.name = Key;
+    item.value = Value;
+    item.extraInfo = Extra;
+    FItems.push_back(item);
+}
+
+void JavaOptions::AppendValue(const TString Key, TString Value) {
+    AppendValue(Key, Value, NULL);
+}
+
+void JavaOptions::AppendValue(const TString Key) {
+    AppendValue(Key, _T(""), NULL);
+}
+
+void JavaOptions::AppendValues(OrderedMap<TString, TString> Values) {
+    std::vector<TString> orderedKeys = Values.GetKeys();
+
+    for (std::vector<TString>::const_iterator iterator = orderedKeys.begin();
+        iterator != orderedKeys.end(); iterator++) {
+        TString name = *iterator;
+        TString value;
+
+        if (Values.GetValue(name, value) == true) {
+            AppendValue(name, value);
+        }
+    }
+}
+
+void JavaOptions::ReplaceValue(const TString Key, TString Value) {
+    for (std::list<JavaOptionItem>::iterator iterator = FItems.begin();
+        iterator != FItems.end(); iterator++) {
+
+        TString lkey = iterator->name;
+
+        if (lkey == Key) {
+            JavaOptionItem item = *iterator;
+            item.value = Value;
+            iterator = FItems.erase(iterator);
+            FItems.insert(iterator, item);
+            break;
+        }
+    }
+}
+
+std::list<TString> JavaOptions::ToList() {
+    std::list<TString> result;
+    Macros& macros = Macros::GetInstance();
+
+    for (std::list<JavaOptionItem>::const_iterator iterator = FItems.begin();
+        iterator != FItems.end(); iterator++) {
+        TString key = iterator->name;
+        TString value = iterator->value;
+        TString option = Helpers::NameValueToString(key, value);
+        option = macros.ExpandMacros(option);
+        result.push_back(option);
     }
 
-    size_t GetCount() {
-        return FItems.size();
-    }
-};
+    return result;
+}
+
+size_t JavaOptions::GetCount() {
+    return FItems.size();
+}
 
 // jvmuserargs can have a trailing equals in the key. This needs to be removed to use
 // other parts of the launcher.
@@ -309,19 +279,7 @@ bool JavaVirtualMachine::StartJVM() {
         return false;
     }
 
-    JavaLibrary javaLibrary;
-
-    // TODO: Clean this up. Because of bug JDK-8131321 the opening of the PE file fails in WindowsPlatform.cpp on the check to
-    // if (pNTHeader->Signature == IMAGE_NT_SIGNATURE)
-#ifdef _WIN64
-    if (FilePath::FileExists(_T("msvcr100.dll")) == true) {
-        javaLibrary.AddDependency(_T("msvcr100.dll"));
-    }
-#else
-    javaLibrary.AddDependencies(platform.FilterOutRuntimeDependenciesForPlatform(platform.GetLibraryImports(package.GetJVMLibraryFileName())));
-#endif
-
-    javaLibrary.Load(package.GetJVMLibraryFileName());
+    configureLibrary();
 
     // Initialize the arguments to JLI_Launch()
     //
@@ -349,6 +307,50 @@ bool JavaVirtualMachine::StartJVM() {
         options.AppendValue(mainModule);
     }
 
+    return launchVM(options, vmargs, false);
+}
+
+bool JavaVirtualMachine::NotifySingleInstance() {
+    Package& package = Package::GetInstance();
+
+    std::list<TString> vmargs;
+    vmargs.push_back(package.GetCommandName());
+
+    JavaOptions options;
+    options.AppendValue(_T("-Djava.library.path"), package.GetPackageAppDirectory()
+                      + FilePath::PathSeparator() + package.GetPackageLauncherDirectory());
+    options.AppendValue(_T("-Djava.launcher.path"), package.GetPackageLauncherDirectory());
+    // launch SingleInstanceNewActivation.main() to pass arguments to another instance
+    options.AppendValue(_T("-m"));
+    options.AppendValue(_T("jdk.packager.services/jdk.packager.services.singleton.SingleInstanceNewActivation"));
+
+    configureLibrary();
+
+    return launchVM(options, vmargs, true);
+}
+
+void JavaVirtualMachine::configureLibrary() {
+    Platform& platform = Platform::GetInstance();
+    Package& package = Package::GetInstance();
+    // TODO: Clean this up. Because of bug JDK-8131321 the opening of the PE file
+    // fails in WindowsPlatform.cpp on the check to
+    // if (pNTHeader->Signature == IMAGE_NT_SIGNATURE)
+    TString libName = package.GetJVMLibraryFileName();
+#ifdef _WIN64
+    if (FilePath::FileExists(_T("msvcr100.dll")) == true) {
+        javaLibrary.AddDependency(_T("msvcr100.dll"));
+    }
+#else
+    javaLibrary.AddDependencies(
+        platform.FilterOutRuntimeDependenciesForPlatform(platform.GetLibraryImports(libName)));
+#endif
+    javaLibrary.Load(libName);
+}
+
+bool JavaVirtualMachine::launchVM(JavaOptions& options, std::list<TString>& vmargs, bool addSiProcessId) {
+    Platform& platform = Platform::GetInstance();
+    Package& package = Package::GetInstance();
+
 #ifdef MAC
     // Mac adds a ProcessSerialNumber to args when launched from .app
     // filter out the psn since they it's not expected in the app
@@ -361,14 +363,23 @@ bool JavaVirtualMachine::StartJVM() {
     vmargs.splice(vmargs.end(), loptions, loptions.begin(), loptions.end());
 #endif
 
+    if (addSiProcessId) {
+        // add single instance process ID as a first argument
+        TProcessID pid = platform.GetSingleInstanceProcessId();
+        std::ostringstream s;
+        s << pid;
+        std::string procIdStr(s.str());
+        vmargs.push_back(TString(procIdStr.begin(), procIdStr.end()));
+    }
+
     std::list<TString> largs = package.GetArgs();
     vmargs.splice(vmargs.end(), largs, largs.begin(), largs.end());
+
     size_t argc = vmargs.size();
     DynamicBuffer<char*> argv(argc + 1);
     unsigned int index = 0;
-
     for (std::list<TString>::const_iterator iterator = vmargs.begin();
-         iterator != vmargs.end(); iterator++) {
+        iterator != vmargs.end(); iterator++) {
         TString item = *iterator;
         std::string arg = PlatformString(item).toStdString();
 #ifdef DEBUG
@@ -380,14 +391,14 @@ bool JavaVirtualMachine::StartJVM() {
 
     argv[argc] = NULL;
 
-    // On Mac we can only free the boot fields if the calling thread is not the main thread.
-    #ifdef MAC
+// On Mac we can only free the boot fields if the calling thread is not the main thread.
+#ifdef MAC
     if (platform.IsMainThread() == false) {
         package.FreeBootFields();
     }
-    #else
+#else
     package.FreeBootFields();
-    #endif //MAC
+#endif //MAC
 
     if (javaLibrary.JavaVMCreate(argc, argv.GetData()) == true) {
         return true;

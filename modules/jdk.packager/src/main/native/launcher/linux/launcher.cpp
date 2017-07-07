@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -30,7 +30,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
+#include <X11/Xlib.h>
 #include <dlfcn.h>
 #include <locale.h>
 #include <string>
@@ -59,6 +59,7 @@ std::string GetProgramPath() {
 
 int main(int argc, char *argv[]) {
     int result = 1;
+    XInitThreads();
     setlocale(LC_ALL, "en_US.utf8");
     void* library = NULL;
 

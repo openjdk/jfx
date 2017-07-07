@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -55,6 +55,33 @@ TPlatformNumber StringToPercentageOfNumber(TString Value, TPlatformNumber Number
     }
 
     return result;
+}
+
+bool Package::CheckForSingleInstance() {
+    Platform& platform = Platform::GetInstance();
+#ifdef MAC
+    if (platform.IsMainThread()) {
+        return false;
+    }
+#endif
+    if (FInitialized == true) {
+        // everything must be initialised at this point
+        return false;
+    }
+    TString appName;
+    TString appVersion;
+    AutoFreePtr<ISectionalPropertyContainer> config = platform.GetConfigFile(platform.GetConfigFileName());
+    std::map<TString, TString> keys = platform.GetKeys();
+    config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[APP_NAME_KEY], appName);
+    config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[CONFIG_VERSION], appVersion);
+    TString singleInstance;
+    config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[CONFIG_APPLICATION_INSTANCE], singleInstance);
+    if (singleInstance == _T("single")) {
+        TString uniqueID = appName + FBootFields->FAppID + appVersion;
+        // if another instance is running, later we can try to reactivate it
+        return platform.CheckForSingleInstance(uniqueID);
+    }
+    return false;
 }
 
 void Package::Initialize() {

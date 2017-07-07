@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -41,8 +41,10 @@
 #include "PosixPlatform.h"
 #include "GenericPlatform.h"
 #include "JavaUserPreferences.h"
-
+#include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <pthread.h>
+#include <list>
 
 
 #pragma warning( push )
@@ -51,6 +53,9 @@ class LinuxPlatform : virtual public Platform, GenericPlatform, PosixPlatform
 {
 private:
     pthread_t FMainThread;
+
+protected:
+    virtual TString getTmpDirString();
 
 public:
     LinuxPlatform(void);
@@ -74,6 +79,7 @@ public:
 
     virtual ISectionalPropertyContainer* GetConfigFile(TString FileName);
 
+    virtual void reactivateAnotherInstance();
     virtual bool IsMainThread();
     virtual TPlatformNumber GetMemorySize();
 
@@ -94,6 +100,20 @@ public:
     ~LinuxJavaUserPreferences(void);
 
     virtual bool Load(TString Appid);
+};
+
+class ProcessReactivator {
+private:
+    void searchWindowHelper(Window w);
+
+    pid_t _pid;
+    Atom _atomPid;
+    Display* _display;
+    std::list<Window> _result;
+public:
+    ProcessReactivator(Display *display, pid_t pid);
+
+    void reactivateProcess();
 };
 
 #endif //LINUXPLATFORM_H

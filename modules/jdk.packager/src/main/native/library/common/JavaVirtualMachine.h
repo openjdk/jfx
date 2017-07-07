@@ -39,14 +39,73 @@
 #include "Platform.h"
 
 
+enum JvmLaunchType {
+    USER_APP_LAUNCH,
+    SINGLE_INSTANCE_NOTIFICATION_LAUNCH,
+    JVM_LAUNCH_TYPES_NUM
+};
+
+struct JavaOptionItem {
+    TString name;
+    TString value;
+    void* extraInfo;
+};
+
+class JavaOptions {
+private:
+    std::list<JavaOptionItem> FItems;
+    JavaVMOption* FOptions;
+
+public:
+    JavaOptions();
+    ~JavaOptions();
+
+    void AppendValue(const TString Key, TString Value, void* Extra);
+    void AppendValue(const TString Key, TString Value);
+    void AppendValue(const TString Key);
+    void AppendValues(OrderedMap<TString, TString> Values);
+    void ReplaceValue(const TString Key, TString Value);
+    std::list<TString> ToList();
+    size_t GetCount();
+};
+
+// Private typedef for function pointer casting
+#define LAUNCH_FUNC "JLI_Launch"
+
+typedef int (JNICALL *JVM_CREATE)(int argc, char ** argv,
+                                  int jargc, const char** jargv,
+                                  int appclassc, const char** appclassv,
+                                  const char* fullversion,
+                                  const char* dotversion,
+                                  const char* pname,
+                                  const char* lname,
+                                  jboolean javaargs,
+                                  jboolean cpwildcard,
+                                  jboolean javaw,
+                                  jint ergo);
+
+class JavaLibrary : public Library {
+    JVM_CREATE FCreateProc;
+    JavaLibrary(const TString &FileName);
+public:
+    JavaLibrary();
+    bool JavaVMCreate(size_t argc, char *argv[]);
+};
+
 class JavaVirtualMachine {
+private:
+    JavaLibrary javaLibrary;
+
+    void configureLibrary();
+    bool launchVM(JavaOptions& options, std::list<TString>& vmargs, bool addSiProcessId);
 public:
     JavaVirtualMachine();
     ~JavaVirtualMachine(void);
 
     bool StartJVM();
+    bool NotifySingleInstance();
 };
 
-bool RunVM();
+bool RunVM(JvmLaunchType type);
 
 #endif //JAVAVIRTUALMACHINE_H

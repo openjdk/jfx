@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -42,10 +42,19 @@
 #include "PlatformString.h"
 #include "Macros.h"
 
+#include <Shlobj.h>
 #include <map>
 #include <vector>
 #include <regex>
 
+#define WINDOWS_PACKAGER_TMP_DIR L"\\AppData\\LocalLow\\Sun\\Java\\Packager\\tmp"
+
+typedef HRESULT (WINAPI* lpSHGetKnownFolderPath)(
+    REFKNOWNFOLDERID rfid,
+    DWORD dwFlags,
+    HANDLE hToken,
+    PWSTR *ppszPath
+);
 
 //--------------------------------------------------------------------------------------------------
 
@@ -316,6 +325,151 @@ Procedure WindowsPlatform::GetProcAddress(Module AModule, std::string MethodName
 bool WindowsPlatform::IsMainThread() {
     bool result = (FMainThread == ::GetCurrentThreadId());
     return result;
+}
+
+TString WindowsPlatform::GetTempDirectory() {
+    HMODULE hndlShell32;
+    lpSHGetKnownFolderPath pSHGetKnownFolderPath;
+    TString tmpDir;
+
+    hndlShell32 = ::LoadLibrary(L"shell32");
+    if (NULL != hndlShell32) {
+
+        pSHGetKnownFolderPath = (lpSHGetKnownFolderPath)
+            GetProcAddress(hndlShell32, "SHGetKnownFolderPath");
+
+        if (pSHGetKnownFolderPath != NULL) {
+            PWSTR userDir = 0;
+            if (SUCCEEDED(pSHGetKnownFolderPath(
+                            FOLDERID_Profile,
+                            0,
+                            NULL,
+                            &userDir))) {
+                tmpDir = userDir;
+                tmpDir += WINDOWS_PACKAGER_TMP_DIR;
+        CoTaskMemFree(userDir);
+            }
+        }
+        FreeLibrary(hndlShell32);
+    }
+    return tmpDir;
+}
+
+static BOOL CALLBACK enumWindows(HWND winHandle, LPARAM lParam) {
+    DWORD pid = (DWORD)lParam, wPid = 0;
+    GetWindowThreadProcessId(winHandle, &wPid);
+    if (pid == wPid)  {
+        SetForegroundWindow(winHandle);
+        return FALSE;
+    }
+    return TRUE;
+}
+
+void WindowsPlatform::reactivateAnotherInstance() {
+    if (singleInstanceProcessId == 0) {
+        printf("Unable to reactivate another instance, PID is undefined");
+        return;
+    }
+    EnumWindows(&enumWindows, (LPARAM)singleInstanceProcessId);
+}
+
+// returns true if another instance is already running.
+// if false, we need to continue regular launch.
+bool WindowsPlatform::CheckForSingleInstance(TString name) {
+    if (SingleInstance::getInstance(name)->IsAnotherInstanceRunning()) {
+        // read PID
+        DWORD pid = SingleInstance::getInstance(name)->readPid();
+        if (pid != 0) {
+            singleInstanceProcessId = pid;
+            return true;
+        }
+    } else {
+        // it is the first intance
+        // write pid and continue regular launch
+        SingleInstance::getInstance(name)->writePid(GetCurrentProcessId());
+    }
+    return false;
+}
+
+SingleInstance::SingleInstance(TString& name_): BUF_SIZE(256), _name(name_), _hMapFile(NULL), _pBuf(NULL) {
+    _mutex = CreateMutex(NULL, TRUE, name_.data());
+    _lastError = GetLastError();
+    _sharedMemoryName = _T("Local\\javapackager-") + _name;
+}
+
+SingleInstance::~SingleInstance() {
+    if (_pBuf != NULL) {
+        UnmapViewOfFile(_pBuf);
+        _pBuf = NULL;
+    }
+
+    if (_hMapFile != NULL) {
+        CloseHandle(_hMapFile);
+        _hMapFile = NULL;
+    }
+
+    if (_mutex != NULL) {
+        CloseHandle(_mutex);
+        _mutex = NULL;
+    }
+}
+
+bool SingleInstance::writePid(DWORD pid) {
+    _hMapFile = CreateFileMapping(
+                 INVALID_HANDLE_VALUE,
+                 NULL,
+                 PAGE_READWRITE,
+                 0,
+                 BUF_SIZE,
+                 _sharedMemoryName.data());
+
+    if (_hMapFile == NULL) {
+        return false;
+    }
+
+    _pBuf = (LPTSTR) MapViewOfFile(_hMapFile,
+                        FILE_MAP_ALL_ACCESS,
+                        0,
+                        0,
+                        BUF_SIZE);
+
+    if (_pBuf == NULL) {
+        CloseHandle(_hMapFile);
+        _hMapFile = NULL;
+        return false;
+    }
+
+    CopyMemory((PVOID)_pBuf, &pid, sizeof(DWORD));
+
+    return true;
+}
+
+DWORD SingleInstance::readPid() {
+    _hMapFile = OpenFileMapping(
+                   FILE_MAP_ALL_ACCESS,
+                   FALSE,
+                   _sharedMemoryName.data());
+
+    if (_hMapFile == NULL) {
+        return 0;
+    }
+
+   _pBuf = (LPTSTR) MapViewOfFile(_hMapFile,
+               FILE_MAP_ALL_ACCESS,
+               0,
+               0,
+               BUF_SIZE);
+
+    if (_pBuf == NULL) {
+        CloseHandle(_hMapFile);
+        _hMapFile = NULL;
+        return 0;
+    }
+
+    DWORD pid = 0;
+    CopyMemory(&pid, (PVOID)_pBuf,  sizeof(DWORD));
+
+    return pid;
 }
 
 TPlatformNumber WindowsPlatform::GetMemorySize() {

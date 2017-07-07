@@ -628,6 +628,7 @@ public class DeployFXTask extends Task implements DynamicAttribute {
             deployParams.setNeedMenu(prefs.getMenu());
             deployParams.setSystemWide(prefs.getSystemInstall());
             deployParams.setInstalldirChooser(prefs.getInstalldirChooser());
+            deployParams.setSingleton(prefs.getSingleton());
         }
     }
 

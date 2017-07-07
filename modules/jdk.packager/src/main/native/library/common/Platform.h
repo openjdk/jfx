@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -144,6 +144,7 @@ typedef pid_t TProcessID;
 #define CONFIG_APP_ID_KEY         _T("CONFIG_APP_ID_KEY")
 #define CONFIG_APP_MEMORY         _T("CONFIG_APP_MEMORY")
 #define CONFIG_APP_DEBUG          _T("CONFIG_APP_DEBUG")
+#define CONFIG_APPLICATION_INSTANCE _T("CONFIG_APPLICATION_INSTANCE")
 
 #define JVM_RUNTIME_KEY           _T("JVM_RUNTIME_KEY")
 #define PACKAGER_APP_DATA_DIR     _T("CONFIG_APP_IDENTIFIER")
@@ -386,13 +387,15 @@ private:
     AppCDSState FAppCDSState;
 
 protected:
-    Platform(void) {
-        FAppCDSState = cdsUninitialized;
+    TProcessID singleInstanceProcessId;
+
+    Platform(void): FAppCDSState(cdsUninitialized), singleInstanceProcessId(0) {
     }
 
 public:
     AppCDSState GetAppCDSState() { return FAppCDSState; }
     void SetAppCDSState(AppCDSState Value) { FAppCDSState = Value; }
+    TProcessID GetSingleInstanceProcessId() { return singleInstanceProcessId; }
 
     static Platform& GetInstance();
 
@@ -444,6 +447,8 @@ public:
     virtual Process* CreateProcess() = 0;
 
     virtual bool IsMainThread() = 0;
+    virtual bool CheckForSingleInstance(TString Name) = 0;
+    virtual void reactivateAnotherInstance() = 0;
 
     // Returns megabytes.
     virtual TPlatformNumber GetMemorySize() = 0;
@@ -452,6 +457,8 @@ public:
 
     virtual std::list<TString> LoadFromFile(TString FileName) = 0;
     virtual void SaveToFile(TString FileName, std::list<TString> Contents, bool ownerOnly) = 0;
+
+    virtual TString GetTempDirectory() = 0;
 
 #ifdef DEBUG
     virtual DebugState GetDebugState() = 0;

@@ -119,6 +119,16 @@ extern "C" {
             package.SetCommandLineArguments(argc, argv);
             platform.SetCurrentDirectory(package.GetPackageAppDirectory());
 
+            if (package.CheckForSingleInstance()) {
+                // reactivate the first instance if the process Id is valid
+                platform.reactivateAnotherInstance();
+                if (package.GetArgs().size() > 0 && platform.GetSingleInstanceProcessId() != 0) {
+                    // if user specified args, try to pass them to the first instance
+                    return RunVM(SINGLE_INSTANCE_NOTIFICATION_LAUNCH);
+                }
+                return true;
+            }
+
             switch (platform.GetAppCDSState()) {
                 case cdsDisabled:
                 case cdsUninitialized:
@@ -192,9 +202,8 @@ extern "C" {
                 }
             }
             }
-
             // Run App
-            result = RunVM();
+            result = RunVM(USER_APP_LAUNCH);
         }
         catch (FileNotFoundException &e) {
             platform.ShowMessage(e.GetMessage());

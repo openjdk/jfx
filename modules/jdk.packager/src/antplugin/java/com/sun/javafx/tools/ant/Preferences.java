@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ public class Preferences extends DataType {
     private Boolean menuRequested = null;
     private Boolean systemWide = null;
     private Boolean installdirChooserRequested = null;
+    private Boolean singletonRequested = null;
 
     Boolean getSystemInstall() {
         return systemWide;
@@ -106,6 +107,10 @@ public class Preferences extends DataType {
         installdirChooserRequested = b;
     }
 
+    public void setSingleton(Boolean b) {
+        singletonRequested = b;
+    }
+
     private Preferences get() {
         if (isReference()) {
             return (Preferences) getRefid().getReferencedObject();
@@ -127,5 +132,9 @@ public class Preferences extends DataType {
 
     Boolean getInstalldirChooser() {
         return get().installdirChooserRequested;
+    }
+
+    Boolean getSingleton() {
+        return get().singletonRequested;
     }
 }

@@ -242,7 +242,7 @@ LINUX.launcher = [:]
 LINUX.launcher.compiler = compiler
 LINUX.launcher.ccFlags = ["-Wextra", "-Wformat", "-Wformat-security", "-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c"]
 LINUX.launcher.linker = linker
-LINUX.launcher.linkFlags = ["-ldl"]
+LINUX.launcher.linkFlags = ["-ldl", "-lX11"]
 if (!IS_64) {
     LINUX.launcher.ccFlags += "-m32"
     LINUX.launcher.linkFlags += "-m32"
@@ -252,7 +252,7 @@ LINUX.launcherlibrary = [:]
 LINUX.launcherlibrary.compiler = compiler
 LINUX.launcherlibrary.ccFlags = ["-Wextra", "-Wformat", "-Wformat-security", "-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c", "-fPIC"]
 LINUX.launcherlibrary.linker = linker
-LINUX.launcherlibrary.linkFlags = ["-ldl", "-lpthread", "-shared"]
+LINUX.launcherlibrary.linkFlags = ["-ldl", "-lpthread", "-shared", "-lX11"]
 if (!IS_64) {
     LINUX.launcherlibrary.ccFlags += "-m32"
     LINUX.launcherlibrary.linkFlags += "-m32"

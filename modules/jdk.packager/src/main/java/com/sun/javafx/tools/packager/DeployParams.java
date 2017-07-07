@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -68,6 +68,7 @@ public class DeployParams extends CommonParams {
     Boolean serviceHint;
     Boolean signBundle;
     Boolean installdirChooser;
+    Boolean singleton;
 
     String applicationClass;
     String preloader;
@@ -178,6 +179,10 @@ public class DeployParams extends CommonParams {
 
     public void setInstalldirChooser(Boolean installdirChooser) {
         this.installdirChooser = installdirChooser;
+    }
+
+    public void setSingleton(Boolean singleton) {
+        this.singleton = singleton;
     }
 
     public void setSignBundle(Boolean signBundle) {
@@ -686,6 +691,7 @@ public class DeployParams extends CommonParams {
         bundleParams.setSystemWide(systemWide);
         bundleParams.setServiceHint(serviceHint);
         bundleParams.setInstalldirChooser(installdirChooser);
+        bundleParams.setSingleton(singleton);
         bundleParams.setSignBundle(signBundle);
         bundleParams.setCopyright(copyright);
         bundleParams.setApplicationCategory(category);

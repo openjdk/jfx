@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,27 @@
  * questions.
  */
 
-/**
- * Defines the services used by the Java packager tool.
- *
- * @moduleGraph
- * @since 9
- */
-module jdk.packager.services {
-    exports jdk.packager.services;
-    exports jdk.packager.services.singleton;
+package jdk.packager.services.singleton;
 
-    requires java.prefs;
-    requires java.desktop;
+import java.util.Arrays;
 
-    uses jdk.packager.services.UserJvmOptionsService;
+// This class is used for notifying Single Instance for Java Packager.
 
-    provides jdk.packager.services.UserJvmOptionsService with jdk.packager.services.userjvmoptions.LauncherUserJvmOptions;
+public class SingleInstanceNewActivation {
+
+    public static void main(String[] args) {
+
+        if (args.length < 2) {
+            // no user args specified
+            return;
+        }
+
+        // the first arg is process id of the single instance
+        String appId = SingleInstanceService.APP_ID_PREFIX + args[0];
+
+        if (SingleInstanceService.isServerRunning(appId)) {
+            String[] newArgs = Arrays.copyOfRange(args, 1, args.length);
+            SingleInstanceService.connectToServer(newArgs);
+        }
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -191,6 +191,7 @@ public abstract class AbstractAppImageBuilder {
         out.println("app.runtime=" + runtimeLocation);
         out.println("app.identifier=" + IDENTIFIER.fetchFrom(params));
         out.println("app.classpath=" + String.join(File.pathSeparator, CLASSPATH.fetchFrom(params).split("[ :;]")));
+        out.println("app.application.instance=" + (SINGLETON.fetchFrom(params) ? "single" : "multiple"));
 
         // The main app is required to be a jar, modular or unnamed.
         if (mainJarType == Module.ModuleType.Unknown || mainJarType == Module.ModuleType.ModularJar) {

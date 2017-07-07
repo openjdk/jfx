@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -42,6 +42,14 @@
 
 #include <stdlib.h>
 #include <pwd.h>
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <limits.h>
+
+#define LINUX_PACKAGER_TMP_DIR "/.java/packager/tmp"
 
 
 TString GetEnv(const TString &name) {
@@ -193,6 +201,21 @@ TString LinuxPlatform::GetSystemJVMLibraryFileName() {
 bool LinuxPlatform::IsMainThread() {
     bool result = (FMainThread == pthread_self());
     return result;
+}
+
+TString LinuxPlatform::getTmpDirString() {
+    return TString(LINUX_PACKAGER_TMP_DIR);
+}
+
+void LinuxPlatform::reactivateAnotherInstance() {
+    if (singleInstanceProcessId == 0) {
+        printf("Unable to reactivate another instance, PID is undefined");
+        return;
+    }
+    Display* dsp = XOpenDisplay(NULL);
+    ProcessReactivator processReactivator(dsp, singleInstanceProcessId);
+    processReactivator.reactivateProcess();
+    XCloseDisplay(dsp);
 }
 
 TPlatformNumber LinuxPlatform::GetMemorySize() {
@@ -1101,6 +1124,68 @@ bool LinuxJavaUserPreferences::Load(TString Appid) {
     }
 
     return result;
+}
+
+ProcessReactivator::ProcessReactivator(Display* display, pid_t pid):
+   _pid(pid), _display(display) {
+
+   _atomPid = XInternAtom(display, "_NET_WM_PID", True);
+
+   if (_atomPid == None) {
+       return;
+   }
+   searchWindowHelper(XDefaultRootWindow(display));
+}
+
+void ProcessReactivator::searchWindowHelper(Window w) {
+    Atom type;
+    int format;
+    unsigned long  num, bytesAfter;
+    unsigned char* propPid = 0;
+    if (Success == XGetWindowProperty(_display, w, _atomPid, 0, 1, False, XA_CARDINAL,
+                                     &type, &format, &num, &bytesAfter, &propPid)) {
+        if (propPid != 0) {
+            if (_pid == *((pid_t *)propPid)) {
+                _result.push_back(w);
+            }
+            XFree(propPid);
+        }
+    }
+
+    Window root, parent;
+    Window* child;
+    unsigned int numChildren;
+    if (0 != XQueryTree(_display, w, &root, &parent, &child, &numChildren)) {
+        for (unsigned int i = 0; i < numChildren; i++) {
+            searchWindowHelper(child[i]);
+        }
+    }
+}
+
+void ProcessReactivator::reactivateProcess() {
+    for (std::list<Window>::const_iterator it = _result.begin(); it != _result.end(); it++) {
+        // try sending an event to activate window,
+        // after that we can try to raise it.
+        XEvent xev;
+        Atom atom = XInternAtom (_display, "_NET_ACTIVE_WINDOW", False);
+        xev.xclient.type = ClientMessage;
+        xev.xclient.serial = 0;
+        xev.xclient.send_event = True;
+        xev.xclient.display = _display;
+        xev.xclient.window = *it;
+        xev.xclient.message_type = atom;
+        xev.xclient.format = 32;
+        xev.xclient.data.l[0] = 2;
+        xev.xclient.data.l[1] = 0;
+        xev.xclient.data.l[2] = 0;
+        xev.xclient.data.l[3] = 0;
+        xev.xclient.data.l[4] = 0;
+        XWindowAttributes attr;
+        XGetWindowAttributes(_display, *it, &attr);
+        XSendEvent(_display, attr.root, False,
+            SubstructureRedirectMask | SubstructureNotifyMask, &xev);
+        XRaiseWindow(_display, *it);
+    }
 }
 
 //--------------------------------------------------------------------------------------------------

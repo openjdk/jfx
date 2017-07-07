@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -102,6 +102,9 @@ public class BundleParams {
 
     /* Adds a dialog to let the user choose a directory where the product will be installed. */
     public static final String PARAM_INSTALLDIR_CHOOSER     = "installdirChooser"; // Boolean
+
+    /* Prevents from launching multiple instances of application.  */
+    public static final String PARAM_SINGLETON              = "singleton"; // Boolean
 
     /**
      * create a new bundle with all default values
@@ -280,6 +283,10 @@ public class BundleParams {
 
     public void setInstalldirChooser(Boolean b) {
         putUnlessNull(PARAM_INSTALLDIR_CHOOSER, b);
+    }
+
+    public void setSingleton(Boolean b) {
+        putUnlessNull(PARAM_SINGLETON, b);
     }
 
     public void setSignBundle(Boolean b) { putUnlessNull(SIGN_BUNDLE.getID(), b); }

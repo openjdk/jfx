@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,20 +23,23 @@
  * questions.
  */
 
+package jdk.packager.services.singleton;
+
 /**
- * Defines the services used by the Java packager tool.
+ * The {@code SingleInstanceListener} interface is used for implementing
+ * Single Instance functionality for Java Packager.
  *
- * @moduleGraph
- * @since 9
+ * @since 10
  */
-module jdk.packager.services {
-    exports jdk.packager.services;
-    exports jdk.packager.services.singleton;
+public interface SingleInstanceListener {
 
-    requires java.prefs;
-    requires java.desktop;
-
-    uses jdk.packager.services.UserJvmOptionsService;
-
-    provides jdk.packager.services.UserJvmOptionsService with jdk.packager.services.userjvmoptions.LauncherUserJvmOptions;
+    /**
+     * This method should be implemented by the application to
+     * handle the single instance behaviour - how should the application
+     * handle the arguments when another instance of the application is
+     * invoked with params.
+     *
+     * @param params parameters for the application main
+     */
+    public void newActivation(String... params);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2014, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -46,6 +46,7 @@
 #include <vector>
 
 #import <Foundation/Foundation.h>
+#import <AppKit/NSRunningApplication.h>
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreFoundation/CFString.h>
@@ -53,6 +54,8 @@
 #ifdef __OBJC__
 #import <Cocoa/Cocoa.h>
 #endif //__OBJC__
+
+#define MAC_PACKAGER_TMP_DIR "/Library/Application Support/Oracle/Java/Packager/tmp"
 
 //--------------------------------------------------------------------------------------------------
 
@@ -87,6 +90,22 @@ void MacPlatform::ShowMessage(TString Description) {
     ShowMessage(appname, Description);
 }
 
+TString MacPlatform::getTmpDirString() {
+    return TString(MAC_PACKAGER_TMP_DIR);
+}
+
+void MacPlatform::reactivateAnotherInstance() {
+    if (singleInstanceProcessId == 0) {
+        printf("Unable to reactivate another instance, PID is undefined");
+        return;
+    } 
+    NSRunningApplication* app = [NSRunningApplication runningApplicationWithProcessIdentifier: singleInstanceProcessId];
+    if (app != nil) {
+    	[app activateWithOptions: NSApplicationActivateIgnoringOtherApps];
+    } else {
+    	printf("Unable to reactivate another instance PID: %d", singleInstanceProcessId);
+    }
+}
 
 TCHAR* MacPlatform::ConvertStringToFileSystemString(TCHAR* Source, bool &release) {
     TCHAR* result = NULL;
@@ -339,6 +358,7 @@ std::map<TString, TString> MacPlatform::GetKeys() {
         keys.insert(std::map<TString, TString>::value_type(CONFIG_SPLASH_KEY,         _T("app.splash")));
         keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_MEMORY,         _T("app.memory")));
         keys.insert(std::map<TString, TString>::value_type(CONFIG_APP_DEBUG,          _T("app.debug")));
+        keys.insert(std::map<TString, TString>::value_type(CONFIG_APPLICATION_INSTANCE,   _T("app.application.instance")));
 
         keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_APPLICATION,    _T("Application")));
         keys.insert(std::map<TString, TString>::value_type(CONFIG_SECTION_JVMOPTIONS,     _T("JVMOptions")));
