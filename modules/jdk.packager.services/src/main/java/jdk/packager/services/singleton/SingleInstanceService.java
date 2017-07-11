@@ -136,11 +136,10 @@ public class SingleInstanceService {
         File siDir = new File(SingleInstanceImpl.SI_FILEDIR);
         String[] fList = siDir.list();
         if (fList != null) {
-            String prefix = SingleInstanceImpl.getSingleInstanceFilePrefix(id +
-                                                    getSessionSpecificString());
+            String prefix = SingleInstanceImpl.getSingleInstanceFilePrefix(id);
             for (String file : fList) {
                 trace("isServerRunning: " + file);
-                trace("\t sessionString: " + getSessionSpecificString());
+                trace("\t String id: " + id);
                 trace("\t SingleInstanceFilePrefix: " + prefix);
                 // if file with the same prefix already exist, server is running
                 if (file.startsWith(prefix)) {
@@ -264,10 +263,5 @@ public class SingleInstanceService {
         }
         trace("No ACK from server, bail out.");
         return false;
-    }
-
-    static String getSessionSpecificString() {
-        // TODO: consider providing session ids
-        return "";
     }
 }

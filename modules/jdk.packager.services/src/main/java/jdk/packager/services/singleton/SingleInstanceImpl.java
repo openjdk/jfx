@@ -98,9 +98,7 @@ class SingleInstanceImpl {
             if (!serverStarted) {
                 SingleInstanceService.trace("unique id: " + id);
                 try {
-                    String sessionID = id +
-                            SingleInstanceService.getSessionSpecificString();
-                    siServer = new SingleInstanceServer(sessionID);
+                    siServer = new SingleInstanceServer(id);
                     siServer.start();
                 } catch (Exception e) {
                     SingleInstanceService.trace("addSingleInstanceListener failed");
