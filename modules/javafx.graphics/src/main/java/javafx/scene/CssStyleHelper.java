@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,7 +157,7 @@ final class CssStyleHelper {
                 // If this node had a style helper, then reset properties to their initial value
                 // since the node won't have a style helper after this call
                 if (node.styleHelper != null) {
-                    node.styleHelper.resetToInitialValues(node);
+                    node.styleHelper.resetToInitialValues(node, null);
                 }
 
                 //
@@ -178,9 +178,15 @@ final class CssStyleHelper {
         // If this node had a style helper, then reset properties to their initial value
         // since the style map might now be different
         if (node.styleHelper != null) {
-            node.styleHelper.resetToInitialValues(node);
-        }
+            StyleMap oldMap = node.styleHelper.getStyleMap(node);
+            StyleMap newMap = helper.getStyleMap(node);
 
+            if (oldMap != newMap) {
+                node.styleHelper.resetToInitialValues(node, null);
+            } else {
+                node.styleHelper.resetToInitialValues(node, newMap);
+            }
+        }
         return helper;
     }
 
@@ -432,29 +438,58 @@ final class CssStyleHelper {
         private boolean forceSlowpath = false;
     }
 
-    private void resetToInitialValues(final Styleable styleable) {
+    private void resetToInitialValues(final Styleable styleable, StyleMap smap) {
+
+        // This method is invoked on a styleHelper before it is being reset
+        // to null or a new StyleHelper.
+        //
+        // if smap is null/empty -- it means node will not have any new styles
+        // in immediate future.
+        //
+        // Action taken in this method :
+        // reset all styleableProperties  in cssSetProperties to initial values
+
+        // if smap is a valid StyleMap -- it means node will have styles from
+        // new stylemap in immediate future
+        //
+        // Action taken in this method :
+        // reset styleableProperties in cssSetProperties in case they are not
+        // present in smap
 
         if (cacheContainer == null ||
                 cacheContainer.cssSetProperties == null ||
                 cacheContainer.cssSetProperties.isEmpty()) return;
 
         // RT-31714 - make a copy of the entry set and clear the cssSetProperties immediately.
-        Set<Entry<CssMetaData, CalculatedValue>> entrySet = new HashSet<>(cacheContainer.cssSetProperties.entrySet());
+        Set<Entry<CssMetaData, CalculatedValue>> entrySet =
+                new HashSet<>(cacheContainer.cssSetProperties.entrySet());
         cacheContainer.cssSetProperties.clear();
 
-        for (Entry<CssMetaData, CalculatedValue> resetValues : entrySet) {
+        if (smap == null || smap.isEmpty() ) {
+            for (Entry<CssMetaData, CalculatedValue> resetValues : entrySet) {
+                final CssMetaData metaData = resetValues.getKey();
+                setStyleableProperty(metaData.getStyleableProperty(styleable), resetValues.getValue());
+            }
+        } else {
+            Map<String, List<CascadingStyle>> newStyles = smap.getCascadingStyles();
 
-            final CssMetaData metaData = resetValues.getKey();
-            final StyleableProperty styleableProperty = metaData.getStyleableProperty(styleable);
+            for (Entry<CssMetaData, CalculatedValue> resetValues : entrySet) {
+                final CssMetaData metaData = resetValues.getKey();
 
-            final StyleOrigin styleOrigin = styleableProperty.getStyleOrigin();
-            if (styleOrigin != null && styleOrigin != StyleOrigin.USER) {
-                final CalculatedValue calculatedValue = resetValues.getValue();
-                styleableProperty.applyStyle(calculatedValue.getOrigin(), calculatedValue.getValue());
+                if (newStyles.containsKey(metaData.getProperty()) == false) {
+                    // earlier set property is not available in new Stylemap - reset it to initial value
+                    setStyleableProperty(metaData.getStyleableProperty(styleable), resetValues.getValue());
+                }
             }
         }
     }
 
+    private void setStyleableProperty(StyleableProperty property, CalculatedValue value) {
+        final StyleOrigin styleOrigin = property.getStyleOrigin();
+        if (styleOrigin != null && styleOrigin != StyleOrigin.USER) {
+            property.applyStyle(value.getOrigin(), value.getValue());
+        }
+    }
 
     private StyleMap getStyleMap(Styleable styleable) {
         if (cacheContainer == null || styleable == null) return null;
