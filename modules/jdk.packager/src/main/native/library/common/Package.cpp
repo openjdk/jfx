@@ -148,13 +148,7 @@ void Package::Initialize() {
     }
 
     // Runtime.
-    FBootFields->FIsRuntimeBundled = true;
     config->GetValue(keys[CONFIG_SECTION_APPLICATION], keys[JVM_RUNTIME_KEY], FBootFields->FJVMRuntimeDirectory);
-
-    if (FBootFields->FJVMRuntimeDirectory.empty()) {
-        FBootFields->FIsRuntimeBundled = false;
-        FBootFields->FJVMRuntimeDirectory = platform.GetSystemJRE();
-    }
 
     // Read jvmargs.
     PromoteAppCDSState(config);
@@ -622,24 +616,14 @@ TString Package::GetMainClassName() {
     return FBootFields->FMainClassName;
 }
 
-bool Package::IsRuntimeBundled() {
-    assert(FBootFields != NULL);
-    return FBootFields->FIsRuntimeBundled;
-}
-
 TString Package::GetJVMLibraryFileName() {
     assert(FBootFields != NULL);
 
     if (FBootFields->FJVMLibraryFileName.empty() == true) {
         Platform& platform = Platform::GetInstance();
-        if (IsRuntimeBundled() == true) {
-            Macros& macros = Macros::GetInstance();
-            TString jvmRuntimePath = macros.ExpandMacros(GetJVMRuntimeDirectory());
-            FBootFields->FJVMLibraryFileName = platform.GetBundledJVMLibraryFileName(jvmRuntimePath);
-        }
-        else {
-            FBootFields->FJVMLibraryFileName = platform.GetSystemJVMLibraryFileName();
-        }
+        Macros& macros = Macros::GetInstance();
+        TString jvmRuntimePath = macros.ExpandMacros(GetJVMRuntimeDirectory());
+        FBootFields->FJVMLibraryFileName = platform.GetBundledJVMLibraryFileName(jvmRuntimePath);
     }
 
     return FBootFields->FJVMLibraryFileName;

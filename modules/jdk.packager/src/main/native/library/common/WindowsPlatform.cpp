@@ -180,62 +180,6 @@ TString WindowsPlatform::GetAppDataDirectory() {
     return result;
 }
 
-#define BUFFER_SIZE 256
-
-// try to find current Java Home from registry
-//
-// HKLM\Software\JavaSoft\Java Runtime Environment\CurrentVersion
-// HKLM\Software\JavaSoft\Java Runtime Environment\[CurrentVersion]\JavaHome
-//
-// note that this has been changed in JDK9 to
-//
-// HKLM\Software\JavaSoft\JRE\CurrentVersion
-// HKLM\Software\JavaSoft\JRE\[CurrentVersion]\JavaHome
-//
-// return non-empty string as path if found
-// return empty string otherwise
-
-TString GetSystemJREForSubkey(TString javaRuntimeSubkey) {
-    Registry registry(HKEY_LOCAL_MACHINE);
-    TString result;
-
-    if (registry.Open(javaRuntimeSubkey)) {
-        TString version = registry.ReadString(_T("CurrentVersion"));
-
-        if (!version.empty()) {
-            if (registry.Open(javaRuntimeSubkey + TString(_T("\\")) + TString(version))) {
-                TString javaHome = registry.ReadString(_T("JavaHome"));
-
-                if (FilePath::DirectoryExists(javaHome)) {
-                    result = javaHome;
-                }
-            }
-        }
-    }
-
-    return result;
-}
-
-TString WindowsPlatform::GetSystemJRE() {
-    if (GetAppCDSState() != cdsDisabled) {
-        //TODO throw exception
-        return _T("");
-    }
-
-    TString result;
-    result = GetSystemJREForSubkey(_T("SOFTWARE\\JavaSoft\\JRE"));
-    if (!result.empty()) {
-        return result;
-    }
-
-    result = GetSystemJREForSubkey(_T("SOFTWARE\\JavaSoft\\Java Runtime Environment"));
-    if (!result.empty()) {
-        return result;
-    }
-
-    return result;
-}
-
 void WindowsPlatform::ShowMessage(TString title, TString description) {
     MessageBox(NULL, description.data(), !title.empty() ? title.data() : description.data(), MB_ICONERROR | MB_OK);
 }
@@ -269,17 +213,6 @@ TString WindowsPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
     if (FilePath::FileExists(result) == false) {
         result = FilePath::IncludeTrailingSeparater(RuntimePath) +
             _T("bin\\jli.dll");
-    }
-
-    return result;
-}
-
-TString WindowsPlatform::GetSystemJVMLibraryFileName() {
-    TString result;
-    TString jvmPath = GetSystemJRE();
-
-    if (jvmPath.empty() == false) {
-        result = GetBundledJVMLibraryFileName(jvmPath);
     }
 
     return result;

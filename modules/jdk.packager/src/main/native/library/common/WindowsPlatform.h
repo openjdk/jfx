@@ -103,8 +103,6 @@ public:
     virtual TString GetPackageRootDirectory();
     virtual TString GetAppDataDirectory();
     virtual TString GetBundledJVMLibraryFileName(TString RuntimePath);
-    virtual TString GetSystemJVMLibraryFileName();
-    virtual TString GetSystemJRE();
 
     virtual ISectionalPropertyContainer* GetConfigFile(TString FileName);
 

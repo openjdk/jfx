@@ -148,56 +148,6 @@ TString LinuxPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
     return result;
 }
 
-TString LinuxPlatform::GetSystemJRE() {
-    if (GetAppCDSState() != cdsDisabled) {
-        //TODO throw exception
-        return _T("");
-    }
-
-    TString result;
-    TString jreHome = GetEnv("JRE_HOME");
-
-    if (jreHome.empty() == false) {
-        result = FilePath::IncludeTrailingSeparater(jreHome);
-
-        if (FilePath::FileExists(result + _T("lib/rt.jar")) == false) {
-            result = FilePath::IncludeTrailingSeparater(jreHome) + _T("jre");
-
-            if (FilePath::FileExists(result + _T("/lib/rt.jar")) == false) {
-                //check redhat location
-                if (FilePath::FileExists(_T("/usr/java/latest/jre/lib/rt.jar")) == true) {
-                    result = _T("/usr/java/latest/jre");
-                }
-                else if (FilePath::FileExists(_T("/usr/lib/jvm/default-java/jre/lib/rt.jar")) == true) {
-                    result = _T("/usr/lib/jvm/default-java/jre");
-                }
-                else {
-                    result = _T("");
-                }
-            }
-        }
-    }
-
-    return result;
-}
-
-TString LinuxPlatform::GetSystemJVMLibraryFileName() {
-    TString result;
-    TString jreHome = GetSystemJRE();
-
-    if (jreHome.empty() == false && FilePath::DirectoryExists(jreHome) == true) {
-        result = FilePath::IncludeTrailingSeparater(jreHome) +
-            _T("/lib/"JAVAARCH"/client/libjvm.so");
-
-        if (FilePath::FileExists(result) == false) {
-            result = FilePath::IncludeTrailingSeparater(jreHome) +
-                _T("/lib/"JAVAARCH"/server/libjvm.so");
-        }
-    }
-
-    return result;
-}
-
 bool LinuxPlatform::IsMainThread() {
     bool result = (FMainThread == pthread_self());
     return result;

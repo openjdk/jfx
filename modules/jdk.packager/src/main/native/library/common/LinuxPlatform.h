@@ -74,8 +74,6 @@ public:
     virtual TString GetModuleFileName();
 
     virtual TString GetBundledJVMLibraryFileName(TString RuntimePath);
-    virtual TString GetSystemJVMLibraryFileName();
-    virtual TString GetSystemJRE();
 
     virtual ISectionalPropertyContainer* GetConfigFile(TString FileName);
 

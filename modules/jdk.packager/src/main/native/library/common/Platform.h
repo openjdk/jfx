@@ -428,8 +428,6 @@ public:
     virtual TString GetConfigFileName() = 0;
 
     virtual TString GetBundledJVMLibraryFileName(TString RuntimePath) = 0;
-    virtual TString GetSystemJVMLibraryFileName() = 0;
-    virtual TString GetSystemJRE() = 0;
 
     // Caller must free result.
     virtual ISectionalPropertyContainer* GetConfigFile(TString FileName) = 0;

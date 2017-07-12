@@ -62,7 +62,6 @@ public:
     TString FMainJar;
     TString FMainModule;
     TString FMainClassName;
-    bool FIsRuntimeBundled;
     TString FJVMRuntimeDirectory;
     TString FJVMLibraryFileName;
     TString FSplashScreenFileName;
@@ -137,7 +136,6 @@ public:
     TString GetClassPath();
     TString GetModulePath();
     TString GetMainClassName();
-    bool IsRuntimeBundled();
     TString GetJVMLibraryFileName();
     TString GetJVMRuntimeDirectory();
     TString GetSplashScreenFileName();

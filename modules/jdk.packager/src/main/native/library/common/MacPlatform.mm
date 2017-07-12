@@ -98,12 +98,12 @@ void MacPlatform::reactivateAnotherInstance() {
     if (singleInstanceProcessId == 0) {
         printf("Unable to reactivate another instance, PID is undefined");
         return;
-    } 
+    }
     NSRunningApplication* app = [NSRunningApplication runningApplicationWithProcessIdentifier: singleInstanceProcessId];
     if (app != nil) {
-    	[app activateWithOptions: NSApplicationActivateIgnoringOtherApps];
+        [app activateWithOptions: NSApplicationActivateIgnoringOtherApps];
     } else {
-    	printf("Unable to reactivate another instance PID: %d", singleInstanceProcessId);
+        printf("Unable to reactivate another instance PID: %d", singleInstanceProcessId);
     }
 }
 
@@ -195,26 +195,6 @@ TString MacPlatform::GetBundledJVMLibraryFileName(TString RuntimePath) {
         if (FilePath::FileExists(result) == false) {
             result = _T("");
         }
-    }
-
-    return result;
-}
-
-
-TString MacPlatform::GetSystemJRE() {
-    if (GetAppCDSState() != cdsDisabled) {
-        //TODO throw exception
-        return _T("");
-    }
-
-    return _T("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/lib/jli/libjli.dylib");
-}
-
-TString MacPlatform::GetSystemJVMLibraryFileName() {
-    TString result = GetSystemJRE();
-
-    if (FilePath::FileExists(result) == false) {
-        result = _T("");
     }
 
     return result;
