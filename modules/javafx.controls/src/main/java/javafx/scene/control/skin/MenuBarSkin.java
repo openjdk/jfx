@@ -956,8 +956,11 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
             });
             menuButton.showingProperty().addListener((observable, oldValue, isShowing) -> {
                 if (isShowing) {
+                    if(openMenuButton == null && focusedMenuIndex != -1)
+                        openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
+
                     if (openMenuButton != null && openMenuButton != menuButton) {
-                        openMenuButton.hide();
+                        openMenuButton.clearHover();
                     }
                     openMenuButton = menuButton;
                     showMenu(menu);
@@ -1051,11 +1054,6 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
         if (openMenu != null) {
             openMenu.hide();
             openMenu = null;
-            openMenuButton = (MenuBarButton)container.getChildren().get(focusedMenuIndex);
-            openMenuButton.clearHover();
-            openMenuButton.disarm();
-            openMenuButton = null;
-            menuModeEnd();
         }
     }
 
@@ -1152,6 +1150,7 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
          for(Node n : container.getChildren()) {
             if (n.isHover()) {
                 ((MenuBarButton)n).clearHover();
+                ((MenuBarButton)n).disarm();
                 return;
             }
         }

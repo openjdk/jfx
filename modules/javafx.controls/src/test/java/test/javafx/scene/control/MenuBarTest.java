@@ -618,4 +618,44 @@ public class MenuBarTest {
         MenuBar menuBar = new MenuBar();
         MenuBarSkin menuBarSkin = new MenuBarSkin(menuBar);
     }
+
+    @Test public void testMenuButtonMouseSelection() {
+        VBox root = new VBox();
+        Menu menu1 = new Menu("Menu1");
+        MenuItem menuItem1 = new MenuItem("MenuItem1");
+
+        menu1.getItems().add(menuItem1);
+
+        menuBar.getMenus().addAll(menu1);
+        root.getChildren().addAll(menuBar);
+        startApp(root);
+        tk.firePulse();
+
+        MenuBarSkin skin = (MenuBarSkin)menuBar.getSkin();
+        assertTrue(skin != null);
+
+        double xval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinX();
+        double yval = (menuBar.localToScene(menuBar.getLayoutBounds())).getMinY();
+
+        MenuButton mb = MenuBarSkinShim.getNodeForMenu(skin, 0);
+        mb.getScene().getWindow().requestFocus();
+
+        // Expand menu1 by mouse
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        assertTrue(menu1.isShowing());
+
+        // Collapse menu1 by mouse
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval+20, yval+20));
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval+20, yval+20));
+        assertFalse(menu1.isShowing());
+
+        // check if focusedMenuIndex is 0 (menu1 is still in selected state).
+        int focusedIndex = MenuBarSkinShim.getFocusedIndex(skin);
+        assertEquals(focusedIndex, 0);
+    }
 }
