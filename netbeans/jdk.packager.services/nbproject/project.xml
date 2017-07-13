@@ -3,11 +3,9 @@
     <type>org.netbeans.modules.java.j2seproject</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/j2se-project/3">
-            <name>fxpackager</name>
+            <name>jdk.packager.services</name>
             <source-roots>
-                <root id="src.dir" name="jdk.packager"/>
-                <root id="src.dir.service" name="jdk.packager.services"/>
-                <root id="src.dir.ant" name="antplugin"/>
+                <root id="src.dir"/>
             </source-roots>
             <test-roots>
                 <root id="test.src.dir"/>
