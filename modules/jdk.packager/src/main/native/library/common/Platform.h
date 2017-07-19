@@ -67,8 +67,8 @@
 
 #ifdef WINDOWS
 // Define Windows compatibility requirements XP or later
-#define WINVER 0x0501
-#define _WIN32_WINNT 0x0501
+#define WINVER 0x0600
+#define _WIN32_WINNT 0x0600
 
 #include <Windows.h>
 #include <tchar.h>

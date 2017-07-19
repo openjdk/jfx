@@ -42,19 +42,11 @@
 #include "PlatformString.h"
 #include "Macros.h"
 
-#include <Shlobj.h>
 #include <map>
 #include <vector>
 #include <regex>
 
 #define WINDOWS_PACKAGER_TMP_DIR L"\\AppData\\LocalLow\\Sun\\Java\\Packager\\tmp"
-
-typedef HRESULT (WINAPI* lpSHGetKnownFolderPath)(
-    REFKNOWNFOLDERID rfid,
-    DWORD dwFlags,
-    HANDLE hToken,
-    PWSTR *ppszPath
-);
 
 //--------------------------------------------------------------------------------------------------
 
@@ -261,31 +253,20 @@ bool WindowsPlatform::IsMainThread() {
 }
 
 TString WindowsPlatform::GetTempDirectory() {
-    HMODULE hndlShell32;
-    lpSHGetKnownFolderPath pSHGetKnownFolderPath;
-    TString tmpDir;
+    TString result;
+    PWSTR userDir = 0;
 
-    hndlShell32 = ::LoadLibrary(L"shell32");
-    if (NULL != hndlShell32) {
-
-        pSHGetKnownFolderPath = (lpSHGetKnownFolderPath)
-            GetProcAddress(hndlShell32, "SHGetKnownFolderPath");
-
-        if (pSHGetKnownFolderPath != NULL) {
-            PWSTR userDir = 0;
-            if (SUCCEEDED(pSHGetKnownFolderPath(
-                            FOLDERID_Profile,
-                            0,
-                            NULL,
-                            &userDir))) {
-                tmpDir = userDir;
-                tmpDir += WINDOWS_PACKAGER_TMP_DIR;
+    if (SUCCEEDED(SHGetKnownFolderPath(
+                    FOLDERID_Profile,
+                    0,
+                    NULL,
+                    &userDir))) {
+        result = userDir;
+        result += WINDOWS_PACKAGER_TMP_DIR;
         CoTaskMemFree(userDir);
-            }
-        }
-        FreeLibrary(hndlShell32);
     }
-    return tmpDir;
+
+    return result;
 }
 
 static BOOL CALLBACK enumWindows(HWND winHandle, LPARAM lParam) {
