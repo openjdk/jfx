@@ -43,13 +43,30 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import jdk.packager.services.singleton.SingleInstanceService;
+import jdk.packager.services.singleton.SingleInstanceListener;
 
 
-public class MinesweeperFX extends Application {
+public class MinesweeperFX extends Application implements SingleInstanceListener {
     Game game;
 
     @Override
+    public void newActivation(String... params) {
+        for (int i = 0; i < params.length; i++) {
+            System.out.println("Arg[" + i + "]: " + params[i]);
+        }
+    }
+
+    @Override
+    public void stop() {
+         SingleInstanceService.unregisterSingleInstance(this);
+    }
+
+    @Override
     public void start(Stage primaryStage) {
+        // the app will be single instance only if the option
+        // "-singleton" is specified for javapackager
+        SingleInstanceService.registerSingleInstance(this);
         BorderPane root = new BorderPane();
         HBox hbox = new HBox();
         hbox.setPadding(new Insets(5));
