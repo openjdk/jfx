@@ -381,8 +381,8 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         String setFileUtility = findSetFileUtility();
         if (setFileUtility != null) { //can not find utility => keep going without icon
             volumeIconFile.setWritable(true);
-            //The “creator” attribute on a file is a legacy attribute
-            // but it seems Finder expects these bytes to be “icnC” for the volume icon
+            // The "creator" attribute on a file is a legacy attribute
+            // but it seems Finder excepts these bytes to be "icnC" for the volume icon
             // (http://endrift.com/blog/2010/06/14/dmg-files-volume-icons-cli/)
             pb = new ProcessBuilder(
                     setFileUtility,
