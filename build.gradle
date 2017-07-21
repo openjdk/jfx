@@ -1073,7 +1073,7 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
 if (gradle.gradleVersion != "3.1") {
     def ver = gradle.gradleVersion.split("[\\.]");
     def gradleMajor = Integer.parseInt(ver[0]);
-    def gradleMinor = Integer.parseInt(ver[1]);
+    def gradleMinor = Integer.parseInt(ver[1].split("[^0-9]")[0]);
     def err = "";
     if (gradleMajor < 3) {
         err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 3.0"
