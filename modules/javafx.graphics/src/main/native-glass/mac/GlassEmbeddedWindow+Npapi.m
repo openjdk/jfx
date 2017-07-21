@@ -317,6 +317,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_events_mac_NpapiEvent__1dispatchCocoaN
                 [event setSyntheticKeyTyped:YES];
                 [window->child sendEvent:event];
             }
+            free(unichars);
         }
 
         if ([chars length] == 1) {
