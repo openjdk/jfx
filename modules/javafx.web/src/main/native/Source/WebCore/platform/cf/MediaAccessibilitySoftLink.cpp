@@ -30,6 +30,11 @@
 #include <CoreText/CoreText.h>
 #include <MediaAccessibility/MediaAccessibility.h>
 
+#if COMPILER(MSVC)
+// See https://msdn.microsoft.com/en-us/library/35bhkfb6.aspx
+#pragma warning(disable: 4273)
+#endif
+
 SOFT_LINK_FRAMEWORK_FOR_SOURCE(WebCore, MediaAccessibility)
 
 SOFT_LINK_FUNCTION_FOR_SOURCE(WebCore, MediaAccessibility, MACaptionAppearanceGetDisplayType, MACaptionAppearanceDisplayType, (MACaptionAppearanceDomain domain), (domain))
@@ -51,5 +56,6 @@ SOFT_LINK_FUNCTION_MAY_FAIL_FOR_SOURCE(WebCore, MediaAccessibility, MAAudibleMed
 
 SOFT_LINK_CONSTANT_FOR_SOURCE(WebCore, MediaAccessibility, kMAXCaptionAppearanceSettingsChangedNotification, CFStringRef)
 SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE(WebCore, MediaAccessibility, kMAAudibleMediaSettingsChangedNotification, CFStringRef)
+SOFT_LINK_CONSTANT_MAY_FAIL_FOR_SOURCE(WebCore, MediaAccessibility, MACaptionFontAttributeStrokeWidth, CFStringRef)
 
 #endif // HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)

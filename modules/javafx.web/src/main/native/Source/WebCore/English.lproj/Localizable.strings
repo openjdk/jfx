@@ -31,6 +31,9 @@
 /* Text track display name format that includes the country and language of the subtitle, in the form of 'Title (Language-Country)' */
 "%@ (%@-%@)" = "%@ (%@-%@)";
 
+/* Text track contains Audio Descriptions */
+"%@ AD" = "%@ AD";
+
 /* Text track contains closed captions */
 "%@ CC" = "%@ CC";
 
@@ -79,14 +82,11 @@
 /* File Upload single video label */
 "1 Video (file upload on page label for one video)" = "1 Video";
 
-/* Menu item title for KEYGEN pop-up menu */
-"1024 (Medium Grade)" = "1024 (Medium Grade)";
+/* Option in segmented control for choosing list type in text editing */
+"1. 2. 3." = "1. 2. 3.";
 
 /* Menu item title for KEYGEN pop-up menu */
 "2048 (High Grade)" = "2048 (High Grade)";
-
-/* Menu item title for KEYGEN pop-up menu */
-"512 (Low Grade)" = "512 (Low Grade)";
 
 /* window title for a standalone image (uses multiplication symbol, not x) */
 "<filename> %d×%d pixels" = "<filename> %d×%d pixels";
@@ -124,8 +124,8 @@
 /* Undo action name */
 "Bold (Undo action name)" = "Bold";
 
-/* menu item title for phone number */
-"Call Using iPhone:" = "Call Using iPhone:";
+/* Option in segmented control for inserting a bulleted list in text editing */
+"Bulleted list" = "Bulleted list";
 
 /* Title for Cancel button label in button bar */
 "Cancel button label in button bar" = "Cancel";
@@ -238,8 +238,32 @@
 /* Video Enter Fullscreen context menu item */
 "Enter Full Screen" = "Enter Full Screen";
 
+/* menu item */
+"Enter Picture in Picture" = "Enter Picture in Picture";
+
+/* Validation message for input form controls of type 'url' that have an invalid value */
+"Enter a URL" = "Enter a URL";
+
+/* Validation message for number fields where the user entered a non-number string */
+"Enter a number" = "Enter a number";
+
+/* Validation message for input form controls with value not respecting the step attribute */
+"Enter a valid value" = "Enter a valid value";
+
+/* Validation message for input form controls of type 'email' that have an invalid value */
+"Enter an email address" = "Enter an email address";
+
 /* Video Exit Fullscreen context menu item */
 "Exit Full Screen" = "Exit Full Screen";
+
+/* Button for exiting fullscreen when in fullscreen media playback */
+"Exit Fullscreen" = "Exit Fullscreen";
+
+/* menu item */
+"Exit Picture in Picture" = "Exit Picture in Picture";
+
+/* Validation message for required form control elements that have no value */
+"Fill out this field" = "Fill out this field";
 
 /* Default application name for Open With context menu */
 "Finder" = "Finder";
@@ -285,6 +309,9 @@
 
 /* Inspect Element context menu item */
 "Inspect Element" = "Inspect Element";
+
+/* Validation message for input form controls with a value not matching type */
+"Invalid value" = "Invalid value";
 
 /* Italic context menu item */
 "Italic" = "Italic";
@@ -346,6 +373,9 @@
 /* Make Upper Case context menu item */
 "Make Upper Case" = "Make Upper Case";
 
+/* Validation message for input form controls requiring a constrained value according to pattern */
+"Match the requested format" = "Match the requested format";
+
 /* Label text to be used when a plugin is missing */
 "Missing Plug-in" = "Missing Plug-in";
 
@@ -361,11 +391,17 @@
 /* Label for only item in menu that appears when clicking on the search field image, when no searches have been performed */
 "No recent searches" = "No recent searches";
 
+/* Option in segmented control for choosing list type in text editing */
+"None" = "None";
+
 /* WebKitErrorCannotUseRestrictedPort description */
 "Not allowed to use restricted network port" = "Not allowed to use restricted network port";
 
-/* OK button label in PDF password failure alert */
-"OK (PDF password failure alert)" = "OK";
+/* Option in segmented control for inserting a numbered list in text editing */
+"Numbered list" = "Numbered list";
+
+/* OK button label in document password failure alert */
+"OK (document password failure alert)" = "OK";
 
 /* Menu item label for the track that represents disabling closed captions */
 "Off" = "Off";
@@ -477,6 +513,18 @@
 
 /* Search with Google context menu item */
 "Search with Google" = "Search with Google";
+
+/* Validation message for required file inputs that have no value */
+"Select a file" = "Select a file";
+
+/* Validation message for required menu list controls that have no selection */
+"Select an item in the list" = "Select an item in the list";
+
+/* Validation message for required radio boxes that have no selection */
+"Select one of these options" = "Select one of these options";
+
+/* Validation message for required checkboxes that have not be selected */
+"Select this checkbox" = "Select this checkbox";
 
 /* Selection direction context sub-menu item */
 "Selection Direction" = "Selection Direction";
@@ -598,6 +646,9 @@
 /* WebKitErrorBlockedByContentBlocker description */
 "The URL was blocked by a content blocker" = "The URL was blocked by a content blocker";
 
+/* WebKitErrorFrameLoadBlockedByContentFilter description */
+"The URL was blocked by a content filter" = "The URL was blocked by a content filter";
+
 /* WKErrorWebViewInvalidated description */
 "The WKWebView was invalidated" = "The WKWebView was invalidated";
 
@@ -607,7 +658,7 @@
 /* WebKitErrorGeolocationLocationUnknown description */
 "The current location cannot be found." = "The current location cannot be found.";
 
-/* PDF password failure alert message */
+/* document password failure alert message */
 "The document could not be opened with that password." = "The document could not be opened with that password.";
 
 /* WebKitErrorCannotFindPlugin description */
@@ -652,6 +703,9 @@
 /* Undo action name */
 "Typing (Undo action name)" = "Typing";
 
+/* accessibility role description for a URL field. */
+"URL field" = "URL field";
+
 /* Underline context menu item */
 "Underline" = "Underline";
 
@@ -682,8 +736,23 @@
 /* Undo action name */
 "Use Standard Ligatures (Undo action name)" = "Use Standard Ligatures";
 
+/* Validation message for form control elements with a value shorter than minimum allowed length */
+"Use at least %d characters" = "Use at least %d characters";
+
+/* Validation message for form control elements with a value shorter than maximum allowed length */
+"Use no more than %d character(s)" = "Use no more than %d character(s)";
+
+/* Validation message for form control elements with a value shorter than maximum allowed length */
+"Use no more than %d characters" = "Use no more than %d characters";
+
 /* Description of WebCrypto master keys in Keychain */
 "Used to encrypt WebCrypto keys in persistent storage, such as IndexedDB" = "Used to encrypt WebCrypto keys in persistent storage, such as IndexedDB";
+
+/* Validation message for input form controls with value lower than allowed minimum */
+"Value must be greater than or equal to %@" = "Value must be greater than or equal to %@";
+
+/* Validation message for input form controls with value higher than allowed maximum */
+"Value must be less than or equal to %@" = "Value must be less than or equal to %@";
 
 /* Web Inspector window title when inspecting Web Inspector */
 "Web Inspector [%d] — %@" = "Web Inspector [%d] — %@";
@@ -712,17 +781,14 @@
 /* An ARIA accessibility group that acts as an alert. */
 "alert" = "alert";
 
-/* An ARIA accessibility group that acts as an alert dialog. */
-"alert dialog" = "alert dialog";
-
-/* An ARIA accessibility group that acts as an application. */
-"application" = "application";
-
 /* An ARIA accessibility group that acts as a status update. */
 "application status" = "application status";
 
 /* An ARIA accessibility group that acts as an article. */
 "article" = "article";
+
+/* accessibility role description for an attachment element */
+"attachment" = "attachment";
 
 /* accessibility help text for audio element controller */
 "audio element playback controls and status display" = "audio element playback controls and status display";
@@ -760,6 +826,9 @@
 /* HTTP result code string */
 "conflict" = "conflict";
 
+/* Label for the auto fill contacts button inside a text field. */
+"contact info auto fill" = "contact info auto fill";
+
 /* An ARIA accessibility group that contains content. */
 "content information" = "content information";
 
@@ -769,11 +838,20 @@
 /* HTTP result code string */
 "created" = "created";
 
+/* The less good value description for a meter element. */
+"critical value" = "critical value";
+
 /* accessibility help text for movie status display */
 "current movie status" = "current movie status";
 
 /* accessibility help text for elapsed time display */
 "current movie time in seconds" = "current movie time in seconds";
+
+/* accessibility role description for a date and time field. */
+"date and time field" = "date and time field";
+
+/* accessibility role description for a date field. */
+"date field" = "date field";
 
 /* role description of ARIA definition role */
 "definition" = "definition";
@@ -784,14 +862,17 @@
 /* accessibility role description of a description list */
 "description list" = "description list";
 
-/* An ARIA accessibility group that acts as an dialog. */
-"dialog" = "dialog";
+/* accessibility role description for a details element */
+"details" = "details";
 
 /* An ARIA accessibility group that acts as a document. */
 "document" = "document";
 
 /* accessibility label for elapsed time display */
 "elapsed time" = "elapsed time";
+
+/* accessibility role description for an email field. */
+"email field" = "email field";
 
 /* accessibility label for enter fullscreen button */
 "enter fullscreen" = "enter fullscreen";
@@ -807,6 +888,9 @@
 
 /* accessibility label for fast reverse button */
 "fast reverse" = "fast reverse";
+
+/* accessibility role description for a figure element. */
+"figure" = "figure";
 
 /* accessibility role description for a file upload button */
 "file upload button" = "file upload button";
@@ -828,6 +912,9 @@
 
 /* accessibility label for hide closed captions button */
 "hide closed captions" = "hide closed captions";
+
+/* accessibility role description for a mark element */
+"highlighted" = "highlighted";
 
 /* accessibility role description for image map */
 "image map" = "image map";
@@ -867,6 +954,9 @@
 
 /* HTTP result code string */
 "method not allowed" = "method not allowed";
+
+/* accessibility role description for a month field. */
+"month and year field" = "month and year field";
 
 /* HTTP result code string */
 "moved permanently" = "moved permanently";
@@ -928,14 +1018,23 @@
 /* An ARIA accessibility group that acts as a note in a document. */
 "note" = "note";
 
+/* accessibility role description for a number field. */
+"number field" = "number field";
+
 /* accessibility help text for remaining time display */
 "number of seconds of movie remaining" = "number of seconds of movie remaining";
+
+/* The optimum value description for a meter element. */
+"optimal value" = "optimal value";
+
+/* accessibility role description for an output element */
+"output" = "output";
 
 /* HTTP result code string */
 "partial content" = "partial content";
 
-/* Validation message for input form controls requiring a constrained value according to pattern */
-"pattern mismatch" = "pattern mismatch";
+/* Label for the auto fill credentials button inside a text field. */
+"password auto fill" = "password auto fill";
 
 /* accessibility label for pause button */
 "pause" = "pause";
@@ -1030,14 +1129,17 @@
 /* accessibility label for movie status */
 "status" = "status";
 
-/* Validation message for input form controls with value not respecting the step attribute */
-"step mismatch" = "step mismatch";
-
 /* accessibility help text for hide closed captions button */
 "stop displaying closed captions" = "stop displaying closed captions";
 
+/* The suboptimal value description for a meter element. */
+"suboptimal value" = "suboptimal value";
+
 /* HTTP result code string */
 "success" = "success";
+
+/* accessibility role description for a summary element */
+"summary" = "summary";
 
 /* HTTP result code string */
 "switching protocols" = "switching protocols";
@@ -1045,11 +1147,17 @@
 /* An ARIA accessibility group that contains the content of a tab. */
 "tab panel" = "tab panel";
 
+/* accessibility role description for a telephone number field. */
+"telephone number field" = "telephone number field";
+
 /* HTTP result code string */
 "temporarily redirected" = "temporarily redirected";
 
 /* term word of a description list */
 "term" = "term";
+
+/* accessibility role description for a time field. */
+"time field" = "time field";
 
 /* accessibility label for timeline thumb */
 "timeline slider thumb" = "timeline slider thumb";
@@ -1057,14 +1165,8 @@
 /* An ARIA accessibility group that acts as an updating timer. */
 "timer" = "timer";
 
-/* Validation message for form control elements with a value longer than maximum allowed length */
-"too long" = "too long";
-
 /* An ARIA accessibility group that acts as a tooltip. */
 "tooltip" = "tooltip";
-
-/* Validation message for input form controls with a value not matching type */
-"type mismatch" = "type mismatch";
 
 /* HTTP result code string */
 "unacceptable" = "unacceptable";
@@ -1093,12 +1195,24 @@
 /* HTTP result code string */
 "unsupported version" = "unsupported version";
 
-/* Validation message for required form control elements that have no value */
-"value missing" = "value missing";
-
 /* accessibility help text for video element controller */
 "video element playback controls and status display" = "video element playback controls and status display";
 
 /* accessibility label for video element controller */
 "video playback" = "video playback";
+
+/* An ARIA accessibility group that acts as an alert dialog. */
+"web alert dialog" = "web alert dialog";
+
+/* An ARIA accessibility group that acts as an application. */
+"web application" = "web application";
+
+/* An ARIA accessibility group that acts as an dialog. */
+"web dialog" = "web dialog";
+
+/* accessibility role description for a time field. */
+"week and year field" = "week and year field";
+
+/* Option in segmented control for choosing list type in text editing */
+"•" = "•";
 

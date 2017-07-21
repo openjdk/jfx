@@ -28,7 +28,7 @@
 
 #include <wtf/Assertions.h>
 
-#if PLATFORM(GTK) || PLATFORM(JAVA) || PLATFORM(EFL)
+#if PLATFORM(GTK) || PLATFORM(JAVA)
     #define suppressNotImplementedWarning() getenv("DISABLE_NI_WARNING")
 #else
     #define suppressNotImplementedWarning() false

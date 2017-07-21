@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JavaInstanceJSC_h
-#define JavaInstanceJSC_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
@@ -81,5 +80,3 @@ protected:
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JavaInstanceJSC_h

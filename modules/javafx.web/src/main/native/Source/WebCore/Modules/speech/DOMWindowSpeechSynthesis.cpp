@@ -34,7 +34,6 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "DOMWindow.h"
-#include <wtf/PassRefPtr.h>
 
 namespace WebCore {
 

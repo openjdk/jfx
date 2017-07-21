@@ -175,24 +175,15 @@ static BOOL isArrayOfClass(id object, Class elementClass)
         return nil;
     }
 
-    RefPtr<ArchiveResource> coreMainResource = mainResource ? [mainResource _coreResource] : 0;
-
-    Vector<RefPtr<ArchiveResource>> coreResources;
+    Vector<Ref<ArchiveResource>> coreResources;
     for (WebResource *subresource in subresources)
         coreResources.append([subresource _coreResource]);
 
-    Vector<RefPtr<LegacyWebArchive>> coreArchives;
+    Vector<Ref<LegacyWebArchive>> coreArchives;
     for (WebArchive *subframeArchive in subframeArchives)
-        coreArchives.append([subframeArchive->_private coreArchive]);
+        coreArchives.append(*[subframeArchive->_private coreArchive]);
 
-    RefPtr<LegacyWebArchive> coreArchive = LegacyWebArchive::create(coreMainResource.release(), WTFMove(coreResources), WTFMove(coreArchives));
-    if (!coreArchive) {
-        [self release];
-        return nil;
-    }
-
-    [_private setCoreArchive:coreArchive.release()];
-
+    [_private setCoreArchive:LegacyWebArchive::create([mainResource _coreResource], WTFMove(coreResources), WTFMove(coreArchives))];
     return self;
 }
 
@@ -209,13 +200,13 @@ static BOOL isArrayOfClass(id object, Class elementClass)
 #endif
 
     _private = [[WebArchivePrivate alloc] init];
-    RefPtr<LegacyWebArchive> coreArchive = LegacyWebArchive::create(SharedBuffer::wrapNSData(data).get());
+    auto coreArchive = LegacyWebArchive::create(SharedBuffer::wrapNSData(data));
     if (!coreArchive) {
         [self release];
         return nil;
     }
 
-    [_private setCoreArchive:coreArchive.release()];
+    [_private setCoreArchive:WTFMove(coreArchive)];
 
 #if !LOG_DISABLED
     CFAbsoluteTime end = CFAbsoluteTimeGetCurrent();
@@ -275,9 +266,10 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created
     // If they ever become mutable, we'll need to rethink this.
     if (!_private->cachedMainResource) {
-        LegacyWebArchive* coreArchive = [_private coreArchive];
-        if (coreArchive)
-            _private->cachedMainResource = [[WebResource alloc] _initWithCoreResource:coreArchive->mainResource()];
+        if (auto* coreArchive = [_private coreArchive]) {
+            if (auto* mainResource = coreArchive->mainResource())
+                _private->cachedMainResource = [[WebResource alloc] _initWithCoreResource:*mainResource];
+        }
     }
 
     return [[_private->cachedMainResource retain] autorelease];
@@ -294,12 +286,11 @@ static BOOL isArrayOfClass(id object, Class elementClass)
         if (!coreArchive)
             _private->cachedSubresources = [[NSArray alloc] init];
         else {
-            const Vector<RefPtr<ArchiveResource>>& subresources(coreArchive->subresources());
+            auto& subresources = coreArchive->subresources();
             NSMutableArray *mutableArray = [[NSMutableArray alloc] initWithCapacity:subresources.size()];
             _private->cachedSubresources = mutableArray;
-            for (unsigned i = 0; i < subresources.size(); ++i) {
-                WebResource *resource = [[WebResource alloc] _initWithCoreResource:subresources[i].get()];
-                if (resource) {
+            for (auto& subresource : subresources) {
+                if (WebResource *resource = [[WebResource alloc] _initWithCoreResource:subresource.get()]) {
                     [mutableArray addObject:resource];
                     [resource release];
                 }
@@ -318,15 +309,15 @@ static BOOL isArrayOfClass(id object, Class elementClass)
     // Currently from WebKit API perspective, WebArchives are entirely immutable once created
     // If they ever become mutable, we'll need to rethink this.
     if (!_private->cachedSubframeArchives) {
-        LegacyWebArchive* coreArchive = [_private coreArchive];
+        auto* coreArchive = [_private coreArchive];
         if (!coreArchive)
             _private->cachedSubframeArchives = [[NSArray alloc] init];
         else {
-            const Vector<RefPtr<Archive>>& subframeArchives(coreArchive->subframeArchives());
-            NSMutableArray *mutableArray = [[NSMutableArray alloc] initWithCapacity:subframeArchives.size()];
+            auto& subframeArchives = coreArchive->subframeArchives();
+            auto mutableArray = [[NSMutableArray alloc] initWithCapacity:subframeArchives.size()];
             _private->cachedSubframeArchives = mutableArray;
             for (unsigned i = 0; i < subframeArchives.size(); ++i) {
-                WebArchive *archive = [[WebArchive alloc] _initWithCoreLegacyWebArchive:(LegacyWebArchive *)subframeArchives[i].get()];
+                WebArchive *archive = [[WebArchive alloc] _initWithCoreLegacyWebArchive:(LegacyWebArchive *)subframeArchives[i].ptr()];
                 [mutableArray addObject:archive];
                 [archive release];
             }

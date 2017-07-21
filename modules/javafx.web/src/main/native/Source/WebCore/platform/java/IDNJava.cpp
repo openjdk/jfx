@@ -3,7 +3,7 @@
  */
 #include "config.h"
 #include "IDNJava.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "java_net_IDN.h"
 
 static JGClass idnClass;

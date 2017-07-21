@@ -24,8 +24,7 @@
  *
  */
 
-#ifndef DocumentMarkerController_h
-#define DocumentMarkerController_h
+#pragma once
 
 #include "DocumentMarker.h"
 #include "IntRect.h"
@@ -53,7 +52,7 @@ public:
     void addMarker(Range*, DocumentMarker::MarkerType);
     void addMarker(Range*, DocumentMarker::MarkerType, const String& description);
     void addMarkerToNode(Node*, unsigned startOffset, unsigned length, DocumentMarker::MarkerType);
-    void addMarkerToNode(Node*, unsigned startOffset, unsigned length, DocumentMarker::MarkerType, PassRefPtr<DocumentMarkerDetails>);
+    void addMarkerToNode(Node*, unsigned startOffset, unsigned length, DocumentMarker::MarkerType, DocumentMarker::Data&&);
     WEBCORE_EXPORT void addTextMatchMarker(const Range*, bool activeMatch);
 #if PLATFORM(IOS)
     void addMarker(Range*, DocumentMarker::MarkerType, const String& description, const Vector<String>& interpretations, const RetainPtr<id>& metadata);
@@ -118,5 +117,3 @@ private:
 #if ENABLE(TREE_DEBUGGING)
 void showDocumentMarkers(const WebCore::DocumentMarkerController*);
 #endif
-
-#endif // DocumentMarkerController_h

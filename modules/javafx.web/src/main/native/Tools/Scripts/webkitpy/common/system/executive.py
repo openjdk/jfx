@@ -60,7 +60,7 @@ class ScriptError(Exception):
                 message += " cwd: %s" % cwd
 
         Exception.__init__(self, message)
-        self.script_args = script_args # 'args' is already used by Exception
+        self.script_args = script_args  # 'args' is already used by Exception
         self.exit_code = exit_code
         self.output = output
         self.cwd = cwd
@@ -205,7 +205,6 @@ class Executive(object):
                 # already exited, and forcefully kill it if SIGTERM wasn't enough.
                 os.kill(pid, signal.SIGTERM)
                 os.kill(pid, signal.SIGKILL)
-                _ = os.waitpid(pid, os.WNOHANG)
             except OSError, e:
                 if e.errno == errno.EAGAIN:
                     if retries_left <= 0:

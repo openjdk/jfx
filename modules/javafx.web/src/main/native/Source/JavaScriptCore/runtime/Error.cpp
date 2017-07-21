@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003, 2004, 2005, 2006, 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2006, 2008, 2016 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel (eric@webkit.org)
  *
  *  This library is free software; you can redistribute it and/or
@@ -28,16 +28,16 @@
 #include "ErrorConstructor.h"
 #include "ExceptionHelpers.h"
 #include "FunctionPrototype.h"
+#include "Interpreter.h"
 #include "JSArray.h"
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
 #include "JSObject.h"
 #include "JSString.h"
-#include "NativeErrorConstructor.h"
 #include "JSCInlines.h"
+#include "NativeErrorConstructor.h"
 #include "SourceCode.h"
-
-#include <wtf/text/StringBuilder.h>
+#include "StackFrame.h"
 
 namespace JSC {
 
@@ -98,11 +98,27 @@ JSObject* createURIError(ExecState* exec, const String& message, ErrorInstance::
     return ErrorInstance::create(exec, globalObject->vm(), globalObject->URIErrorConstructor()->errorStructure(), message, appender, TypeNothing, true);
 }
 
-JSObject* createOutOfMemoryError(ExecState* exec, ErrorInstance::SourceAppender appender)
+JSObject* createError(ExecState* exec, ErrorType errorType, const String& message)
 {
-    return createError(exec, ASCIILiteral("Out of memory"), appender);
+    switch (errorType) {
+    case ErrorType::Error:
+        return createError(exec, message);
+    case ErrorType::EvalError:
+        return createEvalError(exec, message);
+    case ErrorType::RangeError:
+        return createRangeError(exec, message);
+    case ErrorType::ReferenceError:
+        return createReferenceError(exec, message);
+    case ErrorType::SyntaxError:
+        return createSyntaxError(exec, message);
+    case ErrorType::TypeError:
+        return createTypeError(exec, message);
+    case ErrorType::URIError:
+        return createURIError(exec, message);
+    }
+    ASSERT_NOT_REACHED();
+    return nullptr;
 }
-
 
 class FindFirstCallerFrameWithCodeblockFunctor {
 public:
@@ -113,7 +129,7 @@ public:
         , m_index(0)
     { }
 
-    StackVisitor::Status operator()(StackVisitor& visitor)
+    StackVisitor::Status operator()(StackVisitor& visitor) const
     {
         if (!m_foundStartCallFrame && (visitor->callFrame() == m_startCallFrame))
             m_foundStartCallFrame = true;
@@ -134,26 +150,25 @@ public:
 
 private:
     CallFrame* m_startCallFrame;
-    CallFrame* m_foundCallFrame;
-    bool m_foundStartCallFrame;
-    unsigned m_index;
+    mutable CallFrame* m_foundCallFrame;
+    mutable bool m_foundStartCallFrame;
+    mutable unsigned m_index;
 };
 
-bool addErrorInfoAndGetBytecodeOffset(ExecState* exec, VM& vm, JSObject* obj, bool useCurrentFrame, CallFrame*& callFrame, unsigned &bytecodeOffset)
+bool addErrorInfoAndGetBytecodeOffset(ExecState* exec, VM& vm, JSObject* obj, bool useCurrentFrame, CallFrame*& callFrame, unsigned* bytecodeOffset)
 {
     Vector<StackFrame> stackTrace = Vector<StackFrame>();
 
-    if (exec && stackTrace.isEmpty())
-        vm.interpreter->getStackTrace(stackTrace);
-
+    size_t framesToSkip = useCurrentFrame ? 0 : 1;
+    vm.interpreter->getStackTrace(stackTrace, framesToSkip);
     if (!stackTrace.isEmpty()) {
 
         ASSERT(exec == vm.topCallFrame || exec == exec->lexicalGlobalObject()->globalExec() || exec == exec->vmEntryGlobalObject()->globalExec());
 
-        StackFrame* stackFrame;
+        StackFrame* firstFrameWithLineAndColumnInfo = nullptr;
         for (unsigned i = 0 ; i < stackTrace.size(); ++i) {
-            stackFrame = &stackTrace.at(i);
-            if (stackFrame->bytecodeOffset)
+            firstFrameWithLineAndColumnInfo = &stackTrace.at(i);
+            if (firstFrameWithLineAndColumnInfo->hasLineAndColumnInfo())
                 break;
         }
 
@@ -162,21 +177,22 @@ bool addErrorInfoAndGetBytecodeOffset(ExecState* exec, VM& vm, JSObject* obj, bo
             vm.topCallFrame->iterate(functor);
             callFrame = functor.foundCallFrame();
             unsigned stackIndex = functor.index();
-            bytecodeOffset = stackTrace.at(stackIndex).bytecodeOffset;
+            *bytecodeOffset = 0;
+            if (stackTrace.at(stackIndex).hasBytecodeOffset())
+                *bytecodeOffset = stackTrace.at(stackIndex).bytecodeOffset();
         }
 
         unsigned line;
         unsigned column;
-        stackFrame->computeLineAndColumn(line, column);
-        obj->putDirect(vm, vm.propertyNames->line, jsNumber(line), ReadOnly | DontDelete);
-        obj->putDirect(vm, vm.propertyNames->column, jsNumber(column), ReadOnly | DontDelete);
+        firstFrameWithLineAndColumnInfo->computeLineAndColumn(line, column);
+        obj->putDirect(vm, vm.propertyNames->line, jsNumber(line));
+        obj->putDirect(vm, vm.propertyNames->column, jsNumber(column));
 
-        if (!stackFrame->sourceURL.isEmpty())
-            obj->putDirect(vm, vm.propertyNames->sourceURL, jsString(&vm, stackFrame->sourceURL), ReadOnly | DontDelete);
+        String frameSourceURL = firstFrameWithLineAndColumnInfo->sourceURL();
+        if (!frameSourceURL.isEmpty())
+            obj->putDirect(vm, vm.propertyNames->sourceURL, jsString(&vm, frameSourceURL));
 
-        if (!useCurrentFrame)
-            stackTrace.remove(0);
-        obj->putDirect(vm, vm.propertyNames->stack, vm.interpreter->stackTraceAsString(vm.topCallFrame, stackTrace), DontEnum);
+        obj->putDirect(vm, vm.propertyNames->stack, Interpreter::stackTraceAsString(vm, stackTrace), DontEnum);
 
         return true;
     }
@@ -186,8 +202,7 @@ bool addErrorInfoAndGetBytecodeOffset(ExecState* exec, VM& vm, JSObject* obj, bo
 void addErrorInfo(ExecState* exec, JSObject* obj, bool useCurrentFrame)
 {
     CallFrame* callFrame = nullptr;
-    unsigned bytecodeOffset = 0;
-    addErrorInfoAndGetBytecodeOffset(exec, exec->vm(), obj, useCurrentFrame, callFrame, bytecodeOffset);
+    addErrorInfoAndGetBytecodeOffset(exec, exec->vm(), obj, useCurrentFrame, callFrame);
 }
 
 JSObject* addErrorInfo(CallFrame* callFrame, JSObject* error, int line, const SourceCode& source)
@@ -196,37 +211,40 @@ JSObject* addErrorInfo(CallFrame* callFrame, JSObject* error, int line, const So
     const String& sourceURL = source.provider()->url();
 
     if (line != -1)
-        error->putDirect(*vm, Identifier::fromString(vm, linePropertyName), jsNumber(line), ReadOnly | DontDelete);
+        error->putDirect(*vm, Identifier::fromString(vm, linePropertyName), jsNumber(line));
     if (!sourceURL.isNull())
-        error->putDirect(*vm, Identifier::fromString(vm, sourceURLPropertyName), jsString(vm, sourceURL), ReadOnly | DontDelete);
+        error->putDirect(*vm, Identifier::fromString(vm, sourceURLPropertyName), jsString(vm, sourceURL));
     return error;
 }
 
-
-bool hasErrorInfo(ExecState* exec, JSObject* error)
+JSObject* throwConstructorCannotBeCalledAsFunctionTypeError(ExecState* exec, ThrowScope& scope, const char* constructorName)
 {
-    return error->hasProperty(exec, Identifier::fromString(exec, linePropertyName))
-        || error->hasProperty(exec, Identifier::fromString(exec, sourceURLPropertyName));
+    return throwTypeError(exec, scope, makeString("calling ", constructorName, " constructor without new is invalid"));
 }
 
-JSObject* throwConstructorCannotBeCalledAsFunctionTypeError(ExecState* exec, const char* constructorName)
+JSObject* throwTypeError(ExecState* exec, ThrowScope& scope)
 {
-    return exec->vm().throwException(exec, createTypeError(exec, makeString("calling ", constructorName, " constructor without new is invalid")));
+    return throwException(exec, scope, createTypeError(exec));
 }
 
-JSObject* throwTypeError(ExecState* exec)
+JSObject* throwTypeError(ExecState* exec, ThrowScope& scope, ASCIILiteral errorMessage)
 {
-    return exec->vm().throwException(exec, createTypeError(exec));
+    return throwTypeError(exec, scope, String(errorMessage));
 }
 
-JSObject* throwSyntaxError(ExecState* exec)
+JSObject* throwTypeError(ExecState* exec, ThrowScope& scope, const String& message)
 {
-    return exec->vm().throwException(exec, createSyntaxError(exec, ASCIILiteral("Syntax error")));
+    return throwException(exec, scope, createTypeError(exec, message));
 }
 
-JSObject* throwSyntaxError(ExecState* exec, const String& message)
+JSObject* throwSyntaxError(ExecState* exec, ThrowScope& scope)
 {
-    return exec->vm().throwException(exec, createSyntaxError(exec, message));
+    return throwException(exec, scope, createSyntaxError(exec, ASCIILiteral("Syntax error")));
+}
+
+JSObject* throwSyntaxError(ExecState* exec, ThrowScope& scope, const String& message)
+{
+    return throwException(exec, scope, createSyntaxError(exec, message));
 }
 
 JSObject* createError(ExecState* exec, const String& message)
@@ -276,7 +294,7 @@ JSObject* createURIError(ExecState* exec, const String& message)
 
 JSObject* createOutOfMemoryError(ExecState* exec)
 {
-    return createOutOfMemoryError(exec, nullptr);
+    return createError(exec, ASCIILiteral("Out of memory"), nullptr);
 }
 
 
@@ -288,3 +306,36 @@ void StrictModeTypeErrorFunction::destroy(JSCell* cell)
 }
 
 } // namespace JSC
+
+namespace WTF {
+
+using namespace JSC;
+
+void printInternal(PrintStream& out, JSC::ErrorType errorType)
+{
+    switch (errorType) {
+    case JSC::ErrorType::Error:
+        out.print("Error");
+        break;
+    case JSC::ErrorType::EvalError:
+        out.print("EvalError");
+        break;
+    case JSC::ErrorType::RangeError:
+        out.print("RangeError");
+        break;
+    case JSC::ErrorType::ReferenceError:
+        out.print("ReferenceError");
+        break;
+    case JSC::ErrorType::SyntaxError:
+        out.print("SyntaxError");
+        break;
+    case JSC::ErrorType::TypeError:
+        out.print("TypeError");
+        break;
+    case JSC::ErrorType::URIError:
+        out.print("URIError");
+        break;
+    }
+}
+
+} // namespace WTF

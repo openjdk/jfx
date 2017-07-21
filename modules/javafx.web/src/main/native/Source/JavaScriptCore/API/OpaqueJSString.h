@@ -30,10 +30,6 @@
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
 
-#if PLATFORM(JAVA) // tav todo temp
-#include <JSExportMacros.h>
-#endif
-
 namespace JSC {
     class Identifier;
     class VM;

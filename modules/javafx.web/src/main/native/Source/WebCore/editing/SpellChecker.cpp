@@ -30,9 +30,6 @@
 #include "DocumentMarkerController.h"
 #include "Editor.h"
 #include "Frame.h"
-#include "HTMLInputElement.h"
-#include "HTMLTextAreaElement.h"
-#include "Node.h"
 #include "Page.h"
 #include "PositionIterator.h"
 #include "RenderObject.h"
@@ -77,6 +74,8 @@ void SpellCheckRequest::didSucceed(const Vector<TextCheckingResult>& results)
 {
     if (!m_checker)
         return;
+
+    Ref<SpellCheckRequest> protectedThis(*this);
     m_checker->didCheckSucceed(m_requestData.sequence(), results);
     m_checker = nullptr;
 }
@@ -85,6 +84,8 @@ void SpellCheckRequest::didCancel()
 {
     if (!m_checker)
         return;
+
+    Ref<SpellCheckRequest> protectedThis(*this);
     m_checker->didCheckCancel(m_requestData.sequence());
     m_checker = nullptr;
 }
@@ -181,7 +182,7 @@ void SpellChecker::invokeRequest(PassRefPtr<SpellCheckRequest> request)
     if (!client())
         return;
     m_processingRequest = request;
-    client()->requestCheckingOfString(m_processingRequest);
+    client()->requestCheckingOfString(*m_processingRequest, m_frame.selection().selection());
 }
 
 void SpellChecker::enqueueRequest(PassRefPtr<SpellCheckRequest> request)

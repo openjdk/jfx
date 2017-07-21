@@ -27,6 +27,8 @@
 
 #include "PlatformCALayerWin.h"
 
+#if USE(CA)
+
 #include "AbstractCACFLayerTreeHost.h"
 #include "FontCascade.h"
 #include "GDIUtilities.h"
@@ -437,10 +439,24 @@ void PlatformCALayerWin::setSublayerTransform(const TransformationMatrix& value)
     setNeedsCommit();
 }
 
+bool PlatformCALayerWin::isHidden() const
+{
+    return CACFLayerIsHidden(m_layer.get());
+}
+
 void PlatformCALayerWin::setHidden(bool value)
 {
     CACFLayerSetHidden(m_layer.get(), value);
     setNeedsCommit();
+}
+
+bool PlatformCALayerWin::contentsHidden() const
+{
+    return false;
+}
+
+void PlatformCALayerWin::setContentsHidden(bool)
+{
 }
 
 void PlatformCALayerWin::setBackingStoreAttached(bool)
@@ -450,6 +466,15 @@ void PlatformCALayerWin::setBackingStoreAttached(bool)
 bool PlatformCALayerWin::backingStoreAttached() const
 {
     return true;
+}
+
+bool PlatformCALayerWin::userInteractionEnabled() const
+{
+    return true;
+}
+
+void PlatformCALayerWin::setUserInteractionEnabled(bool)
+{
 }
 
 bool PlatformCALayerWin::geometryFlipped() const
@@ -491,6 +516,15 @@ bool PlatformCALayerWin::acceleratesDrawing() const
 }
 
 void PlatformCALayerWin::setAcceleratesDrawing(bool)
+{
+}
+
+bool PlatformCALayerWin::wantsDeepColorBackingStore() const
+{
+    return false;
+}
+
+void PlatformCALayerWin::setWantsDeepColorBackingStore(bool)
 {
 }
 
@@ -720,7 +754,6 @@ static void printLayer(StringBuilder& builder, const PlatformCALayer* layer, int
     case PlatformCALayer::LayerTypeWebLayer: layerTypeName = "web-layer"; break;
     case PlatformCALayer::LayerTypeSimpleLayer: layerTypeName = "simple-layer"; break;
     case PlatformCALayer::LayerTypeTransformLayer: layerTypeName = "transform-layer"; break;
-    case PlatformCALayer::LayerTypeWebTiledLayer: layerTypeName = "web-tiled-layer"; break;
     case PlatformCALayer::LayerTypeTiledBackingLayer: layerTypeName = "tiled-backing-layer"; break;
     case PlatformCALayer::LayerTypePageTiledBackingLayer: layerTypeName = "page-tiled-backing-layer"; break;
     case PlatformCALayer::LayerTypeTiledBackingTileLayer: layerTypeName = "tiled-backing-tile-layer"; break;
@@ -930,3 +963,5 @@ void PlatformCALayerWin::drawTextAtPoint(CGContextRef context, CGFloat x, CGFloa
     cg.setFillColor(Color::black);
     cg.drawText(font, TextRun(text), IntPoint(x, y));
 }
+
+#endif

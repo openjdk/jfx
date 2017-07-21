@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceUsageThread_h
-#define ResourceUsageThread_h
+#pragma once
 
 #if ENABLE(RESOURCE_USAGE)
 
@@ -56,7 +55,7 @@ private:
     static ResourceUsageThread& singleton();
 
     void waitUntilObservers();
-    void notifyObservers(ResourceUsageData&);
+    void notifyObservers(ResourceUsageData&&);
 
     void createThreadIfNeeded();
     static void threadCallback(void* scrollingThread);
@@ -81,6 +80,7 @@ struct TagInfo {
 };
 
 const char* displayNameForVMTag(unsigned);
+size_t vmPageSize();
 std::array<TagInfo, 256> pagesPerVMTag();
 void logFootprintComparison(const std::array<TagInfo, 256>&, const std::array<TagInfo, 256>&);
 #endif
@@ -88,5 +88,3 @@ void logFootprintComparison(const std::array<TagInfo, 256>&, const std::array<Ta
 } // namespace WebCore
 
 #endif // ENABLE(RESOURCE_USAGE)
-
-#endif // ResourceUsageThread_h

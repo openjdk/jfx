@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SpellChecker_h
-#define SpellChecker_h
+#pragma once
 
 #include "Element.h"
 #include "Range.h"
@@ -56,9 +55,9 @@ public:
     void requesterDestroyed();
     bool isStarted() const { return m_checker; }
 
-    virtual const TextCheckingRequestData& data() const override;
-    virtual void didSucceed(const Vector<TextCheckingResult>&) override;
-    virtual void didCancel() override;
+    const TextCheckingRequestData& data() const override;
+    void didSucceed(const Vector<TextCheckingResult>&) override;
+    void didCancel() override;
 
 private:
     SpellCheckRequest(PassRefPtr<Range> checkingRange, PassRefPtr<Range> paragraphRange, const String&, TextCheckingTypeMask, TextCheckingProcessType);
@@ -116,5 +115,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // SpellChecker_h

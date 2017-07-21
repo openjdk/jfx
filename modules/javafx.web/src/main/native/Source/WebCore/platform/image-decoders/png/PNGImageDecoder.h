@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PNGImageDecoder_h
-#define PNGImageDecoder_h
+#pragma once
 
 #include "ImageDecoder.h"
 #if ENABLE(APNG)
@@ -36,24 +35,24 @@ namespace WebCore {
     class PNGImageReader;
 
     // This class decodes the PNG image format.
-    class PNGImageDecoder : public ImageDecoder {
+    class PNGImageDecoder final : public ImageDecoder {
     public:
-        PNGImageDecoder(ImageSource::AlphaOption, ImageSource::GammaAndColorProfileOption);
+        PNGImageDecoder(AlphaOption, GammaAndColorProfileOption);
         virtual ~PNGImageDecoder();
 
         // ImageDecoder
-        virtual String filenameExtension() const override { return "png"; }
+        String filenameExtension() const override { return "png"; }
 #if ENABLE(APNG)
-        virtual size_t frameCount() override { return m_frameCount; }
-        virtual int repetitionCount() const override { return m_playCount-1; }
+        size_t frameCount() const override { return m_frameCount; }
+        RepetitionCount repetitionCount() const override;
 #endif
-        virtual bool isSizeAvailable() override;
-        virtual bool setSize(unsigned width, unsigned height) override;
-        virtual ImageFrame* frameBufferAtIndex(size_t index) override;
+        bool isSizeAvailable() override;
+        bool setSize(const IntSize&) override;
+        ImageFrame* frameBufferAtIndex(size_t index) override;
         // CAUTION: setFailed() deletes |m_reader|.  Be careful to avoid
         // accessing deleted memory, especially when calling this from inside
         // PNGImageReader!
-        virtual bool setFailed() override;
+        bool setFailed() override;
 
         // Callbacks from libpng
         void headerAvailable();
@@ -64,7 +63,7 @@ namespace WebCore {
         void frameHeader();
 
         void init();
-        virtual void clearFrameBufferCache(size_t clearBeforeFrame) override;
+        void clearFrameBufferCache(size_t clearBeforeFrame) override;
 #endif
 
         bool isComplete() const
@@ -73,7 +72,7 @@ namespace WebCore {
                 return false;
 
             for (auto& imageFrame : m_frameBufferCache) {
-                if (imageFrame.status() != ImageFrame::FrameComplete)
+                if (!imageFrame.isComplete())
                     return false;
             }
 
@@ -82,7 +81,7 @@ namespace WebCore {
 
         bool isCompleteAtIndex(size_t index)
         {
-            return (index < m_frameBufferCache.size() && m_frameBufferCache[index].status() == ImageFrame::FrameComplete);
+            return (index < m_frameBufferCache.size() && m_frameBufferCache[index].isComplete());
         }
 
     private:
@@ -130,5 +129,3 @@ namespace WebCore {
     };
 
 } // namespace WebCore
-
-#endif

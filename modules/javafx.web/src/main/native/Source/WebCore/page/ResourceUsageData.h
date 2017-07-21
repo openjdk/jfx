@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceUsageData_h
-#define ResourceUsageData_h
+#pragma once
 
 #if ENABLE(RESOURCE_USAGE)
 
@@ -52,8 +51,11 @@ struct MemoryCategoryInfo {
     {
     }
 
+    size_t totalSize() const { return dirtySize + externalSize; }
+
     size_t dirtySize { 0 };
     size_t reclaimableSize { 0 };
+    size_t externalSize { 0 };
     bool isSubcategory { false };
     unsigned type { MemoryCategory::NumberOfCategories };
 };
@@ -64,6 +66,7 @@ struct ResourceUsageData {
 
     float cpu { 0 };
     size_t totalDirtySize { 0 };
+    size_t totalExternalSize { 0 };
     std::array<MemoryCategoryInfo, MemoryCategory::NumberOfCategories> categories;
     double timeOfNextEdenCollection { 0 };
     double timeOfNextFullCollection { 0 };
@@ -72,5 +75,3 @@ struct ResourceUsageData {
 } // namespace WebCore
 
 #endif // ResourceUsageData_h
-
-#endif // ENABLE(RESOURCE_USAGE)

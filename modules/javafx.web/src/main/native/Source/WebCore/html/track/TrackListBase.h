@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TrackListBase_h
-#define TrackListBase_h
+#pragma once
 
 #if ENABLE(VIDEO_TRACK)
 
@@ -32,7 +31,6 @@
 #include "EventTarget.h"
 #include "GenericEventQueue.h"
 #include "Timer.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -47,16 +45,16 @@ public:
     virtual ~TrackListBase();
 
     virtual unsigned length() const;
-    virtual bool contains(TrackBase*) const;
-    virtual void remove(TrackBase*, bool scheduleEvent = true);
+    virtual bool contains(TrackBase&) const;
+    virtual void remove(TrackBase&, bool scheduleEvent = true);
 
     // EventTarget
-    virtual EventTargetInterface eventTargetInterface() const override = 0;
+    EventTargetInterface eventTargetInterface() const override = 0;
     using RefCounted<TrackListBase>::ref;
     using RefCounted<TrackListBase>::deref;
-    virtual ScriptExecutionContext* scriptExecutionContext() const override final { return m_context; }
+    ScriptExecutionContext* scriptExecutionContext() const final { return m_context; }
 
-    void clearElement() { m_element = 0; }
+    virtual void clearElement();
     Element* element() const;
     HTMLMediaElement* mediaElement() const { return m_element; }
 
@@ -68,17 +66,17 @@ public:
 protected:
     TrackListBase(HTMLMediaElement*, ScriptExecutionContext*);
 
-    void scheduleAddTrackEvent(PassRefPtr<TrackBase>);
-    void scheduleRemoveTrackEvent(PassRefPtr<TrackBase>);
+    void scheduleAddTrackEvent(Ref<TrackBase>&&);
+    void scheduleRemoveTrackEvent(Ref<TrackBase>&&);
 
     Vector<RefPtr<TrackBase>> m_inbandTracks;
 
 private:
-    void scheduleTrackEvent(const AtomicString& eventName, PassRefPtr<TrackBase>);
+    void scheduleTrackEvent(const AtomicString& eventName, Ref<TrackBase>&&);
 
     // EventTarget
-    virtual void refEventTarget() override final { ref(); }
-    virtual void derefEventTarget() override final { deref(); }
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
 
     ScriptExecutionContext* m_context;
     HTMLMediaElement* m_element;
@@ -88,5 +86,4 @@ private:
 
 } // namespace WebCore
 
-#endif
-#endif
+#endif // ENABLE(VIDEO_TRACK)

@@ -1,20 +1,17 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
-#include "JavaRef.h"
-#include "wtf/MainThread.h"
+#include <wtf/java/JavaEnv.h>
+#include <wtf/java/JavaRef.h>
+#include <wtf/MainThread.h>
 
 namespace WTF {
 void scheduleDispatchFunctionsOnMainThread()
 {
-    JNIEnv *env;
-    int envStatus = jvm->GetEnv((void **)&env, JNI_VERSION_1_2);
-    if (envStatus == JNI_EDETACHED) {
-        jvm->AttachCurrentThread((void **)&env, NULL);
-    }
-
+    AutoAttachToJavaThread autoAttach;
+    JNIEnv* env = autoAttach.env();
     static JGClass jMainThreadCls(env->FindClass("com/sun/webkit/MainThread"));
 
     static jmethodID mid = env->GetStaticMethodID(
@@ -26,10 +23,6 @@ void scheduleDispatchFunctionsOnMainThread()
 
     env->CallStaticVoidMethod(jMainThreadCls, mid);
     CheckAndClearException(env);
-
-    if (envStatus == JNI_EDETACHED) {
-        jvm->DetachCurrentThread();
-    }
 }
 
 void initializeMainThreadPlatform()

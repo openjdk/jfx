@@ -26,12 +26,19 @@
 #include "config.h"
 #include "PlatformCALayer.h"
 
+#if USE(CA)
+
+#include <CoreFoundation/CoreFoundation.h>
+#include <CoreText/CoreText.h>
+#include "GraphicsContextCG.h"
 #include "LayerPool.h"
 #include "PlatformCALayerClient.h"
 #include "TextStream.h"
 #include <wtf/StringExtras.h>
 
-#if USE(CA)
+#if PLATFORM(WIN)
+#include "CoreTextSPIWin.h"
+#endif
 
 namespace WebCore {
 
@@ -59,17 +66,24 @@ PlatformCALayer::~PlatformCALayer()
     setOwner(nullptr);
 }
 
+bool PlatformCALayer::canHaveBackingStore() const
+{
+    return m_layerType == LayerType::LayerTypeWebLayer
+        || m_layerType == LayerType::LayerTypeTiledBackingLayer
+        || m_layerType == LayerType::LayerTypePageTiledBackingLayer
+        || m_layerType == LayerType::LayerTypeTiledBackingTileLayer;
+}
+
 void PlatformCALayer::drawRepaintIndicator(CGContextRef context, PlatformCALayer* platformCALayer, int repaintCount, CGColorRef customBackgroundColor)
 {
     char text[16]; // that's a lot of repaints
     snprintf(text, sizeof(text), "%d", repaintCount);
 
-    CGRect indicatorBox = platformCALayer->bounds();
+    FloatRect indicatorBox = platformCALayer->bounds();\
+    indicatorBox.setLocation( { 1, 1 } );
+    indicatorBox.setSize(FloatSize(12 + 10 * strlen(text), 27));
 
-    CGContextSaveGState(context);
-
-    indicatorBox.size.width = 12 + 10 * strlen(text);
-    indicatorBox.size.height = 27;
+    CGContextStateSaver stateSaver(context);
 
     CGContextSetAlpha(context, 0.5f);
     CGContextBeginTransparencyLayerWithRect(context, indicatorBox, 0);
@@ -79,12 +93,22 @@ void PlatformCALayer::drawRepaintIndicator(CGContextRef context, PlatformCALayer
     else
         CGContextSetRGBFillColor(context, 0, 0.5f, 0.25f, 1);
 
-    CGContextFillRect(context, indicatorBox);
+    if (platformCALayer->isOpaque())
+        CGContextFillRect(context, indicatorBox);
+    else {
+        Path boundsPath;
+        boundsPath.moveTo(indicatorBox.maxXMinYCorner());
+        boundsPath.addLineTo(indicatorBox.maxXMaxYCorner());
+        boundsPath.addLineTo(indicatorBox.minXMaxYCorner());
 
-    if (platformCALayer->acceleratesDrawing())
-        CGContextSetRGBFillColor(context, 1, 0, 0, 1);
-    else
-        CGContextSetRGBFillColor(context, 1, 1, 1, 1);
+        const float cornerChunk = 8;
+        boundsPath.addLineTo(FloatPoint(indicatorBox.x(), indicatorBox.y() + cornerChunk));
+        boundsPath.addLineTo(FloatPoint(indicatorBox.x() + cornerChunk, indicatorBox.y()));
+        boundsPath.closeSubpath();
+
+        CGContextAddPath(context, boundsPath.platformPath());
+        CGContextFillPath(context);
+    }
 
     if (platformCALayer->owner()->isUsingDisplayListDrawing(platformCALayer)) {
         CGContextSetRGBStrokeColor(context, 0, 0, 0, 0.65);
@@ -92,10 +116,14 @@ void PlatformCALayer::drawRepaintIndicator(CGContextRef context, PlatformCALayer
         CGContextStrokeRect(context, indicatorBox);
     }
 
-    platformCALayer->drawTextAtPoint(context, indicatorBox.origin.x + 5, indicatorBox.origin.y + 22, CGSizeMake(1, -1), 22, text, strlen(text));
+    if (platformCALayer->acceleratesDrawing())
+        CGContextSetRGBFillColor(context, 1, 0, 0, 1);
+    else
+        CGContextSetRGBFillColor(context, 1, 1, 1, 1);
+
+    platformCALayer->drawTextAtPoint(context, indicatorBox.x() + 5, indicatorBox.y() + 22, CGSizeMake(1, -1), 22, text, strlen(text));
 
     CGContextEndTransparencyLayer(context);
-    CGContextRestoreGState(context);
 }
 
 void PlatformCALayer::flipContext(CGContextRef context, CGFloat height)
@@ -107,12 +135,16 @@ void PlatformCALayer::flipContext(CGContextRef context, CGFloat height)
 // This function is needed to work around a bug in Windows CG <rdar://problem/22703470>
 void PlatformCALayer::drawTextAtPoint(CGContextRef context, CGFloat x, CGFloat y, CGSize scale, CGFloat fontSize, const char* text, size_t length) const
 {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    CGContextSetTextMatrix(context, CGAffineTransformMakeScale(scale.width, scale.height));
-    CGContextSelectFont(context, "Helvetica", fontSize, kCGEncodingMacRoman);
-    CGContextShowTextAtPoint(context, x, y, text, length);
-#pragma clang diagnostic pop
+    auto matrix = CGAffineTransformMakeScale(scale.width, scale.height);
+    auto font = adoptCF(CTFontCreateWithName(CFSTR("Helvetica"), fontSize, &matrix));
+    CFTypeRef keys[] = { kCTFontAttributeName, kCTForegroundColorFromContextAttributeName };
+    CFTypeRef values[] = { font.get(), kCFBooleanTrue };
+    auto attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, WTF_ARRAY_LENGTH(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+    auto string = adoptCF(CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, reinterpret_cast<const UInt8*>(text), length, kCFStringEncodingUTF8, false, kCFAllocatorNull));
+    auto attributedString = adoptCF(CFAttributedStringCreate(kCFAllocatorDefault, string.get(), attributes.get()));
+    auto line = adoptCF(CTLineCreateWithAttributedString(attributedString.get()));
+    CGContextSetTextPosition(context, x, y);
+    CTLineDraw(line.get(), context);
 }
 
 PassRefPtr<PlatformCALayer> PlatformCALayer::createCompatibleLayerOrTakeFromPool(PlatformCALayer::LayerType layerType, PlatformCALayerClient* client, IntSize size)
@@ -121,13 +153,13 @@ PassRefPtr<PlatformCALayer> PlatformCALayer::createCompatibleLayerOrTakeFromPool
 
     if ((layer = layerPool().takeLayerWithSize(size))) {
         layer->setOwner(client);
-        return layer.release();
+        return WTFMove(layer);
     }
 
     layer = createCompatibleLayer(layerType, client);
     layer->setBounds(FloatRect(FloatPoint(), size));
 
-    return layer.release();
+    return WTFMove(layer);
 }
 
 void PlatformCALayer::moveToLayerPool()
@@ -152,9 +184,6 @@ TextStream& operator<<(TextStream& ts, PlatformCALayer::LayerType layerType)
         break;
     case PlatformCALayer::LayerTypeTransformLayer:
         ts << "transform-layer";
-        break;
-    case PlatformCALayer::LayerTypeWebTiledLayer:
-        ts << "tiled-layer";
         break;
     case PlatformCALayer::LayerTypeTiledBackingLayer:
         ts << "tiled-backing-layer";

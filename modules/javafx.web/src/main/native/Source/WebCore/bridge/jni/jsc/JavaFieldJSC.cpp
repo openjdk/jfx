@@ -147,7 +147,7 @@ JSValue JavaField::valueFromInstance(ExecState* exec, const Instance* i) const
     return jsresult;
 }
 
-void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue aValue) const
+bool JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue aValue) const
 {
     const JavaInstance* instance = static_cast<const JavaInstance*>(i);
     jvalue javaValue = convertValueToJValue(exec, i->rootObject(), aValue, m_type, typeClassName());
@@ -159,7 +159,7 @@ void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue a
 
     if (!jlfield) {
         LOG_ERROR("Could not get Instance for %p in JavaField::setValueToInstance", (jobject)jlfield);
-        return;
+        return false;
     }
 
     jobject jinstance = instance->javaInstance();
@@ -168,7 +168,7 @@ void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue a
 
     if (!jlinstance) {
         LOG_ERROR("Could not get javaInstance for %p in JavaField::setValueToInstance", (jobject)jlinstance);
-        return;
+        return false;
     }
 
     switch (m_type) {
@@ -212,6 +212,7 @@ void JavaField::setValueToInstance(ExecState* exec, const Instance* i, JSValue a
     default:
         abort();
     }
+    return true;
 }
 
 #endif // ENABLE(JAVA_BRIDGE)

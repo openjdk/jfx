@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2015-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,22 +23,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HeapTimer_h
-#define HeapTimer_h
+#pragma once
 
 #include <wtf/Lock.h>
+#include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Threading.h>
-
-#if PLATFORM(JAVA) // tav todo temp
-#include <JSExportMacros.h>
-#endif
 
 #if USE(CF)
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-#if USE(GLIB) && !PLATFORM(EFL)
+#if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
 #endif
 
@@ -47,44 +44,45 @@ namespace JSC {
 class JSLock;
 class VM;
 
-class HeapTimer {
+class HeapTimer : public ThreadSafeRefCounted<HeapTimer> {
 public:
-#if USE(CF)
-    HeapTimer(VM*, CFRunLoopRef);
-    static void timerDidFire(CFRunLoopTimerRef, void*);
-#else
     HeapTimer(VM*);
+#if USE(CF)
+    static void timerDidFireCallback(CFRunLoopTimerRef, void*);
 #endif
 
     JS_EXPORT_PRIVATE virtual ~HeapTimer();
     virtual void doWork() = 0;
 
+    void scheduleTimer(double intervalInSeconds);
+    void cancelTimer();
+    bool isScheduled() const { return m_isScheduled; }
+
+#if USE(CF)
+    JS_EXPORT_PRIVATE void setRunLoop(CFRunLoopRef);
+#endif // USE(CF)
+
 protected:
     VM* m_vm;
 
+    RefPtr<JSLock> m_apiLock;
+    bool m_isScheduled { false };
 #if USE(CF)
     static const CFTimeInterval s_decade;
 
     RetainPtr<CFRunLoopTimerRef> m_timer;
     RetainPtr<CFRunLoopRef> m_runLoop;
+
     CFRunLoopTimerContext m_context;
 
     Lock m_shutdownMutex;
-#elif PLATFORM(EFL)
-    static bool timerEvent(void*);
-    Ecore_Timer* add(double delay, void* agent);
-    void stop();
-    Ecore_Timer* m_timer;
 #elif USE(GLIB)
-    void timerDidFire();
-    RefPtr<JSLock> m_apiLock;
+    static const long s_decade;
     GRefPtr<GSource> m_timer;
 #endif
 
 private:
-    void invalidate();
+    void timerDidFire();
 };
 
 } // namespace JSC
-
-#endif

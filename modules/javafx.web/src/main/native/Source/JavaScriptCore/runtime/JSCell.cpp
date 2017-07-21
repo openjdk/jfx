@@ -24,11 +24,13 @@
 #include "JSCell.h"
 
 #include "ArrayBufferView.h"
+#include "JSCInlines.h"
 #include "JSFunction.h"
 #include "JSString.h"
 #include "JSObject.h"
+#include "JSWebAssemblyCallee.h"
 #include "NumberObject.h"
-#include "JSCInlines.h"
+#include "WebAssemblyToJSCallee.h"
 #include <wtf/MathExtras.h>
 
 namespace JSC {
@@ -48,7 +50,7 @@ void JSCell::dump(PrintStream& out) const
 
 void JSCell::dumpToStream(const JSCell* cell, PrintStream& out)
 {
-    out.printf("<%p, %s>", cell, cell->className());
+    out.printf("<%p, %s>", cell, cell->className(*cell->vm()));
 }
 
 size_t JSCell::estimatedSizeInBytes() const
@@ -58,10 +60,10 @@ size_t JSCell::estimatedSizeInBytes() const
 
 size_t JSCell::estimatedSize(JSCell* cell)
 {
-    return MarkedBlock::blockFor(cell)->cellSize();
+    return cell->cellSize();
 }
 
-void JSCell::copyBackingStore(JSCell*, CopyVisitor&, CopyToken)
+void JSCell::heapSnapshot(JSCell*, HeapSnapshotBuilder&)
 {
 }
 
@@ -93,7 +95,7 @@ CallType JSCell::getCallData(JSCell*, CallData& callData)
     callData.js.functionExecutable = 0;
     callData.js.scope = 0;
     callData.native.function = 0;
-    return CallTypeNone;
+    return CallType::None;
 }
 
 ConstructType JSCell::getConstructData(JSCell*, ConstructData& constructData)
@@ -101,28 +103,26 @@ ConstructType JSCell::getConstructData(JSCell*, ConstructData& constructData)
     constructData.js.functionExecutable = 0;
     constructData.js.scope = 0;
     constructData.native.function = 0;
-    return ConstructTypeNone;
+    return ConstructType::None;
 }
 
-void JSCell::put(JSCell* cell, ExecState* exec, PropertyName identifier, JSValue value, PutPropertySlot& slot)
+bool JSCell::put(JSCell* cell, ExecState* exec, PropertyName identifier, JSValue value, PutPropertySlot& slot)
 {
-    if (cell->isString() || cell->isSymbol()) {
-        JSValue(cell).putToPrimitive(exec, identifier, value, slot);
-        return;
-    }
+    if (cell->isString() || cell->isSymbol())
+        return JSValue(cell).putToPrimitive(exec, identifier, value, slot);
+
     JSObject* thisObject = cell->toObject(exec, exec->lexicalGlobalObject());
-    thisObject->methodTable(exec->vm())->put(thisObject, exec, identifier, value, slot);
+    return thisObject->methodTable(exec->vm())->put(thisObject, exec, identifier, value, slot);
 }
 
-void JSCell::putByIndex(JSCell* cell, ExecState* exec, unsigned identifier, JSValue value, bool shouldThrow)
+bool JSCell::putByIndex(JSCell* cell, ExecState* exec, unsigned identifier, JSValue value, bool shouldThrow)
 {
     if (cell->isString() || cell->isSymbol()) {
         PutPropertySlot slot(cell, shouldThrow);
-        JSValue(cell).putToPrimitive(exec, Identifier::from(exec, identifier), value, slot);
-        return;
+        return JSValue(cell).putToPrimitive(exec, Identifier::from(exec, identifier), value, slot);
     }
     JSObject* thisObject = cell->toObject(exec, exec->lexicalGlobalObject());
-    thisObject->methodTable(exec->vm())->putByIndex(thisObject, exec, identifier, value, shouldThrow);
+    return thisObject->methodTable(exec->vm())->putByIndex(thisObject, exec, identifier, value, shouldThrow);
 }
 
 bool JSCell::deleteProperty(JSCell* cell, ExecState* exec, PropertyName identifier)
@@ -171,14 +171,13 @@ double JSCell::toNumber(ExecState* exec) const
     return static_cast<const JSObject*>(this)->toNumber(exec);
 }
 
-JSObject* JSCell::toObject(ExecState* exec, JSGlobalObject* globalObject) const
+JSObject* JSCell::toObjectSlow(ExecState* exec, JSGlobalObject* globalObject) const
 {
+    ASSERT(!isObject());
     if (isString())
         return static_cast<const JSString*>(this)->toObject(exec, globalObject);
-    if (isSymbol())
-        return static_cast<const Symbol*>(this)->toObject(exec, globalObject);
-    ASSERT(isObject());
-    return jsCast<JSObject*>(const_cast<JSCell*>(this));
+    ASSERT(isSymbol());
+    return static_cast<const Symbol*>(this)->toObject(exec, globalObject);
 }
 
 void slowValidateCell(JSCell* cell)
@@ -220,9 +219,15 @@ String JSCell::className(const JSObject*)
     return String();
 }
 
-const char* JSCell::className() const
+String JSCell::toStringName(const JSObject*, ExecState*)
 {
-    return classInfo()->className;
+    RELEASE_ASSERT_NOT_REACHED();
+    return String();
+}
+
+const char* JSCell::className(VM& vm) const
+{
+    return classInfo(vm)->className;
 }
 
 void JSCell::getPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode)
@@ -245,13 +250,13 @@ bool JSCell::defineOwnProperty(JSObject*, ExecState*, PropertyName, const Proper
 ArrayBuffer* JSCell::slowDownAndWasteMemory(JSArrayBufferView*)
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
-PassRefPtr<ArrayBufferView> JSCell::getTypedArrayImpl(JSArrayBufferView*)
+RefPtr<ArrayBufferView> JSCell::getTypedArrayImpl(JSArrayBufferView*)
 {
     RELEASE_ASSERT_NOT_REACHED();
-    return 0;
+    return nullptr;
 }
 
 uint32_t JSCell::getEnumerableLength(ExecState*, JSObject*)
@@ -280,9 +285,25 @@ bool JSCell::isExtensible(JSObject*, ExecState*)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-bool JSCell::setPrototype(JSObject*, ExecState*, JSValue)
+bool JSCell::setPrototype(JSObject*, ExecState*, JSValue, bool)
 {
     RELEASE_ASSERT_NOT_REACHED();
+}
+
+JSValue JSCell::getPrototype(JSObject*, ExecState*)
+{
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+bool JSCell::isAnyWasmCallee(VM& vm) const
+{
+#if ENABLE(WEBASSEMBLY)
+    return inherits(vm, JSWebAssemblyCallee::info()) || inherits(vm, WebAssemblyToJSCallee::info());
+#else
+    UNUSED_PARAM(vm);
+    return false;
+#endif
+
 }
 
 } // namespace JSC

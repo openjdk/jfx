@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef GraphicsContextJava_h
-#define GraphicsContextJava_h
+
+#pragma once
 
 #include <jni.h>
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 extern jmethodID WCGM_getWCFont_mID;
 extern jmethodID WCGM_createBufferedContext_mID;
@@ -45,5 +45,3 @@ extern jmethodID WCP_closeSubpath_mID;
 extern jmethodID WCP_addArc_mID;
 extern jmethodID WCP_addRect_mID;
 extern jmethodID WCP_addEllipse_mID;
-
-#endif

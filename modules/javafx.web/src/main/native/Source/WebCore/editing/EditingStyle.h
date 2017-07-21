@@ -29,15 +29,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef EditingStyle_h
-#define EditingStyle_h
+#pragma once
 
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "StyleProperties.h"
 #include "WritingDirection.h"
 #include <wtf/Forward.h>
-#include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TriState.h>
@@ -125,7 +123,7 @@ public:
     void removeBlockProperties();
     void removeStyleAddedByNode(Node*);
     void removeStyleConflictingWithStyleOfNode(Node*);
-    template<typename T> void removeEquivalentProperties(const T&);
+    template<typename T> void removeEquivalentProperties(T&);
     void collapseTextDecorationProperties();
     enum ShouldIgnoreTextOnlyProperties { IgnoreTextOnlyProperties, DoNotIgnoreTextOnlyProperties };
     TriState triStateOfStyle(EditingStyle*) const;
@@ -148,7 +146,7 @@ public:
     void mergeTypingStyle(Document&);
     enum CSSPropertyOverrideMode { OverrideValues, DoNotOverrideValues };
     void mergeInlineStyleOfElement(StyledElement*, CSSPropertyOverrideMode, PropertiesToInclude = AllProperties);
-    static PassRefPtr<EditingStyle> wrappingStyleForSerialization(Node* context, bool shouldAnnotate);
+    static Ref<EditingStyle> wrappingStyleForSerialization(Node* context, bool shouldAnnotate);
     void mergeStyleFromRules(StyledElement*);
     void mergeStyleFromRulesForSerialization(StyledElement*);
     void removeStyleFromRulesAndContext(StyledElement*, Node* context);
@@ -167,8 +165,9 @@ public:
     void setStrikeThroughChange(TextDecorationChange change) { m_strikeThroughChange = static_cast<unsigned>(change); }
     TextDecorationChange strikeThroughChange() const { return static_cast<TextDecorationChange>(m_strikeThroughChange); }
 
-    static PassRefPtr<EditingStyle> styleAtSelectionStart(const VisibleSelection&, bool shouldUseBackgroundColorInEffect = false);
+    WEBCORE_EXPORT static PassRefPtr<EditingStyle> styleAtSelectionStart(const VisibleSelection&, bool shouldUseBackgroundColorInEffect = false);
     static WritingDirection textDirectionForSelection(const VisibleSelection&, EditingStyle* typingStyle, bool& hasNestedOrMultipleEmbeddings);
+
 private:
     EditingStyle();
     EditingStyle(Node*, PropertiesToInclude);
@@ -178,7 +177,7 @@ private:
     EditingStyle(CSSPropertyID, const String& value);
     EditingStyle(CSSPropertyID, CSSValueID);
     void init(Node*, PropertiesToInclude);
-    void removeTextFillAndStrokeColorsIfNeeded(RenderStyle*);
+    void removeTextFillAndStrokeColorsIfNeeded(const RenderStyle*);
     void setProperty(CSSPropertyID, const String& value, bool important = false);
     void extractFontSizeDelta();
     template<typename T> TriState triStateOfStyle(T& styleToCompare, ShouldIgnoreTextOnlyProperties) const;
@@ -238,5 +237,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // EditingStyle_h

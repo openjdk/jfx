@@ -24,21 +24,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+typedef (CanvasRenderingContext2D or WebGLRenderingContextBase) RenderingContext;
+
 [
     JSGenerateToNativeObject,
-    ReportExtraMemoryCost
+    ReportExtraMemoryCost,
+    ReportExternalMemoryCost,
 ] interface HTMLCanvasElement : HTMLElement {
+    attribute unsigned long width;
+    attribute unsigned long height;
 
-    attribute long width;
-    attribute long height;
+    [Custom] RenderingContext? getContext(DOMString contextId, any... arguments);
 
-    [Custom, RaisesException] DOMString toDataURL(optional DOMString? type);
-
-#if !defined(LANGUAGE_OBJECTIVE_C) || !LANGUAGE_OBJECTIVE_C
-    // The custom binding is needed to handle context creation attributes.
-    [Custom] any getContext([Default=Undefined] optional DOMString contextId);
-    [Custom] any probablySupportsContext([Default=Undefined] optional DOMString contextId);
-#endif
-
+    [Custom, MayThrowException] DOMString toDataURL(optional DOMString? type);
 };
-

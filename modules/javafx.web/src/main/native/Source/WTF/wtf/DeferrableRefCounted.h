@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DeferrableRefCounted_h
-#define DeferrableRefCounted_h
+#pragma once
 
 #include <wtf/Assertions.h>
 #include <wtf/FastMalloc.h>
@@ -43,7 +42,7 @@ class DeferrableRefCountedBase {
     static const unsigned normalIncrement = 2;
 
 public:
-    void ref()
+    void ref() const
     {
         m_refCount += normalIncrement;
     }
@@ -73,7 +72,7 @@ protected:
     {
     }
 
-    bool derefBase()
+    bool derefBase() const
     {
         m_refCount -= normalIncrement;
         return !m_refCount;
@@ -90,17 +89,17 @@ protected:
     }
 
 private:
-    unsigned m_refCount;
+    mutable unsigned m_refCount;
 };
 
 template<typename T>
 class DeferrableRefCounted : public DeferrableRefCountedBase {
     WTF_MAKE_NONCOPYABLE(DeferrableRefCounted); WTF_MAKE_FAST_ALLOCATED;
 public:
-    void deref()
+    void deref() const
     {
         if (derefBase())
-            delete static_cast<T*>(this);
+            delete static_cast<const T*>(this);
     }
 
     bool setIsDeferred(bool value)
@@ -119,6 +118,3 @@ protected:
 } // namespace WTF
 
 using WTF::DeferrableRefCounted;
-
-#endif // DeferrableRefCounted_h
-

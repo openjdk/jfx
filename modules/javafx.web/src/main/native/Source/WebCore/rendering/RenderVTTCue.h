@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RenderVTTCue_h
-#define RenderVTTCue_h
+#pragma once
 
 #if ENABLE(VIDEO_TRACK)
 
@@ -40,10 +39,10 @@ class VTTCueBox;
 
 class RenderVTTCue final : public RenderBlockFlow {
 public:
-    RenderVTTCue(VTTCueBox&, Ref<RenderStyle>&&);
+    RenderVTTCue(VTTCueBox&, RenderStyle&&);
 
 private:
-    virtual void layout() override;
+    void layout() override;
 
     bool isOutside() const;
     bool rectIsWithinContainer(const IntRect&) const;
@@ -69,5 +68,4 @@ private:
 
 } // namespace WebCore
 
-#endif
-#endif // RenderVTTCue_h
+#endif // ENABLE(VIDEO_TRACK)

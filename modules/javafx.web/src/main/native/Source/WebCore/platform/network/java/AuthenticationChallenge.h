@@ -22,16 +22,14 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef AuthenticationChallenge_h
-#define AuthenticationChallenge_h
+
+#pragma once
 
 #include "AuthenticationChallengeBase.h"
-#include "ResourceHandle.h"
+#include "AuthenticationClient.h"
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
-
-class ResourceHandle;
 
 class AuthenticationChallenge : public AuthenticationChallengeBase {
 public:
@@ -44,11 +42,10 @@ public:
     {
     }
 
-    ResourceHandle* sourceHandle() const { return m_sourceHandle.get(); }
+    AuthenticationClient* authenticationClient() const { return m_authenticationClient.get(); }
+    void setAuthenticationClient(AuthenticationClient* client) { m_authenticationClient = client; }
 
-    RefPtr<ResourceHandle> m_sourceHandle;
+    RefPtr<AuthenticationClient> m_authenticationClient;
 };
 
-}
-
-#endif
+} // namespace WebCore

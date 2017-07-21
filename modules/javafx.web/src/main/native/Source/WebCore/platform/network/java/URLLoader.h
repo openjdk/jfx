@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef URLLoader_h
-#define URLLoader_h
+
+#pragma once
 
 #include <wtf/java/JavaRef.h>
 #include <wtf/Vector.h>
@@ -56,14 +56,14 @@ private:
     public:
         AsynchronousTarget(ResourceHandle* handle);
 
-        virtual void didSendData(long totalBytesSent, long totalBytesToBeSent);
-        virtual bool willSendRequest(const String& newUrl,
-                                     const String& newMethod,
-                                     const ResourceResponse& response);
-        virtual void didReceiveResponse(const ResourceResponse& response);
-        virtual void didReceiveData(const char* data, int length);
-        virtual void didFinishLoading();
-        virtual void didFail(const ResourceError& error);
+        void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
+        bool willSendRequest(const String& newUrl,
+                             const String& newMethod,
+                             const ResourceResponse& response) final;
+        void didReceiveResponse(const ResourceResponse& response) final;
+        void didReceiveData(const char* data, int length) final;
+        void didFinishLoading() final;
+        void didFail(const ResourceError& error) final;
     private:
         ResourceHandle* m_handle;
     };
@@ -75,14 +75,14 @@ private:
                           ResourceResponse& response,
                           Vector<char>& data);
 
-        virtual void didSendData(long totalBytesSent, long totalBytesToBeSent);
-        virtual bool willSendRequest(const String& newUrl,
-                                     const String& newMethod,
-                                     const ResourceResponse& response);
-        virtual void didReceiveResponse(const ResourceResponse& response);
-        virtual void didReceiveData(const char* data, int length);
-        virtual void didFinishLoading();
-        virtual void didFail(const ResourceError& error);
+        void didSendData(long totalBytesSent, long totalBytesToBeSent) final;
+        bool willSendRequest(const String& newUrl,
+                             const String& newMethod,
+                             const ResourceResponse& response) final;
+        void didReceiveResponse(const ResourceResponse& response) final;
+        void didReceiveData(const char* data, int length) final;
+        void didFinishLoading() final;
+        void didFail(const ResourceError& error) final;
     private:
         const ResourceRequest& m_request;
         ResourceError& m_error;
@@ -95,5 +95,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // URLLoader_h

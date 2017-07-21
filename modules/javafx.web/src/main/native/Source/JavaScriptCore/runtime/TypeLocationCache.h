@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TypeLocationCache_h
-#define TypeLocationCache_h
+#pragma once
 
 #include "TypeLocation.h"
 #include <unordered_map>
@@ -57,12 +56,10 @@ public:
         unsigned m_end;
     };
 
-    std::pair<TypeLocation*, bool> getTypeLocation(GlobalVariableID, intptr_t, unsigned start, unsigned end, PassRefPtr<TypeSet>, VM*);
+    std::pair<TypeLocation*, bool> getTypeLocation(GlobalVariableID, intptr_t, unsigned start, unsigned end, RefPtr<TypeSet>&&, VM*);
 private:
     typedef std::unordered_map<LocationKey, TypeLocation*, HashMethod<LocationKey>> LocationMap;
     LocationMap m_locationMap;
 };
 
 } // namespace JSC
-
-#endif // TypeLocationCache_h

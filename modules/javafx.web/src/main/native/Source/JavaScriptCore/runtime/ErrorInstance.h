@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008, 2016 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -18,13 +18,11 @@
  *
  */
 
-#ifndef ErrorInstance_h
-#define ErrorInstance_h
+#pragma once
 
-#include "Interpreter.h"
+#include "JSObject.h"
 #include "RuntimeType.h"
 #include "SourceProvider.h"
-#include <wtf/Vector.h>
 
 namespace JSC {
 
@@ -35,7 +33,7 @@ public:
     enum SourceTextWhereErrorOccurred { FoundExactSource, FoundApproximateSource };
     typedef String (*SourceAppender) (const String& originalMessage, const String& sourceText, RuntimeType, SourceTextWhereErrorOccurred);
 
-    DECLARE_INFO;
+    DECLARE_EXPORT_INFO;
 
     static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
     {
@@ -51,10 +49,7 @@ public:
         return instance;
     }
 
-    static ErrorInstance* create(ExecState* exec, Structure* structure, JSValue message, SourceAppender appender = nullptr, RuntimeType type = TypeNothing, bool useCurrentFrame = true)
-    {
-        return create(exec, exec->vm(), structure, message.isUndefined() ? String() : message.toString(exec)->value(exec), appender, type, useCurrentFrame);
-    }
+    static ErrorInstance* create(ExecState*, Structure*, JSValue message, SourceAppender = nullptr, RuntimeType = TypeNothing, bool useCurrentFrame = true);
 
     static void addErrorInfo(ExecState*, VM&, JSObject*, bool = true);
 
@@ -66,6 +61,8 @@ public:
     RuntimeType runtimeTypeForCause() const { return m_runtimeTypeForCause; }
     void clearRuntimeTypeForCause() { m_runtimeTypeForCause = TypeNothing; }
 
+    JS_EXPORT_PRIVATE String sanitizedToString(ExecState*);
+
 protected:
     explicit ErrorInstance(VM&, Structure*);
 
@@ -76,5 +73,3 @@ protected:
 };
 
 } // namespace JSC
-
-#endif // ErrorInstance_h

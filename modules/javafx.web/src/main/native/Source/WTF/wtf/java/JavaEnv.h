@@ -1,0 +1,128 @@
+/*
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ */
+
+#pragma once
+
+#include <wtf/java/JavaRef.h>
+
+#include <jni.h>
+
+extern JavaVM* jvm;
+
+ALWAYS_INLINE JNIEnv* JNICALL WebCore_GetJavaEnv()
+{
+    void* env;
+    jvm->GetEnv(&env, JNI_VERSION_1_2);
+    return (JNIEnv*)env;
+}
+
+#define WC_GETJAVAENV_CHKRET(_env_var, ... /* ret val */)   \
+    JNIEnv* _env_var = WebCore_GetJavaEnv(); \
+    if (!_env_var) return __VA_ARGS__;
+
+extern bool CheckAndClearException(JNIEnv* env);
+
+namespace WebCore {
+
+jclass PG_GetFontClass(JNIEnv* env);
+jclass PG_GetGlyphBufferClass(JNIEnv* env);
+jclass PG_GetFontCustomPlatformDataClass(JNIEnv* env);
+jclass PG_GetGraphicsImageDecoderClass(JNIEnv* env);
+jclass PG_GetGraphicsContextClass(JNIEnv* env);
+jclass PG_GetGraphicsManagerClass(JNIEnv* env);
+jclass PG_GetImageClass(JNIEnv* env);
+jclass PG_GetMediaPlayerClass(JNIEnv* env);
+jclass PG_GetPathClass(JNIEnv* env);
+jclass PG_GetPathIteratorClass(JNIEnv* env);
+jclass PG_GetRectangleClass(JNIEnv* env);
+jclass PG_GetRefClass(JNIEnv* env);
+jclass PG_GetRenderQueueClass(JNIEnv* env);
+jclass PG_GetTransformClass(JNIEnv* env);
+jclass PG_GetWebPageClass(JNIEnv* env);
+jclass PG_GetColorChooserClass(JNIEnv* env);
+
+jclass getTimerClass(JNIEnv* env);
+
+JLObject PL_GetLogger(JNIEnv* env, const char* name);
+void PL_ResumeCount(JNIEnv* env, jobject perfLogger, const char* probe);
+void PL_SuspendCount(JNIEnv* env, jobject perfLogger, const char* probe);
+bool PL_IsEnabled(JNIEnv* env, jobject perfLogger);
+
+JLObject PL_GetGraphicsManager(JNIEnv* env);
+
+
+//Log wrapper
+struct EntryJavaLogger
+{
+    JNIEnv     *m_env;
+    jobject     m_perfLogger;
+    const char *m_probe;
+
+    EntryJavaLogger(
+         JNIEnv *env,
+         jobject global_perfLogger,
+         const char* probe
+    ) : m_env(env)
+      , m_perfLogger(global_perfLogger)
+      , m_probe(probe)
+    {
+        PL_ResumeCount(m_env, m_perfLogger, m_probe);
+    }
+
+    ~EntryJavaLogger()
+    {
+        PL_SuspendCount(m_env, m_perfLogger, m_probe);
+    }
+};
+
+
+} // namespace WebCore
+
+namespace WTF {
+class AutoAttachToJavaThread {
+public:
+    AutoAttachToJavaThread(bool daemon = false)
+    {
+        m_status = jvm->GetEnv((void **)&m_env, JNI_VERSION_1_2);
+        if (m_status == JNI_EDETACHED) {
+            if (daemon) {
+                jvm->AttachCurrentThreadAsDaemon((void **)&m_env, nullptr);
+            } else {
+                jvm->AttachCurrentThread((void **)&m_env, nullptr);
+            }
+        }
+    }
+
+    ~AutoAttachToJavaThread()
+    {
+        if (m_status == JNI_EDETACHED) {
+            jvm->DetachCurrentThread();
+        }
+    }
+
+    JNIEnv* env() { return m_env; }
+private:
+    JNIEnv* m_env;
+    int m_status;
+
+};
+} // namespace
+
+//example: LOG_PERF_RECORD(env, "XXXX", "setUpIterator")
+//the line
+//  com.sun.webkit.perf.XXXX.level = ALL
+//have to be added into the file <wk_root>/WebKitBuild/<Debug|Release>/dist/logging.properties
+#define LOG_PERF_RECORD(env, LOG_NAME, LOG_RECORD) \
+    static JGObject __logger__(WebCore::PL_GetLogger(env, LOG_NAME)); \
+    WebCore::EntryJavaLogger __el__(env, __logger__, LOG_RECORD);
+
+#define jlong_to_ptr(a) ((void*)(uintptr_t)(a))
+#define ptr_to_jlong(a) ((jlong)(uintptr_t)(a))
+
+#define bool_to_jbool(a) ((a) ? JNI_TRUE : JNI_FALSE)
+#define jbool_to_bool(a) (((a) == JNI_TRUE) ? true : false)
+
+#define JINT_SZ sizeof(jint)
+#define JFLOAT_SZ sizeof(jfloat)
+

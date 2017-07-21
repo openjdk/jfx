@@ -1,4 +1,9 @@
 list(APPEND WTF_SOURCES
+    PlatformUserPreferredLanguagesUnix.cpp
+    UniStdExtras.cpp
+
+    text/efl/TextBreakIteratorInternalICUEfl.cpp
+
     efl/DispatchQueueEfl.cpp
     efl/MainThreadEfl.cpp
     efl/RunLoopEfl.cpp

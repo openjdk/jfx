@@ -1,22 +1,21 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef ColorChooserJava_h
-#define ColorChooserJava_h
+#pragma once
 
 #if ENABLE(INPUT_TYPE_COLOR)
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "ColorChooser.h"
 
 namespace WebCore {
 class ColorChooserClient;
 
-class ColorChooserJava : public ColorChooser {
+class ColorChooserJava final : public ColorChooser {
 public:
     ColorChooserJava(JGObject&, ColorChooserClient*, const Color&);
     ColorChooserClient* getClient() { return m_colorChooserClient; }
 
-    ~ColorChooserJava() { }
+    ~ColorChooserJava() override { }
     void reattachColorChooser(const Color&) override;
     void setSelectedColor(const Color&) override;
     void endChooser() override;
@@ -29,5 +28,3 @@ private:
 } // namespace WebCore
 
 #endif  // #if ENABLE(INPUT_TYPE_COLOR)
-
-#endif  // ColorChooserJava_h

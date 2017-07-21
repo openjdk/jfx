@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CachedHTMLCollection_h
-#define CachedHTMLCollection_h
+#pragma once
 
 #include "CollectionTraversal.h"
 #include "HTMLCollection.h"
@@ -39,10 +38,10 @@ public:
 
     virtual ~CachedHTMLCollection();
 
-    virtual unsigned length() const override final { return m_indexCache.nodeCount(collection()); }
-    virtual Element* item(unsigned offset) const override { return m_indexCache.nodeAt(collection(), offset); }
-    virtual Element* namedItem(const AtomicString& name) const override;
-    virtual size_t memoryCost() const override final { return m_indexCache.memoryCost() + HTMLCollection::memoryCost(); }
+    unsigned length() const final { return m_indexCache.nodeCount(collection()); }
+    Element* item(unsigned offset) const override { return m_indexCache.nodeAt(collection(), offset); }
+    Element* namedItem(const AtomicString& name) const override;
+    size_t memoryCost() const final { return m_indexCache.memoryCost() + HTMLCollection::memoryCost(); }
 
     // For CollectionIndexCache; do not use elsewhere.
     using CollectionTraversalIterator = typename CollectionTraversal<traversalType>::Iterator;
@@ -54,7 +53,7 @@ public:
     bool collectionCanTraverseBackward() const { return traversalType != CollectionTraversalType::CustomForwardOnly; }
     void willValidateIndexCache() const { document().registerCollection(const_cast<CachedHTMLCollection<HTMLCollectionClass, traversalType>&>(*this)); }
 
-    virtual void invalidateCache(Document&) override;
+    void invalidateCache(Document&) override;
 
     bool elementMatches(Element&) const;
 
@@ -136,15 +135,18 @@ Element* CachedHTMLCollection<HTMLCollectionClass, traversalType>::namedItem(con
                 candidate = treeScope.getElementById(name);
         } else if (treeScope.hasElementWithName(*name.impl())) {
             if (!treeScope.containsMultipleElementsWithName(name)) {
-                candidate = treeScope.getElementByName(name);
-                if (candidate && type() == DocAll && !nameShouldBeVisibleInDocumentAll(*candidate))
-                    candidate = nullptr;
+                if ((candidate = treeScope.getElementByName(name))) {
+                    if (!is<HTMLElement>(*candidate))
+                        candidate = nullptr;
+                    else if (type() == DocAll && !nameShouldBeVisibleInDocumentAll(*candidate))
+                        candidate = nullptr;
+                }
             }
         } else
             return nullptr;
 
         if (candidate && collection().elementMatches(*candidate)) {
-            if (traversalType == CollectionTraversalType::ChildrenOnly ? candidate->parentNode() == &root : candidate->isDescendantOf(&root))
+            if (traversalType == CollectionTraversalType::ChildrenOnly ? candidate->parentNode() == &root : candidate->isDescendantOf(root))
                 return candidate;
         }
     }
@@ -153,6 +155,3 @@ Element* CachedHTMLCollection<HTMLCollectionClass, traversalType>::namedItem(con
 }
 
 } // namespace WebCore
-
-#endif // CachedHTMLCollection_h
-

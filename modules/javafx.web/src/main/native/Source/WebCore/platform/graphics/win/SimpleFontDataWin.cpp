@@ -37,6 +37,10 @@
 #include <wtf/MathExtras.h>
 #include <wtf/win/GDIObject.h>
 
+#if USE(DIRECT2D)
+#include <dwrite.h>
+#endif
+
 namespace WebCore {
 
 const float cSmallCapsFontSizeMultiplier = 0.7f;
@@ -135,11 +139,8 @@ void Font::platformDestroy()
 RefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescription, float scaleFactor) const
 {
     float scaledSize = scaleFactor * m_platformData.size();
-    if (isCustomFont()) {
-        FontPlatformData scaledFont(m_platformData);
-        scaledFont.setSize(scaledSize);
-        return Font::create(scaledFont, true, false);
-    }
+    if (isCustomFont())
+        return Font::create(FontPlatformData::cloneWithSize(m_platformData, scaledSize), true, false);
 
     LOGFONT winfont;
     GetObject(m_platformData.hfont(), sizeof(LOGFONT), &winfont);

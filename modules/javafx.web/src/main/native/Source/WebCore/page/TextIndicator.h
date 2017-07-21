@@ -23,12 +23,10 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TextIndicator_h
-#define TextIndicator_h
+#pragma once
 
 #include "FloatRect.h"
 #include "Image.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -101,13 +99,8 @@ public:
     // FIXME: These are fairly Mac-specific, and they don't really belong here.
     // But they're needed at TextIndicator creation time, so they can't go in TextIndicatorWindow.
     // Maybe they can live in some Theme code somewhere?
-#if ENABLE(CXX_11_FIX)
-    const static float defaultHorizontalMargin;
-    const static float defaultVerticalMargin;
-#else
     constexpr static float defaultHorizontalMargin { 2 };
     constexpr static float defaultVerticalMargin { 1 };
-#endif
 
     WEBCORE_EXPORT static Ref<TextIndicator> create(const TextIndicatorData&);
     WEBCORE_EXPORT static RefPtr<TextIndicator> createWithSelectionInFrame(Frame&, TextIndicatorOptions, TextIndicatorPresentationTransition, FloatSize margin = FloatSize(defaultHorizontalMargin, defaultVerticalMargin));
@@ -134,5 +127,3 @@ private:
 };
 
 } // namespace WebKit
-
-#endif // TextIndicator_h

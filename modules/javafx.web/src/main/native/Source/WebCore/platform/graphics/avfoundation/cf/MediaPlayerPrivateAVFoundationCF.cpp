@@ -61,7 +61,7 @@
 #include <d3d9.h>
 #include <delayimp.h>
 #include <dispatch/dispatch.h>
-#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(ENCRYPTED_MEDIA_V2)
+#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
 #include <runtime/DataView.h>
 #include <runtime/Uint16Array.h>
 #endif
@@ -82,6 +82,11 @@
 #else
 #pragma comment(lib, "libdispatch.lib")
 #endif
+
+enum {
+    AVAssetReferenceRestrictionForbidRemoteReferenceToLocal = (1UL << 0),
+    AVAssetReferenceRestrictionForbidLocalReferenceToRemote = (1UL << 1)
+};
 
 using namespace std;
 
@@ -150,7 +155,7 @@ public:
 #endif
     inline dispatch_queue_t dispatchQueue() const { return m_notificationQueue; }
 
-#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(ENCRYPTED_MEDIA_V2)
+#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
     RetainPtr<AVCFAssetResourceLoadingRequestRef> takeRequestForKeyURI(const String&);
     void setRequestForKey(const String& keyURI, AVCFAssetResourceLoadingRequestRef avRequest);
 #endif
@@ -863,7 +868,11 @@ void MediaPlayerPrivateAVFoundationCF::paint(GraphicsContext& context, const Flo
         context.scale(FloatSize(1.0f, -1.0f));
         context.setImageInterpolationQuality(InterpolationLow);
         FloatRect paintRect(FloatPoint(), rect.size());
+#if USE(DIRECT2D)
+        notImplemented();
+#else
         CGContextDrawImage(context.platformContext(), CGRectMake(0, 0, paintRect.width(), paintRect.height()), image.get());
+#endif
         context.restore();
         image = 0;
     }
@@ -872,7 +881,7 @@ void MediaPlayerPrivateAVFoundationCF::paint(GraphicsContext& context, const Flo
     m_videoFrameHasDrawn = true;
 }
 
-#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(ENCRYPTED_MEDIA_V2)
+#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
 static bool keySystemIsSupported(const String& keySystem)
 {
@@ -926,7 +935,7 @@ MediaPlayer::SupportsType MediaPlayerPrivateAVFoundationCF::supportsType(const M
 
 bool MediaPlayerPrivateAVFoundationCF::supportsKeySystem(const String& keySystem, const String& mimeType)
 {
-#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(ENCRYPTED_MEDIA_V2)
+#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
     if (keySystem.isEmpty())
         return false;
 
@@ -1112,7 +1121,8 @@ bool MediaPlayerPrivateAVFoundationCF::requiresImmediateCompositing() const
     return true;
 }
 
-#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(ENCRYPTED_MEDIA_V2)
+#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
+
 RetainPtr<AVCFAssetResourceLoadingRequestRef> MediaPlayerPrivateAVFoundationCF::takeRequestForKeyURI(const String& keyURI)
 {
     if (!m_avfWrapper)
@@ -1126,13 +1136,16 @@ std::unique_ptr<CDMSession> MediaPlayerPrivateAVFoundationCF::createSession(cons
     if (!keySystemIsSupported(keySystem))
         return nullptr;
 
-    return std::make_unique<CDMSessionAVFoundationCF>(this, client);
+    return std::make_unique<CDMSessionAVFoundationCF>(*this, client);
 }
-#elif ENABLE(ENCRYPTED_MEDIA_V2)
-std::unique_ptr<CDMSession> MediaPlayerPrivateAVFoundationCF::createSession(const String& keySystem, , CDMSessionClient*)
+
+#elif ENABLE(LEGACY_ENCRYPTED_MEDIA)
+
+std::unique_ptr<CDMSession> MediaPlayerPrivateAVFoundationCF::createSession(const String& keySystem, CDMSessionClient*)
 {
     return nullptr;
 }
+
 #endif
 
 long MediaPlayerPrivateAVFoundationCF::assetErrorCode() const
@@ -1329,6 +1342,26 @@ void MediaPlayerPrivateAVFoundationCF::contentsNeedsDisplay()
         m_avfWrapper->setVideoLayerNeedsCommit();
 }
 
+URL MediaPlayerPrivateAVFoundationCF::resolvedURL() const
+{
+    if (!m_avfWrapper || !m_avfWrapper->avAsset())
+        return URL();
+
+    auto resolvedURL = adoptCF(AVCFAssetCopyResolvedURL(m_avfWrapper->avAsset()));
+
+    return URL(resolvedURL.get());
+}
+
+bool MediaPlayerPrivateAVFoundationCF::hasSingleSecurityOrigin() const
+{
+    if (!m_avfWrapper || !m_avfWrapper->avAsset())
+        return false;
+
+    Ref<SecurityOrigin> resolvedOrigin(SecurityOrigin::create(resolvedURL()));
+    Ref<SecurityOrigin> requestedOrigin(SecurityOrigin::createFromString(assetURL()));
+    return resolvedOrigin->isSameSchemeHostPort(requestedOrigin.get());
+}
+
 AVFWrapper::AVFWrapper(MediaPlayerPrivateAVFoundationCF* owner)
     : m_owner(owner)
     , m_objectID(s_nextAVFWrapperObjectID++)
@@ -1487,6 +1520,11 @@ void AVFWrapper::createAssetForURL(const String& url, bool inheritURI)
 
     if (inheritURI)
         CFDictionarySetValue(optionsRef.get(), AVCFURLAssetInheritURIQueryComponentFromReferencingURIKey, kCFBooleanTrue);
+
+    const int restrictions = AVAssetReferenceRestrictionForbidRemoteReferenceToLocal | AVAssetReferenceRestrictionForbidLocalReferenceToRemote;
+    auto cfRestrictions = adoptCF(CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &restrictions));
+
+    CFDictionarySetValue(optionsRef.get(), AVCFURLAssetReferenceRestrictionsKey, cfRestrictions.get());
 
     m_avAsset = adoptCF(AVCFURLAssetCreateWithURLAndOptions(kCFAllocatorDefault, urlRef.get(), optionsRef.get(), m_notificationQueue));
 
@@ -1858,7 +1896,7 @@ void AVFWrapper::processShouldWaitForLoadingOfResource(void* context)
 
 bool AVFWrapper::shouldWaitForLoadingOfResource(AVCFAssetResourceLoadingRequestRef avRequest)
 {
-#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(ENCRYPTED_MEDIA_V2)
+#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
     RetainPtr<CFURLRequestRef> urlRequest = AVCFAssetResourceLoadingRequestGetURLRequest(avRequest);
     RetainPtr<CFURLRef> requestURL = CFURLRequestGetURL(urlRequest.get());
     RetainPtr<CFStringRef> schemeRef = adoptCF(CFURLCopyScheme(requestURL.get()));
@@ -1873,13 +1911,14 @@ bool AVFWrapper::shouldWaitForLoadingOfResource(AVCFAssetResourceLoadingRequestR
         // [4 bytes: keyURI size], [keyURI size bytes: keyURI]
         unsigned keyURISize = keyURI.length() * sizeof(UChar);
         RefPtr<ArrayBuffer> initDataBuffer = ArrayBuffer::create(4 + keyURISize, 1);
-        RefPtr<JSC::DataView> initDataView = JSC::DataView::create(initDataBuffer, 0, initDataBuffer->byteLength());
+        RefPtr<JSC::DataView> initDataView = JSC::DataView::create(initDataBuffer.copyRef(), 0, initDataBuffer->byteLength());
         initDataView->set<uint32_t>(0, keyURISize, true);
 
-        RefPtr<Uint16Array> keyURIArray = Uint16Array::create(initDataBuffer, 4, keyURI.length());
+        RefPtr<Uint16Array> keyURIArray = Uint16Array::create(initDataBuffer.copyRef(), 4, keyURI.length());
         keyURIArray->setRange(reinterpret_cast<const uint16_t*>(StringView(keyURI).upconvertedCharacters().get()), keyURI.length() / sizeof(unsigned char), 0);
 
-        RefPtr<Uint8Array> initData = Uint8Array::create(initDataBuffer, 0, initDataBuffer->byteLength());
+        unsigned byteLength = initDataBuffer->byteLength();
+        RefPtr<Uint8Array> initData = Uint8Array::create(WTFMove(initDataBuffer), 0, byteLength);
         if (!m_owner->player()->keyNeeded(initData.get()))
             return false;
 
@@ -2055,7 +2094,7 @@ void AVFWrapper::updateVideoLayerGravity()
     // FIXME: <rdar://problem/14884340>
 }
 
-#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(ENCRYPTED_MEDIA_V2)
+#if HAVE(AVFOUNDATION_LOADER_DELEGATE) && ENABLE(LEGACY_ENCRYPTED_MEDIA)
 void AVFWrapper::setRequestForKey(const String& keyURI, AVCFAssetResourceLoadingRequestRef avRequest)
 {
     auto requestsIterator = m_keyURIToRequestMap.find(keyURI);

@@ -25,14 +25,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ReplayController_h
-#define ReplayController_h
+#pragma once
 
 #if ENABLE(WEB_REPLAY)
 
 #include "EventLoopInputDispatcher.h"
 #include <wtf/Noncopyable.h>
-#include <wtf/Vector.h>
 
 // Determinism assertions are guarded by this macro. When a user-facing error reporting and
 // recovery mechanism is implemented, this guard can be removed. <https://webkit.org/b/131279>
@@ -132,7 +130,7 @@ public:
     void switchSession(RefPtr<ReplaySession>&&);
 
     // InspectorReplayAgent notifications.
-    void frameNavigated(DocumentLoader*);
+    void frameNavigated(Frame&);
     void frameDetached(Frame&);
     void willDispatchEvent(const Event&, Frame*);
 
@@ -149,9 +147,9 @@ public:
 
 private:
     // EventLoopInputDispatcherClient API
-    virtual void willDispatchInput(const EventLoopInputBase&) override;
-    virtual void didDispatchInput(const EventLoopInputBase&) override;
-    virtual void didDispatchFinalInput() override;
+    void willDispatchInput(const EventLoopInputBase&) override;
+    void didDispatchInput(const EventLoopInputBase&) override;
+    void didDispatchFinalInput() override;
 
     void createSegment();
     void completeSegment();
@@ -197,5 +195,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // ReplayController_h

@@ -248,6 +248,7 @@ private:
         }
 
         case ArithAdd: {
+            flags &= ~NodeBytecodeUsesAsOther;
             if (isNotNegZero(node->child1().node()) || isNotNegZero(node->child2().node()))
                 flags &= ~NodeBytecodeNeedsNegZero;
             if (!isWithinPowerOfTwo<32>(node->child1()) && !isWithinPowerOfTwo<32>(node->child2()))
@@ -268,6 +269,7 @@ private:
         }
 
         case ArithSub: {
+            flags &= ~NodeBytecodeUsesAsOther;
             if (isNotNegZero(node->child1().node()) || isNotPosZero(node->child2().node()))
                 flags &= ~NodeBytecodeNeedsNegZero;
             if (!isWithinPowerOfTwo<32>(node->child1()) && !isWithinPowerOfTwo<32>(node->child2()))
@@ -358,7 +360,8 @@ private:
             break;
         }
 
-        case ToPrimitive: {
+        case ToPrimitive:
+        case ToNumber: {
             node->child1()->mergeFlags(flags);
             break;
         }
@@ -426,7 +429,6 @@ private:
 
 bool performBackwardsPropagation(Graph& graph)
 {
-    SamplingRegion samplingRegion("DFG Backwards Propagation Phase");
     return runPhase<BackwardsPropagationPhase>(graph);
 }
 

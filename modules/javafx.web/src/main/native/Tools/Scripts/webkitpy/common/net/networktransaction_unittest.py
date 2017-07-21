@@ -82,7 +82,7 @@ class NetworkTransactionTest(LoggingTestCase):
 
     def test_timeout(self):
         self._run_count = 0
-        transaction = NetworkTransaction(initial_backoff_seconds=60*60, timeout_seconds=60)
+        transaction = NetworkTransaction(initial_backoff_seconds=60 * 60, timeout_seconds=60)
         did_process_exception = False
         did_throw_exception = True
         try:

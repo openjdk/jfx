@@ -28,8 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WorkerRunLoop_h
-#define WorkerRunLoop_h
+#pragma once
 
 #include "ScriptExecutionContext.h"
 #include <memory>
@@ -57,18 +56,19 @@ namespace WebCore {
         void terminate();
         bool terminated() const { return m_messageQueue.killed(); }
 
-        void postTask(ScriptExecutionContext::Task);
-        void postTaskAndTerminate(ScriptExecutionContext::Task);
-        void postTaskForMode(ScriptExecutionContext::Task, const String& mode);
+        void postTask(ScriptExecutionContext::Task&&);
+        void postTaskAndTerminate(ScriptExecutionContext::Task&&);
+        void postTaskForMode(ScriptExecutionContext::Task&&, const String& mode);
 
         unsigned long createUniqueId() { return ++m_uniqueId; }
 
         static String defaultMode();
+        static String debuggerMode();
 
         class Task {
             WTF_MAKE_NONCOPYABLE(Task); WTF_MAKE_FAST_ALLOCATED;
         public:
-            Task(ScriptExecutionContext::Task, const String& mode);
+            Task(ScriptExecutionContext::Task&&, const String& mode);
             const String& mode() const { return m_mode; }
             void performTask(const WorkerRunLoop&, WorkerGlobalScope*);
 
@@ -85,6 +85,8 @@ namespace WebCore {
         // This should only be called when the context is closed or loop has been terminated.
         void runCleanupTasks(WorkerGlobalScope*);
 
+        bool isNested() const { return m_nestedCount > 1; }
+
         MessageQueue<Task> m_messageQueue;
         std::unique_ptr<WorkerSharedTimer> m_sharedTimer;
         int m_nestedCount;
@@ -92,5 +94,3 @@ namespace WebCore {
     };
 
 } // namespace WebCore
-
-#endif // WorkerRunLoop_h

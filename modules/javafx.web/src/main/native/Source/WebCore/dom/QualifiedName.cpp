@@ -35,7 +35,6 @@
 #include <wtf/HashSet.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StaticConstructors.h>
-#include <wtf/text/StringBuilder.h>
 
 #if ENABLE(MATHML)
 #include "MathMLNames.h"
@@ -89,14 +88,6 @@ QualifiedName::QualifiedName(const AtomicString& p, const AtomicString& l, const
 QualifiedName::QualifiedNameImpl::~QualifiedNameImpl()
 {
     qualifiedNameCache().remove(this);
-}
-
-String QualifiedName::toString() const
-{
-    if (!hasPrefix())
-        return localName();
-
-    return prefix().string() + ':' + localName().string();
 }
 
 // Global init routines

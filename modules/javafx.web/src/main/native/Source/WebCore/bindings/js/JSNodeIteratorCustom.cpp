@@ -20,7 +20,6 @@
 #include "config.h"
 #include "JSNodeIterator.h"
 
-#include "DOMWrapperWorld.h"
 #include "Node.h"
 #include <heap/SlotVisitorInlines.h>
 

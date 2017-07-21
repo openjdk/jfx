@@ -36,7 +36,8 @@
 #include "LinkRelAttribute.h"
 #include "MediaList.h"
 #include "MediaQueryEvaluator.h"
-#include "SourceSizeList.h"
+#include "RenderView.h"
+#include "SizesAttributeParser.h"
 #include <wtf/MainThread.h>
 
 namespace WebCore {
@@ -46,8 +47,6 @@ using namespace HTMLNames;
 TokenPreloadScanner::TagId TokenPreloadScanner::tagIdFor(const HTMLToken::DataVector& data)
 {
     AtomicString tagName(data);
-    if (tagName == iframeTag)
-        return TagId::Iframe;
     if (tagName == imgTag)
         return TagId::Img;
     if (tagName == inputTag)
@@ -74,17 +73,15 @@ TokenPreloadScanner::TagId TokenPreloadScanner::tagIdFor(const HTMLToken::DataVe
 String TokenPreloadScanner::initiatorFor(TagId tagId)
 {
     switch (tagId) {
-    case TagId::Iframe:
-        return "iframe";
     case TagId::Source:
     case TagId::Img:
-        return "img";
+        return ASCIILiteral("img");
     case TagId::Input:
-        return "input";
+        return ASCIILiteral("input");
     case TagId::Link:
-        return "link";
+        return ASCIILiteral("link");
     case TagId::Script:
-        return "script";
+        return ASCIILiteral("script");
     case TagId::Unknown:
     case TagId::Style:
     case TagId::Base:
@@ -92,10 +89,10 @@ String TokenPreloadScanner::initiatorFor(TagId tagId)
     case TagId::Meta:
     case TagId::Picture:
         ASSERT_NOT_REACHED();
-        return "unknown";
+        return ASCIILiteral("unknown");
     }
     ASSERT_NOT_REACHED();
-    return "unknown";
+    return ASCIILiteral("unknown");
 }
 
 class TokenPreloadScanner::StartTagScanner {
@@ -122,7 +119,8 @@ public:
         }
 
         if (m_tagId == TagId::Source && !pictureState.isEmpty() && !pictureState.last() && m_mediaMatched && !m_srcSetAttribute.isEmpty()) {
-            float sourceSize = parseSizesAttribute(m_sizesAttribute, document.renderView(), document.frame());
+
+            auto sourceSize = SizesAttributeParser(m_sizesAttribute, document).length();
             ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, m_urlToLoad, m_srcSetAttribute, sourceSize);
             if (!imageCandidate.isEmpty()) {
                 pictureState.last() = true;
@@ -132,7 +130,7 @@ public:
 
         // Resolve between src and srcSet if we have them and the tag is img.
         if (m_tagId == TagId::Img && !m_srcSetAttribute.isEmpty()) {
-            float sourceSize = parseSizesAttribute(m_sizesAttribute, document.renderView(), document.frame());
+            auto sourceSize = SizesAttributeParser(m_sizesAttribute, document).length();
             ImageCandidate imageCandidate = bestFitSourceForImageAttributes(m_deviceScaleFactor, m_urlToLoad, m_srcSetAttribute, sourceSize);
             setUrlToLoad(imageCandidate.string.toString(), true);
         }
@@ -146,9 +144,13 @@ public:
         if (!shouldPreload())
             return nullptr;
 
-        auto request = std::make_unique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, resourceType(), m_mediaAttribute);
+        auto request = std::make_unique<PreloadRequest>(initiatorFor(m_tagId), m_urlToLoad, predictedBaseURL, resourceType(), m_mediaAttribute, m_moduleScript);
+        request->setCrossOriginMode(m_crossOriginMode);
+        request->setNonce(m_nonceAttribute);
 
-        request->setCrossOriginModeAllowsCookies(crossOriginModeAllowsCookies());
+        // According to the spec, the module tag ignores the "charset" attribute as the same to the worker's
+        // importScript. But WebKit supports the "charset" for importScript intentionally. So to be consistent,
+        // even for the module tags, we handle the "charset" attribute.
         request->setCharset(charset());
         return request;
     }
@@ -164,7 +166,7 @@ private:
     {
         if (match(attributeName, srcAttr))
             setUrlToLoad(attributeValue);
-        else if (match(attributeName, crossoriginAttr) && !attributeValue.isNull())
+        else if (match(attributeName, crossoriginAttr))
             m_crossOriginMode = stripLeadingAndTrailingHTMLSpaces(attributeValue);
         else if (match(attributeName, charsetAttr))
             m_charset = attributeValue;
@@ -176,10 +178,6 @@ private:
         bool alreadyMatchedSource = inPicture && pictureState.last();
 
         switch (m_tagId) {
-        case TagId::Iframe:
-            if (match(attributeName, srcAttr))
-                setUrlToLoad(attributeValue);
-            break;
         case TagId::Img:
             if (inPicture && alreadyMatchedSource)
                 break;
@@ -206,13 +204,17 @@ private:
             }
             if (match(attributeName, mediaAttr) && m_mediaAttribute.isNull()) {
                 m_mediaAttribute = attributeValue;
-                Ref<MediaQuerySet> mediaSet = MediaQuerySet::createAllowingDescriptionSyntax(attributeValue);
-                Vector<std::unique_ptr<MediaQueryResult>> viewportDependentMediaQueryResults;
-                MediaQueryEvaluator evaluator(document.printing() ? "print" : "screen", document.frame(), document.documentElement() ? document.documentElement()->computedStyle() : nullptr);
-                m_mediaMatched = evaluator.evalCheckingViewportDependentResults(mediaSet.ptr(), viewportDependentMediaQueryResults);
+                auto mediaSet = MediaQuerySet::create(attributeValue);
+                auto* documentElement = document.documentElement();
+                m_mediaMatched = MediaQueryEvaluator { document.printing() ? "print" : "screen", document, documentElement ? documentElement->computedStyle() : nullptr }.evaluate(mediaSet.get());
             }
             break;
         case TagId::Script:
+            if (match(attributeName, typeAttr)) {
+                m_moduleScript = equalLettersIgnoringASCIICase(attributeValue, "module") ? PreloadRequest::ModuleScript::Yes : PreloadRequest::ModuleScript::No;
+                break;
+            } else if (match(attributeName, nonceAttr))
+                m_nonceAttribute = attributeValue;
             processImageAndScriptAttribute(attributeName, attributeValue);
             break;
         case TagId::Link:
@@ -224,6 +226,10 @@ private:
                 m_mediaAttribute = attributeValue;
             else if (match(attributeName, charsetAttr))
                 m_charset = attributeValue;
+            else if (match(attributeName, crossoriginAttr))
+                m_crossOriginMode = stripLeadingAndTrailingHTMLSpaces(attributeValue);
+            else if (match(attributeName, nonceAttr))
+                m_nonceAttribute = attributeValue;
             break;
         case TagId::Input:
             if (match(attributeName, srcAttr))
@@ -249,7 +255,7 @@ private:
     static bool relAttributeIsStyleSheet(const String& attributeValue)
     {
         LinkRelAttribute parsedAttribute { attributeValue };
-        return parsedAttribute.isStyleSheet && !parsedAttribute.isAlternate && parsedAttribute.iconType == InvalidIcon && !parsedAttribute.isDNSPrefetch;
+        return parsedAttribute.isStyleSheet && !parsedAttribute.isAlternate && !parsedAttribute.iconType && !parsedAttribute.isDNSPrefetch;
     }
 
     void setUrlToLoad(const String& value, bool allowReplacement = false)
@@ -272,8 +278,6 @@ private:
     CachedResource::Type resourceType() const
     {
         switch (m_tagId) {
-        case TagId::Iframe:
-            return CachedResource::MainResource;
         case TagId::Script:
             return CachedResource::Script;
         case TagId::Img:
@@ -313,11 +317,6 @@ private:
         return true;
     }
 
-    bool crossOriginModeAllowsCookies()
-    {
-        return m_crossOriginMode.isNull() || equalLettersIgnoringASCIICase(m_crossOriginMode, "use-credentials");
-    }
-
     TagId m_tagId;
     String m_urlToLoad;
     String m_srcSetAttribute;
@@ -327,10 +326,12 @@ private:
     String m_crossOriginMode;
     bool m_linkIsStyleSheet;
     String m_mediaAttribute;
+    String m_nonceAttribute;
     String m_metaContent;
     bool m_metaIsViewport;
     bool m_inputIsImage;
     float m_deviceScaleFactor;
+    PreloadRequest::ModuleScript m_moduleScript { PreloadRequest::ModuleScript::No };
 };
 
 TokenPreloadScanner::TokenPreloadScanner(const URL& documentURL, float deviceScaleFactor)
@@ -350,13 +351,11 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
 
     case HTMLToken::EndTag: {
         TagId tagId = tagIdFor(token.name());
-#if ENABLE(TEMPLATE_ELEMENT)
         if (tagId == TagId::Template) {
             if (m_templateCount)
                 --m_templateCount;
             return;
         }
-#endif
         if (tagId == TagId::Style) {
             if (m_inStyle)
                 m_cssScanner.reset();
@@ -368,17 +367,13 @@ void TokenPreloadScanner::scan(const HTMLToken& token, Vector<std::unique_ptr<Pr
     }
 
     case HTMLToken::StartTag: {
-#if ENABLE(TEMPLATE_ELEMENT)
         if (m_templateCount)
             return;
-#endif
         TagId tagId = tagIdFor(token.name());
-#if ENABLE(TEMPLATE_ELEMENT)
         if (tagId == TagId::Template) {
             ++m_templateCount;
             return;
         }
-#endif
         if (tagId == TagId::Style) {
             m_inStyle = true;
             return;

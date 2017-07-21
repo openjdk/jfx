@@ -1445,7 +1445,7 @@ bool TransformationMatrix::isInvertible() const
     return true;
 }
 
-Optional<TransformationMatrix> TransformationMatrix::inverse() const
+std::optional<TransformationMatrix> TransformationMatrix::inverse() const
 {
     if (isIdentityOrTranslation()) {
         // identity matrix
@@ -1463,7 +1463,7 @@ Optional<TransformationMatrix> TransformationMatrix::inverse() const
     // FIXME: Use LU decomposition to apply the inverse instead of calculating the inverse explicitly.
     // Calculating the inverse of a 4x4 matrix using cofactors is numerically unstable and unnecessary to apply the inverse transformation to a point.
     if (!WebCore::inverse(m_matrix, invMat.m_matrix))
-        return Nullopt;
+        return std::nullopt;
 
     return invMat;
 }
@@ -1501,8 +1501,11 @@ void TransformationMatrix::blend2(const TransformationMatrix& from, double progr
 {
     Decomposed2Type fromDecomp;
     Decomposed2Type toDecomp;
-    from.decompose2(fromDecomp);
-    decompose2(toDecomp);
+    if (!from.decompose2(fromDecomp) || !decompose2(toDecomp)) {
+        if (progress < 0.5)
+            *this = from;
+        return;
+    }
 
     // If x-axis of one is flipped, and y-axis of the other, convert to an unflipped rotation.
     if ((fromDecomp.scaleX < 0 && toDecomp.scaleY < 0) || (fromDecomp.scaleY < 0 && toDecomp.scaleX < 0)) {
@@ -1541,8 +1544,11 @@ void TransformationMatrix::blend4(const TransformationMatrix& from, double progr
 {
     Decomposed4Type fromDecomp;
     Decomposed4Type toDecomp;
-    from.decompose4(fromDecomp);
-    decompose4(toDecomp);
+    if (!from.decompose4(fromDecomp) || !decompose4(toDecomp)) {
+        if (progress < 0.5)
+            *this = from;
+        return;
+    }
 
     blendFloat(fromDecomp.scaleX, toDecomp.scaleX, progress);
     blendFloat(fromDecomp.scaleY, toDecomp.scaleY, progress);

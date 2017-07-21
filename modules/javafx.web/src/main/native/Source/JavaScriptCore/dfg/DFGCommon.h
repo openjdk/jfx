@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DFGCommon_h
-#define DFGCommon_h
+#pragma once
 
 #include "DFGCompilationMode.h"
 
@@ -98,8 +97,6 @@ inline bool enableInt52()
     return false;
 #endif
 }
-
-enum NoResultTag { NoResult };
 
 // The prediction propagator effectively does four passes, with the last pass
 // being done by the separate FixuPhase.
@@ -255,15 +252,6 @@ enum class PlanStage {
     AfterFixup
 };
 
-template<typename T, typename U>
-bool checkAndSet(T& left, U right)
-{
-    if (left == right)
-        return false;
-    left = right;
-    return true;
-}
-
 // If possible, this will acquire a lock to make sure that if multiple threads
 // start crashing at the same time, you get coherent dump output. Use this only
 // when you're forcing a crash with diagnostics.
@@ -385,6 +373,3 @@ namespace WTF {
 void printInternal(PrintStream&, JSC::DFG::CapabilityLevel);
 
 } // namespace WTF
-
-#endif // DFGCommon_h
-

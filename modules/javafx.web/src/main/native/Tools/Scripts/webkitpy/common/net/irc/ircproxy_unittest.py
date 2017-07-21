@@ -32,6 +32,7 @@ from webkitpy.common.net.irc.ircproxy import IRCProxy
 from webkitpy.common.system.outputcapture import OutputCapture
 from webkitpy.thirdparty.mock import Mock
 
+
 class IRCProxyTest(unittest.TestCase):
     def test_trivial(self):
         def fun():

@@ -160,9 +160,11 @@ void WebInspectorClient::didSetSearchingForNode(bool enabled)
 
     ASSERT(isMainThread());
 
-    if (enabled)
+    if (enabled) {
+        [[m_inspectedWebView window] makeKeyAndOrderFront:nil];
+        [[m_inspectedWebView window] makeFirstResponder:m_inspectedWebView];
         [[NSNotificationCenter defaultCenter] postNotificationName:WebInspectorDidStartSearchingForNode object:inspector];
-    else
+    } else
         [[NSNotificationCenter defaultCenter] postNotificationName:WebInspectorDidStopSearchingForNode object:inspector];
 }
 
@@ -189,7 +191,7 @@ void WebInspectorFrontendClient::attachAvailabilityChanged(bool available)
 
 bool WebInspectorFrontendClient::canAttach()
 {
-    if ([[m_frontendWindowController window] styleMask] & NSFullScreenWindowMask)
+    if ([[m_frontendWindowController window] styleMask] & NSWindowStyleMaskFullScreen)
         return false;
 
     return canAttachWindow();
@@ -384,6 +386,9 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     [preferences setPlugInsEnabled:NO];
     [preferences setTabsToLinks:NO];
     [preferences setUserStyleSheetEnabled:NO];
+    [preferences setAllowFileAccessFromFileURLs:YES];
+    [preferences setAllowUniversalAccessFromFileURLs:YES];
+    [preferences setStorageBlockingPolicy:WebAllowAllStorage];
 
     _frontendWebView = [[WebView alloc] init];
     [_frontendWebView setPreferences:preferences];
@@ -457,7 +462,7 @@ void WebInspectorFrontendClient::append(const String& suggestedURL, const String
     if (window)
         return window;
 
-    NSUInteger styleMask = NSTitledWindowMask | NSClosableWindowMask | NSMiniaturizableWindowMask | NSResizableWindowMask | NSFullSizeContentViewWindowMask;
+    NSUInteger styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | NSWindowStyleMaskFullSizeContentView;
     window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, initialWindowWidth, initialWindowHeight) styleMask:styleMask backing:NSBackingStoreBuffered defer:NO];
     [window setDelegate:self];
     [window setMinSize:NSMakeSize(minimumWindowWidth, minimumWindowHeight)];

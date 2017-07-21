@@ -28,6 +28,7 @@
 #ifndef RunLoop_h
 #define RunLoop_h
 
+#include <wtf/Condition.h>
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
 #include <wtf/FunctionDispatcher.h>
@@ -35,13 +36,8 @@
 #include <wtf/RetainPtr.h>
 #include <wtf/Threading.h>
 
-#if USE(GLIB)
+#if USE(GLIB_EVENT_LOOP)
 #include <wtf/glib/GRefPtr.h>
-#endif
-
-#if PLATFORM(EFL)
-#include <Ecore.h>
-#include <wtf/efl/UniquePtrEfl.h>
 #endif
 
 namespace WTF {
@@ -58,18 +54,27 @@ public:
     WTF_EXPORT_PRIVATE static bool isMain();
     ~RunLoop();
 
-    virtual void dispatch(std::function<void()>) override;
+    void dispatch(Function<void ()>&&) override;
 
     WTF_EXPORT_PRIVATE static void run();
     WTF_EXPORT_PRIVATE void stop();
     WTF_EXPORT_PRIVATE void wakeUp();
 
-#if PLATFORM(COCOA)
+#if USE(COCOA_EVENT_LOOP)
     WTF_EXPORT_PRIVATE void runForDuration(double duration);
 #endif
 
-#if USE(GLIB) && !PLATFORM(EFL)
+#if USE(GLIB_EVENT_LOOP)
     WTF_EXPORT_PRIVATE GMainContext* mainContext() const { return m_mainContext.get(); }
+#endif
+
+#if USE(GENERIC_EVENT_LOOP)
+    // Run the single iteration of the RunLoop. It consumes the pending tasks and expired timers, but it won't be blocked.
+    WTF_EXPORT_PRIVATE static void iterate();
+#endif
+
+#if USE(GLIB_EVENT_LOOP) || USE(GENERIC_EVENT_LOOP)
+    WTF_EXPORT_PRIVATE void dispatchAfter(std::chrono::nanoseconds, Function<void ()>&&);
 #endif
 
     class TimerBase {
@@ -81,13 +86,14 @@ public:
         void startRepeating(double repeatInterval) { start(repeatInterval, true); }
         void startRepeating(std::chrono::milliseconds repeatInterval) { startRepeating(repeatInterval.count() * 0.001); }
         void startOneShot(double interval) { start(interval, false); }
+        void startOneShot(std::chrono::milliseconds interval) { start(interval.count() * 0.001, false); }
 
         WTF_EXPORT_PRIVATE void stop();
         WTF_EXPORT_PRIVATE bool isActive() const;
 
         virtual void fired() = 0;
 
-#if USE(GLIB) && !PLATFORM(EFL)
+#if USE(GLIB_EVENT_LOOP)
         void setPriority(int);
 #endif
 
@@ -96,22 +102,21 @@ public:
 
         RunLoop& m_runLoop;
 
-#if PLATFORM(WIN)
+#if USE(WINDOWS_EVENT_LOOP)
         static void timerFired(RunLoop*, uint64_t ID);
         uint64_t m_ID;
         bool m_isRepeating;
-#elif PLATFORM(COCOA)
+#elif USE(COCOA_EVENT_LOOP)
         static void timerFired(CFRunLoopTimerRef, void*);
         RetainPtr<CFRunLoopTimerRef> m_timer;
-#elif PLATFORM(EFL)
-        static bool timerFired(void* data);
-        Ecore_Timer* m_timer;
-        bool m_isRepeating;
-#elif USE(GLIB)
+#elif USE(GLIB_EVENT_LOOP)
         void updateReadyTime();
         GRefPtr<GSource> m_source;
         bool m_isRepeating { false };
         std::chrono::microseconds m_fireInterval { 0 };
+#elif USE(GENERIC_EVENT_LOOP)
+        class ScheduledTask;
+        RefPtr<ScheduledTask> m_scheduledTask;
 #endif
     };
 
@@ -128,7 +133,7 @@ public:
         }
 
     private:
-        virtual void fired() { (m_object->*m_function)(); }
+        void fired() override { (m_object->*m_function)(); }
 
         TimerFiredClass* m_object;
         TimerFiredFunction m_function;
@@ -142,9 +147,9 @@ private:
     void performWork();
 
     Mutex m_functionQueueLock;
-    Deque<std::function<void ()>> m_functionQueue;
+    Deque<Function<void ()>> m_functionQueue;
 
-#if PLATFORM(WIN)
+#if USE(WINDOWS_EVENT_LOOP)
     static bool registerRunLoopMessageWindowClass();
     static LRESULT CALLBACK RunLoopWndProc(HWND, UINT, WPARAM, LPARAM);
     LRESULT wndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -152,23 +157,39 @@ private:
 
     typedef HashMap<uint64_t, TimerBase*> TimerMap;
     TimerMap m_activeTimers;
-#elif PLATFORM(COCOA)
+#elif USE(COCOA_EVENT_LOOP)
     static void performWork(void*);
     RetainPtr<CFRunLoopRef> m_runLoop;
     RetainPtr<CFRunLoopSourceRef> m_runLoopSource;
-    int m_nestingLevel;
-#elif PLATFORM(EFL)
-    Mutex m_pipeLock;
-    EflUniquePtr<Ecore_Pipe> m_pipe;
-
-    Mutex m_wakeUpEventRequestedLock;
-    bool m_wakeUpEventRequested;
-
-    static void wakeUpEvent(void* data, void*, unsigned);
-#elif USE(GLIB)
+#elif USE(GLIB_EVENT_LOOP)
     GRefPtr<GMainContext> m_mainContext;
     Vector<GRefPtr<GMainLoop>> m_mainLoops;
     GRefPtr<GSource> m_source;
+#elif USE(GENERIC_EVENT_LOOP)
+    void schedule(RefPtr<TimerBase::ScheduledTask>&&);
+    void schedule(const LockHolder&, RefPtr<TimerBase::ScheduledTask>&&);
+    void wakeUp(const LockHolder&);
+    void scheduleAndWakeUp(RefPtr<TimerBase::ScheduledTask>);
+
+    enum class RunMode {
+        Iterate,
+        Drain
+    };
+
+    enum class Status {
+        Clear,
+        Stopping,
+    };
+    void runImpl(RunMode);
+    bool populateTasks(RunMode, Status&, Deque<RefPtr<TimerBase::ScheduledTask>>&);
+
+    Lock m_loopLock;
+    Condition m_readyToRun;
+    Condition m_stopCondition;
+    Vector<RefPtr<TimerBase::ScheduledTask>> m_schedules;
+    Vector<Status*> m_mainLoops;
+    bool m_shutdown { false };
+    bool m_pendingTasks { false };
 #endif
 };
 

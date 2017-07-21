@@ -49,6 +49,12 @@ typedef struct _NSRect NSRect;
 
 #if PLATFORM(WIN)
 typedef struct tagRECT RECT;
+
+struct D2D_RECT_U;
+typedef D2D_RECT_U D2D1_RECT_U;
+
+struct D2D_RECT_F;
+typedef D2D_RECT_F D2D1_RECT_F;
 #endif
 
 #if USE(CAIRO)
@@ -85,6 +91,9 @@ public:
     int maxY() const { return y() + height(); }
     int width() const { return m_size.width(); }
     int height() const { return m_size.height(); }
+
+    template <typename T = WTF::CrashOnOverflow>
+    Checked<unsigned, T> area() const { return m_size.area<T>(); }
 
     void setX(int x) { m_location.setX(x); }
     void setY(int y) { m_location.setY(y); }
@@ -168,9 +177,10 @@ public:
 #if PLATFORM(WIN)
     IntRect(const RECT&);
     operator RECT() const;
-#elif PLATFORM(EFL)
-    explicit IntRect(const Eina_Rectangle&);
-    operator Eina_Rectangle() const;
+    explicit IntRect(const D2D1_RECT_F&);
+    IntRect(const D2D1_RECT_U&);
+    operator D2D1_RECT_F() const;
+    operator D2D1_RECT_U() const;
 #endif
 
 #if USE(CAIRO)

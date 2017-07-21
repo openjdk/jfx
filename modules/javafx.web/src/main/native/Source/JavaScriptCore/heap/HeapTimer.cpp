@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,126 +34,92 @@
 #include <wtf/MainThread.h>
 #include <wtf/Threading.h>
 
-#if PLATFORM(EFL)
-#include <Ecore.h>
-#elif USE(GLIB)
+#if USE(GLIB)
 #include <glib.h>
 #endif
 
 namespace JSC {
 
+void HeapTimer::timerDidFire()
+{
+    m_apiLock->lock();
+
+    RefPtr<VM> vm = m_apiLock->vm();
+    if (!vm) {
+        // The VM has been destroyed, so we should just give up.
+        m_apiLock->unlock();
+        return;
+    }
+
+    {
+        JSLockHolder locker(vm.get());
+        doWork();
+    }
+
+    m_apiLock->unlock();
+}
+
 #if USE(CF)
 
 const CFTimeInterval HeapTimer::s_decade = 60 * 60 * 24 * 365 * 10;
 
-static const void* retainAPILock(const void* info)
-{
-    static_cast<JSLock*>(const_cast<void*>(info))->ref();
-    return info;
-}
-
-static void releaseAPILock(const void* info)
-{
-    static_cast<JSLock*>(const_cast<void*>(info))->deref();
-}
-
-HeapTimer::HeapTimer(VM* vm, CFRunLoopRef runLoop)
-    : m_vm(vm)
-    , m_runLoop(runLoop)
-{
-    memset(&m_context, 0, sizeof(CFRunLoopTimerContext));
-    m_context.info = &vm->apiLock();
-    m_context.retain = retainAPILock;
-    m_context.release = releaseAPILock;
-    m_timer = adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, s_decade, s_decade, 0, 0, HeapTimer::timerDidFire, &m_context));
-    CFRunLoopAddTimer(m_runLoop.get(), m_timer.get(), kCFRunLoopCommonModes);
-}
-
-HeapTimer::~HeapTimer()
-{
-    CFRunLoopRemoveTimer(m_runLoop.get(), m_timer.get(), kCFRunLoopCommonModes);
-    CFRunLoopTimerInvalidate(m_timer.get());
-}
-
-void HeapTimer::timerDidFire(CFRunLoopTimerRef timer, void* context)
-{
-    JSLock* apiLock = static_cast<JSLock*>(context);
-    apiLock->lock();
-
-    VM* vm = apiLock->vm();
-    // The VM has been destroyed, so we should just give up.
-    if (!vm) {
-        apiLock->unlock();
-        return;
-    }
-
-    HeapTimer* heapTimer = 0;
-    if (vm->heap.fullActivityCallback() && vm->heap.fullActivityCallback()->m_timer.get() == timer)
-        heapTimer = vm->heap.fullActivityCallback();
-    else if (vm->heap.edenActivityCallback() && vm->heap.edenActivityCallback()->m_timer.get() == timer)
-        heapTimer = vm->heap.edenActivityCallback();
-    else if (vm->heap.sweeper()->m_timer.get() == timer)
-        heapTimer = vm->heap.sweeper();
-    else
-        RELEASE_ASSERT_NOT_REACHED();
-
-    {
-        JSLockHolder locker(vm);
-        heapTimer->doWork();
-    }
-
-    apiLock->unlock();
-}
-
-#elif PLATFORM(EFL)
-
 HeapTimer::HeapTimer(VM* vm)
     : m_vm(vm)
-    , m_timer(0)
+    , m_apiLock(&vm->apiLock())
 {
+    setRunLoop(vm->heap.runLoop());
+}
+
+void HeapTimer::setRunLoop(CFRunLoopRef runLoop)
+{
+    if (m_runLoop) {
+        CFRunLoopRemoveTimer(m_runLoop.get(), m_timer.get(), kCFRunLoopCommonModes);
+        CFRunLoopTimerInvalidate(m_timer.get());
+        m_runLoop.clear();
+        m_timer.clear();
+    }
+
+    if (runLoop) {
+        m_runLoop = runLoop;
+        memset(&m_context, 0, sizeof(CFRunLoopTimerContext));
+        m_context.info = this;
+        m_timer = adoptCF(CFRunLoopTimerCreate(kCFAllocatorDefault, s_decade, s_decade, 0, 0, HeapTimer::timerDidFireCallback, &m_context));
+        CFRunLoopAddTimer(m_runLoop.get(), m_timer.get(), kCFRunLoopCommonModes);
+    }
 }
 
 HeapTimer::~HeapTimer()
 {
-    stop();
+    setRunLoop(0);
 }
 
-Ecore_Timer* HeapTimer::add(double delay, void* agent)
+void HeapTimer::timerDidFireCallback(CFRunLoopTimerRef, void* contextPtr)
 {
-    return ecore_timer_add(delay, reinterpret_cast<Ecore_Task_Cb>(timerEvent), agent);
+    static_cast<HeapTimer*>(contextPtr)->timerDidFire();
 }
 
-void HeapTimer::stop()
+void HeapTimer::scheduleTimer(double intervalInSeconds)
 {
-    if (!m_timer)
-        return;
-
-    ecore_timer_del(m_timer);
-    m_timer = 0;
+    CFRunLoopTimerSetNextFireDate(m_timer.get(), CFAbsoluteTimeGetCurrent() + intervalInSeconds);
+    m_isScheduled = true;
 }
 
-bool HeapTimer::timerEvent(void* info)
+void HeapTimer::cancelTimer()
 {
-    HeapTimer* agent = static_cast<HeapTimer*>(info);
-
-    JSLockHolder locker(agent->m_vm);
-    agent->doWork();
-    agent->m_timer = 0;
-
-    return ECORE_CALLBACK_CANCEL;
+    CFRunLoopTimerSetNextFireDate(m_timer.get(), CFAbsoluteTimeGetCurrent() + s_decade);
+    m_isScheduled = false;
 }
 
 #elif USE(GLIB)
+
+const long HeapTimer::s_decade = 60 * 60 * 24 * 365 * 10;
 
 static GSourceFuncs heapTimerSourceFunctions = {
     nullptr, // prepare
     nullptr, // check
     // dispatch
-    [](GSource* source, GSourceFunc callback, gpointer userData) -> gboolean
+    [](GSource*, GSourceFunc callback, gpointer userData) -> gboolean
     {
-        if (g_source_get_ready_time(source) == -1)
-            return G_SOURCE_CONTINUE;
-        g_source_set_ready_time(source, -1);
         return callback(userData);
     },
     nullptr, // finalize
@@ -168,7 +134,9 @@ HeapTimer::HeapTimer(VM* vm)
 {
     g_source_set_name(m_timer.get(), "[JavaScriptCore] HeapTimer");
     g_source_set_callback(m_timer.get(), [](gpointer userData) -> gboolean {
-        static_cast<HeapTimer*>(userData)->timerDidFire();
+        auto& heapTimer = *static_cast<HeapTimer*>(userData);
+        g_source_set_ready_time(heapTimer.m_timer.get(), g_get_monotonic_time() + HeapTimer::s_decade * G_USEC_PER_SEC);
+        heapTimer.timerDidFire();
         return G_SOURCE_CONTINUE;
     }, this, nullptr);
     g_source_attach(m_timer.get(), g_main_context_get_thread_default());
@@ -179,24 +147,17 @@ HeapTimer::~HeapTimer()
     g_source_destroy(m_timer.get());
 }
 
-void HeapTimer::timerDidFire()
+void HeapTimer::scheduleTimer(double intervalInSeconds)
 {
-    m_apiLock->lock();
-
-    if (!m_apiLock->vm()) {
-        // The VM has been destroyed, so we should just give up.
-        m_apiLock->unlock();
-        return;
-    }
-
-    {
-        JSLockHolder locker(m_vm);
-        doWork();
-    }
-
-    m_apiLock->unlock();
+    g_source_set_ready_time(m_timer.get(), g_get_monotonic_time() + intervalInSeconds * G_USEC_PER_SEC);
+    m_isScheduled = true;
 }
 
+void HeapTimer::cancelTimer()
+{
+    g_source_set_ready_time(m_timer.get(), g_get_monotonic_time() + s_decade * G_USEC_PER_SEC);
+    m_isScheduled = false;
+}
 #else
 HeapTimer::HeapTimer(VM* vm)
     : m_vm(vm)
@@ -207,10 +168,13 @@ HeapTimer::~HeapTimer()
 {
 }
 
-void HeapTimer::invalidate()
+void HeapTimer::scheduleTimer(double)
 {
 }
 
+void HeapTimer::cancelTimer()
+{
+}
 #endif
 
 

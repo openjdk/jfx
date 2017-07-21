@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MockRealtimeAudioSource_h
-#define MockRealtimeAudioSource_h
+#pragma once
 
 #if ENABLE(MEDIA_STREAM)
 
@@ -43,21 +42,41 @@ namespace WebCore {
 class MockRealtimeAudioSource : public MockRealtimeMediaSource {
 public:
 
-    static RefPtr<MockRealtimeAudioSource> create();
+    static RefPtr<MockRealtimeAudioSource> create(const String&, const MediaConstraints*);
+    static RefPtr<MockRealtimeAudioSource> createMuted(const String& name);
 
-    virtual ~MockRealtimeAudioSource() { }
+    virtual ~MockRealtimeAudioSource() = default;
 
 protected:
-    MockRealtimeAudioSource();
+    MockRealtimeAudioSource(const String& name = ASCIILiteral("Mock audio device"));
+
+    void startProducingData() final;
+    void stopProducingData() final;
+
+    virtual void render(double) { }
+
+    double elapsedTime();
+    static int renderInterval() { return 60; }
 
 private:
+
+    bool applyVolume(double) override { return true; }
+    bool applySampleRate(int) override { return true; }
+    bool applySampleSize(int) override { return true; }
+    bool applyEchoCancellation(bool) override { return true; }
+
     void updateSettings(RealtimeMediaSourceSettings&) override;
     void initializeCapabilities(RealtimeMediaSourceCapabilities&) override;
     void initializeSupportedConstraints(RealtimeMediaSourceSupportedConstraints&) override;
+
+    void tick();
+
+    RunLoop::Timer<MockRealtimeAudioSource> m_timer;
+    double m_startTime { NAN };
+    double m_lastRenderTime { NAN };
+    double m_elapsedTime { 0 };
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(MEDIA_STREAM)
-
-#endif // MockRealtimeAudioSource_h

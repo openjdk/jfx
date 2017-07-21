@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,17 +50,17 @@ void FullGCActivityCallback::doCollection()
     double startTime = WTF::monotonicallyIncreasingTime();
     if (heap.isPagedOut(startTime + pagingTimeOut)) {
         cancel();
-        heap.increaseLastFullGCLength(pagingTimeOut);
+        heap.increaseLastFullGCLength(Seconds(pagingTimeOut));
         return;
     }
 #endif
 
-    heap.collect(FullCollection);
+    heap.collectAsync(CollectionScope::Full);
 }
 
 double FullGCActivityCallback::lastGCLength()
 {
-    return m_vm->heap.lastFullGCLength();
+    return m_vm->heap.lastFullGCLength().seconds();
 }
 
 double FullGCActivityCallback::deathRate()
@@ -110,6 +110,6 @@ double FullGCActivityCallback::gcTimeSlice(size_t)
     return 0;
 }
 
-#endif // USE(CF) || PLATFORM(EFL)
+#endif // USE(CF) || USE(GLIB)
 
 } // namespace JSC

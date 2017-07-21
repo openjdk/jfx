@@ -40,7 +40,6 @@
 #include "ScrollingTreeStickyNode.h"
 #include "ScrollingTreeIOS.h"
 #include <wtf/MainThread.h>
-#include <wtf/PassRefPtr.h>
 
 namespace WebCore {
 
@@ -53,7 +52,7 @@ ScrollingCoordinatorIOS::ScrollingCoordinatorIOS(Page* page)
     : AsyncScrollingCoordinator(page)
     , m_scrollingStateTreeCommitterTimer(*this, &ScrollingCoordinatorIOS::commitTreeState)
 {
-    setScrollingTree(ScrollingTreeIOS::create(this));
+    setScrollingTree(ScrollingTreeIOS::create(*this));
 }
 
 ScrollingCoordinatorIOS::~ScrollingCoordinatorIOS()

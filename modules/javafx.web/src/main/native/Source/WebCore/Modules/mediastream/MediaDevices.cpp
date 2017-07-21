@@ -33,29 +33,23 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "Dictionary.h"
 #include "Document.h"
+#include "MediaConstraintsImpl.h"
 #include "MediaDevicesRequest.h"
-#include "MediaStream.h"
 #include "MediaTrackSupportedConstraints.h"
 #include "RealtimeMediaSourceCenter.h"
-#include "UserMediaController.h"
 #include "UserMediaRequest.h"
 
 namespace WebCore {
 
-Ref<MediaDevices> MediaDevices::create(ScriptExecutionContext* context)
-{
-    return adoptRef(*new MediaDevices(context));
-}
-
-MediaDevices::MediaDevices(ScriptExecutionContext* context)
-    : ContextDestructionObserver(context)
+inline MediaDevices::MediaDevices(Document& document)
+    : ContextDestructionObserver(&document)
 {
 }
 
-MediaDevices::~MediaDevices()
+Ref<MediaDevices> MediaDevices::create(Document& document)
 {
+    return adoptRef(*new MediaDevices(document));
 }
 
 Document* MediaDevices::document() const
@@ -63,21 +57,50 @@ Document* MediaDevices::document() const
     return downcast<Document>(scriptExecutionContext());
 }
 
-void MediaDevices::getUserMedia(const Dictionary& options, Promise&& promise, ExceptionCode& ec) const
+static Ref<MediaConstraintsImpl> createMediaConstraintsImpl(const Variant<bool, MediaTrackConstraints>& constraints)
 {
-    UserMediaRequest::start(document(), options, WTFMove(promise), ec);
+    return WTF::switchOn(constraints,
+        [&] (bool constraints) {
+            return MediaConstraintsImpl::create({ }, { }, constraints);
+        },
+        [&] (const MediaTrackConstraints& constraints) {
+            return createMediaConstraintsImpl(constraints);
+        }
+    );
 }
 
-void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise, ExceptionCode& ec) const
+ExceptionOr<void> MediaDevices::getUserMedia(const StreamConstraints& constraints, Promise&& promise) const
 {
-    RefPtr<MediaDevicesRequest> request = MediaDevicesRequest::create(document(), WTFMove(promise), ec);
-    if (request)
-        request->start();
+    auto* document = this->document();
+    if (!document)
+        return Exception { INVALID_STATE_ERR };
+    return UserMediaRequest::start(*document, createMediaConstraintsImpl(constraints.audio), createMediaConstraintsImpl(constraints.video), WTFMove(promise));
 }
 
-RefPtr<MediaTrackSupportedConstraints> MediaDevices::getSupportedConstraints()
+void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise) const
 {
-    return MediaTrackSupportedConstraints::create(RealtimeMediaSourceCenter::singleton().supportedConstraints());
+    auto* document = this->document();
+    if (!document)
+        return;
+    MediaDevicesRequest::create(*document, WTFMove(promise))->start();
+}
+
+MediaTrackSupportedConstraints MediaDevices::getSupportedConstraints()
+{
+    auto& supported = RealtimeMediaSourceCenter::singleton().supportedConstraints();
+    MediaTrackSupportedConstraints result;
+    result.width = supported.supportsWidth();
+    result.height = supported.supportsHeight();
+    result.aspectRatio = supported.supportsAspectRatio();
+    result.frameRate = supported.supportsFrameRate();
+    result.facingMode = supported.supportsFacingMode();
+    result.volume = supported.supportsVolume();
+    result.sampleRate = supported.supportsSampleRate();
+    result.sampleSize = supported.supportsSampleSize();
+    result.echoCancellation = supported.supportsEchoCancellation();
+    result.deviceId = supported.supportsDeviceId();
+    result.groupId = supported.supportsGroupId();
+    return result;
 }
 
 } // namespace WebCore

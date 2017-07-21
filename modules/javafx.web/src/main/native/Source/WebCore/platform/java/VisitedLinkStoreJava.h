@@ -2,17 +2,16 @@
  * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 
-#ifndef VisitedLinkStoreJava_h
-#define VisitedLinkStoreJava_h
 
-#include <WebCore/LinkHash.h>
-#include <WebCore/VisitedLinkStore.h>
-#include <wtf/PassRef.h>
+#pragma once
+
+#include "LinkHash.h"
+#include "VisitedLinkStore.h"
 
 class VisitedLinkStoreJava final : public WebCore::VisitedLinkStore {
 public:
     static Ref<VisitedLinkStoreJava> create();
-    virtual ~VisitedLinkStoreJava();
+    ~VisitedLinkStoreJava() override;
 
     static void setShouldTrackVisitedLinks(bool);
     static void removeAllVisitedLinks();
@@ -22,8 +21,8 @@ public:
 private:
     VisitedLinkStoreJava();
 
-    virtual bool isLinkVisited(WebCore::Page&, WebCore::LinkHash, const WebCore::URL& baseURL, const AtomicString& attributeURL) override;
-    virtual void addVisitedLink(WebCore::Page&, WebCore::LinkHash) override;
+    bool isLinkVisited(WebCore::Page&, WebCore::LinkHash, const WebCore::URL& baseURL, const AtomicString& attributeURL) override;
+    void addVisitedLink(WebCore::Page&, WebCore::LinkHash) override;
 
     void populateVisitedLinksIfNeeded(WebCore::Page&);
     void addVisitedLinkHash(WebCore::LinkHash);
@@ -33,4 +32,3 @@ private:
     bool m_visitedLinksPopulated;
 };
 
-#endif // VisitedLinkStoreJava_h

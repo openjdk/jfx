@@ -77,18 +77,15 @@ void InspectorClientJava::hideHighlight()
     highlight();
 }
 
-bool InspectorClientJava::sendMessageToFrontend(const String& message)
+void InspectorClientJava::sendMessageToFrontend(const String& message)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
 
-    jboolean result = env->CallBooleanMethod(
-            m_webPage,
-            sendInspectorMessageToFrontendMethod,
-            (jstring) message.toJavaString(env));
+    env->CallBooleanMethod(m_webPage,
+                           sendInspectorMessageToFrontendMethod,
+                           (jstring)message.toJavaString(env));
     CheckAndClearException(env);
-
-    return jbool_to_bool(result);
 }
 
 } // namespace WebCore

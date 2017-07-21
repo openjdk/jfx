@@ -37,7 +37,6 @@
 #import "JavaScriptCore.h"
 #import "ObjcRuntimeExtras.h"
 #import "StrongInlines.h"
-#import <wtf/HashSet.h>
 
 #if JSC_OBJC_API_ENABLED
 
@@ -47,8 +46,6 @@
     JSWrapperMap *m_wrapperMap;
     JSC::Strong<JSC::JSObject> m_exception;
 }
-
-@synthesize exceptionHandler;
 
 - (JSGlobalContextRef)JSGlobalContextRef
 {
@@ -85,7 +82,7 @@
     [m_wrapperMap release];
     JSGlobalContextRelease(m_context);
     [m_virtualMachine release];
-    [self.exceptionHandler release];
+    [_exceptionHandler release];
     [super dealloc];
 }
 

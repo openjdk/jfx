@@ -17,7 +17,7 @@
 #include "NotImplemented.h"
 #include "DataObjectJava.h"
 #include "DragData.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/StringBuilder.h>
@@ -88,7 +88,7 @@ void jWriteSelection(bool canSmartCopyOrDelete, const String& plainText, const S
 void jWriteImage(const Image& image)
 {
     DEFINE_PB_STATIC_METHOD("writeImage", "(Lcom/sun/webkit/graphics/WCImageFrame;)V");
-    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()));
+    CALL_PB_STATIC_VOID_METHOD(jobject(*const_cast<Image&>(image).javaImage()->frame()));
 }
 
 void jWriteURL(const String& url, const String& markup)
@@ -125,7 +125,7 @@ CachedImage* getCachedImage(const Element& element)
     return 0;
 }
 
-void writeImageToDataObject(PassRefPtr<DataObjectJava> dataObject, const Element& element, const URL& url)
+void writeImageToDataObject(RefPtr<DataObjectJava> dataObject, const Element& element, const URL&)
 {
     if (!dataObject) {
         return;
@@ -186,14 +186,18 @@ String imageToMarkup(const String& url, const Element& element)
 // WebCore::Pasteboard impl
 ///////////////////////////
 
-Pasteboard::Pasteboard(PassRefPtr<DataObjectJava> dataObject, bool copyPasteMode = false) :
-    m_dataObject(dataObject),
+Pasteboard::Pasteboard(RefPtr<DataObjectJava> dataObject, bool copyPasteMode = false)
+  : m_dataObject(dataObject),
     m_copyPasteMode(copyPasteMode)
 {
     ASSERT(m_dataObject);
 }
 
-std::unique_ptr<Pasteboard> Pasteboard::create(PassRefPtr<DataObjectJava> dataObject)
+Pasteboard::Pasteboard() : Pasteboard(DataObjectJava::create())
+{
+}
+
+std::unique_ptr<Pasteboard> Pasteboard::create(RefPtr<DataObjectJava> dataObject)
 {
     return std::unique_ptr<Pasteboard>(new Pasteboard(dataObject));
 }
@@ -223,7 +227,7 @@ std::unique_ptr<Pasteboard> Pasteboard::createForDragAndDrop(const DragData& dra
     return create(dragData.platformData());
 }
 
-void Pasteboard::setDragImage(DragImageRef image, const IntPoint& hotSpot)
+void Pasteboard::setDragImage(DragImage, const IntPoint&)
 {
 }
 #endif
@@ -420,7 +424,7 @@ bool Pasteboard::canSmartReplace()
     return false;
 }
 
-PassRefPtr<DocumentFragment> Pasteboard::documentFragment(
+RefPtr<DocumentFragment> Pasteboard::documentFragment(
     Frame& frame,
     Range& range,
     bool allowPlainText,
@@ -433,7 +437,7 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(
         m_dataObject ? m_dataObject->asHTML() : String();
 
     if (!htmlString.isNull()) {
-        if (PassRefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
+        if (RefPtr<DocumentFragment> fragment = createFragmentFromMarkup(
                 *frame.document(),
                 htmlString,
                 String(),
@@ -444,7 +448,7 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(
     }
 
     if (!allowPlainText) {
-        return 0;
+        return nullptr;
     }
 
     String plainTextString = m_copyPasteMode ?
@@ -453,14 +457,14 @@ PassRefPtr<DocumentFragment> Pasteboard::documentFragment(
 
     if (!plainTextString.isNull()) {
         chosePlainText = true;
-        if (PassRefPtr<DocumentFragment> fragment = createFragmentFromText(
+        if (RefPtr<DocumentFragment> fragment = createFragmentFromText(
                 range,
                 plainTextString))
         {
             return fragment;
         }
     }
-    return 0;
+    return nullptr;
 }
 
 void Pasteboard::writePasteboard(const Pasteboard& sourcePasteboard)
@@ -474,6 +478,27 @@ void Pasteboard::writePasteboard(const Pasteboard& sourcePasteboard)
         if (data->containsHTML()) jWriteSelection(false, data->asPlainText(), data->asHTML());
         if (data->containsPlainText()) jWritePlainText(data->asPlainText());
     }
+}
+
+void Pasteboard::read(PasteboardWebContentReader&)
+{
+}
+
+void Pasteboard::write(const PasteboardImage&)
+{
+}
+
+void Pasteboard::write(const PasteboardWebContent&)
+{
+}
+
+void Pasteboard::writeMarkup(const String&)
+{
+}
+
+void Pasteboard::writeTrustworthyWebURLsPboardType(const PasteboardURL&)
+{
+    notImplemented();
 }
 
 } // namespace WebCore

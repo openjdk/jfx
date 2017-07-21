@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "Exception.h"
 
+#include "Interpreter.h"
 #include "JSCInlines.h"
 
 namespace JSC {
@@ -56,7 +57,7 @@ void Exception::visitChildren(JSCell* cell, SlotVisitor& visitor)
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
 
-    visitor.append(&thisObject->m_value);
+    visitor.append(thisObject->m_value);
 }
 
 Exception::Exception(VM& vm)
@@ -77,7 +78,7 @@ void Exception::finishCreation(VM& vm, JSValue thrownValue, StackCaptureAction a
     Vector<StackFrame> stackTrace;
     if (action == StackCaptureAction::CaptureStack)
         vm.interpreter->getStackTrace(stackTrace);
-    m_stack = RefCountedArray<StackFrame>(stackTrace);
+    m_stack = WTFMove(stackTrace);
 }
 
 } // namespace JSC

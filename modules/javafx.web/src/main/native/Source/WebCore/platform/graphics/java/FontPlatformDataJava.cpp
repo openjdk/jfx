@@ -1,9 +1,10 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
 #include "FontPlatformData.h"
+#include "FontDescription.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"
 
@@ -13,7 +14,9 @@
 
 namespace WebCore {
 
-PassRefPtr<RQRef> FontPlatformData::getJavaFont(const String& family, float size, bool italic, bool bold)
+namespace {
+
+RefPtr<RQRef> getJavaFont(const String& family, float size, bool italic, bool bold)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -31,17 +34,24 @@ PassRefPtr<RQRef> FontPlatformData::getJavaFont(const String& family, float size
 
     return RQRef::create(wcFont);
 }
+}
+
+FontPlatformData::FontPlatformData(RefPtr<RQRef> font, float size)
+    : m_jFont(font)
+    , m_size(size)
+{
+}
 
 std::unique_ptr<FontPlatformData> FontPlatformData::create(
         const FontDescription& fontDescription, const AtomicString& family)
 {
     FontWeight weight = fontDescription.weight();
-    PassRefPtr<RQRef> wcFont = getJavaFont(
+    RefPtr<RQRef> wcFont = getJavaFont(
             family,
             fontDescription.computedSize(),
             fontDescription.italic(),
             (FontWeightBold <= weight) && (weight <= FontWeight900));
-    return !wcFont ? nullptr : std::unique_ptr<FontPlatformData>(new FontPlatformData(wcFont, fontDescription.computedSize()));
+    return !wcFont ? nullptr : std::make_unique<FontPlatformData>(wcFont, fontDescription.computedSize());
 }
 
 std::unique_ptr<FontPlatformData> FontPlatformData::derive(float scaleFactor) const
@@ -57,24 +67,10 @@ std::unique_ptr<FontPlatformData> FontPlatformData::derive(float scaleFactor) co
     JLObject wcFont(env->CallObjectMethod(*m_jFont, createScaledMID, size));
     CheckAndClearException(env);
 
-    return std::unique_ptr<FontPlatformData>(new FontPlatformData(RQRef::create(wcFont), size));
+    return std::make_unique<FontPlatformData>(RQRef::create(wcFont), size);
 }
 
-jint FontPlatformData::getJavaFontID(const JLObject &font)
-{
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    static jmethodID mid = env->GetStaticMethodID(PG_GetGraphicsManagerClass(env), "getFontRef",
-        "(Lcom/sun/webkit/graphics/WCFont;)I");
-    ASSERT(mid);
-
-    jint res = env->CallStaticIntMethod(PG_GetGraphicsManagerClass(env), mid, (jobject)font);
-    CheckAndClearException(env);
-
-    return res;
-}
-
-bool FontPlatformData::operator==(const FontPlatformData& other) const
+bool FontPlatformData::platformIsEqual(const FontPlatformData& other) const
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -82,8 +78,7 @@ bool FontPlatformData::operator==(const FontPlatformData& other) const
         return true;
     }
     if (!m_jFont || isHashTableDeletedValue() ||
-        !other.m_jFont || other.isHashTableDeletedValue())
-    {
+        !other.m_jFont || other.isHashTableDeletedValue()) {
         return false;
     }
 
@@ -112,16 +107,6 @@ unsigned FontPlatformData::hash() const
     CheckAndClearException(env);
 
     return res;
-}
-
-FontPlatformData& FontPlatformData::operator=(const FontPlatformData& fpd)
-{
-    // Check for self-assignment.
-    if (this != &fpd) {
-        FontPlatformData other(fpd);
-        swap(other);
-    }
-    return *this;
 }
 
 #ifndef NDEBUG

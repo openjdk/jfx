@@ -1,8 +1,8 @@
 /*
  * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef ResourceError_h
-#define ResourceError_h
+
+#pragma once
 
 #include "ResourceErrorBase.h"
 
@@ -10,15 +10,20 @@ namespace WebCore {
 
 class ResourceError : public ResourceErrorBase {
 public:
-    ResourceError() {}
-
-    ResourceError(const String& domain, int errorCode,
-                  const URL& failingURL, const String& localizedDescription)
-        : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription)
+    ResourceError(Type type = Type::Null)
+        : ResourceErrorBase(type)
     {
     }
+
+    ResourceError(const String& domain, int errorCode,
+                  const URL& failingURL, const String& localizedDescription, Type type = Type::General)
+        : ResourceErrorBase(domain, errorCode, failingURL, localizedDescription, type)
+    {
+    }
+
+private:
+    friend class ResourceErrorBase;
+    void doPlatformIsolatedCopy(const ResourceError&) { }
 };
 
-}
-
-#endif // ResourceError_h_
+} // namespace WebCore

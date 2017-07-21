@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2009, 2011, 2016 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,17 +20,16 @@
 #include "config.h"
 #include "JSDocument.h"
 
-#include "CustomElementDefinitions.h"
 #include "ExceptionCode.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "HTMLDocument.h"
 #include "JSCanvasRenderingContext2D.h"
+#include "JSDOMConvert.h"
 #include "JSDOMWindowCustom.h"
 #include "JSHTMLDocument.h"
 #include "JSLocation.h"
-#include "JSNodeOrString.h"
-#include "JSSVGDocument.h"
+#include "JSXMLDocument.h"
 #include "Location.h"
 #include "NodeTraversal.h"
 #include "SVGDocument.h"
@@ -52,127 +51,112 @@ using namespace JSC;
 
 namespace WebCore {
 
-static inline JSValue createNewDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObject, Document& document)
+static inline JSValue createNewDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObject, Ref<Document>&& passedDocument)
 {
+    auto& document = passedDocument.get();
     JSObject* wrapper;
     if (document.isHTMLDocument())
-        wrapper = CREATE_DOM_WRAPPER(&globalObject, HTMLDocument, &document);
-    else if (document.isSVGDocument())
-        wrapper = CREATE_DOM_WRAPPER(&globalObject, SVGDocument, &document);
+        wrapper = createWrapper<HTMLDocument>(&globalObject, WTFMove(passedDocument));
     else if (document.isXMLDocument())
-        wrapper = CREATE_DOM_WRAPPER(&globalObject, XMLDocument, &document);
+        wrapper = createWrapper<XMLDocument>(&globalObject, WTFMove(passedDocument));
     else
-        wrapper = CREATE_DOM_WRAPPER(&globalObject, Document, &document);
+        wrapper = createWrapper<Document>(&globalObject, WTFMove(passedDocument));
 
-    // Make sure the document is kept around by the window object, and works right with the
-    // back/forward cache.
-    if (!document.frame()) {
-        size_t nodeCount = 0;
-        for (Node* n = &document; n; n = NodeTraversal::next(*n))
-            ++nodeCount;
-
-        // FIXME: Adopt reportExtraMemoryVisited, and switch to reportExtraMemoryAllocated.
-        // https://bugs.webkit.org/show_bug.cgi?id=142595
-        state.heap()->deprecatedReportExtraMemory(nodeCount * sizeof(Node));
-    }
+    reportMemoryForDocumentIfFrameless(state, document);
 
     return wrapper;
 }
 
-JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, Document* document)
+JSObject* cachedDocumentWrapper(ExecState& state, JSDOMGlobalObject& globalObject, Document& document)
 {
-    if (!document)
-        return jsNull();
-
-    JSObject* wrapper = getCachedWrapper(globalObject->world(), document);
-    if (wrapper)
+    if (auto* wrapper = getCachedWrapper(globalObject.world(), document))
         return wrapper;
 
-    if (DOMWindow* domWindow = document->domWindow()) {
-        globalObject = toJSDOMWindow(toJS(state, domWindow));
-        // Creating a wrapper for domWindow might have created a wrapper for document as well.
-        wrapper = getCachedWrapper(globalObject->world(), document);
-        if (wrapper)
-            return wrapper;
-    }
+    auto* window = document.domWindow();
+    if (!window)
+        return nullptr;
 
-    return createNewDocumentWrapper(*state, *globalObject, *document);
+    // Creating a wrapper for domWindow might have created a wrapper for document as well.
+    return getCachedWrapper(toJSDOMWindow(state.vm(), toJS(&state, *window))->world(), document);
 }
 
-JSValue toJSNewlyCreated(ExecState* state, JSDOMGlobalObject* globalObject, Document* document)
+void reportMemoryForDocumentIfFrameless(ExecState& state, Document& document)
 {
-    return document ? createNewDocumentWrapper(*state, *globalObject, *document) : jsNull();
+    // Make sure the document is kept around by the window object, and works right with the back/forward cache.
+    if (document.frame())
+        return;
+
+    size_t memoryCost = 0;
+    for (Node* node = &document; node; node = NodeTraversal::next(*node))
+        memoryCost += node->approximateMemoryCost();
+
+    // FIXME: Adopt reportExtraMemoryVisited, and switch to reportExtraMemoryAllocated.
+    // https://bugs.webkit.org/show_bug.cgi?id=142595
+    state.heap()->deprecatedReportExtraMemory(memoryCost);
 }
 
-JSValue JSDocument::prepend(ExecState& state)
+JSValue toJSNewlyCreated(ExecState* state, JSDOMGlobalObject* globalObject, Ref<Document>&& document)
 {
-    ExceptionCode ec = 0;
-    wrapped().prepend(toNodeOrStringVector(state), ec);
-    setDOMException(&state, ec);
-
-    return jsUndefined();
+    return createNewDocumentWrapper(*state, *globalObject, WTFMove(document));
 }
 
-JSValue JSDocument::append(ExecState& state)
+JSValue toJS(ExecState* state, JSDOMGlobalObject* globalObject, Document& document)
 {
-    ExceptionCode ec = 0;
-    wrapped().append(toNodeOrStringVector(state), ec);
-    setDOMException(&state, ec);
-
-    return jsUndefined();
+    if (auto* wrapper = cachedDocumentWrapper(*state, *globalObject, document))
+        return wrapper;
+    return toJSNewlyCreated(state, globalObject, Ref<Document>(document));
 }
 
 #if ENABLE(TOUCH_EVENTS)
 JSValue JSDocument::createTouchList(ExecState& state)
 {
-    RefPtr<TouchList> touchList = TouchList::create();
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    for (size_t i = 0; i < state.argumentCount(); i++)
-        touchList->append(JSTouch::toWrapped(state.argument(i)));
+    auto touchList = TouchList::create();
 
-    return toJS(&state, globalObject(), touchList.release());
+    for (size_t i = 0; i < state.argumentCount(); ++i) {
+        auto* item = JSTouch::toWrapped(vm, state.uncheckedArgument(i));
+        if (!item)
+            return JSValue::decode(throwArgumentTypeError(state, scope, i, "touches", "Document", "createTouchList", "Touch"));
+
+        touchList->append(*item);
+    }
+    return toJSNewlyCreated(&state, globalObject(), WTFMove(touchList));
 }
 #endif
 
-#if ENABLE(CUSTOM_ELEMENTS)
-JSValue JSDocument::defineCustomElement(ExecState& state)
+JSValue JSDocument::getCSSCanvasContext(JSC::ExecState& state)
 {
-    AtomicString tagName(state.argument(0).toString(&state)->toAtomicString(&state));
-    if (UNLIKELY(state.hadException()))
-        return jsUndefined();
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    JSObject* object = state.argument(1).getObject();
-    ConstructData callData;
-    if (!object || object->methodTable()->getConstructData(object, callData) == ConstructTypeNone)
-        return throwTypeError(&state, "The second argument must be a constructor");
+    if (UNLIKELY(state.argumentCount() < 4))
+        return throwException(&state, scope, createNotEnoughArgumentsError(&state));
+    auto contextId = state.uncheckedArgument(0).toWTFString(&state);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+    auto name = state.uncheckedArgument(1).toWTFString(&state);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+    auto width = convert<IDLLong>(state, state.uncheckedArgument(2), IntegerConversionConfiguration::Normal);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+    auto height = convert<IDLLong>(state, state.uncheckedArgument(3), IntegerConversionConfiguration::Normal);
+    RETURN_IF_EXCEPTION(scope, JSValue());
 
-    Document& document = wrapped();
-    switch (CustomElementDefinitions::checkName(tagName)) {
-    case CustomElementDefinitions::NameStatus::Valid:
-        break;
-    case CustomElementDefinitions::NameStatus::ConflictsWithBuiltinNames:
-        return throwSyntaxError(&state, "Custom element name cannot be same as one of the builtin elements");
-    case CustomElementDefinitions::NameStatus::NoHyphen:
-        return throwSyntaxError(&state, "Custom element name must contain a hyphen");
-    case CustomElementDefinitions::NameStatus::ContainsUpperCase:
-        return throwSyntaxError(&state, "Custom element name cannot contain an upper case letter");
-    }
+    auto* context = wrapped().getCSSCanvasContext(WTFMove(contextId), WTFMove(name), WTFMove(width), WTFMove(height));
+    if (!context)
+        return jsNull();
 
-    QualifiedName name(nullAtom, tagName, HTMLNames::xhtmlNamespaceURI);
-    auto& definitions = document.ensureCustomElementDefinitions();
-    if (definitions.findInterface(tagName)) {
-        ExceptionCodeWithMessage ec;
-        ec.code = NOT_SUPPORTED_ERR;
-        ec.message = "Cannot define multiple custom elements with the same tag name";
-        setDOMException(&state, ec);
-        return jsUndefined();
-    }
-    definitions.defineElement(name, JSCustomElementInterface::create(object, globalObject()));
-    PrivateName uniquePrivateName;
-    globalObject()->putDirect(globalObject()->vm(), uniquePrivateName, object);
-
-    return jsUndefined();
-}
+#if ENABLE(WEBGL)
+    if (is<WebGLRenderingContextBase>(*context))
+        return toJS(&state, globalObject(), downcast<WebGLRenderingContextBase>(*context));
 #endif
+
+    return toJS(&state, globalObject(), downcast<CanvasRenderingContext2D>(*context));
+}
+
+void JSDocument::visitAdditionalChildren(SlotVisitor& visitor)
+{
+    visitor.addOpaqueRoot(static_cast<ScriptExecutionContext*>(&wrapped()));
+}
 
 } // namespace WebCore

@@ -30,63 +30,28 @@
  */
 
 #include "config.h"
-
-#if ENABLE(MEDIA_STREAM)
-
 #include "RTCSessionDescription.h"
 
-#include "Dictionary.h"
+#if ENABLE(WEB_RTC)
 
 namespace WebCore {
 
-static bool verifyType(const String& type)
-{
-    return type == "offer" || type == "pranswer" || type == "answer";
-}
-
-RefPtr<RTCSessionDescription> RTCSessionDescription::create(const Dictionary& dictionary, ExceptionCode& ec)
-{
-    String type;
-    bool ok = dictionary.get("type", type);
-    if (ok && !verifyType(type)) {
-        ec = TYPE_MISMATCH_ERR;
-        return nullptr;
-    }
-
-    String sdp;
-    ok = dictionary.get("sdp", sdp);
-    if (ok && sdp.isEmpty()) {
-        ec = TYPE_MISMATCH_ERR;
-        return nullptr;
-    }
-
-    return adoptRef(new RTCSessionDescription(type, sdp));
-}
-
-Ref<RTCSessionDescription> RTCSessionDescription::create(const RTCSessionDescription* description)
-{
-    return adoptRef(*new RTCSessionDescription(description->type(), description->sdp()));
-}
-
-Ref<RTCSessionDescription> RTCSessionDescription::create(const String& type, const String& sdp)
-{
-    return adoptRef(*new RTCSessionDescription(type, sdp));
-}
-
-RTCSessionDescription::RTCSessionDescription(const String& type, const String& sdp)
+inline RTCSessionDescription::RTCSessionDescription(SdpType type, const String& sdp)
     : m_type(type)
     , m_sdp(sdp)
 {
 }
 
-void RTCSessionDescription::setType(const String& type, ExceptionCode& ec)
+Ref<RTCSessionDescription> RTCSessionDescription::create(const Init& dictionary)
 {
-    if (verifyType(type))
-        m_type = type;
-    else
-        ec = TYPE_MISMATCH_ERR;
+    return create(dictionary.type, dictionary.sdp);
+}
+
+Ref<RTCSessionDescription> RTCSessionDescription::create(SdpType type, const String& sdp)
+{
+    return adoptRef(*new RTCSessionDescription(type, sdp));
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(WEB_RTC)

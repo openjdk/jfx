@@ -28,6 +28,9 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
+#include <JavaScriptCore/HeapInlines.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/TypedArrayInlines.h>
 #include <runtime/ArrayBuffer.h>
 #include <runtime/DataView.h>
 #include <runtime/Int8Array.h>

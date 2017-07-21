@@ -52,9 +52,9 @@ void MergeIdenticalElementsCommand::doApply()
         children.append(*child);
 
     for (auto& child : children)
-        m_element2->insertBefore(WTFMove(child), m_atChild.get(), IGNORE_EXCEPTION);
+        m_element2->insertBefore(child, m_atChild.get());
 
-    m_element1->remove(IGNORE_EXCEPTION);
+    m_element1->remove();
 }
 
 void MergeIdenticalElementsCommand::doUnapply()
@@ -62,16 +62,13 @@ void MergeIdenticalElementsCommand::doUnapply()
     ASSERT(m_element1);
     ASSERT(m_element2);
 
-    RefPtr<Node> atChild = m_atChild.release();
+    RefPtr<Node> atChild = WTFMove(m_atChild);
 
-    ContainerNode* parent = m_element2->parentNode();
+    auto* parent = m_element2->parentNode();
     if (!parent || !parent->hasEditableStyle())
         return;
 
-    ExceptionCode ec = 0;
-
-    parent->insertBefore(*m_element1, m_element2.get(), ec);
-    if (ec)
+    if (parent->insertBefore(*m_element1, m_element2.get()).hasException())
         return;
 
     Vector<Ref<Node>> children;
@@ -79,7 +76,7 @@ void MergeIdenticalElementsCommand::doUnapply()
         children.append(*child);
 
     for (auto& child : children)
-        m_element1->appendChild(WTFMove(child), ec);
+        m_element1->appendChild(child);
 }
 
 #ifndef NDEBUG

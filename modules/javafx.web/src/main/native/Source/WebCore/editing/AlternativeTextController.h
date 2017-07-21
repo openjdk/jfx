@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AlternativeTextController_h
-#define AlternativeTextController_h
+#pragma once
 
 #include "AlternativeTextClient.h"
 #include "DocumentMarker.h"
@@ -48,7 +47,6 @@ struct DictationAlternative;
 
 class AlternativeTextDetails : public RefCounted<AlternativeTextDetails> {
 public:
-    AlternativeTextDetails() { }
     virtual ~AlternativeTextDetails() { }
 };
 
@@ -58,24 +56,6 @@ struct AlternativeTextInfo {
     AlternativeTextType type;
     String originalText;
     RefPtr<AlternativeTextDetails> details;
-};
-
-class DictationMarkerDetails : public DocumentMarkerDetails {
-public:
-    static Ref<DictationMarkerDetails> create(const String& originalText, uint64_t dictationContext)
-    {
-        return adoptRef(*new DictationMarkerDetails(originalText, dictationContext));
-    }
-    const String& originalText() const { return m_originalText; }
-    uint64_t dictationContext() const { return m_dictationContext; }
-private:
-    DictationMarkerDetails(const String& originalText, uint64_t dictationContext)
-    : m_dictationContext(dictationContext)
-    , m_originalText(originalText)
-    { }
-
-    uint64_t m_dictationContext;
-    String m_originalText;
 };
 
 struct TextCheckingResult;
@@ -121,7 +101,7 @@ public:
     bool isAutomaticSpellingCorrectionEnabled() UNLESS_ENABLED({ return false; })
     bool shouldRemoveMarkersUponEditing();
 
-    void recordAutocorrectionResponseReversed(const String& replacedString, PassRefPtr<Range> replacementRange) UNLESS_ENABLED({ UNUSED_PARAM(replacedString); UNUSED_PARAM(replacementRange); })
+    void recordAutocorrectionResponse(AutocorrectionResponse, const String& replacedString, PassRefPtr<Range> replacementRange) UNLESS_ENABLED({ UNUSED_PARAM(replacedString); UNUSED_PARAM(replacementRange); })
     void markReversed(PassRefPtr<Range> changedRange) UNLESS_ENABLED({ UNUSED_PARAM(changedRange); })
     void markCorrection(PassRefPtr<Range> replacedRange, const String& replacedString) UNLESS_ENABLED({ UNUSED_PARAM(replacedRange); UNUSED_PARAM(replacedString); })
 
@@ -130,8 +110,8 @@ public:
     void deletedAutocorrectionAtPosition(const Position&, const String& originalString) UNLESS_ENABLED({ UNUSED_PARAM(originalString); })
 
     bool insertDictatedText(const String&, const Vector<DictationAlternative>&, Event*);
-    void removeDictationAlternativesForMarker(const DocumentMarker*);
-    Vector<String> dictationAlternativesForMarker(const DocumentMarker*);
+    void removeDictationAlternativesForMarker(const DocumentMarker&);
+    Vector<String> dictationAlternativesForMarker(const DocumentMarker&);
     void applyDictationAlternative(const String& alternativeString);
 
 private:
@@ -139,7 +119,6 @@ private:
     String dismissSoon(ReasonForDismissingAlternativeText);
     void applyAlternativeTextToRange(const Range*, const String& alternative, AlternativeTextType, const Vector<DocumentMarker::MarkerType>&);
     void timerFired();
-    void recordAutocorrectionResponseReversed(const String& replacedString, const String& replacementString);
     void recordSpellcheckerResponseForModifiedCorrection(Range* rangeOfCorrection, const String& corrected, const String& correction);
     String markerDescriptionForAppliedAlternativeText(AlternativeTextType, DocumentMarker::MarkerType);
 
@@ -176,5 +155,3 @@ inline bool AlternativeTextController::shouldRemoveMarkersUponEditing()
 }
 
 } // namespace WebCore
-
-#endif // AlternativeTextController_h

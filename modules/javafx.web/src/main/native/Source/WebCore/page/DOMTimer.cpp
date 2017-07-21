@@ -35,7 +35,6 @@
 #include "ScheduledAction.h"
 #include "ScriptExecutionContext.h"
 #include "Settings.h"
-#include "UserGestureIndicator.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
@@ -48,14 +47,14 @@
 #include "ChromeClient.h"
 #include "Frame.h"
 #include "WKContentObservation.h"
+#include "WKContentObservationInternal.h"
 #endif
 
 namespace WebCore {
 
-static const int maxIntervalForUserGestureForwarding = 1000; // One second matches Gecko.
-static const int minIntervalForNonUserObservableChangeTimers = 1000; // Empirically determined to maximize battery life.
+static const auto maxIntervalForUserGestureForwarding = 1000ms; // One second matches Gecko.
+static const auto minIntervalForNonUserObservableChangeTimers = 1000ms; // Empirically determined to maximize battery life.
 static const int maxTimerNestingLevel = 5;
-static const double oneMillisecond = 0.001;
 
 class DOMTimerFireState {
 public:
@@ -162,28 +161,36 @@ private:
 
 bool NestedTimersMap::isTrackingNestedTimers = false;
 
-static inline bool shouldForwardUserGesture(int interval, int nestingLevel)
+static inline bool shouldForwardUserGesture(std::chrono::milliseconds interval, int nestingLevel)
 {
     return UserGestureIndicator::processingUserGesture()
         && interval <= maxIntervalForUserGestureForwarding
         && !nestingLevel; // Gestures should not be forwarded to nested timers.
 }
 
-DOMTimer::DOMTimer(ScriptExecutionContext& context, std::unique_ptr<ScheduledAction> action, int interval, bool singleShot)
+static inline RefPtr<UserGestureToken> userGestureTokenToForward(std::chrono::milliseconds interval, int nestingLevel)
+{
+    if (!shouldForwardUserGesture(interval, nestingLevel))
+        return nullptr;
+
+    return UserGestureIndicator::currentUserGesture();
+}
+
+DOMTimer::DOMTimer(ScriptExecutionContext& context, std::unique_ptr<ScheduledAction> action, std::chrono::milliseconds interval, bool singleShot)
     : SuspendableTimer(context)
     , m_nestingLevel(context.timerNestingLevel())
     , m_action(WTFMove(action))
     , m_originalInterval(interval)
     , m_throttleState(Undetermined)
     , m_currentTimerInterval(intervalClampedToMinimum())
-    , m_shouldForwardUserGesture(shouldForwardUserGesture(interval, m_nestingLevel))
+    , m_userGestureTokenToForward(userGestureTokenToForward(interval, m_nestingLevel))
 {
     RefPtr<DOMTimer> reference = adoptRef(this);
 
     // Keep asking for the next id until we're given one that we don't already have.
     do {
         m_timeoutId = context.circularSequentialID();
-    } while (!context.addTimeout(m_timeoutId, reference));
+    } while (!context.addTimeout(m_timeoutId, *this));
 
     if (singleShot)
         startOneShot(m_currentTimerInterval);
@@ -195,7 +202,7 @@ DOMTimer::~DOMTimer()
 {
 }
 
-int DOMTimer::install(ScriptExecutionContext& context, std::unique_ptr<ScheduledAction> action, int timeout, bool singleShot)
+int DOMTimer::install(ScriptExecutionContext& context, std::unique_ptr<ScheduledAction> action, std::chrono::milliseconds timeout, bool singleShot)
 {
     // DOMTimer constructor passes ownership of the initial ref on the object to the constructor.
     // This reference will be released automatically when a one-shot timer fires, when the context
@@ -204,7 +211,7 @@ int DOMTimer::install(ScriptExecutionContext& context, std::unique_ptr<Scheduled
 #if PLATFORM(IOS)
     if (is<Document>(context)) {
         bool didDeferTimeout = context.activeDOMObjectsAreSuspended();
-        if (!didDeferTimeout && timeout <= 100 && singleShot) {
+        if (!didDeferTimeout && timeout.count() <= 100 && singleShot) {
             WKSetObservedContentChange(WKContentIndeterminateChange);
             WebThreadAddObservedContentModifier(timer); // Will only take affect if not already visibility change.
         }
@@ -212,7 +219,7 @@ int DOMTimer::install(ScriptExecutionContext& context, std::unique_ptr<Scheduled
 #endif
 
     timer->suspendIfNeeded();
-    InspectorInstrumentation::didInstallTimer(&context, timer->m_timeoutId, timeout, singleShot);
+    InspectorInstrumentation::didInstallTimer(context, timer->m_timeoutId, timeout, singleShot);
 
     // Keep track of nested timer installs.
     if (NestedTimersMap* nestedTimers = NestedTimersMap::instanceForContext(context))
@@ -232,7 +239,7 @@ void DOMTimer::removeById(ScriptExecutionContext& context, int timeoutId)
     if (NestedTimersMap* nestedTimers = NestedTimersMap::instanceForContext(context))
         nestedTimers->remove(timeoutId);
 
-    InspectorInstrumentation::didRemoveTimer(&context, timeoutId);
+    InspectorInstrumentation::didRemoveTimer(context, timeoutId);
     context.removeTimeout(timeoutId);
 }
 
@@ -301,11 +308,11 @@ void DOMTimer::fired()
 
     ASSERT(!isSuspended());
     ASSERT(!context.activeDOMObjectsAreSuspended());
-    UserGestureIndicator gestureIndicator(m_shouldForwardUserGesture ? DefinitelyProcessingUserGesture : PossiblyProcessingUserGesture);
+    UserGestureIndicator gestureIndicator(m_userGestureTokenToForward);
     // Only the first execution of a multi-shot timer should get an affirmative user gesture indicator.
-    m_shouldForwardUserGesture = false;
+    m_userGestureTokenToForward = nullptr;
 
-    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireTimer(&context, m_timeoutId);
+    InspectorInstrumentationCookie cookie = InspectorInstrumentation::willFireTimer(context, m_timeoutId);
 
     // Simple case for non-one-shot timers.
     if (isActive()) {
@@ -355,7 +362,7 @@ void DOMTimer::fired()
         if (WKObservedContentChange() == WKContentVisibilityChange || shouldReportLackOfChanges) {
             Document& document = downcast<Document>(context);
             if (Page* page = document.page())
-                page->chrome().client().observedContentChange(document.frame());
+                page->chrome().client().observedContentChange(*document.frame());
         }
     }
 #endif
@@ -387,53 +394,52 @@ void DOMTimer::updateTimerIntervalIfNecessary()
 {
     ASSERT(m_nestingLevel <= maxTimerNestingLevel);
 
-    double previousInterval = m_currentTimerInterval;
+    auto previousInterval = m_currentTimerInterval;
     m_currentTimerInterval = intervalClampedToMinimum();
-
-    if (WTF::areEssentiallyEqual(previousInterval, m_currentTimerInterval, oneMillisecond))
+    if (previousInterval == m_currentTimerInterval)
         return;
 
     if (repeatInterval()) {
-        ASSERT(WTF::areEssentiallyEqual(repeatInterval(), previousInterval, oneMillisecond));
-        LOG(DOMTimers, "%p - Updating DOMTimer's repeat interval from %g ms to %g ms due to throttling.", this, previousInterval * 1000., m_currentTimerInterval * 1000.);
+        ASSERT(repeatIntervalMS() == previousInterval);
+        LOG(DOMTimers, "%p - Updating DOMTimer's repeat interval from %" PRId64 " ms to %" PRId64 " ms due to throttling.", this, previousInterval.count(), m_currentTimerInterval.count());
         augmentRepeatInterval(m_currentTimerInterval - previousInterval);
     } else {
-        LOG(DOMTimers, "%p - Updating DOMTimer's fire interval from %g ms to %g ms due to throttling.", this, previousInterval * 1000., m_currentTimerInterval * 1000.);
+        LOG(DOMTimers, "%p - Updating DOMTimer's fire interval from %" PRId64 " ms to %" PRId64 " ms due to throttling.", this, previousInterval.count(), m_currentTimerInterval.count());
         augmentFireInterval(m_currentTimerInterval - previousInterval);
     }
 }
 
-double DOMTimer::intervalClampedToMinimum() const
+std::chrono::milliseconds DOMTimer::intervalClampedToMinimum() const
 {
     ASSERT(scriptExecutionContext());
     ASSERT(m_nestingLevel <= maxTimerNestingLevel);
 
-    double intervalInSeconds = std::max(oneMillisecond, m_originalInterval * oneMillisecond);
+    auto interval = std::max(1ms, m_originalInterval);
 
     // Only apply throttling to repeating timers.
     if (m_nestingLevel < maxTimerNestingLevel)
-        return intervalInSeconds;
+        return interval;
 
     // Apply two throttles - the global (per Page) minimum, and also a per-timer throttle.
-    intervalInSeconds = std::max(intervalInSeconds, scriptExecutionContext()->minimumTimerInterval());
+    interval = std::max(interval, scriptExecutionContext()->minimumTimerInterval());
     if (m_throttleState == ShouldThrottle)
-        intervalInSeconds = std::max(intervalInSeconds, minIntervalForNonUserObservableChangeTimers * oneMillisecond);
-    return intervalInSeconds;
+        interval = std::max(interval, minIntervalForNonUserObservableChangeTimers);
+    return interval;
 }
 
-double DOMTimer::alignedFireTime(double fireTime) const
+std::optional<std::chrono::milliseconds> DOMTimer::alignedFireTime(std::chrono::milliseconds fireTime) const
 {
-    if (double alignmentInterval = scriptExecutionContext()->timerAlignmentInterval(m_nestingLevel >= maxTimerNestingLevel)) {
-        // Don't mess with zero-delay timers.
-        if (!fireTime)
-            return fireTime;
-        static const double randomizedAlignment = randomNumber();
-        // Force alignment to randomizedAlignment fraction of the way between alignemntIntervals, e.g.
-        // if alignmentInterval is 10 and randomizedAlignment is 0.3 this will align to 3, 13, 23, ...
-        return (ceil(fireTime / alignmentInterval - randomizedAlignment) + randomizedAlignment) * alignmentInterval;
-    }
+    auto alignmentInterval = scriptExecutionContext()->timerAlignmentInterval(m_nestingLevel >= maxTimerNestingLevel);
+    if (alignmentInterval == 0ms)
+        return std::nullopt;
 
-    return fireTime;
+    static const double randomizedProportion = randomNumber();
+
+    // Force alignment to randomizedAlignment fraction of the way between alignemntIntervals, e.g.
+    // if alignmentInterval is 10 and randomizedAlignment is 0.3 this will align to 3, 13, 23, ...
+    auto randomizedOffset = std::chrono::duration_cast<std::chrono::milliseconds>(alignmentInterval * randomizedProportion);
+    auto adjustedFireTime = fireTime - randomizedOffset;
+    return adjustedFireTime - (adjustedFireTime % alignmentInterval) + alignmentInterval + randomizedOffset;
 }
 
 const char* DOMTimer::activeDOMObjectName() const

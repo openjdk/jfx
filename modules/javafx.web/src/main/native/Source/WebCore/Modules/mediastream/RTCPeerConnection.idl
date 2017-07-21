@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies).
- * Copyright (C) 2015 Ericsson AB. All rights reserved.
+ * Copyright (C) 2015, 2016 Ericsson AB. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,53 +30,79 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+dictionary RTCOfferAnswerOptions {
+    boolean voiceActivityDetection = true;
+};
+
+dictionary RTCOfferOptions : RTCOfferAnswerOptions {
+    boolean iceRestart = false;
+};
+
+dictionary RTCAnswerOptions : RTCOfferAnswerOptions {
+};
+
+dictionary RTCDataChannelInit {
+    boolean ordered = true;
+    unsigned short maxRetransmitTime;
+    unsigned short maxRetransmits;
+    USVString protocol = "";
+    boolean negotiated = false;
+    unsigned short id;
+};
+
 [
-    Conditional=MEDIA_STREAM,
     ActiveDOMObject,
-    CustomConstructor(Dictionary rtcConfiguration),
+    Conditional=WEB_RTC,
     ConstructorCallWith=ScriptExecutionContext,
-    ConstructorRaisesException,
-    InterfaceName=webkitRTCPeerConnection,
+    EnabledAtRuntime=PeerConnection,
+    ExportMacro=WEBCORE_EXPORT,
+    JSBuiltinConstructor,
 ] interface RTCPeerConnection : EventTarget {
+    // Private initializer
+    [PrivateIdentifier, CallWith=Document, MayThrowException] void initializeWith(RTCConfiguration configuration);
 
-    // Private functions called by runQueuedOperation() (RTCPeerConnectionInternals.js)
-    [Private] Promise queuedCreateOffer(optional Dictionary offerOptions);
-    [Private] Promise queuedCreateAnswer(optional Dictionary answerOptions);
-    [Private] Promise queuedSetLocalDescription(RTCSessionDescription description);
-    [Private] Promise queuedSetRemoteDescription(RTCSessionDescription description);
-    [Private] Promise queuedAddIceCandidate(RTCIceCandidate candidate);
-
-    [Private] Promise privateGetStats(optional MediaStreamTrack selector);
-
-    [JSBuiltin] Promise createOffer(optional Dictionary offerOptions);
-    // Legacy signature: void createOffer(RTCSessionDescriptionCallback successCallback
-    //                                    RTCPeerConnectionErrorCallback errorCallback,
-    //                                    optional Dictionary offerOptions);
-
-    [JSBuiltin] Promise createAnswer(optional Dictionary answerOptions);
-    // Legacy signature: void createAnswer(RTCSessionDescriptionCallback successCallback
-    //                                    RTCPeerConnectionErrorCallback errorCallback,
-    //                                    optional Dictionary answerOptions);
-
-    sequence<RTCRtpSender> getSenders();
+    // RTP Media API extensions
+    [PrivateIdentifier, PublicIdentifier] sequence<RTCRtpSender> getSenders();
     sequence<RTCRtpReceiver> getReceivers();
+    sequence<RTCRtpTransceiver> getTransceivers();
 
-    [StrictTypeChecking, RaisesException] RTCRtpSender addTrack(MediaStreamTrack track, MediaStream... streams);
-    [StrictTypeChecking, RaisesException] void removeTrack(RTCRtpSender sender);
+    [PrivateIdentifier, PublicIdentifier, MayThrowException] RTCRtpSender addTrack(MediaStreamTrack track, MediaStream... streams);
+    [PrivateIdentifier, PublicIdentifier, MayThrowException] void removeTrack(RTCRtpSender sender);
 
-    [JSBuiltin] Promise setLocalDescription(RTCSessionDescription description);
-    // Legacy signature: void setLocalDescription(RTCSessionDescription description
-    //                                            VoidCallback successCallback,
-    //                                            RTCPeerConnectionErrorCallback errorCallback);
+    [MayThrowException] RTCRtpTransceiver addTransceiver(MediaStreamTrack track, optional RTCRtpTransceiverInit init);
+    [MayThrowException] RTCRtpTransceiver addTransceiver(DOMString kind, optional RTCRtpTransceiverInit init);
+
+    // Legacy MediaSream-based API (implemented on top of the RTP Media API)
+    [JSBuiltin] sequence<MediaStream> getLocalStreams();
+    [PrivateIdentifier, PublicIdentifier] sequence<MediaStream> getRemoteStreams();
+    [JSBuiltin] MediaStream getStreamById(DOMString streamId);
+
+    [JSBuiltin] void addStream(MediaStream stream);
+    [JSBuiltin] void removeStream(MediaStream stream);
+
+    [JSBuiltin] Promise<RTCSessionDescriptionInit> createOffer(optional RTCOfferOptions offerOptions);
+    // Legacy signature: Promise<void> createOffer(RTCSessionDescriptionCallback successCallback
+    //                                       RTCPeerConnectionErrorCallback errorCallback,
+    //                                       optional Dictionary offerOptions);
+
+    [JSBuiltin] Promise<RTCSessionDescriptionInit> createAnswer(optional RTCAnswerOptions answerOptions);
+    // Legacy signature: Promise<void> createAnswer(RTCSessionDescriptionCallback successCallback
+    //                                        RTCPeerConnectionErrorCallback errorCallback,
+    //                                        optional Dictionary answerOptions);
+
+    [JSBuiltin] Promise<void> setLocalDescription(RTCSessionDescription description);
+    // Legacy signature: Promise<void> setLocalDescription(RTCSessionDescription description
+    //                                               VoidCallback successCallback,
+    //                                               RTCPeerConnectionErrorCallback errorCallback);
 
     readonly attribute RTCSessionDescription localDescription;
     readonly attribute RTCSessionDescription currentLocalDescription;
     readonly attribute RTCSessionDescription pendingLocalDescription;
 
-    [JSBuiltin] Promise setRemoteDescription(RTCSessionDescription description);
-    // Legacy signature: void setRemoteDescription(RTCSessionDescription description
-    //                                            VoidCallback successCallback,
-    //                                            RTCPeerConnectionErrorCallback errorCallback);
+    [JSBuiltin] Promise<void> setRemoteDescription(RTCSessionDescription description);
+    // Legacy signature: Promise<void> setRemoteDescription(RTCSessionDescription description
+    //                                                VoidCallback successCallback,
+    //                                                RTCPeerConnectionErrorCallback errorCallback);
 
     readonly attribute RTCSessionDescription remoteDescription;
     readonly attribute RTCSessionDescription currentRemoteDescription;
@@ -84,23 +110,28 @@
 
     readonly attribute DOMString signalingState;
 
-    [JSBuiltin] Promise addIceCandidate(RTCIceCandidate candidate);
-    // Legacy signature: void addIceCandidate(RTCIceCandidate candidate
-    //                                        VoidCallback successCallback,
-    //                                        RTCPeerConnectionErrorCallback errorCallback);
+    [JSBuiltin] Promise<void> addIceCandidate(RTCIceCandidate candidate);
+    // Legacy signature: Promise<void> addIceCandidate(RTCIceCandidate candidate
+    //                                           VoidCallback successCallback,
+    //                                           RTCPeerConnectionErrorCallback errorCallback);
 
     readonly attribute DOMString iceGatheringState;
     readonly attribute DOMString iceConnectionState;
 
     RTCConfiguration getConfiguration();
-    [RaisesException] void setConfiguration(Dictionary configuration);
+    [MayThrowException] void setConfiguration(RTCConfiguration configuration);
 
-    [JSBuiltin] Promise getStats(optional MediaStreamTrack selector);
-    // Legacy signature: void getStats(MediaStreamTrack selector
-    //                                 RTCStatsCallback successCallback,
-    //                                 RTCPeerConnectionErrorCallback errorCallback);
+    Promise<RTCStatsReport> getStats(optional MediaStreamTrack? selector = null);
 
-    [RaisesException] RTCDataChannel createDataChannel([TreatNullAs=EmptyString] DOMString label, optional Dictionary options);
+    // Private API used to implement the overloaded operations above. Queued functions are called by
+    // runQueuedOperation() (defined in RTCPeerConnectionInternals.js).
+    [PrivateIdentifier] Promise<RTCSessionDescriptionInit> queuedCreateOffer(optional RTCOfferOptions offerOptions);
+    [PrivateIdentifier] Promise<RTCSessionDescriptionInit> queuedCreateAnswer(optional RTCAnswerOptions answerOptions);
+    [PrivateIdentifier] Promise<void> queuedSetLocalDescription(RTCSessionDescription description);
+    [PrivateIdentifier] Promise<void> queuedSetRemoteDescription(RTCSessionDescription description);
+    [PrivateIdentifier] Promise<void> queuedAddIceCandidate(RTCIceCandidate candidate);
+
+    [CallWith=ScriptExecutionContext, MayThrowException] RTCDataChannel createDataChannel([TreatNullAs=EmptyString] DOMString label, optional RTCDataChannelInit options);
 
     void close();
 
@@ -111,4 +142,14 @@
     attribute EventHandler oniceconnectionstatechange;
     attribute EventHandler onicegatheringstatechange;
     attribute EventHandler ondatachannel;
+
+    // Legacy event handler (MediaStream-based API)
+    attribute EventHandler onaddstream;
+};
+
+// This enum is mirrored in RTCRtpTransceiver.idl
+enum RTCRtpTransceiverDirection { "sendrecv", "sendonly", "recvonly", "inactive" };
+
+dictionary RTCRtpTransceiverInit {
+    RTCRtpTransceiverDirection direction = "sendrecv";
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,7 @@
 #import "config.h"
 #import "WebCoreResourceHandleAsDelegate.h"
 
-#if !USE(CFNETWORK)
+#if !USE(CFURLCONNECTION)
 
 #import "AuthenticationChallenge.h"
 #import "AuthenticationMac.h"
@@ -64,7 +64,7 @@ using namespace WebCore;
     if (!m_handle)
         return nil;
 
-    redirectResponse = synthesizeRedirectResponseIfNecessary(connection, newRequest, redirectResponse);
+    redirectResponse = synthesizeRedirectResponseIfNecessary([connection currentRequest], newRequest, redirectResponse);
 
     // See <rdar://problem/5380697>. This is a workaround for a behavior change in CFNetwork where willSendRequest gets called more often.
     if (!redirectResponse)
@@ -77,11 +77,7 @@ using namespace WebCore;
         LOG(Network, "Handle %p delegate connection:%p willSendRequest:%@ redirectResponse:non-HTTP", m_handle, connection, [newRequest description]);
 #endif
 
-    ResourceRequest request = newRequest;
-
-    m_handle->willSendRequest(request, redirectResponse);
-
-    return request.nsURLRequest(UpdateHTTPBody);
+    return m_handle->willSendRequest(newRequest, redirectResponse).nsURLRequest(UpdateHTTPBody);
 }
 
 - (BOOL)connectionShouldUseCredentialStorage:(NSURLConnection *)connection
@@ -113,19 +109,6 @@ using namespace WebCore;
     m_handle->didReceiveAuthenticationChallenge(core(challenge));
 }
 
-- (void)connection:(NSURLConnection *)connection didCancelAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
-{
-    // FIXME: We probably don't need to implement this (see <rdar://problem/8960124>).
-
-    UNUSED_PARAM(connection);
-
-    LOG(Network, "Handle %p delegate connection:%p didCancelAuthenticationChallenge:%p", m_handle, connection, challenge);
-
-    if (!m_handle)
-        return;
-    m_handle->didCancelAuthenticationChallenge(core(challenge));
-}
-
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)
 - (BOOL)connection:(NSURLConnection *)connection canAuthenticateAgainstProtectionSpace:(NSURLProtectionSpace *)protectionSpace
 {
@@ -140,41 +123,34 @@ using namespace WebCore;
 }
 #endif
 
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)r
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
 {
-#if !PLATFORM(IOS)
-    UNUSED_PARAM(connection);
-#endif
-
-    LOG(Network, "Handle %p delegate connection:%p didReceiveResponse:%p (HTTP status %d, reported MIMEType '%s')", m_handle, connection, r, [r respondsToSelector:@selector(statusCode)] ? [(id)r statusCode] : 0, [[r MIMEType] UTF8String]);
+    LOG(Network, "Handle %p delegate connection:%p didReceiveResponse:%p (HTTP status %d, reported MIMEType '%s')", m_handle, connection, response, [response respondsToSelector:@selector(statusCode)] ? [(id)response statusCode] : 0, [[response MIMEType] UTF8String]);
 
     if (!m_handle || !m_handle->client())
         return;
 
     // Avoid MIME type sniffing if the response comes back as 304 Not Modified.
-    int statusCode = [r respondsToSelector:@selector(statusCode)] ? [(id)r statusCode] : 0;
-    if (statusCode != 304)
-        adjustMIMETypeIfNecessary([r _CFURLResponse]);
+    int statusCode = [response respondsToSelector:@selector(statusCode)] ? [(id)response statusCode] : 0;
+    if (statusCode != 304) {
+        bool isMainResourceLoad = m_handle->firstRequest().requester() == ResourceRequest::Requester::Main;
+        adjustMIMETypeIfNecessary([response _CFURLResponse], isMainResourceLoad);
+    }
 
 #if !PLATFORM(IOS)
     if ([m_handle->firstRequest().nsURLRequest(DoNotUpdateHTTPBody) _propertyForKey:@"ForceHTMLMIMEType"])
-        [r _setMIMEType:@"text/html"];
+        [response _setMIMEType:@"text/html"];
 #endif
 
-#if USE(QUICK_LOOK)
-    m_handle->setQuickLookHandle(QuickLookHandle::create(m_handle, connection, r, self));
-    if (m_handle->quickLookHandle())
-        r = m_handle->quickLookHandle()->nsResponse();
-#endif
-
-    ResourceResponse resourceResponse(r);
+    ResourceResponse resourceResponse(response);
+    resourceResponse.setSource(ResourceResponse::Source::Network);
 #if ENABLE(WEB_TIMING)
-    ResourceHandle::getConnectionTimingData(connection, resourceResponse.resourceLoadTiming());
+    ResourceHandle::getConnectionTimingData(connection, resourceResponse.networkLoadTiming());
 #else
     UNUSED_PARAM(connection);
 #endif
 
-    m_handle->client()->didReceiveResponse(m_handle, resourceResponse);
+    m_handle->didReceiveResponse(WTFMove(resourceResponse));
 }
 
 #if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
@@ -188,11 +164,6 @@ using namespace WebCore;
 
     if (!m_handle || !m_handle->client())
         return;
-
-#if USE(QUICK_LOOK)
-    if (m_handle->quickLookHandle() && m_handle->quickLookHandle()->didReceiveDataArray(reinterpret_cast<CFArrayRef>(dataArray)))
-        return;
-#endif
 
     m_handle->client()->didReceiveBuffer(m_handle, SharedBuffer::wrapCFDataArray(reinterpret_cast<CFArrayRef>(dataArray)), -1);
     // The call to didReceiveData above can cancel a load, and if so, the delegate (self) could have been deallocated by this point.
@@ -216,11 +187,6 @@ using namespace WebCore;
     // FIXME: If we get more than 2B bytes in a single chunk, this code won't do the right thing.
     // However, with today's computers and networking speeds, this won't happen in practice.
     // Could be an issue with a giant local file.
-
-#if USE(QUICK_LOOK)
-    if (m_handle->quickLookHandle() && m_handle->quickLookHandle()->didReceiveData(reinterpret_cast<CFDataRef>(data)))
-        return;
-#endif
 
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=19793
     // -1 means we do not provide any data about transfer size to inspector so it would use
@@ -249,11 +215,6 @@ using namespace WebCore;
     if (!m_handle || !m_handle->client())
         return;
 
-#if USE(QUICK_LOOK)
-    if (m_handle->quickLookHandle() && m_handle->quickLookHandle()->didFinishLoading())
-        return;
-#endif
-
     m_handle->client()->didFinishLoading(m_handle, 0);
 }
 
@@ -265,11 +226,6 @@ using namespace WebCore;
 
     if (!m_handle || !m_handle->client())
         return;
-
-#if USE(QUICK_LOOK)
-    if (m_handle->quickLookHandle())
-        m_handle->quickLookHandle()->didFail();
-#endif
 
     m_handle->client()->didFail(m_handle, error);
 }
@@ -289,5 +245,5 @@ using namespace WebCore;
 
 @end
 
-#endif // !USE(CFNETWORK)
+#endif // !USE(CFURLCONNECTION)
 

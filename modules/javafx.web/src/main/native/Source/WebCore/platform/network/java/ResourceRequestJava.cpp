@@ -4,7 +4,7 @@
 #include "config.h"
 #include "ResourceRequest.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 static JGClass networkContextClass;
 static jmethodID getMaximumHTTPConnectionCountPerHostMethod;

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2016 Oleksandr Skachkov <gskachkov@gmail.com>.
  * Copyright (C) 2015 Jordan Harband. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -23,22 +24,68 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+@globalPrivate
+function enumerableOwnProperties(object, kind)
+{
+    "use strict";
+
+    const obj = @Object(object);
+    const ownKeys = @Reflect.@ownKeys(obj);
+    const properties = [];
+    for (let i = 0, keysLength = ownKeys.length; i < keysLength; ++i) {
+        let nextKey = ownKeys[i];
+        if (typeof nextKey === 'string') {
+            let descriptor = @Reflect.@getOwnPropertyDescriptor(obj, nextKey);
+            if (descriptor !== @undefined && descriptor.enumerable) {
+                if (kind === @iterationKindValue)
+                    properties.@push(obj[nextKey]);
+                else if (kind === @iterationKindKeyValue)
+                    properties.@push([nextKey, obj[nextKey]]);
+            }
+        }
+    }
+    
+    return properties;
+}
+
+function values(object)
+{
+    "use strict";
+    
+    if (object == null)
+        @throwTypeError("Object.values requires that input parameter not be null or undefined");
+
+    return @enumerableOwnProperties(object, @iterationKindValue);
+}
+
+function entries(object)
+{
+    "use strict";
+    
+    if (object == null)
+        @throwTypeError("Object.entries requires that input parameter not be null or undefined");
+    
+    return @enumerableOwnProperties(object, @iterationKindKeyValue);
+}
+
 function assign(target/*[*/, /*...*/sources/*] */)
 {
     "use strict";
 
     if (target == null)
-        throw new @TypeError("can't convert " + target + " to object");
+        @throwTypeError("Object.assign requires that input parameter not be null or undefined");
 
-    var objTarget = @Object(target);
-    for (var s = 1, argumentsLength = arguments.length; s < argumentsLength; ++s) {
-        var nextSource = arguments[s];
+    let objTarget = @Object(target);
+    for (let s = 1, argumentsLength = arguments.length; s < argumentsLength; ++s) {
+        let nextSource = arguments[s];
         if (nextSource != null) {
-            var from = @Object(nextSource);
-            var keys = @ownEnumerablePropertyKeys(from);
-            for (var i = 0, keysLength = keys.length; i < keysLength; ++i) {
-                var nextKey = keys[i];
-                objTarget[nextKey] = from[nextKey];
+            let from = @Object(nextSource);
+            let keys = @Reflect.@ownKeys(from);
+            for (let i = 0, keysLength = keys.length; i < keysLength; ++i) {
+                let nextKey = keys[i];
+                let descriptor = @Reflect.@getOwnPropertyDescriptor(from, nextKey);
+                if (descriptor !== @undefined && descriptor.enumerable)
+                    objTarget[nextKey] = from[nextKey];
             }
         }
     }

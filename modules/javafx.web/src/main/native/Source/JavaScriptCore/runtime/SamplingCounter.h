@@ -26,15 +26,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SamplingCounter_h
-#define SamplingCounter_h
+#pragma once
 
 #include <stdint.h>
 #include <wtf/Assertions.h>
-
-#if PLATFORM(JAVA) // tav todo temp
-#include <JSExportMacros.h>
-#endif
 
 namespace JSC {
 
@@ -176,7 +171,3 @@ public:
 #endif
 
 } // namespace JSC
-
-#endif // SamplingCounter_h
-
-

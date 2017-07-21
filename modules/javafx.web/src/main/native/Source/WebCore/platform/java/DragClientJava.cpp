@@ -12,7 +12,7 @@
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "DragClientJava.h"
 
 namespace WebCore {
@@ -23,14 +23,14 @@ IntSize dragImageSize(DragImageRef pr)
     return pr ? roundedIntSize(pr->size()) : IntSize();
 }
 
-DragImageRef scaleDragImage(DragImageRef pr, FloatSize scale)
+DragImageRef scaleDragImage(DragImageRef pr, FloatSize)
 {
     //TODO: pass to java
     notImplemented();
     return pr;
 }
 
-DragImageRef dissolveDragImageToFraction(DragImageRef pr, float delta)
+DragImageRef dissolveDragImageToFraction(DragImageRef pr, float)
 {
     //TODO: pass to java
     notImplemented();
@@ -39,8 +39,6 @@ DragImageRef dissolveDragImageToFraction(DragImageRef pr, float delta)
 
 DragImageRef createDragImageFromImage(Image* img, ImageOrientationDescription)
 {
-    if(img)
-        img->ref();
     return img;
 }
 
@@ -50,10 +48,10 @@ DragImageRef createDragImageIconForCachedImage(CachedImage *cimg)
     return createDragImageFromImage(cimg->image(), ImageOrientationDescription(RespectImageOrientation)); // todo tav valid orientation?
 }
 
-void deleteDragImage(DragImageRef pr)
+void deleteDragImage(DragImageRef)
 {
-    if(pr)
-        pr->deref();
+    // Since DragImageRef is a RefPtr, there's nothing additional we need to do to
+    // delete it. It will be released when it falls out of scope.
 }
 
 DragImageRef createDragImageIconForCachedImageFilename(const String&)
@@ -77,8 +75,8 @@ void DragClientJava::dragControllerDestroyed()
 }
 
 void DragClientJava::willPerformDragDestinationAction(
-    DragDestinationAction action,
-    DragData& data)
+    DragDestinationAction,
+    const DragData&)
 {
     notImplemented();
 }
@@ -86,12 +84,12 @@ void DragClientJava::willPerformDragDestinationAction(
 void DragClientJava::willPerformDragSourceAction(
     DragSourceAction,
     const IntPoint&,
-    DataTransfer& DataTransfer)
+    DataTransfer&)
 {
     notImplemented();
 }
 
-DragDestinationAction DragClientJava::actionMaskForDrag(DragData& data)
+DragDestinationAction DragClientJava::actionMaskForDrag(const DragData&)
 {
     //TODO: check input element and produce correct respond
     notImplemented();
@@ -99,7 +97,7 @@ DragDestinationAction DragClientJava::actionMaskForDrag(DragData& data)
 }
 
 //We work in window rather than view coordinates here
-DragSourceAction DragClientJava::dragSourceActionMaskForPoint(const IntPoint& windowPoint)
+DragSourceAction DragClientJava::dragSourceActionMaskForPoint(const IntPoint&)
 {
     //TODO: check input element and produce correct respond
     notImplemented();
@@ -107,12 +105,13 @@ DragSourceAction DragClientJava::dragSourceActionMaskForPoint(const IntPoint& wi
 }
 
 void DragClientJava::startDrag(
-    DragImageRef dragImage,
+    DragImage dragImage,
     const IntPoint& dragImageOrigin,
     const IntPoint& eventPos,
+    const FloatPoint&,
     DataTransfer& DataTransfer,
-    Frame& frame,
-    bool linkDrag)
+    Frame&,
+    DragSourceAction)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID mid = env->GetMethodID(
@@ -165,10 +164,8 @@ void DragClientJava::startDrag(
 
     // Attention! [jimage] can be the instance of WCImage or WCImageFrame class.
     // The nature of raster is too different to make a conversion inside the native code.
-    jobject jimage =
-        dragImage && dragImage->javaImage()
-        ? jobject(*(dragImage->javaImage()))
-        : 0;
+    jobject jimage = dragImage.get() && dragImage.get()->javaImage() && dragImage.get()->javaImage()->frame()
+                  ? jobject(*(dragImage.get()->javaImage()->frame())) : nullptr;
 
     env->CallVoidMethod(m_webPage, mid, jimage,
         eventPos.x() - dragImageOrigin.x(),
@@ -178,15 +175,6 @@ void DragClientJava::startDrag(
         jobjectArray(jmimeTypes),
         jobjectArray(jvalues) );
     CheckAndClearException(env);
-}
-
-DragImageRef DragClientJava::createDragImageForLink(
-    URL& url,
-    const String& label,
-    Frame* frame)
-{
-    notImplemented();
-    return 0;
 }
 
 } // namespace WebCore

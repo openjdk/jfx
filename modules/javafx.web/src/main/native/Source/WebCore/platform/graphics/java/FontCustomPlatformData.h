@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef FontCustomPlatformData_h
-#define FontCustomPlatformData_h
+
+#pragma once
 
 #include "TextFlags.h"
 #include "RenderStyleConstants.h"
@@ -33,5 +33,4 @@ private:
 
 std::unique_ptr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&);
 
-}
-#endif
+} // namespace WebCore

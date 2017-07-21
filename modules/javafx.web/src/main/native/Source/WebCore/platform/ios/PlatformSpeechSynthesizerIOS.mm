@@ -29,11 +29,11 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
-#include "BlockExceptions.h"
 #include "PlatformSpeechSynthesisUtterance.h"
 #include "PlatformSpeechSynthesisVoice.h"
 #include "SoftLinking.h"
 #include <AVFoundation/AVSpeechSynthesis.h>
+#include <wtf/BlockObjCExceptions.h>
 #include <wtf/RetainPtr.h>
 
 SOFT_LINK_FRAMEWORK(AVFoundation)
@@ -60,7 +60,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
 }
 
 - (WebSpeechSynthesisWrapper *)initWithSpeechSynthesizer:(WebCore::PlatformSpeechSynthesizer*)synthesizer;
-- (void)speakUtterance:(PassRefPtr<WebCore::PlatformSpeechSynthesisUtterance>)utterance;
+- (void)speakUtterance:(RefPtr<WebCore::PlatformSpeechSynthesisUtterance>&&)utterance;
 
 @end
 
@@ -87,7 +87,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
     return rate;
 }
 
-- (void)speakUtterance:(PassRefPtr<WebCore::PlatformSpeechSynthesisUtterance>)utterance
+- (void)speakUtterance:(RefPtr<WebCore::PlatformSpeechSynthesisUtterance>&&)utterance
 {
     // When speak is called we should not have an existing speech utterance outstanding.
     ASSERT(!m_utterance);
@@ -124,7 +124,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
     [avUtterance setVolume:utterance->volume()];
     [avUtterance setPitchMultiplier:utterance->pitch()];
     [avUtterance setVoice:avVoice];
-    m_utterance = utterance;
+    m_utterance = WTFMove(utterance);
 
     [m_synthesizer speakUtterance:avUtterance];
     END_BLOCK_OBJC_EXCEPTIONS
@@ -167,7 +167,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
     if (!m_utterance)
         return;
 
-    m_synthesizerObject->client()->didStartSpeaking(m_utterance);
+    m_synthesizerObject->client()->didStartSpeaking(*m_utterance);
 }
 
 - (void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didFinishSpeechUtterance:(AVSpeechUtterance *)utterance
@@ -181,7 +181,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
     RefPtr<WebCore::PlatformSpeechSynthesisUtterance> platformUtterance = m_utterance;
     m_utterance = nullptr;
 
-    m_synthesizerObject->client()->didFinishSpeaking(platformUtterance);
+    m_synthesizerObject->client()->didFinishSpeaking(*platformUtterance);
 }
 
 - (void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didPauseSpeechUtterance:(AVSpeechUtterance *)utterance
@@ -191,7 +191,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
     if (!m_utterance)
         return;
 
-    m_synthesizerObject->client()->didPauseSpeaking(m_utterance);
+    m_synthesizerObject->client()->didPauseSpeaking(*m_utterance);
 }
 
 - (void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didContinueSpeechUtterance:(AVSpeechUtterance *)utterance
@@ -201,7 +201,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
     if (!m_utterance)
         return;
 
-    m_synthesizerObject->client()->didResumeSpeaking(m_utterance);
+    m_synthesizerObject->client()->didResumeSpeaking(*m_utterance);
 }
 
 - (void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer didCancelSpeechUtterance:(AVSpeechUtterance *)utterance
@@ -215,7 +215,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
     RefPtr<WebCore::PlatformSpeechSynthesisUtterance> platformUtterance = m_utterance;
     m_utterance = nullptr;
 
-    m_synthesizerObject->client()->didFinishSpeaking(platformUtterance);
+    m_synthesizerObject->client()->didFinishSpeaking(*platformUtterance);
 }
 
 - (void)speechSynthesizer:(AVSpeechSynthesizer *)synthesizer willSpeakRangeOfSpeechString:(NSRange)characterRange utterance:(AVSpeechUtterance *)utterance
@@ -227,7 +227,7 @@ SOFT_LINK_CONSTANT(AVFoundation, AVSpeechUtteranceMaximumSpeechRate, float)
         return;
 
     // iOS only supports word boundaries.
-    m_synthesizerObject->client()->boundaryEventOccurred(m_utterance, WebCore::SpeechWordBoundary, characterRange.location);
+    m_synthesizerObject->client()->boundaryEventOccurred(*m_utterance, WebCore::SpeechWordBoundary, characterRange.location);
 }
 
 @end
@@ -266,7 +266,7 @@ void PlatformSpeechSynthesizer::resume()
     [m_platformSpeechWrapper.get() resume];
 }
 
-void PlatformSpeechSynthesizer::speak(PassRefPtr<PlatformSpeechSynthesisUtterance> utterance)
+void PlatformSpeechSynthesizer::speak(RefPtr<PlatformSpeechSynthesisUtterance>&& utterance)
 {
     if (!m_platformSpeechWrapper)
         m_platformSpeechWrapper = adoptNS([[WebSpeechSynthesisWrapper alloc] initWithSpeechSynthesizer:this]);

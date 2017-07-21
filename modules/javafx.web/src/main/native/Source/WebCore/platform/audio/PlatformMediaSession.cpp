@@ -100,11 +100,15 @@ void PlatformMediaSession::beginInterruption(InterruptionType type)
 {
     LOG(Media, "PlatformMediaSession::beginInterruption(%p), state = %s, interruption type = %s, interruption count = %i", this, stateName(m_state), interruptionName(type), m_interruptionCount);
 
-    if (++m_interruptionCount > 1)
+    // When interruptions are overridden, m_interruptionType doesn't get set.
+    // Give nested interruptions a chance when the previous interruptions were overridden.
+    if (++m_interruptionCount > 1 && m_interruptionType != NoInterruption)
         return;
 
-    if (client().shouldOverrideBackgroundPlaybackRestriction(type))
+    if (client().shouldOverrideBackgroundPlaybackRestriction(type)) {
+        LOG(Media, "PlatformMediaSession::beginInterruption(%p), returning early because client says to override interruption", this);
         return;
+    }
 
     m_stateToRestore = state();
     m_notifyingClient = true;
@@ -129,7 +133,7 @@ void PlatformMediaSession::endInterruption(EndInterruptionFlags flags)
     State stateToRestore = m_stateToRestore;
     m_stateToRestore = Idle;
     m_interruptionType = NoInterruption;
-    setState(Paused);
+    setState(stateToRestore);
 
     if (stateToRestore == Autoplaying)
         client().resumeAutoplaying();
@@ -184,8 +188,7 @@ bool PlatformMediaSession::clientWillPausePlayback()
 
     setState(Paused);
     PlatformMediaSessionManager::sharedManager().sessionWillEndPlayback(*this);
-    if (!m_clientDataBufferingTimer.isActive())
-        m_clientDataBufferingTimer.startOneShot(kClientDataBufferingTimerThrottleDelay);
+    scheduleClientDataBufferingCheck();
     return true;
 }
 
@@ -193,6 +196,13 @@ void PlatformMediaSession::pauseSession()
 {
     LOG(Media, "PlatformMediaSession::pauseSession(%p)", this);
     m_client.suspendPlayback();
+}
+
+void PlatformMediaSession::stopSession()
+{
+    LOG(Media, "PlatformMediaSession::stopSession(%p)", this);
+    m_client.suspendPlayback();
+    PlatformMediaSessionManager::sharedManager().removeSession(*this);
 }
 
 PlatformMediaSession::MediaType PlatformMediaSession::mediaType() const
@@ -203,6 +213,11 @@ PlatformMediaSession::MediaType PlatformMediaSession::mediaType() const
 PlatformMediaSession::MediaType PlatformMediaSession::presentationType() const
 {
     return m_client.presentationType();
+}
+
+PlatformMediaSession::CharacteristicsFlags PlatformMediaSession::characteristics() const
+{
+    return m_client.characteristics();
 }
 
 #if ENABLE(VIDEO)
@@ -227,12 +242,22 @@ bool PlatformMediaSession::canReceiveRemoteControlCommands() const
     return m_client.canReceiveRemoteControlCommands();
 }
 
-void PlatformMediaSession::didReceiveRemoteControlCommand(RemoteControlCommandType command)
+void PlatformMediaSession::didReceiveRemoteControlCommand(RemoteControlCommandType command, const PlatformMediaSession::RemoteCommandArgument* argument)
 {
-    m_client.didReceiveRemoteControlCommand(command);
+    m_client.didReceiveRemoteControlCommand(command, argument);
+}
+
+bool PlatformMediaSession::supportsSeeking() const
+{
+    return m_client.supportsSeeking();
 }
 
 void PlatformMediaSession::visibilityChanged()
+{
+    scheduleClientDataBufferingCheck();
+}
+
+void PlatformMediaSession::scheduleClientDataBufferingCheck()
 {
     if (!m_clientDataBufferingTimer.isActive())
         m_clientDataBufferingTimer.startOneShot(kClientDataBufferingTimerThrottleDelay);
@@ -264,9 +289,19 @@ void PlatformMediaSession::updateClientDataBuffering()
     m_client.setShouldBufferData(PlatformMediaSessionManager::sharedManager().sessionCanLoadMedia(*this));
 }
 
+String PlatformMediaSession::sourceApplicationIdentifier() const
+{
+    return m_client.sourceApplicationIdentifier();
+}
+
 bool PlatformMediaSession::isHidden() const
 {
     return m_client.elementIsHidden();
+}
+
+bool PlatformMediaSession::shouldOverrideBackgroundLoadingRestriction() const
+{
+    return m_client.shouldOverrideBackgroundLoadingRestriction();
 }
 
 void PlatformMediaSession::isPlayingToWirelessPlaybackTargetChanged(bool isWireless)
@@ -275,7 +310,12 @@ void PlatformMediaSession::isPlayingToWirelessPlaybackTargetChanged(bool isWirel
         return;
 
     m_isPlayingToWirelessPlaybackTarget = isWireless;
+
+    // Save and restore the interruption count so it doesn't get out of sync if beginInterruption is called because
+    // if we in the background.
+    int interruptionCount = m_interruptionCount;
     PlatformMediaSessionManager::sharedManager().sessionIsPlayingToWirelessPlaybackTargetChanged(*this);
+    m_interruptionCount = interruptionCount;
 }
 
 PlatformMediaSession::DisplayType PlatformMediaSession::displayType() const
@@ -289,15 +329,16 @@ bool PlatformMediaSession::activeAudioSessionRequired()
         return false;
     if (state() != PlatformMediaSession::State::Playing)
         return false;
-    return m_canProduceAudio;
+    return canProduceAudio();
 }
 
-void PlatformMediaSession::setCanProduceAudio(bool canProduceAudio)
+bool PlatformMediaSession::canProduceAudio() const
 {
-    if (m_canProduceAudio == canProduceAudio)
-        return;
-    m_canProduceAudio = canProduceAudio;
+    return m_client.canProduceAudio();
+}
 
+void PlatformMediaSession::canProduceAudioChanged()
+{
     PlatformMediaSessionManager::sharedManager().sessionCanProduceAudioChanged(*this);
 }
 
@@ -317,6 +358,11 @@ double PlatformMediaSessionClient::mediaSessionCurrentTime() const
     return MediaPlayer::invalidTime();
 }
 #endif
+
+void PlatformMediaSession::clientCharacteristicsChanged()
+{
+    PlatformMediaSessionManager::sharedManager().clientCharacteristicsChanged(*this);
+}
 
 }
 #endif

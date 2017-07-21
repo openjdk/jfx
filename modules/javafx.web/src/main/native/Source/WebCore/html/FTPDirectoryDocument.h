@@ -22,14 +22,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FTPDirectoryDocument_h
-#define FTPDirectoryDocument_h
+#pragma once
 
 #include "HTMLDocument.h"
 
 namespace WebCore {
-
-class DOMImplementation;
 
 class FTPDirectoryDocument final : public HTMLDocument {
 public:
@@ -40,9 +37,7 @@ public:
 
 private:
     FTPDirectoryDocument(Frame*, const URL&);
-    virtual Ref<DocumentParser> createParser() override;
+    Ref<DocumentParser> createParser() override;
 };
 
 } // namespace WebCore
-
-#endif // FTPDirectoryDocument_h

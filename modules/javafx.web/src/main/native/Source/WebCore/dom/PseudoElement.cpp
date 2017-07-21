@@ -32,6 +32,7 @@
 #include "RenderElement.h"
 #include "RenderImage.h"
 #include "RenderQuote.h"
+#include "StyleResolver.h"
 
 namespace WebCore {
 
@@ -76,9 +77,12 @@ void PseudoElement::clearHostElement()
     m_hostElement = nullptr;
 }
 
-RefPtr<RenderStyle> PseudoElement::customStyleForRenderer(RenderStyle& parentStyle, RenderStyle*)
+std::optional<ElementStyle> PseudoElement::resolveCustomStyle(const RenderStyle& parentStyle, const RenderStyle*)
 {
-    return m_hostElement->renderer()->getCachedPseudoStyle(m_pseudoId, &parentStyle);
+    auto* style = m_hostElement->renderer()->getCachedPseudoStyle(m_pseudoId, &parentStyle);
+    if (!style)
+        return std::nullopt;
+    return ElementStyle(RenderStyle::clonePtr(*style));
 }
 
 void PseudoElement::didAttachRenderers()
@@ -92,12 +96,8 @@ void PseudoElement::didAttachRenderers()
 
     for (const ContentData* content = style.contentData(); content; content = content->next()) {
         auto child = content->createContentRenderer(document(), style);
-        if (renderer->isChildAllowed(*child, style)) {
-            auto* childPtr = child.get();
+        if (renderer->isChildAllowed(*child, style))
             renderer->addChild(child.leakPtr());
-            if (is<RenderQuote>(*childPtr))
-                downcast<RenderQuote>(*childPtr).attachQuote();
-        }
     }
 }
 
@@ -118,7 +118,7 @@ void PseudoElement::didRecalcStyle(Style::Change)
         // We only manage the style for the generated content which must be images or text.
         if (!is<RenderImage>(*child) && !is<RenderQuote>(*child))
             continue;
-        Ref<RenderStyle> createdStyle = RenderStyle::createStyleInheritingFromPseudoStyle(renderer.style());
+        auto createdStyle = RenderStyle::createStyleInheritingFromPseudoStyle(renderer.style());
         downcast<RenderElement>(*child).setStyle(WTFMove(createdStyle));
     }
 }

@@ -86,7 +86,6 @@ void AcceleratedCompositingContext::initialize()
 
     // The non-composited contents are a child of the root layer.
     m_nonCompositedContentLayer = GraphicsLayer::create(nullptr, *this);
-    downcast<GraphicsLayerTextureMapper>(*m_nonCompositedContentLayer).setAsNonCompositingLayer();
     m_nonCompositedContentLayer->setDrawsContent(true);
     m_nonCompositedContentLayer->setContentsOpaque(!m_webView.transparent());
     m_nonCompositedContentLayer->setSize(pageSize);
@@ -103,7 +102,7 @@ void AcceleratedCompositingContext::initialize()
 
     // The creation of the TextureMapper needs an active OpenGL context.
     if (!m_context)
-        m_context = GLContext::createContextForWindow(m_window, GLContext::sharingContext());
+        m_context = GLContext::createContextForWindow(m_window);
 
     if (!m_context)
         return;
@@ -283,7 +282,7 @@ bool AcceleratedCompositingContext::acceleratedCompositingAvailable()
         return false;
 
     // Create GL context.
-    std::unique_ptr<WebCore::GLContext> context = GLContext::createContextForWindow(testWindow, GLContext::sharingContext());
+    std::unique_ptr<WebCore::GLContext> context = GLContext::createContextForWindow(testWindow);
 
     if (!context) {
         ::DestroyWindow(testWindow);
@@ -356,13 +355,12 @@ void AcceleratedCompositingContext::scheduleLayerFlush()
 bool AcceleratedCompositingContext::flushPendingLayerChanges()
 {
     FrameView* frameView = core(&m_webView)->mainFrame().view();
-    m_rootLayer->flushCompositingStateForThisLayerOnly(frameView->viewportIsStable());
-    m_nonCompositedContentLayer->flushCompositingStateForThisLayerOnly(frameView->viewportIsStable());
+    m_rootLayer->flushCompositingStateForThisLayerOnly();
+    m_nonCompositedContentLayer->flushCompositingStateForThisLayerOnly();
     if (!frameView->flushCompositingStateIncludingSubframes())
         return false;
 
-    FloatRect visibleRect(frameView->scrollPosition(), getWebViewSize(m_webView));
-    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers(visibleRect);
+    downcast<GraphicsLayerTextureMapper>(*m_rootLayer).updateBackingStoreIncludingSubLayers();
     return true;
 }
 

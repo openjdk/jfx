@@ -27,8 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceLoadNotifier_h
-#define ResourceLoadNotifier_h
+#pragma once
 
 #include <wtf/Noncopyable.h>
 
@@ -50,8 +49,6 @@ public:
 
     void didReceiveAuthenticationChallenge(ResourceLoader*, const AuthenticationChallenge&);
     void didReceiveAuthenticationChallenge(unsigned long identifier, DocumentLoader*, const AuthenticationChallenge&);
-    void didCancelAuthenticationChallenge(ResourceLoader*, const AuthenticationChallenge&);
-    void didCancelAuthenticationChallenge(unsigned long identifier, DocumentLoader*, const AuthenticationChallenge&);
 
     void willSendRequest(ResourceLoader*, ResourceRequest&, const ResourceResponse& redirectResponse);
     void didReceiveResponse(ResourceLoader*, const ResourceResponse&);
@@ -73,5 +70,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ResourceLoadNotifier_h

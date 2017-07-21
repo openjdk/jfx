@@ -36,8 +36,8 @@
 
 namespace WebCore {
 
-WorkerGlobalScopeNotifications::WorkerGlobalScopeNotifications(WorkerGlobalScope* context)
-    : m_context(context)
+WorkerGlobalScopeNotifications::WorkerGlobalScopeNotifications(WorkerGlobalScope& scope)
+    : m_context(&scope)
 {
 }
 
@@ -50,26 +50,29 @@ const char* WorkerGlobalScopeNotifications::supplementName()
     return "WorkerGlobalScopeNotifications";
 }
 
-WorkerGlobalScopeNotifications* WorkerGlobalScopeNotifications::from(WorkerGlobalScope* context)
+WorkerGlobalScopeNotifications* WorkerGlobalScopeNotifications::from(WorkerGlobalScope& scope)
 {
-    WorkerGlobalScopeNotifications* supplement = static_cast<WorkerGlobalScopeNotifications*>(Supplement<ScriptExecutionContext>::from(context, supplementName()));
+    WorkerGlobalScopeNotifications* supplement = static_cast<WorkerGlobalScopeNotifications*>(Supplement<WorkerGlobalScope>::from(&scope, supplementName()));
     if (!supplement) {
-        auto newSupplement = std::make_unique<WorkerGlobalScopeNotifications>(context);
+        auto newSupplement = std::make_unique<WorkerGlobalScopeNotifications>(scope);
         supplement = newSupplement.get();
-        provideTo(context, supplementName(), WTFMove(newSupplement));
+        provideTo(&scope, supplementName(), WTFMove(newSupplement));
     }
     return supplement;
 }
 
-NotificationCenter* WorkerGlobalScopeNotifications::webkitNotifications(WorkerGlobalScope& context)
+NotificationCenter* WorkerGlobalScopeNotifications::webkitNotifications(WorkerGlobalScope& scope)
 {
-    return WorkerGlobalScopeNotifications::from(&context)->webkitNotifications();
+    return WorkerGlobalScopeNotifications::from(scope)->webkitNotifications();
 }
 
 NotificationCenter* WorkerGlobalScopeNotifications::webkitNotifications()
 {
+    // FIXME: As of this writing, this always passes nullptr for the client.
+    // If it wasn't for that, the notification center create function could be taking a reference.
+    // How is it useful to create a notification center with no client?
     if (!m_notificationCenter)
-        m_notificationCenter = NotificationCenter::create(m_context, m_context->thread().getNotificationClient());
+        m_notificationCenter = NotificationCenter::create(*m_context, m_context->thread().getNotificationClient());
     return m_notificationCenter.get();
 }
 

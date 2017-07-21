@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ModifySelectionListLevel_h
-#define ModifySelectionListLevel_h
+#pragma once
 
 #include "CompositeEditCommand.h"
 
@@ -42,7 +41,7 @@ protected:
     void insertSiblingNodeRangeAfter(Node* startNode, Node* endNode, Node* refNode);
 
 private:
-    virtual bool preservesTypingStyle() const;
+    bool preservesTypingStyle() const override;
 };
 
 // IncreaseSelectionListLevelCommand moves the selected list items one level deeper.
@@ -55,7 +54,7 @@ public:
 
 private:
     enum Type { InheritedListType, OrderedList, UnorderedList };
-    static PassRefPtr<Node> increaseSelectionListLevel(Document*, Type);
+    static RefPtr<Node> increaseSelectionListLevel(Document*, Type);
 
     static Ref<IncreaseSelectionListLevelCommand> create(Document& document, Type type)
     {
@@ -64,7 +63,7 @@ private:
 
     IncreaseSelectionListLevelCommand(Document&, Type);
 
-    virtual void doApply();
+    void doApply() override;
 
     Type m_listType;
     RefPtr<Node> m_listElement;
@@ -84,9 +83,7 @@ private:
 
     explicit DecreaseSelectionListLevelCommand(Document&);
 
-    virtual void doApply();
+    void doApply() override;
 };
 
 } // namespace WebCore
-
-#endif // ModifySelectionListLevel_h

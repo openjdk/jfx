@@ -22,17 +22,17 @@
 * or visit www.oracle.com if you need additional information or have any
 * questions.
 */
-#ifndef ProgressTrackerClientJava_H
-#define ProgressTrackerClientJava_H
+
+#pragma once
 
 #include "Frame.h"
 #include "ProgressTrackerClient.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 namespace WebCore {
 
-class ProgressTrackerClientJava : public ProgressTrackerClient {
+class ProgressTrackerClientJava final : public ProgressTrackerClient {
 public:
     ProgressTrackerClientJava(const JLObject &webPage);
 
@@ -47,5 +47,3 @@ private:
 };
 
 }
-
-#endif // ProgressTrackerClientJava_H

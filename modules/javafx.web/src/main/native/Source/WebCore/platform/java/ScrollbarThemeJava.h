@@ -2,10 +2,10 @@
  * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 
-#ifndef ScrollbarThemeJava_h
-#define ScrollbarThemeJava_h
 
-#include "JavaEnv.h"
+#pragma once
+
+#include <wtf/java/JavaEnv.h>
 #include "ScrollbarThemeComposite.h"
 
 namespace WebCore {
@@ -25,5 +25,4 @@ public:
     IntRect trackRect(Scrollbar&, bool painting = false) override;
 };
 
-}
-#endif
+} // namespace WebCore

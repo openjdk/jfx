@@ -26,68 +26,108 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FetchResponse_h
-#define FetchResponse_h
+#pragma once
 
 #if ENABLE(FETCH_API)
 
-#include "FetchBody.h"
-#include "FetchHeaders.h"
+#include "FetchBodyOwner.h"
 #include "ResourceResponse.h"
+#include <runtime/TypedArrays.h>
 
 namespace JSC {
-class ArrayBuffer;
+class ExecState;
+class JSValue;
 };
 
 namespace WebCore {
 
-class Dictionary;
+class FetchRequest;
+class ReadableStreamSource;
 
-typedef int ExceptionCode;
-
-class FetchResponse : public RefCounted<FetchResponse> {
+class FetchResponse final : public FetchBodyOwner {
 public:
-    static Ref<FetchResponse> create() { return adoptRef(*new FetchResponse(Type::Default, { }, FetchHeaders::create(FetchHeaders::Guard::Response), ResourceResponse())); }
-    static Ref<FetchResponse> error();
-    static RefPtr<FetchResponse> redirect(ScriptExecutionContext*, const String&, int, ExceptionCode&);
-    // FIXME: Binding generator should not require below method to handle optional status parameter.
-    static RefPtr<FetchResponse> redirect(ScriptExecutionContext* context, const String& url, ExceptionCode& ec) { return redirect(context, url, 302, ec); }
+    using Type = ResourceResponse::Type;
 
-    void initializeWith(const Dictionary&, ExceptionCode&);
+    static Ref<FetchResponse> create(ScriptExecutionContext& context) { return adoptRef(*new FetchResponse(context, std::nullopt, FetchHeaders::create(FetchHeaders::Guard::Response), ResourceResponse())); }
+    static Ref<FetchResponse> error(ScriptExecutionContext&);
+    static ExceptionOr<Ref<FetchResponse>> redirect(ScriptExecutionContext&, const String& url, int status);
 
-    String type() const;
-    const String& url() const { return m_response.url().string(); }
-    bool redirected() const { return m_isRedirected; }
+    using FetchPromise = DOMPromise<IDLInterface<FetchResponse>>;
+    static void fetch(ScriptExecutionContext&, FetchRequest&, FetchPromise&&);
+
+    void consume(unsigned, Ref<DeferredPromise>&&);
+#if ENABLE(READABLE_STREAM_API)
+    void startConsumingStream(unsigned);
+    void consumeChunk(Ref<JSC::Uint8Array>&&);
+    void finishConsumingStream(Ref<DeferredPromise>&&);
+#endif
+
+    ExceptionOr<void> setStatus(int status, const String& statusText);
+    void initializeWith(JSC::ExecState&, JSC::JSValue);
+
+    Type type() const { return m_response.type(); }
+    const String& url() const;
+    bool redirected() const { return m_response.isRedirected(); }
     int status() const { return m_response.httpStatusCode(); }
-    bool ok() const { return status() >= 200 && status() <= 299; }
+    bool ok() const { return m_response.isSuccessful(); }
     const String& statusText() const { return m_response.httpStatusText(); }
 
     FetchHeaders& headers() { return m_headers; }
-    RefPtr<FetchResponse> clone(ExceptionCode&);
+    Ref<FetchResponse> cloneForJS();
 
-    // Body API
-    bool isDisturbed() const { return m_body.isDisturbed(); }
-    void arrayBuffer(FetchBody::ArrayBufferPromise&& promise) { m_body.arrayBuffer(WTFMove(promise)); }
-    void formData(FetchBody::FormDataPromise&& promise) { m_body.formData(WTFMove(promise)); }
-    void blob(FetchBody::BlobPromise&& promise) { m_body.blob(WTFMove(promise)); }
-    void json(JSC::ExecState& state, FetchBody::JSONPromise&& promise) { m_body.json(state, WTFMove(promise)); }
-    void text(FetchBody::TextPromise&& promise) { m_body.text(WTFMove(promise)); }
+#if ENABLE(READABLE_STREAM_API)
+    ReadableStreamSource* createReadableStreamSource();
+    void consumeBodyAsStream();
+    void feedStream();
+    void cancel();
+#endif
+
+    bool isLoading() const { return !!m_bodyLoader; }
 
 private:
-    enum class Type { Basic, Cors, Default, Error, Opaque, OpaqueRedirect };
+    FetchResponse(ScriptExecutionContext&, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, ResourceResponse&&);
 
-    FetchResponse(Type, FetchBody&&, Ref<FetchHeaders>&&, ResourceResponse&&);
+    static void startFetching(ScriptExecutionContext&, const FetchRequest&, FetchPromise&&);
 
-    Type m_type;
+    void stop() final;
+    const char* activeDOMObjectName() const final;
+    bool canSuspendForDocumentSuspension() const final;
+
+#if ENABLE(READABLE_STREAM_API)
+    void closeStream();
+#endif
+
+    class BodyLoader final : public FetchLoaderClient {
+    public:
+        BodyLoader(FetchResponse&, FetchPromise&&);
+        ~BodyLoader();
+
+        bool start(ScriptExecutionContext&, const FetchRequest&);
+        void stop();
+
+#if ENABLE(READABLE_STREAM_API)
+        RefPtr<SharedBuffer> startStreaming();
+#endif
+
+    private:
+        // FetchLoaderClient API
+        void didSucceed() final;
+        void didFail() final;
+        void didReceiveResponse(const ResourceResponse&) final;
+        void didReceiveData(const char*, size_t) final;
+
+        FetchResponse& m_response;
+        std::optional<FetchPromise> m_promise;
+        std::unique_ptr<FetchLoader> m_loader;
+    };
+
     ResourceResponse m_response;
-    FetchBody m_body;
-    Ref<FetchHeaders> m_headers;
-    bool m_isLocked = false;
-    bool m_isRedirected = false;
+    std::optional<BodyLoader> m_bodyLoader;
+    mutable String m_responseURL;
+
+    FetchBodyConsumer m_consumer { FetchBodyConsumer::Type::ArrayBuffer  };
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(FETCH_API)
-
-#endif // FetchResponse_h

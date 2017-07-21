@@ -23,11 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ScrollingStateScrollingNode_h
-#define ScrollingStateScrollingNode_h
+#pragma once
 
 #if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
 
+#include "ScrollSnapOffsetsInfo.h"
 #include "ScrollTypes.h"
 #include "ScrollingCoordinator.h"
 #include "ScrollingStateNode.h"
@@ -50,6 +50,8 @@ public:
 #if ENABLE(CSS_SCROLL_SNAP)
         HorizontalSnapOffsets,
         VerticalSnapOffsets,
+        HorizontalSnapOffsetRanges,
+        VerticalSnapOffsetRanges,
         CurrentHorizontalSnapOffsetIndex,
         CurrentVerticalSnapOffsetIndex,
 #endif
@@ -72,11 +74,17 @@ public:
     WEBCORE_EXPORT void setScrollOrigin(const IntPoint&);
 
 #if ENABLE(CSS_SCROLL_SNAP)
-    const Vector<float>& horizontalSnapOffsets() const { return m_horizontalSnapOffsets; }
+    const Vector<float>& horizontalSnapOffsets() const { return m_snapOffsetsInfo.horizontalSnapOffsets; }
     WEBCORE_EXPORT void setHorizontalSnapOffsets(const Vector<float>&);
 
-    const Vector<float>& verticalSnapOffsets() const { return m_verticalSnapOffsets; }
+    const Vector<float>& verticalSnapOffsets() const { return m_snapOffsetsInfo.verticalSnapOffsets; }
     WEBCORE_EXPORT void setVerticalSnapOffsets(const Vector<float>&);
+
+    const Vector<ScrollOffsetRange<float>>& horizontalSnapOffsetRanges() const { return m_snapOffsetsInfo.horizontalSnapOffsetRanges; }
+    WEBCORE_EXPORT void setHorizontalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
+
+    const Vector<ScrollOffsetRange<float>>& verticalSnapOffsetRanges() const { return m_snapOffsetsInfo.verticalSnapOffsetRanges; }
+    WEBCORE_EXPORT void setVerticalSnapOffsetRanges(const Vector<ScrollOffsetRange<float>>&);
 
     unsigned currentHorizontalSnapPointIndex() const { return m_currentHorizontalSnapPointIndex; }
     WEBCORE_EXPORT void setCurrentHorizontalSnapPointIndex(unsigned);
@@ -95,11 +103,11 @@ public:
     bool expectsWheelEventTestTrigger() const { return m_expectsWheelEventTestTrigger; }
     WEBCORE_EXPORT void setExpectsWheelEventTestTrigger(bool);
 
-    virtual void dumpProperties(TextStream&, int indent) const override;
-
 protected:
     ScrollingStateScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
+
+    void dumpProperties(TextStream&, int indent, ScrollingStateTreeAsTextBehavior) const override;
 
 private:
     FloatSize m_scrollableAreaSize;
@@ -109,8 +117,7 @@ private:
     FloatPoint m_requestedScrollPosition;
     IntPoint m_scrollOrigin;
 #if ENABLE(CSS_SCROLL_SNAP)
-    Vector<float> m_horizontalSnapOffsets;
-    Vector<float> m_verticalSnapOffsets;
+    ScrollSnapOffsetsInfo<float> m_snapOffsetsInfo;
     unsigned m_currentHorizontalSnapPointIndex { 0 };
     unsigned m_currentVerticalSnapPointIndex { 0 };
 #endif
@@ -124,5 +131,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_SCROLLING_STATE_NODE(ScrollingStateScrollingNode, isScrollingNode())
 
 #endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
-
-#endif // ScrollingStateScrollingNode_h

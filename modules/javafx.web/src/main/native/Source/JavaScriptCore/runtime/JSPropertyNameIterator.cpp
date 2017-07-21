@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple, Inc. All rights reserved.
+ * Copyright (C) 2015-2016 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,9 @@
 #include "config.h"
 #include "JSPropertyNameIterator.h"
 
-#include "IdentifierInlines.h"
 #include "IteratorOperations.h"
-#include "JSCJSValueInlines.h"
-#include "JSCellInlines.h"
+#include "JSCInlines.h"
 #include "JSPropertyNameEnumerator.h"
-#include "SlotVisitorInlines.h"
-#include "StructureInlines.h"
 
 namespace JSC {
 
@@ -51,7 +47,7 @@ JSPropertyNameIterator::JSPropertyNameIterator(VM& vm, Structure* structure, JSO
 
 JSPropertyNameIterator* JSPropertyNameIterator::clone(ExecState* exec)
 {
-    auto iterator = JSPropertyNameIterator::create(exec, exec->callee()->globalObject()->propertyNameIteratorStructure(), m_iteratedObject.get(), m_propertyNameEnumerator.get());
+    auto iterator = JSPropertyNameIterator::create(exec, exec->jsCallee()->globalObject()->propertyNameIteratorStructure(), m_iteratedObject.get(), m_propertyNameEnumerator.get());
     iterator->m_enumerationPhase = m_enumerationPhase;
     iterator->m_cursor = m_cursor;
     return iterator;
@@ -59,7 +55,11 @@ JSPropertyNameIterator* JSPropertyNameIterator::clone(ExecState* exec)
 
 JSPropertyNameIterator* JSPropertyNameIterator::create(ExecState* exec, Structure* structure, JSObject* iteratedObject)
 {
-    return JSPropertyNameIterator::create(exec, structure, iteratedObject, propertyNameEnumerator(exec, iteratedObject));
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSPropertyNameEnumerator* enumerator = propertyNameEnumerator(exec, iteratedObject);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    return JSPropertyNameIterator::create(exec, structure, iteratedObject, enumerator);
 }
 
 JSPropertyNameIterator* JSPropertyNameIterator::create(ExecState* exec, Structure* structure, JSObject* iteratedObject, JSPropertyNameEnumerator* enumerator)
@@ -73,7 +73,7 @@ JSPropertyNameIterator* JSPropertyNameIterator::create(ExecState* exec, Structur
 void JSPropertyNameIterator::finishCreation(VM& vm, JSGlobalObject* globalObject)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(info()));
+    ASSERT(inherits(vm, info()));
     JSC_NATIVE_FUNCTION(vm.propertyNames->next, propertyNameIteratorFuncNext, DontEnum, 0);
 }
 
@@ -82,8 +82,8 @@ void JSPropertyNameIterator::visitChildren(JSCell* cell, SlotVisitor& visitor)
     JSPropertyNameIterator* thisObject = jsCast<JSPropertyNameIterator*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
-    visitor.append(&thisObject->m_iteratedObject);
-    visitor.append(&thisObject->m_propertyNameEnumerator);
+    visitor.append(thisObject->m_iteratedObject);
+    visitor.append(thisObject->m_propertyNameEnumerator);
 }
 
 bool JSPropertyNameIterator::next(ExecState* exec, JSValue& output)
@@ -140,9 +140,12 @@ bool JSPropertyNameIterator::next(ExecState* exec, JSValue& output)
 
 EncodedJSValue JSC_HOST_CALL propertyNameIteratorFuncNext(ExecState* exec)
 {
-    JSPropertyNameIterator* iterator = jsDynamicCast<JSPropertyNameIterator*>(exec->thisValue());
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSPropertyNameIterator* iterator = jsDynamicCast<JSPropertyNameIterator*>(vm, exec->thisValue());
     if (!iterator)
-        return JSValue::encode(throwTypeError(exec, ASCIILiteral("Cannot call PropertyNameIterator.next() on a non-PropertyNameIterator object")));
+        return JSValue::encode(throwTypeError(exec, scope, ASCIILiteral("Cannot call PropertyNameIterator.next() on a non-PropertyNameIterator object")));
 
     JSValue result;
     if (iterator->next(exec, result))

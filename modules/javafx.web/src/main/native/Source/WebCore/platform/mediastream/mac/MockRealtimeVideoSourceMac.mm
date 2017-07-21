@@ -35,6 +35,7 @@
 #import "GraphicsContextCG.h"
 #import "ImageBuffer.h"
 #import "MediaConstraints.h"
+#import "MediaSampleAVFObjC.h"
 #import "NotImplemented.h"
 #import "PlatformLayer.h"
 #import "RealtimeMediaSourceSettings.h"
@@ -42,59 +43,89 @@
 #import <QuartzCore/CATransaction.h>
 #import <objc/runtime.h>
 
+#import "CoreMediaSoftLink.h"
+#import "CoreVideoSoftLink.h"
+
 namespace WebCore {
 
-RefPtr<MockRealtimeVideoSource> MockRealtimeVideoSource::create()
+static const int videoSampleRate = 90000;
+
+RefPtr<MockRealtimeVideoSource> MockRealtimeVideoSource::create(const String& name, const MediaConstraints* constraints)
 {
-    return adoptRef(new MockRealtimeVideoSourceMac());
+    auto source = adoptRef(new MockRealtimeVideoSourceMac(name));
+    if (constraints && source->applyConstraints(*constraints))
+        source = nullptr;
+
+    return source;
 }
 
-MockRealtimeVideoSourceMac::MockRealtimeVideoSourceMac()
-    : MockRealtimeVideoSource()
+MockRealtimeVideoSourceMac::MockRealtimeVideoSourceMac(const String& name)
+    : MockRealtimeVideoSource(name)
 {
 }
 
-PlatformLayer* MockRealtimeVideoSourceMac::platformLayer() const
+RefPtr<MockRealtimeVideoSource> MockRealtimeVideoSource::createMuted(const String& name)
 {
-    if (m_previewLayer)
-        return m_previewLayer.get();
-
-    m_previewLayer = adoptNS([[CALayer alloc] init]);
-    m_previewLayer.get().name = @"MockRealtimeVideoSourceMac preview layer";
-    m_previewLayer.get().contentsGravity = kCAGravityResizeAspect;
-    m_previewLayer.get().anchorPoint = CGPointZero;
-    m_previewLayer.get().needsDisplayOnBoundsChange = YES;
-#if !PLATFORM(IOS)
-    m_previewLayer.get().autoresizingMask = kCALayerWidthSizable | kCALayerHeightSizable;
-#endif
-
-    updatePlatformLayer();
-
-    return m_previewLayer.get();
+    auto source = adoptRef(new MockRealtimeVideoSource(name));
+    source->m_muted = true;
+    return source;
 }
 
-void MockRealtimeVideoSourceMac::updatePlatformLayer() const
+RetainPtr<CMSampleBufferRef> MockRealtimeVideoSourceMac::CMSampleBufferFromPixelBuffer(CVPixelBufferRef pixelBuffer)
 {
-    if (!m_previewLayer)
-        return;
+    if (!pixelBuffer)
+        return nullptr;
 
-    [CATransaction begin];
-    [CATransaction setAnimationDuration:0];
-    [CATransaction setDisableActions:YES];
+    CMTime sampleTime = CMTimeMake((elapsedTime() + .1) * videoSampleRate, videoSampleRate);
+    CMSampleTimingInfo timingInfo = { kCMTimeInvalid, sampleTime, sampleTime };
 
-    do {
-        RefPtr<Image> image = imageBuffer()->copyImage();
-        if (!image)
-            break;
+    CMVideoFormatDescriptionRef formatDescription = nullptr;
+    OSStatus status = CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, (CVImageBufferRef)pixelBuffer, &formatDescription);
+    if (status != noErr) {
+        LOG_ERROR("Failed to initialize CMVideoFormatDescription with error code: %d", status);
+        return nullptr;
+    }
 
-        m_previewImage = image->getCGImageRef();
-        if (!m_previewImage)
-            break;
+    CMSampleBufferRef sampleBuffer;
+    status = CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, (CVImageBufferRef)pixelBuffer, formatDescription, &timingInfo, &sampleBuffer);
+    CFRelease(formatDescription);
+    if (status != noErr) {
+        LOG_ERROR("Failed to initialize CMSampleBuffer with error code: %d", status);
+        return nullptr;
+    }
 
-        m_previewLayer.get().contents = (NSObject*)(m_previewImage.get());
-    } while (0);
+    return adoptCF(sampleBuffer);
+}
 
-    [CATransaction commit];
+RetainPtr<CVPixelBufferRef> MockRealtimeVideoSourceMac::pixelBufferFromCGImage(CGImageRef image) const
+{
+    static CGColorSpaceRef deviceRGBColorSpace = CGColorSpaceCreateDeviceRGB();
+
+    CGSize frameSize = CGSizeMake(CGImageGetWidth(image), CGImageGetHeight(image));
+    CFDictionaryRef options = (__bridge CFDictionaryRef) @{
+        (__bridge NSString *)kCVPixelBufferCGImageCompatibilityKey: @(NO),
+        (__bridge NSString *)kCVPixelBufferCGBitmapContextCompatibilityKey: @(NO)
+    };
+    CVPixelBufferRef pixelBuffer;
+    CVReturn status = CVPixelBufferCreate(kCFAllocatorDefault, frameSize.width, frameSize.height, kCVPixelFormatType_32ARGB, options, &pixelBuffer);
+    if (status != kCVReturnSuccess)
+        return nullptr;
+
+    CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+    void* data = CVPixelBufferGetBaseAddress(pixelBuffer);
+    auto context = adoptCF(CGBitmapContextCreate(data, frameSize.width, frameSize.height, 8, CVPixelBufferGetBytesPerRow(pixelBuffer), deviceRGBColorSpace, (CGBitmapInfo) kCGImageAlphaNoneSkipFirst));
+    CGContextDrawImage(context.get(), CGRectMake(0, 0, CGImageGetWidth(image), CGImageGetHeight(image)), image);
+    CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+
+    return adoptCF(pixelBuffer);
+}
+
+void MockRealtimeVideoSourceMac::updateSampleBuffer()
+{
+    auto pixelBuffer = pixelBufferFromCGImage(imageBuffer()->copyImage()->nativeImage().get());
+    auto sampleBuffer = CMSampleBufferFromPixelBuffer(pixelBuffer.get());
+
+    videoSampleAvailable(MediaSampleAVFObjC::create(sampleBuffer.get()));
 }
 
 } // namespace WebCore

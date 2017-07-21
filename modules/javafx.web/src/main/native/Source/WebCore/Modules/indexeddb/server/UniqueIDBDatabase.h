@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef UniqueIDBDatabase_h
-#define UniqueIDBDatabase_h
+#pragma once
 
 #if ENABLE(INDEXED_DATABASE)
 
@@ -38,6 +37,8 @@
 #include "Timer.h"
 #include "UniqueIDBDatabaseConnection.h"
 #include "UniqueIDBDatabaseTransaction.h"
+#include <wtf/CrossThreadQueue.h>
+#include <wtf/CrossThreadTask.h>
 #include <wtf/Deque.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
@@ -45,11 +46,18 @@
 #include <wtf/Ref.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
+namespace JSC {
+class VM;
+}
+
 namespace WebCore {
 
 class IDBError;
+class IDBGetAllResult;
 class IDBRequestData;
 class IDBTransactionInfo;
+
+enum class IDBGetRecordDataType;
 
 namespace IndexedDB {
 enum class IndexRecordType;
@@ -63,6 +71,7 @@ class IDBServer;
 typedef std::function<void(const IDBError&)> ErrorCallback;
 typedef std::function<void(const IDBError&, const IDBKeyData&)> KeyDataCallback;
 typedef std::function<void(const IDBError&, const IDBGetResult&)> GetResultCallback;
+typedef std::function<void(const IDBError&, const IDBGetAllResult&)> GetAllResultsCallback;
 typedef std::function<void(const IDBError&, uint64_t)> CountCallback;
 
 class UniqueIDBDatabase : public ThreadSafeRefCounted<UniqueIDBDatabase> {
@@ -82,28 +91,37 @@ public:
 
     void createObjectStore(UniqueIDBDatabaseTransaction&, const IDBObjectStoreInfo&, ErrorCallback);
     void deleteObjectStore(UniqueIDBDatabaseTransaction&, const String& objectStoreName, ErrorCallback);
+    void renameObjectStore(UniqueIDBDatabaseTransaction&, uint64_t objectStoreIdentifier, const String& newName, ErrorCallback);
     void clearObjectStore(UniqueIDBDatabaseTransaction&, uint64_t objectStoreIdentifier, ErrorCallback);
     void createIndex(UniqueIDBDatabaseTransaction&, const IDBIndexInfo&, ErrorCallback);
     void deleteIndex(UniqueIDBDatabaseTransaction&, uint64_t objectStoreIdentifier, const String& indexName, ErrorCallback);
-    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const ThreadSafeDataBuffer& valueData, IndexedDB::ObjectStoreOverwriteMode, KeyDataCallback);
-    void getRecord(const IDBRequestData&, const IDBKeyRangeData&, GetResultCallback);
+    void renameIndex(UniqueIDBDatabaseTransaction&, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName, ErrorCallback);
+    void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode, KeyDataCallback);
+    void getRecord(const IDBRequestData&, const IDBGetRecordData&, GetResultCallback);
+    void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&, GetAllResultsCallback);
     void getCount(const IDBRequestData&, const IDBKeyRangeData&, CountCallback);
     void deleteRecord(const IDBRequestData&, const IDBKeyRangeData&, ErrorCallback);
     void openCursor(const IDBRequestData&, const IDBCursorInfo&, GetResultCallback);
-    void iterateCursor(const IDBRequestData&, const IDBKeyData&, unsigned long count, GetResultCallback);
+    void iterateCursor(const IDBRequestData&, const IDBIterateCursorData&, GetResultCallback);
     void commitTransaction(UniqueIDBDatabaseTransaction&, ErrorCallback);
     void abortTransaction(UniqueIDBDatabaseTransaction&, ErrorCallback);
-    void didFinishHandlingVersionChange(UniqueIDBDatabaseTransaction&);
+    void didFinishHandlingVersionChange(UniqueIDBDatabaseConnection&, const IDBResourceIdentifier& transactionIdentifier);
     void transactionDestroyed(UniqueIDBDatabaseTransaction&);
     void connectionClosedFromClient(UniqueIDBDatabaseConnection&);
+    void confirmConnectionClosedOnServer(UniqueIDBDatabaseConnection&);
     void didFireVersionChangeEvent(UniqueIDBDatabaseConnection&, const IDBResourceIdentifier& requestIdentifier);
+    void openDBRequestCancelled(const IDBResourceIdentifier& requestIdentifier);
+    void confirmDidCloseFromServer(UniqueIDBDatabaseConnection&);
 
     void enqueueTransaction(Ref<UniqueIDBDatabaseTransaction>&&);
 
     void handleDelete(IDBConnectionToClient&, const IDBRequestData&);
+    void immediateCloseForUserDelete();
 
     static JSC::VM& databaseThreadVM();
     static JSC::ExecState& databaseThreadExecState();
+
+    bool hardClosedForUserDelete() const { return m_hardClosedForUserDelete; }
 
 private:
     UniqueIDBDatabase(IDBServer&, const IDBDatabaseIdentifier&);
@@ -114,6 +132,7 @@ private:
     void performCurrentDeleteOperation();
     void addOpenDatabaseConnection(Ref<UniqueIDBDatabaseConnection>&&);
     bool hasAnyOpenConnections() const;
+    bool allConnectionsAreClosedOrClosing() const;
 
     void startVersionChangeTransaction();
     void maybeNotifyConnectionsOfVersionChange();
@@ -121,7 +140,9 @@ private:
     bool isVersionChangeInProgress();
 
     void activateTransactionInBackingStore(UniqueIDBDatabaseTransaction&);
-    void inProgressTransactionCompleted(const IDBResourceIdentifier&);
+    void transactionCompleted(RefPtr<UniqueIDBDatabaseTransaction>&&);
+
+    void connectionClosedFromServer(UniqueIDBDatabaseConnection&);
 
     // Database thread operations
     void deleteBackingStore(const IDBDatabaseIdentifier&);
@@ -131,28 +152,37 @@ private:
     void beginTransactionInBackingStore(const IDBTransactionInfo&);
     void performCreateObjectStore(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, const IDBObjectStoreInfo&);
     void performDeleteObjectStore(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier);
+    void performRenameObjectStore(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const String& newName);
     void performClearObjectStore(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier);
     void performCreateIndex(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, const IDBIndexInfo&);
     void performDeleteIndex(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier);
-    void performPutOrAdd(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyData&, const ThreadSafeDataBuffer& valueData, IndexedDB::ObjectStoreOverwriteMode);
-    void performGetRecord(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyRangeData&);
+    void performRenameIndex(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
+    void performPutOrAdd(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyData&, const IDBValue&, IndexedDB::ObjectStoreOverwriteMode);
+    void performGetRecord(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyRangeData&, IDBGetRecordDataType);
+    void performGetAllRecords(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, const IDBGetAllRecordsData&);
     void performGetIndexRecord(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, IndexedDB::IndexRecordType, const IDBKeyRangeData&);
     void performGetCount(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const IDBKeyRangeData&);
     void performDeleteRecord(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, uint64_t objectStoreIdentifier, const IDBKeyRangeData&);
     void performOpenCursor(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, const IDBCursorInfo&);
-    void performIterateCursor(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier, const IDBKeyData&, unsigned long count);
+    void performIterateCursor(uint64_t callbackIdentifier, const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier, const IDBIterateCursorData&);
+    void performPrefetchCursor(const IDBResourceIdentifier& transactionIdentifier, const IDBResourceIdentifier& cursorIdentifier);
+
     void performActivateTransactionInBackingStore(uint64_t callbackIdentifier, const IDBTransactionInfo&);
+    void performUnconditionalDeleteBackingStore();
 
     // Main thread callbacks
     void didDeleteBackingStore(uint64_t deletedVersion);
     void didOpenBackingStore(const IDBDatabaseInfo&, const IDBError&);
     void didPerformCreateObjectStore(uint64_t callbackIdentifier, const IDBError&, const IDBObjectStoreInfo&);
     void didPerformDeleteObjectStore(uint64_t callbackIdentifier, const IDBError&, uint64_t objectStoreIdentifier);
+    void didPerformRenameObjectStore(uint64_t callbackIdentifier, const IDBError&, uint64_t objectStoreIdentifier, const String& newName);
     void didPerformClearObjectStore(uint64_t callbackIdentifier, const IDBError&);
     void didPerformCreateIndex(uint64_t callbackIdentifier, const IDBError&, const IDBIndexInfo&);
     void didPerformDeleteIndex(uint64_t callbackIdentifier, const IDBError&, uint64_t objectStoreIdentifier, uint64_t indexIdentifier);
+    void didPerformRenameIndex(uint64_t callbackIdentifier, const IDBError&, uint64_t objectStoreIdentifier, uint64_t indexIdentifier, const String& newName);
     void didPerformPutOrAdd(uint64_t callbackIdentifier, const IDBError&, const IDBKeyData&);
     void didPerformGetRecord(uint64_t callbackIdentifier, const IDBError&, const IDBGetResult&);
+    void didPerformGetAllRecords(uint64_t callbackIdentifier, const IDBError&, const IDBGetAllResult&);
     void didPerformGetCount(uint64_t callbackIdentifier, const IDBError&, uint64_t);
     void didPerformDeleteRecord(uint64_t callbackIdentifier, const IDBError&);
     void didPerformOpenCursor(uint64_t callbackIdentifier, const IDBError&, const IDBGetResult&);
@@ -160,32 +190,49 @@ private:
     void didPerformCommitTransaction(uint64_t callbackIdentifier, const IDBError&, const IDBResourceIdentifier& transactionIdentifier);
     void didPerformAbortTransaction(uint64_t callbackIdentifier, const IDBError&, const IDBResourceIdentifier& transactionIdentifier);
     void didPerformActivateTransactionInBackingStore(uint64_t callbackIdentifier, const IDBError&);
+    void didPerformUnconditionalDeleteBackingStore();
 
-    uint64_t storeCallback(ErrorCallback);
-    uint64_t storeCallback(KeyDataCallback);
-    uint64_t storeCallback(GetResultCallback);
-    uint64_t storeCallback(CountCallback);
+    uint64_t storeCallbackOrFireError(ErrorCallback);
+    uint64_t storeCallbackOrFireError(KeyDataCallback);
+    uint64_t storeCallbackOrFireError(GetAllResultsCallback);
+    uint64_t storeCallbackOrFireError(GetResultCallback);
+    uint64_t storeCallbackOrFireError(CountCallback);
 
     void performErrorCallback(uint64_t callbackIdentifier, const IDBError&);
     void performKeyDataCallback(uint64_t callbackIdentifier, const IDBError&, const IDBKeyData&);
     void performGetResultCallback(uint64_t callbackIdentifier, const IDBError&, const IDBGetResult&);
+    void performGetAllResultsCallback(uint64_t callbackIdentifier, const IDBError&, const IDBGetAllResult&);
     void performCountCallback(uint64_t callbackIdentifier, const IDBError&, uint64_t);
+
+    void forgetErrorCallback(uint64_t callbackIdentifier);
 
     bool hasAnyPendingCallbacks() const;
     bool isCurrentlyInUse() const;
+    bool hasUnfinishedTransactions() const;
 
     void invokeOperationAndTransactionTimer();
     void operationAndTransactionTimerFired();
     RefPtr<UniqueIDBDatabaseTransaction> takeNextRunnableTransaction(bool& hadDeferredTransactions);
 
+    bool prepareToFinishTransaction(UniqueIDBDatabaseTransaction&);
+
+    void postDatabaseTask(CrossThreadTask&&);
+    void postDatabaseTaskReply(CrossThreadTask&&);
+    void executeNextDatabaseTask();
+    void executeNextDatabaseTaskReply();
+
+    void maybeFinishHardClose();
+    bool isDoneWithHardClose();
+
     IDBServer& m_server;
     IDBDatabaseIdentifier m_identifier;
 
-    Deque<Ref<ServerOpenDBRequest>> m_pendingOpenDBRequests;
+    ListHashSet<RefPtr<ServerOpenDBRequest>> m_pendingOpenDBRequests;
     RefPtr<ServerOpenDBRequest> m_currentOpenDBRequest;
 
     ListHashSet<RefPtr<UniqueIDBDatabaseConnection>> m_openDatabaseConnections;
-    HashSet<RefPtr<UniqueIDBDatabaseConnection>> m_closePendingDatabaseConnections;
+    HashSet<RefPtr<UniqueIDBDatabaseConnection>> m_clientClosePendingDatabaseConnections;
+    HashSet<RefPtr<UniqueIDBDatabaseConnection>> m_serverClosePendingDatabaseConnections;
 
     RefPtr<UniqueIDBDatabaseConnection> m_versionChangeDatabaseConnection;
     RefPtr<UniqueIDBDatabaseTransaction> m_versionChangeTransaction;
@@ -202,12 +249,14 @@ private:
     HashMap<uint64_t, ErrorCallback> m_errorCallbacks;
     HashMap<uint64_t, KeyDataCallback> m_keyDataCallbacks;
     HashMap<uint64_t, GetResultCallback> m_getResultCallbacks;
+    HashMap<uint64_t, GetAllResultsCallback> m_getAllResultsCallbacks;
     HashMap<uint64_t, CountCallback> m_countCallbacks;
 
     Timer m_operationAndTransactionTimer;
 
     Deque<RefPtr<UniqueIDBDatabaseTransaction>> m_pendingTransactions;
     HashMap<IDBResourceIdentifier, RefPtr<UniqueIDBDatabaseTransaction>> m_inProgressTransactions;
+    HashMap<IDBResourceIdentifier, RefPtr<UniqueIDBDatabaseTransaction>> m_finishingTransactions;
 
     // The keys into these sets are the object store ID.
     // These sets help to decide which transactions can be started and which must be deferred.
@@ -215,10 +264,18 @@ private:
     HashSet<uint64_t> m_objectStoreWriteTransactions;
 
     bool m_deleteBackingStoreInProgress { false };
+
+    CrossThreadQueue<CrossThreadTask> m_databaseQueue;
+    CrossThreadQueue<CrossThreadTask> m_databaseReplyQueue;
+    std::atomic<uint64_t> m_queuedTaskCount { 0 };
+
+    bool m_hardClosedForUserDelete { false };
+    RefPtr<UniqueIDBDatabase> m_hardCloseProtector;
+
+    HashMap<IDBResourceIdentifier, RefPtr<UniqueIDBDatabase>> m_prefetchProtectors;
 };
 
 } // namespace IDBServer
 } // namespace WebCore
 
 #endif // ENABLE(INDEXED_DATABASE)
-#endif // UniqueIDBDatabase_h

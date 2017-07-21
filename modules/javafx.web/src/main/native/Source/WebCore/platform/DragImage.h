@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DragImage_h
-#define DragImage_h
+#pragma once
 
 #include "FloatSize.h"
 #include "ImageOrientation.h"
@@ -41,7 +40,10 @@ OBJC_CLASS NSImage;
 #elif PLATFORM(WIN)
 typedef struct HBITMAP__* HBITMAP;
 #elif PLATFORM(GTK)
-typedef struct _cairo_surface cairo_surface_t;
+#include "RefPtrCairo.h"
+#elif PLATFORM(JAVA)
+#include "Image.h"
+#include <wtf/RefPtr.h>
 #endif
 
 // We need to #define YOffset as it needs to be shared with WebKit
@@ -63,11 +65,13 @@ typedef RetainPtr<NSImage> DragImageRef;
 #elif PLATFORM(WIN)
 typedef HBITMAP DragImageRef;
 #elif PLATFORM(GTK)
-typedef cairo_surface_t* DragImageRef;
-#elif PLATFORM(EFL)
-typedef void* DragImageRef;
+typedef RefPtr<cairo_surface_t> DragImageRef;
 #elif PLATFORM(JAVA)
-typedef Image *DragImageRef;
+typedef RefPtr<Image> DragImageRef;
+#endif
+
+#if PLATFORM(COCOA)
+static const float SelectionDragImagePadding = 15;
 #endif
 
 IntSize dragImageSize(DragImageRef);
@@ -77,17 +81,33 @@ IntSize dragImageSize(DragImageRef);
 // the input image ref will still be valid after they have been called.
 DragImageRef fitDragImageToMaxSize(DragImageRef, const IntSize& srcSize, const IntSize& dstSize);
 DragImageRef scaleDragImage(DragImageRef, FloatSize scale);
+DragImageRef platformAdjustDragImageForDeviceScaleFactor(DragImageRef, float deviceScaleFactor);
 DragImageRef dissolveDragImageToFraction(DragImageRef, float delta);
 
 DragImageRef createDragImageFromImage(Image*, ImageOrientationDescription);
 DragImageRef createDragImageIconForCachedImageFilename(const String&);
 
-DragImageRef createDragImageForNode(Frame&, Node&);
+WEBCORE_EXPORT DragImageRef createDragImageForNode(Frame&, Node&);
 WEBCORE_EXPORT DragImageRef createDragImageForSelection(Frame&, bool forceBlackText = false);
-DragImageRef createDragImageForRange(Frame&, Range&, bool forceBlackText = false);
+WEBCORE_EXPORT DragImageRef createDragImageForRange(Frame&, Range&, bool forceBlackText = false);
 DragImageRef createDragImageForImage(Frame&, Node&, IntRect& imageRect, IntRect& elementRect);
 DragImageRef createDragImageForLink(URL&, const String& label, FontRenderingMode);
 void deleteDragImage(DragImageRef);
-}
 
-#endif // DragImage_h
+class DragImage final {
+public:
+    DragImage();
+    explicit DragImage(DragImageRef);
+    DragImage(DragImage&&);
+    ~DragImage();
+
+    DragImage& operator=(DragImage&&);
+
+    explicit operator bool() const { return !!m_dragImageRef; }
+    DragImageRef get() const { return m_dragImageRef; }
+
+private:
+    DragImageRef m_dragImageRef;
+};
+
+}

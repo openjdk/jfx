@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef PopupMenuJava_h
-#define PopupMenuJava_h
+
+#pragma once
 
 #include "IntRect.h"
 #include "PopupMenu.h"
@@ -34,6 +34,4 @@ private:
     JGObject m_popup;
 };
 
-}
-
-#endif // PopupMenuJava_h
+} // namespace WebCore

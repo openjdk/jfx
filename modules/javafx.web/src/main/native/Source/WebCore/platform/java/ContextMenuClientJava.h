@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef ContextMenuClientJava_h
-#define ContextMenuClientJava_h
+
+#pragma once
 
 #include "ContextMenuClient.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 namespace WebCore {
 
@@ -28,5 +28,3 @@ private:
     JGObject m_webPage;
 };
 }
-
-#endif

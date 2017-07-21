@@ -27,12 +27,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AccessibilityObject_h
-#define AccessibilityObject_h
+#pragma once
 
 #include "FloatQuad.h"
+#include "HTMLTextFormControlElement.h"
 #include "LayoutRect.h"
 #include "Path.h"
+#include "Range.h"
 #include "TextIteratorBehavior.h"
 #include "VisiblePosition.h"
 #include "VisibleSelection.h"
@@ -62,7 +63,7 @@ OBJC_CLASS WebAccessibilityObjectWrapper;
 
 typedef WebAccessibilityObjectWrapper AccessibilityObjectWrapper;
 
-#elif PLATFORM(GTK) || (PLATFORM(EFL) && HAVE(ACCESSIBILITY))
+#elif PLATFORM(GTK)
 typedef struct _AtkObject AtkObject;
 typedef struct _AtkObject AccessibilityObjectWrapper;
 #else
@@ -76,15 +77,12 @@ class AXObjectCache;
 class Element;
 class Frame;
 class FrameView;
-class HTMLAnchorElement;
-class HTMLAreaElement;
 class IntPoint;
 class IntSize;
 class MainFrame;
 class Node;
 class Page;
 class RenderObject;
-class RenderListItem;
 class ScrollableArea;
 class ScrollView;
 class Widget;
@@ -126,7 +124,6 @@ enum AccessibilityRole {
     DocumentArticleRole,
     DocumentMathRole,
     DocumentNoteRole,
-    DocumentRegionRole,
     DrawerRole,
     EditableTextRole,
     FooterRole,
@@ -145,12 +142,12 @@ enum AccessibilityRole {
     ImageMapLinkRole,
     IncrementorRole,
     LabelRole,
-    LandmarkApplicationRole,
     LandmarkBannerRole,
     LandmarkComplementaryRole,
     LandmarkContentInfoRole,
     LandmarkMainRole,
     LandmarkNavigationRole,
+    LandmarkRegionRole,
     LandmarkSearchRole,
     LegendRole,
     LinkRole,
@@ -159,6 +156,7 @@ enum AccessibilityRole {
     ListBoxOptionRole,
     ListItemRole,
     ListMarkerRole,
+    MarkRole,
     MathElementRole,
     MatteRole,
     MenuRole,
@@ -202,6 +200,9 @@ enum AccessibilityRole {
     SwitchRole,
     SystemWideRole,
     SVGRootRole,
+    SVGTextRole,
+    SVGTSpanRole,
+    SVGTextPathRole,
     TabGroupRole,
     TabListRole,
     TabPanelRole,
@@ -219,6 +220,7 @@ enum AccessibilityRole {
     UserInterfaceTooltipRole,
     ValueIndicatorRole,
     VideoRole,
+    WebApplicationRole,
     WebAreaRole,
     WebCoreLinkRole,
     WindowRole,
@@ -233,6 +235,9 @@ enum AccessibilityTextSource {
     TitleTagText,
     PlaceholderText,
     LabelByElementText,
+    TitleText,
+    SubtitleText,
+    ActionText,
 };
 
 struct AccessibilityText {
@@ -387,6 +392,11 @@ struct VisiblePositionRange {
         , end(e)
     { }
 
+    VisiblePositionRange(const VisibleSelection& selection)
+        : start(selection.start())
+        , end(selection.end())
+    { }
+
     bool isNull() const { return start.isNull() || end.isNull(); }
 };
 
@@ -465,10 +475,11 @@ public:
     virtual bool isAccessibilityScrollbar() const { return false; }
     virtual bool isAccessibilityScrollView() const { return false; }
     virtual bool isAccessibilitySVGRoot() const { return false; }
+    virtual bool isAccessibilitySVGElement() const { return false; }
 
     bool accessibilityObjectContainsText(String *) const;
 
-    virtual bool isAttachment() const { return false; }
+    virtual bool isAttachmentElement() const { return false; }
     virtual bool isHeading() const { return false; }
     virtual bool isLink() const { return false; }
     virtual bool isImage() const { return false; }
@@ -483,8 +494,10 @@ public:
     bool isWebArea() const { return roleValue() == WebAreaRole; }
     virtual bool isCheckbox() const { return roleValue() == CheckBoxRole; }
     virtual bool isRadioButton() const { return roleValue() == RadioButtonRole; }
-    virtual bool isListBox() const { return roleValue() == ListBoxRole; }
+    virtual bool isNativeListBox() const { return false; }
+    bool isListBox() const { return roleValue() == ListBoxRole; }
     virtual bool isListBoxOption() const { return false; }
+    virtual bool isAttachment() const { return false; }
     virtual bool isMediaTimeline() const { return false; }
     virtual bool isMenuRelated() const { return false; }
     virtual bool isMenu() const { return false; }
@@ -498,6 +511,7 @@ public:
     virtual bool isSliderThumb() const { return false; }
     virtual bool isInputSlider() const { return false; }
     virtual bool isControl() const { return false; }
+    virtual bool isLabel() const { return false; }
     virtual bool isList() const { return false; }
     virtual bool isTable() const { return false; }
     virtual bool isDataTable() const { return false; }
@@ -520,6 +534,7 @@ public:
     bool isToggleButton() const { return roleValue() == ToggleButtonRole; }
     bool isTextControl() const;
     bool isARIATextControl() const;
+    bool isNonNativeTextControl() const;
     bool isTabList() const { return roleValue() == TabListRole; }
     bool isTabItem() const { return roleValue() == TabRole; }
     bool isRadioGroup() const { return roleValue() == RadioGroupRole; }
@@ -541,6 +556,11 @@ public:
     bool isSplitter() const { return roleValue() == SplitterRole; }
     bool isToolbar() const { return roleValue() == ToolbarRole; }
     bool isStyleFormatGroup() const;
+    bool isSubscriptStyleGroup() const;
+    bool isSuperscriptStyleGroup() const;
+    bool isFigure() const;
+    bool isSummary() const { return roleValue() == SummaryRole; }
+    bool isOutput() const;
 
     virtual bool isChecked() const { return false; }
     virtual bool isEnabled() const { return false; }
@@ -552,7 +572,6 @@ public:
     virtual bool isMultiSelectable() const { return false; }
     virtual bool isOffScreen() const { return false; }
     virtual bool isPressed() const { return false; }
-    virtual bool isReadOnly() const { return false; }
     virtual bool isUnvisited() const { return false; }
     virtual bool isVisited() const { return false; }
     virtual bool isRequired() const { return false; }
@@ -594,7 +613,7 @@ public:
     virtual AccessibilityObjectInclusion defaultObjectInclusion() const;
     bool accessibilityIsIgnoredByDefault() const;
 
-    int blockquoteLevel() const;
+    unsigned blockquoteLevel() const;
     virtual int headingLevel() const { return 0; }
     virtual int tableLevel() const { return 0; }
     virtual AccessibilityButtonState checkboxOrRadioValue() const;
@@ -609,14 +628,14 @@ public:
     virtual double estimatedLoadingProgress() const { return 0; }
     static bool isARIAControl(AccessibilityRole);
     static bool isARIAInput(AccessibilityRole);
+
     virtual bool supportsARIAOwns() const { return false; }
-    virtual void ariaOwnsElements(AccessibilityChildrenVector&) const { }
-    virtual bool supportsARIAFlowTo() const { return false; }
-    virtual void ariaFlowToElements(AccessibilityChildrenVector&) const { }
-    virtual bool supportsARIADescribedBy() const { return false; }
-    virtual void ariaDescribedByElements(AccessibilityChildrenVector&) const { }
-    virtual bool supportsARIAControls() const { return false; }
-    virtual void ariaControlsElements(AccessibilityChildrenVector&) const { }
+    void ariaControlsElements(AccessibilityChildrenVector&) const;
+    void ariaDescribedByElements(AccessibilityChildrenVector&) const;
+    void ariaFlowToElements(AccessibilityChildrenVector&) const;
+    void ariaLabelledByElements(AccessibilityChildrenVector&) const;
+    void ariaOwnsElements(AccessibilityChildrenVector&) const;
+
     virtual bool ariaHasPopup() const { return false; }
     bool ariaPressedIsPresent() const;
     bool ariaIsMultiline() const;
@@ -629,7 +648,7 @@ public:
     bool supportsRangeValue() const;
     String identifierAttribute() const;
     void classList(Vector<String>&) const;
-    const AtomicString& roleDescription() const;
+    virtual String roleDescription() const;
     AccessibilityARIACurrentState ariaCurrentState() const;
 
     // This function checks if the object should be ignored when there's a modal dialog displayed.
@@ -667,6 +686,8 @@ public:
     static AccessibilityObject* firstAccessibleObjectFromNode(const Node*);
     void findMatchingObjects(AccessibilitySearchCriteria*, AccessibilityChildrenVector&);
     virtual bool isDescendantOfBarrenParent() const { return false; }
+
+    bool isDescendantOfRole(AccessibilityRole) const;
 
     // Text selection
     RefPtr<Range> rangeOfStringClosestToRangeInDirection(Range*, AccessibilitySearchDirection, Vector<String>&) const;
@@ -799,6 +820,7 @@ public:
 #endif
     virtual bool isDetachedFromParent() { return false; }
 
+    virtual bool canHaveSelectedChildren() const { return false; }
     virtual void selectedChildren(AccessibilityChildrenVector&) { }
     virtual void visibleChildren(AccessibilityChildrenVector&) { }
     virtual void tabChildren(AccessibilityChildrenVector&) { }
@@ -832,9 +854,12 @@ public:
     VisiblePositionRange visiblePositionRangeForRange(const PlainTextRange&) const;
     VisiblePositionRange lineRangeForPosition(const VisiblePosition&) const;
 
-    String stringForVisiblePositionRange(const VisiblePositionRange&) const;
+    RefPtr<Range> rangeForPlainTextRange(const PlainTextRange&) const;
+
+    static String stringForVisiblePositionRange(const VisiblePositionRange&);
     String stringForRange(RefPtr<Range>) const;
     virtual IntRect boundsForVisiblePositionRange(const VisiblePositionRange&) const { return IntRect(); }
+    virtual IntRect boundsForRange(const RefPtr<Range>) const { return IntRect(); }
     int lengthForVisiblePositionRange(const VisiblePositionRange&) const;
     virtual void setSelectedVisiblePositionRange(const VisiblePositionRange&) const { }
 
@@ -868,7 +893,8 @@ public:
 
     virtual String doAXStringForRange(const PlainTextRange&) const { return String(); }
     virtual IntRect doAXBoundsForRange(const PlainTextRange&) const { return IntRect(); }
-    String listMarkerTextForNodeAndPosition(Node*, const VisiblePosition&) const;
+    virtual IntRect doAXBoundsForRangeUsingCharacterOffset(const PlainTextRange&) const { return IntRect(); }
+    static String listMarkerTextForNodeAndPosition(Node*, const VisiblePosition&);
 
     unsigned doAXLineForIndex(unsigned);
 
@@ -882,6 +908,8 @@ public:
 
     virtual String passwordFieldValue() const { return String(); }
     bool isValueAutofilled() const;
+    bool isValueAutofillAvailable() const;
+    AutoFillButtonType valueAutofillButtonType() const;
 
     // Used by an ARIA tree to get all its rows.
     void ariaTreeRows(AccessibilityChildrenVector&);
@@ -896,11 +924,14 @@ public:
     virtual const String ariaLiveRegionStatus() const { return String(); }
     virtual const AtomicString& ariaLiveRegionRelevant() const { return nullAtom; }
     virtual bool ariaLiveRegionAtomic() const { return false; }
-    virtual bool ariaLiveRegionBusy() const { return false; }
+    virtual bool isBusy() const { return false; }
     static const String defaultLiveRegionStatusForRole(AccessibilityRole);
     static bool liveRegionStatusIsEnabled(const AtomicString&);
     static bool contentEditableAttributeIsEnabled(Element*);
     bool hasContentEditableAttributeSet() const;
+
+    bool supportsARIAReadOnly() const;
+    String ariaReadOnlyValue() const;
 
     bool supportsARIAAttributes() const;
 
@@ -970,6 +1001,7 @@ public:
     virtual String mathFencedOpenString() const { return String(); }
     virtual String mathFencedCloseString() const { return String(); }
     virtual int mathLineThickness() const { return 0; }
+    virtual bool isAnonymousMathOperator() const { return false; }
 
     // Multiscripts components.
     typedef Vector<std::pair<AccessibilityObject*, AccessibilityObject*>> AccessibilityMathMultiscriptPairs;
@@ -982,7 +1014,7 @@ public:
     bool isHidden() const { return isARIAHidden() || isDOMHidden(); }
 
 #if HAVE(ACCESSIBILITY)
-#if PLATFORM(GTK) || PLATFORM(EFL)
+#if PLATFORM(GTK)
     AccessibilityObjectWrapper* wrapper() const;
     void setWrapper(AccessibilityObjectWrapper*);
 #else
@@ -1012,6 +1044,8 @@ public:
 
 #if PLATFORM(IOS)
     int accessibilityPasswordFieldLength();
+    bool hasTouchEventListener() const;
+    bool isInputTypePopupButton() const;
 #endif
 
     // allows for an AccessibilityObject to update its render tree or perform
@@ -1027,6 +1061,12 @@ public:
     bool caretBrowsingEnabled() const;
     void setCaretBrowsingEnabled(bool);
 #endif
+
+    AccessibilityObject* focusableAncestor();
+    AccessibilityObject* editableAncestor();
+    AccessibilityObject* highestEditableAncestor();
+
+    static const AccessibilityObject* matchedParent(const AccessibilityObject&, bool includeSelf, const std::function<bool(const AccessibilityObject&)>&);
 
 protected:
     AXID m_id;
@@ -1051,7 +1091,9 @@ protected:
     bool isOnscreen() const;
     bool dispatchTouchEvent();
 
-#if (PLATFORM(GTK) || PLATFORM(EFL)) && HAVE(ACCESSIBILITY)
+    void ariaElementsFromAttribute(AccessibilityChildrenVector&, const QualifiedName&) const;
+
+#if PLATFORM(GTK) && HAVE(ACCESSIBILITY)
     bool allowsTextRanges() const;
     unsigned getLengthForTextRange() const;
 #else
@@ -1063,7 +1105,7 @@ protected:
     RetainPtr<WebAccessibilityObjectWrapper> m_wrapper;
 #elif PLATFORM(WIN)
     COMPtr<AccessibilityObjectWrapper> m_wrapper;
-#elif PLATFORM(GTK) || (PLATFORM(EFL) && HAVE(ACCESSIBILITY))
+#elif PLATFORM(GTK)
     AtkObject* m_wrapper;
 #endif
 };
@@ -1081,5 +1123,3 @@ inline void AccessibilityObject::updateBackingStore() { }
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ToValueTypeName) \
     static bool isType(const WebCore::AccessibilityObject& object) { return object.predicate; } \
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif // AccessibilityObject_h

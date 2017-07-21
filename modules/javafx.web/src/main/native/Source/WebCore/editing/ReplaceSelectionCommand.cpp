@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2009, 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,28 +27,32 @@
 #include "config.h"
 #include "ReplaceSelectionCommand.h"
 
+#include "AXObjectCache.h"
 #include "ApplyStyleCommand.h"
 #include "BeforeTextInsertedEvent.h"
 #include "BreakBlockquoteCommand.h"
 #include "CSSStyleDeclaration.h"
+#include "DOMWrapperWorld.h"
+#include "DataTransfer.h"
 #include "Document.h"
 #include "DocumentFragment.h"
-#include "Element.h"
 #include "ElementIterator.h"
 #include "EventNames.h"
-#include "ExceptionCodePlaceholder.h"
 #include "Frame.h"
 #include "FrameSelection.h"
+#include "HTMLBRElement.h"
+#include "HTMLBaseElement.h"
 #include "HTMLInputElement.h"
+#include "HTMLLIElement.h"
+#include "HTMLLinkElement.h"
+#include "HTMLMetaElement.h"
 #include "HTMLNames.h"
+#include "HTMLStyleElement.h"
 #include "HTMLTitleElement.h"
 #include "NodeList.h"
 #include "NodeRenderStyle.h"
 #include "RenderInline.h"
-#include "RenderObject.h"
 #include "RenderText.h"
-#include "ReplaceDeleteFromTextNodeCommand.h"
-#include "ReplaceInsertIntoTextNodeCommand.h"
 #include "SimplifyMarkupCommand.h"
 #include "SmartReplace.h"
 #include "StyleProperties.h"
@@ -65,6 +69,8 @@ namespace WebCore {
 using namespace HTMLNames;
 
 enum EFragmentType { EmptyFragment, SingleTextNodeFragment, TreeFragment };
+
+static void removeHeadContents(ReplacementFragment&);
 
 // --- ReplacementFragment helper class
 
@@ -87,7 +93,7 @@ public:
     void removeNodePreservingChildren(PassRefPtr<Node>);
 
 private:
-    PassRefPtr<StyledElement> insertFragmentForTestRendering(Node* rootEditableNode);
+    Ref<HTMLElement> insertFragmentForTestRendering(Node* rootEditableNode);
     void removeUnrenderedNodes(Node*);
     void restoreAndRemoveTestRenderingNodesToFragment(StyledElement*);
     void removeInterchangeNodes(Node*);
@@ -102,44 +108,46 @@ private:
     bool m_hasInterchangeNewlineAtEnd;
 };
 
-static bool isInterchangeNewlineNode(const Node *node)
+static bool isInterchangeNewlineNode(const Node* node)
 {
     static NeverDestroyed<String> interchangeNewlineClassString(AppleInterchangeNewline);
-    return node && node->hasTagName(brTag) &&
-           static_cast<const Element *>(node)->getAttribute(classAttr) == interchangeNewlineClassString;
+    return is<HTMLBRElement>(node) && downcast<HTMLBRElement>(*node).attributeWithoutSynchronization(classAttr) == interchangeNewlineClassString;
 }
 
-static bool isInterchangeConvertedSpaceSpan(const Node *node)
+static bool isInterchangeConvertedSpaceSpan(const Node* node)
 {
     static NeverDestroyed<String> convertedSpaceSpanClassString(AppleConvertedSpace);
-    return node->isHTMLElement() &&
-           static_cast<const HTMLElement *>(node)->getAttribute(classAttr) == convertedSpaceSpanClassString;
+    return is<HTMLElement>(node) && downcast<HTMLElement>(*node).attributeWithoutSynchronization(classAttr) == convertedSpaceSpanClassString;
 }
 
-static Position positionAvoidingPrecedingNodes(Position pos)
+static Position positionAvoidingPrecedingNodes(Position position)
 {
+    ASSERT(position.isNotNull());
+
     // If we're already on a break, it's probably a placeholder and we shouldn't change our position.
-    if (editingIgnoresContent(pos.deprecatedNode()))
-        return pos;
+    if (editingIgnoresContent(*position.deprecatedNode()))
+        return position;
 
     // We also stop when changing block flow elements because even though the visual position is the
     // same.  E.g.,
     //   <div>foo^</div>^
     // The two positions above are the same visual position, but we want to stay in the same block.
-    Node* enclosingBlockNode = enclosingBlock(pos.containerNode());
-    for (Position nextPosition = pos; nextPosition.containerNode() != enclosingBlockNode; pos = nextPosition) {
-        if (lineBreakExistsAtPosition(pos))
+    auto* enclosingBlockNode = enclosingBlock(position.containerNode());
+    for (Position nextPosition = position; nextPosition.containerNode() != enclosingBlockNode; position = nextPosition) {
+        if (lineBreakExistsAtPosition(position))
             break;
 
-        if (pos.containerNode()->nonShadowBoundaryParentNode())
-            nextPosition = positionInParentAfterNode(pos.containerNode());
+        if (position.containerNode()->nonShadowBoundaryParentNode())
+            nextPosition = positionInParentAfterNode(position.containerNode());
 
-        if (nextPosition == pos
-            || enclosingBlock(nextPosition.containerNode()) != enclosingBlockNode
-            || VisiblePosition(pos) != VisiblePosition(nextPosition))
+        if (nextPosition == position)
+            break;
+        if (enclosingBlock(nextPosition.containerNode()) != enclosingBlockNode)
+            break;
+        if (VisiblePosition(position) != VisiblePosition(nextPosition))
             break;
     }
-    return pos;
+    return position;
 }
 
 ReplacementFragment::ReplacementFragment(Document& document, DocumentFragment* fragment, const VisibleSelection& selection)
@@ -160,10 +168,9 @@ ReplacementFragment::ReplacementFragment(Document& document, DocumentFragment* f
 
     Node* shadowAncestorNode = editableRoot->deprecatedShadowAncestorNode();
 
-    if (!editableRoot->getAttributeEventListener(eventNames().webkitBeforeTextInsertedEvent) &&
-        // FIXME: Remove these checks once textareas and textfields actually register an event handler.
-        !(shadowAncestorNode && shadowAncestorNode->renderer() && shadowAncestorNode->renderer()->isTextControl()) &&
-        editableRoot->hasRichlyEditableStyle()) {
+    if (!editableRoot->attributeEventListener(eventNames().webkitBeforeTextInsertedEvent, mainThreadNormalWorld())
+        && !(shadowAncestorNode && shadowAncestorNode->renderer() && shadowAncestorNode->renderer()->isTextControl())
+        && editableRoot->hasRichlyEditableStyle()) {
         removeInterchangeNodes(m_fragment.get());
         return;
     }
@@ -182,7 +189,7 @@ ReplacementFragment::ReplacementFragment(Document& document, DocumentFragment* f
     restoreAndRemoveTestRenderingNodesToFragment(holder.get());
 
     // Give the root a chance to change the text.
-    Ref<BeforeTextInsertedEvent> event = BeforeTextInsertedEvent::create(text);
+    auto event = BeforeTextInsertedEvent::create(text);
     editableRoot->dispatchEvent(event);
     if (text != event->text() || !editableRoot->hasRichlyEditableStyle()) {
         restoreAndRemoveTestRenderingNodesToFragment(holder.get());
@@ -224,9 +231,9 @@ void ReplacementFragment::removeNodePreservingChildren(PassRefPtr<Node> node)
 
     while (RefPtr<Node> n = node->firstChild()) {
         removeNode(n);
-        insertNodeBefore(n.release(), node.get());
+        insertNodeBefore(WTFMove(n), node.get());
     }
-    removeNode(node);
+    removeNode(WTFMove(node));
 }
 
 void ReplacementFragment::removeNode(PassRefPtr<Node> node)
@@ -238,7 +245,7 @@ void ReplacementFragment::removeNode(PassRefPtr<Node> node)
     if (!parent)
         return;
 
-    parent->removeChild(*node, ASSERT_NO_EXCEPTION);
+    parent->removeChild(*node);
 }
 
 void ReplacementFragment::insertNodeBefore(PassRefPtr<Node> node, Node* refNode)
@@ -250,18 +257,18 @@ void ReplacementFragment::insertNodeBefore(PassRefPtr<Node> node, Node* refNode)
     if (!parent)
         return;
 
-    parent->insertBefore(*node, refNode, ASSERT_NO_EXCEPTION);
+    parent->insertBefore(*node, refNode);
 }
 
-PassRefPtr<StyledElement> ReplacementFragment::insertFragmentForTestRendering(Node* rootEditableElement)
+Ref<HTMLElement> ReplacementFragment::insertFragmentForTestRendering(Node* rootEditableElement)
 {
-    RefPtr<StyledElement> holder = createDefaultParagraphElement(document());
+    auto holder = createDefaultParagraphElement(document());
 
-    holder->appendChild(*m_fragment, ASSERT_NO_EXCEPTION);
-    rootEditableElement->appendChild(holder.get(), ASSERT_NO_EXCEPTION);
+    holder->appendChild(*m_fragment);
+    rootEditableElement->appendChild(holder);
     document().updateLayoutIgnorePendingStylesheets();
 
-    return holder.release();
+    return holder;
 }
 
 void ReplacementFragment::restoreAndRemoveTestRenderingNodesToFragment(StyledElement* holder)
@@ -270,8 +277,8 @@ void ReplacementFragment::restoreAndRemoveTestRenderingNodesToFragment(StyledEle
         return;
 
     while (RefPtr<Node> node = holder->firstChild()) {
-        holder->removeChild(*node, ASSERT_NO_EXCEPTION);
-        m_fragment->appendChild(*node, ASSERT_NO_EXCEPTION);
+        holder->removeChild(*node);
+        m_fragment->appendChild(*node);
     }
 
     removeNode(holder);
@@ -282,7 +289,7 @@ void ReplacementFragment::removeUnrenderedNodes(Node* holder)
     Vector<RefPtr<Node>> unrendered;
 
     for (Node* node = holder->firstChild(); node; node = NodeTraversal::next(*node, holder)) {
-        if (!isNodeRendered(node) && !isTableStructureNode(node))
+        if (!isNodeRendered(*node) && !isTableStructureNode(node))
             unrendered.append(node);
     }
 
@@ -431,7 +438,7 @@ bool ReplaceSelectionCommand::shouldMergeEnd(bool selectionEndWasEndOfParagraph)
 
 static bool isMailPasteAsQuotationNode(const Node* node)
 {
-    return node && node->hasTagName(blockquoteTag) && downcast<Element>(node)->getAttribute(classAttr) == ApplePasteAsQuotation;
+    return node && node->hasTagName(blockquoteTag) && downcast<Element>(node)->attributeWithoutSynchronization(classAttr) == ApplePasteAsQuotation;
 }
 
 static bool isHeaderElement(const Node* a)
@@ -457,18 +464,19 @@ bool ReplaceSelectionCommand::shouldMerge(const VisiblePosition& source, const V
     if (source.isNull() || destination.isNull())
         return false;
 
-    Node* sourceNode = source.deepEquivalent().deprecatedNode();
-    Node* destinationNode = destination.deepEquivalent().deprecatedNode();
-    Node* sourceBlock = enclosingBlock(sourceNode);
-    Node* destinationBlock = enclosingBlock(destinationNode);
-    return !enclosingNodeOfType(source.deepEquivalent(), &isMailPasteAsQuotationNode) &&
-           sourceBlock && (!sourceBlock->hasTagName(blockquoteTag) || isMailBlockquote(sourceBlock))  &&
-           enclosingListChild(sourceBlock) == enclosingListChild(destinationNode) &&
-           enclosingTableCell(source.deepEquivalent()) == enclosingTableCell(destination.deepEquivalent()) &&
-           (!isHeaderElement(sourceBlock) || haveSameTagName(sourceBlock, destinationBlock)) &&
-           // Don't merge to or from a position before or after a block because it would
-           // be a no-op and cause infinite recursion.
-           !isBlock(sourceNode) && !isBlock(destinationNode);
+    auto* sourceNode = source.deepEquivalent().deprecatedNode();
+    auto* destinationNode = destination.deepEquivalent().deprecatedNode();
+    auto* sourceBlock = enclosingBlock(sourceNode);
+    auto* destinationBlock = enclosingBlock(destinationNode);
+    return !enclosingNodeOfType(source.deepEquivalent(), &isMailPasteAsQuotationNode)
+        && sourceBlock
+        && (!sourceBlock->hasTagName(blockquoteTag) || isMailBlockquote(sourceBlock))
+        && enclosingListChild(sourceBlock) == enclosingListChild(destinationNode)
+        && enclosingTableCell(source.deepEquivalent()) == enclosingTableCell(destination.deepEquivalent())
+        && (!isHeaderElement(sourceBlock) || haveSameTagName(sourceBlock, destinationBlock))
+        // Don't merge to or from a position before or after a block because it would
+        // be a no-op and cause infinite recursion.
+        && !isBlock(sourceNode) && !isBlock(destinationNode);
 }
 
 // Style rules that match just inserted elements could change their appearance, like
@@ -528,7 +536,7 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
             setNodeAttribute(element, styleAttr, newInlineStyle->style()->asText());
 
         // FIXME: Tolerate differences in id, class, and style attributes.
-        if (element->parentNode() && isNonTableCellHTMLBlockElement(element) && areIdenticalElements(element, element->parentNode())
+        if (element->parentNode() && isNonTableCellHTMLBlockElement(element) && areIdenticalElements(*element, *element->parentNode())
             && VisiblePosition(firstPositionInNode(element->parentNode())) == VisiblePosition(firstPositionInNode(element))
             && VisiblePosition(lastPositionInNode(element->parentNode())) == VisiblePosition(lastPositionInNode(element))) {
             insertedNodes.willRemoveNodePreservingChildren(element);
@@ -556,9 +564,9 @@ void ReplaceSelectionCommand::removeRedundantStylesAndKeepStyleSpanInline(Insert
 
             // Mutate using the CSSOM wrapper so we get the same event behavior as a script.
             if (isBlock(element))
-                element->cssomStyle()->setPropertyInternal(CSSPropertyDisplay, "inline", false, IGNORE_EXCEPTION);
+                element->cssomStyle()->setPropertyInternal(CSSPropertyDisplay, "inline", false);
             if (element->renderer() && element->renderer()->style().isFloating())
-                element->cssomStyle()->setPropertyInternal(CSSPropertyFloat, "none", false, IGNORE_EXCEPTION);
+                element->cssomStyle()->setPropertyInternal(CSSPropertyFloat, "none", false);
         }
     }
 }
@@ -672,7 +680,7 @@ void ReplaceSelectionCommand::moveNodeOutOfAncestor(PassRefPtr<Node> prpNode, Pa
     }
     if (!ancestor->firstChild()) {
         insertedNodes.willRemoveNode(ancestor.get());
-        removeNode(ancestor.release());
+        removeNode(WTFMove(ancestor));
     }
 }
 
@@ -843,7 +851,7 @@ void ReplaceSelectionCommand::mergeEndIfNeeded()
     // Merging forward could result in deleting the destination anchor node.
     // To avoid this, we add a placeholder node before the start of the paragraph.
     if (endOfParagraph(startOfParagraphToMove) == destination) {
-        RefPtr<Node> placeholder = createBreakElement(document());
+        RefPtr<Node> placeholder = HTMLBRElement::create(document());
         insertNodeBefore(placeholder, startOfParagraphToMove.deepEquivalent().deprecatedNode());
         destination = VisiblePosition(positionBeforeNode(placeholder.get()));
     }
@@ -864,11 +872,11 @@ void ReplaceSelectionCommand::mergeEndIfNeeded()
 static Node* enclosingInline(Node* node)
 {
     while (ContainerNode* parent = node->parentNode()) {
-        if (isBlockFlowElement(parent) || parent->hasTagName(bodyTag))
+        if (isBlockFlowElement(*parent) || parent->hasTagName(bodyTag))
             return node;
         // Stop if any previous sibling is a block.
         for (Node* sibling = node->previousSibling(); sibling; sibling = sibling->previousSibling()) {
-            if (isBlockFlowElement(sibling))
+            if (isBlockFlowElement(*sibling))
                 return node;
         }
         node = parent;
@@ -888,7 +896,7 @@ static bool isInlineNodeWithStyle(const Node* node)
     // We can skip over elements whose class attribute is
     // one of our internal classes.
     const HTMLElement* element = static_cast<const HTMLElement*>(node);
-    const AtomicString& classAttributeValue = element->getAttribute(classAttr);
+    const AtomicString& classAttributeValue = element->attributeWithoutSynchronization(classAttr);
     if (classAttributeValue == AppleTabSpanClass
         || classAttributeValue == AppleConvertedSpace
         || classAttributeValue == ApplePasteAsQuotation)
@@ -903,15 +911,20 @@ inline Node* nodeToSplitToAvoidPastingIntoInlineNodesWithStyle(const Position& i
     return highestEnclosingNodeOfType(insertionPos, isInlineNodeWithStyle, CannotCrossEditingBoundary, containgBlock);
 }
 
+bool ReplaceSelectionCommand::willApplyCommand()
+{
+    ensureReplacementFragment();
+    m_documentFragmentPlainText = m_documentFragment->textContent();
+    m_documentFragmentHTMLMarkup = createMarkup(*m_documentFragment);
+    return CompositeEditCommand::willApplyCommand();
+}
+
 void ReplaceSelectionCommand::doApply()
 {
     VisibleSelection selection = endingSelection();
     ASSERT(selection.isCaretOrRange());
     ASSERT(selection.start().deprecatedNode());
-    if (!selection.isNonOrphanedCaretOrRange() || !selection.start().deprecatedNode())
-        return;
-
-    if (!selection.rootEditableElement())
+    if (selection.isNoneOrOrphaned() || !selection.start().deprecatedNode() || !selection.isContentEditable())
         return;
 
     // In plain text only regions, we create style-less fragments, so the inserted content will automatically
@@ -919,7 +932,7 @@ void ReplaceSelectionCommand::doApply()
     if (!selection.isContentRichlyEditable())
         m_matchStyle = false;
 
-    ReplacementFragment fragment(document(), m_documentFragment.get(), selection);
+    ReplacementFragment& fragment = *ensureReplacementFragment();
     if (performTrivialReplace(fragment))
         return;
 
@@ -960,7 +973,8 @@ void ReplaceSelectionCommand::doApply()
         bool mergeBlocksAfterDelete = shouldHandleMailBlockquote || isEndOfParagraph(visibleEnd) || isStartOfBlock(visibleStart);
         // FIXME: We should only expand to include fully selected special elements if we are copying a
         // selection and pasting it on top of itself.
-        deleteSelection(false, mergeBlocksAfterDelete, true, false);
+        // FIXME: capturing the content of this delete would allow a replace accessibility notification instead of a simple insert
+        deleteSelection(false, mergeBlocksAfterDelete, true, false, true);
         visibleStart = endingSelection().visibleStart();
         if (fragment.hasInterchangeNewlineAtStart()) {
             if (isEndOfParagraph(visibleStart) && !isStartOfParagraph(visibleStart)) {
@@ -1041,8 +1055,6 @@ void ReplaceSelectionCommand::doApply()
     // any work performed after this that queries or uses the typing style.
     frame().selection().clearTypingStyle();
 
-    removeHeadContents(fragment);
-
     // We don't want the destination to end up inside nodes that weren't selected.  To avoid that, we move the
     // position forward without changing the visible position so we're still at the same visible location, but
     // outside of preceding tags.
@@ -1100,7 +1112,7 @@ void ReplaceSelectionCommand::doApply()
     fragment.removeNode(refNode);
 
     Node* blockStart = enclosingBlock(insertionPos.deprecatedNode());
-    if ((isListElement(refNode.get()) || (isLegacyAppleStyleSpan(refNode.get()) && isListElement(refNode->firstChild())))
+    if ((isListHTMLElement(refNode.get()) || (isLegacyAppleStyleSpan(refNode.get()) && isListHTMLElement(refNode->firstChild())))
         && blockStart && blockStart->renderer()->isListItem())
         refNode = insertAsListItems(downcast<HTMLElement>(refNode.get()), blockStart, insertionPos, insertedNodes);
     else {
@@ -1109,7 +1121,7 @@ void ReplaceSelectionCommand::doApply()
     }
 
     // Mutation events (bug 22634) may have already removed the inserted content
-    if (!refNode->inDocument())
+    if (!refNode->isConnected())
         return;
 
     bool plainTextFragment = isPlainTextMarkup(refNode.get());
@@ -1121,7 +1133,7 @@ void ReplaceSelectionCommand::doApply()
         insertedNodes.respondToNodeInsertion(node.get());
 
         // Mutation events (bug 22634) may have already removed the inserted content
-        if (!node->inDocument())
+        if (!node->isConnected())
             return;
 
         refNode = node;
@@ -1136,7 +1148,7 @@ void ReplaceSelectionCommand::doApply()
         handleStyleSpans(insertedNodes);
 
     // Mutation events (bug 20161) may have already removed the inserted content
-    if (!insertedNodes.firstNodeInserted() || !insertedNodes.firstNodeInserted()->inDocument())
+    if (!insertedNodes.firstNodeInserted() || !insertedNodes.firstNodeInserted()->isConnected())
         return;
 
     VisiblePosition startOfInsertedContent = firstPositionInOrBeforeNode(insertedNodes.firstNodeInserted());
@@ -1144,7 +1156,7 @@ void ReplaceSelectionCommand::doApply()
     // We inserted before the insertionBlock to prevent nesting, and the content before the insertionBlock wasn't in its own block and
     // didn't have a br after it, so the inserted content ended up in the same paragraph.
     if (!startOfInsertedContent.isNull() && insertionBlock && insertionPos.deprecatedNode() == insertionBlock->parentNode() && (unsigned)insertionPos.deprecatedEditingOffset() < insertionBlock->computeNodeIndex() && !isStartOfParagraph(startOfInsertedContent))
-        insertNodeAt(createBreakElement(document()), startOfInsertedContent.deepEquivalent());
+        insertNodeAt(HTMLBRElement::create(document()), startOfInsertedContent.deepEquivalent());
 
     if (endBR && (plainTextFragment || shouldRemoveEndBR(endBR.get(), originalVisPosBeforeEndBR))) {
         RefPtr<Node> parent = endBR->parentNode();
@@ -1179,7 +1191,7 @@ void ReplaceSelectionCommand::doApply()
         // We insert a placeholder before the newly inserted content to avoid being merged into the inline.
         Node* destinationNode = destination.deepEquivalent().deprecatedNode();
         if (m_shouldMergeEnd && destinationNode != enclosingInline(destinationNode) && enclosingInline(destinationNode)->nextSibling())
-            insertNodeBefore(createBreakElement(document()), refNode.get());
+            insertNodeBefore(HTMLBRElement::create(document()), refNode.get());
 
         // Merging the the first paragraph of inserted content with the content that came
         // before the selection that was pasted into would also move content after
@@ -1190,9 +1202,9 @@ void ReplaceSelectionCommand::doApply()
         // comes after and prevent that from happening.
         VisiblePosition endOfInsertedContent = positionAtEndOfInsertedContent();
         if (startOfParagraph(endOfInsertedContent) == startOfParagraphToMove) {
-            insertNodeAt(createBreakElement(document()), endOfInsertedContent.deepEquivalent());
+            insertNodeAt(HTMLBRElement::create(document()), endOfInsertedContent.deepEquivalent());
             // Mutation events (bug 22634) triggered by inserting the <br> might have removed the content we're about to move
-            if (!startOfParagraphToMove.deepEquivalent().anchorNode()->inDocument())
+            if (!startOfParagraphToMove.deepEquivalent().anchorNode()->isConnected())
                 return;
         }
 
@@ -1214,9 +1226,9 @@ void ReplaceSelectionCommand::doApply()
                 setEndingSelection(endOfInsertedContent);
                 Node* enclosingNode = enclosingBlock(endOfInsertedContent.deepEquivalent().deprecatedNode());
                 if (isListItem(enclosingNode)) {
-                    RefPtr<Node> newListItem = createListItemElement(document());
-                    insertNodeAfter(newListItem, enclosingNode);
-                    setEndingSelection(VisiblePosition(firstPositionInNode(newListItem.get())));
+                    auto newListItem = HTMLLIElement::create(document());
+                    insertNodeAfter(newListItem.copyRef(), enclosingNode);
+                    setEndingSelection(VisiblePosition(firstPositionInNode(newListItem.ptr())));
                 } else {
                     // Use a default paragraph element (a plain div) for the empty paragraph, using the last paragraph
                     // block's style seems to annoy users.
@@ -1250,9 +1262,25 @@ void ReplaceSelectionCommand::doApply()
     completeHTMLReplacement(lastPositionToSelect);
 }
 
+String ReplaceSelectionCommand::inputEventData() const
+{
+    if (isEditingTextAreaOrTextInput())
+        return m_documentFragment->textContent();
+
+    return CompositeEditCommand::inputEventData();
+}
+
+RefPtr<DataTransfer> ReplaceSelectionCommand::inputEventDataTransfer() const
+{
+    if (isEditingTextAreaOrTextInput())
+        return CompositeEditCommand::inputEventDataTransfer();
+
+    return DataTransfer::createForInputEvent(m_documentFragmentPlainText, m_documentFragmentHTMLMarkup);
+}
+
 bool ReplaceSelectionCommand::shouldRemoveEndBR(Node* endBR, const VisiblePosition& originalVisPosBeforeEndBR)
 {
-    if (!endBR || !endBR->inDocument())
+    if (!endBR || !endBR->isConnected())
         return false;
 
     VisiblePosition visiblePos(positionBeforeNode(endBR));
@@ -1367,6 +1395,9 @@ void ReplaceSelectionCommand::completeHTMLReplacement(const Position &lastPositi
     else
         return;
 
+    if (AXObjectCache::accessibilityEnabled() && editingAction() == EditActionPaste)
+        m_visibleSelectionForInsertedText = VisibleSelection(start, end);
+
     if (m_selectReplacement)
         setEndingSelection(VisibleSelection(start, end, SEL_DEFAULT_AFFINITY, endingSelection().isDirectional()));
     else
@@ -1406,7 +1437,7 @@ void ReplaceSelectionCommand::mergeTextNodesAroundPosition(Position& position, P
             if (positionOnlyToBeUpdated.containerNode() == text)
                 positionOnlyToBeUpdated.moveToOffset(previous->length() + positionOnlyToBeUpdated.offsetInContainerNode());
             else if (positionOnlyToBeUpdated.containerNode() == previous.ptr())
-                positionOnlyToBeUpdated.moveToPosition(text, positionOnlyToBeUpdated.offsetInContainerNode());
+                positionOnlyToBeUpdated.moveToPosition(text.get(), positionOnlyToBeUpdated.offsetInContainerNode());
         } else
             updatePositionForNodeRemoval(positionOnlyToBeUpdated, previous.get());
 
@@ -1421,7 +1452,7 @@ void ReplaceSelectionCommand::mergeTextNodesAroundPosition(Position& position, P
             updatePositionForNodeRemoval(position, next.get());
 
         if (positionOnlyToBeUpdatedIsOffsetInAnchor && positionOnlyToBeUpdated.containerNode() == next.ptr())
-            positionOnlyToBeUpdated.moveToPosition(text, originalLength + positionOnlyToBeUpdated.offsetInContainerNode());
+            positionOnlyToBeUpdated.moveToPosition(text.get(), originalLength + positionOnlyToBeUpdated.offsetInContainerNode());
         else
             updatePositionForNodeRemoval(positionOnlyToBeUpdated, next.get());
 
@@ -1435,7 +1466,7 @@ Node* ReplaceSelectionCommand::insertAsListItems(PassRefPtr<HTMLElement> prpList
 {
     RefPtr<HTMLElement> listElement = prpListElement;
 
-    while (listElement->hasOneChild() && isListElement(listElement->firstChild()))
+    while (listElement->hasOneChild() && isListHTMLElement(listElement->firstChild()))
         listElement = downcast<HTMLElement>(listElement->firstChild());
 
     bool isStart = isStartOfParagraph(insertPos);
@@ -1453,7 +1484,7 @@ Node* ReplaceSelectionCommand::insertAsListItems(PassRefPtr<HTMLElement> prpList
     }
 
     while (RefPtr<Node> listItem = listElement->firstChild()) {
-        listElement->removeChild(*listItem, ASSERT_NO_EXCEPTION);
+        listElement->removeChild(*listItem);
         if (isStart || isMiddle) {
             insertNodeBefore(listItem, lastNode);
             insertedNodes.respondToNodeInsertion(listItem.get());
@@ -1478,6 +1509,16 @@ void ReplaceSelectionCommand::updateNodesInserted(Node *node)
         m_startOfInsertedContent = firstPositionInOrBeforeNode(node);
 
     m_endOfInsertedContent = lastPositionInOrAfterNode(node->lastDescendant());
+}
+
+ReplacementFragment* ReplaceSelectionCommand::ensureReplacementFragment()
+{
+    if (!m_replacementFragment) {
+        m_replacementFragment = std::make_unique<ReplacementFragment>(document(), m_documentFragment.get(), endingSelection());
+        removeHeadContents(*m_replacementFragment);
+    }
+
+    return m_replacementFragment.get();
 }
 
 // During simple pastes, where we're just pasting a text node into a run of text, we insert the text node
@@ -1511,6 +1552,9 @@ bool ReplaceSelectionCommand::performTrivialReplace(const ReplacementFragment& f
         removeNodeAndPruneAncestors(nodeAfterInsertionPos.get());
 
     VisibleSelection selectionAfterReplace(m_selectReplacement ? start : end, end);
+
+    if (AXObjectCache::accessibilityEnabled() && editingAction() == EditActionPaste)
+        m_visibleSelectionForInsertedText = VisibleSelection(start, end);
 
     setEndingSelection(selectionAfterReplace);
 

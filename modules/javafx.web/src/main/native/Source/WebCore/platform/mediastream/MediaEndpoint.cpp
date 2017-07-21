@@ -30,18 +30,57 @@
 
 #include "config.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(WEB_RTC)
 #include "MediaEndpoint.h"
+
+#include "MediaPayload.h"
+#include "RTCDataChannelHandler.h"
+#include "RealtimeMediaSource.h"
 
 namespace WebCore {
 
-static std::unique_ptr<MediaEndpoint> createMediaEndpoint(MediaEndpointClient*)
+class EmptyRealtimeMediaSource final : public RealtimeMediaSource {
+public:
+    static Ref<EmptyRealtimeMediaSource> create() { return adoptRef(*new EmptyRealtimeMediaSource()); }
+
+private:
+    EmptyRealtimeMediaSource() : RealtimeMediaSource(emptyString(), RealtimeMediaSource::None, emptyString()) { }
+
+    RefPtr<RealtimeMediaSourceCapabilities> capabilities() const final { return nullptr; }
+    const RealtimeMediaSourceSettings& settings() const final { return m_sourceSettings; }
+
+    RealtimeMediaSourceSettings m_sourceSettings;
+};
+
+class EmptyMediaEndpoint final : public MediaEndpoint {
+private:
+    void setConfiguration(MediaEndpointConfiguration&&) final { }
+
+    void generateDtlsInfo() final { }
+    MediaPayloadVector getDefaultAudioPayloads() final { return MediaPayloadVector(); }
+    MediaPayloadVector getDefaultVideoPayloads() final { return MediaPayloadVector(); }
+    MediaPayloadVector filterPayloads(const MediaPayloadVector&, const MediaPayloadVector&) final { return MediaPayloadVector(); }
+
+    UpdateResult updateReceiveConfiguration(MediaEndpointSessionConfiguration*, bool) final { return UpdateResult::Failed; }
+    UpdateResult updateSendConfiguration(MediaEndpointSessionConfiguration*, const RealtimeMediaSourceMap&, bool) final { return UpdateResult::Failed; }
+
+    void addRemoteCandidate(const IceCandidate&, const String&, const String&, const String&) final { }
+
+    Ref<RealtimeMediaSource> createMutedRemoteSource(const String&, RealtimeMediaSource::Type) final { return EmptyRealtimeMediaSource::create(); }
+    void replaceSendSource(RealtimeMediaSource&, const String&) final { }
+    void replaceMutedRemoteSourceMid(const String&, const String&) final { };
+
+    std::unique_ptr<RTCDataChannelHandler> createDataChannelHandler(const String&, const RTCDataChannelInit&) final { return nullptr; }
+    void stop() final { }
+};
+
+static std::unique_ptr<MediaEndpoint> createMediaEndpoint(MediaEndpointClient&)
 {
-    return nullptr;
+    return std::make_unique<EmptyMediaEndpoint>();
 }
 
 CreateMediaEndpoint MediaEndpoint::create = createMediaEndpoint;
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(WEB_RTC)

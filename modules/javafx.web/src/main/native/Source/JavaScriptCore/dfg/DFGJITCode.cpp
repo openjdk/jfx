@@ -123,7 +123,7 @@ RegisterSet JITCode::liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBloc
 bool JITCode::checkIfOptimizationThresholdReached(CodeBlock* codeBlock)
 {
     ASSERT(codeBlock->jitType() == JITCode::DFGJIT);
-    return tierUpCounter.checkIfThresholdCrossedAndSet(codeBlock->baselineVersion());
+    return tierUpCounter.checkIfThresholdCrossedAndSet(codeBlock);
 }
 
 void JITCode::optimizeNextInvocation(CodeBlock* codeBlock)
@@ -131,7 +131,7 @@ void JITCode::optimizeNextInvocation(CodeBlock* codeBlock)
     ASSERT(codeBlock->jitType() == JITCode::DFGJIT);
     if (Options::verboseOSR())
         dataLog(*codeBlock, ": FTL-optimizing next invocation.\n");
-    tierUpCounter.setNewThreshold(0, codeBlock->baselineVersion());
+    tierUpCounter.setNewThreshold(0, codeBlock);
 }
 
 void JITCode::dontOptimizeAnytimeSoon(CodeBlock* codeBlock)
@@ -161,7 +161,7 @@ void JITCode::optimizeSoon(CodeBlock* codeBlock)
     CodeBlock* baseline = codeBlock->baselineVersion();
     tierUpCounter.setNewThreshold(
         baseline->adjustedCounterValue(Options::thresholdForFTLOptimizeSoon()),
-        baseline);
+        codeBlock);
 }
 
 void JITCode::forceOptimizationSlowPathConcurrently(CodeBlock* codeBlock)
@@ -215,16 +215,16 @@ void JITCode::validateReferences(const TrackedReferences& trackedReferences)
     minifiedDFG.validateReferences(trackedReferences);
 }
 
-Optional<CodeOrigin> JITCode::findPC(CodeBlock*, void* pc)
+std::optional<CodeOrigin> JITCode::findPC(CodeBlock*, void* pc)
 {
     for (OSRExit& exit : osrExit) {
         if (ExecutableMemoryHandle* handle = exit.m_code.executableMemory()) {
             if (handle->start() <= pc && pc < handle->end())
-                return Optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
+                return std::optional<CodeOrigin>(exit.m_codeOriginForExitProfile);
         }
     }
 
-    return Nullopt;
+    return std::nullopt;
 }
 
 } } // namespace JSC::DFG

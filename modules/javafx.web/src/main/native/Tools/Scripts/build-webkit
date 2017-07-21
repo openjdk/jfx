@@ -52,22 +52,19 @@ chdirWebKit();
 
 my $showHelp = 0;
 my $clean = 0;
+my $defaultCMakeFeatures = 0;
 my $minimal = 0;
 my $installHeaders;
 my $installLibs;
 my $prefixPath;
 my $makeArgs = "";
-my $cmakeArgs = "";
+my @cmakeArgs;
 my $onlyWebKitProject = 0;
 my $coverageSupport = 0;
 my $shouldRunStaticAnalyzer = 0;
 my $startTime = time();
 
 my @features = getFeatureOptionList();
-
-#foreach (sort keys %ENV) {
-#  print "$_  =  $ENV{$_}\n";
-#}
 
 # Additional environment parameters
 push @ARGV, split(/ /, $ENV{'BUILD_WEBKIT_ARGS'}) if ($ENV{'BUILD_WEBKIT_ARGS'});
@@ -106,9 +103,10 @@ Usage: $programName [options] [options to pass to build system]
 
   --prefix=<path>                   Set installation prefix to the given path (Gtk/Efl only)
   --makeargs=<arguments>            Optional Makefile flags
-  --cmakeargs=<arguments>           Optional CMake flags (e.g. --cmakeargs="-DFOO=bar -DCMAKE_PREFIX_PATH=/usr/local")
+  --cmakeargs=<arguments>           One or more optional CMake flags (e.g. --cmakeargs="-DFOO=bar -DCMAKE_PREFIX_PATH=/usr/local")
 
   --minimal                         No optional features, unless explicitly enabled
+  --default-cmake-features          Use the default CMake features enabled for the port (CMake based ports)
 
   --only-webkit                     Build only the WebKit project
 
@@ -121,11 +119,12 @@ my %options = (
     'install-libs=s' => \$installLibs,
     'prefix=s' => \$prefixPath,
     'makeargs=s' => \$makeArgs,
-    'cmakeargs=s' => \$cmakeArgs,
+    'cmakeargs=s' => \@cmakeArgs,
     'minimal' => \$minimal,
     'only-webkit' => \$onlyWebKitProject,
     'coverage' => \$coverageSupport,
     'analyze' => \$shouldRunStaticAnalyzer,
+    'default-cmake-features' => \$defaultCMakeFeatures,
 );
 
 # Build usage text and options list from features
@@ -151,23 +150,26 @@ my $productDir = productDir();
 my @projects = ("Source/JavaScriptCore", "Source/WebCore", "Source/WebKit");
 
 # Build WTF as a separate static library on ports which support it.
-splice @projects, 0, 0, "Source/WTF" if isAppleMacWebKit() or isAppleWinWebKit() or isWinCairo();
+splice @projects, 0, 0, "Source/WTF" if isAppleWebKit() or isWinCairo();
 
-splice @projects, 0, 0, "Source/bmalloc" if isAppleMacWebKit(); #//XXX remove?
+splice @projects, 0, 0, "Source/bmalloc" if isAppleCocoaWebKit();
 
-for my $dir (@projects) {
-    if (! -d $dir) {
-        die "Error: No $dir directory found. Please do a fresh checkout.\n";
+# Ports using CMake will check if directories exist in the CMake configuration.
+if (!isCMakeBuild()) {
+    for my $dir (@projects) {
+        if (! -d $dir) {
+            die "Error: No $dir directory found. Please do a fresh checkout.\n";
+        }
     }
 }
 
-if (!isIOSWebKit() && !isJava() && !-d "WebKitLibraries") {
+if ((isAppleWebKit() || isWinCairo()) && !-d "WebKitLibraries") {
     die "Error: No WebKitLibraries directory found. Please do a fresh checkout.\n";
 }
 
 my @options = ();
 
-if (isAppleMacWebKit()) {
+if (isAppleCocoaWebKit()) {
     push @options, XcodeOptions();
     sub option($$$)
     {
@@ -181,8 +183,8 @@ if (isAppleMacWebKit()) {
         push @options, $option unless $option eq "";
     }
 
-    # ANGLE must come before WebCore
-    splice @projects, 0, 0, "Source/ThirdParty/ANGLE";
+    # ANGLE and libwebrtc must come before WebCore
+    splice @projects, 0, 0, ("Source/ThirdParty/ANGLE");
 
     push @projects, ("Source/WebKit2");
 
@@ -202,10 +204,6 @@ if (isAppleMacWebKit()) {
         push @copyLibrariesArgs, productDir();
         print(join(" ", @copyLibrariesArgs) . "\n");
         (system(@copyLibrariesArgs) == 0) or die;
-
-        if (willUseIOSSimulatorSDK()) {
-            (system("perl", "Tools/Scripts/build-layouttestrelay", argumentsForConfiguration()) == 0) or die;
-        }
     }
 
     # Build Tools needed for Apple ports
@@ -217,11 +215,6 @@ if (isAppleMacWebKit()) {
     # Copy WebKitSupportLibrary to the correct location in WebKitLibraries so it can be found.
     # Will fail if WebKitSupportLibrary.zip is not in source root.
     (system("perl Tools/Scripts/update-webkit-support-libs") == 0) or die;
-} elsif (isJava()) {
-    @options = ();
-    foreach (@features) {
-        push @options, "DEFINES+=$_->{define}=${$_->{value}}" if ${$_->{value}} != $_->{default};
-    }
 }
 
 # If asked to build just the WebKit project, overwrite the projects
@@ -248,18 +241,21 @@ if (isCMakeBuild()) {
     my @featureArgs = cMakeArgsFromFeatures();
     removeCMakeCache(@featureArgs);
 
-    buildCMakeProjectOrExit($clean, $prefixPath, $makeArgs, (cmakeBasedPortArguments(), @featureArgs), $cmakeArgs);
+    buildCMakeProjectOrExit($clean, $prefixPath, $makeArgs, (cmakeBasedPortArguments(), @featureArgs), @cmakeArgs);
 }
 
 my $baseProductDir = baseProductDir();
 if (isAppleWinWebKit() || isWinCairo()) {
+    my @featureArgs = cMakeArgsFromFeatures();
+    removeCMakeCache(@featureArgs);
+
     chdirWebKit();
     if (exitStatus(generateBuildSystemFromCMakeProject())) {
         die "Run \"C:/Program Files (x86)/Microsoft Visual Studio 14.0/VC/vcvarsall.bat\" before build-webkit when using ninja";
     }
     chdirWebKit();
     if (canUseNinja()) {
-        chdir File::Spec->catdir("WebKitBuild", configuration());
+        chdir File::Spec->catdir($baseProductDir, configuration());
         $result = system("ninja");
     } else {
         $result = buildVisualStudioProject(File::Spec->catfile("WebKitBuild", configuration(), "WebKit.sln"), $clean);
@@ -273,7 +269,7 @@ if (isAppleWinWebKit() || isWinCairo()) {
         }
         exit exitStatus($result);
     }
-} elsif (isAppleMacWebKit() && !isCMakeBuild()) {
+} elsif (isAppleCocoaWebKit() && !isCMakeBuild()) {
     # Build, and abort if the build fails.
     for my $dir (@projects) {
         chdir $dir or die;
@@ -314,11 +310,13 @@ exit 0;
 sub cMakeArgsFromFeatures()
 {
     my @args;
-    foreach (@features) {
-        my $featureName = $_->{define};
-        if ($featureName) {
-            my $featureEnabled = ${$_->{value}} ? "ON" : "OFF";
-            push @args, "-D$featureName=$featureEnabled";
+    if (!$defaultCMakeFeatures) {
+        foreach (@features) {
+            my $featureName = $_->{define};
+            if ($featureName) {
+                my $featureEnabled = ${$_->{value}} ? "ON" : "OFF";
+                push @args, "-D$featureName=$featureEnabled";
+            }
         }
     }
     return @args;

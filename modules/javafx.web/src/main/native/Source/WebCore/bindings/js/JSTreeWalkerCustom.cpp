@@ -20,7 +20,6 @@
 #include "config.h"
 #include "JSTreeWalker.h"
 
-#include "DOMWrapperWorld.h"
 #include "Node.h"
 #include <heap/SlotVisitorInlines.h>
 

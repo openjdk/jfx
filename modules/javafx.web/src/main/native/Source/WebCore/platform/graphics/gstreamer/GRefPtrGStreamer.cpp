@@ -105,7 +105,6 @@ template <> void derefGPtr<GstCaps>(GstCaps* ptr)
 
 template <> GRefPtr<GstContext> adoptGRef(GstContext* ptr)
 {
-    ASSERT(!g_object_is_floating(ptr));
     return GRefPtr<GstContext>(ptr, GRefPtrAdopt);
 }
 
@@ -219,6 +218,26 @@ template<> void derefGPtr<GstBufferList>(GstBufferList* ptr)
 {
     if (ptr)
         gst_buffer_list_unref(ptr);
+}
+
+template<> GRefPtr<GstBufferPool> adoptGRef(GstBufferPool* ptr)
+{
+    ASSERT(!ptr || !g_object_is_floating(ptr));
+    return GRefPtr<GstBufferPool>(ptr, GRefPtrAdopt);
+}
+
+template<> GstBufferPool* refGPtr<GstBufferPool>(GstBufferPool* ptr)
+{
+    if (ptr)
+        gst_object_ref_sink(GST_OBJECT(ptr));
+
+    return ptr;
+}
+
+template<> void derefGPtr<GstBufferPool>(GstBufferPool* ptr)
+{
+    if (ptr)
+        gst_object_unref(ptr);
 }
 
 template<> GRefPtr<GstSample> adoptGRef(GstSample* ptr)
@@ -340,6 +359,16 @@ template <> GRefPtr<WebKitWebSrc> adoptGRef(WebKitWebSrc* ptr)
 {
     ASSERT(!ptr || !g_object_is_floating(ptr));
     return GRefPtr<WebKitWebSrc>(ptr, GRefPtrAdopt);
+}
+
+// This method is only available for WebKitWebSrc and should not be used for any other type.
+// This is only to work around a bug in GST where the URI downloader is not taking the ownership of WebKitWebSrc.
+// See https://bugs.webkit.org/show_bug.cgi?id=144040.
+GRefPtr<WebKitWebSrc> ensureGRef(WebKitWebSrc* ptr)
+{
+    if (ptr && g_object_is_floating(ptr))
+        gst_object_ref_sink(GST_OBJECT(ptr));
+    return GRefPtr<WebKitWebSrc>(ptr);
 }
 
 template <> WebKitWebSrc* refGPtr<WebKitWebSrc>(WebKitWebSrc* ptr)

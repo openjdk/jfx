@@ -23,10 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HeapSnapshot_h
-#define HeapSnapshot_h
+#pragma once
 
 #include "HeapSnapshotBuilder.h"
+#include "TinyBloomFilter.h"
 #include <wtf/Optional.h>
 
 namespace JSC {
@@ -45,14 +45,15 @@ public:
     void finalize();
 
     bool isEmpty() const { return m_nodes.isEmpty(); }
-    Optional<HeapSnapshotNode> nodeForCell(JSCell*);
-    Optional<HeapSnapshotNode> nodeForObjectIdentifier(unsigned objectIdentifier);
+    std::optional<HeapSnapshotNode> nodeForCell(JSCell*);
+    std::optional<HeapSnapshotNode> nodeForObjectIdentifier(unsigned objectIdentifier);
 
 private:
     friend class HeapSnapshotBuilder;
     static const intptr_t CellToSweepTag = 1;
 
     Vector<HeapSnapshotNode> m_nodes;
+    TinyBloomFilter m_filter;
     HeapSnapshot* m_previous { nullptr };
     unsigned m_firstObjectIdentifier { 0 };
     unsigned m_lastObjectIdentifier { 0 };
@@ -61,5 +62,3 @@ private:
 };
 
 } // namespace JSC
-
-#endif // HeapSnapshot_h

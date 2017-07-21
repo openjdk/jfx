@@ -3,7 +3,7 @@
  */
 #include "config.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "StringJava.h"
 
 namespace WebCore {
@@ -29,7 +29,7 @@ jobjectArray strVect2JArray(JNIEnv* env, const Vector<String>& strVect)
 
     env->SetObjectArrayElement(strArray, 0, (jstring)str);
 
-    for (int i = 1; i < strVect.size(); i++) {
+    for (size_t i = 1; i < strVect.size(); i++) {
         ASSERT(strVect[i]);
         str = strVect[i].toJavaString(env);
         env->SetObjectArrayElement(strArray, i, (jstring)str);

@@ -1,9 +1,8 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 
-#ifndef DOMException_h
-#define DOMException_h
+#pragma once
 
 enum DOMExceptionCode {
     INDEX_SIZE_ERR                = 1,
@@ -24,5 +23,3 @@ enum DOMExceptionCode {
     VALIDATION_ERR                = 16,
     TYPE_MISMATCH_ERR             = 17
 };
-
-#endif

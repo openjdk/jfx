@@ -29,14 +29,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InspectorNetworkAgent_h
-#define InspectorNetworkAgent_h
+#pragma once
 
 #include "InspectorWebAgentBase.h"
 #include <inspector/InspectorBackendDispatchers.h>
 #include <inspector/InspectorFrontendDispatchers.h>
 #include <wtf/HashSet.h>
 #include <wtf/text/WTFString.h>
+#include <yarr/RegularExpression.h>
 
 namespace Inspector {
 class InspectorObject;
@@ -47,13 +47,14 @@ namespace WebCore {
 class CachedResource;
 class Document;
 class DocumentLoader;
+class DocumentThreadableLoader;
 class InspectorPageAgent;
+class NetworkLoadTiming;
 class NetworkResourcesData;
 class ResourceError;
 class ResourceLoader;
 class ResourceRequest;
 class ResourceResponse;
-class ThreadableLoaderClient;
 class URL;
 
 #if ENABLE(WEB_SOCKETS)
@@ -68,10 +69,10 @@ public:
     InspectorNetworkAgent(WebAgentContext&, InspectorPageAgent*);
     virtual ~InspectorNetworkAgent();
 
-    virtual void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    virtual void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
 
-    // InspectorInstrumentation callbacks.
+    // InspectorInstrumentation
     void willRecalculateStyle();
     void didRecalculateStyle();
     void willSendRequest(unsigned long identifier, DocumentLoader&, ResourceRequest&, const ResourceResponse& redirectResponse);
@@ -81,8 +82,8 @@ public:
     void didFinishLoading(unsigned long identifier, DocumentLoader&, double finishTime);
     void didFailLoading(unsigned long identifier, DocumentLoader&, const ResourceError&);
     void didLoadResourceFromMemoryCache(DocumentLoader&, CachedResource&);
-    void didFinishXHRLoading(ThreadableLoaderClient*, unsigned long identifier, const String& sourceString);
-    void didReceiveXHRResponse(unsigned long identifier);
+    void didReceiveThreadableLoaderResponse(unsigned long identifier, DocumentThreadableLoader&);
+    void didFinishXHRLoading(unsigned long identifier, const String& decodedText);
     void willLoadXHRSynchronously();
     void didLoadXHRSynchronously();
     void didReceiveScriptResponse(unsigned long identifier);
@@ -100,18 +101,25 @@ public:
     void setInitialScriptContent(unsigned long identifier, const String& sourceString);
     void didScheduleStyleRecalculation(Document&);
 
+    void searchOtherRequests(const JSC::Yarr::RegularExpression&, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::Page::SearchResult>>&);
+    void searchInRequest(ErrorString&, const String& requestId, const String& query, bool caseSensitive, bool isRegex, RefPtr<Inspector::Protocol::Array<Inspector::Protocol::GenericTypes::SearchMatch>>&);
+
     RefPtr<Inspector::Protocol::Network::Initiator> buildInitiatorObject(Document*);
 
     // Called from frontend.
-    virtual void enable(ErrorString&) override;
-    virtual void disable(ErrorString&) override;
-    virtual void setExtraHTTPHeaders(ErrorString&, const Inspector::InspectorObject& headers) override;
-    virtual void getResponseBody(ErrorString&, const String& requestId, String* content, bool* base64Encoded) override;
-    virtual void setCacheDisabled(ErrorString&, bool cacheDisabled) override;
-    virtual void loadResource(ErrorString&, const String& frameId, const String& url, Ref<LoadResourceCallback>&&) override;
+    void enable(ErrorString&) override;
+    void disable(ErrorString&) override;
+    void setExtraHTTPHeaders(ErrorString&, const Inspector::InspectorObject& headers) override;
+    void getResponseBody(ErrorString&, const String& requestId, String* content, bool* base64Encoded) override;
+    void setCacheDisabled(ErrorString&, bool cacheDisabled) override;
+    void loadResource(ErrorString&, const String& frameId, const String& url, Ref<LoadResourceCallback>&&) override;
 
 private:
     void enable();
+
+    Ref<Inspector::Protocol::Network::ResourceTiming> buildObjectForTiming(const NetworkLoadTiming&, ResourceLoader&);
+    RefPtr<Inspector::Protocol::Network::Response> buildObjectForResourceResponse(const ResourceResponse&, ResourceLoader*);
+    Ref<Inspector::Protocol::Network::CachedResource> buildObjectForCachedResource(CachedResource*);
 
     double timestamp();
 
@@ -132,5 +140,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // !defined(InspectorNetworkAgent_h)

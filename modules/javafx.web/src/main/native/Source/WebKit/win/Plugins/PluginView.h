@@ -36,7 +36,6 @@
 #include "Timer.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
@@ -128,7 +127,7 @@ namespace WebCore {
 #if ENABLE(NETSCAPE_PLUGIN_API)
         NPObject* npObject();
 #endif
-        virtual RefPtr<JSC::Bindings::Instance> bindingInstance() override;
+        RefPtr<JSC::Bindings::Instance> bindingInstance() override;
 
         PluginStatus status() const { return m_status; }
 
@@ -162,36 +161,38 @@ namespace WebCore {
         void pushPopupsEnabledState(bool state);
         void popPopupsEnabledState();
 
-        virtual void invalidateRect(const IntRect&);
+        void invalidateRect(const IntRect&) override;
 
         bool arePopupsAllowed() const;
 
-        void setJavaScriptPaused(bool);
+        void setJavaScriptPaused(bool) override;
 
-        void privateBrowsingStateChanged(bool);
+        void privateBrowsingStateChanged(bool) override;
 
         void disconnectStream(PluginStream*);
-        void streamDidFinishLoading(PluginStream* stream) { disconnectStream(stream); }
+#if ENABLE(NETSCAPE_PLUGIN_API)
+        void streamDidFinishLoading(PluginStream* stream) override { disconnectStream(stream); }
+#endif
 
         // Widget functions
-        virtual void setFrameRect(const IntRect&);
-        virtual void frameRectsChanged();
-        virtual void setFocus(bool);
-        virtual void show();
-        virtual void hide();
-        virtual void paint(GraphicsContext&, const IntRect&);
-        virtual void clipRectChanged() override;
+        void setFrameRect(const IntRect&) override;
+        void frameRectsChanged() override;
+        void setFocus(bool) override;
+        void show() override;
+        void hide() override;
+        void paint(GraphicsContext&, const IntRect&) override;
+        void clipRectChanged() override;
 
         // This method is used by plugins on all platforms to obtain a clip rect that includes clips set by WebCore,
         // e.g., in overflow:auto sections.  The clip rects coordinates are in the containing window's coordinate space.
         // This clip includes any clips that the widget itself sets up for its children.
         IntRect windowClipRect() const;
 
-        virtual void handleEvent(Event*);
-        virtual void setParent(ScrollView*);
-        virtual void setParentVisible(bool);
+        void handleEvent(Event*) override;
+        void setParent(ScrollView*) override;
+        void setParentVisible(bool) override;
 
-        virtual bool isPluginView() const override { return true; }
+        bool isPluginView() const override { return true; }
 
         Frame* parentFrame() const { return m_parentFrame.get(); }
 
@@ -208,10 +209,10 @@ namespace WebCore {
 #endif
 
         // Used for manual loading
-        void didReceiveResponse(const ResourceResponse&);
-        void didReceiveData(const char*, int);
-        void didFinishLoading();
-        void didFail(const ResourceError&);
+        void didReceiveResponse(const ResourceResponse&) override;
+        void didReceiveData(const char*, int) override;
+        void didFinishLoading() override;
+        void didFail(const ResourceError&) override;
 
         static bool isCallingPlugin();
 
@@ -247,7 +248,7 @@ namespace WebCore {
 
         void invalidateWindowlessPluginRect(const IntRect&);
 
-        virtual void mediaCanStart();
+        void mediaCanStart(Document&) override;
 
 #if ENABLE(NETSCAPE_PLUGIN_API)
         void paintWindowedPluginIntoContext(GraphicsContext&, const IntRect&);
@@ -292,7 +293,7 @@ namespace WebCore {
         void handleMouseEvent(MouseEvent*);
 
         void paintIntoTransformedContext(HDC);
-        PassRefPtr<Image> snapshot();
+        RefPtr<Image> snapshot();
 
         float deviceScaleFactor() const;
 
@@ -310,6 +311,8 @@ namespace WebCore {
         NPP_t m_instanceStruct;
         NPWindow m_npWindow;
 #endif
+
+        NPObject* m_elementNPObject;
 
         Vector<bool, 4> m_popupStateStack;
 

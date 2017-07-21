@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AirArgInlines_h
-#define AirArgInlines_h
+#pragma once
 
 #if ENABLE(B3_JIT)
 
@@ -84,6 +83,88 @@ template<> struct ArgThingHelper<Arg> {
     }
 };
 
+template<> struct ArgThingHelper<StackSlot*> {
+    static bool is(const Arg& arg)
+    {
+        return arg.isStack();
+    }
+
+    static StackSlot* as(const Arg& arg)
+    {
+        return arg.stackSlot();
+    }
+
+    template<typename Functor>
+    static void forEachFast(Arg& arg, const Functor& functor)
+    {
+        if (!arg.isStack())
+            return;
+
+        StackSlot* stackSlot = arg.stackSlot();
+        functor(stackSlot);
+        arg = Arg::stack(stackSlot, arg.offset());
+    }
+
+    template<typename Functor>
+    static void forEach(Arg& arg, Arg::Role role, Arg::Type type, Arg::Width width, const Functor& functor)
+    {
+        if (!arg.isStack())
+            return;
+
+        StackSlot* stackSlot = arg.stackSlot();
+
+        // FIXME: This is way too optimistic about the meaning of "Def". It gets lucky for
+        // now because our only use of "Anonymous" stack slots happens to want the optimistic
+        // semantics. We could fix this by just changing the comments that describe the
+        // semantics of "Anonymous".
+        // https://bugs.webkit.org/show_bug.cgi?id=151128
+
+        functor(stackSlot, role, type, width);
+        arg = Arg::stack(stackSlot, arg.offset());
+    }
+};
+
+template<> struct ArgThingHelper<Reg> {
+    static bool is(const Arg& arg)
+    {
+        return arg.isReg();
+    }
+
+    static Reg as(const Arg& arg)
+    {
+        return arg.reg();
+    }
+
+    template<typename Functor>
+    static void forEachFast(Arg& arg, const Functor& functor)
+    {
+        arg.forEachTmpFast(
+            [&] (Tmp& tmp) {
+                if (!tmp.isReg())
+                    return;
+
+                Reg reg = tmp.reg();
+                functor(reg);
+                tmp = Tmp(reg);
+            });
+    }
+
+    template<typename Functor>
+    static void forEach(Arg& arg, Arg::Role argRole, Arg::Type argType, Arg::Width argWidth, const Functor& functor)
+    {
+        arg.forEachTmp(
+            argRole, argType, argWidth,
+            [&] (Tmp& tmp, Arg::Role role, Arg::Type type, Arg::Width width) {
+                if (!tmp.isReg())
+                    return;
+
+                Reg reg = tmp.reg();
+                functor(reg, role, type, width);
+                tmp = Tmp(reg);
+            });
+    }
+};
+
 template<typename Thing>
 bool Arg::is() const
 {
@@ -111,6 +192,3 @@ void Arg::forEach(Role role, Type type, Width width, const Functor& functor)
 } } } // namespace JSC::B3::Air
 
 #endif // ENABLE(B3_JIT)
-
-#endif // AirArgInlines_h
-

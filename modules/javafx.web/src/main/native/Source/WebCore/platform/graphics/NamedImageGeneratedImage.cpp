@@ -42,7 +42,7 @@ NamedImageGeneratedImage::NamedImageGeneratedImage(String name, const FloatSize&
 
 void NamedImageGeneratedImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription)
 {
-#if USE(NEW_THEME)
+#if USE(NEW_THEME) || PLATFORM(IOS)
     GraphicsContextStateSaver stateSaver(context);
     context.setCompositeOperation(compositeOp, blendMode);
     context.clip(dstRect);
@@ -61,10 +61,10 @@ void NamedImageGeneratedImage::draw(GraphicsContext& context, const FloatRect& d
 #endif
 }
 
-void NamedImageGeneratedImage::drawPattern(GraphicsContext& context, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator compositeOp, const FloatRect& dstRect, BlendMode blendMode)
+void NamedImageGeneratedImage::drawPattern(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator compositeOp, BlendMode blendMode)
 {
 #if USE(NEW_THEME)
-    std::unique_ptr<ImageBuffer> imageBuffer = context.createCompatibleBuffer(size(), true);
+    auto imageBuffer = ImageBuffer::createCompatibleBuffer(size(), context);
     if (!imageBuffer)
         return;
 
@@ -72,7 +72,7 @@ void NamedImageGeneratedImage::drawPattern(GraphicsContext& context, const Float
     platformTheme()->drawNamedImage(m_name, graphicsContext, FloatRect(0, 0, size().width(), size().height()));
 
     // Tile the image buffer into the context.
-    imageBuffer->drawPattern(context, srcRect, patternTransform, phase, spacing, compositeOp, dstRect, blendMode);
+    imageBuffer->drawPattern(context, dstRect, srcRect, patternTransform, phase, spacing, compositeOp, blendMode);
 #else
     UNUSED_PARAM(context);
     UNUSED_PARAM(srcRect);

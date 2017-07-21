@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ResourceHandleCFURLConnectionDelegateWithOperationQueue.h"
 
-#if USE(CFNETWORK)
+#if USE(CFURLCONNECTION)
 
 #include "AuthenticationCF.h"
 #include "AuthenticationChallenge.h"
@@ -104,10 +104,10 @@ CFURLRequestRef ResourceHandleCFURLConnectionDelegateWithOperationQueue::willSen
 
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!protector->hasHandle()) {
+        if (!protectedThis->hasHandle()) {
             continueWillSendRequest(nullptr);
             return;
         }
@@ -118,7 +118,7 @@ CFURLRequestRef ResourceHandleCFURLConnectionDelegateWithOperationQueue::willSen
         ASSERT(redirectResponse);
 
         ResourceRequest request = createResourceRequest(cfRequest, redirectResponse.get());
-        m_handle->willSendRequest(request, redirectResponse.get());
+        m_handle->willSendRequest(WTFMove(request), redirectResponse.get());
     });
 
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
@@ -130,10 +130,10 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didReceiveResponse
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!protector->hasHandle() || !m_handle->client()) {
+        if (!protectedThis->hasHandle() || !m_handle->client()) {
             continueDidReceiveResponse();
             return;
         }
@@ -144,8 +144,10 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didReceiveResponse
         auto msg = CFURLResponseGetHTTPResponse(cfResponse);
         int statusCode = msg ? CFHTTPMessageGetResponseStatusCode(msg) : 0;
 
-        if (statusCode != 304)
-            adjustMIMETypeIfNecessary(cfResponse);
+        if (statusCode != 304) {
+            bool isMainResourceLoad = m_handle->firstRequest().requester() == ResourceRequest::Requester::Main;
+            adjustMIMETypeIfNecessary(cfResponse, isMainResourceLoad);
+        }
 
 #if !PLATFORM(IOS)
         if (_CFURLRequestCopyProtocolPropertyForKey(m_handle->firstRequest().cfURLRequest(DoNotUpdateHTTPBody), CFSTR("ForceHTMLMIMEType")))
@@ -154,12 +156,12 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didReceiveResponse
 
         ResourceResponse resourceResponse(cfResponse);
 #if ENABLE(WEB_TIMING)
-        ResourceHandle::getConnectionTimingData(connection, resourceResponse.resourceLoadTiming());
+        ResourceHandle::getConnectionTimingData(connection, resourceResponse.networkLoadTiming());
 #else
         UNUSED_PARAM(connection);
 #endif
 
-        m_handle->client()->didReceiveResponseAsync(m_handle, resourceResponse);
+        m_handle->didReceiveResponse(WTFMove(resourceResponse));
     });
     dispatch_semaphore_wait(m_semaphore, DISPATCH_TIME_FOREVER);
 }
@@ -168,11 +170,11 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didReceiveData(CFD
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
     CFRetain(data);
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (protector->hasHandle() && m_handle->client()) {
+        if (protectedThis->hasHandle() && m_handle->client()) {
             LOG(Network, "CFNet - ResourceHandleCFURLConnectionDelegateWithOperationQueue::didReceiveData(handle=%p) (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
 
             m_handle->client()->didReceiveBuffer(m_handle, SharedBuffer::wrapCFData(data), originalLength);
@@ -186,9 +188,9 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didFinishLoading()
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!protector->hasHandle() || !m_handle->client())
+        if (!protectedThis->hasHandle() || !m_handle->client())
             return;
 
         LOG(Network, "CFNet - ResourceHandleCFURLConnectionDelegateWithOperationQueue::didFinishLoading(handle=%p) (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
@@ -201,10 +203,10 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didFail(CFErrorRef
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
     CFRetain(error);
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (protector->hasHandle() && m_handle->client()) {
+        if (protectedThis->hasHandle() && m_handle->client()) {
             LOG(Network, "CFNet - ResourceHandleCFURLConnectionDelegateWithOperationQueue::didFail(handle=%p) (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
 
             m_handle->client()->didFail(m_handle, ResourceError(error));
@@ -218,10 +220,10 @@ CFCachedURLResponseRef ResourceHandleCFURLConnectionDelegateWithOperationQueue::
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!protector->hasHandle() || !m_handle->client()) {
+        if (!protectedThis->hasHandle() || !m_handle->client()) {
             continueWillCacheResponse(nullptr);
             return;
         }
@@ -238,10 +240,10 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didReceiveChalleng
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
     CFRetain(challenge);
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (protector->hasHandle()) {
+        if (protectedThis->hasHandle()) {
             LOG(Network, "CFNet - ResourceHandleCFURLConnectionDelegateWithOperationQueue::didReceiveChallenge(handle=%p) (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
 
             m_handle->didReceiveAuthenticationChallenge(AuthenticationChallenge(challenge, m_handle));
@@ -255,9 +257,9 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didSendBodyData(CF
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!protector->hasHandle() || !m_handle->client())
+        if (!protectedThis->hasHandle() || !m_handle->client())
             return;
 
         LOG(Network, "CFNet - ResourceHandleCFURLConnectionDelegateWithOperationQueue::didSendBodyData(handle=%p) (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
@@ -276,10 +278,10 @@ Boolean ResourceHandleCFURLConnectionDelegateWithOperationQueue::canRespondToPro
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (!protector->hasHandle()) {
+        if (!protectedThis->hasHandle()) {
             continueCanAuthenticateAgainstProtectionSpace(false);
             return;
         }
@@ -306,10 +308,10 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::didReceiveDataArra
 {
     // FIXME: The block implicitly copies protector object, which is wasteful. We should just call ref(),
     // capture "this" by pointer value, and use a C++ lambda to prevent other unintentional capturing.
-    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protector(this);
+    RefPtr<ResourceHandleCFURLConnectionDelegateWithOperationQueue> protectedThis(this);
     CFRetain(dataArray);
     dispatch_async(dispatch_get_main_queue(), ^{
-        if (protector->hasHandle() && m_handle->client()) {
+        if (protectedThis->hasHandle() && m_handle->client()) {
             LOG(Network, "CFNet - ResourceHandleCFURLConnectionDelegateWithOperationQueue::didSendBodyData(handle=%p) (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
 
             m_handle->client()->didReceiveBuffer(m_handle, SharedBuffer::wrapCFDataArray(dataArray), -1);
@@ -345,4 +347,4 @@ void ResourceHandleCFURLConnectionDelegateWithOperationQueue::continueCanAuthent
 #endif // USE(PROTECTION_SPACE_AUTH_CALLBACK)
 } // namespace WebCore
 
-#endif // USE(CFNETWORK)
+#endif // USE(CFURLCONNECTION)

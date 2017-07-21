@@ -23,12 +23,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HeapSnapshotBuilder_h
-#define HeapSnapshotBuilder_h
+#pragma once
 
 #include <functional>
 #include <wtf/Lock.h>
 #include <wtf/Vector.h>
+#include <wtf/text/UniquedStringImpl.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -56,14 +56,45 @@ enum class EdgeType : uint8_t {
 };
 
 struct HeapSnapshotEdge {
-    HeapSnapshotEdge(JSCell* from, JSCell* to)
-        : from(from)
-        , to(to)
-        , type(EdgeType::Internal)
-    { }
+    HeapSnapshotEdge(JSCell* fromCell, JSCell* toCell)
+        : type(EdgeType::Internal)
+    {
+        from.cell = fromCell;
+        to.cell = toCell;
+    }
 
-    JSCell* from;
-    JSCell* to;
+    HeapSnapshotEdge(JSCell* fromCell, JSCell* toCell, EdgeType type, UniquedStringImpl* name)
+        : type(type)
+    {
+        ASSERT(type == EdgeType::Property || type == EdgeType::Variable);
+        from.cell = fromCell;
+        to.cell = toCell;
+        u.name = name;
+    }
+
+    HeapSnapshotEdge(JSCell* fromCell, JSCell* toCell, uint32_t index)
+        : type(EdgeType::Index)
+    {
+        from.cell = fromCell;
+        to.cell = toCell;
+        u.index = index;
+    }
+
+    union {
+        JSCell *cell;
+        unsigned identifier;
+    } from;
+
+    union {
+        JSCell *cell;
+        unsigned identifier;
+    } to;
+
+    union {
+        UniquedStringImpl* name;
+        uint32_t index;
+    } u;
+
     EdgeType type;
 };
 
@@ -75,6 +106,7 @@ public:
 
     static unsigned nextAvailableObjectIdentifier;
     static unsigned getNextObjectIdentifier();
+    static void resetNextAvailableObjectIdentifier();
 
     // Performs a garbage collection that builds a snapshot of all live cells.
     void buildSnapshot();
@@ -84,6 +116,9 @@ public:
 
     // A reference from one cell to another.
     void appendEdge(JSCell* from, JSCell* to);
+    void appendPropertyNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* propertyName);
+    void appendVariableNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* variableName);
+    void appendIndexEdge(JSCell* from, JSCell* to, uint32_t index);
 
     String json();
     String json(std::function<bool (const HeapSnapshotNode&)> allowNodeCallback);
@@ -96,12 +131,10 @@ private:
     HeapProfiler& m_profiler;
 
     // SlotVisitors run in parallel.
-    Lock m_appendingNodeMutex;
+    Lock m_buildingNodeMutex;
     std::unique_ptr<HeapSnapshot> m_snapshot;
-    Lock m_appendingEdgeMutex;
+    Lock m_buildingEdgeMutex;
     Vector<HeapSnapshotEdge> m_edges;
 };
 
 } // namespace JSC
-
-#endif // HeapSnapshotBuilder_h

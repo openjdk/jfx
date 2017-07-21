@@ -21,8 +21,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef FloatingObjects_h
-#define FloatingObjects_h
+#pragma once
 
 #include "PODIntervalTree.h"
 #include "RootInlineBox.h"
@@ -41,7 +40,7 @@ public:
 
     static std::unique_ptr<FloatingObject> create(RenderBox&);
     std::unique_ptr<FloatingObject> copyToNewContainer(LayoutSize, bool shouldPaint = false, bool isDescendant = false) const;
-    std::unique_ptr<FloatingObject> unsafeClone() const;
+    std::unique_ptr<FloatingObject> cloneForNewParent() const;
 
     explicit FloatingObject(RenderBox&);
     FloatingObject(RenderBox&, Type, const LayoutRect&, bool shouldPaint, bool isDescendant);
@@ -174,5 +173,3 @@ template<> struct ValueToString<FloatingObject*> {
 #endif
 
 } // namespace WebCore
-
-#endif // FloatingObjects_h

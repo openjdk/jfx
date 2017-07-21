@@ -28,6 +28,7 @@
 
 #if PLATFORM(IOS)
 
+#include <CoreText/CoreText.h>
 #include "FontAntialiasingStateSaver.h"
 #include "LegacyTileGrid.h"
 #include "LegacyTileGridTile.h"
@@ -116,7 +117,7 @@ FloatRect LegacyTileCache::visibleRectInLayer(CALayer *layer) const
     return [layer convertRect:[m_window extendedVisibleRect] fromLayer:hostLayer()];
 }
 
-void LegacyTileCache::setOverrideVisibleRect(Optional<FloatRect> rect)
+void LegacyTileCache::setOverrideVisibleRect(std::optional<FloatRect> rect)
 {
     m_overrideVisibleRect = rect;
 }
@@ -591,14 +592,17 @@ void LegacyTileCache::drawLayer(LegacyTileLayer* layer, CGContextRef context)
             CGContextSetRGBFillColor(context, 1, 0, 0, 0.4f);
         else
             CGContextSetRGBFillColor(context, 1, 1, 1, 0.6f);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        CGContextSetTextMatrix(context, CGAffineTransformMakeScale(1, -1));
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        CGContextSelectFont(context, "Helvetica", 25, kCGEncodingMacRoman);
-        CGContextShowTextAtPoint(context, labelBounds.origin.x + 3, labelBounds.origin.y + 20, text, strlen(text));
-#pragma clang diagnostic pop
+
+        auto matrix = CGAffineTransformMakeScale(1, -1);
+        auto font = adoptCF(CTFontCreateWithName(CFSTR("Helvetica"), 25, &matrix));
+        CFTypeRef keys[] = { kCTFontAttributeName, kCTForegroundColorFromContextAttributeName };
+        CFTypeRef values[] = { font.get(), kCFBooleanTrue };
+        auto attributes = adoptCF(CFDictionaryCreate(kCFAllocatorDefault, keys, values, WTF_ARRAY_LENGTH(keys), &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks));
+        auto string = adoptCF(CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, reinterpret_cast<const UInt8*>(text), strlen(text), kCFStringEncodingUTF8, false, kCFAllocatorNull));
+        auto attributedString = adoptCF(CFAttributedStringCreate(kCFAllocatorDefault, string.get(), attributes.get()));
+        auto line = adoptCF(CTLineCreateWithAttributedString(attributedString.get()));
+        CGContextSetTextPosition(context, labelBounds.origin.x + 3, labelBounds.origin.y + 20);
+        CTLineDraw(line.get(), context);
 
         CGContextRestoreGState(context);
     }

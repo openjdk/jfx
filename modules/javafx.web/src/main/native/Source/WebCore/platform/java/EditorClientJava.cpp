@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -15,8 +15,9 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "htmlediting.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "KeyboardEvent.h"
+#include "Page.h"
 #include "PlatformKeyboardEvent.h"
 #include "TextIterator.h"
 #include "Widget.h"
@@ -34,7 +35,8 @@ namespace WebCore {
 
 
 EditorClientJava::EditorClientJava(const JLObject &webPage)
-    : m_webPage(webPage), m_isInRedo(false)
+    : m_webPage(webPage)
+    , m_isInRedo(false)
 {
 }
 
@@ -42,14 +44,7 @@ EditorClientJava::~EditorClientJava()
 {
 }
 
-void EditorClientJava::pageDestroyed()
-{
-    notImplemented();
-
-    delete this;
-}
-
-void dump(int indent, Node* node)
+void dump(int, Node*)
 {
     // for (int i=0; i<indent; i++) cout << " "; //XXX: uncomment
     // cout << node->nodeType() << StringView(node->nodeName()) << endl;
@@ -457,6 +452,10 @@ void EditorClientJava::didChangeSelectionAndUpdateLayout() {
     notImplemented();
 }
 
+void EditorClientJava::updateEditorStateAfterLayoutIfEditabilityChanged() {
+    notImplemented();
+}
+
 void EditorClientJava::didEndEditing()
 {
     notImplemented();
@@ -480,7 +479,7 @@ bool EditorClientJava::canRedo() const
 void EditorClientJava::undo()
 {
     if (canUndo()) {
-        RefPtr<WebCore::UndoStep> step(*(--m_undoStack.end()));
+        Ref<WebCore::UndoStep> step = WTFMove(*(--m_undoStack.end()));
         m_undoStack.remove(--m_undoStack.end());
         // unapply will call us back to push this command onto the redo stack.
         step->unapply();
@@ -490,7 +489,7 @@ void EditorClientJava::undo()
 void EditorClientJava::redo()
 {
     if (canRedo()) {
-        RefPtr<WebCore::UndoStep> step(*(--m_redoStack.end()));
+        Ref<WebCore::UndoStep> step = WTFMove(*(--m_redoStack.end()));
         m_redoStack.remove(--m_redoStack.end());
 
         ASSERT(!m_isInRedo);
@@ -627,8 +626,12 @@ void EditorClientJava::discardedComposition(Frame*) {
     notImplemented();
 }
 
+void EditorClientJava::canceledComposition() {
+    notImplemented();
+}
+
 const int gc_maximumm_undoStackDepth = 1000;
-void EditorClientJava::registerUndoStep(PassRefPtr<UndoStep> step)
+void EditorClientJava::registerUndoStep(UndoStep& step)
 {
     if (m_undoStack.size() == gc_maximumm_undoStackDepth)
         m_undoStack.removeFirst();
@@ -637,7 +640,7 @@ void EditorClientJava::registerUndoStep(PassRefPtr<UndoStep> step)
     m_undoStack.append(step);
 }
 
-void EditorClientJava::registerRedoStep(PassRefPtr<UndoStep> step)
+void EditorClientJava::registerRedoStep(UndoStep& step)
 {
     m_redoStack.append(step);
 }
@@ -656,5 +659,58 @@ void EditorClientJava::willWriteSelectionToPasteboard(Range*)
 {
 }
 
+// All of the member functions from TextCheckerClient is umimplemented
+bool EditorClientJava::shouldEraseMarkersAfterChangeSelection(TextCheckingType) const
+{
+    notImplemented();
+    return true;
+}
+
+void EditorClientJava::ignoreWordInSpellDocument(const String&)
+{
+    notImplemented();
+}
+
+void EditorClientJava::learnWord(const String&)
+{
+    notImplemented();
+}
+
+void EditorClientJava::checkSpellingOfString(StringView, int*, int*)
+{
+    notImplemented();
+}
+
+String EditorClientJava::getAutoCorrectSuggestionForMisspelledWord(const String&)
+{
+    notImplemented();
+    return String();
+}
+
+void EditorClientJava::checkGrammarOfString(StringView, Vector<GrammarDetail>&, int*, int*)
+{
+    notImplemented();
+}
+
+#if USE(UNIFIED_TEXT_CHECKING)
+Vector<TextCheckingResult> EditorClientJava::checkTextOfParagraph(StringView, TextCheckingTypeMask, const VisibleSelection&)
+{
+    notImplemented();
+    return Vector<TextCheckingResult>();
+}
+#endif
+
+// For spellcheckers that support multiple languages, it's often important to be able to identify the language in order to
+// provide more accurate correction suggestions. Caller can pass in more text in "context" to aid such spellcheckers on language
+// identification. Noramlly it's the text surrounding the "word" for which we are getting correction suggestions.
+void EditorClientJava::getGuessesForWord(const String&, const String&, const VisibleSelection&, Vector<String>&)
+{
+    notImplemented();
+}
+
+void EditorClientJava::requestCheckingOfString(TextCheckingRequest&, const VisibleSelection&)
+{
+    notImplemented();
+}
 
 } // namespace WebCore

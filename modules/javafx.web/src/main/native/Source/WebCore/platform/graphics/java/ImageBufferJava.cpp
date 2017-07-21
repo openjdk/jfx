@@ -1,13 +1,11 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
+
 #include "config.h"
 
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 #include "BufferImageJava.h"
+
 #include <wtf/text/CString.h>
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
@@ -27,8 +25,8 @@ namespace WebCore {
 ImageBufferData::ImageBufferData(
     const FloatSize& size,
     ImageBuffer &rq_holder,
-    float resolutionScale
-) : m_rq_holder(rq_holder)
+    float resolutionScale)
+  : m_rq_holder(rq_holder)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -96,8 +94,8 @@ ImageBuffer::ImageBuffer(
     bool& success
 )
     : m_data(size, *this, resolutionScale)
-    , m_resolutionScale(resolutionScale)
     , m_logicalSize(size)
+    , m_resolutionScale(resolutionScale)
 {
     // RT-10059: ImageBufferData construction may fail if the requested
     // image size is too large. In that case we exit immediately,
@@ -149,7 +147,7 @@ GraphicsContext& ImageBuffer::context() const
     return *m_data.m_context.get();
 }
 
-RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy copyBehavior, ScaleBehavior scaleBehavior) const
+RefPtr<Image> ImageBuffer::copyImage(BackingStoreCopy, ScaleBehavior) const
 {
     //utatodo: seems [copyBehavior] is the rest of [drawsUsingCopy]
     return BufferImage::create(
@@ -163,7 +161,7 @@ BackingStoreCopy ImageBuffer::fastCopyImageMode()
     return CopyBackingStore; // todo tav revise
 }
 
-void ImageBuffer::platformTransformColorSpace(const Vector<int> &lookUpTable)
+void ImageBuffer::platformTransformColorSpace(const Vector<int>&)
 {
     notImplemented();
 /*
@@ -189,7 +187,7 @@ void ImageBuffer::platformTransformColorSpace(const Vector<int> &lookUpTable)
 */
 }
 
-PassRefPtr<Uint8ClampedArray> getImageData(
+RefPtr<Uint8ClampedArray> getImageData(
     const Multiply multiplied,
     const ImageBufferData &idata,
     const IntRect& rect,
@@ -269,7 +267,7 @@ PassRefPtr<Uint8ClampedArray> getImageData(
     return result;
 }
 
-PassRefPtr<Uint8ClampedArray> ImageBuffer::getUnmultipliedImageData(const IntRect& rect, CoordinateSystem coordinateSystem) const
+RefPtr<Uint8ClampedArray> ImageBuffer::getUnmultipliedImageData(const IntRect& rect, CoordinateSystem coordinateSystem) const
 {
     IntRect srcRect = rect;
     if (coordinateSystem == LogicalCoordinateSystem)
@@ -277,7 +275,7 @@ PassRefPtr<Uint8ClampedArray> ImageBuffer::getUnmultipliedImageData(const IntRec
     return getImageData(Unmultiplied, m_data, srcRect, m_size);
 }
 
-PassRefPtr<Uint8ClampedArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect, CoordinateSystem coordinateSystem) const
+RefPtr<Uint8ClampedArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect, CoordinateSystem coordinateSystem) const
 {
     IntRect srcRect = rect;
     if (coordinateSystem == LogicalCoordinateSystem)
@@ -391,23 +389,23 @@ void ImageBuffer::draw(
 
 void ImageBuffer::drawPattern(
     GraphicsContext& context,
+    const FloatRect& destRect,
     const FloatRect& srcRect,
     const AffineTransform& patternTransform,
     const FloatPoint& phase,
     const FloatSize& spacing,
     CompositeOperator op,
-    const FloatRect& destRect,
     BlendMode bm) // todo tav new param
 {
     RefPtr<Image> imageCopy = copyImage();
     imageCopy->drawPattern(
         context,
+        destRect,
         srcRect,
         patternTransform,
         phase,
         spacing,
         op,
-        destRect,
         bm);
 }
 
@@ -416,7 +414,7 @@ RefPtr<Image> ImageBuffer::sinkIntoImage(std::unique_ptr<ImageBuffer> imageBuffe
     return imageBuffer->copyImage(DontCopyBackingStore, scaleBehavior);
 }
 
-String ImageBuffer::toDataURL(const String& mimeType, const double* quality, CoordinateSystem) const
+String ImageBuffer::toDataURL(const String& mimeType, std::optional<double>, CoordinateSystem) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
         //RenderQueue need to be processed before pixel buffer extraction.

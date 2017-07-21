@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2016 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2009-2010. All rights reserved.
  * Copyright (C) 2015 Canon Inc. All rights reserved.
  *
@@ -62,30 +62,30 @@ static inline void freeSegment(char* p)
 #endif
 
 SharedBuffer::SharedBuffer()
-    : m_buffer(adoptRef(new DataBuffer))
+    : m_buffer(adoptRef(*new DataBuffer))
 {
 }
 
 SharedBuffer::SharedBuffer(unsigned size)
     : m_size(size)
-    , m_buffer(adoptRef(new DataBuffer))
+    , m_buffer(adoptRef(*new DataBuffer))
 {
 }
 
 SharedBuffer::SharedBuffer(const char* data, unsigned size)
-    : m_buffer(adoptRef(new DataBuffer))
+    : m_buffer(adoptRef(*new DataBuffer))
 {
     append(data, size);
 }
 
 SharedBuffer::SharedBuffer(const unsigned char* data, unsigned size)
-    : m_buffer(adoptRef(new DataBuffer))
+    : m_buffer(adoptRef(*new DataBuffer))
 {
     append(reinterpret_cast<const char*>(data), size);
 }
 
 SharedBuffer::SharedBuffer(MappedFileData&& fileData)
-    : m_buffer(adoptRef(new DataBuffer))
+    : m_buffer(adoptRef(*new DataBuffer))
     , m_fileData(WTFMove(fileData))
 {
 }
@@ -106,12 +106,12 @@ RefPtr<SharedBuffer> SharedBuffer::createWithContentsOfFile(const String& filePa
     return adoptRef(new SharedBuffer(WTFMove(mappedFileData)));
 }
 
-PassRefPtr<SharedBuffer> SharedBuffer::adoptVector(Vector<char>& vector)
+Ref<SharedBuffer> SharedBuffer::adoptVector(Vector<char>& vector)
 {
-    RefPtr<SharedBuffer> buffer = create();
+    auto buffer = create();
     buffer->m_buffer->data.swap(vector);
     buffer->m_size = buffer->m_buffer->data.size();
-    return buffer.release();
+    return buffer;
 }
 
 unsigned SharedBuffer::size() const
@@ -141,9 +141,13 @@ const char* SharedBuffer::data() const
     return this->buffer().data();
 }
 
-PassRefPtr<ArrayBuffer> SharedBuffer::createArrayBuffer() const
+RefPtr<ArrayBuffer> SharedBuffer::createArrayBuffer() const
 {
     RefPtr<ArrayBuffer> arrayBuffer = ArrayBuffer::createUninitialized(static_cast<unsigned>(size()), sizeof(char));
+    if (!arrayBuffer) {
+        WTFLogAlways("SharedBuffer::createArrayBuffer Unable to create buffer. Requested size was %d x %lu\n", size(), sizeof(char));
+        return nullptr;
+    }
 
     const char* segment = 0;
     unsigned position = 0;
@@ -155,13 +159,13 @@ PassRefPtr<ArrayBuffer> SharedBuffer::createArrayBuffer() const
     if (position != arrayBuffer->byteLength()) {
         ASSERT_NOT_REACHED();
         // Don't return the incomplete ArrayBuffer.
-        return 0;
+        return nullptr;
     }
 
-    return arrayBuffer.release();
+    return arrayBuffer;
 }
 
-void SharedBuffer::append(SharedBuffer* data)
+void SharedBuffer::append(SharedBuffer& data)
 {
     if (maybeAppendPlatformData(data))
         return;
@@ -172,7 +176,7 @@ void SharedBuffer::append(SharedBuffer* data)
 
     const char* segment;
     size_t position = 0;
-    while (size_t length = data->getSomeData(segment, position)) {
+    while (size_t length = data.getSomeData(segment, position)) {
         append(segment, length);
         position += length;
     }
@@ -264,8 +268,14 @@ Ref<SharedBuffer> SharedBuffer::copy() const
     clone->m_buffer->data.append(m_buffer->data.data(), m_buffer->data.size());
 
 #if !USE(NETWORK_CFDATA_ARRAY_CALLBACK)
-    for (char* segment : m_segments)
-        clone->m_buffer->data.append(segment, segmentSize);
+    if (!m_segments.isEmpty()) {
+        unsigned lastIndex = m_segments.size() - 1;
+        for (unsigned i = 0; i < lastIndex; ++i)
+            clone->m_buffer->data.append(m_segments[i], segmentSize);
+
+        unsigned sizeOfLastSegment = m_size - m_buffer->data.size() - lastIndex * segmentSize;
+        clone->m_buffer->data.append(m_segments.last(), sizeOfLastSegment);
+    }
 #else
     for (auto& data : m_dataArray)
         clone->m_dataArray.append(data.get());
@@ -282,10 +292,10 @@ void SharedBuffer::duplicateDataBufferIfNecessary() const
         return;
 
     size_t newCapacity = std::max(static_cast<size_t>(m_size), currentCapacity * 2);
-    RefPtr<DataBuffer> newBuffer = adoptRef(new DataBuffer);
+    auto newBuffer = adoptRef(*new DataBuffer);
     newBuffer->data.reserveInitialCapacity(newCapacity);
     newBuffer->data = m_buffer->data;
-    m_buffer = newBuffer.release();
+    m_buffer = WTFMove(newBuffer);
 }
 
 void SharedBuffer::appendToDataBuffer(const char *data, unsigned length) const
@@ -297,7 +307,7 @@ void SharedBuffer::appendToDataBuffer(const char *data, unsigned length) const
 void SharedBuffer::clearDataBuffer()
 {
     if (!m_buffer->hasOneRef())
-        m_buffer = adoptRef(new DataBuffer);
+        m_buffer = adoptRef(*new DataBuffer);
     else
         m_buffer->data.clear();
 }
@@ -403,7 +413,7 @@ inline const char* SharedBuffer::platformData() const
 {
     ASSERT_NOT_REACHED();
 
-    return 0;
+    return nullptr;
 }
 
 inline unsigned SharedBuffer::platformDataSize() const
@@ -413,14 +423,14 @@ inline unsigned SharedBuffer::platformDataSize() const
     return 0;
 }
 
-inline bool SharedBuffer::maybeAppendPlatformData(SharedBuffer*)
+inline bool SharedBuffer::maybeAppendPlatformData(SharedBuffer&)
 {
     return false;
 }
 
 #endif
 
-PassRefPtr<SharedBuffer> utf8Buffer(const String& string)
+RefPtr<SharedBuffer> utf8Buffer(const String& string)
 {
     // Allocate a buffer big enough to hold all the characters.
     const int length = string.length();

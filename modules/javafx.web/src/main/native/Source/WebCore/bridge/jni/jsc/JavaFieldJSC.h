@@ -24,16 +24,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JavaFieldJSC_h
-#define JavaFieldJSC_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
 #include "BridgeJSC.h"
 #include "JNIUtility.h"
+#include "JobjectWrapper.h"
 #include "JavaMethodJSC.h"
 #include "JavaStringJSC.h"
-#include "JobjectWrapper.h"
 
 namespace JSC {
 
@@ -43,8 +42,8 @@ class JavaField : public Field {
 public:
     JavaField(JNIEnv*, jobject aField);
 
-    virtual JSValue valueFromInstance(ExecState*, const Instance*) const;
-    virtual void setValueToInstance(ExecState*, const Instance*, JSValue) const;
+    JSValue valueFromInstance(ExecState*, const Instance*) const override;
+    bool setValueToInstance(ExecState*, const Instance*, JSValue) const override;
 
     const JavaString& name() const { return m_name; }
     virtual RuntimeType typeClassName() const { return m_typeClassName.utf8(); }
@@ -62,5 +61,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JavaFieldJSC_h

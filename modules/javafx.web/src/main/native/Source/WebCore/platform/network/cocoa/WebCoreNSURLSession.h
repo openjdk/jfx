@@ -30,6 +30,7 @@
 
 #import <Foundation/NSURLSession.h>
 #import <wtf/HashSet.h>
+#import <wtf/Lock.h>
 #import <wtf/OSObjectPtr.h>
 #import <wtf/RefPtr.h>
 #import <wtf/RetainPtr.h>
@@ -62,6 +63,7 @@ WEBCORE_EXPORT @interface WebCoreNSURLSession : NSObject {
     RetainPtr<NSOperationQueue> _queue;
     NSString *_sessionDescription;
     HashSet<RetainPtr<WebCoreNSURLSessionDataTask>> _dataTasks;
+    Lock _dataTasksLock;
     BOOL _invalidated;
     NSUInteger _nextTaskIdentifier;
     OSObjectPtr<dispatch_queue_t> _internalQueue;
@@ -119,16 +121,17 @@ WEBCORE_EXPORT @interface WebCoreNSURLSession : NSObject {
     NSString *_taskDescription;
     float _priority;
 }
-@property (readwrite) NSUInteger taskIdentifier;
-@property (readwrite, copy) NSURLRequest *originalRequest;
-@property (readwrite, copy) NSURLRequest *currentRequest;
+
+@property NSUInteger taskIdentifier;
+@property (copy) NSURLRequest *originalRequest;
+@property (copy) NSURLRequest *currentRequest;
 @property (readonly, copy) NSURLResponse *response;
-@property (readwrite) int64_t countOfBytesReceived;
-@property (readwrite) int64_t countOfBytesSent;
-@property (readwrite) int64_t countOfBytesExpectedToSend;
-@property (readwrite) int64_t countOfBytesExpectedToReceive;
-@property (readwrite) NSURLSessionTaskState state;
-@property (readwrite, copy) NSError *error;
+@property int64_t countOfBytesReceived;
+@property int64_t countOfBytesSent;
+@property int64_t countOfBytesExpectedToSend;
+@property int64_t countOfBytesExpectedToReceive;
+@property NSURLSessionTaskState state;
+@property (copy) NSError *error;
 @property (copy) NSString *taskDescription;
 @property float priority;
 - (void)cancel;

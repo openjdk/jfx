@@ -48,6 +48,11 @@ class AlternativeTextUIController;
 class HistoryItem;
 class Page;
 class TextIndicatorWindow;
+class ValidationBubble;
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+class WebPlaybackSessionInterfaceMac;
+class WebPlaybackSessionModelMediaElement;
+#endif
 }
 
 @class WebImmediateActionController;
@@ -97,8 +102,10 @@ class WebViewGroup;
 class WebSelectionServiceController;
 #endif
 
-#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200 && USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/WebViewDataAdditionsDeclarations.h>
+#if HAVE(TOUCH_BAR)
+@class WebTextTouchBarItemController;
+@class AVFunctionBarPlaybackControlsProvider;
+@class AVFunctionBarScrubber;
 #endif
 
 class WebViewLayerFlushScheduler : public WebCore::LayerFlushScheduler {
@@ -107,7 +114,7 @@ public:
     virtual ~WebViewLayerFlushScheduler() { }
 
 private:
-    virtual void layerFlushCallback() override
+    void layerFlushCallback() override
     {
         RefPtr<LayerFlushController> protector = m_flushController;
         WebCore::LayerFlushScheduler::layerFlushCallback();
@@ -174,15 +181,33 @@ private:
 #if PLATFORM(MAC)
     WebImmediateActionController *immediateActionController;
 
-#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200 && USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/WebViewDataAdditions.h>
-#endif
+#if HAVE(TOUCH_BAR)
+    RetainPtr<NSTouchBar> _currentTouchBar;
+    RetainPtr<NSTouchBar> _plainTextTouchBar;
+    RetainPtr<NSTouchBar> _richTextTouchBar;
+    RetainPtr<NSTouchBar> _passwordTextTouchBar;
+    RetainPtr<WebTextTouchBarItemController> _textTouchBarItemController;
+    RetainPtr<NSCandidateListTouchBarItem> _richTextCandidateListTouchBarItem;
+    RetainPtr<NSCandidateListTouchBarItem> _plainTextCandidateListTouchBarItem;
+    RetainPtr<NSCandidateListTouchBarItem> _passwordTextCandidateListTouchBarItem;
+    RetainPtr<AVFunctionBarPlaybackControlsProvider> mediaTouchBarProvider;
+    RetainPtr<AVFunctionBarScrubber> mediaPlaybackControlsView;
+
+    BOOL _canCreateTouchBars;
+    BOOL _isUpdatingTextTouchBar;
+    BOOL _startedListeningToCustomizationEvents;
+    BOOL _isCustomizingTouchBar;
+    BOOL _isDeferringTextTouchBarUpdates;
+    BOOL _needsDeferredTextTouchBarUpdate;
+#endif // HAVE(TOUCH_BAR)
 
     std::unique_ptr<WebCore::TextIndicatorWindow> textIndicatorWindow;
     BOOL hasInitializedLookupObserver;
     RetainPtr<WebWindowVisibilityObserver> windowVisibilityObserver;
     RetainPtr<NSEvent> pressureEvent;
 #endif // PLATFORM(MAC)
+
+    RefPtr<WebCore::ValidationBubble> formValidationBubble;
 
     BOOL shouldMaintainInactiveSelection;
 
@@ -209,8 +234,6 @@ private:
     WebFrameLoadDelegateImplementationCache frameLoadDelegateImplementations;
     WebScriptDebugDelegateImplementationCache scriptDebugDelegateImplementations;
     WebHistoryDelegateImplementationCache historyDelegateImplementations;
-
-    void *observationInfo;
 
     BOOL closed;
 #if PLATFORM(IOS)
@@ -289,6 +312,11 @@ private:
 
 #if ENABLE(VIDEO)
     WebVideoFullscreenController *fullscreenController;
+#endif
+
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    RefPtr<WebCore::WebPlaybackSessionModelMediaElement> playbackSessionModel;
+    RefPtr<WebCore::WebPlaybackSessionInterfaceMac> playbackSessionInterface;
 #endif
 
 #if ENABLE(FULLSCREEN_API)

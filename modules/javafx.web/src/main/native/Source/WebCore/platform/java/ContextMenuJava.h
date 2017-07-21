@@ -2,6 +2,8 @@
  * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
  */
 
+#pragma once
+
 #include <wtf/java/JavaRef.h>
 #include <wtf/Vector.h>
 

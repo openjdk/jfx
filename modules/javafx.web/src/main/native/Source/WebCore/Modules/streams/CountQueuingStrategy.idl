@@ -30,8 +30,8 @@
 [
     JSBuiltin,
     Constructor,
-    Conditional=STREAMS_API,
-    GlobalContext=DOMWindow&WorkerGlobalScope,
+    Conditional=READABLE_STREAM_API|WRITABLE_STREAM_API,
+    Exposed=(Window,Worker),
 ] interface CountQueuingStrategy {
     double size();
 };

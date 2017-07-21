@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,19 +23,31 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#pragma once
+
 #import "SoftLinking.h"
 #import <objc/runtime.h>
 
-#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
-
 #if USE(APPLE_INTERNAL_SDK)
 
+#import <AVFoundation/AVAssetCache_Private.h>
 #import <AVFoundation/AVOutputContext.h>
+#import <AVFoundation/AVPlayerLayer_Private.h>
 #import <AVFoundation/AVPlayer_Private.h>
+
+#if PLATFORM(IOS) && HAVE(AVKIT)
+#import <AVKit/AVPlayerViewController_WebKitOnly.h>
+#endif
+
+#if !PLATFORM(IOS)
+#import <AVFoundation/AVStreamDataParser.h>
+#endif
 
 #else
 
 #import <AVFoundation/AVPlayer.h>
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -51,34 +63,87 @@ NS_ASSUME_NONNULL_BEGIN
 
 NS_ASSUME_NONNULL_END
 
-#endif
-
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS)
 
-#if PLATFORM(IOS)
-
-#if HAVE(AVKIT) && USE(APPLE_INTERNAL_SDK)
-
-#import <AVFoundation/AVPlayerLayer_Private.h>
-#import <AVKit/AVPlayerViewController_WebKitOnly.h>
-
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 101200) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 100000)
+#import <AVFoundation/AVAssetCache.h>
 #else
+@interface AVAssetCache : NSObject
+@end
+#endif
+NS_ASSUME_NONNULL_BEGIN
+@interface AVAssetCache ()
++ (AVAssetCache *)assetCacheWithURL:(NSURL *)URL;
+- (id)initWithURL:(NSURL *)URL;
+- (NSArray *)allKeys;
+- (NSDate *)lastModifiedDateOfEntryForKey:(NSString *)key;
+- (void)removeEntryForKey:(NSString *)key;
+@property (nonatomic, readonly, copy) NSURL *URL;
+@end
+NS_ASSUME_NONNULL_END
 
-#import <AVFoundation/AVPlayerLayer.h>
+#if PLATFORM(IOS) && !PLATFORM(IOS_SIMULATOR)
+@interface AVPlayer (AVPlayerVideoSleepPrevention)
+@property (nonatomic, getter=_preventsSleepDuringVideoPlayback, setter=_setPreventsSleepDuringVideoPlayback:) BOOL preventsSleepDuringVideoPlayback;
+@end
 
+#endif // PLATFORM(IOS) && !PLATFORM(IOS_SIMULATOR)
+
+#if !PLATFORM(IOS)
+
+#pragma mark -
+#pragma mark AVStreamDataParser
+
+@protocol AVStreamDataParserOutputHandling <NSObject>
+@end
+
+typedef int32_t CMPersistentTrackID;
+
+NS_ASSUME_NONNULL_BEGIN
+typedef NS_ENUM(NSUInteger, AVStreamDataParserOutputMediaDataFlags) {
+    AVStreamDataParserOutputMediaDataReserved = 1 << 0
+};
+
+typedef NS_ENUM(NSUInteger, AVStreamDataParserStreamDataFlags) {
+    AVStreamDataParserStreamDataDiscontinuity = 1 << 0,
+};
+
+@interface AVStreamDataParser : NSObject
+- (void)setDelegate:(nullable id<AVStreamDataParserOutputHandling>)delegate;
+- (void)appendStreamData:(NSData *)data;
+- (void)appendStreamData:(NSData *)data withFlags:(AVStreamDataParserStreamDataFlags)flags;
+- (void)setShouldProvideMediaData:(BOOL)shouldProvideMediaData forTrackID:(CMPersistentTrackID)trackID;
+- (BOOL)shouldProvideMediaDataForTrackID:(CMPersistentTrackID)trackID;
+- (void)providePendingMediaData;
+- (void)processContentKeyResponseData:(NSData *)contentKeyResponseData forTrackID:(CMPersistentTrackID)trackID;
+- (void)processContentKeyResponseError:(NSError *)error forTrackID:(CMPersistentTrackID)trackID;
+- (void)renewExpiringContentKeyResponseDataForTrackID:(CMPersistentTrackID)trackID;
+- (NSData *)streamingContentKeyRequestDataForApp:(NSData *)appIdentifier contentIdentifier:(NSData *)contentIdentifier trackID:(CMPersistentTrackID)trackID options:(NSDictionary *)options error:(NSError **)outError;
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif // !PLATFORM(IOS)
+#endif // USE(APPLE_INTERNAL_SDK)
+
+#if PLATFORM(MAC) && (!USE(APPLE_INTERNAL_SDK) || __MAC_OS_X_VERSION_MIN_REQUIRED < 101200)
+NS_ASSUME_NONNULL_BEGIN
+@interface AVStreamDataParser (AVStreamDataParserPrivate)
++ (NSString *)outputMIMECodecParameterForInputMIMECodecParameter:(NSString *)inputMIMECodecParameter;
+@end
+NS_ASSUME_NONNULL_END
 #endif
 
-#if !HAVE(AVKIT) || !USE(APPLE_INTERNAL_SDK)
-
+#if PLATFORM(IOS) && (!HAVE(AVKIT) || !USE(APPLE_INTERNAL_SDK))
+#import <AVFoundation/AVPlayerLayer.h>
 @interface AVPlayerLayer (AVPlayerLayerPictureInPictureModeSupportPrivate)
 - (void)setPIPModeEnabled:(BOOL)flag;
 @end
+#endif // !HAVE(AVKIT)
 
-#endif
 
-#endif // PLATFORM(IOS)
-
-// FIXME: Wrap in a #if USE(APPLE_INTERNAL_SDK) once this SPI lands
+// FIXME: Wrap in a #if USE(APPLE_INTERNAL_SDK) once these SPI land
+#import <AVFoundation/AVAsset.h>
 #import <AVFoundation/AVAssetResourceLoader.h>
 
 NS_ASSUME_NONNULL_BEGIN
@@ -89,4 +154,51 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, nullable, retain) NSURLSession *URLSession;
 @end
 
+@interface AVAsset (AVAssetFragmentsPrivate)
+@property (nonatomic, readonly) CMTime overallDurationHint;
+@end
+
 NS_ASSUME_NONNULL_END
+
+#import <CoreMedia/CMSampleBuffer.h>
+#import <CoreMedia/CMSync.h>
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface AVSampleBufferRenderSynchronizer : NSObject
+- (CMTimebaseRef)timebase;
+- (float)rate;
+- (void)setRate:(float)rate;
+- (void)setRate:(float)rate time:(CMTime)time;
+- (NSArray *)renderers;
+- (void)addRenderer:(id)renderer;
+- (void)removeRenderer:(id)renderer atTime:(CMTime)time withCompletionHandler:(void (^)(BOOL didRemoveRenderer))completionHandler;
+- (id)addPeriodicTimeObserverForInterval:(CMTime)interval queue:(dispatch_queue_t)queue usingBlock:(void (^)(CMTime time))block;
+- (id)addBoundaryTimeObserverForTimes:(NSArray *)times queue:(dispatch_queue_t)queue usingBlock:(void (^)(void))block;
+- (void)removeTimeObserver:(id)observer;
+@end
+
+NS_ASSUME_NONNULL_END
+
+#if __has_include(<AVFoundation/AVSampleBufferAudioRenderer.h>)
+#import <AVFoundation/AVSampleBufferAudioRenderer.h>
+#else
+
+NS_ASSUME_NONNULL_BEGIN
+
+@interface AVSampleBufferAudioRenderer : NSObject
+- (NSInteger)status;
+- (NSError*)error;
+- (void)enqueueSampleBuffer:(CMSampleBufferRef)sampleBuffer;
+- (void)flush;
+- (BOOL)isReadyForMoreMediaData;
+- (void)requestMediaDataWhenReadyOnQueue:(dispatch_queue_t)queue usingBlock:(void (^)(void))block;
+- (void)stopRequestingMediaData;
+- (void)setVolume:(float)volume;
+- (void)setMuted:(BOOL)muted;
+@property (nonatomic, copy) NSString *audioTimePitchAlgorithm;
+@end
+
+NS_ASSUME_NONNULL_END
+
+#endif // __has_include(<AVFoundation/AVSampleBufferAudioRenderer.h>)

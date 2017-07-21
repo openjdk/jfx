@@ -1,9 +1,9 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "MainThreadSharedTimer.h"
 
 #include <wtf/Assertions.h>
@@ -14,8 +14,9 @@ namespace WebCore {
 // The fire time is relative to the classic POSIX epoch of January 1, 1970,
 // as the result of currentTime() is.
 #define MINIMAL_INTERVAL 1e-9 //1ns
-void MainThreadSharedTimer::setFireInterval(double fireTime)
+void MainThreadSharedTimer::setFireInterval(Seconds timeout)
 {
+    auto fireTime = timeout.value();
     if (fireTime < MINIMAL_INTERVAL) {
         fireTime = MINIMAL_INTERVAL;
     }
@@ -51,7 +52,7 @@ void MainThreadSharedTimer::invalidate()
 extern "C" {
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_Timer_twkFireTimerEvent
-    (JNIEnv *env, jclass clazz)
+    (JNIEnv*, jclass)
 {
     WebCore::MainThreadSharedTimer::singleton().fired();
 }

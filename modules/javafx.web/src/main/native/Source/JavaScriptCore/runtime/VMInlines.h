@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,13 +23,33 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef VMInlines_h
-#define VMInlines_h
+#pragma once
 
+#include "ProfilerDatabase.h"
 #include "VM.h"
 #include "Watchdog.h"
 
 namespace JSC {
+
+bool VM::ensureStackCapacityFor(Register* newTopOfStack)
+{
+#if ENABLE(JIT)
+    ASSERT(wtfThreadData().stack().isGrowingDownward());
+    return newTopOfStack >= m_softStackLimit;
+#else
+    return ensureStackCapacityForCLoop(newTopOfStack);
+#endif
+
+}
+
+bool VM::isSafeToRecurseSoft() const
+{
+    bool safe = isSafeToRecurse(m_softStackLimit);
+#if !ENABLE(JIT)
+    safe = safe && isSafeToRecurseSoftCLoop();
+#endif
+    return safe;
+}
 
 bool VM::shouldTriggerTermination(ExecState* exec)
 {
@@ -38,7 +58,13 @@ bool VM::shouldTriggerTermination(ExecState* exec)
     return watchdog()->shouldTerminate(exec);
 }
 
+template<typename Func>
+void VM::logEvent(CodeBlock* codeBlock, const char* summary, const Func& func)
+{
+    if (LIKELY(!m_perBytecodeProfiler))
+        return;
+
+    m_perBytecodeProfiler->logEvent(codeBlock, summary, func());
+}
+
 } // namespace JSC
-
-#endif // LLIntData_h
-

@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ScrollingStateOverflowScrollingNode_h
-#define ScrollingStateOverflowScrollingNode_h
+#pragma once
 
 #if ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
 
@@ -36,7 +35,7 @@ class ScrollingStateOverflowScrollingNode : public ScrollingStateScrollingNode {
 public:
     static Ref<ScrollingStateOverflowScrollingNode> create(ScrollingStateTree&, ScrollingNodeID);
 
-    virtual Ref<ScrollingStateNode> clone(ScrollingStateTree&) override;
+    Ref<ScrollingStateNode> clone(ScrollingStateTree&) override;
 
     virtual ~ScrollingStateOverflowScrollingNode();
 
@@ -48,7 +47,7 @@ public:
     const LayerRepresentation& scrolledContentsLayer() const { return m_scrolledContentsLayer; }
     WEBCORE_EXPORT void setScrolledContentsLayer(const LayerRepresentation&);
 
-    virtual void dumpProperties(TextStream&, int indent) const override;
+    void dumpProperties(TextStream&, int indent, ScrollingStateTreeAsTextBehavior) const override;
 
 private:
     ScrollingStateOverflowScrollingNode(ScrollingStateTree&, ScrollingNodeID);
@@ -62,5 +61,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_SCROLLING_STATE_NODE(ScrollingStateOverflowScrollingNode, isOverflowScrollingNode())
 
 #endif // ENABLE(ASYNC_SCROLLING) || USE(COORDINATED_GRAPHICS)
-
-#endif // ScrollingStateScrollingNode_h

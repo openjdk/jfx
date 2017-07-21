@@ -58,8 +58,14 @@
 #endif
 
 #undef WEBCORE_EXPORT
+#if PLATFORM(JAVA)
+#undef WEBCORE_TESTSUPPORT_EXPORT
+#define WEBCORE_EXPORT
+#define WEBCORE_TESTSUPPORT_EXPORT
+#else
 #define WEBCORE_EXPORT WTF_IMPORT_DECLARATION
 #define WEBCORE_TESTSUPPORT_EXPORT WTF_EXPORT_DECLARATION
+#endif
 
 #else
 
@@ -103,7 +109,9 @@
 #include <sys/time.h>
 #endif
 
+#if !PLATFORM(JAVA)
 #include <CoreFoundation/CoreFoundation.h>
+#endif
 #if PLATFORM(WIN_CAIRO)
 #include <ConditionalMacros.h>
 #include <windows.h>
@@ -120,9 +128,7 @@
 #define OBSOLETE_COLORSYNC_API
 #endif
 #endif
-#if USE(CFNETWORK)
-/* Windows doesn't include CFNetwork.h via CoreServices.h, so we do
-   it explicitly here to make Windows more consistent with Mac. */
+#if USE(CFURLCONNECTION)
 #include <CFNetwork/CFNetwork.h>
 // On Windows, dispatch.h needs to be included before certain CFNetwork headers.
 #include <dispatch/dispatch.h>

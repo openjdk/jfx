@@ -72,15 +72,16 @@ void ScrollingStateNode::setPropertyChanged(unsigned propertyBit)
     m_scrollingStateTree.setHasChangedProperties();
 }
 
-PassRefPtr<ScrollingStateNode> ScrollingStateNode::cloneAndReset(ScrollingStateTree& adoptiveTree)
+Ref<ScrollingStateNode> ScrollingStateNode::cloneAndReset(ScrollingStateTree& adoptiveTree)
 {
-    RefPtr<ScrollingStateNode> clone = this->clone(adoptiveTree);
+    auto clone = this->clone(adoptiveTree);
 
     // Now that this node is cloned, reset our change properties.
     resetChangedProperties();
 
-    cloneAndResetChildren(*clone, adoptiveTree);
-    return clone.release();
+    cloneAndResetChildren(clone.get(), adoptiveTree);
+
+    return clone;
 }
 
 void ScrollingStateNode::cloneAndResetChildren(ScrollingStateNode& clone, ScrollingStateTree& adoptiveTree)
@@ -92,14 +93,13 @@ void ScrollingStateNode::cloneAndResetChildren(ScrollingStateNode& clone, Scroll
         clone.appendChild(child->cloneAndReset(adoptiveTree));
 }
 
-void ScrollingStateNode::appendChild(PassRefPtr<ScrollingStateNode> childNode)
+void ScrollingStateNode::appendChild(Ref<ScrollingStateNode>&& childNode)
 {
     childNode->setParent(this);
 
     if (!m_children)
         m_children = std::make_unique<Vector<RefPtr<ScrollingStateNode>>>();
-
-    m_children->append(childNode);
+    m_children->append(WTFMove(childNode));
 }
 
 void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation)
@@ -112,17 +112,17 @@ void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation
     setPropertyChanged(ScrollLayer);
 }
 
-void ScrollingStateNode::dump(TextStream& ts, int indent) const
+void ScrollingStateNode::dump(TextStream& ts, int indent, ScrollingStateTreeAsTextBehavior behavior) const
 {
     writeIndent(ts, indent);
-    dumpProperties(ts, indent);
+    dumpProperties(ts, indent, behavior);
 
     if (m_children) {
         writeIndent(ts, indent + 1);
         ts << "(children " << children()->size() << "\n";
 
         for (auto& child : *m_children)
-            child->dump(ts, indent + 2);
+            child->dump(ts, indent + 2, behavior);
         writeIndent(ts, indent + 1);
         ts << ")\n";
     }
@@ -133,9 +133,9 @@ void ScrollingStateNode::dump(TextStream& ts, int indent) const
 
 String ScrollingStateNode::scrollingStateTreeAsText() const
 {
-    TextStream ts;
+    TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
 
-    dump(ts, 0);
+    dump(ts, 0, ScrollingStateTreeAsTextBehaviorNormal);
     return ts.release();
 }
 

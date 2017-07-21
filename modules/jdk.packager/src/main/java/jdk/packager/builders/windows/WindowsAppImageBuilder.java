@@ -75,8 +75,8 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
     private final static String EXECUTABLE_NAME = "WinLauncher.exe";
     private final static String LIBRARY_NAME = "packager.dll";
 
-    private final static String[] VS_VERS = {"100", "110", "120"};
-    private final static String REDIST_MSVCR = "msvcrVS_VER.dll";
+    private final static String[] VS_VERS = {"100", "110", "120", "140"};
+    private final static String REDIST_MSVCR = "vcruntimeVS_VER.dll";
     private final static String REDIST_MSVCP = "msvcpVS_VER.dll";
 
     private final static String TEMPLATE_APP_ICON ="javalogo_white_48.ico";
@@ -284,7 +284,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
         AtomicReference<IOException> ioe = new AtomicReference<>();
         final String finalVsVer = vsVer;
         try (Stream<Path> files = Files.list(runtimeDir.resolve("bin"))) {
-            files.filter(p -> Pattern.matches("msvc(r|p)\\d\\d\\d.dll", p.toFile().getName().toLowerCase()))
+            files.filter(p -> Pattern.matches("(vcruntime|msvcp)\\d\\d\\d.dll", p.toFile().getName().toLowerCase()))
                  .filter(p -> !p.toString().toLowerCase().endsWith(finalVsVer + ".dll"))
                  .forEach(p -> {
                     try {

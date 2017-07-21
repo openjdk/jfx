@@ -3,7 +3,7 @@
  */
 #include "config.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "TextNormalizerJava.h"
 
 namespace WebCore {

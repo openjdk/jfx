@@ -35,7 +35,6 @@
 #include "FrameLoaderTypes.h"
 #include "FrameView.h"
 #include "MemoryCache.h"
-#include "Page.h"
 #include "RenderElement.h"
 #include "SVGImage.h"
 #include "SecurityOrigin.h"
@@ -45,7 +44,6 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/Vector.h>
 
 #if PLATFORM(IOS)
 #include "SystemMemory.h"
@@ -57,49 +55,26 @@
 
 namespace WebCore {
 
-CachedImage::CachedImage(const ResourceRequest& resourceRequest, SessionID sessionID)
-    : CachedResource(resourceRequest, ImageResource, sessionID)
-    , m_image(nullptr)
-    , m_isManuallyCached(false)
-    , m_shouldPaintBrokenImage(true)
+CachedImage::CachedImage(CachedResourceRequest&& request, SessionID sessionID)
+    : CachedResource(WTFMove(request), ImageResource, sessionID)
 {
     setStatus(Unknown);
 }
 
 CachedImage::CachedImage(Image* image, SessionID sessionID)
-    : CachedResource(ResourceRequest(), ImageResource, sessionID)
+    : CachedResource(URL(), ImageResource, sessionID)
     , m_image(image)
-    , m_isManuallyCached(false)
-    , m_shouldPaintBrokenImage(true)
 {
-    setStatus(Cached);
-    setLoading(false);
 }
 
 CachedImage::CachedImage(const URL& url, Image* image, SessionID sessionID)
-    : CachedResource(ResourceRequest(url), ImageResource, sessionID)
+    : CachedResource(url, ImageResource, sessionID)
     , m_image(image)
-    , m_isManuallyCached(false)
-    , m_shouldPaintBrokenImage(true)
+    , m_isManuallyCached(true)
 {
-    setStatus(Cached);
-    setLoading(false);
-}
-
-CachedImage::CachedImage(const URL& url, Image* image, CachedImage::CacheBehaviorType type, SessionID sessionID)
-    : CachedResource(ResourceRequest(url), ImageResource, sessionID)
-    , m_image(image)
-    , m_isManuallyCached(type == CachedImage::ManuallyCached)
-    , m_shouldPaintBrokenImage(true)
-{
-    setStatus(Cached);
-    setLoading(false);
-    if (UNLIKELY(isManuallyCached())) {
-        // Use the incoming URL in the response field. This ensures that code
-        // using the response directly, such as origin checks for security,
-        // actually see something.
-        m_response.setURL(url);
-    }
+    // Use the incoming URL in the response field. This ensures that code using the response directly,
+    // such as origin checks for security, actually see something.
+    m_response.setURL(url);
 }
 
 CachedImage::~CachedImage()
@@ -107,37 +82,52 @@ CachedImage::~CachedImage()
     clearImage();
 }
 
-void CachedImage::load(CachedResourceLoader& cachedResourceLoader, const ResourceLoaderOptions& options)
+void CachedImage::load(CachedResourceLoader& loader)
 {
-    if (cachedResourceLoader.shouldPerformImageLoad(url()))
-        CachedResource::load(cachedResourceLoader, options);
+    if (loader.shouldPerformImageLoad(url()))
+        CachedResource::load(loader);
     else
         setLoading(false);
 }
 
-void CachedImage::didAddClient(CachedResourceClient* client)
+void CachedImage::setBodyDataFrom(const CachedResource& resource)
+{
+    ASSERT(resource.type() == type());
+    const CachedImage& image = static_cast<const CachedImage&>(resource);
+
+    CachedResource::setBodyDataFrom(resource);
+
+    m_image = image.m_image;
+    m_imageObserver = image.m_imageObserver;
+    if (m_imageObserver)
+        m_imageObserver->add(*this);
+
+    if (m_image && is<SVGImage>(*m_image))
+        m_svgImageCache = std::make_unique<SVGImageCache>(&downcast<SVGImage>(*m_image));
+}
+
+void CachedImage::didAddClient(CachedResourceClient& client)
 {
     if (m_data && !m_image && !errorOccurred()) {
         createImage();
-        m_image->setData(m_data, true);
+        m_image->setData(m_data.copyRef(), true);
     }
 
-    ASSERT(client->resourceClientType() == CachedImageClient::expectedType());
+    ASSERT(client.resourceClientType() == CachedImageClient::expectedType());
     if (m_image && !m_image->isNull())
-        static_cast<CachedImageClient*>(client)->imageChanged(this);
+        static_cast<CachedImageClient&>(client).imageChanged(this);
 
     CachedResource::didAddClient(client);
 }
 
-void CachedImage::didRemoveClient(CachedResourceClient* client)
+void CachedImage::didRemoveClient(CachedResourceClient& client)
 {
-    ASSERT(client);
-    ASSERT(client->resourceClientType() == CachedImageClient::expectedType());
+    ASSERT(client.resourceClientType() == CachedImageClient::expectedType());
 
-    m_pendingContainerSizeRequests.remove(static_cast<CachedImageClient*>(client));
+    m_pendingContainerSizeRequests.remove(&static_cast<CachedImageClient&>(client));
 
     if (m_svgImageCache)
-        m_svgImageCache->removeClientFromCache(static_cast<CachedImageClient*>(client));
+        m_svgImageCache->removeClientFromCache(&static_cast<CachedImageClient&>(client));
 
     CachedResource::didRemoveClient(client);
 }
@@ -267,27 +257,19 @@ bool CachedImage::imageHasRelativeHeight() const
     return false;
 }
 
-LayoutSize CachedImage::imageSizeForRenderer(const RenderObject* renderer, float multiplier, SizeType sizeType)
+LayoutSize CachedImage::imageSizeForRenderer(const RenderElement* renderer, float multiplier, SizeType sizeType)
 {
     if (!m_image)
         return LayoutSize();
 
-    LayoutSize imageSize(m_image->size());
+    LayoutSize imageSize;
 
-#if ENABLE(CSS_IMAGE_ORIENTATION)
-    if (renderer && is<BitmapImage>(*m_image)) {
-        ImageOrientationDescription orientationDescription(renderer->shouldRespectImageOrientation(), renderer->style().imageOrientation());
-        if (orientationDescription.respectImageOrientation() == RespectImageOrientation)
-            imageSize = LayoutSize(downcast<BitmapImage>(*m_image).sizeRespectingOrientation(orientationDescription));
-    }
-#else
-    if (is<BitmapImage>(*m_image) && (renderer && renderer->shouldRespectImageOrientation() == RespectImageOrientation))
+    if (is<BitmapImage>(*m_image) && renderer && renderer->shouldRespectImageOrientation() == RespectImageOrientation)
         imageSize = LayoutSize(downcast<BitmapImage>(*m_image).sizeRespectingOrientation());
-#endif // ENABLE(CSS_IMAGE_ORIENTATION)
-
-    else if (is<SVGImage>(*m_image) && sizeType == UsedSize) {
+    else if (is<SVGImage>(*m_image) && sizeType == UsedSize)
         imageSize = LayoutSize(m_svgImageCache->imageSizeForRenderer(renderer));
-    }
+    else
+        imageSize = LayoutSize(m_image->size());
 
     if (multiplier == 1.0f)
         return imageSize;
@@ -337,18 +319,18 @@ inline void CachedImage::createImage()
     if (m_image)
         return;
 
+    m_imageObserver = CachedImageObserver::create(*this);
+
+    if (m_response.mimeType() == "image/svg+xml") {
+        auto svgImage = SVGImage::create(*m_imageObserver, url());
+        m_svgImageCache = std::make_unique<SVGImageCache>(svgImage.ptr());
+        m_image = WTFMove(svgImage);
 #if USE(CG) && !USE(WEBKIT_IMAGE_DECODERS)
-    else if (m_response.mimeType() == "application/pdf")
-        m_image = PDFDocumentImage::create(this);
+    } else if (m_response.mimeType() == "application/pdf") {
+        m_image = PDFDocumentImage::create(m_imageObserver.get());
 #endif
-    else if (m_response.mimeType() == "image/svg+xml") {
-        RefPtr<SVGImage> svgImage = SVGImage::create(*this, url());
-        m_svgImageCache = std::make_unique<SVGImageCache>(svgImage.get());
-        m_image = svgImage.release();
-    } else {
-        m_image = BitmapImage::create(this);
-        downcast<BitmapImage>(*m_image).setAllowSubsampling(m_loader && m_loader->frameLoader()->frame().settings().imageSubsamplingEnabled());
-    }
+    } else
+        m_image = BitmapImage::create(m_imageObserver.get());
 
     if (m_image) {
         // Send queued container size requests.
@@ -360,12 +342,48 @@ inline void CachedImage::createImage()
     }
 }
 
+CachedImage::CachedImageObserver::CachedImageObserver(CachedImage& image)
+{
+    m_cachedImages.reserveInitialCapacity(1);
+    m_cachedImages.append(&image);
+    if (auto* loader = image.loader()) {
+        m_allowSubsampling = loader->frameLoader()->frame().settings().imageSubsamplingEnabled();
+        m_allowLargeImageAsyncDecoding = loader->frameLoader()->frame().settings().largeImageAsyncDecodingEnabled();
+        m_allowAnimatedImageAsyncDecoding = loader->frameLoader()->frame().settings().animatedImageAsyncDecodingEnabled();
+        m_showDebugBackground = loader->frameLoader()->frame().settings().showDebugBorders();
+    }
+}
+
+void CachedImage::CachedImageObserver::decodedSizeChanged(const Image* image, long long delta)
+{
+    for (auto cachedImage : m_cachedImages)
+        cachedImage->decodedSizeChanged(image, delta);
+}
+
+void CachedImage::CachedImageObserver::didDraw(const Image* image)
+{
+    for (auto cachedImage : m_cachedImages)
+        cachedImage->didDraw(image);
+}
+
+void CachedImage::CachedImageObserver::animationAdvanced(const Image* image)
+{
+    for (auto cachedImage : m_cachedImages)
+        cachedImage->animationAdvanced(image);
+}
+
+void CachedImage::CachedImageObserver::changedInRect(const Image* image, const IntRect* rect)
+{
+    for (auto cachedImage : m_cachedImages)
+        cachedImage->changedInRect(image, rect);
+}
+
 inline void CachedImage::clearImage()
 {
-    // If our Image has an observer, it's always us so we need to clear the back pointer
-    // before dropping our reference.
-    if (m_image)
-        m_image->setImageObserver(nullptr);
+    if (m_imageObserver) {
+        m_imageObserver->remove(*this);
+        m_imageObserver = nullptr;
+    }
     m_image = nullptr;
 }
 
@@ -409,7 +427,7 @@ void CachedImage::addDataBuffer(SharedBuffer& data)
 void CachedImage::addData(const char* data, unsigned length)
 {
     ASSERT(dataBufferingPolicy() == DoNotBufferData);
-    addIncrementalDataBuffer(*SharedBuffer::create(data, length));
+    addIncrementalDataBuffer(SharedBuffer::create(data, length));
     CachedResource::addData(data, length);
 }
 
@@ -471,12 +489,13 @@ void CachedImage::destroyDecodedData()
         m_image->destroyDecodedData();
 }
 
-void CachedImage::decodedSizeChanged(const Image* image, int delta)
+void CachedImage::decodedSizeChanged(const Image* image, long long delta)
 {
     if (!image || image != m_image)
         return;
 
-    setDecodedSize(decodedSize() + delta);
+    ASSERT(delta >= 0 || decodedSize() + delta >= 0);
+    setDecodedSize(static_cast<unsigned>(decodedSize() + delta));
 }
 
 void CachedImage::didDraw(const Image* image)
@@ -500,11 +519,11 @@ void CachedImage::animationAdvanced(const Image* image)
         client->newImageAnimationFrameAvailable(*this);
 }
 
-void CachedImage::changedInRect(const Image* image, const IntRect& rect)
+void CachedImage::changedInRect(const Image* image, const IntRect* rect)
 {
     if (!image || image != m_image)
         return;
-    notifyObservers(&rect);
+    notifyObservers(rect);
 }
 
 bool CachedImage::currentFrameKnownToBeOpaque(const RenderElement* renderer)
@@ -513,13 +532,12 @@ bool CachedImage::currentFrameKnownToBeOpaque(const RenderElement* renderer)
     return image->currentFrameKnownToBeOpaque();
 }
 
-bool CachedImage::isOriginClean(SecurityOrigin* securityOrigin)
+bool CachedImage::isOriginClean(SecurityOrigin* origin)
 {
-    if (!image()->hasSingleSecurityOrigin())
-        return false;
-    if (passesAccessControlCheck(*securityOrigin))
-        return true;
-    return !securityOrigin->taintsCanvas(responseForSameOriginPolicyChecks().url());
+    ASSERT_UNUSED(origin, origin);
+    ASSERT(this->origin());
+    ASSERT(origin->toString() == this->origin()->toString());
+    return !loadFailedOrCanceled() && isCORSSameOrigin();
 }
 
 CachedResource::RevalidationDecision CachedImage::makeRevalidationDecision(CachePolicy cachePolicy) const

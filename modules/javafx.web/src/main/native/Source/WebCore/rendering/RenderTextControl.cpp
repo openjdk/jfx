@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-RenderTextControl::RenderTextControl(HTMLTextFormControlElement& element, Ref<RenderStyle>&& style)
+RenderTextControl::RenderTextControl(HTMLTextFormControlElement& element, RenderStyle&& style)
     : RenderBlockFlow(element, WTFMove(style))
 {
 }
@@ -65,8 +65,8 @@ void RenderTextControl::styleDidChange(StyleDifference diff, const RenderStyle* 
     if (innerTextRenderer) {
         // We may have set the width and the height in the old style in layout().
         // Reset them now to avoid getting a spurious layout hint.
-        innerTextRenderer->style().setHeight(Length());
-        innerTextRenderer->style().setWidth(Length());
+        innerTextRenderer->mutableStyle().setHeight(Length());
+        innerTextRenderer->mutableStyle().setWidth(Length());
         innerTextRenderer->setStyle(textFormControlElement().createInnerTextStyle(style()));
     }
     textFormControlElement().updatePlaceholderVisibility();
@@ -95,7 +95,7 @@ int RenderTextControl::scrollbarThickness() const
     return ScrollbarTheme::theme().scrollbarThickness();
 }
 
-void RenderTextControl::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop, LogicalExtentComputedValues& computedValues) const
+RenderBox::LogicalExtentComputedValues RenderTextControl::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const
 {
     TextControlInnerTextElement* innerText = innerTextElement();
     ASSERT(innerText);
@@ -109,7 +109,7 @@ void RenderTextControl::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUni
             logicalHeight += scrollbarThickness();
     }
 
-    RenderBox::computeLogicalHeight(logicalHeight, logicalTop, computedValues);
+    return RenderBox::computeLogicalHeight(logicalHeight, logicalTop);
 }
 
 void RenderTextControl::hitInnerTextElement(HitTestResult& result, const LayoutPoint& pointInContainer, const LayoutPoint& accumulatedOffset)
@@ -119,7 +119,7 @@ void RenderTextControl::hitInnerTextElement(HitTestResult& result, const LayoutP
         return;
 
     LayoutPoint adjustedLocation = accumulatedOffset + location();
-    LayoutPoint localPoint = pointInContainer - toLayoutSize(adjustedLocation + innerText->renderBox()->location()) + scrolledContentOffset();
+    LayoutPoint localPoint = pointInContainer - toLayoutSize(adjustedLocation + innerText->renderBox()->location()) + toLayoutSize(scrollPosition());
     result.setInnerNode(innerText);
     result.setInnerNonSharedNode(innerText);
     result.setLocalPoint(localPoint);
@@ -134,7 +134,7 @@ float RenderTextControl::getAverageCharWidth()
     const UChar ch = '0';
     const String str = String(&ch, 1);
     const FontCascade& font = style().fontCascade();
-    TextRun textRun = constructTextRun(this, font, str, style(), AllowTrailingExpansion);
+    TextRun textRun = constructTextRun(str, style(), AllowTrailingExpansion);
     return font.width(textRun);
 }
 

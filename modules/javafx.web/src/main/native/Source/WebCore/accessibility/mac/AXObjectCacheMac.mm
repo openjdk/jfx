@@ -398,7 +398,8 @@ void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*
         [userInfo setObject:wrapper forKey:NSAccessibilityTextChangeElement];
 
     AXPostNotificationWithUserInfo(rootWebArea()->wrapper(), NSAccessibilitySelectedTextChangedNotification, userInfo);
-    AXPostNotificationWithUserInfo(object->wrapper(), NSAccessibilitySelectedTextChangedNotification, userInfo);
+    if (rootWebArea()->wrapper() != object->wrapper())
+        AXPostNotificationWithUserInfo(object->wrapper(), NSAccessibilitySelectedTextChangedNotification, userInfo);
 
     [userInfo release];
 }
@@ -428,7 +429,7 @@ void AXObjectCache::postTextStateChangePlatformNotification(AccessibilityObject*
     if (!text.length())
         return;
 
-    postTextReplacementPlatformNotification(object, AXTextEditTypeUnknown, "", type, text, position);
+    postTextReplacementPlatformNotification(object, AXTextEditTypeUnknown, emptyString(), type, text, position);
 }
 
 void AXObjectCache::postTextReplacementPlatformNotification(AccessibilityObject* object, AXTextEditType deletionType, const String& deletedText, AXTextEditType insertionType, const String& insertedText, const VisiblePosition& position)
@@ -455,7 +456,8 @@ void AXObjectCache::postTextReplacementPlatformNotification(AccessibilityObject*
         [userInfo setObject:wrapper forKey:NSAccessibilityTextChangeElement];
 
     AXPostNotificationWithUserInfo(rootWebArea()->wrapper(), NSAccessibilityValueChangedNotification, userInfo);
-    AXPostNotificationWithUserInfo(object->wrapper(), NSAccessibilityValueChangedNotification, userInfo);
+    if (rootWebArea()->wrapper() != object->wrapper())
+        AXPostNotificationWithUserInfo(object->wrapper(), NSAccessibilityValueChangedNotification, userInfo);
 
     [userInfo release];
 }

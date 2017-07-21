@@ -68,12 +68,12 @@ public:
     bool preserveAlpha() const;
     bool setPreserveAlpha(bool);
 
-    virtual void platformApplySoftware();
-    virtual void dump();
+    void platformApplySoftware() override;
+    void dump() override;
 
-    virtual void determineAbsolutePaintRect() { setAbsolutePaintRect(enclosingIntRect(maxEffectRect())); }
+    void determineAbsolutePaintRect() override { setAbsolutePaintRect(enclosingIntRect(maxEffectRect())); }
 
-    virtual TextStream& externalRepresentation(TextStream&, int indention) const;
+    TextStream& externalRepresentation(TextStream&, int indention) const override;
 
 private:
 
@@ -83,6 +83,7 @@ private:
         int width;
         int height;
         float bias;
+        Vector<float> kernelMatrix;
     };
 
     FEConvolveMatrix(Filter&, const IntSize&, float, float,

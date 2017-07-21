@@ -33,6 +33,7 @@ typedef struct _GstBus GstBus;
 typedef struct _GstElementFactory GstElementFactory;
 typedef struct _GstBuffer GstBuffer;
 typedef struct _GstBufferList GstBufferList;
+typedef struct _GstBufferPool GstBufferPool;
 typedef struct _GstSample GstSample;
 typedef struct _GstTagList GstTagList;
 typedef struct _GstEvent GstEvent;
@@ -83,6 +84,10 @@ template<> GRefPtr<GstBufferList> adoptGRef(GstBufferList*);
 template<> GstBufferList* refGPtr<GstBufferList>(GstBufferList*);
 template<> void derefGPtr<GstBufferList>(GstBufferList*);
 
+template<> GRefPtr<GstBufferPool> adoptGRef(GstBufferPool*);
+template<> GstBufferPool* refGPtr<GstBufferPool>(GstBufferPool*);
+template<> void derefGPtr<GstBufferPool>(GstBufferPool*);
+
 template<> GRefPtr<GstSample> adoptGRef(GstSample* ptr);
 template<> GstSample* refGPtr<GstSample>(GstSample* ptr);
 template<> void derefGPtr<GstSample>(GstSample* ptr);
@@ -108,6 +113,7 @@ template<> WebKitVideoSink* refGPtr<WebKitVideoSink>(WebKitVideoSink* ptr);
 template<> void derefGPtr<WebKitVideoSink>(WebKitVideoSink* ptr);
 
 template<> GRefPtr<WebKitWebSrc> adoptGRef(WebKitWebSrc* ptr);
+GRefPtr<WebKitWebSrc> ensureGRef(WebKitWebSrc* ptr);
 template<> WebKitWebSrc* refGPtr<WebKitWebSrc>(WebKitWebSrc* ptr);
 template<> void derefGPtr<WebKitWebSrc>(WebKitWebSrc* ptr);
 

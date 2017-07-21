@@ -31,9 +31,8 @@
 #include "DOMWindow.h"
 #include "DatabaseProvider.h"
 #include "Document.h"
-#include "IDBFactoryImpl.h"
+#include "IDBFactory.h"
 #include "Page.h"
-#include "SecurityOrigin.h"
 
 namespace WebCore {
 
@@ -65,14 +64,14 @@ DOMWindowIndexedDatabase* DOMWindowIndexedDatabase::from(DOMWindow* window)
 
 void DOMWindowIndexedDatabase::disconnectFrameForDocumentSuspension()
 {
-    m_suspendedIDBFactory = m_idbFactory.release();
+    m_suspendedIDBFactory = WTFMove(m_idbFactory);
     DOMWindowProperty::disconnectFrameForDocumentSuspension();
 }
 
 void DOMWindowIndexedDatabase::reconnectFrameFromDocumentSuspension(Frame* frame)
 {
     DOMWindowProperty::reconnectFrameFromDocumentSuspension(frame);
-    m_idbFactory = m_suspendedIDBFactory.release();
+    m_idbFactory = WTFMove(m_suspendedIDBFactory);
 }
 
 void DOMWindowIndexedDatabase::willDestroyGlobalObjectInCachedFrame()
@@ -93,9 +92,9 @@ void DOMWindowIndexedDatabase::willDetachGlobalObjectFromFrame()
     DOMWindowProperty::willDetachGlobalObjectFromFrame();
 }
 
-IDBFactory* DOMWindowIndexedDatabase::indexedDB(DOMWindow* window)
+IDBFactory* DOMWindowIndexedDatabase::indexedDB(DOMWindow& window)
 {
-    return from(window)->indexedDB();
+    return from(&window)->indexedDB();
 }
 
 IDBFactory* DOMWindowIndexedDatabase::indexedDB()
@@ -111,8 +110,13 @@ IDBFactory* DOMWindowIndexedDatabase::indexedDB()
     if (!m_window->isCurrentlyDisplayedInFrame())
         return nullptr;
 
-    if (!m_idbFactory)
-        m_idbFactory = IDBClient::IDBFactory::create(page->idbConnection());
+    if (!m_idbFactory) {
+        auto* connectionProxy = document->idbConnectionProxy();
+        if (!connectionProxy)
+            return nullptr;
+
+        m_idbFactory = IDBFactory::create(*connectionProxy);
+    }
 
     return m_idbFactory.get();
 }

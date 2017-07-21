@@ -30,7 +30,6 @@
 #include "FrameView.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
-#include "Page.h"
 #include "RenderView.h"
 #include "Settings.h"
 #include <wtf/StackStats.h>
@@ -39,7 +38,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderIFrame::RenderIFrame(HTMLIFrameElement& element, Ref<RenderStyle>&& style)
+RenderIFrame::RenderIFrame(HTMLIFrameElement& element, RenderStyle&& style)
     : RenderFrameBase(element, WTFMove(style))
 {
 }
@@ -72,11 +71,7 @@ RenderView* RenderIFrame::contentRootRenderer() const
 
 bool RenderIFrame::flattenFrame() const
 {
-    Frame* frame = iframeElement().document().frame();
-
-    bool enabled = frame && frame->settings().frameFlatteningEnabled();
-
-    if (!enabled || !frame->page())
+    if (!settings().frameFlatteningEnabled())
         return false;
 
     if (style().width().isFixed() && style().height().isFixed()) {

@@ -48,19 +48,20 @@ void BooleanConstructor::finishCreation(VM& vm, BooleanPrototype* booleanPrototy
 // ECMA 15.6.2
 static EncodedJSValue JSC_HOST_CALL constructWithBooleanConstructor(ExecState* exec)
 {
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue boolean = jsBoolean(exec->argument(0).toBoolean(exec));
-    Structure* booleanStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), asInternalFunction(exec->callee())->globalObject()->booleanObjectStructure());
-    if (exec->hadException())
-        return JSValue::encode(JSValue());
-    BooleanObject* obj = BooleanObject::create(exec->vm(), booleanStructure);
-    obj->setInternalValue(exec->vm(), boolean);
+    Structure* booleanStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), asInternalFunction(exec->jsCallee())->globalObject()->booleanObjectStructure());
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    BooleanObject* obj = BooleanObject::create(vm, booleanStructure);
+    obj->setInternalValue(vm, boolean);
     return JSValue::encode(obj);
 }
 
 ConstructType BooleanConstructor::getConstructData(JSCell*, ConstructData& constructData)
 {
     constructData.native.function = constructWithBooleanConstructor;
-    return ConstructTypeHost;
+    return ConstructType::Host;
 }
 
 // ECMA 15.6.1
@@ -72,7 +73,7 @@ static EncodedJSValue JSC_HOST_CALL callBooleanConstructor(ExecState* exec)
 CallType BooleanConstructor::getCallData(JSCell*, CallData& callData)
 {
     callData.native.function = callBooleanConstructor;
-    return CallTypeHost;
+    return CallType::Host;
 }
 
 JSObject* constructBooleanFromImmediateBoolean(ExecState* exec, JSGlobalObject* globalObject, JSValue immediateBooleanValue)

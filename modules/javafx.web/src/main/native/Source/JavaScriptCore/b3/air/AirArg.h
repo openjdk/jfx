@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AirArg_h
-#define AirArg_h
+#pragma once
 
 #if ENABLE(B3_JIT)
 
@@ -546,7 +545,7 @@ public:
     }
 
     // If you don't pass a Width, this optimistically assumes that you're using the right width.
-    static bool isValidScale(unsigned scale, Optional<Width> width = Nullopt)
+    static bool isValidScale(unsigned scale, std::optional<Width> width = std::nullopt)
     {
         switch (scale) {
         case 1:
@@ -688,7 +687,15 @@ public:
 
     bool isSomeImm() const
     {
-        return isImm() || isBigImm() || isBitImm() || isBitImm64();
+        switch (kind()) {
+        case Imm:
+        case BigImm:
+        case BitImm:
+        case BitImm64:
+            return true;
+        default:
+            return false;
+        }
     }
 
     bool isAddr() const
@@ -786,7 +793,65 @@ public:
         return B3::isRepresentableAs<T>(value());
     }
 
+    static bool isRepresentableAs(Width width, Signedness signedness, int64_t value)
+    {
+        switch (signedness) {
+        case Signed:
+            switch (width) {
+            case Width8:
+                return B3::isRepresentableAs<int8_t>(value);
+            case Width16:
+                return B3::isRepresentableAs<int16_t>(value);
+            case Width32:
+                return B3::isRepresentableAs<int32_t>(value);
+            case Width64:
+                return B3::isRepresentableAs<int64_t>(value);
+            }
+        case Unsigned:
+            switch (width) {
+            case Width8:
+                return B3::isRepresentableAs<uint8_t>(value);
+            case Width16:
+                return B3::isRepresentableAs<uint16_t>(value);
+            case Width32:
+                return B3::isRepresentableAs<uint32_t>(value);
+            case Width64:
+                return B3::isRepresentableAs<uint64_t>(value);
+            }
+        }
+        ASSERT_NOT_REACHED();
+    }
+
     bool isRepresentableAs(Width, Signedness) const;
+
+    static int64_t castToType(Width width, Signedness signedness, int64_t value)
+    {
+        switch (signedness) {
+        case Signed:
+            switch (width) {
+            case Width8:
+                return static_cast<int8_t>(value);
+            case Width16:
+                return static_cast<int16_t>(value);
+            case Width32:
+                return static_cast<int32_t>(value);
+            case Width64:
+                return static_cast<int64_t>(value);
+            }
+        case Unsigned:
+            switch (width) {
+            case Width8:
+                return static_cast<uint8_t>(value);
+            case Width16:
+                return static_cast<uint16_t>(value);
+            case Width32:
+                return static_cast<uint32_t>(value);
+            case Width64:
+                return static_cast<uint64_t>(value);
+            }
+        }
+        ASSERT_NOT_REACHED();
+    }
 
     template<typename T>
     T asNumber() const
@@ -993,33 +1058,6 @@ public:
         return tmp().tmpIndex();
     }
 
-    // If 'this' is an address Arg, then it returns a new address Arg with the additional offset applied.
-    // Note that this does not consider whether doing so produces a valid Arg or not. Unless you really
-    // know what you're doing, you should call Arg::isValidForm() on the result. Some code won't do that,
-    // like if you're applying a very small offset to a Arg::stack() that you know has no offset to begin
-    // with. It's safe to assume that all targets allow small offsets (like, 0..7) for Addr, Stack, and
-    // CallArg.
-    Arg withOffset(int64_t additionalOffset) const
-    {
-        if (!hasOffset())
-            return Arg();
-        if (sumOverflows<int64_t>(offset(), additionalOffset))
-            return Arg();
-        switch (kind()) {
-        case Addr:
-            return addr(base(), offset() + additionalOffset);
-        case Stack:
-            return stack(stackSlot(), offset() + additionalOffset);
-        case CallArg:
-            return callArg(offset() + additionalOffset);
-        case Index:
-            return index(base(), index(), scale(), offset() + additionalOffset);
-        default:
-            RELEASE_ASSERT_NOT_REACHED();
-            return Arg();
-        }
-    }
-
     static bool isValidImmForm(int64_t value)
     {
         if (isX86())
@@ -1047,7 +1085,7 @@ public:
         return false;
     }
 
-    static bool isValidAddrForm(int32_t offset, Optional<Width> width = Nullopt)
+    static bool isValidAddrForm(int32_t offset, std::optional<Width> width = std::nullopt)
     {
         if (isX86())
             return true;
@@ -1072,7 +1110,7 @@ public:
         return false;
     }
 
-    static bool isValidIndexForm(unsigned scale, int32_t offset, Optional<Width> width = Nullopt)
+    static bool isValidIndexForm(unsigned scale, int32_t offset, std::optional<Width> width = std::nullopt)
     {
         if (!isValidScale(scale, width))
             return false;
@@ -1086,7 +1124,7 @@ public:
     // If you don't pass a width then this optimistically assumes that you're using the right width. But
     // the width is relevant to validity, so passing a null width is only useful for assertions. Don't
     // pass null widths when cascading through Args in the instruction selector!
-    bool isValidForm(Optional<Width> width = Nullopt) const
+    bool isValidForm(std::optional<Width> width = std::nullopt) const
     {
         switch (kind()) {
         case Invalid:
@@ -1279,6 +1317,9 @@ public:
         return isRelCond() && MacroAssembler::isUnsigned(asRelationalCondition());
     }
 
+    // This computes a hash for comparing this to JSAir's Arg.
+    unsigned jsHash() const;
+
     void dump(PrintStream&) const;
 
     Arg(WTF::HashTableDeletedValueType)
@@ -1316,11 +1357,11 @@ struct ArgHash {
 
 namespace WTF {
 
-void printInternal(PrintStream&, JSC::B3::Air::Arg::Kind);
-void printInternal(PrintStream&, JSC::B3::Air::Arg::Role);
-void printInternal(PrintStream&, JSC::B3::Air::Arg::Type);
-void printInternal(PrintStream&, JSC::B3::Air::Arg::Width);
-void printInternal(PrintStream&, JSC::B3::Air::Arg::Signedness);
+JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Kind);
+JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Role);
+JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Type);
+JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Width);
+JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Air::Arg::Signedness);
 
 template<typename T> struct DefaultHash;
 template<> struct DefaultHash<JSC::B3::Air::Arg> {
@@ -1340,6 +1381,3 @@ template<> struct HashTraits<JSC::B3::Air::Arg> : SimpleClassHashTraits<JSC::B3:
 #endif // COMPILER(GCC) && ASSERT_DISABLED
 
 #endif // ENABLE(B3_JIT)
-
-#endif // AirArg_h
-

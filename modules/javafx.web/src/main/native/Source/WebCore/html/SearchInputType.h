@@ -29,8 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SearchInputType_h
-#define SearchInputType_h
+#pragma once
 
 #include "BaseTextInputType.h"
 #include "Timer.h"
@@ -46,20 +45,20 @@ public:
     void stopSearchEventTimer();
 
 private:
-    virtual void addSearchResult() override;
-    virtual void maxResultsAttributeChanged() override;
-    virtual RenderPtr<RenderElement> createInputRenderer(Ref<RenderStyle>&&) override;
-    virtual const AtomicString& formControlType() const override;
-    virtual bool isSearchField() const override;
-    virtual bool needsContainer() const override;
-    virtual void createShadowSubtree() override;
-    virtual void destroyShadowSubtree() override;
-    virtual HTMLElement* resultsButtonElement() const override;
-    virtual HTMLElement* cancelButtonElement() const override;
-    virtual void handleKeydownEvent(KeyboardEvent*) override;
-    virtual void didSetValueByUserEdit() override;
-    virtual bool sizeShouldIncludeDecoration(int defaultSize, int& preferredSize) const override;
-    virtual float decorationWidth() const override;
+    void addSearchResult() override;
+    void maxResultsAttributeChanged() override;
+    RenderPtr<RenderElement> createInputRenderer(RenderStyle&&) override;
+    const AtomicString& formControlType() const override;
+    bool isSearchField() const override;
+    bool needsContainer() const override;
+    void createShadowSubtree() override;
+    void destroyShadowSubtree() override;
+    HTMLElement* resultsButtonElement() const override;
+    HTMLElement* cancelButtonElement() const override;
+    void handleKeydownEvent(KeyboardEvent&) override;
+    void didSetValueByUserEdit() override;
+    bool sizeShouldIncludeDecoration(int defaultSize, int& preferredSize) const override;
+    float decorationWidth() const override;
 
     void searchEventTimerFired();
     bool searchEventsShouldBeDispatched() const;
@@ -72,4 +71,4 @@ private:
 
 } // namespace WebCore
 
-#endif // SearchInputType_h
+SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(SearchInputType, isSearchField())

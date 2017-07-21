@@ -28,6 +28,7 @@
 
 #if ENABLE(INDEXED_DATABASE)
 
+#include "IDBGetResult.h"
 #include "Logging.h"
 #include "MemoryObjectStore.h"
 
@@ -50,7 +51,7 @@ MemoryObjectStoreCursor::MemoryObjectStoreCursor(MemoryObjectStore& objectStore,
 
 void MemoryObjectStoreCursor::objectStoreCleared()
 {
-    m_iterator = Nullopt;
+    m_iterator = std::nullopt;
 }
 
 void MemoryObjectStoreCursor::keyDeleted(const IDBKeyData& key)
@@ -58,7 +59,7 @@ void MemoryObjectStoreCursor::keyDeleted(const IDBKeyData& key)
     if (m_currentPositionKey != key)
         return;
 
-    m_iterator = Nullopt;
+    m_iterator = std::nullopt;
 }
 
 void MemoryObjectStoreCursor::keyAdded(std::set<IDBKeyData>::iterator iterator)
@@ -72,7 +73,7 @@ void MemoryObjectStoreCursor::keyAdded(std::set<IDBKeyData>::iterator iterator)
 
 void MemoryObjectStoreCursor::setFirstInRemainingRange(std::set<IDBKeyData>& set)
 {
-    m_iterator = Nullopt;
+    m_iterator = std::nullopt;
 
     if (m_info.isDirectionForward()) {
         setForwardIteratorFromRemainingRange(set);
@@ -94,19 +95,19 @@ void MemoryObjectStoreCursor::setFirstInRemainingRange(std::set<IDBKeyData>& set
 void MemoryObjectStoreCursor::setForwardIteratorFromRemainingRange(std::set<IDBKeyData>& set)
 {
     if (!set.size()) {
-        m_iterator = Nullopt;
+        m_iterator = std::nullopt;
         return;
     }
 
     if (m_remainingRange.isExactlyOneKey()) {
         m_iterator = set.find(m_remainingRange.lowerKey);
         if (*m_iterator == set.end())
-            m_iterator = Nullopt;
+            m_iterator = std::nullopt;
 
         return;
     }
 
-    m_iterator = Nullopt;
+    m_iterator = std::nullopt;
 
     auto lowest = set.lower_bound(m_remainingRange.lowerKey);
     if (lowest == set.end())
@@ -132,14 +133,14 @@ void MemoryObjectStoreCursor::setForwardIteratorFromRemainingRange(std::set<IDBK
 void MemoryObjectStoreCursor::setReverseIteratorFromRemainingRange(std::set<IDBKeyData>& set)
 {
     if (!set.size()) {
-        m_iterator = Nullopt;
+        m_iterator = std::nullopt;
         return;
     }
 
     if (m_remainingRange.isExactlyOneKey()) {
         m_iterator = set.find(m_remainingRange.lowerKey);
         if (*m_iterator == set.end())
-            m_iterator = Nullopt;
+            m_iterator = std::nullopt;
 
         return;
     }
@@ -147,12 +148,12 @@ void MemoryObjectStoreCursor::setReverseIteratorFromRemainingRange(std::set<IDBK
     if (!m_remainingRange.upperKey.isValid()) {
         m_iterator = --set.end();
         if (!m_remainingRange.containsKey(**m_iterator))
-            m_iterator = Nullopt;
+            m_iterator = std::nullopt;
 
         return;
     }
 
-    m_iterator = Nullopt;
+    m_iterator = std::nullopt;
 
     // This is one record past the actual key we're looking for.
     auto highest = set.upper_bound(m_remainingRange.upperKey);
@@ -189,7 +190,12 @@ void MemoryObjectStoreCursor::currentData(IDBGetResult& data)
     }
 
     m_currentPositionKey = **m_iterator;
-    data = { m_currentPositionKey, m_currentPositionKey, m_objectStore.valueForKeyRange(m_currentPositionKey) };
+    if (m_info.cursorType() == IndexedDB::CursorType::KeyOnly)
+        data = { m_currentPositionKey, m_currentPositionKey };
+    else {
+        IDBValue value = { m_objectStore.valueForKeyRange(m_currentPositionKey), { }, { } };
+        data = { m_currentPositionKey, m_currentPositionKey, WTFMove(value) };
+    }
 }
 
 void MemoryObjectStoreCursor::incrementForwardIterator(std::set<IDBKeyData>& set, const IDBKeyData& key, uint32_t count)
@@ -242,7 +248,7 @@ void MemoryObjectStoreCursor::incrementForwardIterator(std::set<IDBKeyData>& set
         ++*m_iterator;
 
         if (*m_iterator == set.end() || !m_info.range().containsKey(**m_iterator)) {
-            m_iterator = Nullopt;
+            m_iterator = std::nullopt;
             return;
         }
     }
@@ -294,7 +300,7 @@ void MemoryObjectStoreCursor::incrementReverseIterator(std::set<IDBKeyData>& set
 
     while (count) {
         if (*m_iterator == set.begin()) {
-            m_iterator = Nullopt;
+            m_iterator = std::nullopt;
             return;
         }
 
@@ -302,15 +308,17 @@ void MemoryObjectStoreCursor::incrementReverseIterator(std::set<IDBKeyData>& set
         --*m_iterator;
 
         if (!m_info.range().containsKey(**m_iterator)) {
-            m_iterator = Nullopt;
+            m_iterator = std::nullopt;
             return;
         }
     }
 }
 
-void MemoryObjectStoreCursor::iterate(const IDBKeyData& key, uint32_t count, IDBGetResult& outData)
+void MemoryObjectStoreCursor::iterate(const IDBKeyData& key, const IDBKeyData& primaryKeyData, uint32_t count, IDBGetResult& outData)
 {
     LOG(IndexedDB, "MemoryObjectStoreCursor::iterate to key %s", key.loggingString().utf8().data());
+
+    ASSERT_UNUSED(primaryKeyData, primaryKeyData.isNull());
 
     if (!m_objectStore.orderedKeys()) {
         m_currentPositionKey = { };

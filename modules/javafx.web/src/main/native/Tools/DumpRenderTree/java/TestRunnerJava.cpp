@@ -11,6 +11,8 @@
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <JavaScriptCore/JSStringRef.h>
 
+extern JSGlobalContextRef gContext;
+
 jclass getDRTClass(JNIEnv* env)
 {
     static JGClass cls(env->FindClass("com/sun/javafx/webkit/drt/DumpRenderTree"));
@@ -565,4 +567,30 @@ void TestRunner::removeAllWebNotificationPermissions()
 
 void TestRunner::simulateWebNotificationClick(JSValueRef jsNotification)
 {
+}
+
+JSContextRef TestRunner::mainFrameJSContext()
+{
+    return gContext;
+}
+
+void TestRunner::setViewSize(double width, double height)
+{
+    fprintf(testResult, "ERROR: TestRunner::setViewSize() not implemented\n");
+}
+
+void TestRunner::setSpellCheckerLoggingEnabled(bool enabled)
+{
+    fprintf(testResult, "ERROR: TestRunner::setSpellCheckerLoggingEnabled() not implemented\n");
+}
+
+void TestRunner::setNeedsStorageAccessFromFileURLsQuirk(bool needsQuirk)
+{
+    fprintf(testResult, "ERROR: TestRunner::setNeedsStorageAccessFromFileURLsQuirk() not implemented\n");
+}
+
+unsigned TestRunner::imageCountInGeneralPasteboard() const
+{
+    fprintf(testResult, "ERROR: TestRunner::imageCountInGeneralPasteboard() not implemented\n");
+    return 0;
 }

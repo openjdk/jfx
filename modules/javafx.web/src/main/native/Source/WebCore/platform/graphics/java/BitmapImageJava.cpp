@@ -1,69 +1,27 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
+
 #include "config.h"
 
-#include "NotImplemented.h"
-
 #include "BitmapImage.h"
+#include "NotImplemented.h"
 #include "GraphicsContext.h"
 #include "ImageObserver.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "GraphicsContextJava.h"
-
 #include "PlatformContextJava.h"
+#include "ImageDecoderJava.h"
 #include "RenderingQueue.h"
 #include "SharedBuffer.h"
 
-#include "Logging.h"
-
 namespace WebCore {
-
-bool FrameData::clear(bool clearMetadata)
-{
-    if (clearMetadata)
-        m_haveMetadata = false;
-
-    if (m_frame) {
-#if USE(IMAGEIO)
-    WC_GETJAVAENV_CHKRET(env, false);
-        static jmethodID midDestroyDecodedData = env->GetMethodID(
-                JLClass(env->GetObjectClass(*m_frame)),
-                "destroyDecodedData",
-                "()V");
-        ASSERT(midDestroyDecodedData);
-        env->CallVoidMethod(*m_frame, midDestroyDecodedData);
-        CheckAndClearException(env);
-#endif
-        m_frame = nullptr;
-        return true;
-    }
-    return false;
-}
 
 void BitmapImage::invalidatePlatformData()
 {
 }
 
-void BitmapImage::checkForSolidColor()
-{
-    notImplemented();
-    m_checkedForSolidColor = true;
-}
-
-void BitmapImage::determineMinimumSubsamplingLevel() const
-{
-    m_minimumSubsamplingLevel = 0;
-}
-
-void BitmapImage::draw(GraphicsContext& gc, const FloatRect& dstRect, const FloatRect& srcRect,
-                       CompositeOperator co, BlendMode bm, ImageOrientationDescription id) // todo tav new param
-{
-    Image::drawImage(gc, dstRect, srcRect, co, bm);
-    startAnimation();
-}
-
-PassRefPtr<Image> BitmapImage::createFromName(const char* name)
+RefPtr<Image> BitmapImage::createFromName(const char* name)
 {
     WC_GETJAVAENV_CHKRET(env, NULL);
 
@@ -76,15 +34,17 @@ PassRefPtr<Image> BitmapImage::createFromName(const char* name)
         "(Ljava/lang/String;)V");
     ASSERT(midLoadFromResource);
 
+    RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
+    img->m_source.ensureDecoderAvailable(dataBuffer.get());
     env->CallVoidMethod(
-        img->m_source.m_decoder,
+        img->m_source.m_decoder->nativeDecoder(),
         midLoadFromResource,
         (jstring)String(name).toJavaString(env));
     CheckAndClearException(env);
 
     // we have to make this call in order to initialize
     // internal flags that indicates the image readiness
-    bool isSizeAvailable = img->isSizeAvailable();
+    img->isSizeAvailable();
 
     // Absence if the image size indicates some problem with
     // the availability of the resource referred by the name.
@@ -110,9 +70,8 @@ PassRefPtr<Image> BitmapImage::createFromName(const char* name)
     CheckAndClearException(env);
     //From the upper call we got a callback [Java_com_sun_webkit_graphics_WCGraphicsManager_append]
     //that fills the buffer.
-    img->setData(dataBuffer, true);
+    img->setData(WTFMove(dataBuffer), true);
 #endif
-
     return img;
 }
 
@@ -123,7 +82,7 @@ using namespace WebCore;
 extern "C" {
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCGraphicsManager_append
-    (JNIEnv *env, jclass cls, jlong sharedBufferPtr, jbyteArray jbits, jint count)
+    (JNIEnv *env, jclass, jlong sharedBufferPtr, jbyteArray jbits, jint count)
 {
     ASSERT(sharedBufferPtr);
     SharedBuffer* pBuffer = static_cast<SharedBuffer*>jlong_to_ptr(sharedBufferPtr);

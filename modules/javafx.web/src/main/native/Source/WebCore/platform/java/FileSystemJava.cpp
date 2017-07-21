@@ -5,7 +5,7 @@
 #include "NotImplemented.h"
 #include "FileSystem.h"
 #include "FileMetadata.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include <wtf/text/CString.h>
 
 static jclass GetFileSystemClass(JNIEnv* env)
@@ -241,6 +241,12 @@ long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin o
 {
     notImplemented();
     return (long long)(-1);
+}
+
+std::optional<int32_t> getFileDeviceId(const CString& fsFile)
+{
+    notImplemented();
+    return {};
 }
 
 } // namespace WebCore

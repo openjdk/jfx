@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HTMLCanvasElement_h
-#define HTMLCanvasElement_h
+#pragma once
 
 #include "FloatRect.h"
 #include "HTMLElement.h"
@@ -34,26 +33,22 @@
 #include <memory>
 #include <wtf/Forward.h>
 
-#if USE(CG)
-#define DefaultInterpolationQuality InterpolationLow
-#else
-#define DefaultInterpolationQuality InterpolationDefault
+#if ENABLE(WEBGL)
+#include "WebGLContextAttributes.h"
 #endif
 
 namespace WebCore {
 
-class CanvasContextAttributes;
 class CanvasRenderingContext;
 class GraphicsContext;
 class GraphicsContextStateSaver;
 class HTMLCanvasElement;
 class Image;
-class ImageData;
 class ImageBuffer;
-class IntSize;
+class ImageData;
 
 namespace DisplayList {
-typedef unsigned AsTextFlags;
+using AsTextFlags = unsigned;
 }
 
 class CanvasObserver {
@@ -74,14 +69,13 @@ public:
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
 
-    // Attributes and functions exposed to script
-    int width() const { return size().width(); }
-    int height() const { return size().height(); }
+    unsigned width() const { return size().width(); }
+    unsigned height() const { return size().height(); }
 
     const IntSize& size() const { return m_size; }
 
-    void setWidth(int);
-    void setHeight(int);
+    WEBCORE_EXPORT void setWidth(unsigned);
+    WEBCORE_EXPORT void setHeight(unsigned);
 
     void setSize(const IntSize& newSize)
     {
@@ -94,16 +88,19 @@ public:
         reset();
     }
 
-    CanvasRenderingContext* getContext(const String&, CanvasContextAttributes* attributes = 0);
-    bool probablySupportsContext(const String&, CanvasContextAttributes* = 0);
+    CanvasRenderingContext* getContext(const String&);
+
     static bool is2dType(const String&);
+    CanvasRenderingContext* getContext2d(const String&);
+
 #if ENABLE(WEBGL)
     static bool is3dType(const String&);
+    CanvasRenderingContext* getContextWebGL(const String&, WebGLContextAttributes&& = { });
 #endif
 
     static String toEncodingMimeType(const String& mimeType);
-    String toDataURL(const String& mimeType, const double* quality, ExceptionCode&);
-    String toDataURL(const String& mimeType, ExceptionCode& ec) { return toDataURL(mimeType, 0, ec); }
+    WEBCORE_EXPORT ExceptionOr<String> toDataURL(const String& mimeType, std::optional<double> quality);
+    ExceptionOr<String> toDataURL(const String& mimeType) { return toDataURL(mimeType, std::nullopt); }
 
     // Used for rendering
     void didDraw(const FloatRect&);
@@ -145,15 +142,16 @@ public:
     WEBCORE_EXPORT String replayDisplayListAsText(DisplayList::AsTextFlags) const;
 
     size_t memoryCost() const;
+    size_t externalMemoryCost() const;
 
 private:
     HTMLCanvasElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
-    virtual RenderPtr<RenderElement> createElementRenderer(Ref<RenderStyle>&&, const RenderTreePosition&) override;
+    void parseAttribute(const QualifiedName&, const AtomicString&) final;
+    RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
 
-    virtual bool canContainRangeEndPoint() const override;
-    virtual bool canStartSelection() const override;
+    bool canContainRangeEndPoint() const final;
+    bool canStartSelection() const final;
 
     void reset();
 
@@ -177,7 +175,6 @@ private:
     IntSize m_size;
 
     bool m_originClean { true };
-    bool m_rendererIsCanvas { false };
     bool m_ignoreReset { false };
 
     bool m_usesDisplayListDrawing { false };
@@ -193,6 +190,4 @@ private:
     mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
 };
 
-} //namespace
-
-#endif
+} // namespace WebCore

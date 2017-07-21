@@ -49,17 +49,14 @@ enum AsTextFlag {
 typedef unsigned AsTextFlags;
 
 class DisplayList {
-    WTF_MAKE_NONCOPYABLE(DisplayList);
+    WTF_MAKE_NONCOPYABLE(DisplayList); WTF_MAKE_FAST_ALLOCATED;
     friend class Recorder;
     friend class Replayer;
 public:
     DisplayList() = default;
-
-#if !ENABLE(CXX_11_FIX)
     DisplayList(DisplayList&&) = default;
 
     DisplayList& operator=(DisplayList&&) = default;
-#endif
 
     void dump(TextStream&) const;
 

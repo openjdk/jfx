@@ -1,53 +1,42 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
-
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
 
 #include "FrameLoaderClientJava.h"
 
 #include "NotImplemented.h"
-#include "CSSParser.h"
-#include <wtf/text/CString.h>
+#include "AuthenticationChallenge.h"
+#include "WebPage.h"
+#include "FrameNetworkingContextJava.h"
+
 #include "Chrome.h"
 #include "DocumentLoader.h"
 #include "DNS.h"
-#include "IconURL.h"
 #include "FormState.h"
 #include "FrameLoadRequest.h"
-#include "FrameNetworkingContextJava.h"
 #include "FrameTree.h"
+#include "FrameView.h"
 #include "MainFrame.h"
 #include "HistoryItem.h"
 #include "HTMLFormElement.h"
-#include "HTTPParsers.h"
 #include "MIMETypeRegistry.h"
 #include "Page.h"
-//critical!!! MSVC bug:
-//
-//forward decelerated class member reference accepted as non-virtual, but virtual in fact
-//  no problem in gcc
-//  GPF with ms cc (_fastcall in caller, but _stdcall/_thiscall in fact)
 #include "PolicyChecker.h"
 #include "ProgressTracker.h"
 #include "ScriptController.h"
 #include "Settings.h"
-#include "SharedBuffer.h"
-#include "FrameNetworkingContext.h"
-#include "WebPage.h"
 #include "WindowFeatures.h"
 
-#include <bindings/js/DOMWrapperWorld.h>
-#include <API/APICast.h>
-#include <API/JavaScript.h>
-#include <wtf/text/WTFString.h>
-
-
+#include <JavaScriptCore/APICast.h>
+#include <JavaScriptCore/JavaScript.h>
 
 #include "com_sun_webkit_LoadListenerClient.h"
+
+
+namespace WebCore {
+
+namespace {
 
 static JGClass webPageClass;
 static JGClass networkContextClass;
@@ -131,9 +120,6 @@ static void initRefs(JNIEnv* env)
         ASSERT(canHandleURLMID);
     }
 }
-
-namespace WebCore {
-
 // This was copied from file "WebKit/Source/WebKit/mac/Misc/WebKitErrors.h".
 enum {
     WebKitErrorCannotShowMIMEType =                             100,
@@ -145,6 +131,46 @@ enum {
     WebKitErrorJavaUnavailable =                                202,
     WebKitErrorPluginWillHandleLoad =                           203
 };
+
+enum ContentDispositionType {
+    ContentDispositionNone,
+    ContentDispositionInline,
+    ContentDispositionAttachment,
+    ContentDispositionOther
+};
+
+// Below function was removed after https://bugs.webkit.org/show_bug.cgi?id=163095
+// from HTTPParser.h.
+ContentDispositionType contentDispositionType(const String& contentDisposition)
+{
+    if (contentDisposition.isEmpty())
+        return ContentDispositionNone;
+
+    Vector<String> parameters;
+    contentDisposition.split(';', parameters);
+
+    String dispositionType = parameters[0];
+    dispositionType.stripWhiteSpace();
+
+    if (equalLettersIgnoringASCIICase(dispositionType, "inline"))
+        return ContentDispositionInline;
+
+    // Some broken sites just send bogus headers like
+    //
+    //   Content-Disposition: ; filename="file"
+    //   Content-Disposition: filename="file"
+    //   Content-Disposition: name="file"
+    //
+    // without a disposition token... screen those out.
+    if (!isValidHTTPToken(dispositionType))
+        return ContentDispositionNone;
+
+    // We have a content-disposition of "attachment" or unknown.
+    // RFC 2183, section 2.8 says that an unknown disposition
+    // value should be treated as "attachment"
+    return ContentDispositionAttachment;
+}
+} // namespace
 
 FrameLoaderClientJava::FrameLoaderClientJava(const JLObject &webPage)
     : m_page(nullptr)
@@ -274,7 +300,7 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage()
     FloatRect pageRect = frame()->page()->chrome().pageRect();
     Color bkColor(Color::white);
     bool isTransparent = false;
-    FrameView *fv = frame()->view();
+    FrameView* fv = frame()->view();
     if (fv) {
         bkColor = fv->baseBackgroundColor();
         isTransparent = fv->isTransparent();
@@ -287,7 +313,7 @@ WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(co
     return DocumentLoader::create(request, substituteData);
 }
 
-void FrameLoaderClientJava::dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction policyFunction)
+void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, FramePolicyFunction policyFunction)
 {
     // FIXME: This is surely too simple
     ASSERT(frame() && policyFunction);
@@ -303,17 +329,6 @@ void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const char* da
     loader->commitData(data, length);
 }
 
-
-void FrameLoaderClientJava::dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge&)
-{
-    notImplemented();
-}
-
-void FrameLoaderClientJava::dispatchDidCancelAuthenticationChallenge(DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge&)
-{
-    notImplemented();
-}
-
 void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest& request, FramePolicyFunction policyFunction)
 {
     PolicyAction action;
@@ -322,7 +337,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceRespon
     if (statusCode == 204 || statusCode == 205) {
         // The server does not want us to replace the page contents.
         action = PolicyIgnore;
-    } else if (WebCore::contentDispositionType(response.httpHeaderField(HTTPHeaderName::ContentDisposition)) == WebCore::ContentDispositionAttachment) {
+    } else if (contentDispositionType(response.httpHeaderField(HTTPHeaderName::ContentDisposition)) == ContentDispositionAttachment) {
         // The server wants us to download instead of replacing the page contents.
         // Downloading is handled by the embedder, but we still get the initial
         // response so that we can ignore it and clean up properly.
@@ -339,7 +354,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceRespon
     policyFunction(action);
 }
 
-void FrameLoaderClientJava::dispatchDidReceiveResponse(DocumentLoader* l, unsigned long identifier, const ResourceResponse& response)
+void FrameLoaderClientJava::dispatchDidReceiveResponse(DocumentLoader*, unsigned long identifier, const ResourceResponse& response)
 {
     m_response = response;
 
@@ -355,9 +370,9 @@ void FrameLoaderClientJava::dispatchDidReceiveResponse(DocumentLoader* l, unsign
 
 void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const NavigationAction&,
                                                                    const ResourceRequest& req,
-                                                                   PassRefPtr<FormState>,
+                                                                   FormState*,
                                                                    const String&,
-                                   FramePolicyFunction policyFunction)
+                                                                   FramePolicyFunction policyFunction)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     initRefs(env);
@@ -379,7 +394,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
 
 void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const NavigationAction& action,
                                                                     const ResourceRequest& req,
-                                                                    PassRefPtr<FormState> state,
+                                                                    FormState*,
                                                                     FramePolicyFunction policyFunction)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
@@ -420,13 +435,13 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
     policyFunction(permit ? PolicyUse : PolicyIgnore);
 }
 
-RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLPlugInElement* element, const URL& url,
+RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLPlugInElement& element, const URL& url,
                                             const Vector<String>& paramNames, const Vector<String>& paramValues,
-                                            const String& mimeType, bool loadManually)
+                                            const String& mimeType, bool)
 {
     return adoptRef(new PluginWidgetJava(
         m_webPage,
-        element,
+        &element,
         intSize,
         url.string(),
         mimeType,
@@ -434,20 +449,17 @@ RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& intSize, HTMLP
         paramValues));
 }
 
-RefPtr<Frame> FrameLoaderClientJava::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
-                                        const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight)
+RefPtr<Frame> FrameLoaderClientJava::createFrame(const URL& url, const String& name, HTMLFrameOwnerElement& ownerElement,
+                                        const String& referrer, bool, int, int)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
     FrameLoaderClientJava* frameLoaderClient = new FrameLoaderClientJava(m_webPage);
-    RefPtr<Frame> childFrame(Frame::create(page(), ownerElement, frameLoaderClient));
+    RefPtr<Frame> childFrame(Frame::create(page(), &ownerElement, frameLoaderClient));
     frameLoaderClient->setFrame(childFrame.get());
 
     childFrame->tree().setName(name);
-    m_frame->tree().appendChild(childFrame);
-
-    PassRefPtr<FrameView> frameView = FrameView::create(*childFrame.get());
-    childFrame->setView(frameView.get());
+    m_frame->tree().appendChild(*childFrame);
 
     childFrame->init();
 
@@ -469,19 +481,20 @@ RefPtr<Frame> FrameLoaderClientJava::createFrame(const URL& url, const String& n
     return childFrame;
 }
 
-void FrameLoaderClientJava::redirectDataToPlugin(Widget* pluginWidget)
+void FrameLoaderClientJava::redirectDataToPlugin(Widget&)
 {
     /*
     ASSERT(!m_pluginWidget);
     m_pluginWidget = static_cast<PluginWidgetJava*>(pluginWidget);
     */
+    notImplemented();
 }
 
-PassRefPtr<Widget> FrameLoaderClientJava::createJavaAppletWidget(const IntSize& intSize, HTMLAppletElement*, const URL& url,
-                                                      const Vector<String>& paramNames, const Vector<String>& paramValues)
+RefPtr<Widget> FrameLoaderClientJava::createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL&,
+                                                      const Vector<String>&, const Vector<String>&)
 {
-//    return new PluginWidgetJava(webPage(), intSize, url.string(), "application/x-java-applet", paramNames, paramValues);
-    return 0;
+    notImplemented();
+    return nullptr;
 }
 
 ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const String& mimeType)
@@ -492,7 +505,7 @@ ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const
     // WebCore::FrameLoader::defaultObjectContentType() for an example.
 
     if (url.isEmpty() && mimeType.isEmpty())
-        return ObjectContentNone;
+        return ObjectContentType::None;
 
     // We don't use MIMETypeRegistry::getMIMETypeForPath() because it returns "application/octet-stream" upon failure
     String type = mimeType;
@@ -500,10 +513,10 @@ ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const
         type = MIMETypeRegistry::getMIMETypeForExtension(url.path().substring(url.path().reverseFind('.') + 1));
 
     if (type.isEmpty())
-        return ObjectContentFrame;
+        return ObjectContentType::Frame;
 
     if (MIMETypeRegistry::isSupportedImageMIMEType(type))
-        return ObjectContentImage;
+        return ObjectContentType::Image;
 
 #if 0 // PluginDatabase is disabled until we have Plugin system done.
     if (PluginDatabase::installedPlugins()->isMIMETypeRegistered(mimeType))
@@ -511,12 +524,12 @@ ObjectContentType FrameLoaderClientJava::objectContentType(const URL& url, const
 #endif
 
     if (MIMETypeRegistry::isSupportedNonImageMIMEType(type))
-        return ObjectContentFrame;
+        return ObjectContentType::Frame;
 
     if (url.protocol() == "about")
-        return ObjectContentFrame;
+        return ObjectContentType::Frame;
 
-    return ObjectContentNone;
+    return ObjectContentType::None;
 }
 
 String FrameLoaderClientJava::overrideMediaType() const
@@ -536,7 +549,7 @@ bool FrameLoaderClientJava::hasWebView() const
     return true;
 }
 
-void FrameLoaderClientJava::assignIdentifierToInitialRequest(unsigned long identifier, DocumentLoader* l, const ResourceRequest& req)
+void FrameLoaderClientJava::assignIdentifierToInitialRequest(unsigned long, DocumentLoader*, const ResourceRequest&)
 {
     notImplemented();
 }
@@ -650,11 +663,11 @@ void FrameLoaderClientJava::dispatchDidFailLoad(const ResourceError& error)
 }
 
 // client-side redirection
-void FrameLoaderClientJava::dispatchWillPerformClientRedirect(const URL& url, double, double)
+void FrameLoaderClientJava::dispatchWillPerformClientRedirect(const URL&, double, double)
 {
 }
 
-void FrameLoaderClientJava::dispatchDidReceiveTitle(const StringWithDirection& title)
+void FrameLoaderClientJava::dispatchDidReceiveTitle(const StringWithDirection&)
 {
     double progress = page()->progress().estimatedProgress();
     postLoadEvent(frame(),
@@ -663,13 +676,6 @@ void FrameLoaderClientJava::dispatchDidReceiveTitle(const StringWithDirection& t
                   frame()->loader().documentLoader()->responseMIMEType(),
                   progress);
 }
-
-void FrameLoaderClientJava::dispatchDidChangeIcons(IconType)
-{
-    // FIXME: In order to get notified of icon URLS' changes, add a notification.
-    // emit iconsChanged();
-}
-
 
 void FrameLoaderClientJava::dispatchDidReceiveIcon()
 {
@@ -690,7 +696,7 @@ void FrameLoaderClientJava::dispatchDidReceiveIcon()
     */
 }
 
-void FrameLoaderClientJava::dispatchDidReceiveContentLength(DocumentLoader* l, unsigned long identifier, int lengthReceived)
+void FrameLoaderClientJava::dispatchDidReceiveContentLength(DocumentLoader*, unsigned long, int)
 {
     notImplemented();
 }
@@ -761,7 +767,7 @@ void FrameLoaderClientJava::frameLoadCompleted()
     notImplemented();
 }
 
-void FrameLoaderClientJava::saveViewStateToItem(HistoryItem*)
+void FrameLoaderClientJava::saveViewStateToItem(HistoryItem&)
 {
     notImplemented();
 }
@@ -773,21 +779,21 @@ void FrameLoaderClientJava::restoreViewState()
 
 Frame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& action)
 {
-    struct WindowFeatures features;
+    struct WindowFeatures features {};
     Page* newPage = frame()->page()->chrome().createWindow(
-        frame(),
-        FrameLoadRequest( frame()->document()->securityOrigin(), LockHistory::No,
-                            LockBackForwardList::No, ShouldSendReferrer::MaybeSendReferrer,
-                            AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, // TODO-java: check params
-                            ShouldOpenExternalURLsPolicy::ShouldNotAllow),
-        features,
-        action);
+                        *frame(),
+                        FrameLoadRequest(frame()->document()->securityOrigin(), LockHistory::No,
+                                            LockBackForwardList::No, ShouldSendReferrer::MaybeSendReferrer,
+                                            AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, // TODO-java: check params
+                                            ShouldOpenExternalURLsPolicy::ShouldNotAllow),
+                        features,
+                        action);
 
     // createWindow can return null (e.g., popup blocker denies the window).
     if (!newPage)
         return 0;
 
-    return (Frame*)(&newPage->mainFrame());
+    return &newPage->mainFrame();
 }
 
 bool FrameLoaderClientJava::shouldGoToHistoryItem(HistoryItem* item) const
@@ -803,7 +809,7 @@ void FrameLoaderClientJava::didDisplayInsecureContent()
     notImplemented();
 }
 
-void FrameLoaderClientJava::didRunInsecureContent(SecurityOrigin*, const URL&)
+void FrameLoaderClientJava::didRunInsecureContent(SecurityOrigin&, const URL&)
 {
     notImplemented();
 }
@@ -830,7 +836,7 @@ void FrameLoaderClientJava::dispatchDidReceiveServerRedirectForProvisionalLoad()
 void FrameLoaderClientJava::dispatchDidCancelClientRedirect() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidChangeLocationWithinPage() { notImplemented(); }
 void FrameLoaderClientJava::dispatchWillClose() { notImplemented(); }
-void FrameLoaderClientJava::dispatchDidCommitLoad() {
+void FrameLoaderClientJava::dispatchDidCommitLoad(std::optional<HasInsecureContent>) {
     // TODO: Look at GTK version
     notImplemented();
 }
@@ -874,7 +880,7 @@ bool FrameLoaderClientJava::canShowMIMEType(const String& mimeType) const
     return false;
 }
 
-bool FrameLoaderClientJava::canShowMIMETypeAsHTML(const String& MIMEType) const
+bool FrameLoaderClientJava::canShowMIMETypeAsHTML(const String&) const
 {
     notImplemented();
     return false;
@@ -911,7 +917,7 @@ bool FrameLoaderClientJava::dispatchDidLoadResourceFromMemoryCache(
     DocumentLoader*,
     const ResourceRequest&,
     const ResourceResponse&,
-    int length)
+    int)
 {
     notImplemented();
     return false;
@@ -919,10 +925,7 @@ bool FrameLoaderClientJava::dispatchDidLoadResourceFromMemoryCache(
 
 ResourceError FrameLoaderClientJava::cancelledError(const ResourceRequest& request)
 {
-    ResourceError error("Error", -999, request.url(),
-                        "Request cancelled");
-    error.setIsCancellation(true);
-    return error;
+    return ResourceError("Error", -999, request.url(), "Request cancelled");
 }
 
 ResourceError FrameLoaderClientJava::blockedError(const ResourceRequest& request)
@@ -1001,7 +1004,7 @@ void FrameLoaderClientJava::setMainDocumentError(
     notImplemented();
 }
 
-void FrameLoaderClientJava::startDownload(const ResourceRequest&, const String& suggestedName) {
+void FrameLoaderClientJava::startDownload(const ResourceRequest&, const String&) {
     notImplemented();
 }
 
@@ -1041,17 +1044,25 @@ void FrameLoaderClientJava::convertMainResourceLoadToDownload(DocumentLoader*, S
     //notImplemented();
 }
 
-PassRefPtr<FrameNetworkingContext> FrameLoaderClientJava::createNetworkingContext() {
+Ref<FrameNetworkingContext> FrameLoaderClientJava::createNetworkingContext() {
     return FrameNetworkingContextJava::create(frame());
 }
 
 
 bool FrameLoaderClientJava::shouldUseCredentialStorage(
     DocumentLoader*,
-    unsigned long identifier)
+    unsigned long)
 {
     notImplemented();
     return false;
+}
+
+void FrameLoaderClientJava::dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long, const AuthenticationChallenge& challenge)
+{
+    notImplemented();
+    // If the ResourceLoadDelegate doesn't exist or fails to handle the call, we tell the ResourceHandle
+    // to continue without credential - this is the best approximation of Mac behavior
+    challenge.authenticationClient()->receivedRequestToContinueWithoutCredential(challenge);
 }
 
 void FrameLoaderClientJava::prefetchDNS(const String& hostname)

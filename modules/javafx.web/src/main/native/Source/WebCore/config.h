@@ -29,8 +29,8 @@
 #define USE_FILE_LOCK 1
 #endif
 
-#if PLATFORM(WIN) && !USE(WINGDI) && !PLATFORM(JAVA)
-#include <WebCore/WebCoreHeaderDetection.h>
+#if PLATFORM(WIN) && !USE(WINGDI)
+#include "WebCoreHeaderDetection.h"
 #endif
 
 #include <wtf/ExportMacros.h>
@@ -94,6 +94,9 @@
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_ // Prevent inclusion of winsock.h in windows.h
 #endif
+#elif USE(DIRECT2D)
+#undef USE_CA
+#undef USE_CG
 #elif !USE(WINGDI)
 #define USE_CG 1
 #undef USE_CAIRO
@@ -129,4 +132,3 @@ typedef float CGFloat;
 #endif
 
 #endif
-

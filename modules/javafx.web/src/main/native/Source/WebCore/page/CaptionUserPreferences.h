@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2013  Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2016  Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CaptionUserPreferences_h
-#define CaptionUserPreferences_h
+#pragma once
 
 #if ENABLE(VIDEO_TRACK)
 
@@ -93,18 +92,19 @@ public:
     String primaryAudioTrackLanguageOverride() const;
 
     virtual bool testingMode() const { return m_testingMode; }
-    virtual void setTestingMode(bool override) { m_testingMode = override; }
+    void setTestingMode(bool override) { m_testingMode = override; }
 
     PageGroup& pageGroup() const { return m_pageGroup; }
 
 protected:
-    void updateCaptionStyleSheetOveride();
+    void updateCaptionStyleSheetOverride();
     void beginBlockingNotifications();
     void endBlockingNotifications();
 
 private:
     void timerFired();
     void notify();
+    Page* currentPage() const;
 
     PageGroup& m_pageGroup;
     mutable CaptionDisplayMode m_displayMode;
@@ -114,11 +114,9 @@ private:
     String m_captionsStyleSheetOverride;
     String m_primaryAudioTrackLanguageOverride;
     unsigned m_blockNotificationsCounter { 0 };
-    bool m_testingMode;
-    bool m_havePreferences;
+    bool m_testingMode { false };
+    bool m_havePreferences { false };
 };
 
 }
-#endif
-
 #endif

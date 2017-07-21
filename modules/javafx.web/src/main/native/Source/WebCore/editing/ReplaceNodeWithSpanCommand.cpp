@@ -31,15 +31,10 @@
 #include "config.h"
 #include "ReplaceNodeWithSpanCommand.h"
 
+#include "HTMLSpanElement.h"
 #include "htmlediting.h"
-#include "HTMLElement.h"
-#include "HTMLNames.h"
-
-#include <wtf/Assertions.h>
 
 namespace WebCore {
-
-using namespace HTMLNames;
 
 ReplaceNodeWithSpanCommand::ReplaceNodeWithSpanCommand(PassRefPtr<HTMLElement> element)
     : SimpleEditCommand(element->document())
@@ -50,7 +45,7 @@ ReplaceNodeWithSpanCommand::ReplaceNodeWithSpanCommand(PassRefPtr<HTMLElement> e
 
 static void swapInNodePreservingAttributesAndChildren(HTMLElement& newNode, HTMLElement& nodeToReplace)
 {
-    ASSERT(nodeToReplace.inDocument());
+    ASSERT(nodeToReplace.isConnected());
     RefPtr<ContainerNode> parentNode = nodeToReplace.parentNode();
 
     // FIXME: Fix this to send the proper MutationRecords when MutationObservers are present.
@@ -58,24 +53,24 @@ static void swapInNodePreservingAttributesAndChildren(HTMLElement& newNode, HTML
     NodeVector children;
     getChildNodes(nodeToReplace, children);
     for (auto& child : children)
-        newNode.appendChild(WTFMove(child), ASSERT_NO_EXCEPTION);
+        newNode.appendChild(child);
 
-    parentNode->insertBefore(newNode, &nodeToReplace, ASSERT_NO_EXCEPTION);
-    parentNode->removeChild(nodeToReplace, ASSERT_NO_EXCEPTION);
+    parentNode->insertBefore(newNode, &nodeToReplace);
+    parentNode->removeChild(nodeToReplace);
 }
 
 void ReplaceNodeWithSpanCommand::doApply()
 {
-    if (!m_elementToReplace->inDocument())
+    if (!m_elementToReplace->isConnected())
         return;
     if (!m_spanElement)
-        m_spanElement = createHTMLElement(m_elementToReplace->document(), spanTag);
+        m_spanElement = HTMLSpanElement::create(m_elementToReplace->document());
     swapInNodePreservingAttributesAndChildren(*m_spanElement, *m_elementToReplace);
 }
 
 void ReplaceNodeWithSpanCommand::doUnapply()
 {
-    if (!m_spanElement->inDocument())
+    if (!m_spanElement->isConnected())
         return;
     swapInNodePreservingAttributesAndChildren(*m_elementToReplace, *m_spanElement);
 }

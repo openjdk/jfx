@@ -18,13 +18,13 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef SVGComponentTransferFunctionElement_h
-#define SVGComponentTransferFunctionElement_h
+#pragma once
 
 #include "FEComponentTransfer.h"
 #include "SVGAnimatedEnumeration.h"
 #include "SVGAnimatedNumber.h"
 #include "SVGAnimatedNumberList.h"
+#include "SVGElement.h"
 
 namespace WebCore {
 
@@ -76,10 +76,10 @@ public:
 protected:
     SVGComponentTransferFunctionElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
-    virtual void svgAttributeChanged(const QualifiedName&) override;
+    void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    void svgAttributeChanged(const QualifiedName&) override;
 
-    virtual bool rendererIsNeeded(const RenderStyle&) override { return false; }
+    bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
 private:
     static bool isSupportedAttribute(const QualifiedName&);
@@ -96,5 +96,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif

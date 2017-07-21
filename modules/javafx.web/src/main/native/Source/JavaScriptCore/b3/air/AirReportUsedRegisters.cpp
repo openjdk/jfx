@@ -28,6 +28,7 @@
 
 #if ENABLE(B3_JIT)
 
+#include "AirArgInlines.h"
 #include "AirCode.h"
 #include "AirInstInlines.h"
 #include "AirLiveness.h"
@@ -72,7 +73,7 @@ void reportUsedRegisters(Code& code)
                     inst = Inst();
             }
 
-            if (inst.opcode == Patch) {
+            if (inst.kind.opcode == Patch) {
                 RegisterSet registerSet;
                 for (Reg reg : localCalc.live())
                     registerSet.set(reg);

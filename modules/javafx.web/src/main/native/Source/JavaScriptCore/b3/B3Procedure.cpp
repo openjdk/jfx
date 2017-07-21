@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@
 #include "B3DataSection.h"
 #include "B3Dominators.h"
 #include "B3OpaqueByproducts.h"
+#include "B3PhiChildren.h"
 #include "B3StackSlot.h"
 #include "B3ValueInlines.h"
 #include "B3Variable.h"
@@ -147,38 +148,35 @@ void Procedure::resetValueOwners()
 
 void Procedure::resetReachability()
 {
-    if (shouldValidateIR()) {
-        // Validate the basic properties that we need for resetting reachability. We often reset
-        // reachability before IR validation, so without this mini-validation, you would crash inside
-        // B3::resetReachability() without getting any IR dump.
+    recomputePredecessors(m_blocks);
 
-        BasicBlock* badBlock = nullptr;
-        for (BasicBlock* block : *this) {
-            if (!block->size()) {
-                badBlock = block;
-                break;
-            }
-
-            if (!block->last()->as<ControlValue>()) {
-                badBlock = block;
-                break;
-            }
+    // The common case is that this does not find any dead blocks.
+    bool foundDead = false;
+    for (auto& block : m_blocks) {
+        if (isBlockDead(block.get())) {
+            foundDead = true;
+            break;
         }
+    }
+    if (!foundDead)
+        return;
 
-        if (badBlock) {
-            dataLog("FATAL: Invalid basic block ", *badBlock, " while running Procedure::resetReachability().\n");
-            dataLog(*this);
-            RELEASE_ASSERT_NOT_REACHED();
+    resetValueOwners();
+
+    for (Value* value : values()) {
+        if (UpsilonValue* upsilon = value->as<UpsilonValue>()) {
+            if (isBlockDead(upsilon->phi()->owner))
+                upsilon->replaceWithNop();
         }
     }
 
-    B3::resetReachability(
-        m_blocks,
-        [&] (BasicBlock* deleted) {
-            // Gotta delete the values in this block.
-            for (Value* value : *deleted)
+    for (auto& block : m_blocks) {
+        if (isBlockDead(block.get())) {
+            for (Value* value : *block)
                 deleteValue(value);
-        });
+            block = nullptr;
+        }
+    }
 }
 
 void Procedure::invalidateCFG()
@@ -256,6 +254,10 @@ void Procedure::deleteOrphans()
     for (Value* value : values()) {
         if (!valuesInBlocks.contains(value))
             toRemove.append(value);
+        else if (UpsilonValue* upsilon = value->as<UpsilonValue>()) {
+            if (!valuesInBlocks.contains(upsilon->phi()))
+                upsilon->replaceWithNop();
+        }
     }
 
     for (Value* value : toRemove)
@@ -282,6 +284,11 @@ bool Procedure::isFastConstant(const ValueKey& constant)
     return m_fastConstants.contains(constant);
 }
 
+CCallHelpers::Label Procedure::entrypointLabel(unsigned index) const
+{
+    return m_code->entrypointLabel(index);
+}
+
 void* Procedure::addDataSection(size_t size)
 {
     if (!size)
@@ -292,14 +299,19 @@ void* Procedure::addDataSection(size_t size)
     return result;
 }
 
-unsigned Procedure::callArgAreaSize() const
+unsigned Procedure::callArgAreaSizeInBytes() const
 {
-    return code().callArgAreaSize();
+    return code().callArgAreaSizeInBytes();
 }
 
-void Procedure::requestCallArgAreaSize(unsigned size)
+void Procedure::requestCallArgAreaSizeInBytes(unsigned size)
 {
-    code().requestCallArgAreaSize(size);
+    code().requestCallArgAreaSizeInBytes(size);
+}
+
+void Procedure::pinRegister(Reg reg)
+{
+    code().pinRegister(reg);
 }
 
 unsigned Procedure::frameSize() const
@@ -338,6 +350,11 @@ void Procedure::setBlockOrderImpl(Vector<BasicBlock*>& blocks)
         block->m_index = i;
         m_blocks[i] = std::unique_ptr<BasicBlock>(block);
     }
+}
+
+void Procedure::setWasmBoundsCheckGenerator(RefPtr<WasmBoundsCheckGenerator> generator)
+{
+    code().setWasmBoundsCheckGenerator(generator);
 }
 
 } } // namespace JSC::B3

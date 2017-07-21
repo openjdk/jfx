@@ -23,8 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#ifndef SchemeRegistry_h
-#define SchemeRegistry_h
+
+#pragma once
 
 #include <wtf/HashSet.h>
 #include <wtf/text/StringHash.h>
@@ -32,7 +32,8 @@
 
 namespace WebCore {
 
-typedef HashSet<String, ASCIICaseInsensitiveHash> URLSchemesMap;
+// FIXME: Make HashSet<String>::contains(StringView) work and use StringViews here.
+using URLSchemesMap = HashSet<String, ASCIICaseInsensitiveHash>;
 
 class SchemeRegistry {
 public:
@@ -93,13 +94,11 @@ public:
     WEBCORE_EXPORT static void registerURLSchemeAsAlwaysRevalidated(const String&);
     static bool shouldAlwaysRevalidateURLScheme(const String&);
 
-#if ENABLE(CACHE_PARTITIONING)
     // Schemes whose requests should be partitioned in the cache
     WEBCORE_EXPORT static void registerURLSchemeAsCachePartitioned(const String& scheme);
     static bool shouldPartitionCacheForURLScheme(const String& scheme);
-#endif
+
+    static bool isUserExtensionScheme(const String& scheme);
 };
 
 } // namespace WebCore
-
-#endif // SchemeRegistry_h

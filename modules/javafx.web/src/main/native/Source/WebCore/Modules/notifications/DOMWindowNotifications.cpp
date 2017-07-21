@@ -70,14 +70,14 @@ NotificationCenter* DOMWindowNotifications::webkitNotifications(DOMWindow& windo
 
 void DOMWindowNotifications::disconnectFrameForDocumentSuspension()
 {
-    m_suspendedNotificationCenter = m_notificationCenter.release();
+    m_suspendedNotificationCenter = WTFMove(m_notificationCenter);
     DOMWindowProperty::disconnectFrameForDocumentSuspension();
 }
 
 void DOMWindowNotifications::reconnectFrameFromDocumentSuspension(Frame* frame)
 {
     DOMWindowProperty::reconnectFrameFromDocumentSuspension(frame);
-    m_notificationCenter = m_suspendedNotificationCenter.release();
+    m_notificationCenter = WTFMove(m_suspendedNotificationCenter);
 }
 
 void DOMWindowNotifications::willDestroyGlobalObjectInCachedFrame()
@@ -101,23 +101,24 @@ void DOMWindowNotifications::willDetachGlobalObjectFromFrame()
 NotificationCenter* DOMWindowNotifications::webkitNotifications()
 {
     if (!m_window->isCurrentlyDisplayedInFrame())
-        return 0;
+        return nullptr;
 
     if (m_notificationCenter)
         return m_notificationCenter.get();
 
-    Document* document = m_window->document();
+    auto* document = m_window->document();
     if (!document)
-        return 0;
+        return nullptr;
 
-    Page* page = document->page();
+    auto* page = document->page();
     if (!page)
-        return 0;
+        return nullptr;
 
-    NotificationClient* provider = NotificationController::clientFrom(page);
-    if (provider)
-        m_notificationCenter = NotificationCenter::create(document, provider);
+    auto* provider = NotificationController::clientFrom(*page);
+    if (!provider)
+        return nullptr;
 
+    m_notificationCenter = NotificationCenter::create(*document, provider);
     return m_notificationCenter.get();
 }
 

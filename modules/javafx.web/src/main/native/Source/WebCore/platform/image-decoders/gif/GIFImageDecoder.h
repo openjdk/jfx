@@ -23,40 +23,40 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GIFImageDecoder_h
-#define GIFImageDecoder_h
+#pragma once
 
 #include "ImageDecoder.h"
+#include <wtf/Lock.h>
 
 class GIFImageReader;
 
 namespace WebCore {
 
     // This class decodes the GIF image format.
-    class GIFImageDecoder : public ImageDecoder {
+    class GIFImageDecoder final : public ImageDecoder {
     public:
-        GIFImageDecoder(ImageSource::AlphaOption, ImageSource::GammaAndColorProfileOption);
+        GIFImageDecoder(AlphaOption, GammaAndColorProfileOption);
         virtual ~GIFImageDecoder();
 
         enum GIFQuery { GIFFullQuery, GIFSizeQuery, GIFFrameCountQuery };
 
         // ImageDecoder
-        virtual String filenameExtension() const { return "gif"; }
-        virtual void setData(SharedBuffer* data, bool allDataReceived);
-        virtual bool isSizeAvailable();
-        virtual bool setSize(unsigned width, unsigned height);
-        virtual size_t frameCount();
-        virtual int repetitionCount() const;
-        virtual ImageFrame* frameBufferAtIndex(size_t index);
+        String filenameExtension() const override { return "gif"; }
+        void setData(SharedBuffer& data, bool allDataReceived) override;
+        bool isSizeAvailable() override;
+        bool setSize(const IntSize&) override;
+        size_t frameCount() const override;
+        RepetitionCount repetitionCount() const override;
+        ImageFrame* frameBufferAtIndex(size_t index) override;
         // CAUTION: setFailed() deletes |m_reader|.  Be careful to avoid
         // accessing deleted memory, especially when calling this from inside
         // GIFImageReader!
-        virtual bool setFailed();
-        virtual void clearFrameBufferCache(size_t clearBeforeFrame);
+        bool setFailed() override;
+        void clearFrameBufferCache(size_t clearBeforeFrame) override;
 
         // Callbacks from the GIF reader.
         bool haveDecodedRow(unsigned frameIndex, const Vector<unsigned char>& rowBuffer, size_t width, size_t rowNumber, unsigned repeatCount, bool writeTransparentPixels);
-        bool frameComplete(unsigned frameIndex, unsigned frameDuration, ImageFrame::FrameDisposalMethod disposalMethod);
+        bool frameComplete(unsigned frameIndex, unsigned frameDuration, ImageFrame::DisposalMethod);
         void gifComplete();
 
     private:
@@ -72,10 +72,9 @@ namespace WebCore {
         bool initFrameBuffer(unsigned frameIndex);
 
         bool m_currentBufferSawAlpha;
-        mutable int m_repetitionCount;
+        mutable RepetitionCount m_repetitionCount { RepetitionCountOnce };
         std::unique_ptr<GIFImageReader> m_reader;
+        Lock m_decodeLock;
     };
 
 } // namespace WebCore
-
-#endif

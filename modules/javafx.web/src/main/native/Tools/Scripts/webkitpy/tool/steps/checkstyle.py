@@ -30,6 +30,7 @@ from webkitpy.common.system.executive import ScriptError
 from webkitpy.tool.steps.abstractstep import AbstractStep
 from webkitpy.tool.steps.options import Options
 
+
 class CheckStyle(AbstractStep):
     @classmethod
     def options(cls):

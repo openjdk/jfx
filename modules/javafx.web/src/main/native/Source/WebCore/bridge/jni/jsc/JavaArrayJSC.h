@@ -24,8 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JavaArrayJSC_h
-#define JavaArrayJSC_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
@@ -45,9 +44,9 @@ public:
 
     RootObject* rootObject() const;
 
-    virtual void setValueAt(ExecState*, unsigned int index, JSValue) const;
-    virtual JSValue valueAt(ExecState*, unsigned int index) const;
-    virtual unsigned int getLength() const;
+    bool setValueAt(ExecState*, unsigned int index, JSValue) const final;
+    JSValue valueAt(ExecState*, unsigned int index) const final;
+    unsigned int getLength() const final;
 
     jobject javaArray() const { return m_array->instance(); }
     jobject accessControlContext() const { return m_accessControlContext->instance(); }
@@ -66,5 +65,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JavaArrayJSC_h

@@ -8,6 +8,8 @@ endif ()
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/Source/cmake")
 
+set(ENABLE_WEBCORE ON)
+
 if (NOT DEFINED ENABLE_WEBKIT)
     set(ENABLE_WEBKIT ON)
 endif ()
@@ -19,7 +21,15 @@ endif ()
 # -----------------------------------------------------------------------------
 # Determine which port will be built
 # -----------------------------------------------------------------------------
-set(ALL_PORTS Efl GTK AppleWin WinCairo Mac Java)
+set(ALL_PORTS
+    AppleWin
+    Efl
+    GTK
+    JSCOnly
+    Mac
+    WinCairo
+    Java
+)
 set(PORT "NOPORT" CACHE STRING "choose which WebKit port to build (one of ${ALL_PORTS})")
 
 list(FIND ALL_PORTS ${PORT} RET)
@@ -28,6 +38,17 @@ if (${RET} EQUAL -1)
 endif ()
 
 string(TOLOWER ${PORT} WEBKIT_PORT_DIR)
+
+# -----------------------------------------------------------------------------
+# Determine the compiler
+# -----------------------------------------------------------------------------
+if (${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "AppleClang")
+    set(COMPILER_IS_CLANG ON)
+endif ()
+
+if (CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
+    set(COMPILER_IS_GCC_OR_CLANG ON)
+endif ()
 
 # -----------------------------------------------------------------------------
 # Determine the target processor
@@ -85,18 +106,16 @@ endif ()
 # -----------------------------------------------------------------------------
 # Default library types
 # -----------------------------------------------------------------------------
-option(SHARED_CORE "build JavaScriptCore and WebCore as shared libraries")
-
-message(STATUS "#### ####= SHARED_CORE ${SHARED_CORE}")
+option(SHARED_CORE "build WebCore as a shared library")
 
 if (SHARED_CORE)
-    set(JavaScriptCore_LIBRARY_TYPE SHARED)
     set(WebCore_LIBRARY_TYPE SHARED)
 else ()
-    set(JavaScriptCore_LIBRARY_TYPE SHARED)
     set(WebCore_LIBRARY_TYPE STATIC)
 endif ()
 
+set(JavaScriptCore_LIBRARY_TYPE SHARED)
+set(PAL_LIBRARY_TYPE STATIC)
 set(WebKit_LIBRARY_TYPE SHARED)
 set(WebKit2_LIBRARY_TYPE SHARED)
 set(WebCoreTestSupport_LIBRARY_TYPE STATIC)

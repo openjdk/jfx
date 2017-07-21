@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2016 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Torch Mobile (Beijing) Co. Ltd. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,105 +27,67 @@
 #include "config.h"
 #include "JSHTMLCanvasElement.h"
 
-#include "CanvasContextAttributes.h"
 #include "HTMLCanvasElement.h"
 #include "JSCanvasRenderingContext2D.h"
 #include <bindings/ScriptObject.h>
 #include <wtf/GetPtr.h>
 
 #if ENABLE(WEBGL)
-#include "JSDictionary.h"
+#include "JSWebGLContextAttributes.h"
 #include "JSWebGLRenderingContextBase.h"
-#include "WebGLContextAttributes.h"
 #endif
 
 using namespace JSC;
 
 namespace WebCore {
 
-#if ENABLE(WEBGL)
-static void get3DContextAttributes(ExecState& state, RefPtr<CanvasContextAttributes>& attrs)
-{
-    JSValue initializerValue = state.argument(1);
-    if (initializerValue.isUndefinedOrNull())
-        return;
-
-    JSObject* initializerObject = initializerValue.toObject(&state);
-    JSDictionary dictionary(&state, initializerObject);
-
-    GraphicsContext3D::Attributes graphicsAttrs;
-
-    dictionary.tryGetProperty("alpha", graphicsAttrs.alpha);
-    dictionary.tryGetProperty("depth", graphicsAttrs.depth);
-    dictionary.tryGetProperty("stencil", graphicsAttrs.stencil);
-    dictionary.tryGetProperty("antialias", graphicsAttrs.antialias);
-    dictionary.tryGetProperty("premultipliedAlpha", graphicsAttrs.premultipliedAlpha);
-    dictionary.tryGetProperty("preserveDrawingBuffer", graphicsAttrs.preserveDrawingBuffer);
-
-    attrs = WebGLContextAttributes::create(graphicsAttrs);
-}
-#endif
-
 JSValue JSHTMLCanvasElement::getContext(ExecState& state)
 {
-    HTMLCanvasElement& canvas = wrapped();
-    const String& contextId = state.argument(0).toString(&state)->value(&state);
+    auto& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    RefPtr<CanvasContextAttributes> attrs;
+    if (UNLIKELY(state.argumentCount() < 1))
+        return throwException(&state, scope, createNotEnoughArgumentsError(&state));
+
+    auto contextId = convert<IDLDOMString>(state, state.uncheckedArgument(0), StringConversionConfiguration::Normal);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
+    if (HTMLCanvasElement::is2dType(contextId))
+        return toJS<IDLNullable<IDLInterface<CanvasRenderingContext2D>>>(state, *globalObject(), static_cast<CanvasRenderingContext2D*>(wrapped().getContext2d(contextId)));
+
 #if ENABLE(WEBGL)
     if (HTMLCanvasElement::is3dType(contextId)) {
-        get3DContextAttributes(state, attrs);
-        if (state.hadException())
-            return jsUndefined();
+        auto attributes = convert<IDLDictionary<WebGLContextAttributes>>(state, state.argument(1));
+        RETURN_IF_EXCEPTION(scope, JSValue());
+
+        return toJS<IDLNullable<IDLInterface<WebGLRenderingContextBase>>>(state, *globalObject(), static_cast<WebGLRenderingContextBase*>(wrapped().getContextWebGL(contextId, WTFMove(attributes))));
     }
 #endif
 
-    CanvasRenderingContext* context = canvas.getContext(contextId, attrs.get());
-    if (!context)
-        return jsNull();
-    return toJS(&state, globalObject(), WTF::getPtr(context));
-}
-
-JSValue JSHTMLCanvasElement::probablySupportsContext(ExecState& state)
-{
-    HTMLCanvasElement& canvas = wrapped();
-    if (!state.argumentCount())
-        return jsBoolean(false);
-    const String& contextId = state.uncheckedArgument(0).toString(&state)->value(&state);
-    if (state.hadException())
-        return jsUndefined();
-
-    RefPtr<CanvasContextAttributes> attrs;
-#if ENABLE(WEBGL)
-    if (HTMLCanvasElement::is3dType(contextId)) {
-        get3DContextAttributes(state, attrs);
-        if (state.hadException())
-            return jsUndefined();
-    }
-#endif
-
-    return jsBoolean(canvas.probablySupportsContext(contextId, attrs.get()));
+    return jsNull();
 }
 
 JSValue JSHTMLCanvasElement::toDataURL(ExecState& state)
 {
-    HTMLCanvasElement& canvas = wrapped();
-    ExceptionCode ec = 0;
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
-    const String& type = valueToStringWithUndefinedOrNullCheck(&state, state.argument(0));
-    double quality;
-    double* qualityPtr = 0;
-    if (state.argumentCount() > 1) {
-        JSValue v = state.uncheckedArgument(1);
-        if (v.isNumber()) {
-            quality = v.toNumber(&state);
-            qualityPtr = &quality;
-        }
+    auto type = convert<IDLNullable<IDLDOMString>>(state, state.argument(0));
+    RETURN_IF_EXCEPTION(scope, JSC::JSValue());
+
+    std::optional<double> quality;
+    auto qualityValue = state.argument(1);
+    if (qualityValue.isNumber())
+        quality = qualityValue.toNumber(&state);
+
+    // We would use toJS<IDLString> here, but it uses jsStringWithCache and we historically
+    // did not cache here, presumably because results are likely to be differing long strings.
+    auto result = wrapped().toDataURL(type, quality);
+    if (result.hasException()) {
+        propagateException(state, scope, result.releaseException());
+        return { };
     }
-
-    JSValue result = JSC::jsString(&state, canvas.toDataURL(type, qualityPtr, ec));
-    setDOMException(&state, ec);
-    return result;
+    return jsString(&state, result.releaseReturnValue());
 }
 
 } // namespace WebCore

@@ -20,8 +20,6 @@
 #ifndef TextureMapperLayer_h
 #define TextureMapperLayer_h
 
-#if USE(TEXTURE_MAPPER)
-
 #include "FilterOperations.h"
 #include "FloatRect.h"
 #include "GraphicsLayerTransform.h"
@@ -42,7 +40,7 @@ class TextureMapperLayer : public TextureMapperAnimation::Client {
 public:
 
     class ScrollingClient {
-public:
+    public:
         virtual void commitScrollOffset(uint32_t layerID, const IntSize& offset) = 0;
     };
 
@@ -172,9 +170,9 @@ private:
     void computePatternTransformIfNeeded();
 
     // TextureMapperAnimation::Client
-    virtual void setAnimatedTransform(const TransformationMatrix&) override;
-    virtual void setAnimatedOpacity(float) override;
-    virtual void setAnimatedFilters(const FilterOperations&) override;
+    void setAnimatedTransform(const TransformationMatrix&) override;
+    void setAnimatedOpacity(float) override;
+    void setAnimatedFilters(const FilterOperations&) override;
 
     bool isVisible() const;
     enum ContentsLayerCount {
@@ -268,6 +266,5 @@ private:
 };
 
 }
-#endif
 
 #endif // TextureMapperLayer_h

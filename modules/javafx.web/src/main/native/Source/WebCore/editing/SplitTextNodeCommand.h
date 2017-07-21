@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SplitTextNodeCommand_h
-#define SplitTextNodeCommand_h
+#pragma once
 
 #include "EditCommand.h"
 
@@ -42,13 +41,13 @@ public:
 private:
     SplitTextNodeCommand(PassRefPtr<Text>, int offset);
 
-    virtual void doApply() override;
-    virtual void doUnapply() override;
-    virtual void doReapply() override;
+    void doApply() override;
+    void doUnapply() override;
+    void doReapply() override;
     void insertText1AndTrimText2();
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Node*>&) override;
+    void getNodesInCommand(HashSet<Node*>&) override;
 #endif
 
     RefPtr<Text> m_text1;
@@ -57,5 +56,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // SplitTextNodeCommand_h

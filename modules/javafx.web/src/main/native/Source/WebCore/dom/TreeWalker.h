@@ -22,8 +22,7 @@
  *
  */
 
-#ifndef TreeWalker_h
-#define TreeWalker_h
+#pragma once
 
 #include "NodeFilter.h"
 #include "ScriptWrappable.h"
@@ -32,8 +31,6 @@
 
 namespace WebCore {
 
-    typedef int ExceptionCode;
-
     class TreeWalker : public ScriptWrappable, public RefCounted<TreeWalker>, public NodeIteratorBase {
     public:
         static Ref<TreeWalker> create(Node& rootNode, unsigned long whatToShow, RefPtr<NodeFilter>&& filter)
@@ -41,27 +38,27 @@ namespace WebCore {
             return adoptRef(*new TreeWalker(rootNode, whatToShow, WTFMove(filter)));
         }
 
-        Node* currentNode() const { return m_current.get(); }
-        void setCurrentNode(Node*, ExceptionCode&);
+        Node& currentNode() { return m_current.get(); }
+        const Node& currentNode() const { return m_current.get(); }
 
-        Node* parentNode();
-        Node* firstChild();
-        Node* lastChild();
-        Node* previousSibling();
-        Node* nextSibling();
-        Node* previousNode();
-        Node* nextNode();
+        WEBCORE_EXPORT void setCurrentNode(Node&);
+
+        WEBCORE_EXPORT Node* parentNode();
+        WEBCORE_EXPORT Node* firstChild();
+        WEBCORE_EXPORT Node* lastChild();
+        WEBCORE_EXPORT Node* previousSibling();
+        WEBCORE_EXPORT Node* nextSibling();
+        WEBCORE_EXPORT Node* previousNode();
+        WEBCORE_EXPORT Node* nextNode();
 
     private:
         TreeWalker(Node&, unsigned long whatToShow, RefPtr<NodeFilter>&&);
         enum class SiblingTraversalType { Previous, Next };
         template<SiblingTraversalType> Node* traverseSiblings();
 
-        Node* setCurrent(RefPtr<Node>&&);
+        Node* setCurrent(Ref<Node>&&);
 
-        RefPtr<Node> m_current;
+        Ref<Node> m_current;
     };
 
 } // namespace WebCore
-
-#endif // TreeWalker_h

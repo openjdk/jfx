@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2008, 2015-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,40 +41,26 @@
 namespace WTF {
 
 static bool callbacksPaused; // This global variable is only accessed from main thread.
-#if !OS(DARWIN) || PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(JAVA)
+#if !OS(DARWIN) && !PLATFORM(GTK) || PLATFORM(JAVA)
 static ThreadIdentifier mainThreadIdentifier;
 #endif
 
 static StaticLock mainThreadFunctionQueueMutex;
 
-static Deque<std::function<void ()>>& functionQueue()
+static Deque<Function<void ()>>& functionQueue()
 {
-    static NeverDestroyed<Deque<std::function<void ()>>> functionQueue;
+    static NeverDestroyed<Deque<Function<void ()>>> functionQueue;
     return functionQueue;
 }
 
-#if !OS(DARWIN) || PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(JAVA)
-
-void initializeMainThread()
-{
-    static bool initializedMainThread;
-    if (initializedMainThread)
-        return;
-    initializedMainThread = true;
-
-    mainThreadIdentifier = currentThread();
-
-    initializeMainThreadPlatform();
-    initializeGCThreads();
-}
-
-#else
-
+#if OS(DARWIN) && !PLATFORM(JAVA) || PLATFORM(GTK)
 static pthread_once_t initializeMainThreadKeyOnce = PTHREAD_ONCE_INIT;
 
 static void initializeMainThreadOnce()
 {
+    initializeThreading();
     initializeMainThreadPlatform();
+    initializeGCThreads();
 }
 
 void initializeMainThread()
@@ -82,17 +68,19 @@ void initializeMainThread()
     pthread_once(&initializeMainThreadKeyOnce, initializeMainThreadOnce);
 }
 
-#if !USE(WEB_THREAD)
+#if !USE(WEB_THREAD) && !PLATFORM(GTK) && !PLATFORM(JAVA)
 static void initializeMainThreadToProcessMainThreadOnce()
 {
+    initializeThreading();
     initializeMainThreadToProcessMainThreadPlatform();
+    initializeGCThreads();
 }
 
 void initializeMainThreadToProcessMainThread()
 {
     pthread_once(&initializeMainThreadKeyOnce, initializeMainThreadToProcessMainThreadOnce);
 }
-#else
+#elif !PLATFORM(GTK) && !PLATFORM(JAVA)
 static pthread_once_t initializeWebThreadKeyOnce = PTHREAD_ONCE_INIT;
 
 static void initializeWebThreadOnce()
@@ -106,6 +94,20 @@ void initializeWebThread()
 }
 #endif // !USE(WEB_THREAD)
 
+#else
+void initializeMainThread()
+{
+    static bool initializedMainThread;
+    if (initializedMainThread)
+        return;
+    initializedMainThread = true;
+
+    initializeThreading();
+    mainThreadIdentifier = currentThread();
+
+    initializeMainThreadPlatform();
+    initializeGCThreads();
+}
 #endif
 
 // 0.1 sec delays in UI is approximate threshold when they become noticeable. Have a limit that's half of that.
@@ -120,7 +122,7 @@ void dispatchFunctionsFromMainThread()
 
     auto startTime = std::chrono::steady_clock::now();
 
-    std::function<void ()> function;
+    Function<void ()> function;
 
     while (true) {
         {
@@ -133,6 +135,9 @@ void dispatchFunctionsFromMainThread()
 
         function();
 
+        // Clearing the function can have side effects, so do so outside of the lock above.
+        function = nullptr;
+
         // If we are running accumulated functions for too long so UI may become unresponsive, we need to
         // yield so the user input can be processed. Otherwise user may not be able to even close the window.
         // This code has effect only in case the scheduleDispatchFunctionsOnMainThread() is implemented in a way that
@@ -144,7 +149,7 @@ void dispatchFunctionsFromMainThread()
     }
 }
 
-void callOnMainThread(std::function<void ()> function)
+void callOnMainThread(Function<void ()>&& function)
 {
     ASSERT(function);
 
@@ -173,7 +178,7 @@ void setMainThreadCallbacksPaused(bool paused)
         scheduleDispatchFunctionsOnMainThread();
 }
 
-#if !OS(DARWIN) || PLATFORM(EFL) || PLATFORM(GTK) || PLATFORM(JAVA)
+#if !OS(DARWIN) && !PLATFORM(GTK) || PLATFORM(JAVA)
 bool isMainThread()
 {
     return currentThread() == mainThreadIdentifier;
@@ -187,14 +192,19 @@ bool canAccessThreadLocalDataForThread(ThreadIdentifier threadId)
 }
 #endif
 
-static ThreadSpecific<bool>* isGCThread;
+static ThreadSpecific<std::optional<GCThreadType>, CanBeGCThread::True>* isGCThread;
 
 void initializeGCThreads()
 {
-    isGCThread = new ThreadSpecific<bool>();
+    static std::once_flag flag;
+    std::call_once(
+        flag,
+        [] {
+            isGCThread = new ThreadSpecific<std::optional<GCThreadType>, CanBeGCThread::True>();
+        });
 }
 
-void registerGCThread()
+void registerGCThread(GCThreadType type)
 {
     if (!isGCThread) {
         // This happens if we're running in a process that doesn't care about
@@ -202,15 +212,24 @@ void registerGCThread()
         return;
     }
 
-    **isGCThread = true;
+    **isGCThread = type;
 }
 
 bool isMainThreadOrGCThread()
 {
-    if (isGCThread->isSet() && **isGCThread)
+    if (mayBeGCThread())
         return true;
 
     return isMainThread();
+}
+
+std::optional<GCThreadType> mayBeGCThread()
+{
+    if (!isGCThread)
+        return std::nullopt;
+    if (!isGCThread->isSet())
+        return std::nullopt;
+    return **isGCThread;
 }
 
 } // namespace WTF

@@ -34,9 +34,9 @@
 #include "AirInst.h"
 #include "AirInstInlines.h"
 #include "AirPhaseScope.h"
-#include "B3IndexMap.h"
-#include "B3IndexSet.h"
 #include "MacroAssembler.h"
+#include <wtf/IndexMap.h>
+#include <wtf/IndexSet.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace B3 { namespace Air {
@@ -45,11 +45,13 @@ namespace {
 
 bool hasPartialXmmRegUpdate(const Inst& inst)
 {
-    switch (inst.opcode) {
+    switch (inst.kind.opcode) {
     case ConvertDoubleToFloat:
     case ConvertFloatToDouble:
     case ConvertInt32ToDouble:
     case ConvertInt64ToDouble:
+    case ConvertInt32ToFloat:
+    case ConvertInt64ToFloat:
     case SqrtDouble:
     case SqrtFloat:
     case CeilDouble:
@@ -66,7 +68,7 @@ bool hasPartialXmmRegUpdate(const Inst& inst)
 bool isDependencyBreaking(const Inst& inst)
 {
     // "xorps reg, reg" is used by the frontend to remove the dependency on its argument.
-    return inst.opcode == MoveZeroToDouble;
+    return inst.kind.opcode == MoveZeroToDouble;
 }
 
 // FIXME: find a good distance per architecture experimentally.

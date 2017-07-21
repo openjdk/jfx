@@ -23,9 +23,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef YarrInterpreter_h
-#define YarrInterpreter_h
+#pragma once
 
+#include "ConcurrentJSLock.h"
 #include "YarrPattern.h"
 
 namespace WTF {
@@ -87,7 +87,8 @@ struct ByteTerm {
                 unsigned parenthesesWidth;
             };
             QuantifierType quantityType;
-            unsigned quantityCount;
+            unsigned quantityMinCount;
+            unsigned quantityMaxCount;
         } atom;
         struct {
             int next;
@@ -105,11 +106,17 @@ struct ByteTerm {
     bool m_invert : 1;
     unsigned inputPosition;
 
-    ByteTerm(UChar32 ch, int inputPos, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType)
+    ByteTerm(UChar32 ch, unsigned inputPos, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType)
         : frameLocation(frameLocation)
         , m_capture(false)
         , m_invert(false)
     {
+        atom.patternCharacter = ch;
+        atom.quantityType = quantityType;
+        atom.quantityMinCount = quantityCount.unsafeGet();
+        atom.quantityMaxCount = quantityCount.unsafeGet();
+        inputPosition = inputPos;
+
         switch (quantityType) {
         case QuantifierFixedCount:
             type = (quantityCount == 1) ? ByteTerm::TypePatternCharacterOnce : ByteTerm::TypePatternCharacterFixed;
@@ -121,14 +128,9 @@ struct ByteTerm {
             type = ByteTerm::TypePatternCharacterNonGreedy;
             break;
         }
-
-        atom.patternCharacter = ch;
-        atom.quantityType = quantityType;
-        atom.quantityCount = quantityCount.unsafeGet();
-        inputPosition = inputPos;
     }
 
-    ByteTerm(UChar32 lo, UChar32 hi, int inputPos, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType)
+    ByteTerm(UChar32 lo, UChar32 hi, unsigned inputPos, unsigned frameLocation, Checked<unsigned> quantityCount, QuantifierType quantityType)
         : frameLocation(frameLocation)
         , m_capture(false)
         , m_invert(false)
@@ -148,22 +150,24 @@ struct ByteTerm {
         atom.casedCharacter.lo = lo;
         atom.casedCharacter.hi = hi;
         atom.quantityType = quantityType;
-        atom.quantityCount = quantityCount.unsafeGet();
+        atom.quantityMinCount = quantityCount.unsafeGet();
+        atom.quantityMaxCount = quantityCount.unsafeGet();
         inputPosition = inputPos;
     }
 
-    ByteTerm(CharacterClass* characterClass, bool invert, int inputPos)
+    ByteTerm(CharacterClass* characterClass, bool invert, unsigned inputPos)
         : type(ByteTerm::TypeCharacterClass)
         , m_capture(false)
         , m_invert(invert)
     {
         atom.characterClass = characterClass;
         atom.quantityType = QuantifierFixedCount;
-        atom.quantityCount = 1;
+        atom.quantityMinCount = 1;
+        atom.quantityMaxCount = 1;
         inputPosition = inputPos;
     }
 
-    ByteTerm(Type type, unsigned subpatternId, ByteDisjunction* parenthesesInfo, bool capture, int inputPos)
+    ByteTerm(Type type, unsigned subpatternId, ByteDisjunction* parenthesesInfo, bool capture, unsigned inputPos)
         : type(type)
         , m_capture(capture)
         , m_invert(false)
@@ -171,7 +175,8 @@ struct ByteTerm {
         atom.subpatternId = subpatternId;
         atom.parenthesesDisjunction = parenthesesInfo;
         atom.quantityType = QuantifierFixedCount;
-        atom.quantityCount = 1;
+        atom.quantityMinCount = 1;
+        atom.quantityMaxCount = 1;
         inputPosition = inputPos;
     }
 
@@ -181,21 +186,23 @@ struct ByteTerm {
         , m_invert(invert)
     {
         atom.quantityType = QuantifierFixedCount;
-        atom.quantityCount = 1;
+        atom.quantityMinCount = 1;
+        atom.quantityMaxCount = 1;
     }
 
-    ByteTerm(Type type, unsigned subpatternId, bool capture, bool invert, int inputPos)
+    ByteTerm(Type type, unsigned subpatternId, bool capture, bool invert, unsigned inputPos)
         : type(type)
         , m_capture(capture)
         , m_invert(invert)
     {
         atom.subpatternId = subpatternId;
         atom.quantityType = QuantifierFixedCount;
-        atom.quantityCount = 1;
+        atom.quantityMinCount = 1;
+        atom.quantityMaxCount = 1;
         inputPosition = inputPos;
     }
 
-    static ByteTerm BOL(int inputPos)
+    static ByteTerm BOL(unsigned inputPos)
     {
         ByteTerm term(TypeAssertionBOL);
         term.inputPosition = inputPos;
@@ -216,21 +223,21 @@ struct ByteTerm {
         return term;
     }
 
-    static ByteTerm EOL(int inputPos)
+    static ByteTerm EOL(unsigned inputPos)
     {
         ByteTerm term(TypeAssertionEOL);
         term.inputPosition = inputPos;
         return term;
     }
 
-    static ByteTerm WordBoundary(bool invert, int inputPos)
+    static ByteTerm WordBoundary(bool invert, unsigned inputPos)
     {
         ByteTerm term(TypeAssertionWordBoundary, invert);
         term.inputPosition = inputPos;
         return term;
     }
 
-    static ByteTerm BackReference(unsigned subpatternId, int inputPos)
+    static ByteTerm BackReference(unsigned subpatternId, unsigned inputPos)
     {
         return ByteTerm(TypeBackReference, subpatternId, false, false, inputPos);
     }
@@ -337,17 +344,19 @@ public:
 struct BytecodePattern {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    BytecodePattern(std::unique_ptr<ByteDisjunction> body, Vector<std::unique_ptr<ByteDisjunction>>& parenthesesInfoToAdopt, YarrPattern& pattern, BumpPointerAllocator* allocator)
+    BytecodePattern(std::unique_ptr<ByteDisjunction> body, Vector<std::unique_ptr<ByteDisjunction>>& parenthesesInfoToAdopt, YarrPattern& pattern, BumpPointerAllocator* allocator, ConcurrentJSLock* lock)
         : m_body(WTFMove(body))
-        , m_ignoreCase(pattern.m_ignoreCase)
-        , m_multiline(pattern.m_multiline)
-        , m_unicode(pattern.m_unicode)
+        , m_flags(pattern.m_flags)
         , m_allocator(allocator)
+        , m_lock(lock)
     {
         m_body->terms.shrinkToFit();
 
         newlineCharacterClass = pattern.newlineCharacterClass();
-        wordcharCharacterClass = pattern.wordcharCharacterClass();
+        if (unicode() && ignoreCase())
+            wordcharCharacterClass = pattern.wordUnicodeIgnoreCaseCharCharacterClass();
+        else
+            wordcharCharacterClass = pattern.wordcharCharacterClass();
 
         m_allParenthesesInfo.swap(parenthesesInfoToAdopt);
         m_allParenthesesInfo.shrinkToFit();
@@ -358,13 +367,17 @@ public:
 
     size_t estimatedSizeInBytes() const { return m_body->estimatedSizeInBytes(); }
 
+    bool ignoreCase() const { return m_flags & FlagIgnoreCase; }
+    bool multiline() const { return m_flags & FlagMultiline; }
+    bool sticky() const { return m_flags & FlagSticky; }
+    bool unicode() const { return m_flags & FlagUnicode; }
+
     std::unique_ptr<ByteDisjunction> m_body;
-    bool m_ignoreCase;
-    bool m_multiline;
-    bool m_unicode;
+    RegExpFlags m_flags;
     // Each BytecodePattern is associated with a RegExp, each RegExp is associated
     // with a VM.  Cache a pointer to out VM's m_regExpAllocator.
     BumpPointerAllocator* m_allocator;
+    ConcurrentJSLock* m_lock;
 
     CharacterClass* newlineCharacterClass;
     CharacterClass* wordcharCharacterClass;
@@ -374,11 +387,9 @@ private:
     Vector<std::unique_ptr<CharacterClass>> m_userCharacterClasses;
 };
 
-JS_EXPORT_PRIVATE std::unique_ptr<BytecodePattern> byteCompile(YarrPattern&, BumpPointerAllocator*);
+JS_EXPORT_PRIVATE std::unique_ptr<BytecodePattern> byteCompile(YarrPattern&, BumpPointerAllocator*, ConcurrentJSLock* = nullptr);
 JS_EXPORT_PRIVATE unsigned interpret(BytecodePattern*, const String& input, unsigned start, unsigned* output);
 unsigned interpret(BytecodePattern*, const LChar* input, unsigned length, unsigned start, unsigned* output);
 unsigned interpret(BytecodePattern*, const UChar* input, unsigned length, unsigned start, unsigned* output);
 
 } } // namespace JSC::Yarr
-
-#endif // YarrInterpreter_h

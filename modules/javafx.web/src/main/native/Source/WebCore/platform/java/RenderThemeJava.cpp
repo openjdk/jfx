@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -12,7 +12,7 @@
 #include "CSSPropertyNames.h"
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "HTMLMediaElement.h"
 #include "NotImplemented.h"
 #include "PaintInfo.h"
@@ -45,17 +45,14 @@
 
 namespace WebCore {
 
-RefPtr<RenderTheme> RenderThemeJava::sm_defaultInstance = 0;
 
-PassRefPtr<RenderTheme> RenderTheme::themeForPage(Page* page)
+Ref<RenderTheme> RenderTheme::themeForPage(Page* page)
 {
-    if (page == 0) {
-        if (RenderThemeJava::sm_defaultInstance == 0) {
-            RenderThemeJava::sm_defaultInstance = adoptRef(new RenderThemeJava(0));
-        }
-        return RenderThemeJava::sm_defaultInstance;
+    if (!page) {
+        static RenderTheme& sm_defaultInstance = adoptRef(*new RenderThemeJava(0)).leakRef();
+        return sm_defaultInstance;
     }
-    return adoptRef(new RenderThemeJava(page));
+    return adoptRef(*new RenderThemeJava(page));
 }
 
 jclass getJRenderThemeClass()
@@ -235,7 +232,7 @@ bool RenderThemeJava::paintWidget(
             (jint)rect.width(), (jint)rect.height(),
             (jint)bgColor,
             (jobject)JLObject(extParams.isEmpty()
-                ? NULL
+                ? nullptr
                 : env->NewDirectByteBuffer(
                     extParams.data(),
                     extParams.size())))
@@ -257,7 +254,7 @@ bool RenderThemeJava::paintWidget(
 }
 
 #if ENABLE(PROGRESS_ELEMENT)
-void RenderThemeJava::adjustProgressBarStyle(StyleResolver&, RenderStyle& style, Element*) const
+void RenderThemeJava::adjustProgressBarStyle(StyleResolver&, RenderStyle& style, const Element*) const
 {
     style.setBoxShadow(nullptr);
 }
@@ -344,7 +341,7 @@ bool RenderThemeJava::paintButton(const RenderObject&o, const PaintInfo& i, cons
     return paintWidget(JNI_EXPAND(BUTTON), o, i, rect);
 }
 
-void RenderThemeJava::adjustTextFieldStyle(StyleResolver&, RenderStyle&, Element* e) const
+void RenderThemeJava::adjustTextFieldStyle(StyleResolver&, RenderStyle&, const Element*) const
 {
     notImplemented();
 }
@@ -354,7 +351,7 @@ bool RenderThemeJava::paintTextField(const RenderObject&o, const PaintInfo& i, c
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
 }
 
-void RenderThemeJava::adjustSearchFieldStyle(StyleResolver&, RenderStyle&, Element* e) const
+void RenderThemeJava::adjustSearchFieldStyle(StyleResolver&, RenderStyle&, const Element*) const
 {
     notImplemented();
 }
@@ -364,7 +361,7 @@ bool RenderThemeJava::paintSearchField(const RenderObject&o, const PaintInfo& i,
     return paintWidget(JNI_EXPAND(TEXT_FIELD), o, i, rect);
 }
 
-void RenderThemeJava::adjustTextAreaStyle(StyleResolver&, RenderStyle& style, Element*) const
+void RenderThemeJava::adjustTextAreaStyle(StyleResolver&, RenderStyle& style, const Element*) const
 {
     if (style.paddingTop().isIntrinsicOrAuto())
         style.setPaddingTop(Length(1, Fixed));
@@ -377,7 +374,7 @@ bool RenderThemeJava::paintTextArea(const RenderObject&o, const PaintInfo& i, co
     return paintTextField(o, i, r);
 }
 
-void RenderThemeJava::adjustButtonStyle(StyleResolver& selector, RenderStyle& style, WebCore::Element* e) const
+void RenderThemeJava::adjustButtonStyle(StyleResolver&, RenderStyle& style, const Element*) const
 {
     if (style.appearance() == PushButtonPart) {
         // Ignore line-height.
@@ -460,7 +457,7 @@ void RenderThemeJava::updateCachedSystemFontDescription(CSSValueID propId, FontC
     fontDescription = *cachedDesc;
 }
 
-void RenderThemeJava::adjustSliderTrackStyle(StyleResolver& selector, RenderStyle& style, Element* element) const
+void RenderThemeJava::adjustSliderTrackStyle(StyleResolver& selector, RenderStyle& style, const Element* element) const
 {
     //utatodo: we need to measure the control in Java theme.
     RenderTheme::adjustSliderTrackStyle(selector, style, element);
@@ -490,7 +487,7 @@ void getSliderThumbSize(jint sliderType, int *width, int *height)
 const int sliderThumbWidth = 17;
 const int sliderThumbHeight = 17;
 
-void RenderThemeJava::adjustSliderThumbSize(RenderStyle& style, Element* element) const
+void RenderThemeJava::adjustSliderThumbSize(RenderStyle& style, const Element*) const
 {
     ControlPart part = style.appearance();
 #if ENABLE(VIDEO)
@@ -521,13 +518,13 @@ void RenderThemeJava::adjustSliderThumbSize(RenderStyle& style, Element* element
 #endif
 }
 
-bool RenderThemeJava::paintSliderThumb(const RenderObject& object, const PaintInfo& info, const IntRect& rect)
+bool RenderThemeJava::paintSliderThumb(const RenderObject&, const PaintInfo&, const IntRect&)
 {
     // We've already painted it in paintSliderTrack(), no need to do anything here.
     return false;
 }
 
-void RenderThemeJava::adjustMenuListStyle(StyleResolver&, RenderStyle& style, Element*) const
+void RenderThemeJava::adjustMenuListStyle(StyleResolver&, RenderStyle& style, const Element*) const
 {
     // Add in the padding that we'd like to use.
     style.setPaddingRight(Length(20.0f + style.paddingRight().value(), Fixed));
@@ -539,7 +536,7 @@ bool RenderThemeJava::paintMenuList(const RenderObject& o, const PaintInfo& i, c
     return paintWidget(JNI_EXPAND(MENU_LIST), o, i, rect);
 }
 
-void RenderThemeJava::adjustMenuListButtonStyle(StyleResolver& selector, RenderStyle& style, Element* e) const
+void RenderThemeJava::adjustMenuListButtonStyle(StyleResolver& selector, RenderStyle& style, const Element* e) const
 {
     style.resetBorderRadius();
     adjustMenuListStyle(selector, style, e);
@@ -623,7 +620,7 @@ String RenderThemeJava::extraMediaControlsStyleSheet()
     return String(mediaControlsGtkUserAgentStyleSheet, sizeof(mediaControlsGtkUserAgentStyleSheet));
 }
 
-String RenderThemeJava::formatMediaControlsCurrentTime(float currentTime, float duration) const
+String RenderThemeJava::formatMediaControlsCurrentTime(float, float) const
 {
     return "";
 }
@@ -640,11 +637,11 @@ bool RenderThemeJava::paintMediaFullscreenButton(const RenderObject& o, const Pa
 bool RenderThemeJava::paintMediaPlayButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
 {
     HTMLMediaElement* mediaElement = parentMediaElement(o);
-    if (mediaElement == NULL)
+    if (mediaElement == nullptr)
         return false;
 
     // readyState can be NETWORK_EMPTY if preload is NONE
-    jint type = mediaElement->readyState() == HTMLMediaElement::NETWORK_NO_SOURCE //XXX: warning: comparison between ‘enum WebCore::HTMLMediaElementEnums::ReadyState’ and ‘enum WebCore::HTMLMediaElementEnums::NetworkState’ [-Wenum-compare]
+    jint type = mediaElement->readyState() == HTMLMediaElementEnums::ReadyState::HAVE_NOTHING
                     ? JNI_EXPAND_MEDIA(DISABLED_PLAY_BUTTON)
                     : mediaElement->paused()
                         ? JNI_EXPAND_MEDIA(PLAY_BUTTON)
@@ -655,7 +652,7 @@ bool RenderThemeJava::paintMediaPlayButton(const RenderObject& o, const PaintInf
 bool RenderThemeJava::paintMediaMuteButton(const RenderObject&o, const PaintInfo& paintInfo, const IntRect& r)
 {
     HTMLMediaElement* mediaElement = parentMediaElement(o);
-    if (mediaElement == NULL)
+    if (mediaElement == nullptr)
         return false;
 
     jint type = !mediaElement->hasAudio()
@@ -674,10 +671,10 @@ bool RenderThemeJava::paintMediaSeekForwardButton(const RenderObject& o, const P
 bool RenderThemeJava::paintMediaSliderTrack(const RenderObject&o, const PaintInfo& paintInfo, const IntRect& r)
 {
     HTMLMediaElement* mediaElement = parentMediaElement(o);
-    if (mediaElement == NULL)
+    if (mediaElement == nullptr)
         return false;
 
-    RefPtr<TimeRanges> timeRanges = mediaElement->buffered();
+    Ref<TimeRanges> timeRanges = mediaElement->buffered();
 
     paintInfo.context().platformContext()->rq().freeSpace(4
         + 4                 // number of timeRange pairs
@@ -689,10 +686,9 @@ bool RenderThemeJava::paintMediaSliderTrack(const RenderObject&o, const PaintInf
     << (jint)timeRanges->length();
 
     //utatodo: need [double] support
-    ExceptionCode ex;
-    for (int i=0; i<timeRanges->length(); i++) {
+    for (unsigned i = 0; i < timeRanges->length(); i++) {
         paintInfo.context().platformContext()->rq()
-        << (jfloat)timeRanges->start(i, ex) << (jfloat)timeRanges->end(i, ex);
+        << (jfloat)timeRanges->start(i).releaseReturnValue() << (jfloat)timeRanges->end(i).releaseReturnValue();
     }
 
     paintInfo.context().platformContext()->rq()
@@ -715,7 +711,7 @@ bool RenderThemeJava::paintMediaVolumeSliderContainer(const RenderObject& o, con
 bool RenderThemeJava::paintMediaVolumeSliderTrack(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
 {
     HTMLMediaElement* mediaElement = parentMediaElement(o);
-    if (mediaElement == NULL)
+    if (mediaElement == nullptr)
         return false;
 
     paintInfo.context().platformContext()->rq().freeSpace(28)
@@ -738,25 +734,25 @@ bool RenderThemeJava::paintMediaReturnToRealtimeButton(const RenderObject& o, co
 bool RenderThemeJava::paintMediaToggleClosedCaptionsButton(const RenderObject& o, const PaintInfo& paintInfo, const IntRect &r);
 */
 
-bool RenderThemeJava::paintMediaControlsBackground(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaControlsBackground(const RenderObject&, const PaintInfo&, const IntRect&)
 {
 //    return paintMediaControl(JNI_EXPAND_MEDIA(BACKGROUND), o, paintInfo, r);
     return true;
 }
 
-bool RenderThemeJava::paintMediaCurrentTime(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaCurrentTime(const RenderObject&, const PaintInfo&, const IntRect&)
 {
 //    return paintMediaControl(JNI_EXPAND_MEDIA(CURRENT_TIME), o, paintInfo, r);
     return true;
 }
 
-bool RenderThemeJava::paintMediaTimeRemaining(const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaTimeRemaining(const RenderObject&, const PaintInfo&, const IntRect&)
 {
 //    return paintMediaControl(JNI_EXPAND_MEDIA(REMAINING_TIME), o, paintInfo, r);
     return true;
 }
 
-bool RenderThemeJava::paintMediaControl(jint type, const RenderObject& o, const PaintInfo& paintInfo, const IntRect& r)
+bool RenderThemeJava::paintMediaControl(jint type, const RenderObject&, const PaintInfo& paintInfo, const IntRect& r)
 {
     paintInfo.context().platformContext()->rq().freeSpace(24)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_RENDERMEDIACONTROL

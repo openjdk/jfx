@@ -25,25 +25,33 @@
 
 #include "config.h"
 #include "WorkQueue.h"
+#include "BlockPtr.h"
+#include "Ref.h"
+
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaEnv.h>
+#endif
 
 namespace WTF {
 
-void WorkQueue::dispatch(std::function<void ()> function)
+void WorkQueue::dispatch(Function<void ()>&& function)
 {
-    ref();
-    dispatch_async(m_dispatchQueue, ^{
+    dispatch_async(m_dispatchQueue, BlockPtr<void ()>::fromCallable([protectedThis = makeRef(*this), function = WTFMove(function)] {
+#if PLATFORM(JAVA)
+        AutoAttachToJavaThread autoAttach;
+#endif
         function();
-        deref();
-    });
+    }).get());
 }
 
-void WorkQueue::dispatchAfter(std::chrono::nanoseconds duration, std::function<void ()> function)
+void WorkQueue::dispatchAfter(std::chrono::nanoseconds duration, Function<void ()>&& function)
 {
-    ref();
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, duration.count()), m_dispatchQueue, ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, duration.count()), m_dispatchQueue, BlockPtr<void ()>::fromCallable([protectedThis = makeRef(*this), function = WTFMove(function)] {
+#if PLATFORM(JAVA)
+        AutoAttachToJavaThread autoAttach;
+#endif
         function();
-        deref();
-    });
+    }).get());
 }
 
 #if HAVE(QOS_CLASSES)
@@ -51,15 +59,15 @@ static dispatch_qos_class_t dispatchQOSClass(WorkQueue::QOS qos)
 {
     switch (qos) {
     case WorkQueue::QOS::UserInteractive:
-        return QOS_CLASS_USER_INTERACTIVE;
+        return adjustedQOSClass(QOS_CLASS_USER_INTERACTIVE);
     case WorkQueue::QOS::UserInitiated:
-        return QOS_CLASS_USER_INITIATED;
+        return adjustedQOSClass(QOS_CLASS_USER_INITIATED);
     case WorkQueue::QOS::Default:
-        return QOS_CLASS_DEFAULT;
+        return adjustedQOSClass(QOS_CLASS_DEFAULT);
     case WorkQueue::QOS::Utility:
-        return QOS_CLASS_UTILITY;
+        return adjustedQOSClass(QOS_CLASS_UTILITY);
     case WorkQueue::QOS::Background:
-        return QOS_CLASS_BACKGROUND;
+        return adjustedQOSClass(QOS_CLASS_BACKGROUND);
     }
 }
 #else

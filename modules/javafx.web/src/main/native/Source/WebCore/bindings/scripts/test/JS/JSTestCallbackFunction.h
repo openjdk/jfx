@@ -18,8 +18,7 @@
     Boston, MA 02110-1301, USA.
 */
 
-#ifndef JSTestCallbackFunction_h
-#define JSTestCallbackFunction_h
+#pragma once
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
@@ -43,26 +42,17 @@ public:
     JSCallbackDataStrong* callbackData() { return m_data; }
 
     // Functions
-    virtual bool callbackWithNoParam();
-    virtual bool callbackWithArrayParam(RefPtr<Float32Array> arrayParam);
-    virtual bool callbackWithSerializedScriptValueParam(PassRefPtr<SerializedScriptValue> srzParam, const String& strArg);
-    COMPILE_ASSERT(false)    virtual int callbackWithNonBoolReturnType(const String& strArg);
-    virtual int customCallback(Class5* class5Param, Class6* class6Param);
-    virtual bool callbackWithStringList(PassRefPtr<DOMStringList> listParam);
-    virtual bool callbackWithBoolean(bool boolParam);
-    virtual bool callbackRequiresThisToPass(int longParam, TestNode* testNodeParam);
+    virtual bool handleEvent(RefPtr<Float32Array> arrayParam, RefPtr<SerializedScriptValue>&& srzParam, const String& strArg, bool boolParam, int32_t longParam, TestNode* testNodeParam);
 
 private:
-    JSTestCallbackFunction(JSC::JSObject* callback, JSDOMGlobalObject*);
+    JSTestCallbackFunction(JSC::JSObject*, JSDOMGlobalObject*);
 
     JSCallbackDataStrong* m_data;
 };
 
-JSC::JSValue toJS(JSC::ExecState*, JSDOMGlobalObject*, TestCallbackFunction*);
-inline JSC::JSValue toJS(JSC::ExecState* state, JSDOMGlobalObject* globalObject, TestCallbackFunction& impl) { return toJS(state, globalObject, &impl); }
+JSC::JSValue toJS(TestCallbackFunction&);
+inline JSC::JSValue toJS(TestCallbackFunction* impl) { return impl ? toJS(*impl) : JSC::jsNull(); }
 
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)
-
-#endif

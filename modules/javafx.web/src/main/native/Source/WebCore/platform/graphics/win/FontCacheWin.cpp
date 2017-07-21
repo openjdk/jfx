@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2013-2014 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2008, 2013-2014 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 #include <mlang.h>
 #include <windows.h>
 #include <wtf/HashSet.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringHash.h>
@@ -44,6 +45,10 @@
 #include "CoreGraphicsSPI.h"
 #include <ApplicationServices/ApplicationServices.h>
 #include <WebKitSystemInterface/WebKitSystemInterface.h>
+#endif
+
+#if USE(DIRECT2D)
+#include <dwrite.h>
 #endif
 
 using std::min;
@@ -95,6 +100,24 @@ static int CALLBACK linkedFontEnumProc(CONST LOGFONT* logFont, CONST TEXTMETRIC*
     return false;
 }
 
+WEBCORE_EXPORT void appendLinkedFonts(WCHAR* linkedFonts, unsigned length, Vector<String>* result)
+{
+    unsigned i = 0;
+    while (i < length) {
+        while (i < length && linkedFonts[i] != ',')
+            i++;
+        // Break if we did not find a comma.
+        if (i == length)
+            break;
+        i++;
+        unsigned j = i;
+        while (j < length && linkedFonts[j])
+            j++;
+        result->append(String(linkedFonts + i, j - i));
+        i = j + 1;
+    }
+}
+
 static const Vector<String>* getLinkedFonts(String& family)
 {
     static HashMap<String, Vector<String>*> systemLinkMap;
@@ -105,7 +128,7 @@ static const Vector<String>* getLinkedFonts(String& family)
     result = new Vector<String>;
     systemLinkMap.set(family, result);
     HKEY fontLinkKey = nullptr;
-    if (FAILED(RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &fontLinkKey)))
+    if (::RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"Software\\Microsoft\\Windows NT\\CurrentVersion\\FontLink\\SystemLink", 0, KEY_READ, &fontLinkKey) != ERROR_SUCCESS)
         return result;
 
     DWORD linkedFontsBufferSize = 0;
@@ -115,19 +138,9 @@ static const Vector<String>* getLinkedFonts(String& family)
     }
 
     WCHAR* linkedFonts = reinterpret_cast<WCHAR*>(malloc(linkedFontsBufferSize));
-    if (SUCCEEDED(RegQueryValueEx(fontLinkKey, family.charactersWithNullTermination().data(), 0, NULL, reinterpret_cast<BYTE*>(linkedFonts), &linkedFontsBufferSize))) {
-        unsigned i = 0;
+    if (::RegQueryValueEx(fontLinkKey, family.charactersWithNullTermination().data(), 0, nullptr, reinterpret_cast<BYTE*>(linkedFonts), &linkedFontsBufferSize) == ERROR_SUCCESS) {
         unsigned length = linkedFontsBufferSize / sizeof(*linkedFonts);
-        while (i < length) {
-            while (i < length && linkedFonts[i] != ',')
-                i++;
-            i++;
-            unsigned j = i;
-            while (j < length && linkedFonts[j])
-                j++;
-            result->append(String(linkedFonts + i, j - i));
-            i = j + 1;
-        }
+        appendLinkedFonts(linkedFonts, length, result);
     }
     free(linkedFonts);
     RegCloseKey(fontLinkKey);
@@ -323,6 +336,11 @@ RefPtr<Font> FontCache::fontFromDescriptionAndLogFont(const FontDescription& fon
     if (fontData)
         outFontFamilyName = familyName;
     return fontData;
+}
+
+Ref<Font> FontCache::lastResortFallbackFontForEveryCharacter(const FontDescription& fontDescription)
+{
+    return lastResortFallbackFont(fontDescription);
 }
 
 Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
@@ -540,6 +558,7 @@ static int CALLBACK traitsInFamilyEnumProc(CONST LOGFONT* logFont, CONST TEXTMET
     procData->m_traitsMasks.add(traitsMask);
     return 1;
 }
+
 Vector<FontTraitsMask> FontCache::getTraitsInFamily(const AtomicString& familyName)
 {
     HWndDC hdc(0);
@@ -590,6 +609,8 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
 
 #if USE(CG)
     bool fontCreationFailed = !result->cgFont();
+#elif USE(DIRECT2D)
+    bool fontCreationFailed = !result->dwFont();
 #elif USE(CAIRO)
     bool fontCreationFailed = !result->scaledFont();
 #endif
@@ -602,6 +623,34 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     }
 
     return result;
+}
+
+const AtomicString& FontCache::platformAlternateFamilyName(const AtomicString& familyName)
+{
+    static NeverDestroyed<AtomicString> timesNewRoman("Times New Roman", AtomicString::ConstructFromLiteral);
+    static NeverDestroyed<AtomicString> microsoftSansSerif("Microsoft Sans Serif", AtomicString::ConstructFromLiteral);
+
+    switch (familyName.length()) {
+    // On Windows, we don't support bitmap fonts, but legacy content expects support.
+    // Thus we allow Times New Roman as an alternative for the bitmap font MS Serif,
+    // even if the webpage does not specify fallback.
+    // FIXME: Seems unlikely this is still needed. If it was really needed, I think we
+    // would need it on other platforms too.
+    case 8:
+        if (equalLettersIgnoringASCIICase(familyName, "ms serif"))
+            return timesNewRoman;
+        break;
+    // On Windows, we don't support bitmap fonts, but legacy content expects support.
+    // Thus we allow Microsoft Sans Serif as an alternative for the bitmap font MS Sans Serif,
+    // even if the webpage does not specify fallback.
+    // FIXME: Seems unlikely this is still needed. If it was really needed, I think we
+    // would need it on other platforms too.
+    case 13:
+        if (equalLettersIgnoringASCIICase(familyName, "ms sans serif"))
+            return microsoftSansSerif;
+        break;
+    }
+    return nullAtom;
 }
 
 }

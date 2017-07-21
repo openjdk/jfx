@@ -61,8 +61,7 @@ PlatformWebView::PlatformWebView(WKPageConfigurationRef configuration, const Tes
 
     m_window = initEcoreEvas();
 
-    WKContextRef context = WKPageConfigurationGetContext(configuration);
-    m_view = EWKViewCreate(context, configuration, ecore_evas_get(m_window), /* smart */ 0);
+    m_view = EWKViewCreate(configuration, ecore_evas_get(m_window), /* smart */ 0);
 
     WKPageSetUseFixedLayout(WKViewGetPage(EWKViewGetWKView(m_view)), m_usingFixedLayout);
 
@@ -86,7 +85,7 @@ void PlatformWebView::setWindowIsKey(bool isKey)
     m_windowIsKey = isKey;
 }
 
-void PlatformWebView::resizeTo(unsigned width, unsigned height)
+void PlatformWebView::resizeTo(unsigned width, unsigned height, WebViewSizingMode)
 {
     // FIXME: Don't we need to resize the window too?
     evas_object_resize(m_view, width, height);
@@ -116,7 +115,7 @@ WKRect PlatformWebView::windowFrame()
     return WKRectMake(x, y, width, height);
 }
 
-void PlatformWebView::setWindowFrame(WKRect frame)
+void PlatformWebView::setWindowFrame(WKRect frame, WebViewSizingMode)
 {
     ecore_evas_move_resize(m_window, frame.origin.x, frame.origin.y, frame.size.width, frame.size.height);
     evas_object_resize(m_view, frame.size.width, frame.size.height);
@@ -127,6 +126,14 @@ void PlatformWebView::addChromeInputField()
 }
 
 void PlatformWebView::removeChromeInputField()
+{
+}
+
+void PlatformWebView::addToWindow()
+{
+}
+
+void PlatformWebView::removeFromWindow()
 {
 }
 

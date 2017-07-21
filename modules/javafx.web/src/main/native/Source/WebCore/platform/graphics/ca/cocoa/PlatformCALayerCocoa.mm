@@ -27,7 +27,6 @@
 #import "PlatformCALayerCocoa.h"
 
 #import "AnimationUtilities.h"
-#import "BlockExceptions.h"
 #import "GraphicsContext.h"
 #import "GraphicsLayerCA.h"
 #import "LengthFunctions.h"
@@ -44,9 +43,11 @@
 #import "WebLayer.h"
 #import "WebSystemBackdropLayer.h"
 #import "WebTiledBackingLayer.h"
-#import <AVFoundation/AVFoundation.h>
+#import <AVFoundation/AVPlayer.h>
+#import <AVFoundation/AVPlayerLayer.h>
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
+#import <wtf/BlockObjCExceptions.h>
 #import <wtf/CurrentTime.h>
 #import <wtf/RetainPtr.h>
 
@@ -59,25 +60,9 @@
 #import "ThemeMac.h"
 #endif
 
-#if ENABLE(FILTERS_LEVEL_2)
-@interface CABackdropLayer : CALayer
-@property BOOL windowServerAware;
-@end
-#endif
-
-#if USE(APPLE_INTERNAL_SDK)
-#import <WebKitAdditions/LayerBackingStoreAdditions.mm>
-#else
-namespace WebCore {
-static void setBackingStoreFormat(CALayer *)
-{
-}
-} // namespace WebCore
-#endif
-
 SOFT_LINK_FRAMEWORK_OPTIONAL(AVFoundation)
 
-SOFT_LINK_CLASS(AVFoundation, AVPlayerLayer)
+SOFT_LINK_CLASS_OPTIONAL(AVFoundation, AVPlayerLayer)
 
 using namespace WebCore;
 
@@ -254,9 +239,6 @@ PlatformCALayerCocoa::PlatformCALayerCocoa(LayerType layerType, PlatformCALayerC
         layerClass = [CALayer class];
         break;
 #endif
-    case LayerTypeWebTiledLayer:
-        ASSERT_NOT_REACHED();
-        break;
     case LayerTypeTiledBackingLayer:
     case LayerTypePageTiledBackingLayer:
         layerClass = [WebTiledBackingLayer class];
@@ -307,9 +289,6 @@ void PlatformCALayerCocoa::commonInit()
     else
         [m_layer setDelegate:[WebActionDisablingCALayerDelegate shared]];
 
-    if (m_layerType == LayerTypeWebLayer || m_layerType == LayerTypeTiledBackingTileLayer)
-        setBackingStoreFormat(m_layer.get());
-
     // So that the scrolling thread's performance logging code can find all the tiles, mark this as being a tile.
     if (m_layerType == LayerTypeTiledBackingTileLayer)
         [m_layer setValue:@YES forKey:@"isTile"];
@@ -336,6 +315,9 @@ PassRefPtr<PlatformCALayer> PlatformCALayerCocoa::clone(PlatformCALayerClient* o
         break;
     case LayerTypeShapeLayer:
         type = LayerTypeShapeLayer;
+        break;
+    case LayerTypeBackdropLayer:
+        type = LayerTypeBackdropLayer;
         break;
     case LayerTypeLayer:
     default:
@@ -615,11 +597,34 @@ void PlatformCALayerCocoa::setSublayerTransform(const TransformationMatrix& valu
     END_BLOCK_OBJC_EXCEPTIONS
 }
 
+bool PlatformCALayerCocoa::isHidden() const
+{
+    return [m_layer isHidden];
+}
+
 void PlatformCALayerCocoa::setHidden(bool value)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
     [m_layer setHidden:value];
     END_BLOCK_OBJC_EXCEPTIONS
+}
+
+bool PlatformCALayerCocoa::contentsHidden() const
+{
+    return false;
+}
+
+void PlatformCALayerCocoa::setContentsHidden(bool)
+{
+}
+
+bool PlatformCALayerCocoa::userInteractionEnabled() const
+{
+    return true;
+}
+
+void PlatformCALayerCocoa::setUserInteractionEnabled(bool)
+{
 }
 
 void PlatformCALayerCocoa::setBackingStoreAttached(bool)
@@ -670,14 +675,34 @@ void PlatformCALayerCocoa::setMasksToBounds(bool value)
 
 bool PlatformCALayerCocoa::acceleratesDrawing() const
 {
-    return [m_layer acceleratesDrawing];
+    return [m_layer drawsAsynchronously];
 }
 
 void PlatformCALayerCocoa::setAcceleratesDrawing(bool acceleratesDrawing)
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS
-    [m_layer setAcceleratesDrawing:acceleratesDrawing];
+    [m_layer setDrawsAsynchronously:acceleratesDrawing];
     END_BLOCK_OBJC_EXCEPTIONS
+}
+
+bool PlatformCALayerCocoa::wantsDeepColorBackingStore() const
+{
+    return m_wantsDeepColorBackingStore;
+}
+
+void PlatformCALayerCocoa::setWantsDeepColorBackingStore(bool wantsDeepColorBackingStore)
+{
+    if (wantsDeepColorBackingStore == m_wantsDeepColorBackingStore)
+        return;
+
+    m_wantsDeepColorBackingStore = wantsDeepColorBackingStore;
+
+    if (usesTiledBackingLayer()) {
+        [static_cast<WebTiledBackingLayer *>(m_layer.get()) setWantsDeepColorBackingStore:m_wantsDeepColorBackingStore];
+        return;
+    }
+
+    updateContentsFormat();
 }
 
 CFTypeRef PlatformCALayerCocoa::contents() const
@@ -949,6 +974,31 @@ void PlatformCALayerCocoa::updateCustomAppearance(GraphicsLayer::CustomAppearanc
 #endif
 }
 
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90300) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
+static NSString *layerContentsFormat(bool wantsDeepColor)
+{
+#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90300
+    if (wantsDeepColor)
+        return kCAContentsFormatRGBA10XR;
+#else
+    UNUSED_PARAM(wantsDeepColor);
+#endif
+    return nil;
+}
+#endif
+
+void PlatformCALayerCocoa::updateContentsFormat()
+{
+    if (m_layerType == LayerTypeWebLayer || m_layerType == LayerTypeTiledBackingTileLayer) {
+        BEGIN_BLOCK_OBJC_EXCEPTIONS
+#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90300) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
+        if (NSString *formatString = layerContentsFormat(wantsDeepColorBackingStore()))
+            [m_layer setContentsFormat:formatString];
+#endif
+        END_BLOCK_OBJC_EXCEPTIONS
+    }
+}
+
 TiledBacking* PlatformCALayerCocoa::tiledBacking()
 {
     if (!usesTiledBackingLayer())
@@ -1052,41 +1102,43 @@ void PlatformCALayer::drawLayerContents(CGContextRef context, WebCore::PlatformC
     [NSGraphicsContext setCurrentContext:layerContext];
 #endif
 
-    GraphicsContext graphicsContext(context);
-    graphicsContext.setIsCALayerContext(true);
-    graphicsContext.setIsAcceleratedContext(platformCALayer->acceleratesDrawing());
-
-    if (!layerContents->platformCALayerContentsOpaque()) {
-        // Turn off font smoothing to improve the appearance of text rendered onto a transparent background.
-        graphicsContext.setShouldSmoothFonts(false);
-    }
+    {
+        GraphicsContext graphicsContext(context);
+        graphicsContext.setIsCALayerContext(true);
+        graphicsContext.setIsAcceleratedContext(platformCALayer->acceleratesDrawing());
+        
+        if (!layerContents->platformCALayerContentsOpaque()) {
+            // Turn off font smoothing to improve the appearance of text rendered onto a transparent background.
+            graphicsContext.setShouldSmoothFonts(false);
+        }
 
 #if PLATFORM(MAC)
-    // It's important to get the clip from the context, because it may be significantly
-    // smaller than the layer bounds (e.g. tiled layers)
-    ThemeMac::setFocusRingClipRect(CGContextGetClipBoundingBox(context));
+        // It's important to get the clip from the context, because it may be significantly
+        // smaller than the layer bounds (e.g. tiled layers)
+        ThemeMac::setFocusRingClipRect(CGContextGetClipBoundingBox(context));
 #endif
 
-    for (const auto& rect : dirtyRects) {
-        GraphicsContextStateSaver stateSaver(graphicsContext);
-        graphicsContext.clip(rect);
+        for (const auto& rect : dirtyRects) {
+            GraphicsContextStateSaver stateSaver(graphicsContext);
+            graphicsContext.clip(rect);
 
-        layerContents->platformCALayerPaintContents(platformCALayer, graphicsContext, rect);
-    }
+            layerContents->platformCALayerPaintContents(platformCALayer, graphicsContext, rect);
+        }
 
 #if PLATFORM(IOS)
-    fontAntialiasingState.restore();
+        fontAntialiasingState.restore();
 #else
-    ThemeMac::setFocusRingClipRect(FloatRect());
+        ThemeMac::setFocusRingClipRect(FloatRect());
 
-    [NSGraphicsContext restoreGraphicsState];
+        [NSGraphicsContext restoreGraphicsState];
 #endif
+    }
+
+    CGContextRestoreGState(context);
 
     // Re-fetch the layer owner, since <rdar://problem/9125151> indicates that it might have been destroyed during painting.
     layerContents = platformCALayer->owner();
     ASSERT(layerContents);
-
-    CGContextRestoreGState(context);
 
     // Always update the repaint count so that it's accurate even if the count itself is not shown. This will be useful
     // for the Web Inspector feeding this information through the LayerTreeAgent.

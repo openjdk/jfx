@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,11 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CryptoAlgorithmAesCbcParams_h
-#define CryptoAlgorithmAesCbcParams_h
+#pragma once
 
+#include "BufferSource.h"
 #include "CryptoAlgorithmParameters.h"
-#include <array>
+#include <wtf/Vector.h>
 
 #if ENABLE(SUBTLE_CRYPTO)
 
@@ -35,10 +35,21 @@ namespace WebCore {
 
 class CryptoAlgorithmAesCbcParams final : public CryptoAlgorithmParameters {
 public:
-    // The initialization vector. MUST be 16 bytes.
-    std::array<char, 16> iv;
+    BufferSource iv;
 
-    virtual Class parametersClass() const override { return Class::AesCbcParams; }
+    Class parametersClass() const final { return Class::AesCbcParams; }
+
+    const Vector<uint8_t>& ivVector()
+    {
+        if (!m_ivVector.isEmpty() || !iv.length())
+            return m_ivVector;
+
+        m_ivVector.append(iv.data(), iv.length());
+        return m_ivVector;
+    }
+
+private:
+    Vector<uint8_t> m_ivVector;
 };
 
 } // namespace WebCore
@@ -46,4 +57,3 @@ public:
 SPECIALIZE_TYPE_TRAITS_CRYPTO_ALGORITHM_PARAMETERS(AesCbcParams)
 
 #endif // ENABLE(SUBTLE_CRYPTO)
-#endif // CryptoAlgorithmAesCbcParams_h

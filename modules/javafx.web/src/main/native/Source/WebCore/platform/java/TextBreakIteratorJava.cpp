@@ -5,7 +5,7 @@
 #include "NotImplemented.h"
 #include "TextBreakIterator.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 #include <wtf/Assertions.h>
 #include <wtf/Atomics.h>

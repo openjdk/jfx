@@ -52,16 +52,19 @@ enum ExpansionBehaviorFlags {
     AllowLeadingExpansion = 1 << 2,
     ForceLeadingExpansion = 2 << 2,
     LeadingExpansionMask = 3 << 2,
+
+    DefaultExpansion = AllowTrailingExpansion | ForbidLeadingExpansion,
 };
 typedef unsigned ExpansionBehavior;
 
 enum FontSynthesisValues {
     FontSynthesisNone = 0x0,
     FontSynthesisWeight = 0x1,
-    FontSynthesisStyle = 0x2
+    FontSynthesisStyle = 0x2,
+    FontSynthesisSmallCaps = 0x4
 };
 typedef unsigned FontSynthesis;
-const unsigned FontSynthesisWidth = 2;
+const unsigned FontSynthesisWidth = 3;
 
 enum class FontVariantLigatures {
     Normal,

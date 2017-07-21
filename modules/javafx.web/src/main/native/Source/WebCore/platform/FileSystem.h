@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Collabora, Ltd. All rights reserved.
  * Copyright (C) 2015 Canon Inc. All rights reserved.
  *
@@ -64,8 +64,6 @@ namespace WebCore {
 // PlatformModule
 #if OS(WINDOWS)
 typedef HMODULE PlatformModule;
-#elif PLATFORM(EFL)
-typedef Eina_Module* PlatformModule;
 #elif USE(GLIB)
 typedef GModule* PlatformModule;
 #elif USE(CF)
@@ -98,7 +96,7 @@ typedef unsigned PlatformModuleVersion;
 #endif
 
 // PlatformFileHandle
-#if USE(GLIB) && !PLATFORM(EFL) && !PLATFORM(WIN)
+#if USE(GLIB) && !PLATFORM(WIN)
 typedef GFileIOStream* PlatformFileHandle;
 const PlatformFileHandle invalidPlatformFileHandle = 0;
 #elif OS(WINDOWS)
@@ -128,12 +126,6 @@ enum FileLockMode {
     LockNonBlocking = 4
 };
 
-#if OS(WINDOWS)
-static const char PlatformFilePathSeparator = '\\';
-#else
-static const char PlatformFilePathSeparator = '/';
-#endif
-
 struct FileMetadata;
 
 WEBCORE_EXPORT bool fileExists(const String&);
@@ -146,10 +138,13 @@ WEBCORE_EXPORT bool getFileModificationTime(const String&, time_t& result);
 WEBCORE_EXPORT bool getFileCreationTime(const String&, time_t& result); // Not all platforms store file creation time.
 bool getFileMetadata(const String&, FileMetadata&);
 WEBCORE_EXPORT String pathByAppendingComponent(const String& path, const String& component);
+String lastComponentOfPathIgnoringTrailingSlash(const String& path);
 WEBCORE_EXPORT bool makeAllDirectories(const String& path);
 String homeDirectoryPath();
 WEBCORE_EXPORT String pathGetFileName(const String&);
 WEBCORE_EXPORT String directoryName(const String&);
+WEBCORE_EXPORT bool getVolumeFreeSpace(const String&, uint64_t&);
+WEBCORE_EXPORT std::optional<int32_t> getFileDeviceId(const CString&);
 
 WEBCORE_EXPORT void setMetadataURL(String& URLString, const String& referrer, const String& path);
 
@@ -159,6 +154,7 @@ bool excludeFromBackup(const String&); // Returns true if successful.
 WEBCORE_EXPORT Vector<String> listDirectory(const String& path, const String& filter = String());
 
 WEBCORE_EXPORT CString fileSystemRepresentation(const String&);
+String stringFromFileSystemRepresentation(const char*);
 
 inline bool isHandleValid(const PlatformFileHandle& handle) { return handle != invalidPlatformFileHandle; }
 
@@ -176,6 +172,14 @@ bool truncateFile(PlatformFileHandle, long long offset);
 WEBCORE_EXPORT int writeToFile(PlatformFileHandle, const char* data, int length);
 // Returns number of bytes actually written if successful, -1 otherwise.
 int readFromFile(PlatformFileHandle, char* data, int length);
+
+// Appends the contents of the file found at 'path' to the open PlatformFileHandle.
+// Returns true if the write was successful, false if it was not.
+bool appendFileContentsToFileHandle(const String& path, PlatformFileHandle&);
+
+// Hard links a file if possible, copies it if not.
+bool hardLinkOrCopyFile(const String& source, const String& destination);
+
 #if USE(FILE_LOCK)
 bool lockFile(PlatformFileHandle, FileLockMode);
 bool unlockFile(PlatformFileHandle);
@@ -186,19 +190,18 @@ bool unloadModule(PlatformModule);
 
 // Encode a string for use within a file name.
 WEBCORE_EXPORT String encodeForFileName(const String&);
+String decodeFromFilename(const String&);
+
+WEBCORE_EXPORT bool filesHaveSameVolume(const String&, const String&);
 
 #if USE(CF)
 RetainPtr<CFURLRef> pathAsURL(const String&);
 #endif
 
 #if PLATFORM(GTK)
-String filenameToString(const char*);
 String filenameForDisplay(const String&);
 CString applicationDirectoryPath();
 CString sharedResourcesPath();
-#endif
-#if USE(SOUP)
-uint64_t getVolumeFreeSizeForPath(const char*);
 #endif
 
 #if PLATFORM(WIN)

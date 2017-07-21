@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SMILTimeContainer_h
-#define SMILTimeContainer_h
+#pragma once
 
 #include "QualifiedName.h"
 #include "SMILTime.h"
@@ -41,7 +40,7 @@ class SVGElement;
 class SVGSMILElement;
 class SVGSVGElement;
 
-class SMILTimeContainer : public RefCounted<SMILTimeContainer>  {
+class SMILTimeContainer final : public RefCounted<SMILTimeContainer>  {
 public:
     static Ref<SMILTimeContainer> create(SVGSVGElement* owner) { return adoptRef(*new SMILTimeContainer(owner)); }
     ~SMILTimeContainer();
@@ -67,7 +66,7 @@ private:
     SMILTimeContainer(SVGSVGElement* owner);
 
     void timerFired();
-    void startTimer(SMILTime fireTime, SMILTime minimumDelay = 0);
+    void startTimer(SMILTime elapsed, SMILTime fireTime, SMILTime minimumDelay = 0);
     void updateAnimations(SMILTime elapsed, bool seekToTime = false);
 
     void updateDocumentOrderIndexes();
@@ -94,6 +93,5 @@ private:
     bool m_preventScheduledAnimationsChanges;
 #endif
 };
-}
 
-#endif // SMILTimeContainer_h
+} // namespace WebCore

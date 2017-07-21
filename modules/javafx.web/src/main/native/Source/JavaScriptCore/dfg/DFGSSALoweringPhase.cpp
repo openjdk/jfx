@@ -83,7 +83,7 @@ private:
 
             if (m_node->arrayMode().typedArrayType() != NotTypedArray && m_node->arrayMode().isOutOfBounds()) {
                 Node* length = m_insertionSet.insertNode(
-                    m_nodeIndex, SpecInt32, GetArrayLength, m_node->origin,
+                    m_nodeIndex, SpecInt32Only, GetArrayLength, m_node->origin,
                     OpInfo(m_node->arrayMode().asWord()), base, storage);
 
                 m_graph.varArgChild(m_node, 4) = Edge(length, KnownInt32Use);
@@ -106,10 +106,10 @@ private:
             storage = Edge();
 
         Node* length = m_insertionSet.insertNode(
-            m_nodeIndex, SpecInt32, GetArrayLength, m_node->origin,
+            m_nodeIndex, SpecInt32Only, GetArrayLength, m_node->origin,
             OpInfo(m_node->arrayMode().asWord()), base, storage);
         m_insertionSet.insertNode(
-            m_nodeIndex, SpecInt32, CheckInBounds, m_node->origin,
+            m_nodeIndex, SpecInt32Only, CheckInBounds, m_node->origin,
             index, Edge(length, KnownInt32Use));
         return true;
     }
@@ -122,7 +122,6 @@ private:
 
 bool performSSALowering(Graph& graph)
 {
-    SamplingRegion samplingRegion("DFG SSA Lowering Phase");
     return runPhase<SSALoweringPhase>(graph);
 }
 

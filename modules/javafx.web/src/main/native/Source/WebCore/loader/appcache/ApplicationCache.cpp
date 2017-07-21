@@ -28,8 +28,8 @@
 
 #include "ApplicationCacheGroup.h"
 #include "ApplicationCacheResource.h"
+#include "ApplicationCacheStorage.h"
 #include "ResourceRequest.h"
-#include "SecurityOrigin.h"
 #include <algorithm>
 #include <stdio.h>
 #include <wtf/text/CString.h>
@@ -42,17 +42,13 @@ static inline bool fallbackURLLongerThan(const std::pair<URL, URL>& lhs, const s
 }
 
 ApplicationCache::ApplicationCache()
-    : m_group(nullptr)
-    , m_manifest(nullptr)
-    , m_estimatedSizeInStorage(0)
-    , m_storageID(0)
 {
 }
 
 ApplicationCache::~ApplicationCache()
 {
     if (m_group)
-        m_group->cacheDestroyed(this);
+        m_group->cacheDestroyed(*this);
 }
 
 void ApplicationCache::setGroup(ApplicationCacheGroup* group)
@@ -63,26 +59,24 @@ void ApplicationCache::setGroup(ApplicationCacheGroup* group)
 
 bool ApplicationCache::isComplete()
 {
-    return m_group && m_group->cacheIsComplete(this);
+    return m_group && m_group->cacheIsComplete(*this);
 }
 
-void ApplicationCache::setManifestResource(PassRefPtr<ApplicationCacheResource> manifest)
+void ApplicationCache::setManifestResource(Ref<ApplicationCacheResource>&& manifest)
 {
-    ASSERT(manifest);
     ASSERT(!m_manifest);
     ASSERT(manifest->type() & ApplicationCacheResource::Manifest);
 
-    m_manifest = manifest.get();
+    m_manifest = manifest.ptr();
 
-    addResource(manifest);
+    addResource(WTFMove(manifest));
 }
 
-void ApplicationCache::addResource(PassRefPtr<ApplicationCacheResource> resource)
+void ApplicationCache::addResource(Ref<ApplicationCacheResource>&& resource)
 {
-    ASSERT(resource);
+    auto& url = resource->url();
 
-    const String& url = resource->url();
-
+    ASSERT(!URL(ParsedURLString, url).hasFragmentIdentifier());
     ASSERT(!m_resources.contains(url));
 
     if (m_storageID) {
@@ -90,30 +84,12 @@ void ApplicationCache::addResource(PassRefPtr<ApplicationCacheResource> resource
         ASSERT(resource->type() & ApplicationCacheResource::Master);
 
         // Add the resource to the storage.
-#if !PLATFORM(JAVA)
-        ApplicationCacheStorage::singleton().store(resource.get(), this); //XXX check for other usages
-#endif
+        m_group->storage().store(resource.ptr(), this);
     }
 
     m_estimatedSizeInStorage += resource->estimatedSizeInStorage();
 
-    m_resources.set(url, resource);
-}
-
-unsigned ApplicationCache::removeResource(const String& url)
-{
-    HashMap<String, RefPtr<ApplicationCacheResource>>::iterator it = m_resources.find(url);
-    if (it == m_resources.end())
-        return 0;
-
-    // The resource exists, get its type so we can return it.
-    unsigned type = it->value->type();
-
-    m_estimatedSizeInStorage -= it->value->estimatedSizeInStorage();
-
-    m_resources.remove(it);
-
-    return type;
+    m_resources.set(url, WTFMove(resource));
 }
 
 ApplicationCacheResource* ApplicationCache::resourceForURL(const String& url)
@@ -134,9 +110,7 @@ ApplicationCacheResource* ApplicationCache::resourceForRequest(const ResourceReq
         return nullptr;
 
     URL url(request.url());
-    if (url.hasFragmentIdentifier())
-        url.removeFragmentIdentifier();
-
+    url.removeFragmentIdentifier();
     return resourceForURL(url);
 }
 

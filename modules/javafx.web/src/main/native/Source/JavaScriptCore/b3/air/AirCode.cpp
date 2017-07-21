@@ -30,7 +30,9 @@
 
 #include "AirCCallSpecial.h"
 #include "B3BasicBlockUtils.h"
+#include "B3Procedure.h"
 #include "B3StackSlot.h"
+#include <wtf/ListDump.h>
 
 namespace JSC { namespace B3 { namespace Air {
 
@@ -38,10 +40,49 @@ Code::Code(Procedure& proc)
     : m_proc(proc)
     , m_lastPhaseName("initial")
 {
+    // Come up with initial orderings of registers. The user may replace this with something else.
+    Arg::forEachType(
+        [&] (Arg::Type type) {
+            Vector<Reg> result;
+            RegisterSet all = type == Arg::GP ? RegisterSet::allGPRs() : RegisterSet::allFPRs();
+            all.exclude(RegisterSet::stackRegisters());
+            all.exclude(RegisterSet::reservedHardwareRegisters());
+            RegisterSet calleeSave = RegisterSet::calleeSaveRegisters();
+            all.forEach(
+                [&] (Reg reg) {
+                    if (!calleeSave.get(reg))
+                        result.append(reg);
+                });
+            all.forEach(
+                [&] (Reg reg) {
+                    if (calleeSave.get(reg))
+                        result.append(reg);
+                });
+            setRegsInPriorityOrder(type, result);
+        });
 }
 
 Code::~Code()
 {
+}
+
+void Code::setRegsInPriorityOrder(Arg::Type type, const Vector<Reg>& regs)
+{
+    regsInPriorityOrderImpl(type) = regs;
+    m_mutableRegs = RegisterSet();
+    Arg::forEachType(
+        [&] (Arg::Type type) {
+            for (Reg reg : regsInPriorityOrder(type))
+                m_mutableRegs.set(reg);
+        });
+}
+
+void Code::pinRegister(Reg reg)
+{
+    Vector<Reg>& regs = regsInPriorityOrderImpl(Arg(Tmp(reg)).type());
+    regs.removeFirst(reg);
+    m_mutableRegs.clear(reg);
+    ASSERT(!regs.contains(reg));
 }
 
 BasicBlock* Code::addBlock(double frequency)
@@ -78,17 +119,38 @@ CCallSpecial* Code::cCallSpecial()
     return m_cCallSpecial;
 }
 
+bool Code::isEntrypoint(BasicBlock* block) const
+{
+    if (m_entrypoints.isEmpty())
+        return !block->index();
+
+    for (const FrequentedBlock& entrypoint : m_entrypoints) {
+        if (entrypoint.block() == block)
+            return true;
+    }
+    return false;
+}
+
 void Code::resetReachability()
 {
-    B3::resetReachability(
-        m_blocks,
-        [&] (BasicBlock*) {
-            // We don't have to do anything special for deleted blocks.
-        });
+    clearPredecessors(m_blocks);
+    if (m_entrypoints.isEmpty())
+        updatePredecessorsAfter(m_blocks[0].get());
+    else {
+        for (const FrequentedBlock& entrypoint : m_entrypoints)
+            updatePredecessorsAfter(entrypoint.block());
+    }
+
+    for (auto& block : m_blocks) {
+        if (isBlockDead(block.get()) && !isEntrypoint(block.get()))
+            block = nullptr;
+    }
 }
 
 void Code::dump(PrintStream& out) const
 {
+    if (!m_entrypoints.isEmpty())
+        out.print("Entrypoints: ", listDump(m_entrypoints), "\n");
     for (BasicBlock* block : *this)
         out.print(deepDump(block));
     if (stackSlots().size()) {
@@ -132,6 +194,34 @@ BasicBlock* Code::findNextBlock(BasicBlock* block) const
 void Code::addFastTmp(Tmp tmp)
 {
     m_fastTmps.add(tmp);
+}
+
+void* Code::addDataSection(size_t size)
+{
+    return m_proc.addDataSection(size);
+}
+
+unsigned Code::jsHash() const
+{
+    unsigned result = 0;
+
+    for (BasicBlock* block : *this) {
+        result *= 1000001;
+        for (Inst& inst : *block) {
+            result *= 97;
+            result += inst.jsHash();
+        }
+        for (BasicBlock* successor : block->successorBlocks()) {
+            result *= 7;
+            result += successor->index();
+        }
+    }
+    for (StackSlot* slot : stackSlots()) {
+        result *= 101;
+        result += slot->jsHash();
+    }
+
+    return result;
 }
 
 } } } // namespace JSC::B3::Air

@@ -23,15 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DatabaseProvider_h
-#define DatabaseProvider_h
+#pragma once
 
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
-class IDBConnectionManager;
 class SessionID;
 
 namespace IDBClient {
@@ -47,6 +44,4 @@ public:
 #endif
 };
 
-}
-
-#endif // DatabaseProvider_h
+} // namespace WebCore

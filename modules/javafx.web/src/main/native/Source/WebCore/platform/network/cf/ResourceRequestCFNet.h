@@ -23,17 +23,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceRequestCFNet_h
-#define ResourceRequestCFNet_h
+#pragma once
 
 #include "CFNetworkSPI.h"
 #include "ResourceLoadPriority.h"
+#include "ResourceRequestBase.h"
 
 namespace WebCore {
 
 class ResourceRequest;
 
-#if USE(CFNETWORK)
+#if USE(CFURLCONNECTION)
 void getResourceRequest(ResourceRequest&, CFURLRequestRef);
 CFURLRequestRef cfURLRequest(const ResourceRequest&);
 #endif
@@ -78,5 +78,3 @@ inline CFURLRequestPriority toPlatformRequestPriority(ResourceLoadPriority prior
 }
 
 } // namespace WebCore
-
-#endif // ResourceRequestCFNet_h

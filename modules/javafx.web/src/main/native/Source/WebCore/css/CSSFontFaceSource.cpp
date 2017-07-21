@@ -36,19 +36,18 @@
 #include "FontCache.h"
 #include "FontCustomPlatformData.h"
 #include "FontDescription.h"
-
-#if ENABLE(SVG_OTF_CONVERTER)
 #include "SVGToOTFFontConversion.h"
-#endif
 
 #if ENABLE(SVG_FONTS)
 #include "CachedSVGFont.h"
 #include "FontCustomPlatformData.h"
-#include "SVGFontData.h"
 #include "SVGFontElement.h"
 #include "SVGFontFaceElement.h"
-#include "SVGNames.h"
 #include "SVGURIReference.h"
+#endif
+
+#if USE(DIRECT2D)
+#include <dwrite.h>
 #endif
 
 namespace WebCore {
@@ -69,6 +68,7 @@ inline void CSSFontFaceSource::setStatus(Status newStatus)
         ASSERT(status() == Status::Loading);
         break;
     }
+
     m_status = newStatus;
 }
 
@@ -77,17 +77,17 @@ CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, const String& familyNam
     , m_font(font)
     , m_face(owner)
     , m_immediateSource(WTFMove(arrayBufferView))
-#if ENABLE(SVG_FONTS) || ENABLE(SVG_OTF_CONVERTER)
+#if ENABLE(SVG_FONTS)
     , m_svgFontFaceElement(fontFace)
 #endif
 {
-#if !(ENABLE(SVG_FONTS) || ENABLE(SVG_OTF_CONVERTER))
+#if !ENABLE(SVG_FONTS)
     UNUSED_PARAM(fontFace);
 #endif
 
     // This may synchronously call fontLoaded().
     if (m_font)
-        m_font->addClient(this);
+        m_font->addClient(*this);
 
     if (status() == Status::Pending && (!m_font || m_font->isLoaded())) {
         setStatus(Status::Loading);
@@ -101,7 +101,7 @@ CSSFontFaceSource::CSSFontFaceSource(CSSFontFace& owner, const String& familyNam
 CSSFontFaceSource::~CSSFontFaceSource()
 {
     if (m_font)
-        m_font->removeClient(this);
+        m_font->removeClient(*this);
 }
 
 void CSSFontFaceSource::fontLoaded(CachedFont& loadedFont)
@@ -111,11 +111,20 @@ void CSSFontFaceSource::fontLoaded(CachedFont& loadedFont)
     // If the font is in the cache, this will be synchronously called from CachedFont::addClient().
     if (m_status == Status::Pending)
         setStatus(Status::Loading);
+    else if (m_status == Status::Failure) {
+        // This function may be called twice if loading was cancelled.
+        ASSERT(m_font->errorOccurred());
+        return;
+    }
+
+    if (m_face.webFontsShouldAlwaysFallBack())
+        return;
 
     if (m_font->errorOccurred())
         setStatus(Status::Failure);
     else
         setStatus(Status::Success);
+
     m_face.fontLoaded(*this);
 }
 
@@ -123,7 +132,8 @@ void CSSFontFaceSource::load(CSSFontSelector& fontSelector)
 {
     setStatus(Status::Loading);
 
-    fontSelector.beginLoadingFontSoon(m_font.get());
+    ASSERT(m_font);
+    fontSelector.beginLoadingFontSoon(*m_font);
 }
 
 RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, bool syntheticBold, bool syntheticItalic, const FontFeatureSettings& fontFaceFeatures, const FontVariantSettings& fontFaceVariantSettings)
@@ -164,7 +174,6 @@ RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, boo
         return nullptr;
 
 #if ENABLE(SVG_FONTS)
-#if ENABLE(SVG_OTF_CONVERTER)
     if (!is<SVGFontElement>(m_svgFontFaceElement->parentNode()))
         return nullptr;
     if (!m_inDocumentCustomPlatformData) {
@@ -181,9 +190,6 @@ RefPtr<Font> CSSFontFaceSource::font(const FontDescription& fontDescription, boo
     return Font::create(m_inDocumentCustomPlatformData->fontPlatformData(fontDescription, syntheticBold, syntheticItalic, fontFaceFeatures, fontFaceVariantSettings), true, false);
 #else
     return Font::create(m_inDocumentCustomPlatformData->fontPlatformData(fontDescription, syntheticBold, syntheticItalic), true, false);
-#endif
-#else
-    return Font::create(std::make_unique<SVGFontData>(m_svgFontFaceElement.get()), fontDescription.computedPixelSize(), syntheticBold, syntheticItalic);
 #endif
 #endif
 

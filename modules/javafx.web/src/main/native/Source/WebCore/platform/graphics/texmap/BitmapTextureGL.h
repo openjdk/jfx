@@ -38,24 +38,28 @@ class FilterOperation;
 
 class BitmapTextureGL : public BitmapTexture {
 public:
-    BitmapTextureGL(PassRefPtr<GraphicsContext3D>);
+    static Ref<BitmapTexture> create(Ref<GraphicsContext3D>&& context3D, const Flags flags = NoFlag)
+    {
+        return adoptRef(*new BitmapTextureGL(WTFMove(context3D), flags));
+    }
+
     virtual ~BitmapTextureGL();
 
-    virtual IntSize size() const override;
-    virtual bool isValid() const override;
-    virtual void didReset() override;
+    IntSize size() const override;
+    bool isValid() const override;
+    void didReset() override;
     void bindAsSurface(GraphicsContext3D*);
     void initializeStencil();
     void initializeDepthBuffer();
     virtual uint32_t id() const { return m_id; }
     uint32_t textureTarget() const { return GraphicsContext3D::TEXTURE_2D; }
     IntSize textureSize() const { return m_textureSize; }
-    virtual void updateContents(Image*, const IntRect&, const IntPoint&, UpdateContentsFlag) override;
-    virtual void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine, UpdateContentsFlag) override;
+    void updateContents(Image*, const IntRect&, const IntPoint&, UpdateContentsFlag) override;
+    void updateContents(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine, UpdateContentsFlag) override;
     void updateContentsNoSwizzle(const void*, const IntRect& target, const IntPoint& sourceOffset, int bytesPerLine, unsigned bytesPerPixel = 4, Platform3DObject glFormat = GraphicsContext3D::RGBA);
-    virtual bool isBackedByOpenGL() const override { return true; }
+    bool isBackedByOpenGL() const override { return true; }
 
-    virtual PassRefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&) override;
+    PassRefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&) override;
     struct FilterInfo {
         RefPtr<FilterOperation> filter;
         unsigned pass;
@@ -73,18 +77,17 @@ public:
     GC3Dint internalFormat() const { return m_internalFormat; }
 
 private:
+    BitmapTextureGL(RefPtr<GraphicsContext3D>&&, const Flags);
 
-    Platform3DObject m_id;
+    Platform3DObject m_id { 0 };
     IntSize m_textureSize;
     IntRect m_dirtyRect;
-    Platform3DObject m_fbo;
-    Platform3DObject m_rbo;
-    Platform3DObject m_depthBufferObject;
-    bool m_shouldClear;
+    Platform3DObject m_fbo { 0 };
+    Platform3DObject m_rbo { 0 };
+    Platform3DObject m_depthBufferObject { 0 };
+    bool m_shouldClear { true };
     ClipStack m_clipStack;
     RefPtr<GraphicsContext3D> m_context3D;
-
-    BitmapTextureGL();
 
     void clearIfNeeded();
     void createFboIfNeeded();
@@ -93,7 +96,13 @@ private:
 
     GC3Dint m_internalFormat;
     GC3Denum m_format;
-    GC3Denum m_type;
+    GC3Denum m_type {
+#if OS(DARWIN)
+        GL_UNSIGNED_INT_8_8_8_8_REV
+#else
+        GraphicsContext3D::UNSIGNED_BYTE
+#endif
+    };
 };
 
 BitmapTextureGL* toBitmapTextureGL(BitmapTexture*);

@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
+
 #include "config.h"
 
 #include "NotImplemented.h"
@@ -24,14 +25,14 @@ namespace WebCore {
         copyKeyIsDown = _copyKeyIsDown;
     }
 
-    DragOperation DragController::dragOperation(DragData& dragData)
+    DragOperation DragController::dragOperation(const DragData& dragData)
     {
         //Protects the page from opening URL by fake anchor drag.
         return dragData.containsURL() && !m_didInitiateDrag ? DragOperationCopy : DragOperationNone;
     }
 
     //uta: need to be fixed with usage of DragData pointer
-    bool DragController::isCopyKeyDown(DragData& dragData)
+    bool DragController::isCopyKeyDown(const DragData& dragData)
     {
         //State has not direct connection with keyboard state.
         //Now it is imported from Java (user drag action).

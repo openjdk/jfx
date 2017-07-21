@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef EventLoopInput_h
-#define EventLoopInput_h
+#pragma once
 
 #if ENABLE(WEB_REPLAY)
 
@@ -57,7 +56,7 @@ private:
 class EventLoopInputBase : public NondeterministicInputBase {
 public:
     virtual ~EventLoopInputBase() { }
-    virtual InputQueue queue() const override final { return InputQueue::EventLoopInput; }
+    InputQueue queue() const final { return InputQueue::EventLoopInput; }
 
     virtual void dispatch(ReplayController&) = 0;
 };
@@ -65,7 +64,7 @@ public:
 template <typename InputType>
 class EventLoopInput : public EventLoopInputBase {
 public:
-    virtual const String& type() const override final
+    const String& type() const final
     {
         return InputTraits<InputType>::type();
     }
@@ -74,5 +73,3 @@ public:
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // EventLoopInput_h

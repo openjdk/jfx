@@ -31,43 +31,57 @@
 #include "config.h"
 #include "RTCRtpSender.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(WEB_RTC)
 
-#include "DOMError.h"
 #include "ExceptionCode.h"
-#include "JSDOMError.h"
 
 namespace WebCore {
 
-RTCRtpSender::RTCRtpSender(RefPtr<MediaStreamTrack>&& track, Vector<String>&& mediaStreamIds, RTCRtpSenderClient& client)
-    : RTCRtpSenderReceiverBase(WTFMove(track))
+Ref<RTCRtpSender> RTCRtpSender::create(Ref<MediaStreamTrack>&& track, Vector<String>&& mediaStreamIds, RTCRtpSenderClient& client)
+{
+    const String& trackKind = track->kind();
+    return adoptRef(*new RTCRtpSender(WTFMove(track), trackKind, WTFMove(mediaStreamIds), client));
+}
+
+Ref<RTCRtpSender> RTCRtpSender::create(const String& trackKind, Vector<String>&& mediaStreamIds, RTCRtpSenderClient& client)
+{
+    return adoptRef(*new RTCRtpSender(nullptr, trackKind, WTFMove(mediaStreamIds), client));
+}
+
+RTCRtpSender::RTCRtpSender(RefPtr<MediaStreamTrack>&& track, const String& trackKind, Vector<String>&& mediaStreamIds, RTCRtpSenderClient& client)
+    : RTCRtpSenderReceiverBase()
+    , m_trackKind(trackKind)
     , m_mediaStreamIds(WTFMove(mediaStreamIds))
     , m_client(&client)
 {
-    // The original track id is always used in negotiation even if the track is replaced.
-    m_trackId = m_track->id();
+    setTrack(WTFMove(track));
 }
 
-void RTCRtpSender::replaceTrack(MediaStreamTrack* withTrack, PeerConnection::VoidPromise&& promise, ExceptionCode& ec)
+void RTCRtpSender::setTrack(RefPtr<MediaStreamTrack>&& track)
 {
-    if (!withTrack) {
-        ec = TypeError;
-        return;
+    // Save the id from the first non-null track set. That id will be used to negotiate the sender
+    // even if the track is replaced.
+    if (!m_track && track)
+        m_trackId = track->id();
+
+    m_track = WTFMove(track);
+}
+
+ExceptionOr<void> RTCRtpSender::replaceTrack(Ref<MediaStreamTrack>&& withTrack, DOMPromise<void>&& promise)
+{
+    if (isStopped()) {
+        promise.reject(INVALID_STATE_ERR);
+        return { };
     }
 
-    if (!m_client) {
-        promise.reject(DOMError::create("InvalidStateError"));
-        return;
-    }
+    if (m_trackKind != withTrack->kind())
+        return Exception { TypeError };
 
-    if (m_track->kind() != withTrack->kind()) {
-        ec = TypeError;
-        return;
-    }
+    m_client->replaceTrack(*this, WTFMove(withTrack), WTFMove(promise));
 
-    m_client->replaceTrack(*this, *withTrack, WTFMove(promise));
+    return { };
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(WEB_RTC)

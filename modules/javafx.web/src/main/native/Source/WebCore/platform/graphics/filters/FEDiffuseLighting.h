@@ -34,7 +34,7 @@ public:
         float, float, PassRefPtr<LightSource>);
     virtual ~FEDiffuseLighting();
 
-    Color lightingColor() const;
+    const Color& lightingColor() const;
     bool setLightingColor(const Color&);
 
     float surfaceScale() const;
@@ -52,9 +52,9 @@ public:
     const LightSource* lightSource() const;
     void setLightSource(PassRefPtr<LightSource>);
 
-    virtual void dump();
+    void dump() override;
 
-    virtual TextStream& externalRepresentation(TextStream&, int indention) const;
+    TextStream& externalRepresentation(TextStream&, int indention) const override;
 
 private:
     FEDiffuseLighting(Filter&, const Color&, float, float, float, float, PassRefPtr<LightSource>);

@@ -57,7 +57,7 @@ void SimplifyMarkupCommand::doApply()
             continue;
 
         Node* startingNode = node->parentNode();
-        RenderStyle* startingStyle = startingNode->renderStyle();
+        auto* startingStyle = startingNode->renderStyle();
         if (!startingStyle)
             continue;
         Node* currentNode = startingNode;
@@ -70,7 +70,8 @@ void SimplifyMarkupCommand::doApply()
             if (!currentNode)
                 break;
 
-            if (!is<RenderInline>(currentNode->renderer()) || downcast<RenderInline>(*currentNode->renderer()).alwaysCreateLineBoxes())
+            auto* renderer = currentNode->renderer();
+            if (!is<RenderInline>(renderer) || downcast<RenderInline>(*renderer).alwaysCreateLineBoxes())
                 continue;
 
             if (currentNode->firstChild() != currentNode->lastChild()) {

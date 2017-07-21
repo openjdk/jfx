@@ -2,7 +2,7 @@
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004, 2005, 2006, 2007, 2008 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2017 Apple Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Library General Public
@@ -18,57 +18,53 @@
     along with this library; see the file COPYING.LIB.  If not, write to
     the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
     Boston, MA 02110-1301, USA.
-
-    This class provides all functionality needed for loading images, style sheets and html
-    pages from the web. It has a memory cache for these objects.
 */
 
-#ifndef CachedCSSStyleSheet_h
-#define CachedCSSStyleSheet_h
+#pragma once
 
 #include "CachedResource.h"
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
-    class CachedResourceClient;
-    class StyleSheetContents;
-    class TextResourceDecoder;
-    struct CSSParserContext;
+class StyleSheetContents;
+class TextResourceDecoder;
 
-    class CachedCSSStyleSheet final : public CachedResource {
-    public:
-        CachedCSSStyleSheet(const ResourceRequest&, const String& charset, SessionID);
-        virtual ~CachedCSSStyleSheet();
+struct CSSParserContext;
 
-        enum class MIMETypeCheck { Strict, Lax };
-        const String sheetText(MIMETypeCheck = MIMETypeCheck::Strict, bool* hasValidMIMEType = nullptr) const;
+class CachedCSSStyleSheet final : public CachedResource {
+public:
+    CachedCSSStyleSheet(CachedResourceRequest&&, SessionID);
+    virtual ~CachedCSSStyleSheet();
 
-        PassRefPtr<StyleSheetContents> restoreParsedStyleSheet(const CSSParserContext&, CachePolicy);
-        void saveParsedStyleSheet(Ref<StyleSheetContents>&&);
+    enum class MIMETypeCheck { Strict, Lax };
+    const String sheetText(MIMETypeCheck = MIMETypeCheck::Strict, bool* hasValidMIMEType = nullptr) const;
 
-    private:
-        bool canUseSheet(MIMETypeCheck, bool* hasValidMIMEType) const;
-        virtual bool mayTryReplaceEncodedData() const override { return true; }
+    RefPtr<StyleSheetContents> restoreParsedStyleSheet(const CSSParserContext&, CachePolicy);
+    void saveParsedStyleSheet(Ref<StyleSheetContents>&&);
 
-        virtual void didAddClient(CachedResourceClient*) override;
+private:
+    bool canUseSheet(MIMETypeCheck, bool* hasValidMIMEType) const;
+    bool mayTryReplaceEncodedData() const final { return true; }
 
-        virtual void setEncoding(const String&) override;
-        virtual String encoding() const override;
-        virtual void finishLoading(SharedBuffer*) override;
-        virtual void destroyDecodedData() override;
+    void didAddClient(CachedResourceClient&) final;
 
-    protected:
-        virtual void checkNotify() override;
+    void setEncoding(const String&) final;
+    String encoding() const final;
+    const TextResourceDecoder* textResourceDecoder() const final { return m_decoder.get(); }
+    void finishLoading(SharedBuffer*) final;
+    void destroyDecodedData() final;
 
-        RefPtr<TextResourceDecoder> m_decoder;
-        String m_decodedSheetText;
+    void setBodyDataFrom(const CachedResource&) final;
 
-        RefPtr<StyleSheetContents> m_parsedStyleSheetCache;
-    };
+protected:
+    void checkNotify() final;
+
+    RefPtr<TextResourceDecoder> m_decoder;
+    String m_decodedSheetText;
+
+    RefPtr<StyleSheetContents> m_parsedStyleSheetCache;
+};
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CACHED_RESOURCE(CachedCSSStyleSheet, CachedResource::CSSStyleSheet)
-
-#endif // CachedCSSStyleSheet_h

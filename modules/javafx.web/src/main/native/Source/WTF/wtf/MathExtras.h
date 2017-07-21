@@ -181,9 +181,12 @@ inline int clampToInteger(float value)
     return clampTo<int>(value);
 }
 
-inline int clampToInteger(unsigned x)
+template<typename T>
+inline int clampToInteger(T x)
 {
-    const unsigned intMax = static_cast<unsigned>(std::numeric_limits<int>::max());
+    static_assert(std::numeric_limits<T>::is_integer, "T must be an integer.");
+
+    const T intMax = static_cast<unsigned>(std::numeric_limits<int>::max());
 
     if (x >= intMax)
         return std::numeric_limits<int>::max();
@@ -193,6 +196,15 @@ inline int clampToInteger(unsigned x)
 inline bool isWithinIntRange(float x)
 {
     return x > static_cast<float>(std::numeric_limits<int>::min()) && x < static_cast<float>(std::numeric_limits<int>::max());
+}
+
+inline float normalizedFloat(float value)
+{
+    if (value > 0 && value < std::numeric_limits<float>::min())
+        return std::numeric_limits<float>::min();
+    if (value < 0 && value > -std::numeric_limits<float>::min())
+        return -std::numeric_limits<float>::min();
+    return value;
 }
 
 template<typename T> inline bool hasOneBitSet(T value)
@@ -212,9 +224,11 @@ template<typename T> inline bool hasTwoOrMoreBitsSet(T value)
 
 template <typename T> inline unsigned getLSBSet(T value)
 {
+    typedef typename std::make_unsigned<T>::type UnsignedT;
     unsigned result = 0;
 
-    while (value >>= 1)
+    UnsignedT unsignedValue = static_cast<UnsignedT>(value);
+    while (unsignedValue >>= 1)
         ++result;
 
     return result;
@@ -395,6 +409,20 @@ inline typename std::enable_if<std::is_floating_point<T>::value, bool>::type are
     return safeFPDivision(delta, std::abs(u)) <= epsilon && safeFPDivision(delta, std::abs(v)) <= epsilon;
 }
 
+// Match behavior of Math.min, where NaN is returned if either argument is NaN.
+template <typename T>
+inline typename std::enable_if<std::is_floating_point<T>::value, T>::type nanPropagatingMin(T a, T b)
+{
+    return std::isnan(a) || std::isnan(b) ? std::numeric_limits<T>::quiet_NaN() : std::min(a, b);
+}
+
+// Match behavior of Math.max, where NaN is returned if either argument is NaN.
+template <typename T>
+inline typename std::enable_if<std::is_floating_point<T>::value, T>::type nanPropagatingMax(T a, T b)
+{
+    return std::isnan(a) || std::isnan(b) ? std::numeric_limits<T>::quiet_NaN() : std::max(a, b);
+}
+
 inline bool isIntegral(float value)
 {
     return static_cast<int>(value) == value;
@@ -426,11 +454,7 @@ inline bool nonEmptyRangesOverlap(T leftMin, T leftMax, T rightMin, T rightMax)
     ASSERT(leftMin < leftMax);
     ASSERT(rightMin < rightMax);
 
-    if (leftMin <= rightMin && leftMax > rightMin)
-        return true;
-    if (rightMin <= leftMin && rightMax > leftMin)
-        return true;
-    return false;
+    return leftMax > rightMin && rightMax > leftMin;
 }
 
 // Pass ranges with the min being inclusive and the max being exclusive. For example, this should

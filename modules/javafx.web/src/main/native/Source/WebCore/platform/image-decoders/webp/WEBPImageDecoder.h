@@ -26,8 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WEBPImageDecoder_h
-#define WEBPImageDecoder_h
+#pragma once
 
 #include "ImageDecoder.h"
 
@@ -37,14 +36,14 @@
 
 namespace WebCore {
 
-class WEBPImageDecoder : public ImageDecoder {
+class WEBPImageDecoder final : public ImageDecoder {
 public:
-    WEBPImageDecoder(ImageSource::AlphaOption, ImageSource::GammaAndColorProfileOption);
+    WEBPImageDecoder(AlphaOption, GammaAndColorProfileOption);
     virtual ~WEBPImageDecoder();
 
-    virtual String filenameExtension() const { return "webp"; }
-    virtual bool isSizeAvailable();
-    virtual ImageFrame* frameBufferAtIndex(size_t index);
+    String filenameExtension() const override { return "webp"; }
+    bool isSizeAvailable() override;
+    ImageFrame* frameBufferAtIndex(size_t index) override;
 
 private:
     bool decode(bool onlySize);
@@ -57,7 +56,5 @@ private:
 };
 
 } // namespace WebCore
-
-#endif
 
 #endif

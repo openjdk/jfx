@@ -1,5 +1,6 @@
 # Copyright (C) 2010 Google Inc. All rights reserved.
 # Copyright (C) 2013 Samsung Electronics.  All rights reserved.
+# Copyright (C) 2017 Igalia S.L. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -40,10 +41,12 @@ from webkitpy.port.pulseaudio_sanitizer import PulseAudioSanitizer
 from webkitpy.port.xvfbdriver import XvfbDriver
 from webkitpy.port.westondriver import WestonDriver
 from webkitpy.port.xorgdriver import XorgDriver
+from webkitpy.port.waylanddriver import WaylandDriver
 from webkitpy.port.linux_get_crash_log import GDBCrashLogGenerator
 from webkitpy.port.leakdetector_valgrind import LeakDetectorValgrind
 
 _log = logging.getLogger(__name__)
+
 
 class GtkPort(Port):
     port_name = "gtk"
@@ -51,6 +54,7 @@ class GtkPort(Port):
     def __init__(self, *args, **kwargs):
         super(GtkPort, self).__init__(*args, **kwargs)
         self._pulseaudio_sanitizer = PulseAudioSanitizer()
+        self._display_server = self.get_option("display_server")
 
         if self.get_option("leaks"):
             self._leakdetector = LeakDetectorValgrind(self._executive, self._filesystem, self.results_directory())
@@ -75,14 +79,13 @@ class GtkPort(Port):
 
     @memoized
     def _driver_class(self):
-        if os.environ.get("WAYLAND_DISPLAY"):
+        if self._display_server == "weston":
             return WestonDriver
-        if os.environ.get("USE_NATIVE_XDISPLAY"):
+        if self._display_server == "wayland":
+            return WaylandDriver
+        if self._display_server == "xorg":
             return XorgDriver
         return XvfbDriver
-
-    def supports_per_test_timeout(self):
-        return True
 
     def default_timeout_ms(self):
         # Starting an application under Valgrind takes a lot longer than normal
@@ -98,8 +101,8 @@ class GtkPort(Port):
             return self.default_timeout_ms()
         return super(GtkPort, self).driver_stop_timeout()
 
-    def setup_test_run(self):
-        super(GtkPort, self).setup_test_run()
+    def setup_test_run(self, device_class=None):
+        super(GtkPort, self).setup_test_run(device_class)
         self._pulseaudio_sanitizer.unload_pulseaudio_module()
 
         if self.get_option("leaks"):
@@ -117,11 +120,20 @@ class GtkPort(Port):
         environment['TEST_RUNNER_TEST_PLUGIN_PATH'] = self._build_path('lib', 'plugins')
         environment['OWR_USE_TEST_SOURCES'] = '1'
         self._copy_value_from_environ_if_set(environment, 'WEBKIT_OUTPUTDIR')
-        if self._driver_class() == XvfbDriver and self._should_use_jhbuild():
+
+        if self._driver_class() is XvfbDriver:
+            # Make sure to use the correct GDK backend - we might have a Wayland session
+            environment['GDK_BACKEND'] = 'x11'
+
+        # Configure the software libgl renderer if jhbuild ready and we test inside a virtualized window system
+        if self._driver_class() in [XvfbDriver, WestonDriver] and self._should_use_jhbuild():
             llvmpipe_libgl_path = self.host.executive.run_command(self._jhbuild_wrapper + ['printenv', 'LLVMPIPE_LIBGL_PATH'],
                                                                   error_handler=self.host.executive.ignore_error).strip()
-            if os.path.exists(os.path.join(llvmpipe_libgl_path, "libGL.so")):
+            dri_libgl_path = os.path.join(llvmpipe_libgl_path, "dri")
+            if os.path.exists(os.path.join(llvmpipe_libgl_path, "libGL.so")) and os.path.exists(os.path.join(dri_libgl_path, "swrast_dri.so")):
                     # Force the Gallium llvmpipe software rasterizer
+                    environment['LIBGL_ALWAYS_SOFTWARE'] = "1"
+                    environment['LIBGL_DRIVERS_PATH'] = dri_libgl_path
                     environment['LD_LIBRARY_PATH'] = llvmpipe_libgl_path
                     if os.environ.get('LD_LIBRARY_PATH'):
                             environment['LD_LIBRARY_PATH'] += ':%s' % os.environ.get('LD_LIBRARY_PATH')
@@ -179,6 +191,8 @@ class GtkPort(Port):
 
     def _search_paths(self):
         search_paths = []
+        if self._driver_class() in [WaylandDriver, WestonDriver]:
+            search_paths.append(self.port_name + "-wayland")
         search_paths.append(self.port_name)
         search_paths.append('wk2')
         search_paths.extend(self.get_option("additional_platform_directory", []))

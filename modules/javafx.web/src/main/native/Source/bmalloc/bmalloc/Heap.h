@@ -26,12 +26,15 @@
 #ifndef Heap_h
 #define Heap_h
 
+#include "AsyncTask.h"
 #include "BumpRange.h"
 #include "Environment.h"
+#include "LargeMap.h"
 #include "LineMetadata.h"
+#include "List.h"
+#include "Map.h"
 #include "Mutex.h"
-#include "SegregatedFreeList.h"
-#include "SmallChunk.h"
+#include "Object.h"
 #include "SmallLine.h"
 #include "SmallPage.h"
 #include "VMHeap.h"
@@ -43,71 +46,106 @@ namespace bmalloc {
 
 class BeginTag;
 class BumpAllocator;
+class DebugHeap;
 class EndTag;
 
 class Heap {
 public:
     Heap(std::lock_guard<StaticMutex>&);
 
-    Environment& environment() { return m_environment; }
+    DebugHeap* debugHeap() { return m_debugHeap; }
 
     void allocateSmallBumpRanges(std::lock_guard<StaticMutex>&, size_t sizeClass, BumpAllocator&, BumpRangeCache&);
-    void derefSmallLine(std::lock_guard<StaticMutex>&, SmallLine*);
+    void derefSmallLine(std::lock_guard<StaticMutex>&, Object);
 
-    void* allocateLarge(std::lock_guard<StaticMutex>&, size_t);
-    void* allocateLarge(std::lock_guard<StaticMutex>&, size_t alignment, size_t, size_t unalignedSize);
+    void* allocateLarge(std::lock_guard<StaticMutex>&, size_t alignment, size_t);
+    void* tryAllocateLarge(std::lock_guard<StaticMutex>&, size_t alignment, size_t);
     void deallocateLarge(std::lock_guard<StaticMutex>&, void*);
 
-    void* allocateXLarge(std::lock_guard<StaticMutex>&, size_t);
-    void* allocateXLarge(std::lock_guard<StaticMutex>&, size_t alignment, size_t);
-    void* tryAllocateXLarge(std::lock_guard<StaticMutex>&, size_t alignment, size_t);
-    Range& findXLarge(std::unique_lock<StaticMutex>&, void*);
-    void deallocateXLarge(std::unique_lock<StaticMutex>&, void*);
+    bool isLarge(std::lock_guard<StaticMutex>&, void*);
+    size_t largeSize(std::lock_guard<StaticMutex>&, void*);
+    void shrinkLarge(std::lock_guard<StaticMutex>&, const Range&, size_t);
 
-    void scavenge(std::unique_lock<StaticMutex>&, std::chrono::milliseconds sleepDuration);
+    void scavenge(std::unique_lock<StaticMutex>&, ScavengeMode);
+
+#if BUSE(QOS_CLASSES)
+    void setScavengerThreadQOSClass(qos_class_t overrideClass) { m_requestedScavengerThreadQOSClass = overrideClass; }
+#endif
 
 private:
+    struct LargeObjectHash {
+        static unsigned hash(void* key)
+        {
+            return static_cast<unsigned>(
+                reinterpret_cast<uintptr_t>(key) / smallMax);
+        }
+    };
+
     ~Heap() = delete;
 
     void initializeLineMetadata();
+    void initializePageMetadata();
+
+    void allocateSmallBumpRangesByMetadata(std::lock_guard<StaticMutex>&,
+        size_t sizeClass, BumpAllocator&, BumpRangeCache&);
+    void allocateSmallBumpRangesByObject(std::lock_guard<StaticMutex>&,
+        size_t sizeClass, BumpAllocator&, BumpRangeCache&);
 
     SmallPage* allocateSmallPage(std::lock_guard<StaticMutex>&, size_t sizeClass);
 
-    void deallocateSmallLine(std::lock_guard<StaticMutex>&, SmallLine*);
-    void deallocateLarge(std::lock_guard<StaticMutex>&, const LargeObject&);
+    void deallocateSmallLine(std::lock_guard<StaticMutex>&, Object);
 
-    LargeObject& splitAndAllocate(LargeObject&, size_t);
-    LargeObject& splitAndAllocate(LargeObject&, size_t, size_t);
     void mergeLarge(BeginTag*&, EndTag*&, Range&);
     void mergeLargeLeft(EndTag*&, BeginTag*&, Range&, bool& inVMHeap);
     void mergeLargeRight(EndTag*&, BeginTag*&, Range&, bool& inVMHeap);
 
+    LargeRange splitAndAllocate(LargeRange&, size_t alignment, size_t);
+
     void concurrentScavenge();
-    void scavengeSmallPages(std::unique_lock<StaticMutex>&, std::chrono::milliseconds);
-    void scavengeLargeObjects(std::unique_lock<StaticMutex>&, std::chrono::milliseconds);
+    void scavengeSmallPages(std::unique_lock<StaticMutex>&, ScavengeMode);
+    void scavengeLargeObjects(std::unique_lock<StaticMutex>&, ScavengeMode);
 
-    std::array<std::array<LineMetadata, smallLineCount>, smallMax / alignment> m_smallLineMetadata;
+    size_t m_vmPageSizePhysical;
+    Vector<LineMetadata> m_smallLineMetadata;
+    std::array<size_t, sizeClassCount> m_pageClasses;
 
-    std::array<Vector<SmallPage*>, smallMax / alignment> m_smallPagesWithFreeLines;
+    std::array<List<SmallPage>, sizeClassCount> m_smallPagesWithFreeLines;
+    std::array<List<SmallPage>, pageClassCount> m_smallPages;
 
-    Vector<SmallPage*> m_smallPages;
+    Map<void*, size_t, LargeObjectHash> m_largeAllocated;
+    LargeMap m_largeFree;
 
-    SegregatedFreeList m_largeObjects;
-    Vector<Range> m_xLargeObjects;
+    Map<Chunk*, ObjectType, ChunkHash> m_objectTypes;
 
-    bool m_isAllocatingPages;
+    std::array<bool, pageClassCount> m_isAllocatingPages;
+    bool m_isAllocatingLargePages;
+
     AsyncTask<Heap, decltype(&Heap::concurrentScavenge)> m_scavenger;
 
     Environment m_environment;
+    DebugHeap* m_debugHeap;
 
     VMHeap m_vmHeap;
+
+#if BUSE(QOS_CLASSES)
+    qos_class_t m_requestedScavengerThreadQOSClass { QOS_CLASS_UNSPECIFIED };
+#endif
 };
 
-inline void Heap::derefSmallLine(std::lock_guard<StaticMutex>& lock, SmallLine* line)
+inline void Heap::allocateSmallBumpRanges(
+    std::lock_guard<StaticMutex>& lock, size_t sizeClass,
+    BumpAllocator& allocator, BumpRangeCache& rangeCache)
 {
-    if (!line->deref(lock))
+    if (sizeClass < bmalloc::sizeClass(smallLineSize))
+        return allocateSmallBumpRangesByMetadata(lock, sizeClass, allocator, rangeCache);
+    return allocateSmallBumpRangesByObject(lock, sizeClass, allocator, rangeCache);
+}
+
+inline void Heap::derefSmallLine(std::lock_guard<StaticMutex>& lock, Object object)
+{
+    if (!object.line()->deref(lock))
         return;
-    deallocateSmallLine(lock, line);
+    deallocateSmallLine(lock, object);
 }
 
 } // namespace bmalloc

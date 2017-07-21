@@ -3158,19 +3158,15 @@ project(":web") {
                 '-h', "${project.buildDir}/gensrc/headers"
                 ])
         }
-    } else {
-        // Instead of compiling native wrappers, use a pre-generated version
-
-        // Copy these to a common location in the moduleSourcePath
-        def copyWrappers = project.task("copyPreGeneratedWrappers", type: Copy) {
-            enabled =  (!IS_COMPILE_WEBKIT)
-
-            from "src/main/java-wrappers"
-            into "${gensrcDir}"
-        }
-
-        compileJava.dependsOn(copyWrappers);
     }
+
+    // Copy these to a common location in the moduleSourcePath
+    def copyWrappers = project.task("copyPreGeneratedWrappers", type: Copy) {
+        from "src/main/native/Source/WebCore/bindings/java/dom3/java"
+        into "${gensrcDir}"
+    }
+
+    compileJava.dependsOn(copyWrappers);
 
     test {
         // Run web tests in headless mode
@@ -3196,7 +3192,7 @@ project(":web") {
         }
     }
 
-    task compileGenerated()
+    task compileJavaDOMBinding()
 
     compileTargets { t ->
         def targetProperties = project.rootProject.ext[t.upper]
@@ -3209,9 +3205,6 @@ project(":web") {
         def compileNativeTask = task("compileNative${t.capital}", dependsOn: [generateHeaders, compileJava]) {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             enabled =  (IS_COMPILE_WEBKIT)
-
-            outputs.upToDateWhen { false }
-            outputs.dir("$webkitOutputDir/$webkitConfig/DerivedSources/WebCore/nativeJava/java")
 
             doLast {
                 exec {
@@ -3237,7 +3230,7 @@ project(":web") {
                          */
                         // args("--icu-unicode")
                     } else if (t.name == "mac") {
-                        // Add any osx specific flags.
+                        cmakeArgs = "-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
                         if (!IS_64) {
                             cmakeArgs = "-DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32"
@@ -3300,22 +3293,8 @@ project(":web") {
             compileNativeTask.dependsOn rcTask
         }
 
-        def copyGeneratedDomTask = task("copyGeneratedDom${t.capital}", type: Copy,
+        def compileJavaDOMBindingTask = task("compileJavaDOMBinding${t.capital}", type: JavaCompile,
                 dependsOn: [compileJava, compileNativeTask, copyNativeTask]) {
-            enabled =  (IS_COMPILE_WEBKIT)
-            from "$projectDir/src/main/java-wrappers/com/sun/webkit/dom/EventListenerImpl.java"
-            into "${gensrcDir}/com/sun/webkit/dom"
-        }
-
-        def copyGeneratedTask = task("copyGenerated${t.capital}", type: Copy,
-                dependsOn: [compileJava, compileNativeTask, copyNativeTask, copyGeneratedDomTask]) {
-            enabled =  (IS_COMPILE_WEBKIT)
-            from "$webkitOutputDir/$webkitConfig/DerivedSources/WebCore/nativeJava/java"
-            into "${gensrcDir}"
-        }
-
-        def compileGeneratedTask = task("compileGenerated${t.capital}", type: JavaCompile,
-                dependsOn: [copyGeneratedDomTask, copyGeneratedTask]) {
             destinationDir = file("$buildDir/classes/main")
             classpath = configurations.compile
             source = project.sourceSets.main.java.srcDirs
@@ -3325,7 +3304,7 @@ project(":web") {
                 ])
         }
 
-        compileGenerated.dependsOn compileGeneratedTask
+        compileJavaDOMBinding.dependsOn compileJavaDOMBindingTask
 
         if (!targetProperties.compileWebnodeNative) {
             println("Not compiling native Webkit for ${t.name} per configuration request");
@@ -3343,7 +3322,7 @@ project(":web") {
     }
 
     if (IS_COMPILE_WEBKIT) {
-        assemble.dependsOn compileGenerated, drtJar
+        assemble.dependsOn compileJavaDOMBinding, drtJar
     }
 }
 
@@ -4067,7 +4046,7 @@ compileTargets { t ->
                     from "${project.projectDir}/build/gensrc/java"
                 }
                 if (project.name.equals("web")) {
-                    from "${project.projectDir}/src/main/java-wrappers"
+                    from "${project.projectDir}/src/main/native/Source/WebCore/bindings/java/dom3/java"
                 }
             } else {
                 from "${project.projectDir}/src/main/java/module-info.java"
@@ -4334,6 +4313,12 @@ compileTargets { t ->
             }
             if (IS_WINDOWS) {
                 from ("${graphicsProject.buildDir}/libs/prismD3D/${t.name}/${library(targetProperties.prismD3D.lib)}");
+                targetProperties.VS2017DLLs.each { vslib ->
+                    from ("$vslib");
+                }
+                targetProperties.WinSDKDLLs.each { winsdklib ->
+                    from ("$winsdklib");
+                }
             }
         }
 

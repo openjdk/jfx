@@ -40,31 +40,84 @@
 
 namespace WebCore {
 
-RefPtr<MockRealtimeAudioSource> MockRealtimeAudioSource::create()
+#if !PLATFORM(MAC) && !PLATFORM(IOS)
+RefPtr<MockRealtimeAudioSource> MockRealtimeAudioSource::create(const String& name, const MediaConstraints* constraints)
 {
-    return adoptRef(new MockRealtimeAudioSource());
+    auto source = adoptRef(new MockRealtimeAudioSource(name));
+    if (constraints && source->applyConstraints(*constraints))
+        source = nullptr;
+
+    return source;
 }
 
-MockRealtimeAudioSource::MockRealtimeAudioSource()
-    : MockRealtimeMediaSource(createCanonicalUUIDString(), RealtimeMediaSource::Audio, mockAudioSourceName())
+RefPtr<MockRealtimeAudioSource> MockRealtimeAudioSource::createMuted(const String& name)
+{
+    auto source = adoptRef(new MockRealtimeAudioSource(name));
+    source->m_muted = true;
+    return source;
+}
+#endif
+
+MockRealtimeAudioSource::MockRealtimeAudioSource(const String& name)
+    : MockRealtimeMediaSource(createCanonicalUUIDString(), RealtimeMediaSource::Audio, name)
+    , m_timer(RunLoop::current(), this, &MockRealtimeAudioSource::tick)
 {
 }
 
 void MockRealtimeAudioSource::updateSettings(RealtimeMediaSourceSettings& settings)
 {
-    settings.setVolume(50);
+    settings.setVolume(volume());
+    settings.setEchoCancellation(echoCancellation());
+    settings.setSampleRate(44100);
 }
 
 void MockRealtimeAudioSource::initializeCapabilities(RealtimeMediaSourceCapabilities& capabilities)
 {
-    capabilities.setVolume(CapabilityValueOrRange(0, 1.0));
+    capabilities.setVolume(CapabilityValueOrRange(0.0, 1.0));
     capabilities.setEchoCancellation(RealtimeMediaSourceCapabilities::EchoCancellation::ReadWrite);
+    capabilities.setSampleRate(CapabilityValueOrRange(44100, 44100));
 }
 
 void MockRealtimeAudioSource::initializeSupportedConstraints(RealtimeMediaSourceSupportedConstraints& supportedConstraints)
 {
     supportedConstraints.setSupportsVolume(true);
     supportedConstraints.setSupportsEchoCancellation(true);
+    supportedConstraints.setSupportsSampleRate(true);
+}
+
+void MockRealtimeAudioSource::startProducingData()
+{
+    MockRealtimeMediaSource::startProducingData();
+
+    m_startTime = monotonicallyIncreasingTime();
+    m_timer.startRepeating(std::chrono::milliseconds(renderInterval()));
+}
+
+void MockRealtimeAudioSource::stopProducingData()
+{
+    MockRealtimeMediaSource::stopProducingData();
+    m_timer.stop();
+    m_elapsedTime += monotonicallyIncreasingTime() - m_startTime;
+    m_startTime = NAN;
+}
+
+double MockRealtimeAudioSource::elapsedTime()
+{
+    if (std::isnan(m_startTime))
+        return m_elapsedTime;
+
+    return m_elapsedTime + (monotonicallyIncreasingTime() - m_startTime);
+}
+
+void MockRealtimeAudioSource::tick()
+{
+    if (std::isnan(m_lastRenderTime))
+        m_lastRenderTime = monotonicallyIncreasingTime();
+
+    double now = monotonicallyIncreasingTime();
+    double delta = now - m_lastRenderTime;
+    m_lastRenderTime = now;
+    render(delta);
 }
 
 } // namespace WebCore

@@ -21,10 +21,10 @@ set(XSLT_SOURCES
 )
 
 set(XSLT_INCLUDE_DIRECTORIES
+      .
+      win32
       ${THIRDPARTY_DIR}/libxml/src/include
       ${THIRDPARTY_DIR}/libxml/win32/include
-      win32
-      .
 )
 
 include_directories(${XSLT_INCLUDE_DIRECTORIES})

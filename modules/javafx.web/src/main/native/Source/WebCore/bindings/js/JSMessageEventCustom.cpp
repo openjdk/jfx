@@ -33,9 +33,10 @@
 
 #include "JSBlob.h"
 #include "JSDOMBinding.h"
+#include "JSDOMConvert.h"
 #include "JSDOMWindow.h"
 #include "JSEventTarget.h"
-#include "JSMessagePortCustom.h"
+#include "JSMessagePort.h"
 #include "MessageEvent.h"
 #include <runtime/JSArray.h>
 #include <runtime/JSArrayBuffer.h>
@@ -57,17 +58,16 @@ JSValue JSMessageEvent::data(ExecState& state) const
     JSValue result;
     switch (event.dataType()) {
     case MessageEvent::DataTypeScriptValue: {
-        Deprecated::ScriptValue scriptValue = event.dataAsScriptValue();
-        if (scriptValue.hasNoValue())
+        JSValue dataValue = event.dataAsScriptValue();
+        if (!dataValue)
             result = jsNull();
         else {
-            JSValue dataValue = scriptValue.jsValue();
             // We need to make sure MessageEvents do not leak objects in their state property across isolated DOM worlds.
             // Ideally, we would check that the worlds have different privileges but that's not possible yet.
             if (dataValue.isObject() && &worldForDOMObject(dataValue.getObject()) != &currentWorld(&state)) {
                 RefPtr<SerializedScriptValue> serializedValue = event.trySerializeData(&state);
                 if (serializedValue)
-                    result = serializedValue->deserialize(&state, globalObject(), nullptr);
+                    result = serializedValue->deserialize(state, globalObject());
                 else
                     result = jsNull();
             } else
@@ -78,9 +78,9 @@ JSValue JSMessageEvent::data(ExecState& state) const
 
     case MessageEvent::DataTypeSerializedScriptValue:
         if (RefPtr<SerializedScriptValue> serializedValue = event.dataAsSerializedScriptValue()) {
-            MessagePortArray ports = wrapped().ports();
+            Vector<RefPtr<MessagePort>> ports = wrapped().ports();
             // FIXME: Why does this suppress exceptions?
-            result = serializedValue->deserialize(&state, globalObject(), &ports, NonThrowing);
+            result = serializedValue->deserialize(state, globalObject(), ports, SerializationErrorMode::NonThrowing);
         } else
             result = jsNull();
         break;
@@ -105,34 +105,39 @@ JSValue JSMessageEvent::data(ExecState& state) const
 
 static JSC::JSValue handleInitMessageEvent(JSMessageEvent* jsEvent, JSC::ExecState& state)
 {
-    const String& typeArg = state.argument(0).toString(&state)->value(&state);
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    const String& typeArg = state.argument(0).toWTFString(&state);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
     bool canBubbleArg = state.argument(1).toBoolean(&state);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
     bool cancelableArg = state.argument(2).toBoolean(&state);
-    const String originArg = state.argument(4).toString(&state)->value(&state);
-    const String lastEventIdArg = state.argument(5).toString(&state)->value(&state);
-    DOMWindow* sourceArg = JSDOMWindow::toWrapped(state.argument(6));
-    std::unique_ptr<MessagePortArray> messagePorts;
-    std::unique_ptr<ArrayBufferArray> arrayBuffers;
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
+    JSValue dataArg = state.argument(3);
+
+    const String originArg = convert<IDLUSVString>(state, state.argument(4));
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
+    const String lastEventIdArg = state.argument(5).toWTFString(&state);
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
+    auto sourceArg = convert<IDLNullable<IDLUnion<IDLInterface<DOMWindow>, IDLInterface<MessagePort>>>>(state, state.argument(6));
+    RETURN_IF_EXCEPTION(scope, JSValue());
+
+    Vector<RefPtr<MessagePort>> messagePorts;
     if (!state.argument(7).isUndefinedOrNull()) {
-        messagePorts = std::make_unique<MessagePortArray>();
-        arrayBuffers = std::make_unique<ArrayBufferArray>();
-        fillMessagePortArray(state, state.argument(7), *messagePorts, *arrayBuffers);
-        if (state.hadException())
-            return jsUndefined();
+        messagePorts = convert<IDLSequence<IDLInterface<MessagePort>>>(state, state.argument(7));
+        RETURN_IF_EXCEPTION(scope, JSValue());
     }
-    Deprecated::ScriptValue dataArg = Deprecated::ScriptValue(state.vm(), state.argument(3));
-    if (state.hadException())
-        return jsUndefined();
 
     MessageEvent& event = jsEvent->wrapped();
-    event.initMessageEvent(typeArg, canBubbleArg, cancelableArg, dataArg, originArg, lastEventIdArg, sourceArg, WTFMove(messagePorts));
-    jsEvent->m_data.set(state.vm(), jsEvent, dataArg.jsValue());
+    event.initMessageEvent(state, typeArg, canBubbleArg, cancelableArg, dataArg, originArg, lastEventIdArg, WTFMove(sourceArg), WTFMove(messagePorts));
+    jsEvent->m_data.set(vm, jsEvent, dataArg);
     return jsUndefined();
-}
-
-JSC::JSValue JSMessageEvent::initMessageEvent(JSC::ExecState& state)
-{
-    return handleInitMessageEvent(this, state);
 }
 
 JSC::JSValue JSMessageEvent::webkitInitMessageEvent(JSC::ExecState& state)

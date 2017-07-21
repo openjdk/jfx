@@ -42,6 +42,7 @@
 #include "FTLJITCode.h"
 #include "FTLThunks.h"
 #include "JITSubGenerator.h"
+#include "JSCInlines.h"
 #include "LinkBuffer.h"
 #include "PCToCodeOriginMap.h"
 #include "ScratchRegisterAllocator.h"
@@ -64,7 +65,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     if (safepointResult.didGetCancelled())
         return;
-    RELEASE_ASSERT(!state.graph.m_vm.heap.isCollecting());
+    RELEASE_ASSERT(!state.graph.m_vm.heap.collectorBelievesThatTheWorldIsStopped());
 
     if (state.allocationFailed)
         return;
@@ -103,9 +104,14 @@ void compile(State& state, Safepoint::Result& safepointResult)
                 inlineCallFrame->calleeRecovery.withLocalsOffset(localsOffset);
         }
 
-        if (graph.hasDebuggerEnabled())
-            codeBlock->setScopeRegister(codeBlock->scopeRegister() + localsOffset);
     }
+
+    // Note that the scope register could be invalid here if the original code had CallEval but it
+    // got killed. That's because it takes the CallEval to cause the scope register to be kept alive
+    // unless the debugger is also enabled.
+    if (graph.needsScopeRegister() && codeBlock->scopeRegister().isValid())
+        codeBlock->setScopeRegister(codeBlock->scopeRegister() + localsOffset);
+
     for (OSRExitDescriptor& descriptor : state.jitCode->osrExitDescriptors) {
         for (unsigned i = descriptor.m_values.size(); i--;)
             descriptor.m_values[i] = descriptor.m_values[i].withLocalsOffset(localsOffset);
@@ -121,7 +127,7 @@ void compile(State& state, Safepoint::Result& safepointResult)
 
     // Emit the exception handler.
     *state.exceptionHandler = jit.label();
-    jit.copyCalleeSavesToVMCalleeSavesBuffer();
+    jit.copyCalleeSavesToVMEntryFrameCalleeSavesBuffer();
     jit.move(MacroAssembler::TrustedImmPtr(jit.vm()), GPRInfo::argumentGPR0);
     jit.move(GPRInfo::callFrameRegister, GPRInfo::argumentGPR1);
     CCallHelpers::Call call = jit.call();

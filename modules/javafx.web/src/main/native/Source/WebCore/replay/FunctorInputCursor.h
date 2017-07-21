@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FunctorInputCursor_h
-#define FunctorInputCursor_h
+#pragma once
 
 #if ENABLE(WEB_REPLAY)
 
@@ -36,7 +35,6 @@
 #include <replay/NondeterministicInput.h>
 #include <wtf/Assertions.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -49,16 +47,16 @@ public:
     }
 
     // InputCursor
-    virtual bool isCapturing() const override { return false; }
-    virtual bool isReplaying() const override { return false; }
+    bool isCapturing() const override { return false; }
+    bool isReplaying() const override { return false; }
 
-    virtual void storeInput(std::unique_ptr<NondeterministicInputBase>) override;
-    virtual NondeterministicInputBase* uncheckedLoadInput(InputQueue) override;
+    void storeInput(std::unique_ptr<NondeterministicInputBase>) override;
+    NondeterministicInputBase* uncheckedLoadInput(InputQueue) override;
 
     template<typename Functor>
     typename Functor::ReturnType forEachInputInQueue(InputQueue, Functor&);
 protected:
-    virtual NondeterministicInputBase* loadInput(InputQueue, const String&) override;
+    NondeterministicInputBase* loadInput(InputQueue, const String&) override;
 private:
     FunctorInputCursor(RefPtr<ReplaySessionSegment>&&);
 
@@ -99,5 +97,3 @@ inline NondeterministicInputBase* FunctorInputCursor::uncheckedLoadInput(InputQu
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // FunctorInputCursor_h

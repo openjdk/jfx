@@ -23,10 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TypedArrayAdaptors_h
-#define TypedArrayAdaptors_h
+#pragma once
 
 #include "JSCJSValue.h"
+#include "MathCommon.h"
 #include "TypedArrayType.h"
 #include <wtf/MathExtras.h>
 
@@ -40,6 +40,8 @@ struct IntegralTypedArrayAdaptor {
     typedef ViewTypeArg ViewType;
     typedef JSViewTypeArg JSViewType;
     static const TypedArrayType typeValue = typeValueArg;
+    constexpr static const TypeArg minValue = std::numeric_limits<TypeArg>::lowest();
+    constexpr static const TypeArg maxValue = std::numeric_limits<TypeArg>::max();
 
     static JSValue toJSValue(Type value)
     {
@@ -76,6 +78,33 @@ struct IntegralTypedArrayAdaptor {
             return OtherAdaptor::toNativeFromUint32(value);
         return OtherAdaptor::toNativeFromInt32(value);
     }
+
+    static std::optional<Type> toNativeFromInt32WithoutCoercion(int32_t value)
+    {
+        if ((value >= 0 && static_cast<uint32_t>(value) > static_cast<uint32_t>(maxValue)) || value < static_cast<int32_t>(minValue))
+            return std::nullopt;
+        return static_cast<Type>(value);
+    }
+
+    static std::optional<Type> toNativeFromUint32WithoutCoercion(uint32_t value)
+    {
+        if (value > static_cast<uint32_t>(maxValue))
+            return std::nullopt;
+
+        return static_cast<Type>(value);
+    }
+
+    static std::optional<Type> toNativeFromDoubleWithoutCoercion(double value)
+    {
+        Type integer = static_cast<Type>(value);
+        if (static_cast<double>(integer) != value)
+            return std::nullopt;
+
+        if (value < 0)
+            return toNativeFromInt32WithoutCoercion(static_cast<int32_t>(value));
+
+        return toNativeFromUint32WithoutCoercion(static_cast<uint32_t>(value));
+    }
 };
 
 template<
@@ -86,6 +115,8 @@ struct FloatTypedArrayAdaptor {
     typedef ViewTypeArg ViewType;
     typedef JSViewTypeArg JSViewType;
     static const TypedArrayType typeValue = typeValueArg;
+    constexpr static const TypeArg minValue = std::numeric_limits<TypeArg>::lowest();
+    constexpr static const TypeArg maxValue = std::numeric_limits<TypeArg>::max();
 
     static JSValue toJSValue(Type value)
     {
@@ -109,13 +140,34 @@ struct FloatTypedArrayAdaptor {
 
     static Type toNativeFromDouble(double value)
     {
-        return value;
+        return static_cast<Type>(value);
     }
 
     template<typename OtherAdaptor>
     static typename OtherAdaptor::Type convertTo(Type value)
     {
         return OtherAdaptor::toNativeFromDouble(value);
+    }
+
+    static std::optional<Type> toNativeFromInt32WithoutCoercion(int32_t value)
+    {
+        return static_cast<Type>(value);
+    }
+
+    static std::optional<Type> toNativeFromDoubleWithoutCoercion(double value)
+    {
+        if (std::isnan(value) || std::isinf(value))
+            return static_cast<Type>(value);
+
+        Type valueResult = static_cast<Type>(value);
+
+        if (static_cast<double>(valueResult) != value)
+            return std::nullopt;
+
+        if (value < minValue || value > maxValue)
+            return std::nullopt;
+
+        return valueResult;
     }
 };
 
@@ -165,6 +217,8 @@ struct Uint8ClampedAdaptor {
     typedef Uint8ClampedArray ViewType;
     typedef JSUint8ClampedArray JSViewType;
     static const TypedArrayType typeValue = TypeUint8Clamped;
+    constexpr static const uint8_t minValue = std::numeric_limits<uint8_t>::lowest();
+    constexpr static const uint8_t maxValue = std::numeric_limits<uint8_t>::max();
 
     static JSValue toJSValue(uint8_t value)
     {
@@ -201,6 +255,23 @@ struct Uint8ClampedAdaptor {
         return OtherAdaptor::toNativeFromInt32(value);
     }
 
+    static std::optional<Type> toNativeFromInt32WithoutCoercion(int32_t value)
+    {
+        if (value > maxValue || value < minValue)
+            return std::nullopt;
+
+        return static_cast<Type>(value);
+    }
+
+    static std::optional<Type> toNativeFromDoubleWithoutCoercion(double value)
+    {
+        uint8_t integer = static_cast<uint8_t>(value);
+        if (static_cast<double>(integer) != value)
+            return std::nullopt;
+
+        return integer;
+    }
+
 private:
     static uint8_t clamp(int32_t value)
     {
@@ -213,6 +284,3 @@ private:
 };
 
 } // namespace JSC
-
-#endif // TypedArrayAdaptors_h
-

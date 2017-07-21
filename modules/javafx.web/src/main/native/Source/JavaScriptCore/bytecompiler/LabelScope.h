@@ -26,10 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LabelScope_h
-#define LabelScope_h
+#pragma once
 
-#include <wtf/PassRefPtr.h>
 #include "Label.h"
 
 namespace JSC {
@@ -40,18 +38,18 @@ namespace JSC {
     public:
         enum Type { Loop, Switch, NamedLabel };
 
-        LabelScope(Type type, const Identifier* name, int scopeDepth, PassRefPtr<Label> breakTarget, PassRefPtr<Label> continueTarget)
+        LabelScope(Type type, const Identifier* name, int scopeDepth, Ref<Label>&& breakTarget, RefPtr<Label>&& continueTarget)
             : m_refCount(0)
             , m_type(type)
             , m_name(name)
             , m_scopeDepth(scopeDepth)
-            , m_breakTarget(breakTarget)
-            , m_continueTarget(continueTarget)
+            , m_breakTarget(WTFMove(breakTarget))
+            , m_continueTarget(WTFMove(continueTarget))
         {
         }
         int refCount() const { return m_refCount; }
 
-        Label* breakTarget() const { return m_breakTarget.get(); }
+        Label& breakTarget() const { return m_breakTarget.get(); }
         Label* continueTarget() const { return m_continueTarget.get(); }
 
         Type type() const { return m_type; }
@@ -72,7 +70,7 @@ namespace JSC {
         Type m_type;
         const Identifier* m_name;
         int m_scopeDepth;
-        RefPtr<Label> m_breakTarget;
+        Ref<Label> m_breakTarget;
         RefPtr<Label> m_continueTarget;
     };
 
@@ -132,5 +130,3 @@ namespace JSC {
     };
 
 } // namespace JSC
-
-#endif // LabelScope_h

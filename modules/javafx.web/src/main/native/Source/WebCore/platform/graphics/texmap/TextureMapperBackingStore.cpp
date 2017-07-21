@@ -19,22 +19,11 @@
 
 #include "config.h"
 
-#if USE(TEXTURE_MAPPER)
 #include "TextureMapperBackingStore.h"
 
 #include "GraphicsLayer.h"
 #include "ImageBuffer.h"
 #include "TextureMapper.h"
-
-#if USE(GRAPHICS_SURFACE)
-#include "GraphicsSurface.h"
-#include "TextureMapperGL.h"
-#endif
-
-//utatodo: move to TextureMapperTile.cpp
-#if 0 && PLATFORM(JAVA)
-#include "TextureMapperImageBuffer.h"
-#endif
 
 namespace WebCore {
 
@@ -92,4 +81,3 @@ unsigned TextureMapperBackingStore::calculateExposedTileEdges(const FloatRect& t
 }
 
 }
-#endif

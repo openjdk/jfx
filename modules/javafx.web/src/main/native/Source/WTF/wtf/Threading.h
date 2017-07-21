@@ -58,8 +58,9 @@ WTF_EXPORT_PRIVATE void initializeThreading();
 WTF_EXPORT_PRIVATE ThreadIdentifier createThread(const char* threadName, std::function<void()>);
 
 // Mark the current thread as requiring UI responsiveness.
-WTF_EXPORT_PRIVATE void setCurrentThreadIsUserInteractive();
-WTF_EXPORT_PRIVATE void setCurrentThreadIsUserInitiated();
+// relativePriority is a value in the range [-15, 0] where a lower value indicates a lower priority.
+WTF_EXPORT_PRIVATE void setCurrentThreadIsUserInteractive(int relativePriority = 0);
+WTF_EXPORT_PRIVATE void setCurrentThreadIsUserInitiated(int relativePriority = 0);
 
 WTF_EXPORT_PRIVATE ThreadIdentifier currentThread();
 WTF_EXPORT_PRIVATE void changeThreadPriority(ThreadIdentifier, int);
@@ -76,6 +77,13 @@ ThreadIdentifier createThreadInternal(ThreadFunction, void*, const char* threadN
 // Helpful for platforms where the thread name must be set from within the thread.
 void initializeCurrentThreadInternal(const char* threadName);
 
+const char* normalizeThreadName(const char* threadName);
+
+#if HAVE(QOS_CLASSES)
+WTF_EXPORT_PRIVATE void setGlobalMaxQOSClass(qos_class_t);
+WTF_EXPORT_PRIVATE qos_class_t adjustedQOSClass(qos_class_t);
+#endif
+
 } // namespace WTF
 
 using WTF::ThreadIdentifier;
@@ -84,5 +92,10 @@ using WTF::currentThread;
 using WTF::changeThreadPriority;
 using WTF::detachThread;
 using WTF::waitForThreadCompletion;
+
+#if HAVE(QOS_CLASSES)
+using WTF::setGlobalMaxQOSClass;
+using WTF::adjustedQOSClass;
+#endif
 
 #endif // Threading_h

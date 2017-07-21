@@ -1,20 +1,19 @@
 /*
  * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef RQRef_h
-#define RQRef_h
+
+#pragma once
 
 #include <jni.h>
-#include <JavaEnv.h>
+#include <wtf/java/JavaEnv.h>
 #include <wtf/RefCounted.h>
-#include <wtf/PassRef.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
 
 class RQRef : public RefCounted<RQRef> {
 public:
-    inline static PassRefPtr<RQRef> create(const JLObject &obj)
+    inline static RefPtr<RQRef> create(const JLObject &obj)
     {
         return obj ? adoptRef(new RQRef(obj)) : 0;
     }
@@ -36,4 +35,3 @@ private:
 };
 
 }
-#endif

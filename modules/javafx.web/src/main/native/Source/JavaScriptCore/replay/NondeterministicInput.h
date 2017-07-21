@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NondeterministicInput_h
-#define NondeterministicInput_h
+#pragma once
 
 #if ENABLE(WEB_REPLAY)
 
@@ -66,12 +65,12 @@ public:
 template<typename InputType>
 class NondeterministicInput : public NondeterministicInputBase {
 public:
-    virtual const String& type() const override
+    const String& type() const override
     {
         return InputTraits<InputType>::type();
     }
 
-    virtual InputQueue queue() const override
+    InputQueue queue() const override
     {
         return InputTraits<InputType>::queue();
     }
@@ -85,5 +84,3 @@ using JSC::NondeterministicInput;
 using JSC::NondeterministicInputBase;
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // NondeterministicInput_h

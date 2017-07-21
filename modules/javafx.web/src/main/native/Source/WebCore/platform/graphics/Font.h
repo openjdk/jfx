@@ -1,7 +1,7 @@
 /*
  * This file is part of the internal font implementation.
  *
- * Copyright (C) 2006, 2008, 2010, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2010, 2015-2016 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * This library is free software; you can redistribute it and/or
@@ -54,7 +54,12 @@
 #endif
 
 #if USE(CG)
-#include <WebCore/CoreGraphicsSPI.h>
+#include "CoreGraphicsSPI.h"
+#endif
+
+#if USE(DIRECT2D)
+interface IDWriteFactory;
+interface IDWriteGdiInterop;
 #endif
 
 namespace WebCore {
@@ -70,26 +75,10 @@ enum Pitch { UnknownPitch, FixedPitch, VariablePitch };
 
 class Font : public RefCounted<Font> {
 public:
-    class SVGData {
-        WTF_MAKE_FAST_ALLOCATED;
-    public:
-        virtual ~SVGData() { }
-
-        virtual void initializeFont(Font*, float fontSize) = 0;
-        virtual float widthForSVGGlyph(Glyph, float fontSize) const = 0;
-        virtual bool fillSVGGlyphPage(GlyphPage*, UChar* buffer, unsigned bufferLength) const = 0;
-    };
-
     // Used to create platform fonts.
     static Ref<Font> create(const FontPlatformData& platformData, bool isCustomFont = false, bool isLoading = false, bool isTextOrientationFallback = false)
     {
         return adoptRef(*new Font(platformData, isCustomFont, isLoading, isTextOrientationFallback));
-    }
-
-    // Used to create SVG Fonts.
-    static Ref<Font> create(std::unique_ptr<SVGData> svgData, float fontSize, bool syntheticBold, bool syntheticItalic)
-    {
-        return adoptRef(*new Font(WTFMove(svgData), fontSize, syntheticBold, syntheticItalic));
     }
 
     WEBCORE_EXPORT ~Font();
@@ -159,7 +148,7 @@ public:
         m_adjustedSpaceWidth = spaceWidth;
     }
 
-#if USE(CG) || USE(CAIRO)
+#if USE(CG) || USE(DIRECT2D) || USE(CAIRO) || PLATFORM(JAVA)
     float syntheticBoldOffset() const { return m_syntheticBoldOffset; }
 #endif
 
@@ -181,9 +170,6 @@ public:
     void determinePitch();
     Pitch pitch() const { return m_treatAsFixedPitch ? FixedPitch : VariablePitch; }
 
-    const SVGData* svgData() const { return m_svgData.get(); }
-    bool isSVGFont() const { return !!m_svgData; }
-
     bool isCustomFont() const { return m_isCustomFont; }
     bool isLoading() const { return m_isLoading; }
 
@@ -191,15 +177,11 @@ public:
     String description() const;
 #endif
 
-#if USE(APPKIT)
-    NSFont* getNSFont() const { return m_platformData.nsFont(); }
-#endif
-
 #if PLATFORM(IOS)
-    CTFontRef getCTFont() const { return m_platformData.font(); }
     bool shouldNotBeUsedForArabic() const { return m_shouldNotBeUsedForArabic; };
 #endif
 #if PLATFORM(COCOA)
+    CTFontRef getCTFont() const { return m_platformData.font(); }
     CFDictionaryRef getCFStringAttributes(bool enableKerning, FontOrientation) const;
     const BitVector& glyphsSupportedBySmallCaps() const;
     const BitVector& glyphsSupportedByAllSmallCaps() const;
@@ -221,12 +203,13 @@ public:
     static float ascentConsideringMacAscentHack(const WCHAR*, float ascent, float descent);
 #endif
 
+#if USE(DIRECT2D)
+    WEBCORE_EXPORT static IDWriteFactory* systemDWriteFactory();
+    WEBCORE_EXPORT static IDWriteGdiInterop* systemDWriteGdiInterop();
+#endif
+
 private:
     Font(const FontPlatformData&, bool isCustomFont = false, bool isLoading = false, bool isTextOrientationFallback = false);
-
-    Font(std::unique_ptr<SVGData>, float fontSize, bool syntheticBold, bool syntheticItalic);
-
-    Font(const FontPlatformData&, std::unique_ptr<SVGData>&&, bool isCustomFont = false, bool isLoading = false, bool isTextOrientationFallback = false);
 
     void platformInit();
     void platformGlyphInit();
@@ -252,8 +235,7 @@ private:
     float m_maxCharWidth;
     float m_avgCharWidth;
 
-    FontPlatformData m_platformData;
-    std::unique_ptr<SVGData> m_svgData;
+    const FontPlatformData m_platformData;
 
     mutable RefPtr<GlyphPage> m_glyphPageZero;
     mutable HashMap<unsigned, RefPtr<GlyphPage>> m_glyphPages;
@@ -272,16 +254,16 @@ private:
 
     Glyph m_zeroWidthSpaceGlyph { 0 };
 
-    struct DerivedFontData {
+    struct DerivedFonts {
 #if !COMPILER(MSVC)
         WTF_MAKE_FAST_ALLOCATED;
 #endif
     public:
-        explicit DerivedFontData(bool custom)
+        explicit DerivedFonts(bool custom)
             : forCustomFont(custom)
         {
         }
-        ~DerivedFontData();
+        ~DerivedFonts();
 
         bool forCustomFont;
         RefPtr<Font> smallCaps;
@@ -293,18 +275,19 @@ private:
         RefPtr<Font> nonSyntheticItalic;
     };
 
-    mutable std::unique_ptr<DerivedFontData> m_derivedFontData;
+    mutable std::unique_ptr<DerivedFonts> m_derivedFontData;
 
-#if USE(CG) || USE(CAIRO)
+#if USE(CG) || USE(DIRECT2D) || USE(CAIRO) || PLATFORM(JAVA)
     float m_syntheticBoldOffset;
 #endif
 
 #if PLATFORM(COCOA)
-    mutable HashMap<unsigned, RetainPtr<CFDictionaryRef>> m_CFStringAttributes;
-    mutable Optional<BitVector> m_glyphsSupportedBySmallCaps;
-    mutable Optional<BitVector> m_glyphsSupportedByAllSmallCaps;
-    mutable Optional<BitVector> m_glyphsSupportedByPetiteCaps;
-    mutable Optional<BitVector> m_glyphsSupportedByAllPetiteCaps;
+    mutable RetainPtr<CFDictionaryRef> m_nonKernedCFStringAttributes;
+    mutable RetainPtr<CFDictionaryRef> m_kernedCFStringAttributes;
+    mutable std::optional<BitVector> m_glyphsSupportedBySmallCaps;
+    mutable std::optional<BitVector> m_glyphsSupportedByAllSmallCaps;
+    mutable std::optional<BitVector> m_glyphsSupportedByPetiteCaps;
+    mutable std::optional<BitVector> m_glyphsSupportedByAllPetiteCaps;
 #endif
 
 #if PLATFORM(COCOA) || USE(HARFBUZZ)
@@ -356,24 +339,26 @@ ALWAYS_INLINE FloatRect Font::boundsForGlyph(Glyph glyph) const
 
 ALWAYS_INLINE float Font::widthForGlyph(Glyph glyph) const
 {
-    if (isZeroWidthSpaceGlyph(glyph))
+    // The optimization of returning 0 for the zero-width-space glyph is incorrect for the LastResort font,
+    // used in place of the actual font when isLoading() is true on both macOS and iOS.
+    // The zero-width-space glyph in that font does not have a width of zero and, further, that glyph is used
+    // for many other characters and must not be zero width when used for them.
+    if (isZeroWidthSpaceGlyph(glyph) && !isLoading())
         return 0;
 
     float width = m_glyphToWidthMap.metricsForGlyph(glyph);
     if (width != cGlyphSizeUnknown)
         return width;
 
-    if (isSVGFont())
-        width = m_svgData->widthForSVGGlyph(glyph, m_platformData.size());
 #if ENABLE(OPENTYPE_VERTICAL)
-    else if (m_verticalData)
-#if USE(CG) || USE(CAIRO)
+    if (m_verticalData) {
+#if USE(CG) || USE(DIRECT2D) || USE(CAIRO)
         width = m_verticalData->advanceHeight(this, glyph) + m_syntheticBoldOffset;
 #else
         width = m_verticalData->advanceHeight(this, glyph);
 #endif
+    } else
 #endif
-    else
         width = platformWidthForGlyph(glyph);
 
     m_glyphToWidthMap.setMetricsForGlyph(glyph, width);

@@ -22,9 +22,9 @@
 [
     Constructor,
     ConstructorCallWith=Document,
-    ImplementationLacksVTable
+    ImplementationLacksVTable,
+    ExportMacro=WEBCORE_EXPORT,
 ] interface Range {
-
     readonly attribute Node startContainer;
     readonly attribute long startOffset;
     readonly attribute Node endContainer;
@@ -32,65 +32,51 @@
     readonly attribute boolean collapsed;
     readonly attribute Node commonAncestorContainer;
 
-    [ObjCLegacyUnnamedParameters, RaisesException] void setStart(Node refNode,
-                                 [Default=Undefined] optional long offset);
-    [ObjCLegacyUnnamedParameters, RaisesException] void setEnd(Node refNode,
-                               [Default=Undefined] optional long offset);
-    [RaisesException] void setStartBefore(Node refNode);
-    [RaisesException] void setStartAfter(Node refNode);
-    [RaisesException] void setEndBefore(Node refNode);
-    [RaisesException] void setEndAfter(Node refNode);
-    void collapse([Default=Undefined] optional boolean toStart);
-    [RaisesException] void selectNode(Node refNode);
-    [RaisesException] void selectNodeContents(Node refNode);
+    [MayThrowException] void setStart(Node refNode, unsigned long offset);
+    [MayThrowException] void setEnd(Node refNode, unsigned long offset);
+
+    [MayThrowException] void setStartBefore(Node refNode);
+    [MayThrowException] void setStartAfter(Node refNode);
+    [MayThrowException] void setEndBefore(Node refNode);
+    [MayThrowException] void setEndAfter(Node refNode);
+    void collapse(optional boolean toStart = false);
+    [MayThrowException] void expand(optional DOMString unit = "");
+    [MayThrowException] void selectNode(Node refNode);
+    [MayThrowException] void selectNodeContents(Node refNode);
 
     // CompareHow
     const unsigned short START_TO_START = 0;
-    const unsigned short START_TO_END   = 1;
-    const unsigned short END_TO_END     = 2;
-    const unsigned short END_TO_START   = 3;
+    const unsigned short START_TO_END = 1;
+    const unsigned short END_TO_END = 2;
+    const unsigned short END_TO_START = 3;
 
-    [ObjCLegacyUnnamedParameters, RaisesException, ImplementedAs=compareBoundaryPointsForBindings] short compareBoundaryPoints([Default=Undefined] optional unsigned short how, Range sourceRange);
+    [MayThrowException, ImplementedAs=compareBoundaryPointsForBindings] short compareBoundaryPoints(unsigned short how, Range sourceRange);
 
-    [RaisesException] void deleteContents();
-    [RaisesException, NewObject] DocumentFragment extractContents();
-    [RaisesException, NewObject] DocumentFragment cloneContents();
-    [RaisesException] void insertNode(Node newNode);
-    [RaisesException] void surroundContents(Node newParent);
+    [CEReactions, MayThrowException] void deleteContents();
+    [CEReactions, MayThrowException, NewObject] DocumentFragment extractContents();
+    [CEReactions, MayThrowException, NewObject] DocumentFragment cloneContents();
+    [CEReactions, MayThrowException] void insertNode(Node newNode);
+    [CEReactions, MayThrowException] void surroundContents(Node newParent);
     [NewObject] Range cloneRange();
     DOMString toString();
 
     void detach();
 
-#if defined(LANGUAGE_JAVASCRIPT) || LANGUAGE_JAVASCRIPT
-    // CSSOM View Module API extensions
-
     ClientRectList getClientRects();
     ClientRect getBoundingClientRect();
-#endif
 
-    // extensions
+    [CEReactions, MayThrowException, NewObject] DocumentFragment createContextualFragment(DOMString html);
 
-    [RaisesException] DocumentFragment createContextualFragment([Default=Undefined] optional DOMString html);
-
-    // WebKit extensions
-
-    [RaisesException] short compareNode(Node refNode);
+    [MayThrowException] short compareNode(Node refNode);
 
     // CompareResults
-    const unsigned short NODE_BEFORE           = 0;
-    const unsigned short NODE_AFTER            = 1;
+    const unsigned short NODE_BEFORE = 0;
+    const unsigned short NODE_AFTER = 1;
     const unsigned short NODE_BEFORE_AND_AFTER = 2;
-    const unsigned short NODE_INSIDE           = 3;
+    const unsigned short NODE_INSIDE = 3;
 
-    [RaisesException] short comparePoint(Node refNode, [Default=Undefined] optional long offset);
-    [RaisesException] boolean intersectsNode(Node refNode);
-    [RaisesException] boolean isPointInRange(Node refNode, [Default=Undefined] optional long offset);
+    [MayThrowException] boolean intersectsNode(Node refNode);
 
-    [RaisesException] void expand([Default=Undefined] optional DOMString unit);
-
-#if !defined(LANGUAGE_JAVASCRIPT) || !LANGUAGE_JAVASCRIPT
-    readonly attribute DOMString text;
-#endif
+    [MayThrowException] short comparePoint(Node refNode, unsigned long offset);
+    [MayThrowException] boolean isPointInRange(Node refNode, unsigned long offset);
 };
-

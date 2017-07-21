@@ -2,10 +2,25 @@
                _JNI_OnUnload
                _WTFReportBacktrace
                _WTFReportAssertionFailure
+               _WTFCrashWithSecurityImplication
+               _WTFReportArgumentAssertionFailure
                _WTFCrash
+               __ZN3WTF8LockBase10unlockSlowEv
+               __ZN3WTF8LockBase8lockSlowEv
                __ZN3WTF8fastFreeEPv
                __ZN3WTF10fastMallocEm
                __ZN3WTF11currentTimeEv
+               __ZN3WTF6StringC1EPKc
+               __ZN3WTF6StringC1EPKtj
+               __ZN3WTF7RunLoop4mainEv
+               __ZN3WTF8fastFreeEPv
+               __ZN3WTF10fastMallocEm
+               __ZN3WTF10StringImpl7destroyEPS0_
+               __ZN3WTF11currentTimeEv
+               __ZN3WTF16fastZeroedMallocEm
+               __ZN3WTF26getAndResetAccumulatedLogsEv
+               __ZNK3WTF6String4utf8Ev
+               _kJSClassDefinitionEmpty
                _JSCheckScriptSyntax
                _JSClassCreate
                _JSClassRelease
@@ -102,6 +117,8 @@
                __ZN3JSC20failNextNewCodeBlockEPK15OpaqueJSContext
                __ZN3JSC17JSArrayBufferView6s_infoE
                __ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext
+               __ZN18WebCoreTestSupport25setLogChannelToAccumulateERKN3WTF6StringE
+               __ZN18WebCoreTestSupport26setAllowsAnySSLCertificateEb
                _Java_com_sun_webkit_dom_AttrImpl_getNameImpl
                _Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl
                _Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl
@@ -186,32 +203,6 @@
                _Java_com_sun_webkit_dom_DOMImplementationImpl_createHTMLDocumentImpl
                _Java_com_sun_webkit_dom_DOMImplementationImpl_dispose
                _Java_com_sun_webkit_dom_DOMImplementationImpl_hasFeatureImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_addRangeImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_collapseImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_collapseToEndImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_collapseToStartImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_containsNodeImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_deleteFromDocumentImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_dispose
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_emptyImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_extendImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getAnchorNodeImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getAnchorOffsetImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getBaseNodeImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getBaseOffsetImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getExtentNodeImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getExtentOffsetImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getFocusNodeImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getFocusOffsetImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getIsCollapsedImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getRangeAtImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getRangeCountImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_getTypeImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_modifyImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_removeAllRangesImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_selectAllChildrenImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_setBaseAndExtentImpl
-               _Java_com_sun_webkit_dom_DOMSelectionImpl_setPositionImpl
                _Java_com_sun_webkit_dom_DOMStringListImpl_containsImpl
                _Java_com_sun_webkit_dom_DOMStringListImpl_dispose
                _Java_com_sun_webkit_dom_DOMStringListImpl_getLengthImpl
@@ -282,138 +273,7 @@
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOnmouseoverImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOnmouseupImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_getOnmousewheelImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnofflineImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnonlineImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnpagehideImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnpageshowImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnpauseImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnplayImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnplayingImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnpopstateImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnprogressImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnratechangeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnresetImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnresizeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnscrollImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnsearchImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnseekedImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnseekingImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnselectImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnstalledImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnstorageImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnsubmitImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnsuspendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOntimeupdateImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOntransitionendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnunloadImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnvolumechangeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnwaitingImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnwebkitanimationendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnwebkitanimationiterationImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnwebkitanimationstartImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOnwebkittransitionendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOpenerImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOuterHeightImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getOuterWidthImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getPageXOffsetImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getPageYOffsetImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getParentImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getScreenLeftImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getScreenTopImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getScreenXImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getScreenYImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getScrollXImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getScrollYImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getSelectionImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getSelfImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getStatusImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getTopImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_getWindowImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_moveByImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_moveToImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_printImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_promptImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_releaseEventsImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_removeEventListenerImpl
                _Java_com_sun_webkit_dom_DOMWindowImpl_resizeByImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_resizeToImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_scrollByImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_scrollImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_scrollToImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setDefaultStatusImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setNameImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnabortImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnbeforeunloadImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnblurImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOncanplayImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOncanplaythroughImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnchangeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnclickImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOncontextmenuImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndblclickImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndragImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndragendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndragenterImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndragleaveImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndragoverImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndragstartImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndropImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOndurationchangeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnemptiedImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnendedImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnerrorImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnfocusImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnhashchangeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOninputImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOninvalidImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnkeydownImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnkeypressImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnkeyupImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnloadImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnloadeddataImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnloadedmetadataImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnloadstartImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmessageImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmousedownImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmouseenterImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmouseleaveImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmousemoveImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmouseoutImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmouseoverImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmouseupImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnmousewheelImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnofflineImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnonlineImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnpagehideImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnpageshowImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnpauseImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnplayImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnplayingImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnpopstateImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnprogressImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnratechangeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnresetImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnresizeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnscrollImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnsearchImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnseekedImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnseekingImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnselectImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnstalledImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnstorageImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnsubmitImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnsuspendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOntimeupdateImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOntransitionendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnunloadImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnvolumechangeImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnwaitingImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnwebkitanimationendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnwebkitanimationiterationImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnwebkitanimationstartImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setOnwebkittransitionendImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_setStatusImpl
-               _Java_com_sun_webkit_dom_DOMWindowImpl_stopImpl
                _Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelectorAllImpl
                _Java_com_sun_webkit_dom_DocumentFragmentImpl_querySelectorImpl
                _Java_com_sun_webkit_dom_DocumentImpl_adoptNodeImpl
@@ -948,6 +808,7 @@
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_writeImpl
                _Java_com_sun_webkit_dom_HTMLDocumentImpl_writelnImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_clickImpl
+               _Java_com_sun_webkit_dom_HTMLElementImpl_getIdImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getAccessKeyImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getContentEditableImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_getDirImpl
@@ -975,6 +836,7 @@
                _Java_com_sun_webkit_dom_HTMLElementImpl_setOuterTextImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setSpellcheckImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setTabIndexImpl
+               _Java_com_sun_webkit_dom_HTMLElementImpl_setIdImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setTitleImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setTranslateImpl
                _Java_com_sun_webkit_dom_HTMLElementImpl_setWebkitdropzoneImpl
@@ -1399,7 +1261,6 @@
                _Java_com_sun_webkit_dom_HTMLSelectElementImpl_setAutofocusImpl
                _Java_com_sun_webkit_dom_HTMLSelectElementImpl_setCustomValidityImpl
                _Java_com_sun_webkit_dom_HTMLSelectElementImpl_setDisabledImpl
-               _Java_com_sun_webkit_dom_HTMLSelectElementImpl_setLengthImpl
                _Java_com_sun_webkit_dom_HTMLSelectElementImpl_setMultipleImpl
                _Java_com_sun_webkit_dom_HTMLSelectElementImpl_setNameImpl
                _Java_com_sun_webkit_dom_HTMLSelectElementImpl_setRequiredImpl
@@ -1757,12 +1618,6 @@
                _Java_com_sun_webkit_dom_UIEventImpl_getViewImpl
                _Java_com_sun_webkit_dom_UIEventImpl_getWhichImpl
                _Java_com_sun_webkit_dom_UIEventImpl_initUIEventImpl
-               _Java_com_sun_webkit_dom_WheelEventImpl_getDeltaModeImpl
-               _Java_com_sun_webkit_dom_WheelEventImpl_getWebkitDirectionInvertedFromDeviceImpl
-               _Java_com_sun_webkit_dom_WheelEventImpl_getWheelDeltaImpl
-               _Java_com_sun_webkit_dom_WheelEventImpl_getWheelDeltaXImpl
-               _Java_com_sun_webkit_dom_WheelEventImpl_getWheelDeltaYImpl
-               _Java_com_sun_webkit_dom_WheelEventImpl_initWheelEventImpl
                _Java_com_sun_webkit_dom_XPathExpressionImpl_dispose
                _Java_com_sun_webkit_dom_XPathExpressionImpl_evaluateImpl
                _Java_com_sun_webkit_dom_XPathNSResolverImpl_dispose

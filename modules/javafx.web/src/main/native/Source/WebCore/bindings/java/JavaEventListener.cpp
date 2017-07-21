@@ -1,34 +1,31 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
+
 #include "config.h"
 
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 #include "JavaDOMUtils.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "JavaEventListener.h"
 
 namespace WebCore {
 
-//DOM Document implements ScriptExecutionContext!
-//FIXME: it need to be per-thread object then [WORKERS] would be introduced!
+// DOM Document implements ScriptExecutionContext!
+// FIXME: it need to be per-thread object then [WORKERS] would be introduced!
 Vector<ScriptExecutionContext*> JavaEventListener::sm_vScriptExecutionContexts;
 
 ScriptExecutionContext* JavaEventListener::scriptExecutionContext()
 {
     return sm_vScriptExecutionContexts.size() == 0
-        ? NULL
+        ? nullptr
         : sm_vScriptExecutionContexts.last();
 }
 
-bool JavaEventListener::operator==(const EventListener& other)
+bool JavaEventListener::operator==(const EventListener& other) const
 {
     const JavaEventListener* jother = other.isJavaEventListener()
                                         ? static_cast<const JavaEventListener*>(&other)
-                                        : NULL;
+                                        : nullptr;
     return jother && isJavaEquals(m_joListener, jother->m_joListener);
 }
 
@@ -79,13 +76,13 @@ using namespace WebCore;
 extern "C" {
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkCreatePeer
-    (JNIEnv* env, jobject self)
+    (JNIEnv*, jobject self)
 {
     return ptr_to_jlong(new JavaEventListener(JLObject(self, true)));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkDisposeJSPeer
-    (JNIEnv* env, jclass clazz, jlong peer)
+    (JNIEnv*, jclass, jlong peer)
 {
     EventListener* pEventListener = static_cast<EventListener *>(jlong_to_ptr(peer));
     if (pEventListener)
@@ -93,7 +90,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkDisposeJSPee
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkDispatchEvent
-    (JNIEnv* env, jclass clazz, jlong peer, jlong eventPeer)
+    (JNIEnv*, jclass, jlong peer, jlong eventPeer)
 {
     static_cast<EventListener *>(jlong_to_ptr(peer))->handleEvent(
         JavaEventListener::scriptExecutionContext(),

@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ReplayingInputCursor_h
-#define ReplayingInputCursor_h
+#pragma once
 
 #if ENABLE(WEB_REPLAY)
 
@@ -52,19 +51,19 @@ public:
     static Ref<ReplayingInputCursor> create(RefPtr<ReplaySessionSegment>&&, Page&, EventLoopInputDispatcherClient*);
     virtual ~ReplayingInputCursor();
 
-    virtual bool isCapturing() const override { return false; }
-    virtual bool isReplaying() const override { return true; }
+    bool isCapturing() const override { return false; }
+    bool isReplaying() const override { return true; }
 
     EventLoopInputDispatcher& dispatcher() const { return *m_dispatcher; }
 
     EventLoopInputData loadEventLoopInput();
 protected:
-    virtual NondeterministicInputBase* loadInput(InputQueue, const String& type) override;
+    NondeterministicInputBase* loadInput(InputQueue, const String& type) override;
 private:
     ReplayingInputCursor(RefPtr<ReplaySessionSegment>&&, Page&, EventLoopInputDispatcherClient*);
 
-    virtual void storeInput(std::unique_ptr<NondeterministicInputBase>) override;
-    virtual NondeterministicInputBase* uncheckedLoadInput(InputQueue) override;
+    void storeInput(std::unique_ptr<NondeterministicInputBase>) override;
+    NondeterministicInputBase* uncheckedLoadInput(InputQueue) override;
 
     RefPtr<ReplaySessionSegment> m_segment;
     std::unique_ptr<EventLoopInputDispatcher> m_dispatcher;
@@ -74,5 +73,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // ReplayingInputCursor_h

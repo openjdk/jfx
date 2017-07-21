@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012, 2014-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,9 @@
 #include "config.h"
 #include "Options.h"
 
+#include "LLIntCommon.h"
+#include "LLIntData.h"
+#include "SigillCrashAnalyzer.h"
 #include <algorithm>
 #include <limits>
 #include <math.h>
@@ -52,6 +55,19 @@
 #define OPTIONS_FILENAME "/tmp/jsc.options"
 
 namespace JSC {
+
+namespace {
+#ifdef NDEBUG
+bool restrictedOptionsEnabled = false;
+#else
+bool restrictedOptionsEnabled = true;
+#endif
+}
+
+void Options::enableRestrictedOptions(bool enableOrNot)
+{
+    restrictedOptionsEnabled = enableOrNot;
+}
 
 static bool parse(const char* string, bool& value)
 {
@@ -114,14 +130,39 @@ static bool parse(const char* string, GCLogging::Level& value)
     return false;
 }
 
-template<typename T>
-bool overrideOptionWithHeuristic(T& variable, const char* name)
+bool Options::isAvailable(Options::ID id, Options::Availability availability)
 {
+    if (availability == Availability::Restricted)
+        return restrictedOptionsEnabled;
+    ASSERT(availability == Availability::Configurable);
+
+    UNUSED_PARAM(id);
+#if ENABLE(LLINT_STATS)
+    if (id == reportLLIntStatsID || id == llintStatsFileID)
+        return true;
+#endif
+#if !defined(NDEBUG)
+    if (id == maxSingleAllocationSizeID)
+        return true;
+#endif
+#if OS(DARWIN)
+    if (id == useSigillCrashAnalyzerID)
+        return true;
+#endif
+    return false;
+}
+
+template<typename T>
+bool overrideOptionWithHeuristic(T& variable, Options::ID id, const char* name, Options::Availability availability)
+{
+    bool available = (availability == Options::Availability::Normal)
+        || Options::isAvailable(id, availability);
+
     const char* stringValue = getenv(name);
     if (!stringValue)
         return false;
 
-    if (parse(stringValue, variable))
+    if (available && parse(stringValue, variable))
         return true;
 
     fprintf(stderr, "WARNING: failed to parse %s=%s\n", name, stringValue);
@@ -232,8 +273,8 @@ Options::Entry Options::s_defaultOptions[Options::numberOfOptions];
 
 // Realize the names for each of the options:
 const Options::EntryInfo Options::s_optionsInfo[Options::numberOfOptions] = {
-#define FOR_EACH_OPTION(type_, name_, defaultValue_, description_) \
-    { #name_, description_, Options::Type::type_##Type },
+#define FOR_EACH_OPTION(type_, name_, defaultValue_, availability_, description_) \
+    { #name_, description_, Options::Type::type_##Type, Availability::availability_ },
     JSC_OPTIONS(FOR_EACH_OPTION)
 #undef FOR_EACH_OPTION
 };
@@ -247,7 +288,7 @@ static void scaleJITPolicy()
         scaleFactor = 0.0;
 
     struct OptionToScale {
-        Options::OptionID id;
+        Options::ID id;
         int32_t minVal;
     };
 
@@ -270,6 +311,20 @@ static void scaleJITPolicy()
     }
 }
 
+static void overrideDefaults()
+{
+    if (WTF::numberOfProcessorCores() < 4) {
+        Options::maximumMutatorUtilization() = 0.6;
+        Options::concurrentGCMaxHeadroom() = 1.4;
+        Options::minimumGCPauseMS() = 1;
+        Options::useStochasticMutatorScheduler() = false;
+        if (WTF::numberOfProcessorCores() <= 1)
+            Options::gcIncrementScale() = 1;
+        else
+            Options::gcIncrementScale() = 0;
+    }
+}
+
 static void recomputeDependentOptions()
 {
 #if !defined(NDEBUG)
@@ -280,11 +335,12 @@ static void recomputeDependentOptions()
     Options::useJIT() = false;
     Options::useDFGJIT() = false;
     Options::useFTLJIT() = false;
+    Options::useDOMJIT() = false;
 #endif
 #if !ENABLE(YARR_JIT)
     Options::useRegExpJIT() = false;
 #endif
-#if !ENABLE(CONCURRENT_JIT)
+#if !ENABLE(CONCURRENT_JS)
     Options::useConcurrentJIT() = false;
 #endif
 #if !ENABLE(DFG_JIT)
@@ -294,7 +350,12 @@ static void recomputeDependentOptions()
 #if !ENABLE(FTL_JIT)
     Options::useFTLJIT() = false;
 #endif
-#if ENABLE(ASSEMBLER) && OS(WINDOWS) && CPU(X86)
+
+#if !CPU(X86_64) && !CPU(ARM64)
+    Options::useConcurrentGC() = false;
+#endif
+
+#if OS(WINDOWS) && CPU(X86)
     // Disable JIT on Windows if SSE2 is not present
     if (!MacroAssemblerX86::supportsFloatingPoint())
         Options::useJIT() = false;
@@ -316,10 +377,16 @@ static void recomputeDependentOptions()
         || Options::verboseOSR()
         || Options::verboseCompilationQueue()
         || Options::reportCompileTimes()
+        || Options::reportBaselineCompileTimes()
+        || Options::reportDFGCompileTimes()
         || Options::reportFTLCompileTimes()
+        || Options::reportDFGPhaseTimes()
         || Options::verboseCFA()
         || Options::verboseFTLFailure())
         Options::alwaysComputeHash() = true;
+
+    if (!Options::useConcurrentGC())
+        Options::collectContinuously() = false;
 
     if (Option(Options::jitPolicyScaleID).isOverridden())
         scaleJITPolicy();
@@ -340,6 +407,16 @@ static void recomputeDependentOptions()
         Options::useOSREntryToFTL() = false;
     }
 
+#if PLATFORM(IOS) && !PLATFORM(IOS_SIMULATOR) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000
+    // Override globally for now. Longer term we'll just make the default
+    // be to have this option enabled, and have platforms that don't support
+    // it just silently use a single mapping.
+    Options::useSeparatedWXHeap() = true;
+#endif
+
+    if (Options::alwaysUseShadowChicken())
+        Options::maximumInliningDepth() = 1;
+
     // Compute the maximum value of the reoptimization retry counter. This is simply
     // the largest value at which we don't overflow the execute counter, when using it
     // to left-shift the execution counter by this amount. Currently the value ends
@@ -351,6 +428,24 @@ static void recomputeDependentOptions()
 
     ASSERT((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << Options::reoptimizationRetryCounterMax()) > 0);
     ASSERT((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << Options::reoptimizationRetryCounterMax()) <= static_cast<int64_t>(std::numeric_limits<int32_t>::max()));
+
+#if ENABLE(LLINT_STATS)
+    LLInt::Data::loadStats();
+#endif
+#if !defined(NDEBUG)
+    if (Options::maxSingleAllocationSize())
+        fastSetMaxSingleAllocationSize(Options::maxSingleAllocationSize());
+    else
+        fastSetMaxSingleAllocationSize(std::numeric_limits<size_t>::max());
+#endif
+
+    if (Options::useZombieMode()) {
+        Options::sweepSynchronously() = true;
+        Options::scribbleFreeCells() = true;
+    }
+
+    if (Options::useSigillCrashAnalyzer())
+        enableSigillCrashAnalyzer();
 }
 
 void Options::initialize()
@@ -361,11 +456,13 @@ void Options::initialize()
         initializeOptionsOnceFlag,
         [] {
             // Initialize each of the options with their default values:
-#define FOR_EACH_OPTION(type_, name_, defaultValue_, description_)      \
+#define FOR_EACH_OPTION(type_, name_, defaultValue_, availability_, description_) \
             name_() = defaultValue_;                                    \
             name_##Default() = defaultValue_;
             JSC_OPTIONS(FOR_EACH_OPTION)
 #undef FOR_EACH_OPTION
+
+            overrideDefaults();
 
             // Allow environment vars to override options if applicable.
             // The evn var should be the name of the option prefixed with
@@ -384,8 +481,8 @@ void Options::initialize()
             if (hasBadOptions && Options::validateOptions())
                 CRASH();
 #else // PLATFORM(COCOA)
-#define FOR_EACH_OPTION(type_, name_, defaultValue_, description_)      \
-            overrideOptionWithHeuristic(name_(), "JSC_" #name_);
+#define FOR_EACH_OPTION(type_, name_, defaultValue_, availability_, description_) \
+            overrideOptionWithHeuristic(name_(), name_##ID, "JSC_" #name_, Availability::availability_);
             JSC_OPTIONS(FOR_EACH_OPTION)
 #undef FOR_EACH_OPTION
 #endif // PLATFORM(COCOA)
@@ -398,8 +495,6 @@ void Options::initialize()
 #if 0
                 ; // Deconfuse editors that do auto indentation
 #endif
-
-            recomputeDependentOptions();
 
 #if USE(OPTIONS_FILE)
             {
@@ -425,6 +520,8 @@ void Options::initialize()
                     dataLogF("Failed to close file %s: %s\n", filename, strerror(errno));
             }
 #endif
+
+            recomputeDependentOptions();
 
             // Do range checks where needed and make corrections to the options:
             ASSERT(Options::thresholdForOptimizeAfterLongWarmUp() >= Options::thresholdForOptimizeAfterWarmUp());
@@ -549,9 +646,12 @@ bool Options::setOptionWithoutAlias(const char* arg)
 
     // For each option, check if the specify arg is a match. If so, set the arg
     // if the value makes sense. Otherwise, move on to checking the next option.
-#define FOR_EACH_OPTION(type_, name_, defaultValue_, description_) \
+#define FOR_EACH_OPTION(type_, name_, defaultValue_, availability_, description_) \
     if (strlen(#name_) == static_cast<size_t>(equalStr - arg)      \
         && !strncmp(arg, #name_, equalStr - arg)) {                \
+        if (Availability::availability_ != Availability::Normal     \
+            && !isAvailable(name_##ID, Availability::availability_)) \
+            return false;                                          \
         type_ value;                                               \
         value = (defaultValue_);                                   \
         bool success = parse(valueStr, value);                     \
@@ -644,7 +744,7 @@ void Options::dumpAllOptions(StringBuilder& builder, DumpLevel level, const char
     for (int id = 0; id < numberOfOptions; id++) {
         if (separator && id)
             builder.append(separator);
-        dumpOption(builder, level, static_cast<OptionID>(id), optionHeader, optionFooter, dumpDefaultsOption);
+        dumpOption(builder, level, static_cast<ID>(id), optionHeader, optionFooter, dumpDefaultsOption);
     }
 }
 
@@ -660,13 +760,17 @@ void Options::dumpAllOptions(FILE* stream, DumpLevel level, const char* title)
     fprintf(stream, "%s", builder.toString().utf8().data());
 }
 
-void Options::dumpOption(StringBuilder& builder, DumpLevel level, OptionID id,
+void Options::dumpOption(StringBuilder& builder, DumpLevel level, Options::ID id,
     const char* header, const char* footer, DumpDefaultsOption dumpDefaultsOption)
 {
     if (id >= numberOfOptions)
         return; // Illegal option.
 
     Option option(id);
+    Availability availability = option.availability();
+    if (availability != Availability::Normal && !isAvailable(id, availability))
+        return;
+
     bool wasOverridden = option.isOverridden();
     bool needsDescription = (level == DumpLevel::Verbose && option.description());
 
@@ -680,13 +784,13 @@ void Options::dumpOption(StringBuilder& builder, DumpLevel level, OptionID id,
     option.dump(builder);
 
     if (wasOverridden && (dumpDefaultsOption == DumpDefaults)) {
-        builder.append(" (default: ");
+        builder.appendLiteral(" (default: ");
         option.defaultOption().dump(builder);
-        builder.append(")");
+        builder.appendLiteral(")");
     }
 
     if (needsDescription) {
-        builder.append("   ... ");
+        builder.appendLiteral("   ... ");
         builder.append(option.description());
     }
 

@@ -26,13 +26,11 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WheelEventTestTrigger_h
-#define WheelEventTestTrigger_h
+#pragma once
 
 #include <set>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
-#include <wtf/RefPtr.h>
 #include <wtf/RunLoop.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
@@ -64,6 +62,4 @@ private:
     WTF::HashMap<ScrollableAreaIdentifier, std::set<DeferTestTriggerReason>> m_deferTestTriggerReasons;
 };
 
-}
-
-#endif
+} // namespace WebCore

@@ -1,12 +1,12 @@
 /*
  * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef TextCodecJava_h
-#define TextCodecJava_h
+
+#pragma once
 
 #include "TextCodec.h"
 #include "TextEncoding.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 namespace WebCore {
 
@@ -28,6 +28,4 @@ private:
     jobject m_codec;
 };
 
-}
-
-#endif
+}  // namespace WebCore

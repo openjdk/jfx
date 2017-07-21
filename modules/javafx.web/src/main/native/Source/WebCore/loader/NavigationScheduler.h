@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2008, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2009 Adam Barth. All rights reserved.
  *
@@ -28,8 +28,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NavigationScheduler_h
-#define NavigationScheduler_h
+#pragma once
 
 #include "FrameLoaderTypes.h"
 #include "Timer.h"
@@ -42,16 +41,15 @@ class FormSubmission;
 class Frame;
 class ScheduledNavigation;
 class SecurityOrigin;
-class SubstituteData;
 class URL;
 
-class NavigationDisablerForBeforeUnload {
+class NavigationDisabler {
 public:
-    NavigationDisablerForBeforeUnload()
+    NavigationDisabler()
     {
         s_navigationDisableCount++;
     }
-    ~NavigationDisablerForBeforeUnload()
+    ~NavigationDisabler()
     {
         ASSERT(s_navigationDisableCount);
         s_navigationDisableCount--;
@@ -70,12 +68,11 @@ public:
     bool redirectScheduledDuringLoad();
     bool locationChangePending();
 
-    void scheduleRedirect(Document* initiatingDocument, double delay, const URL&);
-    void scheduleLocationChange(Document* initiatingDocument, SecurityOrigin*, const URL&, const String& referrer, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
-    void scheduleFormSubmission(PassRefPtr<FormSubmission>);
-    void scheduleRefresh(Document* initiatingDocument);
+    void scheduleRedirect(Document& initiatingDocument, double delay, const URL&);
+    void scheduleLocationChange(Document& initiatingDocument, SecurityOrigin&, const URL&, const String& referrer, LockHistory = LockHistory::Yes, LockBackForwardList = LockBackForwardList::Yes);
+    void scheduleFormSubmission(Ref<FormSubmission>&&);
+    void scheduleRefresh(Document& initiatingDocument);
     void scheduleHistoryNavigation(int steps);
-    void scheduleSubstituteDataLoad(const URL& baseURL, const SubstituteData&);
     void schedulePageBlock(Document& originDocument);
 
     void startTimer();
@@ -98,5 +95,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // NavigationScheduler_h

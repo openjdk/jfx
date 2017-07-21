@@ -24,14 +24,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JavaMethodJSC_h
-#define JavaMethodJSC_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
 #include "Bridge.h"
-#include "JavaStringJSC.h"
 #include "JavaType.h"
+
+#include "JavaStringJSC.h"
 
 namespace JSC {
 
@@ -68,5 +68,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JavaMethodJSC_h

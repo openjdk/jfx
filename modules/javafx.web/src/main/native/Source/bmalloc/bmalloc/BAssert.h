@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,10 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BAssert_h
-#define BAssert_h
+#pragma once
 
 #include "BPlatform.h"
+#include "Logging.h"
+
+#if BUSE(OS_LOG)
+#include <os/log.h>
+#endif
 
 #if defined(NDEBUG) && BOS(DARWIN)
 
@@ -63,7 +67,25 @@
 
 #define RELEASE_BASSERT(x) BASSERT_IMPL(x)
 
-#define UNUSED(x) (void)x
+#if BUSE(OS_LOG)
+#define BMALLOC_LOGGING_PREFIX "bmalloc: "
+#define BLOG_ERROR(format, ...) os_log_error(OS_LOG_DEFAULT, BMALLOC_LOGGING_PREFIX format, __VA_ARGS__)
+#else
+#define BLOG_ERROR(format, ...) bmalloc::reportAssertionFailureWithMessage(__FILE__, __LINE__, __PRETTY_FUNCTION__, format, __VA_ARGS__)
+#endif
+
+#if defined(NDEBUG)
+#define RELEASE_BASSERT_WITH_MESSAGE(x, format, ...) BASSERT_IMPL(x)
+#else
+#define RELEASE_BASSERT_WITH_MESSAGE(x, format, ...) do { \
+    if (!(x)) { \
+        BLOG_ERROR("ASSERTION FAILED: " #x " :: " format, ##__VA_ARGS__); \
+        BCRASH(); \
+    } \
+} while (0);
+#endif
+
+#define UNUSED(x) ((void)x)
 
 // ===== Release build =====
 
@@ -82,8 +104,6 @@
 
 #define BASSERT(x) BASSERT_IMPL(x)
 
-#define IF_DEBUG(x) x
+#define IF_DEBUG(x) (x)
 
 #endif // !defined(NDEBUG)
-
-#endif // BAssert_h

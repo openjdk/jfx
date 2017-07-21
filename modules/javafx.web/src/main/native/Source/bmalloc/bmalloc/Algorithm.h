@@ -75,19 +75,35 @@ template<size_t divisor, typename T> inline constexpr T roundUpToMultipleOf(T x)
     return roundUpToMultipleOf(divisor, x);
 }
 
-template<size_t divisor, typename T> inline constexpr T roundDownToMultipleOf(T x)
+template<typename T> inline T roundDownToMultipleOf(size_t divisor, T x)
 {
-    static_assert(isPowerOfTwo(divisor), "'divisor' must be a power of two.");
+    BASSERT(isPowerOfTwo(divisor));
     return reinterpret_cast<T>(mask(reinterpret_cast<uintptr_t>(x), ~(divisor - 1ul)));
 }
 
-template<typename T> void divideRoundingUp(T numerator, T denominator, T& quotient, T& remainder)
+template<size_t divisor, typename T> inline constexpr T roundDownToMultipleOf(T x)
+{
+    static_assert(isPowerOfTwo(divisor), "'divisor' must be a power of two.");
+    return roundDownToMultipleOf(divisor, x);
+}
+
+template<typename T> inline void divideRoundingUp(T numerator, T denominator, T& quotient, T& remainder)
 {
     // We expect the compiler to emit a single divide instruction to extract both the quotient and the remainder.
     quotient = numerator / denominator;
     remainder = numerator % denominator;
     if (remainder)
         quotient += 1;
+}
+
+template<typename T> inline T divideRoundingUp(T numerator, T denominator)
+{
+    return (numerator + denominator - 1) / denominator;
+}
+
+template<typename T> inline T roundUpToMultipleOfNonPowerOfTwo(size_t divisor, T x)
+{
+    return divideRoundingUp(x, divisor) * divisor;
 }
 
 // Version of sizeof that returns 0 for empty classes.
@@ -100,6 +116,11 @@ template<typename T> inline constexpr size_t sizeOf()
 template<typename T> inline constexpr size_t bitCount()
 {
     return sizeof(T) * 8;
+}
+
+inline constexpr unsigned long log2(unsigned long value)
+{
+    return bitCount<unsigned long>() - 1 - __builtin_clzl(value);
 }
 
 } // namespace bmalloc

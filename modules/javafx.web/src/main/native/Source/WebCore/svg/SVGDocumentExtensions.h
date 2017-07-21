@@ -18,8 +18,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef SVGDocumentExtensions_h
-#define SVGDocumentExtensions_h
+#pragma once
 
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -29,15 +28,13 @@
 namespace WebCore {
 
 class Document;
+class Element;
 class RenderSVGResourceContainer;
 class SVGElement;
-#if ENABLE(SVG_FONTS)
 class SVGFontFaceElement;
-#endif
 class SVGResourcesCache;
 class SVGSMILElement;
 class SVGSVGElement;
-class Element;
 
 class SVGDocumentExtensions {
     WTF_MAKE_NONCOPYABLE(SVGDocumentExtensions); WTF_MAKE_FAST_ALLOCATED;
@@ -57,6 +54,7 @@ public:
     void pauseAnimations();
     void unpauseAnimations();
     void dispatchSVGLoadEventToOutermostSVGElements();
+    bool areAnimationsPaused() const { return m_areAnimationsPaused; }
 
     void reportWarning(const String&);
     void reportError(const String&);
@@ -91,6 +89,8 @@ private:
     std::unique_ptr<SVGResourcesCache> m_resourcesCache;
 
     Vector<SVGElement*> m_rebuildElements;
+    bool m_areAnimationsPaused { false }; // For testing.
+
 public:
     // This HashMap contains a list of pending resources. Pending resources, are such
     // which are referenced by any object in the SVG document, but do NOT exist yet.
@@ -111,6 +111,4 @@ private:
     std::unique_ptr<PendingElements> removePendingResourceForRemoval(const AtomicString&);
 };
 
-}
-
-#endif
+} // namespace WebCore

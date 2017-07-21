@@ -26,8 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JSDOMWindowShell_h
-#define JSDOMWindowShell_h
+#pragma once
 
 #include "DOMWindow.h"
 #include "JSDOMWindow.h"
@@ -44,16 +43,17 @@ namespace WebCore {
 
         JSDOMWindow* window() const { return JSC::jsCast<JSDOMWindow*>(target()); }
         void setWindow(JSC::VM&, JSDOMWindow*);
-        void setWindow(PassRefPtr<DOMWindow>);
+        void setWindow(RefPtr<DOMWindow>&&);
 
         DECLARE_INFO;
 
         DOMWindow& wrapped() const;
+        static WEBCORE_EXPORT DOMWindow* toWrapped(JSC::VM&, JSC::JSObject*);
 
-        static JSDOMWindowShell* create(JSC::VM& vm, PassRefPtr<DOMWindow> window, JSC::Structure* structure, DOMWrapperWorld& world)
+        static JSDOMWindowShell* create(JSC::VM& vm, RefPtr<DOMWindow>&& window, JSC::Structure* structure, DOMWrapperWorld& world)
         {
             JSDOMWindowShell* shell = new (NotNull, JSC::allocateCell<JSDOMWindowShell>(vm.heap)) JSDOMWindowShell(vm, structure, world);
-            shell->finishCreation(vm, window);
+            shell->finishCreation(vm, WTFMove(window));
             return shell;
         }
 
@@ -66,7 +66,7 @@ namespace WebCore {
 
     protected:
         JSDOMWindowShell(JSC::VM&, JSC::Structure*, DOMWrapperWorld&);
-        void finishCreation(JSC::VM&, PassRefPtr<DOMWindow>);
+        void finishCreation(JSC::VM&, RefPtr<DOMWindow>&&);
 
         Ref<DOMWrapperWorld> m_world;
     };
@@ -75,5 +75,3 @@ namespace WebCore {
     JSDOMWindowShell* toJSDOMWindowShell(Frame*, DOMWrapperWorld&);
 
 } // namespace WebCore
-
-#endif // JSDOMWindowShell_h

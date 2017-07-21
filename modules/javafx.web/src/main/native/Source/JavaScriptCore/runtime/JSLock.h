@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008, 2009, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2005, 2008, 2009, 2014, 2016 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -18,8 +18,7 @@
  *
  */
 
-#ifndef JSLock_h
-#define JSLock_h
+#pragma once
 
 #include <mutex>
 #include <thread>
@@ -100,6 +99,7 @@ public:
         ASSERT(m_hasExclusiveThread);
         return m_ownerThreadID;
     }
+    std::thread::id ownerThread() const { return m_ownerThreadID; }
     JS_EXPORT_PRIVATE void setExclusiveThread(std::thread::id);
     JS_EXPORT_PRIVATE bool currentThreadIsHoldingLock();
 
@@ -137,10 +137,9 @@ private:
     intptr_t m_lockCount;
     unsigned m_lockDropDepth;
     bool m_hasExclusiveThread;
+    bool m_shouldReleaseHeapAccess;
     VM* m_vm;
     AtomicStringTable* m_entryAtomicStringTable;
 };
 
 } // namespace
-
-#endif // JSLock_h

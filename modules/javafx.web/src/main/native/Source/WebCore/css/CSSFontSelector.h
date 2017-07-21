@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CSSFontSelector_h
-#define CSSFontSelector_h
+#pragma once
 
 #include "CSSFontFace.h"
 #include "CSSFontFaceSet.h"
@@ -34,7 +33,6 @@
 #include "Timer.h"
 #include <memory>
 #include <wtf/Forward.h>
-#include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/StringHash.h>
@@ -57,39 +55,49 @@ public:
     }
     virtual ~CSSFontSelector();
 
-    virtual unsigned version() const override { return m_version; }
-    virtual unsigned uniqueId() const override { return m_uniqueId; }
+    unsigned version() const final { return m_version; }
+    unsigned uniqueId() const final { return m_uniqueId; }
 
-    virtual FontRanges fontRangesForFamily(const FontDescription&, const AtomicString&) override;
-    virtual size_t fallbackFontCount() override;
-    virtual RefPtr<Font> fallbackFontAt(const FontDescription&, size_t) override;
+    FontRanges fontRangesForFamily(const FontDescription&, const AtomicString&) final;
+    size_t fallbackFontCount() final;
+    RefPtr<Font> fallbackFontAt(const FontDescription&, size_t) final;
 
     void clearDocument();
+    void buildStarted();
+    void buildCompleted();
 
     void addFontFaceRule(StyleRuleFontFace&, bool isInitiatingElementInUserAgentShadowTree);
 
     void fontLoaded();
-    virtual void fontCacheInvalidated() override;
+    void fontCacheInvalidated() final;
 
     bool isEmpty() const;
 
-    virtual void registerForInvalidationCallbacks(FontSelectorClient&) override;
-    virtual void unregisterForInvalidationCallbacks(FontSelectorClient&) override;
+    void registerForInvalidationCallbacks(FontSelectorClient&) final;
+    void unregisterForInvalidationCallbacks(FontSelectorClient&) final;
 
     Document* document() const { return m_document; }
 
-    void beginLoadingFontSoon(CachedFont*);
+    void beginLoadingFontSoon(CachedFont&);
 
     FontFaceSet& fontFaceSet();
+
+    void setIsComputingRootStyleFont(bool value) { m_isComputingRootStyleFont = value; }
 
 private:
     explicit CSSFontSelector(Document&);
 
     void dispatchInvalidationCallbacks();
 
-    virtual void fontModified() override;
+    void fontModified() final;
 
     void beginLoadTimerFired();
+
+    struct PendingFontFaceRule {
+        StyleRuleFontFace& styleRuleFontFace;
+        bool isInitiatingElementInUserAgentShadowTree;
+    };
+    Vector<PendingFontFaceRule> m_stagingArea;
 
     Document* m_document;
     RefPtr<FontFaceSet> m_fontFaceSet;
@@ -97,13 +105,15 @@ private:
     HashSet<FontSelectorClient*> m_clients;
 
     Vector<CachedResourceHandle<CachedFont>> m_fontsToBeginLoading;
+    HashSet<RefPtr<CSSFontFace>> m_cssConnectionsPossiblyToRemove;
+    HashSet<RefPtr<StyleRuleFontFace>> m_cssConnectionsEncounteredDuringBuild;
     Timer m_beginLoadingTimer;
 
     unsigned m_uniqueId;
     unsigned m_version;
     bool m_creatingFont { false };
+    bool m_buildIsUnderway { false };
+    bool m_isComputingRootStyleFont { false };
 };
 
 } // namespace WebCore
-
-#endif // CSSFontSelector_h

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -8,7 +8,7 @@
 #include "Color.h"
 #include "Frame.h"
 #include "FrameView.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "Page.h"
 #include "PopupMenuJava.h"
 #include "PopupMenuClient.h"
@@ -62,7 +62,7 @@ PopupMenuJava::~PopupMenuJava()
     CheckAndClearException(env);
 }
 
-void PopupMenuJava::createPopupMenuJava(Page* page)
+void PopupMenuJava::createPopupMenuJava(Page*)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -164,7 +164,7 @@ extern "C" {
 #endif
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkSelectionCommited
-    (JNIEnv* env, jobject self, jlong pdata, jint index)
+    (JNIEnv*, jobject, jlong pdata, jint index)
 {
     if (!pdata) {
         return;
@@ -179,7 +179,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkSelectionCommited
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_PopupMenu_twkPopupClosed
-    (JNIEnv* env, jobject self, jlong pdata)
+    (JNIEnv*, jobject, jlong pdata)
 {
     if (!pdata) {
         return;

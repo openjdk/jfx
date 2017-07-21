@@ -16,6 +16,7 @@
 
 RefPtr<TestRunner> gTestRunner;
 std::unique_ptr<GCController> gGCController;
+JSGlobalContextRef gContext;
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,21 +49,20 @@ JNIEXPORT void JNICALL Java_com_sun_javafx_webkit_drt_DumpRenderTree_didClearWin
     ASSERT(pWindowObject);
     ASSERT(eventSender);
 
-    JSGlobalContextRef context =
-            static_cast<JSGlobalContextRef>(jlong_to_ptr(pContext));
+    gContext = static_cast<JSGlobalContextRef>(jlong_to_ptr(pContext));
     JSObjectRef windowObject =
             static_cast<JSObjectRef>(jlong_to_ptr(pWindowObject));
 
     JSValueRef exception = 0;
 
-    gTestRunner->makeWindowObject(context, windowObject, &exception);
+    gTestRunner->makeWindowObject(gContext, windowObject, &exception);
     ASSERT(!exception);
 
     JLObject jlEventSender(eventSender, true);
-    makeEventSender(context, windowObject, jlEventSender, &exception);
+    makeEventSender(gContext, windowObject, jlEventSender, &exception);
     ASSERT(!exception);
-    WebCoreTestSupport::injectInternalsObject(context);
-    gGCController->makeWindowObject(context, windowObject, &exception);
+    WebCoreTestSupport::injectInternalsObject(gContext);
+    gGCController->makeWindowObject(gContext, windowObject, &exception);
     ASSERT(!exception);
 }
 

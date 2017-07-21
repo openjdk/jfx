@@ -24,8 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MediaControlsApple_h
-#define MediaControlsApple_h
+#pragma once
 
 #if ENABLE(VIDEO)
 
@@ -45,7 +44,7 @@ public:
             : 0;
     }
 
-    virtual bool operator==(const EventListener& other) override;
+    bool operator==(const EventListener& other) const override;
 
 private:
     MediaControlsAppleEventListener(MediaControlsApple* mediaControls)
@@ -54,71 +53,70 @@ private:
     {
     }
 
-    virtual void handleEvent(ScriptExecutionContext*, Event*) override;
+    void handleEvent(ScriptExecutionContext*, Event*) override;
 
     MediaControlsApple* m_mediaControls;
 };
 
 class MediaControlsApple final : public MediaControls {
 public:
-    static PassRefPtr<MediaControlsApple> createControls(Document&);
+    static RefPtr<MediaControlsApple> tryCreateControls(Document&);
 
     // MediaControls implementation.
-    virtual void setMediaController(MediaControllerInterface*) override;
+    void setMediaController(MediaControllerInterface*) override;
 
-    virtual void hide() override;
-    virtual void makeTransparent() override;
+    void hide() override;
+    void makeTransparent() override;
 
-    virtual void reset() override;
+    void reset() override;
 
-    virtual void changedMute() override;
-    virtual void changedVolume() override;
+    void changedMute() override;
+    void changedVolume() override;
 
-    virtual void enteredFullscreen() override;
-    virtual void exitedFullscreen() override;
+    void enteredFullscreen() override;
+    void exitedFullscreen() override;
 
-    virtual void reportedError() override;
-    virtual void loadedMetadata() override;
+    void reportedError() override;
+    void loadedMetadata() override;
 
-    virtual void showVolumeSlider() override;
-    virtual void updateCurrentTimeDisplay() override;
-    virtual void updateStatusDisplay() override;
+    void showVolumeSlider() override;
+    void updateCurrentTimeDisplay() override;
+    void updateStatusDisplay() override;
 
-    virtual void changedClosedCaptionsVisibility() override;
-    virtual void toggleClosedCaptionTrackList() override;
-    virtual void closedCaptionTracksChanged() override;
+    void changedClosedCaptionsVisibility() override;
+    void toggleClosedCaptionTrackList() override;
+    void closedCaptionTracksChanged() override;
 
     bool shouldClosedCaptionsContainerPreventPageScrolling(int wheelDeltaY);
-    void handleClickEvent(Event*);
+    void handleClickEvent(Event&);
 
 private:
     MediaControlsApple(Document&);
 
-    virtual void defaultEventHandler(Event*) override;
-    PassRefPtr<MediaControlsAppleEventListener> eventListener();
+    void defaultEventHandler(Event&) override;
+    MediaControlsAppleEventListener& eventListener();
 
     void showClosedCaptionTrackList();
     void hideClosedCaptionTrackList();
     void setFullscreenSliderVolume();
 
-    MediaControlRewindButtonElement* m_rewindButton;
-    MediaControlReturnToRealtimeButtonElement* m_returnToRealTimeButton;
-    MediaControlStatusDisplayElement* m_statusDisplay;
-    MediaControlTimeRemainingDisplayElement* m_timeRemainingDisplay;
-    MediaControlTimelineContainerElement* m_timelineContainer;
-    MediaControlSeekBackButtonElement* m_seekBackButton;
-    MediaControlSeekForwardButtonElement* m_seekForwardButton;
-    MediaControlClosedCaptionsTrackListElement* m_closedCaptionsTrackList;
-    MediaControlClosedCaptionsContainerElement* m_closedCaptionsContainer;
-    MediaControlVolumeSliderMuteButtonElement* m_volumeSliderMuteButton;
-    MediaControlVolumeSliderContainerElement* m_volumeSliderContainer;
-    MediaControlFullscreenVolumeMinButtonElement* m_fullScreenMinVolumeButton;
-    MediaControlFullscreenVolumeSliderElement* m_fullScreenVolumeSlider;
-    MediaControlFullscreenVolumeMaxButtonElement* m_fullScreenMaxVolumeButton;
+    MediaControlRewindButtonElement* m_rewindButton { nullptr };
+    MediaControlReturnToRealtimeButtonElement* m_returnToRealTimeButton { nullptr };
+    MediaControlStatusDisplayElement* m_statusDisplay { nullptr };
+    MediaControlTimeRemainingDisplayElement* m_timeRemainingDisplay { nullptr };
+    MediaControlTimelineContainerElement* m_timelineContainer { nullptr };
+    MediaControlSeekBackButtonElement* m_seekBackButton { nullptr };
+    MediaControlSeekForwardButtonElement* m_seekForwardButton { nullptr };
+    MediaControlClosedCaptionsTrackListElement* m_closedCaptionsTrackList { nullptr };
+    MediaControlClosedCaptionsContainerElement* m_closedCaptionsContainer { nullptr };
+    MediaControlVolumeSliderMuteButtonElement* m_volumeSliderMuteButton { nullptr };
+    MediaControlVolumeSliderContainerElement* m_volumeSliderContainer { nullptr };
+    MediaControlFullscreenVolumeMinButtonElement* m_fullScreenMinVolumeButton { nullptr };
+    MediaControlFullscreenVolumeSliderElement* m_fullScreenVolumeSlider { nullptr };
+    MediaControlFullscreenVolumeMaxButtonElement* m_fullScreenMaxVolumeButton { nullptr };
     RefPtr<MediaControlsAppleEventListener> m_eventListener;
 };
 
-}
+} // namespace WebCore
 
-#endif
-#endif
+#endif // ENABLE(VIDEO)

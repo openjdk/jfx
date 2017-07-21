@@ -27,7 +27,6 @@
 #include "InsertNodeBeforeCommand.h"
 
 #include "Document.h"
-#include "ExceptionCodePlaceholder.h"
 #include "RenderElement.h"
 #include "Text.h"
 #include "htmlediting.h"
@@ -55,12 +54,7 @@ void InsertNodeBeforeCommand::doApply()
         return;
     ASSERT(isEditableNode(*parent));
 
-    parent->insertBefore(*m_insertChild, m_refChild.get(), IGNORE_EXCEPTION);
-
-    if (shouldPostAccessibilityNotification()) {
-        Position position = is<Text>(m_insertChild.get()) ? Position(downcast<Text>(m_insertChild.get()), 0) : createLegacyEditingPosition(m_insertChild.get(), 0);
-        notifyAccessibilityForTextChange(m_insertChild.get(), applyEditType(), m_insertChild->nodeValue(), VisiblePosition(position));
-    }
+    parent->insertBefore(*m_insertChild, m_refChild.get());
 }
 
 void InsertNodeBeforeCommand::doUnapply()
@@ -68,13 +62,7 @@ void InsertNodeBeforeCommand::doUnapply()
     if (!isEditableNode(*m_insertChild))
         return;
 
-    // Need to notify this before actually deleting the text
-    if (shouldPostAccessibilityNotification()) {
-        Position position = is<Text>(m_insertChild.get()) ? Position(downcast<Text>(m_insertChild.get()), 0) : createLegacyEditingPosition(m_insertChild.get(), 0);
-        notifyAccessibilityForTextChange(m_insertChild.get(), unapplyEditType(), m_insertChild->nodeValue(), VisiblePosition(position));
-    }
-
-    m_insertChild->remove(IGNORE_EXCEPTION);
+    m_insertChild->remove();
 }
 
 #ifndef NDEBUG

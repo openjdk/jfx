@@ -47,6 +47,12 @@ private:
     {
     }
 
+    ThreadSafeDataBufferImpl(const void* data, unsigned length)
+        : m_data(length)
+    {
+        memcpy(m_data.data(), data, length);
+    }
+
     Vector<uint8_t> m_data;
 };
 
@@ -62,6 +68,11 @@ public:
         return ThreadSafeDataBuffer(data);
     }
 
+    static ThreadSafeDataBuffer copyData(const void* data, unsigned length)
+    {
+        return ThreadSafeDataBuffer(data, length);
+    }
+
     ThreadSafeDataBuffer()
     {
     }
@@ -70,6 +81,22 @@ public:
     {
         return m_impl ? &m_impl->m_data : nullptr;
     }
+
+    size_t size() const
+    {
+        return m_impl ? m_impl->m_data.size() : 0;
+    }
+
+    bool operator==(const ThreadSafeDataBuffer& other) const
+    {
+        if (!m_impl)
+            return !other.m_impl;
+
+        return m_impl->m_data == other.m_impl->m_data;
+    }
+
+    template<class Encoder> void encode(Encoder&) const;
+    template<class Decoder> static bool decode(Decoder&, ThreadSafeDataBuffer&);
 
 private:
     explicit ThreadSafeDataBuffer(Vector<uint8_t>& data, ThreadSafeDataBufferImpl::AdoptVectorTag tag)
@@ -82,8 +109,41 @@ private:
         m_impl = adoptRef(new ThreadSafeDataBufferImpl(data));
     }
 
+    explicit ThreadSafeDataBuffer(const void* data, unsigned length)
+    {
+        m_impl = adoptRef(new ThreadSafeDataBufferImpl(data, length));
+    }
+
     RefPtr<ThreadSafeDataBufferImpl> m_impl;
 };
+
+template<class Encoder>
+void ThreadSafeDataBuffer::encode(Encoder& encoder) const
+{
+    bool hasData = m_impl;
+    encoder << hasData;
+
+    if (hasData)
+        encoder << m_impl->m_data;
+}
+
+template<class Decoder>
+bool ThreadSafeDataBuffer::decode(Decoder& decoder, ThreadSafeDataBuffer& result)
+{
+    bool hasData;
+    if (!decoder.decode(hasData))
+        return false;
+
+    if (hasData) {
+        Vector<uint8_t> data;
+        if (!decoder.decode(data))
+            return false;
+
+        result = ThreadSafeDataBuffer::adoptVector(data);
+    }
+
+    return true;
+}
 
 } // namespace WebCore
 

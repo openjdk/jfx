@@ -7,7 +7,7 @@
 #include "ContextMenu.h"
 #include "ContextMenuController.h"
 #include "ContextMenuItem.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 #include "com_sun_webkit_ContextMenu.h"
 #include "com_sun_webkit_ContextMenuItem.h"

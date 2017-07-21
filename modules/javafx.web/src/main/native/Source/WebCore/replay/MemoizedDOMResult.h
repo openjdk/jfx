@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MemoizedDOMResult_h
-#define MemoizedDOMResult_h
+#pragma once
 
 #if ENABLE(WEB_REPLAY)
 
@@ -38,7 +37,7 @@ namespace WebCore {
 
 class SerializedScriptValue;
 
-typedef int ExceptionCode;
+using ExceptionCode = int;
 
 // Add new memoized ctypes here. The first argument is the enum value,
 // which cannot conflict with built-in primitive types. The second is
@@ -76,8 +75,8 @@ public:
     bool convertTo(T& decodedValue);
 
     virtual EncodedValue encodedResult() const = 0;
-    virtual InputQueue queue() const final override { return InputQueue::ScriptMemoizedData; }
-    virtual const String& type() const final override;
+    InputQueue queue() const final { return InputQueue::ScriptMemoizedData; }
+    const String& type() const final;
 
     const String& attribute() const { return m_attribute; }
     EncodedCType ctype() const { return m_ctype; }
@@ -114,7 +113,7 @@ public:
         , m_result(result) { }
     virtual ~MemoizedDOMResult() { }
 
-    virtual EncodedValue encodedResult() const override
+    EncodedValue encodedResult() const override
     {
         return EncodingTraits<MemoizedType>::encodeValue(m_result);
     }
@@ -160,5 +159,3 @@ static bool isType(const NondeterministicInputBase& input) { return input.type()
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEB_REPLAY)
-
-#endif // MemoizedDOMResult_h

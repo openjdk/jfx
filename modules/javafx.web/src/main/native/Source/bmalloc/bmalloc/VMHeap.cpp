@@ -23,50 +23,79 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "LargeObject.h"
 #include "PerProcess.h"
-#include "SuperChunk.h"
 #include "VMHeap.h"
 #include <thread>
 
 namespace bmalloc {
 
-VMHeap::VMHeap()
-    : m_largeObjects(VMState::HasPhysical::False)
+LargeRange VMHeap::tryAllocateLargeChunk(std::lock_guard<StaticMutex>&, size_t alignment, size_t size)
 {
-}
+    // We allocate VM in aligned multiples to increase the chances that
+    // the OS will provide contiguous ranges that we can merge.
+    size_t roundedAlignment = roundUpToMultipleOf<chunkSize>(alignment);
+    if (roundedAlignment < alignment) // Check for overflow
+        return LargeRange();
+    alignment = roundedAlignment;
 
-void VMHeap::allocateSmallChunk(std::lock_guard<StaticMutex>& lock)
-{
-    if (!m_smallChunks.size())
-        allocateSuperChunk(lock);
+    size_t roundedSize = roundUpToMultipleOf<chunkSize>(size);
+    if (roundedSize < size) // Check for overflow
+        return LargeRange();
+    size = roundedSize;
 
-    // We initialize chunks lazily to avoid dirtying their metadata pages.
-    SmallChunk* smallChunk = new (m_smallChunks.pop()->smallChunk()) SmallChunk(lock);
-    for (auto* it = smallChunk->begin(); it < smallChunk->end(); ++it)
-        m_smallPages.push(it);
-}
+    void* memory = tryVMAllocate(alignment, size);
+    if (!memory)
+        return LargeRange();
 
-void VMHeap::allocateLargeChunk(std::lock_guard<StaticMutex>& lock)
-{
-    if (!m_largeChunks.size())
-        allocateSuperChunk(lock);
+    Chunk* chunk = static_cast<Chunk*>(memory);
 
-    // We initialize chunks lazily to avoid dirtying their metadata pages.
-    LargeChunk* largeChunk = new (m_largeChunks.pop()->largeChunk()) LargeChunk;
-    LargeObject largeObject(largeChunk->begin());
-    m_largeObjects.insert(largeObject);
-}
-
-void VMHeap::allocateSuperChunk(std::lock_guard<StaticMutex>&)
-{
-    SuperChunk* superChunk =
-        new (vmAllocate(superChunkSize, superChunkSize)) SuperChunk;
-    m_smallChunks.push(superChunk);
-    m_largeChunks.push(superChunk);
 #if BOS(DARWIN)
-    m_zone.addSuperChunk(superChunk);
+    m_zone.addRange(Range(chunk->bytes(), size));
 #endif
+
+    return LargeRange(chunk->bytes(), size, 0);
+}
+
+void VMHeap::allocateSmallChunk(std::lock_guard<StaticMutex>& lock, size_t pageClass)
+{
+    size_t pageSize = bmalloc::pageSize(pageClass);
+    size_t smallPageCount = pageSize / smallPageSize;
+
+    void* memory = vmAllocate(chunkSize, chunkSize);
+    Chunk* chunk = static_cast<Chunk*>(memory);
+
+    // We align to our page size in order to honor OS APIs and in order to
+    // guarantee that we can service aligned allocation requests at equal
+    // and smaller powers of two.
+    size_t vmPageSize = roundUpToMultipleOf(bmalloc::vmPageSize(), pageSize);
+    size_t metadataSize = roundUpToMultipleOfNonPowerOfTwo(vmPageSize, sizeof(Chunk));
+
+    Object begin(chunk, metadataSize);
+    Object end(chunk, chunkSize);
+
+    // Establish guard pages before writing to Chunk memory to work around
+    // an edge case in the Darwin VM system (<rdar://problem/25910098>).
+    vmRevokePermissions(begin.address(), vmPageSize);
+    vmRevokePermissions(end.address() - vmPageSize, vmPageSize);
+
+    begin = begin + vmPageSize;
+    end = end - vmPageSize;
+    BASSERT(begin <= end && end.offset() - begin.offset() >= pageSize);
+
+    new (chunk) Chunk(lock);
+
+#if BOS(DARWIN)
+    m_zone.addRange(Range(begin.address(), end.address() - begin.address()));
+#endif
+
+    for (Object it = begin; it + pageSize <= end; it = it + pageSize) {
+        SmallPage* page = it.page();
+
+        for (size_t i = 0; i < smallPageCount; ++i)
+            page[i].setSlide(i);
+
+        m_smallPages[pageClass].push(page);
+    }
 }
 
 } // namespace bmalloc

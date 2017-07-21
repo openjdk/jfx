@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IntlDateTimeFormat_h
-#define IntlDateTimeFormat_h
+#pragma once
 
 #if ENABLE(INTL)
 
@@ -40,7 +39,7 @@ class IntlDateTimeFormat : public JSDestructibleObject {
 public:
     typedef JSDestructibleObject Base;
 
-    static IntlDateTimeFormat* create(VM&, IntlDateTimeFormatConstructor*);
+    static IntlDateTimeFormat* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
@@ -107,5 +106,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(INTL)
-
-#endif // IntlDateTimeFormat_h

@@ -20,6 +20,7 @@
 #if USE(CURL)
 
 #include "Cookie.h"
+#include "NotImplemented.h"
 #include "URL.h"
 #include "ResourceHandleManager.h"
 
@@ -222,12 +223,18 @@ static String getNetscapeCookieFormat(const URL& url, const String& value)
 
     StringBuilder cookieStr;
     cookieStr.reserveCapacity(finalStringLength);
-    cookieStr.append(domain + "\t");
-    cookieStr.append(allowSubdomains + "\t");
-    cookieStr.append(path + "\t");
-    cookieStr.append(secure + "\t");
-    cookieStr.append(expiresStr + "\t");
-    cookieStr.append(cookieName + "\t");
+    cookieStr.append(domain);
+    cookieStr.append("\t");
+    cookieStr.append(allowSubdomains);
+    cookieStr.append("\t");
+    cookieStr.append(path);
+    cookieStr.append("\t");
+    cookieStr.append(secure);
+    cookieStr.append("\t");
+    cookieStr.append(expiresStr);
+    cookieStr.append("\t");
+    cookieStr.append(cookieName);
+    cookieStr.append("\t");
     cookieStr.append(cookieValue);
 
     return cookieStr.toString();
@@ -323,6 +330,12 @@ bool getRawCookies(const NetworkStorageSession&, const URL& /*firstParty*/, cons
 void deleteCookie(const NetworkStorageSession&, const URL&, const String&)
 {
     // FIXME: Not yet implemented
+}
+
+void addCookie(const NetworkStorageSession&, const URL&, const Cookie&)
+{
+    // FIXME: implement this command. <https://webkit.org/b/156296>
+    notImplemented();
 }
 
 void getHostnamesWithCookies(const NetworkStorageSession&, HashSet<String>& hostnames)

@@ -10,7 +10,7 @@
 #include "PlatformCookieJar.h"
 #include "URL.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "NotImplemented.h"
 
 static JGClass cookieJarClass;

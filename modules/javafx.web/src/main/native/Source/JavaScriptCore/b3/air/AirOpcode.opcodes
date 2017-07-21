@@ -147,6 +147,7 @@ AddDouble U:F:64, U:F:64, D:F:64
     Tmp, Tmp, Tmp
     x86: Addr, Tmp, Tmp
     x86: Tmp, Addr, Tmp
+    x86: Index, Tmp, Tmp
 
 x86: AddDouble U:F:64, UD:F:64
     Tmp, Tmp
@@ -156,6 +157,7 @@ AddFloat U:F:32, U:F:32, D:F:32
     Tmp, Tmp, Tmp
     x86: Addr, Tmp, Tmp
     x86: Tmp, Addr, Tmp
+    x86: Index, Tmp, Tmp
 
 x86: AddFloat U:F:32, UD:F:32
     Tmp, Tmp
@@ -168,6 +170,9 @@ Sub32 U:G:32, UZD:G:32
     x86: Addr, Tmp
     x86: Tmp, Addr
 
+arm64: Sub32 U:G:32, U:G:32, D:G:32
+    Tmp, Tmp, Tmp
+
 64: Sub64 U:G:64, UD:G:64
     Tmp, Tmp
     x86: Imm, Addr
@@ -175,15 +180,22 @@ Sub32 U:G:32, UZD:G:32
     x86: Addr, Tmp
     x86: Tmp, Addr
 
-arm64: SubDouble U:F:64, U:F:64, D:F:64
+arm64: Sub64 U:G:64, U:G:64, D:G:64
     Tmp, Tmp, Tmp
+
+SubDouble U:F:64, U:F:64, D:F:64
+    arm64: Tmp, Tmp, Tmp
+    x86: Tmp, Addr, Tmp
+    x86: Tmp, Index, Tmp
 
 x86: SubDouble U:F:64, UD:F:64
     Tmp, Tmp
     Addr, Tmp
 
-arm64: SubFloat U:F:32, U:F:32, D:F:32
-    Tmp, Tmp, Tmp
+SubFloat U:F:32, U:F:32, D:F:32
+    arm64: Tmp, Tmp, Tmp
+    x86: Tmp, Addr, Tmp
+    x86: Tmp, Index, Tmp
 
 x86: SubFloat U:F:32, UD:F:32
     Tmp, Tmp
@@ -197,6 +209,9 @@ Neg32 UZD:G:32
     Tmp
 
 arm64: NegateDouble U:F:64, D:F:64
+    Tmp, Tmp
+
+arm64: NegateFloat U:F:32, D:F:32
     Tmp, Tmp
 
 Mul32 U:G:32, UZD:G:32
@@ -215,16 +230,41 @@ Mul32 U:G:32, U:G:32, ZD:G:32
 Mul64 U:G:64, U:G:64, D:G:64
     Tmp, Tmp, Tmp
 
+arm64: MultiplyAdd32 U:G:32, U:G:32, U:G:32, ZD:G:32
+    Tmp, Tmp, Tmp, Tmp
+
+arm64: MultiplyAdd64 U:G:64, U:G:64, U:G:64, D:G:64
+    Tmp, Tmp, Tmp, Tmp
+
+arm64: MultiplySub32 U:G:32, U:G:32, U:G:32, ZD:G:32
+    Tmp, Tmp, Tmp, Tmp
+
+arm64: MultiplySub64 U:G:64, U:G:64, U:G:64, D:G:64
+    Tmp, Tmp, Tmp, Tmp
+
+arm64: MultiplyNeg32 U:G:32, U:G:32, ZD:G:32
+    Tmp, Tmp, Tmp
+
+arm64: MultiplyNeg64 U:G:64, U:G:64, ZD:G:64
+    Tmp, Tmp, Tmp
+
 arm64: Div32 U:G:32, U:G:32, ZD:G:32
     Tmp, Tmp, Tmp
 
+arm64: UDiv32 U:G:32, U:G:32, ZD:G:32
+    Tmp, Tmp, Tmp
+
 arm64: Div64 U:G:64, U:G:64, D:G:64
+    Tmp, Tmp, Tmp
+
+arm64: UDiv64 U:G:64, U:G:64, D:G:64
     Tmp, Tmp, Tmp
 
 MulDouble U:F:64, U:F:64, D:F:64
     Tmp, Tmp, Tmp
     x86: Addr, Tmp, Tmp
     x86: Tmp, Addr, Tmp
+    x86: Index, Tmp, Tmp
 
 x86: MulDouble U:F:64, UD:F:64
     Tmp, Tmp
@@ -234,6 +274,7 @@ MulFloat U:F:32, U:F:32, D:F:32
     Tmp, Tmp, Tmp
     x86: Addr, Tmp, Tmp
     x86: Tmp, Addr, Tmp
+    x86: Index, Tmp, Tmp
 
 x86: MulFloat U:F:32, UD:F:32
     Tmp, Tmp
@@ -262,11 +303,22 @@ x86_64: X86ConvertToQuadWord64 U:G:64, D:G:64
 x86: X86Div32 UZD:G:32, UZD:G:32, U:G:32
     Tmp*, Tmp*, Tmp
 
+x86: X86UDiv32 UZD:G:32, UZD:G:32, U:G:32
+    Tmp*, Tmp*, Tmp
+
 x86_64: X86Div64 UZD:G:64, UZD:G:64, U:G:64
     Tmp*, Tmp*, Tmp
 
-Lea UA:G:Ptr, D:G:Ptr
+x86_64: X86UDiv64 UZD:G:64, UZD:G:64, U:G:64
+    Tmp*, Tmp*, Tmp
+
+Lea32 UA:G:32, D:G:32
     Addr, Tmp
+    x86: Index, Tmp as x86Lea32
+
+Lea64 UA:G:64, D:G:64
+    Addr, Tmp
+    x86: Index, Tmp as x86Lea64
 
 And32 U:G:32, U:G:32, ZD:G:32
     Tmp, Tmp, Tmp
@@ -301,6 +353,18 @@ AndFloat U:F:32, U:F:32, D:F:32
 x86: AndFloat U:F:32, UD:F:32
     Tmp, Tmp
 
+OrDouble U:F:64, U:F:64, D:F:64
+    Tmp, Tmp, Tmp
+
+x86: OrDouble U:F:64, UD:F:64
+    Tmp, Tmp
+
+OrFloat U:F:32, U:F:32, D:F:32
+    Tmp, Tmp, Tmp
+
+x86: OrFloat U:F:32, UD:F:32
+    Tmp, Tmp
+
 x86: XorDouble U:F:64, U:F:64, D:F:64
     Tmp, Tmp, Tmp
 
@@ -321,7 +385,7 @@ x86:Lshift32 U:G:32, UZD:G:32
     Tmp*, Tmp
     Imm, Tmp
 
-arm64: Lshift64 U:G:64, U:G:64, ZD:G:64
+arm64: Lshift64 U:G:64, U:G:64, D:G:64
     Tmp, Tmp, Tmp
     Tmp, Imm, Tmp
 
@@ -337,7 +401,7 @@ x86: Rshift32 U:G:32, UZD:G:32
     Tmp*, Tmp
     Imm, Tmp
 
-arm64: Rshift64 U:G:64, U:G:64, ZD:G:64
+arm64: Rshift64 U:G:64, U:G:64, D:G:64
     Tmp, Tmp, Tmp
     Tmp, Imm, Tmp
 
@@ -353,11 +417,35 @@ x86: Urshift32 U:G:32, UZD:G:32
     Tmp*, Tmp
     Imm, Tmp
 
-arm64: Urshift64 U:G:64, U:G:64, ZD:G:64
+arm64: Urshift64 U:G:64, U:G:64, D:G:64
     Tmp, Tmp, Tmp
     Tmp, Imm, Tmp
 
 x86_64: Urshift64 U:G:64, UD:G:64
+    Tmp*, Tmp
+    Imm, Tmp
+
+x86_64: RotateRight32 U:G:32, UZD:G:32
+    Tmp*, Tmp
+    Imm, Tmp
+
+arm64: RotateRight32 U:G:32, U:G:32, ZD:G:32
+    Tmp, Tmp, Tmp
+    Tmp, Imm, Tmp
+
+x86_64: RotateRight64 U:G:64, UD:G:64
+    Tmp*, Tmp
+    Imm, Tmp
+
+arm64: RotateRight64 U:G:64, U:G:64, D:G:64
+    Tmp, Tmp, Tmp
+    Tmp, Imm, Tmp
+
+x86_64: RotateLeft32 U:G:32, UZD:G:32
+    Tmp*, Tmp
+    Imm, Tmp
+
+x86_64: RotateLeft64 U:G:64, UD:G:64
     Tmp*, Tmp
     Imm, Tmp
 
@@ -454,6 +542,15 @@ ConvertInt32ToDouble U:G:32, D:F:64
 
 64: ConvertInt64ToDouble U:G:64, D:F:64
     Tmp, Tmp
+    x86_64: Addr, Tmp
+
+ConvertInt32ToFloat U:G:32, D:F:32
+    Tmp, Tmp
+    x86: Addr, Tmp
+
+64: ConvertInt64ToFloat U:G:64, D:F:32
+    Tmp, Tmp
+    x86_64: Addr, Tmp
 
 CountLeadingZeros32 U:G:32, ZD:G:32
     Tmp, Tmp
@@ -595,7 +692,7 @@ Store16 U:G:16, D:G:16
 
 Compare32 U:G:32, U:G:32, U:G:32, ZD:G:32
     RelCond, Tmp, Tmp, Tmp
-    x86: RelCond, Tmp, Imm, Tmp
+    RelCond, Tmp, Imm, Tmp
 
 64: Compare64 U:G:32, U:G:64, U:G:64, ZD:G:32
     RelCond, Tmp, Tmp, Tmp
@@ -604,6 +701,7 @@ Compare32 U:G:32, U:G:32, U:G:32, ZD:G:32
 Test32 U:G:32, U:G:32, U:G:32, ZD:G:32
     x86: ResCond, Addr, Imm, Tmp
     ResCond, Tmp, Tmp, Tmp
+    ResCond, Tmp, BitImm, Tmp
 
 64: Test64 U:G:32, U:G:64, U:G:64, ZD:G:32
     x86: ResCond, Tmp, Imm, Tmp
@@ -639,23 +737,24 @@ Branch32 U:G:32, U:G:32, U:G:32 /branch
     x86: RelCond, Index, Tmp
 
 BranchTest8 U:G:32, U:G:8, U:G:8 /branch
-    x86: ResCond, Addr, Imm
-    x86: ResCond, Index, Imm
+    x86: ResCond, Addr, BitImm
+    x86: ResCond, Index, BitImm
 
 BranchTest32 U:G:32, U:G:32, U:G:32 /branch
     ResCond, Tmp, Tmp
-    x86: ResCond, Tmp, Imm
-    x86: ResCond, Addr, Imm
-    x86: ResCond, Index, Imm
+    ResCond, Tmp, BitImm
+    x86: ResCond, Addr, BitImm
+    x86: ResCond, Index, BitImm
 
 # Warning: forms that take an immediate will sign-extend their immediate. You probably want
 # BranchTest32 in most cases where you use an immediate.
 64: BranchTest64 U:G:32, U:G:64, U:G:64 /branch
     ResCond, Tmp, Tmp
-    x86: ResCond, Tmp, Imm
-    x86: ResCond, Addr, Imm
+    arm64: ResCond, Tmp, BitImm64
+    x86: ResCond, Tmp, BitImm
+    x86: ResCond, Addr, BitImm
     x86: ResCond, Addr, Tmp
-    x86: ResCond, Index, Imm
+    x86: ResCond, Index, BitImm
 
 BranchDouble U:G:32, U:F:64, U:F:64 /branch
     DoubleCond, Tmp, Tmp
@@ -730,6 +829,7 @@ MoveConditionally32 U:G:32, U:G:32, U:G:32, U:G:Ptr, U:G:Ptr, D:G:Ptr
 
 64: MoveConditionally64 U:G:32, U:G:64, U:G:64, U:G:Ptr, U:G:Ptr, D:G:Ptr
     RelCond, Tmp, Tmp, Tmp, Tmp, Tmp
+    RelCond, Tmp, Imm, Tmp, Tmp, Tmp
 
 MoveConditionallyTest32 U:G:32, U:G:32, U:G:32, U:G:Ptr, UD:G:Ptr
     ResCond, Tmp, Tmp, Tmp, Tmp
@@ -737,7 +837,7 @@ MoveConditionallyTest32 U:G:32, U:G:32, U:G:32, U:G:Ptr, UD:G:Ptr
 
 MoveConditionallyTest32 U:G:32, U:G:32, U:G:32, U:G:Ptr, U:G:Ptr, D:G:Ptr
     ResCond, Tmp, Tmp, Tmp, Tmp, Tmp
-    x86: ResCond, Tmp, Imm, Tmp, Tmp, Tmp
+    ResCond, Tmp, BitImm, Tmp, Tmp, Tmp
 
 64: MoveConditionallyTest64 U:G:32, U:G:64, U:G:64, U:G:Ptr, UD:G:Ptr
     ResCond, Tmp, Tmp, Tmp, Tmp
@@ -777,7 +877,7 @@ MoveDoubleConditionally32 U:G:32, U:G:32, U:G:32, U:F:64, U:F:64, D:F:64
 
 MoveDoubleConditionallyTest32 U:G:32, U:G:32, U:G:32, U:F:64, U:F:64, D:F:64
     ResCond, Tmp, Tmp, Tmp, Tmp, Tmp
-    x86: ResCond, Tmp, Imm, Tmp, Tmp, Tmp
+    ResCond, Tmp, BitImm, Tmp, Tmp, Tmp
     x86: ResCond, Addr, Imm, Tmp, Tmp, Tmp
     x86: ResCond, Index, Imm, Tmp, Tmp, Tmp
 
@@ -796,7 +896,13 @@ MoveDoubleConditionallyDouble U:G:32, U:F:64, U:F:64, U:F:64, U:F:64, D:F:64
 MoveDoubleConditionallyFloat U:G:32, U:F:32, U:F:32, U:F:64, U:F:64, D:F:64
     DoubleCond, Tmp, Tmp, Tmp, Tmp, Tmp
 
+MemoryFence /effects
+StoreFence /effects
+LoadFence /effects
+
 Jump /branch
+
+RetVoid /return
 
 Ret32 U:G:32 /return
     Tmp
@@ -811,6 +917,10 @@ RetDouble U:F:64 /return
     Tmp
 
 Oops /terminal
+
+# This is a terminal but we express it as a Custom because we don't want it to have a code
+# generator.
+custom EntrySwitch
 
 # A Shuffle is a multi-source, multi-destination move. It simultaneously does multiple moves at once.
 # The moves are specified as triplets of src, dst, and width. For example you can request a swap this
@@ -827,4 +937,7 @@ custom Patch
 custom CCall
 custom ColdCCall
 
+# This is a special wasm opcode that branches to a trap handler. This uses the generator located to Air::Code
+# to produce the side-exit code.
+custom WasmBoundsCheck
 

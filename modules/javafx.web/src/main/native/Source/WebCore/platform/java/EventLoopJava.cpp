@@ -4,7 +4,7 @@
 #include "config.h"
 #include "EventLoop.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 static JGClass eventLoopClass;
 static jmethodID cycleMethod;

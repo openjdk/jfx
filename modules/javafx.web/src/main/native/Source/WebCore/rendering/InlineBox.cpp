@@ -24,8 +24,6 @@
 #include "Frame.h"
 #include "HitTestResult.h"
 #include "InlineFlowBox.h"
-#include "Page.h"
-#include "PaintInfo.h"
 #include "RenderBlockFlow.h"
 #include "RenderLineBreak.h"
 #include "RootInlineBox.h"
@@ -41,8 +39,9 @@ struct SameSizeAsInlineBox {
     void* a[4];
     FloatPoint b;
     float c[2];
-    unsigned d : 20;
+    unsigned d; /*InlineBoxBitfields m_bitfields is padded to 32bits*/
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
+    bool i;
     unsigned s;
     bool f;
 #endif
@@ -72,7 +71,7 @@ void InlineBox::setHasBadParent()
 void InlineBox::invalidateParentChildList()
 {
     assertNotDeleted();
-    if (!m_hasBadParent && m_parent)
+    if (!m_hasBadParent && m_parent && m_isEverInChildList)
         m_parent->setHasBadChildList();
 }
 
@@ -108,7 +107,7 @@ void InlineBox::showLineTreeAndMark(const InlineBox* markedBox, int depth) const
 
 void InlineBox::showLineBox(bool mark, int depth) const
 {
-    fprintf(stderr, "------- --");
+    fprintf(stderr, "-------- %c-", isDirty() ? 'D' : '-');
     int printedCharacters = 0;
     if (mark) {
         fprintf(stderr, "*");

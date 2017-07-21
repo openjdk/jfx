@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DFGGraph_h
-#define DFGGraph_h
+#pragma once
 
 #if ENABLE(DFG_JIT)
 
@@ -41,7 +40,6 @@
 #include "DFGPropertyTypeKey.h"
 #include "DFGScannable.h"
 #include "FullBytecodeLiveness.h"
-#include "JSStack.h"
 #include "MethodOfGettingAValueProfile.h"
 #include <unordered_map>
 #include <wtf/BitVector.h>
@@ -56,10 +54,16 @@ class ExecState;
 
 namespace DFG {
 
+class BackwardsCFG;
+class BackwardsDominators;
 class CFG;
+class ControlEquivalenceAnalysis;
 class Dominators;
+class FlowIndexing;
 class NaturalLoops;
 class PrePostNumbering;
+
+template<typename> class FlowMap;
 
 #define DFG_NODE_DO_TO_CHILDREN(graph, node, thingToDo) do {            \
         Node* _node = (node);                                           \
@@ -180,12 +184,25 @@ public:
     }
 
     template<typename... Params>
+    Node* addNode(Params... params)
+    {
+        Node* node = new (m_allocator) Node(params...);
+        addNodeToMapByIndex(node);
+        return node;
+    }
+    template<typename... Params>
     Node* addNode(SpeculatedType type, Params... params)
     {
         Node* node = new (m_allocator) Node(params...);
         node->predict(type);
+        addNodeToMapByIndex(node);
         return node;
     }
+
+    void deleteNode(Node*);
+    unsigned maxNodeCount() const { return m_nodesByIndex.size(); }
+    Node* nodeAt(unsigned index) const { return m_nodesByIndex[index]; }
+    void packNodeIndices();
 
     void dethread();
 
@@ -196,7 +213,12 @@ public:
     void convertToConstant(Node* node, JSValue value);
     void convertToStrongConstant(Node* node, JSValue value);
 
-    StructureRegistrationResult registerStructure(Structure* structure);
+    RegisteredStructure registerStructure(Structure* structure)
+    {
+        StructureRegistrationResult ignored;
+        return registerStructure(structure, ignored);
+    }
+    RegisteredStructure registerStructure(Structure*, StructureRegistrationResult&);
     void assertIsRegistered(Structure* structure);
 
     // CodeBlock is optional, but may allow additional information to be dumped (e.g. Identifier names).
@@ -263,7 +285,7 @@ public:
         return addSpeculationMode(add, pass) != DontSpeculateInt32;
     }
 
-    bool addShouldSpeculateMachineInt(Node* add)
+    bool addShouldSpeculateAnyInt(Node* add)
     {
         if (!enableInt52())
             return false;
@@ -271,8 +293,44 @@ public:
         Node* left = add->child1().node();
         Node* right = add->child2().node();
 
-        bool speculation = Node::shouldSpeculateMachineInt(left, right);
-        return speculation && !hasExitSite(add, Int52Overflow);
+        if (hasExitSite(add, Int52Overflow))
+            return false;
+
+        if (Node::shouldSpeculateAnyInt(left, right))
+            return true;
+
+        auto shouldSpeculateAnyIntForAdd = [](Node* node) {
+            auto isAnyIntSpeculationForAdd = [](SpeculatedType value) {
+                return !!value && (value & (SpecAnyInt | SpecAnyIntAsDouble)) == value;
+            };
+
+            // When DoubleConstant node appears, it means that users explicitly write a constant in their code with double form instead of integer form (1.0 instead of 1).
+            // In that case, we should honor this decision: using it as integer is not appropriate.
+            if (node->op() == DoubleConstant)
+                return false;
+            return isAnyIntSpeculationForAdd(node->prediction());
+        };
+
+        // Allow AnyInt ArithAdd only when the one side of the binary operation should be speculated AnyInt. It is a bit conservative
+        // decision. This is because Double to Int52 conversion is not so cheap. Frequent back-and-forth conversions between Double and Int52
+        // rather hurt the performance. If the one side of the operation is already Int52, the cost for constructing ArithAdd becomes
+        // cheap since only one Double to Int52 conversion could be required.
+        // This recovers some regression in assorted tests while keeping kraken crypto improvements.
+        if (!left->shouldSpeculateAnyInt() && !right->shouldSpeculateAnyInt())
+            return false;
+
+        auto usesAsNumbers = [](Node* node) {
+            NodeFlags flags = node->flags() & NodeBytecodeBackPropMask;
+            if (!flags)
+                return false;
+            return (flags & (NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeUsesAsInt | NodeBytecodeUsesAsArrayIndex)) == flags;
+        };
+
+        // Wrapping Int52 to Value is also not so cheap. Thus, we allow Int52 addition only when the node is used as number.
+        if (!usesAsNumbers(add))
+            return false;
+
+        return shouldSpeculateAnyIntForAdd(left) && shouldSpeculateAnyIntForAdd(right);
     }
 
     bool binaryArithShouldSpeculateInt32(Node* node, PredictionPass pass)
@@ -284,7 +342,7 @@ public:
             && node->canSpeculateInt32(node->sourceFor(pass));
     }
 
-    bool binaryArithShouldSpeculateMachineInt(Node* node, PredictionPass pass)
+    bool binaryArithShouldSpeculateAnyInt(Node* node, PredictionPass pass)
     {
         if (!enableInt52())
             return false;
@@ -292,7 +350,7 @@ public:
         Node* left = node->child1().node();
         Node* right = node->child2().node();
 
-        return Node::shouldSpeculateMachineInt(left, right)
+        return Node::shouldSpeculateAnyInt(left, right)
             && node->canSpeculateInt52(pass)
             && !hasExitSite(node, Int52Overflow);
     }
@@ -303,31 +361,47 @@ public:
             && node->canSpeculateInt32(pass);
     }
 
-    bool unaryArithShouldSpeculateMachineInt(Node* node, PredictionPass pass)
+    bool unaryArithShouldSpeculateAnyInt(Node* node, PredictionPass pass)
     {
         if (!enableInt52())
             return false;
-        return node->child1()->shouldSpeculateMachineInt()
+        return node->child1()->shouldSpeculateAnyInt()
             && node->canSpeculateInt52(pass)
             && !hasExitSite(node, Int52Overflow);
     }
 
     bool canOptimizeStringObjectAccess(const CodeOrigin&);
 
+    bool getRegExpPrototypeProperty(JSObject* regExpPrototype, Structure* regExpPrototypeStructure, UniquedStringImpl* uid, JSValue& returnJSValue);
+
     bool roundShouldSpeculateInt32(Node* arithRound, PredictionPass pass)
     {
-        ASSERT(arithRound->op() == ArithRound || arithRound->op() == ArithFloor || arithRound->op() == ArithCeil);
+        ASSERT(arithRound->op() == ArithRound || arithRound->op() == ArithFloor || arithRound->op() == ArithCeil || arithRound->op() == ArithTrunc);
         return arithRound->canSpeculateInt32(pass) && !hasExitSite(arithRound->origin.semantic, Overflow) && !hasExitSite(arithRound->origin.semantic, NegativeZero);
     }
 
     static const char *opName(NodeType);
 
-    StructureSet* addStructureSet(const StructureSet& structureSet)
+    RegisteredStructureSet* addStructureSet(const StructureSet& structureSet)
     {
+        m_structureSets.append();
+        RegisteredStructureSet* result = &m_structureSets.last();
+
         for (Structure* structure : structureSet)
-            registerStructure(structure);
-        m_structureSet.append(structureSet);
-        return &m_structureSet.last();
+            result->add(registerStructure(structure));
+
+        return result;
+    }
+
+    RegisteredStructureSet* addStructureSet(const RegisteredStructureSet& structureSet)
+    {
+        m_structureSets.append();
+        RegisteredStructureSet* result = &m_structureSets.last();
+
+        for (RegisteredStructure structure : structureSet)
+            result->add(structure);
+
+        return result;
     }
 
     JSGlobalObject* globalObjectFor(CodeOrigin codeOrigin)
@@ -398,17 +472,16 @@ public:
         return hasExitSite(node->origin.semantic, exitKind);
     }
 
-    ValueProfile* valueProfileFor(Node*);
-    MethodOfGettingAValueProfile methodOfGettingAValueProfileFor(Node*);
+    MethodOfGettingAValueProfile methodOfGettingAValueProfileFor(Node* currentNode, Node* operandNode);
 
     BlockIndex numBlocks() const { return m_blocks.size(); }
     BasicBlock* block(BlockIndex blockIndex) const { return m_blocks[blockIndex].get(); }
     BasicBlock* lastBlock() const { return block(numBlocks() - 1); }
 
-    void appendBlock(PassRefPtr<BasicBlock> basicBlock)
+    void appendBlock(Ref<BasicBlock>&& basicBlock)
     {
         basicBlock->index = m_blocks.size();
-        m_blocks.append(basicBlock);
+        m_blocks.append(WTFMove(basicBlock));
     }
 
     void killBlock(BlockIndex blockIndex)
@@ -530,6 +603,7 @@ public:
     void substituteGetLocal(BasicBlock& block, unsigned startIndexInBlock, VariableAccessData* variableAccessData, Node* newGetLocal);
 
     void invalidateCFG();
+    void invalidateNodeLiveness();
 
     void clearFlagsOnAllNodes(NodeFlags);
 
@@ -641,6 +715,32 @@ public:
         return result;
     }
 
+    bool isWatchingHavingABadTimeWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        return watchpoints().isWatched(globalObject->havingABadTimeWatchpoint());
+    }
+
+    bool isWatchingArrayIteratorProtocolWatchpoint(Node* node)
+    {
+        JSGlobalObject* globalObject = globalObjectFor(node->origin.semantic);
+        InlineWatchpointSet& set = globalObject->arrayIteratorProtocolWatchpoint();
+        if (watchpoints().isWatched(set))
+            return true;
+
+        if (set.isStillValid()) {
+            // Since the global object owns this watchpoint, we make ourselves have a weak pointer to it.
+            // If the global object got deallocated, it wouldn't fire the watchpoint. It's unlikely the
+            // global object would get deallocated without this code ever getting thrown away, however,
+            // it's more sound logically to depend on the global object lifetime weakly.
+            freeze(globalObject);
+            watchpoints().addLazily(set);
+            return true;
+        }
+
+        return false;
+    }
+
     Profiler::Compilation* compilation() { return m_plan.compilation.get(); }
 
     DesiredIdentifiers& identifiers() { return m_plan.identifiers; }
@@ -650,6 +750,7 @@ public:
     // this also makes it cheap to query if the condition holds. Also makes sure that the GC knows
     // what's going on.
     bool watchCondition(const ObjectPropertyCondition&);
+    bool watchConditions(const ObjectPropertyConditionSet&);
 
     // Checks if it's known that loading from the given object at the given offset is fine. This is
     // computed by tracking which conditions we track with watchCondition().
@@ -669,7 +770,7 @@ public:
     }
 
     AbstractValue inferredValueForProperty(
-        const StructureSet& base, UniquedStringImpl* uid, StructureClobberState = StructuresAreWatched);
+        const RegisteredStructureSet& base, UniquedStringImpl* uid, StructureClobberState = StructuresAreWatched);
 
     // This uses either constant property inference or property type inference to derive a good abstract
     // value for some property accessed with the given abstract value base.
@@ -704,9 +805,9 @@ public:
 
             if (inlineCallFrame) {
                 if (inlineCallFrame->isClosureCall)
-                    functor(stackOffset + JSStack::Callee);
+                    functor(stackOffset + CallFrameSlot::callee);
                 if (inlineCallFrame->isVarargs())
-                    functor(stackOffset + JSStack::ArgumentCount);
+                    functor(stackOffset + CallFrameSlot::argumentCount);
             }
 
             CodeBlock* codeBlock = baselineCodeBlockFor(inlineCallFrame);
@@ -719,7 +820,7 @@ public:
                 if (reg >= exclusionStart && reg < exclusionEnd)
                     continue;
 
-                if (liveness.get(relativeLocal))
+                if (liveness[relativeLocal])
                     functor(reg);
             }
 
@@ -765,12 +866,14 @@ public:
     BytecodeKills& killsFor(CodeBlock*);
     BytecodeKills& killsFor(InlineCallFrame*);
 
+    static unsigned parameterSlotsForArgCount(unsigned);
+
     unsigned frameRegisterCount();
     unsigned stackPointerOffset();
     unsigned requiredRegisterCountForExit();
     unsigned requiredRegisterCountForExecutionAndExit();
 
-    JSValue tryGetConstantProperty(JSValue base, const StructureSet&, PropertyOffset);
+    JSValue tryGetConstantProperty(JSValue base, const RegisteredStructureSet&, PropertyOffset);
     JSValue tryGetConstantProperty(JSValue base, Structure*, PropertyOffset);
     JSValue tryGetConstantProperty(JSValue base, const StructureAbstractValue&, PropertyOffset);
     JSValue tryGetConstantProperty(const AbstractValue&, PropertyOffset);
@@ -784,7 +887,7 @@ public:
 
     void registerFrozenValues();
 
-    virtual void visitChildren(SlotVisitor&) override;
+    void visitChildren(SlotVisitor&) override;
 
     NO_RETURN_DUE_TO_CRASH void handleAssertionFailure(
         std::nullptr_t, const char* file, int line, const char* function,
@@ -798,14 +901,20 @@ public:
 
     bool hasDebuggerEnabled() const { return m_hasDebuggerEnabled; }
 
-    void ensureDominators();
-    void ensurePrePostNumbering();
-    void ensureNaturalLoops();
+    Dominators& ensureDominators();
+    PrePostNumbering& ensurePrePostNumbering();
+    NaturalLoops& ensureNaturalLoops();
+    BackwardsCFG& ensureBackwardsCFG();
+    BackwardsDominators& ensureBackwardsDominators();
+    ControlEquivalenceAnalysis& ensureControlEquivalenceAnalysis();
 
     // This function only makes sense to call after bytecode parsing
     // because it queries the m_hasExceptionHandlers boolean whose value
     // is only fully determined after bytcode parsing.
     bool willCatchExceptionInMachineFrame(CodeOrigin, CodeOrigin& opCatchOriginOut, HandlerInfo*& catchHandlerOut);
+
+    bool needsScopeRegister() const { return m_hasDebuggerEnabled || m_codeBlock->usesEval(); }
+    bool needsFlushedThis() const { return m_codeBlock->usesEval(); }
 
     VM& m_vm;
     Plan& m_plan;
@@ -856,7 +965,6 @@ public:
 
     SegmentedVector<VariableAccessData, 16> m_variableAccessData;
     SegmentedVector<ArgumentPosition, 8> m_argumentPositions;
-    SegmentedVector<StructureSet, 16> m_structureSet;
     Bag<Transition> m_transitions;
     SegmentedVector<NewArrayBufferData, 4> m_newArrayBufferData;
     Bag<BranchData> m_branchData;
@@ -867,18 +975,28 @@ public:
     Bag<CallVarargsData> m_callVarargsData;
     Bag<LoadVarargsData> m_loadVarargsData;
     Bag<StackAccessData> m_stackAccessData;
+    Bag<LazyJSValue> m_lazyJSValues;
+    Bag<CallDOMGetterData> m_callDOMGetterData;
+    Bag<BitVector> m_bitVectors;
     Vector<InlineVariableData, 4> m_inlineVariableData;
     HashMap<CodeBlock*, std::unique_ptr<FullBytecodeLiveness>> m_bytecodeLiveness;
     HashMap<CodeBlock*, std::unique_ptr<BytecodeKills>> m_bytecodeKills;
     HashSet<std::pair<JSObject*, PropertyOffset>> m_safeToLoad;
     HashMap<PropertyTypeKey, InferredType::Descriptor> m_inferredTypes;
+    Vector<RefPtr<DOMJIT::Patchpoint>> m_domJITPatchpoints;
     std::unique_ptr<Dominators> m_dominators;
     std::unique_ptr<PrePostNumbering> m_prePostNumbering;
     std::unique_ptr<NaturalLoops> m_naturalLoops;
     std::unique_ptr<CFG> m_cfg;
+    std::unique_ptr<BackwardsCFG> m_backwardsCFG;
+    std::unique_ptr<BackwardsDominators> m_backwardsDominators;
+    std::unique_ptr<ControlEquivalenceAnalysis> m_controlEquivalenceAnalysis;
     unsigned m_localVars;
     unsigned m_nextMachineLocal;
     unsigned m_parameterSlots;
+
+    HashSet<String> m_localStrings;
+    HashMap<const StringImpl*, String> m_copiedStrings;
 
 #if USE(JSVALUE32_64)
     std::unordered_map<int64_t, double*> m_doubleConstantsMap;
@@ -893,9 +1011,16 @@ public:
     RefCountState m_refCountState;
     bool m_hasDebuggerEnabled;
     bool m_hasExceptionHandlers { false };
-private:
+    std::unique_ptr<FlowIndexing> m_indexingCache;
+    std::unique_ptr<FlowMap<AbstractValue>> m_abstractValuesCache;
 
-    bool isStringPrototypeMethodSane(JSObject* stringPrototype, Structure* stringPrototypeStructure, UniquedStringImpl*);
+    RegisteredStructure stringStructure;
+    RegisteredStructure symbolStructure;
+
+private:
+    void addNodeToMapByIndex(Node*);
+
+    bool isStringPrototypeMethodSane(JSGlobalObject*, UniquedStringImpl*);
 
     void handleSuccessor(Vector<BasicBlock*, 16>& worklist, BasicBlock*, BasicBlock* successor);
 
@@ -926,9 +1051,12 @@ private:
 
         return bytecodeCanTruncateInteger(add->arithNodeFlags()) ? SpeculateInt32AndTruncateConstants : DontSpeculateInt32;
     }
+
+    Vector<Node*, 0, UnsafeVectorOverflow> m_nodesByIndex;
+    Vector<unsigned, 0, UnsafeVectorOverflow> m_nodeIndexFreeList;
+    SegmentedVector<RegisteredStructureSet, 16> m_structureSets;
 };
 
 } } // namespace JSC::DFG
 
-#endif
 #endif

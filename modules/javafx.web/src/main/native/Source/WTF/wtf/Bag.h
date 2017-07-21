@@ -37,8 +37,8 @@ private:
         WTF_MAKE_FAST_ALLOCATED;
     public:
         template<typename... Args>
-        Node(Args... args)
-            : m_item(args...)
+        Node(Args&&... args)
+            : m_item(std::forward<Args>(args)...)
         {
         }
 
@@ -48,8 +48,21 @@ private:
 
 public:
     Bag()
-        : m_head(nullptr)
     {
+    }
+
+    Bag(Bag<T>&& other)
+    {
+        ASSERT(!m_head);
+        m_head = other.m_head;
+        other.m_head = nullptr;
+    }
+
+    Bag& operator=(Bag<T>&& other)
+    {
+        m_head = other.m_head;
+        other.m_head = nullptr;
+        return *this;
     }
 
     ~Bag()
@@ -68,9 +81,9 @@ public:
     }
 
     template<typename... Args>
-    T* add(Args... args)
+    T* add(Args&&... args)
     {
-        Node* newNode = new Node(args...);
+        Node* newNode = new Node(std::forward<Args>(args)...);
         newNode->m_next = m_head;
         m_head = newNode;
         return &newNode->m_item;
@@ -121,7 +134,7 @@ public:
     bool isEmpty() const { return !m_head; }
 
 private:
-    Node* m_head;
+    Node* m_head { nullptr };
 };
 
 } // namespace WTF

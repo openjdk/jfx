@@ -30,6 +30,7 @@
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
 #include "MainFrame.h"
+#include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
 #include <wtf/NeverDestroyed.h>
@@ -50,7 +51,7 @@ MockPageOverlayClient::MockPageOverlayClient()
 Ref<MockPageOverlay> MockPageOverlayClient::installOverlay(MainFrame& mainFrame, PageOverlay::OverlayType overlayType)
 {
     auto overlay = PageOverlay::create(*this, overlayType);
-    mainFrame.pageOverlayController().installPageOverlay(overlay.ptr(), PageOverlay::FadeMode::DoNotFade);
+    mainFrame.pageOverlayController().installPageOverlay(overlay, PageOverlay::FadeMode::DoNotFade);
 
     auto mockOverlay = MockPageOverlay::create(overlay.ptr());
     m_overlays.add(mockOverlay.ptr());
@@ -64,26 +65,17 @@ void MockPageOverlayClient::uninstallAllOverlays()
         RefPtr<MockPageOverlay> mockOverlay = m_overlays.takeAny();
         PageOverlayController* overlayController = mockOverlay->overlay()->controller();
         ASSERT(overlayController);
-        overlayController->uninstallPageOverlay(mockOverlay->overlay(), PageOverlay::FadeMode::DoNotFade);
+        overlayController->uninstallPageOverlay(*mockOverlay->overlay(), PageOverlay::FadeMode::DoNotFade);
     }
 }
 
-String MockPageOverlayClient::layerTreeAsText(MainFrame& mainFrame)
+String MockPageOverlayClient::layerTreeAsText(MainFrame& mainFrame, LayerTreeFlags flags)
 {
-    return "View-relative:\n" + mainFrame.pageOverlayController().viewOverlayRootLayer().layerTreeAsText(LayerTreeAsTextIncludePageOverlayLayers) + "\n\nDocument-relative:\n" + mainFrame.pageOverlayController().documentOverlayRootLayer().layerTreeAsText(LayerTreeAsTextIncludePageOverlayLayers);
-}
+    GraphicsLayer* viewOverlayRoot = mainFrame.pageOverlayController().viewOverlayRootLayer();
+    GraphicsLayer* documentOverlayRoot = mainFrame.pageOverlayController().documentOverlayRootLayer();
 
-void MockPageOverlayClient::pageOverlayDestroyed(PageOverlay& overlay)
-{
-    // FIXME: This is dead code, nothing ever calls this function. It's not clear to me what the intention was,
-    // since MockPageOverlayClient has references to MockPageOverlays, not to PageOverlays.
-    // Also, iterating over a set while modifying it is not good.
-    for (auto& mockOverlay : m_overlays) {
-        if (mockOverlay->overlay() == &overlay) {
-            m_overlays.remove(mockOverlay);
-            return;
-        }
-    }
+    return "View-relative:\n" + (viewOverlayRoot ? viewOverlayRoot->layerTreeAsText(flags | LayerTreeAsTextIncludePageOverlayLayers) : "(no view-relative overlay root)")
+        + "\n\nDocument-relative:\n" + (documentOverlayRoot ? documentOverlayRoot->layerTreeAsText(flags | LayerTreeAsTextIncludePageOverlayLayers) : "(no document-relative overlay root)");
 }
 
 void MockPageOverlayClient::willMoveToPage(PageOverlay&, Page*)

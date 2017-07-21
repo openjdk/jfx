@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DFGDriver_h
-#define DFGDriver_h
+#pragma once
 
 #include "CallFrame.h"
 #include "DFGCompilationMode.h"
@@ -46,9 +45,6 @@ JS_EXPORT_PRIVATE unsigned getNumCompilations();
 CompilationResult compile(
     VM&, CodeBlock*, CodeBlock* profiledDFGCodeBlock, CompilationMode,
     unsigned osrEntryBytecodeIndex, const Operands<JSValue>& mustHandleValues,
-    PassRefPtr<DeferredCompilationCallback>);
+    Ref<DeferredCompilationCallback>&&);
 
 } } // namespace JSC::DFG
-
-#endif
-

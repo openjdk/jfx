@@ -51,12 +51,12 @@ JSMutationCallback::~JSMutationCallback()
 {
 }
 
-void JSMutationCallback::call(const Vector<RefPtr<MutationRecord>>& mutations, MutationObserver* observer)
+void JSMutationCallback::call(const Vector<Ref<MutationRecord>>& mutations, MutationObserver* observer)
 {
     if (!canInvokeCallback())
         return;
 
-    Ref<JSMutationCallback> protect(*this);
+    Ref<JSMutationCallback> protectedThis(*this);
 
     JSLockHolder lock(m_isolatedWorld->vm());
 
@@ -66,7 +66,7 @@ void JSMutationCallback::call(const Vector<RefPtr<MutationRecord>>& mutations, M
     JSValue callback = m_callback.get();
     CallData callData;
     CallType callType = getCallData(callback, callData);
-    if (callType == CallTypeNone) {
+    if (callType == CallType::None) {
         ASSERT_NOT_REACHED();
         return;
     }
@@ -82,12 +82,12 @@ void JSMutationCallback::call(const Vector<RefPtr<MutationRecord>>& mutations, M
     JSValue jsObserver = toJS(exec, globalObject, observer);
 
     MarkedArgumentBuffer args;
-    args.append(jsArray(exec, globalObject, mutations));
+    args.append(toJS<IDLSequence<IDLInterface<MutationRecord>>>(*exec, *globalObject, mutations));
     args.append(jsObserver);
 
     InspectorInstrumentationCookie cookie = JSMainThreadExecState::instrumentFunctionCall(context, callType, callData);
 
-    NakedPtr<Exception> exception;
+    NakedPtr<JSC::Exception> exception;
     JSMainThreadExecState::profiledCall(exec, JSC::ProfilingReason::Other, callback, callType, callData, jsObserver, args, exception);
 
     InspectorInstrumentation::didCallFunction(cookie, context);

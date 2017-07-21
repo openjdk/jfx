@@ -32,7 +32,7 @@
 
 namespace WebCore {
 
-RenderSVGResourcePattern::RenderSVGResourcePattern(SVGPatternElement& element, Ref<RenderStyle>&& style)
+RenderSVGResourcePattern::RenderSVGResourcePattern(SVGPatternElement& element, RenderStyle&& style)
     : RenderSVGResourceContainer(element, WTFMove(style))
     , m_shouldCollectPatternAttributes(true)
 {
@@ -71,17 +71,11 @@ void RenderSVGResourcePattern::collectPatternAttributes(PatternAttributes& attri
 
 PatternData* RenderSVGResourcePattern::buildPattern(RenderElement& renderer, unsigned short resourceMode, GraphicsContext& context)
 {
+    ASSERT(!m_shouldCollectPatternAttributes);
+
     PatternData* currentData = m_patternMap.get(&renderer);
     if (currentData && currentData->pattern)
         return currentData;
-
-    if (m_shouldCollectPatternAttributes) {
-        patternElement().synchronizeAnimatedSVGAttribute(anyQName());
-
-        m_attributes = PatternAttributes();
-        collectPatternAttributes(m_attributes);
-        m_shouldCollectPatternAttributes = false;
-    }
 
     // If we couldn't determine the pattern content element root, stop here.
     if (!m_attributes.patternContentElement())
@@ -150,6 +144,14 @@ bool RenderSVGResourcePattern::applyResource(RenderElement& renderer, const Rend
 {
     ASSERT(context);
     ASSERT(resourceMode != ApplyToDefaultMode);
+
+    if (m_shouldCollectPatternAttributes) {
+        patternElement().synchronizeAnimatedSVGAttribute(anyQName());
+
+        m_attributes = PatternAttributes();
+        collectPatternAttributes(m_attributes);
+        m_shouldCollectPatternAttributes = false;
+    }
 
     // Spec: When the geometry of the applicable element has no width or height and objectBoundingBox is specified,
     // then the given effect (e.g. a gradient or a filter) will be ignored.

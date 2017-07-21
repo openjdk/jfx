@@ -17,8 +17,7 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef JSPluginElementFunctions_h
-#define JSPluginElementFunctions_h
+#pragma once
 
 #include "JSDOMBinding.h"
 
@@ -38,19 +37,15 @@ namespace WebCore {
     JSC::Bindings::Instance* pluginInstance(HTMLElement&);
     WEBCORE_EXPORT JSC::JSObject* pluginScriptObject(JSC::ExecState*, JSHTMLElement*);
 
-    JSC::EncodedJSValue pluginElementPropertyGetter(JSC::ExecState*,
-    JSC::EncodedJSValue, JSC::PropertyName);
+    JSC::EncodedJSValue pluginElementPropertyGetter(JSC::ExecState*, JSC::EncodedJSValue, JSC::PropertyName);
     bool pluginElementCustomGetOwnPropertySlot(JSC::ExecState*, JSC::PropertyName, JSC::PropertySlot&, JSHTMLElement*);
-    bool pluginElementCustomPut(JSC::ExecState*, JSC::PropertyName, JSC::JSValue, JSHTMLElement*, JSC::PutPropertySlot&);
+    bool pluginElementCustomPut(JSC::ExecState*, JSC::PropertyName, JSC::JSValue, JSHTMLElement*, JSC::PutPropertySlot&, bool& putResult);
     JSC::CallType pluginElementGetCallData(JSHTMLElement*, JSC::CallData&);
 
     template <class Type, class Base> bool pluginElementCustomGetOwnPropertySlot(JSC::ExecState* exec, JSC::PropertyName propertyName, JSC::PropertySlot& slot, Type* element)
     {
         if (!element->globalObject()->world().isNormal()) {
-            if (Type::hasStaticPropertyTable && JSC::getStaticValueSlot<Type, Base>(exec, *Type::info()->staticPropHashTable, element, propertyName, slot))
-                return true;
-
-            JSC::JSValue proto = element->prototype();
+            JSC::JSValue proto = element->getPrototypeDirect();
             if (proto.isObject() && JSC::jsCast<JSC::JSObject*>(asObject(proto))->hasProperty(exec, propertyName))
                 return false;
         }
@@ -59,5 +54,3 @@ namespace WebCore {
     }
 
 } // namespace WebCore
-
-#endif // JSPluginElementFunctions_h

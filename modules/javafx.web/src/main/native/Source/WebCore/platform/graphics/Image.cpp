@@ -66,9 +66,9 @@ bool Image::supportsType(const String& type)
     return MIMETypeRegistry::isSupportedImageResourceMIMEType(type);
 }
 
-bool Image::setData(PassRefPtr<SharedBuffer> data, bool allDataReceived)
+bool Image::setData(RefPtr<SharedBuffer>&& data, bool allDataReceived)
 {
-    m_encodedImageData = data;
+    m_encodedImageData = WTFMove(data);
     if (!m_encodedImageData.get())
         return true;
 
@@ -81,19 +81,20 @@ bool Image::setData(PassRefPtr<SharedBuffer> data, bool allDataReceived)
 
 void Image::fillWithSolidColor(GraphicsContext& ctxt, const FloatRect& dstRect, const Color& color, CompositeOperator op)
 {
-    if (!color.alpha())
+    if (!color.isVisible())
         return;
 
     CompositeOperator previousOperator = ctxt.compositeOperation();
-    ctxt.setCompositeOperation(!color.hasAlpha() && op == CompositeSourceOver ? CompositeCopy : op);
+    ctxt.setCompositeOperation(color.isOpaque() && op == CompositeSourceOver ? CompositeCopy : op);
     ctxt.fillRect(dstRect, color);
     ctxt.setCompositeOperation(previousOperator);
 }
 
 void Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const FloatPoint& srcPoint, const FloatSize& scaledTileSize, const FloatSize& spacing, CompositeOperator op, BlendMode blendMode)
 {
-    if (mayFillWithSolidColor()) {
-        fillWithSolidColor(ctxt, destRect, solidColor(), op);
+    Color color = singlePixelSolidColor();
+    if (color.isValid()) {
+        fillWithSolidColor(ctxt, destRect, color, op);
         return;
     }
 
@@ -193,21 +194,17 @@ void Image::drawTiled(GraphicsContext& ctxt, const FloatRect& destRect, const Fl
 
     AffineTransform patternTransform = AffineTransform().scaleNonUniform(scale.width(), scale.height());
     FloatRect tileRect(FloatPoint(), intrinsicTileSize);
-    drawPattern(ctxt, tileRect, patternTransform, oneTileRect.location(), spacing, op, destRect, blendMode);
-
-#if PLATFORM(IOS)
-    startAnimation(DoNotCatchUp);
-#else
+    drawPattern(ctxt, destRect, tileRect, patternTransform, oneTileRect.location(), spacing, op, blendMode);
     startAnimation();
-#endif
 }
 
 // FIXME: Merge with the other drawTiled eventually, since we need a combination of both for some things.
 void Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect, const FloatRect& srcRect,
     const FloatSize& tileScaleFactor, TileRule hRule, TileRule vRule, CompositeOperator op)
 {
-    if (mayFillWithSolidColor()) {
-        fillWithSolidColor(ctxt, dstRect, solidColor(), op);
+    Color color = singlePixelSolidColor();
+    if (color.isValid()) {
+        fillWithSolidColor(ctxt, dstRect, color, op);
         return;
     }
 
@@ -277,13 +274,8 @@ void Image::drawTiled(GraphicsContext& ctxt, const FloatRect& dstRect, const Flo
         vPhase -= (dstRect.height() - scaledTileHeight) / 2;
 
     FloatPoint patternPhase(dstRect.x() - hPhase, dstRect.y() - vPhase);
-    drawPattern(ctxt, srcRect, patternTransform, patternPhase, spacing, op, dstRect);
-
-#if PLATFORM(IOS)
-    startAnimation(DoNotCatchUp);
-#else
+    drawPattern(ctxt, dstRect, srcRect, patternTransform, patternPhase, spacing, op);
     startAnimation();
-#endif
 }
 
 #if ENABLE(IMAGE_DECODER_DOWN_SAMPLING)

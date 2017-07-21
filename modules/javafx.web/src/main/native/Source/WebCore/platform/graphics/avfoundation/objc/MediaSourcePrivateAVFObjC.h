@@ -30,7 +30,6 @@
 
 #include "MediaSourcePrivate.h"
 #include <wtf/Deque.h>
-#include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/Vector.h>
@@ -58,14 +57,14 @@ public:
     const Vector<RefPtr<SourceBufferPrivateAVFObjC>>& sourceBuffers() const { return m_sourceBuffers; }
     const Vector<SourceBufferPrivateAVFObjC*>& activeSourceBuffers() const { return m_activeSourceBuffers; }
 
-    virtual AddStatus addSourceBuffer(const ContentType&, RefPtr<SourceBufferPrivate>&) override;
-    virtual void durationChanged() override;
-    virtual void markEndOfStream(EndOfStreamStatus) override;
-    virtual void unmarkEndOfStream() override;
-    virtual MediaPlayer::ReadyState readyState() const override;
-    virtual void setReadyState(MediaPlayer::ReadyState) override;
-    virtual void waitForSeekCompleted() override;
-    virtual void seekCompleted() override;
+    AddStatus addSourceBuffer(const ContentType&, RefPtr<SourceBufferPrivate>&) override;
+    void durationChanged() override;
+    void markEndOfStream(EndOfStreamStatus) override;
+    void unmarkEndOfStream() override;
+    MediaPlayer::ReadyState readyState() const override;
+    void setReadyState(MediaPlayer::ReadyState) override;
+    void waitForSeekCompleted() override;
+    void seekCompleted() override;
 
     MediaTime duration();
     std::unique_ptr<PlatformTimeRanges> buffered();
@@ -73,6 +72,7 @@ public:
     bool hasAudio() const;
     bool hasVideo() const;
 
+    void willSeek();
     void seekToTime(const MediaTime&);
     MediaTime fastSeekTimeForMediaTime(const MediaTime&, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold);
     FloatSize naturalSize() const;
@@ -82,7 +82,7 @@ private:
 
     void sourceBufferPrivateDidChangeActiveState(SourceBufferPrivateAVFObjC*, bool active);
     void sourceBufferPrivateDidReceiveInitializationSegment(SourceBufferPrivateAVFObjC*);
-#if ENABLE(ENCRYPTED_MEDIA_V2)
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
     void sourceBufferKeyNeeded(SourceBufferPrivateAVFObjC*, Uint8Array*);
 #endif
     void monitorSourceBuffers();

@@ -24,13 +24,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JobjectWrapper_h
-#define JobjectWrapper_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
 #include "JNIUtility.h"
-#include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 
 namespace JSC {
@@ -39,7 +38,7 @@ namespace Bindings {
 
 class JobjectWrapper : public RefCounted<JobjectWrapper> {
 public:
-    static PassRefPtr<JobjectWrapper> create(jobject object, bool useGlobalRef = false) { return adoptRef(new JobjectWrapper(object, useGlobalRef)); }
+    static Ref<JobjectWrapper> create(jobject object, bool useGlobalRef = false) { return adoptRef(*new JobjectWrapper(object, useGlobalRef)); }
     ~JobjectWrapper();
 
     jobject instance() const { return m_instance; }
@@ -57,5 +56,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JobjectWrapper_h

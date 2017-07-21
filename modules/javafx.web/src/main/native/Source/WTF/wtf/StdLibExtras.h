@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2016 Apple Inc. All Rights Reserved.
  * Copyright (C) 2013 Patrick Gansterer <paroga@paroga.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,9 +28,11 @@
 #define WTF_StdLibExtras_h
 
 #include <chrono>
+#include <cstring>
 #include <memory>
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/Compiler.h>
 
 // This was used to declare and define a static local variable (static T;) so that
 //  it was leaked so that its destructors were not called at exit.
@@ -66,9 +68,16 @@
 // NULL can cause compiler problems, especially in cases of multiple inheritance.
 #define OBJECT_OFFSETOF(class, field) (reinterpret_cast<ptrdiff_t>(&(reinterpret_cast<class*>(0x4000)->field)) - 0x4000)
 
+#define CAST_OFFSET(from, to) (reinterpret_cast<uintptr_t>(static_cast<to>((reinterpret_cast<from>(0x4000)))) - 0x4000)
+
 // STRINGIZE: Can convert any value to quoted string, even expandable macros
 #define STRINGIZE(exp) #exp
 #define STRINGIZE_VALUE_OF(exp) STRINGIZE(exp)
+
+// WTF_CONCAT: concatenate two symbols into one, even expandable macros
+#define WTF_CONCAT_INTERNAL_DONT_USE(a, b) a ## b
+#define WTF_CONCAT(a, b) WTF_CONCAT_INTERNAL_DONT_USE(a, b)
+
 
 /*
  * The reinterpret_cast<Type1*>([pointer to Type2]) expressions - where
@@ -111,14 +120,11 @@ inline bool isPointerTypeAlignmentOkay(Type*)
 
 namespace WTF {
 
-#if ENABLE(CXX_11_FIX)
-#define constexpr /* constexpr is not supported by msvc2013 */
-#endif
-
 enum CheckMoveParameterTag { CheckMoveParameter };
 
 static const size_t KB = 1024;
 static const size_t MB = 1024 * 1024;
+static const size_t GB = 1024 * 1024 * 1024;
 
 inline bool isPointerAligned(void* p)
 {
@@ -137,18 +143,20 @@ template<typename ToType, typename FromType>
 inline ToType bitwise_cast(FromType from)
 {
     static_assert(sizeof(FromType) == sizeof(ToType), "bitwise_cast size of FromType and ToType must be equal!");
-    union {
-        FromType from;
-        ToType to;
-    } u;
-    u.from = from;
-    return u.to;
+#if COMPILER_SUPPORTS(BUILTIN_IS_TRIVIALLY_COPYABLE)
+    // Not all recent STL implementations support the std::is_trivially_copyable type trait. Work around this by only checking on toolchains which have the equivalent compiler intrinsic.
+    static_assert(__is_trivially_copyable(ToType), "bitwise_cast of non-trivially-copyable type!");
+    static_assert(__is_trivially_copyable(FromType), "bitwise_cast of non-trivially-copyable type!");
+#endif
+    typename std::remove_const<ToType>::type to { };
+    std::memcpy(&to, &from, sizeof(to));
+    return to;
 }
 
 template<typename ToType, typename FromType>
 inline ToType safeCast(FromType value)
 {
-    ASSERT(isInBounds<ToType>(value));
+    RELEASE_ASSERT(isInBounds<ToType>(value));
     return static_cast<ToType>(value);
 }
 
@@ -173,18 +181,27 @@ template<typename T> char (&ArrayLengthHelperFunction(T (&)[0]))[0];
 #endif
 #define WTF_ARRAY_LENGTH(array) sizeof(::WTF::ArrayLengthHelperFunction(array))
 
+ALWAYS_INLINE constexpr size_t roundUpToMultipleOfImpl0(size_t remainderMask, size_t x)
+{
+    return (x + remainderMask) & ~remainderMask;
+}
+
+ALWAYS_INLINE constexpr size_t roundUpToMultipleOfImpl(size_t divisor, size_t x)
+{
+    return roundUpToMultipleOfImpl0(divisor - 1, x);
+}
+
 // Efficient implementation that takes advantage of powers of two.
 inline size_t roundUpToMultipleOf(size_t divisor, size_t x)
 {
     ASSERT(divisor && !(divisor & (divisor - 1)));
-    size_t remainderMask = divisor - 1;
-    return (x + remainderMask) & ~remainderMask;
+    return roundUpToMultipleOfImpl(divisor, x);
 }
 
-template<size_t divisor> inline size_t roundUpToMultipleOf(size_t x)
+template<size_t divisor> inline constexpr size_t roundUpToMultipleOf(size_t x)
 {
     static_assert(divisor && !(divisor & (divisor - 1)), "divisor must be a power of two!");
-    return roundUpToMultipleOf(divisor, x);
+    return roundUpToMultipleOfImpl(divisor, x);
 }
 
 enum BinarySearchMode {
@@ -283,6 +300,114 @@ inline void insertIntoBoundedVector(VectorType& vector, size_t size, const Eleme
 // https://bugs.webkit.org/show_bug.cgi?id=131815
 WTF_EXPORT_PRIVATE bool isCompilationThread();
 
+template<typename Func>
+bool isStatelessLambda()
+{
+    return std::is_empty<Func>::value;
+}
+
+template<typename ResultType, typename Func, typename... ArgumentTypes>
+ResultType callStatelessLambda(ArgumentTypes&&... arguments)
+{
+    uint64_t data[(sizeof(Func) + sizeof(uint64_t) - 1) / sizeof(uint64_t)];
+    memset(data, 0, sizeof(data));
+    return (*bitwise_cast<Func*>(data))(std::forward<ArgumentTypes>(arguments)...);
+}
+
+template<typename T, typename U>
+bool checkAndSet(T& left, U right)
+{
+    if (left == right)
+        return false;
+    left = right;
+    return true;
+}
+
+template<typename T>
+bool findBitInWord(T word, size_t& index, size_t endIndex, bool value)
+{
+    static_assert(std::is_unsigned<T>::value, "Type used in findBitInWord must be unsigned");
+
+    word >>= index;
+
+    while (index < endIndex) {
+        if ((word & 1) == static_cast<T>(value))
+            return true;
+        index++;
+        word >>= 1;
+    }
+
+    index = endIndex;
+    return false;
+}
+
+// Visitor adapted from http://stackoverflow.com/questions/25338795/is-there-a-name-for-this-tuple-creation-idiom
+
+template <class A, class... B>
+struct Visitor : Visitor<A>, Visitor<B...> {
+    Visitor(A a, B... b)
+        : Visitor<A>(a)
+        , Visitor<B...>(b...)
+    {
+    }
+
+    using Visitor<A>::operator ();
+    using Visitor<B...>::operator ();
+};
+
+template <class A>
+struct Visitor<A> : A {
+    Visitor(A a)
+        : A(a)
+    {
+    }
+
+    using A::operator();
+};
+
+template <class... F>
+Visitor<F...> makeVisitor(F... f)
+{
+    return Visitor<F...>(f...);
+}
+
+namespace Detail
+{
+    template <typename, template <typename...> class>
+    struct IsTemplate_ : std::false_type
+    {
+    };
+
+    template <typename... Ts, template <typename...> class C>
+    struct IsTemplate_<C<Ts...>, C> : std::true_type
+    {
+    };
+}
+
+template <typename T, template <typename...> class Template>
+struct IsTemplate : public std::integral_constant<bool, Detail::IsTemplate_<T, Template>::value> {};
+
+namespace Detail
+{
+    template <template <typename...> class Base, typename Derived>
+    struct IsBaseOfTemplateImpl
+    {
+        template <typename... Args>
+        static std::true_type test(Base<Args...>*);
+        static std::false_type test(void*);
+
+        static constexpr const bool value = decltype(test(std::declval<typename std::remove_cv<Derived>::type*>()))::value;
+    };
+}
+
+template <template <typename...> class Base, typename Derived>
+struct IsBaseOfTemplate : public std::integral_constant<bool, Detail::IsBaseOfTemplateImpl<Base, Derived>::value> {};
+
+template <class T>
+struct RemoveCVAndReference  {
+    typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type type;
+};
+
 } // namespace WTF
 
 // This version of placement new omits a 0 check.
@@ -295,8 +420,7 @@ inline void* operator new(size_t, NotNullTag, void* location)
 
 // This adds various C++14 features for versions of the STL that may not yet have them.
 namespace std {
-// MSVC 2013 supports std::make_unique already.
-#if !defined(_MSC_VER) || _MSC_VER < 1800
+#if COMPILER(CLANG) && __cplusplus < 201305L
 template<class T> struct _Unique_if {
     typedef unique_ptr<T> _Single_object;
 };
@@ -324,28 +448,6 @@ make_unique(size_t n)
 
 template<class T, class... Args> typename _Unique_if<T>::_Known_bound
 make_unique(Args&&...) = delete;
-#endif
-
-// MSVC 2015 supports these functions.
-#if !COMPILER(MSVC) || _MSC_VER < 1900
-// Compile-time integer sequences
-// http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3658.html
-// (Note that we only implement index_sequence, and not the more generic integer_sequence).
-template<size_t... indexes> struct index_sequence {
-    static size_t size() { return sizeof...(indexes); }
-};
-
-template<size_t currentIndex, size_t...indexes> struct make_index_sequence_helper;
-
-template<size_t...indexes> struct make_index_sequence_helper<0, indexes...> {
-    typedef std::index_sequence<indexes...> type;
-};
-
-template<size_t currentIndex, size_t...indexes> struct make_index_sequence_helper {
-    typedef typename make_index_sequence_helper<currentIndex - 1, currentIndex - 1, indexes...>::type type;
-};
-
-template<size_t length> struct make_index_sequence : public make_index_sequence_helper<length>::type { };
 
 // std::exchange
 template<class T, class U = T>
@@ -355,24 +457,6 @@ T exchange(T& t, U&& newValue)
     t = std::forward<U>(newValue);
 
     return oldValue;
-}
-#endif
-
-#if COMPILER_SUPPORTS(CXX_USER_LITERALS)
-// These literals are available in C++14, so once we require C++14 compilers we can get rid of them here.
-// (User-literals need to have a leading underscore so we add it here - the "real" literals don't have underscores).
-namespace literals {
-namespace chrono_literals {
-    constexpr inline chrono::seconds operator"" _s(unsigned long long s)
-    {
-        return chrono::seconds(static_cast<chrono::seconds::rep>(s));
-    }
-
-    constexpr chrono::milliseconds operator"" _ms(unsigned long long ms)
-    {
-        return chrono::milliseconds(static_cast<chrono::milliseconds::rep>(ms));
-    }
-}
 }
 #endif
 
@@ -393,17 +477,23 @@ ALWAYS_INLINE constexpr typename remove_reference<T>::type&& move(T&& value)
 
 using WTF::KB;
 using WTF::MB;
-using WTF::isCompilationThread;
-using WTF::insertIntoBoundedVector;
-using WTF::isPointerAligned;
-using WTF::is8ByteAligned;
-using WTF::binarySearch;
-using WTF::tryBinarySearch;
+using WTF::GB;
 using WTF::approximateBinarySearch;
+using WTF::binarySearch;
 using WTF::bitwise_cast;
+using WTF::callStatelessLambda;
+using WTF::checkAndSet;
+using WTF::findBitInWord;
+using WTF::insertIntoBoundedVector;
+using WTF::isCompilationThread;
+using WTF::isPointerAligned;
+using WTF::isStatelessLambda;
+using WTF::is8ByteAligned;
+using WTF::roundUpToMultipleOf;
 using WTF::safeCast;
+using WTF::tryBinarySearch;
 
-#if COMPILER_SUPPORTS(CXX_USER_LITERALS)
+#if !COMPILER(CLANG) || __cplusplus >= 201305L
 // We normally don't want to bring in entire std namespaces, but literals are an exception.
 using namespace std::literals::chrono_literals;
 #endif

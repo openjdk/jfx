@@ -1,8 +1,8 @@
 /*
  * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef ChromiumBridge_h
-#define ChromiumBridge_h
+
+#pragma once
 
 #include "PluginData.h"
 #include <wtf/Vector.h>
@@ -25,5 +25,3 @@ namespace WebCore {
         static String computedDefaultLanguage() { return "en"; }
     };
 }
-
-#endif

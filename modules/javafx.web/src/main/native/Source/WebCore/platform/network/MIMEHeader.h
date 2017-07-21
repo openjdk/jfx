@@ -31,7 +31,6 @@
 #ifndef MIMEHeader_h
 #define MIMEHeader_h
 
-#include <wtf/HashMap.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
@@ -51,7 +50,7 @@ public:
         Unknown
     };
 
-    static PassRefPtr<MIMEHeader> parseHeader(SharedBufferChunkReader* crLFLineReader);
+    static RefPtr<MIMEHeader> parseHeader(SharedBufferChunkReader& crLFLineReader);
 
     bool isMultipart() const { return m_contentType.startsWith("multipart/"); }
 

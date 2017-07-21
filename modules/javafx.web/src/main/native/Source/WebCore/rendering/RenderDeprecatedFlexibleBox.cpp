@@ -60,7 +60,7 @@ public:
     void reset()
     {
         m_currentChild = nullptr;
-        m_ordinalIteration = -1;
+        m_ordinalIteration = std::numeric_limits<unsigned>::max();
     }
 
     RenderBox* first()
@@ -117,7 +117,7 @@ private:
     unsigned m_ordinalIteration;
 };
 
-RenderDeprecatedFlexibleBox::RenderDeprecatedFlexibleBox(Element& element, Ref<RenderStyle>&& style)
+RenderDeprecatedFlexibleBox::RenderDeprecatedFlexibleBox(Element& element, RenderStyle&& style)
     : RenderBlock(element, WTFMove(style), 0)
 {
     setChildrenInline(false); // All of our children must be block-level
@@ -165,7 +165,7 @@ static LayoutUnit contentHeightForChild(RenderBox* child)
 
 void RenderDeprecatedFlexibleBox::styleWillChange(StyleDifference diff, const RenderStyle& newStyle)
 {
-    RenderStyle* oldStyle = hasInitializedStyle() ? &style() : nullptr;
+    auto* oldStyle = hasInitializedStyle() ? &style() : nullptr;
     if (oldStyle && !oldStyle->lineClamp().isNone() && newStyle.lineClamp().isNone())
         clearLineClamp();
 
@@ -421,7 +421,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
             LayoutSize& childLayoutDelta = childLayoutDeltas[childIndex++];
 
             // Compute the child's vertical margins.
-            child->computeAndSetBlockDirectionMargins(this);
+            child->computeAndSetBlockDirectionMargins(*this);
 
             child->markForPaginationRelayoutIfNeeded();
 
@@ -433,7 +433,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
 
             // Update our height and overflow height.
             if (style().boxAlign() == BBASELINE) {
-                LayoutUnit ascent = child->firstLineBaseline().valueOr(child->height() + child->marginBottom());
+                LayoutUnit ascent = child->firstLineBaseline().value_or(child->height() + child->marginBottom());
                 ascent += child->marginTop();
                 LayoutUnit descent = (child->height() + child->verticalMarginExtent()) - ascent;
 
@@ -508,7 +508,7 @@ void RenderDeprecatedFlexibleBox::layoutHorizontalBox(bool relayoutChildren)
                     childY += child->marginTop() + std::max<LayoutUnit>(0, (contentHeight() - (child->height() + child->verticalMarginExtent())) / 2);
                     break;
                 case BBASELINE: {
-                    LayoutUnit ascent = child->firstLineBaseline().valueOr(child->height() + child->marginBottom());
+                    LayoutUnit ascent = child->firstLineBaseline().value_or(child->height() + child->marginBottom());
                     ascent += child->marginTop();
                     childY += child->marginTop() + (maxAscent - ascent);
                     break;
@@ -733,7 +733,7 @@ void RenderDeprecatedFlexibleBox::layoutVerticalBox(bool relayoutChildren)
             }
 
             // Compute the child's vertical margins.
-            child->computeAndSetBlockDirectionMargins(this);
+            child->computeAndSetBlockDirectionMargins(*this);
 
             // Add in the child's marginTop to our height.
             setHeight(height() + child->marginTop());
@@ -996,10 +996,10 @@ void RenderDeprecatedFlexibleBox::applyLineClamp(FlexBoxIterator& iterator, bool
         LayoutUnit totalWidth;
         InlineBox* anchorBox = lastLine->lastChild();
         if (anchorBox && anchorBox->renderer().style().isLink())
-            totalWidth = anchorBox->logicalWidth() + font.width(constructTextRun(this, font, ellipsisAndSpace, 2, style()));
+            totalWidth = anchorBox->logicalWidth() + font.width(constructTextRun(ellipsisAndSpace, 2, style()));
         else {
             anchorBox = nullptr;
-            totalWidth = font.width(constructTextRun(this, font, &horizontalEllipsis, 1, style()));
+            totalWidth = font.width(constructTextRun(&horizontalEllipsis, 1, style()));
         }
 
         // See if this width can be accommodated on the last visible line

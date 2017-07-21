@@ -48,14 +48,14 @@ public:
 
     GlyphData glyphDataForCharacter(UChar32 c) const
     {
-        unsigned index = GlyphPage::indexForCharacter(c);
+        unsigned index = GlyphPage::indexForCodePoint(c);
         ASSERT_WITH_SECURITY_IMPLICATION(index < GlyphPage::size);
         return { m_glyphs[index], m_fonts[index] };
     }
 
     void setGlyphDataForCharacter(UChar32 c, GlyphData glyphData)
     {
-        setGlyphDataForIndex(GlyphPage::indexForCharacter(c), glyphData);
+        setGlyphDataForIndex(GlyphPage::indexForCodePoint(c), glyphData);
     }
 
 private:
@@ -84,11 +84,7 @@ void FontCascadeFonts::GlyphPageCacheEntry::setGlyphDataForCharacter(UChar32 cha
 {
     ASSERT(!glyphDataForCharacter(character).glyph);
     if (!m_mixedFont) {
-#if ENABLE(CXX_11_FIX)
-        m_mixedFont = std::make_shared<MixedFontGlyphPage>(m_singleFont.get());
-#else
         m_mixedFont = std::make_unique<MixedFontGlyphPage>(m_singleFont.get());
-#endif
         m_singleFont = nullptr;
     }
     m_mixedFont->setGlyphDataForCharacter(character, glyphData);
@@ -126,7 +122,7 @@ void FontCascadeFonts::determinePitch(const FontCascadeDescription& description)
     auto& primaryRanges = realizeFallbackRangesAt(description, 0);
     unsigned numRanges = primaryRanges.size();
     if (numRanges == 1)
-        m_pitch = primaryRanges.rangeAt(0).font().pitch();
+        m_pitch = primaryRanges.fontForFirstRange().pitch();
     else
         m_pitch = VariablePitch;
 }
@@ -328,7 +324,7 @@ GlyphData FontCascadeFonts::glyphDataForSystemFallback(UChar32 c, const FontCasc
     if (!originalFont)
         originalFont = &primaryRanges.fontForFirstRange();
 
-    RefPtr<Font> systemFallbackFont = originalFont->systemFallbackFontForCharacter(c, description, m_isForPlatformFont);
+    auto systemFallbackFont = originalFont->systemFallbackFontForCharacter(c, description, m_isForPlatformFont);
     if (!systemFallbackFont)
         return GlyphData();
 
@@ -352,7 +348,7 @@ GlyphData FontCascadeFonts::glyphDataForSystemFallback(UChar32 c, const FontCasc
 
     // Keep the system fallback fonts we use alive.
     if (fallbackGlyphData.glyph)
-        m_systemFallbackFontSet.add(systemFallbackFont.release());
+        m_systemFallbackFontSet.add(WTFMove(systemFallbackFont));
 
     return fallbackGlyphData;
 }
@@ -414,14 +410,11 @@ static RefPtr<GlyphPage> glyphPageFromFontRanges(unsigned pageNumber, const Font
         auto& range = fontRanges.rangeAt(i);
         if (range.to()) {
             if (range.from() <= pageRangeFrom && pageRangeTo <= range.to())
-                font = &range.font();
+                font = range.font();
             break;
         }
     }
-    if (!font)
-        return nullptr;
-
-    if (font->platformData().orientation() == Vertical)
+    if (!font || font->platformData().orientation() == Vertical)
         return nullptr;
 
     return const_cast<GlyphPage*>(font->glyphPage(pageNumber));
@@ -435,7 +428,7 @@ GlyphData FontCascadeFonts::glyphDataForCharacter(UChar32 c, const FontCascadeDe
     if (variant != NormalVariant)
         return glyphDataForVariant(c, description, variant, 0);
 
-    const unsigned pageNumber = c / GlyphPage::size;
+    const unsigned pageNumber = GlyphPage::pageNumberForCodePoint(c);
 
     auto& cacheEntry = pageNumber ? m_cachedPages.add(pageNumber, GlyphPageCacheEntry()).iterator->value : m_cachedPageZero;
 
@@ -461,7 +454,7 @@ void FontCascadeFonts::pruneSystemFallbacks()
     // Mutable glyph pages may reference fallback fonts.
     if (m_cachedPageZero.isMixedFont())
         m_cachedPageZero = { };
-    m_cachedPages.removeIf([](decltype(m_cachedPages)::KeyValuePairType& keyAndValue) {
+    m_cachedPages.removeIf([](auto& keyAndValue) {
         return keyAndValue.value.isMixedFont();
     });
     m_systemFallbackFontSet.clear();

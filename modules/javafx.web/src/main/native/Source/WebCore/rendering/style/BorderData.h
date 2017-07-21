@@ -22,8 +22,7 @@
  *
  */
 
-#ifndef BorderData_h
-#define BorderData_h
+#pragma once
 
 #include "BorderValue.h"
 #include "IntRect.h"
@@ -35,16 +34,23 @@ namespace WebCore {
 class BorderData {
 friend class RenderStyle;
 public:
-    BorderData() : m_topLeft(Length(0, Fixed), Length(0, Fixed))
-                 , m_topRight(Length(0, Fixed), Length(0, Fixed))
-                 , m_bottomLeft(Length(0, Fixed), Length(0, Fixed))
-                 , m_bottomRight(Length(0, Fixed), Length(0, Fixed))
+    BorderData()
+        : m_topLeft { { 0, Fixed }, { 0, Fixed } }
+        , m_topRight { { 0, Fixed }, { 0, Fixed } }
+        , m_bottomLeft { { 0, Fixed }, { 0, Fixed } }
+        , m_bottomRight { { 0, Fixed }, { 0, Fixed } }
     {
     }
     bool hasBorder() const
     {
         bool haveImage = m_image.hasImage();
         return m_left.nonZero(!haveImage) || m_right.nonZero(!haveImage) || m_top.nonZero(!haveImage) || m_bottom.nonZero(!haveImage);
+    }
+
+    bool hasVisibleBorder() const
+    {
+        bool haveImage = m_image.hasImage();
+        return m_left.isVisible(!haveImage) || m_right.isVisible(!haveImage) || m_top.isVisible(!haveImage) || m_bottom.isVisible(!haveImage);
     }
 
     bool hasFill() const
@@ -54,15 +60,10 @@ public:
 
     bool hasBorderRadius() const
     {
-        if (!m_topLeft.width().isZero())
-            return true;
-        if (!m_topRight.width().isZero())
-            return true;
-        if (!m_bottomLeft.width().isZero())
-            return true;
-        if (!m_bottomRight.width().isZero())
-            return true;
-        return false;
+        return !m_topLeft.width.isZero()
+            || !m_topRight.width.isZero()
+            || !m_bottomLeft.width.isZero()
+            || !m_bottomRight.width.isZero();
     }
 
     float borderLeftWidth() const
@@ -136,5 +137,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // BorderData_h

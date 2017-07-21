@@ -31,6 +31,8 @@
 
 using namespace WebCore;
 
+namespace WebKit {
+
 static HashSet<WebStorageNamespaceProvider*>& storageNamespaceProviders()
 {
     static NeverDestroyed<HashSet<WebStorageNamespaceProvider*>> storageNamespaceProviders;
@@ -71,7 +73,7 @@ void WebStorageNamespaceProvider::clearLocalStorageForAllOrigins()
     }
 }
 
-void WebStorageNamespaceProvider::clearLocalStorageForOrigin(SecurityOrigin* origin)
+void WebStorageNamespaceProvider::clearLocalStorageForOrigin(const SecurityOriginData& origin)
 {
     for (const auto& storageNamespaceProvider : storageNamespaceProviders()) {
         if (auto* localStorageNamespace = storageNamespaceProvider->optionalLocalStorageNamespace())
@@ -100,6 +102,11 @@ RefPtr<StorageNamespace> WebStorageNamespaceProvider::createSessionStorageNamesp
     return StorageNamespaceImpl::createSessionStorageNamespace(quota);
 }
 
+RefPtr<StorageNamespace> WebStorageNamespaceProvider::createEphemeralLocalStorageNamespace(Page&, unsigned quota)
+{
+    return StorageNamespaceImpl::createEphemeralLocalStorageNamespace(quota);
+}
+
 RefPtr<StorageNamespace> WebStorageNamespaceProvider::createLocalStorageNamespace(unsigned quota)
 {
     return StorageNamespaceImpl::getOrCreateLocalStorageNamespace(m_localStorageDatabasePath, quota);
@@ -110,4 +117,6 @@ RefPtr<StorageNamespace> WebStorageNamespaceProvider::createTransientLocalStorag
     // FIXME: A smarter implementation would create a special namespace type instead of just piggy-backing off
     // SessionStorageNamespace here.
     return StorageNamespaceImpl::createSessionStorageNamespace(quota);
+}
+
 }

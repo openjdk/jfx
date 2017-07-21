@@ -64,6 +64,8 @@ public:
 
     bool saw(Node node) { return m_seen.contains(node); }
 
+    const Set& seen() const { return m_seen; }
+
 private:
     Set m_seen;
     Vector<Node, 16> m_stack;
@@ -83,7 +85,7 @@ struct GraphNodeWith {
     {
     }
 
-    explicit operator bool() const { return node; }
+    explicit operator bool() const { return !!node; }
 
     Node node;
     T data;

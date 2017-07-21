@@ -20,8 +20,7 @@
     Boston, MA 02110-1301, USA.
  */
 
-#ifndef WebResourceLoadScheduler_h
-#define WebResourceLoadScheduler_h
+#pragma once
 
 #include <wtf/Assertions.h>
 #include <WebCore/FrameLoaderTypes.h>
@@ -50,7 +49,7 @@ class WebResourceLoadScheduler : public WebCore::LoaderStrategy {
 public:
     WebResourceLoadScheduler();
 
-    RefPtr<WebCore::SubresourceLoader> loadResource(WebCore::DocumentLoader*, WebCore::CachedResource*, const WebCore::ResourceRequest&, const WebCore::ResourceLoaderOptions&) override;
+    RefPtr<WebCore::SubresourceLoader> loadResource(WebCore::DocumentLoader&, WebCore::CachedResource&, const WebCore::ResourceRequest&, const WebCore::ResourceLoaderOptions&) override;
     void loadResourceSynchronously(WebCore::NetworkingContext*, unsigned long, const WebCore::ResourceRequest&, WebCore::StoredCredentials, WebCore::ClientCredentialPolicy, WebCore::ResourceError&, WebCore::ResourceResponse&, Vector<char>&) override;
     void remove(WebCore::ResourceLoader*) override;
     void setDefersLoading(WebCore::ResourceLoader*, bool) override;
@@ -60,12 +59,14 @@ public:
     void suspendPendingRequests() override;
     void resumePendingRequests() override;
 
-    void createPingHandle(WebCore::NetworkingContext*, WebCore::ResourceRequest&, bool shouldUseCredentialStorage) override;
+    void createPingHandle(WebCore::NetworkingContext*, WebCore::ResourceRequest&, bool shouldUseCredentialStorage, bool shouldFollowRedirects) override;
+
+    void storeDerivedDataToCache(const SHA1::Digest&, const String&, const String&, WebCore::SharedBuffer&) override { }
 
     bool isSerialLoadingEnabled() const { return m_isSerialLoadingEnabled; }
     void setSerialLoadingEnabled(bool b) { m_isSerialLoadingEnabled = b; }
 
-    RefPtr<WebCore::NetscapePlugInStreamLoader> schedulePluginStreamLoad(WebCore::DocumentLoader*, WebCore::NetscapePlugInStreamLoaderClient*, const WebCore::ResourceRequest&);
+    RefPtr<WebCore::NetscapePlugInStreamLoader> schedulePluginStreamLoad(WebCore::DocumentLoader&, WebCore::NetscapePlugInStreamLoaderClient&, const WebCore::ResourceRequest&);
 
 protected:
     virtual ~WebResourceLoadScheduler();
@@ -109,7 +110,7 @@ private:
     };
 
     HostInformation* hostForURL(const WebCore::URL&, CreateHostPolicy = FindOnly);
-    WEBCORE_EXPORT void servePendingRequests(HostInformation*, WebCore::ResourceLoadPriority);
+    void servePendingRequests(HostInformation*, WebCore::ResourceLoadPriority);
 
     typedef HashMap<String, HostInformation*, StringHash> HostMap;
     HostMap m_hosts;
@@ -120,5 +121,3 @@ private:
     unsigned m_suspendPendingRequestsCount;
     bool m_isSerialLoadingEnabled;
 };
-
-#endif

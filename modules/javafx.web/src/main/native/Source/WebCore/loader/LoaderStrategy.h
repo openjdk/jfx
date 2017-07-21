@@ -23,17 +23,16 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef LoaderStrategy_h
-#define LoaderStrategy_h
+#pragma once
 
 #include "ResourceHandleTypes.h"
 #include "ResourceLoadPriority.h"
 #include "ResourceLoaderOptions.h"
+#include <wtf/SHA1.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-class BlobRegistry;
 class CachedResource;
 class DocumentLoader;
 class Frame;
@@ -44,12 +43,13 @@ class ResourceError;
 class ResourceLoader;
 class ResourceRequest;
 class ResourceResponse;
+class SharedBuffer;
 class SubresourceLoader;
 class URL;
 
 class WEBCORE_EXPORT LoaderStrategy {
 public:
-    virtual RefPtr<SubresourceLoader> loadResource(DocumentLoader*, CachedResource*, const ResourceRequest&, const ResourceLoaderOptions&) = 0;
+    virtual RefPtr<SubresourceLoader> loadResource(DocumentLoader&, CachedResource&, const ResourceRequest&, const ResourceLoaderOptions&) = 0;
     virtual void loadResourceSynchronously(NetworkingContext*, unsigned long identifier, const ResourceRequest&, StoredCredentials, ClientCredentialPolicy, ResourceError&, ResourceResponse&, Vector<char>& data) = 0;
 
     virtual void remove(ResourceLoader*) = 0;
@@ -60,18 +60,12 @@ public:
     virtual void suspendPendingRequests() = 0;
     virtual void resumePendingRequests() = 0;
 
-    virtual void createPingHandle(NetworkingContext*, ResourceRequest&, bool shouldUseCredentialStorage) = 0;
+    virtual void createPingHandle(NetworkingContext*, ResourceRequest&, bool shouldUseCredentialStorage, bool shouldFollowRedirects) = 0;
+
+    virtual void storeDerivedDataToCache(const SHA1::Digest& bodyKey, const String& type, const String& partition, WebCore::SharedBuffer&) = 0;
 
 protected:
     virtual ~LoaderStrategy();
 };
 
-class ResourceLoadSuspender {
-public:
-    ResourceLoadSuspender();
-    ~ResourceLoadSuspender();
-};
-
 } // namespace WebCore
-
-#endif // LoaderStrategy_h

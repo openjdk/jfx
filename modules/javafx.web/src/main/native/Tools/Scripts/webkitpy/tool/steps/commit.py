@@ -89,7 +89,7 @@ class Commit(AbstractStep):
                 svn_revision = scm.svn_revision_from_commit_text(commit_text)
                 _log.info("Committed r%s: <%s>" % (svn_revision, urls.view_revision_url(svn_revision)))
                 self._state["commit_text"] = commit_text
-                break;
+                break
             except AmbiguousCommitError, e:
                 if self._tool.user.confirm(self._commit_warning(e)):
                     force_squash = True

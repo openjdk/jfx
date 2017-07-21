@@ -32,6 +32,7 @@ from webkitpy.thirdparty.mock import Mock
 # Needed to support Windows port tests
 from webkitpy.port.win import WinPort
 
+
 def make_mock_crash_report_darwin(process_name, pid):
     return """Process:         {process_name} [{pid}]
 Path:            /Volumes/Data/slave/snowleopard-intel-release-tests/build/WebKitBuild/Release/{process_name}
@@ -232,6 +233,7 @@ Followup: MachineOwner
 quit:
 """.format(process_name=process_name, pid=pid)
 
+
 class CrashLogsTest(unittest.TestCase):
     def create_crash_logs_darwin(self):
         if not SystemHost().platform.is_mac():
@@ -336,3 +338,16 @@ class CrashLogsTest(unittest.TestCase):
         filesystem.read_binary_file = bad_read
         log = crash_logs.find_newest_log("DumpRenderTree", 28531, include_errors=True)
         self.assertIn('IOError: No such file or directory', log)
+
+    def test_get_timestamp_from_logs_darwin(self):
+        if not SystemHost().platform.is_mac():
+            return
+
+        crash_report = make_mock_crash_report_darwin('DumpRenderTree', 28528)
+        crash_logs = CrashLogs(MockSystemHost())
+        crash_timestamp = crash_logs.get_timestamp_from_log(crash_report)
+        self.assertIn('2011-12-07 13:27:34.816', str(crash_timestamp))
+
+        crash_report = crash_report.replace("Date/Time", "")
+        crash_timestamp = crash_logs.get_timestamp_from_log(crash_report)
+        self.assertIsNone(crash_timestamp)

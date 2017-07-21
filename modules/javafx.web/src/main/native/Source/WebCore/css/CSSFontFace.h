@@ -23,16 +23,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CSSFontFace_h
-#define CSSFontFace_h
+#pragma once
 
 #include "CSSFontFaceRule.h"
-#include "FontFeatureSettings.h"
+#include "FontTaggedSettings.h"
 #include "TextFlags.h"
+#include "Timer.h"
 #include <memory>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
@@ -61,6 +60,8 @@ public:
     }
     virtual ~CSSFontFace();
 
+    // FIXME: These functions don't need to have boolean return values.
+    // Callers only call this with known-valid CSS values.
     bool setFamilies(CSSValue&);
     bool setStyle(CSSValue&);
     bool setWeight(CSSValue&);
@@ -71,7 +72,7 @@ public:
     bool setVariantNumeric(CSSValue&);
     bool setVariantAlternates(CSSValue&);
     bool setVariantEastAsian(CSSValue&);
-    bool setFeatureSettings(CSSValue&);
+    void setFeatureSettings(CSSValue&);
 
     enum class Status;
     struct UnicodeRange;
@@ -86,8 +87,8 @@ public:
     Status status() const { return m_status; }
     StyleRuleFontFace* cssConnection() const { return m_cssConnection.get(); }
 
-    static Optional<FontTraitsMask> calculateStyleMask(CSSValue& style);
-    static Optional<FontTraitsMask> calculateWeightMask(CSSValue& weight);
+    static std::optional<FontTraitsMask> calculateStyleMask(CSSValue& style);
+    static std::optional<FontTraitsMask> calculateWeightMask(CSSValue& weight);
 
     class Client;
     void addClient(Client&);
@@ -108,9 +109,11 @@ public:
     class Client {
     public:
         virtual ~Client() { }
-        virtual void fontLoaded(CSSFontFace&) { };
-        virtual void fontStateChanged(CSSFontFace&, Status oldState, Status newState) { UNUSED_PARAM(oldState); UNUSED_PARAM(newState); };
-        virtual void fontPropertyChanged(CSSFontFace&, CSSValueList* oldFamilies = nullptr) { UNUSED_PARAM(oldFamilies); };
+        virtual void fontLoaded(CSSFontFace&) { }
+        virtual void fontStateChanged(CSSFontFace&, Status /*oldState*/, Status /*newState*/) { }
+        virtual void fontPropertyChanged(CSSFontFace&, CSSValueList* /*oldFamilies*/ = nullptr) { }
+        virtual void ref() = 0;
+        virtual void deref() = 0;
     };
 
     // Pending => Loading  => TimedOut
@@ -122,31 +125,25 @@ public:
     //              ||   //  \\   ||
     //              \/  \/    \/  \/
     //             Success    Failure
-    enum class Status {
-        Pending,
-        Loading,
-        TimedOut,
-        Success,
-        Failure
-    };
+    enum class Status { Pending, Loading, TimedOut, Success, Failure };
 
     struct UnicodeRange {
-        UnicodeRange(UChar32 from, UChar32 to)
-            : m_from(from)
-            , m_to(to)
-        {
-        }
-
-        UChar32 from() const { return m_from; }
-        UChar32 to() const { return m_to; }
-
-    private:
-        UChar32 m_from;
-        UChar32 m_to;
+        UChar32 from;
+        UChar32 to;
     };
 
+    bool rangesMatchCodePoint(UChar32) const;
+
     // We don't guarantee that the FontFace wrapper will be the same every time you ask for it.
-    Ref<FontFace> wrapper(JSC::ExecState&);
+    Ref<FontFace> wrapper();
+    void setWrapper(FontFace&);
+    FontFace* existingWrapper() { return m_wrapper.get(); }
+
+    bool webFontsShouldAlwaysFallBack() const;
+
+    bool purgeable() const;
+
+    void updateStyleIfNeeded();
 
 #if ENABLE(SVG_FONTS)
     bool hasSVGFontFaceSource() const;
@@ -159,11 +156,17 @@ private:
     void setStatus(Status);
     void notifyClientsOfFontPropertyChange();
 
+    void initializeWrapper();
+
+    void fontLoadEventOccurred();
+    void timeoutFired();
+
     RefPtr<CSSValueList> m_families;
     FontTraitsMask m_traitsMask { static_cast<FontTraitsMask>(FontStyleNormalMask | FontWeight400Mask) };
     Vector<UnicodeRange> m_ranges;
     FontFeatureSettings m_featureSettings;
     FontVariantSettings m_variantSettings;
+    Timer m_timeoutTimer;
     Vector<std::unique_ptr<CSSFontFaceSource>> m_sources;
     RefPtr<CSSFontSelector> m_fontSelector;
     RefPtr<StyleRuleFontFace> m_cssConnection;
@@ -172,8 +175,7 @@ private:
     Status m_status { Status::Pending };
     bool m_isLocalFallback { false };
     bool m_sourcesPopulated { false };
+    bool m_mayBePurged { true };
 };
 
 }
-
-#endif

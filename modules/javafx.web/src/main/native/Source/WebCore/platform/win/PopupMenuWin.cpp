@@ -167,7 +167,7 @@ void PopupMenuWin::show(const IntRect& r, FrameView* view, int index)
     m_showPopup = true;
 
     // Protect the popup menu in case its owner is destroyed while we're running the message pump.
-    RefPtr<PopupMenu> protect(this);
+    RefPtr<PopupMenu> protectedThis(this);
 
     ::SetCapture(hostWindow);
 
@@ -720,10 +720,10 @@ void PopupMenuWin::scrollTo(int offset)
     ::UpdateWindow(m_popup);
 }
 
-void PopupMenuWin::invalidateScrollbarRect(Scrollbar* scrollbar, const IntRect& rect)
+void PopupMenuWin::invalidateScrollbarRect(Scrollbar& scrollbar, const IntRect& rect)
 {
     IntRect scrollRect = rect;
-    scrollRect.move(scrollbar->x(), scrollbar->y());
+    scrollRect.move(scrollbar.x(), scrollbar.y());
     RECT r = scrollRect;
     ::InvalidateRect(m_popup, &r, false);
 }
@@ -735,7 +735,7 @@ IntSize PopupMenuWin::visibleSize() const
 
 IntSize PopupMenuWin::contentsSize() const
 {
-    return m_windowRect.size();
+    return IntSize(m_windowRect.width(), m_scrollbar ? m_scrollbar->totalSize() : m_windowRect.height());
 }
 
 IntRect PopupMenuWin::scrollableAreaBoundingBox(bool*) const

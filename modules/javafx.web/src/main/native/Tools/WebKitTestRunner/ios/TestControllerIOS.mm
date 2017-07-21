@@ -26,16 +26,19 @@
 #import "config.h"
 #import "TestController.h"
 
+#import "HIDEventGenerator.h"
 #import "PlatformWebView.h"
 #import "TestInvocation.h"
+#import "TestRunnerWKWebView.h"
+#import "UIKitSPI.h"
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 #import <WebKit/WKPreferencesRefPrivate.h>
 #import <WebKit/WKProcessPoolPrivate.h>
 #import <WebKit/WKStringCF.h>
 #import <WebKit/WKUserContentControllerPrivate.h>
-#import <WebKit/WKWebView.h>
-#import <WebKit/WKWebViewConfiguration.h>
 #import <WebKit/WKWebViewConfigurationPrivate.h>
+#import <WebKit/WKWebViewPrivate.h>
 #import <wtf/MainThread.h>
 
 namespace WTR {
@@ -46,10 +49,10 @@ void TestController::notifyDone()
 
 void TestController::platformInitialize()
 {
-    NSString *identifier = [[NSBundle mainBundle] bundleIdentifier];
-    const char *stdinPath = [[NSString stringWithFormat:@"/tmp/%@_IN", identifier] UTF8String];
-    const char *stdoutPath = [[NSString stringWithFormat:@"/tmp/%@_OUT", identifier] UTF8String];
-    const char *stderrPath = [[NSString stringWithFormat:@"/tmp/%@_ERROR", identifier] UTF8String];
+    const char* identifier = getenv("IPC_IDENTIFIER");
+    const char *stdinPath = [[NSString stringWithFormat:@"/tmp/%s_IN", identifier] UTF8String];
+    const char *stdoutPath = [[NSString stringWithFormat:@"/tmp/%s_OUT", identifier] UTF8String];
+    const char *stderrPath = [[NSString stringWithFormat:@"/tmp/%s_ERROR", identifier] UTF8String];
 
     int infd = open(stdinPath, O_RDWR);
     dup2(infd, STDIN_FILENO);
@@ -65,7 +68,7 @@ void TestController::platformDestroy()
 
 void TestController::initializeInjectedBundlePath()
 {
-    NSString *nsBundlePath = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"WebKitTestRunnerInjectedBundle.bundle"];
+    NSString *nsBundlePath = [[NSBundle mainBundle].builtInPlugInsPath stringByAppendingPathComponent:@"WebKitTestRunnerInjectedBundle.bundle"];
     m_injectedBundlePath.adopt(WKStringCreateWithCFString((CFStringRef)nsBundlePath));
 }
 
@@ -77,22 +80,27 @@ void TestController::initializeTestPluginDirectory()
 void TestController::platformResetPreferencesToConsistentValues()
 {
     WKPreferencesRef preferences = platformPreferences();
-    // Note that WKPreferencesSetTextAutosizingEnabled has no effect on iOS.
-    WKPreferencesSetMinimumZoomFontSize(preferences, 0);
+    WKPreferencesSetTextAutosizingEnabled(preferences, false);
 }
 
 void TestController::platformResetStateToConsistentValues()
 {
     cocoaResetStateToConsistentValues();
+
+    if (PlatformWebView* webView = mainWebView()) {
+        webView->platformView()._stableStateOverride = nil;
+        UIScrollView *scrollView = webView->platformView().scrollView;
+        [scrollView _removeAllAnimations:YES];
+        [scrollView setZoomScale:1 animated:NO];
+        [scrollView setContentOffset:CGPointZero];
+    }
 }
 
 void TestController::platformConfigureViewForTest(const TestInvocation& test)
 {
     if (test.options().useFlexibleViewport) {
-        const unsigned phoneViewHeight = 480;
-        const unsigned phoneViewWidth = 320;
-
-        mainWebView()->resizeTo(phoneViewWidth, phoneViewHeight);
+        CGRect screenBounds = [UIScreen mainScreen].bounds;
+        mainWebView()->resizeTo(screenBounds.size.width, screenBounds.size.height, PlatformWebView::WebViewSizingMode::HeightRespectsStatusBar);
         // We also pass data to InjectedBundle::beginTesting() to have it call
         // WKBundlePageSetUseTestingViewportConfiguration(false).
     }

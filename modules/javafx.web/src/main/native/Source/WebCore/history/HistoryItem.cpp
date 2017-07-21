@@ -68,14 +68,6 @@ HistoryItem::HistoryItem()
     , m_itemSequenceNumber(generateSequenceNumber())
     , m_documentSequenceNumber(generateSequenceNumber())
     , m_pruningReason(PruningReason::None)
-#if PLATFORM(IOS)
-    , m_scale(0)
-    , m_scaleIsInitial(false)
-    , m_bookmarkID(0)
-#endif
-#if PLATFORM(JAVA)
-    , m_hostObject(NULL)
-#endif
 {
 }
 
@@ -89,18 +81,8 @@ HistoryItem::HistoryItem(const String& urlString, const String& title)
     , m_itemSequenceNumber(generateSequenceNumber())
     , m_documentSequenceNumber(generateSequenceNumber())
     , m_pruningReason(PruningReason::None)
-#if PLATFORM(IOS)
-    , m_scale(0)
-    , m_scaleIsInitial(false)
-    , m_bookmarkID(0)
-#endif
-#if PLATFORM(JAVA)
-    , m_hostObject(NULL)
-#endif
 {
-#if !PLATFORM(JAVA) || ENABLE(ICONDATABASE)
     iconDatabase().retainIconForPageURL(m_urlString);
-#endif
 }
 
 HistoryItem::HistoryItem(const String& urlString, const String& title, const String& alternateTitle)
@@ -114,26 +96,14 @@ HistoryItem::HistoryItem(const String& urlString, const String& title, const Str
     , m_itemSequenceNumber(generateSequenceNumber())
     , m_documentSequenceNumber(generateSequenceNumber())
     , m_pruningReason(PruningReason::None)
-#if PLATFORM(IOS)
-    , m_scale(0)
-    , m_scaleIsInitial(false)
-    , m_bookmarkID(0)
-#endif
-#if PLATFORM(JAVA)
-    , m_hostObject(NULL)
-#endif
 {
-#if !PLATFORM(JAVA) || ENABLE(ICONDATABASE)
     iconDatabase().retainIconForPageURL(m_urlString);
-#endif
 }
 
 HistoryItem::~HistoryItem()
 {
     ASSERT(!m_cachedPage);
-#if !PLATFORM(JAVA) || ENABLE(ICONDATABASE)
     iconDatabase().releaseIconForPageURL(m_urlString);
-#endif
 #if PLATFORM(JAVA)
     if (m_hostObject) {
         notifyHistoryItemDestroyed(m_hostObject);
@@ -158,13 +128,12 @@ inline HistoryItem::HistoryItem(const HistoryItem& item)
     , m_formContentType(item.m_formContentType)
     , m_pruningReason(PruningReason::None)
 #if PLATFORM(IOS)
+    , m_obscuredInset(item.m_obscuredInset)
     , m_scale(item.m_scale)
     , m_scaleIsInitial(item.m_scaleIsInitial)
-    , m_bookmarkID(item.m_bookmarkID)
-    , m_sharedLinkUniqueIdentifier(item.m_sharedLinkUniqueIdentifier)
 #endif
 #if PLATFORM(JAVA)
-    , m_hostObject(NULL)
+    , m_hostObject(item.m_hostObject)
 #endif
 {
     if (item.m_formData)
@@ -174,9 +143,6 @@ inline HistoryItem::HistoryItem(const HistoryItem& item)
     m_children.reserveInitialCapacity(size);
     for (unsigned i = 0; i < size; ++i)
         m_children.uncheckedAppend(item.m_children[i]->copy());
-
-    if (item.m_redirectURLs)
-        m_redirectURLs = std::make_unique<Vector<String>>(*item.m_redirectURLs);
 }
 
 Ref<HistoryItem> HistoryItem::copy() const
@@ -186,9 +152,8 @@ Ref<HistoryItem> HistoryItem::copy() const
 
 void HistoryItem::reset()
 {
-#if !PLATFORM(JAVA) || ENABLE(ICONDATABASE)
     iconDatabase().releaseIconForPageURL(m_urlString);
-#endif
+
     m_urlString = String();
     m_originalURLString = String();
     m_referrer = String();
@@ -198,8 +163,6 @@ void HistoryItem::reset()
 
     m_lastVisitWasFailure = false;
     m_isTargetItem = false;
-
-    m_redirectURLs = nullptr;
 
     m_itemSequenceNumber = generateSequenceNumber();
 
@@ -268,13 +231,9 @@ void HistoryItem::setAlternateTitle(const String& alternateTitle)
 void HistoryItem::setURLString(const String& urlString)
 {
     if (m_urlString != urlString) {
-#if !PLATFORM(JAVA) || ENABLE(ICONDATABASE)
         iconDatabase().releaseIconForPageURL(m_urlString);
-#endif
         m_urlString = urlString;
-#if !PLATFORM(JAVA) || ENABLE(ICONDATABASE)
         iconDatabase().retainIconForPageURL(m_urlString);
-#endif
     }
 
     notifyHistoryItemChanged(this);
@@ -416,7 +375,7 @@ HistoryItem* HistoryItem::childItemWithDocumentSequenceNumber(long long number)
     return nullptr;
 }
 
-const HistoryItemVector& HistoryItem::children() const
+const Vector<Ref<HistoryItem>>& HistoryItem::children() const
 {
     return m_children;
 }
@@ -429,18 +388,6 @@ bool HistoryItem::hasChildren() const
 void HistoryItem::clearChildren()
 {
     m_children.clear();
-}
-
-bool HistoryItem::isAncestorOf(const HistoryItem& item) const
-{
-    for (size_t i = 0; i < m_children.size(); ++i) {
-        auto& child = m_children[i].get();
-        if (&child == &item)
-            return true;
-        if (child.isAncestorOf(item))
-            return true;
-    }
-    return false;
 }
 
 // We do same-document navigation if going to a different item and if either of the following is true:
@@ -539,27 +486,6 @@ bool HistoryItem::isCurrentDocument(Document& document) const
     return equalIgnoringFragmentIdentifier(url(), document.url());
 }
 
-void HistoryItem::addRedirectURL(const String& url)
-{
-    if (!m_redirectURLs)
-        m_redirectURLs = std::make_unique<Vector<String>>();
-
-    // Our API allows us to store all the URLs in the redirect chain, but for
-    // now we only have a use for the final URL.
-    (*m_redirectURLs).resize(1);
-    (*m_redirectURLs)[0] = url;
-}
-
-Vector<String>* HistoryItem::redirectURLs() const
-{
-    return m_redirectURLs.get();
-}
-
-void HistoryItem::setRedirectURLs(std::unique_ptr<Vector<String>> redirectURLs)
-{
-    m_redirectURLs = WTFMove(redirectURLs);
-}
-
 void HistoryItem::notifyChanged()
 {
     notifyHistoryItemChanged(this);
@@ -571,7 +497,7 @@ JLObject HistoryItem::hostObject()
     return m_hostObject;
 }
 
-void HistoryItem::setHostObject(const JLObject &host)
+void HistoryItem::setHostObject(const JLObject& host)
 {
     m_hostObject = host;
 }

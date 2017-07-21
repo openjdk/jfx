@@ -23,15 +23,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
 #include "StorageThread.h"
 
 #include <wtf/AutodrainedPool.h>
+#include <wtf/HashSet.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(JAVA)
-#include <jni.h>
-extern JavaVM* jvm;
+#include <wtf/java/JavaEnv.h>
 #endif
 
 namespace WebCore {
@@ -72,10 +73,7 @@ void StorageThread::threadEntryPointCallback(void* thread)
 void StorageThread::threadEntryPoint()
 {
 #if PLATFORM(JAVA)
-    {
-        void* env;
-        jvm->AttachCurrentThreadAsDaemon(&env, 0);
-    }
+    WTF::AutoAttachToJavaThread autoAttach(true);
 #endif
     ASSERT(!isMainThread());
 
@@ -83,16 +81,13 @@ void StorageThread::threadEntryPoint()
         AutodrainedPool pool;
         (*function)();
     }
-#if PLATFORM(JAVA)
-    jvm->DetachCurrentThread();
-#endif
 }
 
-void StorageThread::dispatch(const std::function<void ()>& function)
+void StorageThread::dispatch(Function<void ()>&& function)
 {
     ASSERT(isMainThread());
     ASSERT(!m_queue.killed() && m_threadID);
-    m_queue.append(std::make_unique<std::function<void ()>>(function));
+    m_queue.append(std::make_unique<Function<void ()>>(WTFMove(function)));
 }
 
 void StorageThread::terminate()
@@ -104,7 +99,7 @@ void StorageThread::terminate()
     if (!m_threadID)
         return;
 
-    m_queue.append(std::make_unique<std::function<void ()>>([this] {
+    m_queue.append(std::make_unique<Function<void ()>>([this] {
         performTerminate();
     }));
     waitForThreadCompletion(m_threadID);
@@ -122,8 +117,11 @@ void StorageThread::releaseFastMallocFreeMemoryInAllThreads()
 {
     HashSet<StorageThread*>& threads = activeStorageThreads();
 
-    for (HashSet<StorageThread*>::iterator it = threads.begin(), end = threads.end(); it != end; ++it)
-        (*it)->dispatch(WTF::releaseFastMallocFreeMemory);
+    for (HashSet<StorageThread*>::iterator it = threads.begin(), end = threads.end(); it != end; ++it) {
+        (*it)->dispatch([]() {
+            WTF::releaseFastMallocFreeMemory();
+        });
+    }
 }
 
 }

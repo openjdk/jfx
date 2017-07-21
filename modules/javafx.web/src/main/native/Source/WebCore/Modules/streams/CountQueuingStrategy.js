@@ -23,7 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// @conditional=ENABLE(STREAMS_API)
+// @conditional=ENABLE(READABLE_STREAM_API) || ENABLE(WRITABLE_STREAM_API)
 
 function size()
 {
@@ -36,7 +36,7 @@ function initializeCountQueuingStrategy(parameters)
 {
     "use strict";
 
-    @Object.defineProperty(this, "highWaterMark", {
+    @Object.@defineProperty(this, "highWaterMark", {
         value: parameters.highWaterMark,
         configurable: true,
         enumerable: true,

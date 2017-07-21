@@ -3,7 +3,7 @@
  */
 #include "config.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "KeyboardEvent.h"
 #include "PlatformKeyboardEvent.h"
 #include "NotImplemented.h"
@@ -39,17 +39,16 @@ PlatformKeyboardEvent::PlatformKeyboardEvent(
     jboolean altKey,
     jboolean metaKey,
     jdouble timestamp)
-: PlatformEvent(
-    toPlatformKeyboardEventType(type),
-    shiftKey,
-    ctrlKey,
-    altKey,
-    metaKey,
-    timestamp)
-, m_autoRepeat(false)
-, m_windowsVirtualKeyCode(windowsVirtualKeyCode)
-, m_nativeVirtualKeyCode(0)
-, m_isKeypad(false)
+        : PlatformEvent(
+            toPlatformKeyboardEventType(type),
+            shiftKey,
+            ctrlKey,
+            altKey,
+            metaKey,
+            timestamp)
+        , m_windowsVirtualKeyCode(windowsVirtualKeyCode)
+        , m_autoRepeat(false)
+        , m_isKeypad(false)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -68,16 +67,16 @@ bool PlatformKeyboardEvent::currentCapsLockState()
     return false;
 }
 
-void PlatformKeyboardEvent::disambiguateKeyDownEvent(Type type, bool backwardsCompatibility)
+void PlatformKeyboardEvent::disambiguateKeyDownEvent(Type, bool)
 {
     ASSERT_NOT_REACHED();
 }
 
-static const unsigned short HIGH_BIT_MASK_SHORT = 0x8000;
-void PlatformKeyboardEvent::getCurrentModifierState(bool& shiftKey, bool& ctrlKey, bool& altKey, bool& metaKey)
+void PlatformKeyboardEvent::getCurrentModifierState(bool&, bool&, bool&, bool&)
 {
     //utaTODO: realize it in Java
 /*
+static const unsigned short HIGH_BIT_MASK_SHORT = 0x8000;
 #if OS(WINDOWS) || PLATFORM(JAVA_WIN)
     shiftKey = GetKeyState(VK_SHIFT) & HIGH_BIT_MASK_SHORT;
     ctrlKey = GetKeyState(VK_CONTROL) & HIGH_BIT_MASK_SHORT;

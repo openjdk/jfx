@@ -54,7 +54,7 @@ namespace WebCore {
     String contextMenuItemTagOpenImageInNewWindow();
     String contextMenuItemTagDownloadImageToDisk();
     String contextMenuItemTagCopyImageToClipboard();
-#if PLATFORM(GTK) || PLATFORM(EFL)
+#if PLATFORM(GTK)
     String contextMenuItemTagCopyImageUrlToClipboard();
 #endif
     String contextMenuItemTagOpenFrameInNewWindow();
@@ -80,7 +80,7 @@ namespace WebCore {
     String contextMenuItemTagUnicodeInsertZWJMark();
     String contextMenuItemTagUnicodeInsertZWNJMark();
 #endif
-#if PLATFORM(GTK) || PLATFORM(EFL)
+#if PLATFORM(GTK)
     String contextMenuItemTagSelectAll();
 #endif
     String contextMenuItemTagNoGuessesFound();
@@ -139,6 +139,10 @@ namespace WebCore {
     String contextMenuItemTagToggleMediaLoop();
     String contextMenuItemTagEnterVideoFullscreen();
     String contextMenuItemTagExitVideoFullscreen();
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    String contextMenuItemTagEnterVideoEnhancedFullscreen();
+    String contextMenuItemTagExitVideoEnhancedFullscreen();
+#endif
     String contextMenuItemTagMediaPlay();
     String contextMenuItemTagMediaPause();
     String contextMenuItemTagMediaMute();
@@ -149,6 +153,7 @@ namespace WebCore {
     String searchMenuNoRecentSearchesText();
     String searchMenuRecentSearchesText();
     String searchMenuClearRecentSearchesText();
+#endif
 
     String AXWebAreaText();
     String AXLinkText();
@@ -161,7 +166,21 @@ namespace WebCore {
     String AXDescriptionListDetailText();
     String AXFooterRoleDescriptionText();
     String AXFileUploadButtonText();
+    String AXOutputText();
     String AXSearchFieldCancelButtonText();
+    String AXAttachmentRoleText();
+    String AXDetailsText();
+    String AXSummaryText();
+    String AXFigureText();
+    String AXEmailFieldText();
+    String AXTelephoneFieldText();
+    String AXURLFieldText();
+    String AXDateFieldText();
+    String AXTimeFieldText();
+    String AXDateTimeFieldText();
+    String AXMonthFieldText();
+    String AXNumberFieldText();
+    String AXWeekFieldText();
 
     String AXButtonActionVerb();
     String AXRadioButtonActionVerb();
@@ -172,7 +191,6 @@ namespace WebCore {
     String AXMenuListPopupActionVerb();
     String AXLinkActionVerb();
     String AXListItemActionVerb();
-#endif
 
 #if ENABLE(INPUT_TYPE_WEEK)
     // weekFormatInLDML() returns week and year format in LDML, Unicode
@@ -182,7 +200,16 @@ namespace WebCore {
 #if PLATFORM(COCOA)
     String AXARIAContentGroupText(const String& ariaType);
     String AXHorizontalRuleDescriptionText();
+    String AXMarkText();
+#if ENABLE(METER_ELEMENT)
+    String AXMeterGaugeRegionOptimumText();
+    String AXMeterGaugeRegionSuboptimalText();
+    String AXMeterGaugeRegionLessGoodText();
 #endif
+#endif
+
+    String AXAutoFillCredentialsLabel();
+    String AXAutoFillContactsLabel();
 
     String missingPluginText();
     String crashedPluginText();
@@ -201,8 +228,6 @@ namespace WebCore {
     WEBCORE_EXPORT String builtInPDFPluginName();
     WEBCORE_EXPORT String pdfDocumentTypeDescription();
     WEBCORE_EXPORT String postScriptDocumentTypeDescription();
-    String keygenMenuItem512();
-    String keygenMenuItem1024();
     String keygenMenuItem2048();
     String keygenKeychainItemName(const String& host);
 #endif
@@ -234,6 +259,7 @@ namespace WebCore {
     String validationMessageTypeMismatchForMultipleEmailText();
     String validationMessageTypeMismatchForURLText();
     String validationMessagePatternMismatchText();
+    String validationMessageTooShortText(int valueLength, int minLength);
     String validationMessageTooLongText(int valueLength, int maxLength);
     String validationMessageRangeUnderflowText(const String& minimum);
     String validationMessageRangeOverflowText(const String& maximum);
@@ -258,6 +284,7 @@ namespace WebCore {
     String sdhTrackMenuItemText(const String&);
     String easyReaderTrackMenuItemText(const String&);
     String forcedTrackMenuItemText(const String&);
+    String audioDescriptionTrackSuffixText(const String&);
 #endif
 #endif
 
@@ -271,10 +298,24 @@ namespace WebCore {
     String webCryptoMasterKeyKeychainComment();
 #endif
 
+#if PLATFORM(MAC)
+    WEBCORE_EXPORT String insertListTypeNone();
+    WEBCORE_EXPORT String insertListTypeBulleted();
+    WEBCORE_EXPORT String insertListTypeBulletedAccessibilityTitle();
+    WEBCORE_EXPORT String insertListTypeNumbered();
+    WEBCORE_EXPORT String insertListTypeNumberedAccessibilityTitle();
+    WEBCORE_EXPORT String exitFullScreenButtonAccessibilityTitle();
+#endif
+
 #define WEB_UI_STRING(string, description) WebCore::localizedString(string)
 #define WEB_UI_STRING_KEY(string, key, description) WebCore::localizedString(key)
 
     WEBCORE_EXPORT String localizedString(const char* key);
+
+#ifdef __OBJC__
+#define WEB_UI_NSSTRING(string, description) WebCore::localizedNSString(string)
+    WEBCORE_EXPORT NSString *localizedNSString(NSString *key) NS_FORMAT_ARGUMENT(1);
+#endif
 
 } // namespace WebCore
 

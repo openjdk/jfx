@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GamepadManager_h
-#define GamepadManager_h
+#pragma once
 
 #if ENABLE(GAMEPAD)
 
@@ -46,9 +45,9 @@ class GamepadManager : public GamepadProviderClient {
 public:
     static GamepadManager& singleton();
 
-    virtual void platformGamepadConnected(PlatformGamepad&) override final;
-    virtual void platformGamepadDisconnected(PlatformGamepad&) override final;
-    virtual void platformGamepadInputActivity() override final;
+    void platformGamepadConnected(PlatformGamepad&) final;
+    void platformGamepadDisconnected(PlatformGamepad&) final;
+    void platformGamepadInputActivity(bool shouldMakeGamepadVisible) final;
 
     void registerNavigator(NavigatorGamepad*);
     void unregisterNavigator(NavigatorGamepad*);
@@ -75,4 +74,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(GAMEPAD)
-#endif // GamepadManager_h

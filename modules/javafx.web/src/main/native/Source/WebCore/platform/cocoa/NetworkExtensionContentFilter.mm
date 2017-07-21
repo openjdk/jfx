@@ -33,6 +33,7 @@
 #import "NEFilterSourceSPI.h"
 #import "ResourceRequest.h"
 #import "ResourceResponse.h"
+#import "RuntimeApplicationChecks.h"
 #import "SharedBuffer.h"
 #import "SoftLinking.h"
 #import "URL.h"
@@ -73,6 +74,9 @@ void NetworkExtensionContentFilter::initialize(const URL* url)
 #if HAVE(MODERN_NE_FILTER_SOURCE)
     ASSERT_UNUSED(url, !url);
     m_neFilterSource = adoptNS([allocNEFilterSourceInstance() initWithDecisionQueue:m_queue.get()]);
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000)
+    [m_neFilterSource setSourceAppIdentifier:applicationBundleIdentifier()];
+#endif
 #else
     ASSERT_ARG(url, url);
     m_neFilterSource = adoptNS([allocNEFilterSourceInstance() initWithURL:*url direction:NEFilterSourceDirectionInbound socketIdentifier:0]);
@@ -193,9 +197,10 @@ void NetworkExtensionContentFilter::finishedAddingData()
 Ref<SharedBuffer> NetworkExtensionContentFilter::replacementData() const
 {
     ASSERT(didBlockData());
-    return adoptRef(*SharedBuffer::wrapNSData(m_replacementData.get()).leakRef());
+    return SharedBuffer::wrapNSData(m_replacementData.get());
 }
 
+#if ENABLE(CONTENT_FILTERING)
 ContentFilterUnblockHandler NetworkExtensionContentFilter::unblockHandler() const
 {
 #if HAVE(MODERN_NE_FILTER_SOURCE)
@@ -214,6 +219,7 @@ ContentFilterUnblockHandler NetworkExtensionContentFilter::unblockHandler() cons
     return { };
 #endif
 }
+#endif
 
 void NetworkExtensionContentFilter::handleDecision(NEFilterSourceStatus status, NSData *replacementData)
 {

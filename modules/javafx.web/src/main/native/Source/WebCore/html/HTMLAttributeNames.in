@@ -59,6 +59,7 @@ aria-valuemax
 aria-valuemin
 aria-valuenow
 aria-valuetext
+as
 async
 autocomplete
 autofocus
@@ -163,6 +164,7 @@ marginheight
 marginwidth
 max
 maxlength
+minlength
 mayscript
 media
 mediagroup
@@ -172,6 +174,7 @@ multiple
 muted
 name
 nohref
+nomodule
 nonce
 noresize
 noshade
@@ -186,6 +189,7 @@ onautocomplete
 onautocompleteerror
 onbeforecopy
 onbeforecut
+onbeforeinput
 onbeforeload
 onbeforepaste
 onbeforeunload
@@ -221,6 +225,7 @@ onkeyup
 ongesturestart
 ongesturechange
 ongestureend
+onlanguagechange
 onload
 onloadeddata
 onloadedmetadata
@@ -262,6 +267,8 @@ onstorage
 onsuspend
 onsubmit
 ontimeupdate
+ontoggle
+ontouchforcechange
 ontouchstart
 ontouchmove
 ontouchend
@@ -297,6 +304,7 @@ open
 optimum
 pattern
 placeholder
+playsinline
 pluginspage
 pluginurl
 ping
@@ -380,3 +388,7 @@ webkit-playsinline
 x-webkit-airplay
 x-webkit-wirelessvideoplaybackdisabled
 x-itunes-inherit-uri-query-component
+
+x-apple-data-detectors
+x-apple-data-detectors-type
+x-apple-data-detectors-result

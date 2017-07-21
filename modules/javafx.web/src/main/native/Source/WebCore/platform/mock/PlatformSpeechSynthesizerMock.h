@@ -38,7 +38,7 @@ public:
     explicit PlatformSpeechSynthesizerMock(PlatformSpeechSynthesizerClient*);
 
     virtual ~PlatformSpeechSynthesizerMock();
-    virtual void speak(PassRefPtr<PlatformSpeechSynthesisUtterance>);
+    virtual void speak(RefPtr<PlatformSpeechSynthesisUtterance>&&);
     virtual void pause();
     virtual void resume();
     virtual void cancel();

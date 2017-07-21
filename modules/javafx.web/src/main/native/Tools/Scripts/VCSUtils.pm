@@ -59,6 +59,7 @@ BEGIN {
         &escapeSubversionPath
         &exitStatus
         &fixChangeLogPatch
+        &fixSVNPatchForAdditionWithHistory
         &gitBranch
         &gitDirectory
         &gitTreeDirectory
@@ -75,6 +76,7 @@ BEGIN {
         &mergeChangeLogs
         &normalizePath
         &parseChunkRange
+        &parseDiffStartLine
         &parseFirstEOL
         &parsePatch
         &pathRelativeToSVNRepositoryRootForPath
@@ -86,8 +88,12 @@ BEGIN {
         &scmMoveOrRenameFile
         &scmToggleExecutableBit
         &setChangeLogDateAndReviewer
+        &svnIdentifierForPath
+        &svnInfoForPath
+        &svnRepositoryRootForPath
         &svnRevisionForDirectory
         &svnStatus
+        &svnURLForPath
         &toWindowsLineEndings
         &gitCommitForSVNRevision
         &listOfChangedFilesBetweenRevisions
@@ -443,31 +449,62 @@ sub svnRevisionForDirectory($)
     return $revision;
 }
 
-sub pathRelativeToSVNRepositoryRootForPath($)
+sub svnInfoForPath($)
 {
     my ($file) = @_;
     my $relativePath = File::Spec->abs2rel($file);
 
     my $svnInfo;
-    if (isSVN()) {
+    if (isSVNDirectory($file)) {
         my $escapedRelativePath = escapeSubversionPath($relativePath);
         my $command = "svn info $escapedRelativePath";
         $command = "LC_ALL=C $command" if !isWindows();
         $svnInfo = `$command`;
-    } elsif (isGit()) {
-        my $command = "git svn info $relativePath";
+    } elsif (isGitDirectory($file)) {
+        my $command = "git svn info";
         $command = "LC_ALL=C $command" if !isWindows();
-        $svnInfo = `$command`;
+        $svnInfo = `cd $relativePath && $command`;
     }
 
+    return $svnInfo;
+}
+
+sub svnURLForPath($)
+{
+    my ($file) = @_;
+    my $svnInfo = svnInfoForPath($file);
+
     $svnInfo =~ /.*^URL: (.*?)$/m;
-    my $svnURL = $1;
+    return $1;
+}
+
+sub svnRepositoryRootForPath($)
+{
+    my ($file) = @_;
+    my $svnInfo = svnInfoForPath($file);
 
     $svnInfo =~ /.*^Repository Root: (.*?)$/m;
-    my $repositoryRoot = $1;
+    return $1;
+}
 
-    $svnURL =~ s/$repositoryRoot\///;
+sub pathRelativeToSVNRepositoryRootForPath($)
+{
+    my ($file) = @_;
+
+    my $svnURL = svnURLForPath($file);
+    my $svnRepositoryRoot = svnRepositoryRootForPath($file);
+
+    $svnURL =~ s/$svnRepositoryRoot\///;
     return $svnURL;
+}
+
+sub svnIdentifierForPath($)
+{
+    my ($file) = @_;
+    my $path = pathRelativeToSVNRepositoryRootForPath($file);
+
+    $path =~ /^(trunk)|tags\/([\w\.\-]*)|branches\/([\w\.\-]*).*$/m;
+    return $1 || $2 || $3;
 }
 
 sub makeFilePathRelative($)
@@ -667,6 +704,19 @@ sub isExecutable($)
     my $fileMode = shift;
 
     return $fileMode % 2;
+}
+
+# Parses an SVN or Git diff header start line.
+#
+# Args:
+#   $line: "Index: " line or "diff --git" line
+#
+# Returns the path of the target file or undef if the $line is unrecognized.
+sub parseDiffStartLine($)
+{
+    my ($line) = @_;
+    return $1 if $line =~ /$svnDiffStartRegEx/;
+    return parseGitDiffStartLine($line) if $line =~ /$gitDiffStartRegEx/;
 }
 
 # Parse the Git diff header start line.
@@ -1516,7 +1566,7 @@ sub parseSvnPropertyValue($$)
     }
 
     while (<$fileHandle>) {
-        if (/^[\r\n]+$/ || /$svnPropertyValueStartRegEx/ || /$svnPropertyStartRegEx/ || /$svnPropertyValueNoNewlineRegEx/) {
+        if (/^[\r\n]+$/ || /$svnPropertyValueStartRegEx/ || /$svnPropertyStartRegEx/ || /$svnPropertyValueNoNewlineRegEx/ || /$svnDiffStartRegEx/) {
             # Note, we may encounter an empty line before the contents of a binary patch.
             # Also, we check for $svnPropertyValueStartRegEx because a '-' property may be
             # followed by a '+' property in the case of a "Modified" or "Name" property.
@@ -1685,6 +1735,51 @@ sub setChangeLogDateAndReviewer($$$)
     }
 
     return $patch;
+}
+
+# Removes a leading Subversion header without an associated diff if one exists.
+#
+# This subroutine dies if the specified patch does not begin with an "Index:" line.
+#
+# In SVN 1.9 or newer, "svn diff" of a moved/copied file without post changes always
+# emits a leading header without an associated diff:
+#     Index: B.txt
+#     ===================================================================
+# (end of file or next header)
+#
+# If the same file has a property change then the patch has the form:
+#     Index: B.txt
+#     ===================================================================
+#     Index: B.txt
+#     ===================================================================
+#     --- B.txt    (revision 1)
+#     +++ B.txt    (working copy)
+#
+#     Property change on B.txt
+#     ___________________________________________________________________
+#     Added: svn:executable
+#     ## -0,0 +1 ##
+#     +*
+#     \ No newline at end of property
+#
+# We need to apply this function to the ouput of "svn diff" for an addition with history
+# to remove a duplicate header so that svn-apply can apply the resulting patch.
+sub fixSVNPatchForAdditionWithHistory($)
+{
+    my ($patch) = @_;
+
+    $patch =~ /(\r?\n)/;
+    my $lineEnding = $1;
+    my @lines = split(/$lineEnding/, $patch);
+
+    if ($lines[0] !~ /$svnDiffStartRegEx/) {
+        die("First line of SVN diff does not begin with \"Index \": \"$lines[0]\"");
+    }
+    if (@lines <= 2) {
+        return "";
+    }
+    splice(@lines, 0, 2) if $lines[2] =~ /$svnDiffStartRegEx/;
+    return join($lineEnding, @lines) . "\n"; # patch(1) expects an extra trailing newline.
 }
 
 # If possible, returns a ChangeLog patch equivalent to the given one,

@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RemoveNodePreservingChildrenCommand_h
-#define RemoveNodePreservingChildrenCommand_h
+#pragma once
 
 #include "CompositeEditCommand.h"
 
@@ -40,12 +39,10 @@ public:
 private:
     explicit RemoveNodePreservingChildrenCommand(PassRefPtr<Node>, ShouldAssumeContentIsAlwaysEditable, EditAction);
 
-    virtual void doApply();
+    void doApply() override;
 
     RefPtr<Node> m_node;
     ShouldAssumeContentIsAlwaysEditable m_shouldAssumeContentIsAlwaysEditable;
 };
 
 } // namespace WebCore
-
-#endif // RemoveNodePreservingChildrenCommand_h

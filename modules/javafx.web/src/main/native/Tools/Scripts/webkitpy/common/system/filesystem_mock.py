@@ -137,7 +137,6 @@ class MockFileSystem(object):
                 dirs.append(dirpath)
         return sorted(dirs)
 
-
     def files_under(self, path, dirs_to_skip=[], file_filter=None):
         def filter_all(fs, dirpath, basename):
             return True
@@ -338,7 +337,7 @@ class MockFileSystem(object):
             self._raise_not_found(path)
         return ReadableTextFileObject(self, path, self.files[path])
 
-    def open_text_file_for_writing(self, path):
+    def open_text_file_for_writing(self, path, should_append=False):
         return WritableTextFileObject(self, path)
 
     def read_text_file(self, path):

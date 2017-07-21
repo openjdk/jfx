@@ -37,23 +37,20 @@ log = logging.getLogger('global')
 
 
 class ObjCConfigurationHeaderGenerator(ObjCGenerator):
-    def __init__(self, model, input_filepath):
-        ObjCGenerator.__init__(self, model, input_filepath)
+    def __init__(self, *args, **kwargs):
+        ObjCGenerator.__init__(self, *args, **kwargs)
 
     def output_filename(self):
-        return '%sConfiguration.h' % self.objc_prefix()
+        return '%sConfiguration.h' % self.protocol_name()
 
     def generate_output(self):
         headers = [
-            '<WebInspector/%s.h>' % self.objc_prefix(),
+            '<WebInspector/%s.h>' % self.protocol_name(),
         ]
 
         header_args = {
             'includes': '\n'.join(['#import ' + header for header in headers]),
         }
-
-        self._command_filter = ObjCGenerator.should_generate_domain_command_handler_filter(self.model())
-        self._event_filter = ObjCGenerator.should_generate_domain_event_dispatcher_filter(self.model())
 
         domains = self.domains_to_generate()
         sections = []
@@ -66,7 +63,7 @@ class ObjCConfigurationHeaderGenerator(ObjCGenerator):
     def _generate_configuration_interface_for_domains(self, domains):
         lines = []
         lines.append('__attribute__((visibility ("default")))')
-        lines.append('@interface %sConfiguration : NSObject' % self.objc_prefix())
+        lines.append('@interface %sConfiguration : NSObject' % self.protocol_name())
         for domain in domains:
             lines.extend(self._generate_properties_for_domain(domain))
         lines.append('@end')
@@ -80,8 +77,9 @@ class ObjCConfigurationHeaderGenerator(ObjCGenerator):
         }
 
         lines = []
-        if domain.commands and self._command_filter(domain):
+
+        if self.should_generate_commands_for_domain(domain):
             lines.append(Template(ObjCTemplates.ConfigurationCommandProperty).substitute(None, **property_args))
-        if domain.events and self._event_filter(domain):
+        if self.should_generate_events_for_domain(domain):
             lines.append(Template(ObjCTemplates.ConfigurationEventProperty).substitute(None, **property_args))
         return lines

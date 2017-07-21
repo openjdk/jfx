@@ -6,7 +6,7 @@
 #include "config.h"
 #include "VisitedLinkStoreJava.h"
 
-#include <WebCore/PageCache.h>
+#include "PageCache.h"
 #include <wtf/NeverDestroyed.h>
 
 using namespace WebCore;
@@ -57,7 +57,7 @@ void VisitedLinkStoreJava::addVisitedLink(const String& urlString)
     addVisitedLinkHash(visitedLinkHash(urlString));
 }
 
-bool VisitedLinkStoreJava::isLinkVisited(Page& page, LinkHash linkHash, const URL& baseURL, const AtomicString& attributeURL)
+bool VisitedLinkStoreJava::isLinkVisited(Page& page, LinkHash linkHash, const URL&, const AtomicString&)
 {
     populateVisitedLinksIfNeeded(page);
 
@@ -72,7 +72,7 @@ void VisitedLinkStoreJava::addVisitedLink(Page&, LinkHash linkHash)
     addVisitedLinkHash(linkHash);
 }
 
-void VisitedLinkStoreJava::populateVisitedLinksIfNeeded(Page& sourcePage)
+void VisitedLinkStoreJava::populateVisitedLinksIfNeeded(Page&)
 {
     if (m_visitedLinksPopulated)
         return;

@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IntlCollator_h
-#define IntlCollator_h
+#pragma once
 
 #if ENABLE(INTL)
 
@@ -41,7 +40,7 @@ class IntlCollator : public JSDestructibleObject {
 public:
     typedef JSDestructibleObject Base;
 
-    static IntlCollator* create(VM&, IntlCollatorConstructor*);
+    static IntlCollator* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
@@ -85,5 +84,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(INTL)
-
-#endif // IntlCollator_h

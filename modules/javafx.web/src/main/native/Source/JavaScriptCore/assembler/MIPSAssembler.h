@@ -26,8 +26,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MIPSAssembler_h
-#define MIPSAssembler_h
+#pragma once
 
 #if ENABLE(ASSEMBLER) && CPU(MIPS)
 
@@ -545,6 +544,11 @@ public:
     void sqrtd(FPRegisterID fd, FPRegisterID fs)
     {
         emitInst(0x46200004 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
+    }
+
+    void absd(FPRegisterID fd, FPRegisterID fs)
+    {
+        emitInst(0x46200005 | (fd << OP_SH_FD) | (fs << OP_SH_FS));
     }
 
     void movd(FPRegisterID fd, FPRegisterID fs)
@@ -1091,5 +1095,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(ASSEMBLER) && CPU(MIPS)
-
-#endif // MIPSAssembler_h

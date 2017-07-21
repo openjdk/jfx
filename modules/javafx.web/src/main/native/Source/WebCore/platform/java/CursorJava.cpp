@@ -5,7 +5,7 @@
 
 #include "Cursor.h"
 #include "IntPoint.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "Image.h"
 #include "com_sun_webkit_CursorManager.h"
 
@@ -51,7 +51,7 @@ Cursor::Cursor(Image* image, const IntPoint& hotspot)
                                             "(Lcom/sun/webkit/graphics/WCImageFrame;II)J");
     ASSERT(mid);
 
-    RefPtr<RQRef> cursorImageFrame(image->javaImage());
+    RefPtr<RQRef> cursorImageFrame = image->javaImage() ? image->javaImage()->frame() : nullptr;
     if (!cursorImageFrame) {
         return;
     }
@@ -61,28 +61,9 @@ Cursor::Cursor(Image* image, const IntPoint& hotspot)
     CheckAndClearException(env);
 }
 
-Cursor::Cursor(const Cursor& c)
-{
-    m_platformCursor = c.platformCursor();
-}
-
-Cursor& Cursor::operator=(const Cursor& c)
-{
-    m_type = c.m_type;
-    m_image = c.m_image;
-    m_hotSpot = c.m_hotSpot;
-    m_platformCursor = c.platformCursor();
-    return (*this);
-}
-
 Cursor::Cursor(PlatformCursor c)
 {
     m_platformCursor = c;
-}
-
-Cursor::~Cursor()
-{
-    m_platformCursor = 0;
 }
 
 void Cursor::setPlatformCursor(const Cursor& c) const

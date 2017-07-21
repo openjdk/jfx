@@ -10,7 +10,7 @@
 namespace WebCore {
 
 // JDK-8146959
-RefPtr<SharedBuffer> SharedBuffer::createFromReadingFile(const String& filePath)
+RefPtr<SharedBuffer> SharedBuffer::createFromReadingFile(const String&)
 {
   notImplemented();
   return RefPtr<SharedBuffer>();
@@ -23,7 +23,7 @@ extern "C" {
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkCreate
   (JNIEnv*, jclass)
 {
-    return ptr_to_jlong(SharedBuffer::create().leakRef());
+    return ptr_to_jlong(&SharedBuffer::create().leakRef());
 }
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_SharedBuffer_twkSize
@@ -46,7 +46,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_SharedBuffer_twkGetSomeData
     ASSERT(length >= 0);
 
     const char* segment;
-    unsigned len = p->getSomeData(segment, position);
+    int len = p->getSomeData(segment, position);
     if (len) {
         if (len > length) {
             len = length;

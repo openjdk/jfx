@@ -81,7 +81,7 @@ void HTMLTableColElement::parseAttribute(const QualifiedName& name, const Atomic
         HTMLTablePartElement::parseAttribute(name, value);
 }
 
-const StyleProperties* HTMLTableColElement::additionalPresentationAttributeStyle()
+const StyleProperties* HTMLTableColElement::additionalPresentationAttributeStyle() const
 {
     if (!hasTagName(colgroupTag))
         return nullptr;
@@ -97,7 +97,7 @@ void HTMLTableColElement::setSpan(unsigned n)
 
 String HTMLTableColElement::width() const
 {
-    return fastGetAttribute(widthAttr);
+    return attributeWithoutSynchronization(widthAttr);
 }
 
 }

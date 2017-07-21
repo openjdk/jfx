@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,13 +32,12 @@
 #include "AirInsertionSet.h"
 #include "AirInstInlines.h"
 #include "AirLiveness.h"
+#include "AirPadInterference.h"
 #include "AirPhaseScope.h"
-#include "AirRegisterPriority.h"
 #include "AirTmpInlines.h"
 #include "AirTmpWidth.h"
 #include "AirUseCounts.h"
 #include <wtf/ListDump.h>
-#include <wtf/ListHashSet.h>
 
 namespace JSC { namespace B3 { namespace Air {
 
@@ -58,6 +57,9 @@ public:
         , m_lastPrecoloredRegisterIndex(lastPrecoloredRegisterIndex)
         , m_unspillableTmps(unspillableTmp)
     {
+        for (Reg reg : m_regsInPriorityOrder)
+            m_mutableRegs.set(reg);
+
         initializeDegrees(tmpArraySize);
 
         m_adjacencyList.resize(tmpArraySize);
@@ -87,9 +89,6 @@ protected:
         IndexType firstNonRegIndex = m_lastPrecoloredRegisterIndex + 1;
         for (IndexType i = firstNonRegIndex; i < m_degrees.size(); ++i) {
             unsigned degree = m_degrees[i];
-            if (!degree)
-                continue;
-
             if (degree >= m_regsInPriorityOrder.size())
                 addToSpill(i);
             else if (!m_moveList[i].isEmpty())
@@ -162,7 +161,7 @@ protected:
             std::swap(u, v);
 
         if (traceDebug)
-            dataLog("Coalescing move at index", moveIndex, " u = ", u, " v = ", v, "\n");
+            dataLog("Coalescing move at index ", moveIndex, " u = ", u, " v = ", v, "\n");
 
         if (u == v) {
             addWorkList(u);
@@ -462,8 +461,15 @@ private:
 
     bool precoloredCoalescingHeuristic(IndexType u, IndexType v)
     {
+        if (traceDebug)
+            dataLog("    Checking precoloredCoalescingHeuristic\n");
         ASSERT(isPrecolored(u));
         ASSERT(!isPrecolored(v));
+
+        // If u is a pinned register then it's always safe to coalesce. Note that when we call this,
+        // we have already proved that there is no interference between u and v.
+        if (!m_mutableRegs.get(m_coloredTmp[u]))
+            return true;
 
         // If any adjacent of the non-colored node is not an adjacent of the colored node AND has a degree >= K
         // there is a risk that this node needs to have the same color as our precolored node. If we coalesce such
@@ -550,6 +556,7 @@ protected:
     typedef SimpleClassHashTraits<InterferenceEdge> InterferenceEdgeHashTraits;
 
     const Vector<Reg>& m_regsInPriorityOrder;
+    RegisterSet m_mutableRegs;
     IndexType m_lastPrecoloredRegisterIndex { 0 };
 
     // The interference graph.
@@ -728,7 +735,7 @@ template<Arg::Type type>
 class ColoringAllocator : public AbstractColoringAllocator<unsigned> {
 public:
     ColoringAllocator(Code& code, TmpWidth& tmpWidth, const UseCounts<Tmp>& useCounts, const HashSet<unsigned>& unspillableTmp)
-        : AbstractColoringAllocator<unsigned>(regsInPriorityOrder(type), AbsoluteTmpMapper<type>::lastMachineRegisterIndex(), tmpArraySize(code), unspillableTmp)
+        : AbstractColoringAllocator<unsigned>(code.regsInPriorityOrder(type), AbsoluteTmpMapper<type>::lastMachineRegisterIndex(), tmpArraySize(code), unspillableTmp)
         , m_code(code)
         , m_tmpWidth(tmpWidth)
         , m_useCounts(useCounts)
@@ -838,9 +845,10 @@ public:
 
         Reg reg = m_coloredTmp[AbsoluteTmpMapper<type>::absoluteIndex(tmp)];
         if (!reg) {
-            // We only care about Tmps that interfere. A Tmp that never interfere with anything
-            // can take any register.
-            reg = regsInPriorityOrder(type).first();
+            dataLog("FATAL: No color for ", tmp, "\n");
+            dataLog("Code:\n");
+            dataLog(m_code);
+            RELEASE_ASSERT_NOT_REACHED();
         }
         return reg;
     }
@@ -922,6 +930,8 @@ private:
 
     void build(Inst* prevInst, Inst* nextInst, const typename TmpLiveness<type>::LocalCalc& localCalc)
     {
+        if (traceDebug)
+            dataLog("Building between ", pointerDump(prevInst), " and ", pointerDump(nextInst), ":\n");
         Inst::forEachDefWithExtraClobberedRegs<Tmp>(
             prevInst, nextInst,
             [&] (const Tmp& arg, Arg::Role, Arg::Type argType, Arg::Width) {
@@ -937,6 +947,8 @@ private:
                         if (argType != type)
                             return;
 
+                        if (traceDebug)
+                            dataLog("    Adding def-def edge: ", arg, ", ", otherArg, "\n");
                         this->addEdge(arg, otherArg);
                     });
             });
@@ -973,8 +985,11 @@ private:
             }
 
             for (const Tmp& liveTmp : localCalc.live()) {
-                if (liveTmp != useTmp)
+                if (liveTmp != useTmp) {
+                    if (traceDebug)
+                        dataLog("    Adding def-live for coalescable: ", defTmp, ", ", liveTmp, "\n");
                     addEdge(defTmp, liveTmp);
+                }
             }
 
             // The next instruction could have early clobbers or early def's. We need to consider
@@ -992,7 +1007,7 @@ private:
         m_worklistMoves.startAddingLowPriorityMoves();
         for (BasicBlock* block : m_code) {
             for (Inst& inst : *block) {
-                if (Optional<unsigned> defArgIndex = inst.shouldTryAliasingDef()) {
+                if (std::optional<unsigned> defArgIndex = inst.shouldTryAliasingDef()) {
                     Arg op1 = inst.args[*defArgIndex - 2];
                     Arg op2 = inst.args[*defArgIndex - 1];
                     Arg dest = inst.args[*defArgIndex];
@@ -1020,6 +1035,10 @@ private:
 
                 for (const Tmp& liveTmp : liveTmps) {
                     ASSERT(liveTmp.isGP() == (type == Arg::GP));
+
+                    if (traceDebug)
+                        dataLog("    Adding def-live edge: ", arg, ", ", liveTmp, "\n");
+
                     addEdge(arg, liveTmp);
                 }
 
@@ -1041,7 +1060,7 @@ private:
     {
         switch (type) {
         case Arg::GP:
-            switch (inst.opcode) {
+            switch (inst.kind.opcode) {
             case Move:
             case Move32:
                 break;
@@ -1050,7 +1069,7 @@ private:
             }
             break;
         case Arg::FP:
-            switch (inst.opcode) {
+            switch (inst.kind.opcode) {
             case MoveFloat:
             case MoveDouble:
                 break;
@@ -1075,7 +1094,7 @@ private:
         // Note that the input property requires an analysis over ZDef's, so it's only valid so long
         // as the input gets a register. We don't know if the input gets a register, but we do know
         // that if it doesn't get a register then we will still emit this Move32.
-        if (inst.opcode == Move32) {
+        if (inst.kind.opcode == Move32) {
             if (!tmpWidth)
                 return false;
 
@@ -1122,7 +1141,7 @@ private:
 
             // If it's a constant, then it's not as bad to spill. We can rematerialize it in many
             // cases.
-            if (counts->numConstDefs == counts->numDefs)
+            if (counts->numConstDefs == 1 && counts->numDefs == 1)
                 uses /= 2;
 
             return degree / uses;
@@ -1250,8 +1269,12 @@ public:
 
     void run()
     {
+        padInterference(m_code);
+
         iteratedRegisterCoalescingOnType<Arg::GP>();
         iteratedRegisterCoalescingOnType<Arg::FP>();
+
+        fixSpillsAfterTerminals();
 
         if (reportStats)
             dataLog("Num iterations = ", m_numIterations, "\n");
@@ -1383,11 +1406,11 @@ private:
                 // equivalent if the destination's high bits are not observable or if the source's high
                 // bits are all zero. Note that we don't have the opposite optimization for other
                 // architectures, which may prefer Move over Move32, because Move is canonical already.
-                if (type == Arg::GP && inst.opcode == Move
+                if (type == Arg::GP && inst.kind.opcode == Move
                     && inst.args[0].isTmp() && inst.args[1].isTmp()) {
                     if (m_tmpWidth.useWidth(inst.args[1].tmp()) <= Arg::Width32
                         || m_tmpWidth.defWidth(inst.args[0].tmp()) <= Arg::Width32)
-                        inst.opcode = Move32;
+                        inst.kind.opcode = Move32;
                 }
 
                 inst.forEachTmpFast([&] (Tmp& tmp) {
@@ -1419,6 +1442,11 @@ private:
         }
     }
 
+    static unsigned stackSlotMinimumWidth(Arg::Width width)
+    {
+        return width <= Arg::Width32 ? 4 : 8;
+    }
+
     template<Arg::Type type>
     void addSpillAndFill(const ColoringAllocator<type>& allocator, HashSet<unsigned>& unspillableTmps)
     {
@@ -1429,7 +1457,7 @@ private:
 
             // Allocate stack slot for each spilled value.
             StackSlot* stackSlot = m_code.addStackSlot(
-                m_tmpWidth.width(tmp) <= Arg::Width32 ? 4 : 8, StackSlotKind::Spill);
+                stackSlotMinimumWidth(m_tmpWidth.requiredWidth(tmp)), StackSlotKind::Spill);
             bool isNewTmp = stackSlots.add(tmp, stackSlot).isNewEntry;
             ASSERT_UNUSED(isNewTmp, isNewTmp);
         }
@@ -1447,31 +1475,56 @@ private:
                 // only claim to read 32 bits from the source if only 32 bits of the destination are
                 // read. Note that we only apply this logic if this turns into a load or store, since
                 // Move is the canonical way to move data between GPRs.
-                bool forceMove32IfDidSpill = false;
+                bool canUseMove32IfDidSpill = false;
                 bool didSpill = false;
-                if (type == Arg::GP && inst.opcode == Move) {
+                if (type == Arg::GP && inst.kind.opcode == Move) {
                     if ((inst.args[0].isTmp() && m_tmpWidth.width(inst.args[0].tmp()) <= Arg::Width32)
                         || (inst.args[1].isTmp() && m_tmpWidth.width(inst.args[1].tmp()) <= Arg::Width32))
-                        forceMove32IfDidSpill = true;
+                        canUseMove32IfDidSpill = true;
                 }
 
                 // Try to replace the register use by memory use when possible.
                 inst.forEachArg(
-                    [&] (Arg& arg, Arg::Role, Arg::Type argType, Arg::Width width) {
-                        if (arg.isTmp() && argType == type && !arg.isReg()) {
-                            auto stackSlotEntry = stackSlots.find(arg.tmp());
-                            if (stackSlotEntry != stackSlots.end()
-                                && inst.admitsStack(arg)) {
-                                stackSlotEntry->value->ensureSize(
-                                    forceMove32IfDidSpill ? 4 : Arg::bytes(width));
-                                arg = Arg::stack(stackSlotEntry->value);
-                                didSpill = true;
-                            }
+                    [&] (Arg& arg, Arg::Role role, Arg::Type argType, Arg::Width width) {
+                        if (!arg.isTmp())
+                            return;
+                        if (argType != type)
+                            return;
+                        if (arg.isReg())
+                            return;
+
+                        auto stackSlotEntry = stackSlots.find(arg.tmp());
+                        if (stackSlotEntry == stackSlots.end())
+                            return;
+                        if (!inst.admitsStack(arg))
+                            return;
+
+                        // If the Tmp holds a constant then we want to rematerialize its
+                        // value rather than loading it from the stack. In order for that
+                        // optimization to kick in, we need to avoid placing the Tmp's stack
+                        // address into the instruction.
+                        if (!Arg::isColdUse(role)) {
+                            const UseCounts<Tmp>::Counts* counts = m_useCounts[arg.tmp()];
+                            if (counts && counts->numConstDefs == 1 && counts->numDefs == 1)
+                                return;
                         }
+
+                        Arg::Width spillWidth = m_tmpWidth.requiredWidth(arg.tmp());
+                        if (Arg::isAnyDef(role) && width < spillWidth)
+                            return;
+                        ASSERT(inst.kind.opcode == Move || !(Arg::isAnyUse(role) && width > spillWidth));
+
+                        if (spillWidth != Arg::Width32)
+                            canUseMove32IfDidSpill = false;
+
+                        stackSlotEntry->value->ensureSize(
+                            canUseMove32IfDidSpill ? 4 : Arg::bytes(width));
+                        arg = Arg::stack(stackSlotEntry->value);
+                        didSpill = true;
                     });
 
-                if (didSpill && forceMove32IfDidSpill)
-                    inst.opcode = Move32;
+                if (didSpill && canUseMove32IfDidSpill)
+                    inst.kind.opcode = Move32;
 
                 // For every other case, add Load/Store as needed.
                 inst.forEachTmp([&] (Tmp& tmp, Arg::Role role, Arg::Type argType, Arg::Width) {
@@ -1488,9 +1541,9 @@ private:
                         return;
                     }
 
-                    Arg arg = Arg::stack(stackSlotEntry->value);
+                    Arg::Width spillWidth = m_tmpWidth.requiredWidth(tmp);
                     Opcode move = Oops;
-                    switch (stackSlotEntry->value->byteSize()) {
+                    switch (stackSlotMinimumWidth(spillWidth)) {
                     case 4:
                         move = type == Arg::GP ? Move32 : MoveFloat;
                         break;
@@ -1505,6 +1558,7 @@ private:
                     tmp = m_code.newTmp(type);
                     unspillableTmps.add(AbsoluteTmpMapper<type>::absoluteIndex(tmp));
 
+                    Arg arg = Arg::stack(stackSlotEntry->value);
                     if (Arg::isAnyUse(role) && role != Arg::Scratch)
                         insertionSet.insert(instIndex, move, inst.origin, arg, tmp);
                     if (Arg::isAnyDef(role))
@@ -1519,6 +1573,66 @@ private:
                 });
             }
         }
+    }
+
+    void fixSpillsAfterTerminals()
+    {
+        // Because there may be terminals that produce values, IRC may
+        // want to spill those terminals. It'll happen to spill it after
+        // the terminal. If we left the graph in this state, it'd be invalid
+        // because a terminal must be the last instruction in a block.
+        // We fix that here.
+
+        InsertionSet insertionSet(m_code);
+
+        bool addedBlocks = false;
+
+        for (BasicBlock* block : m_code) {
+            unsigned terminalIndex = block->size();
+            bool foundTerminal = false;
+            while (terminalIndex--) {
+                if (block->at(terminalIndex).isTerminal()) {
+                    foundTerminal = true;
+                    break;
+                }
+            }
+            ASSERT_UNUSED(foundTerminal, foundTerminal);
+
+            if (terminalIndex == block->size() - 1)
+                continue;
+
+            // There must be instructions after the terminal because it's not the last instruction.
+            ASSERT(terminalIndex < block->size() - 1);
+            Vector<Inst, 1> instsToMove;
+            for (unsigned i = terminalIndex + 1; i < block->size(); i++)
+                instsToMove.append(block->at(i));
+            RELEASE_ASSERT(instsToMove.size());
+
+            for (FrequentedBlock& frequentedSuccessor : block->successors()) {
+                BasicBlock* successor = frequentedSuccessor.block();
+                // If successor's only predecessor is block, we can plant the spill inside
+                // the successor. Otherwise, we must split the critical edge and create
+                // a new block for the spill.
+                if (successor->numPredecessors() == 1) {
+                    insertionSet.insertInsts(0, instsToMove);
+                    insertionSet.execute(successor);
+                } else {
+                    addedBlocks = true;
+                    // FIXME: We probably want better block ordering here.
+                    BasicBlock* newBlock = m_code.addBlock();
+                    for (const Inst& inst : instsToMove)
+                        newBlock->appendInst(inst);
+                    newBlock->appendInst(Inst(Jump, instsToMove.last().origin));
+                    newBlock->successors().append(successor);
+                    frequentedSuccessor.block() = newBlock;
+                }
+            }
+
+            block->resize(terminalIndex + 1);
+        }
+
+        if (addedBlocks)
+            m_code.resetReachability();
     }
 
     Code& m_code;

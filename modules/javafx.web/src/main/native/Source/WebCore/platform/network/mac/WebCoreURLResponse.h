@@ -38,10 +38,10 @@
 @class NSURLResponse;
 
 namespace WebCore {
-WEBCORE_EXPORT NSURLResponse *synthesizeRedirectResponseIfNecessary(NSURLConnection *, NSURLRequest *newRequest, NSURLResponse *redirectResponse);
+WEBCORE_EXPORT NSURLResponse *synthesizeRedirectResponseIfNecessary(NSURLRequest *currentRequest, NSURLRequest *newRequest, NSURLResponse *redirectResponse);
 }
 #endif // __OBJC__
 
 namespace WebCore {
-void adjustMIMETypeIfNecessary(CFURLResponseRef);
+WEBCORE_EXPORT void adjustMIMETypeIfNecessary(CFURLResponseRef, bool isMainResourceLoad);
 }

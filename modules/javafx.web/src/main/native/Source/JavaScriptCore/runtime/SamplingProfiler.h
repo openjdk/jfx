@@ -23,18 +23,18 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SamplingProfiler_h
-#define SamplingProfiler_h
+#pragma once
 
 #if ENABLE(SAMPLING_PROFILER)
 
 #include "CallFrame.h"
+#include "CodeBlockHash.h"
+#include "JITCode.h"
 #include "MachineStackMarker.h"
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/Stopwatch.h>
 #include <wtf/Vector.h>
-#include <wtf/WorkQueue.h>
 
 namespace JSC {
 
@@ -51,20 +51,26 @@ public:
             , verifiedCodeBlock(codeBlock)
             , callSiteIndex(callSiteIndex)
         { }
+
+        UnprocessedStackFrame(void* pc)
+            : cCodePC(pc)
+        { }
+
         UnprocessedStackFrame()
         {
             unverifiedCallee = JSValue::encode(JSValue());
-            verifiedCodeBlock = nullptr;
         }
 
+        void* cCodePC { nullptr };
         EncodedJSValue unverifiedCallee;
-        CodeBlock* verifiedCodeBlock;
+        CodeBlock* verifiedCodeBlock { nullptr };
         CallSiteIndex callSiteIndex;
     };
 
     enum class FrameType {
         Executable,
         Host,
+        C,
         Unknown
     };
 
@@ -78,16 +84,48 @@ public:
         { }
 
         FrameType frameType { FrameType::Unknown };
+        void* cCodePC { nullptr };
         ExecutableBase* executable { nullptr };
         JSObject* callee { nullptr };
-        // These attempt to be expression-level line and column number.
-        unsigned lineNumber { std::numeric_limits<unsigned>::max() };
-        unsigned columnNumber { std::numeric_limits<unsigned>::max() };
 
-        bool hasExpressionInfo() const
+        struct CodeLocation {
+            bool hasCodeBlockHash() const
+            {
+                return codeBlockHash.isSet();
+            }
+
+            bool hasBytecodeIndex() const
+            {
+                return bytecodeIndex != std::numeric_limits<unsigned>::max();
+            }
+
+            bool hasExpressionInfo() const
+            {
+                return lineNumber != std::numeric_limits<unsigned>::max()
+                    && columnNumber != std::numeric_limits<unsigned>::max();
+            }
+
+            // These attempt to be expression-level line and column number.
+            unsigned lineNumber { std::numeric_limits<unsigned>::max() };
+            unsigned columnNumber { std::numeric_limits<unsigned>::max() };
+            unsigned bytecodeIndex { std::numeric_limits<unsigned>::max() };
+            CodeBlockHash codeBlockHash;
+            JITCode::JITType jitType { JITCode::None };
+        };
+
+        CodeLocation semanticLocation;
+        std::optional<std::pair<CodeLocation, Strong<CodeBlock>>> machineLocation; // This is non-null if we were inlined. It represents the machine frame we were inlined into.
+
+        bool hasExpressionInfo() const { return semanticLocation.hasExpressionInfo(); }
+        unsigned lineNumber() const
         {
-            return lineNumber != std::numeric_limits<unsigned>::max()
-                && columnNumber != std::numeric_limits<unsigned>::max();
+            ASSERT(hasExpressionInfo());
+            return semanticLocation.lineNumber;
+        }
+        unsigned columnNumber() const
+        {
+            ASSERT(hasExpressionInfo());
+            return semanticLocation.columnNumber;
         }
 
         // These are function-level data.
@@ -129,21 +167,27 @@ public:
     void setTimingInterval(std::chrono::microseconds interval) { m_timingInterval = interval; }
     JS_EXPORT_PRIVATE void start();
     void start(const LockHolder&);
-    void stop();
-    void stop(const LockHolder&);
     Vector<StackTrace> releaseStackTraces(const LockHolder&);
     JS_EXPORT_PRIVATE String stackTracesAsJSON();
     JS_EXPORT_PRIVATE void noticeCurrentThreadAsJSCExecutionThread();
     void noticeCurrentThreadAsJSCExecutionThread(const LockHolder&);
     void processUnverifiedStackTraces(); // You should call this only after acquiring the lock.
-    double totalTime(const LockHolder&) { return m_totalTime; }
     void setStopWatch(const LockHolder&, Ref<Stopwatch>&& stopwatch) { m_stopwatch = WTFMove(stopwatch); }
+    void pause(const LockHolder&);
+    void clearData(const LockHolder&);
+
+    // Used for debugging in the JSC shell/DRT.
+    void registerForReportAtExit();
+    void reportDataToOptionFile();
+    JS_EXPORT_PRIVATE void reportTopFunctions();
+    JS_EXPORT_PRIVATE void reportTopFunctions(PrintStream&);
+    JS_EXPORT_PRIVATE void reportTopBytecodes();
+    JS_EXPORT_PRIVATE void reportTopBytecodes(PrintStream&);
 
 private:
-    void dispatchIfNecessary(const LockHolder&);
-    void dispatchFunction(const LockHolder&);
-    void pause();
-    void clearData(const LockHolder&);
+    void createThreadIfNecessary(const LockHolder&);
+    void timerLoop();
+    void takeSample(const LockHolder&, std::chrono::microseconds& stackTraceProcessingTime);
 
     VM& m_vm;
     RefPtr<Stopwatch> m_stopwatch;
@@ -151,14 +195,12 @@ private:
     Vector<UnprocessedStackTrace> m_unprocessedStackTraces;
     std::chrono::microseconds m_timingInterval;
     double m_lastTime;
-    double m_totalTime;
-    Ref<WorkQueue> m_timerQueue;
-    std::function<void ()> m_handler;
     Lock m_lock;
+    ThreadIdentifier m_threadIdentifier;
     MachineThreads::Thread* m_jscExecutionThread;
-    bool m_isActive;
     bool m_isPaused;
-    bool m_hasDispatchedFunction;
+    bool m_isShutDown;
+    bool m_needsReportAtExit { false };
     HashSet<JSCell*> m_liveCellPointers;
     Vector<UnprocessedStackFrame> m_currentFrames;
 };
@@ -172,5 +214,3 @@ void printInternal(PrintStream&, JSC::SamplingProfiler::FrameType);
 } // namespace WTF
 
 #endif // ENABLE(SAMPLING_PROFILER)
-
-#endif // SamplingProfiler_h

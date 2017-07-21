@@ -1,8 +1,8 @@
 if (${WTF_PLATFORM_WIN_CAIRO})
     add_definitions(-DUSE_CAIRO=1 -DUSE_CURL=1 -DWEBKIT_EXPORTS=1)
     list(APPEND WebKit_INCLUDE_DIRECTORIES
+        ${CAIRO_INCLUDE_DIRS}
         "${WEBKIT_LIBRARIES_DIR}/include"
-        "${WEBKIT_LIBRARIES_DIR}/include/cairo"
         "${WEBKIT_LIBRARIES_DIR}/include/sqlite"
         "${WEBCORE_DIR}/platform/graphics/cairo"
     )
@@ -25,6 +25,8 @@ else ()
         PRIVATE CFNetwork${DEBUG_SUFFIX}
         PRIVATE CoreFoundation${DEBUG_SUFFIX}
         PRIVATE CoreGraphics${DEBUG_SUFFIX}
+        PRIVATE CoreText${DEBUG_SUFFIX}
+        PRIVATE QuartzCore${DEBUG_SUFFIX}
         PRIVATE SQLite3${DEBUG_SUFFIX}
         PRIVATE WebKitSystemInterface${DEBUG_SUFFIX}
         PRIVATE libdispatch${DEBUG_SUFFIX}
@@ -35,6 +37,8 @@ else ()
         PRIVATE zdll${DEBUG_SUFFIX}
     )
 endif ()
+
+list(APPEND WebKit_LIBRARIES PRIVATE WTF${DEBUG_SUFFIX})
 
 add_custom_command(
     OUTPUT ${DERIVED_SOURCES_WEBKIT_DIR}/WebKitVersion.h
@@ -48,14 +52,11 @@ list(APPEND WebKit_INCLUDE_DIRECTORIES
     "${CMAKE_BINARY_DIR}/../include/private"
     "${CMAKE_BINARY_DIR}/../include/private/JavaScriptCore"
     "${CMAKE_BINARY_DIR}/../include/private/WebCore"
-    win
-    win/plugins
-    win/WebCoreSupport
-    WebKit.vcxproj/WebKit
-    "${WEBKIT_DIR}/.."
+    "${WEBKIT_DIR}/win"
+    "${WEBKIT_DIR}/win/plugins"
+    "${WEBKIT_DIR}/win/WebCoreSupport"
     "${DERIVED_SOURCES_WEBKIT_DIR}/include"
     "${DERIVED_SOURCES_WEBKIT_DIR}/Interfaces"
-    "${DERIVED_SOURCES_DIR}"
     "${DERIVED_SOURCES_DIR}/ForwardingHeaders/ANGLE"
     "${DERIVED_SOURCES_DIR}/ForwardingHeaders/ANGLE/include"
     "${DERIVED_SOURCES_DIR}/ForwardingHeaders/ANGLE/include/egl"
@@ -81,6 +82,7 @@ list(APPEND WebKit_INCLUDES
     win/MemoryStream.h
     win/ProgIDMacros.h
     win/WebActionPropertyBag.h
+    win/WebApplicationCache.h
     win/WebArchive.h
     win/WebBackForwardList.h
     win/WebCache.h
@@ -140,6 +142,7 @@ list(APPEND WebKit_SOURCES_Classes
     win/AccessibleDocument.cpp
     win/AccessibleImage.cpp
     win/AccessibleTextImpl.cpp
+    win/BackForwardList.cpp
     win/CFDictionaryPropertyBag.cpp
     win/DOMCSSClasses.cpp
     win/DOMCoreClasses.cpp
@@ -152,6 +155,7 @@ list(APPEND WebKit_SOURCES_Classes
     win/MarshallingHelpers.cpp
     win/MemoryStream.cpp
     win/WebActionPropertyBag.cpp
+    win/WebApplicationCache.cpp
     win/WebArchive.cpp
     win/WebBackForwardList.cpp
     win/WebCache.cpp
@@ -213,6 +217,8 @@ list(APPEND WebKit_SOURCES_Classes
     win/plugins/PluginView.cpp
     win/plugins/PluginViewWin.cpp
     win/plugins/npapi.cpp
+
+    win/storage/WebDatabaseProvider.cpp
 )
 
 list(APPEND WebKit_SOURCES_WebCoreSupport
@@ -241,6 +247,8 @@ list(APPEND WebKit_SOURCES_WebCoreSupport
     win/WebCoreSupport/WebInspectorDelegate.h
     win/WebCoreSupport/WebPlatformStrategies.cpp
     win/WebCoreSupport/WebPlatformStrategies.h
+    win/WebCoreSupport/WebPluginInfoProvider.cpp
+    win/WebCoreSupport/WebPluginInfoProvider.h
     win/WebCoreSupport/WebVisitedLinkStore.cpp
     win/WebCoreSupport/WebVisitedLinkStore.h
 )
@@ -366,11 +374,11 @@ set(WEBKIT_IDL_DEPENDENCIES
     win/Interfaces/Accessible2/AccessibleText.idl
     win/Interfaces/Accessible2/AccessibleText2.idl
     win/Interfaces/Accessible2/IA2CommonTypes.idl
-    "${DERIVED_SOURCES_WEBKIT_DIR}/autoversion.h"
+    "${DERIVED_SOURCES_WEBKIT_DIR}/include/autoversion.h"
 )
 
 add_custom_command(
-    OUTPUT ${DERIVED_SOURCES_WEBKIT_DIR}/autoversion.h
+    OUTPUT ${DERIVED_SOURCES_WEBKIT_DIR}/include/autoversion.h
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMAND ${PERL_EXECUTABLE} ${WEBKIT_LIBRARIES_DIR}/tools/scripts/auto-version.pl ${DERIVED_SOURCES_WEBKIT_DIR}
     VERBATIM)
@@ -407,12 +415,14 @@ add_library(WebKitGUID STATIC
     "${DERIVED_SOURCES_WEBKIT_DIR}/Interfaces/AccessibleText2_i.c"
 )
 set_target_properties(WebKitGUID PROPERTIES OUTPUT_NAME WebKitGUID${DEBUG_SUFFIX})
-set_target_properties(WebKitGUID PROPERTIES FOLDER "WebKit")
 
 list(APPEND WebKit_LIBRARIES
     PRIVATE Comctl32
     PRIVATE Comsupp
     PRIVATE Crypt32
+    PRIVATE D2d1
+    PRIVATE Dwrite
+    PRIVATE dxguid
     PRIVATE Iphlpapi
     PRIVATE Psapi
     PRIVATE Rpcrt4
@@ -421,6 +431,8 @@ list(APPEND WebKit_LIBRARIES
     PRIVATE Version
     PRIVATE Winmm
     PRIVATE WebKitGUID${DEBUG_SUFFIX}
+    PRIVATE WebCoreDerivedSources${DEBUG_SUFFIX}
+    PRIVATE WindowsCodecs
 )
 
 if (ENABLE_GRAPHICS_CONTEXT_3D)

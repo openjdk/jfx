@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008, 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,8 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ExecutableAllocator_h
-#define ExecutableAllocator_h
+#pragma once
+
 #include "JITCompilationEffort.h"
 #include <stddef.h> // for ptrdiff_t
 #include <limits>
@@ -33,8 +33,6 @@
 #include <wtf/MetaAllocatorHandle.h>
 #include <wtf/MetaAllocator.h>
 #include <wtf/PageAllocation.h>
-#include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
 
 #if OS(IOS)
 #include <libkern/OSCacheControl.h>
@@ -46,13 +44,6 @@
 
 #if CPU(MIPS) && OS(LINUX)
 #include <sys/cachectl.h>
-#endif
-
-#if CPU(SH4) && OS(LINUX)
-#include <asm/cachectl.h>
-#include <asm/unistd.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 #endif
 
 #define JIT_ALLOCATOR_LARGE_ALLOC_SIZE (pageSize() * 4)
@@ -69,12 +60,9 @@ typedef WTF::MetaAllocatorHandle ExecutableMemoryHandle;
 
 #if ENABLE(ASSEMBLER)
 
-#if ENABLE(EXECUTABLE_ALLOCATOR_DEMAND)
-class DemandExecutableAllocator;
-#endif
-
-#if ENABLE(EXECUTABLE_ALLOCATOR_FIXED)
-#if CPU(ARM)
+#if defined(FIXED_EXECUTABLE_MEMORY_POOL_SIZE_IN_MB) && FIXED_EXECUTABLE_MEMORY_POOL_SIZE_IN_MB > 0
+static const size_t fixedExecutableMemoryPoolSize = FIXED_EXECUTABLE_MEMORY_POOL_SIZE_IN_MB * 1024 * 1024;
+#elif CPU(ARM)
 static const size_t fixedExecutableMemoryPoolSize = 16 * 1024 * 1024;
 #elif CPU(ARM64)
 static const size_t fixedExecutableMemoryPoolSize = 32 * 1024 * 1024;
@@ -89,8 +77,25 @@ static const double executablePoolReservationFraction = 0.15;
 static const double executablePoolReservationFraction = 0.25;
 #endif
 
-extern uintptr_t startOfFixedExecutableMemoryPool;
-#endif
+extern JS_EXPORTDATA uintptr_t startOfFixedExecutableMemoryPool;
+extern JS_EXPORTDATA uintptr_t endOfFixedExecutableMemoryPool;
+
+typedef void (*JITWriteFunction)(off_t, const void*, size_t);
+extern JS_EXPORTDATA JITWriteFunction jitWriteFunction;
+
+static inline void* performJITMemcpy(void *dst, const void *src, size_t n)
+{
+    // Use execute-only write thunk for writes inside the JIT region. This is a variant of
+    // memcpy that takes an offset into the JIT region as its destination (first) parameter.
+    if (jitWriteFunction && (uintptr_t)dst >= startOfFixedExecutableMemoryPool && (uintptr_t)dst <= endOfFixedExecutableMemoryPool) {
+        off_t offset = (off_t)((uintptr_t)dst - startOfFixedExecutableMemoryPool);
+        jitWriteFunction(offset, src, n);
+        return dst;
+    }
+
+    // Use regular memcpy for writes outside the JIT region.
+    return memcpy(dst, src, n);
+}
 
 class ExecutableAllocator {
     enum ProtectionSetting { Writable, Executable };
@@ -125,5 +130,3 @@ public:
 #endif // ENABLE(JIT) && ENABLE(ASSEMBLER)
 
 } // namespace JSC
-
-#endif // !defined(ExecutableAllocator)

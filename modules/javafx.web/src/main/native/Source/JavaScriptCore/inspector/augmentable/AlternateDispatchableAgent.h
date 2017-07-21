@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AlternateDispatchableAgent_h
-#define AlternateDispatchableAgent_h
+#pragma once
 
 #if ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
 
@@ -53,11 +52,11 @@ public:
         m_alternateDispatcher->setBackendDispatcher(nullptr);
     }
 
-    virtual void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) override
+    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) override
     {
     }
 
-    virtual void willDestroyFrontendAndBackend(DisconnectReason) override
+    void willDestroyFrontendAndBackend(DisconnectReason) override
     {
     }
 
@@ -69,5 +68,3 @@ private:
 } // namespace Inspector
 
 #endif // ENABLE(INSPECTOR_ALTERNATE_DISPATCHERS)
-
-#endif // AlternateDispatchableAgent_h

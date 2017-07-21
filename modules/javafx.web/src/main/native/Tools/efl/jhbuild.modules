@@ -14,14 +14,14 @@
       <dep package="glib"/>
       <dep package="glib-networking"/>
       <dep package="libsoup"/>
-      <dep package="elementary"/>
+      <dep package="efl"/>
       <dep package="libxml2"/>
+      <dep package="libxslt"/>
       <dep package="gstreamer"/>
       <dep package="gst-plugins-base"/>
       <dep package="gst-plugins-good"/>
       <dep package="gst-plugins-bad"/>
       <dep package="gst-libav"/>
-      <dep package="libseccomp"/>
       <dep package="atk"/>
       <dep package="openwebrtc"/>
     </dependencies>
@@ -77,7 +77,7 @@
     </branch>
   </autotools>
 
-  <autotools id="fonts"
+  <autotools id="fonts" supports-non-srcdir-builds="no"
              skip-autogen="true">
     <branch module="mrobinson/webkitgtk-test-fonts/archive/0.0.5.tar.gz" version="0.0.5"
             checkoutdir="webkitgtk-test-fonts"
@@ -87,7 +87,7 @@
     </branch>
   </autotools>
 
-  <autotools id="dicts"
+  <autotools id="dicts" supports-non-srcdir-builds="no"
              skip-autogen="true">
     <branch module="mrobinson/webkitgtk-test-dicts/archive/0.0.1.zip" version="0.0.1"
             checkoutdir="webkitgtk-test-dicts"
@@ -159,38 +159,25 @@
             md5sum="e75e303b4f7756c2b16203a57ac87eba"/>
   </autotools>
 
- <autotools id="harfbuzz" autogen-sh="configure">
-   <branch module="software/harfbuzz/release/harfbuzz-0.9.35.tar.bz2" version="0.9.35"
+  <autotools id="harfbuzz" autogen-sh="configure">
+    <branch module="software/harfbuzz/release/harfbuzz-0.9.35.tar.bz2" version="0.9.35"
            checkoutdir="harfbuzz-0.9.35"
            repo="freedesktop.org"
            hash="sha256:0aa1a8aba6f502321cf6fef3c9d2c73dde48389c5ed1d3615a7691944c2a06ed">
-   </branch>
- </autotools>
+    </branch>
+  </autotools>
 
   <autotools id="efl" autogen-sh="configure"
-             autogenargs="--disable-fribidi --disable-audio --disable-libmount --disable-physics --enable-lua-old --enable-i-really-know-what-i-am-doing-and-that-this-will-probably-break-things-and-i-will-fix-them-myself-and-send-patches-aba">
+             autogenargs="--disable-fribidi --disable-audio --disable-libmount --disable-physics --enable-i-really-know-what-i-am-doing-and-that-this-will-probably-break-things-and-i-will-fix-them-myself-and-send-patches-abb">
     <dependencies>
       <dep package="fontconfig"/>
       <dep package="gstreamer"/>
       <dep package="gst-plugins-base"/>
     </dependencies>
-    <branch module="rel/libs/efl/efl-1.16.1.tar.gz" version="1.16.1"
+    <branch module="rel/libs/efl/efl-1.18.4.tar.gz" version="1.18.4"
             repo="download.enlightenment.org"
-            hash="sha256:acdff08f72f62bb838f2412de29d0828f9884c30033a3e873902709c78a06198">
-      <patch file="ecore_remove_warnings.patch" strip="1"/>
+            hash="sha256:d19669eece770cc09733568c7dfef9870daa0f8b9f613ab76ad14b2f5de20040">
     </branch>
-  </autotools>
-
-  <autotools id="elementary"
-             autogen-sh="configure"
-             autogenargs="--disable-emap --disable-eweather --with-elementary-web-backend=none">
-    <branch module="rel/libs/elementary/elementary-1.16.1.tar.gz" version="1.16.1"
-            repo="download.enlightenment.org"
-            hash="sha256:0707b14d4330b2305ef28ca4387036013a0047a0471b9f36cbaccc89a19113c6">
-    </branch>
-    <dependencies>
-        <dep package="efl"/>
-    </dependencies>
   </autotools>
 
   <autotools id="libxml2"
@@ -200,6 +187,15 @@
             repo="xmlsoft.org"
             hash="sha256:fd3c64cb66f2c4ea27e934d275904d92cec494a8e8405613780cbc8a71680fdb"
             md5sum="9c0cfef285d5c4a5c80d00904ddab380"/>
+  </autotools>
+
+  <autotools id="libxslt">
+    <branch module="/libxslt/libxslt-1.1.29.tar.gz" version="1.1.29"
+            repo="xmlsoft.org"
+            hash="sha256:b5976e3857837e7617b29f2249ebb5eeac34e249208d31f1fbf7a6ba7a4090ce"/>
+    <dependencies>
+      <dep package="libxml2"/>
+    </dependencies>
   </autotools>
 
   <autotools id="orc" autogenargs="--disable-gtk-doc" autogen-sh="configure">
@@ -213,10 +209,10 @@
     <dependencies>
       <dep package="orc"/>
     </dependencies>
-    <branch module="gstreamer/gstreamer-1.4.4.tar.xz" version="1.4.4"
+    <branch module="gstreamer/gstreamer-1.8.0.tar.xz" version="1.8.0"
             repo="gstreamer"
-            hash="sha256:f0e305d91a93d05bf9e332cd4256ca07d77f5186a4d73847b7ae6db218f2c237"
-            md5sum="98f4a6d45a28dd195144baef0244ba38"/>
+            hash="sha256:947a314a212b5d94985d89b43440dbe66b696e12bbdf9a2f78967b98d74abedc"
+            md5sum="6846d7289ec323c38c49b818171e955a"/>
   </autotools>
 
   <autotools id="gst-plugins-base"
@@ -225,11 +221,10 @@
     <dependencies>
       <dep package="gstreamer"/>
     </dependencies>
-    <branch module="gst-plugins-base/gst-plugins-base-1.4.4.tar.xz" version="1.4.4"
+    <branch module="gst-plugins-base/gst-plugins-base-1.8.0.tar.xz" version="1.8.0"
             repo="gstreamer"
-            hash="sha256:49cd9e8f23c416b1607b43837a09833fa03e0106929d81ead2ddfde6c0ade44b"
-            md5sum="0c42eca8f9e4efd56d2ce8e9249ce4a1">
-      <patch file="gst-plugins-base-rtp-rtcpbuffer-fix-typo-in-enum.patch" strip="1"/>
+            hash="sha256:abc0acc1d15b4b9c97c65cd9689bd6400081853b9980ea428d3c8572dd791522"
+            md5sum="20cc8231609318310f2a55f64c86cbb4">
     </branch>
   </autotools>
 
@@ -237,11 +232,12 @@
     <dependencies>
       <dep package="gst-plugins-base"/>
     </dependencies>
-
-    <branch module="gst-plugins-good/gst-plugins-good-1.4.4.tar.xz" version="1.4.4"
+    <branch module="gst-plugins-good/gst-plugins-good-1.8.0.tar.xz" version="1.8.0"
             repo="gstreamer"
-            hash="sha256:2df90e99da45211c7b2525ae4ac34830a9e7784bd48c072c406c0cf014bdb277"
-            md5sum="673cf9276952bd3937dafd817c9ead2b">
+            hash="sha256:c20c134d47dbc238d921707a3b66da709c2b4dd89f9d267cec13d1ddf16e9f4d"
+            md5sum="91ed4649c7c2e43a61f731d144f6f6d0">
+      <patch file="gst-plugins-good-use-the-tfdt-decode-time.patch" strip="1"/>
+      <patch file="gst-plugins-good-Revert-qtdemux-expose-streams-with-first-moof-for-fr.patch" strip="1"/>
     </branch>
   </autotools>
 
@@ -249,11 +245,10 @@
     <dependencies>
       <dep package="gst-plugins-base"/>
     </dependencies>
-    <branch module="gst-plugins-bad/gst-plugins-bad-1.4.4.tar.xz" version="1.4.4"
+    <branch module="gst-plugins-bad/gst-plugins-bad-1.8.0.tar.xz" version="1.8.0"
             repo="gstreamer"
-            hash="sha256:e41b36105c0a13a2cb1ff9f559714e839b82dc3841484cd664790fb7947e55c7"
-            md5sum="972c6e22dd2e44fcf0b04b9d810a56be">
-      <patch file="gst-plugins-bad-remove-gnustep-support.patch" strip="1"/>
+            hash="sha256:116376dd1085082422e0b21b0ecd3d1cb345c469c58e32463167d4675f4ca90e"
+            md5sum="1c2d797bb96a81e9ef570c7a0a37203e">
     </branch>
   </autotools>
 
@@ -261,19 +256,12 @@
     <dependencies>
       <dep package="gst-plugins-base"/>
     </dependencies>
-    <branch module="gst-libav/gst-libav-1.4.4.tar.xz" version="1.4.4"
+    <branch module="gst-libav/gst-libav-1.8.0.tar.xz" version="1.8.0"
             repo="gstreamer"
-            hash="sha256:2ec7285e5ec6731963b0955487cceb9eb04e285ca682f3ef575996c068cde8aa"
-            md5sum="64a3e2cda2687132cadca4efdc63f3b4">
+            hash="sha256:5a1ce28876aee93cb4f3d090f0e807915a5d9bc1325e3480dd302b85aeb4291c"
+            md5sum="361638fa45466c5050bcde6bfe10fa46">
       <patch file="gst-libav.patch" strip="1"/>
     </branch>
-  </autotools>
-
-  <autotools id="libseccomp" autogen-sh="configure">
-      <branch module="seccomp/libseccomp/releases/download/v2.2.3/libseccomp-2.2.3.tar.gz" version="2.2.3"
-          repo="github.com"
-          hash="sha256:d9b400b703cab7bb04b84b9b6e52076a630b673819d7541757bcc16467b6d49e">
-      </branch>
   </autotools>
 
   <autotools id="atk"
@@ -287,13 +275,13 @@
     </dependencies>
   </autotools>
 
-  <autotools id="libusrsctp" autogen-sh="./bootstrap; ./configure --disable-warnings-as-errors">
+  <autotools id="libusrsctp" supports-non-srcdir-builds="no" autogen-sh="./bootstrap; ./configure --disable-warnings-as-errors">
     <branch repo="github.com" module="sctplab/usrsctp/archive/078ff3252f73327e0ac11d6fd5eff62011f6646e.tar.gz" version="078ff3252f73327e0ac11d6fd5eff62011f6646e" checkoutdir="libusrsctp"
             hash="sha256:175938887dc7554e000152055c818bdd15dd0e4ccc94ef93e38e9f952ea82edc" size="648925">
     </branch>
   </autotools>
 
-  <autotools id="gst-plugins-openwebrtc" supports-parallel-builds="no" autogen-sh="./autogen.sh; ./configure">
+  <autotools id="gst-plugins-openwebrtc" supports-parallel-builds="no" supports-non-srcdir-builds="no" autogen-sh="./autogen.sh; ./configure">
     <dependencies>
       <dep package="gst-plugins-base"/>
       <dep package="libusrsctp"/>
@@ -305,13 +293,13 @@
    </branch>
   </autotools>
 
-  <autotools id="libnice">
+  <autotools id="libnice" supports-non-srcdir-builds="no">
     <dependencies>
       <dep package="gstreamer"/>
     </dependencies>
-    <branch repo="nice.freedesktop.org" module="releases/libnice-0.1.10.tar.gz" checkoutdir="libnice" version="0.1.10"
-            hash="sha256:1dbfb663b730889ae8cab13a2913fe557d581f70b513c918bbbd0b7d3eefebc9"
-            md5sum="27b62d0093ce29a39df1c6fcf0bb4396" size="903083">
+    <branch repo="nice.freedesktop.org" module="releases/libnice-0.1.13.tar.gz" checkoutdir="libnice" version="0.1.13"
+            hash="sha256:61112d9f3be933a827c8365f20551563953af6718057928f51f487bfe88419e1"
+            md5sum="3226faeaf48a9150ada00da2e2865959" size="912374">
     </branch>
   </autotools>
 
@@ -320,10 +308,9 @@
       <dep package="gst-plugins-openwebrtc"/>
       <dep package="libnice"/>
      </dependencies>
-    <branch repo="github.com" module="EricssonResearch/openwebrtc/archive/13516c7f79a0c48bb411464f7613d4b426c70f5b.tar.gz" checkoutdir="openwebrtc" version="13516c7f79a0c48bb411464f7613d4b426c70f5b"
-            hash="sha256:c849d36d97c17a198a5d9c180f13f14c7897c9236e2384ea11029e23b09b59ac"
-            md5sum="13516c7f79a0c48bb411464f7613d4b426c70f5b.tar.gz" size="258936">
-      <patch file="openwebrtc-clang-warning-fix.patch" strip="1"/>
+    <branch repo="github.com" module="EricssonResearch/openwebrtc/archive/f511ea1fa79a33fa3d52bfd1c0969c28084aeb35.tar.gz" checkoutdir="openwebrtc" version="f511ea1fa79a33fa3d52bfd1c0969c28084aeb35"
+            hash="sha256:af80b80512b5f5a6b82b4cf43afa28da9c94c86800f6fadd10762361079fb5e3"
+            md5sum="4555d20821af8f5334f74b4f0327f178" size="296143">
     </branch>
   </autotools>
 

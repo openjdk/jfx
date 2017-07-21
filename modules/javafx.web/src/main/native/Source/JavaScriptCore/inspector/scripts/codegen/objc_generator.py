@@ -89,12 +89,22 @@ class ObjCGenerator(Generator):
     OBJC_SHARED_PREFIX = 'Protocol'
     OBJC_STATIC_PREFIX = '%s%s' % (OBJC_HELPER_PREFIX, OBJC_SHARED_PREFIX)
 
-    def __init__(self, model, input_filepath):
-        Generator.__init__(self, model, input_filepath)
+    def __init__(self, *args, **kwargs):
+        Generator.__init__(self, *args, **kwargs)
 
+    # The 'protocol name' is used to prefix filenames for a protocol group (a set of domains generated together).
+    def protocol_name(self):
+        protocol_group = self.model().framework.setting('objc_protocol_group', '')
+        return '%s%s' % (protocol_group, ObjCGenerator.OBJC_SHARED_PREFIX)
+
+    # The 'ObjC prefix' is used to prefix Objective-C class names and enums with a
+    # framework-specific prefix. It is separate from filename prefixes.
     def objc_prefix(self):
-        framework_prefix = self.model().framework.setting('objc_prefix', '')
-        return '%s%s' % (framework_prefix, ObjCGenerator.OBJC_SHARED_PREFIX)
+        framework_prefix = self.model().framework.setting('objc_prefix', None)
+        if not framework_prefix:
+            return ''
+        else:
+            return '%s%s' % (framework_prefix, ObjCGenerator.OBJC_SHARED_PREFIX)
 
     # Adjust identifier names that collide with ObjC keywords.
 
@@ -110,34 +120,37 @@ class ObjCGenerator(Generator):
 
     DOMAINS_TO_GENERATE = ['CSS', 'DOM', 'DOMStorage', 'Network', 'Page', 'Automation', 'GenericTypes']
 
-    @staticmethod
-    def should_generate_domain_types_filter(model):
-        def should_generate_domain_types(domain):
-            if model.framework is Frameworks.Test:
-                return True
-            whitelist = set(ObjCGenerator.DOMAINS_TO_GENERATE)
-            whitelist.update(set(['Console', 'Debugger', 'Runtime']))
-            return domain.domain_name in whitelist
-        return should_generate_domain_types
+    def should_generate_types_for_domain(self, domain):
+        if not len(self.type_declarations_for_domain(domain)):
+            return False
 
-    @staticmethod
-    def should_generate_domain_command_handler_filter(model):
-        def should_generate_domain_command_handler(domain):
-            if model.framework is Frameworks.Test:
-                return True
-            whitelist = set(ObjCGenerator.DOMAINS_TO_GENERATE)
-            return domain.domain_name in whitelist
-        return should_generate_domain_command_handler
+        if self.model().framework is Frameworks.Test:
+            return True
 
-    @staticmethod
-    def should_generate_domain_event_dispatcher_filter(model):
-        def should_generate_domain_event_dispatcher(domain):
-            if model.framework is Frameworks.Test:
-                return True
-            whitelist = set(ObjCGenerator.DOMAINS_TO_GENERATE)
-            whitelist.add('Console')
-            return domain.domain_name in whitelist
-        return should_generate_domain_event_dispatcher
+        whitelist = set(ObjCGenerator.DOMAINS_TO_GENERATE)
+        whitelist.update(set(['Console', 'Debugger', 'Runtime']))
+        return domain.domain_name in whitelist
+
+    def should_generate_commands_for_domain(self, domain):
+        if not len(self.commands_for_domain(domain)):
+            return False
+
+        if self.model().framework is Frameworks.Test:
+            return True
+
+        whitelist = set(ObjCGenerator.DOMAINS_TO_GENERATE)
+        return domain.domain_name in whitelist
+
+    def should_generate_events_for_domain(self, domain):
+        if not len(self.events_for_domain(domain)):
+            return False
+
+        if self.model().framework is Frameworks.Test:
+            return True
+
+        whitelist = set(ObjCGenerator.DOMAINS_TO_GENERATE)
+        whitelist.add('Console')
+        return domain.domain_name in whitelist
 
     # ObjC enum and type names.
 
@@ -429,12 +442,12 @@ class ObjCGenerator(Generator):
         if category in [ObjCTypeCategory.Simple, ObjCTypeCategory.String]:
             if isinstance(member.type, EnumType):
                 if member.type.is_anonymous:
-                    return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), sub_expression)
-                return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_non_anonymous_enum(member.type), sub_expression)
+                    return 'fromProtocolString<%s>(%s).value()' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), sub_expression)
+                return 'fromProtocolString<%s>(%s).value()' % (self.objc_enum_name_for_non_anonymous_enum(member.type), sub_expression)
             return sub_expression
         if category is ObjCTypeCategory.Object:
-            objc_type = self.objc_type_for_member(declaration, member)
-            return '(%s)%s' % (objc_type, sub_expression)
+            objc_class = self.objc_class_for_type(member.type)
+            return '[[%s alloc] initWithInspectorObject:[%s toInspectorObject].get()]' % (objc_class, sub_expression)
         if category is ObjCTypeCategory.Array:
             protocol_type = ObjCGenerator.protocol_type_for_type(member.type.element_type)
             objc_class = self.objc_class_for_type(member.type.element_type)
@@ -446,6 +459,35 @@ class ObjCGenerator(Generator):
                     return 'objcDoubleArray(%s)' % sub_expression
                 return 'objcIntegerArray(%s)' % sub_expression
             return 'objcArray<%s>(%s)' % (objc_class, sub_expression)
+
+    def payload_to_objc_expression_for_member(self, declaration, member):
+        _type = member.type
+        if isinstance(_type, AliasedType):
+            _type = _type.aliased_type
+        if isinstance(_type, PrimitiveType):
+            sub_expression = 'payload[@"%s"]' % member.member_name
+            raw_name = _type.raw_name()
+            if raw_name is 'boolean':
+                return '[%s boolValue]' % sub_expression
+            if raw_name is 'integer':
+                return '[%s integerValue]' % sub_expression
+            if raw_name is 'number':
+                return '[%s doubleValue]' % sub_expression
+            if raw_name in ['any', 'object', 'array', 'string']:
+                return sub_expression  # The setter will check the incoming value.
+            return None
+        if isinstance(member.type, EnumType):
+            sub_expression = 'payload[@"%s"]' % member.member_name
+            if member.type.is_anonymous:
+                return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_anonymous_enum_member(declaration, member), sub_expression)
+            else:
+                return 'fromProtocolString<%s>(%s)' % (self.objc_enum_name_for_non_anonymous_enum(member.type), sub_expression)
+        if isinstance(_type, ObjectType):
+            objc_class = self.objc_class_for_type(member.type)
+            return '[[%s alloc] initWithPayload:payload[@"%s"]]' % (objc_class, member.member_name)
+        if isinstance(_type, ArrayType):
+            objc_class = self.objc_class_for_type(member.type.element_type)
+            return 'objcArrayFromPayload<%s>(payload[@"%s"])' % (objc_class, member.member_name)
 
     # JSON object setter/getter selectors for types.
 

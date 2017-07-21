@@ -48,7 +48,7 @@ static GSource* timeoutSource()
             g_source_set_ready_time(static_cast<GSource*>(userData), -1);
             fprintf(stderr, "FAIL: TestControllerRunLoop timed out.\n");
             RunLoop::main().stop();
-            return G_SOURCE_CONTINUE;
+            return G_SOURCE_REMOVE;
         }, source.get(), nullptr);
         g_source_attach(source.get(), nullptr);
     }
@@ -140,6 +140,7 @@ const char* TestController::platformLibraryPathForTesting()
 
 void TestController::platformConfigureViewForTest(const TestInvocation&)
 {
+    WKPageSetApplicationNameForUserAgent(mainWebView()->page(), WKStringCreateWithUTF8CString("WebKitTestRunnerGTK"));
 }
 
 void TestController::platformResetPreferencesToConsistentValues()

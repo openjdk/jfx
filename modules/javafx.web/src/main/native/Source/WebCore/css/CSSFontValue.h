@@ -18,11 +18,9 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef CSSFontValue_h
-#define CSSFontValue_h
+#pragma once
 
 #include "CSSValue.h"
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -30,7 +28,7 @@ namespace WebCore {
 class CSSPrimitiveValue;
 class CSSValueList;
 
-class CSSFontValue : public CSSValue {
+class CSSFontValue final : public CSSValue {
 public:
     static Ref<CSSFontValue> create()
     {
@@ -58,5 +56,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSFontValue, isFontValue())
-
-#endif

@@ -40,6 +40,7 @@
 #import "WebResourceLoadScheduler.h"
 #import <Foundation/NSURLResponse.h>
 #import <WebCore/CFNetworkSPI.h>
+#import <WebCore/CommonVM.h>
 #import <WebCore/Document.h>
 #import <WebCore/DocumentLoader.h>
 #import <WebCore/Frame.h>
@@ -166,7 +167,7 @@ WebNetscapePluginStream::WebNetscapePluginStream(NSURLRequest *request, NPP plug
     WebNetscapePluginView *view = (WebNetscapePluginView *)plugin->ndata;
 
     // This check has already been done by the plug-in view.
-    ASSERT(core([view webFrame])->document()->securityOrigin()->canDisplay([request URL]));
+    ASSERT(core([view webFrame])->document()->securityOrigin().canDisplay([request URL]));
 
     ASSERT([request URL]);
     ASSERT(plugin);
@@ -290,7 +291,7 @@ void WebNetscapePluginStream::start()
     ASSERT(!m_frameLoader);
     ASSERT(!m_loader);
 
-    m_loader = webResourceLoadScheduler().schedulePluginStreamLoad(core([m_pluginView.get() webFrame]), this, m_request.get());
+    m_loader = webResourceLoadScheduler().schedulePluginStreamLoad(*core([m_pluginView.get() webFrame]), *this, m_request.get());
 }
 
 void WebNetscapePluginStream::stop()
@@ -377,7 +378,7 @@ bool WebNetscapePluginStream::wantsAllStreams() const
     NPError error;
     {
         PluginStopDeferrer deferrer(m_pluginView.get());
-        JSC::JSLock::DropAllLocks dropAllLocks(JSDOMWindowBase::commonVM());
+        JSC::JSLock::DropAllLocks dropAllLocks(commonVM());
         error = m_pluginFuncs->getvalue(m_plugin, NPPVpluginWantsAllNetworkStreams, &value);
     }
     if (error != NPERR_NO_ERROR)

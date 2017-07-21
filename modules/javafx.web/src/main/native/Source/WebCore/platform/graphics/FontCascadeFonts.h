@@ -96,11 +96,7 @@ private:
     private:
         // Only one of these is non-null.
         RefPtr<GlyphPage> m_singleFont;
-#if ENABLE(CXX_11_FIX)
-        std::shared_ptr<MixedFontGlyphPage> m_mixedFont;
-#else
         std::unique_ptr<MixedFontGlyphPage> m_mixedFont;
-#endif
     };
 
     GlyphPageCacheEntry m_cachedPageZero;

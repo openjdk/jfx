@@ -36,6 +36,7 @@
 #include "B3EliminateCommonSubexpressions.h"
 #include "B3FixSSA.h"
 #include "B3FoldPathConstants.h"
+#include "B3InferSwitches.h"
 #include "B3LegalizeMemoryOffsets.h"
 #include "B3LowerMacros.h"
 #include "B3LowerMacrosAfterOptimizations.h"
@@ -82,6 +83,7 @@ void generateToAir(Procedure& procedure, unsigned optLevel)
         reduceDoubleToFloat(procedure);
         reduceStrength(procedure);
         eliminateCommonSubexpressions(procedure);
+        inferSwitches(procedure);
         duplicateTails(procedure);
         fixSSA(procedure);
         foldPathConstants(procedure);
@@ -102,6 +104,9 @@ void generateToAir(Procedure& procedure, unsigned optLevel)
     lowerMacrosAfterOptimizations(procedure);
     legalizeMemoryOffsets(procedure);
     moveConstants(procedure);
+
+    // FIXME: We should run pureCSE here to clean up some platform specific changes from the previous phases.
+    // https://bugs.webkit.org/show_bug.cgi?id=164873
 
     if (shouldValidateIR())
         validate(procedure);

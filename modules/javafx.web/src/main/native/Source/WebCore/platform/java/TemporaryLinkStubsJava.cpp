@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -24,7 +24,6 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
-//#include "JNIUtilityPrivate.h"
 #include "URL.h" // WebKit BUG: must be included from Pasteboard.h
 #include "Language.h"
 #include "NotImplemented.h"
@@ -35,19 +34,6 @@
 #include "SearchPopupMenuJava.h"
 #include "SmartReplace.h"
 #include "JSCTestRunnerUtils.h"
-
-// WebCore/svg
-/*
-#include "SVGPaintServer.h"
-#include "SVGPaintServerGradient.h"
-#include "SVGPaintServerPattern.h"
-#include "SVGPaintServerSolid.h"
-#include "SVGResourceClipper.h"
-#include "SVGResourceFilter.h"
-#include "SVGResourceMasker.h"
-*/
-
-
 
 namespace WebCore
 {
@@ -104,25 +90,12 @@ void setCookieStoragePrivateBrowsingEnabled(bool)
 }
 
 
-// ---- WebCore/editing stubs ---- //
-
-// ---- Editor.h ---- //
-
-//WTF::PassRefPtr<JSC::Bindings::Instance>
-//                    ScriptController::createScriptInstanceForWidget(Widget *)
-//{
-//    notImplemented();
-//    return 0;
-//}
-
-// ---- SSLKeyGenerator.h ---- //
-
 void getSupportedKeySizes(Vector<String>&)
 {
     notImplemented();
 }
 
-String signedPublicKeyAndChallengeString(unsigned keySizeIndex, const String &challengeString, const URL &)
+String signedPublicKeyAndChallengeString(unsigned, const String&, const URL&)
 {
     notImplemented();
     return String("signedPublicKeyAndChallengeString");
@@ -145,12 +118,12 @@ bool SearchPopupMenuJava::enabled()
     return false;
 }
 
-void SearchPopupMenuJava::saveRecentSearches(const AtomicString& name, const Vector<RecentSearch>&)
+void SearchPopupMenuJava::saveRecentSearches(const AtomicString&, const Vector<RecentSearch>&)
 {
     notImplemented();
 }
 
-void SearchPopupMenuJava::loadRecentSearches(const AtomicString& name, Vector<RecentSearch>&)
+void SearchPopupMenuJava::loadRecentSearches(const AtomicString&, Vector<RecentSearch>&)
 {
     notImplemented();
 }

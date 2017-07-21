@@ -75,7 +75,7 @@ public:
     unsigned numberOfChannels() const { return m_channels.size(); }
 
     AudioChannel* channel(unsigned channel) { return m_channels[channel].get(); }
-    const AudioChannel* channel(unsigned channel) const { return const_cast<AudioBus*>(this)->m_channels[channel].get(); }
+    const AudioChannel* channel(unsigned channel) const { return m_channels[channel].get(); }
     AudioChannel* channelByType(unsigned type);
     const AudioChannel* channelByType(unsigned type) const;
 
@@ -120,6 +120,9 @@ public:
     void scale(float scale);
 
     void reset() { m_isFirstTime = true; } // for de-zippering
+
+    // Copies the samples from the source bus to this one.
+    void copyFromRange(const AudioBus& sourceBus, unsigned startFrame, unsigned endFrame);
 
     // Copies the samples from the source bus to this one.
     // This is just a simple per-channel copy if the number of channels match, otherwise an up-mix or down-mix is done.

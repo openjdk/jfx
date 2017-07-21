@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,12 +29,10 @@
 #include "BuiltinNames.h"
 #include "Error.h"
 #include "Exception.h"
-#include "JSCJSValueInlines.h"
-#include "JSCellInlines.h"
+#include "JSCInlines.h"
+#include "JSObjectInlines.h"
 #include "JSPromise.h"
 #include "JSPromiseConstructor.h"
-#include "SlotVisitorInlines.h"
-#include "StructureInlines.h"
 
 namespace JSC {
 
@@ -45,7 +43,7 @@ JSValue newPromiseCapability(ExecState* exec, JSGlobalObject* globalObject, JSPr
     JSFunction* newPromiseCapabilityFunction = globalObject->newPromiseCapabilityFunction();
     CallData callData;
     CallType callType = JSC::getCallData(newPromiseCapabilityFunction, callData);
-    ASSERT(callType != CallTypeNone);
+    ASSERT(callType != CallType::None);
 
     MarkedArgumentBuffer arguments;
     arguments.append(promiseConstructor);
@@ -56,11 +54,13 @@ JSValue newPromiseCapability(ExecState* exec, JSGlobalObject* globalObject, JSPr
 JSPromiseDeferred* JSPromiseDeferred::create(ExecState* exec, JSGlobalObject* globalObject)
 {
     VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue deferred = newPromiseCapability(exec, globalObject, globalObject->promiseConstructor());
+    RETURN_IF_EXCEPTION(scope, nullptr);
 
-    JSValue promise = deferred.get(exec, vm.propertyNames->promisePrivateName);
-    ASSERT(promise.inherits(JSPromise::info()));
+    JSValue promise = deferred.get(exec, vm.propertyNames->builtinNames().promisePrivateName());
+    ASSERT(promise.inherits(vm, JSPromise::info()));
     JSValue resolve = deferred.get(exec, vm.propertyNames->builtinNames().resolvePrivateName());
     JSValue reject = deferred.get(exec, vm.propertyNames->builtinNames().rejectPrivateName());
 
@@ -88,7 +88,7 @@ static inline void callFunction(ExecState* exec, JSValue function, JSValue value
 {
     CallData callData;
     CallType callType = getCallData(function, callData);
-    ASSERT(callType != CallTypeNone);
+    ASSERT(callType != CallType::None);
 
     MarkedArgumentBuffer arguments;
     arguments.append(value);
@@ -121,9 +121,9 @@ void JSPromiseDeferred::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     Base::visitChildren(thisObject, visitor);
 
-    visitor.append(&thisObject->m_promise);
-    visitor.append(&thisObject->m_resolve);
-    visitor.append(&thisObject->m_reject);
+    visitor.append(thisObject->m_promise);
+    visitor.append(thisObject->m_resolve);
+    visitor.append(thisObject->m_reject);
 }
 
 } // namespace JSC

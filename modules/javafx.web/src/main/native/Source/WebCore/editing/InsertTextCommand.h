@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InsertTextCommand_h
-#define InsertTextCommand_h
+#pragma once
 
 #include "CompositeEditCommand.h"
 
@@ -67,9 +66,9 @@ private:
 
     void deleteCharacter();
 
-    virtual void doApply() override;
+    void doApply() override;
 
-    virtual bool isInsertTextCommand() const override { return true; }
+    bool isInsertTextCommand() const override { return true; }
 
     Position positionInsideTextNode(const Position&);
     Position insertTab(const Position&);
@@ -87,5 +86,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // InsertTextCommand_h

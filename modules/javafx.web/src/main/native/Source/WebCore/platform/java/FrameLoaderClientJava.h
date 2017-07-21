@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef FrameLoaderClientJava_H
-#define FrameLoaderClientJava_H
+
+#pragma once
 
 #include "Document.h"
 #include "DocumentLoader.h"
@@ -19,11 +19,11 @@
 #include "PluginWidgetJava.h"
 #include "ProgressTrackerClient.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 namespace WebCore {
 
-class FrameLoaderClientJava : public FrameLoaderClient {
+class FrameLoaderClientJava final : public FrameLoaderClient {
 public:
     FrameLoaderClientJava(const JLObject &webPage);
     void frameLoaderDestroyed() override;
@@ -41,8 +41,6 @@ public:
     void assignIdentifierToInitialRequest(unsigned long identifier, DocumentLoader*, const ResourceRequest&) override;
 
     void dispatchWillSendRequest(DocumentLoader*, unsigned long  identifier, ResourceRequest&, const ResourceResponse& redirectResponse) override;
-    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long identifier, const AuthenticationChallenge&) override;
-    void dispatchDidCancelAuthenticationChallenge(DocumentLoader*, unsigned long  identifier, const AuthenticationChallenge&) override;
     void dispatchDidReceiveResponse(DocumentLoader*, unsigned long  identifier, const ResourceResponse&) override;
     void dispatchDidReceiveContentLength(DocumentLoader*, unsigned long identifier, int lengthReceived) override;
     void dispatchDidFinishLoading(DocumentLoader*, unsigned long  identifier) override;
@@ -61,8 +59,7 @@ public:
     void dispatchDidReceiveIcon() override;
     void dispatchDidStartProvisionalLoad() override;
     void dispatchDidReceiveTitle(const StringWithDirection&) override;
-    void dispatchDidChangeIcons(IconType) override;
-    void dispatchDidCommitLoad() override;
+    void dispatchDidCommitLoad(std::optional<HasInsecureContent>) override;
     void dispatchDidFailProvisionalLoad(const ResourceError&) override;
     void dispatchDidFailLoad(const ResourceError&) override;
     void dispatchDidFinishDocumentLoad() override;
@@ -73,27 +70,27 @@ public:
     void dispatchShow() override;
 
     void dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, FramePolicyFunction) override;
-    void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, const String&, FramePolicyFunction) override;
-    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, PassRefPtr<FormState>, FramePolicyFunction) override;
+    void dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String& frameName, FramePolicyFunction) override;
+    void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, FormState*, FramePolicyFunction) override;
     void cancelPolicyCheck() override;
 
     void dispatchUnableToImplementPolicy(const ResourceError&) override;
 
-    void dispatchWillSendSubmitEvent(PassRefPtr<FormState>) override {}
-    void dispatchWillSubmitForm(PassRefPtr<FormState>, FramePolicyFunction) override;
+    void dispatchWillSendSubmitEvent(Ref<FormState>&&) override {}
+    void dispatchWillSubmitForm(FormState&, FramePolicyFunction) override;
 
     void dispatchDidLoadMainResource(DocumentLoader*);
 
     void revertToProvisionalState(DocumentLoader*) override;
     void setMainDocumentError(DocumentLoader*, const ResourceError&) override;
 
-    RefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement* ownerElement,
+    RefPtr<Frame> createFrame(const URL& url, const String& name, HTMLFrameOwnerElement& ownerElement,
                                const String& referrer, bool allowsScrolling, int marginWidth, int marginHeight) override;
     ObjectContentType objectContentType(const URL& url, const String& mimeTypeIn) override;
-    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement*, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
+    RefPtr<Widget> createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<String>&, const Vector<String>&, const String&, bool loadManually) override;
     void recreatePlugin(Widget*) override {}
-    void redirectDataToPlugin(Widget* pluginWidget) override;
-    PassRefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement*, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) override;
+    void redirectDataToPlugin(Widget&) override;
+    RefPtr<Widget> createJavaAppletWidget(const IntSize&, HTMLAppletElement&, const URL& baseURL, const Vector<String>& paramNames, const Vector<String>& paramValues) override;
     String overrideMediaType() const override;
 
     void setMainFrameDocumentReady(bool) override;
@@ -118,7 +115,7 @@ public:
     // The indicated security origin has run active content (such as a
     // script) from an insecure source.  Note that the insecure content can
     // spread to other frames in the same origin.
-    void didRunInsecureContent(SecurityOrigin*, const URL&) override;
+    void didRunInsecureContent(SecurityOrigin&, const URL&) override;
     void didDetectXSS(const URL&, bool) override;
 
     ResourceError cancelledError(const ResourceRequest&) override;
@@ -134,6 +131,7 @@ public:
     bool shouldFallBack(const ResourceError&) override;
 
     bool shouldUseCredentialStorage(DocumentLoader*, unsigned long identifier) override;
+    void dispatchDidReceiveAuthenticationChallenge(DocumentLoader*, unsigned long identifier, const AuthenticationChallenge&) override;
 
     bool canHandleRequest(const ResourceRequest&) const override;
     bool canShowMIMEType(const String&) const override;
@@ -142,7 +140,7 @@ public:
     String generatedMIMETypeForURLScheme(const String&) const override;
 
     void frameLoadCompleted() override;
-    void saveViewStateToItem(HistoryItem*) override;
+    void saveViewStateToItem(HistoryItem&) override;
     void restoreViewState() override;
     void provisionalLoadStarted() override;
     void didFinishLoad() override;
@@ -167,9 +165,9 @@ public:
     void didSaveToPageCache() override;
     void didRestoreFromPageCache() override;
 
-    void dispatchDidBecomeFrameset(bool); // Can change due to navigation or DOM modification override.
+    void dispatchDidBecomeFrameset(bool) override; // Can change due to navigation or DOM modification override.
 
-    PassRefPtr<FrameNetworkingContext> createNetworkingContext() override;
+    Ref<FrameNetworkingContext> createNetworkingContext() override;
 
     void registerForIconNotification(bool listen = true) override;
 
@@ -198,6 +196,4 @@ private:
     // Plugin widget for handling data redirection
 //        PluginWidgetJava* m_pluginWidget;
 };
-}
-
-#endif
+} // namespace WebCore

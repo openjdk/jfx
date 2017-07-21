@@ -29,8 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InspectorDOMDebuggerAgent_h
-#define InspectorDOMDebuggerAgent_h
+#pragma once
 
 #include "InspectorWebAgentBase.h"
 #include <inspector/InspectorBackendDispatchers.h>
@@ -58,16 +57,16 @@ public:
     virtual ~InspectorDOMDebuggerAgent();
 
     // DOMDebugger API
-    virtual void setXHRBreakpoint(ErrorString&, const String& url) override;
-    virtual void removeXHRBreakpoint(ErrorString&, const String& url) override;
-    virtual void setEventListenerBreakpoint(ErrorString&, const String& eventName) override;
-    virtual void removeEventListenerBreakpoint(ErrorString&, const String& eventName) override;
-    virtual void setInstrumentationBreakpoint(ErrorString&, const String& eventName) override;
-    virtual void removeInstrumentationBreakpoint(ErrorString&, const String& eventName) override;
-    virtual void setDOMBreakpoint(ErrorString&, int nodeId, const String& type) override;
-    virtual void removeDOMBreakpoint(ErrorString&, int nodeId, const String& type) override;
+    void setXHRBreakpoint(ErrorString&, const String& url) override;
+    void removeXHRBreakpoint(ErrorString&, const String& url) override;
+    void setEventListenerBreakpoint(ErrorString&, const String& eventName) override;
+    void removeEventListenerBreakpoint(ErrorString&, const String& eventName) override;
+    void setInstrumentationBreakpoint(ErrorString&, const String& eventName) override;
+    void removeInstrumentationBreakpoint(ErrorString&, const String& eventName) override;
+    void setDOMBreakpoint(ErrorString&, int nodeId, const String& type) override;
+    void removeDOMBreakpoint(ErrorString&, int nodeId, const String& type) override;
 
-    // InspectorInstrumentation callbacks.
+    // InspectorInstrumentation
     void willInsertDOMNode(Node& parent);
     void didInvalidateStyleAttr(Node&);
     void didInsertDOMNode(Node&);
@@ -77,16 +76,14 @@ public:
     void willSendXMLHttpRequest(const String& url);
     void pauseOnNativeEventIfNeeded(bool isDOMEvent, const String& eventName, bool synchronous);
 
-    virtual void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
-    virtual void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
-    virtual void discardAgent() override;
+    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*) override;
+    void willDestroyFrontendAndBackend(Inspector::DisconnectReason) override;
+    void discardAgent() override;
 
 private:
     // Inspector::InspectorDebuggerAgent::Listener implementation.
-    virtual void debuggerWasEnabled() override;
-    virtual void debuggerWasDisabled() override;
-    virtual void stepInto() override;
-    virtual void didPause() override;
+    void debuggerWasEnabled() override;
+    void debuggerWasDisabled() override;
     void disable();
 
     void descriptionForDOMEvent(Node& target, int breakpointType, bool insertion, Inspector::InspectorObject& description);
@@ -105,10 +102,7 @@ private:
     HashMap<Node*, uint32_t> m_domBreakpoints;
     HashSet<String> m_eventListenerBreakpoints;
     HashSet<String> m_xhrBreakpoints;
-    bool m_pauseInNextEventListener { false };
     bool m_pauseOnAllXHRsEnabled { false };
 };
 
 } // namespace WebCore
-
-#endif // !defined(InspectorDOMDebuggerAgent_h)

@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HTMLSourceElement_h
-#define HTMLSourceElement_h
+#pragma once
 
 #include "HTMLElement.h"
 #include "MediaList.h"
@@ -34,6 +33,7 @@ namespace WebCore {
 
 class HTMLSourceElement final : public HTMLElement, public ActiveDOMObject {
 public:
+    static Ref<HTMLSourceElement> create(Document&);
     static Ref<HTMLSourceElement> create(const QualifiedName&, Document&);
 
     String media() const;
@@ -50,18 +50,18 @@ public:
 private:
     HTMLSourceElement(const QualifiedName&, Document&);
 
-    virtual InsertionNotificationRequest insertedInto(ContainerNode&) override;
-    virtual void removedFrom(ContainerNode&) override;
-    virtual bool isURLAttribute(const Attribute&) const override;
+    InsertionNotificationRequest insertedInto(ContainerNode&) final;
+    void removedFrom(ContainerNode&) final;
+    bool isURLAttribute(const Attribute&) const final;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const override;
-    bool canSuspendForDocumentSuspension() const override;
-    void suspend(ReasonForSuspension) override;
-    void resume() override;
-    void stop() override;
+    const char* activeDOMObjectName() const final;
+    bool canSuspendForDocumentSuspension() const final;
+    void suspend(ReasonForSuspension) final;
+    void resume() final;
+    void stop() final;
 
-    void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    void parseAttribute(const QualifiedName&, const AtomicString&) final;
 
     void errorEventTimerFired();
 
@@ -70,7 +70,4 @@ private:
     RefPtr<MediaQuerySet> m_mediaQuerySet;
 };
 
-} //namespace
-
-#endif
-
+} // namespace WebCore

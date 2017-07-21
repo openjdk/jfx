@@ -27,13 +27,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FrameSnapshotting_h
-#define FrameSnapshotting_h
+#pragma once
 
 #include <memory>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
+class FloatRect;
 class Frame;
 class IntRect;
 class ImageBuffer;
@@ -50,9 +51,8 @@ enum {
 typedef unsigned SnapshotOptions;
 
 WEBCORE_EXPORT std::unique_ptr<ImageBuffer> snapshotFrameRect(Frame&, const IntRect&, SnapshotOptions = SnapshotOptionsNone);
+std::unique_ptr<ImageBuffer> snapshotFrameRectWithClip(Frame&, const IntRect&, Vector<FloatRect>& clipRects, SnapshotOptions = SnapshotOptionsNone);
 std::unique_ptr<ImageBuffer> snapshotNode(Frame&, Node&);
 WEBCORE_EXPORT std::unique_ptr<ImageBuffer> snapshotSelection(Frame&, SnapshotOptions = SnapshotOptionsNone);
 
 } // namespace WebCore
-
-#endif // FrameSnapshotting_h

@@ -19,8 +19,7 @@
  *
  */
 
-#ifndef WTF_HashTable_h
-#define WTF_HashTable_h
+#pragma once
 
 #include <atomic>
 #include <iterator>
@@ -279,11 +278,14 @@ namespace WTF {
         const_iterator m_iterator;
     };
 
-    template<typename HashFunctions> class IdentityHashTranslator {
+    template<typename ValueTraits, typename HashFunctions> class IdentityHashTranslator {
     public:
         template<typename T> static unsigned hash(const T& key) { return HashFunctions::hash(key); }
         template<typename T, typename U> static bool equal(const T& a, const U& b) { return HashFunctions::equal(a, b); }
-        template<typename T, typename U, typename V> static void translate(T& location, const U&, V&& value) { location = std::forward<V>(value); }
+        template<typename T, typename U, typename V> static void translate(T& location, const U&, V&& value)
+        {
+            ValueTraits::assignToEmpty(location, std::forward<V>(value));
+        }
     };
 
     template<typename IteratorType> struct HashTableAddResult {
@@ -303,7 +305,7 @@ namespace WTF {
         typedef Traits ValueTraits;
         typedef Key KeyType;
         typedef Value ValueType;
-        typedef IdentityHashTranslator<HashFunctions> IdentityTranslatorType;
+        typedef IdentityHashTranslator<ValueTraits, HashFunctions> IdentityTranslatorType;
         typedef HashTableAddResult<iterator> AddResult;
 
 #if DUMP_HASHTABLE_STATS_PER_TABLE
@@ -430,6 +432,7 @@ namespace WTF {
 
         ValueType* lookup(const Key& key) { return lookup<IdentityTranslatorType>(key); }
         template<typename HashTranslator, typename T> ValueType* lookup(const T&);
+        template<typename HashTranslator, typename T> ValueType* inlineLookup(const T&);
 
 #if !ASSERT_DISABLED
         void checkTableConsistency() const;
@@ -473,7 +476,7 @@ namespace WTF {
         ValueType* reinsert(ValueType&&);
 
         static void initializeBucket(ValueType& bucket);
-        static void deleteBucket(ValueType& bucket) { bucket.~ValueType(); Traits::constructDeletedValue(bucket); }
+        static void deleteBucket(ValueType& bucket) { hashTraitsDeleteBucket<Traits>(bucket); }
 
         FullLookupType makeLookupResult(ValueType* position, bool found, unsigned hash)
             { return FullLookupType(LookupType(position, found), hash); }
@@ -612,6 +615,13 @@ namespace WTF {
     template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
     template<typename HashTranslator, typename T>
     inline auto HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>::lookup(const T& key) -> ValueType*
+    {
+        return inlineLookup<HashTranslator>(key);
+    }
+
+    template<typename Key, typename Value, typename Extractor, typename HashFunctions, typename Traits, typename KeyTraits>
+    template<typename HashTranslator, typename T>
+    ALWAYS_INLINE auto HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>::inlineLookup(const T& key) -> ValueType*
     {
         checkKey<HashTranslator>(key);
 
@@ -855,7 +865,7 @@ namespace WTF {
             // This initializes the bucket without copying the empty value.
             // That makes it possible to use this with types that don't support copying.
             // The memset to 0 looks like a slow operation but is optimized by the compilers.
-            memset(&bucket, 0, sizeof(bucket));
+            memset(std::addressof(bucket), 0, sizeof(bucket));
         }
     };
 
@@ -1118,17 +1128,25 @@ namespace WTF {
     template<typename Functor>
     inline void HashTable<Key, Value, Extractor, HashFunctions, Traits, KeyTraits>::removeIf(const Functor& functor)
     {
+        // We must use local copies in case "functor" or "deleteBucket"
+        // make a function call, which prevents the compiler from keeping
+        // the values in register.
+        unsigned removedBucketCount = 0;
+        ValueType* table = m_table;
+
         for (unsigned i = m_tableSize; i--;) {
-            if (isEmptyOrDeletedBucket(m_table[i]))
+            ValueType& bucket = table[i];
+            if (isEmptyOrDeletedBucket(bucket))
                 continue;
 
-            if (!functor(m_table[i]))
+            if (!functor(bucket))
                 continue;
 
-            deleteBucket(m_table[i]);
-            ++m_deletedCount;
-            --m_keyCount;
+            deleteBucket(bucket);
+            ++removedBucketCount;
         }
+        m_deletedCount += removedBucketCount;
+        m_keyCount -= removedBucketCount;
 
         if (shouldShrink())
             shrink();
@@ -1197,13 +1215,20 @@ namespace WTF {
 
         Value* newEntry = nullptr;
         for (unsigned i = 0; i != oldTableSize; ++i) {
-            if (isEmptyOrDeletedBucket(oldTable[i])) {
-                ASSERT(&oldTable[i] != entry);
+            if (isDeletedBucket(oldTable[i])) {
+                ASSERT(std::addressof(oldTable[i]) != entry);
+                continue;
+            }
+
+            if (isEmptyBucket(oldTable[i])) {
+                ASSERT(std::addressof(oldTable[i]) != entry);
+                oldTable[i].~ValueType();
                 continue;
             }
 
             Value* reinsertedEntry = reinsert(WTFMove(oldTable[i]));
-            if (&oldTable[i] == entry) {
+            oldTable[i].~ValueType();
+            if (std::addressof(oldTable[i]) == entry) {
                 ASSERT(!newEntry);
                 newEntry = reinsertedEntry;
             }
@@ -1211,7 +1236,7 @@ namespace WTF {
 
         m_deletedCount = 0;
 
-        deallocateTable(oldTable, oldTableSize);
+        fastFree(oldTable);
 
         internalCheckTableConsistency();
         return newEntry;
@@ -1529,5 +1554,3 @@ namespace WTF {
 } // namespace WTF
 
 #include <wtf/HashIterators.h>
-
-#endif // WTF_HashTable_h

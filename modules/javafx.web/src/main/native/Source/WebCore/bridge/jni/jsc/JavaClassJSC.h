@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JavaClassJSC_h
-#define JavaClassJSC_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
@@ -61,5 +60,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JavaClassJSC_h

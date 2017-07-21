@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JNIUtility_h
-#define JNIUtility_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
@@ -321,5 +320,3 @@ T callJNIStaticMethod(jclass cls, const char* methodName, const char* methodSign
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JNIUtility_h

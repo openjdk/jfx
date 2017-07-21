@@ -32,12 +32,17 @@
 #include <functional>
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/Optional.h>
+#include <wtf/RunLoop.h>
 
 #if PLATFORM(IOS)
 #include <wtf/Lock.h>
 #include <wtf/ThreadingPrimitives.h>
-#elif OS(LINUX)
-#include "Timer.h"
+#endif
+
+#if USE(GLIB)
+#include <wtf/glib/GRefPtr.h>
 #endif
 
 namespace WebCore {
@@ -49,6 +54,13 @@ enum MemoryPressureReason {
     MemoryPressureReasonVMStatus = 1 << 1,
 };
 #endif
+
+enum class MemoryUsagePolicy {
+    Unrestricted, // Allocate as much as you want
+    Conservative, // Maybe you don't cache every single thing
+    Strict, // Time to start pinching pennies for real
+    Panic, // OH GOD WE'RE SINKING, THROW EVERYTHING OVERBOARD
+};
 
 enum class Critical { No, Yes };
 enum class Synchronous { No, Yes };
@@ -63,13 +75,24 @@ public:
 
     WEBCORE_EXPORT void install();
 
-    void setLowMemoryHandler(LowMemoryHandler handler)
+    WEBCORE_EXPORT void setShouldUsePeriodicMemoryMonitor(bool);
+
+    void setMemoryKillCallback(WTF::Function<void()> function) { m_memoryKillCallback = WTFMove(function); }
+    void setProcessIsEligibleForMemoryKillCallback(WTF::Function<bool()> function) { m_processIsEligibleForMemoryKillCallback = WTFMove(function); }
+
+    void setLowMemoryHandler(LowMemoryHandler&& handler)
     {
-        ASSERT(!m_installed);
-        m_lowMemoryHandler = handler;
+        m_lowMemoryHandler = WTFMove(handler);
     }
 
-    bool isUnderMemoryPressure() const { return m_underMemoryPressure; }
+    bool isUnderMemoryPressure() const
+    {
+        return m_underMemoryPressure
+#if PLATFORM(MAC)
+            || m_memoryUsagePolicy >= MemoryUsagePolicy::Strict
+#endif
+            || m_isSimulatingMemoryPressure;
+    }
     void setUnderMemoryPressure(bool b) { m_underMemoryPressure = b; }
 
 #if PLATFORM(IOS)
@@ -80,43 +103,61 @@ public:
     WEBCORE_EXPORT bool shouldWaitForMemoryClearMessage();
     void respondToMemoryPressureIfNeeded();
 #elif OS(LINUX)
-    static void waitForMemoryPressureEvent(void*);
+    void setMemoryPressureMonitorHandle(int fd);
 #endif
 
     class ReliefLogger {
     public:
         explicit ReliefLogger(const char *log)
             : m_logString(log)
-            , m_initialMemory(s_loggingEnabled ? platformMemoryUsage() : 0)
+            , m_initialMemory(loggingEnabled() ? platformMemoryUsage() : MemoryUsage { })
         {
         }
 
         ~ReliefLogger()
         {
-            if (s_loggingEnabled)
-                platformLog();
+            if (loggingEnabled())
+                logMemoryUsageChange();
         }
+
 
         const char* logString() const { return m_logString; }
         static void setLoggingEnabled(bool enabled) { s_loggingEnabled = enabled; }
-        static bool loggingEnabled() { return s_loggingEnabled; }
+        static bool loggingEnabled()
+        {
+#if RELEASE_LOG_DISABLED
+            return s_loggingEnabled;
+#else
+            return true;
+#endif
+        }
 
     private:
-        size_t platformMemoryUsage();
-        void platformLog();
+        struct MemoryUsage {
+            MemoryUsage() = default;
+            MemoryUsage(size_t resident, size_t physical)
+                : resident(resident)
+                , physical(physical)
+            {
+            }
+            size_t resident { 0 };
+            size_t physical { 0 };
+        };
+        std::optional<MemoryUsage> platformMemoryUsage();
+        void logMemoryUsageChange();
 
         const char* m_logString;
-        size_t m_initialMemory;
+        std::optional<MemoryUsage> m_initialMemory;
 
         WEBCORE_EXPORT static bool s_loggingEnabled;
     };
 
     WEBCORE_EXPORT void releaseMemory(Critical, Synchronous = Synchronous::No);
 
-private:
-    void releaseNoncriticalMemory();
-    void releaseCriticalMemory(Synchronous);
+    WEBCORE_EXPORT void beginSimulatedMemoryPressure();
+    WEBCORE_EXPORT void endSimulatedMemoryPressure();
 
+private:
     void uninstall();
 
     void holdOff(unsigned);
@@ -127,25 +168,55 @@ private:
     void respondToMemoryPressure(Critical, Synchronous = Synchronous::No);
     void platformReleaseMemory(Critical);
 
-    bool m_installed;
-    time_t m_lastRespondTime;
+    NO_RETURN_DUE_TO_CRASH void didExceedMemoryLimitAndFailedToRecover();
+    void measurementTimerFired();
+
+#if OS(LINUX)
+    class EventFDPoller {
+        WTF_MAKE_NONCOPYABLE(EventFDPoller); WTF_MAKE_FAST_ALLOCATED;
+    public:
+        EventFDPoller(int fd, std::function<void ()>&& notifyHandler);
+        ~EventFDPoller();
+
+    private:
+        void readAndNotify() const;
+
+        std::optional<int> m_fd;
+        std::function<void ()> m_notifyHandler;
+#if USE(GLIB)
+        GRefPtr<GSource> m_source;
+#else
+        ThreadIdentifier m_threadID;
+#endif
+    };
+#endif
+
+    bool m_installed { false };
     LowMemoryHandler m_lowMemoryHandler;
 
     std::atomic<bool> m_underMemoryPressure;
+    bool m_isSimulatingMemoryPressure { false };
+
+    std::unique_ptr<RunLoop::Timer<MemoryPressureHandler>> m_measurementTimer;
+    MemoryUsagePolicy m_memoryUsagePolicy { MemoryUsagePolicy::Unrestricted };
+    WTF::Function<void()> m_memoryKillCallback;
+    WTF::Function<bool()> m_processIsEligibleForMemoryKillCallback;
 
 #if PLATFORM(IOS)
-    uint32_t m_memoryPressureReason;
-    bool m_clearPressureOnMemoryRelease;
-    void (^m_releaseMemoryBlock)();
-    CFRunLoopObserverRef m_observer;
+    // FIXME: Can we share more of this with OpenSource?
+    uint32_t m_memoryPressureReason { MemoryPressureReasonNone };
+    bool m_clearPressureOnMemoryRelease { true };
+    void (^m_releaseMemoryBlock)() { nullptr };
+    CFRunLoopObserverRef m_observer { nullptr };
     Lock m_observerMutex;
 #elif OS(LINUX)
-    int m_eventFD;
-    int m_pressureLevelFD;
-    WTF::ThreadIdentifier m_threadID;
-    Timer m_holdOffTimer;
+    std::optional<int> m_eventFD;
+    std::optional<int> m_pressureLevelFD;
+    std::unique_ptr<EventFDPoller> m_eventFDPoller;
+    RunLoop::Timer<MemoryPressureHandler> m_holdOffTimer;
     void holdOffTimerFired();
     void logErrorAndCloseFDs(const char* error);
+    bool tryEnsureEventFD();
 #endif
 };
 

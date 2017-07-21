@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JavaType_h
-#define JavaType_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
@@ -60,5 +59,3 @@ enum JavaType {
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JavaType_h

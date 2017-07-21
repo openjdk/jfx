@@ -25,7 +25,7 @@
 
 #include "config.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(WEB_RTC)
 
 #include "RTCDataChannelHandlerMock.h"
 
@@ -37,11 +37,6 @@ namespace WebCore {
 RTCDataChannelHandlerMock::RTCDataChannelHandlerMock(const String& label, const RTCDataChannelInit& init)
     : m_label(label)
     , m_protocol(init.protocol)
-    , m_maxRetransmitTime(init.maxRetransmitTime)
-    , m_maxRetransmits(init.maxRetransmits)
-    , m_id(init.id)
-    , m_ordered(init.ordered)
-    , m_negotiated(init.negotiated)
 {
 }
 
@@ -75,4 +70,4 @@ void RTCDataChannelHandlerMock::close()
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(WEB_RTC)

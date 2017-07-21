@@ -1,278 +1,127 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
+
 #include "Font.h"
-#include "TextRun.h"
-#include "LayoutRect.h"
 #include "FontRanges.h"
-#include "GlyphBuffer.h"
-#include "Font.h"
-#include "GraphicsContext.h"
+#include "FontDescription.h"
+#include "FontPlatformData.h"
+#include "FontSelector.h"
 #include "GraphicsContextJava.h"
-#include "RenderingQueue.h"
-#include "PlatformContextJava.h"
-#include "com_sun_webkit_graphics_GraphicsDecoder.h"
 #include "NotImplemented.h"
 
-#include <wtf/HashSet.h>
+#include <wtf/Assertions.h>
+#include <wtf/text/WTFString.h>
+#include <wtf/text/CString.h>
 
 namespace WebCore {
 
-static JLString getJavaString(const TextRun& run)
+void Font::platformInit()
 {
-    unsigned length = run.length();
-    bool allowTabs = run.allowTabs();
-    String ret = run.is8Bit()
-        ? String(allowTabs
-                ? run.string()
-                : FontCascade::normalizeSpaces(run.characters8(), length))
-        : String(allowTabs
-                ? run.string()
-                : FontCascade::normalizeSpaces(run.characters16(), length));
-    return ret.toJavaString(WebCore_GetJavaEnv());
-}
-
-float FontCascade::getGlyphsAndAdvancesForComplexText(const TextRun& run, int from, int to, GlyphBuffer& glyphBuffer, ForTextEmphasisOrNot) const {
-    RefPtr<RQRef> jFont = primaryFont().platformData().nativeFontData();
-    if (!jFont)
-        return 0;
-
     JNIEnv* env = WebCore_GetJavaEnv();
-    static jmethodID getGlyphsAndAdvances_mID = env->GetMethodID(
-        PG_GetFontClass(env),
-        "getGlyphsAndAdvances",
-        "(Ljava/lang/String;IIZ)Lcom/sun/webkit/graphics/WCGlyphBuffer;");
-    ASSERT(getGlyphsAndAdvances_mID);
 
-    jobject jglyphBuffer = env->CallObjectMethod(
-        *jFont,
-        getGlyphsAndAdvances_mID,
-        (jstring)getJavaString(run),
-        from,
-        to,
-        run.rtl());
+    RefPtr<RQRef> jFont = m_platformData.nativeFontData();
+    if (!jFont)
+        return;
 
+    static jmethodID getXHeight_mID = env->GetMethodID(PG_GetFontClass(env),
+        "getXHeight", "()F");
+    ASSERT(getXHeight_mID);
+    m_fontMetrics.setXHeight(env->CallFloatMethod(*jFont, getXHeight_mID));
     CheckAndClearException(env);
-    if (!jglyphBuffer)
-        return 0;
-    static jfieldID glyphs_fID = env->GetFieldID(
-        PG_GetGlyphBufferClass(env),
-        "glyphs",
-        "[I");
-    static jfieldID advances_fID = env->GetFieldID(
-        PG_GetGlyphBufferClass(env),
-        "advances",
-        "[F");
-    static jfieldID initialAdvance_fID = env->GetFieldID(
-        PG_GetGlyphBufferClass(env),
-        "initialAdvance",
-        "F");
+
+    static jmethodID getCapHeight_mID = env->GetMethodID(PG_GetFontClass(env),
+        "getCapHeight", "()F");
+    ASSERT(getCapHeight_mID);
+    m_fontMetrics.setCapHeight(env->CallFloatMethod(*jFont, getCapHeight_mID));
     CheckAndClearException(env);
-    // get glyph details from object
-    jarray jglyphs = (jarray)env->GetObjectField(jglyphBuffer, glyphs_fID);
-    jarray jadvances = (jarray)env->GetObjectField(jglyphBuffer, advances_fID);
-    jfloat jinitialAdvance = env->GetFloatField(jglyphBuffer, initialAdvance_fID);
-    size_t glyphsCount = env->GetArrayLength(jglyphs);
-    ASSERT(env->GetArrayLength(jadvances) == glyphsCount);
-    jint* glyphs = (jint*)env->GetPrimitiveArrayCritical(jglyphs, 0);
-    jfloat* advances = (jfloat*)env->GetPrimitiveArrayCritical(jadvances, 0);
-    for (size_t i = 0; i < glyphsCount; i++) {
-        glyphBuffer.add(glyphs[i], &primaryFont(), advances[i]);
-    }
-    env->ReleasePrimitiveArrayCritical(jglyphs, glyphs, 0);
-    env->ReleasePrimitiveArrayCritical(jadvances, advances, 0);
+
+    static jmethodID getAscent_mID = env->GetMethodID(PG_GetFontClass(env),
+        "getAscent", "()F");
+    ASSERT(getAscent_mID);
+    m_fontMetrics.setAscent(env->CallFloatMethod(*jFont, getAscent_mID));
     CheckAndClearException(env);
-    return jinitialAdvance;
+
+    static jmethodID getDescent_mID = env->GetMethodID(PG_GetFontClass(env),
+        "getDescent", "()F");
+    ASSERT(getDescent_mID);
+    m_fontMetrics.setDescent(env->CallFloatMethod(*jFont, getDescent_mID));
+    CheckAndClearException(env);
+
+    static jmethodID getLineSpacing_mID = env->GetMethodID(PG_GetFontClass(env),
+        "getLineSpacing", "()F");
+    ASSERT(getLineSpacing_mID);
+    // Match CoreGraphics metrics.
+    m_fontMetrics.setLineSpacing(lroundf(
+        env->CallFloatMethod(*jFont, getLineSpacing_mID)));
+    CheckAndClearException(env);
+
+    static jmethodID getLineGap_mID = env->GetMethodID(PG_GetFontClass(env),
+        "getLineGap", "()F");
+    ASSERT(getLineGap_mID);
+    m_fontMetrics.setLineGap(env->CallFloatMethod(*jFont, getLineGap_mID));
+    CheckAndClearException(env);
 }
 
-float FontCascade::floatWidthForComplexText(const TextRun& run, HashSet<const Font*>* fallbackFonts, GlyphOverflow* /* glyphOverflow */) const
+void Font::determinePitch()
 {
-    RefPtr<RQRef> jFont = primaryFont().platformData().nativeFontData();
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    RefPtr<RQRef> jFont = m_platformData.nativeFontData();
+    if (!jFont) {
+        m_treatAsFixedPitch = true;
+        return;
+    }
+
+    static jmethodID hasUniformLineMetrics_mID = env->GetMethodID(
+            PG_GetFontClass(env), "hasUniformLineMetrics", "()Z");
+    ASSERT(hasUniformLineMetrics_mID);
+
+    m_treatAsFixedPitch = jbool_to_bool(env->CallBooleanMethod(*jFont, hasUniformLineMetrics_mID));
+    CheckAndClearException(env);
+}
+
+void Font::platformCharWidthInit()
+{
+    m_avgCharWidth = 0.f;
+    m_maxCharWidth = 0.f;
+    initCharWidths();
+}
+
+void Font::platformDestroy()
+{
+    notImplemented();
+}
+
+RefPtr<Font> Font::platformCreateScaledFont(const FontDescription&, float scaleFactor) const
+{
+    return Font::create(*m_platformData.derive(scaleFactor), isCustomFont(), false);
+}
+
+float Font::platformWidthForGlyph(Glyph c) const
+{
+    JNIEnv* env = WebCore_GetJavaEnv();
+
+    RefPtr<RQRef> jFont = m_platformData.nativeFontData();
     if (!jFont)
         return 0.0f;
 
-    JNIEnv* env = WebCore_GetJavaEnv();
-    static jmethodID getStringWidth_mID = env->GetMethodID(
-        PG_GetFontClass(env),
-        "getStringWidth",
-        "(Ljava/lang/String;)D");
-    ASSERT(getStringWidth_mID);
+    static jmethodID getGlyphWidth_mID = env->GetMethodID(PG_GetFontClass(env),
+        "getGlyphWidth", "(I)D");
+    ASSERT(getGlyphWidth_mID);
 
-    float res = env->CallDoubleMethod(
-        *jFont,
-        getStringWidth_mID,
-        (jstring)getJavaString(run));
+    float res = env->CallDoubleMethod(*jFont, getGlyphWidth_mID, (jint)c);
     CheckAndClearException(env);
 
     return res;
 }
 
-void FontCascade::adjustSelectionRectForComplexText(const TextRun& run, LayoutRect& selectionRect, int from, int to) const
+FloatRect Font::platformBoundsForGlyph(Glyph) const
 {
-    RefPtr<RQRef> jFont = primaryFont().platformData().nativeFontData();
-    if (!jFont)
-        return;
-
-    // adjusting to/from bounds due to issue RT-46101
-    if (from > run.length()) {
-        return;
-    }
-
-    if (to > run.length()) {
-        to = run.length();
-    }
-
-    JNIEnv* env = WebCore_GetJavaEnv();
-    static jmethodID getStringBounds_mID = env->GetMethodID(
-        PG_GetFontClass(env),
-        "getStringBounds",
-        "(Ljava/lang/String;IIZ)[D");
-    ASSERT(getStringBounds_mID);
-
-    JLocalRef<jdoubleArray> bnds(static_cast<jdoubleArray>(env->CallObjectMethod(
-        *jFont,
-        getStringBounds_mID,
-        (jstring)getJavaString(run),
-        jint(from),
-        jint(to),
-        jboolean(run.rtl()))));
-
-    if (CheckAndClearException(env)) {
-        return;
-    }
-
-    jdouble* pBnds = (jdouble*)env->GetPrimitiveArrayCritical((jdoubleArray)bnds, NULL);
-    FloatRect rect(pBnds[0] + selectionRect.x(), selectionRect.y(), pBnds[2], selectionRect.height()); //XXX recheck
-    selectionRect = LayoutRect(rect);
-    env->ReleasePrimitiveArrayCritical(bnds, pBnds, JNI_ABORT);
+    return FloatRect(); //That is OK! platformWidthForGlyph impl is enough.
 }
 
-int FontCascade::offsetForPositionForComplexText(
-    const TextRun& run, float xFloat,
-    bool includePartialGlyphs) const
-{
-    RefPtr<RQRef> jFont = primaryFont().platformData().nativeFontData();
-    if (!jFont)
-        return 0;
-
-    JNIEnv* env = WebCore_GetJavaEnv();
-    static jmethodID getOffsetForPosition_mID = env->GetMethodID(
-        PG_GetFontClass(env),
-        "getOffsetForPosition",
-        "(Ljava/lang/String;F)I");
-    ASSERT(getOffsetForPosition_mID);
-
-    jint res = env->CallIntMethod(
-        *jFont,
-        getOffsetForPosition_mID,
-        (jstring)getJavaString(run),
-        xFloat);
-    CheckAndClearException(env);
-
-    return res;
-}
-
-void FontCascade::drawGlyphs(GraphicsContext& gc,
-                      const Font& font,
-                      const GlyphBuffer& glyphBuffer,
-                      int from, int numGlyphs,
-                      const FloatPoint& point,
-                      FontSmoothingMode)
-{
-    // we need to call freeSpace() before refIntArr() and refFloatArr(), see RT-19695.
-    RenderingQueue& rq = gc.platformContext()->rq().freeSpace(24);
-
-    JNIEnv* env = WebCore_GetJavaEnv();
-
-    //prepare Glyphs array
-    JLocalRef<jintArray> jGlyphs(env->NewIntArray(numGlyphs));
-    ASSERT(jGlyphs);
-    {
-        jint *bufArray = (jint*)env->GetPrimitiveArrayCritical(jGlyphs, NULL);
-        ASSERT(bufArray);
-        memcpy(bufArray, glyphBuffer.glyphs(from), sizeof(jint)*numGlyphs);
-        env->ReleasePrimitiveArrayCritical(jGlyphs, bufArray, 0);
-    }
-    static jmethodID refIntArr_mID = env->GetMethodID(
-        PG_GetRenderQueueClass(env),
-        "refIntArr",
-        "([I)I");
-    ASSERT(refIntArr_mID);
-    jint sid = env->CallIntMethod(
-        rq.getWCRenderingQueue(),
-        refIntArr_mID,
-        (jintArray)jGlyphs);
-    CheckAndClearException(env);
-
-
-    //prepare Offsets/Advances array
-    JLocalRef<jfloatArray> jAdvance(env->NewFloatArray(numGlyphs));
-    CheckAndClearException(env);
-    ASSERT(jAdvance);
-    {
-        jfloat *bufArray = env->GetFloatArrayElements(jAdvance, NULL);
-        ASSERT(bufArray);
-        for (int i = 0; i < numGlyphs; ++i) {
-            const GlyphBufferAdvance *pAdvance = glyphBuffer.advances(from + i);
-            bufArray[i] = (jfloat)(pAdvance->width());
-        }
-        env->ReleaseFloatArrayElements(jAdvance, bufArray, 0);
-    }
-    static jmethodID refFloatArr_mID = env->GetMethodID(
-        PG_GetRenderQueueClass(env),
-        "refFloatArr",
-        "([F)I");
-    ASSERT(refFloatArr_mID);
-    jint aid = env->CallIntMethod(
-        rq.getWCRenderingQueue(),
-        refFloatArr_mID,
-        (jfloatArray)jAdvance);
-    CheckAndClearException(env);
-
-    rq  << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSTRING_FAST
-        << font.platformData().nativeFontData()
-        << sid
-        << aid
-        << (jfloat)point.x()
-        << (jfloat)point.y();
-}
-
-bool FontCascade::canReturnFallbackFontsForComplexText()
-{
-    return false;
-}
-
-bool FontCascade::canExpandAroundIdeographsInComplexText()
-{
-    return false;
-}
-
-void FontCascade::drawEmphasisMarksForComplexText(
-    GraphicsContext& context,
-    const TextRun& run,
-    const AtomicString& mark,
-    const FloatPoint& point,
-    int from,
-    int to) const
-{
-    if (isLoadingCustomFonts())
-        return;
-
-    if (to < 0)
-        to = run.length();
-
-#if ENABLE(SVG_FONTS)
-    // FIXME: Implement for SVG fonts.
-    if (primaryFont().isSVGFont())
-        return;
-#endif
-
-    if (codePath(run) != Complex)
-        drawEmphasisMarksForSimpleText(context, run, mark, point, from, to);
-    else
-        drawEmphasisMarksForComplexText(context, run, mark, point, from, to);
-}
 
 }

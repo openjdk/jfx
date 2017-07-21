@@ -78,7 +78,7 @@ String LocaleICU::decimalSymbol(UNumberFormatSymbol symbol)
     unum_getSymbol(m_numberFormat, symbol, buffer.data(), bufferLength, &status);
     if (U_FAILURE(status))
         return String();
-    return String::adopt(buffer);
+    return String::adopt(WTFMove(buffer));
 }
 
 String LocaleICU::decimalTextAttribute(UNumberFormatTextAttribute tag)
@@ -94,7 +94,7 @@ String LocaleICU::decimalTextAttribute(UNumberFormatTextAttribute tag)
     ASSERT(U_SUCCESS(status));
     if (U_FAILURE(status))
         return String();
-    return String::adopt(buffer);
+    return String::adopt(WTFMove(buffer));
 }
 #endif
 
@@ -158,7 +158,7 @@ static String getDateFormatPattern(const UDateFormat* dateFormat)
     udat_toPattern(dateFormat, TRUE, buffer.data(), length, &status);
     if (U_FAILURE(status))
         return emptyString();
-    return String::adopt(buffer);
+    return String::adopt(WTFMove(buffer));
 }
 
 std::unique_ptr<Vector<String>> LocaleICU::createLabelVector(const UDateFormat* dateFormat, UDateFormatSymbolType type, int32_t startIndex, int32_t size)
@@ -180,7 +180,7 @@ std::unique_ptr<Vector<String>> LocaleICU::createLabelVector(const UDateFormat* 
         udat_getSymbols(dateFormat, type, startIndex + i, buffer.data(), length, &status);
         if (U_FAILURE(status))
             return std::make_unique<Vector<String>>();
-        labels->append(String::adopt(buffer));
+        labels->append(String::adopt(WTFMove(buffer)));
     }
     return WTFMove(labels);
 }
@@ -256,7 +256,7 @@ String LocaleICU::dateFormat()
     return m_dateFormat;
 }
 
-static String getFormatForSkeleton(const char* locale, const String& skeleton)
+static String getFormatForSkeleton(const char* locale, const UChar* skeleton, int32_t skeletonLength)
 {
     String format = ASCIILiteral("yyyy-MM");
     UErrorCode status = U_ZERO_ERROR;
@@ -264,13 +264,13 @@ static String getFormatForSkeleton(const char* locale, const String& skeleton)
     if (!patternGenerator)
         return format;
     status = U_ZERO_ERROR;
-    int32_t length = udatpg_getBestPattern(patternGenerator, skeleton.characters(), skeleton.length(), 0, 0, &status);
+    int32_t length = udatpg_getBestPattern(patternGenerator, skeleton, skeletonLength, 0, 0, &status);
     if (status == U_BUFFER_OVERFLOW_ERROR && length) {
         Vector<UChar> buffer(length);
         status = U_ZERO_ERROR;
-        udatpg_getBestPattern(patternGenerator, skeleton.characters(), skeleton.length(), buffer.data(), length, &status);
+        udatpg_getBestPattern(patternGenerator, skeleton, skeletonLength, buffer.data(), length, &status);
         if (U_SUCCESS(status))
-            format = String::adopt(buffer);
+            format = String::adopt(WTFMove(buffer));
     }
     udatpg_close(patternGenerator);
     return format;
@@ -282,7 +282,8 @@ String LocaleICU::monthFormat()
         return m_monthFormat;
     // Gets a format for "MMMM" because Windows API always provides formats for
     // "MMMM" in some locales.
-    m_monthFormat = getFormatForSkeleton(m_locale.data(), ASCIILiteral("yyyyMMMM"));
+    const UChar skeleton[] = { 'y', 'y', 'y', 'y', 'M', 'M', 'M', 'M' };
+    m_monthFormat = getFormatForSkeleton(m_locale.data(), skeleton, WTF_ARRAY_LENGTH(skeleton));
     return m_monthFormat;
 }
 
@@ -290,7 +291,8 @@ String LocaleICU::shortMonthFormat()
 {
     if (!m_shortMonthFormat.isNull())
         return m_shortMonthFormat;
-    m_shortMonthFormat = getFormatForSkeleton(m_locale.data(), ASCIILiteral("yyyyMMM"));
+    const UChar skeleton[] = { 'y', 'y', 'y', 'y', 'M', 'M', 'M' };
+    m_shortMonthFormat = getFormatForSkeleton(m_locale.data(), skeleton, WTF_ARRAY_LENGTH(skeleton));
     return m_shortMonthFormat;
 }
 

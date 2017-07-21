@@ -3,7 +3,7 @@
  */
 #include "config.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "LocalizedStrings.h"
 #include "NotImplemented.h"
 
@@ -555,6 +555,12 @@ String validationMessagePatternMismatchText()
     return getLocalizedProperty("validationMessagePatternMismatchText");
 }
 
+String validationMessageTooShortText(int, int)
+{
+    notImplemented();
+    return String::fromUTF8("too short");
+}
+
 String validationMessageTooLongText(int, int)
 {
     return getLocalizedProperty("validationMessageTooLongText");
@@ -641,6 +647,18 @@ String weekFormatInLDML()
 String defaultDetailsSummaryText()
 {
     return getLocalizedProperty("defaultDetailsSummaryText");
+}
+
+String AXAutoFillCredentialsLabel()
+{
+    notImplemented();
+    return String::fromUTF8("password auto fill");
+}
+
+String AXAutoFillContactsLabel()
+{
+    notImplemented();
+    return String::fromUTF8("contact info auto fill");
 }
 
 } // namespace WebCore

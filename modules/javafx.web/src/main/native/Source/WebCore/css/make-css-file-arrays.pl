@@ -21,6 +21,9 @@
 # Usage: make-css-file-arrays.pl <header> <output> <input> ...
 
 use strict;
+use FindBin;
+use lib "$FindBin::Bin/../bindings/scripts";
+
 use Getopt::Long;
 
 my $defines;
@@ -46,8 +49,6 @@ for my $in (@ARGV) {
 
     # Slurp in the CSS file.
     my $text;
-    # todo tav don't work w/o push
-    push (@INC, "../../../../src/main/native/Source/WebCore/bindings/scripts");
     require preprocessor;
     $text = join('', applyPreprocessor($in, $defines, $preprocessor));
 

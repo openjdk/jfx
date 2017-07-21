@@ -32,11 +32,12 @@
 #include "JNIUtilityPrivate.h"
 #include "JavaInstanceJSC.h"
 #include "JobjectWrapper.h"
-#include "Logging.h"
 #include "runtime_array.h"
 #include "runtime_object.h"
 #include "runtime_root.h"
 #include <runtime/Error.h>
+
+#include "Logging.h"
 
 using namespace JSC;
 using namespace JSC::Bindings;
@@ -82,14 +83,14 @@ RootObject* JavaArray::rootObject() const
     return m_rootObject && m_rootObject->isValid() ? m_rootObject.get() : 0;
 }
 
-void JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) const
+bool JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) const
 {
     // Since javaArray() is WeakGlobalRef, creating a localref to safeguard instance() from GC
     JLObject jlinstance(javaArray(), true);
 
     if (!jlinstance) {
         LOG_ERROR("Could not get javaInstance for %p in JavaArray::setValueAt", (jobject)jlinstance);
-        return;
+        return false;
     }
 
     JNIEnv* env = getJNIEnv();
@@ -164,6 +165,7 @@ void JavaArray::setValueAt(ExecState* exec, unsigned index, JSValue aValue) cons
 
     if (javaClassName)
         free(const_cast<char*>(javaClassName));
+    return true;
 }
 
 JSValue JavaArray::valueAt(ExecState* exec, unsigned index) const

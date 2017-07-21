@@ -29,19 +29,19 @@
 #include "config.h"
 #include "JSSymbolTableObject.h"
 
-#include "JSGlobalObject.h"
-#include "JSLexicalEnvironment.h"
 #include "JSCInlines.h"
 #include "PropertyNameArray.h"
 
 namespace JSC {
+
+const ClassInfo JSSymbolTableObject::s_info = { "SymbolTableObject", &Base::s_info, nullptr, CREATE_METHOD_TABLE(JSSymbolTableObject) };
 
 void JSSymbolTableObject::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
-    visitor.append(&thisObject->m_symbolTable);
+    visitor.append(thisObject->m_symbolTable);
 }
 
 bool JSSymbolTableObject::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propertyName)
@@ -50,14 +50,14 @@ bool JSSymbolTableObject::deleteProperty(JSCell* cell, ExecState* exec, Property
     if (thisObject->symbolTable()->contains(propertyName.uid()))
         return false;
 
-    return JSObject::deleteProperty(thisObject, exec, propertyName);
+    return Base::deleteProperty(thisObject, exec, propertyName);
 }
 
 void JSSymbolTableObject::getOwnNonIndexPropertyNames(JSObject* object, ExecState* exec, PropertyNameArray& propertyNames, EnumerationMode mode)
 {
     JSSymbolTableObject* thisObject = jsCast<JSSymbolTableObject*>(object);
     {
-        ConcurrentJITLocker locker(thisObject->symbolTable()->m_lock);
+        ConcurrentJSLocker locker(thisObject->symbolTable()->m_lock);
         SymbolTable::Map::iterator end = thisObject->symbolTable()->end(locker);
         for (SymbolTable::Map::iterator it = thisObject->symbolTable()->begin(locker); it != end; ++it) {
             if (!(it->value.getAttributes() & DontEnum) || mode.includeDontEnumProperties()) {
@@ -68,7 +68,7 @@ void JSSymbolTableObject::getOwnNonIndexPropertyNames(JSObject* object, ExecStat
         }
     }
 
-    JSObject::getOwnNonIndexPropertyNames(thisObject, exec, propertyNames, mode);
+    Base::getOwnNonIndexPropertyNames(thisObject, exec, propertyNames, mode);
 }
 
 } // namespace JSC

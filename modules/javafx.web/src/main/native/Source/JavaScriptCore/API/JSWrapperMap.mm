@@ -27,7 +27,6 @@
 #import "JavaScriptCore.h"
 
 #if JSC_OBJC_API_ENABLED
-
 #import "APICast.h"
 #import "JSAPIWrapperObject.h"
 #import "JSCInlines.h"
@@ -38,13 +37,21 @@
 #import "ObjcRuntimeExtras.h"
 #import "WeakGCMap.h"
 #import "WeakGCMapInlines.h"
-#import <wtf/HashSet.h>
 #import <wtf/Vector.h>
 #import <wtf/spi/cocoa/NSMapTableSPI.h>
+#import <wtf/spi/darwin/dyldSPI.h>
 
 #include <mach-o/dyld.h>
 
-static const int32_t webkitFirstVersionWithInitConstructorSupport = 0x21A0400; // 538.4.0
+#if PLATFORM(APPLETV)
+#else
+static const int32_t firstJavaScriptCoreVersionWithInitConstructorSupport = 0x21A0400; // 538.4.0
+#if PLATFORM(IOS)
+static const uint32_t firstSDKVersionWithInitConstructorSupport = DYLD_IOS_VERSION_10_0;
+#elif PLATFORM(MAC)
+static const uint32_t firstSDKVersionWithInitConstructorSupport = 0xA0A00; // OSX 10.10.0
+#endif
+#endif
 
 @class JSObjCClassInfo;
 
@@ -632,9 +639,10 @@ id tryUnwrapObjcObject(JSGlobalContextRef context, JSValueRef value)
     JSObjectRef object = JSValueToObject(context, value, &exception);
     ASSERT(!exception);
     JSC::JSLockHolder locker(toJS(context));
-    if (toJS(object)->inherits(JSC::JSCallbackObject<JSC::JSAPIWrapperObject>::info()))
+    JSC::VM& vm = toJS(context)->vm();
+    if (toJS(object)->inherits(vm, JSC::JSCallbackObject<JSC::JSAPIWrapperObject>::info()))
         return (id)JSC::jsCast<JSC::JSAPIWrapperObject*>(toJS(object))->wrappedObject();
-    if (id target = tryUnwrapConstructor(object))
+    if (id target = tryUnwrapConstructor(&vm, object))
         return target;
     return nil;
 }
@@ -650,12 +658,23 @@ bool supportsInitMethodConstructors()
 #if PLATFORM(APPLETV)
     // There are no old clients on Apple TV, so there's no need for backwards compatibility.
     return true;
-#endif
+#else
+    // First check to see the version of JavaScriptCore we directly linked against.
+    static int32_t versionOfLinkTimeJavaScriptCore = 0;
+    if (!versionOfLinkTimeJavaScriptCore)
+        versionOfLinkTimeJavaScriptCore = NSVersionOfLinkTimeLibrary("JavaScriptCore");
+    // Only do the link time version comparison if we linked directly with JavaScriptCore
+    if (versionOfLinkTimeJavaScriptCore != -1)
+        return versionOfLinkTimeJavaScriptCore >= firstJavaScriptCoreVersionWithInitConstructorSupport;
 
-    static int32_t versionOfLinkTimeLibrary = 0;
-    if (!versionOfLinkTimeLibrary)
-        versionOfLinkTimeLibrary = NSVersionOfLinkTimeLibrary("JavaScriptCore");
-    return versionOfLinkTimeLibrary >= webkitFirstVersionWithInitConstructorSupport;
+    // If we didn't link directly with JavaScriptCore,
+    // base our check on what SDK was used to build the application.
+    static uint32_t programSDKVersion = 0;
+    if (!programSDKVersion)
+        programSDKVersion = dyld_get_program_sdk_version();
+
+    return programSDKVersion >= firstSDKVersionWithInitConstructorSupport;
+#endif
 }
 
 Protocol *getJSExportProtocol()

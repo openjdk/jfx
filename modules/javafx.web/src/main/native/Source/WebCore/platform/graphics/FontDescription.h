@@ -26,13 +26,12 @@
 #define FontDescription_h
 
 #include "CSSValueKeywords.h"
-#include "FontFeatureSettings.h"
+#include "FontTaggedSettings.h"
 #include "TextFlags.h"
 #include "WebKitFontFamilyNames.h"
 #include <unicode/uscript.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RefCountedArray.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -60,6 +59,7 @@ public:
     NonCJKGlyphOrientation nonCJKGlyphOrientation() const { return static_cast<NonCJKGlyphOrientation>(m_nonCJKGlyphOrientation); }
     FontWidthVariant widthVariant() const { return static_cast<FontWidthVariant>(m_widthVariant); }
     const FontFeatureSettings& featureSettings() const { return m_featureSettings; }
+    const FontVariationSettings& variationSettings() const { return m_variationSettings; }
     FontSynthesis fontSynthesis() const { return static_cast<FontSynthesis>(m_fontSynthesis); }
     FontVariantLigatures variantCommonLigatures() const { return static_cast<FontVariantLigatures>(m_variantCommonLigatures); }
     FontVariantLigatures variantDiscretionaryLigatures() const { return static_cast<FontVariantLigatures>(m_variantDiscretionaryLigatures); }
@@ -106,6 +106,9 @@ public:
     void setWidthVariant(FontWidthVariant widthVariant) { m_widthVariant = widthVariant; } // Make sure new callers of this sync with FontPlatformData::isForTextCombine()!
     void setLocale(const AtomicString&);
     void setFeatureSettings(FontFeatureSettings&& settings) { m_featureSettings = WTFMove(settings); }
+#if ENABLE(VARIATION_FONTS)
+    void setVariationSettings(FontVariationSettings&& settings) { m_variationSettings = WTFMove(settings); }
+#endif
     void setFontSynthesis(FontSynthesis fontSynthesis) { m_fontSynthesis = fontSynthesis; }
     void setVariantCommonLigatures(FontVariantLigatures variant) { m_variantCommonLigatures = static_cast<unsigned>(variant); }
     void setVariantDiscretionaryLigatures(FontVariantLigatures variant) { m_variantDiscretionaryLigatures = static_cast<unsigned>(variant); }
@@ -126,7 +129,9 @@ public:
     FontTraitsMask traitsMask() const;
 
 private:
+    // FIXME: Investigate moving these into their own object on the heap (to save memory).
     FontFeatureSettings m_featureSettings;
+    FontVariationSettings m_variationSettings;
     AtomicString m_locale;
 
     float m_computedSize { 0 }; // Computed size adjusted for the minimum font size and the zoom factor.
@@ -138,7 +143,7 @@ private:
     unsigned m_renderingMode : 1; // Used to switch between CG and GDI text on Windows.
     unsigned m_textRendering : 2; // TextRenderingMode
     unsigned m_script : 7; // Used to help choose an appropriate font for generic font families.
-    unsigned m_fontSynthesis : 2; // FontSynthesis type
+    unsigned m_fontSynthesis : 3; // FontSynthesis type
     unsigned m_variantCommonLigatures : 2; // FontVariantLigatures
     unsigned m_variantDiscretionaryLigatures : 2; // FontVariantLigatures
     unsigned m_variantHistoricalLigatures : 2; // FontVariantLigatures
@@ -168,6 +173,9 @@ inline bool FontDescription::operator==(const FontDescription& other) const
         && m_widthVariant == other.m_widthVariant
         && m_locale == other.m_locale
         && m_featureSettings == other.m_featureSettings
+#if ENABLE(VARIATION_FONTS)
+        && m_variationSettings == other.m_variationSettings
+#endif
         && m_fontSynthesis == other.m_fontSynthesis
         && m_variantCommonLigatures == other.m_variantCommonLigatures
         && m_variantDiscretionaryLigatures == other.m_variantDiscretionaryLigatures
@@ -189,7 +197,7 @@ inline bool FontDescription::operator==(const FontDescription& other) const
 // FIXME: Move to a file of its own.
 class FontCascadeDescription : public FontDescription {
 public:
-    FontCascadeDescription();
+    WEBCORE_EXPORT FontCascadeDescription();
 
     bool operator==(const FontCascadeDescription&) const;
     bool operator!=(const FontCascadeDescription& other) const { return !(*this == other); }
@@ -239,7 +247,7 @@ public:
     void setFontSmoothing(FontSmoothingMode smoothing) { m_fontSmoothing = smoothing; }
     void setIsSpecifiedFont(bool isSpecifiedFont) { m_isSpecifiedFont = isSpecifiedFont; }
 
-#if ENABLE(IOS_TEXT_AUTOSIZING)
+#if ENABLE(TEXT_AUTOSIZING)
     bool familiesEqualForTextAutoSizing(const FontCascadeDescription& other) const;
 
     bool equalForTextAutoSizing(const FontCascadeDescription& other) const
@@ -257,7 +265,7 @@ public:
     static Kerning initialKerning() { return Kerning::Auto; }
     static FontSmoothingMode initialFontSmoothing() { return AutoSmoothing; }
     static TextRenderingMode initialTextRenderingMode() { return AutoTextRendering; }
-    static FontSynthesis initialFontSynthesis() { return FontSynthesisWeight | FontSynthesisStyle; }
+    static FontSynthesis initialFontSynthesis() { return FontSynthesisWeight | FontSynthesisStyle | FontSynthesisSmallCaps; }
     static FontVariantPosition initialVariantPosition() { return FontVariantPosition::Normal; }
     static FontVariantCaps initialVariantCaps() { return FontVariantCaps::Normal; }
     static FontVariantAlternates initialVariantAlternates() { return FontVariantAlternates::Normal; }

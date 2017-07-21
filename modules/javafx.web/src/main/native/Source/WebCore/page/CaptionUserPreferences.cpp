@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,7 @@
 #include "UserContentTypes.h"
 #include "UserStyleSheet.h"
 #include "UserStyleSheetTypes.h"
+#include <heap/HeapInlines.h>
 #include <runtime/JSCellInlines.h>
 #include <runtime/StructureInlines.h>
 #include <wtf/NeverDestroyed.h>
@@ -48,8 +49,6 @@ CaptionUserPreferences::CaptionUserPreferences(PageGroup& group)
     : m_pageGroup(group)
     , m_displayMode(ForcedOnly)
     , m_timer(*this, &CaptionUserPreferences::timerFired)
-    , m_testingMode(false)
-    , m_havePreferences(false)
 {
 }
 
@@ -98,9 +97,17 @@ void CaptionUserPreferences::setCaptionDisplayMode(CaptionUserPreferences::Capti
     notify();
 }
 
+Page* CaptionUserPreferences::currentPage() const
+{
+    if (m_pageGroup.pages().isEmpty())
+        return nullptr;
+
+    return *(m_pageGroup.pages().begin());
+}
+
 bool CaptionUserPreferences::userPrefersCaptions() const
 {
-    Page* page = *(m_pageGroup.pages().begin());
+    Page* page = currentPage();
     if (!page)
         return false;
 
@@ -109,7 +116,7 @@ bool CaptionUserPreferences::userPrefersCaptions() const
 
 void CaptionUserPreferences::setUserPrefersCaptions(bool preference)
 {
-    Page* page = *(m_pageGroup.pages().begin());
+    Page* page = currentPage();
     if (!page)
         return;
 
@@ -119,7 +126,7 @@ void CaptionUserPreferences::setUserPrefersCaptions(bool preference)
 
 bool CaptionUserPreferences::userPrefersSubtitles() const
 {
-    Page* page = *(pageGroup().pages().begin());
+    Page* page = currentPage();
     if (!page)
         return false;
 
@@ -128,7 +135,7 @@ bool CaptionUserPreferences::userPrefersSubtitles() const
 
 void CaptionUserPreferences::setUserPrefersSubtitles(bool preference)
 {
-    Page* page = *(m_pageGroup.pages().begin());
+    Page* page = currentPage();
     if (!page)
         return;
 
@@ -138,7 +145,7 @@ void CaptionUserPreferences::setUserPrefersSubtitles(bool preference)
 
 bool CaptionUserPreferences::userPrefersTextDescriptions() const
 {
-    Page* page = *(m_pageGroup.pages().begin());
+    Page* page = currentPage();
     if (!page)
         return false;
 
@@ -147,7 +154,7 @@ bool CaptionUserPreferences::userPrefersTextDescriptions() const
 
 void CaptionUserPreferences::setUserPrefersTextDescriptions(bool preference)
 {
-    Page* page = *(m_pageGroup.pages().begin());
+    Page* page = currentPage();
     if (!page)
         return;
 
@@ -196,11 +203,11 @@ static String trackDisplayName(TextTrack* track)
     if (track == TextTrack::captionMenuAutomaticItem())
         return textTrackAutomaticMenuItemText();
 
-    if (track->label().isEmpty() && track->language().isEmpty())
+    if (track->label().isEmpty() && track->validBCP47Language().isEmpty())
         return textTrackNoLabelText();
     if (!track->label().isEmpty())
         return track->label();
-    return track->language();
+    return track->validBCP47Language();
 }
 
 String CaptionUserPreferences::displayNameForTrack(TextTrack* track) const
@@ -216,12 +223,12 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTra
 
     for (unsigned i = 0, length = trackList->length(); i < length; ++i) {
         TextTrack* track = trackList->item(i);
-        const AtomicString& kind = track->kind();
-        if (kind == TextTrack::captionsKeyword() || kind == TextTrack::descriptionsKeyword() || kind == TextTrack::subtitlesKeyword())
+        auto kind = track->kind();
+        if (kind == TextTrack::Kind::Captions || kind == TextTrack::Kind::Descriptions || kind == TextTrack::Kind::Subtitles)
             tracksForMenu.append(track);
     }
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](const RefPtr<TextTrack>& a, const RefPtr<TextTrack>& b) {
+    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](auto& a, auto& b) {
         return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
     });
 
@@ -233,11 +240,11 @@ Vector<RefPtr<TextTrack>> CaptionUserPreferences::sortedTrackListForMenu(TextTra
 
 static String trackDisplayName(AudioTrack* track)
 {
-    if (track->label().isEmpty() && track->language().isEmpty())
+    if (track->label().isEmpty() && track->validBCP47Language().isEmpty())
         return audioTrackNoLabelText();
     if (!track->label().isEmpty())
         return track->label();
-    return track->language();
+    return track->validBCP47Language();
 }
 
 String CaptionUserPreferences::displayNameForTrack(AudioTrack* track) const
@@ -256,7 +263,7 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferences::sortedTrackListForMenu(AudioT
         tracksForMenu.append(track);
     }
 
-    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](const RefPtr<AudioTrack>& a, const RefPtr<AudioTrack>& b) {
+    std::sort(tracksForMenu.begin(), tracksForMenu.end(), [](auto& a, auto& b) {
         return codePointCompare(trackDisplayName(a.get()), trackDisplayName(b.get())) < 0;
     });
 
@@ -265,7 +272,7 @@ Vector<RefPtr<AudioTrack>> CaptionUserPreferences::sortedTrackListForMenu(AudioT
 
 int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaElement*) const
 {
-    if (track->kind() != TextTrack::captionsKeyword() && track->kind() != TextTrack::subtitlesKeyword())
+    if (track->kind() != TextTrack::Kind::Captions && track->kind() != TextTrack::Kind::Subtitles)
         return 0;
 
     if (!userPrefersSubtitles() && !userPrefersCaptions())
@@ -276,11 +283,11 @@ int CaptionUserPreferences::textTrackSelectionScore(TextTrack* track, HTMLMediaE
 
 int CaptionUserPreferences::textTrackLanguageSelectionScore(TextTrack* track, const Vector<String>& preferredLanguages) const
 {
-    if (track->language().isEmpty())
+    if (track->validBCP47Language().isEmpty())
         return 0;
 
     bool exactMatch;
-    size_t languageMatchIndex = indexOfBestMatchingLanguageInList(track->language(), preferredLanguages, exactMatch);
+    size_t languageMatchIndex = indexOfBestMatchingLanguageInList(track->validBCP47Language(), preferredLanguages, exactMatch);
     if (languageMatchIndex >= preferredLanguages.size())
         return 0;
 
@@ -293,30 +300,14 @@ int CaptionUserPreferences::textTrackLanguageSelectionScore(TextTrack* track, co
 void CaptionUserPreferences::setCaptionsStyleSheetOverride(const String& override)
 {
     m_captionsStyleSheetOverride = override;
-    updateCaptionStyleSheetOveride();
+    updateCaptionStyleSheetOverride();
 }
 
-void CaptionUserPreferences::updateCaptionStyleSheetOveride()
+void CaptionUserPreferences::updateCaptionStyleSheetOverride()
 {
-    // Identify our override style sheet with a unique URL - a new scheme and a UUID.
-    static NeverDestroyed<URL> captionsStyleSheetURL(ParsedURLString, "user-captions-override:01F6AF12-C3B0-4F70-AF5E-A3E00234DC23");
-
-    auto& pages = m_pageGroup.pages();
-    for (auto& page : pages) {
-        if (auto* pageUserContentController = page->userContentController())
-            pageUserContentController->removeUserStyleSheet(mainThreadNormalWorld(), captionsStyleSheetURL);
-    }
-
     String captionsOverrideStyleSheet = captionsStyleSheetOverride();
-    if (captionsOverrideStyleSheet.isEmpty())
-        return;
-
-    for (auto& page : pages) {
-        if (auto* pageUserContentController = page->userContentController()) {
-            auto userStyleSheet = std::make_unique<UserStyleSheet>(captionsOverrideStyleSheet, captionsStyleSheetURL, Vector<String>(), Vector<String>(), InjectInAllFrames, UserStyleAuthorLevel);
-            pageUserContentController->addUserStyleSheet(mainThreadNormalWorld(), WTFMove(userStyleSheet), InjectInExistingDocuments);
-        }
-    }
+    for (auto& page : m_pageGroup.pages())
+        page->setCaptionUserPreferencesStyleSheet(captionsOverrideStyleSheet);
 }
 
 String CaptionUserPreferences::primaryAudioTrackLanguageOverride() const

@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SplitTextNodeContainingElementCommand_h
-#define SplitTextNodeContainingElementCommand_h
+#pragma once
 
 #include "CompositeEditCommand.h"
 
@@ -40,12 +39,10 @@ public:
 private:
     SplitTextNodeContainingElementCommand(PassRefPtr<Text>, int offset);
 
-    virtual void doApply();
+    void doApply() override;
 
     RefPtr<Text> m_text;
     int m_offset;
 };
 
 } // namespace WebCore
-
-#endif // SplitTextNodeContainingElementCommand_h

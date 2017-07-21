@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@
 
 namespace JSC { namespace DFG {
 
-ArrayMode ArrayMode::fromObserved(const ConcurrentJITLocker& locker, ArrayProfile* profile, Array::Action action, bool makeSafe)
+ArrayMode ArrayMode::fromObserved(const ConcurrentJSLocker& locker, ArrayProfile* profile, Array::Action action, bool makeSafe)
 {
     Array::Class nonArray;
     if (profile->usesOriginalArrayStructures(locker))
@@ -150,6 +150,14 @@ ArrayMode ArrayMode::fromObserved(const ConcurrentJITLocker& locker, ArrayProfil
     }
 }
 
+static bool canBecomeGetArrayLength(Graph& graph, Node* node)
+{
+    if (node->op() != GetById)
+        return false;
+    auto uid = graph.identifiers()[node->identifierNumber()];
+    return uid == graph.m_vm.propertyNames->length.impl();
+}
+
 ArrayMode ArrayMode::refine(
     Graph& graph, Node* node,
     SpeculatedType base, SpeculatedType index, SpeculatedType value) const
@@ -192,13 +200,14 @@ ArrayMode ArrayMode::refine(
         // If we have an OriginalArray and the JSArray prototype chain is sane,
         // any indexed access always return undefined. We have a fast path for that.
         JSGlobalObject* globalObject = graph.globalObjectFor(node->origin.semantic);
-        if (node->op() == GetByVal
+        if ((node->op() == GetByVal || canBecomeGetArrayLength(graph, node))
             && arrayClass() == Array::OriginalArray
             && globalObject->arrayPrototypeChainIsSane()
             && !graph.hasExitSite(node->origin.semantic, OutOfBounds)) {
             graph.watchpoints().addLazily(globalObject->arrayPrototype()->structure()->transitionWatchpointSet());
             graph.watchpoints().addLazily(globalObject->objectPrototype()->structure()->transitionWatchpointSet());
-            return withSpeculation(Array::SaneChain);
+            if (globalObject->arrayPrototypeChainIsSane())
+                return withSpeculation(Array::SaneChain);
         }
         return ArrayMode(Array::Generic);
     }
@@ -322,20 +331,20 @@ Structure* ArrayMode::originalArrayStructure(Graph& graph, const CodeOrigin& cod
             return globalObject->originalArrayStructureForIndexingType(ArrayWithArrayStorage);
         default:
             CRASH();
-            return 0;
+            return nullptr;
         }
     }
 
     case Array::OriginalNonArray: {
         TypedArrayType type = typedArrayType();
         if (type == NotTypedArray)
-            return 0;
+            return nullptr;
 
-        return globalObject->typedArrayStructure(type);
+        return globalObject->typedArrayStructureConcurrently(type);
     }
 
     default:
-        return 0;
+        return nullptr;
     }
 }
 
@@ -351,12 +360,12 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
         if (value.m_structure.isTop())
             return false;
         for (unsigned i = value.m_structure.size(); i--;) {
-            Structure* structure = value.m_structure[i];
+            RegisteredStructure structure = value.m_structure[i];
             if ((structure->indexingType() & IndexingShapeMask) != shape)
                 return false;
             if (!(structure->indexingType() & IsArray))
                 return false;
-            if (!graph.globalObjectFor(node->origin.semantic)->isOriginalArrayStructure(structure))
+            if (!graph.globalObjectFor(node->origin.semantic)->isOriginalArrayStructure(structure.get()))
                 return false;
         }
         return true;
@@ -368,7 +377,7 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
         if (value.m_structure.isTop())
             return false;
         for (unsigned i = value.m_structure.size(); i--;) {
-            Structure* structure = value.m_structure[i];
+            RegisteredStructure structure = value.m_structure[i];
             if ((structure->indexingType() & IndexingShapeMask) != shape)
                 return false;
             if (!(structure->indexingType() & IsArray))
@@ -383,7 +392,7 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
         if (value.m_structure.isTop())
             return false;
         for (unsigned i = value.m_structure.size(); i--;) {
-            Structure* structure = value.m_structure[i];
+            RegisteredStructure structure = value.m_structure[i];
             if ((structure->indexingType() & IndexingShapeMask) != shape)
                 return false;
         }
@@ -431,7 +440,7 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
             if (value.m_structure.isTop())
                 return false;
             for (unsigned i = value.m_structure.size(); i--;) {
-                Structure* structure = value.m_structure[i];
+                RegisteredStructure structure = value.m_structure[i];
                 if (!hasAnyArrayStorage(structure->indexingType()))
                     return false;
                 if (!(structure->indexingType() & IsArray))
@@ -446,7 +455,7 @@ bool ArrayMode::alreadyChecked(Graph& graph, Node* node, const AbstractValue& va
             if (value.m_structure.isTop())
                 return false;
             for (unsigned i = value.m_structure.size(); i--;) {
-                Structure* structure = value.m_structure[i];
+                RegisteredStructure structure = value.m_structure[i];
                 if (!hasAnyArrayStorage(structure->indexingType()))
                     return false;
             }
@@ -724,7 +733,7 @@ bool ArrayMode::permitsBoundsCheckLowering() const
 
 void ArrayMode::dump(PrintStream& out) const
 {
-    out.print(type(), arrayClass(), speculation(), conversion());
+    out.print(type(), "+", arrayClass(), "+", speculation(), "+", conversion());
 }
 
 } } // namespace JSC::DFG

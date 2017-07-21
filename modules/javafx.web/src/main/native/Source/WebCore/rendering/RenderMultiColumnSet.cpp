@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-RenderMultiColumnSet::RenderMultiColumnSet(RenderFlowThread& flowThread, Ref<RenderStyle>&& style)
+RenderMultiColumnSet::RenderMultiColumnSet(RenderFlowThread& flowThread, RenderStyle&& style)
     : RenderRegionSet(flowThread.document(), WTFMove(style), flowThread)
     , m_computedColumnCount(1)
     , m_computedColumnWidth(0)
@@ -91,7 +91,7 @@ RenderObject* RenderMultiColumnSet::lastRendererInFlowThread() const
     return flowThread()->lastLeafChild();
 }
 
-static bool precedesRenderer(RenderObject* renderer, RenderObject* boundary)
+static bool precedesRenderer(const RenderObject* renderer, const RenderObject* boundary)
 {
     for (; renderer; renderer = renderer->nextInPreOrder()) {
         if (renderer == boundary)
@@ -100,11 +100,11 @@ static bool precedesRenderer(RenderObject* renderer, RenderObject* boundary)
     return false;
 }
 
-bool RenderMultiColumnSet::containsRendererInFlowThread(RenderObject* renderer) const
+bool RenderMultiColumnSet::containsRendererInFlowThread(const RenderObject& renderer) const
 {
     if (!previousSiblingMultiColumnSet() && !nextSiblingMultiColumnSet()) {
         // There is only one set. This is easy, then.
-        return renderer->isDescendantOf(m_flowThread);
+        return renderer.isDescendantOf(m_flowThread);
     }
 
     RenderObject* firstRenderer = firstRendererInFlowThread();
@@ -113,7 +113,7 @@ bool RenderMultiColumnSet::containsRendererInFlowThread(RenderObject* renderer) 
     ASSERT(lastRenderer);
 
     // This is SLOW! But luckily very uncommon.
-    return precedesRenderer(firstRenderer, renderer) && precedesRenderer(renderer, lastRenderer);
+    return precedesRenderer(firstRenderer, &renderer) && precedesRenderer(&renderer, lastRenderer);
 }
 
 void RenderMultiColumnSet::setLogicalTopInFlowThread(LayoutUnit logicalTop)
@@ -234,7 +234,7 @@ LayoutUnit RenderMultiColumnSet::calculateBalancedHeight(bool initial) const
         return m_computedColumnHeight;
     }
 
-    if (forcedBreaksCount() > 1 && forcedBreaksCount() >= computedColumnCount()) {
+    if (forcedBreaksCount() >= computedColumnCount()) {
         // Too many forced breaks to allow any implicit breaks. Initial balancing should already
         // have set a good height. There's nothing more we should do.
         return m_computedColumnHeight;
@@ -402,10 +402,9 @@ void RenderMultiColumnSet::layout()
     }
 }
 
-void RenderMultiColumnSet::computeLogicalHeight(LayoutUnit, LayoutUnit logicalTop, LogicalExtentComputedValues& computedValues) const
+RenderBox::LogicalExtentComputedValues RenderMultiColumnSet::computeLogicalHeight(LayoutUnit, LayoutUnit logicalTop) const
 {
-    computedValues.m_extent = m_availableColumnHeight;
-    computedValues.m_position = logicalTop;
+    return { m_availableColumnHeight, logicalTop, ComputedMarginValues() };
 }
 
 LayoutUnit RenderMultiColumnSet::calculateMaxColumnHeight() const
@@ -415,7 +414,7 @@ LayoutUnit RenderMultiColumnSet::calculateMaxColumnHeight() const
     LayoutUnit availableHeight = multiColumnFlowThread()->columnHeightAvailable();
     LayoutUnit maxColumnHeight = availableHeight ? availableHeight : RenderFlowThread::maxLogicalHeight();
     if (!multicolStyle.logicalMaxHeight().isUndefined())
-        maxColumnHeight = std::min(maxColumnHeight, multicolBlock->computeContentLogicalHeight(MaxSize, multicolStyle.logicalMaxHeight(), Nullopt).valueOr(maxColumnHeight));
+        maxColumnHeight = std::min(maxColumnHeight, multicolBlock->computeContentLogicalHeight(MaxSize, multicolStyle.logicalMaxHeight(), std::nullopt).value_or(maxColumnHeight));
     return heightAdjustedForSetOffset(maxColumnHeight);
 }
 
@@ -552,18 +551,19 @@ LayoutRect RenderMultiColumnSet::flowThreadPortionOverflowRect(const LayoutRect&
     // top/bottom unless it's the first/last column.
     LayoutRect overflowRect = overflowRectForFlowThreadPortion(portionRect, isFirstColumn && isFirstRegion(), isLastColumn && isLastRegion(), VisualOverflow);
 
-    // Avoid overflowing into neighboring columns, by clipping in the middle of adjacent column
-    // gaps. Also make sure that we avoid rounding errors.
-    if (isHorizontalWritingMode()) {
-        if (!isLeftmostColumn)
-            overflowRect.shiftXEdgeTo(portionRect.x() - colGap / 2);
-        if (!isRightmostColumn)
-            overflowRect.shiftMaxXEdgeTo(portionRect.maxX() + colGap - colGap / 2);
-    } else {
-        if (!isLeftmostColumn)
-            overflowRect.shiftYEdgeTo(portionRect.y() - colGap / 2);
-        if (!isRightmostColumn)
-            overflowRect.shiftMaxYEdgeTo(portionRect.maxY() + colGap - colGap / 2);
+    // For RenderViews only (i.e., iBooks), avoid overflowing into neighboring columns, by clipping in the middle of adjacent column gaps. Also make sure that we avoid rounding errors.
+    if (&view() == parent()) {
+        if (isHorizontalWritingMode()) {
+            if (!isLeftmostColumn)
+                overflowRect.shiftXEdgeTo(portionRect.x() - colGap / 2);
+            if (!isRightmostColumn)
+                overflowRect.shiftMaxXEdgeTo(portionRect.maxX() + colGap - colGap / 2);
+        } else {
+            if (!isLeftmostColumn)
+                overflowRect.shiftYEdgeTo(portionRect.y() - colGap / 2);
+            if (!isRightmostColumn)
+                overflowRect.shiftMaxYEdgeTo(portionRect.maxY() + colGap - colGap / 2);
+        }
     }
     return overflowRect;
 }

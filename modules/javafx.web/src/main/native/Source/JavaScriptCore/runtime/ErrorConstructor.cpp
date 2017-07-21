@@ -40,40 +40,42 @@ ErrorConstructor::ErrorConstructor(VM& vm, Structure* structure)
 
 void ErrorConstructor::finishCreation(VM& vm, ErrorPrototype* errorPrototype)
 {
-    Base::finishCreation(vm, errorPrototype->classInfo()->className);
+    Base::finishCreation(vm, ASCIILiteral("Error"));
     // ECMA 15.11.3.1 Error.prototype
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, errorPrototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), DontDelete | ReadOnly | DontEnum);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), DontEnum | ReadOnly);
 }
 
 // ECMA 15.9.3
 
 EncodedJSValue JSC_HOST_CALL Interpreter::constructWithErrorConstructor(ExecState* exec)
 {
-    JSValue message = exec->argumentCount() ? exec->argument(0) : jsUndefined();
-    Structure* errorStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), asInternalFunction(exec->callee())->globalObject()->errorStructure());
-    if (exec->hadException())
-        return JSValue::encode(JSValue());
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSValue message = exec->argument(0);
+    Structure* errorStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), asInternalFunction(exec->jsCallee())->globalObject()->errorStructure());
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+    scope.release();
     return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, nullptr, TypeNothing, false));
 }
 
 ConstructType ErrorConstructor::getConstructData(JSCell*, ConstructData& constructData)
 {
     constructData.native.function = Interpreter::constructWithErrorConstructor;
-    return ConstructTypeHost;
+    return ConstructType::Host;
 }
 
 EncodedJSValue JSC_HOST_CALL Interpreter::callErrorConstructor(ExecState* exec)
 {
-    JSValue message = exec->argumentCount() ? exec->argument(0) : jsUndefined();
-    Structure* errorStructure = asInternalFunction(exec->callee())->globalObject()->errorStructure();
+    JSValue message = exec->argument(0);
+    Structure* errorStructure = asInternalFunction(exec->jsCallee())->globalObject()->errorStructure();
     return JSValue::encode(ErrorInstance::create(exec, errorStructure, message, nullptr, TypeNothing, false));
 }
 
 CallType ErrorConstructor::getCallData(JSCell*, CallData& callData)
 {
     callData.native.function = Interpreter::callErrorConstructor;
-    return CallTypeHost;
+    return CallType::Host;
 }
 
 } // namespace JSC

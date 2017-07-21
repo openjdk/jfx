@@ -26,8 +26,7 @@
 #include "config.h"
 #include "ScriptedAnimationController.h"
 
-#if ENABLE(REQUEST_ANIMATION_FRAME)
-
+#include "DOMWindow.h"
 #include "DisplayRefreshMonitor.h"
 #include "DisplayRefreshMonitorManager.h"
 #include "Document.h"
@@ -36,9 +35,11 @@
 #include "InspectorInstrumentation.h"
 #include "Logging.h"
 #include "MainFrame.h"
+#include "Page.h"
 #include "RequestAnimationFrameCallback.h"
 #include "Settings.h"
 #include <wtf/Ref.h>
+#include <wtf/SystemTracing.h>
 
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
 #include <algorithm>
@@ -62,6 +63,11 @@ ScriptedAnimationController::ScriptedAnimationController(Document* document, Pla
 
 ScriptedAnimationController::~ScriptedAnimationController()
 {
+}
+
+bool ScriptedAnimationController::requestAnimationFrameEnabled() const
+{
+    return m_document && m_document->settings().requestAnimationFrameEnabled();
 }
 
 void ScriptedAnimationController::suspend()
@@ -107,12 +113,12 @@ bool ScriptedAnimationController::isThrottled() const
 #endif
 }
 
-ScriptedAnimationController::CallbackId ScriptedAnimationController::registerCallback(PassRefPtr<RequestAnimationFrameCallback> callback)
+ScriptedAnimationController::CallbackId ScriptedAnimationController::registerCallback(Ref<RequestAnimationFrameCallback>&& callback)
 {
     ScriptedAnimationController::CallbackId id = ++m_nextCallbackId;
     callback->m_firedOrCancelled = false;
     callback->m_id = id;
-    m_callbacks.append(callback);
+    m_callbacks.append(WTFMove(callback));
 
     InspectorInstrumentation::didRequestAnimationFrame(m_document, id);
 
@@ -133,13 +139,15 @@ void ScriptedAnimationController::cancelCallback(CallbackId id)
     }
 }
 
-void ScriptedAnimationController::serviceScriptedAnimations(double monotonicTimeNow)
+void ScriptedAnimationController::serviceScriptedAnimations(double timestamp)
 {
-    if (!m_callbacks.size() || m_suspendCount || (m_document->settings() && !m_document->settings()->requestAnimationFrameEnabled()))
+    if (!m_callbacks.size() || m_suspendCount || !requestAnimationFrameEnabled())
         return;
 
-    double highResNowMs = 1000.0 * m_document->loader()->timing().monotonicTimeToZeroBasedDocumentTime(monotonicTimeNow);
-    double legacyHighResNowMs = 1000.0 * m_document->loader()->timing().monotonicTimeToPseudoWallTime(monotonicTimeNow);
+    TraceScope tracingScope(RAFCallbackStart, RAFCallbackEnd);
+
+    double highResNowMs = 1000 * timestamp;
+    double legacyHighResNowMs = 1000 * (timestamp + m_document->loader()->timing().referenceWallTime().secondsSinceEpoch().seconds());
 
     // First, generate a list of callbacks to consider.  Callbacks registered from this point
     // on are considered only for the "next" frame, not this one.
@@ -147,7 +155,7 @@ void ScriptedAnimationController::serviceScriptedAnimations(double monotonicTime
 
     // Invoking callbacks may detach elements from our document, which clears the document's
     // reference to us, so take a defensive reference.
-    Ref<ScriptedAnimationController> protect(*this);
+    Ref<ScriptedAnimationController> protectedThis(*this);
 
     for (auto& callback : callbacks) {
         if (!callback->m_firedOrCancelled) {
@@ -175,7 +183,7 @@ void ScriptedAnimationController::serviceScriptedAnimations(double monotonicTime
 
 void ScriptedAnimationController::windowScreenDidChange(PlatformDisplayID displayID)
 {
-    if (m_document->settings() && !m_document->settings()->requestAnimationFrameEnabled())
+    if (!requestAnimationFrameEnabled())
         return;
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     DisplayRefreshMonitorManager::sharedManager().windowScreenDidChange(displayID, *this);
@@ -186,7 +194,7 @@ void ScriptedAnimationController::windowScreenDidChange(PlatformDisplayID displa
 
 void ScriptedAnimationController::scheduleAnimation()
 {
-    if (!m_document || (m_document->settings() && !m_document->settings()->requestAnimationFrameEnabled()))
+    if (!requestAnimationFrameEnabled())
         return;
 
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
@@ -207,7 +215,7 @@ void ScriptedAnimationController::scheduleAnimation()
         animationInterval = MinimumThrottledAnimationInterval;
 #endif
 
-    double scheduleDelay = std::max<double>(animationInterval - (monotonicallyIncreasingTime() - m_lastAnimationFrameTimeMonotonic), 0);
+    double scheduleDelay = std::max<double>(animationInterval - (m_document->domWindow()->nowTimestamp() - m_lastAnimationFrameTimestamp), 0);
     m_animationTimer.startOneShot(scheduleDelay);
 #else
     if (FrameView* frameView = m_document->view())
@@ -218,13 +226,13 @@ void ScriptedAnimationController::scheduleAnimation()
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
 void ScriptedAnimationController::animationTimerFired()
 {
-    m_lastAnimationFrameTimeMonotonic = monotonicallyIncreasingTime();
-    serviceScriptedAnimations(m_lastAnimationFrameTimeMonotonic);
+    m_lastAnimationFrameTimestamp = m_document->domWindow()->nowTimestamp();
+    serviceScriptedAnimations(m_lastAnimationFrameTimestamp);
 }
 #if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-void ScriptedAnimationController::displayRefreshFired(double monotonicTimeNow)
+void ScriptedAnimationController::displayRefreshFired()
 {
-    serviceScriptedAnimations(monotonicTimeNow);
+    serviceScriptedAnimations(m_document->domWindow()->nowTimestamp());
 }
 #endif
 #endif
@@ -243,7 +251,4 @@ RefPtr<DisplayRefreshMonitor> ScriptedAnimationController::createDisplayRefreshM
 }
 #endif
 
-
 }
-
-#endif

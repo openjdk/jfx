@@ -45,7 +45,7 @@ XSLImportRule::~XSLImportRule()
         m_styleSheet->setParentStyleSheet(nullptr);
 
     if (m_cachedSheet)
-        m_cachedSheet->removeClient(this);
+        m_cachedSheet->removeClient(*this);
 }
 
 void XSLImportRule::setXSLStyleSheet(const String& href, const URL& baseURL, const String& sheet)
@@ -98,13 +98,15 @@ void XSLImportRule::loadSheet()
             return;
     }
 
-    CachedResourceRequest request(ResourceRequest(cachedResourceLoader->document()->completeURL(absHref)));
     if (m_cachedSheet)
-        m_cachedSheet->removeClient(this);
-    m_cachedSheet = cachedResourceLoader->requestXSLStyleSheet(request);
+        m_cachedSheet->removeClient(*this);
+
+    auto options = CachedResourceLoader::defaultCachedResourceOptions();
+    options.mode = FetchOptions::Mode::SameOrigin;
+    m_cachedSheet = cachedResourceLoader->requestXSLStyleSheet({ResourceRequest(cachedResourceLoader->document()->completeURL(absHref)), options});
 
     if (m_cachedSheet) {
-        m_cachedSheet->addClient(this);
+        m_cachedSheet->addClient(*this);
 
         // If the imported sheet is in the cache, then setXSLStyleSheet gets called,
         // and the sheet even gets parsed (via parseString).  In this case we have

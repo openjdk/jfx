@@ -32,15 +32,22 @@
 
 namespace WebCore {
 
-RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, Ref<RenderStyle>&& style)
+RenderTextControlMultiLine::RenderTextControlMultiLine(HTMLTextAreaElement& element, RenderStyle&& style)
     : RenderTextControl(element, WTFMove(style))
 {
 }
 
 RenderTextControlMultiLine::~RenderTextControlMultiLine()
 {
-    if (textAreaElement().inDocument())
+    // Do not add any code here. Add it to willBeDestroyed() instead.
+}
+
+void RenderTextControlMultiLine::willBeDestroyed()
+{
+    if (textAreaElement().isConnected())
         textAreaElement().rendererWillBeDestroyed();
+
+    RenderTextControl::willBeDestroyed();
 }
 
 HTMLTextAreaElement& RenderTextControlMultiLine::textAreaElement() const
@@ -92,7 +99,7 @@ RenderObject* RenderTextControlMultiLine::layoutSpecialExcludedChild(bool relayo
     RenderObject* placeholderRenderer = RenderTextControl::layoutSpecialExcludedChild(relayoutChildren);
     if (is<RenderBox>(placeholderRenderer)) {
         auto& placeholderBox = downcast<RenderBox>(*placeholderRenderer);
-        placeholderBox.style().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), Fixed));
+        placeholderBox.mutableStyle().setLogicalWidth(Length(contentLogicalWidth() - placeholderBox.borderAndPaddingLogicalWidth(), Fixed));
         placeholderBox.layoutIfNeeded();
         placeholderBox.setX(borderLeft() + paddingLeft());
         placeholderBox.setY(borderTop() + paddingTop());

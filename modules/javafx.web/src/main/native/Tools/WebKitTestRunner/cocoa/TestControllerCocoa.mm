@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -57,14 +57,20 @@ void initializeWebViewConfiguration(const char* libraryPath, WKStringRef injecte
 
     globalWebViewConfiguration.processPool = WTF::adoptNS([[WKProcessPool alloc] _initWithConfiguration:(_WKProcessPoolConfiguration *)contextConfiguration]).get();
     globalWebViewConfiguration.websiteDataStore = (WKWebsiteDataStore *)WKContextGetWebsiteDataStore(context);
+    globalWebViewConfiguration._allowUniversalAccessFromFileURLs = YES;
 
-#if TARGET_OS_IPHONE
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000)
+    globalWebViewConfiguration._applePayEnabled = YES;
+#endif
+
+#if PLATFORM(IOS)
     globalWebViewConfiguration.allowsInlineMediaPlayback = YES;
     globalWebViewConfiguration._inlineMediaPlaybackRequiresPlaysInlineAttribute = NO;
     globalWebViewConfiguration._invisibleAutoplayNotPermitted = NO;
     globalWebViewConfiguration._mediaDataLoadsAutomatically = YES;
     globalWebViewConfiguration.requiresUserActionForMediaPlayback = NO;
 #endif
+    globalWebViewConfiguration.mediaTypesRequiringUserActionForPlayback = WKAudiovisualMediaTypeNone;
 #endif
 }
 
@@ -81,8 +87,15 @@ void TestController::platformCreateWebView(WKPageConfigurationRef, const TestOpt
 {
 #if WK_API_ENABLED
     RetainPtr<WKWebViewConfiguration> copiedConfiguration = adoptNS([globalWebViewConfiguration copy]);
+
+#if PLATFORM(IOS)
     if (options.useDataDetection)
         [copiedConfiguration setDataDetectorTypes:WKDataDetectorTypeAll];
+    if (options.ignoresViewportScaleLimits)
+        [copiedConfiguration setIgnoresViewportScaleLimits:YES];
+    if (options.useCharacterSelectionGranularity)
+        [copiedConfiguration setSelectionGranularity:WKSelectionGranularityCharacter];
+#endif
 
     m_mainWebView = std::make_unique<PlatformWebView>(copiedConfiguration.get(), options);
 #else
@@ -137,6 +150,37 @@ void TestController::cocoaResetStateToConsistentValues()
 void TestController::platformWillRunTest(const TestInvocation& testInvocation)
 {
     setCrashReportApplicationSpecificInformationToURL(testInvocation.url());
+}
+
+static NSString * const WebArchivePboardType = @"Apple Web Archive pasteboard type";
+static NSString * const WebSubresourcesKey = @"WebSubresources";
+static NSString * const WebSubframeArchivesKey = @"WebResourceMIMEType like 'image*'";
+
+unsigned TestController::imageCountInGeneralPasteboard() const
+{
+#if PLATFORM(MAC)
+    NSData *data = [[NSPasteboard generalPasteboard] dataForType:WebArchivePboardType];
+#elif PLATFORM(IOS)
+    NSData *data = [[UIPasteboard generalPasteboard] valueForPasteboardType:WebArchivePboardType];
+#endif
+    if (!data)
+        return 0;
+    
+    NSError *error = nil;
+    id webArchive = [NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:NULL error:&error];
+    if (error) {
+        NSLog(@"Encountered error while serializing Web Archive pasteboard data: %@", error);
+        return 0;
+    }
+    
+    NSArray *subItems = [NSArray arrayWithArray:[webArchive objectForKey:WebSubresourcesKey]];
+    NSPredicate *predicate = [NSPredicate predicateWithFormat:WebSubframeArchivesKey];
+    NSArray *imagesArray = [subItems filteredArrayUsingPredicate:predicate];
+    
+    if (!imagesArray)
+        return 0;
+    
+    return imagesArray.count;
 }
 
 } // namespace WTR

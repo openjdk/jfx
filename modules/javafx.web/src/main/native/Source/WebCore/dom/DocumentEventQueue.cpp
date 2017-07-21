@@ -31,6 +31,7 @@
 #include "DOMWindow.h"
 #include "Document.h"
 #include "Event.h"
+#include "EventNames.h"
 #include "SuspendableTimer.h"
 #include <wtf/Ref.h>
 
@@ -45,7 +46,7 @@ public:
     }
 
 private:
-    virtual void fired() override
+    void fired() override
     {
         ASSERT(!isSuspended());
         m_eventQueue.pendingEventTimerFired();

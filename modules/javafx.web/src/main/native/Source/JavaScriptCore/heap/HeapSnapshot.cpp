@@ -45,13 +45,15 @@ void HeapSnapshot::appendNode(const HeapSnapshotNode& node)
     ASSERT(!m_previous || !m_previous->nodeForCell(node.cell));
 
     m_nodes.append(node);
+    m_filter.add(bitwise_cast<uintptr_t>(node.cell));
 }
 
 void HeapSnapshot::sweepCell(JSCell* cell)
 {
     ASSERT(cell);
 
-    if (m_finalized && !isEmpty()) {
+    if (m_finalized && !m_filter.ruleOut(bitwise_cast<uintptr_t>(cell))) {
+        ASSERT_WITH_MESSAGE(!isEmpty(), "Our filter should have ruled us out if we are empty.");
         unsigned start = 0;
         unsigned end = m_nodes.size();
         while (start != end) {
@@ -79,9 +81,13 @@ void HeapSnapshot::sweepCell(JSCell* cell)
 void HeapSnapshot::shrinkToFit()
 {
     if (m_finalized && m_hasCellsToSweep) {
+        m_filter.reset();
         m_nodes.removeAllMatching(
             [&] (const HeapSnapshotNode& node) -> bool {
-                return reinterpret_cast<intptr_t>(node.cell) & CellToSweepTag;
+                bool willRemoveCell = bitwise_cast<intptr_t>(node.cell) & CellToSweepTag;
+                if (!willRemoveCell)
+                    m_filter.add(bitwise_cast<uintptr_t>(node.cell));
+                return willRemoveCell;
             });
         m_nodes.shrinkToFit();
         m_hasCellsToSweep = false;
@@ -115,25 +121,28 @@ void HeapSnapshot::finalize()
     for (auto& node : m_nodes) {
         ASSERT(node.cell);
         ASSERT(!(reinterpret_cast<intptr_t>(node.cell) & CellToSweepTag));
-        if (previousCell)
+        if (node.cell == previousCell) {
+            dataLog("Seeing same cell twice: ", RawPointer(previousCell), "\n");
             ASSERT(node.cell != previousCell);
+        }
         previousCell = node.cell;
     }
 #endif
 }
 
-Optional<HeapSnapshotNode> HeapSnapshot::nodeForCell(JSCell* cell)
+std::optional<HeapSnapshotNode> HeapSnapshot::nodeForCell(JSCell* cell)
 {
     ASSERT(m_finalized);
 
-    if (!isEmpty()) {
+    if (!m_filter.ruleOut(bitwise_cast<uintptr_t>(cell))) {
+        ASSERT_WITH_MESSAGE(!isEmpty(), "Our filter should have ruled us out if we are empty.");
         unsigned start = 0;
         unsigned end = m_nodes.size();
         while (start != end) {
             unsigned middle = start + ((end - start) / 2);
             HeapSnapshotNode& node = m_nodes[middle];
             if (cell == node.cell)
-                return Optional<HeapSnapshotNode>(node);
+                return std::optional<HeapSnapshotNode>(node);
             if (cell < node.cell)
                 end = middle;
             else
@@ -144,32 +153,32 @@ Optional<HeapSnapshotNode> HeapSnapshot::nodeForCell(JSCell* cell)
     if (m_previous)
         return m_previous->nodeForCell(cell);
 
-    return Nullopt;
+    return std::nullopt;
 }
 
-Optional<HeapSnapshotNode> HeapSnapshot::nodeForObjectIdentifier(unsigned objectIdentifier)
+std::optional<HeapSnapshotNode> HeapSnapshot::nodeForObjectIdentifier(unsigned objectIdentifier)
 {
     if (isEmpty()) {
         if (m_previous)
             return m_previous->nodeForObjectIdentifier(objectIdentifier);
-        return Nullopt;
+        return std::nullopt;
     }
 
     if (objectIdentifier > m_lastObjectIdentifier)
-        return Nullopt;
+        return std::nullopt;
 
     if (objectIdentifier < m_firstObjectIdentifier) {
         if (m_previous)
             return m_previous->nodeForObjectIdentifier(objectIdentifier);
-        return Nullopt;
+        return std::nullopt;
     }
 
     for (auto& node : m_nodes) {
         if (node.identifier == objectIdentifier)
-            return Optional<HeapSnapshotNode>(node);
+            return std::optional<HeapSnapshotNode>(node);
     }
 
-    return Nullopt;
+    return std::nullopt;
 }
 
 } // namespace JSC

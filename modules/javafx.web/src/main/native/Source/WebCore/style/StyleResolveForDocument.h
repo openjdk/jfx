@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef StyleResolveForDocument_h
-#define StyleResolveForDocument_h
+#pragma once
 
 #include <wtf/Ref.h>
 
@@ -35,9 +34,7 @@ class RenderStyle;
 
 namespace Style {
 
-Ref<RenderStyle> resolveForDocument(const Document&);
+RenderStyle resolveForDocument(const Document&);
 
 }
 }
-
-#endif

@@ -1,11 +1,8 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#include "config.h"
 
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
+#include "config.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -24,7 +21,7 @@
 #include "GraphicsContextJava.h"
 #include "Gradient.h"
 #include "IntRect.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "Logging.h"
 #include "NotImplemented.h"
 #include "Path.h"
@@ -122,7 +119,7 @@ void GraphicsContext::restorePlatformState()
 }
 
 // Draws a filled rectangle with a stroked border.
-void GraphicsContext::drawRect(const FloatRect& rect, float borderThickness) // todo tav rect changed from IntRect to FloatRect
+void GraphicsContext::drawRect(const FloatRect& rect, float) // todo tav rect changed from IntRect to FloatRect
 {
     if (paintingDisabled())
         return;
@@ -192,12 +189,12 @@ void GraphicsContext::fillRect(const FloatRect& rect)
             m_state.fillPattern->repeatY() ? rect.height() : img->height());
         img->drawPattern(
             *this,
+            destRect,
             FloatRect(0., 0., img->width(), img->height()),
             m_state.fillPattern->getPatternSpaceTransform(),
             FloatPoint(),
             FloatSize(),
-            CompositeCopy, //any
-            destRect);
+            CompositeCopy);
     } else {
         if (m_state.fillGradient) {
             setGradient(
@@ -224,7 +221,7 @@ void GraphicsContext::clip(const FloatRect& rect)
     << (jint)rect.x() << (jint)rect.y() << (jint)rect.width() << (jint)rect.height();
 }
 
-void GraphicsContext::clipToImageBuffer(ImageBuffer& buffer, const FloatRect& destRect)
+void GraphicsContext::clipToImageBuffer(ImageBuffer&, const FloatRect&)
 {
     notImplemented();
 }
@@ -235,12 +232,12 @@ IntRect GraphicsContext::clipBounds() const
     return enclosingIntRect(m_state.transform.inverse()->mapRect(m_state.clipBounds));
 }
 
-void GraphicsContext::drawFocusRing(const Path&, float width, float offset, const Color&)
+void GraphicsContext::drawFocusRing(const Path&, float, float, const Color&)
 {
     //utaTODO: IMPLEMENT!!!
 }
 
-void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float width, float offset, const Color& color)
+void GraphicsContext::drawFocusRing(const Vector<FloatRect>& rects, float, float offset, const Color& color)
 {
     if (paintingDisabled())
         return;
@@ -290,18 +287,20 @@ void GraphicsContext::updateDocumentMarkerResources()
   //    NotImplemented(); // todo tav implement
 }
 
-void GraphicsContext::drawLinesForText(const FloatPoint&, const DashArray& widths, bool printing, bool doubleLines) {
-    notImplemented();
+void GraphicsContext::drawLinesForText(const FloatPoint& origin, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle stroke) {
+    for (const auto& width : widths) {
+        drawLineForText(origin, width, printing, doubleLines, stroke);
+    }
 }
 
-void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool printing, bool doubleLines)
+void GraphicsContext::drawLineForText(const FloatPoint& origin, float width, bool, bool, StrokeStyle stroke)
 {
     if (paintingDisabled() || width <= 0)
         return;
 
     // This is a workaround for http://bugs.webkit.org/show_bug.cgi?id=15659
     StrokeStyle savedStrokeStyle = strokeStyle();
-    setStrokeStyle(SolidStroke);
+    setStrokeStyle(stroke);
 
     FloatPoint endPoint = origin + FloatPoint(width, 0);
     drawLine(
@@ -495,17 +494,17 @@ void GraphicsContext::setPlatformStrokeThickness(float strokeThickness)
     << strokeThickness;
 }
 
-void GraphicsContext::setPlatformImageInterpolationQuality(InterpolationQuality interpolationQuality)
+void GraphicsContext::setPlatformImageInterpolationQuality(InterpolationQuality)
 {
     notImplemented();
 }
 
-void GraphicsContext::setPlatformShouldAntialias(bool b)
+void GraphicsContext::setPlatformShouldAntialias(bool)
 {
     notImplemented();
 }
 
-void GraphicsContext::setURLForRect(const URL& link, const IntRect& destRect)
+void GraphicsContext::setURLForRect(const URL&, const FloatRect&)
 {
     notImplemented();
 }
@@ -665,7 +664,7 @@ void GraphicsContext::setPlatformAlpha(float alpha)
     << alpha;
 }
 
-void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode bm)
+void GraphicsContext::setPlatformCompositeOperation(CompositeOperator op, BlendMode)
 {
     if (paintingDisabled())
         return;
@@ -735,14 +734,13 @@ void GraphicsContext::clipOut(const FloatRect& rect)
     path.addRoundedRect(rect, FloatSize());
     clipOut(path);
 }
-
-void GraphicsContext::drawPattern(Image& image, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op, const FloatRect& destRect, BlendMode blendMode)
+void GraphicsContext::drawPattern(Image& image, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator op,  BlendMode blendMode)
 {
     if (paintingDisabled())
         return;
 
     if (isRecording()) {
-        m_displayListRecorder->drawPattern(image, tileRect, patternTransform, phase, spacing, op, destRect, blendMode);
+        m_displayListRecorder->drawPattern(image, destRect, srcRect, patternTransform, phase, spacing, op, blendMode);
         return;
     }
 
@@ -750,8 +748,8 @@ void GraphicsContext::drawPattern(Image& image, const FloatRect& tileRect, const
     if (!surface) // If it's too early we won't have an image yet.
         return;
 
-    image.drawPattern(*this, tileRect, patternTransform, phase, spacing,
-                       op, destRect, blendMode);
+    image.drawPattern(*this, destRect, srcRect, patternTransform, phase, spacing,
+                       op, blendMode);
 }
 
 void GraphicsContext::fillPath(const Path& path)
@@ -772,12 +770,12 @@ void GraphicsContext::fillPath(const Path& path)
             m_state.fillPattern->repeatY() ? rect.height() : img->height());
         img->drawPattern(
             *this,
+            destRect,
             FloatRect(0., 0., img->width(), img->height()),
             m_state.fillPattern->getPatternSpaceTransform(),
             FloatPoint(),
             FloatSize(),
-            CompositeCopy, //any
-            destRect);
+            CompositeCopy);
         restorePlatformState();
     } else {
         if (m_state.fillGradient) {

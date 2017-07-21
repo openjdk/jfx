@@ -28,13 +28,19 @@
 
 #include "DocumentRuleSets.h"
 #include "ElementChildIterator.h"
+#include "ShadowRoot.h"
 #include "SpaceSplitString.h"
 #include "StyleInvalidationAnalysis.h"
+#include "StyleResolver.h"
+#include "StyleScope.h"
+#include <wtf/BitVector.h>
 
 namespace WebCore {
 namespace Style {
 
-auto ClassChangeInvalidation::collectClasses(const SpaceSplitString& classes) -> ClassChangeVector
+using ClassChangeVector = Vector<AtomicStringImpl*, 4>;
+
+static ClassChangeVector collectClasses(const SpaceSplitString& classes)
 {
     ClassChangeVector result;
     result.reserveCapacity(classes.size());
@@ -43,19 +49,17 @@ auto ClassChangeInvalidation::collectClasses(const SpaceSplitString& classes) ->
     return result;
 }
 
-void ClassChangeInvalidation::computeClassChange(const SpaceSplitString& oldClasses, const SpaceSplitString& newClasses)
+static ClassChangeVector computeClassChange(const SpaceSplitString& oldClasses, const SpaceSplitString& newClasses)
 {
     unsigned oldSize = oldClasses.size();
     unsigned newSize = newClasses.size();
 
-    if (!oldSize) {
-        m_addedClasses = collectClasses(newClasses);
-        return;
-    }
-    if (!newSize) {
-        m_removedClasses = collectClasses(oldClasses);
-        return;
-    }
+    if (!oldSize)
+        return collectClasses(newClasses);
+    if (!newSize)
+        return collectClasses(oldClasses);
+
+    ClassChangeVector changedClasses;
 
     BitVector remainingClassBits;
     remainingClassBits.ensureSize(oldSize);
@@ -70,35 +74,66 @@ void ClassChangeInvalidation::computeClassChange(const SpaceSplitString& oldClas
         }
         if (foundFromBoth)
             continue;
-        m_addedClasses.append(newClasses[i].impl());
+        changedClasses.append(newClasses[i].impl());
     }
     for (unsigned i = 0; i < oldSize; ++i) {
         // If the bit is not set the the corresponding class has been removed.
         if (remainingClassBits.quickGet(i))
             continue;
-        m_removedClasses.append(oldClasses[i].impl());
+        changedClasses.append(oldClasses[i].impl());
     }
+
+    return changedClasses;
 }
 
-void ClassChangeInvalidation::invalidateStyle(const ClassChangeVector& changedClasses)
+static bool mayBeAffectedByHostRules(ShadowRoot* shadowRoot, AtomicStringImpl* changedClass)
 {
-    auto& ruleSets = m_element.styleResolver().ruleSets();
+    if (!shadowRoot)
+        return false;
+    auto& shadowRuleSets = shadowRoot->styleScope().resolver().ruleSets();
+    if (shadowRuleSets.authorStyle().hostPseudoClassRules().isEmpty())
+        return false;
+    return shadowRuleSets.features().classesInRules.contains(changedClass);
+}
 
-    Vector<AtomicStringImpl*, 4> changedClassesAffectingStyle;
-    for (auto* changedClass : changedClasses) {
+static bool mayBeAffectedBySlottedRules(const Vector<ShadowRoot*>& assignedShadowRoots, AtomicStringImpl* changedClass)
+{
+    for (auto& assignedShadowRoot : assignedShadowRoots) {
+        auto& ruleSets = assignedShadowRoot->styleScope().resolver().ruleSets();
+        if (ruleSets.authorStyle().slottedPseudoElementRules().isEmpty())
+            continue;
         if (ruleSets.features().classesInRules.contains(changedClass))
+            return true;
+    }
+    return false;
+}
+
+void ClassChangeInvalidation::invalidateStyle(const SpaceSplitString& oldClasses, const SpaceSplitString& newClasses)
+{
+    auto changedClasses = computeClassChange(oldClasses, newClasses);
+
+    auto& ruleSets = m_element.styleResolver().ruleSets();
+    auto* shadowRoot = m_element.shadowRoot();
+    auto assignedShadowRoots = assignedShadowRootsIfSlotted(m_element);
+
+    ClassChangeVector changedClassesAffectingStyle;
+    for (auto* changedClass : changedClasses) {
+        bool mayAffectStyle = ruleSets.features().classesInRules.contains(changedClass)
+            || mayBeAffectedByHostRules(shadowRoot, changedClass)
+            || mayBeAffectedBySlottedRules(assignedShadowRoots, changedClass);
+        if (mayAffectStyle)
             changedClassesAffectingStyle.append(changedClass);
     };
 
     if (changedClassesAffectingStyle.isEmpty())
         return;
 
-    if (m_element.shadowRoot() && ruleSets.authorStyle()->hasShadowPseudoElementRules()) {
-        m_element.setNeedsStyleRecalc(FullStyleChange);
+    if (shadowRoot && ruleSets.authorStyle().hasShadowPseudoElementRules()) {
+        m_element.invalidateStyleForSubtree();
         return;
     }
 
-    m_element.setNeedsStyleRecalc(InlineStyleChange);
+    m_element.invalidateStyle();
 
     if (!childrenOfType<Element>(m_element).first())
         return;
@@ -107,6 +142,13 @@ void ClassChangeInvalidation::invalidateStyle(const ClassChangeVector& changedCl
         auto* ancestorClassRules = ruleSets.ancestorClassRules(changedClass);
         if (!ancestorClassRules)
             continue;
+        m_descendantInvalidationRuleSets.append(ancestorClassRules);
+    }
+}
+
+void ClassChangeInvalidation::invalidateDescendantStyle()
+{
+    for (auto* ancestorClassRules : m_descendantInvalidationRuleSets) {
         StyleInvalidationAnalysis invalidationAnalysis(*ancestorClassRules);
         invalidationAnalysis.invalidateStyle(m_element);
     }

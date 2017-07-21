@@ -28,9 +28,10 @@
 #include "YarrPattern.h"
 
 #include "Yarr.h"
-#include "YarrCanonicalizeUnicode.h"
+#include "YarrCanonicalize.h"
 #include "YarrParser.h"
 #include <wtf/Vector.h>
+#include <wtf/WTFThreadData.h>
 
 using namespace WTF;
 
@@ -68,9 +69,14 @@ public:
 
     void putChar(UChar32 ch)
     {
-        // Handle ascii cases.
-        if (ch <= 0x7f) {
-            if (m_isCaseInsensitive && isASCIIAlpha(ch)) {
+        if (!m_isCaseInsensitive) {
+            addSorted(ch);
+            return;
+        }
+
+        if (m_canonicalMode == CanonicalMode::UCS2 && isASCII(ch)) {
+            // Handle ASCII cases.
+            if (isASCIIAlpha(ch)) {
                 addSorted(m_matches, toASCIIUpper(ch));
                 addSorted(m_matches, toASCIILower(ch));
             } else
@@ -78,16 +84,10 @@ public:
             return;
         }
 
-        // Simple case, not a case-insensitive match.
-        if (!m_isCaseInsensitive) {
-            addSorted(m_matchesUnicode, ch);
-            return;
-        }
-
         // Add multiple matches, if necessary.
         const CanonicalizationRange* info = canonicalRangeInfoFor(ch, m_canonicalMode);
         if (info->type == CanonicalizeUnique)
-            addSorted(m_matchesUnicode, ch);
+            addSorted(ch);
         else
             putUnicodeIgnoreCase(ch, info);
     }
@@ -108,7 +108,7 @@ public:
 
     void putRange(UChar32 lo, UChar32 hi)
     {
-        if (lo <= 0x7f) {
+        if (isASCII(lo)) {
             char asciiLo = lo;
             char asciiHi = std::min(hi, (UChar32)0x7f);
             addSortedRange(m_ranges, lo, asciiHi);
@@ -120,7 +120,7 @@ public:
                     addSortedRange(m_ranges, std::max(asciiLo, 'a')+('A'-'a'), std::min(asciiHi, 'z')+('A'-'a'));
             }
         }
-        if (hi <= 0x7f)
+        if (isASCII(hi))
             return;
 
         lo = std::max(lo, (UChar32)0x80);
@@ -190,7 +190,7 @@ public:
 private:
     void addSorted(UChar32 ch)
     {
-        addSorted(ch <= 0x7f ? m_matches : m_matchesUnicode, ch);
+        addSorted(isASCII(ch) ? m_matches : m_matchesUnicode, ch);
     }
 
     void addSorted(Vector<UChar32>& matches, UChar32 ch)
@@ -275,9 +275,10 @@ private:
 
 class YarrPatternConstructor {
 public:
-    YarrPatternConstructor(YarrPattern& pattern)
+    YarrPatternConstructor(YarrPattern& pattern, void* stackLimit)
         : m_pattern(pattern)
-        , m_characterClassConstructor(pattern.m_ignoreCase, pattern.m_unicode ? CanonicalMode::Unicode : CanonicalMode::UCS2)
+        , m_characterClassConstructor(pattern.ignoreCase(), pattern.unicode() ? CanonicalMode::Unicode : CanonicalMode::UCS2)
+        , m_stackLimit(stackLimit)
         , m_invertParentheticalAssertion(false)
     {
         auto body = std::make_unique<PatternDisjunction>();
@@ -323,12 +324,12 @@ public:
     {
         // We handle case-insensitive checking of unicode characters which do have both
         // cases by handling them as if they were defined using a CharacterClass.
-        if (!m_pattern.m_ignoreCase || (isASCII(ch) && !m_pattern.m_unicode)) {
+        if (!m_pattern.ignoreCase() || (isASCII(ch) && !m_pattern.unicode())) {
             m_alternative->m_terms.append(PatternTerm(ch));
             return;
         }
 
-        const CanonicalizationRange* info = canonicalRangeInfoFor(ch, m_pattern.m_unicode ? CanonicalMode::Unicode : CanonicalMode::UCS2);
+        const CanonicalizationRange* info = canonicalRangeInfoFor(ch, m_pattern.unicode() ? CanonicalMode::Unicode : CanonicalMode::UCS2);
         if (info->type == CanonicalizeUnique) {
             m_alternative->m_terms.append(PatternTerm(ch));
             return;
@@ -350,7 +351,10 @@ public:
             m_alternative->m_terms.append(PatternTerm(m_pattern.spacesCharacterClass(), invert));
             break;
         case WordClassID:
-            m_alternative->m_terms.append(PatternTerm(m_pattern.wordcharCharacterClass(), invert));
+            if (m_pattern.unicode() && m_pattern.ignoreCase())
+                m_alternative->m_terms.append(PatternTerm(m_pattern.wordUnicodeIgnoreCaseCharCharacterClass(), invert));
+            else
+                m_alternative->m_terms.append(PatternTerm(m_pattern.wordcharCharacterClass(), invert));
             break;
         case NewlineClassID:
             m_alternative->m_terms.append(PatternTerm(m_pattern.newlineCharacterClass(), invert));
@@ -387,7 +391,10 @@ public:
             break;
 
         case WordClassID:
-            m_characterClassConstructor.append(invert ? m_pattern.nonwordcharCharacterClass() : m_pattern.wordcharCharacterClass());
+            if (m_pattern.unicode() && m_pattern.ignoreCase())
+                m_characterClassConstructor.append(invert ? m_pattern.nonwordUnicodeIgnoreCaseCharCharacterClass() : m_pattern.wordUnicodeIgnoreCaseCharCharacterClass());
+            else
+                m_characterClassConstructor.append(invert ? m_pattern.nonwordcharCharacterClass() : m_pattern.wordcharCharacterClass());
             break;
 
         default:
@@ -515,6 +522,7 @@ public:
 
         PatternTerm termCopy = term;
         termCopy.parentheses.disjunction = copyDisjunction(termCopy.parentheses.disjunction, filterStartsWithBOL);
+        m_pattern.m_hasCopiedParenSubexpressions = true;
         return termCopy;
     }
 
@@ -530,7 +538,7 @@ public:
 
         PatternTerm& term = m_alternative->lastTerm();
         ASSERT(term.type > PatternTerm::TypeAssertionWordBoundary);
-        ASSERT((term.quantityCount == 1) && (term.quantityType == QuantifierFixedCount));
+        ASSERT(term.quantityMinCount == 1 && term.quantityMaxCount == 1 && term.quantityType == QuantifierFixedCount);
 
         if (term.type == PatternTerm::TypeParentheticalAssertion) {
             // If an assertion is quantified with a minimum count of zero, it can simply be removed.
@@ -552,12 +560,12 @@ public:
             return;
         }
 
-        if (min == 0)
-            term.quantify(max, greedy   ? QuantifierGreedy : QuantifierNonGreedy);
-        else if (min == max)
-            term.quantify(min, QuantifierFixedCount);
+        if (min == max)
+            term.quantify(min, max, QuantifierFixedCount);
+        else if (!min || (term.type == PatternTerm::TypeParenthesesSubpattern && m_pattern.m_hasCopiedParenSubexpressions))
+            term.quantify(min, max, greedy ? QuantifierGreedy : QuantifierNonGreedy);
         else {
-            term.quantify(min, QuantifierFixedCount);
+            term.quantify(min, min, QuantifierFixedCount);
             m_alternative->m_terms.append(copyTerm(term));
             // NOTE: this term is interesting from an analysis perspective, in that it can be ignored.....
             m_alternative->lastTerm().quantify((max == quantifyInfinite) ? max : max - min, greedy ? QuantifierGreedy : QuantifierNonGreedy);
@@ -571,10 +579,14 @@ public:
         m_alternative = m_alternative->m_parent->addNewAlternative();
     }
 
-    unsigned setupAlternativeOffsets(PatternAlternative* alternative, unsigned currentCallFrameSize, unsigned initialInputPosition)
+    YarrPattern::ErrorCode setupAlternativeOffsets(PatternAlternative* alternative, unsigned currentCallFrameSize, unsigned initialInputPosition, unsigned& newCallFrameSize) WARN_UNUSED_RETURN
     {
+        if (UNLIKELY(!isSafeToRecurse()))
+            return YarrPattern::TooManyDisjunctions;
+
+        YarrPattern::ErrorCode error = YarrPattern::NoError;
         alternative->m_hasFixedSize = true;
-        Checked<unsigned> currentInputPosition = initialInputPosition;
+        Checked<unsigned, RecordOverflow> currentInputPosition = initialInputPosition;
 
         for (unsigned i = 0; i < alternative->m_terms.size(); ++i) {
             PatternTerm& term = alternative->m_terms[i];
@@ -602,10 +614,10 @@ public:
                     term.frameLocation = currentCallFrameSize;
                     currentCallFrameSize += YarrStackSpaceForBackTrackInfoPatternCharacter;
                     alternative->m_hasFixedSize = false;
-                } else if (m_pattern.m_unicode) {
-                    currentInputPosition += (!U_IS_BMP(term.patternCharacter) ? 2 : 1) * term.quantityCount;
+                } else if (m_pattern.unicode()) {
+                    currentInputPosition += U16_LENGTH(term.patternCharacter) * term.quantityMaxCount;
                 } else
-                    currentInputPosition += term.quantityCount;
+                    currentInputPosition += term.quantityMaxCount;
                 break;
 
             case PatternTerm::TypeCharacterClass:
@@ -614,33 +626,40 @@ public:
                     term.frameLocation = currentCallFrameSize;
                     currentCallFrameSize += YarrStackSpaceForBackTrackInfoCharacterClass;
                     alternative->m_hasFixedSize = false;
-                } else if (m_pattern.m_unicode) {
+                } else if (m_pattern.unicode()) {
                     term.frameLocation = currentCallFrameSize;
                     currentCallFrameSize += YarrStackSpaceForBackTrackInfoCharacterClass;
-                    currentInputPosition += term.quantityCount;
+                    currentInputPosition += term.quantityMaxCount;
                     alternative->m_hasFixedSize = false;
                 } else
-                    currentInputPosition += term.quantityCount;
+                    currentInputPosition += term.quantityMaxCount;
                 break;
 
             case PatternTerm::TypeParenthesesSubpattern:
                 // Note: for fixed once parentheses we will ensure at least the minimum is available; others are on their own.
                 term.frameLocation = currentCallFrameSize;
-                if (term.quantityCount == 1 && !term.parentheses.isCopy) {
+                if (term.quantityMaxCount == 1 && !term.parentheses.isCopy) {
                     if (term.quantityType != QuantifierFixedCount)
                         currentCallFrameSize += YarrStackSpaceForBackTrackInfoParenthesesOnce;
-                    currentCallFrameSize = setupDisjunctionOffsets(term.parentheses.disjunction, currentCallFrameSize, currentInputPosition.unsafeGet());
+                    error = setupDisjunctionOffsets(term.parentheses.disjunction, currentCallFrameSize, currentInputPosition.unsafeGet(), currentCallFrameSize);
+                    if (error)
+                        return error;
                     // If quantity is fixed, then pre-check its minimum size.
                     if (term.quantityType == QuantifierFixedCount)
                         currentInputPosition += term.parentheses.disjunction->m_minimumSize;
                     term.inputPosition = currentInputPosition.unsafeGet();
                 } else if (term.parentheses.isTerminal) {
                     currentCallFrameSize += YarrStackSpaceForBackTrackInfoParenthesesTerminal;
-                    currentCallFrameSize = setupDisjunctionOffsets(term.parentheses.disjunction, currentCallFrameSize, currentInputPosition.unsafeGet());
+                    error = setupDisjunctionOffsets(term.parentheses.disjunction, currentCallFrameSize, currentInputPosition.unsafeGet(), currentCallFrameSize);
+                    if (error)
+                        return error;
                     term.inputPosition = currentInputPosition.unsafeGet();
                 } else {
                     term.inputPosition = currentInputPosition.unsafeGet();
-                    setupDisjunctionOffsets(term.parentheses.disjunction, 0, currentInputPosition.unsafeGet());
+                    unsigned ignoredCallFrameSize;
+                    error = setupDisjunctionOffsets(term.parentheses.disjunction, 0, currentInputPosition.unsafeGet(), ignoredCallFrameSize);
+                    if (error)
+                        return error;
                     currentCallFrameSize += YarrStackSpaceForBackTrackInfoParentheses;
                 }
                 // Fixed count of 1 could be accepted, if they have a fixed size *AND* if all alternatives are of the same length.
@@ -650,7 +669,9 @@ public:
             case PatternTerm::TypeParentheticalAssertion:
                 term.inputPosition = currentInputPosition.unsafeGet();
                 term.frameLocation = currentCallFrameSize;
-                currentCallFrameSize = setupDisjunctionOffsets(term.parentheses.disjunction, currentCallFrameSize + YarrStackSpaceForBackTrackInfoParentheticalAssertion, currentInputPosition.unsafeGet());
+                error = setupDisjunctionOffsets(term.parentheses.disjunction, currentCallFrameSize + YarrStackSpaceForBackTrackInfoParentheticalAssertion, currentInputPosition.unsafeGet(), currentCallFrameSize);
+                if (error)
+                    return error;
                 break;
 
             case PatternTerm::TypeDotStarEnclosure:
@@ -658,24 +679,34 @@ public:
                 term.inputPosition = initialInputPosition;
                 break;
             }
+            if (currentInputPosition.hasOverflowed())
+                return YarrPattern::OffsetTooLarge;
         }
 
         alternative->m_minimumSize = (currentInputPosition - initialInputPosition).unsafeGet();
-        return currentCallFrameSize;
+        newCallFrameSize = currentCallFrameSize;
+        return error;
     }
 
-    unsigned setupDisjunctionOffsets(PatternDisjunction* disjunction, unsigned initialCallFrameSize, unsigned initialInputPosition)
+    YarrPattern::ErrorCode setupDisjunctionOffsets(PatternDisjunction* disjunction, unsigned initialCallFrameSize, unsigned initialInputPosition, unsigned& callFrameSize)
     {
+        if (UNLIKELY(!isSafeToRecurse()))
+            return YarrPattern::TooManyDisjunctions;
+
         if ((disjunction != m_pattern.m_body) && (disjunction->m_alternatives.size() > 1))
             initialCallFrameSize += YarrStackSpaceForBackTrackInfoAlternative;
 
         unsigned minimumInputSize = UINT_MAX;
         unsigned maximumCallFrameSize = 0;
         bool hasFixedSize = true;
+        YarrPattern::ErrorCode error = YarrPattern::NoError;
 
         for (unsigned alt = 0; alt < disjunction->m_alternatives.size(); ++alt) {
             PatternAlternative* alternative = disjunction->m_alternatives[alt].get();
-            unsigned currentAlternativeCallFrameSize = setupAlternativeOffsets(alternative, initialCallFrameSize, initialInputPosition);
+            unsigned currentAlternativeCallFrameSize;
+            error = setupAlternativeOffsets(alternative, initialCallFrameSize, initialInputPosition, currentAlternativeCallFrameSize);
+            if (error)
+                return error;
             minimumInputSize = std::min(minimumInputSize, alternative->m_minimumSize);
             maximumCallFrameSize = std::max(maximumCallFrameSize, currentAlternativeCallFrameSize);
             hasFixedSize &= alternative->m_hasFixedSize;
@@ -689,12 +720,18 @@ public:
         disjunction->m_hasFixedSize = hasFixedSize;
         disjunction->m_minimumSize = minimumInputSize;
         disjunction->m_callFrameSize = maximumCallFrameSize;
-        return maximumCallFrameSize;
+        callFrameSize = maximumCallFrameSize;
+        return error;
     }
 
-    void setupOffsets()
+    const char* setupOffsets()
     {
-        setupDisjunctionOffsets(m_pattern.m_body, 0, 0);
+        // FIXME: Yarr should not use the stack to handle subpatterns (rdar://problem/26436314).
+        unsigned ignoredCallFrameSize;
+        YarrPattern::ErrorCode error = setupDisjunctionOffsets(m_pattern.m_body, 0, 0, ignoredCallFrameSize);
+        if (error)
+            return YarrPattern::errorMessage(error);
+        return nullptr;
     }
 
     // This optimization identifies sets of parentheses that we will never need to backtrack.
@@ -718,7 +755,8 @@ public:
                 PatternTerm& term = terms.last();
                 if (term.type == PatternTerm::TypeParenthesesSubpattern
                     && term.quantityType == QuantifierGreedy
-                    && term.quantityCount == quantifyInfinite
+                    && term.quantityMinCount == 0
+                    && term.quantityMaxCount == quantifyInfinite
                     && !term.capture())
                     term.parentheses.isTerminal = true;
             }
@@ -734,7 +772,7 @@ public:
         // At this point, this is only valid for non-multiline expressions.
         PatternDisjunction* disjunction = m_pattern.m_body;
 
-        if (!m_pattern.m_containsBOL || m_pattern.m_multiline)
+        if (!m_pattern.m_containsBOL || m_pattern.multiline())
             return;
 
         PatternDisjunction* loopDisjunction = copyDisjunction(disjunction, true);
@@ -834,18 +872,58 @@ public:
     }
 
 private:
+    bool isSafeToRecurse() const
+    {
+        if (!m_stackLimit)
+            return true;
+        ASSERT(wtfThreadData().stack().isGrowingDownward());
+        int8_t* curr = reinterpret_cast<int8_t*>(&curr);
+        int8_t* limit = reinterpret_cast<int8_t*>(m_stackLimit);
+        return curr >= limit;
+    }
+
     YarrPattern& m_pattern;
     PatternAlternative* m_alternative;
     CharacterClassConstructor m_characterClassConstructor;
+    void* m_stackLimit;
     bool m_invertCharacterClass;
     bool m_invertParentheticalAssertion;
 };
 
-const char* YarrPattern::compile(const String& patternString)
+const char* YarrPattern::errorMessage(YarrPattern::ErrorCode error)
 {
-    YarrPatternConstructor constructor(*this);
+#define REGEXP_ERROR_PREFIX "Invalid regular expression: "
+    // The order of this array must match the ErrorCode enum.
+    static const char* errorMessages[NumberOfErrorCodes] = {
+        nullptr, // NoError
+        REGEXP_ERROR_PREFIX "regular expression too large",
+        REGEXP_ERROR_PREFIX "numbers out of order in {} quantifier",
+        REGEXP_ERROR_PREFIX "nothing to repeat",
+        REGEXP_ERROR_PREFIX "number too large in {} quantifier",
+        REGEXP_ERROR_PREFIX "missing )",
+        REGEXP_ERROR_PREFIX "unmatched parentheses",
+        REGEXP_ERROR_PREFIX "unrecognized character after (?",
+        REGEXP_ERROR_PREFIX "missing terminating ] for character class",
+        REGEXP_ERROR_PREFIX "range out of order in character class",
+        REGEXP_ERROR_PREFIX "\\ at end of pattern",
+        REGEXP_ERROR_PREFIX "invalid unicode {} escape",
+        REGEXP_ERROR_PREFIX "invalid escaped character for unicode pattern",
+        REGEXP_ERROR_PREFIX "too many nested disjunctions",
+        REGEXP_ERROR_PREFIX "pattern exceeds string length limits",
+        REGEXP_ERROR_PREFIX "invalid flags"
+    };
 
-    if (const char* error = parse(constructor, patternString, m_unicode))
+    return errorMessages[error];
+}
+
+const char* YarrPattern::compile(const String& patternString, void* stackLimit)
+{
+    YarrPatternConstructor constructor(*this, stackLimit);
+
+    if (m_flags == InvalidFlags)
+        return errorMessage(InvalidRegularExpressionFlags);
+
+    if (const char* error = parse(constructor, patternString, unicode()))
         return error;
 
     // If the pattern contains illegal backreferences reset & reparse.
@@ -859,7 +937,7 @@ const char* YarrPattern::compile(const String& patternString)
 #if !ASSERT_DISABLED
         const char* error =
 #endif
-            parse(constructor, patternString, m_unicode, numSubpatterns);
+            parse(constructor, patternString, unicode(), numSubpatterns);
 
         ASSERT(!error);
         ASSERT(numSubpatterns == m_numSubpatterns);
@@ -869,29 +947,31 @@ const char* YarrPattern::compile(const String& patternString)
     constructor.optimizeDotStarWrappedExpressions();
     constructor.optimizeBOL();
 
-    constructor.setupOffsets();
+    if (const char* error = constructor.setupOffsets())
+        return error;
 
-    return 0;
+    return nullptr;
 }
 
-YarrPattern::YarrPattern(const String& pattern, bool ignoreCase, bool multiline, bool unicode, const char** error)
-    : m_ignoreCase(ignoreCase)
-    , m_multiline(multiline)
-    , m_unicode(unicode)
-    , m_containsBackreferences(false)
+YarrPattern::YarrPattern(const String& pattern, RegExpFlags flags, const char** error, void* stackLimit)
+    : m_containsBackreferences(false)
     , m_containsBOL(false)
     , m_containsUnsignedLengthPattern(false)
+    , m_hasCopiedParenSubexpressions(false)
+    , m_flags(flags)
     , m_numSubpatterns(0)
     , m_maxBackReference(0)
     , newlineCached(0)
     , digitsCached(0)
     , spacesCached(0)
     , wordcharCached(0)
+    , wordUnicodeIgnoreCaseCharCached(0)
     , nondigitsCached(0)
     , nonspacesCached(0)
     , nonwordcharCached(0)
+    , nonwordUnicodeIgnoreCasecharCached(0)
 {
-    *error = compile(pattern);
+    *error = compile(pattern, stackLimit);
 }
 
 } }

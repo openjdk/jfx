@@ -23,10 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JSEventTargetCustom_h
-#define JSEventTargetCustom_h
+#pragma once
 
+#include "DOMWindow.h"
 #include "JSDOMBinding.h"
+#include "JSDOMBindingCaller.h"
+#include "JSDOMBindingSecurity.h"
 
 namespace WebCore {
 
@@ -48,8 +50,29 @@ private:
     JSC::JSObject& m_wrapper;
 };
 
-std::unique_ptr<JSEventTargetWrapper> jsEventTargetCast(JSC::JSValue thisValue);
+std::unique_ptr<JSEventTargetWrapper> jsEventTargetCast(JSC::VM&, JSC::JSValue thisValue);
+
+template<> struct BindingCaller<JSEventTarget> {
+    using OperationCallerFunction = JSC::EncodedJSValue(JSC::ExecState*, JSEventTargetWrapper*, JSC::ThrowScope&);
+
+    template<OperationCallerFunction operationCaller>
+    static JSC::EncodedJSValue callOperation(JSC::ExecState* state, const char* operationName)
+    {
+        ASSERT(state);
+        JSC::VM& vm = state->vm();
+        auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+        auto thisObject = jsEventTargetCast(vm, state->thisValue().toThis(state, JSC::NotStrictMode));
+        if (UNLIKELY(!thisObject))
+            return throwThisTypeError(*state, throwScope, "EventTarget", operationName);
+
+        if (auto* window = thisObject->wrapped().toDOMWindow()) {
+            if (!window->frame() || !BindingSecurity::shouldAllowAccessToDOMWindow(state, *window, ThrowSecurityError))
+                return JSC::JSValue::encode(JSC::jsUndefined());
+        }
+
+        return operationCaller(state, thisObject.get(), throwScope);
+    }
+};
 
 } // namespace WebCore
-
-#endif // JSEventTargetCustom_h

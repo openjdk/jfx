@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010, 2016 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,34 +41,11 @@
 
 namespace WTF {
 
-StringImpl* StringImpl::empty()
-{
-    static NeverDestroyed<StringImpl> emptyString(ConstructEmptyString);
-    return &emptyString.get();
-}
-
-// In addition to the normal hash value, store specialized hash value for
-// symbolized StringImpl*. And don't use the normal hash value for symbolized
-// StringImpl* when they are treated as Identifiers. Unique nature of these
-// symbolized StringImpl* keys means that we don't need them to match any other
-// string (in fact, that's exactly the oposite of what we want!), and the
-// normal hash would lead to lots of conflicts.
-unsigned StringImpl::nextHashForSymbol()
-{
-    static unsigned s_nextHashForSymbol = 0;
-    s_nextHashForSymbol += 1 << s_flagCount;
-    s_nextHashForSymbol |= 1 << 31;
-    return s_nextHashForSymbol;
-}
-
 WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, nullAtom)
 WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, emptyAtom)
-WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, textAtom)
-WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, commentAtom)
 WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, starAtom)
 WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, xmlAtom)
 WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, xmlnsAtom)
-WTF_EXPORTDATA DEFINE_GLOBAL(AtomicString, xlinkAtom)
 
 NEVER_INLINE unsigned StringImpl::hashSlowCase() const
 {
@@ -77,6 +54,17 @@ NEVER_INLINE unsigned StringImpl::hashSlowCase() const
     else
         setHash(StringHasher::computeHashAndMaskTop8Bits(m_data16, m_length));
     return existingHash();
+}
+
+unsigned StringImpl::concurrentHash() const
+{
+    unsigned hash;
+    if (is8Bit())
+        hash = StringHasher::computeHashAndMaskTop8Bits(m_data8, m_length);
+    else
+        hash = StringHasher::computeHashAndMaskTop8Bits(m_data16, m_length);
+    ASSERT(((hash << s_flagCount) >> s_flagCount) == hash);
+    return hash;
 }
 
 void AtomicString::init()
@@ -89,12 +77,9 @@ void AtomicString::init()
         // Use placement new to initialize the globals.
         new (NotNull, (void*)&nullAtom) AtomicString;
         new (NotNull, (void*)&emptyAtom) AtomicString("");
-        new (NotNull, (void*)&textAtom) AtomicString("#text", AtomicString::ConstructFromLiteral);
-        new (NotNull, (void*)&commentAtom) AtomicString("#comment", AtomicString::ConstructFromLiteral);
         new (NotNull, (void*)&starAtom) AtomicString("*", AtomicString::ConstructFromLiteral);
         new (NotNull, (void*)&xmlAtom) AtomicString("xml", AtomicString::ConstructFromLiteral);
         new (NotNull, (void*)&xmlnsAtom) AtomicString("xmlns", AtomicString::ConstructFromLiteral);
-        new (NotNull, (void*)&xlinkAtom) AtomicString("xlink", AtomicString::ConstructFromLiteral);
 
         initialized = true;
     }

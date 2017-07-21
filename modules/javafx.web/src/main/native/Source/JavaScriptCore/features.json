@@ -4,11 +4,20 @@
         "name": "ES6",
         "url": "http://wiki.ecmascript.org/doku.php?id=harmony:specification_drafts",
         "keywords": ["es6", "es2015", "ecmascript"],
-        "contact": {
-            "name": "Saam Barati",
-            "email": "sbarati@apple.com",
-            "twitter": "@saambarati"
-        }
+        "status": {
+            "status": "Done"
+        },
+        "contact": [
+            {
+                "name": "Saam Barati",
+                "email": "sbarati@apple.com",
+                "twitter": "@saambarati"
+            },
+            {
+                "name": "Keith Miller",
+                "email": "keith_miller@apple.com"
+            }
+        ]
     },
     {
         "name": "ES7",
@@ -18,18 +27,13 @@
     {
         "name": "Internationalization API",
         "status": {
-            "status": "In Development"
+            "status": "Done"
         },
         "url": "http://ecma-international.org/publications/standards/Ecma-402.htm",
         "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=90906",
         "description": "The Internationalization API provides language sensitive operations for  string, number, and date.",
-        "keywords": ["Intl", "Collator", "ECMA-402"],
-        "contact": {
-            "name": "Andy VanWagoner",
-            "email": "thetalecrafter@gmail.com",
-            "twitter": "@thetalecrafter"
-        }
+        "keywords": ["Intl", "Collator", "ECMA-402"]
     },
     {
         "name": "WebAssembly",
@@ -88,7 +92,7 @@
     {
         "name": "Arrow Functions",
         "status": {
-            "status": "In Development",
+            "status": "Done",
             "enabled-by-default": true
         },
         "url": "http://www.ecma-international.org/ecma-262/6.0/index.html#sec-arrow-function-definitions",
@@ -99,7 +103,7 @@
     {
         "name": "Block Scoping",
         "status": {
-            "status": "In Development",
+            "status": "Done",
             "enabled-by-default": true
         },
         "url": "http://www.ecma-international.org/ecma-262/6.0/#sec-let-and-const-declarations",
@@ -110,7 +114,7 @@
     {
         "name": "Classes",
         "status": {
-            "status": "In Development",
+            "status": "Done",
             "enabled-by-default": true
         },
         "url": "http://www.ecma-international.org/ecma-262/6.0/#sec-class-definitions",
@@ -139,6 +143,23 @@
         "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment",
         "description": "Destructuring syntax is a shorthand form that allows you to easily assign local variables to the values of an object or array's properties.",
         "specification": "ES6"
+    },
+    {
+        "name": "Exponentiation Syntax",
+        "status": {
+            "status": "Done",
+            "enabled-by-default": true
+        },
+        "url": "https://tc39.github.io/ecma262/#prod-ExponentiationExpression",
+        "specification": "ES7",
+        "description": "Exponentiation syntax (like x ** y) provides the syntax suger for exponentiation.",
+        "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=159969",
+        "documentation-url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Arithmetic_Operators#Exponentiation_(**)",
+        "contact": {
+            "name": "Yusuke Suzuki",
+            "twitter": "@Constellation",
+            "email": "utatane.tea@gmail.com"
+        }
     },
     {
         "name": "Generators",
@@ -172,13 +193,14 @@
     {
         "name": "Modules",
         "status": {
-            "status": "In Development",
+            "status": "Done",
             "enabled-by-default": true
         },
         "url": "http://www.ecma-international.org/ecma-262/6.0/index.html#sec-modules",
         "documentation-url": "https://hacks.mozilla.org/2015/08/es6-in-depth-modules/",
         "description": "Modules make modularizing code and splitting it across different files easy because the syntax and semantics are now standard in the JavaScript langauge.",
-        "specification": "ES6"
+        "specification": "ES6",
+        "comment": "Modules can be loaded through script type=\"module\" tags. It is also possible to use Modules with the jsc command line tool by passing the -m flag."
     },
     {
         "name": "Number Object Extensions",
@@ -218,7 +240,7 @@
     {
         "name": "Proxy Objects",
         "status": {
-            "status": "In Development"
+            "status": "Done"
         },
         "url": "http://www.ecma-international.org/ecma-262/6.0/index.html#sec-proxy-objects",
         "webkit-url": "https://bugs.webkit.org/show_bug.cgi?id=35731",
@@ -233,7 +255,7 @@
     {
         "name": "Reflect API",
         "status": {
-            "status": "In Development",
+            "status": "Done",
             "enabled-by-default": true
         },
         "url": "http://www.ecma-international.org/ecma-262/6.0/#sec-reflect-object",

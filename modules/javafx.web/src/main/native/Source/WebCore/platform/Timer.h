@@ -29,6 +29,8 @@
 #include <chrono>
 #include <functional>
 #include <wtf/Noncopyable.h>
+#include <wtf/Optional.h>
+#include <wtf/Seconds.h>
 #include <wtf/Threading.h>
 #include <wtf/Vector.h>
 
@@ -45,6 +47,10 @@ class TimerHeapElement;
 class TimerBase {
     WTF_MAKE_NONCOPYABLE(TimerBase);
     WTF_MAKE_FAST_ALLOCATED;
+protected:
+    static inline double msToSeconds(std::chrono::milliseconds duration) { return duration.count() * 0.001; }
+    static inline std::chrono::milliseconds secondsToMS(double duration) { return std::chrono::milliseconds((std::chrono::milliseconds::rep)(duration * 1000)); }
+
 public:
     WEBCORE_EXPORT TimerBase();
     WEBCORE_EXPORT virtual ~TimerBase();
@@ -52,9 +58,12 @@ public:
     WEBCORE_EXPORT void start(double nextFireInterval, double repeatInterval);
 
     void startRepeating(double repeatInterval) { start(repeatInterval, repeatInterval); }
-    void startRepeating(std::chrono::milliseconds repeatInterval) { startRepeating(repeatInterval.count() * 0.001); }
+    void startRepeating(std::chrono::milliseconds repeatInterval) { startRepeating(msToSeconds(repeatInterval)); }
+    void startRepeating(Seconds repeatInterval) { startRepeating(repeatInterval.value()); }
+
     void startOneShot(double interval) { start(interval, 0); }
-    void startOneShot(std::chrono::milliseconds interval) { startOneShot(interval.count() * 0.001); }
+    void startOneShot(std::chrono::milliseconds interval) { startOneShot(msToSeconds(interval)); }
+    void startOneShot(Seconds interval) { start(interval.value(), 0); }
 
     WEBCORE_EXPORT void stop();
     bool isActive() const;
@@ -62,9 +71,15 @@ public:
     double nextFireInterval() const;
     double nextUnalignedFireInterval() const;
     double repeatInterval() const { return m_repeatInterval; }
+    std::chrono::milliseconds repeatIntervalMS() const { return secondsToMS(repeatInterval()); }
 
     void augmentFireInterval(double delta) { setNextFireTime(m_nextFireTime + delta); }
+    void augmentFireInterval(std::chrono::milliseconds delta) { augmentFireInterval(msToSeconds(delta)); }
+    void augmentFireInterval(Seconds delta) { augmentFireInterval(delta.value()); }
+
     void augmentRepeatInterval(double delta) { augmentFireInterval(delta); m_repeatInterval += delta; }
+    void augmentRepeatInterval(std::chrono::milliseconds delta) { augmentRepeatInterval(msToSeconds(delta)); }
+    void augmentRepeatInterval(Seconds delta) { augmentRepeatInterval(delta.value()); }
 
     void didChangeAlignmentInterval();
 
@@ -73,7 +88,7 @@ public:
 private:
     virtual void fired() = 0;
 
-    virtual double alignedFireTime(double fireTime) const { return fireTime; }
+    virtual std::optional<std::chrono::milliseconds> alignedFireTime(std::chrono::milliseconds) const { return std::nullopt; }
 
     void checkConsistency() const;
     void checkHeapIndex() const;
@@ -127,13 +142,8 @@ public:
     {
     }
 
-    Timer() //XXX remove this stub timer
-    {
-        m_function = [](){};
-    }
-
 private:
-    virtual void fired() override
+    void fired() override
     {
         m_function();
     }
@@ -189,7 +199,7 @@ public:
     using TimerBase::isActive;
 
 private:
-    virtual void fired() override
+    void fired() override
     {
         if (m_shouldRestartWhenTimerFires) {
             m_shouldRestartWhenTimerFires = false;

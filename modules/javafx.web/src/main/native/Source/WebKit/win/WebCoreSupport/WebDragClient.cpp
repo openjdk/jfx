@@ -64,7 +64,7 @@ WebDragClient::WebDragClient(WebView* webView)
     ASSERT(webView);
 }
 
-DragDestinationAction WebDragClient::actionMaskForDrag(DragData& dragData)
+DragDestinationAction WebDragClient::actionMaskForDrag(const DragData& dragData)
 {
     COMPtr<IWebUIDelegate> delegateRef = 0;
     //Default behaviour (eg. no delegate, or callback not implemented) is to allow
@@ -76,7 +76,7 @@ DragDestinationAction WebDragClient::actionMaskForDrag(DragData& dragData)
     return (DragDestinationAction)mask;
 }
 
-void WebDragClient::willPerformDragDestinationAction(DragDestinationAction action, DragData& dragData)
+void WebDragClient::willPerformDragDestinationAction(DragDestinationAction action, const DragData& dragData)
 {
     //Default delegate for willPerformDragDestinationAction has no side effects
     //so we just call the delegate, and don't worry about whether it's implemented
@@ -110,7 +110,7 @@ void WebDragClient::willPerformDragSourceAction(DragSourceAction action, const I
         const_cast<Pasteboard&>(dataTransfer.pasteboard()).setExternalDataObject(newDataObject.get());
 }
 
-void WebDragClient::startDrag(DragImageRef image, const IntPoint& imageOrigin, const IntPoint& dragPoint, DataTransfer& dataTransfer, Frame& frame, bool isLink)
+void WebDragClient::startDrag(DragImage image, const IntPoint& imageOrigin, const IntPoint& dragPoint, const FloatPoint&, DataTransfer& dataTransfer, Frame& frame, DragSourceAction dragSourceAction)
 {
     //FIXME: Allow UIDelegate to override behaviour <rdar://problem/5015953>
 
@@ -129,15 +129,15 @@ void WebDragClient::startDrag(DragImageRef image, const IntPoint& imageOrigin, c
             if(SUCCEEDED(CoCreateInstance(CLSID_DragDropHelper, 0, CLSCTX_INPROC_SERVER,
                 IID_IDragSourceHelper,(LPVOID*)&helper))) {
                 BITMAP b;
-                GetObject(image, sizeof(BITMAP), &b);
+                GetObject(image.get(), sizeof(BITMAP), &b);
                 SHDRAGIMAGE sdi;
                 sdi.sizeDragImage.cx = b.bmWidth;
                 sdi.sizeDragImage.cy = b.bmHeight;
                 sdi.crColorKey = 0xffffffff;
-                sdi.hbmpDragImage = image;
+                sdi.hbmpDragImage = image.get();
                 sdi.ptOffset.x = dragPoint.x() - imageOrigin.x();
                 sdi.ptOffset.y = dragPoint.y() - imageOrigin.y();
-                if (isLink)
+                if (dragSourceAction == DragSourceActionLink)
                     sdi.ptOffset.y = b.bmHeight - sdi.ptOffset.y;
 
                 helper->InitializeFromBitmap(&sdi, dataObject.get());

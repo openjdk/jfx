@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AppendNodeCommand_h
-#define AppendNodeCommand_h
+#pragma once
 
 #include "EditCommand.h"
 
@@ -40,11 +39,11 @@ public:
 private:
     AppendNodeCommand(PassRefPtr<ContainerNode> parent, Ref<Node>&&, EditAction);
 
-    virtual void doApply() override;
-    virtual void doUnapply() override;
+    void doApply() override;
+    void doUnapply() override;
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Node*>&) override;
+    void getNodesInCommand(HashSet<Node*>&) override;
 #endif
 
     RefPtr<ContainerNode> m_parent;
@@ -52,5 +51,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // AppendNodeCommand_h

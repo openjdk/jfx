@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,49 +29,43 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MediaDevices_h
-#define MediaDevices_h
+#pragma once
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "ContextDestructionObserver.h"
+#include "ExceptionOr.h"
 #include "JSDOMPromise.h"
-#include "MediaDeviceInfo.h"
-#include "ScriptWrappable.h"
-#include <functional>
-#include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
+#include "MediaTrackConstraints.h"
 
 namespace WebCore {
 
-class Dictionary;
 class Document;
+class MediaDeviceInfo;
 class MediaStream;
-class MediaTrackSupportedConstraints;
-class NavigatorUserMediaError;
 
-typedef int ExceptionCode;
+struct MediaTrackSupportedConstraints;
 
 class MediaDevices : public ScriptWrappable, public RefCounted<MediaDevices>, public ContextDestructionObserver {
 public:
-    static Ref<MediaDevices> create(ScriptExecutionContext*);
-    virtual ~MediaDevices();
+    static Ref<MediaDevices> create(Document&);
 
     Document* document() const;
 
-    typedef DOMPromise<RefPtr<MediaStream>, RefPtr<NavigatorUserMediaError>> Promise;
-    typedef DOMPromise<MediaDeviceInfoVector, ExceptionCode> EnumerateDevicesPromise;
+    using Promise = DOMPromise<IDLInterface<MediaStream>>;
+    using EnumerateDevicesPromise = DOMPromise<IDLSequence<IDLInterface<MediaDeviceInfo>>>;
 
-    void getUserMedia(const Dictionary&, Promise&&, ExceptionCode&) const;
-    void enumerateDevices(EnumerateDevicesPromise&&, ExceptionCode&) const;
-    RefPtr<MediaTrackSupportedConstraints> getSupportedConstraints();
+    struct StreamConstraints {
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
+    };
+    ExceptionOr<void> getUserMedia(const StreamConstraints&, Promise&&) const;
+    void enumerateDevices(EnumerateDevicesPromise&&) const;
+    MediaTrackSupportedConstraints getSupportedConstraints();
 
 private:
-    explicit MediaDevices(ScriptExecutionContext*);
+    explicit MediaDevices(Document&);
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(MEDIA_STREAM)
-
-#endif // MediaDevices_h

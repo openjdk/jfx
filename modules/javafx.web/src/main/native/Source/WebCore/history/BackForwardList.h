@@ -32,24 +32,15 @@
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
 
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaRef.h>
-#endif
 
 namespace WebCore {
 
 class Page;
-#if PLATFORM(JAVA)
-class BackForwardListImpl;
-#endif
 
 typedef Vector<Ref<HistoryItem>> HistoryItemVector;
 typedef HashSet<RefPtr<HistoryItem>> HistoryItemHashSet;
 
 class BackForwardList : public BackForwardClient {
-#if PLATFORM(JAVA)
-    friend BackForwardListImpl;
-#endif
 public:
     static Ref<BackForwardList> create(Page* page) { return adoptRef(*new BackForwardList(page)); }
     virtual ~BackForwardList();
@@ -61,20 +52,10 @@ public:
     WEBCORE_EXPORT void goForward();
     virtual void goToItem(HistoryItem*) override;
 
-#if PLATFORM(JAVA)
-    BackForwardList(JLObject host): m_hostObject(host) {}
-    JLObject hostObject();
-    void setHostObject(const JLObject&);
-#endif
-
     WEBCORE_EXPORT HistoryItem* backItem();
     WEBCORE_EXPORT HistoryItem* currentItem();
     WEBCORE_EXPORT HistoryItem* forwardItem();
     virtual HistoryItem* itemAtIndex(int) override;
-
-#if PLATFORM(JAVA)
-    JGObject m_hostObject;
-#endif
 
     WEBCORE_EXPORT void backListWithLimit(int, HistoryItemVector&);
     WEBCORE_EXPORT void forwardListWithLimit(int, HistoryItemVector&);

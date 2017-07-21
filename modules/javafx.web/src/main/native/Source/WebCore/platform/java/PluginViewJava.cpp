@@ -5,7 +5,7 @@
 
 #include "NotImplemented.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "StringJava.h"
 // #include "PluginPackage.h" //XXX: win only?
 // #include "PluginView.h" //XXX: win only?

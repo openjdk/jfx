@@ -367,6 +367,7 @@ void GraphicsContext::restore()
         LOG_ERROR("ERROR void GraphicsContext::restore() stack is empty");
         return;
     }
+
     m_state = m_stack.last();
     m_stack.removeLast();
 
@@ -636,7 +637,7 @@ void GraphicsContext::endTransparencyLayer()
     --m_transparencyCount;
 }
 
-float GraphicsContext::drawText(const FontCascade& font, const TextRun& run, const FloatPoint& point, int from, int to)
+float GraphicsContext::drawText(const FontCascade& font, const TextRun& run, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
 {
     if (paintingDisabled())
         return 0;
@@ -645,7 +646,7 @@ float GraphicsContext::drawText(const FontCascade& font, const TextRun& run, con
     return font.drawText(*this, run, point, from, to);
 }
 
-void GraphicsContext::drawGlyphs(const FontCascade& fontCascade, const Font& font, const GlyphBuffer& buffer, int from, int numGlyphs, const FloatPoint& point)
+void GraphicsContext::drawGlyphs(const FontCascade& fontCascade, const Font& font, const GlyphBuffer& buffer, unsigned from, unsigned numGlyphs, const FloatPoint& point)
 {
     if (paintingDisabled())
         return;
@@ -658,7 +659,7 @@ void GraphicsContext::drawGlyphs(const FontCascade& fontCascade, const Font& fon
     fontCascade.drawGlyphs(*this, font, buffer, from, numGlyphs, point, fontCascade.fontDescription().fontSmoothing());
 }
 
-void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomicString& mark, const FloatPoint& point, int from, int to)
+void GraphicsContext::drawEmphasisMarks(const FontCascade& font, const TextRun& run, const AtomicString& mark, const FloatPoint& point, unsigned from, std::optional<unsigned> to)
 {
     if (paintingDisabled())
         return;
@@ -691,13 +692,13 @@ void GraphicsContext::drawBidiText(const FontCascade& font, const TextRun& run, 
         subrun.setDirection(isRTL ? RTL : LTR);
         subrun.setDirectionalOverride(bidiRun->dirOverride(false));
 
-        float width = font.drawText(*this, subrun, currPoint, 0, -1, customFontNotReadyAction);
+        float width = font.drawText(*this, subrun, currPoint, 0, std::nullopt, customFontNotReadyAction);
         currPoint.move(width, 0);
 
         bidiRun = bidiRun->next();
     }
 
-    bidiRuns.deleteRuns();
+    bidiRuns.clear();
 }
 
 void GraphicsContext::drawImage(Image& image, const FloatPoint& destination, const ImagePaintingOptions& imagePaintingOptions)
@@ -834,7 +835,7 @@ void GraphicsContext::clipOutRoundedRect(const FloatRoundedRect& rect)
     clipOut(path);
 }
 
-#if !USE(CG) && !USE(CAIRO) && !PLATFORM(JAVA)
+#if !USE(CG) && !USE(DIRECT2D) && !USE(CAIRO) && !PLATFORM(JAVA)
 IntRect GraphicsContext::clipBounds() const
 {
     ASSERT_NOT_REACHED();
@@ -884,7 +885,7 @@ void GraphicsContext::fillRect(const FloatRect& rect, const Color& color, Compos
     setCompositeOperation(previousOperator);
 }
 
-#if !PLATFORM(JAVA) //XXX: recheck
+#if !PLATFORM(JAVA) // FIXME-java: recheck
 void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color& color, BlendMode blendMode)
 {
     if (paintingDisabled())
@@ -904,7 +905,7 @@ void GraphicsContext::fillRoundedRect(const FloatRoundedRect& rect, const Color&
 }
 #endif
 
-#if !USE(CG) && !USE(CAIRO) && !PLATFORM(JAVA)
+#if !USE(CG) && !USE(DIRECT2D) && !USE(CAIRO) && !PLATFORM(JAVA)
 void GraphicsContext::fillRectWithRoundedHole(const IntRect& rect, const FloatRoundedRect& roundedHoleRect, const Color& color)
 {
     if (paintingDisabled())
@@ -959,26 +960,26 @@ void GraphicsContext::setDrawLuminanceMask(bool drawLuminanceMask)
         m_displayListRecorder->updateState(m_state, GraphicsContextState::DrawLuminanceMaskChange);
 }
 
-#if !USE(CG) && !PLATFORM(JAVA)
+#if !USE(CG) && !USE(DIRECT2D) && !PLATFORM(JAVA)
 // Implement this if you want to go push the drawing mode into your native context immediately.
 void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags)
 {
 }
 #endif
 
-#if !USE(CAIRO) & !PLATFORM(JAVA)
+#if !USE(CAIRO) && !USE(DIRECT2D) && !PLATFORM(JAVA)
 void GraphicsContext::setPlatformStrokeStyle(StrokeStyle)
 {
 }
 #endif
 
-#if !USE(CG)
+#if !USE(CG) && !USE(DIRECT2D)
 void GraphicsContext::setPlatformShouldSmoothFonts(bool)
 {
 }
 #endif
 
-#if !USE(CG) && !USE(CAIRO)
+#if !USE(CG) && !USE(DIRECT2D) && !USE(CAIRO)
 bool GraphicsContext::isAcceleratedContext() const
 {
     return false;
@@ -1014,37 +1015,7 @@ void GraphicsContext::adjustLineToPixelBoundaries(FloatPoint& p1, FloatPoint& p2
     }
 }
 
-static bool scalesMatch(AffineTransform a, AffineTransform b)
-{
-    return a.xScale() == b.xScale() && a.yScale() == b.yScale();
-}
-
-std::unique_ptr<ImageBuffer> GraphicsContext::createCompatibleBuffer(const FloatSize& size, bool hasAlpha) const
-{
-    // Make the buffer larger if the context's transform is scaling it so we need a higher
-    // resolution than one pixel per unit. Also set up a corresponding scale factor on the
-    // graphics context.
-
-    AffineTransform transform = getCTM(DefinitelyIncludeDeviceScale);
-    FloatSize scaledSize(static_cast<int>(ceil(size.width() * transform.xScale())), static_cast<int>(ceil(size.height() * transform.yScale())));
-
-    std::unique_ptr<ImageBuffer> buffer = ImageBuffer::createCompatibleBuffer(scaledSize, 1, ColorSpaceSRGB, *this, hasAlpha);
-    if (!buffer)
-        return nullptr;
-
-    buffer->context().scale(FloatSize(scaledSize.width() / size.width(), scaledSize.height() / size.height()));
-
-    return buffer;
-}
-
-bool GraphicsContext::isCompatibleWithBuffer(ImageBuffer& buffer) const
-{
-    GraphicsContext& bufferContext = buffer.context();
-
-    return scalesMatch(getCTM(), bufferContext.getCTM()) && isAcceleratedContext() == bufferContext.isAcceleratedContext();
-}
-
-#if !USE(CG)
+#if !USE(CG) && !USE(DIRECT2D)
 void GraphicsContext::platformApplyDeviceScaleFactor(float)
 {
 }
@@ -1052,7 +1023,7 @@ void GraphicsContext::platformApplyDeviceScaleFactor(float)
 
 void GraphicsContext::applyDeviceScaleFactor(float deviceScaleFactor)
 {
-    scale(FloatSize(deviceScaleFactor, deviceScaleFactor));
+    scale(deviceScaleFactor);
 
     if (isRecording()) {
         m_displayListRecorder->applyDeviceScaleFactor(deviceScaleFactor);
@@ -1060,6 +1031,12 @@ void GraphicsContext::applyDeviceScaleFactor(float deviceScaleFactor)
     }
 
     platformApplyDeviceScaleFactor(deviceScaleFactor);
+}
+
+FloatSize GraphicsContext::scaleFactor() const
+{
+    AffineTransform transform = getCTM(GraphicsContext::DefinitelyIncludeDeviceScale);
+    return FloatSize(transform.xScale(), transform.yScale());
 }
 
 void GraphicsContext::fillEllipse(const FloatRect& ellipse)
@@ -1086,7 +1063,7 @@ void GraphicsContext::strokeEllipseAsPath(const FloatRect& ellipse)
     strokePath(path);
 }
 
-#if !USE(CG)
+#if !USE(CG) && !USE(DIRECT2D)
 void GraphicsContext::platformFillEllipse(const FloatRect& ellipse)
 {
     if (paintingDisabled())
@@ -1126,8 +1103,7 @@ FloatRect GraphicsContext::computeLineBoundsAndAntialiasingModeForText(const Flo
         // effect, an alpha is applied to the underline color when text is at small scales.
         static const float minimumUnderlineAlpha = 0.4f;
         float shade = scale > minimumUnderlineAlpha ? scale : minimumUnderlineAlpha;
-        int alpha = color.alpha() * shade;
-        color = Color(color.red(), color.green(), color.blue(), alpha);
+        color = color.colorWithAlphaMultipliedBy(shade);
     }
 
     FloatPoint devicePoint = transform.mapPoint(point);
@@ -1151,5 +1127,71 @@ void GraphicsContext::applyState(const GraphicsContextState& state)
     setPlatformShouldAntialias(state.shouldAntialias);
     setPlatformShouldSmoothFonts(state.shouldSmoothFonts);
 }
+
+float GraphicsContext::dashedLineCornerWidthForStrokeWidth(float strokeWidth) const
+{
+    float thickness = strokeThickness();
+    return strokeStyle() == DottedStroke ? thickness : std::min(2.0f * thickness, std::max(thickness, strokeWidth / 3.0f));
+}
+
+float GraphicsContext::dashedLinePatternWidthForStrokeWidth(float strokeWidth) const
+{
+    float thickness = strokeThickness();
+    return strokeStyle() == DottedStroke ? thickness : std::min(3.0f * thickness, std::max(thickness, strokeWidth / 3.0f));
+}
+
+float GraphicsContext::dashedLinePatternOffsetForPatternAndStrokeWidth(float patternWidth, float strokeWidth) const
+{
+    // Pattern starts with full fill and ends with the empty fill.
+    // 1. Let's start with the empty phase after the corner.
+    // 2. Check if we've got odd or even number of patterns and whether they fully cover the line.
+    // 3. In case of even number of patterns and/or remainder, move the pattern start position
+    // so that the pattern is balanced between the corners.
+    float patternOffset = patternWidth;
+    int numberOfSegments = std::floor(strokeWidth / patternWidth);
+    bool oddNumberOfSegments = numberOfSegments % 2;
+    float remainder = strokeWidth - (numberOfSegments * patternWidth);
+    if (oddNumberOfSegments && remainder)
+        patternOffset -= remainder / 2.0f;
+    else if (!oddNumberOfSegments) {
+        if (remainder)
+            patternOffset += patternOffset - (patternWidth + remainder) / 2.0f;
+        else
+            patternOffset += patternWidth / 2.0f;
+    }
+
+    return patternOffset;
+}
+
+Vector<FloatPoint> GraphicsContext::centerLineAndCutOffCorners(bool isVerticalLine, float cornerWidth, FloatPoint point1, FloatPoint point2) const
+{
+    // Center line and cut off corners for pattern painting.
+    if (isVerticalLine) {
+        float centerOffset = (point2.x() - point1.x()) / 2.0f;
+        point1.move(centerOffset, cornerWidth);
+        point2.move(-centerOffset, -cornerWidth);
+    } else {
+        float centerOffset = (point2.y() - point1.y()) / 2.0f;
+        point1.move(cornerWidth, centerOffset);
+        point2.move(-cornerWidth, -centerOffset);
+    }
+
+    return { point1, point2 };
+}
+
+#if !USE(CG)
+bool GraphicsContext::supportsInternalLinks() const
+{
+    return false;
+}
+
+void GraphicsContext::setDestinationForRect(const String&, const FloatRect&)
+{
+}
+
+void GraphicsContext::addDestinationAtPoint(const String&, const FloatPoint&)
+{
+}
+#endif
 
 }

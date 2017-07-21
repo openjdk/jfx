@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011, 2013-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,6 +55,10 @@ void OSRExitCompiler::compileExit(const OSRExit& exit, const Operands<ValueRecov
         switch (recovery->type()) {
         case SpeculativeAdd:
             m_jit.sub32(recovery->src(), recovery->dest());
+            break;
+
+        case SpeculativeAddImmediate:
+            m_jit.sub32(AssemblyHelpers::Imm32(recovery->immediate()), recovery->dest());
             break;
 
         case BooleanSpeculationCheck:
@@ -114,7 +118,7 @@ void OSRExitCompiler::compileExit(const OSRExit& exit, const Operands<ValueRecov
 
                 m_jit.loadPtr(AssemblyHelpers::Address(value, JSCell::structureIDOffset()), scratch1);
                 m_jit.storePtr(scratch1, arrayProfile->addressOfLastSeenStructureID());
-                m_jit.load8(AssemblyHelpers::Address(scratch1, Structure::indexingTypeOffset()), scratch1);
+                m_jit.load8(AssemblyHelpers::Address(scratch1, Structure::indexingTypeIncludingHistoryOffset()), scratch1);
                 m_jit.move(AssemblyHelpers::TrustedImm32(1), scratch2);
                 m_jit.lshift32(scratch1, scratch2);
                 m_jit.or32(scratch2, AssemblyHelpers::AbsoluteAddress(arrayProfile->addressOfArrayModes()));
@@ -124,28 +128,30 @@ void OSRExitCompiler::compileExit(const OSRExit& exit, const Operands<ValueRecov
             }
         }
 
-        if (!!exit.m_valueProfile) {
-            EncodedJSValue* bucket = exit.m_valueProfile.getSpecFailBucket(0);
-
+        if (MethodOfGettingAValueProfile profile = exit.m_valueProfile) {
             if (exit.m_jsValueSource.isAddress()) {
                 // Save a register so we can use it.
-                GPRReg scratch = AssemblyHelpers::selectScratchGPR(exit.m_jsValueSource.base());
+                GPRReg scratchPayload = AssemblyHelpers::selectScratchGPR(exit.m_jsValueSource.base());
+                GPRReg scratchTag = AssemblyHelpers::selectScratchGPR(exit.m_jsValueSource.base(), scratchPayload);
+                m_jit.pushToSave(scratchPayload);
+                m_jit.pushToSave(scratchTag);
 
-                m_jit.push(scratch);
+                JSValueRegs scratch(scratchTag, scratchPayload);
 
-                m_jit.load32(exit.m_jsValueSource.asAddress(OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.tag)), scratch);
-                m_jit.store32(scratch, &bitwise_cast<EncodedValueDescriptor*>(bucket)->asBits.tag);
-                m_jit.load32(exit.m_jsValueSource.asAddress(OBJECT_OFFSETOF(EncodedValueDescriptor, asBits.payload)), scratch);
-                m_jit.store32(scratch, &bitwise_cast<EncodedValueDescriptor*>(bucket)->asBits.payload);
+                m_jit.loadValue(exit.m_jsValueSource.asAddress(), scratch);
+                profile.emitReportValue(m_jit, scratch);
 
-                m_jit.pop(scratch);
+                m_jit.popToRestore(scratchTag);
+                m_jit.popToRestore(scratchPayload);
             } else if (exit.m_jsValueSource.hasKnownTag()) {
-                m_jit.store32(AssemblyHelpers::TrustedImm32(exit.m_jsValueSource.tag()), &bitwise_cast<EncodedValueDescriptor*>(bucket)->asBits.tag);
-                m_jit.store32(exit.m_jsValueSource.payloadGPR(), &bitwise_cast<EncodedValueDescriptor*>(bucket)->asBits.payload);
-            } else {
-                m_jit.store32(exit.m_jsValueSource.tagGPR(), &bitwise_cast<EncodedValueDescriptor*>(bucket)->asBits.tag);
-                m_jit.store32(exit.m_jsValueSource.payloadGPR(), &bitwise_cast<EncodedValueDescriptor*>(bucket)->asBits.payload);
-            }
+                GPRReg scratchTag = AssemblyHelpers::selectScratchGPR(exit.m_jsValueSource.payloadGPR());
+                m_jit.pushToSave(scratchTag);
+                m_jit.move(AssemblyHelpers::TrustedImm32(exit.m_jsValueSource.tag()), scratchTag);
+                JSValueRegs value(scratchTag, exit.m_jsValueSource.payloadGPR());
+                profile.emitReportValue(m_jit, value);
+                m_jit.popToRestore(scratchTag);
+            } else
+                profile.emitReportValue(m_jit, exit.m_jsValueSource.regs());
         }
     }
 
@@ -249,7 +255,7 @@ void OSRExitCompiler::compileExit(const OSRExit& exit, const Operands<ValueRecov
     m_jit.emitSaveCalleeSavesFor(m_jit.baselineCodeBlock());
 
     if (exit.isExceptionHandler())
-        m_jit.copyCalleeSavesToVMCalleeSavesBuffer();
+        m_jit.copyCalleeSavesToVMEntryFrameCalleeSavesBuffer();
 
     // Do all data format conversions and store the results into the stack.
 

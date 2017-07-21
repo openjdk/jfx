@@ -36,6 +36,7 @@
 #include "HTMLNames.h"
 #include "HTMLSpanElement.h"
 #include "InlineTextBox.h"
+#include "Logging.h"
 #include "PrintContext.h"
 #include "PseudoElement.h"
 #include "RenderBlockFlow.h"
@@ -71,6 +72,10 @@
 #include <wtf/HexNumber.h>
 #include <wtf/Vector.h>
 #include <wtf/unicode/CharacterNames.h>
+
+#if PLATFORM(MAC)
+#include "ScrollbarThemeMac.h"
+#endif
 
 namespace WebCore {
 
@@ -350,7 +355,6 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
         ts << " [r=" << c.rowIndex() << " c=" << c.col() << " rs=" << c.rowSpan() << " cs=" << c.colSpan() << "]";
     }
 
-#if ENABLE(DETAILS_ELEMENT)
     if (is<RenderDetailsMarker>(o)) {
         ts << ": ";
         switch (downcast<RenderDetailsMarker>(o).orientation()) {
@@ -368,7 +372,6 @@ void RenderTreeAsText::writeRenderObject(TextStream& ts, const RenderObject& o, 
             break;
         }
     }
-#endif
 
     if (is<RenderListMarker>(o)) {
         String text = downcast<RenderListMarker>(o).text();
@@ -490,18 +493,20 @@ static void writeTextRun(TextStream& ts, const RenderText& o, const InlineTextBo
     ts << "\n";
 }
 
-static void writeSimpleLine(TextStream& ts, const RenderText& o, const FloatRect& rect, StringView text)
+static void writeSimpleLine(TextStream& ts, const RenderText& renderText, const SimpleLineLayout::RunResolver::Run& run)
 {
+    auto rect = run.rect();
     int x = rect.x();
     int y = rect.y();
     int logicalWidth = ceilf(rect.x() + rect.width()) - x;
 
-    if (is<RenderTableCell>(*o.containingBlock()))
-        y -= floorToInt(downcast<RenderTableCell>(*o.containingBlock()).intrinsicPaddingBefore());
+    if (is<RenderTableCell>(*renderText.containingBlock()))
+        y -= floorToInt(downcast<RenderTableCell>(*renderText.containingBlock()).intrinsicPaddingBefore());
 
     ts << "text run at (" << x << "," << y << ") width " << logicalWidth;
-    ts << ": "
-        << quoteAndEscapeNonPrintables(text);
+    ts << ": " << quoteAndEscapeNonPrintables(run.text());
+    if (run.hasHyphen())
+        ts << " + hyphen string " << quoteAndEscapeNonPrintables(renderText.style().hyphenString().string());
     ts << "\n";
 }
 
@@ -552,7 +557,7 @@ void write(TextStream& ts, const RenderObject& o, int indent, RenderAsTextBehavi
             auto resolver = runResolver(downcast<RenderBlockFlow>(*text.parent()), *layout);
             for (const auto& run : resolver.rangeForRenderer(text)) {
                 writeIndent(ts, indent + 1);
-                writeSimpleLine(ts, text, run.rect(), run.text());
+                writeSimpleLine(ts, text, run);
             }
         } else {
             for (auto* box = text.firstTextBox(); box; box = box->nextTextBox()) {
@@ -562,10 +567,10 @@ void write(TextStream& ts, const RenderObject& o, int indent, RenderAsTextBehavi
         }
 
     } else {
-        for (RenderObject* child = downcast<RenderElement>(o).firstChild(); child; child = child->nextSibling()) {
-            if (child->hasLayer())
+        for (auto& child : childrenOfType<RenderObject>(downcast<RenderElement>(o))) {
+            if (child.hasLayer())
                 continue;
-            write(ts, *child, indent + 1, behavior);
+            write(ts, child, indent + 1, behavior);
         }
     }
 
@@ -621,6 +626,14 @@ static void write(TextStream& ts, const RenderLayer& layer, const LayoutRect& la
             ts << " scrollWidth " << layer.scrollWidth();
         if (layer.renderBox() && roundToInt(layer.renderBox()->clientHeight()) != layer.scrollHeight())
             ts << " scrollHeight " << layer.scrollHeight();
+#if PLATFORM(MAC)
+        ScrollbarTheme& scrollbarTheme = ScrollbarTheme::theme();
+        if (!scrollbarTheme.isMockTheme() && layer.hasVerticalScrollbar()) {
+            ScrollbarThemeMac& macTheme = *static_cast<ScrollbarThemeMac*>(&scrollbarTheme);
+            if (macTheme.isLayoutDirectionRTL(*layer.verticalScrollbar()))
+                ts << " scrollbarHasRTLLayoutDirection";
+        }
+#endif
     }
 
     if (paintPhase == LayerPaintPhaseBackground)
@@ -678,8 +691,9 @@ static void writeRenderRegionList(const RenderRegionList& flowThreadRegionList, 
 
             ts << " {" << tagName.toString() << "}";
 
-            if (generatingElement->hasID())
-                ts << " #" << generatingElement->idForStyleResolution();
+            auto& generatingElementId = generatingElement->idForStyleResolution();
+            if (!generatingElementId.isNull())
+                ts << " #" << generatingElementId;
 
             if (isRenderNamedFlowFragment)
                 ts << ")";
@@ -867,9 +881,11 @@ static void writeSelection(TextStream& ts, const RenderObject* renderer)
 
 static String externalRepresentation(RenderBox* renderer, RenderAsTextBehavior behavior)
 {
-    TextStream ts;
+    TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect | TextStream::Formatting::LayoutUnitsAsIntegers);
     if (!renderer->hasLayer())
         return ts.release();
+
+    LOG(Layout, "externalRepresentation: dumping layer tree");
 
     RenderLayer* layer = renderer->layer();
     writeLayers(ts, layer, layer, layer->rect(), 0, behavior);
@@ -923,7 +939,7 @@ String counterValueForElement(Element* element)
     // Make sure the element is not freed during the layout.
     RefPtr<Element> elementRef(element);
     element->document().updateLayout();
-    TextStream stream;
+    TextStream stream(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect | TextStream::Formatting::LayoutUnitsAsIntegers);
     bool isFirstCounter = true;
     // The counter renderers should be children of :before or :after pseudo-elements.
     if (PseudoElement* before = element->beforePseudoElement())

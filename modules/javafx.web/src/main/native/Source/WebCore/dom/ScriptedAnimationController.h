@@ -23,23 +23,23 @@
  *
  */
 
-#ifndef ScriptedAnimationController_h
-#define ScriptedAnimationController_h
+#pragma once
 
-#if ENABLE(REQUEST_ANIMATION_FRAME)
 #include "DOMTimeStamp.h"
-#if USE(REQUEST_ANIMATION_FRAME_TIMER)
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
-#include "Chrome.h"
-#include "ChromeClient.h"
-#include "DisplayRefreshMonitorClient.h"
-#endif
-#include "Timer.h"
-#endif
 #include "PlatformScreen.h"
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
+
+#if USE(REQUEST_ANIMATION_FRAME_TIMER)
+#include "Timer.h"
+#endif
+
+#if USE(REQUEST_ANIMATION_FRAME_TIMER) && USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#include "Chrome.h"
+#include "ChromeClient.h"
+#include "DisplayRefreshMonitorClient.h"
+#endif
 
 namespace WebCore {
 
@@ -58,12 +58,13 @@ public:
     }
     ~ScriptedAnimationController();
     void clearDocumentPointer() { m_document = nullptr; }
+    bool requestAnimationFrameEnabled() const;
 
     typedef int CallbackId;
 
-    CallbackId registerCallback(PassRefPtr<RequestAnimationFrameCallback>);
+    CallbackId registerCallback(Ref<RequestAnimationFrameCallback>&&);
     void cancelCallback(CallbackId);
-    void serviceScriptedAnimations(double monotonicTimeNow);
+    void serviceScriptedAnimations(double timestamp);
 
     void suspend();
     void resume();
@@ -87,21 +88,17 @@ private:
 #if USE(REQUEST_ANIMATION_FRAME_TIMER)
     void animationTimerFired();
     Timer m_animationTimer;
-    double m_lastAnimationFrameTimeMonotonic { 0 };
+    double m_lastAnimationFrameTimestamp { 0 };
+#endif
 
-#if USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
+#if USE(REQUEST_ANIMATION_FRAME_TIMER) && USE(REQUEST_ANIMATION_FRAME_DISPLAY_MONITOR)
     // Override for DisplayRefreshMonitorClient
-    virtual void displayRefreshFired(double timestamp) override;
-    virtual RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const override;
+    void displayRefreshFired() override;
+    RefPtr<DisplayRefreshMonitor> createDisplayRefreshMonitor(PlatformDisplayID) const override;
 
     bool m_isUsingTimer { false };
     bool m_isThrottled { false };
 #endif
-#endif
 };
 
-}
-
-#endif // ENABLE(REQUEST_ANIMATION_FRAME)
-
-#endif // ScriptedAnimationController_h
+} // namespace WebCore

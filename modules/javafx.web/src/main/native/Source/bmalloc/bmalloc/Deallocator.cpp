@@ -24,12 +24,13 @@
  */
 
 #include "BAssert.h"
-#include "LargeChunk.h"
+#include "Chunk.h"
 #include "Deallocator.h"
+#include "DebugHeap.h"
 #include "Heap.h"
 #include "Inline.h"
+#include "Object.h"
 #include "PerProcess.h"
-#include "SmallChunk.h"
 #include <algorithm>
 #include <cstdlib>
 #include <sys/mman.h>
@@ -39,9 +40,9 @@ using namespace std;
 namespace bmalloc {
 
 Deallocator::Deallocator(Heap* heap)
-    : m_isBmallocEnabled(heap->environment().isBmallocEnabled())
+    : m_debugHeap(heap->debugHeap())
 {
-    if (!m_isBmallocEnabled) {
+    if (m_debugHeap) {
         // Fill the object log in order to disable the fast path.
         while (m_objectLog.size() != m_objectLog.capacity())
             m_objectLog.push(nullptr);
@@ -55,58 +56,46 @@ Deallocator::~Deallocator()
 
 void Deallocator::scavenge()
 {
-    if (m_isBmallocEnabled)
-        processObjectLog();
+    if (m_debugHeap)
+        return;
+
+    processObjectLog();
 }
 
-void Deallocator::deallocateLarge(void* object)
+void Deallocator::processObjectLog(std::lock_guard<StaticMutex>& lock)
 {
-    std::lock_guard<StaticMutex> lock(PerProcess<Heap>::mutex());
-    PerProcess<Heap>::getFastCase()->deallocateLarge(lock, object);
-}
+    Heap* heap = PerProcess<Heap>::getFastCase();
 
-void Deallocator::deallocateXLarge(void* object)
-{
-    std::unique_lock<StaticMutex> lock(PerProcess<Heap>::mutex());
-    PerProcess<Heap>::getFastCase()->deallocateXLarge(lock, object);
+    for (Object object : m_objectLog)
+        heap->derefSmallLine(lock, object);
+
+    m_objectLog.clear();
 }
 
 void Deallocator::processObjectLog()
 {
     std::lock_guard<StaticMutex> lock(PerProcess<Heap>::mutex());
-    Heap* heap = PerProcess<Heap>::getFastCase();
-
-    for (auto* object : m_objectLog) {
-        SmallLine* line = SmallLine::get(object);
-        heap->derefSmallLine(lock, line);
-    }
-
-    m_objectLog.clear();
+    processObjectLog(lock);
 }
 
 void Deallocator::deallocateSlowCase(void* object)
 {
-    BASSERT(!deallocateFastCase(object));
+    if (m_debugHeap)
+        return m_debugHeap->free(object);
 
-    if (!m_isBmallocEnabled) {
-        free(object);
-        return;
-    }
-
-    BASSERT(objectType(nullptr) == XLarge);
     if (!object)
         return;
 
-    if (isSmall(object)) {
-        processObjectLog();
-        m_objectLog.push(object);
+    std::lock_guard<StaticMutex> lock(PerProcess<Heap>::mutex());
+    if (PerProcess<Heap>::getFastCase()->isLarge(lock, object)) {
+        PerProcess<Heap>::getFastCase()->deallocateLarge(lock, object);
         return;
     }
 
-    if (!isXLarge(object))
-        return deallocateLarge(object);
+    if (m_objectLog.size() == m_objectLog.capacity())
+        processObjectLog(lock);
 
-    return deallocateXLarge(object);
+    m_objectLog.push(object);
 }
 
 } // namespace bmalloc

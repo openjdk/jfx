@@ -170,7 +170,7 @@ static WebDefaultUIKitDelegate *sharedDelegate = nil;
 {
 }
 
-- (void)deleteFromInputwithFlags:(NSUInteger)flags
+- (void)deleteFromInputWithFlags:(NSUInteger)flags
 {
 }
 
@@ -207,7 +207,7 @@ static WebDefaultUIKitDelegate *sharedDelegate = nil;
 {
 }
 
-- (void)webView:(WebView *)webView runOpenPanelForFileButtonWithResultListener:(id<WebOpenPanelResultListener>)resultListener allowMultipleFiles:(BOOL)allowMultipleFiles acceptMIMETypes:(NSArray *)mimeTypes
+- (void)webView:(WebView *)webView runOpenPanelForFileButtonWithResultListener:(id<WebOpenPanelResultListener>)resultListener configuration:(NSDictionary *)configuration
 {
     [resultListener cancel];
 }

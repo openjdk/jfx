@@ -47,31 +47,31 @@ void GeneratorFunctionConstructor::finishCreation(VM& vm, GeneratorFunctionProto
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, generatorFunctionPrototype, DontEnum | DontDelete | ReadOnly);
 
     // Number of arguments for constructor
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontDelete | DontEnum);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum);
 }
 
 static EncodedJSValue JSC_HOST_CALL callGeneratorFunctionConstructor(ExecState* exec)
 {
     ArgList args(exec);
-    return JSValue::encode(constructFunction(exec, asInternalFunction(exec->callee())->globalObject(), args, FunctionConstructionMode::Generator));
+    return JSValue::encode(constructFunction(exec, asInternalFunction(exec->jsCallee())->globalObject(), args, FunctionConstructionMode::Generator));
 }
 
 static EncodedJSValue JSC_HOST_CALL constructGeneratorFunctionConstructor(ExecState* exec)
 {
     ArgList args(exec);
-    return JSValue::encode(constructFunction(exec, asInternalFunction(exec->callee())->globalObject(), args, FunctionConstructionMode::Generator));
+    return JSValue::encode(constructFunction(exec, asInternalFunction(exec->jsCallee())->globalObject(), args, FunctionConstructionMode::Generator, exec->newTarget()));
 }
 
 CallType GeneratorFunctionConstructor::getCallData(JSCell*, CallData& callData)
 {
     callData.native.function = callGeneratorFunctionConstructor;
-    return CallTypeHost;
+    return CallType::Host;
 }
 
 ConstructType GeneratorFunctionConstructor::getConstructData(JSCell*, ConstructData& constructData)
 {
     constructData.native.function = constructGeneratorFunctionConstructor;
-    return ConstructTypeHost;
+    return ConstructType::Host;
 }
 
 } // namespace JSC

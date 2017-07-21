@@ -30,12 +30,23 @@
  */
 
 [
-    Conditional=MEDIA_STREAM,
-    CustomConstructor(optional Dictionary dictionary),
-    ConstructorRaisesException
+    Conditional=WEB_RTC,
+    Constructor(RTCIceCandidateInit candidateInitDict),
+    ConstructorMayThrowException,
+    EnabledAtRuntime=PeerConnection,
+    ImplementationLacksVTable,
+    PrivateIdentifier,
+    PublicIdentifier
 ] interface RTCIceCandidate {
-    attribute DOMString candidate;
-    attribute DOMString sdpMid;
-    attribute unsigned short sdpMLineIndex;
+    readonly attribute DOMString candidate;
+    readonly attribute DOMString? sdpMid;
+    readonly attribute unsigned short? sdpMLineIndex;
+
+    serializer = {candidate, sdpMid, sdpMLineIndex};
 };
 
+dictionary RTCIceCandidateInit {
+    required DOMString candidate;
+    DOMString? sdpMid = null;
+    unsigned short? sdpMLineIndex = null;
+};

@@ -28,9 +28,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CSSPropertySourceData_h
-#define CSSPropertySourceData_h
+#pragma once
 
+#include "StyleRule.h"
 #include <utility>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
@@ -52,7 +52,7 @@ struct SourceRange {
 };
 
 struct CSSPropertySourceData {
-    CSSPropertySourceData(const String& name, const String& value, bool important, bool parsedOk, const SourceRange& range);
+    CSSPropertySourceData(const String& name, const String& value, bool important, bool disabled, bool parsedOk, const SourceRange&);
     CSSPropertySourceData(const CSSPropertySourceData& other);
     CSSPropertySourceData();
 
@@ -62,6 +62,7 @@ struct CSSPropertySourceData {
     String name;
     String value;
     bool important;
+    bool disabled;
     bool parsedOk;
     SourceRange range;
 };
@@ -76,43 +77,28 @@ struct CSSStyleSourceData : public RefCounted<CSSStyleSourceData> {
 };
 
 struct CSSRuleSourceData;
-typedef Vector<RefPtr<CSSRuleSourceData>> RuleSourceDataList;
+typedef Vector<Ref<CSSRuleSourceData>> RuleSourceDataList;
 typedef Vector<SourceRange> SelectorRangeList;
 
 struct CSSRuleSourceData : public RefCounted<CSSRuleSourceData> {
-    enum Type {
-        UNKNOWN_RULE,
-        STYLE_RULE,
-        CHARSET_RULE,
-        IMPORT_RULE,
-        MEDIA_RULE,
-        FONT_FACE_RULE,
-        PAGE_RULE,
-        KEYFRAMES_RULE,
-        REGION_RULE,
-        HOST_RULE,
-        VIEWPORT_RULE,
-        SUPPORTS_RULE,
-    };
-
-    static Ref<CSSRuleSourceData> create(Type type)
+    static Ref<CSSRuleSourceData> create(StyleRule::Type type)
     {
         return adoptRef(*new CSSRuleSourceData(type));
     }
 
     static Ref<CSSRuleSourceData> createUnknown()
     {
-        return adoptRef(*new CSSRuleSourceData(UNKNOWN_RULE));
+        return adoptRef(*new CSSRuleSourceData(StyleRule::Unknown));
     }
 
-    CSSRuleSourceData(Type type)
+    CSSRuleSourceData(StyleRule::Type type)
         : type(type)
     {
-        if (type == STYLE_RULE || type == FONT_FACE_RULE || type == PAGE_RULE)
+        if (type == StyleRule::Style || type == StyleRule::FontFace || type == StyleRule::Page)
             styleSourceData = CSSStyleSourceData::create();
     }
 
-    Type type;
+    StyleRule::Type type;
 
     // Range of the selector list in the enclosing source.
     SourceRange ruleHeaderRange;
@@ -131,5 +117,3 @@ struct CSSRuleSourceData : public RefCounted<CSSRuleSourceData> {
 };
 
 } // namespace WebCore
-
-#endif // CSSPropertySourceData_h

@@ -65,15 +65,17 @@ setupTools("windows_tools",
         }
     },
     { properties ->
-        defineProperty("WINDOWS_VS_VSINSTALLDIR", properties, "c:/Program Files (x86)/Microsoft Visual Studio 12.0");
+        defineProperty("WINDOWS_VS_VSINSTALLDIR", properties, "c:/Program Files (x86)/Microsoft Visual Studio/2017/Professional");
+        defineProperty("WINDOWS_VS_WINSDKDLLINSTALLDIR", properties, "c:/Program Files (x86)/Windows Kits/10/Redist/ucrt/DLLs");
         defineProperty("WINDOWS_SDK_DIR", properties, System.getenv().get("WINSDK_DIR"))
+        defineProperty("WINDOWS_SDK_VERSION", properties, "")
         defineProperty("WINDOWS_VS_VCINSTALLDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/VC")
         defineProperty("WINDOWS_VS_DEVENVDIR", properties, "$WINDOWS_VS_VSINSTALLDIR/Common7/IDE")
         defineProperty("WINDOWS_VS_DEVENVCMD", properties, "$WINDOWS_VS_DEVENVDIR/VCExpress.exe")
         defineProperty("WINDOWS_VS_MSVCDIR", properties, WINDOWS_VS_VCINSTALLDIR)
         defineProperty("WINDOWS_DXSDK_DIR", properties, System.getenv().get("DXSDK_DIR"))
         defineProperty("WINDOWS_VS_INCLUDE", properties, "$WINDOWS_VS_VCINSTALLDIR/INCLUDE;" + "$WINDOWS_SDK_DIR/include;")
-        defineProperty("WINDOWS_VS_VER", properties, "120")
+        defineProperty("WINDOWS_VS_VER", properties, "150")
         defineProperty("WINDOWS_VS_LIB", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;" + "$WINDOWS_SDK_DIR/lib;")
         defineProperty("WINDOWS_VS_LIBPATH", properties, "$WINDOWS_VS_VCINSTALLDIR/LIB;")
         def parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
@@ -130,17 +132,32 @@ ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "LIBPATH"              : WINDOWS_VS_LIBPATH,
         "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
 ];
-
-String msvcBinDir = (IS_64
-                  ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
-                  : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
+def msvcBinDir = ""
+if (winVsVer == 150) {
+    msvcBinDir = (IS_64
+                      ? "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64"
+                      : "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/14.10.25017/bin/HostX86/x86")
+} else if (winVsVer <= 120) {
+    msvcBinDir = (IS_64
+                      ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
+                      : "$WINDOWS_VS_VSINSTALLDIR/VC/BIN")
+}
 def compiler = IS_COMPILE_PARFAIT ? "cl.exe" : cygpath("$msvcBinDir/cl.exe")
 def linker = IS_COMPILE_PARFAIT ? "link.exe" : cygpath("$msvcBinDir/link.exe")
 def winSdkBinDir = "$WINDOWS_SDK_DIR/Bin"
 if (WINDOWS_VS_VER != "100") {
     winSdkBinDir += "/" + (IS_64 ? "x64" : "x86")
 }
-ext.RC = cygpath("$winSdkBinDir/RC.Exe")
+
+if (!file(cygpath("$winSdkBinDir/RC.Exe")).exists()) {
+    winSdkBinDir = "$WINDOWS_SDK_DIR/Bin/$WINDOWS_SDK_VERSION"
+    if (WINDOWS_VS_VER != "100") {
+        winSdkBinDir += "/" + (IS_64 ? "x64" : "x86")
+    }
+}
+println "winSdkBinDir=$winSdkBinDir"
+
+ext.RC = cygpath("$winSdkBinDir/rc.exe")
 def rcCompiler = RC
 ext.FXC = cygpath("$winSdkBinDir/fxc.exe")
 
@@ -152,11 +169,99 @@ if (!file(FXC).exists()) {
 }
 
 ext.MC = cygpath("$winSdkBinDir/mt.exe")
-ext.MSVCR = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcr${WINDOWS_VS_VER}.dll")
-ext.MSVCP = cygpath("${WINDOWS_VS_MSVCDIR}/redist/${IS_64 ? 'x64' : 'x86'}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcp${WINDOWS_VS_VER}.dll")
 
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
 if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
+
+String msvcRedstDir = (IS_64
+                  ? "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/14.10.25008/x64"
+                  : "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/14.10.25008/x86")
+
+String winSdkDllDir = (IS_64
+                  ? "$WINDOWS_VS_WINSDKDLLINSTALLDIR/x64"
+                  : "$WINDOWS_VS_WINSDKDLLINSTALLDIR/x86")
+
+def WINDOWS_DLL_VER = WINDOWS_VS_VER
+ext.MSVCR = ""
+ext.MSVCP = ""
+
+if (WINDOWS_VS_VER == "150") {
+    WINDOWS_DLL_VER = "140"
+    ext.MSVCR = cygpath("${msvcRedstDir}/Microsoft.VC${WINDOWS_VS_VER}.CRT/vcruntime${WINDOWS_DLL_VER}.dll")
+    ext.MSVCP = cygpath("${msvcRedstDir}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcp${WINDOWS_DLL_VER}.dll")
+}
+
+def vs2017DllPath = cygpath("${msvcRedstDir}/Microsoft.VC${WINDOWS_VS_VER}.CRT")
+if (file(vs2017DllPath).exists()) {
+    def VS2017DLLs = [
+        "concrt140.dll",
+        "msvcp140.dll",
+        "vcruntime140.dll"
+    ];
+    ext.WIN.VS2017DLLs = []
+        VS2017DLLs.each { vsdll->
+            ext.WIN.VS2017DLLs += "$vs2017DllPath/$vsdll"
+        }
+}
+else {
+    ext.WIN.VS2017DLLs = [
+	];
+}
+
+def WinSDKDLLsPath = cygpath("${winSdkDllDir}")
+if (file(WinSDKDLLsPath).exists()) {
+    def WinSDKDLLs = [
+        "api-ms-win-core-console-l1-1-0.dll",
+        "api-ms-win-core-datetime-l1-1-0.dll",
+        "api-ms-win-core-debug-l1-1-0.dll",
+        "api-ms-win-core-errorhandling-l1-1-0.dll",
+        "api-ms-win-core-file-l1-1-0.dll",
+        "api-ms-win-core-file-l1-2-0.dll",
+        "api-ms-win-core-file-l2-1-0.dll",
+        "api-ms-win-core-handle-l1-1-0.dll",
+        "api-ms-win-core-heap-l1-1-0.dll",
+        "api-ms-win-core-interlocked-l1-1-0.dll",
+        "api-ms-win-core-libraryloader-l1-1-0.dll",
+        "api-ms-win-core-localization-l1-2-0.dll",
+        "api-ms-win-core-memory-l1-1-0.dll",
+        "api-ms-win-core-namedpipe-l1-1-0.dll",
+        "api-ms-win-core-processenvironment-l1-1-0.dll",
+        "api-ms-win-core-processthreads-l1-1-0.dll",
+        "api-ms-win-core-processthreads-l1-1-1.dll",
+        "api-ms-win-core-profile-l1-1-0.dll",
+        "api-ms-win-core-rtlsupport-l1-1-0.dll",
+        "api-ms-win-core-string-l1-1-0.dll",
+        "api-ms-win-core-synch-l1-1-0.dll",
+        "api-ms-win-core-synch-l1-2-0.dll",
+        "api-ms-win-core-sysinfo-l1-1-0.dll",
+        "api-ms-win-core-timezone-l1-1-0.dll",
+        "api-ms-win-core-util-l1-1-0.dll",
+        "api-ms-win-crt-conio-l1-1-0.dll",
+        "api-ms-win-crt-convert-l1-1-0.dll",
+        "api-ms-win-crt-environment-l1-1-0.dll",
+        "api-ms-win-crt-filesystem-l1-1-0.dll",
+        "api-ms-win-crt-heap-l1-1-0.dll",
+        "api-ms-win-crt-locale-l1-1-0.dll",
+        "api-ms-win-crt-math-l1-1-0.dll",
+        "api-ms-win-crt-multibyte-l1-1-0.dll",
+        "api-ms-win-crt-private-l1-1-0.dll",
+        "api-ms-win-crt-process-l1-1-0.dll",
+        "api-ms-win-crt-runtime-l1-1-0.dll",
+        "api-ms-win-crt-stdio-l1-1-0.dll",
+        "api-ms-win-crt-string-l1-1-0.dll",
+        "api-ms-win-crt-time-l1-1-0.dll",
+        "api-ms-win-crt-utility-l1-1-0.dll",
+        "ucrtbase.dll"
+    ];
+    ext.WIN.WinSDKDLLs = []
+        WinSDKDLLs.each { winsdkdll->
+            ext.WIN.WinSDKDLLs += "$WinSDKDLLsPath/$winsdkdll"
+        }
+}
+else {
+    ext.WIN.WinSDKDLLs = [
+    ];
+}
 
 // Product version variables passed to RC:
 def rcVer = "$RELEASE_VERSION"

@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DFABytecodeInterpreter_h
-#define DFABytecodeInterpreter_h
+#pragma once
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
@@ -33,7 +32,6 @@
 #include "DFABytecode.h"
 #include <wtf/DataLog.h>
 #include <wtf/HashSet.h>
-#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -66,9 +64,6 @@ private:
 };
 
 } // namespace ContentExtensions
-
 } // namespace WebCore
 
 #endif // ENABLE(CONTENT_EXTENSIONS)
-
-#endif // DFABytecodeInterpreter_h

@@ -28,8 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RenderFlexibleBox_h
-#define RenderFlexibleBox_h
+#pragma once
 
 #include "OrderIterator.h"
 #include "RenderBlock.h"
@@ -38,32 +37,32 @@ namespace WebCore {
 
 class RenderFlexibleBox : public RenderBlock {
 public:
-    RenderFlexibleBox(Element&, Ref<RenderStyle>&&);
-    RenderFlexibleBox(Document&, Ref<RenderStyle>&&);
+    RenderFlexibleBox(Element&, RenderStyle&&);
+    RenderFlexibleBox(Document&, RenderStyle&&);
     virtual ~RenderFlexibleBox();
 
-    virtual const char* renderName() const override;
+    const char* renderName() const override;
 
-    virtual bool avoidsFloats() const override final { return true; }
-    virtual bool canDropAnonymousBlockChild() const override final { return false; }
-    virtual void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0) override final;
+    bool avoidsFloats() const final { return true; }
+    bool canDropAnonymousBlockChild() const final { return false; }
+    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0) final;
 
-    virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
-    virtual Optional<int> firstLineBaseline() const override;
-    virtual Optional<int> inlineBlockBaseline(LineDirectionMode) const override;
+    int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
+    std::optional<int> firstLineBaseline() const override;
+    std::optional<int> inlineBlockBaseline(LineDirectionMode) const override;
 
-    virtual void paintChildren(PaintInfo& forSelf, const LayoutPoint&, PaintInfo& forChild, bool usePrintRect) override;
+    void paintChildren(PaintInfo& forSelf, const LayoutPoint&, PaintInfo& forChild, bool usePrintRect) override;
 
     bool isHorizontalFlow() const;
 
-    virtual bool isTopLayoutOverflowAllowed() const override;
-    virtual bool isLeftLayoutOverflowAllowed() const override;
+    bool isTopLayoutOverflowAllowed() const override;
+    bool isLeftLayoutOverflowAllowed() const override;
 
 protected:
-    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
-    virtual void computePreferredLogicalWidths() override;
+    void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
+    void computePreferredLogicalWidths() override;
 
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
 private:
     enum FlexSign {
@@ -85,8 +84,8 @@ private:
     // Use an inline capacity of 8, since flexbox containers usually have less than 8 children.
     typedef Vector<LayoutRect, 8> ChildFrameRects;
 
-    virtual bool isFlexibleBox() const override final { return true; }
-    bool hasOrthogonalFlow(RenderBox& child) const;
+    bool isFlexibleBox() const final { return true; }
+    bool hasOrthogonalFlow(const RenderBox& child) const;
     bool isColumnFlow() const;
     bool isLeftToRightFlow() const;
     bool isMultiline() const;
@@ -98,7 +97,7 @@ private:
     LayoutUnit mainAxisExtent() const;
     LayoutUnit crossAxisContentExtent() const;
     LayoutUnit mainAxisContentExtent(LayoutUnit contentLogicalHeight);
-    Optional<LayoutUnit> computeMainAxisExtentForChild(RenderBox& child, SizeType, const Length& size);
+    std::optional<LayoutUnit> computeMainAxisExtentForChild(const RenderBox& child, SizeType, const Length& size);
     WritingMode transformedWritingMode() const;
     LayoutUnit flowAwareBorderStart() const;
     LayoutUnit flowAwareBorderEnd() const;
@@ -122,7 +121,7 @@ private:
     LayoutUnit mainAxisBorderAndPaddingExtentForChild(RenderBox& child) const;
     LayoutUnit mainAxisScrollbarExtentForChild(RenderBox& child) const;
     LayoutUnit preferredMainAxisContentExtentForChild(RenderBox& child, bool hasInfiniteLineLength);
-    EOverflow mainAxisOverflowForChild(RenderBox&) const;
+    EOverflow mainAxisOverflowForChild(const RenderBox&) const;
 
     void layoutFlexItems(bool relayoutChildren, Vector<LineContext>&);
     LayoutUnit autoMarginOffsetInMainAxis(const OrderedFlexItemList&, LayoutUnit& availableFreeSpace);
@@ -139,7 +138,8 @@ private:
 
     LayoutUnit computeChildMarginValue(const Length& margin);
     void prepareOrderIteratorAndMargins();
-    LayoutUnit adjustChildSizeForMinAndMax(RenderBox&, LayoutUnit childSize);
+    LayoutUnit adjustChildSizeForMinAndMax(const RenderBox&, LayoutUnit childSize);
+    LayoutUnit adjustChildSizeForAspectRatioCrossAxisMinAndMax(const RenderBox&, LayoutUnit childSize);
     bool computeNextFlexLine(OrderedFlexItemList& orderedChildren, LayoutUnit& preferredMainAxisExtent, double& totalFlexGrow, double& totalWeightedFlexShrink, LayoutUnit& minMaxAppliedMainAxisExtent, bool& hasInfiniteLineLength);
 
     bool resolveFlexibleLengths(FlexSign, const OrderedFlexItemList&, LayoutUnit& availableFreeSpace, double& totalFlexGrow, double& totalWeightedFlexShrink, InflexibleFlexItemSize&, Vector<LayoutUnit>& childSizes, bool hasInfiniteLineLength);
@@ -158,8 +158,10 @@ private:
     void flipForRightToLeftColumn();
     void flipForWrapReverse(const Vector<LineContext>&, LayoutUnit crossAxisStartEdge);
 
-    bool mainAxisExtentIsDefinite() const;
-    bool mainAxisLengthIsIndefinite(const Length& flexBasis) const;
+    bool mainAxisLengthIsDefinite(const RenderBox&, const Length&) const;
+    bool crossAxisLengthIsDefinite(const RenderBox&, const Length&) const;
+    bool useChildAspectRatio(const RenderBox&) const;
+    std::optional<LayoutUnit> computeMainSizeFromAspectRatioUsing(const RenderBox& child, Length crossSizeLength) const;
 
     virtual bool isFlexibleBoxImpl() const { return false; };
 
@@ -170,5 +172,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFlexibleBox, isFlexibleBox())
-
-#endif // RenderFlexibleBox_h

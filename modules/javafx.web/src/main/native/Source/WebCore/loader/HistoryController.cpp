@@ -46,8 +46,8 @@
 #include "MainFrame.h"
 #include "Page.h"
 #include "PageCache.h"
-#include "PageGroup.h"
 #include "ScrollingCoordinator.h"
+#include "SerializedScriptValue.h"
 #include "VisitedLinkStore.h"
 #include <wtf/text/CString.h>
 
@@ -75,21 +75,26 @@ void HistoryController::saveScrollPositionAndViewStateToItem(HistoryItem* item)
     if (!item || !frameView)
         return;
 
-    if (m_frame.document()->inPageCache())
+    if (m_frame.document()->pageCacheState() != Document::NotInPageCache)
         item->setScrollPosition(frameView->cachedScrollPosition());
     else
         item->setScrollPosition(frameView->scrollPosition());
+
 #if PLATFORM(IOS)
     item->setExposedContentRect(frameView->exposedContentRect());
     item->setUnobscuredContentRect(frameView->unobscuredContentRect());
 #endif
 
     Page* page = m_frame.page();
-    if (page && m_frame.isMainFrame())
+    if (page && m_frame.isMainFrame()) {
         item->setPageScaleFactor(page->pageScaleFactor() / page->viewScaleFactor());
+#if PLATFORM(IOS)
+        item->setObscuredInset(page->obscuredInset());
+#endif
+    }
 
     // FIXME: It would be great to work out a way to put this code in WebCore instead of calling through to the client.
-    m_frame.loader().client().saveViewStateToItem(item);
+    m_frame.loader().client().saveViewStateToItem(*item);
 
     // Notify clients that the HistoryItem has changed.
     item->notifyChanged();
@@ -149,12 +154,12 @@ void HistoryController::restoreScrollPositionAndViewState()
     // through to the client.
     m_frame.loader().client().restoreViewState();
 
-#if !PLATFORM(IOS) && !PLATFORM(EFL)
+#if !PLATFORM(IOS)
     // Don't restore scroll point on iOS as FrameLoaderClient::restoreViewState() does that.
     if (view && !view->wasScrolledByUser()) {
         Page* page = m_frame.page();
         auto desiredScrollPosition = m_currentItem->scrollPosition();
-
+        LOG(Scrolling, "HistoryController::restoreScrollPositionAndViewState scrolling to %d,%d", desiredScrollPosition.x(), desiredScrollPosition.y());
         if (page && m_frame.isMainFrame() && m_currentItem->pageScaleFactor())
             page->setPageScaleFactor(m_currentItem->pageScaleFactor() * page->viewScaleFactor(), desiredScrollPosition);
         else
@@ -265,7 +270,7 @@ void HistoryController::invalidateCurrentItemCachedPage()
 
     ASSERT(cachedPage->document() == m_frame.document());
     if (cachedPage->document() == m_frame.document()) {
-        cachedPage->document()->setInPageCache(false);
+        cachedPage->document()->setPageCacheState(Document::NotInPageCache);
         cachedPage->clear();
     }
 }
@@ -344,7 +349,7 @@ void HistoryController::updateForBackForwardNavigation()
 
 void HistoryController::updateForReload()
 {
-    LOG(History, "HistoryController %p updateForBackForwardNavigation: Updating History for reload in frame %p (main frame %d) %s", this, &m_frame, m_frame.isMainFrame(), m_frame.loader().documentLoader() ? m_frame.loader().documentLoader()->url().string().utf8().data() : "");
+    LOG(History, "HistoryController %p updateForReload: Updating History for reload in frame %p (main frame %d) %s", this, &m_frame, m_frame.isMainFrame(), m_frame.loader().documentLoader() ? m_frame.loader().documentLoader()->url().string().utf8().data() : "");
 
     if (m_currentItem) {
         PageCache::singleton().remove(*m_currentItem);
@@ -595,9 +600,9 @@ void HistoryController::setCurrentItem(HistoryItem* item)
 
 void HistoryController::setCurrentItemTitle(const StringWithDirection& title)
 {
+    // FIXME: This ignores the title's direction.
     if (m_currentItem)
-        // FIXME: make use of title.direction() as well.
-        m_currentItem->setTitle(title.string());
+        m_currentItem->setTitle(title.string);
 }
 
 bool HistoryController::currentItemShouldBeReplaced() const
@@ -653,8 +658,8 @@ void HistoryController::initializeItem(HistoryItem& item)
 
     item.setURL(url);
     item.setTarget(m_frame.tree().uniqueName());
-    // FIXME: should store title directionality in history as well.
-    item.setTitle(title.string());
+    // FIXME: Should store the title direction as well.
+    item.setTitle(title.string);
     item.setOriginalURLString(originalURL.string());
 
     if (!unreachableURL.isEmpty() || documentLoader->response().httpStatusCode() >= 400)
@@ -735,7 +740,7 @@ void HistoryController::recursiveSetProvisionalItem(HistoryItem& item, HistoryIt
         Frame* childFrame = m_frame.tree().child(childFrameName);
         ASSERT(childFrame);
 
-        childFrame->loader().history().recursiveSetProvisionalItem(const_cast<HistoryItem&>(childItem.get()), fromChildItem);
+        childFrame->loader().history().recursiveSetProvisionalItem(childItem, fromChildItem);
     }
 }
 
@@ -755,7 +760,7 @@ void HistoryController::recursiveGoToItem(HistoryItem& item, HistoryItem* fromIt
         HistoryItem* fromChildItem = fromItem->childItemWithTarget(childFrameName);
         ASSERT(fromChildItem);
         if (Frame* childFrame = m_frame.tree().child(childFrameName))
-            childFrame->loader().history().recursiveGoToItem(const_cast<HistoryItem&>(childItem.get()), fromChildItem, type);
+            childFrame->loader().history().recursiveGoToItem(childItem, fromChildItem, type);
     }
 }
 
@@ -781,7 +786,7 @@ bool HistoryController::currentFramesMatchItem(HistoryItem* item) const
     if ((!m_frame.tree().uniqueName().isEmpty() || !item->target().isEmpty()) && m_frame.tree().uniqueName() != item->target())
         return false;
 
-    const HistoryItemVector& childItems = item->children();
+    const auto& childItems = item->children();
     if (childItems.size() != m_frame.tree().childCount())
         return false;
 
@@ -840,7 +845,7 @@ void HistoryController::updateCurrentItem()
     }
 }
 
-void HistoryController::pushState(PassRefPtr<SerializedScriptValue> stateObject, const String& title, const String& urlString)
+void HistoryController::pushState(RefPtr<SerializedScriptValue>&& stateObject, const String& title, const String& urlString)
 {
     if (!m_currentItem)
         return;
@@ -854,7 +859,7 @@ void HistoryController::pushState(PassRefPtr<SerializedScriptValue> stateObject,
     // Override data in the current item (created by createItemTree) to reflect
     // the pushState() arguments.
     m_currentItem->setTitle(title);
-    m_currentItem->setStateObject(stateObject);
+    m_currentItem->setStateObject(WTFMove(stateObject));
     m_currentItem->setURLString(urlString);
 
     LOG(History, "HistoryController %p pushState: Adding top item %p, setting url of current item %p to %s", this, topItem.ptr(), m_currentItem.get(), urlString.ascii().data());
@@ -868,7 +873,7 @@ void HistoryController::pushState(PassRefPtr<SerializedScriptValue> stateObject,
     m_frame.loader().client().updateGlobalHistory();
 }
 
-void HistoryController::replaceState(PassRefPtr<SerializedScriptValue> stateObject, const String& title, const String& urlString)
+void HistoryController::replaceState(RefPtr<SerializedScriptValue>&& stateObject, const String& title, const String& urlString)
 {
     if (!m_currentItem)
         return;
@@ -878,7 +883,7 @@ void HistoryController::replaceState(PassRefPtr<SerializedScriptValue> stateObje
     if (!urlString.isEmpty())
         m_currentItem->setURLString(urlString);
     m_currentItem->setTitle(title);
-    m_currentItem->setStateObject(stateObject);
+    m_currentItem->setStateObject(WTFMove(stateObject));
     m_currentItem->setFormData(nullptr);
     m_currentItem->setFormContentType(String());
 

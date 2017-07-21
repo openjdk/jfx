@@ -26,13 +26,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DumpRenderTree_h
-#define DumpRenderTree_h
-
-// FIXME: Remove this when all platforms are using config.h
-#ifndef Config_H
-#include <wtf/Platform.h>
-#endif
+#pragma once
 
 #if PLATFORM(COCOA)
 #include "DumpRenderTreeMac.h"
@@ -45,6 +39,7 @@
 #endif
 
 #include <string>
+#include <wtf/Platform.h>
 #include <wtf/RefPtr.h>
 
 #if !OS(OPENBSD)
@@ -62,14 +57,12 @@ void dump();
 void displayWebView();
 
 struct TestCommand {
-    TestCommand() : shouldDumpPixels(false), timeout(30000) { }
-
     std::string pathOrURL;
-    bool shouldDumpPixels;
+    std::string absolutePath;
+    bool shouldDumpPixels { false };
     std::string expectedPixelHash;
-    int timeout; // in ms
+    int timeout { 30000 }; // in ms
+    bool dumpJSConsoleLogInStdErr { false };
 };
 
 TestCommand parseInputLine(const std::string&);
-
-#endif // DumpRenderTree_h

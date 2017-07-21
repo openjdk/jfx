@@ -27,13 +27,13 @@
  * properly on all platforms and compilers that WebKit builds under.
  */
 
-#ifndef JSExportMacros_h
-#define JSExportMacros_h
+#pragma once
 
 #include <wtf/ExportMacros.h>
 
 // See note in wtf/Platform.h for more info on EXPORT_MACROS.
 #if USE(EXPORT_MACROS)
+
 #if defined(BUILDING_JavaScriptCore) || defined(STATICALLY_LINKED_WITH_JavaScriptCore)
 #define JS_EXPORT_PRIVATE WTF_EXPORT
 #else
@@ -48,20 +48,16 @@
 
 #if OS(WINDOWS) && !COMPILER(GCC_OR_CLANG)
 
-#if PLATFORM(JAVA) && defined(BUILDING_WebCore)
-  #define JS_EXPORTDATA
-  #define WTF_EXPORTDATA
+#if defined(BUILDING_JavaScriptCore) || defined(STATICALLY_LINKED_WITH_JavaScriptCore)
+#define JS_EXPORTDATA __declspec(dllexport)
 #else
-  #if defined(BUILDING_JavaScriptCore) || defined(STATICALLY_LINKED_WITH_JavaScriptCore)
-     #define JS_EXPORTDATA __declspec(dllexport)
-  #else
-     #define JS_EXPORTDATA __declspec(dllimport)
-  #endif
+#define JS_EXPORTDATA __declspec(dllimport)
 #endif
 
 #define JS_EXPORTCLASS JS_EXPORTDATA
 
 #else // !PLATFORM...
+
 #define JS_EXPORTDATA
 #define JS_EXPORTCLASS
 
@@ -71,5 +67,3 @@
 #define JS_EXPORT_HIDDEN
 
 #endif // USE(EXPORT_MACROS)
-
-#endif // JSExportMacros_h

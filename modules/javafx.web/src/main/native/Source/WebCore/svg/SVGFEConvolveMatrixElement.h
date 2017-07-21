@@ -17,8 +17,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef SVGFEConvolveMatrixElement_h
-#define SVGFEConvolveMatrixElement_h
+#pragma once
 
 #include "FEConvolveMatrix.h"
 #include "SVGAnimatedBoolean.h"
@@ -73,10 +72,10 @@ public:
 private:
     SVGFEConvolveMatrixElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
-    virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&) override;
-    virtual void svgAttributeChanged(const QualifiedName&) override;
-    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
+    void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    bool setFilterEffectAttribute(FilterEffect*, const QualifiedName&) override;
+    void svgAttributeChanged(const QualifiedName&) override;
+    RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 
     static const AtomicString& orderXIdentifier();
     static const AtomicString& orderYIdentifier();
@@ -100,5 +99,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif

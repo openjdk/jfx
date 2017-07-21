@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,26 +23,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ApplicationCache_h
-#define ApplicationCache_h
+#pragma once
 
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
-#include <wtf/PassRefPtr.h>
-#include <wtf/RefCounted.h>
 #include <wtf/text/StringHash.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class ApplicationCacheGroup;
 class ApplicationCacheResource;
-class DocumentLoader;
-class URL;
 class ResourceRequest;
-class SecurityOrigin;
+class URL;
 
-typedef Vector<std::pair<URL, URL>> FallbackURLVector;
+using FallbackURLVector = Vector<std::pair<URL, URL>>;
 
 class ApplicationCache : public RefCounted<ApplicationCache> {
 public:
@@ -50,10 +43,9 @@ public:
 
     ~ApplicationCache();
 
-    void addResource(PassRefPtr<ApplicationCacheResource> resource);
-    unsigned removeResource(const String& url);
+    void addResource(Ref<ApplicationCacheResource>&&);
 
-    void setManifestResource(PassRefPtr<ApplicationCacheResource> manifest);
+    void setManifestResource(Ref<ApplicationCacheResource>&&);
     ApplicationCacheResource* manifestResource() const { return m_manifest; }
 
     void setGroup(ApplicationCacheGroup*);
@@ -78,7 +70,7 @@ public:
     void dump();
 #endif
 
-    typedef HashMap<String, RefPtr<ApplicationCacheResource>> ResourceMap;
+    using ResourceMap = HashMap<String, RefPtr<ApplicationCacheResource>>;
     const ResourceMap& resources() const { return m_resources; }
 
     void setStorageID(unsigned storageID) { m_storageID = storageID; }
@@ -92,22 +84,19 @@ public:
 private:
     ApplicationCache();
 
-    ApplicationCacheGroup* m_group;
+    ApplicationCacheGroup* m_group { nullptr };
     ResourceMap m_resources;
-    ApplicationCacheResource* m_manifest;
+    ApplicationCacheResource* m_manifest { nullptr };
 
-    bool m_allowAllNetworkRequests;
+    bool m_allowAllNetworkRequests { false };
     Vector<URL> m_onlineWhitelist;
     FallbackURLVector m_fallbackURLs;
 
     // The total size of the resources belonging to this Application Cache instance.
-    // This is an estimation of the size this Application Cache occupies in the
-    // database file.
-    int64_t m_estimatedSizeInStorage;
+    // This is an estimation of the size this Application Cache occupies in the database file.
+    int64_t m_estimatedSizeInStorage { 0 };
 
-    unsigned m_storageID;
+    unsigned m_storageID { 0 };
 };
 
 } // namespace WebCore
-
-#endif // ApplicationCache_h

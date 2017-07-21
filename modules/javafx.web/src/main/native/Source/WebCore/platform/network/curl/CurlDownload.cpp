@@ -402,17 +402,9 @@ void CurlDownload::didReceiveHeader(const String& header)
         CURLcode err = curl_easy_getinfo(m_curlHandle, CURLINFO_RESPONSE_CODE, &httpCode);
 
         if (httpCode >= 200 && httpCode < 300) {
-            const char* url = 0;
-            err = curl_easy_getinfo(m_curlHandle, CURLINFO_EFFECTIVE_URL, &url);
-
-            String strUrl(url);
-            StringCapture capturedUrl(strUrl);
-
-            RefPtr<CurlDownload> protectedDownload(this);
-
-            callOnMainThread([this, capturedUrl, protectedDownload] {
-                m_response.setURL(URL(ParsedURLString, capturedUrl.string()));
-
+            URL url = getCurlEffectiveURL(m_curlHandle);
+            callOnMainThread([this, url = url.isolatedCopy(), protectedThis = makeRef(*this)] {
+                m_response.setURL(url);
                 m_response.setMimeType(extractMIMETypeFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType)));
                 m_response.setTextEncodingName(extractCharsetFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType)));
 
@@ -420,14 +412,10 @@ void CurlDownload::didReceiveHeader(const String& header)
             });
         }
     } else {
-        StringCapture capturedHeader(header);
-
-        RefPtr<CurlDownload> protectedDownload(this);
-
-        callOnMainThread([this, capturedHeader, protectedDownload] {
-            int splitPos = capturedHeader.string().find(":");
+        callOnMainThread([this, header = header.isolatedCopy(), protectedThis = makeRef(*this)] {
+            int splitPos = header.find(":");
             if (splitPos != -1)
-                m_response.setHTTPHeaderField(capturedHeader.string().left(splitPos), capturedHeader.string().substring(splitPos + 1).stripWhiteSpace());
+                m_response.setHTTPHeaderField(header.left(splitPos), header.substring(splitPos + 1).stripWhiteSpace());
         });
     }
 }
@@ -436,9 +424,9 @@ void CurlDownload::didReceiveData(void* data, int size)
 {
     LockHolder locker(m_mutex);
 
-    RefPtr<CurlDownload> protectedDownload(this);
+    RefPtr<CurlDownload> protectedThis(this);
 
-    callOnMainThread([this, size, protectedDownload] {
+    callOnMainThread([this, size, protectedThis] {
         didReceiveDataOfLength(size);
     });
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,15 +26,10 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCActivityCallback_h
-#define GCActivityCallback_h
+#pragma once
 
 #include "HeapTimer.h"
 #include <wtf/RefPtr.h>
-
-#if PLATFORM(JAVA) // tav todo temp
-#include <JSExportMacros.h>
-#endif
 
 #if USE(CF)
 #include <CoreFoundation/CoreFoundation.h>
@@ -45,15 +40,14 @@ namespace JSC {
 class FullGCActivityCallback;
 class Heap;
 
-class JS_EXPORT_PRIVATE GCActivityCallback : public HeapTimer, public ThreadSafeRefCounted<GCActivityCallback> {
-    WTF_MAKE_FAST_ALLOCATED;
+class JS_EXPORT_PRIVATE GCActivityCallback : public HeapTimer {
 public:
     static RefPtr<FullGCActivityCallback> createFullTimer(Heap*);
     static RefPtr<GCActivityCallback> createEdenTimer(Heap*);
 
     GCActivityCallback(Heap*);
 
-    virtual void doWork() override;
+    void doWork() override;
 
     virtual void doCollection() = 0;
 
@@ -65,7 +59,7 @@ public:
 
     static bool s_shouldCreateGCTimer;
 
-#if USE(CF) || PLATFORM(EFL)
+#if USE(CF) || USE(GLIB)
     double nextFireTime() const { return m_nextFireTime; }
 #endif
 
@@ -75,25 +69,17 @@ protected:
     virtual double deathRate() = 0;
 
 #if USE(CF)
-    GCActivityCallback(VM* vm, CFRunLoopRef runLoop)
-        : HeapTimer(vm, runLoop)
+    GCActivityCallback(VM* vm)
+        : HeapTimer(vm)
         , m_enabled(true)
         , m_delay(s_decade)
-    {
-    }
-#elif PLATFORM(EFL)
-    static constexpr double s_hour = 3600;
-    GCActivityCallback(VM* vm, bool flag)
-        : HeapTimer(vm)
-        , m_enabled(flag)
-        , m_delay(s_hour)
     {
     }
 #elif USE(GLIB)
     GCActivityCallback(VM* vm)
         : HeapTimer(vm)
         , m_enabled(true)
-        , m_delay(-1)
+        , m_delay(s_decade)
     {
     }
 #else
@@ -106,10 +92,6 @@ protected:
 
     bool m_enabled;
 
-#if USE(CF)
-protected:
-    GCActivityCallback(Heap*, CFRunLoopRef);
-#endif
 #if USE(CF) || USE(GLIB)
 protected:
     void cancelTimer();
@@ -122,5 +104,3 @@ private:
 };
 
 } // namespace JSC
-
-#endif

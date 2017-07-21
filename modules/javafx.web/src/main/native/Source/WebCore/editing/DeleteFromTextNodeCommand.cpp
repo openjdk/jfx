@@ -27,7 +27,6 @@
 #include "DeleteFromTextNodeCommand.h"
 
 #include "Document.h"
-#include "ExceptionCodePlaceholder.h"
 #include "Text.h"
 #include "htmlediting.h"
 
@@ -51,16 +50,11 @@ void DeleteFromTextNodeCommand::doApply()
     if (!isEditableNode(*m_node))
         return;
 
-    ExceptionCode ec = 0;
-    m_text = m_node->substringData(m_offset, m_count, ec);
-    if (ec)
+    auto result = m_node->substringData(m_offset, m_count);
+    if (result.hasException())
         return;
-
-    // Need to notify this before actually deleting the text
-    if (shouldPostAccessibilityNotification())
-        notifyAccessibilityForTextChange(m_node.get(), applyEditType(), m_text, VisiblePosition(Position(m_node, m_offset)));
-
-    m_node->deleteData(m_offset, m_count, ec);
+    m_text = result.releaseReturnValue();
+    m_node->deleteData(m_offset, m_count);
 }
 
 void DeleteFromTextNodeCommand::doUnapply()
@@ -70,10 +64,7 @@ void DeleteFromTextNodeCommand::doUnapply()
     if (!m_node->hasEditableStyle())
         return;
 
-    m_node->insertData(m_offset, m_text, IGNORE_EXCEPTION);
-
-    if (shouldPostAccessibilityNotification())
-        notifyAccessibilityForTextChange(m_node.get(), unapplyEditType(), m_text, VisiblePosition(Position(m_node, m_offset)));
+    m_node->insertData(m_offset, m_text);
 }
 
 #ifndef NDEBUG

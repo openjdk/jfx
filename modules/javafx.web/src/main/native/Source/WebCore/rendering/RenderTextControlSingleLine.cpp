@@ -26,7 +26,6 @@
 
 #include "CSSFontSelector.h"
 #include "CSSValueKeywords.h"
-#include "Chrome.h"
 #include "Font.h"
 #include "Frame.h"
 #include "FrameSelection.h"
@@ -34,13 +33,10 @@
 #include "HTMLNames.h"
 #include "HitTestResult.h"
 #include "LocalizedStrings.h"
-#include "Page.h"
-#include "PlatformKeyboardEvent.h"
 #include "RenderLayer.h"
 #include "RenderScrollbar.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
-#include "Settings.h"
 #include "StyleResolver.h"
 #include "TextControlInnerElements.h"
 #include <wtf/StackStats.h>
@@ -53,7 +49,7 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RenderTextControlSingleLine::RenderTextControlSingleLine(HTMLInputElement& element, Ref<RenderStyle>&& style)
+RenderTextControlSingleLine::RenderTextControlSingleLine(HTMLInputElement& element, RenderStyle&& style)
     : RenderTextControl(element, WTFMove(style))
 {
 }
@@ -108,11 +104,11 @@ void RenderTextControlSingleLine::layout()
 
     // To ensure consistency between layouts, we need to reset any conditionally overriden height.
     if (innerTextRenderer && !innerTextRenderer->style().logicalHeight().isAuto()) {
-        innerTextRenderer->style().setLogicalHeight(Length(Auto));
+        innerTextRenderer->mutableStyle().setLogicalHeight(Length(Auto));
         setNeedsLayoutOnAncestors(innerTextRenderer, this);
     }
     if (innerBlockRenderer && !innerBlockRenderer->style().logicalHeight().isAuto()) {
-        innerBlockRenderer->style().setLogicalHeight(Length(Auto));
+        innerBlockRenderer->mutableStyle().setLogicalHeight(Length(Auto));
         setNeedsLayoutOnAncestors(innerBlockRenderer, this);
     }
 
@@ -128,10 +124,10 @@ void RenderTextControlSingleLine::layout()
         if (desiredLogicalHeight != innerTextRenderer->logicalHeight())
             setNeedsLayout(MarkOnlyThis);
 
-        innerTextRenderer->style().setLogicalHeight(Length(desiredLogicalHeight, Fixed));
+        innerTextRenderer->mutableStyle().setLogicalHeight(Length(desiredLogicalHeight, Fixed));
         innerTextRenderer->setNeedsLayout(MarkOnlyThis);
         if (innerBlockRenderer) {
-            innerBlockRenderer->style().setLogicalHeight(Length(desiredLogicalHeight, Fixed));
+            innerBlockRenderer->mutableStyle().setLogicalHeight(Length(desiredLogicalHeight, Fixed));
             innerBlockRenderer->setNeedsLayout(MarkOnlyThis);
         }
     }
@@ -140,13 +136,13 @@ void RenderTextControlSingleLine::layout()
         containerRenderer->layoutIfNeeded();
         LayoutUnit containerLogicalHeight = containerRenderer->logicalHeight();
         if (containerLogicalHeight > logicalHeightLimit) {
-            containerRenderer->style().setLogicalHeight(Length(logicalHeightLimit, Fixed));
+            containerRenderer->mutableStyle().setLogicalHeight(Length(logicalHeightLimit, Fixed));
             setNeedsLayout(MarkOnlyThis);
         } else if (containerRenderer->logicalHeight() < contentLogicalHeight()) {
-            containerRenderer->style().setLogicalHeight(Length(contentLogicalHeight(), Fixed));
+            containerRenderer->mutableStyle().setLogicalHeight(Length(contentLogicalHeight(), Fixed));
             setNeedsLayout(MarkOnlyThis);
         } else
-            containerRenderer->style().setLogicalHeight(Length(containerLogicalHeight, Fixed));
+            containerRenderer->mutableStyle().setLogicalHeight(Length(containerLogicalHeight, Fixed));
     }
 
     // If we need another layout pass, we have changed one of children's height so we need to relayout them.
@@ -174,8 +170,8 @@ void RenderTextControlSingleLine::layout()
         LayoutSize innerTextSize;
         if (innerTextRenderer)
             innerTextSize = innerTextRenderer->size();
-        placeholderBox->style().setWidth(Length(innerTextSize.width() - placeholderBox->horizontalBorderAndPaddingExtent(), Fixed));
-        placeholderBox->style().setHeight(Length(innerTextSize.height() - placeholderBox->verticalBorderAndPaddingExtent(), Fixed));
+        placeholderBox->mutableStyle().setWidth(Length(innerTextSize.width() - placeholderBox->horizontalBorderAndPaddingExtent(), Fixed));
+        placeholderBox->mutableStyle().setHeight(Length(innerTextSize.height() - placeholderBox->verticalBorderAndPaddingExtent(), Fixed));
         bool neededLayout = placeholderBox->needsLayout();
         bool placeholderBoxHadLayout = placeholderBox->everHadLayout();
         placeholderBox->layoutIfNeeded();
@@ -202,7 +198,7 @@ void RenderTextControlSingleLine::layout()
 #if PLATFORM(IOS)
     // FIXME: We should not be adjusting styles during layout. <rdar://problem/7675493>
     if (inputElement().isSearchField())
-        RenderThemeIOS::adjustRoundBorderRadius(style(), *this);
+        RenderThemeIOS::adjustRoundBorderRadius(mutableStyle(), *this);
 #endif
 }
 
@@ -236,20 +232,23 @@ void RenderTextControlSingleLine::styleDidChange(StyleDifference diff, const Ren
     // We may have set the width and the height in the old style in layout().
     // Reset them now to avoid getting a spurious layout hint.
     HTMLElement* innerBlock = innerBlockElement();
-    if (RenderObject* innerBlockRenderer = innerBlock ? innerBlock->renderer() : 0) {
-        innerBlockRenderer->style().setHeight(Length());
-        innerBlockRenderer->style().setWidth(Length());
+    if (auto* innerBlockRenderer = innerBlock ? innerBlock->renderer() : nullptr) {
+        innerBlockRenderer->mutableStyle().setHeight(Length());
+        innerBlockRenderer->mutableStyle().setWidth(Length());
     }
     HTMLElement* container = containerElement();
-    if (RenderObject* containerRenderer = container ? container->renderer() : 0) {
-        containerRenderer->style().setHeight(Length());
-        containerRenderer->style().setWidth(Length());
+    if (auto* containerRenderer = container ? container->renderer() : nullptr) {
+        containerRenderer->mutableStyle().setHeight(Length());
+        containerRenderer->mutableStyle().setWidth(Length());
     }
-    RenderTextControlInnerBlock* innerTextRenderer = innerTextElement()->renderer();
-    if (innerTextRenderer && diff == StyleDifferenceLayout)
-        innerTextRenderer->setNeedsLayout(MarkContainingBlockChain);
-    if (HTMLElement* placeholder = inputElement().placeholderElement())
-        placeholder->setInlineStyleProperty(CSSPropertyTextOverflow, textShouldBeTruncated() ? CSSValueEllipsis : CSSValueClip);
+    if (diff == StyleDifferenceLayout) {
+        if (auto* innerTextRenderer = innerTextElement()->renderer())
+            innerTextRenderer->setNeedsLayout(MarkContainingBlockChain);
+        if (auto* placeholder = inputElement().placeholderElement()) {
+            if (placeholder->renderer())
+                placeholder->renderer()->setNeedsLayout(MarkContainingBlockChain);
+        }
+    }
     setHasOverflowClip(false);
 }
 
@@ -319,11 +318,6 @@ LayoutUnit RenderTextControlSingleLine::preferredContentLogicalWidth(float charW
 LayoutUnit RenderTextControlSingleLine::computeControlLogicalHeight(LayoutUnit lineHeight, LayoutUnit nonContentHeight) const
 {
     return lineHeight + nonContentHeight;
-}
-
-bool RenderTextControlSingleLine::textShouldBeTruncated() const
-{
-    return document().focusedElement() != &inputElement() && style().textOverflow() == TextOverflowEllipsis;
 }
 
 void RenderTextControlSingleLine::autoscroll(const IntPoint& position)

@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IndexValueStore_h
-#define IndexValueStore_h
+#pragma once
 
 #if ENABLE(INDEXED_DATABASE)
 
@@ -51,6 +50,7 @@ public:
     IndexValueStore(bool unique);
 
     const IDBKeyData* lowestValueForKey(const IDBKeyData&) const;
+    Vector<IDBKeyData> allValuesForKey(const IDBKeyData&, uint32_t limit) const;
     uint64_t countForKey(const IDBKeyData&) const;
     IDBKeyData lowestKeyWithRecordInRange(const IDBKeyRangeData&) const;
     bool contains(const IDBKeyData&) const;
@@ -98,7 +98,7 @@ public:
     Iterator find(const IDBKeyData&, const IDBKeyData& primaryKey);
     Iterator reverseFind(const IDBKeyData&, const IDBKeyData& primaryKey, CursorDuplicity);
 
-#ifndef NDEBUG
+#if !LOG_DISABLED
     String loggingString() const;
 #endif
 
@@ -116,4 +116,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(INDEXED_DATABASE)
-#endif // IndexValueStore_h

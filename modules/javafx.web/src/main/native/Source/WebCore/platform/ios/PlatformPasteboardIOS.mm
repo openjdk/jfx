@@ -32,6 +32,8 @@
 #import "Pasteboard.h"
 #import "SharedBuffer.h"
 #import "SoftLinking.h"
+#import "WebItemProviderPasteboard.h"
+#import <MobileCoreServices/MobileCoreServices.h>
 
 SOFT_LINK_FRAMEWORK(UIKit)
 SOFT_LINK_CLASS(UIKit, UIPasteboard)
@@ -45,31 +47,6 @@ SOFT_LINK_CLASS(UIKit, UIPasteboard)
 - (NSInteger)changeCount;
 @end
 
-// FIXME: The following soft linking and #define needs to be shared with PasteboardIOS.mm.
-SOFT_LINK_FRAMEWORK(MobileCoreServices)
-
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTypeText, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTypePNG, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTypeJPEG, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTypeURL, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTypeTIFF, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTypeGIF, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTagClassMIMEType, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTagClassFilenameExtension, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTypeRTFD, CFStringRef)
-SOFT_LINK_CONSTANT(MobileCoreServices, kUTTypeRTF, CFStringRef)
-
-#define kUTTypeText getkUTTypeText()
-#define kUTTypePNG  getkUTTypePNG()
-#define kUTTypeJPEG getkUTTypeJPEG()
-#define kUTTypeURL  getkUTTypeURL()
-#define kUTTypeTIFF getkUTTypeTIFF()
-#define kUTTypeGIF  getkUTTypeGIF()
-#define kUTTagClassMIMEType getkUTTagClassMIMEType()
-#define kUTTagClassFilenameExtension getkUTTagClassFilenameExtension()
-#define kUTTypeRTFD getkUTTypeRTFD()
-#define kUTTypeRTF getkUTTypeRTF()
-
 namespace WebCore {
 
 PlatformPasteboard::PlatformPasteboard()
@@ -77,16 +54,28 @@ PlatformPasteboard::PlatformPasteboard()
 {
 }
 
+#if ENABLE(DATA_INTERACTION)
+PlatformPasteboard::PlatformPasteboard(const String& name)
+{
+    if (name == "data interaction pasteboard")
+        m_pasteboard = [WebItemProviderPasteboard sharedInstance];
+    else
+        m_pasteboard = [getUIPasteboardClass() generalPasteboard];
+}
+#else
 PlatformPasteboard::PlatformPasteboard(const String&)
     : m_pasteboard([getUIPasteboardClass() generalPasteboard])
 {
 }
+#endif
 
-void PlatformPasteboard::getTypes(Vector<String>&)
+void PlatformPasteboard::getTypes(Vector<String>& types)
 {
+    for (NSString *pasteboardType in [m_pasteboard pasteboardTypes])
+        types.append(pasteboardType);
 }
 
-PassRefPtr<SharedBuffer> PlatformPasteboard::bufferForType(const String&)
+RefPtr<SharedBuffer> PlatformPasteboard::bufferForType(const String&)
 {
     return nullptr;
 }
@@ -125,7 +114,7 @@ long PlatformPasteboard::setTypes(const Vector<String>&)
     return 0;
 }
 
-long PlatformPasteboard::setBufferForType(PassRefPtr<SharedBuffer>, const String&)
+long PlatformPasteboard::setBufferForType(SharedBuffer*, const String&)
 {
     return 0;
 }
@@ -154,6 +143,10 @@ void PlatformPasteboard::write(const PasteboardWebContent& content)
 {
     RetainPtr<NSDictionary> representations = adoptNS([[NSMutableDictionary alloc] init]);
 
+    ASSERT(content.clientTypes.size() == content.clientData.size());
+    for (size_t i = 0, size = content.clientTypes.size(); i < size; ++i)
+        [representations setValue:content.clientData[i]->createNSData().get() forKey:content.clientTypes[i]];
+
     if (content.dataInWebArchiveFormat) {
         [representations setValue:(NSData *)content.dataInWebArchiveFormat->createNSData().get() forKey:WebArchivePboardType];
         // Flag for UIKit to know that this copy contains rich content. This will trigger a two-step paste.
@@ -162,10 +155,12 @@ void PlatformPasteboard::write(const PasteboardWebContent& content)
     }
 
     if (content.dataInRTFDFormat)
-        [representations setValue:content.dataInRTFDFormat->createNSData().get() forKey:(NSString *)kUTTypeRTFD];
+        [representations setValue:content.dataInRTFDFormat->createNSData().get() forKey:(NSString *)kUTTypeFlatRTFD];
     if (content.dataInRTFFormat)
         [representations setValue:content.dataInRTFFormat->createNSData().get() forKey:(NSString *)kUTTypeRTF];
+
     [representations setValue:content.dataInStringFormat forKey:(NSString *)kUTTypeText];
+    [representations setValue:[(NSString *)content.dataInStringFormat dataUsingEncoding:NSUTF8StringEncoding] forKey:(NSString *)kUTTypeUTF8PlainText];
     [m_pasteboard setItems:@[representations.get()]];
 }
 
@@ -196,7 +191,7 @@ int PlatformPasteboard::count()
     return [m_pasteboard numberOfItems];
 }
 
-PassRefPtr<SharedBuffer> PlatformPasteboard::readBuffer(int index, const String& type)
+RefPtr<SharedBuffer> PlatformPasteboard::readBuffer(int index, const String& type)
 {
     NSIndexSet *indexSet = [NSIndexSet indexSetWithIndex:index];
 

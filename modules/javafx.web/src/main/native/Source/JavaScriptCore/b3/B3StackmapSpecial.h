@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef B3StackmapSpecial_h
-#define B3StackmapSpecial_h
+#pragma once
 
 #if ENABLE(B3_JIT)
 
@@ -53,14 +52,14 @@ public:
 
 protected:
     void reportUsedRegisters(Air::Inst&, const RegisterSet&) override;
-    const RegisterSet& extraEarlyClobberedRegs(Air::Inst&) override;
-    const RegisterSet& extraClobberedRegs(Air::Inst&) override;
+    RegisterSet extraEarlyClobberedRegs(Air::Inst&) override;
+    RegisterSet extraClobberedRegs(Air::Inst&) override;
 
     // Note that this does not override generate() or dumpImpl()/deepDumpImpl(). We have many some
     // subclasses that implement that.
     void forEachArgImpl(
         unsigned numIgnoredB3Args, unsigned numIgnoredAirArgs,
-        Air::Inst&, RoleMode, Optional<unsigned> firstRecoverableIndex,
+        Air::Inst&, RoleMode, std::optional<unsigned> firstRecoverableIndex,
         const ScopedLambda<Air::Inst::EachArgCallback>&);
 
     bool isValidImpl(
@@ -88,6 +87,3 @@ void printInternal(PrintStream&, JSC::B3::StackmapSpecial::RoleMode);
 } // namespace WTF
 
 #endif // ENABLE(B3_JIT)
-
-#endif // B3StackmapSpecial_h
-

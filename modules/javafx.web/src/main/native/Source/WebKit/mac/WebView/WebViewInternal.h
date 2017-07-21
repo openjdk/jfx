@@ -50,6 +50,7 @@ namespace WebCore {
 class Element;
 class Event;
 class Frame;
+class HTMLMediaElement;
 class HTMLVideoElement;
 class HistoryItem;
 class KeyboardEvent;
@@ -71,6 +72,7 @@ class WebSelectionServiceController;
 
 #endif
 
+@class NSCandidateListTouchBarItem;
 @class WebBasePluginPackage;
 @class WebDownload;
 @class WebImmediateActionController;
@@ -251,6 +253,11 @@ OBJC_CLASS NSTextAlternatives;
 #if ENABLE(VIDEO) && defined(__cplusplus)
 - (void)_enterVideoFullscreenForVideoElement:(WebCore::HTMLVideoElement*)videoElement mode:(WebCore::HTMLMediaElementEnums::VideoFullscreenMode)mode;
 - (void)_exitVideoFullscreen;
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+- (BOOL)_hasActiveVideoForControlsInterface;
+- (void)_setUpPlaybackControlsManagerForMediaElement:(WebCore::HTMLMediaElement&)mediaElement;
+- (void)_clearPlaybackControlsManager;
+#endif
 #endif
 
 #if ENABLE(FULLSCREEN_API) && !PLATFORM(IOS) && defined(__cplusplus)
@@ -287,9 +294,13 @@ OBJC_CLASS NSTextAlternatives;
 - (void)_setMockMediaPlaybackTargetPickerName:(NSString *)name state:(WebCore::MediaPlaybackTargetContext::State)state;
 #endif
 
-@end
+- (void)prepareForMouseUp;
+- (void)prepareForMouseDown;
+- (void)updateTouchBar;
+- (void)_dismissTextTouchBarPopoverItemWithIdentifier:(NSString *)identifier;
+- (NSCandidateListTouchBarItem *)candidateList;
 
-@interface WebView (WebUpdateWebViewAdditions)
-- (void)updateWebViewAdditions;
-- (void)showCandidates:(NSArray *)candidates forString:(NSString *)string inRect:(NSRect)rectOfTypedString view:(NSView *)view completionHandler:(void (^)(NSTextCheckingResult *acceptedCandidate))completionBlock;
+- (void)showFormValidationMessage:(NSString *)message withAnchorRect:(NSRect)anchorRect;
+- (void)hideFormValidationMessage;
+
 @end

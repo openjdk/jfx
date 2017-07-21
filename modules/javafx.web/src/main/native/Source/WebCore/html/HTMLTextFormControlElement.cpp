@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2005, 2006, 2007, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
  *           (C) 2006 Alexey Proskuryakov (ap@nypop.com)
  *
  * This library is free software; you can redistribute it and/or
@@ -31,6 +31,7 @@
 #include "Document.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "ExceptionCode.h"
 #include "Frame.h"
 #include "FrameSelection.h"
 #include "HTMLBRElement.h"
@@ -38,9 +39,10 @@
 #include "HTMLInputElement.h"
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
+#include "Logging.h"
+#include "NoEventDispatchAssertion.h"
 #include "NodeTraversal.h"
 #include "Page.h"
-#include "RenderBlockFlow.h"
 #include "RenderTextControlSingleLine.h"
 #include "RenderTheme.h"
 #include "ShadowRoot.h"
@@ -57,11 +59,11 @@ static Position positionForIndex(TextControlInnerTextElement*, unsigned);
 
 HTMLTextFormControlElement::HTMLTextFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElementWithState(tagName, document, form)
-    , m_cachedSelectionStart(-1)
-    , m_cachedSelectionEnd(-1)
     , m_cachedSelectionDirection(SelectionHasNoDirection)
     , m_lastChangeWasUserEdit(false)
     , m_isPlaceholderVisible(false)
+    , m_cachedSelectionStart(-1)
+    , m_cachedSelectionEnd(-1)
 {
 }
 
@@ -81,7 +83,7 @@ bool HTMLTextFormControlElement::childShouldCreateRenderer(const Node& child) co
 Node::InsertionNotificationRequest HTMLTextFormControlElement::insertedInto(ContainerNode& insertionPoint)
 {
     InsertionNotificationRequest insertionNotificationRequest = HTMLFormControlElementWithState::insertedInto(insertionPoint);
-    if (!insertionPoint.inDocument())
+    if (!insertionPoint.isConnected())
         return insertionNotificationRequest;
     String initialValue = value();
     setTextAsOfLastFormControlChangeEvent(initialValue.isNull() ? emptyString() : initialValue);
@@ -100,6 +102,7 @@ void HTMLTextFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedE
 {
     if (supportsPlaceholder())
         updatePlaceholderVisibility();
+    // Match the order in Document::setFocusedElement.
     handleBlurEvent();
     HTMLFormControlElementWithState::dispatchBlurEvent(WTFMove(newFocusedElement));
 }
@@ -109,13 +112,15 @@ void HTMLTextFormControlElement::didEditInnerTextValue()
     if (!isTextFormControl())
         return;
 
+    LOG(Editing, "HTMLTextFormControlElement %p didEditInnerTextValue", this);
+
     m_lastChangeWasUserEdit = true;
     subtreeHasChanged();
 }
 
-void HTMLTextFormControlElement::forwardEvent(Event* event)
+void HTMLTextFormControlElement::forwardEvent(Event& event)
 {
-    if (event->type() == eventNames().blurEvent || event->type() == eventNames().focusEvent)
+    if (event.type() == eventNames().blurEvent || event.type() == eventNames().focusEvent)
         return;
     innerTextElement()->defaultEventHandler(event);
 }
@@ -124,7 +129,7 @@ String HTMLTextFormControlElement::strippedPlaceholder() const
 {
     // According to the HTML5 specification, we need to remove CR and LF from
     // the attribute value.
-    const AtomicString& attributeValue = fastGetAttribute(placeholderAttr);
+    const AtomicString& attributeValue = attributeWithoutSynchronization(placeholderAttr);
     if (!attributeValue.contains(newlineCharacter) && !attributeValue.contains(carriageReturn))
         return attributeValue;
 
@@ -144,7 +149,7 @@ static bool isNotLineBreak(UChar ch) { return ch != newlineCharacter && ch != ca
 
 bool HTMLTextFormControlElement::isPlaceholderEmpty() const
 {
-    const AtomicString& attributeValue = fastGetAttribute(placeholderAttr);
+    const AtomicString& attributeValue = attributeWithoutSynchronization(placeholderAttr);
     return attributeValue.string().find(isNotLineBreak) == notFound;
 }
 
@@ -163,10 +168,7 @@ void HTMLTextFormControlElement::updatePlaceholderVisibility()
     if (placeHolderWasVisible == m_isPlaceholderVisible)
         return;
 
-    setNeedsStyleRecalc();
-
-    if (HTMLElement* placeholder = placeholderElement())
-        placeholder->setInlineStyleProperty(CSSPropertyDisplay, m_isPlaceholderVisible ? CSSValueBlock : CSSValueNone, true);
+    invalidateStyleForSubtree();
 }
 
 void HTMLTextFormControlElement::setSelectionStart(int start)
@@ -212,17 +214,15 @@ void HTMLTextFormControlElement::dispatchFormControlChangeEvent()
     setChangedSinceLastFormControlChangeEvent(false);
 }
 
-void HTMLTextFormControlElement::setRangeText(const String& replacement, ExceptionCode& ec)
+ExceptionOr<void> HTMLTextFormControlElement::setRangeText(const String& replacement)
 {
-    setRangeText(replacement, selectionStart(), selectionEnd(), String(), ec);
+    return setRangeText(replacement, selectionStart(), selectionEnd(), String());
 }
 
-void HTMLTextFormControlElement::setRangeText(const String& replacement, unsigned start, unsigned end, const String& selectionMode, ExceptionCode& ec)
+ExceptionOr<void> HTMLTextFormControlElement::setRangeText(const String& replacement, unsigned start, unsigned end, const String& selectionMode)
 {
-    if (start > end) {
-        ec = INDEX_SIZE_ERR;
-        return;
-    }
+    if (start > end)
+        return Exception { INDEX_SIZE_ERR };
 
     String text = innerTextValue();
     unsigned textLength = text.length();
@@ -242,7 +242,7 @@ void HTMLTextFormControlElement::setRangeText(const String& replacement, unsigne
 
     // FIXME: What should happen to the value (as in value()) if there's no renderer?
     if (!renderer())
-        return;
+        return { };
 
     subtreeHasChanged();
 
@@ -269,6 +269,8 @@ void HTMLTextFormControlElement::setRangeText(const String& replacement, unsigne
     }
 
     setSelectionRange(newSelectionStart, newSelectionEnd, SelectionHasNoDirection);
+
+    return { };
 }
 
 void HTMLTextFormControlElement::setSelectionRange(int start, int end, const String& directionString, const AXTextStateChangeIntent& intent)
@@ -295,7 +297,12 @@ void HTMLTextFormControlElement::setSelectionRange(int start, int end, TextField
     if (!hasFocus && innerText) {
         // FIXME: Removing this synchronous layout requires fixing <https://webkit.org/b/128797>
         document().updateLayoutIgnorePendingStylesheets();
-        if (RenderElement* rendererTextControl = renderer()) {
+
+        // Double-check the state of innerTextElement after the layout.
+        innerText = innerTextElement();
+        auto* rendererTextControl = renderer();
+
+        if (innerText && rendererTextControl) {
             if (rendererTextControl->style().visibility() == HIDDEN || !innerText->renderBox()->height()) {
                 cacheSelection(start, end, direction);
                 return;
@@ -426,7 +433,7 @@ static inline void setContainerAndOffsetForRange(Node* node, int offset, Node*& 
     }
 }
 
-PassRefPtr<Range> HTMLTextFormControlElement::selection() const
+RefPtr<Range> HTMLTextFormControlElement::selection() const
 {
     if (!renderer() || !isTextFormControl() || !hasCachedSelection())
         return nullptr;
@@ -509,7 +516,7 @@ void HTMLTextFormControlElement::readOnlyAttributeChanged()
 void HTMLTextFormControlElement::updateInnerTextElementEditability()
 {
     if (TextControlInnerTextElement* innerText = innerTextElement())
-        innerText->setAttribute(contenteditableAttr, isDisabledOrReadOnly() ? "false" : "plaintext-only");
+        innerText->setAttributeWithoutSynchronization(contenteditableAttr, isDisabledOrReadOnly() ? "false" : "plaintext-only");
 }
 
 bool HTMLTextFormControlElement::lastChangeWasUserEdit() const
@@ -556,10 +563,16 @@ void HTMLTextFormControlElement::setInnerTextValue(const String& value)
                 cache->postNotification(this, AXObjectCache::AXValueChanged, TargetObservableParent);
         }
 #endif
-        innerText->setInnerText(value, ASSERT_NO_EXCEPTION);
 
-        if (value.endsWith('\n') || value.endsWith('\r'))
-            innerText->appendChild(HTMLBRElement::create(document()), ASSERT_NO_EXCEPTION);
+        {
+            // Events dispatched on the inner text element cannot execute arbitrary author scripts.
+            NoEventDispatchAssertion::EventAllowedScope allowedScope(*userAgentShadowRoot());
+
+            innerText->setInnerText(value);
+
+            if (value.endsWith('\n') || value.endsWith('\r'))
+                innerText->appendChild(HTMLBRElement::create(document()));
+        }
 
 #if HAVE(ACCESSIBILITY) && PLATFORM(COCOA)
         if (textIsChanged && renderer()) {
@@ -743,7 +756,7 @@ static const Element* parentHTMLElement(const Element* element)
 String HTMLTextFormControlElement::directionForFormData() const
 {
     for (const Element* element = this; element; element = parentHTMLElement(element)) {
-        const AtomicString& dirAttributeValue = element->fastGetAttribute(dirAttr);
+        const AtomicString& dirAttributeValue = element->attributeWithoutSynchronization(dirAttr);
         if (dirAttributeValue.isNull())
             continue;
 
@@ -760,12 +773,20 @@ String HTMLTextFormControlElement::directionForFormData() const
     return "ltr";
 }
 
-void HTMLTextFormControlElement::setMaxLengthForBindings(int maxLength, ExceptionCode& ec)
+ExceptionOr<void> HTMLTextFormControlElement::setMaxLength(int maxLength)
 {
-    if (maxLength < 0)
-        ec = INDEX_SIZE_ERR;
-    else
-        setIntegralAttribute(maxlengthAttr, maxLength);
+    if (maxLength < 0 || (m_minLength >= 0 && maxLength < m_minLength))
+        return Exception { INDEX_SIZE_ERR };
+    setIntegralAttribute(maxlengthAttr, maxLength);
+    return { };
+}
+
+ExceptionOr<void> HTMLTextFormControlElement::setMinLength(int minLength)
+{
+    if (minLength < 0 || (m_maxLength >= 0 && minLength > m_maxLength))
+        return Exception { INDEX_SIZE_ERR };
+    setIntegralAttribute(minlengthAttr, minLength);
+    return { };
 }
 
 void HTMLTextFormControlElement::adjustInnerTextStyle(const RenderStyle& parentStyle, RenderStyle& textBlockStyle) const

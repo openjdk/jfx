@@ -24,17 +24,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JavaStringJSC_h
-#define JavaStringJSC_h
+#pragma once
 
 #include "JNIUtility.h"
 #include "JSDOMWindowBase.h"
 #include "DOMWindow.h"
-#include "JavaInstanceJSC.h"
 
 #include <runtime/JSLock.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/text/StringImpl.h>
+
+#include "JavaInstanceJSC.h"
 
 namespace JSC {
 
@@ -73,7 +73,7 @@ public:
         return m_utf8String.data();
     }
     int length() const { return m_impl->length(); }
-    PassRefPtr<StringImpl> impl() const { return m_impl; }
+    RefPtr<StringImpl> impl() const { return m_impl; }
 
 private:
     void init(JNIEnv* e, jstring s)
@@ -94,5 +94,3 @@ private:
 } // namespace Bindings
 
 } // namespace JSC
-
-#endif // JavaStringJSC_h

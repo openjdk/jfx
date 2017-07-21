@@ -7,7 +7,7 @@
 #include "Frame.h"
 #include "FrameView.h"
 #include "HostWindow.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "PlatformScreen.h"
 #include "ScrollView.h"
 #include "WebPage.h"
@@ -148,6 +148,11 @@ FloatRect screenAvailableRect(Widget* w)
 }
 
 bool screenHasInvertedColors() //XXX: recheck
+{
+    return false;
+}
+
+bool screenSupportsExtendedColor(Widget*)
 {
     return false;
 }

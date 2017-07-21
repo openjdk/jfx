@@ -8,7 +8,7 @@
 #endif
 
 #include "GraphicsContext.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "MediaPlayerPrivateJava.h"
 #include "NotImplemented.h"
 #include "PlatformContextJava.h"

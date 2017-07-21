@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,13 +28,17 @@
 
 #if ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
 
+#import "AudioSampleBufferList.h"
+#import "CAAudioStreamDescription.h"
 #import "Logging.h"
 #import "MediaConstraints.h"
-#import "NotImplemented.h"
+#import "MediaSampleAVFObjC.h"
 #import "RealtimeMediaSourceSettings.h"
 #import "SoftLinking.h"
 #import "WebAudioSourceProviderAVFObjC.h"
-#import <AVFoundation/AVFoundation.h>
+#import <AVFoundation/AVCaptureInput.h>
+#import <AVFoundation/AVCaptureOutput.h>
+#import <AVFoundation/AVCaptureSession.h>
 #import <CoreAudio/CoreAudioTypes.h>
 #import <wtf/HashSet.h>
 
@@ -43,7 +47,7 @@
 typedef AVCaptureAudioChannel AVCaptureAudioChannelType;
 typedef AVCaptureAudioDataOutput AVCaptureAudioDataOutputType;
 typedef AVCaptureConnection AVCaptureConnectionType;
-typedef AVCaptureDevice AVCaptureDeviceType;
+typedef AVCaptureDevice AVCaptureDeviceTypedef;
 typedef AVCaptureDeviceInput AVCaptureDeviceInputType;
 typedef AVCaptureOutput AVCaptureOutputType;
 
@@ -56,31 +60,49 @@ SOFT_LINK_CLASS(AVFoundation, AVCaptureDevice)
 SOFT_LINK_CLASS(AVFoundation, AVCaptureDeviceInput)
 SOFT_LINK_CLASS(AVFoundation, AVCaptureOutput)
 
+#define AVCaptureAudioChannel getAVCaptureAudioChannelClass()
+#define AVCaptureAudioDataOutput getAVCaptureAudioDataOutputClass()
+#define AVCaptureConnection getAVCaptureConnectionClass()
+#define AVCaptureDevice getAVCaptureDeviceClass()
+#define AVCaptureDeviceFormat getAVCaptureDeviceFormatClass()
+#define AVCaptureDeviceInput getAVCaptureDeviceInputClass()
+#define AVCaptureOutput getAVCaptureOutputClass()
+#define AVFrameRateRange getAVFrameRateRangeClass()
+
 SOFT_LINK_POINTER(AVFoundation, AVMediaTypeAudio, NSString *)
 
 #define AVMediaTypeAudio getAVMediaTypeAudio()
 
 namespace WebCore {
 
-RefPtr<AVMediaCaptureSource> AVAudioCaptureSource::create(AVCaptureDeviceType* device, const AtomicString& id, PassRefPtr<MediaConstraints> constraint)
+RefPtr<AVMediaCaptureSource> AVAudioCaptureSource::create(AVCaptureDeviceTypedef* device, const AtomicString& id, const MediaConstraints* constraints, String& invalidConstraint)
 {
-    return adoptRef(new AVAudioCaptureSource(device, id, constraint));
+    auto source = adoptRef(new AVAudioCaptureSource(device, id));
+    if (constraints) {
+        auto result = source->applyConstraints(*constraints);
+        if (result) {
+            invalidConstraint = result.value().first;
+            source = nullptr;
+        }
+    }
+
+    return source;
 }
 
-AVAudioCaptureSource::AVAudioCaptureSource(AVCaptureDeviceType* device, const AtomicString& id, PassRefPtr<MediaConstraints> constraints)
-    : AVMediaCaptureSource(device, id, RealtimeMediaSource::Audio, constraints)
+AVAudioCaptureSource::AVAudioCaptureSource(AVCaptureDeviceTypedef* device, const AtomicString& id)
+    : AVMediaCaptureSource(device, id, RealtimeMediaSource::Audio)
 {
-    m_inputDescription = std::make_unique<AudioStreamBasicDescription>();
 }
 
 AVAudioCaptureSource::~AVAudioCaptureSource()
 {
+    shutdownCaptureSession();
 }
 
 void AVAudioCaptureSource::initializeCapabilities(RealtimeMediaSourceCapabilities& capabilities)
 {
     // FIXME: finish this implementation - https://webkit.org/b/122430
-    capabilities.setVolume(CapabilityValueOrRange(0, 1.0));
+    capabilities.setVolume(CapabilityValueOrRange(0.0, 1.0));
 }
 
 void AVAudioCaptureSource::initializeSupportedConstraints(RealtimeMediaSourceSupportedConstraints& supportedConstraints)
@@ -90,25 +112,9 @@ void AVAudioCaptureSource::initializeSupportedConstraints(RealtimeMediaSourceSup
 
 void AVAudioCaptureSource::updateSettings(RealtimeMediaSourceSettings& settings)
 {
-    // FIXME: use [AVCaptureAudioPreviewOutput volume] for volume
+    // FIXME: support volume
 
     settings.setDeviceId(id());
-}
-
-void AVAudioCaptureSource::addObserver(AVAudioCaptureSource::Observer* observer)
-{
-    LockHolder lock(m_lock);
-    m_observers.append(observer);
-    if (m_inputDescription->mSampleRate)
-        observer->prepare(m_inputDescription.get());
-}
-
-void AVAudioCaptureSource::removeObserver(AVAudioCaptureSource::Observer* observer)
-{
-    LockHolder lock(m_lock);
-    size_t pos = m_observers.find(observer);
-    if (pos != notFound)
-        m_observers.remove(pos);
 }
 
 void AVAudioCaptureSource::setupCaptureSession()
@@ -138,33 +144,15 @@ void AVAudioCaptureSource::shutdownCaptureSession()
         LockHolder lock(m_lock);
 
         m_audioConnection = nullptr;
-        m_inputDescription = std::make_unique<AudioStreamBasicDescription>();
+        m_inputDescription = nullptr;
 
-        for (auto& observer : m_observers)
-            observer->unprepare();
-        m_observers.shrink(0);
+        if (m_audioSourceProvider)
+            m_audioSourceProvider->unprepare();
     }
 
     // Don't hold the lock when destroying the audio provider, it will call back into this object
     // to remove itself as an observer.
     m_audioSourceProvider = nullptr;
-}
-
-static bool operator==(const AudioStreamBasicDescription& a, const AudioStreamBasicDescription& b)
-{
-    return a.mSampleRate == b.mSampleRate
-        && a.mFormatID == b.mFormatID
-        && a.mFormatFlags == b.mFormatFlags
-        && a.mBytesPerPacket == b.mBytesPerPacket
-        && a.mFramesPerPacket == b.mFramesPerPacket
-        && a.mBytesPerFrame == b.mBytesPerFrame
-        && a.mChannelsPerFrame == b.mChannelsPerFrame
-        && a.mBitsPerChannel == b.mBitsPerChannel;
-}
-
-static bool operator!=(const AudioStreamBasicDescription& a, const AudioStreamBasicDescription& b)
-{
-    return !(a == b);
 }
 
 void AVAudioCaptureSource::captureOutputDidOutputSampleBufferFromConnection(AVCaptureOutputType*, CMSampleBufferRef sampleBuffer, AVCaptureConnectionType*)
@@ -182,18 +170,16 @@ void AVAudioCaptureSource::captureOutputDidOutputSampleBufferFromConnection(AVCa
         return;
     }
 
-    if (m_observers.isEmpty())
-        return;
-
     const AudioStreamBasicDescription* streamDescription = CMAudioFormatDescriptionGetStreamBasicDescription(formatDescription);
-    if (*m_inputDescription != *streamDescription) {
-        m_inputDescription = std::make_unique<AudioStreamBasicDescription>(*streamDescription);
-        for (auto& observer : m_observers)
-            observer->prepare(m_inputDescription.get());
+    if (!m_inputDescription || *m_inputDescription != *streamDescription) {
+        m_inputDescription = std::make_unique<CAAudioStreamDescription>(*streamDescription);
+
+        if (m_audioSourceProvider)
+            m_audioSourceProvider->prepare(streamDescription);
     }
 
-    for (auto& observer : m_observers)
-        observer->process(formatDescription, sampleBuffer);
+    m_list = std::make_unique<WebAudioBufferList>(*m_inputDescription, sampleBuffer);
+    audioSamplesAvailable(toMediaTime(CMSampleBufferGetPresentationTimeStamp(sampleBuffer)), *m_list, CAAudioStreamDescription(*streamDescription), CMSampleBufferGetNumSamples(sampleBuffer));
 }
 
 AudioSourceProvider* AVAudioCaptureSource::audioSourceProvider()

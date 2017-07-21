@@ -31,6 +31,7 @@
 #include "AVMediaCaptureSource.h"
 
 OBJC_CLASS CALayer;
+OBJC_CLASS AVFrameRateRange;
 
 typedef struct CGImage *CGImageRef;
 typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
@@ -40,44 +41,53 @@ namespace WebCore {
 
 class FloatRect;
 class GraphicsContext;
+class AVVideoSourcePreview;
 
 class AVVideoCaptureSource : public AVMediaCaptureSource {
 public:
-    static RefPtr<AVMediaCaptureSource> create(AVCaptureDevice*, const AtomicString&, PassRefPtr<MediaConstraints>);
+    static RefPtr<AVMediaCaptureSource> create(AVCaptureDevice*, const AtomicString&, const MediaConstraints*, String&);
 
     int32_t width() const { return m_width; }
     int32_t height() const { return m_height; }
 
 private:
-    AVVideoCaptureSource(AVCaptureDevice*, const AtomicString&, PassRefPtr<MediaConstraints>);
+    AVVideoCaptureSource(AVCaptureDevice*, const AtomicString&);
     virtual ~AVVideoCaptureSource();
 
-    void setupCaptureSession() override;
-    void shutdownCaptureSession() override;
+    void setupCaptureSession() final;
+    void shutdownCaptureSession() final;
 
-    void updateSettings(RealtimeMediaSourceSettings&) override;
+    void updateSettings(RealtimeMediaSourceSettings&) final;
 
-    void initializeCapabilities(RealtimeMediaSourceCapabilities&) override;
-    void initializeSupportedConstraints(RealtimeMediaSourceSupportedConstraints&) override;
+    void applySizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) final;
+    bool applySize(const IntSize&) final;
+    bool applyFrameRate(double) final;
+    bool setPreset(NSString*);
 
-    bool applyConstraints(MediaConstraints*);
-    bool setFrameRateConstraint(float minFrameRate, float maxFrameRate);
+    NSString *bestSessionPresetForVideoDimensions(std::optional<int> width, std::optional<int> height) const;
+    bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>) final;
+
+    void initializeCapabilities(RealtimeMediaSourceCapabilities&) final;
+    void initializeSupportedConstraints(RealtimeMediaSourceSupportedConstraints&) final;
+
+    bool setFrameRateConstraint(double minFrameRate, double maxFrameRate);
 
     bool updateFramerate(CMSampleBufferRef);
 
-    void captureOutputDidOutputSampleBufferFromConnection(AVCaptureOutput*, CMSampleBufferRef, AVCaptureConnection*) override;
+    void captureOutputDidOutputSampleBufferFromConnection(AVCaptureOutput*, CMSampleBufferRef, AVCaptureConnection*) final;
     void processNewFrame(RetainPtr<CMSampleBufferRef>);
 
-    void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override;
-    PlatformLayer* platformLayer() const override;
+    void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) final;
 
     RetainPtr<CGImageRef> currentFrameCGImage();
-    RefPtr<Image> currentFrameImage() override;
+    RefPtr<Image> currentFrameImage() final;
 
+    RetainPtr<NSString> m_pendingPreset;
     RetainPtr<CMSampleBufferRef> m_buffer;
     RetainPtr<CGImageRef> m_lastImage;
+    RetainPtr<AVCaptureVideoDataOutput> m_videoOutput;
+
     Vector<Float64> m_videoFrameTimeStamps;
-    mutable RetainPtr<PlatformLayer> m_videoPreviewLayer;
     Float64 m_frameRate { 0 };
     int32_t m_width { 0 };
     int32_t m_height { 0 };

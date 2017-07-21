@@ -59,6 +59,8 @@ void StringPrintStream::vprintf(const char* format, va_list argList)
     int numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten =
         vsnprintf(m_buffer + m_next, m_size - m_next, format, firstPassArgList);
 
+    va_end(firstPassArgList);
+
     int numberOfBytesThatWouldHaveBeenWritten =
         numberOfBytesNotIncludingTerminatorThatWouldHaveBeenWritten + 1;
 
@@ -98,6 +100,12 @@ String StringPrintStream::toString()
 {
     ASSERT(m_next == strlen(m_buffer));
     return String::fromUTF8(m_buffer, m_next);
+}
+
+String StringPrintStream::toStringWithLatin1Fallback()
+{
+    ASSERT(m_next == strlen(m_buffer));
+    return String::fromUTF8WithLatin1Fallback(m_buffer, m_next);
 }
 
 void StringPrintStream::increaseSize(size_t newSize)

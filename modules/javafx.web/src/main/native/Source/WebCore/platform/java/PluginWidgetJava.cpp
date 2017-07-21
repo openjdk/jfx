@@ -6,7 +6,7 @@
 #include "FocusController.h"
 #include "FrameView.h"
 #include "Image.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "MouseEvent.h"
 #include "NotImplemented.h"
 #include "PluginWidgetJava.h"
@@ -124,50 +124,48 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_WCPluginWidget_twkConvertToPage
 
 PluginWidgetJava::PluginWidgetJava(
     jobject wfh,
-    HTMLPlugInElement *element,
-    const IntSize &size,
-    const String &url,
-    const String &mimeType,
-    const Vector<String> &paramNames,
-    const Vector<String> &paramValues)
-:   m_element(element),
-    m_url(url),
-    m_mimeType(mimeType),
-    m_size(size),
-    m_paramNames(paramNames),
-    m_paramValues(paramValues)
+    HTMLPlugInElement* element,
+    const IntSize& size,
+    const String& url,
+    const String& mimeType,
+    const Vector<String>& paramNames,
+    const Vector<String>& paramValues)
+      : m_element(element),
+        m_url(url),
+        m_mimeType(mimeType),
+        m_size(size),
+        m_paramNames(paramNames),
+        m_paramValues(paramValues)
 {
     //TODO: have to be moved into setParent(non-null)
-    {
-        JNIEnv* env = WebCore_GetJavaEnv();
-        JLString urlJavaString(url.toJavaString(env));
-        JLString mimeTypeJavaString(mimeType.toJavaString(env));
+    JNIEnv* env = WebCore_GetJavaEnv();
+    JLString urlJavaString(url.toJavaString(env));
+    JLString mimeTypeJavaString(mimeType.toJavaString(env));
 
-        //better to delegate this upto org/webkit/webcore/platform/api/WebPage
-        //as for "createScrollView"
-        JLClass cls(env->FindClass("com/sun/webkit/WCPluginWidget"));
-        ASSERT(cls);
+    //better to delegate this upto org/webkit/webcore/platform/api/WebPage
+    //as for "createScrollView"
+    JLClass cls(env->FindClass("com/sun/webkit/WCPluginWidget"));
+    ASSERT(cls);
 
-        jobjectArray pNames = strVect2JArray(env, paramNames);
-        jobjectArray pValues = strVect2JArray(env, paramValues);
+    jobjectArray pNames = strVect2JArray(env, paramNames);
+    jobjectArray pValues = strVect2JArray(env, paramValues);
 
-        JLObject obj(env->CallStaticObjectMethod(
-                                                           cls,
-                                                           pluginWidgetCreateMID,
-                                                           wfh,
-                                                           size.width(), size.height(),
-                                                           (jstring)urlJavaString,
-                                                           (jstring)mimeTypeJavaString,
-                                                           pNames, pValues));
-        CheckAndClearException(env);
+    JLObject obj(env->CallStaticObjectMethod(
+                                                       cls,
+                                                       pluginWidgetCreateMID,
+                                                       wfh,
+                                                       size.width(), size.height(),
+                                                       (jstring)urlJavaString,
+                                                       (jstring)mimeTypeJavaString,
+                                                       pNames, pValues));
+    CheckAndClearException(env);
 
-        ASSERT(obj);
-        if (obj) {
-            setPlatformWidget(obj);
-            env->SetLongField(obj, pluginWidgetPDataFID, ptr_to_jlong(this));
-            setSelfVisible(true);
-            setParentVisible(true);
-        }
+    ASSERT(obj);
+    if (obj) {
+        setPlatformWidget(obj);
+        env->SetLongField(obj, pluginWidgetPDataFID, ptr_to_jlong(this));
+        setSelfVisible(true);
+        setParentVisible(true);
     }
 }
 
@@ -180,9 +178,9 @@ PluginWidgetJava::~PluginWidgetJava() {
 }
 
 void PluginWidgetJava::paint(
-    GraphicsContext *context,
-    const IntRect &rc //page coordinates
-){
+    GraphicsContext& context,
+    const IntRect& rc /*page coordinates*/,
+    SecurityOriginPaintPolicy) {
     //Widget::paint(context, rc);
     /*
     if (!m_isStarted) {
@@ -191,24 +189,24 @@ void PluginWidgetJava::paint(
         return;
     }
     */
-    if (context->paintingDisabled())
+    if (context.paintingDisabled())
         return;
 
     jobject obj = platformWidget();
-    if(NULL!=obj){
+    if (obj){
         JNIEnv *env = WebCore_GetJavaEnv();
-        context->save();
+        context.save();
         env->CallVoidMethod(
             obj,
             pluginWidgetPaintMID,
-            context->platformContext(),
+            context.platformContext(),
             rc.x(), rc.y(), rc.width(), rc.height());
-        context->restore();
+        context.restore();
     }
 }
 
 
-void PluginWidgetJava::convertToPage(IntRect& rect)
+void PluginWidgetJava::convertToPage(IntRect&)
 {
     if (!isVisible())
         return;
@@ -216,9 +214,9 @@ void PluginWidgetJava::convertToPage(IntRect& rect)
     if (!m_element || !m_element->renderer())
         return;
 
-    RenderBox* renderer = downcast<RenderBox>(m_element->renderer()); //XXX: recheck
+    RenderBox* renderer = downcast<RenderBox>(m_element->renderer()); // FIXME-java: recheck
     if(renderer){
-        LayoutSize offset(renderer->offsetFromContainer(*renderer->container(), LayoutPoint()));
+        renderer->offsetFromContainer(*renderer->container(), LayoutPoint());
     }
 
 }
@@ -279,7 +277,7 @@ void PluginWidgetJava::invalidateWindowlessPluginRect(
 }
 
 //look at "void PluginView::focusPluginElement()"
-void PluginWidgetJava::focusPluginElement(bool isFocused)
+void PluginWidgetJava::focusPluginElement(bool)
 {
 /*
     if( isFocused ){

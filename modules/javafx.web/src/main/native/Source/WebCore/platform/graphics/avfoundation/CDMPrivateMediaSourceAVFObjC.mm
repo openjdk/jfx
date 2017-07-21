@@ -26,13 +26,12 @@
 #import "config.h"
 #import "CDMPrivateMediaSourceAVFObjC.h"
 
-#if ENABLE(ENCRYPTED_MEDIA_V2) && ENABLE(MEDIA_SOURCE)
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(MEDIA_SOURCE)
 
-#import "CDM.h"
 #import "CDMSessionAVContentKeySession.h"
 #import "CDMSessionAVStreamSession.h"
 #import "ContentType.h"
-#import "ExceptionCode.h"
+#import "LegacyCDM.h"
 #import "MediaPlayerPrivateMediaSourceAVFObjC.h"
 #import "WebCoreSystemInterface.h"
 #import <wtf/NeverDestroyed.h>
@@ -130,4 +129,4 @@ void CDMPrivateMediaSourceAVFObjC::invalidateSession(CDMSessionMediaSourceAVFObj
 
 }
 
-#endif // ENABLE(ENCRYPTED_MEDIA_V2) && ENABLE(MEDIA_SOURCE)
+#endif // ENABLE(LEGACY_ENCRYPTED_MEDIA) && ENABLE(MEDIA_SOURCE)

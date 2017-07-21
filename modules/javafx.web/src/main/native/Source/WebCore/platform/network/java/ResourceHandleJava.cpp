@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
+
 #include "config.h"
 #include "ResourceHandle.h"
 #include "ResourceHandleInternal.h"
@@ -43,9 +44,40 @@ void ResourceHandle::platformLoadResourceSynchronously(NetworkingContext* contex
 }
 
 
-void ResourceHandle::platformSetDefersLoading(bool defers)
+void ResourceHandle::platformSetDefersLoading(bool)
 {
     notImplemented();
+}
+
+void ResourceHandle::receivedCredential(const AuthenticationChallenge&, const Credential&)
+{
+    // Implement like ResourceHandleCurl
+    notImplemented();
+}
+
+void ResourceHandle::receivedRequestToContinueWithoutCredential(const AuthenticationChallenge&)
+{
+    // Implement like ResourceHandleCurl
+    notImplemented();
+}
+
+void ResourceHandle::receivedCancellation(const AuthenticationChallenge& challenge)
+{
+    if (challenge != d->m_currentWebChallenge)
+        return;
+
+    if (client())
+        client()->receivedCancellation(this, challenge);
+}
+
+void ResourceHandle::receivedRequestToPerformDefaultHandling(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void ResourceHandle::receivedChallengeRejection(const AuthenticationChallenge&)
+{
+    ASSERT_NOT_REACHED();
 }
 
 } // namespace WebCore

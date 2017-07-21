@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2009, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2016 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Joone Hur <joone@kldp.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,28 +30,42 @@
 #include "config.h"
 #include "TestRunner.h"
 
+#include "WebCoreTestSupport.h"
 #include "WorkQueue.h"
 #include "WorkQueueItem.h"
 #include <JavaScriptCore/APICast.h>
-#include <JavaScriptCore/JSContextRef.h>
+#include <JavaScriptCore/ArrayBufferView.h>
+#include <JavaScriptCore/HeapInlines.h>
+#include <JavaScriptCore/JSArrayBufferView.h>
 #include <JavaScriptCore/JSCTestRunnerUtils.h>
+#include <JavaScriptCore/JSContextRef.h>
 #include <JavaScriptCore/JSObjectRef.h>
 #include <JavaScriptCore/JSRetainPtr.h>
+#include <JavaScriptCore/TypedArrayInlines.h>
+#include <JavaScriptCore/VMInlines.h>
+#include <WebCore/LogInitialization.h>
 #include <cstring>
 #include <locale.h>
-#include <runtime/ArrayBufferView.h>
-#include <runtime/JSArrayBufferView.h>
-#include <runtime/TypedArrayInlines.h>
 #include <stdio.h>
 #include <wtf/Assertions.h>
 #include <wtf/CurrentTime.h>
+#include <wtf/LoggingAccumulator.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RefPtr.h>
+#include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/WTFString.h>
+
+#if PLATFORM(IOS)
+#include <WebCore/WebCoreThreadRun.h>
+#include <wtf/BlockPtr.h>
+#endif
 
 #if PLATFORM(MAC) && !PLATFORM(IOS)
 #include <Carbon/Carbon.h>
 #endif
+
+FILE* testResult = stdout;
 
 const unsigned TestRunner::viewWidth = 800;
 const unsigned TestRunner::viewHeight = 600;
@@ -81,7 +95,6 @@ TestRunner::TestRunner(const std::string& testURL, const std::string& expectedPi
     , m_dumpSourceAsWebArchive(false)
     , m_dumpStatusCallbacks(false)
     , m_dumpTitleChanges(false)
-    , m_dumpIconChanges(false)
     , m_dumpVisitedLinksCallback(false)
     , m_dumpWillCacheResponse(false)
     , m_generatePixelResults(true)
@@ -101,9 +114,9 @@ TestRunner::TestRunner(const std::string& testURL, const std::string& expectedPi
     , m_globalFlag(false)
     , m_isGeolocationPermissionSet(false)
     , m_geolocationPermission(false)
+    , m_rejectsProtectionSpaceAndContinueForAuthenticationChallenges(false)
     , m_handlesAuthenticationChallenges(false)
     , m_isPrinting(false)
-    , m_deferMainResourceDataLoad(true)
     , m_useDeferredFrameLoading(false)
     , m_shouldPaintBrokenImage(true)
     , m_shouldStayOnPageAfterHandlingBeforeUnload(false)
@@ -119,9 +132,9 @@ TestRunner::TestRunner(const std::string& testURL, const std::string& expectedPi
 {
 }
 
-PassRefPtr<TestRunner> TestRunner::create(const std::string& testURL, const std::string& expectedPixelHash)
+Ref<TestRunner> TestRunner::create(const std::string& testURL, const std::string& expectedPixelHash)
 {
-    return adoptRef(new TestRunner(testURL, expectedPixelHash));
+    return adoptRef(*new TestRunner(testURL, expectedPixelHash));
 }
 
 // Static Functions
@@ -263,13 +276,6 @@ static JSValueRef dumpTitleChangesCallback(JSContextRef context, JSObjectRef fun
     return JSValueMakeUndefined(context);
 }
 
-static JSValueRef dumpIconChangesCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->setDumpIconChanges(true);
-    return JSValueMakeUndefined(context);
-}
-
 static JSValueRef dumpWillCacheResponseCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
@@ -342,9 +348,12 @@ static JSValueRef setAudioResultCallback(JSContextRef context, JSObjectRef funct
 
 #if !PLATFORM(JAVA)
     // FIXME (123058): Use a JSC API to get buffer contents once such is exposed.
-    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(toJS(toJS(context), arguments[0]));
+    JSC::VM& vm = toJS(context)->vm();
+    JSC::JSLockHolder lock(vm);
+
+    JSC::JSArrayBufferView* jsBufferView = JSC::jsDynamicCast<JSC::JSArrayBufferView*>(vm, toJS(toJS(context), arguments[0]));
     ASSERT(jsBufferView);
-    RefPtr<JSC::ArrayBufferView> bufferView = jsBufferView->impl();
+    RefPtr<JSC::ArrayBufferView> bufferView = jsBufferView->unsharedImpl();
     const char* buffer = static_cast<const char*>(bufferView->baseAddress());
     std::vector<char> audioData(buffer, buffer + bufferView->byteLength());
 
@@ -919,18 +928,6 @@ static JSValueRef setDatabaseQuotaCallback(JSContextRef context, JSObjectRef fun
     return JSValueMakeUndefined(context);
 }
 
-static JSValueRef setDeferMainResourceDataLoadCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    // Has Mac and Windows implementation
-    if (argumentCount < 1)
-        return JSValueMakeUndefined(context);
-
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->setDeferMainResourceDataLoad(JSValueToBoolean(context, arguments[0]));
-
-    return JSValueMakeUndefined(context);
-}
-
 static JSValueRef setDefersLoadingCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     if (argumentCount < 1)
@@ -1070,6 +1067,18 @@ static JSValueRef setGeolocationPermissionCallback(JSContextRef context, JSObjec
     return JSValueMakeUndefined(context);
 }
 
+static JSValueRef setRejectsProtectionSpaceAndContinueForAuthenticationChallengesCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    // Has mac & windows implementation
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->setRejectsProtectionSpaceAndContinueForAuthenticationChallenges(JSValueToBoolean(context, arguments[0]));
+
+    return JSValueMakeUndefined(context);
+}
+
 static JSValueRef setHandlesAuthenticationChallengesCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
     // Has mac & windows implementation
@@ -1189,6 +1198,15 @@ static JSValueRef setPrintingCallback(JSContextRef context, JSObjectRef function
     return JSValueMakeUndefined(context);
 }
 
+static JSValueRef setAllowsAnySSLCertificateCallback(JSContextRef context, JSObjectRef, JSObjectRef, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    bool allowAnyCertificate = false;
+    if (argumentCount == 1)
+        allowAnyCertificate = JSValueToBoolean(context, arguments[0]);
+
+    TestRunner::setAllowsAnySSLCertificate(allowAnyCertificate);
+    return JSValueMakeUndefined(context);
+}
 
 static JSValueRef setAllowUniversalAccessFromFileURLsCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
 {
@@ -1210,6 +1228,18 @@ static JSValueRef setAllowFileAccessFromFileURLsCallback(JSContextRef context, J
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
     controller->setAllowFileAccessFromFileURLs(JSValueToBoolean(context, arguments[0]));
+
+    return JSValueMakeUndefined(context);
+}
+
+static JSValueRef setNeedsStorageAccessFromFileURLsQuirkCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    // Has mac & windows implementation
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->setNeedsStorageAccessFromFileURLsQuirk(JSValueToBoolean(context, arguments[0]));
 
     return JSValueMakeUndefined(context);
 }
@@ -1245,19 +1275,6 @@ static JSValueRef setPagePausedCallback(JSContextRef context, JSObjectRef functi
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
     controller->setPagePaused(JSValueToBoolean(context, arguments[0]));
-
-    return JSValueMakeUndefined(context);
-}
-#endif
-
-#if ENABLE(IOS_TEXT_AUTOSIZING)
-static JSValueRef setTextAutosizingEnabledCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
-{
-    if (argumentCount < 1)
-        return JSValueMakeUndefined(context);
-
-    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
-    controller->setTextAutosizingEnabled(JSValueToBoolean(context, arguments[0]));
 
     return JSValueMakeUndefined(context);
 }
@@ -1383,6 +1400,22 @@ static JSValueRef setWindowIsKeyCallback(JSContextRef context, JSObjectRef funct
 
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
     controller->setWindowIsKey(JSValueToBoolean(context, arguments[0]));
+
+    return JSValueMakeUndefined(context);
+}
+
+static JSValueRef setViewSizeCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    if (argumentCount < 2)
+        return JSValueMakeUndefined(context);
+
+    double width = JSValueToNumber(context, arguments[0], exception);
+    ASSERT(!*exception);
+    double height = JSValueToNumber(context, arguments[1], exception);
+    ASSERT(!*exception);
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->setViewSize(width, height);
 
     return JSValueMakeUndefined(context);
 }
@@ -1750,7 +1783,30 @@ static JSValueRef preciseTimeCallback(JSContextRef context, JSObjectRef, JSObjec
     return JSValueMakeNumber(context, WTF::currentTime());
 }
 
+static JSValueRef imageCountInGeneralPasteboardCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    // Has mac & windows implementation
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+
+    return JSValueMakeNumber(context, controller->imageCountInGeneralPasteboard());
+}
+
+static JSValueRef setSpellCheckerLoggingEnabledCallback(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->setSpellCheckerLoggingEnabled(JSValueToBoolean(context, arguments[0]));
+    return JSValueMakeUndefined(context);
+}
+
 // Static Values
+
+static JSValueRef getTimeoutCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
+{
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    return JSValueMakeNumber(context, controller->timeout());
+}
 
 static JSValueRef getGlobalFlagCallback(JSContextRef context, JSObjectRef thisObject, JSStringRef propertyName, JSValueRef* exception)
 {
@@ -1956,6 +2012,34 @@ static JSValueRef neverInlineFunction(JSContextRef context, JSObjectRef function
     return JSC::setNeverInline(context, arguments[0]);
 }
 
+static JSValueRef accummulateLogsForChannel(JSContextRef context, JSObjectRef function, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
+    JSRetainPtr<JSStringRef> channel(Adopt, JSValueToStringCopy(context, arguments[0], exception));
+    ASSERT(!*exception);
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->setAccummulateLogsForChannel(channel.get());
+
+    return JSValueMakeUndefined(context);
+}
+
+static JSValueRef runUIScriptCallback(JSContextRef context, JSObjectRef, JSObjectRef thisObject, size_t argumentCount, const JSValueRef arguments[], JSValueRef* exception)
+{
+    if (argumentCount < 1)
+        return JSValueMakeUndefined(context);
+
+    JSRetainPtr<JSStringRef> script = argumentCount > 0 ? JSRetainPtr<JSStringRef>(Adopt, JSValueToStringCopy(context, arguments[0], 0)) : JSRetainPtr<JSStringRef>();
+    JSValueRef callback = argumentCount > 1 ? arguments[1] : JSValueMakeUndefined(context);
+
+    TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(thisObject));
+    controller->runUIScript(context, script.get(), callback);
+
+    return JSValueMakeUndefined(context);
+}
+
 static void testRunnerObjectFinalize(JSObjectRef object)
 {
     TestRunner* controller = static_cast<TestRunner*>(JSObjectGetPrivate(object));
@@ -1991,6 +2075,7 @@ JSClassRef TestRunner::getJSClass()
 JSStaticValue* TestRunner::staticValues()
 {
     static JSStaticValue staticValues[] = {
+        { "timeout", getTimeoutCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "globalFlag", getGlobalFlagCallback, setGlobalFlagCallback, kJSPropertyAttributeNone },
         { "webHistoryItemCount", getWebHistoryItemCountCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "secureEventInputIsEnabled", getSecureEventInputIsEnabledCallback, 0, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2043,7 +2128,6 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "dumpSourceAsWebArchive", dumpSourceAsWebArchiveCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "dumpStatusCallbacks", dumpStatusCallbacksCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "dumpTitleChanges", dumpTitleChangesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "dumpIconChanges", dumpIconChangesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "dumpWillCacheResponse", dumpWillCacheResponseCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "encodeHostName", encodeHostNameCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "evaluateInWebInspector", evaluateInWebInspectorCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2076,6 +2160,8 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setAcceptsEditing", setAcceptsEditingCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAllowUniversalAccessFromFileURLs", setAllowUniversalAccessFromFileURLsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAllowFileAccessFromFileURLs", setAllowFileAccessFromFileURLsCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setNeedsStorageAccessFromFileURLsQuirk", setNeedsStorageAccessFromFileURLsQuirkCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setAllowsAnySSLCertificate", setAllowsAnySSLCertificateCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAlwaysAcceptCookies", setAlwaysAcceptCookiesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAppCacheMaximumSize", setAppCacheMaximumSizeCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAudioResult", setAudioResultCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2088,11 +2174,11 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setCloseRemainingWindowsWhenComplete", setCloseRemainingWindowsWhenCompleteCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setCustomPolicyDelegate", setCustomPolicyDelegateCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setDatabaseQuota", setDatabaseQuotaCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-        { "setDeferMainResourceDataLoad", setDeferMainResourceDataLoadCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setDefersLoading", setDefersLoadingCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setUseDeferredFrameLoading", setUseDeferredFrameLoadingCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setDomainRelaxationForbiddenForURLScheme", setDomainRelaxationForbiddenForURLSchemeCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setGeolocationPermission", setGeolocationPermissionCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setRejectsProtectionSpaceAndContinueForAuthenticationChallenges", setRejectsProtectionSpaceAndContinueForAuthenticationChallengesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setHandlesAuthenticationChallenges", setHandlesAuthenticationChallengesCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setIconDatabaseEnabled", setIconDatabaseEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setAutomaticLinkDetectionEnabled", setAutomaticLinkDetectionEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2116,9 +2202,6 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setTelephoneNumberParsingEnabled", setTelephoneNumberParsingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setPagePaused", setPagePausedCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
 #endif
-#if ENABLE(IOS_TEXT_AUTOSIZING)
-        { "setTextAutosizingEnabled", setTextAutosizingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
-#endif
         { "setUseDashboardCompatibilityMode", setUseDashboardCompatibilityModeCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setUserStyleSheetEnabled", setUserStyleSheetEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setUserStyleSheetLocation", setUserStyleSheetLocationCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2129,6 +2212,7 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "setWillSendRequestReturnsNull", setWillSendRequestReturnsNullCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setWillSendRequestReturnsNullOnRedirect", setWillSendRequestReturnsNullOnRedirectCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setWindowIsKey", setWindowIsKeyCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setViewSize", setViewSizeCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setJavaScriptCanAccessClipboard", setJavaScriptCanAccessClipboardCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "setXSSAuditorEnabled", setXSSAuditorEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "showWebInspector", showWebInspectorCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
@@ -2159,6 +2243,10 @@ JSStaticFunction* TestRunner::staticFunctions()
         { "failNextNewCodeBlock", failNextNewCodeBlock, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "numberOfDFGCompiles", numberOfDFGCompiles, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { "neverInlineFunction", neverInlineFunction, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "accummulateLogsForChannel", accummulateLogsForChannel, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "runUIScript", runUIScriptCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "imageCountInGeneralPasteboard", imageCountInGeneralPasteboardCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
+        { "setSpellCheckerLoggingEnabled", setSpellCheckerLoggingEnabledCallback, kJSPropertyAttributeReadOnly | kJSPropertyAttributeDontDelete },
         { 0, 0, 0 }
     };
 
@@ -2208,7 +2296,14 @@ void TestRunner::ignoreLegacyWebNotificationPermissionRequests()
 void TestRunner::waitToDumpWatchdogTimerFired()
 {
     const char* message = "FAIL: Timed out waiting for notifyDone to be called\n";
-    fprintf(stdout, "%s", message);
+    fprintf(testResult, "%s", message);
+
+    auto accumulatedLogs = getAndResetAccumulatedLogs();
+    if (!accumulatedLogs.isEmpty()) {
+        const char* message = "Logs accumulated during test run:\n";
+        fprintf(testResult, "%s%s\n", message, accumulatedLogs.utf8().data());
+    }
+
     notifyDone();
 }
 
@@ -2238,4 +2333,119 @@ const std::string& TestRunner::redirectionDestinationForURL(std::string origin)
 void TestRunner::setShouldPaintBrokenImage(bool shouldPaintBrokenImage)
 {
     m_shouldPaintBrokenImage = shouldPaintBrokenImage;
+}
+
+void TestRunner::setAccummulateLogsForChannel(JSStringRef channel)
+{
+    size_t maxLength = JSStringGetMaximumUTF8CStringSize(channel);
+    auto buffer = std::make_unique<char[]>(maxLength + 1);
+    JSStringGetUTF8CString(channel, buffer.get(), maxLength + 1);
+
+    WebCoreTestSupport::setLogChannelToAccumulate({ buffer.get() });
+}
+
+typedef WTF::HashMap<unsigned, JSValueRef> CallbackMap;
+static CallbackMap& callbackMap()
+{
+    static CallbackMap& map = *new CallbackMap;
+    return map;
+}
+
+void TestRunner::cacheTestRunnerCallback(unsigned index, JSValueRef callback)
+{
+    if (!callback)
+        return;
+
+    if (callbackMap().contains(index)) {
+        fprintf(stderr, "FAIL: Tried to install a second TestRunner callback for the same event (id %d)\n", index);
+        return;
+    }
+
+    JSContextRef context = mainFrameJSContext();
+    JSValueProtect(context, callback);
+    callbackMap().add(index, callback);
+}
+
+void TestRunner::callTestRunnerCallback(unsigned index, size_t argumentCount, const JSValueRef arguments[])
+{
+    if (!callbackMap().contains(index))
+        return;
+
+    JSContextRef context = mainFrameJSContext();
+    if (JSObjectRef callback = JSValueToObject(context, callbackMap().take(index), 0)) {
+        JSObjectCallAsFunction(context, callback, JSContextGetGlobalObject(context), argumentCount, arguments, 0);
+        JSValueUnprotect(context, callback);
+    }
+}
+
+void TestRunner::clearTestRunnerCallbacks()
+{
+    JSContextRef context = mainFrameJSContext();
+
+    for (auto& iter : callbackMap()) {
+        if (JSObjectRef callback = JSValueToObject(context, iter.value, 0))
+            JSValueUnprotect(context, callback);
+    }
+
+    callbackMap().clear();
+}
+
+enum {
+    FirstUIScriptCallbackID = 100
+};
+
+static unsigned nextUIScriptCallbackID()
+{
+    static unsigned callbackID = FirstUIScriptCallbackID;
+    return callbackID++;
+}
+
+void TestRunner::runUIScript(JSContextRef context, JSStringRef script, JSValueRef callback)
+{
+    m_pendingUIScriptInvocationData = nullptr;
+
+    unsigned callbackID = nextUIScriptCallbackID();
+    cacheTestRunnerCallback(callbackID, callback);
+
+    if (!m_UIScriptContext)
+        m_UIScriptContext = std::make_unique<WTR::UIScriptContext>(*this);
+
+    String scriptString(JSStringGetCharactersPtr(script), JSStringGetLength(script));
+    m_UIScriptContext->runUIScript(scriptString, callbackID);
+}
+
+void TestRunner::callUIScriptCallback(unsigned callbackID, JSStringRef result)
+{
+    JSRetainPtr<JSStringRef> protectedResult(result);
+#if !PLATFORM(IOS)
+    RunLoop::main().dispatch([protectedThis = makeRef(*this), callbackID, protectedResult]() mutable {
+        JSContextRef context = protectedThis->mainFrameJSContext();
+        JSValueRef resultValue = JSValueMakeString(context, protectedResult.get());
+        protectedThis->callTestRunnerCallback(callbackID, 1, &resultValue);
+    });
+#else
+    WebThreadRun(
+        BlockPtr<void()>::fromCallable([protectedThis = makeRef(*this), callbackID, protectedResult] {
+            JSContextRef context = protectedThis->mainFrameJSContext();
+            JSValueRef resultValue = JSValueMakeString(context, protectedResult.get());
+            protectedThis->callTestRunnerCallback(callbackID, 1, &resultValue);
+        }).get()
+    );
+#endif
+}
+
+void TestRunner::uiScriptDidComplete(const String& result, unsigned callbackID)
+{
+    JSRetainPtr<JSStringRef> stringRef(Adopt, JSStringCreateWithUTF8CString(result.utf8().data()));
+    callUIScriptCallback(callbackID, stringRef.get());
+}
+
+void TestRunner::setAllowsAnySSLCertificate(bool allowsAnySSLCertificate)
+{
+    WebCoreTestSupport::setAllowsAnySSLCertificate(allowsAnySSLCertificate);
+}
+
+void TestRunner::cleanup()
+{
+    clearTestRunnerCallbacks();
 }

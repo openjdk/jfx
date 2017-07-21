@@ -55,7 +55,7 @@ static void ensureLineBoxes(const RenderLineBreak& renderer)
     downcast<RenderBlockFlow>(*renderer.parent()).ensureLineBoxes();
 }
 
-RenderLineBreak::RenderLineBreak(HTMLElement& element, Ref<RenderStyle>&& style)
+RenderLineBreak::RenderLineBreak(HTMLElement& element, RenderStyle&& style)
     : RenderBoxModelObject(element, WTFMove(style), 0)
     , m_inlineBoxWrapper(nullptr)
     , m_cachedLineHeight(invalidLineHeight)
@@ -111,7 +111,7 @@ void RenderLineBreak::deleteInlineBoxWrapper()
 {
     if (!m_inlineBoxWrapper)
         return;
-    if (!documentBeingDestroyed())
+    if (!renderTreeBeingDestroyed())
         m_inlineBoxWrapper->removeFromParent();
     delete m_inlineBoxWrapper;
     m_inlineBoxWrapper = nullptr;
@@ -166,7 +166,7 @@ void RenderLineBreak::setSelectionState(SelectionState state)
     m_inlineBoxWrapper->root().setHasSelectedChildren(state != SelectionNone);
 }
 
-LayoutRect RenderLineBreak::localCaretRect(InlineBox* inlineBox, int caretOffset, LayoutUnit* extraWidthToEndOfLine)
+LayoutRect RenderLineBreak::localCaretRect(InlineBox* inlineBox, unsigned caretOffset, LayoutUnit* extraWidthToEndOfLine)
 {
     ASSERT_UNUSED(caretOffset, !caretOffset);
     ASSERT_UNUSED(inlineBox, inlineBox == m_inlineBoxWrapper);
@@ -225,11 +225,6 @@ void RenderLineBreak::updateFromStyle()
     m_cachedLineHeight = invalidLineHeight;
 }
 
-IntRect RenderLineBreak::borderBoundingBox() const
-{
-    return IntRect(IntPoint(), linesBoundingBox().size());
-}
-
 #if PLATFORM(IOS)
 void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsigned, unsigned)
 {
@@ -246,7 +241,7 @@ void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsign
             rect.shiftXEdgeTo(rootBox.lineTopWithLeading());
     }
 
-    RenderBlock* containingBlock = this->containingBlock();
+    auto* containingBlock = containingBlockForObjectInFlow();
     // Map rect, extended left to leftOffset, and right to rightOffset, through transforms to get minX and maxX.
     LogicalSelectionOffsetCaches cache(*containingBlock);
     LayoutUnit leftOffset = containingBlock->logicalLeftSelectionOffset(*containingBlock, box->logicalTop(), cache);
@@ -269,7 +264,7 @@ void RenderLineBreak::collectSelectionRects(Vector<SelectionRect>& rects, unsign
 
     bool isFixed = false;
     IntRect absRect = localToAbsoluteQuad(FloatRect(rect), UseTransforms, &isFixed).enclosingBoundingBox();
-    bool boxIsHorizontal = !box->isSVGInlineTextBox() ? box->isHorizontal() : !style().svgStyle().isVerticalWritingMode();
+    bool boxIsHorizontal = !box->isSVGInlineTextBox() ? box->isHorizontal() : !style().isVerticalWritingMode();
     // If the containing block is an inline element, we want to check the inlineBoxWrapper orientation
     // to determine the orientation of the block. In this case we also use the inlineBoxWrapper to
     // determine if the element is the last on the line.

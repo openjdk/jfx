@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2007, 2009-2010, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,7 +32,6 @@
 #include "Document.h"
 #include "DocumentFragment.h"
 #include "DocumentType.h"
-#include "Entity.h"
 #include "ExceptionCode.h"
 #include "HTMLAudioElement.h"
 #include "HTMLCanvasElement.h"
@@ -61,11 +60,11 @@
 #include "ProcessingInstruction.h"
 #include "RegisteredEventListener.h"
 #include "SVGElement.h"
+#include "ScriptState.h"
 #include "ShadowRoot.h"
 #include "StyleSheet.h"
 #include "StyledElement.h"
 #include "Text.h"
-#include <wtf/RefPtr.h>
 
 using namespace JSC;
 
@@ -75,7 +74,7 @@ using namespace HTMLNames;
 
 static inline bool isReachableFromDOM(Node* node, SlotVisitor& visitor)
 {
-    if (!node->inDocument()) {
+    if (!node->isConnected()) {
         if (is<Element>(*node)) {
             auto& element = downcast<Element>(*node);
 
@@ -113,47 +112,73 @@ bool JSNodeOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, v
 
 JSValue JSNode::insertBefore(ExecState& state)
 {
-    ExceptionCode ec = 0;
-    bool ok = wrapped().insertBefore(JSNode::toWrapped(state.argument(0)), JSNode::toWrapped(state.argument(1)), ec);
-    setDOMException(&state, ec);
-    if (ok)
-        return state.argument(0);
-    return jsNull();
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(state.argumentCount() < 2))
+        return throwException(&state, scope, createNotEnoughArgumentsError(&state));
+
+    JSValue newChildValue = state.uncheckedArgument(0);
+    auto* newChild = JSNode::toWrapped(vm, newChildValue);
+    if (UNLIKELY(!newChild))
+        return JSValue::decode(throwArgumentTypeError(state, scope, 0, "node", "Node", "insertBefore", "Node"));
+
+    propagateException(state, scope, wrapped().insertBefore(*newChild, JSNode::toWrapped(vm, state.uncheckedArgument(1))));
+    return newChildValue;
 }
 
 JSValue JSNode::replaceChild(ExecState& state)
 {
-    ExceptionCode ec = 0;
-    bool ok = wrapped().replaceChild(JSNode::toWrapped(state.argument(0)), JSNode::toWrapped(state.argument(1)), ec);
-    setDOMException(&state, ec);
-    if (ok)
-        return state.argument(1);
-    return jsNull();
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(state.argumentCount() < 2))
+        return throwException(&state, scope, createNotEnoughArgumentsError(&state));
+
+    auto* newChild = JSNode::toWrapped(vm, state.uncheckedArgument(0));
+    JSValue oldChildValue = state.uncheckedArgument(1);
+    auto* oldChild = JSNode::toWrapped(vm, oldChildValue);
+    if (UNLIKELY(!newChild || !oldChild)) {
+        if (!newChild)
+            return JSValue::decode(throwArgumentTypeError(state, scope, 0, "node", "Node", "replaceChild", "Node"));
+        return JSValue::decode(throwArgumentTypeError(state, scope, 1, "child", "Node", "replaceChild", "Node"));
+    }
+
+    propagateException(state, scope, wrapped().replaceChild(*newChild, *oldChild));
+    return oldChildValue;
 }
 
 JSValue JSNode::removeChild(ExecState& state)
 {
-    ExceptionCode ec = 0;
-    bool ok = wrapped().removeChild(JSNode::toWrapped(state.argument(0)), ec);
-    setDOMException(&state, ec);
-    if (ok)
-        return state.argument(0);
-    return jsNull();
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue childValue = state.argument(0);
+    auto* child = JSNode::toWrapped(vm, childValue);
+    if (UNLIKELY(!child))
+        return JSValue::decode(throwArgumentTypeError(state, scope, 0, "child", "Node", "removeChild", "Node"));
+
+    propagateException(state, scope, wrapped().removeChild(*child));
+    return childValue;
 }
 
 JSValue JSNode::appendChild(ExecState& state)
 {
-    ExceptionCode ec = 0;
-    bool ok = wrapped().appendChild(JSNode::toWrapped(state.argument(0)), ec);
-    setDOMException(&state, ec);
-    if (ok)
-        return state.argument(0);
-    return jsNull();
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue newChildValue = state.argument(0);
+    auto newChild = JSNode::toWrapped(vm, newChildValue);
+    if (UNLIKELY(!newChild))
+        return JSValue::decode(throwArgumentTypeError(state, scope, 0, "node", "Node", "appendChild", "Node"));
+
+    propagateException(state, scope, wrapped().appendChild(*newChild));
+    return newChildValue;
 }
 
 JSScope* JSNode::pushEventHandlerScope(ExecState* exec, JSScope* node) const
 {
-    if (inherits(JSHTMLElement::info()))
+    if (inherits(exec->vm(), JSHTMLElement::info()))
         return jsCast<const JSHTMLElement*>(this)->pushEventHandlerScope(exec, node);
     return node;
 }
@@ -163,74 +188,68 @@ void JSNode::visitAdditionalChildren(SlotVisitor& visitor)
     visitor.addOpaqueRoot(root(wrapped()));
 }
 
-static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObject* globalObject, Node* node)
+static ALWAYS_INLINE JSValue createWrapperInline(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    ASSERT(node);
     ASSERT(!getCachedWrapper(globalObject->world(), node));
 
     JSDOMObject* wrapper;
     switch (node->nodeType()) {
         case Node::ELEMENT_NODE:
-            if (is<HTMLElement>(*node))
-                wrapper = createJSHTMLWrapper(globalObject, downcast<HTMLElement>(node));
-            else if (is<SVGElement>(*node))
-                wrapper = createJSSVGWrapper(globalObject, downcast<SVGElement>(node));
+            if (is<HTMLElement>(node.get()))
+                wrapper = createJSHTMLWrapper(globalObject, static_reference_cast<HTMLElement>(WTFMove(node)));
+            else if (is<SVGElement>(node.get()))
+                wrapper = createJSSVGWrapper(globalObject, static_reference_cast<SVGElement>(WTFMove(node)));
             else
-                wrapper = CREATE_DOM_WRAPPER(globalObject, Element, node);
+                wrapper = createWrapper<Element>(globalObject, WTFMove(node));
             break;
         case Node::ATTRIBUTE_NODE:
-            wrapper = CREATE_DOM_WRAPPER(globalObject, Attr, node);
+            wrapper = createWrapper<Attr>(globalObject, WTFMove(node));
             break;
         case Node::TEXT_NODE:
-            wrapper = CREATE_DOM_WRAPPER(globalObject, Text, node);
+            wrapper = createWrapper<Text>(globalObject, WTFMove(node));
             break;
         case Node::CDATA_SECTION_NODE:
-            wrapper = CREATE_DOM_WRAPPER(globalObject, CDATASection, node);
+            wrapper = createWrapper<CDATASection>(globalObject, WTFMove(node));
             break;
         case Node::PROCESSING_INSTRUCTION_NODE:
-            wrapper = CREATE_DOM_WRAPPER(globalObject, ProcessingInstruction, node);
+            wrapper = createWrapper<ProcessingInstruction>(globalObject, WTFMove(node));
             break;
         case Node::COMMENT_NODE:
-            wrapper = CREATE_DOM_WRAPPER(globalObject, Comment, node);
+            wrapper = createWrapper<Comment>(globalObject, WTFMove(node));
             break;
         case Node::DOCUMENT_NODE:
             // we don't want to cache the document itself in the per-document dictionary
-            return toJS(exec, globalObject, downcast<Document>(node));
+            return toJS(exec, globalObject, downcast<Document>(node.get()));
         case Node::DOCUMENT_TYPE_NODE:
-            wrapper = CREATE_DOM_WRAPPER(globalObject, DocumentType, node);
+            wrapper = createWrapper<DocumentType>(globalObject, WTFMove(node));
             break;
         case Node::DOCUMENT_FRAGMENT_NODE:
-#if ENABLE(SHADOW_DOM)
             if (node->isShadowRoot())
-                wrapper = CREATE_DOM_WRAPPER(globalObject, ShadowRoot, node);
+                wrapper = createWrapper<ShadowRoot>(globalObject, WTFMove(node));
             else
-#endif
-                wrapper = CREATE_DOM_WRAPPER(globalObject, DocumentFragment, node);
+                wrapper = createWrapper<DocumentFragment>(globalObject, WTFMove(node));
             break;
         default:
-            wrapper = CREATE_DOM_WRAPPER(globalObject, Node, node);
+            wrapper = createWrapper<Node>(globalObject, WTFMove(node));
     }
 
     return wrapper;
 }
 
-JSValue createWrapper(ExecState* exec, JSDOMGlobalObject* globalObject, Node* node)
+JSValue createWrapper(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    return createWrapperInline(exec, globalObject, node);
+    return createWrapperInline(exec, globalObject, WTFMove(node));
 }
 
-JSValue toJSNewlyCreated(ExecState* exec, JSDOMGlobalObject* globalObject, Node* node)
+JSValue toJSNewlyCreated(ExecState* exec, JSDOMGlobalObject* globalObject, Ref<Node>&& node)
 {
-    if (!node)
-        return jsNull();
-
-    return createWrapperInline(exec, globalObject, node);
+    return createWrapperInline(exec, globalObject, WTFMove(node));
 }
 
-JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject* globalObject, Node* node)
+JSC::JSObject* getOutOfLineCachedWrapper(JSDOMGlobalObject* globalObject, Node& node)
 {
     ASSERT(!globalObject->world().isNormal());
-    return globalObject->world().m_wrappers.get(node);
+    return globalObject->world().m_wrappers.get(&node);
 }
 
 void willCreatePossiblyOrphanedTreeByRemovalSlowCase(Node* root)
@@ -240,7 +259,7 @@ void willCreatePossiblyOrphanedTreeByRemovalSlowCase(Node* root)
         return;
 
     JSLockHolder lock(scriptState);
-    toJS(scriptState, static_cast<JSDOMGlobalObject*>(scriptState->lexicalGlobalObject()), root);
+    toJS(scriptState, static_cast<JSDOMGlobalObject*>(scriptState->lexicalGlobalObject()), *root);
 }
 
 } // namespace WebCore

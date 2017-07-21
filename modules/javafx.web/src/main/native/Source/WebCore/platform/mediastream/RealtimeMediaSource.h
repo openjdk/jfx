@@ -39,18 +39,25 @@
 #include "AudioSourceProvider.h"
 #include "Image.h"
 #include "MediaConstraints.h"
+#include "MediaSample.h"
 #include "PlatformLayer.h"
 #include "RealtimeMediaSourceCapabilities.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
+
+namespace WTF {
+class MediaTime;
+}
 
 namespace WebCore {
 
+class AudioStreamDescription;
 class FloatRect;
 class GraphicsContext;
-class MediaConstraints;
 class MediaStreamPrivate;
+class PlatformAudioData;
 class RealtimeMediaSourceSettings;
 
 class RealtimeMediaSource : public RefCounted<RealtimeMediaSource> {
@@ -60,12 +67,19 @@ public:
         virtual ~Observer() { }
 
         // Source state changes.
-        virtual void sourceStopped() = 0;
-        virtual void sourceMutedChanged() = 0;
-        virtual void sourceSettingsChanged() = 0;
+        virtual void sourceStopped() { }
+        virtual void sourceMutedChanged() { }
+        virtual void sourceEnabledChanged() { }
+        virtual void sourceSettingsChanged() { }
 
         // Observer state queries.
-        virtual bool preventSourceFromStopping() = 0;
+        virtual bool preventSourceFromStopping() { return false; }
+
+        // Called on the main thread.
+        virtual void videoSampleAvailable(MediaSample&) { }
+
+        // May be called on a background thread.
+        virtual void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t /*numberOfFrames*/) { }
     };
 
     virtual ~RealtimeMediaSource() { }
@@ -84,14 +98,28 @@ public:
     virtual unsigned fitnessScore() const { return m_fitnessScore; }
     virtual void setFitnessScore(const unsigned fitnessScore) { m_fitnessScore = fitnessScore; }
 
-    virtual RefPtr<RealtimeMediaSourceCapabilities> capabilities() = 0;
-    virtual const RealtimeMediaSourceSettings& settings() = 0;
-    void settingsDidChanged();
+    virtual RefPtr<RealtimeMediaSourceCapabilities> capabilities() const = 0;
+    virtual const RealtimeMediaSourceSettings& settings() const = 0;
+
+    using SuccessHandler = std::function<void()>;
+    using FailureHandler = std::function<void(const String& badConstraint, const String& errorString)>;
+    void applyConstraints(const MediaConstraints&, SuccessHandler, FailureHandler);
+    std::optional<std::pair<String, String>> applyConstraints(const MediaConstraints&);
+
+    virtual bool supportsConstraints(const MediaConstraints&, String&);
+
+    virtual void settingsDidChange();
+
+    void videoSampleAvailable(MediaSample&);
+    void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t);
 
     bool stopped() const { return m_stopped; }
 
     virtual bool muted() const { return m_muted; }
     virtual void setMuted(bool);
+
+    virtual bool enabled() const { return m_enabled; }
+    virtual void setEnabled(bool);
 
     virtual bool readonly() const;
     virtual void setReadonly(bool readonly) { m_readonly = readonly; }
@@ -99,8 +127,8 @@ public:
     virtual bool remote() const { return m_remote; }
     virtual void setRemote(bool remote) { m_remote = remote; }
 
-    void addObserver(Observer*);
-    void removeObserver(Observer*);
+    void addObserver(Observer&);
+    void removeObserver(Observer&);
 
     virtual void startProducingData() { }
     virtual void stopProducingData() { }
@@ -113,26 +141,85 @@ public:
 
     virtual AudioSourceProvider* audioSourceProvider() { return nullptr; }
 
-    virtual PlatformLayer* platformLayer() const { return nullptr; }
     virtual RefPtr<Image> currentFrameImage() { return nullptr; }
     virtual void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) { }
+
+    void setWidth(int);
+    void setHeight(int);
+    const IntSize& size() const { return m_size; }
+    virtual bool applySize(const IntSize&) { return false; }
+
+    double frameRate() const { return m_frameRate; }
+    void setFrameRate(double);
+    virtual bool applyFrameRate(double) { return false; }
+
+    double aspectRatio() const { return m_aspectRatio; }
+    void setAspectRatio(double);
+    virtual bool applyAspectRatio(double) { return false; }
+
+    RealtimeMediaSourceSettings::VideoFacingMode facingMode() const { return m_facingMode; }
+    void setFacingMode(RealtimeMediaSourceSettings::VideoFacingMode);
+    virtual bool applyFacingMode(RealtimeMediaSourceSettings::VideoFacingMode) { return false; }
+
+    double volume() const { return m_volume; }
+    void setVolume(double);
+    virtual bool applyVolume(double) { return false; }
+
+    int sampleRate() const { return m_sampleRate; }
+    void setSampleRate(int);
+    virtual bool applySampleRate(int) { return false; }
+
+    int sampleSize() const { return m_sampleSize; }
+    void setSampleSize(int);
+    virtual bool applySampleSize(int) { return false; }
+
+    bool echoCancellation() const { return m_echoCancellation; }
+    void setEchoCancellation(bool);
+    virtual bool applyEchoCancellation(bool) { return false; }
 
 protected:
     RealtimeMediaSource(const String& id, Type, const String& name);
 
+    void scheduleDeferredTask(std::function<void()>&&);
+
+    virtual void beginConfiguration() { }
+    virtual void commitConfiguration() { }
+
+    virtual bool selectSettings(const MediaConstraints&, FlattenedConstraint&, String&);
+    virtual double fitnessDistance(const MediaConstraint&);
+    virtual bool supportsSizeAndFrameRate(std::optional<IntConstraint> width, std::optional<IntConstraint> height, std::optional<DoubleConstraint>, String&);
+    virtual bool supportsSizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>);
+    virtual void applyConstraint(const MediaConstraint&);
+    virtual void applyConstraints(const FlattenedConstraint&);
+    virtual void applySizeAndFrameRate(std::optional<int> width, std::optional<int> height, std::optional<double>);
+
+    bool m_muted { false };
+    bool m_enabled { true };
+
 private:
+    WeakPtr<RealtimeMediaSource> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
+
+    WeakPtrFactory<RealtimeMediaSource> m_weakPtrFactory;
     String m_id;
     String m_persistentID;
     Type m_type;
     String m_name;
-    bool m_stopped;
     Vector<Observer*> m_observers;
+    IntSize m_size;
+    double m_frameRate { 30 };
+    double m_aspectRatio { 0 };
+    double m_volume { 1 };
+    double m_sampleRate { 0 };
+    double m_sampleSize { 0 };
+    unsigned m_fitnessScore { 0 };
+    RealtimeMediaSourceSettings::VideoFacingMode m_facingMode { RealtimeMediaSourceSettings::User};
 
-    bool m_muted;
-    bool m_readonly;
-    bool m_remote;
-
-    unsigned m_fitnessScore;
+    bool m_echoCancellation { false };
+    bool m_stopped { false };
+    bool m_readonly { false };
+    bool m_remote { false };
+    bool m_pendingSettingsDidChangeNotification { false };
+    bool m_suppressNotifications { true };
 };
 
 } // namespace WebCore

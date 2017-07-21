@@ -23,14 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef CSSSegmentedFontFace_h
-#define CSSSegmentedFontFace_h
+#pragma once
 
 #include "CSSFontFace.h"
 #include "FontCache.h"
-#include "FontRanges.h"
 #include <wtf/HashMap.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -38,11 +35,15 @@ namespace WebCore {
 
 class CSSFontSelector;
 class FontDescription;
+class FontRanges;
 
-class CSSSegmentedFontFace final : public CSSFontFace::Client {
+class CSSSegmentedFontFace final : public RefCounted<CSSSegmentedFontFace>, public CSSFontFace::Client {
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    CSSSegmentedFontFace();
+    static Ref<CSSSegmentedFontFace> create()
+    {
+        return adoptRef(*new CSSSegmentedFontFace());
+    }
     ~CSSSegmentedFontFace();
 
     void appendFontFace(Ref<CSSFontFace>&&);
@@ -51,13 +52,16 @@ public:
 
     Vector<Ref<CSSFontFace>, 1>& constituentFaces() { return m_fontFaces; }
 
+    // CSSFontFace::Client needs to be able to be held in a RefPtr.
+    void ref() final { RefCounted<CSSSegmentedFontFace>::ref(); }
+    void deref() final { RefCounted<CSSSegmentedFontFace>::deref(); }
+
 private:
-    virtual void fontLoaded(CSSFontFace&) override;
+    CSSSegmentedFontFace();
+    void fontLoaded(CSSFontFace&) final;
 
     HashMap<FontDescriptionKey, FontRanges, FontDescriptionKeyHash, WTF::SimpleClassHashTraits<FontDescriptionKey>> m_cache;
     Vector<Ref<CSSFontFace>, 1> m_fontFaces;
 };
 
 } // namespace WebCore
-
-#endif // CSSSegmentedFontFace_h

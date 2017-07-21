@@ -16,7 +16,7 @@
 #include "ScrollView.h"
 #include "NotImplemented.h"
 
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "com_sun_webkit_graphics_ScrollBarTheme.h"
 #include "com_sun_webkit_graphics_GraphicsDecoder.h"
 

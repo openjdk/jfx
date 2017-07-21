@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,18 +35,9 @@ function then(onFulfilled, onRejected)
     "use strict";
 
     if (!@isPromise(this))
-        throw new @TypeError("|this| is not a object");
+        @throwTypeError("|this| is not a object");
 
-    var constructor = this.constructor;
-    if (constructor === @undefined)
-        constructor = @Promise;
-    else if (!@isObject(constructor))
-        throw new @TypeError("|this|.constructor is not an Object or undefined");
-    else {
-        constructor = constructor[@symbolSpecies];
-        if (constructor == null)
-            constructor = @Promise;
-    }
+    var constructor = @speciesConstructor(this, @Promise);
 
     var resultCapability = @newPromiseCapability(constructor);
 
@@ -56,18 +47,13 @@ function then(onFulfilled, onRejected)
     if (typeof onRejected !== "function")
         onRejected = function (argument) { throw argument; };
 
-    var fulfillReaction = @newPromiseReaction(resultCapability, onFulfilled);
-    var rejectReaction = @newPromiseReaction(resultCapability, onRejected);
+    var reaction = @newPromiseReaction(resultCapability, onFulfilled, onRejected);
 
     var state = this.@promiseState;
-
-    if (state === @promiseStatePending) {
-        @putByValDirect(this.@promiseFulfillReactions, this.@promiseFulfillReactions.length, fulfillReaction)
-        @putByValDirect(this.@promiseRejectReactions, this.@promiseRejectReactions.length, rejectReaction)
-    } else if (state === @promiseStateFulfilled)
-        @enqueueJob(@promiseReactionJob, [fulfillReaction, this.@promiseResult]);
-    else if (state === @promiseStateRejected)
-        @enqueueJob(@promiseReactionJob, [rejectReaction, this.@promiseResult]);
+    if (state === @promiseStatePending)
+        @putByValDirect(this.@promiseReactions, this.@promiseReactions.length, reaction);
+    else
+        @enqueueJob(@promiseReactionJob, [state, reaction, this.@promiseResult]);
 
     return resultCapability.@promise;
 }

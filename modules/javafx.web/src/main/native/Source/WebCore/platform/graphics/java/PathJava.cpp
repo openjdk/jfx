@@ -10,7 +10,7 @@
 #include "Path.h"
 #include "FloatRect.h"
 #include "StrokeStyleApplier.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "NotImplemented.h"
 #include "GraphicsContextJava.h"
 #include "RQRef.h"

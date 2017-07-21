@@ -1,5 +1,5 @@
-#!/usr/bin/perl
-# Copyright (C) 2010 Google Inc. All rights reserved.
+#!/usr/bin/env python
+# Copyright (C) 2011 Google Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -27,31 +27,7 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# This file is a temporary hack.
-# It will be removed as soon as all platforms are are ready to move to
-# new-run-webkit-tests and we can then update the buildbots to explicitly
-# call old-run-webkit-tests for any platforms which will never support
-# a Python run-webkit-tests.
+"""Wrapper around webkitpy/layout_tests/run_webkit_tests.py"""
+from webkitpy.common import multiprocessing_bootstrap
 
-# This is intentionally written in Perl to guarantee support on
-# the same set of platforms as old-run-webkit-tests currently supports.
-# The buildbot master.cfg also currently passes run-webkit-tests to
-# perl directly instead of executing it in a shell.
-
-use strict;
-use warnings;
-
-use File::Spec;
-use FindBin;
-use lib $FindBin::Bin;
-use webkitdirs;
-
-my $script = "perl";
-my $harnessName = "old-run-webkit-tests";
-
-push(@ARGV, "--java");
-
-my $harnessPath = File::Spec->catfile(relativeScriptsDir(), $harnessName);
-unshift(@ARGV, $harnessPath);
-unshift(@ARGV, $script);
-system(@ARGV) == 0 or die "Failed to execute $harnessPath";
+multiprocessing_bootstrap.run('webkitpy', 'layout_tests', 'run_webkit_tests.py')

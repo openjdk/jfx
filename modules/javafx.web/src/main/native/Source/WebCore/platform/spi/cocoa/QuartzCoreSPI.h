@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,33 +28,21 @@
 
 #if USE(APPLE_INTERNAL_SDK)
 
+#include <QuartzCore/CABackingStore.h>
 #include <QuartzCore/CAColorMatrix.h>
 #include <QuartzCore/CARenderServer.h>
 
 #ifdef __OBJC__
+
+#import <QuartzCore/CAContext.h>
 #import <QuartzCore/CALayerHost.h>
 #import <QuartzCore/CALayerPrivate.h>
+#import <QuartzCore/QuartzCorePrivate.h>
 
 #if PLATFORM(IOS)
 #import <QuartzCore/CADisplay.h>
 #endif
 
-// FIXME: As a workaround for <rdar://problem/18985152>, we conditionally enclose the following
-// headers in an extern "C" linkage block to make it suitable for Objective-C++ use. Once this
-// bug has been fixed we can simply include header <QuartzCore/QuartzCorePrivate.h> instead of
-// including specific QuartzCore headers.
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#import <QuartzCore/CAContext.h>
-#import <QuartzCore/CAFilter.h>
-#import <QuartzCore/CATiledLayerPrivate.h>
-#import <QuartzCore/CATransactionPrivate.h>
-
-#ifdef __cplusplus
-}
-#endif
 #endif // __OBJC__
 
 #else
@@ -70,9 +58,13 @@ extern "C" {
 - (uint32_t)createImageSlot:(CGSize)size hasAlpha:(BOOL)flag;
 - (void)deleteSlot:(uint32_t)name;
 - (void)invalidate;
+- (void)invalidateFences;
 - (mach_port_t)createFencePort;
 - (void)setFencePort:(mach_port_t)port;
 - (void)setFencePort:(mach_port_t)port commitHandler:(void(^)(void))block;
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
+@property uint32_t commitPriority;
+#endif
 #if PLATFORM(MAC)
 @property BOOL colorMatchUntaggedContent;
 #endif
@@ -86,18 +78,15 @@ extern "C" {
 - (CGSize)size;
 - (void *)regionBeingDrawn;
 - (void)setContentsChanged;
-@property BOOL acceleratesDrawing;
 @property BOOL allowsGroupBlending;
 @property BOOL canDrawConcurrently;
 @property BOOL contentsOpaque;
 @property BOOL hitTestsAsOpaque;
 @property BOOL needsLayoutOnGeometryChange;
 @property BOOL shadowPathIsBounds;
-@end
-
-@interface CATiledLayer ()
-- (void)displayInRect:(CGRect)rect levelOfDetail:(int)levelOfDetail options:(NSDictionary *)dictionary;
-- (void)setNeedsDisplayInRect:(CGRect)rect levelOfDetail:(int)levelOfDetail options:(NSDictionary *)dictionary;
+#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90300 && __IPHONE_OS_VERSION_MAX_ALLOWED < 100000
+@property (copy) NSString *contentsFormat;
+#endif
 @end
 
 #if PLATFORM(IOS)
@@ -106,6 +95,12 @@ extern "C" {
 
 @interface CADisplay ()
 @property (nonatomic, readonly) NSString *name;
+@end
+#endif
+
+#if ENABLE(FILTERS_LEVEL_2)
+@interface CABackdropLayer : CALayer
+@property BOOL windowServerAware;
 @end
 #endif
 
@@ -129,7 +124,7 @@ typedef struct CAColorMatrix CAColorMatrix;
 @property (copy) NSString *name;
 @end
 
-#if TARGET_OS_IPHONE || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100)
 typedef enum {
     kCATransactionPhasePreLayout,
     kCATransactionPhasePreCommit,
@@ -146,61 +141,94 @@ typedef enum {
 @property BOOL inheritsSecurity;
 @end
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED < 101100
+@interface CASpringAnimation : CABasicAnimation
+@property CGFloat mass;
+@property CGFloat stiffness;
+@property CGFloat damping;
+@property CGFloat velocity;
+@property CGFloat initialVelocity;
+@end
+#else
+@interface CASpringAnimation (Private)
+@property CGFloat velocity;
+@end
+#endif
+
 #endif // __OBJC__
 
 #endif
 
-EXTERN_C void CARenderServerCaptureLayerWithTransform(mach_port_t serverPort, uint32_t clientId, uint64_t layerId,
-                                                      uint32_t slotId, int32_t ox, int32_t oy, const CATransform3D *);
+WTF_EXTERN_C_BEGIN
+
+// FIXME: Declare these functions even when USE(APPLE_INTERNAL_SDK) is true once we can fix <rdar://problem/26584828> in a better way.
+#if !USE(APPLE_INTERNAL_SDK)
+void CARenderServerCaptureLayerWithTransform(mach_port_t, uint32_t clientId, uint64_t layerId, uint32_t slotId, int32_t ox, int32_t oy, const CATransform3D*);
 
 #if USE(IOSURFACE)
-EXTERN_C void CARenderServerRenderLayerWithTransform(mach_port_t server_port, uint32_t client_id, uint64_t layer_id, IOSurfaceRef iosurface, int32_t ox, int32_t oy, const CATransform3D *matrix);
-EXTERN_C void CARenderServerRenderDisplayLayerWithTransformAndTimeOffset(mach_port_t server_port, CFStringRef display_name, uint32_t client_id, uint64_t layer_id, IOSurfaceRef iosurface, int32_t ox, int32_t oy, const CATransform3D *matrix, CFTimeInterval offset);
+void CARenderServerRenderLayerWithTransform(mach_port_t server_port, uint32_t client_id, uint64_t layer_id, IOSurfaceRef, int32_t ox, int32_t oy, const CATransform3D*);
+void CARenderServerRenderDisplayLayerWithTransformAndTimeOffset(mach_port_t, CFStringRef display_name, uint32_t client_id, uint64_t layer_id, IOSurfaceRef, int32_t ox, int32_t oy, const CATransform3D*, CFTimeInterval);
+#else
+typedef struct CARenderServerBuffer* CARenderServerBufferRef;
+CARenderServerBufferRef CARenderServerCreateBuffer(size_t, size_t);
+void CARenderServerDestroyBuffer(CARenderServerBufferRef);
+size_t CARenderServerGetBufferWidth(CARenderServerBufferRef);
+size_t CARenderServerGetBufferHeight(CARenderServerBufferRef);
+size_t CARenderServerGetBufferRowBytes(CARenderServerBufferRef);
+uint8_t* CARenderServerGetBufferData(CARenderServerBufferRef);
+size_t CARenderServerGetBufferDataSize(CARenderServerBufferRef);
+
+bool CARenderServerRenderLayerWithTransform(mach_port_t, uint32_t client_id, uint64_t layer_id, CARenderServerBufferRef, int32_t ox, int32_t oy, const CATransform3D*);
+#endif
 #endif
 
+typedef struct _CAMachPort *CAMachPortRef;
+CAMachPortRef CAMachPortCreate(mach_port_t);
+mach_port_t CAMachPortGetPort(CAMachPortRef);
+CFTypeID CAMachPortGetTypeID(void);
 
-// FIXME: Move this into the APPLE_INTERNAL_SDK block once it's in an SDK.
-@interface CAContext (AdditionalDetails)
-#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100)
-- (void)invalidateFences;
+void CABackingStoreCollectBlocking(void);
+
+WTF_EXTERN_C_END
+
+extern NSString * const kCAFilterColorInvert;
+extern NSString * const kCAFilterColorMatrix;
+extern NSString * const kCAFilterColorMonochrome;
+extern NSString * const kCAFilterColorHueRotate;
+extern NSString * const kCAFilterColorSaturate;
+extern NSString * const kCAFilterGaussianBlur;
+extern NSString * const kCAFilterPlusD;
+extern NSString * const kCAFilterPlusL;
+
+extern NSString * const kCAFilterNormalBlendMode;
+extern NSString * const kCAFilterMultiplyBlendMode;
+extern NSString * const kCAFilterScreenBlendMode;
+extern NSString * const kCAFilterOverlayBlendMode;
+extern NSString * const kCAFilterDarkenBlendMode;
+extern NSString * const kCAFilterLightenBlendMode;
+extern NSString * const kCAFilterColorDodgeBlendMode;
+extern NSString * const kCAFilterColorBurnBlendMode;
+extern NSString * const kCAFilterSoftLightBlendMode;
+extern NSString * const kCAFilterHardLightBlendMode;
+extern NSString * const kCAFilterDifferenceBlendMode;
+extern NSString * const kCAFilterExclusionBlendMode;
+
+extern NSString * const kCAContextDisplayName;
+extern NSString * const kCAContextDisplayId;
+extern NSString * const kCAContextIgnoresHitTest;
+
+#if PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 90300
+extern NSString * const kCAContentsFormatRGBA10XR;
 #endif
-@end
 
-EXTERN_C NSString * const kCATiledLayerRemoveImmediately;
-
-EXTERN_C NSString * const kCAFilterColorInvert;
-EXTERN_C NSString * const kCAFilterColorMatrix;
-EXTERN_C NSString * const kCAFilterColorMonochrome;
-EXTERN_C NSString * const kCAFilterColorHueRotate;
-EXTERN_C NSString * const kCAFilterColorSaturate;
-EXTERN_C NSString * const kCAFilterGaussianBlur;
-EXTERN_C NSString * const kCAFilterPlusD;
-EXTERN_C NSString * const kCAFilterPlusL;
-
-EXTERN_C NSString * const kCAFilterNormalBlendMode;
-EXTERN_C NSString * const kCAFilterMultiplyBlendMode;
-EXTERN_C NSString * const kCAFilterScreenBlendMode;
-EXTERN_C NSString * const kCAFilterOverlayBlendMode;
-EXTERN_C NSString * const kCAFilterDarkenBlendMode;
-EXTERN_C NSString * const kCAFilterLightenBlendMode;
-EXTERN_C NSString * const kCAFilterColorDodgeBlendMode;
-EXTERN_C NSString * const kCAFilterColorBurnBlendMode;
-EXTERN_C NSString * const kCAFilterSoftLightBlendMode;
-EXTERN_C NSString * const kCAFilterHardLightBlendMode;
-EXTERN_C NSString * const kCAFilterDifferenceBlendMode;
-EXTERN_C NSString * const kCAFilterExclusionBlendMode;
-
-EXTERN_C NSString * const kCAContextDisplayName;
-EXTERN_C NSString * const kCAContextDisplayId;
-EXTERN_C NSString * const kCAContextIgnoresHitTest;
-
-#if (PLATFORM(APPLETV) && __TV_OS_VERSION_MIN_REQUIRED < 100000) \
-    || (PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MIN_REQUIRED < 30000) \
-    || (PLATFORM(IOS) && TARGET_OS_IOS && __IPHONE_OS_VERSION_MIN_REQUIRED < 100000) \
-    || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200)
+#if (PLATFORM(APPLETV) && __TV_OS_VERSION_MAX_ALLOWED < 100000) \
+    || (PLATFORM(WATCHOS) && __WATCH_OS_VERSION_MAX_ALLOWED < 30000) \
+    || (PLATFORM(IOS) && TARGET_OS_IOS && __IPHONE_OS_VERSION_MAX_ALLOWED < 100000) \
+    || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MAX_ALLOWED < 101200)
 @protocol CALayerDelegate <NSObject>
 @end
 
 @protocol CAAnimationDelegate <NSObject>
 @end
-#endif
+
+#endif // USE(APPLE_INTERNAL_SDK)

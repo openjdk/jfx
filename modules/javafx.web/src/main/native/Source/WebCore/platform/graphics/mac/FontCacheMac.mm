@@ -30,25 +30,27 @@
 #import "config.h"
 #import "FontCache.h"
 
-#if !PLATFORM(IOS)
-
 #import "CoreGraphicsSPI.h"
 #import "CoreTextSPI.h"
 #import "Font.h"
 #import "FontCascade.h"
 #import "FontPlatformData.h"
+
+#if PLATFORM(MAC)
 #import "NSFontSPI.h"
 #import "WebCoreNSStringExtras.h"
 #import "WebCoreSystemInterface.h"
 #import <AppKit/AppKit.h>
 #import <wtf/MainThread.h>
 #import <wtf/NeverDestroyed.h>
-#import <wtf/Optional.h>
 #import <wtf/StdLibExtras.h>
 #import <wtf/Threading.h>
 #import <wtf/text/AtomicStringHash.h>
+#endif
 
 namespace WebCore {
+
+#if PLATFORM(MAC)
 
 #if !ENABLE(PLATFORM_FONT_LOOKUP)
 
@@ -377,20 +379,6 @@ void platformInvalidateFontCache()
 #endif
 }
 
-RetainPtr<CTFontRef> platformLookupFallbackFont(CTFontRef font, FontWeight, const AtomicString& locale, const UChar* characters, unsigned length)
-{
-    RetainPtr<CFStringRef> localeString;
-#if __MAC_OS_X_VERSION_MIN_REQUIRED > 101100
-    if (!locale.isNull())
-        localeString = locale.string().createCFString();
-#else
-    UNUSED_PARAM(locale);
-#endif
-
-    CFIndex coveredLength = 0;
-    return adoptCF(CTFontCreateForCharactersWithLanguage(font, characters, length, localeString.get(), &coveredLength));
-}
-
 Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
 {
     // FIXME: Would be even better to somehow get the user's default font here.  For now we'll pick
@@ -405,6 +393,13 @@ Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescripti
     return *fontForFamily(fontDescription, AtomicString("Lucida Grande", AtomicString::ConstructFromLiteral), nullptr, nullptr, false);
 }
 
-} // namespace WebCore
+#endif // PLATFORM(MAC)
 
-#endif // !PLATFORM(IOS)
+Ref<Font> FontCache::lastResortFallbackFontForEveryCharacter(const FontDescription& fontDescription)
+{
+    auto result = fontForFamily(fontDescription, AtomicString("LastResort", AtomicString::ConstructFromLiteral));
+    ASSERT(result);
+    return *result;
+}
+
+} // namespace WebCore

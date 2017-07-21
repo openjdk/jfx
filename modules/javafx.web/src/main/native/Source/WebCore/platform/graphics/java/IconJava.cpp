@@ -7,7 +7,7 @@
 #include "GraphicsContextJava.h"
 #include "Icon.h"
 #include "IntRect.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include <wtf/java/JavaRef.h>
 #include "NotImplemented.h"
 
@@ -32,10 +32,10 @@ Icon::~Icon()
 {
 }
 
-PassRefPtr<Icon> Icon::createIconForFiles(const Vector<String>& filenames)
+RefPtr<Icon> Icon::createIconForFiles(const Vector<String>&)
 {
     notImplemented();
-    return 0;
+    return nullptr;
 }
 
 void Icon::paint(GraphicsContext& gc, const FloatRect& rect)

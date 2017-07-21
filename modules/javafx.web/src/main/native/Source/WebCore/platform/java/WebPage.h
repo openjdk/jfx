@@ -1,8 +1,8 @@
 /*
  * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef WebPage_h
-#define WebPage_h
+
+#pragma once
 
 #if USE(ACCELERATED_COMPOSITING)
 #include <UnicodeJava.h>
@@ -107,7 +107,7 @@ private:
     bool keyEvent(const PlatformKeyboardEvent& event);
     bool charEvent(const PlatformKeyboardEvent& event);
     bool keyEventDefault(const PlatformKeyboardEvent& event);
-    bool scrollViewWithKeyboard(int keyCode, int modifiers);
+    bool scrollViewWithKeyboard(int keyCode, const PlatformKeyboardEvent& event);
     static bool mapKeyCodeForScroll(int keyCode,
                                     ScrollDirection* scrollDirection,
                                     ScrollGranularity* scrollGranularity);
@@ -137,4 +137,3 @@ private:
 
 } // namespace WebCore
 
-#endif // WebPage_h

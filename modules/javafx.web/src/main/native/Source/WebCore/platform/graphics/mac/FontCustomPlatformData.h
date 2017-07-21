@@ -33,12 +33,14 @@ typedef const struct __CTFontDescriptor* CTFontDescriptorRef;
 namespace WebCore {
 
 class FontDescription;
-class FontFeatureSettings;
 class FontPlatformData;
 class SharedBuffer;
 
+template <typename T> class FontTaggedSettings;
+typedef FontTaggedSettings<int> FontFeatureSettings;
+
 struct FontCustomPlatformData {
-    WTF_MAKE_NONCOPYABLE(FontCustomPlatformData);
+    WTF_MAKE_NONCOPYABLE(FontCustomPlatformData); WTF_MAKE_FAST_ALLOCATED;
 public:
     explicit FontCustomPlatformData(CTFontDescriptorRef fontDescriptor)
         : m_fontDescriptor(fontDescriptor)

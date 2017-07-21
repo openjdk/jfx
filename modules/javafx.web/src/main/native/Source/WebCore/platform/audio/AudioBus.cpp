@@ -65,7 +65,7 @@ AudioBus::AudioBus(unsigned numberOfChannels, size_t length, bool allocate)
 
     for (unsigned i = 0; i < numberOfChannels; ++i) {
         auto channel = allocate ? std::make_unique<AudioChannel>(length) : std::make_unique<AudioChannel>(nullptr, length);
-        m_channels.append(WTFMove(channel));
+        m_channels.uncheckedAppend(WTFMove(channel));
     }
 
     m_layout = LayoutCanonical; // for now this is the only layout we define
@@ -211,6 +211,33 @@ void AudioBus::scale(float scale)
 {
     for (unsigned i = 0; i < numberOfChannels(); ++i)
         channel(i)->scale(scale);
+}
+
+void AudioBus::copyFromRange(const AudioBus& sourceBus, unsigned startFrame, unsigned endFrame)
+{
+    if (!topologyMatches(sourceBus)) {
+        ASSERT_NOT_REACHED();
+        zero();
+        return;
+    }
+
+    size_t numberOfSourceFrames = sourceBus.length();
+    bool isRangeSafe = startFrame < endFrame && endFrame <= numberOfSourceFrames;
+    ASSERT(isRangeSafe);
+    if (!isRangeSafe) {
+        zero();
+        return;
+    }
+
+    unsigned numberOfChannels = this->numberOfChannels();
+    ASSERT(numberOfChannels <= MaxBusChannels);
+    if (numberOfChannels > MaxBusChannels) {
+        zero();
+        return;
+    }
+
+    for (unsigned i = 0; i < numberOfChannels; ++i)
+        channel(i)->copyFromRange(sourceBus.channel(i), startFrame, endFrame);
 }
 
 void AudioBus::copyFrom(const AudioBus& sourceBus, ChannelInterpretation channelInterpretation)

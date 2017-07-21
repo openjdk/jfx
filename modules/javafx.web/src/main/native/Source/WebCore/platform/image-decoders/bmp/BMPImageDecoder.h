@@ -28,27 +28,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BMPImageDecoder_h
-#define BMPImageDecoder_h
+#pragma once
 
 #include "BMPImageReader.h"
 
 namespace WebCore {
 
     // This class decodes the BMP image format.
-    class BMPImageDecoder : public ImageDecoder {
+    class BMPImageDecoder final : public ImageDecoder {
     public:
-        BMPImageDecoder(ImageSource::AlphaOption, ImageSource::GammaAndColorProfileOption);
+        BMPImageDecoder(AlphaOption, GammaAndColorProfileOption);
 
         // ImageDecoder
-        virtual String filenameExtension() const { return "bmp"; }
-        virtual void setData(SharedBuffer*, bool allDataReceived);
-        virtual bool isSizeAvailable();
-        virtual ImageFrame* frameBufferAtIndex(size_t index);
+        String filenameExtension() const override { return "bmp"; }
+        void setData(SharedBuffer&, bool allDataReceived) override;
+        bool isSizeAvailable() override;
+        ImageFrame* frameBufferAtIndex(size_t index) override;
         // CAUTION: setFailed() deletes |m_reader|.  Be careful to avoid
         // accessing deleted memory, especially when calling this from inside
         // BMPImageReader!
-        virtual bool setFailed();
+        bool setFailed() override;
 
     private:
         inline uint32_t readUint32(int offset) const
@@ -80,5 +79,3 @@ namespace WebCore {
     };
 
 } // namespace WebCore
-
-#endif

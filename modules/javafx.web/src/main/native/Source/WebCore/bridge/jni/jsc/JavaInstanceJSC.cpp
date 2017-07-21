@@ -31,11 +31,6 @@
 #include "JavaRuntimeObject.h"
 #include "JNIUtilityPrivate.h"
 #include "JSDOMBinding.h"
-#include "JavaArrayJSC.h"
-#include "JavaClassJSC.h"
-#include "JavaMethodJSC.h"
-#include "JavaStringJSC.h"
-#include "Logging.h"
 #include "jni_jsobject.h"
 #include "runtime_method.h"
 #include "runtime_object.h"
@@ -44,6 +39,12 @@
 #include <runtime/Error.h>
 #include <runtime/FunctionPrototype.h>
 #include <runtime/JSLock.h>
+
+#include "JavaArrayJSC.h"
+#include "JavaClassJSC.h"
+#include "JavaMethodJSC.h"
+#include "JavaStringJSC.h"
+#include "Logging.h"
 
 #include <APICast.h>
 
@@ -94,6 +95,9 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
 {
     JSLockHolder lock(exec);
 
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     jobject obj = m_instance->instance();
     // Since m_instance->instance() is WeakGlobalRef, creating a localref to safeguard instance() from GC
     JLObject jlinstance(obj, true);
@@ -115,9 +119,9 @@ JSValue JavaInstance::stringValue(ExecState* exec) const
         JSValue exceptionDescription
             = (JavaInstance::create(ex, rootObject(), accessControlContext())
                ->createRuntimeObject(exec));
-    exec->vm().throwException(exec, createError(exec,
-                                     (exceptionDescription.toString(exec)
-                                      ->value(exec))));
+        throwException(exec, scope, createError(exec,
+                                (exceptionDescription.toString(exec)
+                                    ->value(exec))));
         return jsUndefined();
     }
 
@@ -223,7 +227,7 @@ private:
     void finishCreation(VM& globalData, const String& name)
     {
         Base::finishCreation(globalData, name);
-        ASSERT(inherits(&s_info));
+        ASSERT(inherits(globalData, &s_info));
     }
 };
 
@@ -238,10 +242,13 @@ JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 
 JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod)
 {
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     ASSERT(exec->vm().apiLock().currentThreadIsHoldingLock());
 
-    if (!asObject(runtimeMethod)->inherits(&JavaRuntimeMethod::s_info))
-        exec->vm().throwException(exec, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
+    if (!asObject(runtimeMethod)->inherits(vm, &JavaRuntimeMethod::s_info))
+        throwException(exec, scope, createTypeError(exec, "Attempt to invoke non-Java method on Java object."));
 
 #if 0
     const MethodList& methodList = *runtimeMethod->methods();
@@ -311,7 +318,7 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
     // to dispatch the call on the appropriate internal VM thread.
     RootObject* rootObject = this->rootObject();
     if (jMethod->isStatic())
-        return exec->vm().throwException(exec, createTypeError(exec, "invoking static method"));
+        return throwException(exec, scope, createTypeError(exec, "invoking static method"));
     if (!rootObject)
         return jsUndefined();
 
@@ -335,11 +342,11 @@ JSValue JavaInstance::invokeMethod(ExecState* exec, RuntimeMethod* runtimeMethod
                                         jArgs.data(), result,
                                         accessControlContext());
         if (ex != NULL) {
-          JSValue exceptionDescription
-            = (JavaInstance::create(ex, rootObject, accessControlContext())
-               ->createRuntimeObject(exec));
-          exec->vm().throwException(exec, exceptionDescription);
-          return jsUndefined();
+            JSValue exceptionDescription
+              = (JavaInstance::create(ex, rootObject, accessControlContext())
+                 ->createRuntimeObject(exec));
+            throwException(exec, scope, exceptionDescription);
+            return jsUndefined();
         }
     }
 

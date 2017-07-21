@@ -23,12 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Intrinsic_h
-#define Intrinsic_h
+#pragma once
 
 namespace JSC {
 
-enum Intrinsic {
+enum JS_EXPORT_PRIVATE Intrinsic {
     // Call intrinsics.
     NoIntrinsic,
     AbsIntrinsic,
@@ -38,8 +37,10 @@ enum Intrinsic {
     SinIntrinsic,
     Clz32Intrinsic,
     CosIntrinsic,
+    TanIntrinsic,
     ArrayPushIntrinsic,
     ArrayPopIntrinsic,
+    ArraySliceIntrinsic,
     CharCodeAtIntrinsic,
     CharAtIntrinsic,
     FromCharCodeIntrinsic,
@@ -51,11 +52,35 @@ enum Intrinsic {
     LogIntrinsic,
     RegExpExecIntrinsic,
     RegExpTestIntrinsic,
+    RegExpTestFastIntrinsic,
     StringPrototypeValueOfIntrinsic,
     StringPrototypeReplaceIntrinsic,
+    StringPrototypeReplaceRegExpIntrinsic,
+    StringPrototypeToLowerCaseIntrinsic,
+    NumberPrototypeToStringIntrinsic,
     IMulIntrinsic,
     RandomIntrinsic,
     FRoundIntrinsic,
+    TruncIntrinsic,
+    IsTypedArrayViewIntrinsic,
+    BoundThisNoArgsFunctionCallIntrinsic,
+    JSMapGetIntrinsic,
+    JSMapHasIntrinsic,
+    JSSetHasIntrinsic,
+    HasOwnPropertyIntrinsic,
+    AtomicsAddIntrinsic,
+    AtomicsAndIntrinsic,
+    AtomicsCompareExchangeIntrinsic,
+    AtomicsExchangeIntrinsic,
+    AtomicsIsLockFreeIntrinsic,
+    AtomicsLoadIntrinsic,
+    AtomicsOrIntrinsic,
+    AtomicsStoreIntrinsic,
+    AtomicsSubIntrinsic,
+    AtomicsWaitIntrinsic,
+    AtomicsWakeIntrinsic,
+    AtomicsXorIntrinsic,
+    ParseIntIntrinsic,
 
     // Getter intrinsics.
     TypedArrayLengthIntrinsic,
@@ -73,5 +98,3 @@ enum Intrinsic {
 };
 
 } // namespace JSC
-
-#endif // Intrinsic_h

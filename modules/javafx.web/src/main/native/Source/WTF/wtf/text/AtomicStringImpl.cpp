@@ -25,9 +25,12 @@
 #include "AtomicStringImpl.h"
 
 #include "AtomicStringTable.h"
+#include "CommaPrinter.h"
+#include "DataLog.h"
 #include "HashSet.h"
 #include "IntegerToStringConversion.h"
 #include "StringHash.h"
+#include "StringPrintStream.h"
 #include "Threading.h"
 #include "WTFThreadData.h"
 #include <wtf/unicode/UTF8.h>
@@ -65,23 +68,30 @@ public:
 
 #endif // USE(WEB_THREAD)
 
-static ALWAYS_INLINE HashSet<StringImpl*>& stringTable()
+using StringTableImpl = HashSet<StringImpl*>;
+
+static ALWAYS_INLINE StringTableImpl& stringTable()
 {
     return wtfThreadData().atomicStringTable()->table();
 }
 
 template<typename T, typename HashTranslator>
-static inline Ref<AtomicStringImpl> addToStringTable(const T& value)
+static inline Ref<AtomicStringImpl> addToStringTable(AtomicStringTableLocker&, StringTableImpl& atomicStringTable, const T& value)
 {
-    AtomicStringTableLocker locker;
-
-    HashSet<StringImpl*>::AddResult addResult = stringTable().add<HashTranslator>(value);
+    auto addResult = atomicStringTable.add<HashTranslator>(value);
 
     // If the string is newly-translated, then we need to adopt it.
     // The boolean in the pair tells us if that is so.
     if (addResult.isNewEntry)
         return adoptRef(static_cast<AtomicStringImpl&>(**addResult.iterator));
     return *static_cast<AtomicStringImpl*>(*addResult.iterator);
+}
+
+template<typename T, typename HashTranslator>
+static inline Ref<AtomicStringImpl> addToStringTable(const T& value)
+{
+    AtomicStringTableLocker locker;
+    return addToStringTable<T, HashTranslator>(locker, stringTable(), value);
 }
 
 struct CStringTranslator {
@@ -219,7 +229,7 @@ struct HashAndUTF8CharactersTranslator {
     static void translate(StringImpl*& location, const HashAndUTF8Characters& buffer, unsigned hash)
     {
         UChar* target;
-        RefPtr<StringImpl> newString = StringImpl::createUninitialized(buffer.utf16Length, target);
+        auto newString = StringImpl::createUninitialized(buffer.utf16Length, target);
 
         bool isAllASCII;
         const char* source = buffer.characters;
@@ -229,7 +239,7 @@ struct HashAndUTF8CharactersTranslator {
         if (isAllASCII)
             newString = StringImpl::create(buffer.characters, buffer.length);
 
-        location = newString.release().leakRef();
+        location = &newString.leakRef();
         location->setHash(hash);
         location->setIsAtomic(true);
     }
@@ -284,7 +294,7 @@ struct SubstringLocation {
 struct SubstringTranslator {
     static void translate(StringImpl*& location, const SubstringLocation& buffer, unsigned hash)
     {
-        location = &StringImpl::createSubstringSharingImpl(buffer.baseString, buffer.start, buffer.length).leakRef();
+        location = &StringImpl::createSubstringSharingImpl(*buffer.baseString, buffer.start, buffer.length).leakRef();
         location->setHash(hash);
         location->setIsAtomic(true);
     }
@@ -396,16 +406,30 @@ Ref<AtomicStringImpl> AtomicStringImpl::addLiteral(const char* characters, unsig
     return addToStringTable<CharBuffer, CharBufferFromLiteralDataTranslator>(buffer);
 }
 
+static inline Ref<AtomicStringImpl> addSubstring(AtomicStringTableLocker& locker, StringTableImpl& atomicStringTable, StringImpl& base)
+{
+    ASSERT(base.length());
+    ASSERT(base.isSymbol() || base.isStatic());
+
+    SubstringLocation buffer = { &base, 0, base.length() };
+    if (base.is8Bit())
+        return addToStringTable<SubstringLocation, SubstringTranslator8>(locker, atomicStringTable, buffer);
+    return addToStringTable<SubstringLocation, SubstringTranslator16>(locker, atomicStringTable, buffer);
+}
+
+static inline Ref<AtomicStringImpl> addSubstring(StringImpl& base)
+{
+    AtomicStringTableLocker locker;
+    return addSubstring(locker, stringTable(), base);
+}
+
 Ref<AtomicStringImpl> AtomicStringImpl::addSlowCase(StringImpl& string)
 {
     if (!string.length())
         return *static_cast<AtomicStringImpl*>(StringImpl::empty());
 
-    if (string.isSymbol()) {
-        if (string.is8Bit())
-            return *add(string.characters8(), string.length());
-        return *add(string.characters16(), string.length());
-    }
+    if (string.isSymbol() || string.isStatic())
+        return addSubstring(string);
 
     ASSERT_WITH_MESSAGE(!string.isAtomic(), "AtomicStringImpl should not hit the slow case if the string is already atomic.");
 
@@ -425,10 +449,9 @@ Ref<AtomicStringImpl> AtomicStringImpl::addSlowCase(AtomicStringTable& stringTab
     if (!string.length())
         return *static_cast<AtomicStringImpl*>(StringImpl::empty());
 
-    if (string.isSymbol()) {
-        if (string.is8Bit())
-            return *add(string.characters8(), string.length());
-        return *add(string.characters16(), string.length());
+    if (string.isSymbol() || string.isStatic()) {
+        AtomicStringTableLocker locker;
+        return addSubstring(locker, stringTable.table(), string);
     }
 
     ASSERT_WITH_MESSAGE(!string.isAtomic(), "AtomicStringImpl should not hit the slow case if the string is already atomic.");
@@ -448,9 +471,10 @@ void AtomicStringImpl::remove(AtomicStringImpl* string)
 {
     ASSERT(string->isAtomic());
     AtomicStringTableLocker locker;
-    HashSet<StringImpl*>& atomicStringTable = stringTable();
-    HashSet<StringImpl*>::iterator iterator = atomicStringTable.find(string);
+    auto& atomicStringTable = stringTable();
+    auto iterator = atomicStringTable.find(string);
     ASSERT_WITH_MESSAGE(iterator != atomicStringTable.end(), "The string being removed is atomic in the string table of an other thread!");
+    ASSERT(string == *iterator);
     atomicStringTable.remove(iterator);
 }
 
@@ -461,14 +485,8 @@ RefPtr<AtomicStringImpl> AtomicStringImpl::lookUpSlowCase(StringImpl& string)
     if (!string.length())
         return static_cast<AtomicStringImpl*>(StringImpl::empty());
 
-    if (string.isSymbol()) {
-        if (string.is8Bit())
-            return lookUpInternal(string.characters8(), string.length());
-        return lookUpInternal(string.characters16(), string.length());
-    }
-
     AtomicStringTableLocker locker;
-    HashSet<StringImpl*>& atomicStringTable = stringTable();
+    auto& atomicStringTable = stringTable();
     auto iterator = atomicStringTable.find(&string);
     if (iterator != atomicStringTable.end())
         return static_cast<AtomicStringImpl*>(*iterator);

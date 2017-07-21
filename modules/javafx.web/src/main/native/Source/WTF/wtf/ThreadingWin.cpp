@@ -99,12 +99,9 @@
 #include <wtf/CurrentTime.h>
 #include <wtf/HashMap.h>
 #include <wtf/MathExtras.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RandomNumberSeed.h>
 #include <wtf/WTFThreadData.h>
-
-#if !USE(PTHREADS) && OS(WINDOWS)
-#include "ThreadSpecific.h"
-#endif
 
 #if HAVE(ERRNO_H)
 #include <errno.h>
@@ -132,7 +129,7 @@ void initializeCurrentThreadInternal(const char* szThreadName)
 #else
     THREADNAME_INFO info;
     info.dwType = 0x1000;
-    info.szName = szThreadName;
+    info.szName = normalizeThreadName(szThreadName);
     info.dwThreadID = GetCurrentThreadId();
     info.dwFlags = 0;
 
@@ -145,7 +142,7 @@ void initializeCurrentThreadInternal(const char* szThreadName)
 
 static Mutex& threadMapMutex()
 {
-    static Mutex mutex;
+    static NeverDestroyed<Mutex> mutex;
     return mutex;
 }
 
@@ -170,7 +167,7 @@ void initializeThreading()
 
 static HashMap<DWORD, HANDLE>& threadMap()
 {
-    static HashMap<DWORD, HANDLE> map;
+    static NeverDestroyed<HashMap<DWORD, HANDLE>> map;
     return map;
 }
 
@@ -198,11 +195,6 @@ static unsigned __stdcall wtfThreadEntryPoint(void* param)
 {
     std::unique_ptr<ThreadFunctionInvocation> invocation(static_cast<ThreadFunctionInvocation*>(param));
     invocation->function(invocation->data);
-
-#if !USE(PTHREADS) && OS(WINDOWS)
-    // Do the TLS cleanup.
-    ThreadSpecificThreadExit();
-#endif
 
     return 0;
 }

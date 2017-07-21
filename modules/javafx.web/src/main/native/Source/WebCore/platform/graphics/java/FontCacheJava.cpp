@@ -3,17 +3,13 @@
  */
 #include "config.h"
 
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 #include "NotImplemented.h"
 #include <wtf/text/AtomicString.h>
-#include "Font.h"
 #include "FontCache.h"
 #include "FontRanges.h"
 #include "FontPlatformData.h"
 #include "Font.h"
+#include "FontSelector.h"
 
 namespace WebCore {
 
@@ -21,7 +17,7 @@ void FontCache::platformInit()
 {
 }
 
-RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& fontDescription, const Font*, bool, const UChar* characters, unsigned length)
+RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription&, const Font*, bool, const UChar*, unsigned)
 {
     return nullptr;
 }
@@ -52,6 +48,17 @@ Vector<String> FontCache::systemFontFamilies()
     // FIXME: JDK-8146864
     notImplemented();
     return Vector<String>();
+}
+
+Ref<Font> FontCache::lastResortFallbackFontForEveryCharacter(const FontDescription& fontDescription)
+{
+    return lastResortFallbackFont(fontDescription);
+}
+
+const AtomicString& FontCache::platformAlternateFamilyName(const AtomicString& familyName)
+{
+    notImplemented();
+    return nullAtom;
 }
 
 }

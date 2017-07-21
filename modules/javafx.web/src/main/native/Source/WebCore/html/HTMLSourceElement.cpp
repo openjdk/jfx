@@ -51,9 +51,14 @@ inline HTMLSourceElement::HTMLSourceElement(const QualifiedName& tagName, Docume
 
 Ref<HTMLSourceElement> HTMLSourceElement::create(const QualifiedName& tagName, Document& document)
 {
-    Ref<HTMLSourceElement> sourceElement = adoptRef(*new HTMLSourceElement(tagName, document));
+    auto sourceElement = adoptRef(*new HTMLSourceElement(tagName, document));
     sourceElement->suspendIfNeeded();
     return sourceElement;
+}
+
+Ref<HTMLSourceElement> HTMLSourceElement::create(Document& document)
+{
+    return create(sourceTag, document);
 }
 
 Node::InsertionNotificationRequest HTMLSourceElement::insertedInto(ContainerNode& insertionPoint)
@@ -91,27 +96,27 @@ void HTMLSourceElement::removedFrom(ContainerNode& removalRoot)
 
 void HTMLSourceElement::setSrc(const String& url)
 {
-    setAttribute(srcAttr, url);
+    setAttributeWithoutSynchronization(srcAttr, url);
 }
 
 String HTMLSourceElement::media() const
 {
-    return getAttribute(mediaAttr);
+    return attributeWithoutSynchronization(mediaAttr);
 }
 
 void HTMLSourceElement::setMedia(const String& media)
 {
-    setAttribute(mediaAttr, media);
+    setAttributeWithoutSynchronization(mediaAttr, media);
 }
 
 String HTMLSourceElement::type() const
 {
-    return getAttribute(typeAttr);
+    return attributeWithoutSynchronization(typeAttr);
 }
 
 void HTMLSourceElement::setType(const String& type)
 {
-    setAttribute(typeAttr, type);
+    setAttributeWithoutSynchronization(typeAttr, type);
 }
 
 void HTMLSourceElement::scheduleErrorEvent()
@@ -176,7 +181,7 @@ void HTMLSourceElement::parseAttribute(const QualifiedName& name, const AtomicSt
     HTMLElement::parseAttribute(name, value);
     if (name == srcsetAttr || name == sizesAttr || name == mediaAttr || name == typeAttr) {
         if (name == mediaAttr)
-            m_mediaQuerySet = MediaQuerySet::createAllowingDescriptionSyntax(value);
+            m_mediaQuerySet = MediaQuerySet::create(value);
         auto* parent = parentNode();
         if (is<HTMLPictureElement>(parent))
             downcast<HTMLPictureElement>(*parent).sourcesChanged();

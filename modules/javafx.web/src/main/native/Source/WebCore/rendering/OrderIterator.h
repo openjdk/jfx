@@ -29,10 +29,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OrderIterator_h
-#define OrderIterator_h
+#pragma once
 
 #include <wtf/Noncopyable.h>
+#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -56,7 +56,7 @@ private:
     RenderBox* m_currentChild;
 
     Vector<int, 1> m_orderValues;
-    int m_orderIndex;
+    std::optional<size_t> m_orderIndex;
 };
 
 class OrderIteratorPopulator {
@@ -73,5 +73,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif //  OrderIterator_h

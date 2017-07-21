@@ -23,12 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RegisterAllocator_h
-#define RegisterAllocator_h
+#pragma once
 
 #if ENABLE(CSS_SELECTOR_JIT)
 
-#include <MacroAssembler.h> //XXX #include <JavaScriptCore/MacroAssembler.h>
+#include <JavaScriptCore/MacroAssembler.h>
 #include <wtf/Deque.h>
 #include <wtf/Vector.h>
 
@@ -269,6 +268,3 @@ inline RegisterAllocator::~RegisterAllocator()
 } // namespace WebCore
 
 #endif // ENABLE(CSS_SELECTOR_JIT)
-
-#endif // RegisterAllocator_h
-

@@ -1,34 +1,79 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 /* utility functions */
 
 #include "config.h"
-
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
 
 #include "Document.h"
 #include "Frame.h"
 #include "Element.h"
 #include "HTMLDocument.h"
 #include "HTMLElement.h"
-#include "JavaEnv.h"
+#include "Exception.h"
+#include "ExceptionCodeDescription.h"
 
-//#include "BridgeUtils.h"
+#include <wtf/java/JavaEnv.h>
+
 #include "JavaDOMUtils.h"
 #include "runtime_root.h"
 
-using namespace WebCore;
+namespace WebCore {
 
-#ifdef __cplusplus
+static void raiseDOMErrorException(JNIEnv* env, WebCore::ExceptionCode ec)
+{
+    ASSERT(ec);
+
+    WebCore::ExceptionCodeDescription description(ec);
+
+    // FIXME: This should use type and code exclusively and not try to use typeName.
+    // lazy init
+    jclass clz = 0L;
+    jmethodID  mid = 0;
+    if (strcmp(description.typeName, "DOM Range") == 0) {
+        static JGClass exceptionClass(env->FindClass("org/w3c/dom/ranges/RangeException"));
+        static jmethodID midCtor = env->GetMethodID(exceptionClass, "<init>", "(SLjava/lang/String;)V");
+        clz = exceptionClass;
+        mid = midCtor;
+    } else if (strcmp(description.typeName, "DOM Events") == 0) {
+        static JGClass exceptionClass(env->FindClass("org/w3c/dom/events/EventException"));
+        static jmethodID midCtor = env->GetMethodID(exceptionClass, "<init>", "(SLjava/lang/String;)V");
+        clz = exceptionClass;
+        mid = midCtor;
+    } else {
+        static JGClass exceptionClass(env->FindClass("org/w3c/dom/DOMException"));
+        static jmethodID midCtor = env->GetMethodID(exceptionClass, "<init>", "(SLjava/lang/String;)V");
+        clz = exceptionClass;
+        mid = midCtor;
+    }
+
+    ASSERT(mid);
+    env->Throw(JLocalRef<jthrowable>((jthrowable)env->NewObject(clz, mid, (jshort)ec, (jstring)String(description.description).toJavaString(env))));
+}
+
+void raiseTypeErrorException(JNIEnv* env)
+{
+    raiseDOMErrorException(env, WebCore::TypeError);
+}
+
+void raiseNotSupportedErrorException(JNIEnv* env)
+{
+    raiseDOMErrorException(env, WebCore::NOT_SUPPORTED_ERR);
+}
+
+void raiseDOMErrorException(JNIEnv* env, Exception&& ec)
+{
+    raiseDOMErrorException(env, ec.code());
+}
+} // namespace WebCore
+
+
+namespace WebCore {
 extern "C" {
-#endif
-
+namespace {
 jobject makeObjectFromNode(
     JNIEnv* env,
-    Frame* frame,
+    Frame*,
     Node* peer)
 {
     static JGClass clNode(env->FindClass("com/sun/webkit/dom/NodeImpl"));
@@ -41,33 +86,35 @@ jobject makeObjectFromNode(
         midGetImpl,
         ptr_to_jlong(peer));
 }
+} // namespace
 
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_WebPage_twkGetDocument
-    (JNIEnv* env, jclass clazz, jlong jframe)
+    (JNIEnv* env, jclass, jlong jframe)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(jframe));
     if (!frame)
-        return NULL;
+        return nullptr;
 
     Document* document = frame->document();
     if (!document)
-        return NULL;
+        return nullptr;
 
     return makeObjectFromNode(env, frame, document);
 }
 
 JNIEXPORT jobject JNICALL Java_com_sun_webkit_WebPage_twkGetOwnerElement
-    (JNIEnv* env, jclass clazz, jlong jframe)
+    (JNIEnv* env, jclass, jlong jframe)
 {
     Frame* frame = static_cast<Frame*>(jlong_to_ptr(jframe));
     if (!frame)
-        return NULL;
+        return nullptr;
 
     Element* ownerElement = (Element*) frame->ownerElement();
     if (!ownerElement)
-        return NULL;
+        return nullptr;
 
     return makeObjectFromNode(env, frame, ownerElement);
+}
 }
 
 
@@ -98,6 +145,4 @@ bool isJavaEquals(jobject o1, jobject o2)
     return jbool_to_bool(env->CallBooleanMethod(o1, midEquals, o2));
 }
 
-#ifdef __cplusplus
-}
-#endif
+} // namespace WebCore

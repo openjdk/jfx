@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef Watchdog_h
-#define Watchdog_h
+#pragma once
 
 #include <wtf/Lock.h>
 #include <wtf/Ref.h>
@@ -95,11 +94,8 @@ private:
     void* m_callbackData2;
     friend class Watchdog::Scope;
     Ref<WorkQueue> m_timerQueue;
-    std::function<void ()> m_timerHandler;
 
     friend class LLIntOffsetsExtractor;
 };
 
 } // namespace JSC
-
-#endif // Watchdog_h

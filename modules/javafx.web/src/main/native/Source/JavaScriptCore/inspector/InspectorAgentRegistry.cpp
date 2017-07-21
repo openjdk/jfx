@@ -69,5 +69,10 @@ void AgentRegistry::willDestroyFrontendAndBackend(DisconnectReason reason)
         agent->willDestroyFrontendAndBackend(reason);
 }
 
-} // namespace Inspector
+void AgentRegistry::discardValues()
+{
+    for (auto& agent : m_agents)
+        agent->discardValues();
+}
 
+} // namespace Inspector

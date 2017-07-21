@@ -45,11 +45,11 @@ void PlatformPasteboard::getTypes(Vector<String>& types)
         types.append([pasteboardTypes objectAtIndex:i]);
 }
 
-PassRefPtr<SharedBuffer> PlatformPasteboard::bufferForType(const String& pasteboardType)
+RefPtr<SharedBuffer> PlatformPasteboard::bufferForType(const String& pasteboardType)
 {
     NSData *data = [m_pasteboard.get() dataForType:pasteboardType];
     if (!data)
-        return 0;
+        return nullptr;
     return SharedBuffer::wrapNSData([[data copy] autorelease]);
 }
 
@@ -92,7 +92,7 @@ Color PlatformPasteboard::color()
         color = [color colorUsingColorSpaceName:NSCalibratedRGBColorSpace];
 
     return makeRGBA((int)([color redComponent] * 255.0 + 0.5), (int)([color greenComponent] * 255.0 + 0.5),
-                    (int)([color blueComponent] * 255.0 + 0.5), (int)([color alphaComponent] * 255.0 + 0.5));
+        (int)([color blueComponent] * 255.0 + 0.5), (int)([color alphaComponent] * 255.0 + 0.5));
 }
 
 URL PlatformPasteboard::url()
@@ -135,7 +135,7 @@ long PlatformPasteboard::setTypes(const Vector<String>& pasteboardTypes)
     return [m_pasteboard.get() declareTypes:types.get() owner:nil];
 }
 
-long PlatformPasteboard::setBufferForType(PassRefPtr<SharedBuffer> buffer, const String& pasteboardType)
+long PlatformPasteboard::setBufferForType(SharedBuffer* buffer, const String& pasteboardType)
 {
     BOOL didWriteData = [m_pasteboard setData:buffer ? buffer->createNSData().get() : nil forType:pasteboardType];
     if (!didWriteData)

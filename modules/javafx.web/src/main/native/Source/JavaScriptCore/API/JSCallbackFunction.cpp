@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,6 @@
 #include "JSGlobalObject.h"
 #include "JSLock.h"
 #include "JSCInlines.h"
-#include <wtf/Vector.h>
 
 namespace JSC {
 
@@ -53,12 +52,13 @@ JSCallbackFunction::JSCallbackFunction(VM& vm, Structure* structure, JSObjectCal
 void JSCallbackFunction::finishCreation(VM& vm, const String& name)
 {
     Base::finishCreation(vm, name);
-    ASSERT(inherits(info()));
+    ASSERT(inherits(vm, info()));
 }
 
 JSCallbackFunction* JSCallbackFunction::create(VM& vm, JSGlobalObject* globalObject, JSObjectCallAsFunctionCallback callback, const String& name)
 {
-    JSCallbackFunction* function = new (NotNull, allocateCell<JSCallbackFunction>(vm.heap)) JSCallbackFunction(vm, globalObject->callbackFunctionStructure(), callback);
+    Structure* structure = globalObject->callbackFunctionStructure();
+    JSCallbackFunction* function = new (NotNull, allocateCell<JSCallbackFunction>(vm.heap)) JSCallbackFunction(vm, structure, callback);
     function->finishCreation(vm, name);
     return function;
 }
@@ -66,7 +66,7 @@ JSCallbackFunction* JSCallbackFunction::create(VM& vm, JSGlobalObject* globalObj
 CallType JSCallbackFunction::getCallData(JSCell*, CallData& callData)
 {
     callData.native.function = APICallbackFunction::call<JSCallbackFunction>;
-    return CallTypeHost;
+    return CallType::Host;
 }
 
 } // namespace JSC

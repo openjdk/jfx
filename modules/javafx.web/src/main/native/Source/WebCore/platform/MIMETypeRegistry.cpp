@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2009 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2016 Apple Inc.  All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,20 +29,21 @@
 
 #include "MediaPlayer.h"
 #include <wtf/HashMap.h>
-#include <wtf/HashSet.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
-#include <wtf/text/StringHash.h>
 
 #if USE(CG)
 #include "ImageSourceCG.h"
-#if !PLATFORM(IOS)
-#include <ApplicationServices/ApplicationServices.h>
-#else
-#include <ImageIO/CGImageDestination.h>
-#endif
 #include <wtf/RetainPtr.h>
+#endif
+
+#if USE(CG) && !PLATFORM(IOS)
+#include <ApplicationServices/ApplicationServices.h>
+#endif
+
+#if PLATFORM(IOS)
+#include <ImageIO/CGImageDestination.h>
 #endif
 
 #if ENABLE(WEB_ARCHIVE) || ENABLE(MHTML)
@@ -272,9 +273,6 @@ static void initializeSupportedImageMIMETypesForEncoding()
     supportedImageMIMETypesForEncoding->add("image/png");
     supportedImageMIMETypesForEncoding->add("image/jpeg");
     supportedImageMIMETypesForEncoding->add("image/bmp");
-#elif PLATFORM(EFL)
-    supportedImageMIMETypesForEncoding->add("image/png");
-    supportedImageMIMETypesForEncoding->add("image/jpeg");
 #elif USE(CAIRO)
     supportedImageMIMETypesForEncoding->add("image/png");
 #endif
@@ -519,6 +517,24 @@ bool MIMETypeRegistry::isSupportedJavaScriptMIMEType(const String& mimeType)
     return supportedJavaScriptMIMETypes->contains(mimeType);
 }
 
+bool MIMETypeRegistry::isSupportedJSONMIMEType(const String& mimeType)
+{
+    if (mimeType.isEmpty())
+        return false;
+
+    if (equalLettersIgnoringASCIICase(mimeType, "application/json"))
+        return true;
+
+    // When detecting +json ensure there is a non-empty type / subtype preceeding the suffix.
+    if (mimeType.endsWith("+json", false) && mimeType.length() >= 8) {
+        size_t slashPosition = mimeType.find('/');
+        if (slashPosition != notFound && slashPosition > 0 && slashPosition <= mimeType.length() - 6)
+            return true;
+    }
+
+    return false;
+}
+
 bool MIMETypeRegistry::isSupportedNonImageMIMEType(const String& mimeType)
 {
     if (mimeType.isEmpty())
@@ -544,6 +560,47 @@ bool MIMETypeRegistry::isUnsupportedTextMIMEType(const String& mimeType)
     if (!unsupportedTextMIMETypes)
         initializeMIMETypeRegistry();
     return unsupportedTextMIMETypes->contains(mimeType);
+}
+
+bool MIMETypeRegistry::isTextMIMEType(const String& mimeType)
+{
+    return isSupportedJavaScriptMIMEType(mimeType)
+        || isSupportedJSONMIMEType(mimeType) // Render JSON as text/plain.
+        || (mimeType.startsWith("text/", false)
+            && !equalLettersIgnoringASCIICase(mimeType, "text/html")
+            && !equalLettersIgnoringASCIICase(mimeType, "text/xml")
+            && !equalLettersIgnoringASCIICase(mimeType, "text/xsl"));
+}
+
+
+static inline bool isValidXMLMIMETypeChar(UChar c)
+{
+    // Valid characters per RFCs 3023 and 2045: 0-9a-zA-Z_-+~!$^{}|.%'`#&*
+    return isASCIIAlphanumeric(c) || c == '!' || c == '#' || c == '$' || c == '%' || c == '&' || c == '\'' || c == '*' || c == '+'
+        || c == '-' || c == '.' || c == '^' || c == '_' || c == '`' || c == '{' || c == '|' || c == '}' || c == '~';
+}
+
+bool MIMETypeRegistry::isXMLMIMEType(const String& mimeType)
+{
+    if (equalLettersIgnoringASCIICase(mimeType, "text/xml") || equalLettersIgnoringASCIICase(mimeType, "application/xml") || equalLettersIgnoringASCIICase(mimeType, "text/xsl"))
+        return true;
+
+    if (!mimeType.endsWith("+xml", false))
+        return false;
+
+    size_t slashPosition = mimeType.find('/');
+    // Take into account the '+xml' ending of mimeType.
+    if (slashPosition == notFound || !slashPosition || slashPosition == mimeType.length() - 5)
+        return false;
+
+    // Again, mimeType ends with '+xml', no need to check the validity of that substring.
+    size_t mimeLength = mimeType.length();
+    for (size_t i = 0; i < mimeLength - 4; ++i) {
+        if (!isValidXMLMIMETypeChar(mimeType[i]) && i != slashPosition)
+            return false;
+    }
+
+    return true;
 }
 
 bool MIMETypeRegistry::isJavaAppletMIMEType(const String& mimeType)
@@ -581,7 +638,7 @@ bool MIMETypeRegistry::canShowMIMEType(const String& mimeType)
         return true;
 
     if (mimeType.startsWith("text/", false))
-        return !MIMETypeRegistry::isUnsupportedTextMIMEType(mimeType);
+        return !isUnsupportedTextMIMEType(mimeType);
 
     return false;
 }
@@ -731,5 +788,20 @@ String MIMETypeRegistry::getNormalizedMIMEType(const String& mimeType)
 }
 
 #endif
+
+String MIMETypeRegistry::appendFileExtensionIfNecessary(const String& filename, const String& mimeType)
+{
+    if (filename.isEmpty())
+        return emptyString();
+
+    if (filename.reverseFind('.') != notFound)
+        return filename;
+
+    String preferredExtension = getPreferredExtensionForMIMEType(mimeType);
+    if (preferredExtension.isEmpty())
+        return filename;
+
+    return filename + "." + preferredExtension;
+}
 
 } // namespace WebCore

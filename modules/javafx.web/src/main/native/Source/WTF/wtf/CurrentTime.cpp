@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2009, 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2016 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Google Inc. All rights reserved.
  * Copyright (C) 2007-2009 Torch Mobile, Inc.
  * Copyright (C) 2008 Cameron Zwarich <cwzwarich@uwaterloo.ca>
@@ -34,6 +34,9 @@
 #include "config.h"
 #include "CurrentTime.h"
 
+#include "Condition.h"
+#include "Lock.h"
+
 #if OS(DARWIN)
 #include <mach/mach.h>
 #include <mach/mach_time.h>
@@ -49,21 +52,13 @@
 #include <math.h>
 #include <stdint.h>
 #include <time.h>
-
-#elif PLATFORM(EFL)
-#include <Ecore.h>
 #else
 #include <sys/time.h>
 #endif
 
-#if USE(GLIB) && !PLATFORM(EFL)
+#if USE(GLIB)
 #include <glib.h>
 #endif
-
-#if PLATFORM(JAVA)
-#include <WebCore/platform/java/JavaEnv.h>
-#endif
-
 
 namespace WTF {
 
@@ -224,7 +219,7 @@ double currentTime()
 
 #endif // USE(QUERY_PERFORMANCE_COUNTER)
 
-#elif USE(GLIB) && !PLATFORM(EFL)
+#elif USE(GLIB)
 
 // Note: GTK on Windows will pick up the PLATFORM(WIN) implementation above which provides
 // better accuracy compared with Windows implementation of g_get_current_time:
@@ -235,36 +230,6 @@ double currentTime()
     GTimeVal now;
     g_get_current_time(&now);
     return static_cast<double>(now.tv_sec) + static_cast<double>(now.tv_usec / 1000000.0);
-}
-
-#elif PLATFORM(EFL)
-
-double currentTime()
-{
-    return ecore_time_unix_get();
-}
-
-#elif PLATFORM(JAVA) && 0
-// Attention! That can be called from non-Java thread. And very often,
-// so back to native implementation.
-//
-// Return the current system time in seconds, using the classic POSIX epoch of January 1, 1970.
-// Like time(0) from <time.h>, except with a wider range of values and higher precision.
-double currentTime()
-{
-    JNIEnv *env = WebCore_GetJavaEnv();
-
-    static JGClass systemCls(env->FindClass("java/lang/System"));
-    static jmethodID currentTimeMillisMID = env->GetStaticMethodID(
-        systemCls,
-        "currentTimeMillis",
-        "()J");
-    ASSERT(currentTimeMillisMID);
-
-    jlong jvm_time = env->CallStaticLongMethod(systemCls, currentTimeMillisMID);
-    CheckAndClearException(env);
-
-    return jvm_time / 1000.0;
 }
 
 #else
@@ -278,14 +243,7 @@ double currentTime()
 
 #endif
 
-#if PLATFORM(EFL)
-
-double monotonicallyIncreasingTime()
-{
-    return ecore_time_get();
-}
-
-#elif USE(GLIB)
+#if USE(GLIB)
 
 double monotonicallyIncreasingTime()
 {
@@ -377,6 +335,19 @@ std::chrono::microseconds currentCPUTime()
     static auto firstTime = std::chrono::steady_clock::now();
     return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - firstTime);
 #endif
+}
+
+void sleep(double value)
+{
+    // It's very challenging to find portable ways of sleeping for less than a second. On UNIX, you want to
+    // use usleep() but it's hard to #include it in a portable way (you'd think it's in unistd.h, but then
+    // you'd be wrong on some OSX SDKs). Also, usleep() won't save you on Windows. Hence, bottoming out in
+    // lock code, which already solves the sleeping problem, is probably for the best.
+
+    Lock fakeLock;
+    Condition fakeCondition;
+    LockHolder fakeLocker(fakeLock);
+    fakeCondition.waitFor(fakeLock, Seconds(value));
 }
 
 } // namespace WTF

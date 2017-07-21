@@ -24,9 +24,13 @@
  */
 
 [
-    NoInterfaceObject,
-    Conditional=MEDIA_STREAM,
-    ConstructorTemplate=Event
+    Conditional=WEB_RTC,
+    Constructor(DOMString type, optional RTCDTMFToneChangeEventInit eventInitDict),
+    EnabledAtRuntime=PeerConnection,
 ] interface RTCDTMFToneChangeEvent : Event {
-    [InitializedByEventConstructor] readonly attribute DOMString tone;
+    readonly attribute DOMString tone;
+};
+
+dictionary RTCDTMFToneChangeEventInit : EventInit {
+    DOMString tone = "";
 };

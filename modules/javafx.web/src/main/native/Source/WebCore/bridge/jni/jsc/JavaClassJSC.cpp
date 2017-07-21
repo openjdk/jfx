@@ -160,9 +160,11 @@ jobject JavaClass::createDummyObject()
     return instance;
 }
 
-Method *JavaClass::methodNamed(PropertyName propertyName, Instance*) const
+Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
 {
     const String name(propertyName.publicName());
+    if (name.isNull())
+        return nullptr;
     unsigned nameLength = name.length();
     MethodList* methodList;
     int i;
@@ -267,7 +269,10 @@ Method *JavaClass::methodNamed(PropertyName propertyName, Instance*) const
 
 Field* JavaClass::fieldNamed(PropertyName propertyName, Instance*) const
 {
-    return m_fields.get(propertyName.publicName());
+    String name(propertyName.publicName());
+    if (name.isNull())
+        return nullptr;
+    return m_fields.get(name.impl());
 }
 
 bool JavaClass::isNumberClass() const

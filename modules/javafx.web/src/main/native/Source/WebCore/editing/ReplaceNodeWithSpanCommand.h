@@ -28,8 +28,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ReplaceNodeWithSpanCommand_h
-#define ReplaceNodeWithSpanCommand_h
+#pragma once
 
 #include "CompositeEditCommand.h"
 
@@ -50,11 +49,11 @@ public:
 private:
     explicit ReplaceNodeWithSpanCommand(PassRefPtr<HTMLElement>);
 
-    virtual void doApply() override;
-    virtual void doUnapply() override;
+    void doApply() override;
+    void doUnapply() override;
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Node*>&) override;
+    void getNodesInCommand(HashSet<Node*>&) override;
 #endif
 
     RefPtr<HTMLElement> m_elementToReplace;
@@ -62,5 +61,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ReplaceNodeWithSpanCommand

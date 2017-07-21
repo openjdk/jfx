@@ -165,8 +165,7 @@ using namespace WebCore;
 
         if (pos == start || pos < start) {
             start.setAffinity(UPSTREAM);
-            //result = start.next().absoluteCaretBounds();
-            result = start.absoluteCaretBounds(); //<rdar://problem/6716185>: Allow placing the caaret to the left of the first character.
+            result = start.absoluteCaretBounds();
         } else if (pos > end) {
             end.setAffinity(DOWNSTREAM);
             result = end.absoluteCaretBounds();
@@ -848,8 +847,8 @@ static VisiblePosition SimpleSmartExtendEnd(const VisiblePosition& start, const 
     while (currentVisiblePosition.isNotNull()) {
         WebVisiblePosition *currentWebVisiblePosition = [WebVisiblePosition _wrapVisiblePosition:currentVisiblePosition];
 
-        Node *currentNode = currentVisiblePosition.deepEquivalent().anchorNode();
-        int lastOffset = lastOffsetForEditing(currentNode);
+        auto* currentNode = currentVisiblePosition.deepEquivalent().anchorNode();
+        int lastOffset = lastOffsetForEditing(*currentNode);
         ASSERT(lastOffset >= 0);
         if (lastOffset < 0)
             return currentWebVisiblePosition;
@@ -904,8 +903,8 @@ static VisiblePosition SimpleSmartExtendEnd(const VisiblePosition& start, const 
     while (currentVisiblePosition.isNotNull()) {
         WebVisiblePosition *currentWebVisiblePosition = [WebVisiblePosition _wrapVisiblePosition:currentVisiblePosition];
 
-        Node *currentNode = currentVisiblePosition.deepEquivalent().anchorNode();
-        int lastOffset = lastOffsetForEditing(currentNode);
+        auto* currentNode = currentVisiblePosition.deepEquivalent().anchorNode();
+        int lastOffset = lastOffsetForEditing(*currentNode);
         ASSERT(lastOffset >= 0);
         if (lastOffset < 0)
             return currentWebVisiblePosition;

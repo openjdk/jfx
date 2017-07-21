@@ -35,11 +35,19 @@
 /* COMPILER_QUIRK() - whether the compiler being used to build the project requires a given quirk. */
 #define COMPILER_QUIRK(WTF_COMPILER_QUIRK) (defined WTF_COMPILER_QUIRK_##WTF_COMPILER_QUIRK  && WTF_COMPILER_QUIRK_##WTF_COMPILER_QUIRK)
 
-/* COMPILER_HAS_CLANG_BUILTIN() - wether the compiler supports a particular clang builtin. */
+/* COMPILER_HAS_CLANG_BUILTIN() - whether the compiler supports a particular clang builtin. */
 #ifdef __has_builtin
 #define COMPILER_HAS_CLANG_BUILTIN(x) __has_builtin(x)
 #else
 #define COMPILER_HAS_CLANG_BUILTIN(x) 0
+#endif
+
+/* COMPILER_HAS_CLANG_HEATURE() - whether the compiler supports a particular language or library feature. */
+/* http://clang.llvm.org/docs/LanguageExtensions.html#has-feature-and-has-extension */
+#ifdef __has_feature
+#define COMPILER_HAS_CLANG_FEATURE(x) __has_feature(x)
+#else
+#define COMPILER_HAS_CLANG_FEATURE(x) 0
 #endif
 
 /* ==== COMPILER() - primary detection of the compiler being used to build the project, in alphabetical order ==== */
@@ -48,12 +56,23 @@
 
 #if defined(__clang__)
 #define WTF_COMPILER_CLANG 1
-#define WTF_COMPILER_SUPPORTS_BLOCKS __has_feature(blocks)
-#define WTF_COMPILER_SUPPORTS_C_STATIC_ASSERT __has_feature(c_static_assert)
-#define WTF_COMPILER_SUPPORTS_CXX_REFERENCE_QUALIFIED_FUNCTIONS __has_feature(cxx_reference_qualified_functions)
-#define WTF_COMPILER_SUPPORTS_CXX_USER_LITERALS __has_feature(cxx_user_literals)
-#define WTF_COMPILER_SUPPORTS_FALLTHROUGH_WARNINGS __has_feature(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
+#define WTF_COMPILER_SUPPORTS_BLOCKS COMPILER_HAS_CLANG_FEATURE(blocks)
+#define WTF_COMPILER_SUPPORTS_C_STATIC_ASSERT COMPILER_HAS_CLANG_FEATURE(c_static_assert)
+#define WTF_COMPILER_SUPPORTS_CXX_REFERENCE_QUALIFIED_FUNCTIONS COMPILER_HAS_CLANG_FEATURE(cxx_reference_qualified_functions)
+#define WTF_COMPILER_SUPPORTS_CXX_USER_LITERALS COMPILER_HAS_CLANG_FEATURE(cxx_user_literals)
+#define WTF_COMPILER_SUPPORTS_FALLTHROUGH_WARNINGS COMPILER_HAS_CLANG_FEATURE(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
+#define WTF_COMPILER_SUPPORTS_CXX_EXCEPTIONS COMPILER_HAS_CLANG_FEATURE(cxx_exceptions)
+#define WTF_COMPILER_SUPPORTS_BUILTIN_IS_TRIVIALLY_COPYABLE COMPILER_HAS_CLANG_FEATURE(is_trivially_copyable)
+
+#ifdef __cplusplus
+#if __cplusplus <= 201103L
+#define WTF_CPP_STD_VER 11
+#elif __cplusplus <= 201402L
+#define WTF_CPP_STD_VER 14
 #endif
+#endif
+
+#endif // defined(__clang__)
 
 /* COMPILER(GCC_OR_CLANG) - GNU Compiler Collection or Clang */
 #if defined(__GNUC__)
@@ -100,11 +119,14 @@
 /* COMPILER(MSVC) - Microsoft Visual C++ */
 
 #if defined(_MSC_VER)
+
 #define WTF_COMPILER_MSVC 1
+#define WTF_COMPILER_SUPPORTS_CXX_REFERENCE_QUALIFIED_FUNCTIONS 1
+
+#if _MSC_VER < 1900
+#error "Please use a newer version of Visual Studio. WebKit requires VS2015 or newer to compile."
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 1800
-#error "Please use a newer version of Visual Studio. WebKit requires VS2013 or newer to compile."
 #endif
 
 /* COMPILER(SUNCC) */
@@ -125,11 +147,21 @@
 #define WTF_COMPILER_SUPPORTS_EABI 1
 #endif
 
-#if defined(__has_feature)
-#define ASAN_ENABLED __has_feature(address_sanitizer)
-#else
-#define ASAN_ENABLED 0
+/* RELAXED_CONSTEXPR */
+
+#if defined(__cpp_constexpr) && __cpp_constexpr >= 201304
+#define WTF_COMPILER_SUPPORTS_RELAXED_CONSTEXPR 1
 #endif
+
+#if !defined(RELAXED_CONSTEXPR)
+#if COMPILER_SUPPORTS(RELAXED_CONSTEXPR)
+#define RELAXED_CONSTEXPR constexpr
+#else
+#define RELAXED_CONSTEXPR
+#endif
+#endif
+
+#define ASAN_ENABLED COMPILER_HAS_CLANG_FEATURE(address_sanitizer)
 
 #if ASAN_ENABLED
 #define SUPPRESS_ASAN __attribute__((no_sanitize_address))
@@ -161,13 +193,6 @@
 #else
 #define WTF_EXTERN_C_BEGIN
 #define WTF_EXTERN_C_END
-#endif
-
-/* FIXME: Remove this once we have transitioned to WTF_EXTERN_C_BEGIN/WTF_EXTERN_C_END. */
-#ifdef __cplusplus
-#define EXTERN_C extern "C"
-#else
-#define EXTERN_C extern
 #endif
 
 /* FALLTHROUGH */
@@ -216,6 +241,19 @@
 
 #if !defined(NO_RETURN)
 #define NO_RETURN
+#endif
+
+#if !defined(__has_attribute)
+#define __has_attribute(feature) 0
+#endif
+
+/* RETURNS_NONNULL */
+#if !defined(RETURNS_NONNULL) && COMPILER(GCC_OR_CLANG) && __has_attribute(returns_nonnull)
+#define RETURNS_NONNULL __attribute__((returns_nonnull))
+#endif
+
+#if !defined(RETURNS_NONNULL)
+#define RETURNS_NONNULL
 #endif
 
 /* NO_RETURN_WITH_VALUE */
@@ -301,7 +339,7 @@
 #define WARN_UNUSED_RETURN
 #endif
 
-#if !defined(__has_include) && COMPILER(MSVC)
+#if !defined(__has_include) && (COMPILER(MSVC) || COMPILER(GCC))
 #define __has_include(path) 0
 #endif
 

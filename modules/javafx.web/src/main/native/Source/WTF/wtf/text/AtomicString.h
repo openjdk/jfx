@@ -23,6 +23,7 @@
 
 #include <utility>
 #include <wtf/text/AtomicStringImpl.h>
+#include <wtf/text/IntegerToStringConversion.h>
 #include <wtf/text/WTFString.h>
 
 // Define 'NO_IMPLICIT_ATOMICSTRING' before including this header,
@@ -56,6 +57,7 @@ public:
     }
 
     AtomicString(AtomicStringImpl*);
+    AtomicString(RefPtr<AtomicStringImpl>&&);
     ATOMICSTRING_CONVERSION AtomicString(StringImpl*);
     ATOMICSTRING_CONVERSION AtomicString(const String&);
     AtomicString(StringImpl* baseString, unsigned start, unsigned length);
@@ -104,6 +106,8 @@ public:
 
     WTF_EXPORT_STRING_API static AtomicString number(int);
     WTF_EXPORT_STRING_API static AtomicString number(unsigned);
+    WTF_EXPORT_STRING_API static AtomicString number(unsigned long);
+    WTF_EXPORT_STRING_API static AtomicString number(unsigned long long);
     WTF_EXPORT_STRING_API static AtomicString number(double);
     // If we need more overloads of the number function, we can add all the others that String has, but these seem to do for now.
 
@@ -259,6 +263,11 @@ inline AtomicString::AtomicString(AtomicStringImpl* imp)
 {
 }
 
+inline AtomicString::AtomicString(RefPtr<AtomicStringImpl>&& imp)
+    : m_string(WTFMove(imp))
+{
+}
+
 inline AtomicString::AtomicString(StringImpl* imp)
     : m_string(AtomicStringImpl::add(imp))
 {
@@ -298,12 +307,9 @@ inline AtomicString::AtomicString(NSString* s)
 #ifndef ATOMICSTRING_HIDE_GLOBALS
 extern const WTF_EXPORTDATA AtomicString nullAtom;
 extern const WTF_EXPORTDATA AtomicString emptyAtom;
-extern const WTF_EXPORTDATA AtomicString textAtom;
-extern const WTF_EXPORTDATA AtomicString commentAtom;
 extern const WTF_EXPORTDATA AtomicString starAtom;
 extern const WTF_EXPORTDATA AtomicString xmlAtom;
 extern const WTF_EXPORTDATA AtomicString xmlnsAtom;
-extern const WTF_EXPORTDATA AtomicString xlinkAtom;
 
 inline AtomicString AtomicString::fromUTF8(const char* characters, size_t length)
 {
@@ -355,18 +361,21 @@ inline bool equalIgnoringASCIICase(const AtomicString& a, const char* b)
     return equalIgnoringASCIICase(a.string(), b);
 }
 
+template<> struct IntegerToStringConversionTrait<AtomicString> {
+    using ReturnType = AtomicString;
+    using AdditionalArgumentType = void;
+    static AtomicString flush(LChar* characters, unsigned length, void*) { return { characters, length }; }
+};
+
 } // namespace WTF
 
 #ifndef ATOMICSTRING_HIDE_GLOBALS
 using WTF::AtomicString;
 using WTF::nullAtom;
 using WTF::emptyAtom;
-using WTF::textAtom;
-using WTF::commentAtom;
 using WTF::starAtom;
 using WTF::xmlAtom;
 using WTF::xmlnsAtom;
-using WTF::xlinkAtom;
 #endif
 
 #include <wtf/text/StringConcatenate.h>

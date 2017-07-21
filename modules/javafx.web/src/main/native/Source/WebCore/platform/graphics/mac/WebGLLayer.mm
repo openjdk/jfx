@@ -32,6 +32,8 @@
 #import "GraphicsContext3D.h"
 #import "GraphicsContextCG.h"
 #import "GraphicsLayer.h"
+#import "GraphicsLayerCA.h"
+#import "PlatformCALayer.h"
 #import <wtf/FastMalloc.h>
 #import <wtf/RetainPtr.h>
 
@@ -54,8 +56,7 @@ using namespace WebCore;
 #if PLATFORM(MAC)
     self.contentsScale = _devicePixelRatio;
 #if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101100
-    if ([self respondsToSelector:@selector(setColorspace:)])
-        [self setColorspace:sRGBColorSpaceRef()];
+    self.colorspace = sRGBColorSpaceRef();
 #endif
 #endif
     return self;
@@ -179,6 +180,9 @@ static void freeData(void *, const void *data, size_t /* size */)
     [super display];
 #endif
     _context->markLayerComposited();
+    PlatformCALayer* layer = PlatformCALayer::platformCALayer(self);
+    if (layer && layer->owner())
+        layer->owner()->platformCALayerLayerDidDisplay(layer);
 }
 
 @end

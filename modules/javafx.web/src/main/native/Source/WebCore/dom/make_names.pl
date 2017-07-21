@@ -30,6 +30,8 @@
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use strict;
+use FindBin;
+use lib "$FindBin::Bin/../bindings/scripts";
 
 use StaticString;
 use Config;
@@ -125,6 +127,8 @@ if (length($fontNamesIn)) {
 
     print F StaticString::GenerateStrings(\%parameters);
 
+    print F "#include <wtf/StaticConstructors.h>\n";
+
     for my $name (sort keys %parameters) {
         print F "DEFINE_GLOBAL(AtomicString, $name)\n";
     }
@@ -216,6 +220,7 @@ sub defaultParametersHash
         'attrsNullNamespace' => 0,
         'fallbackInterfaceName' => '',
         'fallbackJSInterfaceName' => '',
+        'customElementInterfaceName' => '',
     );
 }
 
@@ -412,8 +417,7 @@ sub printConstructorInterior
     # instead of having all the support for this here in this script?
     if ($enabledTags{$tagName}{wrapperOnlyIfMediaIsAvailable}) {
         print F <<END
-    Settings* settings = document.settings();
-    if (!MediaPlayer::isAvailable() || (settings && !settings->mediaEnabled()))
+    if (!MediaPlayer::isAvailable() || !document.settings().mediaEnabled())
         return $parameters{fallbackInterfaceName}::create($constructorTagName, document);
     
 END
@@ -432,8 +436,7 @@ END
     my $settingsConditional = $enabledTags{$tagName}{settingsConditional};
     if ($settingsConditional) {
         print F <<END
-    Settings* settings = document.settings();
-    if (!settings || !settings->${settingsConditional}())
+    if (!document.settings().${settingsConditional}())
         return $parameters{fallbackInterfaceName}::create($constructorTagName, document);
 END
 ;
@@ -573,7 +576,6 @@ sub printCppHead
     print F "#endif\n\n";
 
     print F "#include \"${namespace}Names.h\"\n\n";
-    print F "#include <wtf/StaticConstructors.h>\n";
 
     print F "namespace WebCore {\n\n";
     print F "namespace ${namespace}Names {\n\n";
@@ -760,9 +762,11 @@ sub printNamesCppFile
     
     my $lowercaseNamespacePrefix = lc($parameters{namespacePrefix});
 
-    print F "WEBCORE_EXPORT DEFINE_GLOBAL(AtomicString, ${lowercaseNamespacePrefix}NamespaceURI)\n\n";
-
     print F StaticString::GenerateStrings(\%allStrings);
+
+    print F "#include <wtf/StaticConstructors.h>\n";
+
+    print F "WEBCORE_EXPORT DEFINE_GLOBAL(AtomicString, ${lowercaseNamespacePrefix}NamespaceURI)\n\n";
 
     if (keys %allTags) {
         print F "// Tags\n";
@@ -1047,12 +1051,23 @@ RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::crea
     return nullptr;
 }
 
-Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createElement(const AtomicString& name, Document& document$formElementArgumentForDefinition, bool createdByParser)
+RefPtr<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createKnownElement(const QualifiedName& name, Document& document$formElementArgumentForDefinition, bool createdByParser)
 {
-    RefPtr<$parameters{namespace}Element> element = $parameters{namespace}ElementFactory::createKnownElement($argumentList);
-    if (LIKELY(element))
-        return element.releaseNonNull();
-    return $parameters{fallbackInterfaceName}::create(QualifiedName(nullAtom, name, ${lowercaseNamespacePrefix}NamespaceURI), document);
+    const ConstructorFunctionMapEntry& entry = find$parameters{namespace}ElementConstructorFunction(name.localName());
+    if (LIKELY(entry.function))
+        return entry.function($argumentList);
+    return nullptr;
+}
+
+Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createElement(const AtomicString& localName, Document& document$formElementArgumentForDefinition, bool createdByParser)
+{
+    const ConstructorFunctionMapEntry& entry = find$parameters{namespace}ElementConstructorFunction(localName);
+    if (LIKELY(entry.function)) {
+        ASSERT(entry.qualifiedName);
+        const auto& name = *entry.qualifiedName;
+        return entry.function($argumentList);
+    }
+    return $parameters{fallbackInterfaceName}::create(QualifiedName(nullAtom, localName, ${lowercaseNamespacePrefix}NamespaceURI), document);
 }
 
 Ref<$parameters{namespace}Element> $parameters{namespace}ElementFactory::createElement(const QualifiedName& name, Document& document$formElementArgumentForDefinition, bool createdByParser)
@@ -1089,29 +1104,36 @@ sub printFactoryHeaderFile
 
 namespace WebCore {
 
-    class Document;
-    class HTMLFormElement;
-    class QualifiedName;
+class Document;
+class HTMLFormElement;
+class QualifiedName;
 
-    class $parameters{namespace}Element;
+class $parameters{namespace}Element;
 
-    class $parameters{namespace}ElementFactory {
-    public:
+class $parameters{namespace}ElementFactory {
+public:
 END
 ;
 
-print F "        static RefPtr<$parameters{namespace}Element> createKnownElement(const AtomicString& localName, Document&";
-print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
-print F ", bool createdByParser = false);\n\n";
-print F "        static Ref<$parameters{namespace}Element> createElement(const AtomicString& localName, Document&";
+print F "static RefPtr<$parameters{namespace}Element> createKnownElement(const AtomicString&, Document&";
 print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
 print F ", bool createdByParser = false);\n";
-print F "        static Ref<$parameters{namespace}Element> createElement(const QualifiedName& localName, Document&";
+
+print F "static RefPtr<$parameters{namespace}Element> createKnownElement(const QualifiedName&, Document&";
+print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
+print F ", bool createdByParser = false);\n";
+
+print F "static Ref<$parameters{namespace}Element> createElement(const AtomicString&, Document&";
+print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
+print F ", bool createdByParser = false);\n";
+
+print F "static Ref<$parameters{namespace}Element> createElement(const QualifiedName&, Document&";
 print F ", HTMLFormElement* = nullptr" if $parameters{namespace} eq "HTML";
 print F ", bool createdByParser = false);\n";
 
 printf F<<END
-    };
+};
+
 }
 
 #endif // $parameters{namespace}ElementFactory_h
@@ -1151,22 +1173,22 @@ sub printWrapperFunctions
 
         if ($enabledTags{$tagName}{wrapperOnlyIfMediaIsAvailable}) {
             print F <<END
-static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
-        return CREATE_DOM_WRAPPER(globalObject, $parameters{fallbackInterfaceName}, element.get());
-    return CREATE_DOM_WRAPPER(globalObject, ${JSInterfaceName}, element.get());
+        return createWrapper<$parameters{fallbackInterfaceName}>(globalObject, WTFMove(element));
+    return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
 }
 
 END
             ;
         } elsif ($enabledTags{$tagName}{settingsConditional}) {
             print F <<END
-static JSDOMObject* create$enabledTags{$tagName}{interfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+static JSDOMObject* create$enabledTags{$tagName}{interfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (element->is$parameters{fallbackInterfaceName}())
-        return CREATE_DOM_WRAPPER(globalObject, $parameters{fallbackInterfaceName}, element.get());
-    return CREATE_DOM_WRAPPER(globalObject, ${JSInterfaceName}, element.get());
+        return createWrapper<$parameters{fallbackInterfaceName}>(globalObject, WTFMove(element));
+    return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
 }
 
 END
@@ -1174,22 +1196,22 @@ END
         } elsif ($enabledTags{$tagName}{runtimeConditional}) {
             my $runtimeConditional = $enabledTags{$tagName}{runtimeConditional};
             print F <<END
-static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     if (!RuntimeEnabledFeatures::sharedFeatures().${runtimeConditional}Enabled()) {
-        ASSERT(!element || element->is$parameters{fallbackInterfaceName}());
-        return CREATE_DOM_WRAPPER(globalObject, $parameters{fallbackJSInterfaceName}, element.get());
+        ASSERT(element->is$parameters{fallbackInterfaceName}());
+        return createWrapper<$parameters{fallbackJSInterfaceName}>(globalObject, WTFMove(element));
     }
 
-    return CREATE_DOM_WRAPPER(globalObject, ${JSInterfaceName}, element.get());
+    return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
 }
 END
     ;
         } else {
             print F <<END
-static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+static JSDOMObject* create${JSInterfaceName}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
-    return CREATE_DOM_WRAPPER(globalObject, ${JSInterfaceName}, element.get());
+    return createWrapper<${JSInterfaceName}>(globalObject, WTFMove(element));
 }
 
 END
@@ -1240,7 +1262,7 @@ namespace WebCore {
 
 using namespace $parameters{namespace}Names;
 
-typedef JSDOMObject* (*Create$parameters{namespace}ElementWrapperFunction)(JSDOMGlobalObject*, PassRefPtr<$parameters{namespace}Element>);
+typedef JSDOMObject* (*Create$parameters{namespace}ElementWrapperFunction)(JSDOMGlobalObject*, Ref<$parameters{namespace}Element>&&);
 
 END
 ;
@@ -1277,9 +1299,7 @@ END
             $ucTag = $enabledTags{$tag}{JSInterfaceName};
         }
 
-        # FIXME Remove unnecessary '&' from the following (print) line once we switch to a non-broken Visual Studio compiler.
-        # https://bugs.webkit.org/show_bug.cgi?id=121235:
-        print F "        { ${tag}Tag, &create${ucTag}Wrapper },\n";
+        print F "        { ${tag}Tag, create${ucTag}Wrapper },\n";
 
         if ($conditional) {
             print F "#endif\n";
@@ -1293,14 +1313,26 @@ END
         map.add(table[i].name.localName().impl(), table[i].function);
 }
 
-JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject* globalObject, PassRefPtr<$parameters{namespace}Element> element)
+JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject* globalObject, Ref<$parameters{namespace}Element>&& element)
 {
     static NeverDestroyed<HashMap<AtomicStringImpl*, Create$parameters{namespace}ElementWrapperFunction>> functions;
     if (functions.get().isEmpty())
         populate$parameters{namespace}WrapperMap(functions);
     if (auto function = functions.get().get(element->localName().impl()))
-        return function(globalObject, element);
-    return CREATE_DOM_WRAPPER(globalObject, $parameters{fallbackJSInterfaceName}, element.get());
+        return function(globalObject, WTFMove(element));
+END
+;
+
+    if ($parameters{customElementInterfaceName}) {
+        print F <<END
+    if (element->isCustomElementUpgradeCandidate())
+        return createWrapper<$parameters{customElementInterfaceName}>(globalObject, WTFMove(element));
+END
+;
+    }
+
+    print F <<END
+    return createWrapper<$parameters{fallbackJSInterfaceName}>(globalObject, WTFMove(element));
 }
 
 }
@@ -1335,7 +1367,7 @@ namespace WebCore {
     class JSDOMGlobalObject;
     class $parameters{namespace}Element;
 
-    JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject*, PassRefPtr<$parameters{namespace}Element>);
+    JSDOMObject* createJS$parameters{namespace}Wrapper(JSDOMGlobalObject*, Ref<$parameters{namespace}Element>&&);
 
 }
  

@@ -1,4 +1,4 @@
-set(WTF_LIBRARY_TYPE SHARED)
+set(WTF_LIBRARY_TYPE STATIC)
 
 find_library(COCOA_LIBRARY Cocoa)
 find_library(COREFOUNDATION_LIBRARY CoreFoundation)
@@ -11,9 +11,13 @@ list(APPEND WTF_LIBRARIES
 
 list(APPEND WTF_SOURCES
     AutodrainedPoolMac.mm
+    BlockObjCExceptions.mm
+    PlatformUserPreferredLanguagesMac.mm
     RunLoopTimerCF.cpp
     SchedulePairCF.cpp
     SchedulePairMac.mm
+
+    text/mac/TextBreakIteratorInternalICUMac.mm
 
     cf/RunLoopCF.cpp
 

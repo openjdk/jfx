@@ -27,8 +27,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PolicyCallback_h
-#define PolicyCallback_h
+#pragma once
 
 #include "FrameLoaderTypes.h"
 #include "NavigationAction.h"
@@ -41,18 +40,15 @@ namespace WebCore {
 
 class FormState;
 
-typedef std::function<void (const ResourceRequest&, PassRefPtr<FormState>, bool shouldContinue)> NavigationPolicyDecisionFunction;
-typedef std::function<void (const ResourceRequest&, PassRefPtr<FormState>, const String& frameName, const NavigationAction&, bool shouldContinue)> NewWindowPolicyDecisionFunction;
-typedef std::function<void (PolicyAction)> ContentPolicyDecisionFunction;
+using ContentPolicyDecisionFunction = std::function<void(PolicyAction)>;
+using NavigationPolicyDecisionFunction = std::function<void(const ResourceRequest&, FormState*, bool shouldContinue)>;
+using NewWindowPolicyDecisionFunction = std::function<void(const ResourceRequest&, FormState*, const String& frameName, const NavigationAction&, bool shouldContinue)>;
 
 class PolicyCallback {
 public:
-    PolicyCallback();
-    ~PolicyCallback();
-
     void clear();
-    void set(const ResourceRequest&, PassRefPtr<FormState>, NavigationPolicyDecisionFunction);
-    void set(const ResourceRequest&, PassRefPtr<FormState>, const String& frameName, const NavigationAction&, NewWindowPolicyDecisionFunction);
+    void set(const ResourceRequest&, FormState*, NavigationPolicyDecisionFunction);
+    void set(const ResourceRequest&, FormState*, const String& frameName, const NavigationAction&, NewWindowPolicyDecisionFunction);
     void set(ContentPolicyDecisionFunction);
 
     const ResourceRequest& request() const { return m_request; }
@@ -74,5 +70,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // PolicyCallback_h

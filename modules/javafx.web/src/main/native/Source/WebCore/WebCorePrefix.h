@@ -58,7 +58,11 @@
 #endif
 
 #undef WEBCORE_EXPORT
+#if PLATFORM(JAVA)
+#define WEBCORE_EXPORT
+#else
 #define WEBCORE_EXPORT WTF_EXPORT_DECLARATION
+#endif
 
 #else
 
@@ -100,7 +104,9 @@
 #include <sys/resource.h>
 #endif
 
+#if !PLATFORM(JAVA)
 #include <CoreFoundation/CoreFoundation.h>
+#endif
 
 #if OS(WINDOWS)
 #ifndef CF_IMPLICIT_BRIDGING_ENABLED
@@ -111,6 +117,7 @@
 #define CF_IMPLICIT_BRIDGING_DISABLED
 #endif
 
+#if !PLATFORM(JAVA)
 #include <CoreFoundation/CFBase.h>
 
 #ifndef CF_ENUM
@@ -126,6 +133,7 @@
 #define CF_ENUM_AVAILABLE(_mac, _ios)
 #endif
 #endif
+#endif
 
 #if PLATFORM(WIN_CAIRO)
 #include <ConditionalMacros.h>
@@ -133,8 +141,8 @@
 #else
 
 #if OS(WINDOWS)
-#if USE(CG)
 
+#if USE(CG)
 // FIXME <rdar://problem/8208868> Remove support for obsolete ColorSync API, CoreServices header in CoreGraphics
 // We can remove this once the new ColorSync APIs are available in an internal Safari SDK.
 #include <ColorSync/ColorSync.h>
@@ -143,13 +151,13 @@
 #define OBSOLETE_COLORSYNC_API
 #endif
 #endif
-#if USE(CFNETWORK)
-/* Windows doesn't include CFNetwork.h via CoreServices.h, so we do
-   it explicitly here to make Windows more consistent with Mac. */
+
+#if USE(CFURLCONNECTION)
 #include <CFNetwork/CFNetwork.h>
 // On Windows, dispatch.h needs to be included before certain CFNetwork headers.
 #include <dispatch/dispatch.h>
 #endif
+
 #include <windows.h>
 #else
 #if !PLATFORM(IOS)
@@ -163,7 +171,10 @@
 #if PLATFORM(IOS)
 #import <Foundation/Foundation.h>
 #else
+#if USE(APPKIT)
 #import <Cocoa/Cocoa.h>
+#import <wtf/mac/AppKitCompatibilityDeclarations.h>
+#endif
 #endif // PLATFORM(IOS)
 #endif
 

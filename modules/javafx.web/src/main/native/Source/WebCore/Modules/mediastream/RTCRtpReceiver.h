@@ -28,10 +28,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RTCRtpReceiver_h
-#define RTCRtpReceiver_h
+#pragma once
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(WEB_RTC)
 
 #include "RTCRtpSenderReceiverBase.h"
 
@@ -39,17 +38,20 @@ namespace WebCore {
 
 class RTCRtpReceiver : public RTCRtpSenderReceiverBase {
 public:
-    static Ref<RTCRtpReceiver> create(RefPtr<MediaStreamTrack>&& track)
+    static Ref<RTCRtpReceiver> create(Ref<MediaStreamTrack>&& track)
     {
         return adoptRef(*new RTCRtpReceiver(WTFMove(track)));
     }
 
+    bool isDispatched() const { return m_isDispatched; }
+    void setDispatched(bool isDispatched) { m_isDispatched = isDispatched; }
+
 private:
-    explicit RTCRtpReceiver(RefPtr<MediaStreamTrack>&&);
+    explicit RTCRtpReceiver(Ref<MediaStreamTrack>&&);
+
+    bool m_isDispatched { false };
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
-
-#endif // RTCRtpReceiver_h
+#endif // ENABLE(WEB_RTC)

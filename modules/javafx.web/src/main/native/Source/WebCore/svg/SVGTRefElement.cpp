@@ -24,7 +24,6 @@
 
 #include "EventListener.h"
 #include "EventNames.h"
-#include "ExceptionCodePlaceholder.h"
 #include "MutationEvent.h"
 #include "RenderSVGInline.h"
 #include "RenderSVGInlineText.h"
@@ -53,7 +52,7 @@ Ref<SVGTRefElement> SVGTRefElement::create(const QualifiedName& tagName, Documen
     return element;
 }
 
-class SVGTRefTargetEventListener : public EventListener {
+class SVGTRefTargetEventListener final : public EventListener {
 public:
     static Ref<SVGTRefTargetEventListener> create(SVGTRefElement& trefElement)
     {
@@ -72,8 +71,8 @@ public:
 private:
     explicit SVGTRefTargetEventListener(SVGTRefElement& trefElement);
 
-    virtual void handleEvent(ScriptExecutionContext*, Event*) override;
-    virtual bool operator==(const EventListener&) override;
+    void handleEvent(ScriptExecutionContext*, Event*) final;
+    bool operator==(const EventListener&) const final;
 
     SVGTRefElement& m_trefElement;
     RefPtr<Element> m_target;
@@ -90,10 +89,10 @@ void SVGTRefTargetEventListener::attach(RefPtr<Element>&& target)
 {
     ASSERT(!isAttached());
     ASSERT(target.get());
-    ASSERT(target->inDocument());
+    ASSERT(target->isConnected());
 
-    target->addEventListener(eventNames().DOMSubtreeModifiedEvent, this, false);
-    target->addEventListener(eventNames().DOMNodeRemovedFromDocumentEvent, this, false);
+    target->addEventListener(eventNames().DOMSubtreeModifiedEvent, *this, false);
+    target->addEventListener(eventNames().DOMNodeRemovedFromDocumentEvent, *this, false);
     m_target = WTFMove(target);
 }
 
@@ -102,12 +101,12 @@ void SVGTRefTargetEventListener::detach()
     if (!isAttached())
         return;
 
-    m_target->removeEventListener(eventNames().DOMSubtreeModifiedEvent, this, false);
-    m_target->removeEventListener(eventNames().DOMNodeRemovedFromDocumentEvent, this, false);
+    m_target->removeEventListener(eventNames().DOMSubtreeModifiedEvent, *this, false);
+    m_target->removeEventListener(eventNames().DOMNodeRemovedFromDocumentEvent, *this, false);
     m_target = nullptr;
 }
 
-bool SVGTRefTargetEventListener::operator==(const EventListener& listener)
+bool SVGTRefTargetEventListener::operator==(const EventListener& listener) const
 {
     if (const SVGTRefTargetEventListener* targetListener = SVGTRefTargetEventListener::cast(&listener))
         return &m_trefElement == &targetListener->m_trefElement;
@@ -146,10 +145,10 @@ void SVGTRefElement::updateReferencedText(Element* target)
     ASSERT(shadowRoot());
     ShadowRoot* root = shadowRoot();
     if (!root->firstChild())
-        root->appendChild(Text::create(document(), textContent), ASSERT_NO_EXCEPTION);
+        root->appendChild(Text::create(document(), textContent));
     else {
         ASSERT(root->firstChild()->isTextNode());
-        root->firstChild()->setTextContent(textContent, ASSERT_NO_EXCEPTION);
+        root->firstChild()->setTextContent(textContent);
     }
 }
 
@@ -163,9 +162,9 @@ void SVGTRefElement::detachTarget()
     ASSERT(shadowRoot());
     Node* container = shadowRoot()->firstChild();
     if (container)
-        container->setTextContent(emptyContent, IGNORE_EXCEPTION);
+        container->setTextContent(emptyContent);
 
-    if (!inDocument())
+    if (!isConnected())
         return;
 
     // Mark the referenced ID as pending.
@@ -194,7 +193,7 @@ void SVGTRefElement::svgAttributeChanged(const QualifiedName& attrName)
     SVGTextPositioningElement::svgAttributeChanged(attrName);
 }
 
-RenderPtr<RenderElement> SVGTRefElement::createElementRenderer(Ref<RenderStyle>&& style, const RenderTreePosition&)
+RenderPtr<RenderElement> SVGTRefElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     return createRenderer<RenderSVGInline>(*this, WTFMove(style));
 }
@@ -230,7 +229,7 @@ void SVGTRefElement::buildPendingResource()
     m_targetListener->detach();
 
     // If we're not yet in a document, this function will be called again from insertedInto().
-    if (!inDocument())
+    if (!isConnected())
         return;
 
     String id;
@@ -257,7 +256,7 @@ void SVGTRefElement::buildPendingResource()
 Node::InsertionNotificationRequest SVGTRefElement::insertedInto(ContainerNode& rootParent)
 {
     SVGElement::insertedInto(rootParent);
-    if (rootParent.inDocument())
+    if (rootParent.isConnected())
         return InsertionShouldCallFinishedInsertingSubtree;
     return InsertionDone;
 }
@@ -270,7 +269,7 @@ void SVGTRefElement::finishedInsertingSubtree()
 void SVGTRefElement::removedFrom(ContainerNode& rootParent)
 {
     SVGElement::removedFrom(rootParent);
-    if (rootParent.inDocument())
+    if (rootParent.isConnected())
         m_targetListener->detach();
 }
 

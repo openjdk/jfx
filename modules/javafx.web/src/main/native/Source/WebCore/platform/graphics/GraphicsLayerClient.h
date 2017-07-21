@@ -72,6 +72,7 @@ enum LayerTreeAsTextBehaviorFlags {
     LayerTreeAsTextIncludePaintingPhases        = 1 << 4,
     LayerTreeAsTextIncludeContentLayers         = 1 << 5,
     LayerTreeAsTextIncludePageOverlayLayers     = 1 << 6,
+    LayerTreeAsTextIncludeAcceleratesDrawing    = 1 << 7,
 };
 typedef unsigned LayerTreeAsTextBehavior;
 
@@ -120,7 +121,7 @@ public:
     virtual bool shouldAggressivelyRetainTiles(const GraphicsLayer*) const { return false; }
     virtual bool shouldTemporarilyRetainTileCohorts(const GraphicsLayer*) const { return true; }
 
-    virtual IntSize tileSize() const { return defaultTileSize(); }
+    virtual bool useGiantTiles() const { return false; }
 
     virtual bool needsPixelAligment() const { return false; }
 

@@ -20,8 +20,7 @@
  *
  */
 
-#ifndef HTMLCollection_h
-#define HTMLCollection_h
+#pragma once
 
 #include "CollectionIndexCache.h"
 #include "HTMLNames.h"
@@ -34,6 +33,7 @@ namespace WebCore {
 class Element;
 
 class CollectionNamedElementCache {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
     const Vector<Element*>* findElementsWithId(const AtomicString& id) const;
     const Vector<Element*>* findElementsWithName(const AtomicString& name) const;
@@ -66,14 +66,13 @@ public:
     virtual ~HTMLCollection();
 
     // DOM API
-    virtual Element* item(unsigned index) const override = 0; // Tighten return type from NodeList::item().
+    Element* item(unsigned index) const override = 0; // Tighten return type from NodeList::item().
     virtual Element* namedItem(const AtomicString& name) const = 0;
     const Vector<AtomicString>& supportedPropertyNames();
-    RefPtr<NodeList> tags(const String&);
 
     // Non-DOM API
     Vector<Ref<Element>> namedItems(const AtomicString& name) const;
-    virtual size_t memoryCost() const override;
+    size_t memoryCost() const override;
 
     bool isRootedAtDocument() const;
     NodeListInvalidationType invalidationType() const;
@@ -85,17 +84,15 @@ public:
 
     bool hasNamedElementCache() const;
 
-#if PLATFORM(JAVA) // TODO-java: or enable RTTI for dynamic_cast
+#if PLATFORM(JAVA) // FIXME-java: or enable RTTI for dynamic_cast
     virtual bool isHTMLOptionsCollection() const { return false; }
 #endif
-
-    bool wasDeletionStarted() { return m_wasDeletionStarted; }
 
 protected:
     HTMLCollection(ContainerNode& base, CollectionType);
 
     virtual void updateNamedElementCache() const;
-    Element* namedItemSlow(const AtomicString& name) const;
+    WEBCORE_EXPORT Element* namedItemSlow(const AtomicString& name) const;
 
     void setNamedItemCache(std::unique_ptr<CollectionNamedElementCache>) const;
     const CollectionNamedElementCache& namedItemCaches() const;
@@ -114,13 +111,11 @@ protected:
     const unsigned m_collectionType : 5;
     const unsigned m_invalidationType : 4;
     const unsigned m_rootType : 1;
-    // FIXME: This flag is here temporarily to help track down a possible lifetime issue (rdar://problem/24457478).
-    unsigned m_wasDeletionStarted : 1;
 };
 
 inline ContainerNode& HTMLCollection::rootNode() const
 {
-    if (isRootedAtDocument() && ownerNode().inDocument())
+    if (isRootedAtDocument() && ownerNode().isConnected())
         return ownerNode().document();
 
     return ownerNode();
@@ -196,7 +191,7 @@ inline CollectionType HTMLCollection::type() const
 
 inline ContainerNode& HTMLCollection::ownerNode() const
 {
-    return const_cast<ContainerNode&>(m_ownerNode.get());
+    return m_ownerNode;
 }
 
 inline Document& HTMLCollection::document() const
@@ -238,5 +233,3 @@ inline const CollectionNamedElementCache& HTMLCollection::namedItemCaches() cons
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ClassName) \
     static bool isType(const WebCore::HTMLCollection& collection) { return collection.type() == WebCore::Type; } \
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif // HTMLCollection_h

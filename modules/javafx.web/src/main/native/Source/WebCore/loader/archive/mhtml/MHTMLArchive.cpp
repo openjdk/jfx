@@ -101,18 +101,18 @@ MHTMLArchive::~MHTMLArchive()
     clearAllSubframeArchives();
 }
 
-PassRefPtr<MHTMLArchive> MHTMLArchive::create()
+Ref<MHTMLArchive> MHTMLArchive::create()
 {
-    return adoptRef(new MHTMLArchive);
+    return adoptRef(*new MHTMLArchive);
 }
 
-PassRefPtr<MHTMLArchive> MHTMLArchive::create(const URL& url, SharedBuffer* data)
+RefPtr<MHTMLArchive> MHTMLArchive::create(const URL& url, SharedBuffer& data)
 {
     // For security reasons we only load MHTML pages from local URLs.
-    if (!SchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol()))
+    if (!SchemeRegistry::shouldTreatURLSchemeAsLocal(url.protocol().toString()))
         return nullptr;
 
-    MHTMLParser parser(data);
+    MHTMLParser parser(&data);
     RefPtr<MHTMLArchive> mainArchive = parser.parseArchive();
     if (!mainArchive)
         return nullptr; // Invalid MHTML file.
@@ -122,19 +122,19 @@ PassRefPtr<MHTMLArchive> MHTMLArchive::create(const URL& url, SharedBuffer* data
         RefPtr<MHTMLArchive> archive = parser.frameAt(i);
         for (size_t j = 1; j < parser.frameCount(); ++j) {
             if (i != j)
-                archive->addSubframeArchive(parser.frameAt(j));
+                archive->addSubframeArchive(*parser.frameAt(j));
         }
         for (size_t j = 0; j < parser.subResourceCount(); ++j)
-            archive->addSubresource(parser.subResourceAt(j));
+            archive->addSubresource(*parser.subResourceAt(j));
     }
-    return mainArchive.release();
+    return mainArchive;
 }
 
-PassRefPtr<SharedBuffer> MHTMLArchive::generateMHTMLData(Page* page)
+RefPtr<SharedBuffer> MHTMLArchive::generateMHTMLData(Page* page)
 {
     Vector<PageSerializer::Resource> resources;
-    PageSerializer pageSerializer(&resources);
-    pageSerializer.serialize(page);
+    PageSerializer pageSerializer(resources);
+    pageSerializer.serialize(*page);
 
     String boundary = generateRandomBoundary();
     String endOfResourceBoundary = makeString("--", boundary, "\r\n");

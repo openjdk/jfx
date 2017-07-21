@@ -1,60 +1,79 @@
 /*
  * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
+
 #include "config.h"
 
-#if COMPILER(GCC)
+#if COMPILER(GCC_OR_CLANG)
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
-#include "BridgeUtils.h"
 #include "WebPage.h"
-#include <wtf/java/DbgUtils.h>
 
-#include "AdjustViewSizeOrNot.h"
-#include "CharacterData.h"
-#include "Chrome.h"
-#include "ChromeClientJava.h"
+#include <WebCore/LibWebRTCProvider.h>
+#include <WebCore/SocketProvider.h>
+#include <WebCore/EmptyClients.h>
+#include <WebCore/AdjustViewSizeOrNot.h>
+#include <WebCore/CharacterData.h>
+#include <WebCore/Chrome.h>
+#include <WebCore/ContextMenuController.h>
+#include <WebCore/Document.h>
+#include <WebCore/DragController.h>
+#include <WebCore/Editor.h>
+#include <WebCore/EventHandler.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/FocusController.h>
+#include <WebCore/Frame.h>
+#include <WebCore/MainFrame.h>
+#include <WebCore/HistoryItem.h>
+#include <WebCore/BackForwardController.h>
+#include <WebCore/FrameTree.h>
+#include <WebCore/FrameLoadRequest.h>
+#include <WebCore/FrameView.h>
+#include <WebCore/GCController.h>
+#include <WebCore/HTMLFormElement.h>
+#include <WebCore/IconController.h>
+#include <WebCore/InspectorController.h>
+#include <WebCore/KeyboardEvent.h>
+
+#include <WebCore/NodeTraversal.h>
+#include <WebCore/Page.h>
+#include <WebCore/PageGroup.h>
+#include <WebCore/RenderTreeAsText.h>
+#include <WebCore/RenderView.h>
+#include <WebCore/SecurityPolicy.h>
+#include <WebCore/Settings.h>
+#include <WebCore/ScriptController.h>
+#include <WebCore/Text.h>
+#include <WebCore/TextIterator.h>
+#include <WebCore/PageConfiguration.h>
+#include <JavaScriptCore/inspector/InspectorAgentBase.h>
+#include <JavaScriptCore/JSContextRefPrivate.h>
+#include <JavaScriptCore/JSContextRef.h>
+#include <JavaScriptCore/ScriptValue.h>
+#include <wtf/java/DbgUtils.h>
+#include <wtf/java/JavaRef.h>
+#include <wtf/RunLoop.h>
+
+#if USE(ACCELERATED_COMPOSITING)
+#include "TextureMapper.h"
+#include "TextureMapperLayer.h"
+#include "GraphicsLayerTextureMapper.h"
+#endif
+
+#include "Logging.h"
 #include "ContextMenu.h"
 #include "ContextMenuJava.h"
 #include "ContextMenuClientJava.h"
-#include "ContextMenuController.h"
-#include "Document.h"
 #include "DragClientJava.h"
-#include "DragController.h"
 #include "DragData.h"
-#include "Editor.h"
-#include "EditorClientJava.h"
-#include "EventHandler.h"
-#include "FloatRect.h"
-#include "FloatSize.h"
-#include "FocusController.h"
 #include "Font.h"
 #include "FontPlatformData.h"
-#include "Frame.h"
-#include "MainFrame.h"
-#include "HistoryItem.h"
-#include "BackForwardController.h"
-#include "BackForwardList.h"
-#include "FrameTree.h"
-#include "FrameLoadRequest.h"
 #include "FrameLoaderClientJava.h"
-#include "FrameView.h"
-#include "GCController.h"
+#include "EditorClientJava.h"
 #include "GraphicsContext.h"
-#include "HTMLFormElement.h"
-#include "IconController.h"
 #include "InspectorClientJava.h"
-#include "InspectorController.h"
-#include "inspector/InspectorAgentBase.h"
-#include "JSContextRefPrivate.h"
-#include "JSContextRef.h"
-#include "JavaEnv.h"
-#include <wtf/java/JavaRef.h>
-#include "Logging.h"
-#include "NodeTraversal.h"
-#include "Page.h"
-#include "PageGroup.h"
 #include "PlatformContextJava.h"
 #include "PlatformKeyboardEvent.h"
 #include "PlatformMouseEvent.h"
@@ -63,32 +82,23 @@
 #include "PlatformWheelEvent.h"
 #include "ProgressTrackerClientJava.h"
 #include "RenderThemeJava.h"
-#include "RenderTreeAsText.h"
-#include "RenderView.h"
 #include "ResourceRequest.h"
-#include "ScriptValue.h"
-#include "SecurityPolicy.h"
-#include "Settings.h"
-#include "ScriptController.h"
+#include "java/WebKitLogging.h"
+#include "java/BackForwardList.h"
 #include "Storage/WebDatabaseProvider.h"
 #include "Storage/StorageNamespaceImpl.h"
 #include "StorageNamespaceProvider.h"
-#include "Text.h"
-#include "TextIterator.h"
-#include "PageConfiguration.h"
-#if USE(ACCELERATED_COMPOSITING)
-#include "TextureMapper.h"
-#include "TextureMapperLayer.h"
-#include "GraphicsLayerTextureMapper.h"
-#endif
 #include "VisitedLinkStoreJava.h"
 #include "WebKitVersion.h" //generated
 #include "Widget.h"
 #include "WorkerThread.h"
 #include "testing/js/WebCoreTestSupport.h"
+#include "jsc/BridgeUtils.h"
+#include "ChromeClientJava.h"
 
 #include <wtf/text/WTFString.h>
 #include <wtf/Ref.h>
+#include <wtf/java/JavaEnv.h>
 #include <runtime/InitializeThreading.h>
 #include <runtime/JSObject.h>
 #include <runtime/JSCJSValue.h>
@@ -97,7 +107,7 @@
 #include <API/APICast.h>
 #include <API/JSStringRef.h>
 
-#include "runtime_root.h"
+#include <WebCore/runtime_root.h>
 #if OS(UNIX)
 #include <sys/utsname.h>
 #endif
@@ -131,7 +141,7 @@ WebPage::WebPage(std::unique_ptr<Page> page)
 {
     m_page = std::move(page);
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
-    if(!NotificationController::clientFrom(m_page.get())) {
+    if(!NotificationController::from(m_page.get())) {
         provideNotification(m_page.get(), NotificationClientJava::instance());
     }
 #endif
@@ -571,7 +581,7 @@ bool WebPage::keyEventDefault(const PlatformKeyboardEvent& event)
 
     switch (event.type()) {
     case PlatformKeyboardEvent::RawKeyDown:
-        if (event.modifiers() == PlatformKeyboardEvent::CtrlKey) {
+        if (event.modifiers() == PlatformKeyboardEvent::Modifier::CtrlKey) {
             switch (event.windowsVirtualKeyCode()) {
             // Match FF behavior in the sense that Ctrl+home/end are the only
             // Ctrl // key combinations which affect scrolling. Safari is buggy
@@ -585,8 +595,7 @@ bool WebPage::keyEventDefault(const PlatformKeyboardEvent& event)
             }
         }
         if (!event.shiftKey())
-            return scrollViewWithKeyboard(event.windowsVirtualKeyCode(),
-                                          event.modifiers());
+            return scrollViewWithKeyboard(event.windowsVirtualKeyCode(), event);
         break;
     default:
         break;
@@ -594,18 +603,18 @@ bool WebPage::keyEventDefault(const PlatformKeyboardEvent& event)
     return false;
 }
 
-bool WebPage::scrollViewWithKeyboard(int keyCode, int modifiers)
+bool WebPage::scrollViewWithKeyboard(int keyCode, const PlatformKeyboardEvent& event)
 {
     ScrollDirection scrollDirection;
     ScrollGranularity scrollGranularity;
 #if OS(DARWIN)
-    if (modifiers & PlatformKeyboardEvent::MetaKey) {
+    if (event.metaKey()) {
         if (keyCode == VKEY_UP)
             keyCode = VKEY_HOME;
         else if (keyCode == VKEY_DOWN)
             keyCode = VKEY_END;
     }
-    if (modifiers & PlatformKeyboardEvent::AltKey) {
+    if (event.altKey()) {
         if (keyCode == VKEY_UP)
             keyCode = VKEY_PRIOR;
         else if (keyCode == VKEY_DOWN)
@@ -819,19 +828,24 @@ private:
 
     RefPtr<StorageNamespace> createSessionStorageNamespace(Page&, unsigned quota) override
     {
-        return StorageNamespaceImpl::createSessionStorageNamespace(quota);
+        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota);
     }
 
     RefPtr<StorageNamespace> createLocalStorageNamespace(unsigned quota) override
     {
-        return StorageNamespaceImpl::getOrCreateLocalStorageNamespace(m_localStorageDatabasePath, quota);
+        return WebKit::StorageNamespaceImpl::getOrCreateLocalStorageNamespace(m_localStorageDatabasePath, quota);
     }
 
     RefPtr<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned quota) override
     {
         // FIXME: A smarter implementation would create a special namespace type instead of just piggy-backing off
         // SessionStorageNamespace here.
-        return StorageNamespaceImpl::createSessionStorageNamespace(quota);
+        return WebKit::StorageNamespaceImpl::createSessionStorageNamespace(quota);
+    }
+
+    RefPtr<StorageNamespace> createEphemeralLocalStorageNamespace(Page&, unsigned quota) override
+    {
+        return WebKit::StorageNamespaceImpl::createEphemeralLocalStorageNamespace(quota);
     }
 };
 
@@ -859,6 +873,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     // initialization flow.
     JSC::initializeThreading();
     WTF::initializeMainThread();
+    RunLoop::initializeMainRunLoop();
     // RT-17330: Allow local loads for substitute data, that is,
     // for content loaded with twkLoad
     WebCore::SecurityPolicy::setLocalLoadPolicy(
@@ -869,9 +884,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     VisitedLinkStoreJava::setShouldTrackVisitedLinks(true);
 
 #if !LOG_DISABLED
-    initializeLoggingChannelsIfNecessary();
+    WebKitInitializeLogChannelsIfNecessary();
 #endif
-    PlatformStrategiesJava::initialize();
+    WebCore::PlatformStrategiesJava::initialize();
 
     static std::once_flag initializeJSCOptions;
     std::call_once(initializeJSCOptions, [] {
@@ -885,11 +900,14 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     //utaTODO: history agent implementation
     // TODO-java: PageClients -> PageConfiguration
 
-    PageConfiguration pc;
+    PageConfiguration pc {
+        makeUniqueRef<EditorClientJava>(jlself),
+        SocketProvider::create(),
+        makeUniqueRef<LibWebRTCProvider>()
+    };
     fillWithEmptyClients(pc);
     pc.chromeClient = new ChromeClientJava(jlself);
     pc.contextMenuClient = new ContextMenuClientJava(jlself);
-    pc.editorClient = new EditorClientJava(jlself);
     pc.dragClient = new DragClientJava(jlself);
     pc.inspectorClient = new InspectorClientJava(jlself);
     pc.databaseProvider = &WebDatabaseProvider::singleton();
@@ -899,9 +917,9 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     pc.loaderClientForMainFrame = new FrameLoaderClientJava(jlself);
     pc.progressTrackerClient = new ProgressTrackerClientJava(jlself);
 
- //   pc.backForwardClient = BackForwardListImpl::create(NULL);
+    pc.backForwardClient = BackForwardList::create();
 
-    return ptr_to_jlong(new WebPage(std::unique_ptr<Page>(new Page(pc))));
+    return ptr_to_jlong(new WebPage(std::unique_ptr<Page>(new Page(WTFMove(pc)))));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
@@ -932,7 +950,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setSansSerifFontFamily("SansSerif");
     settings.setFixedFontFamily("Monospaced");
 //    settings->setShowsURLsInToolTips(true);
-    RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled(true);
     page->setDeviceScaleFactor(devicePixelScale);
 
     // dynamic_cast<FrameLoaderClientJava*>(&page->mainFrame().loader().client())->setFrame(&page->mainFrame());
@@ -1151,7 +1168,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
         ResourceRequest(emptyUrl),
         ShouldOpenExternalURLsPolicy::ShouldNotAllow, // TODO-java: recheck policy value
         SubstituteData(
-            buffer,
+            WTFMove(buffer),
             URL(),
             response,
             SubstituteData::SessionHistoryVisibility::Visible) // TODO-java: or Hidden?
@@ -1311,8 +1328,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setFixedFontFamily(nativePropertyValue);
     } else if (nativePropertyName == "WebKitShowsURLsInToolTips") {
         settings.setShowsURLsInToolTips(nativePropertyValue.toInt());
-    } else if (nativePropertyName == "WebKitCSSRegionsEnabled") {
-        RuntimeEnabledFeatures::sharedFeatures().setCSSRegionsEnabled(nativePropertyValue.toInt());
     }
 }
 
@@ -1609,12 +1624,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkProcessFocusEvent
                 // comment out the following line to get focus to the last
                 // focused node instead of the first focusable one
                 focusedFrame->document()->setFocusedElement(0);
-                focusController.advanceFocus(FocusDirectionForward, 0);
+                focusController.advanceFocus(FocusDirectionForward, KeyboardEvent::createForDummy());
             } else if (direction == com_sun_webkit_event_WCFocusEvent_BACKWARD) {
                 // comment out the following line to get focus to the last
                 // focused node instead of the last focusable one
                 focusedFrame->document()->setFocusedElement(0);
-                focusController.advanceFocus(FocusDirectionBackward, 0);
+                focusController.advanceFocus(FocusDirectionBackward, KeyboardEvent::createForDummy());
             }
             break;
         case com_sun_webkit_event_WCFocusEvent_FOCUS_LOST:
@@ -1669,7 +1684,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
-                                                       timestamp, ForceAtClick); // TODO-java: handle force?
+                                                       timestamp, ForceAtClick, NoTap); // TODO-java: handle force?
     switch (id) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
         //frame->focusWindow();
@@ -1809,7 +1824,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessCaretPositionCh
 
     ASSERT(frame);
 
-    RefPtr<Text> text = frame->editor().compositionNode();
+    Text* text = frame->editor().compositionNode();
     if (!text) {
         return JNI_FALSE;
     }
@@ -2075,7 +2090,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
                 : NoButton,
             PlatformEvent::MouseMoved,
             0,
-            false, false, false, false, 0.0, ForceAtClick); // TODO-java: handle force?
+            false, false, false, false, 0.0, ForceAtClick, NoTap); // TODO-java: handle force?
         switch(actionId){
         case com_sun_webkit_WebPage_DND_SRC_EXIT:
         case com_sun_webkit_WebPage_DND_SRC_ENTER:

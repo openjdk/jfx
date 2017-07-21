@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SpeechSynthesis_h
-#define SpeechSynthesis_h
+#pragma once
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
@@ -34,9 +33,7 @@
 #include "SpeechSynthesisUtterance.h"
 #include "SpeechSynthesisVoice.h"
 #include <wtf/Deque.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -51,12 +48,12 @@ public:
     bool speaking() const;
     bool paused() const;
 
-    void speak(SpeechSynthesisUtterance*);
+    void speak(SpeechSynthesisUtterance&);
     void cancel();
     void pause();
     void resume();
 
-    const Vector<RefPtr<SpeechSynthesisVoice>>& getVoices();
+    const Vector<Ref<SpeechSynthesisVoice>>& getVoices();
 
     // Used in testing to use a mock platform synthesizer
     WEBCORE_EXPORT void setPlatformSynthesizer(std::unique_ptr<PlatformSpeechSynthesizer>);
@@ -65,17 +62,17 @@ private:
     SpeechSynthesis();
 
     // PlatformSpeechSynthesizerClient override methods.
-    virtual void voicesDidChange() override;
-    virtual void didStartSpeaking(PassRefPtr<PlatformSpeechSynthesisUtterance>) override;
-    virtual void didPauseSpeaking(PassRefPtr<PlatformSpeechSynthesisUtterance>) override;
-    virtual void didResumeSpeaking(PassRefPtr<PlatformSpeechSynthesisUtterance>) override;
-    virtual void didFinishSpeaking(PassRefPtr<PlatformSpeechSynthesisUtterance>) override;
-    virtual void speakingErrorOccurred(PassRefPtr<PlatformSpeechSynthesisUtterance>) override;
-    virtual void boundaryEventOccurred(PassRefPtr<PlatformSpeechSynthesisUtterance>, SpeechBoundary, unsigned charIndex) override;
+    void voicesDidChange() override;
+    void didStartSpeaking(PlatformSpeechSynthesisUtterance&) override;
+    void didPauseSpeaking(PlatformSpeechSynthesisUtterance&) override;
+    void didResumeSpeaking(PlatformSpeechSynthesisUtterance&) override;
+    void didFinishSpeaking(PlatformSpeechSynthesisUtterance&) override;
+    void speakingErrorOccurred(PlatformSpeechSynthesisUtterance&) override;
+    void boundaryEventOccurred(PlatformSpeechSynthesisUtterance&, SpeechBoundary, unsigned charIndex) override;
 
-    void startSpeakingImmediately(SpeechSynthesisUtterance*);
-    void handleSpeakingCompleted(SpeechSynthesisUtterance*, bool errorOccurred);
-    void fireEvent(const AtomicString& type, SpeechSynthesisUtterance*, unsigned long charIndex, const String& name);
+    void startSpeakingImmediately(SpeechSynthesisUtterance&);
+    void handleSpeakingCompleted(SpeechSynthesisUtterance&, bool errorOccurred);
+    void fireEvent(const AtomicString& type, SpeechSynthesisUtterance&, unsigned long charIndex, const String& name);
 
 #if PLATFORM(IOS)
     // Restrictions to change default behaviors.
@@ -89,9 +86,9 @@ private:
     void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
 #endif
     std::unique_ptr<PlatformSpeechSynthesizer> m_platformSpeechSynthesizer;
-    Vector<RefPtr<SpeechSynthesisVoice>> m_voiceList;
+    Vector<Ref<SpeechSynthesisVoice>> m_voiceList;
     SpeechSynthesisUtterance* m_currentSpeechUtterance;
-    Deque<RefPtr<SpeechSynthesisUtterance>> m_utteranceQueue;
+    Deque<Ref<SpeechSynthesisUtterance>> m_utteranceQueue;
     bool m_isPaused;
 #if PLATFORM(IOS)
     BehaviorRestrictions m_restrictions;
@@ -101,5 +98,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)
-
-#endif // SpeechSynthesisEvent_h

@@ -57,31 +57,7 @@ bool Arg::isStackMemory() const
 
 bool Arg::isRepresentableAs(Width width, Signedness signedness) const
 {
-    switch (signedness) {
-    case Signed:
-        switch (width) {
-        case Width8:
-            return isRepresentableAs<int8_t>();
-        case Width16:
-            return isRepresentableAs<int16_t>();
-        case Width32:
-            return isRepresentableAs<int32_t>();
-        case Width64:
-            return isRepresentableAs<int64_t>();
-        }
-    case Unsigned:
-        switch (width) {
-        case Width8:
-            return isRepresentableAs<uint8_t>();
-        case Width16:
-            return isRepresentableAs<uint16_t>();
-        case Width32:
-            return isRepresentableAs<uint32_t>();
-        case Width64:
-            return isRepresentableAs<uint64_t>();
-        }
-    }
-    ASSERT_NOT_REACHED();
+    return isRepresentableAs(width, signedness, value());
 }
 
 bool Arg::usesTmp(Air::Tmp tmp) const
@@ -107,6 +83,50 @@ bool Arg::isCompatibleType(const Arg& other) const
     if (other.hasType())
         return isType(other.type());
     return true;
+}
+
+unsigned Arg::jsHash() const
+{
+    unsigned result = static_cast<unsigned>(m_kind);
+
+    switch (m_kind) {
+    case Invalid:
+    case Special:
+        break;
+    case Tmp:
+        result += m_base.internalValue();
+        break;
+    case Imm:
+    case BitImm:
+    case CallArg:
+    case RelCond:
+    case ResCond:
+    case DoubleCond:
+    case WidthArg:
+        result += static_cast<unsigned>(m_offset);
+        break;
+    case BigImm:
+    case BitImm64:
+        result += static_cast<unsigned>(m_offset);
+        result += static_cast<unsigned>(m_offset >> 32);
+        break;
+    case Addr:
+        result += m_offset;
+        result += m_base.internalValue();
+        break;
+    case Index:
+        result += static_cast<unsigned>(m_offset);
+        result += m_scale;
+        result += m_base.internalValue();
+        result += m_index.internalValue();
+        break;
+    case Stack:
+        result += static_cast<unsigned>(m_scale);
+        result += stackSlot()->index();
+        break;
+    }
+
+    return result;
 }
 
 void Arg::dump(PrintStream& out) const

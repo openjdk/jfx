@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AirInstInlines_h
-#define AirInstInlines_h
+#pragma once
 
 #if ENABLE(B3_JIT)
 
@@ -36,76 +35,24 @@
 
 namespace JSC { namespace B3 { namespace Air {
 
-template<typename T> struct ForEach;
-template<> struct ForEach<Tmp> {
-    template<typename Functor>
-    static void forEach(Inst& inst, const Functor& functor)
-    {
-        inst.forEachTmp(functor);
-    }
-};
-
-template<> struct ForEach<Arg> {
-    template<typename Functor>
-    static void forEach(Inst& inst, const Functor& functor)
-    {
-        inst.forEachArg(functor);
-    }
-};
-
-template<> struct ForEach<StackSlot*> {
-    template<typename Functor>
-    static void forEach(Inst& inst, const Functor& functor)
-    {
-        inst.forEachArg(
-            [&] (Arg& arg, Arg::Role role, Arg::Type type, Arg::Width width) {
-                if (!arg.isStack())
-                    return;
-                StackSlot* stackSlot = arg.stackSlot();
-
-                // FIXME: This is way too optimistic about the meaning of "Def". It gets lucky for
-                // now because our only use of "Anonymous" stack slots happens to want the optimistic
-                // semantics. We could fix this by just changing the comments that describe the
-                // semantics of "Anonymous".
-                // https://bugs.webkit.org/show_bug.cgi?id=151128
-
-                functor(stackSlot, role, type, width);
-                arg = Arg::stack(stackSlot, arg.offset());
-            });
-    }
-};
-
-template<> struct ForEach<Reg> {
-    template<typename Functor>
-    static void forEach(Inst& inst, const Functor& functor)
-    {
-        inst.forEachTmp(
-            [&] (Tmp& tmp, Arg::Role role, Arg::Type type, Arg::Width width) {
-                if (!tmp.isReg())
-                    return;
-
-                Reg reg = tmp.reg();
-                functor(reg, role, type, width);
-                tmp = Tmp(reg);
-            });
-    }
-};
-
 template<typename Thing, typename Functor>
 void Inst::forEach(const Functor& functor)
 {
-    ForEach<Thing>::forEach(*this, functor);
+    forEachArg(
+        [&] (Arg& arg, Arg::Role role, Arg::Type type, Arg::Width width) {
+            arg.forEach<Thing>(role, type, width, functor);
+        });
 }
 
-inline const RegisterSet& Inst::extraClobberedRegs()
+inline RegisterSet Inst::extraClobberedRegs()
 {
-    ASSERT(opcode == Patch);
+    ASSERT(kind.opcode == Patch);
     return args[0].special()->extraClobberedRegs(*this);
 }
 
-inline const RegisterSet& Inst::extraEarlyClobberedRegs()
+inline RegisterSet Inst::extraEarlyClobberedRegs()
 {
-    ASSERT(opcode == Patch);
+    ASSERT(kind.opcode == Patch);
     return args[0].special()->extraEarlyClobberedRegs(*this);
 }
 
@@ -142,12 +89,12 @@ inline void Inst::forEachDefWithExtraClobberedRegs(
         functor(Thing(reg), regDefRole, type, Arg::conservativeWidth(type));
     };
 
-    if (prevInst && prevInst->opcode == Patch) {
+    if (prevInst && prevInst->kind.opcode == Patch) {
         regDefRole = Arg::Def;
         prevInst->extraClobberedRegs().forEach(reportReg);
     }
 
-    if (nextInst && nextInst->opcode == Patch) {
+    if (nextInst && nextInst->kind.opcode == Patch) {
         regDefRole = Arg::EarlyDef;
         nextInst->extraEarlyClobberedRegs().forEach(reportReg);
     }
@@ -155,7 +102,7 @@ inline void Inst::forEachDefWithExtraClobberedRegs(
 
 inline void Inst::reportUsedRegisters(const RegisterSet& usedRegisters)
 {
-    ASSERT(opcode == Patch);
+    ASSERT(kind.opcode == Patch);
     args[0].special()->reportUsedRegisters(*this, usedRegisters);
 }
 
@@ -164,12 +111,12 @@ inline bool Inst::admitsStack(Arg& arg)
     return admitsStack(&arg - &args[0]);
 }
 
-inline Optional<unsigned> Inst::shouldTryAliasingDef()
+inline std::optional<unsigned> Inst::shouldTryAliasingDef()
 {
     if (!isX86())
-        return Nullopt;
+        return std::nullopt;
 
-    switch (opcode) {
+    switch (kind.opcode) {
     case Add32:
     case Add64:
     case And32:
@@ -180,14 +127,23 @@ inline Optional<unsigned> Inst::shouldTryAliasingDef()
     case Or64:
     case Xor32:
     case Xor64:
-    case AddDouble:
-    case AddFloat:
     case AndFloat:
     case AndDouble:
-    case MulDouble:
-    case MulFloat:
+    case OrFloat:
+    case OrDouble:
     case XorDouble:
     case XorFloat:
+        if (args.size() == 3)
+            return 2;
+        break;
+    case AddDouble:
+    case AddFloat:
+    case MulDouble:
+    case MulFloat:
+#if CPU(X86) || CPU(X86_64)
+        if (MacroAssembler::supportsAVX())
+            return std::nullopt;
+#endif
         if (args.size() == 3)
             return 2;
         break;
@@ -217,7 +173,7 @@ inline Optional<unsigned> Inst::shouldTryAliasingDef()
     default:
         break;
     }
-    return Nullopt;
+    return std::nullopt;
 }
 
 inline bool isShiftValid(const Inst& inst)
@@ -260,6 +216,26 @@ inline bool isUrshift64Valid(const Inst& inst)
     return isShiftValid(inst);
 }
 
+inline bool isRotateRight32Valid(const Inst& inst)
+{
+    return isShiftValid(inst);
+}
+
+inline bool isRotateLeft32Valid(const Inst& inst)
+{
+    return isShiftValid(inst);
+}
+
+inline bool isRotateRight64Valid(const Inst& inst)
+{
+    return isShiftValid(inst);
+}
+
+inline bool isRotateLeft64Valid(const Inst& inst)
+{
+    return isShiftValid(inst);
+}
+
 inline bool isX86DivHelperValid(const Inst& inst)
 {
 #if CPU(X86) || CPU(X86_64)
@@ -286,7 +262,17 @@ inline bool isX86Div32Valid(const Inst& inst)
     return isX86DivHelperValid(inst);
 }
 
+inline bool isX86UDiv32Valid(const Inst& inst)
+{
+    return isX86DivHelperValid(inst);
+}
+
 inline bool isX86Div64Valid(const Inst& inst)
+{
+    return isX86DivHelperValid(inst);
+}
+
+inline bool isX86UDiv64Valid(const Inst& inst)
 {
     return isX86DivHelperValid(inst);
 }
@@ -294,6 +280,3 @@ inline bool isX86Div64Valid(const Inst& inst)
 } } } // namespace JSC::B3::Air
 
 #endif // ENABLE(B3_JIT)
-
-#endif // AirInstInlines_h
-

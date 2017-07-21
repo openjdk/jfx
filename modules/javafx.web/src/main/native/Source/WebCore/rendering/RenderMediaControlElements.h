@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RenderMediaControlElements_h
-#define RenderMediaControlElements_h
+#pragma once
 
 #if ENABLE(VIDEO)
 
@@ -38,20 +37,20 @@ namespace WebCore {
 
 class RenderMediaVolumeSliderContainer final : public RenderBlockFlow {
 public:
-    RenderMediaVolumeSliderContainer(Element&, Ref<RenderStyle>&&);
+    RenderMediaVolumeSliderContainer(Element&, RenderStyle&&);
 
 private:
-    virtual void layout() override;
+    void layout() override;
 };
 
 // ----------------------------
 
 class RenderMediaControlTimelineContainer final : public RenderFlexibleBox {
 public:
-    RenderMediaControlTimelineContainer(Element&, Ref<RenderStyle>&&);
+    RenderMediaControlTimelineContainer(Element&, RenderStyle&&);
 
 private:
-    virtual void layout() override;
+    void layout() override;
     bool isFlexibleBoxImpl() const override { return true; }
 };
 
@@ -61,10 +60,10 @@ private:
 
 class RenderTextTrackContainerElement final : public RenderBlockFlow {
 public:
-    RenderTextTrackContainerElement(Element&, Ref<RenderStyle>&&);
+    RenderTextTrackContainerElement(Element&, RenderStyle&&);
 
 private:
-    virtual void layout() override;
+    void layout() override;
 };
 
 #endif // ENABLE(VIDEO_TRACK)
@@ -72,6 +71,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(VIDEO)
-
-#endif // RenderMediaControlElements_h
-

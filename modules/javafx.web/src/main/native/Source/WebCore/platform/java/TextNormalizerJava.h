@@ -1,8 +1,8 @@
 /*
  * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef TextNormalizerJava_h
-#define TextNormalizerJava_h
+
+#pragma once
 
 #include <wtf/text/WTFString.h>
 
@@ -21,7 +21,6 @@ namespace TextNormalizer {
 
     String normalize(const UChar* data, int length, Form form);
 };
-}
+} // namespace WebCore
 
 #undef JNI_EXPAND
-#endif

@@ -28,6 +28,7 @@
 
 #if HAVE(ACCESSIBILITY) && PLATFORM(IOS)
 
+#import "AccessibilityAttachment.h"
 #import "AccessibilityRenderObject.h"
 #import "AccessibilityScrollView.h"
 #import "AccessibilityTable.h"
@@ -48,7 +49,7 @@
 #import "Page.h"
 #import "Range.h"
 #import "RenderView.h"
-#import "RuntimeApplicationChecksIOS.h"
+#import "RuntimeApplicationChecks.h"
 #import "SVGNames.h"
 #import "SVGElement.h"
 #import "TextIterator.h"
@@ -59,6 +60,10 @@
 #import "VisibleUnits.h"
 
 #import <CoreText/CoreText.h>
+
+enum {
+    NSAttachmentCharacter = 0xfffc    /* To denote attachments. */
+};
 
 @interface NSObject (AccessibilityPrivate)
 - (void)_accessibilityUnregister;
@@ -105,6 +110,7 @@ static NSString * const UIAccessibilityTokenBold = @"UIAccessibilityTokenBold";
 static NSString * const UIAccessibilityTokenItalic = @"UIAccessibilityTokenItalic";
 static NSString * const UIAccessibilityTokenUnderline = @"UIAccessibilityTokenUnderline";
 static NSString * const UIAccessibilityTokenLanguage = @"UIAccessibilityTokenLanguage";
+static NSString * const UIAccessibilityTokenAttachment = @"UIAccessibilityTokenAttachment";
 
 static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityObjectWrapper *wrapper)
 {
@@ -320,6 +326,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
 - (uint64_t)_axContainedByFieldsetTrait { return (1 << 22); }
 - (uint64_t)_axSearchFieldTrait { return (1 << 23); }
 - (uint64_t)_axTextAreaTrait { return (1 << 24); }
+- (uint64_t)_axUpdatesFrequentlyTrait { return (1 << 25); }
 
 - (BOOL)accessibilityCanFuzzyHitTest
 {
@@ -495,16 +502,28 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     return m_object->language();
 }
 
+- (BOOL)accessibilityIsDialog
+{
+    if (![self _prepareAccessibilityCall])
+        return NO;
+
+    AccessibilityRole roleValue = m_object->roleValue();
+    return roleValue == ApplicationDialogRole || roleValue == ApplicationAlertDialogRole;
+}
+
 - (BOOL)_accessibilityIsLandmarkRole:(AccessibilityRole)role
 {
     switch (role) {
-    case DocumentRegionRole:
-    case LandmarkApplicationRole:
+    case DocumentRole:
+    case DocumentArticleRole:
+    case DocumentNoteRole:
+    case FooterRole:
     case LandmarkBannerRole:
     case LandmarkComplementaryRole:
     case LandmarkContentInfoRole:
     case LandmarkMainRole:
     case LandmarkNavigationRole:
+    case LandmarkRegionRole:
     case LandmarkSearchRole:
         return YES;
     default:
@@ -512,45 +531,66 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
     }
 }
 
+- (AccessibilityObjectWrapper*)_accessibilityTreeAncestor
+{
+    auto matchFunc = [] (const AccessibilityObject& object) {
+        AccessibilityRole role = object.roleValue();
+        return role == TreeRole;
+    };
+    
+    if (const AccessibilityObject* parent = AccessibilityObject::matchedParent(*m_object, false, matchFunc))
+        return parent->wrapper();
+    return nil;
+}
+
 - (AccessibilityObjectWrapper*)_accessibilityListAncestor
 {
-    for (AccessibilityObject* parent = m_object->parentObject(); parent != nil; parent = parent->parentObject()) {
-        AccessibilityRole role = parent->roleValue();
-        if (role == ListRole || role == ListBoxRole)
-            return parent->wrapper();
-    }
+    auto matchFunc = [] (const AccessibilityObject& object) {
+        AccessibilityRole role = object.roleValue();
+        return role == ListRole || role == ListBoxRole;
+    };
 
+    if (const AccessibilityObject* parent = AccessibilityObject::matchedParent(*m_object, false, matchFunc))
+        return parent->wrapper();
     return nil;
 }
 
 - (AccessibilityObjectWrapper*)_accessibilityLandmarkAncestor
 {
-    for (AccessibilityObject* parent = m_object->parentObject(); parent != nil; parent = parent->parentObject()) {
-        if ([self _accessibilityIsLandmarkRole:parent->roleValue()])
-            return parent->wrapper();
-    }
-
+    if (const AccessibilityObject* parent = AccessibilityObject::matchedParent(*m_object, false, [self] (const AccessibilityObject& object) {
+        return [self _accessibilityIsLandmarkRole:object.roleValue()];
+    }))
+        return parent->wrapper();
     return nil;
 }
 
 - (AccessibilityObjectWrapper*)_accessibilityTableAncestor
 {
-    for (AccessibilityObject* parent = m_object->parentObject(); parent != nil; parent = parent->parentObject()) {
-        if (parent->roleValue() == TableRole || parent->roleValue() == GridRole)
-            return parent->wrapper();
-    }
 
+    if (const AccessibilityObject* parent = AccessibilityObject::matchedParent(*m_object, false, [] (const AccessibilityObject& object) {
+        return object.roleValue() == TableRole || object.roleValue() == GridRole;
+    }))
+        return parent->wrapper();
     return nil;
 }
 
 - (AccessibilityObjectWrapper*)_accessibilityFieldsetAncestor
 {
-    for (AccessibilityObject* parent = m_object->parentObject(); parent != nil; parent = parent->parentObject()) {
-        if (parent->isFieldset())
-            return parent->wrapper();
-    }
-    
+    if (const AccessibilityObject* parent = AccessibilityObject::matchedParent(*m_object, false, [] (const AccessibilityObject& object) {
+        return object.isFieldset();
+    }))
+        return parent->wrapper();
     return nil;
+}
+
+- (AccessibilityObjectWrapper*)_accessibilityFrameAncestor
+{
+    auto* parent = AccessibilityObject::matchedParent(*m_object, false, [] (const AccessibilityObject& object) {
+        return object.isWebArea();
+    });
+    if (!parent)
+        return nil;
+    return parent->wrapper();
 }
 
 - (uint64_t)_accessibilityTraitsFromAncestors
@@ -579,8 +619,15 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
                 // to the heading level. If it was a static text element, we need to store
                 // the value as the label, because the heading level needs to the value.
                 AccessibilityObjectWrapper* wrapper = parent->wrapper();
-                if (role == StaticTextRole)
-                    [self setAccessibilityLabel:m_object->stringValue()];
+                if (role == StaticTextRole) {
+                    // We should only set the text value as the label when there's no
+                    // alternate text on the heading parent.
+                    NSString *headingLabel = [wrapper baseAccessibilityDescription];
+                    if (![headingLabel length])
+                        [self setAccessibilityLabel:m_object->stringValue()];
+                    else
+                        [self setAccessibilityLabel:headingLabel];
+                }
                 [self setAccessibilityValue:[wrapper accessibilityValue]];
                 break;
             }
@@ -672,14 +719,19 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
             break;
         case MenuButtonRole:
         case MenuItemRole:
+            traits |= [self _axMenuItemTrait];
+            break;
         case MenuItemCheckboxRole:
         case MenuItemRadioRole:
-            traits |= [self _axMenuItemTrait];
+            traits |= ([self _axMenuItemTrait] | [self _axToggleTrait]);
             break;
         default:
             break;
     }
 
+    if (m_object->isAttachmentElement())
+        traits |= [self _axUpdatesFrequentlyTrait];
+    
     if (m_object->isSelected())
         traits |= [self _axSelectedTrait];
 
@@ -805,7 +857,6 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
         case DocumentRole:
         case DocumentArticleRole:
         case DocumentNoteRole:
-        case DocumentRegionRole:
         case DrawerRole:
         case EditableTextRole:
         case FooterRole:
@@ -817,17 +868,18 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
         case IgnoredRole:
         case InlineRole:
         case LabelRole:
-        case LandmarkApplicationRole:
         case LandmarkBannerRole:
         case LandmarkComplementaryRole:
         case LandmarkContentInfoRole:
         case LandmarkMainRole:
         case LandmarkNavigationRole:
+        case LandmarkRegionRole:
         case LandmarkSearchRole:
         case LegendRole:
         case ListRole:
         case ListBoxRole:
         case ListItemRole:
+        case MarkRole:
         case MathElementRole:
         case MatteRole:
         case MenuRole:
@@ -857,6 +909,9 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
         case SummaryRole:
         case SystemWideRole:
         case SVGRootRole:
+        case SVGTextPathRole:
+        case SVGTextRole:
+        case SVGTSpanRole:
         case TabGroupRole:
         case TabListRole:
         case TabPanelRole:
@@ -869,6 +924,7 @@ static AccessibilityObjectWrapper* AccessibilityUnignoredAncestor(AccessibilityO
         case UnknownRole:
         case UserInterfaceTooltipRole:
         case VideoRole:
+        case WebApplicationRole:
         case WebAreaRole:
         case WindowRole:
         case RowGroupRole:
@@ -917,6 +973,14 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     [result appendString:string];
 }
 
+- (BOOL)_accessibilityHasTouchEventListener
+{
+    if (![self _prepareAccessibilityCall])
+        return NO;
+    
+    return m_object->hasTouchEventListener();
+}
+
 - (BOOL)_accessibilityValueIsAutofilled
 {
     if (![self _prepareAccessibilityCall])
@@ -956,6 +1020,14 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     NSString *axDescription = [self baseAccessibilityDescription];
     NSString *landmarkDescription = [self ariaLandmarkRoleDescription];
 
+    // We should expose the value of the input type date or time through AXValue instead of AXTitle.
+    if (m_object->isInputTypePopupButton() && [axTitle isEqualToString:[self accessibilityValue]])
+        axTitle = nil;
+
+    // Footer is not considered a landmark, but we want the role description.
+    if (m_object->roleValue() == FooterRole)
+        landmarkDescription = AXFooterRoleDescriptionText();
+
     NSMutableString *result = [NSMutableString string];
     if (m_object->roleValue() == HorizontalRuleRole)
         appendStringToResult(result, AXHorizontalRuleDescriptionText());
@@ -975,27 +1047,21 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
 - (AccessibilityTableCell*)tableCellParent
 {
     // Find if this element is in a table cell.
-    AccessibilityObject* cell = nullptr;
-    for (cell = m_object; cell && !cell->isTableCell(); cell = cell->parentObject())
-    { }
-
-    if (!cell)
-        return nil;
-
-    return static_cast<AccessibilityTableCell*>(cell);
+    if (AccessibilityObject* parent = const_cast<AccessibilityObject*>(AccessibilityObject::matchedParent(*m_object, true, [] (const AccessibilityObject& object) {
+        return object.isTableCell();
+    })))
+        return static_cast<AccessibilityTableCell*>(parent);
+    return nil;
 }
 
 - (AccessibilityTable*)tableParent
 {
     // Find if the parent table for the table cell.
-    AccessibilityObject* parentTable = nullptr;
-    for (parentTable = m_object; parentTable && !(is<AccessibilityTable>(*parentTable) && downcast<AccessibilityTable>(*parentTable).isExposableThroughAccessibility()); parentTable = parentTable->parentObject())
-    { }
-
-    if (!parentTable)
-        return nil;
-
-    return static_cast<AccessibilityTable*>(parentTable);
+    if (AccessibilityObject* parent = const_cast<AccessibilityObject*>(AccessibilityObject::matchedParent(*m_object, true, [] (const AccessibilityObject& object) {
+        return is<AccessibilityTable>(object) && downcast<AccessibilityTable>(object).isExposableThroughAccessibility();
+    })))
+        return static_cast<AccessibilityTable*>(parent);
+    return nil;
 }
 
 - (id)accessibilityTitleElement
@@ -1046,11 +1112,18 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     }
 
     unsigned rowRangeIndex = static_cast<unsigned>(rowRange.first);
-    if (rowRangeIndex < rowHeaders.size()) {
-        RefPtr<AccessibilityObject> rowHeader = rowHeaders[rowRange.first];
-        AccessibilityObjectWrapper* wrapper = rowHeader->wrapper();
-        if (wrapper)
-            [headers addObject:wrapper];
+    // We should consider the cases where the row number does NOT match the index in
+    // rowHeaders, the most common case is when row0/col0 does not have a header.
+    for (const auto& rowHeader : rowHeaders) {
+        if (!is<AccessibilityTableCell>(*rowHeader))
+            break;
+        std::pair<unsigned, unsigned> rowHeaderRange;
+        downcast<AccessibilityTableCell>(*rowHeader).rowIndexRange(rowHeaderRange);
+        if (rowRangeIndex >= rowHeaderRange.first && rowRangeIndex < rowHeaderRange.first + rowHeaderRange.second) {
+            if (AccessibilityObjectWrapper* wrapper = rowHeader->wrapper())
+                [headers addObject:wrapper];
+            break;
+        }
     }
 
     return headers;
@@ -1178,6 +1251,13 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     return NSMakeRange(columnRange.first, columnRange.second);
 }
 
+- (NSUInteger)accessibilityBlockquoteLevel
+{
+    if (![self _prepareAccessibilityCall])
+        return 0;
+    return m_object->blockquoteLevel();
+}
+
 - (NSString *)accessibilityPlaceholderValue
 {
     if (![self _prepareAccessibilityCall])
@@ -1196,7 +1276,8 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (value)
         return value;
 
-    if (m_object->isCheckboxOrRadio()) {
+    AccessibilityRole role = m_object->roleValue();
+    if (m_object->isCheckboxOrRadio() || role == MenuItemCheckboxRole || role == MenuItemRadioRole) {
         switch (m_object->checkboxOrRadioValue()) {
         case ButtonStateOff:
             return [NSString stringWithFormat:@"%d", 0];
@@ -1225,7 +1306,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     if (![self stringValueShouldBeUsedInLabel])
         return m_object->stringValue();
 
-    if (m_object->isProgressIndicator() || m_object->isSlider()) {
+    if (m_object->isRangeControl()) {
         // Prefer a valueDescription if provided by the author (through aria-valuetext).
         String valueDescription = m_object->valueDescription();
         if (!valueDescription.isEmpty())
@@ -1234,10 +1315,21 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
         return [NSString stringWithFormat:@"%.2f", m_object->valueForRange()];
     }
 
+    if (is<AccessibilityAttachment>(m_object) && downcast<AccessibilityAttachment>(m_object)->hasProgress())
+        return [NSString stringWithFormat:@"%.2f", m_object->valueForRange()];
+    
     if (m_object->isHeading())
         return [NSString stringWithFormat:@"%d", m_object->headingLevel()];
 
     return nil;
+}
+
+- (BOOL)accessibilityIsAttachmentElement
+{
+    if (![self _prepareAccessibilityCall])
+        return NO;
+
+    return is<AccessibilityAttachment>(m_object);
 }
 
 - (BOOL)accessibilityIsComboBox
@@ -1344,13 +1436,11 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     else {
         // Find the appropriate scroll view to use to convert the contents to the window.
         ScrollView* scrollView = nullptr;
-        AccessibilityObject* parent = nullptr;
-        for (parent = m_object->parentObject(); parent; parent = parent->parentObject()) {
-            if (is<AccessibilityScrollView>(*parent)) {
-                scrollView = downcast<AccessibilityScrollView>(*parent).scrollView();
-                break;
-            }
-        }
+        const AccessibilityObject* parent = AccessibilityObject::matchedParent(*m_object, false, [] (const AccessibilityObject& object) {
+            return is<AccessibilityScrollView>(object);
+        });
+        if (parent)
+            scrollView = downcast<AccessibilityScrollView>(*parent).scrollView();
 
         IntPoint intPoint = flooredIntPoint(point);
         if (scrollView)
@@ -1398,13 +1488,11 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     } else {
         // Find the appropriate scroll view to use to convert the contents to the window.
         ScrollView* scrollView = nullptr;
-        AccessibilityObject* parent = nullptr;
-        for (parent = m_object->parentObject(); parent; parent = parent->parentObject()) {
-            if (is<AccessibilityScrollView>(*parent)) {
-                scrollView = downcast<AccessibilityScrollView>(*parent).scrollView();
-                break;
-            }
-        }
+        const AccessibilityObject* parent = AccessibilityObject::matchedParent(*m_object, false, [] (const AccessibilityObject& object) {
+            return is<AccessibilityScrollView>(object);
+        });
+        if (parent)
+            scrollView = downcast<AccessibilityScrollView>(*parent).scrollView();
 
         if (scrollView)
             rect = scrollView->contentsToRootView(rect);
@@ -1551,7 +1639,7 @@ static void appendStringToResult(NSMutableString *result, NSString *string)
     // The parentView should have an accessibilityContainer, if the UIKit accessibility bundle was loaded.
     // The exception is DRT, which tests accessibility without the entire system turning accessibility on. Hence,
     // this check should be valid for everything except DRT.
-    ASSERT([parentView accessibilityContainer] || applicationIsDumpRenderTree());
+    ASSERT([parentView accessibilityContainer] || IOSApplication::isDumpRenderTree());
 
     return [parentView accessibilityContainer];
 }
@@ -1768,6 +1856,45 @@ static RenderObject* rendererForView(WAKView* view)
     return m_object->scrollVisibleContentRect();
 }
 
+- (AccessibilityObject*)detailParentForSummaryObject:(AccessibilityObject*)object
+{
+    // Use this to check if an object is the child of a summary object.
+    // And return the summary's parent, which is the expandable details object.
+    if (const AccessibilityObject* summary = AccessibilityObject::matchedParent(*object, true, [] (const AccessibilityObject& object) {
+        return object.hasTagName(summaryTag);
+    }))
+        return summary->parentObject();
+    return nil;
+}
+
+- (AccessibilityObject*)detailParentForObject:(AccessibilityObject*)object
+{
+    // Use this to check if an object is inside a details object.
+    if (const AccessibilityObject* details = AccessibilityObject::matchedParent(*object, true, [] (const AccessibilityObject& object) {
+        return object.hasTagName(detailsTag);
+    }))
+        return const_cast<AccessibilityObject*>(details);
+    return nil;
+}
+
+- (AccessibilityObject*)treeItemParentForObject:(AccessibilityObject*)object
+{
+    // Use this to check if an object is inside a treeitem object.
+    if (const AccessibilityObject* parent = AccessibilityObject::matchedParent(*object, true, [] (const AccessibilityObject& object) {
+        return object.roleValue() == TreeItemRole;
+    }))
+        return const_cast<AccessibilityObject*>(parent);
+    return nil;
+}
+
+- (NSArray<WebAccessibilityObjectWrapper *> *)accessibilityFindMatchingObjects:(NSDictionary *)parameters
+{
+    AccessibilitySearchCriteria criteria = accessibilitySearchCriteriaForSearchPredicateParameterizedAttribute(parameters);
+    AccessibilityObject::AccessibilityChildrenVector results;
+    m_object->findMatchingObjects(&criteria, results);
+    return convertToNSArray(results);
+}
+
 - (void)accessibilityElementDidBecomeFocused
 {
     if (![self _prepareAccessibilityCall])
@@ -1780,6 +1907,15 @@ static RenderObject* rendererForView(WAKView* view)
             break;
 
         if (object->canSetFocusAttribute()) {
+            // webkit.org/b/162041 Taking focus onto elements inside a details node will cause VO focusing onto random items.
+            if ([self detailParentForObject:object])
+                break;
+            
+            // webkit.org/b/162322 When a dialog is focusable, allowing focusing onto the dialog node will cause VO cursor jumping
+            // back and forward while navigating its children.
+            if ([object->wrapper() accessibilityIsDialog])
+                break;
+            
             object->setFocused(true);
             break;
         }
@@ -1969,20 +2105,14 @@ static void AXAttributeStringSetNumber(NSMutableAttributedString* attrString, NS
 
 static void AXAttributeStringSetStyle(NSMutableAttributedString* attrString, RenderObject* renderer, NSRange range)
 {
-    RenderStyle& style = renderer->style();
+    auto& style = renderer->style();
 
     // set basic font info
     AXAttributeStringSetFont(attrString, style.fontCascade().primaryFont().getCTFont(), range);
 
     int decor = style.textDecorationsInEffect();
-    if ((decor & (TextDecorationUnderline | TextDecorationLineThrough)) != 0) {
-        Color underlineColor, overlineColor, linethroughColor;
-        TextDecorationStyle underlineStyle, overlineStyle, linethroughStyle;
-        renderer->getTextDecorationColorsAndStyles(decor, underlineColor, overlineColor, linethroughColor, underlineStyle, overlineStyle, linethroughStyle);
-
-        if (decor & TextDecorationUnderline)
-            AXAttributeStringSetNumber(attrString, UIAccessibilityTokenUnderline, [NSNumber numberWithBool:YES], range);
-    }
+    if (decor & TextDecorationUnderline)
+        AXAttributeStringSetNumber(attrString, UIAccessibilityTokenUnderline, [NSNumber numberWithBool:YES], range);
 }
 
 static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, Node* node, NSString *text)
@@ -2108,9 +2238,7 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     RefPtr<Range> testRange = Range::create(scope->document(), scope, 0, &range->startContainer(), range->startOffset());
     ASSERT(&testRange->startContainer() == scope);
     int startPosition = TextIterator::rangeLength(testRange.get());
-
-    ExceptionCode ec;
-    testRange->setEnd(&range->endContainer(), range->endOffset(), ec);
+    testRange->setEnd(range->endContainer(), range->endOffset());
     ASSERT(&testRange->startContainer() == scope);
     int endPosition = TextIterator::rangeLength(testRange.get());
     return NSMakeRange(startPosition, endPosition - startPosition);
@@ -2145,10 +2273,14 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     if (!marker)
         return NSNotFound;
 
-    VisibleSelection selection([marker visiblePosition]);
-    RefPtr<Range> range = selection.toNormalizedRange();
-    NSRange nsRange = [self _convertToNSRange:range.get()];
-    return nsRange.location;
+    if (AXObjectCache* cache = m_object->axObjectCache()) {
+        CharacterOffset characterOffset = [marker characterOffset];
+        // Create a collapsed range from the CharacterOffset object.
+        RefPtr<Range> range = cache->rangeForUnorderedCharacterOffsets(characterOffset, characterOffset);
+        NSRange nsRange = [self _convertToNSRange:range.get()];
+        return nsRange.location;
+    }
+    return NSNotFound;
 }
 
 - (NSArray *)textMarkerRange
@@ -2202,11 +2334,17 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     VisibleSelection selection = m_object->selection();
     if (selection.isNone())
         return nil;
-    VisiblePosition startPosition = selection.visibleStart();
-    VisiblePosition endPosition = selection.visibleEnd();
 
-    WebAccessibilityTextMarker* startMarker = [WebAccessibilityTextMarker textMarkerWithVisiblePosition:startPosition cache:m_object->axObjectCache()];
-    WebAccessibilityTextMarker* endMarker = [WebAccessibilityTextMarker textMarkerWithVisiblePosition:endPosition cache:m_object->axObjectCache()];
+    AXObjectCache* cache = m_object->axObjectCache();
+    if (!cache)
+        return nil;
+    
+    RefPtr<Range> range = selection.toNormalizedRange();
+    CharacterOffset start = cache->startOrEndCharacterOffsetForRange(range, true);
+    CharacterOffset end = cache->startOrEndCharacterOffsetForRange(range, false);
+
+    WebAccessibilityTextMarker* startMarker = [WebAccessibilityTextMarker textMarkerWithCharacterOffset:start cache:cache];
+    WebAccessibilityTextMarker* endMarker = [WebAccessibilityTextMarker textMarkerWithCharacterOffset:end cache:cache];
     if (!startMarker || !endMarker)
         return nil;
 
@@ -2222,10 +2360,12 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     if (!range)
         return nil;
 
-    VisibleSelection selection = VisibleSelection(*range, DOWNSTREAM);
+    AXObjectCache* cache = m_object->axObjectCache();
+    if (!cache)
+        return nil;
 
-    VisiblePosition visiblePosition = selection.visibleStart();
-    return [WebAccessibilityTextMarker textMarkerWithVisiblePosition:visiblePosition cache:m_object->axObjectCache()];
+    CharacterOffset characterOffset = cache->startOrEndCharacterOffsetForRange(range, true);
+    return [WebAccessibilityTextMarker textMarkerWithCharacterOffset:characterOffset cache:cache];
 }
 
 - (id)_stringForRange:(NSRange)range attributed:(BOOL)attributed
@@ -2252,10 +2392,14 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     Class returnClass = attributed ? [NSMutableAttributedString class] : [NSMutableString class];
     id returnValue = [[(NSString *)[returnClass alloc] init] autorelease];
 
+    const unichar attachmentChar = NSAttachmentCharacter;
     NSInteger count = [array count];
     for (NSInteger k = 0; k < count; ++k) {
         id object = [array objectAtIndex:k];
 
+        if (attributed && [object isKindOfClass:[WebAccessibilityObjectWrapper class]])
+            object = [[[NSMutableAttributedString alloc] initWithString:[NSString stringWithCharacters:&attachmentChar length:1] attributes:@{ UIAccessibilityTokenAttachment : object }] autorelease];
+        
         if (![object isKindOfClass:returnClass])
             continue;
 
@@ -2402,15 +2546,14 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     if (![self _prepareAccessibilityCall])
         return CGRectZero;
 
-    if ([array count] != 2)
+    AXObjectCache* cache = m_object->axObjectCache();
+    if (!cache)
+        return CGRectZero;
+    RefPtr<Range> range = [self rangeForTextMarkers:array];
+    if (!range)
         return CGRectZero;
 
-    WebAccessibilityTextMarker* startMarker = [array objectAtIndex:0];
-    WebAccessibilityTextMarker* endMarker = [array objectAtIndex:1];
-    if (![startMarker isKindOfClass:[WebAccessibilityTextMarker class]] || ![endMarker isKindOfClass:[WebAccessibilityTextMarker class]])
-        return CGRectZero;
-
-    IntRect rect = m_object->boundsForVisiblePositionRange(VisiblePositionRange([startMarker visiblePosition], [endMarker visiblePosition]));
+    IntRect rect = m_object->boundsForRange(range);
     return [self convertRectToScreenSpace:rect];
 }
 
@@ -2419,8 +2562,11 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     if (![self _prepareAccessibilityCall])
         return nil;
 
-    VisiblePosition pos = m_object->visiblePositionForPoint(IntPoint(point));
-    return [WebAccessibilityTextMarker textMarkerWithVisiblePosition:pos cache:m_object->axObjectCache()];
+    AXObjectCache* cache = m_object->axObjectCache();
+    if (!cache)
+        return nil;
+    CharacterOffset characterOffset = cache->characterOffsetForPoint(IntPoint(point), m_object);
+    return [WebAccessibilityTextMarker textMarkerWithCharacterOffset:characterOffset cache:cache];
 }
 
 - (WebAccessibilityTextMarker *)nextMarkerForCharacterOffset:(CharacterOffset&)characterOffset
@@ -2512,6 +2658,13 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     return [NSArray arrayWithObjects:start, end, nil];
 }
 
+- (NSString *)accessibilityExpandedTextValue
+{
+    if (![self _prepareAccessibilityCall])
+        return nil;
+    return m_object->expandedTextValue();
+}
+
 - (NSString *)accessibilityIdentifier
 {
     if (![self _prepareAccessibilityCall])
@@ -2549,7 +2702,7 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     if (![self _prepareAccessibilityCall])
         return NO;
 
-    return m_object->ariaLiveRegionBusy();
+    return m_object->isBusy();
 }
 
 - (NSString *)accessibilityARIALiveRegionStatus
@@ -2597,6 +2750,14 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     if (![self _prepareAccessibilityCall])
         return NO;
 
+    // Since details element is ignored on iOS, we should expose the expanded status on its
+    // summary's accessible children.
+    if (AccessibilityObject* detailParent = [self detailParentForSummaryObject:m_object])
+        return detailParent->supportsExpanded();
+    
+    if (AccessibilityObject* treeItemParent = [self treeItemParentForObject:m_object])
+        return treeItemParent->supportsExpanded();
+    
     return m_object->supportsExpanded();
 }
 
@@ -2605,6 +2766,14 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     if (![self _prepareAccessibilityCall])
         return NO;
 
+    // Since details element is ignored on iOS, we should expose the expanded status on its
+    // summary's accessible children.
+    if (AccessibilityObject* detailParent = [self detailParentForSummaryObject:m_object])
+        return detailParent->isExpanded();
+    
+    if (AccessibilityObject* treeItemParent = [self treeItemParentForObject:m_object])
+        return treeItemParent->isExpanded();
+    
     return m_object->isExpanded();
 }
 
@@ -2637,6 +2806,24 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     default:
     case ARIACurrentTrue:
         return @"true";
+    }
+}
+
+- (NSString *)accessibilitySortDirection
+{
+    if (![self _prepareAccessibilityCall])
+        return nil;
+    
+    switch (m_object->sortDirection()) {
+    case SortDirectionAscending:
+        return @"ascending";
+    case SortDirectionDescending:
+        return @"descending";
+    case SortDirectionOther:
+        return @"other";
+    default:
+    case SortDirectionNone:
+        return nil;
     }
 }
 
@@ -2820,13 +3007,10 @@ static void AXAttributedStringAppendText(NSMutableAttributedString* attrString, 
     return m_object->clickPoint();
 }
 
-#ifndef NDEBUG
 - (NSString *)description
 {
-    CGRect frame = [self accessibilityFrame];
-    return [NSString stringWithFormat:@"Role: (%d) - Text: %@: Value: %@ -- Frame: %f %f %f %f", m_object ? m_object->roleValue() : 0, [self accessibilityLabel], [self accessibilityValue], frame.origin.x, frame.origin.y, frame.size.width, frame.size.height];
+    return [NSString stringWithFormat:@"%@: %@", [self class], [self accessibilityLabel]];
 }
-#endif
 
 @end
 

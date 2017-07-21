@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PropertyCondition_h
-#define PropertyCondition_h
+#pragma once
 
 #include "JSObject.h"
 #include <wtf/HashMap.h>
@@ -283,11 +282,11 @@ public:
 
     void validateReferences(const TrackedReferences&) const;
 
-    static bool isValidValueForAttributes(JSValue value, unsigned attributes);
+    static bool isValidValueForAttributes(VM&, JSValue, unsigned attributes);
 
-    bool isValidValueForPresence(JSValue) const;
+    bool isValidValueForPresence(VM&, JSValue) const;
 
-    PropertyCondition attemptToMakeEquivalenceWithoutBarrier(JSObject* base) const;
+    PropertyCondition attemptToMakeEquivalenceWithoutBarrier(VM&, JSObject* base) const;
 
 private:
     bool isWatchableWhenValid(Structure*, WatchabilityEffort) const;
@@ -333,6 +332,3 @@ template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::PropertyCondition> : SimpleClassHashTraits<JSC::PropertyCondition> { };
 
 } // namespace WTF
-
-#endif // PropertyCondition_h
-

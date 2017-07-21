@@ -28,7 +28,6 @@
 
 #if PLATFORM(MAC)
 
-#import "BlockExceptions.h"
 #import "Document.h"
 #import "FocusController.h"
 #import "Frame.h"
@@ -47,6 +46,7 @@
 #import "WebCoreSystemInterface.h"
 #import "htmlediting.h"
 #import <PDFKit/PDFKit.h>
+#import <wtf/BlockObjCExceptions.h>
 #import <wtf/RefPtr.h>
 
 SOFT_LINK_CONSTANT_MAY_FAIL(Lookup, LUTermOptionDisableSearchTermIndicator, NSString *)
@@ -65,7 +65,7 @@ static bool selectionContainsPosition(const VisiblePosition& position, const Vis
     return selectedRange->contains(position);
 }
 
-PassRefPtr<Range> DictionaryLookup::rangeForSelection(const VisibleSelection& selection, NSDictionary **options)
+RefPtr<Range> DictionaryLookup::rangeForSelection(const VisibleSelection& selection, NSDictionary **options)
 {
     RefPtr<Range> selectedRange = selection.toNormalizedRange();
     if (!selectedRange)
@@ -90,10 +90,10 @@ PassRefPtr<Range> DictionaryLookup::rangeForSelection(const VisibleSelection& se
         [luLookupDefinitionModule tokenRangeForString:fullPlainTextString range:rangeToPass options:options];
     END_BLOCK_OBJC_EXCEPTIONS;
 
-    return selectedRange.release();
+    return selectedRange;
 }
 
-PassRefPtr<Range> DictionaryLookup::rangeAtHitTestResult(const HitTestResult& hitTestResult, NSDictionary **options)
+RefPtr<Range> DictionaryLookup::rangeAtHitTestResult(const HitTestResult& hitTestResult, NSDictionary **options)
 {
     Node* node = hitTestResult.innerNonSharedNode();
     if (!node)
@@ -141,7 +141,8 @@ PassRefPtr<Range> DictionaryLookup::rangeAtHitTestResult(const HitTestResult& hi
         extractedRange = [luLookupDefinitionModule tokenRangeForString:fullPlainTextString range:rangeToPass options:options];
 
     // This function sometimes returns {NSNotFound, 0} if it was unable to determine a good string.
-    if (extractedRange.location == NSNotFound)
+    // FIXME (159063): We shouldn't need to check for zero length here.
+    if (extractedRange.location == NSNotFound || extractedRange.length == 0)
         return nullptr;
 
     return TextIterator::subrange(fullCharacterRange.get(), extractedRange.location, extractedRange.length);
@@ -220,18 +221,16 @@ static PlatformAnimationController showPopupOrCreateAnimationController(bool cre
         textIndicatorInstallationCallback(textIndicator.get());
         [mutableOptions setObject:@YES forKey:getLUTermOptionDisableSearchTermIndicator()];
 
-        if ([getLULookupDefinitionModuleClass() respondsToSelector:@selector(showDefinitionForTerm:relativeToRect:ofView:options:)]) {
-            FloatRect firstTextRectInViewCoordinates = textIndicator.get().textRectsInBoundingRectCoordinates()[0];
-            FloatRect textBoundingRectInViewCoordinates = textIndicator.get().textBoundingRectInRootViewCoordinates();
-            if (rootViewToViewConversionCallback)
-                textBoundingRectInViewCoordinates = rootViewToViewConversionCallback(textBoundingRectInViewCoordinates);
-            firstTextRectInViewCoordinates.moveBy(textBoundingRectInViewCoordinates.location());
-            if (createAnimationController)
-                return [getLULookupDefinitionModuleClass() lookupAnimationControllerForTerm:dictionaryPopupInfo.attributedString.get() relativeToRect:firstTextRectInViewCoordinates ofView:view options:mutableOptions.get()];
+        FloatRect firstTextRectInViewCoordinates = textIndicator.get().textRectsInBoundingRectCoordinates()[0];
+        FloatRect textBoundingRectInViewCoordinates = textIndicator.get().textBoundingRectInRootViewCoordinates();
+        if (rootViewToViewConversionCallback)
+            textBoundingRectInViewCoordinates = rootViewToViewConversionCallback(textBoundingRectInViewCoordinates);
+        firstTextRectInViewCoordinates.moveBy(textBoundingRectInViewCoordinates.location());
+        if (createAnimationController)
+            return [getLULookupDefinitionModuleClass() lookupAnimationControllerForTerm:dictionaryPopupInfo.attributedString.get() relativeToRect:firstTextRectInViewCoordinates ofView:view options:mutableOptions.get()];
 
-            [getLULookupDefinitionModuleClass() showDefinitionForTerm:dictionaryPopupInfo.attributedString.get() relativeToRect:firstTextRectInViewCoordinates ofView:view options:mutableOptions.get()];
-            return nil;
-        }
+        [getLULookupDefinitionModuleClass() showDefinitionForTerm:dictionaryPopupInfo.attributedString.get() relativeToRect:firstTextRectInViewCoordinates ofView:view options:mutableOptions.get()];
+        return nil;
     }
 
     NSPoint textBaselineOrigin = dictionaryPopupInfo.origin;

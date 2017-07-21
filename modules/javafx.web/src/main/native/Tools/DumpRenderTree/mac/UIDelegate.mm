@@ -82,10 +82,11 @@ DumpRenderTreeDraggingInfo *draggingInfo = nil;
     if (range.location != NSNotFound)
         message = [[message substringToIndex:range.location] stringByAppendingString:[[message substringFromIndex:NSMaxRange(range)] lastPathComponent]];
 
-    printf ("CONSOLE MESSAGE: ");
+    auto out = gTestRunner->dumpJSConsoleLogInStdErr() ? stderr : stdout;
+    fprintf(out, "CONSOLE MESSAGE: ");
     if ([lineNumber intValue])
-        printf ("line %d: ", [lineNumber intValue]);
-    printf ("%s\n", [message UTF8String]);
+        fprintf(out, "line %d: ", [lineNumber intValue]);
+    fprintf(out, "%s\n", [message UTF8String]);
 }
 
 - (void)modalWindowWillClose:(NSNotification *)notification
@@ -266,7 +267,6 @@ DumpRenderTreeDraggingInfo *draggingInfo = nil;
 
 - (void)timerFired
 {
-    ASSERT(gTestRunner->isGeolocationPermissionSet());
     m_timer = 0;
     NSEnumerator* enumerator = [m_pendingGeolocationPermissionListeners objectEnumerator];
     id<WebAllowDenyPolicyListener> listener;

@@ -49,15 +49,7 @@ static void unauthorizedSQLFunction(sqlite3_context *context, int, sqlite3_value
     sqlite3_result_error(context, errorMessage.utf8().data(), -1);
 }
 
-SQLiteDatabase::SQLiteDatabase()
-    : m_db(0)
-    , m_pageSize(-1)
-    , m_transactionInProgress(false)
-    , m_sharable(false)
-    , m_openingThread(0)
-    , m_openError(SQLITE_ERROR)
-    , m_openErrorMessage()
-    , m_lastChangesCount(0)
+static void initializeSQLiteIfNecessary()
 {
     static std::once_flag flag;
     std::call_once(flag, [] {
@@ -67,7 +59,7 @@ SQLiteDatabase::SQLiteDatabase()
         // std::call_once is used to stay on the safe side. See bug #143245.
         int ret = sqlite3_initialize();
         if (ret != SQLITE_OK) {
-#if PLATFORM(MAC) || SQLITE_VERSION_NUMBER >= 3007015
+#if SQLITE_VERSION_NUMBER >= 3007015
             WTFLogAlways("Failed to initialize SQLite: %s", sqlite3_errstr(ret));
 #else
             WTFLogAlways("Failed to initialize SQLite");
@@ -77,6 +69,8 @@ SQLiteDatabase::SQLiteDatabase()
     });
 }
 
+SQLiteDatabase::SQLiteDatabase() = default;
+
 SQLiteDatabase::~SQLiteDatabase()
 {
     close();
@@ -84,6 +78,8 @@ SQLiteDatabase::~SQLiteDatabase()
 
 bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
 {
+    initializeSQLiteIfNecessary();
+
     close();
 
     m_openError = SQLiteFileSystem::openDatabase(filename, &m_db, forWebSQLDatabase);
@@ -116,17 +112,14 @@ bool SQLiteDatabase::open(const String& filename, bool forWebSQLDatabase)
         LOG_ERROR("SQLite database could not set temp_store to memory");
 
     SQLiteStatement walStatement(*this, ASCIILiteral("PRAGMA journal_mode=WAL;"));
-    int result = walStatement.step();
-    if (result != SQLITE_OK && result != SQLITE_ROW)
-        LOG_ERROR("SQLite database failed to set journal_mode to WAL, error: %s", lastErrorMsg());
-
+    if (walStatement.prepareAndStep() == SQLITE_ROW) {
 #ifndef NDEBUG
-    if (result == SQLITE_ROW) {
         String mode = walStatement.getColumnText(0);
         if (!equalLettersIgnoringASCIICase(mode, "wal"))
-            LOG_ERROR("journal_mode of database should be 'wal', but is '%s'", mode.utf8().data());
-    }
+            LOG_ERROR("journal_mode of database should be 'WAL', but is '%s'", mode.utf8().data());
 #endif
+    } else
+        LOG_ERROR("SQLite database failed to set journal_mode to WAL, error: %s", lastErrorMsg());
 
     return isOpen();
 }
@@ -337,6 +330,13 @@ int SQLiteDatabase::runIncrementalVacuumCommand()
     return lastError();
 }
 
+void SQLiteDatabase::interrupt()
+{
+    LockHolder locker(m_databaseClosingMutex);
+    if (m_db)
+        sqlite3_interrupt(m_db);
+}
+
 int64_t SQLiteDatabase::lastInsertRowID()
 {
     if (!m_db)
@@ -454,7 +454,7 @@ int SQLiteDatabase::authorizerFunction(void* userData, int actionCode, const cha
     }
 }
 
-void SQLiteDatabase::setAuthorizer(PassRefPtr<DatabaseAuthorizer> auth)
+void SQLiteDatabase::setAuthorizer(DatabaseAuthorizer& authorizer)
 {
     if (!m_db) {
         LOG_ERROR("Attempt to set an authorizer on a non-open SQL database");
@@ -464,7 +464,7 @@ void SQLiteDatabase::setAuthorizer(PassRefPtr<DatabaseAuthorizer> auth)
 
     LockHolder locker(m_authorizerLock);
 
-    m_authorizer = auth;
+    m_authorizer = &authorizer;
 
     enableAuthorizer(true);
 }

@@ -29,7 +29,6 @@
 #include "AudioHardwareListener.h"
 #include "PlatformMediaSession.h"
 #include "RemoteCommandListener.h"
-#include "Settings.h"
 #include "SystemSleepListener.h"
 #include <map>
 #include <wtf/Vector.h>
@@ -46,12 +45,21 @@ class PlatformMediaSessionManager : private RemoteCommandListenerClient, private
 public:
     WEBCORE_EXPORT static PlatformMediaSessionManager* sharedManagerIfExists();
     WEBCORE_EXPORT static PlatformMediaSessionManager& sharedManager();
+
+    static void updateNowPlayingInfoIfNecessary();
+
     virtual ~PlatformMediaSessionManager() { }
 
+    virtual void scheduleUpdateNowPlayingInfo() { }
     bool has(PlatformMediaSession::MediaType) const;
     int count(PlatformMediaSession::MediaType) const;
     bool activeAudioSessionRequired() const;
     bool canProduceAudio() const;
+
+    WEBCORE_EXPORT virtual bool hasActiveNowPlayingSession() const { return false; }
+    WEBCORE_EXPORT virtual String lastUpdatedNowPlayingTitle() const { return emptyString(); }
+    WEBCORE_EXPORT virtual double lastUpdatedNowPlayingDuration() const { return NAN; }
+    WEBCORE_EXPORT virtual double lastUpdatedNowPlayingElapsedTime() const { return NAN; }
 
     bool willIgnoreSystemInterruptions() const { return m_willIgnoreSystemInterruptions; }
     void setWillIgnoreSystemInterruptions(bool ignore) { m_willIgnoreSystemInterruptions = ignore; }
@@ -82,6 +90,8 @@ public:
     virtual bool sessionWillBeginPlayback(PlatformMediaSession&);
     virtual void sessionWillEndPlayback(PlatformMediaSession&);
     virtual bool sessionCanLoadMedia(const PlatformMediaSession&) const;
+    virtual void sessionDidEndRemoteScrubbing(const PlatformMediaSession&) { };
+    virtual void clientCharacteristicsChanged(PlatformMediaSession&) { }
 
 #if PLATFORM(IOS)
     virtual void configureWireLessTargetMonitoring() { }
@@ -89,7 +99,9 @@ public:
 #endif
 
     void setCurrentSession(PlatformMediaSession&);
-    PlatformMediaSession* currentSession();
+    PlatformMediaSession* currentSession() const;
+
+    Vector<PlatformMediaSession*> currentSessionsMatching(std::function<bool(const PlatformMediaSession&)>);
 
     void sessionIsPlayingToWirelessPlaybackTargetChanged(PlatformMediaSession&);
     void sessionCanProduceAudioChanged(PlatformMediaSession&);
@@ -99,9 +111,11 @@ protected:
     explicit PlatformMediaSessionManager();
 
     void addSession(PlatformMediaSession&);
-    void removeSession(PlatformMediaSession&);
+    virtual void removeSession(PlatformMediaSession&);
 
-    Vector<PlatformMediaSession*> sessions() { return m_sessions; }
+    void forEachSession(const Function<void(PlatformMediaSession&, size_t)>&) const;
+    PlatformMediaSession* findSession(const Function<bool(PlatformMediaSession&, size_t)>&) const;
+    bool anyOfSessions(const Function<bool(PlatformMediaSession&, size_t)>& predicate) const { return findSession(predicate); }
 
 private:
     friend class Internals;
@@ -109,19 +123,20 @@ private:
     void updateSessionState();
 
     // RemoteCommandListenerClient
-    WEBCORE_EXPORT virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType) override;
+    WEBCORE_EXPORT void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument*) override;
+    WEBCORE_EXPORT bool supportsSeeking() const override;
 
     // AudioHardwareListenerClient
-    virtual void audioHardwareDidBecomeActive() override { }
-    virtual void audioHardwareDidBecomeInactive() override { }
-    virtual void audioOutputDeviceChanged() override;
+    void audioHardwareDidBecomeActive() override { }
+    void audioHardwareDidBecomeInactive() override { }
+    void audioOutputDeviceChanged() override;
 
     // SystemSleepListener
-    virtual void systemWillSleep() override;
-    virtual void systemDidWake() override;
+    void systemWillSleep() override;
+    void systemDidWake() override;
 
     SessionRestrictions m_restrictions[PlatformMediaSession::WebAudio + 1];
-    Vector<PlatformMediaSession*> m_sessions;
+    mutable Vector<PlatformMediaSession*> m_sessions;
     std::unique_ptr<RemoteCommandListener> m_remoteCommandListener;
     std::unique_ptr<SystemSleepListener> m_systemSleepListener;
     RefPtr<AudioHardwareListener> m_audioHardwareListener;
@@ -134,6 +149,7 @@ private:
     bool m_interrupted { false };
     mutable bool m_isApplicationInBackground { false };
     bool m_willIgnoreSystemInterruptions { false };
+    mutable int m_iteratingOverSessions { 0 };
 };
 
 }

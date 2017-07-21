@@ -154,6 +154,10 @@ for my $file (sort @files) {
         while (s-^\s*([#\w]+|/\*|//|[^#\w/'"()\[\],]+|.)--) {
             my $token = $1;
             
+            if ($token eq "@" and $expected and $expected eq "a quoted string") {
+                next;
+            }
+
             if ($token eq "\"") {
                 if ($expected and $expected ne "a quoted string") {
                     emitError($file, $., "found a quoted string but expected $expected");
@@ -236,7 +240,7 @@ handleString:
                     emitError($file, $., "found $token but expected $expected");
                     $expected = "";
                 }
-                if ($token =~ /(WEB_)?UI_STRING(_KEY)?(_INTERNAL)?$/) {
+                if (($token =~ /(WEB_)?UI_STRING(_KEY)?(_INTERNAL)?$/) || ($token =~ /WEB_UI_NSSTRING$/)) {
                     $expected = "(";
                     $macro = $token;
                     $UIString = undef;

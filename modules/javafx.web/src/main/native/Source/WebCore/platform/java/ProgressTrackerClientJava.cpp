@@ -24,20 +24,19 @@
 */
 #include "config.h"
 
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
-
 #include "ProgressTrackerClientJava.h"
 
+#include "Page.h"
 #include "DocumentLoader.h"
 #include "ProgressTracker.h"
+
 #include "WebPage.h"
 
 #include "com_sun_webkit_LoadListenerClient.h"
 
 static JGClass webPageClass;
 static jmethodID fireLoadEventMID;
+
 static void initRefs(JNIEnv* env)
 {
     if (!webPageClass) {

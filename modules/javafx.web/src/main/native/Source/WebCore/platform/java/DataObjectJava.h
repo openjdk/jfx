@@ -1,8 +1,8 @@
 /*
  * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef DataObjectJava_h
-#define DataObjectJava_h
+
+#pragma once
 
 #include "config.h"
 
@@ -224,5 +224,3 @@ private:
     }
 };
 } // namespace WebCore
-
-#endif //DataObjectJava_h

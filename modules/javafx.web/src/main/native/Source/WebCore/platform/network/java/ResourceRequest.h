@@ -2,8 +2,7 @@
  * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
  */
 
-#ifndef ResourceRequest_h
-#define ResourceRequest_h
+#pragma once
 
 #include "ResourceRequestBase.h"
 
@@ -32,21 +31,15 @@ namespace WebCore {
         {
         }
 
+    private:
+        friend class ResourceRequestBase;
+
         void doUpdatePlatformRequest() {}
         void doUpdateResourceRequest() {}
         void doUpdatePlatformHTTPBody() { }
         void doUpdateResourceHTTPBody() { }
 
-    private:
-        friend class ResourceRequestBase;
-
-        std::unique_ptr<CrossThreadResourceRequestData> doPlatformCopyData(std::unique_ptr<CrossThreadResourceRequestData> data) const { return data; }
-        void doPlatformAdopt(std::unique_ptr<CrossThreadResourceRequestData>) { }
-    };
-
-    struct CrossThreadResourceRequestData : public CrossThreadResourceRequestDataBase {
+        void doPlatformSetAsIsolatedCopy(const ResourceRequest&) { }
     };
 
 } // namespace WebCore
-
-#endif // ResourceRequest_h

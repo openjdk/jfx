@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DFABytecode_h
-#define DFABytecode_h
+#pragma once
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
@@ -130,9 +129,6 @@ static inline size_t instructionSizeWithArguments(DFABytecodeInstruction instruc
 }
 
 } // namespace ContentExtensions
-
 } // namespace WebCore
 
 #endif // ENABLE(CONTENT_EXTENSIONS)
-
-#endif // DFABytecode_h

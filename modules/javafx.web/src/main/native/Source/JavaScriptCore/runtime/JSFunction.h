@@ -21,8 +21,7 @@
  *
  */
 
-#ifndef JSFunction_h
-#define JSFunction_h
+#pragma once
 
 #include "FunctionRareData.h"
 #include "InternalFunction.h"
@@ -40,16 +39,20 @@ class JSGlobalObject;
 class LLIntOffsetsExtractor;
 class NativeExecutable;
 class SourceCode;
-class WebAssemblyExecutable;
 class InternalFunction;
 namespace DFG {
 class SpeculativeJIT;
 class JITCompiler;
 }
 
+namespace DOMJIT {
+class Signature;
+}
+
+
 JS_EXPORT_PRIVATE EncodedJSValue JSC_HOST_CALL callHostFunctionAsConstructor(ExecState*);
 
-JS_EXPORT_PRIVATE String getCalculatedDisplayName(CallFrame*, JSObject*);
+JS_EXPORT_PRIVATE String getCalculatedDisplayName(VM&, JSObject*);
 
 class JSFunction : public JSCallee {
     friend class JIT;
@@ -68,22 +71,19 @@ public:
         return sizeof(JSFunction);
     }
 
-    JS_EXPORT_PRIVATE static JSFunction* create(VM&, JSGlobalObject*, int length, const String& name, NativeFunction, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor);
+    JS_EXPORT_PRIVATE static JSFunction* create(VM&, JSGlobalObject*, int length, const String& name, NativeFunction, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor, const DOMJIT::Signature* = nullptr);
 
     static JSFunction* createWithInvalidatedReallocationWatchpoint(VM&, FunctionExecutable*, JSScope*);
 
     static JSFunction* create(VM&, FunctionExecutable*, JSScope*);
     static JSFunction* create(VM&, FunctionExecutable*, JSScope*, Structure*);
-#if ENABLE(WEBASSEMBLY)
-    static JSFunction* create(VM&, WebAssemblyExecutable*, JSScope*);
-#endif
 
     JS_EXPORT_PRIVATE static JSFunction* createBuiltinFunction(VM&, FunctionExecutable*, JSGlobalObject*);
     static JSFunction* createBuiltinFunction(VM&, FunctionExecutable*, JSGlobalObject*, const String& name);
 
-    JS_EXPORT_PRIVATE String name(ExecState*);
-    JS_EXPORT_PRIVATE String displayName(ExecState*);
-    const String calculatedDisplayName(ExecState*);
+    JS_EXPORT_PRIVATE String name(VM&);
+    JS_EXPORT_PRIVATE String displayName(VM&);
+    const String calculatedDisplayName(VM&);
 
     ExecutableBase* executable() const { return m_executable.get(); }
 
@@ -150,13 +150,11 @@ public:
     JS_EXPORT_PRIVATE bool isHostFunctionNonInline() const;
     bool isClassConstructorFunction() const;
 
+    void setFunctionName(ExecState*, JSValue name);
+
 protected:
     JS_EXPORT_PRIVATE JSFunction(VM&, JSGlobalObject*, Structure*);
     JSFunction(VM&, FunctionExecutable*, JSScope*, Structure*);
-
-#if ENABLE(WEBASSEMBLY)
-    JSFunction(VM&, WebAssemblyExecutable*, JSScope*);
-#endif
 
     void finishCreation(VM&, NativeExecutable*, int length, const String& name);
     using Base::finishCreation;
@@ -169,14 +167,12 @@ protected:
     static void getOwnNonIndexPropertyNames(JSObject*, ExecState*, PropertyNameArray&, EnumerationMode = EnumerationMode());
     static bool defineOwnProperty(JSObject*, ExecState*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
-    static void put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
+    static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
 
     static bool deleteProperty(JSCell*, ExecState*, PropertyName);
 
     static void visitChildren(JSCell*, SlotVisitor&);
 
-
-    static NativeExecutable* lookUpOrCreateNativeExecutable(VM&, NativeFunction, Intrinsic, NativeFunction nativeConstructor, const String& name);
 
 private:
     static JSFunction* createImpl(VM& vm, FunctionExecutable* executable, JSScope* scope, Structure* structure)
@@ -189,9 +185,13 @@ private:
 
     bool hasReifiedLength() const;
     bool hasReifiedName() const;
-    void reifyLength(ExecState*);
-    void reifyName(ExecState*);
-    void reifyLazyPropertyIfNeeded(ExecState*, PropertyName propertyName);
+    void reifyLength(VM&);
+    void reifyName(VM&, ExecState*);
+    void reifyName(VM&, ExecState*, String name);
+
+    enum class LazyPropertyType { NotLazyProperty, IsLazyProperty };
+    LazyPropertyType reifyLazyPropertyIfNeeded(VM&, ExecState*, PropertyName);
+    LazyPropertyType reifyBoundNameIfNeeded(VM&, ExecState*, PropertyName);
 
     friend class LLIntOffsetsExtractor;
 
@@ -205,5 +205,3 @@ private:
 };
 
 } // namespace JSC
-
-#endif // JSFunction_h

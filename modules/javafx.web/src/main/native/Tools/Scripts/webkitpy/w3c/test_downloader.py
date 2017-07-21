@@ -26,15 +26,12 @@
 """
  This script downloads W3C test repositories.
 """
-#FIXME: Implement submodules extraction to prepare for generation of LayoutTests/imported/w3C/resources/WPTModules
 
 import json
 import logging
 
-from webkitpy.common.system.executive import Executive
 from webkitpy.common.system.filesystem import FileSystem
 from webkitpy.common.webkit_finder import WebKitFinder
-from webkitpy.layout_tests.models.test_expectations import TestExpectationParser
 from webkitpy.common.checkout.scm.git import Git
 
 _log = logging.getLogger(__name__)
@@ -74,7 +71,7 @@ class TestDownloader(object):
 
         if not self._options.import_all:
             webkit_finder = WebKitFinder(self._filesystem)
-            import_expectations_path = webkit_finder.path_from_webkit_base('LayoutTests', 'imported', 'w3c', 'resources', 'ImportExpectations')
+            import_expectations_path = webkit_finder.path_from_webkit_base('LayoutTests', 'imported', 'w3c', 'resources', 'import-expectations.json')
             self._init_paths_from_expectations(import_expectations_path)
 
     def git(self, test_repository):
@@ -98,19 +95,20 @@ class TestDownloader(object):
         if not self._filesystem.isfile(file_path):
             _log.warning('Unable to read import expectation file: %s' % file_path)
             return
-        parser = TestExpectationParser(self._host.port_factory.get(), (), False)
-        for line in parser.parse(file_path, self._filesystem.read_text_file(file_path)):
-            if 'SKIP' in line.modifiers:
-                self.paths_to_skip.append(line.name)
-            elif 'PASS' in line.expectations:
-                self.paths_to_import.append(line.name)
+        import_lines = json.loads(self._filesystem.read_text_file(file_path))
+        for line in import_lines:
+            if line[1] == 'skip':
+                self.paths_to_skip.append(line[0])
+            elif line[1] == 'import':
+                self.paths_to_import.append(line[0])
+            else:
+                _log.warning('Problem reading import lines ' + line[0])
 
-    def _add_test_suite_paths(self, test_paths, directory, webkit_path, tests_directory):
-        complete_directory = self._filesystem.join(directory, tests_directory)
-        for name in self._filesystem.listdir(complete_directory):
-            original_path = self._filesystem.join(webkit_path, tests_directory, name)
+    def _add_test_suite_paths(self, test_paths, directory, webkit_path):
+        for name in self._filesystem.listdir(directory):
+            original_path = self._filesystem.join(webkit_path, name)
             if not name.startswith('.') and not original_path in self.paths_to_skip:
-                test_paths.append((original_path, self._filesystem.join(webkit_path, name)))
+                test_paths.append(original_path)
 
     def _empty_directory(self, directory):
         if self._filesystem.exists(directory):
@@ -124,35 +122,57 @@ class TestDownloader(object):
         copy_paths = []
         if test_paths:
             for path in test_paths:
-                copy_paths.append((path, path))
+                copy_paths.append(path)
             for path in self.paths_to_import:
-                copy_paths.append((path, path))
+                copy_paths.append(path)
         else:
             for test_repository in self.test_repositories:
-                self._add_test_suite_paths(copy_paths, self._filesystem.join(self.repository_directory, test_repository['name']), test_repository['name'],
-                    test_repository['tests_directory'] if ('tests_directory' in test_repository) else '')
+                self._add_test_suite_paths(copy_paths, self._filesystem.join(self.repository_directory, test_repository['name']), test_repository['name'])
             # Handling of tests marked as [ Pass ] in expectations file.
             for path in self.paths_to_import:
-                if not (path, path) in copy_paths:
-                    copy_paths.append((path, path))
+                if not path in copy_paths:
+                    copy_paths.append(path)
 
-        for paths in copy_paths:
-            source_path = self._filesystem.join(self.repository_directory, paths[0])
-            destination_path = self._filesystem.join(destination_directory, paths[1])
-            if not self._filesystem.exists(source_path):
-                _log.error('Cannot copy %s' % source_path)
-            elif self._filesystem.isdir(source_path):
-                self._filesystem.copytree(source_path, destination_path)
-            else:
-                self._filesystem.maybe_make_directory(self._filesystem.dirname(destination_path))
-                self._filesystem.copyfile(source_path, destination_path)
+        def longest_path(filesystem, paths):
+            longest_matching_path = ""
+            for path in paths:
+                if path.startswith(longest_matching_path):
+                    longest_matching_path = path
+            return longest_matching_path
 
-        for path in self.paths_to_skip:
-            destination_path = self._filesystem.join(destination_directory, path)
-            if self._filesystem.isfile(destination_path):
-                self._filesystem.remove(destination_path)
-            elif self._filesystem.isdir(destination_path):
-                self._filesystem.rmtree(destination_path)
+        def should_copy_dir(filesystem, directory):
+            relative_path = self._filesystem.relpath(directory, self.repository_directory)
+            if relative_path == ".":
+                return True
+
+            potential_copy_paths = [copy_directory for copy_directory in copy_paths if relative_path.startswith(copy_directory)]
+            if (not potential_copy_paths):
+                return False
+
+            potential_skip_paths = [skip_directory for skip_directory in self.paths_to_skip if relative_path.startswith(skip_directory)]
+            if (not potential_skip_paths):
+                return True
+
+            longest_copy_path = longest_path(filesystem, potential_copy_paths)
+            longest_skip_path = longest_path(filesystem, potential_skip_paths)
+            return longest_copy_path.startswith(longest_skip_path)
+
+        # Compute directories for which we should copy direct children
+        directories_to_copy = self._filesystem.dirs_under(self.repository_directory, should_copy_dir)
+
+        def should_copy_file(filesystem, dirname, filename):
+            full_path = filesystem.join(dirname, filename)
+            relative_path = self._filesystem.relpath(full_path, self.repository_directory)
+            if relative_path in copy_paths:
+                return True
+            if relative_path in self.paths_to_skip:
+                return False
+            return dirname in directories_to_copy
+
+        for source_path in self._filesystem.files_under(self.repository_directory, file_filter=should_copy_file):
+            destination_path = self._filesystem.join(destination_directory, self._filesystem.relpath(source_path, self.repository_directory))
+            self._filesystem.maybe_make_directory(self._filesystem.dirname(destination_path))
+            self._filesystem.copyfile(source_path, destination_path)
 
     def _git_submodules_description(self, test_repository):
         directory = self._filesystem.join(self.repository_directory, test_repository['name'])
@@ -183,6 +203,15 @@ class TestDownloader(object):
 
     def generate_git_submodules_description(self, test_repository, filepath):
         self._filesystem.write_text_file(filepath, json.dumps(self._git_submodules_description(test_repository), sort_keys=True, indent=4))
+
+    def generate_gitignore(self, test_repository, destination_directory):
+        rules = []
+        for submodule in self._git_submodules_description(test_repository):
+            path = list(submodule['path'])
+            path.insert(0, '')
+            rules.append('/'.join(path[:-1]) + '/' + path[-1] + '/')
+            rules.append('/'.join(path[:-1]) + '/.' + path[-1] + '.url')
+        self._filesystem.write_text_file(self._filesystem.join(destination_directory, test_repository['name'], '.gitignore'), '\n'.join(rules))
 
     def download_tests(self, destination_directory, test_paths=[]):
         for test_repository in self.test_repositories:

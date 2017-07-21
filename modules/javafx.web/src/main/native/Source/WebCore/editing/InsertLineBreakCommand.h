@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef InsertLineBreakCommand_h
-#define InsertLineBreakCommand_h
+#pragma once
 
 #include "CompositeEditCommand.h"
 
@@ -40,9 +39,9 @@ public:
 private:
     explicit InsertLineBreakCommand(Document&);
 
-    virtual void doApply();
+    void doApply() override;
 
-    virtual bool preservesTypingStyle() const;
+    bool preservesTypingStyle() const override;
 
     void insertNodeAfterPosition(Node*, const Position&);
     void insertNodeBeforePosition(Node*, const Position&);
@@ -50,5 +49,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // InsertLineBreakCommand_h

@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ScrollingCoordinatorCoordinatedGraphics_h
-#define ScrollingCoordinatorCoordinatedGraphics_h
+#pragma once
 
 #if USE(COORDINATED_GRAPHICS)
 
@@ -39,18 +38,18 @@ public:
     explicit ScrollingCoordinatorCoordinatedGraphics(Page*);
     virtual ~ScrollingCoordinatorCoordinatedGraphics();
 
-    virtual bool supportsFixedPositionLayers() const override { return true; }
+    bool supportsFixedPositionLayers() const override { return true; }
 
-    virtual ScrollingNodeID attachToStateTree(ScrollingNodeType, ScrollingNodeID newNodeID, ScrollingNodeID parentID) override;
-    virtual void detachFromStateTree(ScrollingNodeID) override;
-    virtual void clearStateTree() override;
+    ScrollingNodeID attachToStateTree(ScrollingNodeType, ScrollingNodeID newNodeID, ScrollingNodeID parentID) override;
+    void detachFromStateTree(ScrollingNodeID) override;
+    void clearStateTree() override;
 
-    virtual void updateViewportConstrainedNode(ScrollingNodeID, const ViewportConstraints&, GraphicsLayer*) override;
+    void updateViewportConstrainedNode(ScrollingNodeID, const ViewportConstraints&, GraphicsLayer*) override;
 
-    virtual void scrollableAreaScrollLayerDidChange(ScrollableArea&) override;
-    virtual void willDestroyScrollableArea(ScrollableArea&) override;
+    void scrollableAreaScrollLayerDidChange(ScrollableArea&) override;
+    void willDestroyScrollableArea(ScrollableArea&) override;
 
-    virtual bool requestScrollPositionUpdate(FrameView&, const IntPoint&) override;
+    bool requestScrollPositionUpdate(FrameView&, const IntPoint&) override;
 
 private:
     std::unique_ptr<ScrollingStateTree> m_scrollingStateTree;
@@ -59,5 +58,3 @@ private:
 } // namespace WebCore
 
 #endif // USE(COORDINATED_GRAPHICS)
-
-#endif // ScrollingCoordinatorCoordinatedGraphics_h

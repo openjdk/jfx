@@ -34,11 +34,19 @@
 #include "HTMLAnchorElement.h"
 #include "HTMLAudioElement.h"
 #include "HTMLBRElement.h"
+#include "HTMLBodyElement.h"
+#include "HTMLDivElement.h"
+#include "HTMLEmbedElement.h"
+#include "HTMLHeadElement.h"
+#include "HTMLHtmlElement.h"
+#include "HTMLObjectElement.h"
+#include "HTMLSpanElement.h"
 #include "MathMLElement.h"
 #include "MediaQueryEvaluator.h"
 #include "Page.h"
 #include "RenderTheme.h"
 #include "RuleSet.h"
+#include "RuntimeEnabledFeatures.h"
 #include "SVGElement.h"
 #include "StyleSheetContents.h"
 #include "UserAgentStyleSheets.h"
@@ -66,7 +74,7 @@ StyleSheetContents* CSSDefaultStyleSheets::imageControlsStyleSheet;
 // FIXME: It would be nice to use some mechanism that guarantees this is in sync with the real UA stylesheet.
 static const char* simpleUserAgentStyleSheet = "html,body,div{display:block}head{display:none}body{margin:8px}div:focus,span:focus,a:focus{outline:auto 5px -webkit-focus-ring-color}a:any-link{color:-webkit-link;text-decoration:underline}a:any-link:active{color:-webkit-activelink}";
 
-static inline bool elementCanUseSimpleDefaultStyle(Element& element)
+static inline bool elementCanUseSimpleDefaultStyle(const Element& element)
 {
     return is<HTMLHtmlElement>(element) || is<HTMLHeadElement>(element)
         || is<HTMLBodyElement>(element) || is<HTMLDivElement>(element)
@@ -76,19 +84,19 @@ static inline bool elementCanUseSimpleDefaultStyle(Element& element)
 
 static const MediaQueryEvaluator& screenEval()
 {
-    static NeverDestroyed<const MediaQueryEvaluator> staticScreenEval("screen");
+    static NeverDestroyed<const MediaQueryEvaluator> staticScreenEval(String(ASCIILiteral("screen")));
     return staticScreenEval;
 }
 
 static const MediaQueryEvaluator& printEval()
 {
-    static NeverDestroyed<const MediaQueryEvaluator> staticPrintEval("print");
+    static NeverDestroyed<const MediaQueryEvaluator> staticPrintEval(String(ASCIILiteral("print")));
     return staticPrintEval;
 }
 
 static StyleSheetContents* parseUASheet(const String& str)
 {
-    StyleSheetContents& sheet = StyleSheetContents::create().leakRef(); // leak the sheet on purpose
+    StyleSheetContents& sheet = StyleSheetContents::create(CSSParserContext(UASheetMode)).leakRef(); // leak the sheet on purpose
     sheet.parseString(str);
     return &sheet;
 }
@@ -98,7 +106,7 @@ static StyleSheetContents* parseUASheet(const char* characters, unsigned size)
     return parseUASheet(String(characters, size));
 }
 
-void CSSDefaultStyleSheets::initDefaultStyle(Element* root)
+void CSSDefaultStyleSheets::initDefaultStyle(const Element* root)
 {
     if (!defaultStyle) {
         if (!root || elementCanUseSimpleDefaultStyle(*root))
@@ -153,7 +161,7 @@ void CSSDefaultStyleSheets::loadSimpleDefaultStyle()
     // No need to initialize quirks sheet yet as there are no quirk rules for elements allowed in simple default style.
 }
 
-void CSSDefaultStyleSheets::ensureDefaultStyleSheetsForElement(Element& element)
+void CSSDefaultStyleSheets::ensureDefaultStyleSheetsForElement(const Element& element)
 {
     if (simpleDefaultStyleSheet && !elementCanUseSimpleDefaultStyle(element)) {
         loadFullDefaultStyle();

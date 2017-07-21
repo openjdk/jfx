@@ -26,8 +26,6 @@
 
 namespace WebCore {
 
-static const float kPathSegmentLengthTolerance = 0.00001f;
-
 static inline FloatPoint midPoint(const FloatPoint& first, const FloatPoint& second)
 {
     return FloatPoint((first.x() + second.x()) / 2.0f, (first.y() + second.y()) / 2.0f);
@@ -128,6 +126,12 @@ struct CubicBezier {
     unsigned short splitDepth;
 };
 
+// FIXME: This function is possibly very slow due to the ifs required for proper path measuring
+// A simple speed-up would be to use an additional boolean template parameter to control whether
+// to use the "fast" version of this function with no PathTraversalState updating, vs. the slow
+// version which does update the PathTraversalState.  We'll have to shark it to see if that's necessary.
+// Another check which is possible up-front (to send us down the fast path) would be to check if
+// approximateDistance() + current total distance > desired distance
 template<class CurveType>
 static float curveLength(const PathTraversalState& traversalState, const CurveType& originalCurve, FloatPoint& previous, FloatPoint& current)
 {

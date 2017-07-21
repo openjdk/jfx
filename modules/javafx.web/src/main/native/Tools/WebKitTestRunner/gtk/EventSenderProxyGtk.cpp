@@ -122,6 +122,8 @@ static guint webkitModifiersToGDKModifiers(WKEventModifiers wkModifiers)
         modifiers |= GDK_MOD1_MASK;
     if (wkModifiers & kWKEventModifiersMetaKey)
         modifiers |= GDK_META_MASK;
+    if (wkModifiers & kWKEventModifiersCapsLockKey)
+        modifiers |= GDK_LOCK_MASK;
 
     return modifiers;
 }
@@ -226,6 +228,18 @@ int getGDKKeySymForKeyRef(WKStringRef keyRef, unsigned location, guint* modifier
         return GDK_KEY_VoidSymbol;
     }
 
+    if (WKStringIsEqualToUTF8CString(keyRef, "leftControl"))
+        return GDK_KEY_Control_L;
+    if (WKStringIsEqualToUTF8CString(keyRef, "rightControl"))
+        return GDK_KEY_Control_R;
+    if (WKStringIsEqualToUTF8CString(keyRef, "leftShift"))
+        return GDK_KEY_Shift_L;
+    if (WKStringIsEqualToUTF8CString(keyRef, "rightShift"))
+        return GDK_KEY_Shift_R;
+    if (WKStringIsEqualToUTF8CString(keyRef, "leftAlt"))
+        return GDK_KEY_Alt_L;
+    if (WKStringIsEqualToUTF8CString(keyRef, "rightAlt"))
+        return GDK_KEY_Alt_R;
     if (WKStringIsEqualToUTF8CString(keyRef, "leftArrow"))
         return GDK_KEY_Left;
     if (WKStringIsEqualToUTF8CString(keyRef, "rightArrow"))
@@ -427,7 +441,10 @@ void EventSenderProxy::mouseScrollBy(int horizontal, int vertical)
 void EventSenderProxy::continuousMouseScrollBy(int horizontal, int vertical, bool paged)
 {
     // Gtk+ does not support paged scroll events.
-    g_return_if_fail(!paged);
+    if (paged) {
+        WTFLogAlways("EventSenderProxy::continuousMouseScrollBy not implemented for paged scroll events");
+        return;
+    }
 
     GdkEvent* event = gdk_event_new(GDK_SCROLL);
     event->scroll.x = m_position.x;

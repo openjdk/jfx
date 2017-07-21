@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2008, 2016 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -38,7 +38,7 @@ static JSValue namedItems(ExecState& state, JSHTMLFormControlsCollection* collec
     if (namedItems.isEmpty())
         return jsUndefined();
     if (namedItems.size() == 1)
-        return toJS(&state, collection->globalObject(), namedItems[0].ptr());
+        return toJS(&state, collection->globalObject(), namedItems[0]);
 
     ASSERT(collection->wrapped().type() == FormControls);
     return toJS(&state, collection->globalObject(), collection->wrapped().ownerNode().radioNodeList(name).get());
@@ -56,7 +56,13 @@ bool JSHTMLFormControlsCollection::nameGetter(ExecState* state, PropertyName pro
 
 JSValue JSHTMLFormControlsCollection::namedItem(ExecState& state)
 {
-    JSValue value = namedItems(state, this, Identifier::fromString(&state, state.argument(0).toString(&state)->value(&state)));
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(state.argumentCount() < 1))
+        return throwException(&state, scope, createNotEnoughArgumentsError(&state));
+
+    JSValue value = namedItems(state, this, Identifier::fromString(&state, state.uncheckedArgument(0).toWTFString(&state)));
     return value.isUndefined() ? jsNull() : value;
 }
 

@@ -374,10 +374,6 @@ bool PluginDatabase::addDisabledPluginFile(const String& fileName)
     return m_disabledPluginFiles.add(fileName).isNewEntry;
 }
 
-#if PLATFORM(JAVA) //XXX recheck
-#define ENABLE_NETSCAPE_PLUGIN_API 0 // todo tav where it's set to 1 ???
-#endif
-
 #if !ENABLE(NETSCAPE_PLUGIN_API)
 // For Safari/Win the following three methods are implemented
 // in PluginDatabaseWin.cpp, but if we can use WebCore constructs

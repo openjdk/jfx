@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef AdaptiveInferredPropertyValueWatchpointBase_h
-#define AdaptiveInferredPropertyValueWatchpointBase_h
+#pragma once
 
 #include "ObjectPropertyCondition.h"
 #include "Watchpoint.h"
@@ -54,13 +53,13 @@ private:
     public:
         StructureWatchpoint() { }
     protected:
-        virtual void fireInternal(const FireDetail&) override;
+        void fireInternal(const FireDetail&) override;
     };
     class PropertyWatchpoint : public Watchpoint {
     public:
         PropertyWatchpoint() { }
     protected:
-        virtual void fireInternal(const FireDetail&) override;
+        void fireInternal(const FireDetail&) override;
     };
 
     void fire(const FireDetail&);
@@ -71,5 +70,3 @@ private:
 };
 
 } // namespace JSC
-
-#endif /* AdaptiveInferredPropertyValueWatchpointBase_h */

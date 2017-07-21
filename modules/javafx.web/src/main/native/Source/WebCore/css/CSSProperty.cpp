@@ -24,9 +24,8 @@
 #include "CSSValueList.h"
 #include "RenderStyleConstants.h"
 #include "StylePropertyShorthand.h"
-
+#include "StylePropertyShorthandFunctions.h"
 #include <wtf/NeverDestroyed.h>
-#include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
@@ -42,7 +41,7 @@ CSSPropertyID StylePropertyMetadata::shorthandID() const
     if (!m_isSetFromShorthand)
         return CSSPropertyInvalid;
 
-    Vector<StylePropertyShorthand> shorthands = matchingShorthandsForLonghand(static_cast<CSSPropertyID>(m_propertyID));
+    auto shorthands = matchingShorthandsForLonghand(static_cast<CSSPropertyID>(m_propertyID));
     ASSERT(shorthands.size() && m_indexInShorthandsVector >= 0 && m_indexInShorthandsVector < shorthands.size());
     return shorthands[m_indexInShorthandsVector].id();
 }
@@ -59,13 +58,13 @@ static CSSPropertyID resolveToPhysicalProperty(TextDirection direction, WritingM
     return shorthand.properties()[mapLogicalSideToPhysicalSide(makeTextFlow(writingMode, direction), logicalSide)];
 }
 
-enum _LogicalExtent { _LogicalWidth, _LogicalHeight };
+enum LogicalExtent { LogicalWidth, LogicalHeight };
 
-static CSSPropertyID resolveToPhysicalProperty(WritingMode writingMode, _LogicalExtent logicalSide, const CSSPropertyID* properties)
+static CSSPropertyID resolveToPhysicalProperty(WritingMode writingMode, LogicalExtent logicalSide, const CSSPropertyID* properties)
 {
     if (writingMode == TopToBottomWritingMode || writingMode == BottomToTopWritingMode)
         return properties[logicalSide];
-    return logicalSide == _LogicalWidth ? properties[1] : properties[0];
+    return logicalSide == LogicalWidth ? properties[1] : properties[0];
 }
 
 static const StylePropertyShorthand& borderDirections()
@@ -128,30 +127,47 @@ CSSPropertyID CSSProperty::resolveDirectionAwareProperty(CSSPropertyID propertyI
         return resolveToPhysicalProperty(direction, writingMode, AfterSide, borderWidthShorthand());
     case CSSPropertyWebkitLogicalWidth: {
         const CSSPropertyID properties[2] = { CSSPropertyWidth, CSSPropertyHeight };
-        return resolveToPhysicalProperty(writingMode, _LogicalWidth, properties);
+        return resolveToPhysicalProperty(writingMode, LogicalWidth, properties);
     }
     case CSSPropertyWebkitLogicalHeight: {
         const CSSPropertyID properties[2] = { CSSPropertyWidth, CSSPropertyHeight };
-        return resolveToPhysicalProperty(writingMode, _LogicalHeight, properties);
+        return resolveToPhysicalProperty(writingMode, LogicalHeight, properties);
     }
     case CSSPropertyWebkitMinLogicalWidth: {
         const CSSPropertyID properties[2] = { CSSPropertyMinWidth, CSSPropertyMinHeight };
-        return resolveToPhysicalProperty(writingMode, _LogicalWidth, properties);
+        return resolveToPhysicalProperty(writingMode, LogicalWidth, properties);
     }
     case CSSPropertyWebkitMinLogicalHeight: {
         const CSSPropertyID properties[2] = { CSSPropertyMinWidth, CSSPropertyMinHeight };
-        return resolveToPhysicalProperty(writingMode, _LogicalHeight, properties);
+        return resolveToPhysicalProperty(writingMode, LogicalHeight, properties);
     }
     case CSSPropertyWebkitMaxLogicalWidth: {
         const CSSPropertyID properties[2] = { CSSPropertyMaxWidth, CSSPropertyMaxHeight };
-        return resolveToPhysicalProperty(writingMode, _LogicalWidth, properties);
+        return resolveToPhysicalProperty(writingMode, LogicalWidth, properties);
     }
     case CSSPropertyWebkitMaxLogicalHeight: {
         const CSSPropertyID properties[2] = { CSSPropertyMaxWidth, CSSPropertyMaxHeight };
-        return resolveToPhysicalProperty(writingMode, _LogicalHeight, properties);
+        return resolveToPhysicalProperty(writingMode, LogicalHeight, properties);
     }
     default:
         return propertyID;
+    }
+}
+
+bool CSSProperty::isDescriptorOnly(CSSPropertyID propertyID)
+{
+    switch (propertyID) {
+#if ENABLE(CSS_DEVICE_ADAPTATION)
+    case CSSPropertyMinZoom:
+    case CSSPropertyMaxZoom:
+    case CSSPropertyOrientation:
+    case CSSPropertyUserZoom:
+#endif
+    case CSSPropertySrc:
+    case CSSPropertyUnicodeRange:
+        return true;
+    default:
+        return false;
     }
 }
 

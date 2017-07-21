@@ -35,7 +35,7 @@
 #include "LengthFunctions.h"
 #include <memory>
 #include <wtf/RefCounted.h>
-#include <wtf/Vector.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -44,11 +44,6 @@ enum CalcOperator {
     CalcSubtract = '-',
     CalcMultiply = '*',
     CalcDivide = '/'
-};
-
-enum CalculationPermittedValueRange {
-    CalculationRangeAll,
-    CalculationRangeNonNegative
 };
 
 enum CalcExpressionNodeType {
@@ -81,8 +76,8 @@ public:
     float value() const { return m_value; }
 
 private:
-    virtual float evaluate(float) const override;
-    virtual bool operator==(const CalcExpressionNode&) const override;
+    float evaluate(float) const override;
+    bool operator==(const CalcExpressionNode&) const override;
 
     float m_value;
 };
@@ -94,8 +89,8 @@ public:
     const Length& length() const { return m_length; }
 
 private:
-    virtual float evaluate(float maxValue) const override;
-    virtual bool operator==(const CalcExpressionNode&) const override;
+    float evaluate(float maxValue) const override;
+    bool operator==(const CalcExpressionNode&) const override;
 
     Length m_length;
 };
@@ -109,8 +104,8 @@ public:
     CalcOperator getOperator() const { return m_operator; }
 
 private:
-    virtual float evaluate(float maxValue) const override;
-    virtual bool operator==(const CalcExpressionNode&) const override;
+    float evaluate(float maxValue) const override;
+    bool operator==(const CalcExpressionNode&) const override;
 
     std::unique_ptr<CalcExpressionNode> m_leftSide;
     std::unique_ptr<CalcExpressionNode> m_rightSide;
@@ -126,8 +121,8 @@ public:
     float progress() const { return m_progress; }
 
 private:
-    virtual float evaluate(float maxValue) const override;
-    virtual bool operator==(const CalcExpressionNode&) const override;
+    float evaluate(float maxValue) const override;
+    bool operator==(const CalcExpressionNode&) const override;
 
     Length m_from;
     Length m_to;
@@ -136,14 +131,14 @@ private:
 
 class CalculationValue : public RefCounted<CalculationValue> {
 public:
-    WEBCORE_EXPORT static Ref<CalculationValue> create(std::unique_ptr<CalcExpressionNode>, CalculationPermittedValueRange);
+    WEBCORE_EXPORT static Ref<CalculationValue> create(std::unique_ptr<CalcExpressionNode>, ValueRange);
     float evaluate(float maxValue) const;
 
     bool shouldClampToNonNegative() const { return m_shouldClampToNonNegative; }
     const CalcExpressionNode& expression() const { return *m_expression; }
 
 private:
-    CalculationValue(std::unique_ptr<CalcExpressionNode>, CalculationPermittedValueRange);
+    CalculationValue(std::unique_ptr<CalcExpressionNode>, ValueRange);
 
     std::unique_ptr<CalcExpressionNode> m_expression;
     bool m_shouldClampToNonNegative;
@@ -154,9 +149,9 @@ inline CalcExpressionNode::CalcExpressionNode(CalcExpressionNodeType type)
 {
 }
 
-inline CalculationValue::CalculationValue(std::unique_ptr<CalcExpressionNode> expression, CalculationPermittedValueRange range)
+inline CalculationValue::CalculationValue(std::unique_ptr<CalcExpressionNode> expression, ValueRange range)
     : m_expression(WTFMove(expression))
-    , m_shouldClampToNonNegative(range == CalculationRangeNonNegative)
+    , m_shouldClampToNonNegative(range == ValueRangeNonNegative)
 {
 }
 

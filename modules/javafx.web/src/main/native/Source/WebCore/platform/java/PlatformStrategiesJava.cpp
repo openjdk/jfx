@@ -1,20 +1,21 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 
 #include "config.h"
 #include "PlatformStrategiesJava.h"
 
+#include "NotImplemented.h"
+#include "PlatformCookieJar.h"
+#include "NetworkStorageSession.h"
+
 #include "WebKit/WebCoreSupport/WebResourceLoadScheduler.h"
 #include <WebCore/BlobRegistryImpl.h>
-#include "NotImplemented.h"
-#include "Page.h"
-#include "PageGroup.h"
-#include "PlatformCookieJar.h"
-#include "LinkHash.h"
+#include <WebCore/Page.h>
+#include <WebCore/PageGroup.h>
+#include <WebCore/LinkHash.h>
 
-using namespace WebCore;
-
+namespace WebCore {
 void PlatformStrategiesJava::initialize()
 {
     DEPRECATED_DEFINE_STATIC_LOCAL(PlatformStrategiesJava, platformStrategies, ());
@@ -30,11 +31,6 @@ CookiesStrategy* PlatformStrategiesJava::createCookiesStrategy()
     return this;
 }
 
-// DatabaseStrategy* PlatformStrategiesJava::createDatabaseStrategy()
-// {
-//     return this;
-// }
-
 LoaderStrategy* PlatformStrategiesJava::createLoaderStrategy()
 {
     return new WebResourceLoadScheduler;
@@ -45,15 +41,6 @@ PasteboardStrategy* PlatformStrategiesJava::createPasteboardStrategy()
     // This is currently used only by Mac code.
     notImplemented();
     return 0;
-}
-
-PluginStrategy* PlatformStrategiesJava::createPluginStrategy()
-{
-    return this;
-}
-
-void PlatformStrategiesJava::getWebVisiblePluginInfo(const Page*, Vector<PluginInfo>&) {
-
 }
 
 WebCore::BlobRegistry* PlatformStrategiesJava::createBlobRegistry()
@@ -92,47 +79,14 @@ void PlatformStrategiesJava::deleteCookie(const NetworkStorageSession& session, 
     WebCore::deleteCookie(session, url, cookieName);
 }
 
-// PluginStrategy
-void PlatformStrategiesJava::refreshPlugins()
+String PlatformStrategiesJava::cookieRequestHeaderFieldValue(SessionID session, const URL& firstParty, const URL& url)
 {
-    // PluginDatabase::installedPlugins()->refresh(); //XXX Windows only
+    return PlatformStrategiesJava::cookieRequestHeaderFieldValue(*NetworkStorageSession::storageSession(session), firstParty, url);
 }
 
-void PlatformStrategiesJava::getPluginInfo(const Page* page, Vector<PluginInfo>& outPlugins)
+void PlatformStrategiesJava::addCookie(const NetworkStorageSession&, const URL&, const Cookie&)
 {
-    //XXX make Windows only
-    // PluginDatabase* database = PluginDatabase::installedPlugins();
-    // const Vector<PluginPackage*> &plugins = database->plugins();
-
-    // for (size_t i = 0; i < plugins.size(); ++i) {
-    //     PluginPackage* package = plugins[i];
-
-    //     PluginInfo pluginInfo;
-    //     pluginInfo.name = package->name();
-    //     pluginInfo.file = package->fileName();
-    //     pluginInfo.desc = package->description();
-
-    //     const MIMEToDescriptionsMap& mimeToDescriptions = package->mimeToDescriptions();
-    //     MIMEToDescriptionsMap::const_iterator end = mimeToDescriptions.end();
-    //     for (MIMEToDescriptionsMap::const_iterator it = mimeToDescriptions.begin(); it != end; ++it) {
-    //         MimeClassInfo mime;
-    //         mime.type = it->key;
-    //         mime.desc = it->value;
-    //         mime.extensions = package->mimeToExtensions().get(mime.type);
-    //         pluginInfo.mimes.append(mime);
-    //     }
-
-    //     outPlugins.append(pluginInfo);
-    // }
+    notImplemented();
 }
 
-// VisitedLinkStrategy //XXX recheck
-// bool PlatformStrategiesJava::isLinkVisited(Page* page, LinkHash hash, const URL&, const AtomicString&)
-// {
-//     return page->group().isLinkVisited(hash);
-// }
-
-// void PlatformStrategiesJava::addVisitedLink(Page* page, LinkHash hash)
-// {
-//     page->group().addVisitedLinkHash(hash);
-// }
+} // namespace WebCore

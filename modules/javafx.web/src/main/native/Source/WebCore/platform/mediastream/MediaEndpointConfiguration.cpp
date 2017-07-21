@@ -31,41 +31,24 @@
 #include "config.h"
 #include "MediaEndpointConfiguration.h"
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(WEB_RTC)
 
 namespace WebCore {
 
-IceServerInfo::IceServerInfo(const Vector<String>& urls, const String& credential, const String& username)
-    : m_credential(credential)
-    , m_username(username)
+MediaEndpointConfiguration::MediaEndpointConfiguration(Vector<IceServerInfo>&& iceServers, IceTransportPolicy iceTransportPolicy, BundlePolicy bundlePolicy)
+    : iceServers(WTFMove(iceServers))
+    , iceTransportPolicy(iceTransportPolicy)
+    , bundlePolicy(bundlePolicy)
 {
-    m_urls.reserveCapacity(urls.size());
-    for (auto& url : urls)
-        m_urls.append(URL(URL(), url));
 }
 
-MediaEndpointConfiguration::MediaEndpointConfiguration(Vector<RefPtr<IceServerInfo>>& iceServers, const String& iceTransportPolicy, const String& bundlePolicy)
-    : m_iceServers(iceServers)
+MediaEndpointConfiguration::IceServerInfo::IceServerInfo(Vector<URL>&& urls, const String& credential, const String& username)
+    : urls(WTFMove(urls))
+    , credential(credential)
+    , username(username)
 {
-    if (iceTransportPolicy == "none")
-        m_iceTransportPolicy = IceTransportPolicy::None;
-    else if (iceTransportPolicy == "relay")
-        m_iceTransportPolicy = IceTransportPolicy::Relay;
-    else if (iceTransportPolicy == "all")
-        m_iceTransportPolicy = IceTransportPolicy::All;
-    else
-        ASSERT_NOT_REACHED();
-
-    if (bundlePolicy == "balanced")
-        m_bundlePolicy = BundlePolicy::Balanced;
-    else if (bundlePolicy == "max-compat")
-        m_bundlePolicy = BundlePolicy::MaxCompat;
-    else if (bundlePolicy == "max-bundle")
-        m_bundlePolicy = BundlePolicy::MaxBundle;
-    else
-        ASSERT_NOT_REACHED();
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(WEB_RTC)

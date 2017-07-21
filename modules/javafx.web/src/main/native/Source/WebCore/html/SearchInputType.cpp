@@ -55,8 +55,11 @@ SearchInputType::SearchInputType(HTMLInputElement& element)
 void SearchInputType::addSearchResult()
 {
 #if !PLATFORM(IOS)
-    if (auto* renderer = element().renderer())
-        downcast<RenderSearchField>(*renderer).addSearchResult();
+    // Normally we've got the correct renderer by the time we get here. However when the input type changes
+    // we don't update the associated renderers until after the next tree update, so we could actually end up here
+    // with a mismatched renderer (e.g. through form submission).
+    if (is<RenderSearchField>(element().renderer()))
+        downcast<RenderSearchField>(*element().renderer()).addSearchResult();
 #endif
 }
 
@@ -76,7 +79,7 @@ void SearchInputType::maxResultsAttributeChanged()
         updateResultButtonPseudoType(*m_resultsButton, element().maxResults());
 }
 
-RenderPtr<RenderElement> SearchInputType::createInputRenderer(Ref<RenderStyle>&& style)
+RenderPtr<RenderElement> SearchInputType::createInputRenderer(RenderStyle&& style)
 {
     return createRenderer<RenderSearchField>(element(), WTFMove(style));
 }
@@ -107,14 +110,14 @@ void SearchInputType::createShadowSubtree()
     ASSERT(container);
     ASSERT(textWrapper);
 
-    Ref<SearchFieldResultsButtonElement> resultsButton = SearchFieldResultsButtonElement::create(element().document());
+    auto resultsButton = SearchFieldResultsButtonElement::create(element().document());
     m_resultsButton = resultsButton.ptr();
     updateResultButtonPseudoType(resultsButton.get(), element().maxResults());
-    container->insertBefore(WTFMove(resultsButton), textWrapper, IGNORE_EXCEPTION);
+    container->insertBefore(resultsButton, textWrapper);
 
-    Ref<SearchFieldCancelButtonElement> cancelButton = SearchFieldCancelButtonElement::create(element().document());
+    auto cancelButton = SearchFieldCancelButtonElement::create(element().document());
     m_cancelButton = cancelButton.ptr();
-    container->insertBefore(WTFMove(cancelButton), textWrapper->nextSibling(), IGNORE_EXCEPTION);
+    container->insertBefore(cancelButton, textWrapper->nextSibling());
 }
 
 HTMLElement* SearchInputType::resultsButtonElement() const
@@ -127,19 +130,19 @@ HTMLElement* SearchInputType::cancelButtonElement() const
     return m_cancelButton;
 }
 
-void SearchInputType::handleKeydownEvent(KeyboardEvent* event)
+void SearchInputType::handleKeydownEvent(KeyboardEvent& event)
 {
     if (element().isDisabledOrReadOnly()) {
         TextFieldInputType::handleKeydownEvent(event);
         return;
     }
 
-    const String& key = event->keyIdentifier();
+    const String& key = event.keyIdentifier();
     if (key == "U+001B") {
         Ref<HTMLInputElement> input(this->element());
-        input->setValueForUser("");
+        input->setValueForUser(emptyString());
         input->onSearch();
-        event->setDefaultHandled();
+        event.setDefaultHandled();
         return;
     }
     TextFieldInputType::handleKeydownEvent(event);
@@ -158,8 +161,7 @@ void SearchInputType::startSearchEventTimer()
     unsigned length = element().innerTextValue().length();
 
     if (!length) {
-        stopSearchEventTimer();
-        element().onSearch();
+        m_searchEventTimer.startOneShot(0_ms);
         return;
     }
 
@@ -180,14 +182,13 @@ void SearchInputType::searchEventTimerFired()
 
 bool SearchInputType::searchEventsShouldBeDispatched() const
 {
-    return element().fastHasAttribute(incrementalAttr);
+    return element().hasAttributeWithoutSynchronization(incrementalAttr);
 }
 
 void SearchInputType::didSetValueByUserEdit()
 {
-    if (m_cancelButton && element().renderer())
+    if (m_cancelButton && is<RenderSearchField>(element().renderer()))
         downcast<RenderSearchField>(*element().renderer()).updateCancelButtonVisibility();
-
     // If the incremental attribute is set, then dispatch the search event
     if (searchEventsShouldBeDispatched())
         startSearchEventTimer();

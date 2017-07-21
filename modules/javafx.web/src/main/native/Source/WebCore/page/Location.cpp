@@ -60,7 +60,15 @@ String Location::href() const
     if (!m_frame)
         return String();
 
-    return url().string();
+    auto& url = this->url();
+
+    if (!url.hasUsername() && !url.hasPassword())
+        return url.string();
+
+    URL urlWithoutCredentials(url);
+    urlWithoutCredentials.setUser(WTF::emptyString());
+    urlWithoutCredentials.setPass(WTF::emptyString());
+    return urlWithoutCredentials.string();
 }
 
 String Location::protocol() const
@@ -68,7 +76,7 @@ String Location::protocol() const
     if (!m_frame)
         return String();
 
-    return url().protocol() + ":";
+    return makeString(url().protocol(), ":");
 }
 
 String Location::host() const
@@ -78,8 +86,7 @@ String Location::host() const
 
     // Note: this is the IE spec. The NS spec swaps the two, it says
     // "The hostname property is the concatenation of the host and port properties, separated by a colon."
-    const URL& url = this->url();
-    return url.hasPort() ? url.host() + ":" + String::number(url.port()) : url.host();
+    return url().hostAndPort();
 }
 
 String Location::hostname() const
@@ -96,7 +103,7 @@ String Location::port() const
         return String();
 
     const URL& url = this->url();
-    return url.hasPort() ? String::number(url.port()) : "";
+    return url.port() ? String::number(url.port().value()) : emptyString();
 }
 
 String Location::pathname() const
@@ -124,14 +131,14 @@ String Location::origin() const
     return SecurityOrigin::create(url())->toString();
 }
 
-PassRefPtr<DOMStringList> Location::ancestorOrigins() const
+Ref<DOMStringList> Location::ancestorOrigins() const
 {
-    RefPtr<DOMStringList> origins = DOMStringList::create();
+    auto origins = DOMStringList::create();
     if (!m_frame)
-        return origins.release();
+        return origins;
     for (Frame* frame = m_frame->tree().parent(); frame; frame = frame->tree().parent())
-        origins->append(frame->document()->securityOrigin()->toString());
-    return origins.release();
+        origins->append(frame->document()->securityOrigin().toString());
+    return origins;
 }
 
 String Location::hash() const
@@ -150,16 +157,15 @@ void Location::setHref(DOMWindow& activeWindow, DOMWindow& firstWindow, const St
     setLocation(activeWindow, firstWindow, url);
 }
 
-void Location::setProtocol(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& protocol, ExceptionCode& ec)
+ExceptionOr<void> Location::setProtocol(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& protocol)
 {
     if (!m_frame)
-        return;
+        return { };
     URL url = m_frame->document()->url();
-    if (!url.setProtocol(protocol)) {
-        ec = SYNTAX_ERR;
-        return;
-    }
+    if (!url.setProtocol(protocol))
+        return Exception { SYNTAX_ERR };
     setLocation(activeWindow, firstWindow, url.string());
+    return { };
 }
 
 void Location::setHost(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& host)
@@ -215,9 +221,10 @@ void Location::setHash(DOMWindow& activeWindow, DOMWindow& firstWindow, const St
 {
     if (!m_frame)
         return;
-    URL url = m_frame->document()->url();
-    String oldFragmentIdentifier = url.fragmentIdentifier();
-    String newFragmentIdentifier = hash;
+    ASSERT(m_frame->document());
+    auto url = m_frame->document()->url();
+    auto oldFragmentIdentifier = url.fragmentIdentifier();
+    auto newFragmentIdentifier = hash;
     if (hash[0] == '#')
         newFragmentIdentifier = hash.substring(1);
     url.setFragmentIdentifier(newFragmentIdentifier);
@@ -240,7 +247,9 @@ void Location::replace(DOMWindow& activeWindow, DOMWindow& firstWindow, const St
 {
     if (!m_frame)
         return;
-    // Note: We call DOMWindow::setLocation directly here because replace() always operates on the current frame.
+    ASSERT(m_frame->document());
+    ASSERT(m_frame->document()->domWindow());
+    // We call DOMWindow::setLocation directly here because replace() always operates on the current frame.
     m_frame->document()->domWindow()->setLocation(activeWindow, firstWindow, url, LockHistoryAndBackForwardList);
 }
 
@@ -248,26 +257,38 @@ void Location::reload(DOMWindow& activeWindow)
 {
     if (!m_frame)
         return;
+
+    ASSERT(activeWindow.document());
+    ASSERT(m_frame->document());
+    ASSERT(m_frame->document()->domWindow());
+
+    auto& activeDocument = *activeWindow.document();
+    auto& targetDocument = *m_frame->document();
+
     // FIXME: It's not clear this cross-origin security check is valuable.
     // We allow one page to change the location of another. Why block attempts to reload?
     // Other location operations simply block use of JavaScript URLs cross origin.
-    DOMWindow* targetWindow = m_frame->document()->domWindow();
-    if (!activeWindow.document()->securityOrigin()->canAccess(m_frame->document()->securityOrigin())) {
-        targetWindow->printErrorMessage(targetWindow->crossDomainAccessErrorMessage(activeWindow));
+    if (!activeDocument.securityOrigin().canAccess(targetDocument.securityOrigin())) {
+        auto& targetWindow = *targetDocument.domWindow();
+        targetWindow.printErrorMessage(targetWindow.crossDomainAccessErrorMessage(activeWindow));
         return;
     }
-    if (protocolIsJavaScript(m_frame->document()->url()))
+
+    if (protocolIsJavaScript(targetDocument.url()))
         return;
-    m_frame->navigationScheduler().scheduleRefresh(activeWindow.document());
+
+    m_frame->navigationScheduler().scheduleRefresh(activeDocument);
 }
 
 void Location::setLocation(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& url)
 {
     ASSERT(m_frame);
-    Frame* frame = m_frame->loader().findFrameForNavigation(String(), activeWindow.document());
-    if (!frame)
+    auto* targetFrame = m_frame->loader().findFrameForNavigation({ }, activeWindow.document());
+    if (!targetFrame)
         return;
-    frame->document()->domWindow()->setLocation(activeWindow, firstWindow, url);
+    ASSERT(targetFrame->document());
+    ASSERT(targetFrame->document()->domWindow());
+    targetFrame->document()->domWindow()->setLocation(activeWindow, firstWindow, url);
 }
 
 } // namespace WebCore

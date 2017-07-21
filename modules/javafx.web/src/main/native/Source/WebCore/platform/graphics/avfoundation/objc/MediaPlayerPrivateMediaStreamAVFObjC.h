@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,24 +29,33 @@
 #if ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
 
 #include "MediaPlayerPrivate.h"
+#include "MediaSample.h"
 #include "MediaStreamPrivate.h"
+#include <wtf/Function.h>
 #include <wtf/MediaTime.h>
-#include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
 OBJC_CLASS AVSampleBufferAudioRenderer;
+OBJC_CLASS AVSampleBufferDisplayLayer;
+OBJC_CLASS AVSampleBufferRenderSynchronizer;
 OBJC_CLASS AVStreamSession;
+OBJC_CLASS NSNumber;
+OBJC_CLASS WebAVSampleBufferStatusChangeListener;
 typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 
 namespace WebCore {
 
-class AudioTrackPrivateMediaStream;
+class AudioTrackPrivateMediaStreamCocoa;
 class AVVideoCaptureSource;
 class Clock;
 class MediaSourcePrivateClient;
 class VideoTrackPrivateMediaStream;
 
-class MediaPlayerPrivateMediaStreamAVFObjC : public MediaPlayerPrivateInterface, public MediaStreamPrivate::Observer {
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+class VideoFullscreenLayerManager;
+#endif
+
+class MediaPlayerPrivateMediaStreamAVFObjC final : public MediaPlayerPrivateInterface, private MediaStreamPrivate::Observer, private MediaStreamTrackPrivate::Observer {
 public:
     explicit MediaPlayerPrivateMediaStreamAVFObjC(MediaPlayer*);
     virtual ~MediaPlayerPrivateMediaStreamAVFObjC();
@@ -64,6 +73,11 @@ public:
     void setReadyState(MediaPlayer::ReadyState);
 
     WeakPtr<MediaPlayerPrivateMediaStreamAVFObjC> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
+
+    void ensureLayer();
+    void destroyLayer();
+
+    void layerStatusDidChange(AVSampleBufferDisplayLayer*, NSNumber*);
 
 private:
     // MediaPlayerPrivateInterface
@@ -87,7 +101,6 @@ private:
     bool paused() const override;
 
     void setVolume(float) override;
-    void internalSetVolume(float, bool);
     void setMuted(bool) override;
     bool supportsMuting() const override { return true; }
 
@@ -112,10 +125,25 @@ private:
 
     void setSize(const IntSize&) override { /* No-op */ }
 
+    void flushRenderers();
+
+    using PendingSampleQueue = Deque<Ref<MediaSample>>;
+    void addSampleToPendingQueue(PendingSampleQueue&, MediaSample&);
+    void removeOldSamplesFromPendingQueue(PendingSampleQueue&);
+
+    void updateSampleTimes(MediaSample&, const MediaTime&, const char*);
+    MediaTime calculateTimelineOffset(const MediaSample&, double);
+
+    void enqueueVideoSample(MediaStreamTrackPrivate&, MediaSample&);
+    bool shouldEnqueueVideoSampleBuffer() const;
+    void flushAndRemoveVideoSampleBuffers();
+    void requestNotificationWhenReadyForVideoData();
+
     void paint(GraphicsContext&, const FloatRect&) override;
     void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) override;
     bool metaDataAvailable() const { return m_mediaStreamPrivate && m_readyState >= MediaPlayer::HaveMetadata; }
 
+    void acceleratedRenderingStateChanged() override;
     bool supportsAcceleratedRendering() const override { return true; }
 
     bool hasSingleSecurityOrigin() const override { return true; }
@@ -134,11 +162,11 @@ private:
     void updateReadyState();
 
     void updateIntrinsicSize(const FloatSize&);
-    void createPreviewLayers();
     void updateTracks();
     void renderingModeChanged();
+    void checkSelectedVideoTrack();
 
-    void scheduleDeferredTask(std::function<void()>);
+    void scheduleDeferredTask(Function<void ()>&&);
 
     enum DisplayMode {
         None,
@@ -148,6 +176,7 @@ private:
     };
     DisplayMode currentDisplayMode() const;
     void updateDisplayMode();
+    void updatePausedImage();
 
     // MediaStreamPrivate::Observer
     void activeStatusChanged() override;
@@ -155,16 +184,38 @@ private:
     void didAddTrack(MediaStreamTrackPrivate&) override;
     void didRemoveTrack(MediaStreamTrackPrivate&) override;
 
+    // MediaStreamPrivateTrack::Observer
+    void trackEnded(MediaStreamTrackPrivate&) override { };
+    void trackMutedChanged(MediaStreamTrackPrivate&) override { };
+    void trackSettingsChanged(MediaStreamTrackPrivate&) override { };
+    void trackEnabledChanged(MediaStreamTrackPrivate&) override { };
+    void sampleBufferUpdated(MediaStreamTrackPrivate&, MediaSample&) override;
+
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    void setVideoFullscreenLayer(PlatformLayer*, std::function<void()> completionHandler) override;
+    void setVideoFullscreenFrame(FloatRect) override;
+#endif
+
+    MediaTime streamTime() const;
+
+    AudioSourceProvider* audioSourceProvider() final;
+
     MediaPlayer* m_player { nullptr };
     WeakPtrFactory<MediaPlayerPrivateMediaStreamAVFObjC> m_weakPtrFactory;
     RefPtr<MediaStreamPrivate> m_mediaStreamPrivate;
-    mutable RetainPtr<CALayer> m_previewLayer;
-    mutable RetainPtr<PlatformLayer> m_videoBackgroundLayer;
-    RetainPtr<CGImageRef> m_pausedImage;
+
+    RefPtr<MediaStreamTrackPrivate> m_activeVideoTrack;
+
+    RetainPtr<WebAVSampleBufferStatusChangeListener> m_statusChangeListener;
+    RetainPtr<AVSampleBufferDisplayLayer> m_sampleBufferDisplayLayer;
     std::unique_ptr<Clock> m_clock;
 
-    HashMap<String, RefPtr<AudioTrackPrivateMediaStream>> m_audioTrackMap;
+    MediaTime m_pausedTime;
+    RetainPtr<CGImageRef> m_pausedImage;
+
+    HashMap<String, RefPtr<AudioTrackPrivateMediaStreamCocoa>> m_audioTrackMap;
     HashMap<String, RefPtr<VideoTrackPrivateMediaStream>> m_videoTrackMap;
+    PendingSampleQueue m_pendingVideoSampleQueue;
 
     MediaPlayer::NetworkState m_networkState { MediaPlayer::Empty };
     MediaPlayer::ReadyState m_readyState { MediaPlayer::HaveNothing };
@@ -175,6 +226,14 @@ private:
     bool m_muted { false };
     bool m_haveEverPlayed { false };
     bool m_ended { false };
+    bool m_hasEverEnqueuedVideoFrame { false };
+    bool m_hasReceivedMedia { false };
+    bool m_isFrameDisplayed { false };
+    bool m_pendingSelectedTrackCheck { false };
+
+#if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
+    std::unique_ptr<VideoFullscreenLayerManager> m_videoFullscreenLayerManager;
+#endif
 };
 
 }

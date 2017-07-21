@@ -23,13 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef StackAllocator_h
-#define StackAllocator_h
+#pragma once
 
 #if ENABLE(CSS_SELECTOR_JIT)
 
 #include "RegisterAllocator.h"
-#include <MacroAssembler.h> //XXX #include <JavaScriptCore/MacroAssembler.h>
+#include <JavaScriptCore/MacroAssembler.h>
 #include <limits>
 
 namespace WebCore {
@@ -274,5 +273,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(CSS_SELECTOR_JIT)
-
-#endif // StackAllocator_h

@@ -1,15 +1,15 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef _JavaDOMUtils_h
-#define _JavaDOMUtils_h
+
+#pragma once
 
 #include <jni.h>
 
-#include "wtf/RefPtr.h"
-#include "wtf/text/WTFString.h"
-#include "WebCore/dom/ExceptionCodePlaceholder.h"
-#include "WebCore/dom/ExceptionCode.h"
+#include <wtf/RefPtr.h>
+#include <wtf/text/WTFString.h>
+#include <WebCore/ExceptionCode.h>
+#include <WebCore/ExceptionOr.h>
 
 // Note that a pointer to a Node is not necessarily the same address
 // as a pointer to an Element: a static_cast between the two is not
@@ -29,85 +29,29 @@ enum JavaExceptionType {
     JavaUndefinedException
 };
 
-class JavaException {
-private:
-    ExceptionCode m_ec;
-    JNIEnv* m_env;
-    JavaExceptionType m_type1;
-    JavaExceptionType m_type2;
-public:
-    JavaException(JNIEnv* env, JavaExceptionType type1, JavaExceptionType type2 = JavaUndefinedException)
-    : m_ec(0)
-    , m_env(env)
-    , m_type1(std::min(type1, type2))
-    , m_type2(std::max(type1, type2))
-    {
-    }
+uint32_t getJavaHashCode(jobject o);
+bool isJavaEquals(jobject o1, jobject o2);
 
-    ~JavaException() {
-        if (m_ec) {
-            // FIXME-java: RangeException has been removed from w3c spec
-            // http://trac.webkit.org/changeset/189202
-            JavaExceptionType type = (JavaRangeException == m_type2
-                && (
-                       m_ec == INVALID_STATE_ERR
-                    || m_ec == INVALID_NODE_TYPE_ERR
-                )
-            )
-            ? JavaRangeException
-            : m_type1;
+void raiseTypeErrorException(JNIEnv*);
+void raiseNotSupportedErrorException(JNIEnv*);
 
-            //lazy init
-            jclass clz = 0L;
-            jmethodID  mid = 0;
-            switch(type) {
-            case JavaDOMException:
-                {
-                    static JGClass exceptionClass(m_env->FindClass("org/w3c/dom/DOMException"));
-                    static jmethodID midCtor = m_env->GetMethodID(exceptionClass, "<init>", "(SLjava/lang/String;)V");
-                    clz = exceptionClass;
-                    mid = midCtor;
-                }
-                break;
-            case JavaEventException:
-                {
-                    static JGClass exceptionClass(m_env->FindClass("org/w3c/dom/events/EventException"));
-                    static jmethodID midCtor = m_env->GetMethodID(exceptionClass, "<init>", "(SLjava/lang/String;)V");
-                    clz = exceptionClass;
-                    mid = midCtor;
-                }
-                break;
-            case JavaRangeException:
-                {
-                    static JGClass exceptionClass(m_env->FindClass("org/w3c/dom/ranges/RangeException"));
-                    static jmethodID midCtor = m_env->GetMethodID(exceptionClass, "<init>", "(SLjava/lang/String;)V");
-                    clz = exceptionClass;
-                    mid = midCtor;
-                }
-                break;
-            case JavaUndefinedException:
-                {
-                    //XXX: handle?
-                }
-                break;
-            }
+void raiseDOMErrorException(JNIEnv*, Exception&&);
 
-            ASSERT(mid);
-            m_env->Throw(JLocalRef<jthrowable>(
-                (jthrowable)m_env->NewObject(clz, mid, (jshort)m_ec, 0)
-            ));
-        }
-    }
+template<typename T> T raiseOnDOMError(JNIEnv*, ExceptionOr<T>&&);
+void raiseOnDOMError(JNIEnv*, ExceptionOr<void>&&);
 
-    operator ExceptionCode&() {
-        return m_ec;
-    }
+inline void raiseOnDOMError(JNIEnv* env, ExceptionOr<void>&& possibleException)
+{
+    if (possibleException.hasException())
+        raiseDOMErrorException(env, possibleException.releaseException());
+}
 
-    ExceptionCode* operator&() {
-        m_ec = 0;
-        return &m_ec;
-    }
-};
+template<typename T> inline T raiseOnDOMError(JNIEnv* env, ExceptionOr<T>&& exceptionOrReturnValue)
+{
+    if (exceptionOrReturnValue.hasException())
+        raiseDOMErrorException(env, exceptionOrReturnValue.releaseException());
+    return exceptionOrReturnValue.releaseReturnValue();
+}
 
 template <typename T> class JavaReturn {
     JNIEnv* m_env;
@@ -163,14 +107,4 @@ public:
     }
 };
 
-}
-
-extern "C" {
-
-uint32_t getJavaHashCode(jobject o);
-bool isJavaEquals(jobject o1, jobject o2);
-
-}
-
-
-#endif
+} // namespace WebCore

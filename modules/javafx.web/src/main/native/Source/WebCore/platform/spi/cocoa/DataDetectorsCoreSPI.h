@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,14 +26,21 @@
 #ifndef DataDetectorsCoreSPI_h
 #define DataDetectorsCoreSPI_h
 
+typedef struct __DDResult *DDResultRef;
+
 #if USE(APPLE_INTERNAL_SDK)
 
 #import <DataDetectorsCore/DDBinderKeys_Private.h>
 #import <DataDetectorsCore/DDScannerResult.h>
 #import <DataDetectorsCore/DataDetectorsCore.h>
+
 #if PLATFORM(IOS)
-#import <DataDetectorsCore/DDURLifier.h>
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000
+#import <DataDetectorsCore/DDOptionalSource.h>
 #endif
+#import <DataDetectorsCore/DDURLifier.h>
+#endif // PLATFORM(IOS)
+
 #else // !USE(APPLE_INTERNAL_SDK)
 
 typedef enum {
@@ -47,6 +54,8 @@ enum {
     DDScannerCopyResultsOptionsNoOverlap = 1 << 0,
     DDScannerCopyResultsOptionsCoalesceSignatures = 1 << 1,
 };
+
+typedef CFIndex DDScannerSource;
 
 enum {
     DDURLifierPhoneNumberDetectionNone = 0,
@@ -85,11 +94,13 @@ extern CFStringRef const DDBinderGenericURLKey;
 extern CFStringRef const DDBinderEmailKey;
 extern CFStringRef const DDBinderTrackingNumberKey;
 extern CFStringRef const DDBinderFlightInformationKey;
+extern CFStringRef const DDBinderParsecSourceKey;
 extern CFStringRef const DDBinderSignatureBlockKey;
 extern NSString * const DDURLScheme;
 
 @interface DDScannerResult : NSObject <NSCoding, NSSecureCoding>
 + (NSArray *)resultsFromCoreResults:(CFArrayRef)coreResults;
+- (DDResultRef)coreResult;
 @end
 
 #define DDResultPropertyPassiveDisplay   (1 << 0)
@@ -106,14 +117,17 @@ typedef struct __DDQueryRange {
 
 #endif // !USE(APPLE_INTERNAL_SDK)
 
-typedef struct __DDResult *DDResultRef;
 typedef struct __DDScanQuery *DDScanQueryRef;
 typedef struct __DDScanner *DDScannerRef;
 
 typedef CFIndex DDScannerCopyResultsOptions;
 typedef CFIndex DDScannerOptions;
 
-extern "C" {
+enum {
+    DDScannerSourceSpotlight = 1<<1,
+};
+
+WTF_EXTERN_C_BEGIN
 
 extern const DDScannerCopyResultsOptions DDScannerCopyResultsOptionsForPassiveUse;
 
@@ -134,6 +148,6 @@ bool DDResultHasProperties(DDResultRef, CFIndex propertySet);
 CFArrayRef DDResultGetSubResults(DDResultRef);
 DDQueryRange DDResultGetQueryRangeForURLification(DDResultRef);
 
-}
+WTF_EXTERN_C_END
 
 #endif // DataDetectorsCoreSPI_h

@@ -19,8 +19,7 @@
  * Boston, MA 02110-1301, USA.
  */
 
-#ifndef SVGFEBlendElement_h
-#define SVGFEBlendElement_h
+#pragma once
 
 #include "FEBlend.h"
 #include "SVGAnimatedEnumeration.h"
@@ -58,10 +57,10 @@ public:
 private:
     SVGFEBlendElement(const QualifiedName&, Document&);
 
-    virtual void parseAttribute(const QualifiedName&, const AtomicString&) override;
-    virtual bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName) override;
-    virtual void svgAttributeChanged(const QualifiedName&) override;
-    virtual RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
+    void parseAttribute(const QualifiedName&, const AtomicString&) override;
+    bool setFilterEffectAttribute(FilterEffect*, const QualifiedName& attrName) override;
+    void svgAttributeChanged(const QualifiedName&) override;
+    RefPtr<FilterEffect> build(SVGFilterBuilder*, Filter&) override;
 
     BEGIN_DECLARE_ANIMATED_PROPERTIES(SVGFEBlendElement)
         DECLARE_ANIMATED_STRING(In1, in1)
@@ -71,5 +70,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif

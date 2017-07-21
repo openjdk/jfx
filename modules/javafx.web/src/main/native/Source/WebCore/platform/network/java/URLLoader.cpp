@@ -10,7 +10,7 @@
 #include "URLLoader.h"
 #include "FrameNetworkingContextJava.h"
 #include "HTTPParsers.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "MIMETypeRegistry.h"
 #include "ResourceError.h"
 #include "ResourceHandle.h"
@@ -255,7 +255,7 @@ bool URLLoader::AsynchronousTarget::willSendRequest(
         ResourceRequest request = m_handle->firstRequest();
         request.setURL(URL(URL(), newUrl));
         request.setHTTPMethod(newMethod);
-        client->willSendRequest(m_handle, request, response);
+        client->willSendRequest(m_handle, WTFMove(request), ResourceResponse(response));
     }
     return true;
 }
@@ -265,7 +265,7 @@ void URLLoader::AsynchronousTarget::didReceiveResponse(
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
-        client->didReceiveResponse(m_handle, response);
+        client->didReceiveResponse(m_handle, ResourceResponse(response));
     }
 }
 
@@ -305,15 +305,14 @@ URLLoader::SynchronousTarget::SynchronousTarget(const ResourceRequest& request,
     m_error = ResourceError();
 }
 
-void URLLoader::SynchronousTarget::didSendData(long totalBytesSent,
-                                               long totalBytesToBeSent)
+void URLLoader::SynchronousTarget::didSendData(long, long)
 {
 }
 
 bool URLLoader::SynchronousTarget::willSendRequest(
         const String& newUrl,
         const String&,
-        const ResourceResponse& response)
+        const ResourceResponse&)
 {
     // The following code was adapted from the Windows port
     // FIXME: This needs to be fixed to follow redirects correctly even

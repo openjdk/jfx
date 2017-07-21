@@ -1,10 +1,13 @@
 /*
  * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
  */
+
 #include "config.h"
+
 #include "FontCustomPlatformData.h"
 
 #include "SharedBuffer.h"
+#include "FontDescription.h"
 #include "FontPlatformData.h"
 
 namespace WebCore {

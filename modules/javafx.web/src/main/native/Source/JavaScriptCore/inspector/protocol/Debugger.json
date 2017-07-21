@@ -1,6 +1,7 @@
 {
     "domain": "Debugger",
     "description": "Debugger domain exposes JavaScript debugging capabilities. It allows setting and removing breakpoints, stepping through execution, exploring stack traces, etc.",
+    "workerSupported": true,
     "types": [
         {
             "id": "BreakpointId",
@@ -60,7 +61,6 @@
                 { "name": "location", "$ref": "Location", "description": "Location of the function." },
                 { "name": "name", "type": "string", "optional": true, "description": "Name of the function. Not present for anonymous functions." },
                 { "name": "displayName", "type": "string", "optional": true, "description": "Display name of the function(specified in 'displayName' property on the function object)." },
-                { "name": "inferredName", "type": "string", "optional": true, "description": "Name of the function inferred from its initial assignment." },
                 { "name": "scopeChain", "type": "array", "optional": true, "items": { "$ref": "Scope" }, "description": "Scope chain for this closure." }
             ],
             "description": "Information about the function."
@@ -73,7 +73,8 @@
                 { "name": "functionName", "type": "string", "description": "Name of the JavaScript function called on this call frame." },
                 { "name": "location", "$ref": "Location", "description": "Location in the source code." },
                 { "name": "scopeChain", "type": "array", "items": { "$ref": "Scope" }, "description": "Scope chain for this call frame." },
-                { "name": "this", "$ref": "Runtime.RemoteObject", "description": "<code>this</code> object for this call frame." }
+                { "name": "this", "$ref": "Runtime.RemoteObject", "description": "<code>this</code> object for this call frame." },
+                { "name": "isTailDeleted", "type": "boolean", "description": "Is the current frame tail deleted from a tail call." }
             ],
             "description": "JavaScript call frame. Array of call frames form the call stack."
         },
@@ -81,8 +82,11 @@
             "id": "Scope",
             "type": "object",
             "properties": [
+                { "name": "object", "$ref": "Runtime.RemoteObject", "description": "Object representing the scope. For <code>global</code> and <code>with</code> scopes it represents the actual object; for the rest of the scopes, it is artificial transient object enumerating scope variables as its properties." },
                 { "name": "type", "type": "string", "enum": ["global", "with", "closure", "catch", "functionName", "globalLexicalEnvironment", "nestedLexical"], "description": "Scope type." },
-                { "name": "object", "$ref": "Runtime.RemoteObject", "description": "Object representing the scope. For <code>global</code> and <code>with</code> scopes it represents the actual object; for the rest of the scopes, it is artificial transient object enumerating scope variables as its properties." }
+                { "name": "name", "type": "string", "optional": true, "description": "Name associated with the scope." },
+                { "name": "location", "$ref": "Location", "optional": true, "description": "Location if available of the scope definition." },
+                { "name": "empty", "type": "boolean", "optional": true, "description": "Whether the scope has any variables." }
             ],
             "description": "Scope description."
         },
@@ -133,6 +137,13 @@
             "description": "Disables debugger for given page."
         },
         {
+            "name": "setAsyncStackTraceDepth",
+            "description": "Set the async stack trace depth for the page. A value of zero disables recording of async stack traces.",
+            "parameters": [
+                { "name": "depth", "type": "integer", "description": "Async stack trace depth." }
+            ]
+        },
+        {
             "name": "setBreakpointsActive",
             "parameters": [
                 { "name": "active", "type": "boolean", "description": "New value for breakpoints active state." }
@@ -174,23 +185,27 @@
             "description": "Removes JavaScript breakpoint."
         },
         {
+            "name": "continueUntilNextRunLoop",
+            "description": "Continues execution until the current evaluation completes. This will trigger either a Debugger.paused or Debugger.resumed event."
+        },
+        {
             "name": "continueToLocation",
+            "description": "Continues execution until specific location is reached. This will trigger either a Debugger.paused or Debugger.resumed event.",
             "parameters": [
                 { "name": "location", "$ref": "Location", "description": "Location to continue to." }
-            ],
-            "description": "Continues execution until specific location is reached."
+            ]
         },
         {
             "name": "stepOver",
-            "description": "Steps over the statement."
+            "description": "Steps over the statement. This will trigger either a Debugger.paused or Debugger.resumed event."
         },
         {
             "name": "stepInto",
-            "description": "Steps into the function call."
+            "description": "Steps into the function call. This will trigger either a Debugger.paused or Debugger.resumed event."
         },
         {
             "name": "stepOut",
-            "description": "Steps out of the function call."
+            "description": "Steps out of the function call. This will trigger either a Debugger.paused or Debugger.resumed event."
         },
         {
             "name": "pause",
@@ -198,7 +213,7 @@
         },
         {
             "name": "resume",
-            "description": "Resumes JavaScript execution."
+            "description": "Resumes JavaScript execution. This will trigger a Debugger.resumed event."
         },
         {
             "name": "searchInContent",
@@ -235,10 +250,17 @@
         },
         {
             "name": "setPauseOnExceptions",
+            "description": "Defines pause on exceptions state. Can be set to stop on all exceptions, uncaught exceptions or no exceptions. Initial pause on exceptions state is <code>none</code>.",
             "parameters": [
                 { "name": "state", "type": "string", "enum": ["none", "uncaught", "all"], "description": "Pause on exceptions mode." }
-            ],
-            "description": "Defines pause on exceptions state. Can be set to stop on all exceptions, uncaught exceptions or no exceptions. Initial pause on exceptions state is <code>none</code>."
+            ]
+        },
+        {
+            "name": "setPauseOnAssertions",
+            "description": "Set pause on assertions state. Assertions are console.assert assertions.",
+            "parameters": [
+                { "name": "enabled", "type": "boolean" }
+            ]
         },
         {
             "name": "evaluateOnCallFrame",
@@ -276,14 +298,15 @@
             "name": "scriptParsed",
             "parameters": [
                 { "name": "scriptId", "$ref": "ScriptId", "description": "Identifier of the script parsed." },
-                { "name": "url", "type": "string", "description": "URL or name of the script parsed (if any)." },
+                { "name": "url", "type": "string", "description": "URL of the script parsed (if any)." },
                 { "name": "startLine", "type": "integer", "description": "Line offset of the script within the resource with given URL (for script tags)." },
                 { "name": "startColumn", "type": "integer", "description": "Column offset of the script within the resource with given URL." },
                 { "name": "endLine", "type": "integer", "description": "Last line of the script." },
                 { "name": "endColumn", "type": "integer", "description": "Length of the last line of the script." },
                 { "name": "isContentScript", "type": "boolean", "optional": true, "description": "Determines whether this script is a user extension script." },
+                { "name": "sourceURL", "type": "string", "optional": true, "description": "sourceURL name of the script (if any)." },
                 { "name": "sourceMapURL", "type": "string", "optional": true, "description": "URL of source map associated with script (if any)." },
-                { "name": "hasSourceURL", "type": "boolean", "optional": true, "description": "True, if this script has sourceURL." }
+                { "name": "module", "type": "boolean", "optional": true, "description": "True if this script was parsed as a module." }
             ],
             "description": "Fired when virtual machine parses script. This event is also fired for all known and uncollected scripts upon enabling debugger."
         },
@@ -311,7 +334,8 @@
             "parameters": [
                 { "name": "callFrames", "type": "array", "items": { "$ref": "CallFrame" }, "description": "Call stack the virtual machine stopped on." },
                 { "name": "reason", "type": "string", "enum": ["XHR", "DOM", "EventListener", "exception", "assert", "CSPViolation", "DebuggerStatement", "Breakpoint", "PauseOnNextStatement", "other"], "description": "Pause reason." },
-                { "name": "data", "type": "object", "optional": true, "description": "Object containing break-specific auxiliary properties." }
+                { "name": "data", "type": "object", "optional": true, "description": "Object containing break-specific auxiliary properties." },
+                { "name": "asyncStackTrace", "$ref": "Console.StackTrace", "optional": true, "description": "Linked list of asynchronous StackTraces." }
             ],
             "description": "Fired when the virtual machine stopped on breakpoint or exception or any other stop criteria."
         },

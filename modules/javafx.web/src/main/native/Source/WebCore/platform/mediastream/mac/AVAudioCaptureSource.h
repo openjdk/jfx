@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,33 +29,25 @@
 #if ENABLE(MEDIA_STREAM) && USE(AVFOUNDATION)
 
 #include "AVMediaCaptureSource.h"
+#include "CAAudioStreamDescription.h"
 #include <wtf/Lock.h>
 
+typedef struct AudioBufferList AudioBufferList;
 typedef struct AudioStreamBasicDescription AudioStreamBasicDescription;
 typedef const struct opaqueCMFormatDescription *CMFormatDescriptionRef;
 
 namespace WebCore {
 
+class WebAudioBufferList;
 class WebAudioSourceProviderAVFObjC;
 
 class AVAudioCaptureSource : public AVMediaCaptureSource {
 public:
 
-    class Observer {
-    public:
-        virtual ~Observer() { }
-        virtual void prepare(const AudioStreamBasicDescription *) = 0;
-        virtual void unprepare() = 0;
-        virtual void process(CMFormatDescriptionRef, CMSampleBufferRef) = 0;
-    };
-
-    static RefPtr<AVMediaCaptureSource> create(AVCaptureDevice*, const AtomicString&, PassRefPtr<MediaConstraints>);
-
-    void addObserver(Observer*);
-    void removeObserver(Observer*);
+    static RefPtr<AVMediaCaptureSource> create(AVCaptureDevice*, const AtomicString&, const MediaConstraints*, String&);
 
 private:
-    AVAudioCaptureSource(AVCaptureDevice*, const AtomicString&, PassRefPtr<MediaConstraints>);
+    AVAudioCaptureSource(AVCaptureDevice*, const AtomicString&);
     virtual ~AVAudioCaptureSource();
 
     void initializeCapabilities(RealtimeMediaSourceCapabilities&) override;
@@ -69,10 +61,10 @@ private:
     AudioSourceProvider* audioSourceProvider() override;
 
     RetainPtr<AVCaptureConnection> m_audioConnection;
+    std::unique_ptr<WebAudioBufferList> m_list;
 
     RefPtr<WebAudioSourceProviderAVFObjC> m_audioSourceProvider;
-    std::unique_ptr<AudioStreamBasicDescription> m_inputDescription;
-    Vector<Observer*> m_observers;
+    std::unique_ptr<CAAudioStreamDescription> m_inputDescription;
     Lock m_lock;
 };
 

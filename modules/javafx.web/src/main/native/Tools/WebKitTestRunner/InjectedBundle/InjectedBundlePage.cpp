@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -414,6 +414,10 @@ void InjectedBundlePage::prepare()
     WKBundleFrameClearOpener(WKBundlePageGetMainFrame(m_page));
 
     WKBundlePageSetTracksRepaints(m_page, false);
+
+    // Force consistent "responsive" behavior for WebPage::eventThrottlingDelay() for testing. Tests can override via internals.
+    WKEventThrottlingBehavior behavior = kWKEventThrottlingBehaviorResponsive;
+    WKBundlePageSetEventThrottlingBehaviorOverride(m_page, &behavior);
 }
 
 void InjectedBundlePage::resetAfterTest()
@@ -697,8 +701,11 @@ void InjectedBundlePage::didFailProvisionalLoadWithErrorForFrame(WKBundleFrameRe
 
     if (injectedBundle.testRunner()->shouldDumpFrameLoadCallbacks()) {
         dumpLoadEvent(frame, "didFailProvisionalLoadWithError");
-        if (WKErrorGetErrorCode(error) == kWKErrorCodeCannotShowURL)
-            dumpLoadEvent(frame, "(kWKErrorCodeCannotShowURL)");
+        auto code = WKErrorGetErrorCode(error);
+        if (code == kWKErrorCodeCannotShowURL)
+            dumpLoadEvent(frame, "(ErrorCodeCannotShowURL)");
+        else if (code == kWKErrorCodeFrameLoadBlockedByContentBlocker)
+            dumpLoadEvent(frame, "(kWKErrorCodeFrameLoadBlockedByContentBlocker)");
     }
 
     frameDidChangeLocation(frame);
@@ -839,7 +846,7 @@ void InjectedBundlePage::dumpDOMAsWebArchive(WKBundleFrameRef frame, StringBuild
 #if USE(CF)
     WKRetainPtr<WKDataRef> wkData = adoptWK(WKBundleFrameCopyWebArchive(frame));
     RetainPtr<CFDataRef> cfData = adoptCF(CFDataCreate(0, WKDataGetBytes(wkData.get()), WKDataGetSize(wkData.get())));
-    RetainPtr<CFStringRef> cfString = adoptCF(createXMLStringFromWebArchiveData(cfData.get()));
+    RetainPtr<CFStringRef> cfString = adoptCF(WebCoreTestSupport::createXMLStringFromWebArchiveData(cfData.get()));
     stringBuilder.append(cfString.get());
 #endif
 }
@@ -892,12 +899,7 @@ void InjectedBundlePage::dump()
         injectedBundle.dumpBackForwardListsForAllPages(stringBuilder);
 
     if (injectedBundle.shouldDumpPixels() && injectedBundle.testRunner()->shouldDumpPixels()) {
-#if PLATFORM(IOS)
-        // IOS doesn't implement PlatformWebView::windowSnapshotImage() yet, so we need to generate the snapshot in the web process.
-        bool shouldCreateSnapshot = true;
-#else
         bool shouldCreateSnapshot = injectedBundle.testRunner()->isPrinting();
-#endif
         if (shouldCreateSnapshot) {
             WKSnapshotOptions options = kWKSnapshotOptionsShareable;
             WKRect snapshotRect = WKBundleFrameGetVisibleContentBounds(WKBundlePageGetMainFrame(m_page));
@@ -1317,8 +1319,11 @@ WKBundlePagePolicyAction InjectedBundlePage::decidePolicyForNavigationAction(WKB
     if (injectedBundle.testRunner()->shouldDecideNavigationPolicyAfterDelay())
         return WKBundlePagePolicyActionPassThrough;
 
-    if (!injectedBundle.testRunner()->isPolicyDelegateEnabled())
-        return WKBundlePagePolicyActionUse;
+    if (!injectedBundle.testRunner()->isPolicyDelegateEnabled()) {
+        WKRetainPtr<WKStringRef> downloadAttributeRef(AdoptWK, WKBundleNavigationActionCopyDownloadAttribute(navigationAction));
+        String downloadAttribute = toWTFString(downloadAttributeRef);
+        return downloadAttribute.isNull() ? WKBundlePagePolicyActionUse : WKBundlePagePolicyActionPassThrough;
+    }
 
     WKRetainPtr<WKURLRef> url = adoptWK(WKURLRequestCopyURL(request));
     WKRetainPtr<WKStringRef> urlScheme = adoptWK(WKURLCopyScheme(url.get()));
@@ -1456,7 +1461,11 @@ void InjectedBundlePage::willAddMessageToConsole(WKStringRef message, uint32_t l
     }
     stringBuilder.append(messageString);
     stringBuilder.append('\n');
-    injectedBundle.outputText(stringBuilder.toString());
+
+    if (injectedBundle.dumpJSConsoleLogInStdErr())
+        injectedBundle.dumpToStdErr(stringBuilder.toString());
+    else
+        injectedBundle.outputText(stringBuilder.toString());
 }
 
 void InjectedBundlePage::willSetStatusbarText(WKStringRef statusbarText)

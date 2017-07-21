@@ -32,6 +32,7 @@
 #import <QuartzCore/QuartzCore.h>
 #import <wtf/CurrentTime.h>
 #import <wtf/MainThread.h>
+#import <wtf/SystemTracing.h>
 
 using namespace WebCore;
 
@@ -56,6 +57,7 @@ using namespace WebCore;
         // Note that CADisplayLink retains its target (self), so a call to -invalidate is needed on teardown.
         m_displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(handleDisplayLink:)];
         [m_displayLink addToRunLoop:WebThreadNSRunLoop() forMode:NSDefaultRunLoopMode];
+        m_displayLink.preferredFramesPerSecond = 60;
     }
     return self;
 }
@@ -68,8 +70,9 @@ using namespace WebCore;
 
 - (void)handleDisplayLink:(CADisplayLink *)sender
 {
+    UNUSED_PARAM(sender);
     ASSERT(isMainThread());
-    m_monitor->displayLinkFired(sender.timestamp);
+    m_monitor->displayLinkFired();
 }
 
 - (void)invalidate
@@ -97,6 +100,8 @@ bool DisplayRefreshMonitorIOS::requestRefreshCallback()
     if (!isActive())
         return false;
 
+    TracePoint(RAFDisplayLinkScheduled);
+    
     if (!m_handler) {
         m_handler = adoptNS([[WebDisplayLinkHandler alloc] initWithMonitor:this]);
         setIsActive(true);
@@ -106,21 +111,15 @@ bool DisplayRefreshMonitorIOS::requestRefreshCallback()
     return true;
 }
 
-static double mediaTimeToCurrentTime(CFTimeInterval t)
-{
-    // FIXME: This may be a no-op if CACurrentMediaTime is *guaranteed* to be mach_absolute_time.
-    return monotonicallyIncreasingTime() + t - CACurrentMediaTime();
-}
-
-void DisplayRefreshMonitorIOS::displayLinkFired(double nowSeconds)
+void DisplayRefreshMonitorIOS::displayLinkFired()
 {
     if (!isPreviousFrameDone())
         return;
 
     setIsPreviousFrameDone(false);
-    setMonotonicAnimationStartTime(mediaTimeToCurrentTime(nowSeconds));
-
     handleDisplayRefreshedNotificationOnMainThread(this);
+    
+    TracePoint(RAFDisplayLinkFired);
 }
 
 }

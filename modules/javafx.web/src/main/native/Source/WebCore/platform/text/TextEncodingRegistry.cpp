@@ -29,6 +29,7 @@
 
 #include "TextCodecICU.h"
 #include "TextCodecLatin1.h"
+#include "TextCodecReplacement.h"
 #include "TextCodecUserDefined.h"
 #include "TextCodecUTF16.h"
 #include "TextCodecUTF8.h"
@@ -39,7 +40,6 @@
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/MainThread.h>
-#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
 
@@ -118,7 +118,7 @@ static bool didExtendTextCodecMaps;
 static HashSet<const char*>* japaneseEncodings;
 static HashSet<const char*>* nonBackslashEncodings;
 
-static const char* const textEncodingNameBlacklist[] = { "UTF-7" };
+static const char* const textEncodingNameBlacklist[] = { "UTF-7", "BOCU-1", "SCSU" };
 
 #if ERROR_DISABLED
 
@@ -200,9 +200,8 @@ static void pruneBlacklistedCodecs()
     }
 }
 
-static void buildBaseTextCodecMaps()
+static void buildBaseTextCodecMaps(const std::lock_guard<StaticLock>&)
 {
-    ASSERT(isMainThread());
     ASSERT(!textCodecMap);
     ASSERT(!textEncodingNameMap);
 
@@ -270,6 +269,22 @@ bool isJapaneseEncoding(const char* canonicalEncodingName)
     return canonicalEncodingName && japaneseEncodings && japaneseEncodings->contains(canonicalEncodingName);
 }
 
+bool isReplacementEncoding(const char* alias)
+{
+    if (!alias)
+        return false;
+
+    if (strlen(alias) != 11)
+        return false;
+
+    return !strcasecmp(alias, "replacement");
+}
+
+bool isReplacementEncoding(const String& alias)
+{
+    return equalLettersIgnoringASCIICase(alias, "replacement");
+}
+
 bool shouldShowBackslashAsCurrencySymbolIn(const char* canonicalEncodingName)
 {
     return canonicalEncodingName && nonBackslashEncodings && nonBackslashEncodings->contains(canonicalEncodingName);
@@ -277,6 +292,9 @@ bool shouldShowBackslashAsCurrencySymbolIn(const char* canonicalEncodingName)
 
 static void extendTextCodecMaps()
 {
+    TextCodecReplacement::registerEncodingNames(addToTextEncodingNameMap);
+    TextCodecReplacement::registerCodecs(addToTextCodecMap);
+
     TextCodecICU::registerEncodingNames(addToTextEncodingNameMap);
     TextCodecICU::registerCodecs(addToTextCodecMap);
 
@@ -309,10 +327,10 @@ const char* atomicCanonicalTextEncodingName(const char* name)
     if (!name || !name[0])
         return nullptr;
 
-    if (!textEncodingNameMap)
-        buildBaseTextCodecMaps();
-
     std::lock_guard<StaticLock> lock(encodingRegistryMutex);
+
+    if (!textEncodingNameMap)
+        buildBaseTextCodecMaps(lock);
 
     if (const char* atomicName = textEncodingNameMap->get(name))
         return atomicName;

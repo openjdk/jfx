@@ -22,6 +22,7 @@
 #include "config.h"
 #include "FontCache.h"
 
+#include "CairoUtilities.h"
 #include "FcUniquePtr.h"
 #include "Font.h"
 #include "RefPtrCairo.h"
@@ -57,26 +58,19 @@ static RefPtr<FcPattern> createFontConfigPatternForCharacters(const UChar* chara
 
     FcPatternAddBool(pattern.get(), FC_SCALABLE, FcTrue);
     FcConfigSubstitute(nullptr, pattern.get(), FcMatchPattern);
+    cairo_ft_font_options_substitute(getDefaultCairoFontOptions(), pattern.get());
     FcDefaultSubstitute(pattern.get());
     return pattern;
 }
 
 static RefPtr<FcPattern> findBestFontGivenFallbacks(const FontPlatformData& fontData, FcPattern* pattern)
 {
-    if (!fontData.m_pattern)
+    FcFontSet* fallbacks = fontData.fallbacks();
+    if (!fallbacks)
         return nullptr;
 
-    if (!fontData.m_fallbacks) {
-        FcResult fontConfigResult;
-        fontData.m_fallbacks = FcFontSort(nullptr, fontData.m_pattern.get(), FcTrue, nullptr, &fontConfigResult);
-    }
-
-    if (!fontData.m_fallbacks)
-        return nullptr;
-
-    FcFontSet* sets[] = { fontData.m_fallbacks };
     FcResult fontConfigResult;
-    return FcFontSetMatch(nullptr, sets, 1, pattern, &fontConfigResult);
+    return FcFontSetMatch(nullptr, &fallbacks, 1, pattern, &fontConfigResult);
 }
 
 RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& description, const Font* originalFontData, bool, const UChar* characters, unsigned length)
@@ -129,12 +123,21 @@ Vector<String> FontCache::systemFontFamilies()
     return fontFamilies;
 }
 
+Ref<Font> FontCache::lastResortFallbackFontForEveryCharacter(const FontDescription& fontDescription)
+{
+    return lastResortFallbackFont(fontDescription);
+}
+
 Ref<Font> FontCache::lastResortFallbackFont(const FontDescription& fontDescription)
 {
     // We want to return a fallback font here, otherwise the logic preventing FontConfig
     // matches for non-fallback fonts might return 0. See isFallbackFontAllowed.
     static AtomicString timesStr("serif");
-    return *fontForFamily(fontDescription, timesStr);
+    if (RefPtr<Font> font = fontForFamily(fontDescription, timesStr))
+        return *font;
+
+    // This could be reached due to improperly-installed or misconfigured fontconfig.
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 Vector<FontTraitsMask> FontCache::getTraitsInFamily(const AtomicString&)
@@ -265,6 +268,7 @@ static Vector<String> strongAliasesForFamily(const String& family)
         return Vector<String>();
 
     FcConfigSubstitute(nullptr, pattern.get(), FcMatchPattern);
+    cairo_ft_font_options_substitute(getDefaultCairoFontOptions(), pattern.get());
     FcDefaultSubstitute(pattern.get());
 
     FcUniquePtr<FcObjectSet> familiesOnly(FcObjectSetBuild(FC_FAMILY, nullptr));
@@ -359,6 +363,7 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     // configuration step, before any matching occurs, we allow arbitrary family substitutions,
     // since this is an exact matter of respecting the user's font configuration.
     FcConfigSubstitute(nullptr, pattern.get(), FcMatchPattern);
+    cairo_ft_font_options_substitute(getDefaultCairoFontOptions(), pattern.get());
     FcDefaultSubstitute(pattern.get());
 
     FcChar8* fontConfigFamilyNameAfterConfiguration;
@@ -389,6 +394,11 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
         return nullptr;
 
     return platformData;
+}
+
+const AtomicString& FontCache::platformAlternateFamilyName(const AtomicString&)
+{
+    return nullAtom;
 }
 
 }

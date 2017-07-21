@@ -40,7 +40,6 @@
 #include "ScrollingStateScrollingNode.h"
 #include "ScrollingStateStickyNode.h"
 #include "ScrollingStateTree.h"
-#include "Settings.h"
 
 namespace WebCore {
 
@@ -63,7 +62,7 @@ void ScrollingCoordinatorCoordinatedGraphics::detachFromStateTree(ScrollingNodeI
 {
     ScrollingStateNode* node = m_scrollingStateTree->stateNodeForID(nodeID);
     if (node && node->nodeType() == FixedNode)
-        toCoordinatedGraphicsLayer(node->layer())->setFixedToViewport(false);
+        downcast<CoordinatedGraphicsLayer>(*static_cast<GraphicsLayer*>(node->layer())).setFixedToViewport(false);
 
     m_scrollingStateTree->detachNode(nodeID);
 }
@@ -83,7 +82,7 @@ void ScrollingCoordinatorCoordinatedGraphics::updateViewportConstrainedNode(Scro
 
     switch (constraints.constraintType()) {
     case ViewportConstraints::FixedPositionConstraint: {
-        toCoordinatedGraphicsLayer(graphicsLayer)->setFixedToViewport(true); // FIXME : Use constraints!
+        downcast<CoordinatedGraphicsLayer>(*graphicsLayer).setFixedToViewport(true);
         downcast<ScrollingStateFixedNode>(*node).setLayer(graphicsLayer);
         break;
     }
@@ -96,7 +95,7 @@ void ScrollingCoordinatorCoordinatedGraphics::updateViewportConstrainedNode(Scro
 
 void ScrollingCoordinatorCoordinatedGraphics::scrollableAreaScrollLayerDidChange(ScrollableArea& scrollableArea)
 {
-    CoordinatedGraphicsLayer* layer = toCoordinatedGraphicsLayer(scrollLayerForScrollableArea(scrollableArea));
+    CoordinatedGraphicsLayer* layer = downcast<CoordinatedGraphicsLayer>(scrollLayerForScrollableArea(scrollableArea));
     if (!layer)
         return;
 
@@ -105,7 +104,7 @@ void ScrollingCoordinatorCoordinatedGraphics::scrollableAreaScrollLayerDidChange
 
 void ScrollingCoordinatorCoordinatedGraphics::willDestroyScrollableArea(ScrollableArea& scrollableArea)
 {
-    CoordinatedGraphicsLayer* layer = toCoordinatedGraphicsLayer(scrollLayerForScrollableArea(scrollableArea));
+    CoordinatedGraphicsLayer* layer = downcast<CoordinatedGraphicsLayer>(scrollLayerForScrollableArea(scrollableArea));
     if (!layer)
         return;
 

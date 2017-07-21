@@ -102,6 +102,7 @@ enum {
     WebMenuItemTagDictationAlternative,
     WebMenuItemTagToggleVideoFullscreen,
     WebMenuItemTagShareMenu,
+    WebMenuItemTagToggleVideoEnhancedFullscreen,
 };
 
 // Deprecated; remove when there are no more clients.
@@ -246,7 +247,6 @@ extern NSString *WebConsoleMessageErrorMessageLevel;
 
 /*!
     @method webView:decidePolicyForGeolocationRequestFromOrigin:frame:listener:
-    @abstract
     @param webView The WebView sending the delegate method.
     @param origin The security origin that would like to use Geolocation.
     @param frame The WebFrame whose JavaScript initiated this call.
@@ -266,8 +266,8 @@ extern NSString *WebConsoleMessageErrorMessageLevel;
 /*!
     @method webView:printFrame:
     @abstract Informs that a WebFrame needs to be printed
-    @param webView The WebView sending the delegate method
-    @param frameView The WebFrame needing to be printed
+    @param sender The WebView sending the delegate method
+    @param frame The WebFrame needing to be printed
     @discussion This method is called when a script or user requests the page to be printed.
 */
 - (void)webView:(WebView *)sender printFrame:(WebFrame *)frame;

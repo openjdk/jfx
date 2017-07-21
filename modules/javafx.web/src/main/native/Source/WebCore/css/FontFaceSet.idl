@@ -30,13 +30,12 @@ enum FontFaceSetLoadStatus {
 
 [
     ConstructorCallWith=Document,
-    Constructor(sequence<FontFace> initialFaces)
+    Constructor(sequence<FontFace> initialFaces),
 ] interface FontFaceSet : EventTarget {
     boolean has(FontFace font);
 
     // FIXME: We should add support for the setlike declaration.
-    // As a first step this map iterable declaration should be changed to a set iterable.
-    iterable<FontFace, FontFace>;
+    iterable<FontFace>;
 
     readonly attribute long size;
 
@@ -48,9 +47,9 @@ enum FontFaceSetLoadStatus {
     attribute EventHandler onloadingdone;
     attribute EventHandler onloadingerror;
 
-    [RaisesException, CallWith=ScriptState] Promise load(DOMString font, optional DOMString text);
-    [RaisesException] boolean check(DOMString font, optional DOMString text);
+    Promise<sequence<FontFace>> load(DOMString font, optional DOMString text = " ");
+    [MayThrowException] boolean check(DOMString font, optional DOMString text = " ");
 
-    [Custom] readonly attribute Promise ready;
+    [CustomGetter, CachedAttribute] readonly attribute Promise<FontFaceSet> ready;
     readonly attribute FontFaceSetLoadStatus status;
 };

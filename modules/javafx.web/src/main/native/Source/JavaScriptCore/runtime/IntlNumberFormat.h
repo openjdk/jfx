@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef IntlNumberFormat_h
-#define IntlNumberFormat_h
+#pragma once
 
 #if ENABLE(INTL)
 
@@ -40,7 +39,7 @@ class IntlNumberFormat : public JSDestructibleObject {
 public:
     typedef JSDestructibleObject Base;
 
-    static IntlNumberFormat* create(VM&, IntlNumberFormatConstructor*);
+    static IntlNumberFormat* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
@@ -89,5 +88,3 @@ private:
 } // namespace JSC
 
 #endif // ENABLE(INTL)
-
-#endif // IntlNumberFormat_h

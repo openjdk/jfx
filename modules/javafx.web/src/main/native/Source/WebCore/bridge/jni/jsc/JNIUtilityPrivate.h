@@ -24,8 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JNIUtilityPrivate_h
-#define JNIUtilityPrivate_h
+#pragma once
 
 #if ENABLE(JAVA_BRIDGE)
 
@@ -53,5 +52,3 @@ jobject jvalueToJObject(jvalue value, JavaType);
 } // namespace JSC
 
 #endif // ENABLE(JAVA_BRIDGE)
-
-#endif // JNIUtilityPrivate_h

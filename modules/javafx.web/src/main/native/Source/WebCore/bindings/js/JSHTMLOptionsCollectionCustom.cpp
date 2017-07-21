@@ -20,65 +20,21 @@
 #include "config.h"
 #include "JSHTMLOptionsCollection.h"
 
+#include "CustomElementReactionQueue.h"
 #include "ExceptionCode.h"
-#include "HTMLNames.h"
-#include "HTMLOptionElement.h"
-#include "HTMLOptionsCollection.h"
-#include "HTMLSelectElement.h"
 #include "JSHTMLOptionElement.h"
 #include "JSHTMLSelectElement.h"
 #include "JSHTMLSelectElementCustom.h"
-#include "JSNodeList.h"
-#include "StaticNodeList.h"
-
 #include <wtf/MathExtras.h>
 
 using namespace JSC;
 
 namespace WebCore {
 
-bool JSHTMLOptionsCollection::nameGetter(ExecState* exec, PropertyName propertyName, JSValue& value)
+void JSHTMLOptionsCollection::indexSetter(ExecState* state, unsigned index, JSValue value)
 {
-    auto item = wrapped().namedItem(propertyNameToAtomicString(propertyName));
-    if (!item)
-        return false;
-
-    value = toJS(exec, globalObject(), item);
-    return true;
-}
-
-void JSHTMLOptionsCollection::setLength(ExecState& state, JSValue value)
-{
-    ExceptionCode ec = 0;
-    unsigned newLength = 0;
-    double lengthValue = value.toNumber(&state);
-    if (!std::isnan(lengthValue) && !std::isinf(lengthValue)) {
-        if (lengthValue < 0.0)
-            ec = INDEX_SIZE_ERR;
-        else if (lengthValue > static_cast<double>(UINT_MAX))
-            newLength = UINT_MAX;
-        else
-            newLength = static_cast<unsigned>(lengthValue);
-    }
-    if (!ec)
-        wrapped().setLength(newLength, ec);
-    setDOMException(&state, ec);
-}
-
-void JSHTMLOptionsCollection::indexSetter(ExecState* exec, unsigned index, JSValue value)
-{
-    selectIndexSetter(&wrapped().selectElement(), exec, index, value);
-}
-
-JSValue JSHTMLOptionsCollection::remove(ExecState& state)
-{
-    // The argument can be an HTMLOptionElement or an index.
-    JSValue argument = state.argument(0);
-    if (HTMLOptionElement* option = JSHTMLOptionElement::toWrapped(argument))
-        wrapped().remove(option);
-    else
-        wrapped().remove(argument.toInt32(&state));
-    return jsUndefined();
+    CustomElementReactionStack customElementReactionStack;
+    selectElementIndexSetter(*state, wrapped().selectElement(), index, value);
 }
 
 }

@@ -2,12 +2,25 @@ SUNWprivate_1.0 {
         global:
                JNI_OnLoad;
                JNI_OnUnload;
+               WTFCrash;
+               WTFCrashWithSecurityImplication;
+               WTFReportArgumentAssertionFailure;
                WTFReportBacktrace;
                WTFReportAssertionFailure;
+               _ZN3WTF6StringC1EPKc;
+               _ZN3WTF6StringC1EPKtj;
+               _ZN3WTF7RunLoop4mainEv;
+               _ZN3WTF8fastFreeEPv;
+               _ZN3WTF8LockBase8lockSlowEv;
+               _ZN3WTF8LockBase10unlockSlowEv;
                _ZN3WTF10fastMallocEj;
                _ZN3WTF10fastMallocEm;
-               _ZN3WTF8fastFreeEPv;
+               _ZN3WTF10StringImpl7destroyEPS0_;
                _ZN3WTF11currentTimeEv;
+               _ZN3WTF16fastZeroedMallocEj;
+               _ZN3WTF16fastZeroedMallocEm;
+               _ZN3WTF26getAndResetAccumulatedLogsEv;
+               _ZNK3WTF6String4utf8Ev;
                JSCheckScriptSyntax;
                JSClassCreate;
                JSClassRelease;
@@ -104,6 +117,8 @@ SUNWprivate_1.0 {
                _ZN3JSC20failNextNewCodeBlockEPK15OpaqueJSContext;
                _ZN3JSC17JSArrayBufferView6s_infoE;
                _ZN18WebCoreTestSupport21injectInternalsObjectEPK15OpaqueJSContext;
+               _ZN18WebCoreTestSupport25setLogChannelToAccumulateERKN3WTF6StringE;
+               _ZN18WebCoreTestSupport26setAllowsAnySSLCertificateEb;
                Java_com_sun_webkit_dom_AttrImpl_getNameImpl;
                Java_com_sun_webkit_dom_AttrImpl_getOwnerElementImpl;
                Java_com_sun_webkit_dom_AttrImpl_getSpecifiedImpl;
@@ -962,6 +977,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLDocumentImpl_writeImpl;
                Java_com_sun_webkit_dom_HTMLDocumentImpl_writelnImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_clickImpl;
+               Java_com_sun_webkit_dom_HTMLElementImpl_getIdImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getAccessKeyImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getChildrenImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_getContentEditableImpl;
@@ -995,6 +1011,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_dom_HTMLElementImpl_setOuterTextImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setSpellcheckImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setTabIndexImpl;
+               Java_com_sun_webkit_dom_HTMLElementImpl_setIdImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setTitleImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setTranslateImpl;
                Java_com_sun_webkit_dom_HTMLElementImpl_setWebkitdropzoneImpl;
@@ -1962,6 +1979,7 @@ SUNWprivate_1.0 {
                Java_com_sun_webkit_network_URLLoader_twkDidReceiveResponse;
                Java_com_sun_webkit_network_URLLoader_twkDidSendData;
                Java_com_sun_webkit_network_URLLoader_twkWillSendRequest;
+               kJSClassDefinitionEmpty;
         local:
                 *;
 };

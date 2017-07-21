@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef MergeIdenticalElementsCommand_h
-#define MergeIdenticalElementsCommand_h
+#pragma once
 
 #include "EditCommand.h"
 
@@ -40,11 +39,11 @@ public:
 private:
     MergeIdenticalElementsCommand(PassRefPtr<Element>, PassRefPtr<Element>);
 
-    virtual void doApply() override;
-    virtual void doUnapply() override;
+    void doApply() override;
+    void doUnapply() override;
 
 #ifndef NDEBUG
-    virtual void getNodesInCommand(HashSet<Node*>&) override;
+    void getNodesInCommand(HashSet<Node*>&) override;
 #endif
 
     RefPtr<Element> m_element1;
@@ -53,5 +52,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // MergeIdenticalElementsCommand_h

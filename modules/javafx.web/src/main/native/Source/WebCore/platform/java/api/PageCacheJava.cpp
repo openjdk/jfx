@@ -4,7 +4,7 @@
 #include "config.h"
 
 #include "PageCache.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 
 #include "com_sun_webkit_PageCache.h"
 

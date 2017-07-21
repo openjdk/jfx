@@ -42,8 +42,10 @@ namespace WebCore {
 
 // CSS Filters
 
+class CachedResourceLoader;
 class CachedSVGDocumentReference;
 class FilterEffect;
+struct ResourceLoaderOptions;
 
 class FilterOperation : public RefCounted<FilterOperation> {
 public:
@@ -101,6 +103,8 @@ public:
     virtual bool affectsOpacity() const { return false; }
     // True if the the value of one pixel can affect the value of another pixel under this operation, such as blur.
     virtual bool movesPixels() const { return false; }
+    // True if the filter should not be allowed to work on content that is not available from this security origin.
+    virtual bool shouldBeRestrictedBySecurityOrigin() const { return false; }
     // True if the filter needs the size of the box in order to calculate the animations.
     virtual bool blendingNeedsRendererSize() const { return false; }
 
@@ -120,7 +124,7 @@ public:
         return adoptRef(new DefaultFilterOperation(representedType));
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const override
+    PassRefPtr<FilterOperation> clone() const override
     {
         return adoptRef(new DefaultFilterOperation(representedType()));
     }
@@ -128,7 +132,7 @@ public:
     OperationType representedType() const { return m_representedType; }
 
 private:
-    virtual bool operator==(const FilterOperation&) const override;
+    bool operator==(const FilterOperation&) const override;
 
     DefaultFilterOperation(OperationType representedType)
         : FilterOperation(DEFAULT)
@@ -146,13 +150,13 @@ public:
         return adoptRef(new PassthroughFilterOperation());
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const override
+    PassRefPtr<FilterOperation> clone() const override
     {
         return adoptRef(new PassthroughFilterOperation());
     }
 
 private:
-    virtual bool operator==(const FilterOperation& o) const override
+    bool operator==(const FilterOperation& o) const override
     {
         return isSameType(o);
     }
@@ -171,21 +175,25 @@ public:
     }
     virtual ~ReferenceFilterOperation();
 
-    virtual PassRefPtr<FilterOperation> clone() const override
+    PassRefPtr<FilterOperation> clone() const override
     {
         // Reference filters cannot be cloned.
         ASSERT_NOT_REACHED();
         return nullptr;
     }
 
-    virtual bool affectsOpacity() const override { return true; }
-    virtual bool movesPixels() const override { return true; }
+    bool affectsOpacity() const override { return true; }
+    bool movesPixels() const override { return true; }
+    // FIXME: This only needs to return true for graphs that include ConvolveMatrix, DisplacementMap, Morphology and possibly Lighting.
+    // https://bugs.webkit.org/show_bug.cgi?id=171753
+    bool shouldBeRestrictedBySecurityOrigin() const override { return true; }
 
     const String& url() const { return m_url; }
     const String& fragment() const { return m_fragment; }
 
+    void loadExternalDocumentIfNeeded(CachedResourceLoader&, const ResourceLoaderOptions&);
+
     CachedSVGDocumentReference* cachedSVGDocumentReference() const { return m_cachedSVGDocumentReference.get(); }
-    CachedSVGDocumentReference* getOrCreateCachedSVGDocumentReference();
 
     FilterEffect* filterEffect() const { return m_filterEffect.get(); }
     void setFilterEffect(PassRefPtr<FilterEffect>);
@@ -193,7 +201,7 @@ public:
 private:
     ReferenceFilterOperation(const String& url, const String& fragment);
 
-    virtual bool operator==(const FilterOperation&) const override;
+    bool operator==(const FilterOperation&) const override;
 
     String m_url;
     String m_fragment;
@@ -210,17 +218,17 @@ public:
         return adoptRef(new BasicColorMatrixFilterOperation(amount, type));
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const override
+    PassRefPtr<FilterOperation> clone() const override
     {
         return adoptRef(new BasicColorMatrixFilterOperation(amount(), type()));
     }
 
     double amount() const { return m_amount; }
 
-    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
 
 private:
-    virtual bool operator==(const FilterOperation&) const override;
+    bool operator==(const FilterOperation&) const override;
 
     double passthroughAmount() const;
 
@@ -241,19 +249,19 @@ public:
         return adoptRef(new BasicComponentTransferFilterOperation(amount, type));
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const override
+    PassRefPtr<FilterOperation> clone() const override
     {
         return adoptRef(new BasicComponentTransferFilterOperation(amount(), type()));
     }
 
     double amount() const { return m_amount; }
 
-    virtual bool affectsOpacity() const override { return m_type == OPACITY; }
+    bool affectsOpacity() const override { return m_type == OPACITY; }
 
-    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
 
 private:
-    virtual bool operator==(const FilterOperation&) const override;
+    bool operator==(const FilterOperation&) const override;
 
     double passthroughAmount() const;
 
@@ -273,20 +281,20 @@ public:
         return adoptRef(new BlurFilterOperation(WTFMove(stdDeviation)));
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const override
+    PassRefPtr<FilterOperation> clone() const override
     {
         return adoptRef(new BlurFilterOperation(stdDeviation()));
     }
 
     const Length& stdDeviation() const { return m_stdDeviation; }
 
-    virtual bool affectsOpacity() const override { return true; }
-    virtual bool movesPixels() const override { return true; }
+    bool affectsOpacity() const override { return true; }
+    bool movesPixels() const override { return true; }
 
-    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
 
 private:
-    virtual bool operator==(const FilterOperation&) const override;
+    bool operator==(const FilterOperation&) const override;
 
     BlurFilterOperation(Length stdDeviation)
         : FilterOperation(BLUR)
@@ -299,12 +307,12 @@ private:
 
 class WEBCORE_EXPORT DropShadowFilterOperation : public FilterOperation {
 public:
-    static PassRefPtr<DropShadowFilterOperation> create(const IntPoint& location, int stdDeviation, Color color)
+    static PassRefPtr<DropShadowFilterOperation> create(const IntPoint& location, int stdDeviation, const Color& color)
     {
         return adoptRef(new DropShadowFilterOperation(location, stdDeviation, color));
     }
 
-    virtual PassRefPtr<FilterOperation> clone() const override
+    PassRefPtr<FilterOperation> clone() const override
     {
         return adoptRef(new DropShadowFilterOperation(location(), stdDeviation(), color()));
     }
@@ -313,17 +321,17 @@ public:
     int y() const { return m_location.y(); }
     IntPoint location() const { return m_location; }
     int stdDeviation() const { return m_stdDeviation; }
-    Color color() const { return m_color; }
+    const Color& color() const { return m_color; }
 
-    virtual bool affectsOpacity() const override { return true; }
-    virtual bool movesPixels() const override { return true; }
+    bool affectsOpacity() const override { return true; }
+    bool movesPixels() const override { return true; }
 
-    virtual PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
+    PassRefPtr<FilterOperation> blend(const FilterOperation* from, double progress, bool blendToPassthrough = false) override;
 
 private:
-    virtual bool operator==(const FilterOperation&) const override;
+    bool operator==(const FilterOperation&) const override;
 
-    DropShadowFilterOperation(const IntPoint& location, int stdDeviation, Color color)
+    DropShadowFilterOperation(const IntPoint& location, int stdDeviation, const Color& color)
         : FilterOperation(DROP_SHADOW)
         , m_location(location)
         , m_stdDeviation(stdDeviation)

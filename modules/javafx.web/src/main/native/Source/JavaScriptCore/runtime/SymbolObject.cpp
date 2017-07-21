@@ -43,8 +43,13 @@ SymbolObject::SymbolObject(VM& vm, Structure* structure)
 void SymbolObject::finishCreation(VM& vm, Symbol* symbol)
 {
     Base::finishCreation(vm);
-    ASSERT(inherits(info()));
+    ASSERT(inherits(vm, info()));
     setInternalValue(vm, symbol);
+}
+
+String SymbolObject::toStringName(const JSObject*, ExecState*)
+{
+    return ASCIILiteral("Object");
 }
 
 JSValue SymbolObject::defaultValue(const JSObject* object, ExecState*, PreferredPrimitiveType)

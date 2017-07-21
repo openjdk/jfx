@@ -32,6 +32,7 @@
 #include "HeapSnapshot.h"
 #include "JSCInlines.h"
 #include "JSCell.h"
+#include "PreventCollectionScope.h"
 #include "VM.h"
 #include <wtf/text/StringBuilder.h>
 
@@ -39,6 +40,7 @@ namespace JSC {
 
 unsigned HeapSnapshotBuilder::nextAvailableObjectIdentifier = 1;
 unsigned HeapSnapshotBuilder::getNextObjectIdentifier() { return nextAvailableObjectIdentifier++; }
+void HeapSnapshotBuilder::resetNextAvailableObjectIdentifier() { HeapSnapshotBuilder::nextAvailableObjectIdentifier = 1; }
 
 HeapSnapshotBuilder::HeapSnapshotBuilder(HeapProfiler& profiler)
     : m_profiler(profiler)
@@ -51,6 +53,8 @@ HeapSnapshotBuilder::~HeapSnapshotBuilder()
 
 void HeapSnapshotBuilder::buildSnapshot()
 {
+    PreventCollectionScope preventCollectionScope(m_profiler.vm().heap);
+
     m_snapshot = std::make_unique<HeapSnapshot>(m_profiler.mostRecentSnapshot());
     {
         m_profiler.setActiveSnapshotBuilder(this);
@@ -65,12 +69,12 @@ void HeapSnapshotBuilder::buildSnapshot()
 void HeapSnapshotBuilder::appendNode(JSCell* cell)
 {
     ASSERT(m_profiler.activeSnapshotBuilder() == this);
-    ASSERT(Heap::isMarked(cell));
+    ASSERT(Heap::isMarkedConcurrently(cell));
 
     if (hasExistingNodeForCell(cell))
         return;
 
-    std::lock_guard<Lock> lock(m_appendingNodeMutex);
+    std::lock_guard<Lock> lock(m_buildingNodeMutex);
 
     m_snapshot->appendNode(HeapSnapshotNode(cell, getNextObjectIdentifier()));
 }
@@ -84,9 +88,39 @@ void HeapSnapshotBuilder::appendEdge(JSCell* from, JSCell* to)
     if (from == to)
         return;
 
-    std::lock_guard<Lock> lock(m_appendingEdgeMutex);
+    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
 
     m_edges.append(HeapSnapshotEdge(from, to));
+}
+
+void HeapSnapshotBuilder::appendPropertyNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* propertyName)
+{
+    ASSERT(m_profiler.activeSnapshotBuilder() == this);
+    ASSERT(to);
+
+    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+
+    m_edges.append(HeapSnapshotEdge(from, to, EdgeType::Property, propertyName));
+}
+
+void HeapSnapshotBuilder::appendVariableNameEdge(JSCell* from, JSCell* to, UniquedStringImpl* variableName)
+{
+    ASSERT(m_profiler.activeSnapshotBuilder() == this);
+    ASSERT(to);
+
+    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+
+    m_edges.append(HeapSnapshotEdge(from, to, EdgeType::Variable, variableName));
+}
+
+void HeapSnapshotBuilder::appendIndexEdge(JSCell* from, JSCell* to, uint32_t index)
+{
+    ASSERT(m_profiler.activeSnapshotBuilder() == this);
+    ASSERT(to);
+
+    std::lock_guard<Lock> lock(m_buildingEdgeMutex);
+
+    m_edges.append(HeapSnapshotEdge(from, to, index));
 }
 
 bool HeapSnapshotBuilder::hasExistingNodeForCell(JSCell* cell)
@@ -103,22 +137,41 @@ bool HeapSnapshotBuilder::hasExistingNodeForCell(JSCell* cell)
 //   {
 //      "version": 1.0,
 //      "nodes": [
-//          [<nodeId>, <sizeInBytes>, <nodeClassNameIndex>, <optionalInternal>], ...
+//          <nodeId>, <sizeInBytes>, <nodeClassNameIndex>, <internal>,
+//          <nodeId>, <sizeInBytes>, <nodeClassNameIndex>, <internal>,
+//          ...
 //      ],
 //      "nodeClassNames": [
 //          "string", "Structure", "Object", ...
 //      ],
 //      "edges": [
-//          [<fromNodeId>, <toNodeId>, <edgeTypeIndex>, <optionalEdgeExtraData>], ...
+//          <fromNodeId>, <toNodeId>, <edgeTypeIndex>, <edgeExtraData>,
+//          <fromNodeId>, <toNodeId>, <edgeTypeIndex>, <edgeExtraData>,
+//          ...
 //      ],
 //      "edgeTypes": [
 //          "Internal", "Property", "Index", "Variable"
+//      ],
+//      "edgeNames": [
+//          "propertyName", "variableName", ...
 //      ]
 //   }
 //
-// FIXME: Possible compaction improvements:
-//   - eliminate inner array groups and just have a single list with fixed group sizes (meta data section).
-//   - eliminate duplicate edge extra data strings, have an index into a de-duplicated like edgeTypes / nodeClassNames.
+// Notes:
+//
+//     <nodeClassNameIndex>
+//       - index into the "nodeClassNames" list.
+//
+//     <internal>
+//       - 0 = false, 1 = true.
+//
+//     <edgeTypeIndex>
+//       - index into the "edgeTypes" list.
+//
+//     <edgeExtraData>
+//       - for Internal edges this should be ignored (0).
+//       - for Index edges this is the index value.
+//       - for Property or Variable edges this is an index into the "edgeNames" list.
 
 static uint8_t edgeTypeToNumber(EdgeType type)
 {
@@ -156,7 +209,12 @@ String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> a
 
     // Build a list of used class names.
     HashMap<const char*, unsigned> classNameIndexes;
-    unsigned nextClassNameIndex = 0;
+    classNameIndexes.set("<root>", 0);
+    unsigned nextClassNameIndex = 1;
+
+    // Build a list of used edge names.
+    HashMap<UniquedStringImpl*, unsigned> edgeNameIndexes;
+    unsigned nextEdgeNameIndex = 0;
 
     StringBuilder json;
 
@@ -167,7 +225,7 @@ String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> a
 
         allowedNodeIdentifiers.set(node.cell, node.identifier);
 
-        auto result = classNameIndexes.add(node.cell->classInfo()->className, nextClassNameIndex);
+        auto result = classNameIndexes.add(node.cell->classInfo(vm)->className, nextClassNameIndex);
         if (result.isNewEntry)
             nextClassNameIndex++;
         unsigned classNameIndex = result.iterator->value;
@@ -178,50 +236,48 @@ String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> a
             isInternal = !structure || !structure->globalObject();
         }
 
-        // [<nodeId>, <sizeInBytes>, <className>, <optionalInternalBoolean>]
+        // <nodeId>, <sizeInBytes>, <className>, <optionalInternalBoolean>
         json.append(',');
-        json.append('[');
         json.appendNumber(node.identifier);
         json.append(',');
         json.appendNumber(node.cell->estimatedSizeInBytes());
         json.append(',');
         json.appendNumber(classNameIndex);
-        if (isInternal)
-            json.appendLiteral(",1");
-        json.append(']');
+        json.append(',');
+        json.append(isInternal ? '1' : '0');
     };
 
     bool firstEdge = true;
     auto appendEdgeJSON = [&] (const HeapSnapshotEdge& edge) {
-        // If the from cell is null, this means a root edge.
-        unsigned fromIdentifier = 0;
-        if (edge.from) {
-            auto fromLookup = allowedNodeIdentifiers.find(edge.from);
-            if (fromLookup == allowedNodeIdentifiers.end())
-                return;
-            fromIdentifier = fromLookup->value;
-        }
-
-        unsigned toIdentifier = 0;
-        if (edge.to) {
-            auto toLookup = allowedNodeIdentifiers.find(edge.to);
-            if (toLookup == allowedNodeIdentifiers.end())
-                return;
-            toIdentifier = toLookup->value;
-        }
-
         if (!firstEdge)
             json.append(',');
         firstEdge = false;
 
-        // [<fromNodeId>, <toNodeId>, <edgeTypeIndex>, <optionalEdgeExtraData>],
-        json.append('[');
-        json.appendNumber(fromIdentifier);
+        // <fromNodeId>, <toNodeId>, <edgeTypeIndex>, <edgeExtraData>
+        json.appendNumber(edge.from.identifier);
         json.append(',');
-        json.appendNumber(toIdentifier);
+        json.appendNumber(edge.to.identifier);
         json.append(',');
         json.appendNumber(edgeTypeToNumber(edge.type));
-        json.append(']');
+        json.append(',');
+        switch (edge.type) {
+        case EdgeType::Property:
+        case EdgeType::Variable: {
+            auto result = edgeNameIndexes.add(edge.u.name, nextEdgeNameIndex);
+            if (result.isNewEntry)
+                nextEdgeNameIndex++;
+            unsigned edgeNameIndex = result.iterator->value;
+            json.appendNumber(edgeNameIndex);
+            break;
+        }
+        case EdgeType::Index:
+            json.appendNumber(edge.u.index);
+            break;
+        default:
+            // No data for this edge type.
+            json.append('0');
+            break;
+        }
     };
 
     json.append('{');
@@ -233,7 +289,7 @@ String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> a
     json.append(',');
     json.appendLiteral("\"nodes\":");
     json.append('[');
-    json.appendLiteral("[0,0,\"<root>\"]");
+    json.appendLiteral("0,0,0,0"); // <root>
     for (HeapSnapshot* snapshot = m_profiler.mostRecentSnapshot(); snapshot; snapshot = snapshot->previous()) {
         for (auto& node : snapshot->m_nodes)
             appendNodeJSON(node);
@@ -247,6 +303,7 @@ String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> a
     Vector<const char *> orderedClassNames(classNameIndexes.size());
     for (auto& entry : classNameIndexes)
         orderedClassNames[entry.value] = entry.key;
+    classNameIndexes.clear();
     bool firstClassName = true;
     for (auto& className : orderedClassNames) {
         if (!firstClassName)
@@ -254,7 +311,41 @@ String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> a
         firstClassName = false;
         json.appendQuotedJSONString(className);
     }
+    orderedClassNames.clear();
     json.append(']');
+
+    // Process edges.
+    // Replace pointers with identifiers.
+    // Remove any edges that we won't need.
+    m_edges.removeAllMatching([&] (HeapSnapshotEdge& edge) {
+        // If the from cell is null, this means a <root> edge.
+        if (!edge.from.cell)
+            edge.from.identifier = 0;
+        else {
+            auto fromLookup = allowedNodeIdentifiers.find(edge.from.cell);
+            if (fromLookup == allowedNodeIdentifiers.end())
+                return true;
+            edge.from.identifier = fromLookup->value;
+        }
+
+        if (!edge.to.cell)
+            edge.to.identifier = 0;
+        else {
+            auto toLookup = allowedNodeIdentifiers.find(edge.to.cell);
+            if (toLookup == allowedNodeIdentifiers.end())
+                return true;
+            edge.to.identifier = toLookup->value;
+        }
+
+        return false;
+    });
+    allowedNodeIdentifiers.clear();
+    m_edges.shrinkToFit();
+
+    // Sort edges based on from identifier.
+    std::sort(m_edges.begin(), m_edges.end(), [&] (const HeapSnapshotEdge& a, const HeapSnapshotEdge& b) {
+        return a.from.identifier < b.from.identifier;
+    });
 
     // edges
     json.append(',');
@@ -275,6 +366,24 @@ String HeapSnapshotBuilder::json(std::function<bool (const HeapSnapshotNode&)> a
     json.appendQuotedJSONString(edgeTypeToString(EdgeType::Index));
     json.append(',');
     json.appendQuotedJSONString(edgeTypeToString(EdgeType::Variable));
+    json.append(']');
+
+    // edge names
+    json.append(',');
+    json.appendLiteral("\"edgeNames\":");
+    json.append('[');
+    Vector<UniquedStringImpl*> orderedEdgeNames(edgeNameIndexes.size());
+    for (auto& entry : edgeNameIndexes)
+        orderedEdgeNames[entry.value] = entry.key;
+    edgeNameIndexes.clear();
+    bool firstEdgeName = true;
+    for (auto& edgeName : orderedEdgeNames) {
+        if (!firstEdgeName)
+            json.append(',');
+        firstEdgeName = false;
+        json.appendQuotedJSONString(edgeName);
+    }
+    orderedEdgeNames.clear();
     json.append(']');
 
     json.append('}');

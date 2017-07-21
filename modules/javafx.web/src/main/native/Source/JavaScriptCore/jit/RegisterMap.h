@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RegisterMap_h
-#define RegisterMap_h
+#pragma once
 
 #if ENABLE(JIT)
 
@@ -68,17 +67,8 @@ public:
         return m_map[MacroAssembler::registerIndex(fpr)];
     }
 
-#if ENABLE(CXX_11_FIX)
-    RegisterMap() : m_map({}) { }
-#endif
-
 private:
-#if ENABLE(CXX_11_FIX)
-    // FIXME-java: Find number of registers and put exact number
-    std::array<T, 1000> m_map;
-#else
     std::array<T, MacroAssembler::totalNumberOfRegisters()> m_map { { } };
-#endif
 };
 
 template<typename T>
@@ -95,12 +85,7 @@ public:
     }
 
 private:
-#if ENABLE(CXX_11_FIX)
-    // FIXME-java: Find number of registers and put exact number
-    std::array<T, 1000> m_map { { } };
-#else
     std::array<T, MacroAssembler::numberOfRegisters()> m_map { { } };
-#endif
 };
 
 template<typename T>
@@ -117,16 +102,9 @@ public:
     }
 
 private:
-#if ENABLE(CXX_11_FIX)
-    // FIXME-java: Find number of registers and put exact number
-    std::array<T, 1000> m_map { { } };
-#else
     std::array<T, MacroAssembler::numberOfFPRegisters()> m_map { { } };
-#endif
 };
 
 } // namespace JSC
 
 #endif // ENABLE(JIT)
-
-#endif // RegisterMap_h

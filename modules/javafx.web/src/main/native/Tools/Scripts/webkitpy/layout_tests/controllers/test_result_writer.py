@@ -48,6 +48,7 @@ def write_test_result(filesystem, port, results_directory, test_name, driver_out
     for failure in failures:
         failure.write_failure(writer, driver_output, expected_driver_output, port)
 
+
 class TestResultWriter(object):
     """A class which handles all writing operations to the result directory."""
 
@@ -88,6 +89,11 @@ class TestResultWriter(object):
         """
         fs = self._filesystem
         output_filename = fs.join(self._root_output_dir, self._test_name)
+
+        # Temporary fix, also in LayoutTests/fast/harness/results.html, line 275.
+        # FIXME: Refactor to avoid confusing reference to both test and process names.
+        if len(fs.splitext(output_filename)[1]) - 1 > 5:
+            return output_filename + modifier
         return fs.splitext(output_filename)[0] + modifier
 
     def _write_binary_file(self, path, contents):

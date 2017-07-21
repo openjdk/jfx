@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,15 +23,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GCSegmentedArray_h
-#define GCSegmentedArray_h
+#pragma once
 
 #include <wtf/DoublyLinkedList.h>
+#include <wtf/ListDump.h>
+#include <wtf/PrintStream.h>
 #include <wtf/Vector.h>
-
-#if PLATFORM(JAVA) // tav todo temp
-#include <JSExportMacros.h>
-#endif
 
 namespace JSC {
 
@@ -168,4 +165,3 @@ private:
 
 } // namespace JSC
 
-#endif // GCSegmentedArray_h

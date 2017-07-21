@@ -18,12 +18,10 @@
  */
 #include "config.h"
 
-#if USE(TEXTURE_MAPPER)
 #include "TextureMapperTile.h"
 
 #include "Image.h"
 #include "TextureMapper.h"
-#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -76,4 +74,3 @@ void TextureMapperTile::paint(TextureMapper& textureMapper, const Transformation
 }
 
 } // namespace WebCore
-#endif

@@ -1,21 +1,21 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef _JavaEventListener_h
-#define _JavaEventListener_h
 
-#include "Event.h"
-#include "EventListener.h"
-#include "Node.h"
+#pragma once
 
-#include "wtf/RefCounted.h"
-#include "wtf/PassRefPtr.h"
-#include "wtf/Vector.h"
-#include "wtf/java/JavaRef.h"
+#include <WebCore/Event.h>
+#include <WebCore/EventListener.h>
+#include <WebCore/Node.h>
+
+#include <wtf/RefCounted.h>
+#include <wtf/PassRefPtr.h>
+#include <wtf/Vector.h>
+#include <wtf/java/JavaRef.h>
 
 namespace WebCore {
 
-class JavaEventListener : public EventListener {
+class JavaEventListener final : public EventListener {
 public:
     JavaEventListener(const JLObject &listener)
         : EventListener(NativeEventListenerType)
@@ -24,18 +24,16 @@ public:
         relaxAdoptionRequirement();
     }
 
-    virtual ~JavaEventListener();
+    ~JavaEventListener() override;
 
-    virtual bool operator==(const EventListener&);
-    virtual void handleEvent(ScriptExecutionContext* context, Event* event);
+    bool operator == (const EventListener&) const override;
+    void handleEvent(ScriptExecutionContext* context, Event* event) override;
 
     JGObject m_joListener;
     static ScriptExecutionContext* scriptExecutionContext();
-    virtual bool isJavaEventListener() const override { return true; }
+    bool isJavaEventListener() const override { return true; }
 private:
     static Vector<ScriptExecutionContext*> sm_vScriptExecutionContexts;
 };
 
 }; // namespace WebCore
-
-#endif

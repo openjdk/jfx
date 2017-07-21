@@ -1,3 +1,9 @@
+set(WEBKIT_TESTRUNNER_SHARED_DIR "${TOOLS_DIR}/TestRunnerShared/")
+set(WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR "${TOOLS_DIR}/TestRunnerShared/UIScriptContext")
+set(DUMP_RENDER_TREE_BINDINGS_DIR "${TOOLS_DIR}/DumpRenderTree/Bindings")
+
+file(MAKE_DIRECTORY ${DERIVED_SOURCES_DIR}/DumpRenderTree)
+
 set(DumpRenderTree_SOURCES
     ../CyclicRedundancyCheck.cpp
     ../DumpRenderTreeCommon.cpp
@@ -10,6 +16,9 @@ set(DumpRenderTree_SOURCES
     GCControllerJava.cpp
     JavaEnv.cpp
     WorkQueueItemJava.cpp
+    ${WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR}/UIScriptContext.cpp
+    ${WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR}/UIScriptController.cpp
+    ${WEBKIT_TESTRUNNER_SHARED_DIR}/Bindings/JSWrapper.cpp
 )
 
 set(DumpRenderTree_LIBRARIES
@@ -20,7 +29,11 @@ set(DumpRenderTree_LIBRARIES
 )
 
 set(DumpRenderTree_INCLUDE_DIRECTORIES
+    ${DERIVED_SOURCES_DIR}/DumpRenderTree
+    ${WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR}
+    ${WEBKIT_TESTRUNNER_SHARED_DIR}/Bindings
     ${WEBCORE_DIR}
+    ${WEBCORE_DIR}/testing/js
     ${WEBCORE_DIR}/platform
     ${JAVASCRIPTCORE_DIR}
     ${JAVASCRIPTCORE_DIR}/API
@@ -55,17 +68,33 @@ if (APPLE)
     )
 endif ()
 
+set(DumpRenderTree_IDL_FILES
+    "${WEBKIT_TESTRUNNER_UISCRIPTCONTEXT_DIR}/Bindings/UIScriptController.idl"
+)
+
+GENERATE_BINDINGS(DumpRenderTreeBindings
+    OUTPUT_SOURCE DumpRenderTree_SOURCES
+    INPUT_FILES ${DumpRenderTree_IDL_FILES}
+    BASE_DIR ${DUMP_RENDER_TREE_BINDINGS_DIR}
+    IDL_INCLUDES ../Bindings
+    FEATURES ${FEATURE_DEFINES_WITH_SPACE_SEPARATOR}
+    DESTINATION ${DERIVED_SOURCES_DIR}/DumpRenderTree
+    GENERATOR DumpRenderTree)
+
 WEBKIT_INCLUDE_CONFIG_FILES_IF_EXISTS()
 
 include_directories(${DumpRenderTree_INCLUDE_DIRECTORIES})
 
 add_library(DumpRenderTreeJava SHARED ${DumpRenderTree_SOURCES})
+add_definitions(-DWEBCORE_EXPORT=WTF_IMPORT -DWEBCORE_TESTSUPPORT_EXPORT=WTF_IMPORT)
+add_dependencies(DumpRenderTreeJava DumpRenderTreeBindings)
+
 if (UNIX AND NOT APPLE)
   set_target_properties(DumpRenderTreeJava PROPERTIES LINK_FLAGS "-Wl,--no-undefined")
 elseif (WIN32)
   # Workaround for MSBuild. It always creates Release|Debug folder
   # according to the build type on each target.
-  install(PROGRAMS ${CMAKE_BINARY_DIR}/lib/${CMAKE_BUILD_TYPE}/DumpRenderTreeJava.dll DESTINATION ${CMAKE_BINARY_DIR}/lib OPTIONAL)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/DumpRenderTreeJava.dll DESTINATION ${CMAKE_BINARY_DIR}/lib OPTIONAL)
 endif ()
 set_target_properties(DumpRenderTreeJava PROPERTIES OUTPUT_NAME "DumpRenderTreeJava")
 target_link_libraries(DumpRenderTreeJava ${DumpRenderTree_LIBRARIES})

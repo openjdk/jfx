@@ -1,4 +1,4 @@
-REM Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+REM Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
 REM DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 REM
 REM This code is free software; you can redistribute it and/or modify it
@@ -30,29 +30,36 @@ set INCLUDE=
 set LIB=
 set LIBPATH=
 
-REM Run the vsvars32.bat file, sending it's output to neverland.
-REM The current officially supported Visual Studio version is 12.0.
-REM Handling of 14.0 is included here, but not yet supported.
-REM The previous officially supported VS version was 10.0
-REM Handling of 11.0 has been included, but not really tested.
-REM So, the search order is 120, then 140, then 100, then 110
-set VSVER=120
-set VSVARSDIR=%VS120COMNTOOLS%
-if "%VSVARSDIR%"=="" set VSVER=140
-if "%VSVARSDIR%"=="" set VSVARSDIR=%VS140COMNTOOLS%
+REM Run the vsvars32.bat (12.0) / vcvars32.bat (15.0) file, sending it's output to neverland.
+REM The current officially supported Visual Studio version is 15.0.
+REM Handling of 11.0 and 14.0 is excluded here.
+REM The previous officially supported VS version was 12.0
+REM So, the search order is 150, then 120, then 100
+set VSVER=150
+set "VSVARS32FILE=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars32.bat"
+if not "%VS150COMNTOOLS%"=="" (
+    set VS150COMNTOOLS=%VS150COMNTOOLS%
+) else (
+  if exist "%VSVARS32FILE%" set "VS150COMNTOOLS=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build"
+)
+set VSVARSDIR=%VS150COMNTOOLS%
+if "%VSVARSDIR%"=="" set VSVER=120
+if "%VSVARSDIR%"=="" set VSVARSDIR=%VS120COMNTOOLS%
 if "%VSVARSDIR%"=="" set VSVER=100
 if "%VSVARSDIR%"=="" set VSVARSDIR=%VS100COMNTOOLS%
-if "%VSVARSDIR%"=="" set VSVER=110
-if "%VSVARSDIR%"=="" set VSVARSDIR=%VS110COMNTOOLS%
 
 REM We shouldn't depend on VSVARS32 as it's 32-bit only.
 REM   However, this var is still used somewhere in FX (e.g.
 REM   to build media), so we set it here.
 
-set VSVARS32=%VSVARSDIR%\vsvars32.bat
+if "%VSVER%"=="100" set VSVARS32=%VSVARSDIR%\vsvars32.bat
+if "%VSVER%"=="120" set VSVARS32=%VSVARSDIR%\vsvars32.bat
+if "%VSVER%"=="150" set VSVARS32=%VSVARSDIR%\vcvars32.bat
 call "%VSVARS32%" > NUL
 
-set VCVARSALL=%VCINSTALLDIR%\vcvarsall.bat
+if "%VSVER%"=="100" set VCVARSALL=%VCINSTALLDIR%\vcvarsall.bat
+if "%VSVER%"=="120" set VCVARSALL=%VCINSTALLDIR%\vcvarsall.bat
+if "%VSVER%"=="150" set VCVARSALL=%VSVARSDIR%\vcvarsall.bat
 call "%VCVARSALL%" %VCARCH% > NUL
 
 REM Some vars are reset by vcvarsall.bat, so save them here.
@@ -88,5 +95,6 @@ echo windows.vs.LIBPATH=%LIBPATH%@@ENDOFLINE@@
 echo windows.vs.PATH=%PARFAIT_PATH%;%PATH%@@ENDOFLINE@@
 echo windows.vs.VER=%VSVER%@@ENDOFLINE@@
 echo WINDOWS_SDK_DIR=%WindowsSdkDir%@@ENDOFLINE@@
+echo WINDOWS_SDK_VERSION=%WindowsSDKVersion%@@ENDOFLINE@@
 echo ############################################################
 

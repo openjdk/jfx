@@ -122,6 +122,13 @@ void FEComposite::correctFilterResultIfNeeded()
     forceValidPreMultipliedPixels();
 }
 
+static unsigned char clampByte(int c)
+{
+    unsigned char buff[] = { static_cast<unsigned char>(c), 255, 0 };
+    unsigned uc = static_cast<unsigned>(c);
+    return buff[!!(uc & ~0xff) + !!(uc & ~(~0u >> 1))];
+}
+
 template <int b1, int b4>
 static inline void computeArithmeticPixels(unsigned char* source, unsigned char* destination, int pixelArrayLength,
                                     float k1, float k2, float k3, float k4)
@@ -142,12 +149,7 @@ static inline void computeArithmeticPixels(unsigned char* source, unsigned char*
         if (b4)
             result += scaledK4;
 
-        if (result <= 0)
-            *destination = 0;
-        else if (result >= 255)
-            *destination = 255;
-        else
-            *destination = result;
+        *destination = clampByte(result);
         ++source;
         ++destination;
     }

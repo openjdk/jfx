@@ -27,9 +27,9 @@
 #include "CommandLineAPIModule.h"
 
 #include "CommandLineAPIModuleSource.h"
-#include "DOMWrapperWorld.h"
 #include "JSDOMGlobalObject.h"
 #include "WebInjectedScriptManager.h"
+#include <heap/HeapInlines.h>
 #include <inspector/InjectedScript.h>
 
 using namespace JSC;

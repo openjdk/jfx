@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,7 @@
 #include "GenericTaskQueue.h"
 #include "RealtimeMediaSource.h"
 #include "Timer.h"
-#include <wtf/RetainPtr.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/Function.h>
 
 OBJC_CLASS AVCaptureAudioDataOutput;
 OBJC_CLASS AVCaptureConnection;
@@ -46,6 +45,8 @@ typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 
 namespace WebCore {
 
+class AVMediaCaptureSource;
+
 class AVMediaCaptureSource : public RealtimeMediaSource {
 public:
     virtual ~AVMediaCaptureSource();
@@ -56,16 +57,14 @@ public:
 
     AVCaptureSession *session() const { return m_session.get(); }
 
-    const RealtimeMediaSourceSettings& settings() override;
+    const RealtimeMediaSourceSettings& settings() const final;
 
-    void startProducingData() override;
-    void stopProducingData() override;
-    bool isProducingData() const override { return m_isRunning; }
-
-    WeakPtr<AVMediaCaptureSource> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
+    void startProducingData() final;
+    void stopProducingData() final;
+    bool isProducingData() const final { return m_isRunning; }
 
 protected:
-    AVMediaCaptureSource(AVCaptureDevice*, const AtomicString&, RealtimeMediaSource::Type, PassRefPtr<MediaConstraints>);
+    AVMediaCaptureSource(AVCaptureDevice*, const AtomicString&, RealtimeMediaSource::Type);
 
     AudioSourceProvider* audioSourceProvider() override;
 
@@ -77,25 +76,25 @@ protected:
 
     AVCaptureDevice *device() const { return m_device.get(); }
 
-    MediaConstraints* constraints() { return m_constraints.get(); }
-
     RealtimeMediaSourceSupportedConstraints& supportedConstraints();
-    RefPtr<RealtimeMediaSourceCapabilities> capabilities() override;
+    RefPtr<RealtimeMediaSourceCapabilities> capabilities() const final;
 
     void setVideoSampleBufferDelegate(AVCaptureVideoDataOutput*);
     void setAudioSampleBufferDelegate(AVCaptureAudioDataOutput*);
 
-    void scheduleDeferredTask(std::function<void ()>);
-
 private:
     void setupSession();
-    void reset() override;
+    void reset() final;
+
+    void beginConfiguration() final;
+    void commitConfiguration() final;
+
+    void initializeSettings();
+    void initializeCapabilities();
 
     RealtimeMediaSourceSettings m_currentSettings;
     RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
-    WeakPtrFactory<AVMediaCaptureSource> m_weakPtrFactory;
     RetainPtr<WebCoreAVMediaCaptureSourceObserver> m_objcObserver;
-    RefPtr<MediaConstraints> m_constraints;
     RefPtr<RealtimeMediaSourceCapabilities> m_capabilities;
     RetainPtr<AVCaptureSession> m_session;
     RetainPtr<AVCaptureDevice> m_device;

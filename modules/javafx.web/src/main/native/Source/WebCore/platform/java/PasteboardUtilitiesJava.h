@@ -1,8 +1,8 @@
 /*
  * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef PasteboardUtilitiesJava_h
-#define PasteboardUtilitiesJava_h
+
+#pragma once
 
 #include <wtf/Forward.h>
 
@@ -14,5 +14,3 @@ void replaceNewlinesWithWindowsStyleNewlines(String&);
 void replaceNBSPWithSpace(String&);
 
 } // namespace WebCore
-
-#endif // PasteboardUtilitiesJava_h

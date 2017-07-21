@@ -51,12 +51,12 @@ public:
     virtual void notificationObjectDestroyed(WebCore::Notification* object);
     virtual void notificationControllerDestroyed();
 #if ENABLE(LEGACY_NOTIFICATIONS)
-    virtual void requestPermission(WebCore::SecurityOrigin*, PassRefPtr<WebCore::VoidCallback>);
+    virtual void requestPermission(WebCore::SecurityOrigin*, RefPtr<WebCore::VoidCallback>&&);
 #endif
 #if ENABLE(NOTIFICATIONS)
-    virtual void requestPermission(WebCore::SecurityOrigin*, PassRefPtr<WebCore::NotificationPermissionCallback>);
+    virtual void requestPermission(WebCore::SecurityOrigin*, RefPtr<WebCore::NotificationPermissionCallback>&&);
 #endif
-    virtual bool hasPendingPermissionRequests(WebCore::ScriptExecutionContext*) const override;
+    bool hasPendingPermissionRequests(WebCore::ScriptExecutionContext*) const override;
     virtual void cancelRequestsForPermission(WebCore::ScriptExecutionContext*);
     virtual WebCore::NotificationClient::Permission checkPermission(const URL&);
 

@@ -27,8 +27,7 @@
  * SUCH DAMAGE.
  */
 
-#ifndef ViewportStyleResolver_h
-#define ViewportStyleResolver_h
+#pragma once
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
 
@@ -44,7 +43,7 @@ class Document;
 class MutableStyleProperties;
 class StyleRuleViewport;
 
-class ViewportStyleResolver : public RefCounted<ViewportStyleResolver> {
+class ViewportStyleResolver final : public RefCounted<ViewportStyleResolver> {
 public:
     static Ref<ViewportStyleResolver> create(Document* document)
     {
@@ -70,5 +69,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(CSS_DEVICE_ADAPTATION)
-
-#endif // ViewportStyleResolver_h

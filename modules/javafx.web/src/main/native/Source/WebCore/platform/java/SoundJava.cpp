@@ -4,7 +4,7 @@
 #include "config.h"
 
 #include "wtf/Assertions.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "Sound.h"
 
 namespace WebCore {

@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef JavaRuntimeObject_h
-#define JavaRuntimeObject_h
+#pragma once
 
 #include "JSDOMBinding.h"
 #include "runtime_object.h"
@@ -62,7 +61,5 @@ private:
     void finishCreation(JSGlobalObject*);
 };
 
-}
-}
-
-#endif
+}  // namespace Bindings
+}  // namespace JSC

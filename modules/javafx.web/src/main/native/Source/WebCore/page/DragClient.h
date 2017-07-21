@@ -23,12 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#ifndef DragClient_h
-#define DragClient_h
+#pragma once
 
 #include "DragActions.h"
 #include "DragImage.h"
+#include "FloatPoint.h"
 #include "IntPoint.h"
 
 namespace WebCore {
@@ -43,12 +42,12 @@ class DragClient {
 public:
     virtual void dragControllerDestroyed() = 0;
 
-    virtual void willPerformDragDestinationAction(DragDestinationAction, DragData&) = 0;
+    virtual void willPerformDragDestinationAction(DragDestinationAction, const DragData&) = 0;
     virtual void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) = 0;
-    virtual DragDestinationAction actionMaskForDrag(DragData&) = 0;
+    virtual DragDestinationAction actionMaskForDrag(const DragData&) = 0;
     virtual DragSourceAction dragSourceActionMaskForPoint(const IntPoint& rootViewPoint) = 0;
 
-    virtual void startDrag(DragImageRef, const IntPoint& dragImageOrigin, const IntPoint& eventPos, DataTransfer&, Frame&, bool linkDrag = false) = 0;
+    virtual void startDrag(DragImage, const IntPoint& dragImageOrigin, const IntPoint& eventPos, const FloatPoint& dragImageAnchor, DataTransfer&, Frame&, DragSourceAction) = 0;
     virtual void dragEnded() { }
 
 #if PLATFORM(COCOA)
@@ -64,6 +63,3 @@ public:
 };
 
 } // namespace WebCore
-
-#endif // DragClient_h
-

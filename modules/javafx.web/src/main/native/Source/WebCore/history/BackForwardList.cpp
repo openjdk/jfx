@@ -41,10 +41,6 @@ namespace WebCore {
 static const unsigned DefaultCapacity = 100;
 static const unsigned NoCurrentItemIndex = UINT_MAX;
 
-#if PLATFORM(JAVA)
-extern void notifyBackForwardListChanged(const JLObject&);
-#endif
-
 BackForwardList::BackForwardList(Page* page)
     : m_page(page)
     , m_current(NoCurrentItemIndex)
@@ -87,9 +83,6 @@ void BackForwardList::addItem(Ref<HistoryItem>&& newItem)
     m_entryHash.add(newItem.ptr());
     m_entries.insert(m_current + 1, WTFMove(newItem));
     ++m_current;
-#if PLATFORM(JAVA)
-    notifyBackForwardListChanged(m_hostObject);
-#endif
 }
 
 void BackForwardList::goBack()
@@ -120,9 +113,6 @@ void BackForwardList::goToItem(HistoryItem* item)
     if (index < m_entries.size()) {
         m_current = index;
     }
-#if PLATFORM(JAVA)
-    notifyBackForwardListChanged(m_hostObject);
-#endif
 }
 
 HistoryItem* BackForwardList::backItem()
@@ -191,9 +181,6 @@ void BackForwardList::setCapacity(int size)
         m_current = m_entries.size() - 1;
     }
     m_capacity = size;
-#if PLATFORM(JAVA)
-    notifyBackForwardListChanged(m_hostObject);
-#endif
 }
 
 bool BackForwardList::enabled()
@@ -298,27 +285,11 @@ void BackForwardList::removeItem(HistoryItem* item)
             break;
         }
     }
-
-#if PLATFORM(JAVA)
-    notifyBackForwardListChanged(m_hostObject);
-#endif
 }
 
 bool BackForwardList::containsItem(HistoryItem* entry)
 {
     return m_entryHash.contains(entry);
 }
-
-#if PLATFORM(JAVA)
-void BackForwardList::setHostObject(const JLObject &host)
-{
-    m_hostObject = host;
-}
-
-JLObject BackForwardList::hostObject()
-{
-    return m_hostObject;
-}
-#endif
 
 }; // namespace WebCore

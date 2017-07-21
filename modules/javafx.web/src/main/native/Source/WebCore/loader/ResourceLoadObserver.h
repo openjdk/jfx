@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,17 +23,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef ResourceLoadObserver_h
-#define ResourceLoadObserver_h
+#pragma once
 
+#include "ResourceLoadStatisticsStore.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class Document;
-class KeyedDecoder;
-class KeyedEncoder;
+class Frame;
+class Page;
+class ResourceRequest;
+class ResourceResponse;
 class URL;
 
 struct ResourceLoadStatistics;
@@ -43,35 +45,35 @@ class ResourceLoadObserver {
 public:
     WEBCORE_EXPORT static ResourceLoadObserver& sharedObserver();
 
-    void logFrameNavigation(bool isRedirect, const URL& sourceURL, const URL& targetURL, bool isMainFrame, const URL& mainFrameURL);
-    void logSubresourceLoading(bool isRedirect, const URL& sourceURL, const URL& targetURL, const URL& mainFrameURL);
-    void logUserInteraction(const Document&);
+    void logFrameNavigation(const Frame& frame, const Frame& topFrame, const ResourceRequest& newRequest, const ResourceResponse& redirectResponse);
+    void logSubresourceLoading(const Frame*, const ResourceRequest& newRequest, const ResourceResponse& redirectResponse);
+    void logWebSocketLoading(const Frame*, const URL&);
+    void logUserInteractionWithReducedTimeResolution(const Document&);
 
-    WEBCORE_EXPORT void writeDataToDisk();
-    WEBCORE_EXPORT void readDataFromDiskIfNeeded();
-    WEBCORE_EXPORT void setStatisticsStorageDirectory(const String&);
+    WEBCORE_EXPORT void logUserInteraction(const URL&);
+    WEBCORE_EXPORT bool hasHadUserInteraction(const URL&);
+    WEBCORE_EXPORT void clearUserInteraction(const URL&);
+
+    WEBCORE_EXPORT void setPrevalentResource(const URL&);
+    WEBCORE_EXPORT bool isPrevalentResource(const URL&);
+    WEBCORE_EXPORT void clearPrevalentResource(const URL&);
+
+    WEBCORE_EXPORT void setTimeToLiveUserInteraction(double seconds);
+    WEBCORE_EXPORT void setReducedTimestampResolution(double seconds);
+
+    WEBCORE_EXPORT void fireDataModificationHandler();
+
+    WEBCORE_EXPORT RefPtr<ResourceLoadStatisticsStore> statisticsStore();
+    WEBCORE_EXPORT void setStatisticsStore(Ref<ResourceLoadStatisticsStore>&&);
 
     WEBCORE_EXPORT String statisticsForOrigin(const String&);
 
 private:
-    ResourceLoadStatistics& resourceStatisticsForPrimaryDomain(const String&);
-
+    bool shouldLog(Page*);
     static String primaryDomain(const URL&);
 
-    bool isPrevalentResource(const String&) const;
-
-    String persistentStoragePath(const String& label) const;
-
-    void writeDataToDisk(const String& origin, const ResourceLoadStatistics&) const;
-
-    std::unique_ptr<KeyedDecoder> createDecoderFromDisk(const String& label) const;
-    void writeEncoderToDisk(KeyedEncoder&, const String& label) const;
-
+    RefPtr<ResourceLoadStatisticsStore> m_store;
     HashMap<String, size_t> m_originsVisitedMap;
-    HashMap<String, ResourceLoadStatistics> m_resourceStatisticsMap;
-    String m_storagePath;
 };
 
 } // namespace WebCore
-
-#endif /* ResourceLoadObserver_h */

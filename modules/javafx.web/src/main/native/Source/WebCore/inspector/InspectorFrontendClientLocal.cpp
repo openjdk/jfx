@@ -51,7 +51,6 @@
 #include "Timer.h"
 #include "UserGestureIndicator.h"
 #include "WindowFeatures.h"
-#include <bindings/ScriptValue.h>
 #include <inspector/InspectorBackendDispatchers.h>
 #include <wtf/Deque.h>
 #include <wtf/text/CString.h>
@@ -97,7 +96,7 @@ public:
 
         // Dispatching a message can possibly close the frontend and destroy
         // the owning frontend client, so keep a protector reference here.
-        Ref<InspectorBackendDispatchTask> protect(*this);
+        Ref<InspectorBackendDispatchTask> protectedThis(*this);
 
         if (!m_messages.isEmpty())
             m_inspectedPageController->dispatchMessageFromFrontend(m_messages.takeFirst());
@@ -152,9 +151,8 @@ void InspectorFrontendClientLocal::windowObjectCleared()
     if (m_frontendHost)
         m_frontendHost->disconnectClient();
 
-    JSC::ExecState* frontendExecState = execStateFromPage(debuggerWorld(), m_frontendPage);
     m_frontendHost = InspectorFrontendHost::create(this, m_frontendPage);
-    ScriptGlobalObject::set(frontendExecState, "InspectorFrontendHost", m_frontendHost.get());
+    ScriptGlobalObject::set(*execStateFromPage(debuggerWorld(), m_frontendPage), "InspectorFrontendHost", *m_frontendHost);
 }
 
 void InspectorFrontendClientLocal::frontendLoaded()
@@ -169,6 +167,11 @@ void InspectorFrontendClientLocal::frontendLoaded()
     for (auto& evaluate : m_evaluateOnLoad)
         evaluateOnLoad(evaluate);
     m_evaluateOnLoad.clear();
+}
+
+UserInterfaceLayoutDirection InspectorFrontendClientLocal::userInterfaceLayoutDirection() const
+{
+    return m_frontendPage->userInterfaceLayoutDirection();
 }
 
 void InspectorFrontendClientLocal::requestSetDockSide(DockSide dockSide)
@@ -222,7 +225,7 @@ void InspectorFrontendClientLocal::changeAttachedWindowWidth(unsigned width)
 
 void InspectorFrontendClientLocal::openInNewTab(const String& url)
 {
-    UserGestureIndicator indicator(DefinitelyProcessingUserGesture);
+    UserGestureIndicator indicator(ProcessingUserGesture);
     Frame& mainFrame = m_inspectedPageController->inspectedPage().mainFrame();
     FrameLoadRequest request(mainFrame.document()->securityOrigin(), ResourceRequest(), "_blank", LockHistory::No, LockBackForwardList::No, MaybeSendReferrer, AllowNavigationToInvalidURL::Yes, NewFrameOpenerPolicy::Allow, ReplaceDocumentIfJavaScriptURL, ShouldOpenExternalURLsPolicy::ShouldNotAllow);
 
@@ -257,6 +260,9 @@ void InspectorFrontendClientLocal::setAttachedWindow(DockSide dockSide)
         break;
     case DockSide::Right:
         side = "right";
+        break;
+    case DockSide::Left:
+        side = "left";
         break;
     case DockSide::Bottom:
         side = "bottom";
@@ -364,8 +370,8 @@ unsigned InspectorFrontendClientLocal::inspectionLevel() const
 
 bool InspectorFrontendClientLocal::evaluateAsBoolean(const String& expression)
 {
-    Deprecated::ScriptValue value = m_frontendPage->mainFrame().script().executeScript(expression);
-    return value.toString(mainWorldExecState(&m_frontendPage->mainFrame())) == "true";
+    auto& state = *mainWorldExecState(&m_frontendPage->mainFrame());
+    return m_frontendPage->mainFrame().script().executeScript(expression).toWTFString(&state) == "true";
 }
 
 void InspectorFrontendClientLocal::evaluateOnLoad(const String& expression)

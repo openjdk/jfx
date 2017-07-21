@@ -20,19 +20,19 @@
     Boston, MA 02110-1301, USA.
 */
 
-#ifndef CachedRawResource_h
-#define CachedRawResource_h
+#pragma once
 
 #include "CachedResource.h"
 
 namespace WebCore {
 
 class CachedResourceClient;
+class ResourceTiming;
 class SubresourceLoader;
 
 class CachedRawResource final : public CachedResource {
 public:
-    CachedRawResource(ResourceRequest&, Type, SessionID);
+    CachedRawResource(CachedResourceRequest&&, Type, SessionID);
 
     // FIXME: AssociatedURLLoader shouldn't be a DocumentThreadableLoader and therefore shouldn't
     // use CachedRawResource. However, it is, and it needs to be able to defer loading.
@@ -41,7 +41,7 @@ public:
 
     virtual void setDataBufferingPolicy(DataBufferingPolicy);
 
-    // FIXME: This is exposed for the InpsectorInstrumentation for preflights in DocumentThreadableLoader. It's also really lame.
+    // FIXME: This is exposed for the InspectorInstrumentation for preflights in DocumentThreadableLoader. It's also really lame.
     unsigned long identifier() const { return m_identifier; }
 
     void clear();
@@ -50,28 +50,30 @@ public:
 
     bool wasRedirected() const { return !m_redirectChain.isEmpty(); };
 
+    void finishedTimingForWorkerLoad(ResourceTiming&&);
+
 private:
-    virtual void didAddClient(CachedResourceClient*) override;
-    virtual void addDataBuffer(SharedBuffer&) override;
-    virtual void addData(const char* data, unsigned length) override;
-    virtual void finishLoading(SharedBuffer*) override;
+    void didAddClient(CachedResourceClient&) final;
+    void addDataBuffer(SharedBuffer&) final;
+    void addData(const char* data, unsigned length) final;
+    void finishLoading(SharedBuffer*) final;
 
-    virtual bool shouldIgnoreHTTPStatusCodeErrors() const override { return true; }
-    virtual void allClientsRemoved() override;
+    bool shouldIgnoreHTTPStatusCodeErrors() const override { return true; }
+    void allClientsRemoved() override;
 
-    virtual void redirectReceived(ResourceRequest&, const ResourceResponse&) override;
-    virtual void responseReceived(const ResourceResponse&) override;
-    virtual bool shouldCacheResponse(const ResourceResponse&) override;
-    virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
+    void redirectReceived(ResourceRequest&, const ResourceResponse&) override;
+    void responseReceived(const ResourceResponse&) override;
+    bool shouldCacheResponse(const ResourceResponse&) override;
+    void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
 
-    virtual void switchClientsToRevalidatedResource() override;
-    virtual bool mayTryReplaceEncodedData() const override { return m_allowEncodedDataReplacement; }
+    void switchClientsToRevalidatedResource() override;
+    bool mayTryReplaceEncodedData() const override { return m_allowEncodedDataReplacement; }
 
     const char* calculateIncrementalDataChunk(SharedBuffer*, unsigned& incrementalDataLength);
     void notifyClientsDataWasReceived(const char* data, unsigned length);
 
 #if USE(SOUP)
-    virtual char* getOrCreateReadBuffer(size_t requestedSize, size_t& actualSize) override;
+    char* getOrCreateReadBuffer(size_t requestedSize, size_t& actualSize) override;
 #endif
 
     unsigned long m_identifier;
@@ -95,7 +97,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CachedRawResource)
-    static bool isType(const WebCore::CachedResource& resource) { return resource.isMainOrRawResource(); }
+    static bool isType(const WebCore::CachedResource& resource) { return resource.isMainOrMediaOrRawResource(); }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif // CachedRawResource_h

@@ -18,7 +18,7 @@
 #include "GraphicsContextJava.h"
 #include "HostWindow.h"
 #include "IntRect.h"
-#include "JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #include "KeyboardEvent.h"
 #include "Logging.h"
 #include "Page.h"
@@ -175,7 +175,7 @@ void Widget::setIsSelected(bool)
     notImplemented();
 }
 
-void Widget::paint(GraphicsContext& gc, const IntRect& r)
+void Widget::paint(GraphicsContext&, const IntRect&, SecurityOriginPaintPolicy)
 {
 /*
     JNIEnv* env = WebCore_GetJavaEnv();

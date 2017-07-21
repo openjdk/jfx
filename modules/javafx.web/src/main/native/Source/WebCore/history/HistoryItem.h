@@ -24,8 +24,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef HistoryItem_h
-#define HistoryItem_h
+#pragma once
 
 #include "FloatRect.h"
 #include "FrameLoaderTypes.h"
@@ -59,8 +58,6 @@ class Image;
 class ResourceRequest;
 class URL;
 enum class PruningReason;
-
-typedef Vector<Ref<HistoryItem>> HistoryItemVector;
 
 WEBCORE_EXPORT extern void (*notifyHistoryItemChanged)(HistoryItem*);
 
@@ -129,7 +126,7 @@ public:
     WEBCORE_EXPORT void setIsTargetItem(bool);
 
     WEBCORE_EXPORT void setStateObject(RefPtr<SerializedScriptValue>&&);
-    RefPtr<SerializedScriptValue> stateObject() const { return m_stateObject; }
+    SerializedScriptValue* stateObject() const { return m_stateObject.get(); }
 
     void setItemSequenceNumber(long long number) { m_itemSequenceNumber = number; }
     long long itemSequenceNumber() const { return m_itemSequenceNumber; }
@@ -147,17 +144,12 @@ public:
     void setChildItem(Ref<HistoryItem>&&);
     WEBCORE_EXPORT HistoryItem* childItemWithTarget(const String&);
     HistoryItem* childItemWithDocumentSequenceNumber(long long number);
-    WEBCORE_EXPORT const HistoryItemVector& children() const;
+    WEBCORE_EXPORT const Vector<Ref<HistoryItem>>& children() const;
     WEBCORE_EXPORT bool hasChildren() const;
     void clearChildren();
-    bool isAncestorOf(const HistoryItem&) const;
 
     bool shouldDoSameDocumentNavigationTo(HistoryItem& otherItem) const;
     bool hasSameFrames(HistoryItem& otherItem) const;
-
-    WEBCORE_EXPORT void addRedirectURL(const String&);
-    WEBCORE_EXPORT Vector<String>* redirectURLs() const;
-    WEBCORE_EXPORT void setRedirectURLs(std::unique_ptr<Vector<String>>);
 
     bool isCurrentDocument(Document&) const;
 
@@ -187,6 +179,9 @@ public:
     IntRect unobscuredContentRect() const { return m_unobscuredContentRect; }
     void setUnobscuredContentRect(IntRect unobscuredContentRect) { m_unobscuredContentRect = unobscuredContentRect; }
 
+    FloatSize obscuredInset() const { return m_obscuredInset; }
+    void setObscuredInset(const FloatSize& inset) { m_obscuredInset = inset; }
+
     FloatSize minimumLayoutSizeInScrollViewCoordinates() const { return m_minimumLayoutSizeInScrollViewCoordinates; }
     void setMinimumLayoutSizeInScrollViewCoordinates(FloatSize minimumLayoutSizeInScrollViewCoordinates) { m_minimumLayoutSizeInScrollViewCoordinates = minimumLayoutSizeInScrollViewCoordinates; }
 
@@ -204,11 +199,6 @@ public:
 
     const ViewportArguments& viewportArguments() const { return m_viewportArguments; }
     void setViewportArguments(const ViewportArguments& viewportArguments) { m_viewportArguments = viewportArguments; }
-
-    uint32_t bookmarkID() const { return m_bookmarkID; }
-    void setBookmarkID(uint32_t bookmarkID) { m_bookmarkID = bookmarkID; }
-    String sharedLinkUniqueIdentifier() const { return m_sharedLinkUniqueIdentifier; }
-    void setSharedLinkUniqueIdentifier(const String& sharedLinkUniqueidentifier) { m_sharedLinkUniqueIdentifier = sharedLinkUniqueidentifier; }
 #endif
 
     void notifyChanged();
@@ -238,13 +228,11 @@ private:
 
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
 
-    HistoryItemVector m_children;
+    Vector<Ref<HistoryItem>> m_children;
 
     bool m_lastVisitWasFailure;
     bool m_isTargetItem;
     bool m_wasRestoredFromSession { false };
-
-    std::unique_ptr<Vector<String>> m_redirectURLs;
 
     // If two HistoryItems have the same item sequence number, then they are
     // clones of one another.  Traversing history from one such HistoryItem to
@@ -273,29 +261,25 @@ private:
     IntRect m_unobscuredContentRect;
     FloatSize m_minimumLayoutSizeInScrollViewCoordinates;
     IntSize m_contentSize;
-    float m_scale;
-    bool m_scaleIsInitial;
+    FloatSize m_obscuredInset;
+    float m_scale { 0 }; // Note that UIWebView looks for a non-zero value, so this has to start as 0.
+    bool m_scaleIsInitial { false };
     ViewportArguments m_viewportArguments;
-
-    uint32_t m_bookmarkID;
-    String m_sharedLinkUniqueIdentifier;
 #endif
 
 #if PLATFORM(JAVA)
-    JGObject m_hostObject;
+    JGObject m_hostObject { nullptr };
 #endif
 
 #if PLATFORM(COCOA)
     RetainPtr<id> m_viewState;
     std::unique_ptr<HashMap<String, RetainPtr<id>>> m_transientProperties;
 #endif
-}; //class HistoryItem
+};
 
-} //namespace WebCore
+} // namespace WebCore
 
-#ifndef NDEBUG
-// Outside the WebCore namespace for ease of invocation from gdb.
+#if ENABLE(TREE_DEBUGGING)
+// Outside the WebCore namespace for ease of invocation from the debugger.
 extern "C" int showTree(const WebCore::HistoryItem*);
 #endif
-
-#endif // HISTORYITEM_H

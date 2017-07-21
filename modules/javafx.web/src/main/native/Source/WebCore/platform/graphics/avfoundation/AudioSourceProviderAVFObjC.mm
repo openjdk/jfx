@@ -38,6 +38,7 @@
 #import <AVFoundation/AVAudioMix.h>
 #import <AVFoundation/AVMediaFormat.h>
 #import <AVFoundation/AVPlayerItem.h>
+#import <mutex>
 #import <objc/runtime.h>
 #import <wtf/MainThread.h>
 
@@ -78,10 +79,6 @@ RefPtr<AudioSourceProviderAVFObjC> AudioSourceProviderAVFObjC::create(AVPlayerIt
 
 AudioSourceProviderAVFObjC::AudioSourceProviderAVFObjC(AVPlayerItem *item)
     : m_avPlayerItem(item)
-    , m_writeCount(0)
-    , m_readCount(0)
-    , m_paused(true)
-    , m_client(nullptr)
 {
 }
 
@@ -92,19 +89,30 @@ AudioSourceProviderAVFObjC::~AudioSourceProviderAVFObjC()
 
 void AudioSourceProviderAVFObjC::provideInput(AudioBus* bus, size_t framesToProcess)
 {
-    if (!m_avPlayerItem)
-        return;
-
-    uint64_t startFrame = 0;
-    uint64_t endFrame = 0;
-    m_ringBuffer->getCurrentFrameBounds(startFrame, endFrame);
-
-    if (m_writeCount <= m_readCount + m_writeAheadCount) {
+    // Protect access to m_ringBuffer by try_locking the mutex. If we failed
+    // to aquire, a re-configure is underway, and m_ringBuffer is unsafe to access.
+    // Emit silence.
+    std::unique_lock<Lock> lock(m_mutex, std::try_to_lock);
+    if (!lock.owns_lock() || !m_ringBuffer) {
         bus->zero();
         return;
     }
 
-    size_t framesAvailable = static_cast<size_t>(endFrame - (m_readCount + m_writeAheadCount));
+    uint64_t startFrame = 0;
+    uint64_t endFrame = 0;
+    uint64_t seekTo = m_seekTo.exchange(NoSeek);
+    uint64_t writeAheadCount = m_writeAheadCount.load();
+    if (seekTo != NoSeek)
+        m_readCount = seekTo;
+
+    m_ringBuffer->getCurrentFrameBounds(startFrame, endFrame);
+
+    size_t framesAvailable = static_cast<size_t>(endFrame - (m_readCount + writeAheadCount));
+    if (!framesAvailable) {
+        bus->zero();
+        return;
+    }
+
     if (framesAvailable < framesToProcess) {
         framesToProcess = framesAvailable;
         bus->zero();
@@ -256,30 +264,14 @@ void AudioSourceProviderAVFObjC::finalize()
 {
 }
 
-static bool operator==(const AudioStreamBasicDescription& a, const AudioStreamBasicDescription& b)
-{
-    return a.mSampleRate == b.mSampleRate
-        && a.mFormatID == b.mFormatID
-        && a.mFormatFlags == b.mFormatFlags
-        && a.mBytesPerPacket == b.mBytesPerPacket
-        && a.mFramesPerPacket == b.mFramesPerPacket
-        && a.mBytesPerFrame == b.mBytesPerFrame
-        && a.mChannelsPerFrame == b.mChannelsPerFrame
-        && a.mBitsPerChannel == b.mBitsPerChannel;
-}
-
-static bool operator!=(const AudioStreamBasicDescription& a, const AudioStreamBasicDescription& b)
-{
-    return !(a == b);
-}
-
 void AudioSourceProviderAVFObjC::prepare(CMItemCount maxFrames, const AudioStreamBasicDescription *processingFormat)
 {
     ASSERT(maxFrames >= 0);
 
+    std::lock_guard<Lock> lock(m_mutex);
+
     m_tapDescription = std::make_unique<AudioStreamBasicDescription>(*processingFormat);
     int numberOfChannels = processingFormat->mChannelsPerFrame;
-    size_t bytesPerFrame = processingFormat->mBytesPerFrame;
     double sampleRate = processingFormat->mSampleRate;
     ASSERT(sampleRate >= 0);
 
@@ -304,7 +296,7 @@ void AudioSourceProviderAVFObjC::prepare(CMItemCount maxFrames, const AudioStrea
     size_t capacity = std::max(static_cast<size_t>(2 * maxFrames), static_cast<size_t>(kRingBufferDuration * sampleRate));
 
     m_ringBuffer = std::make_unique<CARingBuffer>();
-    m_ringBuffer->allocate(numberOfChannels, bytesPerFrame, capacity);
+    m_ringBuffer->allocate(CAAudioStreamDescription(*processingFormat), capacity);
 
     // AudioBufferList is a variable-length struct, so create on the heap with a generic new() operator
     // with a custom size, and initialize the struct manually.
@@ -313,14 +305,15 @@ void AudioSourceProviderAVFObjC::prepare(CMItemCount maxFrames, const AudioStrea
     memset(m_list.get(), 0, bufferListSize);
     m_list->mNumberBuffers = numberOfChannels;
 
-    RefPtr<AudioSourceProviderAVFObjC> strongThis = this;
-    callOnMainThread([strongThis, numberOfChannels, sampleRate] {
-        strongThis->m_client->setFormat(numberOfChannels, sampleRate);
+    callOnMainThread([protectedThis = makeRef(*this), numberOfChannels, sampleRate] {
+        protectedThis->m_client->setFormat(numberOfChannels, sampleRate);
     });
 }
 
 void AudioSourceProviderAVFObjC::unprepare()
 {
+    std::lock_guard<Lock> lock(m_mutex);
+
     m_tapDescription = nullptr;
     m_outputDescription = nullptr;
     m_ringBuffer = nullptr;
@@ -358,13 +351,17 @@ void AudioSourceProviderAVFObjC::process(CMItemCount numberOfFrames, MTAudioProc
         // Only check the write-ahead time when playback begins.
         m_paused = false;
         MediaTime earlyBy = rangeStart - currentTime;
-        m_writeAheadCount = m_tapDescription->mSampleRate * earlyBy.toDouble();
+        m_writeAheadCount.store(m_tapDescription->mSampleRate * earlyBy.toDouble());
     }
+
+    uint64_t startFrame = 0;
+    uint64_t endFrame = 0;
+    m_ringBuffer->getCurrentFrameBounds(startFrame, endFrame);
 
     // Check to see if the underlying media has seeked, which would require us to "flush"
     // our outstanding buffers.
     if (rangeStart != m_endTimeAtLastProcess)
-        m_readCount = m_writeCount;
+        m_seekTo.store(endFrame);
 
     m_startTimeAtLastProcess = rangeStart;
     m_endTimeAtLastProcess = rangeStart + rangeDuration;
@@ -372,10 +369,9 @@ void AudioSourceProviderAVFObjC::process(CMItemCount numberOfFrames, MTAudioProc
     // StartOfStream indicates a discontinuity, such as when an AVPlayerItem is re-added
     // to an AVPlayer, so "flush" outstanding buffers.
     if (flagsOut && *flagsOut & kMTAudioProcessingTapFlag_StartOfStream)
-        m_readCount = m_writeCount;
+        m_seekTo.store(endFrame);
 
-    m_ringBuffer->store(bufferListInOut, itemCount, m_writeCount);
-    m_writeCount += itemCount;
+    m_ringBuffer->store(bufferListInOut, itemCount, endFrame);
 
     // Mute the default audio playback by zeroing the tap-owned buffers.
     for (uint32_t i = 0; i < bufferListInOut->mNumberBuffers; ++i) {

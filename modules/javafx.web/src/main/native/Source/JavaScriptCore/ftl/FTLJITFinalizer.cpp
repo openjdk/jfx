@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2014, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "DFGPlan.h"
 #include "FTLState.h"
 #include "FTLThunks.h"
+#include "JSCInlines.h"
 #include "ProfilerDatabase.h"
 
 namespace JSC { namespace FTL {
@@ -80,10 +81,10 @@ bool JITFinalizer::finalizeFunction()
             dumpDisassembly, *entrypointLinkBuffer,
             ("FTL entrypoint thunk for %s with B3 generated code at %p", toCString(CodeBlockWithJITType(m_plan.codeBlock, JITCode::FTLJIT)).data(), function)));
 
-    m_plan.codeBlock->setJITCode(jitCode);
+    m_plan.codeBlock->setJITCode(*jitCode);
 
     if (m_plan.compilation)
-        m_plan.vm.m_perBytecodeProfiler->addCompilation(m_plan.compilation);
+        m_plan.vm->m_perBytecodeProfiler->addCompilation(m_plan.codeBlock, *m_plan.compilation);
 
     return true;
 }

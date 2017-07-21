@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SimplifyMarkupCommand_h
-#define SimplifyMarkupCommand_h
+#pragma once
 
 #include "CompositeEditCommand.h"
 
@@ -40,7 +39,7 @@ public:
 private:
     SimplifyMarkupCommand(Document&, Node* firstNode, Node* nodeAfterLast);
 
-    virtual void doApply();
+    void doApply() override;
     int pruneSubsequentAncestorsToRemove(Vector<RefPtr<Node>>& nodesToRemove, size_t startNodeIndex);
 
     RefPtr<Node> m_firstNode;
@@ -48,5 +47,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // SimplifyMarkupCommand_h

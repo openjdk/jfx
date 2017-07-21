@@ -29,6 +29,7 @@
 from webkitpy.tool.steps.applypatch import ApplyPatch
 from webkitpy.tool.steps.options import Options
 
+
 class ApplyPatchWithLocalCommit(ApplyPatch):
     @classmethod
     def options(cls):

@@ -22,13 +22,11 @@
  *
  */
 
-#ifndef LineBreaker_h
-#define LineBreaker_h
+#pragma once
 
 #include "InlineIterator.h"
 #include "LineInfo.h"
 #include "LineInlineHeaders.h"
-#include "TextBreakIterator.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -76,6 +74,4 @@ private:
     Vector<RenderBox*> m_positionedObjects;
 };
 
-}
-
-#endif // LineBreaker_h
+} // namespace WebCore

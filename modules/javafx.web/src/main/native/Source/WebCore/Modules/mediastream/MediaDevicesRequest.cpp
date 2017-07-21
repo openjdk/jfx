@@ -29,11 +29,11 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "CaptureDevice.h"
 #include "Document.h"
-#include "ExceptionCode.h"
 #include "Frame.h"
 #include "JSMediaDeviceInfo.h"
-#include "RealtimeMediaSourceCenter.h"
+#include "MediaDevicesEnumerationRequest.h"
 #include "SecurityOrigin.h"
 #include "UserMediaController.h"
 #include <wtf/MainThread.h>
@@ -41,21 +41,21 @@
 
 namespace WebCore {
 
-RefPtr<MediaDevicesRequest> MediaDevicesRequest::create(Document* document, MediaDevices::EnumerateDevicesPromise&& promise, ExceptionCode&)
-{
-    return adoptRef(*new MediaDevicesRequest(document, WTFMove(promise)));
-}
-
-MediaDevicesRequest::MediaDevicesRequest(ScriptExecutionContext* context, MediaDevices::EnumerateDevicesPromise&& promise)
-    : ContextDestructionObserver(context)
+inline MediaDevicesRequest::MediaDevicesRequest(Document& document, MediaDevices::EnumerateDevicesPromise&& promise)
+    : ContextDestructionObserver(&document)
     , m_promise(WTFMove(promise))
 {
 }
 
+Ref<MediaDevicesRequest> MediaDevicesRequest::create(Document& document, MediaDevices::EnumerateDevicesPromise&& promise)
+{
+    return adoptRef(*new MediaDevicesRequest(document, WTFMove(promise)));
+}
+
 MediaDevicesRequest::~MediaDevicesRequest()
 {
-    if (m_permissionCheck)
-        m_permissionCheck->setClient(nullptr);
+    if (m_enumerationRequest)
+        m_enumerationRequest->cancel();
 }
 
 SecurityOrigin* MediaDevicesRequest::securityOrigin() const
@@ -68,32 +68,52 @@ SecurityOrigin* MediaDevicesRequest::securityOrigin() const
 
 void MediaDevicesRequest::contextDestroyed()
 {
-    ContextDestructionObserver::contextDestroyed();
-    if (m_permissionCheck) {
-        m_permissionCheck->setClient(nullptr);
-        m_permissionCheck = nullptr;
+    if (m_enumerationRequest) {
+        m_enumerationRequest->cancel();
+        m_enumerationRequest = nullptr;
     }
-    m_protector = nullptr;
+    ContextDestructionObserver::contextDestroyed();
 }
 
 void MediaDevicesRequest::start()
 {
-    m_protector = this;
-    m_permissionCheck = UserMediaPermissionCheck::create(*downcast<Document>(scriptExecutionContext()), *this);
-    m_permissionCheck->start();
-}
+    RefPtr<MediaDevicesRequest> protectedThis = this;
+    auto completion = [this, protectedThis = WTFMove(protectedThis)] (const Vector<CaptureDevice>& captureDevices, const String& deviceIdentifierHashSalt, bool originHasPersistentAccess) mutable {
 
-void MediaDevicesRequest::didCompletePermissionCheck(const String& salt, bool canAccess)
-{
-    m_permissionCheck->setClient(nullptr);
-    m_permissionCheck = nullptr;
+        m_enumerationRequest = nullptr;
 
-    m_idHashSalt = salt;
-    m_havePersistentPermission = canAccess;
+        if (!scriptExecutionContext())
+            return;
 
-    callOnMainThread([this] {
-        RealtimeMediaSourceCenter::singleton().getMediaStreamTrackSources(this);
-    });
+        Document& document = downcast<Document>(*scriptExecutionContext());
+        UserMediaController* controller = UserMediaController::from(document.page());
+        if (!controller)
+            return;
+
+        m_idHashSalt = deviceIdentifierHashSalt;
+
+        Vector<RefPtr<MediaDeviceInfo>> devices;
+        for (auto& deviceInfo : captureDevices) {
+            auto label = emptyString();
+            if (originHasPersistentAccess || document.hasHadActiveMediaStreamTrack())
+                label = deviceInfo.label();
+
+            auto id = hashID(deviceInfo.persistentId());
+            if (id.isEmpty())
+                continue;
+
+            auto groupId = hashID(deviceInfo.groupId());
+            auto deviceType = deviceInfo.type() == CaptureDevice::DeviceType::Audio ? MediaDeviceInfo::Kind::Audioinput : MediaDeviceInfo::Kind::Videoinput;
+            devices.append(MediaDeviceInfo::create(scriptExecutionContext(), label, id, groupId, deviceType));
+        }
+
+        callOnMainThread([protectedThis = makeRef(*this), devices = WTFMove(devices)]() mutable {
+            protectedThis->m_promise.resolve(devices);
+        });
+    };
+
+    m_enumerationRequest = MediaDevicesEnumerationRequest::create(*downcast<Document>(scriptExecutionContext()), WTFMove(completion));
+    m_enumerationRequest->start();
 }
 
 static void hashString(SHA1& sha1, const String& string)
@@ -126,55 +146,6 @@ String MediaDevicesRequest::hashID(const String& id)
     sha1.computeHash(digest);
 
     return SHA1::hexDigest(digest).data();
-}
-
-void MediaDevicesRequest::didCompleteTrackSourceInfoRequest(const TrackSourceInfoVector& captureDevices)
-{
-    if (!scriptExecutionContext()) {
-        m_protector = nullptr;
-        return;
-    }
-
-    Document& document = downcast<Document>(*scriptExecutionContext());
-    UserMediaController* controller = UserMediaController::from(document.page());
-    if (!controller) {
-        m_protector = nullptr;
-        return;
-    }
-
-    Vector<RefPtr<MediaDeviceInfo>> devices;
-    for (auto deviceInfo : captureDevices) {
-        String deviceType = deviceInfo->kind() == TrackSourceInfo::SourceKind::Audio ? MediaDeviceInfo::audioInputType() : MediaDeviceInfo::videoInputType();
-        AtomicString label = emptyAtom;
-        if (m_havePersistentPermission || document.hasHadActiveMediaStreamTrack())
-            label = deviceInfo->label();
-
-        String id = hashID(deviceInfo->persistentId());
-        if (id.isEmpty())
-            continue;
-
-        String groupId = hashID(deviceInfo->groupId());
-
-        devices.append(MediaDeviceInfo::create(scriptExecutionContext(), label, id, groupId, deviceType));
-    }
-
-    RefPtr<MediaDevicesRequest> protectedThis(this);
-    callOnMainThread([protectedThis, devices] {
-        protectedThis->m_promise.resolve(devices);
-    });
-    m_protector = nullptr;
-
-}
-
-const String& MediaDevicesRequest::requestOrigin() const
-{
-    if (scriptExecutionContext()) {
-        Document* document = downcast<Document>(scriptExecutionContext());
-        if (document)
-            return document->url();
-    }
-
-    return emptyString();
 }
 
 } // namespace WebCore

@@ -51,16 +51,19 @@ static void drawCrossfadeSubimage(GraphicsContext& context, Image& image, Compos
 
     GraphicsContextStateSaver stateSaver(context);
 
-    context.setCompositeOperation(operation);
+    CompositeOperator drawImageOperation = operation;
 
-    if (useTransparencyLayer)
+    if (useTransparencyLayer) {
+        context.setCompositeOperation(operation);
         context.beginTransparencyLayer(opacity);
-    else
+        drawImageOperation = CompositeSourceOver;
+    } else
         context.setAlpha(opacity);
 
     if (targetSize != imageSize)
         context.scale(FloatSize(targetSize.width() / imageSize.width(), targetSize.height() / imageSize.height()));
-    context.drawImage(image, IntPoint());
+
+    context.drawImage(image, IntPoint(), ImagePaintingOptions(drawImageOperation));
 
     if (useTransparencyLayer)
         context.endTransparencyLayer();
@@ -96,7 +99,7 @@ void CrossfadeGeneratedImage::draw(GraphicsContext& context, const FloatRect& ds
     drawCrossfade(context);
 }
 
-void CrossfadeGeneratedImage::drawPattern(GraphicsContext& context, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator compositeOp, const FloatRect& dstRect, BlendMode blendMode)
+void CrossfadeGeneratedImage::drawPattern(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, CompositeOperator compositeOp, BlendMode blendMode)
 {
     std::unique_ptr<ImageBuffer> imageBuffer = ImageBuffer::create(size(), context.renderingMode());
     if (!imageBuffer)
@@ -107,7 +110,7 @@ void CrossfadeGeneratedImage::drawPattern(GraphicsContext& context, const FloatR
     drawCrossfade(graphicsContext);
 
     // Tile the image buffer into the context.
-    imageBuffer->drawPattern(context, srcRect, patternTransform, phase, spacing, compositeOp, dstRect, blendMode);
+    imageBuffer->drawPattern(context, dstRect, srcRect, patternTransform, phase, spacing, compositeOp, blendMode);
 }
 
 void CrossfadeGeneratedImage::dump(TextStream& ts) const

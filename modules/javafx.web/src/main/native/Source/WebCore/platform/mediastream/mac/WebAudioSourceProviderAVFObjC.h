@@ -23,17 +23,15 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WebAudioSourceProviderAVFObjC_h
-#define WebAudioSourceProviderAVFObjC_h
+#pragma once
 
 #if ENABLE(WEB_AUDIO) && ENABLE(MEDIA_STREAM)
 
-#include "AVAudioCaptureSource.h"
 #include "AudioSourceProvider.h"
+#include "RealtimeMediaSource.h"
 #include <wtf/Lock.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
-#include <wtf/RetainPtr.h>
 
 typedef struct AudioBufferList AudioBufferList;
 typedef struct OpaqueAudioConverter* AudioConverterRef;
@@ -43,28 +41,25 @@ typedef struct opaqueCMSampleBuffer *CMSampleBufferRef;
 
 namespace WebCore {
 
-class AVAudioCaptureSource;
 class CARingBuffer;
 
-class WebAudioSourceProviderAVFObjC : public RefCounted<WebAudioSourceProviderAVFObjC>, public AudioSourceProvider, public AVAudioCaptureSource::Observer {
+class WebAudioSourceProviderAVFObjC : public RefCounted<WebAudioSourceProviderAVFObjC>, public AudioSourceProvider, RealtimeMediaSource::Observer {
 public:
-    static Ref<WebAudioSourceProviderAVFObjC> create(AVAudioCaptureSource&);
+    static Ref<WebAudioSourceProviderAVFObjC> create(RealtimeMediaSource&);
     virtual ~WebAudioSourceProviderAVFObjC();
 
-private:
-    WebAudioSourceProviderAVFObjC(AVAudioCaptureSource&);
+    void prepare(const AudioStreamBasicDescription *);
+    void unprepare();
 
-    void startProducingData();
-    void stopProducingData();
+private:
+    WebAudioSourceProviderAVFObjC(RealtimeMediaSource&);
 
     // AudioSourceProvider
     void provideInput(AudioBus*, size_t) override;
     void setClient(AudioSourceProviderClient*) override;
 
-    // AVAudioCaptureSource::Observer
-    void prepare(const AudioStreamBasicDescription *) override;
-    void unprepare() override;
-    void process(CMFormatDescriptionRef, CMSampleBufferRef) override;
+    // RealtimeMediaSource::Observer
+    void audioSamplesAvailable(const MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t) final;
 
     size_t m_listBufferSize { 0 };
     std::unique_ptr<AudioBufferList> m_list;
@@ -73,16 +68,14 @@ private:
     std::unique_ptr<AudioStreamBasicDescription> m_outputDescription;
     std::unique_ptr<CARingBuffer> m_ringBuffer;
 
-    uint64_t m_writeAheadCount { 0 };
     uint64_t m_writeCount { 0 };
     uint64_t m_readCount { 0 };
     AudioSourceProviderClient* m_client { nullptr };
-    AVAudioCaptureSource* m_captureSource { nullptr };
+    RealtimeMediaSource* m_captureSource { nullptr };
+    Lock m_mutex;
     bool m_connected { false };
 };
 
 }
-
-#endif
 
 #endif

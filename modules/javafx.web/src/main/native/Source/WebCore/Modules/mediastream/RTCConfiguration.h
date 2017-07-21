@@ -28,44 +28,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RTCConfiguration_h
-#define RTCConfiguration_h
+#pragma once
 
-#if ENABLE(MEDIA_STREAM)
+#if ENABLE(WEB_RTC)
 
+#include "PeerConnectionStates.h"
 #include "RTCIceServer.h"
-#include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
-#include <wtf/Vector.h>
-#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class Dictionary;
+using RTCIceTransportPolicy = PeerConnectionStates::IceTransportPolicy;
+using RTCBundlePolicy = PeerConnectionStates::BundlePolicy;
 
-typedef int ExceptionCode;
+struct RTCConfiguration {
+    using IceTransportPolicy = RTCIceTransportPolicy;
+    using BundlePolicy = RTCBundlePolicy;
 
-class RTCConfiguration : public RefCounted<RTCConfiguration> {
-public:
-    static RefPtr<RTCConfiguration> create(const Dictionary& configuration, ExceptionCode&);
-    virtual ~RTCConfiguration() { }
-
-    const String& iceTransportPolicy() const { return m_iceTransportPolicy; }
-    const String& bundlePolicy() const { return m_bundlePolicy; }
-    Vector<RefPtr<RTCIceServer>> iceServers() const { return m_iceServers; }
-
-private:
-    RTCConfiguration();
-
-    void initialize(const Dictionary& configuration, ExceptionCode&);
-
-    Vector<RefPtr<RTCIceServer>> m_iceServers;
-    String m_iceTransportPolicy;
-    String m_bundlePolicy;
+    std::optional<Vector<RTCIceServer>> iceServers;
+    IceTransportPolicy iceTransportPolicy;
+    BundlePolicy bundlePolicy;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
-
-#endif // RTCConfiguration_h
+#endif // ENABLE(WEB_RTC)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
 #include "config.h"
 
@@ -19,15 +19,17 @@ namespace WebCore {
 
 double const EventHandler::TextDragDelay = 0;
 
-unsigned EventHandler::accessKeyModifiers()
+OptionSet<PlatformEvent::Modifier> EventHandler::accessKeyModifiers()
 {
-    return PlatformKeyboardEvent::AltKey;
+    return PlatformEvent::Modifier::AltKey;
 }
 
-PassRefPtr<DataTransfer> EventHandler::createDraggingDataTransfer() const
+#if ENABLE(DRAG_SUPPORT)
+Ref<DataTransfer> EventHandler::createDraggingDataTransfer() const
 {
-    return DataTransfer::createForDragAndDrop();
+    return DataTransfer::createForDrag();
 }
+#endif
 
 void EventHandler::focusDocumentView()
 {
@@ -54,6 +56,14 @@ bool EventHandler::passMousePressEventToSubframe(MouseEventWithHitTestResults& e
     return true;
 }
 
+bool EventHandler::widgetDidHandleWheelEvent(const PlatformWheelEvent& wheelEvent, Widget& widget)
+{
+    if (!is<FrameView>(widget))
+        return false;
+
+    return downcast<FrameView>(widget).frame().eventHandler().handleWheelEvent(wheelEvent);
+}
+
 bool EventHandler::passMouseMoveEventToSubframe(MouseEventWithHitTestResults& event, Frame* subFrame, HitTestResult* hoveredNode)
 {
     if (m_mouseDownMayStartDrag && !m_mouseDownWasInSubframe)
@@ -68,23 +78,13 @@ bool EventHandler::passMouseReleaseEventToSubframe(MouseEventWithHitTestResults&
     return true;
 }
 
-bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestResults& event)
+bool EventHandler::passWidgetMouseDownEventToWidget(const MouseEventWithHitTestResults&)
 {
     notImplemented();
     return false;
 }
 
-bool EventHandler::passWheelEventToWidget(const PlatformWheelEvent& ev, Widget& widget)
-{
-    if (!widget.isFrameView()) {
-        return false;
-    }
-
-    FrameView* frameView = static_cast<FrameView*>(&widget);
-    return frameView->frame().eventHandler().handleWheelEvent(ev);
-}
-
-bool EventHandler::tabsToAllFormControls(KeyboardEvent *) const
+bool EventHandler::tabsToAllFormControls(KeyboardEvent&) const
 {
     return true;
 }

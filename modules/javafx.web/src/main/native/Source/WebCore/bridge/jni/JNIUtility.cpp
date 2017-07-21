@@ -33,7 +33,7 @@
 #if !ENABLE(JAVA_JSC)
 #include <dlfcn.h>
 #else
-#include "platform/java/JavaEnv.h"
+#include <wtf/java/JavaEnv.h>
 #endif
 
 namespace JSC {

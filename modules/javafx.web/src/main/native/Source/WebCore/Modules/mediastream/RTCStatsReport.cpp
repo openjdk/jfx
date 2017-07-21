@@ -24,50 +24,12 @@
  */
 
 #include "config.h"
-
-#if ENABLE(MEDIA_STREAM)
-
 #include "RTCStatsReport.h"
 
-#include <wtf/text/StringHash.h>
+#if ENABLE(WEB_RTC)
 
 namespace WebCore {
 
-Ref<RTCStatsReport> RTCStatsReport::create(const String& id, const String& type, double timestamp)
-{
-    return adoptRef(*new RTCStatsReport(id, type, timestamp));
-}
-
-RTCStatsReport::RTCStatsReport(const String& id, const String& type, double timestamp)
-    : m_id(id)
-    , m_type(type)
-    , m_timestamp(timestamp)
-{
-}
-
-Vector<String> RTCStatsReport::names() const
-{
-    Vector<String> result;
-    for (auto& stat : m_stats.keys())
-        result.append(stat);
-    return result;
-}
-
-const PassRefPtr<RTCStatsReport> RTCStatsReport::local()
-{
-    return this;
-}
-
-const PassRefPtr<RTCStatsReport> RTCStatsReport::remote()
-{
-    return this;
-}
-
-void RTCStatsReport::addStatistic(const String& name, const String& value)
-{
-    m_stats.add(name, value);
-}
-
 } // namespace WebCore
 
-#endif // ENABLE(MEDIA_STREAM)
+#endif // ENABLE(WEB_RTC)

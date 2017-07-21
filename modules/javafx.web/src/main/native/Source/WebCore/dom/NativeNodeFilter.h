@@ -23,11 +23,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef NativeNodeFilter_h
-#define NativeNodeFilter_h
+#pragma once
 
 #include "NodeFilter.h"
 #include "NodeFilterCondition.h"
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 
@@ -43,12 +43,12 @@ public:
         return adoptRef(*new NativeNodeFilter());
     }
 
-    virtual uint16_t acceptNode(Node*) override;
+    uint16_t acceptNode(Node*) override;
 
     void setCondition(RefPtr<NodeFilterCondition>&& condition) { ASSERT(!m_condition); m_condition = condition; }
 
 private:
-    explicit NativeNodeFilter(RefPtr<NodeFilterCondition>&&);
+    WEBCORE_EXPORT explicit NativeNodeFilter(RefPtr<NodeFilterCondition>&&);
 
     NativeNodeFilter() { }
 
@@ -56,6 +56,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // NativeNodeFilter_h
-

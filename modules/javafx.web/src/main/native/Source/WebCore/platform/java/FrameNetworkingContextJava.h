@@ -1,28 +1,41 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  */
-#ifndef FrameNetworkingContextJava_h
-#define FrameNetworkingContextJava_h
+
+#pragma once
 
 #include "FrameNetworkingContext.h"
 
+#include "FrameLoader.h"
+#include "FrameLoaderClient.h"
+#include "NetworkStorageSession.h"
+#include "Page.h"
+
 namespace WebCore {
 
-class FrameNetworkingContextJava : public FrameNetworkingContext {
+class FrameNetworkingContextJava final : public FrameNetworkingContext {
 public:
-    static PassRefPtr<FrameNetworkingContextJava> create(Frame* frame)
+    static Ref<FrameNetworkingContextJava> create(Frame* frame)
     {
-        return adoptRef(new FrameNetworkingContextJava(frame));
+        return adoptRef(*new FrameNetworkingContextJava(frame));
     }
 
     Page* page() const { return frame()->page(); }
+
+    NetworkStorageSession& storageSession() const override
+    {
+        ASSERT(isMainThread());
+
+        if (frame() && frame()->page()->usesEphemeralSession())
+            return *NetworkStorageSession::storageSession(SessionID::legacyPrivateSessionID());
+
+        return NetworkStorageSession::defaultStorageSession();
+    }
 private:
     FrameNetworkingContextJava(Frame* frame)
-        : WebCore::FrameNetworkingContext(frame)
+        : FrameNetworkingContext(frame)
     {
     }
 };
 
-}
-
-#endif // FrameNetworkingContextJava_h
+}  // namespace WebCore

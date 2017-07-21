@@ -23,13 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef SpeechSynthesisEvent_h
-#define SpeechSynthesisEvent_h
+#pragma once
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "Event.h"
-#include <wtf/PassRefPtr.h>
 
 namespace WebCore {
 
@@ -54,5 +52,3 @@ private:
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)
-
-#endif // SpeechSynthesisEvent_h

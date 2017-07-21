@@ -37,6 +37,7 @@ _log = logging.getLogger(__name__)
 
 class AbstractSequencedCommand(Command):
     steps = None
+
     def __init__(self):
         self._sequence = StepSequence(self.steps)
         Command.__init__(self, self._sequence.options())

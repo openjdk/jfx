@@ -19,15 +19,14 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
-#ifndef DOMWrapperWorld_h
-#define DOMWrapperWorld_h
+#pragma once
 
 #include "JSDOMGlobalObject.h"
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
-class CSSValue;
+class DeprecatedCSSOMValue;
 class ScriptController;
 
 typedef HashMap<void*, JSC::Weak<JSC::JSObject>> DOMObjectWrapperMap;
@@ -51,7 +50,7 @@ public:
 
     // FIXME: can we make this private?
     DOMObjectWrapperMap m_wrappers;
-    HashMap<CSSValue*, void*> m_cssValueRoots;
+    HashMap<DeprecatedCSSOMValue*, void*> m_deprecatedCSSOMValueRoots;
 
     bool isNormal() const { return m_isNormal; }
 
@@ -83,5 +82,3 @@ inline DOMWrapperWorld& worldForDOMObject(JSC::JSObject* object)
 }
 
 } // namespace WebCore
-
-#endif // DOMWrapperWorld_h

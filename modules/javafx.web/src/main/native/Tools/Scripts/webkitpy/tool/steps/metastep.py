@@ -31,7 +31,8 @@ from webkitpy.tool.steps.abstractstep import AbstractStep
 
 # FIXME: Unify with StepSequence?  I'm not sure yet which is the better design.
 class MetaStep(AbstractStep):
-    substeps = [] # Override in subclasses
+    substeps = []  # Override in subclasses
+
     def __init__(self, tool, options):
         AbstractStep.__init__(self, tool, options)
         self._step_instances = []
@@ -51,4 +52,4 @@ class MetaStep(AbstractStep):
 
     def run(self, state):
         for step in self._step_instances:
-             step.run(state)
+            step.run(state)

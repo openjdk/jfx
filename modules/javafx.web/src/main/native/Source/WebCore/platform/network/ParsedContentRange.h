@@ -33,21 +33,17 @@ namespace WebCore {
 class ParsedContentRange {
 public:
     WEBCORE_EXPORT explicit ParsedContentRange(const String&);
-    WEBCORE_EXPORT ParsedContentRange() { }
+    ParsedContentRange() { }
     WEBCORE_EXPORT ParsedContentRange(int64_t firstBytePosition, int64_t lastBytePosition, int64_t instanceLength);
 
-    WEBCORE_EXPORT bool isValid() const { return m_isValid; }
+    bool isValid() const { return m_isValid; }
     int64_t firstBytePosition() const { return m_firstBytePosition; }
     int64_t lastBytePosition() const { return m_lastBytePosition; }
     int64_t instanceLength() const { return m_instanceLength; }
 
     WEBCORE_EXPORT String headerValue() const;
 
-#if ENABLE(CXX_11_FIX)
-    enum { UnknownLength = INT64_MAX };
-#else
     enum { UnknownLength = std::numeric_limits<int64_t>::max() };
-#endif
 
 private:
     template<typename T> static bool isPositive(T);

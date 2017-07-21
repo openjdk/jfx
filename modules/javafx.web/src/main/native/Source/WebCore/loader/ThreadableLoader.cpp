@@ -31,10 +31,11 @@
 #include "config.h"
 #include "ThreadableLoader.h"
 
+#include "CachedResourceRequestInitiators.h"
 #include "Document.h"
 #include "DocumentThreadableLoader.h"
+#include "ResourceError.h"
 #include "ScriptExecutionContext.h"
-#include "SecurityOrigin.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerRunLoop.h"
 #include "WorkerThreadableLoader.h"
@@ -42,53 +43,75 @@
 namespace WebCore {
 
 ThreadableLoaderOptions::ThreadableLoaderOptions()
-    : preflightPolicy(ConsiderPreflight)
-    , crossOriginRequestPolicy(DenyCrossOriginRequests)
 {
+    mode = FetchOptions::Mode::SameOrigin;
 }
 
 ThreadableLoaderOptions::~ThreadableLoaderOptions()
 {
 }
 
-ThreadableLoaderOptions::ThreadableLoaderOptions(const ResourceLoaderOptions& baseOptions, PreflightPolicy preflightPolicy, CrossOriginRequestPolicy crossOriginRequestPolicy, ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement, RefPtr<SecurityOrigin>&& securityOrigin, String&& initiator)
+ThreadableLoaderOptions::ThreadableLoaderOptions(const ResourceLoaderOptions& baseOptions, PreflightPolicy preflightPolicy, ContentSecurityPolicyEnforcement contentSecurityPolicyEnforcement, String&& initiator, ResponseFilteringPolicy filteringPolicy)
     : ResourceLoaderOptions(baseOptions)
     , preflightPolicy(preflightPolicy)
-    , crossOriginRequestPolicy(crossOriginRequestPolicy)
     , contentSecurityPolicyEnforcement(contentSecurityPolicyEnforcement)
-    , securityOrigin(WTFMove(securityOrigin))
     , initiator(WTFMove(initiator))
+    , filteringPolicy(filteringPolicy)
 {
 }
 
-std::unique_ptr<ThreadableLoaderOptions> ThreadableLoaderOptions::isolatedCopy() const
+RefPtr<ThreadableLoader> ThreadableLoader::create(ScriptExecutionContext& context, ThreadableLoaderClient& client, ResourceRequest&& request, const ThreadableLoaderOptions& options, String&& referrer)
 {
-    RefPtr<SecurityOrigin> securityOriginCopy;
-    if (securityOrigin)
-        securityOriginCopy = securityOrigin->isolatedCopy();
-    return std::make_unique<ThreadableLoaderOptions>(*this, preflightPolicy, crossOriginRequestPolicy, contentSecurityPolicyEnforcement, WTFMove(securityOriginCopy), initiator.isolatedCopy());
+    if (is<WorkerGlobalScope>(context))
+        return WorkerThreadableLoader::create(downcast<WorkerGlobalScope>(context), client, WorkerRunLoop::defaultMode(), WTFMove(request), options, referrer);
+
+    return DocumentThreadableLoader::create(downcast<Document>(context), client, WTFMove(request), options, WTFMove(referrer));
 }
 
-PassRefPtr<ThreadableLoader> ThreadableLoader::create(ScriptExecutionContext* context, ThreadableLoaderClient* client, const ResourceRequest& request, const ThreadableLoaderOptions& options)
+void ThreadableLoader::loadResourceSynchronously(ScriptExecutionContext& context, ResourceRequest&& request, ThreadableLoaderClient& client, const ThreadableLoaderOptions& options)
 {
-    ASSERT(client);
-    ASSERT(context);
-
-    if (is<WorkerGlobalScope>(*context))
-        return WorkerThreadableLoader::create(downcast<WorkerGlobalScope>(context), client, WorkerRunLoop::defaultMode(), request, options);
-
-    return DocumentThreadableLoader::create(downcast<Document>(*context), *client, request, options);
-}
-
-void ThreadableLoader::loadResourceSynchronously(ScriptExecutionContext* context, const ResourceRequest& request, ThreadableLoaderClient& client, const ThreadableLoaderOptions& options)
-{
-    ASSERT(context);
-
-    if (is<WorkerGlobalScope>(*context))
-        WorkerThreadableLoader::loadResourceSynchronously(downcast<WorkerGlobalScope>(context), request, client, options);
+    if (is<WorkerGlobalScope>(context))
+        WorkerThreadableLoader::loadResourceSynchronously(downcast<WorkerGlobalScope>(context), WTFMove(request), client, options);
     else
-        DocumentThreadableLoader::loadResourceSynchronously(downcast<Document>(*context), request, client, options);
-    context->didLoadResourceSynchronously(request);
+        DocumentThreadableLoader::loadResourceSynchronously(downcast<Document>(context), WTFMove(request), client, options);
+    context.didLoadResourceSynchronously();
+}
+
+void ThreadableLoader::logError(ScriptExecutionContext& context, const ResourceError& error, const String& initiator)
+{
+    // FIXME: extend centralized logging to other clients than fetch, at least XHR and EventSource.
+    if (initiator != cachedResourceRequestInitiators().fetch)
+        return;
+
+    if (error.isCancellation())
+        return;
+
+    // FIXME: Some errors are returned with null URLs. This leads to poor console messages. We should do better for these errors.
+    if (error.failingURL().isNull())
+        return;
+
+    // We further reduce logging to some errors.
+    // FIXME: Log more errors when making so do not make some layout tests flaky.
+    if (error.domain() != errorDomainWebKitInternal && !error.isAccessControl())
+        return;
+
+    const char* messageStart;
+    if (initiator == cachedResourceRequestInitiators().fetch)
+        messageStart = "Fetch API cannot load ";
+    else
+        messageStart = "Cannot load ";
+
+    const char* messageMiddle = ". ";
+    String description = error.localizedDescription();
+    if (description.isEmpty()) {
+        // FIXME: We should probably define default description error message for all error types.
+        if (error.isAccessControl())
+            messageMiddle = ASCIILiteral(" due to access control checks.");
+        else
+            messageMiddle = ".";
+    }
+
+    context.addConsoleMessage(MessageSource::JS, MessageLevel::Error, makeString(messageStart, error.failingURL().string(), messageMiddle, description));
 }
 
 } // namespace WebCore
