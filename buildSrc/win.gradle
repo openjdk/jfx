@@ -182,8 +182,8 @@ String winSdkDllDir = (IS_64
                   : "$WINDOWS_VS_WINSDKDLLINSTALLDIR/x86")
 
 def WINDOWS_DLL_VER = WINDOWS_VS_VER
-ext.MSVCR = ""
-ext.MSVCP = ""
+ext.MSVCR = null
+ext.MSVCP = null
 
 if (WINDOWS_VS_VER == "150") {
     WINDOWS_DLL_VER = "140"
