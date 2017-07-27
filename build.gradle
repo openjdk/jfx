@@ -828,6 +828,8 @@ void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath) {
 // perform common project manipulation for modules
 void commonModuleSetup(Project p, List<String> moduleChain) {
 
+    // Allow the build to use either gradle 3.x or gradle 4.x
+    p.sourceSets.main.output.classesDir = new File(p.buildDir, "classes/main")
     p.ext.moduleChain = moduleChain
 
     if (p.hasProperty("moduleName")) {
