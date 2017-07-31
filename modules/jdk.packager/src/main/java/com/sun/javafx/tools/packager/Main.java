@@ -203,6 +203,7 @@ public class Main {
 
             try {
                 if (args[0].equalsIgnoreCase("-createjar")) {
+                    Log.info("Warning: -createjar has been deprecated and will be removed in a future release.");
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.equalsIgnoreCase("-appclass")) {
@@ -392,6 +393,7 @@ public class Main {
 
                     addResources(deployParams, srcdir, srcfiles);
                 } else if (args[0].equalsIgnoreCase("-createbss")) {
+                    Log.info("Warning: -createbss has been deprecated and will be removed in a future release.");
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.equalsIgnoreCase("-verbose") || arg.equalsIgnoreCase("-v")) {
