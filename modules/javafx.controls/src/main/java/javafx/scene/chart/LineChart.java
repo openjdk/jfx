@@ -453,44 +453,15 @@ public class LineChart<X,Y> extends XYChart<X,Y> {
         for (int seriesIndex=0; seriesIndex < getDataSize(); seriesIndex++) {
             Series<X,Y> series = getData().get(seriesIndex);
             final DoubleProperty seriesYAnimMultiplier = seriesYMultiplierMap.get(series);
-            if(series.getNode() instanceof  Path) {
-                final ObservableList<PathElement> seriesLine = ((Path)series.getNode()).getElements();
-                seriesLine.clear();
-                constructedPath.clear();
-                for (Iterator<Data<X, Y>> it = getDisplayedDataIterator(series); it.hasNext(); ) {
-                    Data<X, Y> item = it.next();
-                    double x = getXAxis().getDisplayPosition(item.getCurrentX());
-                    double y = getYAxis().getDisplayPosition(
-                            getYAxis().toRealValue(getYAxis().toNumericValue(item.getCurrentY()) * seriesYAnimMultiplier.getValue()));
-                    if (Double.isNaN(x) || Double.isNaN(y)) {
-                        continue;
-                    }
-                    constructedPath.add(new LineTo(x, y));
-
-                    Node symbol = item.getNode();
-                    if (symbol != null) {
-                        final double w = symbol.prefWidth(-1);
-                        final double h = symbol.prefHeight(-1);
-                        symbol.resizeRelocate(x-(w/2), y-(h/2),w,h);
-                    }
-                }
-                switch (getAxisSortingPolicy()) {
-                    case X_AXIS:
-                        Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getX(), e2.getX()));
-                        break;
-                    case Y_AXIS:
-                        Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getY(), e2.getY()));
-                        break;
-                }
-
-                if (!constructedPath.isEmpty()) {
-                    LineTo first = constructedPath.get(0);
-                    seriesLine.add(new MoveTo(first.getX(), first.getY()));
-                    seriesLine.addAll(constructedPath);
-                }
+            final Node seriesNode = series.getNode();
+            if (seriesNode instanceof Path) {
+                AreaChart.makePaths(this, series,
+                                    constructedPath, null, (Path) seriesNode,
+                                    seriesYAnimMultiplier.get(), getAxisSortingPolicy());
             }
         }
     }
+
     /** {@inheritDoc} */
     @Override void dataBeingRemovedIsAdded(Data item, Series series) {
         if (fadeSymbolTransition != null) {

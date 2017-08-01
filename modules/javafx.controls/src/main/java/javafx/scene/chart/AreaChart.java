@@ -58,6 +58,7 @@ import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableBooleanProperty;
 import javafx.css.StyleableProperty;
+import javafx.scene.chart.LineChart.SortingPolicy;
 
 /**
  * AreaChart - Plots the area between the line that connects the data points and
@@ -421,54 +422,106 @@ public class AreaChart<X,Y> extends XYChart<X,Y> {
         for (int seriesIndex=0; seriesIndex < getDataSize(); seriesIndex++) {
             Series<X, Y> series = getData().get(seriesIndex);
             DoubleProperty seriesYAnimMultiplier = seriesYMultiplierMap.get(series);
-            double lastX = 0;
             final ObservableList<Node> children = ((Group) series.getNode()).getChildren();
-            ObservableList<PathElement> seriesLine = ((Path) children.get(1)).getElements();
-            ObservableList<PathElement> fillPath = ((Path) children.get(0)).getElements();
-            seriesLine.clear();
-            fillPath.clear();
-            constructedPath.clear();
-            for (Iterator<Data<X, Y>> it = getDisplayedDataIterator(series); it.hasNext(); ) {
-                Data<X, Y> item = it.next();
-                double x = getXAxis().getDisplayPosition(item.getCurrentX());
-                double y = getYAxis().getDisplayPosition(
-                        getYAxis().toRealValue(getYAxis().toNumericValue(item.getCurrentY()) * seriesYAnimMultiplier.getValue()));
-                constructedPath.add(new LineTo(x, y));
-                if (Double.isNaN(x) || Double.isNaN(y)) {
-                    continue;
-                }
-                lastX = x;
-                Node symbol = item.getNode();
-                if (symbol != null) {
-                    final double w = symbol.prefWidth(-1);
-                    final double h = symbol.prefHeight(-1);
-                    symbol.resizeRelocate(x-(w/2), y-(h/2),w,h);
+            Path fillPath = (Path) children.get(0);
+            Path linePath = (Path) children.get(1);
+            makePaths(this, series, constructedPath, fillPath, linePath,
+                      seriesYAnimMultiplier.get(), SortingPolicy.X_AXIS);
+        }
+    }
+
+    static <X,Y> void makePaths(XYChart<X, Y> chart, Series<X, Y> series,
+                                List<LineTo> constructedPath,
+                                Path fillPath, Path linePath,
+                                double yAnimMultiplier, SortingPolicy sortAxis)
+    {
+        final Axis<X> axisX = chart.getXAxis();
+        final Axis<Y> axisY = chart.getYAxis();
+        final double hlw = linePath.getStrokeWidth() / 2.0;
+        final boolean sortX = (sortAxis == SortingPolicy.X_AXIS);
+        final boolean sortY = (sortAxis == SortingPolicy.Y_AXIS);
+        final double dataXMin = sortX ? -hlw : Double.NEGATIVE_INFINITY;
+        final double dataXMax = sortX ? axisX.getWidth() + hlw : Double.POSITIVE_INFINITY;
+        final double dataYMin = sortY ? -hlw : Double.NEGATIVE_INFINITY;
+        final double dataYMax = sortY ? axisY.getHeight() + hlw : Double.POSITIVE_INFINITY;
+        LineTo prevDataPoint = null;
+        LineTo nextDataPoint = null;
+        constructedPath.clear();
+        for (Iterator<Data<X, Y>> it = chart.getDisplayedDataIterator(series); it.hasNext(); ) {
+            Data<X, Y> item = it.next();
+            double x = axisX.getDisplayPosition(item.getCurrentX());
+            double y = axisY.getDisplayPosition(
+                    axisY.toRealValue(axisY.toNumericValue(item.getCurrentY()) * yAnimMultiplier));
+            boolean skip = (Double.isNaN(x) || Double.isNaN(y));
+            Node symbol = item.getNode();
+            if (symbol != null) {
+                final double w = symbol.prefWidth(-1);
+                final double h = symbol.prefHeight(-1);
+                if (skip) {
+                    symbol.resizeRelocate(-w*2, -h*2, w, h);
+                } else {
+                    symbol.resizeRelocate(x-(w/2), y-(h/2), w, h);
                 }
             }
+            if (skip) continue;
+            if (x < dataXMin || y < dataYMin) {
+                if (prevDataPoint == null) {
+                    prevDataPoint = new LineTo(x, y);
+                } else if ((sortX && prevDataPoint.getX() <= x) ||
+                           (sortY && prevDataPoint.getY() <= y))
+                {
+                    prevDataPoint.setX(x);
+                    prevDataPoint.setY(y);
+                }
+            } else if (x <= dataXMax && y <= dataYMax) {
+                constructedPath.add(new LineTo(x, y));
+            } else {
+                if (nextDataPoint == null) {
+                    nextDataPoint = new LineTo(x, y);
+                } else if ((sortX && x <= nextDataPoint.getX()) ||
+                           (sortY && y <= nextDataPoint.getY()))
+                {
+                    nextDataPoint.setX(x);
+                    nextDataPoint.setY(y);
+                }
+            }
+        }
 
-            if (!constructedPath.isEmpty()) {
+        if (!constructedPath.isEmpty() || prevDataPoint != null || nextDataPoint != null) {
+            if (sortX) {
                 Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getX(), e2.getX()));
-                LineTo first = constructedPath.get(0);
+            } else if (sortY) {
+                Collections.sort(constructedPath, (e1, e2) -> Double.compare(e1.getY(), e2.getY()));
+            } else {
+                // assert prevDataPoint == null && nextDataPoint == null
+            }
+            if (prevDataPoint != null) {
+                constructedPath.add(0, prevDataPoint);
+            }
+            if (nextDataPoint != null) {
+                constructedPath.add(nextDataPoint);
+            }
 
-                final double displayYPos = first.getY();
-                final double numericYPos = getYAxis().toNumericValue(getYAxis().getValueForDisplay(displayYPos));
+            // assert !constructedPath.isEmpty()
+            LineTo first = constructedPath.get(0);
+            LineTo last = constructedPath.get(constructedPath.size()-1);
 
-                // RT-34626: We can't always use getZeroPosition(), as it may be the case
-                // that the zero position of the y-axis is not visible on the chart. In these
-                // cases, we need to use the height between the point and the y-axis line.
-                final double yAxisZeroPos = getYAxis().getZeroPosition();
-                final boolean isYAxisZeroPosVisible = !Double.isNaN(yAxisZeroPos);
-                final double yAxisHeight = getYAxis().getHeight();
-                final double yFillPos = isYAxisZeroPosVisible ? yAxisZeroPos :
-                                        numericYPos < 0 ? numericYPos - yAxisHeight : yAxisHeight;
+            final double displayYPos = first.getY();
 
-                seriesLine.add(new MoveTo(first.getX(), displayYPos));
-                fillPath.add(new MoveTo(first.getX(), yFillPos));
+            ObservableList<PathElement> lineElements = linePath.getElements();
+            lineElements.clear();
+            lineElements.add(new MoveTo(first.getX(), displayYPos));
+            lineElements.addAll(constructedPath);
 
-                seriesLine.addAll(constructedPath);
-                fillPath.addAll(constructedPath);
-                fillPath.add(new LineTo(lastX, yFillPos));
-                fillPath.add(new ClosePath());
+            if (fillPath != null) {
+                ObservableList<PathElement> fillElements = fillPath.getElements();
+                fillElements.clear();
+                double yOrigin = axisY.getDisplayPosition(axisY.toRealValue(0.0));
+
+                fillElements.add(new MoveTo(first.getX(), yOrigin));
+                fillElements.addAll(constructedPath);
+                fillElements.add(new LineTo(last.getX(), yOrigin));
+                fillElements.add(new ClosePath());
             }
         }
     }
