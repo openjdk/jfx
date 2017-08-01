@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -394,5 +395,32 @@ public class MiscellaneousTest extends TestBase {
                 (Boolean) getEngine().executeScript(
                 "document.getElementById('idwrap').clientHeight == document.getElementById('idword').clientHeight"));
         });
+    }
+
+    /**
+     * @test
+     * @bug 8185132
+     * Check window.requestAnimationFrame functionality
+     */
+    @Test public void testRequestAnimationFrame() {
+        final CountDownLatch latch = new CountDownLatch(1);
+        loadContent("hello");
+        submit(() -> {
+            final JSObject window =
+                (JSObject) getEngine().executeScript("window");
+            assertNotNull(window);
+            assertNotNull(window.getMember("requestAnimationFrame"));
+            window.setMember("latch", latch);
+            getEngine().executeScript(
+                    "window.requestAnimationFrame(function() {\n" +
+                    "latch.countDown(); });");
+        });
+
+        try {
+            assertTrue("No callback received from window.requestAnimationFrame",
+                    latch.await(10, TimeUnit.SECONDS));
+        } catch (InterruptedException e) {
+            throw new AssertionError(e);
+        }
     }
 }
