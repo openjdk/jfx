@@ -458,3 +458,5 @@ set(WebCore_FORWARDING_HEADERS_DIRECTORIES
     svg/graphics/filters)
 
 WEBKIT_CREATE_FORWARDING_HEADERS(WebCore DIRECTORIES ${WebCore_FORWARDING_HEADERS_DIRECTORIES})
+
+configure_file(platform/java/WebPageConfig.h.in ${CMAKE_BINARY_DIR}/WebPageConfig.h)

@@ -95,6 +95,7 @@
 #include "testing/js/WebCoreTestSupport.h"
 #include "jsc/BridgeUtils.h"
 #include "ChromeClientJava.h"
+#include "WebPageConfig.h"
 
 #include <wtf/text/WTFString.h>
 #include <wtf/Ref.h>
@@ -734,10 +735,11 @@ static String defaultUserAgent()
 {
     DEPRECATED_DEFINE_STATIC_LOCAL(String, userAgentString, ());
     if (userAgentString.isNull()) {
-        String wkVersion = String::format("%d.%d", WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION);
+        String wkVersion = String::format("%d.%d (KHTML, like Gecko) JavaFX/%d Safari/%d.%d",
+                                          WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, JAVAFX_VERSION,
+                                          WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION);
         userAgentString = makeString("Mozilla/5.0 (", agentOS(),
-                                     ") AppleWebKit/", wkVersion,
-                                     " (KHTML, like Gecko) JavaFX/9 Safari/", wkVersion);
+                                     ") AppleWebKit/", wkVersion);
     }
     return userAgentString;
 }
