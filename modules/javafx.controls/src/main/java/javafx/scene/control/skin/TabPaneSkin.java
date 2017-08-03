@@ -1408,10 +1408,11 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     oldTooltip = tooltip;
                 }
             });
-            listener.registerChangeListener(tab.disableProperty(), e -> {
-                pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, tab.isDisable());
-                inner.requestLayout();
-                requestLayout();
+            listener.registerChangeListener(tab.disabledProperty(), e -> {
+                updateTabDisabledState();
+            });
+            listener.registerChangeListener(tab.getTabPane().disabledProperty(), e -> {
+                updateTabDisabledState();
             });
             listener.registerChangeListener(tab.styleProperty(), e -> setStyle(tab.getStyle()));
 
@@ -1480,12 +1481,18 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
             // initialize pseudo-class state
             pseudoClassStateChanged(SELECTED_PSEUDOCLASS_STATE, tab.isSelected());
-            pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, tab.isDisable());
+            pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, tab.isDisabled());
             final Side side = getSkinnable().getSide();
             pseudoClassStateChanged(TOP_PSEUDOCLASS_STATE, (side == Side.TOP));
             pseudoClassStateChanged(RIGHT_PSEUDOCLASS_STATE, (side == Side.RIGHT));
             pseudoClassStateChanged(BOTTOM_PSEUDOCLASS_STATE, (side == Side.BOTTOM));
             pseudoClassStateChanged(LEFT_PSEUDOCLASS_STATE, (side == Side.LEFT));
+        }
+
+        private void updateTabDisabledState() {
+            pseudoClassStateChanged(DISABLED_PSEUDOCLASS_STATE, tab.isDisabled());
+            inner.requestLayout();
+            requestLayout();
         }
 
         private void updateGraphicRotation() {
