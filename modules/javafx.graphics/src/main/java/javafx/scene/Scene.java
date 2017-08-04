@@ -124,7 +124,7 @@ import java.lang.ref.WeakReference;
  * transforms may use depth buffer support for proper depth sorted rendering; to
  * avoid depth fighting (also known as Z fighting), disable depth testing on 2D
  * shapes that have no 3D transforms. See
- * {@link Node#depthTestProperty depthTest} for more information. A scene with
+ * {@link Node#depthTestProperty() depthTest} for more information. A scene with
  * 3D shapes may enable scene anti-aliasing to improve its rendering quality.
  * <p>
  * The depthBuffer and antiAliasing flags are conditional features. With the
@@ -138,7 +138,7 @@ import java.lang.ref.WeakReference;
  *
  * <p>
  * A {@code Scene} may be created and modified on any thread until it is attached
- * to a {@link Window} that is {@link Window#isShowing showing}.
+ * to a {@link Window} that is {@link Window#isShowing() showing}.
  * After that, it must be modified only on the JavaFX Application Thread.
  * Note that {@code Scene} is not thread-safe; modifying a {@code Scene} on
  * multiple threads at the same time will lead to unpredictable results and
@@ -273,7 +273,7 @@ public class Scene implements EventTarget {
      * transforms may use depth buffer support for proper depth sorted
      * rendering; to avoid depth fighting (also known as Z fighting), disable
      * depth testing on 2D shapes that have no 3D transforms. See
-     * {@link Node#depthTestProperty depthTest} for more information.
+     * {@link Node#depthTestProperty() depthTest} for more information.
      *
      * @param root The root node of the scene graph
      * @param width The width of the scene
@@ -303,7 +303,7 @@ public class Scene implements EventTarget {
      * shapes or 2D shapes with 3D transforms may use depth buffer support for
      * proper depth sorted rendering; to avoid depth fighting (also known as Z
      * fighting), disable depth testing on 2D shapes that have no 3D transforms.
-     * See {@link Node#depthTestProperty depthTest} for more information. A
+     * See {@link Node#depthTestProperty() depthTest} for more information. A
      * scene with 3D shapes may enable scene anti-aliasing to improve its
      * rendering quality.
      *
@@ -5771,7 +5771,7 @@ public class Scene implements EventTarget {
     /**
      * Defines a function to be called when the mouse button is released
      * on this {@code Scene} during drag and drop gesture. Transfer of data from
-     * the {@link DragEvent}'s {@link DragEvent#dragboard dragboard} should
+     * the {@link DragEvent}'s {@link DragEvent#getDragboard() dragboard} should
      * happen in this function.
      * @return the function to be called when the mouse button is released on
      * this scene during drag and drop gesture
@@ -5820,8 +5820,8 @@ public class Scene implements EventTarget {
      * gesture. A {@code transferMode} that has the value {@code NONE}
      * indicates that no data was transferred during the drag and drop gesture.
      * Positional data for the {@code DragEvent} is invalid.  Valid positional
-     * data for the {@code DragEvent} is presented in the {@link onDragDropped}
-     * event handler.
+     * data for the {@code DragEvent} is presented in the
+     * {@link #onDragDroppedProperty() onDragDropped} event handler.
      * @return the function to be called when this scene is a drag and drop
      * gesture source after its data has been dropped on a drop target
      */

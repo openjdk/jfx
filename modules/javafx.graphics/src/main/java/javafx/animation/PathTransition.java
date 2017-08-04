@@ -41,7 +41,7 @@ import java.util.ArrayList;
 
 /**
  * This {@code Transition} creates a path animation that spans its
- * {@link #duration}. The translation along the path is done by updating the
+ * {@link #durationProperty() duration}. The translation along the path is done by updating the
  * {@code translateX} and {@code translateY} variables of the {@code node}, and
  * the {@code rotate} variable will get updated if {@code orientation} is set to
  * {@code OrientationType.ORTHOGONAL_TO_TANGENT}, at regular interval.
@@ -272,11 +272,11 @@ public final class PathTransition extends Transition {
      * The constructor of {@code PathTransition}.
      *
      * @param duration
-     *            The {@link #duration} of this {@code PathTransition}
+     *            The {@link #durationProperty() duration} of this {@code PathTransition}
      * @param path
-     *            The {@link #path} of this {@code PathTransition}
+     *            The {@link #pathProperty() path} of this {@code PathTransition}
      * @param node
-     *            The {@link #node} of this {@code PathTransition}
+     *            The {@link #nodeProperty() node} of this {@code PathTransition}
      */
     public PathTransition(Duration duration, Shape path, Node node) {
         setDuration(duration);
@@ -289,9 +289,9 @@ public final class PathTransition extends Transition {
      * The constructor of {@code PathTransition}.
      *
      * @param duration
-     *            The {@link #duration} of this {@code PathTransition}
+     *            The {@link #durationProperty() duration} of this {@code PathTransition}
      * @param path
-     *            The {@link #path} of this {@code PathTransition}
+     *            The {@link #pathProperty() path} of this {@code PathTransition}
      */
     public PathTransition(Duration duration, Shape path) {
         this(duration, path, null);

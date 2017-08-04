@@ -469,7 +469,7 @@ public class Window implements EventTarget {
      * The horizontal scale that the {@code Window} will use when rendering
      * its {@code Scene} to the rendering buffer.
      * This property is automatically updated whenever there is a change in
-     * the {@link outputScaleX} property and can be overridden either by
+     * the {@link #outputScaleXProperty() outpitScaleX} property and can be overridden either by
      * calling {@code setRenderScaleX()} in response to a listener on the
      * {@code outputScaleX} property or by binding it appropriately.
      *
@@ -499,7 +499,7 @@ public class Window implements EventTarget {
      * The vertical scale that the {@code Window} will use when rendering
      * its {@code Scene} to the rendering buffer.
      * This property is automatically updated whenever there is a change in
-     * the {@link outputScaleY} property and can be overridden either by
+     * the {@link #outputScaleYProperty() outpitScaleY} property and can be overridden either by
      * calling {@code setRenderScaleY()} in response to a listener on the
      * {@code outputScaleY} property or by binding it appropriately.
      *
@@ -531,8 +531,8 @@ public class Window implements EventTarget {
      * this attribute will move the {@code Window} horizontally. If this
      * {@code Window} is an instance of {@code Stage}, changing this attribute
      * will not visually affect the {@code Window} while
-     * {@link Stage#fullScreenProperty fullScreen} is true, but will be honored
-     * by the {@code Window} once {@link Stage#fullScreenProperty fullScreen}
+     * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
+     * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      */
     private ReadOnlyDoubleWrapper x =
@@ -556,8 +556,8 @@ public class Window implements EventTarget {
      * attribute will move the {@code Window} vertically. If this
      * {@code Window} is an instance of {@code Stage}, changing this attribute
      * will not visually affect the {@code Window} while
-     * {@link Stage#fullScreenProperty fullScreen} is true, but will be honored
-     * by the {@code Window} once {@link Stage#fullScreenProperty fullScreen}
+     * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
+     * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      */
     private ReadOnlyDoubleWrapper y =
@@ -599,8 +599,8 @@ public class Window implements EventTarget {
      * does not count as a setting the width by the application. If this
      * {@code Window} is an instance of {@code Stage}, changing this attribute
      * will not visually affect the {@code Window} while
-     * {@link Stage#fullScreenProperty fullScreen} is true, but will be honored
-     * by the {@code Window} once {@link Stage#fullScreenProperty fullScreen}
+     * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
+     * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      * <p>
      * The property is read only because it can be changed externally
@@ -629,8 +629,8 @@ public class Window implements EventTarget {
      * count as a setting the height by the application.  If this
      * {@code Window} is an instance of {@code Stage}, changing this attribute
      * will not visually affect the {@code Window} while
-     * {@link Stage#fullScreenProperty fullScreen} is true, but will be honored
-     * by the {@code Window} once {@link Stage#fullScreenProperty fullScreen}
+     * {@link Stage#fullScreenProperty() fullScreen} is true, but will be honored
+     * by the {@code Window} once {@link Stage#fullScreenProperty() fullScreen}
      * becomes false.
      * <p>
      * The property is read only because it can be changed externally
@@ -767,7 +767,7 @@ public class Window implements EventTarget {
      * a different {@code Window} will cause the old {@code Window} to lose the
      * reference before the new one gains it. You may swap {@code Scene}s on
      * a {@code Window} at any time, even if it is an instance of {@code Stage}
-     * and with {@link Stage#fullScreenProperty fullScreen} set to true.
+     * and with {@link Stage#fullScreenProperty() fullScreen} set to true.
      * If the width or height of this {@code Window} have never been set by the
      * application, setting the scene will cause this {@code Window} to take its
      * width or height from that scene.  Resizing this window by end user does

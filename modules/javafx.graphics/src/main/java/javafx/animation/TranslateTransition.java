@@ -35,7 +35,7 @@ import javafx.util.Duration;
 
 /**
  * This {@code Transition} creates a move/translate animation that spans its
- * {@link #duration}. This is done by updating the {@code translateX},
+ * {@link #durationProperty() duration}. This is done by updating the {@code translateX},
  * {@code translateY} and {@code translateZ} variables of the {@code node} at
  * regular interval.
  * <p>

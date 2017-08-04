@@ -79,7 +79,7 @@ import com.sun.javafx.scene.control.skin.Utils;
  *    <li>Have a {@link #contextMenuProperty() context menu} when the user
  *      right-clicks the column header area
  *    <li>Have the contents of the table be sorted (using
- *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
+ *      {@link #comparatorProperty() comparator}, {@link #sortableProperty() sortable} and
  *      sortType).
  * </ul>
  *

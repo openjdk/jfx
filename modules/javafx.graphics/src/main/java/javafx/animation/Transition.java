@@ -43,7 +43,7 @@ import javafx.scene.Node;
  * In addition an extending class needs to set the duration of a single cycle
  * with {@link Animation#setCycleDuration(javafx.util.Duration)}. This duration
  * is usually set by the user via a duration property (as in
- * {@link FadeTransition#duration}) for example. But it can also be calculated
+ * {@link FadeTransition#durationProperty() duration}) for example. But it can also be calculated
  * by the extending class as is done in {@link ParallelTransition} and
  * {@link FadeTransition}.
  * <p>
@@ -121,7 +121,7 @@ public abstract class Transition extends Animation {
      * Returns the {@link Interpolator}, that was set when the
      * {@code Transition} was started.
      *
-     * Changing the {@link #interpolator} of a running {@code Transition} should
+     * Changing the {@link #interpolatorProperty() interpolator} of a running {@code Transition} should
      * have no immediate effect. Instead the running {@code Transition} should
      * continue to use the original {@code Interpolator} until it is stopped and
      * started again.
@@ -136,7 +136,7 @@ public abstract class Transition extends Animation {
     /**
      * The constructor of {@code Transition}.
      *
-     * This constructor allows to define a {@link #targetFramerate}.
+     * This constructor allows to define a {@link #getTargetFramerate() target framerate}.
      *
      * @param targetFramerate
      *            The custom target frame rate for this {@code Transition}

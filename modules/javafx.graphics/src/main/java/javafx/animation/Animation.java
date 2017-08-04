@@ -60,14 +60,14 @@ import java.security.PrivilegedAction;
  * The class {@code Animation} provides the core functionality of all animations
  * used in the JavaFX runtime.
  * <p>
- * An animation can run in a loop by setting {@link #cycleCount}. To make an
- * animation run back and forth while looping, set the {@link #autoReverse}
- * -flag.
+ * An animation can run in a loop by setting {@link #cycleCountProperty() cycleCount}.
+ * To make an animation run back and forth while looping, set the
+ * {@link #autoReverseProperty() autoReverse} -flag.
  * <p>
  * Call {@link #play()} or {@link #playFromStart()} to play an {@code Animation}
  * . The {@code Animation} progresses in the direction and speed specified by
- * {@link #rate}, and stops when its duration is elapsed. An {@code Animation}
- * with indefinite duration (a {@link #cycleCount} of {@link #INDEFINITE}) runs
+ * {@link #rateProperty() rate}, and stops when its duration is elapsed. An {@code Animation}
+ * with indefinite duration (a {@link #cycleCountProperty() cycleCount} of {@link #INDEFINITE}) runs
  * repeatedly until the {@link #stop()} method is explicitly called, which will
  * stop the running {@code Animation} and reset its play head to the initial
  * position.
@@ -82,7 +82,7 @@ import java.security.PrivilegedAction;
  * If the {@code Animation} is not running, the next {@link #play()} will start
  * the {@code Animation} from the specified position.
  * <p>
- * Inverting the value of {@link #rate} toggles the play direction.
+ * Inverting the value of {@link #rateProperty() rate} toggles the play direction.
  *
  * @see Timeline
  * @see Transition
@@ -102,7 +102,7 @@ public abstract class Animation {
     public static final int INDEFINITE = -1;
 
     /**
-     * The possible states for {@link Animation#statusProperty status}.
+     * The possible states for {@link Animation#statusProperty() status}.
      * @since JavaFX 2.0
      */
     public static enum Status {
@@ -721,7 +721,7 @@ public abstract class Animation {
      * attempts to override them have no effect.
      * <p>
      * Another option to define a cue point in a {@code Animation} is to set the
-     * {@link KeyFrame#name} property of a {@link KeyFrame}.
+     * {@link KeyFrame#getName() name} property of a {@link KeyFrame}.
      *
      * @return {@link javafx.collections.ObservableMap} of cue points
      */

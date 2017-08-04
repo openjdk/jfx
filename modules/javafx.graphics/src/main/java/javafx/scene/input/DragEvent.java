@@ -280,7 +280,7 @@ public final class DragEvent extends InputEvent {
     /**
      * This event occurs when the mouse button is released during drag and drop
      * gesture on a drop target. Transfer of data from the
-     * {@link DragEvent}'s {@link DragEvent#dragboard dragboard} should happen
+     * {@link DragEvent}'s {@link DragEvent#getDragboard() dragboard} should happen
      * in handler of this event.
      */
     public static final EventType<DragEvent> DRAG_DROPPED =
@@ -727,7 +727,7 @@ public final class DragEvent extends InputEvent {
     /**
      * Indicates that transfer handling of this {@code DragEvent} was completed
      * successfully during a {@code DRAG_DROPPED} event handler.
-     * No {@link #dragboard} access can happen after this call.
+     * No {@link #getDragboard() dragboard} access can happen after this call.
      *
      * @param isTransferDone {@code true} indicates that the transfer was successful.
      * @throws IllegalStateException if this is not a DRAG_DROPPED event

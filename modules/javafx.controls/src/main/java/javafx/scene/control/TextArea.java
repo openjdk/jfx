@@ -421,12 +421,12 @@ public class TextArea extends TextInputControl {
     };
 
     /**
-     * The default value for {@link #prefColumnCount}.
+     * The default value for {@link #prefColumnCountProperty() prefColumnCount}.
      */
     public static final int DEFAULT_PREF_COLUMN_COUNT = 40;
 
     /**
-     * The default value for {@link #prefRowCount}.
+     * The default value for {@link #prefRowCountProperty() prefRowCount}.
      */
     public static final int DEFAULT_PREF_ROW_COUNT = 10;
 

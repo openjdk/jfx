@@ -34,7 +34,7 @@ import javafx.util.Pair;
  * {@link Media} which is then played by a {@link MediaPlayer}. The event
  * is fired when the playback position reaches the position of the marker.
  *
- * @see MediaPlayer#onMarker
+ * @see MediaPlayer#onMarkerProperty()
  * @since JavaFX 2.0
  */
 public class MediaMarkerEvent extends ActionEvent {

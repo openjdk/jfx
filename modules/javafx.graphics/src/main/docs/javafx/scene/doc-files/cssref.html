@@ -355,7 +355,6 @@
               <li><a href="#menubar">MenuBar</a></li>
               <li><a href="#menubutton">MenuButton</a></li>
               <li><a href="#menuitem">MenuItem</a></li>
-              <li><a href="#menuitembase">MenuItemBase</a></li>
               <li><a href="#pagination">Pagination</a></li>
               <li><a href="#passwordfield">PasswordField</a></li>
               <li><a href="#progressbar">ProgressBar</a></li>
@@ -411,7 +410,7 @@
       </li>
       <li><a href="#references">References</a></li>
     </ul>
-    <h2><a name="intro" id="intro">Introduction</a></h2>
+    <h2><a id="intro">Introduction</a></h2>
     <p>
         Never has styling a Java UI been easier than with JavaFX and Cascading Style Sheets (CSS). Going from one
         theme to another, or customizing the look of just one control, can all be done through CSS. To the novice,
@@ -431,7 +430,7 @@
       control, the substructure of that control's skin is given, along with the
       style&#8209;class names for the Region objects that implement that substructure.
     </p>
-    <h3><a name="introscenegraph" id="introscenegraph">CSS and the JavaFX Scene Graph</a></h3>
+    <h3><a id="introscenegraph">CSS and the JavaFX Scene Graph</a></h3>
     <p>
         JavaFX Cascading Style Sheets (CSS) is based on the W3C CSS version 2.1 <a href="#references">[1]</a>
         with some additions from current work on version 3 <a href="#references">[2]</a>.
@@ -516,7 +515,7 @@
         the appropriate type and is then assigned to an instance variable of the
         JavaFX object.
     </p>
-    <h3><a name="introstylesheets" id="introstylesheets">Scene, Parent and SubScene Stylesheets</a></h3>
+    <h3><a id="introstylesheets">Scene, Parent and SubScene Stylesheets</a></h3>
     <p>
         CSS styles can come from style sheets or inline styles. Style sheets are
         loaded from the URLs specified in the
@@ -570,7 +569,7 @@
     or Parent style sheet. Inline styles have highest precedence. Style sheets
     from a Parent instance are considered to be more specific than those styles
     from Scene style sheets.</cite>
-    <h3><a name="intronaming" id="intronaming">Naming Conventions</a></h3>
+    <h3><a id="intronaming">Naming Conventions</a></h3>
     <p>Naming conventions have been established for deriving CSS style&#8209;class
         names from JavaFX class names, and for deriving CSS property names from
         JavaFX variable names. Note that this is only a naming convention; there
@@ -586,10 +585,10 @@
         similar, with the addition of the "-fx-" prefix. For example, the
         blendMode variable would have a corresponding CSS property name of
         "-fx-blend-mode". </p>
-    <h3><a name="intropublicapi" id="intropublicapi">CSS Public API</a></h3>
+    <h3><a id="intropublicapi">CSS Public API</a></h3>
     Beginning with JavaFX 8, public API is available for developers to create styleable properties and manage
     pseudo-class state. Refer to <a href="../../../javafx/css/package-summary.html">javafx.css</a> for details.
-    <h3><a name="introinheritance" id="introinheritance">Inheritance</a></h3>
+    <h3><a id="introinheritance">Inheritance</a></h3>
     <p>CSS also provides for certain properties to be inherited by default, or
         to be inherited if the property value is 'inherit'. If a value is
         inherited, it is inherited from the computed value of the element's parent
@@ -644,7 +643,7 @@
         inherited provided there is not an author or an inline-style that applies specifically to that node.
         In this case, the inherited font is created from the user-set font and any parts of the applicable
         author or in-line style.
-    <h3><a name="introatrules" id="introatrules">&#64; Rules</a></h3>
+    <h3><a id="introatrules">&#64; Rules</a></h3>
     <p>
         Beginning with JavaFX 8u20, the CSS
         <a href="http://www.w3.org/TR/CSS21/cascade.html#at-import">@import</a> is also partially supported.
@@ -692,7 +691,7 @@
     <p>Although the parser will parse the syntax, all @font&#8209;face descriptors are ignored except for
         the <code>src</code> descriptor. The <code>src</code> descriptor is expected to be a
         <a href="#typeurl" class="typelink">&lt;url&gt;</a>. The <code>format</code> hint is ignored.</p>
-    <h3><a name="introexamples" id="introexamples">Examples</a></h3>
+    <h3><a id="introexamples">Examples</a></h3>
     <p>Consider the following simple JavaFX application: </p>
     <p class="example">Scene scene = new Scene(new Group()); <br>
         scene.getStylesheets().add(&ldquo;test.css&rdquo;); <br>
@@ -719,7 +718,7 @@
     <p>the result will be a yellow rectangle with a nicely dashed green border:
     </p>
     <p><img src="cssexample2.png" alt="A rectangle with yellow fill and a green, dashed border"></p>
-    <h3><a name="introparserwarnings" id="introparserwarnings">Understanding
+    <h3><a id="introparserwarnings">Understanding
         Parser Warnings</a></h3>
     <p>When the JavaFX CSS parser encounters a syntax error, a warning message
         is emitted which conveys as much information as is available to help
@@ -739,7 +738,7 @@
     <p>Applications needing to detect errors from the parser can add a listener
         to the errors property of javafx.css.CssParser. <br>
     </p>
-    <h3><a name="introlimitations" id="introlimitations">Limitations</a></h3>
+    <h3><a id="introlimitations">Limitations</a></h3>
     <ol>
     <li> While the JavaFX CSS parser will parse valid CSS syntax, it is not a
         fully compliant CSS parser. One should not expect the parser to handle
@@ -765,8 +764,8 @@
     <li>When parsing a <a href="http://www.w3.org/TR/CSS2/syndata.html#uri">URI</a>,
         the parser doesn't handle URI escapes nor \&lt;hex-digit&gt;[1,6] code points.</li>
     </ol>
-    <h2><a name="types" id="types">Types</a></h2>
-    <h3><a name="typeinherit" id="typeinherit">inherit</a></h3>
+    <h2><a id="types">Types</a></h2>
+    <h3><a id="typeinherit">inherit</a></h3>
     <p>Each property has a type, which determines what kind of value and the
         syntax for specifying those values. In addition, each property may have a
         specified value of 'inherit', which means that, for a given node, the
@@ -776,10 +775,10 @@
     </p>
     <p>If the 'inherit' value is set on the root element, the property is
       assigned its initial value.</p>
-    <h3><a name="typeboolean" id="typeboolean">&lt;boolean&gt;</a></h3>
+    <h3><a id="typeboolean">&lt;boolean&gt;</a></h3>
     <p>Boolean values can either have the string value of "true" or "false", the
       values are case insensitive as all CSS is case insensitive.</p>
-    <h3><a name="typestring" id="typestring">&lt;string&gt;</a></h3>
+    <h3><a id="typestring">&lt;string&gt;</a></h3>
     <p>Strings can either be written with double quotes or with single quotes.
       Double quotes cannot occur inside double quotes, unless escaped (e.g., as
       '\"' or as '\22'). Analogously for single quotes (e.g., "\'" or "\27").</p>
@@ -791,7 +790,7 @@
       string, use an escape representing the line feed character in ISO-10646
       (U+000A), such as "\A" or "\00000a". This character represents the generic
       notion of "newline" in CSS. See the 'content' property for an example.</p>
-    <h3><a name="typenumber" id="typenumber">&lt;number&gt; &amp;
+    <h3><a id="typenumber">&lt;number&gt; &amp;
         &lt;integer&gt;</a></h3>
     <p>Some value types may have integer values (denoted by &lt;integer&gt;) or
       real number values (denoted by &lt;number&gt;). Real numbers and integers
@@ -804,12 +803,12 @@
     <p class="grammar">[+|-]? [[0-9]+|[0-9]*"."[0-9]+]</p>
     <p>Note that many properties that allow an integer or real number as a value
       actually restrict the value to some range, often to a non-negative value.</p>
-    <h3><a name="typesize" id="typesize">&lt;size&gt;</a></h3>
+    <h3><a id="typesize">&lt;size&gt;</a></h3>
     <p>A size is a <a href="#typenumber" class="typeref">&lt;number&gt;</a>
       with units of <a href="#typelength" class="typeref">&lt;length&gt;</a> or
       <a href="#typepercentage" class="typeref">&lt;percentage&gt;</a>. If a unit
       is not specified then 'px' is assumed.</p>
-    <h4><a name="typelength" id="typelength">&lt;length&gt;</a></h4>
+    <h4><a id="typelength">&lt;length&gt;</a></h4>
     <p class="grammar"><a href="#typenumber">&lt;number&gt;</a>[ px | mm | cm |
       in | pt | pc | em | ex ]?</p>
     <p>No whitespace is allowed between the number and units if provided. Some
@@ -830,11 +829,11 @@
         equal to 1/72nd of an inch.</li>
       <li><strong>pc</strong>: picas &mdash; 1 pica is equal to 12 points.</li>
     </ul>
-    <h4><a name="typepercentage" id="typepercentage">&lt;percentage&gt;</a></h4>
+    <h4><a id="typepercentage">&lt;percentage&gt;</a></h4>
     <p>These are a percentage of some length, typically to the width or height
       of a node.</p>
     <p class="grammar"><a href="#typenumber">&lt;number&gt;</a>[ % ]</p>
-    <h3><a name="typeangle" id="typeangle">&lt;angle&gt;</a></h3>
+    <h3><a id="typeangle">&lt;angle&gt;</a></h3>
     <p>An angle is a <a href="#typenumber" class="typeref">&lt;number&gt;</a>
       with one of the following units.</p>
     <p>&nbsp;</p>
@@ -847,7 +846,7 @@
       <li><strong>grad</strong>: angle in gradians</li>
       <li><strong>turn</strong>: angle in turns</li>
     </ul>
-    <h3><a name="typeduration" id="typeduration">&lt;duration&gt;</a></h3>
+    <h3><a id="typeduration">&lt;duration&gt;</a></h3>
     <p>A duration is a <a href="#typenumber" class="typeref">&lt;number&gt;</a>
         with second or millisecond units, or the value <span class="grammar">indefinite</span>.</p>
     <p>&nbsp;</p>
@@ -858,11 +857,11 @@
         <li><strong>indefinite</strong>: See <a href="../../util/Duration.html#INDEFINITE" class="typelink">Duration.INDEFINITE</a></li>
     </ul>
     <p>See also <a href="http://www.w3.org/TR/css3-values/#time" class="typelink">W3C time units</a>.</p>
-    <h3><a name="typepoint" id="typepoint">&lt;point&gt;</a></h3>
+    <h3><a id="typepoint">&lt;point&gt;</a></h3>
     <p>A point is an {x,y} coordinate.</p>
     <p class="grammar">[ [ &lt;length&gt; &lt;length&gt; ]&nbsp;|&nbsp;[
       &lt;percentage&gt; | &lt;percentage&gt; ] ]</p>
-    <h3><a name="typecolorstop" id="typecolorstop">&lt;color-stop&gt;</a></h3>
+    <h3><a id="typecolorstop">&lt;color-stop&gt;</a></h3>
     <p>Stops are per <a href="http://dev.w3.org/csswg/css3-images/#color-stop-syntax."
         class="typelink">W3C
         color-stop syntax</a>.</p>
@@ -885,7 +884,7 @@
       since distance units do not agree.</p>
     <p>"<span style="color: #009900; ">red, white, blue</span>" is valid. The stops are
       distributed evenly between 0% and 100%.</p>
-    <h3><a name="typeurl" id="typeurl">&lt;uri&gt;</a></h3>
+    <h3><a id="typeurl">&lt;uri&gt;</a></h3>
     <p class="grammar">url ( [\"\']? &lt;address&gt; [\"\']? )</p>
     <p><span class="grammar">&lt;address&gt;</span> is a hierarchical URI of the form [scheme:][//authority][path] <a href="#references">(see [2])</a>.
         For example:</p>
@@ -955,7 +954,7 @@
     }
     </textarea>
     <p>The same style would work equally as well from a stylesheet.</p>
-    <h3><a name="typeeffect" id="typeeffect">&lt;effect&gt;</a></h3>
+    <h3><a id="typeeffect">&lt;effect&gt;</a></h3>
     <p>JavaFX CSS currently supports the DropShadow and InnerShadow effects from
       the JavaFX platform. See the class documentation in javafx.scene.effect
       for further details about the semantics of the various effect parameters.</p>
@@ -1019,7 +1018,7 @@
       The shadow offset in the x direction, in pixels. <br>
       <span class="grammar"><a href="#typenumber" class="typelink">&lt;number&gt;</a></span>
       The shadow offset in the y direction, in pixels. </p>
-    <h3><a name="typefont" id="typefont">&lt;font&gt;</a></h3>
+    <h3><a id="typefont">&lt;font&gt;</a></h3>
     <p>JavaFX CSS supports the ability to specify fonts using separate family,
       size, style, and weight properties, as well as the ability to specify a
       font using a single shorthand property. There are four value types related
@@ -1049,7 +1048,7 @@
       syntax:<br>
       <span class="grammar">[[ &lt;font-style&gt; || &lt;font-weight&gt; ]?
         &lt;font-size&gt; &lt;font-family&gt; ]</span></p>
-    <h4><a name="fontprops" id="fontprops">Font Properties</a></h4>
+    <h4><a id="fontprops">Font Properties</a></h4>
     <p>Most classes that use text will support the following font properties. In
       some cases a similar set of properties will be supported but with a
       different prefix instead of "-fx-font".</p>
@@ -1096,7 +1095,7 @@
         </tr>
       </tbody>
     </table>
-    <h3><a name="typepaint" id="typepaint">&lt;paint&gt;</a></h3>
+    <h3><a id="typepaint">&lt;paint&gt;</a></h3>
     <p>Paint values can either be a solid color specified in one of the color
       syntaxes, they can be a linear or radial gradient, or an image-pattern.</p>
     <p class="grammar"><a href="#typecolor" class="typelink">&lt;color&gt;</a> |
@@ -1105,7 +1104,7 @@
       <a href="#typeimage-pattern" class="typelink">&lt;image-pattern&gt;</a>
       <a href="#typeimage-pattern" class="typelink">&lt;repeating-image-pattern&gt;</a></p>
     <h4>Linear Gradients<span class="grammar" style="font-size: smaller;">
-            <a name="typelinear-gradient" id="typelinear-gradient">&lt;linear-gradient&gt;</a>
+            <a id="typelinear-gradient">&lt;linear-gradient&gt;</a>
         </span></h4>
     <p class="grammar">linear-gradient( [ [from <a href="#typepoint" class="typelink">&lt;point&gt;</a>
       to <a href="#typepoint" class="typelink">&lt;point&gt;</a>] | [ to
@@ -1147,7 +1146,7 @@
         to (&lt;size&gt;, &lt;size&gt;) stops [ (&lt;number&gt;,&lt;color&gt;)
         ]+ [ repeat | reflect ]?</span></p>
     <h4>Radial Gradients <span class="grammar" style="font-size: smaller;">
-            <a name="typeradial-gradient" id="typeradial-gradient">&lt;radial-gradient&gt;</a>
+            <a id="typeradial-gradient">&lt;radial-gradient&gt;</a>
         </span></h4>
     <p class="grammar">radial-gradient([ focus-angle <a href="#typeangle" class="typelink">&lt;angle&gt;</a>,
       ]? [ focus-distance <a href="#typepercentage" class="typelink">&lt;percentage&gt;</a>,
@@ -1180,7 +1179,7 @@
         &lt;size,size&gt; ]? &lt;size&gt; stops [ ( &lt;number&gt;,
         &lt;color&gt; ) ]+ [ repeat | reflect ]?</span></p>
     <h4>Image Paint <span class="grammar" style="font-size: smaller;">
-            <a name="typeimage-pattern" id="typeimage-pattern">&lt;image-pattern&gt;</a>
+            <a id="typeimage-pattern">&lt;image-pattern&gt;</a>
         </span></h4>
     <p class="grammar">image-pattern(<a href="#typestring" class="typelink">&lt;string&gt;</a>,
       [<a href="#typesize" class="typelink">&lt;size&gt;</a>,
@@ -1221,7 +1220,7 @@
 
 
 
-    <h3><a name="typecolor" id="typecolor">&lt;color&gt;</a></h3>
+    <h3><a id="typecolor">&lt;color&gt;</a></h3>
     <p class="grammar">&lt;named-color&gt; | &lt;looked-up-color&gt; |
       &lt;rgb-color&gt; | &lt;hsb-color&gt; | &lt;color-function&gt;</p>
     <h4>Named Colors <span class="grammar" style="font-size: smaller;">&lt;named-color&gt;</span></h4>
@@ -1904,7 +1903,7 @@
           href="#typecolor"
           class="typelink">&lt;color&gt;</a>
         ) ]+ </span></p>
-    <h2><a name="stage" id="stage">Stage</a></h2>
+    <h2><a id="stage">Stage</a></h2>
     <table summary="property table" class="package" width="100%">
         <tbody>
         <tr>
@@ -1912,13 +1911,13 @@
         </tr>
         </tbody>
     </table>
-    <h4><a name="popupwindow" id="popupwindow">Group</a></h4>
+    <h4><a id="popupwindow">Group</a></h4>
     <p class="styleclass">Style class: .root.popup</p>
     <p>PopupWindow does not have any properties that can be styled by CSS, but a PopupWindow does have its own Scene.
         Scene's root gets the .root style-class by default. If the Scene is the root scene of a PopupWindow, then the
         .popup style-class is also added. This allows the root scene of a PopupWindow to have distinct styles via
         the CSS rule <code>.root.popup { /* declarations */ }</code>
-    <h2><a name="nodes" id="nodes">Nodes</a></h2>
+    <h2><a id="nodes">Nodes</a></h2>
     <table summary="property table" class="package" width="100%">
       <tbody>
         <tr>
@@ -1926,7 +1925,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="group" id="group">Group</a></h4>
+    <h4><a id="group">Group</a></h4>
     <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -1948,7 +1947,7 @@
       </tbody>
     </table>
     <br>
-    <h4><a name="node" id="node">Node</a></h4>
+    <h4><a id="node">Node</a></h4>
     <p class="styleclass">Style class: empty by default<br>
     </p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -2111,7 +2110,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="parent" id="parent">Parent</a></h4>
+    <h4><a id="parent">Parent</a></h4>
     <p class="styleclass">Style
       class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -2134,7 +2133,7 @@
       </tbody>
     </table>
     <br>
-    <h4><a name="scene" id="scene">Scene</a></h4>
+    <h4><a id="scene">Scene</a></h4>
     <p class="styleclass">Style class: not applicable<br>
     </p>
     <p>The Scene object has no settable CSS properties, nor does it have any
@@ -2150,7 +2149,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="imageview" id="imageview">ImageView</a></h4>
+    <h4><a id="imageview">ImageView</a></h4>
 <p class="styleclass">Style class: image-view</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -2181,7 +2180,7 @@
       </tbody>
     </table>
     <br>
-    <h4><a name="anchorpane" id="anchorpane">AnchorPane</a></h4>
+    <h4><a id="anchorpane">AnchorPane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -2202,7 +2201,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="border" id="border">BorderPane</a></h4>
+    <h4><a id="border">BorderPane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -2225,7 +2224,7 @@
     </table>
     <br>
 
-    <h4><a name="dialogpane" id="dialogpane">DialogPane</a></h4>
+    <h4><a id="dialogpane">DialogPane</a></h4>
     <p class="styleclass">Style class: dialog-pane</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -2257,7 +2256,7 @@
         <li>button-bar &mdash; ButtonBar</li>
     </ul>
 
-    <h4><a name="flowpane" id="flowpane">FlowPane</a></h4>
+    <h4><a id="flowpane">FlowPane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -2312,7 +2311,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="gridpane" id="gridpane">GridPane</a></h4>
+    <h4><a id="gridpane">GridPane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -2364,7 +2363,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="hbox" id="hbox">HBox</a></h4>
+    <h4><a id="hbox">HBox</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -2401,7 +2400,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="pane" id="pane">Pane</a></h4>
+    <h4><a id="pane">Pane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -2423,7 +2422,7 @@
       </tbody>
     </table>
     <br>
-    <h4><a name="region" id="region">Region</a></h4>
+    <h4><a id="region">Region</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>A Region is a Node (extending from Parent) with backgrounds and borders
       that are styleable via CSS. A Region is typically a rounded rectangle,
@@ -2954,7 +2953,7 @@
       </tbody>
     </table>
     <br>
-    <h4><a name="stackpane" id="stackpane">StackPane</a></h4>
+    <h4><a id="stackpane">StackPane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -2979,7 +2978,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="tilepane" id="tilepane">TilePane</a></h4>
+    <h4><a id="tilepane">TilePane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3054,7 +3053,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="vbox" id="vbox">VBox</a></h4>
+    <h4><a id="vbox">VBox</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3099,7 +3098,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="mediaview" id="mediaview">MediaView</a></h4>
+    <h4><a id="mediaview">MediaView</a></h4>
 <p class="styleclass">Style class: media-view</p>
 
     <table summary="property table" class="package" width="100%">
@@ -3109,7 +3108,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="shape" id="shape">Shape</a></h4>
+    <h4><a id="shape">Shape</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3187,23 +3186,23 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="arc" id="arc">Arc</a></h4>
+    <h4><a id="arc">Arc</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>The Arc node has all the properties of <a href="#shape">Shape</a> and <a
         href="#node">Node</a>.</p>
-    <h4><a name="circle" id="circle">Circle</a></h4>
+    <h4><a id="circle">Circle</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>The Circle node has all the properties of <a href="#shape">Shape</a> and
       <a href="#node">Node</a>.</p>
-    <h4><a name="cubiccurve" id="cubiccurve">CubicCurve</a></h4>
+    <h4><a id="cubiccurve">CubicCurve</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>The CubicCurve node has all the properties of <a href="#shape">Shape</a>
       and <a href="#node">Node</a>.</p>
-    <h4><a name="ellipse" id="ellipse">Ellipse</a></h4>
+    <h4><a id="ellipse">Ellipse</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>The Ellipse node has all the properties of <a href="#shape">Shape</a>
       and <a href="#node">Node</a>.</p>
-    <h4><a name="line" id="line">Line</a></h4>
+    <h4><a id="line">Line</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -3232,7 +3231,7 @@
         </tr>
         </tbody>
     </table>
-    <h4><a name="path" id="path">Path</a></h4>
+    <h4><a id="path">Path</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -3261,15 +3260,15 @@
         </tr>
         </tbody>
     </table>
-    <h4><a name="polygon" id="polygon">Polygon</a></h4>
+    <h4><a id="polygon">Polygon</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>The Polygon node has all the properties of <a href="#shape">Shape</a>
       and <a href="#node">Node</a>.</p>
-    <h4><a name="quadcurve" id="quadcurve">QuadCurve</a></h4>
+    <h4><a id="quadcurve">QuadCurve</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>The QuadCurve node has all the properties of <a href="#shape">Shape</a>
       and <a href="#node">Node</a>.</p>
-    <h4><a name="rectangle" id="rectangle">Rectangle</a></h4>
+    <h4><a id="rectangle">Rectangle</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3298,7 +3297,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="svgpath" id="svgpath">SVGPath</a></h4>
+    <h4><a id="svgpath">SVGPath</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <p>The SVGPath node has all the properties of <a href="#shape">Shape</a>
       and <a href="#node">Node</a>.</p>
@@ -3309,7 +3308,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="text" id="text">Text</a></h4>
+    <h4><a id="text">Text</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3370,7 +3369,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="webview" id="webview">WebView</a></h4>
+    <h4><a id="webview">WebView</a></h4>
     <p class="styleclass">Style class: web-view</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3445,7 +3444,7 @@
     <table summary="property table" class="package" width="100%">
       <tbody>
         <tr>
-          <td><a name="controls">javafx.scene.control</a></td>
+          <td><a id="controls">javafx.scene.control</a></td>
         </tr>
       </tbody>
     </table>
@@ -3462,14 +3461,14 @@
         of the focusTraversable property true; whereas in <a href="#node">Node</a>, the initial value of the focusTraversable property
         is false. The following controls are not focus traversable by default: Accordion, Cell, Label, MenuBar,
         ProgressBar, ProgressIndicator, ScrollBar, ScrollPane, Separator, SplitPane, ToolBar.</p>
-    <h4><a name="accordion" id="accordion">Accordion</a></h4>
+    <h4><a id="accordion">Accordion</a></h4>
     <p class="styleclass">Style class: accordion</p>
     <p>The Accordion control has all the properties and pseudo&#8209;classes of <a href="#control">Control</a></p>
     <h4>Substructure</h4>
     <ul>
       <li>first-titled-pane &mdash; the first TitledPane </li>
     </ul>
-    <h4><a name="button" id="button">Button</a></h4>
+    <h4><a id="button">Button</a></h4>
     <p class="styleclass">Style class: button</p>
     <p>The Button control has all the properties of <a href="#buttonbase">ButtonBase</a></p>
     <h4>Pseudo-classes</h4>
@@ -3496,7 +3495,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="buttonbase" id="buttonbase">ButtonBase</a></h4>
+    <h4><a id="buttonbase">ButtonBase</a></h4>
     <p>The ButtonBase control has all the properties of <a href="#labeled">Labeled</a></p>
     <h4>Pseudo-classes</h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -3516,7 +3515,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="cell" id="cell">Cell</a></h4>
+    <h4><a id="cell">Cell</a></h4>
     <p class="styleclass">Style class: cell</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3571,7 +3570,7 @@
     <ul>
       <li>text &mdash; a Labeled</li>
     </ul>
-    <h4><a name="checkbox" id="checkbox">CheckBox</a></h4>
+    <h4><a id="checkbox">CheckBox</a></h4>
     <p class="styleclass">Style class: check-box</p>
     <p>The CheckBox control has all the properties of <a href="#buttonbase">ButtonBase</a></p>
     <h4>Pseudo-classes</h4>
@@ -3609,7 +3608,7 @@
       </ul>
       </li>
     </ul>
-    <h4><a name="checkmenuitem" id="checkmenuitem">CheckMenuItem</a></h4>
+    <h4><a id="checkmenuitem">CheckMenuItem</a></h4>
     <h4>Pseudo-classes</h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -3625,7 +3624,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="choicebox" id="choicebox">ChoiceBox</a></h4>
+    <h4><a id="choicebox">ChoiceBox</a></h4>
     <p class="styleclass">Style class: choice-box</p>
     <p>The ChoiceBox control has all the properties and pseudo&#8209;classes of <a href="#control">Control</a></p>
     <h4>Substructure</h4>
@@ -3636,7 +3635,7 @@
         </ul>
       </li>
     </ul>
-    <h4><a name="colorpicker" id="colorpicker">ColorPicker</a></h4>
+    <h4><a id="colorpicker">ColorPicker</a></h4>
     <p class="styleclass">Style class: color-picker</p>
 	<p>The ColorPicker control has all the properties and pseudo&#8209;classes of <a href="#comboboxbase">ComboBoxBase</a></p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -3669,7 +3668,7 @@
 	    </ul>
       </li>
     </ul>
-    <h4><a name="combobox" id="combobox">ComboBox</a></h4>
+    <h4><a id="combobox">ComboBox</a></h4>
     <p class="styleclass">Style class: combo-box</p>
     <p>The ComboBox control has all the properties and pseudo&#8209;classes of <a href="#comboboxbase">ComboBoxBase</a></p>
     <h4>Substructure</h4>
@@ -3689,7 +3688,7 @@
         </ul>
       </li>
     </ul>
-    <h4><a name="comboboxbase" id="comboboxbase">ComboBoxBase</a></h4>
+    <h4><a id="comboboxbase">ComboBoxBase</a></h4>
     <p class="styleclass">Style class: combo-box-base</p>
     <p>The ComboBoxBase control has all the properties of <a href="#control">Control</a></p>
     <h4>Substructure</h4>
@@ -3722,9 +3721,9 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="contextmenu" id="contextmenu">ContextMenu</a></h4>
+    <h4><a id="contextmenu">ContextMenu</a></h4>
     <p class="styleclass">Style class: context-menu</p>
-    <p>The ContextMenu class has all the properties of <a href="#poupucontrol">PopupControl</a>.</p>
+    <p>The ContextMenu class has all the properties of <a href="#popupcontrol">PopupControl</a>.</p>
     The selector for a ContextMenu may be made more specific by using the selector for the control from which the ContextMenu was shown.
     For example,
     <p class="example">.choice-box > .context-menu { ... }</p>
@@ -3757,7 +3756,7 @@
             </ul>
         </li>
     </ul>
-    <h4><a name="control" id="control">Control</a></h4>
+    <h4><a id="control">Control</a></h4>
     <p>The Control class has all the properties of <a href="#region">Region</a></p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -3785,7 +3784,7 @@
         </tr>
         </tbody>
     </table>
-    <h4><a name="datepicker" id="datepicker">DatePicker</a></h4>
+    <h4><a id="datepicker">DatePicker</a></h4>
     <p class="styleclass">Style class: date-picker</p>
     <p>The DatePicker control has all the properties and pseudo&#8209;classes of <a href="#comboboxbase">ComboBoxBase</a></p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -3814,7 +3813,7 @@
         <li>date-picker-display-node  &mdash; TextField</li>
     </ul>
 
-    <h4><a name="htmleditor" id="htmleditor">HTMLEditor</a></h4>
+    <h4><a id="htmleditor">HTMLEditor</a></h4>
     <p class="styleclass">Style class: html-editor</p>
     <p>The Hyperlink control has all the properties of <a href="#control">Control</a>.</p>
     <h4>Substructure</h4>
@@ -3855,7 +3854,7 @@
             </ul>
         </li>
     </ul>
-    <h4><a name="hyperlink" id="hyperlink">Hyperlink</a></h4>
+    <h4><a id="hyperlink">Hyperlink</a></h4>
     <p class="styleclass">Style class: hyperlink</p>
     <p>The Hyperlink control has all the properties of <a href="#buttonbase">ButtonBase</a>.</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -3901,7 +3900,7 @@
     <ul>
       <li>label &mdash; Label</li>
     </ul>
-    <h4><a name="indexedcell" id="indexedcell">IndexedCell</a></h4>
+    <h4><a id="indexedcell">IndexedCell</a></h4>
     <p class="styleclass">Style class: indexed-cell</p>
     <p>The IndexedCell control has all the properties of <a href="#cell">Cell</a>.</p>
     <h4>Pseudo-classes</h4>
@@ -3926,10 +3925,10 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="label" id="label">Label</a></h4>
+    <h4><a id="label">Label</a></h4>
     <p class="styleclass">Style class: label</p>
     <p>Label has all the properties and pseudo&#8209;class state of <a href="#labeled">Labeled</a></p>
-    <h4><a name="labeled" id="labeled">Labeled</a></h4>
+    <h4><a id="labeled">Labeled</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -4026,11 +4025,11 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="listcell" id="listcell">ListCell</a></h4>
+    <h4><a id="listcell">ListCell</a></h4>
     <p class="styleclass">Style class: list-cell</p>
     <p>The ListCell control has all the settable properties and pseudo&#8209;classes
       of <a href="#indexedcell">IndexedCell</a>.</p>
-    <h4><a name="listview" id="listview">ListView</a></h4>
+    <h4><a id="listview">ListView</a></h4>
     <p class="styleclass">Style class: list-view</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4081,7 +4080,7 @@
             </ul>
     </ul>
 
-    <h4><a name="menu" id="menu">Menu</a></h4>
+    <h4><a id="menu">Menu</a></h4>
     <p class="styleclass">Style class: menu</p>
     <h4>Pseudo-classes</h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -4101,7 +4100,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="menubar" id="menubar">MenuBar</a></h4>
+    <h4><a id="menubar">MenuBar</a></h4>
     <p class="styleclass">Style class: menu-bar</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4129,7 +4128,7 @@
     <ul>
       <li>menu</li>
     </ul>
-    <h4><a name="menubutton" id="menubutton">MenuButton</a></h4>
+    <h4><a id="menubutton">MenuButton</a></h4>
     <p class="styleclass">Style class: menu-button</p>
     <p>The MenuButton control has all the properties of <a href="#buttonbase">ButtonBase</a></p>
     <h4>Pseudo-classes</h4>
@@ -4154,9 +4153,9 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="menuitem" id="menuitem">MenuItem</a></h4>
+    <h4><a id="menuitem">MenuItem</a></h4>
     <p class="styleclass">Style class: menu-item</p>
-    <h4><a name="pagination" id="pagination">Pagination</a></h4>
+    <h4><a id="pagination">Pagination</a></h4>
     <p class="styleclass">Style class: pagination</p>
 	<p>Pagination has all the pseudo&#8209;class states of <a href="#control">Control</a></p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -4227,13 +4226,13 @@
 	  </ul>
       </li>
     </ul>
-    <h4><a name="passwordfield" id="passwordfield">PasswordField</a></h4>
+    <h4><a id="passwordfield">PasswordField</a></h4>
     <p class="styleclass">Style class: password-field</p>
     <p>The PasswordField control has all the properties of <a href="#textfield">TextField</a></p>
-    <h4><a name="popupcontrol" id="popupcontrol">PopupControl</a></h4>
+    <h4><a id="popupcontrol">PopupControl</a></h4>
     <p>PopupControl is also a <a href="#popupwindow">PopupWindow</a> and as such, its root node has the
     style-class .root.popup</p>
-    <h4><a name="progressbar" id="progressbar">ProgressBar</a></h4>
+    <h4><a id="progressbar">ProgressBar</a></h4>
     <p class="styleclass">Style class: progress-bar</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4304,7 +4303,7 @@
       </ul>
       </li>
     </ul>
-    <h4><a name="progressindicator" id="progressindicator">ProgressIndicator</a></h4>
+    <h4><a id="progressindicator">ProgressIndicator</a></h4>
     <p class="styleclass">Style class: progress-indicator</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4368,7 +4367,7 @@
       <li>percentage &mdash; Text</li>
       <li>tick &mdash; StackPane</li>
     </ul>
-    <h4><a name="radiobutton" id="radiobutton">RadioButton</a></h4>
+    <h4><a id="radiobutton">RadioButton</a></h4>
     <p class="styleclass">Style class: radio-button</p>
     <p>The RadioButton control has all the properties of <a href="#togglebutton">ToggleButton</a></p>
     <h4>Substructure</h4>
@@ -4380,7 +4379,7 @@
       </li>
       <li>label &mdash; Label</li>
     </ul>
-    <h4><a name="radiomenuitem" id="radiomenuitem">RadioMenuItem</a></h4>
+    <h4><a id="radiomenuitem">RadioMenuItem</a></h4>
     <h4>Pseudo-classes</h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4396,7 +4395,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="scrollbar" id="scrollbar">ScrollBar</a></h4>
+    <h4><a id="scrollbar">ScrollBar</a></h4>
     <p class="styleclass">Style class: scroll-bar</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4465,7 +4464,7 @@
         </ul>
       </li>
     </ul>
-    <h4><a name="scrollpane" id="scrollpane">ScrollPane</a></h4>
+    <h4><a id="scrollpane">ScrollPane</a></h4>
     <p class="styleclass">Style class: scroll-pane</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4550,7 +4549,7 @@
       <li>scroll-bar:horizontall &mdash; ScrollBar</li>
       <li>corner &mdash; StackPane</li>
     </ul>
-    <h4><a name="separator" id="separator">Separator</a></h4>
+    <h4><a id="separator">Separator</a></h4>
     <p class="styleclass">Style class: separator</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4611,7 +4610,7 @@
     <ul>
       <li>line &mdash; Region</li>
     </ul>
-    <h4><a name="spinner" id="spinner">Spinner</a></h4>
+    <h4><a id="spinner">Spinner</a></h4>
     <p class="styleclass">Style class: spinner</p>
     <p>Note that the default style class, "spinner", puts arrows on right, stacked vertically. The following
         style classes can also be used in combination with the default style class in order to control the
@@ -4692,7 +4691,7 @@
             </ul>
         </li>
     </ul>
-    <h4><a name="slider" id="slider">Slider</a></h4>
+    <h4><a id="slider">Slider</a></h4>
     <p class="styleclass">Style class: slider</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -4785,7 +4784,7 @@
         <li>track &mdash; Region</li>
         <li>thumb &mdash; Region</li>
     </ul>
-    <h4><a name="splitmenubutton" id="splitmenubutton">SplitMenuButton</a></h4>
+    <h4><a id="splitmenubutton">SplitMenuButton</a></h4>
     <p class="styleclass">Style class: split-menu-button</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -4802,7 +4801,7 @@
         </tr>
         </tbody>
     </table>
-    <h4><a name="splitpane" id="splitpane">SplitPane</a></h4>
+    <h4><a id="splitpane">SplitPane</a></h4>
     <p class="styleclass">Style class: split-pane</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -4856,7 +4855,7 @@
       </ul>
       </li>
     </ul>
-    <h4><a name="tabpane" id="tabpane">TabPane</a></h4>
+    <h4><a id="tabpane">TabPane</a></h4>
     <p class="styleclass">Style class: tab-pane</p>
     <p>Note: The styleclass is "tab-pane floating" if the TabPane is floating.</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
@@ -4965,7 +4964,7 @@
       </li>
       <li>tab-content-area &mdash; StackPane</li>
     </ul>
-    <h4><a name="tablecolumnheader" id="tablecolumnheader">TableColumnHeader</a></h4>
+    <h4><a id="tablecolumnheader">TableColumnHeader</a></h4>
     <p class="styleclass">Style class: column-header</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -5031,7 +5030,7 @@
         </ul>
         </li>
     </ul>
-    <h4><a name="tableview" id="tableview">TableView</a></h4>
+    <h4><a id="tableview">TableView</a></h4>
     <p class="styleclass">Style class: table-view</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5103,7 +5102,7 @@
       </li>
         <li>table-column &mdash; TableColumn</li>
     </ul>
-    <h4><a name="text-area" id="text-area">TextArea</a></h4>
+    <h4><a id="text-area">TextArea</a></h4>
     <p class="styleclass">Style class: text-area</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5146,7 +5145,7 @@
       </ul>
       </li>
     </ul>
-    <h4><a name="textinputcontrol" id="textinputcontrol">TextInputControl</a></h4>
+    <h4><a id="textinputcontrol">TextInputControl</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -5217,7 +5216,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="textfield" id="textfield">TextField</a></h4>
+    <h4><a id="textfield">TextField</a></h4>
     <p class="styleclass">Style class: text-field</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5249,7 +5248,7 @@
       </tbody>
     </table>
     <p>TextField has all the pseudo&#8209;class states of <a href="#textinputcontrol">TextInputControl</a></p>
-    <h4><a name="titledpane" id="titledpane">TitledPane</a></h4>
+    <h4><a id="titledpane">TitledPane</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -5314,7 +5313,7 @@
       </li>
       <li>content &mdash; StackPane/li&gt; </li>
     </ul>
-    <h4><a name="togglebutton" id="togglebutton">ToggleButton</a></h4>
+    <h4><a id="togglebutton">ToggleButton</a></h4>
     <p class="styleclass">Style class: toggle-button</p>
     <p>The ToggleButton control has all the properties of <a href="#buttonbase">ButtonBase</a>.</p>
     <h4>Pseudo-classes</h4>
@@ -5335,7 +5334,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="toolbar" id="toolbar">ToolBar</a></h4>
+    <h4><a id="toolbar">ToolBar</a></h4>
     <p class="styleclass">Style class: tool-bar</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5388,7 +5387,7 @@
       </ul>
       </li>
     </ul>
-    <h4><a name="tooltip" id="tooltip">Tooltip</a></h4>
+    <h4><a id="tooltip">Tooltip</a></h4>
     <p class="styleclass">Style class: tooltip</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5471,7 +5470,7 @@
       <li>label &mdash; Label</li>
       <li>page-corner &mdash; StackPane</li>
     </ul>
-    <h4><a name="treecell" id="treecell">TreeCell</a></h4>
+    <h4><a id="treecell">TreeCell</a></h4>
     <p class="styleclass">Style class: tree-cell</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -5517,7 +5516,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="treetablecell" id="treetablecell">TreeTableCell</a></h4>
+    <h4><a id="treetablecell">TreeTableCell</a></h4>
     <p class="styleclass">Style class: tree-table-cell</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -5553,7 +5552,7 @@
         </tbody>
     </table>
 
-    <h4><a name="treetableview" id="treetableview">TreeView</a></h4>
+    <h4><a id="treetableview">TreeView</a></h4>
     <p class="styleclass">Style class: tree-table-view</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -5578,7 +5577,7 @@
         </tbody>
     </table>
 
-    <h4><a name="treeview" id="treeview">TreeView</a></h4>
+    <h4><a id="treeview">TreeView</a></h4>
     <p class="styleclass">Style class: tree-view</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -5603,7 +5602,7 @@
         </tbody>
     </table>
     <!-- Charts -->
-    <h2><a name="charts" id="charts">Charts</a></h2>
+    <h2><a id="charts">Charts</a></h2>
     <table summary="property table" class="package" width="100%">
       <tbody>
         <tr>
@@ -5611,7 +5610,7 @@
         </tr>
       </tbody>
     </table>
-    <h4><a name="areachart" id="areachart">AreaChart</a></h4>
+    <h4><a id="areachart">AreaChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -5648,7 +5647,7 @@
             area-legend-symbol default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
             series&rsquo; color index</td>
-          <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
+          <td>LegendItem </td>
         </tr>
       </tbody>
     </table>
@@ -5668,7 +5667,7 @@
           </tr>
         </tbody>
       </table>
-    <h4><a name="axis" id="axis">Axis</a></h4>
+    <h4><a id="axis">Axis</a></h4>
     <p class="styleclass">Style class: axis</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -5732,7 +5731,7 @@
         <li>axis-label &mdash; Text</li>
         <li>axis-tick-mark &mdash; Path</li>
     </ul>
-    <h4><a name="barchart" id="barchart">BarChart</a></h4>
+    <h4><a id="barchart">BarChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -5762,7 +5761,7 @@
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
             series&rsquo; color index</td>
-          <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
+          <td>LegendItem </td>
         </tr>
       </tbody>
     </table>
@@ -5794,7 +5793,7 @@
           </tr>
         </tbody>
       </table>
-    <h4><a name="bubblechart" id="bubblechart">BubbleChart</a></h4>
+    <h4><a id="bubblechart">BubbleChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -5817,7 +5816,7 @@
             bubble-legend-symbol default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
             series&rsquo; color index</td>
-          <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
+          <td>LegendItem </td>
         </tr>
       </tbody>
     </table>
@@ -5837,7 +5836,7 @@
           </tr>
         </tbody>
       </table>
-    <h4><a name="categoryaxis" id="categoryaxis">CategoryAxis</a></h4>
+    <h4><a id="categoryaxis">CategoryAxis</a></h4>
     <p class="styleclass">Style class: axis</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -5873,7 +5872,7 @@
         </tr>
         </tbody>
     </table>
-    <h4><a name="chart" id="chart">Chart</a></h4>
+    <h4><a id="chart">Chart</a></h4>
     <p class="styleclass">Style class: chart</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -5913,7 +5912,7 @@
         <li>chart-title &mdash; Label</li>
         <li>chart-content &mdash; Pane</li>
     </ul>
-    <h4><a name="legend" id="legend">Legend</a></h4>
+    <h4><a id="legend">Legend</a></h4>
     <p class="styleclass">Style class: chart-legend</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -5935,7 +5934,7 @@
         <li>chart-legend-item &mdash; Label</li>
         <li>chart-legend-item-symbol &mdash; Node (the Label's graphic)</li>
     </ul>
-    <h4><a name="linechart" id="linechart">LineChart</a></h4>
+    <h4><a id="linechart">LineChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -5965,7 +5964,7 @@
             default-color&lt;j&gt;"</td>
           <td>Where &lt;i&gt; is the index of the series and &lt;j&gt; is the
             series&rsquo; color index</td>
-          <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
+          <td>LegendItem </td>
         </tr>
       </tbody>
     </table>
@@ -5991,7 +5990,7 @@
           </tr>
         </tbody>
       </table>
-    <h4><a name="numberaxis" id="numberaxis">NumberAxis</a></h4>
+    <h4><a id="numberaxis">NumberAxis</a></h4>
     <p class="styleclass">Style class: axis</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -6014,7 +6013,7 @@
         </tr>
         </tbody>
     </table>
-    <h4><a name="piechart" id="piechart">PieChart</a></h4>
+    <h4><a id="piechart">PieChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
         <tr>
@@ -6047,7 +6046,7 @@
             data item&rsquo;s style&#8209;class&gt;"</td>
           <td>Each item in the legend has the style&#8209;class "pie-legend-symbol"
             plus the style&#8209;class of the corresponding data item</td>
-          <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
+          <td>LegendItem </td>
         </tr>
       </tbody>
     </table>
@@ -6091,7 +6090,7 @@
           </tr>
         </tbody>
       </table>
-    <h4><a name="scatterchart" id="scatterchart">ScatterChart</a></h4>
+    <h4><a id="scatterchart">ScatterChart</a></h4>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
         <tr>
@@ -6113,7 +6112,7 @@
             <td class="propertyname">&nbsp;</td>
             <td>The LegendItem symbols are assigned the style&#8209;class of the first
                 symbol of the series.</td>
-            <td><a href="#LegendItem" class="typelink">LegendItem</a> </td>
+            <td>LegendItem </td>
         </tr>
         </tbody>
     </table>
@@ -6133,7 +6132,7 @@
         </tr>
         </tbody>
     </table>
-    <h4><a name="valueaxis" id="valueaxis">ValueAxis</a></h4>
+    <h4><a id="valueaxis">ValueAxis</a></h4>
     <p class="styleclass">Style class: axis</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
         <thead>
@@ -6172,7 +6171,7 @@
     <ul>
         <li>axis-minor-tick-mark &mdash; Path</li>
     </ul>
-    <h4><a name="xychart" id="xychart">XYChart</a></h4>
+    <h4><a id="xychart">XYChart</a></h4>
     <p class="styleclass">Style class: set by sub-type</p>
     <table summary="property table" class="csspropertytable" cellpadding="2" cellspacing="1">
       <thead>
@@ -6236,7 +6235,7 @@
         <li>chart-vertical-zero-line &mdash; Line</li>
         <li>chart-horizontal-zero-line &mdash; Line</li>
     </ul>
-    <h2><a name="references" id="references">References</a></h2>
+    <h2><a id="references">References</a></h2>
     <p>[1] CSS 2.1: <a href="http://www.w3.org/TR/CSS21/" target="_blank">http://www.w3.org/TR/CSS21/</a>
     </p>
     <p>[2] CSS 3 work in progress <a href="http://www.w3.org/Style/CSS/current-work"

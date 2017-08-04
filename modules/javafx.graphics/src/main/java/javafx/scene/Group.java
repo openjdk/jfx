@@ -50,9 +50,9 @@ import java.util.Collection;
  * By default, a {@code Group} will "auto-size" its managed resizable
  * children to their preferred sizes during the layout pass to ensure that Regions
  * and Controls are sized properly as their state changes.  If an application
- * needs to disable this auto-sizing behavior, then it should set {@link #autoSizeChildren}
- * to {@code false} and understand that if the preferred size of the children
- * change, they will not automatically resize (so buyer beware!).
+ * needs to disable this auto-sizing behavior, then it should set
+ * {@link #autoSizeChildrenProperty() autoSizeChildren} to {@code false} and understand that if the preferred size of
+ * the children change, they will not automatically resize (so buyer beware!).
  *
  * <p>Group Example:</p>
  *
@@ -231,7 +231,7 @@ public  class Group extends Parent {
     /**
      * Group implements layoutChildren such that each child is resized to its preferred
      * size, if the child is resizable. Non-resizable children are simply left alone.
-     * If {@link #autoSizeChildren} is false, then Group does nothing in this method.
+     * If {@link #autoSizeChildrenProperty() autoSizeChildren} is false, then Group does nothing in this method.
      */
     @Override protected void layoutChildren() {
         if (isAutoSizeChildren()) {

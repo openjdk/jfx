@@ -343,7 +343,7 @@ import javafx.scene.control.skin.TableViewSkin;
  * you then handle the writeback to the property (or the relevant data source),
  * nothing will happen. You can work around this by using the
  * {@link TableColumn#addEventHandler(javafx.event.EventType, javafx.event.EventHandler)}
- * method to add a {@link TableColumn#EDIT_COMMIT_EVENT} {@link EventType} with
+ * method to add a {@link TableColumn#editCommitEvent()} {@link EventType} with
  * your desired {@link EventHandler} as the second argument. Using this method,
  * you will not replace the default implementation, but you will be notified when
  * an edit commit has occurred.</p>

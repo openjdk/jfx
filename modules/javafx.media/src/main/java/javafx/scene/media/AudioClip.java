@@ -112,7 +112,7 @@ public final class AudioClip {
     /**
      * Set the default volume level. The new setting will only take effect on
      * subsequent plays.
-     * @see #volume
+     * @see #volumeProperty()
      * @param value new default volume level for this clip
      */
     public final void setVolume(double value) {
@@ -121,7 +121,7 @@ public final class AudioClip {
 
     /**
      * Get the default volume level.
-     * @see #volume
+     * @see #volumeProperty()
      * @return the default volume level for this clip
      */
     public final double getVolume() {
@@ -163,7 +163,7 @@ public final class AudioClip {
     /**
      * Set the default balance level. The new value will only affect subsequent
      * plays.
-     * @see #balance
+     * @see #balanceProperty()
      * @param balance new default balance
      */
     public void setBalance(double balance) {
@@ -172,7 +172,7 @@ public final class AudioClip {
 
     /**
      * Get the default balance level for this clip.
-     * @see #balance
+     * @see #balanceProperty()
      * @return the default balance for this clip
      */
     public double getBalance() {
@@ -213,7 +213,7 @@ public final class AudioClip {
     /**
      * Set the default playback rate. The new value will only affect subsequent
      * plays.
-     * @see #rate
+     * @see #rateProperty()
      * @param rate the new default playback rate
      */
     public void setRate(double rate) {
@@ -222,7 +222,7 @@ public final class AudioClip {
 
     /**
      * Get the default playback rate.
-     * @see #rate
+     * @see #rateProperty()
      * @return default playback rate for this clip
      */
     public double getRate() {
@@ -266,7 +266,7 @@ public final class AudioClip {
     /**
      * Set the default pan value. The new value will only affect subsequent
      * plays.
-     * @see #pan
+     * @see #panProperty()
      * @param pan the new default pan value
      */
     public void setPan(double pan) {
@@ -275,7 +275,7 @@ public final class AudioClip {
 
     /**
      * Get the default pan value.
-     * @see #pan
+     * @see #panProperty()
      * @return the default pan value for this clip
      */
     public double getPan() {
@@ -319,7 +319,7 @@ public final class AudioClip {
     /**
      * Set the default playback priority. The new value will only affect
      * subsequent plays.
-     * @see #priority
+     * @see #priorityProperty()
      * @param priority the new default playback priority
      */
     public void setPriority(int priority) {
@@ -328,7 +328,7 @@ public final class AudioClip {
 
     /**
      * Get the default playback priority.
-     * @see #priority
+     * @see #priorityProperty()
      * @return the default playback priority of this clip
      */
     public int getPriority() {
@@ -379,7 +379,7 @@ public final class AudioClip {
     /**
      * Set the default cycle count. The new value will only affect subsequent
      * plays.
-     * @see #cycleCount
+     * @see #cycleCountProperty()
      * @param count the new default cycle count for this clip
      */
     public void setCycleCount(int count) {
@@ -388,7 +388,7 @@ public final class AudioClip {
 
     /**
      * Get the default cycle count.
-     * @see #cycleCount
+     * @see #cycleCountProperty()
      * @return the default cycleCount for this audio clip
      */
     public int getCycleCount() {

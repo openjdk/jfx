@@ -207,7 +207,7 @@ import javafx.util.Pair;
  * you then handle the writeback to the property (or the relevant data source),
  * nothing will happen. You can work around this by using the
  * {@link ListView#addEventHandler(javafx.event.EventType, javafx.event.EventHandler)}
- * method to add a {@link ListView#EDIT_COMMIT_EVENT} {@link EventType} with
+ * method to add a {@link ListView#editCommitEvent()} {@link EventType} with
  * your desired {@link EventHandler} as the second argument. Using this method,
  * you will not replace the default implementation, but you will be notified when
  * an edit commit has occurred.</p>
@@ -238,8 +238,8 @@ public class ListView<T> extends Control {
 
     /**
      * An EventType that indicates some edit event has occurred. It is the parent
-     * type of all other edit events: {@link #EDIT_START_EVENT},
-     *  {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT}.
+     * type of all other edit events: {@link #editStartEvent()},
+     *  {@link #editCommitEvent()} and {@link #editCancelEvent()}.
      * @param <T> the type of the objects stored in this ListView
      * @return the event type
      */
@@ -1160,8 +1160,8 @@ public class ListView<T> extends Control {
 
         /**
          * Creates a new EditEvent instance to represent an edit event. This
-         * event is used for {@link #EDIT_START_EVENT},
-         * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.
+         * event is used for {@link #editStartEvent()},
+         * {@link #editCommitEvent()} and {@link #editCancelEvent()} types.
          * @param source the source
          * @param eventType the event type
          * @param newValue the new value

@@ -108,9 +108,6 @@ final public class Rule {
      * or remove declarations from a Rule. Changes to the list are tracked
      * so that added declarations are tagged as belonging to this rule, and
      * the rule for removed declarations is nulled out.
-     * If the list is not going to be modified, then it is more efficient to
-     * call {@link #getUnobservedDeclarationList()}, but the returned list
-     * must be treated as unmodifiable.
      * @return a observable list of declarations
      */
     public final ObservableList<Declaration> getDeclarations() {
@@ -127,9 +124,6 @@ final public class Rule {
      * or remove selectors from a Rule. Changes to the list are tracked
      * so that added selectors are tagged as belonging to this rule, and
      * the rule for removed selectors is nulled out.
-     * If the list is not going to be modified, then it is more efficient to
-     * call {@link #getUnobservedSelectorList()}, but the returned list
-     * must be treated as unmodifiable.
      * @return an observable list of selectors
      */
     public final ObservableList<Selector> getSelectors() {

@@ -2168,8 +2168,8 @@ public class TreeTableView<S> extends Control {
 
         /**
          * Creates a new EditEvent instance to represent an edit event. This
-         * event is used for {@link #EDIT_START_EVENT},
-         * {@link #EDIT_COMMIT_EVENT} and {@link #EDIT_CANCEL_EVENT} types.
+         * event is used for {@link #editStartEvent()},
+         * {@link #editCommitEvent()} and {@link #editCancelEvent()} types.
          * @param source the source
          * @param eventType the eventType
          * @param treeItem the treeItem

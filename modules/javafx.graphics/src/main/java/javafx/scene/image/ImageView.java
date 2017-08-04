@@ -409,7 +409,7 @@ public class ImageView extends Node {
      * necessary to fit. If set to a value &lt;= 0, then the intrinsic width of the
      * image will be used as the {@code fitWidth}.
      * <p>
-     * See {@link #preserveRatio} for information on interaction between image
+     * See {@link #preserveRatioProperty() preserveRatio} for information on interaction between image
      * view's {@code fitWidth}, {@code fitHeight} and {@code preserveRatio}
      * attributes.
      *
@@ -456,7 +456,7 @@ public class ImageView extends Node {
      * as necessary to fit. If set to a value &lt;= 0, then the intrinsic height of
      * the image will be used as the {@code fitHeight}.
      * <p>
-     * See {@link #preserveRatio} for information on interaction between image
+     * See {@link #preserveRatioProperty() preserveRatio} for information on interaction between image
      * view's {@code fitWidth}, {@code fitHeight} and {@code preserveRatio}
      * attributes.
      * </p>
@@ -615,7 +615,7 @@ public class ImageView extends Node {
     }
 
     /**
-     * Platform-dependent default value of the {@link #smoothProperty smooth} property.
+     * Platform-dependent default value of the {@link #smoothProperty() smooth} property.
      */
     public static final boolean SMOOTH_DEFAULT = Toolkit.getToolkit()
             .getDefaultImageSmooth();

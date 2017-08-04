@@ -376,7 +376,7 @@ public enum AccessibleAttribute {
 
     /**
      * Returns the node that is the label for this node.
-     * <p>When {@link javafx.scene.control.Label#labelFor} is set,
+     * <p>When {@link javafx.scene.control.Label#labelForProperty() labelFor} is set,
      * the default implementation of {@code LABELED_BY} uses this
      * relationship to return the appropriate node to the screen
      * reader.</p>

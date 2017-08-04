@@ -418,8 +418,8 @@ public final class PrinterJob {
     /**
      * An enum class used in reporting status of a print job.
      * Applications can listen to the job status via the
-     * {@link #jobStatus jobStatus} property, or may query it directly
-     * using {@link javafx.print.PrinterJob#getJobStatus getJobStatus()}.
+     * {@link #jobStatusProperty() jobStatus} property, or may query it directly
+     * using {@link PrinterJob#getJobStatus() getJobStatus()}.
      * <p>
      * The typical life cycle of a job is as follows :
      * <ul>

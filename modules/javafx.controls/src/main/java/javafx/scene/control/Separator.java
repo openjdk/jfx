@@ -49,7 +49,8 @@ import javafx.css.StyleableProperty;
  * separator can be controlled via CSS. A horizontal separator occupies the
  * full horizontal space allocated to it (less padding), and a vertical
  * separator occupies the full vertical space allocated to it (less padding).
- * The {@link #halignment} and {@link #valignment} properties determine how the
+ * The {@link #halignmentProperty() halignment} and {@link #valignmentProperty() valignment}
+ * properties determine how the
  * separator is positioned in the other dimension, for example, how a horizontal
  * separator is positioned vertically within its allocated space.
  * <p>

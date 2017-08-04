@@ -112,7 +112,7 @@ public class Pagination extends Control {
     /**
      * Value for indicating that the page count is indeterminate.
      *
-     * @see #setPageCount
+     * @see #setPageCount(int)
      */
     public static final int INDETERMINATE = Integer.MAX_VALUE;
 
@@ -176,7 +176,7 @@ public class Pagination extends Control {
     /**
      * The maximum number of page indicators to use for this pagination control.
      * The maximum number of pages indicators will remain unchanged if the value is less than 1
-     * or greater than the {@link #pageCount}.  The number of page indicators will be
+     * or greater than the {@link #pageCountProperty() pageCount}.  The number of page indicators will be
      * reduced to fit the control if the {@code maxPageIndicatorCount} cannot fit.
      *
      * The default is 10 page indicators.
@@ -281,7 +281,7 @@ public class Pagination extends Control {
     /**
      * The current page index to display for this pagination control.  The first page will be
      * the current page if the value is less than 0.  Similarly the last page
-     * will be the current page if the value is greater than the {@link #pageCount}
+     * will be the current page if the value is greater than the {@link #pageCountProperty() pageCount}
      *
      * The default is 0 for the first page.
      * <p>

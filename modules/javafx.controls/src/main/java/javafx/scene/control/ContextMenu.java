@@ -49,7 +49,7 @@ import javafx.beans.property.SimpleBooleanProperty;
 
 /**
  * <p>
- * A popup control containing an ObservableList of menu items. The {@link #items}
+ * A popup control containing an ObservableList of menu items. The {@link #getItems() items}
  * ObservableList allows for any {@link MenuItem} type to be inserted,
  * including its subclasses {@link Menu}, {@link MenuItem}, {@link RadioMenuItem}, {@link CheckMenuItem} and
  * {@link CustomMenuItem}. If an arbitrary Node needs to be

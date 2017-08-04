@@ -369,7 +369,7 @@ public abstract class PopupWindow extends Window {
 
     /**
      * Shows the popup at the specified location on the screen. The popup window
-     * is positioned in such way that its anchor point ({@link #anchorLocation})
+     * is positioned in such way that its anchor point ({@link #anchorLocationProperty() anchorLocation})
      * is displayed at the specified {@code anchorX} and {@code anchorY}
      * coordinates.
      * <p>
@@ -378,7 +378,7 @@ public abstract class PopupWindow extends Window {
      * window of the displayed popup.
      * </p>
      * <p>
-     * Note that when {@link #autoHideProperty()} is set to true, mouse press on the owner Node
+     * Note that when {@link #autoHideProperty() autoHide} is set to true, mouse press on the owner Node
      * will not hide the PopupWindow.
      * </p>
      *
@@ -419,7 +419,7 @@ public abstract class PopupWindow extends Window {
 
     /**
      * Shows the popup at the specified location on the screen. The popup window
-     * is positioned in such way that its anchor point ({@link #anchorLocation})
+     * is positioned in such way that its anchor point ({@link #anchorLocationProperty() anchorLocation})
      * is displayed at the specified {@code anchorX} and {@code anchorY}
      * coordinates.
      *

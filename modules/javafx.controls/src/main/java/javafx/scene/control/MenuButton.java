@@ -45,10 +45,10 @@ import javafx.beans.property.ReadOnlyBooleanWrapper;
  * MenuButton is a button which, when clicked or pressed, will show a
  * {@link ContextMenu}. A MenuButton shares a very similar API to the {@link Menu}
  * control, insofar that you set the items that should be shown in the
- * {@link #items} ObservableList, and there is a {@link #text} property to specify the
+ * {@link #getItems() items} ObservableList, and there is a {@link #textProperty() text} property to specify the
  * label shown within the MenuButton.
  * <p>
- * As mentioned, like the Menu API itself, you'll find an {@link #items} ObservableList
+ * As mentioned, like the Menu API itself, you'll find an {@link #getItems() items} ObservableList
  * within which you can provide anything that extends from {@link MenuItem}.
  * There are several useful subclasses of {@link MenuItem} including
  * {@link RadioMenuItem}, {@link CheckMenuItem}, {@link Menu},
@@ -230,8 +230,8 @@ public class MenuButton extends ButtonBase {
      * relation to the MenuButton. Menu items are generally laid
      * out vertically in either case.
      * For example, if the menu button were in a vertical toolbar on the left
-     * edge of the application, you might change {@link #popupSide} to {@code Side.RIGHT} so that
-     * the popup will appear to the right of the MenuButton.
+     * edge of the application, you might change {@link #popupSideProperty() popupSide}
+     * to {@code Side.RIGHT} so that the popup will appear to the right of the MenuButton.
      *
      * @defaultValue {@code Side.BOTTOM}
      */

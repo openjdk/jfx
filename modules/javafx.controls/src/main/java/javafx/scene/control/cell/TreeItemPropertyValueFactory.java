@@ -81,7 +81,7 @@ import sun.util.logging.PlatformLogger.Level;
  * </p>
  *
  * <p>For reference (and as noted in the TreeTableColumn
- * {@link TreeTableColumn#cellValueFactory cell value factory} documentation), the
+ * {@link TreeTableColumn#cellValueFactoryProperty() cell value factory} documentation), the
  * long form of the code above would be the following:
  * </p>
  *

@@ -60,9 +60,9 @@ import javafx.util.Callback;
  * }</pre>
  *
  * VBox will resize children (if resizable) to their preferred heights and uses its
- * {@link #fillWidth} property to determine whether to resize their widths to
+ * {@link #fillWidthProperty() fillWidth} property to determine whether to resize their widths to
  * fill its own width or keep their widths to their preferred (fillWidth defaults to true).
- * The alignment of the content is controlled by the {@link #alignment} property,
+ * The alignment of the content is controlled by the {@link #alignmentProperty() alignment} property,
  * which defaults to Pos.TOP_LEFT.
  * <p>
  * If a vbox is resized larger than its preferred height, by default it will keep

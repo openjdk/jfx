@@ -65,13 +65,13 @@ import javafx.css.Styleable;
  *    <li>Have a {@link #contextMenuProperty() context menu} when the user
  *      right-clicks the column header area
  *    <li>Have the contents of the table be sorted (using
- *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
+ *      {@link #comparatorProperty() comparator}, {@link #sortableProperty() sortable} and
  *      {@link #sortTypeProperty() sortType})
  * </ul>
  *
  * When creating a TreeTableColumn instance, perhaps the two most important properties
  * to set are the column {@link #textProperty() text} (what to show in the column
- * header area), and the column {@link #cellValueFactory cell value factory}
+ * header area), and the column {@link #cellValueFactoryProperty() cell value factory}
  * (which is used to populate individual cells in the column). This can be
  * achieved using some variation on the following code:
  *
@@ -197,7 +197,7 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
      * If no cellFactory is specified on a TreeTableColumn instance, then this one
      * will be used by default. At present it simply renders the TableCell item
      * property within the {@link TableCell#graphicProperty() graphic} property
-     * if the {@link Cell#item item} is a Node, or it simply calls
+     * if the {@link Cell#itemProperty() item} is a Node, or it simply calls
      * <code>toString()</code> if it is not null, setting the resulting string
      * inside the {@link Cell#textProperty() text} property.
      */

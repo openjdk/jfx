@@ -227,7 +227,7 @@ public class Image {
      * resized as necessary to fit. If set to a value {@code <= 0}, then the
      * intrinsic width of the image will be used.
      * <p/>
-     * See {@link #preserveRatio} for information on interaction between image's
+     * See {@link #isPreserveRatio() preserveRatio} for information on interaction between image's
      * {@code requestedWidth}, {@code requestedHeight} and {@code preserveRatio}
      * attributes.
      *
@@ -240,7 +240,7 @@ public class Image {
      * resized as necessary to fit. If set to a value {@code <= 0}, then the
      * intrinsic width of the image will be used.
      * <p>
-     * See {@link #preserveRatio} for information on interaction between image's
+     * See {@link #isPreserveRatio() preserveRatio} for information on interaction between image's
      * {@code requestedWidth}, {@code requestedHeight} and {@code preserveRatio}
      * attributes.
      *
@@ -255,7 +255,7 @@ public class Image {
      * resized as necessary to fit. If set to a value {@code <= 0}, then the
      * intrinsic height of the image will be used.
      * <p>
-     * See {@link #preserveRatio} for information on interaction between image's
+     * See {@link #isPreserveRatio() preserveRatio} for information on interaction between image's
      * {@code requestedWidth}, {@code requestedHeight} and {@code preserveRatio}
      * attributes.
      *
@@ -268,7 +268,7 @@ public class Image {
      * resized as necessary to fit. If set to a value {@code <= 0}, then the
      * intrinsic height of the image will be used.
      * <p>
-     * See {@link #preserveRatio} for information on interaction between image's
+     * See {@link #isPreserveRatio() preserveRatio} for information on interaction between image's
      * {@code requestedWidth}, {@code requestedHeight} and {@code preserveRatio}
      * attributes.
      *

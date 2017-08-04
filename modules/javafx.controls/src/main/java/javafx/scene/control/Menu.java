@@ -64,7 +64,7 @@ import javafx.event.EventDispatchChain;
  * </code></pre>
  * <p>
  * A Menu is a subclass of {@link MenuItem} which means that it can be inserted
- * into a Menu's {@link #items} ObservableList, resulting in a submenu being created:
+ * into a Menu's {@link #getItems() items} ObservableList, resulting in a submenu being created:
  * <pre><code>
  * MenuItem menu12 = new MenuItem("Open");
  * menu1.getItems().add(menu12);

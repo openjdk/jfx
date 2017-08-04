@@ -80,7 +80,7 @@ import com.sun.javafx.scene.control.Logging;
  * </p>
  *
  * <p>For reference (and as noted in the TableColumn
- * {@link TableColumn#cellValueFactory cell value factory} documentation), the
+ * {@link TableColumn#cellValueFactoryProperty()}  cell value factory} documentation), the
  * long form of the code above would be the following:
  * </p>
  *

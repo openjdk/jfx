@@ -2426,7 +2426,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines a function to be called when the mouse button is released
      * on this {@code Node} during drag and drop gesture. Transfer of data from
-     * the {@link DragEvent}'s {@link DragEvent#dragboard dragboard} should
+     * the {@link DragEvent}'s {@link DragEvent#getDragboard() dragboard} should
      * happen in this function.
      * @return the event handler that is called when the mouse button is
      * released on this {@code Node}

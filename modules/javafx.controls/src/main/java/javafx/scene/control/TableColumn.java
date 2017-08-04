@@ -71,13 +71,13 @@ import javafx.beans.value.WritableValue;
  *    <li>Have a {@link #contextMenuProperty() context menu} when the user
  *      right-clicks the column header area
  *    <li>Have the contents of the table be sorted (using
- *      {@link #comparatorProperty() comparator}, {@link #sortable sortable} and
+ *      {@link #comparatorProperty() comparator}, {@link #sortableProperty() sortable} and
  *      {@link #sortTypeProperty() sortType})
  * </ul>
  *
  * When creating a TableColumn instance, perhaps the two most important properties
  * to set are the column {@link #textProperty() text} (what to show in the column
- * header area), and the column {@link #cellValueFactory cell value factory}
+ * header area), and the column {@link #cellValueFactoryProperty() cell value factory}
  * (which is used to populate individual cells in the column). This can be
  * achieved using some variation on the following code:
  *

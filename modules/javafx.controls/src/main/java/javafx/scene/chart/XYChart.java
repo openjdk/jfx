@@ -270,7 +270,7 @@ public abstract class XYChart<X,Y> extends Chart {
      * Indicates whether vertical grid lines are visible or not.
      *
      * @return true if verticalGridLines are visible else false.
-     * @see #verticalGridLinesVisible
+     * @see #verticalGridLinesVisibleProperty()
      */
     public final boolean getVerticalGridLinesVisible() { return verticalGridLinesVisible.get(); }
     public final void setVerticalGridLinesVisible(boolean value) { verticalGridLinesVisible.set(value); }
@@ -981,7 +981,7 @@ public abstract class XYChart<X,Y> extends Chart {
      *
      * @param item The XYChart.Data item from which the current X axis data value is obtained.
      * @param value The X axis data value
-     * @see #getCurrentDisplayedXValue
+     * @see #getCurrentDisplayedXValue(Data)
      */
     protected final void setCurrentDisplayedXValue(Data<X,Y> item, X value) { item.setCurrentX(value); }
 
@@ -989,7 +989,7 @@ public abstract class XYChart<X,Y> extends Chart {
      *
      * @param item The XYChart.Data item from which the current X axis data value property object is obtained.
      * @return The current displayed X data value ObjectProperty.
-     * @see #getCurrentDisplayedXValue
+     * @see #getCurrentDisplayedXValue(Data)
      */
     protected final ObjectProperty<X> currentDisplayedXValueProperty(Data<X,Y> item) { return item.currentXProperty(); }
 
@@ -1008,7 +1008,7 @@ public abstract class XYChart<X,Y> extends Chart {
      *
      * @param item The XYChart.Data item from which the current Y axis data value is obtained.
      * @param value The Y axis data value
-     * @see #getCurrentDisplayedYValue
+     * @see #getCurrentDisplayedYValue(Data)
      */
     protected final void setCurrentDisplayedYValue(Data<X,Y> item, Y value) { item.setCurrentY(value); }
 
@@ -1016,7 +1016,7 @@ public abstract class XYChart<X,Y> extends Chart {
      *
      * @param item The XYChart.Data item from which the current Y axis data value property object is obtained.
      * @return The current displayed Y data value ObjectProperty.
-     * @see #getCurrentDisplayedYValue
+     * @see #getCurrentDisplayedYValue(Data)
      */
     protected final ObjectProperty<Y> currentDisplayedYValueProperty(Data<X,Y> item) { return item.currentYProperty(); }
 
@@ -1034,7 +1034,7 @@ public abstract class XYChart<X,Y> extends Chart {
      *
      * @param item The XYChart.Data item from which the current extra value is obtained.
      * @param value The extra value
-     * @see #getCurrentDisplayedExtraValue
+     * @see #getCurrentDisplayedExtraValue(Data)
      */
     protected final void setCurrentDisplayedExtraValue(Data<X,Y> item, Object value) { item.setCurrentExtraValue(value); }
 
@@ -1043,7 +1043,7 @@ public abstract class XYChart<X,Y> extends Chart {
      *
      * @param item The XYChart.Data item from which the current extra value property object is obtained.
      * @return {@literal ObjectProperty<Object> The current extra value ObjectProperty}
-     * @see #getCurrentDisplayedExtraValue
+     * @see #getCurrentDisplayedExtraValue(Data)
      */
     protected final ObjectProperty<Object> currentDisplayedExtraValueProperty(Data<X,Y> item) { return item.currentExtraValueProperty(); }
 

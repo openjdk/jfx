@@ -128,7 +128,7 @@ public class TextField extends TextInputControl {
     }
 
     /**
-     * The default value for {@link #prefColumnCount}.
+     * The default value for {@link #prefColumnCountProperty() prefColumnCount}.
      */
     public static final int DEFAULT_PREF_COLUMN_COUNT = 12;
 

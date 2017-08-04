@@ -31,7 +31,7 @@ import javafx.util.Duration;
 
 /**
  * This {@code Transition} executes an {@link Animation#onFinished} at the end of its
- * {@link #duration}.
+ * {@link #durationProperty() duration}.
  *
  * <p>
  * Code Segment Example:

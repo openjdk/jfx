@@ -130,7 +130,7 @@ import java.util.TimerTask;
  * milliseconds. Any null Duration is treated as Duration.ZERO. Any custom implementation of an backoff strategy
  * callback must be prepared to handle these different potential values.</p>
  *
- * <p>The ScheduledService introduces a new property called {@link #lastValue}. The lastValue is the value that
+ * <p>The ScheduledService introduces a new property called {@link #lastValueProperty() lastValue}. The lastValue is the value that
  * was last successfully computed. Because a Service clears its {@code value} property on each run, and
  * because the ScheduledService will reschedule a run immediately after completion (unless it enters the
  * cancelled or failed states), the value property is not overly useful on a ScheduledService. In most cases

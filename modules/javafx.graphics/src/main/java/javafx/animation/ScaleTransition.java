@@ -35,7 +35,7 @@ import javafx.util.Duration;
 
 /**
  * This {@code Transition} creates a scale animation that spans its
- * {@link #duration}. This is done by updating the {@code scaleX},
+ * {@link #durationProperty() duration}. This is done by updating the {@code scaleX},
  * {@code scaleY} and {@code scaleZ} variables of the {@code node} at regular
  * interval.
  * <p>

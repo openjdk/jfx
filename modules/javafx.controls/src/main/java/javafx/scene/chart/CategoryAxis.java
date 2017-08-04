@@ -234,7 +234,6 @@ public final class CategoryAxis extends Axis<String> {
      * Returns a {@link ObservableList} of categories plotted on this axis.
      *
      * @return ObservableList of categories for this axis.
-     * @see #categories
      */
     public final ObservableList<String> getCategories() {
         return categories.get();
