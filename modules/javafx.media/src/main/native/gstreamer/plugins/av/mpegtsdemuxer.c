@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,6 +75,7 @@ struct _MpegTSDemuxer
     Stream            audio;
 
     volatile gboolean is_eos;
+    volatile gboolean is_last_buffer_send;
     volatile gboolean is_reading;
     volatile gboolean is_flushing;
     volatile gboolean is_closing;
@@ -463,6 +464,7 @@ static gboolean mpegts_demuxer_sink_event(GstPad *pad, GstObject *parent, GstEve
 
                 demuxer->audio.discont = demuxer->video.discont = TRUE;
                 demuxer->is_eos = FALSE;
+                demuxer->is_last_buffer_send = FALSE;
                 demuxer->is_reading = TRUE;
 
                 if (!demuxer->reader_thread)
@@ -865,17 +867,11 @@ static ParseAction mpegts_demuxer_read_frame(MpegTSDemuxer *demuxer)
 #endif
             break;
 
-        case AVERROR_EOF:
-#ifdef DEBUG_OUTPUT
-            g_print("MpegTS process: AVERROR_EOF\n");
-#endif
-            if (demuxer->is_eos)
-                mpegts_demuxer_push_to_sources(demuxer, gst_event_new_eos());
-            result = PA_STOP;
-            break;
-
         default:
-            post_error(demuxer, "LibAV stream parse error", ret, GST_STREAM_ERROR_DEMUX);
+            if (demuxer->is_eos && demuxer->is_last_buffer_send) // Send EOS
+                mpegts_demuxer_push_to_sources(demuxer, gst_event_new_eos());
+            else
+                post_error(demuxer, "LibAV stream parse error", ret, GST_STREAM_ERROR_DEMUX); // Send Error
             result = PA_STOP;
             break;
     }
@@ -1021,8 +1017,10 @@ static int mpegts_demuxer_read_packet(void *opaque, uint8_t *buffer, int size)
 
     if (demuxer->is_reading && !demuxer->is_flushing)
     {
-        if (demuxer->is_eos && available < size)
+        if (demuxer->is_eos && available <= size) {
+            demuxer->is_last_buffer_send = TRUE; // Last buffer
             size = available;
+        }
 
         if (size > 0)
         {
@@ -1041,7 +1039,7 @@ static int mpegts_demuxer_read_packet(void *opaque, uint8_t *buffer, int size)
         }
     }
     else
-        result = AVERROR_EXIT;
+        result = 0; // No more data
 
     g_mutex_unlock(&demuxer->lock);
 
@@ -1166,6 +1164,7 @@ static void init_stream(Stream* stream)
 static void mpegts_demuxer_init_state(MpegTSDemuxer *demuxer)
 {
     demuxer->is_eos = FALSE;
+    demuxer->is_last_buffer_send = FALSE;
     demuxer->is_flushing = FALSE;
     demuxer->is_reading = TRUE;
     demuxer->is_closing = FALSE;
