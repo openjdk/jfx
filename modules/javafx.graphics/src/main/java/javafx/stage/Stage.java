@@ -40,6 +40,7 @@ import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
 
+import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.stage.StageHelper;
@@ -692,7 +693,7 @@ public class Stage extends Window {
      *
      * @defaultValue empty
      */
-    private ObservableList<Image> icons = new TrackableObservableList<Image>() {
+    private ObservableList<Image> icons = new VetoableListDecorator<Image>(new TrackableObservableList<Image>() {
         @Override protected void onChanged(Change<Image> c) {
             List<Object> platformImages = new ArrayList<Object>();
             for (Image icon : icons) {
@@ -700,6 +701,15 @@ public class Stage extends Window {
             }
             if (getPeer() != null) {
                 getPeer().setIcons(platformImages);
+            }
+        }
+    }) {
+        @Override protected void onProposedChange(
+                final List<Image> toBeAddedIcons, int[] indices) {
+            for (Image icon : toBeAddedIcons) {
+                if (icon == null) {
+                    throw new NullPointerException("icon can not be null.");
+                }
             }
         }
     };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.javafx.stage;
 
+import java.util.ArrayList;
+import javafx.scene.image.Image;
 import com.sun.javafx.stage.WindowHelper;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -453,5 +455,60 @@ public class StageTest {
         assertEquals(50.0, peer.y, 0.0001);
         assertEquals(400.0, peer.width, 0.0001);
         assertEquals(300.0, peer.height, 0.0001);
+    }
+
+    @Test
+    public void testAddAndSetNullIcon() {
+        String failMessage = "NullPointerException is expected.";
+        ArrayList<Image> imageList = new ArrayList<>();
+        imageList.add(null);
+        try {
+            s.getIcons().add(null);
+            throw new Exception();
+        } catch (Exception e) {
+            assertTrue(failMessage, e instanceof NullPointerException);
+        }
+        try {
+            s.getIcons().add(0, null);
+            throw new Exception();
+        } catch (Exception e) {
+            assertTrue(failMessage, e instanceof NullPointerException);
+        }
+        try {
+            s.getIcons().addAll(null, null);
+            throw new Exception();
+        } catch (Exception e) {
+            assertTrue(failMessage, e instanceof NullPointerException);
+        }
+        try {
+            s.getIcons().addAll(imageList);
+            throw new Exception();
+        } catch (Exception e) {
+            assertTrue(failMessage, e instanceof NullPointerException);
+        }
+        try {
+            s.getIcons().addAll(0, imageList);
+            throw new Exception();
+        } catch (Exception e) {
+            assertTrue(failMessage, e instanceof NullPointerException);
+        }
+        try {
+            s.getIcons().set(0, null);
+            throw new Exception();
+        } catch (Exception e) {
+            assertTrue(failMessage, e instanceof NullPointerException);
+        }
+        try {
+            s.getIcons().setAll(imageList);
+            throw new Exception();
+        } catch (Exception e) {
+            assertTrue(failMessage, e instanceof NullPointerException);
+        }
+        try {
+            s.getIcons().setAll(null, null);
+            throw new Exception();
+        } catch (Exception e) {
+            assertTrue(failMessage, e instanceof NullPointerException);
+        }
     }
 }
