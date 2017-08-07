@@ -880,10 +880,11 @@ public class JFXPanel extends JComponent {
 
     @Override
     public InputMethodRequests getInputMethodRequests() {
-        if (scenePeer == null) {
+        EmbeddedSceneInterface scene = scenePeer;
+        if (scene == null) {
             return null;
         }
-        return new InputMethodSupport.InputMethodRequestsAdapter(scenePeer.getInputMethodRequests());
+        return new InputMethodSupport.InputMethodRequestsAdapter(scene.getInputMethodRequests());
     }
 
     /**
