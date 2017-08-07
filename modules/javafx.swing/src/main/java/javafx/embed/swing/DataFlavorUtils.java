@@ -62,8 +62,7 @@ final class DataFlavorUtils {
             DataFlavor flavor = null;
             try {
                 flavor = new DataFlavor(mime);
-            } catch (ClassNotFoundException e) {
-                // FIXME: what to do?
+            } catch (ClassNotFoundException | IllegalArgumentException e) {
                 continue;
             }
             flavors.add(flavor);
