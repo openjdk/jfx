@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,9 +38,8 @@ public abstract class WCImageDecoder {
 
     /**
      * Returns image size.
-     * @param size a buffer of size 2.
      */
-    protected abstract void getImageSize(int[] size);
+    protected abstract int[] getImageSize();
 
     /**
      * Returns a number of frames of the decoded image.
@@ -49,21 +48,35 @@ public abstract class WCImageDecoder {
      */
     protected abstract int getFrameCount();
 
-    /*
-     * Returns image frame at the specified index. The [data] parameter is
-     * either null or an array of size 5. If non-null, it should be filled
-     * as follows:
-     *  1 if the frame is complete, 0 otherwise;
-     *  frame width
-     *  frame height
-     *  frame duration in milliseconds
-     *  1 if the frame has translucent pixels, 0 otherwise
+    /**
+     * Returns image frame at the specified index.
+     * @param index frame index
      */
-    protected abstract WCImageFrame getFrame(int idx, int[] data);
+    protected abstract WCImageFrame getFrame(int index);
+
+    /**
+     * Returns frame duration in ms
+     * @param index frame index
+     */
+    protected abstract int getFrameDuration(int index);
+
+    /**
+     * Returns frame size, array[0] represents width and array[1]
+     * represents height.
+     * @param index frame index
+     */
+    protected abstract int[] getFrameSize(int index);
+
+    /**
+     * Returns whether the frame is complete or partial
+     * @param index frame index
+     */
+    protected abstract boolean getFrameCompleteStatus(int index);
 
     protected abstract void loadFromResource(String name);
 
     protected abstract void destroy();
 
     protected abstract String getFilenameExtension();
+
 }

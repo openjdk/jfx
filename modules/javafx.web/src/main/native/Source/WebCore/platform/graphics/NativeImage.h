@@ -38,7 +38,7 @@ typedef struct CGImage* CGImageRef;
 #elif USE(WINGDI)
 #include "SharedBitmap.h"
 #elif PLATFORM(JAVA)
-#include "ImageFrameData.h"
+#include "RQRef.h"
 #endif
 
 #if USE(DIRECT2D)
@@ -62,8 +62,7 @@ typedef RefPtr<cairo_surface_t> NativeImagePtr;
 #elif USE(WINGDI)
 typedef RefPtr<SharedBitmap> NativeImagePtr;
 #elif PLATFORM(JAVA)
-class ImageFrameData;
-typedef RefPtr<ImageFrameData> NativeImagePtr;
+typedef RefPtr<RQRef> NativeImagePtr;
 #endif
 
 IntSize nativeImageSize(const NativeImagePtr&);

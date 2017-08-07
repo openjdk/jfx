@@ -1,6 +1,27 @@
 /*
  * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
- */
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+*/
 
 #include "config.h"
 
@@ -23,12 +44,33 @@ namespace WebCore {
 
 IntSize nativeImageSize(const NativeImagePtr& image)
 {
-    return image && image->frame() ? image->size() : IntSize();
+    if (!image) {
+        return {};
+    }
+
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID midGetSize = env->GetMethodID(
+        PG_GetImageFrameClass(env),
+        "getSize",
+        "()[I");
+    ASSERT(midGetSize);
+    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
+                        jobject(*image.get()),
+                        midGetSize));
+    if (!jsize) {
+        return {};
+    }
+
+    jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
+    IntSize frameSize(size[0], size[1]);
+    env->ReleasePrimitiveArrayCritical(jsize, size, 0);
+    return frameSize;
 }
 
 bool nativeImageHasAlpha(const NativeImagePtr& image)
 {
-    return image && image->frame() && image->hasAlpha();
+    // FIXME-java: Get alpha details from ImageMetadata class
+    return true;
 }
 
 Color nativeImageSinglePixelSolidColor(const NativeImagePtr&)
@@ -43,7 +85,7 @@ float subsamplingScale(GraphicsContext&, const FloatRect&, const FloatRect&)
 
 void drawNativeImage(const NativeImagePtr& image, GraphicsContext& context, const FloatRect& destRect, const FloatRect& srcRect, const IntSize&, CompositeOperator op, BlendMode mode, const ImageOrientation& orientation)
 {
-    if (!image || !image->frame()) {
+    if (!image) {
         return;
     }
     context.save();
@@ -77,7 +119,7 @@ void drawNativeImage(const NativeImagePtr& image, GraphicsContext& context, cons
 
     context.platformContext()->rq().freeSpace(72)
         << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
-        << image->frame()
+        << image
         << adjustedDestRect.x() << adjustedDestRect.y()
         << adjustedDestRect.width() << adjustedDestRect.height()
         << adjustedSrcRect.x() << adjustedSrcRect.y()

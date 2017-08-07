@@ -32,7 +32,7 @@ void Image::drawPattern(GraphicsContext& gc, const FloatRect& destRect, const Fl
     }
 
     NativeImagePtr currFrame = nativeImageForCurrentFrame();
-    if (!currFrame || !currFrame->frame()) {
+    if (!currFrame) {
         return;
     }
 
@@ -49,7 +49,7 @@ void Image::drawPattern(GraphicsContext& gc, const FloatRect& destRect, const Fl
 
     gc.platformContext()->rq().freeSpace(13 * 4)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWPATTERN
-    << currFrame->frame()
+    << currFrame
     << srcRect.x() << srcRect.y() << srcRect.width() << srcRect.height()
     << RQRef::create(transform)
     << phase.x() << phase.y()
@@ -69,13 +69,13 @@ void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const Float
     }
 
     NativeImagePtr currFrame = nativeImageForCurrentFrame();
-    if (!currFrame || !currFrame->frame()) {
+    if (!currFrame) {
         return;
     }
 
     gc.platformContext()->rq().freeSpace(72)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWIMAGE
-    << currFrame->frame()
+    << currFrame
     << dstRect.x() << dstRect.y()
     << dstRect.width() << dstRect.height()
     << srcRect.x() << srcRect.y()

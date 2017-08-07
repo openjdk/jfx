@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -138,7 +138,8 @@ public final class PrismGraphicsManager extends WCGraphicsManager {
         final WCImageImpl wimg = new WCImageImpl(data, w, h);
 
         return new WCImageFrame() {
-            public WCImage getFrame() { return wimg; }
+            @Override public WCImage getFrame() { return wimg; }
+            @Override public int[] getSize() { return new int[] {w, h}; }
         };
     }
 

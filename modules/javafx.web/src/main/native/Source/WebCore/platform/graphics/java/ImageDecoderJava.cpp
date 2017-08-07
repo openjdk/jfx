@@ -1,12 +1,32 @@
 /*
  * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
- */
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+*/
 
 #include "config.h"
 
 #include "ImageDecoderJava.h"
 
-#include "ImageFrameData.h"
 #include "NotImplemented.h"
 #include "SharedBuffer.h"
 #include <wtf/java/JavaEnv.h>
@@ -21,7 +41,7 @@ namespace WebCore {
 
     ~ImageDecoderCounter() {
       if ((created - deleted) != 0) {
-        fprintf(stderr, "LEAK: %d image sources (%d - %d)\n",
+          fprintf(stderr, "LEAK: %d image sources (%d - %d)\n",
                 (created - deleted), created, deleted);
       }
     }
@@ -109,20 +129,17 @@ bool ImageDecoder::isSizeAvailable() const
     static jmethodID midGetImageSize = env->GetMethodID(
         PG_GetGraphicsImageDecoderClass(env),
         "getImageSize",
-        "([I)V");
+        "()[I");
     ASSERT(midGetImageSize);
 
-    JLocalRef<jintArray> jbuf(env->NewIntArray(2));
-    CheckAndClearException(env); // OOME
-    ASSERT(jbuf);
-
-    env->CallVoidMethod(m_nativeDecoder, midGetImageSize, (jintArray)jbuf);
+    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
+                m_nativeDecoder, midGetImageSize));
     CheckAndClearException(env);
 
-    jint *buf = (jint*)env->GetPrimitiveArrayCritical(jbuf, 0);
-    m_size.setWidth(buf[0]);
-    m_size.setHeight(buf[1]);
-    env->ReleasePrimitiveArrayCritical(jbuf, buf, 0);
+    jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
+    m_size.setWidth(size[0]);
+    m_size.setHeight(size[1]);
+    env->ReleasePrimitiveArrayCritical(jsize, size, 0);
 
     return m_size.width();
 }
@@ -146,7 +163,7 @@ size_t ImageDecoder::frameCount() const
         : count;
 }
 
-NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const std::optional<IntSize>&)
+NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLevel samplingLevel, const std::optional<IntSize>&)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_nativeDecoder);
@@ -154,42 +171,31 @@ NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLeve
     static jmethodID midGetFrame = env->GetMethodID(
         PG_GetGraphicsImageDecoderClass(env),
         "getFrame",
-        "(I[I)Lcom/sun/webkit/graphics/WCImageFrame;");
+        "(I)Lcom/sun/webkit/graphics/WCImageFrame;");
     ASSERT(midGetFrame);
-
-    JLocalRef<jintArray> jbuf(env->NewIntArray(5));
-    CheckAndClearException(env); // OOME
-    ASSERT(jbuf);
 
     JLObject frame(env->CallObjectMethod(
         m_nativeDecoder,
         midGetFrame,
-        idx,
-        (jintArray)jbuf));
+        idx));
     CheckAndClearException(env);
 
-    if (m_frameInfos.size() <= idx)
-        m_frameInfos.grow(idx + 1);
-
-    jint* buf = (jint*)env->GetPrimitiveArrayCritical(jbuf, 0);
-    auto frameInfo = ImageFrameData::create(frame, buf);
-    env->ReleasePrimitiveArrayCritical(jbuf, buf, 0);
-    m_frameInfos[idx] = frameInfo;
-    return frameInfo;
-}
-
-bool ImageDecoder::isMetaDataExists(size_t idx) const
-{
-    return m_frameInfos.size() > idx;
+    return RQRef::create(frame);
 }
 
 float ImageDecoder::frameDurationAtIndex(size_t idx) const
 {
-    if (!isMetaDataExists(idx))
-        return 0;
-
-    ASSERT(idx < m_frameInfos.size());
-    return m_frameInfos[idx]->m_duration;
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID midGetDuration = env->GetMethodID(
+        PG_GetGraphicsImageDecoderClass(env),
+        "getFrameDuration",
+        "(I)I");
+    ASSERT(midGetDuration);
+    jint duration = env->CallIntMethod(
+                        m_nativeDecoder,
+                        midGetDuration,
+                        idx);
+    return duration / 1000.0f;
 }
 
 IntSize ImageDecoder::size() const
@@ -199,11 +205,25 @@ IntSize ImageDecoder::size() const
 
 IntSize ImageDecoder::frameSizeAtIndex(size_t idx, SubsamplingLevel) const
 {
-    if (!isMetaDataExists(idx))
-        return size();
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID midGetFrameSize = env->GetMethodID(
+        PG_GetGraphicsImageDecoderClass(env),
+        "getFrameSize",
+        "(I)[I");
+    ASSERT(midGetFrameSize);
+    JLocalRef<jintArray> jsize((jintArray)env->CallObjectMethod(
+                        m_nativeDecoder,
+                        midGetFrameSize,
+                        idx));
+    if (!jsize) {
+        return m_size;
+    }
 
-    ASSERT(idx < m_frameInfos.size());
-    return m_frameInfos[idx]->m_size;
+    jint* size = (jint*)env->GetPrimitiveArrayCritical((jintArray)jsize, 0);
+    IntSize frameSize(size[0], size[1]);
+    env->ReleasePrimitiveArrayCritical(jsize, size, 0);
+
+    return frameSize;
 }
 
 bool ImageDecoder::frameAllowSubsamplingAtIndex(size_t) const
@@ -214,30 +234,27 @@ bool ImageDecoder::frameAllowSubsamplingAtIndex(size_t) const
 
 bool ImageDecoder::frameHasAlphaAtIndex(size_t idx) const
 {
-    if (!isMetaDataExists(idx))
-        return true;
-
-    ASSERT(idx < m_frameInfos.size());
-    return m_frameInfos[idx]->m_hasAlpha;
+    // FIXME-java: Read it from ImageMetadata
+    return true;
 }
 
 bool ImageDecoder::frameIsCompleteAtIndex(size_t idx) const
 {
-    if (!isMetaDataExists(idx))
-        return false;
-
-    ASSERT(idx < m_frameInfos.size());
-    return m_frameInfos[idx]->m_complete;
+    JNIEnv* env = WebCore_GetJavaEnv();
+    static jmethodID midGetFrameIsComplete = env->GetMethodID(
+        PG_GetGraphicsImageDecoderClass(env),
+        "getFrameCompleteStatus",
+        "(I)Z");
+    ASSERT(midGetFrameIsComplete);
+    return (bool)env->CallBooleanMethod(m_nativeDecoder,
+            midGetFrameIsComplete,
+            idx);
 }
 
-unsigned ImageDecoder::frameBytesAtIndex(size_t idx, SubsamplingLevel) const
+unsigned ImageDecoder::frameBytesAtIndex(size_t idx, SubsamplingLevel samplingLevel) const
 {
-    if (!isMetaDataExists(idx))
-        return 0;
-
-    //utatodo: need support for variable frame size.
-    ASSERT(idx < m_frameInfos.size());
-    return m_frameInfos[idx]->m_size.width() * m_frameInfos[idx]->m_size.height() * 4;
+    auto frameSize = frameSizeAtIndex(idx, samplingLevel);
+    return (frameSize.area() * 4).unsafeGet();
 }
 
 RepetitionCount ImageDecoder::repetitionCount() const

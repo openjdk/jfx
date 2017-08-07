@@ -116,7 +116,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/java/GraphicsContextJava.cpp
     platform/graphics/java/IconJava.cpp
     platform/graphics/java/ImageBufferJava.cpp
-    platform/graphics/java/ImageFrameData.cpp
     platform/graphics/java/ImageJava.cpp
     platform/graphics/java/ImageDecoderJava.cpp  # FIXME: Add only if IMAGEIO?
     platform/graphics/java/MediaPlayerPrivateJava.cpp

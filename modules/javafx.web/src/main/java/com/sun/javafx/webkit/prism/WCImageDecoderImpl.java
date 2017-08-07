@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -70,7 +70,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
      * It should free all complex object on the java layer and explicitely
      * destroy objects which has native resources.
      */
-    @Override protected void destroy() {
+    @Override protected synchronized void destroy() {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("%X Destroy image decoder", hashCode()));
         }
@@ -213,12 +213,14 @@ final class WCImageDecoderImpl extends WCImageDecoder {
         }
     };
 
-    @Override protected void getImageSize(int[] size) {
+    @Override protected int[] getImageSize() {
+        final int[] size = THREAD_LOCAL_SIZE_ARRAY.get();
         size[0] = imageWidth;
         size[1] = imageHeight;
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("%X image size = %dx%d", hashCode(), size[0], size[1]));
         }
+        return size;
     }
 
     private static final class Frame extends WCImageFrame {
@@ -232,12 +234,19 @@ final class WCImageDecoderImpl extends WCImageDecoder {
             return image;
         }
 
+        @Override public int[] getSize() {
+            final int[] size = THREAD_LOCAL_SIZE_ARRAY.get();
+            size[0] = image.getWidth();
+            size[1] = image.getHeight();
+            return size;
+        }
+
         @Override protected void destroyDecodedData() {
             image = null;
         }
     }
 
-    private void setFrames(ImageFrame[] frames) {
+    private synchronized void setFrames(ImageFrame[] frames) {
         this.frames = frames;
         this.images = null;
         frameCount = frames == null ? 0 : frames.length;
@@ -255,7 +264,9 @@ final class WCImageDecoderImpl extends WCImageDecoder {
         return frameCount;
     }
 
-    @Override protected WCImageFrame getFrame(int idx, int[] data) {
+    // Avoid redundant decoding by async decoder threads, currently we don't
+    // support per frame decoding.
+    @Override protected synchronized WCImageFrame getFrame(int idx) {
         ImageFrame frame = getImageFrame(idx);
         if (frame != null) {
             if (log.isLoggable(Level.FINE)) {
@@ -264,26 +275,6 @@ final class WCImageDecoderImpl extends WCImageDecoder {
                         hashCode(), idx, type));
             }
             PrismImage img = getPrismImage(idx, frame);
-
-            if (data != null) {
-                ImageMetadata meta = frame.getMetadata();
-                int dur = (meta == null || meta.delayTime == null) ? 0 : meta.delayTime;
-                // Many annoying ads try to animate too fast.
-                // See RT-13535 or <http://webkit.org/b/36082>.
-                if (dur < 11) dur = 100;
-
-                data[0] = (idx < frames.length - 1) ? 1 : 0;
-                data[1] = img.getWidth();
-                data[2] = img.getHeight();
-                data[3] = dur;
-                data[4] = 1;  /// hasAlpha
-
-                if (log.isLoggable(Level.FINE)) {
-                    log.fine(String.format(
-                            "%X getFrame(%d): complete=%d, size=%dx%d, duration=%d, hasAlpha=%d",
-                            hashCode(), idx, data[0], data[1], data[2], data[3], data[4]));
-                }
-            }
             return new Frame(img);
         }
         if (log.isLoggable(Level.FINE)) {
@@ -292,7 +283,46 @@ final class WCImageDecoderImpl extends WCImageDecoder {
         return null;
     }
 
-    private ImageFrame getImageFrame(int idx) {
+    private synchronized ImageMetadata getFrameMetadata(int idx) {
+        return frames != null && frames.length > idx && frames[idx] != null ? frames[idx].getMetadata() : null;
+    }
+
+    @Override protected int getFrameDuration(int idx) {
+        final ImageMetadata meta = getFrameMetadata(idx);
+        int dur = (meta == null || meta.delayTime == null) ? 0 : meta.delayTime;
+        // Many annoying ads try to animate too fast.
+        // See RT-13535 or <http://webkit.org/b/36082>.
+        if (dur < 11) dur = 100;
+        return dur;
+    }
+
+    // Per thread array cache to avoid repeated creation of int[]
+    private static final ThreadLocal<int[]> THREAD_LOCAL_SIZE_ARRAY =
+        new ThreadLocal<int[]> () {
+            @Override protected int[] initialValue() {
+                return new int[2];
+            }
+    };
+
+    @Override protected int[] getFrameSize(int idx) {
+        final ImageMetadata meta = getFrameMetadata(idx);
+        if (meta == null) {
+            return null;
+        }
+        final int[] size = THREAD_LOCAL_SIZE_ARRAY.get();
+        size[0] = meta.imageWidth;
+        size[1] = meta.imageHeight;
+        return size;
+    }
+
+    @Override protected synchronized boolean getFrameCompleteStatus(int idx) {
+        // For GIF images there is no better way to find whether a given frame
+        // is completely decoded or not. As of now relying on framesDecoded
+        // which will wait for all the frames to decode.
+        return getFrameMetadata(idx) != null && framesDecoded;
+    }
+
+    private synchronized ImageFrame getImageFrame(int idx) {
         if (!fullDataReceived) {
             startLoader();
         } else if (fullDataReceived && !framesDecoded) {
@@ -305,7 +335,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
                 : null;
     }
 
-    private PrismImage getPrismImage(int idx, ImageFrame frame) {
+    private synchronized PrismImage getPrismImage(int idx, ImageFrame frame) {
         if (this.images == null) {
             this.images = new PrismImage[this.frames.length];
         }
