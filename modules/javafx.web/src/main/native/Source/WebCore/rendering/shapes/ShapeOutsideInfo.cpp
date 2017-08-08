@@ -163,6 +163,7 @@ const Shape& ShapeOutsideInfo::computedShape() const
 {
     if (Shape* shape = m_shape.get())
         return *shape;
+    SetForScope<bool> isInComputingShape(m_isComputingShape, true);
 
     const RenderStyle& style = m_renderer.style();
     ASSERT(m_renderer.containingBlock());

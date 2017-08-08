@@ -1728,10 +1728,13 @@ void RenderBox::imageChanged(WrappedImagePtr image, const IntRect*)
     }
 
     ShapeValue* shapeOutsideValue = style().shapeOutside();
-    if (!view().frameView().isInRenderTreeLayout() && isFloating() && shapeOutsideValue && shapeOutsideValue->image() && shapeOutsideValue->image()->data() == image) {
-        ShapeOutsideInfo::ensureInfo(*this).markShapeAsDirty();
-        markShapeOutsideDependentsForLayout();
-    }
+    if (!view().frameView().isInLayout() && isFloating() && shapeOutsideValue && shapeOutsideValue->image() && shapeOutsideValue->image()->data() == image) {
+        ShapeOutsideInfo& info = ShapeOutsideInfo::ensureInfo(*this);
+        if (!info.isComputingShape()) {
+            info.markShapeAsDirty();
+            markShapeOutsideDependentsForLayout();
+        }
+     }
 
     bool didFullRepaint = repaintLayerRectsForImage(image, style().backgroundLayers(), true);
     if (!didFullRepaint)
