@@ -25,7 +25,7 @@
 
 package com.oracle.tools.packager;
 
-import jdk.packager.internal.JLinkBundlerHelper;
+import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 
@@ -56,8 +56,8 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import static jdk.packager.internal.JLinkBundlerHelper.findPathOfModule;
-import static jdk.packager.internal.JLinkBundlerHelper.listOfPathToString;
+import static jdk.packager.internal.legacy.JLinkBundlerHelper.findPathOfModule;
+import static jdk.packager.internal.legacy.JLinkBundlerHelper.listOfPathToString;
 
 public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
 

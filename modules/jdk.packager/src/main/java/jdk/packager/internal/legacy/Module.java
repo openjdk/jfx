@@ -23,7 +23,7 @@
  * questions.
  */
 
-package jdk.packager.internal;
+package jdk.packager.internal.legacy;
 
 import java.io.File;
 import java.io.FileInputStream;

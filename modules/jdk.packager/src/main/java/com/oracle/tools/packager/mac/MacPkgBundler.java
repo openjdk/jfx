@@ -55,7 +55,7 @@ import java.util.ResourceBundle;
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEYCHAIN;
 import static com.oracle.tools.packager.mac.MacBaseInstallerBundler.SIGNING_KEY_USER;
-import jdk.packager.internal.mac.MacCertificate;
+import jdk.packager.internal.legacy.mac.MacCertificate;
 
 public class MacPkgBundler extends MacBaseInstallerBundler {
 

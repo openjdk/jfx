@@ -37,7 +37,7 @@ import java.util.jar.Manifest;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 
-import jdk.packager.internal.JLinkBundlerHelper;
+import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 
 public class BundleParams {

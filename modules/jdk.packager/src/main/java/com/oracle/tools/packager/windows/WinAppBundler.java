@@ -34,9 +34,9 @@ import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
-import jdk.packager.builders.windows.WindowsAppImageBuilder;
+import jdk.packager.internal.legacy.builders.windows.WindowsAppImageBuilder;
 
-import jdk.packager.internal.JLinkBundlerHelper;
+import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -50,7 +50,7 @@ import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.*;
-import jdk.packager.builders.AbstractAppImageBuilder;
+import jdk.packager.internal.legacy.builders.AbstractAppImageBuilder;
 
 public class WinAppBundler extends AbstractImageBundler {
 

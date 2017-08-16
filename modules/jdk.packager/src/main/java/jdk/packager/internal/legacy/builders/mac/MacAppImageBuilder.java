@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jdk.packager.builders.mac;
+package jdk.packager.internal.legacy.builders.mac;
 
 
 import com.oracle.tools.packager.BundlerParamInfo;
@@ -32,8 +32,8 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.mac.MacResources;
 
-import jdk.packager.builders.AbstractAppImageBuilder;
-import jdk.packager.internal.JLinkBundlerHelper;
+import jdk.packager.internal.legacy.builders.AbstractAppImageBuilder;
+import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 import java.io.BufferedWriter;
 import java.io.File;

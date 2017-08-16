@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jdk.packager.builders.linux;
+package jdk.packager.internal.legacy.builders.linux;
 
 
 import com.oracle.tools.packager.BundlerParamInfo;
@@ -31,7 +31,7 @@ import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.linux.LinuxResources;
-import jdk.packager.builders.AbstractAppImageBuilder;
+import jdk.packager.internal.legacy.builders.AbstractAppImageBuilder;
 
 import java.io.File;
 import java.io.FileInputStream;

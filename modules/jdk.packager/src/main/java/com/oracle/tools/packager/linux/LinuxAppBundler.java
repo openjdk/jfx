@@ -37,9 +37,9 @@ import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
-import jdk.packager.builders.linux.LinuxAppImageBuilder;
+import jdk.packager.internal.legacy.builders.linux.LinuxAppImageBuilder;
 
-import jdk.packager.internal.JLinkBundlerHelper;
+import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +52,7 @@ import java.util.Map;
 import java.util.ResourceBundle;
 
 import static com.oracle.tools.packager.StandardBundlerParam.*;
-import jdk.packager.builders.AbstractAppImageBuilder;
+import jdk.packager.internal.legacy.builders.AbstractAppImageBuilder;
 
 public class LinuxAppBundler extends AbstractImageBundler {
 

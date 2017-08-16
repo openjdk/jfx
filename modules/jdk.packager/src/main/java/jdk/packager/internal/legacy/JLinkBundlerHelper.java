@@ -23,7 +23,7 @@
  * questions.
  */
 
-package jdk.packager.internal;
+package jdk.packager.internal.legacy;
 
 
 import com.oracle.tools.packager.StandardBundlerParam;
@@ -70,8 +70,8 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import jdk.packager.builders.AbstractAppImageBuilder;
-import jdk.packager.internal.Module;
+import jdk.packager.internal.legacy.builders.AbstractAppImageBuilder;
+import jdk.packager.internal.legacy.Module;
 import jdk.tools.jlink.internal.packager.AppRuntimeImageBuilder;
 
 

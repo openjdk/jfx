@@ -43,7 +43,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import jdk.packager.internal.JLinkBundlerHelper;
+import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 import static com.oracle.tools.packager.jnlp.JNLPBundler.*;
 

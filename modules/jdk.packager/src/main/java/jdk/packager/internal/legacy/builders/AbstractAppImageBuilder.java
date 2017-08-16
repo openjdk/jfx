@@ -23,15 +23,13 @@
  * questions.
  */
 
-package jdk.packager.builders;
+package jdk.packager.internal.legacy.builders;
 
 
-import jdk.packager.internal.JLinkBundlerHelper;
 import com.oracle.tools.packager.RelativeFileSet;
 
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.StandardBundlerParam;
-import jdk.packager.internal.Module;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -53,6 +51,8 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 import static com.oracle.tools.packager.StandardBundlerParam.ARGUMENTS;
 import static com.oracle.tools.packager.StandardBundlerParam.USER_JVM_OPTIONS;
 import java.util.ArrayList;
+import jdk.packager.internal.legacy.JLinkBundlerHelper;
+import jdk.packager.internal.legacy.Module;
 
 
 public abstract class AbstractAppImageBuilder {

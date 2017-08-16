@@ -38,7 +38,7 @@ import static com.oracle.tools.packager.StandardBundlerParam.SECONDARY_LAUNCHERS
 import static com.oracle.tools.packager.StandardBundlerParam.SERVICE_HINT;
 import static com.oracle.tools.packager.StandardBundlerParam.VERBOSE;
 import static com.oracle.tools.packager.windows.WindowsBundlerParam.*;
-import jdk.packager.internal.windows.WindowsDefender;
+import jdk.packager.internal.legacy.windows.WindowsDefender;
 
 public class WinExeBundler extends AbstractBundler {
 

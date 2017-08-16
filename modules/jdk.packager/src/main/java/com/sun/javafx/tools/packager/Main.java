@@ -40,7 +40,7 @@ import java.util.stream.Stream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import jdk.packager.internal.JLinkBundlerHelper;
+import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 
 public class Main {

@@ -22,7 +22,7 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package jdk.packager.internal;
+package jdk.packager.internal.legacy;
 
 
 import java.io.BufferedReader;

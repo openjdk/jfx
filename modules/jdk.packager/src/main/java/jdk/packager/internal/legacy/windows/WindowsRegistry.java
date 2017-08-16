@@ -23,7 +23,7 @@
  * questions.
  */
 
-package jdk.packager.internal.windows;
+package jdk.packager.internal.legacy.windows;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;

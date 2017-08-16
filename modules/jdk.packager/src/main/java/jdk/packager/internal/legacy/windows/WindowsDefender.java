@@ -23,7 +23,7 @@
  * questions.
  */
 
-package jdk.packager.internal.windows;
+package jdk.packager.internal.legacy.windows;
 
 import com.oracle.tools.packager.Platform;
 import java.util.List;
