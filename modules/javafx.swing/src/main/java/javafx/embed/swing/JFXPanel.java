@@ -701,11 +701,15 @@ public class JFXPanel extends JComponent {
     private void sendInputMethodEventToFX(InputMethodEvent e) {
         String t = InputMethodSupport.getTextForEvent(e);
 
+        int insertionIndex = 0;
+        if (e.getCaret() != null) {
+            insertionIndex = e.getCaret().getInsertionIndex();
+        }
         scenePeer.inputMethodEvent(
                 javafx.scene.input.InputMethodEvent.INPUT_METHOD_TEXT_CHANGED,
                 InputMethodSupport.inputMethodEventComposed(t, e.getCommittedCharacterCount()),
                 t.substring(0, e.getCommittedCharacterCount()),
-                e.getCaret().getInsertionIndex());
+                insertionIndex);
     }
 
     /**
