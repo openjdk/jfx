@@ -50,40 +50,6 @@ public abstract class Utilities {
     protected abstract PopupMenu createPopupMenu();
     protected abstract ContextMenu createContextMenu();
 
-    private static String fwkGetMIMETypeForExtension(String ext) {
-        return MimeTypeMapHolder.MIME_TYPE_MAP.get(ext);
-    }
-
-    private static final class MimeTypeMapHolder {
-        private static final Map<String, String> MIME_TYPE_MAP =
-                createMimeTypeMap();
-
-        private static Map<String,String> createMimeTypeMap() {
-            Map<String, String> mimeTypeMap = new HashMap<String, String>(21);
-            mimeTypeMap.put("txt", "text/plain");
-            mimeTypeMap.put("html", "text/html");
-            mimeTypeMap.put("htm", "text/html");
-            mimeTypeMap.put("css", "text/css");
-            mimeTypeMap.put("xml", "text/xml");
-            mimeTypeMap.put("xsl", "text/xsl");
-            mimeTypeMap.put("js", "application/x-javascript");
-            mimeTypeMap.put("xhtml", "application/xhtml+xml");
-            mimeTypeMap.put("svg", "image/svg+xml");
-            mimeTypeMap.put("svgz", "image/svg+xml");
-            mimeTypeMap.put("gif", "image/gif");
-            mimeTypeMap.put("jpg", "image/jpeg");
-            mimeTypeMap.put("jpeg", "image/jpeg");
-            mimeTypeMap.put("png", "image/png");
-            mimeTypeMap.put("tif", "image/tiff");
-            mimeTypeMap.put("tiff", "image/tiff");
-            mimeTypeMap.put("ico", "image/ico");
-            mimeTypeMap.put("cur", "image/ico");
-            mimeTypeMap.put("bmp", "image/bmp");
-            mimeTypeMap.put("mp3", "audio/mpeg");
-            return mimeTypeMap;
-        }
-    }
-
     private static Object fwkInvokeWithContext(final Method method,
                                                final Object instance,
                                                final Object[] args,
