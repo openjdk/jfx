@@ -46,7 +46,10 @@ elseif (APPLE)
 
     find_package(LibXml2 2.8.0 REQUIRED)
     find_package(LibXslt 1.1.7 REQUIRED)
-    set(CMAKE_SKIP_RPATH TRUE)
+
+    set(CMAKE_MACOSX_RPATH TRUE)
+    set(CMAKE_INSTALL_RPATH "@loader_path/.")
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 elseif (UNIX)
     #### ICU ####
     set(ICU_JAVA_COMMON_LIB icuuc)
