@@ -1009,7 +1009,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                 ** these is no font size set in webview,
                 ** let's just use the default....
                 */
-                if (!fontSizeComboBox.getValue().equals(sizeFontMap.get(SIZE_SMALL))) {
+                if ((fontSizeComboBox.getValue() == null) || !fontSizeComboBox.getValue().equals(sizeFontMap.get(SIZE_SMALL))) {
                     fontSizeComboBox.setValue(sizeFontMap.get(SIZE_SMALL));
                 }
             }
