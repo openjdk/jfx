@@ -444,6 +444,16 @@ public class JFXPanel extends JComponent {
             (e.getButton() == MouseEvent.BUTTON1)) {
             if (!hasFocus()) {
                 requestFocus();
+                // this focus request event goes to eventqueue and will be
+                // asynchronously handled so MOUSE_PRESSED event will not be
+                // honoured by FX immediately due to lack of focus in fx
+                // component. Fire the same MOUSE_PRESSED event after
+                // requestFocus() so that 2nd mouse press will be honoured
+                // since now fx have focus
+                AppContext context = SunToolkit.targetToAppContext(this);
+                if (context != null) {
+                    SunToolkit.postEvent(context, e);
+                }
             }
         }
 
