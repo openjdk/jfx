@@ -143,16 +143,16 @@ public class JFXPanel extends JComponent {
     private static AtomicInteger instanceCount = new AtomicInteger(0);
     private static PlatformImpl.FinishListener finishListener;
 
-    private HostContainer hostContainer;
+    private transient HostContainer hostContainer;
 
-    private volatile EmbeddedWindow stage;
-    private volatile Scene scene;
+    private transient volatile EmbeddedWindow stage;
+    private transient volatile Scene scene;
 
     // Accessed on EDT only
-    private SwingDnD dnd;
+    private transient SwingDnD dnd;
 
-    private EmbeddedStageInterface stagePeer;
-    private EmbeddedSceneInterface scenePeer;
+    private transient EmbeddedStageInterface stagePeer;
+    private transient EmbeddedSceneInterface scenePeer;
 
     // The logical size of the FX content
     private int pWidth;
@@ -827,7 +827,7 @@ public class JFXPanel extends JComponent {
         }
     }
 
-    private final AWTEventListener ungrabListener = event -> {
+    private transient  AWTEventListener ungrabListener = event -> {
         if (event instanceof sun.awt.UngrabEvent) {
             SwingFXUtils.runOnFxThread(() -> {
                 if (JFXPanel.this.stagePeer != null) {
