@@ -297,15 +297,15 @@ public class JFXPanel extends JComponent {
         if (Toolkit.getToolkit().isFxUserThread()) {
             setSceneImpl(newScene);
         } else {
-            final CountDownLatch initLatch = new CountDownLatch(1);
-            Platform.runLater(() -> {
-                setSceneImpl(newScene);
-                initLatch.countDown();
-            });
-            try {
-                initLatch.await();
-            } catch (InterruptedException z) {
-                z.printStackTrace(System.err);
+            EventQueue eventQueue = AccessController.doPrivileged(
+                    (PrivilegedAction<EventQueue>) java.awt.Toolkit
+                            .getDefaultToolkit()::getSystemEventQueue);
+            SecondaryLoop secondaryLoop = eventQueue.createSecondaryLoop();
+            if (secondaryLoop.enter()) {
+                Platform.runLater(() -> {
+                    setSceneImpl(newScene);
+                });
+                secondaryLoop.exit();
             }
         }
     }
