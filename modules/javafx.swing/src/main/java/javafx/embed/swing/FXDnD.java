@@ -538,7 +538,7 @@ final class FXDnD {
                 node.removeEventHandler(DragEvent.DRAG_OVER, onDragOverHandler);
                 node.removeEventHandler(DragEvent.DRAG_DROPPED, onDragDroppedHandler);
 
-                isDropTargetListenerInstalled = true;
+                isDropTargetListenerInstalled = false;
             }
         });
     }
