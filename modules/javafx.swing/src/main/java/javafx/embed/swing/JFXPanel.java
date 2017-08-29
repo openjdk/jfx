@@ -830,7 +830,10 @@ public class JFXPanel extends JComponent {
     private transient  AWTEventListener ungrabListener = event -> {
         if (event instanceof sun.awt.UngrabEvent) {
             SwingFXUtils.runOnFxThread(() -> {
-                if (JFXPanel.this.stagePeer != null) {
+                if (JFXPanel.this.stagePeer != null &&
+                        getScene() != null &&
+                        getScene().getFocusOwner() != null &&
+                        getScene().getFocusOwner().isFocused()) {
                     JFXPanel.this.stagePeer.focusUngrab();
                 }
             });
