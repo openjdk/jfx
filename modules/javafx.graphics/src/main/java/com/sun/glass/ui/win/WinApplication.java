@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
+import com.sun.javafx.tk.Toolkit;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -96,6 +97,8 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
                 } else {
                     overrideUIScale = 1.0f;
                 }
+                // This loading of msvcp140.dll and vcruntime140.dll (VS2017) is required on Windows platforms
+                Toolkit.loadMSWindowsLibraries();
                 Application.loadNativeLibrary();
                 return null;
             }
