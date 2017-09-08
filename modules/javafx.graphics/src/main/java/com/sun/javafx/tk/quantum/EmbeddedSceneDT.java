@@ -59,8 +59,6 @@ final class EmbeddedSceneDT implements EmbeddedSceneDTInterface {
         assert dnd.isHostThread();
 
         return dnd.executeOnFXThread(() -> {
-            assert dragSource == null;
-            assert assistant == null;
 
             dragSource = ds;
             assistant = new EmbeddedDTAssistant(dragSource);
