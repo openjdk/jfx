@@ -79,6 +79,7 @@ final class EmbeddedSceneDnD {
     }
 
     public void onDropTargetReleased(final EmbeddedSceneDTInterface dt) {
+        assert fxDropTarget == dt;
 
         fxDropTarget = null;
     }

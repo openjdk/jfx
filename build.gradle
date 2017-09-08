@@ -3209,22 +3209,19 @@ project(":web") {
         def webkitOutputDir = cygpath("$buildDir/${t.name}")
         def webkitConfig = IS_DEBUG_NATIVE ? "Debug" : "Release"
 
-        File nativeBuildDir = new File("${webkitOutputDir}")
-        nativeBuildDir.mkdirs()
-
-            def compileNativeTask = task("compileNative${t.capital}", dependsOn: [generateHeaders, compileJava]) {
+        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [generateHeaders, compileJava]) {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             enabled =  (IS_COMPILE_WEBKIT)
 
             doLast {
                 exec {
-                    workingDir("$webkitOutputDir")
-                    commandLine("perl", "../../src/main/native/Tools/Scripts/set-webkit-configuration", "--$webkitConfig")
+                    workingDir("$projectDir/src/main/native")
+                    commandLine("perl", "Tools/Scripts/set-webkit-configuration", "--$webkitConfig")
                     environment(["WEBKIT_OUTPUTDIR" : webkitOutputDir])
                 }
 
                 exec {
-                    workingDir("$webkitOutputDir")
+                    workingDir("$projectDir/src/main/native")
                     def cmakeArgs = "-DENABLE_TOOLS=1"
                     if (t.name == "win") {
                         String parfaitPath = IS_COMPILE_PARFAIT ? System.getenv().get("PARFAIT_PATH") + ";" : "";
@@ -3259,7 +3256,6 @@ project(":web") {
                     environment([
                         "JAVA_HOME"       : JDK_HOME,
                         "WEBKIT_OUTPUTDIR" : webkitOutputDir,
-                        "PYTHONDONTWRITEBYTECODE" : "1",
                     ])
 
                     def targetCpuBitDepthSwitch = ""
@@ -3269,7 +3265,7 @@ project(":web") {
                         targetCpuBitDepthSwitch = "--32-bit"
                     }
                     cmakeArgs += " -DJAVAFX_RELEASE_VERSION=${jfxReleaseMajorVersion}"
-                    commandLine("perl", "$projectDir/src/main/native/Tools/Scripts/build-webkit",
+                    commandLine("perl", "Tools/Scripts/build-webkit",
                         "--java", "--icu-unicode", targetCpuBitDepthSwitch,
                         "--cmakeargs=${cmakeArgs}")
                 }
