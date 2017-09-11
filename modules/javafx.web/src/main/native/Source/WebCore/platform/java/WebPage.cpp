@@ -946,6 +946,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setUserAgent(defaultUserAgent());
     settings.setMaximumHTMLParserDOMTreeDepth(180);
     settings.setXSSAuditorEnabled(true);
+    settings.setInteractiveFormValidationEnabled(true);
 
     /* Using java logical fonts as defaults */
     settings.setSerifFontFamily("Serif");

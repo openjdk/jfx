@@ -486,6 +486,8 @@ if (IS_MAC) {
 defineProperty("HUDSON_JOB_NAME", "not_hudson")
 defineProperty("HUDSON_BUILD_NUMBER","0000")
 defineProperty("PROMOTED_BUILD_NUMBER", "0")
+defineProperty("MILESTONE_FCS", "false")
+ext.IS_MILESTONE_FCS = Boolean.parseBoolean(MILESTONE_FCS)
 
 // The following properties define the product name for Oracle JDK and OpenJDK
 // for VersionInfo and the DLL manifest.
@@ -528,7 +530,7 @@ if (HUDSON_JOB_NAME == "not_hudson") {
     relSuffix = "-internal"
     relOpt = "-${buildTimestamp}"
 } else {
-    relSuffix = jfxReleaseSuffix
+    relSuffix = IS_MILESTONE_FCS ? "" : jfxReleaseSuffix
 }
 defineProperty("RELEASE_SUFFIX", relSuffix)
 defineProperty("RELEASE_VERSION_SHORT", "${RELEASE_VERSION}${RELEASE_SUFFIX}")
@@ -715,6 +717,9 @@ void ant(String conf,   // platform configuration
             params.each() { s->
                 args(s)
             }
+        }
+        if (IS_MILESTONE_FCS) {
+            args('-Djfx.release.suffix=""')
         }
         args(target);
     }
