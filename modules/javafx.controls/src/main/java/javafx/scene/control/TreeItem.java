@@ -54,7 +54,7 @@ import static javafx.scene.control.TreeSortMode.*;
 
 /**
  * The model for a single node supplying a hierarchy of values to a control such
- * as TreeView. The model may be implemented such that values may be loaded in
+ * as {@link TreeView}. The model may be implemented such that values may be loaded in
  * memory as they are needed.
  * <p>
  * The model allows registration of listeners which will be notified as the
@@ -201,6 +201,7 @@ import static javafx.scene.control.TreeSortMode.*;
  *
  * @param <T> The type of the {@link #getValue() value} property within TreeItem.
  * @since JavaFX 2.0
+ * @see TreeView
  */
 public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
 
