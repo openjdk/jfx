@@ -106,7 +106,7 @@ using namespace WebCore;
 extern "C" {
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCRenderQueue_twkRelease
-    (JNIEnv* env, jobject clazz, jobjectArray bufs)
+    (JNIEnv* env, jobject, jobjectArray bufs)
 {
     /*
      * This method should be called on the Event thread to synchronize with JavaScript

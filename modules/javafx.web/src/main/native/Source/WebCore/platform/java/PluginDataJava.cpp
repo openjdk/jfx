@@ -9,7 +9,7 @@
 namespace WebCore {
 
 
-void init_plugins(bool refresh, Vector<PluginInfo> *plugins) {
+void init_plugins(bool, Vector<PluginInfo>*) {
 /*
     JNIEnv* env = WebCore_GetJavaEnv();
 

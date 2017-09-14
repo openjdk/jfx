@@ -26,7 +26,7 @@ public:
         return adoptRef(new BufferImage(rqoImage, rq, w, h));
     }
 
-    void destroyDecodedData(bool destroyAll = true) override { }
+    void destroyDecodedData(bool = true) override { }
 
     //utatodo: callback to Java
     bool currentFrameKnownToBeOpaque() const override { return false; /*!m_data->m_bitmap->hasAlpha() ;*/}

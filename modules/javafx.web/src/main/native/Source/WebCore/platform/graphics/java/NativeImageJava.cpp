@@ -67,7 +67,7 @@ IntSize nativeImageSize(const NativeImagePtr& image)
     return frameSize;
 }
 
-bool nativeImageHasAlpha(const NativeImagePtr& image)
+bool nativeImageHasAlpha(const NativeImagePtr&)
 {
     // FIXME-java: Get alpha details from ImageMetadata class
     return true;

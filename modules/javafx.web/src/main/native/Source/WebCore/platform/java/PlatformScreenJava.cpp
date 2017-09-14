@@ -60,13 +60,13 @@ static void initRefs(JNIEnv* env)
 namespace WebCore
 {
 
-int screenHorizontalDPI(Widget* widget)
+int screenHorizontalDPI(Widget*)
 {
     notImplemented();
     return 0;
 }
 
-int screenVerticalDPI(Widget* widget)
+int screenVerticalDPI(Widget*)
 {
     notImplemented();
     return 0;
@@ -99,7 +99,7 @@ int screenDepthPerComponent(Widget* w)
     return screenDepth(w) / 3;
 }
 
-bool screenIsMonochrome(Widget* w)
+bool screenIsMonochrome(Widget*)
 {
     notImplemented();
     return false;

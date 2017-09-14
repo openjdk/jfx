@@ -123,5 +123,4 @@ FloatRect Font::platformBoundsForGlyph(Glyph) const
     return FloatRect(); //That is OK! platformWidthForGlyph impl is enough.
 }
 
-
 }

@@ -208,7 +208,6 @@ Method* JavaClass::methodNamed(PropertyName propertyName, Instance*) const
                            && pname[pnameLength-1] == ']') {
                         // Primitive array type names.
                         if (methodParamLength == 2) {
-                          UChar sig1 = methodParam[1];
                           const char *prim;
                           switch (methodParam[1]) {
                           case 'I': prim = "int[]"; break;

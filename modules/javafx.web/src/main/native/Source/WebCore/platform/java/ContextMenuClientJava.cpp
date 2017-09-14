@@ -21,7 +21,7 @@ void ContextMenuClientJava::contextMenuDestroyed()
     delete this;
 }
 
-void ContextMenuClientJava::downloadURL(const URL& url)
+void ContextMenuClientJava::downloadURL(const URL&)
 {
     notImplemented();
 }

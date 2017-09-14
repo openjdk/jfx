@@ -202,7 +202,7 @@ String contextMenuItemTagSpellingMenu()
     return String(); // UNSUPPORTED: getLocalizedProperty("contextMenuItemTagSpellingMenu");
 }
 
-String contextMenuItemTagShowSpellingPanel(bool show)
+String contextMenuItemTagShowSpellingPanel(bool)
 {
     return String(); /* UNSUPPORTED: show
             ? getLocalizedProperty("contextMenuItemTagShowSpellingPanelShow")
@@ -330,7 +330,7 @@ String insecurePluginVersionText()
 }
 
 
-String imageTitle(const String& filename, const IntSize& size)
+String imageTitle(const String&, const IntSize&)
 {
     return String();
 }

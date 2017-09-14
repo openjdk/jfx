@@ -62,8 +62,6 @@ void Image::drawPattern(GraphicsContext& gc, const FloatRect& destRect, const Fl
 void Image::drawImage(GraphicsContext& gc, const FloatRect &dstRect, const FloatRect &srcRect,
                        CompositeOperator, BlendMode)
 {
-    JNIEnv* env = WebCore_GetJavaEnv();
-
     if (gc.paintingDisabled()) {
         return;
     }

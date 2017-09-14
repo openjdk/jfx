@@ -98,7 +98,7 @@ IntRect getPartRect(Scrollbar& scrollbar, ScrollbarPart part) {
 }
 
 
-bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const IntRect& damageRect)
+bool ScrollbarThemeJava::paint(Scrollbar& scrollbar, GraphicsContext& gc, const IntRect&)
 {
     // platformContext() returns 0 when printing
     if (gc.paintingDisabled() || !gc.platformContext()) {
@@ -166,7 +166,7 @@ IntRect ScrollbarThemeJava::trackRect(Scrollbar& scrollbar, bool) {
     return getPartRect(scrollbar, TrackBGPart);
 }
 
-int ScrollbarThemeJava::scrollbarThickness(ScrollbarControlSize controlSize)
+int ScrollbarThemeJava::scrollbarThickness(ScrollbarControlSize)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 

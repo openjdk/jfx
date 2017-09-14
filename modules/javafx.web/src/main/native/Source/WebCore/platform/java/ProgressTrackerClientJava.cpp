@@ -58,7 +58,7 @@ ProgressTrackerClientJava::ProgressTrackerClientJava(const JLObject &webPage)
 {
 }
 
-void ProgressTrackerClientJava::progressStarted(Frame& originatingProgressFrame)
+void ProgressTrackerClientJava::progressStarted(Frame&)
 {
 }
 
@@ -90,7 +90,7 @@ void ProgressTrackerClientJava::progressEstimateChanged(Frame& originatingProgre
     }
 }
 
-void ProgressTrackerClientJava::progressFinished(Frame& originatingProgressFrame)
+void ProgressTrackerClientJava::progressFinished(Frame&)
 {
     // shouldn't post PROGRESS_CHANGED after PAGE_FINISHED
 }

@@ -32,7 +32,7 @@ namespace WebCore {
     }
 
     //uta: need to be fixed with usage of DragData pointer
-    bool DragController::isCopyKeyDown(const DragData& dragData)
+    bool DragController::isCopyKeyDown(const DragData&)
     {
         //State has not direct connection with keyboard state.
         //Now it is imported from Java (user drag action).

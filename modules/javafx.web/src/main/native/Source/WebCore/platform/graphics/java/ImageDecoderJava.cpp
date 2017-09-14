@@ -163,7 +163,7 @@ size_t ImageDecoder::frameCount() const
         : count;
 }
 
-NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLevel samplingLevel, const std::optional<IntSize>&)
+NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const std::optional<IntSize>&)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_nativeDecoder);
@@ -232,7 +232,7 @@ bool ImageDecoder::frameAllowSubsamplingAtIndex(size_t) const
     return true;
 }
 
-bool ImageDecoder::frameHasAlphaAtIndex(size_t idx) const
+bool ImageDecoder::frameHasAlphaAtIndex(size_t) const
 {
     // FIXME-java: Read it from ImageMetadata
     return true;

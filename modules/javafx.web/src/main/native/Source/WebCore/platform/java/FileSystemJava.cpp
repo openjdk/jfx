@@ -83,7 +83,7 @@ bool getFileModificationTime(const String& path, time_t& result)
     }
 }
 
-bool getFileCreationTime(const String&, time_t& result)
+bool getFileCreationTime(const String&, time_t&)
 {
     notImplemented(); // todo tav
     return false;
@@ -169,7 +169,7 @@ bool getFileMetadata(const String& path, FileMetadata& metadata)
     return false;
 }
 
-Vector<String> listDirectory(const String& path, const String& filter)
+Vector<String> listDirectory(const String&, const String&)
 {
     Vector<String> entities;
     notImplemented();
@@ -189,7 +189,7 @@ String openTemporaryFile(const String&, PlatformFileHandle& handle)
     return String();
 }
 
-PlatformFileHandle openFile(const String& path, FileOpenMode mode)
+PlatformFileHandle openFile(const String&, FileOpenMode)
 {
     notImplemented();
     return invalidPlatformFileHandle;
@@ -200,13 +200,13 @@ void closeFile(PlatformFileHandle&)
     notImplemented();
 }
 
-int readFromFile(PlatformFileHandle handle, char* data, int length)
+int readFromFile(PlatformFileHandle, char*, int)
 {
     notImplemented();
     return -1;
 }
 
-int writeToFile(PlatformFileHandle, const char* data, int length)
+int writeToFile(PlatformFileHandle, const char*, int)
 {
     notImplemented();
     return -1;
@@ -237,13 +237,13 @@ String pathGetFileName(const String& path)
     return String(env, result);
 }
 
-long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
+long long seekFile(PlatformFileHandle, long long, FileSeekOrigin)
 {
     notImplemented();
     return (long long)(-1);
 }
 
-std::optional<int32_t> getFileDeviceId(const CString& fsFile)
+std::optional<int32_t> getFileDeviceId(const CString&)
 {
     notImplemented();
     return {};

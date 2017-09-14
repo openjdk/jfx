@@ -55,12 +55,11 @@ Ref<Font> FontCache::lastResortFallbackFontForEveryCharacter(const FontDescripti
     return lastResortFallbackFont(fontDescription);
 }
 
-const AtomicString& FontCache::platformAlternateFamilyName(const AtomicString& familyName)
+const AtomicString& FontCache::platformAlternateFamilyName(const AtomicString&)
 {
     notImplemented();
     return nullAtom;
 }
 
 }
-
 

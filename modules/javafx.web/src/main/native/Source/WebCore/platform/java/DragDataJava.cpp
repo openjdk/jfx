@@ -17,14 +17,14 @@
 
 namespace WebCore {
 
-bool DragData::containsURL(FilenameConversionPolicy filenamePolicy /*= ConvertFilenames*/) const
+bool DragData::containsURL(FilenameConversionPolicy /*= ConvertFilenames*/) const
 {
     /* utaTODO: extent the functionality
     */
     return m_platformDragData->containsURL();
 }
 
-String DragData::asURL(FilenameConversionPolicy filenamePolicy, String* title) const
+String DragData::asURL(FilenameConversionPolicy, String* title) const
 {
     /* utaTODO: extent the functionality
     String url;

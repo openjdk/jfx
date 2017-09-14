@@ -329,7 +329,7 @@ void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const char* da
     loader->commitData(data, length);
 }
 
-void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest& request, FramePolicyFunction policyFunction)
+void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, FramePolicyFunction policyFunction)
 {
     PolicyAction action;
 

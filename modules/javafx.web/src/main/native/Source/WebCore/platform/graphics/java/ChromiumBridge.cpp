@@ -443,7 +443,7 @@ String ChromiumBridge::getFontFamilyForCharacters(const UChar* characters, size_
     return family;
 #endif //USE(ICU_UNICODE)
 #endif //SKIA
-void ChromiumBridge::plugins(bool refresh, Vector<PluginInfo>*)
+void ChromiumBridge::plugins(bool, Vector<PluginInfo>*)
 {
 
 }
