@@ -34,11 +34,11 @@
  * @since 9
  */
 module javafx.swing {
-    requires transitive java.desktop;
-    requires transitive javafx.graphics;
-
     requires java.datatransfer;
     requires javafx.base;
+
+    requires transitive java.desktop;
+    requires transitive javafx.graphics;
 
     exports javafx.embed.swing;
 

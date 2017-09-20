@@ -30,12 +30,12 @@
  * @since 9
  */
 module javafx.fxml {
-    requires transitive javafx.base;
-
     requires java.logging;
     requires java.scripting;
     requires java.xml;
     requires javafx.graphics;
+
+    requires transitive javafx.base;
 
     exports javafx.fxml;
 

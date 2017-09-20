@@ -31,16 +31,16 @@
  * @since 9
  */
 module javafx.web {
-    requires transitive java.xml;
-    requires transitive javafx.base;
-    requires transitive javafx.controls;
-    requires transitive javafx.graphics;
-
     requires java.desktop;
     requires java.logging;
     requires javafx.media;
     requires jdk.xml.dom;
     requires jdk.jsobject;
+
+    requires transitive java.xml;
+    requires transitive javafx.base;
+    requires transitive javafx.controls;
+    requires transitive javafx.graphics;
 
     exports javafx.scene.web;
 

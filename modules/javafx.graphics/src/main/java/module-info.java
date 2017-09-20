@@ -34,11 +34,11 @@
  * @since 9
  */
 module javafx.graphics {
-    requires transitive javafx.base;
-
     requires java.desktop;
     requires java.xml;
     requires jdk.jsobject;
+
+    requires transitive javafx.base;
 
     exports javafx.animation;
     exports javafx.application;
