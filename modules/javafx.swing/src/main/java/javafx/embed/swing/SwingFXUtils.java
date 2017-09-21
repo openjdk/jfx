@@ -38,6 +38,7 @@ import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.image.WritablePixelFormat;
+import javafx.scene.paint.Color;
 import com.sun.javafx.tk.Toolkit;
 import javax.swing.SwingUtilities;
 import sun.awt.image.IntegerComponentRaster;
@@ -132,12 +133,16 @@ public class SwingFXUtils {
      * @return
      */
     static int
-        getBestBufferedImageType(PixelFormat<?> fxFormat, BufferedImage bimg)
+            getBestBufferedImageType(PixelFormat<?> fxFormat, BufferedImage bimg,
+                                     boolean isOpaque)
     {
         if (bimg != null) {
             int bimgType = bimg.getType();
             if (bimgType == BufferedImage.TYPE_INT_ARGB ||
-                bimgType == BufferedImage.TYPE_INT_ARGB_PRE)
+                bimgType == BufferedImage.TYPE_INT_ARGB_PRE ||
+                (isOpaque &&
+                     (bimgType == BufferedImage.TYPE_INT_BGR ||
+                      bimgType == BufferedImage.TYPE_INT_RGB)))
             {
                 // We will allow the caller to give us a BufferedImage
                 // that has an alpha channel, but we might not otherwise
@@ -193,6 +198,18 @@ public class SwingFXUtils {
         }
     }
 
+    private static boolean checkFXImageOpaque(PixelReader pr, int iw, int ih) {
+        for (int x = 0; x < iw; x++) {
+            for (int y = 0; y < ih; y++) {
+                Color color = pr.getColor(x,y);
+                if (color.getOpacity() != 1.0) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     /**
      * Snapshots the specified JavaFX {@link Image} object and stores a
      * copy of its pixels into a {@link BufferedImage} object, creating
@@ -229,7 +246,26 @@ public class SwingFXUtils {
         }
         int iw = (int) img.getWidth();
         int ih = (int) img.getHeight();
-        int prefBimgType = getBestBufferedImageType(pr.getPixelFormat(), bimg);
+        PixelFormat<?> fxFormat = pr.getPixelFormat();
+        boolean srcPixelsAreOpaque = false;
+        switch (fxFormat.getType()) {
+            case INT_ARGB_PRE:
+            case INT_ARGB:
+            case BYTE_BGRA_PRE:
+            case BYTE_BGRA:
+                // Check fx image opacity only if
+                // supplied BufferedImage is without alpha channel
+                if (bimg != null &&
+                        (bimg.getType() == BufferedImage.TYPE_INT_BGR ||
+                         bimg.getType() == BufferedImage.TYPE_INT_RGB)) {
+                    srcPixelsAreOpaque = checkFXImageOpaque(pr, iw, ih);
+                }
+                break;
+            case BYTE_RGB:
+                srcPixelsAreOpaque = true;
+                break;
+        }
+        int prefBimgType = getBestBufferedImageType(pr.getPixelFormat(), bimg, srcPixelsAreOpaque);
         if (bimg != null) {
             int bw = bimg.getWidth();
             int bh = bimg.getHeight();
