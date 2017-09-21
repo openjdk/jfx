@@ -255,6 +255,63 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override protected double computeMinWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        double minWidth = 0.0;
+
+        if (spinner != null && control.isIndeterminate()) {
+            minWidth = spinner.minWidth(-1);
+        } else if (determinateIndicator != null) {
+            minWidth = determinateIndicator.minWidth(-1);
+        }
+        return minWidth;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        double minHeight = 0.0;
+
+        if (spinner != null && control.isIndeterminate()) {
+            minHeight = spinner.minHeight(-1);
+        } else if (determinateIndicator != null) {
+            minHeight = determinateIndicator.minHeight(-1);
+        }
+        return minHeight;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected double computePrefWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        double prefWidth = 0.0;
+
+        if (spinner != null && control.isIndeterminate()) {
+            prefWidth = spinner.prefWidth(height);
+        } else if (determinateIndicator != null) {
+            prefWidth = determinateIndicator.prefWidth(height);
+        }
+        return prefWidth;
+    }
+
+   /** {@inheritDoc} */
+   @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        double prefHeight = 0.0;
+
+        if (spinner != null && control.isIndeterminate()) {
+            prefHeight = spinner.prefHeight(width);
+        } else if (determinateIndicator != null) {
+            prefHeight = determinateIndicator.prefHeight(width);
+        }
+        return prefHeight;
+    }
+
+    /** {@inheritDoc} */
+    @Override protected double computeMaxWidth(double height, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return computePrefWidth(height, topInset, rightInset, bottomInset, leftInset);
+    }
+
+    /** {@inheritDoc} */
+    @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
+        return computePrefHeight(width, topInset, rightInset, bottomInset, leftInset);
+    }
 
 
     /***************************************************************************
