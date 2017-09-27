@@ -193,6 +193,7 @@ private:
 
     void postLoadEvent(Frame* f, int state, String url, String contentType, double progress, int errorCode = 0);
     void postResourceLoadEvent(Frame* f, int state, int id, String contentType, double progress, int errorCode = 0);
+    void dispatchDidNavigateWithinPage();
     // Plugin widget for handling data redirection
 //        PluginWidgetJava* m_pluginWidget;
 };
