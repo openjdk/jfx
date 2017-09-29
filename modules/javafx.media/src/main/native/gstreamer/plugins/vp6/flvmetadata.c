@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -443,11 +443,6 @@ flv_script_read_keyframe_array(FlvScriptDataReader* reader,
         }
     }
 
-    // pre-populate the array
-    if (keyframes->len != readSize) {
-        g_array_set_size(keyframes, readSize);
-    }
-
     for (i = 0; i < size; i++, readSize--) {
         if (!flv_script_data_read_ui8(reader, &value_type))
             return FALSE;
@@ -461,12 +456,15 @@ flv_script_read_keyframe_array(FlvScriptDataReader* reader,
         }
 
         if (readSize > 0 && whichField > 0) {
-            FlvKeyframe *entry = &g_array_index(keyframes, FlvKeyframe, i);
+            FlvKeyframe entry;
             if (whichField == 1) {
-                entry->time = (GstClockTime)(double_value * GST_SECOND);
+                entry.time = (GstClockTime)(double_value * GST_SECOND);
+                entry.fileposition = 0;
             } else if (whichField == 2) {
-                entry->fileposition = (guint64)double_value;
+                entry.time = 0;
+                entry.fileposition = (guint64)double_value;
             }
+            g_array_append_vals(keyframes, &entry, 1);
         }
     }
     return TRUE;
@@ -487,7 +485,13 @@ static gboolean flv_metadata_keyframe_handler(FlvScriptDataReader* reader,
             if (!metadata->keyframes) {
                 metadata->keyframes = g_array_new(FALSE, TRUE, sizeof(FlvKeyframe));
             }
+
             result &= flv_script_read_keyframe_array(reader, value_name, metadata->keyframes);
+
+            if (!result) {
+                g_array_free(metadata->keyframes, TRUE);
+                metadata->keyframes = NULL;
+            }
             break;
 
         default:
