@@ -312,7 +312,7 @@ public final class UIClientImpl implements UIClient {
     @Override public void startDrag(WCImage image,
         int imageOffsetX, int imageOffsetY,
         int eventPosX, int eventPosY,
-        String[] mimeTypes, Object[] values
+        String[] mimeTypes, Object[] values, boolean isImageSource
     ){
         content = new ClipboardContent();
         for (int i = 0; i < mimeTypes.length; ++i) if (values[i] != null) {
@@ -346,24 +346,26 @@ public final class UIClientImpl implements UIClient {
             //Image need to be created by target request only.
             //QuantumClipboard.putContent have to be rewritten in Glass manner
             //with postponed data requests (DelayedCallback data object).
-            Object platformImage = image.getWidth() > 0 && image.getHeight() > 0 ?
-                    image.getPlatformImage() : null;
-            if (platformImage != null) {
-                try {
-                    File temp = File.createTempFile("jfx", ".png");
-                    temp.deleteOnExit();
-                    ImageIO.write(
-                        toBufferedImage(Toolkit.getImageAccessor().fromPlatformImage(
-                            Toolkit.getToolkit().loadPlatformImage(
-                                platformImage
-                            )
-                        )),
-                        "png",
-                        temp);
-                    content.put(DataFormat.FILES, Arrays.asList(temp));
-                } catch (IOException | SecurityException e) {
-                    //That is ok. It was just an attempt.
-                    //e.printStackTrace();
+            if (isImageSource) {
+                Object platformImage = image.getWidth() > 0 && image.getHeight() > 0 ?
+                        image.getPlatformImage() : null;
+                if (platformImage != null) {
+                    try {
+                        File temp = File.createTempFile("jfx", ".png");
+                        temp.deleteOnExit();
+                        ImageIO.write(
+                            toBufferedImage(Toolkit.getImageAccessor().fromPlatformImage(
+                                Toolkit.getToolkit().loadPlatformImage(
+                                    platformImage
+                                )
+                            )),
+                            "png",
+                            temp);
+                        content.put(DataFormat.FILES, Arrays.asList(temp));
+                    } catch (IOException | SecurityException e) {
+                        //That is ok. It was just an attempt.
+                        //e.printStackTrace();
+                    }
                 }
             }
         }

@@ -50,8 +50,8 @@ public interface UIClient {
             WCImage frame,
             int imageOffsetX, int imageOffsetY,
             int eventPosX, int eventPosY,
-            String[] mimeTypes,
-            Object[] values);
+            String[] mimeTypes, Object[] values,
+            boolean isImageSource);
     public void confirmStartDrag();
     public boolean isDragConfirmed();
 }
