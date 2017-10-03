@@ -5,6 +5,7 @@
 # $3 : icu Data library location
 # $4 : CFLAGS used by cmake
 # $5 : CPPFLAGS used by cmake
+# $6 : Mac OSX min version
 
 JAVA_DATA_LIBRARY=$3
 
@@ -12,6 +13,9 @@ case "$(uname -s)" in
    Darwin)
      JAVA_LIBDIR=$1
      PLATFORM=MacOSX
+     export CFLAGS=$4
+     export CPPFLAGS="$5 -mmacosx-version-min=$6"
+     export LDFLAGS=-mmacosx-version-min=$6
      ;;
 
    Linux)
