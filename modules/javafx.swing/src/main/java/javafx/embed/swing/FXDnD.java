@@ -46,6 +46,8 @@ import java.awt.dnd.InvalidDnDOperationException;
 import java.awt.dnd.MouseDragGestureRecognizer;
 import java.awt.dnd.peer.DragSourceContextPeer;
 import java.awt.dnd.peer.DropTargetContextPeer;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
 import javafx.application.Platform;
@@ -67,7 +69,18 @@ import sun.swing.JLightweightFrame;
  */
 final class FXDnD {
     private final SwingNode node;
+    private static boolean fxAppThreadIsDispatchThread;
     private SwingNode getNode() { return node; }
+
+    static {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            public Object run() {
+                fxAppThreadIsDispatchThread =
+                        "true".equals(System.getProperty("javafx.embed.singleThread"));
+                return null;
+            }
+        });
+    }
 
     FXDnD(SwingNode node) {
         this.node = node;
@@ -245,7 +258,9 @@ final class FXDnD {
         final boolean hasContent = db.setContent(fxData);
         if (!hasContent) {
             // No data, no DnD, no onDragDoneHandler, so release the AWT loop now
-            loop.exit();
+            if (!fxAppThreadIsDispatchThread) {
+                loop.exit();
+            }
         }
     };
 
@@ -253,7 +268,9 @@ final class FXDnD {
         event.consume();
 
         // Release FXDragSourceContextPeer.startDrag()
-        loop.exit();
+        if (!fxAppThreadIsDispatchThread) {
+            loop.exit();
+        }
 
         if (activeDSContextPeer != null) {
             final TransferMode mode = event.getTransferMode();
@@ -310,10 +327,12 @@ final class FXDnD {
 
             // Release the FX nested loop to allow onDragDetected to start the actual DnD operation,
             // and then start an AWT nested loop to wait until DnD finishes.
-            loop = java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
-            SwingFXUtils.leaveFXNestedLoop(FXDnD.this);
-            if (!loop.enter()) {
-                // An error occured, but there's little we can do here...
+            if (!fxAppThreadIsDispatchThread) {
+                loop = java.awt.Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
+                SwingFXUtils.leaveFXNestedLoop(FXDnD.this);
+                if (!loop.enter()) {
+                    // An error occured, but there's little we can do here...
+                }
             }
         }
     };

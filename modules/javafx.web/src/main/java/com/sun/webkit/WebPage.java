@@ -2262,18 +2262,17 @@ public final class WebPage {
           Object image,
           int imageOffsetX, int imageOffsetY,
           int eventPosX, int eventPosY,
-          String[] mimeTypes,
-          Object[] values)
+          String[] mimeTypes, Object[] values,
+          boolean isImageSource)
     {
         log.log(Level.FINER, "Start drag: ");
-
         if (uiClient != null) {
             uiClient.startDrag(
                   WCImage.getImage(image),
                   imageOffsetX, imageOffsetY,
                   eventPosX, eventPosY,
-                  mimeTypes,
-                  values);
+                  mimeTypes, values,
+                  isImageSource);
         }
     }
 

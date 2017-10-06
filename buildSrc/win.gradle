@@ -132,11 +132,12 @@ ext.WINDOWS_NATIVE_COMPILE_ENVIRONMENT = [
         "LIBPATH"              : WINDOWS_VS_LIBPATH,
         "DXSDK_DIR"            : WINDOWS_DXSDK_DIR
 ];
+def msvcVer = System.getenv("MSVC_VER") ?: "14.10.25017"
 def msvcBinDir = ""
 if (winVsVer == 150) {
     msvcBinDir = (IS_64
-                      ? "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/14.10.25017/bin/HostX64/x64"
-                      : "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/14.10.25017/bin/HostX86/x86")
+                      ? "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/$msvcVer/bin/HostX64/x64"
+                      : "$WINDOWS_VS_VSINSTALLDIR/VC/Tools/MSVC/$msvcVer/bin/HostX86/x86")
 } else if (winVsVer <= 120) {
     msvcBinDir = (IS_64
                       ? "$WINDOWS_VS_VSINSTALLDIR/VC/BIN/amd64"
@@ -173,9 +174,10 @@ ext.MC = cygpath("$winSdkBinDir/mt.exe")
 if (!file(RC).exists()) throw new GradleException("FAIL: cannot find RC: " + RC)
 if (!file(FXC).exists()) throw new GradleException("FAIL: cannot find FXC: " + FXC)
 
+def msvcRedistVer = System.getenv("MSVC_REDIST_VER") ?: "14.10.25008"
 String msvcRedstDir = (IS_64
-                  ? "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/14.10.25008/x64"
-                  : "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/14.10.25008/x86")
+                  ? "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/$msvcRedistVer/x64"
+                  : "$WINDOWS_VS_VSINSTALLDIR/VC/Redist/MSVC/$msvcRedistVer/x86")
 
 String winSdkDllDir = (IS_64
                   ? "$WINDOWS_VS_WINSDKDLLINSTALLDIR/x64"
@@ -185,13 +187,14 @@ def WINDOWS_DLL_VER = WINDOWS_VS_VER
 ext.MSVCR = null
 ext.MSVCP = null
 
+def windowsCRTVer = System.getenv("WINDOWS_CRT_VER") ?: "150"
 if (WINDOWS_VS_VER == "150") {
     WINDOWS_DLL_VER = "140"
-    ext.MSVCR = cygpath("${msvcRedstDir}/Microsoft.VC${WINDOWS_VS_VER}.CRT/vcruntime${WINDOWS_DLL_VER}.dll")
-    ext.MSVCP = cygpath("${msvcRedstDir}/Microsoft.VC${WINDOWS_VS_VER}.CRT/msvcp${WINDOWS_DLL_VER}.dll")
+    ext.MSVCR = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT/vcruntime${WINDOWS_DLL_VER}.dll")
+    ext.MSVCP = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT/msvcp${WINDOWS_DLL_VER}.dll")
 }
 
-def vs2017DllPath = cygpath("${msvcRedstDir}/Microsoft.VC${WINDOWS_VS_VER}.CRT")
+def vs2017DllPath = cygpath("${msvcRedstDir}/Microsoft.VC${windowsCRTVer}.CRT")
 if (file(vs2017DllPath).exists()) {
     def VS2017DLLs = [
         "concrt140.dll",

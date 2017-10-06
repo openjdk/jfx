@@ -181,6 +181,15 @@ FrameLoaderClientJava::FrameLoaderClientJava(const JLObject &webPage)
 {
 }
 
+void FrameLoaderClientJava::dispatchDidNavigateWithinPage()
+{
+    postLoadEvent(frame(),
+                  com_sun_webkit_LoadListenerClient_PAGE_REPLACED,
+                  frame()->document()->url(),
+                  frame()->loader().documentLoader()->responseMIMEType(),
+                  1.0 /* progress */);
+}
+
 void FrameLoaderClientJava::frameLoaderDestroyed()
 {
     WC_GETJAVAENV_CHKRET(env);
@@ -829,8 +838,17 @@ void FrameLoaderClientJava::setCopiesOnScroll() { notImplemented(); }
 void FrameLoaderClientJava::detachedFromParent2() { notImplemented(); }
 void FrameLoaderClientJava::detachedFromParent3() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidDispatchOnloadEvents() {notImplemented(); }
-void FrameLoaderClientJava::dispatchDidPushStateWithinPage() { notImplemented(); }
-void FrameLoaderClientJava::dispatchDidReplaceStateWithinPage() { notImplemented(); }
+
+void FrameLoaderClientJava::dispatchDidPushStateWithinPage()
+{
+    dispatchDidNavigateWithinPage();
+}
+
+void FrameLoaderClientJava::dispatchDidReplaceStateWithinPage()
+{
+    dispatchDidNavigateWithinPage();
+}
+
 void FrameLoaderClientJava::dispatchDidPopStateWithinPage() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidReceiveServerRedirectForProvisionalLoad() { notImplemented(); }
 void FrameLoaderClientJava::dispatchDidCancelClientRedirect() { notImplemented(); }

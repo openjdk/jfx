@@ -133,7 +133,7 @@ void DragClientJava::startDrag(
     const FloatPoint&,
     DataTransfer& DataTransfer,
     Frame&,
-    DragSourceAction)
+    DragSourceAction dragSourceAction)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID mid = env->GetMethodID(
@@ -144,6 +144,7 @@ void DragClientJava::startDrag(
         "II"
         "[Ljava/lang/String;"
         "[Ljava/lang/Object;"
+        "Z"
         ")V");
     ASSERT(mid);
 
@@ -189,13 +190,16 @@ void DragClientJava::startDrag(
     jobject jimage = dragImage.get() && dragImage.get()->javaImage()
                   ? jobject(*(dragImage.get()->javaImage())) : nullptr;
 
+    bool isImageSource = dragSourceAction & DragSourceActionImage;
+
     env->CallVoidMethod(m_webPage, mid, jimage,
         eventPos.x() - dragImageOrigin.x(),
         eventPos.y() - dragImageOrigin.y(),
         eventPos.x(),
         eventPos.y(),
         jobjectArray(jmimeTypes),
-        jobjectArray(jvalues) );
+        jobjectArray(jvalues),
+        bool_to_jbool(isImageSource));
     CheckAndClearException(env);
 }
 

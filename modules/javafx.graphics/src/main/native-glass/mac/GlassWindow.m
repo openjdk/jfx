@@ -474,6 +474,10 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         {
             styleMask = styleMask|NSTitledWindowMask;
         }
+
+        bool isUtility = (jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0;
+        bool isPopup = (jStyleMask & com_sun_glass_ui_Window_POPUP) != 0;
+
         // only nontransparent windows get decorations
         if ((jStyleMask&com_sun_glass_ui_Window_TRANSPARENT) == 0)
         {
@@ -494,13 +498,13 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
                 styleMask = styleMask|NSTexturedBackgroundWindowMask;
             }
 
-            if ((jStyleMask&com_sun_glass_ui_Window_UTILITY) != 0)
+            if (isUtility)
             {
                 styleMask = styleMask | NSUtilityWindowMask | NSNonactivatingPanelMask;
             }
         }
 
-        if ((jStyleMask&com_sun_glass_ui_Window_POPUP) != 0)
+        if (isPopup)
         {
             // can receive keyboard input without activating the owning application
             styleMask = styleMask|NSNonactivatingPanelMask;
@@ -523,6 +527,9 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         if ((jStyleMask & com_sun_glass_ui_Window_UTILITY) != 0) {
             [[window->nsWindow standardWindowButton:NSWindowMiniaturizeButton] setHidden:YES];
             [[window->nsWindow standardWindowButton:NSWindowZoomButton] setHidden:YES];
+            if (!jOwnerPtr) {
+                [window->nsWindow setLevel:NSNormalWindowLevel];
+            }
         }
 
         if (jIsChild == JNI_FALSE)
@@ -548,7 +555,7 @@ static jlong _createWindowCommonDo(JNIEnv *env, jobject jWindow, jlong jOwnerPtr
         /* 10.7 full screen window support */
         if ([NSWindow instancesRespondToSelector:@selector(toggleFullScreen:)]) {
             NSWindowCollectionBehavior behavior = [window->nsWindow collectionBehavior];
-            if ((jStyleMask&com_sun_glass_ui_Window_POPUP) == 0 && !window->owner)
+            if (!isPopup && !isUtility && !window->owner)
             {
                 // Only ownerless windows should have the Full Screen Toggle control
                 behavior |= (1 << 7) /* NSWindowCollectionBehaviorFullScreenPrimary */;

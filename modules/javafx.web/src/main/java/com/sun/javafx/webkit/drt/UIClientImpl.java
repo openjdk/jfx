@@ -179,7 +179,7 @@ final class UIClientImpl implements UIClient {
      */
     @Override
     public void startDrag(WCImage frame, int imageOffsetX, int imageOffsetY,
-            int eventPosX, int eventPosY, String[] mimeTypes, Object[] values)
+            int eventPosX, int eventPosY, String[] mimeTypes, Object[] values, boolean isImageSource)
     {
         throw new UnsupportedOperationException("Not supported yet");
     }

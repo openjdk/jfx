@@ -131,6 +131,7 @@ final class CssStyleHelper {
             }
             node.styleHelper.cacheContainer.forceSlowpath = true;
             node.styleHelper.triggerStates.addAll(triggerStates[0]);
+            node.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(node);
             updateParentTriggerStates(node, depth, triggerStates);
             return node.styleHelper;
 
@@ -175,6 +176,8 @@ final class CssStyleHelper {
 
         helper.cacheContainer = new CacheContainer(node, styleMap, depth);
 
+        helper.firstStyleableAncestor = findFirstStyleableAncestor(node);
+
         // If this node had a style helper, then reset properties to their initial value
         // since the style map might now be different
         if (node.styleHelper != null) {
@@ -210,8 +213,10 @@ final class CssStyleHelper {
             if (triggerState != null && triggerState.size() > 0) {
 
                 // Create a StyleHelper for the parent, if necessary.
+                // TODO : check why calling createStyleHelper(parentNode) does not work here?
                 if (parentNode.styleHelper == null) {
                     parentNode.styleHelper = new CssStyleHelper();
+                    parentNode.styleHelper.firstStyleableAncestor = findFirstStyleableAncestor(parentNode) ;
                 }
                 parentNode.styleHelper.triggerStates.addAll(triggerState);
 
@@ -234,20 +239,34 @@ final class CssStyleHelper {
             if (fontStyleableProperty != null && fontStyleableProperty.getStyleOrigin() == StyleOrigin.USER) return true;
         }
 
-        CssStyleHelper parentStyleHelper = null;
-        Styleable styleableParent = node;
-        do {
-            styleableParent = styleableParent.getStyleableParent();
-            if (styleableParent instanceof Node) {
-                parentStyleHelper = ((Node)styleableParent).styleHelper;
-            }
-        } while (parentStyleHelper == null && styleableParent != null);
+        Styleable styleableParent = firstStyleableAncestor;
+        CssStyleHelper parentStyleHelper = getStyleHelper(firstStyleableAncestor);
 
         if (parentStyleHelper != null) {
             return parentStyleHelper.isUserSetFont(styleableParent);
         } else {
             return false;
         }
+    }
+
+    private static CssStyleHelper getStyleHelper(Node n) {
+        return (n != null)? n.styleHelper : null;
+    }
+
+    private static Node findFirstStyleableAncestor(Styleable st) {
+        Node ancestor = null;
+        Styleable parent = st.getStyleableParent();
+        while (parent != null) {
+            if (parent instanceof Node) {
+                if (((Node) parent).styleHelper != null) {
+                    ancestor = (Node) parent;
+                    break;
+                }
+            }
+            parent = parent.getStyleableParent();
+        }
+
+        return ancestor;
     }
 
     //
@@ -300,7 +319,6 @@ final class CssStyleHelper {
         // since it is made up of the current set of StyleMap ids.
         //
 
-        CssStyleHelper parentHelper = null;
         Styleable parent = node.getStyleableParent();
 
         // if the node's parent is null and the style maps are the same, then we can certainly reuse the style-helper
@@ -308,13 +326,7 @@ final class CssStyleHelper {
             return true;
         }
 
-        while (parent != null) {
-            if (parent instanceof Node) {
-                parentHelper = ((Node) parent).styleHelper;
-                if (parentHelper != null) break;
-            }
-            parent = parent.getStyleableParent();
-        }
+        CssStyleHelper parentHelper = getStyleHelper(node.styleHelper.firstStyleableAncestor);
 
         if (parentHelper != null && parentHelper.cacheContainer != null) {
 
@@ -340,6 +352,10 @@ final class CssStyleHelper {
 
         return false;
     }
+
+    /* This is the first Styleable parent (of Node this StyleHelper belongs to)
+     * having a valid StyleHelper */
+    private Node firstStyleableAncestor;
 
     private CacheContainer cacheContainer;
 
@@ -568,7 +584,7 @@ final class CssStyleHelper {
 
         int count = 0;
         parent = node;
-        while (parent != null) {
+        while (parent != null) { // This loop traverses through all ancestors till root
             final CssStyleHelper helper = (parent instanceof Node) ? parent.styleHelper : null;
             if (helper != null) {
                 final Set<PseudoClass> pseudoClassState = parent.pseudoClassStates;
@@ -1091,32 +1107,24 @@ final class CssStyleHelper {
             final Styleable styleable,
             final String property) {
 
-        Styleable parent = styleable != null ? styleable.getStyleableParent() : null;
+        Styleable parent = ((Node)styleable).styleHelper.firstStyleableAncestor;
+        CssStyleHelper parentStyleHelper = getStyleHelper((Node) parent);
 
-        while (parent != null) {
+        if (parent != null && parentStyleHelper != null) {
 
-            CssStyleHelper parentStyleHelper = parent instanceof Node ? ((Node)parent).styleHelper : null;
-            if (parentStyleHelper != null) {
+            StyleMap parentStyleMap = parentStyleHelper.getStyleMap(parent);
+            Set<PseudoClass> transitionStates = ((Node)parent).pseudoClassStates;
+            CascadingStyle cascadingStyle = parentStyleHelper.getStyle(parent, property, parentStyleMap, transitionStates);
 
-                StyleMap parentStyleMap = parentStyleHelper.getStyleMap(parent);
-                Set<PseudoClass> transitionStates = ((Node)parent).pseudoClassStates;
-                CascadingStyle cascadingStyle = parentStyleHelper.getStyle(parent, property, parentStyleMap, transitionStates);
+            if (cascadingStyle != null) {
 
-                if (cascadingStyle != null) {
+                final ParsedValue cssValue = cascadingStyle.getParsedValue();
 
-                    final ParsedValue cssValue = cascadingStyle.getParsedValue();
-
-                    if ("inherit".equals(cssValue.getValue())) {
-                        return getInheritedStyle(parent, property);
-                    }
-                    return cascadingStyle;
+                if ("inherit".equals(cssValue.getValue())) {
+                    return getInheritedStyle(parent, property);
                 }
-
-                return null;
+                return cascadingStyle;
             }
-
-            parent = parent.getStyleableParent();
-
         }
 
         return null;
@@ -1143,17 +1151,9 @@ final class CssStyleHelper {
                 return resolveRef(styleable,property, styleMap, NULL_PSEUDO_CLASS_STATE);
             } else {
                 // TODO: This block was copied from inherit. Both should use same code somehow.
-                Styleable styleableParent = styleable.getStyleableParent();
-                CssStyleHelper parentStyleHelper = null;
-                if (styleableParent != null && styleableParent instanceof Node) {
-                    parentStyleHelper = ((Node)styleableParent).styleHelper;
-                }
-                while (styleableParent != null && parentStyleHelper == null) {
-                    styleableParent = styleableParent.getStyleableParent();
-                    if (styleableParent != null && styleableParent instanceof Node) {
-                        parentStyleHelper = ((Node)styleableParent).styleHelper;
-                    }
-                }
+
+                Styleable styleableParent = ((Node)styleable).styleHelper.firstStyleableAncestor;
+                CssStyleHelper parentStyleHelper = getStyleHelper((Node) styleableParent);
 
                 if (styleableParent == null || parentStyleHelper == null) {
                     return null;
@@ -1743,7 +1743,7 @@ final class CssStyleHelper {
 
             Styleable parent = styleable != null ? styleable.getStyleableParent() : null;
 
-            while (parent != null) {
+            while (parent != null) { // This loop traverses through all ancestors till root
 
                 CssStyleHelper parentStyleHelper = parent instanceof Node ? ((Node)parent).styleHelper : null;
                 if (parentStyleHelper != null) {
@@ -1993,7 +1993,7 @@ final class CssStyleHelper {
         Styleable parent = styleable != null ? styleable.getStyleableParent() : null;
 
         int nlooks = distance;
-        while (parent != null && nlooks > 0) {
+        while (parent != null && nlooks > 0) { // This loop traverses through all ancestors till root
 
             CssStyleHelper parentStyleHelper = parent instanceof Node ? ((Node)parent).styleHelper : null;
             if (parentStyleHelper != null) {
@@ -2134,7 +2134,7 @@ final class CssStyleHelper {
 
             if (styleableProperty.isInherits()) {
                 Styleable parent = node.getStyleableParent();
-                while (parent != null) {
+                while (parent != null) { // This loop traverses through all ancestors till root
                     CssStyleHelper parentHelper = parent instanceof Node
                             ? ((Node)parent).styleHelper
                             : null;
@@ -2198,7 +2198,7 @@ final class CssStyleHelper {
                         }
                     }
 
-                } while ((parent = parent.getStyleableParent()) != null);
+                } while ((parent = parent.getStyleableParent()) != null); // This loop traverses through all ancestors till root
 
             }
         }
