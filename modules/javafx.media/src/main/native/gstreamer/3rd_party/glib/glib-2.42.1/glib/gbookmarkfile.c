@@ -1976,6 +1976,12 @@ g_bookmark_file_add_item (GBookmarkFile  *bookmark,
   g_warn_if_fail (bookmark != NULL);
   g_warn_if_fail (item != NULL);
 
+#ifdef GSTREAMER_LITE
+  if (bookmark == NULL || item == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
+
   /* this should never happen; and if it does, then we are
    * screwing up something big time.
    */
