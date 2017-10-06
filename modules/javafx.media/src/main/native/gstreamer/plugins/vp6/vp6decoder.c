@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -341,8 +341,8 @@ vp6decoder_init (VP6Decoder * filter)
     filter->have_par = FALSE;
     filter->par_num = 0;
     filter->par_den = 0;
-    filter->framerate_num = 0;
-    filter->framerate_den = 0;
+    filter->framerate_num = 25;
+    filter->framerate_den = 1;
     filter->tmp_input_buf = NULL;
     filter->tmp_input_buf_size = 0;
 
@@ -512,6 +512,13 @@ static gboolean vp6decoder_set_caps (GstPad * pad, GstObject *parent, GstCaps * 
 
         // Check if we have framerate. If the framerate isn't specified by sink caps, use 25 fps
         if (!gst_structure_get_fraction (s, "framerate", &filter->framerate_num, &filter->framerate_den))
+        {
+            filter->framerate_num = 25;
+            filter->framerate_den = 1;
+        }
+
+        // Make sure framerate is valid
+        if (filter->framerate_num <= 0 || filter->framerate_den <= 0)
         {
             filter->framerate_num = 25;
             filter->framerate_den = 1;
