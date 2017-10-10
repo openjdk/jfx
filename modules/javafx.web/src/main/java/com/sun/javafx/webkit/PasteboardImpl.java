@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,17 @@
 package com.sun.javafx.webkit;
 
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.webkit.UIClientImpl;
 import com.sun.webkit.Pasteboard;
 import com.sun.webkit.graphics.WCGraphicsManager;
 import com.sun.webkit.graphics.WCImageFrame;
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
 import javafx.scene.image.Image;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
-
+import javax.imageio.ImageIO;
 
 final class PasteboardImpl implements Pasteboard {
 
@@ -66,9 +70,21 @@ final class PasteboardImpl implements Pasteboard {
         Object platformImage = WCGraphicsManager.getGraphicsManager().
                 toPlatformImage(wcImage.getFrame());
         Image fxImage = Toolkit.getImageAccessor().fromPlatformImage(platformImage);
-        ClipboardContent content = new ClipboardContent();
-        content.putImage(fxImage);
-        clipboard.setContent(content);
+        if (fxImage != null) {
+            ClipboardContent content = new ClipboardContent();
+            content.putImage(fxImage);
+            try {
+                File imageDump = File.createTempFile("jfx", ".png");
+                imageDump.deleteOnExit();
+                ImageIO.write(UIClientImpl.toBufferedImage(fxImage),
+                    "png",
+                    imageDump);
+                content.putFiles(Arrays.asList(imageDump));
+            } catch (IOException | SecurityException e) {
+                // Nothing specific to be done as of now
+            }
+            clipboard.setContent(content);
+        }
     }
 
     @Override public void writeUrl(String url, String markup) {
