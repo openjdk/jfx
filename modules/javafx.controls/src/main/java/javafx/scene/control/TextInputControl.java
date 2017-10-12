@@ -570,14 +570,32 @@ public abstract class TextInputControl extends Control {
             return;
         }
 
-        // If you select some stuff and type anything, then we need to
-        // create an undo record. If the range is a single character and
-        // is right next to the index of the last undo record end index, then
-        // we don't need to create a new undo record. In all other cases
-        // we do.
+        /*
+         * A new undo record is created, if
+         * 1. createNewUndoRecord is true, currently it is set to true for paste operation
+         * 2. Text is selected and a character is typed
+         * 3. This is the first operation to be added to undo record
+         * 4. forceNewUndoRecord is true, currently it is set to true if there is no text present
+         * 5. Space character is typed
+         * 6. 2500 milliseconds are elapsed since the undo record was created
+         * 7. Cursor position is changed and a character is typed
+         * 8. A range of text is replaced programmatically using replaceText()
+         * Otherwise, the last undo record is updated or discarded.
+         */
+
         int endOfUndoChange = undoChange == undoChangeHead ? -1 : undoChange.start + undoChange.newText.length();
+        boolean isNewSpaceChar = false;
+        if (newText.equals(" ")) {
+            if (!UndoRedoChange.isSpaceCharSequence()) {
+                isNewSpaceChar = true;
+                UndoRedoChange.setSpaceCharSequence(true);
+            }
+        } else {
+            UndoRedoChange.setSpaceCharSequence(false);
+        }
         if (createNewUndoRecord || nonEmptySelection || endOfUndoChange == -1 || forceNewUndoRecord ||
-                (endOfUndoChange != change.start && endOfUndoChange != change.end) || change.end - change.start > 1) {
+                isNewSpaceChar || UndoRedoChange.hasChangeDurationElapsed() ||
+                (endOfUndoChange != change.start && endOfUndoChange != change.end) || change.end - change.start > 0) {
             undoChange = undoChange.add(change.start, oldText, newText);
         } else if (change.start != change.end && change.text.isEmpty()) {
             // I know I am deleting, and am located at the end of the range of the current undo record
@@ -1467,6 +1485,9 @@ public abstract class TextInputControl extends Control {
      * behavior as necessary.
      */
     static class UndoRedoChange {
+        static long prevRecordTime;
+        static final long CHANGE_DURATION = 2500; // milliseconds
+        static boolean spaceCharSequence = false;
         int start;
         String oldText;
         String newText;
@@ -1482,7 +1503,19 @@ public abstract class TextInputControl extends Control {
             c.newText = newText;
             c.prev = this;
             next = c;
+            prevRecordTime = System.currentTimeMillis();
             return c;
+        }
+
+        static boolean hasChangeDurationElapsed() {
+            return (System.currentTimeMillis() - prevRecordTime > CHANGE_DURATION) ;
+        }
+
+        static void setSpaceCharSequence(boolean value) {
+            spaceCharSequence = value;
+        }
+        static boolean isSpaceCharSequence() {
+            return spaceCharSequence;
         }
 
         public UndoRedoChange discard() {

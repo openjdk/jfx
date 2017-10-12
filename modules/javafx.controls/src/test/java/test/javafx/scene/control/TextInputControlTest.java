@@ -1852,6 +1852,196 @@ public class TextInputControlTest {
 
         textInput.replaceText(0, 4, "");
         assertEquals("", textInput.getText());
+
+        textInput.undo();
+        assertEquals("abcd", textInput.getText());
+
+        textInput.undo();
+        assertEquals("abcefg", textInput.getText());
+
+        textInput.undo();
+        assertEquals("abcd", textInput.getText());
+
+        textInput.undo();
+        assertEquals("", textInput.getText());
+    }
+
+    // Test for JDK-8178418
+    @Test public void UndoRedoSpaceSequence() {
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        StackPane root = new StackPane();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        String text = "123456789";
+        String tempText = "";
+
+        textInput.setText(text);
+        stage.setScene(scene);
+        root.getChildren().removeAll();
+        root.getChildren().add(textInput);
+        stage.show();
+        tk.firePulse();
+
+        KeyEventFirer keyboard = new KeyEventFirer(textInput);
+
+        // Test sequence of spaces
+        keyboard.doKeyPress(KeyCode.HOME);
+        tk.firePulse();
+        for (int i = 0; i < 10; ++i) {
+            keyboard.doKeyTyped(KeyCode.SPACE);
+            tk.firePulse();
+            tempText += " ";
+        }
+        assertTrue(textInput.getText().equals(tempText + text));
+
+        textInput.undo();
+        assertTrue(textInput.getText().equals(text));
+
+        textInput.redo();
+        assertTrue(textInput.getText().equals(tempText + text));
+
+        root.getChildren().removeAll();
+        stage.hide();
+        tk.firePulse();
+    }
+
+    // Test for JDK-8178418
+    @Test public void UndoRedoReverseSpaceSequence() {
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        StackPane root = new StackPane();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        String text = "123456789";
+        String tempText = "";
+
+        textInput.setText(text);
+        stage.setScene(scene);
+        root.getChildren().removeAll();
+        root.getChildren().add(textInput);
+        stage.show();
+        tk.firePulse();
+
+        KeyEventFirer keyboard = new KeyEventFirer(textInput);
+        // Test reverse sequence of spaces
+        keyboard.doKeyPress(KeyCode.HOME);
+        tk.firePulse();
+        for (int i = 0; i < 10; ++i) {
+            keyboard.doKeyTyped(KeyCode.SPACE);
+            keyboard.doKeyPress(KeyCode.LEFT);
+            tk.firePulse();
+            tempText += " ";
+            assertTrue(textInput.getText().equals(tempText + text));
+        }
+
+        for (int i = 0; i < 10; ++i) {
+            textInput.undo();
+            tk.firePulse();
+        }
+        assertTrue(textInput.getText().equals(text));
+
+        tempText = "";
+        for (int i = 0; i < 10; ++i) {
+            textInput.redo();
+            tk.firePulse();
+            tempText += " ";
+            assertTrue(textInput.getText().equals(tempText + text));
+        }
+
+        root.getChildren().removeAll();
+        stage.hide();
+        tk.firePulse();
+    }
+
+    // Test for JDK-8178418
+    @Test public void UndoRedoWords() {
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        StackPane root = new StackPane();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        String text = "123456789";
+        String tempText = "";
+
+        textInput.setText(text);
+        stage.setScene(scene);
+        root.getChildren().removeAll();
+        root.getChildren().add(textInput);
+        stage.show();
+        tk.firePulse();
+
+        KeyEventFirer keyboard = new KeyEventFirer(textInput);
+
+        // Test words separated by space
+        keyboard.doKeyPress(KeyCode.HOME);
+        tk.firePulse();
+        for (int i = 0; i < 10; ++i) {
+            keyboard.doKeyTyped(KeyCode.SPACE);
+            keyboard.doKeyTyped(KeyCode.A);
+            keyboard.doKeyTyped(KeyCode.B);
+            tk.firePulse();
+            tempText += " AB";
+            assertTrue(textInput.getText().equals(tempText + text));
+        }
+
+        for (int i = 0; i < 10; ++i) {
+            textInput.undo();
+            tk.firePulse();
+        }
+        assertTrue(textInput.getText().equals(text));
+
+        tempText = "";
+        for (int i = 0; i < 10; ++i) {
+            textInput.redo();
+            tk.firePulse();
+            tempText += " AB";
+            assertTrue(textInput.getText().equals(tempText + text));
+        }
+
+        root.getChildren().removeAll();
+        stage.hide();
+        tk.firePulse();
+    }
+
+    // Test for JDK-8178418
+    @Test public void UndoRedoTimestampBased() {
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        StackPane root = new StackPane();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        String text = "123456789";
+        String tempText = "";
+
+        textInput.setText(text);
+        stage.setScene(scene);
+        root.getChildren().removeAll();
+        root.getChildren().add(textInput);
+        stage.show();
+        tk.firePulse();
+
+        KeyEventFirer keyboard = new KeyEventFirer(textInput);
+
+        // Test continuos sequence of characters.
+        // In this case an undo-redo record is added after 2500 milliseconds.
+        keyboard.doKeyPress(KeyCode.HOME);
+        tk.firePulse();
+
+        long startTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() - startTime < 4000) {
+
+            keyboard.doKeyTyped(KeyCode.A);
+            tk.firePulse();
+            tempText += "A";
+            assertTrue(textInput.getText().equals(tempText + text));
+        }
+
+        textInput.undo();
+        assertFalse(textInput.getText().equals(text));
+        textInput.undo();
+        tk.firePulse();
+        assertTrue(textInput.getText().equals(text));
+
+        root.getChildren().removeAll();
+        stage.hide();
+        tk.firePulse();
     }
 
     // TODO tests for Content firing event notification properly
