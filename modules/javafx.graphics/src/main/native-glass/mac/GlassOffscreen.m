@@ -145,7 +145,6 @@
 
 - (void)unbind
 {
-    assert(CGLGetCurrentContext() == self->_ctx);
     [self->_offscreen unbind];
     [self unsetContext];
 }
