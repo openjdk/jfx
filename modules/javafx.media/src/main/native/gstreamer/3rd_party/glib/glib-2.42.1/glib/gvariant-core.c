@@ -941,6 +941,12 @@ g_variant_n_children (GVariant *value)
 {
   gsize n_children;
 
+#ifdef GSTREAMER_LITE
+  if (value == NULL) {
+    return 0;
+  }
+#endif // GSTREAMER_LITE
+
   g_variant_lock (value);
 
   if (value->state & STATE_SERIALISED)

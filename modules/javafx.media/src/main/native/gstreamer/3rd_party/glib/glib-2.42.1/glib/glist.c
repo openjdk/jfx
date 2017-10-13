@@ -698,6 +698,11 @@ g_list_copy_deep (GList     *list,
       GList *last;
 
       new_list = _g_list_alloc ();
+ #ifdef GSTREAMER_LITE
+      if (new_list == NULL) {
+        return NULL;
+      }
+ #endif // GSTREAMER_LITE
       if (func)
         new_list->data = func (list->data, user_data);
       else
@@ -708,6 +713,11 @@ g_list_copy_deep (GList     *list,
       while (list)
         {
           last->next = _g_list_alloc ();
+#ifdef GSTREAMER_LITE
+          if (last->next == NULL) {
+            return NULL;
+          }
+#endif // GSTREAMER_LITE
           last->next->prev = last;
           last = last->next;
           if (func)

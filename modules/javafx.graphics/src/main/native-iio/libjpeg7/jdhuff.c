@@ -576,7 +576,9 @@ jpeg_huff_decode (bitread_working_state * state,
   /* With garbage input we may reach the sentinel value l = 17. */
 
   if (l > 16) {
+    int br_offset = state->next_input_byte - state->cinfo->src->next_input_byte;
     WARNMS(state->cinfo, JWRN_HUFF_BAD_CODE);
+    state->next_input_byte = state->cinfo->src->next_input_byte + br_offset;
     return 0;                   /* fake a zero as the safest result */
   }
 

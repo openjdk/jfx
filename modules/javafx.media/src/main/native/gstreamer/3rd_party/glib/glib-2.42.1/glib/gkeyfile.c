@@ -3847,6 +3847,11 @@ g_key_file_add_key (GKeyFile      *key_file,
   GKeyFileKeyValuePair *pair;
 
   pair = g_slice_new (GKeyFileKeyValuePair);
+#ifdef GSTREAMER_LITE
+  if (pair == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
   pair->key = g_strdup (key);
   pair->value = g_strdup (value);
 
