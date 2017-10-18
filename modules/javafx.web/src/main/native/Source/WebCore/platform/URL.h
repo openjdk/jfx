@@ -199,7 +199,7 @@ public:
 
 #if PLATFORM(JAVA)
     bool isJarFile() const { return m_protocolIsInJar; }
-    URL(JNIEnv* env, jstring url) : URL(ParsedURLString, String(env, url)) {}
+    URL(JNIEnv* env, jstring url) : URL(URL(), String(env, url)) {}
 #endif
 
 #ifndef NDEBUG
