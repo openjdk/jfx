@@ -141,8 +141,12 @@ static BOOL doPerformKeyEquivalent(NSEvent* theEvent, NSWindow* panel)
     GET_MAIN_JENV;
     DialogDispatcher *dd = self;
 
+    jclass eventLoopCls = [GlassHelper ClassForName:"com.sun.glass.ui.EventLoop" withEnv:env];
+    if (!eventLoopCls) {
+        return;
+    }
     jobject jobj = (*env)->NewObject(env,
-            [GlassHelper ClassForName:"com.sun.glass.ui.EventLoop" withEnv:env],
+            eventLoopCls,
             javaIDs.EventLoop.init);
     if ((*env)->ExceptionCheck(env)) return;
 
@@ -250,6 +254,7 @@ static jobject convertNSURLtoFile(JNIEnv *env, NSURL *url)
 
     // Make sure the class is initialized before using the methodIDs
     const jclass MacCommonDialogsCls = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacCommonDialogs" withEnv:env];
+    if (!MacCommonDialogsCls) return NULL;
 
     // Performance doesn't matter here, so call the method every time
     jboolean result = (*env)->CallStaticBooleanMethod(env, MacCommonDialogsCls,
@@ -260,6 +265,7 @@ static jobject convertNSURLtoFile(JNIEnv *env, NSURL *url)
         [url retain]; //NOTE: an app must call MacFileURL.dispoes() to release it
 
         const jclass MacFileNSURLCls = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacFileNSURL" withEnv:env];
+        if (!MacFileNSURLCls) return NULL;
         ret = (*env)->NewObject(env,
                 MacFileNSURLCls,
                 javaIDs.MacFileNSURL.init, path, ptr_to_jlong(url));
@@ -434,6 +440,9 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1initIDs
     if ((*env)->ExceptionCheck(env)) return;
 
     cls = [GlassHelper ClassForName:"com.sun.glass.ui.EventLoop" withEnv:env];
+    if (!cls) {
+        return;
+    }
     javaIDs.EventLoop.init  = (*env)->GetMethodID(env, cls, "<init>", "()V");
     if ((*env)->ExceptionCheck(env)) return;
     javaIDs.EventLoop.enter = (*env)->GetMethodID(env, cls, "enter", "()Ljava/lang/Object;");
@@ -446,12 +455,18 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1initIDs
     initJavaIDsFile(env);
 
     cls = [GlassHelper ClassForName:"com.sun.glass.ui.CommonDialogs$ExtensionFilter" withEnv:env];
+    if (!cls) {
+        return;
+    }
     javaIDs.ExtensionFilter.getDescription = (*env)->GetMethodID(env, cls, "getDescription", "()Ljava/lang/String;");
     if ((*env)->ExceptionCheck(env)) return;
     javaIDs.ExtensionFilter.extensionsToArray  = (*env)->GetMethodID(env, cls, "extensionsToArray", "()[Ljava/lang/String;");
     if ((*env)->ExceptionCheck(env)) return;
 
     cls = [GlassHelper ClassForName:"com.sun.glass.ui.CommonDialogs$FileChooserResult" withEnv:env];
+    if (!cls) {
+        return;
+    }
     javaIDs.FileChooserResult.init = (*env)->GetMethodID(env, cls, "<init>", "(Ljava/util/List;Lcom/sun/glass/ui/CommonDialogs$ExtensionFilter;)V");
 }
 
@@ -522,6 +537,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileO
         [dispatcher release];
 
         cls = [GlassHelper ClassForName:"com.sun.glass.ui.CommonDialogs$FileChooserResult" withEnv:env];
+        if (!cls) return NULL;
         result = (*env)->NewObject(env, cls, javaIDs.FileChooserResult.init, chosenFiles, chosenFilter);
     }
     GLASS_POOL_EXIT;
@@ -593,6 +609,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCommonDialogs__1showFileS
         [dispatcher release];
 
         cls = [GlassHelper ClassForName:"com.sun.glass.ui.CommonDialogs$FileChooserResult" withEnv:env];
+        if (!cls) return NULL;
         result = (*env)->NewObject(env, cls, javaIDs.FileChooserResult.init, chosenFile, chosenFilter);
     }
     GLASS_POOL_EXIT;

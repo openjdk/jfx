@@ -97,7 +97,11 @@ static volatile jobject glassClassLoader = NULL;
     if (_ApplicationClass == NULL)
     {
         GET_MAIN_JENV;
-        _ApplicationClass = (*env)->NewGlobalRef(env, [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env]);
+        _ApplicationClass =
+            [GlassHelper ClassForName:"com.sun.glass.ui.Application" withEnv:env];
+        if (_ApplicationClass) {
+            _ApplicationClass = (*env)->NewGlobalRef(env, _ApplicationClass);
+        }
         GLASS_CHECK_EXCEPTION(env);
     }
     if (_ApplicationClass == NULL)

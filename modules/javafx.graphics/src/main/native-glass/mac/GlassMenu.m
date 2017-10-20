@@ -367,7 +367,13 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacMenuDelegate__1initIDs
 (JNIEnv *env, jclass jMenuDelegateClass)
 {
     jclass jCallbackClass = [GlassHelper ClassForName:"com.sun.glass.ui.MenuItem$Callback" withEnv:env];
+    if (!jCallbackClass) {
+        return;
+    }
     jclass jMenuClass = [GlassHelper ClassForName:"com.sun.glass.ui.Menu" withEnv:env];
+    if (!jMenuClass) {
+        return;
+    }
 
     jMenuActionMethod  = (*env)->GetMethodID(env, jCallbackClass,   "action",  "()V");
     if ((*env)->ExceptionCheck(env)) return;
