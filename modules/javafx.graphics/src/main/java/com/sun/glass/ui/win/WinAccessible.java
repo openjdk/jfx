@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -490,6 +490,7 @@ final class WinAccessible extends Accessible {
 
         @SuppressWarnings("unchecked")
         ObservableList<Node> children = (ObservableList<Node>)acc.getAttribute(CHILDREN);
+        if (children == null) return FXCollections.emptyObservableList();
         return children.stream()
                 .filter(Node::isVisible)
                 .collect(Collectors.toList());
@@ -1364,6 +1365,7 @@ final class WinAccessible extends Accessible {
             documentRange = new WinTextRangeProvider(this);
         }
         String text = (String)getAttribute(TEXT);
+        if (text == null) return 0;
         documentRange.setRange(0, text.length());
         return documentRange.getNativeProvider();
     }

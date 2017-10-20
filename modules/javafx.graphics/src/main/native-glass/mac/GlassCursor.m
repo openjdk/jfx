@@ -77,6 +77,15 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1initIDs
 {
     LOG("Java_com_sun_glass_ui_mac_MacCursor__1initIDs");
 
+    if (jSizeInit == NULL)
+    {
+        jclass cls = [GlassHelper ClassForName:"com.sun.glass.ui.Size" withEnv:env];
+        if (!cls) {
+            return;
+        }
+        jSizeInit = (*env)->GetMethodID(env, cls, "<init>", "(II)V");
+    }
+
     NSString *base = @"/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/HIServices.framework/Versions/A/Resources/cursors";
     NSString *nwse = @"resizenorthwestsoutheast";
     NSString *nesw = @"resizenortheastsouthwest";
@@ -95,11 +104,7 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacCursor__1initIDs
     NSPoint   neswPoint = NSMakePoint([[neswDict valueForKey:@"hotx"] doubleValue],
                                       [[neswDict valueForKey:@"hoty"] doubleValue]);
 
-    if (jSizeInit == NULL)
-    {
-        jSizeInit = (*env)->GetMethodID(env, [GlassHelper ClassForName:"com.sun.glass.ui.Size" withEnv:env],
-                                        "<init>", "(II)V");
-    }
+
     cursorCache = [NSArray arrayWithObjects:
                       /* CURSOR_CUSTOM */           [NSCursor arrowCursor],     // not handed out in set
                       /* CURSOR_DEFAULT */          [NSCursor arrowCursor],
@@ -270,8 +275,11 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacCursor__1getBestSize
         }
 
         [image release];
-
-        jsize = (*env)->NewObject(env, [GlassHelper ClassForName:"com.sun.glass.ui.Size" withEnv:env], jSizeInit, widthBest, heightBest);
+        jclass sizeClass = [GlassHelper ClassForName:"com.sun.glass.ui.Size" withEnv:env];
+        if (sizeClass) {
+            return NULL;
+        }
+        jsize = (*env)->NewObject(env, sizeClass, jSizeInit, widthBest, heightBest);
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

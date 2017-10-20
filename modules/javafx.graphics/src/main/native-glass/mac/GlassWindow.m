@@ -650,17 +650,29 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_mac_MacWindow__1initIDs
 
     if (jMenuBarDelegateClass == NULL)
     {
-        jMenuBarDelegateClass = (*env)->NewGlobalRef(env, [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacMenuBarDelegate" withEnv:env]);
+        jclass cls = [GlassHelper ClassForName:"com.sun.glass.ui.mac.MacMenuBarDelegate" withEnv:env];
+        if (!cls) {
+            return;
+        }
+        jMenuBarDelegateClass = (*env)->NewGlobalRef(env, cls);
     }
 
     if (jViewClass == NULL)
     {
-        jViewClass = (*env)->NewGlobalRef(env, [GlassHelper ClassForName:"com.sun.glass.ui.View" withEnv:env]);
+        jclass cls = [GlassHelper ClassForName:"com.sun.glass.ui.View" withEnv:env];
+        if (!cls) {
+            return;
+        }
+        jViewClass = (*env)->NewGlobalRef(env, cls);
     }
 
     if (jScreenClass == NULL)
     {
-        jScreenClass = (*env)->NewGlobalRef(env, [GlassHelper ClassForName:"com.sun.glass.ui.Screen" withEnv:env]);
+        jclass cls = [GlassHelper ClassForName:"com.sun.glass.ui.Screen" withEnv:env];
+        if (!cls) {
+            return;
+        }
+        jScreenClass = (*env)->NewGlobalRef(env, cls);
     }
 
     if (jWindowNotifyMove == NULL)
