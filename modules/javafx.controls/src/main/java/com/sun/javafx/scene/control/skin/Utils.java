@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -144,6 +144,51 @@ public class Utils {
             layout.setBoundsType(0);
         }
         return layout.getBounds().getHeight();
+    }
+
+    public static Point2D computeMnemonicPosition(Font font, String text, int mnemonicIndex, double wrappingWidth,
+                                                  double lineSpacing) {
+        // Input validation
+        if ((font == null) || (text == null) ||
+            (mnemonicIndex < 0) || (mnemonicIndex > text.length())) {
+            return null;
+        }
+
+        // Layout the text with given font, wrapping width and line spacing
+        layout.setContent(text, FontHelper.getNativeFont(font));
+        layout.setWrapWidth((float)wrappingWidth);
+        layout.setLineSpacing((float)lineSpacing);
+
+        // The text could be spread over multiple lines
+        // We need to find out on which line the mnemonic character lies
+        int start = 0;
+        int i = 0;
+        int totalLines = layout.getLines().length;
+        while (i < totalLines) {
+            int lineLength = layout.getLines()[i].getLength();
+
+            if ((mnemonicIndex >= start) &&
+                (mnemonicIndex < (start + lineLength))) {
+                // mnemonic lies on line 'i'
+                break;
+            }
+
+            start += lineLength;
+            i++;
+        }
+
+        // Find x and y offsets of mnemonic character position
+        // in line numbered 'i'
+        double lineHeight = layout.getBounds().getHeight() / totalLines;
+        double x = Utils.computeTextWidth(font, text.substring(start, mnemonicIndex), 0);
+
+        double y = (lineHeight * (i+1));
+        // Adjust y offset for linespacing except for the last line.
+        if ((i+1) != totalLines) {
+            y -= (lineSpacing / 2);
+        }
+
+        return new Point2D(x, y);
     }
 
     public static int computeTruncationIndex(Font font, String text, double width) {

@@ -33,6 +33,7 @@ import javafx.beans.InvalidationListener;
 import javafx.geometry.HPos;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.AccessibleAttribute;
@@ -573,13 +574,13 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             contentY = (y + ((h - contentHeight) / 2.0));
         }
 
-        double preMnemonicWidth = 0.0;
+        Point2D mnemonicPos = null;
         double mnemonicWidth = 0.0;
         double mnemonicHeight = 0.0;
         if (containsMnemonic) {
             final Font font = text.getFont();
             String preSt = bindings.getText();
-            preMnemonicWidth = Utils.computeTextWidth(font, preSt.substring(0, bindings.getMnemonicIndex()), 0);
+            mnemonicPos = Utils.computeMnemonicPosition(font, preSt, bindings.getMnemonicIndex(), this.wrapWidth, labeled.getLineSpacing());
             mnemonicWidth = Utils.computeTextWidth(font, preSt.substring(bindings.getMnemonicIndex(), bindings.getMnemonicIndex() + 1), 0);
             mnemonicHeight = Utils.computeTextHeight(font, "_", 0, text.getBoundsType());
         }
@@ -612,9 +613,10 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // adjust the text based on the text's minX/minY so no need to
             // worry about that here
             text.relocate(snapPositionX(contentX), snapPositionY(contentY));
-            if (containsMnemonic) {
+            if (containsMnemonic && (mnemonicPos != null)) {
                 mnemonic_underscore.setEndX(mnemonicWidth-2.0);
-                mnemonic_underscore.relocate(contentX+preMnemonicWidth, contentY+mnemonicHeight-1);
+                mnemonic_underscore.relocate(snapPositionX(contentX + mnemonicPos.getX()),
+                                             snapPositionY(contentY + mnemonicPos.getY()));
             }
 
         } else if (ignoreText) {
@@ -623,11 +625,11 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
             // there is a graphic, the text isn't even in the scene)
             text.relocate(snapPositionX(contentX), snapPositionY(contentY));
             graphic.relocate(snapPositionX(contentX), snapPositionY(contentY));
-            if (containsMnemonic) {
+            if (containsMnemonic && (mnemonicPos != null)) {
                 mnemonic_underscore.setEndX(mnemonicWidth);
                 mnemonic_underscore.setStrokeWidth(mnemonicHeight/10.0);
-                mnemonic_underscore.relocate(contentX+preMnemonicWidth, contentY+mnemonicHeight-1);
-
+                mnemonic_underscore.relocate(snapPositionX(contentX + mnemonicPos.getX()),
+                                             snapPositionY(contentY + mnemonicPos.getY()));
             }
         } else {
             // There is both text and a graphic, so I need to position them
@@ -670,10 +672,11 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
                 textY = contentY + ((contentHeight - textHeight) / 2.0);
             }
             text.relocate(snapPositionX(textX), snapPositionY(textY));
-            if (containsMnemonic) {
+            if (containsMnemonic && (mnemonicPos != null)) {
                 mnemonic_underscore.setEndX(mnemonicWidth);
                 mnemonic_underscore.setStrokeWidth(mnemonicHeight/10.0);
-                mnemonic_underscore.relocate(snapPositionX(textX+preMnemonicWidth), snapPositionY(textY+mnemonicHeight-1));
+                mnemonic_underscore.relocate(snapPositionX(textX + mnemonicPos.getX()),
+                                             snapPositionY(textY + mnemonicPos.getY()));
             }
             graphic.relocate(snapPositionX(graphicX), snapPositionY(graphicY));
         }
