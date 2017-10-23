@@ -676,16 +676,35 @@ JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetStringIndices)
 {
     CTRunRef run = (CTRunRef)runRef;
     const CFIndex* indices = CTRunGetStringIndicesPtr(run);
+    CFIndex count = CTRunGetGlyphCount(run);
+    if (count == 0) {
+        return 0;
+    }
+
+    CFIndex* tempIndices = NULL;
+    if (!indices) {
+        tempIndices = (CFIndex*) malloc(count * sizeof(CFIndex));
+        if (!tempIndices) {
+            return 0;
+        }
+
+        CTRunGetStringIndices(run, CFRangeMake(0, 0), tempIndices);
+        indices = tempIndices;
+    }
+
     int i = 0;
     if (indices) {
         jint* buffer = (*env)->GetPrimitiveArrayCritical(env, bufferRef, NULL);
         if (buffer) {
-            CFIndex count = CTRunGetGlyphCount(run);
             while(i < count) {
                 buffer[start + i] = indices[i];
                 i++;
             }
             (*env)->ReleasePrimitiveArrayCritical(env, bufferRef, buffer, 0);
+        }
+
+        if (tempIndices) {
+            free(tempIndices);
         }
     }
     return i;
