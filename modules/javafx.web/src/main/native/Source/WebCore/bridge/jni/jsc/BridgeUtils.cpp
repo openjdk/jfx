@@ -120,6 +120,7 @@ JSValueRef Java_Object_to_JSValue(
     if (val == NULL)
         return JSValueMakeNull(ctx);
     JSC::ExecState* exec = toJS(ctx);
+    JSC::JSLockHolder lock(exec);
 
     jclass clJSObject = getJSObjectClass(env);
     if (env->IsInstanceOf(val, clJSObject)) {
@@ -274,6 +275,7 @@ PassRefPtr<JSC::Bindings::RootObject> checkJSPeer(
             if (rootObject) {
                 context = WebCore::getGlobalContext(&frame->script());
                 JSC::ExecState* exec = toJS(context);
+                JSC::JSLockHolder lock(exec);
 
                 object = const_cast<JSObjectRef>(toRef(exec,
                     (peer_type == com_sun_webkit_dom_JSObject_JS_DOM_WINDOW_OBJECT)
@@ -390,6 +392,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_JSObject_toStringImpl
     checkJSPeer(peer, peer_type, object, ctx);
 
     JSC::ExecState* exec = toJS(ctx);
+    JSC::JSLockHolder lock(exec);
 
     return toJS(object)->toString(exec)->value(exec)
         .toJavaString(env).releaseLocal();

@@ -92,6 +92,9 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkDisposeJSPee
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_EventListenerImpl_twkDispatchEvent
     (JNIEnv*, jclass, jlong peer, jlong eventPeer)
 {
+    if (!peer || !eventPeer || !JavaEventListener::scriptExecutionContext())
+        return;
+
     static_cast<EventListener *>(jlong_to_ptr(peer))->handleEvent(
         JavaEventListener::scriptExecutionContext(),
         static_cast<Event*>(jlong_to_ptr(eventPeer)));
