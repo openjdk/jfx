@@ -277,12 +277,10 @@ import javafx.scene.text.FontSmoothingType;
  * <tr><th colspan="1">Basic Shape Rendering</th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
- * <a id="fill-basic-ops">
  * {@link #fillRect(double, double, double, double) fillRect()},
  * {@link #fillRoundRect(double, double, double, double, double, double) fillRoundRect()},
  * {@link #fillOval(double, double, double, double) fillOval()},
  * {@link #fillArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) fillArc()}
- * </a>
  * </td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
@@ -292,13 +290,11 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
- * <a id="strk-basic-ops">
  * {@link #strokeLine(double, double, double, double) strokeLine()},
  * {@link #strokeRect(double, double, double, double) strokeRect()},
  * {@link #strokeRoundRect(double, double, double, double, double, double) strokeRoundRect()},
  * {@link #strokeOval(double, double, double, double) strokeOval()},
  * {@link #strokeArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) strokeArc()}
- * </a>
  * </td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -345,10 +341,8 @@ import javafx.scene.text.FontSmoothingType;
  * <tr><th colspan="1">Text Rendering</th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
- * <a id="fill-text-ops">
  * {@link #fillText(java.lang.String, double, double) fillText()},
  * {@link #fillText(java.lang.String, double, double, double) fillText(with maxWidth)}
- * </a>
  * </td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
@@ -358,10 +352,8 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
- * <a id="strk-text-ops">
  * {@link #strokeText(java.lang.String, double, double) strokeText()},
  * {@link #strokeText(java.lang.String, double, double, double) strokeText(with maxWidth)}
- * </a>
  * </td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -395,9 +387,7 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
- * <a id="fill-path-ops">
  * {@link #fill() fill()}
- * </a>
  * </td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
@@ -407,9 +397,7 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
- * <a id="strk-path-ops">
  * {@link #stroke() stroke()}
- * </a>
  * </td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -419,9 +407,7 @@ import javafx.scene.text.FontSmoothingType;
  * </tr>
  * <tr class="altColor">
  * <td class="colLast" style="width:25%">
- * <a id="clip-path-ops">
  * {@link #clip() clip()}
- * </a>
  * </td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -437,9 +423,7 @@ import javafx.scene.text.FontSmoothingType;
  * <tr><th colspan="1">Image Rendering</th></tr>
  * <tr class="rowColor">
  * <td class="colLast" style="width:25%">
- * <a id="draw-img-ops">
  * {@link #drawImage(javafx.scene.image.Image, double, double) drawImage(all forms)}
- * </a>
  * </td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>

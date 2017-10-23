@@ -31,7 +31,7 @@ import javafx.beans.property.ObjectProperty;
  * <p>
  * The Skinnable interface is implemented by the {@link Control} class,
  * and therefore is implemented by all Control implementations.
- * <p>
+ *
  * @since JavaFX 2.0
  */
 public interface Skinnable {

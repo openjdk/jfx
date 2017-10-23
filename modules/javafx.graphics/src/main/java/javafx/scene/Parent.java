@@ -314,21 +314,6 @@ public abstract class Parent extends Node {
     //accumulates all removed nodes between pulses, for dirty area calculation.
     private List<Node> removed;
 
-    /**
-     * A ObservableList of child {@code Node}s.
-     * <p>
-     * See the class documentation for {@link Node} for scene graph structure
-     * restrictions on setting a {@link Parent}'s children ObservableList.
-     * If these restrictions are violated by a change to the children ObservableList,
-     * the change is ignored and the previous value of the child ObservableList is
-     * restored.
-     *
-     * {@code <p>Throws AssignToBoundException} if the same node
-     * appears in two different bound ObservableList.
-     *
-     * @defaultValue empty
-     */
-
     // set to true if either childRemoved or childAdded returns
     // true. These functions will indicate whether the geom
     // bounds for the parent have changed

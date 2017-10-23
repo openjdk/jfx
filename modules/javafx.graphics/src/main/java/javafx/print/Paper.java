@@ -37,7 +37,7 @@ import static com.sun.javafx.print.Units.*;
  * However for convenience, this class pre-defines some of the most
  * common paper sizes so that an application may easily set up default
  * parameters from code, eg by referring to <code>Paper.A4</code>
- * <p>
+ *
  * @since JavaFX 8.0
  */
 

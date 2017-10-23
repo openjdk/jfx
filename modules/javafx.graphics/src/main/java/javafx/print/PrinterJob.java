@@ -86,7 +86,7 @@ import com.sun.javafx.tk.PrintPipeline;
  * So the recommendation is to perform printing on a new thread
  * and let the implementation internally schedule any tasks that
  * need to be performed on the FX thread to be run on that thread.
- * <p>
+ *
  * @since JavaFX 8.0
  */
 

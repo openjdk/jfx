@@ -1750,7 +1750,7 @@ public abstract class Node implements EventTarget, Styleable {
      * Note that this is a conditional feature. See
      * {@link javafx.application.ConditionalFeature#SCENE3D ConditionalFeature.SCENE3D}
      * for more information.
-     *<p>
+     * <p>
      * See the constructor in Scene with depthBuffer as one of its input
      * arguments.
      *
@@ -2935,7 +2935,7 @@ public abstract class Node implements EventTarget, Styleable {
      * <p>
      * If Node's {@link #maxWidth(double)} is lower than this number,
      * {@code minWidth} takes precedence. This means the Node should never be resized below {@code minWidth}.
-     * <p>
+     *
      * @see #isResizable()
      * @see #getContentBias()
      *
@@ -2965,7 +2965,7 @@ public abstract class Node implements EventTarget, Styleable {
      * <p>
      * If Node's {@link #maxHeight(double)} is lower than this number,
      * {@code minHeight} takes precedence. This means the Node should never be resized below {@code minHeight}.
-     * <p>
+     *
      * @see #isResizable()
      * @see #getContentBias()
      *
@@ -2993,7 +2993,7 @@ public abstract class Node implements EventTarget, Styleable {
      * Node subclasses with a vertical content-bias should honor the height
      * parameter whether -1 or a positive value.   All other subclasses may ignore
      * the height parameter (which will likely be -1).
-     * <p>
+     *
      * @see #isResizable()
      * @see #getContentBias()
      * @see #autosize()
@@ -3023,7 +3023,7 @@ public abstract class Node implements EventTarget, Styleable {
      * Node subclasses with a horizontal content-bias should honor the height
      * parameter whether -1 or a positive value.   All other subclasses may ignore
      * the height parameter (which will likely be -1).
-     * <p>
+     *
      * @see #getContentBias()
      * @see #autosize()
      *
@@ -3056,7 +3056,7 @@ public abstract class Node implements EventTarget, Styleable {
      * <p>
      * If Node's {@link #minWidth(double)} is greater, it should take precedence
      * over the {@code maxWidth}. This means the Node should never be resized below {@code minWidth}.
-     * <p>
+     *
      * @see #isResizable()
      * @see #getContentBias()
      *
@@ -3088,7 +3088,7 @@ public abstract class Node implements EventTarget, Styleable {
      * <p>
      * If Node's {@link #minHeight(double)} is greater, it should take precedence
      * over the {@code maxHeight}.  This means the Node should never be resized below {@code minHeight}.
-     * <p>
+     *
      * @see #isResizable()
      * @see #getContentBias()
      *
@@ -3113,7 +3113,6 @@ public abstract class Node implements EventTarget, Styleable {
      * within the resizable node's preferred range.  The autosize() method may
      * be used if the parent just needs to resize the node to its preferred size.
      *
-     * <p>
      * @see #isResizable()
      * @see #getContentBias()
      * @see #autosize()
@@ -3187,7 +3186,7 @@ public abstract class Node implements EventTarget, Styleable {
      * within the resizable node's preferred range.  The autosize() and relocate()
      * methods may be used if the parent just needs to resize the node to its
      * preferred size and reposition it.
-     * <p>
+     *
      * @see #isResizable()
      * @see #getContentBias()
      * @see #autosize()
@@ -5557,7 +5556,7 @@ public abstract class Node implements EventTarget, Styleable {
      * The node's final translation will be computed as {@link #layoutYProperty layoutY} + {@code translateY},
      * where {@code layoutY} establishes the node's stable position and {@code translateY}
      * optionally makes dynamic adjustments to that position.
-     *<p>
+     * <p>
      * This variable can be used to alter the location of a node without disturbing
      * its {@link #layoutBoundsProperty layoutBounds}, which makes it useful for animating a node's location.
      *
@@ -5583,7 +5582,7 @@ public abstract class Node implements EventTarget, Styleable {
      * transformed coordinates of this {@code Node}.  This value will be added
      * to any translation defined by the {@code transforms} ObservableList and
      * {@code layoutZ}.
-     *<p>
+     * <p>
      * This variable can be used to alter the location of a Node without
      * disturbing its layout bounds, which makes it useful for animating a
      * node's location.

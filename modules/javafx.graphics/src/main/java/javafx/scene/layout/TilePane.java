@@ -109,7 +109,7 @@ import javafx.util.Callback;
  *
  * <p>
  * A tilepane's parent will resize the tilepane within the tilepane's resizable range
- * during layout.   By default the tilepane computes this range based on its content
+ * during layout. By default the tilepane computes this range based on its content
  * as outlined in the tables below.
  * </p>
  * <table border="1">
@@ -130,10 +130,10 @@ import javafx.util.Callback;
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus width required to display all tiles when wrapped at a specified height with an hgap between each column.</td>
- * <td>top/bottom insets plus the tile height.</td><tr>
+ * <td>top/bottom insets plus the tile height.</td></tr>
  * <tr><th>preferred</th>
  * <td>left/right insets plus width required to display all tiles when wrapped at the specified height with an hgap between each column.</td>
- * <td>top/bottom insets plus prefRows multiplied by the tile height.</td><tr>
+ * <td>top/bottom insets plus prefRows multiplied by the tile height.</td></tr>
  * <tr><th>maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
@@ -143,10 +143,7 @@ import javafx.util.Callback;
  * <p>
  * TilePane provides properties for setting the size range directly.  These
  * properties default to the sentinel value Region.USE_COMPUTED_SIZE, however the
- * application may set them to other values as needed:
- * <pre>{@code
- *     <b>tilepane.setMaxWidth(500);</b>
- * }</pre>
+ * application may set them to other values as needed, e.g. {@code tilepane.setMaxWidth(500)}.
  * Applications may restore the computed values by setting these properties back
  * to Region.USE_COMPUTED_SIZE.
  * <p>

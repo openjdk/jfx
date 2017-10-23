@@ -59,7 +59,6 @@ customMenuItem.setHideOnClick(false);
  * menu, you'll be presented with a slider that is horizontally centered when
  * the menu is visible, and interacting with the slider will not result in the
  * menu disappearing.
- * <p>
  *
  * @see MenuItem
  * @see Menu

@@ -73,8 +73,6 @@ import javafx.beans.value.ObservableValue;
  * to determine supported settings.
  *
  * @since JavaFX 8.0
- *
- *
  */
 public final class JobSettings {
 
@@ -852,7 +850,7 @@ public final class JobSettings {
     /**
      * Set the <code>PrintColor</code> property.
      * A null value is ignored.
-     * <p>
+     *
      * @param color new setting for print color.
      */
     public void setPrintColor(PrintColor color) {

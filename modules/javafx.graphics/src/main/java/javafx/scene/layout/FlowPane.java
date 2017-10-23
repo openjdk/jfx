@@ -123,10 +123,10 @@ import javafx.util.Callback;
  * <tr><td></td><th>width</th><th>height</th></tr>
  * <tr><th>minimum</th>
  * <td>left/right insets plus width required to display all children at their preferred widths when wrapped at a specified height</td>
- * <td>top/bottom insets plus largest of children's pref heights</td><tr>
+ * <td>top/bottom insets plus largest of children's pref heights</td></tr>
  * <tr><th>preferred</th>
  * <td>left/right insets plus width required to display all children at their pref widths when wrapped at the specified height</td>
- * <td>top/bottom insets plus prefWrapLength</td><tr>
+ * <td>top/bottom insets plus prefWrapLength</td></tr>
  * <tr><th>maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
