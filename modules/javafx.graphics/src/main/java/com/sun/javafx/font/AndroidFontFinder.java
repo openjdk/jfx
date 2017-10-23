@@ -49,7 +49,7 @@ import com.sun.glass.utils.NativeLibLoader;
 /**
  * Class AndroidFontFinder reads font descriptor from
  * /system/etc/system_fonts.xml. If that file doesn't exist it is replaced by
- * embedded font descriptor {@link com/sun/t2k/android_system_fonts.xml} which
+ * embedded font descriptor {@link com/sun/javafx/font/android_system_fonts.xml} which
  * defines some basic mappings based on best guess which fonts are mandatory on
  * platforms lower than 4.0 and how they map to typefaces.
  */

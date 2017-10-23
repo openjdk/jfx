@@ -351,7 +351,7 @@ ANDROID.jfxrtJarExcludes = [
     "com/oracle/dalvik"
 ]
 
-def text = (compileNativeText) ? "native" : "t2k"
+def text = (compileNativeText) ? "native" : ""
 
 ANDROID.javafxPlatformProperties = """
 javafx.platform=android
@@ -565,20 +565,6 @@ ANDROID.font.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 ANDROID.font.linker = linker
 ANDROID.font.linkFlags = [linkFlags].flatten()
 ANDROID.font.lib = "javafx_font"
-
-if (BUILD_CLOSED) {
-    ANDROID.fontT2K = [:]
-    ANDROID.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
-    ANDROID.fontT2K.nativeSource = [
-        file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout")]
-    ANDROID.fontT2K.compiler = compiler
-    ANDROID.fontT2K.ccFlags = [ccFlags, "-DLE_STANDALONE", "-fno-exceptions", "-fno-rtti", ccWarnFlags,
-        ccArchFlags, ccOptFlags, ccDebugFlags, ccDefaultIncludeFlags].flatten()
-    ANDROID.fontT2K.linker = linker
-    ANDROID.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
-    ANDROID.fontT2K.lib = "javafx_font_t2k"
-}
 
 if (compileNativeText) {
     ANDROID.fontNativeFreetype = [:]

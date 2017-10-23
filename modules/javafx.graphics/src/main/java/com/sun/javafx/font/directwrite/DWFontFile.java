@@ -118,7 +118,7 @@ class DWFontFile extends PrismFontFile {
     }
 
     RectBounds getBBox(int glyphCode, float size) {
-        /* In coretext and t2k this is the bounds for the path of the glyph */
+        /* In coretext this is the bounds for the path of the glyph */
         float[] bb = new float[4];
         getGlyphBoundingBox(glyphCode, size, bb);
         return new RectBounds(bb[0], bb[1], bb[2], bb[3]);

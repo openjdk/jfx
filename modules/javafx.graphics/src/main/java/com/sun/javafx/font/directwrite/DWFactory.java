@@ -48,7 +48,7 @@ public class DWFactory extends PrismFontFactory {
          */
         if (getDWriteFactory() == null) {
             /* Returning null here indicates to the PrismFontFactory
-             * to fallback to T2K. */
+             * to throw an Error . */
             return null;
         }
         return new DWFactory();

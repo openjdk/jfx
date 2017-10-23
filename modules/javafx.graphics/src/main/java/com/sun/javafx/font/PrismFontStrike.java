@@ -85,9 +85,6 @@ public abstract class PrismFontStrike<T extends PrismFontFile> implements FontSt
         fontResource.getStrikeMap().remove(desc);
         // Native resources are freed via a disposer once we are sure
         // all references are cleared. It also ensures we don't leak.
-        // So this is approach is not used right now, in favour of a disposer.
-        //T2KFontFile.freePointer(pScalerContext);
-        //pScalerContext = 0L;
     }
 
     /**

@@ -419,45 +419,6 @@ IOS.font.x86_64.linker = linker
 IOS.font.x86_64.linkFlags = ["-arch_only", archX86_64, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
 IOS.font.x86_64.lib = "javafx_font_${archX86_64}"
 
-IOS.fontT2K = [:]
-IOS.fontT2K.lib = "javafx_font_t2k"
-IOS.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
-IOS.fontT2K.variants = ["arm", "arm64", "x86", "x86_64"];
-
-IOS.fontT2K.arm = [:]
-IOS.fontT2K.arm.nativeSource = [
-        file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout")]
-IOS.fontT2K.arm.compiler = compiler
-IOS.fontT2K.arm.ccFlags = ["-DJFXFONT_PLUS", "-DLE_STANDALONE", ccFlags, "-arch", archArm, "-isysroot", sdkPath(iPhoneOS)].flatten()
-IOS.fontT2K.arm.linker = linker
-IOS.fontT2K.arm.linkFlags = ["-arch_only", archArm, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.fontT2K.arm.lib = "javafx_font_t2k_${archArm}"
-
-IOS.fontT2K.arm64 = [:]
-IOS.fontT2K.arm64.nativeSource = [IOS.fontT2K.arm.nativeSource].flatten()
-IOS.fontT2K.arm64.compiler = compiler
-IOS.fontT2K.arm64.ccFlags = ["-DJFXFONT_PLUS", "-DLE_STANDALONE", ccFlags, "-arch", archArm64, "-isysroot", sdkPath(iPhoneOS)].flatten()
-IOS.fontT2K.arm64.linker = linker
-IOS.fontT2K.arm64.linkFlags = ["-arch_only", archArm64, "-syslibroot", sdkPath(iPhoneOS), linkFlags].flatten()
-IOS.fontT2K.arm64.lib = "javafx_font_t2k_${archArm64}"
-
-IOS.fontT2K.x86 = [:]
-IOS.fontT2K.x86.nativeSource = [IOS.fontT2K.arm.nativeSource].flatten()
-IOS.fontT2K.x86.compiler = compiler
-IOS.fontT2K.x86.ccFlags = ["-DJFXFONT_PLUS", "-DLE_STANDALONE", ccFlags, "-arch", archX86, "-isysroot", sdkPath(iPhoneSim)].flatten()
-IOS.fontT2K.x86.linker = linker
-IOS.fontT2K.x86.linkFlags = ["-arch_only", archX86, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.fontT2K.x86.lib = "javafx_font_t2k_${archX86}"
-
-IOS.fontT2K.x86_64 = [:]
-IOS.fontT2K.x86_64.nativeSource = [IOS.fontT2K.arm.nativeSource].flatten()
-IOS.fontT2K.x86_64.compiler = compiler
-IOS.fontT2K.x86_64.ccFlags = ["-DJFXFONT_PLUS", "-DLE_STANDALONE", ccFlags, "-arch", archX86_64, "-isysroot", sdkPath(iPhoneSim)].flatten()
-IOS.fontT2K.x86_64.linker = linker
-IOS.fontT2K.x86_64.linkFlags = ["-arch_only", archX86_64, "-syslibroot", sdkPath(iPhoneSim), linkFlags].flatten()
-IOS.fontT2K.x86_64.lib = "javafx_font_t2k_${archX86_64}"
-
 IOS.webview = [:]
 IOS.webview.lib = "javafx_ios_webnode"
 IOS.webview.javahInclude = ["javafx/scene/web/*"]

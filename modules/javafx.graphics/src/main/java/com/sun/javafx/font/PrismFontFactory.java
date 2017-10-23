@@ -56,7 +56,6 @@ public abstract class PrismFontFactory implements FontFactory {
     public static final boolean isAndroid;
     public static final boolean isEmbedded;
     public static final int cacheLayoutSize;
-    static boolean useNativeRasterizer;
     private static int subPixelMode;
     public static final int SUB_PIXEL_ON = 1;
     public static final int SUB_PIXEL_Y = 2;
@@ -69,7 +68,6 @@ public abstract class PrismFontFactory implements FontFactory {
     private static final String jreDefaultFont   = "Lucida Sans Regular";
     private static final String jreDefaultFontLC = "lucida sans regular";
     private static final String jreDefaultFontFile = "LucidaSansRegular.ttf";
-    private static final String T2K_FACTORY = "com.sun.javafx.font.t2k.T2KFactory";
     private static final String CT_FACTORY = "com.sun.javafx.font.coretext.CTFactory";
     private static final String DW_FACTORY = "com.sun.javafx.font.directwrite.DWFactory";
     private static final String FT_FACTORY = "com.sun.javafx.font.freetype.FTFactory";
@@ -134,17 +132,7 @@ public abstract class PrismFontFactory implements FontFactory {
                         }
                     }
 
-                    useNativeRasterizer = isMacOSX || isWindows || isLinux;
-                    String defPrismText = useNativeRasterizer ? "native" : "t2k";
-                    String prismText = System.getProperty("prism.text", defPrismText);
-                    if (useNativeRasterizer) {
-                        useNativeRasterizer = !prismText.equals("t2k");
-                    } else {
-                        useNativeRasterizer = prismText.equals("native");
-                    }
-
-                    boolean lcdTextOff = (isMacOSX && !useNativeRasterizer) ||
-                                         isIOS || isAndroid || isEmbedded;
+                    boolean lcdTextOff = isIOS || isAndroid || isEmbedded;
                     String defLCDProp = lcdTextOff ? "false" : "true";
                     String lcdProp = System.getProperty("prism.lcdtext", defLCDProp);
                     lcdEnabled = lcdProp.equals("true");
@@ -201,13 +189,9 @@ public abstract class PrismFontFactory implements FontFactory {
         if (theFontFactory != null) {
             return theFontFactory;
         }
-        String factoryClass = null;
-        if (useNativeRasterizer) {
-            factoryClass = getNativeFactoryName();
-        }
+        String factoryClass = getNativeFactoryName();
         if (factoryClass == null) {
-            useNativeRasterizer = false;
-            factoryClass = T2K_FACTORY;
+            throw new InternalError("cannot find a native font factory");
         }
         if (debugFonts) {
             System.err.println("Loading FontFactory " + factoryClass);
@@ -224,22 +208,7 @@ public abstract class PrismFontFactory implements FontFactory {
         }
         theFontFactory = getFontFactory(factoryClass);
         if (theFontFactory == null) {
-            if (useNativeRasterizer) {
-                // If native failed use T2K (i.e. Windows Vista)
-                useNativeRasterizer = false;
-                factoryClass = T2K_FACTORY;
-            } else {
-                // If T2K failed use native (i.e. OpenJFX build)
-                useNativeRasterizer = true;
-                factoryClass = getNativeFactoryName();
-            }
-            if (factoryClass != null) {
-                theFontFactory = getFontFactory(factoryClass);
-            }
-            if (debugFonts) {
-                System.err.println("*** Loading primary font factory failed. ***");
-                System.err.println("*** Fallbacking to " + factoryClass  + " ***");
-            }
+            throw new InternalError("cannot load font factory: "+ factoryClass);
         }
         return theFontFactory;
     }
@@ -526,10 +495,6 @@ public abstract class PrismFontFactory implements FontFactory {
                     continue;
                 }
                 storeInMap(lcFontName, fr);
-//                 if (wantComp) {
-//                     // wrap with fallback support
-//                     fr = new T2KCompositeFontResource(fr, lcFontName);
-//                 }
             }
             if (bold == fr.isBold() && italic == fr.isItalic()) {
                 storeInMap(lcFamilyName+styleStr, fr);
@@ -2043,6 +2008,6 @@ public abstract class PrismFontFactory implements FontFactory {
         }
     }
 
-    /* Called from T2KFontFile which caches the return value */
+    /* Called from PrismFontFile which caches the return value */
     static native short getSystemLCID();
 }

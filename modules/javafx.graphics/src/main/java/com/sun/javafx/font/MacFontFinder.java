@@ -80,16 +80,6 @@ class MacFontFinder {
             String family = fontData[i++];
             String file = fontData[i++];
 
-            if (!PrismFontFactory.useNativeRasterizer) {
-                /* Skip OTF/CID keyed fonts for T2K (RT-15755) */
-                if (file.endsWith(".otf")) {
-                    if (name.indexOf(" Pro W") != -1) continue;
-                    if (name.indexOf(" ProN W") != -1) continue;
-                    if (name.indexOf(" Std W") != -1) continue;
-                    if (name.indexOf(" StdN W") != -1) continue;
-                    if (name.indexOf("Hiragino") != -1) continue;
-                }
-            }
             if (PrismFontFactory.debugFonts) {
                 System.err.println("[MacFontFinder] Name=" + name);
                 System.err.println("\tFamily=" + family);

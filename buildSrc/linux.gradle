@@ -289,16 +289,6 @@ LINUX.font.linker = linker
 LINUX.font.linkFlags = [linkFlags].flatten()
 LINUX.font.lib = "javafx_font"
 
-LINUX.fontT2K = [:]
-LINUX.fontT2K.nativeSource = [
-        file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout")]
-LINUX.fontT2K.compiler = compiler
-LINUX.fontT2K.ccFlags = ["-DJFXFONT_PLUS", "-DLE_STANDALONE", ccFlags].flatten()
-LINUX.fontT2K.linker = linker
-LINUX.fontT2K.linkFlags = [linkFlags].flatten()
-LINUX.fontT2K.lib = "javafx_font_t2k"
-
 LINUX.fontFreetype = [:]
 LINUX.fontFreetype.nativeSource = ["src/main/native-font/freetype.c"]
 LINUX.fontFreetype.compiler = compiler

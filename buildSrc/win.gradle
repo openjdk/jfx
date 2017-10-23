@@ -446,20 +446,6 @@ WIN.font.rcCompiler = rcCompiler;
 WIN.font.rcSource = defaultRcSource
 WIN.font.rcFlags = ["/d", "JFX_FNAME=javafx_font.dll", "/d", "JFX_INTERNAL_NAME=font", rcFlags].flatten();
 
-WIN.fontT2K = [:]
-WIN.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
-WIN.fontT2K.nativeSource = [
-        file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout")]
-WIN.fontT2K.compiler = compiler
-WIN.fontT2K.ccFlags = ["/DJFXFONT_PLUS", "/DLE_STANDALONE", ccFlags].flatten()
-WIN.fontT2K.linker = linker
-WIN.fontT2K.linkFlags = [linkFlags, "advapi32.lib", "gdi32.lib", "user32.lib"].flatten()
-WIN.fontT2K.lib = "javafx_font_t2k"
-WIN.fontT2K.rcCompiler = rcCompiler;
-WIN.fontT2K.rcSource = defaultRcSource
-WIN.fontT2K.rcFlags = ["/d", "JFX_FNAME=javafx_font_t2k.dll", "/d", "JFX_INTERNAL_NAME=fontT2K", rcFlags].flatten();
-
 WIN.media = [:]
 WIN.media.rcCompiler = rcCompiler
 WIN.media.rcSource = defaultRcSource

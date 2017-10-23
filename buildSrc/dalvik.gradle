@@ -491,7 +491,7 @@ DALVIK.jfxrtJarExcludes = [
     "com/sun/javafx/tk/Print*"
 ]
 
-def text = (compileNativeText) ? "native" : "t2k"
+def text = (compileNativeText) ? "native" : ""
 
 DALVIK.javafxPlatformProperties = """
 javafx.platform=android
@@ -748,21 +748,6 @@ DALVIK.font.ccFlags = [ccFlags, ccWarnFlags, ccArchFlags, ccOptFlags,
 DALVIK.font.linker = linker
 DALVIK.font.linkFlags = [linkFlags].flatten()
 DALVIK.font.lib = "javafx_font"
-
-if (BUILD_CLOSED) {
-    DALVIK.fontT2K = [:]
-    DALVIK.fontT2K.javahInclude = ["com/sun/javafx/font/t2k/**/*"]
-    DALVIK.fontT2K.nativeSource = [
-        file("$closedDir/javafx-font-t2k-native/src"),
-        file("$closedDir/javafx-font-t2k-native/src/layout"),
-        file("$closedDir/javafx-font-t2k-native/src/layoutfx")]
-    DALVIK.fontT2K.compiler = compiler
-    DALVIK.fontT2K.ccFlags = [ccFlags, "-fno-exceptions", "-fno-rtti", ccWarnFlags,
-        ccArchFlags, ccOptFlags, ccDebugFlags, ccDefaultIncludeFlags].flatten()
-    DALVIK.fontT2K.linker = linker
-    DALVIK.fontT2K.linkFlags = [linkFlags, "-lstdc++"].flatten()
-    DALVIK.fontT2K.lib = "javafx_font_t2k"
-}
 
 if (compileNativeText) {
     DALVIK.fontNativeFreetype = [:]
