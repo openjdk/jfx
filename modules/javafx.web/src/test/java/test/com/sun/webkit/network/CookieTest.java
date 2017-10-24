@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -195,10 +195,11 @@ public class CookieTest {
         actual = CookieShim.parse(testString, expected.creationTime);
         assertAsExpected(testString, expected, actual);
 
-        long maxAge = (Long.MAX_VALUE - currentTimeMillis()) / 1000;
-        testString = "foo=bar; Max-Age=" + maxAge;
         expected = new CookieModel("foo", "bar");
-        expected.expiryTime = expected.creationTime.baseTime() + maxAge * 1000;
+        long currentTimeInMillis = expected.creationTime.baseTime();
+        long maxAge = (Long.MAX_VALUE - currentTimeInMillis) / 1000;
+        testString = "foo=bar; Max-Age=" + maxAge;
+        expected.expiryTime = currentTimeInMillis + maxAge * 1000;
         expected.persistent = true;
         actual = CookieShim.parse(testString, expected.creationTime);
         assertAsExpected(testString, expected, actual);
