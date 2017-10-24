@@ -159,26 +159,26 @@ public final class MediaPlayer {
      * <table border="1">
      * <caption>MediaPlayer Status Transition Table</caption>
      * <tr>
-     * <th>Current \ Next</th><th>READY</th><th>PAUSED</th>
-     * <th>PLAYING</th><th>STALLED</th><th>STOPPED</th>
+     * <th scope="col">Current \ Next</th><th scope="col">READY</th><th scope="col">PAUSED</th>
+     * <th scope="col">PLAYING</th><th scope="col">STALLED</th><th scope="col">STOPPED</th>
      * </tr>
      * <tr>
-     * <td><b>UNKNOWN</b></td><td>pre-roll</td><td></td><td></td><td></td><td></td>
+     * <th scope="row"><b>UNKNOWN</b></th><td>pre-roll</td><td></td><td></td><td></td><td></td>
      * </tr>
      * <tr>
-     * <td><b>READY</b></td><td></td><td></td><td>autoplay; play()</td><td></td><td></td>
+     * <th scope="row"><b>READY</b></th><td></td><td></td><td>autoplay; play()</td><td></td><td></td>
      * </tr>
      * <tr>
-     * <td><b>PAUSED</b></td><td></td><td></td><td>play()</td><td></td><td>stop()</td>
+     * <th scope="row"><b>PAUSED</b></th><td></td><td></td><td>play()</td><td></td><td>stop()</td>
      * </tr>
      * <tr>
-     * <td><b>PLAYING</b></td><td></td><td>pause()</td><td></td><td>buffering data</td><td>stop()</td>
+     * <th scope="row"><b>PLAYING</b></th><td></td><td>pause()</td><td></td><td>buffering data</td><td>stop()</td>
      * </tr>
      * <tr>
-     * <td><b>STALLED</b></td><td></td><td>pause()</td><td>data buffered</td><td></td><td>stop()</td>
+     * <th scope="row"><b>STALLED</b></th><td></td><td>pause()</td><td>data buffered</td><td></td><td>stop()</td>
      * </tr>
      * <tr>
-     * <td><b>STOPPED</b></td><td></td><td>pause()</td><td>play()</td><td></td><td></td>
+     * <th scope="row"><b>STOPPED</b></th><td></td><td>pause()</td><td>play()</td><td></td><td></td>
      * </tr>
      * </table>
      * <p>The table rows represent the current state of the player and the columns
@@ -1367,13 +1367,13 @@ public final class MediaPlayer {
      * </p>
      * <table border="1">
      * <caption>MediaPlayer Seek Table</caption>
-     * <tr><th>seekTime</th><th>seek position</th></tr>
-     * <tr><td><code>null</code></td><td>no change</td></tr>
-     * <tr><td>{@link Duration#UNKNOWN}</td><td>no change</td></tr>
-     * <tr><td>{@link Duration#INDEFINITE}</td><td>stop time</td></tr>
-     * <tr><td>seekTime&nbsp;&lt;&nbsp;start time</td><td>start time</td></tr>
-     * <tr><td>seekTime&nbsp;&gt;&nbsp;stop time</td><td>stop time</td></tr>
-     * <tr><td>start time&nbsp;&le;&nbsp;seekTime&nbsp;&le;&nbsp;stop time</td><td>seekTime</td></tr>
+     * <tr><th scope="col">seekTime</th><th scope="col">seek position</th></tr>
+     * <tr><th scope="row"><code>null</code></th><td>no change</td></tr>
+     * <tr><th scope="row">{@link Duration#UNKNOWN}</th><td>no change</td></tr>
+     * <tr><th scope="row">{@link Duration#INDEFINITE}</th><td>stop time</td></tr>
+     * <tr><th scope="row">seekTime&nbsp;&lt;&nbsp;start time</th><td>start time</td></tr>
+     * <tr><th scope="row">seekTime&nbsp;&gt;&nbsp;stop time</th><td>stop time</td></tr>
+     * <tr><th scope="row">start time&nbsp;&le;&nbsp;seekTime&nbsp;&le;&nbsp;stop time</th><td>seekTime</td></tr>
      * </table>
      *
      * @param seekTime the requested playback time

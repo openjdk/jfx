@@ -83,16 +83,16 @@ import javafx.util.Callback;
  * </p>
  * <table border="1">
  * <caption>VBox Resize Table</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus the largest of the children's min widths.</td>
  * <td>top/bottom insets plus the sum of each child's min height plus spacing between each child.</td>
  * </tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus the largest of the children's pref widths.</td>
  * <td>top/bottom insets plus the sum of each child's pref height plus spacing between each child.</td>
  * </tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>
@@ -122,9 +122,9 @@ import javafx.util.Callback;
  *
  * <table border="1">
  * <caption>VBox Constraint Table</caption>
- * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
- * <tr><td>vgrow</td><td>javafx.scene.layout.Priority</td><td>The vertical grow priority for the child.</td></tr>
- * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
+ * <tr><th scope="col">Constraint</th><th scope="col">Type</th><th scope="col">Description</th></tr>
+ * <tr><th scope="row">vgrow</th><td>javafx.scene.layout.Priority</td><td>The vertical grow priority for the child.</td></tr>
+ * <tr><th scope="row">margin</th><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
  * </table>
  * <p>
  * For example, if a vbox needs the ListView to be allocated all extra space:

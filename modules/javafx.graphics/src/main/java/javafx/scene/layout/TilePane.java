@@ -114,27 +114,27 @@ import javafx.util.Callback;
  * </p>
  * <table border="1">
  * <caption>Horizontal</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus the tile width.</td>
  * <td>top/bottom insets plus height required to display all tiles when wrapped at a specified width with a vgap between each row.</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus prefColumns multiplied by the tile width.</td>
  * <td>top/bottom insets plus height required to display all tiles when wrapped at a specified width with a vgap between each row.</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <br>
  * <table border="1">
  * <caption>Vertical</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus width required to display all tiles when wrapped at a specified height with an hgap between each column.</td>
  * <td>top/bottom insets plus the tile height.</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus width required to display all tiles when wrapped at the specified height with an hgap between each column.</td>
  * <td>top/bottom insets plus prefRows multiplied by the tile height.</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>
@@ -162,9 +162,9 @@ import javafx.util.Callback;
  *
  * <table border="1">
  * <caption>TilePane Constraint Table</caption>
- * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
- * <tr><td>alignment</td><td>javafx.geometry.Pos</td><td>The alignment of the child within its tile.</td></tr>
- * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
+ * <tr><th scope="col">Constraint</th><th scope="col">Type</th><th scope="col">Description</th></tr>
+ * <tr><th scope="row">alignment</th><td>javafx.geometry.Pos</td><td>The alignment of the child within its tile.</td></tr>
+ * <tr><th scope="row">margin</th><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
  * </table>
  * <p>
  * Example:

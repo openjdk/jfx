@@ -66,16 +66,16 @@ table indicates the encoding types supported by Java FX Media.
 
 <table border="1">
 <caption>Media Encoding Table</caption>
-<tr><th>Encoding</th><th>Type</th><th>Description</th></tr>
-<tr><td>AAC</td><td>Audio</td><td>Advanced Audio Coding audio compression</td></tr>
-<tr><td>MP3</td><td>Audio</td>
+<tr><th scope="col">Encoding</th><th scope="col">Type</th><th scope="col">Description</th></tr>
+<tr><th scope="row">AAC</th><td>Audio</td><td>Advanced Audio Coding audio compression</td></tr>
+<tr><th scope="row">MP3</th><td>Audio</td>
 <td>Raw MPEG-1, 2, and 2.5 audio; layers I, II, and III; all supported
 combinations of sampling frequencies and bit rates. Note: File must contain at least 3 MP3 frames.</td>
 </tr>
-<tr><td>PCM</td><td>Audio</td><td>Uncompressed, raw audio samples</td></tr>
-<tr><td>H.264/AVC</td><td>Video</td><td>H.264/MPEG-4 Part 10 / AVC (Advanced Video Coding)
+<tr><th scope="row">PCM</th><td>Audio</td><td>Uncompressed, raw audio samples</td></tr>
+<tr><th scope="row">H.264/AVC</th><td>Video</td><td>H.264/MPEG-4 Part 10 / AVC (Advanced Video Coding)
 video compression</td></tr>
-<tr><td>VP6 (*)</td><td>Video</td><td>On2 VP6 video compression</td></tr>
+<tr><th scope="row">VP6 (*)</th><td>Video</td><td>On2 VP6 video compression</td></tr>
 </table>
 
 <p>
@@ -94,21 +94,21 @@ supported by Java FX Media.
 
 <table border="1">
 <caption>Media Container / Encoding Types Table</caption>
-<tr><th>Container</th><th>Description</th><th>Video Encoding</th>
-<th>Audio Encoding</th><th>MIME Type</th><th>File Extension</th></tr>
-<tr><td>AIFF</td><td>Audio Interchange File Format</td><td>N/A</td>
+<tr><th scope="col">Container</th><th scope="col">Description</th><th scope="col">Video Encoding</th>
+<th scope="col">Audio Encoding</th><th scope="col">MIME Type</th><th scope="col">File Extension</th></tr>
+<tr><th scope="row">AIFF</th><td>Audio Interchange File Format</td><td>N/A</td>
     <td>PCM</td><td>audio/x-aiff</td><td>.aif, .aiff</td></tr>
-<tr><td>FXM, FLV (*)</td><td>FX Media, Flash Video</td><td>VP6</td>
+<tr><th scope="row">FXM, FLV (*)</th><td>FX Media, Flash Video</td><td>VP6</td>
     <td>MP3</td><td>video/x-javafx, video/x-flv</td><td>.fxm, .flv</td></tr>
-<tr><td>HLS (**)</td><td>MP2T HTTP Live Streaming (audiovisual)</td><td>H.264/AVC</td>
+<tr><th scope="row">HLS (**)</th><td>MP2T HTTP Live Streaming (audiovisual)</td><td>H.264/AVC</td>
     <td>AAC</td><td>application/vnd.apple.mpegurl, audio/mpegurl</td><td>.m3u8</td></tr>
-<tr><td>HLS (**)</td><td>MP3 HTTP Live Streaming (audio-only)</td><td>N/A</td>
+<tr><th scope="row">HLS (**)</th><td>MP3 HTTP Live Streaming (audio-only)</td><td>N/A</td>
     <td>MP3</td><td>application/vnd.apple.mpegurl, audio/mpegurl</td><td>.m3u8</td></tr>
-<tr><td>MP3</td><td>MPEG-1, 2, 2.5 raw audio stream possibly with ID3 metadata v2.3 or v2.4</td>
+<tr><th scope="row">MP3</th><td>MPEG-1, 2, 2.5 raw audio stream possibly with ID3 metadata v2.3 or v2.4</td>
     <td>N/A</td><td>MP3</td><td>audio/mpeg</td><td>.mp3</td></tr>
-<tr><td>MP4</td><td>MPEG-4 Part 14</td><td>H.264/AVC</td>
+<tr><th scope="row">MP4</th><td>MPEG-4 Part 14</td><td>H.264/AVC</td>
     <td>AAC</td><td>video/mp4, audio/x-m4a, video/x-m4v</td><td>.mp4, .m4a, .m4v</td></tr>
-<tr><td>WAV</td><td>Waveform Audio Format</td><td>N/A</td>
+<tr><th scope="row">WAV</th><td>Waveform Audio Format</td><td>N/A</td>
     <td>PCM</td><td>audio/x-wav</td><td>.wav</td></tr>
 </table>
 
@@ -121,29 +121,29 @@ aggregate similar attributes.
 
 <table border="1">
 <caption>Supported Protocols Table</caption>
-<tr><th>Protocol</th><th>Description</th><th>Reference</th></tr>
+<tr><th scope="col">Protocol</th><th scope="col">Description</th><th scope="col">Reference</th></tr>
 <tr>
-    <td>FILE</td>
+    <th scope="row">FILE</th>
     <td>Protocol for URI representation of local files</td>
     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
 </tr>
 <tr>
-    <td>HTTP</td>
+    <th scope="row">HTTP</th>
     <td>Hypertext transfer protocol for representation of remote files</td>
     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
 </tr>
 <tr>
-    <td>HTTPS</td>
+    <th scope="row">HTTPS</th>
     <td>Hypertext transfer protocol secure for representation of remote files</td>
     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
 </tr>
 <tr>
-    <td>JAR</td>
+    <th scope="row">JAR</th>
     <td>Representation of media entries in files accessible via the FILE, HTTP or HTTPS protocols</td>
     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html">java.net.JarURLConnection</a></td>
 </tr>
 <tr>
-    <td>HTTP Live Streaming (HLS)</td>
+    <th scope="row">HTTP Live Streaming (HLS)</th>
     <td>Playlist-based media streaming via HTTP or HTTPS</td>
     <td><a href="http://tools.ietf.org/html/draft-pantos-http-live-streaming">Internet-Draft: HTTP Live Streaming</a></td>
 </tr>
@@ -185,29 +185,29 @@ guaranteed to be available.
 
 <table border="1">
 <caption>"Metadata Keys and Tags Table</caption>
-<tr><th> Container </th><th> Tag (type String) </th><th> Type </th><th> Description </th></tr>
-<tr><td> FXM, FLV </td><td> audio&nbsp;codec </td><td> java.lang.String </td><td>The encoder used for the audio track.</td></tr>
-<tr><td> FXM, FLV </td><td> duration </td><td> javafx.util.Duration </td><td>The duration of the media.</td></tr>
-<tr><td> FXM, FLV </td><td> video&nbsp;codec </td><td> java.lang.String </td><td>The encoder used for the video track.</td></tr>
-<tr><td> FXM, FLV </td><td> width </td><td> java.lang.Integer </td><td>The width in pixels of the video track.</td></tr>
-<tr><td> FXM, FLV </td><td> height </td><td> java.lang.Integer </td><td>The height in pixels of the video track.</td></tr>
-<tr><td> FXM, FLV </td><td> framerate </td><td> java.lang.Double </td><td>The video frame rate in frames per second.</td></tr>
-<tr><td> FXM, FLV </td><td> creationdate </td><td> java.lang.String </td><td>The date when the video was created.</td></tr>
-<tr><td> FXM, FLV, MP3 </td><td> raw&nbsp;metadata </td><td> Map&lt;String,ByteBuffer&gt; </td><td>The raw metadata according to the appropriate media specification. The key "ID3" maps to MP3 ID3v2 metadata and "FLV" to the FLV onMetadata marker content.</td></tr>
-<tr><td> MP3 </td><td> album&nbsp;artist </td><td> java.lang.String </td><td>The artist for the overall album, possibly "Various Artists" for compilations.</td></tr>
-<tr><td> MP3 </td><td> album </td><td> java.lang.String </td><td>The name of the album.</td></tr>
-<tr><td> MP3 </td><td> artist </td><td> java.lang.String </td><td>The artist of the track.</td></tr>
-<tr><td> MP3 </td><td> comment-N </td><td> java.lang.String </td><td>A comment where N is a 0-relative index. Comment format: ContentDescription[lng]=Comment </td></tr>
-<tr><td> MP3 </td><td> composer </td><td> java.lang.String </td><td>The composer of the track.</td></tr>
-<tr><td> MP3 </td><td> year </td><td> java.lang.Integer </td><td>The year the track was recorded.</td></tr>
-<tr><td> MP3 </td><td> disc&nbsp;count </td><td> java.lang.Integer </td><td>The number of discs in the album.</td></tr>
-<tr><td> MP3 </td><td> disc&nbsp;number </td><td> java.lang.Integer </td><td>The 1-relative index of the disc on which this track appears.</td></tr>
-<tr><td> MP3 </td><td> duration </td><td> javafx.util.Duration </td><td>The duration of the track.</td></tr>
-<tr><td> MP3 </td><td> genre </td><td> java.lang.String </td><td>The genre of the track, for example, "Classical," "Darkwave," or "Jazz."</td></tr>
-<tr><td> MP3 </td><td> image </td><td> javafx.scene.image.Image </td><td>The album cover.</td></tr>
-<tr><td> MP3 </td><td> title </td><td> java.lang.String </td><td>The name of the track.</td></tr>
-<tr><td> MP3 </td><td> track&nbsp;count </td><td> java.lang.Integer </td><td>The number of tracks on the album.</td></tr>
-<tr><td> MP3 </td><td> track&nbsp;number </td><td> java.lang.Integer </td><td>The 1-relative index of this track on the disc.</td></tr>
+<tr><th scope="col"> Container </th><th scope="col"> Tag (type String) </th><th scope="col"> Type </th><th scope="col"> Description </th></tr>
+<tr><td> FXM, FLV </td><th scope="row"> audio&nbsp;codec </th><td> java.lang.String </td><td>The encoder used for the audio track.</td></tr>
+<tr><td> FXM, FLV </td><th scope="row"> duration </th><td> javafx.util.Duration </td><td>The duration of the media.</td></tr>
+<tr><td> FXM, FLV </td><th scope="row"> video&nbsp;codec </th><td> java.lang.String </td><td>The encoder used for the video track.</td></tr>
+<tr><td> FXM, FLV </td><th scope="row"> width </th><td> java.lang.Integer </td><td>The width in pixels of the video track.</td></tr>
+<tr><td> FXM, FLV </td><th scope="row"> height </th><td> java.lang.Integer </td><td>The height in pixels of the video track.</td></tr>
+<tr><td> FXM, FLV </td><th scope="row"> framerate </th><td> java.lang.Double </td><td>The video frame rate in frames per second.</td></tr>
+<tr><td> FXM, FLV </td><th scope="row"> creationdate </th><td> java.lang.String </td><td>The date when the video was created.</td></tr>
+<tr><td> FXM, FLV, MP3 </td><th scope="row"> raw&nbsp;metadata </th><td> Map&lt;String,ByteBuffer&gt; </td><td>The raw metadata according to the appropriate media specification. The key "ID3" maps to MP3 ID3v2 metadata and "FLV" to the FLV onMetadata marker content.</td></tr>
+<tr><td> MP3 </td><th scope="row"> album&nbsp;artist </th><td> java.lang.String </td><td>The artist for the overall album, possibly "Various Artists" for compilations.</td></tr>
+<tr><td> MP3 </td><th scope="row"> album </th><td> java.lang.String </td><td>The name of the album.</td></tr>
+<tr><td> MP3 </td><th scope="row"> artist </th><td> java.lang.String </td><td>The artist of the track.</td></tr>
+<tr><td> MP3 </td><th scope="row"> comment-N </th><td> java.lang.String </td><td>A comment where N is a 0-relative index. Comment format: ContentDescription[lng]=Comment </td></tr>
+<tr><td> MP3 </td><th scope="row"> composer </th><td> java.lang.String </td><td>The composer of the track.</td></tr>
+<tr><td> MP3 </td><th scope="row"> year </th><td> java.lang.Integer </td><td>The year the track was recorded.</td></tr>
+<tr><td> MP3 </td><th scope="row"> disc&nbsp;count </th><td> java.lang.Integer </td><td>The number of discs in the album.</td></tr>
+<tr><td> MP3 </td><th scope="row"> disc&nbsp;number </th><td> java.lang.Integer </td><td>The 1-relative index of the disc on which this track appears.</td></tr>
+<tr><td> MP3 </td><th scope="row"> duration </th><td> javafx.util.Duration </td><td>The duration of the track.</td></tr>
+<tr><td> MP3 </td><th scope="row"> genre </th><td> java.lang.String </td><td>The genre of the track, for example, "Classical," "Darkwave," or "Jazz."</td></tr>
+<tr><td> MP3 </td><th scope="row"> image </th><td> javafx.scene.image.Image </td><td>The album cover.</td></tr>
+<tr><td> MP3 </td><th scope="row"> title </th><td> java.lang.String </td><td>The name of the track.</td></tr>
+<tr><td> MP3 </td><th scope="row"> track&nbsp;count </th><td> java.lang.Integer </td><td>The number of tracks on the album.</td></tr>
+<tr><td> MP3 </td><th scope="row"> track&nbsp;number </th><td> java.lang.Integer </td><td>The 1-relative index of this track on the disc.</td></tr>
 </table>
 
 <a id="PlayingMediaInJavaFX"></a>

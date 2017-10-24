@@ -126,21 +126,21 @@ import static com.sun.webkit.LoadListenerClient.*;
  * <table border="1">
  * <caption>JavaScript Callback Table</caption>
  * <tr>
- *     <th>JavaScript method/property</th>
- *     <th>WebEngine callback</th>
+ *     <th scope="col">JavaScript method/property</th>
+ *     <th scope="col">WebEngine callback</th>
  * </tr>
- * <tr><td>{@code window.alert()}</td><td>{@code onAlert}</td></tr>
- * <tr><td>{@code window.confirm()}</td><td>{@code confirmHandler}</td></tr>
- * <tr><td>{@code window.open()}</td><td>{@code createPopupHandler}</td></tr>
- * <tr><td>{@code window.open()} and<br>
- *         {@code window.close()}</td><td>{@code onVisibilityChanged}</td></tr>
- * <tr><td>{@code window.prompt()}</td><td>{@code promptHandler}</td></tr>
- * <tr><td>Setting {@code window.status}</td><td>{@code onStatusChanged}</td></tr>
- * <tr><td>Setting any of the following:<br>
+ * <tr><th scope="row">{@code window.alert()}</th><td>{@code onAlert}</td></tr>
+ * <tr><th scope="row">{@code window.confirm()}</th><td>{@code confirmHandler}</td></tr>
+ * <tr><th scope="row">{@code window.open()}</th><td>{@code createPopupHandler}</td></tr>
+ * <tr><th scope="row">{@code window.open()} and<br>
+ *         {@code window.close()}</th><td>{@code onVisibilityChanged}</td></tr>
+ * <tr><th scope="row">{@code window.prompt()}</th><td>{@code promptHandler}</td></tr>
+ * <tr><th scope="row">Setting {@code window.status}</th><td>{@code onStatusChanged}</td></tr>
+ * <tr><th scope="row">Setting any of the following:<br>
  *         {@code window.innerWidth}, {@code window.innerHeight},<br>
  *         {@code window.outerWidth}, {@code window.outerHeight},<br>
  *         {@code window.screenX}, {@code window.screenY},<br>
- *         {@code window.screenLeft}, {@code window.screenTop}
+ *         {@code window.screenLeft}, {@code window.screenTop}</th>
  *         <td>{@code onResized}</td></tr>
  * </table>
  *

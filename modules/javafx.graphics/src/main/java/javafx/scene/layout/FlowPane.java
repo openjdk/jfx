@@ -107,27 +107,27 @@ import javafx.util.Callback;
  * </p>
  * <table border="1">
  * <caption>Horizontal</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus largest of children's pref widths</td>
  * <td>top/bottom insets plus height required to display all children at their preferred heights when wrapped at a specified width</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus prefWrapLength</td>
  * <td>top/bottom insets plus height required to display all children at their pref heights when wrapped at a specified width</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <br>
  * <table border="1">
  * <caption>Vertical</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus width required to display all children at their preferred widths when wrapped at a specified height</td>
  * <td>top/bottom insets plus largest of children's pref heights</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus width required to display all children at their pref widths when wrapped at the specified height</td>
  * <td>top/bottom insets plus prefWrapLength</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>

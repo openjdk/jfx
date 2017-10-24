@@ -85,14 +85,14 @@ import javafx.util.Callback;
  * </p>
  * <table border="1">
  * <caption>HBox Resize Table</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus the sum of each child's min width plus spacing between each child.</td>
  * <td>top/bottom insets plus the largest of the children's min heights.</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus the sum of each child's pref width plus spacing between each child.</td>
  * <td>top/bottom insets plus the largest of the children's pref heights.</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>
@@ -122,9 +122,9 @@ import javafx.util.Callback;
  *
  * <table border="1">
  * <caption>HBox Constraint Table</caption>
- * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
- * <tr><td>hgrow</td><td>javafx.scene.layout.Priority</td><td>The horizontal grow priority for the child.</td></tr>
- * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
+ * <tr><th scope="col">Constraint</th><th scope="col">Type</th><th scope="col">Description</th></tr>
+ * <tr><th scope="row">hgrow</th><td>javafx.scene.layout.Priority</td><td>The horizontal grow priority for the child.</td></tr>
+ * <tr><th scope="row">margin</th><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
  * </table>
  * <p>
  * For example, if an hbox needs the TextField to be allocated all extra space:
