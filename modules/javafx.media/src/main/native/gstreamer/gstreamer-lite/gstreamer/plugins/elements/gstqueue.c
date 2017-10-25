@@ -1284,6 +1284,11 @@ gst_queue_loop (GstPad * pad)
   GstFlowReturn ret;
 
   queue = (GstQueue *) GST_PAD_PARENT (pad);
+#ifdef GSTREAMER_LITE
+  if (queue == NULL) {
+    return;
+  }
+#endif // GSTREAMER_LITE
 
   /* have to lock for thread-safety */
   GST_QUEUE_MUTEX_LOCK_CHECK (queue, out_flushing);
