@@ -54,11 +54,11 @@ import javafx.scene.Node;
  *
  * <table border="1">
  * <caption>AnchorPane Constraint Table</caption>
- * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
- * <tr><td>topAnchor</td><td>double</td><td>distance from the anchor pane's top insets to the child's top edge.</td></tr>
- * <tr><td>leftAnchor</td><td>double</td><td>distance from the anchor pane's left insets to the child's left edge.</td></tr>
- * <tr><td>bottomAnchor</td><td>double</td><td>distance from the anchor pane's bottom insets to the child's bottom edge.</td></tr>
- * <tr><td>rightAnchor</td><td>double</td><td>distance from the anchor pane's right insets to the child's right edge.</td></tr>
+ * <tr><th scope="col">Constraint</th><th scope="col">Type</th><th scope="col">Description</th></tr>
+ * <tr><th scope="row">topAnchor</th><td>double</td><td>distance from the anchor pane's top insets to the child's top edge.</td></tr>
+ * <tr><th scope="row">leftAnchor</th><td>double</td><td>distance from the anchor pane's left insets to the child's left edge.</td></tr>
+ * <tr><th scope="row">bottomAnchor</th><td>double</td><td>distance from the anchor pane's bottom insets to the child's bottom edge.</td></tr>
+ * <tr><th scope="row">rightAnchor</th><td>double</td><td>distance from the anchor pane's right insets to the child's right edge.</td></tr>
  * </table>
  * <p>
  * AnchorPane Example:
@@ -84,14 +84,14 @@ import javafx.scene.Node;
  *
  * <table border="1">
  * <caption>AnchorPane Resize Table</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus width required to display children anchored at left/right with at least their min widths</td>
  * <td>top/bottom insets plus height required to display children anchored at top/bottom with at least their min heights</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus width required to display children anchored at left/right with at least their pref widths</td>
  * <td>top/bottom insets plus height required to display children anchored at top/bottom with at least their pref heights</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>

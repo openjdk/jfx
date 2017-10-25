@@ -105,15 +105,19 @@ import java.util.Map;
  * <table>
  * <caption>ButtonBar Layout Table</caption>
  *   <tr>
- *     <td><strong>Windows:</strong></td>
+ *     <th scope="col">Operating System</th>
+ *     <th scope="col">Button Order</th>
+ *   </tr>
+ *   <tr>
+ *     <th scope="row">Windows</th>
  *     <td>L_E+U+FBXI_YNOCAH_R</td>
  *   </tr>
  *   <tr>
- *     <td><strong>Mac OS:</strong></td>
+ *     <th scope="row">Mac OS</th>
  *     <td>L_HE+U+FBIX_NCYOA_R</td>
  *   </tr>
  *   <tr>
- *     <td><strong>Linux:</strong></td>
+ *     <th scope="row">Linux</th>
  *     <td>L_HE+UNYACBXIO_R</td>
  *   </tr>
  * </table>

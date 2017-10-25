@@ -330,49 +330,49 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * <table class="overviewSummary">
      * <caption>Web Color Format Table</caption>
      * <tr>
-     * <th class="colFirst">Web Format String</th>
-     * <th class="colLast">Equivalent constructor or factory call</th>
+     * <th scope="col" class="colFirst">Web Format String</th>
+     * <th scope="col" class="colLast">Equivalent constructor or factory call</th>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("orange", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("orange", 0.5);</code></th>
      * <td class="colLast"><code>new Color(1.0, 0xA5/255.0, 0.0, 0.5)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td class="colFirst"><code>Color.web("0xff66cc33", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("0xff66cc33", 0.5);</code></th>
      * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.1)</code></td>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("0xff66cc", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("0xff66cc", 0.5);</code></th>
      * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.5)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td class="colFirst"><code>Color.web("#ff66cc", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("#ff66cc", 0.5);</code></th>
      * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.5)</code></td>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("#f68", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("#f68", 0.5);</code></th>
      * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.5)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td class="colFirst"><code>Color.web("rgb(255,102,204)", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("rgb(255,102,204)", 0.5);</code></th>
      * <td class="colLast"><code>new Color(1.0, 0.4, 0.8, 0.5)</code></td>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("rgb(100%,50%,50%)", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("rgb(100%,50%,50%)", 0.5);</code></th>
      * <td class="colLast"><code>new Color(1.0, 0.5, 0.5, 0.5)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td class="colFirst"><code>Color.web("rgb(255,50%,50%,0.25)", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("rgb(255,50%,50%,0.25)", 0.5);</code></th>
      * <td class="colLast"><code>new Color(1.0, 0.5, 0.5, 0.125)</code></td>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("hsl(240,100%,100%)", 0.5);</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("hsl(240,100%,100%)", 0.5);</code></th>
      * <td class="colLast"><code>Color.hsb(240.0, 1.0, 1.0, 0.5)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td style="border-bottom:1px solid" class="colFirst">
+     * <th scope="row" style="border-bottom:1px solid" class="colFirst">
      *     <code>Color.web("hsla(120,0%,0%,0.25)", 0.5);</code>
-     * </td>
+     * </th>
      * <td style="border-bottom:1px solid" class="colLast">
      *     <code>Color.hsb(120.0, 0.0, 0.0, 0.125)</code>
      * </td>
@@ -586,49 +586,49 @@ public final class Color extends Paint implements Interpolatable<Color> {
      * <table class="overviewSummary">
      * <caption>Web Color Format Table</caption>
      * <tr>
-     * <th class="colFirst">Web Format String</th>
-     * <th class="colLast">Equivalent constant or factory call</th>
+     * <th scope="col" class="colFirst">Web Format String</th>
+     * <th scope="col" class="colLast">Equivalent constant or factory call</th>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("orange");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("orange");</code></th>
      * <td class="colLast"><code>Color.ORANGE</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td class="colFirst"><code>Color.web("0xff668840");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("0xff668840");</code></th>
      * <td class="colLast"><code>Color.rgb(255, 102, 136, 0.25)</code></td>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("0xff6688");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("0xff6688");</code></th>
      * <td class="colLast"><code>Color.rgb(255, 102, 136, 1.0)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td class="colFirst"><code>Color.web("#ff6688");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("#ff6688");</code></th>
      * <td class="colLast"><code>Color.rgb(255, 102, 136, 1.0)</code></td>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("#f68");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("#f68");</code></th>
      * <td class="colLast"><code>Color.rgb(255, 102, 136, 1.0)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td class="colFirst"><code>Color.web("rgb(255,102,136)");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("rgb(255,102,136)");</code></th>
      * <td class="colLast"><code>Color.rgb(255, 102, 136, 1.0)</code></td>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("rgb(100%,50%,50%)");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("rgb(100%,50%,50%)");</code></th>
      * <td class="colLast"><code>Color.rgb(255, 128, 128, 1.0)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td class="colFirst"><code>Color.web("rgb(255,50%,50%,0.25)");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("rgb(255,50%,50%,0.25)");</code></th>
      * <td class="colLast"><code>Color.rgb(255, 128, 128, 0.25)</code></td>
      * </tr>
      * <tr class="rowColor">
-     * <td class="colFirst"><code>Color.web("hsl(240,100%,100%)");</code></td>
+     * <th scope="row" class="colFirst"><code>Color.web("hsl(240,100%,100%)");</code></th>
      * <td class="colLast"><code>Color.hsb(240.0, 1.0, 1.0, 1.0)</code></td>
      * </tr>
      * <tr class="altColor">
-     * <td style="border-bottom:1px solid" class="colFirst">
+     * <th scope="row" style="border-bottom:1px solid" class="colFirst">
      *     <code>Color.web("hsla(120,0%,0%,0.25)");</code>
-     * </td>
+     * </th>
      * <td style="border-bottom:1px solid" class="colLast">
      *     <code>Color.hsb(120.0, 0.0, 0.0, 0.25)</code>
      * </td>

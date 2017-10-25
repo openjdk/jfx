@@ -78,17 +78,17 @@ public final class AudioEqualizer {
      * unity gain (0 dB).
      * <table border="1">
      * <caption>AudioEqualizer Band Table</caption>
-     * <tr><th>Band Index</th><th>Center Frequency (Hz)</th><th>Bandwidth (Hz)</th></tr>
-     * <tr><td>0</td><td>32</td><td>19</td></tr>
-     * <tr><td>1</td><td>64</td><td>39</td></tr>
-     * <tr><td>2</td><td>125</td><td>78</td></tr>
-     * <tr><td>3</td><td>250</td><td>156</td></tr>
-     * <tr><td>4</td><td>500</td><td>312</td></tr>
-     * <tr><td>5</td><td>1000</td><td>625</td></tr>
-     * <tr><td>6</td><td>2000</td><td>1250</td></tr>
-     * <tr><td>7</td><td>4000</td><td>2500</td></tr>
-     * <tr><td>8</td><td>8000</td><td>5000</td></tr>
-     * <tr><td>9</td><td>16000</td><td>10000</td></tr>
+     * <tr><th scope="col">Band Index</th><th scope="col">Center Frequency (Hz)</th><th scope="col">Bandwidth (Hz)</th></tr>
+     * <tr><th scope="row">0</th><td>32</td><td>19</td></tr>
+     * <tr><th scope="row">1</th><td>64</td><td>39</td></tr>
+     * <tr><th scope="row">2</th><td>125</td><td>78</td></tr>
+     * <tr><th scope="row">3</th><td>250</td><td>156</td></tr>
+     * <tr><th scope="row">4</th><td>500</td><td>312</td></tr>
+     * <tr><th scope="row">5</th><td>1000</td><td>625</td></tr>
+     * <tr><th scope="row">6</th><td>2000</td><td>1250</td></tr>
+     * <tr><th scope="row">7</th><td>4000</td><td>2500</td></tr>
+     * <tr><th scope="row">8</th><td>8000</td><td>5000</td></tr>
+     * <tr><th scope="row">9</th><td>16000</td><td>10000</td></tr>
      * </table>
      *
      * @return ObservableList containing {@link EqualizerBand} elements.

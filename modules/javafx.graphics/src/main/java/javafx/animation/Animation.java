@@ -948,7 +948,6 @@ public abstract class Animation {
      * Note: <ul>
      * <li>{@code playFromStart()} is an asynchronous call, {@code Animation} may
      * not start immediately. </ul>
-     * <p>
      *
      * @throws IllegalStateException
      *             if embedded in another animation,

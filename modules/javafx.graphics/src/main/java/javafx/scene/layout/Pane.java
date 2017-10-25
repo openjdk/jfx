@@ -68,14 +68,14 @@ import javafx.scene.Node;
  *
  * <table border="1">
  * <caption>Pane Resize Table</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left plus right insets.</td>
  * <td>top plus bottom insets.</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>width required to encompass each child at its current x location and preferred width.</td>
  * <td>height required to encompass each child at its current y location and preferred height.</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>

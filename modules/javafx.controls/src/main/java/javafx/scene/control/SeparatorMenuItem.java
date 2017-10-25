@@ -42,7 +42,6 @@ import javafx.geometry.Orientation;
 <pre><code>
 SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
 </code></pre>
- * <p>
  *
  * @see CustomMenuItem
  * @see MenuItem

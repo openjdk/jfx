@@ -88,11 +88,11 @@ import javafx.util.Callback;
  *
  * <table border="1">
  * <caption>Grid Constraint Table</caption>
- * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
- * <tr><td>columnIndex</td><td>integer</td><td>column where child's layout area starts.</td></tr>
- * <tr><td>rowIndex</td><td>integer</td><td>row where child's layout area starts.</td></tr>
- * <tr><td>columnSpan</td><td>integer</td><td>the number of columns the child's layout area spans horizontally.</td></tr>
- * <tr><td>rowSpan</td><td>integer</td><td>the number of rows the child's layout area spans vertically.</td></tr>
+ * <tr><th scope="col">Constraint</th><th scope="col">Type</th><th scope="col">Description</th></tr>
+ * <tr><th scope="row">columnIndex</th><td>integer</td><td>column where child's layout area starts.</td></tr>
+ * <tr><th scope="row">rowIndex</th><td>integer</td><td>row where child's layout area starts.</td></tr>
+ * <tr><th scope="row">columnSpan</th><td>integer</td><td>the number of columns the child's layout area spans horizontally.</td></tr>
+ * <tr><th scope="row">rowSpan</th><td>integer</td><td>the number of rows the child's layout area spans vertically.</td></tr>
  * </table>
  * <p>
  * If the row/column indices are not explicitly set, then the child will be placed
@@ -198,14 +198,14 @@ import javafx.util.Callback;
  *
  * <table border="1">
  * <caption>GridPane Resize Table</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus the sum of each column's min width.</td>
  * <td>top/bottom insets plus the sum of each row's min height.</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus the sum of each column's pref width.</td>
  * <td>top/bottom insets plus the sum of each row's pref height.</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>
@@ -237,12 +237,12 @@ import javafx.util.Callback;
  *
  * <table border="1">
  * <caption>GridPane Constraint Table</caption>
- * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
- * <tr><td>halignment</td><td>javafx.geometry.HPos</td><td>The horizontal alignment of the child within its layout area.</td></tr>
- * <tr><td>valignment</td><td>javafx.geometry.VPos</td><td>The vertical alignment of the child within its layout area.</td></tr>
- * <tr><td>hgrow</td><td>javafx.scene.layout.Priority</td><td>The horizontal grow priority of the child.</td></tr>
- * <tr><td>vgrow</td><td>javafx.scene.layout.Priority</td><td>The vertical grow priority of the child.</td></tr>
- * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
+ * <tr><th scope="col">Constraint</th><th scope="col">Type</th><th scope="col">Description</th></tr>
+ * <tr><th scope="row">halignment</th><td>javafx.geometry.HPos</td><td>The horizontal alignment of the child within its layout area.</td></tr>
+ * <tr><th scope="row">valignment</th><td>javafx.geometry.VPos</td><td>The vertical alignment of the child within its layout area.</td></tr>
+ * <tr><th scope="row">hgrow</th><td>javafx.scene.layout.Priority</td><td>The horizontal grow priority of the child.</td></tr>
+ * <tr><th scope="row">vgrow</th><td>javafx.scene.layout.Priority</td><td>The vertical grow priority of the child.</td></tr>
+ * <tr><th scope="row">margin</th><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
  * </table>
  * <p>
  * By default the alignment of a child within its layout area is defined by the

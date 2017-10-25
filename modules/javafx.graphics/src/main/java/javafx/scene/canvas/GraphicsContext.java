@@ -89,15 +89,14 @@ import javafx.scene.text.FontSmoothingType;
  * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">
  * <caption>List of Rendering Attributes</caption>
  * <tr>
- * <th class="colLast" style="width:15%">Attribute</th>
- * <th class="colLast" style="width:10%; text-align:center">Save/Restore?</th>
- * <th class="colLast" style="width:10%; text-align:center">Default value</th>
- * <th class="colLast">Description</th>
+ * <th class="colLast" style="width:15%" scope="col">Attribute</th>
+ * <th class="colLast" style="width:10%; text-align:center" scope="col">Save/Restore?</th>
+ * <th class="colLast" style="width:10%; text-align:center" scope="col">Default value</th>
+ * <th class="colLast" scope="col">Description</th>
  * </tr>
- *
- * <tr><th colspan="3"><a id="comm-attr">Common Rendering Attributes</a></th></tr>
+ * <tr><th colspan="3" scope="row"><a id="comm-attr">Common Rendering Attributes</a></th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #clip() Clip}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #clip() Clip}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">No clipping</td>
  * <td class="colLast">
@@ -105,7 +104,7 @@ import javafx.scene.text.FontSmoothingType;
  * is restricted.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setGlobalAlpha(double) Global Alpha}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setGlobalAlpha(double) Global Alpha}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@code 1.0}</td>
  * <td class="colLast">
@@ -113,7 +112,7 @@ import javafx.scene.text.FontSmoothingType;
  * operation.
  * </td></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #setGlobalBlendMode(javafx.scene.effect.BlendMode) Global Blend Mode}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setGlobalBlendMode(javafx.scene.effect.BlendMode) Global Blend Mode}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link BlendMode#SRC_OVER SRC_OVER}</td>
  * <td class="colLast">
@@ -121,7 +120,7 @@ import javafx.scene.text.FontSmoothingType;
  * operation are composited into the existing image.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setTransform(javafx.scene.transform.Affine) Transform}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setTransform(javafx.scene.transform.Affine) Transform}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@code Identity}</td>
  * <td class="colLast">
@@ -129,26 +128,24 @@ import javafx.scene.text.FontSmoothingType;
  * mapped onto the logical pixels of the canvas image.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setEffect(javafx.scene.effect.Effect) Effect}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setEffect(javafx.scene.effect.Effect) Effect}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@code null}</td>
  * <td class="colLast">
  * An {@link Effect} applied individually to each rendering operation.
  * </td></tr>
- *
- * <tr><th colspan="3"><a id="fill-attr">Fill Attributes</a></th></tr>
+ * <tr><th colspan="3" scope="row"><a id="fill-attr">Fill Attributes</a></th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #setFill(javafx.scene.paint.Paint) Fill Paint}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setFill(javafx.scene.paint.Paint) Fill Paint}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link Color#BLACK BLACK}</td>
  * <td class="colLast">
  * The {@link Paint} to be applied to the interior of shapes in a
  * fill operation.
  * </td></tr>
- *
- * <tr><th colspan="3"><a id="strk-attr">Stroke Attributes</a></th></tr>
+ * <tr><th colspan="3" scope="row"><a id="strk-attr">Stroke Attributes</a></th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #setStroke(javafx.scene.paint.Paint) Stroke Paint}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setStroke(javafx.scene.paint.Paint) Stroke Paint}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link Color#BLACK BLACK}</td>
  * <td class="colLast">
@@ -156,7 +153,7 @@ import javafx.scene.text.FontSmoothingType;
  * stroke operation.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setLineWidth(double) Line Width}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setLineWidth(double) Line Width}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@code 1.0}</td>
  * <td class="colLast">
@@ -164,7 +161,7 @@ import javafx.scene.text.FontSmoothingType;
  * stroke operation.
  * </td></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #setLineCap(javafx.scene.shape.StrokeLineCap) Line Cap}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setLineCap(javafx.scene.shape.StrokeLineCap) Line Cap}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link StrokeLineCap#SQUARE SQUARE}</td>
  * <td class="colLast">
@@ -172,7 +169,7 @@ import javafx.scene.text.FontSmoothingType;
  * dash and/or subpath in a stroke operation.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setLineJoin(javafx.scene.shape.StrokeLineJoin) Line Join}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setLineJoin(javafx.scene.shape.StrokeLineJoin) Line Join}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link StrokeLineJoin#MITER MITER}</td>
  * <td class="colLast">
@@ -180,7 +177,7 @@ import javafx.scene.text.FontSmoothingType;
  * paths of shapes in a stroke operation.
  * </td></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #setMiterLimit(double) Miter Limit}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setMiterLimit(double) Miter Limit}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@code 10.0}</td>
  * <td class="colLast">
@@ -190,7 +187,7 @@ import javafx.scene.text.FontSmoothingType;
  * to a {@link StrokeLineJoin#BEVEL BEVEL} join in a stroke operation.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setLineDashes(double...) Dashes}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setLineDashes(double...) Dashes}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@code null}</td>
  * <td class="colLast">
@@ -198,24 +195,23 @@ import javafx.scene.text.FontSmoothingType;
  * of shapes in a stroke operation.
  * </td></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #setLineDashOffset(double) Dash Offset}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setLineDashOffset(double) Dash Offset}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@code 0.0}</td>
  * <td class="colLast">
  * The distance offset into the array of dash lengths at which to start the
  * dashing of the segments in the boundary of shapes in a stroke operation.
  * </td></tr>
- *
- * <tr><th colspan="3"><a id="text-attr">Text Attributes</a></th></tr>
+ * <tr><th colspan="3" scope="row"><a id="text-attr">Text Attributes</a></th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #setFont(javafx.scene.text.Font) Font}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setFont(javafx.scene.text.Font) Font}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link Font#getDefault() Default Font}</td>
  * <td class="colLast">
  * The font used for all fill and stroke text operations.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setTextAlign(javafx.scene.text.TextAlignment) Text Align}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setTextAlign(javafx.scene.text.TextAlignment) Text Align}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link TextAlignment#LEFT LEFT}</td>
  * <td class="colLast">
@@ -223,7 +219,7 @@ import javafx.scene.text.FontSmoothingType;
  * specified in the text operation.
  * </td></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #setTextBaseline(javafx.geometry.VPos) Text Baseline}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setTextBaseline(javafx.geometry.VPos) Text Baseline}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link VPos#BASELINE BASELINE}</td>
  * <td class="colLast">
@@ -231,17 +227,16 @@ import javafx.scene.text.FontSmoothingType;
  * specified in the text operation.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setFontSmoothingType(javafx.scene.text.FontSmoothingType) Font Smoothing}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setFontSmoothingType(javafx.scene.text.FontSmoothingType) Font Smoothing}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link FontSmoothingType#GRAY GRAY}</td>
  * <td class="colLast">
  * The type of smoothing (antialiasing) applied to the glyphs in the font
  * for all fill text operations.
  * </td></tr>
- *
- * <tr><th colspan="3"><a id="path-attr">Path Attributes</a></th></tr>
+ * <tr><th colspan="3" scope="row"><a id="path-attr">Path Attributes</a></th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:15%">{@link #beginPath() Current Path}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #beginPath() Current Path}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:10%; text-align:center">Empty path</td>
  * <td class="colLast">
@@ -249,7 +244,7 @@ import javafx.scene.text.FontSmoothingType;
  * in various path filling, stroking, or clipping operations.
  * </td></tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:15%">{@link #setFillRule(javafx.scene.shape.FillRule) Fill Rule}</td>
+ * <th scope="row" class="colLast" style="width:15%">{@link #setFillRule(javafx.scene.shape.FillRule) Fill Rule}</th>
  * <td class="colLast" style="width:10%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:10%; text-align:center">{@link FillRule#NON_ZERO NON_ZERO}</td>
  * <td class="colLast">
@@ -257,7 +252,6 @@ import javafx.scene.text.FontSmoothingType;
  * clip operation.
  * </td></tr>
  * </table>
- *
  * <p>
  * <a id="attr-ops-table">
  * The various rendering methods on the {@code GraphicsContext} use the
@@ -266,24 +260,21 @@ import javafx.scene.text.FontSmoothingType;
  * <table class="overviewSummary" style="width:80%; margin-left:auto; margin-right:auto">
  * <caption>Rendering Attributes Table</caption>
  * <tr>
- * <th class="colLast" style="width:25%">Method</th>
- * <th class="colLast" style="width:15%; text-align:center"><a href="#comm-attr">Common Rendering Attributes</a></th>
- * <th class="colLast" style="width:15%; text-align:center"><a href="#fill-attr">Fill Attributes</a></th>
- * <th class="colLast" style="width:15%; text-align:center"><a href="#strk-attr">Stroke Attributes</a></th>
- * <th class="colLast" style="width:15%; text-align:center"><a href="#text-attr">Text Attributes</a></th>
- * <th class="colLast" style="width:15%; text-align:center"><a href="#path-attr">Path Attributes</a></th>
+ * <th scope="col" class="colLast" style="width:25%">Method</th>
+ * <th scope="col" class="colLast" style="width:15%; text-align:center"><a href="#comm-attr">Common Rendering Attributes</a></th>
+ * <th scope="col" class="colLast" style="width:15%; text-align:center"><a href="#fill-attr">Fill Attributes</a></th>
+ * <th scope="col" class="colLast" style="width:15%; text-align:center"><a href="#strk-attr">Stroke Attributes</a></th>
+ * <th scope="col" class="colLast" style="width:15%; text-align:center"><a href="#text-attr">Text Attributes</a></th>
+ * <th scope="col" class="colLast" style="width:15%; text-align:center"><a href="#path-attr">Path Attributes</a></th>
  * </tr>
- *
- * <tr><th colspan="1">Basic Shape Rendering</th></tr>
+ * <tr><th colspan="1" scope="row">Basic Shape Rendering</th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:25%">
- * <a id="fill-basic-ops">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #fillRect(double, double, double, double) fillRect()},
  * {@link #fillRoundRect(double, double, double, double, double, double) fillRoundRect()},
  * {@link #fillOval(double, double, double, double) fillOval()},
  * {@link #fillArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) fillArc()}
- * </a>
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -291,15 +282,13 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:25%">
- * <a id="strk-basic-ops">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #strokeLine(double, double, double, double) strokeLine()},
  * {@link #strokeRect(double, double, double, double) strokeRect()},
  * {@link #strokeRoundRect(double, double, double, double, double, double) strokeRoundRect()},
  * {@link #strokeOval(double, double, double, double) strokeOval()},
  * {@link #strokeArc(double, double, double, double, double, double, javafx.scene.shape.ArcType) strokeArc()}
- * </a>
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
@@ -307,9 +296,9 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:25%">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #clearRect(double, double, double, double) clearRect()}
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#base-fn-1">[1]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -317,9 +306,9 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:25%">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #fillPolygon(double[], double[], int) fillPolygon()}
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -327,29 +316,26 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#base-fn-2">[2]</a></td>
  * </tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:25%">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #strokePolygon(double[], double[], int) strokePolygon()},
  * {@link #strokePolyline(double[], double[], int) strokePolyline()}
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
- * <tr><td colspan="6">
+ * <tr><th scope="row" colspan="6">
  * <a id="base-fn-1">[1]</a> Only the Transform, Clip, and Effect apply to clearRect()<br>
  * <a id="base-fn-2">[2]</a> Only the Fill Rule applies to fillPolygon(), the current path is left unchanged
- * </td></tr>
- *
- * <tr><th colspan="1">Text Rendering</th></tr>
+ * </th></tr>
+ * <tr><th colspan="1" scope="row">Text Rendering</th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:25%">
- * <a id="fill-text-ops">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #fillText(java.lang.String, double, double) fillText()},
  * {@link #fillText(java.lang.String, double, double, double) fillText(with maxWidth)}
- * </a>
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -357,25 +343,22 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:25%">
- * <a id="strk-text-ops">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #strokeText(java.lang.String, double, double) strokeText()},
  * {@link #strokeText(java.lang.String, double, double, double) strokeText(with maxWidth)}
- * </a>
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#text-fn-3">[3]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
- * <tr><td colspan="6">
+ * <tr><th scope="row" colspan="6">
  * <a id="text-fn-3">[3]</a> The Font Smoothing attribute only applies to filled text
- * </td></tr>
- *
- * <tr><th colspan="1">Path Rendering</th></tr>
+ * </th></tr>
+ * <tr><th colspan="1" scope="row">Path Rendering</th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:25%">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #beginPath() beginPath()},
  * {@link #moveTo(double, double) moveTo()},
  * {@link #lineTo(double, double) lineTo()},
@@ -386,7 +369,7 @@ import javafx.scene.text.FontSmoothingType;
  * {@link #appendSVGPath(java.lang.String) appendSVGPath()},
  * {@link #closePath() closePath()},
  * {@link #rect(double, double, double, double) rect()}
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -394,11 +377,9 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:25%">
- * <a id="fill-path-ops">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #fill() fill()}
- * </a>
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -406,11 +387,9 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * </tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:25%">
- * <a id="strk-path-ops">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #stroke() stroke()}
- * </a>
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-4">[4]</a></td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
@@ -418,42 +397,36 @@ import javafx.scene.text.FontSmoothingType;
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes <a href="#path-fn-5">[5]</a></td>
  * </tr>
  * <tr class="altColor">
- * <td class="colLast" style="width:25%">
- * <a id="clip-path-ops">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #clip() clip()}
- * </a>
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * </tr>
- * <tr><td colspan="6">
+ * <tr><th scope="row" colspan="6">
  * <a id="path-fn-4">[4]</a> Transform applied only during path construction<br>
  * <a id="path-fn-5">[5]</a> Fill Rule only used for fill() and clip()
- * </td></tr>
- *
- * <tr><th colspan="1">Image Rendering</th></tr>
+ * </th></tr>
+ * <tr><th scope="row" colspan="1">Image Rendering</th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:25%">
- * <a id="draw-img-ops">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #drawImage(javafx.scene.image.Image, double, double) drawImage(all forms)}
- * </a>
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#0c0">Yes</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * </tr>
- *
- * <tr><th colspan="1">Miscellaneous</th></tr>
+ * <tr><th scope="row" colspan="1">Miscellaneous</th></tr>
  * <tr class="rowColor">
- * <td class="colLast" style="width:25%">
+ * <th scope="row" class="colLast" style="width:25%">
  * {@link #applyEffect(javafx.scene.effect.Effect) applyEffect()},
  * {@link #getPixelWriter() PixelWriter methods}
- * </td>
+ * </th>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
  * <td class="colLast" style="width:15%; text-align:center; color:#c00">No</td>
@@ -465,20 +438,20 @@ import javafx.scene.text.FontSmoothingType;
  * <p>Example:</p>
  *
  * <pre>
-import javafx.scene.*;
-import javafx.scene.paint.*;
-import javafx.scene.canvas.*;
-
-Group root = new Group();
-Scene s = new Scene(root, 300, 300, Color.BLACK);
-
-final Canvas canvas = new Canvas(250,250);
-GraphicsContext gc = canvas.getGraphicsContext2D();
-
-gc.setFill(Color.BLUE);
-gc.fillRect(75,75,100,100);
-
-root.getChildren().add(canvas);
+ * import javafx.scene.*;
+ * import javafx.scene.paint.*;
+ * import javafx.scene.canvas.*;
+ *
+ * Group root = new Group();
+ * Scene s = new Scene(root, 300, 300, Color.BLACK);
+ *
+ * final Canvas canvas = new Canvas(250,250);
+ * GraphicsContext gc = canvas.getGraphicsContext2D();
+ *
+ * gc.setFill(Color.BLUE);
+ * gc.fillRect(75,75,100,100);
+ *
+ * root.getChildren().add(canvas);
  * </pre>
  *
  * @see Canvas

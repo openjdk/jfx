@@ -162,32 +162,32 @@ once all effects, clipping, and transforms have been applied.
  <caption>Bounds Computation Table</caption>
  <thead>
      <tr>
-         <th>Node Type</th>
-         <th>Layout Bounds</th>
+         <th scope="col">Node Type</th>
+         <th scope="col">Layout Bounds</th>
      </tr>
  </thead>
  <tbody>
      <tr>
-         <td>{@link javafx.scene.shape.Shape Shape},{@link javafx.scene.image.ImageView ImageView}</td>
+         <th scope="row">{@link javafx.scene.shape.Shape Shape},{@link javafx.scene.image.ImageView ImageView}</th>
          <td>Includes geometric bounds (geometry plus stroke).
              Does NOT include effect, clip, or any transforms.
          </td>
      </tr>
      <tr>
-         <td>{@link javafx.scene.text.Text Text}</td>
+         <th scope="row">{@link javafx.scene.text.Text Text}</th>
          <td>logical bounds based on the font height and content width, including white space.
              can be configured to be tight bounds around chars glyphs by setting {@code boundsType}.
              Does NOT include effect, clip, or any transforms.
          </td>
      </tr>
      <tr>
-         <td>{@link javafx.scene.layout.Region Region}, {@link javafx.scene.control.Control Control}, {@link javafx.scene.web.WebView WebView}</td>
+         <th scope="row">{@link javafx.scene.layout.Region Region}, {@link javafx.scene.control.Control Control}, {@link javafx.scene.web.WebView WebView}</th>
          <td>always {@code [0,0 width x height]} regardless of visual bounds,
              which might be larger or smaller than layout bounds.
          </td>
      </tr>
      <tr>
-         <td>{@link javafx.scene.Group Group}</td>
+         <th scope="row">{@link javafx.scene.Group Group}</th>
          <td>Union of all visible childrens' visual bounds ({@code boundsInParent})
              Does NOT include effect, clip, or transforms set directly on group,
              however DOES include effect, clip, transforms set on individual children since

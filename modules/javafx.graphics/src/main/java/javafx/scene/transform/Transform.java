@@ -1955,7 +1955,6 @@ public abstract class Transform implements Cloneable, EventTarget {
      * Currently the only event delivered to a {@code Transform} is the
      * {@code TransformChangedEvent} with it's single type
      * {@code TRANSFORM_CHANGED}.
-     * <p>
      *
      * @param <T> the specific event class of the filter
      * @param eventType the type of the events to receive by the filter

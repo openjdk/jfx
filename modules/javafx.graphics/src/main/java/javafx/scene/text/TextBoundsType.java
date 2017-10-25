@@ -42,7 +42,6 @@ package javafx.scene.text;
  * report heights which account for the potential ascent and descent of
  * text using the font at its specified size. Also leading and trailing
  * spaces are part of the logical advance width of the text.
- * <p>
  *
  * @since JavaFX 2.0
  */

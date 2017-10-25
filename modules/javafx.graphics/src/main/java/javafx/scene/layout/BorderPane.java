@@ -95,14 +95,14 @@ import static javafx.scene.layout.Region.positionInArea;
  *
  * <table border="1">
  * <caption>BorderPane Resize Table</caption>
- * <tr><td></td><th>width</th><th>height</th></tr>
- * <tr><th>minimum</th>
+ * <tr><td></td><th scope="col">width</th><th scope="col">height</th></tr>
+ * <tr><th scope="row">minimum</th>
  * <td>left/right insets plus width required to display right/left children at their pref widths and top/bottom/center with at least their min widths</td>
  * <td>top/bottom insets plus height required to display top/bottom children at their pref heights and left/right/center with at least their min heights</td></tr>
- * <tr><th>preferred</th>
+ * <tr><th scope="row">preferred</th>
  * <td>left/right insets plus width required to display top/right/bottom/left/center children with at least their pref widths</td>
  * <td>top/bottom insets plus height required to display top/right/bottom/left/center children with at least their pref heights</td></tr>
- * <tr><th>maximum</th>
+ * <tr><th scope="row">maximum</th>
  * <td>Double.MAX_VALUE</td><td>Double.MAX_VALUE</td></tr>
  * </table>
  * <p>
@@ -131,9 +131,9 @@ import static javafx.scene.layout.Region.positionInArea;
  *
  * <table border="1">
  * <caption>BorderPane Constraint Table</caption>
- * <tr><th>Constraint</th><th>Type</th><th>Description</th></tr>
- * <tr><td>alignment</td><td>javafx.geometry.Pos</td><td>The alignment of the child within its area of the border pane.</td></tr>
- * <tr><td>margin</td><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
+ * <tr><th scope="col">Constraint</th><th scope="col">Type</th><th scope="col">Description</th></tr>
+ * <tr><th scope="row">alignment</th><td>javafx.geometry.Pos</td><td>The alignment of the child within its area of the border pane.</td></tr>
+ * <tr><th scope="row">margin</th><td>javafx.geometry.Insets</td><td>Margin space around the outside of the child.</td></tr>
  * </table>
  * <p>
  * Example:

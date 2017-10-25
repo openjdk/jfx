@@ -48,27 +48,27 @@ import java.security.BasicPermission;
  * <table border=1>
  * <caption>FXPermission Table</caption>
  * <tr>
- * <th style="padding: 5px;">Permission Target Name</th>
- * <th style="padding: 5px;">What the Permission Allows</th>
- * <th style="padding: 5px;">Risks of Allowing this Permission</th>
+ * <th style="padding: 5px;" scope="col">Permission Target Name</th>
+ * <th style="padding: 5px;" scope="col">What the Permission Allows</th>
+ * <th style="padding: 5px;" scope="col">Risks of Allowing this Permission</th>
  * </tr>
  *
  * <tr>
- *   <td style="padding: 5px;">accessClipboard</td>
+ *   <th style="padding: 5px;" scope="row">accessClipboard</th>
  *   <td style="padding: 5px;">Posting and retrieval of information to and from the system clipboard</td>
  *   <td style="padding: 5px;">This would allow a malicious application to share or read
  *       potentially sensitive or confidential information.</td>
  * </tr>
  *
  * <tr>
- *   <td style="padding: 5px;">accessWindowList</td>
+ *   <th style="padding: 5px;" scope="row">accessWindowList</th>
  *   <td style="padding: 5px;">Accessing the list of all JavaFX Windows</td>
  *   <td style="padding: 5px;">Providing access to the complete list of all JavaFX windows could give
  *       a malicious application the ability to modify a security dialog.</td>
  * </tr>
  *
  * <tr>
- *   <td style="padding: 5px;">createRobot</td>
+ *   <th style="padding: 5px;" scope="row">createRobot</th>
  *   <td style="padding: 5px;">Creating JavaFX Robot objects</td>
  *   <td style="padding: 5px;">The JavaFX Robot object allows code to generate native-level
  *       mouse and keyboard events as well as read the screen. It could allow
@@ -77,7 +77,7 @@ import java.security.BasicPermission;
  * </tr>
  *
  * <tr>
- *   <td style="padding: 5px;">createTransparentWindow</td>
+ *   <th style="padding: 5px;" scope="row">createTransparentWindow</th>
  *   <td style="padding: 5px;">Creating transparent windows</td>
  *   <td style="padding: 5px;">Transparent windows are not limited to a rectangular region that
  *       obscures what is underneath the window.
@@ -89,7 +89,7 @@ import java.security.BasicPermission;
  * </tr>
  *
  * <tr>
- *   <td style="padding: 5px;">loadFont</td>
+ *   <th style="padding: 5px;" scope="row">loadFont</th>
  *   <td style="padding: 5px;">Loading a custom font, either via the
  *       {@link javafx.scene.text.Font#loadFont} method or a jar file containing
  *       embedded fonts listed in the jar manifest</td>
@@ -100,7 +100,7 @@ import java.security.BasicPermission;
  * </tr>
  *
  * <tr>
- *   <td style="padding: 5px;">modifyFXMLClassLoader</td>
+ *   <th style="padding: 5px;" scope="row">modifyFXMLClassLoader</th>
  *   <td style="padding: 5px;">Setting the ClassLoader used to load FXML objects, and removing the
  *       restriction against loading system classes</td>
  *   <td style="padding: 5px;">Allowing an application to set an arbitrary ClassLoader might enable
@@ -111,7 +111,7 @@ import java.security.BasicPermission;
  * </tr>
  *
  * <tr>
- *   <td style="padding: 5px;">setWindowAlwaysOnTop</td>
+ *   <th style="padding: 5px;" scope="row">setWindowAlwaysOnTop</th>
  *   <td style="padding: 5px;">Setting the always-on-top property of a window:
  *       {@link javafx.stage.Stage#setAlwaysOnTop}</td>
  *   <td style="padding: 5px;">The malicious window might make itself look and behave like the
@@ -122,7 +122,7 @@ import java.security.BasicPermission;
  * </tr>
  *
  * <tr>
- *   <td style="padding: 5px;">unrestrictedFullScreen</td>
+ *   <th style="padding: 5px;" scope="row">unrestrictedFullScreen</th>
  *   <td style="padding: 5px;">Allow unrestricted full-screen access, including keyboard events
  *       and warning banner</td>
  *   <td style="padding: 5px;">This permission allows an application to enter full-screen mode at any

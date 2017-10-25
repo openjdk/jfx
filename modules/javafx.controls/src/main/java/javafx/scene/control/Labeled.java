@@ -246,12 +246,12 @@ public abstract class Labeled extends Control {
      *
      * <table>
      *   <caption>Ellipsis Table</caption>
-     *   <tr><th colspan=2>Examples</th></tr>
-     *   <tr class="altColor"><td>"..." </td>        <td>Default value for most locales</td>
-     *   <tr class="rowColor"><td>" . . . " </td>    <td></td>
-     *   <tr class="altColor"><td>" [...] " </td>    <td></td>
-     *   <tr class="rowColor"><td>"&#92;u2026" </td> <td>The Unicode ellipsis character '&hellip;'</td>
-     *   <tr class="altColor"><td>"" </td>           <td>No ellipsis, just display the truncated string</td>
+     *   <tr><th scope="col" colspan=2>Examples</th></tr>
+     *   <tr class="altColor"><th scope="row">"..." </th>        <td>Default value for most locales</td>
+     *   <tr class="rowColor"><th scope="row">" . . . " </th>    <td></td>
+     *   <tr class="altColor"><th scope="row">" [...] " </th>    <td></td>
+     *   <tr class="rowColor"><th scope="row">"&#92;u2026" </th> <td>The Unicode ellipsis character '&hellip;'</td>
+     *   <tr class="altColor"><th scope="row">"" </th>           <td>No ellipsis, just display the truncated string</td>
      * </table>
      *
      * <p>Note that not all fonts support all Unicode characters.
