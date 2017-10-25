@@ -31,9 +31,12 @@ import java.util.List;
 
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
+import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Ellipse;
@@ -232,7 +235,25 @@ public class BubbleChart<X,Y> extends XYChart<X,Y> {
         Node bubble = item.getNode();
         // check if bubble has already been created
         if (bubble == null) {
-            bubble = new StackPane();
+            bubble = new StackPane() {
+                @Override
+                public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+                    switch (attribute) {
+                        case TEXT: {
+                            String accText = getAccessibleText();
+                            if (item.getExtraValue() == null) {
+                                return accText;
+                            } else {
+                                return accText + " Bubble radius is " + item.getExtraValue();
+                            }
+                        }
+                        default: return super.queryAccessibleAttribute(attribute, parameters);
+                    }
+                }
+            };
+            bubble.setAccessibleRole(AccessibleRole.TEXT);
+            bubble.setAccessibleRoleDescription("Bubble");
+            bubble.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
             item.setNode(bubble);
         }
         // set bubble styles
