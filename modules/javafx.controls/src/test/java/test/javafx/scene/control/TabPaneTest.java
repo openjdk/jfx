@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1030,4 +1030,51 @@ public class TabPaneTest {
             assertTrue(fooMap.containsKey(tab));
         });
     }
+
+    // Test for JDK-8189424
+    int selectionChangeCount = 0;
+    @Test public void testTabClosingEventAndSelectionChange() {
+        Tab t1 = new Tab("");
+        Tab t2 = new Tab("");
+        tabPane.getTabs().add(t1);
+        tabPane.getTabs().add(t2);
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.ALL_TABS);
+
+        tabPane.getSelectionModel().selectedItemProperty().addListener((ov, oldTab, newTab) -> {
+            selectionChangeCount++;
+        });
+        t1.setOnCloseRequest((event) -> {
+            event.consume();
+            tabPane.getTabs().remove(t1);
+        });
+
+        root.getChildren().add(tabPane);
+        show();
+
+        root.applyCss();
+        root.resize(300, 300);
+        root.layout();
+
+        tk.firePulse();
+        assertTrue(tabPane.isFocused());
+
+        tabPane.getSelectionModel().select(t1);
+
+        double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
+        double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
+
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval + 19, yval + 17));
+        tk.firePulse();
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_RELEASED, xval + 19, yval + 17));
+        tk.firePulse();
+
+        assertEquals(1, tabPane.getTabs().size());
+        assertEquals(t2, tabPane.getSelectionModel().getSelectedItem());
+        assertEquals(1, selectionChangeCount);
+
+        tabPane.getTabs().remove(t2);
+    }
+
 }

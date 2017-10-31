@@ -1274,6 +1274,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     if (behavior.canCloseTab(tab)) {
                         behavior.closeTab(tab);
                         setOnMousePressed(null);
+                        me.consume();
                     }
                 }
             });
@@ -1519,6 +1520,8 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             listener.dispose();
             inner.getChildren().clear();
             getChildren().clear();
+            setOnContextMenuRequested(null);
+            setOnMousePressed(null);
         }
 
         private TabAnimationState animationState = TabAnimationState.NONE;
