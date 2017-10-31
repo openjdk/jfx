@@ -987,6 +987,10 @@ public abstract class PrismFontFactory implements FontFactory {
             fontRegInfo[0].add("/System/Library/Fonts/Apple Symbols.ttf");
             fontRegInfo[1].add("Apple Symbols");
 
+            // Add Apple Emoji Symbols to Mac OS X fallback list
+            fontRegInfo[0].add("/System/Library/Fonts/Apple Color Emoji.ttc");
+            fontRegInfo[1].add("Apple Color Emoji");
+
             // Add CJK Ext B supplementary characters.
             fontRegInfo[0].add("/System/Library/Fonts/STHeiti Light.ttf");
             fontRegInfo[1].add("Heiti SC Light");
