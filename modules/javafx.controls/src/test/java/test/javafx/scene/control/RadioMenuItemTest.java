@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.ToggleGroup;
@@ -280,5 +282,27 @@ public class RadioMenuItemTest {
         assertEquals(other.get(), rmi.isSelected());
     }
 
+    private boolean result8189677 = false;
+    @Test public void extraNullValueInSelectedProperty_JDK_8189677() {
+       RadioMenuItem b1 = new RadioMenuItem("ONE");
+       RadioMenuItem b2 = new RadioMenuItem("TWO");
+       ToggleGroup group = new ToggleGroup();
+       group.getToggles().addAll(b1, b2);
+       group.selectToggle(b1);
 
+       group.selectedToggleProperty().addListener(new ChangeListener() {
+            @Override public void changed(ObservableValue o, Object oldVal,
+                                          Object newVal) {
+                if (newVal == null || oldVal == null) {
+                    result8189677 = true;
+                }
+            }
+       });
+
+       group.selectToggle(b2);
+       group.selectToggle(b1);
+
+       assertTrue(b1.isSelected());
+       assertFalse(result8189677);
+    }
 }
