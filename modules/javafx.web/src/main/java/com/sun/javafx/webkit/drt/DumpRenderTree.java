@@ -324,6 +324,7 @@ public final class DumpRenderTree {
     private static native boolean dumpAsText();
     private static native boolean dumpChildFramesAsText();
     private static native boolean dumpBackForwardList();
+    protected static native boolean shouldStayOnPageAfterHandlingBeforeUnload();
 
     private final class DRTLoadListener implements LoadListenerClient {
         @Override

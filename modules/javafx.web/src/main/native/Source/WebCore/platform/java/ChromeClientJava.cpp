@@ -101,6 +101,9 @@ static jmethodID promptMID = NULL;
 
 static jmethodID addMessageToConsoleMID = NULL; // WebPage
 
+static jmethodID canRunBeforeUnloadConfirmPanelMID = NULL; // WebPage
+static jmethodID runBeforeUnloadConfirmPanelMID = NULL; // WebPage
+
 static jmethodID screenToWindowMID = NULL; // WebPage
 static jmethodID windowToScreenMID = NULL; // WebPage
 
@@ -157,6 +160,17 @@ static void initRefs(JNIEnv* env)
                 "fwkAddMessageToConsole",
                 "(Ljava/lang/String;ILjava/lang/String;)V");
         ASSERT(addMessageToConsoleMID);
+
+
+        canRunBeforeUnloadConfirmPanelMID = env->GetMethodID(getWebPageCls(),
+                "fwkCanRunBeforeUnloadConfirmPanel",
+                "()Z");
+        ASSERT(canRunBeforeUnloadConfirmPanelMID);
+
+        runBeforeUnloadConfirmPanelMID = env->GetMethodID(getWebPageCls(),
+                "fwkRunBeforeUnloadConfirmPanel",
+                "(Ljava/lang/String;)Z");
+        ASSERT(runBeforeUnloadConfirmPanelMID);
 
         screenToWindowMID = env->GetMethodID(getWebPageCls(), "fwkScreenToWindow",
             "(Lcom/sun/webkit/graphics/WCPoint;)Lcom/sun/webkit/graphics/WCPoint;");
@@ -536,8 +550,22 @@ void ChromeClientJava::loadIconForFiles(const Vector<String>& filenames, FileIco
 
 bool ChromeClientJava::canRunBeforeUnloadConfirmPanel()
 {
-    notImplemented();
-    return false;
+    JNIEnv* env = WebCore_GetJavaEnv();
+    initRefs(env);
+
+    auto result = env->CallBooleanMethod(m_webPage, canRunBeforeUnloadConfirmPanelMID);
+    CheckAndClearException(env);
+    return result;
+}
+
+bool ChromeClientJava::runBeforeUnloadConfirmPanel(const String& message, Frame&)
+{
+    JNIEnv* env = WebCore_GetJavaEnv();
+    initRefs(env);
+
+    auto result = env->CallBooleanMethod(m_webPage, runBeforeUnloadConfirmPanelMID, (jstring)message.toJavaString(env));
+    CheckAndClearException(env);
+    return result;
 }
 
 void ChromeClientJava::addMessageToConsole(MessageSource, MessageLevel, const String& message,
@@ -551,12 +579,6 @@ void ChromeClientJava::addMessageToConsole(MessageSource, MessageLevel, const St
             (jint)lineNumber,
             (jstring)sourceID.toJavaString(env));
     CheckAndClearException(env);
-}
-
-bool ChromeClientJava::runBeforeUnloadConfirmPanel(const String&, Frame&)
-{
-    notImplemented();
-    return false;
 }
 
 KeyboardUIMode ChromeClientJava::keyboardUIMode()
