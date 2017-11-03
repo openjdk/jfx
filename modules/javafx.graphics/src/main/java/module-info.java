@@ -36,7 +36,6 @@
 module javafx.graphics {
     requires java.desktop;
     requires java.xml;
-    requires jdk.jsobject;
 
     requires transitive javafx.base;
 

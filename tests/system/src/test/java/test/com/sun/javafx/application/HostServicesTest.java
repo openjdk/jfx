@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.PlatformUtil;
+import java.lang.reflect.Method;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Application;
@@ -113,6 +113,13 @@ public class HostServicesTest {
     public void testWebContext() {
         final HostServices hs = myApp.getHostServices();
         assertNotNull(hs);
-        assertNull(hs.getWebContext());
+
+        boolean nsme = false;
+        try {
+            Method m_getWebContext = HostServices.class.getMethod("getWebContext");
+        } catch (NoSuchMethodException ex) {
+            nsme = true;
+        }
+        assertTrue("Did not get the expected NoSuchMethodException", nsme);
     }
 }
