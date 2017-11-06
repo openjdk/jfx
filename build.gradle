@@ -2957,19 +2957,10 @@ project(":media") {
             def buildPlugins = task("build${t.capital}Plugins", dependsOn: buildGStreamer) {
                 enabled = IS_COMPILE_MEDIA
 
-                if (!project.ext.properties.containsKey("ON2_SRCDIR")) {
-                    project.ext.ON2_SRCDIR = "";
-                }
-
-                if (!project.ext.properties.containsKey("ON2_LIB")) {
-                    project.ext.ON2_LIB = "";
-                }
-
                 doLast {
                     exec {
                         commandLine ("make", "${makeJobsFlag}", "-C", "${nativeSrcDir}/gstreamer/projects/${projectDir}/fxplugins")
                         args("OUTPUT_DIR=${nativeOutputDir}", "BUILD_TYPE=${buildType}", "BASE_NAME=fxplugins",
-                             "ON2_SRCDIR=${project.ext.ON2_SRCDIR}", "ON2_LIB=${project.ext.ON2_LIB}",
                              IS_64 ? "ARCH=x64" : "ARCH=x32",
                              "CC=${mediaProperties.compiler}", "AR=${mediaProperties.ar}", "LINKER=${mediaProperties.linker}")
 

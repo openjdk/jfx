@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,6 @@ public abstract class Track
         H264,               // H.264 ("ISO/IEC 14496-10" standard
                             // or "ITU-T Recommendation H.264")
                             // (aka MPEG-4 part 10 video, also known as AVC)
-        VP6,                // On2 VP6
 
         // custom encoding
         CUSTOM;

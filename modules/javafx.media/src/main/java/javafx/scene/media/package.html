@@ -75,12 +75,7 @@ combinations of sampling frequencies and bit rates. Note: File must contain at l
 <tr><th scope="row">PCM</th><td>Audio</td><td>Uncompressed, raw audio samples</td></tr>
 <tr><th scope="row">H.264/AVC</th><td>Video</td><td>H.264/MPEG-4 Part 10 / AVC (Advanced Video Coding)
 video compression</td></tr>
-<tr><th scope="row">VP6 (*)</th><td>Video</td><td>On2 VP6 video compression</td></tr>
 </table>
-
-<p>
-<br>(*) VP6 video encoding is deprecated since JDK 9.
-</p>
 
 <h4>Supported Container Types</h4>
 
@@ -98,11 +93,9 @@ supported by Java FX Media.
 <th scope="col">Audio Encoding</th><th scope="col">MIME Type</th><th scope="col">File Extension</th></tr>
 <tr><th scope="row">AIFF</th><td>Audio Interchange File Format</td><td>N/A</td>
     <td>PCM</td><td>audio/x-aiff</td><td>.aif, .aiff</td></tr>
-<tr><th scope="row">FXM, FLV (*)</th><td>FX Media, Flash Video</td><td>VP6</td>
-    <td>MP3</td><td>video/x-javafx, video/x-flv</td><td>.fxm, .flv</td></tr>
-<tr><th scope="row">HLS (**)</th><td>MP2T HTTP Live Streaming (audiovisual)</td><td>H.264/AVC</td>
+<tr><th scope="row">HLS (*)</th><td>MP2T HTTP Live Streaming (audiovisual)</td><td>H.264/AVC</td>
     <td>AAC</td><td>application/vnd.apple.mpegurl, audio/mpegurl</td><td>.m3u8</td></tr>
-<tr><th scope="row">HLS (**)</th><td>MP3 HTTP Live Streaming (audio-only)</td><td>N/A</td>
+<tr><th scope="row">HLS (*)</th><td>MP3 HTTP Live Streaming (audio-only)</td><td>N/A</td>
     <td>MP3</td><td>application/vnd.apple.mpegurl, audio/mpegurl</td><td>.m3u8</td></tr>
 <tr><th scope="row">MP3</th><td>MPEG-1, 2, 2.5 raw audio stream possibly with ID3 metadata v2.3 or v2.4</td>
     <td>N/A</td><td>MP3</td><td>audio/mpeg</td><td>.mp3</td></tr>
@@ -112,8 +105,7 @@ supported by Java FX Media.
     <td>PCM</td><td>audio/x-wav</td><td>.wav</td></tr>
 </table>
 
-<br>(*) FXM and FLV containers are deprecated since JDK 9.
-<br>(**) HLS is a protocol rather than a container type but is included here to
+<br>(*) HLS is a protocol rather than a container type but is included here to
 aggregate similar attributes.
 
 <a id="SupportedProtocols"></a>
@@ -186,14 +178,7 @@ guaranteed to be available.
 <table border="1">
 <caption>"Metadata Keys and Tags Table</caption>
 <tr><th scope="col"> Container </th><th scope="col"> Tag (type String) </th><th scope="col"> Type </th><th scope="col"> Description </th></tr>
-<tr><td> FXM, FLV </td><th scope="row"> audio&nbsp;codec </th><td> java.lang.String </td><td>The encoder used for the audio track.</td></tr>
-<tr><td> FXM, FLV </td><th scope="row"> duration </th><td> javafx.util.Duration </td><td>The duration of the media.</td></tr>
-<tr><td> FXM, FLV </td><th scope="row"> video&nbsp;codec </th><td> java.lang.String </td><td>The encoder used for the video track.</td></tr>
-<tr><td> FXM, FLV </td><th scope="row"> width </th><td> java.lang.Integer </td><td>The width in pixels of the video track.</td></tr>
-<tr><td> FXM, FLV </td><th scope="row"> height </th><td> java.lang.Integer </td><td>The height in pixels of the video track.</td></tr>
-<tr><td> FXM, FLV </td><th scope="row"> framerate </th><td> java.lang.Double </td><td>The video frame rate in frames per second.</td></tr>
-<tr><td> FXM, FLV </td><th scope="row"> creationdate </th><td> java.lang.String </td><td>The date when the video was created.</td></tr>
-<tr><td> FXM, FLV, MP3 </td><th scope="row"> raw&nbsp;metadata </th><td> Map&lt;String,ByteBuffer&gt; </td><td>The raw metadata according to the appropriate media specification. The key "ID3" maps to MP3 ID3v2 metadata and "FLV" to the FLV onMetadata marker content.</td></tr>
+<tr><td> MP3 </td><th scope="row"> raw&nbsp;metadata </th><td> Map&lt;String,ByteBuffer&gt; </td><td>The raw metadata according to the appropriate media specification. The key "ID3" maps to MP3 ID3v2 metadata.</td></tr>
 <tr><td> MP3 </td><th scope="row"> album&nbsp;artist </th><td> java.lang.String </td><td>The artist for the overall album, possibly "Various Artists" for compilations.</td></tr>
 <tr><td> MP3 </td><th scope="row"> album </th><td> java.lang.String </td><td>The name of the album.</td></tr>
 <tr><td> MP3 </td><th scope="row"> artist </th><td> java.lang.String </td><td>The artist of the track.</td></tr>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -739,12 +739,7 @@ GstPadProbeReturn CGstAVPlaybackPipeline::VideoDecoderSrcProbe(GstPad* pPad, Gst
 
         strMimeType = gst_structure_get_name(pStructure);
 
-        if (strMimeType.find("video/x-vp6-flash") != string::npos) {
-            encoding = CTrack::VP6;
-        } else if (strMimeType.find("video/x-vp6-alpha") != string::npos) {
-            encoding = CTrack::VP6;
-            hasAlpha = true;
-        } else if (strMimeType.find("video/x-h264") != string::npos) {
+        if (strMimeType.find("video/x-h264") != string::npos) {
             encoding = CTrack::H264;
         } else {
             encoding = CTrack::CUSTOM;

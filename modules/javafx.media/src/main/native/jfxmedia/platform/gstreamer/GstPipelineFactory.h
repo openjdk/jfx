@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -56,7 +56,6 @@ private:
     GstCaps*    FrameTypeToCaps(CVideoFrame::FrameType format);
     void        NegotiatePixelFormat(GstElement* pVideoSink, CPipelineOptions* pOptions);
 
-    uint32_t    CreateFLVPipeline(GstElement* source, GstElement* videosink, CPipelineOptions* pOptions, CPipeline** ppPipeline);
     uint32_t    CreateMP4Pipeline(GstElement* source, GstElement* videosink, CPipelineOptions* pOptions, CPipeline** ppPipeline);
     uint32_t    CreateMp3AudioPipeline(GstElement* source, CPipelineOptions* pOptions, CPipeline** ppPipeline);
     uint32_t    CreateWavPcmAudioPipeline(GstElement* source, CPipelineOptions* pOptions, CPipeline **ppPipeline);

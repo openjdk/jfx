@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,13 +42,6 @@ import java.nio.charset.Charset;
 import java.util.Collections;
 
 public abstract class MetadataParserImpl extends Thread implements com.sun.media.jfxmedia.MetadataParser {
-    private String[] FLV_VIDEO_CODEC_NAME = {
-        "Unsupported", "JPEG Video (Unsupported)", "Sorenson H.263 Video", "Flash Screen Video",
-        "On2 VP6 Video", "On2 VP6-Alpha Video", "Unsupported", "H.264 Video",
-        "Unsupported", "Unsupported", "Unsupported", "Unsupported",
-        "Unsupported", "Unsupported", "Unsupported", "Unsupported"
-    };
-
     private final List<WeakReference<MetadataListener>> listeners = new ArrayList<WeakReference<MetadataListener>>();
     private Map<String, Object> metadata = new HashMap<String, Object>();
     private Locator locator = null;
@@ -341,19 +334,6 @@ public abstract class MetadataParserImpl extends Thread implements com.sun.media
         } else if (tag.equals("duration") && value instanceof String) {
             String v = (String) value;
             return Long.valueOf(v.trim());
-        } else if (tag.equals("width") || tag.equals("height")) {
-            Double v = (Double) value;
-            return v.intValue();
-        } else if (tag.equals("framerate")) {
-            return value;
-        } else if (tag.equals("videocodecid")) {
-            // XXX: This conversion to String should be in the FLV parser itself.
-            int codecid = ((Double) value).intValue();
-            if (codecid < FLV_VIDEO_CODEC_NAME.length) {
-                return FLV_VIDEO_CODEC_NAME[codecid];
-            } else {
-                return null;
-            }
         } else if (tag.equals("audiocodecid")) {
             // XXX hard-coded
             return "MPEG 1 Audio";

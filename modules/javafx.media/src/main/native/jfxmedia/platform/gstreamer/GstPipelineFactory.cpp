@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,9 +57,6 @@ CGstPipelineFactory::CGstPipelineFactory()
     m_ContentTypes.push_back(CONTENT_TYPE_MP3);
     m_ContentTypes.push_back(CONTENT_TYPE_MPA);
     m_ContentTypes.push_back(CONTENT_TYPE_WAV);
-    m_ContentTypes.push_back(CONTENT_TYPE_JFX);
-    m_ContentTypes.push_back(CONTENT_TYPE_FLV);
-    m_ContentTypes.push_back(CONTENT_TYPE_FXM);
     m_ContentTypes.push_back(CONTENT_TYPE_MP4);
     m_ContentTypes.push_back(CONTENT_TYPE_M4A);
     m_ContentTypes.push_back(CONTENT_TYPE_M4V);
@@ -101,10 +98,7 @@ uint32_t CGstPipelineFactory::CreatePlayerPipeline(CLocator* locator, CPipelineO
     //***** Initialize the return pipeline
     *ppPipeline = NULL;
 
-    if (CONTENT_TYPE_JFX == locator->GetContentType() ||
-        CONTENT_TYPE_FLV == locator->GetContentType() ||
-        CONTENT_TYPE_FXM == locator->GetContentType() ||
-        CONTENT_TYPE_MP4 == locator->GetContentType() ||
+    if (CONTENT_TYPE_MP4 == locator->GetContentType() ||
         CONTENT_TYPE_M4A == locator->GetContentType() ||
         CONTENT_TYPE_M4V == locator->GetContentType())
     {
@@ -115,14 +109,7 @@ uint32_t CGstPipelineFactory::CreatePlayerPipeline(CLocator* locator, CPipelineO
             return ERROR_GSTREAMER_VIDEO_SINK_CREATE;
 #endif // !(ENABLE_APP_SINK && !ENABLE_NATIVE_SINK)
 
-        if (CONTENT_TYPE_JFX == locator->GetContentType() ||
-            CONTENT_TYPE_FLV == locator->GetContentType() ||
-            CONTENT_TYPE_FXM == locator->GetContentType())
-        {
-            uRetCode = CreateFLVPipeline(pSource, pVideoSink, (CPipelineOptions*) pOptions, ppPipeline);
-            if (ERROR_NONE != uRetCode)
-                return uRetCode;
-        } else if (CONTENT_TYPE_MP4 == locator->GetContentType() ||
+        if (CONTENT_TYPE_MP4 == locator->GetContentType() ||
                    CONTENT_TYPE_M4A == locator->GetContentType() ||
                    CONTENT_TYPE_M4V == locator->GetContentType())
         {
@@ -474,42 +461,6 @@ uint32_t CGstPipelineFactory::AttachToSource(GstBin* bin, GstElement* source, Gs
 #endif
 
     return ERROR_NONE;
-}
-
-/**
-    *  GstElement* CreateFLVPipeline(GstElement* source, char* demux_factory,
-    *                              char* audiodec_factory, char* videodec_factory,
-    *                              GstElement* audiosink, GstElement* videosink)
-    *
-    *  @param  source              Pipeline source element; must not be NULL.
-    *  @param  demux_factory       Name of the demuxer factory.
-    *  @param  audiodec_factory    Name of the audio decoder factory.
-    *  @param  videodec_factory    Name of the video decoder factory.
-    *  @param  audiosink           The audio sink element; if NULL one will be created internally.
-    *  @param  videosink           The video sink element; if NULL one will be created internally.
-    *
-    *  @return An audio-visual playback pipeline for FLV playback.
-    */
-uint32_t CGstPipelineFactory::CreateFLVPipeline(GstElement* source, GstElement* pVideoSink,
-                                                CPipelineOptions* pOptions, CPipeline** ppPipeline)
-{
-#if TARGET_OS_WIN32
-    return CreateAVPipeline(source, "flvdemux", "dshowwrapper", false, "vp6decoder", pVideoSink,
-                            pOptions, ppPipeline);
-#elif TARGET_OS_MAC
-    return CreateAVPipeline(source, "flvdemux", "audioconverter", true, "vp6decoder", pVideoSink,
-                            pOptions, ppPipeline);
-#elif TARGET_OS_LINUX
-#if ENABLE_GST_FFMPEG
-    return CreateAVPipeline(source, "flvdemux", "ffdec_mp3", true,
-                            "ffdec_vp6f", pVideoSink, pOptions, ppPipeline);
-#else
-    return CreateAVPipeline(source, "flvdemux", "avaudiodecoder", false, "vp6decoder", pVideoSink,
-                            pOptions, ppPipeline);
-#endif // ENABLE_GST_FFMPEG
-#else
-    return ERROR_PLATFORM_UNSUPPORTED;
-#endif // TARGET_OS_WIN32
 }
 
 /**

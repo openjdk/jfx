@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,9 +57,7 @@ public final class JavaPlatform extends Platform {
     @Override
     public MetadataParser createMetadataParser(Locator source) {
         String contentType = source.getContentType();
-        if (contentType.equals(MediaUtils.CONTENT_TYPE_JFX) || contentType.equals(MediaUtils.CONTENT_TYPE_FLV)) {
-            return new FLVMetadataParser(source);
-        } else if (contentType.equals(MediaUtils.CONTENT_TYPE_MPA) ||
+        if (contentType.equals(MediaUtils.CONTENT_TYPE_MPA) ||
                 contentType.equals(MediaUtils.CONTENT_TYPE_MP3)) {
             return new ID3MetadataParser(source);
         }
