@@ -194,7 +194,7 @@ public class RadioMenuItem extends MenuItem implements Toggle {
                         if (get()) {
                             getToggleGroup().selectToggle(RadioMenuItem.this);
                         } else if (getToggleGroup().getSelectedToggle() == RadioMenuItem.this) {
-                            getToggleGroup().selectToggle(null);
+                            getToggleGroup().clearSelectedToggle();
                         }
                     }
 

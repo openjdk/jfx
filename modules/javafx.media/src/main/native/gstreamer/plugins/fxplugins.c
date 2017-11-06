@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,11 +30,6 @@
 #include <progressbuffer.h>
 #include <hlsprogressbuffer.h>
 
-#ifdef ENABLE_ON2_DECODER
-#include <vp6decoder.h>
-#include <flvdemux.h>
-#endif
-
 #ifdef OSX
 #include <audioconverter.h>
 #include <avcdecoder.h>
@@ -48,11 +43,6 @@ static gboolean fxplugins_init (GstPlugin * plugin)
 {
     return java_source_plugin_init(plugin) &&
            hls_progress_buffer_plugin_init(plugin) &&
-
-#ifdef ENABLE_ON2_DECODER
-           gst_element_register (plugin, "vp6decoder", 250, TYPE_VP6_DECODER) &&
-           gst_element_register (plugin, "flvdemux", 70, TYPE_FLV_DEMUX) &&
-#endif
 
 #if defined(WIN32)
            dshowwrapper_init(plugin) &&

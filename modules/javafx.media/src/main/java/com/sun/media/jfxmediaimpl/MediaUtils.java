@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,9 @@ public class MediaUtils {
     /**
      * Format of an error which occurred in the native porting layer. A single
      * int argument representing a warning code is expected.
+     *
+     * Note: FLV related code in this file is needed so we can provide error
+     * message that FLV support is removed.
      */
     static final String NATIVE_MEDIA_WARNING_FORMAT = "Internal media warning: %d";
     public static final String CONTENT_TYPE_AIFF = "audio/x-aiff";

@@ -27,16 +27,13 @@ package javafx.application;
 
 import java.net.URI;
 
-import netscape.javascript.JSObject;
-
 import com.sun.javafx.application.HostServicesDelegate;
 
 /**
  * This class provides HostServices for an Application. This includes
  * methods to get the code base and document base for an Application,
- * show a web page in a browser, and communicate with the enclosing web page
- * using JavaScript if the Application is running in
- * a browser.
+ * and to show a web page in a browser.
+ *
  * @since JavaFX 2.0
  */
 public final class HostServices {
@@ -123,36 +120,6 @@ public final class HostServices {
      */
     public final void showDocument(String uri) {
         delegate.showDocument(uri);
-    }
-
-    /**
-     * Returns the JavaScript handle of the enclosing DOM window of the web
-     * page containing this application.
-     * This handle is used to access the web page by calling from Java into
-     * JavaScript.
-     * If the application is not embedded into a web page, this method
-     * return null.
-     *
-     * <p>Example:</p>
-     * <pre>{@code
-     *     JSObject jsWin = getHostServices().getWebContext();
-     *     if (jsWin != null) {
-     *         jsWin.eval("var b = document.body;" +
-     *                    "var newdiv = document.createElement('div');" +
-     *                    "newdiv.innerHTML = '<br>Hello from JavaScript!';" +
-     *                    "b.appendChild(newdiv);");
-     *     }
-     * }</pre>
-     *
-     * @return handle of the enclosing DOM window of the web page containing
-     * this application
-     *
-     * @deprecated This method is deprecated as of JDK 9 because the
-     * {@link java.applet.Applet Applet} API is deprecated.
-     */
-    @Deprecated(since="9", forRemoval=true)
-    public final JSObject getWebContext() {
-        return delegate.getWebContext();
     }
 
 }

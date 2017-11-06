@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,6 @@ public class HelloHostServices extends Application {
         final HostServices hs = getHostServices();
         final Label codeBaseText = new Label();
         final Label documentBaseText = new Label();
-        final Label webContextText = new Label();
         final Label showDocumentText = new Label();
 
         stage.setTitle("Hello HostServices");
@@ -67,24 +66,18 @@ public class HelloHostServices extends Application {
         Button getDocumentBaseBtn = new Button("Get DocumentBase");
         getDocumentBaseBtn.setOnAction(event -> documentBaseText.setText(hs.getDocumentBase()));
 
-        // getWebContext() in HostServices has been deprecated and marked for removal
-        Button getWebContextBtn = new Button("Get WebContext");
-        getWebContextBtn.setOnAction(event -> webContextText.setText(
-                (hs.getWebContext() != null) ? hs.getWebContext().toString() : "NULL"));
-
         Button showDocmentBtn = new Button("Show Document");
         showDocmentBtn.setOnAction(event
                 -> showDocument(hs, showDocumentText, "http://www.oracle.com/java/"));
 
         VBox textBox = new VBox(15);
         textBox.setFillWidth(false);
-        textBox.getChildren().addAll(codeBaseText, documentBaseText, webContextText, showDocumentText);
+        textBox.getChildren().addAll(codeBaseText, documentBaseText, showDocumentText);
 
         VBox buttonBox = new VBox(5);
         buttonBox.getChildren().addAll(
                 getCodeBaseBtn,
                 getDocumentBaseBtn,
-                getWebContextBtn,
                 showDocmentBtn);
 
         HBox root = new HBox(7);

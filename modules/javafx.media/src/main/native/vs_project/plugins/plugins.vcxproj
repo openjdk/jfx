@@ -41,21 +41,6 @@
     <ClCompile Include="..\..\gstreamer\plugins\progressbuffer\win32\filecache.c">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvdemux.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvmetadata.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\vp6\flvparser.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\vp6\fxmplugin.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
-    <ClCompile Include="..\..\gstreamer\plugins\vp6\vp6decoder.c">
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">WIN32;_WINDOWS;_USRDLL;ENABLE_PULL_MODE=1;HAVE_CONFIG_H=on2_codecs_config.h;ENABLE_SOURCE_SEEKING=1;GSTREAMER_LITE;GST_REMOVE_DEPRECATED;GST_REMOVE_DISABLED;GST_DISABLE_GST_DEBUG;GST_DISABLE_LOADSAVE;G_DISABLE_DEPRECATED;G_DISABLE_ASSERT;G_DISABLE_CHECKS;_WINDLL;_MBCS;INITGUID;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{87CF0F6E-87BD-4CB5-A6A1-841F81F17842}</ProjectGuid>

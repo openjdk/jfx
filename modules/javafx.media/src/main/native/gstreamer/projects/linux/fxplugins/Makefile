@@ -45,7 +45,7 @@ INCLUDES = -I$(SRCBASE_DIR) \
 PACKAGES_INCLUDES := $(shell pkg-config --cflags glib-2.0)
 PACKAGES_LIBS := $(shell pkg-config --libs glib-2.0 gobject-2.0)
 
-LDFLAGS = -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS) 
+LDFLAGS = -L$(BUILD_DIR) -lgstreamer-lite $(PACKAGES_LIBS)
 
 ifeq ($(ARCH), x32)
     CFLAGS += -m32
@@ -58,21 +58,6 @@ SOURCES = fxplugins.c                        \
           progressbuffer/posix/filecache.c   \
           javasource/javasource.c            \
           javasource/marshal.c
-
-ifneq ($(strip $(ON2_SRCDIR)),)
-DIRLIST += vp6
-
-INCLUDES += -I$(ON2_SRCDIR)/include \
-            -I$(ON2_SRCDIR)/src \
-            -I$(ON2_SRCDIR)/config/linux
-
-SOURCES += vp6/flvdemux.c    \
-           vp6/flvmetadata.c \
-           vp6/flvparser.c   \
-           vp6/vp6decoder.c
-
-CFLAGS += -DENABLE_ON2_DECODER
-endif
 
 OBJ_DIRS = $(addprefix $(OBJBASE_DIR)/,$(DIRLIST))
 OBJECTS = $(patsubst %.c,$(OBJBASE_DIR)/%.o,$(SOURCES))

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,16 +29,8 @@ import com.sun.media.jfxmedia.events.MetadataListener;
 import java.io.IOException;
 
 public interface MetadataParser {
-    // FLV and MP3
-    static final String DURATION_TAG_NAME = "duration";
-    // FLV
-    static final String CREATIONDATE_TAG_NAME = "creationdate";
-    static final String WIDTH_TAG_NAME = "width";
-    static final String HEIGHT_TAG_NAME = "height";
-    static final String FRAMERATE_TAG_NAME = "framerate";
-    static final String VIDEOCODEC_TAG_NAME = "video codec";
-    static final String AUDIOCODEC_TAG_NAME = "audio codec";
     // MP3
+    static final String DURATION_TAG_NAME = "duration";
     static final String IMAGE_TAG_NAME = "image";
     static final String ALBUMARTIST_TAG_NAME = "album artist";
     static final String ALBUM_TAG_NAME = "album";
@@ -55,7 +47,6 @@ public interface MetadataParser {
     static final String TEXT_TAG_NAME = "text";
 
     static final String RAW_METADATA_TAG_NAME = "raw metadata";
-    static final String RAW_FLV_METADATA_NAME = "FLV";
     static final String RAW_ID3_METADATA_NAME = "ID3";
 
     void addListener(MetadataListener listener);

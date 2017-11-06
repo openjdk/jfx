@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,6 @@ import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import javafx.application.Application;
-import netscape.javascript.JSObject;
-
 
 public abstract class HostServicesDelegate {
 
@@ -83,8 +81,6 @@ public abstract class HostServicesDelegate {
     public abstract String getDocumentBase();
 
     public abstract void showDocument(String uri);
-
-    public abstract JSObject getWebContext();
 
     // StandaloneHostService implementation
     private static class StandaloneHostService extends HostServicesDelegate {
@@ -192,10 +188,6 @@ public abstract class HostServicesDelegate {
                 // dump stack for debug purpose
                 e.printStackTrace();
             }
-        }
-
-        @Override public JSObject getWebContext() {
-            return null;
         }
     }
 }

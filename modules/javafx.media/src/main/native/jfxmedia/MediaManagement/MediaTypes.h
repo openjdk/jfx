@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,9 +34,6 @@
 #define CONTENT_TYPE_MP3    "audio/mp3"
 #define CONTENT_TYPE_MPA    "audio/mpeg"
 #define CONTENT_TYPE_WAV    "audio/x-wav"
-#define CONTENT_TYPE_JFX    "video/x-javafx"
-#define CONTENT_TYPE_FLV    "video/x-flv"
-#define CONTENT_TYPE_FXM    "video/x-fxm"
 #define CONTENT_TYPE_MP4    "video/mp4"
 #define CONTENT_TYPE_M4A    "audio/x-m4a"
 #define CONTENT_TYPE_M4V    "video/x-m4v"

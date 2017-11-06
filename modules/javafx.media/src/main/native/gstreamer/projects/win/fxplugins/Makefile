@@ -31,7 +31,7 @@ SYSTEM_LIBS = glib-lite.lib \
 
 LDFLAGS = -out:$(shell cygpath -ma $(TARGET)) -nologo -incremental:no -libpath:$(shell cygpath -ma $(BUILD_DIR)) -dll $(SYSTEM_LIBS) \
           -nodefaultlib:libcmt -manifest -manifestfile:$(MANIFEST) -manifestuac:"level='asInvoker' uiAccess='false'" -implib:$(IMPLIB) \
-          -subsystem:windows -tlbid:1 -dynamicbase -nxcompat -errorreport:queue 
+          -subsystem:windows -tlbid:1 -dynamicbase -nxcompat -errorreport:queue
 
 OBJBASE_DIR = $(BUILD_DIR)/obj/plugins
 SRCBASE_DIR = ../../../plugins
@@ -101,7 +101,7 @@ ifeq ($(BUILD_TYPE), Release)
     O1FLAGS = -O1
     O2FLAGS = -O2
 else # debug
-    LDFLAGS += -debug -pdb:$(PDB) 
+    LDFLAGS += -debug -pdb:$(PDB)
     CFLAGS += -D_DEBUG -Oy- -RTC1 -MDd -DENABLE_VISUAL_STUDIO_MEMORY_LEAKS_DETECTION -wd"4018" -wd"4244" -wd"4274" -Zi -Fd$(PDB)
     O1FLAGS = -Od
     O2FLAGS = -Od
@@ -112,23 +112,6 @@ ifeq ($(ARCH), x32)
 else
     CFLAGS += -D_WIN64
     LDFLAGS += -MACHINE:x64
-endif
-
-ifneq ($(strip $(ON2_SRCDIR)),)
-DIRLIST += vp6
-
-INCLUDES += -I$(shell cygpath -ma "$(ON2_SRCDIR)/include") \
-            -I$(shell cygpath -ma "$(ON2_SRCDIR)/src") \
-            -I$(shell cygpath -ma "$(ON2_SRCDIR)/config/win")
-
-LDFLAGS += $(shell cygpath -ma "$(ON2_LIB)")
-
-C_SOURCES += vp6/flvdemux.c    \
-             vp6/flvmetadata.c \
-             vp6/flvparser.c   \
-             vp6/vp6decoder.c
-
-CFLAGS += -DENABLE_ON2_DECODER
 endif
 
 LIBS = $(addprefix $(BUILD_DIR)/,$(MODULES))
