@@ -73,11 +73,12 @@ final class PasteboardImpl implements Pasteboard {
         if (fxImage != null) {
             ClipboardContent content = new ClipboardContent();
             content.putImage(fxImage);
+            String fileExtension = wcImage.getFrame().getFileExtension();
             try {
-                File imageDump = File.createTempFile("jfx", ".png");
+                File imageDump = File.createTempFile("jfx", "." + fileExtension);
                 imageDump.deleteOnExit();
                 ImageIO.write(UIClientImpl.toBufferedImage(fxImage),
-                    "png",
+                    fileExtension,
                     imageDump);
                 content.putFiles(Arrays.asList(imageDump));
             } catch (IOException | SecurityException e) {

@@ -59,6 +59,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     private PrismImage[] images;
     private volatile byte[] data;
     private volatile int dataSize = 0;
+    private String fileNameExtension;
 
     static {
         log = Logger.getLogger(WCImageDecoderImpl.class.getName());
@@ -82,8 +83,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     }
 
     @Override protected String getFilenameExtension() {
-        /// retrieve image format from reader
-        return ".img";
+        return "." + fileNameExtension;
     }
 
     private boolean imageSizeAvilable() {
@@ -210,6 +210,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
             if (imageHeight < metadata.imageHeight) {
                 imageHeight = metadata.imageHeight;
             }
+            fileNameExtension = l.getFormatDescription().getExtensions().get(0);
         }
     };
 
@@ -226,8 +227,9 @@ final class WCImageDecoderImpl extends WCImageDecoder {
     private static final class Frame extends WCImageFrame {
         private WCImage image;
 
-        private Frame(WCImage image) {
+        private Frame(WCImage image, String extension) {
             this.image = image;
+            this.image.setFileExtension(extension);
         }
 
         @Override public WCImage getFrame() {
@@ -275,7 +277,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
                         hashCode(), idx, type));
             }
             PrismImage img = getPrismImage(idx, frame);
-            return new Frame(img);
+            return new Frame(img, fileNameExtension);
         }
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("%X FAILED getFrame(%d)", hashCode(), idx));

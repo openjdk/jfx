@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -349,9 +349,10 @@ public final class UIClientImpl implements UIClient {
             if (isImageSource) {
                 Object platformImage = image.getWidth() > 0 && image.getHeight() > 0 ?
                         image.getPlatformImage() : null;
+                String fileExtension = image.getFileExtension();
                 if (platformImage != null) {
                     try {
-                        File temp = File.createTempFile("jfx", ".png");
+                        File temp = File.createTempFile("jfx", "." + fileExtension);
                         temp.deleteOnExit();
                         ImageIO.write(
                             toBufferedImage(Toolkit.getImageAccessor().fromPlatformImage(
@@ -359,7 +360,7 @@ public final class UIClientImpl implements UIClient {
                                     platformImage
                                 )
                             )),
-                            "png",
+                            fileExtension,
                             temp);
                         content.put(DataFormat.FILES, Arrays.asList(temp));
                     } catch (IOException | SecurityException e) {
