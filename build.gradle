@@ -1076,8 +1076,8 @@ if (Integer.parseInt(NUM_COMPILE_THREADS.toString()) < 1) {
     NUM_COMPILE_THREADS = 1
 }
 
-// Check for Gradle 3.1, error if < 3.0.
-if (gradle.gradleVersion != "3.1") {
+// Check for Gradle 4.3, error if < 3.0.
+if (gradle.gradleVersion != "4.3") {
     def ver = gradle.gradleVersion.split("[\\.]");
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1].split("[^0-9]")[0]);
@@ -1092,7 +1092,7 @@ if (gradle.gradleVersion != "3.1") {
 
     logger.warn("*****************************************************************");
     logger.warn("Unsupported gradle version $gradle.gradleVersion in use.");
-    logger.warn("Only version 3.1 is supported. Use this version at your own risk");
+    logger.warn("Only version 4.3 is supported. Use this version at your own risk");
     if ( err != "") logger.warn(err);
     logger.warn("*****************************************************************");
 }

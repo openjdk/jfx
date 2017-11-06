@@ -1,3 +1,0 @@
-The following environment variable must be set in order to run gradle 3.1 with the latest JDK 9 build:
-
-export _JAVA_OPTIONS="-Dsun.reflect.debugModuleAccessChecks=true --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.text=ALL-UNNAMED"
