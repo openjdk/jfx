@@ -143,7 +143,7 @@ bool Library::Load(const TString &FileName) {
             platform.ShowMessage(messages.GetMessage(LIBRARY_NOT_FOUND), FileName);
             result = false;
         } else {
-            fname = FileName;
+            fname = PlatformString(FileName).toStdString();
         }
     }
 
