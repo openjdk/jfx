@@ -279,9 +279,10 @@ public class NestedTableColumnHeader extends TableColumnHeader {
         double w = getWidth() - snappedLeftInset() - snappedRightInset();
         double h = getHeight() - snappedTopInset() - snappedBottomInset();
 
-        int labelHeight = (int) label.prefHeight(-1);
+        int labelHeight = 0;
 
-        if (label.isVisible()) {
+        if (label.isVisible() && getTableColumn() != null) {
+            labelHeight = (int) label.prefHeight(-1);
             // label gets to span whole width and sits at top
             label.resize(w, labelHeight);
             label.relocate(snappedLeftInset(), snappedTopInset());
@@ -351,7 +352,12 @@ public class NestedTableColumnHeader extends TableColumnHeader {
             }
         }
 
-        return height + label.prefHeight(-1) + snappedTopInset() + snappedBottomInset();
+        double labelHeight = 0.0;
+        if (label.isVisible() && getTableColumn() != null) {
+            labelHeight = label.prefHeight(-1);
+        }
+
+        return height + labelHeight + snappedTopInset() + snappedBottomInset();
     }
 
     /**
