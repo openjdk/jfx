@@ -162,10 +162,8 @@ void LinuxPlatform::reactivateAnotherInstance() {
         printf("Unable to reactivate another instance, PID is undefined");
         return;
     }
-    Display* dsp = XOpenDisplay(NULL);
-    ProcessReactivator processReactivator(dsp, singleInstanceProcessId);
-    processReactivator.reactivateProcess();
-    XCloseDisplay(dsp);
+
+    const ProcessReactivator reactivator(singleInstanceProcessId);
 }
 
 TPlatformNumber LinuxPlatform::GetMemorySize() {
@@ -1076,48 +1074,141 @@ bool LinuxJavaUserPreferences::Load(TString Appid) {
     return result;
 }
 
-ProcessReactivator::ProcessReactivator(Display* display, pid_t pid):
-   _pid(pid), _display(display) {
+namespace {
+template<class funcType>
+class DllFunction {
+    const Library& lib;
+    funcType funcPtr;
+    std::string theName;
 
-   _atomPid = XInternAtom(display, "_NET_WM_PID", True);
+public:
+    DllFunction(const Library& library, const std::string &funcName): lib(library) {
+        funcPtr = reinterpret_cast<funcType>(lib.GetProcAddress(funcName));
+        if (!funcPtr) {
+            throw std::runtime_error("Failed to load function \"" + funcName + "\" from \"" + library.GetName() + "\" library");
+        }
+    }
 
-   if (_atomPid == None) {
-       return;
-   }
-   searchWindowHelper(XDefaultRootWindow(display));
+    operator funcType() const {
+        return funcPtr;
+    }
+};
+} // namespace
+
+extern "C" {
+typedef Status (*XInitThreadsFuncPtr)();
+typedef Display* (*XOpenDisplayFuncPtr)(char *display_name);
+
+typedef Atom (*XInternAtomFuncPtr)(Display *display, char *atom_name, Bool only_if_exists);
+
+typedef Window (*XDefaultRootWindowFuncPtr)(Display *display);
+
+typedef int (*XCloseDisplayFuncPtr)(Display *display);
+}
+
+ProcessReactivator::ProcessReactivator(pid_t pid): _pid(pid) {
+    const std::string libname = "libX11.so";
+    if(!libX11.Load(libname)) {
+        throw std::runtime_error("Failed to load \"" + libname + "\" library");
+    }
+
+    DllFunction<XInitThreadsFuncPtr> XInitThreadsFunc(libX11, "XInitThreads");
+
+    XInitThreadsFunc();
+
+    DllFunction<XOpenDisplayFuncPtr> XOpenDisplayFunc(libX11, "XOpenDisplay33");
+
+    _display = XOpenDisplayFunc(NULL);
+
+    DllFunction<XInternAtomFuncPtr> XInternAtomFunc(libX11, "XInternAtom");
+
+    _atomPid = XInternAtomFunc(_display, "_NET_WM_PID", True);
+
+    if (_atomPid == None) {
+        return;
+    }
+
+    DllFunction<XDefaultRootWindowFuncPtr> XDefaultRootWindowFunc(libX11, "XDefaultRootWindow");
+
+    searchWindowHelper(XDefaultRootWindowFunc(_display));
+
+    reactivateProcess();
+
+    DllFunction<XCloseDisplayFuncPtr> XCloseDisplayFunc(libX11, "XCloseDisplay");
+
+    XCloseDisplayFunc(_display);
+}
+
+extern "C" {
+typedef int (*XGetWindowPropertyFuncPtr)(Display *display, Window w, Atom property,
+        long long_offset, long long_length, Bool d, Atom req_type, Atom *actual_type_return,
+        int *actual_format_return, unsigned long *nitems_return,
+        unsigned long *bytes_after_return, unsigned char **prop_return);
+
+typedef Status (*XQueryTreeFuncPtr)(Display *display, Window w, Window *root_return,
+        Window *parent_return, Window **children_return, unsigned int *nchildren_return);
+
+typedef int (*XFreeFuncPtr)(void *data);
 }
 
 void ProcessReactivator::searchWindowHelper(Window w) {
+
+    DllFunction<XGetWindowPropertyFuncPtr> XGetWindowPropertyFunc(libX11, "XGetWindowProperty");
+
+    DllFunction<XFreeFuncPtr> XFreeFunc(libX11, "XFree");
+
     Atom type;
     int format;
     unsigned long  num, bytesAfter;
     unsigned char* propPid = 0;
-    if (Success == XGetWindowProperty(_display, w, _atomPid, 0, 1, False, XA_CARDINAL,
+    if (Success == XGetWindowPropertyFunc(_display, w, _atomPid, 0, 1, False, XA_CARDINAL,
                                      &type, &format, &num, &bytesAfter, &propPid)) {
         if (propPid != 0) {
             if (_pid == *((pid_t *)propPid)) {
                 _result.push_back(w);
             }
-            XFree(propPid);
+            XFreeFunc(propPid);
         }
     }
+
+    DllFunction<XQueryTreeFuncPtr> XQueryTreeFunc(libX11, "XQueryTree");
 
     Window root, parent;
     Window* child;
     unsigned int numChildren;
-    if (0 != XQueryTree(_display, w, &root, &parent, &child, &numChildren)) {
+    if (0 != XQueryTreeFunc(_display, w, &root, &parent, &child, &numChildren)) {
         for (unsigned int i = 0; i < numChildren; i++) {
             searchWindowHelper(child[i]);
         }
     }
 }
 
+
+extern "C" {
+typedef Status (*XGetWindowAttributesFuncPtr)(Display *display, Window w,
+        XWindowAttributes *window_attributes_return);
+
+typedef Status (*XSendEventFuncPtr)(Display *display, Window w, Bool propagate,
+        long event_mask, XEvent *event_send);
+
+typedef int (*XRaiseWindowFuncPtr)(Display *display, Window w);
+}
+
 void ProcessReactivator::reactivateProcess() {
+
+    DllFunction<XGetWindowAttributesFuncPtr> XGetWindowAttributesFunc(libX11, "XGetWindowAttributes");
+
+    DllFunction<XSendEventFuncPtr> XSendEventFunc(libX11, "XSendEvent");
+
+    DllFunction<XRaiseWindowFuncPtr> XRaiseWindowFunc(libX11, "XRaiseWindow");
+
+    DllFunction<XInternAtomFuncPtr> XInternAtomFunc(libX11, "XInternAtom");
+
     for (std::list<Window>::const_iterator it = _result.begin(); it != _result.end(); it++) {
         // try sending an event to activate window,
         // after that we can try to raise it.
         XEvent xev;
-        Atom atom = XInternAtom (_display, "_NET_ACTIVE_WINDOW", False);
+        Atom atom = XInternAtomFunc (_display, "_NET_ACTIVE_WINDOW", False);
         xev.xclient.type = ClientMessage;
         xev.xclient.serial = 0;
         xev.xclient.send_event = True;
@@ -1131,10 +1222,10 @@ void ProcessReactivator::reactivateProcess() {
         xev.xclient.data.l[3] = 0;
         xev.xclient.data.l[4] = 0;
         XWindowAttributes attr;
-        XGetWindowAttributes(_display, *it, &attr);
-        XSendEvent(_display, attr.root, False,
+        XGetWindowAttributesFunc(_display, *it, &attr);
+        XSendEventFunc(_display, attr.root, False,
             SubstructureRedirectMask | SubstructureNotifyMask, &xev);
-        XRaiseWindow(_display, *it);
+        XRaiseWindowFunc(_display, *it);
     }
 }
 

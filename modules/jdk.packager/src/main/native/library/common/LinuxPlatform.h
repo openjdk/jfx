@@ -103,15 +103,16 @@ public:
 class ProcessReactivator {
 private:
     void searchWindowHelper(Window w);
+    void reactivateProcess();
+
+    Library libX11;
 
     pid_t _pid;
     Atom _atomPid;
     Display* _display;
     std::list<Window> _result;
 public:
-    ProcessReactivator(Display *display, pid_t pid);
-
-    void reactivateProcess();
+    explicit ProcessReactivator(pid_t pid);
 };
 
 #endif //LINUXPLATFORM_H

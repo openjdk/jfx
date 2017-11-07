@@ -30,7 +30,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <X11/Xlib.h>
 #include <dlfcn.h>
 #include <locale.h>
 #include <string>
@@ -59,7 +58,6 @@ std::string GetProgramPath() {
 
 int main(int argc, char *argv[]) {
     int result = 1;
-    XInitThreads();
     setlocale(LC_ALL, "en_US.utf8");
     void* library = NULL;
 
