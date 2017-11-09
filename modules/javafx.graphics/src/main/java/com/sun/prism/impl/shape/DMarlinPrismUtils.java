@@ -51,17 +51,17 @@ public final class DMarlinPrismUtils {
     private DMarlinPrismUtils() {
     }
 
-    private static DPathConsumer2D initRenderer(
+    private static boolean nearZero(final double num) {
+        return Math.abs(num) < 2.0d * Math.ulp(num);
+    }
+
+    private static DPathConsumer2D initPipeline(
             final DRendererContext rdrCtx,
             final BasicStroke stroke,
+            final float lineWidth,
             final BaseTransform tx,
-            final Rectangle clip,
-            final int pirule,
-            final DMarlinRenderer renderer)
+            final DPathConsumer2D out)
     {
-        final int oprule = (stroke == null && pirule == PathIterator.WIND_EVEN_ODD) ?
-            DMarlinRenderer.WIND_EVEN_ODD : DMarlinRenderer.WIND_NON_ZERO;
-
         // We use strokerat so that in Stroker and Dasher we can work only
         // with the pre-transformation coordinates. This will repeat a lot of
         // computations done in the path iterator, but the alternative is to
@@ -79,12 +79,12 @@ public final class DMarlinPrismUtils {
 
         int dashLen = -1;
         boolean recycleDashes = false;
-
+        double scale = 1.0d;
         double width = 0.0f, dashphase = 0.0f;
         double[] dashesD = null;
 
         if (stroke != null) {
-            width = stroke.getLineWidth();
+            width = lineWidth;
             final float[] dashes = stroke.getDashArray();
             dashphase = stroke.getDashPhase();
 
@@ -95,7 +95,7 @@ public final class DMarlinPrismUtils {
                 dashesD = rdrCtx.dasher.copyDashArray(dashes);
             }
 
-            if (tx != null && !tx.isIdentity()) {
+            if ((tx != null) && !tx.isIdentity()) {
                 final double a = tx.getMxx();
                 final double b = tx.getMxy();
                 final double c = tx.getMyx();
@@ -108,7 +108,7 @@ public final class DMarlinPrismUtils {
                 // a*b == -c*d && a*a+c*c == b*b+d*d. In the actual check below, we
                 // leave a bit of room for error.
                 if (nearZero(a*b + c*d) && nearZero(a*a + c*c - (b*b + d*d))) {
-                    final double scale = Math.sqrt(a*a + c*c);
+                    scale = Math.sqrt(a*a + c*c);
 
                     if (dashesD != null) {
                         for (int i = 0; i < dashLen; i++) {
@@ -140,7 +140,8 @@ public final class DMarlinPrismUtils {
             }
         }
 
-        DPathConsumer2D pc = renderer.init(clip.x, clip.y, clip.width, clip.height, oprule);
+        // Prepare the pipeline:
+        DPathConsumer2D pc = out;
 
         if (MarlinConst.USE_SIMPLIFIER) {
             // Use simplifier after stroker before Renderer
@@ -149,18 +150,18 @@ public final class DMarlinPrismUtils {
         }
 
         final DTransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
-        pc = transformerPC2D.deltaTransformConsumer(pc, strokerTx);
 
         if (stroke != null) {
+            pc = transformerPC2D.deltaTransformConsumer(pc, strokerTx);
+
             pc = rdrCtx.stroker.init(pc, width, stroke.getEndCap(),
                     stroke.getLineJoin(), stroke.getMiterLimit());
 
             if (dashesD != null) {
                 pc = rdrCtx.dasher.init(pc, dashesD, dashLen, dashphase, recycleDashes);
             }
+            pc = transformerPC2D.inverseDeltaTransformConsumer(pc, strokerTx);
         }
-
-        pc = transformerPC2D.inverseDeltaTransformConsumer(pc, strokerTx);
 
         /*
          * Pipeline seems to be:
@@ -177,8 +178,26 @@ public final class DMarlinPrismUtils {
         return pc;
     }
 
-    private static boolean nearZero(final double num) {
-        return Math.abs(num) < 2.0d * Math.ulp(num);
+    private static DPathConsumer2D initRenderer(
+            final DRendererContext rdrCtx,
+            final BasicStroke stroke,
+            final BaseTransform tx,
+            final Rectangle clip,
+            final int piRule,
+            final DMarlinRenderer renderer)
+    {
+        final int oprule = ((stroke == null) && (piRule == PathIterator.WIND_EVEN_ODD)) ?
+            DMarlinRenderer.WIND_EVEN_ODD : DMarlinRenderer.WIND_NON_ZERO;
+
+        renderer.init(clip.x, clip.y, clip.width, clip.height, oprule);
+
+        float lw = 0.0f;
+
+        if (stroke != null) {
+            lw = stroke.getLineWidth();
+        }
+
+        return initPipeline(rdrCtx, stroke, lw, tx, renderer);
     }
 
     public static DMarlinRenderer setupRenderer(
@@ -190,39 +209,37 @@ public final class DMarlinPrismUtils {
             final boolean antialiasedShape)
     {
         // Test if transform is identity:
-        final BaseTransform tf = (xform != null && !xform.isIdentity()) ? xform : null;
-
-        final PathIterator pi = shape.getPathIterator(tf);
+        final BaseTransform tf = ((xform != null) && !xform.isIdentity()) ? xform : null;
 
         final DMarlinRenderer r =  (!FORCE_NO_AA && antialiasedShape) ?
                 rdrCtx.renderer : rdrCtx.getRendererNoAA();
 
-        final DPathConsumer2D pc2d = initRenderer(rdrCtx, stroke, tf, rclip, pi.getWindingRule(), r);
-
-        feedConsumer(rdrCtx, pi, pc2d);
-
+        if (shape instanceof Path2D) {
+            final Path2D p2d = (Path2D)shape;
+            final DPathConsumer2D pc2d = initRenderer(rdrCtx, stroke, tf, rclip, p2d.getWindingRule(), r);
+            feedConsumer(rdrCtx, p2d, tf, pc2d);
+        } else {
+            final PathIterator pi = shape.getPathIterator(tf);
+            final DPathConsumer2D pc2d = initRenderer(rdrCtx, stroke, tf, rclip, pi.getWindingRule(), r);
+            feedConsumer(rdrCtx, pi, pc2d);
+        }
         return r;
     }
 
-    public static DMarlinRenderer setupRenderer(
+    public static void strokeTo(
             final DRendererContext rdrCtx,
-            final Path2D p2d,
+            final Shape shape,
             final BasicStroke stroke,
-            final BaseTransform xform,
-            final Rectangle rclip,
-            final boolean antialiasedShape)
+            final float lineWidth,
+            final DPathConsumer2D out)
     {
-        // Test if transform is identity:
-        final BaseTransform tf = (xform != null && !xform.isIdentity()) ? xform : null;
+        final DPathConsumer2D pc2d = initPipeline(rdrCtx, stroke, lineWidth, null, out);
 
-        final DMarlinRenderer r =  (!FORCE_NO_AA && antialiasedShape) ?
-                rdrCtx.renderer : rdrCtx.getRendererNoAA();
-
-        final DPathConsumer2D pc2d = initRenderer(rdrCtx, stroke, tf, rclip, p2d.getWindingRule(), r);
-
-        feedConsumer(rdrCtx, p2d, tf, pc2d);
-
-        return r;
+        if (shape instanceof Path2D) {
+            feedConsumer(rdrCtx, (Path2D)shape, null, pc2d);
+        } else {
+            feedConsumer(rdrCtx, shape.getPathIterator(null), pc2d);
+        }
     }
 
     private static void feedConsumer(final DRendererContext rdrCtx, final PathIterator pi,
@@ -359,8 +376,8 @@ public final class DMarlinPrismUtils {
         // - removed pathClosed (ie subpathStarted not set to false)
         boolean subpathStarted = false;
 
-        final float pCoords[] = p2d.getFloatCoordsNoClone();
-        final byte pTypes[] = p2d.getCommandsNoClone();
+        final float[] pCoords = p2d.getFloatCoordsNoClone();
+        final byte[] pTypes = p2d.getCommandsNoClone();
         final int nsegs = p2d.getNumCommands();
 
         for (int i = 0, coff = 0; i < nsegs; i++) {

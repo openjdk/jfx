@@ -25,6 +25,7 @@
 
 package com.sun.marlin;
 
+import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.PathConsumer2D;
 import com.sun.javafx.geom.transform.BaseTransform;
 
@@ -34,9 +35,16 @@ public final class TransformingPathConsumer2D {
         // used by RendererContext
     }
 
+    // recycled PathConsumer2D instance from wrapPath2d()
+    private final Path2DWrapper        wp_Path2DWrapper        = new Path2DWrapper();
+
     // recycled PathConsumer2D instances from deltaTransformConsumer()
     private final DeltaScaleFilter     dt_DeltaScaleFilter     = new DeltaScaleFilter();
     private final DeltaTransformFilter dt_DeltaTransformFilter = new DeltaTransformFilter();
+
+    public PathConsumer2D wrapPath2D(Path2D p2d) {
+        return wp_Path2DWrapper.init(p2d);
+    }
 
     public PathConsumer2D deltaTransformConsumer(PathConsumer2D out,
                                                  BaseTransform at)
@@ -90,7 +98,6 @@ public final class TransformingPathConsumer2D {
                                                 mxx / det);
         }
     }
-
 
     static final class DeltaScaleFilter implements PathConsumer2D {
         private PathConsumer2D out;
@@ -207,6 +214,48 @@ public final class TransformingPathConsumer2D {
         @Override
         public void pathDone() {
             out.pathDone();
+        }
+    }
+
+    static final class Path2DWrapper implements PathConsumer2D {
+        private Path2D p2d;
+
+        Path2DWrapper() {}
+
+        Path2DWrapper init(Path2D p2d) {
+            this.p2d = p2d;
+            return this;
+        }
+
+        @Override
+        public void moveTo(float x0, float y0) {
+            p2d.moveTo(x0, y0);
+        }
+
+        @Override
+        public void lineTo(float x1, float y1) {
+            p2d.lineTo(x1, y1);
+        }
+
+        @Override
+        public void closePath() {
+            p2d.closePath();
+        }
+
+        @Override
+        public void pathDone() {}
+
+        @Override
+        public void curveTo(float x1, float y1,
+                            float x2, float y2,
+                            float x3, float y3)
+        {
+            p2d.curveTo(x1, y1, x2, y2, x3, y3);
+        }
+
+        @Override
+        public void quadTo(float x1, float y1, float x2, float y2) {
+            p2d.quadTo(x1, y1, x2, y2);
         }
     }
 }

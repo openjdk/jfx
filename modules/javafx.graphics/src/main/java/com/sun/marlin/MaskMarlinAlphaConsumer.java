@@ -159,7 +159,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
 //            System.out.println("setting row "+(pix_y - y)+
 //                               " out of "+width+" x "+height);
 
-        final byte out[] = this.alphas;
+        final byte[] out = this.alphas;
         final int w = width;
         final int off = (pix_y - y) * w;
 
@@ -223,7 +223,7 @@ public final class MaskMarlinAlphaConsumer implements MarlinAlphaConsumer {
 //            System.out.println("setting row "+(pix_y - y)+
 //                               " out of "+width+" x "+height);
 
-        final byte out[] = this.alphas;
+        final byte[] out = this.alphas;
         final int w = width;
         final int off = (pix_y - y) * w;
 

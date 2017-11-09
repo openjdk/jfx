@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,14 +83,9 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
             final Rectangle rclip = rdrCtx.clip;
             rclip.setBounds(xformBounds);
 
-            if (shape instanceof Path2D) {
-                renderer = DMarlinPrismUtils.setupRenderer(rdrCtx, (Path2D) shape, stroke, xform, rclip,
-                        antialiasedShape);
-            }
-            if (renderer == null) {
-                renderer = DMarlinPrismUtils.setupRenderer(rdrCtx, shape, stroke, xform, rclip,
-                        antialiasedShape);
-            }
+            renderer = DMarlinPrismUtils.setupRenderer(rdrCtx, shape, stroke, xform, rclip,
+                    antialiasedShape);
+
             final int outpix_xmin = renderer.getOutpixMinX();
             final int outpix_xmax = renderer.getOutpixMaxX();
             final int outpix_ymin = renderer.getOutpixMinY();
@@ -111,12 +106,36 @@ public final class DMarlinRasterizer implements ShapeRasterizer {
             }
             consumer.setBoundsNoClone(outpix_xmin, outpix_ymin, w, h);
             renderer.produceAlphas(consumer);
+
             return consumer.getMaskData();
         } finally {
             if (renderer != null) {
                 renderer.dispose();
             }
-            // recycle the RendererContext instance
+            // recycle the DRendererContext instance
+            DMarlinRenderingEngine.returnRendererContext(rdrCtx);
+        }
+    }
+
+    static Shape createCenteredStrokedShape(Shape s, BasicStroke stroke)
+    {
+        final float lw = (stroke.getType() == BasicStroke.TYPE_CENTERED) ?
+                             stroke.getLineWidth() : stroke.getLineWidth() * 2.0f;
+
+        final DRendererContext rdrCtx = DMarlinRenderingEngine.getRendererContext();
+        try {
+            // initialize a large copyable Path2D to avoid a lot of array growing:
+            final Path2D p2d = rdrCtx.getPath2D();
+
+            DMarlinPrismUtils.strokeTo(rdrCtx, s, stroke, lw,
+                     rdrCtx.transformerPC2D.wrapPath2D(p2d)
+            );
+
+            // Use Path2D copy constructor (trim)
+            return new Path2D(p2d);
+
+        } finally {
+            // recycle the DRendererContext instance
             DMarlinRenderingEngine.returnRendererContext(rdrCtx);
         }
     }

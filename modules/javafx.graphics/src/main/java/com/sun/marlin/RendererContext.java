@@ -25,10 +25,12 @@
 
 package com.sun.marlin;
 
+import com.sun.javafx.geom.Path2D;
 import java.util.concurrent.atomic.AtomicInteger;
 import com.sun.util.reentrant.ReentrantContext;
 import com.sun.javafx.geom.Rectangle;
 import com.sun.marlin.ArrayCacheConst.CacheStats;
+import java.lang.ref.WeakReference;
 
 /**
  * This class is a renderer context dedicated to a single thread
@@ -58,6 +60,8 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
     final Curve curve = new Curve();
     // MarlinRenderingEngine.TransformingPathConsumer2D
     public final TransformingPathConsumer2D transformerPC2D;
+    // recycled Path2D instance (weak)
+    private WeakReference<Path2D> refPath2D = null;
     // shared memory between renderer instances:
     final RendererSharedMemory rdrMem;
     public final Renderer renderer;
@@ -148,6 +152,22 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
             // mark context as CLEAN:
             dirty = false;
         }
+    }
+
+    public Path2D getPath2D() {
+        // resolve reference:
+        Path2D p2d = (refPath2D != null) ? refPath2D.get() : null;
+
+        // create a new Path2D ?
+        if (p2d == null) {
+            p2d = new Path2D(Path2D.WIND_NON_ZERO, INITIAL_EDGES_COUNT); // 32K
+
+            // update weak reference:
+            refPath2D = new WeakReference<Path2D>(p2d);
+        }
+        // reset the path anyway:
+        p2d.reset();
+        return p2d;
     }
 
     public RendererNoAA getRendererNoAA() {

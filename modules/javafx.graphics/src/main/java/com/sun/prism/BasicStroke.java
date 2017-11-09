@@ -28,24 +28,28 @@ package com.sun.prism;
 import com.sun.javafx.geom.Area;
 import com.sun.javafx.geom.GeneralShapePair;
 import com.sun.javafx.geom.Path2D;
-import com.sun.javafx.geom.PathConsumer2D;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.RoundRectangle2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.ShapePair;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.openpisces.Dasher;
-import com.sun.openpisces.Stroker;
-import com.sun.prism.impl.shape.OpenPiscesPrismUtils;
+import com.sun.prism.impl.shape.ShapeUtil;
 
 public final class BasicStroke {
-    public static final int CAP_BUTT = Stroker.CAP_BUTT;
-    public static final int CAP_ROUND = Stroker.CAP_ROUND;
-    public static final int CAP_SQUARE = Stroker.CAP_SQUARE;
 
-    public static final int JOIN_BEVEL = Stroker.JOIN_BEVEL;
-    public static final int JOIN_MITER = Stroker.JOIN_MITER;
-    public static final int JOIN_ROUND = Stroker.JOIN_ROUND;
+    /** Constant value for end cap style. */
+    public static final int CAP_BUTT = 0;
+    /** Constant value for end cap style. */
+    public static final int CAP_ROUND = 1;
+    /** Constant value for end cap style. */
+    public static final int CAP_SQUARE = 2;
+
+    /** Constant value for join style. */
+    public static final int JOIN_MITER = 0;
+    /** Constant value for join style. */
+    public static final int JOIN_ROUND = 1;
+    /** Constant value for join style. */
+    public static final int JOIN_BEVEL = 2;
 
     public static final int TYPE_CENTERED = 0;
     public static final int TYPE_INNER = 1;
@@ -679,16 +683,8 @@ public final class BasicStroke {
         accumulate(x0 + ox, y0 + oy, x0 - ox, y0 - oy, bbox);
     }
 
-    public Shape createCenteredStrokedShape(Shape s) {
-        Path2D p2d = new Path2D(Path2D.WIND_NON_ZERO);
-        float lw = (type == TYPE_CENTERED) ? width : width * 2.0f;
-        PathConsumer2D pc2d =
-            new Stroker(p2d, lw, cap, join, miterLimit);
-        if (dash != null) {
-            pc2d = new Dasher(pc2d, dash, dashPhase);
-        }
-        OpenPiscesPrismUtils.feedConsumer(s.getPathIterator(null), pc2d);
-        return p2d;
+    public Shape createCenteredStrokedShape(final Shape s) {
+        return ShapeUtil.createCenteredStrokedShape(s, this);
     }
 
     static final float SQRT_2 = (float) Math.sqrt(2);
