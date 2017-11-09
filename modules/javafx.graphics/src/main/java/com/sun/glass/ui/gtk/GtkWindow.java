@@ -228,4 +228,10 @@ class GtkWindow extends Window {
     protected void _releaseInput(long ptr) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public long getRawHandle() {
+        long ptr = super.getRawHandle();
+        return ptr == 0L ? 0L : _getNativeWindowImpl(ptr);
+    }
 }
