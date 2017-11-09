@@ -27,6 +27,7 @@ package javafx.embed.swing;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.value.ChangeListener;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Point2D;
@@ -74,12 +75,15 @@ import com.sun.javafx.sg.prism.NGExternalNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.stage.FocusUngrabEvent;
 import com.sun.javafx.stage.WindowHelper;
+import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.scene.NodeHelper;
 import sun.awt.UngrabEvent;
 import sun.swing.JLightweightFrame;
 import sun.swing.LightweightContent;
+
+import static javafx.stage.WindowEvent.WINDOW_HIDDEN;
 
 /**
  * This class is used to embed a Swing content into a JavaFX application.
@@ -123,7 +127,17 @@ import sun.swing.LightweightContent;
  * @since JavaFX 8.0
  */
 public class SwingNode extends Node {
+    private static boolean isThreadMerged;
+
     static {
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
+            public Object run() {
+                isThreadMerged = Boolean.valueOf(
+                        System.getProperty("javafx.embed.singleThread"));
+                return null;
+            }
+        });
+
          // This is used by classes in different packages to get access to
          // private and package private methods.
         SwingNodeHelper.setSwingNodeAccessor(new SwingNodeHelper.SwingNodeAccessor() {
@@ -197,6 +211,53 @@ public class SwingNode extends Node {
 
         //Workaround for RT-34170
         javafx.scene.text.Font.getFamilies();
+    }
+
+
+    private EventHandler windowHiddenHandler = (Event event) -> {
+        if (lwFrame != null &&  event.getTarget() instanceof Window) {
+            final Window w = (Window) event.getTarget();
+            TKStage tk = WindowHelper.getPeer(w);
+            if (tk != null) {
+                if (isThreadMerged) {
+                    jlfOverrideNativeWindowHandle.invoke(lwFrame, 0L, null);
+                } else {
+                    // Postpone actual window closing to ensure that
+                    // a native window handler is valid on a Swing side
+                    tk.postponeClose();
+                    SwingFXUtils.runOnEDT(() -> {
+                        jlfOverrideNativeWindowHandle.invoke(lwFrame, 0L,
+                                (Runnable) () -> SwingFXUtils.runOnFxThread(
+                                        () -> tk.closePostponed()));
+                    });
+                }
+            }
+        }
+
+    };
+
+    private Window hWindow = null;
+    private void notifyNativeHandle(Window window) {
+        if (hWindow != window) {
+            if (hWindow != null) {
+                hWindow.removeEventHandler(WINDOW_HIDDEN, windowHiddenHandler);
+            }
+            if (window != null) {
+                window.addEventHandler(WINDOW_HIDDEN, windowHiddenHandler);
+            }
+            hWindow = window;
+        }
+
+        if (lwFrame != null) {
+            long rawHandle = 0L;
+            if (window != null) {
+                TKStage tkStage = WindowHelper.getPeer(window);
+                if (tkStage != null) {
+                    rawHandle = tkStage.getRawHandle();
+                }
+            }
+            jlfOverrideNativeWindowHandle.invoke(lwFrame, rawHandle, null);
+        }
     }
 
     /**
@@ -278,6 +339,7 @@ public class SwingNode extends Node {
      * Must be called on EDT only.
      */
     private static OptionalMethod<JLightweightFrame> jlfNotifyDisplayChanged;
+    private static OptionalMethod<JLightweightFrame> jlfOverrideNativeWindowHandle;
 
     static {
         jlfNotifyDisplayChanged = new OptionalMethod<>(JLightweightFrame.class,
@@ -286,6 +348,10 @@ public class SwingNode extends Node {
             jlfNotifyDisplayChanged = new OptionalMethod<>(
                   JLightweightFrame.class,"notifyDisplayChanged", Integer.TYPE);
         }
+
+        jlfOverrideNativeWindowHandle = new OptionalMethod<>(JLightweightFrame.class,
+                "overrideNativeWindowHandle", Long.TYPE, Runnable.class);
+
     }
 
     /*
@@ -326,6 +392,10 @@ public class SwingNode extends Node {
             }
             lwFrame.setContent(new SwingNodeContent(content));
             lwFrame.setVisible(true);
+
+            if (getScene() != null) {
+                notifyNativeHandle(getScene().getWindow());
+            }
 
             SwingFXUtils.runOnFxThread(() -> {
                 locateLwFrame(); // initialize location
@@ -515,6 +585,9 @@ public class SwingNode extends Node {
         if (oldValue != null) {
             removeWindowListeners(oldValue);
         }
+
+        notifyNativeHandle(newValue);
+
         if (newValue != null) {
             addWindowListeners(newValue);
         }
@@ -532,6 +605,7 @@ public class SwingNode extends Node {
         Window window = scene.getWindow();
         if (window != null) {
             addWindowListeners(window);
+            notifyNativeHandle(window);
         }
         scene.windowProperty().addListener(sceneWindowListener);
     }

@@ -125,7 +125,7 @@ void Library::UnloadDependencies() {
     }
 }
 
-Procedure Library::GetProcAddress(std::string MethodName) {
+Procedure Library::GetProcAddress(const std::string& MethodName) const {
     Platform& platform = Platform::GetInstance();
     return platform.GetProcAddress(FModule, MethodName);
 }
@@ -142,6 +142,8 @@ bool Library::Load(const TString &FileName) {
             Messages& messages = Messages::GetInstance();
             platform.ShowMessage(messages.GetMessage(LIBRARY_NOT_FOUND), FileName);
             result = false;
+        } else {
+            fname = PlatformString(FileName).toStdString();
         }
     }
 

@@ -471,14 +471,15 @@ private:
     std::vector<TString> *FDependentLibraryNames;
     std::vector<Library*> *FDependenciesLibraries;
     Module FModule;
+    std::string fname;
 
     void Initialize();
     void InitializeDependencies();
     void LoadDependencies();
     void UnloadDependencies();
 
-protected:
-    void* GetProcAddress(std::string MethodName);
+public:
+    void* GetProcAddress(const std::string& MethodName) const;
 
 public:
     Library();
@@ -487,6 +488,10 @@ public:
 
     bool Load(const TString &FileName);
     bool Unload();
+
+    const std::string& GetName() const {
+        return fname;
+    }
 
     void AddDependency(const TString &FileName);
     void AddDependencies(const std::vector<TString> &Dependencies);

@@ -929,7 +929,8 @@ final public class WebView extends Parent {
 
         boolean iconified = (window instanceof Stage) ? ((Stage)window).isIconified() : false;
 
-        return NodeHelper.isTreeShowing(this)
+        return NodeHelper.isTreeVisible(this)
+               && window.isShowing()
                && window.getWidth() > 0
                && window.getHeight() > 0
                && !iconified;

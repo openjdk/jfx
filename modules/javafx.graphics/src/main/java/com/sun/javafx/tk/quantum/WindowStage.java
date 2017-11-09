@@ -791,13 +791,33 @@ class WindowStage extends GlassStage {
         }
     }
 
+    private boolean isClosePostponed = false;
+    private Window deadWindow = null;
+
+    @Override
+    public void postponeClose() {
+        isClosePostponed = true;
+    }
+
+    @Override
+    public void closePostponed() {
+        if (deadWindow != null) {
+            deadWindow.close();
+            deadWindow = null;
+        }
+    }
+
     @Override public void close() {
         super.close();
         QuantumToolkit.runWithRenderLock(() -> {
             // prevents closing a closed platform window
             if (platformWindow != null) {
                 platformWindows.remove(platformWindow);
-                platformWindow.close();
+                if (isClosePostponed) {
+                    deadWindow = platformWindow;
+                } else {
+                    platformWindow.close();
+                }
                 platformWindow = null;
             }
             GlassScene oldScene = getViewScene();
