@@ -1294,6 +1294,37 @@ is_blacklisted_hidden_directory (const gchar * dirent)
 }
 #endif
 
+#ifdef GSTREAMER_LITE
+// Only for Linux 32-bit
+#if defined(LINUX) && !defined(__x86_64__)
+gpointer load_plugin(gpointer data)
+{
+  return dlopen((gchar*)data, RTLD_GLOBAL|RTLD_NOW);
+}
+
+gboolean preload_plugin_on_thread(int version, gchar *filename)
+{
+  void *handle = NULL;
+
+  if (version != 57) // Only needed for 57
+    return TRUE;
+
+  if (filename == NULL)
+    return FALSE;
+
+  GThread *thread = g_thread_new(NULL, load_plugin, filename);
+  if (thread != NULL) {
+    handle = g_thread_join(thread);
+    if (handle != NULL) {
+      return TRUE;
+    }
+  }
+
+  return FALSE;
+}
+#endif
+#endif // GSTREAMER_LITE
+
 static gboolean
 gst_registry_scan_path_level (GstRegistryScanContext * context,
     const gchar * path, int level)
@@ -1444,7 +1475,16 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
             filename = g_strdup_printf("%s-ffmpeg-%d%s", filename_partial, plugin_version, GST_EXTRA_MODULE_SUFFIX);
           else
             filename = g_strdup_printf("%s-%d%s", filename_partial, plugin_version, GST_EXTRA_MODULE_SUFFIX);
-          }
+        }
+#if defined(LINUX) && !defined(__x86_64__)
+        if (!preload_plugin_on_thread(plugin_version, filename)) {
+          g_free(filename_partial);
+          filename_partial = NULL;
+          g_free(filename);
+          filename = NULL;
+          continue; // If we fail preload do not load such plugin.
+        }
+#endif
       } else {
         g_free(filename_partial);
         continue; // No libavcodec.so installed.
