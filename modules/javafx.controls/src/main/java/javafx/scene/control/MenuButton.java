@@ -32,6 +32,7 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
+import javafx.event.EventHandler;
 import javafx.event.EventType;
 import javafx.geometry.Side;
 import javafx.scene.AccessibleAction;
@@ -268,6 +269,95 @@ public class MenuButton extends ButtonBase {
         }
         return popupSide;
     }
+
+    /**
+     * Called just prior to the {@code ContextMenu} being shown.
+     * @return the on showing property
+     * @since 10
+     */
+    public final ObjectProperty<EventHandler<Event>> onShowingProperty() { return onShowing; }
+    public final void setOnShowing(EventHandler<Event> value) { onShowingProperty().set(value); }
+    public final EventHandler<Event> getOnShowing() { return onShowingProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onShowing = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_SHOWING, get());
+        }
+
+        @Override public Object getBean() {
+            return MenuButton.this;
+        }
+
+        @Override public String getName() {
+            return "onShowing";
+        }
+    };
+
+    /**
+     * Called just after the {@code ContextMenu} is shown.
+     * @return the on shown property
+     * @since 10
+     */
+    public final ObjectProperty<EventHandler<Event>> onShownProperty() { return onShown; }
+    public final void setOnShown(EventHandler<Event> value) { onShownProperty().set(value); }
+    public final EventHandler<Event> getOnShown() { return onShownProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onShown = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_SHOWN, get());
+        }
+
+        @Override public Object getBean() {
+            return MenuButton.this;
+        }
+
+        @Override public String getName() {
+            return "onShown";
+        }
+    };
+
+    /**
+     * Called just prior to the {@code ContextMenu} being hidden.
+     * @return the on hiding property
+     * @since 10
+     */
+    public final ObjectProperty<EventHandler<Event>> onHidingProperty() { return onHiding; }
+    public final void setOnHiding(EventHandler<Event> value) { onHidingProperty().set(value); }
+    public final EventHandler<Event> getOnHiding() { return onHidingProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onHiding = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_HIDING, get());
+        }
+
+        @Override public Object getBean() {
+            return MenuButton.this;
+        }
+
+        @Override public String getName() {
+            return "onHiding";
+        }
+    };
+
+    /**
+     * Called just after the {@code ContextMenu} has been hidden.
+     * @return the on hidden property
+     * @since 10
+     */
+    public final ObjectProperty<EventHandler<Event>> onHiddenProperty() { return onHidden; }
+    public final void setOnHidden(EventHandler<Event> value) { onHiddenProperty().set(value); }
+    public final EventHandler<Event> getOnHidden() { return onHiddenProperty().get(); }
+    private ObjectProperty<EventHandler<Event>> onHidden = new ObjectPropertyBase<EventHandler<Event>>() {
+        @Override protected void invalidated() {
+            setEventHandler(ON_HIDDEN, get());
+        }
+
+        @Override public Object getBean() {
+            return MenuButton.this;
+        }
+
+        @Override public String getName() {
+            return "onHidden";
+        }
+    };
+
 
     /***************************************************************************
      *                                                                         *
