@@ -210,9 +210,11 @@ public class SwingNodeBase {
         int checkLoc = BASE_LOCATION + 3 * BASE_SIZE /4;
         int clickLoc = BASE_LOCATION + BASE_SIZE / 4;
 
-        robot.mouseMove(clickLoc, clickLoc);
-        robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
-        robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        if (myApp.stage != null && myApp.stage.isShowing()) {
+            robot.mouseMove(clickLoc, clickLoc);
+            robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+        }
 
         if (above) {
             Assert.assertEquals("JDialog is not above JavaFX stage",

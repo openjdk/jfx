@@ -84,7 +84,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         myApp.createStageAndDialog();
         myApp.closeStage();
         myApp.showDialog();
-        testAbove(false);
+        testAbove(true);
         myApp.disposeDialog();
     }
 
@@ -102,7 +102,7 @@ public class SwingNodeJDialogTest extends SwingNodeBase {
         latch.await();
         myApp.detachSwingNode();
         testAbove(false);
-        myApp.disposeDialog();
+        myApp.closeStageAndDialog();
         myApp.attachSwingNode();
     }
 

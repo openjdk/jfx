@@ -217,6 +217,8 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
          @{(id)kCVPixelBufferPixelFormatTypeKey: @(FALLBACK_VO_FORMAT)}];
 
         if (newOutput) {
+            newOutput.suppressesPlayerRendering = YES;
+
             CVDisplayLinkStop(_displayLink);
             [_player.currentItem removeOutput:_playerOutput];
             [_playerOutput setDelegate:nil queue:nil];
