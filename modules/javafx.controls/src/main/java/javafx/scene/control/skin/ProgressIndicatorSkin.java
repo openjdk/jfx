@@ -130,6 +130,7 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
         registerChangeListener(control.indeterminateProperty(), e -> initialize());
         registerChangeListener(control.progressProperty(), e -> updateProgress());
         registerChangeListener(NodeHelper.treeShowingProperty(control), e -> updateAnimation());
+        registerChangeListener(control.sceneProperty(), e->updateAnimation());
 
         initialize();
         updateAnimation();
@@ -376,7 +377,8 @@ public class ProgressIndicatorSkin extends SkinBase<ProgressIndicator> {
 
     void updateAnimation() {
         ProgressIndicator control = getSkinnable();
-        final boolean isTreeShowing = NodeHelper.isTreeShowing(control);
+        final boolean isTreeShowing = NodeHelper.isTreeShowing(control) &&
+                                      control.getScene() != null;
         if (indeterminateTransition != null) {
             pauseTimeline(!isTreeShowing);
         } else if (isTreeShowing) {
