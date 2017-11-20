@@ -1063,6 +1063,19 @@ try {
 if (!project.hasProperty("jdkRuntimeVersion")) throw new Exception("Unable to determine the version of Java in JDK_HOME at $JDK_HOME");
 
 
+// Determine whether the javafx.* modules are present in the JDK. To do this,
+// we will execute "java --list-modules" and search for javafx.base
+ext.HAS_JAVAFX_MODULES = false;
+def inStream2 = new java.io.BufferedReader(new java.io.InputStreamReader(new java.lang.ProcessBuilder(JAVA, "--list-modules").start().getInputStream()));
+try {
+    String v;
+    while ((v = inStream2.readLine()) != null) {
+        v = v.trim();
+        if (v.startsWith("javafx.base")) ext.HAS_JAVAFX_MODULES = true;
+    }
+} finally {
+    inStream2.close();
+}
 
 // Verify that CONF is something useful
 if (CONF != "Release" && CONF != "Debug" && CONF != "DebugNative") {
@@ -1119,6 +1132,7 @@ logger.quiet("jdk version: ${jdkVersion}")
 logger.quiet("jdk build number: ${jdkBuildNumber}")
 logger.quiet("minimum jdk version: ${jfxBuildJdkVersionMin}")
 logger.quiet("minimum jdk build number: ${jfxBuildJdkBuildnumMin}")
+logger.quiet("HAS_JAVAFX_MODULES: $HAS_JAVAFX_MODULES")
 logger.quiet("STUB_RUNTIME: $STUB_RUNTIME")
 logger.quiet("CONF: $CONF")
 logger.quiet("NUM_COMPILE_THREADS: $NUM_COMPILE_THREADS")
@@ -1262,17 +1276,24 @@ void addNative(Project project, String name) {
 void addJSL(Project project, String name, String pkg, List<String> addExports, Closure compile) {
     def lowerName = name.toLowerCase()
 
+    def modulePath = "${project.sourceSets.main.output.classesDir}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/main"
     def compileCompilers = project.task("compile${name}Compilers",
             type: JavaCompile,
             dependsOn: project.compileJava) {
         description = "Compile the $name JSL Compilers"
 
-        classpath = project.files(project.sourceSets.main.output.classesDir) +
+        classpath =
                project.files(project.sourceSets.jslc.output.classesDir) +
                project.configurations.antlr
         source = [project.file("src/main/jsl-$lowerName")]
         destinationDir = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
 
+        options.compilerArgs.addAll([
+            "-implicit:none",
+            "--module-path", modulePath,
+            "--add-modules=javafx.graphics"
+            ])
         if (addExports != null) {
             options.compilerArgs.addAll(addExports)
         }
@@ -1516,6 +1537,34 @@ allprojects {
     }
 }
 
+// Qualified exports needed by javafx.* modules (excluding javafx.swing)
+def qualExportsCore = [
+    "--add-exports=java.base/jdk.internal.misc=javafx.graphics",
+    "--add-exports=java.base/jdk.internal.ref=javafx.media",
+    "--add-exports=java.base/sun.net.www=javafx.web",
+    "--add-exports=java.base/sun.nio.ch=javafx.media",
+    "--add-exports=java.base/sun.reflect.misc=javafx.base",
+    "--add-exports=java.base/sun.reflect.misc=javafx.fxml",
+    "--add-exports=java.base/sun.reflect.misc=javafx.web",
+    "--add-exports=java.base/sun.util.logging=javafx.base",
+    "--add-exports=java.base/sun.util.logging=javafx.controls",
+    "--add-exports=java.base/sun.util.logging=javafx.fxml",
+    "--add-exports=java.base/sun.util.logging=javafx.graphics",
+    "--add-exports=java.desktop/sun.font.lookup=javafx.graphics",
+    "--add-exports=java.desktop/sun.print=javafx.graphics",
+]
+
+// Qualified exports needed by javafx.swing
+def qualExportsSwing = [
+        "--add-exports=java.base/sun.util.logging=javafx.swing",
+        "--add-exports=java.desktop/java.awt.dnd.peer=javafx.swing",
+        "--add-exports=java.desktop/sun.awt=javafx.swing",
+        "--add-exports=java.desktop/sun.awt.dnd=javafx.swing",
+        "--add-exports=java.desktop/sun.awt.image=javafx.swing",
+        "--add-exports=java.desktop/sun.java2d=javafx.swing",
+        "--add-exports=java.desktop/sun.swing=javafx.swing",
+]
+
 // These strings define the module-source-path to be used in compilation.
 // They need to contain the full paths to the sources and the * will be
 // used to infer the module name that is used.
@@ -1595,6 +1644,8 @@ project(":base") {
     sourceSets.main.java.srcDirs += "$buildDir/gensrc/java"
 
     compileJava.dependsOn processVersionInfo
+
+    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 // The graphics module is needed for any graphical JavaFX application. It requires
@@ -1707,6 +1758,7 @@ project(":graphics") {
             '-implicit:none',
             '--module-source-path', defaultModuleSourcePath
             ] )
+        options.compilerArgs.addAll(qualExportsCore)
     }
     classes.dependsOn(compileFullJava)
 
@@ -1845,6 +1897,8 @@ project(":graphics") {
     // a new task for each of the decora files, preferring instead just to create a rule?? Also
     // need "clean" tasks for each compile task.
 
+    def modulePath = "${project.sourceSets.main.output.classesDir}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/main"
     addJSL(project, "Decora", "com/sun/scenario/effect/impl/hw/d3d/hlsl", decoraAddExports) { sourceDir, destinationDir ->
         [[fileName: "ColorAdjust", generator: "CompileJSL", outputs: "-all"],
          [fileName: "Brightpass", generator: "CompileJSL", outputs: "-all"],
@@ -1865,8 +1919,9 @@ project(":graphics") {
 
                 classpath += files("${project.projectDir}/src/jslc/resources")
 
-                classpath += files("$buildDir/classes/main")
                 classpath += files("$buildDir/classes/jsl-compilers/decora")
+                jvmArgs += "--module-path=$modulePath"
+                jvmArgs += "--add-modules=javafx.graphics"
                 jvmArgs += decoraAddExports
                 args += ["-i", sourceDir, "-o", destinationDir, "-t", "-pkg", "com/sun/scenario/effect", "$settings.outputs", "$settings.fileName"]
             }
@@ -2011,6 +2066,8 @@ project(":graphics") {
             }
         }
     }
+
+    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 project(":controls") {
@@ -2041,6 +2098,12 @@ project(":controls") {
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
 
+    List<String> css2BinAddExports = [
+            '--add-exports=java.base/sun.util.logging=javafx.graphics',
+            ]
+    def modulePath = "${project.sourceSets.main.output.classesDir}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/main"
     processResources << {
         def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
         cssFiles.include "**/*.css"
@@ -2051,6 +2114,9 @@ project(":controls") {
                 executable = JAVA
                 workingDir = project.projectDir
                 jvmArgs += patchModuleArgs
+                jvmArgs += "--module-path=$modulePath"
+                jvmArgs += "--add-modules=javafx.graphics"
+                jvmArgs += css2BinAddExports
                 main = "com.sun.javafx.css.parser.Css2Bin"
                 args css
             }
@@ -2062,6 +2128,8 @@ project(":controls") {
         into project.moduleShimsDir
         include "**/*.bss"
     })
+
+    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 project(":swing") {
@@ -2092,6 +2160,9 @@ project(":swing") {
     test {
         enabled = IS_FULL_TEST && IS_AWT_TEST
     }
+
+    compileJava.options.compilerArgs.addAll(qualExportsCore)
+    compileJava.options.compilerArgs.addAll(qualExportsSwing)
 }
 
 project(":swt") {
@@ -2182,6 +2253,8 @@ project(":fxml") {
         // FIXME: change this to also allow JDK 9 boot jdk
         classpath += files("$JDK_HOME/jre/lib/ext/nashorn.jar")
     }
+
+    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 project(":jmx") {
@@ -3108,6 +3181,8 @@ project(":media") {
             dependsOn buildNativeTargets
         }
     }
+
+    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 project(":web") {
@@ -3326,6 +3401,8 @@ project(":web") {
     if (IS_COMPILE_WEBKIT) {
         assemble.dependsOn compileJavaDOMBinding, drtJar
     }
+
+    compileJava.options.compilerArgs.addAll(qualExportsCore)
 }
 
 // This project is for system tests that need to run with a full SDK.
