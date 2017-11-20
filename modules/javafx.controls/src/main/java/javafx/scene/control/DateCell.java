@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,8 @@ package javafx.scene.control;
 
 import java.time.LocalDate;
 
+import javafx.scene.AccessibleAttribute;
+import javafx.scene.AccessibleRole;
 import javafx.scene.control.skin.DateCellSkin;
 
 /**
@@ -41,6 +43,7 @@ import javafx.scene.control.skin.DateCellSkin;
 public class DateCell extends Cell<LocalDate> {
     public DateCell() {
         getStyleClass().add(DEFAULT_STYLE_CLASS);
+        setAccessibleRole(AccessibleRole.TEXT);
     }
 
     /** {@inheritDoc} */
@@ -60,4 +63,24 @@ public class DateCell extends Cell<LocalDate> {
      **************************************************************************/
 
     private static final String DEFAULT_STYLE_CLASS = "date-cell";
+
+    /***************************************************************************
+     *                                                                         *
+     * Accessibility handling                                                  *
+     *                                                                         *
+     **************************************************************************/
+
+    /** {@inheritDoc} */
+    @Override
+    public Object queryAccessibleAttribute(AccessibleAttribute attribute, Object... parameters) {
+        switch (attribute) {
+            case TEXT: {
+                if (isFocused()) {
+                    return getText();
+                }
+                return "";
+            }
+            default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
 }
