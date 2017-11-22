@@ -344,6 +344,7 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
                 "-srcfolder", srcFolder.getAbsolutePath(),
                 "-volname", APP_NAME.fetchFrom(p),
                 "-ov", protoDMG.getAbsolutePath(),
+                "-fs", "HFS+",
                 "-format", "UDRW");
         IOUtils.exec(pb, VERBOSE.fetchFrom(p));
 
@@ -380,22 +381,28 @@ public class MacDmgBundler extends MacBaseInstallerBundler {
         //  Therefore we have to do this after we mount image
         String setFileUtility = findSetFileUtility();
         if (setFileUtility != null) { //can not find utility => keep going without icon
-            volumeIconFile.setWritable(true);
-            // The "creator" attribute on a file is a legacy attribute
-            // but it seems Finder excepts these bytes to be "icnC" for the volume icon
-            // (http://endrift.com/blog/2010/06/14/dmg-files-volume-icons-cli/)
-            pb = new ProcessBuilder(
-                    setFileUtility,
-                    "-c", "icnC",
-                    volumeIconFile.getAbsolutePath());
-            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
-            volumeIconFile.setReadOnly();
+            try {
+                volumeIconFile.setWritable(true);
+                // The "creator" attribute on a file is a legacy attribute
+                // but it seems Finder excepts these bytes to be "icnC" for the volume icon
+                // (http://endrift.com/blog/2010/06/14/dmg-files-volume-icons-cli/)
+                // (might not work on Mac 10.13 with old XCode)
+                pb = new ProcessBuilder(
+                        setFileUtility,
+                        "-c", "icnC",
+                        volumeIconFile.getAbsolutePath());
+                IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+                volumeIconFile.setReadOnly();
 
-            pb = new ProcessBuilder(
-                    setFileUtility,
-                    "-a", "C",
-                    mountedRoot.getAbsolutePath());
-            IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+                pb = new ProcessBuilder(
+                        setFileUtility,
+                        "-a", "C",
+                        mountedRoot.getAbsolutePath());
+                IOUtils.exec(pb, VERBOSE.fetchFrom(p));
+            } catch (IOException ex) {
+                Log.info(ex.getMessage());
+                Log.verbose("Cannot enable custom icon using SetFile utility");
+            }
         } else {
             Log.verbose("Skip enabling custom icon as SetFile utility is not found");
         }
