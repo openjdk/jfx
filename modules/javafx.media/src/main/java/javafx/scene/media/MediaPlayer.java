@@ -161,36 +161,41 @@ public final class MediaPlayer {
      * <tr>
      * <th scope="col">Current \ Next</th><th scope="col">READY</th><th scope="col">PAUSED</th>
      * <th scope="col">PLAYING</th><th scope="col">STALLED</th><th scope="col">STOPPED</th>
+     * <th scope="col">DISPOSED</th>
      * </tr>
      * <tr>
-     * <th scope="row"><b>UNKNOWN</b></th><td>pre-roll</td><td></td><td></td><td></td><td></td>
+     * <th scope="row"><b>UNKNOWN</b></th><td>pre-roll</td><td></td><td></td><td></td><td></td><td>dispose()</td>
      * </tr>
      * <tr>
-     * <th scope="row"><b>READY</b></th><td></td><td></td><td>autoplay; play()</td><td></td><td></td>
+     * <th scope="row"><b>READY</b></th><td></td><td></td><td>autoplay; play()</td><td></td><td></td><td>dispose()</td>
      * </tr>
      * <tr>
-     * <th scope="row"><b>PAUSED</b></th><td></td><td></td><td>play()</td><td></td><td>stop()</td>
+     * <th scope="row"><b>PAUSED</b></th><td></td><td></td><td>play()</td><td></td><td>stop()</td><td>dispose()</td>
      * </tr>
      * <tr>
-     * <th scope="row"><b>PLAYING</b></th><td></td><td>pause()</td><td></td><td>buffering data</td><td>stop()</td>
+     * <th scope="row"><b>PLAYING</b></th><td></td><td>pause()</td><td></td><td>buffering data</td><td>stop()</td><td>dispose()</td>
      * </tr>
      * <tr>
-     * <th scope="row"><b>STALLED</b></th><td></td><td>pause()</td><td>data buffered</td><td></td><td>stop()</td>
+     * <th scope="row"><b>STALLED</b></th><td></td><td>pause()</td><td>data buffered</td><td></td><td>stop()</td><td>dispose()</td>
      * </tr>
      * <tr>
-     * <th scope="row"><b>STOPPED</b></th><td></td><td>pause()</td><td>play()</td><td></td><td></td>
+     * <th scope="row"><b>STOPPED</b></th><td></td><td>pause()</td><td>play()</td><td></td><td></td><td>dispose()</td>
+     * </tr>
+     * <tr>
+     * <th scope="row"><b>HALTED</b></th><td></td><td></td><td></td><td></td><td></td><td>dispose()</td>
      * </tr>
      * </table>
      * <p>The table rows represent the current state of the player and the columns
      * the next state of the player. The cell at the intersection of a given row
      * and column lists the events which can cause a transition from the row
      * state to the column state. An empty cell represents an impossible transition.
-     * The transitions to <code>UNKNOWN</code> and to and from <code>HALTED</code>
-     * status are intentionally not tabulated. <code>UNKNOWN</code> is the initial
-     * status of the player before the media source is pre-rolled and cannot be
-     * entered once exited. <code>HALTED</code> is a terminal status entered when
-     * an error occurs and may be transitioned into from any other status but not
-     * exited.
+     * The transitions to <code>UNKNOWN</code> and <code>HALTED</code> and from
+     * <code>DISPOSED</code> status are intentionally not tabulated. <code>UNKNOWN</code>
+     * is the initial status of the player before the media source is pre-rolled
+     * and cannot be entered once exited. <code>DISPOSED</code> is a terminal status
+     * entered after dispose() method is invoked and cannot be exited. <code>HALTED</code>
+     * status entered when a critical error occurs and may be transitioned into
+     * from any other status except <code>DISPOSED</code>.
      * </p>
      * <p>
      * The principal <code>MediaPlayer</code> status values and transitions are
@@ -2356,8 +2361,8 @@ public final class MediaPlayer {
 
     /**
      * Free all resources associated with player. Player SHOULD NOT be used after this function is called.
-     * Player will transition to {@link Status#DISPOSED} after this method is done. This method can be called
-     * anytime and regarding current player status.
+     * Player will transition to {@link Status#DISPOSED} after this method is done. This method can be
+     * called anytime regardless of current player status.
      * @since JavaFX 8.0
      */
     public synchronized void dispose() {
