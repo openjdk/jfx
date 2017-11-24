@@ -56,6 +56,7 @@ import java.io.FilePermission;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.Reference;
+import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -286,10 +287,6 @@ final public class StyleManager {
         // who uses this stylesheet?
         final RefList<Parent> parentUsers;
 
-        // RT-24516 -- cache images coming from this stylesheet.
-        // This just holds a hard reference to the image.
-        final List<Image> imageCache;
-
         final int hash;
         final byte[] checksum;
         boolean checksumInvalid = false;
@@ -327,9 +324,6 @@ final public class StyleManager {
             }
 
             this.parentUsers = new RefList<Parent>();
-
-            // this just holds a hard reference to the image
-            this.imageCache = new ArrayList<Image>();
 
             this.checksum = checksum;
         }
@@ -568,7 +562,7 @@ final public class StyleManager {
                     // clean up image cache by removing images from the cache that
                     // might have come from this stylesheet
                     final String fname = container.fname;
-                    cleanUpImageCache(fname);
+                    imageCache.cleanUpImageCache(fname);
                 }
             }
 
@@ -727,7 +721,7 @@ final public class StyleManager {
 
             // clean up image cache by removing images from the cache that
             // might have come from this stylesheet
-            cleanUpImageCache(fname);
+            imageCache.cleanUpImageCache(fname);
 
             final List<Reference<Parent>> parentList = stylesheetContainer.parentUsers.list;
 
@@ -756,88 +750,93 @@ final public class StyleManager {
     //
     ////////////////////////////////////////////////////////////////////////////
 
-    private final Map<String,Image> imageCache = new HashMap<String,Image>();
+    private final static class ImageCache {
+        private Map<String, SoftReference<Image>> imageCache = new HashMap<>();
 
-    public Image getCachedImage(String url) {
+        Image getCachedImage(String url) {
 
-        synchronized (styleLock) {
-            Image image = null;
-            if (imageCache.containsKey(url)) {
+            synchronized (styleLock) {
+                Image image = null;
+                if (imageCache.containsKey(url)) {
+                    image = imageCache.get(url).get();
+                }
+                if (image == null) {
+                    try {
+                        image = new Image(url);
+                        // RT-31865
+                        if (image.isError()) {
+                            final PlatformLogger logger = getLogger();
+                            if (logger != null && logger.isLoggable(Level.WARNING)) {
+                                logger.warning("Error loading image: " + url);
+                            }
+                            image = null;
+                        }
+                        imageCache.put(url, new SoftReference(image));
 
-                image = imageCache.get(url);
-
-            } else {
-
-                try {
-
-                    image = new Image(url);
-
-                    // RT-31865
-                    if (image.isError()) {
-
+                    } catch (IllegalArgumentException iae) {
+                        // url was empty!
                         final PlatformLogger logger = getLogger();
                         if (logger != null && logger.isLoggable(Level.WARNING)) {
-                            logger.warning("Error loading image: " + url);
+                            logger.warning(iae.getLocalizedMessage());
                         }
-
-                        image = null;
-                    }
-
-                    imageCache.put(url, image);
-
-                } catch (IllegalArgumentException iae) {
-                    // url was empty!
-                    final PlatformLogger logger = getLogger();
-                    if (logger != null && logger.isLoggable(Level.WARNING)) {
-                        logger.warning(iae.getLocalizedMessage());
-                    }
-
-                } catch (NullPointerException npe) {
-                    // url was null!
-                    final PlatformLogger logger = getLogger();
-                    if (logger != null && logger.isLoggable(Level.WARNING)) {
-                        logger.warning(npe.getLocalizedMessage());
+                    } catch (NullPointerException npe) {
+                        // url was null!
+                        final PlatformLogger logger = getLogger();
+                        if (logger != null && logger.isLoggable(Level.WARNING)) {
+                            logger.warning(npe.getLocalizedMessage());
+                        }
                     }
                 }
+                return image;
             }
+        }
 
-            return image;
+        void cleanUpImageCache(String imgFname) {
+
+            synchronized (styleLock) {
+                if (imgFname == null || imageCache.isEmpty()) return;
+
+                final String fname = imgFname.trim();
+                if (fname.isEmpty()) return;
+
+                int len = fname.lastIndexOf('/');
+                final String path = (len > 0) ? fname.substring(0,len) : fname;
+                final int plen = path.length();
+
+                final String[] entriesToRemove = new String[imageCache.size()];
+                int count = 0;
+
+                final Set<Entry<String, SoftReference<Image>>> entrySet = imageCache.entrySet();
+                for (Entry<String, SoftReference<Image>> entry : entrySet) {
+
+                    final String key = entry.getKey();
+                    if (entry.getValue().get() == null) {
+                        entriesToRemove[count++] = key;
+                        continue;
+                    }
+                    len = key.lastIndexOf('/');
+                    final String kpath = (len > 0) ? key.substring(0, len) : key;
+                    final int klen = kpath.length();
+
+                    // If the longer path begins with the shorter path,
+                    // then assume the image came from this path.
+                    boolean match = (klen > plen) ? kpath.startsWith(path) : path.startsWith(kpath);
+                    if (match) {
+                        entriesToRemove[count++] = key;
+                    }
+                }
+
+                for (int n = 0; n < count; n++) {
+                    imageCache.remove(entriesToRemove[n]);
+                }
+            }
         }
     }
 
-    private void cleanUpImageCache(String imgFname) {
+    private final ImageCache imageCache = new ImageCache();
 
-        synchronized (styleLock) {
-            if (imgFname == null && imageCache.isEmpty()) return;
-
-            final String fname = imgFname.trim();
-            if (fname.isEmpty()) return;
-
-            int len = fname.lastIndexOf('/');
-            final String path = (len > 0) ? fname.substring(0,len) : fname;
-            final int plen = path.length();
-
-            final String[] entriesToRemove = new String[imageCache.size()];
-            int count = 0;
-
-            final Set<Entry<String, Image>> entrySet = imageCache.entrySet();
-            for(Entry<String, Image> entry : entrySet) {
-
-                final String key = entry.getKey();
-                len = key.lastIndexOf('/');
-                final String kpath = (len > 0) ? key.substring(0, len) : key;
-                final int klen = kpath.length();
-
-                // if the longer path begins with the shorter path,
-                // then assume the image came from this path.
-                boolean match = (klen > plen) ? kpath.startsWith(path) : path.startsWith(kpath);
-                if (match) entriesToRemove[count++] = key;
-            }
-
-            for (int n=0; n<count; n++) {
-                Image img = imageCache.remove(entriesToRemove[n]);
-            }
-        }
+    public Image getCachedImage(String url) {
+        return imageCache.getCachedImage(url);
     }
 
     ////////////////////////////////////////////////////////////////////////////
