@@ -28,7 +28,10 @@ dist/
 test.keystore
 ^webrev*
 nbproject/private/
+Ensemble8/src/generated/resources/ensemble/search/index/write.lock
+Ensemble8/lib/lucene.*.jar
 ^.*~$
+
 syntax: glob
 *.vcxproj.user
 */Release/*

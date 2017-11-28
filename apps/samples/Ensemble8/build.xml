@@ -122,15 +122,41 @@
     <target name="-pre-jar">
         <delete dir="${build.classes.dir}/ensemble/compiletime"/>
     </target>
-    
+
     <!-- COPY LIBS INTO JAR FILE: so that we have a simple single jar application -->
     <target name="-post-jar" depends="jfx-deployment">
         <zip destfile="${dist.jar}" update="true">
-            <zipfileset src="${file.reference.lucene-core-3.2.0.jar}"/>
-            <zipfileset src="${file.reference.lucene-grouping-3.2.0.jar}"/>
+            <!-- Rename license and notice file -->
+            <mappedresources>
+                <zipfileset src="${file.reference.lucene-core-7.1.0.jar}">
+                    <include name="META-INF/LICENSE.txt"/>
+                </zipfileset>
+                <globmapper from="*/LICENSE.txt" to="*/LUCENE_LICENSE.TXT" />
+            </mappedresources>
+            <mappedresources>
+                <zipfileset src="${file.reference.lucene-core-7.1.0.jar}">
+                    <include name="META-INF/NOTICE.txt"/>
+                </zipfileset>
+                <globmapper from="*/NOTICE.txt" to="*/LUCENE_NOTICE.TXT" />
+            </mappedresources>
+
+            <!-- Include the core SPI services -->
+            <zipfileset src="${file.reference.lucene-core-7.1.0.jar}">
+                <include name="META-INF/services/**"/>
+            </zipfileset>
+
+            <zipfileset src="${file.reference.lucene-core-7.1.0.jar}">
+                <exclude name="META-INF/**"/>
+            </zipfileset>
+            <zipfileset src="${file.reference.lucene-grouping-7.1.0.jar}">
+                <exclude name="META-INF/**"/>
+            </zipfileset>
+            <zipfileset src="${file.reference.lucene-queryparser-7.1.0.jar}">
+                <exclude name="META-INF/**"/>
+            </zipfileset>
         </zip>
     </target>
-    
+
     <target name="ensemble-generate-samples-class" depends="init,compile" description="Ensemble: Generate source for all samples data class.">
        <java classname="ensemble.compiletime.EnsembleCompiletimeMain" fork="true">
          <arg value="samples"/>

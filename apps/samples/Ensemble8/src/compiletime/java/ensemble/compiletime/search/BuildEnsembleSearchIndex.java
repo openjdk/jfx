@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,7 +32,11 @@
 package ensemble.compiletime.search;
 
 import ensemble.compiletime.Sample;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,12 +55,15 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.SortedDocValuesField;
+import org.apache.lucene.document.StringField;
+import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.util.Version;
+import org.apache.lucene.util.BytesRef;
 
 /**
  * Generate the lucene index that Ensemble uses for its search
@@ -71,6 +78,8 @@ public class BuildEnsembleSearchIndex {
             System.out.println("Creating Documents for Samples...");
             docs.addAll(indexSamples(allSamples));
             System.out.println("Creating tasks for getting all documentation...");
+            System.out.println("javaDocBaseUrl = " + javaDocBaseUrl);
+            System.out.println("javafxDocumentationHome = " + javafxDocumentationHome);
             tasks.addAll(indexJavaDocAllClasses(javaDocBaseUrl));
             tasks.addAll(indexAllDocumentation(javafxDocumentationHome));
             // execute all the tasks in 32 threads, collecting all the documents to write
@@ -94,24 +103,22 @@ public class BuildEnsembleSearchIndex {
             }
             // create index
             System.out.println("Indexing to directory '" + indexDir + "'...");
-            Directory dir = FSDirectory.open(indexDir);
-            Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_31);
-            IndexWriterConfig iwc = new IndexWriterConfig(Version.LUCENE_31, analyzer);
+            Directory dir = FSDirectory.open(indexDir.toPath());
+            Analyzer analyzer = new StandardAnalyzer();
+            IndexWriterConfig iwc = new IndexWriterConfig(analyzer);
             iwc.setOpenMode(OpenMode.CREATE);
             try (IndexWriter writer = new IndexWriter(dir, iwc)) {
                 // write all docs
                 System.out.println("Writing ["+docs.size()+"] documents to index....");
                 writer.addDocuments(docs);
-                // optimize the writen index
-                System.out.println("Optimizing search index....");
-                writer.optimize();
                 System.out.println("NUMBER OF INDEXED DOCUMENTS = ["+writer.numDocs()+"]");
             }
             // write file listing all the search index files, so we know what
             // is in the jar file at runtime
             try (FileWriter listAllOut = new FileWriter(new File(indexDir,"listAll.txt"))) {
                 for (String fileName: dir.listAll()) {
-                    if (!"listAll.txt".equals(fileName)) { // don't include the "listAll.txt" file
+                    // don't include the "listAll.txt" file or "write.lock"
+                    if (!"listAll.txt".equals(fileName) && !"write.lock".equals(fileName)) {
                         Long length = dir.fileLength(fileName);
                         listAllOut.write(fileName);
                         listAllOut.write(':');
@@ -167,11 +174,11 @@ public class BuildEnsembleSearchIndex {
                 }
                 // write documentation section entry to index
                 docs.add(createDocument(DocumentType.DOC,
-                    new Field("bookTitle", docPage.bookTitle, Field.Store.YES, Field.Index.ANALYZED),
-                    new Field("chapter", docPage.chapter==null? "" : docPage.chapter, Field.Store.YES, Field.Index.ANALYZED),
-                    new Field("name", section.name, Field.Store.YES, Field.Index.ANALYZED),
-                    new Field("description", section.content, Field.Store.NO, Field.Index.ANALYZED),
-                    new Field("ensemblePath", section.url, Field.Store.YES, Field.Index.NOT_ANALYZED)
+                    new TextField("bookTitle", docPage.bookTitle, Field.Store.YES),
+                    new TextField("chapter", docPage.chapter==null? "" : docPage.chapter, Field.Store.YES),
+                    new TextField("name", section.name, Field.Store.YES),
+                    new TextField("description", section.content, Field.Store.NO),
+                    new StringField("ensemblePath", section.url, Field.Store.YES)
                 ));
             }
             // handle next page if there is one
@@ -206,11 +213,11 @@ public class BuildEnsembleSearchIndex {
         for (Sample sample: allSamples) {
             // write class entry to index
             docs.add(createDocument(DocumentType.SAMPLE,
-                new Field("name", sample.name, Field.Store.YES, Field.Index.ANALYZED),
-                new Field("description", sample.description, Field.Store.NO, Field.Index.ANALYZED),
-                new Field("shortDescription", sample.description.substring(0, Math.min(160, sample.description.length())),
-                        Field.Store.YES, Field.Index.NOT_ANALYZED),
-                new Field("ensemblePath", "sample://"+sample.ensemblePath, Field.Store.YES, Field.Index.NOT_ANALYZED)
+                new TextField("name", sample.name, Field.Store.YES),
+                new TextField("description", sample.description, Field.Store.NO),
+                new StringField("shortDescription", sample.description.substring(0, Math.min(160, sample.description.length())),
+                        Field.Store.YES),
+                new StringField("ensemblePath", "sample://"+sample.ensemblePath, Field.Store.YES)
             ));
         }
         return docs;
@@ -257,13 +264,13 @@ public class BuildEnsembleSearchIndex {
         ///System.out.println("classDescription = " + classDescription);
         // write class entry to index
         docs.add(createDocument(documentType,
-                new Field("name", className, Field.Store.YES, Field.Index.ANALYZED),
-                new Field("description", classDescription, Field.Store.NO, Field.Index.ANALYZED),
-                new Field("shortDescription", classDescription.substring(0,Math.min(160,classDescription.length())),
-                        Field.Store.YES, Field.Index.NOT_ANALYZED),
-                new Field("package", packageName, Field.Store.YES, Field.Index.ANALYZED),
-                new Field("url", url, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                new Field("ensemblePath", url, Field.Store.YES, Field.Index.NOT_ANALYZED) // TODO what do we need here
+                new TextField("name", className, Field.Store.YES),
+                new TextField("description", classDescription, Field.Store.NO),
+                new StringField("shortDescription", classDescription.substring(0,Math.min(160,classDescription.length())),
+                        Field.Store.YES),
+                new TextField("package", packageName, Field.Store.YES),
+                new StringField("url", url, Field.Store.YES),
+                new StringField("ensemblePath", url, Field.Store.YES) // TODO what do we need here
         ));
 
         // extract properties
@@ -282,14 +289,14 @@ public class BuildEnsembleSearchIndex {
                 //System.out.println("                    oracle url = " + url);
                 // write class entry to index
                 docs.add(createDocument(DocumentType.PROPERTY,
-                        new Field("name", propertyName, Field.Store.YES, Field.Index.ANALYZED),
-                        new Field("description", description, Field.Store.NO, Field.Index.ANALYZED),
-                        new Field("shortDescription", description.substring(0,Math.min(160,description.length())),
-                                Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("url", propUrl, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("className", className, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("package", packageName, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("ensemblePath", url + "#" + propertyName, Field.Store.YES, Field.Index.NOT_ANALYZED) // TODO what do we need here
+                        new TextField("name", propertyName, Field.Store.YES),
+                        new TextField("description", description, Field.Store.NO),
+                        new StringField("shortDescription", description.substring(0,Math.min(160,description.length())),
+                                Field.Store.YES),
+                        new StringField("url", propUrl, Field.Store.YES),
+                        new StringField("className", className, Field.Store.YES),
+                        new StringField("package", packageName, Field.Store.YES),
+                        new StringField("ensemblePath", url + "#" + propertyName, Field.Store.YES) // TODO what do we need here
                 ));
             }
         }
@@ -309,14 +316,14 @@ public class BuildEnsembleSearchIndex {
                 //System.out.println("                    oracle url = " + url);
                 // write class entry to index
                 docs.add(createDocument(DocumentType.METHOD,
-                        new Field("name", methodName, Field.Store.YES, Field.Index.ANALYZED),
-                        new Field("description", description, Field.Store.NO, Field.Index.ANALYZED),
-                        new Field("shortDescription", description.substring(0,Math.min(160,description.length())),
-                                Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("url", methodUrl, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("className", className, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("package", packageName, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("ensemblePath", url + "#" + methodName + "()", Field.Store.YES, Field.Index.NOT_ANALYZED) // TODO what do we need here
+                        new TextField("name", methodName, Field.Store.YES),
+                        new TextField("description", description, Field.Store.NO),
+                        new StringField("shortDescription", description.substring(0,Math.min(160,description.length())),
+                                Field.Store.YES),
+                        new StringField("url", methodUrl, Field.Store.YES),
+                        new StringField("className", className, Field.Store.YES),
+                        new StringField("package", packageName, Field.Store.YES),
+                        new StringField("ensemblePath", url + "#" + methodName + "()", Field.Store.YES) // TODO what do we need here
                 ));
             }
         }
@@ -336,14 +343,14 @@ public class BuildEnsembleSearchIndex {
                 //System.out.println("                    oracle url = " + url);
                 // write class entry to index
                 docs.add(createDocument(DocumentType.FIELD,
-                        new Field("name", fieldName, Field.Store.YES, Field.Index.ANALYZED),
-                        new Field("description", description, Field.Store.NO, Field.Index.ANALYZED),
-                        new Field("shortDescription", description.substring(0,Math.min(160,description.length())),
-                                Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("url", fieldUrl, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("className", className, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("package", packageName, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("ensemblePath", url + "#" + fieldName, Field.Store.YES, Field.Index.NOT_ANALYZED) // TODO what do we need here
+                        new TextField("name", fieldName, Field.Store.YES),
+                        new TextField("description", description, Field.Store.NO),
+                        new StringField("shortDescription", description.substring(0,Math.min(160,description.length())),
+                                Field.Store.YES),
+                        new StringField("url", fieldUrl, Field.Store.YES),
+                        new StringField("className", className, Field.Store.YES),
+                        new StringField("package", packageName, Field.Store.YES),
+                        new StringField("ensemblePath", url + "#" + fieldName, Field.Store.YES) // TODO what do we need here
                 ));
             }
         }
@@ -363,14 +370,14 @@ public class BuildEnsembleSearchIndex {
                 ///System.out.println("                    oracle url = " + url);
                 // write class entry to index
                 docs.add(createDocument(DocumentType.ENUM,
-                        new Field("name", enumName, Field.Store.YES, Field.Index.ANALYZED),
-                        new Field("description", description, Field.Store.NO, Field.Index.ANALYZED),
-                        new Field("shortDescription", description.substring(0,Math.min(160,description.length())),
-                                Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("url", enumUrl, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("className", className, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("package", packageName, Field.Store.YES, Field.Index.NOT_ANALYZED),
-                        new Field("ensemblePath", url+ "#" + enumName, Field.Store.YES, Field.Index.NOT_ANALYZED) // TODO what do we need here
+                        new TextField("name", enumName, Field.Store.YES),
+                        new TextField("description", description, Field.Store.NO),
+                        new StringField("shortDescription", description.substring(0,Math.min(160,description.length())),
+                                Field.Store.YES),
+                        new StringField("url", enumUrl, Field.Store.YES),
+                        new StringField("className", className, Field.Store.YES),
+                        new StringField("package", packageName, Field.Store.YES),
+                        new StringField("ensemblePath", url+ "#" + enumName, Field.Store.YES) // TODO what do we need here
                 ));
             }
         }
@@ -387,8 +394,9 @@ public class BuildEnsembleSearchIndex {
     private static Document createDocument(DocumentType documentType, Field... fields) throws IOException {
         // make a new, empty document
         Document doc = new Document();
-        // add doc type field
-        doc.add(new Field("documentType", documentType.toString(), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
+        // add doc type field + sorting field
+        doc.add(new StringField("documentType", documentType.toString(), Field.Store.YES));
+        doc.add(new SortedDocValuesField("documentType", new BytesRef(documentType.toString())));
         // add other fields
         if (fields != null) {
             for (Field field : fields) {
@@ -409,8 +417,9 @@ public class BuildEnsembleSearchIndex {
     private static void addDocument(IndexWriter writer, DocumentType documentType, Field... fields) throws IOException {
         // make a new, empty document
         Document doc = new Document();
-        // add doc type field
-        doc.add(new Field("documentType", documentType.toString(), Field.Store.YES, Field.Index.NOT_ANALYZED_NO_NORMS));
+        // add doc type field + sorting field
+        doc.add(new StringField("documentType", documentType.toString(), Field.Store.YES));
+        doc.add(new SortedDocValuesField("documentType", new BytesRef(documentType.toString())));
         // add other fields
         if (fields != null) {
             for (Field field : fields) {

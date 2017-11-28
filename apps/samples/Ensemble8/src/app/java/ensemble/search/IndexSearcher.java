@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -35,32 +35,37 @@ import ensemble.generated.Samples;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.queryParser.MultiFieldQueryParser;
-import org.apache.lucene.queryParser.ParseException;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
+import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.Sort;
 import org.apache.lucene.search.grouping.GroupDocs;
 import org.apache.lucene.search.grouping.SearchGroup;
-import org.apache.lucene.search.grouping.SecondPassGroupingCollector;
+import org.apache.lucene.search.grouping.TermGroupSelector;
 import org.apache.lucene.search.grouping.TopGroups;
-import org.apache.lucene.util.Version;
+import org.apache.lucene.search.grouping.TopGroupsCollector;
+import org.apache.lucene.util.BytesRef;
 
 /**
  * Class for searching the index
  */
 public class IndexSearcher {
-    private final static List<SearchGroup> searchGroups = new ArrayList<>();
+    private final static List<SearchGroup<BytesRef>> searchGroups = new ArrayList<>();
     static {
         for (DocumentType dt: DocumentType.values()){
-            SearchGroup searchGroup = new SearchGroup();
-            searchGroup.groupValue = dt.toString();
+            SearchGroup<BytesRef> searchGroup = new SearchGroup();
+            searchGroup.groupValue = new BytesRef(dt.toString());
             searchGroup.sortValues = new Comparable[]{5f};
             searchGroups.add(searchGroup);
         }
@@ -71,24 +76,25 @@ public class IndexSearcher {
 
     public IndexSearcher() {
         try {
-            searcher = new org.apache.lucene.search.IndexSearcher(new ClasspathDirectory());
+            searcher = new org.apache.lucene.search.IndexSearcher(DirectoryReader.open(new ClasspathDirectory()));
         } catch (IOException e) {
             e.printStackTrace();
         }
-        analyzer = new StandardAnalyzer(Version.LUCENE_31);
-        parser = new MultiFieldQueryParser(Version.LUCENE_31, new String[]{"name","bookTitle","chapter","description"}, analyzer);
+        analyzer = new StandardAnalyzer();
+        parser = new MultiFieldQueryParser(new String[]{"name","bookTitle","chapter","description"}, analyzer);
     }
 
     public Map<DocumentType, List<SearchResult>> search(String searchString) throws ParseException {
         Map<DocumentType, List<SearchResult>> resultMap = new EnumMap<>(DocumentType.class);
         try {
             Query query = parser.parse(searchString);
-            final SecondPassGroupingCollector collector = new SecondPassGroupingCollector("documentType", searchGroups,
+            final TopGroupsCollector<BytesRef> collector = new TopGroupsCollector(
+                    new TermGroupSelector("documentType"), searchGroups,
                     Sort.RELEVANCE, Sort.RELEVANCE, 10, true, false, true);
             searcher.search(query, collector);
-            final TopGroups groups = collector.getTopGroups(0);
-            for (GroupDocs groupDocs : groups.groups) {
-                DocumentType docType = DocumentType.valueOf(groupDocs.groupValue);
+            final TopGroups<BytesRef> groups = collector.getTopGroups(0);
+            for (GroupDocs<BytesRef> groupDocs : groups.groups) {
+                DocumentType docType = DocumentType.valueOf(groupDocs.groupValue.utf8ToString());
                 List<SearchResult> results = new ArrayList<>();
                 for (ScoreDoc scoreDoc : groupDocs.scoreDocs) {
                     if ((Platform.isSupported(ConditionalFeature.WEB)) || (docType != DocumentType.DOC)) {

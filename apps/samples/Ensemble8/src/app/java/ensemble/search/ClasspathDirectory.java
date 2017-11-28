@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2017, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -36,12 +36,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.IndexOutput;
+import org.apache.lucene.store.Lock;
 
 /**
  * A very simple implementation of lucene Directory, it reads a index from the classpath in a directory called index
@@ -75,8 +78,9 @@ public class ClasspathDirectory extends Directory {
         return allFiles;
     }
 
-    @Override public IndexInput openInput(String s) throws IOException {
+    @Override public IndexInput openInput(String s, IOContext ioc) throws IOException {
         return new ClassPathIndexInput(
+            s,
             getClass().getResourceAsStream("index/"+s),
             fileLengthMap.get(s).intValue()
         );
@@ -87,7 +91,8 @@ public class ClasspathDirectory extends Directory {
         private int pointer = 0;
         private int length;
 
-        private ClassPathIndexInput(InputStream in, int length) throws IOException {
+        private ClassPathIndexInput(String resourceDescription, InputStream in, int length) throws IOException {
+            super(resourceDescription);
             this.length = length;
             // read whole file into memory, so we can provide random access
             data = new byte[length];
@@ -108,6 +113,13 @@ public class ClasspathDirectory extends Directory {
             in.close();
         }
 
+        private ClassPathIndexInput(String resourceDescription, byte[] data) {
+            super(resourceDescription);
+            this.data = data;
+            this.pointer = 0;
+            this.length = data.length;
+        }
+
         @Override public byte readByte() throws IOException {
             return data[pointer ++];
         }
@@ -124,13 +136,48 @@ public class ClasspathDirectory extends Directory {
         @Override public void seek(long l) throws IOException { pointer = (int)l; }
 
         @Override public long length() { return length; }
+
+        @Override
+        public IndexInput slice(String sliceDescription, long offset, long length) throws IOException {
+            int o = (int) offset;
+            int l = (int) length;
+            byte[] sliceData = new byte[l];
+            System.arraycopy(data, o, sliceData, 0, l);
+            return new ClassPathIndexInput(sliceDescription, sliceData);
+        }
     }
 
     @Override public void close() throws IOException {}
-    @Override public boolean fileExists(String s) throws IOException { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public long fileModified(String s) throws IOException { throw new UnsupportedOperationException("Not implemented"); }
-    @Override @Deprecated public void touchFile(String s) throws IOException { throw new UnsupportedOperationException("Not implemented"); }
     @Override public void deleteFile(String s) throws IOException { throw new UnsupportedOperationException("Not implemented"); }
     @Override public long fileLength(String s) throws IOException { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public IndexOutput createOutput(String s) throws IOException { throw new UnsupportedOperationException("Not implemented"); }
+    @Override
+    public IndexOutput createOutput(String string, IOContext ioc) throws IOException {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public IndexOutput createTempOutput(String string, String string1, IOContext ioc) throws IOException {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public void sync(Collection<String> clctn) throws IOException {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public void rename(String string, String string1) throws IOException {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public void syncMetaData() throws IOException {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public Lock obtainLock(String string) throws IOException {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
 }

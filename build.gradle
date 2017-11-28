@@ -1459,22 +1459,6 @@ void addJCov(p, test) {
 }
 
 allprojects {
-    // We want to configure all projects as java projects and use the same compile settings
-    // etc, except for the root project which we just want to ignore (and for now media)
-    if (project == rootProject) {
-       return
-    }
-    if (project.path.startsWith(":apps")) {
-        // Lets handle the apps tree differently, as it is a collection of ant builds,
-        // and the ant importer collides with the 'apply plugin:java'
-        return
-    }
-
-    // All of our projects are java projects
-
-    apply plugin: "java"
-    sourceCompatibility = 1.9
-
     // Setup the repositories that we'll download libraries from. Maven Central is
     // just easy for most things. The custom "ivy" repo is for downloading SWT. The way it
     // works is to setup the download URL such that it will resolve to the actual jar file
@@ -1493,6 +1477,22 @@ allprojects {
             }
         }
     }
+
+    // We want to configure all projects as java projects and use the same compile settings
+    // etc, except for the root project which we just want to ignore (and for now media)
+    if (project == rootProject) {
+       return
+    }
+    if (project.path.startsWith(":apps")) {
+        // Lets handle the apps tree differently, as it is a collection of ant builds,
+        // and the ant importer collides with the 'apply plugin:java'
+        return
+    }
+
+    // All of our projects are java projects
+
+    apply plugin: "java"
+    sourceCompatibility = 1.9
 
     // By default all of our projects require junit for testing so we can just
     // setup this dependency here.
@@ -3919,6 +3919,36 @@ compileTargets { t ->
 project(":apps") {
     // The apps build is Ant based, we will exec ant from gradle.
 
+    // Download the Lucene libraries needed for the Ensemble8 app
+    getConfigurations().create("lucene");
+    dependencies {
+        lucene group: "org.apache.lucene", name: "lucene-core", version: "7.1.0"
+        lucene group: "org.apache.lucene", name: "lucene-grouping", version: "7.1.0"
+        lucene group: "org.apache.lucene", name: "lucene-queryparser", version: "7.1.0"
+    }
+
+    // Copy Lucene libraries into the Ensemble8/lib directory
+    File ensembleLibDir = rootProject.file("apps/samples/Ensemble8/lib");
+    def libNames = [ "lucene-core-7.1.0.jar",
+                     "lucene-grouping-7.1.0.jar",
+                     "lucene-queryparser-7.1.0.jar" ]
+
+
+    task getLucene(type: Copy) {
+        doFirst {
+            ensembleLibDir.mkdirs();
+        }
+        into ensembleLibDir
+        includeEmptyDirs = false
+        configurations.lucene.files.each { f ->
+            libNames.each { name ->
+                if (name == f.getName()) {
+                    from f.getPath()
+                }
+            }
+        }
+    }
+
     compileTargets { t ->
         List<String> params = []
 
@@ -3932,7 +3962,7 @@ project(":apps") {
         params << "-Drun.patch=@${rootProject.buildDir}/${RUNARGSFILE}"
 
         def appsJar = project.task("appsJar${t.capital}") {
-            dependsOn(sdk)
+            dependsOn(sdk, getLucene)
             doLast() {
                 ant(t.name,
                       projectDir.path,
@@ -3948,6 +3978,7 @@ project(":apps") {
                       project.projectDir.path,
                       "clean",
                       params);
+                delete(ensembleLibDir);
             }
         }
         rootProject.clean.dependsOn(appsClean)
