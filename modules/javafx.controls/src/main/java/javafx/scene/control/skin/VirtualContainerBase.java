@@ -112,6 +112,28 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
      **************************************************************************/
 
     /**
+     * Create the virtualized container that handles the layout and scrolling of
+     * all the cells. This enables skin subclasses to provide
+     * a custom {@link VirtualFlow} implementation.
+     * If not overridden, this method intantiates a default VirtualFlow instance.
+     * @return newly created VirtualFlow instance
+     * @since 10
+     */
+    protected VirtualFlow<I> createVirtualFlow() {
+        return new VirtualFlow<>();
+    }
+
+    /**
+     * Get the virtualized container.
+     * Subclasses can invoke this method to get the VirtualFlow instance.
+     * @return the virtualized container
+     * @since 10
+     */
+    protected final VirtualFlow<I> getVirtualFlow() {
+        return flow;
+    }
+
+    /**
      * Call this method to indicate that the item count should be updated on the next pulse.
      */
     protected final void markItemCountDirty() {
@@ -123,25 +145,11 @@ public abstract class VirtualContainerBase<C extends Control, I extends IndexedC
         checkState();
     }
 
-
-
     /***************************************************************************
      *                                                                         *
      * Private methods                                                         *
      *                                                                         *
      **************************************************************************/
-
-    /**
-     * This enables skin subclasses to provide a custom VirtualFlow implementation,
-     * rather than have VirtualContainerBase instantiate the default instance.
-     */
-    VirtualFlow<I> createVirtualFlow() {
-        return new VirtualFlow<>();
-    }
-
-    final VirtualFlow<I> getVirtualFlow() {
-        return flow;
-    }
 
     double getMaxCellWidth(int rowsToCount) {
         return snappedLeftInset() + flow.getMaxCellWidth(rowsToCount) + snappedRightInset();
