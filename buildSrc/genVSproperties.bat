@@ -38,7 +38,7 @@ REM So, the search order is 150, then 120, then 100
 set VSVER=150
 set "VSVARS32FILE=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvars32.bat"
 if not "%VS150COMNTOOLS%"=="" (
-    set VS150COMNTOOLS=%VS150COMNTOOLS%
+    set "VS150COMNTOOLS=%VS150COMNTOOLS%"
 ) else (
   if exist "%VSVARS32FILE%" set "VS150COMNTOOLS=C:\Program Files (x86)\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build"
 )
