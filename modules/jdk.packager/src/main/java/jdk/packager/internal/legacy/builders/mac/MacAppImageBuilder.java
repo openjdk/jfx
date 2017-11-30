@@ -473,7 +473,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
         data.put("CF_BUNDLE_IDENTIFIER", "com.oracle.java." + MAC_CF_BUNDLE_IDENTIFIER.fetchFrom(params));
         data.put("CF_BUNDLE_NAME", "Java Runtime Image");
         data.put("CF_BUNDLE_VERSION", VERSION.fetchFrom(params));
-        data.put("CF_BUDNEL_SHORT_VERSION_STRING", VERSION.fetchFrom(params));
+        data.put("CF_BUNDLE_SHORT_VERSION_STRING", VERSION.fetchFrom(params));
 
         Writer w = new BufferedWriter(new FileWriter(file));
         w.write(preprocessTextResource(

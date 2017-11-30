@@ -15,7 +15,7 @@
         <key>CFBundlePackageType</key>
         <string>BNDL</string>
         <key>CFBundleShortVersionString</key>
-        <string>CF_BUDNEL_SHORT_VERSION_STRING</string>
+        <string>CF_BUNDLE_SHORT_VERSION_STRING</string>
         <key>CFBundleSignature</key>
         <string>????</string>
         <key>CFBundleVersion</key>
