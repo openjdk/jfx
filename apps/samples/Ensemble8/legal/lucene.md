@@ -1,4 +1,4 @@
-## Apache Lucene v3.2.0
+## Apache Lucene v7.1.0
 
 ### Apache 2.0 License
 <pre>
