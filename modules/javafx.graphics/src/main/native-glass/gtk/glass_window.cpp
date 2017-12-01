@@ -666,6 +666,8 @@ WindowContextBase::~WindowContextBase() {
 }
 
 ////////////////////////////// WindowContextTop /////////////////////////////////
+WindowFrameExtents WindowContextTop::normal_extents = {28, 1, 1, 1};
+WindowFrameExtents WindowContextTop::utility_extents = {28, 1, 1, 1};
 
 
 WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long _screen,
@@ -673,6 +675,7 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             WindowContextBase(),
             screen(_screen),
             frame_type(_frame_type),
+            window_type(type),
             owner(_owner),
             geometry(),
             resizable(),
@@ -680,7 +683,8 @@ WindowContextTop::WindowContextTop(jobject _jwindow, WindowContext* _owner, long
             map_received(false),
             location_assigned(false),
             size_assigned(false),
-            on_top(false)
+            on_top(false),
+            requested_bounds()
 {
     jwindow = mainEnv->NewGlobalRef(_jwindow);
 
@@ -797,15 +801,38 @@ void WindowContextTop::activate_window() {
     }
 }
 
-void
-WindowContextTop::initialize_frame_extents() {
+void WindowContextTop::set_cached_extents(WindowFrameExtents ex) {
+    if (window_type == NORMAL) {
+        normal_extents = ex;
+    } else {
+        utility_extents = ex;
+    }
+}
+
+WindowFrameExtents WindowContextTop::get_cached_extents() {
+    return window_type == NORMAL ? normal_extents : utility_extents;
+}
+
+
+bool WindowContextTop::update_frame_extents() {
+    bool changed = false;
     int top, left, bottom, right;
     if (get_frame_extents_property(&top, &left, &bottom, &right)) {
-        geometry.extents.top = top;
-        geometry.extents.left = left;
-        geometry.extents.bottom = bottom;
-        geometry.extents.right = right;
+        changed = geometry.extents.top != top
+                    || geometry.extents.left != left
+                    || geometry.extents.bottom != bottom
+                    || geometry.extents.right != right;
+        if (changed) {
+            geometry.extents.top = top;
+            geometry.extents.left = left;
+            geometry.extents.bottom = bottom;
+            geometry.extents.right = right;
+            if (!is_null_extents()) {
+                set_cached_extents(geometry.extents);
+            }
+        }
     }
+    return changed;
 }
 
 bool
@@ -957,8 +984,6 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         gint top, left, bottom, right;
 
         gdk_window_get_frame_extents(gdk_window, &frame);
-        gint contentX, contentY;
-        gdk_window_get_origin(gdk_window, &contentX, &contentY);
 #ifdef GLASS_GTK3
         gdk_window_get_geometry(gdk_window, NULL, NULL, &w, &h);
 #else
@@ -969,19 +994,15 @@ void WindowContextTop::process_configure(GdkEventConfigure* event) {
         geometry.current_width = frame.width;
         geometry.current_height = frame.height;
 
-        top = contentY - frame.y;
-        left = contentX - frame.x;
-        bottom = frame.y + frame.height - (contentY + h);
-        right = frame.x + frame.width - (contentX + w);
-        if (geometry.extents.top != top
-                || geometry.extents.left != left
-                || geometry.extents.bottom != bottom
-                || geometry.extents.right != right) {
+        if (update_frame_extents()) {
             updateWindowConstraints = true;
-            geometry.extents.top = top;
-            geometry.extents.left = left;
-            geometry.extents.bottom = bottom;
-            geometry.extents.right = right;
+            if (!frame_extents_initialized && !is_null_extents()) {
+                frame_extents_initialized = true;
+                set_bounds(0, 0, false, false,
+                    requested_bounds.width, requested_bounds.height,
+                    requested_bounds.client_width, requested_bounds.client_height
+                );
+            }
         }
     } else {
         x = event->x;
@@ -1109,9 +1130,20 @@ void WindowContextTop::set_visible(bool visible)
 }
 
 void WindowContextTop::set_bounds(int x, int y, bool xSet, bool ySet, int w, int h, int cw, int ch) {
+    requested_bounds.width = w;
+    requested_bounds.height = h;
+    requested_bounds.client_width = cw;
+    requested_bounds.client_height = ch;
+
     if (!frame_extents_initialized && frame_type == TITLED) {
-        initialize_frame_extents();
-        frame_extents_initialized = true;
+        update_frame_extents();
+        if (is_null_extents()) {
+            if (!is_null_extents(get_cached_extents())) {
+                geometry.extents = get_cached_extents();
+            }
+        } else {
+            frame_extents_initialized = true;
+        }
     }
 
     XWindowChanges windowChanges;

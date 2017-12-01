@@ -1095,8 +1095,8 @@ if (gradle.gradleVersion != "4.3") {
     def gradleMajor = Integer.parseInt(ver[0]);
     def gradleMinor = Integer.parseInt(ver[1].split("[^0-9]")[0]);
     def err = "";
-    if (gradleMajor < 3) {
-        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 3.0"
+    if (gradleMajor < 4 || (gradleMajor == 4 && gradleMinor < 3)) {
+        err = "Gradle version too old: ${gradle.gradleVersion}; must be at least 4.3"
     }
 
     if (IS_GRADLE_VERSION_CHECK && err != "") {

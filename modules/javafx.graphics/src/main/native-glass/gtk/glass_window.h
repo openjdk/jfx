@@ -365,6 +365,7 @@ private:
 class WindowContextTop: public WindowContextBase {
     jlong screen;
     WindowFrameType frame_type;
+    WindowType window_type;
     struct WindowContext *owner;
     WindowGeometry geometry;
     struct _Resizable{// we can't use set/get gtk_window_resizable function
@@ -381,6 +382,20 @@ class WindowContextTop: public WindowContextBase {
     bool location_assigned;
     bool size_assigned;
     bool on_top;
+
+    struct _Size {
+        int width, height;
+        int client_width, client_height;
+    } requested_bounds;
+
+    bool is_null_extents() { return is_null_extents(geometry.extents); }
+
+    bool is_null_extents(WindowFrameExtents ex) {
+        return !ex.top && !ex.left && !ex.bottom && !ex.right;
+    }
+
+    static WindowFrameExtents normal_extents;
+    static WindowFrameExtents utility_extents;
 public:
     WindowContextTop(jobject, WindowContext*, long, WindowFrameType, WindowType, GdkWMFunction);
     void process_map();
@@ -423,7 +438,9 @@ private:
     bool get_frame_extents_property(int *, int *, int *, int *);
     void request_frame_extents();
     void activate_window();
-    void initialize_frame_extents();
+    bool update_frame_extents();
+    void set_cached_extents(WindowFrameExtents ex);
+    WindowFrameExtents get_cached_extents();
     void window_configure(XWindowChanges *, unsigned int);
     void update_window_constraints();
     void set_window_resizable(bool);
