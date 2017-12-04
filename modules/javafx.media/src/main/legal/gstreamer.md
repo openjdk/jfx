@@ -16,7 +16,7 @@ this library:
 A copy of the Oracle modified GStreamer library source code is located
 in the following OpenJDK Mercurial repository:
 
-   http://hg.openjdk.java.net/openjfx/9/rt
+   http://hg.openjdk.java.net/openjfx/jfx/rt
 
 You can use Mercurial to clone the repository or you can browse the
 source using a web browser. The root directory of the GStreamer source
