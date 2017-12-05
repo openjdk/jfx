@@ -11,9 +11,9 @@
 
 #include <stdint.h>
 
-#include "java_lang_Character.h"
+#include "com_sun_webkit_dom_CharacterDataImpl.h"
 
-#define CharProp(p) java_lang_Character_##p
+#define CharProp(p) com_sun_webkit_dom_CharacterDataImpl_##p
 
 #if PLATFORM(JAVA) && OS(WINDOWS)
 typedef wchar_t UChar;

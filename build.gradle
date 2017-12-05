@@ -3251,20 +3251,6 @@ project(":web") {
         jvmArgs "-DWEB_ARCHIVE_JAR_TEST_DIR=$testResourceDir"
     }
 
-    // generate some headers that are not part of our build
-    task generateHeaders(dependsOn: compileJava) {
-        doLast {
-            def dest = file("$buildDir/gensrc/headers/${project.moduleName}");
-            mkdir dest;
-            exec {
-                commandLine("$JAVAH", "-d", "$dest",);
-                args("java.lang.Character",
-                     "java.net.IDN",
-                     );
-            }
-        }
-    }
-
     task compileJavaDOMBinding()
 
     compileTargets { t ->
@@ -3278,7 +3264,7 @@ project(":web") {
         File nativeBuildDir = new File("${webkitOutputDir}")
         nativeBuildDir.mkdirs()
 
-        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [generateHeaders, compileJava]) {
+        def compileNativeTask = task("compileNative${t.capital}", dependsOn: [compileJava]) {
             println "Building Webkit configuration /$webkitConfig/ into $webkitOutputDir"
             enabled =  (IS_COMPILE_WEBKIT)
 

@@ -4,7 +4,7 @@
 #include "config.h"
 #include "IDNJava.h"
 #include <wtf/java/JavaEnv.h>
-#include "java_net_IDN.h"
+#include "com_sun_webkit_network_URLLoader.h"
 
 static JGClass idnClass;
 static jmethodID toASCIIMID;
@@ -36,7 +36,7 @@ String toASCII(const String& hostname)
             idnClass,
             toASCIIMID,
             (jstring)hostname.toJavaString(env),
-            java_net_IDN_ALLOW_UNASSIGNED));
+            com_sun_webkit_network_URLLoader_ALLOW_UNASSIGNED));
     CheckAndClearException(env);
 
     return String(env, result);
