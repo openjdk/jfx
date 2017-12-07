@@ -86,6 +86,9 @@ class MacFontFinder {
                 System.err.println("\tFile=" + file);
             }
 
+            if (name == null || family == null || file == null) {
+                continue;
+            }
             String lcName = name.toLowerCase(locale);
             String lcFamily = family.toLowerCase(locale);
             fontToFileMap.put(lcName, file);
