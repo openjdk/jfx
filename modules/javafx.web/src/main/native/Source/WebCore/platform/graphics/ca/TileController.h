@@ -23,8 +23,7 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TileController_h
-#define TileController_h
+#pragma once
 
 #include "FloatRect.h"
 #include "IntRect.h"
@@ -36,6 +35,7 @@
 #include <wtf/Deque.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/Seconds.h>
 
 namespace WebCore {
 
@@ -73,6 +73,9 @@ public:
 
     bool wantsDeepColorBackingStore() const { return m_wantsDeepColorBackingStore; }
     WEBCORE_EXPORT void setWantsDeepColorBackingStore(bool);
+
+    bool supportsSubpixelAntialiasedText() const { return m_supportsSubpixelAntialiasedText; }
+    WEBCORE_EXPORT void setSupportsSubpixelAntialiasedText(bool);
 
     WEBCORE_EXPORT void setTilesOpaque(bool);
     bool tilesAreOpaque() const { return m_tilesAreOpaque; }
@@ -135,10 +138,12 @@ public:
 
     WEBCORE_EXPORT Vector<RefPtr<PlatformCALayer>> containerLayers();
 
+    void logFilledVisibleFreshTile(unsigned blankPixelCount);
+
 private:
     TileGrid& tileGrid() { return *m_tileGrid; }
 
-    void scheduleTileRevalidation(double interval);
+    void scheduleTileRevalidation(Seconds interval);
 
     float topContentInset() const { return m_topContentInset; }
 
@@ -208,19 +213,19 @@ private:
 
     int m_marginSize { kDefaultTileSize };
 
+    Scrollability m_scrollability { HorizontallyScrollable | VerticallyScrollable };
+
     // m_marginTop and m_marginBottom are the height in pixels of the top and bottom margin tiles. The width
     // of those tiles will be equivalent to the width of the other tiles in the grid. m_marginRight and
     // m_marginLeft are the width in pixels of the right and left margin tiles, respectively. The height of
     // those tiles will be equivalent to the height of the other tiles in the grid.
-
-    Scrollability m_scrollability { HorizontallyScrollable | VerticallyScrollable };
-
     BoxExtent<bool> m_marginEdges;
 
     bool m_isInWindow { false };
     bool m_scrollingPerformanceLoggingEnabled { false };
     bool m_acceleratesDrawing { false };
     bool m_wantsDeepColorBackingStore { false };
+    bool m_supportsSubpixelAntialiasedText { false };
     bool m_tilesAreOpaque { false };
     bool m_hasTilesWithTemporaryScaleFactor { false }; // Used to make low-res tiles when zooming.
     bool m_inLiveResize { false };
@@ -235,4 +240,3 @@ private:
 
 } // namespace WebCore
 
-#endif // TileController_h

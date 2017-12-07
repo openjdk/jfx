@@ -134,7 +134,7 @@ FontPlatformData::FontPlatformData(FcPattern* pattern, const FontDescription& fo
         m_fixedWidth = true;
 
     bool descriptionAllowsSyntheticBold = fontDescription.fontSynthesis() & FontSynthesisWeight;
-    if (descriptionAllowsSyntheticBold && fontDescription.weight() >= FontWeightBold) {
+    if (descriptionAllowsSyntheticBold && isFontWeightBold(fontDescription.weight())) {
         // The FC_EMBOLDEN property instructs us to fake the boldness of the font.
         FcBool fontConfigEmbolden = FcFalse;
         if (FcPatternGetBool(pattern, FC_EMBOLDEN, 0, &fontConfigEmbolden) == FcResultMatch)
@@ -255,7 +255,10 @@ FcFontSet* FontPlatformData::fallbacks() const
 
     if (m_pattern) {
         FcResult fontConfigResult;
-        m_fallbacks.reset(FcFontSort(nullptr, m_pattern.get(), FcTrue, nullptr, &fontConfigResult));
+        FcUniquePtr<FcFontSet> unpreparedFallbacks(FcFontSort(nullptr, m_pattern.get(), FcTrue, nullptr, &fontConfigResult));
+        m_fallbacks.reset(FcFontSetCreate());
+        for (int i = 0; i < unpreparedFallbacks.get()->nfont; i++)
+            FcFontSetAdd(m_fallbacks.get(), FcFontRenderPrepare(nullptr, m_pattern.get(), unpreparedFallbacks.get()->fonts[i]));
     }
     return m_fallbacks.get();
 }
@@ -359,16 +362,13 @@ RefPtr<SharedBuffer> FontPlatformData::openTypeTable(uint32_t table) const
     if (FT_Load_Sfnt_Table(freeTypeFace, tag, 0, 0, &tableSize))
         return nullptr;
 
-    RefPtr<SharedBuffer> buffer = SharedBuffer::create(tableSize);
-    if (buffer->size() != tableSize)
-        return nullptr;
-
+    Vector<char> data(tableSize);
     FT_ULong expectedTableSize = tableSize;
-    FT_Error error = FT_Load_Sfnt_Table(freeTypeFace, tag, 0, reinterpret_cast<FT_Byte*>(const_cast<char*>(buffer->data())), &tableSize);
+    FT_Error error = FT_Load_Sfnt_Table(freeTypeFace, tag, 0, reinterpret_cast<FT_Byte*>(data.data()), &tableSize);
     if (error || tableSize != expectedTableSize)
         return nullptr;
 
-    return buffer;
+    return SharedBuffer::create(WTFMove(data));
 }
 
 } // namespace WebCore

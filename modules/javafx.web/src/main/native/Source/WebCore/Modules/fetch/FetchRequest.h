@@ -28,11 +28,10 @@
 
 #pragma once
 
-#if ENABLE(FETCH_API)
-
 #include "ExceptionOr.h"
 #include "FetchBodyOwner.h"
 #include "FetchOptions.h"
+#include "FetchRequestInit.h"
 #include "ResourceRequest.h"
 #include <wtf/Optional.h>
 
@@ -44,31 +43,17 @@ class URLSearchParams;
 
 class FetchRequest final : public FetchBodyOwner {
 public:
-    static Ref<FetchRequest> create(ScriptExecutionContext& context) { return adoptRef(*new FetchRequest(context, std::nullopt, FetchHeaders::create(FetchHeaders::Guard::Request), { })); }
+    using Init = FetchRequestInit;
+    using Info = Variant<RefPtr<FetchRequest>, String>;
 
     using Cache = FetchOptions::Cache;
     using Credentials = FetchOptions::Credentials;
     using Destination = FetchOptions::Destination;
     using Mode = FetchOptions::Mode;
     using Redirect = FetchOptions::Redirect;
-    using ReferrerPolicy = FetchOptions::ReferrerPolicy;
     using Type = FetchOptions::Type;
 
-    struct Init {
-        String method;
-        String referrer;
-        std::optional<ReferrerPolicy> referrerPolicy;
-        std::optional<Mode> mode;
-        std::optional<Credentials> credentials;
-        std::optional<Cache> cache;
-        std::optional<Redirect> redirect;
-        String integrity;
-        JSC::JSValue window;
-    };
-
-    ExceptionOr<FetchHeaders&> initializeWith(FetchRequest&, const Init&);
-    ExceptionOr<FetchHeaders&> initializeWith(const String&, const Init&);
-    ExceptionOr<void> setBody(JSC::ExecState&, JSC::JSValue, FetchRequest*);
+    static ExceptionOr<Ref<FetchRequest>> create(ScriptExecutionContext&, Info&&, Init&&);
 
     const String& method() const { return m_internalRequest.request.httpMethod(); }
     const String& url() const;
@@ -82,8 +67,9 @@ public:
     Credentials credentials() const;
     Cache cache() const;
     Redirect redirect() const;
+    bool keepalive() const { return m_internalRequest.options.keepAlive; };
 
-    const String& integrity() const { return m_internalRequest.integrity; }
+    const String& integrity() const { return m_internalRequest.options.integrity; }
 
     ExceptionOr<Ref<FetchRequest>> clone(ScriptExecutionContext&);
 
@@ -91,7 +77,6 @@ public:
         ResourceRequest request;
         FetchOptions options;
         String referrer;
-        String integrity;
     };
 
     const FetchOptions& fetchOptions() const { return m_internalRequest.options; }
@@ -103,7 +88,11 @@ public:
 private:
     FetchRequest(ScriptExecutionContext&, std::optional<FetchBody>&&, Ref<FetchHeaders>&&, InternalRequest&&);
 
-    ExceptionOr<FetchHeaders&> initializeOptions(const Init&);
+    ExceptionOr<void> initializeOptions(const Init&);
+    ExceptionOr<void> initializeWith(FetchRequest&, Init&&);
+    ExceptionOr<void> initializeWith(const String&, Init&&);
+    ExceptionOr<void> setBody(FetchBody::Init&&);
+    ExceptionOr<void> setBody(FetchRequest&);
 
     const char* activeDOMObjectName() const final;
     bool canSuspendForDocumentSuspension() const final;
@@ -154,5 +143,3 @@ inline auto FetchRequest::type() const -> Type
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FETCH_API)

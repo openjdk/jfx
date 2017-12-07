@@ -23,30 +23,81 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "AbstractPasteboard.h"
+#import <WebCore/AbstractPasteboard.h>
 
-#if ENABLE(DATA_INTERACTION)
+#if TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
 
-OBJC_CLASS UIItemProvider;
+@class UIItemProvider;
+@protocol UIItemProviderWriting;
+
+struct CGSize;
 
 NS_ASSUME_NONNULL_BEGIN
+
+/*! A WebItemProviderRegistrationInfo represents a single call to register something to an item provider.
+ @discussion Either the representing object exists and the type identifier and data are nil, or the
+ representing object is nil and the type identifier and data exist. The former represents a call to
+ register an entire UIItemProviderWriting-conformant object to the item provider, while the latter
+ represents a call to register only a data representation for the given type identifier.
+ */
+WEBCORE_EXPORT @interface WebItemProviderRegistrationInfo : NSObject
+
+@property (nonatomic, readonly, nullable, strong) id <UIItemProviderWriting> representingObject;
+@property (nonatomic, readonly, nullable, strong) NSString *typeIdentifier;
+@property (nonatomic, readonly, nullable, strong) NSData *data;
+
+@end
+
+/*! A WebItemProviderRegistrationInfoList represents a series of registration calls used to set up a
+ single item provider.
+ @discussion The order of items specified in the list (lowest indices first) is the order in which
+ objects or data are registered to the item provider, and therefore indicates the relative fidelity
+ of each item. Private UTI types, such as those vended through the injected editing bundle SPI, are
+ considered to be higher fidelity than the other default types.
+ */
+WEBCORE_EXPORT @interface WebItemProviderRegistrationInfoList : NSObject
+
+- (void)addRepresentingObject:(id <UIItemProviderWriting>)object;
+- (void)addData:(NSData *)data forType:(NSString *)typeIdentifier;
+
+@property (nonatomic) CGSize estimatedDisplayedSize;
+@property (nonatomic, copy) NSString *suggestedName;
+
+- (NSUInteger)numberOfItems;
+- (nullable WebItemProviderRegistrationInfo *)itemAtIndex:(NSUInteger)index;
+- (void)enumerateItems:(void(^)(WebItemProviderRegistrationInfo *item, NSUInteger index))block;
+
+@end
+
+typedef void (^WebItemProviderFileLoadBlock)(NSArray<NSURL *> *);
 
 WEBCORE_EXPORT @interface WebItemProviderPasteboard : NSObject<AbstractPasteboard>
 
 + (instancetype)sharedInstance;
 
-- (UIItemProvider *)itemProviderAtIndex:(NSInteger)index;
+// Registration info lists are only available upon starting data interaction.
+- (WebItemProviderRegistrationInfoList *)registrationInfoAtIndex:(NSUInteger)index;
+- (UIItemProvider *)itemProviderAtIndex:(NSUInteger)index;
 
-@property (copy, nonatomic, nullable) NSArray<UIItemProvider *> *itemProviders;
+@property (copy, nonatomic, nullable) NSArray<__kindof NSItemProvider *> *itemProviders;
 @property (readonly, nonatomic) NSInteger numberOfItems;
 @property (readonly, nonatomic) NSInteger changeCount;
+
+// This will only be non-empty when an operation is being performed.
+@property (readonly, nonatomic) NSArray<NSURL *> *fileURLsForDataInteraction;
 
 @property (readonly, nonatomic) BOOL hasPendingOperation;
 - (void)incrementPendingOperationCount;
 - (void)decrementPendingOperationCount;
 
+- (void)enumerateItemProvidersWithBlock:(void (^)(UIItemProvider *itemProvider, NSUInteger index, BOOL *stop))block;
+
+// The given completion block is always dispatched on the main thread.
+- (void)doAfterLoadingProvidedContentIntoFileURLs:(WebItemProviderFileLoadBlock)action;
+- (void)doAfterLoadingProvidedContentIntoFileURLs:(WebItemProviderFileLoadBlock)action synchronousTimeout:(NSTimeInterval)synchronousTimeout;
+
 @end
 
 NS_ASSUME_NONNULL_END
 
-#endif // ENABLE(DATA_INTERACTION)
+#endif // TARGET_OS_IPHONE && __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000

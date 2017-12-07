@@ -28,7 +28,6 @@
 
 #include "JSDOMConvert.h"
 #include <runtime/IteratorPrototype.h>
-#include <runtime/JSDestructibleObject.h>
 #include <type_traits>
 
 namespace WebCore {
@@ -99,9 +98,9 @@ public:
         return instance;
     }
 
-    static Prototype* createPrototype(JSC::VM& vm, JSC::JSGlobalObject* globalObject)
+    static Prototype* createPrototype(JSC::VM& vm, JSC::JSGlobalObject& globalObject)
     {
-        return Prototype::create(vm, globalObject, Prototype::createStructure(vm, globalObject, globalObject->iteratorPrototype()));
+        return Prototype::create(vm, &globalObject, Prototype::createStructure(vm, &globalObject, globalObject.iteratorPrototype()));
     }
 
     JSC::JSValue next(JSC::ExecState&);

@@ -28,14 +28,13 @@
 
 #include <wtf/Assertions.h>
 #include <wtf/GetPtr.h>
-#include <wtf/Noncopyable.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TypeCasts.h>
 
 #if ASAN_ENABLED
 extern "C" void __asan_poison_memory_region(void const volatile *addr, size_t size);
 extern "C" void __asan_unpoison_memory_region(void const volatile *addr, size_t size);
-extern "C" bool __asan_address_is_poisoned(void const volatile *addr);
+extern "C" int __asan_address_is_poisoned(void const volatile *addr);
 #endif
 
 namespace WTF {
@@ -82,37 +81,15 @@ public:
         ASSERT(m_ptr);
     }
 
-    Ref& operator=(T& object)
-    {
-        ASSERT(m_ptr);
-        object.ref();
-        m_ptr->deref();
-        m_ptr = &object;
-        ASSERT(m_ptr);
-        return *this;
-    }
+    Ref& operator=(T&);
+    Ref& operator=(Ref&&);
+    template<typename U> Ref& operator=(Ref<U>&&);
 
     // Use copyRef() and the move assignment operators instead.
-    Ref& operator=(const Ref& reference) = delete;
-    template<typename U> Ref& operator=(const Ref<U>& reference) = delete;
+    Ref& operator=(const Ref&) = delete;
+    template<typename U> Ref& operator=(const Ref<U>&) = delete;
 
-    Ref& operator=(Ref&& reference)
-    {
-        ASSERT(m_ptr);
-        m_ptr->deref();
-        m_ptr = &reference.leakRef();
-        ASSERT(m_ptr);
-        return *this;
-    }
-
-    template<typename U> Ref& operator=(Ref<U>&& reference)
-    {
-        ASSERT(m_ptr);
-        m_ptr->deref();
-        m_ptr = &reference.leakRef();
-        ASSERT(m_ptr);
-        return *this;
-    }
+    void swap(Ref&);
 
     // Hash table deleted values, which are only constructed and never copied or destroyed.
     Ref(HashTableDeletedValueType) : m_ptr(hashTableDeletedValue()) { }
@@ -134,9 +111,10 @@ public:
     }
 
     T* operator->() const { ASSERT(m_ptr); return m_ptr; }
-    T* ptr() const { ASSERT(m_ptr); return m_ptr; }
+    T* ptr() const RETURNS_NONNULL { ASSERT(m_ptr); return m_ptr; }
     T& get() const { ASSERT(m_ptr); return *m_ptr; }
     operator T&() const { ASSERT(m_ptr); return *m_ptr; }
+    bool operator!() const { ASSERT(m_ptr); return !*m_ptr; }
 
     template<typename U> Ref<T> replace(Ref<U>&&) WARN_UNUSED_RETURN;
 
@@ -169,6 +147,41 @@ private:
 
     T* m_ptr;
 };
+
+template<typename T> void swap(Ref<T>&, Ref<T>&);
+template<typename T> Ref<T> adoptRef(T&);
+template<typename T> Ref<T> makeRef(T&);
+
+template<typename T> inline Ref<T>& Ref<T>::operator=(T& reference)
+{
+    Ref copiedReference = reference;
+    swap(copiedReference);
+    return *this;
+}
+
+template<typename T> inline Ref<T>& Ref<T>::operator=(Ref&& reference)
+{
+    Ref movedReference = WTFMove(reference);
+    swap(movedReference);
+    return *this;
+}
+
+template<typename T> template<typename U> inline Ref<T>& Ref<T>::operator=(Ref<U>&& reference)
+{
+    Ref movedReference = WTFMove(reference);
+    swap(movedReference);
+    return *this;
+}
+
+template<typename T> inline void Ref<T>::swap(Ref& other)
+{
+    std::swap(m_ptr, other.m_ptr);
+}
+
+template<typename T> inline void swap(Ref<T>& a, Ref<T>& b)
+{
+    a.swap(b);
+}
 
 template<typename T> template<typename U> inline Ref<T> Ref<T>::replace(Ref<U>&& reference)
 {

@@ -1,5 +1,26 @@
 /*
  * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 #include "config.h"
@@ -161,7 +182,7 @@ BackingStoreCopy ImageBuffer::fastCopyImageMode()
     return CopyBackingStore; // todo tav revise
 }
 
-void ImageBuffer::platformTransformColorSpace(const Vector<int>&)
+void ImageBuffer::platformTransformColorSpace(const std::array<uint8_t, 256>&)
 {
     notImplemented();
 /*
@@ -267,19 +288,27 @@ RefPtr<Uint8ClampedArray> getImageData(
     return result;
 }
 
-RefPtr<Uint8ClampedArray> ImageBuffer::getUnmultipliedImageData(const IntRect& rect, CoordinateSystem coordinateSystem) const
+RefPtr<Uint8ClampedArray> ImageBuffer::getUnmultipliedImageData(const IntRect& rect, IntSize* pixelArrayDimensions, CoordinateSystem coordinateSystem) const
 {
     IntRect srcRect = rect;
     if (coordinateSystem == LogicalCoordinateSystem)
         srcRect.scale(m_resolutionScale);
+
+    if (pixelArrayDimensions)
+        *pixelArrayDimensions = srcRect.size();
+
     return getImageData(Unmultiplied, m_data, srcRect, m_size);
 }
 
-RefPtr<Uint8ClampedArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect, CoordinateSystem coordinateSystem) const
+RefPtr<Uint8ClampedArray> ImageBuffer::getPremultipliedImageData(const IntRect& rect, IntSize* pixelArrayDimensions, CoordinateSystem coordinateSystem) const
 {
     IntRect srcRect = rect;
     if (coordinateSystem == LogicalCoordinateSystem)
         srcRect.scale(m_resolutionScale);
+
+    if (pixelArrayDimensions)
+        *pixelArrayDimensions = srcRect.size();
+
     return getImageData(Premultiplied, m_data, srcRect, m_size);
 }
 
@@ -383,6 +412,7 @@ void ImageBuffer::draw(
         ImagePaintingOptions(
             op,
             bm,
+            DecodingMode::Synchronous,
             DoNotRespectImageOrientation)
         );
 }
@@ -417,8 +447,8 @@ RefPtr<Image> ImageBuffer::sinkIntoImage(std::unique_ptr<ImageBuffer> imageBuffe
 String ImageBuffer::toDataURL(const String& mimeType, std::optional<double>, CoordinateSystem) const
 {
     if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
-        //RenderQueue need to be processed before pixel buffer extraction.
-        //For that purpose it has to be in actual state.
+        // RenderQueue need to be processed before pixel buffer extraction.
+        // For that purpose it has to be in actual state.
         context().platformContext()->rq().flushBuffer();
 
         JNIEnv* env = WebCore_GetJavaEnv();
@@ -440,6 +470,38 @@ String ImageBuffer::toDataURL(const String& mimeType, std::optional<double>, Coo
         }
     }
     return "data:,";
+}
+
+Vector<uint8_t> ImageBuffer::toData(const String& mimeType, std::optional<double>) const
+{
+    if (MIMETypeRegistry::isSupportedImageMIMETypeForEncoding(mimeType)) {
+        // RenderQueue need to be processed before pixel buffer extraction.
+        // For that purpose it has to be in actual state.
+        context().platformContext()->rq().flushBuffer();
+
+        JNIEnv* env = WebCore_GetJavaEnv();
+
+        static jmethodID midToData = env->GetMethodID(
+                PG_GetImageClass(env),
+                "toData",
+                "(Ljava/lang/String;)Ljava/lang/String;");
+        ASSERT(midToData);
+
+        JLocalRef<jbyteArray> jdata((jbyteArray)env->CallObjectMethod(
+                m_data.getWCImage(),
+                midToData,
+                (jstring) JLString(mimeType.toJavaString(env))));
+
+        CheckAndClearException(env);
+        if (jdata) {
+            uint8_t* dataArray = (uint8_t*)env->GetPrimitiveArrayCritical((jbyteArray)jdata, 0);
+            Vector<uint8_t> data;
+            data.append(dataArray, env->GetArrayLength(jdata));
+            env->ReleasePrimitiveArrayCritical(jdata, dataArray, 0);
+            return data;
+        }
+    }
+    return { };
 }
 
 }

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(WEB_TIMING)
-
 #include "PerformanceEntry.h"
 #include <wtf/text/WTFString.h>
 
@@ -35,8 +33,6 @@ namespace WebCore {
 class PerformanceMark final : public PerformanceEntry {
 public:
     static Ref<PerformanceMark> create(const String& name, double startTime) { return adoptRef(*new PerformanceMark(name, startTime)); }
-
-    bool isMark() const override { return true; }
 
 private:
     PerformanceMark(const String& name, double startTime)
@@ -52,5 +48,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::PerformanceMark)
     static bool isType(const WebCore::PerformanceEntry& entry) { return entry.isMark(); }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif // ENABLE(WEB_TIMING)

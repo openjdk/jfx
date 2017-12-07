@@ -44,6 +44,12 @@ enum PolicyAction {
     PolicyIgnore
 };
 
+enum class ReloadOption {
+    ExpiredOnly = 1 << 0,
+    FromOrigin  = 1 << 1,
+    DisableContentBlockers = 1 << 2,
+};
+
 enum class FrameLoadType {
     Standard,
     Back,
@@ -54,6 +60,7 @@ enum class FrameLoadType {
     RedirectWithLockedBackForwardList, // FIXME: Merge "lockBackForwardList", "lockHistory", "quickRedirect" and "clientRedirect" into a single concept of redirect.
     Replace,
     ReloadFromOrigin,
+    ReloadExpiredOnly
 };
 
 enum class NewFrameOpenerPolicy {
@@ -74,6 +81,11 @@ enum class ShouldOpenExternalURLsPolicy {
     ShouldNotAllow,
     ShouldAllowExternalSchemes,
     ShouldAllow,
+};
+
+enum class InitiatedByMainFrame {
+    Yes,
+    Unknown,
 };
 
 enum ClearProvisionalItemPolicy {

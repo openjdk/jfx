@@ -41,12 +41,12 @@
 #include "LinkBuffer.h"
 #include "MacroAssembler.h"
 
-#if PLATFORM(MAC) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000)
+#if PLATFORM(COCOA)
 #define HAVE_REMAP_JIT 1
 #endif
 
 #if HAVE(REMAP_JIT)
-#if CPU(ARM64) && PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000
+#if CPU(ARM64) && PLATFORM(IOS)
 #define USE_EXECUTE_ONLY_JIT_WRITE_FUNCTION 1
 #endif
 #endif
@@ -82,10 +82,29 @@ using namespace WTF;
 
 namespace JSC {
 
+#if defined(FIXED_EXECUTABLE_MEMORY_POOL_SIZE_IN_MB) && FIXED_EXECUTABLE_MEMORY_POOL_SIZE_IN_MB > 0
+static const size_t fixedExecutableMemoryPoolSize = FIXED_EXECUTABLE_MEMORY_POOL_SIZE_IN_MB * 1024 * 1024;
+#elif CPU(ARM)
+static const size_t fixedExecutableMemoryPoolSize = 16 * 1024 * 1024;
+#elif CPU(ARM64)
+static const size_t fixedExecutableMemoryPoolSize = 64 * 1024 * 1024;
+#elif CPU(X86_64)
+static const size_t fixedExecutableMemoryPoolSize = 1024 * 1024 * 1024;
+#else
+static const size_t fixedExecutableMemoryPoolSize = 32 * 1024 * 1024;
+#endif
+
+#if CPU(ARM)
+static const double executablePoolReservationFraction = 0.15;
+#else
+static const double executablePoolReservationFraction = 0.25;
+#endif
+
 JS_EXPORTDATA uintptr_t startOfFixedExecutableMemoryPool;
 JS_EXPORTDATA uintptr_t endOfFixedExecutableMemoryPool;
+JS_EXPORTDATA bool useFastPermisionsJITCopy { false };
 
-JS_EXPORTDATA JITWriteFunction jitWriteFunction;
+JS_EXPORTDATA JITWriteSeparateHeapsFunction jitWriteSeparateHeapsFunction;
 
 #if !USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION) && HAVE(REMAP_JIT)
 static uintptr_t startOfFixedWritableMemoryPool;
@@ -108,6 +127,12 @@ public:
             ASSERT(m_reservation.size() == reservationSize);
             void* reservationBase = m_reservation.base();
 
+#if ENABLE(FAST_JIT_PERMISSIONS)
+            if (os_thread_self_restrict_rwx_is_supported()) {
+                useFastPermisionsJITCopy = true;
+                os_thread_self_restrict_rwx_to_rx();
+            } else
+#endif
             if (Options::useSeparatedWXHeap()) {
                 // First page of our JIT allocation is reserved.
                 ASSERT(reservationSize >= pageSize() * 2);
@@ -187,22 +212,22 @@ private:
 
 #if USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION)
         // Prevent reading the write thunk code.
-        result = mprotect(stubBase, stubSize, VM_PROT_EXECUTE_ONLY);
+        result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(stubBase), stubSize, true, VM_PROT_EXECUTE);
         RELEASE_ASSERT(!result);
 #endif
 
         // Prevent writing into the executable JIT mapping.
-        result = mprotect(jitBase, jitSize, VM_PROT_READ | VM_PROT_EXECUTE);
+        result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(jitBase), jitSize, true, VM_PROT_READ | VM_PROT_EXECUTE);
         RELEASE_ASSERT(!result);
 
         // Prevent execution in the writable JIT mapping.
-        result = mprotect((void*)writableAddr, jitSize, VM_PROT_READ | VM_PROT_WRITE);
+        result = vm_protect(mach_task_self(), static_cast<vm_address_t>(writableAddr), jitSize, true, VM_PROT_READ | VM_PROT_WRITE);
         RELEASE_ASSERT(!result);
 
         // Zero out writableAddr to avoid leaking the address of the writable mapping.
         memset_s(&writableAddr, sizeof(writableAddr), 0, sizeof(writableAddr));
 
-        jitWriteFunction = reinterpret_cast<JITWriteFunction>(writeThunk.code().executableAddress());
+        jitWriteSeparateHeapsFunction = reinterpret_cast<JITWriteSeparateHeapsFunction>(writeThunk.code().executableAddress());
     }
 
 #if CPU(ARM64) && USE(EXECUTE_ONLY_JIT_WRITE_FUNCTION)
@@ -304,15 +329,25 @@ private:
 };
 
 static FixedVMPoolExecutableAllocator* allocator;
+static ExecutableAllocator* executableAllocator;
 
 void ExecutableAllocator::initializeAllocator()
 {
     ASSERT(!allocator);
     allocator = new FixedVMPoolExecutableAllocator();
     CodeProfiling::notifyAllocator(allocator);
+
+    executableAllocator = new ExecutableAllocator;
 }
 
-ExecutableAllocator::ExecutableAllocator(VM&)
+ExecutableAllocator& ExecutableAllocator::singleton()
+{
+    ASSERT(allocator);
+    ASSERT(executableAllocator);
+    return *executableAllocator;
+}
+
+ExecutableAllocator::ExecutableAllocator()
 {
     ASSERT(allocator);
 }
@@ -355,7 +390,7 @@ double ExecutableAllocator::memoryPressureMultiplier(size_t addedMemoryUsage)
     return result;
 }
 
-RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(VM&, size_t sizeInBytes, void* ownerUID, JITCompilationEffort effort)
+RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(size_t sizeInBytes, void* ownerUID, JITCompilationEffort effort)
 {
     if (Options::logExecutableAllocation()) {
         MetaAllocator::Statistics stats = allocator->currentStatistics();
@@ -377,8 +412,11 @@ RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(VM&, size_t sizeInB
         size_t bytesAllocated = statistics.bytesAllocated + sizeInBytes;
         size_t bytesAvailable = static_cast<size_t>(
             statistics.bytesReserved * (1 - executablePoolReservationFraction));
-        if (bytesAllocated > bytesAvailable)
+        if (bytesAllocated > bytesAvailable) {
+            if (Options::logExecutableAllocation())
+                dataLog("Allocation failed because bytes allocated ", bytesAllocated,  " > ", bytesAvailable, " bytes available.\n");
             return nullptr;
+        }
     }
 
     RefPtr<ExecutableMemoryHandle> result = allocator->allocate(sizeInBytes, ownerUID);
@@ -392,7 +430,7 @@ RefPtr<ExecutableMemoryHandle> ExecutableAllocator::allocate(VM&, size_t sizeInB
     return result;
 }
 
-bool ExecutableAllocator::isValidExecutableMemory(const LockHolder& locker, void* address)
+bool ExecutableAllocator::isValidExecutableMemory(const AbstractLocker& locker, void* address)
 {
     return allocator->isInAllocatedMemory(locker, address);
 }

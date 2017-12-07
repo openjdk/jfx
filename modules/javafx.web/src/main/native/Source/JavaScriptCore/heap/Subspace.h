@@ -31,6 +31,8 @@
 
 namespace JSC {
 
+class AlignedMemoryAllocator;
+
 // The idea of subspaces is that you can provide some custom behavior for your objects if you
 // allocate them from a custom Subspace in which you override some of the virtual methods. This
 // class is the baseclass of Subspaces and it provides a reasonable default implementation, where
@@ -44,17 +46,18 @@ class Subspace {
     WTF_MAKE_NONCOPYABLE(Subspace);
     WTF_MAKE_FAST_ALLOCATED;
 public:
-    JS_EXPORT_PRIVATE Subspace(CString name, Heap&, AllocatorAttributes);
+    JS_EXPORT_PRIVATE Subspace(CString name, Heap&, AllocatorAttributes, AlignedMemoryAllocator*);
     JS_EXPORT_PRIVATE virtual ~Subspace();
 
-    const char *name() const { return m_name.data(); }
+    const char* name() const { return m_name.data(); }
     MarkedSpace& space() const { return m_space; }
 
     const AllocatorAttributes& attributes() const { return m_attributes; }
+    AlignedMemoryAllocator* alignedMemoryAllocator() const { return m_alignedMemoryAllocator; }
 
     // The purpose of overriding this is to specialize the sweep for your destructors. This won't
     // be called for no-destructor blocks. This must call MarkedBlock::finishSweepKnowingSubspace.
-    virtual FreeList finishSweep(MarkedBlock::Handle&, MarkedBlock::Handle::SweepMode);
+    virtual void finishSweep(MarkedBlock::Handle&, FreeList*);
 
     // These get called for large objects.
     virtual void destroy(VM&, JSCell*);
@@ -68,6 +71,16 @@ public:
     JS_EXPORT_PRIVATE void* tryAllocate(size_t);
     JS_EXPORT_PRIVATE void* tryAllocate(GCDeferralContext*, size_t);
 
+    void prepareForAllocation();
+
+    void didCreateFirstAllocator(MarkedAllocator* allocator) { m_allocatorForEmptyAllocation = allocator; }
+
+    // Finds an empty block from any Subspace that agrees to trade blocks with us.
+    MarkedBlock::Handle* findEmptyBlockToSteal();
+
+    template<typename Func>
+    void forEachAllocator(const Func&);
+
     template<typename Func>
     void forEachMarkedBlock(const Func&);
 
@@ -80,6 +93,9 @@ public:
     template<typename Func>
     void forEachMarkedCell(const Func&);
 
+    template<typename Func>
+    void forEachLiveCell(const Func&);
+
     static ptrdiff_t offsetOfAllocatorForSizeStep() { return OBJECT_OFFSETOF(Subspace, m_allocatorForSizeStep); }
 
     MarkedAllocator** allocatorForSizeStep() { return &m_allocatorForSizeStep[0]; }
@@ -91,13 +107,18 @@ private:
     void* allocateSlow(GCDeferralContext*, size_t);
     void* tryAllocateSlow(GCDeferralContext*, size_t);
 
+    void didAllocate(void*);
+
     MarkedSpace& m_space;
 
     CString m_name;
     AllocatorAttributes m_attributes;
 
+    AlignedMemoryAllocator* m_alignedMemoryAllocator;
+
     std::array<MarkedAllocator*, MarkedSpace::numSizeClasses> m_allocatorForSizeStep;
     MarkedAllocator* m_firstAllocator { nullptr };
+    MarkedAllocator* m_allocatorForEmptyAllocation { nullptr }; // Uses the MarkedSpace linked list of blocks.
     SentinelLinkedList<LargeAllocation, BasicRawSentinelNode<LargeAllocation>> m_largeAllocations;
 };
 

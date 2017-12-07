@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include <functional>
+#include <wtf/Function.h>
 #include <wtf/Optional.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -52,6 +52,7 @@ struct WindowFeatures {
 
     bool fullscreen { false };
     bool dialog { false };
+    bool noopener { false };
 
     Vector<String> additionalFeatures;
 };
@@ -59,6 +60,7 @@ struct WindowFeatures {
 WindowFeatures parseWindowFeatures(StringView windowFeaturesString);
 WindowFeatures parseDialogFeatures(const String& dialogFeaturesString, const FloatRect& screenAvailableRect);
 
-void processFeaturesString(StringView features, std::function<void(StringView type, StringView value)> callback);
+enum class FeatureMode { Window, Viewport };
+void processFeaturesString(StringView features, FeatureMode, const WTF::Function<void(StringView type, StringView value)>& callback);
 
 } // namespace WebCore

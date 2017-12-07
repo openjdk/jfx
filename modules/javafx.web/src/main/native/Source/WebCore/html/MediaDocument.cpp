@@ -67,17 +67,15 @@ public:
 
 private:
     MediaDocumentParser(MediaDocument& document)
-        : RawDataDocumentParser(document)
-        , m_mediaElement(0)
+        : RawDataDocumentParser { document }
+        , m_outgoingReferrer { document.outgoingReferrer() }
     {
-        m_outgoingReferrer = document.outgoingReferrer();
     }
 
-    void appendBytes(DocumentWriter&, const char*, size_t) override;
-
+    void appendBytes(DocumentWriter&, const char*, size_t) final;
     void createDocumentStructure();
 
-    HTMLMediaElement* m_mediaElement;
+    HTMLMediaElement* m_mediaElement { nullptr };
     String m_outgoingReferrer;
 };
 
@@ -104,38 +102,25 @@ void MediaDocumentParser::createDocumentStructure()
 #endif
 
     auto body = HTMLBodyElement::create(document);
-    if (RuntimeEnabledFeatures::sharedFeatures().modernMediaControlsEnabled()) {
-        StringBuilder bodyStyle;
-        bodyStyle.appendLiteral("margin: 0; padding: 0;");
-        bodyStyle.appendLiteral("background-color: rgb(38, 38, 38);");
-        bodyStyle.appendLiteral("display: flex; justify-content: center; align-items: center;");
-        body->setAttribute(styleAttr, bodyStyle.toString());
-    }
     rootElement->appendChild(body);
 
     auto videoElement = HTMLVideoElement::create(document);
     m_mediaElement = videoElement.ptr();
-    videoElement->setAttributeWithoutSynchronization(controlsAttr, emptyAtom);
-    videoElement->setAttributeWithoutSynchronization(autoplayAttr, emptyAtom);
-    videoElement->setAttributeWithoutSynchronization(nameAttr, AtomicString("media", AtomicString::ConstructFromLiteral));
-
-    StringBuilder elementStyle;
-    elementStyle.appendLiteral("max-width: 100%; max-height: 100%;");
-#if PLATFORM(IOS)
-    elementStyle.appendLiteral("width: 100%; height: auto;");
-#endif
-    if (RuntimeEnabledFeatures::sharedFeatures().modernMediaControlsEnabled()) {
-        elementStyle.appendLiteral("min-height: 50px;");
-    }
-    videoElement->setAttribute(styleAttr, elementStyle.toString());
-
-    auto sourceElement = HTMLSourceElement::create(document);
-    sourceElement->setSrc(document.url());
-
+    videoElement->setAttributeWithoutSynchronization(controlsAttr, emptyAtom());
+    videoElement->setAttributeWithoutSynchronization(autoplayAttr, emptyAtom());
+    videoElement->setAttributeWithoutSynchronization(srcAttr, document.url().string());
     if (auto* loader = document.loader())
-        sourceElement->setType(loader->responseMIMEType());
+        videoElement->setAttributeWithoutSynchronization(typeAttr, loader->responseMIMEType());
 
-    videoElement->appendChild(sourceElement);
+    if (!RuntimeEnabledFeatures::sharedFeatures().modernMediaControlsEnabled()) {
+        StringBuilder elementStyle;
+        elementStyle.appendLiteral("max-width: 100%; max-height: 100%;");
+#if PLATFORM(IOS)
+        elementStyle.appendLiteral("width: 100%; height: auto;");
+#endif
+        videoElement->setAttribute(styleAttr, elementStyle.toString());
+    }
+
     body->appendChild(videoElement);
 
     Frame* frame = document.frame();
@@ -193,6 +178,11 @@ static inline HTMLVideoElement* ancestorVideoElement(Node* node)
 
 void MediaDocument::defaultEventHandler(Event& event)
 {
+    // Modern media controls have their own event handling to determine when to
+    // pause or resume playback.
+    if (RuntimeEnabledFeatures::sharedFeatures().modernMediaControlsEnabled())
+        return;
+
     // Match the default Quicktime plugin behavior to allow
     // clicking and double-clicking to pause and play the media.
     Node* targetNode = event.target()->toNode();
@@ -240,7 +230,7 @@ void MediaDocument::mediaElementSawUnsupportedTracks()
     // and let the plugin handle this. Don't do it immediately as this
     // function may be called directly from a media engine callback, and
     // replaceChild will destroy the element, media player, and media engine.
-    m_replaceMediaElementTimer.startOneShot(0);
+    m_replaceMediaElementTimer.startOneShot(0_s);
 }
 
 void MediaDocument::replaceMediaElementTimerFired()

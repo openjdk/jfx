@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,7 @@
 
 #include "CodeBlock.h"
 #include "DFGCommon.h"
-#include "Interpreter.h"
+#include "InterpreterInlines.h"
 #include "JSCInlines.h"
 #include "Options.h"
 
@@ -92,10 +92,15 @@ bool canUseOSRExitFuzzing(CodeBlock* codeBlock)
     return codeBlock->ownerScriptExecutable()->canUseOSRExitFuzzing();
 }
 
+static bool verboseCapabilities()
+{
+    return verboseCompilationEnabled() || Options::verboseDFGFailure();
+}
+
 inline void debugFail(CodeBlock* codeBlock, OpcodeID opcodeID, CapabilityLevel result)
 {
-    if (Options::verboseCompilation() && !canCompile(result))
-        dataLog("Cannot compile code block ", *codeBlock, " because of opcode ", opcodeNames[opcodeID], "\n");
+    if (verboseCapabilities() && !canCompile(result))
+        dataLog("DFG rejecting opcode in ", *codeBlock, " because of opcode ", opcodeNames[opcodeID], "\n");
 }
 
 CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruction* pc)
@@ -187,7 +192,8 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
     case op_jngreater:
     case op_jngreatereq:
     case op_loop_hint:
-    case op_watchdog:
+    case op_check_traps:
+    case op_nop:
     case op_ret:
     case op_end:
     case op_new_object:
@@ -247,7 +253,9 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
     case op_log_shadow_chicken_tail:
     case op_put_to_scope:
     case op_resolve_scope:
+    case op_resolve_scope_for_hoisting_func_decl_in_eval:
     case op_new_regexp:
+    case op_unreachable:
         return CanCompileAndInline;
 
     case op_switch_string: // Don't inline because we don't want to copy string tables in the concurrent JIT.
@@ -261,13 +269,12 @@ CapabilityLevel capabilityLevel(OpcodeID opcodeID, CodeBlock* codeBlock, Instruc
 
 CapabilityLevel capabilityLevel(CodeBlock* codeBlock)
 {
-    Interpreter* interpreter = codeBlock->vm()->interpreter;
     Instruction* instructionsBegin = codeBlock->instructions().begin();
     unsigned instructionCount = codeBlock->instructions().size();
     CapabilityLevel result = CanCompileAndInline;
 
     for (unsigned bytecodeOffset = 0; bytecodeOffset < instructionCount; ) {
-        switch (interpreter->getOpcodeID(instructionsBegin[bytecodeOffset].u.opcode)) {
+        switch (Interpreter::getOpcodeID(instructionsBegin[bytecodeOffset].u.opcode)) {
 #define DEFINE_OP(opcode, length) \
         case opcode: { \
             CapabilityLevel newResult = leastUpperBound(result, capabilityLevel(opcode, codeBlock, instructionsBegin + bytecodeOffset)); \

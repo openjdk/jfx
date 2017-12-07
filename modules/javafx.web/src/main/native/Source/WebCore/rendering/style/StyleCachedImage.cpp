@@ -29,6 +29,7 @@
 #include "CSSImageValue.h"
 #include "CachedImage.h"
 #include "RenderElement.h"
+#include "RenderView.h"
 
 namespace WebCore {
 
@@ -65,6 +66,21 @@ bool StyleCachedImage::operator==(const StyleImage& other) const
     if (m_cachedImage && m_cachedImage == otherCached.m_cachedImage)
         return true;
     return false;
+}
+
+URL StyleCachedImage::imageURL()
+{
+    if (is<CSSImageValue>(m_cssValue))
+        return downcast<CSSImageValue>(m_cssValue.get()).url();
+
+    if (is<CSSImageSetValue>(m_cssValue))
+        return downcast<CSSImageSetValue>(m_cssValue.get()).bestImageForScaleFactorURL();
+
+    if (is<CSSCursorImageValue>(m_cssValue.get()))
+        return downcast<CSSCursorImageValue>(m_cssValue.get()).imageURL();
+
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
 void StyleCachedImage::load(CachedResourceLoader& loader, const ResourceLoaderOptions& options)
@@ -164,11 +180,11 @@ bool StyleCachedImage::usesImageContainerSize() const
     return m_cachedImage->usesImageContainerSize();
 }
 
-void StyleCachedImage::setContainerSizeForRenderer(const RenderElement* renderer, const FloatSize& imageContainerSize, float imageContainerZoomFactor)
+void StyleCachedImage::setContainerContextForRenderer(const RenderElement& renderer, const FloatSize& containerSize, float containerZoom)
 {
     if (!m_cachedImage)
         return;
-    m_cachedImage->setContainerSizeForRenderer(renderer, LayoutSize(imageContainerSize), imageContainerZoomFactor);
+    m_cachedImage->setContainerContextForClient(renderer, LayoutSize(containerSize), containerZoom, imageURL());
 }
 
 void StyleCachedImage::addClient(RenderElement* renderer)
@@ -186,6 +202,7 @@ void StyleCachedImage::removeClient(RenderElement* renderer)
     if (!m_cachedImage)
         return;
     ASSERT(renderer);
+
     m_cachedImage->removeClient(*renderer);
 }
 

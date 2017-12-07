@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "SoftLinking.h"
 #import <objc/runtime.h>
+#import <wtf/SoftLinking.h>
 
 #if PLATFORM(IOS)
 #import <AVKit/AVKit.h>
@@ -147,20 +147,43 @@ NS_ASSUME_NONNULL_BEGIN
 @interface AVValueTiming ()
 + (AVValueTiming *)valueTimingWithAnchorValue:(double)anchorValue anchorTimeStamp:(NSTimeInterval)timeStamp rate:(double)rate;
 @property (NS_NONATOMIC_IOSONLY, readonly) double currentValue;
+@property (NS_NONATOMIC_IOSONLY, readonly) double rate;
+@property (NS_NONATOMIC_IOSONLY, readonly) NSTimeInterval anchorTimeStamp;
+@property (NS_NONATOMIC_IOSONLY, readonly) double anchorValue;
+
++ (NSTimeInterval)currentTimeStamp;
+- (double)valueForTimeStamp:(NSTimeInterval)timeStamp;
 @end
 
 NS_ASSUME_NONNULL_END
 
 #if PLATFORM(MAC) && ENABLE(WEB_PLAYBACK_CONTROLS_MANAGER)
 
+OBJC_CLASS AVFunctionBarPlaybackControlsProvider;
+OBJC_CLASS AVFunctionBarScrubber;
+OBJC_CLASS AVFunctionBarMediaSelectionOption;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101300
+OBJC_CLASS AVTouchBarPlaybackControlsProvider;
+OBJC_CLASS AVTouchBarScrubber;
+OBJC_CLASS AVTouchBarMediaSelectionOption;
+#else
+typedef AVFunctionBarMediaSelectionOption AVTouchBarMediaSelectionOption;
+#endif
+
 #if USE(APPLE_INTERNAL_SDK)
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+#import <AVKit/AVTouchBarPlaybackControlsProvider.h>
+#import <AVKit/AVTouchBarScrubber.h>
+#else
 #import <AVKit/AVFunctionBarPlaybackControlsProvider.h>
 #import <AVKit/AVFunctionBarScrubber.h>
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+
 #else
 
 NS_ASSUME_NONNULL_BEGIN
 
-@protocol AVFunctionBarPlaybackControlsControlling <NSObject>
+__attribute__((availability(macosx,obsoleted=10.13))) @protocol AVFunctionBarPlaybackControlsControlling <NSObject>;
 @property (readonly) NSTimeInterval contentDuration;
 @property (readonly, nullable) AVValueTiming *timing;
 @property (readonly, getter=isSeeking) BOOL seeking;
@@ -170,17 +193,57 @@ NS_ASSUME_NONNULL_BEGIN
 @property (readonly) BOOL hasEnabledVideo;
 @end
 
-@interface AVFunctionBarPlaybackControlsProvider : NSResponder
+__attribute__((availability(macosx,obsoleted=10.13))) @interface AVFunctionBarPlaybackControlsProvider : NSResponder
 @property (strong, readonly, nullable) NSTouchBar *touchBar;
 @property (assign, nullable) id<AVFunctionBarPlaybackControlsControlling> playbackControlsController;
 @end
 
-@interface AVFunctionBarScrubber : NSView
+@class AVThumbnail;
+
+__attribute__((availability(macosx,obsoleted=10.13))) @interface AVFunctionBarScrubber : NSView
 @property (assign, nullable) id<AVFunctionBarPlaybackControlsControlling> playbackControlsController;
 @end
 
-@class AVFunctionBarMediaSelectionOption;
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101300
+
+@protocol AVTouchBarPlaybackControlsControlling <NSObject>
+@property (readonly) NSTimeInterval contentDuration;
+@property (readonly, nullable) AVValueTiming *timing;
+@property (readonly, getter = isSeeking) BOOL seeking;
+@property (readonly) NSTimeInterval seekToTime;
+- (void)seekToTime:(NSTimeInterval)time toleranceBefore:(NSTimeInterval)toleranceBefore toleranceAfter:(NSTimeInterval)toleranceAfter;
+@property (readonly) BOOL hasEnabledAudio;
+@property (readonly) BOOL hasEnabledVideo;
+@property (readonly) BOOL allowsPictureInPicturePlayback;
+@property (readonly, getter=isPictureInPictureActive) BOOL pictureInPictureActive;
+@property (readonly) BOOL canTogglePictureInPicture;
+- (void)togglePictureInPicture;
+
+typedef NS_ENUM(NSInteger, AVTouchBarMediaSelectionOptionType) {
+    AVTouchBarMediaSelectionOptionTypeRegular,
+    AVTouchBarMediaSelectionOptionTypeLegibleOff,
+    AVTouchBarMediaSelectionOptionTypeLegibleAuto,
+};
+
+@end
+
+@interface AVTouchBarPlaybackControlsProvider : NSResponder
+@property (strong, readonly, nullable) NSTouchBar *touchBar;
+@property (assign, nullable) id<AVTouchBarPlaybackControlsControlling> playbackControlsController;
+@end
+
+@interface AVTouchBarScrubber : NSView
+@property (assign, nullable) id<AVTouchBarPlaybackControlsControlling> playbackControlsController;
+@property BOOL canShowMediaSelectionButton;
+@end
+
+@interface AVTouchBarMediaSelectionOption : NSObject
+- (instancetype)initWithTitle:(nonnull NSString *)title type:(AVTouchBarMediaSelectionOptionType)type;
+@end
+
 @class AVThumbnail;
+
+#endif
 
 NS_ASSUME_NONNULL_END
 

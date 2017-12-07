@@ -9,6 +9,7 @@
 #include <JavaScriptCore/CallFrame.h>
 #include <JavaScriptCore/Identifier.h>
 
+#include "Document.h"
 #include "Frame.h"
 #include "JavaInstanceJSC.h"
 #include "JavaArrayJSC.h"
@@ -42,24 +43,10 @@
   return cls
 #endif
 
-static jclass getJSObjectClass (JNIEnv *env)
-{
-    FIND_CACHE_CLASS(env, "com/sun/webkit/dom/JSObject");
-}
-
-static jclass getJSExceptionClass (JNIEnv *env)
-{
-    FIND_CACHE_CLASS(env, "netscape/javascript/JSException");
-}
-
+#if 0
 static jclass getNodeImplClass (JNIEnv *env)
 {
     FIND_CACHE_CLASS(env, "com/sun/webkit/dom/NodeImpl");
-}
-
-static jclass getNumberClass (JNIEnv *env)
-{
-    FIND_CACHE_CLASS(env, "java/lang/Number");
 }
 
 static jclass getDoubleClass (JNIEnv *env)
@@ -70,6 +57,22 @@ static jclass getDoubleClass (JNIEnv *env)
 static jclass getIntegerClass (JNIEnv *env)
 {
     FIND_CACHE_CLASS(env, "java/lang/Integer");
+}
+#endif
+
+static jclass getJSObjectClass (JNIEnv *env)
+{
+    FIND_CACHE_CLASS(env, "com/sun/webkit/dom/JSObject");
+}
+
+static jclass getJSExceptionClass (JNIEnv *env)
+{
+    FIND_CACHE_CLASS(env, "netscape/javascript/JSException");
+}
+
+static jclass getNumberClass (JNIEnv *env)
+{
+    FIND_CACHE_CLASS(env, "java/lang/Number");
 }
 
 static jclass getBooleanClass (JNIEnv *env)
@@ -176,7 +179,7 @@ JSValueRef Java_Object_to_JSValue(
     }
     else {
         // All other Java Object types including java.lang.Character will be wrapped inside JavaInstance.
-        PassRefPtr<JSC::Bindings::JavaInstance> jinstance = JSC::Bindings::JavaInstance::create(val, rootObject, accessControlContext);
+        RefPtr<JSC::Bindings::JavaInstance> jinstance = JSC::Bindings::JavaInstance::create(val, rootObject, accessControlContext);
         return toRef(jinstance->createRuntimeObject(exec));
     }
 }
@@ -245,7 +248,7 @@ jobject executeScript(
 }
 
 
-PassRefPtr<JSC::Bindings::RootObject> checkJSPeer(
+RefPtr<JSC::Bindings::RootObject> checkJSPeer(
     jlong peer,
     jint peer_type,
     JSObjectRef &object,
@@ -274,7 +277,7 @@ PassRefPtr<JSC::Bindings::RootObject> checkJSPeer(
             if (!frame) {
                 return rootObject;
             }
-            rootObject = frame->script().createRootObject(frame).leakRef();
+            rootObject = &(frame->script().createRootObject(frame).leakRef());
             if (rootObject) {
                 context = WebCore::getGlobalContext(&frame->script());
                 JSC::ExecState* exec = toJS(context);
@@ -450,7 +453,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_webkit_dom_JSObject_callImpl
         return JSC::Bindings::convertUndefinedToJObject();
     size_t argumentCount = env->GetArrayLength(args);
     JSValueRef *arguments = new JSValueRef[argumentCount];
-    for (int i = 0;  i < argumentCount; i++) {
+    for (size_t i = 0;  i < argumentCount; i++) {
       JLObject jarg(env->GetObjectArrayElement(args, i));
         arguments[i] = WebCore::Java_Object_to_JSValue(env, ctx, rootObject.get(), jarg, accessControlContext);
     }

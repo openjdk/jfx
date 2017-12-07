@@ -28,9 +28,11 @@
 
 #import "TestController.h"
 #import "TestRunnerWKWebView.h"
+#import "UIKitTestSPI.h"
 #import <WebCore/QuartzCoreSPI.h>
 #import <WebKit/WKImageCG.h>
 #import <WebKit/WKPreferencesPrivate.h>
+#import <WebKit/WKSnapshotConfiguration.h>
 #import <WebKit/WKWebViewConfiguration.h>
 #import <WebKit/WKWebViewPrivate.h>
 #import <wtf/BlockObjCExceptions.h>
@@ -114,6 +116,48 @@ enum class WebViewSizingMode {
     HeightRespectsStatusBar
 };
 
+static CGRect viewRectForWindowRect(CGRect, PlatformWebView::WebViewSizingMode);
+
+} // namespace WTR
+
+@interface PlatformWebViewController : UIViewController
+@end
+
+@implementation PlatformWebViewController
+
+- (void)viewWillTransitionToSize:(CGSize)toSize withTransitionCoordinator:(id <UIViewControllerTransitionCoordinator>)coordinator
+{
+    [super viewWillTransitionToSize:toSize withTransitionCoordinator:coordinator];
+
+    TestRunnerWKWebView *webView = WTR::TestController::singleton().mainWebView()->platformView();
+
+    if (webView.usesSafariLikeRotation)
+        [webView _setInterfaceOrientationOverride:[[UIApplication sharedApplication] statusBarOrientation]];
+
+    [coordinator animateAlongsideTransition: ^(id<UIViewControllerTransitionCoordinatorContext> context) {
+        // This code assumes that we should take the status bar into account, which we only do for flexible viewport tests,
+        // but it only makes sense to test rotation with a flexible viewport anyway.
+        if (webView.usesSafariLikeRotation) {
+            [webView _beginAnimatedResizeWithUpdates:^{
+                webView.frame = viewRectForWindowRect(self.view.bounds, WTR::PlatformWebView::WebViewSizingMode::HeightRespectsStatusBar);
+                [webView _overrideLayoutParametersWithMinimumLayoutSize:webView.frame.size maximumUnobscuredSizeOverride:webView.frame.size];
+                [webView _setInterfaceOrientationOverride:[[UIApplication sharedApplication] statusBarOrientation]];
+            }];
+        } else
+            webView.frame = viewRectForWindowRect(self.view.bounds, WTR::PlatformWebView::WebViewSizingMode::HeightRespectsStatusBar);
+    } completion:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+        webView.frame = viewRectForWindowRect(self.view.bounds, WTR::PlatformWebView::WebViewSizingMode::HeightRespectsStatusBar);
+        if (webView.usesSafariLikeRotation)
+            [webView _endAnimatedResize];
+
+        [webView _didEndRotation];
+    }];
+}
+
+@end
+
+namespace WTR {
+
 static CGRect viewRectForWindowRect(CGRect windowRect, PlatformWebView::WebViewSizingMode mode)
 {
     CGFloat statusBarBottom = CGRectGetMaxY([[UIApplication sharedApplication] statusBarFrame]);
@@ -130,7 +174,7 @@ PlatformWebView::PlatformWebView(WKWebViewConfiguration* configuration, const Te
     m_window.backgroundColor = [UIColor lightGrayColor];
     m_window.platformWebView = this;
 
-    UIViewController *viewController = [[UIViewController alloc] init];
+    UIViewController *viewController = [[PlatformWebViewController alloc] init];
     [m_window setRootViewController:viewController];
     [viewController release];
 
@@ -250,11 +294,33 @@ void PlatformWebView::changeWindowScaleIfNeeded(float)
     // Retina only surface.
 }
 
-WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
+#if !USE(IOSURFACE)
+static void releaseDataProviderData(void* info, const void*, size_t)
+{
+    CARenderServerDestroyBuffer(static_cast<CARenderServerBufferRef>(info));
+}
+#endif
+
+RetainPtr<CGImageRef> PlatformWebView::windowSnapshotImage()
 {
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
 #if USE(IOSURFACE)
-    return nullptr;
+    __block bool isDone = false;
+    __block RetainPtr<CGImageRef> result;
+    
+    RetainPtr<WKSnapshotConfiguration> snapshotConfiguration = adoptNS([[WKSnapshotConfiguration alloc] init]);
+    [snapshotConfiguration setRect:CGRectMake(0, 0, m_view.frame.size.width, m_view.frame.size.height)];
+    [snapshotConfiguration setSnapshotWidth:@(m_view.frame.size.width)];
+    
+    [m_view takeSnapshotWithConfiguration:snapshotConfiguration.get() completionHandler:^(UIImage *snapshotImage, NSError *error) {
+        if (!error)
+            result = [snapshotImage CGImage];
+        isDone = true;
+    }];
+    while (!isDone)
+        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
+    return result;
+
 #else
     CGFloat deviceScaleFactor = 2; // FIXME: hardcode 2x for now. In future we could respect 1x and 3x as we do on Mac.
     CATransform3D transform = CATransform3DMakeScale(deviceScaleFactor, deviceScaleFactor, 1);
@@ -279,29 +345,13 @@ WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
     size_t rowBytes = CARenderServerGetBufferRowBytes(buffer);
 
     static CGColorSpaceRef sRGBSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-    RetainPtr<CGDataProviderRef> provider = adoptCF(CGDataProviderCreateWithData(0, data, CARenderServerGetBufferDataSize(buffer), nullptr));
+    RetainPtr<CGDataProviderRef> provider = adoptCF(CGDataProviderCreateWithData(0, data, CARenderServerGetBufferDataSize(buffer), releaseDataProviderData));
     
     RetainPtr<CGImageRef> cgImage = adoptCF(CGImageCreate(bufferWidth, bufferHeight, 8, 32, rowBytes, sRGBSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Host, provider.get(), 0, false, kCGRenderingIntentDefault));
-    WKRetainPtr<WKImageRef> result = adoptWK(WKImageCreateFromCGImage(cgImage.get(), 0));
 
-    CARenderServerDestroyBuffer(buffer);
-
-    return result;
+    return cgImage;
 #endif
     END_BLOCK_OBJC_EXCEPTIONS;
-}
-
-bool PlatformWebView::viewSupportsOptions(const TestOptions& options) const
-{
-    if (m_options.overrideLanguages != options.overrideLanguages
-        || m_options.needsSiteSpecificQuirks != options.needsSiteSpecificQuirks
-        || m_options.useCharacterSelectionGranularity != options.useCharacterSelectionGranularity
-        || m_options.enableIntersectionObserver != options.enableIntersectionObserver
-        || m_options.enableModernMediaControls != options.enableModernMediaControls
-        || m_options.enablePointerLock != options.enablePointerLock)
-        return false;
-
-    return true;
 }
 
 void PlatformWebView::setNavigationGesturesEnabled(bool enabled)

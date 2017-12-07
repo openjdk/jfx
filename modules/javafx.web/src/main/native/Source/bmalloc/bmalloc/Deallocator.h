@@ -26,7 +26,9 @@
 #ifndef Deallocator_h
 #define Deallocator_h
 
+#include "BExport.h"
 #include "FixedVector.h"
+#include "SmallPage.h"
 #include <mutex>
 
 namespace bmalloc {
@@ -39,20 +41,23 @@ class StaticMutex;
 
 class Deallocator {
 public:
-    Deallocator(Heap*);
+    Deallocator(Heap&);
     ~Deallocator();
 
     void deallocate(void*);
     void scavenge();
 
-    void processObjectLog();
     void processObjectLog(std::lock_guard<StaticMutex>&);
+
+    LineCache& lineCache(std::lock_guard<StaticMutex>&) { return m_lineCache; }
 
 private:
     bool deallocateFastCase(void*);
-    void deallocateSlowCase(void*);
+    BEXPORT void deallocateSlowCase(void*);
 
+    Heap& m_heap;
     FixedVector<void*, deallocatorLogCapacity> m_objectLog;
+    LineCache m_lineCache; // The Heap removes items from this cache.
     DebugHeap* m_debugHeap;
 };
 

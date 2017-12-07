@@ -29,6 +29,8 @@
 #include "BreakLines.h"
 #include "BreakingContext.h"
 #include "CharacterProperties.h"
+#include "DocumentMarker.h"
+#include "DocumentMarkerController.h"
 #include "EllipsisBox.h"
 #include "FloatQuad.h"
 #include "Frame.h"
@@ -41,6 +43,7 @@
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderView.h"
+#include "RenderedDocumentMarker.h"
 #include "Settings.h"
 #include "SimpleLineLayoutFunctions.h"
 #include "Text.h"
@@ -66,13 +69,13 @@ using namespace Unicode;
 namespace WebCore {
 
 struct SameSizeAsRenderText : public RenderObject {
+    void* pointers[2];
     uint32_t bitfields : 16;
 #if ENABLE(TEXT_AUTOSIZING)
     float candidateTextSize;
 #endif
     float widths[4];
     String text;
-    void* pointers[2];
 };
 
 COMPILE_ASSERT(sizeof(RenderText) == sizeof(SameSizeAsRenderText), RenderText_should_stay_small);
@@ -107,7 +110,7 @@ inline SecureTextTimer::SecureTextTimer(RenderText& renderer)
 inline void SecureTextTimer::restart(unsigned offsetAfterLastTypedCharacter)
 {
     m_offsetAfterLastTypedCharacter = offsetAfterLastTypedCharacter;
-    startOneShot(m_renderer.settings().passwordEchoDurationInSeconds());
+    startOneShot(1_s * m_renderer.settings().passwordEchoDurationInSeconds());
 }
 
 inline unsigned SecureTextTimer::takeOffsetAfterLastTypedCharacter()
@@ -444,7 +447,11 @@ Vector<FloatQuad> RenderText::absoluteQuadsForRange(unsigned start, unsigned end
 Position RenderText::positionForPoint(const LayoutPoint& point)
 {
     if (simpleLineLayout() && parent()->firstChild() == parent()->lastChild()) {
-        auto position = Position(textNode(), SimpleLineLayout::textOffsetForPoint(point, *this, *simpleLineLayout()));
+        auto offset = SimpleLineLayout::textOffsetForPoint(point, *this, *simpleLineLayout());
+        // Did not find a valid offset. Fall back to the normal line layout based Position.
+        if (offset == textLength())
+            return positionForPoint(point, nullptr).deepEquivalent();
+        auto position = Position(textNode(), offset);
         ASSERT(position == positionForPoint(point, nullptr).deepEquivalent());
         return position;
     }
@@ -820,8 +827,6 @@ void RenderText::computePreferredLogicalWidths(float leadWidth, HashSet<const Fo
     std::optional<unsigned> nextBreakable;
     unsigned lastWordBoundary = 0;
 
-    // Non-zero only when kerning is enabled, in which case we measure words with their trailing
-    // space, then subtract its width.
     WordTrailingSpace wordTrailingSpace(style);
     // If automatic hyphenation is allowed, we keep track of the width of the widest word (or word
     // fragment) encountered so far, and only try hyphenating words that are wider.
@@ -1065,6 +1070,30 @@ bool RenderText::containsOnlyWhitespace(unsigned from, unsigned len) const
     return currPos >= (from + len);
 }
 
+Vector<std::pair<unsigned, unsigned>> RenderText::draggedContentRangesBetweenOffsets(unsigned startOffset, unsigned endOffset) const
+{
+    if (!textNode())
+        return { };
+
+    auto markers = document().markers().markersFor(textNode(), DocumentMarker::DraggedContent);
+    if (markers.isEmpty())
+        return { };
+
+    Vector<std::pair<unsigned, unsigned>> draggedContentRanges;
+    for (auto* marker : markers) {
+        unsigned markerStart = std::max(marker->startOffset(), startOffset);
+        unsigned markerEnd = std::min(marker->endOffset(), endOffset);
+        if (markerStart >= markerEnd || markerStart > endOffset || markerEnd < startOffset)
+            continue;
+
+        std::pair<unsigned, unsigned> draggedContentRange;
+        draggedContentRange.first = markerStart;
+        draggedContentRange.second = markerEnd;
+        draggedContentRanges.append(draggedContentRange);
+    }
+    return draggedContentRanges;
+}
+
 IntPoint RenderText::firstRunLocation() const
 {
     if (auto* layout = simpleLineLayout())
@@ -1283,7 +1312,7 @@ void RenderText::setText(const String& text, bool force)
         downcast<RenderBlockFlow>(*parent()).invalidateLineLayoutPath();
 
     if (AXObjectCache* cache = document().existingAXObjectCache())
-        cache->textChanged(this);
+        cache->deferTextChangedIfNeeded(textNode());
 }
 
 String RenderText::textWithoutConvertingBackslashToYenSymbol() const
@@ -1509,15 +1538,8 @@ int RenderText::previousOffset(int current) const
         return current - 1;
 
     StringImpl* textImpl = m_text.impl();
-    UBreakIterator* iterator = cursorMovementIterator(StringView(textImpl->characters16(), textImpl->length()));
-    if (!iterator)
-        return current - 1;
-
-    long result = ubrk_preceding(iterator, current);
-    if (result == UBRK_DONE)
-        result = current - 1;
-
-
+    CachedTextBreakIterator iterator(StringView(textImpl->characters16(), textImpl->length()), TextBreakIterator::Mode::Caret, nullAtom());
+    auto result = iterator.preceding(current).value_or(current - 1);
     return result;
 }
 
@@ -1689,14 +1711,8 @@ int RenderText::nextOffset(int current) const
         return current + 1;
 
     StringImpl* textImpl = m_text.impl();
-    UBreakIterator* iterator = cursorMovementIterator(StringView(textImpl->characters16(), textImpl->length()));
-    if (!iterator)
-        return current + 1;
-
-    long result = ubrk_following(iterator, current);
-    if (result == UBRK_DONE)
-        result = current + 1;
-
+    CachedTextBreakIterator iterator(StringView(textImpl->characters16(), textImpl->length()), TextBreakIterator::Mode::Caret, nullAtom());
+    auto result = iterator.following(current).value_or(current + 1);
     return result;
 }
 

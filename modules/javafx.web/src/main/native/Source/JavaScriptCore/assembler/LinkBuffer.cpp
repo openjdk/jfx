@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,10 @@
 #if ENABLE(ASSEMBLER)
 
 #include "CodeBlock.h"
+#include "Disassembler.h"
 #include "JITCode.h"
 #include "JSCInlines.h"
 #include "Options.h"
-#include "VM.h"
 #include <wtf/CompilationThread.h>
 
 namespace JSC {
@@ -237,8 +237,12 @@ void LinkBuffer::allocate(MacroAssembler& macroAssembler, void* ownerUID, JITCom
         return;
     }
 
-    ASSERT(m_vm != nullptr);
-    m_executableMemory = m_vm->executableAllocator.allocate(*m_vm, initialSize, ownerUID, effort);
+    while (initialSize % jitAllocationGranule) {
+        macroAssembler.breakpoint();
+        initialSize = macroAssembler.m_assembler.codeSize();
+    }
+
+    m_executableMemory = ExecutableAllocator::singleton().allocate(initialSize, ownerUID, effort);
     if (!m_executableMemory)
         return;
     m_code = m_executableMemory->start();

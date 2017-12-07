@@ -31,7 +31,6 @@
 #include "ImplicitAnimation.h"
 #include "KeyframeAnimation.h"
 #include <wtf/HashMap.h>
-#include <wtf/Noncopyable.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
@@ -59,7 +58,7 @@ public:
     std::unique_ptr<RenderStyle> getAnimatedStyle() const;
     bool computeExtentOfTransformAnimation(LayoutRect&) const;
 
-    double timeToNextService() const;
+    std::optional<Seconds> timeToNextService() const;
 
     CSSAnimationControllerPrivate& animationController() const { return m_animationController; }
 

@@ -41,6 +41,7 @@
 #include "StopIfNecessaryTimer.h"
 #include "SuperSampler.h"
 #include "VM.h"
+#include <wtf/ListDump.h>
 #include <wtf/Lock.h>
 
 namespace JSC {
@@ -222,49 +223,37 @@ void SlotVisitor::appendJSCellOrAuxiliary(HeapCell* heapCell)
     } }
 }
 
-void SlotVisitor::appendUnbarriered(JSValue value)
+void SlotVisitor::appendSlow(JSCell* cell, Dependency dependency)
 {
-    if (!value || !value.isCell())
-        return;
-
     if (UNLIKELY(m_heapSnapshotBuilder))
-        m_heapSnapshotBuilder->appendEdge(m_currentCell, value.asCell());
+        m_heapSnapshotBuilder->appendEdge(m_currentCell, cell);
 
-    setMarkedAndAppendToMarkStack(value.asCell());
+    appendHiddenSlowImpl(cell, dependency);
 }
 
-void SlotVisitor::appendHidden(JSValue value)
+void SlotVisitor::appendHiddenSlow(JSCell* cell, Dependency dependency)
 {
-    if (!value || !value.isCell())
-        return;
-
-    setMarkedAndAppendToMarkStack(value.asCell());
+    appendHiddenSlowImpl(cell, dependency);
 }
 
-void SlotVisitor::setMarkedAndAppendToMarkStack(JSCell* cell)
+ALWAYS_INLINE void SlotVisitor::appendHiddenSlowImpl(JSCell* cell, Dependency dependency)
 {
-    SuperSamplerScope superSamplerScope(false);
-
     ASSERT(!m_isCheckingForDefaultMarkViolation);
-    if (!cell)
-        return;
 
 #if ENABLE(GC_VALIDATION)
     validate(cell);
 #endif
 
     if (cell->isLargeAllocation())
-        setMarkedAndAppendToMarkStack(cell->largeAllocation(), cell);
+        setMarkedAndAppendToMarkStack(cell->largeAllocation(), cell, dependency);
     else
-        setMarkedAndAppendToMarkStack(cell->markedBlock(), cell);
+        setMarkedAndAppendToMarkStack(cell->markedBlock(), cell, dependency);
 }
 
 template<typename ContainerType>
-ALWAYS_INLINE void SlotVisitor::setMarkedAndAppendToMarkStack(ContainerType& container, JSCell* cell)
+ALWAYS_INLINE void SlotVisitor::setMarkedAndAppendToMarkStack(ContainerType& container, JSCell* cell, Dependency dependency)
 {
-    container.aboutToMark(m_markingVersion);
-
-    if (container.testAndSetMarked(cell))
+    if (container.testAndSetMarked(cell, dependency))
         return;
 
     ASSERT(cell->structure());

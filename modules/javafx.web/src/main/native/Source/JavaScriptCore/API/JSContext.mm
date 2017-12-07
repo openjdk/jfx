@@ -43,13 +43,20 @@
 @implementation JSContext {
     JSVirtualMachine *m_virtualMachine;
     JSGlobalContextRef m_context;
-    JSWrapperMap *m_wrapperMap;
     JSC::Strong<JSC::JSObject> m_exception;
 }
 
 - (JSGlobalContextRef)JSGlobalContextRef
 {
     return m_context;
+}
+
+- (void)ensureWrapperMap
+{
+    if (!toJS([self JSGlobalContextRef])->lexicalGlobalObject()->wrapperMap()) {
+        // The map will be retained by the GlobalObject in initialization.
+        [[[JSWrapperMap alloc] initWithGlobalContextRef:[self JSGlobalContextRef]] release];
+    }
 }
 
 - (instancetype)init
@@ -65,12 +72,12 @@
 
     m_virtualMachine = [virtualMachine retain];
     m_context = JSGlobalContextCreateInGroup(getGroupFromVirtualMachine(virtualMachine), 0);
-    m_wrapperMap = [[JSWrapperMap alloc] initWithContext:self];
 
     self.exceptionHandler = ^(JSContext *context, JSValue *exceptionValue) {
         context.exception = exceptionValue;
     };
 
+    [self ensureWrapperMap];
     [m_virtualMachine addContext:self forGlobalContextRef:m_context];
 
     return self;
@@ -79,7 +86,6 @@
 - (void)dealloc
 {
     m_exception.clear();
-    [m_wrapperMap release];
     JSGlobalContextRelease(m_context);
     [m_virtualMachine release];
     [_exceptionHandler release];
@@ -125,7 +131,7 @@
 
 - (JSWrapperMap *)wrapperMap
 {
-    return m_wrapperMap;
+    return toJS(m_context)->lexicalGlobalObject()->wrapperMap();
 }
 
 - (JSValue *)globalObject
@@ -135,15 +141,15 @@
 
 + (JSContext *)currentContext
 {
-    WTFThreadData& threadData = wtfThreadData();
-    CallbackData *entry = (CallbackData *)threadData.m_apiData;
+    Thread& thread = Thread::current();
+    CallbackData *entry = (CallbackData *)thread.m_apiData;
     return entry ? entry->context : nil;
 }
 
 + (JSValue *)currentThis
 {
-    WTFThreadData& threadData = wtfThreadData();
-    CallbackData *entry = (CallbackData *)threadData.m_apiData;
+    Thread& thread = Thread::current();
+    CallbackData *entry = (CallbackData *)thread.m_apiData;
     if (!entry)
         return nil;
     return [JSValue valueWithJSValueRef:entry->thisValue inContext:[JSContext currentContext]];
@@ -151,8 +157,8 @@
 
 + (JSValue *)currentCallee
 {
-    WTFThreadData& threadData = wtfThreadData();
-    CallbackData *entry = (CallbackData *)threadData.m_apiData;
+    Thread& thread = Thread::current();
+    CallbackData *entry = (CallbackData *)thread.m_apiData;
     if (!entry)
         return nil;
     return [JSValue valueWithJSValueRef:entry->calleeValue inContext:[JSContext currentContext]];
@@ -160,8 +166,8 @@
 
 + (NSArray *)currentArguments
 {
-    WTFThreadData& threadData = wtfThreadData();
-    CallbackData *entry = (CallbackData *)threadData.m_apiData;
+    Thread& thread = Thread::current();
+    CallbackData *entry = (CallbackData *)thread.m_apiData;
 
     if (!entry)
         return nil;
@@ -258,7 +264,7 @@
     m_virtualMachine = [[JSVirtualMachine virtualMachineWithContextGroupRef:toRef(&globalObject->vm())] retain];
     ASSERT(m_virtualMachine);
     m_context = JSGlobalContextRetain(context);
-    m_wrapperMap = [[JSWrapperMap alloc] initWithContext:self];
+    [self ensureWrapperMap];
 
     self.exceptionHandler = ^(JSContext *context, JSValue *exceptionValue) {
         context.exception = exceptionValue;
@@ -288,34 +294,34 @@
 
 - (void)beginCallbackWithData:(CallbackData *)callbackData calleeValue:(JSValueRef)calleeValue thisValue:(JSValueRef)thisValue argumentCount:(size_t)argumentCount arguments:(const JSValueRef *)arguments
 {
-    WTFThreadData& threadData = wtfThreadData();
+    Thread& thread = Thread::current();
     [self retain];
-    CallbackData *prevStack = (CallbackData *)threadData.m_apiData;
+    CallbackData *prevStack = (CallbackData *)thread.m_apiData;
     *callbackData = (CallbackData){ prevStack, self, [self.exception retain], calleeValue, thisValue, argumentCount, arguments, nil };
-    threadData.m_apiData = callbackData;
+    thread.m_apiData = callbackData;
     self.exception = nil;
 }
 
 - (void)endCallbackWithData:(CallbackData *)callbackData
 {
-    WTFThreadData& threadData = wtfThreadData();
+    Thread& thread = Thread::current();
     self.exception = callbackData->preservedException;
     [callbackData->preservedException release];
     [callbackData->currentArguments release];
-    threadData.m_apiData = callbackData->next;
+    thread.m_apiData = callbackData->next;
     [self release];
 }
 
 - (JSValue *)wrapperForObjCObject:(id)object
 {
     JSC::JSLockHolder locker(toJS(m_context));
-    return [m_wrapperMap jsWrapperForObject:object];
+    return [[self wrapperMap] jsWrapperForObject:object inContext:self];
 }
 
 - (JSValue *)wrapperForJSObject:(JSValueRef)value
 {
     JSC::JSLockHolder locker(toJS(m_context));
-    return [m_wrapperMap objcWrapperForJSValueRef:value];
+    return [[self wrapperMap] objcWrapperForJSValueRef:value inContext:self];
 }
 
 + (JSContext *)contextWithJSGlobalContextRef:(JSGlobalContextRef)globalContext

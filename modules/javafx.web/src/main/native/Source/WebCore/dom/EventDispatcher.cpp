@@ -27,10 +27,10 @@
 #include "EventDispatcher.h"
 
 #include "CompositionEvent.h"
-#include "DataTransfer.h"
 #include "EventContext.h"
 #include "EventPath.h"
 #include "Frame.h"
+#include "FrameLoader.h"
 #include "FrameView.h"
 #include "HTMLInputElement.h"
 #include "InputEvent.h"

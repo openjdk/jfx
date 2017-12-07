@@ -33,9 +33,9 @@
 namespace JSC {
 namespace Bindings {
 
-const ClassInfo JavaRuntimeObject::s_info = { "JavaRuntimeObject", &RuntimeObject::s_info, 0, CREATE_METHOD_TABLE(JavaRuntimeObject) };
+const ClassInfo JavaRuntimeObject::s_info = { "JavaRuntimeObject", &RuntimeObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JavaRuntimeObject) };
 
-JavaRuntimeObject::JavaRuntimeObject(ExecState*, JSGlobalObject* globalObject, Structure* structure, PassRefPtr<JavaInstance> instance)
+JavaRuntimeObject::JavaRuntimeObject(ExecState*, JSGlobalObject* globalObject, Structure* structure, RefPtr<JavaInstance> instance)
     : RuntimeObject(globalObject->vm(), structure, instance) // todo tav
 {
 }

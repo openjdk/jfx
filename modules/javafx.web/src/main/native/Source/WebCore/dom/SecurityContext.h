@@ -39,17 +39,20 @@ class URL;
 
 enum SandboxFlag {
     // See http://www.whatwg.org/specs/web-apps/current-work/#attr-iframe-sandbox for a list of the sandbox flags.
-    SandboxNone = 0,
-    SandboxNavigation = 1,
-    SandboxPlugins = 1 << 1,
-    SandboxOrigin = 1 << 2,
-    SandboxForms = 1 << 3,
-    SandboxScripts = 1 << 4,
-    SandboxTopNavigation = 1 << 5,
-    SandboxPopups = 1 << 6, // See https://www.w3.org/Bugs/Public/show_bug.cgi?id=12393
-    SandboxAutomaticFeatures = 1 << 7,
-    SandboxPointerLock = 1 << 8,
-    SandboxAll = -1 // Mask with all bits set to 1.
+    SandboxNone                 = 0,
+    SandboxNavigation           = 1,
+    SandboxPlugins              = 1 << 1,
+    SandboxOrigin               = 1 << 2,
+    SandboxForms                = 1 << 3,
+    SandboxScripts              = 1 << 4,
+    SandboxTopNavigation        = 1 << 5,
+    SandboxPopups               = 1 << 6, // See https://www.w3.org/Bugs/Public/show_bug.cgi?id=12393
+    SandboxAutomaticFeatures    = 1 << 7,
+    SandboxPointerLock          = 1 << 8,
+    SandboxPropagatesToAuxiliaryBrowsingContexts = 1 << 9,
+    SandboxTopNavigationByUserActivation = 1 << 10,
+    SandboxDocumentDomain       = 1 << 11,
+    SandboxAll                  = -1 // Mask with all bits set to 1.
 };
 
 typedef int SandboxFlags;
@@ -84,20 +87,28 @@ public:
     bool isStrictMixedContentMode() const { return m_isStrictMixedContentMode; }
     void setStrictMixedContentMode(bool strictMixedContentMode) { m_isStrictMixedContentMode = strictMixedContentMode; }
 
+    // This method implements the "Is the environment settings object settings a secure context?" algorithm from
+    // the Secure Context spec: https://w3c.github.io/webappsec-secure-contexts/#settings-object (Editor's Draft, 17 November 2016)
+    virtual bool isSecureContext() const = 0;
+
 protected:
     SecurityContext();
     virtual ~SecurityContext();
 
     void setContentSecurityPolicy(std::unique_ptr<ContentSecurityPolicy>);
 
+    // It's only appropriate to call this during security context initialization; it's needed for
+    // flags that can't be disabled with allow-* attributes, such as SandboxNavigation.
+    void disableSandboxFlags(SandboxFlags mask) { m_sandboxFlags &= ~mask; }
+
     void didFailToInitializeSecurityOrigin() { m_haveInitializedSecurityOrigin = false; }
     bool haveInitializedSecurityOrigin() const { return m_haveInitializedSecurityOrigin; }
 
 private:
-    bool m_haveInitializedSecurityOrigin;
-    SandboxFlags m_sandboxFlags;
     RefPtr<SecurityOriginPolicy> m_securityOriginPolicy;
     std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
+    SandboxFlags m_sandboxFlags { SandboxNone };
+    bool m_haveInitializedSecurityOrigin { false };
     bool m_foundMixedContent { false };
     bool m_geolocationAccessed { false };
     bool m_isStrictMixedContentMode { false };

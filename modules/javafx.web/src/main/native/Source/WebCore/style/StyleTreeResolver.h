@@ -25,16 +25,13 @@
 
 #pragma once
 
-#include "RenderStyleConstants.h"
-#include "RenderTreePosition.h"
 #include "SelectorChecker.h"
 #include "SelectorFilter.h"
 #include "StyleChange.h"
 #include "StyleSharingResolver.h"
 #include "StyleUpdate.h"
-#include "StyleValidity.h"
 #include <wtf/Function.h>
-#include <wtf/RefPtr.h>
+#include <wtf/Ref.h>
 
 namespace WebCore {
 
@@ -52,7 +49,7 @@ public:
     TreeResolver(Document&);
     ~TreeResolver();
 
-    std::unique_ptr<Update> resolve(Change);
+    std::unique_ptr<Update> resolve();
 
     static ElementUpdate createAnimatedElementUpdate(std::unique_ptr<RenderStyle>, Element&, Change parentChange);
 
@@ -71,16 +68,17 @@ private:
 
         Scope(Document&);
         Scope(ShadowRoot&, Scope& enclosingScope);
+        ~Scope();
     };
 
     struct Parent {
         Element* element;
         const RenderStyle& style;
-        Change change;
+        Change change { NoChange };
         bool didPushScope { false };
         bool elementNeedingStyleRecalcAffectsNextSiblingElementStyle { false };
 
-        Parent(Document&, Change);
+        Parent(Document&);
         Parent(Element&, const RenderStyle&, Change);
     };
 
@@ -102,6 +100,7 @@ private:
 
     Vector<Ref<Scope>, 4> m_scopeStack;
     Vector<Parent, 32> m_parentStack;
+    bool m_didSeePendingStylesheet { false };
 
     std::unique_ptr<Update> m_update;
 };

@@ -26,7 +26,7 @@
 #pragma once
 
 #include "JSCell.h"
-#include "MarkedAllocator.h"
+#include "MarkedAllocatorInlines.h"
 #include "MarkedBlock.h"
 #include "MarkedSpace.h"
 #include "Subspace.h"
@@ -34,17 +34,28 @@
 namespace JSC {
 
 template<typename Func>
-void Subspace::forEachMarkedBlock(const Func& func)
+void Subspace::forEachAllocator(const Func& func)
 {
     for (MarkedAllocator* allocator = m_firstAllocator; allocator; allocator = allocator->nextAllocatorInSubspace())
-        allocator->forEachBlock(func);
+        func(*allocator);
+}
+
+template<typename Func>
+void Subspace::forEachMarkedBlock(const Func& func)
+{
+    forEachAllocator(
+        [&] (MarkedAllocator& allocator) {
+            allocator.forEachBlock(func);
+        });
 }
 
 template<typename Func>
 void Subspace::forEachNotEmptyMarkedBlock(const Func& func)
 {
-    for (MarkedAllocator* allocator = m_firstAllocator; allocator; allocator = allocator->nextAllocatorInSubspace())
-        allocator->forEachNotEmptyBlock(func);
+    forEachAllocator(
+        [&] (MarkedAllocator& allocator) {
+            allocator.forEachNotEmptyBlock(func);
+        });
 }
 
 template<typename Func>
@@ -68,6 +79,24 @@ void Subspace::forEachMarkedCell(const Func& func)
     forEachLargeAllocation(
         [&] (LargeAllocation* allocation) {
             if (allocation->isMarked())
+                func(allocation->cell(), m_attributes.cellKind);
+        });
+}
+
+template<typename Func>
+void Subspace::forEachLiveCell(const Func& func)
+{
+    forEachMarkedBlock(
+        [&] (MarkedBlock::Handle* handle) {
+            handle->forEachLiveCell(
+                [&] (HeapCell* cell, HeapCell::Kind kind) -> IterationStatus {
+                    func(cell, kind);
+                    return IterationStatus::Continue;
+                });
+        });
+    forEachLargeAllocation(
+        [&] (LargeAllocation* allocation) {
+            if (allocation->isLive())
                 func(allocation->cell(), m_attributes.cellKind);
         });
 }

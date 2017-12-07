@@ -1,4 +1,4 @@
-# Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+# Copyright (C) 2014-2017 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -162,168 +162,6 @@ class Runtime(object):
             num_devices=len(self.devices))
 
 
-class Device(object):
-    """
-    Represents a CoreSimulator device underneath a runtime
-    """
-
-    def __init__(self, name, udid, available, runtime, host):
-        """
-        :param name: The device name
-        :type name: str
-        :param udid: The device UDID (a UUID string)
-        :type udid: str
-        :param available: Whether the device is available for use.
-        :type available: bool
-        :param runtime: The iOS Simulator runtime that hosts this device
-        :type runtime: Runtime
-        :param host: The host which can run command line commands
-        :type host: Host
-        """
-        self._host = host
-        self.name = name
-        self.udid = udid
-        self.available = available
-        self.runtime = runtime
-
-    @property
-    def state(self):
-        """
-        :returns: The current state of the device.
-        :rtype: Simulator.DeviceState
-        """
-        return Simulator.device_state(self.udid)
-
-    @property
-    def path(self):
-        """
-        :returns: The filesystem path that contains the simulator device's data.
-        :rtype: str
-        """
-        return Simulator.device_directory(self.udid)
-
-    @classmethod
-    def create(cls, name, device_type, runtime):
-        """
-        Create a new CoreSimulator device.
-        :param name: The name of the device.
-        :type name: str
-        :param device_type: The CoreSimulatort device type.
-        :type device_type: DeviceType
-        :param runtime:  The CoreSimualtor runtime.
-        :type runtime: Runtime
-        :return: The new device or raises a CalledProcessError if ``simctl create`` failed.
-        :rtype: Device
-        """
-        device_udid = subprocess.check_output(['xcrun', 'simctl', 'create', name, device_type.identifier, runtime.identifier]).rstrip()
-        _log.debug('"xcrun simctl create %s %s %s" returned %s', name, device_type.identifier, runtime.identifier, device_udid)
-        Simulator.wait_until_device_is_in_state(device_udid, Simulator.DeviceState.SHUTDOWN)
-        return Simulator().find_device_by_udid(device_udid)
-
-    @classmethod
-    def shutdown(cls, udid):
-        """
-        Shut down the given CoreSimulator device.
-        :param udid: The udid of the device.
-        :type udid: str
-        """
-        device_state = Simulator.device_state(udid)
-        if device_state == Simulator.DeviceState.BOOTING or device_state == Simulator.DeviceState.BOOTED:
-            _log.debug('xcrun simctl shutdown %s', udid)
-            # Don't throw on error. Device shutdown seems to be racy with Simulator app killing.
-            subprocess.call(['xcrun', 'simctl', 'shutdown', udid])
-
-        Simulator.wait_until_device_is_in_state(udid, Simulator.DeviceState.SHUTDOWN)
-
-    @classmethod
-    def delete(cls, udid):
-        """
-        Delete the given CoreSimulator device.
-        :param udid: The udid of the device.
-        :type udid: str
-        """
-        Device.shutdown(udid)
-        try:
-            _log.debug('xcrun simctl delete %s', udid)
-            subprocess.check_call(['xcrun', 'simctl', 'delete', udid])
-        except subprocess.CalledProcessError:
-            raise RuntimeError('"xcrun simctl delete" failed: device state is {}'.format(Simulator.device_state(udid)))
-
-    @classmethod
-    def reset(cls, udid):
-        """
-        Reset the given CoreSimulator device.
-        :param udid: The udid of the device.
-        :type udid: str
-        """
-        Device.shutdown(udid)
-        try:
-            _log.debug('xcrun simctl erase %s', udid)
-            subprocess.check_call(['xcrun', 'simctl', 'erase', udid])
-        except subprocess.CalledProcessError:
-            raise RuntimeError('"xcrun simctl erase" failed: device state is {}'.format(Simulator.device_state(udid)))
-
-    def install_app(self, app_path, env=None):
-        # FIXME: This is a workaround for <rdar://problem/30273973>, Racey failure of simctl install.
-        for x in xrange(3):
-            if self._host.executive.run_command(['xcrun', 'simctl', 'install', self.udid, app_path], return_exit_code=True):
-                return False
-            try:
-                bundle_id = self._host.executive.run_command([
-                    '/usr/libexec/PlistBuddy',
-                    '-c',
-                    'Print CFBundleIdentifier',
-                    self._host.filesystem.join(app_path, 'Info.plist'),
-                ]).rstrip()
-                self._host.executive.kill_process(self.launch_app(bundle_id, [], env=env, attempts=1))
-                return True
-            except RuntimeError:
-                pass
-        return False
-
-    def launch_app(self, bundle_id, args, env=None, attempts=3):
-        environment_to_use = {}
-        SIMCTL_ENV_PREFIX = 'SIMCTL_CHILD_'
-        for value in (env or {}):
-            if not value.startswith(SIMCTL_ENV_PREFIX):
-                environment_to_use[SIMCTL_ENV_PREFIX + value] = env[value]
-            else:
-                environment_to_use[value] = env[value]
-
-        # FIXME: This is a workaround for <rdar://problem/30172453>.
-        def _log_debug_error(error):
-            _log.debug(error.message_with_output())
-
-        output = None
-        for x in xrange(attempts):
-            output = self._host.executive.run_command(
-                ['xcrun', 'simctl', 'launch', self.udid, bundle_id] + args,
-                env=environment_to_use,
-                error_handler=_log_debug_error,
-            )
-            match = re.match(r'(?P<bundle>[^:]+): (?P<pid>\d+)\n', output)
-            if match:
-                break
-
-        if not match or match.group('bundle') != bundle_id:
-            raise RuntimeError('Failed to find process id for {}: {}'.format(bundle_id, output))
-        return int(match.group('pid'))
-
-    def __eq__(self, other):
-        return self.udid == other.udid
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __repr__(self):
-        return '<Device "{name}": {udid}. State: {state}. Runtime: {runtime}, Available: {available}>'.format(
-            name=self.name,
-            udid=self.udid,
-            state=self.state,
-            available=self.available,
-            runtime=self.runtime.identifier)
-
-
 # FIXME: This class is fragile because it parses the output of the simctl command line utility, which may change.
 #        We should find a better way to query for simulator device state and capabilities. Maybe take a similiar
 #        approach as in webkitdirs.pm and utilize the parsed output from the device.plist files in the sub-
@@ -333,19 +171,25 @@ class Simulator(object):
     """
     Represents the iOS Simulator infrastructure under the currently select Xcode.app bundle.
     """
-    device_type_re = re.compile('(?P<name>[^(]+)\((?P<identifier>[^)]+)\)')
+    device_type_re = re.compile('(?P<name>.+)\((?P<identifier>[^)]+)\)')
     # FIXME: runtime_re parses the version from the runtime name, but that does not contain the full version number
     # (it can omit the revision). We should instead parse the version from the number contained in parentheses.
-    runtime_re = re.compile(
-        '(i|watch|tv)OS (?P<version>\d+\.\d)(?P<internal> Internal)? \(\d+\.\d+(\.\d+)? - (?P<build_version>[^)]+)\) \((?P<identifier>[^)]+)\)( \((?P<availability>[^)]+)\))?')
+    runtime_re = re.compile('(i|watch|tv)OS (?P<version>\d+\.\d)(?P<internal> Internal)? \(\d+\.\d+(\.\d+)? - (?P<build_version>[^)]+)\) \((?P<identifier>[^)]+)\)( \((?P<availability>[^)]+)\))?')
+    new_runtime_re = re.compile('(i|watch|tv)OS (?P<version>\d+\.\d)(?P<internal> Internal)? \(\d+\.\d+(\.\d+)? - (?P<build_version>[^)]+)\) - (?P<identifier>[^)]+)( \((?P<availability>[^)]+)\))?')
     unavailable_version_re = re.compile('-- Unavailable: (?P<identifier>[^ ]+) --')
     version_re = re.compile('-- (i|watch|tv)OS (?P<version>\d+\.\d+)(?P<internal> Internal)? --')
     devices_re = re.compile(
-        '\s*(?P<name>[^(]+ )\((?P<udid>[^)]+)\) \((?P<state>[^)]+)\)( \((?P<availability>[^)]+)\))?')
+        '\s*(?P<name>.+) \((?P<udid>[A-Z0-9\-]+)\) \((?P<state>[^)]+)\)( \((?P<availability>[^)]+)\))?')
 
-    _managed_devices = {}
+    managed_devices = {}
+    Device = None
 
     def __init__(self, host=None):
+        # FIXME: This circular import should be resolved.
+        if not Simulator.Device:
+            from webkitpy.xcode.simulated_device import SimulatedDevice
+            Simulator.Device = SimulatedDevice
+
         self._host = host or Host()
         self.runtimes = []
         self.device_types = []
@@ -372,21 +216,21 @@ class Simulator(object):
     def create_device(number, device_type, runtime):
         device = Simulator().lookup_or_create_device(device_type.name + ' WebKit Tester' + str(number), device_type, runtime)
         _log.debug('created device {} {}'.format(number, device))
-        assert(len(Simulator._managed_devices) == number)
-        Simulator._managed_devices[number] = device
+        assert(len(Simulator.managed_devices) == number)
+        Simulator.managed_devices[number] = device
 
     @staticmethod
     def remove_device(number):
-        if not Simulator._managed_devices[number]:
+        if not Simulator.managed_devices[number]:
             return
-        device_udid = Simulator._managed_devices[number].udid
+        device_udid = Simulator.managed_devices[number].udid
         _log.debug('removing device {} {}'.format(number, device_udid))
-        del Simulator._managed_devices[number]
+        del Simulator.managed_devices[number]
         Simulator.delete_device(device_udid)
 
     @staticmethod
     def device_number(number):
-        return Simulator._managed_devices[number]
+        return Simulator.managed_devices[number]
 
     @staticmethod
     def device_state_description(state):
@@ -394,8 +238,9 @@ class Simulator(object):
             return 'DOES_NOT_EXIST'
         return Simulator.NAME_FOR_STATE[state]
 
+    # FIXME: When <rdar://problem/31080009> is fixed, decrease timeout back to 5 minutes
     @staticmethod
-    def wait_until_device_is_booted(udid, timeout_seconds=60 * 5):
+    def wait_until_device_is_booted(udid, timeout_seconds=60 * 15):
         Simulator.wait_until_device_is_in_state(udid, Simulator.DeviceState.BOOTED, timeout_seconds)
         with timeout(seconds=timeout_seconds):
             while True:
@@ -411,8 +256,9 @@ class Simulator(object):
                     _log.warn("Error in checking Simulator boot status. Will retry in 1 second.")
                 time.sleep(1)
 
+    # FIXME: When <rdar://problem/31080009> is fixed, decrease timeout back to 5 minutes
     @staticmethod
-    def wait_until_device_is_in_state(udid, wait_until_state, timeout_seconds=60 * 5):
+    def wait_until_device_is_in_state(udid, wait_until_state, timeout_seconds=60 * 15):
         _log.debug('waiting for device %s to enter state %s with timeout %s', udid, Simulator.device_state_description(wait_until_state), timeout_seconds)
         with timeout(seconds=timeout_seconds):
             device_state = Simulator.device_state(udid)
@@ -438,11 +284,11 @@ class Simulator(object):
 
     @staticmethod
     def delete_device(udid):
-        Device.delete(udid)
+        Simulator.Device.delete(udid)
 
     @staticmethod
     def reset_device(udid):
-        Device.reset(udid)
+        Simulator.Device.reset(udid)
 
     def refresh(self):
         """
@@ -483,7 +329,7 @@ class Simulator(object):
         :return: None
         """
         for line in lines:
-            runtime_match = self.runtime_re.match(line)
+            runtime_match = self.runtime_re.match(line) or self.new_runtime_re.match(line)
             if not runtime_match:
                 if line != '== Devices ==':
                     raise RuntimeError('Expected == Devices == header but got: "{}"'.format(line))
@@ -523,7 +369,7 @@ class Simulator(object):
                     raise RuntimeError('Expected == Device Pairs == header but got: "{}"'.format(line))
                 break
             if current_runtime:
-                device = Device(name=device_match.group('name').rstrip(),
+                device = Simulator.Device(name=device_match.group('name').rstrip(),
                                 udid=device_match.group('udid'),
                                 available=device_match.group('availability') is None,
                                 runtime=current_runtime,
@@ -659,7 +505,7 @@ class Simulator(object):
         if testing_device:
             _log.debug('lookup_or_create_device %s %s %s found %s', name, device_type, runtime, testing_device.name)
             return testing_device
-        testing_device = Device.create(name, device_type, runtime)
+        testing_device = Simulator.Device.create(name, device_type, runtime)
         _log.debug('lookup_or_create_device %s %s %s created %s', name, device_type, runtime, testing_device.name)
         assert(testing_device.available)
         return testing_device

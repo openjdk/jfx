@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,13 +28,10 @@
 
 #include "CustomElementReactionQueue.h"
 #include "JSDOMBinding.h"
+#include <runtime/CatchScope.h>
 #include <runtime/Completion.h>
 #include <runtime/Microtask.h>
 #include <wtf/MainThread.h>
-
-#if PLATFORM(IOS)
-#include "WebCoreThread.h"
-#endif
 
 namespace WebCore {
 
@@ -137,14 +134,15 @@ private:
         JSC::VM& vm = s_mainThreadState->vm();
         auto scope = DECLARE_CATCH_SCOPE(vm);
         ASSERT(isMainThread());
-        ASSERT_UNUSED(scope, !scope.exception());
+        scope.assertNoException();
 
+        JSC::ExecState* state = s_mainThreadState;
         bool didExitJavaScript = s_mainThreadState && !m_previousState;
 
         s_mainThreadState = m_previousState;
 
         if (didExitJavaScript)
-            didLeaveScriptContext();
+            didLeaveScriptContext(state);
     }
 
     template<typename Type, Type jsType, typename DataType> static InspectorInstrumentationCookie instrumentFunctionInternal(ScriptExecutionContext*, Type, const DataType&);
@@ -153,7 +151,7 @@ private:
     JSC::ExecState* m_previousState;
     JSC::JSLockHolder m_lock;
 
-    static void didLeaveScriptContext();
+    static void didLeaveScriptContext(JSC::ExecState*);
 };
 
 // Null state prevents origin security checks.

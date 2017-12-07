@@ -67,11 +67,10 @@ public:
         bool isCollapsed() const { return m_isCollapsed; }
         bool isCollapsible() const { return m_isCollapsible; }
         bool hasHyphen() const { return m_hasHyphen; }
-        unsigned wrappingWithHyphenCounter() const { return m_hyphenationCounter; }
 
         bool isEmpty() const { return start() == end() && !isLineBreak(); }
-        TextFragment split(unsigned splitPosition, const TextFragmentIterator&);
-        TextFragment splitWithHyphen(unsigned hyphenPosition, const TextFragmentIterator&);
+        TextFragment split(unsigned splitPosition, float leftSideWidth, float rightSideWidth);
+        TextFragment splitWithHyphen(unsigned hyphenPosition, float hyphenStringWidth, float leftSideWidth, float rightSideWidth);
         bool operator==(const TextFragment& other) const
         {
             return m_start == other.m_start
@@ -95,7 +94,6 @@ public:
         bool m_isCollapsed { false };
         bool m_isCollapsible { false };
         bool m_hasHyphen { false };
-        unsigned m_hyphenationCounter { 0 };
     };
     TextFragment nextTextFragment(float xPosition = 0);
     void revertToEndOfFragment(const TextFragment&);
@@ -145,35 +143,30 @@ private:
     bool m_atEndOfSegment { false };
 };
 
-inline TextFragmentIterator::TextFragment TextFragmentIterator::TextFragment::split(unsigned splitPosition, const TextFragmentIterator& textFragmentIterator)
+inline TextFragmentIterator::TextFragment TextFragmentIterator::TextFragment::split(unsigned splitPosition, float leftSideWidth, float rightSideWidth)
 {
-    auto updateFragmentProperties = [&textFragmentIterator] (TextFragment& fragment)
+    auto updateFragmentProperties = [] (TextFragment& fragment, unsigned start, unsigned end, float width)
     {
-        fragment.m_width = 0;
-        if (fragment.start() != fragment.end())
-            fragment.m_width = textFragmentIterator.textWidth(fragment.start(), fragment.end(), 0);
+        fragment.m_start = start;
+        fragment.m_end = end;
+        fragment.m_width = width;
         if (fragment.start() + 1 > fragment.end())
             return;
         fragment.m_isCollapsed = false;
     };
 
     TextFragment rightSide(*this);
-    m_end = splitPosition;
-    updateFragmentProperties(*this);
-
-    rightSide.m_start = splitPosition;
-    updateFragmentProperties(rightSide);
+    updateFragmentProperties(*this, start(), splitPosition, leftSideWidth);
+    updateFragmentProperties(rightSide, splitPosition, rightSide.end(), rightSideWidth);
     return rightSide;
 }
 
-inline TextFragmentIterator::TextFragment TextFragmentIterator::TextFragment::splitWithHyphen(unsigned hyphenPosition,
-    const TextFragmentIterator& textFragmentIterator)
+inline TextFragmentIterator::TextFragment TextFragmentIterator::TextFragment::splitWithHyphen(unsigned hyphenPosition, float hyphenStringWidth,
+    float leftSideWidth, float rightSideWidth)
 {
-    ASSERT(textFragmentIterator.style().shouldHyphenate);
-    auto rightSide = split(hyphenPosition, textFragmentIterator);
-    rightSide.m_hyphenationCounter = m_hyphenationCounter + 1;
+    auto rightSide = split(hyphenPosition, leftSideWidth, rightSideWidth);
     m_hasHyphen = true;
-    m_width += textFragmentIterator.style().hyphenStringWidth;
+    m_width += hyphenStringWidth;
     return rightSide;
 }
 

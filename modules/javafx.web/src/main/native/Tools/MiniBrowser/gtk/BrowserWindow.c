@@ -76,7 +76,7 @@ static const gdouble minimumZoomLevel = 0.5;
 static const gdouble maximumZoomLevel = 3;
 static const gdouble defaultZoomLevel = 1;
 static const gdouble zoomStep = 1.2;
-static gint windowCount = 0;
+static GList *windowList;
 
 G_DEFINE_TYPE(BrowserWindow, browser_window, GTK_TYPE_WINDOW)
 
@@ -155,7 +155,9 @@ static void webViewTitleChanged(WebKitWebView *webView, GParamSpec *pspec, Brows
     if (!title)
         title = defaultWindowTitle;
     char *privateTitle = NULL;
-    if (webkit_web_view_is_ephemeral(webView))
+    if (webkit_web_view_is_controlled_by_automation(webView))
+        privateTitle = g_strdup_printf("[Automation] %s", title);
+    else if (webkit_web_view_is_ephemeral(webView))
         privateTitle = g_strdup_printf("[Private] %s", title);
     gtk_window_set_title(GTK_WINDOW(window), privateTitle ? privateTitle : title);
     g_free(privateTitle);
@@ -235,26 +237,49 @@ static GtkWidget *browserWindowCreateBackForwardMenu(BrowserWindow *window, GLis
     return menu;
 }
 
-static void browserWindowUpdateNavigationActions(BrowserWindow *window, WebKitBackForwardList *backForwadlist)
+static void browserWindowUpdateNavigationActions(BrowserWindow *window, WebKitBackForwardList *backForwardlist)
 {
     WebKitWebView *webView = browser_tab_get_web_view(window->activeTab);
     gtk_widget_set_sensitive(window->backItem, webkit_web_view_can_go_back(webView));
     gtk_widget_set_sensitive(window->forwardItem, webkit_web_view_can_go_forward(webView));
 
-    GList *list = g_list_reverse(webkit_back_forward_list_get_back_list_with_limit(backForwadlist, 10));
+    GList *list = g_list_reverse(webkit_back_forward_list_get_back_list_with_limit(backForwardlist, 10));
     gtk_menu_tool_button_set_menu(GTK_MENU_TOOL_BUTTON(window->backItem),
         browserWindowCreateBackForwardMenu(window, list));
     g_list_free(list);
 
-    list = webkit_back_forward_list_get_forward_list_with_limit(backForwadlist, 10);
+    list = webkit_back_forward_list_get_forward_list_with_limit(backForwardlist, 10);
     gtk_menu_tool_button_set_menu(GTK_MENU_TOOL_BUTTON(window->forwardItem),
         browserWindowCreateBackForwardMenu(window, list));
     g_list_free(list);
 }
 
-static void backForwadlistChanged(WebKitBackForwardList *backForwadlist, WebKitBackForwardListItem *itemAdded, GList *itemsRemoved, BrowserWindow *window)
+static void browserWindowTryCloseCurrentWebView(BrowserWindow *window)
 {
-    browserWindowUpdateNavigationActions(window, backForwadlist);
+    int currentPage = gtk_notebook_get_current_page(GTK_NOTEBOOK(window->notebook));
+    BrowserTab *tab = (BrowserTab *)gtk_notebook_get_nth_page(GTK_NOTEBOOK(window->notebook), currentPage);
+    webkit_web_view_try_close(browser_tab_get_web_view(tab));
+}
+
+static void browserWindowTryClose(BrowserWindow *window)
+{
+    GSList *webViews = NULL;
+    int n = gtk_notebook_get_n_pages(GTK_NOTEBOOK(window->notebook));
+    int i;
+
+    for (i = 0; i < n; ++i) {
+        BrowserTab *tab = (BrowserTab *)gtk_notebook_get_nth_page(GTK_NOTEBOOK(window->notebook), i);
+        webViews = g_slist_prepend(webViews, browser_tab_get_web_view(tab));
+    }
+
+    GSList *link;
+    for (link = webViews; link; link = link->next)
+        webkit_web_view_try_close(link->data);
+}
+
+static void backForwardlistChanged(WebKitBackForwardList *backForwardlist, WebKitBackForwardListItem *itemAdded, GList *itemsRemoved, BrowserWindow *window)
+{
+    browserWindowUpdateNavigationActions(window, backForwardlist);
 }
 
 static void webViewClose(WebKitWebView *webView, BrowserWindow *window)
@@ -355,6 +380,7 @@ static gboolean webViewDecidePolicy(WebKitWebView *webView, WebKitPolicyDecision
         "web-context", webkit_web_view_get_context(webView),
         "settings", webkit_web_view_get_settings(webView),
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
+        "is-controlled-by-automation", webkit_web_view_is_controlled_by_automation(webView),
         NULL));
     browser_window_append_view(window, newWebView);
     webkit_web_view_load_request(newWebView, webkit_navigation_action_get_request(navigationAction));
@@ -496,6 +522,7 @@ static void newTabCallback(BrowserWindow *window)
         "web-context", webkit_web_view_get_context(webView),
         "settings", webkit_web_view_get_settings(webView),
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
+        "is-controlled-by-automation", webkit_web_view_is_controlled_by_automation(webView),
         NULL)));
     gtk_notebook_set_current_page(GTK_NOTEBOOK(window->notebook), -1);
 }
@@ -513,6 +540,7 @@ static void openPrivateWindow(BrowserWindow *window)
         "settings", webkit_web_view_get_settings(webView),
         "user-content-manager", webkit_web_view_get_user_content_manager(webView),
         "is-ephemeral", TRUE,
+        "is-controlled-by-automation", webkit_web_view_is_controlled_by_automation(webView),
         NULL));
     GtkWidget *newWindow = browser_window_new(GTK_WINDOW(window), window->webContext);
     browser_window_append_view(BROWSER_WINDOW(newWindow), newWebView);
@@ -662,9 +690,11 @@ static void browserWindowFinalize(GObject *gObject)
 
     g_free(window->sessionFile);
 
+    windowList = g_list_remove(windowList, window);
+
     G_OBJECT_CLASS(browser_window_parent_class)->finalize(gObject);
 
-    if (g_atomic_int_dec_and_test(&windowCount))
+    if (!windowList)
         gtk_main_quit();
 }
 
@@ -816,8 +846,8 @@ static void browserWindowSwitchTab(GtkNotebook *notebook, BrowserTab *tab, guint
         /* We always want close to be connected even for not active tabs */
         g_signal_connect(webView, "close", G_CALLBACK(webViewClose), window);
 
-        WebKitBackForwardList *backForwadlist = webkit_web_view_get_back_forward_list(webView);
-        g_signal_handlers_disconnect_by_data(backForwadlist, window);
+        WebKitBackForwardList *backForwardlist = webkit_web_view_get_back_forward_list(webView);
+        g_signal_handlers_disconnect_by_data(backForwardlist, window);
     }
 
     window->activeTab = tab;
@@ -850,9 +880,9 @@ static void browserWindowSwitchTab(GtkNotebook *notebook, BrowserTab *tab, guint
     g_signal_connect(webView, "leave-fullscreen", G_CALLBACK(webViewLeaveFullScreen), window);
     g_signal_connect(webView, "scroll-event", G_CALLBACK(scrollEventCallback), window);
 
-    WebKitBackForwardList *backForwadlist = webkit_web_view_get_back_forward_list(webView);
-    browserWindowUpdateNavigationActions(window, backForwadlist);
-    g_signal_connect(backForwadlist, "changed", G_CALLBACK(backForwadlistChanged), window);
+    WebKitBackForwardList *backForwardlist = webkit_web_view_get_back_forward_list(webView);
+    browserWindowUpdateNavigationActions(window, backForwardlist);
+    g_signal_connect(backForwardlist, "changed", G_CALLBACK(backForwardlistChanged), window);
 }
 
 static void browserWindowTabAddedOrRemoved(GtkNotebook *notebook, BrowserTab *tab, guint tabIndex, BrowserWindow *window)
@@ -862,7 +892,7 @@ static void browserWindowTabAddedOrRemoved(GtkNotebook *notebook, BrowserTab *ta
 
 static void browser_window_init(BrowserWindow *window)
 {
-    g_atomic_int_inc(&windowCount);
+    windowList = g_list_append(windowList, window);
 
     gtk_window_set_title(GTK_WINDOW(window), defaultWindowTitle);
     gtk_window_set_default_size(GTK_WINDOW(window), 800, 600);
@@ -926,9 +956,9 @@ static void browser_window_init(BrowserWindow *window)
 
     /* Quit */
     gtk_accel_group_connect(window->accelGroup, GDK_KEY_Q, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE,
-        g_cclosure_new_swap(G_CALLBACK(gtk_widget_destroy), window, NULL));
+        g_cclosure_new_swap(G_CALLBACK(browserWindowTryClose), window, NULL));
     gtk_accel_group_connect(window->accelGroup, GDK_KEY_W, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE,
-        g_cclosure_new_swap(G_CALLBACK(gtk_widget_destroy), window, NULL));
+        g_cclosure_new_swap(G_CALLBACK(browserWindowTryCloseCurrentWebView), window, NULL));
 
     /* Print */
     gtk_accel_group_connect(window->accelGroup, GDK_KEY_P, GDK_CONTROL_MASK, GTK_ACCEL_VISIBLE,
@@ -1042,8 +1072,7 @@ static gboolean browserWindowDeleteEvent(GtkWidget *widget, GdkEventAny* event)
 {
     BrowserWindow *window = BROWSER_WINDOW(widget);
     browserWindowSaveSession(window);
-    WebKitWebView *webView = browser_tab_get_web_view(window->activeTab);
-    webkit_web_view_try_close(webView);
+    browserWindowTryClose(window);
     return TRUE;
 }
 
@@ -1156,4 +1185,24 @@ void browser_window_set_background_color(BrowserWindow *window, GdkRGBA *rgba)
     gtk_widget_set_app_paintable(GTK_WIDGET(window), TRUE);
 
     webkit_web_view_set_background_color(webView, rgba);
+}
+
+WebKitWebView *browser_window_get_or_create_web_view_for_automation(void)
+{
+    if (!windowList)
+        return NULL;
+
+    BrowserWindow *window = (BrowserWindow *)windowList->data;
+    WebKitWebView *webView = browser_tab_get_web_view(window->activeTab);
+    if (gtk_notebook_get_n_pages(GTK_NOTEBOOK(window->notebook)) == 1 && !webkit_web_view_get_uri(webView))
+        return webView;
+
+    WebKitWebView *newWebView = WEBKIT_WEB_VIEW(g_object_new(WEBKIT_TYPE_WEB_VIEW,
+        "web-context", webkit_web_view_get_context(webView),
+        "settings", webkit_web_view_get_settings(webView),
+        "user-content-manager", webkit_web_view_get_user_content_manager(webView),
+        "is-controlled-by-automation", TRUE,
+        NULL));
+    browser_window_append_view(window, newWebView);
+    return newWebView;
 }

@@ -44,21 +44,15 @@ Ref<AudioSampleBufferList> AudioSampleBufferList::create(const CAAudioStreamDesc
 }
 
 AudioSampleBufferList::AudioSampleBufferList(const CAAudioStreamDescription& format, size_t maximumSampleCount)
+    : m_internalFormat(makeUniqueRef<CAAudioStreamDescription>(format))
+    , m_sampleCapacity(maximumSampleCount)
+    , m_maxBufferSizePerChannel(maximumSampleCount * format.bytesPerFrame() / format.numberOfChannelStreams())
+    , m_bufferList(makeUniqueRef<WebAudioBufferList>(m_internalFormat, m_maxBufferSizePerChannel))
 {
-    m_internalFormat = std::make_unique<CAAudioStreamDescription>(format);
-
-    m_sampleCapacity = maximumSampleCount;
-    m_maxBufferSizePerChannel = maximumSampleCount * format.bytesPerFrame() / format.numberOfChannelStreams();
-
     ASSERT(format.sampleRate() >= 0);
-    reset();
 }
 
-AudioSampleBufferList::~AudioSampleBufferList()
-{
-    m_internalFormat = nullptr;
-    m_bufferList = nullptr;
-}
+AudioSampleBufferList::~AudioSampleBufferList() = default;
 
 void AudioSampleBufferList::setSampleCount(size_t count)
 {
@@ -106,7 +100,7 @@ void AudioSampleBufferList::applyGain(AudioBufferList& bufferList, float gain, A
 
 void AudioSampleBufferList::applyGain(float gain)
 {
-    applyGain(*m_bufferList, gain, m_internalFormat->format());
+    applyGain(m_bufferList.get(), gain, m_internalFormat->format());
 }
 
 OSStatus AudioSampleBufferList::mixFrom(const AudioSampleBufferList& source, size_t frameCount)
@@ -124,7 +118,7 @@ OSStatus AudioSampleBufferList::mixFrom(const AudioSampleBufferList& source, siz
 
     m_sampleCount = frameCount;
 
-    WebAudioBufferList& sourceBuffer = source.bufferList();
+    auto& sourceBuffer = source.bufferList();
     for (uint32_t i = 0; i < m_bufferList->bufferCount(); i++) {
         switch (m_internalFormat->format()) {
         case AudioStreamDescription::Int16: {
@@ -204,12 +198,12 @@ void AudioSampleBufferList::reset()
     m_timestamp = 0;
     m_hostTime = -1;
 
-    m_bufferList = std::make_unique<WebAudioBufferList>(*m_internalFormat, m_maxBufferSizePerChannel);
+    m_bufferList->reset();
 }
 
 void AudioSampleBufferList::zero()
 {
-    zeroABL(*m_bufferList, m_internalFormat->bytesPerPacket() * m_sampleCapacity);
+    zeroABL(m_bufferList.get(), m_internalFormat->bytesPerPacket() * m_sampleCapacity);
 }
 
 void AudioSampleBufferList::zeroABL(AudioBufferList& buffer, size_t byteCount)
@@ -218,42 +212,48 @@ void AudioSampleBufferList::zeroABL(AudioBufferList& buffer, size_t byteCount)
         memset(buffer.mBuffers[i].mData, 0, byteCount);
 }
 
-OSStatus AudioSampleBufferList::convertInput(UInt32* ioNumberDataPackets, AudioBufferList* ioData)
+struct AudioConverterFromABLContext {
+    const AudioBufferList& buffer;
+    size_t packetsAvailableToConvert;
+    size_t bytesPerPacket;
+};
+
+static const OSStatus kRanOutOfInputDataStatus = '!mor';
+
+static OSStatus audioConverterFromABLCallback(AudioConverterRef, UInt32* ioNumberDataPackets, AudioBufferList* ioData, AudioStreamPacketDescription**, void* inRefCon)
 {
-    if (!ioNumberDataPackets || !ioData || !m_converterInputBuffer) {
-        LOG_ERROR("AudioSampleBufferList::reconfigureInput(%p) invalid input to AudioConverterInput", this);
+    if (!ioNumberDataPackets || !ioData || !inRefCon) {
+        LOG_ERROR("AudioSampleBufferList::audioConverterCallback() invalid input to AudioConverterInput");
         return kAudioConverterErr_UnspecifiedError;
     }
 
-    size_t packetCount = m_converterInputBuffer->mBuffers[0].mDataByteSize / m_converterInputBytesPerPacket;
-    if (*ioNumberDataPackets > m_sampleCapacity) {
-        LOG_ERROR("AudioSampleBufferList::convertInput(%p) not enough internal storage: needed = %zu, available = %lu", this, (size_t)*ioNumberDataPackets, m_sampleCapacity);
-        return kAudioConverterErr_InvalidInputSize;
+    auto& context = *static_cast<AudioConverterFromABLContext*>(inRefCon);
+    if (!context.packetsAvailableToConvert) {
+        *ioNumberDataPackets = 0;
+        return kRanOutOfInputDataStatus;
     }
 
-    *ioNumberDataPackets = static_cast<UInt32>(packetCount);
+    *ioNumberDataPackets = static_cast<UInt32>(context.packetsAvailableToConvert);
+
     for (uint32_t i = 0; i < ioData->mNumberBuffers; ++i) {
-        ioData->mBuffers[i].mData = m_converterInputBuffer->mBuffers[i].mData;
-        ioData->mBuffers[i].mDataByteSize = m_converterInputBuffer->mBuffers[i].mDataByteSize;
+        ioData->mBuffers[i].mData = context.buffer.mBuffers[i].mData;
+        ioData->mBuffers[i].mDataByteSize = context.packetsAvailableToConvert * context.bytesPerPacket;
     }
+    context.packetsAvailableToConvert = 0;
 
     return 0;
 }
 
-OSStatus AudioSampleBufferList::audioConverterCallback(AudioConverterRef, UInt32* ioNumberDataPackets, AudioBufferList* ioData, AudioStreamPacketDescription**, void* inRefCon)
-{
-    return static_cast<AudioSampleBufferList*>(inRefCon)->convertInput(ioNumberDataPackets, ioData);
-}
-
-OSStatus AudioSampleBufferList::copyFrom(const AudioBufferList& source, AudioConverterRef converter)
+OSStatus AudioSampleBufferList::copyFrom(const AudioBufferList& source, size_t frameCount, AudioConverterRef converter)
 {
     reset();
 
     AudioStreamBasicDescription inputFormat;
     UInt32 propertyDataSize = sizeof(inputFormat);
     AudioConverterGetProperty(converter, kAudioConverterCurrentInputStreamDescription, &propertyDataSize, &inputFormat);
-    m_converterInputBytesPerPacket = inputFormat.mBytesPerPacket;
-    SetForScope<const AudioBufferList*> scopedInputBuffer(m_converterInputBuffer, &source);
+    ASSERT(frameCount <= source.mBuffers[0].mDataByteSize / inputFormat.mBytesPerPacket);
+
+    AudioConverterFromABLContext context { source, frameCount, inputFormat.mBytesPerPacket };
 
 #if !LOG_DISABLED
     AudioStreamBasicDescription outputFormat;
@@ -267,22 +267,22 @@ OSStatus AudioSampleBufferList::copyFrom(const AudioBufferList& source, AudioCon
     }
 #endif
 
-    UInt32 samplesConverted = static_cast<UInt32>(m_sampleCapacity);
-    OSStatus err = AudioConverterFillComplexBuffer(converter, audioConverterCallback, this, &samplesConverted, m_bufferList->list(), nullptr);
-    if (err) {
-        LOG_ERROR("AudioSampleBufferList::copyFrom(%p) AudioConverterFillComplexBuffer returned error %d (%.4s)", this, (int)err, (char*)&err);
-        m_sampleCount = std::min(m_sampleCapacity, static_cast<size_t>(samplesConverted));
-        zero();
-        return err;
+    UInt32 samplesConverted = m_sampleCapacity;
+    OSStatus err = AudioConverterFillComplexBuffer(converter, audioConverterFromABLCallback, &context, &samplesConverted, m_bufferList->list(), nullptr);
+    if (!err || err == kRanOutOfInputDataStatus) {
+        m_sampleCount = samplesConverted;
+        return 0;
     }
 
-    m_sampleCount = samplesConverted;
-    return 0;
+    LOG_ERROR("AudioSampleBufferList::copyFrom(%p) AudioConverterFillComplexBuffer returned error %d (%.4s)", this, (int)err, (char*)&err);
+    m_sampleCount = std::min(m_sampleCapacity, static_cast<size_t>(samplesConverted));
+    zero();
+    return err;
 }
 
-OSStatus AudioSampleBufferList::copyFrom(AudioSampleBufferList& source, AudioConverterRef converter)
+OSStatus AudioSampleBufferList::copyFrom(AudioSampleBufferList& source, size_t frameCount, AudioConverterRef converter)
 {
-    return copyFrom(source.bufferList(), converter);
+    return copyFrom(source.bufferList(), frameCount, converter);
 }
 
 OSStatus AudioSampleBufferList::copyFrom(CARingBuffer& ringBuffer, size_t sampleCount, uint64_t startFrame, CARingBuffer::FetchMode mode)

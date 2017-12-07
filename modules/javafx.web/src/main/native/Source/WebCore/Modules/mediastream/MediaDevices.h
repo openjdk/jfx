@@ -33,9 +33,13 @@
 
 #if ENABLE(MEDIA_STREAM)
 
+#include "EventTarget.h"
 #include "ExceptionOr.h"
-#include "JSDOMPromise.h"
+#include "JSDOMPromiseDeferred.h"
 #include "MediaTrackConstraints.h"
+#include "RealtimeMediaSourceCenter.h"
+#include "Timer.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -45,14 +49,16 @@ class MediaStream;
 
 struct MediaTrackSupportedConstraints;
 
-class MediaDevices : public ScriptWrappable, public RefCounted<MediaDevices>, public ContextDestructionObserver {
+class MediaDevices : public RefCounted<MediaDevices>, public ContextDestructionObserver, public EventTargetWithInlineData {
 public:
     static Ref<MediaDevices> create(Document&);
 
+    ~MediaDevices();
+
     Document* document() const;
 
-    using Promise = DOMPromise<IDLInterface<MediaStream>>;
-    using EnumerateDevicesPromise = DOMPromise<IDLSequence<IDLInterface<MediaDeviceInfo>>>;
+    using Promise = DOMPromiseDeferred<IDLInterface<MediaStream>>;
+    using EnumerateDevicesPromise = DOMPromiseDeferred<IDLSequence<IDLInterface<MediaDeviceInfo>>>;
 
     struct StreamConstraints {
         Variant<bool, MediaTrackConstraints> video;
@@ -62,8 +68,25 @@ public:
     void enumerateDevices(EnumerateDevicesPromise&&) const;
     MediaTrackSupportedConstraints getSupportedConstraints();
 
+    using RefCounted<MediaDevices>::ref;
+    using RefCounted<MediaDevices>::deref;
+
 private:
     explicit MediaDevices(Document&);
+
+    void scheduledEventTimerFired();
+
+    // EventTargetWithInlineData.
+    EventTargetInterface eventTargetInterface() const override { return MediaDevicesEventTargetInterfaceType; }
+    ScriptExecutionContext* scriptExecutionContext() const final { return m_scriptExecutionContext; }
+    void refEventTarget() override { ref(); }
+    void derefEventTarget() override { deref(); }
+
+    WeakPtr<MediaDevices> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
+
+    Timer m_scheduledEventTimer;
+    std::optional<RealtimeMediaSourceCenter::DevicesChangedObserverToken> m_deviceChangedToken;
+    WeakPtrFactory<MediaDevices> m_weakPtrFactory;
 };
 
 } // namespace WebCore

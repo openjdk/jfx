@@ -28,14 +28,12 @@
 #include "JSCJSValue.h"
 #include "ProfilerBytecodes.h"
 #include "ProfilerCompilation.h"
-#include "ProfilerCompilationKind.h"
 #include "ProfilerEvent.h"
 #include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/SegmentedVector.h>
-#include <wtf/ThreadingPrimitives.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC { namespace Profiler {
@@ -72,7 +70,7 @@ public:
     JS_EXPORT_PRIVATE void logEvent(CodeBlock* codeBlock, const char* summary, const CString& detail);
 
 private:
-    Bytecodes* ensureBytecodesFor(const LockHolder&, CodeBlock*);
+    Bytecodes* ensureBytecodesFor(const AbstractLocker&, CodeBlock*);
 
     void addDatabaseToAtExit();
     void removeDatabaseFromAtExit();

@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2013 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2013 Company 100, Inc. All rights reserved.
+ * Copyright (C) 2017 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -64,6 +65,21 @@ struct TileCreationInfo {
     float scale;
 };
 
+struct DebugVisuals {
+    DebugVisuals()
+        : showDebugBorders(false)
+        , showRepaintCounter(false) { }
+    Color debugBorderColor;
+    float debugBorderWidth { 0 };
+    union {
+        struct {
+            bool showDebugBorders : 1;
+            bool showRepaintCounter : 1;
+        };
+        unsigned flags;
+    };
+};
+
 struct CoordinatedGraphicsLayerState {
     union {
         struct {
@@ -75,8 +91,7 @@ struct CoordinatedGraphicsLayerState {
             bool contentsRectChanged: 1;
             bool opacityChanged: 1;
             bool solidColorChanged: 1;
-            bool debugBorderColorChanged: 1;
-            bool debugBorderWidthChanged: 1;
+            bool debugVisualsChanged: 1;
             bool replicaChanged: 1;
             bool maskChanged: 1;
             bool imageChanged: 1;
@@ -86,6 +101,7 @@ struct CoordinatedGraphicsLayerState {
             bool childrenChanged: 1;
             bool repaintCountChanged : 1;
             bool platformLayerChanged: 1;
+            bool platformLayerUpdated: 1;
             bool platformLayerShouldSwapBuffers: 1;
             bool isScrollableChanged: 1;
             bool committedScrollOffsetChanged: 1;
@@ -102,8 +118,6 @@ struct CoordinatedGraphicsLayerState {
             bool masksToBounds : 1;
             bool preserves3D : 1;
             bool fixedToViewport : 1;
-            bool showDebugBorders : 1;
-            bool showRepaintCounter : 1;
             bool isScrollable: 1;
         };
         unsigned flags;
@@ -118,11 +132,8 @@ struct CoordinatedGraphicsLayerState {
         , masksToBounds(false)
         , preserves3D(false)
         , fixedToViewport(false)
-        , showDebugBorders(false)
-        , showRepaintCounter(false)
         , isScrollable(false)
         , opacity(0)
-        , debugBorderWidth(0)
         , replica(InvalidCoordinatedLayerID)
         , mask(InvalidCoordinatedLayerID)
         , imageID(InvalidCoordinatedImageBackingID)
@@ -143,8 +154,6 @@ struct CoordinatedGraphicsLayerState {
     FloatSize contentsTileSize;
     float opacity;
     Color solidColor;
-    Color debugBorderColor;
-    float debugBorderWidth;
     FilterOperations filters;
     TextureMapperAnimations animations;
     Vector<uint32_t> children;
@@ -153,6 +162,7 @@ struct CoordinatedGraphicsLayerState {
     CoordinatedLayerID replica;
     CoordinatedLayerID mask;
     CoordinatedImageBackingID imageID;
+    DebugVisuals debugVisuals;
 
     unsigned repaintCount;
     Vector<TileUpdateInfo> tilesToUpdate;
@@ -185,7 +195,6 @@ struct CoordinatedGraphicsState {
     Vector<CoordinatedImageBackingID> imagesToClear;
 
     Vector<std::pair<uint32_t /* atlasID */, RefPtr<CoordinatedSurface> > > updateAtlasesToCreate;
-    Vector<uint32_t /* atlasID */> updateAtlasesToRemove;
 };
 
 } // namespace WebCore

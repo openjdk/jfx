@@ -90,12 +90,17 @@ void DOMPatchSupport::patchDocument(const String& markup)
     parser->finish();
     parser->detach();
 
+    if (!m_document.documentElement())
+        return;
+    if (!newDocument->documentElement())
+        return;
+
     std::unique_ptr<Digest> oldInfo = createDigest(*m_document.documentElement(), nullptr);
     std::unique_ptr<Digest> newInfo = createDigest(*newDocument->documentElement(), &m_unusedNodesMap);
 
     if (innerPatchNode(*oldInfo, *newInfo).hasException()) {
         // Fall back to rewrite.
-        m_document.write(markup);
+        m_document.write(nullptr, markup);
         m_document.close();
     }
 }

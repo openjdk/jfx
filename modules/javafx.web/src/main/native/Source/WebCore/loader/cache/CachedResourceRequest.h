@@ -26,7 +26,6 @@
 #pragma once
 
 #include "CachedResource.h"
-#include "DocumentLoader.h"
 #include "Element.h"
 #include "ResourceLoadPriority.h"
 #include "ResourceLoaderOptions.h"
@@ -64,6 +63,10 @@ public:
     bool allowsCaching() const { return m_options.cachingPolicy == CachingPolicy::AllowCaching; }
     void setCachingPolicy(CachingPolicy policy) { m_options.cachingPolicy = policy;  }
 
+    // Whether this request should impact request counting and delay window.onload.
+    bool ignoreForRequestCount() const { return m_ignoreForRequestCount; }
+    void setIgnoreForRequestCount(bool ignoreForRequestCount) { m_ignoreForRequestCount = ignoreForRequestCount; }
+
     void setAsPotentiallyCrossOrigin(const String&, Document&);
     void updateForAccessControl(Document&);
 
@@ -76,6 +79,7 @@ public:
     void applyBlockedStatus(const ContentExtensions::BlockedStatus&);
 #endif
     void setDomainForCachePartition(Document&);
+    void setDomainForCachePartition(const String&);
     bool isLinkPreload() const { return m_isLinkPreload; }
     void setIsLinkPreload() { m_isLinkPreload = true; }
 
@@ -98,6 +102,7 @@ private:
     RefPtr<SecurityOrigin> m_origin;
     String m_fragmentIdentifier;
     bool m_isLinkPreload { false };
+    bool m_ignoreForRequestCount { false };
 };
 
 void upgradeInsecureResourceRequestIfNeeded(ResourceRequest&, Document&);

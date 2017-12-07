@@ -29,9 +29,8 @@
 
 #include "AuthenticationCF.h"
 #include "AuthenticationChallenge.h"
-#include "CFNetworkSPI.h"
-#include "CredentialStorage.h"
 #include "CachedResourceLoader.h"
+#include "CredentialStorage.h"
 #include "FormDataStreamCFNet.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -46,6 +45,7 @@
 #include "SynchronousLoaderClient.h"
 #include "SynchronousResourceHandleCFURLConnectionDelegate.h"
 #include <CFNetwork/CFNetwork.h>
+#include <pal/spi/cf/CFNetworkSPI.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <wtf/HashMap.h>
@@ -270,7 +270,7 @@ bool ResourceHandle::start()
 
     bool shouldUseCredentialStorage = !client() || client()->shouldUseCredentialStorage(this);
 
-#if ENABLE(WEB_TIMING) && PLATFORM(COCOA) && !HAVE(TIMINGDATAOPTIONS)
+#if PLATFORM(COCOA) && !HAVE(TIMINGDATAOPTIONS)
     setCollectsTimingData();
 #endif
 

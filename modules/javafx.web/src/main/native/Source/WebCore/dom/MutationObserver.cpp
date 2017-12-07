@@ -33,7 +33,6 @@
 #include "MutationObserver.h"
 
 #include "Document.h"
-#include "ExceptionCode.h"
 #include "HTMLSlotElement.h"
 #include "Microtasks.h"
 #include "MutationCallback.h"
@@ -41,6 +40,7 @@
 #include "MutationRecord.h"
 #include <algorithm>
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -232,7 +232,7 @@ void MutationObserver::deliver()
     Vector<Ref<MutationRecord>> records;
     records.swap(m_records);
 
-    m_callback->call(records, this);
+    m_callback->handleEvent(*this, records, *this);
 }
 
 void MutationObserver::notifyMutationObservers()

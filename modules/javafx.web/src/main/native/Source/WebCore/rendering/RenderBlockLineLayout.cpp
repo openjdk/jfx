@@ -130,7 +130,7 @@ RootInlineBox* RenderBlockFlow::createAndAppendRootInlineBox()
 
     if (UNLIKELY(AXObjectCache::accessibilityEnabled()) && firstRootBox() == rootBox) {
         if (AXObjectCache* cache = document().existingAXObjectCache())
-            cache->recomputeDeferredIsIgnored(*this);
+            cache->deferRecomputeIsIgnored(element());
     }
 
     return rootBox;
@@ -504,7 +504,7 @@ static inline void setLogicalWidthForTextRun(RootInlineBox* lineBox, BidiRun* ru
                     &wordMeasurement.fallbackFonts, &overflow);
                 UChar c = renderer.characterAt(wordMeasurement.startOffset);
                 // renderer.width() omits word-spacing value for leading whitespace, so let's just add it back here.
-                if (!atFirstWordMeasurement && (c == ' ' || c == '\t'))
+                if (!atFirstWordMeasurement && FontCascade::treatAsSpace(c))
                     measuredWidth += renderer.style().fontCascade().wordSpacing();
             } else
                 measuredWidth += wordMeasurement.width;
@@ -1281,12 +1281,12 @@ void RenderBlockFlow::layoutRunsAndFloats(LineLayoutState& layoutState, bool has
     // determineStartPosition first will break fast/repaint/line-flow-with-floats-9.html.
     if (layoutState.isFullLayout() && hasInlineChild && !selfNeedsLayout()) {
         setNeedsLayout(MarkOnlyThis); // Mark as needing a full layout to force us to repaint.
-        if (!view().doingFullRepaint() && hasSelfPaintingLayer() && layer()->hasComputedRepaintRect()) {
+        if (!view().doingFullRepaint() && hasSelfPaintingLayer() && hasRepaintLayoutRects()) {
             // Because we waited until we were already inside layout to discover
             // that the block really needed a full layout, we missed our chance to repaint the layer
             // before layout started.  Luckily the layer has cached the repaint rect for its original
             // position and size, and so we can use that to make a repaint happen now.
-            repaintUsingContainer(containerForRepaint(), layer()->repaintRect());
+            repaintUsingContainer(containerForRepaint(), repaintLayoutRects().m_repaintRect);
         }
     }
 
@@ -1728,6 +1728,12 @@ void RenderBlockFlow::layoutLineBoxes(bool relayoutChildren, LayoutUnit& repaint
                     layoutState.floatList().append(FloatWithRect::create(box));
                 else if (isFullLayout || box.needsLayout()) {
                     // Replaced element.
+                    if (isFullLayout && is<RenderRubyRun>(box)) {
+                        // FIXME: This resets the overhanging margins that we set during line layout (see computeInlineDirectionPositionsForSegment)
+                        // Find a more suitable place for this.
+                        setMarginStartForChild(box, 0);
+                        setMarginEndForChild(box, 0);
+                    }
                     box.dirtyLineBoxes(isFullLayout);
                     if (!o.isAnonymousInlineBlock()) {
                         if (isFullLayout)

@@ -30,19 +30,27 @@
 
 #include "CryptoAlgorithm.h"
 #include "CryptoAlgorithmRegistry.h"
-#include "JSAesCbcParams.h"
-#include "JSAesKeyGenParams.h"
+#include "JSAesCbcCfbParams.h"
+#include "JSAesCtrParams.h"
+#include "JSAesGcmParams.h"
+#include "JSAesKeyParams.h"
 #include "JSCryptoAlgorithmParameters.h"
 #include "JSCryptoKey.h"
 #include "JSCryptoKeyPair.h"
-#include "JSDOMPromise.h"
+#include "JSDOMPromiseDeferred.h"
 #include "JSDOMWrapper.h"
+#include "JSEcKeyParams.h"
+#include "JSEcdhKeyDeriveParams.h"
+#include "JSEcdsaParams.h"
+#include "JSHkdfParams.h"
 #include "JSHmacKeyParams.h"
 #include "JSJsonWebKey.h"
+#include "JSPbkdf2Params.h"
 #include "JSRsaHashedImportParams.h"
 #include "JSRsaHashedKeyGenParams.h"
 #include "JSRsaKeyGenParams.h"
 #include "JSRsaOaepParams.h"
+#include "JSRsaPssParams.h"
 #include "ScriptState.h"
 #include <runtime/Error.h>
 #include <runtime/JSArray.h>
@@ -58,12 +66,12 @@ enum class Operations {
     Sign,
     Verify,
     Digest,
-    DeriveKey,
-    DeriveBits,
     GenerateKey,
+    DeriveBits,
     ImportKey,
     WrapKey,
-    UnwrapKey
+    UnwrapKey,
+    GetKeyLength
 };
 
 static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParameters(ExecState&, JSValue, Operations);
@@ -113,10 +121,23 @@ static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParame
                 result = std::make_unique<CryptoAlgorithmRsaOaepParams>(params);
                 break;
             }
-            case CryptoAlgorithmIdentifier::AES_CBC: {
-                auto params = convertDictionary<CryptoAlgorithmAesCbcParams>(state, value);
+            case CryptoAlgorithmIdentifier::AES_CBC:
+            case CryptoAlgorithmIdentifier::AES_CFB: {
+                auto params = convertDictionary<CryptoAlgorithmAesCbcCfbParams>(state, value);
                 RETURN_IF_EXCEPTION(scope, nullptr);
-                result = std::make_unique<CryptoAlgorithmAesCbcParams>(params);
+                result = std::make_unique<CryptoAlgorithmAesCbcCfbParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::AES_CTR: {
+                auto params = convertDictionary<CryptoAlgorithmAesCtrParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmAesCtrParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::AES_GCM: {
+                auto params = convertDictionary<CryptoAlgorithmAesGcmParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmAesGcmParams>(params);
                 break;
             }
             default:
@@ -131,6 +152,20 @@ static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParame
             case CryptoAlgorithmIdentifier::HMAC:
                 result = std::make_unique<CryptoAlgorithmParameters>(params);
                 break;
+            case CryptoAlgorithmIdentifier::ECDSA: {
+                auto params = convertDictionary<CryptoAlgorithmEcdsaParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                params.hashIdentifier = toHashIdentifier(state, params.hash);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmEcdsaParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::RSA_PSS: {
+                auto params = convertDictionary<CryptoAlgorithmRsaPssParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmRsaPssParams>(params);
+                break;
+            }
             default:
                 throwNotSupportedError(state, scope);
                 return nullptr;
@@ -150,10 +185,6 @@ static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParame
                 return nullptr;
             }
             break;
-        case Operations::DeriveKey:
-        case Operations::DeriveBits:
-            throwNotSupportedError(state, scope);
-            return nullptr;
         case Operations::GenerateKey:
             switch (*identifier) {
             case CryptoAlgorithmIdentifier::RSAES_PKCS1_v1_5: {
@@ -174,13 +205,12 @@ static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParame
             }
             case CryptoAlgorithmIdentifier::AES_CTR:
             case CryptoAlgorithmIdentifier::AES_CBC:
-            case CryptoAlgorithmIdentifier::AES_CMAC:
             case CryptoAlgorithmIdentifier::AES_GCM:
             case CryptoAlgorithmIdentifier::AES_CFB:
             case CryptoAlgorithmIdentifier::AES_KW: {
-                auto params = convertDictionary<CryptoAlgorithmAesKeyGenParams>(state, value);
+                auto params = convertDictionary<CryptoAlgorithmAesKeyParams>(state, value);
                 RETURN_IF_EXCEPTION(scope, nullptr);
-                result = std::make_unique<CryptoAlgorithmAesKeyGenParams>(params);
+                result = std::make_unique<CryptoAlgorithmAesKeyParams>(params);
                 break;
             }
             case CryptoAlgorithmIdentifier::HMAC: {
@@ -189,6 +219,49 @@ static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParame
                 params.hashIdentifier = toHashIdentifier(state, params.hash);
                 RETURN_IF_EXCEPTION(scope, nullptr);
                 result = std::make_unique<CryptoAlgorithmHmacKeyParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::ECDSA:
+            case CryptoAlgorithmIdentifier::ECDH: {
+                auto params = convertDictionary<CryptoAlgorithmEcKeyParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmEcKeyParams>(params);
+                break;
+            }
+            default:
+                throwNotSupportedError(state, scope);
+                return nullptr;
+            }
+            break;
+        case Operations::DeriveBits:
+            switch (*identifier) {
+            case CryptoAlgorithmIdentifier::ECDH: {
+                // Remove this hack once https://bugs.webkit.org/show_bug.cgi?id=169333 is fixed.
+                JSValue nameValue = value.getObject()->get(&state, Identifier::fromString(&state, "name"));
+                JSValue publicValue = value.getObject()->get(&state, Identifier::fromString(&state, "public"));
+                JSObject* newValue = constructEmptyObject(&state);
+                newValue->putDirect(vm, Identifier::fromString(&vm, "name"), nameValue);
+                newValue->putDirect(vm, Identifier::fromString(&vm, "publicKey"), publicValue);
+
+                auto params = convertDictionary<CryptoAlgorithmEcdhKeyDeriveParams>(state, newValue);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmEcdhKeyDeriveParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::HKDF: {
+                auto params = convertDictionary<CryptoAlgorithmHkdfParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                params.hashIdentifier = toHashIdentifier(state, params.hash);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmHkdfParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::PBKDF2: {
+                auto params = convertDictionary<CryptoAlgorithmPbkdf2Params>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                params.hashIdentifier = toHashIdentifier(state, params.hash);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmPbkdf2Params>(params);
                 break;
             }
             default:
@@ -213,7 +286,6 @@ static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParame
             }
             case CryptoAlgorithmIdentifier::AES_CTR:
             case CryptoAlgorithmIdentifier::AES_CBC:
-            case CryptoAlgorithmIdentifier::AES_CMAC:
             case CryptoAlgorithmIdentifier::AES_GCM:
             case CryptoAlgorithmIdentifier::AES_CFB:
             case CryptoAlgorithmIdentifier::AES_KW:
@@ -227,6 +299,17 @@ static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParame
                 result = std::make_unique<CryptoAlgorithmHmacKeyParams>(params);
                 break;
             }
+            case CryptoAlgorithmIdentifier::ECDSA:
+            case CryptoAlgorithmIdentifier::ECDH: {
+                auto params = convertDictionary<CryptoAlgorithmEcKeyParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmEcKeyParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::HKDF:
+            case CryptoAlgorithmIdentifier::PBKDF2:
+                result = std::make_unique<CryptoAlgorithmParameters>(params);
+                break;
             default:
                 throwNotSupportedError(state, scope);
                 return nullptr;
@@ -236,6 +319,35 @@ static std::unique_ptr<CryptoAlgorithmParameters> normalizeCryptoAlgorithmParame
         case Operations::UnwrapKey:
             switch (*identifier) {
             case CryptoAlgorithmIdentifier::AES_KW:
+                result = std::make_unique<CryptoAlgorithmParameters>(params);
+                break;
+            default:
+                throwNotSupportedError(state, scope);
+                return nullptr;
+            }
+            break;
+        case Operations::GetKeyLength:
+            switch (*identifier) {
+            case CryptoAlgorithmIdentifier::AES_CTR:
+            case CryptoAlgorithmIdentifier::AES_CBC:
+            case CryptoAlgorithmIdentifier::AES_GCM:
+            case CryptoAlgorithmIdentifier::AES_CFB:
+            case CryptoAlgorithmIdentifier::AES_KW: {
+                auto params = convertDictionary<CryptoAlgorithmAesKeyParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmAesKeyParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::HMAC: {
+                auto params = convertDictionary<CryptoAlgorithmHmacKeyParams>(state, value);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                params.hashIdentifier = toHashIdentifier(state, params.hash);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                result = std::make_unique<CryptoAlgorithmHmacKeyParams>(params);
+                break;
+            }
+            case CryptoAlgorithmIdentifier::HKDF:
+            case CryptoAlgorithmIdentifier::PBKDF2:
                 result = std::make_unique<CryptoAlgorithmParameters>(params);
                 break;
             default:
@@ -300,16 +412,16 @@ static CryptoKeyUsageBitmap cryptoKeyUsageBitmapFromJSValue(ExecState& state, JS
 static void rejectWithException(Ref<DeferredPromise>&& passedPromise, ExceptionCode ec)
 {
     switch (ec) {
-    case NOT_SUPPORTED_ERR:
+    case NotSupportedError:
         passedPromise->reject(ec, ASCIILiteral("The algorithm is not supported"));
         return;
-    case SYNTAX_ERR:
+    case SyntaxError:
         passedPromise->reject(ec, ASCIILiteral("A required parameter was missing or out-of-range"));
         return;
-    case INVALID_STATE_ERR:
+    case InvalidStateError:
         passedPromise->reject(ec, ASCIILiteral("The requested operation is not valid for the current state of the provided key"));
         return;
-    case INVALID_ACCESS_ERR:
+    case InvalidAccessError:
         passedPromise->reject(ec, ASCIILiteral("The requested operation is not valid for the provided key"));
         return;
     case UnknownError:
@@ -321,6 +433,8 @@ static void rejectWithException(Ref<DeferredPromise>&& passedPromise, ExceptionC
     case OperationError:
         passedPromise->reject(ec, ASCIILiteral("The operation failed for an operation-specific reason"));
         return;
+    default:
+        break;
     }
     ASSERT_NOT_REACHED();
 }
@@ -335,7 +449,7 @@ static KeyData toKeyData(ExecState& state, SubtleCrypto::KeyFormat format, JSVal
     case SubtleCrypto::KeyFormat::Spki:
     case SubtleCrypto::KeyFormat::Pkcs8:
     case SubtleCrypto::KeyFormat::Raw: {
-        BufferSource bufferSource = convert<IDLBufferSource>(state, value);
+        BufferSource bufferSource = convert<IDLUnion<IDLArrayBufferView, IDLArrayBuffer>>(state, value);
         RETURN_IF_EXCEPTION(scope, result);
         Vector<uint8_t> vector;
         vector.append(bufferSource.data(), bufferSource.length());
@@ -377,7 +491,7 @@ static Vector<uint8_t> toVector(ExecState& state, JSValue value)
     VM& vm = state.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    BufferSource data = convert<IDLBufferSource>(state, value);
+    BufferSource data = convert<IDLUnion<IDLArrayBufferView, IDLArrayBuffer>>(state, value);
     RETURN_IF_EXCEPTION(scope, { });
     Vector<uint8_t> dataVector;
     dataVector.append(data.data(), data.length());
@@ -394,11 +508,12 @@ static void supportExportKeyThrow(ExecState& state, ThrowScope& scope, CryptoAlg
     case CryptoAlgorithmIdentifier::RSA_OAEP:
     case CryptoAlgorithmIdentifier::AES_CTR:
     case CryptoAlgorithmIdentifier::AES_CBC:
-    case CryptoAlgorithmIdentifier::AES_CMAC:
     case CryptoAlgorithmIdentifier::AES_GCM:
     case CryptoAlgorithmIdentifier::AES_CFB:
     case CryptoAlgorithmIdentifier::AES_KW:
     case CryptoAlgorithmIdentifier::HMAC:
+    case CryptoAlgorithmIdentifier::ECDSA:
+    case CryptoAlgorithmIdentifier::ECDH:
         return;
     default:
         throwNotSupportedError(state, scope);
@@ -425,12 +540,12 @@ static void jsSubtleCryptoFunctionEncryptPromise(ExecState& state, Ref<DeferredP
     RETURN_IF_EXCEPTION(scope, void());
 
     if (params->identifier != key->algorithmIdentifier()) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
         return;
     }
 
     if (!key->allows(CryptoKeyUsageEncrypt)) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("CryptoKey doesn't support encryption"));
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't support encryption"));
         return;
     }
 
@@ -442,7 +557,6 @@ static void jsSubtleCryptoFunctionEncryptPromise(ExecState& state, Ref<DeferredP
 
     auto callback = [capturedPromise = promise.copyRef()](const Vector<uint8_t>& cipherText) mutable {
         fulfillPromiseWithArrayBuffer(WTFMove(capturedPromise), cipherText.data(), cipherText.size());
-        return;
     };
     auto exceptionCallback = [capturedPromise = WTFMove(promise)](ExceptionCode ec) mutable {
         rejectWithException(WTFMove(capturedPromise), ec);
@@ -473,12 +587,12 @@ static void jsSubtleCryptoFunctionDecryptPromise(ExecState& state, Ref<DeferredP
     RETURN_IF_EXCEPTION(scope, void());
 
     if (params->identifier != key->algorithmIdentifier()) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
         return;
     }
 
     if (!key->allows(CryptoKeyUsageDecrypt)) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("CryptoKey doesn't support decryption"));
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't support decryption"));
         return;
     }
 
@@ -490,7 +604,6 @@ static void jsSubtleCryptoFunctionDecryptPromise(ExecState& state, Ref<DeferredP
 
     auto callback = [capturedPromise = promise.copyRef()](const Vector<uint8_t>& plainText) mutable {
         fulfillPromiseWithArrayBuffer(WTFMove(capturedPromise), plainText.data(), plainText.size());
-        return;
     };
     auto exceptionCallback = [capturedPromise = WTFMove(promise)](ExceptionCode ec) mutable {
         rejectWithException(WTFMove(capturedPromise), ec);
@@ -521,12 +634,12 @@ static void jsSubtleCryptoFunctionSignPromise(ExecState& state, Ref<DeferredProm
     RETURN_IF_EXCEPTION(scope, void());
 
     if (params->identifier != key->algorithmIdentifier()) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
         return;
     }
 
     if (!key->allows(CryptoKeyUsageSign)) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("CryptoKey doesn't support signing"));
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't support signing"));
         return;
     }
 
@@ -538,7 +651,6 @@ static void jsSubtleCryptoFunctionSignPromise(ExecState& state, Ref<DeferredProm
 
     auto callback = [capturedPromise = promise.copyRef()](const Vector<uint8_t>& signature) mutable {
         fulfillPromiseWithArrayBuffer(WTFMove(capturedPromise), signature.data(), signature.size());
-        return;
     };
     auto exceptionCallback = [capturedPromise = WTFMove(promise)](ExceptionCode ec) mutable {
         rejectWithException(WTFMove(capturedPromise), ec);
@@ -546,7 +658,7 @@ static void jsSubtleCryptoFunctionSignPromise(ExecState& state, Ref<DeferredProm
 
     JSSubtleCrypto* subtle = jsDynamicDowncast<JSSubtleCrypto*>(vm, state.thisValue());
     ASSERT(subtle);
-    algorithm->sign(key.releaseNonNull(), WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state), subtle->wrapped().workQueue());
+    algorithm->sign(WTFMove(params), key.releaseNonNull(), WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state), subtle->wrapped().workQueue());
 }
 
 static void jsSubtleCryptoFunctionVerifyPromise(ExecState& state, Ref<DeferredPromise>&& promise)
@@ -572,12 +684,12 @@ static void jsSubtleCryptoFunctionVerifyPromise(ExecState& state, Ref<DeferredPr
     RETURN_IF_EXCEPTION(scope, void());
 
     if (params->identifier != key->algorithmIdentifier()) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
         return;
     }
 
     if (!key->allows(CryptoKeyUsageVerify)) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("CryptoKey doesn't support verification"));
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't support verification"));
         return;
     }
 
@@ -589,7 +701,6 @@ static void jsSubtleCryptoFunctionVerifyPromise(ExecState& state, Ref<DeferredPr
 
     auto callback = [capturedPromise = promise.copyRef()](bool result) mutable {
         capturedPromise->resolve<IDLBoolean>(result);
-        return;
     };
     auto exceptionCallback = [capturedPromise = WTFMove(promise)](ExceptionCode ec) mutable {
         rejectWithException(WTFMove(capturedPromise), ec);
@@ -597,7 +708,7 @@ static void jsSubtleCryptoFunctionVerifyPromise(ExecState& state, Ref<DeferredPr
 
     auto subtle = jsDynamicDowncast<JSSubtleCrypto*>(vm, state.thisValue());
     ASSERT(subtle);
-    algorithm->verify(key.releaseNonNull(), WTFMove(signature), WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state), subtle->wrapped().workQueue());
+    algorithm->verify(WTFMove(params), key.releaseNonNull(), WTFMove(signature), WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state), subtle->wrapped().workQueue());
 }
 
 static void jsSubtleCryptoFunctionDigestPromise(ExecState& state, Ref<DeferredPromise>&& promise)
@@ -624,7 +735,6 @@ static void jsSubtleCryptoFunctionDigestPromise(ExecState& state, Ref<DeferredPr
 
     auto callback = [capturedPromise = promise.copyRef()](const Vector<uint8_t>& digest) mutable {
         fulfillPromiseWithArrayBuffer(WTFMove(capturedPromise), digest.data(), digest.size());
-        return;
     };
     auto exceptionCallback = [capturedPromise = WTFMove(promise)](ExceptionCode ec) mutable {
         rejectWithException(WTFMove(capturedPromise), ec);
@@ -633,40 +743,6 @@ static void jsSubtleCryptoFunctionDigestPromise(ExecState& state, Ref<DeferredPr
     auto subtle = jsDynamicDowncast<JSSubtleCrypto*>(vm, state.thisValue());
     ASSERT(subtle);
     algorithm->digest(WTFMove(data), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state), subtle->wrapped().workQueue());
-}
-
-static void jsSubtleCryptoFunctionDeriveKeyPromise(ExecState& state, Ref<DeferredPromise>&& promise)
-{
-    VM& vm = state.vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    if (UNLIKELY(state.argumentCount() < 5)) {
-        promise->reject<IDLAny>(createNotEnoughArgumentsError(&state));
-        return;
-    }
-
-    auto params = normalizeCryptoAlgorithmParameters(state, state.uncheckedArgument(0), Operations::DeriveKey);
-    RETURN_IF_EXCEPTION(scope, void());
-
-    // We should always return a NOT_SUPPORTED_ERR since we currently don't support any algorithms that has deriveKey operation.
-    ASSERT_NOT_REACHED();
-}
-
-static void jsSubtleCryptoFunctionDeriveBitsPromise(ExecState& state, Ref<DeferredPromise>&& promise)
-{
-    VM& vm = state.vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    if (UNLIKELY(state.argumentCount() < 3)) {
-        promise->reject<IDLAny>(createNotEnoughArgumentsError(&state));
-        return;
-    }
-
-    auto params = normalizeCryptoAlgorithmParameters(state, state.uncheckedArgument(0), Operations::DeriveBits);
-    RETURN_IF_EXCEPTION(scope, void());
-
-    // We should always return a NOT_SUPPORTED_ERR since we currently don't support any algorithms that has deriveBits operation.
-    ASSERT_NOT_REACHED();
 }
 
 static void jsSubtleCryptoFunctionGenerateKeyPromise(ExecState& state, Ref<DeferredPromise>&& promise)
@@ -698,14 +774,14 @@ static void jsSubtleCryptoFunctionGenerateKeyPromise(ExecState& state, Ref<Defer
         WTF::switchOn(keyOrKeyPair,
             [&capturedPromise] (RefPtr<CryptoKey>& key) {
                 if ((key->type() == CryptoKeyType::Private || key->type() == CryptoKeyType::Secret) && !key->usagesBitmap()) {
-                    rejectWithException(WTFMove(capturedPromise), SYNTAX_ERR);
+                    rejectWithException(WTFMove(capturedPromise), SyntaxError);
                     return;
                 }
                 capturedPromise->resolve<IDLInterface<CryptoKey>>(*key);
             },
             [&capturedPromise] (CryptoKeyPair& keyPair) {
                 if (!keyPair.privateKey->usagesBitmap()) {
-                    rejectWithException(WTFMove(capturedPromise), SYNTAX_ERR);
+                    rejectWithException(WTFMove(capturedPromise), SyntaxError);
                     return;
                 }
                 capturedPromise->resolve<IDLDictionary<CryptoKeyPair>>(keyPair);
@@ -716,10 +792,144 @@ static void jsSubtleCryptoFunctionGenerateKeyPromise(ExecState& state, Ref<Defer
         rejectWithException(WTFMove(capturedPromise), ec);
     };
 
-    // The 11 December 2014 version of the specification suggests we should perform the following task asynchronously
+    // The 26 January 2017 version of the specification suggests we should perform the following task asynchronously
     // regardless what kind of keys it produces: https://www.w3.org/TR/WebCryptoAPI/#SubtleCrypto-method-generateKey
-    // That's simply not efficient for AES and HMAC keys. Therefore, we perform it as an async task conditionally.
+    // That's simply not efficient for AES, HMAC and EC keys. Therefore, we perform it as an async task only for RSA keys.
     algorithm->generateKey(*params, extractable, keyUsages, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state));
+}
+
+static void jsSubtleCryptoFunctionDeriveKeyPromise(ExecState& state, Ref<DeferredPromise>&& promise)
+{
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(state.argumentCount() < 5)) {
+        promise->reject<IDLAny>(createNotEnoughArgumentsError(&state));
+        return;
+    }
+
+    auto params = normalizeCryptoAlgorithmParameters(state, state.uncheckedArgument(0), Operations::DeriveBits);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    auto baseKey = toCryptoKey(state, state.uncheckedArgument(1));
+    RETURN_IF_EXCEPTION(scope, void());
+
+    auto importParams = normalizeCryptoAlgorithmParameters(state, state.uncheckedArgument(2), Operations::ImportKey);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    auto getLengthParams = normalizeCryptoAlgorithmParameters(state, state.uncheckedArgument(2), Operations::GetKeyLength);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    auto extractable = state.uncheckedArgument(3).toBoolean(&state);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    auto keyUsages = cryptoKeyUsageBitmapFromJSValue(state, state.uncheckedArgument(4));
+    RETURN_IF_EXCEPTION(scope, void());
+
+    if (params->identifier != baseKey->algorithmIdentifier()) {
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
+        return;
+    }
+
+    if (!baseKey->allows(CryptoKeyUsageDeriveKey)) {
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't support CryptoKey derivation"));
+        return;
+    }
+
+    auto getLengthAlgorithm = CryptoAlgorithmRegistry::singleton().create(getLengthParams->identifier);
+    if (UNLIKELY(!getLengthAlgorithm)) {
+        throwNotSupportedError(state, scope);
+        return;
+    }
+    auto result = getLengthAlgorithm->getKeyLength(*getLengthParams);
+    if (result.hasException()) {
+        promise->reject(result.releaseException().code(), ASCIILiteral("Cannot get key length from derivedKeyType"));
+        return;
+    }
+    size_t length = result.releaseReturnValue();
+
+    auto importAlgorithm = CryptoAlgorithmRegistry::singleton().create(importParams->identifier);
+    if (UNLIKELY(!importAlgorithm)) {
+        throwNotSupportedError(state, scope);
+        return;
+    }
+
+    auto algorithm = CryptoAlgorithmRegistry::singleton().create(params->identifier);
+    if (UNLIKELY(!algorithm)) {
+        throwNotSupportedError(state, scope);
+        return;
+    }
+
+    auto callback = [promise = promise.copyRef(), importAlgorithm, importParams = WTFMove(importParams), extractable, keyUsages](const Vector<uint8_t>& derivedKey) mutable {
+        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=169395
+        KeyData data = derivedKey;
+        auto callback = [capturedPromise = promise.copyRef()](CryptoKey& key) mutable {
+            if ((key.type() == CryptoKeyType::Private || key.type() == CryptoKeyType::Secret) && !key.usagesBitmap()) {
+                rejectWithException(WTFMove(capturedPromise), SyntaxError);
+                return;
+            }
+            capturedPromise->resolve<IDLInterface<CryptoKey>>(key);
+        };
+        auto exceptionCallback = [capturedPromise = WTFMove(promise)](ExceptionCode ec) mutable {
+            rejectWithException(WTFMove(capturedPromise), ec);
+        };
+
+        importAlgorithm->importKey(SubtleCrypto::KeyFormat::Raw, WTFMove(data), WTFMove(importParams), extractable, keyUsages, WTFMove(callback), WTFMove(exceptionCallback));
+    };
+    auto exceptionCallback = [capturedPromise = WTFMove(promise)](ExceptionCode ec) mutable {
+        rejectWithException(WTFMove(capturedPromise), ec);
+    };
+
+    auto subtle = jsDynamicDowncast<JSSubtleCrypto*>(vm, state.thisValue());
+    ASSERT(subtle);
+    algorithm->deriveBits(WTFMove(params), baseKey.releaseNonNull(), length, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state), subtle->wrapped().workQueue());
+}
+
+static void jsSubtleCryptoFunctionDeriveBitsPromise(ExecState& state, Ref<DeferredPromise>&& promise)
+{
+    VM& vm = state.vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (UNLIKELY(state.argumentCount() < 3)) {
+        promise->reject<IDLAny>(createNotEnoughArgumentsError(&state));
+        return;
+    }
+
+    auto params = normalizeCryptoAlgorithmParameters(state, state.uncheckedArgument(0), Operations::DeriveBits);
+    RETURN_IF_EXCEPTION(scope, void());
+
+    auto baseKey = toCryptoKey(state, state.uncheckedArgument(1));
+    RETURN_IF_EXCEPTION(scope, void());
+
+    auto length = convert<IDLUnsignedLong>(state, state.uncheckedArgument(2));
+    RETURN_IF_EXCEPTION(scope, void());
+
+    if (params->identifier != baseKey->algorithmIdentifier()) {
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't match AlgorithmIdentifier"));
+        return;
+    }
+
+    if (!baseKey->allows(CryptoKeyUsageDeriveBits)) {
+        promise->reject(InvalidAccessError, ASCIILiteral("CryptoKey doesn't support bits derivation"));
+        return;
+    }
+
+    auto algorithm = CryptoAlgorithmRegistry::singleton().create(params->identifier);
+    if (UNLIKELY(!algorithm)) {
+        throwNotSupportedError(state, scope);
+        return;
+    }
+
+    auto callback = [capturedPromise = promise.copyRef()](const Vector<uint8_t>& derivedKey) mutable {
+        fulfillPromiseWithArrayBuffer(WTFMove(capturedPromise), derivedKey.data(), derivedKey.size());
+    };
+    auto exceptionCallback = [capturedPromise = WTFMove(promise)](ExceptionCode ec) mutable {
+        rejectWithException(WTFMove(capturedPromise), ec);
+    };
+
+    auto subtle = jsDynamicDowncast<JSSubtleCrypto*>(vm, state.thisValue());
+    ASSERT(subtle);
+    algorithm->deriveBits(WTFMove(params), baseKey.releaseNonNull(), length, WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state), subtle->wrapped().workQueue());
 }
 
 static void jsSubtleCryptoFunctionImportKeyPromise(ExecState& state, Ref<DeferredPromise>&& promise)
@@ -732,7 +942,7 @@ static void jsSubtleCryptoFunctionImportKeyPromise(ExecState& state, Ref<Deferre
         return;
     }
 
-    auto format = convertEnumeration<SubtleCrypto::KeyFormat>(state, state.uncheckedArgument(0));
+    auto format = convert<IDLEnumeration<SubtleCrypto::KeyFormat>>(state, state.uncheckedArgument(0));
     RETURN_IF_EXCEPTION(scope, void());
 
     auto keyData = toKeyData(state, format, state.uncheckedArgument(1));
@@ -755,7 +965,7 @@ static void jsSubtleCryptoFunctionImportKeyPromise(ExecState& state, Ref<Deferre
 
     auto callback = [capturedPromise = promise.copyRef()](CryptoKey& key) mutable {
         if ((key.type() == CryptoKeyType::Private || key.type() == CryptoKeyType::Secret) && !key.usagesBitmap()) {
-            rejectWithException(WTFMove(capturedPromise), SYNTAX_ERR);
+            rejectWithException(WTFMove(capturedPromise), SyntaxError);
             return;
         }
         capturedPromise->resolve<IDLInterface<CryptoKey>>(key);
@@ -780,7 +990,7 @@ static void jsSubtleCryptoFunctionExportKeyPromise(ExecState& state, Ref<Deferre
         return;
     }
 
-    auto format = convertEnumeration<SubtleCrypto::KeyFormat>(state, state.uncheckedArgument(0));
+    auto format = convert<IDLEnumeration<SubtleCrypto::KeyFormat>>(state, state.uncheckedArgument(0));
     RETURN_IF_EXCEPTION(scope, void());
 
     auto key = toCryptoKey(state, state.uncheckedArgument(1));
@@ -790,7 +1000,7 @@ static void jsSubtleCryptoFunctionExportKeyPromise(ExecState& state, Ref<Deferre
     RETURN_IF_EXCEPTION(scope, void());
 
     if (!key->extractable()) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("The CryptoKey is nonextractable"));
+        promise->reject(InvalidAccessError, ASCIILiteral("The CryptoKey is nonextractable"));
         return;
     }
 
@@ -835,7 +1045,7 @@ static void jsSubtleCryptoFunctionWrapKeyPromise(ExecState& state, Ref<DeferredP
         return;
     }
 
-    auto format = convertEnumeration<SubtleCrypto::KeyFormat>(state, state.uncheckedArgument(0));
+    auto format = convert<IDLEnumeration<SubtleCrypto::KeyFormat>>(state, state.uncheckedArgument(0));
     RETURN_IF_EXCEPTION(scope, void());
 
     auto key = toCryptoKey(state, state.uncheckedArgument(1));
@@ -855,12 +1065,12 @@ static void jsSubtleCryptoFunctionWrapKeyPromise(ExecState& state, Ref<DeferredP
     }
 
     if (wrapParams->identifier != wrappingKey->algorithmIdentifier()) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("Wrapping CryptoKey doesn't match AlgorithmIdentifier"));
+        promise->reject(InvalidAccessError, ASCIILiteral("Wrapping CryptoKey doesn't match AlgorithmIdentifier"));
         return;
     }
 
     if (!wrappingKey->allows(CryptoKeyUsageWrapKey)) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("Wrapping CryptoKey doesn't support wrapKey operation"));
+        promise->reject(InvalidAccessError, ASCIILiteral("Wrapping CryptoKey doesn't support wrapKey operation"));
         return;
     }
 
@@ -868,7 +1078,7 @@ static void jsSubtleCryptoFunctionWrapKeyPromise(ExecState& state, Ref<DeferredP
     RETURN_IF_EXCEPTION(scope, void());
 
     if (!key->extractable()) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("The CryptoKey is nonextractable"));
+        promise->reject(InvalidAccessError, ASCIILiteral("The CryptoKey is nonextractable"));
         return;
     }
 
@@ -942,7 +1152,7 @@ static void jsSubtleCryptoFunctionUnwrapKeyPromise(ExecState& state, Ref<Deferre
         return;
     }
 
-    auto format = convertEnumeration<SubtleCrypto::KeyFormat>(state, state.uncheckedArgument(0));
+    auto format = convert<IDLEnumeration<SubtleCrypto::KeyFormat>>(state, state.uncheckedArgument(0));
     RETURN_IF_EXCEPTION(scope, void());
 
     auto wrappedKey = toVector(state, state.uncheckedArgument(1));
@@ -971,12 +1181,12 @@ static void jsSubtleCryptoFunctionUnwrapKeyPromise(ExecState& state, Ref<Deferre
     RETURN_IF_EXCEPTION(scope, void());
 
     if (unwrapParams->identifier != unwrappingKey->algorithmIdentifier()) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("Unwrapping CryptoKey doesn't match unwrap AlgorithmIdentifier"));
+        promise->reject(InvalidAccessError, ASCIILiteral("Unwrapping CryptoKey doesn't match unwrap AlgorithmIdentifier"));
         return;
     }
 
     if (!unwrappingKey->allows(CryptoKeyUsageUnwrapKey)) {
-        promise->reject(INVALID_ACCESS_ERR, ASCIILiteral("Unwrapping CryptoKey doesn't support unwrapKey operation"));
+        promise->reject(InvalidAccessError, ASCIILiteral("Unwrapping CryptoKey doesn't support unwrapKey operation"));
         return;
     }
 
@@ -1019,7 +1229,7 @@ static void jsSubtleCryptoFunctionUnwrapKeyPromise(ExecState& state, Ref<Deferre
 
         auto callback = [promise = promise.copyRef()](CryptoKey& key) mutable {
             if ((key.type() == CryptoKeyType::Private || key.type() == CryptoKeyType::Secret) && !key.usagesBitmap()) {
-                rejectWithException(WTFMove(promise), SYNTAX_ERR);
+                rejectWithException(WTFMove(promise), SyntaxError);
                 return;
             }
             promise->resolve<IDLInterface<CryptoKey>>(key);
@@ -1048,64 +1258,76 @@ static void jsSubtleCryptoFunctionUnwrapKeyPromise(ExecState& state, Ref<Deferre
     unwrapAlgorithm->decrypt(WTFMove(unwrapParams), unwrappingKey.releaseNonNull(), WTFMove(wrappedKey), WTFMove(callback), WTFMove(exceptionCallback), *scriptExecutionContextFromExecState(&state), subtle->wrapped().workQueue());
 }
 
-JSValue JSSubtleCrypto::encrypt(ExecState& state)
+JSValue JSSubtleCrypto::encrypt(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionEncryptPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionEncryptPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::decrypt(ExecState& state)
+JSValue JSSubtleCrypto::decrypt(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionDecryptPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionDecryptPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::sign(ExecState& state)
+JSValue JSSubtleCrypto::sign(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionSignPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionSignPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::verify(ExecState& state)
+JSValue JSSubtleCrypto::verify(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionVerifyPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionVerifyPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::digest(ExecState& state)
+JSValue JSSubtleCrypto::digest(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionDigestPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionDigestPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::deriveKey(ExecState& state)
+JSValue JSSubtleCrypto::generateKey(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionDeriveKeyPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionGenerateKeyPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::deriveBits(ExecState& state)
+JSValue JSSubtleCrypto::deriveKey(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionDeriveBitsPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionDeriveKeyPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::generateKey(ExecState& state)
+JSValue JSSubtleCrypto::deriveBits(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionGenerateKeyPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionDeriveBitsPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::importKey(ExecState& state)
+JSValue JSSubtleCrypto::importKey(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionImportKeyPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionImportKeyPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::exportKey(ExecState& state)
+JSValue JSSubtleCrypto::exportKey(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionExportKeyPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionExportKeyPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::wrapKey(ExecState& state)
+JSValue JSSubtleCrypto::wrapKey(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionWrapKeyPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionWrapKeyPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
-JSValue JSSubtleCrypto::unwrapKey(ExecState& state)
+JSValue JSSubtleCrypto::unwrapKey(ExecState& state, Ref<DeferredPromise>&& promise)
 {
-    return callPromiseFunction<jsSubtleCryptoFunctionUnwrapKeyPromise, PromiseExecutionScope::WindowOrWorker>(state);
+    jsSubtleCryptoFunctionUnwrapKeyPromise(state, WTFMove(promise));
+    return jsUndefined();
 }
 
 } // namespace WebCore

@@ -62,7 +62,7 @@ static inline MatchBasedOnRuleHash computeMatchBasedOnRuleHash(const CSSSelector
     if (selector.match() == CSSSelector::Tag) {
         const QualifiedName& tagQualifiedName = selector.tagQName();
         const AtomicString& selectorNamespace = tagQualifiedName.namespaceURI();
-        if (selectorNamespace == starAtom || selectorNamespace == xhtmlNamespaceURI) {
+        if (selectorNamespace == starAtom() || selectorNamespace == xhtmlNamespaceURI) {
             if (tagQualifiedName == anyQName())
                 return MatchBasedOnRuleHash::Universal;
             return MatchBasedOnRuleHash::ClassC;
@@ -139,14 +139,14 @@ static inline PropertyWhitelistType determinePropertyWhitelistType(const AddRule
 {
     if (addRuleFlags & RuleIsInRegionRule)
         return PropertyWhitelistRegion;
-#if ENABLE(VIDEO_TRACK)
     for (const CSSSelector* component = selector; component; component = component->tagHistory()) {
+#if ENABLE(VIDEO_TRACK)
         if (component->match() == CSSSelector::PseudoElement && (component->pseudoElementType() == CSSSelector::PseudoElementCue || component->value() == TextTrackCue::cueShadowPseudoId()))
             return PropertyWhitelistCue;
-    }
-#else
-    UNUSED_PARAM(selector);
 #endif
+        if (component->match() == CSSSelector::PseudoElement && component->pseudoElementType() == CSSSelector::PseudoElementMarker)
+            return PropertyWhitelistMarker;
+    }
     return PropertyWhitelistNone;
 }
 
@@ -194,6 +194,20 @@ static unsigned rulesCountForName(const RuleSet::AtomRuleMap& map, const AtomicS
     return 0;
 }
 
+static bool isHostSelectorMatchingInShadowTree(const CSSSelector& startSelector)
+{
+    auto* leftmostSelector = &startSelector;
+    bool hasDescendantOrChildRelation = false;
+    while (auto* previous = leftmostSelector->tagHistory()) {
+        hasDescendantOrChildRelation = leftmostSelector->hasDescendantOrChildRelation();
+        leftmostSelector = previous;
+    }
+    if (!hasDescendantOrChildRelation)
+        return false;
+
+    return leftmostSelector->match() == CSSSelector::PseudoClass && leftmostSelector->pseudoClassType() == CSSSelector::PseudoClassHost;
+}
+
 void RuleSet::addRule(StyleRule* rule, unsigned selectorIndex, AddRuleFlags addRuleFlags)
 {
     RuleData ruleData(rule, selectorIndex, m_ruleCount++, addRuleFlags);
@@ -232,7 +246,7 @@ void RuleSet::addRule(StyleRule* rule, unsigned selectorIndex, AddRuleFlags addR
             break;
         }
         case CSSSelector::Tag:
-            if (selector->tagQName().localName() != starAtom)
+            if (selector->tagQName().localName() != starAtom())
                 tagSelector = selector;
             break;
         case CSSSelector::PseudoElement:
@@ -308,6 +322,9 @@ void RuleSet::addRule(StyleRule* rule, unsigned selectorIndex, AddRuleFlags addR
         addToRuleSet(customPseudoElementSelector->value(), m_shadowPseudoElementRules, ruleData);
         return;
     }
+
+    if (!m_hasHostPseudoClassRulesMatchingInShadowTree)
+        m_hasHostPseudoClassRulesMatchingInShadowTree = isHostSelectorMatchingInShadowTree(*ruleData.selector());
 
     if (hostPseudoClassSelector) {
         m_hostPseudoClassRules.append(ruleData);

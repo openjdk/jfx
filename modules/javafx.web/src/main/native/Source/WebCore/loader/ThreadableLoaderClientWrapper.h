@@ -31,9 +31,8 @@
 #pragma once
 
 #include "ThreadableLoaderClient.h"
-#include <wtf/Noncopyable.h>
 #include <wtf/Ref.h>
-#include <wtf/Threading.h>
+#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
 
@@ -73,11 +72,11 @@ public:
             m_client->didReceiveData(data, dataLength);
     }
 
-    void didFinishLoading(unsigned long identifier, double finishTime)
+    void didFinishLoading(unsigned long identifier)
     {
         m_done = true;
         if (m_client)
-            m_client->didFinishLoading(identifier, finishTime);
+            m_client->didFinishLoading(identifier);
     }
 
     void didFail(const ResourceError& error)

@@ -34,17 +34,21 @@ namespace WebCore {
 
 class CaptureDeviceManager {
 public:
+    using CaptureDeviceChangedCallback = WTF::Function<void()>;
+    using ObserverToken = uint32_t;
+    virtual ObserverToken addCaptureDeviceChangedObserver(CaptureDeviceChangedCallback&&);
+    virtual void removeCaptureDeviceChangedObserver(ObserverToken);
+
     virtual Vector<CaptureDevice>& captureDevices() = 0;
     virtual void refreshCaptureDevices() { }
-    virtual Vector<CaptureDevice> getSourcesInfo();
-    virtual Vector<String> bestSourcesForTypeAndConstraints(RealtimeMediaSource::Type, const MediaConstraints&, String&);
-    virtual RefPtr<RealtimeMediaSource> sourceWithUID(const String&, RealtimeMediaSource::Type, const MediaConstraints*, String&);
+    virtual Vector<CaptureDevice> getAudioSourcesInfo();
+    virtual Vector<CaptureDevice> getVideoSourcesInfo();
+    virtual std::optional<CaptureDevice> deviceWithUID(const String&, RealtimeMediaSource::Type);
 
 protected:
     virtual ~CaptureDeviceManager();
-    virtual RefPtr<RealtimeMediaSource> createMediaSourceForCaptureDeviceWithConstraints(const CaptureDevice&, const MediaConstraints*, String&) = 0;
-
-    bool captureDeviceFromDeviceID(const String& captureDeviceID, CaptureDevice& source);
+    std::optional<CaptureDevice> captureDeviceFromPersistentID(const String& captureDeviceID);
+    HashMap<ObserverToken, CaptureDeviceChangedCallback> m_observers;
 };
 
 } // namespace WebCore

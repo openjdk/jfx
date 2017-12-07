@@ -26,7 +26,7 @@
 #pragma once
 
 #include "BitmapTextureGL.h"
-#include "GraphicsTypes3D.h"
+#include "TextureMapperGLHeaders.h"
 #include "TextureMapperPlatformLayer.h"
 #include <wtf/CurrentTime.h>
 
@@ -38,14 +38,14 @@ class TextureMapperPlatformLayerBuffer : public TextureMapperPlatformLayer {
     WTF_MAKE_NONCOPYABLE(TextureMapperPlatformLayerBuffer);
     WTF_MAKE_FAST_ALLOCATED();
 public:
-    TextureMapperPlatformLayerBuffer(RefPtr<BitmapTexture>&&);
-    TextureMapperPlatformLayerBuffer(GLuint textureID, const IntSize&, TextureMapperGL::Flags);
+    TextureMapperPlatformLayerBuffer(RefPtr<BitmapTexture>&&, TextureMapperGL::Flags = 0);
+    TextureMapperPlatformLayerBuffer(GLuint textureID, const IntSize&, TextureMapperGL::Flags, GLint internalFormat);
 
     virtual ~TextureMapperPlatformLayerBuffer() = default;
 
     void paintToTextureMapper(TextureMapper&, const FloatRect&, const TransformationMatrix& modelViewMatrix = TransformationMatrix(), float opacity = 1.0) final;
 
-    bool canReuseWithoutReset(const IntSize&, GC3Dint internalFormat);
+    bool canReuseWithoutReset(const IntSize&, GLint internalFormat);
     BitmapTextureGL& textureGL() { return static_cast<BitmapTextureGL&>(*m_texture); }
 
     inline void markUsed() { m_timeLastUsed = monotonicallyIncreasingTime(); }
@@ -63,6 +63,8 @@ public:
     void setUnmanagedBufferDataHolder(std::unique_ptr<UnmanagedBufferDataHolder> holder) { m_unmanagedBufferDataHolder = WTFMove(holder); }
     void setExtraFlags(TextureMapperGL::Flags flags) { m_extraFlags = flags; }
 
+    std::unique_ptr<TextureMapperPlatformLayerBuffer> clone(TextureMapperGL&);
+
 private:
 
     RefPtr<BitmapTexture> m_texture;
@@ -70,6 +72,7 @@ private:
 
     GLuint m_textureID;
     IntSize m_size;
+    GLint m_internalFormat;
     TextureMapperGL::Flags m_extraFlags;
     bool m_hasManagedTexture;
     std::unique_ptr<UnmanagedBufferDataHolder> m_unmanagedBufferDataHolder;

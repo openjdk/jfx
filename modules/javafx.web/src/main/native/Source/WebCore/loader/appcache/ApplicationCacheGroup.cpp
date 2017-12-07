@@ -41,6 +41,8 @@
 #include "HTTPHeaderNames.h"
 #include "InspectorInstrumentation.h"
 #include "ManifestParser.h"
+#include "NavigationScheduler.h"
+#include "NetworkLoadMetrics.h"
 #include "Page.h"
 #include "ProgressTracker.h"
 #include "ResourceHandle.h"
@@ -570,9 +572,11 @@ void ApplicationCacheGroup::didReceiveData(ResourceHandle* handle, const char* d
     m_currentResource->data().append(data, length);
 }
 
-void ApplicationCacheGroup::didFinishLoading(ResourceHandle* handle, double finishTime)
+void ApplicationCacheGroup::didFinishLoading(ResourceHandle* handle)
 {
-    InspectorInstrumentation::didFinishLoading(m_frame, m_frame->loader().documentLoader(), m_currentResourceIdentifier, finishTime);
+    // FIXME: We should have NetworkLoadMetrics for ApplicationCache loads.
+    NetworkLoadMetrics emptyMetrics;
+    InspectorInstrumentation::didFinishLoading(m_frame, m_frame->loader().documentLoader(), m_currentResourceIdentifier, emptyMetrics, nullptr);
 
     if (handle == m_manifestHandle) {
         didFinishLoadingManifest();
@@ -709,7 +713,7 @@ void ApplicationCacheGroup::didFinishLoadingManifest()
     }
 
     Manifest manifest;
-    if (!parseManifest(m_manifestURL, m_manifestResource->data().data(), m_manifestResource->data().size(), manifest)) {
+    if (!parseManifest(m_manifestURL, m_manifestResource->response().mimeType(), m_manifestResource->data().data(), m_manifestResource->data().size(), manifest)) {
         // At the time of this writing, lack of "CACHE MANIFEST" signature is the only reason for parseManifest to fail.
         m_frame->document()->addConsoleMessage(MessageSource::AppCache, MessageLevel::Error, ASCIILiteral("Application Cache manifest could not be parsed. Does it start with CACHE MANIFEST?"));
         cacheUpdateFailed();
@@ -1051,7 +1055,7 @@ void ApplicationCacheGroup::scheduleReachedMaxAppCacheSizeCallback()
 {
     ASSERT(isMainThread());
     auto* timer = new ChromeClientCallbackTimer(*this);
-    timer->startOneShot(0);
+    timer->startOneShot(0_s);
     // The timer will delete itself once it fires.
 }
 

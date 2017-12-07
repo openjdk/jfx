@@ -2,7 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
- * Copyright (C) 2004, 2006-2007, 2013-2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2017 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,7 +25,6 @@
 
 #include "CollectionIndexCache.h"
 #include "CollectionTraversal.h"
-#include "CollectionType.h"
 #include "Document.h"
 #include "ElementDescendantIterator.h"
 #include "HTMLNames.h"
@@ -48,12 +47,13 @@ public:
 
     ALWAYS_INLINE NodeListInvalidationType invalidationType() const { return static_cast<NodeListInvalidationType>(m_invalidationType); }
     ContainerNode& ownerNode() const { return m_ownerNode; }
-    ALWAYS_INLINE void invalidateCacheForAttribute(const QualifiedName* attrName) const
+    ALWAYS_INLINE void invalidateCacheForAttribute(const QualifiedName& attrName) const
     {
-        if (!attrName || shouldInvalidateTypeOnAttributeChange(invalidationType(), *attrName))
-            invalidateCache(document());
+        if (shouldInvalidateTypeOnAttributeChange(invalidationType(), attrName))
+            invalidateCache();
     }
-    virtual void invalidateCache(Document&) const = 0;
+    virtual void invalidateCacheForDocument(Document&) const = 0;
+    void invalidateCache() const { invalidateCacheForDocument(document()); }
 
     bool isRegisteredForInvalidationAtDocument() const { return m_isRegisteredForInvalidationAtDocument; }
     void setRegisteredForInvalidationAtDocument(bool f) { m_isRegisteredForInvalidationAtDocument = f; }
@@ -89,8 +89,14 @@ public:
     bool collectionCanTraverseBackward() const { return true; }
     void willValidateIndexCache() const { document().registerNodeListForInvalidation(const_cast<CachedLiveNodeList<NodeListType>&>(*this)); }
 
-    void invalidateCache(Document&) const final;
-    size_t memoryCost() const final { return m_indexCache.memoryCost(); }
+    void invalidateCacheForDocument(Document&) const final;
+    size_t memoryCost() const final
+    {
+        // memoryCost() may be invoked concurrently from a GC thread, and we need to be careful
+        // about what data we access here and how. Accessing m_indexCache is safe because
+        // because it doesn't involve any pointer chasing.
+        return m_indexCache.memoryCost();
+    }
 
 protected:
     CachedLiveNodeList(ContainerNode& rootNode, NodeListInvalidationType);
@@ -152,7 +158,7 @@ inline ContainerNode& CachedLiveNodeList<NodeListType>::rootNode() const
 }
 
 template <class NodeListType>
-void CachedLiveNodeList<NodeListType>::invalidateCache(Document& document) const
+void CachedLiveNodeList<NodeListType>::invalidateCacheForDocument(Document& document) const
 {
     if (!m_indexCache.hasValidCache(nodeList()))
         return;

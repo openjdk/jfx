@@ -108,6 +108,14 @@ void UIScriptController::overridePreference(JSStringRef preferenceRef, JSStringR
         preferences.minimumFontSize = [(NSString *)value.get() doubleValue];
 }
 
+void UIScriptController::simulateRotation(DeviceOrientation*, JSValueRef)
+{
+}
+
+void UIScriptController::simulateRotationLikeSafari(DeviceOrientation*, JSValueRef)
+{
+}
+
 void UIScriptController::removeViewFromWindow(JSValueRef callback)
 {
     unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
@@ -134,6 +142,18 @@ void UIScriptController::addViewToWindow(JSValueRef callback)
             return;
         m_context->asyncTaskComplete(callbackID);
     });
+}
+
+void UIScriptController::beginBackSwipe(JSValueRef callback)
+{
+}
+
+void UIScriptController::completeBackSwipe(JSValueRef callback)
+{
+}
+
+void UIScriptController::platformPlayBackEventStream(JSStringRef, JSValueRef)
+{
 }
 
 }

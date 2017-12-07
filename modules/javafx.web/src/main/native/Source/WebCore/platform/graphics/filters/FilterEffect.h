@@ -31,12 +31,15 @@
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class Filter;
 class FilterEffect;
 class ImageBuffer;
-class TextStream;
 
 typedef Vector<RefPtr<FilterEffect>> FilterEffectVector;
 
@@ -55,8 +58,8 @@ public:
     void clearResultsRecursive();
 
     ImageBuffer* asImageBuffer();
-    PassRefPtr<Uint8ClampedArray> asUnmultipliedImage(const IntRect&);
-    PassRefPtr<Uint8ClampedArray> asPremultipliedImage(const IntRect&);
+    RefPtr<Uint8ClampedArray> asUnmultipliedImage(const IntRect&);
+    RefPtr<Uint8ClampedArray> asPremultipliedImage(const IntRect&);
     void copyUnmultipliedImage(Uint8ClampedArray* destination, const IntRect&);
     void copyPremultipliedImage(Uint8ClampedArray* destination, const IntRect&);
 
@@ -117,7 +120,7 @@ public:
 
     virtual FilterEffectType filterEffectType() const { return FilterEffectTypeUnknown; }
 
-    virtual TextStream& externalRepresentation(TextStream&, int indention = 0) const;
+    virtual WTF::TextStream& externalRepresentation(WTF::TextStream&, int indention = 0) const;
 
 public:
     // The following functions are SVG specific and will move to RenderSVGResourceFilterPrimitive.

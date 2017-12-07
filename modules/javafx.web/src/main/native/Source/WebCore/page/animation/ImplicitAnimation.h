@@ -53,9 +53,9 @@ public:
     void pauseAnimation(double timeOffset) override;
     void endAnimation() override;
 
-    bool animate(CompositeAnimation*, RenderElement*, const RenderStyle* currentStyle, const RenderStyle* targetStyle, std::unique_ptr<RenderStyle>& animatedStyle, bool& didBlendStyle) override;
+    bool animate(CompositeAnimation&, RenderElement*, const RenderStyle* currentStyle, const RenderStyle& targetStyle, std::unique_ptr<RenderStyle>& animatedStyle, bool& didBlendStyle) override;
     void getAnimatedStyle(std::unique_ptr<RenderStyle>& animatedStyle) override;
-    void reset(const RenderStyle* to);
+    void reset(const RenderStyle& to, CompositeAnimation&);
 
     bool computeExtentOfTransformAnimation(LayoutRect&) const override;
 
@@ -70,7 +70,7 @@ public:
 
     void blendPropertyValueInStyle(CSSPropertyID, RenderStyle*);
 
-    double timeToNextService() override;
+    std::optional<Seconds> timeToNextService() override;
 
     bool active() const { return m_active; }
     void setActive(bool b) { m_active = b; }

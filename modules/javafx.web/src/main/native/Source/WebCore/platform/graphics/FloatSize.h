@@ -25,8 +25,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef FloatSize_h
-#define FloatSize_h
+#pragma once
 
 #include "IntPoint.h"
 #include <wtf/MathExtras.h>
@@ -52,10 +51,13 @@ struct D2D_SIZE_F;
 typedef D2D_SIZE_F D2D1_SIZE_F;
 #endif
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 class IntSize;
-class TextStream;
 
 class FloatSize {
 public:
@@ -93,6 +95,16 @@ public:
     {
         m_width *= scaleX;
         m_height *= scaleY;
+    }
+
+    FloatSize scaled(float s) const
+    {
+        return { m_width * s, m_height * s };
+    }
+
+    FloatSize scaled(float scaleX, float scaleY) const
+    {
+        return { m_width * scaleX, m_height * scaleY };
     }
 
     WEBCORE_EXPORT FloatSize constrainedBetween(const FloatSize& min, const FloatSize& max) const;
@@ -235,8 +247,7 @@ inline IntPoint flooredIntPoint(const FloatSize& p)
     return IntPoint(clampToInteger(floorf(p.width())), clampToInteger(floorf(p.height())));
 }
 
-WEBCORE_EXPORT TextStream& operator<<(TextStream&, const FloatSize&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatSize&);
 
 } // namespace WebCore
 
-#endif // FloatSize_h

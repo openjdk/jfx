@@ -101,12 +101,18 @@ RenderBox::LogicalExtentComputedValues RenderTextControl::computeLogicalHeight(L
     ASSERT(innerText);
     if (RenderBox* innerTextBox = innerText->renderBox()) {
         LayoutUnit nonContentHeight = innerTextBox->verticalBorderAndPaddingExtent() + innerTextBox->verticalMarginExtent();
-        logicalHeight = computeControlLogicalHeight(innerTextBox->lineHeight(true, HorizontalLine, PositionOfInteriorLineBoxes), nonContentHeight) + verticalBorderAndPaddingExtent();
+        logicalHeight = computeControlLogicalHeight(innerTextBox->lineHeight(true, HorizontalLine, PositionOfInteriorLineBoxes), nonContentHeight);
 
         // We are able to have a horizontal scrollbar if the overflow style is scroll, or if its auto and there's no word wrap.
         if ((isHorizontalWritingMode() && (style().overflowX() == OSCROLL ||  (style().overflowX() == OAUTO && innerText->renderer()->style().overflowWrap() == NormalOverflowWrap)))
             || (!isHorizontalWritingMode() && (style().overflowY() == OSCROLL ||  (style().overflowY() == OAUTO && innerText->renderer()->style().overflowWrap() == NormalOverflowWrap))))
             logicalHeight += scrollbarThickness();
+
+        // FIXME: The logical height of the inner text box should have been added
+        // before calling computeLogicalHeight to avoid this hack.
+        cacheIntrinsicContentLogicalHeightForFlexItem(logicalHeight);
+
+        logicalHeight += verticalBorderAndPaddingExtent();
     }
 
     return RenderBox::computeLogicalHeight(logicalHeight, logicalTop);
@@ -191,19 +197,22 @@ void RenderTextControl::addFocusRingRects(Vector<LayoutRect>& rects, const Layou
         rects.append(LayoutRect(additionalOffset, size()));
 }
 
-RenderObject* RenderTextControl::layoutSpecialExcludedChild(bool relayoutChildren)
+void RenderTextControl::layoutExcludedChildren(bool relayoutChildren)
 {
+    RenderBlockFlow::layoutExcludedChildren(relayoutChildren);
+
     HTMLElement* placeholder = textFormControlElement().placeholderElement();
     RenderElement* placeholderRenderer = placeholder ? placeholder->renderer() : 0;
     if (!placeholderRenderer)
-        return 0;
+        return;
+    placeholderRenderer->setIsExcludedFromNormalLayout(true);
+
     if (relayoutChildren) {
         // The markParents arguments should be false because this function is
         // called from layout() of the parent and the placeholder layout doesn't
         // affect the parent layout.
         placeholderRenderer->setChildNeedsLayout(MarkOnlyThis);
     }
-    return placeholderRenderer;
 }
 
 #if PLATFORM(IOS)

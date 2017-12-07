@@ -93,6 +93,7 @@ public:
     Heap* heap() const { return m_heap; }
 
     void lastChanceToFinalize(); // You must call stopAllocating before you call this.
+    void freeMemory();
 
     static size_t optimalSizeFor(size_t);
 
@@ -155,9 +156,6 @@ public:
     unsigned largeAllocationsForThisCollectionSize() const { return m_largeAllocationsForThisCollectionSize; }
 
     MarkedAllocator* firstAllocator() const { return m_firstAllocator; }
-    MarkedAllocator* allocatorForEmptyAllocation() const { return m_allocatorForEmptyAllocation; }
-
-    MarkedBlock::Handle* findEmptyBlockToSteal();
 
     Lock& allocatorLock() { return m_allocatorLock; }
     MarkedAllocator* addMarkedAllocator(const AbstractLocker&, Subspace*, size_t cellSize);
@@ -177,6 +175,10 @@ private:
 
     void* allocateSlow(Subspace&, GCDeferralContext*, size_t);
     void* tryAllocateSlow(Subspace&, GCDeferralContext*, size_t);
+
+    // Use this version when calling from within the GC where we know that the allocators
+    // have already been stopped.
+    template<typename Functor> void forEachLiveCell(const Functor&);
 
     static void initializeSizeClassForStepSize();
 
@@ -211,7 +213,8 @@ private:
     Bag<MarkedAllocator> m_bagOfAllocators;
     MarkedAllocator* m_firstAllocator { nullptr };
     MarkedAllocator* m_lastAllocator { nullptr };
-    MarkedAllocator* m_allocatorForEmptyAllocation { nullptr };
+
+    friend class HeapVerifier;
 };
 
 template <typename Functor> inline void MarkedSpace::forEachBlock(const Functor& functor)

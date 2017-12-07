@@ -36,7 +36,6 @@
 
 #include "SessionID.h"
 #include <wtf/java/JavaRef.h>
-#include <wtf/PassRefPtr.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -46,7 +45,7 @@ class SocketStreamHandleClient;
 
 class SocketStreamHandleImpl : public SocketStreamHandle {
 public:
-    static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, SessionID, Page* page, const String&) {
+    static Ref<SocketStreamHandleImpl> create(const URL& url, SocketStreamHandleClient& client, SessionID, Page* page, const String&, SourceApplicationAuditToken&&) {
         return adoptRef(*new SocketStreamHandleImpl(url, page, client));
     }
 
@@ -58,8 +57,9 @@ public:
     void didClose();
 
 protected:
-    std::optional<size_t> platformSend(const char* data, size_t length) final;
+    void platformSend(const char* data, size_t length, Function<void(bool)>&&) final;
     void platformClose() final;
+    size_t bufferedAmount() final { return 0; }
 
 private:
     SocketStreamHandleImpl(const URL&, Page*, SocketStreamHandleClient&);

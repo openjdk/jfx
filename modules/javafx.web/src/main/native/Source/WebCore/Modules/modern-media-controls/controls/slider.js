@@ -23,28 +23,55 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-class Slider extends LayoutItem
+class Slider extends LayoutNode
 {
 
-    constructor({ layoutDelegate = null, cssClassName = "" } = {})
+    constructor(cssClassName = "")
     {
-        super({
-            element: `<div class="slider ${cssClassName}"></div>`,
-            layoutDelegate
-        });
+        super(`<div class="slider ${cssClassName}"></div>`);
 
-        this._canvas = new LayoutNode(`<canvas></canvas>`);
+        this._container = new LayoutNode(`<div class="custom-slider"></div>`);
+        this._track = new LayoutNode(`<div class="track fill"></div>`);
+        this._primaryFill = new LayoutNode(`<div class="primary fill"></div>`);
+        this._secondaryFill = new LayoutNode(`<div class="secondary fill"></div>`);
+        this._knob = new LayoutNode(`<div class="knob"></div>`);
+        this._container.children = [this._track, this._primaryFill, this._secondaryFill, this._knob];
 
         this._input = new LayoutNode(`<input type="range" min="0" max="1" step="0.001" />`);
-        this._input.element.addEventListener("change", this);
+        this._input.element.addEventListener(GestureRecognizer.SupportsTouches ? "touchstart" : "mousedown", this);
         this._input.element.addEventListener("input", this);
+        this._input.element.addEventListener("change", this);
 
         this.value = 0;
+        this.height = 16;
+        this.enabled = true;
+        this.isActive = false;
+        this._secondaryValue = 0;
+        this._disabled = false;
 
-        this.children = [this._canvas, this._input];
+        this.children = [this._container, this._input];
     }
 
     // Public
+
+    set inputAccessibleLabel(timeValue)
+    {
+        this._input.element.setAttribute("aria-valuetext", formattedStringForDuration(timeValue));
+    }
+
+    get disabled()
+    {
+        return this._disabled;
+    }
+
+    set disabled(flag)
+    {
+        if (this._disabled === flag)
+            return;
+
+        this._disabled = flag;
+        this.markDirtyProperty("disabled");
+    }
 
     get value()
     {
@@ -55,7 +82,7 @@ class Slider extends LayoutItem
 
     set value(value)
     {
-        if (this._valueIsChanging)
+        if (this.isActive)
             return;
 
         this._value = value;
@@ -63,14 +90,17 @@ class Slider extends LayoutItem
         this.needsLayout = true;
     }
 
-    get width()
+    get secondaryValue()
     {
-        return super.width;
+        return this._secondaryValue;
     }
 
-    set width(width)
+    set secondaryValue(secondaryValue)
     {
-        super.width = width;
+        if (this._secondaryValue === secondaryValue)
+            return;
+
+        this._secondaryValue = secondaryValue;
         this.needsLayout = true;
     }
 
@@ -79,11 +109,21 @@ class Slider extends LayoutItem
     handleEvent(event)
     {
         switch (event.type) {
-        case "input":
-            this._handleInputEvent();
+        case "mousedown":
+            this._handleMousedownEvent();
+            break;
+        case "touchstart":
+            this._handleTouchstartEvent(event);
+            break;
+        case "mouseup":
+            this._handleMouseupEvent();
+            break;
+        case "touchend":
+            this._handleTouchendEvent(event);
             break;
         case "change":
-            this._handleChangeEvent();
+        case "input":
+            this._valueDidChange();
             break;
         }
     }
@@ -95,58 +135,104 @@ class Slider extends LayoutItem
             this._input.element.value = this._value;
             delete this._value;
             break;
-        case "width":
-            this._canvas.element.width = this.width * window.devicePixelRatio;
-        case "height":
-            this._canvas.element.height = this.height * window.devicePixelRatio;
+        case "disabled":
+            this.element.classList.toggle("disabled", this._disabled);
+            break;
         default :
             super.commitProperty(propertyName);
             break;
         }
     }
 
-    layout()
+    commit()
     {
-        super.layout();
-        this.draw(this._canvas.element.getContext("2d"));
-    }
+        super.commit();
 
-    draw(ctx)
-    {
-        // Implemented by subclasses.
+        const scrubberRadius = 4.5;
+        const scrubberCenterX = scrubberRadius + Math.round((this.width - (scrubberRadius * 2)) * this.value);
+        this._primaryFill.element.style.width = `${scrubberCenterX}px`;
+        this._secondaryFill.element.style.left = `${scrubberCenterX}px`;
+        this._secondaryFill.element.style.right = `${(1 - this._secondaryValue) * 100}%`;
+        this._knob.element.style.left = `${scrubberCenterX}px`;
     }
 
     // Private
 
-    _handleInputEvent()
+    _handleMousedownEvent()
     {
-        if (!this._valueIsChanging && this.uiDelegate && typeof this.uiDelegate.controlValueWillStartChanging === "function")
+        this._mouseupTarget = this._interactionEndTarget();
+        this._mouseupTarget.addEventListener("mouseup", this, true);
+
+        this._valueWillStartChanging();
+    }
+
+    _interactionEndTarget()
+    {
+        const mediaControls = this.parentOfType(MediaControls);
+        return (!mediaControls || mediaControls instanceof MacOSInlineMediaControls) ? window : mediaControls.element;
+    }
+
+    _handleTouchstartEvent(event)
+    {
+        // We're only interested in the very first touch on the <input>.
+        if (event.touches.length !== 1)
+            return;
+
+        this._initialTouchIdentifier = event.touches[0].identifier;
+
+        this._touchendTarget = this._interactionEndTarget();
+        this._touchendTarget.addEventListener("touchend", this, true);
+
+        this._valueWillStartChanging();
+    }
+
+    _valueWillStartChanging()
+    {
+        // We should no longer cache the value since we'll be interacting with the <input>
+        // so the value should be read back from it dynamically.
+        delete this._value;
+
+        if (this.uiDelegate && typeof this.uiDelegate.controlValueWillStartChanging === "function")
             this.uiDelegate.controlValueWillStartChanging(this);
-        this._valueIsChanging = true;
+        this.isActive = true;
+        this.needsLayout = true;
+    }
+
+    _valueDidChange()
+    {
         if (this.uiDelegate && typeof this.uiDelegate.controlValueDidChange === "function")
             this.uiDelegate.controlValueDidChange(this);
 
         this.needsLayout = true;
     }
 
-    _handleChangeEvent()
+    _valueDidStopChanging()
     {
-        delete this._valueIsChanging;
+        this.isActive = false;
         if (this.uiDelegate && typeof this.uiDelegate.controlValueDidStopChanging === "function")
             this.uiDelegate.controlValueDidStopChanging(this);
 
         this.needsLayout = true;
     }
 
-}
+    _handleMouseupEvent()
+    {
+        this._mouseupTarget.removeEventListener("mouseup", this, true);
+        delete this._mouseupTarget;
 
-function addRoundedRect(ctx, x, y, width, height, radius) {
-    ctx.moveTo(x + radius, y);
-    ctx.arcTo(x + width, y, x + width, y + radius, radius);
-    ctx.lineTo(x + width, y + height - radius);
-    ctx.arcTo(x + width, y + height, x + width - radius, y + height, radius);
-    ctx.lineTo(x + radius, y + height);
-    ctx.arcTo(x, y + height, x, y + height - radius, radius);
-    ctx.lineTo(x, y + radius);
-    ctx.arcTo(x, y, x + radius, y, radius);
+        this._valueDidStopChanging();
+    }
+
+    _handleTouchendEvent(event)
+    {
+        if (!Array.from(event.changedTouches).find(touch => touch.identifier === this._initialTouchIdentifier))
+            return;
+
+        this._touchendTarget.removeEventListener("touchend", this, true);
+        delete this._touchendTarget;
+        delete this._initialTouchIdentifier;
+
+        this._valueDidStopChanging();
+    }
+
 }

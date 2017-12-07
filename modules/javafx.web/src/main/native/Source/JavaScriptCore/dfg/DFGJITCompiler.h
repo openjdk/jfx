@@ -34,8 +34,6 @@
 #include "DFGInlineCacheWrapper.h"
 #include "DFGJITCode.h"
 #include "DFGOSRExitCompilationInfo.h"
-#include "DFGRegisterBank.h"
-#include "FPRInfo.h"
 #include "GPRInfo.h"
 #include "HandlerInfo.h"
 #include "JITCode.h"
@@ -43,7 +41,6 @@
 #include "LinkBuffer.h"
 #include "MacroAssembler.h"
 #include "PCToCodeOriginMap.h"
-#include "TempRegisterSet.h"
 
 namespace JSC {
 
@@ -170,13 +167,13 @@ public:
 
     void exceptionCheckWithCallFrameRollback()
     {
-        m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck());
+        m_exceptionChecksWithCallFrameRollback.append(emitExceptionCheck(*vm()));
     }
 
     // Add a call out from JIT code, with a fast exception check that tests if the return value is zero.
     void fastExceptionCheck()
     {
-        callExceptionFuzz();
+        callExceptionFuzz(*vm());
         m_exceptionChecks.append(branchTestPtr(Zero, GPRInfo::returnValueGPR));
     }
 
@@ -195,6 +192,11 @@ public:
     void addGetById(const JITGetByIdGenerator& gen, SlowPathGenerator* slowPath)
     {
         m_getByIds.append(InlineCacheWrapper<JITGetByIdGenerator>(gen, slowPath));
+    }
+
+    void addGetByIdWithThis(const JITGetByIdWithThisGenerator& gen, SlowPathGenerator* slowPath)
+    {
+        m_getByIdsWithThis.append(InlineCacheWrapper<JITGetByIdWithThisGenerator>(gen, slowPath));
     }
 
     void addPutById(const JITPutByIdGenerator& gen, SlowPathGenerator* slowPath)
@@ -263,6 +265,8 @@ public:
 
     PCToCodeOriginMapBuilder& pcToCodeOriginMapBuilder() { return m_pcToCodeOriginMapBuilder; }
 
+    VM* vm() { return &m_graph.m_vm; }
+
 private:
     friend class OSRExitJumpPlaceholder;
 
@@ -294,6 +298,7 @@ private:
     JumpList m_exceptionChecksWithCallFrameRollback;
 
     Vector<Label> m_blockHeads;
+
 
     struct JSCallRecord {
         JSCallRecord(Call fastCall, Call slowCall, DataLabelPtr targetToCheck, CallLinkInfo* info)
@@ -338,7 +343,9 @@ private:
         CallLinkInfo* info;
     };
 
+
     Vector<InlineCacheWrapper<JITGetByIdGenerator>, 4> m_getByIds;
+    Vector<InlineCacheWrapper<JITGetByIdWithThisGenerator>, 4> m_getByIdsWithThis;
     Vector<InlineCacheWrapper<JITPutByIdGenerator>, 4> m_putByIds;
     Vector<InRecord, 4> m_ins;
     Vector<JSCallRecord, 4> m_jsCalls;

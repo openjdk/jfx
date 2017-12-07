@@ -33,10 +33,10 @@
 #include "LayerPool.h"
 #include "Logging.h"
 #include "PlatformCALayer.h"
-#include "TextStream.h"
 #include "TileController.h"
 #include <wtf/MainThread.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/TextStream.h>
 
 #if PLATFORM(IOS)
 #include "TileControllerMemoryHandlerIOS.h"
@@ -65,7 +65,7 @@ static String validationPolicyAsString(TileGrid::TileValidationPolicy validation
 
 TileGrid::TileGrid(TileController& controller)
     : m_controller(controller)
-    , m_containerLayer(*controller.rootLayer().createCompatibleLayer(PlatformCALayer::LayerTypeLayer, nullptr))
+    , m_containerLayer(controller.rootLayer().createCompatibleLayer(PlatformCALayer::LayerTypeLayer, nullptr))
     , m_cohortRemovalTimer(*this, &TileGrid::cohortRemovalTimerFired)
     , m_tileSize(kDefaultTileSize, kDefaultTileSize)
 {
@@ -199,6 +199,7 @@ void TileGrid::updateTileLayerProperties()
 {
     bool acceleratesDrawing = m_controller.acceleratesDrawing();
     bool deepColor = m_controller.wantsDeepColorBackingStore();
+    bool subpixelAntialiasedText = m_controller.supportsSubpixelAntialiasedText();
     bool opaque = m_controller.tilesAreOpaque();
     Color tileDebugBorderColor = m_controller.tileDebugBorderColor();
     float tileDebugBorderWidth = m_controller.tileDebugBorderWidth();
@@ -207,6 +208,7 @@ void TileGrid::updateTileLayerProperties()
         const TileInfo& tileInfo = it->value;
         tileInfo.layer->setAcceleratesDrawing(acceleratesDrawing);
         tileInfo.layer->setWantsDeepColorBackingStore(deepColor);
+        tileInfo.layer->setSupportsSubpixelAntialiasedText(subpixelAntialiasedText);
         tileInfo.layer->setOpaque(opaque);
         tileInfo.layer->setBorderColor(tileDebugBorderColor);
         tileInfo.layer->setBorderWidth(tileDebugBorderWidth);
@@ -363,7 +365,7 @@ void TileGrid::revalidateTiles(TileValidationPolicy validationPolicy)
     TileCohort currCohort = nextTileCohort();
     unsigned tilesInCohort = 0;
 
-    double minimumRevalidationTimerDuration = std::numeric_limits<double>::max();
+    Seconds minimumRevalidationTimerDuration = Seconds::infinity();
     bool needsTileRevalidation = false;
 
     auto tileSize = m_controller.tileSize();
@@ -402,7 +404,7 @@ void TileGrid::revalidateTiles(TileValidationPolicy validationPolicy)
                         continue;
                     double timeUntilCohortExpires = cohort.timeUntilExpiration();
                     if (timeUntilCohortExpires > 0) {
-                        minimumRevalidationTimerDuration = std::min(minimumRevalidationTimerDuration, timeUntilCohortExpires);
+                        minimumRevalidationTimerDuration = std::min(minimumRevalidationTimerDuration, Seconds { timeUntilCohortExpires });
                         needsTileRevalidation = true;
                     } else
                         tileLayer->removeFromSuperlayer();
@@ -521,7 +523,7 @@ TileGrid::TileCohort TileGrid::oldestTileCohort() const
 
 void TileGrid::scheduleCohortRemoval()
 {
-    const double cohortRemovalTimerSeconds = 1;
+    const Seconds cohortRemovalTimerSeconds { 1_s };
 
     // Start the timer, or reschedule the timer from now if it's already active.
     if (!m_cohortRemovalTimer.isActive())
@@ -710,12 +712,15 @@ void TileGrid::drawTileMapContents(CGContextRef context, CGRect layerBounds) con
     }
 }
 
-void TileGrid::platformCALayerPaintContents(PlatformCALayer* platformCALayer, GraphicsContext& context, const FloatRect&)
+void TileGrid::platformCALayerPaintContents(PlatformCALayer* platformCALayer, GraphicsContext& context, const FloatRect&, GraphicsLayerPaintBehavior layerPaintBehavior)
 {
 #if PLATFORM(IOS)
     if (pthread_main_np())
         WebThreadLock();
 #endif
+
+    if (!platformCALayerRepaintCount(platformCALayer))
+        layerPaintBehavior |= GraphicsLayerPaintFirstTilePaint;
 
     {
         GraphicsContextStateSaver stateSaver(context);
@@ -725,7 +730,7 @@ void TileGrid::platformCALayerPaintContents(PlatformCALayer* platformCALayer, Gr
         context.scale(m_scale);
 
         PlatformCALayer::RepaintRectList dirtyRects = PlatformCALayer::collectRectsToPaint(context.platformContext(), platformCALayer);
-        PlatformCALayer::drawLayerContents(context.platformContext(), &m_controller.rootLayer(), dirtyRects);
+        PlatformCALayer::drawLayerContents(context.platformContext(), &m_controller.rootLayer(), dirtyRects, layerPaintBehavior);
     }
 
     int repaintCount = platformCALayerIncrementRepaintCount(platformCALayer);
@@ -737,7 +742,7 @@ void TileGrid::platformCALayerPaintContents(PlatformCALayer* platformCALayer, Gr
         visiblePart.intersect(m_controller.visibleRect());
 
         if (repaintCount == 1 && !visiblePart.isEmpty())
-            WTFLogAlways("SCROLLING: Filled visible fresh tile. Time: %f Unfilled Pixels: %u\n", WTF::monotonicallyIncreasingTime(), blankPixelCount());
+            m_controller.logFilledVisibleFreshTile(blankPixelCount());
     }
 }
 
@@ -764,6 +769,12 @@ bool TileGrid::isUsingDisplayListDrawing(PlatformCALayer*) const
 bool TileGrid::platformCALayerContentsOpaque() const
 {
     return m_controller.tilesAreOpaque();
+}
+
+int TileGrid::platformCALayerRepaintCount(PlatformCALayer* platformCALayer) const
+{
+    const auto it = m_tileRepaintCounts.find(platformCALayer);
+    return it != m_tileRepaintCounts.end() ? it->value : 0;
 }
 
 int TileGrid::platformCALayerIncrementRepaintCount(PlatformCALayer* platformCALayer)

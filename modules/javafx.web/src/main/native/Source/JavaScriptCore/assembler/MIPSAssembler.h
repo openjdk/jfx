@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2009 University of Szeged
  * All rights reserved.
  * Copyright (C) 2010 MIPS Technologies, Inc. All rights reserved.
@@ -32,6 +32,7 @@
 
 #include "AssemblerBuffer.h"
 #include "JITCompilationEffort.h"
+#include <limits.h>
 #include <wtf/Assertions.h>
 #include <wtf/SegmentedVector.h>
 
@@ -107,6 +108,12 @@ typedef enum {
     ra = r31
 } RegisterID;
 
+// Currently, we don't have support for any special purpose registers.
+typedef enum {
+    firstInvalidSPR,
+    lastInvalidSPR = -1,
+} SPRegisterID;
+
 typedef enum {
     f0,
     f1,
@@ -147,14 +154,55 @@ typedef enum {
 class MIPSAssembler {
 public:
     typedef MIPSRegisters::RegisterID RegisterID;
+    typedef MIPSRegisters::SPRegisterID SPRegisterID;
     typedef MIPSRegisters::FPRegisterID FPRegisterID;
     typedef SegmentedVector<AssemblerLabel, 64> Jumps;
 
     static constexpr RegisterID firstRegister() { return MIPSRegisters::r0; }
     static constexpr RegisterID lastRegister() { return MIPSRegisters::r31; }
+    static constexpr unsigned numberOfRegisters() { return lastRegister() - firstRegister() + 1; }
+
+    static constexpr SPRegisterID firstSPRegister() { return MIPSRegisters::firstInvalidSPR; }
+    static constexpr SPRegisterID lastSPRegister() { return MIPSRegisters::lastInvalidSPR; }
+    static constexpr unsigned numberOfSPRegisters() { return 0; }
 
     static constexpr FPRegisterID firstFPRegister() { return MIPSRegisters::f0; }
     static constexpr FPRegisterID lastFPRegister() { return MIPSRegisters::f31; }
+    static constexpr unsigned numberOfFPRegisters() { return lastFPRegister() - firstFPRegister() + 1; }
+
+    static const char* gprName(RegisterID id)
+    {
+        ASSERT(id >= firstRegister() && id <= lastRegister());
+        static const char* const nameForRegister[numberOfRegisters()] = {
+            "zero", "at", "v0", "v1",
+            "a0", "a1", "a2", "a3",
+            "t0", "t1", "t2", "t3",
+            "t4", "t5", "t6", "t7"
+        };
+        return nameForRegister[id];
+    }
+
+    static const char* sprName(SPRegisterID id)
+    {
+        // Currently, we don't have support for any special purpose registers.
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    static const char* fprName(FPRegisterID id)
+    {
+        ASSERT(id >= firstFPRegister() && id <= lastFPRegister());
+        static const char* const nameForRegister[numberOfFPRegisters()] = {
+            "f0", "f1", "f2", "f3",
+            "f4", "f5", "f6", "f7",
+            "f8", "f9", "f10", "f11",
+            "f12", "f13", "f14", "f15"
+            "f16", "f17", "f18", "f19"
+            "f20", "f21", "f22", "f23"
+            "f24", "f25", "f26", "f27"
+            "f28", "f29", "f30", "f31"
+        };
+        return nameForRegister[id];
+    }
 
     MIPSAssembler()
         : m_indexOfLastWatchpoint(INT_MIN)
@@ -192,8 +240,23 @@ public:
         emitInst(0x00000000);
     }
 
+    static void fillNops(void* base, size_t size, bool isCopyingToExecutableMemory)
+    {
+        UNUSED_PARAM(isCopyingToExecutableMemory);
+        RELEASE_ASSERT(!(size % sizeof(int32_t)));
+
+        int32_t* ptr = static_cast<int32_t*>(base);
+        const size_t num32s = size / sizeof(int32_t);
+        const int32_t insn = 0x00000000;
+        for (size_t i = 0; i < num32s; i++)
+            *ptr++ = insn;
+    }
+
     void sync()
     {
+        // FIXME: https://bugs.webkit.org/show_bug.cgi?id=169984
+        // We might get a performance improvements by using SYNC_MB in some or
+        // all cases.
         emitInst(0x0000000f);
     }
 
@@ -445,6 +508,14 @@ public:
     {
         int value = 512; /* BRK_BUG */
         emitInst(0x0000000d | ((value & 0x3ff) << OP_SH_CODE));
+    }
+
+    static bool isBkpt(void* address)
+    {
+        int value = 512; /* BRK_BUG */
+        MIPSWord expected = (0x0000000d | ((value & 0x3ff) << OP_SH_CODE));
+        MIPSWord candidateInstruction = *reinterpret_cast<MIPSWord*>(address);
+        return candidateInstruction == expected;
     }
 
     void bgez(RegisterID rs, int imm)
@@ -815,6 +886,11 @@ public:
         cacheFlush(insn, flushSize);
     }
 
+    static void relinkJumpToNop(void* from)
+    {
+        relinkJump(from, from);
+    }
+
     static void relinkCall(void* from, void* to)
     {
         void* start;
@@ -886,6 +962,11 @@ public:
     static ptrdiff_t maxJumpReplacementSize()
     {
         return sizeof(MIPSWord) * 4;
+    }
+
+    static constexpr ptrdiff_t patchableJumpSize()
+    {
+        return sizeof(MIPSWord) * 8;
     }
 
     static void revertJumpToMove(void* instructionStart, RegisterID rt, int imm)

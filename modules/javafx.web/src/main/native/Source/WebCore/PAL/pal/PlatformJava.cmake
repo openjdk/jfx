@@ -1,3 +1,12 @@
+list(APPEND PAL_SOURCES
+    text/KillRingNone.cpp
+    system/java/SoundJava.cpp
+)
+
+list(APPEND PAL_INCLUDE_DIRECTORIES
+    "${ICU_INCLUDE_DIRS}"
+)
+
 if (APPLE)
     list(APPEND PAL_SOURCES
         crypto/commoncrypto/CryptoDigestCommonCrypto.cpp

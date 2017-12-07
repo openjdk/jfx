@@ -94,7 +94,7 @@ struct LoaderTaskOptions {
 };
 
 LoaderTaskOptions::LoaderTaskOptions(const ThreadableLoaderOptions& options, const String& referrer, Ref<SecurityOrigin>&& origin)
-    : options(options, options.preflightPolicy, options.contentSecurityPolicyEnforcement, options.initiator.isolatedCopy(), options.filteringPolicy)
+    : options(options.isolatedCopy())
     , referrer(referrer.isolatedCopy())
     , origin(WTFMove(origin))
 {
@@ -201,12 +201,12 @@ void WorkerThreadableLoader::MainThreadBridge::didReceiveData(const char* data, 
     }, m_taskMode);
 }
 
-void WorkerThreadableLoader::MainThreadBridge::didFinishLoading(unsigned long identifier, double finishTime)
+void WorkerThreadableLoader::MainThreadBridge::didFinishLoading(unsigned long identifier)
 {
     m_loadingFinished = true;
-    m_loaderProxy.postTaskForModeToWorkerGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), identifier, finishTime] (ScriptExecutionContext& context) mutable {
+    m_loaderProxy.postTaskForModeToWorkerGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), identifier] (ScriptExecutionContext& context) mutable {
         ASSERT_UNUSED(context, context.isWorkerGlobalScope());
-        protectedWorkerClientWrapper->didFinishLoading(identifier, finishTime);
+        protectedWorkerClientWrapper->didFinishLoading(identifier);
     }, m_taskMode);
 }
 
@@ -222,7 +222,6 @@ void WorkerThreadableLoader::MainThreadBridge::didFail(const ResourceError& erro
     }, m_taskMode);
 }
 
-#if ENABLE(WEB_TIMING)
 void WorkerThreadableLoader::MainThreadBridge::didFinishTiming(const ResourceTiming& resourceTiming)
 {
     m_loaderProxy.postTaskForModeToWorkerGlobalScope([protectedWorkerClientWrapper = makeRef(*m_workerClientWrapper), resourceTiming = resourceTiming.isolatedCopy()] (ScriptExecutionContext& context) mutable {
@@ -233,6 +232,5 @@ void WorkerThreadableLoader::MainThreadBridge::didFinishTiming(const ResourceTim
         downcast<WorkerGlobalScope>(context).performance().addResourceTiming(WTFMove(resourceTiming));
     }, m_taskMode);
 }
-#endif
 
 } // namespace WebCore

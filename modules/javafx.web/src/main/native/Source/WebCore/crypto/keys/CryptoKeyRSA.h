@@ -36,9 +36,10 @@ typedef struct _CCRSACryptor *CCRSACryptorRef;
 typedef CCRSACryptorRef PlatformRSAKey;
 #endif
 
-#if PLATFORM(GTK)
-typedef struct _PlatformRSAKeyGnuTLS PlatformRSAKeyGnuTLS;
-typedef PlatformRSAKeyGnuTLS *PlatformRSAKey;
+#if PLATFORM(GTK) || PLATFORM(WPE)
+// gcry_sexp* equates gcry_sexp_t.
+struct gcry_sexp;
+typedef gcry_sexp* PlatformRSAKey;
 #endif
 
 namespace WebCore {
@@ -64,6 +65,8 @@ public:
     size_t modulusLength() const { return m_modulusLength; }
     const Vector<uint8_t>& publicExponent() const { return m_publicExponent; }
 
+    CryptoRsaKeyAlgorithm dictionary() const;
+
 private:
     size_t m_modulusLength;
     Vector<uint8_t> m_publicExponent;
@@ -80,6 +83,8 @@ public:
     KeyAlgorithmClass keyAlgorithmClass() const final { return KeyAlgorithmClass::HRSA; }
 
     const String& hash() const { return m_hash; }
+
+    CryptoRsaHashedKeyAlgorithm dictionary() const;
 
 private:
     String m_hash;

@@ -33,7 +33,7 @@
 #include "RenderView.h"
 #include "Settings.h"
 #include "SimpleLineLayout.h"
-#include "TextStream.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace SimpleLineLayout {
@@ -42,8 +42,8 @@ namespace SimpleLineLayout {
 static void printReason(AvoidanceReason reason, TextStream& stream)
 {
     switch (reason) {
-    case FlowIsInsideRegion:
-        stream << "flow is inside region";
+    case FlowIsInsideANonMultiColumnThread:
+        stream << "flow is inside a non-multicolumn container";
         break;
     case FlowHasHorizonalWritingMode:
         stream << "horizontal writing mode";
@@ -182,6 +182,18 @@ static void printReason(AvoidanceReason reason, TextStream& stream)
         break;
     case FlowTextHasSurrogatePair:
         stream << "surrogate pair";
+        break;
+    case MultiColumnFlowIsNotTopLevel:
+        stream << "non top level column";
+        break;
+    case MultiColumnFlowHasColumnSpanner:
+        stream << "column has spanner";
+        break;
+    case MultiColumnFlowVerticalAlign:
+        stream << "column with vertical-align != baseline";
+        break;
+    case MultiColumnFlowIsFloating:
+        stream << "column with floating objecgts";
         break;
     case FlowTextIsEmpty:
     case FlowHasNoChild:
@@ -339,7 +351,7 @@ void printSimpleLineLayoutCoverage()
     stream << "---------------------------------------------------\n";
     stream << "Number of blocks: total(" <<  leafRenderers.size() << ") non-simple(" << numberOfUnsupportedLeafBlocks << ")\nContent length: total(" <<
         textLength << ") non-simple(" << unsupportedTextLength << ")\n";
-    for (const auto reasonEntry : flowStatistics) {
+    for (const auto& reasonEntry : flowStatistics) {
         printReason(reasonEntry.key, stream);
         stream << ": " << (float)reasonEntry.value / (float)textLength * 100 << "%\n";
     }

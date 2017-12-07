@@ -50,18 +50,29 @@ public:
     LibWebRTCProvider() = default;
     virtual ~LibWebRTCProvider() = default;
 
+    static bool webRTCAvailable();
 #if USE(LIBWEBRTC)
-    WEBCORE_EXPORT virtual rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&);
+    WEBCORE_EXPORT virtual rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, webrtc::PeerConnectionInterface::RTCConfiguration&&);
+
+    WEBCORE_EXPORT webrtc::PeerConnectionFactoryInterface* factory();
 
     // FIXME: Make these methods not static.
     static WEBCORE_EXPORT void callOnWebRTCNetworkThread(Function<void()>&&);
     static WEBCORE_EXPORT void callOnWebRTCSignalingThread(Function<void()>&&);
-    static WEBCORE_EXPORT webrtc::PeerConnectionFactoryInterface& factory();
+    static WEBCORE_EXPORT void setDecoderFactoryGetter(Function<std::unique_ptr<cricket::WebRtcVideoDecoderFactory>()>&&);
+    static WEBCORE_EXPORT void setEncoderFactoryGetter(Function<std::unique_ptr<cricket::WebRtcVideoEncoderFactory>()>&&);
+
     // Used for mock testing
     static void setPeerConnectionFactory(rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface>&&);
 
+    void disableEnumeratingAllNetworkInterfaces() { m_enableEnumeratingAllNetworkInterfaces = false; }
+    void enableEnumeratingAllNetworkInterfaces() { m_enableEnumeratingAllNetworkInterfaces = true; }
+
 protected:
-    WEBCORE_EXPORT rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::NetworkManager&, rtc::PacketSocketFactory&);
+    WEBCORE_EXPORT rtc::scoped_refptr<webrtc::PeerConnectionInterface> createPeerConnection(webrtc::PeerConnectionObserver&, rtc::NetworkManager&, rtc::PacketSocketFactory&, webrtc::PeerConnectionInterface::RTCConfiguration&&);
+
+    bool m_enableEnumeratingAllNetworkInterfaces { false };
+    bool m_useNetworkThreadWithSocketServer { true };
 #endif
 };
 

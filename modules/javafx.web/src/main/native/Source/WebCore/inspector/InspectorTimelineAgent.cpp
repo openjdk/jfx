@@ -33,6 +33,7 @@
 #include "config.h"
 #include "InspectorTimelineAgent.h"
 
+#include "DOMWindow.h"
 #include "Event.h"
 #include "Frame.h"
 #include "InspectorMemoryAgent.h"
@@ -384,7 +385,7 @@ void InspectorTimelineAgent::didPaint(RenderObject& renderer, const LayoutRect& 
     didCompleteCurrentRecord(TimelineRecordType::Paint);
 }
 
-void InspectorTimelineAgent::didInstallTimer(int timerId, std::chrono::milliseconds timeout, bool singleShot, Frame* frame)
+void InspectorTimelineAgent::didInstallTimer(int timerId, Seconds timeout, bool singleShot, Frame* frame)
 {
     appendRecord(TimelineRecordFactory::createTimerInstallData(timerId, timeout, singleShot), TimelineRecordType::TimerInstall, true, frame);
 }

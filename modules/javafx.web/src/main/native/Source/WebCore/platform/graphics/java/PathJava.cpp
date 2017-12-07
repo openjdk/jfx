@@ -1,11 +1,29 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
-#include "config.h"
 
-#if COMPILER(GCC)
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#endif
+#include "config.h"
 
 #include "Path.h"
 #include "FloatRect.h"
@@ -22,8 +40,7 @@
 #include "com_sun_webkit_graphics_WCPathIterator.h"
 
 
-namespace WebCore
-{
+namespace WebCore {
 
 static GraphicsContext& scratchContext()
 {
@@ -32,7 +49,7 @@ static GraphicsContext& scratchContext()
     return context;
 }
 
-PassRefPtr<RQRef> createEmptyPath()
+RefPtr<RQRef> createEmptyPath()
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     static jmethodID mid = env->GetMethodID(PG_GetGraphicsManagerClass(env),
@@ -45,7 +62,7 @@ PassRefPtr<RQRef> createEmptyPath()
     return RQRef::create(ref);
 }
 
-PassRefPtr<RQRef> copyPath(PassRefPtr<RQRef> p)
+RefPtr<RQRef> copyPath(RefPtr<RQRef> p)
 {
     if (!p) {
         return createEmptyPath();
@@ -327,12 +344,12 @@ void Path::addRect(const FloatRect& r)
     CheckAndClearException(env);
 }
 
-void Path::addEllipse(FloatPoint point, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, bool anticlockwise)
+void Path::addEllipse(FloatPoint, float, float, float, float, float, bool)
 {
     notImplemented();
 }
 
-void Path::addPath(const Path& path, const AffineTransform& transform)
+void Path::addPath(const Path&, const AffineTransform&)
 {
     notImplemented();
 }

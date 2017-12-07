@@ -30,6 +30,8 @@ class LayoutNode
         this._pendingDOMManipulation = LayoutNode.DOMManipulation.None;
     }
 
+    // Public
+
     get x()
     {
         return this._x;
@@ -70,6 +72,7 @@ class LayoutNode
 
         this._width = width;
         this.markDirtyProperty("width");
+        this.layout();
     }
 
     get height()
@@ -84,6 +87,7 @@ class LayoutNode
 
         this._height = height;
         this.markDirtyProperty("height");
+        this.layout();
     }
 
     get visible()
@@ -126,6 +130,18 @@ class LayoutNode
 
     set children(children)
     {
+        if (children.length === this._children.length) {
+            let arraysDiffer = false;
+            for (let i = children.length - 1; i >= 0; --i) {
+                if (children[i] !== this._children[i]) {
+                    arraysDiffer = true;
+                    break;
+                }
+            }
+            if (!arraysDiffer)
+                return;
+        }
+
         while (this._children.length)
             this.removeChild(this._children[0]);
 
@@ -201,6 +217,30 @@ class LayoutNode
             this._updateDirtyState();
     }
 
+    // Protected
+
+    layout()
+    {
+        // Implemented by subclasses.
+    }
+
+    commit()
+    {
+        if (this._pendingDOMManipulation === LayoutNode.DOMManipulation.Removal) {
+            const parent = this.element.parentNode;
+            if (parent)
+                parent.removeChild(this.element);
+        }
+    
+        for (let propertyName of this._dirtyProperties)
+            this.commitProperty(propertyName);
+
+        this._dirtyProperties.clear();
+
+        if (this._pendingDOMManipulation === LayoutNode.DOMManipulation.Addition)
+            nodesRequiringChildrenUpdate.add(this.parent);
+    }
+
     commitProperty(propertyName)
     {
         const style = this.element.style;
@@ -219,26 +259,12 @@ class LayoutNode
             style.height = `${this._height}px`;
             break;
         case "visible":
-            style.display = this._visible ? "inherit" : "none";
+            if (this._visible)
+                style.removeProperty("display");
+            else
+                style.display = "none";
             break;
         }
-    }
-
-    layout()
-    {
-        if (this._pendingDOMManipulation === LayoutNode.DOMManipulation.Removal) {
-            const parent = this.element.parentNode;
-            if (parent)
-                parent.removeChild(this.element);
-        }
-    
-        for (let propertyName of this._dirtyProperties)
-            this.commitProperty(propertyName);
-
-        this._dirtyProperties.clear();
-
-        if (this._pendingDOMManipulation === LayoutNode.DOMManipulation.Addition)
-            nodesRequiringChildrenUpdate.add(this.parent);
     }
 
     // Private
@@ -293,6 +319,7 @@ function performScheduledLayout()
     previousDirtyNodes.forEach(node => {
         node._needsLayout = false;
         node.layout();
+        node.commit();
     });
 
     nodesRequiringChildrenUpdate.forEach(node => node._updateChildren());

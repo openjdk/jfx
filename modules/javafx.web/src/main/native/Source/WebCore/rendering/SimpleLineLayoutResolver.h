@@ -28,7 +28,6 @@
 #include "LayoutRect.h"
 #include "RenderBlockFlow.h"
 #include "SimpleLineLayoutFlowContents.h"
-#include "SimpleLineLayoutFunctions.h"
 #include <wtf/IteratorRange.h>
 #include <wtf/text/WTFString.h>
 
@@ -110,7 +109,7 @@ public:
 private:
     enum class IndexType { First, Last };
     unsigned lineIndexForHeight(LayoutUnit, IndexType) const;
-    unsigned adjustLineIndexForStruts(LayoutUnit, unsigned lineIndexCandidate) const;
+    unsigned adjustLineIndexForStruts(LayoutUnit, IndexType, unsigned lineIndexCandidate) const;
 
     const RenderBlockFlow& m_flowRenderer;
     const Layout& m_layout;

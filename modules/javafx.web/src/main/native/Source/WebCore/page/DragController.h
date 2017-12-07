@@ -33,19 +33,20 @@
 
 namespace WebCore {
 
-    class DataTransfer;
-    class Document;
-    class DragClient;
-    class DragData;
-    class Element;
-    class Frame;
-    class FrameSelection;
-    class HTMLInputElement;
-    class IntRect;
-    class Page;
-    class PlatformMouseEvent;
+class DataTransfer;
+class Document;
+class DragClient;
+class DragData;
+class Element;
+class Frame;
+class FrameSelection;
+class HTMLInputElement;
+class IntRect;
+class Page;
+class PlatformMouseEvent;
 
-    struct DragState;
+struct DragItem;
+struct DragState;
 
     class DragController {
         WTF_MAKE_NONCOPYABLE(DragController); WTF_MAKE_FAST_ALLOCATED;
@@ -54,6 +55,7 @@ namespace WebCore {
         ~DragController();
 
         static std::unique_ptr<DragController> create(Page&, DragClient&);
+        static DragOperation platformGenericDragOperation();
 
         DragClient& client() const { return m_client; }
 
@@ -61,6 +63,7 @@ namespace WebCore {
         WEBCORE_EXPORT void dragExited(const DragData&);
         WEBCORE_EXPORT DragOperation dragUpdated(const DragData&);
         WEBCORE_EXPORT bool performDragOperation(const DragData&);
+        WEBCORE_EXPORT void dragCancelled();
 
         bool mouseIsOverFileInput() const { return m_fileInputElementUnderMouse; }
         unsigned numberOfItemsToBeAccepted() const { return m_numberOfItemsToBeAccepted; }
@@ -78,6 +81,7 @@ namespace WebCore {
         const IntPoint& dragOffset() const { return m_dragOffset; }
         DragSourceAction dragSourceAction() const { return m_dragSourceAction; }
 
+        enum class DragHandlingMethod { None, EditPlainText, EditRichText, UploadFile, PageLoad, SetColor, NonDefault };
         Document* documentUnderMouse() const { return m_documentUnderMouse.get(); }
         DragDestinationAction dragDestinationAction() const { return m_dragDestinationAction; }
         DragSourceAction delegateDragSourceAction(const IntPoint& rootViewPoint);
@@ -90,19 +94,19 @@ namespace WebCore {
         bool startDrag(Frame& src, const DragState&, DragOperation srcOp, const PlatformMouseEvent& dragEvent, const IntPoint& dragOrigin);
         static const IntSize& maxDragImageSize();
 
-        static const int LinkDragBorderInset;
         static const int MaxOriginalImageArea;
         static const int DragIconRightInset;
         static const int DragIconBottomInset;
         static const float DragImageAlpha;
 
     private:
+        void updateSupportedTypeIdentifiersForDragHandlingMethod(DragHandlingMethod, const DragData&) const;
         bool dispatchTextInputEventFor(Frame*, const DragData&);
         bool canProcessDrag(const DragData&);
         bool concludeEditDrag(const DragData&);
         DragOperation dragEnteredOrUpdated(const DragData&);
         DragOperation operationForLoad(const DragData&);
-        bool tryDocumentDrag(const DragData&, DragDestinationAction, DragOperation&);
+        DragHandlingMethod tryDocumentDrag(const DragData&, DragDestinationAction, DragOperation&);
         bool tryDHTMLDrag(const DragData&, DragOperation&);
         DragOperation dragOperation(const DragData&);
         void clearDragCaret();
@@ -110,9 +114,22 @@ namespace WebCore {
         bool isCopyKeyDown(const DragData&);
 
         void mouseMovedIntoDocument(Document*);
+        bool shouldUseCachedImageForDragImage(const Image&) const;
 
-        void doImageDrag(Element&, const IntPoint&, const IntRect&, DataTransfer&, Frame&, IntPoint&);
-        void doSystemDrag(DragImage, const IntPoint&, const IntPoint&, const IntRect& dragImageBounds, DataTransfer&, Frame&, DragSourceAction);
+        void doImageDrag(Element&, const IntPoint&, const IntRect&, Frame&, IntPoint&, const DragState&);
+        void doSystemDrag(DragImage, const IntPoint&, const IntPoint&, Frame&, const DragState&);
+
+        void beginDrag(DragItem, Frame&, const IntPoint& mouseDownPoint, const IntPoint& mouseDraggedPoint, DataTransfer&, DragSourceAction);
+
+        bool canLoadDataFromDraggingPasteboard() const
+        {
+#if ENABLE(DATA_INTERACTION)
+            return m_isPerformingDrop;
+#else
+            return true;
+#endif
+        }
+
         void cleanupAfterSystemDrag();
         void declareAndWriteDragImage(DataTransfer&, Element&, const URL&, const String& label);
 #if ENABLE(ATTACHMENT_ELEMENT)
@@ -125,7 +142,7 @@ namespace WebCore {
         RefPtr<Document> m_dragInitiator; // The Document (if any) that initiated the drag.
         RefPtr<HTMLInputElement> m_fileInputElementUnderMouse;
         unsigned m_numberOfItemsToBeAccepted;
-        bool m_documentIsHandlingDrag;
+        DragHandlingMethod m_dragHandlingMethod;
 
         DragDestinationAction m_dragDestinationAction;
         DragSourceAction m_dragSourceAction;
@@ -133,6 +150,7 @@ namespace WebCore {
         DragOperation m_sourceDragOperation; // Set in startDrag when a drag starts from a mouse down within WebKit
         IntPoint m_dragOffset;
         URL m_draggingImageURL;
+        bool m_isPerformingDrop { false };
 #if ENABLE(ATTACHMENT_ELEMENT)
         URL m_draggingAttachmentURL;
 #endif

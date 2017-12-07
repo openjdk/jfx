@@ -26,10 +26,10 @@
 #import "config.h"
 #import "DiskCacheMonitorCocoa.h"
 
-#import "CFNetworkSPI.h"
 #import "CachedResource.h"
 #import "MemoryCache.h"
 #import "SharedBuffer.h"
+#import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/MainThread.h>
 #import <wtf/RefPtr.h>
 
@@ -48,7 +48,7 @@ RefPtr<SharedBuffer> DiskCacheMonitor::tryGetFileBackedSharedBufferFromCFURLCach
     if (!data)
         return nullptr;
 
-    return SharedBuffer::wrapCFData(data);
+    return SharedBuffer::create(data);
 }
 
 void DiskCacheMonitor::monitorFileBackingStoreCreation(const ResourceRequest& request, SessionID sessionID, CFCachedURLResponseRef cachedResponse)

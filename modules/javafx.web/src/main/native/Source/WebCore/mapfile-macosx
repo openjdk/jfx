@@ -20,6 +20,8 @@
                __ZN3WTF16fastZeroedMallocEm
                __ZN3WTF26getAndResetAccumulatedLogsEv
                __ZNK3WTF6String4utf8Ev
+               __ZNK14OpaqueJSString6stringEv
+               __ZN3WTF5equalEPKNS_10StringImplEPKh
                _kJSClassDefinitionEmpty
                _JSCheckScriptSyntax
                _JSClassCreate
@@ -89,6 +91,7 @@
                _JSStringRetain
                _JSValueCreateJSONString
                _JSValueGetType
+               _JSValueIsArray
                _JSValueIsBoolean
                _JSValueIsEqual
                _JSValueIsInstanceOfConstructor

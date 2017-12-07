@@ -64,13 +64,15 @@ class DeprecatedPort(object):
     def port(port_name):
         ports = {
             "gtk-wk2": GtkWK2Port,
+            "ios-device": IOSPort,
+            # FIXME: https://bugs.webkit.org/show_bug.cgi?id=169302
             "ios": IOSPort,
             "ios-simulator-wk2": IOSSimulatorWK2Port,
             "mac": MacPort,
             "mac-wk2": MacWK2Port,
             "win": WinPort,
             "wincairo": WinCairoPort,
-            "efl-wk2": EflWK2Port,
+            "wpe": WpePort,
         }
         default_port = {
             "Windows": WinPort,
@@ -128,9 +130,16 @@ class DeprecatedPort(object):
     def run_bindings_tests_command(self):
         return self.script_shell_command("run-bindings-tests")
 
+    def run_api_tests_command(self, build_style=None):
+        command = self.script_shell_command("run-api-tests")
+        return self._append_build_style_flag(command, build_style)
+
+    def run_sort_xcode_project_file_command(self):
+        return self.script_shell_command("sort-Xcode-project-file")
+
 
 class IOSPort(DeprecatedPort):
-    port_flag_name = "ios"
+    port_flag_name = "ios-device"
 
     def build_webkit_command(self, build_style=None):
         command = super(IOSPort, self).build_webkit_command(build_style=build_style)
@@ -197,12 +206,17 @@ class GtkWK2Port(DeprecatedPort):
         return command
 
 
-class EflWK2Port(DeprecatedPort):
-    port_flag_name = "efl-wk2"
+class WpePort(DeprecatedPort):
+    port_flag_name = "wpe"
 
     def build_webkit_command(self, build_style=None):
-        command = super(EflWK2Port, self).build_webkit_command(build_style=build_style)
-        command.append("--efl")
-        command.append("--update-efl")
-        command.append(super(EflWK2Port, self).makeArgs())
+        command = super(WpePort, self).build_webkit_command(build_style=build_style)
+        command.append("--wpe")
+        command.append("--update-wpe")
+        command.append(super(WpePort, self).makeArgs())
+        return command
+
+    def run_webkit_tests_command(self, build_style=None):
+        command = super(WpePort, self).run_webkit_tests_command(build_style)
+        command.append("--wpe")
         return command

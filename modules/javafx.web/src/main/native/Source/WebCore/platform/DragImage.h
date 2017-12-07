@@ -29,7 +29,9 @@
 #include "ImageOrientation.h"
 #include "IntSize.h"
 #include "TextFlags.h"
+#include "TextIndicator.h"
 #include <wtf/Forward.h>
+#include <wtf/Optional.h>
 
 #if PLATFORM(IOS)
 #include <wtf/RetainPtr.h>
@@ -39,7 +41,7 @@ typedef struct CGImage *CGImageRef;
 OBJC_CLASS NSImage;
 #elif PLATFORM(WIN)
 typedef struct HBITMAP__* HBITMAP;
-#elif PLATFORM(GTK)
+#elif USE(CAIRO)
 #include "RefPtrCairo.h"
 #elif PLATFORM(JAVA)
 #include "Image.h"
@@ -51,6 +53,7 @@ typedef struct HBITMAP__* HBITMAP;
 
 namespace WebCore {
 
+class Element;
 class Frame;
 class Image;
 class IntRect;
@@ -64,7 +67,7 @@ typedef RetainPtr<CGImageRef> DragImageRef;
 typedef RetainPtr<NSImage> DragImageRef;
 #elif PLATFORM(WIN)
 typedef HBITMAP DragImageRef;
-#elif PLATFORM(GTK)
+#elif USE(CAIRO)
 typedef RefPtr<cairo_surface_t> DragImageRef;
 #elif PLATFORM(JAVA)
 typedef RefPtr<Image> DragImageRef;
@@ -88,26 +91,34 @@ DragImageRef createDragImageFromImage(Image*, ImageOrientationDescription);
 DragImageRef createDragImageIconForCachedImageFilename(const String&);
 
 WEBCORE_EXPORT DragImageRef createDragImageForNode(Frame&, Node&);
-WEBCORE_EXPORT DragImageRef createDragImageForSelection(Frame&, bool forceBlackText = false);
+WEBCORE_EXPORT DragImageRef createDragImageForSelection(Frame&, TextIndicatorData&, bool forceBlackText = false);
 WEBCORE_EXPORT DragImageRef createDragImageForRange(Frame&, Range&, bool forceBlackText = false);
 DragImageRef createDragImageForImage(Frame&, Node&, IntRect& imageRect, IntRect& elementRect);
-DragImageRef createDragImageForLink(URL&, const String& label, FontRenderingMode);
+DragImageRef createDragImageForLink(Element&, URL&, const String& label, TextIndicatorData&, FontRenderingMode, float deviceScaleFactor);
 void deleteDragImage(DragImageRef);
+
+IntPoint dragOffsetForLinkDragImage(DragImageRef);
+FloatPoint anchorPointForLinkDragImage(DragImageRef);
 
 class DragImage final {
 public:
-    DragImage();
+    WEBCORE_EXPORT DragImage();
     explicit DragImage(DragImageRef);
     DragImage(DragImage&&);
-    ~DragImage();
+    WEBCORE_EXPORT ~DragImage();
 
     DragImage& operator=(DragImage&&);
+
+    void setIndicatorData(const TextIndicatorData& data) { m_indicatorData = data; }
+    bool hasIndicatorData() const { return !!m_indicatorData; }
+    std::optional<TextIndicatorData> indicatorData() const { return m_indicatorData; }
 
     explicit operator bool() const { return !!m_dragImageRef; }
     DragImageRef get() const { return m_dragImageRef; }
 
 private:
     DragImageRef m_dragImageRef;
+    std::optional<TextIndicatorData> m_indicatorData;
 };
 
 }

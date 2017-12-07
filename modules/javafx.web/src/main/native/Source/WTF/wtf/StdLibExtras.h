@@ -27,9 +27,9 @@
 #ifndef WTF_StdLibExtras_h
 #define WTF_StdLibExtras_h
 
-#include <chrono>
 #include <cstring>
 #include <memory>
+#include <type_traits>
 #include <wtf/Assertions.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/Compiler.h>
@@ -408,6 +408,45 @@ struct RemoveCVAndReference  {
     typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type type;
 };
 
+template<typename IteratorTypeLeft, typename IteratorTypeRight, typename IteratorTypeDst>
+IteratorTypeDst mergeDeduplicatedSorted(IteratorTypeLeft leftBegin, IteratorTypeLeft leftEnd, IteratorTypeRight rightBegin, IteratorTypeRight rightEnd, IteratorTypeDst dstBegin)
+{
+    IteratorTypeLeft leftIter = leftBegin;
+    IteratorTypeRight rightIter = rightBegin;
+    IteratorTypeDst dstIter = dstBegin;
+
+    if (leftIter < leftEnd && rightIter < rightEnd) {
+        for (;;) {
+            auto left = *leftIter;
+            auto right = *rightIter;
+            if (left < right) {
+                *dstIter++ = left;
+                leftIter++;
+                if (leftIter >= leftEnd)
+                    break;
+            } else if (left == right) {
+                *dstIter++ = left;
+                leftIter++;
+                rightIter++;
+                if (leftIter >= leftEnd || rightIter >= rightEnd)
+                    break;
+            } else {
+                *dstIter++ = right;
+                rightIter++;
+                if (rightIter >= rightEnd)
+                    break;
+            }
+        }
+    }
+
+    while (leftIter < leftEnd)
+        *dstIter++ = *leftIter++;
+    while (rightIter < rightEnd)
+        *dstIter++ = *rightIter++;
+
+    return dstIter;
+}
+
 } // namespace WTF
 
 // This version of placement new omits a 0 check.
@@ -471,7 +510,25 @@ ALWAYS_INLINE constexpr typename remove_reference<T>::type&& move(T&& value)
     return move(forward<T>(value));
 }
 
+#if __cplusplus < 201703L && (!defined(_MSC_FULL_VER) || _MSC_FULL_VER < 190023918)
+template<class...> struct wtf_conjunction_impl;
+template<> struct wtf_conjunction_impl<> : true_type { };
+template<class B0> struct wtf_conjunction_impl<B0> : B0 { };
+template<class B0, class B1> struct wtf_conjunction_impl<B0, B1> : conditional<B0::value, B1, B0>::type { };
+template<class B0, class B1, class B2, class... Bn> struct wtf_conjunction_impl<B0, B1, B2, Bn...> : conditional<B0::value, wtf_conjunction_impl<B1, B2, Bn...>, B0>::type { };
+template<class... _Args> struct conjunction : wtf_conjunction_impl<_Args...> { };
+#endif
+
 } // namespace std
+
+#if COMPILER(GCC) && GCC_VERSION < 40904
+namespace std {
+    template<class T>
+        struct is_final
+        : public std::integral_constant<bool, __is_final(T)>
+        { };
+}
+#endif
 
 #define WTFMove(value) std::move<WTF::CheckMoveParameter>(value)
 
@@ -489,13 +546,9 @@ using WTF::isCompilationThread;
 using WTF::isPointerAligned;
 using WTF::isStatelessLambda;
 using WTF::is8ByteAligned;
+using WTF::mergeDeduplicatedSorted;
 using WTF::roundUpToMultipleOf;
 using WTF::safeCast;
 using WTF::tryBinarySearch;
-
-#if !COMPILER(CLANG) || __cplusplus >= 201305L
-// We normally don't want to bring in entire std namespaces, but literals are an exception.
-using namespace std::literals::chrono_literals;
-#endif
 
 #endif // WTF_StdLibExtras_h

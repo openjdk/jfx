@@ -28,9 +28,9 @@
 #include "JSFunction.h"
 #include "JSString.h"
 #include "JSObject.h"
-#include "JSWebAssemblyCallee.h"
 #include "NumberObject.h"
 #include "WebAssemblyToJSCallee.h"
+#include <wtf/LockAlgorithmInlines.h>
 #include <wtf/MathExtras.h>
 
 namespace JSC {
@@ -295,15 +295,16 @@ JSValue JSCell::getPrototype(JSObject*, ExecState*)
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-bool JSCell::isAnyWasmCallee(VM& vm) const
+void JSCell::lockSlow()
 {
-#if ENABLE(WEBASSEMBLY)
-    return inherits(vm, JSWebAssemblyCallee::info()) || inherits(vm, WebAssemblyToJSCallee::info());
-#else
-    UNUSED_PARAM(vm);
-    return false;
-#endif
+    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    IndexingTypeLockAlgorithm::lockSlow(*lock);
+}
 
+void JSCell::unlockSlow()
+{
+    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    IndexingTypeLockAlgorithm::unlockSlow(*lock);
 }
 
 } // namespace JSC

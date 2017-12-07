@@ -47,11 +47,20 @@ static inline webrtc::PeerConnectionFactoryInterface* realPeerConnectionFactory(
     return getRealPeerConnectionFactory().get();
 }
 
+void useRealRTCPeerConnectionFactory()
+{
+    auto& factory = getRealPeerConnectionFactory();
+    if (!factory)
+        return;
+    LibWebRTCProvider::setPeerConnectionFactory(factory.get());
+    factory = nullptr;
+}
+
 void useMockRTCPeerConnectionFactory(LibWebRTCProvider* provider, const String& testCase)
 {
     if (provider && !realPeerConnectionFactory()) {
         auto& factory = getRealPeerConnectionFactory();
-        factory = &provider->factory();
+        factory = provider->factory();
     }
 
     LibWebRTCProvider::setPeerConnectionFactory(MockLibWebRTCPeerConnectionFactory::create(String(testCase)));
@@ -122,7 +131,7 @@ public:
     virtual ~MockLibWebRTCPeerConnectionReleasedInNetworkThreadWhileCreatingOffer() = default;
 
 private:
-    void CreateOffer(webrtc::CreateSessionDescriptionObserver* observer, const webrtc::MediaConstraintsInterface*) final { releaseInNetworkThread(*this, *observer); }
+    void CreateOffer(webrtc::CreateSessionDescriptionObserver* observer, const webrtc::PeerConnectionInterface::RTCOfferAnswerOptions&) final { releaseInNetworkThread(*this, *observer); }
 };
 
 class MockLibWebRTCPeerConnectionReleasedInNetworkThreadWhileGettingStats : public MockLibWebRTCPeerConnection {
@@ -152,22 +161,10 @@ private:
 MockLibWebRTCPeerConnectionFactory::MockLibWebRTCPeerConnectionFactory(String&& testCase)
     : m_testCase(WTFMove(testCase))
 {
-    if (m_testCase == "TwoRealPeerConnections") {
-        m_numberOfRealPeerConnections = 2;
-        return;
-    }
-    if (m_testCase == "OneRealPeerConnection")
-        m_numberOfRealPeerConnections = 1;
 }
 
-rtc::scoped_refptr<webrtc::PeerConnectionInterface> MockLibWebRTCPeerConnectionFactory::CreatePeerConnection(const webrtc::PeerConnectionInterface::RTCConfiguration& configuration, std::unique_ptr<cricket::PortAllocator> portAllocator, std::unique_ptr<rtc::RTCCertificateGeneratorInterface> generator, webrtc::PeerConnectionObserver* observer)
+rtc::scoped_refptr<webrtc::PeerConnectionInterface> MockLibWebRTCPeerConnectionFactory::CreatePeerConnection(const webrtc::PeerConnectionInterface::RTCConfiguration&, std::unique_ptr<cricket::PortAllocator>, std::unique_ptr<rtc::RTCCertificateGeneratorInterface>, webrtc::PeerConnectionObserver* observer)
 {
-    if (m_numberOfRealPeerConnections) {
-        auto connection = realPeerConnectionFactory()->CreatePeerConnection(configuration, WTFMove(portAllocator), WTFMove(generator), observer);
-        --m_numberOfRealPeerConnections;
-        return connection;
-    }
-
     if (m_testCase == "ICECandidates")
         return new rtc::RefCountedObject<MockLibWebRTCPeerConnectionForIceCandidates>(*observer);
 
@@ -184,6 +181,16 @@ rtc::scoped_refptr<webrtc::PeerConnectionInterface> MockLibWebRTCPeerConnectionF
         return new rtc::RefCountedObject<MockLibWebRTCPeerConnectionReleasedInNetworkThreadWhileSettingDescription>(*observer);
 
     return new rtc::RefCountedObject<MockLibWebRTCPeerConnection>(*observer);
+}
+
+rtc::scoped_refptr<webrtc::VideoTrackInterface> MockLibWebRTCPeerConnectionFactory::CreateVideoTrack(const std::string& id, webrtc::VideoTrackSourceInterface* source)
+{
+    return new rtc::RefCountedObject<MockLibWebRTCVideoTrack>(id, source);
+}
+
+rtc::scoped_refptr<webrtc::AudioTrackInterface> MockLibWebRTCPeerConnectionFactory::CreateAudioTrack(const std::string& id, webrtc::AudioSourceInterface* source)
+{
+    return new rtc::RefCountedObject<MockLibWebRTCAudioTrack>(id, source);
 }
 
 rtc::scoped_refptr<webrtc::MediaStreamInterface> MockLibWebRTCPeerConnectionFactory::CreateLocalMediaStream(const std::string& label)
@@ -223,24 +230,34 @@ rtc::scoped_refptr<webrtc::DataChannelInterface> MockLibWebRTCPeerConnection::Cr
     return new rtc::RefCountedObject<MockLibWebRTCDataChannel>(std::string(label), parameters.ordered, parameters.reliable, parameters.id);
 }
 
-bool MockLibWebRTCPeerConnection::AddStream(webrtc::MediaStreamInterface* stream)
-{
-    m_stream = stream;
-    LibWebRTCProvider::callOnWebRTCSignalingThread([observer = &m_observer] {
-        observer->OnRenegotiationNeeded();
-    });
-    return true;
-}
-
-void MockLibWebRTCPeerConnection::RemoveStream(webrtc::MediaStreamInterface*)
+rtc::scoped_refptr<webrtc::RtpSenderInterface> MockLibWebRTCPeerConnection::AddTrack(webrtc::MediaStreamTrackInterface* track, std::vector<webrtc::MediaStreamInterface*> streams)
 {
     LibWebRTCProvider::callOnWebRTCSignalingThread([observer = &m_observer] {
         observer->OnRenegotiationNeeded();
     });
-    m_stream = nullptr;
+
+    if (streams.size())
+        m_streamLabel = streams.front()->label();
+
+    m_senders.append(new rtc::RefCountedObject<MockRtpSender>(rtc::scoped_refptr<webrtc::MediaStreamTrackInterface>(track)));
+    return m_senders.last().get();
 }
 
-void MockLibWebRTCPeerConnection::CreateOffer(webrtc::CreateSessionDescriptionObserver* observer, const webrtc::MediaConstraintsInterface*)
+bool MockLibWebRTCPeerConnection::RemoveTrack(webrtc::RtpSenderInterface* sender)
+{
+    LibWebRTCProvider::callOnWebRTCSignalingThread([observer = &m_observer] {
+        observer->OnRenegotiationNeeded();
+    });
+    bool isRemoved = false;
+    return m_senders.removeFirstMatching([&](auto& item) {
+        if (item.get() != sender)
+            return false;
+        isRemoved = true;
+        return true;
+    });
+}
+
+void MockLibWebRTCPeerConnection::CreateOffer(webrtc::CreateSessionDescriptionObserver* observer, const webrtc::PeerConnectionInterface::RTCOfferAnswerOptions&)
 {
     LibWebRTCProvider::callOnWebRTCSignalingThread([this, observer] {
         std::ostringstream sdp;
@@ -249,10 +266,13 @@ void MockLibWebRTCPeerConnection::CreateOffer(webrtc::CreateSessionDescriptionOb
             "o=- 5667094644266930845 " << m_counter++ << " IN IP4 127.0.0.1\r\n"
             "s=-\r\n"
             "t=0 0\r\n";
-        if (m_stream) {
+        if (m_senders.size()) {
             unsigned partCounter = 1;
-            sdp << "a=msid-semantic:WMS " << m_stream->label() << "\r\n";
-            for (auto& audioTrack : m_stream->GetAudioTracks()) {
+            sdp << "a=msid-semantic:WMS " << m_streamLabel << "\r\n";
+            for (auto& sender : m_senders) {
+                auto track = sender->track();
+                if (track->kind() != "audio")
+                    continue;
                 sdp <<
                     "m=audio 9 UDP/TLS/RTP/SAVPF 111 8 0\r\n"
                     "c=IN IP4 0.0.0.0\r\n"
@@ -263,13 +283,16 @@ void MockLibWebRTCPeerConnection::CreateOffer(webrtc::CreateSessionDescriptionOb
                     "a=rtpmap:8 PCMA/8000\r\n"
                     "a=rtpmap:0 PCMU/8000\r\n"
                     "a=ssrc:3409173717 cname:/chKzCS9K6KOgL0n\r\n"
-                    "a=msid:" << m_stream->label() << " " << audioTrack->id() << "\r\n"
+                    "a=msid:" << m_streamLabel << " " << track->id() << "\r\n"
                     "a=ice-ufrag:e/B1\r\n"
                     "a=ice-pwd:Yotk3Im3mnyi+1Q38p51MDub\r\n"
                     "a=fingerprint:sha-256 8B:87:09:8A:5D:C2:F3:33:EF:C5:B1:F6:84:3A:3D:D6:A3:E2:9C:17:4C:E7:46:3B:1B:CE:84:98:DD:8E:AF:7B\r\n"
                     "a=setup:actpass\r\n";
             }
-            for (auto& videoTrack : m_stream->GetVideoTracks()) {
+            for (auto& sender : m_senders) {
+                auto track = sender->track();
+                if (track->kind() != "video")
+                    continue;
                 sdp <<
                     "m=video 9 UDP/TLS/RTP/SAVPF 103 100 120\r\n"
                     "c=IN IP4 0.0.0.0\r\n"
@@ -287,15 +310,14 @@ void MockLibWebRTCPeerConnection::CreateOffer(webrtc::CreateSessionDescriptionOb
                     "a=rtcp-fb:103 ccm fir\r\n"
                     "a=rtcp-fb:100 ccm fir\r\n"
                     "a=ssrc:3409173718 cname:/chKzCS9K6KOgL0n\r\n"
-                    "a=msid:" << m_stream->label() << " " << videoTrack->id() << "\r\n"
+                    "a=msid:" << m_streamLabel << " " << track->id() << "\r\n"
                     "a=ice-ufrag:e/B1\r\n"
                     "a=ice-pwd:Yotk3Im3mnyi+1Q38p51MDub\r\n"
                     "a=fingerprint:sha-256 8B:87:09:8A:5D:C2:F3:33:EF:C5:B1:F6:84:3A:3D:D6:A3:E2:9C:17:4C:E7:46:3B:1B:CE:84:98:DD:8E:AF:7B\r\n"
                     "a=setup:actpass\r\n";
             }
         }
-        MockLibWebRTCSessionDescription description(sdp.str());
-        observer->OnSuccess(&description);
+        observer->OnSuccess(new MockLibWebRTCSessionDescription(sdp.str()));
     });
 }
 
@@ -308,9 +330,11 @@ void MockLibWebRTCPeerConnection::CreateAnswer(webrtc::CreateSessionDescriptionO
             "o=- 5667094644266930846 " << m_counter++ << " IN IP4 127.0.0.1\r\n"
             "s=-\r\n"
             "t=0 0\r\n";
-        if (m_stream) {
-            for (auto& audioTrack : m_stream->GetAudioTracks()) {
-                ASSERT_UNUSED(audioTrack, !!audioTrack);
+        if (m_senders.size()) {
+            for (auto& sender : m_senders) {
+                auto track = sender->track();
+                if (track->kind() != "audio")
+                    continue;
                 sdp <<
                     "m=audio 9 UDP/TLS/RTP/SAVPF 111 8 0\r\n"
                     "c=IN IP4 0.0.0.0\r\n"
@@ -326,8 +350,10 @@ void MockLibWebRTCPeerConnection::CreateAnswer(webrtc::CreateSessionDescriptionO
                     "a=fingerprint:sha-256 8B:87:09:8A:5D:C2:F3:33:EF:C5:B1:F6:84:3A:3D:D6:A3:E2:9C:17:4C:E7:46:3B:1B:CE:84:98:DD:8E:AF:7B\r\n"
                     "a=setup:active\r\n";
             }
-            for (auto& videoTrack : m_stream->GetVideoTracks()) {
-                ASSERT_UNUSED(videoTrack, !!videoTrack);
+            for (auto& sender : m_senders) {
+                auto track = sender->track();
+                if (track->kind() != "video")
+                    continue;
                 sdp <<
                     "m=video 9 UDP/TLS/RTP/SAVPF 103 100 120\r\n"
                     "c=IN IP4 0.0.0.0\r\n"
@@ -391,8 +417,7 @@ void MockLibWebRTCPeerConnection::CreateAnswer(webrtc::CreateSessionDescriptionO
                     "a=setup:active\r\n";
             }
         }
-        MockLibWebRTCSessionDescription description(sdp.str());
-        observer->OnSuccess(&description);
+        observer->OnSuccess(new MockLibWebRTCSessionDescription(sdp.str()));
     });
 }
 

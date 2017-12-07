@@ -57,6 +57,7 @@ class Identifier;
     macro(toNumber) \
     macro(toString) \
     macro(newArrayWithSize) \
+    macro(defineEnumerableWritableConfigurableDataProperty) \
 
 #define JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_EACH_NAME(macro) \
     macro(undefined) \
@@ -73,6 +74,8 @@ class Identifier;
     macro(ModuleSatisfy) \
     macro(ModuleLink) \
     macro(ModuleReady) \
+    macro(promiseRejectionReject) \
+    macro(promiseRejectionHandle) \
     macro(promiseStatePending) \
     macro(promiseStateFulfilled) \
     macro(promiseStateRejected) \

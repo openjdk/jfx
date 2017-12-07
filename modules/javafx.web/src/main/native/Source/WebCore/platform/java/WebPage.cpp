@@ -1,5 +1,26 @@
 /*
  * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 #include "config.h"
@@ -33,7 +54,6 @@
 #include <WebCore/FrameView.h>
 #include <WebCore/GCController.h>
 #include <WebCore/HTMLFormElement.h>
-#include <WebCore/IconController.h>
 #include <WebCore/InspectorController.h>
 #include <WebCore/KeyboardEvent.h>
 
@@ -150,6 +170,7 @@ WebPage::WebPage(std::unique_ptr<Page> page)
 
 WebPage::~WebPage()
 {
+    RenderThemeJava::setTheme(nullptr);
     debugEnded();
 }
 
@@ -231,6 +252,10 @@ static void drawDebugBorder(GraphicsContext& context,
 #endif
 
 void WebPage::prePaint() {
+    if (!m_jTheme) {
+        m_jTheme = RenderThemeJava::themeForPage(jobjectFromPage(m_page.get()));
+    }
+    RenderThemeJava::setTheme(m_jTheme);
 #if USE(ACCELERATED_COMPOSITING)
     if (m_rootLayer) {
         if (m_syncLayers) {
@@ -240,6 +265,7 @@ void WebPage::prePaint() {
         return;
     }
 #endif
+
     Frame* mainFrame = (Frame*)&m_page->mainFrame();
     FrameView* frameView = mainFrame->view();
     if (frameView) {
@@ -282,6 +308,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
 
 void WebPage::postPaint(jobject rq, jint x, jint y, jint w, jint h)
 {
+    RenderThemeJava::setTheme(nullptr);
     if (!m_page->inspectorController().highlightedNode()
 #if USE(ACCELERATED_COMPOSITING)
             && !m_rootLayer
@@ -1146,7 +1173,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
     static const URL emptyParent;
 
     frame->loader().load(FrameLoadRequest(
-        frame,
+        *frame,
         ResourceRequest(URL(emptyParent, String(env, url))),
         ShouldOpenExternalURLsPolicy::ShouldNotAllow // TODO-java: recheck policy value
     ));
@@ -1167,7 +1194,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
     static const URL emptyUrl(ParsedURLString, "");
     ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8");
     frame->loader().load(FrameLoadRequest(
-        frame,
+        *frame,
         ResourceRequest(emptyUrl),
         ShouldOpenExternalURLsPolicy::ShouldNotAllow, // TODO-java: recheck policy value
         SubstituteData(
@@ -1218,7 +1245,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkRefresh
         return;
     }
 
-    frame->loader().reload(true);
+    frame->loader().reload(ReloadOption::FromOrigin);
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkGoBackForward
@@ -1878,7 +1905,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
     }
 
     jint offset = -1;
-    IntPoint point = IntPoint(x, y);
+    IntPoint point {x, y};
     point = frameView->windowToContents(point);
 
     Editor &editor = frame->editor();
@@ -1890,7 +1917,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
             VisiblePosition targetPosition(renderer->positionForPoint(LayoutPoint(point.x() - content.x(),
                                                                             point.y() - content.y()), nullptr)); // TODO-java: recheck nullptr
             offset = targetPosition.deepEquivalent().offsetInContainerNode();
-            if (offset >= editor.compositionStart() && offset < editor.compositionEnd()) {
+            if (offset >= (jint)editor.compositionStart() && offset < (jint)editor.compositionEnd()) {
                 offset -= editor.compositionStart();
                 break;
             }
@@ -1971,7 +1998,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
                 String s;
                 int start = editor.compositionStart();
                 int end = editor.compositionEnd();
-                int length = t.length() - (end - start);
+                unsigned int length = t.length() - (end - start);
                 if (start > 0) {
                     s = t.substring(0, start);
                 }
@@ -2043,11 +2070,10 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
  jobjectArray jMimes, jobjectArray jValues,
  jint x, jint y,
  jint screenX, jint screenY,
- jint javaAction)
-{
+ jint javaAction) {
     if (jMimes) {
         //TRAGET
-        PassRefPtr<DataObjectJava> pr( DataObjectJava::create() );
+        RefPtr<DataObjectJava> pr = DataObjectJava::create();
         jint n = env->GetArrayLength(jMimes);
         for( jint j=0; j<n; ++j ){
             jstring value = (jstring)env->GetObjectArrayElement(jValues, j);

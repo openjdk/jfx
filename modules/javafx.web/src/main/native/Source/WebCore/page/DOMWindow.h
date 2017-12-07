@@ -33,6 +33,8 @@
 #include "FrameDestructionObserver.h"
 #include "ScrollToOptions.h"
 #include "Supplementable.h"
+#include <heap/HandleTypes.h>
+#include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/WeakPtr.h>
 
@@ -142,16 +144,16 @@ public:
     Element* frameElement() const;
 
     WEBCORE_EXPORT void focus(bool allowFocus = false);
-    void focus(DOMWindow& callerWindow);
+    void focus(DOMWindow& incumbentWindow);
     void blur();
     WEBCORE_EXPORT void close();
     void close(Document&);
     void print();
     void stop();
 
-    WEBCORE_EXPORT RefPtr<DOMWindow> open(const String& urlString, const AtomicString& frameName, const String& windowFeaturesString, DOMWindow& activeWindow, DOMWindow& firstWindow);
+    WEBCORE_EXPORT RefPtr<DOMWindow> open(DOMWindow& activeWindow, DOMWindow& firstWindow, const String& urlString, const AtomicString& frameName, const String& windowFeaturesString);
 
-    void showModalDialog(const String& urlString, const String& dialogFeaturesString, DOMWindow& activeWindow, DOMWindow& firstWindow, std::function<void(DOMWindow&)> prepareDialogFunction);
+    void showModalDialog(const String& urlString, const String& dialogFeaturesString, DOMWindow& activeWindow, DOMWindow& firstWindow, const WTF::Function<void(DOMWindow&)>& prepareDialogFunction);
 
     void alert(const String& message = emptyString());
     bool confirm(const String& message);
@@ -194,6 +196,8 @@ public:
     DOMWindow* parent() const;
     DOMWindow* top() const;
 
+    String origin() const;
+
     // DOM Level 2 AbstractView Interface
 
     WEBCORE_EXPORT Document* document() const;
@@ -219,7 +223,7 @@ public:
     void printErrorMessage(const String&);
     String crossDomainAccessErrorMessage(const DOMWindow& activeWindow);
 
-    ExceptionOr<void> postMessage(JSC::ExecState&, DOMWindow& callerWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&);
+    ExceptionOr<void> postMessage(JSC::ExecState&, DOMWindow& incumbentWindow, JSC::JSValue message, const String& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&&);
     void postMessageTimerFired(PostMessageTimer&);
 
     void languagesChanged();
@@ -236,14 +240,17 @@ public:
     void resizeTo(float width, float height) const;
 
     // Timers
-    ExceptionOr<int> setTimeout(std::unique_ptr<ScheduledAction>, int timeout);
+    ExceptionOr<int> setTimeout(JSC::ExecState&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
     void clearTimeout(int timeoutId);
-    ExceptionOr<int> setInterval(std::unique_ptr<ScheduledAction>, int timeout);
+    ExceptionOr<int> setInterval(JSC::ExecState&, std::unique_ptr<ScheduledAction>, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments);
     void clearInterval(int timeoutId);
 
     int requestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
     int webkitRequestAnimationFrame(Ref<RequestAnimationFrameCallback>&&);
     void cancelAnimationFrame(int id);
+
+    // Secure Contexts
+    bool isSecureContext() const;
 
     // Events
     // EventTarget API
@@ -286,10 +293,7 @@ public:
     int orientation() const;
 #endif
 
-#if ENABLE(WEB_TIMING)
     Performance* performance() const;
-#endif
-
     double nowTimestamp() const;
 
 #if PLATFORM(IOS)
@@ -301,7 +305,7 @@ public:
     void resetAllGeolocationPermission();
 
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
-    bool hasTouchEventListeners() const { return m_touchEventListenerCount > 0; }
+    bool hasTouchOrGestureEventListeners() const { return m_touchAndGestureEventListenerCount > 0; }
 #endif
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
@@ -340,7 +344,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    static RefPtr<Frame> createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures&, DOMWindow& activeWindow, Frame& firstFrame, Frame& openerFrame, std::function<void(DOMWindow&)> prepareDialogFunction = nullptr);
+    static RefPtr<Frame> createWindow(const String& urlString, const AtomicString& frameName, const WindowFeatures&, DOMWindow& activeWindow, Frame& firstFrame, Frame& openerFrame, const WTF::Function<void(DOMWindow&)>& prepareDialogFunction = nullptr);
     bool isInsecureScriptAccess(DOMWindow& activeWindow, const String& urlString);
 
     void resetDOMWindowProperties();
@@ -388,7 +392,7 @@ private:
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS) || ENABLE(IOS_GESTURE_EVENTS)
-    unsigned m_touchEventListenerCount { 0 };
+    unsigned m_touchAndGestureEventListenerCount { 0 };
 #endif
 
 #if ENABLE(GAMEPAD)
@@ -401,9 +405,7 @@ private:
 
     RefPtr<CustomElementRegistry> m_customElementRegistry;
 
-#if ENABLE(WEB_TIMING)
     mutable RefPtr<Performance> m_performance;
-#endif
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
     mutable RefPtr<WebKitNamespace> m_webkitNamespace;

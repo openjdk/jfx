@@ -67,6 +67,11 @@ void RenderVideo::willBeDestroyed()
     RenderMedia::willBeDestroyed();
 }
 
+void RenderVideo::visibleInViewportStateChanged()
+{
+    videoElement().isVisibleInViewportChanged();
+}
+
 IntSize RenderVideo::defaultSize()
 {
     // These values are specified in the spec.
@@ -193,9 +198,9 @@ void RenderVideo::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOf
         context.clip(contentRect);
 
     if (displayingPoster)
-        paintIntoRect(context, rect);
+        paintIntoRect(paintInfo, rect);
     else if (!videoElement().isFullscreen() || !mediaPlayer->supportsAcceleratedRendering()) {
-        if (view().frameView().paintBehavior() & PaintBehaviorFlattenCompositingLayers)
+        if (paintInfo.paintBehavior & PaintBehaviorFlattenCompositingLayers)
             mediaPlayer->paintCurrentFrameInContext(context, rect);
         else
             mediaPlayer->paint(context, rect);
@@ -243,7 +248,7 @@ void RenderVideo::updatePlayer()
 
     IntRect videoBounds = videoBox();
     mediaPlayer->setSize(IntSize(videoBounds.width(), videoBounds.height()));
-    mediaPlayer->setVisible(true);
+    mediaPlayer->setVisible(!videoElement().elementIsHidden());
     mediaPlayer->setShouldMaintainAspectRatio(style().objectFit() != ObjectFitFill);
 }
 

@@ -33,11 +33,13 @@
 #import "DataTransfer.h"
 #import "DocumentFragment.h"
 #import "DocumentLoader.h"
+#import "Editing.h"
 #import "Editor.h"
 #import "EditorClient.h"
 #import "File.h"
 #import "FontCascade.h"
 #import "Frame.h"
+#import "FrameLoader.h"
 #import "FrameLoaderClient.h"
 #import "FrameView.h"
 #import "HTMLAnchorElement.h"
@@ -58,14 +60,12 @@
 #import "RenderImage.h"
 #import "RuntimeApplicationChecks.h"
 #import "Settings.h"
-#import "Sound.h"
 #import "StyleProperties.h"
 #import "Text.h"
 #import "TypingCommand.h"
-#import "UUID.h"
 #import "WebNSAttributedStringExtras.h"
-#import "htmlediting.h"
 #import "markup.h"
+#import <pal/system/Sound.h>
 
 namespace WebCore {
 
@@ -99,7 +99,7 @@ void Editor::pasteWithPasteboard(Pasteboard* pasteboard, bool allowPlainText, Ma
     bool chosePlainText;
     RefPtr<DocumentFragment> fragment = webContentFromPasteboard(*pasteboard, *range, allowPlainText, chosePlainText);
 
-    if (fragment && shouldInsertFragment(fragment, range, EditorInsertAction::Pasted))
+    if (fragment && shouldInsertFragment(*fragment, range.get(), EditorInsertAction::Pasted))
         pasteAsFragment(fragment.releaseNonNull(), canSmartReplaceWithPasteboard(*pasteboard), false, mailBlockquoteHandling);
 
     client()->setInsertionPasteboard(String());
@@ -114,7 +114,7 @@ bool Editor::canCopyExcludingStandaloneImages()
 void Editor::takeFindStringFromSelection()
 {
     if (!canCopyExcludingStandaloneImages()) {
-        systemBeep();
+        PAL::systemBeep();
         return;
     }
 
@@ -187,7 +187,7 @@ void Editor::replaceNodeFromPasteboard(Node* node, const String& pasteboardName)
     bool chosePlainText;
     if (RefPtr<DocumentFragment> fragment = webContentFromPasteboard(pasteboard, *range, true, chosePlainText)) {
         maybeCopyNodeAttributesToFragment(*node, *fragment);
-        if (shouldInsertFragment(fragment, range, EditorInsertAction::Pasted))
+        if (shouldInsertFragment(*fragment, range.get(), EditorInsertAction::Pasted))
             pasteAsFragment(fragment.releaseNonNull(), canSmartReplaceWithPasteboard(pasteboard), false, MailBlockquoteHandling::IgnoreBlockquote);
     }
 
@@ -204,7 +204,7 @@ RefPtr<SharedBuffer> Editor::imageInWebArchiveFormat(Element& imageElement)
     RefPtr<LegacyWebArchive> archive = LegacyWebArchive::create(imageElement);
     if (!archive)
         return nullptr;
-    return SharedBuffer::wrapCFData(archive->rawDataRepresentation().get());
+    return SharedBuffer::create(archive->rawDataRepresentation().get());
 }
 
 RefPtr<SharedBuffer> Editor::dataSelectionForPasteboard(const String& pasteboardType)
@@ -251,14 +251,14 @@ static void getImage(Element& imageElement, RefPtr<Image>& image, CachedImage*& 
     cachedImage = tentativeCachedImage;
 }
 
-void Editor::fillInUserVisibleForm(PasteboardURL& pasteboardURL)
+String Editor::userVisibleString(const URL& url)
 {
-    pasteboardURL.userVisibleForm = client()->userVisibleString(pasteboardURL.url);
+    return client()->userVisibleString(url);
 }
 
 void Editor::selectionWillChange()
 {
-    if (!hasComposition() || ignoreCompositionSelectionChange() || m_frame.selection().isNone())
+    if (!hasComposition() || ignoreSelectionChanges() || m_frame.selection().isNone())
         return;
 
     cancelComposition();
@@ -492,7 +492,7 @@ void Editor::applyFontStyles(const String& fontFamily, double fontSize, unsigned
     Ref<MutableStyleProperties> style = MutableStyleProperties::create();
     style->setProperty(CSSPropertyFontFamily, cssValuePool.createFontFamilyValue(fontFamily));
     style->setProperty(CSSPropertyFontStyle, (fontTraits & NSFontItalicTrait) ? CSSValueItalic : CSSValueNormal);
-    style->setProperty(CSSPropertyFontWeight, cssValuePool.createValue(fontTraits & NSFontBoldTrait ? FontWeightBold : FontWeightNormal));
+    style->setProperty(CSSPropertyFontWeight, (fontTraits & NSFontBoldTrait) ? CSSValueBold : CSSValueNormal);
     style->setProperty(CSSPropertyFontSize, cssValuePool.createValue(fontSize, CSSPrimitiveValue::CSS_PX));
     applyStyleToSelection(style.ptr(), EditActionSetFont);
 }

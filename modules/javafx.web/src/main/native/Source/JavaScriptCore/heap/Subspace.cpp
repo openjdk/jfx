@@ -54,10 +54,12 @@ struct DestroyFunc {
 
 } // anonymous namespace
 
-Subspace::Subspace(CString name, Heap& heap, AllocatorAttributes attributes)
+Subspace::Subspace(CString name, Heap& heap, AllocatorAttributes attributes, AlignedMemoryAllocator* alignedMemoryAllocator)
     : m_space(heap.objectSpace())
     , m_name(name)
     , m_attributes(attributes)
+    , m_alignedMemoryAllocator(alignedMemoryAllocator)
+    , m_allocatorForEmptyAllocation(m_space.firstAllocator())
 {
     // It's remotely possible that we're GCing right now even if the client is careful to only
     // create subspaces right after VM creation, since collectContinuously (and probably other
@@ -77,9 +79,9 @@ Subspace::~Subspace()
 {
 }
 
-FreeList Subspace::finishSweep(MarkedBlock::Handle& block, MarkedBlock::Handle::SweepMode sweepMode)
+void Subspace::finishSweep(MarkedBlock::Handle& block, FreeList* freeList)
 {
-    return block.finishSweepKnowingSubspace(sweepMode, DestroyFunc());
+    block.finishSweepKnowingSubspace(freeList, DestroyFunc());
 }
 
 void Subspace::destroy(VM& vm, JSCell* cell)
@@ -93,30 +95,69 @@ void Subspace::destroy(VM& vm, JSCell* cell)
 // need the deferralContext.
 void* Subspace::allocate(size_t size)
 {
+    void* result;
     if (MarkedAllocator* allocator = tryAllocatorFor(size))
-        return allocator->allocate();
-    return allocateSlow(nullptr, size);
+        result = allocator->allocate();
+    else
+        result = allocateSlow(nullptr, size);
+    didAllocate(result);
+    return result;
 }
 
 void* Subspace::allocate(GCDeferralContext* deferralContext, size_t size)
 {
+    void *result;
     if (MarkedAllocator* allocator = tryAllocatorFor(size))
-        return allocator->allocate(deferralContext);
-    return allocateSlow(deferralContext, size);
+        result = allocator->allocate(deferralContext);
+    else
+        result = allocateSlow(deferralContext, size);
+    didAllocate(result);
+    return result;
 }
 
 void* Subspace::tryAllocate(size_t size)
 {
+    void* result;
     if (MarkedAllocator* allocator = tryAllocatorFor(size))
-        return allocator->tryAllocate();
-    return tryAllocateSlow(nullptr, size);
+        result = allocator->tryAllocate();
+    else
+        result = tryAllocateSlow(nullptr, size);
+    didAllocate(result);
+    return result;
 }
 
 void* Subspace::tryAllocate(GCDeferralContext* deferralContext, size_t size)
 {
+    void* result;
     if (MarkedAllocator* allocator = tryAllocatorFor(size))
-        return allocator->tryAllocate(deferralContext);
-    return tryAllocateSlow(deferralContext, size);
+        result = allocator->tryAllocate(deferralContext);
+    else
+        result = tryAllocateSlow(deferralContext, size);
+    didAllocate(result);
+    return result;
+}
+
+void Subspace::prepareForAllocation()
+{
+    forEachAllocator(
+        [&] (MarkedAllocator& allocator) {
+            allocator.prepareForAllocation();
+        });
+
+    m_allocatorForEmptyAllocation = m_space.firstAllocator();
+}
+
+MarkedBlock::Handle* Subspace::findEmptyBlockToSteal()
+{
+    for (; m_allocatorForEmptyAllocation; m_allocatorForEmptyAllocation = m_allocatorForEmptyAllocation->nextAllocator()) {
+        Subspace* otherSubspace = m_allocatorForEmptyAllocation->subspace();
+        if (otherSubspace->alignedMemoryAllocator() != alignedMemoryAllocator())
+            continue;
+
+        if (MarkedBlock::Handle* block = m_allocatorForEmptyAllocation->findEmptyBlockToSteal())
+            return block;
+    }
+    return nullptr;
 }
 
 MarkedAllocator* Subspace::allocatorForSlow(size_t size)
@@ -190,6 +231,14 @@ void* Subspace::tryAllocateSlow(GCDeferralContext* deferralContext, size_t size)
     m_largeAllocations.append(allocation);
 
     return allocation->cell();
+}
+
+ALWAYS_INLINE void Subspace::didAllocate(void* ptr)
+{
+    UNUSED_PARAM(ptr);
+
+    // This is useful for logging allocations, or doing other kinds of debugging hacks. Just make
+    // sure you JSC_forceGCSlowPaths=true.
 }
 
 } // namespace JSC

@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSProxy);
 
-const ClassInfo JSProxy::s_info = { "JSProxy", &Base::s_info, 0, CREATE_METHOD_TABLE(JSProxy) };
+const ClassInfo JSProxy::s_info = { "JSProxy", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSProxy) };
 
 void JSProxy::visitChildren(JSCell* cell, SlotVisitor& visitor)
 {
@@ -115,6 +115,12 @@ bool JSProxy::deleteProperty(JSCell* cell, ExecState* exec, PropertyName propert
     return thisObject->target()->methodTable(exec->vm())->deleteProperty(thisObject->target(), exec, propertyName);
 }
 
+bool JSProxy::isExtensible(JSObject* object, ExecState* exec)
+{
+    JSProxy* thisObject = jsCast<JSProxy*>(object);
+    return thisObject->target()->methodTable(exec->vm())->isExtensible(thisObject->target(), exec);
+}
+
 bool JSProxy::preventExtensions(JSObject* object, ExecState* exec)
 {
     JSProxy* thisObject = jsCast<JSProxy*>(object);
@@ -158,11 +164,10 @@ void JSProxy::getOwnPropertyNames(JSObject* object, ExecState* exec, PropertyNam
     thisObject->target()->methodTable(exec->vm())->getOwnPropertyNames(thisObject->target(), exec, propertyNames, mode);
 }
 
-bool JSProxy::setPrototype(JSObject*, ExecState* exec, JSValue, bool shouldThrowIfCantSet)
+bool JSProxy::setPrototype(JSObject* object, ExecState* exec, JSValue prototype, bool shouldThrowIfCantSet)
 {
-    auto scope = DECLARE_THROW_SCOPE(exec->vm());
-
-    return typeError(exec, scope, shouldThrowIfCantSet, ASCIILiteral("Cannot set prototype of this object"));
+    JSProxy* thisObject = jsCast<JSProxy*>(object);
+    return thisObject->target()->methodTable(exec->vm())->setPrototype(thisObject->target(), exec, prototype, shouldThrowIfCantSet);
 }
 
 JSValue JSProxy::getPrototype(JSObject* object, ExecState* exec)

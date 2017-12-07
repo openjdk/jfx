@@ -62,7 +62,6 @@
 #include "RenderDetailsMarker.cpp"
 #include "RenderElement.cpp"
 #include "RenderEmbeddedObject.cpp"
-#include "RenderFieldset.cpp"
 #include "RenderFileUploadControl.cpp"
 #include "RenderFlexibleBox.cpp"
 #include "RenderFlowThread.cpp"
@@ -130,9 +129,6 @@
 #include "RenderTextFragment.cpp"
 #include "RenderTextLineBoxes.cpp"
 #include "RenderTheme.cpp"
-#if PLATFORM(WIN)
-#include "RenderThemeWin.cpp"
-#endif
 #include "RenderTreeAsText.cpp"
 #include "RenderVTTCue.cpp"
 #include "RenderVideo.cpp"

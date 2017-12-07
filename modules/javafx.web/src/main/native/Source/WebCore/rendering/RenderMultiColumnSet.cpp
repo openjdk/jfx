@@ -29,6 +29,7 @@
 #include "FrameView.h"
 #include "HitTestResult.h"
 #include "PaintInfo.h"
+#include "RenderBoxRegionInfo.h"
 #include "RenderLayer.h"
 #include "RenderMultiColumnFlowThread.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
@@ -73,8 +74,9 @@ RenderObject* RenderMultiColumnSet::firstRendererInFlowThread() const
         // Adjacent sets should not occur. Currently we would have no way of figuring out what each
         // of them contains then.
         ASSERT(!sibling->isRenderMultiColumnSet());
-        RenderMultiColumnSpannerPlaceholder* placeholder = multiColumnFlowThread()->findColumnSpannerPlaceholder(sibling);
-        return placeholder->nextInPreOrderAfterChildren();
+        if (RenderMultiColumnSpannerPlaceholder* placeholder = multiColumnFlowThread()->findColumnSpannerPlaceholder(sibling))
+            return placeholder->nextInPreOrderAfterChildren();
+        ASSERT_NOT_REACHED();
     }
     return flowThread()->firstChild();
 }
@@ -85,8 +87,9 @@ RenderObject* RenderMultiColumnSet::lastRendererInFlowThread() const
         // Adjacent sets should not occur. Currently we would have no way of figuring out what each
         // of them contains then.
         ASSERT(!sibling->isRenderMultiColumnSet());
-        RenderMultiColumnSpannerPlaceholder* placeholder = multiColumnFlowThread()->findColumnSpannerPlaceholder(sibling);
-        return placeholder->previousInPreOrder();
+        if (RenderMultiColumnSpannerPlaceholder* placeholder = multiColumnFlowThread()->findColumnSpannerPlaceholder(sibling))
+            return placeholder->previousInPreOrder();
+        ASSERT_NOT_REACHED();
     }
     return flowThread()->lastLeafChild();
 }
@@ -319,7 +322,7 @@ bool RenderMultiColumnSet::requiresBalancing() const
         return false;
 
     if (RenderBox* next = RenderMultiColumnFlowThread::nextColumnSetOrSpannerSiblingOf(this)) {
-        if (!next->isRenderMultiColumnSet()) {
+        if (!next->isRenderMultiColumnSet() && !next->isLegend()) {
             // If we're followed by a spanner, we need to balance.
             ASSERT(multiColumnFlowThread()->findColumnSpannerPlaceholder(next));
             return true;

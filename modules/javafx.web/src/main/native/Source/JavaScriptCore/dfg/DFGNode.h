@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,9 @@
 
 #if ENABLE(DFG_JIT)
 
+#include "B3SparseCollection.h"
 #include "BasicBlockLocation.h"
 #include "CodeBlock.h"
-#include "DFGAbstractValue.h"
 #include "DFGAdjacencyList.h"
 #include "DFGArithMode.h"
 #include "DFGArrayMode.h"
@@ -52,24 +52,25 @@
 #include "Operands.h"
 #include "PutByIdVariant.h"
 #include "SpeculatedType.h"
-#include "StructureSet.h"
 #include "TypeLocation.h"
 #include "ValueProfile.h"
 #include <type_traits>
 #include <wtf/ListDump.h>
+#include <wtf/LoggingHashSet.h>
 
 namespace JSC {
 
 namespace DOMJIT {
 class GetterSetter;
-class Patchpoint;
-class CallDOMGetterPatchpoint;
+class CallDOMGetterSnippet;
 class Signature;
 }
 
 namespace Profiler {
 class ExecutionCounter;
 }
+
+class Snippet;
 
 namespace DFG {
 
@@ -236,8 +237,9 @@ struct StackAccessData {
 };
 
 struct CallDOMGetterData {
-    DOMJIT::GetterSetter* domJIT { nullptr };
-    DOMJIT::CallDOMGetterPatchpoint* patchpoint { nullptr };
+    PropertySlot::GetValueFunc customAccessorGetter { nullptr };
+    const DOMJIT::GetterSetter* domJIT { nullptr };
+    DOMJIT::CallDOMGetterSnippet* snippet { nullptr };
     unsigned identifierNumber { 0 };
 };
 
@@ -245,7 +247,10 @@ struct CallDOMGetterData {
 //
 // Node represents a single operation in the data flow graph.
 struct Node {
+    WTF_MAKE_FAST_ALLOCATED;
 public:
+    static const char HashSetTemplateInstantiationString[];
+
     enum VarArgTag { VarArg };
 
     Node() { }
@@ -945,6 +950,7 @@ public:
         case DeleteById:
         case GetDynamicVar:
         case PutDynamicVar:
+        case ResolveScopeForHoistingFuncDeclInEval:
         case ResolveScope:
             return true;
         default:
@@ -1302,6 +1308,24 @@ public:
         return false;
     }
 
+    // As is described in DFGNodeType.h's ForceOSRExit, this is a pseudo-terminal.
+    // It means that execution should fall out of DFG at this point, but execution
+    // does continue in the basic block - just in a different compiler.
+    // FIXME: This is used for lightweight reachability decision. But this should
+    // be replaced with AI-based reachability ideally.
+    bool isPseudoTerminal()
+    {
+        switch (op()) {
+        case ForceOSRExit:
+        case CheckBadCell:
+        case Throw:
+        case ThrowStaticError:
+            return true;
+        default:
+            return false;
+        }
+    }
+
     unsigned targetBytecodeOffsetDuringParsing()
     {
         ASSERT(isJump());
@@ -1485,6 +1509,15 @@ public:
         case CallDOMGetter:
         case CallDOM:
         case ParseInt:
+        case AtomicsAdd:
+        case AtomicsAnd:
+        case AtomicsCompareExchange:
+        case AtomicsExchange:
+        case AtomicsLoad:
+        case AtomicsOr:
+        case AtomicsStore:
+        case AtomicsSub:
+        case AtomicsXor:
             return true;
         default:
             return false;
@@ -1789,6 +1822,7 @@ public:
         switch (op()) {
         case GetIndexedPropertyStorage:
         case GetArrayLength:
+        case GetVectorLength:
         case In:
         case PutByValDirect:
         case PutByVal:
@@ -1801,7 +1835,17 @@ public:
         case ArrayifyToStructure:
         case ArrayPush:
         case ArrayPop:
+        case ArrayIndexOf:
         case HasIndexedProperty:
+        case AtomicsAdd:
+        case AtomicsAnd:
+        case AtomicsCompareExchange:
+        case AtomicsExchange:
+        case AtomicsLoad:
+        case AtomicsOr:
+        case AtomicsStore:
+        case AtomicsSub:
+        case AtomicsXor:
             return true;
         default:
             return false;
@@ -1871,6 +1915,17 @@ public:
         m_opInfo = static_cast<uint32_t>(mode);
     }
 
+    bool hasArithUnaryType()
+    {
+        return op() == ArithUnary;
+    }
+
+    Arith::UnaryType arithUnaryType()
+    {
+        ASSERT(hasArithUnaryType());
+        return static_cast<Arith::UnaryType>(m_opInfo.as<uint32_t>());
+    }
+
     bool hasVirtualRegister()
     {
         return m_virtualRegister.isValid();
@@ -1905,9 +1960,11 @@ public:
         return m_refCount;
     }
 
+    // Return true if the execution of this Node does not affect our ability to OSR to the FTL.
+    // FIXME: Isn't this just like checking if the node has effects?
     bool isSemanticallySkippable()
     {
-        return op() == CountExecution;
+        return op() == CountExecution || op() == InvalidationPoint;
     }
 
     unsigned refCount()
@@ -2379,17 +2436,6 @@ public:
         return m_opInfo.as<BasicBlockLocation*>();
     }
 
-    bool hasCheckDOMPatchpoint() const
-    {
-        return op() == CheckDOM;
-    }
-
-    DOMJIT::Patchpoint* checkDOMPatchpoint()
-    {
-        ASSERT(hasCheckDOMPatchpoint());
-        return m_opInfo.as<DOMJIT::Patchpoint*>();
-    }
-
     bool hasCallDOMGetterData() const
     {
         return op() == CallDOMGetter;
@@ -2403,12 +2449,12 @@ public:
 
     bool hasClassInfo() const
     {
-        return op() == CheckDOM;
+        return op() == CheckSubClass;
     }
 
     const ClassInfo* classInfo()
     {
-        return m_opInfo2.as<const ClassInfo*>();
+        return m_opInfo.as<const ClassInfo*>();
     }
 
     bool hasSignature() const
@@ -2498,7 +2544,7 @@ public:
     AdjacencyList children;
 
 private:
-    friend class Graph;
+    friend class B3::SparseCollection<Node>;
 
     unsigned m_index { std::numeric_limits<unsigned>::max() };
     unsigned m_op : 10; // real type is NodeType
@@ -2628,6 +2674,10 @@ public:
     BasicBlock* owner;
 };
 
+// Uncomment this to log NodeSet operations.
+// typedef LoggingHashSet<Node::HashSetTemplateInstantiationString, Node*> NodeSet;
+typedef HashSet<Node*> NodeSet;
+
 struct NodeComparator {
     template<typename NodePtrType>
     bool operator()(NodePtrType a, NodePtrType b) const
@@ -2682,6 +2732,14 @@ void printInternal(PrintStream&, JSC::DFG::SwitchKind);
 void printInternal(PrintStream&, JSC::DFG::Node*);
 
 inline JSC::DFG::Node* inContext(JSC::DFG::Node* node, JSC::DumpContext*) { return node; }
+
+template<>
+struct LoggingHashKeyTraits<JSC::DFG::Node*> {
+    static void print(PrintStream& out, JSC::DFG::Node* key)
+    {
+        out.print("bitwise_cast<::JSC::DFG::Node*>(", RawPointer(key), "lu)");
+    }
+};
 
 } // namespace WTF
 

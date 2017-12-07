@@ -37,10 +37,9 @@
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
 #include "URL.h"
-#include "UUID.h"
-#include <wtf/NeverDestroyed.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
+#include <wtf/UUID.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -804,7 +803,7 @@ bool ApplicationCacheStorage::store(ApplicationCacheResource* resource, unsigned
     else if (shouldStoreResourceAsFlatFile(resource)) {
         // First, check to see if creating the flat file would violate the maximum total quota. We don't need
         // to check the per-origin quota here, as it was already checked in storeNewestCache().
-        if (m_database.totalSize() + flatFileAreaSize() + resource->data().size() > m_maximumSize) {
+        if (m_database.totalSize() + flatFileAreaSize() + static_cast<int64_t>(resource->data().size()) > m_maximumSize) {
             m_isMaximumSizeReached = true;
             return false;
         }
@@ -1130,7 +1129,7 @@ RefPtr<ApplicationCache> ApplicationCacheStorage::loadCache(unsigned storageID)
         Vector<char> blob;
         cacheStatement.getColumnBlobAsVector(6, blob);
 
-        auto data = SharedBuffer::adoptVector(blob);
+        auto data = SharedBuffer::create(WTFMove(blob));
 
         String path = cacheStatement.getColumnText(7);
         long long size = 0;

@@ -50,7 +50,8 @@ class AuthenticationChallenge;
 class DocumentLoader;
 class Frame;
 class FrameLoader;
-class QuickLookHandle;
+class NetworkLoadMetrics;
+class PreviewLoader;
 class URL;
 
 class ResourceLoader : public RefCounted<ResourceLoader>, protected ResourceHandleClient {
@@ -97,16 +98,13 @@ public:
 
     virtual bool isSubresourceLoader();
 
-    virtual void willSendRequest(ResourceRequest&&, const ResourceResponse& redirectResponse, std::function<void(ResourceRequest&&)>&& callback);
+    virtual void willSendRequest(ResourceRequest&&, const ResourceResponse& redirectResponse, WTF::Function<void(ResourceRequest&&)>&& callback);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
     virtual void didReceiveResponse(const ResourceResponse&);
     virtual void didReceiveData(const char*, unsigned, long long encodedDataLength, DataPayloadType);
     virtual void didReceiveBuffer(Ref<SharedBuffer>&&, long long encodedDataLength, DataPayloadType);
-    virtual void didFinishLoading(double finishTime);
+    virtual void didFinishLoading(const NetworkLoadMetrics&);
     virtual void didFail(const ResourceError&);
-#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
-    virtual void didReceiveDataArray(CFArrayRef dataArray);
-#endif
     virtual void didRetrieveDerivedDataFromCache(const String& type, SharedBuffer&);
 
     virtual bool shouldUseCredentialStorage();
@@ -152,7 +150,7 @@ public:
 protected:
     ResourceLoader(DocumentLoader&, ResourceLoaderOptions);
 
-    void didFinishLoadingOnePart(double finishTime);
+    void didFinishLoadingOnePart(const NetworkLoadMetrics&);
     void cleanupForError(const ResourceError&);
 
     bool wasCancelled() const { return m_cancellationStatus >= Cancelled; }
@@ -174,7 +172,7 @@ protected:
     ResourceResponse m_response;
     LoadTiming m_loadTiming;
 #if USE(QUICK_LOOK)
-    std::unique_ptr<QuickLookHandle> m_quickLookHandle;
+    std::unique_ptr<PreviewLoader> m_previewLoader;
 #endif
 
 private:
@@ -191,13 +189,10 @@ private:
     void didReceiveResponse(ResourceHandle*, ResourceResponse&&) override;
     void didReceiveData(ResourceHandle*, const char*, unsigned, int encodedDataLength) override;
     void didReceiveBuffer(ResourceHandle*, Ref<SharedBuffer>&&, int encodedDataLength) override;
-    void didFinishLoading(ResourceHandle*, double finishTime) override;
+    void didFinishLoading(ResourceHandle*) override;
     void didFail(ResourceHandle*, const ResourceError&) override;
     void wasBlocked(ResourceHandle*) override;
     void cannotShowURL(ResourceHandle*) override;
-#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
-    void didReceiveDataArray(ResourceHandle*, CFArrayRef dataArray) override;
-#endif
     bool shouldUseCredentialStorage(ResourceHandle*) override { return shouldUseCredentialStorage(); }
     void didReceiveAuthenticationChallenge(ResourceHandle*, const AuthenticationChallenge& challenge) override { didReceiveAuthenticationChallenge(challenge); }
 #if USE(PROTECTION_SPACE_AUTH_CALLBACK)

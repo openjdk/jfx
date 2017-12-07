@@ -21,7 +21,7 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #include "config.h"
 
@@ -112,13 +112,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setChOff
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getColSpanImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->colSpanForBindings();
+    return IMPL->colSpan();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_setColSpanImpl(JNIEnv* env, jclass, jlong peer, jint value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setColSpanForBindings(value);
+    IMPL->setColSpan(value);
 }
 
 JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLTableCellElementImpl_getRowSpanImpl(JNIEnv* env, jclass, jlong peer)

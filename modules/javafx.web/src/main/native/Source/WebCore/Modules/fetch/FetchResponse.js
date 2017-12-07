@@ -23,8 +23,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// @conditional=ENABLE(FETCH_API)
-
 function initializeFetchResponse(body, init)
 {
     "use strict";
@@ -49,12 +47,13 @@ function initializeFetchResponse(body, init)
         if (status === 101 || status === 204 || status === 205 || status === 304)
             @throwTypeError("Response cannot have a body with the given status");
 
-        // FIXME: Use @isReadableStream once it is no longer guarded by READABLE_STREAM_API guard.
+        // FIXME: Use @isReadableStream once it is no longer guarded by STREAMS_API compilation guard.
         let isBodyReadableStream = (@isObject(body) && !!body.@readableStreamController);
-        if (isBodyReadableStream)
-          this.@body = body;
-
-        this.@initializeWith(body);
+        if (isBodyReadableStream) {
+            this.@body = body;
+            this.@setBodyAsReadableStream();
+        } else
+            this.@initializeWith(body);
     }
 
     return this;

@@ -63,7 +63,7 @@ SocketStreamHandleImpl::~SocketStreamHandleImpl()
     CheckAndClearException(env);
 }
 
-std::optional<size_t> SocketStreamHandleImpl::platformSend(const char* data, size_t len)
+void SocketStreamHandleImpl::platformSend(const char* data, size_t len, Function<void(bool)>&& completionHandler)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
@@ -81,9 +81,11 @@ std::optional<size_t> SocketStreamHandleImpl::platformSend(const char* data, siz
     ASSERT(mid);
 
     jint res = env->CallIntMethod(m_ref, mid, (jbyteArray) byteArray);
-    CheckAndClearException(env);
-
-    return res;
+    if (CheckAndClearException(env)) {
+        completionHandler(false);
+    } else {
+        completionHandler(res == (int)len);
+    }
 }
 
 void SocketStreamHandleImpl::platformClose()

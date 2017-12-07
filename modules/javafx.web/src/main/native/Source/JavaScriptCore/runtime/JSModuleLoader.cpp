@@ -28,6 +28,7 @@
 #include "JSModuleLoader.h"
 
 #include "BuiltinNames.h"
+#include "CatchScope.h"
 #include "CodeProfiling.h"
 #include "Error.h"
 #include "Exception.h"
@@ -49,7 +50,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSModuleLoader);
 
-const ClassInfo JSModuleLoader::s_info = { "ModuleLoader", &Base::s_info, nullptr, CREATE_METHOD_TABLE(JSModuleLoader) };
+const ClassInfo JSModuleLoader::s_info = { "ModuleLoader", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSModuleLoader) };
 
 JSModuleLoader::JSModuleLoader(VM& vm, Structure* structure)
     : JSNonFinalObject(vm, structure)
@@ -63,7 +64,7 @@ void JSModuleLoader::finishCreation(ExecState* exec, VM& vm, JSGlobalObject* glo
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
     JSMap* map = JSMap::create(exec, vm, globalObject->mapStructure());
-    RELEASE_ASSERT(!scope.exception());
+    scope.releaseAssertNoException();
     putDirect(vm, Identifier::fromString(&vm, "registry"), map);
 }
 

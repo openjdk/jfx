@@ -99,6 +99,10 @@ interface TestRunner {
     void testRepaint();
     void repaintSweepHorizontally();
     void display();
+    void displayAndTrackRepaints();
+
+    // Failed load condition testing
+    void forceImmediateCompletion();
 
     // Printing
     boolean isPageBoxVisible(long pageIndex);
@@ -163,6 +167,7 @@ interface TestRunner {
 
     // Cookies testing
     void setAlwaysAcceptCookies(boolean accept);
+    void setCookieStoragePartitioningEnabled(boolean enabled);
 
     void overridePreference(DOMString preference, DOMString value);
 
@@ -187,6 +192,7 @@ interface TestRunner {
 
     // MediaStream
     void setUserMediaPermission(boolean value);
+    void resetUserMediaPermission();
     void setUserMediaPersistentPermissionForOrigin(boolean permission, DOMString origin, DOMString parentOrigin);
     unsigned long userMediaPermissionRequestCountForOrigin(DOMString origin, DOMString parentOrigin);
     void resetUserMediaPermissionRequestCountForOrigin(DOMString origin, DOMString parentOrigin);
@@ -249,14 +255,42 @@ interface TestRunner {
 
     // Resource Load Statistics
     void installStatisticsDidModifyDataRecordsCallback(object callback);
+    void installStatisticsDidScanDataRecordsCallback(object callback);
+    void installStatisticsDidRunTelemetryCallback(object callback);
+    void setStatisticsLastSeen(DOMString hostName, double seconds);
     void setStatisticsPrevalentResource(DOMString hostName, boolean value);
     boolean isStatisticsPrevalentResource(DOMString hostName);
     void setStatisticsHasHadUserInteraction(DOMString hostName, boolean value);
     boolean isStatisticsHasHadUserInteraction(DOMString hostName);
+    void setStatisticsGrandfathered(DOMString hostName, boolean value);
+    boolean isStatisticsGrandfathered(DOMString hostName);
+    void setStatisticsSubframeUnderTopFrameOrigin(DOMString hostName, DOMString topFrameHostName);
+    void setStatisticsSubresourceUnderTopFrameOrigin(DOMString hostName, DOMString topFrameHostName);
+    void setStatisticsSubresourceUniqueRedirectTo(DOMString hostName, DOMString hostNameRedirectedTo);
     void setStatisticsTimeToLiveUserInteraction(double seconds);
-    void statisticsFireDataModificationHandler();
+    void setStatisticsTimeToLiveCookiePartitionFree(double seconds);
+    void statisticsProcessStatisticsAndDataRecords();
+    void statisticsUpdateCookiePartitioning();
+    void statisticsSetShouldPartitionCookiesForHost(DOMString hostName, boolean value);
+    void statisticsSubmitTelemetry();
     void setStatisticsNotifyPagesWhenDataRecordsWereScanned(boolean value);
     void setStatisticsShouldClassifyResourcesBeforeDataRecordsRemoval(boolean value);
-    void setStatisticsMinimumTimeBetweeenDataRecordsRemoval(double seconds);
+    void setStatisticsNotifyPagesWhenTelemetryWasCaptured(boolean value);
+    void setStatisticsMinimumTimeBetweenDataRecordsRemoval(double seconds);
+    void setStatisticsGrandfatheringTime(double seconds);
+    void setStatisticsMaxStatisticsEntries(unsigned long entries);
+    void setStatisticsPruneEntriesDownTo(unsigned long entries);
+    void statisticsClearInMemoryAndPersistentStore();
+    void statisticsClearInMemoryAndPersistentStoreModifiedSinceHours(unsigned long hours);
+    void statisticsClearThroughWebsiteDataRemoval(object callback);
     void statisticsResetToConsistentState();
+
+    // Open panel
+    void setOpenPanelFiles(object filesArray);
+
+    void setWebRTCLegacyAPIEnabled(boolean value);
+
+    void terminateNetworkProcess();
+
+    void removeAllSessionCredentials(object callback);
 };

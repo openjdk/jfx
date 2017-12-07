@@ -46,11 +46,36 @@ struct TestOptions {
     bool enableIntersectionObserver { false };
     bool enableModernMediaControls { true };
     bool enablePointerLock { false };
+    bool enableCredentialManagement { false };
+    bool enableIsSecureContextAttribute { true };
+    bool enableInspectorAdditions { false };
 
     float deviceScaleFactor { 1 };
     Vector<String> overrideLanguages;
 
     TestOptions(const std::string& pathOrURL);
+
+    // Add here options that can only be set upon PlatformWebView
+    // initialization and make sure it's up to date when adding new
+    // options to this struct. Otherwise, tests using those options
+    // might fail if WTR is reusing an existing PlatformWebView.
+    bool hasSameInitializationOptions(const TestOptions& options) const
+    {
+        if (useThreadedScrolling != options.useThreadedScrolling
+            || overrideLanguages != options.overrideLanguages
+            || useMockScrollbars != options.useMockScrollbars
+            || needsSiteSpecificQuirks != options.needsSiteSpecificQuirks
+            || useCharacterSelectionGranularity != options.useCharacterSelectionGranularity
+            || enableIntersectionObserver != options.enableIntersectionObserver
+            || enableModernMediaControls != options.enableModernMediaControls
+            || enablePointerLock != options.enablePointerLock
+            || enableCredentialManagement != options.enableCredentialManagement
+            || enableIsSecureContextAttribute != options.enableIsSecureContextAttribute
+            || enableInspectorAdditions != options.enableInspectorAdditions)
+            return false;
+
+        return true;
+    }
 };
 
 }

@@ -26,24 +26,23 @@
 #pragma once
 
 #include "BytecodeConventions.h"
-#include "CodeSpecializationKind.h"
 #include "CodeType.h"
-#include "ConstructAbility.h"
 #include "ExpressionRangeInfo.h"
 #include "HandlerInfo.h"
 #include "Identifier.h"
 #include "JSCell.h"
-#include "JSString.h"
 #include "LockDuringMarking.h"
 #include "ParserModes.h"
 #include "RegExp.h"
 #include "SpecialPointer.h"
 #include "UnlinkedFunctionExecutable.h"
-#include "VariableEnvironment.h"
 #include "VirtualRegister.h"
+#include <algorithm>
 #include <wtf/BitVector.h>
+#include <wtf/HashSet.h>
 #include <wtf/TriState.h>
 #include <wtf/Vector.h>
+#include <wtf/text/UniquedStringImpl.h>
 
 namespace JSC {
 
@@ -65,6 +64,7 @@ typedef unsigned UnlinkedArrayProfile;
 typedef unsigned UnlinkedArrayAllocationProfile;
 typedef unsigned UnlinkedObjectAllocationProfile;
 typedef unsigned UnlinkedLLIntCallLinkInfo;
+using ConstantIndentifierSetEntry = std::pair<IdentifierSet, unsigned>;
 
 struct UnlinkedStringJumpTable {
     struct OffsetLocation {
@@ -104,7 +104,7 @@ struct UnlinkedInstruction {
     union {
         OpcodeID opcode;
         int32_t operand;
-        unsigned index;
+        unsigned unsignedValue;
     } u;
 };
 
@@ -183,6 +183,16 @@ public:
         return m_bitVectors.size() - 1;
     }
 
+    void addSetConstant(IdentifierSet& set)
+    {
+        VM& vm = *this->vm();
+        auto locker = lockDuringMarking(vm.heap, *this);
+        unsigned result = m_constantRegisters.size();
+        m_constantRegisters.append(WriteBarrier<Unknown>());
+        m_constantsSourceCodeRepresentation.append(SourceCodeRepresentation::Other);
+        m_constantIdentifierSets.append(ConstantIndentifierSetEntry(set, result));
+    }
+
     unsigned addConstant(JSValue v, SourceCodeRepresentation sourceCodeRepresentation = SourceCodeRepresentation::Other)
     {
         VM& vm = *this->vm();
@@ -206,6 +216,7 @@ public:
         m_constantsSourceCodeRepresentation.append(SourceCodeRepresentation::Other);
         return result;
     }
+
     unsigned registerIndexForLinkTimeConstant(LinkTimeConstant type)
     {
         unsigned index = static_cast<unsigned>(type);
@@ -213,8 +224,10 @@ public:
         return m_linkTimeConstants[index];
     }
     const Vector<WriteBarrier<Unknown>>& constantRegisters() { return m_constantRegisters; }
+    const Vector<ConstantIndentifierSetEntry>& constantIdentifierSets() { return m_constantIdentifierSets; }
     const WriteBarrier<Unknown>& constantRegister(int index) const { return m_constantRegisters[index - FirstConstantRegisterIndex]; }
     ALWAYS_INLINE bool isConstantRegisterIndex(int index) const { return index >= FirstConstantRegisterIndex; }
+    ALWAYS_INLINE JSValue getConstant(int index) const { return m_constantRegisters[index - FirstConstantRegisterIndex].get(); }
     const Vector<SourceCodeRepresentation>& constantsSourceCodeRepresentation() { return m_constantsSourceCodeRepresentation; }
 
     // Jumps
@@ -380,6 +393,8 @@ public:
     TriState didOptimize() const { return m_didOptimize; }
     void setDidOptimize(TriState didOptimize) { m_didOptimize = didOptimize; }
 
+    void dump(PrintStream&) const;
+
 protected:
     UnlinkedCodeBlock(VM*, Structure*, CodeType, const ExecutableInfo&, DebuggerMode);
     ~UnlinkedCodeBlock();
@@ -443,6 +458,7 @@ private:
     Vector<Identifier> m_identifiers;
     Vector<BitVector> m_bitVectors;
     Vector<WriteBarrier<Unknown>> m_constantRegisters;
+    Vector<ConstantIndentifierSetEntry> m_constantIdentifierSets;
     Vector<SourceCodeRepresentation> m_constantsSourceCodeRepresentation;
     typedef Vector<WriteBarrier<UnlinkedFunctionExecutable>> FunctionExpressionVector;
     FunctionExpressionVector m_functionDecls;

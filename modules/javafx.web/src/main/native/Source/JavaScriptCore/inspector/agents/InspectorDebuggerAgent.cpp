@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2013, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #include "InspectorValues.h"
 #include "JSCInlines.h"
 #include "RegularExpression.h"
+#include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
 #include "ScriptDebugServer.h"
 #include "ScriptObject.h"
@@ -56,7 +57,7 @@ const char* InspectorDebuggerAgent::backtraceObjectGroup = "backtrace";
 // create objects in the same group.
 static String objectGroupForBreakpointAction(const ScriptBreakpointAction& action)
 {
-    static NeverDestroyed<String> objectGroup(ASCIILiteral("breakpoint-action-"));
+    static NeverDestroyed<String> objectGroup(MAKE_STATIC_STRING_IMPL("breakpoint-action-"));
     return makeString(objectGroup.get(), String::number(action.identifier));
 }
 
@@ -222,7 +223,12 @@ void InspectorDebuggerAgent::handleConsoleAssert(const String& message)
         breakProgram(DebuggerFrontendDispatcher::Reason::Assert, buildAssertPauseReason(message));
 }
 
-void InspectorDebuggerAgent::didScheduleAsyncCall(JSC::ExecState* exec, int asyncCallType, int callbackIdentifier, bool singleShot)
+InspectorDebuggerAgent::AsyncCallIdentifier InspectorDebuggerAgent::asyncCallIdentifier(AsyncCallType asyncCallType, int callbackId)
+{
+    return std::make_pair(static_cast<unsigned>(asyncCallType), callbackId);
+}
+
+void InspectorDebuggerAgent::didScheduleAsyncCall(JSC::ExecState* exec, AsyncCallType asyncCallType, int callbackId, bool singleShot)
 {
     if (!m_asyncStackTraceDepth)
         return;
@@ -242,18 +248,18 @@ void InspectorDebuggerAgent::didScheduleAsyncCall(JSC::ExecState* exec, int asyn
         parentStackTrace = it->value;
     }
 
-    auto identifier = std::make_pair(asyncCallType, callbackIdentifier);
+    auto identifier = asyncCallIdentifier(asyncCallType, callbackId);
     auto asyncStackTrace = AsyncStackTrace::create(WTFMove(callStack), singleShot, WTFMove(parentStackTrace));
 
     m_pendingAsyncCalls.set(identifier, WTFMove(asyncStackTrace));
 }
 
-void InspectorDebuggerAgent::didCancelAsyncCall(int asyncCallType, int callbackIdentifier)
+void InspectorDebuggerAgent::didCancelAsyncCall(AsyncCallType asyncCallType, int callbackId)
 {
     if (!m_asyncStackTraceDepth)
         return;
 
-    auto identifier = std::make_pair(asyncCallType, callbackIdentifier);
+    auto identifier = asyncCallIdentifier(asyncCallType, callbackId);
     auto it = m_pendingAsyncCalls.find(identifier);
     if (it == m_pendingAsyncCalls.end())
         return;
@@ -267,7 +273,7 @@ void InspectorDebuggerAgent::didCancelAsyncCall(int asyncCallType, int callbackI
     m_pendingAsyncCalls.remove(identifier);
 }
 
-void InspectorDebuggerAgent::willDispatchAsyncCall(int asyncCallType, int callbackIdentifier)
+void InspectorDebuggerAgent::willDispatchAsyncCall(AsyncCallType asyncCallType, int callbackId)
 {
     if (!m_asyncStackTraceDepth)
         return;
@@ -277,7 +283,7 @@ void InspectorDebuggerAgent::willDispatchAsyncCall(int asyncCallType, int callba
 
     // A call can be scheduled before the Inspector is opened, or while async stack
     // traces are disabled. If no call data exists, do nothing.
-    auto identifier = std::make_pair(asyncCallType, callbackIdentifier);
+    auto identifier = asyncCallIdentifier(asyncCallType, callbackId);
     auto it = m_pendingAsyncCalls.find(identifier);
     if (it == m_pendingAsyncCalls.end())
         return;
@@ -1139,6 +1145,8 @@ void InspectorDebuggerAgent::clearAsyncStackTraceData()
 {
     m_pendingAsyncCalls.clear();
     m_currentAsyncCallIdentifier = std::nullopt;
+
+    didClearAsyncStackTraceData();
 }
 
 } // namespace Inspector

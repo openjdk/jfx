@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -142,6 +142,7 @@ struct ImpureBlockData {
 
     RangeSet<HeapRange> reads; // This only gets used for forward store elimination.
     RangeSet<HeapRange> writes; // This gets used for both load and store elimination.
+    bool fence;
 
     MemoryValueMap storesAtHead;
     MemoryValueMap memoryValuesAtTail;
@@ -174,12 +175,14 @@ public:
 
                 if (memory && memory->isStore()
                     && !data.reads.overlaps(memory->range())
-                    && !data.writes.overlaps(memory->range()))
+                    && !data.writes.overlaps(memory->range())
+                    && (!data.fence || !memory->hasFence()))
                     data.storesAtHead.add(memory);
                 data.reads.add(effects.reads);
 
                 if (HeapRange writes = effects.writes)
                     clobber(data, writes);
+                data.fence |= effects.fence;
 
                 if (memory)
                     data.memoryValuesAtTail.add(memory);
@@ -254,7 +257,7 @@ private:
         Value* value = memory->child(0);
         Value* ptr = memory->lastChild();
         HeapRange range = memory->range();
-        int32_t offset = memory->offset();
+        Value::OffsetType offset = memory->offset();
 
         switch (memory->opcode()) {
         case Store8:
@@ -302,7 +305,7 @@ private:
     {
         Value* ptr = memory->lastChild();
         HeapRange range = memory->range();
-        int32_t offset = memory->offset();
+        Value::OffsetType offset = memory->offset();
         Type type = memory->type();
 
         // FIXME: Empower this to insert more casts and shifts. For example, a Load8 could match a
@@ -445,8 +448,6 @@ private:
         }
 
         default:
-            dataLog("Bad memory value: ", deepDump(m_proc, m_value), "\n");
-            RELEASE_ASSERT_NOT_REACHED();
             break;
         }
     }
@@ -478,6 +479,9 @@ private:
     template<typename Filter>
     bool findStoreAfterClobber(Value* ptr, HeapRange range, const Filter& filter)
     {
+        if (m_value->as<MemoryValue>()->hasFence())
+            return false;
+
         // We can eliminate a store if every forward path hits a store to the same location before
         // hitting any operation that observes the store. This search seems like it should be
         // expensive, but in the overwhelming majority of cases it will almost immediately hit an
@@ -614,6 +618,12 @@ private:
         if (verbose)
             dataLog(*m_value, ": looking backward for ", *ptr, "...\n");
 
+        if (m_value->as<MemoryValue>()->hasFence()) {
+            if (verbose)
+                dataLog("    Giving up because fences.\n");
+            return { };
+        }
+
         if (MemoryValue* match = m_data.memoryValuesAtTail.find(ptr, filter)) {
             if (verbose)
                 dataLog("    Found ", *match, " locally.\n");
@@ -672,7 +682,7 @@ private:
     Dominators& m_dominators;
     PureCSE m_pureCSE;
 
-    IndexMap<BasicBlock, ImpureBlockData> m_impureBlockData;
+    IndexMap<BasicBlock*, ImpureBlockData> m_impureBlockData;
 
     ImpureBlockData m_data;
 

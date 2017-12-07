@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,63 +27,82 @@
 
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmCallingConvention.h"
 #include "WasmPageCount.h"
+
+#include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
 
 namespace WTF {
 class PrintStream;
 }
 
-namespace JSC { namespace Wasm {
+namespace JSC {
 
-class Memory {
+class VM;
+
+namespace Wasm {
+
+// FIXME: We should support other modes. see: https://bugs.webkit.org/show_bug.cgi?id=162693
+enum class MemoryMode : uint8_t {
+    BoundsChecking,
+    Signaling
+};
+static constexpr size_t NumberOfMemoryModes = 2;
+JS_EXPORT_PRIVATE const char* makeString(MemoryMode);
+
+class Memory : public RefCounted<Memory> {
     WTF_MAKE_NONCOPYABLE(Memory);
     WTF_MAKE_FAST_ALLOCATED;
 public:
     void dump(WTF::PrintStream&) const;
 
-    // FIXME: We should support other modes. see: https://bugs.webkit.org/show_bug.cgi?id=162693
-    enum class Mode {
-        BoundsChecking
-    };
-    const char* makeString(Mode) const;
+    explicit operator bool() const { return !!m_memory; }
 
-    Memory() = default;
-    JS_EXPORT_PRIVATE Memory(PageCount initial, PageCount maximum, bool& failed);
-    Memory(Memory&& other)
-        : m_memory(other.m_memory)
-        , m_size(other.m_size)
-        , m_initial(other.m_initial)
-        , m_maximum(other.m_maximum)
-        , m_mappedCapacity(other.m_mappedCapacity)
-        , m_mode(other.m_mode)
-    {
-        // Moving transfers ownership of the allocated memory.
-        other.m_memory = nullptr;
-    }
+    static RefPtr<Memory> create(VM&, PageCount initial, PageCount maximum);
+
     ~Memory();
 
+    static size_t fastMappedRedzoneBytes();
+    static size_t fastMappedBytes(); // Includes redzone.
+    static bool addressIsInActiveFastMemory(void*);
+
     void* memory() const { return m_memory; }
-    uint64_t size() const { return m_size; }
+    size_t size() const { return m_size; }
     PageCount sizeInPages() const { return PageCount::fromBytes(m_size); }
 
     PageCount initial() const { return m_initial; }
     PageCount maximum() const { return m_maximum; }
 
-    Mode mode() const { return m_mode; }
+    MemoryMode mode() const { return m_mode; }
 
-    bool grow(PageCount);
+    // grow() should only be called from the JSWebAssemblyMemory object since that object needs to update internal
+    // pointers with the current base and size.
+    bool grow(VM&, PageCount);
 
-    static ptrdiff_t offsetOfMemory() { return OBJECT_OFFSETOF(Memory, m_memory); }
-    static ptrdiff_t offsetOfSize() { return OBJECT_OFFSETOF(Memory, m_size); }
-
+    void check() {  ASSERT(!deletionHasBegun()); }
 private:
+    Memory(void* memory, PageCount initial, PageCount maximum, size_t mappedCapacity, MemoryMode);
+    Memory(PageCount initial, PageCount maximum);
+
+    // FIXME: we should move these to the instance to avoid a load on instance->instance calls.
     void* m_memory { nullptr };
-    uint64_t m_size { 0 };
+    size_t m_size { 0 };
     PageCount m_initial;
     PageCount m_maximum;
-    uint64_t m_mappedCapacity { 0 };
-    Mode m_mode { Mode::BoundsChecking };
+    size_t m_mappedCapacity { 0 };
+    MemoryMode m_mode { MemoryMode::BoundsChecking };
+};
+
+} } // namespace JSC::Wasm
+
+#else
+
+namespace JSC { namespace Wasm {
+
+class Memory {
+public:
+    static size_t maxFastMemoryCount() { return 0; }
+    static bool addressIsInActiveFastMemory(void*) { return false; }
 };
 
 } } // namespace JSC::Wasm

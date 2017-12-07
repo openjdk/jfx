@@ -27,6 +27,7 @@
 
 #include "TypeLocation.h"
 #include <unordered_map>
+#include <wtf/FastMalloc.h>
 #include <wtf/HashMethod.h>
 
 namespace JSC {
@@ -58,7 +59,7 @@ public:
 
     std::pair<TypeLocation*, bool> getTypeLocation(GlobalVariableID, intptr_t, unsigned start, unsigned end, RefPtr<TypeSet>&&, VM*);
 private:
-    typedef std::unordered_map<LocationKey, TypeLocation*, HashMethod<LocationKey>> LocationMap;
+    using LocationMap = std::unordered_map<LocationKey, TypeLocation*, HashMethod<LocationKey>, std::equal_to<LocationKey>, FastAllocator<std::pair<const LocationKey, TypeLocation*>>>;
     LocationMap m_locationMap;
 };
 

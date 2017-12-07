@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +34,7 @@
 
 namespace JSC {
 
-const ClassInfo StructureRareData::s_info = { "StructureRareData", 0, 0, CREATE_METHOD_TABLE(StructureRareData) };
+const ClassInfo StructureRareData::s_info = { "StructureRareData", nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(StructureRareData) };
 
 Structure* StructureRareData::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
@@ -90,6 +90,7 @@ public:
     ObjectToStringAdaptiveInferredPropertyValueWatchpoint(const ObjectPropertyCondition&, StructureRareData*);
 
 private:
+    bool isValid() const override;
     void handleFire(const FireDetail&) override;
 
     StructureRareData* m_structureRareData;
@@ -191,17 +192,15 @@ void ObjectToStringAdaptiveStructureWatchpoint::install()
     m_key.object()->structure()->addTransitionWatchpoint(this);
 }
 
-void ObjectToStringAdaptiveStructureWatchpoint::fireInternal(const FireDetail& detail)
+void ObjectToStringAdaptiveStructureWatchpoint::fireInternal(const FireDetail&)
 {
+    if (!m_structureRareData->isLive())
+        return;
+
     if (m_key.isWatchable(PropertyCondition::EnsureWatchability)) {
         install();
         return;
     }
-
-    StringPrintStream out;
-    out.print("ObjectToStringValue Adaptation of ", m_key, " failed: ", detail);
-
-    StringFireDetail stringDetail(out.toCString().data());
 
     m_structureRareData->clearObjectToStringValue();
 }
@@ -212,13 +211,13 @@ ObjectToStringAdaptiveInferredPropertyValueWatchpoint::ObjectToStringAdaptiveInf
 {
 }
 
-void ObjectToStringAdaptiveInferredPropertyValueWatchpoint::handleFire(const FireDetail& detail)
+bool ObjectToStringAdaptiveInferredPropertyValueWatchpoint::isValid() const
 {
-    StringPrintStream out;
-    out.print("Adaptation of ", key(), " failed: ", detail);
+    return m_structureRareData->isLive();
+}
 
-    StringFireDetail stringDetail(out.toCString().data());
-
+void ObjectToStringAdaptiveInferredPropertyValueWatchpoint::handleFire(const FireDetail&)
+{
     m_structureRareData->clearObjectToStringValue();
 }
 

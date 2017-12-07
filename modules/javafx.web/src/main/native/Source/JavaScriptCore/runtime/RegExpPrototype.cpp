@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003, 2007-2008, 2016 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2017 Apple Inc. All Rights Reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -55,7 +55,7 @@ static EncodedJSValue JSC_HOST_CALL regExpProtoGetterUnicode(ExecState*);
 static EncodedJSValue JSC_HOST_CALL regExpProtoGetterSource(ExecState*);
 static EncodedJSValue JSC_HOST_CALL regExpProtoGetterFlags(ExecState*);
 
-const ClassInfo RegExpPrototype::s_info = { "Object", &Base::s_info, 0, CREATE_METHOD_TABLE(RegExpPrototype) };
+const ClassInfo RegExpPrototype::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(RegExpPrototype) };
 
 RegExpPrototype::RegExpPrototype(VM& vm, Structure* structure)
     : JSNonFinalObject(vm, structure)
@@ -76,10 +76,16 @@ void RegExpPrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_NATIVE_GETTER(vm.propertyNames->unicode, regExpProtoGetterUnicode, DontEnum | Accessor);
     JSC_NATIVE_GETTER(vm.propertyNames->source, regExpProtoGetterSource, DontEnum | Accessor);
     JSC_NATIVE_GETTER(vm.propertyNames->flags, regExpProtoGetterFlags, DontEnum | Accessor);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->matchSymbol, regExpPrototypeMatchCodeGenerator, DontEnum);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->replaceSymbol, regExpPrototypeReplaceCodeGenerator, DontEnum);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->searchSymbol, regExpPrototypeSearchCodeGenerator, DontEnum);
-    JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->splitSymbol, regExpPrototypeSplitCodeGenerator, DontEnum);
+
+    JSFunction* matchFunction = JSFunction::createBuiltinFunction(vm, regExpPrototypeMatchCodeGenerator(vm), globalObject, ASCIILiteral("[Symbol.match]"));
+    putDirectWithoutTransition(vm, vm.propertyNames->matchSymbol, matchFunction, DontEnum);
+    JSFunction* replaceFunction = JSFunction::createBuiltinFunction(vm, regExpPrototypeReplaceCodeGenerator(vm), globalObject, ASCIILiteral("[Symbol.replace]"));
+    putDirectWithoutTransition(vm, vm.propertyNames->replaceSymbol, replaceFunction, DontEnum);
+    JSFunction* searchFunction = JSFunction::createBuiltinFunction(vm, regExpPrototypeSearchCodeGenerator(vm), globalObject, ASCIILiteral("[Symbol.search]"));
+    putDirectWithoutTransition(vm, vm.propertyNames->searchSymbol, searchFunction, DontEnum);
+    JSFunction* splitFunction = JSFunction::createBuiltinFunction(vm, regExpPrototypeSplitCodeGenerator(vm), globalObject, ASCIILiteral("[Symbol.split]"));
+    putDirectWithoutTransition(vm, vm.propertyNames->splitSymbol, splitFunction, DontEnum);
+
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->test, regExpPrototypeTestCodeGenerator, DontEnum);
 
     m_emptyRegExp.set(vm, this, RegExp::create(vm, "", NoFlags));
@@ -508,7 +514,7 @@ void genericSplit(
         if (control() == AbortSplit)
             return;
 
-        ovector.resize(0);
+        ovector.shrink(0);
 
         // a. Perform ? Set(splitter, "lastIndex", q, true).
         // b. Let z be ? RegExpExec(splitter, S).
@@ -672,7 +678,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncSplitFast(ExecState* exec)
     genericSplit(
         vm, regexp, input, inputSize, position, matchPosition, regExpIsSticky, regExpIsUnicode,
         [&] () -> SplitControl {
-            if (resultLength + dryRunCount >= MAX_STORAGE_VECTOR_LENGTH)
+            if (resultLength + dryRunCount > MAX_STORAGE_VECTOR_LENGTH)
                 return AbortSplit;
             return ContinueSplit;
         },
@@ -683,7 +689,7 @@ EncodedJSValue JSC_HOST_CALL regExpProtoFuncSplitFast(ExecState* exec)
             return ContinueSplit;
         });
 
-    if (resultLength + dryRunCount >= MAX_STORAGE_VECTOR_LENGTH) {
+    if (resultLength + dryRunCount > MAX_STORAGE_VECTOR_LENGTH) {
         throwOutOfMemoryError(exec, scope);
         return encodedJSValue();
     }

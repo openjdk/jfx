@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003, 2007, 2009, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -35,13 +35,18 @@
     macro(Audio) \
     macro(BYTES_PER_ELEMENT) \
     macro(Boolean) \
+    macro(Cache) \
+    macro(CacheStorage) \
     macro(Collator) \
+    macro(Credential) \
+    macro(CredentialsContainer) \
     macro(CustomElementRegistry) \
     macro(Date) \
     macro(DateTimeFormat) \
     macro(DocumentTimeline) \
     macro(Error) \
     macro(EvalError) \
+    macro(FederatedCredential) \
     macro(Function) \
     macro(Gamepad) \
     macro(GamepadButton) \
@@ -77,14 +82,21 @@
     macro(MediaKeyStatusMap) \
     macro(MediaKeySystemAccess) \
     macro(MediaKeys) \
+    macro(WebKitMediaKeyError) \
+    macro(WebKitMediaKeyNeededEvent) \
+    macro(WebKitMediaKeySession) \
+    macro(WebKitMediaKeys) \
+    macro(WebKitMediaKeyMessageEvent) \
     macro(MediaStreamEvent) \
     macro(ModernMediaControls) \
     macro(NaN) \
+    macro(NavigatorCredentials) \
     macro(NavigatorMediaDevices) \
     macro(NavigatorUserMedia) \
     macro(Number) \
     macro(NumberFormat) \
     macro(Object) \
+    macro(PasswordCredential) \
     macro(PerformanceEntry) \
     macro(PerformanceEntryList) \
     macro(PerformanceMark) \
@@ -98,16 +110,25 @@
     macro(ReferenceError) \
     macro(Reflect) \
     macro(RegExp) \
-    macro(Response) \
     macro(Request) \
+    macro(Response) \
+    macro(RTCDataChannel) \
+    macro(RTCDataChannelEvent) \
+    macro(RTCDTMFSender) \
     macro(RTCDTMFToneChangeEvent) \
     macro(RTCIceCandidate) \
+    macro(RTCIceTransport) \
     macro(RTCPeerConnection) \
     macro(RTCRtpReceiver) \
     macro(RTCRtpSender) \
     macro(RTCRtpTransceiver) \
     macro(RTCSessionDescription) \
+    macro(RTCStatsReport) \
     macro(RTCTrackEvent) \
+    macro(ServiceWorker)\
+    macro(ServiceWorkerContainer)\
+    macro(ServiceWorkerGlobalScope)\
+    macro(ServiceWorkerRegistration)\
     macro(Set)\
     macro(SetIterator)\
     macro(ShadowRoot) \
@@ -123,7 +144,30 @@
     macro(WeakSet)\
     macro(WebGL2RenderingContext) \
     macro(WebGLVertexArrayObject) \
+    macro(WebGPUBuffer) \
+    macro(WebGPUCommandBuffer) \
+    macro(WebGPUCommandQueue) \
+    macro(WebGPUComputeCommandEncoder) \
+    macro(WebGPUComputePipelineState) \
+    macro(WebGPUDepthStencilDescriptor) \
+    macro(WebGPUDepthStencilState) \
+    macro(WebGPUDrawable) \
+    macro(WebGPUFunction) \
+    macro(WebGPULibrary) \
+    macro(WebGPURenderCommandEncoder) \
+    macro(WebGPURenderPassAttachmentDescriptor) \
+    macro(WebGPURenderPassColorAttachmentDescriptor) \
+    macro(WebGPURenderPassDepthAttachmentDescriptor) \
+    macro(WebGPURenderPassDescriptor) \
+    macro(WebGPURenderPipelineColorAttachmentDescriptor) \
+    macro(WebGPURenderPipelineDescriptor) \
+    macro(WebGPURenderPipelineState) \
+    macro(WebGPURenderingContext) \
+    macro(WebGPUSize) \
+    macro(WebGPUTexture) \
+    macro(WebGPUTextureDescriptor) \
     macro(WebSocket) \
+    macro(WritableStream) \
     macro(__defineGetter__) \
     macro(__defineSetter__) \
     macro(__lookupGetter__) \
@@ -144,6 +188,7 @@
     macro(bytecodeIndex) \
     macro(bytecodes) \
     macro(bytecodesID) \
+    macro(caches) \
     macro(calendar) \
     macro(callee) \
     macro(caller) \
@@ -182,6 +227,7 @@
     macro(focus) \
     macro(forEach) \
     macro(formatMatcher) \
+    macro(formatToParts) \
     macro(forward) \
     macro(frames) \
     macro(from) \
@@ -207,6 +253,7 @@
     macro(isArray) \
     macro(isEnabled) \
     macro(isPrototypeOf) \
+    macro(isSecureContext) \
     macro(isView) \
     macro(isWatchpoint) \
     macro(jettisonReason) \
@@ -239,6 +286,7 @@
     macro(parent) \
     macro(parse) \
     macro(parseInt) \
+    macro(parseFloat) \
     macro(postMessage) \
     macro(profiledBytecodes) \
     macro(propertyIsEnumerable) \
@@ -258,6 +306,7 @@
     macro(sourceCode) \
     macro(sourceURL) \
     macro(stack) \
+    macro(stackTraceLimit) \
     macro(sticky) \
     macro(subarray) \
     macro(summary) \
@@ -395,10 +444,6 @@ namespace JSC {
 #define JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL(name) const Identifier name##Symbol;
         JSC_COMMON_PRIVATE_IDENTIFIERS_EACH_WELL_KNOWN_SYMBOL(JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL)
 #undef JSC_IDENTIFIER_DECLARE_PRIVATE_WELL_KNOWN_SYMBOL_GLOBAL
-
-        bool isPrivateName(SymbolImpl& uid) const;
-        bool isPrivateName(UniquedStringImpl& uid) const;
-        bool isPrivateName(const Identifier&) const;
 
         const Identifier* lookUpPrivateName(const Identifier&) const;
         Identifier lookUpPublicName(const Identifier&) const;

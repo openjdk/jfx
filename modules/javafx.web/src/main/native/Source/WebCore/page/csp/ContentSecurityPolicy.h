@@ -26,9 +26,11 @@
 
 #pragma once
 
+#include "ContentSecurityPolicyHash.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginHash.h"
+#include <functional>
 #include <wtf/HashSet.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Vector.h>
@@ -49,14 +51,12 @@ class ContentSecurityPolicyDirectiveList;
 class ContentSecurityPolicySource;
 class DOMStringList;
 class Frame;
-class JSDOMWindowShell;
+class JSDOMWindowProxy;
 class ResourceRequest;
 class ScriptExecutionContext;
 class SecurityOrigin;
 class TextEncoding;
 class URL;
-
-enum class ContentSecurityPolicyHashAlgorithm;
 
 typedef Vector<std::unique_ptr<ContentSecurityPolicyDirectiveList>> CSPDirectiveListVector;
 typedef int SandboxFlags;
@@ -71,7 +71,7 @@ public:
     void copyStateFrom(const ContentSecurityPolicy*);
     void copyUpgradeInsecureRequestStateFrom(const ContentSecurityPolicy&);
 
-    void didCreateWindowShell(JSDOMWindowShell&) const;
+    void didCreateWindowProxy(JSDOMWindowProxy&) const;
 
     enum class PolicyFrom {
         API,
@@ -207,6 +207,7 @@ private:
     String m_selfSourceProtocol;
     CSPDirectiveListVector m_policies;
     String m_lastPolicyEvalDisabledErrorMessage;
+    String m_lastPolicyWebAssemblyDisabledErrorMessage;
     SandboxFlags m_sandboxFlags;
     bool m_overrideInlineStyleAllowed { false };
     bool m_isReportingEnabled { true };

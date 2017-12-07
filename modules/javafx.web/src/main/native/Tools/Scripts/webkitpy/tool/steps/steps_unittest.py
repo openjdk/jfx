@@ -46,6 +46,7 @@ class StepsTest(unittest.TestCase):
         options.quiet = True
         options.test = True
         options.iterate_on_new_tests = 0
+        options.root = '/tmp'
         return options
 
     def _run_step(self, step, tool=None, options=None, state=None):
@@ -154,8 +155,7 @@ MOCK run_and_throw_if_fail: ['Tools/Scripts/run-webkit-tests', '--debug', '--qui
         # FIXME: We shouldn't use a real port-object here, but there is too much to mock at the moment.
         tool._deprecated_port = DeprecatedPort()
         step = steps.RunTests(tool, mock_options)
-        expected_logs = """MOCK run_command: ['perl', 'Tools/Scripts/webkit-build-directory', '--configuration', '--release', '--mac'], cwd=/mock-checkout
-MOCK run_and_throw_if_fail: ['Tools/Scripts/run-javascriptcore-tests', '--no-fail-fast', '--release', '--json-output=/MOCK output of child process/jsc_test_results.json'], cwd=/mock-checkout
+        expected_logs = """MOCK run_and_throw_if_fail: ['Tools/Scripts/run-javascriptcore-tests', '--no-fail-fast', '--release', '--json-output=/tmp/jsc_test_results.json'], cwd=/mock-checkout
 """
         OutputCapture().assert_outputs(self, step.run, [{}], expected_logs=expected_logs)
 
@@ -168,8 +168,7 @@ MOCK run_and_throw_if_fail: ['Tools/Scripts/run-javascriptcore-tests', '--no-fai
         # FIXME: We shouldn't use a real port-object here, but there is too much to mock at the moment.
         tool._deprecated_port = DeprecatedPort()
         step = steps.RunTests(tool, mock_options)
-        expected_logs = """MOCK run_command: ['perl', 'Tools/Scripts/webkit-build-directory', '--configuration', '--release', '--mac'], cwd=/mock-checkout
-MOCK run_and_throw_if_fail: ['Tools/Scripts/run-javascriptcore-tests', '--no-fail-fast', '--debug', '--json-output=/MOCK output of child process/jsc_test_results.json'], cwd=/mock-checkout
+        expected_logs = """MOCK run_and_throw_if_fail: ['Tools/Scripts/run-javascriptcore-tests', '--no-fail-fast', '--debug', '--json-output=/tmp/jsc_test_results.json'], cwd=/mock-checkout
 """
         OutputCapture().assert_outputs(self, step.run, [{}], expected_logs=expected_logs)
 
@@ -244,3 +243,68 @@ This patch does not have relevant changes.
 """
         with self.assertRaises(ScriptError):
             OutputCapture().assert_outputs(self, step.run, [{}], expected_logs=expected_logs)
+
+    def test_runtests_bindings(self):
+        mock_options = self._step_options()
+        mock_options.non_interactive = False
+        mock_options.group = "bindings"
+        step = steps.RunTests(MockTool(log_executive=True), mock_options)
+        tool = MockTool(log_executive=True)
+        # FIXME: We shouldn't use a real port-object here, but there is too much to mock at the moment.
+        tool._deprecated_port = DeprecatedPort()
+        step = steps.RunTests(tool, mock_options)
+        expected_logs = """MOCK run_and_throw_if_fail: ['Tools/Scripts/run-bindings-tests', '--json-output=/tmp/bindings_test_results.json'], cwd=/mock-checkout
+"""
+        OutputCapture().assert_outputs(self, step.run, [{}], expected_logs=expected_logs)
+
+    def test_patch_relevant_bindings(self):
+        self.maxDiff = None
+        mock_options = self._step_options()
+        mock_options.group = "bindings"
+        tool = MockTool(log_executive=True)
+        tool.scm()._mockChangedFiles = ["Source/WebCore/features.json", "Source/ChangeLog"]
+        # FIXME: We shouldn't use a real port-object here, but there is too much to mock at the moment.
+        tool._deprecated_port = DeprecatedPort()
+        step = steps.CheckPatchRelevance(tool, mock_options)
+        expected_logs = """Checking relevance of patch
+"""
+        OutputCapture().assert_outputs(self, step.run, [{}], expected_logs=expected_logs)
+
+    def test_patch_not_relevant_bindings(self):
+        self.maxDiff = None
+        mock_options = self._step_options()
+        mock_options.group = "bindings"
+        tool = MockTool(log_executive=True)
+        tool.scm()._mockChangedFiles = ["Source/JavaScriptCore/Makefile", "Source/ChangeLog"]
+        # FIXME: We shouldn't use a real port-object here, but there is too much to mock at the moment.
+        tool._deprecated_port = DeprecatedPort()
+        step = steps.CheckPatchRelevance(tool, mock_options)
+        expected_logs = """Checking relevance of patch
+This patch does not have relevant changes.
+"""
+
+    def test_runtests_api(self):
+        mock_options = self._step_options()
+        mock_options.non_interactive = False
+        mock_options.build_style = "release"
+        mock_options.group = "api"
+        step = steps.RunTests(MockTool(log_executive=True), mock_options)
+        tool = MockTool(log_executive=True)
+        tool._deprecated_port = DeprecatedPort()
+        step = steps.RunTests(tool, mock_options)
+        expected_logs = """MOCK run_and_throw_if_fail: ['Tools/Scripts/run-api-tests', '--release', '--json-output=/tmp/api_test_results.json'], cwd=/mock-checkout
+"""
+        OutputCapture().assert_outputs(self, step.run, [{}], expected_logs=expected_logs)
+
+    def test_runtests_api_debug(self):
+        mock_options = self._step_options()
+        mock_options.non_interactive = False
+        mock_options.build_style = "debug"
+        mock_options.group = "api"
+        step = steps.RunTests(MockTool(log_executive=True), mock_options)
+        tool = MockTool(log_executive=True)
+        tool._deprecated_port = DeprecatedPort()
+        step = steps.RunTests(tool, mock_options)
+        expected_logs = """MOCK run_and_throw_if_fail: ['Tools/Scripts/run-api-tests', '--debug', '--json-output=/tmp/api_test_results.json'], cwd=/mock-checkout
+"""
+        OutputCapture().assert_outputs(self, step.run, [{}], expected_logs=expected_logs)

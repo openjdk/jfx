@@ -271,7 +271,7 @@ void PlatformWebView::makeWebViewFirstResponder()
     [m_window makeFirstResponder:platformView()];
 }
 
-WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
+RetainPtr<CGImageRef> PlatformWebView::windowSnapshotImage()
 {
     [platformView() display];
     CGWindowImageOption options = kCGWindowImageBoundsIgnoreFraming | kCGWindowImageShouldBeOpaque;
@@ -279,24 +279,7 @@ WKRetainPtr<WKImageRef> PlatformWebView::windowSnapshotImage()
     if ([m_window backingScaleFactor] == 1)
         options |= kCGWindowImageNominalResolution;
 
-    RetainPtr<CGImageRef> windowSnapshotImage = adoptCF(CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, [m_window windowNumber], options));
-
-    // windowSnapshotImage will be in GenericRGB, as we've set the main display's color space to GenericRGB.
-    return adoptWK(WKImageCreateFromCGImage(windowSnapshotImage.get(), 0));
-}
-
-bool PlatformWebView::viewSupportsOptions(const TestOptions& options) const
-{
-    if (m_options.useThreadedScrolling != options.useThreadedScrolling
-        || m_options.overrideLanguages != options.overrideLanguages
-        || m_options.useMockScrollbars != options.useMockScrollbars
-        || m_options.needsSiteSpecificQuirks != options.needsSiteSpecificQuirks
-        || m_options.enableIntersectionObserver != options.enableIntersectionObserver
-        || m_options.enableModernMediaControls != options.enableModernMediaControls
-        || m_options.enablePointerLock != options.enablePointerLock)
-        return false;
-
-    return true;
+    return adoptCF(CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, [m_window windowNumber], options));
 }
 
 void PlatformWebView::changeWindowScaleIfNeeded(float newScale)

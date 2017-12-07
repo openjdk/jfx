@@ -44,36 +44,39 @@
 #include "JSLock.h"
 #include "JSSegmentedVariableObjectSubspace.h"
 #include "JSStringSubspace.h"
+#include "JSWebAssemblyCodeBlockSubspace.h"
 #include "MacroAssemblerCodeRef.h"
 #include "Microtask.h"
 #include "NumericStrings.h"
-#include "PrivateName.h"
 #include "PrototypeMap.h"
 #include "SmallStrings.h"
-#include "SourceCode.h"
 #include "Strong.h"
 #include "Subspace.h"
 #include "TemplateRegistryKeyTable.h"
-#include "ThunkGenerators.h"
 #include "VMEntryRecord.h"
+#include "VMTraps.h"
 #include "Watchpoint.h"
-#include <wtf/Bag.h>
 #include <wtf/BumpPointerAllocator.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/DateMath.h>
 #include <wtf/Deque.h>
 #include <wtf/DoublyLinkedList.h>
 #include <wtf/Forward.h>
+#include <wtf/Gigacage.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/StackBounds.h>
 #include <wtf/Stopwatch.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/ThreadSpecific.h>
-#include <wtf/WTFThreadData.h>
 #include <wtf/text/SymbolRegistry.h>
 #include <wtf/text/WTFString.h>
 #if ENABLE(REGEXP_TRACING)
 #include <wtf/ListHashSet.h>
+#endif
+
+#if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
+#include <wtf/StackTrace.h>
 #endif
 
 namespace WTF {
@@ -89,9 +92,12 @@ class CodeBlock;
 class CodeCache;
 class CommonIdentifiers;
 class CustomGetterSetter;
+class DOMAttributeGetterSetter;
 class ExecState;
 class Exception;
 class ExceptionScope;
+class FastMallocAlignedMemoryAllocator;
+class GigacageAlignedMemoryAllocator;
 class HandleStack;
 class TypeProfiler;
 class TypeProfilerLog;
@@ -102,9 +108,11 @@ class Interpreter;
 class JSCustomGetterSetterFunction;
 class JSGlobalObject;
 class JSObject;
+class JSRunLoopTimer;
 class JSWebAssemblyInstance;
 class LLIntOffsetsExtractor;
 class NativeExecutable;
+class PromiseDeferredTimer;
 class RegExpCache;
 class Register;
 class RegisterAtOffsetList;
@@ -133,11 +141,6 @@ class Watchdog;
 class Watchpoint;
 class WatchpointSet;
 
-#if ENABLE(DFG_JIT)
-namespace DFG {
-class LongLivedState;
-}
-#endif // ENABLE(DFG_JIT)
 #if ENABLE(FTL_JIT)
 namespace FTL {
 class Thunks;
@@ -152,11 +155,6 @@ class Database;
 namespace DOMJIT {
 class Signature;
 }
-#if ENABLE(WEBASSEMBLY)
-namespace Wasm {
-class SignatureInformation;
-}
-#endif
 
 struct HashTable;
 struct Instruction;
@@ -222,10 +220,10 @@ struct ScratchBuffer {
         return result;
     }
 
-    static size_t allocationSize(size_t bufferSize) { return sizeof(ScratchBuffer) + bufferSize; }
+    static size_t allocationSize(Checked<size_t> bufferSize) { return (sizeof(ScratchBuffer) + bufferSize).unsafeGet(); }
     void setActiveLength(size_t activeLength) { u.m_activeLength = activeLength; }
     size_t activeLength() const { return u.m_activeLength; };
-    size_t* activeLengthPtr() { return &u.m_activeLength; };
+    size_t* addressOfActiveLength() { return &u.m_activeLength; };
     void* dataBuffer() { return m_buffer; }
 
     union {
@@ -247,7 +245,7 @@ public:
     // WebCore has a one-to-one mapping of threads to VMs;
     // either create() or createLeaked() should only be called once
     // on a thread, this is the 'default' VM (it uses the
-    // thread's default string uniquing table from wtfThreadData).
+    // thread's default string uniquing table from Thread::current()).
     // API contexts created using the new context group aware interface
     // create APIContextGroup objects which require less locking of JSC
     // than the old singleton APIShared VM created for use by
@@ -268,7 +266,7 @@ public:
     static Ref<VM> createContextGroup(HeapType = SmallHeap);
     JS_EXPORT_PRIVATE ~VM();
 
-    JS_EXPORT_PRIVATE Watchdog& ensureWatchdog();
+    Watchdog& ensureWatchdog();
     Watchdog* watchdog() { return m_watchdog.get(); }
 
     HeapProfiler* heapProfiler() const { return m_heapProfiler.get(); }
@@ -281,30 +279,50 @@ public:
 
 private:
     RefPtr<JSLock> m_apiLock;
-
-public:
-#if ENABLE(ASSEMBLER)
-    // executableAllocator should be destructed after the heap, as the heap can call executableAllocator
-    // in its destructor.
-    ExecutableAllocator executableAllocator;
+#if USE(CF)
+    // These need to be initialized before heap below.
+    HashSet<JSRunLoopTimer*> m_runLoopTimers;
+    RetainPtr<CFRunLoopRef> m_runLoop;
 #endif
 
-    // The heap should be just after executableAllocator and before other members to ensure that it's
-    // destructed after all the objects that reference it.
+public:
     Heap heap;
 
-    Subspace auxiliarySpace;
+    std::unique_ptr<FastMallocAlignedMemoryAllocator> fastMallocAllocator;
+    std::unique_ptr<GigacageAlignedMemoryAllocator> primitiveGigacageAllocator;
+    std::unique_ptr<GigacageAlignedMemoryAllocator> jsValueGigacageAllocator;
+
+    Subspace primitiveGigacageAuxiliarySpace; // Typed arrays, strings, bitvectors, etc go here.
+    Subspace jsValueGigacageAuxiliarySpace; // Butterflies, arrays of JSValues, etc go here.
+
+    // We make cross-cutting assumptions about typed arrays being in the primitive Gigacage and butterflies
+    // being in the JSValue gigacage. For some types, it's super obvious where they should go, and so we
+    // can hardcode that fact. But sometimes it's not clear, so we abstract it by having a Gigacage::Kind
+    // constant somewhere.
+    // FIXME: Maybe it would be better if everyone abstracted this?
+    // https://bugs.webkit.org/show_bug.cgi?id=175248
+    ALWAYS_INLINE Subspace& gigacageAuxiliarySpace(Gigacage::Kind kind)
+    {
+        switch (kind) {
+        case Gigacage::Primitive:
+            return primitiveGigacageAuxiliarySpace;
+        case Gigacage::JSValue:
+            return jsValueGigacageAuxiliarySpace;
+        }
+        RELEASE_ASSERT_NOT_REACHED();
+        return primitiveGigacageAuxiliarySpace;
+    }
 
     // Whenever possible, use subspaceFor<CellType>(vm) to get one of these subspaces.
     Subspace cellSpace;
     Subspace destructibleCellSpace;
     JSStringSubspace stringSpace;
     JSDestructibleObjectSubspace destructibleObjectSpace;
+    JSDestructibleObjectSubspace eagerlySweptDestructibleObjectSpace;
     JSSegmentedVariableObjectSubspace segmentedVariableObjectSpace;
-
-#if ENABLE(DFG_JIT)
-    std::unique_ptr<DFG::LongLivedState> dfgState;
-#endif // ENABLE(DFG_JIT)
+#if ENABLE(WEBASSEMBLY)
+    JSWebAssemblyCodeBlockSubspace webAssemblyCodeBlockSpace;
+#endif
 
     VMType vmType;
     ClientData* clientData;
@@ -313,8 +331,9 @@ public:
     // topVMEntryFrame.
     // FIXME: This should be a void*, because it might not point to a CallFrame.
     // https://bugs.webkit.org/show_bug.cgi?id=160441
-    ExecState* topCallFrame;
-    JSWebAssemblyInstance* topJSWebAssemblyInstance;
+    ExecState* topCallFrame { nullptr };
+    // FIXME: Save this state elsewhere to allow PIC. https://bugs.webkit.org/show_bug.cgi?id=169773
+    JSWebAssemblyInstance* wasmContext { nullptr };
     Strong<Structure> structureStructure;
     Strong<Structure> structureRareDataStructure;
     Strong<Structure> terminatedExecutionErrorStructure;
@@ -322,18 +341,15 @@ public:
     Strong<Structure> propertyNameIteratorStructure;
     Strong<Structure> propertyNameEnumeratorStructure;
     Strong<Structure> customGetterSetterStructure;
+    Strong<Structure> domAttributeGetterSetterStructure;
     Strong<Structure> scopedArgumentsTableStructure;
     Strong<Structure> apiWrapperStructure;
-    Strong<Structure> JSScopeStructure;
-    Strong<Structure> executableStructure;
     Strong<Structure> nativeExecutableStructure;
     Strong<Structure> evalExecutableStructure;
     Strong<Structure> programExecutableStructure;
     Strong<Structure> functionExecutableStructure;
 #if ENABLE(WEBASSEMBLY)
-    Strong<Structure> webAssemblyCalleeStructure;
-    Strong<Structure> webAssemblyToJSCalleeStructure;
-    Strong<JSCell> webAssemblyToJSCallee;
+    Strong<Structure> webAssemblyCodeBlockStructure;
 #endif
     Strong<Structure> moduleProgramExecutableStructure;
     Strong<Structure> regExpStructure;
@@ -352,7 +368,6 @@ public:
     Strong<Structure> unlinkedFunctionCodeBlockStructure;
     Strong<Structure> unlinkedModuleProgramCodeBlockStructure;
     Strong<Structure> propertyTableStructure;
-    Strong<Structure> weakMapDataStructure;
     Strong<Structure> inferredValueStructure;
     Strong<Structure> inferredTypeStructure;
     Strong<Structure> inferredTypeTableStructure;
@@ -367,16 +382,10 @@ public:
     Strong<Structure> functionCodeBlockStructure;
     Strong<Structure> hashMapBucketSetStructure;
     Strong<Structure> hashMapBucketMapStructure;
-    Strong<Structure> hashMapImplSetStructure;
-    Strong<Structure> hashMapImplMapStructure;
 
-    Strong<JSCell> iterationTerminator;
     Strong<JSCell> emptyPropertyNameEnumerator;
 
-#if ENABLE(WEBASSEMBLY)
-    std::once_flag m_wasmSignatureInformationOnceFlag;
-    std::unique_ptr<Wasm::SignatureInformation> m_wasmSignatureInformation;
-#endif
+    std::unique_ptr<PromiseDeferredTimer> promiseDeferredTimer;
 
     JSCell* currentlyDestructingCallbackObject;
     const ClassInfo* currentlyDestructingCallbackObjectClassInfo;
@@ -460,9 +469,7 @@ public:
         return jitStubs->ctiStub(this, generator);
     }
 
-    std::unique_ptr<RegisterAtOffsetList> allCalleeSaveRegisterOffsets;
-
-    RegisterAtOffsetList* getAllCalleeSaveRegisterOffsets() { return allCalleeSaveRegisterOffsets.get(); }
+    static RegisterAtOffsetList* getAllCalleeSaveRegisterOffsets();
 
 #endif // ENABLE(JIT)
     std::unique_ptr<CommonSlowPaths::ArityCheckData> arityCheckData;
@@ -485,6 +492,11 @@ public:
     static ptrdiff_t targetMachinePCForThrowOffset()
     {
         return OBJECT_OFFSETOF(VM, targetMachinePCForThrow);
+    }
+
+    static ptrdiff_t topVMEntryFrameOffset()
+    {
+        return OBJECT_OFFSETOF(VM, topVMEntryFrame);
     }
 
     void restorePreviousException(Exception* exception) { setException(exception); }
@@ -537,8 +549,13 @@ public:
     void* lastStackTop() { return m_lastStackTop; }
     void setLastStackTop(void*);
 
-    const ClassInfo* const jsArrayClassInfo;
-    const ClassInfo* const jsFinalObjectClassInfo;
+    void firePrimitiveGigacageEnabledIfNecessary()
+    {
+        if (m_needToFirePrimitiveGigacageEnabled) {
+            m_needToFirePrimitiveGigacageEnabled = false;
+            m_primitiveGigacageEnabled.fireAll(*this, "Primitive gigacage disabled asynchronously");
+        }
+    }
 
     JSValue hostCallReturnValue;
     unsigned varargsLength;
@@ -548,32 +565,12 @@ public:
     Instruction* targetInterpreterPCForThrow;
     uint32_t osrExitIndex;
     void* osrExitJumpDestination;
-    Vector<ScratchBuffer*> scratchBuffers;
-    size_t sizeOfLastScratchBuffer;
-
     bool isExecutingInRegExpJIT { false };
 
-    ScratchBuffer* scratchBufferForSize(size_t size)
-    {
-        if (!size)
-            return 0;
-
-        if (size > sizeOfLastScratchBuffer) {
-            // Protect against a N^2 memory usage pathology by ensuring
-            // that at worst, we get a geometric series, meaning that the
-            // total memory usage is somewhere around
-            // max(scratch buffer size) * 4.
-            sizeOfLastScratchBuffer = size * 2;
-
-            ScratchBuffer* newBuffer = ScratchBuffer::create(sizeOfLastScratchBuffer);
-            RELEASE_ASSERT(newBuffer);
-            scratchBuffers.append(newBuffer);
-        }
-
-        ScratchBuffer* result = scratchBuffers.last();
-        result->setActiveLength(0);
-        return result;
-    }
+    // The threading protocol here is as follows:
+    // - You can call scratchBufferForSize from any thread.
+    // - You can only set the ScratchBuffer's activeLength from the main thread.
+    ScratchBuffer* scratchBufferForSize(size_t size);
 
     EncodedJSValue* exceptionFuzzingBuffer(size_t size)
     {
@@ -610,10 +607,6 @@ public:
     RTTraceList* m_rtTraceList;
 #endif
 
-    bool hasExclusiveThread() const { return m_apiLock->hasExclusiveThread(); }
-    std::thread::id exclusiveThread() const { return m_apiLock->exclusiveThread(); }
-    void setExclusiveThread(std::thread::id threadId) { m_apiLock->setExclusiveThread(threadId); }
-
     JS_EXPORT_PRIVATE void resetDateCache();
 
     RegExpCache* regExpCache() { return m_regExpCache; }
@@ -645,6 +638,8 @@ public:
     // FIXME: Use AtomicString once it got merged with Identifier.
     JS_EXPORT_PRIVATE void addImpureProperty(const String&);
 
+    InlineWatchpointSet& primitiveGigacageEnabled() { return m_primitiveGigacageEnabled; }
+
     BuiltinExecutables* builtinExecutables() { return m_builtinExecutables.get(); }
 
     bool enableTypeProfiler();
@@ -659,12 +654,10 @@ public:
     bool enableControlFlowProfiler();
     bool disableControlFlowProfiler();
 
-    JS_EXPORT_PRIVATE void queueMicrotask(JSGlobalObject*, Ref<Microtask>&&);
+    void queueMicrotask(JSGlobalObject&, Ref<Microtask>&&);
     JS_EXPORT_PRIVATE void drainMicrotasks();
     void setGlobalConstRedeclarationShouldThrow(bool globalConstRedeclarationThrow) { m_globalConstRedeclarationShouldThrow = globalConstRedeclarationThrow; }
     ALWAYS_INLINE bool globalConstRedeclarationShouldThrow() const { return m_globalConstRedeclarationShouldThrow; }
-
-    inline bool shouldTriggerTermination(ExecState*);
 
     void setShouldBuildPCToCodeOriginMapping() { m_shouldBuildPCToCodeOriginMapping = true; }
     bool shouldBuilderPCToCodeOriginMapping() const { return m_shouldBuildPCToCodeOriginMapping; }
@@ -675,6 +668,32 @@ public:
 
     template<typename Func>
     void logEvent(CodeBlock*, const char* summary, const Func& func);
+
+    std::optional<RefPtr<Thread>> ownerThread() const { return m_apiLock->ownerThread(); }
+
+    VMTraps& traps() { return m_traps; }
+
+    void handleTraps(ExecState* exec, VMTraps::Mask mask = VMTraps::Mask::allEventTypes()) { m_traps.handleTraps(exec, mask); }
+
+    bool needTrapHandling() { return m_traps.needTrapHandling(); }
+    bool needTrapHandling(VMTraps::Mask mask) { return m_traps.needTrapHandling(mask); }
+    void* needTrapHandlingAddress() { return m_traps.needTrapHandlingAddress(); }
+
+    void notifyNeedDebuggerBreak() { m_traps.fireTrap(VMTraps::NeedDebuggerBreak); }
+    void notifyNeedTermination() { m_traps.fireTrap(VMTraps::NeedTermination); }
+    void notifyNeedWatchdogCheck() { m_traps.fireTrap(VMTraps::NeedWatchdogCheck); }
+
+#if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
+    StackTrace* nativeStackTraceOfLastThrow() const { return m_nativeStackTraceOfLastThrow.get(); }
+    ThreadIdentifier throwingThread() const { return m_throwingThread; }
+#endif
+
+#if USE(CF)
+    CFRunLoopRef runLoop() const { return m_runLoop.get(); }
+    void registerRunLoopTimer(JSRunLoopTimer*);
+    void unregisterRunLoopTimer(JSRunLoopTimer*);
+    JS_EXPORT_PRIVATE void setRunLoop(CFRunLoopRef);
+#endif // USE(CF)
 
 private:
     friend class LLIntOffsetsExtractor;
@@ -687,7 +706,7 @@ private:
 
     bool isSafeToRecurse(void* stackLimit) const
     {
-        ASSERT(wtfThreadData().stack().isGrowingDownward());
+        ASSERT(Thread::current().stack().isGrowingDownward());
         void* curr = reinterpret_cast<void*>(&curr);
         return curr >= stackLimit;
     }
@@ -708,6 +727,8 @@ private:
     {
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
         m_needExceptionCheck = false;
+        m_nativeStackTraceOfLastThrow = nullptr;
+        m_throwingThread = 0;
 #endif
         m_exception = nullptr;
     }
@@ -724,6 +745,9 @@ private:
 #if ENABLE(EXCEPTION_SCOPE_VERIFICATION)
     void verifyExceptionCheckNeedIsSatisfied(unsigned depth, ExceptionEventLocation&);
 #endif
+
+    static void primitiveGigacageDisabledCallback(void*);
+    void primitiveGigacageDisabled();
 
 #if ENABLE(ASSEMBLER)
     bool m_canUseAssembler;
@@ -754,6 +778,8 @@ private:
     ExceptionEventLocation m_simulatedThrowPointLocation;
     unsigned m_simulatedThrowPointRecursionDepth { 0 };
     mutable bool m_needExceptionCheck { false };
+    std::unique_ptr<StackTrace> m_nativeStackTraceOfLastThrow;
+    ThreadIdentifier m_throwingThread;
 #endif
 
     bool m_failNextNewCodeBlock { false };
@@ -766,11 +792,17 @@ private:
     std::unique_ptr<TypeProfiler> m_typeProfiler;
     std::unique_ptr<TypeProfilerLog> m_typeProfilerLog;
     unsigned m_typeProfilerEnabledCount;
+    bool m_needToFirePrimitiveGigacageEnabled { false };
+    Lock m_scratchBufferLock;
+    Vector<ScratchBuffer*> m_scratchBuffers;
+    size_t m_sizeOfLastScratchBuffer { 0 };
+    InlineWatchpointSet m_primitiveGigacageEnabled;
     FunctionHasExecutedCache m_functionHasExecutedCache;
     std::unique_ptr<ControlFlowProfiler> m_controlFlowProfiler;
     unsigned m_controlFlowProfilerEnabledCount;
     Deque<std::unique_ptr<QueuedTask>> m_microtaskQueue;
     MallocPtr<EncodedJSValue> m_exceptionFuzzBuffer;
+    VMTraps m_traps;
     RefPtr<Watchdog> m_watchdog;
     std::unique_ptr<HeapProfiler> m_heapProfiler;
 #if ENABLE(SAMPLING_PROFILER)
@@ -787,6 +819,7 @@ private:
     friend class CatchScope;
     friend class ExceptionScope;
     friend class ThrowScope;
+    friend class VMTraps;
     friend class WTF::DoublyLinkedListNode<VM>;
 };
 

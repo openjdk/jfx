@@ -28,68 +28,98 @@
 
 #if ENABLE(DRAG_SUPPORT)
 #import "MIMETypeRegistry.h"
+#import "NotImplemented.h"
 #import "Pasteboard.h"
 #import "PasteboardStrategy.h"
+#import "PlatformPasteboard.h"
 #import "PlatformStrategies.h"
 #import "WebCoreNSURLExtras.h"
 
-#if USE(APPLE_INTERNAL_SDK)
+#if PLATFORM(IOS)
+#import <MobileCoreServices/MobileCoreServices.h>
+#endif
 
-#import <WebKitAdditions/DragDataAdditions.mm>
-
-#else
+namespace WebCore {
 
 static inline String rtfPasteboardType()
 {
+#if PLATFORM(IOS)
+    return String(kUTTypeRTF);
+#else
     return String(NSRTFPboardType);
+#endif
 }
 
 static inline String rtfdPasteboardType()
 {
+#if PLATFORM(IOS)
+    return String(kUTTypeFlatRTFD);
+#else
     return String(NSRTFDPboardType);
+#endif
 }
 
 static inline String stringPasteboardType()
 {
+#if PLATFORM(IOS)
+    return String(kUTTypeText);
+#else
     return String(NSStringPboardType);
+#endif
 }
 
 static inline String urlPasteboardType()
 {
+#if PLATFORM(IOS)
+    return String(kUTTypeURL);
+#else
     return String(NSURLPboardType);
+#endif
 }
 
 static inline String htmlPasteboardType()
 {
+#if PLATFORM(IOS)
+    return String(kUTTypeHTML);
+#else
     return String(NSHTMLPboardType);
+#endif
 }
 
 static inline String colorPasteboardType()
 {
+#if PLATFORM(IOS)
+    return "com.apple.uikit.color";
+#else
     return String(NSColorPboardType);
+#endif
 }
 
 static inline String pdfPasteboardType()
 {
+#if PLATFORM(IOS)
+    return String(kUTTypePDF);
+#else
     return String(NSPDFPboardType);
+#endif
 }
 
 static inline String tiffPasteboardType()
 {
+#if PLATFORM(IOS)
+    return String(kUTTypeTIFF);
+#else
     return String(NSTIFFPboardType);
+#endif
 }
 
-#endif // USE(APPLE_INTERNAL_SDK)
-
-namespace WebCore {
-
-DragData::DragData(DragDataRef data, const IntPoint& clientPosition, const IntPoint& globalPosition,
-    DragOperation sourceOperationMask, DragApplicationFlags flags)
+DragData::DragData(DragDataRef data, const IntPoint& clientPosition, const IntPoint& globalPosition, DragOperation sourceOperationMask, DragApplicationFlags flags, DragDestinationAction destinationAction)
     : m_clientPosition(clientPosition)
     , m_globalPosition(globalPosition)
     , m_platformDragData(data)
     , m_draggingSourceOperationMask(sourceOperationMask)
     , m_applicationFlags(flags)
+    , m_dragDestinationAction(destinationAction)
 #if PLATFORM(MAC)
     , m_pasteboardName([[m_platformDragData draggingPasteboard] name])
 #else
@@ -98,17 +128,24 @@ DragData::DragData(DragDataRef data, const IntPoint& clientPosition, const IntPo
 {
 }
 
-DragData::DragData(const String& dragStorageName, const IntPoint& clientPosition, const IntPoint& globalPosition,
-    DragOperation sourceOperationMask, DragApplicationFlags flags)
+DragData::DragData(const String& dragStorageName, const IntPoint& clientPosition, const IntPoint& globalPosition, DragOperation sourceOperationMask, DragApplicationFlags flags, DragDestinationAction destinationAction)
     : m_clientPosition(clientPosition)
     , m_globalPosition(globalPosition)
     , m_platformDragData(0)
     , m_draggingSourceOperationMask(sourceOperationMask)
     , m_applicationFlags(flags)
+    , m_dragDestinationAction(destinationAction)
     , m_pasteboardName(dragStorageName)
 {
 }
 
+bool DragData::containsURLTypeIdentifier() const
+{
+    Vector<String> types;
+    platformStrategies()->pasteboardStrategy()->getTypes(types, m_pasteboardName);
+    return types.contains(urlPasteboardType());
+}
+    
 bool DragData::canSmartReplace() const
 {
     return Pasteboard(m_pasteboardName).canSmartReplace();
@@ -123,35 +160,31 @@ bool DragData::containsColor() const
 
 bool DragData::containsFiles() const
 {
-#if PLATFORM(MAC)
+    NSArray *supportedFileTypes = Pasteboard::supportedFileUploadPasteboardTypes();
     Vector<String> types;
     platformStrategies()->pasteboardStrategy()->getTypes(types, m_pasteboardName);
-    return types.contains(String(NSFilenamesPboardType)) || types.contains(String(NSFilesPromisePboardType));
-#else
+    for (auto& type : types) {
+        auto cfType = type.createCFString();
+        for (NSString *fileType in supportedFileTypes) {
+            if (UTTypeConformsTo(cfType.get(), (CFStringRef)fileType))
+                return true;
+        }
+    }
     return false;
-#endif
 }
 
 unsigned DragData::numberOfFiles() const
 {
-    Vector<String> files;
-#if PLATFORM(MAC)
-    platformStrategies()->pasteboardStrategy()->getPathnamesForType(files, String(NSFilenamesPboardType), m_pasteboardName);
-    if (!files.size())
-        platformStrategies()->pasteboardStrategy()->getPathnamesForType(files, String(NSFilesPromisePboardType), m_pasteboardName);
-#endif
-    return files.size();
+    return platformStrategies()->pasteboardStrategy()->getNumberOfFiles(m_pasteboardName);
 }
 
 void DragData::asFilenames(Vector<String>& result) const
 {
 #if PLATFORM(MAC)
     platformStrategies()->pasteboardStrategy()->getPathnamesForType(result, String(NSFilenamesPboardType), m_pasteboardName);
+#endif
     if (!result.size())
         result = fileNames();
-#else
-    UNUSED_PARAM(result);
-#endif
 }
 
 bool DragData::containsPlainText() const
@@ -189,8 +222,11 @@ Color DragData::asColor() const
     return platformStrategies()->pasteboardStrategy()->color(m_pasteboardName);
 }
 
-bool DragData::containsCompatibleContent() const
+bool DragData::containsCompatibleContent(DraggingPurpose purpose) const
 {
+    if (purpose == DraggingPurpose::ForFileUpload)
+        return containsFiles();
+
     Vector<String> types;
     platformStrategies()->pasteboardStrategy()->getTypes(types, m_pasteboardName);
     return types.contains(String(WebArchivePboardType))
@@ -222,7 +258,27 @@ bool DragData::containsPromise() const
 
 bool DragData::containsURL(FilenameConversionPolicy filenamePolicy) const
 {
+#if PLATFORM(IOS)
+    UNUSED_PARAM(filenamePolicy);
+    Vector<String> types;
+    platformStrategies()->pasteboardStrategy()->getTypes(types, m_pasteboardName);
+    if (!types.contains(urlPasteboardType()))
+        return false;
+
+    auto urlString = platformStrategies()->pasteboardStrategy()->stringForType(urlPasteboardType(), m_pasteboardName);
+    if (urlString.isEmpty()) {
+        // On iOS, we don't get access to the contents of UIItemProviders until we perform the drag operation.
+        // Thus, we consider DragData to contain an URL if it contains the `public.url` UTI type. Later down the
+        // road, when we perform the drag operation, we can then check if the URL's protocol is http or https,
+        // and if it isn't, we bail out of page navigation.
+        return true;
+    }
+
+    URL webcoreURL = [NSURL URLWithString:urlString];
+    return webcoreURL.protocolIs("http") || webcoreURL.protocolIs("https");
+#else
     return !asURL(filenamePolicy).isEmpty();
+#endif
 }
 
 String DragData::asURL(FilenameConversionPolicy, String* title) const

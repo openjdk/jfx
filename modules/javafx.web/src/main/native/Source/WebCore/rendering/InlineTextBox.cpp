@@ -36,7 +36,6 @@
 #include "InlineTextBoxStyle.h"
 #include "Page.h"
 #include "PaintInfo.h"
-#include "RenderedDocumentMarker.h"
 #include "RenderBlock.h"
 #include "RenderCombineText.h"
 #include "RenderLineBreak.h"
@@ -44,12 +43,14 @@
 #include "RenderRubyText.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
+#include "RenderedDocumentMarker.h"
 #include "Text.h"
 #include "TextDecorationPainter.h"
 #include "TextPaintStyle.h"
 #include "TextPainter.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -358,7 +359,7 @@ bool InlineTextBox::nodeAtPoint(const HitTestRequest& request, HitTestResult& re
 
     if (locationInContainer.intersects(rect)) {
         renderer().updateHitTestResult(result, flipForWritingMode(locationInContainer.point() - toLayoutSize(accumulatedOffset)));
-        if (!result.addNodeToRectBasedTestResult(renderer().textNode(), request, locationInContainer, rect))
+        if (result.addNodeToListBasedTestResult(renderer().textNode(), request, locationInContainer, rect) == HitTestProgress::Stop)
             return true;
     }
     return false;
@@ -474,10 +475,11 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
 
     bool paintSelectedTextOnly = false;
     bool paintSelectedTextSeparately = false;
+    bool paintNonSelectedTextOnly = false;
     const ShadowData* selectionShadow = nullptr;
 
     // Text with custom underlines does not have selection background painted, so selection paint style is not appropriate for it.
-    TextPaintStyle selectionPaintStyle = haveSelection && !useCustomUnderlines ? computeTextSelectionPaintStyle(textPaintStyle, renderer(), lineStyle, paintInfo, paintSelectedTextOnly, paintSelectedTextSeparately, selectionShadow) : textPaintStyle;
+    TextPaintStyle selectionPaintStyle = haveSelection && !useCustomUnderlines ? computeTextSelectionPaintStyle(textPaintStyle, renderer(), lineStyle, paintInfo, paintSelectedTextOnly, paintSelectedTextSeparately, paintNonSelectedTextOnly, selectionShadow) : textPaintStyle;
 
     // Set our font.
     const FontCascade& font = fontToUse(lineStyle, renderer());
@@ -526,7 +528,7 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
     float emphasisMarkOffset = 0;
     bool emphasisMarkAbove;
     bool hasTextEmphasis = emphasisMarkExistsAndIsAbove(lineStyle, emphasisMarkAbove);
-    const AtomicString& emphasisMark = hasTextEmphasis ? lineStyle.textEmphasisMarkString() : nullAtom;
+    const AtomicString& emphasisMark = hasTextEmphasis ? lineStyle.textEmphasisMarkString() : nullAtom();
     if (!emphasisMark.isEmpty())
         emphasisMarkOffset = emphasisMarkAbove ? -font.fontMetrics().ascent() - font.emphasisMarkDescent(emphasisMark) : font.fontMetrics().descent() + font.emphasisMarkAscent(emphasisMark);
 
@@ -545,18 +547,62 @@ void InlineTextBox::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset, 
 
     TextPainter textPainter(context);
     textPainter.setFont(font);
-    textPainter.setTextPaintStyle(textPaintStyle);
-    textPainter.setSelectionPaintStyle(selectionPaintStyle);
+    textPainter.setStyle(textPaintStyle);
+    textPainter.setSelectionStyle(selectionPaintStyle);
     textPainter.setIsHorizontal(isHorizontal());
-    textPainter.addTextShadow(textShadow, selectionShadow);
-    textPainter.addEmphasis(emphasisMark, emphasisMarkOffset, combinedText);
+    textPainter.setShadow(textShadow);
+    textPainter.setSelectionShadow(selectionShadow);
+    textPainter.setEmphasisMark(emphasisMark, emphasisMarkOffset, combinedText);
 
-    textPainter.paintText(textRun, length, boxRect, textOrigin, selectionStart, selectionEnd, paintSelectedTextOnly, paintSelectedTextSeparately);
+    auto draggedContentRanges = renderer().draggedContentRangesBetweenOffsets(m_start, m_start + m_len);
+    if (!draggedContentRanges.isEmpty() && !paintSelectedTextOnly && !paintNonSelectedTextOnly) {
+        // FIXME: Painting with text effects ranges currently only works if we're not also painting the selection.
+        // In the future, we may want to support this capability, but in the meantime, this isn't required by anything.
+        unsigned currentEnd = 0;
+        for (size_t index = 0; index < draggedContentRanges.size(); ++index) {
+            unsigned previousEnd = index ? std::min(draggedContentRanges[index - 1].second, length) : 0;
+            unsigned currentStart = draggedContentRanges[index].first - m_start;
+            currentEnd = std::min(draggedContentRanges[index].second - m_start, length);
+
+            if (previousEnd < currentStart)
+                textPainter.paintRange(textRun, boxRect, textOrigin, previousEnd, currentStart);
+
+            if (currentStart < currentEnd) {
+                context.save();
+                context.setAlpha(0.25);
+                textPainter.paintRange(textRun, boxRect, textOrigin, currentStart, currentEnd);
+                context.restore();
+            }
+        }
+        if (currentEnd < length)
+            textPainter.paintRange(textRun, boxRect, textOrigin, currentEnd, length);
+    } else
+        textPainter.paint(textRun, length, boxRect, textOrigin, selectionStart, selectionEnd, paintSelectedTextOnly, paintSelectedTextSeparately, paintNonSelectedTextOnly);
 
     // Paint decorations
     TextDecoration textDecorations = lineStyle.textDecorationsInEffect();
-    if (textDecorations != TextDecorationNone && paintInfo.phase != PaintPhaseSelection)
-        paintDecoration(context, font, combinedText, textRun, textOrigin, boxRect, textDecorations, textPaintStyle, textShadow);
+    if (textDecorations != TextDecorationNone && paintInfo.phase != PaintPhaseSelection) {
+        FloatRect textDecorationSelectionClipOutRect;
+        if ((paintInfo.paintBehavior & PaintBehaviorExcludeSelection) && selectionStart < selectionEnd && selectionEnd <= length) {
+            textDecorationSelectionClipOutRect = logicalOverflowRect();
+            textDecorationSelectionClipOutRect.moveBy(localPaintOffset);
+            float logicalWidthBeforeRange;
+            float logicalWidthAfterRange;
+            float logicalSelectionWidth = font.widthOfTextRange(textRun, selectionStart, selectionEnd, nullptr, &logicalWidthBeforeRange, &logicalWidthAfterRange);
+            // FIXME: Do we need to handle vertical bottom to top text?
+            if (!isHorizontal()) {
+                textDecorationSelectionClipOutRect.move(0, logicalWidthBeforeRange);
+                textDecorationSelectionClipOutRect.setHeight(logicalSelectionWidth);
+            } else if (direction() == RTL) {
+                textDecorationSelectionClipOutRect.move(logicalWidthAfterRange, 0);
+                textDecorationSelectionClipOutRect.setWidth(logicalSelectionWidth);
+            } else {
+                textDecorationSelectionClipOutRect.move(logicalWidthBeforeRange, 0);
+                textDecorationSelectionClipOutRect.setWidth(logicalSelectionWidth);
+            }
+        }
+        paintDecoration(context, font, combinedText, textRun, textOrigin, boxRect, textDecorations, textPaintStyle, textShadow, textDecorationSelectionClipOutRect);
+    }
 
     if (paintInfo.phase == PaintPhaseForeground) {
         paintDocumentMarkers(context, boxOrigin, lineStyle, font, false);
@@ -695,7 +741,7 @@ static inline void mirrorRTLSegment(float logicalWidth, TextDirection direction,
 }
 
 void InlineTextBox::paintDecoration(GraphicsContext& context, const FontCascade& font, RenderCombineText* combinedText, const TextRun& textRun, const FloatPoint& textOrigin,
-    const FloatRect& boxRect, TextDecoration decoration, TextPaintStyle textPaintStyle, const ShadowData* shadow)
+    const FloatRect& boxRect, TextDecoration decoration, TextPaintStyle textPaintStyle, const ShadowData* shadow, const FloatRect& clipOutRect)
 {
     if (m_truncation == cFullTruncation)
         return;
@@ -721,7 +767,16 @@ void InlineTextBox::paintDecoration(GraphicsContext& context, const FontCascade&
 
     FloatPoint localOrigin = boxRect.location();
     localOrigin.move(start, 0);
+
+    if (!clipOutRect.isEmpty()) {
+        context.save();
+        context.clipOut(clipOutRect);
+    }
+
     decorationPainter.paintTextDecoration(textRun, textOrigin, localOrigin);
+
+    if (!clipOutRect.isEmpty())
+        context.restore();
 
     if (combinedText)
         context.concatCTM(rotation(boxRect, Counterclockwise));
@@ -749,7 +804,7 @@ static GraphicsContext::DocumentMarkerLineStyle lineStyleForMarkerType(DocumentM
     }
 }
 
-void InlineTextBox::paintDocumentMarker(GraphicsContext& context, const FloatPoint& boxOrigin, RenderedDocumentMarker& marker, const RenderStyle& style, const FontCascade& font, bool grammar)
+void InlineTextBox::paintDocumentMarker(GraphicsContext& context, const FloatPoint& boxOrigin, RenderedDocumentMarker& marker, const RenderStyle& style, const FontCascade& font)
 {
     // Never print spelling/grammar markers (5327887)
     if (renderer().document().printing())
@@ -770,8 +825,7 @@ void InlineTextBox::paintDocumentMarker(GraphicsContext& context, const FloatPoi
     if (m_truncation != cNoTruncation)
         markerSpansWholeBox = false;
 
-    bool isDictationMarker = marker.type() == DocumentMarker::DictationAlternatives;
-    if (!markerSpansWholeBox || grammar || isDictationMarker) {
+    if (!markerSpansWholeBox) {
         unsigned startPosition = clampedOffset(marker.startOffset());
         unsigned endPosition = clampedOffset(marker.endOffset());
 
@@ -885,15 +939,15 @@ void InlineTextBox::paintDocumentMarkers(GraphicsContext& context, const FloatPo
             case DocumentMarker::Spelling:
             case DocumentMarker::CorrectionIndicator:
             case DocumentMarker::DictationAlternatives:
-                paintDocumentMarker(context, boxOrigin, *marker, style, font, false);
+                paintDocumentMarker(context, boxOrigin, *marker, style, font);
                 break;
             case DocumentMarker::Grammar:
-                paintDocumentMarker(context, boxOrigin, *marker, style, font, true);
+                paintDocumentMarker(context, boxOrigin, *marker, style, font);
                 break;
 #if PLATFORM(IOS)
             // FIXME: See <rdar://problem/8933352>. Also, remove the PLATFORM(IOS)-guard.
             case DocumentMarker::DictationPhraseWithAlternatives:
-                paintDocumentMarker(context, boxOrigin, *marker, style, font, true);
+                paintDocumentMarker(context, boxOrigin, *marker, style, font);
                 break;
 #endif
             case DocumentMarker::TextMatch:
@@ -953,7 +1007,7 @@ void InlineTextBox::paintCompositionUnderline(GraphicsContext& context, const Fl
     start += 1;
     width -= 2;
 
-    context.setStrokeColor(underline.color);
+    context.setStrokeColor(underline.compositionUnderlineColor == CompositionUnderlineColor::TextColor ? renderer().style().visitedDependentColor(CSSPropertyWebkitTextFillColor) : underline.color);
     context.setStrokeThickness(lineThickness);
     context.drawLineForText(FloatPoint(boxOrigin.x() + start, boxOrigin.y() + logicalHeight() - lineThickness), width, renderer().document().printing());
 }
@@ -1070,23 +1124,24 @@ const char* InlineTextBox::boxName() const
     return "InlineTextBox";
 }
 
-void InlineTextBox::showLineBox(bool mark, int depth) const
+void InlineTextBox::outputLineBox(TextStream& stream, bool mark, int depth) const
 {
-    fprintf(stderr, "-------- %c-", isDirty() ? 'D' : '-');
+    stream << "-------- " << (isDirty() ? "D" : "-") << "-";
 
     int printedCharacters = 0;
     if (mark) {
-        fprintf(stderr, "*");
+        stream << "*";
         ++printedCharacters;
     }
     while (++printedCharacters <= depth * 2)
-        fputc(' ', stderr);
+        stream << " ";
 
     String value = renderer().text();
     value = value.substring(start(), len());
     value.replaceWithLiteral('\\', "\\\\");
     value.replaceWithLiteral('\n', "\\n");
-    fprintf(stderr, "%s  (%.2f, %.2f) (%.2f, %.2f) (%p) renderer->(%p) run(%d, %d) \"%s\"\n", boxName(), x(), y(), width(), height(), this, &renderer(), start(), start() + len(), value.utf8().data());
+    stream << boxName() << " " << FloatRect(x(), y(), width(), height()) << " (" << this << ") renderer->(" << &renderer() << ") run(" << start() << ", " << start() + len() << ") \"" << value.utf8().data() << "\"";
+    stream.nextLine();
 }
 
 #endif

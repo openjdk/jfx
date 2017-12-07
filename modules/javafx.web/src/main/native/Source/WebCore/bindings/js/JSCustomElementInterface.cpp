@@ -31,6 +31,8 @@
 #include "DOMWrapperWorld.h"
 #include "HTMLUnknownElement.h"
 #include "JSDOMBinding.h"
+#include "JSDOMConvertNullable.h"
+#include "JSDOMConvertStrings.h"
 #include "JSDOMGlobalObject.h"
 #include "JSElement.h"
 #include "JSHTMLElement.h"
@@ -48,7 +50,7 @@ JSCustomElementInterface::JSCustomElementInterface(const QualifiedName& name, JS
     : ActiveDOMCallback(globalObject->scriptExecutionContext())
     , m_name(name)
     , m_constructor(constructor)
-    , m_isolatedWorld(&globalObject->world())
+    , m_isolatedWorld(globalObject->world())
 {
 }
 
@@ -63,7 +65,7 @@ Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& do
     if (auto element = tryToConstructCustomElement(document, localName))
         return element.releaseNonNull();
 
-    auto element = HTMLUnknownElement::create(QualifiedName(nullAtom, localName, HTMLNames::xhtmlNamespaceURI), document);
+    auto element = HTMLUnknownElement::create(QualifiedName(nullAtom(), localName, HTMLNames::xhtmlNamespaceURI), document);
     element->setIsCustomElementUpgradeCandidate();
     element->setIsFailedCustomElement(*this);
 
@@ -73,7 +75,7 @@ Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& do
 Ref<Element> JSCustomElementInterface::constructElementWithFallback(Document& document, const QualifiedName& name)
 {
     if (auto element = tryToConstructCustomElement(document, name.localName())) {
-        if (name.prefix() != nullAtom)
+        if (!name.prefix().isNull())
             element->setPrefix(name.prefix());
         return element.releaseNonNull();
     }
@@ -182,7 +184,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     if (!context)
         return;
     ASSERT(context->isDocument());
-    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(context, *m_isolatedWorld);
+    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(context, m_isolatedWorld);
     ExecState* state = globalObject->globalExec();
     RETURN_IF_EXCEPTION(scope, void());
 
@@ -213,7 +215,7 @@ void JSCustomElementInterface::upgradeElement(Element& element)
     Element* wrappedElement = JSElement::toWrapped(vm, returnedElement);
     if (!wrappedElement || wrappedElement != &element) {
         element.setIsFailedCustomElement(*this);
-        reportException(state, createDOMException(state, INVALID_STATE_ERR, "Custom element constructor failed to upgrade an element"));
+        reportException(state, createDOMException(state, InvalidStateError, "Custom element constructor failed to upgrade an element"));
         return;
     }
     element.setIsDefinedCustomElement(*this);
@@ -233,7 +235,7 @@ void JSCustomElementInterface::invokeCallback(Element& element, JSObject* callba
 
     ASSERT(context);
     ASSERT(context->isDocument());
-    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(context, *m_isolatedWorld);
+    JSDOMGlobalObject* globalObject = toJSDOMGlobalObject(context, m_isolatedWorld);
     ExecState* state = globalObject->globalExec();
 
     JSObject* jsElement = asObject(toJS(state, globalObject, element));

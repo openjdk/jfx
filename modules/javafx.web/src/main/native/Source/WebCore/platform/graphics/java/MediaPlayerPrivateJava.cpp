@@ -1,6 +1,28 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 #include "config.h"
 
 #if COMPILER(GCC)
@@ -160,12 +182,8 @@ void MediaPlayerPrivate::registerMediaEngine(MediaEngineRegistrar registrar)
     }
     //CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType,
     //MediaEngineGetSitesInMediaCache, MediaEngineClearMediaCache, MediaEngineClearMediaCacheForSite
-    registrar(CreateMediaEnginePlayer, MediaEngineSupportedTypes, MediaEngineSupportsType, 0, 0, 0, 0);
-}
-
-std::unique_ptr<MediaPlayerPrivateInterface> MediaPlayerPrivate::CreateMediaEnginePlayer(MediaPlayer *player)
-{
-    return std::unique_ptr<MediaPlayerPrivate>(new MediaPlayerPrivate(player));
+    registrar([] (MediaPlayer* player) { return std::unique_ptr<MediaPlayerPrivate>(new MediaPlayerPrivate(player)); },
+        MediaEngineSupportedTypes, MediaEngineSupportsType, 0, 0, 0, 0);
 }
 
 void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types)
@@ -180,15 +198,19 @@ void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String, ASCIICaseInse
 
 MediaPlayer::SupportsType MediaPlayerPrivate::MediaEngineSupportsType(const MediaEngineSupportParameters& parameters)
 {
-    LOG_TRACE2(">>MediaEngineSupportsType, type=%s, codecs=%s\n", parameters.type.utf8().data(), parameters.codecs.utf8().data());
+    for(auto& codecValue: parameters.type.codecs()) {
+        LOG_TRACE2(">>MediaEngineSupportsType, type=%s, codecs=%s\n", parameters.type.raw().utf8().data(), codecValue.utf8().data());
+    }
+
     if (parameters.type.isEmpty()) {
         LOG_TRACE0("<<MediaEngineSupportsType: NOT supported (type is empty)\n");
         return MediaPlayer::IsNotSupported;
     }
 
-    if (GetSupportedTypes().contains(parameters.type)) {
+    if (GetSupportedTypes().contains(parameters.type.containerType())) {
         LOG_TRACE0("<<MediaEngineSupportsType: MayBeSupported/IsSupported\n");
-        return parameters.codecs.isEmpty() ? MediaPlayer::MayBeSupported : MediaPlayer::IsSupported;
+        auto codecs = parameters.type.parameter(ContentType::codecsParameter());
+        return codecs.isEmpty() ? MediaPlayer::MayBeSupported : MediaPlayer::IsSupported;
     }
     LOG_TRACE0("<<MediaEngineSupportsType: NOT supported\n");
     return MediaPlayer::IsNotSupported;
@@ -751,42 +773,42 @@ void MediaPlayerPrivate::notifyBufferChanged(std::unique_ptr<PlatformTimeRanges>
 // *********************************************************
 extern "C" {
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyNetworkStateChanged
-    (JNIEnv *env, jobject jThis, jlong ptr, jint networkState)
+    (JNIEnv*, jobject, jlong ptr, jint networkState)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     player->notifyNetworkStateChanged(networkState);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyReadyStateChanged
-    (JNIEnv *env, jobject jThis, jlong ptr, jint readyState)
+    (JNIEnv*, jobject, jlong ptr, jint readyState)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     player->notifyReadyStateChanged(readyState);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyPaused
-    (JNIEnv *env, jobject jThis, jlong ptr, jboolean paused)
+    (JNIEnv*, jobject, jlong ptr, jboolean paused)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     player->notifyPaused(jbool_to_bool(paused));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifySeeking
-    (JNIEnv *env, jobject jThis, jlong ptr, jboolean seeking, jint readyState)
+    (JNIEnv*, jobject, jlong ptr, jboolean seeking, jint /*readyState*/)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     player->notifySeeking(jbool_to_bool(seeking));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyFinished
-    (JNIEnv *env, jobject jThis, jlong ptr)
+    (JNIEnv*, jobject, jlong ptr)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     player->notifyFinished();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyReady
-    (JNIEnv *env, jobject jThis, jlong ptr, jboolean hasVideo, jboolean hasAudio, jfloat duration)
+    (JNIEnv*, jobject, jlong ptr, jboolean hasVideo, jboolean hasAudio, jfloat duration)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     player->notifyReady(jbool_to_bool(hasVideo), jbool_to_bool(hasAudio));
@@ -796,7 +818,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyReady
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyDurationChanged
-  (JNIEnv *env, jobject jThis, jlong ptr, jfloat duration)
+  (JNIEnv*, jobject, jlong ptr, jfloat duration)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     if (duration != player->duration()) {
@@ -805,21 +827,21 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyDuration
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifySizeChanged
-    (JNIEnv *env, jobject jThis, jlong ptr, jint width, jint height)
+    (JNIEnv*, jobject, jlong ptr, jint width, jint height)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     player->notifySizeChanged(width, height);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyNewFrame
-    (JNIEnv *env, jobject jThis, jlong ptr)
+    (JNIEnv*, jobject, jlong ptr)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
     player->notifyNewFrame();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyBufferChanged
-  (JNIEnv *env, jobject jThis, jlong ptr, jfloatArray ranges, jint bytesLoaded)
+  (JNIEnv *env, jobject, jlong ptr, jfloatArray ranges, jint bytesLoaded)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
 

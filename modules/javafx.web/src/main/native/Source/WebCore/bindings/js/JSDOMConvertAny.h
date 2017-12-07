@@ -33,6 +33,8 @@ namespace WebCore {
 template<> struct Converter<IDLAny> : DefaultConverter<IDLAny> {
     using ReturnType = JSC::JSValue;
 
+    static constexpr bool conversionHasSideEffects = false;
+
     static JSC::JSValue convert(JSC::ExecState&, JSC::JSValue value)
     {
         return value;
@@ -56,6 +58,21 @@ template<> struct JSConverter<IDLAny> {
     static JSC::JSValue convert(const JSC::Strong<JSC::Unknown>& value)
     {
         return value.get();
+    }
+};
+
+template<> struct VariadicConverter<IDLAny> {
+    using Item = typename IDLAny::ImplementationType;
+
+    static std::optional<Item> convert(JSC::ExecState& state, JSC::JSValue value)
+    {
+        auto& vm = state.vm();
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        auto result = Converter<IDLAny>::convert(state, value);
+        RETURN_IF_EXCEPTION(scope, std::nullopt);
+
+        return Item { vm, result };
     }
 };
 

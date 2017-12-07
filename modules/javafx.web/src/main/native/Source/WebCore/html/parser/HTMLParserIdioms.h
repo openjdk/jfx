@@ -25,6 +25,7 @@
 #pragma once
 
 #include <unicode/uchar.h>
+#include <wtf/Expected.h>
 #include <wtf/Forward.h>
 #include <wtf/Optional.h>
 #include <wtf/Vector.h>
@@ -37,10 +38,10 @@ class QualifiedName;
 
 // Space characters as defined by the HTML specification.
 template<typename CharacterType> bool isHTMLSpace(CharacterType);
+template<typename CharacterType> bool isNotHTMLSpace(CharacterType);
 template<typename CharacterType> bool isComma(CharacterType);
 template<typename CharacterType> bool isHTMLSpaceOrComma(CharacterType);
 bool isHTMLLineBreak(UChar);
-bool isNotHTMLSpace(UChar);
 bool isHTMLSpaceButNotLineBreak(UChar);
 
 // 2147483647 is 2^31 - 1.
@@ -62,10 +63,12 @@ double parseToDoubleForNumberType(const String&);
 double parseToDoubleForNumberType(const String&, double fallbackValue);
 
 // http://www.whatwg.org/specs/web-apps/current-work/#rules-for-parsing-integers
-WEBCORE_EXPORT std::optional<int> parseHTMLInteger(StringView);
+enum class HTMLIntegerParsingError { NegativeOverflow, PositiveOverflow, Other };
+
+WEBCORE_EXPORT Expected<int, HTMLIntegerParsingError> parseHTMLInteger(StringView);
 
 // http://www.whatwg.org/specs/web-apps/current-work/#rules-for-parsing-non-negative-integers
-WEBCORE_EXPORT std::optional<unsigned> parseHTMLNonNegativeInteger(StringView);
+WEBCORE_EXPORT Expected<unsigned, HTMLIntegerParsingError> parseHTMLNonNegativeInteger(StringView);
 
 // https://html.spec.whatwg.org/#valid-non-negative-integer
 std::optional<int> parseValidHTMLNonNegativeInteger(StringView);
@@ -103,6 +106,11 @@ template<typename CharacterType> inline bool isHTMLSpace(CharacterType character
     return character <= ' ' && (character == ' ' || character == '\n' || character == '\t' || character == '\r' || character == '\f');
 }
 
+template<typename CharacterType> inline bool isNotHTMLSpace(CharacterType character)
+{
+    return !isHTMLSpace(character);
+}
+
 inline bool isHTMLLineBreak(UChar character)
 {
     return character <= '\r' && (character == '\n' || character == '\r');
@@ -116,11 +124,6 @@ template<typename CharacterType> inline bool isComma(CharacterType character)
 template<typename CharacterType> inline bool isHTMLSpaceOrComma(CharacterType character)
 {
     return isComma(character) || isHTMLSpace(character);
-}
-
-inline bool isNotHTMLSpace(UChar character)
-{
-    return !isHTMLSpace(character);
 }
 
 inline bool isHTMLSpaceButNotLineBreak(UChar character)
@@ -155,9 +158,21 @@ inline unsigned limitToOnlyHTMLNonNegative(unsigned value, unsigned defaultValue
 inline unsigned limitToOnlyHTMLNonNegative(StringView stringValue, unsigned defaultValue = 0)
 {
     ASSERT(defaultValue <= maxHTMLNonNegativeInteger);
-    unsigned value = parseHTMLNonNegativeInteger(stringValue).value_or(defaultValue);
+    unsigned value = parseHTMLNonNegativeInteger(stringValue).valueOr(defaultValue);
     ASSERT(value <= maxHTMLNonNegativeInteger);
     return value;
+}
+
+// https://html.spec.whatwg.org/#clamped-to-the-range
+inline unsigned clampHTMLNonNegativeIntegerToRange(StringView stringValue, unsigned min, unsigned max, unsigned defaultValue = 0)
+{
+    ASSERT(defaultValue >= min);
+    ASSERT(defaultValue <= max);
+    auto optionalValue = parseHTMLNonNegativeInteger(stringValue);
+    if (optionalValue)
+        return std::min(std::max(optionalValue.value(), min), max);
+
+    return optionalValue.error() == HTMLIntegerParsingError::PositiveOverflow ? max : defaultValue;
 }
 
 } // namespace WebCore

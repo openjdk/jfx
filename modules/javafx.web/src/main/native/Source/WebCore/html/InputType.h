@@ -203,6 +203,8 @@ public:
     virtual void subtreeHasChanged();
     virtual void blur();
 
+    virtual void elementDidBlur() { }
+
 #if ENABLE(TOUCH_EVENTS)
     virtual bool hasTouchEventHandler() const;
 #endif
@@ -303,8 +305,8 @@ public:
 
 #if PLATFORM(IOS)
     virtual DateComponents::Type dateType() const;
-    virtual String displayString() const;
 #endif
+    virtual String displayString() const;
 
 protected:
     explicit InputType(HTMLInputElement& element) : m_element(element) { }

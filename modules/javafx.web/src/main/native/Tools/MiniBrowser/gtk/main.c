@@ -42,6 +42,8 @@ static gboolean editorMode;
 static const char *sessionFile;
 static char *geometry;
 static gboolean privateMode;
+static gboolean automationMode;
+static gboolean fullScreen;
 
 typedef enum {
     MINI_BROWSER_ERROR_INVALID_ABOUT_PATH
@@ -67,6 +69,7 @@ static WebKitWebView *createBrowserTab(BrowserWindow *window, WebKitSettings *we
         "web-context", browser_window_get_web_context(window),
         "settings", webkitSettings,
         "user-content-manager", userContentManager,
+        "is-controlled-by-automation", automationMode,
         NULL));
 
     if (editorMode)
@@ -94,7 +97,9 @@ static const GOptionEntry commandLineOptions[] =
     { "editor-mode", 'e', 0, G_OPTION_ARG_NONE, &editorMode, "Run in editor mode", NULL },
     { "session-file", 's', 0, G_OPTION_ARG_FILENAME, &sessionFile, "Session file", "FILE" },
     { "geometry", 'g', 0, G_OPTION_ARG_STRING, &geometry, "Set the size and position of the window (WIDTHxHEIGHT+X+Y)", "GEOMETRY" },
+    { "full-screen", 'f', 0, G_OPTION_ARG_NONE, &fullScreen, "Set the window to full-screen mode", NULL },
     { "private", 'p', 0, G_OPTION_ARG_NONE, &privateMode, "Run in private browsing mode", NULL },
+    { "automation", 0, 0, G_OPTION_ARG_NONE, &automationMode, "Run in automation mode", NULL },
     { G_OPTION_REMAINING, 0, 0, G_OPTION_ARG_FILENAME_ARRAY, &uriArguments, 0, "[URL…]" },
     { 0, 0, 0, 0, 0, 0, 0 }
 };
@@ -448,6 +453,21 @@ static void aboutURISchemeRequestCallback(WebKitURISchemeRequest *request, WebKi
     }
 }
 
+static GtkWidget *createWebViewForAutomationCallback(WebKitAutomationSession* session)
+{
+    return GTK_WIDGET(browser_window_get_or_create_web_view_for_automation());
+}
+
+static void automationStartedCallback(WebKitWebContext *webContext, WebKitAutomationSession *session)
+{
+    WebKitApplicationInfo *info = webkit_application_info_new();
+    webkit_application_info_set_version(info, WEBKIT_MAJOR_VERSION, WEBKIT_MINOR_VERSION, WEBKIT_MICRO_VERSION);
+    webkit_automation_session_set_application_info(session, info);
+    webkit_application_info_unref(info);
+
+    g_signal_connect(session, "create-web-view", G_CALLBACK(createWebViewForAutomationCallback), NULL);
+}
+
 int main(int argc, char *argv[])
 {
     gtk_init(&argc, &argv);
@@ -476,7 +496,7 @@ int main(int argc, char *argv[])
     }
     g_option_context_free (context);
 
-    WebKitWebContext *webContext = privateMode ? webkit_web_context_new_ephemeral() : webkit_web_context_get_default();
+    WebKitWebContext *webContext = (privateMode || automationMode) ? webkit_web_context_new_ephemeral() : webkit_web_context_get_default();
 
     const gchar *singleprocess = g_getenv("MINIBROWSER_SINGLEPROCESS");
     webkit_web_context_set_process_model(webContext, (singleprocess && *singleprocess) ?
@@ -491,8 +511,13 @@ int main(int argc, char *argv[])
     webkit_user_content_manager_register_script_message_handler(userContentManager, "aboutData");
     g_signal_connect(userContentManager, "script-message-received::aboutData", G_CALLBACK(aboutDataScriptMessageReceivedCallback), webContext);
 
+    webkit_web_context_set_automation_allowed(webContext, automationMode);
+    g_signal_connect(webContext, "automation-started", G_CALLBACK(automationStartedCallback), NULL);
+
     BrowserWindow *mainWindow = BROWSER_WINDOW(browser_window_new(NULL, webContext));
-    if (geometry)
+    if (fullScreen)
+        gtk_window_fullscreen(GTK_WINDOW(mainWindow));
+    else if (geometry)
         gtk_window_parse_geometry(GTK_WINDOW(mainWindow), geometry);
 
     GtkWidget *firstTab = NULL;
@@ -517,7 +542,7 @@ int main(int argc, char *argv[])
         if (!editorMode) {
             if (sessionFile)
                 browser_window_load_session(mainWindow, sessionFile);
-            else
+            else if (!automationMode)
                 webkit_web_view_load_uri(webView, BROWSER_DEFAULT_URL);
         }
     }

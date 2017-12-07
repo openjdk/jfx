@@ -48,6 +48,9 @@ void LoadableTextTrack::scheduleLoad(const URL& url)
     if (url == m_url)
         return;
 
+    // When src attribute is changed we need to flush all collected track data
+    removeAllCues();
+
     // 4.8.10.12.3 Sourcing out-of-band text tracks (continued)
 
     // 2. Let URL be the track URL of the track element.
@@ -56,7 +59,7 @@ void LoadableTextTrack::scheduleLoad(const URL& url)
     // 3. Asynchronously run the remaining steps, while continuing with whatever task
     // was responsible for creating the text track or changing the text track mode.
     if (!m_loadTimer.isActive())
-        m_loadTimer.startOneShot(0);
+        m_loadTimer.startOneShot(0_s);
 }
 
 Element* LoadableTextTrack::element()
@@ -127,7 +130,7 @@ void LoadableTextTrack::newRegionsAvailable(TextTrackLoader* loader)
 AtomicString LoadableTextTrack::id() const
 {
     if (!m_trackElement)
-        return emptyAtom;
+        return emptyAtom();
     return m_trackElement->attributeWithoutSynchronization(idAttr);
 }
 

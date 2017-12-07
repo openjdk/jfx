@@ -36,12 +36,12 @@ interface IWICImagingFactory;
 
 namespace WebCore {
 
-class ImageDecoder : public RefCounted<ImageDecoder> {
+class ImageDecoder : public ThreadSafeRefCounted<ImageDecoder> {
     WTF_MAKE_FAST_ALLOCATED;
 public:
     ImageDecoder();
 
-    static Ref<ImageDecoder> create(const SharedBuffer&, AlphaOption, GammaAndColorProfileOption)
+    static Ref<ImageDecoder> create(SharedBuffer&, AlphaOption, GammaAndColorProfileOption)
     {
         return adoptRef(*new ImageDecoder());
     }
@@ -49,6 +49,7 @@ public:
     static size_t bytesDecodedToDetermineProperties();
 
     String filenameExtension() const;
+    EncodedDataStatus encodedDataStatus() const;
     bool isSizeAvailable() const;
 
     // Always original size, without subsampling.
@@ -67,7 +68,7 @@ public:
     bool frameAllowSubsamplingAtIndex(size_t) const;
     unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const;
 
-    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const std::optional<IntSize>& sizeForDraw = { }) const;
+    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingMode::Synchronous) const;
 
     void setData(SharedBuffer&, bool allDataReceived);
     bool isAllDataReceived() const { return m_isAllDataReceived; }

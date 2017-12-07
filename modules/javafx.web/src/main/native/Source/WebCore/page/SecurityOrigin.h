@@ -97,7 +97,7 @@ public:
     // Returns true if this SecurityOrigin can read content retrieved from
     // the given URL. For example, call this function before issuing
     // XMLHttpRequests.
-    bool canRequest(const URL&) const;
+    WEBCORE_EXPORT bool canRequest(const URL&) const;
 
     // Returns true if this SecurityOrigin can receive drag content from the
     // initiator. For example, call this function before allowing content to be
@@ -200,6 +200,8 @@ public:
 
     static URL urlWithUniqueSecurityOrigin();
 
+    bool isPotentionallyTrustworthy() const { return m_isPotentionallyTrustworthy; }
+
 private:
     SecurityOrigin();
     explicit SecurityOrigin(const URL&);
@@ -227,6 +229,7 @@ private:
     StorageBlockingPolicy m_storageBlockingPolicy { AllowAllStorage };
     bool m_enforceFilePathSeparation { false };
     bool m_needsStorageAccessFromFileURLsQuirk { false };
+    bool m_isPotentionallyTrustworthy { false };
 };
 
 // Returns true if the Origin header values serialized from these two origins would be the same.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
  * Copyright (C) 2009, 2011 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,6 @@
 
 #include "ContentSecurityPolicy.h"
 #include "Crypto.h"
-#include "ExceptionCode.h"
 #include "IDBConnectionProxy.h"
 #include "InspectorInstrumentation.h"
 #include "Performance.h"
@@ -66,21 +65,11 @@ WorkerGlobalScope::WorkerGlobalScope(const URL& url, const String& identifier, c
 #if ENABLE(INDEXED_DATABASE)
     , m_connectionProxy(connectionProxy)
 #endif
-#if ENABLE(WEB_SOCKETS)
     , m_socketProvider(socketProvider)
-#endif
-#if ENABLE(WEB_TIMING)
     , m_performance(Performance::create(*this, timeOrigin))
-#endif
 {
 #if !ENABLE(INDEXED_DATABASE)
     UNUSED_PARAM(connectionProxy);
-#endif
-#if !ENABLE(WEB_SOCKETS)
-    UNUSED_PARAM(socketProvider);
-#endif
-#if !ENABLE(WEB_TIMING)
-    UNUSED_PARAM(timeOrigin);
 #endif
 
     auto origin = SecurityOrigin::create(url);
@@ -97,21 +86,29 @@ WorkerGlobalScope::~WorkerGlobalScope()
 {
     ASSERT(currentThread() == thread().threadID());
 
-#if ENABLE(WEB_TIMING)
     m_performance = nullptr;
-#endif
+    m_crypto = nullptr;
 
     // Notify proxy that we are going away. This can free the WorkerThread object, so do not access it after this.
     thread().workerReportingProxy().workerGlobalScopeDestroyed();
 }
 
+String WorkerGlobalScope::origin() const
+{
+    auto* securityOrigin = this->securityOrigin();
+    return securityOrigin ? securityOrigin->toString() : emptyString();
+}
+
 void WorkerGlobalScope::removeAllEventListeners()
 {
     EventTarget::removeAllEventListeners();
-
-#if ENABLE(WEB_TIMING)
     m_performance->removeAllEventListeners();
-#endif
+    m_performance->removeAllObservers();
+}
+
+bool WorkerGlobalScope::isSecureContext() const
+{
+    return securityOrigin() && securityOrigin()->isPotentionallyTrustworthy();
 }
 
 void WorkerGlobalScope::applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders& contentSecurityPolicyResponseHeaders)
@@ -139,14 +136,15 @@ void WorkerGlobalScope::disableEval(const String& errorMessage)
     m_script->disableEval(errorMessage);
 }
 
-#if ENABLE(WEB_SOCKETS)
+void WorkerGlobalScope::disableWebAssembly(const String& errorMessage)
+{
+    m_script->disableWebAssembly(errorMessage);
+}
 
 SocketProvider* WorkerGlobalScope::socketProvider()
 {
     return m_socketProvider.get();
 }
-
-#endif
 
 #if ENABLE(INDEXED_DATABASE)
 
@@ -193,10 +191,10 @@ void WorkerGlobalScope::close()
     } });
 }
 
-WorkerNavigator& WorkerGlobalScope::navigator() const
+WorkerNavigator& WorkerGlobalScope::navigator()
 {
     if (!m_navigator)
-        m_navigator = WorkerNavigator::create(m_userAgent);
+        m_navigator = WorkerNavigator::create(*this, m_userAgent);
     return *m_navigator;
 }
 
@@ -205,9 +203,17 @@ void WorkerGlobalScope::postTask(Task&& task)
     thread().runLoop().postTask(WTFMove(task));
 }
 
-int WorkerGlobalScope::setTimeout(std::unique_ptr<ScheduledAction> action, int timeout)
+ExceptionOr<int> WorkerGlobalScope::setTimeout(JSC::ExecState& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
-    return DOMTimer::install(*this, WTFMove(action), std::chrono::milliseconds(timeout), true);
+    // FIXME: Should this check really happen here? Or should it happen when code is about to eval?
+    if (action->type() == ScheduledAction::Type::Code) {
+        if (!contentSecurityPolicy()->allowEval(&state))
+            return 0;
+    }
+
+    action->addArguments(WTFMove(arguments));
+
+    return DOMTimer::install(*this, WTFMove(action), Seconds::fromMilliseconds(timeout), true);
 }
 
 void WorkerGlobalScope::clearTimeout(int timeoutId)
@@ -215,9 +221,17 @@ void WorkerGlobalScope::clearTimeout(int timeoutId)
     DOMTimer::removeById(*this, timeoutId);
 }
 
-int WorkerGlobalScope::setInterval(std::unique_ptr<ScheduledAction> action, int timeout)
+ExceptionOr<int> WorkerGlobalScope::setInterval(JSC::ExecState& state, std::unique_ptr<ScheduledAction> action, int timeout, Vector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
-    return DOMTimer::install(*this, WTFMove(action), std::chrono::milliseconds(timeout), false);
+    // FIXME: Should this check really happen here? Or should it happen when code is about to eval?
+    if (action->type() == ScheduledAction::Type::Code) {
+        if (!contentSecurityPolicy()->allowEval(&state))
+            return 0;
+    }
+
+    action->addArguments(WTFMove(arguments));
+
+    return DOMTimer::install(*this, WTFMove(action), Seconds::fromMilliseconds(timeout), false);
 }
 
 void WorkerGlobalScope::clearInterval(int timeoutId)
@@ -234,7 +248,7 @@ ExceptionOr<void> WorkerGlobalScope::importScripts(const Vector<String>& urls)
     for (auto& entry : urls) {
         URL url = completeURL(entry);
         if (!url.isValid())
-            return Exception { SYNTAX_ERR };
+            return Exception { SyntaxError };
         completedURLs.uncheckedAppend(WTFMove(url));
     }
 
@@ -242,14 +256,14 @@ ExceptionOr<void> WorkerGlobalScope::importScripts(const Vector<String>& urls)
         // FIXME: Convert this to check the isolated world's Content Security Policy once webkit.org/b/104520 is solved.
         bool shouldBypassMainWorldContentSecurityPolicy = this->shouldBypassMainWorldContentSecurityPolicy();
         if (!shouldBypassMainWorldContentSecurityPolicy && !contentSecurityPolicy()->allowScriptFromSource(url))
-            return Exception { NETWORK_ERR };
+            return Exception { NetworkError };
 
         auto scriptLoader = WorkerScriptLoader::create();
         scriptLoader->loadSynchronously(this, url, FetchOptions::Mode::NoCors, shouldBypassMainWorldContentSecurityPolicy ? ContentSecurityPolicyEnforcement::DoNotEnforce : ContentSecurityPolicyEnforcement::EnforceScriptSrcDirective, resourceRequestIdentifier());
 
-        // If the fetching attempt failed, throw a NETWORK_ERR exception and abort all these steps.
+        // If the fetching attempt failed, throw a NetworkError exception and abort all these steps.
         if (scriptLoader->failed())
-            return Exception { NETWORK_ERR };
+            return Exception { NetworkError };
 
         InspectorInstrumentation::scriptImported(*this, scriptLoader->identifier(), scriptLoader->script());
 
@@ -367,13 +381,9 @@ Crypto& WorkerGlobalScope::crypto()
     return *m_crypto;
 }
 
-#if ENABLE(WEB_TIMING)
-
 Performance& WorkerGlobalScope::performance() const
 {
     return *m_performance;
 }
-
-#endif
 
 } // namespace WebCore

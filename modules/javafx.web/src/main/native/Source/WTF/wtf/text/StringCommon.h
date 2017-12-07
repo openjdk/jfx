@@ -26,8 +26,10 @@
 #ifndef StringCommon_h
 #define StringCommon_h
 
+#include <algorithm>
 #include <unicode/uchar.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/NotFound.h>
 
 namespace WTF {
 

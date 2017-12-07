@@ -44,6 +44,11 @@ public:
     {
     }
 
+    bool canMergeBlocks(BasicBlock* block, BasicBlock* targetBlock)
+    {
+        return targetBlock->predecessors.size() == 1 && targetBlock != block;
+    }
+
     bool run()
     {
         // FIXME: We should make this work in SSA. https://bugs.webkit.org/show_bug.cgi?id=148260
@@ -62,10 +67,14 @@ public:
                     continue;
                 ASSERT(block->isReachable);
 
+                auto canMergeWithBlock = [&] (BasicBlock* targetBlock) {
+                    return canMergeBlocks(block, targetBlock);
+                };
+
                 switch (block->terminal()->op()) {
                 case Jump: {
                     // Successor with one predecessor -> merge.
-                    if (block->successor(0)->predecessors.size() == 1) {
+                    if (canMergeWithBlock(block->successor(0))) {
                         ASSERT(block->successor(0)->predecessors[0] == block);
                         if (extremeLogging)
                             m_graph.dump();
@@ -93,7 +102,7 @@ public:
                         bool condition = branchCondition(block->cfaBranchDirection);
                         BasicBlock* targetBlock = block->successorForCondition(condition);
                         BasicBlock* jettisonedBlock = block->successorForCondition(!condition);
-                        if (targetBlock->predecessors.size() == 1) {
+                        if (canMergeWithBlock(targetBlock)) {
                             if (extremeLogging)
                                 m_graph.dump();
                             m_graph.dethread();
@@ -177,7 +186,7 @@ public:
                                 jettisonedBlocks.append(successor);
                         }
 
-                        if (targetBlock->predecessors.size() == 1) {
+                        if (canMergeWithBlock(targetBlock)) {
                             if (extremeLogging)
                                 m_graph.dump();
                             m_graph.dethread();
@@ -255,7 +264,7 @@ private:
     {
         ASSERT(targetBlock);
         ASSERT(targetBlock->isReachable);
-        if (targetBlock->predecessors.size() == 1) {
+        if (canMergeBlocks(block, targetBlock)) {
             m_graph.dethread();
             mergeBlocks(block, targetBlock, noBlocks());
         } else {
@@ -318,6 +327,7 @@ private:
         BasicBlock* firstBlock, BasicBlock* secondBlock,
         Vector<BasicBlock*, 1> jettisonedBlocks)
     {
+        RELEASE_ASSERT(canMergeBlocks(firstBlock, secondBlock));
         // This will add all of the nodes in secondBlock to firstBlock, but in so doing
         // it will also ensure that any GetLocals from the second block that refer to
         // SetLocals in the first block are relinked. If jettisonedBlock is not NoBlock,

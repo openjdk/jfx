@@ -33,7 +33,7 @@ namespace WebCore {
 
 class PasteboardWriterData;
 
-WEBCORE_EXPORT RetainPtr<id <NSPasteboardWriting>> createPasteboardWriting(const PasteboardWriterData&);
+WEBCORE_EXPORT RetainPtr<id <NSPasteboardWriting>> createPasteboardWriter(const PasteboardWriterData&);
 
 }
 

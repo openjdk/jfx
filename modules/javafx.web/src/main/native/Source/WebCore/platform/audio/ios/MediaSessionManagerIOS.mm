@@ -32,7 +32,6 @@
 #import "MediaPlayer.h"
 #import "MediaPlayerSPI.h"
 #import "PlatformMediaSession.h"
-#import "SoftLinking.h"
 #import "SystemMemory.h"
 #import "WebCoreThreadRun.h"
 #import <AVFoundation/AVAudioSession.h>
@@ -44,6 +43,7 @@
 #import <wtf/MainThread.h>
 #import <wtf/RAMSize.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/SoftLinking.h>
 
 SOFT_LINK_FRAMEWORK(AVFoundation)
 SOFT_LINK_CLASS(AVFoundation, AVAudioSession)
@@ -153,17 +153,8 @@ void MediaSessionManageriOS::resetRestrictions()
         addRestriction(PlatformMediaSession::Video, BackgroundTabPlaybackRestricted);
     }
 
-    removeRestriction(PlatformMediaSession::Video, ConcurrentPlaybackNotPermitted);
     addRestriction(PlatformMediaSession::Video, BackgroundProcessPlaybackRestricted);
-
-    addRestriction(PlatformMediaSession::VideoAudio, ConcurrentPlaybackNotPermitted);
-    addRestriction(PlatformMediaSession::VideoAudio, BackgroundProcessPlaybackRestricted);
-
-    removeRestriction(PlatformMediaSession::Audio, ConcurrentPlaybackNotPermitted);
-    removeRestriction(PlatformMediaSession::Audio, BackgroundProcessPlaybackRestricted);
-
-    removeRestriction(PlatformMediaSession::WebAudio, ConcurrentPlaybackNotPermitted);
-    removeRestriction(PlatformMediaSession::WebAudio, BackgroundProcessPlaybackRestricted);
+    addRestriction(PlatformMediaSession::VideoAudio, ConcurrentPlaybackNotPermitted | BackgroundProcessPlaybackRestricted | SuspendedUnderLockPlaybackRestricted);
 }
 
 bool MediaSessionManageriOS::hasWirelessTargetsAvailable()
@@ -292,40 +283,6 @@ void MediaSessionManageriOS::externalOutputDeviceAvailableDidChange()
     });
 }
 
-void MediaSessionManageriOS::applicationDidEnterBackground(bool isSuspendedUnderLock)
-{
-    LOG(Media, "MediaSessionManageriOS::applicationDidEnterBackground");
-
-    if (m_isInBackground)
-        return;
-    m_isInBackground = true;
-
-    if (!isSuspendedUnderLock)
-        return;
-
-    forEachSession([this] (PlatformMediaSession& session, size_t) {
-        if (restrictions(session.mediaType()) & BackgroundProcessPlaybackRestricted)
-            session.beginInterruption(PlatformMediaSession::SuspendedUnderLock);
-    });
-}
-
-void MediaSessionManageriOS::applicationWillEnterForeground(bool isSuspendedUnderLock)
-{
-    LOG(Media, "MediaSessionManageriOS::applicationWillEnterForeground");
-
-    if (!m_isInBackground)
-        return;
-    m_isInBackground = false;
-
-    if (!isSuspendedUnderLock)
-        return;
-
-    forEachSession([this] (PlatformMediaSession& session, size_t) {
-        if (restrictions(session.mediaType()) & BackgroundProcessPlaybackRestricted)
-            session.endInterruption(PlatformMediaSession::MayResumePlaying);
-    });
-}
-
 } // namespace WebCore
 
 @implementation WebMediaSessionHelper
@@ -381,7 +338,9 @@ void MediaSessionManageriOS::applicationWillEnterForeground(bool isSuspendedUnde
     [self allocateVolumeView];
 
     // Now playing won't work unless we turn on the delivery of remote control events.
-    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+    dispatch_async(dispatch_get_main_queue(), ^ {
+        [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+    });
 
     return self;
 }
@@ -513,7 +472,7 @@ void MediaSessionManageriOS::applicationWillEnterForeground(bool isSuspendedUnde
         if (!_callback)
             return;
 
-        _callback->applicationDidEnterForeground();
+        _callback->applicationDidBecomeActive();
     });
 }
 
@@ -530,7 +489,7 @@ void MediaSessionManageriOS::applicationWillEnterForeground(bool isSuspendedUnde
         if (!_callback)
             return;
 
-        _callback->applicationWillEnterBackground();
+        _callback->applicationWillBecomeInactive();
     });
 }
 

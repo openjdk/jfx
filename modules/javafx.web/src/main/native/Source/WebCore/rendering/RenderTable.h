@@ -302,7 +302,6 @@ private:
     void invalidateCachedColumnOffsets();
 
     RenderBlock* firstLineBlock() const final;
-    void updateFirstLetter(RenderTreeMutationIsAllowed = RenderTreeMutationIsAllowed::Yes) final;
 
     void updateLogicalWidth() final;
 
@@ -314,7 +313,7 @@ private:
 
     void addOverflowFromChildren() final;
 
-    void subtractCaptionRect(LayoutRect&) const;
+    void adjustBorderBoxRectForPainting(LayoutRect&) override;
 
     void recalcCollapsedBorders();
     void recalcSections() const;
@@ -366,6 +365,7 @@ private:
     LayoutUnit m_borderEnd;
     mutable LayoutUnit m_columnOffsetTop;
     mutable LayoutUnit m_columnOffsetHeight;
+    bool m_inRecursiveSectionMovedWithPagination { false };
 };
 
 inline RenderTableSection* RenderTable::topSection() const

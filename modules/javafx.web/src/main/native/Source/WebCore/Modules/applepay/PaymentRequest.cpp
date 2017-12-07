@@ -28,7 +28,8 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "SoftLinking.h"
+#include "PaymentAuthorizationStatus.h"
+#include <wtf/SoftLinking.h>
 
 namespace WebCore {
 
@@ -39,15 +40,6 @@ PaymentRequest::PaymentRequest()
 PaymentRequest::~PaymentRequest()
 {
 }
-
-#if USE(APPLE_INTERNAL_SDK) && __has_include(<WebKitAdditions/PaymentRequestAdditions.cpp>)
-#include <WebKitAdditions/PaymentRequestAdditions.cpp>
-#else
-static inline bool isAdditionalValidSupportedNetwork(unsigned, const String&)
-{
-    return false;
-}
-#endif
 
 bool PaymentRequest::isValidSupportedNetwork(unsigned version, const String& supportedNetwork)
 {
@@ -65,8 +57,38 @@ bool PaymentRequest::isValidSupportedNetwork(unsigned version, const String& sup
         return true;
     if (supportedNetwork == "visa")
         return true;
+    if (version >= 2 && supportedNetwork == "jcb")
+        return true;
+    if (version >= 3 && supportedNetwork == "carteBancaire")
+        return true;
 
-    return isAdditionalValidSupportedNetwork(version, supportedNetwork);
+    return false;
+}
+
+bool isFinalStateResult(const std::optional<PaymentAuthorizationResult>& result)
+{
+    if (!result)
+        return true;
+
+    switch (result->status) {
+    case PaymentAuthorizationStatus::Success:
+        return true;
+
+    case PaymentAuthorizationStatus::PINRequired:
+    case PaymentAuthorizationStatus::PINIncorrect:
+    case PaymentAuthorizationStatus::PINLockout:
+        return false;
+
+    case PaymentAuthorizationStatus::Failure:
+        if (result->errors.isEmpty())
+            return true;
+
+        for (auto& error : result->errors) {
+            if (error.code == PaymentError::Code::Unknown)
+                return true;
+        }
+        return false;
+    }
 }
 
 }

@@ -21,7 +21,6 @@
 #pragma once
 
 #include "RenderFlexibleBox.h"
-#include "Timer.h"
 #include <memory>
 
 namespace WebCore {
@@ -46,12 +45,13 @@ public:
     void removeLeftoverAnonymousBlock(RenderBlock*) override { }
     bool createsAnonymousWrapper() const override { return true; }
 
-    void setupInnerStyle(RenderStyle*);
     void updateFromElement() override;
 
     bool canHaveGeneratedChildren() const override;
     bool hasControlClip() const override { return true; }
     LayoutRect controlClipRect(const LayoutPoint&) const override;
+
+    void updateAnonymousChildStyle(const RenderObject& anonymousChild, RenderStyle&) const override;
 
     void setText(const String&);
     String text() const;
@@ -65,9 +65,6 @@ private:
 
     const char* renderName() const override { return "RenderButton"; }
     bool isRenderButton() const override { return true; }
-
-    void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
 
     bool hasLineIfEmpty() const override;
 

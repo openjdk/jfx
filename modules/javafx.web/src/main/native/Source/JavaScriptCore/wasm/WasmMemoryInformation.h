@@ -28,7 +28,10 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "GPRInfo.h"
+#include "RegisterSet.h"
+#include "WasmMemory.h"
 #include "WasmPageCount.h"
+#include <wtf/Ref.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace Wasm {
@@ -41,8 +44,22 @@ struct PinnedSizeRegisterInfo {
 struct PinnedRegisterInfo {
     Vector<PinnedSizeRegisterInfo> sizeRegisters;
     GPRReg baseMemoryPointer;
+    GPRReg wasmContextPointer;
     static const PinnedRegisterInfo& get();
-    PinnedRegisterInfo(Vector<PinnedSizeRegisterInfo>&&, GPRReg);
+    PinnedRegisterInfo(Vector<PinnedSizeRegisterInfo>&&, GPRReg, GPRReg);
+
+    RegisterSet toSave(MemoryMode mode) const
+    {
+        RegisterSet result;
+        result.set(baseMemoryPointer);
+        if (wasmContextPointer != InvalidGPRReg)
+            result.set(wasmContextPointer);
+        if (mode != MemoryMode::Signaling) {
+            for (const auto& info : sizeRegisters)
+                result.set(info.sizeRegister);
+        }
+        return result;
+    }
 };
 
 class MemoryInformation {

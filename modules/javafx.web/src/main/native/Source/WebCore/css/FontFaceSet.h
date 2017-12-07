@@ -27,12 +27,13 @@
 
 #include "ActiveDOMObject.h"
 #include "CSSFontFaceSet.h"
+#include "DOMPromiseProxy.h"
 #include "EventTarget.h"
-#include "JSDOMPromise.h"
+#include "JSDOMPromiseDeferred.h"
 
 namespace WebCore {
 
-class DOMCoreException;
+class DOMException;
 
 class FontFaceSet final : public RefCounted<FontFaceSet>, private CSSFontFaceSetClient, public EventTargetWithInlineData, private ActiveDOMObject {
 public:
@@ -46,15 +47,15 @@ public:
     bool remove(FontFace&);
     void clear();
 
-    using LoadPromise = DOMPromise<IDLSequence<IDLInterface<FontFace>>>;
+    using LoadPromise = DOMPromiseDeferred<IDLSequence<IDLInterface<FontFace>>>;
     void load(const String& font, const String& text, LoadPromise&&);
     ExceptionOr<bool> check(const String& font, const String& text);
 
     enum class LoadStatus { Loading, Loaded };
     LoadStatus status() const;
 
-    using ReadyPromise = DOMPromise<IDLInterface<FontFaceSet>>;
-    void registerReady(ReadyPromise&&);
+    using ReadyPromise = DOMPromiseProxyWithResolveCallback<IDLInterface<FontFaceSet>>;
+    ReadyPromise& ready() { return m_readyPromise; }
 
     CSSFontFaceSet& backing() { return m_backing; }
 
@@ -84,7 +85,7 @@ private:
         PendingPromise(LoadPromise&&);
 
     public:
-        Vector<RefPtr<FontFace>> faces;
+        Vector<Ref<FontFace>> faces;
         LoadPromise promise;
         bool hasReachedTerminalState { false };
     };
@@ -107,10 +108,12 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
+    // Callback for ReadyPromise.
+    FontFaceSet& readyPromiseResolve();
+
     Ref<CSSFontFaceSet> m_backing;
     HashMap<RefPtr<FontFace>, Vector<Ref<PendingPromise>>> m_pendingPromises;
-    std::optional<ReadyPromise> m_promise;
-    bool m_isReady { true };
+    ReadyPromise m_readyPromise;
 };
 
 }

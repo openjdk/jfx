@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,17 +35,36 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "Document.h"
-#include "MediaConstraintsImpl.h"
+#include "Event.h"
+#include "EventNames.h"
 #include "MediaDevicesRequest.h"
 #include "MediaTrackSupportedConstraints.h"
-#include "RealtimeMediaSourceCenter.h"
 #include "UserMediaRequest.h"
+#include <wtf/RandomNumber.h>
 
 namespace WebCore {
 
 inline MediaDevices::MediaDevices(Document& document)
     : ContextDestructionObserver(&document)
+    , m_scheduledEventTimer(*this, &MediaDevices::scheduledEventTimerFired)
+    , m_weakPtrFactory(this)
 {
+    m_deviceChangedToken = RealtimeMediaSourceCenter::singleton().addDevicesChangedObserver([weakThis = createWeakPtr(), this]() {
+
+        if (!weakThis)
+            return;
+
+        // FIXME: We should only dispatch an event if the user has been granted access to the type of
+        // device that was added or removed.
+        if (!m_scheduledEventTimer.isActive())
+            m_scheduledEventTimer.startOneShot(Seconds(randomNumber() / 2));
+    });
+}
+
+MediaDevices::~MediaDevices()
+{
+    if (m_deviceChangedToken)
+        RealtimeMediaSourceCenter::singleton().removeDevicesChangedObserver(m_deviceChangedToken.value());
 }
 
 Ref<MediaDevices> MediaDevices::create(Document& document)
@@ -57,14 +77,16 @@ Document* MediaDevices::document() const
     return downcast<Document>(scriptExecutionContext());
 }
 
-static Ref<MediaConstraintsImpl> createMediaConstraintsImpl(const Variant<bool, MediaTrackConstraints>& constraints)
+static MediaConstraints createMediaConstraints(const Variant<bool, MediaTrackConstraints>& constraints)
 {
     return WTF::switchOn(constraints,
-        [&] (bool constraints) {
-            return MediaConstraintsImpl::create({ }, { }, constraints);
+        [&] (bool isValid) {
+            MediaConstraints constraints;
+            constraints.isValid = isValid;
+            return constraints;
         },
-        [&] (const MediaTrackConstraints& constraints) {
-            return createMediaConstraintsImpl(constraints);
+        [&] (const MediaTrackConstraints& trackConstraints) {
+            return createMediaConstraints(trackConstraints);
         }
     );
 }
@@ -73,8 +95,13 @@ ExceptionOr<void> MediaDevices::getUserMedia(const StreamConstraints& constraint
 {
     auto* document = this->document();
     if (!document)
-        return Exception { INVALID_STATE_ERR };
-    return UserMediaRequest::start(*document, createMediaConstraintsImpl(constraints.audio), createMediaConstraintsImpl(constraints.video), WTFMove(promise));
+        return Exception { InvalidStateError };
+
+    auto audioConstraints = createMediaConstraints(constraints.audio);
+    auto videoConstraints = createMediaConstraints(constraints.video);
+    if (videoConstraints.isValid)
+        videoConstraints.setDefaultVideoConstraints();
+    return UserMediaRequest::start(*document, WTFMove(audioConstraints), WTFMove(videoConstraints), WTFMove(promise));
 }
 
 void MediaDevices::enumerateDevices(EnumerateDevicesPromise&& promise) const
@@ -101,6 +128,11 @@ MediaTrackSupportedConstraints MediaDevices::getSupportedConstraints()
     result.deviceId = supported.supportsDeviceId();
     result.groupId = supported.supportsGroupId();
     return result;
+}
+
+void MediaDevices::scheduledEventTimerFired()
+{
+    dispatchEvent(Event::create(eventNames().devicechangeEvent, false, false));
 }
 
 } // namespace WebCore

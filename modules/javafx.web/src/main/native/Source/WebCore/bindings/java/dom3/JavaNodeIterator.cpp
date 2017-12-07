@@ -21,7 +21,7 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #include "config.h"
 
@@ -83,19 +83,28 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_getPointerBe
     return IMPL->pointerBeforeReferenceNode();
 }
 
-
 // Functions
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_nextNodeImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->nextNode()));
+
+    auto result = IMPL->nextNode();
+    if (result.hasException()) {
+        return {};
+    }
+    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
 }
 
 
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_NodeIteratorImpl_previousNodeImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Node>(env, WTF::getPtr(IMPL->previousNode()));
+
+    auto result = IMPL->previousNode();
+    if (result.hasException()) {
+        return {};
+    }
+    return JavaReturn<Node>(env, WTF::getPtr(result.releaseReturnValue()));
 }
 
 

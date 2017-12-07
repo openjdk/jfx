@@ -45,6 +45,21 @@ list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
 
 list(REMOVE_ITEM WebCore_SOURCES
     platform/graphics/WOFFFileFormat.cpp
+    platform/network/SocketStreamHandleImpl.cpp
+    platform/LocalizedStrings.cpp
+)
+
+set(WEBKIT_LEGACY_FILES
+    # FIXME-java: Move WebKit interface specific files into WebKit dir
+    ../WebKitLegacy/Storage/StorageAreaImpl.cpp
+    ../WebKitLegacy/Storage/StorageAreaSync.cpp
+    ../WebKitLegacy/Storage/StorageNamespaceImpl.cpp
+    ../WebKitLegacy/Storage/StorageSyncManager.cpp
+    ../WebKitLegacy/Storage/StorageThread.cpp
+    ../WebKitLegacy/Storage/StorageTracker.cpp
+    ../WebKitLegacy/Storage/WebDatabaseProvider.cpp
+    ../WebKitLegacy/Storage/WebStorageNamespaceProvider.cpp
+    ../WebKitLegacy/WebCoreSupport/WebResourceLoadScheduler.cpp
 )
 
 list(APPEND WebCore_SOURCES
@@ -64,6 +79,7 @@ list(APPEND WebCore_SOURCES
     platform/java/ContextMenuJava.cpp
     platform/java/CursorJava.cpp
     platform/java/DragClientJava.cpp
+    platform/java/DragImageJava.cpp
     platform/java/DragDataJava.cpp
     platform/java/EditorClientJava.cpp
     platform/java/EventLoopJava.cpp
@@ -85,7 +101,6 @@ list(APPEND WebCore_SOURCES
     platform/java/PasteboardUtilitiesJava.cpp
     platform/java/PlatformScreenJava.cpp
     platform/java/PlatformStrategiesJava.cpp
-    platform/KillRingNone.cpp
     platform/java/PluginDataJava.cpp
     platform/java/PluginInfoStoreJava.cpp
     platform/java/PluginViewJava.cpp
@@ -95,7 +110,6 @@ list(APPEND WebCore_SOURCES
     platform/java/ScrollbarThemeJava.cpp
     platform/java/SharedBufferJava.cpp
     platform/java/MainThreadSharedTimerJava.cpp
-    platform/java/SoundJava.cpp
     platform/java/StringJava.cpp
     platform/java/TemporaryLinkStubsJava.cpp
     platform/java/TouchEventJava.cpp
@@ -120,7 +134,6 @@ list(APPEND WebCore_SOURCES
     platform/graphics/java/ImageDecoderJava.cpp  # FIXME: Add only if IMAGEIO?
     platform/graphics/java/MediaPlayerPrivateJava.cpp
     platform/graphics/java/NativeImageJava.cpp
-    html/shadow/MediaControlsApple.cpp
     platform/graphics/java/PathJava.cpp
     platform/graphics/java/RenderingQueue.cpp
     platform/graphics/java/RQRef.cpp
@@ -142,26 +155,21 @@ list(APPEND WebCore_SOURCES
     bindings/java/JavaEventListener.cpp
 
     platform/java/ChromeClientJava.cpp
+    platform/java/WebKitLogging.cpp
+    platform/java/BackForwardList.cpp
     page/java/DragControllerJava.cpp
     page/java/EventHandlerJava.cpp
 
-    # FIXME-java: Move WebKit interface specific files into WebKit dir
-    ../WebKit/Storage/StorageAreaImpl.cpp
-    ../WebKit/Storage/StorageAreaSync.cpp
-    ../WebKit/Storage/StorageNamespaceImpl.cpp
-    ../WebKit/Storage/StorageSyncManager.cpp
-    ../WebKit/Storage/StorageThread.cpp
-    ../WebKit/Storage/StorageTracker.cpp
-    ../WebKit/Storage/WebDatabaseProvider.cpp
-    ../WebKit/Storage/WebStorageNamespaceProvider.cpp
-    ../WebKit/WebCoreSupport/WebResourceLoadScheduler.cpp
-    ../WebKit/java/WebKitLogging.cpp
-    ../WebKit/java/BackForwardList.cpp
+    ${WEBKIT_LEGACY_FILES}
 )
+
+if (NOT WIN32)
+    set_source_files_properties(${WEBKIT_LEGACY_FILES} PROPERTIES COMPILE_FLAGS "-include config.h")
+endif()
 
 if (WIN32)
     list(APPEND WebCore_SOURCES
-      platform/win/SystemInfo.cpp
+        platform/win/SystemInfo.cpp
     )
     list(APPEND WebCore_INCLUDE_DIRECTORIES
         ${THIRDPARTY_DIR}/libxml/win32/include
@@ -185,11 +193,6 @@ elseif(APPLE)
     find_library(ACCELERATE_LIBRARY accelerate)
     list(APPEND WebCore_LIBRARIES
         ${ACCELERATE_LIBRARY}
-    )
-elseif(UNIX)
-    list(APPEND WebCore_SOURCES
-      platform/linux/CurrentProcessMemoryStatus.cpp
-      platform/linux/MemoryPressureHandlerLinux.cpp
     )
 endif()
 

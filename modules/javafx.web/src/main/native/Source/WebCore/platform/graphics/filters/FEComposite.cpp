@@ -28,7 +28,7 @@
 #endif
 #include "Filter.h"
 #include "GraphicsContext.h"
-#include "TextStream.h"
+#include <wtf/text/TextStream.h>
 
 #include <runtime/Uint8ClampedArray.h>
 

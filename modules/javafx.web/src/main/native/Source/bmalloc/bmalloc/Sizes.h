@@ -46,7 +46,7 @@ namespace Sizes {
     static const size_t alignment = 8;
     static const size_t alignmentMask = alignment - 1ul;
 
-    static const size_t chunkSize = 2 * MB;
+    static const size_t chunkSize = 1 * MB;
     static const size_t chunkMask = ~(chunkSize - 1ul);
 
     static const size_t smallLineSize = 256;
@@ -65,10 +65,13 @@ namespace Sizes {
     static const size_t largeAlignment = smallMax / pageSizeWasteFactor;
     static const size_t largeAlignmentMask = largeAlignment - 1;
 
-    static const size_t deallocatorLogCapacity = 256;
+    static const size_t deallocatorLogCapacity = 512;
     static const size_t bumpRangeCacheCapacity = 3;
 
-    static const std::chrono::milliseconds scavengeSleepDuration = std::chrono::milliseconds(512);
+    static const size_t scavengerBytesPerMemoryPressureCheck = 16 * MB;
+    static const double memoryPressureThreshold = 0.75;
+
+    static const std::chrono::milliseconds asyncTaskSleepDuration = std::chrono::milliseconds(2000);
 
     static const size_t maskSizeClassCount = maskSizeClassMax / alignment;
 

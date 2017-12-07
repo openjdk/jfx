@@ -47,77 +47,85 @@
 namespace WTF {
 
 #if PLATFORM(JAVA)
-    // 16K is a safe value to guard java stack red zone
-    #define JAVA_RED_ZONE 0x4000
-    #if OS(WINDOWS)
-        // This is safe for the default stack sizes in all supported Windows
-        // configurations, but is not safe for stack sizes lower than the default.
-        #if CPU(X86_64)
-            static const ptrdiff_t estimatedStackSize = 1024 * 1024;
-        #else
-            // estimatedStackSize needs to be a little greater than 256KB to keep
-            // Interpreter::StackPolicy::StackPolicy happy and less than 320KB
-            // to play safe against the default stack size on 32 bit Windows.
-            static const ptrdiff_t estimatedStackSize = 272 * 1024;
-        #endif
-    #endif
+// 16K is a safe value to guard java stack red zone
+#define JAVA_RED_ZONE 0x4000
+#if OS(WINDOWS)
+// This is safe for the default stack sizes in all supported Windows
+// configurations, but is not safe for stack sizes lower than the default.
+#if CPU(X86_64)
+static const ptrdiff_t estimatedStackSize = 1024 * 1024;
+#else
+// estimatedStackSize needs to be a little greater than 256KB to keep
+// Interpreter::StackPolicy::StackPolicy happy and less than 320KB
+// to play safe against the default stack size on 32 bit Windows.
+static const ptrdiff_t estimatedStackSize = 272 * 1024;
+#endif
+#endif
 #endif
 
 #if OS(DARWIN)
 
-void StackBounds::initialize()
+StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
 {
-    pthread_t thread = pthread_self();
-    m_origin = pthread_get_stackaddr_np(thread);
-    rlim_t size = 0;
+    void* origin = pthread_get_stackaddr_np(thread);
+    rlim_t size = pthread_get_stacksize_np(thread);
+    void* bound = static_cast<char*>(origin) - size;
+    return StackBounds { origin, bound };
+}
+
+StackBounds StackBounds::currentThreadStackBoundsInternal()
+{
     if (pthread_main_np()) {
         // FIXME: <rdar://problem/13741204>
         // pthread_get_size lies to us when we're the main thread, use get_rlimit instead
+        void* origin = pthread_get_stackaddr_np(pthread_self());
         rlimit limit;
         getrlimit(RLIMIT_STACK, &limit);
-        size = limit.rlim_cur;
-    } else
-        size = pthread_get_stacksize_np(thread);
-
-    m_bound = static_cast<char*>(m_origin) - size;
+        rlim_t size = limit.rlim_cur;
+        void* bound = static_cast<char*>(origin) - size;
 #if PLATFORM(JAVA)
-    m_bound = static_cast<char*>(m_bound) + JAVA_RED_ZONE;
+        bound = static_cast<char*>(bound) + JAVA_RED_ZONE;
 #endif
+        return StackBounds { origin, bound };
+    }
+    return newThreadStackBounds(pthread_self());
 }
 
 #elif OS(SOLARIS)
 
-void StackBounds::initialize()
+StackBounds StackBounds::currentThreadStackBoundsInternal()
 {
     stack_t s;
     thr_stksegment(&s);
-    m_origin = s.ss_sp;
-    m_bound = static_cast<char*>(m_origin) - s.ss_size;
-}
-
-#elif OS(OPENBSD)
-
-void StackBounds::initialize()
-{
-    pthread_t thread = pthread_self();
-    stack_t stack;
-    pthread_stackseg_np(thread, &stack);
-    m_origin = stack.ss_sp;
-#if CPU(HPPA)
-    m_bound = static_cast<char*>(m_origin) + stack.ss_size;
-#else
-    m_bound = static_cast<char*>(m_origin) - stack.ss_size;
-#endif
+    void* origin = s.ss_sp;
+    void* bound = static_cast<char*>(origin) - s.ss_size;
+    return StackBounds { origin, bound };
 }
 
 #elif OS(UNIX)
 
-void StackBounds::initialize()
+#if OS(OPENBSD)
+
+StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
 {
-    void* stackBase = 0;
+    stack_t stack;
+    pthread_stackseg_np(thread, &stack);
+    void* origin = stack.ss_sp;
+#if CPU(HPPA)
+    void* bound = static_cast<char*>(origin) + stack.ss_size;
+#else
+    void* bound = static_cast<char*>(origin) - stack.ss_size;
+#endif
+    return StackBounds { origin, bound };
+}
+
+#else // !OS(OPENBSD)
+
+StackBounds StackBounds::newThreadStackBounds(PlatformThreadHandle thread)
+{
+    void* bound = nullptr;
     size_t stackSize = 0;
 
-    pthread_t thread = pthread_self();
     pthread_attr_t sattr;
     pthread_attr_init(&sattr);
 #if HAVE(PTHREAD_NP_H) || OS(NETBSD)
@@ -127,69 +135,35 @@ void StackBounds::initialize()
     // FIXME: this function is non-portable; other POSIX systems may have different np alternatives
     pthread_getattr_np(thread, &sattr);
 #endif
-    int rc = pthread_attr_getstack(&sattr, &stackBase, &stackSize);
-    (void)rc; // FIXME: Deal with error code somehow? Seems fatal.
-    ASSERT(stackBase);
+    int rc = pthread_attr_getstack(&sattr, &bound, &stackSize);
+    UNUSED_PARAM(rc);
+    ASSERT(bound);
     pthread_attr_destroy(&sattr);
-    m_bound = stackBase;
-    m_origin = static_cast<char*>(stackBase) + stackSize;
-
+    void* origin = static_cast<char*>(bound) + stackSize;
 #if PLATFORM(JAVA)
-    m_bound = static_cast<char*>(m_bound) + JAVA_RED_ZONE;
+    bound = static_cast<char*>(bound) + JAVA_RED_ZONE;
 #endif
+    return StackBounds { origin, bound };
+}
+
+#endif // OS(OPENBSD)
+
+StackBounds StackBounds::currentThreadStackBoundsInternal()
+{
+    return newThreadStackBounds(pthread_self());
 }
 
 #elif OS(WINDOWS)
 
-#ifdef STACK_BOUNDS_DEBUG
-static char* dumpState(DWORD state) {
-    switch (state) {
-        case MEM_COMMIT:
-            return "MEM_COMMIT";
-        case MEM_RESERVE:
-            return "MEM_RESERVE";
-        case MEM_FREE:
-            return "MEM_FREE";
-        default:
-            return "UNKNNOWN";
-    }
-}
-#endif //STACK_BOUNDS_DEBUG
-
-void StackBounds::initialize()
+StackBounds StackBounds::currentThreadStackBoundsInternal()
 {
     MEMORY_BASIC_INFORMATION stackOrigin = { 0 };
     VirtualQuery(&stackOrigin, &stackOrigin, sizeof(stackOrigin));
     // stackOrigin.AllocationBase points to the reserved stack memory base address.
 
     const LPVOID theAllocBase = stackOrigin.AllocationBase;
-#ifdef STACK_BOUNDS_DEBUG
+    void* origin = static_cast<char*>(stackOrigin.BaseAddress) + stackOrigin.RegionSize;
 
-    do {
-        MEMORY_BASIC_INFORMATION info = { 0 };
-        const LPVOID theObject = &stackOrigin;
-        LPVOID addr = theObject;
-
-        size_t r = ::VirtualQuery(addr, &info, sizeof(info));
-
-        addr = info.AllocationBase;
-        printf("%p\n", addr);
-
-        do {
-            LPVOID end;
-            r = ::VirtualQuery(addr, &info, sizeof(info));
-            end = (LPVOID)((char*)addr + info.RegionSize);
-            printf("%p - %p: state %s (%x), proctect: %x\n", addr, end, dumpState(info.State), info.State, info.Protect);
-
-            if (theObject > addr && theObject < end) {
-                printf("the object is here: %p\n", theObject);
-            }
-            addr = end;
-        } while (theAllocBase == info.AllocationBase);
-    } while (0);
-#endif // STACK_BOUNDS_DEBUG
-
-    m_origin = static_cast<char*>(stackOrigin.BaseAddress) + stackOrigin.RegionSize;
     // The stack on Windows consists out of three parts (uncommitted memory, a guard page and present
     // committed memory). The 3 regions have different BaseAddresses but all have the same AllocationBase
     // since they are all from the same VirtualAlloc. The 3 regions are laid out in memory (from high to
@@ -227,7 +201,7 @@ void StackBounds::initialize()
     VirtualQuery(static_cast<char*>(guardPage.BaseAddress) + guardPage.RegionSize, &committedMemory, sizeof(committedMemory));
     ASSERT(committedMemory.State == MEM_COMMIT);
 
-    void* computedEnd = static_cast<char*>(m_origin) - (uncommittedMemory.RegionSize + guardPage.RegionSize + committedMemory.RegionSize);
+    void* computedEnd = static_cast<char*>(origin) - (uncommittedMemory.RegionSize + guardPage.RegionSize + committedMemory.RegionSize);
 
     ASSERT(stackOrigin.AllocationBase == uncommittedMemory.AllocationBase);
     ASSERT(stackOrigin.AllocationBase == guardPage.AllocationBase);
@@ -236,7 +210,8 @@ void StackBounds::initialize()
     //ASSERT(stackOrigin.AllocationBase == uncommittedMemory.BaseAddress);
     //ASSERT(endOfStack == computedEnd);
 #endif // NDEBUG
-    m_bound = static_cast<char*>(endOfStack) + guardPage.RegionSize;
+    void* bound = static_cast<char*>(endOfStack) + guardPage.RegionSize;
+    return StackBounds { origin, bound };
 }
 
 #else

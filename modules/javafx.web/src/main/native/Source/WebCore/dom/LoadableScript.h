@@ -28,7 +28,6 @@
 #include "ScriptElementCachedScriptFetcher.h"
 #include <runtime/ConsoleTypes.h>
 #include <wtf/HashCountedSet.h>
-#include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -42,6 +41,7 @@ public:
         CachedScript,
         CrossOriginLoad,
         Nosniff,
+        FailedIntegrityCheck,
     };
 
     struct ConsoleMessage {

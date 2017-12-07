@@ -235,12 +235,12 @@ public class MiscellaneousTest extends TestBase {
         svgPaths.put("'M 0 0 t 0 100'",
                 new Double[] {100.0, 0.1});
         svgPaths.put("'M 0 0 Q 55 50 100 100'",
-                new Double[] {141.4803314, 0.000001});
+                new Double[] {141.4803314, 0.001});
         svgPaths.put("'M 778.4191616766467 375.19086364081954 C 781.239563 " +
                         "375.1908569 786.8525244750526 346.60170830052556 786.8802395209582 346.87991373394766'",
-                new Double[] {29.86020, 0.0001});
+                new Double[] {29.86020, 0.1});
         svgPaths.put("'M 0 0 C 0.00001 0.00001 0.00002 0.00001 0.00003 0'",
-                new Double[] {0.0000344338, 0.000000001});
+                new Double[] {0.0000344338, 0.0001});
 
         loadContent(svgStub);
 
@@ -249,8 +249,8 @@ public class MiscellaneousTest extends TestBase {
             // Get svg path's total length
             Double totalLength = ((Number) executeScript("document.getElementById('pathId').getTotalLength();")).doubleValue();
             final String msg = String.format(
-                    "svg.path.getTotalLength() for %s, expected : %f, actual : %f",
-                    pathData, expected[0], totalLength);
+                    "svg.path.getTotalLength() for %s",
+                    pathData);
             assertEquals(msg,
                     expected[0], totalLength, expected[1]);
         });

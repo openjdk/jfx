@@ -132,24 +132,41 @@ RunResolver::RunResolver(const RenderBlockFlow& flow, const Layout& layout)
 {
 }
 
-unsigned RunResolver::adjustLineIndexForStruts(LayoutUnit y, unsigned lineIndexCandidate) const
+unsigned RunResolver::adjustLineIndexForStruts(LayoutUnit y, IndexType type, unsigned lineIndexCandidate) const
 {
     auto& struts = m_layout.struts();
     // We need to offset the lineIndex with line struts when there's an actual strut before the candidate.
     auto& strut = struts.first();
     if (strut.lineBreak >= lineIndexCandidate)
         return lineIndexCandidate;
-    // Jump over the first strut since we know that the line we are looking for is beyond the strut.
-    unsigned strutIndex = 1;
-    float topPosition = strut.lineBreak * m_lineHeight + strut.offset;
-    for (auto lineIndex = strut.lineBreak; lineIndex < m_layout.lineCount(); ++lineIndex) {
-        if (strutIndex < struts.size() && struts.at(strutIndex).lineBreak == lineIndex)
-            topPosition += struts.at(strutIndex++).offset;
-        if (y >= topPosition && y < (topPosition + m_lineHeight))
-            return lineIndex;
-        topPosition += m_lineHeight;
+    unsigned strutIndex = 0;
+    std::optional<unsigned> lastIndexCandidate;
+    auto top = strut.lineBreak * m_lineHeight;
+    auto lineHeightWithOverflow = m_lineHeight;
+    // If font is larger than the line height (glyphs overflow), use the font size when checking line boundaries.
+    if (m_ascent + m_descent > m_lineHeight) {
+        lineHeightWithOverflow = m_ascent + m_descent;
+        top += m_baseline - m_ascent;
     }
-    return m_layout.lineCount() - 1;
+    auto bottom = top + lineHeightWithOverflow;
+    for (auto lineIndex = strut.lineBreak; lineIndex < m_layout.lineCount(); ++lineIndex) {
+        float strutOffset = 0;
+        if (strutIndex < struts.size() && struts.at(strutIndex).lineBreak == lineIndex)
+            strutOffset = struts.at(strutIndex++).offset;
+        bottom = top + strutOffset + lineHeightWithOverflow;
+        if (y >= top && y < bottom) {
+            if (type == IndexType::First)
+                return lineIndex;
+            lastIndexCandidate = lineIndex;
+        } else if (lastIndexCandidate)
+            return *lastIndexCandidate;
+        top += m_lineHeight + strutOffset;
+    }
+    if (lastIndexCandidate || y >= bottom)
+        return m_layout.lineCount() - 1;
+    // We missed the line.
+    ASSERT_NOT_REACHED();
+    return lineIndexCandidate;
 }
 
 unsigned RunResolver::lineIndexForHeight(LayoutUnit height, IndexType type) const
@@ -157,14 +174,15 @@ unsigned RunResolver::lineIndexForHeight(LayoutUnit height, IndexType type) cons
     ASSERT(m_lineHeight);
     float y = height - m_borderAndPaddingBefore;
     // Lines may overlap, adjust to get the first or last line at this height.
+    auto adjustedY = y;
     if (type == IndexType::First)
-        y += m_lineHeight - (m_baseline + m_descent);
+        adjustedY += m_lineHeight - (m_baseline + m_descent);
     else
-        y -= m_baseline - m_ascent;
-    y = std::max<float>(y, 0);
-    auto lineIndexCandidate =  std::min<unsigned>(y / m_lineHeight, m_layout.lineCount() - 1);
+        adjustedY -= m_baseline - m_ascent;
+    adjustedY = std::max<float>(adjustedY, 0);
+    auto lineIndexCandidate =  std::min<unsigned>(adjustedY / m_lineHeight, m_layout.lineCount() - 1);
     if (m_layout.hasLineStruts())
-        return adjustLineIndexForStruts(y, lineIndexCandidate);
+        return adjustLineIndexForStruts(y, type, lineIndexCandidate);
     return lineIndexCandidate;
 }
 
@@ -175,7 +193,6 @@ WTF::IteratorRange<RunResolver::Iterator> RunResolver::rangeForRect(const Layout
 
     unsigned firstLine = lineIndexForHeight(rect.y(), IndexType::First);
     unsigned lastLine = std::max(firstLine, lineIndexForHeight(rect.maxY(), IndexType::Last));
-
     auto rangeBegin = begin().advanceLines(firstLine);
     if (rangeBegin == end())
         return { end(), end() };
@@ -221,6 +238,8 @@ WTF::IteratorRange<RunResolver::Iterator> RunResolver::rangeForRenderer(const Re
 RunResolver::Iterator RunResolver::runForPoint(const LayoutPoint& point) const
 {
     if (!m_lineHeight)
+        return end();
+    if (begin() == end())
         return end();
     unsigned lineIndex = lineIndexForHeight(point.y(), IndexType::Last);
     auto x = point.x() - m_borderAndPaddingBefore;

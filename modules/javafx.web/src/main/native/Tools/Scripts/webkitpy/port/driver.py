@@ -133,6 +133,7 @@ class Driver(object):
         self._port = port
         self._worker_number = worker_number
         self._no_timeout = no_timeout
+        self._target_host = port.target_host(worker_number)
 
         self._driver_tempdir = None
         self._driver_user_directory_suffix = None
@@ -166,7 +167,8 @@ class Driver(object):
             self._profiler = None
 
         self.web_platform_test_server_doc_root = self._port.web_platform_test_server_doc_root()
-        self.web_platform_test_server_base_url = self._port.web_platform_test_server_base_url()
+        self.web_platform_test_server_base_http_url = self._port.web_platform_test_server_base_http_url()
+        self.web_platform_test_server_base_https_url = self._port.web_platform_test_server_base_https_url()
 
     def __del__(self):
         self.stop()
@@ -240,7 +242,7 @@ class Driver(object):
             crashed_pid=self._crashed_pid, crash_log=crash_log, pid=pid)
 
     def _get_crash_log(self, stdout, stderr, newer_than):
-        return self._port._get_crash_log(self._crashed_process_name, self._crashed_pid, stdout, stderr, newer_than)
+        return self._port._get_crash_log(self._crashed_process_name, self._crashed_pid, stdout, stderr, newer_than, target_host=self._target_host)
 
     def _command_wrapper(self):
         # Hook for injecting valgrind or other runtime instrumentation, used by e.g. tools/valgrind/valgrind_tests.py.
@@ -253,27 +255,35 @@ class Driver(object):
 
     HTTP_DIR = "http/tests/"
     HTTP_LOCAL_DIR = "http/tests/local/"
+    WEBKIT_SPECIFIC_WEB_PLATFORM_TEST_SUBDIR = "http/wpt/"
+    WEBKIT_WEB_PLATFORM_TEST_SERVER_ROUTE = "WebKit/"
 
     def is_http_test(self, test_name):
         return test_name.startswith(self.HTTP_DIR) and not test_name.startswith(self.HTTP_LOCAL_DIR)
 
+    def is_webkit_specific_web_platform_test(self, test_name):
+        return test_name.startswith(self.WEBKIT_SPECIFIC_WEB_PLATFORM_TEST_SUBDIR)
+
     def is_web_platform_test(self, test_name):
         return test_name.startswith(self.web_platform_test_server_doc_root)
+
+    def wpt_test_path_to_uri(self, path):
+        return self.web_platform_test_server_base_https_url + path if ".https." in path else self.web_platform_test_server_base_http_url + path
+
+    def http_test_path_to_uri(self, path):
+        return "https://127.0.0.1:8443/" + path if path.startswith("ssl") or ".https." in path else "http://127.0.0.1:8000/" + path
 
     def test_to_uri(self, test_name):
         """Convert a test name to a URI."""
         if self.is_web_platform_test(test_name):
-            return self.web_platform_test_server_base_url + test_name[len(self.web_platform_test_server_doc_root):]
+            return self.wpt_test_path_to_uri(test_name[len(self.web_platform_test_server_doc_root):])
+        if self.is_webkit_specific_web_platform_test(test_name):
+            return self.wpt_test_path_to_uri(self.WEBKIT_WEB_PLATFORM_TEST_SERVER_ROUTE + test_name[len(self.WEBKIT_SPECIFIC_WEB_PLATFORM_TEST_SUBDIR):])
 
         if not self.is_http_test(test_name):
             return path.abspath_to_uri(self._port.host.platform, self._port.abspath_for_test(test_name))
 
-        relative_path = test_name[len(self.HTTP_DIR):]
-
-        # TODO(dpranke): remove the SSL reference?
-        if relative_path.startswith("ssl/"):
-            return "https://127.0.0.1:8443/" + relative_path
-        return "http://127.0.0.1:8000/" + relative_path
+        return self.http_test_path_to_uri(test_name[len(self.HTTP_DIR):])
 
     def uri_to_test(self, uri):
         """Return the base layout test name for a given URI.
@@ -288,8 +298,14 @@ class Driver(object):
             if not prefix.endswith('/'):
                 prefix += '/'
             return uri[len(prefix):]
-        if uri.startswith(self.web_platform_test_server_base_url):
-            return uri.replace(self.web_platform_test_server_base_url, self.web_platform_test_server_doc_root)
+        if uri.startswith(self.web_platform_test_server_base_http_url + self.WEBKIT_WEB_PLATFORM_TEST_SERVER_ROUTE):
+            return uri.replace(self.web_platform_test_server_base_http_url + self.WEBKIT_WEB_PLATFORM_TEST_SERVER_ROUTE, self.WEBKIT_SPECIFIC_WEB_PLATFORM_TEST_SUBDIR)
+        if uri.startswith(self.web_platform_test_server_base_https_url + self.WEBKIT_WEB_PLATFORM_TEST_SERVER_ROUTE):
+            return uri.replace(self.web_platform_test_server_base_https_url + self.WEBKIT_WEB_PLATFORM_TEST_SERVER_ROUTE, self.WEBKIT_SPECIFIC_WEB_PLATFORM_TEST_SUBDIR)
+        if uri.startswith(self.web_platform_test_server_base_http_url):
+            return uri.replace(self.web_platform_test_server_base_http_url, self.web_platform_test_server_doc_root)
+        if uri.startswith(self.web_platform_test_server_base_https_url):
+            return uri.replace(self.web_platform_test_server_base_https_url, self.web_platform_test_server_doc_root)
         if uri.startswith("http://"):
             return uri.replace('http://127.0.0.1:8000/', self.HTTP_DIR)
         if uri.startswith("https://"):
@@ -302,7 +318,7 @@ class Driver(object):
         if self._crashed_process_name:
             return True
         if self._server_process.has_crashed():
-            self._crashed_process_name = self._server_process.name()
+            self._crashed_process_name = self._server_process.process_name()
             self._crashed_pid = self._server_process.pid()
             return True
         return False
@@ -343,8 +359,6 @@ class Driver(object):
         environment['LOCAL_RESOURCE_ROOT'] = str(self._port.layout_tests_dir())
         environment['ASAN_OPTIONS'] = "allocator_may_return_null=1"
         environment['__XPC_ASAN_OPTIONS'] = environment['ASAN_OPTIONS']
-        if 'WEBKIT_OUTPUTDIR' in os.environ:
-            environment['WEBKIT_OUTPUTDIR'] = os.environ['WEBKIT_OUTPUTDIR']
         if self._profiler:
             environment = self._profiler.adjusted_environment(environment)
         return environment
@@ -359,16 +373,16 @@ class Driver(object):
         # Each driver process should be using individual directories under _driver_tempdir (which is deleted when stopping),
         # however some subsystems on some platforms could end up using process default ones.
         self._port._clear_global_caches_and_temporary_files()
-        self._driver_tempdir = self._port._driver_tempdir()
+        self._driver_tempdir = self._port._driver_tempdir(self._target_host)
         self._driver_user_directory_suffix = os.path.basename(str(self._driver_tempdir))
         user_cache_directory = self._port._path_to_user_cache_directory(self._driver_user_directory_suffix)
         if user_cache_directory:
-            self._port._filesystem.maybe_make_directory(user_cache_directory)
+            self._target_host.filesystem.maybe_make_directory(user_cache_directory)
             self._driver_user_cache_directory = user_cache_directory
         environment = self._setup_environ_for_test()
         self._crashed_process_name = None
         self._crashed_pid = None
-        self._server_process = self._port._test_runner_process_constructor(self._port, self._server_name, self.cmd_line(pixel_tests, per_test_args), environment, worker_number=self._worker_number)
+        self._server_process = self._port._test_runner_process_constructor(self._port, self._server_name, self.cmd_line(pixel_tests, per_test_args), environment, target_host=self._target_host)
         self._server_process.start()
 
     def _run_post_start_tasks(self):
@@ -388,10 +402,10 @@ class Driver(object):
                 self._profiler.profile_after_exit()
 
         if self._driver_tempdir:
-            self._port._filesystem.rmtree(str(self._driver_tempdir))
+            self._target_host.filesystem.rmtree(str(self._driver_tempdir))
             self._driver_tempdir = None
         if self._driver_user_cache_directory:
-            self._port._filesystem.rmtree(self._driver_user_cache_directory)
+            self._target_host.filesystem.rmtree(self._driver_user_cache_directory)
             self._driver_user_cache_directory = None
 
     def cmd_line(self, pixel_tests, per_test_args):
@@ -432,7 +446,7 @@ class Driver(object):
             self.error_from_test += err_line
             _log.debug(err_line)
             if self._port.get_option("sample_on_timeout"):
-                self._port.sample_process(child_process_name, child_process_pid)
+                self._port.sample_process(child_process_name, child_process_pid, self._target_host)
         if out_line == "FAIL: Timed out waiting for notifyDone to be called\n":
             self._driver_timed_out = True
 
@@ -443,7 +457,7 @@ class Driver(object):
     def _check_for_driver_crash_or_unresponsiveness(self, error_line):
         crashed_check = error_line.rstrip('\r\n')
         if crashed_check == "#CRASHED":
-            self._crashed_process_name = self._server_process.name()
+            self._crashed_process_name = self._server_process.process_name()
             self._crashed_pid = self._server_process.pid()
             return True
         elif error_line.startswith("#CRASHED - "):
@@ -461,7 +475,7 @@ class Driver(object):
             _log.debug('%s is unresponsive, pid = %s' % (child_process_name, str(child_process_pid)))
             self._driver_timed_out = True
             if child_process_pid:
-                self._port.sample_process(child_process_name, child_process_pid)
+                self._port.sample_process(child_process_name, child_process_pid, self._target_host)
             self.error_from_test += error_line
             self._server_process.write('#SAMPLE FINISHED\n', True)  # Must be able to ignore a broken pipe here, target process may already be closed.
             return True
@@ -471,12 +485,12 @@ class Driver(object):
         # FIXME: performance tests pass in full URLs instead of test names.
         if driver_input.test_name.startswith('http://') or driver_input.test_name.startswith('https://')  or driver_input.test_name == ('about:blank'):
             command = driver_input.test_name
-        elif self.is_web_platform_test(driver_input.test_name) or (self.is_http_test(driver_input.test_name) and (self._port.get_option('webkit_test_runner') or sys.platform == "cygwin")):
+        elif self.is_web_platform_test(driver_input.test_name) or self.is_webkit_specific_web_platform_test(driver_input.test_name) or self.is_http_test(driver_input.test_name):
             command = self.test_to_uri(driver_input.test_name)
             command += "'--absolutePath'"
-            command += self._port.abspath_for_test(driver_input.test_name)
+            command += self._port.abspath_for_test(driver_input.test_name, self._target_host)
         else:
-            command = self._port.abspath_for_test(driver_input.test_name)
+            command = self._port.abspath_for_test(driver_input.test_name, self._target_host)
             if sys.platform == 'cygwin':
                 command = path.cygpath(command)
 
@@ -542,7 +556,7 @@ class Driver(object):
         out_seen_eof = False
         asan_violation_detected = False
 
-        while not self.has_crashed():
+        while True:
             if out_seen_eof and (self.err_seen_eof or not wait_for_stderr_eof):
                 break
 
@@ -555,7 +569,8 @@ class Driver(object):
             else:
                 out_line, err_line = self._server_process.read_either_stdout_or_stderr_line(deadline)
 
-            if self._server_process.timed_out or self.has_crashed():
+            # ServerProcess returns None for time outs and crashes.
+            if out_line is None and err_line is None:
                 break
 
             if out_line:
@@ -597,7 +612,7 @@ class Driver(object):
                     self.error_from_test += err_line
 
         if asan_violation_detected and not self._crashed_process_name:
-            self._crashed_process_name = self._server_process.name()
+            self._crashed_process_name = self._server_process.process_name()
             self._crashed_pid = self._server_process.pid()
 
         block.decode_content()
@@ -650,6 +665,12 @@ class DriverProxy(object):
     # FIXME: this should be a @classmethod (or implemented on Port instead).
     def is_http_test(self, test_name):
         return self._driver.is_http_test(test_name)
+
+    def is_web_platform_test(self, test_name):
+        return self._driver.is_web_platform_test(test_name)
+
+    def is_webkit_specific_web_platform_test(self, test_name):
+        return self._driver.is_webkit_specific_web_platform_test(test_name)
 
     # FIXME: this should be a @classmethod (or implemented on Port instead).
     def test_to_uri(self, test_name):

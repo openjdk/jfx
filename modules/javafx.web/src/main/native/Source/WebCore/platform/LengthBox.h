@@ -30,7 +30,7 @@ namespace WebCore {
 template<typename T> class BoxExtent {
 public:
     BoxExtent()
-        : m_sides({ { { 0 }, { 0 }, { 0 }, { 0 } } })
+        : m_sides({ { 0, 0, 0, 0 } })
     {
     }
 
@@ -157,6 +157,7 @@ public:
 using LayoutBoxExtent = BoxExtent<LayoutUnit>;
 using FloatBoxExtent = BoxExtent<float>;
 
-TextStream& operator<<(TextStream&, const LengthBox&);
+WTF::TextStream& operator<<(WTF::TextStream&, const LengthBox&);
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatBoxExtent&);
 
 } // namespace WebCore

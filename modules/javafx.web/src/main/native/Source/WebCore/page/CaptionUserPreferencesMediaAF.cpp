@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,20 +32,24 @@
 #include "CaptionUserPreferencesMediaAF.h"
 
 #include "AudioTrackList.h"
+#if PLATFORM(WIN)
+#include "CoreTextSPIWin.h"
+#endif
 #include "FloatConversion.h"
 #include "HTMLMediaElement.h"
-#include "URL.h"
 #include "Language.h"
 #include "LocalizedStrings.h"
 #include "Logging.h"
 #include "MediaControlElements.h"
-#include "SoftLinking.h"
 #include "TextTrackList.h"
+#include "URL.h"
 #include "UserStyleSheetTypes.h"
 #include "VTTCue.h"
+#include <algorithm>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/PlatformUserPreferredLanguages.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/SoftLinking.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 
@@ -76,14 +80,6 @@
 #define SOFT_LINK_AVF_POINTER(Lib, Name, Type) SOFT_LINK_VARIABLE_DLL_IMPORT_OPTIONAL(Lib, Name, Type)
 #define SOFT_LINK_AVF_FRAMEWORK_IMPORT(Lib, Fun, ReturnType, Arguments, Signature) SOFT_LINK_DLL_IMPORT(Lib, Fun, ReturnType, __cdecl, Arguments, Signature)
 #define SOFT_LINK_AVF_FRAMEWORK_IMPORT_OPTIONAL(Lib, Fun, ReturnType, Arguments) SOFT_LINK_DLL_IMPORT_OPTIONAL(Lib, Fun, ReturnType, __cdecl, Arguments)
-
-// CoreText only needs to be soft-linked on Windows.
-SOFT_LINK_AVF_FRAMEWORK(CoreText)
-SOFT_LINK_AVF_FRAMEWORK_IMPORT(CoreText, CTFontDescriptorCopyAttribute,  CFTypeRef, (CTFontDescriptorRef descriptor, CFStringRef attribute), (descriptor, attribute));
-SOFT_LINK_AVF_POINTER(CoreText, kCTFontNameAttribute, CFStringRef)
-#define kCTFontNameAttribute getkCTFontNameAttribute()
-
-#define CTFontDescriptorCopyAttribute softLink_CTFontDescriptorCopyAttribute
 
 SOFT_LINK_AVF_FRAMEWORK(CoreMedia)
 SOFT_LINK_AVF_FRAMEWORK_IMPORT_OPTIONAL(CoreMedia, MTEnableCaption2015Behavior, Boolean, ())
@@ -246,7 +242,7 @@ void CaptionUserPreferencesMediaAF::setInterestedInCaptionPreferenceChanges()
 
     // Generating and registering the caption stylesheet can be expensive and this method is called indirectly when the parser creates an audio or
     // video element, so do it after a brief pause.
-    m_updateStyleSheetTimer.startOneShot(0);
+    m_updateStyleSheetTimer.startOneShot(0_s);
 }
 
 void CaptionUserPreferencesMediaAF::captionPreferencesChanged()
@@ -328,6 +324,16 @@ String CaptionUserPreferencesMediaAF::captionsTextColorCSS() const
     return colorPropertyCSS(CSSPropertyColor, textColor, important);
 }
 
+static void appendCSS(StringBuilder& builder, CSSPropertyID id, const String& value, bool important)
+{
+    builder.append(getPropertyNameString(id));
+    builder.append(':');
+    builder.append(value);
+    if (important)
+        builder.appendLiteral(" !important");
+    builder.append(';');
+}
+
 String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
 {
     MACaptionAppearanceBehavior behavior;
@@ -336,119 +342,67 @@ String CaptionUserPreferencesMediaAF::windowRoundedCornerRadiusCSS() const
         return emptyString();
 
     StringBuilder builder;
-    builder.append(getPropertyNameString(CSSPropertyBorderRadius));
-    builder.append(String::format(":%.02fpx", radius));
-    if (behavior == kMACaptionAppearanceBehaviorUseValue)
-        builder.appendLiteral(" !important");
-    builder.append(';');
-
-    return builder.toString();
-}
-
-Color CaptionUserPreferencesMediaAF::captionsEdgeColorForTextColor(const Color& textColor) const
-{
-    int distanceFromWhite = differenceSquared(textColor, Color::white);
-    int distanceFromBlack = differenceSquared(textColor, Color::black);
-
-    if (distanceFromWhite < distanceFromBlack)
-        return textColor.dark();
-
-    return textColor.light();
-}
-
-String CaptionUserPreferencesMediaAF::cssPropertyWithTextEdgeColor(CSSPropertyID id, const String& value, const Color& textColor, bool important) const
-{
-    StringBuilder builder;
-
-    builder.append(getPropertyNameString(id));
-    builder.append(':');
-    builder.append(value);
-    builder.append(' ');
-    builder.append(captionsEdgeColorForTextColor(textColor).serialized());
-    if (important)
-        builder.appendLiteral(" !important");
-    builder.append(';');
-    if (id == CSSPropertyWebkitTextStroke) {
-        builder.append(" paint-order: stroke;");
-        builder.append(" stroke-linejoin: round;");
-        builder.append(" stroke-linecap: round;");
-    }
-
+    appendCSS(builder, CSSPropertyBorderRadius, String::format("%.02fpx", radius), behavior == kMACaptionAppearanceBehaviorUseValue);
     return builder.toString();
 }
 
 String CaptionUserPreferencesMediaAF::colorPropertyCSS(CSSPropertyID id, const Color& color, bool important) const
 {
     StringBuilder builder;
-
-    builder.append(getPropertyNameString(id));
-    builder.append(':');
-    builder.append(color.serialized());
-    if (important)
-        builder.appendLiteral(" !important");
-    builder.append(';');
-
+    appendCSS(builder, id, color.serialized(), important);
     return builder.toString();
 }
 
-String CaptionUserPreferencesMediaAF::strokeWidth() const
+bool CaptionUserPreferencesMediaAF::captionStrokeWidthForFont(float fontSize, const String& language, float& strokeWidth, bool& important) const
 {
-    static NeverDestroyed<const String> strokeWidthDefault(ASCIILiteral(" .03em "));
-
-    if (!MACaptionFontAttributeStrokeWidth && !canLoad_MediaAccessibility_MACaptionFontAttributeStrokeWidth())
-        return strokeWidthDefault;
+    if (!canLoad_MediaAccessibility_MACaptionAppearanceCopyFontDescriptorWithStrokeForStyle())
+        return false;
 
     MACaptionAppearanceBehavior behavior;
+    auto trackLanguage = language.createCFString();
+    CGFloat strokeWidthPt;
 
-    auto font = adoptCF(MACaptionAppearanceCopyFontDescriptorForStyle(kMACaptionAppearanceDomainUser, &behavior, kMACaptionAppearanceFontStyleDefault));
-    if (!font)
-        return strokeWidthDefault;
+    auto fontDescriptor = adoptCF(MACaptionAppearanceCopyFontDescriptorWithStrokeForStyle(kMACaptionAppearanceDomainUser, &behavior, kMACaptionAppearanceFontStyleDefault, trackLanguage.get(), fontSize, &strokeWidthPt));
 
-    auto strokeWidthAttribute = adoptCF(CTFontDescriptorCopyAttribute(font.get(), MACaptionFontAttributeStrokeWidth));
-    if (!strokeWidthAttribute)
-        return strokeWidthDefault;
+    if (!fontDescriptor)
+        return false;
 
-    int strokeWidth = 0;
-    if (!CFNumberGetValue(static_cast<CFNumberRef>(strokeWidthAttribute.get()), kCFNumberIntType, &strokeWidth))
-        return strokeWidthDefault;
+    // Since only half of the stroke is visible because the stroke is drawn before the fill, we double the stroke width here.
+    strokeWidth = strokeWidthPt * 2;
+    important = behavior == kMACaptionAppearanceBehaviorUseValue;
 
-    return String::format(" %dpx ", strokeWidth);
+    return true;
 }
 
 String CaptionUserPreferencesMediaAF::captionsTextEdgeCSS() const
 {
-    static NeverDestroyed<const String> edgeStyleRaised(ASCIILiteral(" -.05em -.05em 0 "));
-    static NeverDestroyed<const String> edgeStyleDepressed(ASCIILiteral(" .05em .05em 0 "));
-    static NeverDestroyed<const String> edgeStyleDropShadow(ASCIILiteral(" .075em .075em 0 "));
-
-    bool unused;
-    Color color = captionsTextColor(unused);
-    if (!color.isValid())
-        color = Color { Color::black };
-    color = captionsEdgeColorForTextColor(color);
+    static NeverDestroyed<const String> edgeStyleRaised(MAKE_STATIC_STRING_IMPL(" -.1em -.1em .16em "));
+    static NeverDestroyed<const String> edgeStyleDepressed(MAKE_STATIC_STRING_IMPL(" .1em .1em .16em "));
+    static NeverDestroyed<const String> edgeStyleDropShadow(MAKE_STATIC_STRING_IMPL(" 0 .1em .16em "));
 
     MACaptionAppearanceBehavior behavior;
     MACaptionAppearanceTextEdgeStyle textEdgeStyle = MACaptionAppearanceGetTextEdgeStyle(kMACaptionAppearanceDomainUser, &behavior);
-    switch (textEdgeStyle) {
-    case kMACaptionAppearanceTextEdgeStyleUndefined:
-    case kMACaptionAppearanceTextEdgeStyleNone:
+
+    if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleUndefined || textEdgeStyle == kMACaptionAppearanceTextEdgeStyleNone)
         return emptyString();
 
-    case kMACaptionAppearanceTextEdgeStyleRaised:
-        return cssPropertyWithTextEdgeColor(CSSPropertyTextShadow, edgeStyleRaised, color, behavior == kMACaptionAppearanceBehaviorUseValue);
-    case kMACaptionAppearanceTextEdgeStyleDepressed:
-        return cssPropertyWithTextEdgeColor(CSSPropertyTextShadow, edgeStyleDepressed, color, behavior == kMACaptionAppearanceBehaviorUseValue);
-    case kMACaptionAppearanceTextEdgeStyleDropShadow:
-        return cssPropertyWithTextEdgeColor(CSSPropertyTextShadow, edgeStyleDropShadow, color, behavior == kMACaptionAppearanceBehaviorUseValue);
-    case kMACaptionAppearanceTextEdgeStyleUniform:
-        return cssPropertyWithTextEdgeColor(CSSPropertyWebkitTextStroke, strokeWidth(), color, behavior == kMACaptionAppearanceBehaviorUseValue);
+    StringBuilder builder;
+    bool important = behavior == kMACaptionAppearanceBehaviorUseValue;
+    if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleRaised)
+        appendCSS(builder, CSSPropertyTextShadow, makeString(edgeStyleRaised.get(), " black"), important);
+    else if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleDepressed)
+        appendCSS(builder, CSSPropertyTextShadow, makeString(edgeStyleDepressed.get(), " black"), important);
+    else if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleDropShadow)
+        appendCSS(builder, CSSPropertyTextShadow, makeString(edgeStyleDropShadow.get(), " black"), important);
 
-    default:
-        ASSERT_NOT_REACHED();
-        break;
+    if (textEdgeStyle == kMACaptionAppearanceTextEdgeStyleDropShadow || textEdgeStyle == kMACaptionAppearanceTextEdgeStyleUniform) {
+        appendCSS(builder, CSSPropertyWebkitTextStrokeColor, "black", important);
+        appendCSS(builder, CSSPropertyPaintOrder, getValueName(CSSValueStroke), important);
+        appendCSS(builder, CSSPropertyStrokeLinejoin, getValueName(CSSValueRound), important);
+        appendCSS(builder, CSSPropertyStrokeLinecap, getValueName(CSSValueRound), important);
     }
 
-    return emptyString();
+    return builder.toString();
 }
 
 String CaptionUserPreferencesMediaAF::captionsDefaultFontCSS() const
@@ -469,6 +423,23 @@ String CaptionUserPreferencesMediaAF::captionsDefaultFontCSS() const
     builder.appendLiteral(": \"");
     builder.append(static_cast<CFStringRef>(name.get()));
     builder.append('"');
+
+    auto cascadeList = adoptCF(static_cast<CFArrayRef>(CTFontDescriptorCopyAttribute(font.get(), kCTFontCascadeListAttribute)));
+
+    if (cascadeList) {
+        for (CFIndex i = 0; i < CFArrayGetCount(cascadeList.get()); i++) {
+            auto fontCascade = static_cast<CTFontDescriptorRef>(CFArrayGetValueAtIndex(cascadeList.get(), i));
+            if (!fontCascade)
+                continue;
+            auto fontCascadeName = adoptCF(CTFontDescriptorCopyAttribute(fontCascade, kCTFontNameAttribute));
+            if (!fontCascadeName)
+                continue;
+            builder.append(", \"");
+            builder.append(static_cast<CFStringRef>(fontCascadeName.get()));
+            builder.append('"');
+        }
+    }
+
     if (behavior == kMACaptionAppearanceBehaviorUseValue)
         builder.appendLiteral(" !important");
     builder.append(';');
@@ -620,7 +591,7 @@ String CaptionUserPreferencesMediaAF::captionsStyleSheetOverride() const
     }
 #endif // HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
 
-    LOG(Media, "CaptionUserPreferencesMediaAF::captionsStyleSheetOverrideSetting sytle to:\n%s", captionsOverrideStyleSheet.toString().utf8().data());
+    LOG(Media, "CaptionUserPreferencesMediaAF::captionsStyleSheetOverrideSetting style to:\n%s", captionsOverrideStyleSheet.toString().utf8().data());
 
     return captionsOverrideStyleSheet.toString();
 }

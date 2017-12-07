@@ -160,33 +160,6 @@ float HarfBuzzShaper::HarfBuzzRun::xPositionForOffset(unsigned offset)
     return position;
 }
 
-static void normalizeCharacters(const TextRun& run, UChar* destination, unsigned length)
-{
-    unsigned position = 0;
-    bool error = false;
-    const UChar* source;
-    String stringFor8BitRun;
-    if (run.is8Bit()) {
-        stringFor8BitRun = String::make16BitFrom8BitSource(run.characters8(), run.length());
-        source = stringFor8BitRun.characters16();
-    } else
-        source = run.characters16();
-
-    while (position < length) {
-        UChar32 character;
-        unsigned nextPosition = position;
-        U16_NEXT(source, nextPosition, length, character);
-        // Don't normalize tabs as they are not treated as spaces for word-end.
-        if (FontCascade::treatAsSpace(character) && character != '\t')
-            character = ' ';
-        else if (FontCascade::treatAsZeroWidthSpaceInComplexScript(character))
-            character = zeroWidthSpace;
-        U16_APPEND(destination, position, length, character, error);
-        ASSERT_UNUSED(error, !error);
-        position = nextPosition;
-    }
-}
-
 HarfBuzzShaper::HarfBuzzShaper(const FontCascade* font, const TextRun& run)
     : m_font(font)
     , m_normalizedBufferLength(0)
@@ -197,9 +170,7 @@ HarfBuzzShaper::HarfBuzzShaper(const FontCascade* font, const TextRun& run)
     , m_padError(0)
     , m_letterSpacing(font->letterSpacing())
 {
-    m_normalizedBuffer = std::make_unique<UChar[]>(m_run.length() + 1);
-    m_normalizedBufferLength = m_run.length();
-    normalizeCharacters(m_run, m_normalizedBuffer.get(), m_normalizedBufferLength);
+    setNormalizedBuffer();
     setPadding(m_run.expansion());
     setFontFeatures();
 }
@@ -220,7 +191,7 @@ static void normalizeSpacesAndMirrorChars(const UChar* source, UChar* destinatio
         // Don't normalize tabs as they are not treated as spaces for word-end
         if (FontCascade::treatAsSpace(character) && character != '\t')
             character = ' ';
-        else if (FontCascade::treatAsZeroWidthSpace(character))
+        else if (FontCascade::treatAsZeroWidthSpaceInComplexScript(character))
             character = zeroWidthSpace;
         else if (normalizeMode == HarfBuzzShaper::NormalizeMirrorChars)
             character = u_charMirror(character);
@@ -444,10 +415,34 @@ bool HarfBuzzShaper::collectHarfBuzzRuns()
             nextScript = uscript_getScript(character, &errorCode);
             if (U_FAILURE(errorCode))
                 return false;
-            if ((nextFontData != currentFontData) || ((currentScript != nextScript) && (nextScript != USCRIPT_INHERITED) && (!uscript_hasScript(character, currentScript))))
+
+            if (nextFontData != currentFontData)
                 break;
-            if (nextScript == USCRIPT_INHERITED)
-                nextScript = currentScript;
+
+            // §5.1 Handling Characters with the Common Script Property.
+            // Programs must resolve any of the special Script property values, such as Common,
+            // based on the context of the surrounding characters. A simple heuristic uses the
+            // script of the preceding character, which works well in many cases.
+            // http://www.unicode.org/reports/tr24/#Common.
+            //
+            // FIXME: cover all other cases mentioned in the spec (ie. brackets or quotation marks).
+            // https://bugs.webkit.org/show_bug.cgi?id=177003.
+            //
+            // If next script is inherited or common, keep using the current script.
+            if (nextScript == USCRIPT_INHERITED || nextScript == USCRIPT_COMMON) {
+                currentCharacterPosition = iterator.characters();
+                continue;
+            }
+            // If current script is inherited or common, set the next script as current.
+            if (currentScript == USCRIPT_INHERITED || currentScript == USCRIPT_COMMON) {
+                currentScript = nextScript;
+                currentCharacterPosition = iterator.characters();
+                continue;
+            }
+
+            if (currentScript != nextScript && !uscript_hasScript(character, currentScript))
+                break;
+
             currentCharacterPosition = iterator.characters();
         }
         unsigned numCharactersOfCurrentRun = iterator.currentIndex() - startIndexOfCurrentRun;

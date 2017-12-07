@@ -162,7 +162,7 @@ void RenderListBox::selectionChanged()
     }
 
     if (AXObjectCache* cache = document().existingAXObjectCache())
-        cache->selectedChildrenChanged(this);
+        cache->deferSelectedChildrenChangedIfNeeded(selectElement());
 }
 
 void RenderListBox::layout()
@@ -266,7 +266,9 @@ LayoutUnit RenderListBox::listHeight() const
 
 RenderBox::LogicalExtentComputedValues RenderListBox::computeLogicalHeight(LayoutUnit, LayoutUnit logicalTop) const
 {
-    LayoutUnit height = itemHeight() * size() - rowSpacing + verticalBorderAndPaddingExtent();
+    LayoutUnit height = itemHeight() * size() - rowSpacing;
+    cacheIntrinsicContentLogicalHeightForFlexItem(height);
+    height += verticalBorderAndPaddingExtent();
     return RenderBox::computeLogicalHeight(height, logicalTop);
 }
 
@@ -284,7 +286,7 @@ LayoutRect RenderListBox::itemBoundingBoxRect(const LayoutPoint& additionalOffse
     return LayoutRect(x, y, contentWidth(), itemHeight());
 }
 
-void RenderListBox::paintItem(PaintInfo& paintInfo, const LayoutPoint& paintOffset, PaintFunction paintFunction)
+void RenderListBox::paintItem(PaintInfo& paintInfo, const LayoutPoint& paintOffset, const PaintFunction& paintFunction)
 {
     int listItemsSize = numItems();
     int firstVisibleItem = m_indexOfFirstVisibleItemInsidePaddingTopArea.value_or(m_indexOffset);

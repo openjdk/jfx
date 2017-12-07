@@ -37,7 +37,7 @@ class JavaRuntimeObject : public RuntimeObject {
 public:
     typedef RuntimeObject Base;
 
-    static JavaRuntimeObject* create(ExecState* exec, JSGlobalObject* globalObject, PassRefPtr<JavaInstance> javaInstance)
+    static JavaRuntimeObject* create(ExecState* exec, JSGlobalObject* globalObject, RefPtr<JavaInstance> javaInstance)
     {
         // FIXME: deprecatedGetDOMStructure uses the prototype off of the wrong global object
         // We need to pass in the right global object for "i".
@@ -57,7 +57,7 @@ public:
     }
 
 private:
-    JavaRuntimeObject(ExecState*, JSGlobalObject*, Structure*, PassRefPtr<JavaInstance>);
+    JavaRuntimeObject(ExecState*, JSGlobalObject*, Structure*, RefPtr<JavaInstance>);
     void finishCreation(JSGlobalObject*);
 };
 

@@ -26,21 +26,20 @@
 #pragma once
 
 #include "ImageFrame.h"
-#include "TextStream.h"
 
 #include <wtf/Forward.h>
 #include <wtf/Optional.h>
 #include <wtf/SynchronizedFixedQueue.h>
 #include <wtf/WorkQueue.h>
-#include <wtf/threads/BinarySemaphore.h>
 
 namespace WebCore {
 
 class GraphicsContext;
 class Image;
 class ImageDecoder;
+class URL;
 
-class ImageFrameCache : public RefCounted<ImageFrameCache> {
+class ImageFrameCache : public ThreadSafeRefCounted<ImageFrameCache> {
     friend class ImageSource;
 public:
     static Ref<ImageFrameCache> create(Image* image)
@@ -66,18 +65,23 @@ public:
 
     void growFrames();
     void clearMetadata();
+    void clearImage() { m_image = nullptr; }
+    URL sourceURL() const;
 
     // Asynchronous image decoding
     void startAsyncDecodingQueue();
-    bool requestFrameAsyncDecodingAtIndex(size_t, SubsamplingLevel, const IntSize&);
+    void requestFrameAsyncDecodingAtIndex(size_t, SubsamplingLevel, const std::optional<IntSize>&);
     void stopAsyncDecodingQueue();
-    bool hasDecodingQueue() { return m_decodingQueue; }
+    bool hasAsyncDecodingQueue() const { return m_decodingQueue; }
+    bool isAsyncDecodingQueueIdle() const;
 
     // Image metadata which is calculated either by the ImageDecoder or directly
     // from the NativeImage if this class was created for a memory image.
-    bool isSizeAvailable();
+    EncodedDataStatus encodedDataStatus();
+    bool isSizeAvailable() { return encodedDataStatus() >= EncodedDataStatus::SizeAvailable; }
     size_t frameCount();
     RepetitionCount repetitionCount();
+    String uti();
     String filenameExtension();
     std::optional<IntPoint> hotSpot();
 
@@ -88,12 +92,12 @@ public:
     Color singlePixelSolidColor();
 
     // ImageFrame metadata which does not require caching the ImageFrame.
-    bool frameIsBeingDecodedAtIndex(size_t, const std::optional<IntSize>& sizeForDrawing);
-    bool frameIsCompleteAtIndex(size_t);
+    bool frameIsBeingDecodedAndIsCompatibleWithOptionsAtIndex(size_t, const DecodingOptions&);
+    DecodingStatus frameDecodingStatusAtIndex(size_t);
     bool frameHasAlphaAtIndex(size_t);
     bool frameHasImageAtIndex(size_t);
-    bool frameHasValidNativeImageAtIndex(size_t, const std::optional<SubsamplingLevel>&, const std::optional<IntSize>& sizeForDrawing);
-    bool frameHasDecodedNativeImage(size_t);
+    bool frameHasFullSizeNativeImageAtIndex(size_t, const std::optional<SubsamplingLevel>&);
+    bool frameHasDecodedNativeImageCompatibleWithOptionsAtIndex(size_t, const std::optional<SubsamplingLevel>&, const DecodingOptions&);
     SubsamplingLevel frameSubsamplingLevelAtIndex(size_t);
 
     // ImageFrame metadata which forces caching or re-caching the ImageFrame.
@@ -101,7 +105,9 @@ public:
     unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default);
     float frameDurationAtIndex(size_t);
     ImageOrientation frameOrientationAtIndex(size_t);
-    NativeImagePtr frameImageAtIndex(size_t, const std::optional<SubsamplingLevel>&, const std::optional<IntSize>& sizeForDrawing);
+
+    NativeImagePtr frameImageAtIndex(size_t);
+    NativeImagePtr frameImageAtIndexCacheIfNeeded(size_t, SubsamplingLevel);
 
 private:
     ImageFrameCache(Image*);
@@ -125,14 +131,16 @@ private:
     void decodedSizeReset(unsigned decodedSize);
 
     void setNativeImage(NativeImagePtr&&);
-    void setFrameNativeImageAtIndex(NativeImagePtr&&, size_t, SubsamplingLevel, const std::optional<IntSize>& sizeForDrawing);
-    void setFrameMetadataAtIndex(size_t, SubsamplingLevel, const std::optional<IntSize>& sizeForDrawing);
-    void replaceFrameNativeImageAtIndex(NativeImagePtr&&, size_t, SubsamplingLevel, const std::optional<IntSize>& sizeForDrawing);
-    void cacheFrameNativeImageAtIndex(NativeImagePtr&&, size_t, SubsamplingLevel, const IntSize& sizeForDrawing);
+    void cacheMetadataAtIndex(size_t, SubsamplingLevel, DecodingStatus = DecodingStatus::Invalid);
+    void cacheNativeImageAtIndex(NativeImagePtr&&, size_t, SubsamplingLevel, const DecodingOptions&, DecodingStatus = DecodingStatus::Invalid);
+    void cacheNativeImageAtIndexAsync(NativeImagePtr&&, size_t, SubsamplingLevel, const DecodingOptions&, DecodingStatus);
 
-    Ref<WorkQueue> decodingQueue();
+    struct ImageFrameRequest;
+    static const int BufferSize = 8;
+    WorkQueue& decodingQueue();
+    SynchronizedFixedQueue<ImageFrameRequest, BufferSize>& frameRequestQueue();
 
-    const ImageFrame& frameAtIndexCacheIfNeeded(size_t, ImageFrame::Caching, const std::optional<SubsamplingLevel>& = { }, const std::optional<IntSize>& sizeForDrawing = { });
+    const ImageFrame& frameAtIndexCacheIfNeeded(size_t, ImageFrame::Caching, const std::optional<SubsamplingLevel>& = { });
 
     Image* m_image { nullptr };
     RefPtr<ImageDecoder> m_decoder;
@@ -145,17 +153,24 @@ private:
     struct ImageFrameRequest {
         size_t index;
         SubsamplingLevel subsamplingLevel;
-        IntSize sizeForDrawing;
+        DecodingOptions decodingOptions;
+        DecodingStatus decodingStatus;
+        bool operator==(const ImageFrameRequest& other) const
+        {
+            return index == other.index && subsamplingLevel == other.subsamplingLevel && decodingOptions == other.decodingOptions && decodingStatus == other.decodingStatus;
+        }
     };
-    static const int BufferSize = 8;
     using FrameRequestQueue = SynchronizedFixedQueue<ImageFrameRequest, BufferSize>;
-    FrameRequestQueue m_frameRequestQueue;
+    using FrameCommitQueue = Deque<ImageFrameRequest, BufferSize>;
+    RefPtr<FrameRequestQueue> m_frameRequestQueue;
+    FrameCommitQueue m_frameCommitQueue;
     RefPtr<WorkQueue> m_decodingQueue;
 
     // Image metadata.
-    std::optional<bool> m_isSizeAvailable;
+    std::optional<EncodedDataStatus> m_encodedDataStatus;
     std::optional<size_t> m_frameCount;
     std::optional<RepetitionCount> m_repetitionCount;
+    std::optional<String> m_uti;
     std::optional<String> m_filenameExtension;
     std::optional<std::optional<IntPoint>> m_hotSpot;
 

@@ -33,6 +33,7 @@
 #include "NavigationAction.h"
 #include "ResourceRequest.h"
 #include <functional>
+#include <wtf/Function.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,22 +41,16 @@ namespace WebCore {
 
 class FormState;
 
-using ContentPolicyDecisionFunction = std::function<void(PolicyAction)>;
-using NavigationPolicyDecisionFunction = std::function<void(const ResourceRequest&, FormState*, bool shouldContinue)>;
-using NewWindowPolicyDecisionFunction = std::function<void(const ResourceRequest&, FormState*, const String& frameName, const NavigationAction&, bool shouldContinue)>;
+using NavigationPolicyDecisionFunction = Function<void(const ResourceRequest&, FormState*, bool shouldContinue)>;
 
 class PolicyCallback {
 public:
-    void clear();
-    void set(const ResourceRequest&, FormState*, NavigationPolicyDecisionFunction);
-    void set(const ResourceRequest&, FormState*, const String& frameName, const NavigationAction&, NewWindowPolicyDecisionFunction);
-    void set(ContentPolicyDecisionFunction);
+    void set(const ResourceRequest&, FormState*, NavigationPolicyDecisionFunction&&);
 
     const ResourceRequest& request() const { return m_request; }
     void clearRequest();
 
     void call(bool shouldContinue);
-    void call(PolicyAction);
     void cancel();
 
 private:
@@ -65,8 +60,6 @@ private:
     NavigationAction m_navigationAction;
 
     NavigationPolicyDecisionFunction m_navigationFunction;
-    NewWindowPolicyDecisionFunction m_newWindowFunction;
-    ContentPolicyDecisionFunction m_contentFunction;
 };
 
 } // namespace WebCore

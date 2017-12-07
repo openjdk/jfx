@@ -31,6 +31,7 @@
 #include "JIT.h"
 #include "JSCInlines.h"
 #include "LLIntData.h"
+#include "ThunkGenerators.h"
 #include "VM.h"
 
 namespace JSC {
@@ -80,6 +81,15 @@ MacroAssemblerCodeRef JITThunks::ctiStub(VM* vm, ThunkGenerator generator)
         entry.iterator->value = generator(vm);
     }
     return entry.iterator->value;
+}
+
+MacroAssemblerCodeRef JITThunks::existingCTIStub(ThunkGenerator generator)
+{
+    LockHolder locker(m_lock);
+    CTIStubMap::iterator entry = m_ctiStubMap.find(generator);
+    if (entry == m_ctiStubMap.end())
+        return MacroAssemblerCodeRef();
+    return entry->value;
 }
 
 void JITThunks::finalize(Handle<Unknown> handle, void*)

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(WEB_TIMING)
-
 #include "ExceptionOr.h"
 #include "PerformanceEntry.h"
 #include "PerformanceObserverCallback.h"
@@ -51,6 +49,8 @@ public:
         return adoptRef(*new PerformanceObserver(context, WTFMove(callback)));
     }
 
+    void disassociate();
+
     ExceptionOr<void> observe(Init&&);
     void disconnect();
 
@@ -70,5 +70,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(WEB_TIMING)

@@ -28,13 +28,23 @@
 
 #if ENABLE(SUBTLE_CRYPTO)
 
+#include "CryptoAlgorithmAesKeyParams.h"
 #include "CryptoAlgorithmRegistry.h"
 #include "CryptoKeyDataOctetSequence.h"
+#include "ExceptionOr.h"
 #include "JsonWebKey.h"
 #include <wtf/text/Base64.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+CryptoAesKeyAlgorithm AesKeyAlgorithm::dictionary() const
+{
+    CryptoAesKeyAlgorithm result;
+    result.name = this->name();
+    result.length = this->length();
+    return result;
+}
 
 static inline bool lengthIsValid(size_t length)
 {
@@ -63,7 +73,6 @@ bool CryptoKeyAES::isValidAESAlgorithm(CryptoAlgorithmIdentifier algorithm)
 {
     return algorithm == CryptoAlgorithmIdentifier::AES_CTR
         || algorithm == CryptoAlgorithmIdentifier::AES_CBC
-        || algorithm == CryptoAlgorithmIdentifier::AES_CMAC
         || algorithm == CryptoAlgorithmIdentifier::AES_GCM
         || algorithm == CryptoAlgorithmIdentifier::AES_CFB
         || algorithm == CryptoAlgorithmIdentifier::AES_KW;
@@ -112,6 +121,14 @@ JsonWebKey CryptoKeyAES::exportJwk() const
     result.key_ops = usages();
     result.ext = extractable();
     return result;
+}
+
+ExceptionOr<size_t> CryptoKeyAES::getKeyLength(const CryptoAlgorithmParameters& parameters)
+{
+    auto& aesParameters = downcast<CryptoAlgorithmAesKeyParams>(parameters);
+    if (!lengthIsValid(aesParameters.length))
+        return Exception { OperationError };
+    return aesParameters.length;
 }
 
 std::unique_ptr<KeyAlgorithm> CryptoKeyAES::buildAlgorithm() const

@@ -26,7 +26,9 @@
 #include "config.h"
 #include "RenderBoxModelObject.h"
 
+#include "BitmapImage.h"
 #include "BorderEdge.h"
+#include "CachedImage.h"
 #include "FloatRoundedRect.h"
 #include "Frame.h"
 #include "FrameView.h"
@@ -39,6 +41,7 @@
 #include "ImageQualityController.h"
 #include "Path.h"
 #include "RenderBlock.h"
+#include "RenderFlexibleBox.h"
 #include "RenderInline.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
@@ -58,6 +61,10 @@
 #include <wtf/NeverDestroyed.h>
 #if !ASSERT_DISABLED
 #include <wtf/SetForScope.h>
+#endif
+
+#if PLATFORM(IOS)
+#include "RuntimeApplicationChecks.h"
 #endif
 
 namespace WebCore {
@@ -229,41 +236,110 @@ static LayoutSize accumulateInFlowPositionOffsets(const RenderObject* child)
     return offset;
 }
 
+static inline bool isOutOfFlowPositionedWithImplicitHeight(const RenderBoxModelObject& child)
+{
+    return child.isOutOfFlowPositioned() && !child.style().logicalTop().isAuto() && !child.style().logicalBottom().isAuto();
+}
+
+RenderBlock* RenderBoxModelObject::containingBlockForAutoHeightDetection(Length logicalHeight) const
+{
+    // For percentage heights: The percentage is calculated with respect to the
+    // height of the generated box's containing block. If the height of the
+    // containing block is not specified explicitly (i.e., it depends on content
+    // height), and this element is not absolutely positioned, the used height is
+    // calculated as if 'auto' was specified.
+    if (!logicalHeight.isPercentOrCalculated() || isOutOfFlowPositioned())
+        return nullptr;
+
+    // Anonymous block boxes are ignored when resolving percentage values that
+    // would refer to it: the closest non-anonymous ancestor box is used instead.
+    auto* cb = containingBlock();
+    while (cb && cb->isAnonymous() && !is<RenderView>(cb))
+        cb = cb->containingBlock();
+    if (!cb)
+        return nullptr;
+
+    // Matching RenderBox::percentageLogicalHeightIsResolvable() by
+    // ignoring table cell's attribute value, where it says that table cells
+    // violate what the CSS spec says to do with heights. Basically we don't care
+    // if the cell specified a height or not.
+    if (cb->isTableCell())
+        return nullptr;
+
+    // Match RenderBox::availableLogicalHeightUsing by special casing the layout
+    // view. The available height is taken from the frame.
+    if (cb->isRenderView())
+        return nullptr;
+
+    if (isOutOfFlowPositionedWithImplicitHeight(*cb))
+        return nullptr;
+
+    return cb;
+}
+
 bool RenderBoxModelObject::hasAutoHeightOrContainingBlockWithAutoHeight() const
 {
+    const auto* thisBox = isBox() ? downcast<RenderBox>(this) : nullptr;
     Length logicalHeightLength = style().logicalHeight();
-    if (logicalHeightLength.isAuto())
+    auto* cb = containingBlockForAutoHeightDetection(logicalHeightLength);
+
+    if (logicalHeightLength.isPercentOrCalculated() && cb && isBox())
+        cb->addPercentHeightDescendant(*const_cast<RenderBox*>(downcast<RenderBox>(this)));
+
+    if (thisBox && thisBox->isFlexItem()) {
+        auto& flexBox = downcast<RenderFlexibleBox>(*parent());
+        if (flexBox.childLogicalHeightForPercentageResolution(*thisBox))
+            return false;
+    }
+
+    if (thisBox && thisBox->isGridItem() && thisBox->hasOverrideContainingBlockLogicalHeight())
+        return false;
+
+    if (logicalHeightLength.isAuto() && !isOutOfFlowPositionedWithImplicitHeight(*this))
         return true;
 
-    // For percentage heights: The percentage is calculated with respect to the height of the generated box's
-    // containing block. If the height of the containing block is not specified explicitly (i.e., it depends
-    // on content height), and this element is not absolutely positioned, the value computes to 'auto'.
-    if (!logicalHeightLength.isPercentOrCalculated() || isOutOfFlowPositioned() || document().inQuirksMode())
+    if (document().inQuirksMode())
         return false;
 
-    // Anonymous block boxes are ignored when resolving percentage values that would refer to it:
-    // the closest non-anonymous ancestor box is used instead.
-    RenderBlock* cb = containingBlock();
-    while (cb && !is<RenderView>(*cb) && cb->isAnonymous())
-        cb = cb->containingBlock();
+    if (cb)
+        return !cb->hasDefiniteLogicalHeight();
 
-    // Matching RenderBox::percentageLogicalHeightIsResolvableFromBlock() by
-    // ignoring table cell's attribute value, where it says that table cells violate
-    // what the CSS spec says to do with heights. Basically we
-    // don't care if the cell specified a height or not.
-    if (cb->isTableCell())
-        return false;
+    return false;
+}
 
-    // Match RenderBox::availableLogicalHeightUsing by special casing
-    // the render view. The available height is taken from the frame.
-    if (cb->isRenderView())
-        return false;
+DecodingMode RenderBoxModelObject::decodingModeForImageDraw(const Image& image, const PaintInfo& paintInfo) const
+{
+    if (!is<BitmapImage>(image))
+        return DecodingMode::Synchronous;
 
-    if (cb->isOutOfFlowPositioned() && !cb->style().logicalTop().isAuto() && !cb->style().logicalBottom().isAuto())
-        return false;
+    const BitmapImage& bitmapImage = downcast<BitmapImage>(image);
+    if (bitmapImage.canAnimate()) {
+        // The DecodingMode for the current frame has to be Synchronous. The DecodingMode
+        // for the next frame will be calculated in BitmapImage::internalStartAnimation().
+        return DecodingMode::Synchronous;
+    }
 
-    // If the height of the containing block computes to 'auto', then it hasn't been 'specified explictly'.
-    return cb->hasAutoHeightOrContainingBlockWithAutoHeight();
+    // Large image case.
+#if PLATFORM(IOS)
+    if (IOSApplication::isIBooksStorytime())
+        return DecodingMode::Synchronous;
+#endif
+    if (bitmapImage.isLargeImageAsyncDecodingEnabledForTesting())
+        return DecodingMode::Asynchronous;
+    if (document().isImageDocument())
+        return DecodingMode::Synchronous;
+    if (paintInfo.paintBehavior & PaintBehaviorSnapshotting)
+        return DecodingMode::Synchronous;
+    if (!settings().largeImageAsyncDecodingEnabled())
+        return DecodingMode::Synchronous;
+    if (!bitmapImage.canUseAsyncDecodingForLargeImages())
+        return DecodingMode::Synchronous;
+    if (paintInfo.paintBehavior & PaintBehaviorTileFirstPaint)
+        return DecodingMode::Asynchronous;
+    // FIXME: isVisibleInViewport() is not cheap. Find a way to make this condition faster.
+    if (!isVisibleInViewport())
+        return DecodingMode::Asynchronous;
+    return DecodingMode::Synchronous;
 }
 
 LayoutSize RenderBoxModelObject::relativePositionOffset() const
@@ -842,8 +918,16 @@ void RenderBoxModelObject::paintFillLayerExtended(const PaintInfo& paintInfo, co
             auto compositeOp = op == CompositeSourceOver ? bgLayer.composite() : op;
             context.setDrawLuminanceMask(bgLayer.maskSourceType() == MaskLuminance);
 
+            if (is<BitmapImage>(image.get()))
+                downcast<BitmapImage>(*image).updateFromSettings(settings());
+
             auto interpolation = chooseInterpolationQuality(context, *image, &bgLayer, geometry.tileSize());
-            context.drawTiledImage(*image, geometry.destRect(), toLayoutPoint(geometry.relativePhase()), geometry.tileSize(), geometry.spaceSize(), ImagePaintingOptions(compositeOp, bgLayer.blendMode(), ImageOrientationDescription(), interpolation));
+            auto decodingMode = decodingModeForImageDraw(*image, paintInfo);
+            auto drawResult = context.drawTiledImage(*image, geometry.destRect(), toLayoutPoint(geometry.relativePhase()), geometry.tileSize(), geometry.spaceSize(), ImagePaintingOptions(compositeOp, bgLayer.blendMode(), decodingMode, ImageOrientationDescription(), interpolation));
+            if (drawResult == ImageDrawResult::DidRequestDecoding) {
+                ASSERT(bgImage->isCachedImage());
+                bgImage->cachedImage()->addPendingImageDrawingClient(*this);
+            }
         }
     }
 
@@ -1157,7 +1241,7 @@ BackgroundImageGeometry RenderBoxModelObject::calculateBackgroundImageGeometry(c
     auto clientForBackgroundImage = backgroundObject ? backgroundObject : this;
     LayoutSize tileSize = calculateFillTileSize(fillLayer, positioningAreaSize);
     if (StyleImage* layerImage = fillLayer.image())
-        layerImage->setContainerSizeForRenderer(clientForBackgroundImage, tileSize, style().effectiveZoom());
+        layerImage->setContainerContextForRenderer(*clientForBackgroundImage, tileSize, style().effectiveZoom());
 
     EFillRepeat backgroundRepeatX = fillLayer.repeatX();
     EFillRepeat backgroundRepeatY = fillLayer.repeatY();
@@ -1279,7 +1363,7 @@ bool RenderBoxModelObject::paintNinePieceImage(GraphicsContext& graphicsContext,
     LayoutSize source = calculateImageIntrinsicDimensions(styleImage, destination.size(), DoNotScaleByEffectiveZoom);
 
     // If both values are ‘auto’ then the intrinsic width and/or height of the image should be used, if any.
-    styleImage->setContainerSizeForRenderer(this, source, style.effectiveZoom());
+    styleImage->setContainerContextForRenderer(*this, source, style.effectiveZoom());
 
     ninePieceImage.paint(graphicsContext, this, style, destination, source, deviceScaleFactor, op);
     return true;
@@ -1684,6 +1768,12 @@ void RenderBoxModelObject::paintBorder(const PaintInfo& info, const LayoutRect& 
     if (rect.isEmpty())
         return;
 
+    auto rectToClipOut = paintRectToClipOutFromBorder(rect);
+    bool appliedClipAlready = !rectToClipOut.isEmpty();
+    GraphicsContextStateSaver stateSave(graphicsContext, appliedClipAlready);
+    if (!rectToClipOut.isEmpty())
+        graphicsContext.clipOut(snapRectToDevicePixels(rectToClipOut, document().deviceScaleFactor()));
+
     // border-image is not affected by border-radius.
     if (paintNinePieceImage(graphicsContext, rect, style, style.borderImage()))
         return;
@@ -1826,7 +1916,7 @@ void RenderBoxModelObject::paintBorder(const PaintInfo& info, const LayoutRect& 
     }
 
     bool clipToOuterBorder = outerBorder.isRounded();
-    GraphicsContextStateSaver stateSaver(graphicsContext, clipToOuterBorder);
+    GraphicsContextStateSaver stateSaver(graphicsContext, clipToOuterBorder && !appliedClipAlready);
     if (clipToOuterBorder) {
         // Clip to the inner and outer radii rects.
         if (bleedAvoidance != BackgroundBleedUseTransparencyLayer)

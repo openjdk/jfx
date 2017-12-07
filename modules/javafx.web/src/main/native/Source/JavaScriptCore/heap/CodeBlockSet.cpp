@@ -47,7 +47,7 @@ void CodeBlockSet::add(CodeBlock* codeBlock)
     ASSERT_UNUSED(isNewEntry, isNewEntry);
 }
 
-void CodeBlockSet::promoteYoungCodeBlocks(const LockHolder&)
+void CodeBlockSet::promoteYoungCodeBlocks(const AbstractLocker&)
 {
     ASSERT(m_lock.isLocked());
     m_oldCodeBlocks.add(m_newCodeBlocks.begin(), m_newCodeBlocks.end());
@@ -86,7 +86,7 @@ void CodeBlockSet::deleteUnmarkedAndUnreferenced(VM& vm, CollectionScope scope)
             codeBlock->structure(vm)->classInfo()->methodTable.destroy(codeBlock);
             set.remove(codeBlock);
         }
-        unmarked.resize(0);
+        unmarked.shrink(0);
     };
 
     switch (scope) {
@@ -103,7 +103,7 @@ void CodeBlockSet::deleteUnmarkedAndUnreferenced(VM& vm, CollectionScope scope)
     promoteYoungCodeBlocks(locker);
 }
 
-bool CodeBlockSet::contains(const LockHolder&, void* candidateCodeBlock)
+bool CodeBlockSet::contains(const AbstractLocker&, void* candidateCodeBlock)
 {
     RELEASE_ASSERT(m_lock.isLocked());
     CodeBlock* codeBlock = static_cast<CodeBlock*>(candidateCodeBlock);

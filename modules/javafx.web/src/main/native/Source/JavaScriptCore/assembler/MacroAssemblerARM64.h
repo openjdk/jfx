@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012, 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,13 +34,13 @@
 
 namespace JSC {
 
-class MacroAssemblerARM64 : public AbstractMacroAssembler<ARM64Assembler, MacroAssemblerARM64> {
+class MacroAssemblerARM64 : public AbstractMacroAssembler<ARM64Assembler> {
 public:
     static const unsigned numGPRs = 32;
     static const unsigned numFPRs = 32;
 
-    static const RegisterID dataTempRegister = ARM64Registers::ip0;
-    static const RegisterID memoryTempRegister = ARM64Registers::ip1;
+    static constexpr RegisterID dataTempRegister = ARM64Registers::ip0;
+    static constexpr RegisterID memoryTempRegister = ARM64Registers::ip1;
 
     RegisterID scratchRegister()
     {
@@ -909,6 +909,12 @@ public:
         xor32(dest, src, dest);
     }
 
+    void xor32(Address src, RegisterID dest)
+    {
+        load32(src, getCachedDataTempRegisterIDAndInvalidate());
+        xor32(dataTempRegister, dest);
+    }
+
     void xor32(RegisterID op1, RegisterID op2, RegisterID dest)
     {
         m_assembler.eor<32>(dest, op1, op2);
@@ -990,6 +996,12 @@ public:
             signExtend32ToPtr(imm, getCachedDataTempRegisterIDAndInvalidate());
             m_assembler.eor<64>(dest, src, dataTempRegister);
         }
+    }
+
+    void xor64(Address src, RegisterID dest)
+    {
+        load64(src, getCachedDataTempRegisterIDAndInvalidate());
+        xor64(dataTempRegister, dest);
     }
 
     void not32(RegisterID src, RegisterID dest)
@@ -1329,6 +1341,16 @@ public:
     void store64(RegisterID src, RegisterID dest, PostIndex simm)
     {
         m_assembler.str<64>(src, dest, simm);
+    }
+
+    void storeZero64(ImplicitAddress address)
+    {
+        store64(ARM64Registers::zr, address);
+    }
+
+    void storeZero64(BaseIndex address)
+    {
+        store64(ARM64Registers::zr, address);
     }
 
     DataLabel32 store64WithAddressOffsetPatch(RegisterID src, Address address)
@@ -2233,13 +2255,13 @@ public:
     void moveConditionally32(RelationalCondition cond, RegisterID left, RegisterID right, RegisterID src, RegisterID dest)
     {
         m_assembler.cmp<32>(left, right);
-        m_assembler.csel<32>(dest, src, dest, ARM64Condition(cond));
+        m_assembler.csel<64>(dest, src, dest, ARM64Condition(cond));
     }
 
     void moveConditionally32(RelationalCondition cond, RegisterID left, RegisterID right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
     {
         m_assembler.cmp<32>(left, right);
-        m_assembler.csel<32>(dest, thenCase, elseCase, ARM64Condition(cond));
+        m_assembler.csel<64>(dest, thenCase, elseCase, ARM64Condition(cond));
     }
 
     void moveConditionally32(RelationalCondition cond, RegisterID left, TrustedImm32 right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
@@ -2297,19 +2319,19 @@ public:
     void moveConditionallyTest32(ResultCondition cond, RegisterID testReg, RegisterID mask, RegisterID src, RegisterID dest)
     {
         m_assembler.tst<32>(testReg, mask);
-        m_assembler.csel<32>(dest, src, dest, ARM64Condition(cond));
+        m_assembler.csel<64>(dest, src, dest, ARM64Condition(cond));
     }
 
     void moveConditionallyTest32(ResultCondition cond, RegisterID left, RegisterID right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
     {
         m_assembler.tst<32>(left, right);
-        m_assembler.csel<32>(dest, thenCase, elseCase, ARM64Condition(cond));
+        m_assembler.csel<64>(dest, thenCase, elseCase, ARM64Condition(cond));
     }
 
     void moveConditionallyTest32(ResultCondition cond, RegisterID left, TrustedImm32 right, RegisterID thenCase, RegisterID elseCase, RegisterID dest)
     {
         test32(left, right);
-        m_assembler.csel<32>(dest, thenCase, elseCase, ARM64Condition(cond));
+        m_assembler.csel<64>(dest, thenCase, elseCase, ARM64Condition(cond));
     }
 
     void moveConditionallyTest64(ResultCondition cond, RegisterID testReg, RegisterID mask, RegisterID src, RegisterID dest)
@@ -2549,10 +2571,15 @@ public:
         return branch64(cond, memoryTempRegister, right);
     }
 
-    Jump branchPtr(RelationalCondition cond, BaseIndex left, RegisterID right)
+    Jump branch64(RelationalCondition cond, BaseIndex left, RegisterID right)
     {
         load64(left, getCachedMemoryTempRegisterIDAndInvalidate());
         return branch64(cond, memoryTempRegister, right);
+    }
+
+    Jump branchPtr(RelationalCondition cond, BaseIndex left, RegisterID right)
+    {
+        return branch64(cond, left, right);
     }
 
     Jump branch8(RelationalCondition cond, Address left, TrustedImm32 right)
@@ -3087,6 +3114,12 @@ public:
         return Call(label, Call::LinkableNearTail);
     }
 
+    ALWAYS_INLINE Call threadSafePatchableNearCall()
+    {
+        m_assembler.bl();
+        return Call(m_assembler.label(), Call::LinkableNear);
+    }
+
     ALWAYS_INLINE void ret()
     {
         m_assembler.ret();
@@ -3348,6 +3381,8 @@ public:
         m_assembler.brk(imm);
     }
 
+    static bool isBreakpoint(void* address) { return ARM64Assembler::isBrk(address); }
+
     void nop()
     {
         m_assembler.nop();
@@ -3373,6 +3408,290 @@ public:
     {
         m_assembler.dmbISH();
     }
+
+    void loadAcq8SignedExtendTo32(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldar<8>(dest, extractSimpleAddress(address));
+    }
+
+    void loadAcq8(ImplicitAddress address, RegisterID dest)
+    {
+        loadAcq8SignedExtendTo32(address, dest);
+        and32(TrustedImm32(0xff), dest);
+    }
+
+    void storeRel8(RegisterID src, ImplicitAddress address)
+    {
+        m_assembler.stlr<8>(src, extractSimpleAddress(address));
+    }
+
+    void loadAcq16SignedExtendTo32(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldar<16>(dest, extractSimpleAddress(address));
+    }
+
+    void loadAcq16(ImplicitAddress address, RegisterID dest)
+    {
+        loadAcq16SignedExtendTo32(address, dest);
+        and32(TrustedImm32(0xffff), dest);
+    }
+
+    void storeRel16(RegisterID src, ImplicitAddress address)
+    {
+        m_assembler.stlr<16>(src, extractSimpleAddress(address));
+    }
+
+    void loadAcq32(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldar<32>(dest, extractSimpleAddress(address));
+    }
+
+    void loadAcq64(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldar<64>(dest, extractSimpleAddress(address));
+    }
+
+    void storeRel32(RegisterID dest, ImplicitAddress address)
+    {
+        m_assembler.stlr<32>(dest, extractSimpleAddress(address));
+    }
+
+    void storeRel64(RegisterID dest, ImplicitAddress address)
+    {
+        m_assembler.stlr<64>(dest, extractSimpleAddress(address));
+    }
+
+    void loadLink8(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldxr<8>(dest, extractSimpleAddress(address));
+    }
+
+    void loadLinkAcq8(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldaxr<8>(dest, extractSimpleAddress(address));
+    }
+
+    void storeCond8(RegisterID src, ImplicitAddress address, RegisterID result)
+    {
+        m_assembler.stxr<8>(result, src, extractSimpleAddress(address));
+    }
+
+    void storeCondRel8(RegisterID src, ImplicitAddress address, RegisterID result)
+    {
+        m_assembler.stlxr<8>(result, src, extractSimpleAddress(address));
+    }
+
+    void loadLink16(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldxr<16>(dest, extractSimpleAddress(address));
+    }
+
+    void loadLinkAcq16(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldaxr<16>(dest, extractSimpleAddress(address));
+    }
+
+    void storeCond16(RegisterID src, ImplicitAddress address, RegisterID result)
+    {
+        m_assembler.stxr<16>(result, src, extractSimpleAddress(address));
+    }
+
+    void storeCondRel16(RegisterID src, ImplicitAddress address, RegisterID result)
+    {
+        m_assembler.stlxr<16>(result, src, extractSimpleAddress(address));
+    }
+
+    void loadLink32(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldxr<32>(dest, extractSimpleAddress(address));
+    }
+
+    void loadLinkAcq32(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldaxr<32>(dest, extractSimpleAddress(address));
+    }
+
+    void storeCond32(RegisterID src, ImplicitAddress address, RegisterID result)
+    {
+        m_assembler.stxr<32>(result, src, extractSimpleAddress(address));
+    }
+
+    void storeCondRel32(RegisterID src, ImplicitAddress address, RegisterID result)
+    {
+        m_assembler.stlxr<32>(result, src, extractSimpleAddress(address));
+    }
+
+    void loadLink64(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldxr<64>(dest, extractSimpleAddress(address));
+    }
+
+    void loadLinkAcq64(ImplicitAddress address, RegisterID dest)
+    {
+        m_assembler.ldaxr<64>(dest, extractSimpleAddress(address));
+    }
+
+    void storeCond64(RegisterID src, ImplicitAddress address, RegisterID result)
+    {
+        m_assembler.stxr<64>(result, src, extractSimpleAddress(address));
+    }
+
+    void storeCondRel64(RegisterID src, ImplicitAddress address, RegisterID result)
+    {
+        m_assembler.stlxr<64>(result, src, extractSimpleAddress(address));
+    }
+
+    template<typename AddressType>
+    void atomicStrongCAS8(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        atomicStrongCAS<8>(cond, expectedAndResult, newValue, address, result);
+    }
+
+    template<typename AddressType>
+    void atomicStrongCAS16(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        atomicStrongCAS<16>(cond, expectedAndResult, newValue, address, result);
+    }
+
+    template<typename AddressType>
+    void atomicStrongCAS32(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        atomicStrongCAS<32>(cond, expectedAndResult, newValue, address, result);
+    }
+
+    template<typename AddressType>
+    void atomicStrongCAS64(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        atomicStrongCAS<64>(cond, expectedAndResult, newValue, address, result);
+    }
+
+    template<typename AddressType>
+    void atomicRelaxedStrongCAS8(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        atomicRelaxedStrongCAS<8>(cond, expectedAndResult, newValue, address, result);
+    }
+
+    template<typename AddressType>
+    void atomicRelaxedStrongCAS16(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        atomicRelaxedStrongCAS<16>(cond, expectedAndResult, newValue, address, result);
+    }
+
+    template<typename AddressType>
+    void atomicRelaxedStrongCAS32(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        atomicRelaxedStrongCAS<32>(cond, expectedAndResult, newValue, address, result);
+    }
+
+    template<typename AddressType>
+    void atomicRelaxedStrongCAS64(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        atomicRelaxedStrongCAS<64>(cond, expectedAndResult, newValue, address, result);
+    }
+
+    template<typename AddressType>
+    JumpList branchAtomicWeakCAS8(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        return branchAtomicWeakCAS<8>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    template<typename AddressType>
+    JumpList branchAtomicWeakCAS16(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        return branchAtomicWeakCAS<16>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    template<typename AddressType>
+    JumpList branchAtomicWeakCAS32(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        return branchAtomicWeakCAS<32>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    template<typename AddressType>
+    JumpList branchAtomicWeakCAS64(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        return branchAtomicWeakCAS<64>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    template<typename AddressType>
+    JumpList branchAtomicRelaxedWeakCAS8(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        return branchAtomicRelaxedWeakCAS<8>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    template<typename AddressType>
+    JumpList branchAtomicRelaxedWeakCAS16(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        return branchAtomicRelaxedWeakCAS<16>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    template<typename AddressType>
+    JumpList branchAtomicRelaxedWeakCAS32(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        return branchAtomicRelaxedWeakCAS<32>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    template<typename AddressType>
+    JumpList branchAtomicRelaxedWeakCAS64(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        return branchAtomicRelaxedWeakCAS<64>(cond, expectedAndClobbered, newValue, address);
+    }
+
+    void depend32(RegisterID src, RegisterID dest)
+    {
+        m_assembler.eor<32>(dest, src, src);
+    }
+
+    void depend64(RegisterID src, RegisterID dest)
+    {
+        m_assembler.eor<64>(dest, src, src);
+    }
+
+#if ENABLE(FAST_TLS_JIT)
+    // This will use scratch registers if the offset is not legal.
+
+    void loadFromTLS32(uint32_t offset, RegisterID dst)
+    {
+        m_assembler.mrs_TPIDRRO_EL0(dst);
+        and64(TrustedImm32(~7), dst);
+        load32(Address(dst, offset), dst);
+    }
+
+    void loadFromTLS64(uint32_t offset, RegisterID dst)
+    {
+        m_assembler.mrs_TPIDRRO_EL0(dst);
+        and64(TrustedImm32(~7), dst);
+        load64(Address(dst, offset), dst);
+    }
+
+    static bool loadFromTLSPtrNeedsMacroScratchRegister()
+    {
+        return true;
+    }
+
+    void storeToTLS32(RegisterID src, uint32_t offset)
+    {
+        RegisterID tmp = getCachedDataTempRegisterIDAndInvalidate();
+        ASSERT(src != tmp);
+        m_assembler.mrs_TPIDRRO_EL0(tmp);
+        and64(TrustedImm32(~7), tmp);
+        store32(src, Address(tmp, offset));
+    }
+
+    void storeToTLS64(RegisterID src, uint32_t offset)
+    {
+        RegisterID tmp = getCachedDataTempRegisterIDAndInvalidate();
+        ASSERT(src != tmp);
+        m_assembler.mrs_TPIDRRO_EL0(tmp);
+        and64(TrustedImm32(~7), tmp);
+        store64(src, Address(tmp, offset));
+    }
+
+    static bool storeToTLSPtrNeedsMacroScratchRegister()
+    {
+        return true;
+    }
+#endif // ENABLE(FAST_TLS_JIT)
 
     // Misc helper functions.
 
@@ -3402,6 +3721,11 @@ public:
     static FunctionPtr readCallTarget(CodeLocationCall call)
     {
         return FunctionPtr(reinterpret_cast<void(*)()>(ARM64Assembler::readCallTarget(call.dataLocation())));
+    }
+
+    static void replaceWithVMHalt(CodeLocationLabel instructionStart)
+    {
+        ARM64Assembler::replaceWithVMHalt(instructionStart.executableAddress());
     }
 
     static void replaceWithJump(CodeLocationLabel instructionStart, CodeLocationLabel destination)
@@ -3470,10 +3794,6 @@ public:
     {
         ARM64Assembler::repatchPointer(call.dataLabelPtrAtOffset(REPATCH_OFFSET_CALL_TO_POINTER).dataLocation(), destination.executableAddress());
     }
-
-#if ENABLE(MASM_PROBE)
-    void probe(ProbeFunction, void* arg1, void* arg2);
-#endif // ENABLE(MASM_PROBE)
 
 protected:
     ALWAYS_INLINE Jump makeBranch(ARM64Assembler::Condition cond)
@@ -3876,6 +4196,169 @@ private:
         return false;
     }
 
+    template<int datasize>
+    void loadLink(RegisterID src, RegisterID dest)
+    {
+        m_assembler.ldxr<datasize>(dest, src);
+    }
+
+    template<int datasize>
+    void loadLinkAcq(RegisterID src, RegisterID dest)
+    {
+        m_assembler.ldaxr<datasize>(dest, src);
+    }
+
+    template<int datasize>
+    void storeCond(RegisterID src, RegisterID dest, RegisterID result)
+    {
+        m_assembler.stxr<datasize>(src, dest, result);
+    }
+
+    template<int datasize>
+    void storeCondRel(RegisterID src, RegisterID dest, RegisterID result)
+    {
+        m_assembler.stlxr<datasize>(result, src, dest);
+    }
+
+    template<int datasize>
+    void signExtend(RegisterID src, RegisterID dest)
+    {
+        move(src, dest);
+    }
+
+    template<int datasize>
+    Jump branch(RelationalCondition cond, RegisterID left, RegisterID right)
+    {
+        return branch32(cond, left, right);
+    }
+
+    template<int datasize>
+    void atomicStrongCAS(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, Address address, RegisterID result)
+    {
+        signExtend<datasize>(expectedAndResult, expectedAndResult);
+
+        RegisterID simpleAddress = extractSimpleAddress(address);
+        RegisterID tmp = getCachedDataTempRegisterIDAndInvalidate();
+
+        Label reloop = label();
+        loadLinkAcq<datasize>(simpleAddress, tmp);
+        Jump failure = branch<datasize>(NotEqual, expectedAndResult, tmp);
+
+        storeCondRel<datasize>(newValue, simpleAddress, result);
+        branchTest32(NonZero, result).linkTo(reloop, this);
+        move(TrustedImm32(cond == Success), result);
+        Jump done = jump();
+
+        failure.link(this);
+        move(tmp, expectedAndResult);
+        storeCondRel<datasize>(tmp, simpleAddress, result);
+        branchTest32(NonZero, result).linkTo(reloop, this);
+        move(TrustedImm32(cond == Failure), result);
+
+        done.link(this);
+    }
+
+    template<int datasize, typename AddressType>
+    void atomicRelaxedStrongCAS(StatusCondition cond, RegisterID expectedAndResult, RegisterID newValue, AddressType address, RegisterID result)
+    {
+        signExtend<datasize>(expectedAndResult, expectedAndResult);
+
+        RegisterID simpleAddress = extractSimpleAddress(address);
+        RegisterID tmp = getCachedDataTempRegisterIDAndInvalidate();
+
+        Label reloop = label();
+        loadLink<datasize>(simpleAddress, tmp);
+        Jump failure = branch<datasize>(NotEqual, expectedAndResult, tmp);
+
+        storeCond<datasize>(newValue, simpleAddress, result);
+        branchTest32(NonZero, result).linkTo(reloop, this);
+        move(TrustedImm32(cond == Success), result);
+        Jump done = jump();
+
+        failure.link(this);
+        move(tmp, expectedAndResult);
+        move(TrustedImm32(cond == Failure), result);
+
+        done.link(this);
+    }
+
+    template<int datasize, typename AddressType>
+    JumpList branchAtomicWeakCAS(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        signExtend<datasize>(expectedAndClobbered, expectedAndClobbered);
+
+        RegisterID simpleAddress = extractSimpleAddress(address);
+        RegisterID tmp = getCachedDataTempRegisterIDAndInvalidate();
+
+        JumpList success;
+        JumpList failure;
+
+        loadLinkAcq<datasize>(simpleAddress, tmp);
+        failure.append(branch<datasize>(NotEqual, expectedAndClobbered, tmp));
+        storeCondRel<datasize>(newValue, simpleAddress, expectedAndClobbered);
+
+        switch (cond) {
+        case Success:
+            success.append(branchTest32(Zero, expectedAndClobbered));
+            failure.link(this);
+            return success;
+        case Failure:
+            failure.append(branchTest32(NonZero, expectedAndClobbered));
+            return failure;
+        }
+
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    template<int datasize, typename AddressType>
+    JumpList branchAtomicRelaxedWeakCAS(StatusCondition cond, RegisterID expectedAndClobbered, RegisterID newValue, AddressType address)
+    {
+        signExtend<datasize>(expectedAndClobbered, expectedAndClobbered);
+
+        RegisterID simpleAddress = extractSimpleAddress(address);
+        RegisterID tmp = getCachedDataTempRegisterIDAndInvalidate();
+
+        JumpList success;
+        JumpList failure;
+
+        loadLink<datasize>(simpleAddress, tmp);
+        failure.append(branch<datasize>(NotEqual, expectedAndClobbered, tmp));
+        storeCond<datasize>(newValue, simpleAddress, expectedAndClobbered);
+
+        switch (cond) {
+        case Success:
+            success.append(branchTest32(Zero, expectedAndClobbered));
+            failure.link(this);
+            return success;
+        case Failure:
+            failure.append(branchTest32(NonZero, expectedAndClobbered));
+            return failure;
+        }
+
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+
+    RegisterID extractSimpleAddress(ImplicitAddress address)
+    {
+        if (!address.offset)
+            return address.base;
+
+        signExtend32ToPtr(TrustedImm32(address.offset), getCachedMemoryTempRegisterIDAndInvalidate());
+        add64(address.base, memoryTempRegister);
+        return memoryTempRegister;
+    }
+
+    // This uses both the memory and data temp, but only returns the memorty temp. So you can use the
+    // data temp after this finishes.
+    RegisterID extractSimpleAddress(BaseIndex address)
+    {
+        RegisterID result = getCachedMemoryTempRegisterIDAndInvalidate();
+        lshift64(address.index, TrustedImm32(address.scale), result);
+        add64(address.base, result);
+        add64(TrustedImm32(address.offset), result);
+        return result;
+    }
+
     Jump jumpAfterFloatingPointCompare(DoubleCondition cond)
     {
         if (cond == DoubleNotEqual) {
@@ -3985,6 +4468,24 @@ template<>
 ALWAYS_INLINE void MacroAssemblerARM64::storeUnscaledImmediate<16>(RegisterID rt, RegisterID rn, int simm)
 {
     m_assembler.sturh(rt, rn, simm);
+}
+
+template<>
+inline void MacroAssemblerARM64::signExtend<8>(RegisterID src, RegisterID dest)
+{
+    signExtend8To32(src, dest);
+}
+
+template<>
+inline void MacroAssemblerARM64::signExtend<16>(RegisterID src, RegisterID dest)
+{
+    signExtend16To32(src, dest);
+}
+
+template<>
+inline MacroAssemblerARM64::Jump MacroAssemblerARM64::branch<64>(RelationalCondition cond, RegisterID left, RegisterID right)
+{
+    return branch64(cond, left, right);
 }
 
 } // namespace JSC

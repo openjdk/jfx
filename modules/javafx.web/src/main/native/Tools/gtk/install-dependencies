@@ -37,7 +37,7 @@ function checkInstaller {
         exit 0
     fi
 
-    if [ `uname` -eq "Darwin" ]; then
+    if [ `uname` = "Darwin" ]; then
        installDependenciesWithBrew
        exit 0
     fi
@@ -65,6 +65,7 @@ function installDependenciesWithBrew {
          libcroco \
          libgcrypt \
          libgpg-error \
+         libtasn1 \
          libtiff \
          libtool \
          ninja \
@@ -106,6 +107,7 @@ function installDependenciesWithApt {
         libedit-dev \
         libenchant-dev \
         libfaad-dev \
+        libffi-dev \
         $(aptIfElse libgcrypt20-dev libgcrypt11-dev) \
         $(aptIfElse libgeoclue-2-dev libgeoclue-dev) \
         libgirepository1.0-dev \
@@ -118,6 +120,7 @@ function installDependenciesWithApt {
         libgudev-1.0-dev \
         libhyphen-dev \
         libjpeg-dev \
+        libmount-dev \
         libmpg123-dev \
         libnotify-dev \
         libopus-dev \
@@ -128,9 +131,12 @@ function installDependenciesWithApt {
         libsecret-1-dev \
         libsoup2.4-dev \
         libsqlite3-dev \
+        libsrtp0-dev \
+        libtasn1-6-dev \
         libtheora-dev \
         libtool \
         libvorbis-dev \
+        libvpx-dev \
         libwebp-dev \
         libxcomposite-dev \
         libxt-dev \
@@ -150,6 +156,7 @@ function installDependenciesWithApt {
         gdb \
         libapache2-mod-bw \
         $(aptIfElse libapache2-mod-php7.0 libapache2-mod-php5) \
+        libcgi-pm-perl \
         libgpg-error-dev \
         psmisc \
         pulseaudio-utils \
@@ -180,6 +187,7 @@ function installDependenciesWithApt {
         libjson-glib-dev \
         libinput-dev \
         libmtdev-dev \
+        liborc-0.4-dev \
         libp11-kit-dev \
         libpciaccess-dev \
         libproxy-dev \
@@ -190,6 +198,7 @@ function installDependenciesWithApt {
         libxcb-xfixes0-dev \
         $(aptIfElse libxfont1-dev libxfont-dev) \
         libxkbfile-dev \
+        libxkbcommon-x11-dev \
         libtool-bin \
         libudev-dev \
         python-dev \
@@ -225,6 +234,7 @@ function installDependenciesWithPacman {
         bison \
         cmake \
         libedit \
+        libffi \
         file \
         findutils \
         flex \
@@ -272,10 +282,13 @@ function installDependenciesWithPacman {
         librsvg \
         libsecret \
         libsoup \
+        libsrtp \
         sqlite \
+        libtasn1 \
         libtheora \
         libtool \
         libvorbis \
+        libvpx \
         libwebp \
         libxcomposite \
         libxt \
@@ -283,6 +296,7 @@ function installDependenciesWithPacman {
         libxtst \
         ninja \
         ruby \
+        util-linux \
         xorg-font-utils \
         wayland"
 
@@ -329,7 +343,9 @@ function installDependenciesWithPacman {
         libxfont \
         libxcb \
         libxkbfile \
+        libxkbcommon-x11 \
         mtdev \
+        orc \
         python2 \
         python2-lxml \
         ragel \
@@ -387,23 +403,33 @@ function installDependenciesWithDnf {
         libXtst-devel \
         libxslt-devel \
         libedit-devel \
+        libffi-devel \
         libgcrypt-devel \
         libgudev1-devel \
         libjpeg-turbo-devel \
+        libmount-devel \
         libnotify-devel \
         libpng-devel \
         libsecret-devel \
         libsoup-devel \
+        libsrtp-devel \
+        libtasn1-devel \
+        libtheora-devel \
         libv4l-devel \
+        libvorbis-devel \
+        libvpx-devel \
         libwebp-devel \
         libwayland-client-devel \
         libwayland-server-devel \
         mesa-libGL-devel \
         ninja-build \
         openssl-devel \
+        opus-devel \
         patch \
         pcre-devel \
+        perl-JSON-PP \
         perl-Switch \
+        perl-Time-HiRes \
         perl-version \
         pulseaudio-libs-devel \
         python-devel \
@@ -457,8 +483,10 @@ function installDependenciesWithDnf {
         libtiff-devel \
         libxcb-devel \
         libxkbfile-devel \
+        libxkbcommon-x11-devel \
         mesa-libEGL-devel \
         mtdev-devel \
+        orc-devel \
         ragel \
         systemd-devel \
         xorg-x11-font-utils \

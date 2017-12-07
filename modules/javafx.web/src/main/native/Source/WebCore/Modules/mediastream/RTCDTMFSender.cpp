@@ -26,7 +26,7 @@
 #include "config.h"
 #include "RTCDTMFSender.h"
 
-#if ENABLE(WEB_RTC)
+#if ENABLE(WEB_RTC_DTMF)
 
 #include "MediaStreamTrack.h"
 #include "RTCDTMFSenderHandler.h"
@@ -73,18 +73,18 @@ String RTCDTMFSender::toneBuffer() const
 ExceptionOr<void> RTCDTMFSender::insertDTMF(const String&, std::optional<int> duration, std::optional<int> interToneGap)
 {
     if (!canInsertDTMF())
-        return Exception { NOT_SUPPORTED_ERR };
+        return Exception { NotSupportedError };
 
     if (duration && (duration.value() > maxToneDurationMs || duration.value() < minToneDurationMs))
-        return Exception { SYNTAX_ERR };
+        return Exception { SyntaxError };
 
     if (interToneGap && interToneGap.value() < minInterToneGapMs)
-        return Exception { SYNTAX_ERR };
+        return Exception { SyntaxError };
 
     m_duration = duration.value_or(defaultToneDurationMs);
     m_interToneGap = interToneGap.value_or(defaultInterToneGapMs);
 
-    return Exception { SYNTAX_ERR };
+    return Exception { SyntaxError };
 }
 
 void RTCDTMFSender::didPlayTone(const String& tone)
@@ -113,7 +113,7 @@ void RTCDTMFSender::scheduleDispatchEvent(Ref<Event>&& event)
     m_scheduledEvents.append(WTFMove(event));
 
     if (!m_scheduledEventTimer.isActive())
-        m_scheduledEventTimer.startOneShot(0);
+        m_scheduledEventTimer.startOneShot(0_s);
 }
 
 void RTCDTMFSender::scheduledEventTimerFired()

@@ -604,7 +604,7 @@ void BlobResourceHandle::notifyResponseOnError()
 void BlobResourceHandle::notifyReceiveData(const char* data, int bytesRead)
 {
     if (client())
-        client()->didReceiveBuffer(this, SharedBuffer::create(data, bytesRead), bytesRead);
+        client()->didReceiveBuffer(this, SharedBuffer::create(reinterpret_cast<const uint8_t*>(data), bytesRead), bytesRead);
 }
 
 void BlobResourceHandle::notifyFail(Error errorCode)
@@ -621,7 +621,7 @@ static void doNotifyFinish(BlobResourceHandle& handle)
     if (!handle.client())
         return;
 
-    handle.client()->didFinishLoading(&handle, 0);
+    handle.client()->didFinishLoading(&handle);
 }
 
 void BlobResourceHandle::notifyFinish()

@@ -4,7 +4,7 @@ set (ICU_DATA_BUILD_COMMAND bash icudata_wrapper.sh ${CMAKE_BINARY_DIR} ${CMAKE_
 
 if (APPLE)
     # Fixed in ICU 59.1 http://bugs.icu-project.org/trac/ticket/12643
-    string (REPLACE "-std=c++1y" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+    string (REPLACE "-std=c++14" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     # Fixed in ICU 56.1 http://bugs.icu-project.org/trac/ticket/11435
     string (REPLACE "-fno-rtti" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     list(APPEND ICU_DATA_BUILD_COMMAND ${CMAKE_CXX_FLAGS} ${CMAKE_OSX_DEPLOYMENT_TARGET})

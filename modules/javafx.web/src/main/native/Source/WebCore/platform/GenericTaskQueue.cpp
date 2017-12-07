@@ -41,13 +41,13 @@ void TaskDispatcher<Timer>::postTask(Function<void()>&& function)
     m_pendingTasks.append(WTFMove(function));
     pendingDispatchers().append(m_weakPtrFactory.createWeakPtr());
     if (!sharedTimer().isActive())
-        sharedTimer().startOneShot(0);
+        sharedTimer().startOneShot(0_s);
 }
 
 Timer& TaskDispatcher<Timer>::sharedTimer()
 {
     ASSERT(isMainThread());
-    static NeverDestroyed<Timer> timer(TaskDispatcher<Timer>::sharedTimerFired);
+    static NeverDestroyed<Timer> timer([] { TaskDispatcher<Timer>::sharedTimerFired(); });
     return timer.get();
 }
 

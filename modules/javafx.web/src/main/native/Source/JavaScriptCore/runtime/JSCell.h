@@ -34,7 +34,6 @@
 #include "SlotVisitor.h"
 #include "TypedArrayType.h"
 #include "WriteBarrier.h"
-#include <wtf/Noncopyable.h>
 
 namespace JSC {
 
@@ -50,11 +49,20 @@ class PropertyDescriptor;
 class PropertyNameArray;
 class Structure;
 
-template<typename T> void* allocateCell(Heap&);
-template<typename T> void* allocateCell(Heap&, size_t);
+enum class AllocationFailureMode {
+    ShouldAssertOnFailure,
+    ShouldNotAssertOnFailure
+};
 
-template<typename T> void* allocateCell(Heap&, GCDeferralContext*);
-template<typename T> void* allocateCell(Heap&, GCDeferralContext*, size_t);
+enum class GCDeferralContextArgPresense {
+    HasArg,
+    DoesNotHaveArg
+};
+
+template<typename T> void* allocateCell(Heap&, size_t = sizeof(T));
+template<typename T> void* tryAllocateCell(Heap&, size_t = sizeof(T));
+template<typename T> void* allocateCell(Heap&, GCDeferralContext*, size_t = sizeof(T));
+template<typename T> void* tryAllocateCell(Heap&, GCDeferralContext*, size_t = sizeof(T));
 
 #define DECLARE_EXPORT_INFO                                                  \
     protected:                                                               \
@@ -71,10 +79,8 @@ template<typename T> void* allocateCell(Heap&, GCDeferralContext*, size_t);
 class JSCell : public HeapCell {
     friend class JSValue;
     friend class MarkedBlock;
-    template<typename T> friend void* allocateCell(Heap&);
-    template<typename T> friend void* allocateCell(Heap&, size_t);
-    template<typename T> friend void* allocateCell(Heap&, GCDeferralContext*);
-    template<typename T> friend void* allocateCell(Heap&, GCDeferralContext*, size_t);
+    template<typename T, AllocationFailureMode, GCDeferralContextArgPresense>
+    friend void* tryAllocateCellHelper(Heap&, GCDeferralContext*, size_t);
 
 public:
     static const unsigned StructureFlags = 0;
@@ -101,7 +107,6 @@ public:
     bool isString() const;
     bool isSymbol() const;
     bool isObject() const;
-    bool isAnyWasmCallee(VM&) const;
     bool isGetterSetter() const;
     bool isCustomGetterSetter() const;
     bool isProxy() const;
@@ -170,6 +175,7 @@ public:
     const MethodTable* methodTable(VM&) const;
     static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
     static bool putByIndex(JSCell*, ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
+    bool putInline(ExecState*, PropertyName, JSValue, PutPropertySlot&);
 
     static bool deleteProperty(JSCell*, ExecState*, PropertyName);
     static bool deletePropertyByIndex(JSCell*, ExecState*, unsigned propertyName);
@@ -259,6 +265,8 @@ private:
     friend class LLIntOffsetsExtractor;
 
     JS_EXPORT_PRIVATE JSObject* toObjectSlow(ExecState*, JSGlobalObject*) const;
+    JS_EXPORT_PRIVATE void lockSlow();
+    JS_EXPORT_PRIVATE void unlockSlow();
 
     StructureID m_structureID;
     IndexingType m_indexingTypeAndMisc; // DO NOT store to this field. Always CAS.

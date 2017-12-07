@@ -2,7 +2,7 @@
     "GTK WK2 EWS": {
         "port": "gtk-wk2",
         "watchers": [
-            "xan.lopez@gmail.com"
+            "bugs-noreply@webkitgtk.org"
         ]
     },
     "Win EWS": {
@@ -12,7 +12,8 @@
         ]
     },
     "iOS EWS": {
-        "port": "ios",
+        "port": "ios-device",
+        "name": "ios-ews",
         "architecture": "armv7s"
     },
     "iOS Simulator EWS": {
@@ -50,5 +51,18 @@
         "name": "jsc-ews",
         "group": "jsc",
         "runTests": true
+    },
+    "Bindings EWS": {
+        "port": "mac",
+        "name": "bindings-ews",
+        "group": "bindings",
+        "runTests": true,
+        "shouldBuild": false
+    },
+    "WPE EWS": {
+        "port": "wpe",
+        "watchers": [
+            "bugs-noreply@webkitgtk.org"
+        ]
     }
 }

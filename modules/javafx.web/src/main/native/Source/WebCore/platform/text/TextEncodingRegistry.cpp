@@ -179,22 +179,19 @@ static void addToTextCodecMap(const char* name, NewTextCodecFunction function, c
 
 static void pruneBlacklistedCodecs()
 {
-    for (size_t i = 0; i < WTF_ARRAY_LENGTH(textEncodingNameBlacklist); ++i) {
-        const char* atomicName = textEncodingNameMap->get(textEncodingNameBlacklist[i]);
+    for (auto& nameFromBlacklist : textEncodingNameBlacklist) {
+        auto* atomicName = textEncodingNameMap->get(nameFromBlacklist);
         if (!atomicName)
             continue;
 
         Vector<const char*> names;
-        TextEncodingNameMap::const_iterator it = textEncodingNameMap->begin();
-        TextEncodingNameMap::const_iterator end = textEncodingNameMap->end();
-        for (; it != end; ++it) {
-            if (it->value == atomicName)
-                names.append(it->key);
+        for (auto& entry : *textEncodingNameMap) {
+            if (entry.value == atomicName)
+                names.append(entry.key);
         }
 
-        size_t length = names.size();
-        for (size_t j = 0; j < length; ++j)
-            textEncodingNameMap->remove(names[j]);
+        for (auto* name : names)
+            textEncodingNameMap->remove(name);
 
         textCodecMap->remove(atomicName);
     }
@@ -385,6 +382,13 @@ String defaultTextEncodingNameForSystemLanguage()
     // On some OS versions, the result is CP949 (uppercase).
     if (equalLettersIgnoringASCIICase(systemEncodingName, "cp949"))
         systemEncodingName = ASCIILiteral("ks_c_5601-1987");
+
+    // CFStringConvertEncodingToIANACharSetName() returns cp874 for kTextEncodingDOSThai, AKA windows-874.
+    // Since "cp874" alias is not standard (https://encoding.spec.whatwg.org/#names-and-labels), map to
+    // "dos-874" instead.
+    if (equalLettersIgnoringASCIICase(systemEncodingName, "cp874"))
+        systemEncodingName = ASCIILiteral("dos-874");
+
     return systemEncodingName;
 #else
     return ASCIILiteral("ISO-8859-1");

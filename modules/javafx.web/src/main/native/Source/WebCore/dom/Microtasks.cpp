@@ -23,6 +23,7 @@
 #include "Microtasks.h"
 
 #include <wtf/MainThread.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/SetForScope.h>
 
 namespace WebCore {
@@ -52,7 +53,7 @@ void MicrotaskQueue::append(std::unique_ptr<Microtask>&& task)
 {
     m_microtaskQueue.append(WTFMove(task));
 
-    m_timer.startOneShot(0);
+    m_timer.startOneShot(0_s);
 }
 
 void MicrotaskQueue::remove(const Microtask& task)

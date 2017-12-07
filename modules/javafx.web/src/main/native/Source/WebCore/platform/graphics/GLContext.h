@@ -24,7 +24,7 @@
 #include "PlatformDisplay.h"
 #include <wtf/Noncopyable.h>
 
-#if USE(EGL) && !PLATFORM(GTK)
+#if USE(EGL) && !PLATFORM(GTK) && !PLATFORM(WPE)
 #include "eglplatform.h"
 typedef EGLNativeWindowType GLNativeWindowType;
 #else

@@ -281,7 +281,7 @@ void URLLoader::AsynchronousTarget::didFinishLoading()
 {
     ResourceHandleClient* client = m_handle->client();
     if (client) {
-        client->didFinishLoading(m_handle, 0.0);
+        client->didFinishLoading(m_handle);
     }
 }
 

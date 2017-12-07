@@ -1,16 +1,36 @@
 /*
  * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 #include "config.h"
 
-#include <wtf/PassRefPtr.h>
 #if USE(JAVA_UNICODE)
 #include <wtf/unicode/java/UnicodeJava.h>
 #elif USE(ICU_UNICODE)
 #include <wtf/unicode/icu/UnicodeIcu.h>
 #endif
 
-#include "DataTransfer.h" // WebKit BUG: must be included from Editor.h
 #include "CookieStorage.h"
 #include "Color.h"
 #include "ChromiumBridge.h"
@@ -24,12 +44,10 @@
 #include "FrameView.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
-#include "URL.h" // WebKit BUG: must be included from Pasteboard.h
 #include "Language.h"
 #include "NotImplemented.h"
 #include "RenderObject.h"
 #include "ResourceHandle.h"
-#include "SharedBuffer.h" // WebKit BUG: must be included from ResourceHandle.h
 #include "SSLKeyGenerator.h"
 #include "SearchPopupMenuJava.h"
 #include "SmartReplace.h"

@@ -31,7 +31,6 @@
 #include "CSSVariableData.h"
 
 #include "CSSCustomPropertyValue.h"
-#include "CSSParser.h"
 #include "CSSParserTokenRange.h"
 #include <wtf/text/AtomicStringHash.h>
 #include <wtf/text/StringBuilder.h>
@@ -101,7 +100,7 @@ bool CSSVariableData::checkVariablesForCycles(const AtomicString& name, CustomPr
 bool CSSVariableData::checkVariablesForCyclesWithRange(CSSParserTokenRange range, CustomPropertyValueMap& customProperties, HashSet<AtomicString>& seenProperties, HashSet<AtomicString>& invalidProperties) const
 {
     while (!range.atEnd()) {
-        if (range.peek().functionId() == CSSValueVar) {
+        if (range.peek().functionId() == CSSValueVar || range.peek().functionId() == CSSValueConstant) {
             CSSParserTokenRange block = range.consumeBlock();
 
             block.consumeWhitespace();
@@ -171,7 +170,7 @@ bool CSSVariableData::resolveTokenRange(const CustomPropertyValueMap& customProp
 {
     bool success = true;
     while (!range.atEnd()) {
-        if (range.peek().functionId() == CSSValueVar)
+        if (range.peek().functionId() == CSSValueVar || range.peek().functionId() == CSSValueConstant)
             success &= resolveVariableReference(customProperties, range.consumeBlock(), result);
         else
             result.append(range.consume());

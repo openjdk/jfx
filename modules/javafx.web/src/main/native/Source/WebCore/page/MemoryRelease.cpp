@@ -26,6 +26,7 @@
 #include "config.h"
 #include "MemoryRelease.h"
 
+#include "CSSFontSelector.h"
 #include "CSSValuePool.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
@@ -47,6 +48,7 @@
 #include "StyledElement.h"
 #include "WorkerThread.h"
 #include <wtf/FastMalloc.h>
+#include <wtf/SystemTracing.h>
 
 #if PLATFORM(COCOA)
 #include "ResourceUsageThread.h"
@@ -56,9 +58,10 @@ namespace WebCore {
 
 static void releaseNoncriticalMemory()
 {
-    RenderTheme::defaultTheme()->purgeCaches();
+    RenderTheme::singleton().purgeCaches();
 
     FontCache::singleton().purgeInactiveFontData();
+    FontDescription::invalidateCaches();
 
     clearWidthCaches();
 
@@ -82,8 +85,10 @@ static void releaseCriticalMemory(Synchronous synchronous)
 
     Vector<RefPtr<Document>> documents;
     copyToVector(Document::allDocuments(), documents);
-    for (auto& document : documents)
+    for (auto& document : documents) {
         document->styleScope().clearResolver();
+        document->fontSelector().emptyCaches();
+    }
 
     GCController::singleton().deleteAllCode(JSC::DeleteAllCodeIfNotCollecting);
 
@@ -103,30 +108,30 @@ static void releaseCriticalMemory(Synchronous synchronous)
         GCController::singleton().garbageCollectSoon();
 #endif
     }
-
-    // We reduce tiling coverage while under memory pressure, so make sure to drop excess tiles ASAP.
-    Page::forEachPage([](Page& page) {
-        page.chrome().client().scheduleCompositingLayerFlush();
-    });
 }
 
 void releaseMemory(Critical critical, Synchronous synchronous)
 {
-    if (critical == Critical::Yes)
+    TraceScope scope(MemoryPressureHandlerStart, MemoryPressureHandlerEnd, static_cast<uint64_t>(critical), static_cast<uint64_t>(synchronous));
+
+    if (critical == Critical::Yes) {
+        // Return unused pages back to the OS now as this will likely give us a little memory to work with.
+        WTF::releaseFastMallocFreeMemory();
         releaseCriticalMemory(synchronous);
+    }
 
     releaseNoncriticalMemory();
 
     platformReleaseMemory(critical);
 
-    // FastMalloc has lock-free thread specific caches that can only be cleared from the thread itself.
-    WorkerThread::releaseFastMallocFreeMemoryInAllThreads();
+    if (synchronous == Synchronous::Yes) {
+        // FastMalloc has lock-free thread specific caches that can only be cleared from the thread itself.
+        WorkerThread::releaseFastMallocFreeMemoryInAllThreads();
 #if ENABLE(ASYNC_SCROLLING) && !PLATFORM(IOS)
-    ScrollingThread::dispatch([]() {
-        WTF::releaseFastMallocFreeMemory();
-    });
+        ScrollingThread::dispatch(WTF::releaseFastMallocFreeMemory);
 #endif
-    WTF::releaseFastMallocFreeMemory();
+        WTF::releaseFastMallocFreeMemory();
+    }
 
 #if ENABLE(RESOURCE_USAGE)
     Page::forEachPage([&](Page& page) {
@@ -181,40 +186,6 @@ void logMemoryStatisticsAtTimeOfDeath()
     for (auto& it : *vm.heap.objectTypeCounts())
         RELEASE_LOG(MemoryPressure, "  %s: %d", it.key, it.value);
 #endif
-}
-
-void didExceedMemoryLimitAndFailedToRecover()
-{
-    RELEASE_LOG(MemoryPressure, "Crashing non-visible process due to excessive memory usage + inability to free up memory below panic threshold.");
-    logMemoryStatisticsAtTimeOfDeath();
-    CRASH();
-}
-
-bool processIsEligibleForMemoryKill()
-{
-    bool hasVisiblePages = false;
-    bool hasAudiblePages = false;
-    bool hasMainFrameNavigatedInTheLastHour = false;
-
-    auto now = MonotonicTime::now();
-    Page::forEachPage([&] (Page& page) {
-        if (page.isUtilityPage())
-            return;
-        if (page.isVisible())
-            hasVisiblePages = true;
-        if (page.activityState() & ActivityState::IsAudible)
-            hasAudiblePages = true;
-        if (auto timeOfLastCompletedLoad = page.mainFrame().timeOfLastCompletedLoad()) {
-            if (now - timeOfLastCompletedLoad <= Seconds::fromMinutes(60))
-                hasMainFrameNavigatedInTheLastHour = true;
-        }
-    });
-
-    bool eligible = !hasVisiblePages && !hasAudiblePages && !hasMainFrameNavigatedInTheLastHour;
-    if (!eligible)
-        RELEASE_LOG(MemoryPressure, "Process not eligible for panic memory kill. Reasons: hasVisiblePages=%u, hasAudiblePages=%u, hasMainFrameNavigatedInTheLastHour=%u", hasVisiblePages, hasAudiblePages, hasMainFrameNavigatedInTheLastHour);
-
-    return eligible;
 }
 
 #if !PLATFORM(COCOA)

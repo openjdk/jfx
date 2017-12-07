@@ -40,13 +40,13 @@
 #include "Length.h"
 #include "NotImplemented.h"
 #include "SharedBuffer.h"
-#include "TextStream.h"
 #include <CoreGraphics/CGContext.h>
 #include <CoreGraphics/CGPDFDocument.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RAMSize.h>
 #include <wtf/RetainPtr.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/TextStream.h>
 
 #if !PLATFORM(COCOA)
 #include "ImageSourceCG.h"
@@ -87,7 +87,7 @@ void PDFDocumentImage::computeIntrinsicDimensions(Length& intrinsicWidth, Length
     intrinsicRatio = FloatSize();
 }
 
-bool PDFDocumentImage::dataChanged(bool allDataReceived)
+EncodedDataStatus PDFDocumentImage::dataChanged(bool allDataReceived)
 {
     ASSERT(!m_document);
     if (allDataReceived && !m_document) {
@@ -98,7 +98,7 @@ bool PDFDocumentImage::dataChanged(bool allDataReceived)
             computeBoundsForCurrentPage();
         }
     }
-    return m_document; // Return true if size is available.
+    return m_document ? EncodedDataStatus::Complete : EncodedDataStatus::Unknown;
 }
 
 void PDFDocumentImage::setPdfImageCachingPolicy(PDFImageCachingPolicy pdfImageCachingPolicy)
@@ -183,7 +183,7 @@ void PDFDocumentImage::decodedSizeChanged(size_t newCachedBytes)
         return;
 
     if (imageObserver())
-        imageObserver()->decodedSizeChanged(this, -static_cast<long long>(m_cachedBytes) + newCachedBytes);
+        imageObserver()->decodedSizeChanged(*this, -static_cast<long long>(m_cachedBytes) + newCachedBytes);
 
     ASSERT(s_allDecodedDataSize >= m_cachedBytes);
     // Update with the difference in two steps to avoid unsigned underflow subtraction.
@@ -263,10 +263,10 @@ void PDFDocumentImage::updateCachedImageIfNeeded(GraphicsContext& context, const
     decodedSizeChanged(internalSize.unclampedArea() * 4);
 }
 
-void PDFDocumentImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator op, BlendMode, ImageOrientationDescription)
+ImageDrawResult PDFDocumentImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator op, BlendMode, DecodingMode, ImageOrientationDescription)
 {
     if (!m_document || !m_hasPage)
-        return;
+        return ImageDrawResult::DidNothing;
 
     updateCachedImageIfNeeded(context, dstRect, srcRect);
 
@@ -288,7 +288,9 @@ void PDFDocumentImage::draw(GraphicsContext& context, const FloatRect& dstRect, 
     }
 
     if (imageObserver())
-        imageObserver()->didDraw(this);
+        imageObserver()->didDraw(*this);
+
+    return ImageDrawResult::DidDraw;
 }
 
 void PDFDocumentImage::destroyDecodedData(bool)
@@ -349,7 +351,7 @@ void PDFDocumentImage::drawPDFPage(GraphicsContext& context)
     notImplemented();
 #else
     // CGPDF pages are indexed from 1.
-#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000)
+#if (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200) || PLATFORM(IOS)
     CGContextDrawPDFPageWithAnnotations(context.platformContext(), CGPDFDocumentGetPage(m_document.get(), 1), nullptr);
 #else
     CGContextDrawPDFPage(context.platformContext(), CGPDFDocumentGetPage(m_document.get(), 1));

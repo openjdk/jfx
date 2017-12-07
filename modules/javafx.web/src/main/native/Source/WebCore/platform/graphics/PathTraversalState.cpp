@@ -26,6 +26,8 @@
 
 namespace WebCore {
 
+static const float kPathSegmentLengthTolerance = 0.00001f;
+
 static inline FloatPoint midPoint(const FloatPoint& first, const FloatPoint& second)
 {
     return FloatPoint((first.x() + second.x()) / 2.0f, (first.y() + second.y()) / 2.0f);
@@ -44,13 +46,14 @@ struct QuadraticBezier {
         : start(s)
         , control(c)
         , end(e)
-        , splitDepth(0)
     {
     }
 
-    double magnitudeSquared() const
+    bool operator==(const QuadraticBezier& rhs) const
     {
-        return ((double)(start.dot(start)) + (double)(control.dot(control)) + (double)(end.dot(end))) / 9.0;
+        return start == rhs.start
+            && control == rhs.control
+            && end == rhs.end;
     }
 
     float approximateDistance() const
@@ -58,7 +61,7 @@ struct QuadraticBezier {
         return distanceLine(start, control) + distanceLine(control, end);
     }
 
-    void split(QuadraticBezier& left, QuadraticBezier& right) const
+    bool split(QuadraticBezier& left, QuadraticBezier& right) const
     {
         left.control = midPoint(start, control);
         right.control = midPoint(control, end);
@@ -70,13 +73,12 @@ struct QuadraticBezier {
         left.start = start;
         right.end = end;
 
-        left.splitDepth = right.splitDepth = splitDepth + 1;
+        return !(left == *this) && !(right == *this);
     }
 
     FloatPoint start;
     FloatPoint control;
     FloatPoint end;
-    unsigned short splitDepth;
 };
 
 struct CubicBezier {
@@ -86,13 +88,15 @@ struct CubicBezier {
         , control1(c1)
         , control2(c2)
         , end(e)
-        , splitDepth(0)
     {
     }
 
-    double magnitudeSquared() const
+    bool operator==(const CubicBezier& rhs) const
     {
-        return ((double)(start.dot(start)) + (double)(control1.dot(control1)) + (double)(control2.dot(control2)) + (double)(end.dot(end))) / 16.0;
+        return start == rhs.start
+            && control1 == rhs.control1
+            && control2 == rhs.control2
+            && end == rhs.end;
     }
 
     float approximateDistance() const
@@ -100,7 +104,7 @@ struct CubicBezier {
         return distanceLine(start, control1) + distanceLine(control1, control2) + distanceLine(control2, end);
     }
 
-    void split(CubicBezier& left, CubicBezier& right) const
+    bool split(CubicBezier& left, CubicBezier& right) const
     {
         FloatPoint startToControl1 = midPoint(control1, control2);
 
@@ -116,14 +120,13 @@ struct CubicBezier {
         left.end = leftControl2ToRightControl1;
         right.start = leftControl2ToRightControl1;
 
-        left.splitDepth = right.splitDepth = splitDepth + 1;
+        return !(left == *this) && !(right == *this);
     }
 
     FloatPoint start;
     FloatPoint control1;
     FloatPoint control2;
     FloatPoint end;
-    unsigned short splitDepth;
 };
 
 // FIXME: This function is possibly very slow due to the ifs required for proper path measuring
@@ -140,20 +143,13 @@ static float curveLength(const PathTraversalState& traversalState, const CurveTy
     Vector<CurveType, curveStackDepthLimit> curveStack;
     float totalLength = 0;
 
-    static const double pathSegmentLengthToleranceSquared = 1.e-16;
-
-    double curveScaleForToleranceSquared = originalCurve.magnitudeSquared();
-    if (curveScaleForToleranceSquared < pathSegmentLengthToleranceSquared)
-        return 0;
-
     while (true) {
         float length = curve.approximateDistance();
-        double lengthDiscrepancy = length - distanceLine(curve.start, curve.end);
 
-        if ((lengthDiscrepancy * lengthDiscrepancy) / curveScaleForToleranceSquared > pathSegmentLengthToleranceSquared && curve.splitDepth < curveStackDepthLimit) {
-            CurveType leftCurve;
-            CurveType rightCurve;
-            curve.split(leftCurve, rightCurve);
+        CurveType leftCurve;
+        CurveType rightCurve;
+
+        if ((length - distanceLine(curve.start, curve.end)) > kPathSegmentLengthTolerance && curveStack.size() < curveStackDepthLimit && curve.split(leftCurve, rightCurve)) {
             curve = leftCurve;
             curveStack.append(rightCurve);
             continue;

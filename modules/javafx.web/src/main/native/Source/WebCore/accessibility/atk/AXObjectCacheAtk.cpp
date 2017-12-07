@@ -239,6 +239,52 @@ void AXObjectCache::postPlatformNotification(AccessibilityObject* coreObject, AX
         atk_object_notify_state_change(axObject, ATK_STATE_INVALID_ENTRY, coreObject->invalidStatus() != "false");
         break;
 
+    case AXElementBusyChanged:
+        atk_object_notify_state_change(axObject, ATK_STATE_BUSY, coreObject->isBusy());
+        break;
+
+    case AXCurrentChanged:
+        atk_object_notify_state_change(axObject, ATK_STATE_ACTIVE, coreObject->ariaCurrentState() != ARIACurrentFalse);
+        break;
+
+    case AXRowExpanded:
+        atk_object_notify_state_change(axObject, ATK_STATE_EXPANDED, true);
+        break;
+
+    case AXRowCollapsed:
+        atk_object_notify_state_change(axObject, ATK_STATE_EXPANDED, false);
+        break;
+
+    case AXExpandedChanged:
+        atk_object_notify_state_change(axObject, ATK_STATE_EXPANDED, coreObject->isExpanded());
+        break;
+
+    case AXDisabledStateChanged: {
+        bool enabledState = coreObject->isEnabled();
+        atk_object_notify_state_change(axObject, ATK_STATE_ENABLED, enabledState);
+        atk_object_notify_state_change(axObject, ATK_STATE_SENSITIVE, enabledState);
+        break;
+    }
+
+    case AXPressedStateChanged:
+        atk_object_notify_state_change(axObject, ATK_STATE_PRESSED, coreObject->isPressed());
+        break;
+
+    case AXReadOnlyStatusChanged:
+#if ATK_CHECK_VERSION(2,15,3)
+        atk_object_notify_state_change(axObject, ATK_STATE_READ_ONLY, !coreObject->canSetValueAttribute());
+#endif
+        break;
+
+    case AXRequiredStatusChanged:
+        atk_object_notify_state_change(axObject, ATK_STATE_REQUIRED, coreObject->isRequired());
+        break;
+
+    case AXActiveDescendantChanged:
+        if (AccessibilityObject* descendant = coreObject->activeDescendant())
+            platformHandleFocusedUIElementChanged(nullptr, descendant->node());
+        break;
+
     default:
         break;
     }

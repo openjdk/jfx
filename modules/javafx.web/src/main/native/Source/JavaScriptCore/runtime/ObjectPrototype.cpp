@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2008, 2011, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -45,7 +45,7 @@ static EncodedJSValue JSC_HOST_CALL objectProtoFuncToLocaleString(ExecState*);
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ObjectPrototype);
 
-const ClassInfo ObjectPrototype::s_info = { "Object", &JSNonFinalObject::s_info, 0, CREATE_METHOD_TABLE(ObjectPrototype) };
+const ClassInfo ObjectPrototype::s_info = { "Object", &JSNonFinalObject::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ObjectPrototype) };
 
 ObjectPrototype::ObjectPrototype(VM& vm, Structure* stucture)
     : JSNonFinalObject(vm, stucture)
@@ -105,7 +105,7 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncHasOwnProperty(ExecState* exec)
     HasOwnPropertyCache* hasOwnPropertyCache = vm.ensureHasOwnPropertyCache();
     if (std::optional<bool> result = hasOwnPropertyCache->get(structure, propertyName)) {
         ASSERT(*result == thisObject->hasOwnProperty(exec, propertyName));
-        ASSERT(!scope.exception());
+        scope.assertNoException();
         return JSValue::encode(jsBoolean(*result));
     }
 
@@ -270,6 +270,8 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncPropertyIsEnumerable(ExecState* exec
 
     JSObject* thisObject = exec->thisValue().toThis(exec, StrictMode).toObject(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    scope.release();
     PropertyDescriptor descriptor;
     bool enumerable = thisObject->getOwnPropertyDescriptor(exec, propertyName, descriptor) && descriptor.enumerable();
     return JSValue::encode(jsBoolean(enumerable));
@@ -281,23 +283,30 @@ EncodedJSValue JSC_HOST_CALL objectProtoFuncToLocaleString(ExecState* exec)
     VM& vm = exec->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    // 1. Let O be the result of calling ToObject passing the this value as the argument.
-    JSObject* object = exec->thisValue().toThis(exec, StrictMode).toObject(exec);
+    // 1. Let V be the this value.
+    JSValue thisValue = exec->thisValue();
+
+    // 2. Invoke(V, "toString")
+
+    // Let O be the result of calling ToObject passing the this value as the argument.
+    JSObject* object = thisValue.toThis(exec, StrictMode).toObject(exec);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    // 2. Let toString be the result of calling the [[Get]] internal method of O passing "toString" as the argument.
-    JSValue toString = object->get(exec, vm.propertyNames->toString);
+    // Let toString be the O.[[Get]]("toString", V)
+    PropertySlot slot(thisValue, PropertySlot::InternalMethodType::Get);
+    bool hasProperty = object->getPropertySlot(exec, vm.propertyNames->toString, slot);
+    JSValue toString = hasProperty ? slot.getValue(exec, vm.propertyNames->toString) : jsUndefined();
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    // 3. If IsCallable(toString) is false, throw a TypeError exception.
+    // If IsCallable(toString) is false, throw a TypeError exception.
     CallData callData;
     CallType callType = getCallData(toString, callData);
     if (callType == CallType::None)
-        return JSValue::encode(jsUndefined());
+        return throwVMTypeError(exec, scope);
 
-    // 4. Return the result of calling the [[Call]] internal method of toString passing O as the this value and no arguments.
+    // Return the result of calling the [[Call]] internal method of toString passing the this value and no arguments.
     scope.release();
-    return JSValue::encode(call(exec, toString, callType, callData, object, exec->emptyList()));
+    return JSValue::encode(call(exec, toString, callType, callData, thisValue, exec->emptyList()));
 }
 
 EncodedJSValue JSC_HOST_CALL objectProtoFuncToString(ExecState* exec)

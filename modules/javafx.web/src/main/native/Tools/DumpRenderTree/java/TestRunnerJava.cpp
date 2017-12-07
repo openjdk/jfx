@@ -89,6 +89,11 @@ void TestRunner::display()
     // FIXME: implement
 }
 
+void TestRunner::displayAndTrackRepaints()
+{
+    // FIXME: implement
+}
+
 void TestRunner::execCommand(JSStringRef name, JSStringRef value)
 {
     // FIXME: implement
@@ -452,11 +457,6 @@ void TestRunner::setMockDeviceOrientation(bool canProvideAlpha, double alpha, bo
 {
     // FIXME: Implement for DeviceOrientation layout tests.
     // See https://bugs.webkit.org/show_bug.cgi?id=30335.
-}
-
-void TestRunner::setViewModeMediaFeature(JSStringRef mode)
-{
-    // FIXME: implement
 }
 
 int TestRunner::numberOfPendingGeolocationPermissionRequests()

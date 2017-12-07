@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2008, 2010, 2012-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2007 Justin Haygood (jhaygood@reaktix.com)
  *
  * Redistribution and use in source and binary forms, with or without
@@ -40,6 +40,11 @@ extern "C" void _ReadWriteBarrier(void);
 
 namespace WTF {
 
+ALWAYS_INLINE bool hasFence(std::memory_order order)
+{
+    return order != std::memory_order_relaxed;
+}
+
 // Atomic wraps around std::atomic with the sole purpose of making the compare_exchange
 // operations not alter the expected value. This is more in line with how we typically
 // use CAS in our code.
@@ -57,7 +62,24 @@ struct Atomic {
 
     ALWAYS_INLINE T loadRelaxed() const { return load(std::memory_order_relaxed); }
 
+    // This is a load that simultaneously does a full fence - neither loads nor stores will move
+    // above or below it.
+    ALWAYS_INLINE T loadFullyFenced() const
+    {
+        Atomic<T>* ptr = const_cast<Atomic<T>*>(this);
+        return ptr->exchangeAdd(T());
+    }
+
     ALWAYS_INLINE void store(T desired, std::memory_order order = std::memory_order_seq_cst) { value.store(desired, order); }
+
+    ALWAYS_INLINE void storeRelaxed(T desired) { store(desired, std::memory_order_relaxed); }
+
+    // This is a store that simultaneously does a full fence - neither loads nor stores will move
+    // above or below it.
+    ALWAYS_INLINE void storeFullyFenced(T desired)
+    {
+        exchange(desired);
+    }
 
     ALWAYS_INLINE bool compareExchangeWeak(T expected, T desired, std::memory_order order = std::memory_order_seq_cst)
     {
@@ -76,6 +98,8 @@ struct Atomic {
         return value.compare_exchange_weak(expectedOrActual, desired, order_success, order_failure);
     }
 
+    // WARNING: This does not have strong fencing guarantees when it fails. For example, stores could
+    // sink below it in that case.
     ALWAYS_INLINE T compareExchangeStrong(T expected, T desired, std::memory_order order = std::memory_order_seq_cst)
     {
         T expectedOrActual = expected;
@@ -108,33 +132,28 @@ struct Atomic {
     ALWAYS_INLINE T exchange(T newValue, std::memory_order order = std::memory_order_seq_cst) { return value.exchange(newValue, order); }
 
     template<typename Func>
-    ALWAYS_INLINE bool tryTransactionRelaxed(const Func& func)
+    ALWAYS_INLINE bool transaction(const Func& func, std::memory_order order = std::memory_order_seq_cst)
     {
-        T oldValue = load(std::memory_order_relaxed);
-        T newValue = oldValue;
-        func(newValue);
-        return compareExchangeWeakRelaxed(oldValue, newValue);
+        for (;;) {
+            T oldValue = load(std::memory_order_relaxed);
+            T newValue = oldValue;
+            if (!func(newValue))
+                return false;
+            if (compareExchangeWeak(oldValue, newValue, order))
+                return true;
+        }
     }
 
     template<typename Func>
-    ALWAYS_INLINE void transactionRelaxed(const Func& func)
+    ALWAYS_INLINE bool transactionRelaxed(const Func& func)
     {
-        while (!tryTransationRelaxed(func)) { }
+        return transaction(func, std::memory_order_relaxed);
     }
 
-    template<typename Func>
-    ALWAYS_INLINE bool tryTransaction(const Func& func)
+    Atomic() = default;
+    constexpr Atomic(T initial)
+        : value(std::forward<T>(initial))
     {
-        T oldValue = load(std::memory_order_relaxed);
-        T newValue = oldValue;
-        func(newValue);
-        return compareExchangeWeak(oldValue, newValue);
-    }
-
-    template<typename Func>
-    ALWAYS_INLINE void transaction(const Func& func)
-    {
-        while (!tryTransaction(func)) { }
     }
 
     std::atomic<T> value;
@@ -147,9 +166,21 @@ inline T atomicLoad(T* location, std::memory_order order = std::memory_order_seq
 }
 
 template<typename T>
+inline T atomicLoadFullyFenced(T* location)
+{
+    return bitwise_cast<Atomic<T>*>(location)->loadFullyFenced();
+}
+
+template<typename T>
 inline void atomicStore(T* location, T newValue, std::memory_order order = std::memory_order_seq_cst)
 {
     bitwise_cast<Atomic<T>*>(location)->store(newValue, order);
+}
+
+template<typename T>
+inline void atomicStoreFullyFenced(T* location, T newValue)
+{
+    bitwise_cast<Atomic<T>*>(location)->storeFullyFenced(newValue);
 }
 
 template<typename T>
@@ -308,12 +339,17 @@ inline void crossModifyingCodeFence() { std::atomic_thread_fence(std::memory_ord
 
 #endif
 
-typedef size_t ConsumeDependency;
+typedef unsigned Dependency;
+
+ALWAYS_INLINE Dependency nullDependency()
+{
+    return 0;
+}
 
 template <typename T, typename std::enable_if<sizeof(T) == 8>::type* = nullptr>
-ALWAYS_INLINE ConsumeDependency zeroWithConsumeDependency(T value)
+ALWAYS_INLINE Dependency dependency(T value)
 {
-    uint64_t dependency;
+    unsigned dependency;
     uint64_t copy = bitwise_cast<uint64_t>(value);
 #if CPU(ARM64)
     // Create a magical zero value through inline assembly, whose computation
@@ -325,104 +361,119 @@ ALWAYS_INLINE ConsumeDependency zeroWithConsumeDependency(T value)
     // ordering. This forces weak memory order CPUs to observe `location` and
     // dependent loads in their store order without the reader using a barrier
     // or an acquire load.
-    asm volatile("eor %x[dependency], %x[in], %x[in]"
-                 : [dependency] "=r"(dependency)
-                 : [in] "r"(copy)
-                 // Lie about touching memory. Not strictly needed, but is
-                 // likely to avoid unwanted load/store motion.
-                 : "memory");
+    asm("eor %w[dependency], %w[in], %w[in]"
+        : [dependency] "=r"(dependency)
+        : [in] "r"(copy));
 #elif CPU(ARM)
-    asm volatile("eor %[dependency], %[in], %[in]"
-                 : [dependency] "=r"(dependency)
-                 : [in] "r"(copy)
-                 : "memory");
+    asm("eor %[dependency], %[in], %[in]"
+        : [dependency] "=r"(dependency)
+        : [in] "r"(copy));
 #else
     // No dependency is needed for this architecture.
     loadLoadFence();
     dependency = 0;
-    (void)copy;
+    UNUSED_PARAM(copy);
 #endif
-    return static_cast<ConsumeDependency>(dependency);
+    return dependency;
 }
 
+// FIXME: This code is almost identical to the other dependency() overload.
+// https://bugs.webkit.org/show_bug.cgi?id=169405
 template <typename T, typename std::enable_if<sizeof(T) == 4>::type* = nullptr>
-ALWAYS_INLINE ConsumeDependency zeroWithConsumeDependency(T value)
+ALWAYS_INLINE Dependency dependency(T value)
 {
-    uint32_t dependency;
+    unsigned dependency;
     uint32_t copy = bitwise_cast<uint32_t>(value);
 #if CPU(ARM64)
-    asm volatile("eor %w[dependency], %w[in], %w[in]"
-                 : [dependency] "=r"(dependency)
-                 : [in] "r"(copy)
-                 : "memory");
+    asm("eor %w[dependency], %w[in], %w[in]"
+        : [dependency] "=r"(dependency)
+        : [in] "r"(copy));
 #elif CPU(ARM)
-    asm volatile("eor %[dependency], %[in], %[in]"
-                 : [dependency] "=r"(dependency)
-                 : [in] "r"(copy)
-                 : "memory");
+    asm("eor %[dependency], %[in], %[in]"
+        : [dependency] "=r"(dependency)
+        : [in] "r"(copy));
 #else
     loadLoadFence();
     dependency = 0;
-    (void)copy;
+    UNUSED_PARAM(copy);
 #endif
-    return static_cast<ConsumeDependency>(dependency);
+    return dependency;
 }
 
 template <typename T, typename std::enable_if<sizeof(T) == 2>::type* = nullptr>
-ALWAYS_INLINE ConsumeDependency zeroWithConsumeDependency(T value)
+ALWAYS_INLINE Dependency dependency(T value)
 {
-    uint16_t copy = bitwise_cast<uint16_t>(value);
-    return zeroWithConsumeDependency(static_cast<size_t>(copy));
+    return dependency(static_cast<uint32_t>(value));
 }
 
 template <typename T, typename std::enable_if<sizeof(T) == 1>::type* = nullptr>
-ALWAYS_INLINE ConsumeDependency zeroWithConsumeDependency(T value)
+ALWAYS_INLINE Dependency dependency(T value)
 {
-    uint8_t copy = bitwise_cast<uint8_t>(value);
-    return zeroWithConsumeDependency(static_cast<size_t>(copy));
+    return dependency(static_cast<uint32_t>(value));
 }
 
-template <typename T>
-struct Consumed {
+template<typename T>
+struct DependencyWith {
+public:
+    DependencyWith()
+        : dependency(nullDependency())
+        , value()
+    {
+    }
+
+    DependencyWith(Dependency dependency, const T& value)
+        : dependency(dependency)
+        , value(value)
+    {
+    }
+
+    Dependency dependency;
     T value;
-    ConsumeDependency dependency;
 };
 
-// Consume load, returning the loaded `value` at `location` and a dependent-zero
-// which creates an address dependency from the `location`.
-//
-// Usage notes:
-//
-//  * Regarding control dependencies: merely branching based on `value` or
-//    `dependency` isn't sufficient to impose a dependency ordering: you must
-//    use `dependency` in the address computation of subsequent loads which
-//    should observe the store order w.r.t. `location`.
-// * Regarding memory ordering: consume load orders the `location` load with
-//   susequent dependent loads *only*. It says nothing about ordering of other
-//   loads!
-//
-// Caveat emptor.
-template <typename T>
-ALWAYS_INLINE auto consumeLoad(const T* location)
+template<typename T>
+inline DependencyWith<T> dependencyWith(Dependency dependency, const T& value)
 {
-    typedef typename std::remove_cv<T>::type Returned;
-    Consumed<Returned> ret { };
-    // Force the read of `location` to occur exactly once and without fusing or
-    // forwarding using volatile. This is important because the compiler could
-    // otherwise rematerialize or find equivalent loads, or simply forward from
-    // a previous one, and lose the dependency we're trying so hard to
-    // create. Prevent tearing by using an atomic, but let it move around by
-    // using relaxed. We have at least a memory fence after this which prevents
-    // the load from moving too much.
-    ret.value = reinterpret_cast<const volatile std::atomic<Returned>*>(location)->load(std::memory_order_relaxed);
-    ret.dependency = zeroWithConsumeDependency(ret.value);
-    return ret;
+    return DependencyWith<T>(dependency, value);
+}
+
+template<typename T>
+inline T* consume(T* pointer, Dependency dependency)
+{
+#if CPU(ARM64) || CPU(ARM)
+    return bitwise_cast<T*>(bitwise_cast<char*>(pointer) + dependency);
+#else
+    UNUSED_PARAM(dependency);
+    return pointer;
+#endif
+}
+
+template<typename T, typename Func>
+ALWAYS_INLINE T& ensurePointer(Atomic<T*>& pointer, const Func& func)
+{
+    for (;;) {
+        T* oldValue = pointer.load(std::memory_order_relaxed);
+        if (oldValue) {
+            // On all sensible CPUs, we get an implicit dependency-based load-load barrier when
+            // loading this.
+            return *oldValue;
+        }
+        T* newValue = func();
+        if (pointer.compareExchangeWeak(oldValue, newValue))
+            return *newValue;
+        delete newValue;
+    }
 }
 
 } // namespace WTF
 
 using WTF::Atomic;
-using WTF::ConsumeDependency;
-using WTF::consumeLoad;
+using WTF::Dependency;
+using WTF::DependencyWith;
+using WTF::consume;
+using WTF::dependency;
+using WTF::dependencyWith;
+using WTF::ensurePointer;
+using WTF::nullDependency;
 
 #endif // Atomics_h

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -108,17 +108,22 @@ Inst CheckSpecial::hiddenBranch(const Inst& inst) const
 
 void CheckSpecial::forEachArg(Inst& inst, const ScopedLambda<Inst::EachArgCallback>& callback)
 {
+    std::optional<Width> optionalDefArgWidth;
     Inst hidden = hiddenBranch(inst);
     hidden.forEachArg(
-        [&] (Arg& arg, Arg::Role role, Arg::Type type, Arg::Width width) {
+        [&] (Arg& arg, Arg::Role role, Bank bank, Width width) {
+            if (Arg::isAnyDef(role) && role != Arg::Scratch) {
+                ASSERT(!optionalDefArgWidth); // There can only be one Def'ed arg.
+                optionalDefArgWidth = width;
+            }
             unsigned index = &arg - &hidden.args[0];
-            callback(inst.args[1 + index], role, type, width);
+            callback(inst.args[1 + index], role, bank, width);
         });
 
     std::optional<unsigned> firstRecoverableIndex;
     if (m_checkKind.opcode == BranchAdd32 || m_checkKind.opcode == BranchAdd64)
         firstRecoverableIndex = 1;
-    forEachArgImpl(numB3Args(inst), m_numCheckArgs + 1, inst, m_stackmapRole, firstRecoverableIndex, callback);
+    forEachArgImpl(numB3Args(inst), m_numCheckArgs + 1, inst, m_stackmapRole, firstRecoverableIndex, callback, optionalDefArgWidth);
 }
 
 bool CheckSpecial::isValid(Inst& inst)
@@ -133,6 +138,13 @@ bool CheckSpecial::admitsStack(Inst& inst, unsigned argIndex)
     if (argIndex >= 1 && argIndex < 1 + m_numCheckArgs)
         return hiddenBranch(inst).admitsStack(argIndex - 1);
     return admitsStackImpl(numB3Args(inst), m_numCheckArgs + 1, inst, argIndex);
+}
+
+bool CheckSpecial::admitsExtendedOffsetAddr(Inst& inst, unsigned argIndex)
+{
+    if (argIndex >= 1 && argIndex < 1 + m_numCheckArgs)
+        return false;
+    return admitsStack(inst, argIndex);
 }
 
 std::optional<unsigned> CheckSpecial::shouldTryAliasingDef(Inst& inst)

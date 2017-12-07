@@ -269,7 +269,7 @@ extern "C" {
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
 #include <crtdbg.h>
 #endif
-JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*)
 {
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
     _CrtSetReportMode( _CRT_ERROR, _CRTDBG_MODE_FILE );
@@ -288,7 +288,7 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
     return JNI_VERSION_1_2;
 }
 
-JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* vm, void* reserved)
+JNIEXPORT void JNICALL JNI_OnUnload(JavaVM* , void*)
 {
 #if PLATFORM(JAVA_WIN) && !defined(NDEBUG)
     _CrtDumpMemoryLeaks();

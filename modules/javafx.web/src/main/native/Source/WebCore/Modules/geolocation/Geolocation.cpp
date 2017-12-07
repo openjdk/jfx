@@ -40,6 +40,7 @@
 #include "Geoposition.h"
 #include "Page.h"
 #include "PositionError.h"
+#include "RuntimeApplicationChecks.h"
 #include "SecurityOrigin.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/Ref.h>
@@ -189,7 +190,7 @@ void Geolocation::resume()
     ActiveDOMObject::resume();
 
     if (!m_resumeTimer.isActive())
-        m_resumeTimer.startOneShot(0);
+        m_resumeTimer.startOneShot(0_s);
 }
 
 void Geolocation::resumeTimerFired()
@@ -231,7 +232,7 @@ void Geolocation::resumeTimerFired()
     }
 
     if (m_errorWaitingForResume) {
-        handleError(m_errorWaitingForResume.get());
+        handleError(*m_errorWaitingForResume);
         m_errorWaitingForResume = nullptr;
     }
 }
@@ -346,13 +347,24 @@ static void logError(const String& target, const bool isSecure, const bool isMix
     document->addConsoleMessage(MessageSource::Security, MessageLevel::Error, message.toString());
 }
 
+// FIXME: remove this function when rdar://problem/32137821 is fixed.
+static bool isRequestFromIBooks()
+{
+#if PLATFORM(MAC)
+    return MacApplication::isIBooks();
+#elif PLATFORM(IOS)
+    return IOSApplication::isIBooks();
+#endif
+    return false;
+}
+
 bool Geolocation::shouldBlockGeolocationRequests()
 {
     bool isSecure = SecurityOrigin::isSecure(document()->url());
     bool hasMixedContent = document()->foundMixedContent();
-    bool isLocalFile = document()->url().isLocalFile();
+    bool isLocalOrigin = securityOrigin()->isLocal();
     if (securityOrigin()->canRequestGeolocation()) {
-        if (isLocalFile || (isSecure && !hasMixedContent))
+        if (isLocalOrigin || (isSecure && !hasMixedContent) || isRequestFromIBooks())
             return false;
     }
 
@@ -423,6 +435,8 @@ void Geolocation::makeCachedPositionCallbacks()
     // asynchronously, so we don't need to worry about it being modified from
     // the callbacks.
     for (auto& notifier : m_requestsAwaitingCachedPosition) {
+        // FIXME: This seems wrong, since makeCachedPositionCallbacks() is called in a branch where
+        // lastPosition() is known to be null in Geolocation::setIsAllowed().
         notifier->runSuccessCallback(lastPosition());
 
         // If this is a one-shot request, stop it. Otherwise, if the watch still
@@ -494,35 +508,34 @@ void Geolocation::setIsAllowed(bool allowed)
     }
 
     if (!isAllowed()) {
-        RefPtr<PositionError> error = PositionError::create(PositionError::PERMISSION_DENIED,  ASCIILiteral(permissionDeniedErrorMessage));
+        auto error = PositionError::create(PositionError::PERMISSION_DENIED,  ASCIILiteral(permissionDeniedErrorMessage));
         error->setIsFatal(true);
-        handleError(error.get());
+        handleError(error);
         m_requestsAwaitingCachedPosition.clear();
         m_hasChangedPosition = false;
         m_errorWaitingForResume = nullptr;
-
         return;
     }
 
     // If the service has a last position, use it to call back for all requests.
     // If any of the requests are waiting for permission for a cached position,
     // the position from the service will be at least as fresh.
-    if (lastPosition())
-        makeSuccessCallbacks();
+    if (RefPtr<Geoposition> position = lastPosition())
+        makeSuccessCallbacks(*position);
     else
         makeCachedPositionCallbacks();
 }
 
-void Geolocation::sendError(GeoNotifierVector& notifiers, PositionError* error)
+void Geolocation::sendError(GeoNotifierVector& notifiers, PositionError& error)
 {
     for (auto& notifier : notifiers)
         notifier->runErrorCallback(error);
 }
 
-void Geolocation::sendPosition(GeoNotifierVector& notifiers, Geoposition* position)
+void Geolocation::sendPosition(GeoNotifierVector& notifiers, Geoposition& position)
 {
     for (auto& notifier : notifiers)
-        notifier->runSuccessCallback(position);
+        notifier->runSuccessCallback(&position);
 }
 
 void Geolocation::stopTimer(GeoNotifierVector& notifiers)
@@ -587,10 +600,8 @@ void Geolocation::copyToSet(const GeoNotifierVector& src, GeoNotifierSet& dest)
         dest.add(notifier.get());
 }
 
-void Geolocation::handleError(PositionError* error)
+void Geolocation::handleError(PositionError& error)
 {
-    ASSERT(error);
-
     GeoNotifierVector oneShotsCopy;
     copyToVector(m_oneShots, oneShotsCopy);
 
@@ -602,7 +613,7 @@ void Geolocation::handleError(PositionError* error)
     // further callbacks to these notifiers.
     GeoNotifierVector oneShotsWithCachedPosition;
     m_oneShots.clear();
-    if (error->isFatal())
+    if (error.isFatal())
         m_watchers.clear();
     else {
         // Don't send non-fatal errors to notifiers due to receive a cached position.
@@ -638,7 +649,7 @@ void Geolocation::requestPermission()
     GeolocationController::from(page)->requestPermission(this);
 }
 
-void Geolocation::makeSuccessCallbacks()
+void Geolocation::makeSuccessCallbacks(Geoposition& position)
 {
     ASSERT(lastPosition());
     ASSERT(isAllowed());
@@ -654,8 +665,8 @@ void Geolocation::makeSuccessCallbacks()
     // further callbacks to these notifiers.
     m_oneShots.clear();
 
-    sendPosition(oneShotsCopy, lastPosition());
-    sendPosition(watchersCopy, lastPosition());
+    sendPosition(oneShotsCopy, position);
+    sendPosition(watchersCopy, position);
 
     if (!hasListeners())
         stopUpdating();
@@ -673,7 +684,10 @@ void Geolocation::positionChanged()
         return;
     }
 
-    makeSuccessCallbacks();
+    RefPtr<Geoposition> position = lastPosition();
+    ASSERT(position);
+
+    makeSuccessCallbacks(*position);
 }
 
 void Geolocation::setError(GeolocationError* error)
@@ -682,8 +696,9 @@ void Geolocation::setError(GeolocationError* error)
         m_errorWaitingForResume = createPositionError(error);
         return;
     }
-    RefPtr<PositionError> positionError = createPositionError(error);
-    handleError(positionError.get());
+
+    auto positionError = createPositionError(error);
+    handleError(positionError);
 }
 
 bool Geolocation::startUpdating(GeoNotifier* notifier)

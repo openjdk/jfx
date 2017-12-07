@@ -343,6 +343,36 @@ String DiagnosticLoggingKeys::documentLoaderStoppingKey()
     return ASCIILiteral("documentLoaderStopping");
 }
 
+String DiagnosticLoggingKeys::domainCausingEnergyDrainKey()
+{
+    return ASCIILiteral("DomainCausingEnergyDrain");
+}
+
+String DiagnosticLoggingKeys::domainCausingJetsamKey()
+{
+    return ASCIILiteral("DomainCausingJetsam");
+}
+
+String DiagnosticLoggingKeys::simulatedPageCrashKey()
+{
+    return ASCIILiteral("SimulatedPageCrash");
+}
+
+String DiagnosticLoggingKeys::exceededActiveMemoryLimitKey()
+{
+    return ASCIILiteral("ExceededActiveMemoryLimit");
+}
+
+String DiagnosticLoggingKeys::exceededInactiveMemoryLimitKey()
+{
+    return ASCIILiteral("ExceededInactiveMemoryLimit");
+}
+
+String DiagnosticLoggingKeys::exceededBackgroundCPULimitKey()
+{
+    return ASCIILiteral("ExceededBackgroundCPULimit");
+}
+
 String DiagnosticLoggingKeys::domainVisitedKey()
 {
     return ASCIILiteral("DomainVisited");
@@ -423,11 +453,6 @@ String DiagnosticLoggingKeys::deviceOrientationKey()
     return ASCIILiteral("deviceOrientation");
 }
 
-String DiagnosticLoggingKeys::deviceProximityKey()
-{
-    return ASCIILiteral("deviceProximity");
-}
-
 String DiagnosticLoggingKeys::diskCacheKey()
 {
     return ASCIILiteral("diskCache");
@@ -476,6 +501,11 @@ String DiagnosticLoggingKeys::revalidatingKey()
 String DiagnosticLoggingKeys::reloadFromOriginKey()
 {
     return ASCIILiteral("reloadFromOrigin");
+}
+
+String DiagnosticLoggingKeys::reloadRevalidatingExpiredKey()
+{
+    return ASCIILiteral("reloadRevalidatingExpired");
 }
 
 String DiagnosticLoggingKeys::sameLoadKey()
@@ -730,6 +760,11 @@ String DiagnosticLoggingKeys::backgroundCPUUsageToDiagnosticLoggingKey(double cp
     if (cpuUsage < 70)
         return ASCIILiteral("50to70");
     return ASCIILiteral("over70");
+}
+
+String DiagnosticLoggingKeys::resourceLoadStatisticsTelemetryKey()
+{
+    return ASCIILiteral("resourceLoadStatisticsTelemetry");
 }
 
 } // namespace WebCore

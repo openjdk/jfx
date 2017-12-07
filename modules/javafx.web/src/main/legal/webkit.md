@@ -1,8 +1,10 @@
-## WebKit Open Source Project: WebKit v604.1
+## WebKit Open Source Project: WebKit v605.1
 
 ### WebKit Notice
 <pre>
-Oracle license do NOT apply to the WebKit; it is
+You are receiving a copy of WebKit in either source or
+object code in the JavaFX runtime or JavaFX SDK. The terms of the
+Oracle license do NOT apply to WebKit; it is
 licensed under the following license, separately from the Oracle programs
 you receive. If you do not wish to install this library, you may delete
 this library:

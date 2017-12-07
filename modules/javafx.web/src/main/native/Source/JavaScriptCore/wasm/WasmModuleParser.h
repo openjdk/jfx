@@ -30,25 +30,16 @@
 #include "WasmFormat.h"
 #include "WasmOps.h"
 #include "WasmParser.h"
+#include <wtf/Optional.h>
 #include <wtf/Vector.h>
 
 namespace JSC { namespace Wasm {
 
-struct ModuleParserResult {
-    std::unique_ptr<ModuleInformation> module;
-    Vector<FunctionLocationInBinary> functionLocationInBinary;
-    Vector<SignatureIndex> moduleSignatureIndicesToUniquedSignatureIndices;
-};
-
-class ModuleParser : public Parser<ModuleParserResult> {
+class ModuleParser : public Parser<void> {
 public:
-
-    ModuleParser(VM* vm, const uint8_t* sourceBuffer, size_t sourceLength)
-        : Parser(vm, sourceBuffer, sourceLength)
-    {
-    }
-    ModuleParser(VM* vm, const Vector<uint8_t>& sourceBuffer)
-        : ModuleParser(vm, sourceBuffer.data(), sourceBuffer.size())
+    ModuleParser(const uint8_t* sourceBuffer, size_t sourceLength, ModuleInformation& info)
+        : Parser(sourceBuffer, sourceLength)
+        , m_info(info)
     {
     }
 
@@ -67,8 +58,9 @@ private:
     PartialResult WARN_UNUSED_RETURN parseResizableLimits(uint32_t& initial, std::optional<uint32_t>& maximum);
     PartialResult WARN_UNUSED_RETURN parseInitExpr(uint8_t&, uint64_t&, Type& initExprType);
 
-    ModuleParserResult m_result;
-    bool m_hasTable { false };
+    Ref<ModuleInformation> m_info;
+    uint32_t m_memoryCount { 0 };
+    uint32_t m_tableCount { 0 };
 };
 
 } } // namespace JSC::Wasm

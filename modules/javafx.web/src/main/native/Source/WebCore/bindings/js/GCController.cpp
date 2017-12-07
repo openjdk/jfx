@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2014, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,10 +38,10 @@ using namespace JSC;
 
 namespace WebCore {
 
-static void collect(void*)
+static void collect()
 {
     JSLockHolder lock(commonVM());
-    commonVM().heap.collectAllGarbage();
+    commonVM().heap.collectNow(Async, CollectionScope::Full);
 }
 
 GCController& GCController::singleton()
@@ -71,19 +71,19 @@ void GCController::garbageCollectSoon()
 void GCController::garbageCollectOnNextRunLoop()
 {
     if (!m_GCTimer.isActive())
-        m_GCTimer.startOneShot(0);
+        m_GCTimer.startOneShot(0_s);
 }
 
 void GCController::gcTimerFired()
 {
-    collect(nullptr);
+    collect();
 }
 
 void GCController::garbageCollectNow()
 {
     JSLockHolder lock(commonVM());
     if (!commonVM().heap.isCurrentThreadBusy()) {
-        commonVM().heap.collectAllGarbage();
+        commonVM().heap.collectNow(Sync, CollectionScope::Full);
         WTF::releaseFastMallocFreeMemory();
     }
 }
@@ -93,7 +93,7 @@ void GCController::garbageCollectNowIfNotDoneRecently()
 #if USE(CF) || USE(GLIB)
     JSLockHolder lock(commonVM());
     if (!commonVM().heap.isCurrentThreadBusy())
-        commonVM().heap.collectAllGarbageIfNotDoneRecently();
+        commonVM().heap.collectNowFullIfNotDoneRecently(Async);
 #else
     garbageCollectSoon();
 #endif
@@ -101,14 +101,14 @@ void GCController::garbageCollectNowIfNotDoneRecently()
 
 void GCController::garbageCollectOnAlternateThreadForDebugging(bool waitUntilDone)
 {
-    ThreadIdentifier threadID = createThread(collect, 0, "WebCore: GCController");
+    RefPtr<Thread> thread = Thread::create("WebCore: GCController", &collect);
 
     if (waitUntilDone) {
-        waitForThreadCompletion(threadID);
+        thread->waitForCompletion();
         return;
     }
 
-    detachThread(threadID);
+    thread->detach();
 }
 
 void GCController::setJavaScriptGarbageCollectorTimerEnabled(bool enable)

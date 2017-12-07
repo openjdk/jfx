@@ -31,8 +31,10 @@
 #include "config.h"
 #include "Crypto.h"
 
+#if OS(DARWIN)
+#include "CommonCryptoUtilities.h"
+#endif
 #include "Document.h"
-#include "ExceptionCode.h"
 #include "SubtleCrypto.h"
 #include "WebKitSubtleCrypto.h"
 #include <runtime/ArrayBufferView.h>
@@ -55,10 +57,15 @@ Crypto::~Crypto()
 ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
 {
     if (!isInt(array.getType()))
-        return Exception { TYPE_MISMATCH_ERR };
+        return Exception { TypeMismatchError };
     if (array.byteLength() > 65536)
-        return Exception { QUOTA_EXCEEDED_ERR };
+        return Exception { QuotaExceededError };
+#if OS(DARWIN) && ENABLE(SUBTLE_CRYPTO)
+    int rc = CCRandomCopyBytes(kCCRandomDefault, array.baseAddress(), array.byteLength());
+    RELEASE_ASSERT(rc == kCCSuccess);
+#else
     cryptographicallyRandomValues(array.baseAddress(), array.byteLength());
+#endif
     return { };
 }
 
@@ -72,7 +79,7 @@ SubtleCrypto& Crypto::subtle()
 ExceptionOr<WebKitSubtleCrypto&> Crypto::webkitSubtle()
 {
     if (!isMainThread())
-        return Exception { NOT_SUPPORTED_ERR };
+        return Exception { NotSupportedError };
 
     if (!m_webkitSubtle) {
         m_webkitSubtle = WebKitSubtleCrypto::create(*downcast<Document>(scriptExecutionContext()));

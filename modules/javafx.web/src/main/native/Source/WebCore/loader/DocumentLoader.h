@@ -32,7 +32,7 @@
 #include "CachedRawResourceClient.h"
 #include "CachedResourceHandle.h"
 #include "DocumentWriter.h"
-#include "IconDatabaseBase.h"
+#include "FrameDestructionObserver.h"
 #include "LinkIcon.h"
 #include "LoadTiming.h"
 #include "NavigationAction.h"
@@ -45,6 +45,7 @@
 #include "SubstituteData.h"
 #include "Timer.h"
 #include <wtf/HashSet.h>
+#include <wtf/OptionSet.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
@@ -85,7 +86,12 @@ enum class AutoplayPolicy {
     Deny,
 };
 
-class DocumentLoader : public RefCounted<DocumentLoader>, private CachedRawResourceClient {
+enum class AutoplayQuirk {
+    SynthesizedPauseEvents = 1 << 0,
+    InheritedUserGestures = 1 << 1,
+};
+
+class DocumentLoader : public RefCounted<DocumentLoader>, public FrameDestructionObserver, private CachedRawResourceClient {
     WTF_MAKE_FAST_ALLOCATED;
     friend class ContentFilter;
 public:
@@ -96,7 +102,6 @@ public:
     WEBCORE_EXPORT virtual ~DocumentLoader();
 
     void attachToFrame(Frame&);
-    Frame* frame() const { return m_frame; }
 
     WEBCORE_EXPORT virtual void detachFromFrame();
 
@@ -222,14 +227,6 @@ public:
     WEBCORE_EXPORT void cancelMainResourceLoad(const ResourceError&);
     void willContinueMainResourceLoadAfterRedirect(const ResourceRequest&);
 
-    // Support iconDatabase in synchronous mode.
-    void iconLoadDecisionAvailable();
-
-    // Support iconDatabase in asynchronous mode.
-    void continueIconLoadWithDecision(IconLoadDecision);
-    void getIconLoadDecisionForIconURL(const String&);
-    void getIconDataForIconURL(const String&);
-
     bool isLoadingMainResource() const { return m_loadingMainResource; }
     bool isLoadingMultipartContent() const { return m_isLoadingMultipartContent; }
 
@@ -241,6 +238,9 @@ public:
 
     AutoplayPolicy autoplayPolicy() const { return m_autoplayPolicy; }
     void setAutoplayPolicy(AutoplayPolicy policy) { m_autoplayPolicy = policy; }
+
+    OptionSet<AutoplayQuirk> allowedAutoplayQuirks() const { return m_allowedAutoplayQuirks; }
+    void setAllowedAutoplayQuirks(OptionSet<AutoplayQuirk> allowedQuirks) { m_allowedAutoplayQuirks = allowedQuirks; }
 
     void addSubresourceLoader(ResourceLoader*);
     void removeSubresourceLoader(ResourceLoader*);
@@ -293,6 +293,8 @@ public:
     WEBCORE_EXPORT void didGetLoadDecisionForIcon(bool decision, uint64_t loadIdentifier, uint64_t newCallbackID);
     void finishedLoadingIcon(IconLoader&, SharedBuffer*);
 
+    const Vector<LinkIcon>& linkIcons() const { return m_linkIcons; }
+
 protected:
     WEBCORE_EXPORT DocumentLoader(const ResourceRequest&, const SubstituteData&);
 
@@ -319,7 +321,7 @@ private:
 #endif
 
     void willSendRequest(ResourceRequest&, const ResourceResponse&);
-    void finishedLoading(double finishTime);
+    void finishedLoading();
     void mainReceivedError(const ResourceError&);
     WEBCORE_EXPORT void redirectReceived(CachedResource&, ResourceRequest&, const ResourceResponse&) override;
     WEBCORE_EXPORT void responseReceived(CachedResource&, const ResourceResponse&) override;
@@ -359,7 +361,8 @@ private:
     void cancelPolicyCheckIfNeeded();
     void becomeMainResourceClient();
 
-    Frame* m_frame { nullptr };
+    void notifyFinishedLoadingIcon(uint64_t callbackIdentifier, SharedBuffer*);
+
     Ref<CachedResourceLoader> m_cachedResourceLoader;
 
     CachedResourceHandle<CachedRawResource> m_mainResource;
@@ -445,13 +448,9 @@ private:
     bool m_waitingForContentPolicy { false };
     bool m_waitingForNavigationPolicy { false };
 
-    // For IconDatabase-style loads
-    RefPtr<IconLoadDecisionCallback> m_iconLoadDecisionCallback;
-    RefPtr<IconDataCallback> m_iconDataCallback;
-
-    // For IconLoadingClient-style loads
     HashMap<uint64_t, LinkIcon> m_iconsPendingLoadDecision;
     HashMap<std::unique_ptr<IconLoader>, uint64_t> m_iconLoaders;
+    Vector<LinkIcon> m_linkIcons;
 
     bool m_subresourceLoadersArePageCacheAcceptable { false };
     ShouldOpenExternalURLsPolicy m_shouldOpenExternalURLsPolicy { ShouldOpenExternalURLsPolicy::ShouldNotAllow };
@@ -472,6 +471,7 @@ private:
 #endif
     bool m_userContentExtensionsEnabled { true };
     AutoplayPolicy m_autoplayPolicy { AutoplayPolicy::Default };
+    OptionSet<AutoplayQuirk> m_allowedAutoplayQuirks;
 
 #ifndef NDEBUG
     bool m_hasEverBeenAttached { false };

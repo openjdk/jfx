@@ -27,15 +27,16 @@
 #include "VisibleSelection.h"
 
 #include "Document.h"
+#include "Editing.h"
 #include "Element.h"
 #include "HTMLInputElement.h"
 #include "TextIterator.h"
 #include "VisibleUnits.h"
-#include "htmlediting.h"
 #include <stdio.h>
 #include <wtf/Assertions.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
@@ -718,6 +719,19 @@ void VisibleSelection::showTreeForThis() const
         fputs("end: ", stderr);
         end().showAnchorTypeAndOffset();
     }
+}
+
+TextStream& operator<<(TextStream& stream, const VisibleSelection& v)
+{
+    TextStream::GroupScope scope(stream);
+    stream << "VisibleSelection " << &v;
+
+    stream.dumpProperty("base", v.base());
+    stream.dumpProperty("extent", v.extent());
+    stream.dumpProperty("start", v.start());
+    stream.dumpProperty("end", v.end());
+
+    return stream;
 }
 
 #endif

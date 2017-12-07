@@ -42,6 +42,10 @@
 #include "PlatformDisplayWin.h"
 #endif
 
+#if PLATFORM(WPE)
+#include "PlatformDisplayWPE.h"
+#endif
+
 #if PLATFORM(GTK)
 #include <gdk/gdk.h>
 #endif
@@ -55,7 +59,11 @@
 #endif
 
 #if USE(EGL)
+#if USE(LIBEPOXY)
+#include "EpoxyEGL.h"
+#else
 #include <EGL/egl.h>
+#endif
 #include <wtf/HashSet.h>
 #include <wtf/NeverDestroyed.h>
 #endif
@@ -98,6 +106,10 @@ std::unique_ptr<PlatformDisplay> PlatformDisplay::createPlatformDisplay()
 #endif
 #if PLATFORM(X11)
     return std::make_unique<PlatformDisplayX11>(nullptr);
+#endif
+
+#if PLATFORM(WPE)
+    return std::make_unique<PlatformDisplayWPE>();
 #endif
 
     ASSERT_NOT_REACHED();
@@ -184,12 +196,6 @@ void PlatformDisplay::initializeEGLDisplay()
     m_eglDisplayInitialized = true;
 
     if (m_eglDisplay == EGL_NO_DISPLAY) {
-        // EGL is optionally soft linked on Windows.
-#if PLATFORM(WIN)
-        auto eglGetDisplay = eglGetDisplayPtr();
-        if (!eglGetDisplay)
-            return;
-#endif
         m_eglDisplay = eglGetDisplay(EGL_DEFAULT_DISPLAY);
         if (m_eglDisplay == EGL_NO_DISPLAY)
             return;
@@ -207,6 +213,7 @@ void PlatformDisplay::initializeEGLDisplay()
 
     eglDisplays().add(this);
 
+#if !PLATFORM(WIN)
     static bool eglAtexitHandlerInitialized = false;
     if (!eglAtexitHandlerInitialized) {
         // EGL registers atexit handlers to cleanup its global display list.
@@ -218,13 +225,9 @@ void PlatformDisplay::initializeEGLDisplay()
         // EGL atexit handlers and the PlatformDisplay destructor.
         // See https://bugs.webkit.org/show_bug.cgi?id=157973.
         eglAtexitHandlerInitialized = true;
-        std::atexit([] {
-            while (!eglDisplays().isEmpty()) {
-                auto* display = eglDisplays().takeAny();
-                display->terminateEGLDisplay();
-            }
-        });
+        std::atexit(shutDownEglDisplays);
     }
+#endif
 }
 
 void PlatformDisplay::terminateEGLDisplay()
@@ -236,6 +239,15 @@ void PlatformDisplay::terminateEGLDisplay()
     eglTerminate(m_eglDisplay);
     m_eglDisplay = EGL_NO_DISPLAY;
 }
+
+void PlatformDisplay::shutDownEglDisplays()
+{
+    while (!eglDisplays().isEmpty()) {
+        auto* display = eglDisplays().takeAny();
+        display->terminateEGLDisplay();
+    }
+}
+
 #endif // USE(EGL)
 
 } // namespace WebCore

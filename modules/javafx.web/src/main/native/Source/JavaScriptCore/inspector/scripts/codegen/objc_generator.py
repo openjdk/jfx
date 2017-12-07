@@ -446,8 +446,7 @@ class ObjCGenerator(Generator):
                 return 'fromProtocolString<%s>(%s).value()' % (self.objc_enum_name_for_non_anonymous_enum(member.type), sub_expression)
             return sub_expression
         if category is ObjCTypeCategory.Object:
-            objc_class = self.objc_class_for_type(member.type)
-            return '[[%s alloc] initWithInspectorObject:[%s toInspectorObject].get()]' % (objc_class, sub_expression)
+            raise Exception("protocol_to_objc_expression_for_member does not support an Object type. See: protocol_to_objc_code_block_for_object_member")
         if category is ObjCTypeCategory.Array:
             protocol_type = ObjCGenerator.protocol_type_for_type(member.type.element_type)
             objc_class = self.objc_class_for_type(member.type.element_type)
@@ -459,6 +458,15 @@ class ObjCGenerator(Generator):
                     return 'objcDoubleArray(%s)' % sub_expression
                 return 'objcIntegerArray(%s)' % sub_expression
             return 'objcArray<%s>(%s)' % (objc_class, sub_expression)
+
+    def protocol_to_objc_code_block_for_object_member(self, declaration, member, sub_expression):
+        objc_class = self.objc_class_for_type(member.type)
+        lines = []
+        lines.append('    %sJSONObject *object = %s;' % (ObjCGenerator.OBJC_STATIC_PREFIX, sub_expression))
+        lines.append('    if (!object)')
+        lines.append('        return nil;')
+        lines.append('    return [[%s alloc] initWithInspectorObject:[%s toInspectorObject].get()];' % (objc_class, sub_expression))
+        return '\n'.join(lines)
 
     def payload_to_objc_expression_for_member(self, declaration, member):
         _type = member.type
@@ -486,8 +494,16 @@ class ObjCGenerator(Generator):
             objc_class = self.objc_class_for_type(member.type)
             return '[[%s alloc] initWithPayload:payload[@"%s"]]' % (objc_class, member.member_name)
         if isinstance(_type, ArrayType):
-            objc_class = self.objc_class_for_type(member.type.element_type)
-            return 'objcArrayFromPayload<%s>(payload[@"%s"])' % (objc_class, member.member_name)
+            element_type = member.type.element_type
+            if isinstance(element_type, EnumType):
+                element_type = element_type.primitive_type
+
+            # In this case, there is no conversion that needs to be done, the array already contains an ObjC type.
+            if isinstance(element_type, PrimitiveType):
+                return 'payload[@"%s"]' % member.member_name
+            else:
+                objc_class = self.objc_class_for_type(element_type)
+                return 'objcArrayFromPayload<%s>(payload[@"%s"])' % (objc_class, member.member_name)
 
     # JSON object setter/getter selectors for types.
 

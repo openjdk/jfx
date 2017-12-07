@@ -70,7 +70,7 @@ public:
 
     virtual bool shouldDeleteRange(Range*) = 0;
     virtual bool smartInsertDeleteEnabled() = 0;
-    virtual bool isSelectTrailingWhitespaceEnabled() = 0;
+    virtual bool isSelectTrailingWhitespaceEnabled() const = 0;
     virtual bool isContinuousSpellCheckingEnabled() = 0;
     virtual void toggleContinuousSpellChecking() = 0;
     virtual bool isGrammarCheckingEnabled() = 0;
@@ -185,6 +185,8 @@ public:
     // Support for global selections, used on platforms like the X Window System that treat
     // selection as a type of clipboard.
     virtual bool supportsGlobalSelection() { return false; }
+
+    virtual bool performTwoStepDrop(DocumentFragment&, Range& destination, bool isMove) = 0;
 };
 
 }

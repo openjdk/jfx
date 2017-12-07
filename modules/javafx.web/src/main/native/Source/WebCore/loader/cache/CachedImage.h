@@ -50,7 +50,7 @@ public:
     CachedImage(CachedResourceRequest&&, SessionID);
     CachedImage(Image*, SessionID);
     // Constructor to use for manually cached images.
-    CachedImage(const URL&, Image*, SessionID);
+    CachedImage(const URL&, Image*, SessionID, const String& domainForCachePartition);
     virtual ~CachedImage();
 
     WEBCORE_EXPORT Image* image(); // Returns the nullImage() if the image is not available yet.
@@ -63,10 +63,10 @@ public:
 
     bool canRender(const RenderElement* renderer, float multiplier) { return !errorOccurred() && !imageSizeForRenderer(renderer, multiplier).isEmpty(); }
 
-    void setContainerSizeForRenderer(const CachedImageClient*, const LayoutSize&, float);
-    bool usesImageContainerSize() const;
-    bool imageHasRelativeWidth() const;
-    bool imageHasRelativeHeight() const;
+    void setContainerContextForClient(const CachedImageClient&, const LayoutSize&, float, const URL&);
+    bool usesImageContainerSize() const { return m_image && m_image->usesContainerSize(); }
+    bool imageHasRelativeWidth() const { return m_image && m_image->hasRelativeWidth(); }
+    bool imageHasRelativeHeight() const { return m_image && m_image->hasRelativeHeight(); }
 
     void addDataBuffer(SharedBuffer&) override;
     void finishLoading(SharedBuffer*) override;
@@ -84,6 +84,8 @@ public:
     void load(CachedResourceLoader&) override;
 
     bool isOriginClean(SecurityOrigin*);
+
+    void addPendingImageDrawingClient(CachedImageClient&);
 
 private:
     void clear();
@@ -107,6 +109,7 @@ private:
     void allClientsRemoved() override;
     void destroyDecodedData() override;
 
+    EncodedDataStatus setImageDataBuffer(SharedBuffer*, bool allDataReceived);
     void addData(const char* data, unsigned length) override;
     void error(CachedResource::Status) override;
     void responseReceived(const ResourceResponse&) override;
@@ -119,48 +122,44 @@ private:
     class CachedImageObserver final : public RefCounted<CachedImageObserver>, public ImageObserver {
     public:
         static Ref<CachedImageObserver> create(CachedImage& image) { return adoptRef(*new CachedImageObserver(image)); }
-        void add(CachedImage& image) { m_cachedImages.append(&image); }
-        void remove(CachedImage& image) { m_cachedImages.removeFirst(&image); }
+        HashSet<CachedImage*>& cachedImages() { return m_cachedImages; }
+        const HashSet<CachedImage*>& cachedImages() const { return m_cachedImages; }
 
     private:
         explicit CachedImageObserver(CachedImage&);
 
         // ImageObserver API
-        URL sourceUrl() const override { return m_cachedImages[0]->url(); }
-        bool allowSubsampling() const final { return m_allowSubsampling; }
-        bool allowLargeImageAsyncDecoding() const override { return m_allowLargeImageAsyncDecoding; }
-        bool allowAnimatedImageAsyncDecoding() const override { return m_allowAnimatedImageAsyncDecoding; }
-        bool showDebugBackground() const final { return m_showDebugBackground; }
-        void decodedSizeChanged(const Image*, long long delta) final;
-        void didDraw(const Image*) final;
+        URL sourceUrl() const override { return !m_cachedImages.isEmpty() ? (*m_cachedImages.begin())->url() : URL(); }
+        void decodedSizeChanged(const Image&, long long delta) final;
+        void didDraw(const Image&) final;
 
-        void animationAdvanced(const Image*) final;
-        void changedInRect(const Image*, const IntRect*) final;
+        bool canDestroyDecodedData(const Image&) final;
+        void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid) final;
+        void changedInRect(const Image&, const IntRect*) final;
 
-        Vector<CachedImage*> m_cachedImages;
-        // The default value of m_allowSubsampling should be the same as defaultImageSubsamplingEnabled in Settings.cpp
-#if PLATFORM(IOS)
-        bool m_allowSubsampling { true };
-#else
-        bool m_allowSubsampling { false };
-#endif
-        bool m_allowLargeImageAsyncDecoding { true };
-        bool m_allowAnimatedImageAsyncDecoding { true };
-        bool m_showDebugBackground { false };
+        HashSet<CachedImage*> m_cachedImages;
     };
 
-    void decodedSizeChanged(const Image*, long long delta);
-    void didDraw(const Image*);
-    void animationAdvanced(const Image*);
-    void changedInRect(const Image*, const IntRect*);
+    void decodedSizeChanged(const Image&, long long delta);
+    void didDraw(const Image&);
+    bool canDestroyDecodedData(const Image&);
+    void imageFrameAvailable(const Image&, ImageAnimatingState, const IntRect* changeRect = nullptr, DecodingStatus = DecodingStatus::Invalid);
+    void changedInRect(const Image&, const IntRect*);
 
     void addIncrementalDataBuffer(SharedBuffer&);
 
     void didReplaceSharedBufferContents() override;
 
-    typedef std::pair<LayoutSize, float> SizeAndZoom;
-    typedef HashMap<const CachedImageClient*, SizeAndZoom> ContainerSizeRequests;
-    ContainerSizeRequests m_pendingContainerSizeRequests;
+    struct ContainerContext {
+        LayoutSize containerSize;
+        float containerZoom;
+        URL imageURL;
+    };
+
+    using ContainerContextRequests = HashMap<const CachedImageClient*, ContainerContext>;
+    ContainerContextRequests m_pendingContainerContextRequests;
+
+    HashSet<CachedImageClient*> m_pendingImageDrawingClients;
 
     RefPtr<CachedImageObserver> m_imageObserver;
     RefPtr<Image> m_image;
