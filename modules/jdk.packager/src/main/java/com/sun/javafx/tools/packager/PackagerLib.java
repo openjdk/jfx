@@ -465,7 +465,7 @@ public class PackagerLib {
             String name = "bsigned_" + jar.getName();
             File signedJar = new File(parent, name);
 
-            System.out.println("Signing (BLOB) " + jar.getPath());
+            Log.info("Signing (BLOB) " + jar.getPath());
 
             signAsBLOB(jar, signedJar, signature);
 
@@ -481,7 +481,7 @@ public class PackagerLib {
             destJar.getParentFile().mkdirs();
             signedJar.renameTo(destJar);
             if (verbose) {
-                System.out.println("Signed as " + destJar.getPath());
+                Log.info("Signed as " + destJar.getPath());
             }
         }
     }
@@ -543,8 +543,8 @@ public class PackagerLib {
                 classpath += File.pathSeparator + makeAllParams.classpath;
             }
             if (makeAllParams.verbose) {
-                System.out.println("Executing javac:");
-                System.out.printf("%s %s %s %s %s %s%n",
+                Log.info("Executing javac:");
+                Log.infof("%s %s %s %s %s %s%n",
                         javac.getAbsolutePath(),
                         "-d", compiledDirName,
                         "-cp", classpath,
@@ -609,7 +609,7 @@ public class PackagerLib {
             try {
                 String line;
                 while ((line = in.readLine()) != null) {
-                    System.out.println(line);
+                    Log.info(line);
                 }
             } catch (IOException ioe) {
                 com.oracle.tools.packager.Log.verbose(ioe);
@@ -622,7 +622,7 @@ public class PackagerLib {
             try {
                 String line;
                 while ((line = err.readLine()) != null) {
-                    System.err.println(line);
+                    Log.error(line);
                 }
             } catch (IOException ioe) {
                 Log.verbose(ioe);

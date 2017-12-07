@@ -602,7 +602,7 @@ public class JNLPBundler extends AbstractBundler {
                     for (Map.Entry<File, File> t: TEMPLATES.fetchFrom(params).entrySet()) {
                         File out = t.getValue();
                         if (out == null) {
-                            System.out.println(
+                            Log.info(
                                     "Perform inplace substitution for " +
                                             t.getKey().getAbsolutePath());
                             out = t.getKey();
@@ -988,7 +988,6 @@ public class JNLPBundler extends AbstractBundler {
     }
 
     private String xmlPrettyPrint(String s) throws TransformerException {
-//        System.out.println(s);
         TransformerFactory factory = TransformerFactory.newInstance();
 
         Transformer transformer = factory.newTransformer();
@@ -1350,7 +1349,7 @@ public class JNLPBundler extends AbstractBundler {
         for (String s: lst) {
             InputStream is = PackagerResource.class.getResourceAsStream(prefixWebFiles+s);
             if (is == null) {
-                System.err.println("Internal error. Missing resources [" +
+                Log.error("Internal error. Missing resources [" +
                         (prefixWebFiles+s) + "]");
                 return false;
             } else {

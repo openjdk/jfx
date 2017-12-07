@@ -307,7 +307,7 @@ public class DeployParams extends CommonParams {
     @Deprecated
     public void setEmbedCertifcates(boolean v) {
         if (v) {
-            System.out.println("JavaFX Packager no longer supports embedding certificates in JNLP files.  Setting will be ignored.");
+            Log.info("JavaFX Packager no longer supports embedding certificates in JNLP files.  Setting will be ignored.");
         }
     }
 

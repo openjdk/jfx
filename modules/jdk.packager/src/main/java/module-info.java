@@ -26,6 +26,13 @@
 /**
  * Defines the Java packager tool, javapackager.
  *
+ * <p>The javapackager is a tool for generating bundles for self-contained applications.
+ * It can be located under the name {@code "javapackager"} using the {@link ToolProvider}, for example:
+ * <pre>{@code
+ * ToolProvider javaPackager = ToolProvider.findFirst("javapackager").orElseThrow(...);
+ * javaPackager.run(...);
+ * }</pre>
+ *
  * @moduleGraph
  * @since 9
  */
@@ -59,4 +66,7 @@ module jdk.packager {
         com.oracle.tools.packager.windows.WinAppBundler,
         com.oracle.tools.packager.windows.WinExeBundler,
         com.oracle.tools.packager.windows.WinMsiBundler;
+
+    provides java.util.spi.ToolProvider
+        with jdk.packager.internal.JavaPackagerToolProvider;
 }
