@@ -35,7 +35,7 @@
 
 namespace JSC {
 
-const ClassInfo JSInternalPromiseDeferred::s_info = { "JSInternalPromiseDeferred", &Base::s_info, nullptr, CREATE_METHOD_TABLE(JSInternalPromiseDeferred) };
+const ClassInfo JSInternalPromiseDeferred::s_info = { "JSInternalPromiseDeferred", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSInternalPromiseDeferred) };
 
 JSInternalPromiseDeferred* JSInternalPromiseDeferred::create(ExecState* exec, JSGlobalObject* globalObject)
 {
@@ -73,6 +73,11 @@ JSInternalPromise* JSInternalPromiseDeferred::reject(ExecState* exec, JSValue re
 {
     Base::reject(exec, reason);
     return promise();
+}
+
+JSInternalPromise* JSInternalPromiseDeferred::reject(ExecState* exec, Exception* reason)
+{
+    return reject(exec, reason->value());
 }
 
 } // namespace JSC

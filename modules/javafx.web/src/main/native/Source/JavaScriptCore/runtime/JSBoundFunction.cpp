@@ -32,7 +32,7 @@
 
 namespace JSC {
 
-const ClassInfo JSBoundFunction::s_info = { "Function", &Base::s_info, 0, CREATE_METHOD_TABLE(JSBoundFunction) };
+const ClassInfo JSBoundFunction::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSBoundFunction) };
 
 EncodedJSValue JSC_HOST_CALL boundThisNoArgsFunctionCall(ExecState* exec)
 {
@@ -189,6 +189,19 @@ JSBoundFunction::JSBoundFunction(VM& vm, JSGlobalObject* globalObject, Structure
     , m_boundThis(vm, this, boundThis)
     , m_boundArgs(vm, this, boundArgs, WriteBarrier<JSArray>::MayBeNull)
 {
+}
+
+JSArray* JSBoundFunction::boundArgsCopy(ExecState* exec)
+{
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    JSArray* result = constructEmptyArray(exec, nullptr, globalObject());
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    for (unsigned i = 0; i < m_boundArgs->length(); ++i) {
+        result->push(exec, m_boundArgs->getIndexQuickly(i));
+        RETURN_IF_EXCEPTION(scope, nullptr);
+    }
+    return result;
 }
 
 void JSBoundFunction::finishCreation(VM& vm, NativeExecutable* executable, int length)

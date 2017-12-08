@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2005-2010, 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -27,6 +27,7 @@
 #include <unicode/uchar.h>
 #include <unicode/ustring.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/Forward.h>
 #include <wtf/Hasher.h>
 #include <wtf/MathExtras.h>
@@ -54,7 +55,7 @@ class SymbolImpl;
 class SymbolRegistry;
 
 struct CStringTranslator;
-struct CharBufferFromLiteralDataTranslator;
+template<typename> struct BufferFromStaticDataTranslator;
 struct HashAndUTF8CharactersTranslator;
 struct LCharBufferTranslator;
 struct StringHash;
@@ -128,18 +129,69 @@ struct StringStats {
 #define STRING_STATS_DEREF_STRING(string) ((void)0)
 #endif
 
-class StringImpl {
+class StringImplShape {
+    WTF_MAKE_NONCOPYABLE(StringImplShape);
+protected:
+    StringImplShape(unsigned refCount, unsigned length, const LChar* data8, unsigned hashAndFlags)
+        : m_refCount(refCount)
+        , m_length(length)
+        , m_data8(data8)
+        , m_hashAndFlags(hashAndFlags)
+    { }
+
+    StringImplShape(unsigned refCount, unsigned length, const UChar* data16, unsigned hashAndFlags)
+        : m_refCount(refCount)
+        , m_length(length)
+        , m_data16(data16)
+        , m_hashAndFlags(hashAndFlags)
+    { }
+
+    enum ConstructWithConstExprTag { ConstructWithConstExpr };
+
+    template<unsigned characterCount>
+    constexpr StringImplShape(unsigned refCount, unsigned length, const char (&characters)[characterCount], unsigned hashAndFlags, ConstructWithConstExprTag)
+        : m_refCount(refCount)
+        , m_length(length)
+        , m_data8Char(characters)
+        , m_hashAndFlags(hashAndFlags)
+    { }
+
+    template<unsigned characterCount>
+    constexpr StringImplShape(unsigned refCount, unsigned length, const char16_t (&characters)[characterCount], unsigned hashAndFlags, ConstructWithConstExprTag)
+        : m_refCount(refCount)
+        , m_length(length)
+        , m_data16Char(characters)
+        , m_hashAndFlags(hashAndFlags)
+    { }
+
+    unsigned m_refCount;
+    unsigned m_length;
+    union {
+        const LChar* m_data8;
+        const UChar* m_data16;
+        // It seems that reinterpret_cast prevents constexpr's compile time initialization in VC++.
+        // These are needed to avoid reinterpret_cast.
+        const char* m_data8Char;
+        const char16_t* m_data16Char;
+    };
+    mutable unsigned m_hashAndFlags;
+};
+
+class StringImpl : private StringImplShape {
     WTF_MAKE_NONCOPYABLE(StringImpl); WTF_MAKE_FAST_ALLOCATED;
     friend struct WTF::CStringTranslator;
     template<typename CharacterType> friend struct WTF::HashAndCharactersTranslator;
     friend struct WTF::HashAndUTF8CharactersTranslator;
-    friend struct WTF::CharBufferFromLiteralDataTranslator;
+    template<typename CharacterType> friend struct WTF::BufferFromStaticDataTranslator;
     friend struct WTF::LCharBufferTranslator;
     friend struct WTF::SubstringTranslator;
     friend struct WTF::UCharBufferTranslator;
     friend class JSC::LLInt::Data;
     friend class JSC::LLIntOffsetsExtractor;
+    friend class AtomicStringImpl;
     friend class SymbolImpl;
+    friend class PrivateSymbolImpl;
+    friend class RegisteredSymbolImpl;
 
 private:
     enum BufferOwnership {
@@ -173,10 +225,7 @@ private:
     enum Force8Bit { Force8BitConstructor };
     // Create a normal 8-bit string with internal storage (BufferInternal)
     StringImpl(unsigned length, Force8Bit)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data8(tailPointer<LChar>())
-        , m_hashAndFlags(s_hashFlag8BitBuffer | StringNormal | BufferInternal)
+        : StringImplShape(s_refCountIncrement, length, tailPointer<LChar>(), s_hashFlag8BitBuffer | StringNormal | BufferInternal)
     {
         ASSERT(m_data8);
         ASSERT(m_length);
@@ -186,10 +235,7 @@ private:
 
     // Create a normal 16-bit string with internal storage (BufferInternal)
     StringImpl(unsigned length)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data16(tailPointer<UChar>())
-        , m_hashAndFlags(StringNormal | BufferInternal)
+        : StringImplShape(s_refCountIncrement, length, tailPointer<UChar>(), StringNormal | BufferInternal)
     {
         ASSERT(m_data16);
         ASSERT(m_length);
@@ -199,10 +245,7 @@ private:
 
     // Create a StringImpl adopting ownership of the provided buffer (BufferOwned)
     StringImpl(MallocPtr<LChar> characters, unsigned length)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data8(characters.leakPtr())
-        , m_hashAndFlags(s_hashFlag8BitBuffer | StringNormal | BufferOwned)
+        : StringImplShape(s_refCountIncrement, length, characters.leakPtr(), s_hashFlag8BitBuffer | StringNormal | BufferOwned)
     {
         ASSERT(m_data8);
         ASSERT(m_length);
@@ -212,10 +255,7 @@ private:
 
     enum ConstructWithoutCopyingTag { ConstructWithoutCopying };
     StringImpl(const UChar* characters, unsigned length, ConstructWithoutCopyingTag)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data16(characters)
-        , m_hashAndFlags(StringNormal | BufferInternal)
+        : StringImplShape(s_refCountIncrement, length, characters, StringNormal | BufferInternal)
     {
         ASSERT(m_data16);
         ASSERT(m_length);
@@ -224,10 +264,7 @@ private:
     }
 
     StringImpl(const LChar* characters, unsigned length, ConstructWithoutCopyingTag)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data8(characters)
-        , m_hashAndFlags(s_hashFlag8BitBuffer | StringNormal | BufferInternal)
+        : StringImplShape(s_refCountIncrement, length, characters, s_hashFlag8BitBuffer | StringNormal | BufferInternal)
     {
         ASSERT(m_data8);
         ASSERT(m_length);
@@ -237,10 +274,7 @@ private:
 
     // Create a StringImpl adopting ownership of the provided buffer (BufferOwned)
     StringImpl(MallocPtr<UChar> characters, unsigned length)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data16(characters.leakPtr())
-        , m_hashAndFlags(StringNormal | BufferOwned)
+        : StringImplShape(s_refCountIncrement, length, characters.leakPtr(), StringNormal | BufferOwned)
     {
         ASSERT(m_data16);
         ASSERT(m_length);
@@ -250,10 +284,7 @@ private:
 
     // Used to create new strings that are a substring of an existing 8-bit StringImpl (BufferSubstring)
     StringImpl(const LChar* characters, unsigned length, Ref<StringImpl>&& base)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data8(characters)
-        , m_hashAndFlags(s_hashFlag8BitBuffer | StringNormal | BufferSubstring)
+        : StringImplShape(s_refCountIncrement, length, characters, s_hashFlag8BitBuffer | StringNormal | BufferSubstring)
     {
         ASSERT(is8Bit());
         ASSERT(m_data8);
@@ -267,10 +298,7 @@ private:
 
     // Used to create new strings that are a substring of an existing 16-bit StringImpl (BufferSubstring)
     StringImpl(const UChar* characters, unsigned length, Ref<StringImpl>&& base)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data16(characters)
-        , m_hashAndFlags(StringNormal | BufferSubstring)
+        : StringImplShape(s_refCountIncrement, length, characters, StringNormal | BufferSubstring)
     {
         ASSERT(!is8Bit());
         ASSERT(m_data16);
@@ -315,13 +343,13 @@ public:
         return adoptRef(*new (NotNull, stringImpl) StringImpl(rep.m_data16 + offset, length, *ownerRep));
     }
 
-    template<unsigned charactersCount>
-    ALWAYS_INLINE static Ref<StringImpl> createFromLiteral(const char (&characters)[charactersCount])
+    template<unsigned characterCount>
+    ALWAYS_INLINE static Ref<StringImpl> createFromLiteral(const char (&characters)[characterCount])
     {
-        COMPILE_ASSERT(charactersCount > 1, StringImplFromLiteralNotEmpty);
-        COMPILE_ASSERT((charactersCount - 1 <= ((unsigned(~0) - sizeof(StringImpl)) / sizeof(LChar))), StringImplFromLiteralCannotOverflow);
+        COMPILE_ASSERT(characterCount > 1, StringImplFromLiteralNotEmpty);
+        COMPILE_ASSERT((characterCount - 1 <= ((unsigned(~0) - sizeof(StringImpl)) / sizeof(LChar))), StringImplFromLiteralCannotOverflow);
 
-        return createWithoutCopying(reinterpret_cast<const LChar*>(characters), charactersCount - 1);
+        return createWithoutCopying(reinterpret_cast<const LChar*>(characters), characterCount - 1);
     }
 
     // FIXME: Transition off of these functions to createWithoutCopying instead.
@@ -398,6 +426,10 @@ public:
         if (bufferOwnership() == BufferSubstring)
             return substringBuffer()->cost();
 
+        // Note: we must not alter the m_hashAndFlags field in instances of StaticStringImpl.
+        // We ensure this by pre-setting the s_hashFlagDidReportCost bit in all instances of
+        // StaticStringImpl. As a result, StaticStringImpl instances will always return a cost of
+        // 0 here and avoid modifying m_hashAndFlags.
         if (m_hashAndFlags & s_hashFlagDidReportCost)
             return 0;
 
@@ -459,6 +491,7 @@ private:
     void setHash(unsigned hash) const
     {
         ASSERT(!hasHash());
+        ASSERT(!isStatic());
         // Multiple clients assume that StringHasher is the canonical string hash function.
         ASSERT(hash == (is8Bit() ? StringHasher::computeHashAndMaskTop8Bits(m_data8, m_length) : StringHasher::computeHashAndMaskTop8Bits(m_data16, m_length)));
         ASSERT(!(hash & (s_flagMask << (8 * sizeof(hash) - s_flagCount)))); // Verify that enough high bits are empty.
@@ -536,27 +569,47 @@ public:
         m_refCount = tempRefCount;
     }
 
-    class StaticStringImpl {
+    class StaticStringImpl : private StringImplShape {
         WTF_MAKE_NONCOPYABLE(StaticStringImpl);
     public:
         // Used to construct static strings, which have an special refCount that can never hit zero.
         // This means that the static string will never be destroyed, which is important because
         // static strings will be shared across threads & ref-counted in a non-threadsafe manner.
-        template<unsigned charactersCount>
-        constexpr StaticStringImpl(const char (&characters)[charactersCount], StringKind stringKind = StringNormal)
-            : m_refCount(s_refCountFlagIsStaticString)
-            , m_length(charactersCount - 1)
-            , m_data8(characters)
-            , m_hashAndFlags(s_hashFlag8BitBuffer | stringKind | BufferInternal | (StringHasher::computeLiteralHashAndMaskTop8Bits(characters) << s_flagCount))
+        //
+        // In order to make StaticStringImpl thread safe, we also need to ensure that the rest of
+        // the fields are never mutated by threads. We have this guarantee because:
+        //
+        // 1. m_length is only set on construction and never mutated thereafter.
+        //
+        // 2. m_data8 and m_data16 are only set on construction and never mutated thereafter.
+        //    We also know that a StringImpl never changes from 8 bit to 16 bit because there
+        //    is no way to set/clear the s_hashFlag8BitBuffer flag other than at construction.
+        //
+        // 3. m_hashAndFlags will not be mutated by different threads because:
+        //
+        //    a. StaticStringImpl's constructor sets the s_hashFlagDidReportCost flag to ensure
+        //       that StringImpl::cost() returns early.
+        //       This means StaticStringImpl costs are not counted. But since there should only
+        //       be a finite set of StaticStringImpls, their cost can be aggregated into a single
+        //       system cost if needed.
+        //    b. setIsAtomic() is never called on a StaticStringImpl.
+        //       setIsAtomic() asserts !isStatic().
+        //    c. setHash() is never called on a StaticStringImpl.
+        //       StaticStringImpl's constructor sets the hash on construction.
+        //       StringImpl::hash() only sets a new hash iff !hasHash().
+        //       Additionally, StringImpl::setHash() asserts hasHash() and !isStatic().
+
+        template<unsigned characterCount>
+        constexpr StaticStringImpl(const char (&characters)[characterCount], StringKind stringKind = StringNormal)
+            : StringImplShape(s_refCountFlagIsStaticString, characterCount - 1, characters,
+                s_hashFlag8BitBuffer | s_hashFlagDidReportCost | stringKind | BufferInternal | (StringHasher::computeLiteralHashAndMaskTop8Bits(characters) << s_flagCount), ConstructWithConstExpr)
         {
         }
 
-        template<unsigned charactersCount>
-        constexpr StaticStringImpl(const char16_t (&characters)[charactersCount], StringKind stringKind = StringNormal)
-            : m_refCount(s_refCountFlagIsStaticString)
-            , m_length(charactersCount - 1)
-            , m_data16(characters)
-            , m_hashAndFlags(stringKind | BufferInternal | (StringHasher::computeLiteralHashAndMaskTop8Bits(characters) << s_flagCount))
+        template<unsigned characterCount>
+        constexpr StaticStringImpl(const char16_t (&characters)[characterCount], StringKind stringKind = StringNormal)
+            : StringImplShape(s_refCountFlagIsStaticString, characterCount - 1, characters,
+                s_hashFlagDidReportCost | stringKind | BufferInternal | (StringHasher::computeLiteralHashAndMaskTop8Bits(characters) << s_flagCount), ConstructWithConstExpr)
         {
         }
 
@@ -564,15 +617,6 @@ public:
         {
             return *reinterpret_cast<StringImpl*>(this);
         }
-
-        // These member variables must match the layout of StringImpl.
-        unsigned m_refCount;
-        unsigned m_length;
-        union {
-            const char* m_data8;
-            const char16_t* m_data16;
-        };
-        unsigned m_hashAndFlags;
     };
 
     WTF_EXPORTDATA static StaticStringImpl s_atomicEmptyString;
@@ -585,25 +629,7 @@ public:
             *destination = *source;
             return;
         }
-
-        if (numCharacters <= s_copyCharsInlineCutOff) {
-            unsigned i = 0;
-#if (CPU(X86) || CPU(X86_64))
-            const unsigned charsPerInt = sizeof(uint32_t) / sizeof(T);
-
-            if (numCharacters > charsPerInt) {
-                unsigned stopCount = numCharacters & ~(charsPerInt - 1);
-
-                const uint32_t* srcCharacters = reinterpret_cast<const uint32_t*>(source);
-                uint32_t* destCharacters = reinterpret_cast<uint32_t*>(destination);
-                for (unsigned j = 0; i < stopCount; i += charsPerInt, ++j)
-                    destCharacters[j] = srcCharacters[j];
-            }
-#endif
-            for (; i < numCharacters; ++i)
-                destination[i] = source[i];
-        } else
-            memcpy(destination, source, numCharacters * sizeof(T));
+        memcpy(destination, source, numCharacters * sizeof(T));
     }
 
     ALWAYS_INLINE static void copyChars(UChar* destination, const LChar* source, unsigned numCharacters)
@@ -738,10 +764,7 @@ protected:
 
     // Used to create new symbol strings that holds existing 8-bit [[Description]] string as a substring buffer (BufferSubstring).
     StringImpl(CreateSymbolTag, const LChar* characters, unsigned length)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data8(characters)
-        , m_hashAndFlags(s_hashFlag8BitBuffer | StringSymbol | BufferSubstring)
+        : StringImplShape(s_refCountIncrement, length, characters, s_hashFlag8BitBuffer | StringSymbol | BufferSubstring)
     {
         ASSERT(is8Bit());
         ASSERT(m_data8);
@@ -750,10 +773,7 @@ protected:
 
     // Used to create new symbol strings that holds existing 16-bit [[Description]] string as a substring buffer (BufferSubstring).
     StringImpl(CreateSymbolTag, const UChar* characters, unsigned length)
-        : m_refCount(s_refCountIncrement)
-        , m_length(length)
-        , m_data16(characters)
-        , m_hashAndFlags(StringSymbol | BufferSubstring)
+        : StringImplShape(s_refCountIncrement, length, characters, StringSymbol | BufferSubstring)
     {
         ASSERT(!is8Bit());
         ASSERT(m_data16);
@@ -762,10 +782,7 @@ protected:
 
     // Null symbol.
     StringImpl(CreateSymbolTag)
-        : m_refCount(s_refCountIncrement)
-        , m_length(0)
-        , m_data8(empty()->characters8())
-        , m_hashAndFlags(s_hashFlag8BitBuffer | StringSymbol | BufferSubstring)
+        : StringImplShape(s_refCountIncrement, 0, empty()->characters8(), s_hashFlag8BitBuffer | StringSymbol | BufferSubstring)
     {
         ASSERT(is8Bit());
         ASSERT(m_data8);
@@ -773,13 +790,13 @@ protected:
     }
 
     template<typename T>
-    static size_t allocationSize(unsigned tailElementCount)
+    static size_t allocationSize(Checked<size_t> tailElementCount)
     {
-        return tailOffset<T>() + tailElementCount * sizeof(T);
+        return (tailOffset<T>() + tailElementCount * sizeof(T)).unsafeGet();
     }
 
     template<typename T>
-    static ptrdiff_t tailOffset()
+    static size_t tailOffset()
     {
 #if COMPILER(MSVC)
         // MSVC doesn't support alignof yet.
@@ -826,9 +843,6 @@ private:
         return *tailPointer<StringImpl*>();
     }
 
-    // This number must be at least 2 to avoid sharing empty, null as well as 1 character strings from SmallStrings.
-    static const unsigned s_copyCharsInlineCutOff = 20;
-
     enum class CaseConvertType { Upper, Lower };
     template<CaseConvertType type, typename CharacterType> static Ref<StringImpl> convertASCIICase(StringImpl&, const CharacterType*, unsigned);
 
@@ -858,19 +872,11 @@ public:
         ASSERT(existingHash() == StringHasher::computeHashAndMaskTop8Bits(characters8(), length()));
     }
 #endif
-
-private:
-    // These member variables must match the layout of StaticStringImpl.
-    unsigned m_refCount;
-    unsigned m_length;
-    union {
-        const LChar* m_data8;
-        const UChar* m_data16;
-    };
-    mutable unsigned m_hashAndFlags;
 };
 
-static_assert(sizeof(StringImpl) == sizeof(StringImpl::StaticStringImpl), "");
+using StaticStringImpl = StringImpl::StaticStringImpl;
+
+static_assert(sizeof(StringImpl) == sizeof(StaticStringImpl), "");
 
 #if !ASSERT_DISABLED
 // StringImpls created from StaticStringImpl will ASSERT
@@ -1135,9 +1141,16 @@ template<unsigned length> inline bool equalLettersIgnoringASCIICase(const String
     return string && equalLettersIgnoringASCIICase(*string, lowercaseLetters);
 }
 
+#define MAKE_STATIC_STRING_IMPL(characters) ([] { \
+        static StaticStringImpl impl(characters); \
+        return &impl; \
+    }())
+
+
 } // namespace WTF
 
 using WTF::StringImpl;
+using WTF::StaticStringImpl;
 using WTF::equal;
 using WTF::TextCaseSensitivity;
 using WTF::TextCaseSensitive;

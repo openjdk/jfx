@@ -85,6 +85,7 @@ public: // DOM
     void pauseAnimations();
     void unpauseAnimations();
     bool animationsPaused() const;
+    bool hasActiveAnimation() const;
 
     float getCurrentTime() const;
     void setCurrentTime(float);
@@ -138,7 +139,7 @@ private:
     virtual ~SVGSVGElement();
 
     bool isValid() const override;
-    void didMoveToNewDocument(Document& oldDocument) override;
+    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) override;
     void parseAttribute(const QualifiedName&, const AtomicString&) override;
     bool rendererIsNeeded(const RenderStyle&) override;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;

@@ -27,7 +27,6 @@
 #if ENABLE(FULLSCREEN_API)
 
 #include "RenderFlexibleBox.h"
-#include "StyleInheritedData.h"
 
 namespace WebCore {
 
@@ -43,6 +42,8 @@ public:
 
     static RenderFullScreen* wrapRenderer(RenderObject*, RenderElement*, Document&);
     void unwrapRenderer(bool& requiresRenderTreeRebuild);
+
+    ItemPosition selfAlignmentNormalBehavior(const RenderBox* = nullptr) const override { return ItemPositionCenter; }
 
 private:
     bool isRenderFullScreen() const override { return true; }

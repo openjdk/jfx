@@ -29,8 +29,8 @@
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
-#include "TextStream.h"
 #include "Theme.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
@@ -40,7 +40,7 @@ NamedImageGeneratedImage::NamedImageGeneratedImage(String name, const FloatSize&
     setContainerSize(size);
 }
 
-void NamedImageGeneratedImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator compositeOp, BlendMode blendMode, ImageOrientationDescription)
+ImageDrawResult NamedImageGeneratedImage::draw(GraphicsContext& context, const FloatRect& dstRect, const FloatRect& srcRect, CompositeOperator compositeOp, BlendMode blendMode, DecodingMode, ImageOrientationDescription)
 {
 #if USE(NEW_THEME) || PLATFORM(IOS)
     GraphicsContextStateSaver stateSaver(context);
@@ -51,13 +51,15 @@ void NamedImageGeneratedImage::draw(GraphicsContext& context, const FloatRect& d
         context.scale(FloatSize(dstRect.width() / srcRect.width(), dstRect.height() / srcRect.height()));
     context.translate(-srcRect.x(), -srcRect.y());
 
-    platformTheme()->drawNamedImage(m_name, context, dstRect);
+    Theme::singleton().drawNamedImage(m_name, context, dstRect);
+    return ImageDrawResult::DidDraw;
 #else
     UNUSED_PARAM(context);
     UNUSED_PARAM(dstRect);
     UNUSED_PARAM(srcRect);
     UNUSED_PARAM(compositeOp);
     UNUSED_PARAM(blendMode);
+    return ImageDrawResult::DidNothing;
 #endif
 }
 
@@ -69,7 +71,7 @@ void NamedImageGeneratedImage::drawPattern(GraphicsContext& context, const Float
         return;
 
     GraphicsContext& graphicsContext = imageBuffer->context();
-    platformTheme()->drawNamedImage(m_name, graphicsContext, FloatRect(0, 0, size().width(), size().height()));
+    Theme::singleton().drawNamedImage(m_name, graphicsContext, FloatRect(0, 0, size().width(), size().height()));
 
     // Tile the image buffer into the context.
     imageBuffer->drawPattern(context, dstRect, srcRect, patternTransform, phase, spacing, compositeOp, blendMode);

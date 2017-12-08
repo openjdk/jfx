@@ -51,8 +51,8 @@ public:
     void applyGain(float);
 
     OSStatus copyFrom(const AudioSampleBufferList&, size_t count = SIZE_MAX);
-    OSStatus copyFrom(const AudioBufferList&, AudioConverterRef);
-    OSStatus copyFrom(AudioSampleBufferList&, AudioConverterRef);
+    OSStatus copyFrom(const AudioBufferList&, size_t frameCount, AudioConverterRef);
+    OSStatus copyFrom(AudioSampleBufferList&, size_t frameCount, AudioConverterRef);
     OSStatus copyFrom(CARingBuffer&, size_t frameCount, uint64_t startFrame, CARingBuffer::FetchMode);
 
     OSStatus mixFrom(const AudioSampleBufferList&, size_t count = SIZE_MAX);
@@ -60,7 +60,8 @@ public:
     OSStatus copyTo(AudioBufferList&, size_t count = SIZE_MAX);
 
     const AudioStreamBasicDescription& streamDescription() const { return m_internalFormat->streamDescription(); }
-    WebAudioBufferList& bufferList() const { return *m_bufferList; }
+    const WebAudioBufferList& bufferList() const { return m_bufferList; }
+    WebAudioBufferList& bufferList() { return m_bufferList; }
 
     uint32_t sampleCapacity() const { return m_sampleCapacity; }
     uint32_t sampleCount() const { return m_sampleCount; }
@@ -78,13 +79,7 @@ public:
 protected:
     AudioSampleBufferList(const CAAudioStreamDescription&, size_t);
 
-    static OSStatus audioConverterCallback(AudioConverterRef, UInt32*, AudioBufferList*, AudioStreamPacketDescription**, void*);
-    OSStatus convertInput(UInt32*, AudioBufferList*);
-
-    std::unique_ptr<CAAudioStreamDescription> m_internalFormat;
-
-    const AudioBufferList* m_converterInputBuffer { nullptr };
-    uint32_t m_converterInputBytesPerPacket { 0 };
+    UniqueRef<CAAudioStreamDescription> m_internalFormat;
 
     uint64_t m_timestamp { 0 };
     double m_hostTime { -1 };
@@ -92,7 +87,7 @@ protected:
     size_t m_sampleCapacity { 0 };
     size_t m_maxBufferSizePerChannel { 0 };
     size_t m_bufferListBaseSize { 0 };
-    std::unique_ptr<WebAudioBufferList> m_bufferList;
+    UniqueRef<WebAudioBufferList> m_bufferList;
 };
 
 inline size_t AudioSampleBufferList::audioBufferListSizeForStream(const CAAudioStreamDescription& description)

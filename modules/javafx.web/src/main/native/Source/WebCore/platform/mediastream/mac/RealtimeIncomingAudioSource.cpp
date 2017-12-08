@@ -33,7 +33,11 @@
 
 #if USE(LIBWEBRTC)
 
-#include "RealtimeMediaSourceSettings.h"
+#include "AudioStreamDescription.h"
+#include "CAAudioStreamDescription.h"
+#include "LibWebRTCAudioFormat.h"
+#include "MediaTimeAVFoundation.h"
+#include "WebAudioBufferList.h"
 #include "WebAudioSourceProviderAVFObjC.h"
 
 #include "CoreMediaSoftLink.h"
@@ -42,57 +46,88 @@ namespace WebCore {
 
 Ref<RealtimeIncomingAudioSource> RealtimeIncomingAudioSource::create(rtc::scoped_refptr<webrtc::AudioTrackInterface>&& audioTrack, String&& audioTrackId)
 {
-    return adoptRef(*new RealtimeIncomingAudioSource(WTFMove(audioTrack), WTFMove(audioTrackId)));
+    auto source = adoptRef(*new RealtimeIncomingAudioSource(WTFMove(audioTrack), WTFMove(audioTrackId)));
+    source->start();
+    return source;
 }
 
 RealtimeIncomingAudioSource::RealtimeIncomingAudioSource(rtc::scoped_refptr<webrtc::AudioTrackInterface>&& audioTrack, String&& audioTrackId)
     : RealtimeMediaSource(WTFMove(audioTrackId), RealtimeMediaSource::Type::Audio, String())
     , m_audioTrack(WTFMove(audioTrack))
 {
+    notifyMutedChange(!m_audioTrack);
 }
 
 RealtimeIncomingAudioSource::~RealtimeIncomingAudioSource()
 {
-    if (m_audioSourceProvider) {
-        m_audioSourceProvider->unprepare();
-        m_audioSourceProvider = nullptr;
-    }
+    stop();
+}
+
+
+static inline AudioStreamBasicDescription streamDescription(size_t sampleRate, size_t channelCount)
+{
+    AudioStreamBasicDescription streamFormat;
+    FillOutASBDForLPCM(streamFormat, sampleRate, channelCount, LibWebRTCAudioFormat::sampleSize, LibWebRTCAudioFormat::sampleSize, LibWebRTCAudioFormat::isFloat, LibWebRTCAudioFormat::isBigEndian, LibWebRTCAudioFormat::isNonInterleaved);
+    return streamFormat;
 }
 
 void RealtimeIncomingAudioSource::OnData(const void* audioData, int bitsPerSample, int sampleRate, size_t numberOfChannels, size_t numberOfFrames)
 {
-    // FIXME: Implement this.
-    UNUSED_PARAM(audioData);
-    UNUSED_PARAM(bitsPerSample);
-    UNUSED_PARAM(sampleRate);
-    UNUSED_PARAM(numberOfChannels);
-    UNUSED_PARAM(numberOfFrames);
+    // We may receive OnData calls with empty sound data (mono, samples equal to zero and sampleRate equal to 16000) when starting the call.
+    // FIXME: For the moment we skip them, we should find a better solution at libwebrtc level to not be called until getting some real data.
+    if (sampleRate == 16000 && numberOfChannels == 1)
+        return;
+
+    ASSERT(bitsPerSample == 16);
+    ASSERT(numberOfChannels == 1 || numberOfChannels == 2);
+    ASSERT(sampleRate == 48000);
+
+    CMTime startTime = CMTimeMake(m_numberOfFrames, sampleRate);
+    auto mediaTime = toMediaTime(startTime);
+    m_numberOfFrames += numberOfFrames;
+
+    AudioStreamBasicDescription newDescription = streamDescription(sampleRate, numberOfChannels);
+
+    // FIXME: We should not need to do the extra memory allocation and copy.
+    // Instead, we should be able to directly pass audioData pointer.
+    WebAudioBufferList audioBufferList { CAAudioStreamDescription(newDescription), WTF::safeCast<uint32_t>(numberOfFrames) };
+    audioBufferList.buffer(0)->mDataByteSize = numberOfChannels * numberOfFrames * bitsPerSample / 8;
+    audioBufferList.buffer(0)->mNumberChannels = numberOfChannels;
+
+    if (muted())
+        memset(audioBufferList.buffer(0)->mData, 0, audioBufferList.buffer(0)->mDataByteSize);
+    else
+        memcpy(audioBufferList.buffer(0)->mData, audioData, audioBufferList.buffer(0)->mDataByteSize);
+
+    audioSamplesAvailable(mediaTime, audioBufferList, CAAudioStreamDescription(newDescription), numberOfFrames);
 }
 
 void RealtimeIncomingAudioSource::startProducingData()
 {
-    if (m_isProducingData)
-        return;
-
-    m_isProducingData = true;
     if (m_audioTrack)
         m_audioTrack->AddSink(this);
 }
 
 void RealtimeIncomingAudioSource::stopProducingData()
 {
-    if (m_isProducingData)
-        return;
-
-    m_isProducingData = false;
     if (m_audioTrack)
         m_audioTrack->RemoveSink(this);
 }
 
-
-RefPtr<RealtimeMediaSourceCapabilities> RealtimeIncomingAudioSource::capabilities() const
+void RealtimeIncomingAudioSource::setSourceTrack(rtc::scoped_refptr<webrtc::AudioTrackInterface>&& track)
 {
-    return m_capabilities;
+    ASSERT(!m_audioTrack);
+    ASSERT(track);
+
+    m_audioTrack = WTFMove(track);
+    notifyMutedChange(!m_audioTrack);
+    if (isProducingData())
+        m_audioTrack->AddSink(this);
+}
+
+const RealtimeMediaSourceCapabilities& RealtimeIncomingAudioSource::capabilities() const
+{
+    return RealtimeMediaSourceCapabilities::emptyCapabilities();
 }
 
 const RealtimeMediaSourceSettings& RealtimeIncomingAudioSource::settings() const
@@ -100,22 +135,6 @@ const RealtimeMediaSourceSettings& RealtimeIncomingAudioSource::settings() const
     return m_currentSettings;
 }
 
-RealtimeMediaSourceSupportedConstraints& RealtimeIncomingAudioSource::supportedConstraints()
-{
-    return m_supportedConstraints;
 }
-
-AudioSourceProvider* RealtimeIncomingAudioSource::audioSourceProvider()
-{
-    if (!m_audioSourceProvider) {
-        m_audioSourceProvider = WebAudioSourceProviderAVFObjC::create(*this);
-        const auto* description = CMAudioFormatDescriptionGetStreamBasicDescription(m_formatDescription.get());
-        m_audioSourceProvider->prepare(description);
-    }
-
-    return m_audioSourceProvider.get();
-}
-
-} // namespace WebCore
 
 #endif // USE(LIBWEBRTC)

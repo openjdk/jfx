@@ -43,9 +43,12 @@ class ResourceError;
 class ResourceLoader;
 class ResourceRequest;
 class ResourceResponse;
+class SecurityOrigin;
 class SharedBuffer;
 class SubresourceLoader;
 class URL;
+
+struct FetchOptions;
 
 class WEBCORE_EXPORT LoaderStrategy {
 public:
@@ -60,9 +63,11 @@ public:
     virtual void suspendPendingRequests() = 0;
     virtual void resumePendingRequests() = 0;
 
-    virtual void createPingHandle(NetworkingContext*, ResourceRequest&, bool shouldUseCredentialStorage, bool shouldFollowRedirects) = 0;
+    virtual void createPingHandle(NetworkingContext*, ResourceRequest&, Ref<SecurityOrigin>&& sourceOrigin, const FetchOptions&) = 0;
 
     virtual void storeDerivedDataToCache(const SHA1::Digest& bodyKey, const String& type, const String& partition, WebCore::SharedBuffer&) = 0;
+
+    virtual void setCaptureExtraNetworkLoadMetricsEnabled(bool) = 0;
 
 protected:
     virtual ~LoaderStrategy();

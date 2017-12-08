@@ -40,7 +40,6 @@
 #include "EXTTextureFilterAnisotropic.h"
 #include "EXTsRGB.h"
 #include "EventNames.h"
-#include "ExceptionCode.h"
 #include "Extensions3D.h"
 #include "Frame.h"
 #include "FrameLoader.h"
@@ -52,7 +51,9 @@
 #include "HTMLVideoElement.h"
 #include "ImageBuffer.h"
 #include "ImageData.h"
+#include "InspectorInstrumentation.h"
 #include "IntSize.h"
+#include "JSMainThreadExecState.h"
 #include "Logging.h"
 #include "MainFrame.h"
 #include "NotImplemented.h"
@@ -89,7 +90,9 @@
 #include "WebGLShaderPrecisionFormat.h"
 #include "WebGLTexture.h"
 #include "WebGLUniformLocation.h"
-
+#include <inspector/ConsoleMessage.h>
+#include <inspector/ScriptCallStack.h>
+#include <inspector/ScriptCallStackFactory.h>
 #include <runtime/JSCInlines.h>
 #include <runtime/TypedArrayInlines.h>
 #include <runtime/Uint32Array.h>
@@ -100,9 +103,9 @@
 
 namespace WebCore {
 
-const double secondsBetweenRestoreAttempts = 1.0;
+static const Seconds secondsBetweenRestoreAttempts { 1_s };
 const int maxGLErrorsAllowedToConsole = 256;
-static const std::chrono::seconds checkContextLossHandlingDelay { 3 };
+static const Seconds checkContextLossHandlingDelay { 3_s };
 
 namespace {
 
@@ -344,7 +347,7 @@ public:
     void onErrorMessage(const String& message, GC3Dint) override
     {
         if (m_context->m_synthesizedErrorsToConsole)
-            m_context->printGLErrorToConsole(message);
+            m_context->printToConsole(MessageLevel::Error, message);
     }
     virtual ~WebGLRenderingContextErrorMessageCallback() { }
 private:
@@ -460,8 +463,7 @@ std::unique_ptr<WebGLRenderingContextBase> WebGLRenderingContextBase::create(HTM
 }
 
 WebGLRenderingContextBase::WebGLRenderingContextBase(HTMLCanvasElement& passedCanvas, WebGLContextAttributes attributes)
-    : CanvasRenderingContext(passedCanvas)
-    , ActiveDOMObject(&passedCanvas.document())
+    : GPUBasedCanvasRenderingContext(passedCanvas)
     , m_dispatchContextLostEventTimer(*this, &WebGLRenderingContextBase::dispatchContextLostEvent)
     , m_restoreTimer(*this, &WebGLRenderingContextBase::maybeRestoreContext)
     , m_attributes(attributes)
@@ -474,8 +476,7 @@ WebGLRenderingContextBase::WebGLRenderingContextBase(HTMLCanvasElement& passedCa
 }
 
 WebGLRenderingContextBase::WebGLRenderingContextBase(HTMLCanvasElement& passedCanvas, Ref<GraphicsContext3D>&& context, WebGLContextAttributes attributes)
-    : CanvasRenderingContext(passedCanvas)
-    , ActiveDOMObject(&passedCanvas.document())
+    : GPUBasedCanvasRenderingContext(passedCanvas)
     , m_context(WTFMove(context))
     , m_dispatchContextLostEventTimer(*this, &WebGLRenderingContextBase::dispatchContextLostEvent)
     , m_restoreTimer(*this, &WebGLRenderingContextBase::maybeRestoreContext)
@@ -712,13 +713,25 @@ void WebGLRenderingContextBase::markContextChanged()
     }
 }
 
+void WebGLRenderingContextBase::markContextChangedAndNotifyCanvasObserver()
+{
+    markContextChanged();
+    if (!isAccelerated())
+        return;
+
+    RenderBox* renderBox = canvas().renderBox();
+    if (renderBox && renderBox->hasAcceleratedCompositing())
+        canvas().notifyObserversCanvasChanged(FloatRect(FloatPoint(0, 0), clampedCanvasSize()));
+}
+
 bool WebGLRenderingContextBase::clearIfComposited(GC3Dbitfield mask)
 {
     if (isContextLostOrPending())
         return false;
 
     if (!m_context->layerComposited() || m_layerCleared
-        || m_attributes.preserveDrawingBuffer || (mask && m_framebufferBinding))
+        || m_attributes.preserveDrawingBuffer || (mask && m_framebufferBinding)
+        || m_preventBufferClearForInspector)
         return false;
 
     auto contextAttributes = getContextAttributes();
@@ -1233,7 +1246,8 @@ GC3Denum WebGLRenderingContextBase::checkFramebufferStatus(GC3Denum target)
     const char* reason = "framebuffer incomplete";
     GC3Denum result = m_framebufferBinding->checkStatus(&reason);
     if (result != GraphicsContext3D::FRAMEBUFFER_COMPLETE) {
-        printGLWarningToConsole("checkFramebufferStatus", reason);
+        String str = "WebGL: checkFramebufferStatus:" + String(reason);
+        printToConsole(MessageLevel::Warning, str);
         return result;
     }
     result = m_context->checkFramebufferStatus(target);
@@ -1294,6 +1308,15 @@ void WebGLRenderingContextBase::compileShader(WebGLShader* shader)
     GC3Dint value;
     m_context->getShaderiv(objectOrZero(shader), GraphicsContext3D::COMPILE_STATUS, &value);
     shader->setValid(value);
+
+    if (m_synthesizedErrorsToConsole && !value) {
+        Ref<Inspector::ScriptCallStack> stackTrace = Inspector::createScriptCallStack(JSMainThreadExecState::currentState(), Inspector::ScriptCallStack::maxCallStackSizeToCapture);
+
+        Vector<String> errors;
+        getShaderInfoLog(shader).split("\n", errors);
+        for (String& error : errors)
+            canvas().document().addConsoleMessage(std::make_unique<Inspector::ConsoleMessage>(MessageSource::Rendering, MessageType::Log, MessageLevel::Error, "WebGL: " + error, stackTrace.copyRef()));
+    }
 }
 
 void WebGLRenderingContextBase::compressedTexImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, ArrayBufferView& data)
@@ -1479,6 +1502,9 @@ RefPtr<WebGLProgram> WebGLRenderingContextBase::createProgram()
         return nullptr;
     auto program = WebGLProgram::create(*this);
     addSharedObject(program.get());
+
+    InspectorInstrumentation::didCreateProgram(*this, program.get());
+
     return WTFMove(program);
 }
 
@@ -1549,6 +1575,9 @@ void WebGLRenderingContextBase::deleteFramebuffer(WebGLFramebuffer* framebuffer)
 
 void WebGLRenderingContextBase::deleteProgram(WebGLProgram* program)
 {
+    if (program)
+        InspectorInstrumentation::willDeleteProgram(*this, *program);
+
     deleteObject(program);
     // We don't reset m_currentProgram to 0 here because the deletion of the
     // current program is delayed.
@@ -1989,7 +2018,7 @@ void WebGLRenderingContextBase::drawArrays(GC3Denum mode, GC3Dint first, GC3Dsiz
         restoreStatesAfterVertexAttrib0Simulation();
     if (usesFallbackTexture)
         checkTextureCompleteness("drawArrays", false);
-    markContextChanged();
+    markContextChangedAndNotifyCanvasObserver();
 }
 
 void WebGLRenderingContextBase::drawElements(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset)
@@ -2017,7 +2046,7 @@ void WebGLRenderingContextBase::drawElements(GC3Denum mode, GC3Dsizei count, GC3
         restoreStatesAfterVertexAttrib0Simulation();
     if (usesFallbackTexture)
         checkTextureCompleteness("drawElements", false);
-    markContextChanged();
+    markContextChangedAndNotifyCanvasObserver();
 }
 
 void WebGLRenderingContextBase::enable(GC3Denum cap)
@@ -2807,17 +2836,26 @@ void WebGLRenderingContextBase::lineWidth(GC3Dfloat width)
 
 void WebGLRenderingContextBase::linkProgram(WebGLProgram* program)
 {
-    if (isContextLostOrPending() || !validateWebGLObject("linkProgram", program))
+    if (!linkProgramWithoutInvalidatingAttribLocations(program))
         return;
+
+    program->increaseLinkCount();
+}
+
+bool WebGLRenderingContextBase::linkProgramWithoutInvalidatingAttribLocations(WebGLProgram* program)
+{
+    if (isContextLostOrPending() || !validateWebGLObject("linkProgram", program))
+        return false;
+
     WebGLShader* vertexShader = program->getAttachedShader(GraphicsContext3D::VERTEX_SHADER);
     WebGLShader* fragmentShader = program->getAttachedShader(GraphicsContext3D::FRAGMENT_SHADER);
     if (!vertexShader || !vertexShader->isValid() || !fragmentShader || !fragmentShader->isValid() || !m_context->precisionsMatch(objectOrZero(vertexShader), objectOrZero(fragmentShader)) || !m_context->checkVaryingsPacking(objectOrZero(vertexShader), objectOrZero(fragmentShader))) {
         program->setLinkStatus(false);
-        return;
+        return false;
     }
 
     m_context->linkProgram(objectOrZero(program));
-    program->increaseLinkCount();
+    return true;
 }
 
 void WebGLRenderingContextBase::pixelStorei(GC3Denum pname, GC3Dint param)
@@ -3547,9 +3585,13 @@ ExceptionOr<void> WebGLRenderingContextBase::texSubImage2D(GC3Denum target, GC3D
 
         return { };
     } , [&](const RefPtr<HTMLImageElement>& image) -> ExceptionOr<void> {
-        ExceptionCode ec = 0;
-        if (isContextLostOrPending() || !validateHTMLImageElement("texSubImage2D", image.get(), ec))
-            return ec ? Exception { ec } : ExceptionOr<void> { };
+        if (isContextLostOrPending())
+            return { };
+        auto validationResult = validateHTMLImageElement("texSubImage2D", image.get());
+        if (validationResult.hasException())
+            return validationResult.releaseException();
+        if (!validationResult.returnValue())
+            return { };
 
         RefPtr<Image> imageForRender = image->cachedImage()->imageForRenderer(image->renderer());
         if (!imageForRender)
@@ -3574,9 +3616,13 @@ ExceptionOr<void> WebGLRenderingContextBase::texSubImage2D(GC3Denum target, GC3D
         texSubImage2DImpl(target, level, xoffset, yoffset, format, type, imageForRender.get(), GraphicsContext3D::HtmlDomImage, m_unpackFlipY, m_unpackPremultiplyAlpha);
         return { };
     }, [&](const RefPtr<HTMLCanvasElement>& canvas) -> ExceptionOr<void> {
-        ExceptionCode ec = 0;
-        if (isContextLostOrPending() || !validateHTMLCanvasElement("texSubImage2D", canvas.get(), ec))
-            return ec ? Exception { ec } : ExceptionOr<void> { };
+        if (isContextLostOrPending())
+            return { };
+        auto validationResult = validateHTMLCanvasElement("texSubImage2D", canvas.get());
+        if (validationResult.hasException())
+            return validationResult.releaseException();
+        if (!validationResult.returnValue())
+            return { };
 
         WebGLTexture* texture = validateTextureBinding("texSubImage2D", target, true);
         if (!texture)
@@ -3597,10 +3643,16 @@ ExceptionOr<void> WebGLRenderingContextBase::texSubImage2D(GC3Denum target, GC3D
         else
             texSubImage2DImpl(target, level, xoffset, yoffset, format, type, canvas->copiedImage(), GraphicsContext3D::HtmlDomCanvas, m_unpackFlipY, m_unpackPremultiplyAlpha);
         return { };
-    }, [&](const RefPtr<HTMLVideoElement>& video) -> ExceptionOr<void> {
-        ExceptionCode ec = 0;
-        if (isContextLostOrPending() || !validateHTMLVideoElement("texSubImage2D", video.get(), ec))
-            return ec ? Exception { ec } : ExceptionOr<void> { };
+    }
+#if ENABLE(VIDEO)
+    , [&](const RefPtr<HTMLVideoElement>& video) -> ExceptionOr<void> {
+        if (isContextLostOrPending())
+            return { };
+        auto validationResult = validateHTMLVideoElement("texSubImage2D", video.get());
+        if (validationResult.hasException())
+            return validationResult.releaseException();
+        if (!validationResult.returnValue())
+            return { };
 
         WebGLTexture* texture = validateTextureBinding("texSubImage2D", target, true);
         if (!texture)
@@ -3620,7 +3672,9 @@ ExceptionOr<void> WebGLRenderingContextBase::texSubImage2D(GC3Denum target, GC3D
             return { };
         texSubImage2DImpl(target, level, xoffset, yoffset, format, type, image.get(), GraphicsContext3D::HtmlDomVideo, m_unpackFlipY, m_unpackPremultiplyAlpha);
         return { };
-    });
+    }
+#endif
+    );
 
     return WTF::visit(visitor, source.value());
 }
@@ -4061,9 +4115,13 @@ ExceptionOr<void> WebGLRenderingContextBase::texImage2D(GC3Denum target, GC3Dint
             m_context->pixelStorei(GraphicsContext3D::UNPACK_ALIGNMENT, m_unpackAlignment);
         return { };
     }, [&](const RefPtr<HTMLImageElement>& image) -> ExceptionOr<void> {
-        ExceptionCode ec = 0;
-        if (isContextLostOrPending() || !validateHTMLImageElement("texImage2D", image.get(), ec))
-            return ec ? Exception { ec } : ExceptionOr<void> { };
+        if (isContextLostOrPending())
+            return { };
+        auto validationResult = validateHTMLImageElement("texImage2D", image.get());
+        if (validationResult.hasException())
+            return validationResult.releaseException();
+        if (!validationResult.returnValue())
+            return { };
 
         RefPtr<Image> imageForRender = image->cachedImage()->imageForRenderer(image->renderer());
         if (!imageForRender)
@@ -4078,9 +4136,15 @@ ExceptionOr<void> WebGLRenderingContextBase::texImage2D(GC3Denum target, GC3Dint
         texImage2DImpl(target, level, internalformat, format, type, imageForRender.get(), GraphicsContext3D::HtmlDomImage, m_unpackFlipY, m_unpackPremultiplyAlpha);
         return { };
     }, [&](const RefPtr<HTMLCanvasElement>& canvas) -> ExceptionOr<void> {
-        ExceptionCode ec = 0;
-        if (isContextLostOrPending() || !validateHTMLCanvasElement("texImage2D", canvas.get(), ec) || !validateTexFunc("texImage2D", TexImage, SourceHTMLCanvasElement, target, level, internalformat, canvas->width(), canvas->height(), 0, format, type, 0, 0))
-            return ec ? Exception { ec } : ExceptionOr<void> { };
+        if (isContextLostOrPending())
+            return { };
+        auto validationResult = validateHTMLCanvasElement("texImage2D", canvas.get());
+        if (validationResult.hasException())
+            return validationResult.releaseException();
+        if (!validationResult.returnValue())
+            return { };
+        if (!validateTexFunc("texImage2D", TexImage, SourceHTMLCanvasElement, target, level, internalformat, canvas->width(), canvas->height(), 0, format, type, 0, 0))
+            return { };
 
         WebGLTexture* texture = validateTextureBinding("texImage2D", target, true);
         // If possible, copy from the canvas element directly to the texture
@@ -4107,11 +4171,18 @@ ExceptionOr<void> WebGLRenderingContextBase::texImage2D(GC3Denum target, GC3Dint
         else
             texImage2DImpl(target, level, internalformat, format, type, canvas->copiedImage(), GraphicsContext3D::HtmlDomCanvas, m_unpackFlipY, m_unpackPremultiplyAlpha);
         return { };
-    }, [&](const RefPtr<HTMLVideoElement>& video) -> ExceptionOr<void> {
-        ExceptionCode ec = 0;
-        if (isContextLostOrPending() || !validateHTMLVideoElement("texImage2D", video.get(), ec)
-            || !validateTexFunc("texImage2D", TexImage, SourceHTMLVideoElement, target, level, internalformat, video->videoWidth(), video->videoHeight(), 0, format, type, 0, 0))
-            return ec ? Exception { ec } : ExceptionOr<void> { };
+    }
+#if ENABLE(VIDEO)
+    , [&](const RefPtr<HTMLVideoElement>& video) -> ExceptionOr<void> {
+        if (isContextLostOrPending())
+            return { };
+        auto validationResult = validateHTMLVideoElement("texImage2D", video.get());
+        if (validationResult.hasException())
+            return validationResult.releaseException();
+        if (!validationResult.returnValue())
+            return { };
+        if (!validateTexFunc("texImage2D", TexImage, SourceHTMLVideoElement, target, level, internalformat, video->videoWidth(), video->videoHeight(), 0, format, type, 0, 0))
+            return { };
 
         // Go through the fast path doing a GPU-GPU textures copy without a readback to system memory if possible.
         // Otherwise, it will fall back to the normal SW path.
@@ -4137,7 +4208,9 @@ ExceptionOr<void> WebGLRenderingContextBase::texImage2D(GC3Denum target, GC3Dint
             return { };
         texImage2DImpl(target, level, internalformat, format, type, image.get(), GraphicsContext3D::HtmlDomVideo, m_unpackFlipY, m_unpackPremultiplyAlpha);
         return { };
-    });
+    }
+#endif
+    );
 
     return WTF::visit(visitor, source.value());
 }
@@ -4563,7 +4636,7 @@ void WebGLRenderingContextBase::forceLostContext(WebGLRenderingContextBase::Lost
 
 void WebGLRenderingContextBase::recycleContext()
 {
-    printWarningToConsole("There are too many active WebGL contexts on this page, the oldest context will be lost.");
+    printToConsole(MessageLevel::Error, "There are too many active WebGL contexts on this page, the oldest context will be lost.");
     // Using SyntheticLostContext means the developer won't be able to force the restoration
     // of the context by calling preventDefault() in a "webglcontextlost" event handler.
     forceLostContext(SyntheticLostContext);
@@ -4604,7 +4677,7 @@ void WebGLRenderingContextBase::loseContextImpl(WebGLRenderingContextBase::LostC
 
     // Always defer the dispatch of the context lost event, to implement
     // the spec behavior of queueing a task.
-    m_dispatchContextLostEventTimer.startOneShot(0);
+    m_dispatchContextLostEventTimer.startOneShot(0_s);
 }
 
 void WebGLRenderingContextBase::forceRestoreContext()
@@ -4621,7 +4694,7 @@ void WebGLRenderingContextBase::forceRestoreContext()
     }
 
     if (!m_restoreTimer.isActive())
-        m_restoreTimer.startOneShot(0);
+        m_restoreTimer.startOneShot(0_s);
 }
 
 PlatformLayer* WebGLRenderingContextBase::platformLayer() const
@@ -4820,7 +4893,7 @@ bool WebGLRenderingContextBase::checkTextureCompleteness(const char* functionNam
             String msg(String("texture bound to texture unit ") + String::number(badTexture)
                 + " is not renderable. It maybe non-power-of-2 and have incompatible texture filtering or is not 'texture complete',"
                 + " or it is a float/half-float type with linear filtering and without the relevant float/half-float linear extension enabled.");
-            printGLWarningToConsole(functionName, msg.utf8().data());
+            printToConsole(MessageLevel::Error, "WebGL: " + String(functionName) + ": " + msg);
             tex2D = m_blackTexture2D.get();
             texCubeMap = m_blackTextureCubeMap.get();
         } else {
@@ -5191,21 +5264,25 @@ bool WebGLRenderingContextBase::validateStencilFunc(const char* functionName, GC
     }
 }
 
-void WebGLRenderingContextBase::printGLErrorToConsole(const String& message)
+void WebGLRenderingContextBase::printToConsole(MessageLevel level, const String& message)
 {
-    if (!m_numGLErrorsToConsoleAllowed)
+    if (!m_synthesizedErrorsToConsole || !m_numGLErrorsToConsoleAllowed)
         return;
 
+    std::unique_ptr<Inspector::ConsoleMessage> consoleMessage;
+
+    // Error messages can occur during function calls, so show stack traces for them.
+    if (level == MessageLevel::Error) {
+        Ref<Inspector::ScriptCallStack> stackTrace = Inspector::createScriptCallStack(JSMainThreadExecState::currentState(), Inspector::ScriptCallStack::maxCallStackSizeToCapture);
+        consoleMessage = std::make_unique<Inspector::ConsoleMessage>(MessageSource::Rendering, MessageType::Log, level, message, WTFMove(stackTrace));
+    } else
+        consoleMessage = std::make_unique<Inspector::ConsoleMessage>(MessageSource::Rendering, MessageType::Log, level, message);
+
+    canvas().document().addConsoleMessage(WTFMove(consoleMessage));
+
     --m_numGLErrorsToConsoleAllowed;
-    printWarningToConsole(message);
-
     if (!m_numGLErrorsToConsoleAllowed)
-        printWarningToConsole("WebGL: too many errors, no more errors will be reported to the console for this context.");
-}
-
-void WebGLRenderingContextBase::printWarningToConsole(const String& message)
-{
-    canvas().document().addConsoleMessage(MessageSource::Rendering, MessageLevel::Warning, message);
+        printToConsole(MessageLevel::Warning, "WebGL: too many errors, no more errors will be reported to the console for this context.");
 }
 
 bool WebGLRenderingContextBase::validateBlendFuncFactors(const char* functionName, GC3Denum src, GC3Denum dst)
@@ -5317,7 +5394,7 @@ WebGLBuffer* WebGLRenderingContextBase::validateBufferDataParameters(const char*
     return nullptr;
 }
 
-bool WebGLRenderingContextBase::validateHTMLImageElement(const char* functionName, HTMLImageElement* image, ExceptionCode& ec)
+ExceptionOr<bool> WebGLRenderingContextBase::validateHTMLImageElement(const char* functionName, HTMLImageElement* image)
 {
     if (!image || !image->cachedImage()) {
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "no image");
@@ -5328,38 +5405,32 @@ bool WebGLRenderingContextBase::validateHTMLImageElement(const char* functionNam
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "invalid image");
         return false;
     }
-    if (wouldTaintOrigin(image)) {
-        ec = SECURITY_ERR;
-        return false;
-    }
+    if (wouldTaintOrigin(image))
+        return Exception { SecurityError };
     return true;
 }
 
-bool WebGLRenderingContextBase::validateHTMLCanvasElement(const char* functionName, HTMLCanvasElement* canvas, ExceptionCode& ec)
+ExceptionOr<bool> WebGLRenderingContextBase::validateHTMLCanvasElement(const char* functionName, HTMLCanvasElement* canvas)
 {
     if (!canvas || !canvas->buffer()) {
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "no canvas");
         return false;
     }
-    if (wouldTaintOrigin(canvas)) {
-        ec = SECURITY_ERR;
-        return false;
-    }
+    if (wouldTaintOrigin(canvas))
+        return Exception { SecurityError };
     return true;
 }
 
 #if ENABLE(VIDEO)
 
-bool WebGLRenderingContextBase::validateHTMLVideoElement(const char* functionName, HTMLVideoElement* video, ExceptionCode& ec)
+ExceptionOr<bool> WebGLRenderingContextBase::validateHTMLVideoElement(const char* functionName, HTMLVideoElement* video)
 {
     if (!video || !video->videoWidth() || !video->videoHeight()) {
         synthesizeGLError(GraphicsContext3D::INVALID_VALUE, functionName, "no video");
         return false;
     }
-    if (wouldTaintOrigin(video)) {
-        ec = SECURITY_ERR;
-        return false;
-    }
+    if (wouldTaintOrigin(video))
+        return Exception { SecurityError };
     return true;
 }
 
@@ -5556,7 +5627,7 @@ void WebGLRenderingContextBase::dispatchContextLostEvent()
     canvas().dispatchEvent(event);
     m_restoreAllowed = event->defaultPrevented();
     if (m_contextLostMode == RealLostContext && m_restoreAllowed)
-        m_restoreTimer.startOneShot(0);
+        m_restoreTimer.startOneShot(0_s);
 }
 
 void WebGLRenderingContextBase::maybeRestoreContext()
@@ -5586,7 +5657,7 @@ void WebGLRenderingContextBase::maybeRestoreContext()
     case Extensions3D::GUILTY_CONTEXT_RESET_ARB:
         // The rendering context is not restored if this context was
         // guilty of causing the graphics reset.
-        printWarningToConsole("WARNING: WebGL content on the page caused the graphics card to reset; not restoring the context");
+        printToConsole(MessageLevel::Warning, "WARNING: WebGL content on the page caused the graphics card to reset; not restoring the context");
         return;
     case Extensions3D::INNOCENT_CONTEXT_RESET_ARB:
         // Always allow the context to be restored.
@@ -5597,7 +5668,7 @@ void WebGLRenderingContextBase::maybeRestoreContext()
         // reset and ask them whether they want to continue running
         // the content. Only if they say "yes" should we start
         // attempting to restore the context.
-        printWarningToConsole("WARNING: WebGL content on the page might have caused the graphics card to reset");
+        printToConsole(MessageLevel::Warning, "WARNING: WebGL content on the page might have caused the graphics card to reset");
         break;
     }
 
@@ -5635,6 +5706,17 @@ void WebGLRenderingContextBase::maybeRestoreContext()
     initializeNewContext();
     initializeVertexArrayObjects();
     canvas().dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextrestoredEvent, false, true, emptyString()));
+}
+
+void WebGLRenderingContextBase::dispatchContextChangedEvent()
+{
+    canvas().dispatchEvent(WebGLContextEvent::create(eventNames().webglcontextchangedEvent, false, true, emptyString()));
+}
+
+void WebGLRenderingContextBase::simulateContextChanged()
+{
+    if (m_context)
+        m_context->simulateContextChanged();
 }
 
 String WebGLRenderingContextBase::ensureNotNull(const String& text) const
@@ -5708,19 +5790,10 @@ namespace {
 void WebGLRenderingContextBase::synthesizeGLError(GC3Denum error, const char* functionName, const char* description, ConsoleDisplayPreference display)
 {
     if (m_synthesizedErrorsToConsole && display == DisplayInConsole) {
-      String str = String("WebGL: ") + GetErrorString(error) +  ": " + String(functionName) + ": " + String(description);
-      printGLErrorToConsole(str);
+        String str = "WebGL: " + GetErrorString(error) +  ": " + String(functionName) + ": " + String(description);
+        printToConsole(MessageLevel::Error, str);
     }
     m_context->synthesizeGLError(error);
-}
-
-
-void WebGLRenderingContextBase::printGLWarningToConsole(const char* functionName, const char* description)
-{
-    if (m_synthesizedErrorsToConsole) {
-        String str = String("WebGL: ") + String(functionName) + ": " + String(description);
-        printGLErrorToConsole(str);
-    }
 }
 
 void WebGLRenderingContextBase::applyStencilTest()
@@ -5823,7 +5896,7 @@ void WebGLRenderingContextBase::drawArraysInstanced(GC3Denum mode, GC3Dint first
         restoreStatesAfterVertexAttrib0Simulation();
     if (!isGLES2NPOTStrict())
         checkTextureCompleteness("drawArraysInstanced", false);
-    markContextChanged();
+    markContextChangedAndNotifyCanvasObserver();
 }
 
 void WebGLRenderingContextBase::drawElementsInstanced(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, GC3Dsizei primcount)
@@ -5854,7 +5927,7 @@ void WebGLRenderingContextBase::drawElementsInstanced(GC3Denum mode, GC3Dsizei c
         restoreStatesAfterVertexAttrib0Simulation();
     if (!isGLES2NPOTStrict())
         checkTextureCompleteness("drawElementsInstanced", false);
-    markContextChanged();
+    markContextChangedAndNotifyCanvasObserver();
 }
 
 void WebGLRenderingContextBase::vertexAttribDivisor(GC3Duint index, GC3Duint divisor)
@@ -5890,6 +5963,14 @@ void WebGLRenderingContextBase::activityStateDidChange(ActivityState::Flags oldA
     ActivityState::Flags changed = oldActivityState ^ newActivityState;
     if (changed & ActivityState::IsVisible)
         m_context->setContextVisibility(newActivityState & ActivityState::IsVisible);
+}
+
+void WebGLRenderingContextBase::setFailNextGPUStatusCheck()
+{
+    if (!m_context)
+        return;
+
+    m_context->setFailNextGPUStatusCheck();
 }
 
 } // namespace WebCore

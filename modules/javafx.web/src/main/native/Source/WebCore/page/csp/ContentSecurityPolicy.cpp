@@ -42,7 +42,7 @@
 #include "Frame.h"
 #include "HTMLParserIdioms.h"
 #include "InspectorInstrumentation.h"
-#include "JSDOMWindowShell.h"
+#include "JSDOMWindowProxy.h"
 #include "JSMainThreadExecState.h"
 #include "ParsingUtilities.h"
 #include "PingLoader.h"
@@ -148,17 +148,18 @@ bool ContentSecurityPolicy::allowRunningOrDisplayingInsecureContent(const URL& u
     return allow;
 }
 
-void ContentSecurityPolicy::didCreateWindowShell(JSDOMWindowShell& windowShell) const
+void ContentSecurityPolicy::didCreateWindowProxy(JSDOMWindowProxy& windowProxy) const
 {
-    JSDOMWindow* window = windowShell.window();
+    auto* window = windowProxy.window();
     ASSERT(window);
     ASSERT(window->scriptExecutionContext());
     ASSERT(window->scriptExecutionContext()->contentSecurityPolicy() == this);
-    if (!windowShell.world().isNormal()) {
+    if (!windowProxy.world().isNormal()) {
         window->setEvalEnabled(true);
         return;
     }
     window->setEvalEnabled(m_lastPolicyEvalDisabledErrorMessage.isNull(), m_lastPolicyEvalDisabledErrorMessage);
+    window->setWebAssemblyEnabled(m_lastPolicyWebAssemblyDisabledErrorMessage.isNull(), m_lastPolicyWebAssemblyDisabledErrorMessage);
 }
 
 ContentSecurityPolicyResponseHeaders ContentSecurityPolicy::responseHeaders() const
@@ -230,14 +231,18 @@ void ContentSecurityPolicy::applyPolicyToScriptExecutionContext()
     bool enableStrictMixedContentMode = false;
     for (auto& policy : m_policies) {
         const ContentSecurityPolicyDirective* violatedDirective = policy->violatedDirectiveForUnsafeEval();
-        if (violatedDirective && !violatedDirective->directiveList().isReportOnly())
+        if (violatedDirective && !violatedDirective->directiveList().isReportOnly()) {
             m_lastPolicyEvalDisabledErrorMessage = policy->evalDisabledErrorMessage();
+            m_lastPolicyWebAssemblyDisabledErrorMessage = policy->webAssemblyDisabledErrorMessage();
+        }
         if (policy->hasBlockAllMixedContentDirective() && !policy->isReportOnly())
             enableStrictMixedContentMode = true;
     }
 
     if (!m_lastPolicyEvalDisabledErrorMessage.isNull())
         m_scriptExecutionContext->disableEval(m_lastPolicyEvalDisabledErrorMessage);
+    if (!m_lastPolicyWebAssemblyDisabledErrorMessage.isNull())
+        m_scriptExecutionContext->disableWebAssembly(m_lastPolicyWebAssemblyDisabledErrorMessage);
     if (m_sandboxFlags != SandboxNone && is<Document>(m_scriptExecutionContext))
         m_scriptExecutionContext->enforceSandboxFlags(m_sandboxFlags);
     if (enableStrictMixedContentMode)
@@ -311,20 +316,6 @@ bool ContentSecurityPolicy::allPoliciesAllow(ViolatedDirectiveCallback&& callbac
     return isAllowed;
 }
 
-static PAL::CryptoDigest::Algorithm toCryptoDigestAlgorithm(ContentSecurityPolicyHashAlgorithm algorithm)
-{
-    switch (algorithm) {
-    case ContentSecurityPolicyHashAlgorithm::SHA_256:
-        return PAL::CryptoDigest::Algorithm::SHA_256;
-    case ContentSecurityPolicyHashAlgorithm::SHA_384:
-        return PAL::CryptoDigest::Algorithm::SHA_384;
-    case ContentSecurityPolicyHashAlgorithm::SHA_512:
-        return PAL::CryptoDigest::Algorithm::SHA_512;
-    }
-    ASSERT_NOT_REACHED();
-    return PAL::CryptoDigest::Algorithm::SHA_512;
-}
-
 template<typename Predicate>
 ContentSecurityPolicy::HashInEnforcedAndReportOnlyPoliciesPair ContentSecurityPolicy::findHashOfContentInPolicies(Predicate&& predicate, const String& content, OptionSet<ContentSecurityPolicyHashAlgorithm> algorithms) const
 {
@@ -343,9 +334,7 @@ ContentSecurityPolicy::HashInEnforcedAndReportOnlyPoliciesPair ContentSecurityPo
     bool foundHashInEnforcedPolicies = false;
     bool foundHashInReportOnlyPolicies = false;
     for (auto algorithm : algorithms) {
-        auto cryptoDigest = PAL::CryptoDigest::create(toCryptoDigestAlgorithm(algorithm));
-        cryptoDigest->addBytes(contentCString.data(), contentCString.length());
-        ContentSecurityPolicyHash hash = { algorithm, cryptoDigest->computeHash() };
+        ContentSecurityPolicyHash hash = cryptographicDigestForBytes(algorithm, contentCString.data(), contentCString.length());
         if (!foundHashInEnforcedPolicies && allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::Enforce, std::forward<Predicate>(predicate), hash))
             foundHashInEnforcedPolicies = true;
         if (!foundHashInReportOnlyPolicies && allPoliciesWithDispositionAllow(ContentSecurityPolicy::Disposition::ReportOnly, std::forward<Predicate>(predicate), hash))

@@ -154,14 +154,14 @@ void KeyframeAnimation::fetchIntervalEndpointsForProperty(CSSPropertyID property
     prog = progress(scale, offset, prevKeyframe.timingFunction(name()));
 }
 
-bool KeyframeAnimation::animate(CompositeAnimation* compositeAnimation, RenderElement*, const RenderStyle*, const RenderStyle* targetStyle, std::unique_ptr<RenderStyle>& animatedStyle, bool& didBlendStyle)
+bool KeyframeAnimation::animate(CompositeAnimation& compositeAnimation, RenderElement*, const RenderStyle*, const RenderStyle& targetStyle, std::unique_ptr<RenderStyle>& animatedStyle, bool& didBlendStyle)
 {
     // Fire the start timeout if needed
     fireAnimationEventsIfNeeded();
 
     // If we have not yet started, we will not have a valid start time, so just start the animation if needed.
     if (isNew()) {
-        if (m_animation->playState() == AnimPlayStatePlaying && !compositeAnimation->isSuspended())
+        if (m_animation->playState() == AnimPlayStatePlaying && !compositeAnimation.isSuspended())
             updateStateMachine(AnimationStateInput::StartAnimation, -1);
         else if (m_animation->playState() == AnimPlayStatePaused)
             updateStateMachine(AnimationStateInput::PlayStatePaused, -1);
@@ -171,7 +171,7 @@ bool KeyframeAnimation::animate(CompositeAnimation* compositeAnimation, RenderEl
     // If so, we need to send back the targetStyle.
     if (postActive()) {
         if (!animatedStyle)
-            animatedStyle = RenderStyle::clonePtr(*targetStyle);
+            animatedStyle = RenderStyle::clonePtr(targetStyle);
         return false;
     }
 
@@ -195,7 +195,7 @@ bool KeyframeAnimation::animate(CompositeAnimation* compositeAnimation, RenderEl
     // Run a cycle of animation.
     // We know we will need a new render style, so make one if needed.
     if (!animatedStyle)
-        animatedStyle = RenderStyle::clonePtr(*targetStyle);
+        animatedStyle = RenderStyle::clonePtr(targetStyle);
 
     // FIXME: we need to be more efficient about determining which keyframes we are animating between.
     // We should cache the last pair or something.
@@ -519,14 +519,14 @@ void KeyframeAnimation::checkForMatchingBackdropFilterFunctionLists()
 }
 #endif
 
-double KeyframeAnimation::timeToNextService()
+std::optional<Seconds> KeyframeAnimation::timeToNextService()
 {
-    double t = AnimationBase::timeToNextService();
-    if (t != 0 || preActive())
+    std::optional<Seconds> t = AnimationBase::timeToNextService();
+    if (!t || t.value() != 0_s || preActive())
         return t;
 
     // A return value of 0 means we need service. But if we only have accelerated animations we
-    // only need service at the end of the transition
+    // only need service at the end of the transition.
     bool acceleratedPropertiesOnly = true;
 
     for (auto propertyID : m_keyframes.properties()) {
@@ -538,7 +538,7 @@ double KeyframeAnimation::timeToNextService()
 
     if (acceleratedPropertiesOnly) {
         bool isLooping;
-        getTimeToNextEvent(t, isLooping);
+        getTimeToNextEvent(t.value(), isLooping);
     }
 
     return t;

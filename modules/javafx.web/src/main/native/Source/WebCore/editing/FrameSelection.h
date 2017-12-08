@@ -97,12 +97,13 @@ public:
     void paintDragCaret(Frame*, GraphicsContext&, const LayoutPoint&, const LayoutRect& clipRect) const;
 
     bool isContentEditable() const { return m_position.rootEditableElement(); }
-    bool isContentRichlyEditable() const;
+    WEBCORE_EXPORT bool isContentRichlyEditable() const;
 
     bool hasCaret() const { return m_position.isNotNull(); }
     const VisiblePosition& caretPosition() { return m_position; }
     void setCaretPosition(const VisiblePosition&);
     void clear() { setCaretPosition(VisiblePosition()); }
+    WEBCORE_EXPORT IntRect caretRectInRootViewCoordinates() const;
 
     void nodeWillBeRemoved(Node&);
 
@@ -151,9 +152,10 @@ public:
     void prepareForDestruction();
 
     void updateAppearanceAfterLayout();
+    void scheduleAppearanceUpdateAfterStyleChange();
     void setNeedsSelectionUpdate();
 
-    bool contains(const LayoutPoint&);
+    bool contains(const LayoutPoint&) const;
 
     WEBCORE_EXPORT bool modify(EAlteration, SelectionDirection, TextGranularity, EUserTriggered = NotUserTriggered);
     enum VerticalDirection { DirectionUp, DirectionDown };
@@ -215,9 +217,9 @@ public:
 #if PLATFORM(IOS)
 public:
     WEBCORE_EXPORT void expandSelectionToElementContainingCaretSelection();
-    WEBCORE_EXPORT PassRefPtr<Range> elementRangeContainingCaretSelection() const;
+    WEBCORE_EXPORT RefPtr<Range> elementRangeContainingCaretSelection() const;
     WEBCORE_EXPORT void expandSelectionToWordContainingCaretSelection();
-    WEBCORE_EXPORT PassRefPtr<Range> wordRangeContainingCaretSelection();
+    WEBCORE_EXPORT RefPtr<Range> wordRangeContainingCaretSelection();
     WEBCORE_EXPORT void expandSelectionToStartOfWordContainingCaretSelection();
     WEBCORE_EXPORT UChar characterInRelationToCaretSelection(int amount) const;
     WEBCORE_EXPORT UChar characterBeforeCaretSelection() const;
@@ -227,13 +229,14 @@ public:
     WEBCORE_EXPORT bool selectionAtDocumentStart() const;
     WEBCORE_EXPORT bool selectionAtSentenceStart() const;
     WEBCORE_EXPORT bool selectionAtWordStart() const;
-    WEBCORE_EXPORT PassRefPtr<Range> rangeByMovingCurrentSelection(int amount) const;
-    WEBCORE_EXPORT PassRefPtr<Range> rangeByExtendingCurrentSelection(int amount) const;
+    WEBCORE_EXPORT RefPtr<Range> rangeByMovingCurrentSelection(int amount) const;
+    WEBCORE_EXPORT RefPtr<Range> rangeByExtendingCurrentSelection(int amount) const;
     WEBCORE_EXPORT void selectRangeOnElement(unsigned location, unsigned length, Node&);
     WEBCORE_EXPORT void clearCurrentSelection();
     void setCaretBlinks(bool caretBlinks = true);
     WEBCORE_EXPORT void setCaretColor(const Color&);
     WEBCORE_EXPORT static VisibleSelection wordSelectionContainingCaretSelection(const VisibleSelection&);
+    bool isUpdateAppearanceEnabled() const { return m_updateAppearanceEnabled; }
     void setUpdateAppearanceEnabled(bool enabled) { m_updateAppearanceEnabled = enabled; }
     void suppressScrolling() { ++m_scrollingSuppressCount; }
     void restoreScrolling()
@@ -243,7 +246,7 @@ public:
     }
 private:
     bool actualSelectionAtSentenceStart(const VisibleSelection&) const;
-    PassRefPtr<Range> rangeByAlteringCurrentSelection(EAlteration, int amount) const;
+    RefPtr<Range> rangeByAlteringCurrentSelection(EAlteration, int amount) const;
 public:
 #endif
 
@@ -253,8 +256,8 @@ public:
     void setSelectionByMouseIfDifferent(const VisibleSelection&, TextGranularity, EndPointsAdjustmentMode = DoNotAdjsutEndpoints);
 
     EditingStyle* typingStyle() const;
-    WEBCORE_EXPORT PassRefPtr<MutableStyleProperties> copyTypingStyle() const;
-    void setTypingStyle(PassRefPtr<EditingStyle>);
+    WEBCORE_EXPORT RefPtr<MutableStyleProperties> copyTypingStyle() const;
+    void setTypingStyle(RefPtr<EditingStyle>&& style) { m_typingStyle = WTFMove(style); }
     void clearTypingStyle();
 
     WEBCORE_EXPORT FloatRect selectionBounds(bool clipToVisibleContent = true) const;
@@ -315,6 +318,9 @@ private:
 
     void caretBlinkTimerFired();
 
+    void updateAppearanceAfterLayoutOrStyleChange();
+    void appearanceUpdateTimerFired();
+
     void setCaretVisibility(CaretVisibility);
     bool recomputeCaretRect();
     void invalidateCaretRect();
@@ -334,6 +340,7 @@ private:
     RefPtr<EditingStyle> m_typingStyle;
 
     Timer m_caretBlinkTimer;
+    Timer m_appearanceUpdateTimer;
     // The painted bounds of the caret in absolute coordinates
     IntRect m_absCaretBounds;
     bool m_caretInsidePositionFixed : 1;
@@ -362,11 +369,6 @@ inline EditingStyle* FrameSelection::typingStyle() const
 inline void FrameSelection::clearTypingStyle()
 {
     m_typingStyle = nullptr;
-}
-
-inline void FrameSelection::setTypingStyle(PassRefPtr<EditingStyle> style)
-{
-    m_typingStyle = style;
 }
 
 #if !(PLATFORM(COCOA) || PLATFORM(GTK))

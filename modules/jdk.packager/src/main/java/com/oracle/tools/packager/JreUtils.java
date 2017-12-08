@@ -29,6 +29,10 @@ import java.io.File;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class JreUtils {
 
     public static class Rule {

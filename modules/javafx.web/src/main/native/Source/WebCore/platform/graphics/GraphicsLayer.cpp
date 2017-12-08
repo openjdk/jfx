@@ -32,11 +32,11 @@
 #include "GraphicsContext.h"
 #include "LayoutRect.h"
 #include "RotateTransformOperation.h"
-#include "TextStream.h"
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 #ifndef NDEBUG
@@ -95,6 +95,11 @@ bool GraphicsLayer::supportsBackgroundColorContent()
     return false;
 #endif
 }
+
+bool GraphicsLayer::supportsSubpixelAntialiasedLayerText()
+{
+    return false;
+}
 #endif
 
 #if !USE(COORDINATED_GRAPHICS)
@@ -115,6 +120,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& client)
 #endif
     , m_type(type)
     , m_contentsOpaque(false)
+    , m_supportsSubpixelAntialiasedText(false)
     , m_preserves3D(false)
     , m_backfaceVisibility(true)
     , m_masksToBounds(false)
@@ -128,6 +134,7 @@ GraphicsLayer::GraphicsLayer(Type type, GraphicsLayerClient& client)
     , m_isMaskLayer(false)
     , m_isTrackingDisplayListReplay(false)
     , m_userInteractionEnabled(true)
+    , m_canDetachBackingStore(true)
     , m_paintingPhase(GraphicsLayerPaintAllWithOverflowClip)
     , m_contentsOrientation(CompositingCoordinatesTopDown)
     , m_parent(nullptr)
@@ -411,7 +418,7 @@ void GraphicsLayer::setBackgroundColor(const Color& color)
     m_backgroundColor = color;
 }
 
-void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip)
+void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const FloatRect& clip, GraphicsLayerPaintBehavior layerPaintBehavior)
 {
     FloatSize offset = offsetFromRenderer();
     context.translate(-offset);
@@ -419,7 +426,7 @@ void GraphicsLayer::paintGraphicsLayerContents(GraphicsContext& context, const F
     FloatRect clipRect(clip);
     clipRect.move(offset);
 
-    m_client.paintContents(this, context, m_paintingPhase, clipRect);
+    m_client.paintContents(this, context, m_paintingPhase, clipRect, layerPaintBehavior);
 }
 
 String GraphicsLayer::animationNameForTransition(AnimatedPropertyID property)
@@ -665,7 +672,7 @@ void GraphicsLayer::addRepaintRect(const FloatRect& repaintRect)
     }
 }
 
-void GraphicsLayer::traverse(GraphicsLayer& layer, std::function<void (GraphicsLayer&)> traversalFunc)
+void GraphicsLayer::traverse(GraphicsLayer& layer, const WTF::Function<void (GraphicsLayer&)>& traversalFunc)
 {
     traversalFunc(layer);
 
@@ -762,6 +769,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, int indent, LayerTreeAsTextBe
         ts << "(contentsOpaque " << (m_contentsOpaque || needsIOSDumpRenderTreeMainFrameRenderViewLayerIsAlwaysOpaqueHack) << ")\n";
     }
 
+    if (m_supportsSubpixelAntialiasedText) {
+        writeIndent(ts, indent + 1);
+        ts << "(supports subpixel antialiased text " << m_supportsSubpixelAntialiasedText << ")\n";
+    }
+
     if (m_preserves3D) {
         writeIndent(ts, indent + 1);
         ts << "(preserves3D " << m_preserves3D << ")\n";
@@ -797,6 +809,11 @@ void GraphicsLayer::dumpProperties(TextStream& ts, int indent, LayerTreeAsTextBe
     if (behavior & LayerTreeAsTextIncludeAcceleratesDrawing && m_acceleratesDrawing) {
         writeIndent(ts, indent + 1);
         ts << "(acceleratesDrawing " << m_acceleratesDrawing << ")\n";
+    }
+
+    if (behavior & LayerTreeAsTextIncludeBackingStoreAttached) {
+        writeIndent(ts, indent + 1);
+        ts << "(backingStoreAttached " << backingStoreAttached() << ")\n";
     }
 
     if (!m_transform.isIdentity()) {

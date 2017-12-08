@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2015 Andy VanWagoner (thetalecrafter@gmail.com)
  * Copyright (C) 2016 Sukolsak Sakshuwong (sukolsak@gmail.com)
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 
 #if ENABLE(INTL)
 
+#include "CatchScope.h"
 #include "Error.h"
 #include "IntlNumberFormatConstructor.h"
 #include "IntlObject.h"
@@ -39,7 +40,7 @@
 
 namespace JSC {
 
-const ClassInfo IntlNumberFormat::s_info = { "Object", &Base::s_info, 0, CREATE_METHOD_TABLE(IntlNumberFormat) };
+const ClassInfo IntlNumberFormat::s_info = { "Object", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlNumberFormat) };
 
 static const char* const relevantExtensionKeys[1] = { "nu" };
 
@@ -358,7 +359,7 @@ void IntlNumberFormat::createNumberFormat(ExecState& state)
 
     if (!m_initializedNumberFormat) {
         initializeNumberFormat(state, jsUndefined(), jsUndefined());
-        ASSERT_UNUSED(scope, !scope.exception());
+        scope.assertNoException();
     }
 
     UNumberFormatStyle style;
@@ -486,7 +487,7 @@ JSObject* IntlNumberFormat::resolvedOptions(ExecState& state)
 
     if (!m_initializedNumberFormat) {
         initializeNumberFormat(state, jsUndefined(), jsUndefined());
-        ASSERT_UNUSED(scope, !scope.exception());
+        scope.assertNoException();
     }
 
     JSObject* options = constructEmptyObject(&state);

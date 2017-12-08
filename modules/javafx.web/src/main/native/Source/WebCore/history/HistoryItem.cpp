@@ -28,7 +28,6 @@
 
 #include "CachedPage.h"
 #include "Document.h"
-#include "IconDatabase.h"
 #include "KeyedCoding.h"
 #include "PageCache.h"
 #include "ResourceRequest.h"
@@ -62,10 +61,7 @@ extern void notifyHistoryItemDestroyed(const JLObject&);
 #endif
 
 HistoryItem::HistoryItem()
-    : m_pageScaleFactor(0)
-    , m_lastVisitWasFailure(false)
-    , m_isTargetItem(false)
-    , m_itemSequenceNumber(generateSequenceNumber())
+    : m_itemSequenceNumber(generateSequenceNumber())
     , m_documentSequenceNumber(generateSequenceNumber())
     , m_pruningReason(PruningReason::None)
 {
@@ -75,14 +71,10 @@ HistoryItem::HistoryItem(const String& urlString, const String& title)
     : m_urlString(urlString)
     , m_originalURLString(urlString)
     , m_title(title)
-    , m_pageScaleFactor(0)
-    , m_lastVisitWasFailure(false)
-    , m_isTargetItem(false)
     , m_itemSequenceNumber(generateSequenceNumber())
     , m_documentSequenceNumber(generateSequenceNumber())
     , m_pruningReason(PruningReason::None)
 {
-    iconDatabase().retainIconForPageURL(m_urlString);
 }
 
 HistoryItem::HistoryItem(const String& urlString, const String& title, const String& alternateTitle)
@@ -91,19 +83,15 @@ HistoryItem::HistoryItem(const String& urlString, const String& title, const Str
     , m_title(title)
     , m_displayTitle(alternateTitle)
     , m_pageScaleFactor(0)
-    , m_lastVisitWasFailure(false)
-    , m_isTargetItem(false)
     , m_itemSequenceNumber(generateSequenceNumber())
     , m_documentSequenceNumber(generateSequenceNumber())
     , m_pruningReason(PruningReason::None)
 {
-    iconDatabase().retainIconForPageURL(m_urlString);
 }
 
 HistoryItem::~HistoryItem()
 {
     ASSERT(!m_cachedPage);
-    iconDatabase().releaseIconForPageURL(m_urlString);
 #if PLATFORM(JAVA)
     if (m_hostObject) {
         notifyHistoryItemDestroyed(m_hostObject);
@@ -128,7 +116,7 @@ inline HistoryItem::HistoryItem(const HistoryItem& item)
     , m_formContentType(item.m_formContentType)
     , m_pruningReason(PruningReason::None)
 #if PLATFORM(IOS)
-    , m_obscuredInset(item.m_obscuredInset)
+    , m_obscuredInsets(item.m_obscuredInsets)
     , m_scale(item.m_scale)
     , m_scaleIsInitial(item.m_scaleIsInitial)
 #endif
@@ -152,8 +140,6 @@ Ref<HistoryItem> HistoryItem::copy() const
 
 void HistoryItem::reset()
 {
-    iconDatabase().releaseIconForPageURL(m_urlString);
-
     m_urlString = String();
     m_originalURLString = String();
     m_referrer = String();
@@ -230,12 +216,7 @@ void HistoryItem::setAlternateTitle(const String& alternateTitle)
 
 void HistoryItem::setURLString(const String& urlString)
 {
-    if (m_urlString != urlString) {
-        iconDatabase().releaseIconForPageURL(m_urlString);
-        m_urlString = urlString;
-        iconDatabase().retainIconForPageURL(m_urlString);
-    }
-
+    m_urlString = urlString;
     notifyHistoryItemChanged(this);
 }
 
@@ -283,6 +264,17 @@ void HistoryItem::setScrollPosition(const IntPoint& position)
 void HistoryItem::clearScrollPosition()
 {
     m_scrollPosition = IntPoint();
+}
+
+bool HistoryItem::shouldRestoreScrollPosition() const
+{
+    return m_shouldRestoreScrollPosition;
+}
+
+void HistoryItem::setShouldRestoreScrollPosition(bool shouldRestore)
+{
+    m_shouldRestoreScrollPosition = shouldRestore;
+    notifyHistoryItemChanged(this);
 }
 
 float HistoryItem::pageScaleFactor() const

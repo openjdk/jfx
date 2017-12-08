@@ -20,10 +20,9 @@
 
 #pragma once
 
+#include "PrivateName.h"
 #include "VM.h"
 #include <wtf/Optional.h>
-#include <wtf/ThreadSpecific.h>
-#include <wtf/WTFThreadData.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/UniquedStringImpl.h>
 #include <wtf/text/WTFString.h>
@@ -122,6 +121,7 @@ public:
     static Identifier fromString(ExecState*, const AtomicString&);
     static Identifier fromString(ExecState*, const String&);
     static Identifier fromString(ExecState*, const char*);
+    static Identifier fromString(VM* vm, const Vector<LChar>& characters) { return fromString(vm, characters.data(), characters.size()); }
 
     static Identifier fromUid(VM*, UniquedStringImpl* uid);
     static Identifier fromUid(ExecState*, UniquedStringImpl* uid);
@@ -139,6 +139,7 @@ public:
     bool isNull() const { return m_string.isNull(); }
     bool isEmpty() const { return m_string.isEmpty(); }
     bool isSymbol() const { return !isNull() && impl()->isSymbol(); }
+    bool isPrivateName() const { return isSymbol() && static_cast<const SymbolImpl*>(impl())->isPrivate(); }
 
     friend bool operator==(const Identifier&, const Identifier&);
     friend bool operator!=(const Identifier&, const Identifier&);

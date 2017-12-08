@@ -40,9 +40,9 @@ class JavaClass;
 
 class JavaInstance : public Instance {
 public:
-    static PassRefPtr<JavaInstance> create(jobject instance, PassRefPtr<RootObject> rootObject, jobject accessControlContext)
+    static RefPtr<JavaInstance> create(jobject instance, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
     {
-        return adoptRef(new JavaInstance(instance, rootObject, accessControlContext));
+        return adoptRef(new JavaInstance(instance, WTFMove(rootObject), accessControlContext));
     }
 
     ~JavaInstance();
@@ -63,7 +63,7 @@ public:
     jobject accessControlContext() const { return m_accessControlContext->instance(); }
 
 protected:
-    JavaInstance(jobject instance, PassRefPtr<RootObject>, jobject accessControlContext);
+    JavaInstance(jobject instance, RefPtr<RootObject>&&, jobject accessControlContext);
 
     virtual RuntimeObject* newRuntimeObject(ExecState*);
 

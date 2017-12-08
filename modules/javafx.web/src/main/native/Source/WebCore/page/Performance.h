@@ -32,8 +32,6 @@
 
 #pragma once
 
-#if ENABLE(WEB_TIMING)
-
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
 #include "ExceptionOr.h"
@@ -78,6 +76,7 @@ public:
 
     void addResourceTiming(ResourceTiming&&);
 
+    void removeAllObservers();
     void registerPerformanceObserver(PerformanceObserver&);
     void unregisterPerformanceObserver(PerformanceObserver&);
 
@@ -118,5 +117,3 @@ private:
 };
 
 }
-
-#endif // ENABLE(WEB_TIMING)

@@ -25,6 +25,7 @@
  */
 
 enum ForcedAccessibilityValue { "system", "on", "off" };
+enum FrameFlatteningValue { "Disabled", "EnabledForNonFullScreenIFrames", "FullyEnabled" };
 
 [
     NoInterfaceObject,
@@ -81,11 +82,13 @@ enum ForcedAccessibilityValue { "system", "on", "off" };
     [MayThrowException] void setAllowsInlineMediaPlayback(boolean allows);
     [MayThrowException] void setAllowsInlineMediaPlaybackAfterFullscreen(boolean allows);
     [MayThrowException] void setInlineMediaPlaybackRequiresPlaysInlineAttribute(boolean requires);
+    [MayThrowException] void setFrameFlattening(FrameFlatteningValue frameFlattening);
 
     // RuntimeEnabledFeatures.
     void setIndexedDBWorkersEnabled(boolean enabled);
     void setCSSGridLayoutEnabled(boolean enabled);
     void setWebGL2Enabled(boolean enabled);
+    void setWebGPUEnabled(boolean enabled);
 
     [MayThrowException] DOMString userInterfaceDirectionPolicy();
     [MayThrowException] void setUserInterfaceDirectionPolicy(DOMString policy);
@@ -95,8 +98,12 @@ enum ForcedAccessibilityValue { "system", "on", "off" };
     [MayThrowException] boolean deferredCSSParserEnabled();
     [MayThrowException] void setDeferredCSSParserEnabled(boolean enabled);
 
+    [MayThrowException] void setShouldMockBoldSystemFontForAccessibility(boolean shouldMock);
+
     attribute ForcedAccessibilityValue forcedColorsAreInvertedAccessibilityValue;
     attribute ForcedAccessibilityValue forcedDisplayIsMonochromeAccessibilityValue;
     attribute ForcedAccessibilityValue forcedPrefersReducedMotionAccessibilityValue;
+
+    [MayThrowException] void setShouldManageAudioSessionCategory(boolean should);
 };
 

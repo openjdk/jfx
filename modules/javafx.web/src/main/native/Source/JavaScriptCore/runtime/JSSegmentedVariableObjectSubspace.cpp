@@ -43,8 +43,8 @@ struct DestroyFunc {
 
 } // anonymous namespace
 
-JSSegmentedVariableObjectSubspace::JSSegmentedVariableObjectSubspace(CString name, Heap& heap)
-    : Subspace(name, heap, AllocatorAttributes(NeedsDestruction, HeapCell::JSCell))
+JSSegmentedVariableObjectSubspace::JSSegmentedVariableObjectSubspace(CString name, Heap& heap, AlignedMemoryAllocator* allocator)
+    : Subspace(name, heap, AllocatorAttributes(NeedsDestruction, HeapCell::JSCell), allocator)
 {
 }
 
@@ -52,9 +52,9 @@ JSSegmentedVariableObjectSubspace::~JSSegmentedVariableObjectSubspace()
 {
 }
 
-FreeList JSSegmentedVariableObjectSubspace::finishSweep(MarkedBlock::Handle& handle, MarkedBlock::Handle::SweepMode sweepMode)
+void JSSegmentedVariableObjectSubspace::finishSweep(MarkedBlock::Handle& handle, FreeList* freeList)
 {
-    return handle.finishSweepKnowingSubspace(sweepMode, DestroyFunc());
+    handle.finishSweepKnowingSubspace(freeList, DestroyFunc());
 }
 
 void JSSegmentedVariableObjectSubspace::destroy(VM& vm, JSCell* cell)

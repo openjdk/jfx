@@ -23,8 +23,9 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DataDetectorsCoreSPI_h
-#define DataDetectorsCoreSPI_h
+#pragma once
+
+#if ENABLE(DATA_DETECTION)
 
 typedef struct __DDResult *DDResultRef;
 
@@ -35,9 +36,7 @@ typedef struct __DDResult *DDResultRef;
 #import <DataDetectorsCore/DataDetectorsCore.h>
 
 #if PLATFORM(IOS)
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000
 #import <DataDetectorsCore/DDOptionalSource.h>
-#endif
 #import <DataDetectorsCore/DDURLifier.h>
 #endif // PLATFORM(IOS)
 
@@ -105,10 +104,17 @@ extern NSString * const DDURLScheme;
 
 #define DDResultPropertyPassiveDisplay   (1 << 0)
 
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200
 typedef struct __DDQueryOffset {
     CFIndex queryIndex;
     CFIndex offset;
 } DDQueryOffset;
+#else
+typedef struct __DDQueryOffset {
+    CFIndex queryIndex:32;
+    CFIndex offset:32;
+} DDQueryOffset;
+#endif
 
 typedef struct __DDQueryRange {
     DDQueryOffset start;
@@ -116,6 +122,12 @@ typedef struct __DDQueryRange {
 } DDQueryRange;
 
 #endif // !USE(APPLE_INTERNAL_SDK)
+
+#if PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101200
+static_assert(sizeof(DDQueryOffset) == sizeof(CFIndex) * 2, "DDQueryOffset is no longer the size of two CFIndexes. Update the definition of DDQueryOffset in this file to match the new size.");
+#else
+static_assert(sizeof(DDQueryOffset) == 8, "DDQueryOffset is no longer 8 bytes. Update the definition of DDQueryOffset in this file to match the new size.");
+#endif
 
 typedef struct __DDScanQuery *DDScanQueryRef;
 typedef struct __DDScanner *DDScannerRef;
@@ -150,4 +162,5 @@ DDQueryRange DDResultGetQueryRangeForURLification(DDResultRef);
 
 WTF_EXTERN_C_END
 
-#endif // DataDetectorsCoreSPI_h
+#endif
+

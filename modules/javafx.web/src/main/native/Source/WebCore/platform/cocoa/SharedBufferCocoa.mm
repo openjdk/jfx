@@ -35,10 +35,10 @@ using namespace WebCore;
 
 @interface WebCoreSharedBufferData : NSData
 {
-    RefPtr<SharedBuffer::DataBuffer> sharedBufferDataBuffer;
+    RefPtr<const SharedBuffer::DataSegment> sharedBufferDataSegment;
 }
 
-- (id)initWithSharedBufferDataBuffer:(SharedBuffer::DataBuffer*)dataBuffer;
+- (id)initWithSharedBufferDataSegment:(const SharedBuffer::DataSegment&)dataSegment;
 @end
 
 @implementation WebCoreSharedBufferData
@@ -59,91 +59,62 @@ using namespace WebCore;
     [super dealloc];
 }
 
-- (id)initWithSharedBufferDataBuffer:(SharedBuffer::DataBuffer*)dataBuffer
+- (id)initWithSharedBufferDataSegment:(const SharedBuffer::DataSegment&)dataSegment
 {
     self = [super init];
     
     if (self)
-        sharedBufferDataBuffer = dataBuffer;
+        sharedBufferDataSegment = &dataSegment;
 
     return self;
 }
 
 - (NSUInteger)length
 {
-    return sharedBufferDataBuffer->data.size();
+    return sharedBufferDataSegment->size();
 }
 
 - (const void *)bytes
 {
-    return sharedBufferDataBuffer->data.data();
+    return sharedBufferDataSegment->data();
 }
 
 @end
 
 namespace WebCore {
 
-Ref<SharedBuffer> SharedBuffer::wrapNSData(NSData *nsData)
+Ref<SharedBuffer> SharedBuffer::create(NSData *nsData)
 {
     return adoptRef(*new SharedBuffer((CFDataRef)nsData));
 }
 
-RetainPtr<NSData> SharedBuffer::createNSData()
+RetainPtr<NSData> SharedBuffer::createNSData() const
 {
     return adoptNS((NSData *)createCFData().leakRef());
 }
 
-CFDataRef SharedBuffer::existingCFData()
+RetainPtr<CFDataRef> SharedBuffer::createCFData() const
 {
-    if (m_cfData)
-        return m_cfData.get();
-
-#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
-    if (m_dataArray.size() == 1)
-        return m_dataArray.at(0).get();
-#endif
-
-    return nullptr;
-}
-
-RetainPtr<CFDataRef> SharedBuffer::createCFData()
-{
-    if (CFDataRef cfData = existingCFData())
-        return cfData;
-
-    data(); // Force data into m_buffer from segments or data array.
-    return adoptCF((CFDataRef)adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBufferDataBuffer:m_buffer.ptr()]).leakRef());
+    combineIntoOneSegment();
+    if (!m_segments.size())
+        return adoptCF(CFDataCreate(nullptr, nullptr, 0));
+    ASSERT(m_segments.size() == 1);
+    return adoptCF((CFDataRef)adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBufferDataSegment:m_segments[0].segment]).leakRef());
 }
 
 RefPtr<SharedBuffer> SharedBuffer::createFromReadingFile(const String& filePath)
 {
     NSData *resourceData = [NSData dataWithContentsOfFile:filePath];
     if (resourceData) 
-        return SharedBuffer::wrapNSData(resourceData);
+        return SharedBuffer::create(resourceData);
     return nullptr;
 }
 
 RetainPtr<NSArray> SharedBuffer::createNSDataArray() const
 {
-    if (auto platformData = (NSData *)m_cfData.get())
-        return @[ platformData ];
-
-    if (m_fileData)
-        return @[ [NSData dataWithBytes:m_fileData.data() length:m_fileData.size()] ];
-
-    auto dataArray = adoptNS([[NSMutableArray alloc] init]);
-    if (m_buffer->data.size())
-        [dataArray addObject:adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBufferDataBuffer:m_buffer.ptr()]).get()];
-
-#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
-    for (auto& data : m_dataArray)
-        [dataArray addObject:(NSData *)data.get()];
-#else
-    // Cocoa platforms all currently USE(NETWORK_CFDATA_ARRAY_CALLBACK), so implementing a code path for copying segments would be dead code.
-    // If this ever changes, the following static_assert will detect it.
-    static_assert(false, "FIXME: Copy the segments into an array of NSData objects.");
-#endif
-
+    auto dataArray = adoptNS([[NSMutableArray alloc] initWithCapacity:m_segments.size()]);
+    for (const auto& segment : m_segments)
+        [dataArray addObject:adoptNS([[WebCoreSharedBufferData alloc] initWithSharedBufferDataSegment:segment.segment]).get()];
     return WTFMove(dataArray);
 }
 

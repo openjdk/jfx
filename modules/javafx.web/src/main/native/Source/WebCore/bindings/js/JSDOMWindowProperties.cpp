@@ -30,6 +30,7 @@
 #include "HTMLDocument.h"
 #include "JSDOMBinding.h"
 #include "JSDOMBindingSecurity.h"
+#include "JSDOMConvertStrings.h"
 #include "JSDOMWindowBase.h"
 #include "JSElement.h"
 #include "JSHTMLCollection.h"
@@ -38,7 +39,7 @@ namespace WebCore {
 
 using namespace JSC;
 
-const ClassInfo JSDOMWindowProperties::s_info = { "WindowProperties", &Base::s_info, 0, CREATE_METHOD_TABLE(JSDOMWindowProperties) };
+const ClassInfo JSDOMWindowProperties::s_info = { "WindowProperties", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSDOMWindowProperties) };
 
 static bool jsDOMWindowPropertiesGetOwnPropertySlotNamedItemGetter(JSDOMWindowProperties* thisObject, Frame& frame, ExecState* exec, PropertyName propertyName, PropertySlot& slot)
 {

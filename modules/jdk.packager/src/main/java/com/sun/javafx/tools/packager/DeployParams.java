@@ -47,7 +47,10 @@ import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 import static com.oracle.tools.packager.jnlp.JNLPBundler.*;
 
-@Deprecated
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class DeployParams extends CommonParams {
     public enum RunMode {
         WEBSTART, EMBEDDED, STANDALONE, ALL
@@ -307,7 +310,7 @@ public class DeployParams extends CommonParams {
     @Deprecated
     public void setEmbedCertifcates(boolean v) {
         if (v) {
-            System.out.println("JavaFX Packager no longer supports embedding certificates in JNLP files.  Setting will be ignored.");
+            Log.info("JavaFX Packager no longer supports embedding certificates in JNLP files.  Setting will be ignored.");
         }
     }
 

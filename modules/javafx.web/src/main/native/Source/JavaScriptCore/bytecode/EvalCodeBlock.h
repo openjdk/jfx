@@ -51,7 +51,8 @@ public:
     {
         EvalCodeBlock* instance = new (NotNull, allocateCell<EvalCodeBlock>(vm->heap))
             EvalCodeBlock(vm, vm->evalCodeBlockStructure.get(), ownerExecutable, unlinkedCodeBlock, scope, WTFMove(sourceProvider));
-        instance->finishCreation(*vm, ownerExecutable, unlinkedCodeBlock, scope);
+        if (!instance->finishCreation(*vm, ownerExecutable, unlinkedCodeBlock, scope))
+            return nullptr;
         return instance;
     }
 
@@ -62,6 +63,8 @@ public:
 
     const Identifier& variable(unsigned index) { return unlinkedEvalCodeBlock()->variable(index); }
     unsigned numVariables() { return unlinkedEvalCodeBlock()->numVariables(); }
+    const Identifier& functionHoistingCandidate(unsigned index) { return unlinkedEvalCodeBlock()->functionHoistingCandidate(index); }
+    unsigned numFunctionHoistingCandidates() { return unlinkedEvalCodeBlock()->numFunctionHoistingCandidates(); }
 
 private:
     EvalCodeBlock(VM* vm, Structure* structure, CopyParsedBlockTag, EvalCodeBlock& other)

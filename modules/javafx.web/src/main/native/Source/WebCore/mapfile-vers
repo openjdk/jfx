@@ -7,6 +7,7 @@ SUNWprivate_1.0 {
                WTFReportArgumentAssertionFailure;
                WTFReportBacktrace;
                WTFReportAssertionFailure;
+               _ZN3WTF5equalEPKNS_10StringImplEPKh;
                _ZN3WTF6StringC1EPKc;
                _ZN3WTF6StringC1EPKtj;
                _ZN3WTF7RunLoop4mainEv;
@@ -20,6 +21,7 @@ SUNWprivate_1.0 {
                _ZN3WTF16fastZeroedMallocEj;
                _ZN3WTF16fastZeroedMallocEm;
                _ZN3WTF26getAndResetAccumulatedLogsEv;
+               _ZNK14OpaqueJSString6stringEv;
                _ZNK3WTF6String4utf8Ev;
                JSCheckScriptSyntax;
                JSClassCreate;
@@ -89,6 +91,7 @@ SUNWprivate_1.0 {
                JSStringRetain;
                JSValueCreateJSONString;
                JSValueGetType;
+               JSValueIsArray;
                JSValueIsBoolean;
                JSValueIsEqual;
                JSValueIsInstanceOfConstructor;

@@ -38,9 +38,10 @@
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "IntRect.h"
+#include "Logging.h"
 #include "MediaSampleAVFObjC.h"
-#include <webrtc/common_video/include/corevideo_frame_buffer.h>
 #include <webrtc/common_video/libyuv/include/webrtc_libyuv.h>
+#include <webrtc/sdk/objc/Framework/Classes/Video/corevideo_frame_buffer.h>
 #include <wtf/MainThread.h>
 
 #include "CoreMediaSoftLink.h"
@@ -58,7 +59,7 @@ Ref<RealtimeIncomingVideoSource> RealtimeIncomingVideoSource::create(rtc::scoped
     PixelBufferConformerCV conformer(conformerOptions.get());
 
     auto source = adoptRef(*new RealtimeIncomingVideoSource(WTFMove(videoTrack), WTFMove(trackId), conformerOptions.get()));
-    source->startProducingData();
+    source->start();
     return source;
 }
 
@@ -67,38 +68,74 @@ RealtimeIncomingVideoSource::RealtimeIncomingVideoSource(rtc::scoped_refptr<webr
     , m_videoTrack(WTFMove(videoTrack))
     , m_conformer(conformerOptions)
 {
-    m_muted = !m_videoTrack;
     m_currentSettings.setWidth(640);
     m_currentSettings.setHeight(480);
+    notifyMutedChange(!m_videoTrack);
 }
 
 void RealtimeIncomingVideoSource::startProducingData()
 {
-    if (m_isProducingData)
-        return;
-
-    m_isProducingData = true;
     if (m_videoTrack)
+        m_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
+}
+
+void RealtimeIncomingVideoSource::setSourceTrack(rtc::scoped_refptr<webrtc::VideoTrackInterface>&& track)
+{
+    ASSERT(!m_videoTrack);
+    ASSERT(track);
+
+    m_videoTrack = WTFMove(track);
+    notifyMutedChange(!m_videoTrack);
+    if (isProducingData())
         m_videoTrack->AddOrUpdateSink(this, rtc::VideoSinkWants());
 }
 
 void RealtimeIncomingVideoSource::stopProducingData()
 {
-    if (!m_isProducingData)
-        return;
-
-    m_isProducingData = false;
     if (m_videoTrack)
         m_videoTrack->RemoveSink(this);
 }
 
+CVPixelBufferRef RealtimeIncomingVideoSource::pixelBufferFromVideoFrame(const webrtc::VideoFrame& frame)
+{
+    if (muted()) {
+        if (!m_blackFrame || m_blackFrameWidth != frame.width() || m_blackFrameHeight != frame.height()) {
+            CVPixelBufferRef pixelBuffer = nullptr;
+            auto status = CVPixelBufferCreate(kCFAllocatorDefault, frame.width(), frame.height(), kCVPixelFormatType_420YpCbCr8Planar, nullptr, &pixelBuffer);
+            ASSERT_UNUSED(status, status == noErr);
+
+            m_blackFrame = pixelBuffer;
+            m_blackFrameWidth = frame.width();
+            m_blackFrameHeight = frame.height();
+
+            status = CVPixelBufferLockBaseAddress(pixelBuffer, 0);
+            ASSERT(status == noErr);
+            void* data = CVPixelBufferGetBaseAddress(pixelBuffer);
+            size_t yLength = frame.width() * frame.height();
+            memset(data, 0, yLength);
+            memset(static_cast<uint8_t*>(data) + yLength, 128, yLength / 2);
+
+            status = CVPixelBufferUnlockBaseAddress(pixelBuffer, 0);
+            ASSERT(!status);
+        }
+        return m_blackFrame.get();
+    }
+    auto buffer = frame.video_frame_buffer();
+    ASSERT(buffer->type() == webrtc::VideoFrameBuffer::Type::kNative);
+    return static_cast<webrtc::CoreVideoFrameBuffer&>(*buffer).pixel_buffer();
+}
+
 void RealtimeIncomingVideoSource::OnFrame(const webrtc::VideoFrame& frame)
 {
-    if (!m_isProducingData)
+    if (!isProducingData())
         return;
 
-    auto buffer = frame.video_frame_buffer();
-    CVPixelBufferRef pixelBuffer = static_cast<CVPixelBufferRef>(buffer->native_handle());
+#if !RELEASE_LOG_DISABLED
+    if (!(++m_numberOfFrames % 30))
+        RELEASE_LOG(MediaStream, "RealtimeIncomingVideoSource::OnFrame %zu frame", m_numberOfFrames);
+#endif
+
+    auto pixelBuffer = pixelBufferFromVideoFrame(frame);
 
     // FIXME: Convert timing information from VideoFrame to CMSampleTimingInfo.
     // For the moment, we will pretend that frames should be rendered asap.
@@ -110,19 +147,19 @@ void RealtimeIncomingVideoSource::OnFrame(const webrtc::VideoFrame& frame)
     CMVideoFormatDescriptionRef formatDescription;
     OSStatus ostatus = CMVideoFormatDescriptionCreateForImageBuffer(kCFAllocatorDefault, (CVImageBufferRef)pixelBuffer, &formatDescription);
     if (ostatus != noErr) {
-        LOG_ERROR("Failed to initialize CMVideoFormatDescription: %d", ostatus);
+        LOG_ERROR("Failed to initialize CMVideoFormatDescription: %d", static_cast<int>(ostatus));
         return;
     }
 
     CMSampleBufferRef sampleBuffer;
     ostatus = CMSampleBufferCreateReadyWithImageBuffer(kCFAllocatorDefault, (CVImageBufferRef)pixelBuffer, formatDescription, &timingInfo, &sampleBuffer);
     if (ostatus != noErr) {
-        LOG_ERROR("Failed to create the sample buffer: %d", ostatus);
+        LOG_ERROR("Failed to create the sample buffer: %d", static_cast<int>(ostatus));
         return;
     }
     CFRelease(formatDescription);
 
-    RetainPtr<CMSampleBufferRef> sample = sampleBuffer;
+    auto sample = adoptCF(sampleBuffer);
 
     CFArrayRef attachmentsArray = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, true);
     for (CFIndex i = 0; i < CFArrayGetCount(attachmentsArray); ++i) {
@@ -132,13 +169,32 @@ void RealtimeIncomingVideoSource::OnFrame(const webrtc::VideoFrame& frame)
 
     unsigned width = frame.width();
     unsigned height = frame.height();
+
+    MediaSample::VideoRotation rotation;
+    switch (frame.rotation()) {
+    case webrtc::kVideoRotation_0:
+        rotation = MediaSample::VideoRotation::None;
+        break;
+    case webrtc::kVideoRotation_180:
+        rotation = MediaSample::VideoRotation::UpsideDown;
+        break;
+    case webrtc::kVideoRotation_90:
+        rotation = MediaSample::VideoRotation::Right;
+        std::swap(width, height);
+        break;
+    case webrtc::kVideoRotation_270:
+        rotation = MediaSample::VideoRotation::Left;
+        std::swap(width, height);
+        break;
+    }
+
     RefPtr<RealtimeIncomingVideoSource> protectedThis(this);
-    callOnMainThread([protectedThis = WTFMove(protectedThis), sample = WTFMove(sample), width, height] {
-        protectedThis->processNewSample(sample.get(), width, height);
+    callOnMainThread([protectedThis = WTFMove(protectedThis), sample = WTFMove(sample), width, height, rotation] {
+        protectedThis->processNewSample(sample.get(), width, height, rotation);
     });
 }
 
-void RealtimeIncomingVideoSource::processNewSample(CMSampleBufferRef sample, unsigned width, unsigned height)
+void RealtimeIncomingVideoSource::processNewSample(CMSampleBufferRef sample, unsigned width, unsigned height, MediaSample::VideoRotation rotation)
 {
     m_buffer = sample;
     if (width != m_currentSettings.width() || height != m_currentSettings.height()) {
@@ -147,68 +203,17 @@ void RealtimeIncomingVideoSource::processNewSample(CMSampleBufferRef sample, uns
         settingsDidChange();
     }
 
-    videoSampleAvailable(MediaSampleAVFObjC::create(sample));
+    videoSampleAvailable(MediaSampleAVFObjC::create(sample, rotation));
 }
 
-static inline void drawImage(ImageBuffer& imageBuffer, CGImageRef image, const FloatRect& rect)
+const RealtimeMediaSourceCapabilities& RealtimeIncomingVideoSource::capabilities() const
 {
-    auto& context = imageBuffer.context();
-    GraphicsContextStateSaver stateSaver(context);
-    context.translate(rect.x(), rect.y() + rect.height());
-    context.scale(FloatSize(1, -1));
-    context.setImageInterpolationQuality(InterpolationLow);
-    IntRect paintRect(IntPoint(0, 0), IntSize(rect.width(), rect.height()));
-    CGContextDrawImage(context.platformContext(), CGRectMake(0, 0, paintRect.width(), paintRect.height()), image);
-}
-
-RefPtr<Image> RealtimeIncomingVideoSource::currentFrameImage()
-{
-    if (!m_buffer)
-        return nullptr;
-
-    FloatRect rect(0, 0, m_currentSettings.width(), m_currentSettings.height());
-    auto imageBuffer = ImageBuffer::create(rect.size(), Unaccelerated);
-
-    auto pixelBuffer = static_cast<CVPixelBufferRef>(CMSampleBufferGetImageBuffer(m_buffer.get()));
-    drawImage(*imageBuffer, m_conformer.createImageFromPixelBuffer(pixelBuffer).get(), rect);
-
-    return ImageBuffer::sinkIntoImage(WTFMove(imageBuffer));
-}
-
-void RealtimeIncomingVideoSource::paintCurrentFrameInContext(GraphicsContext& context, const FloatRect& rect)
-{
-    if (context.paintingDisabled())
-        return;
-
-    if (!m_buffer)
-        return;
-
-    // FIXME: Can we optimize here the painting?
-    FloatRect fullRect(0, 0, m_currentSettings.width(), m_currentSettings.height());
-    auto imageBuffer = ImageBuffer::create(fullRect.size(), Unaccelerated);
-
-    auto pixelBuffer = static_cast<CVPixelBufferRef>(CMSampleBufferGetImageBuffer(m_buffer.get()));
-    drawImage(*imageBuffer, m_conformer.createImageFromPixelBuffer(pixelBuffer).get(), fullRect);
-
-    GraphicsContextStateSaver stateSaver(context);
-    context.setImageInterpolationQuality(InterpolationLow);
-    IntRect paintRect(IntPoint(0, 0), IntSize(rect.width(), rect.height()));
-    context.drawImage(*imageBuffer->copyImage(DontCopyBackingStore), rect);
-}
-
-RefPtr<RealtimeMediaSourceCapabilities> RealtimeIncomingVideoSource::capabilities() const
-{
-    return m_capabilities;
+    return RealtimeMediaSourceCapabilities::emptyCapabilities();
 }
 
 const RealtimeMediaSourceSettings& RealtimeIncomingVideoSource::settings() const
 {
     return m_currentSettings;
-}
-
-RealtimeMediaSourceSupportedConstraints& RealtimeIncomingVideoSource::supportedConstraints()
-{
-    return m_supportedConstraints;
 }
 
 } // namespace WebCore

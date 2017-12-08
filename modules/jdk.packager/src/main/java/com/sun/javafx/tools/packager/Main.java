@@ -34,6 +34,7 @@ import com.oracle.tools.packager.Log;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.stream.Stream;
@@ -42,7 +43,10 @@ import java.nio.file.Path;
 
 import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
-
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class Main {
 
     private static final ResourceBundle bundle =
@@ -182,15 +186,34 @@ public class Main {
         return list;
     }
 
+    public static void main(String... args) throws Exception {
+        // Create logger with default system.out and system.err
+        Log.Logger logger = new Log.Logger(false);
+        Log.setLogger(logger);
+
+        int status = run(args);
+        System.exit(status);
+    }
+
+    public static int run(PrintWriter out, PrintWriter err, String... args) throws Exception {
+        // Create logger with provided streams
+        Log.Logger logger = new Log.Logger(false);
+        logger.setPrintWriter(out, err);
+        Log.setLogger(logger);
+
+        int status = run(args);
+        Log.flush();
+        return status;
+    }
 
     @SuppressWarnings("deprecation")
-    public static void main(String... args) throws Exception {
+    public static int run(String... args) throws Exception {
         BundleType bundleType = BundleType.NONE;
 
         if (args.length == 0 || args.length == 1 && args[0].equals("-help")) {
-            System.out.println(help);
+            Log.info(help);
         } else if (args.length == 1 && args[0].equals("-version")) {
-            System.out.println(version);
+            Log.info(version);
         } else {
             PackagerLib packager = new PackagerLib();
             CreateJarParams createJarParams = new CreateJarParams();
@@ -215,12 +238,12 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-manifestAttrs")) {
                             createJarParams.setManifestAttrs(createAttrMap(nextArg(args, i++)));
                         } else if (arg.equalsIgnoreCase("-noembedlauncher")) {
-                            System.err.println("-noembedlauncher is deprecated");
+                            Log.error("-noembedlauncher is deprecated");
                         } else if (arg.equalsIgnoreCase("-nocss2bin")) {
                             createJarParams.setCss2bin(false);
                         } else if (arg.equalsIgnoreCase("-runtimeVersion")) {
                             createJarParams.setFxVersion(nextArg(args, i++));
-                            System.err.println("-runtimeVersion is deprecated");
+                            Log.error("-runtimeVersion is deprecated");
                         } else if (arg.equalsIgnoreCase("-verbose") || arg.equalsIgnoreCase("-v")) {
                             createJarParams.setVerbose(true);
                             verbose = true;
@@ -316,7 +339,7 @@ public class Main {
                         } else if (arg.equalsIgnoreCase("-embedJNLP")) {
                             deployParams.setEmbedJNLP(true);
                         } else if (arg.equalsIgnoreCase("-embedCertificates")) {
-                            System.err.println("-embedCertificates is deprecated");
+                            Log.error("-embedCertificates is deprecated");
                         } else if (arg.equalsIgnoreCase("-allpermissions")) {
                             deployParams.setAllPermissions(true);
                         } else if (arg.equalsIgnoreCase("-updatemode")) {
@@ -443,7 +466,7 @@ public class Main {
                     addResources(signJarParams, srcdir, srcfiles);
                     signJar = true;
                 } else if (args[0].equalsIgnoreCase("-makeall")) {
-                    System.err.println("-makeall is deprecated");
+                    Log.error("-makeall is deprecated");
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
                         if (arg.equalsIgnoreCase("-appclass")) {
@@ -468,17 +491,18 @@ public class Main {
                 } else if (args[0].equalsIgnoreCase("-help")) {
                     showBundlerHelp(args[1], args.length > 2 && "-verbose".equals(args[2]));
                 } else {
-                    System.err.println(MessageFormat.format(
+                    Log.error(MessageFormat.format(
                                         bundle.getString("ERR_UnknownCommand"),
                                         args[0]));
-                    System.exit(-1);
+                    return -1;
                 }
 
-                //set default logger
+                // Enable verbose if needed
                 if (verbose) {
-                    com.oracle.tools.packager.Log.setLogger(new com.oracle.tools.packager.Log.Logger(true));
-                } else {
-                    com.oracle.tools.packager.Log.setLogger(new com.oracle.tools.packager.Log.Logger(false));
+                    Log.Logger logger = Log.getLogger();
+                    if (logger != null) {
+                        logger.setVerbose(true);
+                    }
                 }
 
                 if (css2Bin) {
@@ -528,14 +552,16 @@ public class Main {
                 if (verbose) {
                     throw e;
                 } else {
-                    System.err.println(e.getMessage());
+                    Log.error(e.getMessage());
                     if (e.getCause() != null && e.getCause() != e) {
-                        System.err.println(e.getCause().getMessage());
+                        Log.error(e.getCause().getMessage());
                     }
-                    System.exit(-1);
+                    return -1;
                 }
             }
         }
+
+        return 0;
     }
 
     private static final String MODULE = "--" + StandardBundlerParam.MODULE.getID();
@@ -553,7 +579,7 @@ public class Main {
         //TODO I18N
         if ("bundlers".equals(bundlerName)) {
             // enumerate bundlers
-            System.out.println("Known Bundlers -- \n");
+            Log.info("Known Bundlers -- \n");
             for (Bundler bundler : Bundlers.createBundlersInstance().getBundlers()) {
                 try {
                     bundler.validate(new HashMap<>());
@@ -567,7 +593,7 @@ public class Main {
                 }
 
                 if (verbose) {
-                    System.out.printf(
+                    Log.infof(
                             "%s - %s - %s\n\t%s\n",
                             bundler.getID(),
                             bundler.getName(),
@@ -575,7 +601,7 @@ public class Main {
                             bundler.getDescription()
                     );
                 } else {
-                    System.out.printf(
+                    Log.infof(
                             "%s - %s - %s\n",
                             bundler.getID(),
                             bundler.getName(),
@@ -587,11 +613,11 @@ public class Main {
             // enumerate parameters for a bundler
             for (Bundler bundler : Bundlers.createBundlersInstance().getBundlers()) {
                 if (bundler.getID().equals(bundlerName)) {
-                    System.out.printf("Bundler Parameters for %s (%s) --\n", bundler.getName(), bundler.getID());
+                    Log.infof("Bundler Parameters for %s (%s) --\n", bundler.getName(), bundler.getID());
                     for (BundlerParamInfo bpi : bundler.getBundleParameters()) {
                         if (bpi.getStringConverter() == null) continue;
                         if (verbose) {
-                            System.out.printf(
+                            Log.infof(
                                     "%s - %s - %s\n\t%s\n",
                                     bpi.getID(),
                                     bpi.getName(),
@@ -599,7 +625,7 @@ public class Main {
                                     bpi.getDescription()
                             );
                         } else {
-                            System.out.printf(
+                            Log.infof(
                                     "%s - %s - %s\n",
                                     bpi.getID(),
                                     bpi.getName(),
@@ -610,7 +636,7 @@ public class Main {
                     return;
                 }
             }
-            System.out.printf("Sorry, no bundler matching the id %s was found.\n", bundlerName);
+            Log.infof("Sorry, no bundler matching the id %s was found.\n", bundlerName);
         }
     }
 }

@@ -40,7 +40,7 @@ static EncodedJSValue JSC_HOST_CALL stringFromCodePoint(ExecState*);
 
 namespace JSC {
 
-const ClassInfo StringConstructor::s_info = { "Function", &InternalFunction::s_info, &stringConstructorTable, CREATE_METHOD_TABLE(StringConstructor) };
+const ClassInfo StringConstructor::s_info = { "Function", &InternalFunction::s_info, &stringConstructorTable, nullptr, CREATE_METHOD_TABLE(StringConstructor) };
 
 /* Source for StringConstructor.lut.h
 @begin stringConstructorTable
@@ -61,7 +61,7 @@ void StringConstructor::finishCreation(VM& vm, StringPrototype* stringPrototype)
 {
     Base::finishCreation(vm, stringPrototype->classInfo()->className);
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, stringPrototype, ReadOnly | DontEnum | DontDelete);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum | DontDelete);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum);
 }
 
 // ------------------------------ Functions --------------------------------

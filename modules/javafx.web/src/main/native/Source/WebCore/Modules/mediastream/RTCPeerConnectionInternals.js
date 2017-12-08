@@ -62,33 +62,25 @@ function objectAndCallbacksOverload(args, functionName, objectInfo, promiseMode,
     let objectArg = args[0];
     let objectArgOk = false;
 
-    if (!argsCount) {
-        if (!objectInfo.defaultsToNull)
-            return @Promise.@reject(new @TypeError("Not enough arguments"));
-
-        objectArg = null;
+    const hasMatchingType = objectArg instanceof objectInfo.constructor;
+    if (hasMatchingType)
         objectArgOk = true;
-        argsCount = 1;
-    } else {
-        const hasMatchingType = objectArg instanceof objectInfo.constructor;
-        if (hasMatchingType)
+    else if (objectArg == null && objectInfo.defaultsToNull) {
+        objectArgOk = true;
+        objectArg = null;
+    } else if (objectInfo.maybeDictionary) {
+        try {
+            objectArg = new objectInfo.constructor(objectArg);
             objectArgOk = true;
-        else if (objectInfo.defaultsToNull)
-            objectArgOk = objectArg === null || typeof objectArg === "undefined";
-        else if (objectInfo.maybeDictionary) {
-            try {
-                objectArg = new objectInfo.constructor(objectArg);
-                objectArgOk = true;
-            } catch (e) {
-                objectArgOk = false;
-            }
+        } catch (e) {
+            objectArgOk = false;
         }
     }
 
     if (!objectArgOk)
         return @Promise.@reject(new @TypeError(`Argument 1 ('${objectInfo.argName}') to RTCPeerConnection.${functionName} must be an instance of ${objectInfo.argType}`));
 
-    if (argsCount === 1)
+    if (!@webRTCLegacyAPIEnabled() || argsCount === 1)
         return promiseMode(objectArg);
 
     // More than one argument: Legacy mode
@@ -111,7 +103,7 @@ function callbacksAndDictionaryOverload(args, functionName, promiseMode, legacyM
 {
     "use strict";
 
-    if (args.length <= 1) {
+    if (!@webRTCLegacyAPIEnabled() || args.length <= 1) {
         // Zero or one arguments: Promise mode
         const options = args[0];
         if (args.length && !@isDictionary(options))

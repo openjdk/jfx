@@ -33,10 +33,7 @@
 #include "CSSPrimitiveValue.h"
 #include "CSSToLengthConversionData.h"
 #include "CSSValueKeywords.h"
-#include "CSSValueList.h"
-#include "FloatRect.h"
 #include "FrameView.h"
-#include "IntRect.h"
 #include "MainFrame.h"
 #include "MediaFeatureNames.h"
 #include "MediaList.h"
@@ -46,7 +43,6 @@
 #include "PlatformScreen.h"
 #include "RenderStyle.h"
 #include "RenderView.h"
-#include "Screen.h"
 #include "Settings.h"
 #include "StyleResolver.h"
 #include "Theme.h"
@@ -308,16 +304,14 @@ static bool orientationEvaluate(CSSValue* value, const CSSToLengthConversionData
     if (!view)
         return false;
 
-    auto width = view->layoutWidth();
-    auto height = view->layoutHeight();
-
+    auto viewSize = view->layoutSizeForMediaQuery();
     if (!is<CSSPrimitiveValue>(value)) {
         // Expression (orientation) evaluates to true if width and height >= 0.
-        return height >= 0 && width >= 0;
+        return viewSize.height() >= 0 && viewSize.width() >= 0;
     }
 
     auto keyword = downcast<CSSPrimitiveValue>(*value).valueID();
-    if (width > height) // Square viewport is portrait.
+    if (viewSize.width() > viewSize.height()) // Square viewport is portrait.
         return keyword == CSSValueLandscape;
     return keyword == CSSValuePortrait;
 }
@@ -328,12 +322,11 @@ static bool aspectRatioEvaluate(CSSValue* value, const CSSToLengthConversionData
     // assume if we have a device, its aspect ratio is non-zero
     if (!value)
         return true;
-
     FrameView* view = frame.view();
     if (!view)
         return true;
-
-    return compareAspectRatioValue(value, view->layoutWidth(), view->layoutHeight(), op);
+    auto viewSize = view->layoutSizeForMediaQuery();
+    return compareAspectRatioValue(value, viewSize.width(), viewSize.height(), op);
 }
 
 static bool deviceAspectRatioEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix op)
@@ -449,7 +442,7 @@ static bool heightEvaluate(CSSValue* value, const CSSToLengthConversionData& con
     FrameView* view = frame.view();
     if (!view)
         return false;
-    int height = view->layoutHeight();
+    int height = view->layoutSizeForMediaQuery().height();
     if (!value)
         return height;
     if (auto* renderView = frame.document()->renderView())
@@ -463,7 +456,7 @@ static bool widthEvaluate(CSSValue* value, const CSSToLengthConversionData& conv
     FrameView* view = frame.view();
     if (!view)
         return false;
-    int width = view->layoutWidth();
+    int width = view->layoutSizeForMediaQuery().width();
     if (!value)
         return width;
     if (auto* renderView = frame.document()->renderView())
@@ -608,35 +601,6 @@ static bool transform3dEvaluate(CSSValue* value, const CSSToLengthConversionData
 #endif
 }
 
-#if ENABLE(VIEW_MODE_CSS_MEDIA)
-
-static bool viewModeEvaluate(CSSValue* value, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix)
-{
-    if (!value)
-        return true;
-
-    auto keyword = downcast<CSSPrimitiveValue>(*value).valueID();
-
-    switch (frame.page()->viewMode()) {
-    case Page::ViewModeWindowed:
-        return keyword == CSSValueWindowed;
-    case Page::ViewModeFloating:
-        return keyword == CSSValueFloating;
-    case Page::ViewModeFullscreen:
-        return keyword == CSSValueFullscreen;
-    case Page::ViewModeMaximized:
-        return keyword == CSSValueMaximized;
-    case Page::ViewModeMinimized:
-        return keyword == CSSValueMinimized;
-    default:
-        break;
-    }
-
-    return false;
-}
-
-#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
-
 static bool videoPlayableInlineEvaluate(CSSValue*, const CSSToLengthConversionData&, Frame& frame, MediaFeaturePrefix)
 {
     return frame.settings().allowsInlineMediaPlayback();
@@ -687,14 +651,18 @@ static bool prefersReducedMotionEvaluate(CSSValue* value, const CSSToLengthConve
 {
     bool userPrefersReducedMotion = false;
 
-    if (frame.settings().forcedPrefersReducedMotionAccessibilityValue() == Settings::ForcedAccessibilityValue::On)
+    switch (frame.settings().forcedPrefersReducedMotionAccessibilityValue()) {
+    case Settings::ForcedAccessibilityValue::On:
         userPrefersReducedMotion = true;
-    else if (frame.settings().forcedPrefersReducedMotionAccessibilityValue() == Settings::ForcedAccessibilityValue::Off)
-        userPrefersReducedMotion = false;
-#if PLATFORM(IOS) || USE(NEW_THEME)
-    else
-        userPrefersReducedMotion = platformTheme()->userPrefersReducedMotion();
+        break;
+    case Settings::ForcedAccessibilityValue::Off:
+        break;
+    case Settings::ForcedAccessibilityValue::System:
+#if USE(NEW_THEME)
+        userPrefersReducedMotion = Theme::singleton().userPrefersReducedMotion();
 #endif
+        break;
+    }
 
     if (!value)
         return userPrefersReducedMotion;
@@ -718,7 +686,7 @@ bool MediaQueryEvaluator::evaluate(const MediaQueryExpression& expression) const
 
     static NeverDestroyed<MediaQueryFunctionMap> map = [] {
         MediaQueryFunctionMap map;
-#define ADD_TO_FUNCTIONMAP(name, str) add(map, MediaFeatureNames::name.impl(), name##Evaluate);
+#define ADD_TO_FUNCTIONMAP(name, str) add(map, MediaFeatureNames::name->impl(), name##Evaluate);
         CSS_MEDIAQUERY_NAMES_FOR_EACH_MEDIAFEATURE(ADD_TO_FUNCTIONMAP);
 #undef ADD_TO_FUNCTIONMAP
         return map;
@@ -732,6 +700,13 @@ bool MediaQueryEvaluator::evaluate(const MediaQueryExpression& expression) const
     if (!document.documentElement())
         return false;
     return function(expression.value(), { m_style, document.documentElement()->renderStyle(), document.renderView(), 1, false }, *m_frame, NoPrefix);
+}
+
+bool MediaQueryEvaluator::mediaAttributeMatches(Document& document, const String& attributeValue)
+{
+    ASSERT(document.renderView());
+    auto mediaQueries = MediaQuerySet::create(attributeValue);
+    return MediaQueryEvaluator { "screen", document, &document.renderView()->style() }.evaluate(mediaQueries.get());
 }
 
 } // namespace

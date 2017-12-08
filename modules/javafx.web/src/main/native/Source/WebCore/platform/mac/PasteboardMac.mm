@@ -31,15 +31,14 @@
 #import "DocumentFragment.h"
 #import "DocumentLoader.h"
 #import "DragData.h"
+#import "Editing.h"
 #import "Editor.h"
 #import "EditorClient.h"
 #import "Frame.h"
-#import "FrameView.h"
 #import "FrameLoaderClient.h"
+#import "FrameView.h"
 #import "HitTestResult.h"
-#import "htmlediting.h"
 #import "Image.h"
-#import "URL.h"
 #import "LegacyWebArchive.h"
 #import "LoaderNSURLExtras.h"
 #import "MIMETypeRegistry.h"
@@ -47,11 +46,13 @@
 #import "PlatformStrategies.h"
 #import "RenderImage.h"
 #import "Text.h"
+#import "URL.h"
 #import "WebCoreNSStringExtras.h"
+#import "WebCoreSystemInterface.h"
 #import "WebNSAttributedStringExtras.h"
 #import "markup.h"
-#import <wtf/StdLibExtras.h>
 #import <wtf/RetainPtr.h>
+#import <wtf/StdLibExtras.h>
 #import <wtf/text/StringBuilder.h>
 #import <wtf/unicode/CharacterNames.h>
 
@@ -101,6 +102,11 @@ static Vector<String> writableTypesForImage()
     types.appendVector(writableTypesForURL());
     types.append(String(NSRTFDPboardType));
     return types;
+}
+
+NSArray *Pasteboard::supportedFileUploadPasteboardTypes()
+{
+    return @[ (NSString *)NSFilesPromisePboardType, (NSString *)NSFilenamesPboardType ];
 }
 
 Pasteboard::Pasteboard()
@@ -261,7 +267,7 @@ static void writeFileWrapperAsRTFDAttachment(NSFileWrapper *wrapper, const Strin
     if (!RTFDData)
         return;
 
-    newChangeCount = platformStrategies()->pasteboardStrategy()->setBufferForType(SharedBuffer::wrapNSData(RTFDData).ptr(), NSRTFDPboardType, pasteboardName);
+    newChangeCount = platformStrategies()->pasteboardStrategy()->setBufferForType(SharedBuffer::create(RTFDData).ptr(), NSRTFDPboardType, pasteboardName);
 }
 
 void Pasteboard::write(const PasteboardImage& pasteboardImage)
@@ -278,7 +284,7 @@ void Pasteboard::write(const PasteboardImage& pasteboardImage)
         types.append(WebArchivePboardType);
 
     m_changeCount = writeURLForTypes(types, m_pasteboardName, pasteboardImage.url);
-    m_changeCount = platformStrategies()->pasteboardStrategy()->setBufferForType(SharedBuffer::wrapCFData(imageData).ptr(), NSTIFFPboardType, m_pasteboardName);
+    m_changeCount = platformStrategies()->pasteboardStrategy()->setBufferForType(SharedBuffer::create(imageData).ptr(), NSTIFFPboardType, m_pasteboardName);
     if (pasteboardImage.dataInWebArchiveFormat)
         m_changeCount = platformStrategies()->pasteboardStrategy()->setBufferForType(pasteboardImage.dataInWebArchiveFormat.get(), WebArchivePboardType, m_pasteboardName);
     writeFileWrapperAsRTFDAttachment(fileWrapper(pasteboardImage), m_pasteboardName, m_changeCount);
@@ -306,6 +312,12 @@ void Pasteboard::read(PasteboardPlainText& text)
 
     Vector<String> types;
     strategy.getTypes(types, m_pasteboardName);
+
+    if (types.contains(String(NSPasteboardTypeString))) {
+        text.text = strategy.stringForType(NSPasteboardTypeString, m_pasteboardName);
+        text.isURL = false;
+        return;
+    }
 
     if (types.contains(String(NSStringPboardType))) {
         text.text = strategy.stringForType(NSStringPboardType, m_pasteboardName);
@@ -566,7 +578,7 @@ static String utiTypeFromCocoaType(const String& type)
 static void addHTMLClipboardTypesForCocoaType(ListHashSet<String>& resultTypes, const String& cocoaType, const String& pasteboardName)
 {
     // UTI may not do these right, so make sure we get the right, predictable result
-    if (cocoaType == String(NSStringPboardType)) {
+    if (cocoaType == String(NSStringPboardType) || cocoaType == String(NSPasteboardTypeString)) {
         resultTypes.add(ASCIILiteral("text/plain"));
         return;
     }

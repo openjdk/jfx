@@ -25,7 +25,6 @@
 
 #include "FilterEffect.h"
 #include "FloatPoint.h"
-#include "FloatSize.h"
 #include "Filter.h"
 #include <wtf/Vector.h>
 
@@ -73,7 +72,7 @@ public:
 
     void determineAbsolutePaintRect() override { setAbsolutePaintRect(enclosingIntRect(maxEffectRect())); }
 
-    TextStream& externalRepresentation(TextStream&, int indention) const override;
+    WTF::TextStream& externalRepresentation(WTF::TextStream&, int indention) const override;
 
 private:
 

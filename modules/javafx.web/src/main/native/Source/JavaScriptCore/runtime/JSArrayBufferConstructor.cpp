@@ -40,7 +40,7 @@ namespace JSC {
 static EncodedJSValue JSC_HOST_CALL arrayBufferFuncIsView(ExecState*);
 
 const ClassInfo JSArrayBufferConstructor::s_info = {
-    "Function", &Base::s_info, 0,
+    "Function", &Base::s_info, nullptr, nullptr,
     CREATE_METHOD_TABLE(JSArrayBufferConstructor)
 };
 
@@ -54,7 +54,7 @@ void JSArrayBufferConstructor::finishCreation(VM& vm, JSArrayBufferPrototype* pr
 {
     Base::finishCreation(vm, ASCIILiteral(arrayBufferSharingModeName(m_sharingMode)));
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, DontEnum | DontDelete | ReadOnly);
-    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), DontEnum | DontDelete | ReadOnly);
+    putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), DontEnum | ReadOnly);
     putDirectNonIndexAccessor(vm, vm.propertyNames->speciesSymbol, speciesSymbol, Accessor | ReadOnly | DontEnum);
 
     if (m_sharingMode == ArrayBufferSharingMode::Default) {
@@ -88,6 +88,9 @@ static EncodedJSValue JSC_HOST_CALL constructArrayBuffer(ExecState* exec)
     JSArrayBufferConstructor* constructor =
         jsCast<JSArrayBufferConstructor*>(exec->jsCallee());
 
+    Structure* arrayBufferStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), constructor->globalObject()->arrayBufferStructure(constructor->sharingMode()));
+    RETURN_IF_EXCEPTION(scope, { });
+
     unsigned length;
     if (exec->argumentCount()) {
         length = exec->uncheckedArgument(0).toIndex(exec, "length");
@@ -105,13 +108,9 @@ static EncodedJSValue JSC_HOST_CALL constructArrayBuffer(ExecState* exec)
 
     if (constructor->sharingMode() == ArrayBufferSharingMode::Shared)
         buffer->makeShared();
-
     ASSERT(constructor->sharingMode() == buffer->sharingMode());
 
-    Structure* arrayBufferStructure = InternalFunction::createSubclassStructure(exec, exec->newTarget(), constructor->globalObject()->arrayBufferStructure(constructor->sharingMode()));
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
     JSArrayBuffer* result = JSArrayBuffer::create(vm, arrayBufferStructure, WTFMove(buffer));
-
     return JSValue::encode(result);
 }
 

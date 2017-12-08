@@ -27,7 +27,6 @@
 
 #include "AbstractModuleRecord.h"
 #include "JSDestructibleObject.h"
-#include "ScopeOffset.h"
 
 namespace JSC {
 
@@ -48,6 +47,7 @@ public:
     }
 
     JS_EXPORT_PRIVATE static bool getOwnPropertySlot(JSObject*, ExecState*, PropertyName, PropertySlot&);
+    JS_EXPORT_PRIVATE static bool getOwnPropertySlotByIndex(JSObject*, ExecState*, unsigned propertyName, PropertySlot&);
     JS_EXPORT_PRIVATE static bool put(JSCell*, ExecState*, PropertyName, JSValue, PutPropertySlot&);
     JS_EXPORT_PRIVATE static bool putByIndex(JSCell*, ExecState*, unsigned propertyName, JSValue, bool shouldThrow);
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, ExecState*, PropertyName);
@@ -70,6 +70,7 @@ protected:
 private:
     static void destroy(JSCell*);
     static void visitChildren(JSCell*, SlotVisitor&);
+    bool getOwnPropertySlotCommon(ExecState*, PropertyName, PropertySlot&);
 
     WriteBarrierBase<AbstractModuleRecord>& moduleRecordAt(unsigned offset)
     {
@@ -86,9 +87,9 @@ private:
         return WTF::roundUpToMultipleOf<sizeof(WriteBarrier<AbstractModuleRecord>)>(sizeof(JSModuleNamespaceObject));
     }
 
-    static size_t allocationSize(unsigned moduleRecords)
+    static size_t allocationSize(Checked<size_t> moduleRecords)
     {
-        return offsetOfModuleRecords() + moduleRecords * sizeof(WriteBarrier<AbstractModuleRecord>);
+        return (offsetOfModuleRecords() + moduleRecords * sizeof(WriteBarrier<AbstractModuleRecord>)).unsafeGet();
     }
 
     struct ExportEntry {

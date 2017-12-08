@@ -210,8 +210,10 @@ public class LinuxAppImageBuilder extends AbstractAppImageBuilder {
 
     private void copyIcon() throws IOException {
         File icon = ICON_PNG.fetchFrom(params);
-        File iconTarget = new File(resourcesDir.toFile(), APP_FS_NAME.fetchFrom(params) + ".png");
-        IOUtils.copyFile(icon, iconTarget);
+        if (icon != null) {
+            File iconTarget = new File(resourcesDir.toFile(), APP_FS_NAME.fetchFrom(params) + ".png");
+            IOUtils.copyFile(icon, iconTarget);
+        }
     }
 
     private void copyApplication() throws IOException {

@@ -35,6 +35,8 @@
 
 #include "RealtimeMediaSourceSupportedConstraints.h"
 #include <cstdlib>
+#include <wtf/Function.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -219,7 +221,7 @@ public:
         return true;
     }
 
-    ValueType find(std::function<bool(ValueType)> function) const
+    ValueType find(const WTF::Function<bool(ValueType)>& function) const
     {
         if (m_min && function(m_min.value()))
             return m_min.value();
@@ -524,7 +526,7 @@ public:
     double fitnessDistance(const String&) const;
     double fitnessDistance(const Vector<String>&) const;
 
-    const String& find(std::function<bool(const String&)>) const;
+    const String& find(const WTF::Function<bool(const String&)>&) const;
 
     bool isEmpty() const { return m_exact.isEmpty() && m_ideal.isEmpty(); }
     bool isMandatory() const { return !m_exact.isEmpty(); }
@@ -571,8 +573,8 @@ private:
 
 class MediaTrackConstraintSetMap {
 public:
-    WEBCORE_EXPORT void forEach(std::function<void(const MediaConstraint&)>) const;
-    void filter(std::function<bool(const MediaConstraint&)>) const;
+    WEBCORE_EXPORT void forEach(WTF::Function<void(const MediaConstraint&)>&&) const;
+    void filter(const WTF::Function<bool(const MediaConstraint&)>&) const;
     bool isEmpty() const;
     WEBCORE_EXPORT size_t size() const;
 
@@ -803,16 +805,14 @@ private:
 #endif
 };
 
-class MediaConstraints : public RefCounted<MediaConstraints> {
-public:
-    virtual ~MediaConstraints() { }
+struct MediaConstraints {
+    void setDefaultVideoConstraints();
+    bool isConstraintSet(const WTF::Function<bool(const MediaTrackConstraintSetMap&)>&);
 
-    virtual const MediaTrackConstraintSetMap& mandatoryConstraints() const = 0;
-    virtual const Vector<MediaTrackConstraintSetMap>& advancedConstraints() const = 0;
-    virtual bool isValid() const = 0;
-
-protected:
-    MediaConstraints() { }
+    MediaTrackConstraintSetMap mandatoryConstraints;
+    Vector<MediaTrackConstraintSetMap> advancedConstraints;
+    String deviceIDHashSalt;
+    bool isValid { false };
 };
 
 } // namespace WebCore

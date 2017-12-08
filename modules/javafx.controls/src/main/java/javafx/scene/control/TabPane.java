@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.sun.javafx.collections.UnmodifiableListSet;
+import com.sun.javafx.scene.control.TabObservableList;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
@@ -38,7 +39,6 @@ import javafx.beans.property.ObjectPropertyBase;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.WritableValue;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.geometry.Side;
@@ -151,7 +151,7 @@ public class TabPane extends Control {
 
     }
 
-    private ObservableList<Tab> tabs = FXCollections.observableArrayList();
+    private ObservableList<Tab> tabs = new TabObservableList<>(new ArrayList<>());
 
     /**
      * <p>The tabs to display in this TabPane. Changing this ObservableList will
@@ -847,5 +847,55 @@ public class TabPane extends Control {
          * Tabs can not be closed by the user.
          */
         UNAVAILABLE
+    }
+
+
+    // TabDragPolicy //
+    private ObjectProperty<TabDragPolicy> tabDragPolicy;
+
+    /**
+     * The drag policy for the tabs. The policy can be changed dynamically.
+     *
+     * @defaultValue TabDragPolicy.FIXED
+     * @return The tab drag policy property
+     * @since 10
+     */
+    public final ObjectProperty<TabDragPolicy> tabDragPolicyProperty() {
+        if (tabDragPolicy == null) {
+            tabDragPolicy = new SimpleObjectProperty<TabDragPolicy>(this, "tabDragPolicy", TabDragPolicy.FIXED);
+        }
+        return tabDragPolicy;
+    }
+    public final void setTabDragPolicy(TabDragPolicy value) {
+        tabDragPolicyProperty().set(value);
+    }
+    public final TabDragPolicy getTabDragPolicy() {
+        return tabDragPolicyProperty().get();
+    }
+
+    /**
+     * This enum specifies drag policies for tabs in a TabPane.
+     *
+     * @since 10
+     */
+    public enum TabDragPolicy {
+        /**
+         * The tabs remain fixed in their positions and cannot be dragged.
+         */
+        FIXED,
+
+        /**
+         * The tabs can be dragged to reorder them within the same TabPane.
+         * Users can perform the simple mouse press-drag-release gesture on a
+         * tab header to drag it to a new position. A tab can not be detached
+         * from its parent TabPane.
+         * <p>After a tab is reordered, the {@link #getTabs() tabs} list is
+         * permuted to reflect the updated order.
+         * A {@link javafx.collections.ListChangeListener.Change permutation
+         * change} event is fired to indicate which tabs were reordered. This
+         * reordering is done after the mouse button is released. While a tab
+         * is being dragged, the list of tabs is unchanged.</p>
+         */
+        REORDER
     }
 }

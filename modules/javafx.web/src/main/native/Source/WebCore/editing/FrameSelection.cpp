@@ -30,6 +30,7 @@
 #include "CharacterData.h"
 #include "DeleteSelectionCommand.h"
 #include "Document.h"
+#include "Editing.h"
 #include "Editor.h"
 #include "EditorClient.h"
 #include "Element.h"
@@ -63,7 +64,6 @@
 #include "StyleProperties.h"
 #include "TypingCommand.h"
 #include "VisibleUnits.h"
-#include "htmlediting.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
 
@@ -101,6 +101,19 @@ bool DragCaretController::isContentRichlyEditable() const
     return isRichlyEditablePosition(m_position.deepEquivalent());
 }
 
+IntRect DragCaretController::caretRectInRootViewCoordinates() const
+{
+    if (!hasCaret())
+        return { };
+
+    if (auto* document = m_position.deepEquivalent().document()) {
+        if (auto* documentView = document->view())
+            return documentView->contentsToRootView(m_position.absoluteCaretBounds());
+    }
+
+    return { };
+}
+
 static inline bool shouldAlwaysUseDirectionalSelection(Frame* frame)
 {
     return !frame || frame->editor().behavior().shouldConsiderSelectionAsDirectional();
@@ -111,6 +124,7 @@ FrameSelection::FrameSelection(Frame* frame)
     , m_xPosForVerticalArrowNavigation(NoXPosForVerticalArrowNavigation())
     , m_granularity(CharacterGranularity)
     , m_caretBlinkTimer(*this, &FrameSelection::caretBlinkTimerFired)
+    , m_appearanceUpdateTimer(*this, &FrameSelection::appearanceUpdateTimerFired)
     , m_caretInsidePositionFixed(false)
     , m_absCaretBoundsDirty(true)
     , m_caretPaint(true)
@@ -332,6 +346,7 @@ bool FrameSelection::setSelectionWithoutUpdatingAppearance(const VisibleSelectio
 
 void FrameSelection::setSelection(const VisibleSelection& selection, SetSelectionOptions options, AXTextStateChangeIntent intent, CursorAlignOnScroll align, TextGranularity granularity)
 {
+    RefPtr<Frame> protectedFrame(m_frame);
     if (!setSelectionWithoutUpdatingAppearance(selection, options, align, granularity))
         return;
 
@@ -493,7 +508,7 @@ void FrameSelection::respondToNodeModification(Node& node, bool baseRemoved, boo
 
             // Trigger a selection update so the selection will be set again.
             m_pendingSelectionUpdate = true;
-            renderView->setNeedsLayout();
+            renderView->frameView().scheduleSelectionUpdate();
         }
     }
 
@@ -1813,7 +1828,7 @@ void FrameSelection::debugRenderer(RenderObject* renderer, bool selected) const
     }
 }
 
-bool FrameSelection::contains(const LayoutPoint& point)
+bool FrameSelection::contains(const LayoutPoint& point) const
 {
     // Treat a collapsed selection like no selection.
     if (!isRange())
@@ -2057,7 +2072,7 @@ void FrameSelection::updateAppearance()
     // Start blinking with a black caret. Be sure not to restart if we're
     // already blinking in the right location.
     if (shouldBlink && !m_caretBlinkTimer.isActive()) {
-        if (double blinkInterval = m_frame->page()->theme().caretBlinkInterval())
+        if (Seconds blinkInterval = RenderTheme::singleton().caretBlinkInterval())
             m_caretBlinkTimer.startRepeating(blinkInterval);
 
         if (!m_caretPaint) {
@@ -2201,10 +2216,10 @@ void DragCaretController::paintDragCaret(Frame* frame, GraphicsContext& p, const
 #endif
 }
 
-PassRefPtr<MutableStyleProperties> FrameSelection::copyTypingStyle() const
+RefPtr<MutableStyleProperties> FrameSelection::copyTypingStyle() const
 {
     if (!m_typingStyle || !m_typingStyle->style())
-        return 0;
+        return nullptr;
     return m_typingStyle->style()->mutableCopy();
 }
 
@@ -2396,6 +2411,22 @@ void FrameSelection::setShouldShowBlockCursor(bool shouldShowBlockCursor)
 
 void FrameSelection::updateAppearanceAfterLayout()
 {
+    m_appearanceUpdateTimer.stop();
+    updateAppearanceAfterLayoutOrStyleChange();
+}
+
+void FrameSelection::scheduleAppearanceUpdateAfterStyleChange()
+{
+    m_appearanceUpdateTimer.startOneShot(0_s);
+}
+
+void FrameSelection::appearanceUpdateTimerFired()
+{
+    updateAppearanceAfterLayoutOrStyleChange();
+}
+
+void FrameSelection::updateAppearanceAfterLayoutOrStyleChange()
+{
     if (auto* client = m_frame->editor().client())
         client->updateEditorStateAfterLayoutIfEditabilityChanged();
 
@@ -2428,7 +2459,7 @@ void FrameSelection::expandSelectionToElementContainingCaretSelection()
     setSelection(selection);
 }
 
-PassRefPtr<Range> FrameSelection::elementRangeContainingCaretSelection() const
+RefPtr<Range> FrameSelection::elementRangeContainingCaretSelection() const
 {
     if (m_selection.isNone())
         return nullptr;
@@ -2467,7 +2498,7 @@ void FrameSelection::expandSelectionToWordContainingCaretSelection()
         setSelection(selection);
 }
 
-PassRefPtr<Range> FrameSelection::wordRangeContainingCaretSelection()
+RefPtr<Range> FrameSelection::wordRangeContainingCaretSelection()
 {
     return wordSelectionContainingCaretSelection(m_selection).toNormalizedRange();
 }
@@ -2619,12 +2650,12 @@ bool FrameSelection::selectionAtWordStart() const
     return result;
 }
 
-PassRefPtr<Range> FrameSelection::rangeByMovingCurrentSelection(int amount) const
+RefPtr<Range> FrameSelection::rangeByMovingCurrentSelection(int amount) const
 {
     return rangeByAlteringCurrentSelection(AlterationMove, amount);
 }
 
-PassRefPtr<Range> FrameSelection::rangeByExtendingCurrentSelection(int amount) const
+RefPtr<Range> FrameSelection::rangeByExtendingCurrentSelection(int amount) const
 {
     return rangeByAlteringCurrentSelection(AlterationExtend, amount);
 }
@@ -2785,7 +2816,7 @@ bool FrameSelection::actualSelectionAtSentenceStart(const VisibleSelection& sel)
     return result;
 }
 
-PassRefPtr<Range> FrameSelection::rangeByAlteringCurrentSelection(EAlteration alteration, int amount) const
+RefPtr<Range> FrameSelection::rangeByAlteringCurrentSelection(EAlteration alteration, int amount) const
 {
     if (m_selection.isNone())
         return nullptr;

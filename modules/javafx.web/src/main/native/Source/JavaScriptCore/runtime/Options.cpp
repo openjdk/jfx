@@ -26,8 +26,10 @@
 #include "config.h"
 #include "Options.h"
 
+#include "AssemblerCommon.h"
 #include "LLIntCommon.h"
 #include "LLIntData.h"
+#include "MinimumReservedZoneSize.h"
 #include "SigillCrashAnalyzer.h"
 #include <algorithm>
 #include <limits>
@@ -42,6 +44,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/StringExtras.h>
 #include <wtf/text/StringBuilder.h>
+#include <wtf/threads/Signals.h>
 
 #if PLATFORM(COCOA)
 #include <crt_externs.h>
@@ -50,9 +53,6 @@
 #if OS(WINDOWS)
 #include "MacroAssemblerX86.h"
 #endif
-
-#define USE_OPTIONS_FILE 0
-#define OPTIONS_FILENAME "/tmp/jsc.options"
 
 namespace JSC {
 
@@ -90,6 +90,16 @@ static bool parse(const char* string, int32_t& value)
 static bool parse(const char* string, unsigned& value)
 {
     return sscanf(string, "%u", &value) == 1;
+}
+
+static bool parse(const char* string, unsigned long& value)
+{
+    return sscanf(string, "%lu", &value);
+}
+
+static bool UNUSED_FUNCTION parse(const char* string, unsigned long long& value)
+{
+    return sscanf(string, "%llu", &value);
 }
 
 static bool parse(const char* string, double& value)
@@ -321,7 +331,10 @@ static void scaleJITPolicy()
 
 static void overrideDefaults()
 {
-    if (WTF::numberOfProcessorCores() < 4) {
+#if !PLATFORM(IOS)
+    if (WTF::numberOfProcessorCores() < 4)
+#endif
+    {
         Options::maximumMutatorUtilization() = 0.6;
         Options::concurrentGCMaxHeadroom() = 1.4;
         Options::minimumGCPauseMS() = 1;
@@ -331,6 +344,26 @@ static void overrideDefaults()
         else
             Options::gcIncrementScale() = 0;
     }
+
+#if PLATFORM(IOS)
+    // On iOS, we control heap growth using process memory footprint. Therefore these values can be agressive.
+    Options::smallHeapRAMFraction() = 0.8;
+    Options::mediumHeapRAMFraction() = 0.9;
+
+    Options::useSigillCrashAnalyzer() = true;
+#endif
+
+#if !ENABLE(SIGNAL_BASED_VM_TRAPS)
+    Options::usePollingTraps() = true;
+#endif
+
+#if !ENABLE(WEBASSEMBLY_FAST_MEMORY)
+    Options::useWebAssemblyFastMemory() = false;
+#endif
+
+#if !HAVE(MACH_EXCEPTIONS)
+    Options::useMachForExceptions() = false;
+#endif
 }
 
 static void recomputeDependentOptions()
@@ -368,6 +401,13 @@ static void recomputeDependentOptions()
     if (!MacroAssemblerX86::supportsFloatingPoint())
         Options::useJIT() = false;
 #endif
+
+    if (!Options::useJIT())
+        Options::useWebAssembly() = false;
+
+    if (!Options::useWebAssembly())
+        Options::useWebAssemblyFastTLS() = false;
+
     if (Options::dumpDisassembly()
         || Options::dumpDFGDisassembly()
         || Options::dumpFTLDisassembly()
@@ -390,6 +430,7 @@ static void recomputeDependentOptions()
         || Options::reportFTLCompileTimes()
         || Options::reportDFGPhaseTimes()
         || Options::verboseCFA()
+        || Options::verboseDFGFailure()
         || Options::verboseFTLFailure())
         Options::alwaysComputeHash() = true;
 
@@ -415,7 +456,7 @@ static void recomputeDependentOptions()
         Options::useOSREntryToFTL() = false;
     }
 
-#if PLATFORM(IOS) && !PLATFORM(IOS_SIMULATOR) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000
+#if PLATFORM(IOS) && !PLATFORM(IOS_SIMULATOR)
     // Override globally for now. Longer term we'll just make the default
     // be to have this option enabled, and have platforms that don't support
     // it just silently use a single mapping.
@@ -454,6 +495,11 @@ static void recomputeDependentOptions()
 
     if (Options::useSigillCrashAnalyzer())
         enableSigillCrashAnalyzer();
+
+    if (Options::reservedZoneSize() < minimumReservedZoneSize)
+        Options::reservedZoneSize() = minimumReservedZoneSize;
+    if (Options::softReservedZoneSize() < Options::reservedZoneSize() + minimumReservedZoneSize)
+        Options::softReservedZoneSize() = Options::reservedZoneSize() + minimumReservedZoneSize;
 }
 
 void Options::initialize()
@@ -504,40 +550,21 @@ void Options::initialize()
                 ; // Deconfuse editors that do auto indentation
 #endif
 
-#if USE(OPTIONS_FILE)
-            {
-                const char* filename = OPTIONS_FILENAME;
-                FILE* optionsFile = fopen(filename, "r");
-                if (!optionsFile) {
-                    dataLogF("Failed to open file %s. Did you add the file-read-data entitlement to WebProcess.sb?\n", filename);
-                    return;
-                }
-
-                StringBuilder builder;
-                char* line;
-                char buffer[BUFSIZ];
-                while ((line = fgets(buffer, sizeof(buffer), optionsFile)))
-                    builder.append(buffer);
-
-                const char* optionsStr = builder.toString().utf8().data();
-                dataLogF("Setting options: %s\n", optionsStr);
-                setOptions(optionsStr);
-
-                int result = fclose(optionsFile);
-                if (result)
-                    dataLogF("Failed to close file %s: %s\n", filename, strerror(errno));
-            }
-#endif
-
             recomputeDependentOptions();
 
             // Do range checks where needed and make corrections to the options:
             ASSERT(Options::thresholdForOptimizeAfterLongWarmUp() >= Options::thresholdForOptimizeAfterWarmUp());
             ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= Options::thresholdForOptimizeSoon());
             ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= 0);
+            ASSERT(Options::criticalGCMemoryThreshold() > 0.0 && Options::criticalGCMemoryThreshold() < 1.0);
 
             dumpOptionsIfNeeded();
             ensureOptionsAreCoherent();
+
+#if HAVE(MACH_EXCEPTIONS)
+            if (Options::useMachForExceptions())
+                handleSignalsWithMach();
+#endif
         });
 }
 
@@ -638,7 +665,11 @@ bool Options::setOptions(const char* optionsStr)
         }
     }
 
+    recomputeDependentOptions();
+
     dumpOptionsIfNeeded();
+
+    ensureOptionsAreCoherent();
 
     WTF::fastFree(optionsStrCopy);
 
@@ -830,6 +861,9 @@ void Option::dump(StringBuilder& builder) const
     case Options::Type::unsignedType:
         builder.appendNumber(m_entry.unsignedVal);
         break;
+    case Options::Type::sizeType:
+        builder.appendNumber(m_entry.sizeVal);
+        break;
     case Options::Type::doubleType:
         builder.appendNumber(m_entry.doubleVal);
         break;
@@ -862,6 +896,8 @@ bool Option::operator==(const Option& other) const
         return m_entry.boolVal == other.m_entry.boolVal;
     case Options::Type::unsignedType:
         return m_entry.unsignedVal == other.m_entry.unsignedVal;
+    case Options::Type::sizeType:
+        return m_entry.sizeVal == other.m_entry.sizeVal;
     case Options::Type::doubleType:
         return (m_entry.doubleVal == other.m_entry.doubleVal) || (std::isnan(m_entry.doubleVal) && std::isnan(other.m_entry.doubleVal));
     case Options::Type::int32Type:

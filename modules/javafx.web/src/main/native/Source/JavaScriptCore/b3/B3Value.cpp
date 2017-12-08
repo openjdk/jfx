@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #if ENABLE(B3_JIT)
 
 #include "B3ArgumentRegValue.h"
+#include "B3AtomicValue.h"
 #include "B3BasicBlockInlines.h"
 #include "B3BottomProvider.h"
 #include "B3CCallValue.h"
@@ -42,6 +43,7 @@
 #include "B3ValueInlines.h"
 #include "B3ValueKeyInlines.h"
 #include "B3VariableValue.h"
+#include "B3WasmBoundsCheckValue.h"
 #include <wtf/CommaPrinter.h>
 #include <wtf/ListDump.h>
 #include <wtf/StringPrintStream.h>
@@ -221,9 +223,6 @@ void Value::deepDump(const Procedure* proc, PrintStream& out) const
     CommaPrinter comma;
     dumpChildren(comma, out);
 
-    if (m_origin)
-        out.print(comma, OriginDump(proc, m_origin));
-
     dumpMeta(comma, out);
 
     {
@@ -231,6 +230,9 @@ void Value::deepDump(const Procedure* proc, PrintStream& out) const
         if (string.length())
             out.print(comma, string);
     }
+
+    if (m_origin)
+        out.print(comma, OriginDump(proc, m_origin));
 
     out.print(")");
 }
@@ -510,6 +512,7 @@ bool Value::returnsBool() const
     case AboveEqual:
     case BelowEqual:
     case EqualOrUnordered:
+    case AtomicWeakCAS:
         return true;
     case Phi:
         // FIXME: We should have a story here.
@@ -589,6 +592,7 @@ Effects Value::effects() const
     case BelowEqual:
     case EqualOrUnordered:
     case Select:
+    case Depend:
         break;
     case Div:
     case UDiv:
@@ -600,16 +604,44 @@ Effects Value::effects() const
     case Load8S:
     case Load16Z:
     case Load16S:
-    case Load:
-        result.reads = as<MemoryValue>()->range();
+    case Load: {
+        const MemoryValue* memory = as<MemoryValue>();
+        result.reads = memory->range();
+        if (memory->hasFence()) {
+            result.writes = memory->fenceRange();
+            result.fence = true;
+        }
         result.controlDependent = true;
         break;
+    }
     case Store8:
     case Store16:
-    case Store:
-        result.writes = as<MemoryValue>()->range();
+    case Store: {
+        const MemoryValue* memory = as<MemoryValue>();
+        result.writes = memory->range();
+        if (memory->hasFence()) {
+            result.reads = memory->fenceRange();
+            result.fence = true;
+        }
         result.controlDependent = true;
         break;
+    }
+    case AtomicWeakCAS:
+    case AtomicStrongCAS:
+    case AtomicXchgAdd:
+    case AtomicXchgAnd:
+    case AtomicXchgOr:
+    case AtomicXchgSub:
+    case AtomicXchgXor:
+    case AtomicXchg: {
+        const AtomicValue* atomic = as<AtomicValue>();
+        result.reads = atomic->range() | atomic->fenceRange();
+        result.writes = atomic->range() | atomic->fenceRange();
+        if (atomic->hasFence())
+            result.fence = true;
+        result.controlDependent = true;
+        break;
+    }
     case WasmAddress:
         result.readsPinned = true;
         break;
@@ -617,18 +649,7 @@ Effects Value::effects() const
         const FenceValue* fence = as<FenceValue>();
         result.reads = fence->read;
         result.writes = fence->write;
-
-        // Prevent killing of fences that claim not to write anything. It's a bit weird that we use
-        // local state as the way to do this, but it happens to work: we must assume that we cannot
-        // kill writesLocalState unless we understands exactly what the instruction is doing (like
-        // the way that fixSSA understands Set/Get and the way that reduceStrength and others
-        // understand Upsilon). This would only become a problem if we had some analysis that was
-        // looking to use the writesLocalState bit to invalidate a CSE over local state operations.
-        // Then a Fence would look block, say, the elimination of a redundant Get. But it like
-        // that's not at all how our optimizations for Set/Get/Upsilon/Phi work - they grok their
-        // operations deeply enough that they have no need to check this bit - so this cheat is
-        // fine.
-        result.writesLocalState = true;
+        result.fence = true;
         break;
     }
     case CCall:
@@ -644,7 +665,13 @@ Effects Value::effects() const
         result = Effects::forCheck();
         break;
     case WasmBoundsCheck:
-        result.readsPinned = true;
+        switch (as<WasmBoundsCheckValue>()->boundsType()) {
+        case WasmBoundsCheckValue::Type::Pinned:
+            result.readsPinned = true;
+            break;
+        case WasmBoundsCheckValue::Type::Maximum:
+            break;
+        }
         result.exitsSideways = true;
         break;
     case Upsilon:
@@ -694,6 +721,7 @@ ValueKey Value::key() const
     case Check:
     case BitwiseCast:
     case Neg:
+    case Depend:
         return ValueKey(kind(), type(), child(0));
     case Add:
     case Sub:
@@ -746,12 +774,16 @@ ValueKey Value::key() const
     }
 }
 
-void Value::performSubstitution()
+bool Value::performSubstitution()
 {
+    bool result = false;
     for (Value*& child : children()) {
-        while (child->opcode() == Identity)
+        while (child->opcode() == Identity) {
+            result = true;
             child = child->child(0);
+        }
     }
+    return result;
 }
 
 bool Value::isFree() const
@@ -801,6 +833,7 @@ Type Value::typeFor(Kind kind, Value* firstChild, Value* secondChild)
     case CheckAdd:
     case CheckSub:
     case CheckMul:
+    case Depend:
         return firstChild->type();
     case FramePointer:
         return pointerType();

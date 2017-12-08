@@ -55,13 +55,14 @@ protected:
 private:
     void willMoveToPage(PageOverlay&, Page*) final;
     void didMoveToPage(PageOverlay&, Page*) final;
-    void drawRect(PageOverlay&, GraphicsContext&, const IntRect& dirtyRect) final;
+    void drawRect(PageOverlay&, GraphicsContext&, const IntRect& dirtyRect) override;
     bool mouseEvent(PageOverlay&, const PlatformMouseEvent&) final;
     void didScrollFrame(PageOverlay&, Frame&) final;
 
 protected:
     // Returns true if the region changed.
     virtual bool updateRegion() = 0;
+    void drawRegion(GraphicsContext&, const Region&, const Color&, const IntRect& dirtyRect);
 
     MainFrame& m_frame;
     RefPtr<PageOverlay> m_overlay;
@@ -119,23 +120,118 @@ private:
     }
 
     bool updateRegion() override;
+    void drawRect(PageOverlay&, GraphicsContext&, const IntRect& dirtyRect) final;
+
+    EventTrackingRegions m_eventTrackingRegions;
 };
 
 bool NonFastScrollableRegionOverlay::updateRegion()
 {
-    auto region = std::make_unique<Region>();
+    bool regionChanged = false;
 
     if (Page* page = m_frame.page()) {
         if (ScrollingCoordinator* scrollingCoordinator = page->scrollingCoordinator()) {
             EventTrackingRegions eventTrackingRegions = scrollingCoordinator->absoluteEventTrackingRegions();
-            for (const auto& synchronousEventRegion : eventTrackingRegions.eventSpecificSynchronousDispatchRegions)
-                region->unite(synchronousEventRegion.value);
+
+            if (eventTrackingRegions != m_eventTrackingRegions) {
+                m_eventTrackingRegions = eventTrackingRegions;
+                regionChanged = true;
+            }
         }
     }
 
-    bool regionChanged = !m_region || !(*m_region == *region);
-    m_region = WTFMove(region);
     return regionChanged;
+}
+
+static const HashMap<String, Color>& touchEventRegionColors()
+{
+    static const auto regionColors = makeNeverDestroyed([] {
+        struct MapEntry {
+            const char* name;
+            int r;
+            int g;
+            int b;
+        };
+        static const MapEntry entries[] = {
+            { "touchstart", 191, 191, 63 },
+            { "touchmove", 63, 191, 191 },
+            { "touchend", 191, 63, 127 },
+            { "touchforcechange", 63, 63, 191 },
+            { "wheel", 255, 128, 0 },
+        };
+        HashMap<String, Color> map;
+        for (auto& entry : entries)
+            map.add(ASCIILiteral { entry.name }, Color { entry.r, entry.g, entry.b, 80 });
+        return map;
+    }());
+    return regionColors;
+}
+
+static void drawRightAlignedText(const String& text, GraphicsContext& context, const FontCascade& font, const FloatPoint& boxLocation)
+{
+    float textGap = 10;
+    float textBaselineFromTop = 14;
+
+    TextRun textRun = TextRun(StringView(text));
+    context.setFillColor(Color::transparent);
+    float textWidth = context.drawText(font, textRun, { });
+    context.setFillColor(Color::black);
+    context.drawText(font, textRun, boxLocation + FloatSize(-(textWidth + textGap), textBaselineFromTop));
+}
+
+void NonFastScrollableRegionOverlay::drawRect(PageOverlay& pageOverlay, GraphicsContext& context, const IntRect&)
+{
+    IntRect bounds = pageOverlay.bounds();
+
+    context.clearRect(bounds);
+
+    FloatRect legendRect = { bounds.maxX() - 30.0f, 10, 20, 20 };
+
+    FontCascadeDescription fontDescription;
+    fontDescription.setOneFamily("Helvetica");
+    fontDescription.setSpecifiedSize(12);
+    fontDescription.setComputedSize(12);
+    fontDescription.setWeight(FontSelectionValue(500));
+    FontCascade font(fontDescription, 0, 0);
+    font.update(nullptr);
+
+#if ENABLE(TOUCH_EVENTS)
+    context.setFillColor(touchEventRegionColors().get("touchstart"));
+    context.fillRect(legendRect);
+    drawRightAlignedText("touchstart", context, font, legendRect.location());
+
+    legendRect.move(0, 30);
+    context.setFillColor(touchEventRegionColors().get("touchmove"));
+    context.fillRect(legendRect);
+    drawRightAlignedText("touchmove", context, font, legendRect.location());
+
+    legendRect.move(0, 30);
+    context.setFillColor(touchEventRegionColors().get("touchend"));
+    context.fillRect(legendRect);
+    drawRightAlignedText("touchend", context, font, legendRect.location());
+
+    legendRect.move(0, 30);
+    context.setFillColor(touchEventRegionColors().get("touchforcechange"));
+    context.fillRect(legendRect);
+    drawRightAlignedText("touchforcechange", context, font, legendRect.location());
+
+    legendRect.move(0, 30);
+    context.setFillColor(m_color);
+    context.fillRect(legendRect);
+    drawRightAlignedText("passive listeners", context, font, legendRect.location());
+#else
+    // On desktop platforms, the "wheel" region includes the non-fast scrollable region.
+    context.setFillColor(touchEventRegionColors().get("wheel"));
+    context.fillRect(legendRect);
+    drawRightAlignedText("non-fast region", context, font, legendRect.location());
+#endif
+
+    for (const auto& synchronousEventRegion : m_eventTrackingRegions.eventSpecificSynchronousDispatchRegions) {
+        Color regionColor = touchEventRegionColors().get(synchronousEventRegion.key);
+        drawRegion(context, synchronousEventRegion.value, regionColor, bounds);
+    }
+
+    drawRegion(context, m_eventTrackingRegions.asynchronousDispatchRegion, m_color, bounds);
 }
 
 Ref<RegionOverlay> RegionOverlay::create(MainFrame& frame, DebugPageOverlays::RegionType regionType)
@@ -182,9 +278,14 @@ void RegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, const IntRe
     if (!m_region)
         return;
 
+    drawRegion(context, *m_region, m_color, dirtyRect);
+}
+
+void RegionOverlay::drawRegion(GraphicsContext& context, const Region& region, const Color& color, const IntRect& dirtyRect)
+{
     GraphicsContextStateSaver saver(context);
-    context.setFillColor(m_color);
-    for (auto rect : m_region->rects()) {
+    context.setFillColor(color);
+    for (auto rect : region.rects()) {
         if (rect.intersects(dirtyRect))
             context.fillRect(rect);
     }

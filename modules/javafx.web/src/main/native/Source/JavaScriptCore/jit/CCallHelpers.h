@@ -29,7 +29,6 @@
 
 #include "AssemblyHelpers.h"
 #include "GPRInfo.h"
-#include "RegisterMap.h"
 #include "StackAlignment.h"
 
 namespace JSC {
@@ -50,8 +49,8 @@ namespace JSC {
 
 class CCallHelpers : public AssemblyHelpers {
 public:
-    CCallHelpers(VM* vm, CodeBlock* codeBlock = 0)
-        : AssemblyHelpers(vm, codeBlock)
+    CCallHelpers(CodeBlock* codeBlock = 0)
+        : AssemblyHelpers(codeBlock)
     {
     }
 
@@ -725,6 +724,18 @@ public:
         addCallArgument(arg4);
     }
 
+    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImmPtr arg1, GPRReg arg2, TrustedImm32 arg3, GPRReg arg4, TrustedImm32 arg5, TrustedImmPtr arg6)
+    {
+        resetCallArguments();
+        addCallArgument(GPRInfo::callFrameRegister);
+        addCallArgument(arg1);
+        addCallArgument(arg2);
+        addCallArgument(arg3);
+        addCallArgument(arg4);
+        addCallArgument(arg5);
+        addCallArgument(arg6);
+    }
+
     ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImm32 arg2, TrustedImmPtr arg3, GPRReg arg4)
     {
         resetCallArguments();
@@ -733,6 +744,18 @@ public:
         addCallArgument(arg2);
         addCallArgument(arg3);
         addCallArgument(arg4);
+    }
+
+    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImmPtr arg1, GPRReg arg2, TrustedImm32 arg3, GPRReg arg4, GPRReg arg5, TrustedImmPtr arg6)
+    {
+        resetCallArguments();
+        addCallArgument(GPRInfo::callFrameRegister);
+        addCallArgument(arg1);
+        addCallArgument(arg2);
+        addCallArgument(arg3);
+        addCallArgument(arg4);
+        addCallArgument(arg5);
+        addCallArgument(arg6);
     }
 
     ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImmPtr arg2, GPRReg arg3, GPRReg arg4)
@@ -1737,6 +1760,22 @@ public:
         setupArgumentsWithExecState(arg1, arg2, arg3);
     }
 
+    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImmPtr arg1, GPRReg arg2, TrustedImm32 arg3, GPRReg arg4, GPRReg arg5, TrustedImmPtr arg6)
+    {
+        poke(arg6, POKE_ARGUMENT_OFFSET + 2);
+        poke(arg5, POKE_ARGUMENT_OFFSET + 1);
+        poke(arg4, POKE_ARGUMENT_OFFSET);
+        setupArgumentsWithExecState(arg1, arg2, arg3);
+    }
+
+    ALWAYS_INLINE void setupArgumentsWithExecState(TrustedImmPtr arg1, GPRReg arg2, TrustedImm32 arg3, GPRReg arg4, TrustedImm32 arg5, TrustedImmPtr arg6)
+    {
+        poke(arg6, POKE_ARGUMENT_OFFSET + 2);
+        poke(arg5, POKE_ARGUMENT_OFFSET + 1);
+        poke(arg4, POKE_ARGUMENT_OFFSET);
+        setupArgumentsWithExecState(arg1, arg2, arg3);
+    }
+
     ALWAYS_INLINE void setupArgumentsWithExecState(GPRReg arg1, TrustedImmPtr arg2, TrustedImm32 arg3, GPRReg arg4, GPRReg arg5)
     {
         poke(arg5, POKE_ARGUMENT_OFFSET + 1);
@@ -2400,11 +2439,11 @@ public:
 #endif
     }
 
-    void jumpToExceptionHandler()
+    void jumpToExceptionHandler(VM& vm)
     {
         // genericUnwind() leaves the handler CallFrame* in vm->callFrameForCatch,
         // and the address of the handler in vm->targetMachinePCForThrow.
-        loadPtr(&vm()->targetMachinePCForThrow, GPRInfo::regT1);
+        loadPtr(&vm.targetMachinePCForThrow, GPRInfo::regT1);
         jump(GPRInfo::regT1);
     }
 
@@ -2600,7 +2639,7 @@ public:
     void logShadowChickenProloguePacket(GPRReg shadowPacket, GPRReg scratch1, GPRReg scope);
     void logShadowChickenTailPacket(GPRReg shadowPacket, JSValueRegs thisRegs, GPRReg scope, CodeBlock*, CallSiteIndex);
     // Leaves behind a pointer to the Packet we should write to in shadowPacket.
-    void ensureShadowChickenPacket(GPRReg shadowPacket, GPRReg scratch1NonArgGPR, GPRReg scratch2);
+    void ensureShadowChickenPacket(VM&, GPRReg shadowPacket, GPRReg scratch1NonArgGPR, GPRReg scratch2);
 };
 
 } // namespace JSC

@@ -27,9 +27,8 @@
 
 #if ENABLE(WEBGL)
 
-#include "ActiveDOMObject.h"
 #include "ActivityStateChangeObserver.h"
-#include "CanvasRenderingContext.h"
+#include "GPUBasedCanvasRenderingContext.h"
 #include "GraphicsContext3D.h"
 #include "ImageBuffer.h"
 #include "Timer.h"
@@ -57,7 +56,6 @@ class EXTShaderTextureLOD;
 class EXTsRGB;
 class EXTFragDepth;
 class HTMLImageElement;
-class HTMLVideoElement;
 class ImageData;
 class IntSize;
 class OESStandardDerivatives;
@@ -85,6 +83,10 @@ class WebGLSharedObject;
 class WebGLShaderPrecisionFormat;
 class WebGLUniformLocation;
 
+#if ENABLE(VIDEO)
+class HTMLVideoElement;
+#endif
+
 inline void clip1D(GC3Dint start, GC3Dsizei range, GC3Dsizei sourceRange, GC3Dint* clippedStart, GC3Dsizei* clippedRange)
 {
     ASSERT(clippedStart && clippedRange);
@@ -110,17 +112,10 @@ inline bool clip2D(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height,
     return (*clippedX != x || *clippedY != y || *clippedWidth != width || *clippedHeight != height);
 }
 
-class WebGLRenderingContextBase : public CanvasRenderingContext, private ActivityStateChangeObserver, public ActiveDOMObject {
+class WebGLRenderingContextBase : public GPUBasedCanvasRenderingContext, private ActivityStateChangeObserver {
 public:
     static std::unique_ptr<WebGLRenderingContextBase> create(HTMLCanvasElement&, WebGLContextAttributes&, const String&);
     virtual ~WebGLRenderingContextBase();
-
-#if PLATFORM(WIN)
-    // FIXME: Implement accelerated 3d canvas on Windows.
-    bool isAccelerated() const override { return false; }
-#else
-    bool isAccelerated() const override { return true; }
-#endif
 
     int drawingBufferWidth() const;
     int drawingBufferHeight() const;
@@ -215,6 +210,12 @@ public:
     WebGLAny getVertexAttrib(GC3Duint index, GC3Denum pname);
     long long getVertexAttribOffset(GC3Duint index, GC3Denum pname);
 
+    bool isPreservingDrawingBuffer() const { return m_attributes.preserveDrawingBuffer; }
+    void setPreserveDrawingBuffer(bool value) { m_attributes.preserveDrawingBuffer = value; }
+
+    bool preventBufferClearForInspector() const { return m_preventBufferClearForInspector; }
+    void setPreventBufferClearForInspector(bool value) { m_preventBufferClearForInspector = value; }
+
     virtual void hint(GC3Denum target, GC3Denum mode) = 0;
     GC3Dboolean isBuffer(WebGLBuffer*);
     bool isContextLost() const;
@@ -227,6 +228,7 @@ public:
 
     void lineWidth(GC3Dfloat);
     void linkProgram(WebGLProgram*);
+    bool linkProgramWithoutInvalidatingAttribLocations(WebGLProgram*);
     void pixelStorei(GC3Denum pname, GC3Dint param);
     void polygonOffset(GC3Dfloat factor, GC3Dfloat units);
     void readPixels(GC3Dint x, GC3Dint y, GC3Dsizei width, GC3Dsizei height, GC3Denum format, GC3Denum type, ArrayBufferView& pixels);
@@ -244,7 +246,12 @@ public:
 
     void texImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Dsizei width, GC3Dsizei height, GC3Dint border, GC3Denum format, GC3Denum type, RefPtr<ArrayBufferView>&&);
 
+#if ENABLE(VIDEO)
     using TexImageSource = WTF::Variant<RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>, RefPtr<HTMLVideoElement>>;
+#else
+    using TexImageSource = WTF::Variant<RefPtr<ImageData>, RefPtr<HTMLImageElement>, RefPtr<HTMLCanvasElement>>;
+#endif
+
     ExceptionOr<void> texImage2D(GC3Denum target, GC3Dint level, GC3Denum internalformat, GC3Denum format, GC3Denum type, std::optional<TexImageSource>);
 
     void texParameterf(GC3Denum target, GC3Denum pname, GC3Dfloat param);
@@ -340,14 +347,16 @@ public:
     void recycleContext();
     void forceRestoreContext();
     void loseContextImpl(LostContextMode);
+    void dispatchContextChangedEvent();
+    WEBCORE_EXPORT void simulateContextChanged();
 
     GraphicsContext3D* graphicsContext3D() const { return m_context.get(); }
     WebGLContextGroup* contextGroup() const { return m_contextGroup.get(); }
     PlatformLayer* platformLayer() const override;
 
-    void reshape(int width, int height);
+    void reshape(int width, int height) override;
 
-    void markLayerComposited();
+    void markLayerComposited() final;
     void paintRenderingResultsToCanvas() override;
     RefPtr<ImageData> paintRenderingResultsToImageData();
 
@@ -360,6 +369,9 @@ public:
     void drawArraysInstanced(GC3Denum mode, GC3Dint first, GC3Dsizei count, GC3Dsizei primcount);
     void drawElementsInstanced(GC3Denum mode, GC3Dsizei count, GC3Denum type, long long offset, GC3Dsizei primcount);
     void vertexAttribDivisor(GC3Duint index, GC3Duint divisor);
+
+    // Used for testing only, from Internals.
+    WEBCORE_EXPORT void setFailNextGPUStatusCheck();
 
 protected:
     WebGLRenderingContextBase(HTMLCanvasElement&, WebGLContextAttributes);
@@ -394,6 +406,7 @@ protected:
 
     void destroyGraphicsContext3D();
     void markContextChanged();
+    void markContextChangedAndNotifyCanvasObserver();
 
     void addActivityStateChangeObserverIfNecessary();
     void removeActivityStateChangeObserver();
@@ -569,6 +582,8 @@ protected:
     bool m_synthesizedErrorsToConsole { true };
     int m_numGLErrorsToConsoleAllowed;
 
+    bool m_preventBufferClearForInspector { false };
+
     // A WebGLRenderingContext can be created in a state where it appears as
     // a valid and active context, but will not execute any important operations
     // until its load policy is completely resolved.
@@ -677,7 +692,9 @@ protected:
         SourceImageData,
         SourceHTMLImageElement,
         SourceHTMLCanvasElement,
+#if ENABLE(VIDEO)
         SourceHTMLVideoElement,
+#endif
     };
 
     // Helper function for tex{Sub}Image2D to check if the input format/type/level/target/width/height/border/xoffset/yoffset are valid.
@@ -742,13 +759,8 @@ protected:
     // Helper function for texParameterf and texParameteri.
     void texParameter(GC3Denum target, GC3Denum pname, GC3Dfloat parami, GC3Dint paramf, bool isFloat);
 
-    // Helper function to print GL errors to console.
-    void printGLErrorToConsole(const String&);
-    void printGLWarningToConsole(const char* function, const char* reason);
-
-    // Helper function to print warnings to console. Currently
-    // used only to warn about use of obsolete functions.
-    void printWarningToConsole(const String&);
+    // Helper function to print errors and warnings to console.
+    void printToConsole(MessageLevel, const String&);
 
     // Helper function to validate input parameters for framebuffer functions.
     // Generate GL error if parameters are illegal.
@@ -775,10 +787,10 @@ protected:
     WebGLBuffer* validateBufferDataParameters(const char* functionName, GC3Denum target, GC3Denum usage);
 
     // Helper function for tex{Sub}Image2D to make sure image is ready.
-    bool validateHTMLImageElement(const char* functionName, HTMLImageElement*, ExceptionCode&);
-    bool validateHTMLCanvasElement(const char* functionName, HTMLCanvasElement*, ExceptionCode&);
+    ExceptionOr<bool> validateHTMLImageElement(const char* functionName, HTMLImageElement*);
+    ExceptionOr<bool> validateHTMLCanvasElement(const char* functionName, HTMLCanvasElement*);
 #if ENABLE(VIDEO)
-    bool validateHTMLVideoElement(const char* functionName, HTMLVideoElement*, ExceptionCode&);
+    ExceptionOr<bool> validateHTMLVideoElement(const char* functionName, HTMLVideoElement*);
 #endif
 
     // Helper functions for vertexAttribNf{v}.
@@ -843,6 +855,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::WebGLRenderingContextBase, is3d())
+SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::WebGLRenderingContextBase, isWebGL())
 
 #endif

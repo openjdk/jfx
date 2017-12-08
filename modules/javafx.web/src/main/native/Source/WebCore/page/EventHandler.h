@@ -147,9 +147,7 @@ public:
     WEBCORE_EXPORT void dispatchFakeMouseMoveEventSoon();
     void dispatchFakeMouseMoveEventSoonInQuad(const FloatQuad&);
 
-    WEBCORE_EXPORT HitTestResult hitTestResultAtPoint(const LayoutPoint&,
-        HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent,
-        const LayoutSize& padding = LayoutSize());
+    WEBCORE_EXPORT HitTestResult hitTestResultAtPoint(const LayoutPoint&, HitTestRequest::HitTestRequestType hitType = HitTestRequest::ReadOnly | HitTestRequest::Active | HitTestRequest::DisallowUserAgentShadowContent, const LayoutSize& padding = LayoutSize()) const;
 
     bool mousePressed() const { return m_mousePressed; }
     Node* mousePressNode() const { return m_mousePressNode.get(); }
@@ -161,6 +159,7 @@ public:
     void cancelDragAndDrop(const PlatformMouseEvent&, DataTransfer&);
     bool performDragAndDrop(const PlatformMouseEvent&, DataTransfer&);
     void updateDragStateAfterEditDragIfNeeded(Element& rootEditableElement);
+    RefPtr<Element> draggedElement() const;
 #endif
 
     void scheduleHoverStateUpdate();
@@ -255,6 +254,8 @@ public:
 #if ENABLE(DRAG_SUPPORT)
     WEBCORE_EXPORT bool eventMayStartDrag(const PlatformMouseEvent&) const;
 
+    WEBCORE_EXPORT void didStartDrag();
+    WEBCORE_EXPORT void dragCancelled();
     WEBCORE_EXPORT void dragSourceEndedAt(const PlatformMouseEvent&, DragOperation);
 #endif
 

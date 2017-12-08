@@ -28,7 +28,6 @@
 
 #include "BackForwardController.h"
 #include "Document.h"
-#include "ExceptionCode.h"
 #include "Frame.h"
 #include "FrameLoader.h"
 #include "FrameLoaderClient.h"
@@ -36,6 +35,7 @@
 #include "HistoryItem.h"
 #include "Logging.h"
 #include "MainFrame.h"
+#include "NavigationScheduler.h"
 #include "Page.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
@@ -57,6 +57,30 @@ unsigned History::length() const
     if (!page)
         return 0;
     return page->backForward().count();
+}
+
+ExceptionOr<History::ScrollRestoration> History::scrollRestoration() const
+{
+    if (!m_frame)
+        return Exception { SecurityError };
+
+    auto* historyItem = m_frame->loader().history().currentItem();
+    if (!historyItem)
+        return ScrollRestoration::Auto;
+
+    return historyItem->shouldRestoreScrollPosition() ? ScrollRestoration::Auto : ScrollRestoration::Manual;
+}
+
+ExceptionOr<void> History::setScrollRestoration(ScrollRestoration scrollRestoration)
+{
+    if (!m_frame)
+        return Exception { SecurityError };
+
+    auto* historyItem = m_frame->loader().history().currentItem();
+    if (historyItem)
+        historyItem->setShouldRestoreScrollPosition(scrollRestoration == ScrollRestoration::Auto);
+
+    return { };
 }
 
 SerializedScriptValue* History::state()
@@ -150,14 +174,19 @@ ExceptionOr<void> History::stateObjectAdded(RefPtr<SerializedScriptValue>&& data
         return { };
 
     URL fullURL = urlForState(urlString);
-    if (!fullURL.isValid() || !m_frame->document()->securityOrigin().canRequest(fullURL))
-        return Exception { SECURITY_ERR };
+    if (!fullURL.isValid())
+        return Exception { SecurityError };
 
-    if (fullURL.hasUsername() || fullURL.hasPassword()) {
-        if (stateObjectType == StateObjectType::Replace)
-            return Exception { SECURITY_ERR, "Attempt to use history.replaceState() to change session history URL to " + fullURL.string() + " is insecure; Username/passwords aren't allowed in state object URLs" };
-        return Exception { SECURITY_ERR, "Attempt to use history.pushState() to add URL " + fullURL.string() + " to session history is insecure; Username/passwords aren't allowed in state object URLs" };
-    }
+    const URL& documentURL = m_frame->document()->url();
+
+    auto createBlockedURLSecurityErrorWithMessageSuffix = [&] (const char* suffix) {
+        const char* functionName = stateObjectType == StateObjectType::Replace ? "history.replaceState()" : "history.pushState()";
+        return Exception { SecurityError, makeString("Blocked attempt to use ", functionName, " to change session history URL from ", documentURL.stringCenterEllipsizedToLength(), " to ", fullURL.stringCenterEllipsizedToLength(), ". ", suffix) };
+    };
+    if (!protocolHostAndPortAreEqual(fullURL, documentURL) || fullURL.user() != documentURL.user() || fullURL.pass() != documentURL.pass())
+        return createBlockedURLSecurityErrorWithMessageSuffix("Protocols, domains, ports, usernames, and passwords must match.");
+    if (!m_frame->document()->securityOrigin().canRequest(fullURL) && (fullURL.path() != documentURL.path() || fullURL.query() != documentURL.query()))
+        return createBlockedURLSecurityErrorWithMessageSuffix("Paths and fragments must match for a sandboxed document.");
 
     Document* mainDocument = m_frame->page()->mainFrame().document();
     History* mainHistory = nullptr;
@@ -177,8 +206,8 @@ ExceptionOr<void> History::stateObjectAdded(RefPtr<SerializedScriptValue>&& data
 
     if (mainHistory->m_currentStateObjectTimeSpanObjectsAdded >= perStateObjectTimeSpanLimit) {
         if (stateObjectType == StateObjectType::Replace)
-            return Exception { SECURITY_ERR, String::format("Attempt to use history.replaceState() more than %u times per %f seconds", perStateObjectTimeSpanLimit, stateObjectTimeSpan) };
-        return Exception { SECURITY_ERR, String::format("Attempt to use history.pushState() more than %u times per %f seconds", perStateObjectTimeSpanLimit, stateObjectTimeSpan) };
+            return Exception { SecurityError, String::format("Attempt to use history.replaceState() more than %u times per %f seconds", perStateObjectTimeSpanLimit, stateObjectTimeSpan) };
+        return Exception { SecurityError, String::format("Attempt to use history.pushState() more than %u times per %f seconds", perStateObjectTimeSpanLimit, stateObjectTimeSpan) };
     }
 
     Checked<unsigned> titleSize = title.length();
@@ -199,8 +228,8 @@ ExceptionOr<void> History::stateObjectAdded(RefPtr<SerializedScriptValue>&& data
 
     if (newTotalUsage > totalStateObjectPayloadLimit) {
         if (stateObjectType == StateObjectType::Replace)
-            return Exception { QUOTA_EXCEEDED_ERR, ASCIILiteral("Attempt to store more data than allowed using history.replaceState()") };
-        return Exception { QUOTA_EXCEEDED_ERR, ASCIILiteral("Attempt to store more data than allowed using history.pushState()") };
+            return Exception { QuotaExceededError, ASCIILiteral("Attempt to store more data than allowed using history.replaceState()") };
+        return Exception { QuotaExceededError, ASCIILiteral("Attempt to store more data than allowed using history.pushState()") };
     }
 
     m_mostRecentStateObjectUsage = payloadSize.unsafeGet();

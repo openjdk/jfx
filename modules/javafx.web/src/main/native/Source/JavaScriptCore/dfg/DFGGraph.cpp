@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -68,12 +68,11 @@ static const char* dfgOpNames[] = {
 #undef STRINGIZE_DFG_OP_ENUM
 };
 
-Graph::Graph(VM& vm, Plan& plan, LongLivedState& longLivedState)
+Graph::Graph(VM& vm, Plan& plan)
     : m_vm(vm)
     , m_plan(plan)
     , m_codeBlock(m_plan.codeBlock)
     , m_profiledBlock(m_codeBlock->alternative())
-    , m_allocator(longLivedState.m_allocator)
     , m_cfg(std::make_unique<CFG>(*this))
     , m_nextMachineLocal(0)
     , m_fixpointState(BeforeFixpoint)
@@ -96,17 +95,6 @@ Graph::Graph(VM& vm, Plan& plan, LongLivedState& longLivedState)
 
 Graph::~Graph()
 {
-    for (BlockIndex blockIndex = numBlocks(); blockIndex--;) {
-        BasicBlock* block = this->block(blockIndex);
-        if (!block)
-            continue;
-
-        for (unsigned phiIndex = block->phis.size(); phiIndex--;)
-            m_allocator.free(block->phis[phiIndex]);
-        for (unsigned nodeIndex = block->size(); nodeIndex--;)
-            m_allocator.free(block->at(nodeIndex));
-    }
-    m_allocator.freeAll();
 }
 
 const char *Graph::opName(NodeType op)
@@ -232,6 +220,8 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
         out.print(comma, SpeculationDump(node->prediction()));
     if (node->hasArrayMode())
         out.print(comma, node->arrayMode());
+    if (node->hasArithUnaryType())
+        out.print(comma, "Type:", node->arithUnaryType());
     if (node->hasArithMode())
         out.print(comma, node->arithMode());
     if (node->hasArithRoundingMode())
@@ -248,6 +238,8 @@ void Graph::dump(PrintStream& out, const char* prefix, Node* node, DumpContext* 
         out.print(comma, "id", node->identifierNumber(), "{", identifiers()[node->identifierNumber()], "}");
     if (node->hasPromotedLocationDescriptor())
         out.print(comma, node->promotedLocationDescriptor());
+    if (node->hasClassInfo())
+        out.print(comma, *node->classInfo());
     if (node->hasStructureSet())
         out.print(comma, inContext(node->structureSet().toStructureSet(), context));
     if (node->hasStructure())
@@ -597,19 +589,6 @@ void Graph::dump(PrintStream& out, DumpContext* context)
     }
 }
 
-void Graph::addNodeToMapByIndex(Node* node)
-{
-    if (m_nodeIndexFreeList.isEmpty()) {
-        node->m_index = m_nodesByIndex.size();
-        m_nodesByIndex.append(node);
-        return;
-    }
-    unsigned index = m_nodeIndexFreeList.takeLast();
-    node->m_index = index;
-    ASSERT(!m_nodesByIndex[index]);
-    m_nodesByIndex[index] = node;
-}
-
 void Graph::deleteNode(Node* node)
 {
     if (validationEnabled() && m_form == SSA) {
@@ -619,48 +598,12 @@ void Graph::deleteNode(Node* node)
         }
     }
 
-    RELEASE_ASSERT(m_nodesByIndex[node->m_index] == node);
-    unsigned nodeIndex = node->m_index;
-    m_nodesByIndex[nodeIndex] = nullptr;
-    m_nodeIndexFreeList.append(nodeIndex);
-
-    m_allocator.free(node);
+    m_nodes.remove(node);
 }
 
 void Graph::packNodeIndices()
 {
-    if (m_nodeIndexFreeList.isEmpty())
-        return;
-
-    unsigned holeIndex = 0;
-    unsigned endIndex = m_nodesByIndex.size();
-
-    while (true) {
-        while (holeIndex < endIndex && m_nodesByIndex[holeIndex])
-            ++holeIndex;
-
-        if (holeIndex == endIndex)
-            break;
-        ASSERT(holeIndex < m_nodesByIndex.size());
-        ASSERT(!m_nodesByIndex[holeIndex]);
-
-        do {
-            --endIndex;
-        } while (!m_nodesByIndex[endIndex] && endIndex > holeIndex);
-
-        if (holeIndex == endIndex)
-            break;
-        ASSERT(endIndex > holeIndex);
-        ASSERT(m_nodesByIndex[endIndex]);
-
-        auto& value = m_nodesByIndex[endIndex];
-        value->m_index = holeIndex;
-        m_nodesByIndex[holeIndex] = WTFMove(value);
-        ++holeIndex;
-    }
-
-    m_nodeIndexFreeList.resize(0);
-    m_nodesByIndex.resize(endIndex);
+    m_nodes.packIndices();
 }
 
 void Graph::dethread()
@@ -1207,6 +1150,8 @@ unsigned Graph::requiredRegisterCountForExit()
 
 unsigned Graph::requiredRegisterCountForExecutionAndExit()
 {
+    // FIXME: We should make sure that frameRegisterCount() and requiredRegisterCountForExit()
+    // never overflows. https://bugs.webkit.org/show_bug.cgi?id=173852
     return std::max(frameRegisterCount(), requiredRegisterCountForExit());
 }
 
@@ -1385,7 +1330,7 @@ JSArrayBufferView* Graph::tryGetFoldableView(JSValue value, ArrayMode arrayMode)
 
 void Graph::registerFrozenValues()
 {
-    m_codeBlock->constants().resize(0);
+    m_codeBlock->constants().shrink(0);
     m_codeBlock->constantsSourceCodeRepresentation().resize(0);
     for (FrozenValue* value : m_frozenValues) {
         if (!value->pointsToHeap())
@@ -1493,7 +1438,7 @@ void Graph::assertIsRegistered(Structure* structure)
     DFG_CRASH(*this, nullptr, toCString("Structure ", pointerDump(structure), " is watchable but isn't being watched.").data());
 }
 
-NO_RETURN_DUE_TO_CRASH static void crash(
+static void logDFGAssertionFailure(
     Graph& graph, const CString& whileText, const char* file, int line, const char* function,
     const char* assertion)
 {
@@ -1507,25 +1452,24 @@ NO_RETURN_DUE_TO_CRASH static void crash(
     dataLog("\n");
     dataLog("DFG ASSERTION FAILED: ", assertion, "\n");
     dataLog(file, "(", line, ") : ", function, "\n");
-    CRASH_WITH_SECURITY_IMPLICATION();
 }
 
-void Graph::handleAssertionFailure(
+void Graph::logAssertionFailure(
     std::nullptr_t, const char* file, int line, const char* function, const char* assertion)
 {
-    crash(*this, "", file, line, function, assertion);
+    logDFGAssertionFailure(*this, "", file, line, function, assertion);
 }
 
-void Graph::handleAssertionFailure(
+void Graph::logAssertionFailure(
     Node* node, const char* file, int line, const char* function, const char* assertion)
 {
-    crash(*this, toCString("While handling node ", node, "\n\n"), file, line, function, assertion);
+    logDFGAssertionFailure(*this, toCString("While handling node ", node, "\n\n"), file, line, function, assertion);
 }
 
-void Graph::handleAssertionFailure(
+void Graph::logAssertionFailure(
     BasicBlock* block, const char* file, int line, const char* function, const char* assertion)
 {
-    crash(*this, toCString("While handling block ", pointerDump(block), "\n\n"), file, line, function, assertion);
+    logDFGAssertionFailure(*this, toCString("While handling block ", pointerDump(block), "\n\n"), file, line, function, assertion);
 }
 
 Dominators& Graph::ensureDominators()
@@ -1588,7 +1532,7 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
                         return nullptr;
                     if (node->variableAccessData() != argumentNode->variableAccessData())
                         return nullptr;
-                    return profiledBlock->valueProfileForArgument(argument);
+                    return &profiledBlock->valueProfileForArgument(argument);
                 }();
                 if (result)
                     return result;
@@ -1602,7 +1546,7 @@ MethodOfGettingAValueProfile Graph::methodOfGettingAValueProfileFor(Node* curren
             }
 
             if (node->hasHeapPrediction())
-                return profiledBlock->valueProfileForBytecodeOffset(node->origin.semantic.bytecodeIndex);
+                return &profiledBlock->valueProfileForBytecodeOffset(node->origin.semantic.bytecodeIndex);
 
             if (profiledBlock->hasBaselineJITProfiling()) {
                 if (ArithProfile* result = profiledBlock->arithProfileForBytecodeOffset(node->origin.semantic.bytecodeIndex))
@@ -1721,6 +1665,37 @@ bool Graph::willCatchExceptionInMachineFrame(CodeOrigin codeOrigin, CodeOrigin& 
     }
 
     RELEASE_ASSERT_NOT_REACHED();
+}
+
+bool Graph::canDoFastSpread(Node* node, const AbstractValue& value)
+{
+    // The parameter 'value' is the AbstractValue for child1 (the thing being spread).
+    ASSERT(node->op() == Spread);
+
+    if (node->child1().useKind() != ArrayUse) {
+        // Note: we only speculate on ArrayUse when we've set up the necessary watchpoints
+        // to prove that the iteration protocol is non-observable starting from ArrayPrototype.
+        return false;
+    }
+
+    // FIXME: We should add profiling of the incoming operand to Spread
+    // so we can speculate in such a way that we guarantee that this
+    // function would return true:
+    // https://bugs.webkit.org/show_bug.cgi?id=171198
+
+    if (!value.m_structure.isFinite())
+        return false;
+
+    ArrayPrototype* arrayPrototype = globalObjectFor(node->child1()->origin.semantic)->arrayPrototype();
+    bool allGood = true;
+    value.m_structure.forEach([&] (RegisteredStructure structure) {
+        allGood &= structure->storedPrototype() == arrayPrototype
+            && !structure->isDictionary()
+            && structure->getConcurrently(m_vm.propertyNames->iteratorSymbol.impl()) == invalidOffset
+            && !structure->mayInterceptIndexedAccesses();
+    });
+
+    return allGood;
 }
 
 } } // namespace JSC::DFG

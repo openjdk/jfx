@@ -93,6 +93,11 @@ public:
     void addPercentHeightDescendant(RenderBox&);
     static void removePercentHeightDescendant(RenderBox&);
     TrackedRendererListHashSet* percentHeightDescendants() const;
+    bool hasPercentHeightDescendants() const
+    {
+        TrackedRendererListHashSet* objects = percentHeightDescendants();
+        return objects && !objects->isEmpty();
+    }
     static bool hasPercentHeightContainerMap();
     static bool hasPercentHeightDescendant(RenderBox&);
     static void clearPercentHeightDescendantsFrom(RenderBox&);
@@ -225,6 +230,20 @@ public:
     LayoutUnit pageLogicalOffset() const;
     void setPageLogicalOffset(LayoutUnit);
 
+    // Fieldset legends that are taller than the fieldset border add in intrinsic border
+    // in order to ensure that content gets properly pushed down across all layout systems
+    // (flexbox, block, etc.)
+    LayoutUnit intrinsicBorderForFieldset() const;
+    void setIntrinsicBorderForFieldset(LayoutUnit);
+    LayoutUnit borderTop() const override;
+    LayoutUnit borderBottom() const override;
+    LayoutUnit borderLeft() const override;
+    LayoutUnit borderRight() const override;
+    LayoutUnit borderBefore() const override;
+    LayoutUnit adjustBorderBoxLogicalHeightForBoxSizing(LayoutUnit height) const override;
+    LayoutUnit adjustContentBoxLogicalHeightForBoxSizing(std::optional<LayoutUnit> height) const override;
+    void paintExcludedChildrenInBorder(PaintInfo&, const LayoutPoint&);
+
     // Accessors for logical width/height and margins in the containing block's block-flow direction.
     enum ApplyLayoutDeltaMode { ApplyLayoutDelta, DoNotApplyLayoutDelta };
     LayoutUnit logicalWidthForChild(const RenderBox& child) const { return isHorizontalWritingMode() ? child.width() : child.height(); }
@@ -244,8 +263,6 @@ public:
     LayoutUnit collapsedMarginBeforeForChild(const RenderBox& child) const;
     LayoutUnit collapsedMarginAfterForChild(const RenderBox& child) const;
 
-    enum class RenderTreeMutationIsAllowed { Yes, No };
-    virtual void updateFirstLetter(RenderTreeMutationIsAllowed = RenderTreeMutationIsAllowed::Yes);
     void getFirstLetter(RenderObject*& firstLetter, RenderElement*& firstLetterContainer, RenderObject* skipObject = nullptr);
 
     virtual void scrollbarsChanged(bool /*horizontalScrollbarChanged*/, bool /*verticalScrollbarChanged*/) { }
@@ -306,7 +323,10 @@ public:
     RenderFlowThread* cachedFlowThreadContainingBlock() const;
     void setCachedFlowThreadContainingBlockNeedsUpdate();
     virtual bool cachedFlowThreadContainingBlockNeedsUpdate() const;
-    void resetFlowThreadContainingBlockAndChildInfoIncludingDescendants();
+    void resetFlowThreadContainingBlockAndChildInfoIncludingDescendants(RenderFlowThread* = nullptr) final;
+
+    std::optional<LayoutUnit> availableLogicalHeightForPercentageComputation() const;
+    bool hasDefiniteLogicalHeight() const;
 
 protected:
     RenderFlowThread* locateFlowThreadContainingBlock() const override;
@@ -375,6 +395,14 @@ public:
     // children.
     RenderBlock* firstLineBlock() const override;
 
+    enum FieldsetFindLegendOption { FieldsetIgnoreFloatingOrOutOfFlow, FieldsetIncludeFloatingOrOutOfFlow };
+    RenderBox* findFieldsetLegend(FieldsetFindLegendOption = FieldsetIgnoreFloatingOrOutOfFlow) const;
+    virtual void layoutExcludedChildren(bool /*relayoutChildren*/);
+    virtual bool computePreferredWidthsForExcludedChildren(LayoutUnit&, LayoutUnit&) const;
+
+    void adjustBorderBoxRectForPainting(LayoutRect&) override;
+    LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) override;
+
 protected:
     virtual void addOverflowFromChildren();
     // FIXME-BLOCKFLOW: Remove virtualization when all callers have moved to RenderBlockFlow
@@ -394,6 +422,8 @@ protected:
     void updateBlockChildDirtyBitsBeforeLayout(bool relayoutChildren, RenderBox&);
 
     void preparePaginationBeforeBlockLayout(bool&);
+
+    void computeChildPreferredLogicalWidths(RenderObject&, LayoutUnit& minPreferredLogicalWidth, LayoutUnit& maxPreferredLogicalWidth) const;
 
     void blockWillBeDestroyed();
 
@@ -422,9 +452,6 @@ private:
 
     bool isSelfCollapsingBlock() const override;
     virtual bool childrenPreventSelfCollapsing() const;
-
-    void createFirstLetterRenderer(RenderElement* firstLetterBlock, RenderText* currentTextChild);
-    void updateFirstLetterStyle(RenderElement* firstLetterBlock, RenderObject* firstLetterContainer);
 
     Node* nodeForHitTest() const;
 

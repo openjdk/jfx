@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(AsyncFunctionConstructor);
 
-const ClassInfo AsyncFunctionConstructor::s_info = { "AsyncFunction", &Base::s_info, nullptr, CREATE_METHOD_TABLE(AsyncFunctionConstructor) };
+const ClassInfo AsyncFunctionConstructor::s_info = { "AsyncFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(AsyncFunctionConstructor) };
 
 AsyncFunctionConstructor::AsyncFunctionConstructor(VM& vm, Structure* structure)
     : InternalFunction(vm, structure)
@@ -45,8 +45,6 @@ void AsyncFunctionConstructor::finishCreation(VM& vm, AsyncFunctionPrototype* pr
 {
     Base::finishCreation(vm, "AsyncFunction");
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, prototype, DontEnum | DontDelete | ReadOnly);
-
-    // Number of arguments for constructor
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum);
 }
 

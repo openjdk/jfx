@@ -32,8 +32,11 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS)
-OBJC_CLASS NSArray;
 OBJC_CLASS NSString;
+#endif
+
+#if PLATFORM(COCOA)
+OBJC_CLASS NSArray;
 #endif
 
 #if PLATFORM(WIN)
@@ -66,13 +69,14 @@ enum ShouldSerializeSelectedTextForDataTransfer { DefaultSelectedTextType, Inclu
 // For writing to the pasteboard. Generally sorted with the richest formats on top.
 
 struct PasteboardWebContent {
-#if !(PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(JAVA))
+#if !(PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(WPE) || PLATFORM(JAVA))
     WEBCORE_EXPORT PasteboardWebContent();
     WEBCORE_EXPORT ~PasteboardWebContent();
     bool canSmartCopyOrDelete;
     RefPtr<SharedBuffer> dataInWebArchiveFormat;
     RefPtr<SharedBuffer> dataInRTFDFormat;
     RefPtr<SharedBuffer> dataInRTFFormat;
+    RefPtr<SharedBuffer> dataInAttributedStringFormat;
     String dataInHTMLFormat;
     String dataInStringFormat;
     Vector<String> clientTypes;
@@ -80,6 +84,10 @@ struct PasteboardWebContent {
 #endif
 #if PLATFORM(GTK)
     bool canSmartCopyOrDelete;
+    String text;
+    String markup;
+#endif
+#if PLATFORM(WPE)
     String text;
     String markup;
 #endif
@@ -109,7 +117,11 @@ struct PasteboardImage {
 #if !(PLATFORM(GTK) || PLATFORM(WIN) || PLATFORM(JAVA))
     RefPtr<SharedBuffer> resourceData;
     String resourceMIMEType;
+    Vector<String> clientTypes;
+    Vector<RefPtr<SharedBuffer>> clientData;
 #endif
+    String suggestedName;
+    FloatSize imageSize;
 };
 
 // For reading from the pasteboard.
@@ -204,13 +216,16 @@ public:
 #endif
 
 #if PLATFORM(IOS)
-    static NSArray* supportedPasteboardTypes();
+    explicit Pasteboard(long changeCount);
+
+    static NSArray *supportedWebContentPasteboardTypes();
     static String resourceMIMEType(const NSString *mimeType);
 #endif
 
 #if PLATFORM(COCOA)
     explicit Pasteboard(const String& pasteboardName);
 
+    WEBCORE_EXPORT static NSArray *supportedFileUploadPasteboardTypes();
     const String& name() const { return m_pasteboardName; }
 #endif
 
@@ -224,6 +239,11 @@ public:
 #endif
 
 private:
+#if PLATFORM(IOS)
+    bool respectsUTIFidelities() const;
+    void readRespectingUTIFidelities(PasteboardWebContentReader&);
+#endif
+
 #if PLATFORM(WIN)
     void finishCreatingPasteboard();
     void writeRangeToDataObject(Range&, Frame&); // FIXME: Layering violation.

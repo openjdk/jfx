@@ -31,13 +31,16 @@
 #include "CachedScript.h"
 #include "CommonVM.h"
 #include "DOMTimer.h"
+#include "DOMWindow.h"
 #include "DatabaseContext.h"
 #include "Document.h"
 #include "ErrorEvent.h"
+#include "JSDOMExceptionHandling.h"
 #include "JSDOMWindow.h"
 #include "MessagePort.h"
 #include "NoEventDispatchAssertion.h"
 #include "PublicURLManager.h"
+#include "RejectedPromiseTracker.h"
 #include "ResourceRequest.h"
 #include "ScriptState.h"
 #include "Settings.h"
@@ -45,7 +48,9 @@
 #include "WorkerThread.h"
 #include <heap/StrongInlines.h>
 #include <inspector/ScriptCallStack.h>
+#include <runtime/CatchScope.h>
 #include <runtime/Exception.h>
+#include <runtime/JSPromise.h>
 #include <wtf/MainThread.h>
 #include <wtf/Ref.h>
 
@@ -379,6 +384,29 @@ void ScriptExecutionContext::reportException(const String& errorMessage, int lin
         logExceptionToConsole(exception->m_errorMessage, exception->m_sourceURL, exception->m_lineNumber, exception->m_columnNumber, WTFMove(exception->m_callStack));
 }
 
+void ScriptExecutionContext::reportUnhandledPromiseRejection(JSC::ExecState& state, JSC::JSPromise& promise, RefPtr<Inspector::ScriptCallStack>&& callStack)
+{
+    JSC::VM& vm = state.vm();
+    auto scope = DECLARE_CATCH_SCOPE(vm);
+
+    int lineNumber = 0;
+    int columnNumber = 0;
+    String sourceURL;
+
+    JSC::JSValue result = promise.result(vm);
+    String resultMessage = retrieveErrorMessage(state, vm, result, scope);
+    String errorMessage = makeString("Unhandled Promise Rejection: ", resultMessage);
+    if (callStack) {
+        if (const ScriptCallFrame* callFrame = callStack->firstNonNativeCallFrame()) {
+            lineNumber = callFrame->lineNumber();
+            columnNumber = callFrame->columnNumber();
+            sourceURL = callFrame->sourceURL();
+        }
+    }
+
+    logExceptionToConsole(errorMessage, sourceURL, lineNumber, columnNumber, WTFMove(callStack));
+}
+
 void ScriptExecutionContext::addConsoleMessage(MessageSource source, MessageLevel level, const String& message, const String& sourceURL, unsigned lineNumber, unsigned columnNumber, JSC::ExecState* state, unsigned long requestIdentifier)
 {
     addMessage(source, level, message, sourceURL, lineNumber, columnNumber, 0, state, requestIdentifier);
@@ -389,13 +417,6 @@ bool ScriptExecutionContext::dispatchErrorEvent(const String& errorMessage, int 
     EventTarget* target = errorEventTarget();
     if (!target)
         return false;
-
-#if PLATFORM(IOS)
-    if (target->toDOMWindow() && is<Document>(*this)) {
-        if (!downcast<Document>(*this).settings().shouldDispatchJavaScriptWindowOnErrorEvents())
-            return false;
-    }
-#endif
 
     String message = errorMessage;
     int line = lineNumber;
@@ -427,15 +448,15 @@ PublicURLManager& ScriptExecutionContext::publicURLManager()
     return *m_publicURLManager;
 }
 
-void ScriptExecutionContext::adjustMinimumTimerInterval(std::chrono::milliseconds oldMinimumTimerInterval)
+void ScriptExecutionContext::adjustMinimumDOMTimerInterval(Seconds oldMinimumTimerInterval)
 {
-    if (minimumTimerInterval() != oldMinimumTimerInterval) {
+    if (minimumDOMTimerInterval() != oldMinimumTimerInterval) {
         for (auto& timer : m_timeouts.values())
             timer->updateTimerIntervalIfNecessary();
     }
 }
 
-std::chrono::milliseconds ScriptExecutionContext::minimumTimerInterval() const
+Seconds ScriptExecutionContext::minimumDOMTimerInterval() const
 {
     // The default implementation returns the DOMTimer's default
     // minimum timer interval. FIXME: to make it work with dedicated
@@ -451,7 +472,7 @@ void ScriptExecutionContext::didChangeTimerAlignmentInterval()
         timer->didChangeAlignmentInterval();
 }
 
-std::chrono::milliseconds ScriptExecutionContext::timerAlignmentInterval(bool) const
+Seconds ScriptExecutionContext::domTimerAlignmentInterval(bool) const
 {
     return DOMTimer::defaultAlignmentInterval();
 }
@@ -462,6 +483,16 @@ JSC::VM& ScriptExecutionContext::vm()
         return commonVM();
 
     return downcast<WorkerGlobalScope>(*this).script()->vm();
+}
+
+RejectedPromiseTracker& ScriptExecutionContext::ensureRejectedPromiseTrackerSlow()
+{
+    // ScriptExecutionContext::vm() in Worker is only available after WorkerGlobalScope initialization is done.
+    // When initializing ScriptExecutionContext, vm() is not ready.
+
+    ASSERT(!m_rejectedPromiseTracker);
+    m_rejectedPromiseTracker = std::make_unique<RejectedPromiseTracker>(*this, vm());
+    return *m_rejectedPromiseTracker.get();
 }
 
 void ScriptExecutionContext::setDatabaseContext(DatabaseContext* databaseContext)

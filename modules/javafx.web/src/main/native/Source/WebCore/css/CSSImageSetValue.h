@@ -26,11 +26,12 @@
 #pragma once
 
 #include "CSSValueList.h"
-#include "CachedImageClient.h"
 #include "CachedResourceHandle.h"
+#include <wtf/Function.h>
 
 namespace WebCore {
 
+class CachedImage;
 class CachedResourceLoader;
 class Document;
 struct ResourceLoaderOptions;
@@ -49,13 +50,15 @@ public:
     String customCSSText() const;
 
     struct ImageWithScale {
-        String imageURL;
+        URL imageURL;
         float scaleFactor;
     };
 
-    bool traverseSubresources(const std::function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
 
     void updateDeviceScaleFactor(const Document&);
+
+    URL bestImageForScaleFactorURL() { return bestImageForScaleFactor().imageURL; }
 
 protected:
     ImageWithScale bestImageForScaleFactor();

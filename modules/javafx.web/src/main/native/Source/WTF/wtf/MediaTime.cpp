@@ -90,10 +90,6 @@ MediaTime MediaTime::createWithFloat(float floatTime)
         return invalidTime();
     if (std::isinf(floatTime))
         return std::signbit(floatTime) ? negativeInfiniteTime() : positiveInfiniteTime();
-    if (floatTime > std::numeric_limits<int64_t>::max())
-        return positiveInfiniteTime();
-    if (floatTime < std::numeric_limits<int64_t>::min())
-        return negativeInfiniteTime();
 
     MediaTime value(0, DefaultTimeScale, Valid | DoubleValue);
     value.m_timeValueAsDouble = floatTime;
@@ -122,10 +118,6 @@ MediaTime MediaTime::createWithDouble(double doubleTime)
         return invalidTime();
     if (std::isinf(doubleTime))
         return std::signbit(doubleTime) ? negativeInfiniteTime() : positiveInfiniteTime();
-    if (doubleTime > std::numeric_limits<int64_t>::max())
-        return positiveInfiniteTime();
-    if (doubleTime < std::numeric_limits<int64_t>::min())
-        return negativeInfiniteTime();
 
     MediaTime value(0, DefaultTimeScale, Valid | DoubleValue);
     value.m_timeValueAsDouble = doubleTime;
@@ -145,7 +137,7 @@ MediaTime MediaTime::createWithDouble(double doubleTime, uint32_t timeScale)
 
     while (doubleTime * timeScale > std::numeric_limits<int64_t>::max())
         timeScale /= 2;
-    return MediaTime(static_cast<int64_t>(doubleTime * timeScale), timeScale, Valid);
+    return MediaTime(static_cast<int64_t>(std::round(doubleTime * timeScale)), timeScale, Valid);
 }
 
 float MediaTime::toFloat() const
@@ -205,13 +197,11 @@ MediaTime MediaTime::operator+(const MediaTime& rhs) const
     if (hasDoubleValue() && rhs.hasDoubleValue())
         return MediaTime::createWithDouble(m_timeValueAsDouble + rhs.m_timeValueAsDouble);
 
+    if (hasDoubleValue() || rhs.hasDoubleValue())
+        return MediaTime::createWithDouble(toDouble() + rhs.toDouble());
+
     MediaTime a = *this;
     MediaTime b = rhs;
-
-    if (a.hasDoubleValue())
-        a.setTimeScale(DefaultTimeScale);
-    else if (b.hasDoubleValue())
-        b.setTimeScale(DefaultTimeScale);
 
     uint32_t commonTimeScale;
     if (!leastCommonMultiple(a.m_timeScale, b.m_timeScale, commonTimeScale) || commonTimeScale > MaximumTimeScale)
@@ -251,13 +241,11 @@ MediaTime MediaTime::operator-(const MediaTime& rhs) const
     if (hasDoubleValue() && rhs.hasDoubleValue())
         return MediaTime::createWithDouble(m_timeValueAsDouble - rhs.m_timeValueAsDouble);
 
+    if (hasDoubleValue() || rhs.hasDoubleValue())
+        return MediaTime::createWithDouble(toDouble() - rhs.toDouble());
+
     MediaTime a = *this;
     MediaTime b = rhs;
-
-    if (a.hasDoubleValue())
-        a.setTimeScale(DefaultTimeScale);
-    else if (b.hasDoubleValue())
-        b.setTimeScale(DefaultTimeScale);
 
     uint32_t commonTimeScale;
     if (!leastCommonMultiple(this->m_timeScale, rhs.m_timeScale, commonTimeScale) || commonTimeScale > MaximumTimeScale)
@@ -470,7 +458,14 @@ const MediaTime& MediaTime::indefiniteTime()
     return *time;
 }
 
-void MediaTime::setTimeScale(uint32_t timeScale)
+MediaTime MediaTime::toTimeScale(uint32_t timeScale, RoundingFlags flags) const
+{
+    MediaTime result = *this;
+    result.setTimeScale(timeScale, flags);
+    return result;
+}
+
+void MediaTime::setTimeScale(uint32_t timeScale, RoundingFlags flags)
 {
     if (hasDoubleValue()) {
         *this = MediaTime::createWithDouble(m_timeValueAsDouble, timeScale);
@@ -479,24 +474,81 @@ void MediaTime::setTimeScale(uint32_t timeScale)
 
     if (timeScale == m_timeScale)
         return;
+
     timeScale = std::min(MaximumTimeScale, timeScale);
-    int64_t wholePart = m_timeValue / m_timeScale;
 
-    // If setting the time scale will cause an overflow, divide the
-    // timescale by two until the number will fit, and round the
-    // result.
-    int64_t newWholePart;
-    while (!safeMultiply(wholePart, static_cast<int64_t>(timeScale), newWholePart))
-        timeScale /= 2;
+#if HAVE(INT128_T)
+    __int128_t newValue = static_cast<__int128_t>(m_timeValue) * timeScale;
+    int64_t remainder = newValue % m_timeScale;
+    newValue = newValue / m_timeScale;
 
-    int64_t remainder = m_timeValue % m_timeScale;
-    m_timeValue = newWholePart + (remainder * timeScale) / m_timeScale;
-    m_timeScale = timeScale;
+    if (newValue < std::numeric_limits<int64_t>::min()) {
+        *this = negativeInfiniteTime();
+        return;
+    }
+
+    if (newValue > std::numeric_limits<int64_t>::max()) {
+        *this = positiveInfiniteTime();
+        return;
+    }
+#else
+    int64_t newValue = m_timeValue / m_timeScale;
+    int64_t partialRemainder = (m_timeValue % m_timeScale) * timeScale;
+    int64_t remainder = partialRemainder % m_timeScale;
+
+    if (!safeMultiply<int64_t>(newValue, static_cast<int64_t>(timeScale), newValue)
+        || !safeAdd(newValue, partialRemainder / m_timeScale, newValue)) {
+        *this = newValue < 0 ? negativeInfiniteTime() : positiveInfiniteTime();
+        return;
+    }
+#endif
+
+    m_timeValue = newValue;
+    std::swap(m_timeScale, timeScale);
+
+    if (!remainder)
+        return;
+
+    m_timeFlags |= HasBeenRounded;
+    switch (flags) {
+    case RoundingFlags::HalfAwayFromZero:
+        if (static_cast<int64_t>(llabs(remainder)) * 2 >= static_cast<int64_t>(timeScale)) {
+            // round up (away from zero)
+            if (remainder < 0)
+                m_timeValue--;
+            else
+                m_timeValue++;
+        }
+        break;
+
+    case RoundingFlags::TowardZero:
+        break;
+
+    case RoundingFlags::AwayFromZero:
+        if (remainder < 0)
+            m_timeValue--;
+        else
+            m_timeValue++;
+        break;
+
+    case RoundingFlags::TowardPositiveInfinity:
+        if (remainder > 0)
+            m_timeValue++;
+        break;
+
+    case RoundingFlags::TowardNegativeInfinity:
+        if (remainder < 0)
+            m_timeValue--;
+        break;
+    }
 }
 
-void MediaTime::dump(PrintStream &out) const
+void MediaTime::dump(PrintStream& out) const
 {
-    out.print("{", m_timeValue, "/", m_timeScale, ", ", toDouble(), "}");
+    out.print("{");
+    if (!hasDoubleValue())
+        out.print(m_timeValue, "/", m_timeScale, " = ");
+    out.print(toDouble(), "}");
 }
 
 MediaTime abs(const MediaTime& rhs)

@@ -1,5 +1,26 @@
 /*
  * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
 
 #include "config.h"
@@ -44,7 +65,7 @@ namespace WebCore {
 
 static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, jint id)
 {
-    Vector<Gradient::ColorStop, 2> stops = gradient.getStops(); // TODO-java: recheck;
+    const Vector<Gradient::ColorStop, 2> stops = gradient.stops();
     int nStops = stops.size();
 
     AffineTransform gt = gradient.gradientSpaceTransform();
@@ -61,24 +82,18 @@ static void setGradient(Gradient &gradient, PlatformGraphicsContext* context, ji
 
     if (gradient.isRadial()) {
         context->rq()
-        << (jfloat)(gt.xScale()*gradient.startRadius())
-        << (jfloat)(gt.xScale()*gradient.endRadius());
+        << (jfloat)(gt.xScale() * gradient.startRadius())
+        << (jfloat)(gt.xScale() * gradient.endRadius());
     }
     context->rq()
     << (jint)0 //is not proportional
     << (jint)gradient.spreadMethod()
     << (jint)nStops;
 
-    for (int i = 0; i < nStops; i++) {
-        Gradient::ColorStop cs = stops[i];
-        int rgba =
-            ((int)(cs.alpha * 255 + 0.5)) << 24 |
-            ((int)(cs.red   * 255 + 0.5)) << 16 |
-            ((int)(cs.green * 255 + 0.5)) << 8 |
-            ((int)(cs.blue  * 255 + 0.5));
-
+    for (const auto& cs : stops) {
+        int rgba = (int)cs.color.rgb();
         context->rq()
-        << (jint)rgba << (jfloat)cs.stop;
+        << (jint)rgba << (jfloat)cs.offset;
     }
 }
 
@@ -180,17 +195,17 @@ void GraphicsContext::fillRect(const FloatRect& rect)
     if (paintingDisabled())
         return;
 
-    if (m_state.fillPattern && m_state.fillPattern->tileImage()) {
-        Image *img = m_state.fillPattern->tileImage();
+    if (m_state.fillPattern) {
+        Image& img = m_state.fillPattern->tileImage();
         FloatRect destRect(
             rect.x(),
             rect.y(),
-            m_state.fillPattern->repeatX() ? rect.width() : img->width(),
-            m_state.fillPattern->repeatY() ? rect.height() : img->height());
-        img->drawPattern(
+            m_state.fillPattern->repeatX() ? rect.width() : img.width(),
+            m_state.fillPattern->repeatY() ? rect.height() : img.height());
+        img.drawPattern(
             *this,
             destRect,
-            FloatRect(0., 0., img->width(), img->height()),
+            FloatRect(0., 0., img.width(), img.height()),
             m_state.fillPattern->getPatternSpaceTransform(),
             FloatPoint(),
             FloatSize(),
@@ -441,13 +456,6 @@ void GraphicsContext::setPlatformFillColor(const Color& col)
     platformContext()->rq().freeSpace(8)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_SETFILLCOLOR
     << (jint)col.rgb();
-}
-
-
-
-const Vector<Gradient::ColorStop, 2>& Gradient::getStops() const
-{
-    return m_stops;
 }
 
 void GraphicsContext::setPlatformTextDrawingMode(TextDrawingModeFlags mode)
@@ -757,21 +765,21 @@ void GraphicsContext::fillPath(const Path& path)
     if (paintingDisabled())
         return;
 
-    if (m_state.fillPattern && m_state.fillPattern->tileImage()) {
+    if (m_state.fillPattern) {
         savePlatformState(); //fake clip isolation
         clipPath(path, m_state.fillRule);
         FloatRect rect(path.boundingRect());
 
-        Image *img = m_state.fillPattern->tileImage();
+        Image& img = m_state.fillPattern->tileImage();
         FloatRect destRect(
             rect.x(),
             rect.y(),
-            m_state.fillPattern->repeatX() ? rect.width() : img->width(),
-            m_state.fillPattern->repeatY() ? rect.height() : img->height());
-        img->drawPattern(
+            m_state.fillPattern->repeatX() ? rect.width() : img.width(),
+            m_state.fillPattern->repeatY() ? rect.height() : img.height());
+        img.drawPattern(
             *this,
             destRect,
-            FloatRect(0., 0., img->width(), img->height()),
+            FloatRect(0., 0., img.width(), img.height()),
             m_state.fillPattern->getPatternSpaceTransform(),
             FloatPoint(),
             FloatSize(),

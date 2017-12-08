@@ -26,10 +26,11 @@
 #pragma once
 
 #include "AuthenticationClient.h"
-#include "HTTPHeaderMap.h"
 #include "ResourceHandleTypes.h"
-#include "ResourceLoadPriority.h"
+#include <wtf/MonotonicTime.h>
 #include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
+#include <wtf/text/AtomicString.h>
 
 #if PLATFORM(COCOA) || USE(CFURLCONNECTION)
 #include <wtf/RetainPtr.h>
@@ -79,11 +80,10 @@ class Frame;
 class URL;
 class NetworkingContext;
 class ProtectionSpace;
-class QuickLookHandle;
 class ResourceError;
 class ResourceHandleClient;
 class ResourceHandleInternal;
-class NetworkLoadTiming;
+class NetworkLoadMetrics;
 class ResourceRequest;
 class ResourceResponse;
 class SoupNetworkSession;
@@ -130,11 +130,11 @@ public:
     void releaseDelegate();
 #endif
 
-#if PLATFORM(COCOA) && ENABLE(WEB_TIMING)
+#if PLATFORM(COCOA)
 #if USE(CFURLCONNECTION)
-    static void getConnectionTimingData(CFURLConnectionRef, NetworkLoadTiming&);
+    static void getConnectionTimingData(CFURLConnectionRef, NetworkLoadMetrics&);
 #else
-    static void getConnectionTimingData(NSURLConnection *, NetworkLoadTiming&);
+    static void getConnectionTimingData(NSURLConnection *, NetworkLoadMetrics&);
 #endif
 #endif
 
@@ -152,12 +152,12 @@ public:
     static void setClientCertificate(const String& host, CFDataRef);
 #endif
 
-#if PLATFORM(WIN) && USE(CURL)
+#if OS(WINDOWS) && USE(CURL)
     static void setHostAllowsAnyHTTPSCertificate(const String&);
     static void setClientCertificateInfo(const String&, const String&, const String&);
 #endif
 
-#if PLATFORM(WIN) && USE(CURL) && USE(CF)
+#if OS(WINDOWS) && USE(CURL) && USE(CF)
     static void setClientCertificate(const String& host, CFDataRef);
 #endif
 
@@ -178,7 +178,7 @@ public:
     void ensureReadBuffer();
     size_t currentStreamPosition() const;
     void didStartRequest();
-    double m_requestTime;
+    MonotonicTime m_requestTime;
 #endif
 
     bool hasAuthenticationChallenge() const;

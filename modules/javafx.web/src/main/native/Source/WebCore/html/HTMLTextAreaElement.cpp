@@ -202,13 +202,13 @@ void HTMLTextAreaElement::parseAttribute(const QualifiedName& name, const Atomic
 
 void HTMLTextAreaElement::maxLengthAttributeChanged(const AtomicString& newValue)
 {
-    internalSetMaxLength(parseHTMLNonNegativeInteger(newValue).value_or(-1));
+    internalSetMaxLength(parseHTMLNonNegativeInteger(newValue).valueOr(-1));
     updateValidity();
 }
 
 void HTMLTextAreaElement::minLengthAttributeChanged(const AtomicString& newValue)
 {
-    internalSetMinLength(parseHTMLNonNegativeInteger(newValue).value_or(-1));
+    internalSetMinLength(parseHTMLNonNegativeInteger(newValue).valueOr(-1));
     updateValidity();
 }
 
@@ -404,30 +404,12 @@ void HTMLTextAreaElement::setValueCommon(const String& newValue)
 
 String HTMLTextAreaElement::defaultValue() const
 {
-    return TextNodeTraversal::contentsAsString(*this);
+    return TextNodeTraversal::childTextContent(*this);
 }
 
 void HTMLTextAreaElement::setDefaultValue(const String& defaultValue)
 {
-    Ref<HTMLTextAreaElement> protectedThis(*this);
-
-    // To preserve comments, remove only the text nodes, then add a single text node.
-    Vector<Ref<Text>> textNodes;
-    for (Text* textNode = TextNodeTraversal::firstChild(*this); textNode; textNode = TextNodeTraversal::nextSibling(*textNode))
-        textNodes.append(*textNode);
-
-    for (auto& textNode : textNodes)
-        removeChild(textNode.get());
-
-    // Normalize line endings.
-    String value = defaultValue;
-    value.replace("\r\n", "\n");
-    value.replace('\r', '\n');
-
-    insertBefore(document().createTextNode(value), firstChild());
-
-    if (!m_isDirty)
-        setNonDirtyValue(value);
+    setTextContent(defaultValue);
 }
 
 String HTMLTextAreaElement::validationMessage() const

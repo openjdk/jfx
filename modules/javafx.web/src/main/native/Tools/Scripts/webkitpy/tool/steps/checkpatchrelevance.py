@@ -35,22 +35,43 @@ class CheckPatchRelevance(AbstractStep):
     def options(cls):
         return AbstractStep.options() + [
             Options.group,
+            Options.quiet,
         ]
+
+    bindings_paths = [
+        "Source/WebCore",
+        "Tools",
+    ]
 
     jsc_paths = [
         "JSTests/",
         "Source/JavaScriptCore/",
-        "Source/WTF/"
+        "Source/WTF/",
         "Source/bmalloc/",
+        "Makefile",
+        "Makefile.shared",
+        "Source/Makefile",
+        "Source/Makefile.shared",
+        "Tools/Scripts/build-webkit",
+        "Tools/Scripts/build-jsc",
+        "Tools/Scripts/jsc-stress-test-helpers/",
+        "Tools/Scripts/run-jsc",
+        "Tools/Scripts/run-jsc-benchmarks",
+        "Tools/Scripts/run-jsc-stress-tests",
+        "Tools/Scripts/run-javascriptcore-tests",
+        "Tools/Scripts/run-layout-jsc",
+        "Tools/Scripts/update-javascriptcore-test-results",
+        "Tools/Scripts/webkitdirs.pm",
     ]
 
     group_to_paths_mapping = {
+        'bindings': bindings_paths,
         'jsc': jsc_paths,
     }
 
     def _changes_are_relevant(self, changed_files):
         # In the default case, all patches are relevant
-        if self._options.group != 'jsc':
+        if self._options.group not in self.group_to_paths_mapping:
             return True
 
         patterns = self.group_to_paths_mapping[self._options.group]
@@ -70,5 +91,5 @@ class CheckPatchRelevance(AbstractStep):
         if self._changes_are_relevant(change_list):
             return True
 
-        _log.info("This patch does not have relevant changes.")
+        _log.debug("This patch does not have relevant changes.")
         raise ScriptError(message="This patch does not have relevant changes.")

@@ -38,6 +38,10 @@ import java.text.MessageFormat;
 import java.util.*;
 import com.oracle.tools.packager.IOUtils;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public abstract class AbstractBundler implements Bundler {
 
     private static final ResourceBundle I18N =
@@ -152,7 +156,9 @@ public abstract class AbstractBundler implements Bundler {
         if (!StandardBundlerParam.VERBOSE.fetchFrom(params)) {
             try {
                 IOUtils.deleteRecursive(StandardBundlerParam.BUILD_ROOT.fetchFrom(params));
-            } catch (FileNotFoundException ignored) {}
+            } catch (IOException e) {
+                Log.debug(e.getMessage());
+            }
         }
     }
 }

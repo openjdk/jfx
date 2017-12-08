@@ -27,6 +27,7 @@
 #include "config.h"
 #include "CrossOriginAccessControl.h"
 
+#include "CrossOriginPreflightResultCache.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
 #include "ResourceRequest.h"
@@ -56,25 +57,6 @@ bool isSimpleCrossOriginAccessRequest(const String& method, const HTTPHeaderMap&
     }
 
     return true;
-}
-
-bool isOnAccessControlResponseHeaderWhitelist(const String& name)
-{
-    static std::once_flag onceFlag;
-    static LazyNeverDestroyed<HTTPHeaderSet> allowedCrossOriginResponseHeaders;
-
-    std::call_once(onceFlag, []{
-        allowedCrossOriginResponseHeaders.construct<std::initializer_list<String>>({
-            "cache-control",
-            "content-language",
-            "content-type",
-            "expires",
-            "last-modified",
-            "pragma"
-        });
-    });
-
-    return allowedCrossOriginResponseHeaders.get().contains(name);
 }
 
 void updateRequestForAccessControl(ResourceRequest& request, SecurityOrigin& securityOrigin, StoredCredentials allowCredentials)
@@ -172,6 +154,27 @@ bool passesAccessControlCheck(const ResourceResponse& response, StoredCredential
         }
     }
 
+    return true;
+}
+
+bool validatePreflightResponse(const ResourceRequest& request, const ResourceResponse& response, StoredCredentials includeCredentials, SecurityOrigin& securityOrigin, String& errorDescription)
+{
+    if (!response.isSuccessful()) {
+        errorDescription = ASCIILiteral("Preflight response is not successful");
+        return false;
+    }
+
+    if (!passesAccessControlCheck(response, includeCredentials, securityOrigin, errorDescription))
+        return false;
+
+    auto result = std::make_unique<CrossOriginPreflightResultCacheItem>(includeCredentials);
+    if (!result->parse(response, errorDescription)
+        || !result->allowsCrossOriginMethod(request.httpMethod(), errorDescription)
+        || !result->allowsCrossOriginHeaders(request.httpHeaderFields(), errorDescription)) {
+        return false;
+    }
+
+    CrossOriginPreflightResultCache::singleton().appendEntry(securityOrigin.toString(), request.url(), WTFMove(result));
     return true;
 }
 

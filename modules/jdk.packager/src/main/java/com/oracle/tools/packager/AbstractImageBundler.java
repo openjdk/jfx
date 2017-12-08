@@ -44,7 +44,10 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 /**
  * Common utility methods used by app image bundlers.
+ *
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
  */
+@Deprecated(since="10", forRemoval=true)
 public abstract class AbstractImageBundler extends AbstractBundler {
 
     private static final ResourceBundle I18N =

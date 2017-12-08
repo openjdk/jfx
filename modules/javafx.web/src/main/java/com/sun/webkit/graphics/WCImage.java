@@ -45,6 +45,8 @@ public abstract class WCImage extends Ref {
 
     public Object getPlatformImage() {return null;}
 
+    protected abstract byte[] toData(String mimeType);
+
     protected abstract String toDataURL(String mimeType);
 
     public ByteBuffer getPixelBuffer() {return null;}

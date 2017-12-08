@@ -19,7 +19,6 @@
 
 #pragma once
 
-#include "Logging.h"
 
 #include <gst/gst.h>
 #include <gst/video/video-format.h>
@@ -65,7 +64,7 @@ unsigned getGstPlayFlag(const char* nick);
 GstClockTime toGstClockTime(float time);
 bool gstRegistryHasElementForMediaType(GList* elementFactories, const char* capsString);
 
-#if GST_CHECK_VERSION(1, 5, 3) && (ENABLE(LEGACY_ENCRYPTED_MEDIA) || ENABLE(ENCRYPTED_MEDIA))
+#if GST_CHECK_VERSION(1, 5, 3) && ENABLE(ENCRYPTED_MEDIA)
 GstElement* createGstDecryptor(const gchar* protectionSystem);
 #endif
 }

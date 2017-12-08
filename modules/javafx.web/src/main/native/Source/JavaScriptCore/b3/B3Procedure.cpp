@@ -29,12 +29,15 @@
 #if ENABLE(B3_JIT)
 
 #include "AirCode.h"
+#include "B3BackwardsCFG.h"
+#include "B3BackwardsDominators.h"
 #include "B3BasicBlockInlines.h"
 #include "B3BasicBlockUtils.h"
 #include "B3BlockWorklist.h"
 #include "B3CFG.h"
 #include "B3DataSection.h"
 #include "B3Dominators.h"
+#include "B3NaturalLoops.h"
 #include "B3OpaqueByproducts.h"
 #include "B3PhiChildren.h"
 #include "B3StackSlot.h"
@@ -89,6 +92,7 @@ Value* Procedure::clone(Value* value)
     return m_values.add(WTFMove(clone));
 }
 
+
 Value* Procedure::addIntConstant(Origin origin, Type type, int64_t value)
 {
     switch (type) {
@@ -109,6 +113,23 @@ Value* Procedure::addIntConstant(Origin origin, Type type, int64_t value)
 Value* Procedure::addIntConstant(Value* likeValue, int64_t value)
 {
     return addIntConstant(likeValue->origin(), likeValue->type(), value);
+}
+
+Value* Procedure::addConstant(Origin origin, Type type, uint64_t bits)
+{
+    switch (type) {
+    case Int32:
+        return add<Const32Value>(origin, static_cast<int32_t>(bits));
+    case Int64:
+        return add<Const64Value>(origin, bits);
+    case Float:
+        return add<ConstFloatValue>(origin, bitwise_cast<float>(static_cast<int32_t>(bits)));
+    case Double:
+        return add<ConstDoubleValue>(origin, bitwise_cast<double>(bits));
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return nullptr;
+    }
 }
 
 Value* Procedure::addBottom(Origin origin, Type type)
@@ -182,11 +203,14 @@ void Procedure::resetReachability()
 void Procedure::invalidateCFG()
 {
     m_dominators = nullptr;
+    m_naturalLoops = nullptr;
+    m_backwardsCFG = nullptr;
+    m_backwardsDominators = nullptr;
 }
 
 void Procedure::dump(PrintStream& out) const
 {
-    IndexSet<Value> valuesInBlocks;
+    IndexSet<Value*> valuesInBlocks;
     for (BasicBlock* block : *this) {
         out.print(deepDump(*this, block));
         valuesInBlocks.addAll(*block);
@@ -202,6 +226,8 @@ void Procedure::dump(PrintStream& out) const
         }
         dataLog("    ", deepDump(*this, value), "\n");
     }
+    if (hasQuirks())
+        out.print("Has Quirks: True\n");
     if (variables().size()) {
         out.print("Variables:\n");
         for (Variable* variable : variables())
@@ -243,7 +269,7 @@ void Procedure::deleteValue(Value* value)
 
 void Procedure::deleteOrphans()
 {
-    IndexSet<Value> valuesInBlocks;
+    IndexSet<Value*> valuesInBlocks;
     for (BasicBlock* block : *this)
         valuesInBlocks.addAll(*block);
 
@@ -269,6 +295,27 @@ Dominators& Procedure::dominators()
     if (!m_dominators)
         m_dominators = std::make_unique<Dominators>(*this);
     return *m_dominators;
+}
+
+NaturalLoops& Procedure::naturalLoops()
+{
+    if (!m_naturalLoops)
+        m_naturalLoops = std::make_unique<NaturalLoops>(*this);
+    return *m_naturalLoops;
+}
+
+BackwardsCFG& Procedure::backwardsCFG()
+{
+    if (!m_backwardsCFG)
+        m_backwardsCFG = std::make_unique<BackwardsCFG>(*this);
+    return *m_backwardsCFG;
+}
+
+BackwardsDominators& Procedure::backwardsDominators()
+{
+    if (!m_backwardsDominators)
+        m_backwardsDominators = std::make_unique<BackwardsDominators>(*this);
+    return *m_backwardsDominators;
 }
 
 void Procedure::addFastConstant(const ValueKey& constant)
@@ -314,14 +361,20 @@ void Procedure::pinRegister(Reg reg)
     code().pinRegister(reg);
 }
 
+void Procedure::setOptLevel(unsigned optLevel)
+{
+    m_optLevel = optLevel;
+    code().setOptLevel(optLevel);
+}
+
 unsigned Procedure::frameSize() const
 {
     return code().frameSize();
 }
 
-const RegisterAtOffsetList& Procedure::calleeSaveRegisters() const
+RegisterAtOffsetList Procedure::calleeSaveRegisterAtOffsetList() const
 {
-    return code().calleeSaveRegisters();
+    return code().calleeSaveRegisterAtOffsetList();
 }
 
 Value* Procedure::addValueImpl(Value* value)
@@ -331,7 +384,7 @@ Value* Procedure::addValueImpl(Value* value)
 
 void Procedure::setBlockOrderImpl(Vector<BasicBlock*>& blocks)
 {
-    IndexSet<BasicBlock> blocksSet;
+    IndexSet<BasicBlock*> blocksSet;
     blocksSet.addAll(blocks);
 
     for (BasicBlock* block : *this) {
@@ -355,6 +408,16 @@ void Procedure::setBlockOrderImpl(Vector<BasicBlock*>& blocks)
 void Procedure::setWasmBoundsCheckGenerator(RefPtr<WasmBoundsCheckGenerator> generator)
 {
     code().setWasmBoundsCheckGenerator(generator);
+}
+
+RegisterSet Procedure::mutableGPRs()
+{
+    return code().mutableGPRs();
+}
+
+RegisterSet Procedure::mutableFPRs()
+{
+    return code().mutableFPRs();
 }
 
 } } // namespace JSC::B3

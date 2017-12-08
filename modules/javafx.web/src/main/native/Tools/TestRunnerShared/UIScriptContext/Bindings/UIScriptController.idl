@@ -23,6 +23,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+enum DeviceOrientation {
+    "portrait",
+    "portrait-upsidedown",
+    "landscape-left",
+    "landscape-right"
+};
+
 interface UIScriptController {
 
     void doAsyncTask(object callback); // Used to test the harness.
@@ -162,6 +169,11 @@ interface UIScriptController {
     //  }
     void sendEventStream(DOMString eventsJSON, object callback);
 
+    void beginBackSwipe(object callback);
+    void completeBackSwipe(object callback);
+
+    void playBackEventStream(DOMString eventStream, object callback);
+
     // Equivalent of pressing the Done button in the form accessory bar.
     void dismissFormAccessoryView();
 
@@ -178,6 +190,8 @@ interface UIScriptController {
 
     void keyboardAccessoryBarNext();
     void keyboardAccessoryBarPrevious();
+
+    void applyAutocorrection(DOMString newString, DOMString oldString, object callback);
 
     // Returned object is a dictionary with the passed in string as a key for returned object
     object contentsOfUserInterfaceItem(DOMString interfaceItem);
@@ -217,12 +231,19 @@ interface UIScriptController {
 
     readonly attribute DOMString scrollingTreeAsText;
 
+    object propertiesOfLayerWithID(unsigned long long layerID);
+
     void retrieveSpeakSelectionContent(object callback);
     readonly attribute DOMString accessibilitySpeakSelectionContent;
+
+    void simulateRotation(DeviceOrientation orientation, object callback);
+    void simulateRotationLikeSafari(DeviceOrientation orientation, object callback);
 
     // Unparent and parent the web view, simulating, for example, tab switching.
     void removeViewFromWindow(object callback);
     void addViewToWindow(object callback);
 
     void overridePreference(DOMString preference, DOMString value);
+
+    void setSafeAreaInsets(double top, double right, double bottom, double left);
 };

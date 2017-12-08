@@ -36,10 +36,7 @@
 #include <unistd.h>
 
 #if BOS(DARWIN)
-// Removed the below inclusion to avoid build issues with 10.9 SDK
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101100
 #include <mach/vm_page_size.h>
-#endif
 #include <mach/vm_statistics.h>
 #endif
 
@@ -90,7 +87,7 @@ inline void vmValidate(void* p, size_t vmSize)
 
 inline size_t vmPageSizePhysical()
 {
-#if (BPLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000)
+#if BPLATFORM(IOS)
     return vm_kernel_page_size;
 #else
     static size_t cached;

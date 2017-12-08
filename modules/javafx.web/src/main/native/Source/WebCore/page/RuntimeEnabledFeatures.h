@@ -32,7 +32,8 @@
 #pragma once
 
 #include "PlatformExportMacros.h"
-#include <wtf/NeverDestroyed.h>
+#include <wtf/Forward.h>
+#include <wtf/Noncopyable.h>
 
 namespace WebCore {
 
@@ -43,14 +44,14 @@ namespace WebCore {
 class RuntimeEnabledFeatures {
     WTF_MAKE_NONCOPYABLE(RuntimeEnabledFeatures);
 public:
-    void setDOMIteratorEnabled(bool isEnabled) { m_isDOMIteratorEnabled = isEnabled; }
-    bool domIteratorEnabled() const { return m_isDOMIteratorEnabled; }
-
-    void setGeolocationEnabled(bool isEnabled) { m_isGeolocationEnabled = isEnabled; }
-    bool geolocationEnabled() const { return m_isGeolocationEnabled; }
+    void setDisplayContentsEnabled(bool isEnabled) { m_isDisplayContentsEnabled = isEnabled; }
+    bool displayContentsEnabled() const { return m_isDisplayContentsEnabled; }
 
     void setLinkPreloadEnabled(bool isEnabled) { m_isLinkPreloadEnabled = isEnabled; }
     bool linkPreloadEnabled() const { return m_isLinkPreloadEnabled; }
+
+    void setMediaPreloadingEnabled(bool isEnabled) { m_isMediaPreloadingEnabled = isEnabled; }
+    bool mediaPreloadingEnabled() const { return m_isMediaPreloadingEnabled; }
 
     void setResourceTimingEnabled(bool isEnabled) { m_isResourceTimingEnabled = isEnabled; }
     bool resourceTimingEnabled() const { return m_isResourceTimingEnabled; }
@@ -75,24 +76,29 @@ public:
     void setModernMediaControlsEnabled(bool areEnabled) { m_areModernMediaControlsEnabled = areEnabled; }
     bool modernMediaControlsEnabled() const { return m_areModernMediaControlsEnabled; }
 
+    void setCredentialManagementEnabled(bool isEnabled) { m_isCredentialManagementEnabled = isEnabled; }
+    bool credentialManagementEnabled() const { return m_isCredentialManagementEnabled; }
+
+    void setIsSecureContextAttributeEnabled(bool isEnabled) { m_isSecureContextAttributeEnabled = isEnabled; }
+    bool isSecureContextAttributeEnabled() const { return m_isSecureContextAttributeEnabled; }
+
 #if ENABLE(INDEXED_DATABASE_IN_WORKERS)
     void setIndexedDBWorkersEnabled(bool isEnabled) { m_isIndexedDBWorkersEnabled = isEnabled; }
     bool indexedDBWorkersEnabled() const { return m_isIndexedDBWorkersEnabled; }
 #endif
 
-#if ENABLE(FONT_LOAD_EVENTS)
-    void setFontLoadEventsEnabled(bool isEnabled) { m_isFontLoadEventsEnabled = isEnabled; }
-    bool fontLoadEventsEnabled() const { return m_isFontLoadEventsEnabled; }
-#endif
-
 #if ENABLE(MEDIA_STREAM)
+    bool mediaDevicesEnabled() const { return m_isMediaDevicesEnabled; }
+    void setMediaDevicesEnabled(bool isEnabled) { m_isMediaDevicesEnabled = isEnabled; }
     bool mediaStreamEnabled() const { return m_isMediaStreamEnabled; }
     void setMediaStreamEnabled(bool isEnabled) { m_isMediaStreamEnabled = isEnabled; }
 #endif
 
 #if ENABLE(WEB_RTC)
-    bool peerConnectionEnabled() const { return m_isMediaStreamEnabled && m_isPeerConnectionEnabled; }
+    bool peerConnectionEnabled() const { return m_isPeerConnectionEnabled; }
     void setPeerConnectionEnabled(bool isEnabled) { m_isPeerConnectionEnabled = isEnabled; }
+    bool webRTCLegacyAPIEnabled() const { return m_webRTCLegacyAPIEnabled; }
+    void setWebRTCLegacyAPIEnabled(bool isEnabled) { m_webRTCLegacyAPIEnabled = isEnabled; }
 #endif
 
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
@@ -151,9 +157,22 @@ public:
     bool webGL2Enabled() const { return m_isWebGL2Enabled; }
 #endif
 
-#if ENABLE(FETCH_API)
+#if ENABLE(WEBGPU)
+    void setWebGPUEnabled(bool isEnabled) { m_isWebGPUEnabled = isEnabled; }
+    bool webGPUEnabled() const { return m_isWebGPUEnabled; }
+#endif
+
+    void setCacheAPIEnabled(bool isEnabled) { m_isCacheAPIEnabled = isEnabled; }
+    bool cacheAPIEnabled() const { return m_isCacheAPIEnabled; }
+
     void setFetchAPIEnabled(bool isEnabled) { m_isFetchAPIEnabled = isEnabled; }
     bool fetchAPIEnabled() const { return m_isFetchAPIEnabled; }
+
+#if ENABLE(STREAMS_API)
+    void setReadableByteStreamAPIEnabled(bool isEnabled) { m_isReadableByteStreamAPIEnabled = isEnabled; }
+    bool readableByteStreamAPIEnabled() const { return m_isReadableByteStreamAPIEnabled; }
+    void setWritableStreamAPIEnabled(bool isEnabled) { m_isWritableStreamAPIEnabled = isEnabled; }
+    bool writableStreamAPIEnabled() const { return m_isWritableStreamAPIEnabled; }
 #endif
 
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
@@ -174,25 +193,22 @@ public:
     bool encryptedMediaAPIEnabled() const { return m_encryptedMediaAPIEnabled; }
 #endif
 
-#if ENABLE(SUBTLE_CRYPTO)
-    void setSubtleCryptoEnabled(bool isEnabled) { m_isSubtleCryptoEnabled = isEnabled; }
-    bool subtleCryptoEnabled() const { return m_isSubtleCryptoEnabled; }
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+    void setLegacyEncryptedMediaAPIEnabled(bool isEnabled) { m_legacyEncryptedMediaAPIEnabled = isEnabled; }
+    bool legacyEncryptedMediaAPIEnabled() const { return m_legacyEncryptedMediaAPIEnabled; }
+#endif
+
+#if ENABLE(SERVICE_WORKER)
+    bool serviceWorkerEnabled() const { return m_serviceWorkerEnabled; }
+    void setServiceWorkerEnabled(bool isEnabled) { m_serviceWorkerEnabled = isEnabled; }
 #endif
 
 #if ENABLE(VIDEO)
     bool audioEnabled() const;
-    bool htmlMediaElementEnabled() const;
-    bool htmlAudioElementEnabled() const;
-    bool htmlVideoElementEnabled() const;
-    bool htmlSourceElementEnabled() const;
-    bool mediaControllerEnabled() const;
-    bool mediaErrorEnabled() const;
-    bool timeRangesEnabled() const;
 #endif
 
-#if ENABLE(WEB_SOCKETS)
-    bool webSocketEnabled() const;
-#endif
+    void setInspectorAdditionsEnabled(bool isEnabled) { m_inspectorAdditionsEnabled = isEnabled; }
+    bool inspectorAdditionsEnabled() const { return m_inspectorAdditionsEnabled; }
 
     WEBCORE_EXPORT static RuntimeEnabledFeatures& sharedFeatures();
 
@@ -201,13 +217,15 @@ private:
     RuntimeEnabledFeatures();
 
     bool m_areModernMediaControlsEnabled { false };
-    bool m_isLinkPreloadEnabled { false };
+    bool m_isLinkPreloadEnabled { true };
+    bool m_isMediaPreloadingEnabled { false };
     bool m_isResourceTimingEnabled { false };
     bool m_isUserTimingEnabled { false };
     bool m_isInteractiveFormValidationEnabled { false };
+    bool m_isCredentialManagementEnabled { false };
+    bool m_isSecureContextAttributeEnabled { false };
 
-    bool m_isDOMIteratorEnabled { true };
-    bool m_isGeolocationEnabled { true };
+    bool m_isDisplayContentsEnabled { false };
     bool m_isShadowDOMEnabled { true };
     bool m_areCustomElementsEnabled { true };
     bool m_inputEventsEnabled { true };
@@ -217,11 +235,13 @@ private:
 #endif
 
 #if ENABLE(MEDIA_STREAM)
+    bool m_isMediaDevicesEnabled { false };
     bool m_isMediaStreamEnabled { true };
 #endif
 
 #if ENABLE(WEB_RTC)
     bool m_isPeerConnectionEnabled { true };
+    bool m_webRTCLegacyAPIEnabled { true };
 #endif
 
 #if ENABLE(LEGACY_CSS_VENDOR_PREFIXES)
@@ -252,16 +272,17 @@ private:
     bool m_isInputTypeWeekEnabled { true };
 #endif
 
-#if ENABLE(FONT_LOAD_EVENTS)
-    bool m_isFontLoadEventsEnabled { true };
-#endif
-
 #if ENABLE(GAMEPAD)
     bool m_areGamepadsEnabled { false };
 #endif
 
 #if ENABLE(CSS_ANIMATIONS_LEVEL_2)
     bool m_areAnimationTriggersEnabled { false };
+#endif
+
+#if ENABLE(STREAMS_API)
+    bool m_isReadableByteStreamAPIEnabled { false };
+    bool m_isWritableStreamAPIEnabled { false };
 #endif
 
 #if ENABLE(WEB_ANIMATIONS)
@@ -272,9 +293,12 @@ private:
     bool m_isWebGL2Enabled { false };
 #endif
 
-#if ENABLE(FETCH_API)
-    bool m_isFetchAPIEnabled { true };
+#if ENABLE(WEBGPU)
+    bool m_isWebGPUEnabled { false };
 #endif
+
+    bool m_isCacheAPIEnabled { false };
+    bool m_isFetchAPIEnabled { true };
 
 #if ENABLE(DOWNLOAD_ATTRIBUTE)
     bool m_isDownloadAttributeEnabled { false };
@@ -286,13 +310,19 @@ private:
     bool m_encryptedMediaAPIEnabled { false };
 #endif
 
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+    bool m_legacyEncryptedMediaAPIEnabled { false };
+#endif
+
 #if ENABLE(INTERSECTION_OBSERVER)
     bool m_intersectionObserverEnabled { false };
 #endif
 
-#if ENABLE(SUBTLE_CRYPTO)
-    bool m_isSubtleCryptoEnabled { true };
+#if ENABLE(SERVICE_WORKER)
+    bool m_serviceWorkerEnabled { false };
 #endif
+
+    bool m_inspectorAdditionsEnabled { false };
 
     friend class WTF::NeverDestroyed<RuntimeEnabledFeatures>;
 };

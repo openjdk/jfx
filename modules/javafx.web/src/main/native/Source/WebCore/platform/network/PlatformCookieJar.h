@@ -23,8 +23,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformCookieJar_h
-#define PlatformCookieJar_h
+#pragma once
 
 #include <chrono>
 #include <wtf/Forward.h>
@@ -46,12 +45,9 @@ WEBCORE_EXPORT bool cookiesEnabled(const NetworkStorageSession&, const URL& firs
 WEBCORE_EXPORT String cookieRequestHeaderFieldValue(const NetworkStorageSession&, const URL& firstParty, const URL&);
 WEBCORE_EXPORT bool getRawCookies(const NetworkStorageSession&, const URL& firstParty, const URL&, Vector<Cookie>&);
 WEBCORE_EXPORT void deleteCookie(const NetworkStorageSession&, const URL&, const String&);
-WEBCORE_EXPORT void addCookie(const NetworkStorageSession&, const URL&, const Cookie&);
 WEBCORE_EXPORT void getHostnamesWithCookies(const NetworkStorageSession&, HashSet<String>& hostnames);
 WEBCORE_EXPORT void deleteCookiesForHostnames(const NetworkStorageSession&, const Vector<String>& cookieHostNames);
 WEBCORE_EXPORT void deleteAllCookies(const NetworkStorageSession&);
 WEBCORE_EXPORT void deleteAllCookiesModifiedSince(const NetworkStorageSession&, std::chrono::system_clock::time_point);
 
 }
-
-#endif

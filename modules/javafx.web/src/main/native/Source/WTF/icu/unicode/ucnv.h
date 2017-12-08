@@ -1,6 +1,6 @@
 /*
 **********************************************************************
-*   Copyright (C) 1999-2013, International Business Machines
+*   Copyright (C) 1999-2014, International Business Machines
 *   Corporation and others.  All Rights Reserved.
 **********************************************************************
  *  ucnv.h:
@@ -779,8 +779,10 @@ ucnv_resetFromUnicode(UConverter *converter);
  * - ISO-2022-CN: 8 (4-byte designator sequences + 2-byte SS2/SS3 + DBCS)
  *
  * @param converter The Unicode converter.
- * @return The maximum number of bytes per UChar that are output by ucnv_fromUnicode(),
- *         to be used together with UCNV_GET_MAX_BYTES_FOR_STRING for buffer allocation.
+ * @return The maximum number of bytes per UChar (16 bit code unit)
+ *    that are output by ucnv_fromUnicode(),
+ *    to be used together with UCNV_GET_MAX_BYTES_FOR_STRING
+ *    for buffer allocation.
  *
  * @see UCNV_GET_MAX_BYTES_FOR_STRING
  * @see ucnv_getMinCharSize
@@ -812,10 +814,10 @@ ucnv_getMaxCharSize(const UConverter *converter);
      (((int32_t)(length)+10)*(int32_t)(maxCharSize))
 
 /**
- * Returns the minimum byte length for characters in this codepage.
+ * Returns the minimum byte length (per codepoint) for characters in this codepage.
  * This is usually either 1 or 2.
  * @param converter the Unicode converter
- * @return the minimum number of bytes allowed by this particular converter
+ * @return the minimum number of bytes per codepoint allowed by this particular converter
  * @see ucnv_getMaxCharSize
  * @stable ICU 2.0
  */

@@ -26,8 +26,13 @@
 #ifndef ANGLEWebKitBridge_h
 #define ANGLEWebKitBridge_h
 
+#if USE(LIBEPOXY)
+// libepoxy headers have to be included before <ANGLE/ShaderLang.h> in order to avoid
+// picking up khrplatform.h inclusion that's done in ANGLE.
+#include <epoxy/gl.h>
+#endif
+
 #include <ANGLE/ShaderLang.h>
-#include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(IOS)
@@ -36,8 +41,10 @@
 #include <OpenGL/gl.h>
 #elif PLATFORM(WIN)
 #include "OpenGLESShims.h"
-#elif PLATFORM(GTK) || PLATFORM(JAVA)
-#if USE(OPENGL_ES_2)
+#elif PLATFORM(GTK) || PLATFORM(WPE)
+#if USE(LIBEPOXY)
+// <epoxy/gl.h> already included above.
+#elif USE(OPENGL_ES_2)
 #include <GLES2/gl2.h>
 #else
 #include "OpenGLShims.h"

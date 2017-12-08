@@ -49,6 +49,8 @@ public:
     static Ref<RealtimeIncomingVideoSource> create(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
     ~RealtimeIncomingVideoSource() { stopProducingData(); }
 
+    void setSourceTrack(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&);
+
 private:
     RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&, CFMutableDictionaryRef);
 
@@ -56,32 +58,29 @@ private:
     void startProducingData() final;
     void stopProducingData()  final;
 
-    RefPtr<RealtimeMediaSourceCapabilities> capabilities() const final;
+    const RealtimeMediaSourceCapabilities& capabilities() const final;
     const RealtimeMediaSourceSettings& settings() const final;
 
-    MediaConstraints& constraints() { return *m_constraints.get(); }
-    RealtimeMediaSourceSupportedConstraints& supportedConstraints();
+    void processNewSample(CMSampleBufferRef, unsigned, unsigned, MediaSample::VideoRotation);
 
-    void processNewSample(CMSampleBufferRef, unsigned, unsigned);
-    RefPtr<Image> currentFrameImage() final;
-
-    void paintCurrentFrameInContext(GraphicsContext&, const FloatRect&) final;
-
-    bool isProducingData() const final { return m_isProducingData && m_buffer; }
     bool applySize(const IntSize&) final { return true; }
 
     // rtc::VideoSinkInterface
     void OnFrame(const webrtc::VideoFrame&) final;
 
+    CVPixelBufferRef pixelBufferFromVideoFrame(const webrtc::VideoFrame&);
+
     RefPtr<Image> m_currentImage;
     RealtimeMediaSourceSettings m_currentSettings;
-    RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
-    RefPtr<RealtimeMediaSourceCapabilities> m_capabilities;
-    RefPtr<MediaConstraints> m_constraints;
-    bool m_isProducingData { false };
     rtc::scoped_refptr<webrtc::VideoTrackInterface> m_videoTrack;
     RetainPtr<CMSampleBufferRef> m_buffer;
     PixelBufferConformerCV m_conformer;
+    RetainPtr<CVPixelBufferRef> m_blackFrame;
+    int m_blackFrameWidth { 0 };
+    int m_blackFrameHeight { 0 };
+#if !RELEASE_LOG_DISABLED
+    size_t m_numberOfFrames { 0 };
+#endif
 };
 
 } // namespace WebCore

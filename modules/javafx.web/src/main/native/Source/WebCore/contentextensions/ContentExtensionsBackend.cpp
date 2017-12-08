@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,19 +48,14 @@ namespace WebCore {
 
 namespace ContentExtensions {
 
-void ContentExtensionsBackend::addContentExtension(const String& identifier, RefPtr<CompiledContentExtension> compiledContentExtension)
+void ContentExtensionsBackend::addContentExtension(const String& identifier, Ref<CompiledContentExtension> compiledContentExtension)
 {
     ASSERT(!identifier.isEmpty());
     if (identifier.isEmpty())
         return;
 
-    if (!compiledContentExtension) {
-        removeContentExtension(identifier);
-        return;
-    }
-
-    RefPtr<ContentExtension> extension = ContentExtension::create(identifier, adoptRef(*compiledContentExtension.leakRef()));
-    m_contentExtensions.set(identifier, WTFMove(extension));
+    auto contentExtension = ContentExtension::create(identifier, WTFMove(compiledContentExtension));
+    m_contentExtensions.set(identifier, WTFMove(contentExtension));
 }
 
 void ContentExtensionsBackend::removeContentExtension(const String& identifier)
@@ -88,32 +83,31 @@ Vector<Action> ContentExtensionsBackend::actionsForResourceLoad(const ResourceLo
     Vector<Action> finalActions;
     ResourceFlags flags = resourceLoadInfo.getResourceFlags();
     for (auto& contentExtension : m_contentExtensions.values()) {
-        RELEASE_ASSERT(contentExtension);
         const CompiledContentExtension& compiledExtension = contentExtension->compiledExtension();
 
-        DFABytecodeInterpreter withoutDomainsInterpreter(compiledExtension.filtersWithoutDomainsBytecode(), compiledExtension.filtersWithoutDomainsBytecodeLength());
-        DFABytecodeInterpreter::Actions withoutDomainsActions = withoutDomainsInterpreter.interpret(urlCString, flags);
+        DFABytecodeInterpreter withoutConditionsInterpreter(compiledExtension.filtersWithoutConditionsBytecode(), compiledExtension.filtersWithoutConditionsBytecodeLength());
+        DFABytecodeInterpreter::Actions withoutConditionsActions = withoutConditionsInterpreter.interpret(urlCString, flags);
 
-        String domain = resourceLoadInfo.mainDocumentURL.host();
-        DFABytecodeInterpreter withDomainsInterpreter(compiledExtension.filtersWithDomainsBytecode(), compiledExtension.filtersWithDomainsBytecodeLength());
-        DFABytecodeInterpreter::Actions withDomainsActions = withDomainsInterpreter.interpretWithDomains(urlCString, flags, contentExtension->cachedDomainActions(domain));
+        URL topURL = resourceLoadInfo.mainDocumentURL;
+        DFABytecodeInterpreter withConditionsInterpreter(compiledExtension.filtersWithConditionsBytecode(), compiledExtension.filtersWithConditionsBytecodeLength());
+        DFABytecodeInterpreter::Actions withConditionsActions = withConditionsInterpreter.interpretWithConditions(urlCString, flags, contentExtension->topURLActions(topURL));
 
         const SerializedActionByte* actions = compiledExtension.actions();
         const unsigned actionsLength = compiledExtension.actionsLength();
 
         bool sawIgnorePreviousRules = false;
-        const Vector<uint32_t>& universalWithDomains = contentExtension->universalActionsWithDomains(domain);
-        const Vector<uint32_t>& universalWithoutDomains = contentExtension->universalActionsWithoutDomains();
-        if (!withoutDomainsActions.isEmpty() || !withDomainsActions.isEmpty() || !universalWithDomains.isEmpty() || !universalWithoutDomains.isEmpty()) {
+        const Vector<uint32_t>& universalWithConditions = contentExtension->universalActionsWithConditions(topURL);
+        const Vector<uint32_t>& universalWithoutConditions = contentExtension->universalActionsWithoutConditions();
+        if (!withoutConditionsActions.isEmpty() || !withConditionsActions.isEmpty() || !universalWithConditions.isEmpty() || !universalWithoutConditions.isEmpty()) {
             Vector<uint32_t> actionLocations;
-            actionLocations.reserveInitialCapacity(withoutDomainsActions.size() + withDomainsActions.size() + universalWithoutDomains.size() + universalWithDomains.size());
-            for (uint64_t actionLocation : withoutDomainsActions)
+            actionLocations.reserveInitialCapacity(withoutConditionsActions.size() + withConditionsActions.size() + universalWithoutConditions.size() + universalWithConditions.size());
+            for (uint64_t actionLocation : withoutConditionsActions)
                 actionLocations.uncheckedAppend(static_cast<uint32_t>(actionLocation));
-            for (uint64_t actionLocation : withDomainsActions)
+            for (uint64_t actionLocation : withConditionsActions)
                 actionLocations.uncheckedAppend(static_cast<uint32_t>(actionLocation));
-            for (uint32_t actionLocation : universalWithoutDomains)
+            for (uint32_t actionLocation : universalWithoutConditions)
                 actionLocations.uncheckedAppend(actionLocation);
-            for (uint32_t actionLocation : universalWithDomains)
+            for (uint32_t actionLocation : universalWithConditions)
                 actionLocations.uncheckedAppend(actionLocation);
             std::sort(actionLocations.begin(), actionLocations.end());
 
@@ -221,7 +215,7 @@ BlockedStatus ContentExtensionsBackend::processContentExtensionRulesForLoad(cons
 
 const String& ContentExtensionsBackend::displayNoneCSSRule()
 {
-    static NeverDestroyed<const String> rule(ASCIILiteral("display:none !important;"));
+    static NeverDestroyed<const String> rule(MAKE_STATIC_STRING_IMPL("display:none !important;"));
     return rule;
 }
 

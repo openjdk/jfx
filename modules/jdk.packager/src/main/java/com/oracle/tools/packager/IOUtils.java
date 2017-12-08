@@ -25,28 +25,54 @@
 
 package com.oracle.tools.packager;
 
-import com.oracle.tools.packager.Log;
 import java.io.*;
 import java.net.URL;
-import java.nio.channels.FileChannel;
 import java.util.Arrays;
+import java.nio.channels.FileChannel;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class IOUtils {
 
-    public static boolean deleteRecursive(File path) throws FileNotFoundException {
-        boolean ret = true;
-        if (!path.exists()) { //nothing to do
-            return true;
+    public static void deleteRecursive(File path) throws IOException {
+        if (!path.exists()) {
+            return;
         }
-        if (path.isDirectory()) {
-            File[] children = path.listFiles();
-            if (children != null) {
-                for (File f : children) {
-                    ret = ret && deleteRecursive(f);
+        Path directory = path.toPath();
+        Files.walkFileTree(directory, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file,
+                            BasicFileAttributes attr) throws IOException {
+                if (Platform.getPlatform() == Platform.WINDOWS) {
+                    Files.setAttribute(file, "dos:readonly", false);
                 }
+                Files.delete(file);
+                return FileVisitResult.CONTINUE;
             }
-        }
-        return ret && path.delete();
+
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir,
+                            BasicFileAttributes attr) throws IOException {
+                if (Platform.getPlatform() == Platform.WINDOWS) {
+                    Files.setAttribute(dir, "dos:readonly", false);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult postVisitDirectory(Path dir, IOException e)
+                            throws IOException {
+                Files.delete(dir);
+                return FileVisitResult.CONTINUE;
+            }
+        });
     }
 
     public static void copyFromURL(URL location, File file) throws IOException {

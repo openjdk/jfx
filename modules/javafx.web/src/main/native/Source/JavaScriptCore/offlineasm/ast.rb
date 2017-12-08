@@ -928,7 +928,7 @@ class Instruction < Node
         when "globalAnnotation"
             $asm.putGlobalAnnotation
         when "emit"
-          $asm.puts "#{operands[0].dump}"
+            $asm.puts "#{operands[0].dump}"
         else
             raise "Unhandled opcode #{opcode} at #{codeOriginString}"
         end
@@ -942,6 +942,36 @@ class Error < NoChildren
     
     def dump
         "\terror"
+    end
+end
+
+class ConstExpr < NoChildren
+    attr_reader :variable, :value
+
+    def initialize(codeOrigin, value)
+        super(codeOrigin)
+        @value = value
+    end
+
+    @@mapping = {}
+
+    def self.forName(codeOrigin, text)
+        unless @@mapping[text]
+            @@mapping[text] = ConstExpr.new(codeOrigin, text)
+        end
+        @@mapping[text]
+    end
+
+    def dump
+        "constexpr (#{@value.dump})"
+    end
+
+    def <=>(other)
+        @value <=> other.value
+    end
+
+    def immediate?
+        true
     end
 end
 

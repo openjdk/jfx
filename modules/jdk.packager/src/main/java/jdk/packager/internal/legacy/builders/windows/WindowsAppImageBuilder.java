@@ -36,6 +36,7 @@ import jdk.packager.internal.legacy.builders.AbstractAppImageBuilder;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -434,7 +435,8 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
             }
             File srcdir = appResources.getBaseDirectory();
             for (String fname : appResources.getIncludedFiles()) {
-                Files.copy(new File(srcdir, fname).toPath(), new File(appDir.toFile(), fname).toPath());
+                writeEntry(new FileInputStream(new File(srcdir, fname)),
+                           new File(appDir.toFile(), fname).toPath());
             }
         }
     }

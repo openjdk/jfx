@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010, 2014-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2010 University of Szeged
  *
  * Redistribution and use in source and binary forms, with or without
@@ -33,7 +33,7 @@
 
 namespace JSC {
 
-class MacroAssemblerARMv7 : public AbstractMacroAssembler<ARMv7Assembler, MacroAssemblerARMv7> {
+class MacroAssemblerARMv7 : public AbstractMacroAssembler<ARMv7Assembler> {
     static const RegisterID dataTempRegister = ARMRegisters::ip;
     static const RegisterID addressTempRegister = ARMRegisters::r6;
 
@@ -541,6 +541,12 @@ public:
     void xor32(RegisterID src, RegisterID dest)
     {
         xor32(dest, src, dest);
+    }
+
+    void xor32(Address src, RegisterID dest)
+    {
+        load32(src, dataTempRegister);
+        xor32(dataTempRegister, dest);
     }
 
     void xor32(TrustedImm32 imm, RegisterID dest)
@@ -1752,6 +1758,8 @@ public:
         m_assembler.bkpt(imm);
     }
 
+    static bool isBreakpoint(void* address) { return ARMv7Assembler::isBkpt(address); }
+
     ALWAYS_INLINE Call nearCall()
     {
         moveFixedWidthEncoding(TrustedImm32(0), dataTempRegister);
@@ -2008,10 +2016,6 @@ public:
         ARMv7Assembler::relinkCall(call.dataLocation(), destination.executableAddress());
     }
 
-#if ENABLE(MASM_PROBE)
-    void probe(ProbeFunction, void* arg1, void* arg2);
-#endif // ENABLE(MASM_PROBE)
-
 protected:
     ALWAYS_INLINE Jump jump()
     {
@@ -2103,17 +2107,6 @@ protected:
         return static_cast<ARMv7Assembler::Condition>(cond);
     }
 
-private:
-    friend class LinkBuffer;
-
-    static void linkCall(void* code, Call call, FunctionPtr function)
-    {
-        if (call.isFlagSet(Call::Tail))
-            ARMv7Assembler::linkJump(code, call.m_label, function.value());
-        else
-            ARMv7Assembler::linkCall(code, call.m_label, function.value());
-    }
-
 #if ENABLE(MASM_PROBE)
     inline TrustedImm32 trustedImm32FromPtr(void* ptr)
     {
@@ -2130,6 +2123,17 @@ private:
         return TrustedImm32(TrustedImmPtr(reinterpret_cast<void*>(function)));
     }
 #endif
+
+private:
+    friend class LinkBuffer;
+
+    static void linkCall(void* code, Call call, FunctionPtr function)
+    {
+        if (call.isFlagSet(Call::Tail))
+            ARMv7Assembler::linkJump(code, call.m_label, function.value());
+        else
+            ARMv7Assembler::linkCall(code, call.m_label, function.value());
+    }
 
     bool m_makeJumpPatchable;
 };

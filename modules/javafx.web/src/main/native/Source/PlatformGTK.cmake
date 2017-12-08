@@ -7,8 +7,8 @@ endif ()
 
 list(APPEND DocumentationDependencies
     WebKit2
-    "${CMAKE_SOURCE_DIR}/Source/WebKit2/UIProcess/API/gtk/docs/webkit2gtk-docs.sgml"
-    "${CMAKE_SOURCE_DIR}/Source/WebKit2/UIProcess/API/gtk/docs/webkit2gtk-${WEBKITGTK_API_VERSION}-sections.txt"
+    "${CMAKE_SOURCE_DIR}/Source/WebKit/UIProcess/API/gtk/docs/webkit2gtk-docs.sgml"
+    "${CMAKE_SOURCE_DIR}/Source/WebKit/UIProcess/API/gtk/docs/webkit2gtk-${WEBKITGTK_API_VERSION}-sections.txt"
 )
 
 if (ENABLE_GTKDOC)
@@ -24,9 +24,10 @@ macro(ADD_GTKDOC_GENERATOR _stamp_name _extra_args)
     add_custom_command(
         OUTPUT "${CMAKE_BINARY_DIR}/${_stamp_name}"
         DEPENDS ${DocumentationDependencies}
-        COMMAND CC=${CMAKE_C_COMPILER} CFLAGS=${CMAKE_C_FLAGS} ${CMAKE_SOURCE_DIR}/Tools/gtk/generate-gtkdoc ${_extra_args}
+        COMMAND ${CMAKE_COMMAND} -E env "CC=${CMAKE_C_COMPILER}" "CFLAGS=${CMAKE_C_FLAGS} -Wno-unused-parameter" ${CMAKE_SOURCE_DIR}/Tools/gtk/generate-gtkdoc ${_extra_args}
         COMMAND touch ${_stamp_name}
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        VERBATIM
     )
 endmacro()
 

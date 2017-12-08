@@ -72,9 +72,9 @@ String CachedCSSStyleSheet::encoding() const
     return m_decoder->encoding().name();
 }
 
-const String CachedCSSStyleSheet::sheetText(MIMETypeCheck mimeTypeCheck, bool* hasValidMIMEType) const
+const String CachedCSSStyleSheet::sheetText(MIMETypeCheckHint mimeTypeCheckHint, bool* hasValidMIMEType) const
 {
-    if (!m_data || m_data->isEmpty() || !canUseSheet(mimeTypeCheck, hasValidMIMEType))
+    if (!m_data || m_data->isEmpty() || !canUseSheet(mimeTypeCheckHint, hasValidMIMEType))
         return String();
 
     if (!m_decodedSheetText.isNull())
@@ -120,12 +120,28 @@ void CachedCSSStyleSheet::checkNotify()
         c->setCSSStyleSheet(m_resourceRequest.url(), m_response.url(), m_decoder->encoding().name(), this);
 }
 
-bool CachedCSSStyleSheet::canUseSheet(MIMETypeCheck mimeTypeCheck, bool* hasValidMIMEType) const
+String CachedCSSStyleSheet::responseMIMEType() const
+{
+    return extractMIMETypeFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType));
+}
+
+bool CachedCSSStyleSheet::mimeTypeAllowedByNosniff() const
+{
+    return parseContentTypeOptionsHeader(m_response.httpHeaderField(HTTPHeaderName::XContentTypeOptions)) != ContentTypeOptionsNosniff || equalLettersIgnoringASCIICase(responseMIMEType(), "text/css");
+}
+
+bool CachedCSSStyleSheet::canUseSheet(MIMETypeCheckHint mimeTypeCheckHint, bool* hasValidMIMEType) const
 {
     if (errorOccurred())
         return false;
 
-    if (mimeTypeCheck == MIMETypeCheck::Lax)
+    if (!mimeTypeAllowedByNosniff()) {
+        if (hasValidMIMEType)
+            *hasValidMIMEType = false;
+        return false;
+    }
+
+    if (mimeTypeCheckHint == MIMETypeCheckHint::Lax)
         return true;
 
     // This check exactly matches Firefox.  Note that we grab the Content-Type
@@ -135,7 +151,7 @@ bool CachedCSSStyleSheet::canUseSheet(MIMETypeCheck mimeTypeCheck, bool* hasVali
     //
     // This code defaults to allowing the stylesheet for non-HTTP protocols so
     // folks can use standards mode for local HTML documents.
-    String mimeType = extractMIMETypeFromMediaType(response().httpHeaderField(HTTPHeaderName::ContentType));
+    String mimeType = responseMIMEType();
     bool typeOK = mimeType.isEmpty() || equalLettersIgnoringASCIICase(mimeType, "text/css") || equalLettersIgnoringASCIICase(mimeType, "application/x-unknown-content-type");
     if (hasValidMIMEType)
         *hasValidMIMEType = typeOK;
@@ -153,11 +169,11 @@ void CachedCSSStyleSheet::destroyDecodedData()
     setDecodedSize(0);
 }
 
-RefPtr<StyleSheetContents> CachedCSSStyleSheet::restoreParsedStyleSheet(const CSSParserContext& context, CachePolicy cachePolicy)
+RefPtr<StyleSheetContents> CachedCSSStyleSheet::restoreParsedStyleSheet(const CSSParserContext& context, CachePolicy cachePolicy, FrameLoader& loader)
 {
     if (!m_parsedStyleSheetCache)
         return nullptr;
-    if (!m_parsedStyleSheetCache->subresourcesAllowReuse(cachePolicy)) {
+    if (!m_parsedStyleSheetCache->subresourcesAllowReuse(cachePolicy, loader)) {
         m_parsedStyleSheetCache->removedFromMemoryCache();
         m_parsedStyleSheetCache = nullptr;
         return nullptr;

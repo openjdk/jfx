@@ -31,6 +31,7 @@
 
 namespace WebCore {
 
+class Font;
 class InlineTextBox;
 struct GlyphOverflow;
 
@@ -138,6 +139,7 @@ public:
     bool containsCaretOffset(unsigned) const;
     bool hasRenderedText() const;
 
+    // FIXME: These should return unsigneds.
     int previousOffset(int current) const final;
     int previousOffsetForBackwardDeletion(int current) const final;
     int nextOffset(int current) const final;
@@ -175,12 +177,16 @@ public:
 
     bool canUseSimplifiedTextMeasuring() const { return m_canUseSimplifiedTextMeasuring; }
 
+    Vector<std::pair<unsigned, unsigned>> draggedContentRangesBetweenOffsets(unsigned startOffset, unsigned endOffset) const;
+
 protected:
     virtual void computePreferredLogicalWidths(float leadWidth);
     void willBeDestroyed() override;
 
     virtual void setRenderedText(const String&);
     virtual UChar previousCharacter() const;
+
+    RenderTextLineBoxes m_lineBoxes;
 
 private:
     RenderText(Node&, const String&);
@@ -239,8 +245,6 @@ private:
     float m_endMinWidth;
 
     String m_text;
-
-    RenderTextLineBoxes m_lineBoxes;
 };
 
 inline UChar RenderText::uncheckedCharacterAt(unsigned i) const

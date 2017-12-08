@@ -29,7 +29,10 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.ServiceLoader;
 
-
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public interface Bundlers {
 
     /**

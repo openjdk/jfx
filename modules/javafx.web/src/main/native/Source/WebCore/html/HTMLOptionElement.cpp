@@ -65,21 +65,20 @@ Ref<HTMLOptionElement> HTMLOptionElement::create(const QualifiedName& tagName, D
     return adoptRef(*new HTMLOptionElement(tagName, document));
 }
 
-ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForJSConstructor(Document& document,
-    const String& data, const String& value, bool defaultSelected, bool selected)
+ExceptionOr<Ref<HTMLOptionElement>> HTMLOptionElement::createForJSConstructor(Document& document, const String& text, const String& value, bool defaultSelected, bool selected)
 {
-    Ref<HTMLOptionElement> element = adoptRef(*new HTMLOptionElement(optionTag, document));
+    auto element = create(document);
 
-    auto text = Text::create(document, data.isNull() ? emptyString() : data);
-
-    auto appendResult = element->appendChild(text);
-    if (appendResult.hasException())
-        return appendResult.releaseException();
+    if (!text.isEmpty()) {
+        auto appendResult = element->appendChild(Text::create(document, text));
+        if (appendResult.hasException())
+            return appendResult.releaseException();
+    }
 
     if (!value.isNull())
         element->setValue(value);
     if (defaultSelected)
-        element->setAttributeWithoutSynchronization(selectedAttr, emptyAtom);
+        element->setAttributeWithoutSynchronization(selectedAttr, emptyAtom());
     element->setSelected(selected);
 
     return WTFMove(element);
@@ -276,6 +275,14 @@ String HTMLOptionElement::label() const
     return collectOptionInnerText().stripWhiteSpace(isHTMLSpace).simplifyWhiteSpace(isHTMLSpace);
 }
 
+// Same as label() but ignores the label content attribute in quirks mode for compatibility with other browsers.
+String HTMLOptionElement::displayLabel() const
+{
+    if (document().inQuirksMode())
+        return collectOptionInnerText().stripWhiteSpace(isHTMLSpace).simplifyWhiteSpace(isHTMLSpace);
+    return label();
+}
+
 void HTMLOptionElement::setLabel(const String& label)
 {
     setAttributeWithoutSynchronization(labelAttr, label);
@@ -295,8 +302,8 @@ String HTMLOptionElement::textIndentedToRespectGroupLabel() const
 {
     ContainerNode* parent = parentNode();
     if (is<HTMLOptGroupElement>(parent))
-        return "    " + label();
-    return label();
+        return "    " + displayLabel();
+    return displayLabel();
 }
 
 bool HTMLOptionElement::isDisabledFormControl() const

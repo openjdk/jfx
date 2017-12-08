@@ -32,9 +32,9 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "FontCascade.h"
 #include "MockRealtimeAudioSource.h"
 #include <CoreAudio/CoreAudioTypes.h>
+#include <wtf/Vector.h>
 
 OBJC_CLASS AVAudioPCMBuffer;
 typedef struct OpaqueCMClock* CMClockRef;
@@ -48,8 +48,7 @@ class WebAudioSourceProviderAVFObjC;
 class MockRealtimeAudioSourceMac final : public MockRealtimeAudioSource {
 private:
     friend class MockRealtimeAudioSource;
-    MockRealtimeAudioSourceMac(const String&);
-    ~MockRealtimeAudioSourceMac();
+    explicit MockRealtimeAudioSourceMac(const String&);
 
     bool applySampleRate(int) final;
     bool applySampleSize(int) final { return false; }
@@ -58,18 +57,16 @@ private:
     void render(double) final;
     void reconfigure();
 
-    AudioSourceProvider* audioSourceProvider() final;
-
-    size_t m_audioBufferListBufferSize { 0 };
     std::unique_ptr<WebAudioBufferList> m_audioBufferList;
 
     uint32_t m_maximiumFrameCount;
-    uint32_t m_sampleRate { 44100 };
-    uint64_t m_bytesEmitted { 0 };
+    uint64_t m_samplesEmitted { 0 };
+    uint64_t m_samplesRendered { 0 };
 
     RetainPtr<CMFormatDescriptionRef> m_formatDescription;
     AudioStreamBasicDescription m_streamFormat;
-    RefPtr<WebAudioSourceProviderAVFObjC> m_audioSourceProvider;
+
+    Vector<float> m_bipBopBuffer;
 };
 
 } // namespace WebCore

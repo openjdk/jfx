@@ -50,6 +50,14 @@
 #define COMPILER_HAS_CLANG_FEATURE(x) 0
 #endif
 
+/* COMPILER_HAS_CLANG_DECLSPEC() - whether the compiler supports a Microsoft style __declspec attribute. */
+/* https://clang.llvm.org/docs/LanguageExtensions.html#has-declspec-attribute */
+#ifdef __has_declspec_attribute
+#define COMPILER_HAS_CLANG_DECLSPEC(x) __has_declspec_attribute(x)
+#else
+#define COMPILER_HAS_CLANG_DECLSPEC(x) 0
+#endif
+
 /* ==== COMPILER() - primary detection of the compiler being used to build the project, in alphabetical order ==== */
 
 /* COMPILER(CLANG) - Clang  */
@@ -59,8 +67,6 @@
 #define WTF_COMPILER_SUPPORTS_BLOCKS COMPILER_HAS_CLANG_FEATURE(blocks)
 #define WTF_COMPILER_SUPPORTS_C_STATIC_ASSERT COMPILER_HAS_CLANG_FEATURE(c_static_assert)
 #define WTF_COMPILER_SUPPORTS_CXX_REFERENCE_QUALIFIED_FUNCTIONS COMPILER_HAS_CLANG_FEATURE(cxx_reference_qualified_functions)
-#define WTF_COMPILER_SUPPORTS_CXX_USER_LITERALS COMPILER_HAS_CLANG_FEATURE(cxx_user_literals)
-#define WTF_COMPILER_SUPPORTS_FALLTHROUGH_WARNINGS COMPILER_HAS_CLANG_FEATURE(cxx_attributes) && __has_warning("-Wimplicit-fallthrough")
 #define WTF_COMPILER_SUPPORTS_CXX_EXCEPTIONS COMPILER_HAS_CLANG_FEATURE(cxx_exceptions)
 #define WTF_COMPILER_SUPPORTS_BUILTIN_IS_TRIVIALLY_COPYABLE COMPILER_HAS_CLANG_FEATURE(is_trivially_copyable)
 
@@ -83,7 +89,6 @@
 /* Note: This section must come after the Clang section since we check !COMPILER(CLANG) here. */
 #if COMPILER(GCC_OR_CLANG) && !COMPILER(CLANG)
 #define WTF_COMPILER_GCC 1
-#define WTF_COMPILER_SUPPORTS_CXX_USER_LITERALS 1
 #define WTF_COMPILER_SUPPORTS_CXX_REFERENCE_QUALIFIED_FUNCTIONS 1
 
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
@@ -97,9 +102,11 @@
 #define WTF_COMPILER_SUPPORTS_C_STATIC_ASSERT 1
 #endif
 
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-
 #endif /* COMPILER(GCC) */
+
+#if COMPILER(GCC_OR_CLANG) && defined(NDEBUG) && !defined(__OPTIMIZE__) && !defined(RELEASE_WITHOUT_OPTIMIZATIONS)
+#error "Building release without compiler optimizations: WebKit will be slow. Set -DRELEASE_WITHOUT_OPTIMIZATIONS if this is intended."
+#endif
 
 /* COMPILER(MINGW) - MinGW GCC */
 
@@ -197,9 +204,25 @@
 
 /* FALLTHROUGH */
 
-#if !defined(FALLTHROUGH) && COMPILER_SUPPORTS(FALLTHROUGH_WARNINGS) && COMPILER(CLANG)
+#if !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
+
+#if __has_cpp_attribute(fallthrough)
+#define FALLTHROUGH [[fallthrough]]
+#elif __has_cpp_attribute(clang::fallthrough)
 #define FALLTHROUGH [[clang::fallthrough]]
+#elif __has_cpp_attribute(gnu::fallthrough)
+#define FALLTHROUGH [[gnu::fallthrough]]
 #endif
+
+#elif !defined(FALLTHROUGH) && !defined(__cplusplus)
+
+#if COMPILER(GCC)
+#if GCC_VERSION_AT_LEAST(7, 0, 0)
+#define FALLTHROUGH __attribute__ ((fallthrough))
+#endif
+#endif
+
+#endif // !defined(FALLTHROUGH) && defined(__cplusplus) && defined(__has_cpp_attribute)
 
 #if !defined(FALLTHROUGH)
 #define FALLTHROUGH
@@ -246,6 +269,17 @@
 #if !defined(__has_attribute)
 #define __has_attribute(feature) 0
 #endif
+/* NOT_TAIL_CALLED */
+
+#if !defined(NOT_TAIL_CALLED) && defined(__has_attribute)
+#if __has_attribute(not_tail_called)
+#define NOT_TAIL_CALLED __attribute__((not_tail_called))
+#endif
+#endif
+
+#if !defined(NOT_TAIL_CALLED)
+#define NOT_TAIL_CALLED
+#endif
 
 /* RETURNS_NONNULL */
 #if !defined(RETURNS_NONNULL) && COMPILER(GCC_OR_CLANG) && __has_attribute(returns_nonnull)
@@ -284,6 +318,16 @@
 
 #if !defined(PURE_FUNCTION)
 #define PURE_FUNCTION
+#endif
+
+/* UNUSED_FUNCTION */
+
+#if !defined(UNUSED_FUNCTION) && COMPILER(GCC_OR_CLANG)
+#define UNUSED_FUNCTION __attribute__((unused))
+#endif
+
+#if !defined(UNUSED_FUNCTION)
+#define UNUSED_FUNCTION
 #endif
 
 /* REFERENCED_FROM_ASM */

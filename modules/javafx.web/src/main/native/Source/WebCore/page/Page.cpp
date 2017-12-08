@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2015  Apple Inc. All Rights Reserved.
+ * Copyright (C) 2006-2017 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  *
  * This library is free software; you can redistribute it and/or
@@ -28,9 +28,11 @@
 #include "CSSAnimationController.h"
 #include "Chrome.h"
 #include "ChromeClient.h"
-#include "ClientRectList.h"
+#include "ConstantPropertyMap.h"
 #include "ContextMenuClient.h"
 #include "ContextMenuController.h"
+#include "DOMRect.h"
+#include "DOMRectList.h"
 #include "DatabaseProvider.h"
 #include "DiagnosticLoggingClient.h"
 #include "DiagnosticLoggingKeys.h"
@@ -51,12 +53,14 @@
 #include "FrameTree.h"
 #include "FrameView.h"
 #include "HTMLElement.h"
+#include "HTMLMediaElement.h"
 #include "HistoryController.h"
 #include "HistoryItem.h"
 #include "InspectorController.h"
 #include "InspectorInstrumentation.h"
 #include "LibWebRTCProvider.h"
 #include "Logging.h"
+#include "LowPowerModeNotifier.h"
 #include "MainFrame.h"
 #include "MediaCanStartListener.h"
 #include "Navigator.h"
@@ -67,6 +71,7 @@
 #include "PageDebuggable.h"
 #include "PageGroup.h"
 #include "PageOverlayController.h"
+#include "PerformanceLoggingClient.h"
 #include "PerformanceMonitor.h"
 #include "PlatformMediaSessionManager.h"
 #include "PlugInClient.h"
@@ -75,6 +80,7 @@
 #include "PluginViewBase.h"
 #include "PointerLockController.h"
 #include "ProgressTracker.h"
+#include "PublicSuffix.h"
 #include "RenderLayerCompositor.h"
 #include "RenderTheme.h"
 #include "RenderView.h"
@@ -84,6 +90,7 @@
 #include "SVGDocumentExtensions.h"
 #include "SchemeRegistry.h"
 #include "ScriptController.h"
+#include "ScriptedAnimationController.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"
 #include "SharedBuffer.h"
@@ -109,11 +116,6 @@
 #include <wtf/text/Base64.h>
 #include <wtf/text/StringHash.h>
 
-#if ENABLE(WEB_REPLAY)
-#include "ReplayController.h"
-#include <replay/InputCursor.h>
-#endif
-
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 #include "HTMLVideoElement.h"
 #include "MediaPlaybackTarget.h"
@@ -134,7 +136,12 @@
 
 namespace WebCore {
 
-static HashSet<Page*>* allPages;
+static HashSet<Page*>& allPages()
+{
+    static NeverDestroyed<HashSet<Page*>> set;
+    return set;
+}
+
 static unsigned nonUtilityPageCount { 0 };
 
 static inline bool isUtilityPageChromeClient(ChromeClient& chromeClient)
@@ -144,11 +151,9 @@ static inline bool isUtilityPageChromeClient(ChromeClient& chromeClient)
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, pageCounter, ("Page"));
 
-void Page::forEachPage(std::function<void(Page&)> function)
+void Page::forEachPage(const WTF::Function<void(Page&)>& function)
 {
-    if (!allPages)
-        return;
-    for (Page* page : *allPages)
+    for (auto* page : allPages())
         function(*page);
 }
 
@@ -163,13 +168,13 @@ static void networkStateChanged(bool isOnLine)
     Vector<Ref<Frame>> frames;
 
     // Get all the frames of all the pages in all the page groups
-    for (auto& page : *allPages) {
+    for (auto* page : allPages()) {
         for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext())
             frames.append(*frame);
         InspectorInstrumentation::networkStateChanged(*page);
     }
 
-    AtomicString eventName = isOnLine ? eventNames().onlineEvent : eventNames().offlineEvent;
+    auto& eventName = isOnLine ? eventNames().onlineEvent : eventNames().offlineEvent;
     for (auto& frame : frames) {
         if (!frame->document())
             continue;
@@ -190,9 +195,6 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_contextMenuController(std::make_unique<ContextMenuController>(*this, *pageConfiguration.contextMenuClient))
 #endif
     , m_userInputBridge(std::make_unique<UserInputBridge>(*this))
-#if ENABLE(WEB_REPLAY)
-    , m_replayController(std::make_unique<ReplayController>(*this))
-#endif
     , m_inspectorController(std::make_unique<InspectorController>(*this, pageConfiguration.inspectorClient))
 #if ENABLE(POINTER_LOCK)
     , m_pointerLockController(std::make_unique<PointerLockController>(*this))
@@ -201,57 +203,23 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_progress(std::make_unique<ProgressTracker>(*pageConfiguration.progressTrackerClient))
     , m_backForwardController(std::make_unique<BackForwardController>(*this, *WTFMove(pageConfiguration.backForwardClient)))
     , m_mainFrame(MainFrame::create(*this, pageConfiguration))
-    , m_theme(RenderTheme::themeForPage(this))
     , m_editorClient(WTFMove(pageConfiguration.editorClient))
     , m_plugInClient(pageConfiguration.plugInClient)
     , m_validationMessageClient(WTFMove(pageConfiguration.validationMessageClient))
     , m_diagnosticLoggingClient(WTFMove(pageConfiguration.diagnosticLoggingClient))
+    , m_performanceLoggingClient(WTFMove(pageConfiguration.performanceLoggingClient))
     , m_webGLStateTracker(WTFMove(pageConfiguration.webGLStateTracker))
     , m_libWebRTCProvider(WTFMove(pageConfiguration.libWebRTCProvider))
-    , m_openedByDOM(false)
-    , m_tabKeyCyclesThroughElements(true)
-    , m_defersLoading(false)
-    , m_defersLoadingCallCount(0)
-    , m_inLowQualityInterpolationMode(false)
-    , m_areMemoryCacheClientCallsEnabled(true)
-    , m_mediaVolume(1)
-    , m_pageScaleFactor(1)
-    , m_zoomedOutPageScaleFactor(0)
-    , m_topContentInset(0)
-#if ENABLE(TEXT_AUTOSIZING)
-    , m_textAutosizingWidth(0)
-#endif
-    , m_suppressScrollbarAnimations(false)
     , m_verticalScrollElasticity(ScrollElasticityAllowed)
     , m_horizontalScrollElasticity(ScrollElasticityAllowed)
-    , m_didLoadUserStyleSheet(false)
-    , m_userStyleSheetModificationTime(0)
-    , m_group(nullptr)
-    , m_debugger(nullptr)
-    , m_canStartMedia(true)
-#if ENABLE(VIEW_MODE_CSS_MEDIA)
-    , m_viewMode(ViewModeWindowed)
-#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
-    , m_timerAlignmentInterval(DOMTimer::defaultAlignmentInterval())
-    , m_timerAlignmentIntervalIncreaseTimer(*this, &Page::timerAlignmentIntervalIncreaseTimerFired)
-    , m_isEditable(false)
-    , m_isPrerender(false)
+    , m_domTimerAlignmentInterval(DOMTimer::defaultAlignmentInterval())
+    , m_domTimerAlignmentIntervalIncreaseTimer(*this, &Page::domTimerAlignmentIntervalIncreaseTimerFired)
     , m_activityState(PageInitialActivityState)
-    , m_requestedLayoutMilestones(0)
-    , m_headerHeight(0)
-    , m_footerHeight(0)
-    , m_isCountingRelevantRepaintedObjects(false)
-#ifndef NDEBUG
-    , m_isPainting(false)
-#endif
     , m_alternativeTextClient(pageConfiguration.alternativeTextClient)
-    , m_scriptedAnimationsSuspended(false)
     , m_consoleClient(std::make_unique<PageConsoleClient>(*this))
 #if ENABLE(REMOTE_INSPECTOR)
     , m_inspectorDebuggable(std::make_unique<PageDebuggable>(*this))
 #endif
-    , m_lastSpatialNavigationCandidatesCount(0) // NOTE: Only called from Internals for Spatial Navigation testing.
-    , m_forbidPromptsDepth(0)
     , m_socketProvider(WTFMove(pageConfiguration.socketProvider))
     , m_applicationCacheStorage(*WTFMove(pageConfiguration.applicationCacheStorage))
     , m_databaseProvider(*WTFMove(pageConfiguration.databaseProvider))
@@ -260,9 +228,9 @@ Page::Page(PageConfiguration&& pageConfiguration)
     , m_userContentProvider(*WTFMove(pageConfiguration.userContentProvider))
     , m_visitedLinkStore(*WTFMove(pageConfiguration.visitedLinkStore))
     , m_sessionID(SessionID::defaultSessionID())
-    , m_isClosing(false)
     , m_isUtilityPage(isUtilityPageChromeClient(chrome().client()))
     , m_performanceMonitor(isUtilityPage() ? nullptr : std::make_unique<PerformanceMonitor>(*this))
+    , m_lowPowerModeNotifier(std::make_unique<LowPowerModeNotifier>([this](bool isLowPowerModeEnabled) { handleLowModePowerChange(isLowPowerModeEnabled); }))
 {
     updateTimerThrottlingState();
 
@@ -271,16 +239,19 @@ Page::Page(PageConfiguration&& pageConfiguration)
     m_userContentProvider->addPage(*this);
     m_visitedLinkStore->addPage(*this);
 
-    if (!allPages) {
-        allPages = new HashSet<Page*>;
-
-        networkStateNotifier().addNetworkStateChangeListener(networkStateChanged);
+    static bool addedListener;
+    if (!addedListener) {
+        NetworkStateNotifier::singleton().addListener(&networkStateChanged);
+        addedListener = true;
     }
 
-    ASSERT(!allPages->contains(this));
-    allPages->add(this);
-    if (!isUtilityPage())
+    ASSERT(!allPages().contains(this));
+    allPages().add(this);
+
+    if (!isUtilityPage()) {
         ++nonUtilityPageCount;
+        MemoryPressureHandler::setPageCount(nonUtilityPageCount);
+    }
 
 #ifndef NDEBUG
     pageCounter.increment();
@@ -302,11 +273,14 @@ Page::~Page()
 
     m_validationMessageClient = nullptr;
     m_diagnosticLoggingClient = nullptr;
+    m_performanceLoggingClient = nullptr;
     m_mainFrame->setView(nullptr);
     setGroupName(String());
-    allPages->remove(this);
-    if (!isUtilityPage())
+    allPages().remove(this);
+    if (!isUtilityPage()) {
         --nonUtilityPageCount;
+        MemoryPressureHandler::setPageCount(nonUtilityPageCount);
+    }
 
     m_settings->pageDestroyed();
 
@@ -326,7 +300,8 @@ Page::~Page()
         m_scrollingCoordinator->pageDestroyed();
 
     backForward().close();
-    PageCache::singleton().removeAllItemsForPage(*this);
+    if (!isUtilityPage())
+        PageCache::singleton().removeAllItemsForPage(*this);
 
 #ifndef NDEBUG
     pageCounter.decrement();
@@ -340,11 +315,8 @@ Page::~Page()
 
 void Page::clearPreviousItemFromAllPages(HistoryItem* item)
 {
-    if (!allPages)
-        return;
-
-    for (auto& page : *allPages) {
-        HistoryController& controller = page->mainFrame().loader().history();
+    for (auto* page : allPages()) {
+        auto& controller = page->mainFrame().loader().history();
         if (item == controller.previousItem()) {
             controller.clearPreviousItem();
             return;
@@ -401,7 +373,7 @@ String Page::synchronousScrollingReasonsAsText()
     return String();
 }
 
-Ref<ClientRectList> Page::nonFastScrollableRects()
+Ref<DOMRectList> Page::nonFastScrollableRects()
 {
     if (Document* document = m_mainFrame->document())
         document->updateLayout();
@@ -417,47 +389,51 @@ Ref<ClientRectList> Page::nonFastScrollableRects()
     for (size_t i = 0; i < rects.size(); ++i)
         quads[i] = FloatRect(rects[i]);
 
-    return ClientRectList::create(quads);
+    return DOMRectList::create(quads);
 }
 
-#if ENABLE(VIEW_MODE_CSS_MEDIA)
-struct ViewModeInfo {
-    const char* name;
-    Page::ViewMode type;
-};
-static const int viewModeMapSize = 5;
-static const ViewModeInfo viewModeMap[viewModeMapSize] = {
-    {"windowed", Page::ViewModeWindowed},
-    {"floating", Page::ViewModeFloating},
-    {"fullscreen", Page::ViewModeFullscreen},
-    {"maximized", Page::ViewModeMaximized},
-    {"minimized", Page::ViewModeMinimized}
-};
-
-Page::ViewMode Page::stringToViewMode(const String& text)
+Ref<DOMRectList> Page::touchEventRectsForEvent(const String& eventName)
 {
-    for (auto& mode : viewModeMap) {
-        if (text == mode.name)
-            return mode.type;
+    if (Document* document = m_mainFrame->document()) {
+        document->updateLayout();
+#if ENABLE(IOS_TOUCH_EVENTS)
+        document->updateTouchEventRegions();
+#endif
     }
-    return Page::ViewModeInvalid;
+
+    Vector<IntRect> rects;
+    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator()) {
+        const EventTrackingRegions& eventTrackingRegions = scrollingCoordinator->absoluteEventTrackingRegions();
+        const auto& region = eventTrackingRegions.eventSpecificSynchronousDispatchRegions.get(eventName);
+        rects.appendVector(region.rects());
+    }
+
+    Vector<FloatQuad> quads(rects.size());
+    for (size_t i = 0; i < rects.size(); ++i)
+        quads[i] = FloatRect(rects[i]);
+
+    return DOMRectList::create(quads);
 }
 
-void Page::setViewMode(ViewMode viewMode)
+Ref<DOMRectList> Page::passiveTouchEventListenerRects()
 {
-    if (viewMode == m_viewMode || viewMode == ViewModeInvalid)
-        return;
+    if (Document* document = m_mainFrame->document()) {
+        document->updateLayout();
+#if ENABLE(IOS_TOUCH_EVENTS)
+        document->updateTouchEventRegions();
+#endif
+    }
 
-    m_viewMode = viewMode;
+    Vector<IntRect> rects;
+    if (ScrollingCoordinator* scrollingCoordinator = this->scrollingCoordinator())
+        rects.appendVector(scrollingCoordinator->absoluteEventTrackingRegions().asynchronousDispatchRegion.rects());
 
+    Vector<FloatQuad> quads(rects.size());
+    for (size_t i = 0; i < rects.size(); ++i)
+        quads[i] = FloatRect(rects[i]);
 
-    if (m_mainFrame->view())
-        m_mainFrame->view()->forceLayout();
-
-    if (m_mainFrame->document())
-        m_mainFrame->document()->styleScope().didChangeStyleSheetEnvironment();
+    return DOMRectList::create(quads);
 }
-#endif // ENABLE(VIEW_MODE_CSS_MEDIA)
 
 bool Page::openedByDOM() const
 {
@@ -500,7 +476,7 @@ void Page::setGroupName(const String& name)
 
 const String& Page::groupName() const
 {
-    return m_group ? m_group->name() : nullAtom.string();
+    return m_group ? m_group->name() : nullAtom().string();
 }
 
 void Page::initGroup()
@@ -513,9 +489,7 @@ void Page::initGroup()
 
 void Page::updateStyleForAllPagesAfterGlobalChangeInEnvironment()
 {
-    if (!allPages)
-        return;
-    for (auto& page : *allPages) {
+    for (auto* page : allPages()) {
         for (Frame* frame = &page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
             // If a change in the global environment has occurred, we need to
             // make sure all the properties a recomputed, therefore we invalidate
@@ -540,12 +514,9 @@ void Page::setNeedsRecalcStyleInAllFrames()
 
 void Page::refreshPlugins(bool reload)
 {
-    if (!allPages)
-        return;
-
     HashSet<PluginInfoProvider*> pluginInfoProviders;
 
-    for (auto& page : *allPages)
+    for (auto* page : allPages())
         pluginInfoProviders.add(&page->pluginInfoProvider());
 
     for (auto& pluginInfoProvider : pluginInfoProviders)
@@ -601,19 +572,19 @@ void Page::setCanStartMedia(bool canStartMedia)
     }
 }
 
-static Frame* incrementFrame(Frame* curr, bool forward, bool wrapFlag)
+static Frame* incrementFrame(Frame* curr, bool forward, CanWrap canWrap, DidWrap* didWrap = nullptr)
 {
     return forward
-        ? curr->tree().traverseNextWithWrap(wrapFlag)
-        : curr->tree().traversePreviousWithWrap(wrapFlag);
+        ? curr->tree().traverseNext(canWrap, didWrap)
+        : curr->tree().traversePrevious(canWrap, didWrap);
 }
 
-bool Page::findString(const String& target, FindOptions options)
+bool Page::findString(const String& target, FindOptions options, DidWrap* didWrap)
 {
     if (target.isEmpty())
         return false;
 
-    bool shouldWrap = options & WrapAround;
+    CanWrap canWrap = options & WrapAround ? CanWrap::Yes : CanWrap::No;
     Frame* frame = &focusController().focusedOrMainFrame();
     Frame* startFrame = frame;
     do {
@@ -623,12 +594,14 @@ bool Page::findString(const String& target, FindOptions options)
             focusController().setFocusedFrame(frame);
             return true;
         }
-        frame = incrementFrame(frame, !(options & Backwards), shouldWrap);
+        frame = incrementFrame(frame, !(options & Backwards), canWrap, didWrap);
     } while (frame && frame != startFrame);
 
     // Search contents of startFrame, on the other side of the selection that we did earlier.
     // We cheat a bit and just research with wrap on
-    if (shouldWrap && !startFrame->selection().isNone()) {
+    if (canWrap == CanWrap::Yes && !startFrame->selection().isNone()) {
+        if (didWrap)
+            *didWrap = DidWrap::Yes;
         bool found = startFrame->editor().findString(target, options | WrapAround | StartInSelection);
         focusController().setFocusedFrame(frame);
         return found;
@@ -647,7 +620,7 @@ void Page::findStringMatchingRanges(const String& target, FindOptions options, i
         frame->editor().countMatchesForText(target, 0, options, limit ? (limit - matchRanges.size()) : 0, true, &matchRanges);
         if (frame->selection().isRange())
             frameWithSelection = frame;
-        frame = incrementFrame(frame, true, false);
+        frame = incrementFrame(frame, true, CanWrap::No);
     } while (frame);
 
     if (matchRanges.isEmpty())
@@ -689,19 +662,19 @@ RefPtr<Range> Page::rangeOfString(const String& target, Range* referenceRange, F
     if (referenceRange && referenceRange->ownerDocument().page() != this)
         return nullptr;
 
-    bool shouldWrap = options & WrapAround;
+    CanWrap canWrap = options & WrapAround ? CanWrap::Yes : CanWrap::No;
     Frame* frame = referenceRange ? referenceRange->ownerDocument().frame() : &mainFrame();
     Frame* startFrame = frame;
     do {
         if (RefPtr<Range> resultRange = frame->editor().rangeOfString(target, frame == startFrame ? referenceRange : 0, options & ~WrapAround))
             return resultRange;
 
-        frame = incrementFrame(frame, !(options & Backwards), shouldWrap);
+        frame = incrementFrame(frame, !(options & Backwards), canWrap);
     } while (frame && frame != startFrame);
 
     // Search contents of startFrame, on the other side of the reference range that we did earlier.
     // We cheat a bit and just search again with wrap on.
-    if (shouldWrap && referenceRange) {
+    if (canWrap == CanWrap::Yes && referenceRange) {
         if (RefPtr<Range> resultRange = startFrame->editor().rangeOfString(target, referenceRange, options | WrapAround | StartInSelection))
             return resultRange;
     }
@@ -721,7 +694,7 @@ unsigned Page::findMatchesForText(const String& target, FindOptions options, uns
         if (shouldMarkMatches == MarkMatches)
             frame->editor().setMarkedTextMatchesAreHighlighted(shouldHighlightMatches == HighlightMatches);
         matchCount += frame->editor().countMatchesForText(target, 0, options, maxMatchCount ? (maxMatchCount - matchCount) : 0, shouldMarkMatches == MarkMatches, 0);
-        frame = incrementFrame(frame, true, false);
+        frame = incrementFrame(frame, true, CanWrap::No);
     } while (frame);
 
     return matchCount;
@@ -742,7 +715,7 @@ void Page::unmarkAllTextMatches()
     Frame* frame = &mainFrame();
     do {
         frame->document()->markers().removeMarkers(DocumentMarker::TextMatch);
-        frame = incrementFrame(frame, true, false);
+        frame = incrementFrame(frame, true, CanWrap::No);
     } while (frame);
 }
 
@@ -855,7 +828,7 @@ void Page::setPageScaleFactor(float scale, const IntPoint& origin, bool inStable
         if (document->renderView())
             document->renderView()->setNeedsLayout();
 
-        document->recalcStyle(Style::Force);
+        document->resolveStyle(Document::ResolveStyleType::Rebuild);
 
         // Transform change on RenderView doesn't trigger repaint on non-composited contents.
         mainFrame().view()->invalidateRect(IntRect(LayoutRect::infiniteRect()));
@@ -935,6 +908,14 @@ void Page::setUserInterfaceLayoutDirection(UserInterfaceLayoutDirection userInte
 #endif
 }
 
+#if ENABLE(VIDEO)
+void Page::updateMediaElementRateChangeRestrictions()
+{
+    for (auto* mediaElement : HTMLMediaElement::allMediaElements())
+        mediaElement->updateRateChangeRestrictions();
+}
+#endif
+
 void Page::didStartProvisionalLoad()
 {
     if (m_performanceMonitor)
@@ -952,6 +933,20 @@ void Page::didFinishLoad()
 bool Page::isOnlyNonUtilityPage() const
 {
     return !isUtilityPage() && nonUtilityPageCount == 1;
+}
+
+bool Page::isLowPowerModeEnabled() const
+{
+    if (m_lowPowerModeEnabledOverrideForTesting)
+        return m_lowPowerModeEnabledOverrideForTesting.value();
+
+    return m_lowPowerModeNotifier->isLowPowerModeEnabled();
+}
+
+void Page::setLowPowerModeEnabledOverrideForTesting(std::optional<bool> isEnabled)
+{
+    m_lowPowerModeEnabledOverrideForTesting = isEnabled;
+    handleLowModePowerChange(m_lowPowerModeEnabledOverrideForTesting.value_or(false));
 }
 
 void Page::setTopContentInset(float contentInset)
@@ -1094,12 +1089,34 @@ void Page::resumeScriptedAnimations()
     }
 }
 
+enum class ThrottlingReasonOperation { Add, Remove };
+static void updateScriptedAnimationsThrottlingReason(Page& page, ThrottlingReasonOperation operation, ScriptedAnimationController::ThrottlingReason reason)
+{
+    for (Frame* frame = &page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        auto* document = frame->document();
+        if (!document)
+            continue;
+        auto* scriptedAnimationController = document->scriptedAnimationController();
+        if (!scriptedAnimationController)
+            continue;
+
+        if (operation == ThrottlingReasonOperation::Add)
+            scriptedAnimationController->addThrottlingReason(reason);
+        else
+            scriptedAnimationController->removeThrottlingReason(reason);
+    }
+}
+
 void Page::setIsVisuallyIdleInternal(bool isVisuallyIdle)
 {
-    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        if (frame->document())
-            frame->document()->scriptedAnimationControllerSetThrottled(isVisuallyIdle);
-    }
+    updateScriptedAnimationsThrottlingReason(*this, isVisuallyIdle ? ThrottlingReasonOperation::Add : ThrottlingReasonOperation::Remove, ScriptedAnimationController::ThrottlingReason::VisuallyIdle);
+}
+
+void Page::handleLowModePowerChange(bool isLowPowerModeEnabled)
+{
+    updateScriptedAnimationsThrottlingReason(*this, isLowPowerModeEnabled ? ThrottlingReasonOperation::Add : ThrottlingReasonOperation::Remove, ScriptedAnimationController::ThrottlingReason::LowPowerMode);
+    mainFrame().animation().updateThrottlingState();
+    updateDOMTimerAlignmentInterval();
 }
 
 void Page::userStyleSheetLocationChanged()
@@ -1280,7 +1297,7 @@ void Page::updateTimerThrottlingState()
     // If the page is visible (but idle), there is any activity (loading, media playing, etc), or per setting,
     // we allow timer throttling, but not increasing timer throttling.
     if (!m_settings->hiddenPageDOMTimerThrottlingAutoIncreases()
-        || m_activityState & (ActivityState::IsVisible | ActivityState::IsAudible | ActivityState::IsLoading)) {
+        || m_activityState & (ActivityState::IsVisible | ActivityState::IsAudible | ActivityState::IsLoading | ActivityState::IsCapturingMedia)) {
         setTimerThrottlingState(TimerThrottlingState::Enabled);
         return;
     }
@@ -1295,7 +1312,7 @@ void Page::setTimerThrottlingState(TimerThrottlingState state)
         return;
 
     m_timerThrottlingState = state;
-    m_timerThrottlingStateLastChangedTime = std::chrono::steady_clock::now();
+    m_timerThrottlingStateLastChangedTime = MonotonicTime::now();
 
     updateDOMTimerAlignmentInterval();
 
@@ -1308,12 +1325,12 @@ void Page::setTimerThrottlingState(TimerThrottlingState state)
     }
 }
 
-void Page::setTimerAlignmentIntervalIncreaseLimit(std::chrono::milliseconds limit)
+void Page::setDOMTimerAlignmentIntervalIncreaseLimit(Seconds limit)
 {
-    m_timerAlignmentIntervalIncreaseLimit = limit;
+    m_domTimerAlignmentIntervalIncreaseLimit = limit;
 
-    // If (m_timerAlignmentIntervalIncreaseLimit < m_timerAlignmentInterval) then we need
-    // to update m_timerAlignmentInterval, if greater then need to restart the increase timer.
+    // If (m_domTimerAlignmentIntervalIncreaseLimit < m_domTimerAlignmentInterval) then we need
+    // to update m_domTimerAlignmentInterval, if greater then need to restart the increase timer.
     if (m_timerThrottlingState == TimerThrottlingState::EnabledIncreasing)
         updateDOMTimerAlignmentInterval();
 }
@@ -1324,28 +1341,28 @@ void Page::updateDOMTimerAlignmentInterval()
 
     switch (m_timerThrottlingState) {
     case TimerThrottlingState::Disabled:
-        m_timerAlignmentInterval = DOMTimer::defaultAlignmentInterval();
+        m_domTimerAlignmentInterval = isLowPowerModeEnabled() ? DOMTimer::defaultAlignmentIntervalInLowPowerMode() : DOMTimer::defaultAlignmentInterval();
         break;
 
     case TimerThrottlingState::Enabled:
-        m_timerAlignmentInterval = DOMTimer::hiddenPageAlignmentInterval();
+        m_domTimerAlignmentInterval = DOMTimer::hiddenPageAlignmentInterval();
         break;
 
     case TimerThrottlingState::EnabledIncreasing:
         // For pages in prerender state maximum throttling kicks in immediately.
         if (m_isPrerender)
-            m_timerAlignmentInterval = m_timerAlignmentIntervalIncreaseLimit;
+            m_domTimerAlignmentInterval = m_domTimerAlignmentIntervalIncreaseLimit;
         else {
-            ASSERT(m_timerThrottlingStateLastChangedTime.time_since_epoch() != std::chrono::steady_clock::duration::zero());
-            m_timerAlignmentInterval = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_timerThrottlingStateLastChangedTime);
+            ASSERT(!!m_timerThrottlingStateLastChangedTime);
+            m_domTimerAlignmentInterval = MonotonicTime::now() - m_timerThrottlingStateLastChangedTime;
             // If we're below the limit, set the timer. If above, clamp to limit.
-            if (m_timerAlignmentInterval < m_timerAlignmentIntervalIncreaseLimit)
+            if (m_domTimerAlignmentInterval < m_domTimerAlignmentIntervalIncreaseLimit)
                 needsIncreaseTimer = true;
             else
-                m_timerAlignmentInterval = m_timerAlignmentIntervalIncreaseLimit;
+                m_domTimerAlignmentInterval = m_domTimerAlignmentIntervalIncreaseLimit;
         }
         // Alignment interval should not be less than DOMTimer::hiddenPageAlignmentInterval().
-        m_timerAlignmentInterval = std::max(m_timerAlignmentInterval, DOMTimer::hiddenPageAlignmentInterval());
+        m_domTimerAlignmentInterval = std::max(m_domTimerAlignmentInterval, DOMTimer::hiddenPageAlignmentInterval());
     }
 
     // If throttling is enabled, auto-increasing of throttling is enabled, and the auto-increase
@@ -1353,16 +1370,16 @@ void Page::updateDOMTimerAlignmentInterval()
     // between increases is equal to the current throttle time. Since alinment interval increases
     // exponentially, time between steps is exponential too.
     if (!needsIncreaseTimer)
-        m_timerAlignmentIntervalIncreaseTimer.stop();
-    else if (!m_timerAlignmentIntervalIncreaseTimer.isActive())
-        m_timerAlignmentIntervalIncreaseTimer.startOneShot(m_timerAlignmentInterval);
+        m_domTimerAlignmentIntervalIncreaseTimer.stop();
+    else if (!m_domTimerAlignmentIntervalIncreaseTimer.isActive())
+        m_domTimerAlignmentIntervalIncreaseTimer.startOneShot(m_domTimerAlignmentInterval);
 }
 
-void Page::timerAlignmentIntervalIncreaseTimerFired()
+void Page::domTimerAlignmentIntervalIncreaseTimerFired()
 {
     ASSERT(m_settings->hiddenPageDOMTimerThrottlingAutoIncreases());
     ASSERT(m_timerThrottlingState == TimerThrottlingState::EnabledIncreasing);
-    ASSERT(m_timerAlignmentInterval < m_timerAlignmentIntervalIncreaseLimit);
+    ASSERT(m_domTimerAlignmentInterval < m_domTimerAlignmentIntervalIncreaseLimit);
 
     // Alignment interval is increased to equal the time the page has been throttled, to a limit.
     updateDOMTimerAlignmentInterval();
@@ -1444,6 +1461,18 @@ void Page::setMuted(MediaProducer::MutedStateFlags muted)
     }
 }
 
+void Page::stopMediaCapture()
+{
+#if ENABLE(MEDIA_STREAM)
+    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (!frame->document())
+            continue;
+
+        frame->document()->stopMediaCapture();
+    }
+#endif
+}
+
 #if ENABLE(MEDIA_SESSION)
 void Page::handleMediaEvent(MediaEventType eventType)
 {
@@ -1512,7 +1541,7 @@ void Page::setActivityState(ActivityState::Flags activityState)
             view->updateTiledBackingAdaptiveSizing();
     }
 
-    if (changed & (ActivityState::IsVisible | ActivityState::IsVisuallyIdle | ActivityState::IsAudible | ActivityState::IsLoading))
+    if (changed & (ActivityState::IsVisible | ActivityState::IsVisuallyIdle | ActivityState::IsAudible | ActivityState::IsLoading | ActivityState::IsCapturingMedia))
         updateTimerThrottlingState();
 
     for (auto* observer : m_activityStateChangeObservers)
@@ -1583,14 +1612,12 @@ void Page::setIsVisibleInternal(bool isVisible)
         setSVGAnimationsState(*this, SVGAnimationsState::Resumed);
 
         resumeAnimatingImages();
+
+        if (m_navigationToLogWhenVisible) {
+            logNavigation(m_navigationToLogWhenVisible.value());
+            m_navigationToLogWhenVisible = std::nullopt;
+        }
     }
-
-    Vector<Ref<Document>> documents;
-    for (Frame* frame = &m_mainFrame.get(); frame; frame = frame->tree().traverseNext())
-        documents.append(*frame->document());
-
-    for (auto& document : documents)
-        document->visibilityStateChanged();
 
     if (!isVisible) {
         if (m_settings->hiddenPageCSSAnimationSuspensionEnabled())
@@ -1601,11 +1628,19 @@ void Page::setIsVisibleInternal(bool isVisible)
 #if PLATFORM(IOS)
         suspendDeviceMotionAndOrientationUpdates();
 #endif
+
         suspendScriptedAnimations();
 
         if (FrameView* view = mainFrame().view())
             view->hide();
     }
+
+    Vector<Ref<Document>> documents;
+    for (Frame* frame = &m_mainFrame.get(); frame; frame = frame->tree().traverseNext())
+        documents.append(*frame->document());
+
+    for (auto& document : documents)
+        document->visibilityStateChanged();
 }
 
 void Page::setIsPrerender()
@@ -1677,19 +1712,18 @@ void Page::decrementNestedRunLoopCount()
 
             // This callback may destruct the Page.
             if (m_unnestCallback) {
-                auto callback = m_unnestCallback;
-                m_unnestCallback = nullptr;
+                auto callback = WTFMove(m_unnestCallback);
                 callback();
             }
         });
     }
 }
 
-void Page::whenUnnested(std::function<void()> callback)
+void Page::whenUnnested(WTF::Function<void()>&& callback)
 {
     ASSERT(!m_unnestCallback);
 
-    m_unnestCallback = callback;
+    m_unnestCallback = WTFMove(callback);
 }
 
 #if ENABLE(REMOTE_INSPECTOR)
@@ -1967,6 +2001,66 @@ bool Page::arePromptsAllowed()
     return !m_forbidPromptsDepth;
 }
 
+void Page::logNavigation(const Navigation& navigation)
+{
+    String navigationDescription;
+    switch (navigation.type) {
+    case FrameLoadType::Standard:
+        navigationDescription = ASCIILiteral("standard");
+        break;
+    case FrameLoadType::Back:
+        navigationDescription = ASCIILiteral("back");
+        break;
+    case FrameLoadType::Forward:
+        navigationDescription = ASCIILiteral("forward");
+        break;
+    case FrameLoadType::IndexedBackForward:
+        navigationDescription = ASCIILiteral("indexedBackForward");
+        break;
+    case FrameLoadType::Reload:
+        navigationDescription = ASCIILiteral("reload");
+        break;
+    case FrameLoadType::Same:
+        navigationDescription = ASCIILiteral("same");
+        break;
+    case FrameLoadType::ReloadFromOrigin:
+        navigationDescription = ASCIILiteral("reloadFromOrigin");
+        break;
+    case FrameLoadType::ReloadExpiredOnly:
+        navigationDescription = ASCIILiteral("reloadRevalidatingExpired");
+        break;
+    case FrameLoadType::Replace:
+    case FrameLoadType::RedirectWithLockedBackForwardList:
+        // Not logging those for now.
+        return;
+    }
+    diagnosticLoggingClient().logDiagnosticMessage(DiagnosticLoggingKeys::navigationKey(), navigationDescription, ShouldSample::No);
+
+    if (!navigation.domain.isEmpty())
+        diagnosticLoggingClient().logDiagnosticMessageWithEnhancedPrivacy(DiagnosticLoggingKeys::domainVisitedKey(), navigation.domain, ShouldSample::No);
+}
+
+void Page::mainFrameLoadStarted(const URL& destinationURL, FrameLoadType type)
+{
+    String domain;
+#if ENABLE(PUBLIC_SUFFIX_LIST)
+    domain = topPrivatelyControlledDomain(destinationURL.host());
+#else
+    UNUSED_PARAM(destinationURL);
+#endif
+
+    Navigation navigation = { domain, type };
+
+    // To avoid being too verbose, we only log navigations if the page is or becomes visible. This avoids logging non-user observable loads.
+    if (!isVisible()) {
+        m_navigationToLogWhenVisible = navigation;
+        return;
+    }
+
+    m_navigationToLogWhenVisible = std::nullopt;
+    logNavigation(navigation);
+}
+
 PluginInfoProvider& Page::pluginInfoProvider()
 {
     return m_pluginInfoProvider;
@@ -2191,6 +2285,7 @@ void Page::accessibilitySettingsDidChange()
             auto* styleResolver = document->styleScope().resolverIfExists();
             if (styleResolver && styleResolver->hasMediaQueriesAffectedByAccessibilitySettingsChange()) {
                 document->styleScope().didChangeStyleSheetEnvironment();
+                document->evaluateMediaQueryList();
                 neededRecalc = true;
                 // FIXME: This instrumentation event is not strictly accurate since cached media query results do not persist across StyleResolver rebuilds.
                 InspectorInstrumentation::mediaQueryResultChanged(*document);
@@ -2202,9 +2297,23 @@ void Page::accessibilitySettingsDidChange()
         LOG(Layout, "hasMediaQueriesAffectedByAccessibilitySettingsChange, enqueueing style recalc");
 }
 
+void Page::setUnobscuredSafeAreaInsets(const FloatBoxExtent& insets)
+{
+    if (m_unobscuredSafeAreaInsets == insets)
+        return;
+
+    m_unobscuredSafeAreaInsets = insets;
+
+    for (Frame* frame = &mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        if (!frame->document())
+            continue;
+        frame->document()->constantProperties().didChangeSafeAreaInsets();
+    }
+}
+
 #if ENABLE(DATA_INTERACTION)
 
-bool Page::hasDataInteractionAtPosition(const FloatPoint& position) const
+bool Page::hasSelectionAtPosition(const FloatPoint& position) const
 {
     auto currentSelection = m_mainFrame->selection().selection();
     if (!currentSelection.isRange())
@@ -2223,5 +2332,28 @@ bool Page::hasDataInteractionAtPosition(const FloatPoint& position) const
 }
 
 #endif
+
+void Page::disableICECandidateFiltering()
+{
+    m_shouldEnableICECandidateFilteringByDefault = false;
+#if ENABLE(WEB_RTC)
+    m_rtcController.disableICECandidateFiltering();
+#endif
+}
+
+void Page::enableICECandidateFiltering()
+{
+    m_shouldEnableICECandidateFilteringByDefault = true;
+#if ENABLE(WEB_RTC)
+    m_rtcController.enableICECandidateFiltering();
+#endif
+}
+
+void Page::didChangeMainDocument()
+{
+#if ENABLE(WEB_RTC)
+    m_rtcController.reset(m_shouldEnableICECandidateFilteringByDefault);
+#endif
+}
 
 } // namespace WebCore

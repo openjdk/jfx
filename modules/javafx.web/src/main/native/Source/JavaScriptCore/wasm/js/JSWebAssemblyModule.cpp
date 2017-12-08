@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,20 +29,31 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "JSCInlines.h"
-#include "JSWebAssemblyCallee.h"
+#include "JSWebAssemblyCodeBlock.h"
+#include "JSWebAssemblyCompileError.h"
+#include "JSWebAssemblyMemory.h"
+#include "WasmCallee.h"
 #include "WasmFormat.h"
 #include "WasmMemory.h"
+#include "WasmPlan.h"
+#include "WebAssemblyToJSCallee.h"
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
 
-const ClassInfo JSWebAssemblyModule::s_info = { "WebAssembly.Module", &Base::s_info, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyModule) };
+const ClassInfo JSWebAssemblyModule::s_info = { "WebAssembly.Module", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyModule) };
 
-JSWebAssemblyModule* JSWebAssemblyModule::create(VM& vm, Structure* structure, std::unique_ptr<Wasm::ModuleInformation>&& moduleInformation, Bag<CallLinkInfo>&& callLinkInfos, Vector<Wasm::WasmExitStubs>&& wasmExitStubs, SymbolTable* exportSymbolTable, unsigned calleeCount)
+JSWebAssemblyModule* JSWebAssemblyModule::createStub(VM& vm, ExecState* exec, Structure* structure, Wasm::Module::ValidationResult&& result)
 {
-    auto* instance = new (NotNull, allocateCell<JSWebAssemblyModule>(vm.heap, allocationSize(calleeCount))) JSWebAssemblyModule(vm, structure, std::forward<std::unique_ptr<Wasm::ModuleInformation>>(moduleInformation), std::forward<Bag<CallLinkInfo>>(callLinkInfos), std::forward<Vector<Wasm::WasmExitStubs>>(wasmExitStubs), calleeCount);
-    instance->finishCreation(vm, exportSymbolTable);
-    return instance;
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    if (!result.hasValue()) {
+        throwException(exec, scope, JSWebAssemblyCompileError::create(exec, vm, structure->globalObject()->WebAssemblyCompileErrorStructure(), result.error()));
+        return nullptr;
+    }
+
+    auto* module = new (NotNull, allocateCell<JSWebAssemblyModule>(vm.heap)) JSWebAssemblyModule(vm, structure, result.value().releaseNonNull());
+    module->finishCreation(vm);
+    return module;
 }
 
 Structure* JSWebAssemblyModule::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
@@ -50,26 +61,39 @@ Structure* JSWebAssemblyModule::createStructure(VM& vm, JSGlobalObject* globalOb
     return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
-JSWebAssemblyModule::JSWebAssemblyModule(VM& vm, Structure* structure, std::unique_ptr<Wasm::ModuleInformation>&& moduleInformation, Bag<CallLinkInfo>&& callLinkInfos, Vector<Wasm::WasmExitStubs>&& wasmExitStubs, unsigned calleeCount)
+JSWebAssemblyModule::JSWebAssemblyModule(VM& vm, Structure* structure, Ref<Wasm::Module>&& module)
     : Base(vm, structure)
-    , m_moduleInformation(WTFMove(moduleInformation))
-    , m_callLinkInfos(WTFMove(callLinkInfos))
-    , m_wasmExitStubs(WTFMove(wasmExitStubs))
-    , m_calleeCount(calleeCount)
+    , m_module(WTFMove(module))
 {
-    memset(callees(), 0, m_calleeCount * sizeof(WriteBarrier<JSWebAssemblyCallee>) * 2);
 }
 
-void JSWebAssemblyModule::finishCreation(VM& vm, SymbolTable* exportSymbolTable)
+void JSWebAssemblyModule::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
+
+    // On success, a new WebAssembly.Module object is returned with [[Module]] set to the validated Ast.module.
+    SymbolTable* exportSymbolTable = SymbolTable::create(vm);
+    const Wasm::ModuleInformation& moduleInformation = m_module->moduleInformation();
+    for (auto& exp : moduleInformation.exports) {
+        auto offset = exportSymbolTable->takeNextScopeOffset(NoLockingNecessary);
+        String field = String::fromUTF8(exp.field);
+        exportSymbolTable->set(NoLockingNecessary, AtomicString(field).impl(), SymbolTableEntry(VarOffset(offset)));
+    }
+
     m_exportSymbolTable.set(vm, this, exportSymbolTable);
+    m_callee.set(vm, this, WebAssemblyToJSCallee::create(vm, this));
 }
 
 void JSWebAssemblyModule::destroy(JSCell* cell)
 {
     static_cast<JSWebAssemblyModule*>(cell)->JSWebAssemblyModule::~JSWebAssemblyModule();
+    Wasm::SignatureInformation::tryCleanup();
+}
+
+void JSWebAssemblyModule::setCodeBlock(VM& vm, Wasm::MemoryMode mode, JSWebAssemblyCodeBlock* codeBlock)
+{
+    m_codeBlocks[static_cast<size_t>(mode)].set(vm, this, codeBlock);
 }
 
 void JSWebAssemblyModule::visitChildren(JSCell* cell, SlotVisitor& visitor)
@@ -79,18 +103,14 @@ void JSWebAssemblyModule::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_exportSymbolTable);
-    for (unsigned i = 0; i < thisObject->m_calleeCount * 2; i++)
-        visitor.append(thisObject->callees()[i]);
-
-    visitor.addUnconditionalFinalizer(&thisObject->m_unconditionalFinalizer);
+    visitor.append(thisObject->m_callee);
+    for (unsigned i = 0; i < Wasm::NumberOfMemoryModes; ++i)
+        visitor.append(thisObject->m_codeBlocks[i]);
 }
 
-void JSWebAssemblyModule::UnconditionalFinalizer::finalizeUnconditionally()
+const Vector<uint8_t>& JSWebAssemblyModule::source() const
 {
-    JSWebAssemblyModule* thisObject = bitwise_cast<JSWebAssemblyModule*>(
-        bitwise_cast<char*>(this) - OBJECT_OFFSETOF(JSWebAssemblyModule, m_unconditionalFinalizer));
-    for (auto iter = thisObject->m_callLinkInfos.begin(); !!iter; ++iter)
-        (*iter)->visitWeak(*thisObject->vm());
+    return moduleInformation().source;
 }
 
 } // namespace JSC

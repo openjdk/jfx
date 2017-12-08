@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,11 +35,23 @@
 
 namespace JSC {
 
-const ClassInfo JSWebAssemblyMemory::s_info = { "WebAssembly.Memory", &Base::s_info, 0, CREATE_METHOD_TABLE(JSWebAssemblyMemory) };
+const ClassInfo JSWebAssemblyMemory::s_info = { "WebAssembly.Memory", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyMemory) };
 
-JSWebAssemblyMemory* JSWebAssemblyMemory::create(VM& vm, Structure* structure, Wasm::Memory&& memory)
+JSWebAssemblyMemory* JSWebAssemblyMemory::create(ExecState* exec, VM& vm, Structure* structure, Ref<Wasm::Memory>&& memory)
 {
-    auto* instance = new (NotNull, allocateCell<JSWebAssemblyMemory>(vm.heap)) JSWebAssemblyMemory(vm, structure, std::forward<Wasm::Memory>(memory));
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+    auto* globalObject = exec->lexicalGlobalObject();
+
+    auto exception = [&] (JSObject* error) {
+        throwException(exec, throwScope, error);
+        return nullptr;
+    };
+
+    if (!globalObject->webAssemblyEnabled())
+        return exception(createEvalError(exec, globalObject->webAssemblyDisabledErrorMessage()));
+
+    auto* instance = new (NotNull, allocateCell<JSWebAssemblyMemory>(vm.heap)) JSWebAssemblyMemory(vm, structure, WTFMove(memory));
+    instance->m_memory->check();
     instance->finishCreation(vm);
     return instance;
 }
@@ -49,10 +61,13 @@ Structure* JSWebAssemblyMemory::createStructure(VM& vm, JSGlobalObject* globalOb
     return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
-JSWebAssemblyMemory::JSWebAssemblyMemory(VM& vm, Structure* structure, Wasm::Memory&& memory)
+JSWebAssemblyMemory::JSWebAssemblyMemory(VM& vm, Structure* structure, Ref<Wasm::Memory>&& memory)
     : Base(vm, structure)
     , m_memory(WTFMove(memory))
 {
+    ASSERT(m_memory->refCount() == 1);
+    m_memoryBase = m_memory->memory();
+    m_memorySize = m_memory->size();
 }
 
 JSArrayBuffer* JSWebAssemblyMemory::buffer(VM& vm, JSGlobalObject* globalObject)
@@ -60,23 +75,22 @@ JSArrayBuffer* JSWebAssemblyMemory::buffer(VM& vm, JSGlobalObject* globalObject)
     if (m_bufferWrapper)
         return m_bufferWrapper.get();
 
-    auto destructor = [] (void*) {
-        // We don't need to do anything here to destroy the memory.
-        // The ArrayBuffer backing the JSArrayBuffer is only owned by us,
-        // so we guarantee its lifecycle.
-    };
-    m_buffer = ArrayBuffer::createFromBytes(memory()->memory(), memory()->size(), WTFMove(destructor));
+    // We can't use a ref here since it doesn't have a copy constructor...
+    Ref<Wasm::Memory> protectedMemory = m_memory.get();
+    auto destructor = [protectedMemory = WTFMove(protectedMemory)] (void*) { };
+    m_buffer = ArrayBuffer::createFromBytes(memory().memory(), memory().size(), WTFMove(destructor));
+    m_buffer->makeWasmMemory();
     m_bufferWrapper.set(vm, this, JSArrayBuffer::create(vm, globalObject->m_arrayBufferStructure.get(), m_buffer.get()));
     RELEASE_ASSERT(m_bufferWrapper);
     return m_bufferWrapper.get();
 }
 
-Wasm::PageCount JSWebAssemblyMemory::grow(ExecState* exec, uint32_t delta, bool shouldThrowExceptionsOnFailure)
+Wasm::PageCount JSWebAssemblyMemory::grow(VM& vm, ExecState* exec, uint32_t delta, bool shouldThrowExceptionsOnFailure)
 {
-    VM& vm = exec->vm();
+    // Note: We can only use exec if shouldThrowExceptionsOnFailure is true.
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    Wasm::PageCount oldPageCount = memory()->sizeInPages();
+    Wasm::PageCount oldPageCount = memory().sizeInPages();
 
     if (!Wasm::PageCount::isValid(delta)) {
         if (shouldThrowExceptionsOnFailure)
@@ -92,24 +106,30 @@ Wasm::PageCount JSWebAssemblyMemory::grow(ExecState* exec, uint32_t delta, bool 
     }
 
     if (delta) {
-        bool success = memory()->grow(newSize);
+        bool success = memory().grow(vm, newSize);
         if (!success) {
+            ASSERT(m_memoryBase == memory().memory());
+            ASSERT(m_memorySize == memory().size());
             if (shouldThrowExceptionsOnFailure)
                 throwException(exec, throwScope, createOutOfMemoryError(exec));
             return Wasm::PageCount();
         }
+        m_memoryBase = memory().memory();
+        m_memorySize = memory().size();
     }
 
     // We need to clear out the old array buffer because it might now be pointing
     // to stale memory.
     // Neuter the old array.
     if (m_buffer) {
-        ArrayBufferContents dummyContents;
-        m_buffer->transferTo(vm, dummyContents);
+        m_buffer->neuter(vm);
         m_buffer = nullptr;
         m_bufferWrapper.clear();
     }
 
+    memory().check();
+
+    vm.heap.reportExtraMemoryAllocated(Wasm::PageCount(delta).bytes());
     return oldPageCount;
 }
 
@@ -117,19 +137,13 @@ void JSWebAssemblyMemory::finishCreation(VM& vm)
 {
     Base::finishCreation(vm);
     ASSERT(inherits(vm, info()));
+    heap()->reportExtraMemoryAllocated(memory().size());
 }
 
 void JSWebAssemblyMemory::destroy(JSCell* cell)
 {
     auto memory = static_cast<JSWebAssemblyMemory*>(cell);
     ASSERT(memory->classInfo() == info());
-    VM& vm = *memory->vm();
-
-    if (memory->m_buffer) {
-        ArrayBufferContents dummyContents;
-        memory->m_buffer->transferTo(vm, dummyContents);
-        memory->m_buffer = nullptr;
-    }
 
     memory->JSWebAssemblyMemory::~JSWebAssemblyMemory();
 }
@@ -141,6 +155,7 @@ void JSWebAssemblyMemory::visitChildren(JSCell* cell, SlotVisitor& visitor)
 
     Base::visitChildren(thisObject, visitor);
     visitor.append(thisObject->m_bufferWrapper);
+    visitor.reportExtraMemoryVisited(thisObject->memory().size());
 }
 
 } // namespace JSC

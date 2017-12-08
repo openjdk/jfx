@@ -21,7 +21,7 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #include "config.h"
 
@@ -102,12 +102,13 @@ void ImageDecoder::setData(SharedBuffer& data, bool allDataReceived)
         "([B)V");
     ASSERT(midAddImageData);
 
-    const char* segment;
-    while (unsigned length = data.getSomeData(segment, m_receivedDataSize)) {
+    while (m_receivedDataSize < data.size()) {
+        const auto& someData = data.getSomeData(m_receivedDataSize);
+        unsigned length = someData.size();
         JLByteArray jArray(env->NewByteArray(length));
         if (jArray && !CheckAndClearException(env)) {
             // not OOME in Java
-            env->SetByteArrayRegion(jArray, 0, length, (const jbyte*)segment);
+            env->SetByteArrayRegion(jArray, 0, length, (const jbyte*)someData.data());
             env->CallVoidMethod(m_nativeDecoder, midAddImageData, (jbyteArray)jArray);
             CheckAndClearException(env);
         }
@@ -163,7 +164,7 @@ size_t ImageDecoder::frameCount() const
         : count;
 }
 
-NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const std::optional<IntSize>&)
+NativeImagePtr ImageDecoder::createFrameImageAtIndex(size_t idx, SubsamplingLevel, const DecodingOptions&)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(m_nativeDecoder);
@@ -196,6 +197,14 @@ float ImageDecoder::frameDurationAtIndex(size_t idx) const
                         midGetDuration,
                         idx);
     return duration / 1000.0f;
+}
+
+EncodedDataStatus ImageDecoder::encodedDataStatus() const
+{
+    if (isSizeAvailable())
+        m_encodedDataStatus = EncodedDataStatus::SizeAvailable;
+
+    return m_encodedDataStatus;
 }
 
 IntSize ImageDecoder::size() const

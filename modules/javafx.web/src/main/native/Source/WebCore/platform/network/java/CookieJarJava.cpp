@@ -84,13 +84,13 @@ bool cookiesEnabled(const NetworkStorageSession&, const URL&, const URL&)
     return true;
 }
 
-bool getRawCookies(const NetworkStorageSession&, const URL&, const URL& url, Vector<Cookie>& rawCookies)
+bool getRawCookies(const NetworkStorageSession&, const URL&, const URL&, Vector<Cookie>&)
 {
     notImplemented();
     return false;
 }
 
-void deleteCookie(const NetworkStorageSession&, const URL& url, const String& name)
+void deleteCookie(const NetworkStorageSession&, const URL&, const String&)
 {
     notImplemented();
 }

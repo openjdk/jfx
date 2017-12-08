@@ -29,8 +29,6 @@
 #include "config.h"
 #include "FetchBodyConsumer.h"
 
-#if ENABLE(FETCH_API)
-
 #include "JSBlob.h"
 #include "TextResourceDecoder.h"
 
@@ -125,7 +123,7 @@ RefPtr<JSC::ArrayBuffer> FetchBodyConsumer::takeAsArrayBuffer()
     if (!m_buffer)
         return ArrayBuffer::tryCreate(nullptr, 0);
 
-    auto arrayBuffer = m_buffer->createArrayBuffer();
+    auto arrayBuffer = m_buffer->tryCreateArrayBuffer();
     m_buffer = nullptr;
     return arrayBuffer;
 }
@@ -151,5 +149,3 @@ String FetchBodyConsumer::takeAsText()
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FETCH_API)

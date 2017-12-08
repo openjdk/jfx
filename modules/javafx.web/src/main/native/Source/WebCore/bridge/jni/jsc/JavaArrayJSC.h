@@ -38,7 +38,7 @@ namespace Bindings {
 
 class JavaArray : public Array {
 public:
-    JavaArray(jobject array, const char* type, PassRefPtr<RootObject>,
+    JavaArray(jobject array, const char* type, RefPtr<RootObject>&&,
               jobject accessControlContext);
     virtual ~JavaArray();
 
@@ -51,7 +51,7 @@ public:
     jobject javaArray() const { return m_array->instance(); }
     jobject accessControlContext() const { return m_accessControlContext->instance(); }
 
-    static JSValue convertJObjectToArray(ExecState*, jobject, const char* type, PassRefPtr<RootObject>, jobject accessControlContext);
+    static JSValue convertJObjectToArray(ExecState*, jobject, const char* type, RefPtr<RootObject>&&, jobject accessControlContext);
 
 private:
     RefPtr<JobjectWrapper> m_array;

@@ -22,6 +22,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #import "config.h"
 #import "GameControllerGamepadProvider.h"
 
@@ -30,8 +31,9 @@
 #import "GameControllerGamepad.h"
 #import "GamepadProviderClient.h"
 #import "Logging.h"
-#import "SoftLinking.h"
 #import <GameController/GameController.h>
+#import <wtf/NeverDestroyed.h>
+#import <wtf/SoftLinking.h>
 
 SOFT_LINK_FRAMEWORK_OPTIONAL(GameController)
 SOFT_LINK_CLASS_OPTIONAL(GameController, GCController);
@@ -40,7 +42,7 @@ SOFT_LINK_CONSTANT_MAY_FAIL(GameController, GCControllerDidDisconnectNotificatio
 
 namespace WebCore {
 
-static const std::chrono::milliseconds InputNotificationDelay = 16ms;
+static const Seconds inputNotificationDelay { 16_ms };
 
 GameControllerGamepadProvider& GameControllerGamepadProvider::singleton()
 {
@@ -62,7 +64,7 @@ void GameControllerGamepadProvider::controllerDidConnect(GCController *controlle
     auto gamepad = std::make_unique<GameControllerGamepad>(controller, index);
 
     if (m_gamepadVector.size() <= index)
-        m_gamepadVector.resize(index + 1);
+        m_gamepadVector.grow(index + 1);
 
     m_gamepadVector[index] = gamepad.get();
     m_gamepadMap.set(controller, WTFMove(gamepad));
@@ -144,7 +146,7 @@ unsigned GameControllerGamepadProvider::indexForNewlyConnectedDevice()
 void GameControllerGamepadProvider::gamepadHadInput(GameControllerGamepad&, bool hadButtonPresses)
 {
     if (!m_inputNotificationTimer.isActive())
-        m_inputNotificationTimer.startOneShot(InputNotificationDelay);
+        m_inputNotificationTimer.startOneShot(inputNotificationDelay);
 
     if (hadButtonPresses)
         m_shouldMakeInvisibileGamepadsVisible = true;

@@ -85,21 +85,18 @@ namespace WebCore {
         void dataReceived(CachedResource&, const char* data, int dataLength) override;
         void redirectReceived(CachedResource&, ResourceRequest&, const ResourceResponse&) override;
         void finishedTimingForWorkerLoad(CachedResource&, const ResourceTiming&) override;
+        void finishedTimingForWorkerLoad(const ResourceTiming&);
         void notifyFinished(CachedResource&) override;
 
-        void didReceiveResponse(unsigned long identifier, const ResourceResponse&, ResourceResponse::Tainting);
+        void didReceiveResponse(unsigned long identifier, const ResourceResponse&);
         void didReceiveData(unsigned long identifier, const char* data, int dataLength);
-        void didFinishLoading(unsigned long identifier, double finishTime);
+        void didFinishLoading(unsigned long identifier);
         void didFail(unsigned long identifier, const ResourceError&);
         void makeCrossOriginAccessRequest(ResourceRequest&&);
         void makeSimpleCrossOriginAccessRequest(ResourceRequest&&);
         void makeCrossOriginAccessRequestWithPreflight(ResourceRequest&&);
         void preflightSuccess(ResourceRequest&&);
         void preflightFailure(unsigned long identifier, const ResourceError&);
-
-#if ENABLE(WEB_TIMING)
-        void finishedTimingForWorkerLoad(const ResourceTiming&);
-#endif
 
         void loadRequest(ResourceRequest&&, SecurityCheckPolicy);
         bool isAllowedRedirect(const URL&);
@@ -118,6 +115,7 @@ namespace WebCore {
         void reportRedirectionWithBadScheme(const URL&);
         void reportContentSecurityPolicyError(const URL&);
         void reportCrossOriginResourceSharingError(const URL&);
+        void reportIntegrityMetadataError(const URL&);
         void logErrorAndFail(const ResourceError&);
 
         CachedResourceHandle<CachedRawResource> m_resource;
@@ -129,6 +127,7 @@ namespace WebCore {
         bool m_sameOriginRequest;
         bool m_simpleRequest;
         bool m_async;
+        bool m_delayCallbacksForIntegrityCheck;
         std::unique_ptr<ContentSecurityPolicy> m_contentSecurityPolicy;
         std::optional<CrossOriginPreflightChecker> m_preflightChecker;
         std::optional<HTTPHeaderMap> m_originalHeaders;

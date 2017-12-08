@@ -71,6 +71,8 @@ public:
 #endif
         MediaResource,
         RawResource,
+        Icon,
+        Beacon,
         SVGDocumentResource
 #if ENABLE(XSLT)
         , XSLStyleSheet
@@ -111,7 +113,6 @@ public:
     virtual bool shouldIgnoreHTTPStatusCodeErrors() const { return false; }
 
     const ResourceRequest& resourceRequest() const { return m_resourceRequest; }
-    ResourceRequest& resourceRequest() { return m_resourceRequest; }
     const URL& url() const { return m_resourceRequest.url();}
     const String& cachePartition() const { return m_resourceRequest.cachePartition(); }
     SessionID sessionID() const { return m_sessionID; }
@@ -161,17 +162,22 @@ public:
 
     bool isImage() const { return type() == ImageResource; }
     // FIXME: CachedRawResource could be a main resource, an audio/video resource, or a raw XHR/icon resource.
-    bool isMainOrMediaOrRawResource() const { return type() == MainResource || type() == MediaResource || type() == RawResource; }
+    bool isMainOrMediaOrIconOrRawResource() const { return type() == MainResource || type() == MediaResource || type() == Icon || type() == RawResource; }
+
+    // Whether this request should impact request counting and delay window.onload.
     bool ignoreForRequestCount() const
     {
-        return m_resourceRequest.ignoreForRequestCount()
+        return m_ignoreForRequestCount
             || type() == MainResource
 #if ENABLE(LINK_PREFETCH)
             || type() == LinkPrefetch
             || type() == LinkSubresource
 #endif
+            || type() == Icon
             || type() == RawResource;
     }
+
+    void setIgnoreForRequestCount(bool ignoreForRequestCount) { m_ignoreForRequestCount = ignoreForRequestCount; }
 
     unsigned accessCount() const { return m_accessCount; }
     void increaseAccessCount() { m_accessCount++; }
@@ -232,6 +238,8 @@ public:
     void decreasePreloadCount() { ASSERT(m_preloadCount); --m_preloadCount; }
     bool isLinkPreload() { return m_isLinkPreload; }
     void setLinkPreload() { m_isLinkPreload = true; }
+    bool hasUnknownEncoding() { return m_hasUnknownEncoding; }
+    void setHasUnknownEncoding(bool hasUnknownEncoding) { m_hasUnknownEncoding = hasUnknownEncoding; }
 
     void registerHandle(CachedResourceHandleBase*);
     WEBCORE_EXPORT void unregisterHandle(CachedResourceHandleBase*);
@@ -259,9 +267,6 @@ public:
     virtual void didSendData(unsigned long long /* bytesSent */, unsigned long long /* totalBytesToBeSent */) { }
 
     virtual void didRetrieveDerivedDataFromCache(const String& /* type */, SharedBuffer&) { }
-
-    void setLoadFinishTime(double finishTime) { m_loadFinishTime = finishTime; }
-    double loadFinishTime() const { return m_loadFinishTime; }
 
 #if USE(FOUNDATION) || USE(SOUP)
     WEBCORE_EXPORT void tryReplaceEncodedData(SharedBuffer&);
@@ -323,7 +328,6 @@ private:
     AtomicString m_initiatorName;
 
     double m_lastDecodedAccessTime { 0 }; // Used as a "thrash guard" in the cache
-    double m_loadFinishTime { 0 };
 
     unsigned m_encodedSize { 0 };
     unsigned m_decodedSize { 0 };
@@ -338,6 +342,7 @@ private:
     bool m_inCache { false };
     bool m_loading { false };
     bool m_isLinkPreload { false };
+    bool m_hasUnknownEncoding { false };
 
     bool m_switchingClientsToRevalidatedResource { false };
 
@@ -368,6 +373,7 @@ private:
     Vector<std::pair<String, String>> m_varyingHeaderValues;
 
     unsigned long m_identifierForLoadWithoutResourceLoader { 0 };
+    bool m_ignoreForRequestCount { false };
 };
 
 class CachedResource::Callback {

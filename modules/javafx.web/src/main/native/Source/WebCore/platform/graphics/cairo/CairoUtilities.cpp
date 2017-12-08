@@ -43,7 +43,14 @@
 #include <wtf/Vector.h>
 
 #if ENABLE(ACCELERATED_2D_CANVAS)
+#if USE(EGL) && USE(LIBEPOXY)
+#include "EpoxyEGL.h"
+#endif
 #include <cairo-gl.h>
+#endif
+
+#if OS(WINDOWS)
+#include <cairo-win32.h>
 #endif
 
 namespace WebCore {
@@ -247,7 +254,7 @@ void drawPatternToCairoContext(cairo_t* cr, cairo_surface_t* image, const IntSiz
     // are drawing a repeated pattern. This means that, assuming that (w, h) is the size of the pattern, samplig it at (x, y) is the same
     // than sampling it at (x mod w, y mod h), so we transform the translation component of the pattern matrix in that way.
 
-    cairo_matrix_t patternMatrix = cairo_matrix_t(patternTransform);
+    cairo_matrix_t patternMatrix = toCairoMatrix(patternTransform);
     // dx and dy are added here as well to compensate the previous translation of the destination rectangle.
     double phaseOffsetX = phase.x() + tileRect.x() * patternTransform.a() + dx;
     double phaseOffsetY = phase.y() + tileRect.y() * patternTransform.d() + dy;
@@ -282,7 +289,7 @@ RefPtr<cairo_surface_t> copyCairoImageSurface(cairo_surface_t* originalSurface)
     cairo_set_source_surface(cr.get(), originalSurface, 0, 0);
     cairo_set_operator(cr.get(), CAIRO_OPERATOR_SOURCE);
     cairo_paint(cr.get());
-    return newSurface.release();
+    return newSurface;
 }
 
 void copyRectFromCairoSurfaceToContext(cairo_surface_t* from, cairo_t* to, const IntSize& offset, const IntRect& rect)
@@ -308,6 +315,13 @@ IntSize cairoSurfaceSize(cairo_surface_t* surface)
 #if ENABLE(ACCELERATED_2D_CANVAS)
     case CAIRO_SURFACE_TYPE_GL:
         return IntSize(cairo_gl_surface_get_width(surface), cairo_gl_surface_get_height(surface));
+#endif
+#if OS(WINDOWS)
+    case CAIRO_SURFACE_TYPE_WIN32:
+        surface = cairo_win32_surface_get_image(surface);
+        ASSERT(surface);
+        ASSERT(cairo_surface_get_type(surface) == CAIRO_SURFACE_TYPE_IMAGE);
+        return IntSize(cairo_image_surface_get_width(surface), cairo_image_surface_get_height(surface));
 #endif
     default:
         ASSERT_NOT_REACHED();
@@ -369,6 +383,11 @@ RefPtr<cairo_region_t> toCairoRegion(const Region& region)
         cairo_region_union_rectangle(cairoRegion.get(), &cairoRect);
     }
     return cairoRegion;
+}
+
+cairo_matrix_t toCairoMatrix(const AffineTransform& transform)
+{
+    return cairo_matrix_t { transform.a(), transform.b(), transform.c(), transform.d(), transform.e(), transform.f() };
 }
 
 } // namespace WebCore

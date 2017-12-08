@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(GeneratorFunctionConstructor);
 
-const ClassInfo GeneratorFunctionConstructor::s_info = { "GeneratorFunction", &Base::s_info, nullptr, CREATE_METHOD_TABLE(GeneratorFunctionConstructor) };
+const ClassInfo GeneratorFunctionConstructor::s_info = { "GeneratorFunction", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(GeneratorFunctionConstructor) };
 
 GeneratorFunctionConstructor::GeneratorFunctionConstructor(VM& vm, Structure* structure)
     : InternalFunction(vm, structure)
@@ -45,8 +45,6 @@ void GeneratorFunctionConstructor::finishCreation(VM& vm, GeneratorFunctionProto
 {
     Base::finishCreation(vm, "GeneratorFunction");
     putDirectWithoutTransition(vm, vm.propertyNames->prototype, generatorFunctionPrototype, DontEnum | DontDelete | ReadOnly);
-
-    // Number of arguments for constructor
     putDirectWithoutTransition(vm, vm.propertyNames->length, jsNumber(1), ReadOnly | DontEnum);
 }
 

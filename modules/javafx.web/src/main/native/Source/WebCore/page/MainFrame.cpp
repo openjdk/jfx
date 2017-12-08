@@ -33,7 +33,6 @@
 #include "PerformanceLogging.h"
 #include "ScrollLatchingState.h"
 #include "WheelEventDeltaFilter.h"
-#include <wtf/NeverDestroyed.h>
 
 #if PLATFORM(MAC)
 #include "ServicesOverlayController.h"
@@ -59,7 +58,6 @@ inline MainFrame::MainFrame(Page& page, PageConfiguration& configuration)
 MainFrame::~MainFrame()
 {
     m_recentWheelEventDeltaFilter = nullptr;
-    m_eventHandler = nullptr;
 
     setMainFrameWasDestroyed();
 }
@@ -97,7 +95,6 @@ void MainFrame::dropChildren()
 
 void MainFrame::didCompleteLoad()
 {
-    m_timeOfLastCompletedLoad = MonotonicTime::now();
     performanceLogging().didReachPointOfInterest(PerformanceLogging::MainFrameLoadCompleted);
 }
 

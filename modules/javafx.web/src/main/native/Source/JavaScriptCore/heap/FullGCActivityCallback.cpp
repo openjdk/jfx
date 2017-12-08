@@ -30,8 +30,6 @@
 
 namespace JSC {
 
-#if USE(CF) || USE(GLIB)
-
 #if !PLATFORM(IOS)
 const double pagingTimeOut = 0.1; // Time in seconds to allow opportunistic timer to iterate over all blocks to see if the Heap is paged out.
 #endif
@@ -44,7 +42,7 @@ FullGCActivityCallback::FullGCActivityCallback(Heap* heap)
 void FullGCActivityCallback::doCollection()
 {
     Heap& heap = m_vm->heap;
-    m_didSyncGCRecently = false;
+    m_didGCRecently = false;
 
 #if !PLATFORM(IOS)
     double startTime = WTF::monotonicallyIncreasingTime();
@@ -58,9 +56,9 @@ void FullGCActivityCallback::doCollection()
     heap.collectAsync(CollectionScope::Full);
 }
 
-double FullGCActivityCallback::lastGCLength()
+Seconds FullGCActivityCallback::lastGCLength()
 {
-    return m_vm->heap.lastFullGCLength().seconds();
+    return m_vm->heap.lastFullGCLength();
 }
 
 double FullGCActivityCallback::deathRate()
@@ -83,33 +81,5 @@ double FullGCActivityCallback::gcTimeSlice(size_t bytes)
 {
     return std::min((static_cast<double>(bytes) / MB) * Options::percentCPUPerMBForFullTimer(), Options::collectionTimerMaxPercentCPU());
 }
-
-#else
-
-FullGCActivityCallback::FullGCActivityCallback(Heap* heap)
-    : GCActivityCallback(heap)
-{
-}
-
-void FullGCActivityCallback::doCollection()
-{
-}
-
-double FullGCActivityCallback::lastGCLength()
-{
-    return 0;
-}
-
-double FullGCActivityCallback::deathRate()
-{
-    return 0;
-}
-
-double FullGCActivityCallback::gcTimeSlice(size_t)
-{
-    return 0;
-}
-
-#endif // USE(CF) || USE(GLIB)
 
 } // namespace JSC

@@ -29,9 +29,6 @@
 #include "config.h"
 #include "FetchResponse.h"
 
-#if ENABLE(FETCH_API)
-
-#include "ExceptionCode.h"
 #include "FetchRequest.h"
 #include "HTTPParsers.h"
 #include "JSBlob.h"
@@ -75,10 +72,17 @@ ExceptionOr<void> FetchResponse::setStatus(int status, const String& statusText)
     return { };
 }
 
-void FetchResponse::initializeWith(JSC::ExecState& execState, JSC::JSValue body)
+void FetchResponse::initializeWith(FetchBody::Init&& body)
 {
     ASSERT(scriptExecutionContext());
-    extractBody(*scriptExecutionContext(), execState, body);
+    extractBody(*scriptExecutionContext(), WTFMove(body));
+    updateContentType();
+}
+
+void FetchResponse::setBodyAsReadableStream()
+{
+    ASSERT(isBodyNull());
+    setBody(FetchBody::readableStreamBody());
     updateContentType();
 }
 
@@ -123,7 +127,7 @@ void FetchResponse::BodyLoader::didSucceed()
     ASSERT(m_response.hasPendingActivity());
     m_response.m_body->loadingSucceeded();
 
-#if ENABLE(READABLE_STREAM_API)
+#if ENABLE(STREAMS_API)
     if (m_response.m_readableStreamSource && !m_response.body().consumer().hasData())
         m_response.closeStream();
 #endif
@@ -140,7 +144,7 @@ void FetchResponse::BodyLoader::didFail()
     if (m_promise)
         std::exchange(m_promise, std::nullopt)->reject(TypeError);
 
-#if ENABLE(READABLE_STREAM_API)
+#if ENABLE(STREAMS_API)
     if (m_response.m_readableStreamSource) {
         if (!m_response.m_readableStreamSource->isCancelling())
             m_response.m_readableStreamSource->error(ASCIILiteral("Loading failed"));
@@ -171,15 +175,18 @@ void FetchResponse::BodyLoader::didReceiveResponse(const ResourceResponse& resou
 {
     ASSERT(m_promise);
 
-    m_response.m_response = resourceResponse;
-    m_response.m_headers->filterAndFill(resourceResponse.httpHeaderFields(), FetchHeaders::Guard::Response);
+    m_response.m_response = ResourceResponseBase::filter(resourceResponse);
+    m_response.m_shouldExposeBody = resourceResponse.tainting() != ResourceResponse::Tainting::Opaque;
+
+    m_response.m_headers->filterAndFill(m_response.m_response.httpHeaderFields(), FetchHeaders::Guard::Response);
+    m_response.updateContentType();
 
     std::exchange(m_promise, std::nullopt)->resolve(m_response);
 }
 
 void FetchResponse::BodyLoader::didReceiveData(const char* data, size_t size)
 {
-#if ENABLE(READABLE_STREAM_API)
+#if ENABLE(STREAMS_API)
     ASSERT(m_response.m_readableStreamSource);
     auto& source = *m_response.m_readableStreamSource;
 
@@ -222,6 +229,11 @@ void FetchResponse::consume(unsigned type, Ref<DeferredPromise>&& wrapper)
     ASSERT(type <= static_cast<unsigned>(FetchBodyConsumer::Type::Text));
     auto consumerType = static_cast<FetchBodyConsumer::Type>(type);
 
+    if (!m_shouldExposeBody) {
+        consumeNullBody(consumerType, WTFMove(wrapper));
+        return;
+    }
+
     if (isLoading()) {
         consumeOnceLoadingFinished(consumerType, WTFMove(wrapper));
         return;
@@ -246,11 +258,14 @@ void FetchResponse::consume(unsigned type, Ref<DeferredPromise>&& wrapper)
     }
 }
 
-#if ENABLE(READABLE_STREAM_API)
+#if ENABLE(STREAMS_API)
 void FetchResponse::startConsumingStream(unsigned type)
 {
     m_isDisturbed = true;
-    m_consumer.setType(static_cast<FetchBodyConsumer::Type>(type));
+    auto consumerType = static_cast<FetchBodyConsumer::Type>(type);
+    m_consumer.setType(consumerType);
+    if (consumerType == FetchBodyConsumer::Type::Blob)
+        m_consumer.setContentType(Blob::normalizedContentType(extractMIMETypeFromMediaType(m_contentType)));
 }
 
 void FetchResponse::consumeChunk(Ref<JSC::Uint8Array>&& chunk)
@@ -265,6 +280,7 @@ void FetchResponse::finishConsumingStream(Ref<DeferredPromise>&& promise)
 
 void FetchResponse::consumeBodyAsStream()
 {
+    ASSERT(m_shouldExposeBody);
     ASSERT(m_readableStreamSource);
     m_isDisturbed = true;
     if (!isLoading()) {
@@ -278,7 +294,7 @@ void FetchResponse::consumeBodyAsStream()
 
     RefPtr<SharedBuffer> data = m_bodyLoader->startStreaming();
     if (data) {
-        if (!m_readableStreamSource->enqueue(data->createArrayBuffer())) {
+        if (!m_readableStreamSource->enqueue(data->tryCreateArrayBuffer())) {
             stop();
             return;
         }
@@ -318,7 +334,7 @@ ReadableStreamSource* FetchResponse::createReadableStreamSource()
     ASSERT(!m_readableStreamSource);
     ASSERT(!m_isDisturbed);
 
-    if (isBodyNull())
+    if (isBodyNull() || !m_shouldExposeBody)
         return nullptr;
 
     m_readableStreamSource = adoptRef(*new FetchResponseSource(*this));
@@ -361,5 +377,3 @@ bool FetchResponse::canSuspendForDocumentSuspension() const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(FETCH_API)

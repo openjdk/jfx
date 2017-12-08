@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -16,11 +16,11 @@
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
  */
+
 #import "config.h"
-
-#if !PLATFORM(IOS)
-
 #import "RenderThemeMac.h"
+
+#if PLATFORM(MAC)
 
 #import "BitmapImage.h"
 #import "CSSValueKeywords.h"
@@ -94,6 +94,7 @@
 
 #if ENABLE(SERVICE_CONTROLS) && HAVE(APPKIT_SERVICE_CONTROLS_SUPPORT)
 
+// FIXME: This should go into an SPI.h file in the spi directory.
 #if USE(APPLE_INTERNAL_SDK)
 #import <AppKit/AppKitDefines_Private.h>
 #import <AppKit/NSServicesRolloverButtonCell.h>
@@ -103,6 +104,7 @@
 @end
 #endif
 
+// FIXME: This should go into an SPI.h file in the spi directory.
 @interface NSServicesRolloverButtonCell ()
 + (NSServicesRolloverButtonCell *)serviceRolloverButtonCellForStyle:(NSSharingServicePickerStyle)style;
 - (NSRect)rectForBounds:(NSRect)bounds preferredEdge:(NSRectEdge)preferredEdge;
@@ -110,71 +112,62 @@
 
 #endif // ENABLE(SERVICE_CONTROLS)
 
-// The methods in this file are specific to the Mac OS X platform.
+// FIXME: This should go into an SPI.h file in the spi directory.
+@interface NSTextFieldCell ()
+- (CFDictionaryRef)_coreUIDrawOptionsWithFrame:(NSRect)cellFrame inView:(NSView *)controlView includeFocus:(BOOL)includeFocus;
+@end
 
-// We estimate the animation rate of a Mac OS X progress bar is 33 fps.
-// Hard code the value here because we haven't found API for it.
-const double progressAnimationFrameRate = 0.033;
+// FIXME: This should go into an SPI.h file in the spi directory.
+@interface NSSearchFieldCell ()
+@property (getter=isCenteredLook) BOOL centeredLook;
+@end
 
-// Mac OS X progress bar animation seems to have 256 frames.
-const double progressAnimationNumFrames = 256;
+static const Seconds progressAnimationFrameRate = 33_ms; // 30 fps
+static const double progressAnimationNumFrames = 256;
 
 @interface WebCoreRenderThemeNotificationObserver : NSObject
-{
-    WebCore::RenderTheme *_theme;
-}
-
-- (id)initWithTheme:(WebCore::RenderTheme *)theme;
-- (void)systemColorsDidChange:(NSNotification *)notification;
-
 @end
 
 @implementation WebCoreRenderThemeNotificationObserver
 
-- (id)initWithTheme:(WebCore::RenderTheme *)theme
+- (id)init
 {
-    if (!(self = [super init]))
+    self = [super init];
+    if (!self)
         return nil;
-
-    _theme = theme;
+    [[NSNotificationCenter defaultCenter] addObserver:self
+        selector:@selector(systemColorsDidChange:) name:NSSystemColorsDidChangeNotification object:nil];
     return self;
 }
 
 - (void)systemColorsDidChange:(NSNotification *)unusedNotification
 {
     ASSERT_UNUSED(unusedNotification, [[unusedNotification name] isEqualToString:NSSystemColorsDidChangeNotification]);
-    _theme->platformColorsDidChange();
+    WebCore::RenderTheme::singleton().platformColorsDidChange();
 }
 
 @end
 
-@interface NSTextFieldCell (WKDetails)
-- (CFDictionaryRef)_coreUIDrawOptionsWithFrame:(NSRect)cellFrame inView:(NSView *)controlView includeFocus:(BOOL)includeFocus;
-@end
-
-
 @interface WebCoreTextFieldCell : NSTextFieldCell
-- (CFDictionaryRef)_coreUIDrawOptionsWithFrame:(NSRect)cellFrame inView:(NSView *)controlView includeFocus:(BOOL)includeFocus;
 @end
 
 @implementation WebCoreTextFieldCell
+
 - (CFDictionaryRef)_coreUIDrawOptionsWithFrame:(NSRect)cellFrame inView:(NSView *)controlView includeFocus:(BOOL)includeFocus
 {
-    // FIXME: This is a post-Lion-only workaround for <rdar://problem/11385461>. When that bug is resolved, we should remove this code.
+    // FIXME: This is a workaround for <rdar://problem/11385461>. When that bug is resolved, we should remove this code.
     CFMutableDictionaryRef coreUIDrawOptions = CFDictionaryCreateMutableCopy(NULL, 0, [super _coreUIDrawOptionsWithFrame:cellFrame inView:controlView includeFocus:includeFocus]);
     CFDictionarySetValue(coreUIDrawOptions, @"borders only", kCFBooleanTrue);
-    return (CFDictionaryRef)[NSMakeCollectable(coreUIDrawOptions) autorelease];
+    CFAutorelease(coreUIDrawOptions);
+    return coreUIDrawOptions;
 }
+
 @end
 
 @interface WebCoreRenderThemeBundle : NSObject
 @end
 
 @implementation WebCoreRenderThemeBundle
-@end
-
-@interface NSSearchFieldCell()
-@property (getter=isCenteredLook) BOOL centeredLook;
 @end
 
 namespace WebCore {
@@ -195,40 +188,25 @@ enum {
     leftPadding
 };
 
-Ref<RenderTheme> RenderTheme::themeForPage(Page*)
+RenderTheme& RenderTheme::singleton()
 {
-    static RenderTheme& rt = RenderThemeMac::create().leakRef();
-    return rt;
-}
-
-Ref<RenderTheme> RenderThemeMac::create()
-{
-    return adoptRef(*new RenderThemeMac);
+    static NeverDestroyed<RenderThemeMac> theme;
+    return theme;
 }
 
 RenderThemeMac::RenderThemeMac()
-    : m_isSliderThumbHorizontalPressed(false)
-    , m_isSliderThumbVerticalPressed(false)
-    , m_notificationObserver(adoptNS([[WebCoreRenderThemeNotificationObserver alloc] initWithTheme:this]))
+    : m_notificationObserver(adoptNS([[WebCoreRenderThemeNotificationObserver alloc] init]))
 {
-    [[NSNotificationCenter defaultCenter] addObserver:m_notificationObserver.get()
-                                                        selector:@selector(systemColorsDidChange:)
-                                                            name:NSSystemColorsDidChangeNotification
-                                                          object:nil];
 }
 
-RenderThemeMac::~RenderThemeMac()
-{
-    [[NSNotificationCenter defaultCenter] removeObserver:m_notificationObserver.get()];
-}
-
-NSView* RenderThemeMac::documentViewFor(const RenderObject& o) const
+NSView *RenderThemeMac::documentViewFor(const RenderObject& o) const
 {
     ControlStates states(extractControlStatesForRenderer(o));
     return ThemeMac::ensuredView(&o.view().frameView(), states);
 }
 
 #if ENABLE(VIDEO)
+
 String RenderThemeMac::mediaControlsStyleSheet()
 {
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
@@ -270,7 +248,7 @@ String RenderThemeMac::mediaControlsScript()
             NSBundle *bundle = [NSBundle bundleForClass:[WebCoreRenderThemeBundle class]];
 
             StringBuilder scriptBuilder;
-            scriptBuilder.append([NSString stringWithContentsOfFile:[bundle pathForResource:@"modern-media-controls-localized-strings.js" ofType:@"js"] encoding:NSUTF8StringEncoding error:nil]);
+            scriptBuilder.append([NSString stringWithContentsOfFile:[bundle pathForResource:@"modern-media-controls-localized-strings" ofType:@"js"] encoding:NSUTF8StringEncoding error:nil]);
             scriptBuilder.append([NSString stringWithContentsOfFile:[bundle pathForResource:@"modern-media-controls" ofType:@"js" inDirectory:@"modern-media-controls"] encoding:NSUTF8StringEncoding error:nil]);
             m_mediaControlsScript = scriptBuilder.toString();
         }
@@ -292,15 +270,15 @@ String RenderThemeMac::mediaControlsScript()
 #endif
 }
 
-String RenderThemeMac::mediaControlsBase64StringForIconAndPlatform(const String& iconName, const String& platform)
+String RenderThemeMac::mediaControlsBase64StringForIconNameAndType(const String& iconName, const String& iconType)
 {
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
     if (!RuntimeEnabledFeatures::sharedFeatures().modernMediaControlsEnabled())
         return emptyString();
 
-    String directory = "modern-media-controls/images/" + platform;
+    NSString *directory = @"modern-media-controls/images";
     NSBundle *bundle = [NSBundle bundleForClass:[WebCoreRenderThemeBundle class]];
-    return [[NSData dataWithContentsOfFile:[bundle pathForResource:iconName ofType:@"png" inDirectory:directory]] base64EncodedStringWithOptions:0];
+    return [[NSData dataWithContentsOfFile:[bundle pathForResource:iconName ofType:iconType inDirectory:directory]] base64EncodedStringWithOptions:0];
 #else
     return emptyString();
 #endif
@@ -308,12 +286,13 @@ String RenderThemeMac::mediaControlsBase64StringForIconAndPlatform(const String&
 
 #endif // ENABLE(VIDEO)
 
-
 #if ENABLE(SERVICE_CONTROLS)
+
 String RenderThemeMac::imageControlsStyleSheet() const
 {
     return String(imageControlsMacUserAgentStyleSheet, sizeof(imageControlsMacUserAgentStyleSheet));
 }
+
 #endif
 
 Color RenderThemeMac::platformActiveSelectionBackgroundColor() const
@@ -357,7 +336,7 @@ Color RenderThemeMac::platformInactiveListBoxSelectionBackgroundColor() const
     return platformInactiveSelectionBackgroundColor();
 }
 
-static FontWeight toFontWeight(NSInteger appKitFontWeight)
+static FontSelectionValue toFontWeight(NSInteger appKitFontWeight)
 {
     ASSERT(appKitFontWeight > 0 && appKitFontWeight < 15);
     if (appKitFontWeight > 14)
@@ -365,21 +344,21 @@ static FontWeight toFontWeight(NSInteger appKitFontWeight)
     else if (appKitFontWeight < 1)
         appKitFontWeight = 1;
 
-    static const FontWeight fontWeights[] = {
-        FontWeight100,
-        FontWeight100,
-        FontWeight200,
-        FontWeight300,
-        FontWeight400,
-        FontWeight500,
-        FontWeight600,
-        FontWeight600,
-        FontWeight700,
-        FontWeight800,
-        FontWeight800,
-        FontWeight900,
-        FontWeight900,
-        FontWeight900
+    static const FontSelectionValue fontWeights[] = {
+        FontSelectionValue(100),
+        FontSelectionValue(100),
+        FontSelectionValue(200),
+        FontSelectionValue(300),
+        FontSelectionValue(400),
+        FontSelectionValue(500),
+        FontSelectionValue(600),
+        FontSelectionValue(600),
+        FontSelectionValue(700),
+        FontSelectionValue(800),
+        FontSelectionValue(800),
+        FontSelectionValue(900),
+        FontSelectionValue(900),
+        FontSelectionValue(900)
     };
     return fontWeights[appKitFontWeight - 1];
 }
@@ -420,7 +399,7 @@ void RenderThemeMac::updateCachedSystemFontDescription(CSSValueID cssValueId, Fo
         return;
 
     if (fontName.isNull())
-        fontName = AtomicString("-apple-system", AtomicString::ConstructFromLiteral);
+        fontName = AtomicString("system-ui", AtomicString::ConstructFromLiteral);
 
     NSFontManager *fontManager = [NSFontManager sharedFontManager];
     fontDescription.setIsAbsoluteSize(true);
@@ -792,7 +771,7 @@ bool RenderThemeMac::controlSupportsTints(const RenderObject& o) const
 
 NSControlSize RenderThemeMac::controlSizeForFont(const RenderStyle& style) const
 {
-    int fontSize = style.fontSize();
+    int fontSize = style.computedFontPixelSize();
     if (fontSize >= 16)
         return NSControlSizeRegular;
     if (fontSize >= 11)
@@ -867,7 +846,7 @@ void RenderThemeMac::setFontFromControlSize(StyleResolver&, RenderStyle& style, 
 
 NSControlSize RenderThemeMac::controlSizeForSystemFont(const RenderStyle& style) const
 {
-    int fontSize = style.fontSize();
+    int fontSize = style.computedFontPixelSize();
     if (fontSize >= [NSFont systemFontSizeForControlSize:NSControlSizeRegular])
         return NSControlSizeRegular;
     if (fontSize >= [NSFont systemFontSizeForControlSize:NSControlSizeSmall])
@@ -1074,11 +1053,10 @@ NSLevelIndicatorCell* RenderThemeMac::levelIndicatorFor(const RenderMeter& rende
     }
 
     [cell setLevelIndicatorStyle:levelIndicatorStyleFor(style.appearance())];
-    [cell setBaseWritingDirection:style.isLeftToRightDirection() ? NSWritingDirectionLeftToRight : NSWritingDirectionRightToLeft];
+    [cell setUserInterfaceLayoutDirection:style.isLeftToRightDirection() ? NSUserInterfaceLayoutDirectionLeftToRight : NSUserInterfaceLayoutDirectionRightToLeft];
     [cell setMinValue:element->min()];
     [cell setMaxValue:element->max()];
-    RetainPtr<NSNumber> valueObject = [NSNumber numberWithDouble:value];
-    [cell setObjectValue:valueObject.get()];
+    [cell setObjectValue:@(value)];
 
     return cell;
 }
@@ -1129,14 +1107,14 @@ int RenderThemeMac::minimumProgressBarHeight(const RenderStyle& style) const
     return sizeForSystemFont(style, progressBarSizes()).height();
 }
 
-double RenderThemeMac::animationRepeatIntervalForProgressBar(RenderProgress&) const
+Seconds RenderThemeMac::animationRepeatIntervalForProgressBar(RenderProgress&) const
 {
     return progressAnimationFrameRate;
 }
 
 double RenderThemeMac::animationDurationForProgressBar(RenderProgress&) const
 {
-    return progressAnimationNumFrames * progressAnimationFrameRate;
+    return progressAnimationNumFrames * progressAnimationFrameRate.value();
 }
 
 void RenderThemeMac::adjustProgressBarStyle(StyleResolver&, RenderStyle&, const Element*) const
@@ -1319,7 +1297,7 @@ bool RenderThemeMac::paintMenuListButtonDecorations(const RenderBox& renderer, c
     paintMenuListButtonGradients(renderer, paintInfo, bounds);
 
     // Since we actually know the size of the control here, we restrict the font scale to make sure the arrows will fit vertically in the bounds
-    float fontScale = std::min(renderer.style().fontSize() / baseFontSize, bounds.height() / (baseArrowHeight * 2 + baseSpaceBetweenArrows));
+    float fontScale = std::min(renderer.style().computedFontPixelSize() / baseFontSize, bounds.height() / (baseArrowHeight * 2 + baseSpaceBetweenArrows));
     float centerY = bounds.y() + bounds.height() / 2.0f;
     float arrowHeight = baseArrowHeight * fontScale;
     float arrowWidth = baseArrowWidth * fontScale;
@@ -1423,7 +1401,7 @@ LengthBox RenderThemeMac::popupInternalPaddingBox(const RenderStyle& style) cons
     }
 
     if (style.appearance() == MenulistButtonPart) {
-        float arrowWidth = baseArrowWidth * (style.fontSize() / baseFontSize);
+        float arrowWidth = baseArrowWidth * (style.computedFontPixelSize() / baseFontSize);
         float rightPadding = ceilf(arrowWidth + (arrowPaddingBefore + arrowPaddingAfter + paddingBeforeSeparator) * style.effectiveZoom());
         float leftPadding = styledPopupPaddingLeft * style.effectiveZoom();
         if (style.direction() == RTL)
@@ -1455,7 +1433,7 @@ PopupMenuStyle::PopupMenuSize RenderThemeMac::popupMenuSize(const RenderStyle& s
 
 void RenderThemeMac::adjustMenuListButtonStyle(StyleResolver&, RenderStyle& style, const Element*) const
 {
-    float fontScale = style.fontSize() / baseFontSize;
+    float fontScale = style.computedFontPixelSize() / baseFontSize;
 
     style.resetPadding();
     style.setBorderRadius(IntSize(int(baseBorderRadius + fontScale - 1), int(baseBorderRadius + fontScale - 1))); // FIXME: Round up?
@@ -2346,8 +2324,7 @@ void AttachmentLayout::layOutTitle(const RenderAttachment& attachment)
 
 void AttachmentLayout::layOutSubtitle(const RenderAttachment& attachment)
 {
-    String subtitleText = attachment.attachmentElement().attributeWithoutSynchronization(subtitleAttr);
-
+    auto& subtitleText = attachment.attachmentElement().attributeWithoutSynchronization(subtitleAttr);
     if (subtitleText.isEmpty())
         return;
 
@@ -2595,7 +2572,7 @@ bool RenderThemeMac::paintAttachment(const RenderObject& renderer, const PaintIn
 
     AttachmentLayout layout(attachment);
 
-    String progressString = attachment.attachmentElement().attributeWithoutSynchronization(progressAttr);
+    auto& progressString = attachment.attachmentElement().attributeWithoutSynchronization(progressAttr);
     bool validProgress = false;
     float progress = 0;
     if (!progressString.isEmpty())
@@ -2636,4 +2613,4 @@ bool RenderThemeMac::paintAttachment(const RenderObject& renderer, const PaintIn
 
 } // namespace WebCore
 
-#endif // !PLATFORM(IOS)
+#endif // PLATFORM(MAC)

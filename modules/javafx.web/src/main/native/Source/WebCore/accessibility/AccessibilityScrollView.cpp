@@ -180,10 +180,7 @@ void AccessibilityScrollView::addChildren()
     ASSERT(!m_haveChildren);
     m_haveChildren = true;
 
-    AccessibilityObject* webArea = webAreaObject();
-    if (webArea && !webArea->accessibilityIsIgnored())
-        m_children.append(webArea);
-
+    addChild(webAreaObject());
     updateScrollbars();
 }
 

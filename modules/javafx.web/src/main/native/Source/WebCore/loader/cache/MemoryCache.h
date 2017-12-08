@@ -29,6 +29,7 @@
 #include "SessionID.h"
 #include "Timer.h"
 #include <wtf/Forward.h>
+#include <wtf/Function.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
@@ -102,9 +103,9 @@ public:
     void revalidationSucceeded(CachedResource& revalidatingResource, const ResourceResponse&);
     void revalidationFailed(CachedResource& revalidatingResource);
 
-    void forEachResource(const std::function<void(CachedResource&)>&);
-    void forEachSessionResource(SessionID, const std::function<void(CachedResource&)>&);
-    void destroyDecodedDataForAllImages();
+    void forEachResource(const WTF::Function<void(CachedResource&)>&);
+    void forEachSessionResource(SessionID, const WTF::Function<void(CachedResource&)>&);
+    WEBCORE_EXPORT void destroyDecodedDataForAllImages();
 
     // Sets the cache's memory capacities, in bytes. These will hold only approximately,
     // since the decoded cost of resources like scripts and stylesheets is not known.
@@ -125,8 +126,8 @@ public:
     void pruneSoon();
     unsigned size() const { return m_liveSize + m_deadSize; }
 
-    void setDeadDecodedDataDeletionInterval(std::chrono::milliseconds interval) { m_deadDecodedDataDeletionInterval = interval; }
-    std::chrono::milliseconds deadDecodedDataDeletionInterval() const { return m_deadDecodedDataDeletionInterval; }
+    void setDeadDecodedDataDeletionInterval(Seconds interval) { m_deadDecodedDataDeletionInterval = interval; }
+    Seconds deadDecodedDataDeletionInterval() const { return m_deadDecodedDataDeletionInterval; }
 
     // Calls to put the cached resource into and out of LRU lists.
     void insertInLRUList(CachedResource&);
@@ -195,7 +196,7 @@ private:
     unsigned m_capacity;
     unsigned m_minDeadCapacity;
     unsigned m_maxDeadCapacity;
-    std::chrono::milliseconds m_deadDecodedDataDeletionInterval;
+    Seconds m_deadDecodedDataDeletionInterval;
 
     unsigned m_liveSize; // The number of bytes currently consumed by "live" resources in the cache.
     unsigned m_deadSize; // The number of bytes currently consumed by "dead" resources in the cache.

@@ -28,31 +28,29 @@
 
 #pragma once
 
-#if ENABLE(FETCH_API)
-
 #include "ActiveDOMObject.h"
 #include "FetchBody.h"
 #include "FetchHeaders.h"
+#include "FetchLoader.h"
 #include "FetchLoaderClient.h"
 #include "FetchResponseSource.h"
 
 namespace WebCore {
-
-class FetchLoader;
 
 class FetchBodyOwner : public RefCounted<FetchBodyOwner>, public ActiveDOMObject {
 public:
     FetchBodyOwner(ScriptExecutionContext&, std::optional<FetchBody>&&, Ref<FetchHeaders>&&);
 
     // Exposed Body API
-    bool isDisturbed() const { return m_isDisturbed; };
-
+    // FIXME: Missing body attribute returning a ReadableStream.
+    bool bodyUsed() const { return isDisturbed(); }
     void arrayBuffer(Ref<DeferredPromise>&&);
     void blob(Ref<DeferredPromise>&&);
     void formData(Ref<DeferredPromise>&&);
     void json(Ref<DeferredPromise>&&);
     void text(Ref<DeferredPromise>&&);
 
+    bool isDisturbed() const { return m_isDisturbed; };
     bool isDisturbedOrLocked() const;
 
     void loadBlob(const Blob&, FetchBodyConsumer*);
@@ -65,9 +63,12 @@ protected:
     bool isBodyNull() const { return !m_body; }
     void cloneBody(const FetchBodyOwner&);
 
-    void extractBody(ScriptExecutionContext&, JSC::ExecState&, JSC::JSValue);
+    void extractBody(ScriptExecutionContext&, FetchBody::Init&&);
     void updateContentType();
     void consumeOnceLoadingFinished(FetchBodyConsumer::Type, Ref<DeferredPromise>&&);
+    void consumeNullBody(FetchBodyConsumer::Type, Ref<DeferredPromise>&&);
+
+    void setBody(FetchBody&& body) { m_body = WTFMove(body); }
 
     // ActiveDOMObject API
     void stop() override;
@@ -98,7 +99,7 @@ protected:
     std::optional<FetchBody> m_body;
     String m_contentType;
     bool m_isDisturbed { false };
-#if ENABLE(READABLE_STREAM_API)
+#if ENABLE(STREAMS_API)
     RefPtr<FetchResponseSource> m_readableStreamSource;
 #endif
     Ref<FetchHeaders> m_headers;
@@ -108,5 +109,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(FETCH_API)

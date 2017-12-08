@@ -78,6 +78,7 @@ ResourceLoadPriority CachedResource::defaultPriorityForResourceType(Type type)
     case CachedResource::MediaResource:
     case CachedResource::FontResource:
     case CachedResource::RawResource:
+    case CachedResource::Icon:
         return ResourceLoadPriority::Medium;
     case CachedResource::ImageResource:
         return ResourceLoadPriority::Low;
@@ -87,6 +88,8 @@ ResourceLoadPriority CachedResource::defaultPriorityForResourceType(Type type)
 #endif
     case CachedResource::SVGDocumentResource:
         return ResourceLoadPriority::Low;
+    case CachedResource::Beacon:
+        return ResourceLoadPriority::VeryLow;
 #if ENABLE(LINK_PREFETCH)
     case CachedResource::LinkPrefetch:
         return ResourceLoadPriority::VeryLow;
@@ -102,10 +105,10 @@ ResourceLoadPriority CachedResource::defaultPriorityForResourceType(Type type)
     return ResourceLoadPriority::Low;
 }
 
-static std::chrono::milliseconds deadDecodedDataDeletionIntervalForResourceType(CachedResource::Type type)
+static Seconds deadDecodedDataDeletionIntervalForResourceType(CachedResource::Type type)
 {
     if (type == CachedResource::Script)
-        return std::chrono::milliseconds { 0 };
+        return 0_s;
 
     return MemoryCache::singleton().deadDecodedDataDeletionInterval();
 }
@@ -123,7 +126,9 @@ CachedResource::CachedResource(CachedResourceRequest&& request, Type type, Sessi
     , m_origin(request.releaseOrigin())
     , m_initiatorName(request.initiatorName())
     , m_isLinkPreload(request.isLinkPreload())
+    , m_hasUnknownEncoding(request.isLinkPreload())
     , m_type(type)
+    , m_ignoreForRequestCount(request.ignoreForRequestCount())
 {
     ASSERT(sessionID.isValid());
 
@@ -223,8 +228,8 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
         const String& lastModified = resourceToRevalidate->response().httpHeaderField(HTTPHeaderName::LastModified);
         const String& eTag = resourceToRevalidate->response().httpHeaderField(HTTPHeaderName::ETag);
         if (!lastModified.isEmpty() || !eTag.isEmpty()) {
-            ASSERT(cachedResourceLoader.cachePolicy(type()) != CachePolicyReload);
-            if (cachedResourceLoader.cachePolicy(type()) == CachePolicyRevalidate)
+            ASSERT(cachedResourceLoader.cachePolicy(type(), url()) != CachePolicyReload);
+            if (cachedResourceLoader.cachePolicy(type(), url()) == CachePolicyRevalidate)
                 m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::CacheControl, "max-age=0");
             if (!lastModified.isEmpty())
                 m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::IfModifiedSince, lastModified);
@@ -253,6 +258,13 @@ void CachedResource::load(CachedResourceLoader& cachedResourceLoader)
         url.setFragmentIdentifier(m_fragmentIdentifierForRequest);
         request.setURL(url);
         m_fragmentIdentifierForRequest = String();
+    }
+
+    // FIXME: We should not special-case Beacon here.
+    if (m_options.keepAlive && type() == CachedResource::Beacon) {
+        ASSERT(m_origin);
+        platformStrategies()->loaderStrategy()->createPingHandle(frame.loader().networkingContext(), request, *m_origin, m_options);
+        return;
     }
 
     RELEASE_ASSERT(cachedResourceLoader.documentLoader());
@@ -290,6 +302,7 @@ void CachedResource::setBodyDataFrom(const CachedResource& resource)
 {
     m_data = resource.m_data;
     m_response = resource.m_response;
+    m_response.setTainting(m_responseTainting);
     setDecodedSize(resource.decodedSize());
     setEncodedSize(resource.encodedSize());
 }
@@ -395,6 +408,8 @@ static inline bool shouldCacheSchemeIndefinitely(StringView scheme)
 
 std::chrono::microseconds CachedResource::freshnessLifetime(const ResourceResponse& response) const
 {
+    using namespace std::literals::chrono_literals;
+
     if (!response.url().protocolIsInHTTPFamily()) {
         StringView protocol = response.url().protocol();
         if (!shouldCacheSchemeIndefinitely(protocol)) {
@@ -425,6 +440,8 @@ void CachedResource::setResponse(const ResourceResponse& response)
     ASSERT(m_response.type() == ResourceResponse::Type::Default);
     m_response = response;
     m_response.setRedirected(m_redirectChainCacheStatus.status != RedirectChainCacheStatus::NoRedirection);
+    if (m_response.tainting() == ResourceResponse::Tainting::Basic || m_response.tainting() == ResourceResponse::Tainting::Cors)
+        m_response.setTainting(m_responseTainting);
 
     m_varyingHeaderValues = collectVaryingRequestHeaders(m_resourceRequest, m_response, m_sessionID);
 }
@@ -465,7 +482,7 @@ void CachedResource::didAddClient(CachedResourceClient& client)
 
 bool CachedResource::addClientToSet(CachedResourceClient& client)
 {
-    if (m_preloadResult == PreloadNotReferenced) {
+    if (m_preloadResult == PreloadNotReferenced && client.shouldMarkAsReferenced()) {
         if (isLoaded())
             m_preloadResult = PreloadReferencedWhileComplete;
         else if (m_requestedFromNetworkingLayer)
@@ -537,7 +554,7 @@ void CachedResource::destroyDecodedDataIfNeeded()
 {
     if (!m_decodedSize)
         return;
-    if (!MemoryCache::singleton().deadDecodedDataDeletionInterval().count())
+    if (!MemoryCache::singleton().deadDecodedDataDeletionInterval())
         return;
     m_decodedDataDeletionTimer.restart();
 }
@@ -821,7 +838,7 @@ inline CachedResource::Callback::Callback(CachedResource& resource, CachedResour
     , m_client(client)
     , m_timer(*this, &Callback::timerFired)
 {
-    m_timer.startOneShot(0);
+    m_timer.startOneShot(0_s);
 }
 
 inline void CachedResource::Callback::cancel()
@@ -851,8 +868,9 @@ void CachedResource::tryReplaceEncodedData(SharedBuffer& newBuffer)
     if (m_data->size() != newBuffer.size() || memcmp(m_data->data(), newBuffer.data(), m_data->size()))
         return;
 
-    if (m_data->tryReplaceContentsWithPlatformBuffer(newBuffer))
-        didReplaceSharedBufferContents();
+    m_data->clear();
+    m_data->append(newBuffer);
+    didReplaceSharedBufferContents();
 }
 
 #endif

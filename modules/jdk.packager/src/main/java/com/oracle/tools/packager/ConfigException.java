@@ -25,6 +25,10 @@
 
 package com.oracle.tools.packager;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class ConfigException extends Exception {
     final String advice;
 

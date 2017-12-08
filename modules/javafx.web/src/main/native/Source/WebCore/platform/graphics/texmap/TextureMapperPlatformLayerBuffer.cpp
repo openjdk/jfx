@@ -26,27 +26,42 @@
 #include "config.h"
 #include "TextureMapperPlatformLayerBuffer.h"
 
+#include "NotImplemented.h"
+
 namespace WebCore {
 
-TextureMapperPlatformLayerBuffer::TextureMapperPlatformLayerBuffer(RefPtr<BitmapTexture>&& texture)
+TextureMapperPlatformLayerBuffer::TextureMapperPlatformLayerBuffer(RefPtr<BitmapTexture>&& texture, TextureMapperGL::Flags flags)
     : m_texture(WTFMove(texture))
     , m_textureID(0)
-    , m_extraFlags(0)
+    , m_extraFlags(flags)
     , m_hasManagedTexture(true)
 {
 }
 
-TextureMapperPlatformLayerBuffer::TextureMapperPlatformLayerBuffer(GLuint textureID, const IntSize& size, TextureMapperGL::Flags flags)
+TextureMapperPlatformLayerBuffer::TextureMapperPlatformLayerBuffer(GLuint textureID, const IntSize& size, TextureMapperGL::Flags flags, GLint internalFormat)
     : m_textureID(textureID)
     , m_size(size)
+    , m_internalFormat(internalFormat)
     , m_extraFlags(flags)
     , m_hasManagedTexture(false)
 {
 }
 
-bool TextureMapperPlatformLayerBuffer::canReuseWithoutReset(const IntSize& size, GC3Dint internalFormat)
+bool TextureMapperPlatformLayerBuffer::canReuseWithoutReset(const IntSize& size, GLint internalFormat)
 {
-    return m_texture && (m_texture->size() == size) && (static_cast<BitmapTextureGL*>(m_texture.get())->internalFormat() == internalFormat || internalFormat == GraphicsContext3D::DONT_CARE);
+    return m_texture && (m_texture->size() == size) && (static_cast<BitmapTextureGL*>(m_texture.get())->internalFormat() == internalFormat || internalFormat == GL_DONT_CARE);
+}
+
+std::unique_ptr<TextureMapperPlatformLayerBuffer> TextureMapperPlatformLayerBuffer::clone(TextureMapperGL& texmapGL)
+{
+    if (m_hasManagedTexture || !m_textureID) {
+        notImplemented();
+        return nullptr;
+    }
+    RefPtr<BitmapTexture> texture = texmapGL.createTexture(m_internalFormat);
+    texture->reset(m_size);
+    static_cast<BitmapTextureGL&>(*texture).copyFromExternalTexture(m_textureID);
+    return std::make_unique<TextureMapperPlatformLayerBuffer>(WTFMove(texture), m_extraFlags);
 }
 
 void TextureMapperPlatformLayerBuffer::paintToTextureMapper(TextureMapper& textureMapper, const FloatRect& targetRect, const TransformationMatrix& modelViewMatrix, float opacity)

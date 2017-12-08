@@ -43,12 +43,9 @@ namespace WebCore {
 
         virtual void didReceiveResponse(unsigned long /*identifier*/, const ResourceResponse&) { }
         virtual void didReceiveData(const char*, int /*dataLength*/) { }
-        virtual void didFinishLoading(unsigned long /*identifier*/, double /*finishTime*/) { }
+        virtual void didFinishLoading(unsigned long /*identifier*/) { }
         virtual void didFail(const ResourceError&) { }
-
-#if ENABLE(WEB_TIMING)
         virtual void didFinishTiming(const ResourceTiming&) { }
-#endif
 
     protected:
         ThreadableLoaderClient() { }

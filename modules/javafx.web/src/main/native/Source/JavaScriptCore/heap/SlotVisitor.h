@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "CellState.h"
 #include "HandleTypes.h"
 #include "IterationStatus.h"
 #include "MarkStack.h"
 #include "OpaqueRootSet.h"
 #include "VisitRaceKey.h"
 #include <wtf/MonotonicTime.h>
+#include <wtf/text/CString.h>
 
 namespace JSC {
 
@@ -85,12 +85,15 @@ public:
     //
     // If you are not a root and you don't know what kind of barrier you have, then you
     // shouldn't call these methods.
-    JS_EXPORT_PRIVATE void appendUnbarriered(JSValue);
+    void appendUnbarriered(JSValue);
     void appendUnbarriered(JSValue*, size_t);
     void appendUnbarriered(JSCell*);
 
     template<typename T>
     void append(const Weak<T>& weak);
+
+    void appendHiddenUnbarriered(JSValue);
+    void appendHiddenUnbarriered(JSCell*);
 
     JS_EXPORT_PRIVATE void addOpaqueRoot(void*);
 
@@ -174,12 +177,13 @@ private:
     friend class ParallelModeEnabler;
 
     void appendJSCellOrAuxiliary(HeapCell*);
-    void appendHidden(JSValue);
 
-    JS_EXPORT_PRIVATE void setMarkedAndAppendToMarkStack(JSCell*);
+    JS_EXPORT_PRIVATE void appendSlow(JSCell*, Dependency);
+    JS_EXPORT_PRIVATE void appendHiddenSlow(JSCell*, Dependency);
+    void appendHiddenSlowImpl(JSCell*, Dependency);
 
     template<typename ContainerType>
-    void setMarkedAndAppendToMarkStack(ContainerType&, JSCell*);
+    void setMarkedAndAppendToMarkStack(ContainerType&, JSCell*, Dependency);
 
     void appendToMarkStack(JSCell*);
 

@@ -250,10 +250,10 @@ void HTMLFormControlElement::didAttachRenderers()
     }
 }
 
-void HTMLFormControlElement::didMoveToNewDocument(Document& oldDocument)
+void HTMLFormControlElement::didMoveToNewDocument(Document& oldDocument, Document& newDocument)
 {
     FormAssociatedElement::didMoveToNewDocument(oldDocument);
-    HTMLElement::didMoveToNewDocument(oldDocument);
+    HTMLElement::didMoveToNewDocument(oldDocument, newDocument);
 }
 
 static void addInvalidElementToAncestorFromInsertionPoint(const HTMLFormControlElement& element, ContainerNode* insertionPoint)
@@ -486,6 +486,11 @@ bool HTMLFormControlElement::checkValidity(Vector<RefPtr<HTMLFormControlElement>
     if (needsDefaultAction && unhandledInvalidControls && isConnected() && originalDocument.ptr() == &document())
         unhandledInvalidControls->append(this);
     return false;
+}
+
+bool HTMLFormControlElement::isShowingValidationMessage() const
+{
+    return m_validationMessage && m_validationMessage->isVisible();
 }
 
 bool HTMLFormControlElement::reportValidity()

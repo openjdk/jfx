@@ -58,6 +58,7 @@
 #endif
 #include <wtf/CurrentTime.h>
 #include <wtf/glib/GRefPtr.h>
+#include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
@@ -68,9 +69,6 @@ static bool createSoupRequestAndMessageForHandle(ResourceHandle*, const Resource
 static void cleanupSoupRequestOperation(ResourceHandle*, bool isDestroying = false);
 static void sendRequestCallback(GObject*, GAsyncResult*, gpointer);
 static void readCallback(GObject*, GAsyncResult*, gpointer);
-#if ENABLE(WEB_TIMING)
-static double milisecondsSinceRequest(double requestTime);
-#endif
 static void continueAfterDidReceiveResponse(ResourceHandle*);
 
 ResourceHandleInternal::~ResourceHandleInternal()
@@ -145,8 +143,10 @@ void ResourceHandle::ensureReadBuffer()
     char* bufferFromClient = client()->getOrCreateReadBuffer(gDefaultReadBufferSize, bufferSize);
     if (bufferFromClient)
         d->m_soupBuffer.reset(soup_buffer_new(SOUP_MEMORY_TEMPORARY, bufferFromClient, bufferSize));
-    else
-        d->m_soupBuffer.reset(soup_buffer_new(SOUP_MEMORY_TAKE, static_cast<char*>(g_malloc(gDefaultReadBufferSize)), gDefaultReadBufferSize));
+    else {
+        auto* buffer = static_cast<uint8_t*>(fastMalloc(gDefaultReadBufferSize));
+        d->m_soupBuffer.reset(soup_buffer_new_with_owner(buffer, gDefaultReadBufferSize, buffer, fastFree));
+    }
 
     ASSERT(d->m_soupBuffer);
 }
@@ -238,7 +238,6 @@ static void applyAuthenticationToRequest(ResourceHandle* handle, ResourceRequest
     request.setURL(urlWithCredentials);
 }
 
-#if ENABLE(WEB_TIMING)
 // Called each time the message is going to be sent again except the first time.
 // This happens when libsoup handles HTTP authentication.
 static void restartedCallback(SoupMessage*, gpointer data)
@@ -247,9 +246,8 @@ static void restartedCallback(SoupMessage*, gpointer data)
     if (!handle || handle->cancelledOrClientless())
         return;
 
-    handle->m_requestTime = monotonicallyIncreasingTime();
+    handle->m_requestTime = MonotonicTime::now();
 }
-#endif
 
 static bool shouldRedirect(ResourceHandle* handle)
 {
@@ -385,7 +383,7 @@ static void redirectSkipCallback(GObject*, GAsyncResult* asyncResult, gpointer d
     }
 
     if (bytesSkipped > 0) {
-        g_input_stream_skip_async(d->m_inputStream.get(), gDefaultReadBufferSize, G_PRIORITY_DEFAULT,
+        g_input_stream_skip_async(d->m_inputStream.get(), gDefaultReadBufferSize, RunLoopSourcePriority::AsyncIONetwork,
             d->m_cancellable.get(), redirectSkipCallback, handle.get());
         return;
     }
@@ -467,7 +465,7 @@ static void nextMultipartResponsePartCallback(GObject* /*source*/, GAsyncResult*
     }
 
     if (!d->m_inputStream) {
-        handle->client()->didFinishLoading(handle.get(), 0);
+        handle->client()->didFinishLoading(handle.get());
         cleanupSoupRequestOperation(handle.get());
         return;
     }
@@ -516,7 +514,7 @@ static void sendRequestCallback(GObject*, GAsyncResult* result, gpointer data)
 
         if (SOUP_STATUS_IS_REDIRECTION(soupMessage->status_code) && shouldRedirect(handle.get())) {
             d->m_inputStream = inputStream;
-            g_input_stream_skip_async(d->m_inputStream.get(), gDefaultReadBufferSize, G_PRIORITY_DEFAULT,
+            g_input_stream_skip_async(d->m_inputStream.get(), gDefaultReadBufferSize, RunLoopSourcePriority::AsyncIONetwork,
                 d->m_cancellable.get(), redirectSkipCallback, handle.get());
             return;
         }
@@ -528,9 +526,7 @@ static void sendRequestCallback(GObject*, GAsyncResult* result, gpointer data)
         d->m_response.setExpectedContentLength(soup_request_get_content_length(d->m_soupRequest.get()));
     }
 
-#if ENABLE(WEB_TIMING)
-    d->m_response.networkLoadTiming().responseStart = milisecondsSinceRequest(handle->m_requestTime);
-#endif
+    d->m_response.deprecatedNetworkLoadMetrics().responseStart = MonotonicTime::now() - handle->m_requestTime;
 
     if (soupMessage && d->m_response.isMultipart())
         d->m_multipartInputStream = adoptGRef(soup_multipart_input_stream_new(soupMessage, inputStream.get()));
@@ -554,7 +550,7 @@ static void continueAfterDidReceiveResponse(ResourceHandle* handle)
 
     ResourceHandleInternal* d = handle->getInternal();
     if (d->m_soupMessage && d->m_multipartInputStream && !d->m_inputStream) {
-        soup_multipart_input_stream_next_part_async(d->m_multipartInputStream.get(), G_PRIORITY_DEFAULT,
+        soup_multipart_input_stream_next_part_async(d->m_multipartInputStream.get(), RunLoopSourcePriority::AsyncIONetwork,
             d->m_cancellable.get(), nextMultipartResponsePartCallback, handle);
         return;
     }
@@ -562,18 +558,12 @@ static void continueAfterDidReceiveResponse(ResourceHandle* handle)
     ASSERT(d->m_inputStream);
     handle->ensureReadBuffer();
     g_input_stream_read_async(d->m_inputStream.get(), const_cast<char*>(d->m_soupBuffer->data), d->m_soupBuffer->length,
-        G_PRIORITY_DEFAULT, d->m_cancellable.get(), readCallback, handle);
-}
-
-#if ENABLE(WEB_TIMING)
-static double milisecondsSinceRequest(double requestTime)
-{
-    return (monotonicallyIncreasingTime() - requestTime) * 1000.0;
+        RunLoopSourcePriority::AsyncIONetwork, d->m_cancellable.get(), readCallback, handle);
 }
 
 void ResourceHandle::didStartRequest()
 {
-    getInternal()->m_response.networkLoadTiming().requestStart = milisecondsSinceRequest(m_requestTime);
+    getInternal()->m_response.deprecatedNetworkLoadMetrics().requestStart = MonotonicTime::now() - m_requestTime;
 }
 
 #if SOUP_CHECK_VERSION(2, 49, 91)
@@ -593,24 +583,24 @@ static void networkEventCallback(SoupMessage*, GSocketClientEvent event, GIOStre
         return;
 
     ResourceHandleInternal* d = handle->getInternal();
-    double deltaTime = milisecondsSinceRequest(handle->m_requestTime);
+    Seconds deltaTime = MonotonicTime::now() - handle->m_requestTime;
     switch (event) {
     case G_SOCKET_CLIENT_RESOLVING:
-        d->m_response.networkLoadTiming().domainLookupStart = deltaTime;
+        d->m_response.deprecatedNetworkLoadMetrics().domainLookupStart = deltaTime;
         break;
     case G_SOCKET_CLIENT_RESOLVED:
-        d->m_response.networkLoadTiming().domainLookupEnd = deltaTime;
+        d->m_response.deprecatedNetworkLoadMetrics().domainLookupEnd = deltaTime;
         break;
     case G_SOCKET_CLIENT_CONNECTING:
-        d->m_response.networkLoadTiming().connectStart = deltaTime;
-        if (d->m_response.networkLoadTiming().domainLookupStart != -1) {
+        d->m_response.deprecatedNetworkLoadMetrics().connectStart = deltaTime;
+        if (d->m_response.deprecatedNetworkLoadMetrics().domainLookupStart != Seconds(-1)) {
             // WebCore/inspector/front-end/RequestTimingView.js assumes
             // that DNS time is included in connection time so must
             // substract here the DNS delta that will be added later (see
             // WebInspector.RequestTimingView.createTimingTable in the
             // file above for more details).
-            d->m_response.networkLoadTiming().connectStart -=
-                d->m_response.networkLoadTiming().domainLookupEnd - d->m_response.networkLoadTiming().domainLookupStart;
+            d->m_response.deprecatedNetworkLoadMetrics().connectStart -=
+                d->m_response.deprecatedNetworkLoadMetrics().domainLookupEnd - d->m_response.deprecatedNetworkLoadMetrics().domainLookupStart;
         }
         break;
     case G_SOCKET_CLIENT_CONNECTED:
@@ -622,19 +612,18 @@ static void networkEventCallback(SoupMessage*, GSocketClientEvent event, GIOStre
     case G_SOCKET_CLIENT_PROXY_NEGOTIATED:
         break;
     case G_SOCKET_CLIENT_TLS_HANDSHAKING:
-        d->m_response.networkLoadTiming().secureConnectionStart = deltaTime;
+        d->m_response.deprecatedNetworkLoadMetrics().secureConnectionStart = deltaTime;
         break;
     case G_SOCKET_CLIENT_TLS_HANDSHAKED:
         break;
     case G_SOCKET_CLIENT_COMPLETE:
-        d->m_response.networkLoadTiming().connectEnd = deltaTime;
+        d->m_response.deprecatedNetworkLoadMetrics().connectEnd = deltaTime;
         break;
     default:
         ASSERT_NOT_REACHED();
         break;
     }
 }
-#endif
 
 static bool createSoupMessageForHandleAndRequest(ResourceHandle* handle, const ResourceRequest& request)
 {
@@ -676,13 +665,11 @@ static bool createSoupMessageForHandleAndRequest(ResourceHandle* handle, const R
     unsigned flags = SOUP_MESSAGE_NO_REDIRECT;
     soup_message_set_flags(d->m_soupMessage.get(), static_cast<SoupMessageFlags>(soup_message_get_flags(d->m_soupMessage.get()) | flags));
 
-#if ENABLE(WEB_TIMING)
 #if SOUP_CHECK_VERSION(2, 49, 91)
     g_signal_connect(d->m_soupMessage.get(), "starting", G_CALLBACK(startingCallback), handle);
 #endif
     g_signal_connect(d->m_soupMessage.get(), "network-event", G_CALLBACK(networkEventCallback), handle);
     g_signal_connect(d->m_soupMessage.get(), "restarted", G_CALLBACK(restartedCallback), handle);
-#endif
 
 #if SOUP_CHECK_VERSION(2, 43, 1)
     soup_message_set_priority(d->m_soupMessage.get(), toSoupMessagePriority(request.priority()));
@@ -774,12 +761,10 @@ void ResourceHandle::timeoutFired()
 
 void ResourceHandle::sendPendingRequest()
 {
-#if ENABLE(WEB_TIMING)
-    m_requestTime = monotonicallyIncreasingTime();
-#endif
+    m_requestTime = MonotonicTime::now();
 
     if (d->m_firstRequest.timeoutInterval() > 0)
-        d->m_timeoutSource.startOneShot(d->m_firstRequest.timeoutInterval());
+        d->m_timeoutSource.startOneShot(1_s * d->m_firstRequest.timeoutInterval());
 
     // Balanced by a deref() in cleanupSoupRequestOperation, which should always run.
     ref();
@@ -1012,14 +997,14 @@ static void readCallback(GObject*, GAsyncResult* asyncResult, gpointer data)
         // If this is a multipart message, we'll look for another part.
         if (d->m_soupMessage && d->m_multipartInputStream) {
             d->m_inputStream.clear();
-            soup_multipart_input_stream_next_part_async(d->m_multipartInputStream.get(), G_PRIORITY_DEFAULT,
+            soup_multipart_input_stream_next_part_async(d->m_multipartInputStream.get(), RunLoopSourcePriority::AsyncIONetwork,
                 d->m_cancellable.get(), nextMultipartResponsePartCallback, handle.get());
             return;
         }
 
         g_input_stream_close(d->m_inputStream.get(), 0, 0);
 
-        handle->client()->didFinishLoading(handle.get(), 0);
+        handle->client()->didFinishLoading(handle.get());
         cleanupSoupRequestOperation(handle.get());
         return;
     }
@@ -1043,7 +1028,7 @@ static void readCallback(GObject*, GAsyncResult* asyncResult, gpointer data)
     }
 
     handle->ensureReadBuffer();
-    g_input_stream_read_async(d->m_inputStream.get(), const_cast<char*>(d->m_soupBuffer->data), d->m_soupBuffer->length, G_PRIORITY_DEFAULT,
+    g_input_stream_read_async(d->m_inputStream.get(), const_cast<char*>(d->m_soupBuffer->data), d->m_soupBuffer->length, RunLoopSourcePriority::AsyncIONetwork,
         d->m_cancellable.get(), readCallback, handle.get());
 }
 

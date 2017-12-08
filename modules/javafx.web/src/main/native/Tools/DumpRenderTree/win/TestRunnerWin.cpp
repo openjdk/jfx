@@ -229,6 +229,11 @@ void TestRunner::display()
     displayWebView();
 }
 
+void TestRunner::displayAndTrackRepaints()
+{
+    displayWebView();
+}
+
 void TestRunner::keepWebHistory()
 {
     COMPtr<IWebHistory> history;
@@ -284,6 +289,14 @@ void TestRunner::notifyDone()
 {
     // Same as on mac.  This can be shared.
     if (m_waitToDump && !topLoadingFrame && !WorkQueue::singleton().count())
+        dump();
+    m_waitToDump = false;
+}
+
+void TestRunner::forceImmediateCompletion()
+{
+    // Same as on mac. This can be shared.
+    if (m_waitToDump && !WorkQueue::singleton().count())
         dump();
     m_waitToDump = false;
 }
@@ -480,19 +493,8 @@ void TestRunner::setGeolocationPermission(bool allow)
     setGeolocationPermissionCommon(allow);
 }
 
-void TestRunner::setIconDatabaseEnabled(bool iconDatabaseEnabled)
+void TestRunner::setIconDatabaseEnabled(bool)
 {
-#if ENABLE(ICONDATABASE)
-    // See also <rdar://problem/6480108>
-    COMPtr<IWebIconDatabase> iconDatabase;
-    COMPtr<IWebIconDatabase> tmpIconDatabase;
-    if (FAILED(WebKitCreateInstance(CLSID_WebIconDatabase, 0, IID_IWebIconDatabase, (void**)&tmpIconDatabase)))
-        return;
-    if (FAILED(tmpIconDatabase->sharedIconDatabase(&iconDatabase)))
-        return;
-
-    iconDatabase->setEnabled(iconDatabaseEnabled);
-#endif
 }
 
 void TestRunner::setMainFrameIsFirstResponder(bool)
@@ -840,11 +842,6 @@ void TestRunner::setValueForUser(JSContextRef context, JSValueRef element, JSStr
     domInputElement->setValueForUser(valueBSTR);
 }
 
-void TestRunner::setViewModeMediaFeature(JSStringRef mode)
-{
-    // FIXME: implement
-}
-
 void TestRunner::dispatchPendingLoadRequests()
 {
     COMPtr<IWebView> webView;
@@ -939,8 +936,6 @@ void TestRunner::setViewSize(double width, double height)
     ::SetWindowPos(webViewWindow, 0, 0, 0, width, height, SWP_NOMOVE);
 }
 
-static const CFTimeInterval waitToDumpWatchdogInterval = 30.0;
-
 static void CALLBACK waitUntilDoneWatchdogFired(HWND, UINT, UINT_PTR, DWORD)
 {
     gTestRunner->waitToDumpWatchdogTimerFired();
@@ -950,7 +945,7 @@ void TestRunner::setWaitToDump(bool waitUntilDone)
 {
     m_waitToDump = waitUntilDone;
     if (m_waitToDump && !waitToDumpWatchdog)
-        waitToDumpWatchdog = SetTimer(0, 0, waitToDumpWatchdogInterval * 1000, waitUntilDoneWatchdogFired);
+        waitToDumpWatchdog = SetTimer(0, 0, m_timeout, waitUntilDoneWatchdogFired);
 }
 
 int TestRunner::windowCount()
@@ -1363,22 +1358,26 @@ void TestRunner::setPageVisibility(const char* newVisibility)
 
 void TestRunner::grantWebNotificationPermission(JSStringRef origin)
 {
-    fprintf(testResult, "ERROR: TestRunner::grantWebNotificationPermission(JSStringRef) not implemented\n");
+    // FIXME: Implement.
+    // See https://bugs.webkit.org/show_bug.cgi?id=172295
 }
 
 void TestRunner::denyWebNotificationPermission(JSStringRef jsOrigin)
 {
-    fprintf(testResult, "ERROR: TestRunner::denyWebNotificationPermission(JSStringRef) not implemented\n");
+    // FIXME: Implement.
+    // See https://bugs.webkit.org/show_bug.cgi?id=172295
 }
 
 void TestRunner::removeAllWebNotificationPermissions()
 {
-    fprintf(testResult, "ERROR: TestRunner::removeAllWebNotificationPermissions() not implemented\n");
+    // FIXME: Implement.
+    // See https://bugs.webkit.org/show_bug.cgi?id=172295
 }
 
 void TestRunner::simulateWebNotificationClick(JSValueRef jsNotification)
 {
-    fprintf(testResult, "ERROR: TestRunner::simulateWebNotificationClick() not implemented\n");
+    // FIXME: Implement.
+    // See https://bugs.webkit.org/show_bug.cgi?id=172295
 }
 
 void TestRunner::simulateLegacyWebNotificationClick(JSStringRef title)

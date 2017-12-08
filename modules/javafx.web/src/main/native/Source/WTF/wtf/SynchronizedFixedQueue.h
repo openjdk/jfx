@@ -27,18 +27,17 @@
 
 #include <wtf/Condition.h>
 #include <wtf/Deque.h>
-#include <wtf/HashSet.h>
 #include <wtf/Lock.h>
-#include <wtf/Locker.h>
+#include <wtf/ThreadSafeRefCounted.h>
 
 namespace WTF {
 
 template<typename T, size_t BufferSize>
-class SynchronizedFixedQueue {
+class SynchronizedFixedQueue : public ThreadSafeRefCounted<SynchronizedFixedQueue<T, BufferSize>> {
 public:
-    SynchronizedFixedQueue()
+    static Ref<SynchronizedFixedQueue> create()
     {
-        static_assert(!((BufferSize - 1) & BufferSize), "BufferSize must be power of 2.");
+        return adoptRef(*new SynchronizedFixedQueue());
     }
 
     void open()
@@ -109,6 +108,11 @@ public:
     }
 
 private:
+    SynchronizedFixedQueue()
+    {
+        static_assert(!((BufferSize - 1) & BufferSize), "BufferSize must be power of 2.");
+    }
+
     Lock m_mutex;
     Condition m_condition;
 

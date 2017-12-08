@@ -28,7 +28,6 @@
 
 #include "GRefPtrGStreamer.h"
 #include "MediaPlayerPrivateGStreamerBase.h"
-#include "Timer.h"
 
 #include <glib.h>
 #include <gst/gst.h>
@@ -173,6 +172,8 @@ private:
     void purgeOldDownloadFiles(const char*);
     static void uriDecodeBinElementAddedCallback(GstBin*, GstElement*, MediaPlayerPrivateGStreamer*);
     static void downloadBufferFileCreatedCallback(MediaPlayerPrivateGStreamer*);
+
+    void setPlaybinURL(const URL& urlString);
 
 protected:
     void cacheDuration();

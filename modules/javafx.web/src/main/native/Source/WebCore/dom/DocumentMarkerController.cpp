@@ -42,9 +42,9 @@
 
 namespace WebCore {
 
-inline bool DocumentMarkerController::possiblyHasMarkers(DocumentMarker::MarkerTypes types)
+inline bool DocumentMarkerController::possiblyHasMarkers(OptionSet<DocumentMarker::MarkerType> types)
 {
-    return m_possiblyExistingMarkerTypes.intersects(types);
+    return m_possiblyExistingMarkerTypes.contains(types);
 }
 
 DocumentMarkerController::DocumentMarkerController(Document& document)
@@ -59,7 +59,7 @@ DocumentMarkerController::~DocumentMarkerController()
 void DocumentMarkerController::detach()
 {
     m_markers.clear();
-    m_possiblyExistingMarkerTypes = 0;
+    m_possiblyExistingMarkerTypes = { };
 }
 
 void DocumentMarkerController::addMarker(Range* range, DocumentMarker::MarkerType type, const String& description)
@@ -135,7 +135,16 @@ void DocumentMarkerController::addDictationResultMarker(Range* range, const Reta
 
 #endif
 
-void DocumentMarkerController::removeMarkers(Range* range, DocumentMarker::MarkerTypes markerTypes, RemovePartiallyOverlappingMarkerOrNot shouldRemovePartiallyOverlappingMarker)
+void DocumentMarkerController::addDraggedContentMarker(RefPtr<Range> range)
+{
+    for (TextIterator markedText(range.get()); !markedText.atEnd(); markedText.advance()) {
+        RefPtr<Range> textPiece = markedText.range();
+        DocumentMarker::DraggedContentData draggedContentData { markedText.node() };
+        addMarker(&textPiece->startContainer(), { DocumentMarker::DraggedContent, textPiece->startOffset(), textPiece->endOffset(), WTFMove(draggedContentData) });
+    }
+}
+
+void DocumentMarkerController::removeMarkers(Range* range, OptionSet<DocumentMarker::MarkerType> markerTypes, RemovePartiallyOverlappingMarkerOrNot shouldRemovePartiallyOverlappingMarker)
 {
     for (TextIterator markedText(range); !markedText.atEnd(); markedText.advance()) {
         if (!possiblyHasMarkers(markerTypes))
@@ -293,6 +302,20 @@ Vector<FloatRect> DocumentMarkerController::renderedRectsForMarkers(DocumentMark
     return result;
 }
 
+static bool shouldInsertAsSeparateMarker(const DocumentMarker& newMarker)
+{
+#if PLATFORM(IOS)
+    if (newMarker.type() == DocumentMarker::DictationPhraseWithAlternatives || newMarker.type() == DocumentMarker::DictationResult)
+        return true;
+#endif
+    if (newMarker.type() == DocumentMarker::DraggedContent) {
+        if (auto targetNode = WTF::get<DocumentMarker::DraggedContentData>(newMarker.data()).targetNode)
+            return targetNode->renderer() && targetNode->renderer()->isRenderReplaced();
+    }
+
+    return false;
+}
+
 // Markers are stored in order sorted by their start offset.
 // Markers of the same type do not overlap each other.
 
@@ -310,15 +333,14 @@ void DocumentMarkerController::addMarker(Node* node, const DocumentMarker& newMa
             downcast<RenderBlockFlow>(*renderer).ensureLineBoxes();
     }
 
-    m_possiblyExistingMarkerTypes.add(newMarker.type());
+    m_possiblyExistingMarkerTypes |= newMarker.type();
 
     std::unique_ptr<MarkerList>& list = m_markers.add(node, nullptr).iterator->value;
 
     if (!list) {
         list = std::make_unique<MarkerList>();
         list->append(RenderedDocumentMarker(newMarker));
-#if PLATFORM(IOS)
-    } else if (newMarker.type() == DocumentMarker::DictationPhraseWithAlternatives || newMarker.type() == DocumentMarker::DictationResult) {
+    } else if (shouldInsertAsSeparateMarker(newMarker)) {
         // We don't merge dictation markers.
         size_t i;
         size_t numberOfMarkers = list->size();
@@ -328,7 +350,6 @@ void DocumentMarkerController::addMarker(Node* node, const DocumentMarker& newMa
                 break;
         }
         list->insert(i, RenderedDocumentMarker(newMarker));
-#endif
     } else {
         RenderedDocumentMarker toInsert(newMarker);
         size_t numMarkers = list->size();
@@ -382,7 +403,7 @@ void DocumentMarkerController::copyMarkers(Node* srcNode, unsigned startOffset, 
     if (length <= 0)
         return;
 
-    if (!possiblyHasMarkers(DocumentMarker::AllMarkers()))
+    if (!possiblyHasMarkers(DocumentMarker::allMarkers()))
         return;
     ASSERT(!m_markers.isEmpty());
 
@@ -416,7 +437,7 @@ void DocumentMarkerController::copyMarkers(Node* srcNode, unsigned startOffset, 
         dstNode->renderer()->repaint();
 }
 
-void DocumentMarkerController::removeMarkers(Node* node, unsigned startOffset, int length, DocumentMarker::MarkerTypes markerTypes, RemovePartiallyOverlappingMarkerOrNot shouldRemovePartiallyOverlappingMarker)
+void DocumentMarkerController::removeMarkers(Node* node, unsigned startOffset, int length, OptionSet<DocumentMarker::MarkerType> markerTypes, RemovePartiallyOverlappingMarkerOrNot shouldRemovePartiallyOverlappingMarker)
 {
     if (length <= 0)
         return;
@@ -474,7 +495,7 @@ void DocumentMarkerController::removeMarkers(Node* node, unsigned startOffset, i
     if (list->isEmpty()) {
         m_markers.remove(node);
         if (m_markers.isEmpty())
-            m_possiblyExistingMarkerTypes = 0;
+            m_possiblyExistingMarkerTypes = { };
     }
 
     if (docDirty && node->renderer())
@@ -502,8 +523,11 @@ DocumentMarker* DocumentMarkerController::markerContainingPoint(const LayoutPoin
     return nullptr;
 }
 
-Vector<RenderedDocumentMarker*> DocumentMarkerController::markersFor(Node* node, DocumentMarker::MarkerTypes markerTypes)
+Vector<RenderedDocumentMarker*> DocumentMarkerController::markersFor(Node* node, OptionSet<DocumentMarker::MarkerType> markerTypes)
 {
+    if (!possiblyHasMarkers(markerTypes))
+        return { };
+
     Vector<RenderedDocumentMarker*> result;
     MarkerList* list = m_markers.get(node);
     if (!list)
@@ -517,24 +541,24 @@ Vector<RenderedDocumentMarker*> DocumentMarkerController::markersFor(Node* node,
     return result;
 }
 
-Vector<RenderedDocumentMarker*> DocumentMarkerController::markersInRange(Range* range, DocumentMarker::MarkerTypes markerTypes)
+Vector<RenderedDocumentMarker*> DocumentMarkerController::markersInRange(Range& range, OptionSet<DocumentMarker::MarkerType> markerTypes)
 {
     if (!possiblyHasMarkers(markerTypes))
         return Vector<RenderedDocumentMarker*>();
 
     Vector<RenderedDocumentMarker*> foundMarkers;
 
-    Node& startContainer = range->startContainer();
-    Node& endContainer = range->endContainer();
+    Node& startContainer = range.startContainer();
+    Node& endContainer = range.endContainer();
 
-    Node* pastLastNode = range->pastLastNode();
-    for (Node* node = range->firstNode(); node != pastLastNode; node = NodeTraversal::next(*node)) {
+    Node* pastLastNode = range.pastLastNode();
+    for (Node* node = range.firstNode(); node != pastLastNode; node = NodeTraversal::next(*node)) {
         for (auto* marker : markersFor(node)) {
             if (!markerTypes.contains(marker->type()))
                 continue;
-            if (node == &startContainer && marker->endOffset() <= range->startOffset())
+            if (node == &startContainer && marker->endOffset() <= range.startOffset())
                 continue;
-            if (node == &endContainer && marker->startOffset() >= range->endOffset())
+            if (node == &endContainer && marker->startOffset() >= range.endOffset())
                 continue;
             foundMarkers.append(marker);
         }
@@ -542,7 +566,7 @@ Vector<RenderedDocumentMarker*> DocumentMarkerController::markersInRange(Range* 
     return foundMarkers;
 }
 
-void DocumentMarkerController::removeMarkers(Node* node, DocumentMarker::MarkerTypes markerTypes)
+void DocumentMarkerController::removeMarkers(Node* node, OptionSet<DocumentMarker::MarkerType> markerTypes)
 {
     if (!possiblyHasMarkers(markerTypes))
         return;
@@ -553,7 +577,7 @@ void DocumentMarkerController::removeMarkers(Node* node, DocumentMarker::MarkerT
         removeMarkersFromList(iterator, markerTypes);
 }
 
-void DocumentMarkerController::removeMarkers(DocumentMarker::MarkerTypes markerTypes)
+void DocumentMarkerController::removeMarkers(OptionSet<DocumentMarker::MarkerType> markerTypes)
 {
     if (!possiblyHasMarkers(markerTypes))
         return;
@@ -567,15 +591,15 @@ void DocumentMarkerController::removeMarkers(DocumentMarker::MarkerTypes markerT
             removeMarkersFromList(iterator, markerTypes);
     }
 
-    m_possiblyExistingMarkerTypes.remove(markerTypes);
+    m_possiblyExistingMarkerTypes -= markerTypes;
 }
 
-void DocumentMarkerController::removeMarkersFromList(MarkerMap::iterator iterator, DocumentMarker::MarkerTypes markerTypes)
+void DocumentMarkerController::removeMarkersFromList(MarkerMap::iterator iterator, OptionSet<DocumentMarker::MarkerType> markerTypes)
 {
     bool needsRepainting = false;
     bool listCanBeRemoved;
 
-    if (markerTypes == DocumentMarker::AllMarkers()) {
+    if (markerTypes == DocumentMarker::allMarkers()) {
         needsRepainting = true;
         listCanBeRemoved = true;
     } else {
@@ -607,11 +631,11 @@ void DocumentMarkerController::removeMarkersFromList(MarkerMap::iterator iterato
     if (listCanBeRemoved) {
         m_markers.remove(iterator);
         if (m_markers.isEmpty())
-            m_possiblyExistingMarkerTypes = 0;
+            m_possiblyExistingMarkerTypes = { };
     }
 }
 
-void DocumentMarkerController::repaintMarkers(DocumentMarker::MarkerTypes markerTypes)
+void DocumentMarkerController::repaintMarkers(OptionSet<DocumentMarker::MarkerType> markerTypes)
 {
     if (!possiblyHasMarkers(markerTypes))
         return;
@@ -641,7 +665,7 @@ void DocumentMarkerController::repaintMarkers(DocumentMarker::MarkerTypes marker
 
 void DocumentMarkerController::shiftMarkers(Node* node, unsigned startOffset, int delta)
 {
-    if (!possiblyHasMarkers(DocumentMarker::AllMarkers()))
+    if (!possiblyHasMarkers(DocumentMarker::allMarkers()))
         return;
     ASSERT(!m_markers.isEmpty());
 
@@ -692,7 +716,7 @@ void DocumentMarkerController::shiftMarkers(Node* node, unsigned startOffset, in
 
 void DocumentMarkerController::setMarkersActive(Range* range, bool active)
 {
-    if (!possiblyHasMarkers(DocumentMarker::AllMarkers()))
+    if (!possiblyHasMarkers(DocumentMarker::allMarkers()))
         return;
     ASSERT(!m_markers.isEmpty());
 
@@ -732,23 +756,23 @@ void DocumentMarkerController::setMarkersActive(Node* node, unsigned startOffset
         node->renderer()->repaint();
 }
 
-bool DocumentMarkerController::hasMarkers(Range* range, DocumentMarker::MarkerTypes markerTypes)
+bool DocumentMarkerController::hasMarkers(Range& range, OptionSet<DocumentMarker::MarkerType> markerTypes)
 {
     if (!possiblyHasMarkers(markerTypes))
         return false;
     ASSERT(!m_markers.isEmpty());
 
-    Node& startContainer = range->startContainer();
-    Node& endContainer = range->endContainer();
+    Node& startContainer = range.startContainer();
+    Node& endContainer = range.endContainer();
 
-    Node* pastLastNode = range->pastLastNode();
-    for (Node* node = range->firstNode(); node != pastLastNode; node = NodeTraversal::next(*node)) {
+    Node* pastLastNode = range.pastLastNode();
+    for (Node* node = range.firstNode(); node != pastLastNode; node = NodeTraversal::next(*node)) {
         for (auto* marker : markersFor(node)) {
             if (!markerTypes.contains(marker->type()))
                 continue;
-            if (node == &startContainer && marker->endOffset() <= static_cast<unsigned>(range->startOffset()))
+            if (node == &startContainer && marker->endOffset() <= static_cast<unsigned>(range.startOffset()))
                 continue;
-            if (node == &endContainer && marker->startOffset() >= static_cast<unsigned>(range->endOffset()))
+            if (node == &endContainer && marker->startOffset() >= static_cast<unsigned>(range.endOffset()))
                 continue;
             return true;
         }
@@ -756,19 +780,19 @@ bool DocumentMarkerController::hasMarkers(Range* range, DocumentMarker::MarkerTy
     return false;
 }
 
-void DocumentMarkerController::clearDescriptionOnMarkersIntersectingRange(Range* range, DocumentMarker::MarkerTypes markerTypes)
+void DocumentMarkerController::clearDescriptionOnMarkersIntersectingRange(Range& range, OptionSet<DocumentMarker::MarkerType> markerTypes)
 {
     if (!possiblyHasMarkers(markerTypes))
         return;
     ASSERT(!m_markers.isEmpty());
 
-    Node& startContainer = range->startContainer();
-    Node& endContainer = range->endContainer();
+    Node& startContainer = range.startContainer();
+    Node& endContainer = range.endContainer();
 
-    Node* pastLastNode = range->pastLastNode();
-    for (Node* node = range->firstNode(); node != pastLastNode; node = NodeTraversal::next(*node)) {
-        unsigned startOffset = node == &startContainer ? range->startOffset() : 0;
-        unsigned endOffset = node == &endContainer ? static_cast<unsigned>(range->endOffset()) : std::numeric_limits<unsigned>::max();
+    Node* pastLastNode = range.pastLastNode();
+    for (Node* node = range.firstNode(); node != pastLastNode; node = NodeTraversal::next(*node)) {
+        unsigned startOffset = node == &startContainer ? range.startOffset() : 0;
+        unsigned endOffset = node == &endContainer ? static_cast<unsigned>(range.endOffset()) : std::numeric_limits<unsigned>::max();
         MarkerList* list = m_markers.get(node);
         if (!list)
             continue;

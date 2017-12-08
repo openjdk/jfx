@@ -171,7 +171,7 @@ final class WCImageDecoderImpl extends WCImageDecoder {
         setFrames(loadFrames(in));
     }
 
-    private ImageFrame[] loadFrames(InputStream in) {
+    private synchronized ImageFrame[] loadFrames(InputStream in) {
         if (log.isLoggable(Level.FINE)) {
             log.fine(String.format("%X Decoding frames", hashCode()));
         }

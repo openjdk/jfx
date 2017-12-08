@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(DirectArguments);
 
-const ClassInfo DirectArguments::s_info = { "Arguments", &Base::s_info, 0, CREATE_METHOD_TABLE(DirectArguments) };
+const ClassInfo DirectArguments::s_info = { "Arguments", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(DirectArguments) };
 
 DirectArguments::DirectArguments(VM& vm, Structure* structure, unsigned length, unsigned capacity)
     : GenericArguments(vm, structure)
@@ -118,7 +118,7 @@ void DirectArguments::overrideThings(VM& vm)
     putDirect(vm, vm.propertyNames->callee, m_callee.get(), DontEnum);
     putDirect(vm, vm.propertyNames->iteratorSymbol, globalObject()->arrayProtoValuesFunction(), DontEnum);
 
-    void* backingStore = vm.auxiliarySpace.tryAllocate(mappedArgumentsSize());
+    void* backingStore = vm.gigacageAuxiliarySpace(m_mappedArguments.kind).tryAllocate(mappedArgumentsSize());
     RELEASE_ASSERT(backingStore);
     bool* overrides = static_cast<bool*>(backingStore);
     m_mappedArguments.set(vm, this, overrides);
@@ -135,7 +135,7 @@ void DirectArguments::overrideThingsIfNecessary(VM& vm)
 void DirectArguments::unmapArgument(VM& vm, unsigned index)
 {
     overrideThingsIfNecessary(vm);
-    m_mappedArguments.get()[index] = true;
+    m_mappedArguments[index] = true;
 }
 
 void DirectArguments::copyToArguments(ExecState* exec, VirtualRegister firstElementDest, unsigned offset, unsigned length)

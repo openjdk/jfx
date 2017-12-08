@@ -39,7 +39,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(FunctionPrototype);
 
-const ClassInfo FunctionPrototype::s_info = { "Function", &Base::s_info, 0, CREATE_METHOD_TABLE(FunctionPrototype) };
+const ClassInfo FunctionPrototype::s_info = { "Function", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(FunctionPrototype) };
 
 static EncodedJSValue JSC_HOST_CALL functionProtoFuncToString(ExecState*);
 
@@ -63,8 +63,10 @@ void FunctionPrototype::addFunctionProperties(ExecState* exec, JSGlobalObject* g
 
     *applyFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().applyPublicName(), functionPrototypeApplyCodeGenerator(vm), DontEnum);
     *callFunction = putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->builtinNames().callPublicName(), functionPrototypeCallCodeGenerator(vm), DontEnum);
-    *hasInstanceSymbolFunction = putDirectBuiltinFunction(vm, globalObject, vm.propertyNames->hasInstanceSymbol, functionPrototypeSymbolHasInstanceCodeGenerator(vm), DontDelete | ReadOnly | DontEnum);
     putDirectBuiltinFunctionWithoutTransition(vm, globalObject, vm.propertyNames->bind, functionPrototypeBindCodeGenerator(vm), DontEnum);
+
+    *hasInstanceSymbolFunction = JSFunction::createBuiltinFunction(vm, functionPrototypeSymbolHasInstanceCodeGenerator(vm), globalObject, ASCIILiteral("[Symbol.hasInstance]"));
+    putDirectWithoutTransition(vm, vm.propertyNames->hasInstanceSymbol, *hasInstanceSymbolFunction, DontDelete | ReadOnly | DontEnum);
 }
 
 void FunctionPrototype::initRestrictedProperties(ExecState* exec, JSGlobalObject* globalObject)

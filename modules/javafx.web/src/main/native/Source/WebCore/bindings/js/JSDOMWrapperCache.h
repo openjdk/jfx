@@ -34,7 +34,6 @@
 #include <heap/WeakInlines.h>
 #include <runtime/JSArrayBuffer.h>
 #include <runtime/TypedArrayInlines.h>
-#include <runtime/TypedArrays.h>
 
 namespace WebCore {
 
@@ -84,7 +83,7 @@ template<typename WrapperClass> inline JSC::Structure* getDOMStructure(JSC::VM& 
 {
     if (JSC::Structure* structure = getCachedDOMStructure(globalObject, WrapperClass::info()))
         return structure;
-    return cacheDOMStructure(globalObject, WrapperClass::createStructure(vm, &globalObject, WrapperClass::createPrototype(vm, &globalObject)), WrapperClass::info());
+    return cacheDOMStructure(globalObject, WrapperClass::createStructure(vm, &globalObject, WrapperClass::createPrototype(vm, globalObject)), WrapperClass::info());
 }
 
 template<typename WrapperClass> inline JSC::Structure* deprecatedGetDOMStructure(JSC::ExecState* exec)
@@ -93,9 +92,9 @@ template<typename WrapperClass> inline JSC::Structure* deprecatedGetDOMStructure
     return getDOMStructure<WrapperClass>(exec->vm(), *deprecatedGlobalObjectForPrototype(exec));
 }
 
-template<typename WrapperClass> inline JSC::JSObject* getDOMPrototype(JSC::VM& vm, JSC::JSGlobalObject* globalObject)
+template<typename WrapperClass> inline JSC::JSObject* getDOMPrototype(JSC::VM& vm, JSDOMGlobalObject& globalObject)
 {
-    return JSC::jsCast<JSC::JSObject*>(asObject(getDOMStructure<WrapperClass>(vm, *JSC::jsCast<JSDOMGlobalObject*>(globalObject))->storedPrototype()));
+    return JSC::jsCast<JSC::JSObject*>(asObject(getDOMStructure<WrapperClass>(vm, globalObject)->storedPrototype()));
 }
 
 inline JSC::WeakHandleOwner* wrapperOwner(DOMWrapperWorld& world, JSC::ArrayBuffer*)
@@ -162,7 +161,7 @@ template<typename DOMClass> inline JSC::JSObject* getCachedWrapper(DOMWrapperWor
 {
     if (auto* wrapper = getInlineCachedWrapper(world, &domObject))
         return wrapper;
-    return world.m_wrappers.get(wrapperKey(&domObject));
+    return world.wrappers().get(wrapperKey(&domObject));
 }
 
 template<typename DOMClass, typename WrapperClass> inline void cacheWrapper(DOMWrapperWorld& world, DOMClass* domObject, WrapperClass* wrapper)
@@ -170,14 +169,14 @@ template<typename DOMClass, typename WrapperClass> inline void cacheWrapper(DOMW
     JSC::WeakHandleOwner* owner = wrapperOwner(world, domObject);
     if (setInlineCachedWrapper(world, domObject, wrapper, owner))
         return;
-    weakAdd(world.m_wrappers, wrapperKey(domObject), JSC::Weak<JSC::JSObject>(wrapper, owner, &world));
+    weakAdd(world.wrappers(), wrapperKey(domObject), JSC::Weak<JSC::JSObject>(wrapper, owner, &world));
 }
 
 template<typename DOMClass, typename WrapperClass> inline void uncacheWrapper(DOMWrapperWorld& world, DOMClass* domObject, WrapperClass* wrapper)
 {
     if (clearInlineCachedWrapper(world, domObject, wrapper))
         return;
-    weakRemove(world.m_wrappers, wrapperKey(domObject), wrapper);
+    weakRemove(world.wrappers(), wrapperKey(domObject), wrapper);
 }
 
 template<typename DOMClass, typename T> inline auto createWrapper(JSDOMGlobalObject* globalObject, Ref<T>&& domObject) -> typename std::enable_if<std::is_same<DOMClass, T>::value, typename JSDOMWrapperConverterTraits<DOMClass>::WrapperClass*>::type

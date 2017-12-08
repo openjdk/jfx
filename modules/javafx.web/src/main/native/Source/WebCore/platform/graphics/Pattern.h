@@ -30,9 +30,8 @@
 
 #include "AffineTransform.h"
 
-#include <wtf/PassRefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
-#include <wtf/RefPtr.h>
 
 #if USE(CG)
 typedef struct CGPattern* CGPatternRef;
@@ -41,7 +40,7 @@ typedef CGPatternRef PlatformPatternPtr;
 interface ID2D1BitmapBrush;
 typedef ID2D1BitmapBrush* PlatformPatternPtr;
 #elif USE(CAIRO)
-#include <cairo.h>
+typedef struct _cairo_pattern cairo_pattern_t;
 typedef cairo_pattern_t* PlatformPatternPtr;
 #elif USE(WINGDI)
 typedef void* PlatformPatternPtr;
@@ -59,10 +58,10 @@ class Image;
 
 class Pattern final : public RefCounted<Pattern> {
 public:
-    static Ref<Pattern> create(PassRefPtr<Image> tileImage, bool repeatX, bool repeatY);
+    static Ref<Pattern> create(Ref<Image>&& tileImage, bool repeatX, bool repeatY);
     ~Pattern();
 
-    Image* tileImage() const { return m_tileImage.get(); }
+    Image& tileImage() const { return m_tileImage.get(); }
 
     void platformDestroy();
 
@@ -84,9 +83,9 @@ public:
 #endif
 
 private:
-    Pattern(PassRefPtr<Image>, bool repeatX, bool repeatY);
+    Pattern(Ref<Image>&&, bool repeatX, bool repeatY);
 
-    RefPtr<Image> m_tileImage;
+    Ref<Image> m_tileImage;
     bool m_repeatX;
     bool m_repeatY;
     AffineTransform m_patternSpaceTransformation;

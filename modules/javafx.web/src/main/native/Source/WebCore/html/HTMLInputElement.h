@@ -213,6 +213,8 @@ public:
     void willDispatchEvent(Event&, InputElementClickState&);
     void didDispatchClickEvent(Event&, const InputElementClickState&);
 
+    void didBlur();
+
     int maxResults() const { return m_maxResults; }
 
     WEBCORE_EXPORT String defaultValue() const;
@@ -246,9 +248,8 @@ public:
 #endif
 
     Icon* icon() const;
-#if PLATFORM(IOS)
     String displayString() const;
-#endif
+
     // These functions are used for rendering the input active during a
     // drag-and-drop operation.
     bool canReceiveDroppedFiles() const;
@@ -349,7 +350,7 @@ private:
     InsertionNotificationRequest insertedInto(ContainerNode&) final;
     void finishedInsertingSubtree() final;
     void removedFrom(ContainerNode&) final;
-    void didMoveToNewDocument(Document& oldDocument) final;
+    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
 
     bool hasCustomFocusLogic() const final;
     bool isKeyboardFocusable(KeyboardEvent&) const final;

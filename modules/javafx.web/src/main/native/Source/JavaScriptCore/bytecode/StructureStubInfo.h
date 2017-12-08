@@ -30,7 +30,6 @@
 #include "Instruction.h"
 #include "JITStubRoutine.h"
 #include "MacroAssembler.h"
-#include "ObjectPropertyConditionSet.h"
 #include "Options.h"
 #include "RegisterSet.h"
 #include "Structure.h"
@@ -47,6 +46,7 @@ class PolymorphicAccess;
 
 enum class AccessType : int8_t {
     Get,
+    GetWithThis,
     TryGet,
     Put,
     In
@@ -70,9 +70,8 @@ public:
     void initGetByIdSelf(CodeBlock*, Structure* baseObjectStructure, PropertyOffset);
     void initArrayLength();
     void initPutByIdReplace(CodeBlock*, Structure* baseObjectStructure, PropertyOffset);
-    void initStub(CodeBlock*, std::unique_ptr<PolymorphicAccess>);
 
-    AccessGenerationResult addAccessCase(CodeBlock*, const Identifier&, std::unique_ptr<AccessCase>);
+    AccessGenerationResult addAccessCase(const GCSafeConcurrentJSLocker&, CodeBlock*, const Identifier&, std::unique_ptr<AccessCase>);
 
     void reset(CodeBlock*);
 
@@ -177,9 +176,11 @@ public:
 
         int8_t baseGPR;
         int8_t valueGPR;
+        int8_t thisGPR;
 #if USE(JSVALUE32_64)
         int8_t valueTagGPR;
         int8_t baseTagGPR;
+        int8_t thisTagGPR;
 #endif
     } patch;
 

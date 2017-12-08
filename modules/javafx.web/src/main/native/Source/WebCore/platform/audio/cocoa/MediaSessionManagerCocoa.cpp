@@ -42,7 +42,7 @@ void PlatformMediaSessionManager::updateSessionState()
 {
     LOG(Media, "PlatformMediaSessionManager::updateSessionState() - types: Video(%d), Audio(%d), WebAudio(%d)", count(PlatformMediaSession::Video), count(PlatformMediaSession::Audio), count(PlatformMediaSession::WebAudio));
 
-    if (has(PlatformMediaSession::WebAudio))
+    if (has(PlatformMediaSession::WebAudio) || has(PlatformMediaSession::MediaStreamCapturingAudio))
         AudioSession::sharedSession().setPreferredBufferSize(kWebAudioBufferSize);
     else if ((has(PlatformMediaSession::Video) || has(PlatformMediaSession::Audio)) && Settings::lowPowerVideoAudioBufferSizeEnabled()) {
         // FIXME: <http://webkit.org/b/116725> Figure out why enabling the code below
@@ -57,25 +57,28 @@ void PlatformMediaSessionManager::updateSessionState()
         AudioSession::sharedSession().setPreferredBufferSize(bufferSize);
     }
 
-#if PLATFORM(IOS)
     if (!Settings::shouldManageAudioSessionCategory())
         return;
 
-    bool hasAudioMediaType = false;
-    bool hasAudibleAudioOrVideoMediaType = anyOfSessions([this, hasAudioMediaType] (PlatformMediaSession& session, size_t) mutable {
+    bool hasWebAudioType = false;
+    bool hasAudibleAudioOrVideoMediaType = false;
+    bool hasAudioCapture = anyOfSessions([&hasWebAudioType, &hasAudibleAudioOrVideoMediaType] (PlatformMediaSession& session, size_t) mutable {
         auto type = session.mediaType();
-        if (type == PlatformMediaSession::VideoAudio || type == PlatformMediaSession::Audio || type == PlatformMediaSession::WebAudio)
-            hasAudioMediaType = true;
-        return (type == PlatformMediaSession::VideoAudio || type == PlatformMediaSession::Audio) && session.canProduceAudio();
+        if (type == PlatformMediaSession::WebAudio)
+            hasWebAudioType = true;
+        if ((type == PlatformMediaSession::VideoAudio || type == PlatformMediaSession::Audio) && session.canProduceAudio())
+            hasAudibleAudioOrVideoMediaType = true;
+        return (type == PlatformMediaSession::MediaStreamCapturingAudio);
     });
 
-    if (hasAudibleAudioOrVideoMediaType)
+    if (hasAudioCapture)
+        AudioSession::sharedSession().setCategory(AudioSession::PlayAndRecord);
+    else if (hasAudibleAudioOrVideoMediaType)
         AudioSession::sharedSession().setCategory(AudioSession::MediaPlayback);
-    else if (hasAudioMediaType)
+    else if (hasWebAudioType)
         AudioSession::sharedSession().setCategory(AudioSession::AmbientSound);
     else
         AudioSession::sharedSession().setCategory(AudioSession::None);
-#endif
 }
 
 #endif // USE(AUDIO_SESSION)

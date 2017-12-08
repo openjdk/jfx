@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2013-2016 Apple Inc.
+ * Copyright (C) 2008-2017 Apple Inc.
  * Copyright (C) 2009, 2010 University of Szeged
  * All rights reserved.
  *
@@ -34,7 +34,7 @@
 
 namespace JSC {
 
-class MacroAssemblerARM : public AbstractMacroAssembler<ARMAssembler, MacroAssemblerARM> {
+class MacroAssemblerARM : public AbstractMacroAssembler<ARMAssembler> {
     static const int DoubleConditionMask = 0x0f;
     static const int DoubleConditionBitSpecial = 0x10;
     COMPILE_ASSERT(!(DoubleConditionBitSpecial & DoubleConditionMask), DoubleConditionBitSpecial_should_not_interfere_with_ARMAssembler_Condition_codes);
@@ -356,6 +356,12 @@ public:
     void xor32(RegisterID op1, RegisterID op2, RegisterID dest)
     {
         m_assembler.eors(dest, op1, op2);
+    }
+
+    void xor32(Address src, RegisterID dest)
+    {
+        load32(src, ARMRegisters::S1);
+        xor32(ARMRegisters::S1, dest);
     }
 
     void xor32(TrustedImm32 imm, RegisterID dest)
@@ -955,6 +961,8 @@ public:
         m_assembler.bkpt(0);
     }
 
+    static bool isBreakpoint(void* address) { return ARMAssembler::isBkpt(address); }
+
     Call nearCall()
     {
         m_assembler.loadBranchTarget(ARMRegisters::S1, ARMAssembler::AL, true);
@@ -1183,6 +1191,12 @@ public:
     static bool supportsFloatingPointAbs() { return false; }
     static bool supportsFloatingPointRounding() { return false; }
 
+
+    void loadFloat(ImplicitAddress address, FPRegisterID dest)
+    {
+        m_assembler.dataTransferFloat(ARMAssembler::LoadFloat, dest, address.base, address.offset);
+    }
+
     void loadFloat(BaseIndex address, FPRegisterID dest)
     {
         m_assembler.baseIndexTransferFloat(ARMAssembler::LoadFloat, dest, address.base, address.index, static_cast<int>(address.scale), address.offset);
@@ -1220,6 +1234,11 @@ public:
     {
         ASSERT(!supportsFloatingPointRounding());
         CRASH();
+    }
+
+    void storeFloat(FPRegisterID src, ImplicitAddress address)
+    {
+        m_assembler.dataTransferFloat(ARMAssembler::StoreFloat, src, address.base, address.offset);
     }
 
     void storeFloat(FPRegisterID src, BaseIndex address)
@@ -1540,10 +1559,6 @@ public:
         ARMAssembler::relinkCall(call.dataLocation(), destination.executableAddress());
     }
 
-#if ENABLE(MASM_PROBE)
-    void probe(ProbeFunction, void* arg1, void* arg2);
-#endif // ENABLE(MASM_PROBE)
-
 protected:
     ARMAssembler::Condition ARMCondition(RelationalCondition cond)
     {
@@ -1571,37 +1586,6 @@ protected:
         m_assembler.blx(ARMRegisters::S1);
     }
 
-private:
-    friend class LinkBuffer;
-
-    void internalCompare32(RegisterID left, TrustedImm32 right)
-    {
-        ARMWord tmp = (static_cast<unsigned>(right.m_value) == 0x80000000) ? ARMAssembler::InvalidImmediate : m_assembler.getOp2(-right.m_value);
-        if (tmp != ARMAssembler::InvalidImmediate)
-            m_assembler.cmn(left, tmp);
-        else
-            m_assembler.cmp(left, m_assembler.getImm(right.m_value, ARMRegisters::S0));
-    }
-
-    void internalCompare32(Address left, TrustedImm32 right)
-    {
-        ARMWord tmp = (static_cast<unsigned>(right.m_value) == 0x80000000) ? ARMAssembler::InvalidImmediate : m_assembler.getOp2(-right.m_value);
-        load32(left, ARMRegisters::S1);
-        if (tmp != ARMAssembler::InvalidImmediate)
-            m_assembler.cmn(ARMRegisters::S1, tmp);
-        else
-            m_assembler.cmp(ARMRegisters::S1, m_assembler.getImm(right.m_value, ARMRegisters::S0));
-    }
-
-    static void linkCall(void* code, Call call, FunctionPtr function)
-    {
-        if (call.isFlagSet(Call::Tail))
-            ARMAssembler::linkJump(code, call.m_label, function.value());
-        else
-            ARMAssembler::linkCall(code, call.m_label, function.value());
-    }
-
-
 #if ENABLE(MASM_PROBE)
     inline TrustedImm32 trustedImm32FromPtr(void* ptr)
     {
@@ -1618,6 +1602,36 @@ private:
         return TrustedImm32(TrustedImmPtr(reinterpret_cast<void*>(function)));
     }
 #endif
+
+private:
+    friend class LinkBuffer;
+
+    void internalCompare32(RegisterID left, TrustedImm32 right)
+    {
+        ARMWord tmp = (!right.m_value || static_cast<unsigned>(right.m_value) == 0x80000000) ? ARMAssembler::InvalidImmediate : m_assembler.getOp2(-right.m_value);
+        if (tmp != ARMAssembler::InvalidImmediate)
+            m_assembler.cmn(left, tmp);
+        else
+            m_assembler.cmp(left, m_assembler.getImm(right.m_value, ARMRegisters::S0));
+    }
+
+    void internalCompare32(Address left, TrustedImm32 right)
+    {
+        ARMWord tmp = (!right.m_value || static_cast<unsigned>(right.m_value) == 0x80000000) ? ARMAssembler::InvalidImmediate : m_assembler.getOp2(-right.m_value);
+        load32(left, ARMRegisters::S1);
+        if (tmp != ARMAssembler::InvalidImmediate)
+            m_assembler.cmn(ARMRegisters::S1, tmp);
+        else
+            m_assembler.cmp(ARMRegisters::S1, m_assembler.getImm(right.m_value, ARMRegisters::S0));
+    }
+
+    static void linkCall(void* code, Call call, FunctionPtr function)
+    {
+        if (call.isFlagSet(Call::Tail))
+            ARMAssembler::linkJump(code, call.m_label, function.value());
+        else
+            ARMAssembler::linkCall(code, call.m_label, function.value());
+    }
 
     static const bool s_isVFPPresent;
 };

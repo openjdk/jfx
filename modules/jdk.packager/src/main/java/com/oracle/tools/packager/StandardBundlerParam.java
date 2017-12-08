@@ -59,6 +59,10 @@ import java.util.stream.Collectors;
 import static jdk.packager.internal.legacy.JLinkBundlerHelper.findPathOfModule;
 import static jdk.packager.internal.legacy.JLinkBundlerHelper.listOfPathToString;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
 
     public static final String MANIFEST_JAVAFX_MAIN ="JavaFX-Application-Class";

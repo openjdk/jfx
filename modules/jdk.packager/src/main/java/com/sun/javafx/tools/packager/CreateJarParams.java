@@ -31,8 +31,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class CreateJarParams extends CommonParams {
-
     final List<PackagerResource> resources = new ArrayList<PackagerResource>();
 
     String applicationClass;

@@ -29,8 +29,9 @@ package com.sun.javafx.tools.packager;
  * Ant-independent version of the Callback class.
  *
  * @see com.sun.javafx.tools.ant.Callback
- *
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
  */
+@Deprecated(since="10", forRemoval=true)
 class JSCallback {
 
     private String name;

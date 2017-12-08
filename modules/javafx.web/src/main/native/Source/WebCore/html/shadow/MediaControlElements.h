@@ -453,6 +453,7 @@ public:
 private:
     void updateTimerFired();
     void updateActiveCuesFontSize();
+    void updateTextStrokeStyle();
 
     explicit MediaControlTextTrackContainerElement(Document&);
 

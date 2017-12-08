@@ -21,7 +21,7 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #include "config.h"
 
@@ -271,7 +271,22 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getDefaultCharset
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getReadyStateImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->readyState());
+    auto readyState = IMPL->readyState();
+    const char* readyStateStr;
+    switch (readyState) {
+    case WebCore::Document::Loading:
+        readyStateStr = "loading";
+        break;
+    case WebCore::Document::Interactive:
+        readyStateStr = "interactive";
+        break;
+    case WebCore::Document::Complete:
+        readyStateStr = "complete";
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+    return JavaReturn<String>(env, String(readyStateStr));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_DocumentImpl_getCharacterSetImpl(JNIEnv* env, jclass, jlong peer)

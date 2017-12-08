@@ -26,12 +26,10 @@
 #pragma once
 
 #include "CollectionScope.h"
-#include "GCSegmentedArray.h"
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
-#include <wtf/RefPtr.h>
 
 namespace JSC {
 
@@ -62,9 +60,9 @@ public:
     // Mark a pointer that may be a CodeBlock that belongs to the set of DFG
     // blocks. This is defined in CodeBlock.h.
 private:
-    void mark(const LockHolder&, CodeBlock* candidateCodeBlock);
+    void mark(const AbstractLocker&, CodeBlock* candidateCodeBlock);
 public:
-    void mark(const LockHolder&, void* candidateCodeBlock);
+    void mark(const AbstractLocker&, void* candidateCodeBlock);
 
     // Delete all code blocks that are only referenced by this set (i.e. owned
     // by this set), and that have not been marked.
@@ -72,20 +70,21 @@ public:
 
     void clearCurrentlyExecuting();
 
-    bool contains(const LockHolder&, void* candidateCodeBlock);
+    bool contains(const AbstractLocker&, void* candidateCodeBlock);
     Lock& getLock() { return m_lock; }
 
     // Visits each CodeBlock in the heap until the visitor function returns true
     // to indicate that it is done iterating, or until every CodeBlock has been
     // visited.
     template<typename Functor> void iterate(const Functor&);
+    template<typename Functor> void iterate(const AbstractLocker&, const Functor&);
 
     template<typename Functor> void iterateCurrentlyExecuting(const Functor&);
 
     void dump(PrintStream&) const;
 
 private:
-    void promoteYoungCodeBlocks(const LockHolder&);
+    void promoteYoungCodeBlocks(const AbstractLocker&);
 
     HashSet<CodeBlock*> m_oldCodeBlocks;
     HashSet<CodeBlock*> m_newCodeBlocks;

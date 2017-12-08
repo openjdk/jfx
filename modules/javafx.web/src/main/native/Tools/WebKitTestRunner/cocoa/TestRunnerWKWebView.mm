@@ -31,6 +31,7 @@
 #import <wtf/RetainPtr.h>
 
 #if PLATFORM(IOS)
+#import "UIKitTestSPI.h"
 #import <WebKit/WKWebViewPrivate.h>
 @interface WKWebView ()
 
@@ -90,6 +91,7 @@
     self.didShowKeyboardCallback = nil;
     self.didHideKeyboardCallback = nil;
     self.didEndScrollingCallback = nil;
+    self.rotationDidEndCallback = nil;
 
     self.zoomToScaleCompletionHandler = nil;
     self.showKeyboardCompletionHandler = nil;
@@ -190,6 +192,12 @@
     [self _scheduleVisibleContentRectUpdate];
 }
 
+- (void)_didEndRotation
+{
+    if (self.rotationDidEndCallback)
+        self.rotationDidEndCallback();
+}
+
 - (void)_accessibilityDidGetSpeakSelectionContent:(NSString *)content
 {
     self.accessibilitySpeakSelectionContent = content;
@@ -201,6 +209,19 @@
 {
     self.retrieveSpeakSelectionContentCompletionHandler = completionHandler;
     [self _accessibilityRetrieveSpeakSelectionContent];
+}
+
+- (void)setOverrideSafeAreaInsets:(UIEdgeInsets)insets
+{
+    _overrideSafeAreaInsets = insets;
+#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 110000
+    [self _updateSafeAreaInsets];
+#endif
+}
+
+- (UIEdgeInsets)_safeAreaInsetsForFrame:(CGRect)frame inSuperview:(UIView *)view
+{
+    return _overrideSafeAreaInsets;
 }
 
 #endif

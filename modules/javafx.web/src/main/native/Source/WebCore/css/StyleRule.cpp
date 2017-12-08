@@ -32,7 +32,6 @@
 #include "CSSPageRule.h"
 #include "CSSStyleRule.h"
 #include "CSSSupportsRule.h"
-#include "CSSUnknownRule.h"
 #include "MediaList.h"
 #include "StyleProperties.h"
 #include "StyleRuleImport.h"
@@ -449,7 +448,7 @@ StyleRuleRegion::StyleRuleRegion(const StyleRuleRegion& o)
 
 #if ENABLE(CSS_DEVICE_ADAPTATION)
 StyleRuleViewport::StyleRuleViewport(Ref<StyleProperties>&& properties)
-    : StyleRuleBase(Viewport, 0)
+    : StyleRuleBase(Viewport)
     , m_properties(WTFMove(properties))
 {
 }

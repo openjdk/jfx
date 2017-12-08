@@ -27,6 +27,11 @@
 
 #if ENABLE(WEBASSEMBLY)
 
+#if COMPILER(GCC) && ASSERT_DISABLED
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type"
+#endif // COMPILER(GCC) && ASSERT_DISABLED
+
 namespace JSC { namespace Wasm {
 
 #define FOR_EACH_WASM_SECTION(macro) \
@@ -46,7 +51,7 @@ enum class Section : uint8_t {
 #define DEFINE_WASM_SECTION_ENUM(NAME, ID, DESCRIPTION) NAME = ID,
     FOR_EACH_WASM_SECTION(DEFINE_WASM_SECTION_ENUM)
 #undef DEFINE_WASM_SECTION_ENUM
-    Unknown
+    Custom
 };
 
 template<typename Int>
@@ -63,7 +68,7 @@ static inline bool isValidSection(Int section)
 
 static inline bool validateOrder(Section previous, Section next)
 {
-    if (previous == Section::Unknown)
+    if (previous == Section::Custom)
         return true;
     return static_cast<uint8_t>(previous) < static_cast<uint8_t>(next);
 }
@@ -71,15 +76,19 @@ static inline bool validateOrder(Section previous, Section next)
 static inline const char* makeString(Section section)
 {
     switch (section) {
+    case Section::Custom:
+        return "Custom";
 #define STRINGIFY_SECTION_NAME(NAME, ID, DESCRIPTION) case Section::NAME: return #NAME;
         FOR_EACH_WASM_SECTION(STRINGIFY_SECTION_NAME)
 #undef STRINGIFY_SECTION_NAME
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
-        return "?";
     }
+    ASSERT_NOT_REACHED();
 }
 
 } } // namespace JSC::Wasm
+
+#if COMPILER(GCC) && ASSERT_DISABLED
+#pragma GCC diagnostic pop
+#endif // COMPILER(GCC) && ASSERT_DISABLED
 
 #endif // ENABLE(WEBASSEMBLY)

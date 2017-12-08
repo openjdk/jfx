@@ -54,6 +54,9 @@ public:
 #if PLATFORM(WIN)
         Windows,
 #endif
+#if PLATFORM(WPE)
+        WPE,
+#endif
     };
 
     virtual Type type() const = 0;
@@ -65,6 +68,7 @@ public:
 #if USE(EGL)
     EGLDisplay eglDisplay() const;
     bool eglCheckVersion(int major, int minor) const;
+    static void shutDownEglDisplays();
 #endif
 
 protected:

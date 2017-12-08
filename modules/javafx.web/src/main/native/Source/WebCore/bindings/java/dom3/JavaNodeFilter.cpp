@@ -21,7 +21,7 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #include "config.h"
 
@@ -41,7 +41,7 @@ extern "C" {
 
 #define IMPL (static_cast<NodeFilter*>(jlong_to_ptr(peer)))
 
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeFilterImpl_dispose(JNIEnv* env, jclass, jlong peer)
+JNIEXPORT void JNICALL Java_com_sun_webkit_dom_NodeFilterImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
     IMPL->deref();
 }
@@ -52,7 +52,12 @@ JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_NodeFilterImpl_acceptNodeImpl(J
     , jlong n)
 {
     WebCore::JSMainThreadNullState state;
-    return IMPL->acceptNode(static_cast<Node*>(jlong_to_ptr(n)));
+    if (!n) {
+        raiseTypeErrorException(env);
+        return {};
+    }
+    auto result = IMPL->acceptNode(*static_cast<Node*>(jlong_to_ptr(n)));
+    return result.type() == CallbackResultType::Success ? result.releaseReturnValue() : NodeFilter::FILTER_REJECT;
 }
 
 

@@ -48,7 +48,10 @@
 #include <gst/pbutils/pbutils.h>
 #include <gst/video/video.h>
 #include <wtf/Condition.h>
+#include <wtf/HashSet.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/AtomicString.h>
+#include <wtf/text/AtomicStringHash.h>
 
 static const char* dumpReadyState(WebCore::MediaPlayer::ReadyState readyState)
 {
@@ -194,7 +197,7 @@ void MediaPlayerPrivateGStreamerMSE::seek(float time)
     }
 
     m_isEndReached = false;
-    GST_DEBUG("m_seeking=%s, m_seekTime=%f", m_seeking ? "true" : "false", m_seekTime);
+    GST_DEBUG("m_seeking=%s, m_seekTime=%f", boolForPrinting(m_seeking), m_seekTime);
 }
 
 void MediaPlayerPrivateGStreamerMSE::configurePlaySink()
@@ -720,7 +723,7 @@ void MediaPlayerPrivateGStreamerMSE::getSupportedTypes(HashSet<String, ASCIICase
     types = mimeTypeCache();
 }
 
-void MediaPlayerPrivateGStreamerMSE::trackDetected(RefPtr<AppendPipeline> appendPipeline, RefPtr<WebCore::TrackPrivateBase> oldTrack, RefPtr<WebCore::TrackPrivateBase> newTrack)
+void MediaPlayerPrivateGStreamerMSE::trackDetected(RefPtr<AppendPipeline> appendPipeline, RefPtr<WebCore::TrackPrivateBase> newTrack, bool firstTrackDetected)
 {
     ASSERT(appendPipeline->track() == newTrack);
 
@@ -741,15 +744,90 @@ void MediaPlayerPrivateGStreamerMSE::trackDetected(RefPtr<AppendPipeline> append
         m_videoSize.setHeight(height);
     }
 
-    if (!oldTrack)
+    if (firstTrackDetected)
         m_playbackPipeline->attachTrack(appendPipeline->sourceBufferPrivate(), newTrack, structure, caps);
     else
-        m_playbackPipeline->reattachTrack(appendPipeline->sourceBufferPrivate(), newTrack);
+        m_playbackPipeline->reattachTrack(appendPipeline->sourceBufferPrivate(), newTrack, mediaType);
+}
+
+const static HashSet<AtomicString>& codecSet()
+{
+    static NeverDestroyed<HashSet<AtomicString>> codecTypes = []()
+    {
+        MediaPlayerPrivateGStreamerBase::initializeGStreamerAndRegisterWebKitElements();
+        HashSet<AtomicString> set;
+
+        GList* audioDecoderFactories = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DECODER | GST_ELEMENT_FACTORY_TYPE_MEDIA_AUDIO, GST_RANK_MARGINAL);
+        GList* videoDecoderFactories = gst_element_factory_list_get_elements(GST_ELEMENT_FACTORY_TYPE_DECODER | GST_ELEMENT_FACTORY_TYPE_MEDIA_VIDEO, GST_RANK_MARGINAL);
+
+        enum ElementType {
+            AudioDecoder = 0,
+            VideoDecoder
+        };
+        struct GstCapsWebKitMapping {
+            ElementType elementType;
+            const char* capsString;
+            Vector<AtomicString> webkitCodecs;
+        };
+
+        std::array<GstCapsWebKitMapping, 3> mapping = { {
+            { VideoDecoder, "video/x-h264,  profile=(string){ constrained-baseline, baseline }", { "x-h264" } },
+            { VideoDecoder, "video/x-h264, stream-format=avc", { "avc*"} },
+            { VideoDecoder, "video/mpeg, mpegversion=(int){1,2}, systemstream=(boolean)false", { "mpeg" } }
+        } };
+
+        for (auto& current : mapping) {
+            GList* factories = nullptr;
+            switch (current.elementType) {
+            case AudioDecoder:
+                factories = audioDecoderFactories;
+                break;
+            case VideoDecoder:
+                factories = videoDecoderFactories;
+                break;
+            default:
+                g_assert_not_reached();
+                break;
+            }
+
+            g_assert_nonnull(factories);
+
+            if (gstRegistryHasElementForMediaType(factories, current.capsString) && factories != nullptr) {
+                if (!current.webkitCodecs.isEmpty()) {
+                    for (const auto& mimeType : current.webkitCodecs)
+                        set.add(mimeType);
+                } else
+                    set.add(AtomicString(current.capsString));
+            }
+        }
+
+        bool audioMpegSupported = false;
+        if (gstRegistryHasElementForMediaType(audioDecoderFactories, "audio/mpeg, mpegversion=(int)1, layer=(int)[1, 3]")) {
+            audioMpegSupported = true;
+            set.add(AtomicString("audio/mp3"));
+        }
+
+        if (gstRegistryHasElementForMediaType(audioDecoderFactories, "audio/mpeg, mpegversion=(int){2, 4}")) {
+            audioMpegSupported = true;
+            set.add(AtomicString("mp4a*"));
+        }
+
+        if (audioMpegSupported) {
+            set.add(AtomicString("audio/mpeg"));
+            set.add(AtomicString("audio/x-mpeg"));
+        }
+
+
+        gst_plugin_feature_list_free(audioDecoderFactories);
+        gst_plugin_feature_list_free(videoDecoderFactories);
+
+        return set;
+    }();
+    return codecTypes;
 }
 
 bool MediaPlayerPrivateGStreamerMSE::supportsCodecs(const String& codecs)
 {
-    static Vector<const char*> supportedCodecs = { "avc*", "mp4a*", "mpeg", "x-h264" };
     Vector<String> codecEntries;
     codecs.split(',', false, codecEntries);
 
@@ -762,8 +840,8 @@ bool MediaPlayerPrivateGStreamerMSE::supportsCodecs(const String& codecs)
             codec = codec.substring(slashIndex+1);
 
         const char* codecData = codec.utf8().data();
-        for (const auto& pattern : supportedCodecs) {
-            isCodecSupported = !fnmatch(pattern, codecData, 0);
+        for (const auto& pattern : codecSet()) {
+            isCodecSupported = !fnmatch(pattern.string().utf8().data(), codecData, 0);
             if (isCodecSupported)
                 break;
         }
@@ -780,34 +858,28 @@ MediaPlayer::SupportsType MediaPlayerPrivateGStreamerMSE::supportsType(const Med
     if (!parameters.isMediaSource)
         return result;
 
+    auto containerType = parameters.type.containerType();
     // Disable VPX/Opus on MSE for now, mp4/avc1 seems way more reliable currently.
-    if (parameters.type.endsWith("webm"))
+    if (containerType.endsWith("webm"))
         return result;
 
     // YouTube TV provides empty types for some videos and we want to be selected as best media engine for them.
-    if (parameters.type.isEmpty()) {
+    if (containerType.isEmpty()) {
         result = MediaPlayer::MayBeSupported;
         return result;
     }
 
     // Spec says we should not return "probably" if the codecs string is empty.
-    if (mimeTypeCache().contains(parameters.type)) {
-        if (parameters.codecs.isEmpty())
+    if (mimeTypeCache().contains(containerType)) {
+        String codecs = parameters.type.parameter(ContentType::codecsParameter());
+        if (codecs.isEmpty())
             result = MediaPlayer::MayBeSupported;
         else
-            result = supportsCodecs(parameters.codecs) ? MediaPlayer::IsSupported : MediaPlayer::IsNotSupported;
+            result = supportsCodecs(codecs) ? MediaPlayer::IsSupported : MediaPlayer::IsNotSupported;
     }
 
     return extendedSupportsType(parameters, result);
 }
-
-#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
-void MediaPlayerPrivateGStreamerMSE::dispatchDecryptionKey(GstBuffer* buffer)
-{
-    for (auto it : m_appendPipelinesMap)
-        it.value->dispatchDecryptionKey(buffer);
-}
-#endif
 
 void MediaPlayerPrivateGStreamerMSE::markEndOfStream(MediaSourcePrivate::EndOfStreamStatus status)
 {

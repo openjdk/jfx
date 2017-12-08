@@ -27,6 +27,7 @@
 #include "IndentOutdentCommand.h"
 
 #include "Document.h"
+#include "Editing.h"
 #include "ElementTraversal.h"
 #include "HTMLBRElement.h"
 #include "HTMLNames.h"
@@ -38,7 +39,6 @@
 #include "SplitElementCommand.h"
 #include "Text.h"
 #include "VisibleUnits.h"
-#include "htmlediting.h"
 
 namespace WebCore {
 
@@ -78,14 +78,14 @@ bool IndentOutdentCommand::tryIndentingAsListItem(const Position& start, const P
         newList = HTMLUListElement::create(document());
     else
         newList = HTMLOListElement::create(document());
-    insertNodeBefore(newList, selectedListItem);
+    insertNodeBefore(*newList, *selectedListItem);
 
     moveParagraphWithClones(start, end, newList.get(), selectedListItem.get());
 
     if (canMergeLists(previousList.get(), newList.get()))
-        mergeIdenticalElements(previousList, newList);
+        mergeIdenticalElements(*previousList, *newList);
     if (canMergeLists(newList.get(), nextList.get()))
-        mergeIdenticalElements(newList, nextList);
+        mergeIdenticalElements(*newList, *nextList);
 
     return true;
 }
@@ -105,7 +105,7 @@ void IndentOutdentCommand::indentIntoBlockquote(const Position& start, const Pos
         return;
 
     RefPtr<Node> nodeAfterStart = start.computeNodeAfterPosition();
-    RefPtr<Node> outerBlock = (start.containerNode() == nodeToSplitTo) ? start.containerNode() : splitTreeToNode(start.containerNode(), nodeToSplitTo);
+    RefPtr<Node> outerBlock = (start.containerNode() == nodeToSplitTo) ? start.containerNode() : splitTreeToNode(*start.containerNode(), *nodeToSplitTo);
 
     VisiblePosition startOfContents = start;
     if (!targetBlockquote) {
@@ -113,9 +113,9 @@ void IndentOutdentCommand::indentIntoBlockquote(const Position& start, const Pos
         // this by splitting all parents of the current paragraph up to that point.
         targetBlockquote = createBlockElement();
         if (outerBlock == nodeToSplitTo)
-            insertNodeAt(targetBlockquote, start);
+            insertNodeAt(*targetBlockquote, start);
         else
-            insertNodeBefore(targetBlockquote, outerBlock);
+            insertNodeBefore(*targetBlockquote, *outerBlock);
         startOfContents = positionInParentAfterNode(targetBlockquote.get());
     }
 
@@ -152,7 +152,7 @@ void IndentOutdentCommand::outdentParagraph()
         visibleEndOfParagraph == endOfEnclosingBlock) {
         // The blockquote doesn't contain anything outside the paragraph, so it can be totally removed.
         Node* splitPoint = enclosingNode->nextSibling();
-        removeNodePreservingChildren(enclosingNode);
+        removeNodePreservingChildren(*enclosingNode);
         // outdentRegion() assumes it is operating on the first paragraph of an enclosing blockquote, but if there are multiply nested blockquotes and we've
         // just removed one, then this assumption isn't true. By splitting the next containing blockquote after this node, we keep this assumption true
         if (splitPoint) {
@@ -160,7 +160,7 @@ void IndentOutdentCommand::outdentParagraph()
                 if (splitPointParent->hasTagName(blockquoteTag)
                     && !splitPoint->hasTagName(blockquoteTag)
                     && splitPointParent->parentNode()->hasEditableStyle()) // We can't outdent if there is no place to go!
-                    splitElement(downcast<Element>(splitPointParent), splitPoint);
+                    splitElement(downcast<Element>(*splitPointParent), *splitPoint);
             }
         }
 
@@ -179,15 +179,16 @@ void IndentOutdentCommand::outdentParagraph()
     auto* enclosingBlockFlow = enclosingBlock(startOfParagraphNode);
     RefPtr<Node> splitBlockquoteNode = enclosingNode;
     if (enclosingBlockFlow != enclosingNode)
-        splitBlockquoteNode = splitTreeToNode(startOfParagraphNode, enclosingNode, true);
+        splitBlockquoteNode = splitTreeToNode(*startOfParagraphNode, *enclosingNode, true);
     else {
         // We split the blockquote at where we start outdenting.
         auto* highestInlineNode = highestEnclosingNodeOfType(visibleStartOfParagraph.deepEquivalent(), isInline, CannotCrossEditingBoundary, enclosingBlockFlow);
-        splitElement(enclosingNode, highestInlineNode ? highestInlineNode : visibleStartOfParagraph.deepEquivalent().deprecatedNode());
+        splitElement(*enclosingNode, highestInlineNode ? *highestInlineNode : *visibleStartOfParagraph.deepEquivalent().deprecatedNode());
     }
     auto placeholder = HTMLBRElement::create(document());
-    insertNodeBefore(placeholder.copyRef(), splitBlockquoteNode);
-    moveParagraph(startOfParagraph(visibleStartOfParagraph), endOfParagraph(visibleEndOfParagraph), positionBeforeNode(placeholder.ptr()), true);
+    auto* placeholderPtr = placeholder.ptr();
+    insertNodeBefore(WTFMove(placeholder), *splitBlockquoteNode);
+    moveParagraph(startOfParagraph(visibleStartOfParagraph), endOfParagraph(visibleEndOfParagraph), positionBeforeNode(placeholderPtr), true);
 }
 
 // FIXME: We should merge this function with ApplyBlockElementCommand::formatSelection
@@ -224,6 +225,12 @@ void IndentOutdentCommand::outdentRegion(const VisiblePosition& startOfSelection
             endOfNextParagraph = endOfParagraph(endOfCurrentParagraph.next());
         }
         endOfCurrentParagraph = endOfNextParagraph;
+
+        if (endOfCurrentParagraph.isNull()) {
+            // If the end of the current paragraph is null, we'll end up looping infinitely, since the end of the next paragraph
+            // (and the paragraph after that, and so on) will always be null. To avoid this infinite loop, just bail.
+            break;
+        }
     }
 }
 

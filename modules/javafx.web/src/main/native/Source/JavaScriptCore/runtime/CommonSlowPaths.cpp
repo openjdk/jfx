@@ -38,6 +38,7 @@
 #include "Error.h"
 #include "ErrorHandlingScope.h"
 #include "ExceptionFuzz.h"
+#include "FrameTracers.h"
 #include "GetterSetter.h"
 #include "HostCallReturnValue.h"
 #include "ICStats.h"
@@ -60,6 +61,7 @@
 #include "ObjectConstructor.h"
 #include "ScopedArguments.h"
 #include "StructureRareDataInlines.h"
+#include "ThunkGenerators.h"
 #include "TypeProfilerLog.h"
 #include <wtf/StringPrintStream.h>
 
@@ -704,7 +706,10 @@ SLOW_PATH_DECL(slow_path_has_structure_property)
     JSPropertyNameEnumerator* enumerator = jsCast<JSPropertyNameEnumerator*>(OP(4).jsValue().asCell());
     if (base->structure(vm)->id() == enumerator->cachedStructureID())
         RETURN(jsBoolean(true));
-    RETURN(jsBoolean(base->hasPropertyGeneric(exec, asString(property.asCell())->toIdentifier(exec), PropertySlot::InternalMethodType::GetOwnProperty)));
+    JSString* string = asString(property);
+    auto propertyName = string->toIdentifier(exec);
+    CHECK_EXCEPTION();
+    RETURN(jsBoolean(base->hasPropertyGeneric(exec, propertyName, PropertySlot::InternalMethodType::GetOwnProperty)));
 }
 
 SLOW_PATH_DECL(slow_path_has_generic_property)
@@ -713,14 +718,10 @@ SLOW_PATH_DECL(slow_path_has_generic_property)
     JSObject* base = OP(2).jsValue().toObject(exec);
     CHECK_EXCEPTION();
     JSValue property = OP(3).jsValue();
-    bool result;
-    if (property.isString())
-        result = base->hasPropertyGeneric(exec, asString(property.asCell())->toIdentifier(exec), PropertySlot::InternalMethodType::GetOwnProperty);
-    else {
-        ASSERT(property.isUInt32());
-        result = base->hasPropertyGeneric(exec, property.asUInt32(), PropertySlot::InternalMethodType::GetOwnProperty);
-    }
-    RETURN(jsBoolean(result));
+    JSString* string = asString(property);
+    auto propertyName = string->toIdentifier(exec);
+    CHECK_EXCEPTION();
+    RETURN(jsBoolean(base->hasPropertyGeneric(exec, propertyName, PropertySlot::InternalMethodType::GetOwnProperty)));
 }
 
 SLOW_PATH_DECL(slow_path_get_direct_pname)
@@ -728,8 +729,10 @@ SLOW_PATH_DECL(slow_path_get_direct_pname)
     BEGIN();
     JSValue baseValue = OP_C(2).jsValue();
     JSValue property = OP(3).jsValue();
-    ASSERT(property.isString());
-    RETURN(baseValue.get(exec, asString(property)->toIdentifier(exec)));
+    JSString* string = asString(property);
+    auto propertyName = string->toIdentifier(exec);
+    CHECK_EXCEPTION();
+    RETURN(baseValue.get(exec, propertyName));
 }
 
 SLOW_PATH_DECL(slow_path_get_property_enumerator)
@@ -789,6 +792,13 @@ SLOW_PATH_DECL(slow_path_assert)
     END();
 }
 
+SLOW_PATH_DECL(slow_path_unreachable)
+{
+    BEGIN();
+    UNREACHABLE_FOR_PLATFORM();
+    END();
+}
+
 SLOW_PATH_DECL(slow_path_create_lexical_environment)
 {
     BEGIN();
@@ -810,6 +820,18 @@ SLOW_PATH_DECL(slow_path_push_with_scope)
     int scopeReg = pc[3].u.operand;
     JSScope* currentScope = exec->uncheckedR(scopeReg).Register::scope();
     RETURN(JSWithScope::create(vm, exec->lexicalGlobalObject(), newScope, currentScope));
+}
+
+SLOW_PATH_DECL(slow_path_resolve_scope_for_hoisting_func_decl_in_eval)
+{
+    BEGIN();
+    const Identifier& ident = exec->codeBlock()->identifier(pc[3].u.operand);
+    JSScope* scope = exec->uncheckedR(pc[2].u.operand).Register::scope();
+    JSValue resolvedScope = JSScope::resolveScopeForHoistingFuncDeclInEval(exec, scope, ident);
+
+    CHECK_EXCEPTION();
+
+    RETURN(resolvedScope);
 }
 
 SLOW_PATH_DECL(slow_path_resolve_scope)
@@ -1009,7 +1031,7 @@ SLOW_PATH_DECL(slow_path_new_array_with_spread)
     JSGlobalObject* globalObject = exec->lexicalGlobalObject();
     Structure* structure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
 
-    JSArray* result = JSArray::tryCreateForInitializationPrivate(vm, structure, arraySize);
+    JSArray* result = JSArray::tryCreate(vm, structure, arraySize);
     if (UNLIKELY(!result))
         THROW(createOutOfMemoryError(exec));
     CHECK_EXCEPTION();
@@ -1022,12 +1044,12 @@ SLOW_PATH_DECL(slow_path_new_array_with_spread)
             JSFixedArray* array = jsCast<JSFixedArray*>(value);
             for (unsigned i = 0; i < array->size(); i++) {
                 RELEASE_ASSERT(array->get(i));
-                result->initializeIndex(vm, index, array->get(i));
+                result->putDirectIndex(exec, index, array->get(i));
                 ++index;
             }
         } else {
             // We are not spreading.
-            result->initializeIndex(vm, index, value);
+            result->putDirectIndex(exec, index, value);
             ++index;
         }
     }

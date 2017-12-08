@@ -35,9 +35,7 @@
 
     - All tests are by default imported into LayoutTests/imported/w3c
 
-    - Tests will be imported into a directory tree that
-      mirrors the CSS and WPT repositories. For example, <csswg_repo_root>/css2.1 should be brought in
-      as LayoutTests/imported/w3c/csswg-tests/css2.1, maintaining the entire directory structure under that
+    - Tests will be imported into a directory tree that mirrors WPT repository in LayoutTests/imported/w3c/web-platform-tests.
 
     - By default, only reftests and jstest are imported. This can be overridden with a -a or --all
       argument
@@ -115,17 +113,20 @@ def configure_logging():
     return handler
 
 
+# FIXME: We should decide whether we want to make this specific to web-platform-tests or to make it generic to any git repository containing tests.
 def parse_args(args):
     description = """
 To import a web-platform-tests test suite named xyz, use: 'import-w3c-tests web-platform-tests/xyz'.
-To import a csswg-test test suite named abc, use 'import-w3c-tests csswg-test/abc'.
-To import a web-platform-tests/csswg-test test suite from a specific folder, use 'import-w3c-tests web-platform-tests/xyz -s my-folder-containing-web-platform-tests-folder'"""
+To import a web-platform-tests suite from a specific folder, use 'import-w3c-tests xyz -l -s my-folder-containing-web-platform-tests-folder'"""
     parser = argparse.ArgumentParser(prog='import-w3c-tests [web-platform-tests/test-suite-name...]', description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('-n', '--no-overwrite', dest='overwrite', action='store_false', default=True,
         help='Flag to prevent duplicate test files from overwriting existing tests. By default, they will be overwritten')
     parser.add_argument('-l', '--no-links-conversion', dest='convert_test_harness_links', action='store_false', default=True,
        help='Do not change links (testharness js or css e.g.). This option only applies when providing a source directory, in which case by default, links are converted to point to WebKit testharness files. When tests are downloaded from W3C repository, links are converted for CSS tests and remain unchanged for WPT tests')
+
+    parser.add_argument('-t', '--tip-of-tree', dest='use_tip_of_tree', action='store_true', default=False,
+        help='Import all tests using the latest repository revision')
 
     parser.add_argument('-a', '--all', action='store_true', default=False,
         help='Import all tests including reftests, JS tests, and manual/pixel tests. By default, only reftests and JS tests are imported')
@@ -134,7 +135,7 @@ To import a web-platform-tests/csswg-test test suite from a specific folder, use
         help='Import into a specified directory relative to the LayoutTests root. By default, imports into imported/w3c')
 
     parser.add_argument('-s', '--src-dir', dest='source', default=None,
-        help='Import from a specific folder which contains web-platform-tests and/or csswg-test folders. If not provided, the script will clone the necessary repositories.')
+        help='Import from a specific folder which contains web-platform-tests folder. If not provided, the script will clone the necessary repositories.')
 
     parser.add_argument('-v', '--verbose', action='store_true', default=False,
          help='Print maximal log')
@@ -194,7 +195,7 @@ class TestImporter(object):
             self.source_directory = self.filesystem.join(self.tests_download_path, 'to-be-imported')
             self.filesystem.maybe_make_directory(self.tests_download_path)
             self.filesystem.maybe_make_directory(self.source_directory)
-            self.test_downloader().download_tests(self.source_directory, self.test_paths)
+            self.test_downloader().download_tests(self.source_directory, self.test_paths, self.options.use_tip_of_tree)
 
         test_paths = self.test_paths if self.test_paths else [test_repository['name'] for test_repository in self.test_downloader().test_repositories]
         for test_path in test_paths:
@@ -206,18 +207,13 @@ class TestImporter(object):
 
         self.import_tests()
 
-        if self.options.clean_destination_directory:
-            for test_path in test_paths:
-                self.remove_dangling_expectations(test_path)
+        for test_path in test_paths:
+            self.remove_dangling_expectations(test_path)
 
         if self._importing_downloaded_tests:
             self.generate_git_submodules_description_for_all_repositories()
 
-        self.check_imported_expectations()
-
-    def check_imported_expectations(self):
-        for path in [path for path in self.test_paths if path in self.test_downloader().paths_to_skip]:
-            _log.warn('Please update LayoutTests/imported/w3c/resources/ImportExpectations to automate importing of ' + path)
+        self.test_downloader().update_import_expectations(self.test_paths)
 
     def generate_git_submodules_description_for_all_repositories(self):
         for test_repository in self._test_downloader.test_repositories:
@@ -316,11 +312,11 @@ class TestImporter(object):
                 elif self._is_in_resources_directory(fullpath):
                     _log.warning('%s is a test located in a "resources" folder. This test will be skipped by WebKit test runners.', fullpath)
 
-                if 'slow' in test_info:
-                    self._slow_tests.append(fullpath)
-
                 if 'manualtest' in test_info.keys():
                     continue
+
+                if 'slow' in test_info:
+                    self._slow_tests.append(fullpath)
 
                 if 'referencefile' in test_info.keys():
                     # Skip it since, the corresponding reference test should have a link to this file
@@ -370,7 +366,7 @@ class TestImporter(object):
             return
         if (orig_filepath.endswith('.any.js')):
             self.filesystem.write_text_file(new_filepath.replace('.any.js', '.any.html'), content)
-            self.filesystem.write_text_file(new_filepath.replace('.any.js', '.worker.html'), content)
+            self.filesystem.write_text_file(new_filepath.replace('.any.js', '.any.worker.html'), content)
             return
 
     def import_tests(self):
@@ -510,6 +506,8 @@ class TestImporter(object):
             self.update_tests_options()
 
     def _already_identified_as_resource_file(self, path):
+        if not self._test_resource_files:
+            return False
         if path in self._test_resource_files["files"]:
             return True
         return any([path.find(directory) != -1 for directory in self._test_resource_files["directories"]])
@@ -521,6 +519,7 @@ class TestImporter(object):
         should_update = self.options.clean_destination_directory
         for full_path in self._slow_tests:
             w3c_test_path = self.filesystem.relpath(full_path, self.source_directory)
+            print w3c_test_path
             # No need to mark tests as slow if they are in skipped directories
             if self._already_identified_as_resource_file(w3c_test_path):
                 continue
@@ -554,14 +553,17 @@ class TestImporter(object):
 
         contents = self.filesystem.read_text_file(import_log_file).split('\n')
 
-        if 'List of files\n' in contents:
-            list_index = contents.index('List of files:\n') + 1
-            previous_file_list = [filename.strip() for filename in contents[list_index:]]
+        if 'List of files:' in contents:
+            list_index = contents.index('List of files:') + 1
+            previous_file_list = [filename.strip() for filename in contents[list_index:] if len(filename)]
 
         deleted_files = set(previous_file_list) - set(new_file_list)
         for deleted_file in deleted_files:
             _log.info('Deleting file removed from the W3C repo: %s', deleted_file)
-            deleted_file = self.filesystem.join(self._webkit_root, deleted_file)
+            deleted_file = self.filesystem.join(self._webkit_root, deleted_file[1:])
+            if not self.filesystem.exists(deleted_file):
+                _log.warning('%s no longer exists', deleted_file)
+                continue
             self.filesystem.remove(deleted_file)
 
     def write_import_log(self, import_directory, file_list, prop_list, property_values_list):
@@ -570,8 +572,7 @@ class TestImporter(object):
         import_log = []
         import_log.append('The tests in this directory were imported from the W3C repository.\n')
         import_log.append('Do NOT modify these tests directly in WebKit.\n')
-        import_log.append('Instead, create a pull request on the W3C CSS or WPT github:\n')
-        import_log.append('\thttps://github.com/w3c/csswg-test\n')
+        import_log.append('Instead, create a pull request on the WPT github:\n')
         import_log.append('\thttps://github.com/w3c/web-platform-tests\n\n')
         import_log.append('Then run the Tools/Scripts/import-w3c-tests in WebKit to reimport\n\n')
         import_log.append('Do NOT modify or remove this file.\n\n')

@@ -30,17 +30,90 @@
 
 #import "NSPasteboardSPI.h"
 #import "PasteboardWriterData.h"
+#import "SharedBuffer.h"
 
 namespace WebCore {
 
-RetainPtr<id <NSPasteboardWriting>> createPasteboardWriting(const PasteboardWriterData& data)
+static RetainPtr<NSString> toUTI(NSString *pasteboardType)
+{
+    return adoptNS((__bridge NSString *)UTTypeCreatePreferredIdentifierForTag(kUTTagClassNSPboardType, (__bridge CFStringRef)pasteboardType, nullptr));
+}
+
+static RetainPtr<NSString> toUTIUnlessAlreadyUTI(NSString *type)
+{
+    if (UTTypeIsDeclared((__bridge CFStringRef)type) || UTTypeIsDynamic((__bridge CFStringRef)type)) {
+        // This is already a UTI.
+        return type;
+    }
+
+    return toUTI(type);
+}
+
+RetainPtr<id <NSPasteboardWriting>> createPasteboardWriter(const PasteboardWriterData& data)
 {
     auto pasteboardItem = adoptNS([[NSPasteboardItem alloc] init]);
 
     if (auto& plainText = data.plainText()) {
         [pasteboardItem setString:plainText->text forType:NSPasteboardTypeString];
-        if (plainText->canSmartCopyOrDelete)
-            [pasteboardItem setData:nil forType:_NXSmartPaste];
+        if (plainText->canSmartCopyOrDelete) {
+            auto smartPasteType = adoptNS((__bridge NSString *)UTTypeCreatePreferredIdentifierForTag(kUTTagClassNSPboardType, (__bridge CFStringRef)_NXSmartPaste, nullptr));
+            [pasteboardItem setData:[NSData data] forType:smartPasteType.get()];
+        }
+    }
+
+    if (auto& url = data.url()) {
+        NSURL *cocoaURL = url->url;
+        NSString *userVisibleString = url->userVisibleForm;
+        NSString *title = (NSString *)url->title;
+        if (!title.length) {
+            title = cocoaURL.path.lastPathComponent;
+            if (!title.length)
+                title = userVisibleString;
+        }
+
+        // WebURLsWithTitlesPboardType.
+        auto paths = adoptNS([[NSArray alloc] initWithObjects:@[ @[ cocoaURL.absoluteString ] ], @[ url->title.stripWhiteSpace() ], nil]);
+        [pasteboardItem setPropertyList:paths.get() forType:toUTI(@"WebURLsWithTitlesPboardType").get()];
+
+        // NSURLPboardType.
+        if (NSURL *baseCocoaURL = cocoaURL.baseURL)
+            [pasteboardItem setPropertyList:@[ cocoaURL.relativeString, baseCocoaURL.absoluteString ] forType:toUTI(NSURLPboardType).get()];
+        else if (cocoaURL)
+            [pasteboardItem setPropertyList:@[ cocoaURL.absoluteString, @"" ] forType:toUTI(NSURLPboardType).get()];
+        else
+            [pasteboardItem setPropertyList:@[ @"", @"" ] forType:toUTI(NSURLPboardType).get()];
+
+        if (cocoaURL.fileURL)
+            [pasteboardItem setString:cocoaURL.absoluteString forType:(NSString *)kUTTypeFileURL];
+        [pasteboardItem setString:userVisibleString forType:(NSString *)kUTTypeURL];
+
+        // WebURLNamePboardType.
+        [pasteboardItem setString:title forType:@"public.url-name"];
+
+        // NSPasteboardTypeString.
+        [pasteboardItem setString:userVisibleString forType:NSPasteboardTypeString];
+    }
+
+    if (auto& webContent = data.webContent()) {
+        if (webContent->canSmartCopyOrDelete) {
+            auto smartPasteType = adoptNS((__bridge NSString *)UTTypeCreatePreferredIdentifierForTag(kUTTagClassNSPboardType, (__bridge CFStringRef)_NXSmartPaste, nullptr));
+            [pasteboardItem setData:[NSData data] forType:smartPasteType.get()];
+        }
+        if (webContent->dataInWebArchiveFormat) {
+            auto webArchiveType = adoptNS((__bridge NSString *)UTTypeCreatePreferredIdentifierForTag(kUTTagClassNSPboardType, (__bridge CFStringRef)@"Apple Web Archive pasteboard type", nullptr));
+            [pasteboardItem setData:webContent->dataInWebArchiveFormat->createNSData().get() forType:webArchiveType.get()];
+        }
+        if (webContent->dataInRTFDFormat)
+            [pasteboardItem setData:webContent->dataInRTFDFormat->createNSData().get() forType:NSPasteboardTypeRTFD];
+        if (webContent->dataInRTFFormat)
+            [pasteboardItem setData:webContent->dataInRTFFormat->createNSData().get() forType:NSPasteboardTypeRTF];
+        if (!webContent->dataInHTMLFormat.isNull())
+            [pasteboardItem setString:webContent->dataInHTMLFormat forType:NSPasteboardTypeHTML];
+        if (!webContent->dataInStringFormat.isNull())
+            [pasteboardItem setString:webContent->dataInStringFormat forType:NSPasteboardTypeString];
+
+        for (unsigned i = 0; i < webContent->clientTypes.size(); ++i)
+            [pasteboardItem setData:webContent->clientData[i]->createNSData().get() forType:toUTIUnlessAlreadyUTI(webContent->clientTypes[i]).get()];
     }
 
     return pasteboardItem;

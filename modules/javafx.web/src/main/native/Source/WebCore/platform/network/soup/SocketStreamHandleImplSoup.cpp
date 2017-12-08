@@ -43,6 +43,7 @@
 #include <glib.h>
 #include <wtf/Vector.h>
 #include <wtf/glib/GUniquePtr.h>
+#include <wtf/glib/RunLoopSourcePriority.h>
 #include <wtf/text/CString.h>
 
 #define READ_BUFFER_SIZE 1024
@@ -62,7 +63,7 @@ static void wssSocketClientEventCallback(GSocketClient*, GSocketClientEvent even
     g_signal_connect(connection, "accept-certificate", G_CALLBACK(wssConnectionAcceptCertificateCallback), nullptr);
 }
 
-Ref<SocketStreamHandleImpl> SocketStreamHandleImpl::create(const URL& url, SocketStreamHandleClient& client, SessionID, const String&)
+Ref<SocketStreamHandleImpl> SocketStreamHandleImpl::create(const URL& url, SocketStreamHandleClient& client, SessionID, const String&, SourceApplicationAuditToken&&)
 {
     Ref<SocketStreamHandleImpl> socket = adoptRef(*new SocketStreamHandleImpl(url, client));
 
@@ -109,7 +110,7 @@ void SocketStreamHandleImpl::connected(GRefPtr<GSocketConnection>&& socketConnec
     m_readBuffer = std::make_unique<char[]>(READ_BUFFER_SIZE);
 
     RefPtr<SocketStreamHandleImpl> protectedThis(this);
-    g_input_stream_read_async(m_inputStream.get(), m_readBuffer.get(), READ_BUFFER_SIZE, G_PRIORITY_DEFAULT, m_cancellable.get(),
+    g_input_stream_read_async(m_inputStream.get(), m_readBuffer.get(), READ_BUFFER_SIZE, RunLoopSourcePriority::AsyncIONetwork, m_cancellable.get(),
         reinterpret_cast<GAsyncReadyCallback>(readReadyCallback), protectedThis.leakRef());
 
     m_state = Open;
@@ -146,12 +147,13 @@ void SocketStreamHandleImpl::readBytes(gssize bytesRead)
 
     // The client can close the handle, potentially removing the last reference.
     RefPtr<SocketStreamHandle> protectedThis(this);
-    std::optional<size_t> optionalLength;
-    if (bytesRead != -1)
-        optionalLength = static_cast<size_t>(bytesRead);
-    m_client.didReceiveSocketStreamData(*this, m_readBuffer.get(), optionalLength);
+    if (bytesRead == -1)
+        m_client.didFailToReceiveSocketStreamData(*this);
+    else
+        m_client.didReceiveSocketStreamData(*this, m_readBuffer.get(), static_cast<size_t>(bytesRead));
+
     if (m_inputStream) {
-        g_input_stream_read_async(m_inputStream.get(), m_readBuffer.get(), READ_BUFFER_SIZE, G_PRIORITY_DEFAULT, m_cancellable.get(),
+        g_input_stream_read_async(m_inputStream.get(), m_readBuffer.get(), READ_BUFFER_SIZE, RunLoopSourcePriority::AsyncIONetwork, m_cancellable.get(),
             reinterpret_cast<GAsyncReadyCallback>(readReadyCallback), protectedThis.leakRef());
     }
 }
@@ -189,7 +191,7 @@ void SocketStreamHandleImpl::writeReady()
     sendPendingData();
 }
 
-std::optional<size_t> SocketStreamHandleImpl::platformSend(const char* data, size_t length)
+std::optional<size_t> SocketStreamHandleImpl::platformSendInternal(const char* data, size_t length)
 {
     LOG(Network, "SocketStreamHandle %p platformSend", this);
     if (!m_outputStream || !data)

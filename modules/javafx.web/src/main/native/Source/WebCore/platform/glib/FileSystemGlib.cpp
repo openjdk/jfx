@@ -25,10 +25,12 @@
 
 #include "FileMetadata.h"
 #include "NotImplemented.h"
-#include "UUID.h"
+#include <gio/gfiledescriptorbased.h>
 #include <gio/gio.h>
 #include <glib.h>
 #include <glib/gstdio.h>
+#include <sys/file.h>
+#include <wtf/UUID.h>
 #include <wtf/glib/GLibUtilities.h>
 #include <wtf/glib/GRefPtr.h>
 #include <wtf/glib/GUniquePtr.h>
@@ -213,6 +215,9 @@ CString sharedResourcesPath()
     if (!cachedPath.isNull())
         return cachedPath;
 
+#if PLATFORM(WPE)
+    GUniquePtr<gchar> dataPath(g_build_filename(DATA_DIR, "wpe", nullptr));
+#elif PLATFORM(GTK)
 #if OS(WINDOWS)
     HMODULE hmodule = 0;
     GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, reinterpret_cast<char*>(sharedResourcesPath), &hmodule);
@@ -221,6 +226,7 @@ CString sharedResourcesPath()
     GUniquePtr<gchar> dataPath(g_build_filename(runtimeDir.get(), "share", "webkitgtk-" WEBKITGTK_API_VERSION_STRING, NULL));
 #else
     GUniquePtr<gchar> dataPath(g_build_filename(DATA_DIR, "webkitgtk-" WEBKITGTK_API_VERSION_STRING, NULL));
+#endif
 #endif
 
     cachedPath = dataPath.get();
@@ -376,15 +382,6 @@ bool moveFile(const String& oldPath, const String& newPath)
     return g_rename(oldFilename.get(), newFilename.get()) != -1;
 }
 
-bool unloadModule(PlatformModule module)
-{
-#if OS(WINDOWS)
-    return ::FreeLibrary(module);
-#else
-    return g_module_close(module);
-#endif
-}
-
 bool hardLinkOrCopyFile(const String& source, const String& destination)
 {
 #if OS(WINDOWS)
@@ -421,5 +418,24 @@ std::optional<int32_t> getFileDeviceId(const CString& fsFile)
 
     return g_file_info_get_attribute_uint32(fileInfo.get(), G_FILE_ATTRIBUTE_UNIX_DEVICE);
 }
+
+#if USE(FILE_LOCK)
+bool lockFile(PlatformFileHandle handle, FileLockMode lockMode)
+{
+    COMPILE_ASSERT(LOCK_SH == LockShared, LockSharedEncodingIsAsExpected);
+    COMPILE_ASSERT(LOCK_EX == LockExclusive, LockExclusiveEncodingIsAsExpected);
+    COMPILE_ASSERT(LOCK_NB == LockNonBlocking, LockNonBlockingEncodingIsAsExpected);
+    auto* inputStream = g_io_stream_get_input_stream(G_IO_STREAM(handle));
+    int result = flock(g_file_descriptor_based_get_fd(G_FILE_DESCRIPTOR_BASED(inputStream)), lockMode);
+    return result != -1;
+}
+
+bool unlockFile(PlatformFileHandle handle)
+{
+    auto* inputStream = g_io_stream_get_input_stream(G_IO_STREAM(handle));
+    int result = flock(g_file_descriptor_based_get_fd(G_FILE_DESCRIPTOR_BASED(inputStream)), LOCK_UN);
+    return result != -1;
+}
+#endif // USE(FILE_LOCK)
 
 }

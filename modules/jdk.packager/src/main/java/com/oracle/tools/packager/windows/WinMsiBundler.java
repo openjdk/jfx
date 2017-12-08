@@ -525,8 +525,9 @@ public class WinMsiBundler  extends AbstractBundler {
                 } else {
                     cleanupConfigFiles(p);
                 }
-            } catch (FileNotFoundException ex) {
+            } catch (IOException ex) {
                 //noinspection ReturnInsideFinallyBlock
+                Log.debug(ex.getMessage());
                 return null;
             }
         }

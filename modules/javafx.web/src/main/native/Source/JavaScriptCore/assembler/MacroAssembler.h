@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2012-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -63,6 +63,13 @@ namespace JSC { typedef MacroAssemblerX86_64 MacroAssemblerBase; };
 
 namespace JSC {
 
+namespace Printer {
+
+struct PrintRecord;
+typedef Vector<PrintRecord> PrintRecordList;
+
+}
+
 class MacroAssembler : public MacroAssemblerBase {
 public:
 
@@ -76,19 +83,9 @@ public:
         return static_cast<FPRegisterID>(reg + 1);
     }
 
-    static constexpr unsigned numberOfRegisters()
-    {
-        return lastRegister() - firstRegister() + 1;
-    }
-
     static constexpr unsigned registerIndex(RegisterID reg)
     {
         return reg - firstRegister();
-    }
-
-    static constexpr unsigned numberOfFPRegisters()
-    {
-        return lastFPRegister() - firstFPRegister() + 1;
     }
 
     static constexpr unsigned fpRegisterIndex(FPRegisterID reg)
@@ -111,12 +108,13 @@ public:
     using MacroAssemblerBase::branch32;
     using MacroAssemblerBase::compare32;
     using MacroAssemblerBase::move;
+    using MacroAssemblerBase::moveDouble;
     using MacroAssemblerBase::add32;
     using MacroAssemblerBase::mul32;
     using MacroAssemblerBase::and32;
     using MacroAssemblerBase::branchAdd32;
     using MacroAssemblerBase::branchMul32;
-#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL) || CPU(X86_64)
+#if CPU(ARM64) || CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL) || CPU(X86_64) || CPU(MIPS)
     using MacroAssemblerBase::branchPtr;
 #endif
     using MacroAssemblerBase::branchSub32;
@@ -136,6 +134,7 @@ public:
     static const double twoToThe32; // This is super useful for some double code.
 
     // Utilities used by the DFG JIT.
+    using AbstractMacroAssemblerBase::invert;
     using MacroAssemblerBase::invert;
 
     static DoubleCondition invert(DoubleCondition cond)
@@ -486,6 +485,30 @@ public:
         return !(random() & (BlindingModulus - 1));
     }
 
+    void move(Address src, Address dest, RegisterID scratch)
+    {
+        loadPtr(src, scratch);
+        storePtr(scratch, dest);
+    }
+
+    void move32(Address src, Address dest, RegisterID scratch)
+    {
+        load32(src, scratch);
+        store32(scratch, dest);
+    }
+
+    void moveFloat(Address src, Address dest, FPRegisterID scratch)
+    {
+        loadFloat(src, scratch);
+        storeFloat(scratch, dest);
+    }
+
+    void moveDouble(Address src, Address dest, FPRegisterID scratch)
+    {
+        loadDouble(src, scratch);
+        storeDouble(scratch, dest);
+    }
+
     // Ptr methods
     // On 32-bit platforms (i.e. x86), these methods directly map onto their 32-bit equivalents.
     // FIXME: should this use a test for 32-bitness instead of this specific exception?
@@ -610,6 +633,10 @@ public:
         xor32(imm, srcDest);
     }
 
+    void xorPtr(Address src, RegisterID dest)
+    {
+        xor32(src, dest);
+    }
 
     void loadPtr(ImplicitAddress address, RegisterID dest)
     {
@@ -625,6 +652,18 @@ public:
     {
         load32(address, dest);
     }
+
+#if ENABLE(FAST_TLS_JIT)
+    void loadFromTLSPtr(uint32_t offset, RegisterID dst)
+    {
+        loadFromTLS32(offset, dst);
+    }
+
+    void storeToTLSPtr(RegisterID src, uint32_t offset)
+    {
+        storeToTLS32(src, offset);
+    }
+#endif
 
     DataLabel32 loadPtrWithAddressOffsetPatch(Address address, RegisterID dest)
     {
@@ -776,7 +815,7 @@ public:
         return MacroAssemblerBase::branchTest8(cond, Address(address.base, address.offset), mask);
     }
 
-#else // !CPU(X86_64)
+#else // !CPU(X86_64) && !CPU(ARM64)
 
     void addPtr(RegisterID src, RegisterID dest)
     {
@@ -908,6 +947,11 @@ public:
         xor64(src, dest);
     }
 
+    void xorPtr(Address src, RegisterID dest)
+    {
+        xor64(src, dest);
+    }
+
     void xorPtr(RegisterID src, Address dest)
     {
         xor64(src, dest);
@@ -932,6 +976,17 @@ public:
     {
         load64(address, dest);
     }
+
+#if ENABLE(FAST_TLS_JIT)
+    void loadFromTLSPtr(uint32_t offset, RegisterID dst)
+    {
+        loadFromTLS64(offset, dst);
+    }
+    void storeToTLSPtr(RegisterID src, uint32_t offset)
+    {
+        storeToTLS64(src, offset);
+    }
+#endif
 
     DataLabel32 loadPtrWithAddressOffsetPatch(Address address, RegisterID dest)
     {
@@ -1271,6 +1326,14 @@ public:
         else
             move(imm.asTrustedImm64(), dest);
     }
+
+#if CPU(X86_64) || CPU(ARM64)
+    void moveDouble(Imm64 imm, FPRegisterID dest)
+    {
+        move(imm, scratchRegister());
+        move64ToDouble(scratchRegister(), dest);
+    }
+#endif
 
     void and64(Imm32 imm, RegisterID dest)
     {
@@ -1762,16 +1825,145 @@ public:
     }
 
 #if ENABLE(MASM_PROBE)
-    using MacroAssemblerBase::probe;
+    struct CPUState;
+
+    // This function emits code to preserve the CPUState (e.g. registers),
+    // call a user supplied probe function, and restore the CPUState before
+    // continuing with other JIT generated code.
+    //
+    // The user supplied probe function will be called with a single pointer to
+    // a ProbeContext struct (defined below) which contains, among other things,
+    // the preserved CPUState. This allows the user probe function to inspect
+    // the CPUState at that point in the JIT generated code.
+    //
+    // If the user probe function alters the register values in the ProbeContext,
+    // the altered values will be loaded into the CPU registers when the probe
+    // returns.
+    //
+    // The ProbeContext is stack allocated and is only valid for the duration
+    // of the call to the user probe function.
+    //
+    // Note: this version of probe() should be implemented by the target specific
+    // MacroAssembler.
+    void probe(ProbeFunction, void* arg);
+
+    JS_EXPORT_PRIVATE void probe(std::function<void(ProbeContext*)>);
+#endif // ENABLE(MASM_PROBE)
 
     // Let's you print from your JIT generated code.
+    // This only works if ENABLE(MASM_PROBE). Otherwise, print() is a no-op.
     // See comments in MacroAssemblerPrinter.h for examples of how to use this.
     template<typename... Arguments>
-    void print(Arguments... args);
+    void print(Arguments&&... args);
 
-    void probe(std::function<void (ProbeContext*)>);
-#endif
+    void print(Printer::PrintRecordList*);
 };
+
+#if ENABLE(MASM_PROBE)
+
+struct MacroAssembler::CPUState {
+    static inline const char* gprName(RegisterID id) { return MacroAssembler::gprName(id); }
+    static inline const char* sprName(SPRegisterID id) { return MacroAssembler::sprName(id); }
+    static inline const char* fprName(FPRegisterID id) { return MacroAssembler::fprName(id); }
+    inline uintptr_t& gpr(RegisterID);
+    inline uintptr_t& spr(SPRegisterID);
+    inline double& fpr(FPRegisterID);
+
+    inline void*& pc();
+    inline void*& fp();
+    inline void*& sp();
+
+    uintptr_t gprs[MacroAssembler::numberOfRegisters()];
+    uintptr_t sprs[MacroAssembler::numberOfSPRegisters()];
+    double fprs[MacroAssembler::numberOfFPRegisters()];
+};
+
+inline uintptr_t& MacroAssembler::CPUState::gpr(RegisterID id)
+{
+    ASSERT(id >= MacroAssembler::firstRegister() && id <= MacroAssembler::lastRegister());
+    return gprs[id];
+}
+
+inline uintptr_t& MacroAssembler::CPUState::spr(SPRegisterID id)
+{
+    ASSERT(id >= MacroAssembler::firstSPRegister() && id <= MacroAssembler::lastSPRegister());
+    return sprs[id];
+}
+
+inline double& MacroAssembler::CPUState::fpr(FPRegisterID id)
+{
+    ASSERT(id >= MacroAssembler::firstFPRegister() && id <= MacroAssembler::lastFPRegister());
+    return fprs[id];
+}
+
+inline void*& MacroAssembler::CPUState::pc()
+{
+#if CPU(X86) || CPU(X86_64)
+    return *reinterpret_cast<void**>(&spr(X86Registers::eip));
+#elif CPU(ARM64)
+    return *reinterpret_cast<void**>(&spr(ARM64Registers::pc));
+#elif CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL)
+    return *reinterpret_cast<void**>(&gpr(ARMRegisters::pc));
+#elif CPU(MIPS)
+    RELEASE_ASSERT_NOT_REACHED();
+#else
+#error "Unsupported CPU"
+#endif
+}
+
+inline void*& MacroAssembler::CPUState::fp()
+{
+#if CPU(X86) || CPU(X86_64)
+    return *reinterpret_cast<void**>(&gpr(X86Registers::ebp));
+#elif CPU(ARM64)
+    return *reinterpret_cast<void**>(&gpr(ARM64Registers::fp));
+#elif CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL)
+    return *reinterpret_cast<void**>(&gpr(ARMRegisters::fp));
+#elif CPU(MIPS)
+    return *reinterpret_cast<void**>(&gpr(MIPSRegisters::fp));
+#else
+#error "Unsupported CPU"
+#endif
+}
+
+inline void*& MacroAssembler::CPUState::sp()
+{
+#if CPU(X86) || CPU(X86_64)
+    return *reinterpret_cast<void**>(&gpr(X86Registers::esp));
+#elif CPU(ARM64)
+    return *reinterpret_cast<void**>(&gpr(ARM64Registers::sp));
+#elif CPU(ARM_THUMB2) || CPU(ARM_TRADITIONAL)
+    return *reinterpret_cast<void**>(&gpr(ARMRegisters::sp));
+#elif CPU(MIPS)
+    return *reinterpret_cast<void**>(&gpr(MIPSRegisters::sp));
+#else
+#error "Unsupported CPU"
+#endif
+}
+
+struct ProbeContext {
+    using CPUState = MacroAssembler::CPUState;
+    using RegisterID = MacroAssembler::RegisterID;
+    using SPRegisterID = MacroAssembler::SPRegisterID;
+    using FPRegisterID = MacroAssembler::FPRegisterID;
+
+    ProbeFunction probeFunction;
+    void* arg;
+    CPUState cpu;
+
+    // Convenience methods:
+    uintptr_t& gpr(RegisterID id) { return cpu.gpr(id); }
+    uintptr_t& spr(SPRegisterID id) { return cpu.spr(id); }
+    double& fpr(FPRegisterID id) { return cpu.fpr(id); }
+    const char* gprName(RegisterID id) { return cpu.gprName(id); }
+    const char* sprName(SPRegisterID id) { return cpu.sprName(id); }
+    const char* fprName(FPRegisterID id) { return cpu.fprName(id); }
+
+    void*& pc() { return cpu.pc(); }
+    void*& fp() { return cpu.fp(); }
+    void*& sp() { return cpu.sp(); }
+};
+#endif // ENABLE(MASM_PROBE)
 
 } // namespace JSC
 

@@ -25,6 +25,10 @@
 
 package com.sun.javafx.tools.packager;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class MakeAllParams {
     String appClass;
     String preloader;

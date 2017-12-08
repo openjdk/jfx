@@ -41,12 +41,12 @@
 #include "Pattern.h"
 #include "ShadowBlur.h"
 #include "SubimageCacheWithTimer.h"
-#include "TextStream.h"
 #include "Timer.h"
 #include "URL.h"
 #include <wtf/CurrentTime.h>
 #include <wtf/MathExtras.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/text/TextStream.h>
 
 #if PLATFORM(COCOA)
 #include "WebCoreSystemInterface.h"
@@ -97,7 +97,7 @@ CGColorSpaceRef sRGBColorSpaceRef()
 CGColorSpaceRef extendedSRGBColorSpaceRef()
 {
     static CGColorSpaceRef extendedSRGBSpace;
-#if (PLATFORM(IOS) && __IPHONE_OS_VERSION_MIN_REQUIRED >= 100000) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
+#if PLATFORM(IOS) || (PLATFORM(MAC) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200)
     extendedSRGBSpace = CGColorSpaceCreateWithName(kCGColorSpaceExtendedSRGB);
 #endif
     // If there is no support for exteneded sRGB, fall back to sRGB.

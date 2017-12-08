@@ -48,6 +48,8 @@ public:
     void zap() { *reinterpret_cast_ptr<uintptr_t**>(this) = 0; }
     bool isZapped() const { return !*reinterpret_cast_ptr<uintptr_t* const*>(this); }
 
+    bool isLive();
+
     bool isLargeAllocation() const;
     CellContainer cellContainer() const;
     MarkedBlock& markedBlock() const;

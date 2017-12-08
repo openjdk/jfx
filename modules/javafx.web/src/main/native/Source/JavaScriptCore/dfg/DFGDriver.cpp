@@ -38,6 +38,7 @@
 #include "JITCode.h"
 #include "JSCInlines.h"
 #include "Options.h"
+#include "ThunkGenerators.h"
 #include "TypeProfilerLog.h"
 #include <wtf/Atomics.h>
 #include <wtf/NeverDestroyed.h>
@@ -108,7 +109,7 @@ static CompilationResult compileImpl(
         return CompilationDeferred;
     }
 
-    plan->compileInThread(*vm.dfgState, 0);
+    plan->compileInThread(nullptr);
     return plan->finalizeWithoutNotifyingCallback();
 }
 #else // ENABLE(DFG_JIT)

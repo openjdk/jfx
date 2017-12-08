@@ -21,7 +21,7 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #include "config.h"
 
@@ -35,6 +35,7 @@
 #include <WebCore/NamedNodeMap.h>
 #include <WebCore/NodeList.h>
 #include <WebCore/EventNames.h>
+#include <WebCore/StyledElement.h>
 #include <WebCore/JSMainThreadExecState.h>
 
 #include <wtf/RefPtr.h>
@@ -70,7 +71,8 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getAttributesImpl(JN
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_ElementImpl_getStyleImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleDeclaration>(env, WTF::getPtr(IMPL->cssomStyle()));
+    auto ret = is<WebCore::StyledElement>(IMPL) ? WTF::getPtr(&downcast<WebCore::StyledElement>(IMPL)->cssomStyle()) : nullptr;
+    return JavaReturn<CSSStyleDeclaration>(env, ret);
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_ElementImpl_getIdImpl(JNIEnv* env, jclass, jlong peer)

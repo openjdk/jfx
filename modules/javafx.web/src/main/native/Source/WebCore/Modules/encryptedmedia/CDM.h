@@ -28,9 +28,12 @@
 #if ENABLE(ENCRYPTED_MEDIA)
 
 #include "ContextDestructionObserver.h"
+#include "MediaKeySessionType.h"
 #include "MediaKeySystemConfiguration.h"
+#include "MediaKeySystemMediaCapability.h"
+#include "MediaKeysRestrictions.h"
 #include "SharedBuffer.h"
-#include <functional>
+#include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -39,34 +42,22 @@
 
 namespace WebCore {
 
-class CDM;
+class CDMFactory;
 class CDMInstance;
 class CDMPrivate;
 class Document;
 class ScriptExecutionContext;
 class SharedBuffer;
 
-struct MediaKeysRestrictions;
-
-class CDMFactory {
-public:
-    virtual ~CDMFactory() { };
-    virtual std::unique_ptr<CDMPrivate> createCDM(CDM&) = 0;
-    virtual bool supportsKeySystem(const String&) = 0;
-};
-
 class CDM : public RefCounted<CDM>, private ContextDestructionObserver {
 public:
-    WEBCORE_EXPORT static void registerCDMFactory(CDMFactory&);
-    WEBCORE_EXPORT static void unregisterCDMFactory(CDMFactory&);
-
     static bool supportsKeySystem(const String&);
     static bool isPersistentType(MediaKeySessionType);
 
     static Ref<CDM> create(Document&, const String& keySystem);
     ~CDM();
 
-    using SupportedConfigurationCallback = std::function<void(std::optional<MediaKeySystemConfiguration>)>;
+    using SupportedConfigurationCallback = WTF::Function<void(std::optional<MediaKeySystemConfiguration>)>;
     void getSupportedConfiguration(MediaKeySystemConfiguration&& candidateConfiguration, SupportedConfigurationCallback&&);
 
     const String& keySystem() const { return m_keySystem; }
@@ -110,7 +101,7 @@ private:
 
     WeakPtr<CDM> createWeakPtr() { return m_weakPtrFactory.createWeakPtr(); }
 
-    using ConsentStatusCallback = std::function<void(ConsentStatus, MediaKeySystemConfiguration&&, MediaKeysRestrictions&&)>;
+    using ConsentStatusCallback = WTF::Function<void(ConsentStatus, MediaKeySystemConfiguration&&, MediaKeysRestrictions&&)>;
     void getConsentStatus(MediaKeySystemConfiguration&& accumulatedConfiguration, MediaKeysRestrictions&&, ConsentStatusCallback&&);
     String m_keySystem;
     std::unique_ptr<CDMPrivate> m_private;

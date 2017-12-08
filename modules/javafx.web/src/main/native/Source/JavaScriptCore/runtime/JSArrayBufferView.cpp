@@ -30,11 +30,12 @@
 #include "JSCInlines.h"
 #include "TypeError.h"
 #include "TypedArrayController.h"
+#include <wtf/Gigacage.h>
 
 namespace JSC {
 
 const ClassInfo JSArrayBufferView::s_info = {
-    "ArrayBufferView", &Base::s_info, 0, CREATE_METHOD_TABLE(JSArrayBufferView)
+    "ArrayBufferView", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSArrayBufferView)
 };
 
 String JSArrayBufferView::toStringName(const JSObject*, ExecState*)
@@ -65,7 +66,7 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
         void* temp;
         size_t size = sizeOf(length, elementSize);
         if (size) {
-            temp = vm.auxiliarySpace.tryAllocate(nullptr, size);
+            temp = vm.primitiveGigacageAuxiliarySpace.tryAllocate(nullptr, size);
             if (!temp)
                 return;
         } else
@@ -88,13 +89,12 @@ JSArrayBufferView::ConstructionContext::ConstructionContext(
     if (length > static_cast<unsigned>(INT_MAX) / elementSize)
         return;
 
-    if (mode == ZeroFill) {
-        if (!tryFastCalloc(length, elementSize).getValue(m_vector))
-            return;
-    } else {
-        if (!tryFastMalloc(length * elementSize).getValue(m_vector))
-            return;
-    }
+    size_t size = static_cast<size_t>(length) * static_cast<size_t>(elementSize);
+    m_vector = Gigacage::tryMalloc(Gigacage::Primitive, size);
+    if (!m_vector)
+        return;
+    if (mode == ZeroFill)
+        memset(m_vector, 0, size);
 
     vm.heap.reportExtraMemoryAllocated(static_cast<size_t>(length) * elementSize);
 
@@ -192,7 +192,7 @@ void JSArrayBufferView::finalize(JSCell* cell)
     JSArrayBufferView* thisObject = static_cast<JSArrayBufferView*>(cell);
     ASSERT(thisObject->m_mode == OversizeTypedArray || thisObject->m_mode == WastefulTypedArray);
     if (thisObject->m_mode == OversizeTypedArray)
-        fastFree(thisObject->m_vector.get());
+        Gigacage::free(Gigacage::Primitive, thisObject->m_vector.get());
 }
 
 JSArrayBuffer* JSArrayBufferView::unsharedJSBuffer(ExecState* exec)

@@ -38,6 +38,7 @@
 #include "ImageQualityController.h"
 #include "NodeTraversal.h"
 #include "Page.h"
+#include "RenderDescendantIterator.h"
 #include "RenderGeometryMap.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
@@ -47,6 +48,7 @@
 #include "RenderMultiColumnSet.h"
 #include "RenderMultiColumnSpannerPlaceholder.h"
 #include "RenderNamedFlowThread.h"
+#include "RenderQuote.h"
 #include "RenderSelectionInfo.h"
 #include "RenderWidget.h"
 #include "ScrollbarTheme.h"
@@ -61,7 +63,7 @@ namespace WebCore {
 struct FrameFlatteningLayoutDisallower {
     FrameFlatteningLayoutDisallower(FrameView& frameView)
         : m_frameView(frameView)
-        , m_disallowLayout(frameView.frame().settings().frameFlatteningEnabled())
+        , m_disallowLayout(frameView.frame().settings().frameFlattening() != FrameFlatteningDisabled)
     {
         if (m_disallowLayout)
             m_frameView.startDisallowingLayout();
@@ -154,7 +156,7 @@ void RenderView::scheduleLazyRepaint(RenderBox& renderer)
     renderer.setRenderBoxNeedsLazyRepaint(true);
     m_renderersNeedingLazyRepaint.add(&renderer);
     if (!m_lazyRepaintTimer.isActive())
-        m_lazyRepaintTimer.startOneShot(0);
+        m_lazyRepaintTimer.startOneShot(0_s);
 }
 
 void RenderView::unscheduleLazyRepaint(RenderBox& renderer)
@@ -217,8 +219,7 @@ RenderBox::LogicalExtentComputedValues RenderView::computeLogicalHeight(LayoutUn
 
 void RenderView::updateLogicalWidth()
 {
-    if (!shouldUsePrintingLayout())
-        setLogicalWidth(viewLogicalWidth());
+    setLogicalWidth(shouldUsePrintingLayout() ? m_pageLogicalSize->width() : LayoutUnit(viewLogicalWidth()));
 }
 
 LayoutUnit RenderView::availableLogicalHeight(AvailableLogicalHeightType) const
@@ -268,7 +269,7 @@ void RenderView::initializeLayoutState(LayoutState& state)
     // FIXME: May be better to push a clip and avoid issuing offscreen repaints.
     state.m_clipped = false;
 
-    state.m_pageLogicalHeight = m_pageLogicalHeight;
+    state.m_pageLogicalHeight = m_pageLogicalSize ? m_pageLogicalSize->height() : LayoutUnit(0);
     state.m_pageLogicalHeightChanged = m_pageLogicalHeightChanged;
     ASSERT(state.m_pageLogicalHeight >= 0);
     state.m_isPaginated = state.m_pageLogicalHeight > 0;
@@ -339,10 +340,14 @@ void RenderView::layout()
 {
     StackStats::LayoutCheckPoint layoutCheckPoint;
     if (!document().paginated())
-        setPageLogicalHeight(0);
+        m_pageLogicalSize = { };
 
-    if (shouldUsePrintingLayout())
-        m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = logicalWidth();
+    if (shouldUsePrintingLayout()) {
+        if (!m_pageLogicalSize)
+            m_pageLogicalSize = LayoutSize(logicalWidth(), 0);
+        m_minPreferredLogicalWidth = m_pageLogicalSize->width();
+        m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth;
+    }
 
     // Use calcWidth/Height to get the new width/height, since this will take the full page zoom factor into account.
     bool relayoutChildren = !shouldUsePrintingLayout() && (width() != viewWidth() || height() != viewHeight());
@@ -386,7 +391,7 @@ void RenderView::layout()
 LayoutUnit RenderView::pageOrViewLogicalHeight() const
 {
     if (document().printing())
-        return pageLogicalHeight();
+        return m_pageLogicalSize->height();
 
     if (multiColumnFlowThread() && !style().hasInlineColumnAxis()) {
         if (int pageLength = frameView().pagination().pageLength)
@@ -1219,6 +1224,14 @@ int RenderView::viewLogicalHeight() const
     return height;
 }
 
+void RenderView::setPageLogicalSize(LayoutSize size)
+{
+    if (!m_pageLogicalSize || m_pageLogicalSize->height() != size.height())
+        m_pageLogicalHeightChanged = true;
+
+    m_pageLogicalSize = size;
+}
+
 float RenderView::zoomFactor() const
 {
     return frameView().frame().pageZoomFactor();
@@ -1233,13 +1246,16 @@ void RenderView::pushLayoutState(RenderObject& root)
     pushLayoutStateForCurrentFlowThread(root);
 }
 
-void RenderView::pushLayoutStateForPagination(RenderBlockFlow& layoutRoot)
+bool RenderView::pushLayoutStateForPaginationIfNeeded(RenderBlockFlow& layoutRoot)
 {
-    pushLayoutState(layoutRoot);
-    ASSERT(m_layoutState);
+    if (m_layoutState)
+        return false;
+    m_layoutState = std::make_unique<LayoutState>(layoutRoot);
     m_layoutState->m_isPaginated = true;
     // This is just a flag for known page height (see RenderBlockFlow::checkForPaginationLogicalHeightChange).
     m_layoutState->m_pageLogicalHeight = 1;
+    pushLayoutStateForCurrentFlowThread(layoutRoot);
+    return true;
 }
 
 IntSize RenderView::viewportSizeForCSSViewportUnits() const
@@ -1388,18 +1404,22 @@ void RenderView::updateVisibleViewportRect(const IntRect& visibleRect)
 {
     resumePausedImageAnimationsIfNeeded(visibleRect);
 
-    for (auto* renderer : m_visibleInViewportRenderers)
-        renderer->visibleInViewportStateChanged(visibleRect.intersects(enclosingIntRect(renderer->absoluteClippedOverflowRect())) ? RenderElement::VisibleInViewport : RenderElement::NotVisibleInViewport);
+    for (auto* renderer : m_visibleInViewportRenderers) {
+        auto state = visibleRect.intersects(enclosingIntRect(renderer->absoluteClippedOverflowRect())) ? VisibleInViewportState::Yes : VisibleInViewportState::No;
+        renderer->setVisibleInViewportState(state);
+    }
 }
 
-void RenderView::addRendererWithPausedImageAnimations(RenderElement& renderer)
+void RenderView::addRendererWithPausedImageAnimations(RenderElement& renderer, CachedImage& image)
 {
-    if (renderer.hasPausedImageAnimations()) {
-        ASSERT(m_renderersWithPausedImageAnimation.contains(&renderer));
-        return;
-    }
+    ASSERT(!renderer.hasPausedImageAnimations() || m_renderersWithPausedImageAnimation.contains(&renderer));
+
     renderer.setHasPausedImageAnimations(true);
-    m_renderersWithPausedImageAnimation.add(&renderer);
+    auto& images = m_renderersWithPausedImageAnimation.ensure(&renderer, [] {
+        return Vector<CachedImage*>();
+    }).iterator->value;
+    if (!images.contains(&image))
+        images.append(&image);
 }
 
 void RenderView::removeRendererWithPausedImageAnimations(RenderElement& renderer)
@@ -1411,15 +1431,35 @@ void RenderView::removeRendererWithPausedImageAnimations(RenderElement& renderer
     m_renderersWithPausedImageAnimation.remove(&renderer);
 }
 
+void RenderView::removeRendererWithPausedImageAnimations(RenderElement& renderer, CachedImage& image)
+{
+    ASSERT(renderer.hasPausedImageAnimations());
+
+    auto it = m_renderersWithPausedImageAnimation.find(&renderer);
+    ASSERT(it != m_renderersWithPausedImageAnimation.end());
+
+    auto& images = it->value;
+    if (!images.contains(&image))
+        return;
+
+    if (images.size() == 1)
+        removeRendererWithPausedImageAnimations(renderer);
+    else
+        images.removeFirst(&image);
+}
+
 void RenderView::resumePausedImageAnimationsIfNeeded(IntRect visibleRect)
 {
-    Vector<RenderElement*, 10> toRemove;
-    for (auto* renderer : m_renderersWithPausedImageAnimation) {
-        if (renderer->repaintForPausedImageAnimationsIfNeeded(visibleRect))
-            toRemove.append(renderer);
+    Vector<std::pair<RenderElement*, CachedImage*>, 10> toRemove;
+    for (auto& it : m_renderersWithPausedImageAnimation) {
+        auto* renderer = it.key;
+        for (auto* image : it.value) {
+            if (renderer->repaintForPausedImageAnimationsIfNeeded(visibleRect, *image))
+                toRemove.append(std::make_pair(renderer, image));
+        }
     }
-    for (auto& renderer : toRemove)
-        removeRendererWithPausedImageAnimations(*renderer);
+    for (auto& pair : toRemove)
+        removeRendererWithPausedImageAnimations(*pair.first, *pair.second);
 }
 
 RenderView::RepaintRegionAccumulator::RepaintRegionAccumulator(RenderView* view)

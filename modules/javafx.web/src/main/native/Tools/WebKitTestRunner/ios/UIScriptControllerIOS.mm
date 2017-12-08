@@ -33,7 +33,7 @@
 #import "StringFunctions.h"
 #import "TestController.h"
 #import "TestRunnerWKWebView.h"
-#import "UIKitSPI.h"
+#import "UIKitTestSPI.h"
 #import "UIScriptContext.h"
 #import <JavaScriptCore/JavaScriptCore.h>
 #import <JavaScriptCore/OpaqueJSString.h>
@@ -477,6 +477,22 @@ void UIScriptController::keyboardAccessoryBarPrevious()
     [webView keyboardAccessoryBarPrevious];
 }
 
+void UIScriptController::applyAutocorrection(JSStringRef newString, JSStringRef oldString, JSValueRef callback)
+{
+    unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+
+    TestRunnerWKWebView *webView = TestController::singleton().mainWebView()->platformView();
+    [webView applyAutocorrection:toWTFString(toWK(newString)) toString:toWTFString(toWK(oldString)) withCompletionHandler:^ {
+        // applyAutocorrection can call its completion handler synchronously,
+        // which makes UIScriptController unhappy (see bug 172884).
+        dispatch_async(dispatch_get_main_queue(), ^ {
+            if (!m_context)
+                return;
+            m_context->asyncTaskComplete(callbackID);
+        });
+    }];
+}
+
 double UIScriptController::minimumZoomScale() const
 {
     TestRunnerWKWebView *webView = TestController::singleton().mainWebView()->platformView();
@@ -546,6 +562,62 @@ JSRetainPtr<JSStringRef> UIScriptController::scrollingTreeAsText() const
 {
     TestRunnerWKWebView *webView = TestController::singleton().mainWebView()->platformView();
     return JSStringCreateWithCFString((CFStringRef)[webView _scrollingTreeAsText]);
+}
+
+JSObjectRef UIScriptController::propertiesOfLayerWithID(uint64_t layerID) const
+{
+    return JSValueToObject(m_context->jsContext(), [JSValue valueWithObject:[TestController::singleton().mainWebView()->platformView() _propertiesOfLayerWithID:layerID] inContext:[JSContext contextWithJSGlobalContextRef:m_context->jsContext()]].JSValueRef, nullptr);
+}
+
+static UIDeviceOrientation toUIDeviceOrientation(DeviceOrientation* orientation)
+{
+    if (!orientation)
+        return UIDeviceOrientationPortrait;
+        
+    switch (*orientation) {
+    case DeviceOrientation::Portrait:
+        return UIDeviceOrientationPortrait;
+    case DeviceOrientation::PortraitUpsideDown:
+        return UIDeviceOrientationPortraitUpsideDown;
+    case DeviceOrientation::LandscapeLeft:
+        return UIDeviceOrientationLandscapeLeft;
+    case DeviceOrientation::LandscapeRight:
+        return UIDeviceOrientationLandscapeRight;
+    }
+    
+    return UIDeviceOrientationPortrait;
+}
+
+void UIScriptController::simulateRotation(DeviceOrientation* orientation, JSValueRef callback)
+{
+    TestRunnerWKWebView *webView = TestController::singleton().mainWebView()->platformView();
+    webView.usesSafariLikeRotation = NO;
+    
+    unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+    
+    webView.rotationDidEndCallback = ^{
+        if (!m_context)
+            return;
+        m_context->asyncTaskComplete(callbackID);
+    };
+    
+    [[UIDevice currentDevice] setOrientation:toUIDeviceOrientation(orientation) animated:YES];
+}
+
+void UIScriptController::simulateRotationLikeSafari(DeviceOrientation* orientation, JSValueRef callback)
+{
+    TestRunnerWKWebView *webView = TestController::singleton().mainWebView()->platformView();
+    webView.usesSafariLikeRotation = YES;
+    
+    unsigned callbackID = m_context->prepareForAsyncTask(callback, CallbackTypeNonPersistent);
+    
+    webView.rotationDidEndCallback = ^{
+        if (!m_context)
+            return;
+        m_context->asyncTaskComplete(callbackID);
+    };
+    
+    [[UIDevice currentDevice] setOrientation:toUIDeviceOrientation(orientation) animated:YES];
 }
 
 void UIScriptController::removeViewFromWindow(JSValueRef callback)
@@ -661,6 +733,14 @@ void UIScriptController::platformClearAllCallbacks()
     webView.didHideKeyboardCallback = nil;
     webView.didShowKeyboardCallback = nil;
     webView.didEndScrollingCallback = nil;
+    webView.rotationDidEndCallback = nil;
+}
+
+void UIScriptController::setSafeAreaInsets(double top, double right, double bottom, double left)
+{
+    UIEdgeInsets insets = UIEdgeInsetsMake(top, left, bottom, right);
+    TestRunnerWKWebView *webView = TestController::singleton().mainWebView()->platformView();
+    webView.overrideSafeAreaInsets = insets;
 }
 
 }

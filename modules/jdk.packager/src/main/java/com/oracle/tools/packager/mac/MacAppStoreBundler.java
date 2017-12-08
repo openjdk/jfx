@@ -204,8 +204,9 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
                 } else {
                     Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), CONFIG_ROOT.fetchFrom(p).getAbsolutePath()));
                 }
-            } catch (FileNotFoundException ex) {
+            } catch (IOException ex) {
                 //noinspection ReturnInsideFinallyBlock
+                Log.debug(ex.getMessage());
                 return null;
             }
         }

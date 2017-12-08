@@ -57,6 +57,8 @@ inline IndexingType JSArray::mergeIndexingTypeForCopying(IndexingType other)
 
 inline bool JSArray::canFastCopy(VM& vm, JSArray* otherArray)
 {
+    if (otherArray == this)
+        return false;
     if (hasAnyArrayStorage(indexingType()) || hasAnyArrayStorage(otherArray->indexingType()))
         return false;
     // FIXME: We should have a watchpoint for indexed properties on Array.prototype and Object.prototype
@@ -65,19 +67,6 @@ inline bool JSArray::canFastCopy(VM& vm, JSArray* otherArray)
         || otherArray->structure(vm)->holesMustForwardToPrototype(vm))
         return false;
     return true;
-}
-
-ALWAYS_INLINE unsigned getLength(ExecState* exec, JSObject* obj)
-{
-    VM& vm = exec->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    if (isJSArray(obj))
-        return jsCast<JSArray*>(obj)->length();
-
-    JSValue lengthValue = obj->get(exec, vm.propertyNames->length);
-    RETURN_IF_EXCEPTION(scope, UINT_MAX);
-    scope.release();
-    return lengthValue.toUInt32(exec);
 }
 
 ALWAYS_INLINE double toLength(ExecState* exec, JSObject* obj)
@@ -91,11 +80,6 @@ ALWAYS_INLINE double toLength(ExecState* exec, JSObject* obj)
     RETURN_IF_EXCEPTION(scope, PNaN);
     scope.release();
     return lengthValue.toLength(exec);
-}
-
-ALWAYS_INLINE bool JSArray::isIteratorProtocolFastAndNonObservable()
-{
-    return globalObject()->isArrayIteratorProtocolFastAndNonObservable();
 }
 
 } // namespace JSC

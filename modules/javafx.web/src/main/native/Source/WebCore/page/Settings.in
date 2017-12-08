@@ -131,6 +131,7 @@ requiresUserGestureToLoadVideo initial=defaultRequiresUserGestureToLoadVideo
 videoPlaybackRequiresUserGesture initial=defaultVideoPlaybackRequiresUserGesture
 audioPlaybackRequiresUserGesture initial=defaultAudioPlaybackRequiresUserGesture
 mainContentUserGestureOverrideEnabled initial=false
+mediaUserGestureInheritsFromDocument initial=false
 allowsInlineMediaPlayback initial=defaultAllowsInlineMediaPlayback
 allowsInlineMediaPlaybackAfterFullscreen initial=true
 inlineMediaPlaybackRequiresPlaysInlineAttribute initial=defaultInlineMediaPlaybackRequiresPlaysInlineAttribute
@@ -158,7 +159,6 @@ imageSubsamplingEnabled initial=defaultImageSubsamplingEnabled
 wantsBalancedSetDefersLoadingBehavior initial=false
 requestAnimationFrameEnabled initial=true
 
-fixedPositionCreatesStackingContext initial=defaultFixedPositionCreatesStackingContext
 cookieEnabled initial=true
 mediaEnabled initial=true
 DOMPasteAllowed initial=false
@@ -175,7 +175,8 @@ snapshotAllPlugIns initial=false
 autostartOriginPlugInSnapshottingEnabled initial=true
 primaryPlugInSnapshotDetectionEnabled initial=true
 maximumPlugInSnapshotAttempts type=unsigned, initial=20
-frameFlatteningEnabled initial=false
+frameFlattening type=FrameFlattening, initial=FrameFlatteningDisabled
+asyncFrameScrollingEnabled initial=false
 
 webSecurityEnabled initial=true
 spatialNavigationEnabled initial=false
@@ -201,6 +202,7 @@ textAutosizingEnabled initial=defaultTextAutosizingEnabled(), setNeedsStyleRecal
 textAutosizingWindowSizeOverride type=IntSize, setNeedsStyleRecalcInAllFrames=1, conditional=TEXT_AUTOSIZING
 minimumZoomFontSize type=float, initial=defaultMinimumZoomFontSize(), conditional=TEXT_AUTOSIZING
 
+subpixelAntialiasedLayerTextEnabled initial=false, setNeedsStyleRecalcInAllFrames=1
 simpleLineLayoutEnabled initial=true, setNeedsStyleRecalcInAllFrames=1
 simpleLineLayoutDebugBordersEnabled initial=false, setNeedsStyleRecalcInAllFrames=1
 
@@ -221,8 +223,6 @@ maxParseDuration type=double, initial=-1
 standalone initial=false
 telephoneNumberParsingEnabled initial=false
 mediaDataLoadsAutomatically initial=defaultMediaDataLoadsAutomatically
-shouldTransformsAffectOverflow initial=true
-shouldDispatchJavaScriptWindowOnErrorEvents initial=false
 alwaysUseAcceleratedOverflowScroll initial=false
 imageControlsEnabled initial=false, conditional=SERVICE_CONTROLS
 
@@ -269,6 +269,8 @@ springTimingFunctionEnabled initial=false
 
 treatIPAddressAsDomain initial=false
 
+mediaPreloadingEnabled initial=false
+
 # Runtime-enabled features
 visualViewportEnabled initial=false, setNeedsStyleRecalcInAllFrames=1
 
@@ -283,7 +285,18 @@ forcedPrefersReducedMotionAccessibilityValue type=ForcedAccessibilityValue, init
 
 largeImageAsyncDecodingEnabled initial=true
 animatedImageAsyncDecodingEnabled initial=true
+webkitImageReadyEventEnabled initial=false
 
 shouldSuppressKeyboardInputDuringProvisionalNavigation initial=false
 
 langAttributeAwareFormControlUIEnabled initial=false
+
+subresourceIntegrityEnabled initial=true
+
+beaconAPIEnabled initial=false
+
+constantPropertiesEnabled initial=false
+
+viewportFitEnabled initial=false
+
+allowMediaContentTypesRequiringHardwareSupportAsFallback initial=false

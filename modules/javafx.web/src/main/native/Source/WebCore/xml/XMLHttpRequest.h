@@ -48,6 +48,7 @@ class SharedBuffer;
 class TextResourceDecoder;
 class ThreadableLoader;
 class XMLHttpRequestUpload;
+struct OwnedString;
 
 class XMLHttpRequest final : public RefCounted<XMLHttpRequest>, public XMLHttpRequestEventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
     WTF_MAKE_FAST_ALLOCATED;
@@ -86,7 +87,7 @@ public:
     bool doneWithoutErrors() const { return !m_error && m_state == DONE; }
     String getAllResponseHeaders() const;
     String getResponseHeader(const String& name) const;
-    ExceptionOr<String> responseText();
+    ExceptionOr<OwnedString> responseText();
     String responseTextIgnoringResponseType() const { return m_responseBuilder.toStringPreserveCapacity(); }
     String responseMIMEType() const;
 
@@ -149,7 +150,7 @@ private:
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
     void didReceiveResponse(unsigned long identifier, const ResourceResponse&) override;
     void didReceiveData(const char* data, int dataLength) override;
-    void didFinishLoading(unsigned long identifier, double finishTime) override;
+    void didFinishLoading(unsigned long identifier) override;
     void didFail(const ResourceError&) override;
 
     bool responseIsXML() const;
@@ -216,6 +217,7 @@ private:
     bool m_uploadComplete { false };
 
     bool m_sameOriginRequest { true };
+    bool m_wasAbortedByClient { false };
 
     // Used for progress event tracking.
     long long m_receivedLength { 0 };
@@ -223,12 +225,13 @@ private:
     unsigned m_lastSendLineNumber { 0 };
     unsigned m_lastSendColumnNumber { 0 };
     String m_lastSendURL;
-    ExceptionCode m_exceptionCode { 0 };
+    std::optional<ExceptionCode> m_exceptionCode;
 
     XMLHttpRequestProgressEventThrottle m_progressEventThrottle;
 
     ResponseType m_responseType { ResponseType::EmptyString };
     bool m_responseCacheIsValid { false };
+    mutable String m_allResponseHeaders;
 
     Timer m_resumeTimer;
     bool m_dispatchErrorOnResuming { false };
@@ -237,7 +240,7 @@ private:
     void networkErrorTimerFired();
 
     unsigned m_timeoutMilliseconds { 0 };
-    std::chrono::steady_clock::time_point m_sendingTime;
+    MonotonicTime m_sendingTime;
     Timer m_timeoutTimer;
 };
 

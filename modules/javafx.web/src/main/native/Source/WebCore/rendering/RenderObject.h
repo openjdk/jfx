@@ -31,7 +31,6 @@
 #include "Frame.h"
 #include "LayoutRect.h"
 #include "Page.h"
-#include "PaintPhase.h"
 #include "RenderObjectEnums.h"
 #include "RenderStyle.h"
 #include "ScrollAlignment.h"
@@ -206,9 +205,9 @@ public:
     void showRenderTreeForThis() const;
     void showLineTreeForThis() const;
 
-    void showRenderObject(bool mark, int depth) const;
-    void showRenderSubTreeAndMark(const RenderObject* markedObject, int depth) const;
-    void showRegionsInformation() const;
+    void outputRenderObject(WTF::TextStream&, bool mark, int depth) const;
+    void outputRenderSubTreeAndMark(WTF::TextStream&, const RenderObject* markedObject, int depth) const;
+    void outputRegionsInformation(WTF::TextStream&) const;
 #endif
 
     bool isPseudoElement() const { return node() && node()->isPseudoElement(); }
@@ -226,7 +225,7 @@ public:
 
     virtual bool isDetailsMarker() const { return false; }
     virtual bool isEmbeddedObject() const { return false; }
-    virtual bool isFieldset() const { return false; }
+    bool isFieldset() const;
     virtual bool isFileUploadControl() const { return false; }
     virtual bool isFrame() const { return false; }
     virtual bool isFrameSet() const { return false; }
@@ -447,14 +446,10 @@ public:
     bool hasReflection() const { return m_bitfields.hasRareData() && rareData().hasReflection(); }
     bool isRenderFlowThread() const { return m_bitfields.hasRareData() && rareData().isRenderFlowThread(); }
     bool hasOutlineAutoAncestor() const { return m_bitfields.hasRareData() && rareData().hasOutlineAutoAncestor(); }
-    bool isRegisteredForVisibleInViewportCallback() { return m_bitfields.hasRareData() && rareData().isRegisteredForVisibleInViewportCallback(); }
 
-    enum VisibleInViewportState {
-        VisibilityUnknown,
-        VisibleInViewport,
-        NotVisibleInViewport,
-    };
-    VisibleInViewportState visibleInViewportState() { return m_bitfields.hasRareData() ? rareData().visibleInViewportState() : VisibilityUnknown; }
+    bool isExcludedFromNormalLayout() const { return m_bitfields.isExcludedFromNormalLayout(); }
+    void setIsExcludedFromNormalLayout(bool excluded) { m_bitfields.setIsExcludedFromNormalLayout(excluded); }
+    bool isExcludedAndPlacedInBorder() const { return isExcludedFromNormalLayout() && isLegend(); }
 
     bool hasLayer() const { return m_bitfields.hasLayer(); }
 
@@ -564,8 +559,6 @@ public:
     void setHasReflection(bool = true);
     void setIsRenderFlowThread(bool = true);
     void setHasOutlineAutoAncestor(bool = true);
-    void setIsRegisteredForVisibleInViewportCallback(bool);
-    void setVisibleInViewportState(VisibleInViewportState);
 
     // Hook so that RenderTextControl can return the line height of its inner renderer.
     // For other renderers, the value is the same as lineHeight(false).
@@ -901,6 +894,7 @@ private:
             , m_hasTransformRelatedProperty(false)
             , m_everHadLayout(false)
             , m_childrenInline(false)
+            , m_isExcludedFromNormalLayout(false)
             , m_positionedState(IsStaticallyPositioned)
             , m_selectionState(SelectionNone)
             , m_flowThreadState(NotInsideFlowThread)
@@ -936,6 +930,8 @@ private:
 
         // from RenderBlock
         ADD_BOOLEAN_BITFIELD(childrenInline, ChildrenInline);
+
+        ADD_BOOLEAN_BITFIELD(isExcludedFromNormalLayout, IsExcludedFromNormalLayout);
 
     private:
         unsigned m_positionedState : 2; // PositionedState
@@ -976,8 +972,6 @@ private:
             , m_hasReflection(false)
             , m_isRenderFlowThread(false)
             , m_hasOutlineAutoAncestor(false)
-            , m_isRegisteredForVisibleInViewportCallback(false)
-            , m_visibleInViewportState(VisibilityUnknown)
         {
         }
         ADD_BOOLEAN_BITFIELD(isDragging, IsDragging);
@@ -986,8 +980,6 @@ private:
         ADD_BOOLEAN_BITFIELD(hasOutlineAutoAncestor, HasOutlineAutoAncestor);
 
         // From RenderElement
-        ADD_BOOLEAN_BITFIELD(isRegisteredForVisibleInViewportCallback, IsRegisteredForVisibleInViewportCallback);
-        ADD_ENUM_BITFIELD(visibleInViewportState, VisibleInViewportState, VisibleInViewportState, 2);
         std::unique_ptr<RenderStyle> cachedFirstLineStyle;
     };
 

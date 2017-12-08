@@ -144,7 +144,7 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, St
 
     // For everything but DataView, we allow construction with any of:
     // - Another array. This creates a copy of the of that array.
-    // - An integer. This creates a new typed array of that length and zero-initializes it.
+    // - A primitive. This creates a new typed array of that length and zero-initializes it.
 
     if (JSObject* object = jsDynamicCast<JSObject*>(vm, firstValue)) {
         unsigned length;
@@ -185,8 +185,14 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, St
                     return constructGenericTypedArrayViewFromIterator<ViewClass>(exec, structure, iterator);
             }
 
-            length = lengthSlot.isUnset() ? 0 : lengthSlot.getValue(exec, vm.propertyNames->length).toUInt32(exec);
-            RETURN_IF_EXCEPTION(scope, nullptr);
+            if (lengthSlot.isUnset())
+                length = 0;
+            else {
+                JSValue value = lengthSlot.getValue(exec, vm.propertyNames->length);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+                length = value.toUInt32(exec);
+                RETURN_IF_EXCEPTION(scope, nullptr);
+            }
         }
 
 
@@ -201,9 +207,6 @@ inline JSObject* constructGenericTypedArrayViewWithArguments(ExecState* exec, St
 
         return result;
     }
-
-    if (!firstValue.isNumber())
-        return throwTypeError(exec, scope, ASCIILiteral("Invalid array length argument"));
 
     unsigned length = firstValue.toIndex(exec, "length");
     RETURN_IF_EXCEPTION(scope, nullptr);

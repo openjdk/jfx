@@ -37,43 +37,129 @@
 
 namespace WebCore {
 
-static inline AudioStreamBasicDescription libwebrtcAudioFormat(size_t channelCount)
+static inline AudioStreamBasicDescription libwebrtcAudioFormat(Float64 sampleRate, size_t channelCount)
 {
+    // FIXME: Microphones can have more than two channels. In such case, we should do the mix down based on AudioChannelLayoutTag.
+    size_t libWebRTCChannelCount = channelCount >= 2 ? 2 : channelCount;
     AudioStreamBasicDescription streamFormat;
-    FillOutASBDForLPCM(streamFormat, LibWebRTCAudioFormat::sampleRate, channelCount, LibWebRTCAudioFormat::sampleSize, LibWebRTCAudioFormat::sampleSize, LibWebRTCAudioFormat::isFloat, LibWebRTCAudioFormat::isBigEndian, LibWebRTCAudioFormat::isNonInterleaved);
+    FillOutASBDForLPCM(streamFormat, sampleRate, libWebRTCChannelCount, LibWebRTCAudioFormat::sampleSize, LibWebRTCAudioFormat::sampleSize, LibWebRTCAudioFormat::isFloat, LibWebRTCAudioFormat::isBigEndian, LibWebRTCAudioFormat::isNonInterleaved);
     return streamFormat;
 }
 
-RealtimeOutgoingAudioSource::RealtimeOutgoingAudioSource(Ref<RealtimeMediaSource>&& audioSource)
+RealtimeOutgoingAudioSource::RealtimeOutgoingAudioSource(Ref<MediaStreamTrackPrivate>&& audioSource)
     : m_audioSource(WTFMove(audioSource))
     , m_sampleConverter(AudioSampleDataSource::create(LibWebRTCAudioFormat::sampleRate * 2))
+    , m_silenceAudioTimer(*this, &RealtimeOutgoingAudioSource::sendSilence)
 {
     m_audioSource->addObserver(*this);
+    initializeConverter();
+}
+
+bool RealtimeOutgoingAudioSource::setSource(Ref<MediaStreamTrackPrivate>&& newSource)
+{
+    m_audioSource->removeObserver(*this);
+    m_audioSource = WTFMove(newSource);
+    m_audioSource->addObserver(*this);
+
+    initializeConverter();
+    return true;
+}
+
+void RealtimeOutgoingAudioSource::initializeConverter()
+{
+    m_muted = m_audioSource->muted();
+    m_enabled = m_audioSource->enabled();
+    handleMutedIfNeeded();
+}
+
+void RealtimeOutgoingAudioSource::stop()
+{
+    m_silenceAudioTimer.stop();
+    m_audioSource->removeObserver(*this);
 }
 
 void RealtimeOutgoingAudioSource::sourceMutedChanged()
 {
     m_muted = m_audioSource->muted();
-    m_sampleConverter->setMuted(m_muted || !m_enabled);
+    handleMutedIfNeeded();
 }
 
 void RealtimeOutgoingAudioSource::sourceEnabledChanged()
 {
     m_enabled = m_audioSource->enabled();
-    m_sampleConverter->setMuted(m_muted || !m_enabled);
+    handleMutedIfNeeded();
 }
 
-void RealtimeOutgoingAudioSource::audioSamplesAvailable(const MediaTime& time, const PlatformAudioData& audioData, const AudioStreamDescription& streamDescription, size_t sampleCount)
+void RealtimeOutgoingAudioSource::handleMutedIfNeeded()
+{
+    bool isSilenced = m_muted || !m_enabled;
+    m_sampleConverter->setMuted(isSilenced);
+    if (isSilenced && !m_silenceAudioTimer.isActive())
+        m_silenceAudioTimer.startRepeating(1_s);
+    if (!isSilenced && m_silenceAudioTimer.isActive())
+        m_silenceAudioTimer.stop();
+}
+
+void RealtimeOutgoingAudioSource::sendSilence()
+{
+    LibWebRTCProvider::callOnWebRTCSignalingThread([this, protectedThis = makeRef(*this)] {
+        size_t chunkSampleCount = m_outputStreamDescription.sampleRate() / 100;
+        size_t bufferSize = chunkSampleCount * LibWebRTCAudioFormat::sampleByteSize * m_outputStreamDescription.numberOfChannels();
+
+        if (!bufferSize)
+            return;
+
+        m_audioBuffer.grow(bufferSize);
+        memset(m_audioBuffer.data(), 0, bufferSize);
+        for (auto sink : m_sinks)
+            sink->OnData(m_audioBuffer.data(), LibWebRTCAudioFormat::sampleSize, m_outputStreamDescription.sampleRate(), m_outputStreamDescription.numberOfChannels(), chunkSampleCount);
+    });
+}
+
+bool RealtimeOutgoingAudioSource::isReachingBufferedAudioDataHighLimit()
+{
+    auto writtenAudioDuration = m_writeCount / m_inputStreamDescription.sampleRate();
+    auto readAudioDuration = m_readCount / m_outputStreamDescription.sampleRate();
+
+    ASSERT(writtenAudioDuration >= readAudioDuration);
+    return writtenAudioDuration > readAudioDuration + 0.5;
+}
+
+bool RealtimeOutgoingAudioSource::isReachingBufferedAudioDataLowLimit()
+{
+    auto writtenAudioDuration = m_writeCount / m_inputStreamDescription.sampleRate();
+    auto readAudioDuration = m_readCount / m_outputStreamDescription.sampleRate();
+
+    ASSERT(writtenAudioDuration >= readAudioDuration);
+    return writtenAudioDuration < readAudioDuration + 0.1;
+}
+
+void RealtimeOutgoingAudioSource::audioSamplesAvailable(const MediaTime&, const PlatformAudioData& audioData, const AudioStreamDescription& streamDescription, size_t sampleCount)
 {
     if (m_inputStreamDescription != streamDescription) {
         m_inputStreamDescription = toCAAudioStreamDescription(streamDescription);
         auto status  = m_sampleConverter->setInputFormat(m_inputStreamDescription);
         ASSERT_UNUSED(status, !status);
 
-        status = m_sampleConverter->setOutputFormat(libwebrtcAudioFormat(streamDescription.numberOfChannels()));
+        m_outputStreamDescription = libwebrtcAudioFormat(LibWebRTCAudioFormat::sampleRate, streamDescription.numberOfChannels());
+        status = m_sampleConverter->setOutputFormat(m_outputStreamDescription.streamDescription());
         ASSERT(!status);
     }
-    m_sampleConverter->pushSamples(time, audioData, sampleCount);
+
+    // Let's skip pushing samples if we are too slow pulling them.
+    if (m_skippingAudioData) {
+        if (!isReachingBufferedAudioDataLowLimit())
+            return;
+        m_skippingAudioData = false;
+    } else if (isReachingBufferedAudioDataHighLimit()) {
+        m_skippingAudioData = true;
+        return;
+    }
+
+    // If we change the audio track or its sample rate changes, the timestamp based on m_writeCount may be wrong.
+    // FIXME: We should update m_writeCount to be valid according the new sampleRate.
+    m_sampleConverter->pushSamples(MediaTime(m_writeCount, static_cast<uint32_t>(m_inputStreamDescription.sampleRate())), audioData, sampleCount);
+    m_writeCount += sampleCount;
 
     LibWebRTCProvider::callOnWebRTCSignalingThread([protectedThis = makeRef(*this)] {
         protectedThis->pullAudioData();
@@ -82,19 +168,21 @@ void RealtimeOutgoingAudioSource::audioSamplesAvailable(const MediaTime& time, c
 
 void RealtimeOutgoingAudioSource::pullAudioData()
 {
-    size_t bufferSize = LibWebRTCAudioFormat::chunkSampleCount * LibWebRTCAudioFormat::sampleByteSize * m_inputStreamDescription.numberOfChannels();
-    m_audioBuffer.reserveCapacity(bufferSize);
+    // libwebrtc expects 10 ms chunks.
+    size_t chunkSampleCount = m_outputStreamDescription.sampleRate() / 100;
+    size_t bufferSize = chunkSampleCount * LibWebRTCAudioFormat::sampleByteSize * m_outputStreamDescription.numberOfChannels();
+    m_audioBuffer.grow(bufferSize);
 
     AudioBufferList bufferList;
     bufferList.mNumberBuffers = 1;
-    bufferList.mBuffers[0].mNumberChannels = m_inputStreamDescription.numberOfChannels();
+    bufferList.mBuffers[0].mNumberChannels = m_outputStreamDescription.numberOfChannels();
     bufferList.mBuffers[0].mDataByteSize = bufferSize;
     bufferList.mBuffers[0].mData = m_audioBuffer.data();
 
-    m_sampleConverter->pullAvalaibleSamplesAsChunks(bufferList, LibWebRTCAudioFormat::chunkSampleCount, m_startFrame, [this] {
-        m_startFrame += LibWebRTCAudioFormat::chunkSampleCount;
+    m_sampleConverter->pullAvalaibleSamplesAsChunks(bufferList, chunkSampleCount, m_readCount, [this, chunkSampleCount] {
+        m_readCount += chunkSampleCount;
         for (auto sink : m_sinks)
-            sink->OnData(m_audioBuffer.data(), LibWebRTCAudioFormat::sampleSize, LibWebRTCAudioFormat::sampleRate, m_inputStreamDescription.numberOfChannels(), LibWebRTCAudioFormat::chunkSampleCount);
+            sink->OnData(m_audioBuffer.data(), LibWebRTCAudioFormat::sampleSize, m_outputStreamDescription.sampleRate(), m_outputStreamDescription.numberOfChannels(), chunkSampleCount);
     });
 }
 

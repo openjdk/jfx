@@ -41,6 +41,7 @@
 #include "ChromeClient.h"
 #include "DOMWindow.h"
 #include "DocumentType.h"
+#include "Editing.h"
 #include "Editor.h"
 #include "EditorClient.h"
 #include "Event.h"
@@ -65,11 +66,12 @@
 #include "HitTestResult.h"
 #include "ImageBuffer.h"
 #include "InspectorInstrumentation.h"
-#include "JSDOMWindowShell.h"
+#include "JSDOMWindowProxy.h"
 #include "Logging.h"
 #include "MainFrame.h"
 #include "MathMLNames.h"
 #include "MediaFeatureNames.h"
+#include "NavigationScheduler.h"
 #include "Navigator.h"
 #include "NodeList.h"
 #include "NodeTraversal.h"
@@ -103,7 +105,6 @@
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
-#include "htmlediting.h"
 #include "markup.h"
 #include "npruntime_impl.h"
 #include "runtime_root.h"
@@ -121,7 +122,7 @@ namespace WebCore {
 using namespace HTMLNames;
 
 #if PLATFORM(IOS)
-const unsigned scrollFrequency = 1000 / 60;
+static const Seconds scrollFrequency { 1000_s / 60. };
 #endif
 
 DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, frameCounter, ("Frame"));
@@ -154,13 +155,13 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
     , m_page(&page)
     , m_settings(&page.settings())
     , m_treeNode(*this, parentFromOwnerElement(ownerElement))
-    , m_loader(*this, frameLoaderClient)
-    , m_navigationScheduler(*this)
+    , m_loader(makeUniqueRef<FrameLoader>(*this, frameLoaderClient))
+    , m_navigationScheduler(makeUniqueRef<NavigationScheduler>(*this))
     , m_ownerElement(ownerElement)
-    , m_script(std::make_unique<ScriptController>(*this))
-    , m_editor(std::make_unique<Editor>(*this))
-    , m_selection(std::make_unique<FrameSelection>(this))
-    , m_animationController(std::make_unique<CSSAnimationController>(*this))
+    , m_script(makeUniqueRef<ScriptController>(*this))
+    , m_editor(makeUniqueRef<Editor>(*this))
+    , m_selection(makeUniqueRef<FrameSelection>(this))
+    , m_animationController(makeUniqueRef<CSSAnimationController>(*this))
 #if PLATFORM(IOS)
     , m_overflowAutoScrollTimer(*this, &Frame::overflowAutoScrollTimerFired)
     , m_selectionChangeCallbacksDisabled(false)
@@ -168,7 +169,7 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
     , m_pageZoomFactor(parentPageZoomFactor(this))
     , m_textZoomFactor(parentTextZoomFactor(this))
     , m_activeDOMObjectsAndAnimationsSuspendedCount(0)
-    , m_eventHandler(std::make_unique<EventHandler>(*this))
+    , m_eventHandler(makeUniqueRef<EventHandler>(*this))
 {
     AtomicString::init();
     HTMLNames::init();
@@ -195,6 +196,11 @@ Frame::Frame(Page& page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient&
     Frame* parent = parentFromOwnerElement(ownerElement);
     if (parent && parent->activeDOMObjectsAndAnimationsSuspended())
         suspendActiveDOMObjectsAndAnimations();
+}
+
+void Frame::init()
+{
+    m_loader->init();
 }
 
 Ref<Frame> Frame::create(Page* page, HTMLFrameOwnerElement* ownerElement, FrameLoaderClient* client)
@@ -251,18 +257,11 @@ void Frame::setView(RefPtr<FrameView>&& view)
     if (m_view)
         m_view->unscheduleRelayout();
 
-    // This may be called during destruction, so need to do a null check.
-    if (m_eventHandler)
-        m_eventHandler->clear();
+    m_eventHandler->clear();
 
-    bool hadLivingRenderTree = m_doc ? m_doc->hasLivingRenderTree() : false;
-    if (hadLivingRenderTree)
-        m_doc->destroyRenderTree();
+    RELEASE_ASSERT(!m_doc || !m_doc->hasLivingRenderTree());
 
     m_view = WTFMove(view);
-
-    if (hadLivingRenderTree && m_view)
-        m_doc->didBecomeCurrentDocumentInView();
 
     // Only one form submission is allowed per view of a part.
     // Since this part may be getting reused as a result of being
@@ -278,6 +277,12 @@ void Frame::setDocument(RefPtr<Document>&& newDocument)
         return;
 
     m_documentIsBeingReplaced = true;
+
+    if (isMainFrame()) {
+        if (m_page)
+            m_page->didChangeMainDocument();
+        m_loader->client().dispatchDidChangeMainDocument();
+    }
 
     if (m_doc && m_doc->pageCacheState() != Document::InPageCache)
         m_doc->prepareForDestruction();
@@ -303,9 +308,10 @@ void Frame::orientationChanged()
     for (Frame* frame = this; frame; frame = frame->tree().traverseNext())
         frames.append(*frame);
 
+    auto newOrientation = orientation();
     for (auto& frame : frames) {
         if (Document* document = frame->document())
-            document->dispatchWindowEvent(Event::create(eventNames().orientationchangeEvent, false, false));
+            document->orientationChanged(newOrientation);
     }
 }
 
@@ -709,16 +715,16 @@ void Frame::injectUserScripts(UserScriptInjectionTime injectionTime)
     if (loader().stateMachine().creatingInitialEmptyDocument() && !settings().shouldInjectUserScriptsInInitialEmptyDocument())
         return;
 
-    Document* document = this->document();
-    if (!document)
-        return;
-
-    m_page->userContentProvider().forEachUserScript([&](DOMWrapperWorld& world, const UserScript& script) {
+    m_page->userContentProvider().forEachUserScript([this, protectedThis = makeRef(*this), injectionTime](DOMWrapperWorld& world, const UserScript& script) {
+        auto* document = this->document();
+        if (!document)
+            return;
         if (script.injectedFrames() == InjectInTopFrameOnly && ownerElement())
             return;
 
         if (script.injectionTime() == injectionTime && UserContentURLPattern::matchesPatterns(document->url(), script.whitelist(), script.blacklist())) {
-            m_page->setAsRunningUserScripts();
+            if (m_page)
+                m_page->setAsRunningUserScripts();
             m_script->evaluateInWorld(ScriptSourceCode(script.source(), script.url()), world);
         }
     });
@@ -979,7 +985,7 @@ void Frame::setPageAndTextZoomFactors(float pageZoomFactor, float textZoomFactor
     m_pageZoomFactor = pageZoomFactor;
     m_textZoomFactor = textZoomFactor;
 
-    document->recalcStyle(Style::Force);
+    document->resolveStyle(Document::ResolveStyleType::Rebuild);
 
     for (RefPtr<Frame> child = tree().firstChild(); child; child = child->tree().nextSibling())
         child->setPageAndTextZoomFactors(m_pageZoomFactor, m_textZoomFactor);

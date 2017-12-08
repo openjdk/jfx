@@ -39,7 +39,7 @@
 void WorkQueue::platformInitialize(const char* name, Type, QOS)
 {
     LockHolder locker(m_initializeRunLoopConditionMutex);
-    m_workQueueThread = createThread(name, [this] {
+    m_workQueueThread = Thread::create(name, [this] {
         {
             LockHolder locker(m_initializeRunLoopConditionMutex);
             m_runLoop = &RunLoop::current();
@@ -55,12 +55,12 @@ void WorkQueue::platformInvalidate()
     if (m_runLoop)
         m_runLoop->stop();
     if (m_workQueueThread) {
-        detachThread(m_workQueueThread);
-        m_workQueueThread = 0;
+        m_workQueueThread->detach();
+        m_workQueueThread = nullptr;
     }
 }
 
-void WorkQueue::dispatch(Function<void ()>&& function)
+void WorkQueue::dispatch(Function<void()>&& function)
 {
     RefPtr<WorkQueue> protect(this);
     m_runLoop->dispatch([protect, function = WTFMove(function)] {
@@ -71,7 +71,7 @@ void WorkQueue::dispatch(Function<void ()>&& function)
     });
 }
 
-void WorkQueue::dispatchAfter(std::chrono::nanoseconds delay, Function<void ()>&& function)
+void WorkQueue::dispatchAfter(Seconds delay, Function<void()>&& function)
 {
     RefPtr<WorkQueue> protect(this);
     m_runLoop->dispatchAfter(delay, [protect, function = WTFMove(function)] {

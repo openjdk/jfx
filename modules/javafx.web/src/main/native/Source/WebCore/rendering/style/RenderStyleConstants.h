@@ -27,9 +27,11 @@
 
 #include <initializer_list>
 
-namespace WebCore {
-
+namespace WTF {
 class TextStream;
+}
+
+namespace WebCore {
 
 static const size_t PrintColorAdjustBits = 1;
 enum PrintColorAdjust {
@@ -77,7 +79,7 @@ enum StyleDifferenceContextSensitiveProperty {
 // Static pseudo styles. Dynamic ones are produced on the fly.
 enum PseudoId : unsigned char {
     // The order must be NOP ID, public IDs, and then internal IDs.
-    NOPSEUDO, FIRST_LINE, FIRST_LETTER, BEFORE, AFTER, SELECTION, SCROLLBAR,
+    NOPSEUDO, FIRST_LINE, FIRST_LETTER, MARKER, BEFORE, AFTER, SELECTION, SCROLLBAR,
     // Internal IDs follow:
     SCROLLBAR_THUMB, SCROLLBAR_BUTTON, SCROLLBAR_TRACK, SCROLLBAR_TRACK_PIECE, SCROLLBAR_CORNER, RESIZER,
     AFTER_LAST_INTERNAL_PSEUDOID,
@@ -508,26 +510,31 @@ enum EVisibility { VISIBLE, HIDDEN, COLLAPSE };
 enum ECursor {
     // The following must match the order in CSSValueKeywords.in.
     CursorAuto,
-    CursorCross,
     CursorDefault,
-    CursorPointer,
-    CursorMove,
-    CursorVerticalText,
-    CursorCell,
+    // CursorNone
     CursorContextMenu,
-    CursorAlias,
+    CursorHelp,
+    CursorPointer,
     CursorProgress,
+    CursorWait,
+    CursorCell,
+    CursorCrosshair,
+    CursorText,
+    CursorVerticalText,
+    CursorAlias,
+    // CursorCopy
+    CursorMove,
     CursorNoDrop,
     CursorNotAllowed,
-    CursorZoomIn,
-    CursorZoomOut,
+    CursorGrab,
+    CursorGrabbing,
     CursorEResize,
+    CursorNResize,
     CursorNeResize,
     CursorNwResize,
-    CursorNResize,
+    CursorSResize,
     CursorSeResize,
     CursorSwResize,
-    CursorSResize,
     CursorWResize,
     CursorEwResize,
     CursorNsResize,
@@ -535,12 +542,9 @@ enum ECursor {
     CursorNwseResize,
     CursorColResize,
     CursorRowResize,
-    CursorText,
-    CursorWait,
-    CursorHelp,
     CursorAllScroll,
-    CursorWebkitGrab,
-    CursorWebkitGrabbing,
+    CursorZoomIn,
+    CursorZoomOut,
 
     // The following are handled as exceptions so don't need to match.
     CursorCopy,
@@ -580,6 +584,12 @@ enum ETransformStyle3D {
 
 enum EBackfaceVisibility {
     BackfaceVisibilityVisible, BackfaceVisibilityHidden
+};
+
+enum class TransformBox {
+    BorderBox,
+    FillBox,
+    ViewBox
 };
 
 enum ELineClampType { LineClampLineCount, LineClampPercentage };
@@ -719,11 +729,30 @@ enum class ApplePayButtonType {
 };
 #endif
 
-TextStream& operator<<(TextStream&, EFillSizeType);
-TextStream& operator<<(TextStream&, EFillAttachment);
-TextStream& operator<<(TextStream&, EFillBox);
-TextStream& operator<<(TextStream&, EFillRepeat);
-TextStream& operator<<(TextStream&, EMaskSourceType);
-TextStream& operator<<(TextStream&, Edge);
+WTF::TextStream& operator<<(WTF::TextStream&, EFillSizeType);
+WTF::TextStream& operator<<(WTF::TextStream&, EFillAttachment);
+WTF::TextStream& operator<<(WTF::TextStream&, EFillBox);
+WTF::TextStream& operator<<(WTF::TextStream&, EFillRepeat);
+WTF::TextStream& operator<<(WTF::TextStream&, EMaskSourceType);
+WTF::TextStream& operator<<(WTF::TextStream&, Edge);
+
+// These are all minimized combinations of paint-order.
+enum class PaintOrder {
+    Normal,
+    Fill,
+    FillMarkers,
+    Stroke,
+    StrokeMarkers,
+    Markers,
+    MarkersStroke
+};
+
+enum class PaintType {
+    Fill,
+    Stroke,
+    Markers
+};
+
+extern const float defaultMiterLimit;
 
 } // namespace WebCore

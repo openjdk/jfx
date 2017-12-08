@@ -50,6 +50,7 @@ static NSString * const UsesGameControllerFrameworkKey = @"UsesGameControllerFra
 static NSString * const IncrementalRenderingSuppressedPreferenceKey = @"IncrementalRenderingSuppressed";
 static NSString * const AcceleratedDrawingEnabledPreferenceKey = @"AcceleratedDrawingEnabled";
 static NSString * const DisplayListDrawingEnabledPreferenceKey = @"DisplayListDrawingEnabled";
+static NSString * const SubpixelAntialiasedLayerTextEnabledPreferenceKey = @"SubpixelAntialiasedLayerTextEnabled";
 static NSString * const ResourceLoadStatisticsEnabledPreferenceKey = @"ResourceLoadStatisticsEnabled";
 
 static NSString * const NonFastScrollableRegionOverlayVisiblePreferenceKey = @"NonFastScrollableRegionOverlayVisible";
@@ -90,6 +91,33 @@ typedef NS_ENUM(NSInteger, DebugOverylayMenuItemTag) {
     });
 
     return sharedSettingsController;
+}
+
+- (instancetype)init
+{
+    self = [super init];
+    if (!self)
+        return nil;
+
+    NSArray *onByDefaultPrefs = @[
+        UseWebKit2ByDefaultPreferenceKey,
+        AcceleratedDrawingEnabledPreferenceKey,
+        SimpleLineLayoutEnabledPreferenceKey,
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101300
+        SubpixelAntialiasedLayerTextEnabledPreferenceKey,
+#endif
+        VisualViewportEnabledPreferenceKey,
+        LargeImageAsyncDecodingEnabledPreferenceKey,
+        AnimatedImageAsyncDecodingEnabledPreferenceKey,
+    ];
+    
+    NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
+    for (NSString *prefName in onByDefaultPrefs) {
+        if (![userDefaults objectForKey:prefName])
+            [userDefaults setBool:YES forKey:prefName];
+    }
+
+    return self;
 }
 
 - (NSMenu *)menu
@@ -134,6 +162,7 @@ typedef NS_ENUM(NSInteger, DebugOverylayMenuItemTag) {
     [self _addItemWithTitle:@"Suppress Incremental Rendering in New Windows" action:@selector(toggleIncrementalRenderingSuppressed:) indented:NO];
     [self _addItemWithTitle:@"Enable Accelerated Drawing" action:@selector(toggleAcceleratedDrawingEnabled:) indented:NO];
     [self _addItemWithTitle:@"Enable Display List Drawing" action:@selector(toggleDisplayListDrawingEnabled:) indented:NO];
+    [self _addItemWithTitle:@"Enable Subpixel-antialiased Layer Text" action:@selector(toggleSubpixelAntialiasedLayerTextEnabled:) indented:NO];
     [self _addItemWithTitle:@"Enable Visual Viewport" action:@selector(toggleVisualViewportEnabled:) indented:NO];
     [self _addItemWithTitle:@"Enable Resource Load Statistics" action:@selector(toggleResourceLoadStatisticsEnabled:) indented:NO];
     [self _addItemWithTitle:@"Enable Large Image Async Decoding" action:@selector(toggleLargeImageAsyncDecodingEnabled:) indented:NO];
@@ -218,6 +247,8 @@ typedef NS_ENUM(NSInteger, DebugOverylayMenuItemTag) {
         [menuItem setState:[self acceleratedDrawingEnabled] ? NSOnState : NSOffState];
     else if (action == @selector(toggleDisplayListDrawingEnabled:))
         [menuItem setState:[self displayListDrawingEnabled] ? NSOnState : NSOffState];
+    else if (action == @selector(toggleSubpixelAntialiasedLayerTextEnabled:))
+        [menuItem setState:[self subpixelAntialiasedLayerTextEnabled] ? NSOnState : NSOffState];
     else if (action == @selector(toggleResourceLoadStatisticsEnabled:))
         [menuItem setState:[self resourceLoadStatisticsEnabled] ? NSOnState : NSOffState];
     else if (action == @selector(toggleLargeImageAsyncDecodingEnabled:))
@@ -396,6 +427,16 @@ typedef NS_ENUM(NSInteger, DebugOverylayMenuItemTag) {
 - (BOOL)displayListDrawingEnabled
 {
     return [[NSUserDefaults standardUserDefaults] boolForKey:DisplayListDrawingEnabledPreferenceKey];
+}
+
+- (void)toggleSubpixelAntialiasedLayerTextEnabled:(id)sender
+{
+    [self _toggleBooleanDefault:SubpixelAntialiasedLayerTextEnabledPreferenceKey];
+}
+
+- (BOOL)subpixelAntialiasedLayerTextEnabled
+{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:SubpixelAntialiasedLayerTextEnabledPreferenceKey];
 }
 
 - (void)toggleReserveSpaceForBanners:(id)sender

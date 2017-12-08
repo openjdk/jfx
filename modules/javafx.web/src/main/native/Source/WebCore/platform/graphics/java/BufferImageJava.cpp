@@ -21,7 +21,7 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #include "config.h"
 
@@ -66,11 +66,12 @@ void BufferImage::flushImageRQ(GraphicsContext& gc)
     }
 }
 
-void BufferImage::draw(GraphicsContext& gc, const FloatRect& dstRect,
-                       const FloatRect& srcRect, CompositeOperator co, BlendMode bm, ImageOrientationDescription)
+ImageDrawResult BufferImage::draw(GraphicsContext& gc, const FloatRect& dstRect,
+                       const FloatRect& srcRect, CompositeOperator co, BlendMode bm, DecodingMode, ImageOrientationDescription)
 {
     flushImageRQ(gc);
     Image::drawImage(gc, dstRect, srcRect, co, bm);
+    return ImageDrawResult::DidDraw;
 }
 
 void BufferImage::drawPattern(GraphicsContext& gc, const FloatRect& dstRect, const FloatRect& srcRect, const AffineTransform& patternTransform,

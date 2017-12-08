@@ -28,10 +28,9 @@
 
 #import "AuthenticationChallenge.h"
 #import "AuthenticationMac.h"
-#import "CFNetworkSPI.h"
+#import "CachedResourceLoader.h"
 #import "CookieStorage.h"
 #import "CredentialStorage.h"
-#import "CachedResourceLoader.h"
 #import "FormDataStreamMac.h"
 #import "Frame.h"
 #import "FrameLoader.h"
@@ -45,11 +44,12 @@
 #import "ResourceResponse.h"
 #import "SharedBuffer.h"
 #import "SubresourceLoader.h"
+#import "SynchronousLoaderClient.h"
 #import "WebCoreResourceHandleAsDelegate.h"
 #import "WebCoreResourceHandleAsOperationQueueDelegate.h"
-#import "SynchronousLoaderClient.h"
 #import "WebCoreSystemInterface.h"
 #import "WebCoreURLResponse.h"
+#import <pal/spi/cf/CFNetworkSPI.h>
 #import <wtf/BlockObjCExceptions.h>
 #import <wtf/Ref.h>
 #import <wtf/SchedulePair.h>
@@ -67,13 +67,8 @@ CFDictionaryRef _CFURLConnectionCopyTimingData(CFURLConnectionRef);
 #endif // USE(CFURLCONNECTION)
 
 #if PLATFORM(IOS)
-#import "CFNetworkSPI.h"
 #import "RuntimeApplicationChecks.h"
 #import "WebCoreThreadRun.h"
-
-@interface NSURLRequest ()
-- (CFURLRequestRef) _CFURLRequest;
-@end
 #endif
 
 using namespace WebCore;
@@ -135,7 +130,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
 void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredentialStorage, bool shouldContentSniff, SchedulingBehavior schedulingBehavior, NSDictionary *connectionProperties)
 #endif
 {
-#if ENABLE(WEB_TIMING) && !HAVE(TIMINGDATAOPTIONS)
+#if !HAVE(TIMINGDATAOPTIONS)
     setCollectsTimingData();
 #endif
 
@@ -173,7 +168,7 @@ void ResourceHandle::createNSURLConnection(id delegate, bool shouldUseCredential
     }
 
 #if HAVE(CFNETWORK_STORAGE_PARTITIONING)
-    String storagePartition = cookieStoragePartition(firstRequest());
+    String storagePartition = d->m_context->storageSession().cookieStoragePartition(firstRequest());
     if (!storagePartition.isEmpty()) {
         NSMutableURLRequest *mutableRequest = [[nsRequest mutableCopy] autorelease];
         [mutableRequest _setProperty:storagePartition forKey:@"__STORAGE_PARTITION_IDENTIFIER"];
@@ -732,25 +727,20 @@ void ResourceHandle::continueWillCacheResponse(NSCachedURLResponse *response)
 
 #endif // !USE(CFURLCONNECTION)
 
-#if ENABLE(WEB_TIMING)
-
 #if USE(CFURLCONNECTION)
 
-void ResourceHandle::getConnectionTimingData(CFURLConnectionRef connection, NetworkLoadTiming& timing)
+void ResourceHandle::getConnectionTimingData(CFURLConnectionRef connection, NetworkLoadMetrics& timing)
 {
     copyTimingData((__bridge NSDictionary*)adoptCF(_CFURLConnectionCopyTimingData(connection)).get(), timing);
 }
 
 #else
 
-void ResourceHandle::getConnectionTimingData(NSURLConnection *connection, NetworkLoadTiming& timing)
+void ResourceHandle::getConnectionTimingData(NSURLConnection *connection, NetworkLoadMetrics& timing)
 {
     copyTimingData([connection _timingData], timing);
 }
 
 #endif
 
-#endif // ENABLE(WEB_TIMING)
-
 } // namespace WebCore
-

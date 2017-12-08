@@ -24,11 +24,9 @@
 
 #pragma once
 
-#include "BasicShapes.h"
 #include "CSSPropertyNames.h"
 #include "ClipPathOperation.h"
 #include "CounterDirectives.h"
-#include "CursorData.h"
 #include "DataRef.h"
 #include "FillLayer.h"
 #include "LengthPoint.h"
@@ -93,8 +91,6 @@ public:
 #endif
 
     bool hasOpacity() const { return opacity < 1; }
-
-    bool hasAnimationsOrTransitions() const { return animations || transitions; }
 
     float opacity;
 
@@ -220,7 +216,7 @@ public:
 
     unsigned hasAttrContent : 1;
 
-    unsigned isPlaceholderStyle : 1;
+    unsigned isNotFinal : 1;
 
 private:
     StyleRareNonInheritedData();

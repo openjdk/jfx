@@ -27,6 +27,10 @@ package com.sun.javafx.tools.packager;
 
 import java.io.PrintStream;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class CachingPrintStream {
 
     private PrintStream ps;

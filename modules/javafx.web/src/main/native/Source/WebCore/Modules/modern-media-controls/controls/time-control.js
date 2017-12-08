@@ -23,11 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-const MinimumScrubberWidth = 168;
-const ElapsedTimeLabelLeftMargin = -2;
-const ElapsedTimeLabelWidth = 40;
-const RemainingTimeLabelWidth = 49;
-const AdditionalTimeLabelWidthOverAnHour = 22;
+const TenMinutes = 10 * 60;
+const OneHour = 6 * TenMinutes;
+const TenHours = 10 * OneHour;
+const MinimumScrubberWidth = 120;
 const ScrubberMargin = 5;
 
 class TimeControl extends LayoutItem
@@ -40,54 +39,127 @@ class TimeControl extends LayoutItem
             layoutDelegate
         });
 
-        this.elapsedTimeLabel = new TimeLabel;
-        this.scrubber = new Scrubber(layoutDelegate);
-        this.remainingTimeLabel = new TimeLabel;
+        this.elapsedTimeLabel = new TimeLabel(TimeLabel.Types.Elapsed);
+        this.scrubber = new Slider("scrubber");
+        this.remainingTimeLabel = new TimeLabel(TimeLabel.Types.Remaining);
 
-        this.children = [this.elapsedTimeLabel, this.scrubber, this.remainingTimeLabel];
+        this.activityIndicator = new LayoutNode(`<div class="activity-indicator"></div>`);
+        this.activityIndicator.width = 14;
+        this.activityIndicator.height = 14;
+        for (let segmentClassName of ["n", "ne", "e", "se", "s", "sw", "w", "nw"])
+            this.activityIndicator.element.appendChild(document.createElement("div")).className = segmentClassName;
 
-        this._labelsMayDisplayTimesOverAnHour = false;
+        this._duration = 0;
+        this._currentTime = 0;
+        this._loading = false;
     }
 
     // Public
 
-    get labelsMayDisplayTimesOverAnHour()
+    set duration(duration)
     {
-        return this._labelsMayDisplayTimesOverAnHour;
-    }
-
-    set labelsMayDisplayTimesOverAnHour(flag)
-    {
-        if (this._labelsMayDisplayTimesOverAnHour === flag)
+        if (this._duration === duration)
             return;
 
-        this._labelsMayDisplayTimesOverAnHour = flag;
-        this.layout();
+        this._duration = duration;
+        this.needsLayout = true;
     }
 
-    get width()
+    set currentTime(currentTime)
     {
-        return super.width;
+        if (this._currentTime === currentTime)
+            return;
+
+        this._currentTime = currentTime;
+        this.needsLayout = true;
     }
 
-    set width(width)
+    get loading()
     {
-        super.width = width;
+        return this._loading;
+    }
 
-        const extraWidth = this._labelsMayDisplayTimesOverAnHour ? AdditionalTimeLabelWidthOverAnHour : 0;
-        const elapsedTimeLabelWidth = ElapsedTimeLabelWidth + extraWidth;
-        const remainingTimeLabelWidth = RemainingTimeLabelWidth + extraWidth;
+    set loading(flag)
+    {
+        if (this._loading === flag)
+            return;
 
-        this.elapsedTimeLabel.x = ElapsedTimeLabelLeftMargin;
-        this.elapsedTimeLabel.width = elapsedTimeLabelWidth;
-        this.scrubber.x = this.elapsedTimeLabel.x + elapsedTimeLabelWidth + ScrubberMargin;
-        this.scrubber.width = this._width - elapsedTimeLabelWidth - ScrubberMargin - remainingTimeLabelWidth;
+        this._loading = flag;
+        this.scrubber.disabled = flag;
+        this.needsLayout = true;
+    }
+
+    get minimumWidth()
+    {
+        this._performIdealLayout();
+        return MinimumScrubberWidth + ScrubberMargin + this.remainingTimeLabel.width;
+    }
+
+    get idealMinimumWidth()
+    {
+        this._performIdealLayout();
+        return this.elapsedTimeLabel.width + ScrubberMargin + MinimumScrubberWidth + ScrubberMargin + this.remainingTimeLabel.width;
+    }
+
+    // Protected
+
+    layout()
+    {
+        super.layout();
+        this._performIdealLayout();
+
+        if (this._loading)
+            return;
+
+        if (this.scrubber.width >= MinimumScrubberWidth) {
+            this.elapsedTimeLabel.visible = true;
+            return;
+        }
+
+        // We drop the elapsed time label if width is constrained and we can't guarantee
+        // the scrubber minimum size otherwise.
+        this.scrubber.x = 0;
+        this.scrubber.width = this.width - ScrubberMargin - this.remainingTimeLabel.width;
         this.remainingTimeLabel.x = this.scrubber.x + this.scrubber.width + ScrubberMargin;
+        this.elapsedTimeLabel.visible = false;
     }
 
-    get isSufficientlyWide()
+    // Private
+
+    _performIdealLayout()
     {
-        return this.scrubber.width >= MinimumScrubberWidth;
+        if (this._loading)
+            this.remainingTimeLabel.setValueWithNumberOfDigits(NaN, 4);
+        else {
+            const shouldShowZeroDurations = isNaN(this._duration) || this._duration === Number.POSITIVE_INFINITY;
+
+            let numberOfDigitsForTimeLabels;
+            if (this._duration < TenMinutes)
+                numberOfDigitsForTimeLabels = 3;
+            else if (shouldShowZeroDurations || this._duration < OneHour)
+                numberOfDigitsForTimeLabels = 4;
+            else if (this._duration < TenHours)
+                numberOfDigitsForTimeLabels = 5;
+            else
+                numberOfDigitsForTimeLabels = 6;
+
+            this.elapsedTimeLabel.setValueWithNumberOfDigits(shouldShowZeroDurations ? 0 : this._currentTime, numberOfDigitsForTimeLabels);
+            this.remainingTimeLabel.setValueWithNumberOfDigits(shouldShowZeroDurations ? 0 : (this._currentTime - this._duration), numberOfDigitsForTimeLabels);
+        }
+
+        if (this._duration)
+            this.scrubber.value = this._currentTime / this._duration;
+
+        this.scrubber.x = (this._loading ? this.activityIndicator.width : this.elapsedTimeLabel.width) + ScrubberMargin;
+        this.scrubber.width = this.width - this.scrubber.x - ScrubberMargin - this.remainingTimeLabel.width;
+        this.remainingTimeLabel.x = this.scrubber.x + this.scrubber.width + ScrubberMargin;
+
+        this.children = [this._loading ? this.activityIndicator : this.elapsedTimeLabel, this.scrubber, this.remainingTimeLabel];
+    }
+
+    updateScrubberLabel()
+    {
+        this.scrubber.inputAccessibleLabel = this.elapsedTimeLabel.value;
     }
 
 }

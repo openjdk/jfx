@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Ericsson AB. All rights reserved.
+ * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -196,14 +197,18 @@ Ref<RealtimeMediaSource> MockMediaEndpoint::createMutedRemoteSource(const String
     RefPtr<RealtimeMediaSource> source;
 
     switch (type) {
-    case RealtimeMediaSource::Audio: source = MockRealtimeAudioSource::createMuted("remote audio"); break;
-    case RealtimeMediaSource::Video: source = MockRealtimeVideoSource::createMuted("remote video"); break;
-    case RealtimeMediaSource::None:
+    case RealtimeMediaSource::Type::Audio:
+        source = MockRealtimeAudioSource::createMuted("remote audio");
+        break;
+    case RealtimeMediaSource::Type::Video:
+        source = MockRealtimeVideoSource::createMuted("remote video");
+        break;
+    case RealtimeMediaSource::Type::None:
         ASSERT_NOT_REACHED();
     }
 
     m_mutedRemoteSources.set(mid, source);
-    return *source;
+    return source.releaseNonNull();
 }
 
 void MockMediaEndpoint::replaceSendSource(RealtimeMediaSource& newSource, const String& mid)
@@ -249,7 +254,7 @@ void MockMediaEndpoint::dispatchFakeIceCandidates()
     // Reverse order to use takeLast() while keeping the above order
     m_fakeIceCandidates.reverse();
 
-    m_iceCandidateTimer.startOneShot(0);
+    m_iceCandidateTimer.startOneShot(0_s);
 }
 
 void MockMediaEndpoint::iceCandidateTimerFired()
@@ -259,7 +264,7 @@ void MockMediaEndpoint::iceCandidateTimerFired()
 
     if (!m_fakeIceCandidates.isEmpty()) {
         m_client.gotIceCandidate(m_mids[0], m_fakeIceCandidates.takeLast());
-        m_iceCandidateTimer.startOneShot(0);
+        m_iceCandidateTimer.startOneShot(0_s);
     } else
         m_client.doneGatheringCandidates(m_mids[0]);
 }
@@ -273,32 +278,32 @@ void MockMediaEndpoint::stepIceTransportStates()
 
     // Should go to:
     // 'checking'
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], MediaEndpoint::IceTransportState::Checking));
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[1], MediaEndpoint::IceTransportState::Checking));
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[2], MediaEndpoint::IceTransportState::Checking));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], RTCIceTransportState::Checking));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[1], RTCIceTransportState::Checking));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[2], RTCIceTransportState::Checking));
 
     // 'connected'
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], MediaEndpoint::IceTransportState::Connected));
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[1], MediaEndpoint::IceTransportState::Completed));
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[2], MediaEndpoint::IceTransportState::Closed));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], RTCIceTransportState::Connected));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[1], RTCIceTransportState::Completed));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[2], RTCIceTransportState::Closed));
 
     // 'completed'
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], MediaEndpoint::IceTransportState::Completed));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], RTCIceTransportState::Completed));
 
     // 'failed'
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], MediaEndpoint::IceTransportState::Failed));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], RTCIceTransportState::Failed));
 
     // 'disconnected'
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[1], MediaEndpoint::IceTransportState::Disconnected));
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], MediaEndpoint::IceTransportState::Closed));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[1], RTCIceTransportState::Disconnected));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[0], RTCIceTransportState::Closed));
 
     // 'new'
-    m_iceTransportStateChanges.append(std::make_pair(m_mids[1], MediaEndpoint::IceTransportState::Closed));
+    m_iceTransportStateChanges.append(std::make_pair(m_mids[1], RTCIceTransportState::Closed));
 
     // Reverse order to use takeLast() while keeping the above order
     m_iceTransportStateChanges.reverse();
 
-    m_iceTransportTimer.startOneShot(0);
+    m_iceTransportTimer.startOneShot(0_s);
 }
 
 void MockMediaEndpoint::iceTransportTimerFired()
@@ -309,7 +314,7 @@ void MockMediaEndpoint::iceTransportTimerFired()
     auto stateChange = m_iceTransportStateChanges.takeLast();
     m_client.iceTransportStateChanged(stateChange.first, stateChange.second);
 
-    m_iceTransportTimer.startOneShot(0);
+    m_iceTransportTimer.startOneShot(0_s);
 }
 
 void MockMediaEndpoint::unmuteRemoteSourcesByMid()
@@ -324,17 +329,17 @@ void MockMediaEndpoint::unmuteRemoteSourcesByMid()
     for (int i = m_mids.size() - 1; i >= 0; --i)
         m_midsOfSourcesToUnmute.append(m_mids[i]);
 
-    m_unmuteTimer.startOneShot(0);
+    m_unmuteTimer.startOneShot(0_s);
 }
 
 void MockMediaEndpoint::unmuteTimerFired()
 {
-    RefPtr<RealtimeMediaSource> source = m_mutedRemoteSources.get(m_midsOfSourcesToUnmute.takeLast());
+    auto* source = m_mutedRemoteSources.get(m_midsOfSourcesToUnmute.takeLast());
     if (source)
         source->setMuted(false);
 
     if (!m_midsOfSourcesToUnmute.isEmpty())
-        m_unmuteTimer.startOneShot(0);
+        m_unmuteTimer.startOneShot(0_s);
 }
 
 } // namespace WebCore

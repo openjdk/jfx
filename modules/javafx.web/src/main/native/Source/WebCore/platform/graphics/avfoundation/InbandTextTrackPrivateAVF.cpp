@@ -397,7 +397,7 @@ void InbandTextTrackPrivateAVF::processAttributedStrings(CFArrayRef attributedSt
 
         LOG(Media, "InbandTextTrackPrivateAVF::processCue(%p) - adding cue \"%s\" for time = %.2f, end = %.2f, position =  %.2f, line =  %.2f", this, cueData->content().utf8().data(), cueData->startTime().toDouble(), cueData->endTime().toDouble(), cueData->position(), cueData->line());
 
-        client()->addGenericCue(WTFMove(cueData));
+        client()->addGenericCue(cueData);
     }
 
     m_pendingCueStatus = seeking() ? DeliveredDuringSeek : Valid;
@@ -449,7 +449,7 @@ void InbandTextTrackPrivateAVF::resetCueValues()
             client->removeGenericCue(*cue);
     }
 
-    m_cues.resize(0);
+    m_cues.shrink(0);
     m_pendingCueStatus = None;
     m_currentCueStartTime = MediaTime::zeroTime();
     m_currentCueEndTime = MediaTime::zeroTime();
@@ -568,7 +568,7 @@ bool InbandTextTrackPrivateAVF::readNativeSampleBuffer(CFArrayRef nativeSamples,
         return false;
     }
 
-    m_sampleInputBuffer.resize(m_sampleInputBuffer.size() + bufferLength);
+    m_sampleInputBuffer.grow(m_sampleInputBuffer.size() + bufferLength);
     CMBlockBufferCopyDataBytes(blockBuffer, 0, bufferLength, m_sampleInputBuffer.data() + m_sampleInputBuffer.size() - bufferLength);
 
     buffer = ArrayBuffer::create(m_sampleInputBuffer.data(), m_sampleInputBuffer.size());

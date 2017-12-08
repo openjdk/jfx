@@ -35,7 +35,6 @@
 #include <wtf/Forward.h>
 #include <wtf/ListHashSet.h>
 #include <wtf/MainThread.h>
-#include <wtf/TypeCasts.h>
 
 // This needs to be here because Document.h also depends on it.
 #define DUMP_NODE_STATISTICS 0
@@ -83,7 +82,6 @@ class Node : public EventTarget {
 
     friend class Document;
     friend class TreeScope;
-    friend class TreeScopeAdopter;
 public:
     enum NodeType {
         ELEMENT_NODE = 1,
@@ -223,7 +221,7 @@ public:
     virtual bool isImageControlsButtonElement() const { return false; }
 #endif
 
-    bool isDocumentNode() const;
+    bool isDocumentNode() const { return getFlag(IsContainerFlag) && !getFlag(IsElementFlag) && !getFlag(IsDocumentFragmentFlag); }
     bool isTreeScope() const;
     bool isDocumentFragment() const { return getFlag(IsDocumentFragmentFlag); }
     bool isShadowRoot() const { return isDocumentFragment() && isTreeScope(); }
@@ -260,6 +258,7 @@ public:
     Element* parentOrShadowHostElement() const;
     void setParentNode(ContainerNode*);
     Node& rootNode() const;
+    Node& traverseToRootNode() const;
     Node& shadowIncludingRoot() const;
 
     struct GetRootNodeOptions {
@@ -338,7 +337,7 @@ public:
     {
         return computeEditability(treatment, ShouldUpdateStyle::DoNotUpdate) != Editability::ReadOnly;
     }
-    // FIXME: Replace every use of this function by helpers in htmlediting.h
+    // FIXME: Replace every use of this function by helpers in Editing.h
     bool hasRichlyEditableStyle() const
     {
         return computeEditability(UserSelectAllIsAlwaysNonEditable, ShouldUpdateStyle::DoNotUpdate) == Editability::CanEditRichly;
@@ -369,6 +368,7 @@ public:
         ASSERT(m_treeScope);
         return *m_treeScope;
     }
+    void setTreeScopeRecursively(TreeScope&);
     static ptrdiff_t treeScopeMemoryOffset() { return OBJECT_OFFSETOF(Node, m_treeScope); }
 
     // Returns true if this node is associated with a document and is in its associated document's
@@ -474,7 +474,8 @@ public:
     void showTreeForThisAcrossFrame() const;
 #endif // ENABLE(TREE_DEBUGGING)
 
-    void invalidateNodeListAndCollectionCachesInAncestors(const QualifiedName* attrName = nullptr, Element* attributeOwnerElement = nullptr);
+    void invalidateNodeListAndCollectionCachesInAncestors();
+    void invalidateNodeListAndCollectionCachesInAncestorsForAttribute(const QualifiedName& attrName);
     NodeListsNodeData* nodeLists();
     void clearNodeLists();
 
@@ -488,6 +489,8 @@ public:
 
     EventTargetInterface eventTargetInterface() const override;
     ScriptExecutionContext* scriptExecutionContext() const final; // Implemented in Document.h
+
+    virtual void didMoveToNewDocument(Document& oldDocument, Document& newDocument);
 
     bool addEventListener(const AtomicString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) override;
     bool removeEventListener(const AtomicString& eventType, EventListener&, const ListenerOptions&) override;
@@ -572,6 +575,7 @@ protected:
         IsStyledElementFlag = 1 << 3,
         IsHTMLFlag = 1 << 4,
         IsSVGFlag = 1 << 5,
+        // One free bit left.
         ChildNeedsStyleRecalcFlag = 1 << 7,
         IsConnectedFlag = 1 << 8,
         IsLinkFlag = 1 << 9,
@@ -612,6 +616,10 @@ protected:
     void setFlag(NodeFlags mask) const { m_nodeFlags |= mask; }
     void clearFlag(NodeFlags mask) const { m_nodeFlags &= ~mask; }
 
+    bool isParsingChildrenFinished() const { return getFlag(IsParsingChildrenFinishedFlag); }
+    void setIsParsingChildrenFinished() { setFlag(IsParsingChildrenFinishedFlag); }
+    void clearIsParsingChildrenFinished() { clearFlag(IsParsingChildrenFinishedFlag); }
+
     enum ConstructionType {
         CreateOther = DefaultNodeFlags,
         CreateText = DefaultNodeFlags | IsTextFlag,
@@ -628,8 +636,6 @@ protected:
         CreateMathMLElement = CreateStyledElement | IsMathMLFlag
     };
     Node(Document&, ConstructionType);
-
-    virtual void didMoveToNewDocument(Document& oldDocument);
 
     virtual void addSubresourceAttributeURLs(ListHashSet<URL>&) const { }
 
@@ -672,6 +678,8 @@ private:
 
     void* opaqueRootSlow() const;
 
+    static void moveTreeToNewScope(Node&, TreeScope& oldScope, TreeScope& newScope);
+
     int m_refCount;
     mutable uint32_t m_nodeFlags;
 
@@ -684,11 +692,6 @@ private:
         RenderObject* m_renderer;
         NodeRareDataBase* m_rareData;
     } m_data { nullptr };
-
-protected:
-    bool isParsingChildrenFinished() const { return getFlag(IsParsingChildrenFinishedFlag); }
-    void setIsParsingChildrenFinished() { setFlag(IsParsingChildrenFinishedFlag); }
-    void clearIsParsingChildrenFinished() { clearFlag(IsParsingChildrenFinishedFlag); }
 };
 
 #ifndef NDEBUG
@@ -786,6 +789,14 @@ inline void Node::setHasValidStyle()
 {
     m_nodeFlags &= ~StyleValidityMask;
     clearFlag(StyleResolutionShouldRecompositeLayerFlag);
+}
+
+inline void Node::setTreeScopeRecursively(TreeScope& newTreeScope)
+{
+    ASSERT(!isDocumentNode());
+    ASSERT(!m_deletionHasBegun);
+    if (m_treeScope != &newTreeScope)
+        moveTreeToNewScope(*this, *m_treeScope, newTreeScope);
 }
 
 } // namespace WebCore

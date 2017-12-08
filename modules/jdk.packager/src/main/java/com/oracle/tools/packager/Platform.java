@@ -44,8 +44,10 @@ import java.util.regex.Pattern;
  *      //TODO Do something else
  *    }
  *  }
+ *
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
  */
-
+@Deprecated(since="10", forRemoval=true)
 public enum Platform {UNKNOWN, WINDOWS, LINUX, MAC;
     private static final Platform platform;
     private static final int majorVersion;

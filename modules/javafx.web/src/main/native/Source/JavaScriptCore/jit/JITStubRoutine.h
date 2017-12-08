@@ -33,6 +33,7 @@
 namespace JSC {
 
 class JITStubRoutineSet;
+class VM;
 
 // This is a base-class for JIT stub routines, and also the class you want
 // to instantiate directly if you have a routine that does not need any
@@ -95,30 +96,9 @@ public:
     uintptr_t endAddress() const { return m_code.executableMemory()->endAsInteger(); }
     static uintptr_t addressStep() { return jitAllocationGranule; }
 
-    static bool canPerformRangeFilter()
-    {
-        return true;
-    }
-    static uintptr_t filteringStartAddress()
-    {
-        return startOfFixedExecutableMemoryPool;
-    }
-    static size_t filteringExtentSize()
-    {
-        return fixedExecutableMemoryPoolSize;
-    }
     static bool passesFilter(uintptr_t address)
     {
-        if (!canPerformRangeFilter()) {
-            // Just check that the address doesn't use any special values that would make
-            // our hashtables upset.
-            return address >= jitAllocationGranule && address != std::numeric_limits<uintptr_t>::max();
-        }
-
-        if (address - filteringStartAddress() >= filteringExtentSize())
-            return false;
-
-        return true;
+        return isJITPC(bitwise_cast<void*>(address));
     }
 
     // Return true if you are still valid after. Return false if you are now invalid. If you return

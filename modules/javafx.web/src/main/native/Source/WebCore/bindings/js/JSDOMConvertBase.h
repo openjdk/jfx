@@ -26,12 +26,21 @@
 #pragma once
 
 #include "JSDOMExceptionHandling.h"
+#include <runtime/Error.h>
 
 namespace WebCore {
 
 // Conversion from JSValue -> Implementation
 template<typename T> struct Converter;
 
+namespace Detail {
+
+template <typename T> inline T* getPtrOrRef(const T* p) { return const_cast<T*>(p); }
+template <typename T> inline T& getPtrOrRef(const T& p) { return const_cast<T&>(p); }
+template <typename T> inline T* getPtrOrRef(const RefPtr<T>& p) { return p.get(); }
+template <typename T> inline T& getPtrOrRef(const Ref<T>& p) { return p.get(); }
+
+}
 
 struct DefaultExceptionThrower {
     void operator()(JSC::ExecState& state, JSC::ThrowScope& scope)
@@ -178,6 +187,19 @@ template<typename T, typename U> inline JSC::JSValue toJSNewlyCreated(JSC::ExecS
 
 template<typename T> struct DefaultConverter {
     using ReturnType = typename T::ImplementationType;
+
+    // We assume the worst, subtypes can override to be less pessimistic.
+    // An example of something that can have side effects
+    // is having a converter that does JSC::JSValue::toNumber.
+    // toNumber() in JavaScript can call arbitrary JS functions.
+    //
+    // An example of something that does not have side effects
+    // is something having a converter that does JSC::JSValue::toBoolean.
+    // toBoolean() in JS can't call arbitrary functions.
+    static constexpr bool conversionHasSideEffects = true;
 };
+
+// Conversion from JSValue -> Implementation for variadic arguments
+template<typename IDLType> struct VariadicConverter;
 
 } // namespace WebCore

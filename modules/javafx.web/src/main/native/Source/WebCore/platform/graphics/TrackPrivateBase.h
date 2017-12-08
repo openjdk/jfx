@@ -30,6 +30,7 @@
 #if ENABLE(VIDEO_TRACK)
 
 #include <wtf/MediaTime.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/AtomicString.h>
 
 namespace WebCore {
@@ -43,7 +44,7 @@ public:
     virtual void willRemove() = 0;
 };
 
-class TrackPrivateBase : public RefCounted<TrackPrivateBase> {
+class TrackPrivateBase : public ThreadSafeRefCounted<TrackPrivateBase> {
     WTF_MAKE_NONCOPYABLE(TrackPrivateBase);
     WTF_MAKE_FAST_ALLOCATED;
 public:
@@ -51,9 +52,9 @@ public:
 
     virtual TrackPrivateBaseClient* client() const = 0;
 
-    virtual AtomicString id() const { return emptyAtom; }
-    virtual AtomicString label() const { return emptyAtom; }
-    virtual AtomicString language() const { return emptyAtom; }
+    virtual AtomicString id() const { return emptyAtom(); }
+    virtual AtomicString label() const { return emptyAtom(); }
+    virtual AtomicString language() const { return emptyAtom(); }
 
     virtual int trackIndex() const { return 0; }
 

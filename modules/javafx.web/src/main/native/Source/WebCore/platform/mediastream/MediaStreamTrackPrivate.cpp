@@ -29,16 +29,21 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "AudioSourceProvider.h"
 #include "GraphicsContext.h"
 #include "IntRect.h"
-#include "UUID.h"
+#include <wtf/UUID.h>
+
+#if PLATFORM(COCOA)
+#include "WebAudioSourceProviderAVFObjC.h"
+#else
+#include "WebAudioSourceProvider.h"
+#endif
 
 namespace WebCore {
 
 Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<RealtimeMediaSource>&& source)
 {
-    return adoptRef(*new MediaStreamTrackPrivate(WTFMove(source), createCanonicalUUIDString()));
+    return create(WTFMove(source), createCanonicalUUIDString());
 }
 
 Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<RealtimeMediaSource>&& source, String&& id)
@@ -49,8 +54,6 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::create(Ref<RealtimeMediaSo
 MediaStreamTrackPrivate::MediaStreamTrackPrivate(Ref<RealtimeMediaSource>&& source, String&& id)
     : m_source(WTFMove(source))
     , m_id(WTFMove(id))
-    , m_isEnabled(true)
-    , m_isEnded(false)
 {
     m_source->addObserver(*this);
 }
@@ -82,14 +85,9 @@ bool MediaStreamTrackPrivate::muted() const
     return m_source->muted();
 }
 
-bool MediaStreamTrackPrivate::readonly() const
+bool MediaStreamTrackPrivate::isCaptureTrack() const
 {
-    return m_source->readonly();
-}
-
-bool MediaStreamTrackPrivate::remote() const
-{
-    return m_source->remote();
+    return m_source->isCaptureSource();
 }
 
 void MediaStreamTrackPrivate::setEnabled(bool enabled)
@@ -99,8 +97,6 @@ void MediaStreamTrackPrivate::setEnabled(bool enabled)
 
     // Always update the enabled state regardless of the track being ended.
     m_isEnabled = enabled;
-
-    m_source->setEnabled(enabled);
 
     for (auto& observer : m_observers)
         observer->trackEnabledChanged(*this);
@@ -115,6 +111,7 @@ void MediaStreamTrackPrivate::endTrack()
     // only track using the source and it does stop, we will only call each observer's
     // trackEnded method once.
     m_isEnded = true;
+    updateReadyState();
 
     m_source->requestStop(this);
 
@@ -127,6 +124,7 @@ Ref<MediaStreamTrackPrivate> MediaStreamTrackPrivate::clone()
     auto clonedMediaStreamTrackPrivate = create(m_source.copyRef());
     clonedMediaStreamTrackPrivate->m_isEnabled = this->m_isEnabled;
     clonedMediaStreamTrackPrivate->m_isEnded = this->m_isEnded;
+    clonedMediaStreamTrackPrivate->updateReadyState();
 
     return clonedMediaStreamTrackPrivate;
 }
@@ -141,34 +139,29 @@ const RealtimeMediaSourceSettings& MediaStreamTrackPrivate::settings() const
     return m_source->settings();
 }
 
-RefPtr<RealtimeMediaSourceCapabilities> MediaStreamTrackPrivate::capabilities() const
+const RealtimeMediaSourceCapabilities& MediaStreamTrackPrivate::capabilities() const
 {
     return m_source->capabilities();
 }
 
-void MediaStreamTrackPrivate::paintCurrentFrameInContext(GraphicsContext& context, const FloatRect& rect)
+void MediaStreamTrackPrivate::applyConstraints(const MediaConstraints& constraints, RealtimeMediaSource::SuccessHandler&& successHandler, RealtimeMediaSource::FailureHandler&& failureHandler)
 {
-    if (context.paintingDisabled() || m_source->type() != RealtimeMediaSource::Type::Video || ended())
-        return;
-
-    if (!m_source->muted())
-        m_source->paintCurrentFrameInContext(context, rect);
-    else {
-        GraphicsContextStateSaver stateSaver(context);
-        context.translate(rect.x(), rect.y() + rect.height());
-        IntRect paintRect(IntPoint(0, 0), IntSize(rect.width(), rect.height()));
-        context.fillRect(paintRect, Color::black);
-    }
-}
-
-void MediaStreamTrackPrivate::applyConstraints(const MediaConstraints& constraints, RealtimeMediaSource::SuccessHandler successHandler, RealtimeMediaSource::FailureHandler failureHandler)
-{
-    m_source->applyConstraints(constraints, successHandler, failureHandler);
+    m_source->applyConstraints(constraints, WTFMove(successHandler), WTFMove(failureHandler));
 }
 
 AudioSourceProvider* MediaStreamTrackPrivate::audioSourceProvider()
 {
-    return m_source->audioSourceProvider();
+#if PLATFORM(COCOA)
+    if (!m_audioSourceProvider)
+        m_audioSourceProvider = WebAudioSourceProviderAVFObjC::create(*this);
+#endif
+    return m_audioSourceProvider.get();
+}
+
+void MediaStreamTrackPrivate::sourceStarted()
+{
+    for (auto& observer : m_observers)
+        observer->trackStarted(*this);
 }
 
 void MediaStreamTrackPrivate::sourceStopped()
@@ -177,6 +170,7 @@ void MediaStreamTrackPrivate::sourceStopped()
         return;
 
     m_isEnded = true;
+    updateReadyState();
 
     for (auto& observer : m_observers)
         observer->trackEnded(*this);
@@ -186,12 +180,6 @@ void MediaStreamTrackPrivate::sourceMutedChanged()
 {
     for (auto& observer : m_observers)
         observer->trackMutedChanged(*this);
-}
-
-void MediaStreamTrackPrivate::sourceEnabledChanged()
-{
-    for (auto& observer : m_observers)
-        observer->trackEnabledChanged(*this);
 }
 
 void MediaStreamTrackPrivate::sourceSettingsChanged()
@@ -208,9 +196,49 @@ bool MediaStreamTrackPrivate::preventSourceFromStopping()
 
 void MediaStreamTrackPrivate::videoSampleAvailable(MediaSample& mediaSample)
 {
+    if (!m_haveProducedData) {
+        m_haveProducedData = true;
+        updateReadyState();
+    }
+
+    if (!enabled())
+        return;
+
     mediaSample.setTrackID(id());
     for (auto& observer : m_observers)
         observer->sampleBufferUpdated(*this, mediaSample);
+}
+
+void MediaStreamTrackPrivate::audioSamplesAvailable(const MediaTime& mediaTime, const PlatformAudioData& data, const AudioStreamDescription& description, size_t sampleCount)
+{
+    if (!m_haveProducedData) {
+        m_haveProducedData = true;
+        updateReadyState();
+    }
+
+    if (!enabled())
+        return;
+
+    for (auto& observer : m_observers)
+        observer->audioSamplesAvailable(*this, mediaTime, data, description, sampleCount);
+}
+
+
+void MediaStreamTrackPrivate::updateReadyState()
+{
+    ReadyState state = ReadyState::None;
+
+    if (m_isEnded)
+        state = ReadyState::Ended;
+    else if (m_haveProducedData)
+        state = ReadyState::Live;
+
+    if (state == m_readyState)
+        return;
+
+    m_readyState = state;
+    for (auto& observer : m_observers)
+        observer->readyStateChanged(*this);
 }
 
 } // namespace WebCore

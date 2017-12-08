@@ -27,7 +27,6 @@
 
 #if ENABLE(MEDIA_CONTROLS_SCRIPT)
 
-#include <bindings/ScriptObject.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Variant.h>
 #include <wtf/Vector.h>
@@ -70,6 +69,7 @@ public:
     bool isVideoLayerInline() const;
     bool isInMediaDocument() const;
     bool userGestureRequired() const;
+    bool shouldForceControlsDisplay() const;
     void setPreparedToReturnVideoLayerToInline(bool);
 
     void updateCaptionDisplaySizes();
@@ -87,7 +87,8 @@ public:
     String generateUUID() const;
 
     String shadowRootCSSText() const;
-    String base64StringForIconAndPlatform(const String& iconName, const String& platform) const;
+    String base64StringForIconNameAndType(const String& iconName, const String& iconType) const;
+    String formattedStringForDuration(double) const;
 
 private:
     MediaControlsHost(HTMLMediaElement*);

@@ -1,6 +1,28 @@
 /*
  * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
  */
+
 #include "config.h"
 
 #include <cstdio>
@@ -45,14 +67,13 @@
 
 namespace WebCore {
 
+static RefPtr<RQRef> s_jTheme;
 
-Ref<RenderTheme> RenderTheme::themeForPage(Page* page)
+
+RenderTheme& RenderTheme::singleton()
 {
-    if (!page) {
-        static RenderTheme& sm_defaultInstance = adoptRef(*new RenderThemeJava(0)).leakRef();
-        return sm_defaultInstance;
-    }
-    return adoptRef(*new RenderThemeJava(page));
+    static RenderTheme& sm_defaultInstance = *new RenderThemeJava();
+    return sm_defaultInstance;
 }
 
 jclass getJRenderThemeClass()
@@ -64,23 +85,11 @@ jclass getJRenderThemeClass()
     return jRenderThemeCls;
 }
 
-JLObject getJRenderTheme(Page* page)
+static JLObject getJRenderTheme(JLObject page)
 {
     JNIEnv* env = WebCore_GetJavaEnv();
 
-    ChromeClientJava *pChromeClientJava = 0;
-    if (page) {
-        //here we can get 0 for synthetic Page object, that is created for processing SVG.
-        //NB! dynamic_cast is essential. Returns 0 for SVG ChromeClient on runtime.
-        //webnode\Source\WebCore\svg\graphics\SVGImage.cpp::dataChanged(bool allDataReceived)
-        // pChromeClientJava = dynamic_cast<ChromeClientJava *>(&page->chrome().client());
-
-        if (page->chrome().client().isJavaChromeClient()) {
-            pChromeClientJava = static_cast<ChromeClientJava *>(&page->chrome().client());
-        }
-    }
-
-    if (pChromeClientJava == 0) {
+    if (!page) {
         static jmethodID mid  = env->GetStaticMethodID(
             PG_GetWebPageClass(env),
             "fwkGetDefaultRenderTheme",
@@ -100,16 +109,31 @@ JLObject getJRenderTheme(Page* page)
     ASSERT(mid);
 
     JLObject jRenderTheme(env->CallObjectMethod(
-        pChromeClientJava->platformPage(),
+        page,
         mid));
     CheckAndClearException(env);
 
     return jRenderTheme;
 }
 
-RenderThemeJava::RenderThemeJava(Page* page)
+RefPtr<RQRef> RenderThemeJava::themeForPage(JLObject page)
 {
-    m_jTheme = RQRef::create(getJRenderTheme(page));
+    return RQRef::create(getJRenderTheme(page));
+}
+
+void RenderThemeJava::setTheme(RefPtr<RQRef> theme)
+{
+    if (theme) {
+        s_jTheme = theme;
+    } else {
+        static auto jTheme = themeForPage(nullptr);
+        s_jTheme = jTheme;
+    }
+}
+
+RenderThemeJava::RenderThemeJava()
+{
+    setTheme(nullptr);
 }
 
 int RenderThemeJava::createWidgetState(const RenderObject& o)
@@ -148,10 +172,11 @@ bool RenderThemeJava::paintWidget(
     const IntRect &rect)
 {
     // platformContext() returns 0 when printing
-    if (!m_jTheme || paintInfo.context().paintingDisabled() || !paintInfo.context().platformContext()) {
+    if (paintInfo.context().paintingDisabled() || !paintInfo.context().platformContext()) {
         return false;
     }
 
+    ASSERT(s_jTheme);
     int state = createWidgetState(object);
     RGBA32 bgColor = object.style().visitedDependentColor(
         widgetIndex == JNI_EXPAND(MENU_LIST_BUTTON)
@@ -225,7 +250,7 @@ bool RenderThemeJava::paintWidget(
     ASSERT(mid);
 
     RefPtr<RQRef> widgetRef = RQRef::create(
-        env->CallObjectMethod((jobject)*m_jTheme, mid,
+        env->CallObjectMethod((jobject)*s_jTheme, mid,
             ptr_to_jlong(&object),
             (jint)widgetIndex,
             (jint)state,
@@ -246,7 +271,7 @@ bool RenderThemeJava::paintWidget(
     // widgetRef will go into rq's inner refs vector.
     paintInfo.context().platformContext()->rq().freeSpace(20)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWWIDGET
-    << (jint)*m_jTheme
+    << (jint)*s_jTheme
     << widgetRef
     << (jint)rect.x() << (jint)rect.y();
 
@@ -310,16 +335,18 @@ bool RenderThemeJava::paintCheckbox(const RenderObject&o, const PaintInfo& i, co
 void RenderThemeJava::setRadioSize(RenderStyle& style) const
 {
     // If the width and height are both specified, then we have nothing to do.
-    if (!m_jTheme || (!style.width().isIntrinsicOrAuto() && !style.height().isAuto())) {
+    if ((!style.width().isIntrinsicOrAuto() && !style.height().isAuto())) {
         return;
     }
+
+    ASSERT(s_jTheme);
 
     JNIEnv* env = WebCore_GetJavaEnv();
 
     static jmethodID mid = env->GetMethodID(getJRenderThemeClass(), "getRadioButtonSize", "()I");
     ASSERT(mid);
 
-    int radioRadius = env->CallIntMethod((jobject)*m_jTheme, mid);
+    int radioRadius = env->CallIntMethod((jobject)*s_jTheme, mid);
     CheckAndClearException(env);
 
     if (style.width().isIntrinsicOrAuto()) {
@@ -447,12 +474,12 @@ void RenderThemeJava::updateCachedSystemFontDescription(CSSValueID propId, FontC
 
     if (fontSize) {
         cachedDesc->setIsAbsoluteSize(true);
-        // cachedDesc->setGenericFamily(FontCascadeDescription::NoFamily); //XXX: removed
+        // cachedDesc->setGenericFamily(FontCascadeDescription::NoFamily);
         //cachedDesc->setOneFamily("Lucida Grande");
         cachedDesc->setOneFamily("Tahoma");
         cachedDesc->setSpecifiedSize(fontSize);
-        cachedDesc->setWeight(FontWeightNormal);
-        cachedDesc->setItalic(FontItalicOff);
+        cachedDesc->setWeight(normalWeightValue());
+        cachedDesc->setItalic(normalItalicValue());
     }
     fontDescription = *cachedDesc;
 }
@@ -569,17 +596,14 @@ bool RenderThemeJava::supportsFocusRing(const RenderStyle& style) const
 
 Color RenderThemeJava::getSelectionColor(int index) const
 {
-    if (!m_jTheme) {
-        return Color(0x800000ff);
-    }
-
     JNIEnv* env = WebCore_GetJavaEnv();
     ASSERT(env);
+    ASSERT(s_jTheme);
 
     static jmethodID mid = env->GetMethodID(getJRenderThemeClass(), "getSelectionColor", "(I)I");
     ASSERT(mid);
 
-    jint c = env->CallIntMethod((jobject)*m_jTheme, mid, index);
+    jint c = env->CallIntMethod((jobject)*s_jTheme, mid, index);
     CheckAndClearException(env);
 
     return Color(c);

@@ -20,10 +20,9 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "URLHash.h"
+#include <wtf/Function.h>
 #include <wtf/HashMap.h>
-#include <wtf/ListHashSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
@@ -31,6 +30,7 @@
 namespace WebCore {
 
 class CSSCustomPropertyValue;
+class CSSStyleDeclaration;
 class CachedResource;
 class DeprecatedCSSOMValue;
 class StyleSheetContents;
@@ -79,6 +79,8 @@ public:
 #endif
     bool isFontFaceSrcValue() const { return m_classType == FontFaceSrcClass; }
     bool isFontValue() const { return m_classType == FontClass; }
+    bool isFontStyleValue() const { return m_classType == FontStyleClass; }
+    bool isFontStyleRangeValue() const { return m_classType == FontStyleRangeClass; }
     bool isImageGeneratorValue() const { return m_classType >= CanvasClass && m_classType <= RadialGradientClass; }
     bool isGradientValue() const { return m_classType >= LinearGradientClass && m_classType <= RadialGradientClass; }
     bool isNamedImageValue() const { return m_classType == NamedImageClass; }
@@ -117,9 +119,9 @@ public:
 
     bool hasVariableReferences() const { return isVariableReferenceValue() || isPendingSubstitutionValue(); }
 
-    Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper() const;
+    Ref<DeprecatedCSSOMValue> createDeprecatedCSSOMWrapper(CSSStyleDeclaration&) const;
 
-    bool traverseSubresources(const std::function<bool (const CachedResource&)>& handler) const;
+    bool traverseSubresources(const WTF::Function<bool (const CachedResource&)>& handler) const;
 
     bool equals(const CSSValue&) const;
     bool operator==(const CSSValue& other) const { return equals(other); }
@@ -155,6 +157,8 @@ protected:
         FontVariationClass,
 #endif
         FontClass,
+        FontStyleClass,
+        FontStyleRangeClass,
         FontFaceSrcClass,
         FunctionClass,
 

@@ -35,6 +35,7 @@
 #include <wtf/Lock.h>
 #include <wtf/Stopwatch.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakRandom.h>
 
 namespace JSC {
 
@@ -46,7 +47,7 @@ class SamplingProfiler : public ThreadSafeRefCounted<SamplingProfiler> {
 public:
 
     struct UnprocessedStackFrame {
-        UnprocessedStackFrame(CodeBlock* codeBlock, EncodedJSValue callee, CallSiteIndex callSiteIndex)
+        UnprocessedStackFrame(CodeBlock* codeBlock, CalleeBits callee, CallSiteIndex callSiteIndex)
             : unverifiedCallee(callee)
             , verifiedCodeBlock(codeBlock)
             , callSiteIndex(callSiteIndex)
@@ -56,13 +57,10 @@ public:
             : cCodePC(pc)
         { }
 
-        UnprocessedStackFrame()
-        {
-            unverifiedCallee = JSValue::encode(JSValue());
-        }
+        UnprocessedStackFrame() = default;
 
         void* cCodePC { nullptr };
-        EncodedJSValue unverifiedCallee;
+        CalleeBits unverifiedCallee;
         CodeBlock* verifiedCodeBlock { nullptr };
         CallSiteIndex callSiteIndex;
     };
@@ -166,15 +164,15 @@ public:
     Lock& getLock() { return m_lock; }
     void setTimingInterval(std::chrono::microseconds interval) { m_timingInterval = interval; }
     JS_EXPORT_PRIVATE void start();
-    void start(const LockHolder&);
-    Vector<StackTrace> releaseStackTraces(const LockHolder&);
+    void start(const AbstractLocker&);
+    Vector<StackTrace> releaseStackTraces(const AbstractLocker&);
     JS_EXPORT_PRIVATE String stackTracesAsJSON();
     JS_EXPORT_PRIVATE void noticeCurrentThreadAsJSCExecutionThread();
-    void noticeCurrentThreadAsJSCExecutionThread(const LockHolder&);
+    void noticeCurrentThreadAsJSCExecutionThread(const AbstractLocker&);
     void processUnverifiedStackTraces(); // You should call this only after acquiring the lock.
-    void setStopWatch(const LockHolder&, Ref<Stopwatch>&& stopwatch) { m_stopwatch = WTFMove(stopwatch); }
-    void pause(const LockHolder&);
-    void clearData(const LockHolder&);
+    void setStopWatch(const AbstractLocker&, Ref<Stopwatch>&& stopwatch) { m_stopwatch = WTFMove(stopwatch); }
+    void pause(const AbstractLocker&);
+    void clearData(const AbstractLocker&);
 
     // Used for debugging in the JSC shell/DRT.
     void registerForReportAtExit();
@@ -185,19 +183,20 @@ public:
     JS_EXPORT_PRIVATE void reportTopBytecodes(PrintStream&);
 
 private:
-    void createThreadIfNecessary(const LockHolder&);
+    void createThreadIfNecessary(const AbstractLocker&);
     void timerLoop();
-    void takeSample(const LockHolder&, std::chrono::microseconds& stackTraceProcessingTime);
+    void takeSample(const AbstractLocker&, std::chrono::microseconds& stackTraceProcessingTime);
 
     VM& m_vm;
+    WeakRandom m_weakRandom;
     RefPtr<Stopwatch> m_stopwatch;
     Vector<StackTrace> m_stackTraces;
     Vector<UnprocessedStackTrace> m_unprocessedStackTraces;
     std::chrono::microseconds m_timingInterval;
     double m_lastTime;
     Lock m_lock;
-    ThreadIdentifier m_threadIdentifier;
-    MachineThreads::Thread* m_jscExecutionThread;
+    RefPtr<Thread> m_thread;
+    RefPtr<Thread> m_jscExecutionThread;
     bool m_isPaused;
     bool m_isShutDown;
     bool m_needsReportAtExit { false };

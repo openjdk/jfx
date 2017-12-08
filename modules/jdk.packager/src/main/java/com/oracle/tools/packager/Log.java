@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,33 +28,85 @@ package com.oracle.tools.packager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class Log {
     public static class Logger {
         private boolean verbose = false;
+        private PrintWriter out = null;
+        private PrintWriter err = null;
 
         public Logger(boolean v) {
             verbose = v;
         }
 
+        public void setVerbose(boolean v) {
+            verbose = v;
+        }
+
+        public void setPrintWriter(PrintWriter out, PrintWriter err) {
+            this.out = out;
+            this.err = err;
+        }
+
+        public void flush() {
+            if (out != null) {
+                out.flush();
+            }
+
+            if (err != null) {
+                err.flush();
+            }
+        }
+
         public void info(String msg) {
-            System.out.println(msg);
+            if (out != null) {
+                out.println(msg);
+            } else {
+                System.out.println(msg);
+            }
+        }
+
+        public void infof(String format, Object... args) {
+            if (out != null) {
+                out.printf(format, args);
+            } else {
+                System.out.printf(format, args);
+            }
+        }
+
+        public void error(String msg) {
+            if (err != null) {
+                err.println(msg);
+            } else {
+                System.err.println(msg);
+            }
         }
 
         public void verbose(Throwable t) {
-            if (Log.debug || verbose) {
+            if (out != null && (Log.debug || verbose)) {
+                t.printStackTrace(out);
+            } else if (Log.debug || verbose) {
                 t.printStackTrace(System.out);
             }
         }
 
         public void verbose(String msg) {
-            if (Log.debug || verbose) {
+            if (out != null && (Log.debug || verbose)) {
+                out.println(msg);
+            } else if (Log.debug || verbose) {
                 System.out.println(msg);
             }
         }
 
         public void debug(String msg) {
-            if (Log.debug) {
+            if (out != null && Log.debug) {
+                out.println(msg);
+            } else if (Log.debug) {
                 System.out.println(msg);
             }
         }
@@ -71,10 +123,31 @@ public class Log {
         }
     }
 
+    public static Logger getLogger() {
+        return delegate;
+    }
+
+    public static void flush() {
+        if (delegate != null) {
+            delegate.flush();
+        }
+    }
 
     public static void info(String msg) {
         if (delegate != null) {
            delegate.info(msg);
+        }
+    }
+
+    public static void infof(String format, Object... args) {
+        if (delegate != null) {
+           delegate.infof(format, args);
+        }
+    }
+
+    public static void error(String msg) {
+        if (delegate != null) {
+            delegate.error(msg);
         }
     }
 

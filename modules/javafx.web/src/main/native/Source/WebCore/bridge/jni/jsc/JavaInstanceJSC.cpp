@@ -52,8 +52,8 @@ using namespace JSC::Bindings;
 using namespace JSC;
 using namespace WebCore;
 
-JavaInstance::JavaInstance(jobject instance, PassRefPtr<RootObject> rootObject, jobject accessControlContext)
-    : Instance(rootObject)
+JavaInstance::JavaInstance(jobject instance, RefPtr<RootObject>&& rootObject, jobject accessControlContext)
+    : Instance(WTFMove(rootObject))
 {
     m_instance = JobjectWrapper::create(instance);
     m_class = 0;
@@ -231,7 +231,7 @@ private:
     }
 };
 
-const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMethod::s_info, 0, CREATE_METHOD_TABLE(JavaRuntimeMethod) };
+const ClassInfo JavaRuntimeMethod::s_info = { "JavaRuntimeMethod", &RuntimeMethod::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JavaRuntimeMethod) };
 
 JSValue JavaInstance::getMethod(ExecState* exec, PropertyName propertyName)
 {

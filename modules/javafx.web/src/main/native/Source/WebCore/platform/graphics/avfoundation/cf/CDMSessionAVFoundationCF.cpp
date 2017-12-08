@@ -30,13 +30,12 @@
 
 #include "LegacyCDM.h"
 #include "LegacyCDMSession.h"
-#include "ExceptionCode.h"
 #include "MediaPlayer.h"
 #include "MediaPlayerPrivateAVFoundationCF.h"
 #include "NotImplemented.h"
-#include "SoftLinking.h"
-#include "UUID.h"
 #include <AVFoundationCF/AVFoundationCF.h>
+#include <wtf/SoftLinking.h>
+#include <wtf/UUID.h>
 #include <wtf/text/CString.h>
 
 // The softlink header files must be included after the AVCF and CoreMedia header files.

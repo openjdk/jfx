@@ -33,13 +33,12 @@ namespace WebCore {
 
 class RenderStyle;
 class GraphicsContext;
+
 struct AttachmentLayout;
 
 class RenderThemeIOS final : public RenderThemeCocoa {
 public:
-    static Ref<RenderTheme> create();
-
-    LengthBox popupInternalPaddingBox(const RenderStyle&) const override;
+    friend NeverDestroyed<RenderThemeIOS>;
 
     static void adjustRoundBorderRadius(RenderStyle&, RenderBox&);
 
@@ -48,6 +47,8 @@ public:
     WEBCORE_EXPORT static void setContentSizeCategory(const String&);
 
 protected:
+    LengthBox popupInternalPaddingBox(const RenderStyle&) const override;
+
     FontCascadeDescription& cachedSystemFontDescription(CSSValueID systemFontID) const override;
     void updateCachedSystemFontDescription(CSSValueID, FontCascadeDescription&) const override;
     int baselinePosition(const RenderBox&) const override;
@@ -81,7 +82,7 @@ protected:
     bool paintSliderThumbDecorations(const RenderObject&, const PaintInfo&, const IntRect&) override;
 
     // Returns the repeat interval of the animation for the progress bar.
-    double animationRepeatIntervalForProgressBar(RenderProgress&) const override;
+    Seconds animationRepeatIntervalForProgressBar(RenderProgress&) const override;
     // Returns the duration of the animation for the progress bar.
     double animationDurationForProgressBar(RenderProgress&) const override;
 
@@ -109,7 +110,7 @@ protected:
     String mediaControlsStyleSheet() override;
     String modernMediaControlsStyleSheet() override;
     String mediaControlsScript() override;
-    String mediaControlsBase64StringForIconAndPlatform(const String&, const String&) override;
+    String mediaControlsBase64StringForIconNameAndType(const String&, const String&) override;
 #endif
 
 #if ENABLE(ATTACHMENT_ELEMENT)
@@ -117,6 +118,9 @@ protected:
     int attachmentBaseline(const RenderAttachment&) const override;
     bool paintAttachment(const RenderObject&, const PaintInfo&, const IntRect&) override;
 #endif
+
+    bool shouldMockBoldSystemFontForAccessibility() const override { return m_shouldMockBoldSystemFontForAccessibility; }
+    void setShouldMockBoldSystemFontForAccessibility(bool shouldMockBoldSystemFontForAccessibility) override { m_shouldMockBoldSystemFontForAccessibility = shouldMockBoldSystemFontForAccessibility; }
 
 private:
     RenderThemeIOS();
@@ -135,6 +139,8 @@ private:
     String m_mediaControlsStyleSheet;
 
     mutable HashMap<int, Color> m_systemColorCache;
+
+    bool m_shouldMockBoldSystemFontForAccessibility { false };
 };
 
 }

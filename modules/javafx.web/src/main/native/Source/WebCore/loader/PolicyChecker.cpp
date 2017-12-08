@@ -35,6 +35,7 @@
 #include "ContentSecurityPolicy.h"
 #include "DOMWindow.h"
 #include "DocumentLoader.h"
+#include "Event.h"
 #include "EventNames.h"
 #include "FormState.h"
 #include "Frame.h"
@@ -83,7 +84,7 @@ void PolicyChecker::checkNavigationPolicy(const ResourceRequest& request, bool d
 {
     NavigationAction action = loader->triggeringAction();
     if (action.isEmpty()) {
-        action = NavigationAction(request, NavigationType::Other, loader->shouldOpenExternalURLsPolicyToPropagate());
+        action = NavigationAction { *m_frame.document(), request, InitiatedByMainFrame::Unknown, NavigationType::Other, loader->shouldOpenExternalURLsPolicyToPropagate() };
         loader->setTriggeringAction(action);
     }
 
@@ -125,7 +126,7 @@ void PolicyChecker::checkNavigationPolicy(const ResourceRequest& request, bool d
 
 #if USE(QUICK_LOOK)
     // Always allow QuickLook-generated URLs based on the protocol scheme.
-    if (!request.isNull() && request.url().protocolIs(QLPreviewProtocol())) {
+    if (!request.isNull() && isQuickLookPreviewURL(request.url())) {
         continueAfterNavigationPolicy(PolicyUse);
         return;
     }
@@ -145,14 +146,14 @@ void PolicyChecker::checkNavigationPolicy(const ResourceRequest& request, bool d
 #endif
 
     m_delegateIsDecidingNavigationPolicy = true;
-    m_suggestedFilename = action.downloadAttribute();
+    m_suggestedFilename = action.downloadAttribute().isEmpty() ? nullAtom() : action.downloadAttribute();
     m_frame.loader().client().dispatchDecidePolicyForNavigationAction(action, request, formState, [this](PolicyAction action) {
         continueAfterNavigationPolicy(action);
     });
     m_delegateIsDecidingNavigationPolicy = false;
 }
 
-void PolicyChecker::checkNewWindowPolicy(const NavigationAction& action, const ResourceRequest& request, FormState* formState, const String& frameName, NewWindowPolicyDecisionFunction function)
+void PolicyChecker::checkNewWindowPolicy(NavigationAction&& navigationAction, const ResourceRequest& request, FormState* formState, const String& frameName, NewWindowPolicyDecisionFunction function)
 {
     if (m_frame.document() && m_frame.document()->isSandboxed(SandboxPopups))
         return continueAfterNavigationPolicy(PolicyIgnore);
@@ -160,31 +161,26 @@ void PolicyChecker::checkNewWindowPolicy(const NavigationAction& action, const R
     if (!DOMWindow::allowPopUp(m_frame))
         return continueAfterNavigationPolicy(PolicyIgnore);
 
-    m_callback.set(request, formState, frameName, action, WTFMove(function));
-    m_frame.loader().client().dispatchDecidePolicyForNewWindowAction(action, request, formState, frameName, [this](PolicyAction action) {
-        continueAfterNewWindowPolicy(action);
+    m_frame.loader().client().dispatchDecidePolicyForNewWindowAction(navigationAction, request, formState, frameName, [frame = makeRef(m_frame), request, formState = makeRefPtr(formState), frameName, navigationAction, function = WTFMove(function)](PolicyAction policyAction) {
+        switch (policyAction) {
+        case PolicyDownload:
+            frame->loader().client().startDownload(request);
+            FALLTHROUGH;
+        case PolicyIgnore:
+            function({ }, nullptr, { }, { }, false);
+            return;
+        case PolicyUse:
+            function(request, formState.get(), frameName, navigationAction, true);
+            return;
+        }
+        ASSERT_NOT_REACHED();
     });
-}
-
-void PolicyChecker::checkContentPolicy(const ResourceResponse& response, ContentPolicyDecisionFunction function)
-{
-    m_callback.set(WTFMove(function));
-    m_frame.loader().client().dispatchDecidePolicyForResponse(response, m_frame.loader().activeDocumentLoader()->request(), [this](PolicyAction action) {
-        continueAfterContentPolicy(action);
-    });
-}
-
-void PolicyChecker::cancelCheck()
-{
-    m_frame.loader().client().cancelPolicyCheck();
-    m_callback.clear();
 }
 
 void PolicyChecker::stopCheck()
 {
     m_frame.loader().client().cancelPolicyCheck();
-    PolicyCallback callback = m_callback;
-    m_callback.clear();
+    PolicyCallback callback = WTFMove(m_callback);
     callback.cancel();
 }
 
@@ -193,17 +189,9 @@ void PolicyChecker::cannotShowMIMEType(const ResourceResponse& response)
     handleUnimplementablePolicy(m_frame.loader().client().cannotShowMIMETypeError(response));
 }
 
-void PolicyChecker::continueLoadAfterWillSubmitForm(PolicyAction)
-{
-    // See header file for an explaination of why this function
-    // isn't like the others.
-    m_frame.loader().continueLoadAfterWillSubmitForm();
-}
-
 void PolicyChecker::continueAfterNavigationPolicy(PolicyAction policy)
 {
-    PolicyCallback callback = m_callback;
-    m_callback.clear();
+    PolicyCallback callback = WTFMove(m_callback);
 
     bool shouldContinue = policy == PolicyUse;
 
@@ -231,33 +219,6 @@ void PolicyChecker::continueAfterNavigationPolicy(PolicyAction policy)
     }
 
     callback.call(shouldContinue);
-}
-
-void PolicyChecker::continueAfterNewWindowPolicy(PolicyAction policy)
-{
-    PolicyCallback callback = m_callback;
-    m_callback.clear();
-
-    switch (policy) {
-        case PolicyIgnore:
-            callback.clearRequest();
-            break;
-        case PolicyDownload:
-            m_frame.loader().client().startDownload(callback.request());
-            callback.clearRequest();
-            break;
-        case PolicyUse:
-            break;
-    }
-
-    callback.call(policy == PolicyUse);
-}
-
-void PolicyChecker::continueAfterContentPolicy(PolicyAction policy)
-{
-    PolicyCallback callback = m_callback;
-    m_callback.clear();
-    callback.call(policy);
 }
 
 void PolicyChecker::handleUnimplementablePolicy(const ResourceError& error)

@@ -167,14 +167,6 @@ void EventSenderProxy::updateClickCountForButton(int button)
 void EventSenderProxy::dispatchEvent(GdkEvent* event)
 {
     ASSERT(m_testController->mainWebView());
-
-    // If we are sending an escape key to the WebView, this has the side-effect of dismissing
-    // any current popups anyway. Chances are that the test is doing this to dismiss the popup
-    // anyway. Not all tests properly dismiss popup menus, so we still need to do it manually
-    // if this isn't an escape key press.
-    if (event->type != GDK_KEY_PRESS || event->key.keyval != GDK_KEY_Escape)
-        m_testController->mainWebView()->dismissAllPopupMenus();
-
     gtk_main_do_event(event);
     gdk_event_free(event);
 }
@@ -323,7 +315,7 @@ void EventSenderProxy::keyDown(WKStringRef keyRef, WKEventModifiers wkModifiers,
 
     GUniqueOutPtr<GdkKeymapKey> keys;
     gint nKeys;
-    if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), gdkKeySym, &keys.outPtr(), &nKeys))
+    if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), gdkKeySym, &keys.outPtr(), &nKeys) && nKeys)
         pressEvent->key.hardware_keycode = keys.get()[0].keycode;
 
     GdkEvent* releaseEvent = gdk_event_copy(pressEvent);
@@ -468,11 +460,6 @@ void EventSenderProxy::mouseScrollByWithWheelAndMomentumPhases(int x, int y, int
     mouseScrollBy(x, y);
 }
 
-void EventSenderProxy::swipeGestureWithWheelAndMomentumPhases(int, int, int, int)
-{
-    notImplemented();
-}
-
 void EventSenderProxy::leapForward(int milliseconds)
 {
     if (m_eventQueue.isEmpty())
@@ -518,7 +505,7 @@ void EventSenderProxy::addTouchPoint(int x, int y)
 
 void EventSenderProxy::updateTouchPoint(int index, int x, int y)
 {
-    ASSERT(index >= 0 && index < m_touchEvents.size());
+    ASSERT(index >= 0 && static_cast<size_t>(index) < m_touchEvents.size());
 
     const auto& event = m_touchEvents[index];
     ASSERT(event);
@@ -564,7 +551,7 @@ void EventSenderProxy::clearTouchPoints()
 
 void EventSenderProxy::releaseTouchPoint(int index)
 {
-    ASSERT(index >= 0 && index < m_touchEvents.size());
+    ASSERT(index >= 0 && static_cast<size_t>(index) < m_touchEvents.size());
 
     const auto& event = m_touchEvents[index];
     event->type = GDK_TOUCH_END;

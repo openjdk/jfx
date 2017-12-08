@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2002 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2009, 2012, 2016 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Cameron Zwarich (cwzwarich@uwaterloo.ca)
  *  Copyright (C) 2007 Maks Orlovich
  *
@@ -26,14 +26,17 @@
 #include "JSGlobalObjectFunctions.h"
 
 #include "CallFrame.h"
+#include "CatchScope.h"
 #include "EvalExecutable.h"
 #include "Exception.h"
 #include "IndirectEvalExecutable.h"
 #include "Interpreter.h"
+#include "JSCInlines.h"
 #include "JSFunction.h"
 #include "JSGlobalObject.h"
 #include "JSInternalPromise.h"
 #include "JSModuleLoader.h"
+#include "JSPromise.h"
 #include "JSPromiseDeferred.h"
 #include "JSString.h"
 #include "JSStringBuilder.h"
@@ -44,7 +47,6 @@
 #include "ParseInt.h"
 #include "Parser.h"
 #include "StackVisitor.h"
-#include <wtf/dtoa.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <wtf/ASCIICType.h>
@@ -52,6 +54,7 @@
 #include <wtf/HexNumber.h>
 #include <wtf/MathExtras.h>
 #include <wtf/StringExtras.h>
+#include <wtf/dtoa.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/UTF8.h>
 
@@ -531,7 +534,7 @@ EncodedJSValue JSC_HOST_CALL globalFuncParseInt(ExecState* exec)
 
 EncodedJSValue JSC_HOST_CALL globalFuncParseFloat(ExecState* exec)
 {
-    auto viewWithString = exec->argument(0).toString(exec)->viewWithUnderlyingString(*exec);
+    auto viewWithString = exec->argument(0).toString(exec)->viewWithUnderlyingString(exec);
     return JSValue::encode(jsNumber(parseFloat(viewWithString.view)));
 }
 
@@ -736,6 +739,29 @@ EncodedJSValue JSC_HOST_CALL globalFuncProtoSetter(ExecState* exec)
     return JSValue::encode(jsUndefined());
 }
 
+EncodedJSValue JSC_HOST_CALL globalFuncHostPromiseRejectionTracker(ExecState* exec)
+{
+    JSGlobalObject* globalObject = exec->lexicalGlobalObject();
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!globalObject->globalObjectMethodTable()->promiseRejectionTracker)
+        return JSValue::encode(jsUndefined());
+
+    JSPromise* promise = jsCast<JSPromise*>(exec->argument(0));
+    JSValue operationValue = exec->argument(1);
+
+    ASSERT(operationValue.isNumber());
+    auto operation = static_cast<JSPromiseRejectionOperation>(operationValue.toUInt32(exec));
+    ASSERT(operation == JSPromiseRejectionOperation::Reject || operation == JSPromiseRejectionOperation::Handle);
+    scope.assertNoException();
+
+    globalObject->globalObjectMethodTable()->promiseRejectionTracker(globalObject, exec, promise, operation);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    return JSValue::encode(jsUndefined());
+}
+
 EncodedJSValue JSC_HOST_CALL globalFuncBuiltinLog(ExecState* exec)
 {
     dataLog(exec->argument(0).toWTFString(exec), "\n");
@@ -770,6 +796,22 @@ EncodedJSValue JSC_HOST_CALL globalFuncImportModule(ExecState* exec)
     promise->resolve(exec, internalPromise);
 
     return JSValue::encode(promise->promise());
+}
+
+EncodedJSValue JSC_HOST_CALL globalFuncPropertyIsEnumerable(ExecState* exec)
+{
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    RELEASE_ASSERT(exec->argumentCount() == 2);
+    JSObject* object = jsCast<JSObject*>(exec->uncheckedArgument(0));
+    auto propertyName = exec->uncheckedArgument(1).toPropertyKey(exec);
+    RETURN_IF_EXCEPTION(scope, encodedJSValue());
+
+    scope.release();
+    PropertyDescriptor descriptor;
+    bool enumerable = object->getOwnPropertyDescriptor(exec, propertyName, descriptor) && descriptor.enumerable();
+    return JSValue::encode(jsBoolean(enumerable));
 }
 
 } // namespace JSC

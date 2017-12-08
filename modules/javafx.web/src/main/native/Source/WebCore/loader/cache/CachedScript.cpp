@@ -30,9 +30,6 @@
 #include "CachedResourceClient.h"
 #include "CachedResourceClientWalker.h"
 #include "CachedResourceRequest.h"
-#include "HTTPHeaderNames.h"
-#include "HTTPParsers.h"
-#include "MIMETypeRegistry.h"
 #include "RuntimeApplicationChecks.h"
 #include "SharedBuffer.h"
 #include "TextResourceDecoder.h"
@@ -59,11 +56,6 @@ String CachedScript::encoding() const
     return m_decoder->encoding().name();
 }
 
-String CachedScript::mimeType() const
-{
-    return extractMIMETypeFromMediaType(m_response.httpHeaderField(HTTPHeaderName::ContentType)).convertToASCIILowercase();
-}
-
 StringView CachedScript::script()
 {
     if (!m_data)
@@ -84,7 +76,7 @@ StringView CachedScript::script()
     }
 
     if (m_decodingState == DataAndDecodedStringHaveSameBytes)
-        return { reinterpret_cast<const LChar*>(m_data->data()), m_data->size() };
+        return { reinterpret_cast<const LChar*>(m_data->data()), static_cast<unsigned>(m_data->size()) };
 
     if (!m_script) {
         m_script = m_decoder->decodeAndFlush(m_data->data(), encodedSize());
@@ -131,13 +123,6 @@ void CachedScript::setBodyDataFrom(const CachedResource& resource)
     m_decodingState = script.m_decodingState;
     m_decoder = script.m_decoder;
 }
-
-#if ENABLE(NOSNIFF)
-bool CachedScript::mimeTypeAllowedByNosniff() const
-{
-    return parseContentTypeOptionsHeader(m_response.httpHeaderField(HTTPHeaderName::XContentTypeOptions)) != ContentTypeOptionsNosniff || MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType());
-}
-#endif
 
 bool CachedScript::shouldIgnoreHTTPStatusCodeErrors() const
 {

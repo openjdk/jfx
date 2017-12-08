@@ -28,7 +28,7 @@
 #if ENABLE(APPLE_PAY)
 
 #include "PaymentRequest.h"
-#include <functional>
+#include <wtf/Function.h>
 
 namespace WebCore {
 
@@ -40,6 +40,10 @@ class PaymentMerchantSession;
 class PaymentMethod;
 class URL;
 enum class PaymentAuthorizationStatus;
+struct PaymentAuthorizationResult;
+struct PaymentMethodUpdate;
+struct ShippingContactUpdate;
+struct ShippingMethodUpdate;
 
 class PaymentCoordinator {
 public:
@@ -48,25 +52,26 @@ public:
 
     bool supportsVersion(unsigned version);
     bool canMakePayments();
-    void canMakePaymentsWithActiveCard(const String& merchantIdentifier, const String& domainName, std::function<void (bool)> completionHandler);
-    void openPaymentSetup(const String& merchantIdentifier, const String& domainName, std::function<void (bool)> completionHandler);
+    void canMakePaymentsWithActiveCard(const String& merchantIdentifier, const String& domainName, WTF::Function<void (bool)>&& completionHandler);
+    void openPaymentSetup(const String& merchantIdentifier, const String& domainName, WTF::Function<void (bool)>&& completionHandler);
 
     bool hasActiveSession() const { return m_activeSession; }
 
     bool beginPaymentSession(ApplePaySession&, const URL& originatingURL, const Vector<URL>& linkIconURLs, const PaymentRequest&);
     void completeMerchantValidation(const PaymentMerchantSession&);
-    void completeShippingMethodSelection(PaymentAuthorizationStatus, std::optional<PaymentRequest::TotalAndLineItems> newItems);
-    void completeShippingContactSelection(PaymentAuthorizationStatus, const Vector<PaymentRequest::ShippingMethod>& newShippingMethods, std::optional<PaymentRequest::TotalAndLineItems> newItems);
-    void completePaymentMethodSelection(std::optional<PaymentRequest::TotalAndLineItems> newItems);
-    void completePaymentSession(PaymentAuthorizationStatus);
+    void completeShippingMethodSelection(std::optional<ShippingMethodUpdate>&&);
+    void completeShippingContactSelection(std::optional<ShippingContactUpdate>&&);
+    void completePaymentMethodSelection(std::optional<PaymentMethodUpdate>&&);
+    void completePaymentSession(std::optional<PaymentAuthorizationResult>&&);
     void abortPaymentSession();
+    void cancelPaymentSession();
 
     WEBCORE_EXPORT void validateMerchant(const URL& validationURL);
     WEBCORE_EXPORT void didAuthorizePayment(const Payment&);
     WEBCORE_EXPORT void didSelectPaymentMethod(const PaymentMethod&);
     WEBCORE_EXPORT void didSelectShippingMethod(const PaymentRequest::ShippingMethod&);
     WEBCORE_EXPORT void didSelectShippingContact(const PaymentContact&);
-    WEBCORE_EXPORT void didCancelPayment();
+    WEBCORE_EXPORT void didCancelPaymentSession();
 
 private:
     PaymentCoordinatorClient& m_client;

@@ -45,6 +45,7 @@
 #include "ResourceRequest.h"
 #include "Settings.h"
 #include "SubresourceLoader.h"
+#include <wtf/UUID.h>
 
 namespace WebCore {
 
@@ -507,7 +508,7 @@ bool ApplicationCacheHost::swapCache()
         return true;
     }
 
-    // If there is no newer cache, raise an INVALID_STATE_ERR exception.
+    // If there is no newer cache, raise an InvalidStateError exception.
     auto* newestCache = cache->group()->newestCache();
     if (cache == newestCache)
         return false;

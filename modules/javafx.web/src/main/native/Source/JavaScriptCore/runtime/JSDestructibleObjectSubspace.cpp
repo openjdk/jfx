@@ -43,8 +43,8 @@ struct DestroyFunc {
 
 } // anonymous namespace
 
-JSDestructibleObjectSubspace::JSDestructibleObjectSubspace(CString name, Heap& heap)
-    : Subspace(name, heap, AllocatorAttributes(NeedsDestruction, HeapCell::JSCell))
+JSDestructibleObjectSubspace::JSDestructibleObjectSubspace(CString name, Heap& heap, AlignedMemoryAllocator* allocator)
+    : Subspace(name, heap, AllocatorAttributes(NeedsDestruction, HeapCell::JSCell), allocator)
 {
 }
 
@@ -52,9 +52,9 @@ JSDestructibleObjectSubspace::~JSDestructibleObjectSubspace()
 {
 }
 
-FreeList JSDestructibleObjectSubspace::finishSweep(MarkedBlock::Handle& handle, MarkedBlock::Handle::SweepMode sweepMode)
+void JSDestructibleObjectSubspace::finishSweep(MarkedBlock::Handle& handle, FreeList* freeList)
 {
-    return handle.finishSweepKnowingSubspace(sweepMode, DestroyFunc());
+    handle.finishSweepKnowingSubspace(freeList, DestroyFunc());
 }
 
 void JSDestructibleObjectSubspace::destroy(VM& vm, JSCell* cell)

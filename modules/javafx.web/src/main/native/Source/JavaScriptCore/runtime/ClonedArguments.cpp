@@ -34,7 +34,7 @@ namespace JSC {
 
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(ClonedArguments);
 
-const ClassInfo ClonedArguments::s_info = { "Arguments", &Base::s_info, 0, CREATE_METHOD_TABLE(ClonedArguments) };
+const ClassInfo ClonedArguments::s_info = { "Arguments", &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ClonedArguments) };
 
 ClonedArguments::ClonedArguments(VM& vm, Structure* structure, Butterfly* butterfly)
     : Base(vm, structure, butterfly)
@@ -54,12 +54,12 @@ ClonedArguments* ClonedArguments::createEmpty(
         butterfly->arrayStorage()->m_numValuesInVector = vectorLength;
 
     } else {
-        void* temp = vm.auxiliarySpace.tryAllocate(Butterfly::totalSize(0, structure->outOfLineCapacity(), true, vectorLength * sizeof(EncodedJSValue)));
-        if (!temp)
+        IndexingHeader indexingHeader;
+        indexingHeader.setVectorLength(vectorLength);
+        indexingHeader.setPublicLength(length);
+        butterfly = Butterfly::tryCreate(vm, 0, 0, structure->outOfLineCapacity(), true, indexingHeader, vectorLength * sizeof(EncodedJSValue));
+        if (!butterfly)
             return 0;
-        butterfly = Butterfly::fromBase(temp, 0, structure->outOfLineCapacity());
-        butterfly->setVectorLength(vectorLength);
-        butterfly->setPublicLength(length);
 
         for (unsigned i = length; i < vectorLength; ++i)
             butterfly->contiguous()[i].clear();
@@ -87,8 +87,6 @@ ClonedArguments* ClonedArguments::createEmpty(ExecState* exec, JSFunction* calle
 
 ClonedArguments* ClonedArguments::createWithInlineFrame(ExecState* myFrame, ExecState* targetFrame, InlineCallFrame* inlineCallFrame, ArgumentsMode mode)
 {
-    VM& vm = myFrame->vm();
-
     JSFunction* callee;
 
     if (inlineCallFrame)
@@ -110,13 +108,13 @@ ClonedArguments* ClonedArguments::createWithInlineFrame(ExecState* myFrame, Exec
             result = createEmpty(myFrame, callee, length);
 
             for (unsigned i = length; i--;)
-                result->initializeIndex(vm, i, inlineCallFrame->arguments[i + 1].recover(targetFrame));
+                result->putDirectIndex(myFrame, i, inlineCallFrame->arguments[i + 1].recover(targetFrame));
         } else {
             length = targetFrame->argumentCount();
             result = createEmpty(myFrame, callee, length);
 
             for (unsigned i = length; i--;)
-                result->initializeIndex(vm, i, targetFrame->uncheckedArgument(i));
+                result->putDirectIndex(myFrame, i, targetFrame->uncheckedArgument(i));
         }
         break;
     }
@@ -127,7 +125,7 @@ ClonedArguments* ClonedArguments::createWithInlineFrame(ExecState* myFrame, Exec
     } }
 
     ASSERT(myFrame->lexicalGlobalObject()->clonedArgumentsStructure() == result->structure());
-    ASSERT(!result->structure(vm)->needsSlowPutIndexing() || shouldUseSlowPut(result->structure(vm)->indexingType()));
+    ASSERT(!result->structure()->needsSlowPutIndexing() || shouldUseSlowPut(result->structure()->indexingType()));
     return result;
 }
 
@@ -146,14 +144,14 @@ ClonedArguments* ClonedArguments::createByCopyingFrom(
     ClonedArguments* result = createEmpty(vm, structure, callee, length);
 
     for (unsigned i = length; i--;)
-        result->initializeIndex(vm, i, argumentStart[i].jsValue());
+        result->putDirectIndex(exec, i, argumentStart[i].jsValue());
     ASSERT(!result->structure(vm)->needsSlowPutIndexing() || shouldUseSlowPut(result->structure(vm)->indexingType()));
     return result;
 }
 
 Structure* ClonedArguments::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, IndexingType indexingType)
 {
-    Structure* structure = Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info(), indexingType);
+    Structure* structure = Structure::create(vm, globalObject, prototype, TypeInfo(ClonedArgumentsType, StructureFlags), info(), indexingType);
     PropertyOffset offset;
     structure = structure->addPropertyTransition(vm, structure, vm.propertyNames->length, DontEnum, offset);
     ASSERT(offset == clonedArgumentsLengthPropertyOffset);

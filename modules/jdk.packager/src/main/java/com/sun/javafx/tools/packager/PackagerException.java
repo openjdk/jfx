@@ -28,7 +28,10 @@ package com.sun.javafx.tools.packager;
 import java.text.MessageFormat;
 import java.util.ResourceBundle;
 
-
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class PackagerException extends Exception {
     private static final ResourceBundle bundle =
             ResourceBundle.getBundle("com/sun/javafx/tools/packager/Bundle");

@@ -38,7 +38,6 @@
 #include "GraphicsTypes.h"
 #include "Length.h"
 #include "LineClampValue.h"
-#include "Path.h"
 #include "RenderStyleConstants.h"
 #include "SVGRenderStyleDefs.h"
 #include "TextFlags.h"
@@ -607,6 +606,9 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ControlPart e)
     case AttachmentPart:
         m_value.valueID = CSSValueAttachment;
         break;
+    case BorderlessAttachmentPart:
+        m_value.valueID = CSSValueBorderlessAttachment;
+        break;
 #endif
 #if ENABLE(SERVICE_CONTROLS)
     case ImageControlsButtonPart:
@@ -1161,26 +1163,38 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ECursor e)
     case CursorAuto:
         m_value.valueID = CSSValueAuto;
         break;
-    case CursorCross:
-        m_value.valueID = CSSValueCrosshair;
-        break;
     case CursorDefault:
         m_value.valueID = CSSValueDefault;
+        break;
+    case CursorNone:
+        m_value.valueID = CSSValueNone;
+        break;
+    case CursorContextMenu:
+        m_value.valueID = CSSValueContextMenu;
+        break;
+    case CursorHelp:
+        m_value.valueID = CSSValueHelp;
         break;
     case CursorPointer:
         m_value.valueID = CSSValuePointer;
         break;
-    case CursorMove:
-        m_value.valueID = CSSValueMove;
+    case CursorProgress:
+        m_value.valueID = CSSValueProgress;
+        break;
+    case CursorWait:
+        m_value.valueID = CSSValueWait;
         break;
     case CursorCell:
         m_value.valueID = CSSValueCell;
         break;
+    case CursorCrosshair:
+        m_value.valueID = CSSValueCrosshair;
+        break;
+    case CursorText:
+        m_value.valueID = CSSValueText;
+        break;
     case CursorVerticalText:
         m_value.valueID = CSSValueVerticalText;
-        break;
-    case CursorContextMenu:
-        m_value.valueID = CSSValueContextMenu;
         break;
     case CursorAlias:
         m_value.valueID = CSSValueAlias;
@@ -1188,11 +1202,8 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ECursor e)
     case CursorCopy:
         m_value.valueID = CSSValueCopy;
         break;
-    case CursorNone:
-        m_value.valueID = CSSValueNone;
-        break;
-    case CursorProgress:
-        m_value.valueID = CSSValueProgress;
+    case CursorMove:
+        m_value.valueID = CSSValueMove;
         break;
     case CursorNoDrop:
         m_value.valueID = CSSValueNoDrop;
@@ -1200,14 +1211,17 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ECursor e)
     case CursorNotAllowed:
         m_value.valueID = CSSValueNotAllowed;
         break;
-    case CursorZoomIn:
-        m_value.valueID = CSSValueZoomIn;
+    case CursorGrab:
+        m_value.valueID = CSSValueGrab;
         break;
-    case CursorZoomOut:
-        m_value.valueID = CSSValueZoomOut;
+    case CursorGrabbing:
+        m_value.valueID = CSSValueGrabbing;
         break;
     case CursorEResize:
         m_value.valueID = CSSValueEResize;
+        break;
+    case CursorNResize:
+        m_value.valueID = CSSValueNResize;
         break;
     case CursorNeResize:
         m_value.valueID = CSSValueNeResize;
@@ -1215,17 +1229,14 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ECursor e)
     case CursorNwResize:
         m_value.valueID = CSSValueNwResize;
         break;
-    case CursorNResize:
-        m_value.valueID = CSSValueNResize;
+    case CursorSResize:
+        m_value.valueID = CSSValueSResize;
         break;
     case CursorSeResize:
         m_value.valueID = CSSValueSeResize;
         break;
     case CursorSwResize:
         m_value.valueID = CSSValueSwResize;
-        break;
-    case CursorSResize:
-        m_value.valueID = CSSValueSResize;
         break;
     case CursorWResize:
         m_value.valueID = CSSValueWResize;
@@ -1248,23 +1259,14 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ECursor e)
     case CursorRowResize:
         m_value.valueID = CSSValueRowResize;
         break;
-    case CursorText:
-        m_value.valueID = CSSValueText;
-        break;
-    case CursorWait:
-        m_value.valueID = CSSValueWait;
-        break;
-    case CursorHelp:
-        m_value.valueID = CSSValueHelp;
-        break;
     case CursorAllScroll:
         m_value.valueID = CSSValueAllScroll;
         break;
-    case CursorWebkitGrab:
-        m_value.valueID = CSSValueWebkitGrab;
+    case CursorZoomIn:
+        m_value.valueID = CSSValueZoomIn;
         break;
-    case CursorWebkitGrabbing:
-        m_value.valueID = CSSValueWebkitGrabbing;
+    case CursorZoomOut:
+        m_value.valueID = CSSValueZoomOut;
         break;
     }
 }
@@ -1275,6 +1277,10 @@ template<> inline CSSPrimitiveValue::operator ECursor() const
     switch (m_value.valueID) {
     case CSSValueCopy:
         return CursorCopy;
+    case CSSValueWebkitGrab:
+        return CursorGrab;
+    case CSSValueWebkitGrabbing:
+        return CursorGrabbing;
     case CSSValueWebkitZoomIn:
         return CursorZoomIn;
     case CSSValueWebkitZoomOut:
@@ -2806,13 +2812,13 @@ template<> inline CSSPrimitiveValue::CSSPrimitiveValue(EUnicodeBidi e)
         m_value.valueID = CSSValueBidiOverride;
         break;
     case Isolate:
-        m_value.valueID = CSSValueWebkitIsolate;
+        m_value.valueID = CSSValueIsolate;
         break;
     case IsolateOverride:
-        m_value.valueID = CSSValueWebkitIsolateOverride;
+        m_value.valueID = CSSValueIsolateOverride;
         break;
     case Plaintext:
-        m_value.valueID = CSSValueWebkitPlaintext;
+        m_value.valueID = CSSValuePlaintext;
         break;
     }
 }
@@ -2828,10 +2834,13 @@ template<> inline CSSPrimitiveValue::operator EUnicodeBidi() const
         return Embed;
     case CSSValueBidiOverride:
         return Override;
+    case CSSValueIsolate:
     case CSSValueWebkitIsolate:
         return Isolate;
+    case CSSValueIsolateOverride:
     case CSSValueWebkitIsolateOverride:
         return IsolateOverride;
+    case CSSValuePlaintext:
     case CSSValueWebkitPlaintext:
         return Plaintext;
     default:
@@ -3679,114 +3688,6 @@ template<> inline CSSPrimitiveValue::operator FontSmoothingMode() const
     return AutoSmoothing;
 }
 
-template<> inline CSSPrimitiveValue::CSSPrimitiveValue(FontWeight weight)
-    : CSSValue(PrimitiveClass)
-{
-    m_primitiveUnitType = CSS_VALUE_ID;
-    switch (weight) {
-    case FontWeight900:
-        m_value.valueID = CSSValue900;
-        return;
-    case FontWeight800:
-        m_value.valueID = CSSValue800;
-        return;
-    case FontWeight700:
-        m_value.valueID = CSSValue700;
-        return;
-    case FontWeight600:
-        m_value.valueID = CSSValue600;
-        return;
-    case FontWeight500:
-        m_value.valueID = CSSValue500;
-        return;
-    case FontWeight400:
-        m_value.valueID = CSSValue400;
-        return;
-    case FontWeight300:
-        m_value.valueID = CSSValue300;
-        return;
-    case FontWeight200:
-        m_value.valueID = CSSValue200;
-        return;
-    case FontWeight100:
-        m_value.valueID = CSSValue100;
-        return;
-    }
-
-    ASSERT_NOT_REACHED();
-    m_value.valueID = CSSValueNormal;
-}
-
-template<> inline CSSPrimitiveValue::operator FontWeight() const
-{
-    ASSERT(isValueID());
-
-    switch (m_value.valueID) {
-    case CSSValueBold:
-        return FontWeightBold;
-    case CSSValueNormal:
-        return FontWeightNormal;
-    case CSSValue900:
-        return FontWeight900;
-    case CSSValue800:
-        return FontWeight800;
-    case CSSValue700:
-        return FontWeight700;
-    case CSSValue600:
-        return FontWeight600;
-    case CSSValue500:
-        return FontWeight500;
-    case CSSValue400:
-        return FontWeight400;
-    case CSSValue300:
-        return FontWeight300;
-    case CSSValue200:
-        return FontWeight200;
-    case CSSValue100:
-        return FontWeight100;
-    default:
-        break;
-    }
-
-    ASSERT_NOT_REACHED();
-    return FontWeightNormal;
-}
-
-template<> inline CSSPrimitiveValue::CSSPrimitiveValue(FontItalic italic)
-    : CSSValue(PrimitiveClass)
-{
-    m_primitiveUnitType = CSS_VALUE_ID;
-    switch (italic) {
-    case FontItalicOff:
-        m_value.valueID = CSSValueNormal;
-        return;
-    case FontItalicOn:
-        m_value.valueID = CSSValueItalic;
-        return;
-    }
-
-    ASSERT_NOT_REACHED();
-    m_value.valueID = CSSValueNormal;
-}
-
-template<> inline CSSPrimitiveValue::operator FontItalic() const
-{
-    ASSERT(isValueID());
-
-    switch (m_value.valueID) {
-    case CSSValueOblique:
-    // FIXME: oblique is the same as italic for the moment...
-    case CSSValueItalic:
-        return FontItalicOn;
-    case CSSValueNormal:
-        return FontItalicOff;
-    default:
-        break;
-    }
-    ASSERT_NOT_REACHED();
-    return FontItalicOff;
-}
-
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(FontSmallCaps smallCaps)
     : CSSValue(PrimitiveClass)
 {
@@ -4515,6 +4416,42 @@ template<> inline CSSPrimitiveValue::operator ETransformStyle3D() const
     return TransformStyle3DFlat;
 }
 
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(TransformBox box)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_VALUE_ID;
+    switch (box) {
+    case TransformBox::BorderBox:
+        m_value.valueID = CSSValueBorderBox;
+        break;
+    case TransformBox::FillBox:
+        m_value.valueID = CSSValueFillBox;
+        break;
+    case TransformBox::ViewBox:
+        m_value.valueID = CSSValueViewBox;
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator TransformBox() const
+{
+    ASSERT(isValueID());
+
+    switch (m_value.valueID) {
+    case CSSValueBorderBox:
+        return TransformBox::BorderBox;
+    case CSSValueFillBox:
+        return TransformBox::FillBox;
+    case CSSValueViewBox:
+        return TransformBox::ViewBox;
+    default:
+        break;
+    }
+
+    ASSERT_NOT_REACHED();
+    return TransformBox::BorderBox;
+}
+
 template<> inline CSSPrimitiveValue::CSSPrimitiveValue(ColumnAxis e)
     : CSSValue(PrimitiveClass)
 {
@@ -5132,6 +5069,8 @@ template<> inline CSSPrimitiveValue::operator ItemPosition() const
         return ItemPositionStretch;
     case CSSValueBaseline:
         return ItemPositionBaseline;
+    case CSSValueFirstBaseline:
+        return ItemPositionBaseline;
     case CSSValueLastBaseline:
         return ItemPositionLastBaseline;
     case CSSValueCenter:
@@ -5234,6 +5173,8 @@ template<> inline CSSPrimitiveValue::operator ContentPosition() const
     case CSSValueNormal:
         return ContentPositionNormal;
     case CSSValueBaseline:
+        return ContentPositionBaseline;
+    case CSSValueFirstBaseline:
         return ContentPositionBaseline;
     case CSSValueLastBaseline:
         return ContentPositionLastBaseline;
@@ -5722,6 +5663,38 @@ template<> inline CSSPrimitiveValue::operator FontVariantAlternates() const
     }
     ASSERT_NOT_REACHED();
     return FontVariantAlternates::Normal;
+}
+
+template<> inline CSSPrimitiveValue::CSSPrimitiveValue(FontOpticalSizing sizing)
+    : CSSValue(PrimitiveClass)
+{
+    m_primitiveUnitType = CSS_VALUE_ID;
+    switch (sizing) {
+    case FontOpticalSizing::Enabled:
+        m_value.valueID = CSSValueAuto;
+        break;
+    case FontOpticalSizing::Disabled:
+        m_value.valueID = CSSValueNone;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+}
+
+template<> inline CSSPrimitiveValue::operator FontOpticalSizing() const
+{
+    ASSERT(isValueID());
+    switch (m_value.valueID) {
+    case CSSValueAuto:
+        return FontOpticalSizing::Enabled;
+    case CSSValueNone:
+        return FontOpticalSizing::Disabled;
+    default:
+        break;
+    }
+    ASSERT_NOT_REACHED();
+    return FontOpticalSizing::Enabled;
 }
 
 }

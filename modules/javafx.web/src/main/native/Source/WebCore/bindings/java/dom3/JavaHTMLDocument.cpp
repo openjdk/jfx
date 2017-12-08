@@ -21,7 +21,7 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #include "config.h"
 
@@ -142,13 +142,13 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setAlinkColorImp
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getLinkColorImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<String>(env, IMPL->linkColor());
+    return JavaReturn<String>(env, IMPL->linkColorForBindings());
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_setLinkColorImpl(JNIEnv* env, jclass, jlong peer, jstring value)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->setLinkColor(String(env, value));
+    IMPL->setLinkColorForBindings(String(env, value));
 }
 
 JNIEXPORT jstring JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_getVlinkColorImpl(JNIEnv* env, jclass, jlong peer)
@@ -183,7 +183,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writeImpl(JNIEnv
     , jstring text)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->write(String(env, text));
+    IMPL->write(nullptr, { String(env, text) });
 }
 
 
@@ -191,7 +191,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLDocumentImpl_writelnImpl(JNIE
     , jstring text)
 {
     WebCore::JSMainThreadNullState state;
-    IMPL->writeln(String(env, text));
+    IMPL->writeln(nullptr, { String(env, text) });
 }
 
 

@@ -41,9 +41,9 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
-#include "CFNetworkSPI.h"
 #include "WebCoreSystemInterface.h"
 #include "WebCoreURLResponse.h"
+#include <pal/spi/cf/CFNetworkSPI.h>
 #endif // PLATFORM(COCOA)
 
 #if PLATFORM(IOS)
@@ -170,8 +170,8 @@ void SynchronousResourceHandleCFURLConnectionDelegate::didReceiveResponse(CFURLC
 #endif
 
     ResourceResponse resourceResponse(cfResponse);
-#if PLATFORM(COCOA) && ENABLE(WEB_TIMING)
-    ResourceHandle::getConnectionTimingData(connection, resourceResponse.networkLoadTiming());
+#if PLATFORM(COCOA)
+    ResourceHandle::getConnectionTimingData(connection, resourceResponse.deprecatedNetworkLoadMetrics());
 #else
     UNUSED_PARAM(connection);
 #endif
@@ -184,7 +184,7 @@ void SynchronousResourceHandleCFURLConnectionDelegate::didReceiveData(CFDataRef 
     LOG(Network, "CFNet - SynchronousResourceHandleCFURLConnectionDelegate::didReceiveData(handle=%p, bytes=%ld) (%s)", m_handle, CFDataGetLength(data), m_handle->firstRequest().url().string().utf8().data());
 
     if (ResourceHandleClient* client = m_handle->client())
-        client->didReceiveBuffer(m_handle, SharedBuffer::wrapCFData(data), originalLength);
+        client->didReceiveBuffer(m_handle, SharedBuffer::create(data), originalLength);
 }
 
 void SynchronousResourceHandleCFURLConnectionDelegate::didFinishLoading()
@@ -192,7 +192,7 @@ void SynchronousResourceHandleCFURLConnectionDelegate::didFinishLoading()
     LOG(Network, "CFNet - SynchronousResourceHandleCFURLConnectionDelegate::didFinishLoading(handle=%p) (%s)", m_handle, m_handle->firstRequest().url().string().utf8().data());
 
     if (ResourceHandleClient* client = m_handle->client())
-        client->didFinishLoading(m_handle, 0);
+        client->didFinishLoading(m_handle);
 }
 
 void SynchronousResourceHandleCFURLConnectionDelegate::didFail(CFErrorRef error)
@@ -271,19 +271,6 @@ Boolean SynchronousResourceHandleCFURLConnectionDelegate::canRespondToProtection
 #endif
 }
 #endif // USE(PROTECTION_SPACE_AUTH_CALLBACK)
-
-#if USE(NETWORK_CFDATA_ARRAY_CALLBACK)
-void SynchronousResourceHandleCFURLConnectionDelegate::didReceiveDataArray(CFArrayRef dataArray)
-{
-    if (!m_handle->client())
-        return;
-
-    LOG(Network, "CFNet - SynchronousResourceHandleCFURLConnectionDelegate::didReceiveDataArray(handle=%p, arrayLength=%ld) (%s)", m_handle, CFArrayGetCount(dataArray), m_handle->firstRequest().url().string().utf8().data());
-
-    if (ResourceHandleClient* client = m_handle->client())
-        client->didReceiveBuffer(m_handle, SharedBuffer::wrapCFDataArray(dataArray), -1);
-}
-#endif // USE(NETWORK_CFDATA_ARRAY_CALLBACK)
 
 void SynchronousResourceHandleCFURLConnectionDelegate::continueWillSendRequest(CFURLRequestRef)
 {

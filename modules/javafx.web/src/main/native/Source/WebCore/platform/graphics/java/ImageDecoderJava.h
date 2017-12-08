@@ -21,12 +21,13 @@
  * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
  * or visit www.oracle.com if you need additional information or have any
  * questions.
-*/
+ */
 
 #pragma once
 
 #include "ImageSource.h"
 #include "IntSize.h"
+#include "SharedBuffer.h"
 #include "RQRef.h"
 #include <wtf/Optional.h>
 
@@ -50,6 +51,7 @@ public:
     String filenameExtension() const;
     bool isSizeAvailable() const;
 
+    EncodedDataStatus encodedDataStatus() const;
     // Always original size, without subsampling.
     IntSize size() const;
     size_t frameCount() const;
@@ -66,7 +68,7 @@ public:
     bool frameAllowSubsamplingAtIndex(size_t) const;
     unsigned frameBytesAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default) const;
 
-    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const std::optional<IntSize>& sizeForDraw = { });
+    NativeImagePtr createFrameImageAtIndex(size_t, SubsamplingLevel = SubsamplingLevel::Default, const DecodingOptions& = DecodingMode::Synchronous);
 
     void setData(SharedBuffer&, bool allDataReceived);
     bool isAllDataReceived() const { return m_isAllDataReceived; }
@@ -77,6 +79,7 @@ public:
 protected:
     bool m_isAllDataReceived { false };
     size_t m_receivedDataSize { 0 };
+    mutable EncodedDataStatus m_encodedDataStatus { EncodedDataStatus::Unknown };
     // Native Handle for Java object.
     JGObject m_nativeDecoder;
     mutable IntSize m_size;

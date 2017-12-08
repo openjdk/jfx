@@ -1918,9 +1918,9 @@ public abstract class BaseShaderGraphics
             // LCD mixing with background will often lead to extra pixel at edge
             // thus adding a single pixel, as padding, at edges and bottom.
             float bx = textBounds.getMinX() - 1.0f;
-            float by = textBounds.getMinY();
+            float by = textBounds.getMinY() - 1.0f;
             float bw = textBounds.getWidth() + 2.0f;
-            float bh = textBounds.getHeight() + 1.0f;
+            float bh = textBounds.getHeight() + 2.0f;
 
             context.validateLCDBuffer(getRenderTarget());
 

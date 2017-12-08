@@ -428,7 +428,7 @@ static bool fillStructuresUsingDateArgs(ExecState *exec, int maxArgs, double *ms
     return ok;
 }
 
-const ClassInfo DatePrototype::s_info = {"Object", &JSNonFinalObject::s_info, &dateTable, CREATE_METHOD_TABLE(DatePrototype)};
+const ClassInfo DatePrototype::s_info = {"Object", &JSNonFinalObject::s_info, &dateTable, nullptr, CREATE_METHOD_TABLE(DatePrototype)};
 
 /* Source for DatePrototype.lut.h
 @begin dateTable
@@ -500,11 +500,11 @@ void DatePrototype::finishCreation(VM& vm, JSGlobalObject* globalObject)
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleString", datePrototypeToLocaleStringCodeGenerator, DontEnum);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleDateString", datePrototypeToLocaleDateStringCodeGenerator, DontEnum);
     JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION("toLocaleTimeString", datePrototypeToLocaleTimeStringCodeGenerator, DontEnum);
-#else
-    UNUSED_PARAM(globalObject);
-#endif // ENABLE(INTL)
+#endif
 
-    JSC_NATIVE_FUNCTION(vm.propertyNames->toPrimitiveSymbol, dateProtoFuncToPrimitiveSymbol, DontEnum | ReadOnly, 1);
+    JSFunction* toPrimitiveFunction = JSFunction::create(vm, globalObject, 1, ASCIILiteral("[Symbol.toPrimitive]"), dateProtoFuncToPrimitiveSymbol, NoIntrinsic);
+    putDirectWithoutTransition(vm, vm.propertyNames->toPrimitiveSymbol, toPrimitiveFunction, DontEnum | ReadOnly);
+
     // The constructor will be added later, after DateConstructor has been built.
 }
 

@@ -25,7 +25,8 @@
 
 #include "config.h"
 #include "SelectionRect.h"
-#include "TextStream.h"
+
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 

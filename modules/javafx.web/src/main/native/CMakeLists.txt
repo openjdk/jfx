@@ -1,10 +1,16 @@
-cmake_minimum_required(VERSION 2.8.12)
-project(WebKit)
+# -----------------------------------------------------------------------------
+# Determine CMake version and build type.
+# -----------------------------------------------------------------------------
+cmake_minimum_required(VERSION 3.3)
 
-# This should be removed once we require CMake 3.3.
-if (POLICY CMP0058)
-    cmake_policy(SET CMP0058 NEW)
+if (NOT CMAKE_BUILD_TYPE)
+    message(WARNING "No CMAKE_BUILD_TYPE value specified, defaulting to RelWithDebInfo.")
+    set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build." FORCE)
+else ()
+    message(STATUS "The CMake build type is: ${CMAKE_BUILD_TYPE}")
 endif ()
+
+project(WebKit)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/Source/cmake")
 
@@ -27,6 +33,7 @@ set(ALL_PORTS
     GTK
     JSCOnly
     Mac
+    WPE
     WinCairo
     Java
 )
@@ -50,6 +57,10 @@ if (CMAKE_COMPILER_IS_GNUCXX OR COMPILER_IS_CLANG)
     set(COMPILER_IS_GCC_OR_CLANG ON)
 endif ()
 
+if (MSVC AND COMPILER_IS_CLANG)
+    set(COMPILER_IS_CLANG_CL ON)
+endif ()
+
 # -----------------------------------------------------------------------------
 # Determine the target processor
 # -----------------------------------------------------------------------------
@@ -64,6 +75,8 @@ if (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
     set(WTF_CPU_ARM 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
     set(WTF_CPU_ARM64 1)
+elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "alpha*")
+    set(WTF_CPU_ALPHA 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "^mips")
     set(WTF_CPU_MIPS 1)
 elseif (LOWERCASE_CMAKE_SYSTEM_PROCESSOR MATCHES "sh4")
@@ -114,11 +127,14 @@ else ()
     set(WebCore_LIBRARY_TYPE STATIC)
 endif ()
 
+set(WTF_LIBRARY_TYPE STATIC)
 set(JavaScriptCore_LIBRARY_TYPE SHARED)
 set(PAL_LIBRARY_TYPE STATIC)
 set(WebKit_LIBRARY_TYPE SHARED)
 set(WebKit2_LIBRARY_TYPE SHARED)
 set(WebCoreTestSupport_LIBRARY_TYPE STATIC)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE True)
 
 # -----------------------------------------------------------------------------
 # Install JavaScript shell
@@ -143,11 +159,6 @@ include(WebKitCommon)
 if (ENABLE_API_TESTS)
     enable_testing()
 endif ()
-
-# -----------------------------------------------------------------------------
-# Define packaging
-# -----------------------------------------------------------------------------
-include(WebKitPackaging)
 
 # -----------------------------------------------------------------------------
 # Add module directories

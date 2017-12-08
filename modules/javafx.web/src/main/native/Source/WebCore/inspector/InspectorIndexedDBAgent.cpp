@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -115,14 +115,14 @@ public:
         return this == &other;
     }
 
-    void handleEvent(ScriptExecutionContext*, Event* event) final
+    void handleEvent(ScriptExecutionContext&, Event& event) final
     {
-        if (event->type() != eventNames().successEvent) {
+        if (event.type() != eventNames().successEvent) {
             m_executableWithDatabase->requestCallback().sendFailure("Unexpected event type.");
             return;
         }
 
-        auto& request = static_cast<IDBOpenDBRequest&>(*event->target());
+        auto& request = static_cast<IDBOpenDBRequest&>(*event.target());
 
         auto result = request.result();
         if (result.hasException()) {
@@ -274,10 +274,10 @@ static RefPtr<IDBKey> idbKeyFromInspectorObject(InspectorObject* key)
     if (!key->getString("type", type))
         return nullptr;
 
-    static NeverDestroyed<const String> numberType(ASCIILiteral("number"));
-    static NeverDestroyed<const String> stringType(ASCIILiteral("string"));
-    static NeverDestroyed<const String> dateType(ASCIILiteral("date"));
-    static NeverDestroyed<const String> arrayType(ASCIILiteral("array"));
+    static NeverDestroyed<const String> numberType(MAKE_STATIC_STRING_IMPL("number"));
+    static NeverDestroyed<const String> stringType(MAKE_STATIC_STRING_IMPL("string"));
+    static NeverDestroyed<const String> dateType(MAKE_STATIC_STRING_IMPL("date"));
+    static NeverDestroyed<const String> arrayType(MAKE_STATIC_STRING_IMPL("array"));
 
     RefPtr<IDBKey> idbKey;
     if (type == numberType) {
@@ -357,14 +357,14 @@ public:
         return this == &other;
     }
 
-    void handleEvent(ScriptExecutionContext* context, Event* event) override
+    void handleEvent(ScriptExecutionContext&, Event& event) override
     {
-        if (event->type() != eventNames().successEvent) {
+        if (event.type() != eventNames().successEvent) {
             m_requestCallback->sendFailure("Unexpected event type.");
             return;
         }
 
-        auto& request = static_cast<IDBRequest&>(*event->target());
+        auto& request = static_cast<IDBRequest&>(*event.target());
 
         auto result = request.result();
         if (result.hasException()) {
@@ -397,10 +397,6 @@ public:
             m_requestCallback->sendFailure("Could not continue cursor.");
             return;
         }
-
-        auto* state = context ? context->execState() : nullptr;
-        if (!state)
-            return;
 
         auto dataEntry = DataEntry::create()
             .setKey(m_injectedScript.wrapObject(cursor->key(), String(), true))
@@ -581,8 +577,7 @@ void InspectorIndexedDBAgent::requestDatabaseNames(ErrorString& errorString, con
     if (!idbFactory)
         return;
 
-    RefPtr<RequestDatabaseNamesCallback> callback = WTFMove(requestCallback);
-    idbFactory->getAllDatabaseNames(topOrigin, openingOrigin, [callback](auto& databaseNames) {
+    idbFactory->getAllDatabaseNames(topOrigin, openingOrigin, [callback = WTFMove(requestCallback)](auto& databaseNames) {
         if (!callback->isActive())
             return;
 
@@ -647,11 +642,11 @@ public:
         return this == &other;
     }
 
-    void handleEvent(ScriptExecutionContext*, Event* event) override
+    void handleEvent(ScriptExecutionContext&, Event& event) override
     {
         if (!m_requestCallback->isActive())
             return;
-        if (event->type() != eventNames().completeEvent) {
+        if (event.type() != eventNames().completeEvent) {
             m_requestCallback->sendFailure("Unexpected event type.");
             return;
         }

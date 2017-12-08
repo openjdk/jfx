@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "FontBaseline.h"
 #include "LayoutRect.h"
 #include "RenderLayerModelObject.h"
 
@@ -236,6 +237,8 @@ public:
 
     RenderBoxModelObject* continuation() const;
 
+    virtual LayoutRect paintRectToClipOutFromBorder(const LayoutRect&) { return LayoutRect(); };
+
 protected:
     RenderBoxModelObject(Element&, RenderStyle&&, BaseTypeFlags);
     RenderBoxModelObject(Document&, RenderStyle&&, BaseTypeFlags);
@@ -263,6 +266,8 @@ protected:
     static void clipRoundedInnerRect(GraphicsContext&, const FloatRect&, const FloatRoundedRect& clipRect);
 
     bool hasAutoHeightOrContainingBlockWithAutoHeight() const;
+
+    DecodingMode decodingModeForImageDraw(const Image&, const PaintInfo&) const;
 
 public:
     // For RenderBlocks and RenderInlines with m_style->styleType() == FIRST_LETTER, this tracks their remaining text fragments
@@ -294,6 +299,8 @@ public:
 
     enum ScaleByEffectiveZoomOrNot { ScaleByEffectiveZoom, DoNotScaleByEffectiveZoom };
     LayoutSize calculateImageIntrinsicDimensions(StyleImage*, const LayoutSize& scaledPositioningAreaSize, ScaleByEffectiveZoomOrNot) const;
+
+    RenderBlock* containingBlockForAutoHeightDetection(Length logicalHeight) const;
 
 private:
     LayoutUnit computedCSSPadding(const Length&) const;

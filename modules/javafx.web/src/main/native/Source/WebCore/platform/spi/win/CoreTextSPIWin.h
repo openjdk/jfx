@@ -37,7 +37,11 @@ typedef UInt32 FourCharCode;
 typedef FourCharCode CTFontTableTag;
 
 CT_EXPORT const CFStringRef kCTFontAttributeName;
+CT_EXPORT const CFStringRef kCTFontCascadeListAttribute;
+CT_EXPORT const CFStringRef kCTFontNameAttribute;
 CT_EXPORT const CFStringRef kCTForegroundColorFromContextAttributeName;
+CT_EXPORT const CFStringRef kCTStrokeWidthAttributeName;
+CT_EXPORT const CFStringRef kCTStrokeColorAttributeName;
 
 // This enum is defined in CTFont.h. To avoid redefinition, only define it here if CTFont.h has not been included.
 #ifndef __CTFONT__

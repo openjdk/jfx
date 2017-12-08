@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2017 Apple Inc. All Rights Reserved.
  * Copyright (C) 2011, 2012 Google Inc. All Rights Reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -35,12 +35,13 @@
 #include "WorkerConsoleClient.h"
 #include "WorkerGlobalScope.h"
 #include <bindings/ScriptValue.h>
+#include <heap/GCActivityCallback.h>
 #include <heap/StrongInlines.h>
 #include <runtime/Completion.h>
 #include <runtime/Exception.h>
 #include <runtime/ExceptionHelpers.h>
 #include <runtime/JSLock.h>
-#include <runtime/Watchdog.h>
+#include <runtime/PromiseDeferredTimer.h>
 
 using namespace JSC;
 
@@ -52,7 +53,6 @@ WorkerScriptController::WorkerScriptController(WorkerGlobalScope* workerGlobalSc
     , m_workerGlobalScopeWrapper(*m_vm)
 {
     m_vm->heap.acquireAccess(); // It's not clear that we have good discipline for heap access, so turn it on permanently.
-    m_vm->ensureWatchdog();
     JSVMClientData::initNormalWorld(m_vm.get());
 }
 
@@ -88,7 +88,7 @@ void WorkerScriptController::initScript()
         ASSERT(structure->globalObject() == m_workerGlobalScopeWrapper);
         ASSERT(m_workerGlobalScopeWrapper->structure()->globalObject() == m_workerGlobalScopeWrapper);
         dedicatedContextPrototype->structure()->setGlobalObject(*m_vm, m_workerGlobalScopeWrapper.get());
-        dedicatedContextPrototype->structure()->setPrototypeWithoutTransition(*m_vm, JSWorkerGlobalScope::prototype(*m_vm, m_workerGlobalScopeWrapper.get()));
+        dedicatedContextPrototype->structure()->setPrototypeWithoutTransition(*m_vm, JSWorkerGlobalScope::prototype(*m_vm, *m_workerGlobalScopeWrapper.get()));
 
         proxy->setTarget(*m_vm, m_workerGlobalScopeWrapper.get());
         proxy->structure()->setGlobalObject(*m_vm, m_workerGlobalScopeWrapper.get());
@@ -152,14 +152,17 @@ void WorkerScriptController::setException(JSC::Exception* exception)
 
 void WorkerScriptController::scheduleExecutionTermination()
 {
-    // The mutex provides a memory barrier to ensure that once
-    // termination is scheduled, isTerminatingExecution() will
-    // accurately reflect that state when called from another thread.
-    LockHolder locker(m_scheduledTerminationMutex);
-    m_isTerminatingExecution = true;
+    if (m_isTerminatingExecution)
+        return;
 
-    ASSERT(m_vm->watchdog());
-    m_vm->watchdog()->terminateSoon();
+    {
+        // The mutex provides a memory barrier to ensure that once
+        // termination is scheduled, isTerminatingExecution() will
+        // accurately reflect that state when called from another thread.
+        LockHolder locker(m_scheduledTerminationMutex);
+        m_isTerminatingExecution = true;
+    }
+    m_vm->notifyNeedTermination();
 }
 
 bool WorkerScriptController::isTerminatingExecution() const
@@ -184,9 +187,17 @@ bool WorkerScriptController::isExecutionForbidden() const
 void WorkerScriptController::disableEval(const String& errorMessage)
 {
     initScriptIfNeeded();
-    JSLockHolder lock(vm());
+    JSLockHolder lock{vm()};
 
     m_workerGlobalScopeWrapper->setEvalEnabled(false, errorMessage);
+}
+
+void WorkerScriptController::disableWebAssembly(const String& errorMessage)
+{
+    initScriptIfNeeded();
+    JSLockHolder lock{vm()};
+
+    m_workerGlobalScopeWrapper->setWebAssemblyEnabled(false, errorMessage);
 }
 
 void WorkerScriptController::releaseHeapAccess()
@@ -197,6 +208,32 @@ void WorkerScriptController::releaseHeapAccess()
 void WorkerScriptController::acquireHeapAccess()
 {
     m_vm->heap.acquireAccess();
+}
+
+void WorkerScriptController::addTimerSetNotification(JSC::JSRunLoopTimer::TimerNotificationCallback callback)
+{
+    auto processTimer = [&] (JSRunLoopTimer* timer) {
+        if (!timer)
+            return;
+        timer->addTimerSetNotification(callback);
+    };
+
+    processTimer(m_vm->heap.fullActivityCallback());
+    processTimer(m_vm->heap.edenActivityCallback());
+    processTimer(m_vm->promiseDeferredTimer.get());
+}
+
+void WorkerScriptController::removeTimerSetNotification(JSC::JSRunLoopTimer::TimerNotificationCallback callback)
+{
+    auto processTimer = [&] (JSRunLoopTimer* timer) {
+        if (!timer)
+            return;
+        timer->removeTimerSetNotification(callback);
+    };
+
+    processTimer(m_vm->heap.fullActivityCallback());
+    processTimer(m_vm->heap.edenActivityCallback());
+    processTimer(m_vm->promiseDeferredTimer.get());
 }
 
 void WorkerScriptController::attachDebugger(JSC::Debugger* debugger)

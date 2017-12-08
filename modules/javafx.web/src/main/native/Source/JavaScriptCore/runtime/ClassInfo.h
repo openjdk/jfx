@@ -26,10 +26,15 @@
 #include "ConstructData.h"
 #include "JSCell.h"
 
+namespace WTF {
+class PrintStream;
+};
+
 namespace JSC {
 
 class HeapSnapshotBuilder;
 class JSArrayBufferView;
+class Snippet;
 struct HashTable;
 
 struct MethodTable {
@@ -190,6 +195,11 @@ struct ClassInfo {
     // nullptrif there is none.
     const ClassInfo* parentClass;
 
+    static ptrdiff_t offsetOfParentClass()
+    {
+        return OBJECT_OFFSETOF(ClassInfo, parentClass);
+    }
+
     bool isSubClassOf(const ClassInfo* other) const
     {
         for (const ClassInfo* ci = this; ci; ci = ci->parentClass) {
@@ -199,9 +209,14 @@ struct ClassInfo {
         return false;
     }
 
+    JS_EXPORT_PRIVATE void dump(PrintStream&) const;
+
     JS_EXPORT_PRIVATE bool hasStaticSetterOrReadonlyProperties() const;
 
     const HashTable* staticPropHashTable;
+
+    typedef Ref<Snippet> (*CheckSubClassSnippetFunctionPtr)(void);
+    CheckSubClassSnippetFunctionPtr checkSubClassSnippet;
 
     MethodTable methodTable;
 

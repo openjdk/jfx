@@ -48,6 +48,8 @@ class RealtimeIncomingAudioSource final : public RealtimeMediaSource, private we
 public:
     static Ref<RealtimeIncomingAudioSource> create(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&, String&&);
 
+    void setSourceTrack(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&);
+
 private:
     RealtimeIncomingAudioSource(rtc::scoped_refptr<webrtc::AudioTrackInterface>&&, String&&);
     ~RealtimeIncomingAudioSource();
@@ -59,25 +61,13 @@ private:
     void startProducingData() final;
     void stopProducingData()  final;
 
-    RefPtr<RealtimeMediaSourceCapabilities> capabilities() const final;
+    const RealtimeMediaSourceCapabilities& capabilities() const final;
     const RealtimeMediaSourceSettings& settings() const final;
 
-    MediaConstraints& constraints() { return *m_constraints.get(); }
-    RealtimeMediaSourceSupportedConstraints& supportedConstraints();
-
-    bool isProducingData() const final { return m_isProducingData; }
-
-    AudioSourceProvider* audioSourceProvider() final;
-
     RealtimeMediaSourceSettings m_currentSettings;
-    RealtimeMediaSourceSupportedConstraints m_supportedConstraints;
-    RefPtr<RealtimeMediaSourceCapabilities> m_capabilities;
-    RefPtr<MediaConstraints> m_constraints;
-    bool m_isProducingData { false };
     rtc::scoped_refptr<webrtc::AudioTrackInterface> m_audioTrack;
 
-    RefPtr<WebAudioSourceProviderAVFObjC> m_audioSourceProvider;
-    RetainPtr<CMFormatDescriptionRef> m_formatDescription;
+    uint64_t m_numberOfFrames { 0 };
 };
 
 } // namespace WebCore

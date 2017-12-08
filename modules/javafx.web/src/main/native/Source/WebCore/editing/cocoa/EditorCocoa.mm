@@ -33,9 +33,12 @@
 #import "ColorMac.h"
 #import "DocumentFragment.h"
 #import "DocumentLoader.h"
+#import "Editing.h"
 #import "EditingStyle.h"
 #import "EditorClient.h"
+#import "FontCascade.h"
 #import "Frame.h"
+#import "FrameLoader.h"
 #import "FrameSelection.h"
 #import "HTMLConverter.h"
 #import "HTMLImageElement.h"
@@ -45,10 +48,9 @@
 #import "Pasteboard.h"
 #import "RenderElement.h"
 #import "RenderStyle.h"
-#import "SoftLinking.h"
 #import "Text.h"
-#import "htmlediting.h"
 #import <wtf/BlockObjCExceptions.h>
+#import <wtf/SoftLinking.h>
 
 #if PLATFORM(IOS)
 SOFT_LINK_PRIVATE_FRAMEWORK(WebKitLegacy)
@@ -58,6 +60,7 @@ SOFT_LINK_PRIVATE_FRAMEWORK(WebKitLegacy)
 SOFT_LINK_FRAMEWORK_IN_UMBRELLA(WebKit, WebKitLegacy)
 #endif
 
+// FIXME: Get rid of this and change NSAttributedString conversion so it doesn't use WebKitLegacy (cf. rdar://problem/30597352).
 SOFT_LINK(WebKitLegacy, _WebCreateFragment, void, (WebCore::Document& document, NSAttributedString *string, WebCore::FragmentAndResources& result), (document, string, result))
 
 namespace WebCore {
@@ -151,6 +154,14 @@ FragmentAndResources Editor::createFragment(NSAttributedString *string)
     return result;
 }
 
+static RefPtr<SharedBuffer> archivedDataForAttributedString(NSAttributedString *attributedString)
+{
+    if (!attributedString.length)
+        return nullptr;
+
+    return SharedBuffer::create([NSKeyedArchiver archivedDataWithRootObject:attributedString]);
+}
+
 void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
 {
     NSAttributedString *attributedString = attributedStringFromRange(*selectedRange());
@@ -160,6 +171,7 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
     content.dataInWebArchiveFormat = selectionInWebArchiveFormat();
     content.dataInRTFDFormat = attributedString.containsAttachments ? dataInRTFDFormat(attributedString) : nullptr;
     content.dataInRTFFormat = dataInRTFFormat(attributedString);
+    content.dataInAttributedStringFormat = archivedDataForAttributedString(attributedString);
     // FIXME: Why don't we want this on iOS?
 #if PLATFORM(MAC)
     content.dataInHTMLFormat = selectionInHTMLFormat();
@@ -170,12 +182,32 @@ void Editor::writeSelectionToPasteboard(Pasteboard& pasteboard)
     pasteboard.write(content);
 }
 
+void Editor::writeSelection(PasteboardWriterData& pasteboardWriterData)
+{
+    NSAttributedString *attributedString = attributedStringFromRange(*selectedRange());
+
+    PasteboardWriterData::WebContent webContent;
+    webContent.canSmartCopyOrDelete = canSmartCopyOrDelete();
+    webContent.dataInWebArchiveFormat = selectionInWebArchiveFormat();
+    webContent.dataInRTFDFormat = attributedString.containsAttachments ? dataInRTFDFormat(attributedString) : nullptr;
+    webContent.dataInRTFFormat = dataInRTFFormat(attributedString);
+    webContent.dataInAttributedStringFormat = archivedDataForAttributedString(attributedString);
+    // FIXME: Why don't we want this on iOS?
+#if PLATFORM(MAC)
+    webContent.dataInHTMLFormat = selectionInHTMLFormat();
+#endif
+    webContent.dataInStringFormat = stringSelectionForPasteboardWithImageAltText();
+    client()->getClientPasteboardDataForRange(selectedRange().get(), webContent.clientTypes, webContent.clientData);
+
+    pasteboardWriterData.setWebContent(WTFMove(webContent));
+}
+
 RefPtr<SharedBuffer> Editor::selectionInWebArchiveFormat()
 {
     RefPtr<LegacyWebArchive> archive = LegacyWebArchive::createFromSelection(&m_frame);
     if (!archive)
         return nullptr;
-    return SharedBuffer::wrapCFData(archive->rawDataRepresentation().get());
+    return SharedBuffer::create(archive->rawDataRepresentation().get());
 }
 
 // FIXME: Makes no sense that selectedTextForDataTransfer always includes alt text, but stringSelectionForPasteboard does not.
@@ -205,7 +237,7 @@ void Editor::replaceSelectionWithAttributedString(NSAttributedString *attributed
 
     if (m_frame.selection().selection().isContentRichlyEditable()) {
         RefPtr<DocumentFragment> fragment = createFragmentAndAddResources(attributedString);
-        if (fragment && shouldInsertFragment(fragment, selectedRange(), EditorInsertAction::Pasted))
+        if (fragment && shouldInsertFragment(*fragment, selectedRange().get(), EditorInsertAction::Pasted))
             pasteAsFragment(fragment.releaseNonNull(), false, false, mailBlockquoteHandling);
     } else {
         String text = attributedString.string;
@@ -246,7 +278,7 @@ RefPtr<SharedBuffer> Editor::dataInRTFDFormat(NSAttributedString *string)
         return nullptr; 
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    return SharedBuffer::wrapNSData([string RTFDFromRange:NSMakeRange(0, length) documentAttributes:@{ }]);
+    return SharedBuffer::create([string RTFDFromRange:NSMakeRange(0, length) documentAttributes:@{ }]);
     END_BLOCK_OBJC_EXCEPTIONS;
 
     return nullptr;
@@ -259,7 +291,7 @@ RefPtr<SharedBuffer> Editor::dataInRTFFormat(NSAttributedString *string)
         return nullptr;
 
     BEGIN_BLOCK_OBJC_EXCEPTIONS;
-    return SharedBuffer::wrapNSData([string RTFFromRange:NSMakeRange(0, length) documentAttributes:@{ }]);
+    return SharedBuffer::create([string RTFFromRange:NSMakeRange(0, length) documentAttributes:@{ }]);
     END_BLOCK_OBJC_EXCEPTIONS;
 
     return nullptr;
