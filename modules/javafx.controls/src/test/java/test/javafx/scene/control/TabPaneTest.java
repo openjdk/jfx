@@ -442,6 +442,22 @@ public class TabPaneTest {
         assertSame(tabPane.getTabClosingPolicy(), TabPane.TabClosingPolicy.UNAVAILABLE);
     }
 
+    @Test public void setTabDragPolicyAndSeeValueIsReflectedInModel() {
+        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
+        assertSame(TabPane.TabDragPolicy.REORDER, tabPane.tabDragPolicyProperty().getValue());
+
+        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.FIXED);
+        assertSame(TabPane.TabDragPolicy.FIXED, tabPane.tabDragPolicyProperty().getValue());
+    }
+
+    @Test public void setTabDragPolicyAndSeeValue() {
+        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
+        assertSame(TabPane.TabDragPolicy.REORDER, tabPane.getTabDragPolicy());
+
+        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.FIXED);
+        assertSame(TabPane.TabDragPolicy.FIXED, tabPane.getTabDragPolicy());
+    }
+
     @Test public void setRotateGraphicAndSeeValueIsReflectedInModel() {
         tabPane.setRotateGraphic(true);
         assertTrue(tabPane.rotateGraphicProperty().getValue());

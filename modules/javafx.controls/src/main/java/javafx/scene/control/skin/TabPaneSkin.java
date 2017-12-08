@@ -27,12 +27,14 @@ package javafx.scene.control.skin;
 
 import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 import com.sun.javafx.scene.control.Properties;
+import com.sun.javafx.scene.control.TabObservableList;
 import com.sun.javafx.util.Utils;
 import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.animation.Transition;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -51,7 +53,10 @@ import javafx.css.StyleableObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.HPos;
+import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
 import javafx.geometry.VPos;
@@ -68,6 +73,7 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPane.TabClosingPolicy;
+import javafx.scene.control.TabPane.TabDragPolicy;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.Tooltip;
 import javafx.scene.effect.DropShadow;
@@ -91,8 +97,6 @@ import java.util.List;
 
 import javafx.css.converter.EnumConverter;
 import com.sun.javafx.scene.control.behavior.TabPaneBehavior;
-import com.sun.javafx.scene.traversal.Direction;
-import com.sun.javafx.scene.traversal.TraversalEngine;
 
 import static com.sun.javafx.scene.control.skin.resources.ControlResources.getString;
 
@@ -576,39 +580,40 @@ public class TabPaneSkin extends SkinBase<TabPane> {
 
             while (c.next()) {
                 if (c.wasPermutated()) {
-                    TabPane tabPane = getSkinnable();
-                    List<Tab> tabs = tabPane.getTabs();
+                    if (dragState != DragState.REORDER) {
+                        TabPane tabPane = getSkinnable();
+                        List<Tab> tabs = tabPane.getTabs();
 
-                    // tabs sorted : create list of permutated tabs.
-                    // clear selection, set tab animation to NONE
-                    // remove permutated tabs, add them back in correct order.
-                    // restore old selection, and old tab animation states.
-                    int size = c.getTo() - c.getFrom();
-                    Tab selTab = tabPane.getSelectionModel().getSelectedItem();
-                    List<Tab> permutatedTabs = new ArrayList<Tab>(size);
-                    getSkinnable().getSelectionModel().clearSelection();
+                        // tabs sorted : create list of permutated tabs.
+                        // clear selection, set tab animation to NONE
+                        // remove permutated tabs, add them back in correct order.
+                        // restore old selection, and old tab animation states.
+                        int size = c.getTo() - c.getFrom();
+                        Tab selTab = tabPane.getSelectionModel().getSelectedItem();
+                        List<Tab> permutatedTabs = new ArrayList<Tab>(size);
+                        getSkinnable().getSelectionModel().clearSelection();
 
-                    // save and set tab animation to none - as it is not a good idea
-                    // to animate on the same data for open and close.
-                    TabAnimation prevOpenAnimation = openTabAnimation.get();
-                    TabAnimation prevCloseAnimation = closeTabAnimation.get();
-                    openTabAnimation.set(TabAnimation.NONE);
-                    closeTabAnimation.set(TabAnimation.NONE);
-                    for (int i = c.getFrom(); i < c.getTo(); i++) {
-                        permutatedTabs.add(tabs.get(i));
+                        // save and set tab animation to none - as it is not a good idea
+                        // to animate on the same data for open and close.
+                        TabAnimation prevOpenAnimation = openTabAnimation.get();
+                        TabAnimation prevCloseAnimation = closeTabAnimation.get();
+                        openTabAnimation.set(TabAnimation.NONE);
+                        closeTabAnimation.set(TabAnimation.NONE);
+                        for (int i = c.getFrom(); i < c.getTo(); i++) {
+                            permutatedTabs.add(tabs.get(i));
+                        }
+
+                        removeTabs(permutatedTabs);
+                        addTabs(permutatedTabs, c.getFrom());
+                        openTabAnimation.set(prevOpenAnimation);
+                        closeTabAnimation.set(prevCloseAnimation);
+                        getSkinnable().getSelectionModel().select(selTab);
                     }
-
-                    removeTabs(permutatedTabs);
-                    addTabs(permutatedTabs, c.getFrom());
-                    openTabAnimation.set(prevOpenAnimation);
-                    closeTabAnimation.set(prevCloseAnimation);
-                    getSkinnable().getSelectionModel().select(selTab);
                 }
 
                 if (c.wasRemoved()) {
                     tabsToRemove.addAll(c.getRemoved());
                 }
-
                 if (c.wasAdded()) {
                     tabsToAdd.addAll(c.getAddedSubList());
                     insertPos = c.getFrom();
@@ -873,10 +878,16 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                         if (tabPosition.equals(Side.LEFT) || tabPosition.equals(Side.BOTTOM)) {
                             // build from the right
                             tabX -= tabHeaderPrefWidth;
-                            tabHeader.relocate(tabX, startY);
+                            if (dragState != DragState.REORDER ||
+                                    (tabHeader != dragTabHeader && tabHeader != dropAnimHeader)) {
+                                tabHeader.relocate(tabX, startY);
+                            }
                         } else {
                             // build from the left
-                            tabHeader.relocate(tabX, startY);
+                            if (dragState != DragState.REORDER ||
+                                    (tabHeader != dragTabHeader && tabHeader != dropAnimHeader)) {
+                                tabHeader.relocate(tabX, startY);
+                            }
                             tabX += tabHeaderPrefWidth;
                         }
                     }
@@ -885,6 +896,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             };
             headersRegion.getStyleClass().setAll("headers-region");
             headersRegion.setClip(headerClip);
+            setupReordering(headersRegion);
 
             headerBackground = new StackPane();
             headerBackground.getStyleClass().setAll("tab-header-background");
@@ -1234,6 +1246,7 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             setId(tab.getId());
             setStyle(tab.getStyle());
             setAccessibleRole(AccessibleRole.TAB_ITEM);
+            setViewOrder(1);
 
             this.tab = tab;
             clip = new Rectangle();
@@ -1913,6 +1926,343 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                 return tabHeaderArea.headersRegion.getChildren().get(index);
             }
             default: return super.queryAccessibleAttribute(attribute, parameters);
+        }
+    }
+
+    // --------------------------
+    // Tab Reordering
+    // --------------------------
+    private enum DragState {
+        NONE,
+        START,
+        REORDER
+    }
+    private EventHandler<MouseEvent> headerDraggedHandler = this::handleHeaderDragged;
+    private EventHandler<MouseEvent> headerMousePressedHandler = this::handleHeaderMousePressed;
+    private EventHandler<MouseEvent> headerMouseReleasedHandler = this::handleHeaderMouseReleased;
+
+    private int dragTabHeaderIndex;
+    private TabHeaderSkin dragTabHeader;
+    private TabHeaderSkin dropTabHeader;
+    private StackPane headersRegion;
+    private DragState dragState;
+    private final int MIN_TO_MAX = 1;
+    private final int MAX_TO_MIN = -1;
+    private int xLayoutDirection;
+    private double dragEventPrevLoc;
+    private int prevDragDirection = MIN_TO_MAX;
+    private final double DRAG_DIST_THRESHOLD = 0.75;
+
+    // Reordering Animation
+    private final double ANIM_DURATION = 120;
+    private TabHeaderSkin dropAnimHeader;
+    private Tab swapTab;
+    private double dropHeaderSourceX;
+    private double dropHeaderTransitionX;
+    private final Animation dropHeaderAnim = new Transition() {
+        {
+            setInterpolator(Interpolator.EASE_BOTH);
+            setCycleDuration(Duration.millis(ANIM_DURATION));
+            setOnFinished(event -> {
+                completeHeaderReordering();
+            });
+        }
+        protected void interpolate(double frac) {
+            dropAnimHeader.setLayoutX(dropHeaderSourceX + dropHeaderTransitionX * frac);
+        }
+    };
+    private double dragHeaderStartX;
+    private double dragHeaderDestX;
+    private double dragHeaderSourceX;
+    private double dragHeaderTransitionX;
+    private final Animation dragHeaderAnim = new Transition() {
+        {
+            setInterpolator(Interpolator.EASE_OUT);
+            setCycleDuration(Duration.millis(ANIM_DURATION));
+            setOnFinished(event -> {
+                resetDrag();
+            });
+        }
+        protected void interpolate(double frac) {
+            dragTabHeader.setLayoutX(dragHeaderSourceX + dragHeaderTransitionX * frac);
+        }
+    };
+
+    // Helper methods for managing the listeners based on TabDragPolicy.
+    private void addReorderListeners(Node n) {
+        n.addEventHandler(MouseEvent.MOUSE_PRESSED, headerMousePressedHandler);
+        n.addEventHandler(MouseEvent.MOUSE_RELEASED, headerMouseReleasedHandler);
+        n.addEventHandler(MouseEvent.MOUSE_DRAGGED, headerDraggedHandler);
+    }
+
+    private void removeReorderListeners(Node n) {
+        n.removeEventHandler(MouseEvent.MOUSE_PRESSED, headerMousePressedHandler);
+        n.removeEventHandler(MouseEvent.MOUSE_RELEASED, headerMouseReleasedHandler);
+        n.removeEventHandler(MouseEvent.MOUSE_DRAGGED, headerDraggedHandler);
+    }
+
+    private ListChangeListener childListener = new ListChangeListener<Node>() {
+        public void onChanged(Change<? extends Node> change) {
+            while (change.next()) {
+                if (change.wasAdded()) {
+                    for(Node n : change.getAddedSubList()) {
+                        addReorderListeners(n);
+                    }
+                }
+                if (change.wasRemoved()) {
+                    for(Node n : change.getRemoved()) {
+                        removeReorderListeners(n);
+                    }
+                }
+            }
+        }
+    };
+
+    private void updateListeners() {
+        if (getSkinnable().getTabDragPolicy() == TabDragPolicy.FIXED ||
+                getSkinnable().getTabDragPolicy() == null) {
+            for (Node n : headersRegion.getChildren()) {
+                removeReorderListeners(n);
+            }
+            headersRegion.getChildren().removeListener(childListener);
+        } else if (getSkinnable().getTabDragPolicy() == TabDragPolicy.REORDER) {
+            for (Node n : headersRegion.getChildren()) {
+                addReorderListeners(n);
+            }
+            headersRegion.getChildren().addListener(childListener);
+        }
+    }
+
+    private void setupReordering(StackPane headersRegion) {
+        dragState = DragState.NONE;
+        this.headersRegion = headersRegion;
+        updateListeners();
+        getSkinnable().tabDragPolicyProperty().addListener((observable, oldValue, newValue) -> {
+            if (oldValue != newValue) {
+                updateListeners();
+            }
+        });
+    }
+
+    private void handleHeaderMousePressed(MouseEvent event) {
+        ((StackPane)event.getSource()).setMouseTransparent(true);
+        startDrag(event);
+    }
+
+    private void handleHeaderMouseReleased(MouseEvent event) {
+        ((StackPane)event.getSource()).setMouseTransparent(false);
+        stopDrag();
+        event.consume();
+    }
+
+    private void handleHeaderDragged(MouseEvent event) {
+        perfromDrag(event);
+    }
+
+    private double getDragDelta(double curr, double prev) {
+        if (getSkinnable().getSide().equals(Side.TOP) ||
+                getSkinnable().getSide().equals(Side.RIGHT)) {
+            return curr - prev;
+        } else {
+            return prev - curr;
+        }
+    }
+
+    private int deriveTabHeaderLayoutXDirection() {
+        if (getSkinnable().getSide().equals(Side.TOP) ||
+                getSkinnable().getSide().equals(Side.RIGHT)) {
+            // TabHeaderSkin are laid out in left to right direction inside headersRegion
+            return MIN_TO_MAX;
+        }
+        // TabHeaderSkin are laid out in right to left direction inside headersRegion
+        return MAX_TO_MIN;
+    }
+
+    private void perfromDrag(MouseEvent event) {
+        int dragDirection;
+        double dragHeaderNewLayoutX;
+        Bounds dragHeaderBounds;
+        Bounds dropHeaderBounds;
+        double draggedDist;
+        double mouseCurrentLoc = getHeaderRegionLocalX(event);
+        double dragDelta = getDragDelta(mouseCurrentLoc, dragEventPrevLoc);
+
+        if (dragDelta > 0) {
+            // Dragging the tab header towards higher indexed tab headers inside headersRegion.
+            dragDirection = MIN_TO_MAX;
+        } else {
+            // Dragging the tab header towards lower indexed tab headers inside headersRegion.
+            dragDirection = MAX_TO_MIN;
+        }
+        // Stop dropHeaderAnim if direction of drag is changed
+        if (prevDragDirection != dragDirection) {
+            stopAnim(dropHeaderAnim);
+            prevDragDirection = dragDirection;
+        }
+
+        dragHeaderNewLayoutX = dragTabHeader.getLayoutX() + xLayoutDirection * dragDelta;
+
+        if (dragHeaderNewLayoutX >= 0 &&
+                dragHeaderNewLayoutX + dragTabHeader.getWidth() <= headersRegion.getWidth()) {
+
+            dragState = DragState.REORDER;
+            dragTabHeader.setLayoutX(dragHeaderNewLayoutX);
+            dragHeaderBounds = dragTabHeader.getBoundsInParent();
+
+            if (dragDirection == MIN_TO_MAX) {
+                // Dragging the tab header towards higher indexed tab headers
+                // Last tab header can not be dragged outside headersRegion.
+
+                // When the mouse is moved too fast, sufficient number of events
+                // are not generated. Hence it is required to check all possible
+                // headers to be reordered.
+                for (int i = dragTabHeaderIndex + 1; i < headersRegion.getChildren().size(); i++) {
+                    dropTabHeader = (TabHeaderSkin) headersRegion.getChildren().get(i);
+
+                    // dropTabHeader should not be already reordering.
+                    if (dropAnimHeader != dropTabHeader) {
+                        dropHeaderBounds = dropTabHeader.getBoundsInParent();
+
+                        if (xLayoutDirection == MIN_TO_MAX) {
+                            draggedDist = dragHeaderBounds.getMaxX() - dropHeaderBounds.getMinX();
+                        } else {
+                            draggedDist = dropHeaderBounds.getMaxX() - dragHeaderBounds.getMinX();
+                        }
+
+                        // A tab header is reordered when dragged tab header crosses DRAG_DIST_THRESHOLD% of next tab header's width.
+                        if (draggedDist > dropHeaderBounds.getWidth() * DRAG_DIST_THRESHOLD) {
+                            stopAnim(dropHeaderAnim);
+                            // Distance by which tab header should be animated.
+                            dropHeaderTransitionX = xLayoutDirection * -dragHeaderBounds.getWidth();
+                            if (xLayoutDirection == MIN_TO_MAX) {
+                                dragHeaderDestX = dropHeaderBounds.getMaxX() - dragHeaderBounds.getWidth();
+                            } else {
+                                dragHeaderDestX = dropHeaderBounds.getMinX();
+                            }
+                            startHeaderReorderingAnim();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            } else {
+                // dragDirection is MAX_TO_MIN
+                // Dragging the tab header towards lower indexed tab headers.
+                // First tab header can not be dragged outside headersRegion.
+
+                // When the mouse is moved too fast, sufficient number of events
+                // are not generated. Hence it is required to check all possible
+                // tab headers to be reordered.
+                for (int i = dragTabHeaderIndex - 1; i >= 0; i--) {
+                    dropTabHeader = (TabHeaderSkin) headersRegion.getChildren().get(i);
+
+                    // dropTabHeader should not be already reordering.
+                    if (dropAnimHeader != dropTabHeader) {
+                        dropHeaderBounds = dropTabHeader.getBoundsInParent();
+
+                        if (xLayoutDirection == MIN_TO_MAX) {
+                            draggedDist = dropHeaderBounds.getMaxX() - dragHeaderBounds.getMinX();
+                        } else {
+                            draggedDist = dragHeaderBounds.getMaxX() - dropHeaderBounds.getMinX();
+                        }
+
+                        // A tab header is reordered when dragged tab crosses DRAG_DIST_THRESHOLD% of next tab header's width.
+                        if (draggedDist > dropHeaderBounds.getWidth() * DRAG_DIST_THRESHOLD) {
+                            stopAnim(dropHeaderAnim);
+                            // Distance by which tab header should be animated.
+                            dropHeaderTransitionX = xLayoutDirection * dragHeaderBounds.getWidth();
+                            if (xLayoutDirection == MIN_TO_MAX) {
+                                dragHeaderDestX = dropHeaderBounds.getMinX();
+                            } else {
+                                dragHeaderDestX = dropHeaderBounds.getMaxX() - dragHeaderBounds.getWidth();
+                            }
+                            startHeaderReorderingAnim();
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        dragEventPrevLoc = mouseCurrentLoc;
+        event.consume();
+    }
+
+    private void startDrag(MouseEvent event) {
+        // Stop the animations if any are running from previous reorder.
+        stopAnim(dropHeaderAnim);
+        stopAnim(dragHeaderAnim);
+
+        dragTabHeader = (TabHeaderSkin) event.getSource();
+        if (dragTabHeader != null) {
+            dragState = DragState.START;
+            swapTab = null;
+            xLayoutDirection = deriveTabHeaderLayoutXDirection();
+            dragEventPrevLoc = getHeaderRegionLocalX(event);
+            dragTabHeaderIndex = headersRegion.getChildren().indexOf(dragTabHeader);
+            dragTabHeader.setViewOrder(0);
+            dragHeaderStartX = dragHeaderDestX = dragTabHeader.getLayoutX();
+        }
+    }
+
+    private double getHeaderRegionLocalX(MouseEvent ev) {
+        // The event is converted to tab header's parent i.e. headersRegion's local space.
+        // This will provide a value of X co-ordinate with all transformations of TabPane
+        // and transformations of all nodes in the TabPane's parent hierarchy.
+        Point2D sceneToLocalHR = headersRegion.sceneToLocal(ev.getSceneX(), ev.getSceneY());
+        return sceneToLocalHR.getX();
+    }
+
+    private void stopDrag() {
+        if (dragState == DragState.START) {
+            // No drag action was performed.
+            resetDrag();
+            return;
+        }
+        // Animate tab header being dragged to its final position.
+        dragHeaderSourceX = dragTabHeader.getLayoutX();
+        dragHeaderTransitionX = dragHeaderDestX - dragHeaderSourceX;
+        dragHeaderAnim.playFromStart();
+
+        // Reorder the tab list.
+        if (dragHeaderStartX != dragHeaderDestX) {
+            ((TabObservableList<Tab>) getSkinnable().getTabs()).reorder(dragTabHeader.tab, swapTab);
+            swapTab = null;
+        }
+    }
+
+    private void resetDrag() {
+        dragState = DragState.NONE;
+        dragTabHeader.setViewOrder(1);
+        dragTabHeader = null;
+        dropTabHeader = null;
+        headersRegion.requestLayout();
+    }
+
+    // Animate tab header being dropped-on to its new position.
+    private void startHeaderReorderingAnim() {
+        dropAnimHeader = dropTabHeader;
+        swapTab = dropAnimHeader.tab;
+        dropHeaderSourceX = dropAnimHeader.getLayoutX();
+        dropHeaderAnim.playFromStart();
+    }
+
+    // Remove dropAnimHeader and add at the index position of dragTabHeader.
+    private void completeHeaderReordering() {
+        if (dropAnimHeader != null) {
+            headersRegion.getChildren().remove(dropAnimHeader);
+            headersRegion.getChildren().add(dragTabHeaderIndex, dropAnimHeader);
+            dropAnimHeader = null;
+            headersRegion.requestLayout();
+            dragTabHeaderIndex = headersRegion.getChildren().indexOf(dragTabHeader);
+        }
+    }
+
+    // Helper method to stop an animation.
+    private void stopAnim(Animation anim) {
+        if (anim.getStatus() == Animation.Status.RUNNING) {
+            anim.getOnFinished().handle(null);
+            anim.stop();
         }
     }
 }
