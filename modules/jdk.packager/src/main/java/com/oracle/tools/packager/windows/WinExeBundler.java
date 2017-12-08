@@ -385,8 +385,9 @@ public class WinExeBundler extends AbstractBundler {
                 } else if (imageDir != null) {
                     Log.info(MessageFormat.format(I18N.getString("message.debug-working-directory"), imageDir.getAbsolutePath()));
                 }
-            } catch (FileNotFoundException ex) {
+            } catch (IOException ex) {
                 //noinspection ReturnInsideFinallyBlock
+                Log.debug(ex.getMessage());
                 return null;
             }
         }

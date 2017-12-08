@@ -152,7 +152,9 @@ public abstract class AbstractBundler implements Bundler {
         if (!StandardBundlerParam.VERBOSE.fetchFrom(params)) {
             try {
                 IOUtils.deleteRecursive(StandardBundlerParam.BUILD_ROOT.fetchFrom(params));
-            } catch (FileNotFoundException ignored) {}
+            } catch (IOException e) {
+                Log.debug(e.getMessage());
+            }
         }
     }
 }

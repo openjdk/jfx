@@ -175,7 +175,7 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
                 } else {
                     Log.info(MessageFormat.format(I18N.getString("message.config-save-location"), CONFIG_ROOT.fetchFrom(params).getAbsolutePath()));
                 }
-            } catch (FileNotFoundException ex) {
+            } catch (IOException ex) {
                 Log.debug(ex);
                 //noinspection ReturnInsideFinallyBlock
                 return null;
