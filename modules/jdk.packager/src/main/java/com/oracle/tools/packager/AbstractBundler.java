@@ -38,6 +38,10 @@ import java.text.MessageFormat;
 import java.util.*;
 import com.oracle.tools.packager.IOUtils;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public abstract class AbstractBundler implements Bundler {
 
     private static final ResourceBundle I18N =

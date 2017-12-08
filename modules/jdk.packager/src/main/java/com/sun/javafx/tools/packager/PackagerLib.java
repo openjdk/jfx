@@ -81,6 +81,10 @@ import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class PackagerLib {
     public static final String JAVAFX_VERSION = System.getProperty("java.version");
 

@@ -25,6 +25,10 @@
 
 package com.oracle.tools.packager;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class InvalidBundlerParamException extends RuntimeException {
     public InvalidBundlerParamException(String message) {
         super(message);

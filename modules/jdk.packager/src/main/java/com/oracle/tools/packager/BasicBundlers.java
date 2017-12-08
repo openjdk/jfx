@@ -58,7 +58,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *     <LI>Linux RPM</LI>
  *
  * </UL>
+ *
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
  */
+@Deprecated(since="10", forRemoval=true)
 public class BasicBundlers implements Bundlers {
 
     boolean defaultsLoaded = false;

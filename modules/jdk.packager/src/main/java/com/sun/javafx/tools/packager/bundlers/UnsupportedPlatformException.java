@@ -25,4 +25,8 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class UnsupportedPlatformException extends com.oracle.tools.packager.UnsupportedPlatformException {}

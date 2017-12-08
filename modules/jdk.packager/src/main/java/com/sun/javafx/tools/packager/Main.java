@@ -43,7 +43,10 @@ import java.nio.file.Path;
 
 import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
-
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class Main {
 
     private static final ResourceBundle bundle =

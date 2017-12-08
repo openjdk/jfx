@@ -29,9 +29,11 @@ import java.io.File;
 import java.util.Collection;
 import java.util.Map;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public interface Bundler {
-
-
     /**
      * @return User Friendly name of this bundler.
      */

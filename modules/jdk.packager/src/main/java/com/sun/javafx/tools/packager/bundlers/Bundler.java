@@ -25,7 +25,10 @@
 
 package com.sun.javafx.tools.packager.bundlers;
 
-@Deprecated
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public final class Bundler {
 
     private Bundler() {}

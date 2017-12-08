@@ -31,6 +31,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class SignJarParams extends CommonParams {
 
     final List<PackagerResource> resources = new ArrayList<PackagerResource>();

@@ -47,7 +47,10 @@ import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
 import static com.oracle.tools.packager.jnlp.JNLPBundler.*;
 
-@Deprecated
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class DeployParams extends CommonParams {
     public enum RunMode {
         WEBSTART, EMBEDDED, STANDALONE, ALL

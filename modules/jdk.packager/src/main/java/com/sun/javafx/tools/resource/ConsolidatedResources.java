@@ -30,6 +30,10 @@ import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public final class ConsolidatedResources {
     private final SortedMap<ResourceKey, ResourceRecord> resourceMap;
 

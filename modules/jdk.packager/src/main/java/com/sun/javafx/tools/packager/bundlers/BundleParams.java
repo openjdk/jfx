@@ -39,7 +39,10 @@ import static com.oracle.tools.packager.StandardBundlerParam.*;
 
 import jdk.packager.internal.legacy.JLinkBundlerHelper;
 
-
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class BundleParams {
 
     final protected Map<String, ? super Object> params;

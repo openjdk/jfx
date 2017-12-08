@@ -49,7 +49,9 @@ import java.util.function.Function;
  *     params.put(MAC_CATEGORY.getID(), value);
  * }</pre>
  *
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
  */
+@Deprecated(since="10", forRemoval=true)
 public class EnumeratedBundlerParam<T> extends BundlerParamInfo<T> {
     //Not sure if this is the correct order, my idea is that from and IDE's perspective
     //the string to display to the user is the key and then the value is some type of

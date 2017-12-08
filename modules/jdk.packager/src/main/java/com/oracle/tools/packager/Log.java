@@ -30,6 +30,10 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public class Log {
     public static class Logger {
         private boolean verbose = false;

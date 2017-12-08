@@ -27,8 +27,11 @@ package com.sun.javafx.tools.packager;
 
 import java.io.File;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public abstract class CommonParams {
-
     File outdir;
     boolean verbose;
 

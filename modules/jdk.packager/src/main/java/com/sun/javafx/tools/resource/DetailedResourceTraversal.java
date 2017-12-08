@@ -27,6 +27,10 @@ package com.sun.javafx.tools.resource;
 
 import java.io.File;
 
+/**
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
+ */
+@Deprecated(since="10", forRemoval=true)
 public abstract class DetailedResourceTraversal implements ResourceTraversal {
     private String lastRelativePath;
 

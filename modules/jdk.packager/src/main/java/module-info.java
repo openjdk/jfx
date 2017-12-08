@@ -36,6 +36,7 @@
  * @moduleGraph
  * @since 9
  */
+@SuppressWarnings("removal")
 module jdk.packager {
     requires jdk.jlink;
 

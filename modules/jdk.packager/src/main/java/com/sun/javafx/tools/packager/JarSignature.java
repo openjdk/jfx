@@ -80,7 +80,10 @@ import sun.security.x509.X500Name;
  *   - add entries using updateWithEntry()
  *   - use isValid() to validate result
  *   - use getCodeSigners() to get list of code signers used
+ *
+ * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
  */
+@Deprecated(since="10", forRemoval=true)
 public class JarSignature {
     //name of jar manifest attribute that contains signature
     public static final String BLOB_SIGNATURE = "META-INF/SIGNATURE.BSF";
