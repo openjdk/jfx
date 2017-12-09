@@ -155,7 +155,9 @@ void GenericPlatform::SaveToFile(TString FileName, std::list<TString> Contents, 
 TString GenericPlatform::GetAppName() {
     TString result = GetModuleFileName();
     result = FilePath::ExtractFileName(result);
+#if defined(WINDOWS)
     result = FilePath::ChangeFileExt(result, _T(""));
+#endif
     return result;
 }
 #endif //WINDOWS || LINUX
