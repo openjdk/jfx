@@ -46,6 +46,7 @@ import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.EventQueue;
 import java.awt.Toolkit;
+import java.lang.ref.WeakReference;
 import java.awt.dnd.DragGestureEvent;
 import java.awt.dnd.DragGestureListener;
 import java.awt.dnd.DragGestureRecognizer;
@@ -66,6 +67,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
+import com.sun.javafx.embed.swing.Disposer;
+import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.jmx.MXNodeAlgorithm;
@@ -365,17 +368,9 @@ public class SwingNode extends Node {
         if (content != null) {
             lwFrame = new JLightweightFrame();
 
-            lwFrame.addWindowFocusListener(new WindowFocusListener() {
-                @Override
-                public void windowGainedFocus(WindowEvent e) {
-                    SwingFXUtils.runOnFxThread(() ->
-                                                 SwingNode.this.requestFocus());
-                }
-                @Override
-                public void windowLostFocus(WindowEvent e) {
-                    SwingFXUtils.runOnFxThread(() -> ungrabFocus(true));
-                }
-            });
+            SwingNodeWindowFocusListener snfListener =
+                                 new SwingNodeWindowFocusListener(this);
+            lwFrame.addWindowFocusListener(snfListener);
 
             if (getScene() != null) {
                 Window window = getScene().getWindow();
@@ -390,8 +385,11 @@ public class SwingNode extends Node {
                     }
                 }
             }
-            lwFrame.setContent(new SwingNodeContent(content));
+            lwFrame.setContent(new SwingNodeContent(content, this));
             lwFrame.setVisible(true);
+
+            SwingNodeDisposer disposeRec = new SwingNodeDisposer(lwFrame);
+            Disposer.addRecord(this, disposeRec);
 
             if (getScene() != null) {
                 notifyNativeHandle(getScene().getWindow());
@@ -812,12 +810,56 @@ public class SwingNode extends Node {
         return alg.processLeafNode(this, ctx);
     }
 
-    private class SwingNodeContent implements LightweightContent {
+    private static class SwingNodeDisposer implements DisposerRecord {
+         JLightweightFrame lwFrame;
+
+         SwingNodeDisposer(JLightweightFrame ref) {
+             this.lwFrame = ref;
+         }
+         public void dispose() {
+             if (lwFrame != null) {
+                 lwFrame.dispose();
+                 lwFrame = null;
+             }
+         }
+    }
+
+    private static class SwingNodeWindowFocusListener implements WindowFocusListener {
+        private WeakReference<SwingNode> swingNodeRef;
+
+        SwingNodeWindowFocusListener(SwingNode swingNode) {
+            this.swingNodeRef = new WeakReference<SwingNode>(swingNode);
+        }
+
+        @Override
+        public void windowGainedFocus(WindowEvent e) {
+            SwingFXUtils.runOnFxThread(() -> {
+                SwingNode swingNode = swingNodeRef.get();
+                if (swingNode != null) {
+                    swingNode.requestFocus();
+                }
+            });
+        }
+
+        @Override
+        public void windowLostFocus(WindowEvent e) {
+            SwingFXUtils.runOnFxThread(() -> {
+                SwingNode swingNode = swingNodeRef.get();
+                if (swingNode != null) {
+                    swingNode.ungrabFocus(true);
+                }
+            });
+        }
+    }
+
+    private static class SwingNodeContent implements LightweightContent {
         private JComponent comp;
         private volatile FXDnD dnd;
+        private WeakReference<SwingNode> swingNodeRef;
 
-        SwingNodeContent(JComponent comp) {
+        SwingNodeContent(JComponent comp, SwingNode swingNode) {
             this.comp = comp;
+            this.swingNodeRef = new WeakReference<SwingNode>(swingNode);
         }
         @Override
         public JComponent getComponent() {
@@ -825,11 +867,17 @@ public class SwingNode extends Node {
         }
         @Override
         public void paintLock() {
-            paintLock.lock();
+            SwingNode swingNode = swingNodeRef.get();
+            if (swingNode != null) {
+                swingNode.paintLock.lock();
+            }
         }
         @Override
         public void paintUnlock() {
-            paintLock.unlock();
+            SwingNode swingNode = swingNodeRef.get();
+            if (swingNode != null) {
+                swingNode.paintLock.unlock();
+            }
         }
 
         // Note: we skip @Override annotation and implement both pre-hiDPI and post-hiDPI versions
@@ -840,19 +888,31 @@ public class SwingNode extends Node {
         }
         //@Override
         public void imageBufferReset(int[] data, int x, int y, int width, int height, int linestride, int scale) {
-            SwingNode.this.setImageBuffer(data, x, y, width, height, linestride, scale, scale);
+            SwingNode swingNode = swingNodeRef.get();
+            if (swingNode != null) {
+                swingNode.setImageBuffer(data, x, y, width, height, linestride, scale, scale);
+            }
         }
         //@Override
         public void imageBufferReset(int[] data, int x, int y, int width, int height, int linestride, double scaleX, double scaleY) {
-            SwingNode.this.setImageBuffer(data, x, y, width, height, linestride, scaleX, scaleY);
+            SwingNode swingNode = swingNodeRef.get();
+            if (swingNode != null) {
+                swingNode.setImageBuffer(data, x, y, width, height, linestride, scaleX, scaleY);
+            }
         }
         @Override
         public void imageReshaped(int x, int y, int width, int height) {
-            SwingNode.this.setImageBounds(x, y, width, height);
+            SwingNode swingNode = swingNodeRef.get();
+            if (swingNode != null) {
+                swingNode.setImageBounds(x, y, width, height);
+            }
         }
         @Override
         public void imageUpdated(int dirtyX, int dirtyY, int dirtyWidth, int dirtyHeight) {
-            SwingNode.this.repaintDirtyRegion(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+            SwingNode swingNode = swingNodeRef.get();
+            if (swingNode != null) {
+                swingNode.repaintDirtyRegion(dirtyX, dirtyY, dirtyWidth, dirtyHeight);
+            }
         }
         @Override
         public void focusGrabbed() {
@@ -861,49 +921,68 @@ public class SwingNode extends Node {
                 // so we can't delegate it to another GUI toolkit.
                 if (PlatformUtil.isLinux()) return;
 
-                if (getScene() != null &&
-                        getScene().getWindow() != null &&
-                        WindowHelper.getPeer(getScene().getWindow()) != null) {
-                    WindowHelper.getPeer(getScene().getWindow()).grabFocus();
-                    grabbed = true;
+                SwingNode swingNode = swingNodeRef.get();
+                if (swingNode != null) {
+                    Scene scene = swingNode.getScene();
+                    if (scene != null &&
+                            scene.getWindow() != null &&
+                            WindowHelper.getPeer(scene.getWindow()) != null) {
+                        WindowHelper.getPeer(scene.getWindow()).grabFocus();
+                        swingNode.grabbed = true;
+                    }
                 }
             });
         }
         @Override
         public void focusUngrabbed() {
             SwingFXUtils.runOnFxThread(() -> {
-                ungrabFocus(false);
+                SwingNode swingNode = swingNodeRef.get();
+                if (swingNode != null) {
+                    swingNode.ungrabFocus(false);
+                }
             });
         }
         @Override
         public void preferredSizeChanged(final int width, final int height) {
             SwingFXUtils.runOnFxThread(() -> {
-                SwingNode.this.swingPrefWidth = width;
-                SwingNode.this.swingPrefHeight = height;
-                NodeHelper.notifyLayoutBoundsChanged(SwingNode.this);
+                SwingNode swingNode = swingNodeRef.get();
+                if (swingNode != null) {
+                    swingNode.swingPrefWidth = width;
+                    swingNode.swingPrefHeight = height;
+                    NodeHelper.notifyLayoutBoundsChanged(swingNode);
+                }
             });
         }
         @Override
         public void maximumSizeChanged(final int width, final int height) {
             SwingFXUtils.runOnFxThread(() -> {
-                SwingNode.this.swingMaxWidth = width;
-                SwingNode.this.swingMaxHeight = height;
-                NodeHelper.notifyLayoutBoundsChanged(SwingNode.this);
+                SwingNode swingNode = swingNodeRef.get();
+                if (swingNode != null) {
+                    swingNode.swingMaxWidth = width;
+                    swingNode.swingMaxHeight = height;
+                    NodeHelper.notifyLayoutBoundsChanged(swingNode);
+                }
             });
         }
         @Override
         public void minimumSizeChanged(final int width, final int height) {
             SwingFXUtils.runOnFxThread(() -> {
-                SwingNode.this.swingMinWidth = width;
-                SwingNode.this.swingMinHeight = height;
-                NodeHelper.notifyLayoutBoundsChanged(SwingNode.this);
+                SwingNode swingNode = swingNodeRef.get();
+                if (swingNode != null) {
+                    swingNode.swingMinWidth = width;
+                    swingNode.swingMinHeight = height;
+                    NodeHelper.notifyLayoutBoundsChanged(swingNode);
+                }
             });
         }
 
         //@Override
         public void setCursor(Cursor cursor) {
             SwingFXUtils.runOnFxThread(() -> {
-                SwingNode.this.setCursor(SwingCursors.embedCursorToCursor(cursor));
+                SwingNode swingNode = swingNodeRef.get();
+                if (swingNode != null) {
+                    swingNode.setCursor(SwingCursors.embedCursorToCursor(cursor));
+                }
             });
         }
 
@@ -911,7 +990,10 @@ public class SwingNode extends Node {
             // This is a part of AWT API, so the method may be invoked on any thread
             synchronized (SwingNodeContent.this) {
                 if (this.dnd == null) {
-                    this.dnd = new FXDnD(SwingNode.this);
+                    SwingNode swingNode = swingNodeRef.get();
+                    if (swingNode != null) {
+                        this.dnd = new FXDnD(swingNode);
+                    }
                 }
             }
         }
