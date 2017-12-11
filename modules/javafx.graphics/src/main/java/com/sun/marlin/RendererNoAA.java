@@ -37,6 +37,9 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
     private static final double POWER_2_TO_32 = 0x1.0p32d;
 
+    private static final float RDR_OFFSET_X = 0.5f;
+    private static final float RDR_OFFSET_Y = 0.5f;
+
     // common to all types of input path segments.
     // OFFSET as bytes
     // only integer values:
@@ -643,7 +646,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     }
 
     @Override
-    public void moveTo(float pix_x0, float pix_y0) {
+    public void moveTo(final float pix_x0, final float pix_y0) {
         closePath();
         final float sx = tosubpixx(pix_x0);
         final float sy = tosubpixy(pix_y0);
@@ -654,7 +657,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     }
 
     @Override
-    public void lineTo(float pix_x1, float pix_y1) {
+    public void lineTo(final float pix_x1, final float pix_y1) {
         final float x1 = tosubpixx(pix_x1);
         final float y1 = tosubpixy(pix_y1);
         addLine(x0, y0, x1, y1);
@@ -663,24 +666,26 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     }
 
     @Override
-    public void curveTo(float x1, float y1,
-            float x2, float y2,
-            float x3, float y3)
+    public void curveTo(final float pix_x1, final float pix_y1,
+                        final float pix_x2, final float pix_y2,
+                        final float pix_x3, final float pix_y3)
     {
-        final float xe = tosubpixx(x3);
-        final float ye = tosubpixy(y3);
-        curve.set(x0, y0, tosubpixx(x1), tosubpixy(y1),
-                          tosubpixx(x2), tosubpixy(y2), xe, ye);
+        final float xe = tosubpixx(pix_x3);
+        final float ye = tosubpixy(pix_y3);
+        curve.set(x0, y0, tosubpixx(pix_x1), tosubpixy(pix_y1),
+                  tosubpixx(pix_x2), tosubpixy(pix_y2), xe, ye);
         curveBreakIntoLinesAndAdd(x0, y0, curve, xe, ye);
         x0 = xe;
         y0 = ye;
     }
 
     @Override
-    public void quadTo(float x1, float y1, float x2, float y2) {
-        final float xe = tosubpixx(x2);
-        final float ye = tosubpixy(y2);
-        curve.set(x0, y0, tosubpixx(x1), tosubpixy(y1), xe, ye);
+    public void quadTo(final float pix_x1, final float pix_y1,
+                       final float pix_x2, final float pix_y2)
+    {
+        final float xe = tosubpixx(pix_x2);
+        final float ye = tosubpixy(pix_y2);
+        curve.set(x0, y0, tosubpixx(pix_x1), tosubpixy(pix_y1), xe, ye);
         quadBreakIntoLinesAndAdd(x0, y0, curve, xe, ye);
         x0 = xe;
         y0 = ye;
@@ -688,9 +693,11 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
 
     @Override
     public void closePath() {
-        addLine(x0, y0, sx0, sy0);
-        x0 = sx0;
-        y0 = sy0;
+        if (x0 != sx0 || y0 != sy0) {
+            addLine(x0, y0, sx0, sy0);
+            x0 = sx0;
+            y0 = sy0;
+        }
     }
 
     @Override
@@ -1402,11 +1409,7 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
             // ie number of primitives:
 
             // fast check min width:
-            if (width <= RLE_MIN_WIDTH) {
-                useRLE = false;
-            } else {
-                useRLE = true;
-            }
+            useRLE = (width > RLE_MIN_WIDTH);
         }
     }
 
@@ -1482,5 +1485,15 @@ public final class RendererNoAA implements MarlinRenderer, MarlinConst {
     @Override
     public int getOutpixMaxY() {
         return bboxY1;
+    }
+
+    @Override
+    public float getOffsetX() {
+        return RDR_OFFSET_X;
+    }
+
+    @Override
+    public float getOffsetY() {
+        return RDR_OFFSET_Y;
     }
 }
