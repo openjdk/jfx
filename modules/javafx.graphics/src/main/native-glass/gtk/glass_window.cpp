@@ -568,6 +568,14 @@ bool WindowContextBase::is_visible() {
 bool WindowContextBase::set_view(jobject view) {
 
     if (jview) {
+        mainEnv->CallVoidMethod(jview, jViewNotifyMouse,
+                com_sun_glass_events_MouseEvent_EXIT,
+                com_sun_glass_events_MouseEvent_BUTTON_NONE,
+                0, 0,
+                0, 0,
+                0,
+                JNI_FALSE,
+                JNI_FALSE);
         mainEnv->DeleteGlobalRef(jview);
     }
 
