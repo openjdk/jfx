@@ -3298,7 +3298,7 @@ project(":web") {
                         if (IS_64) {
                             cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=x86_64"
                         } else {
-                            cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=x86 -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32"
+                            cmakeArgs = "$cmakeArgs -DCMAKE_SYSTEM_PROCESSOR=i586 -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32"
                         }
                     } else if (t.name.startsWith("arm")) {
                         fail("ARM target is not supported as of now.")
