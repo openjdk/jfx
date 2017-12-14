@@ -47,6 +47,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import static org.junit.Assert.fail;
 
+import test.util.Util;
+
 /*
  * Unit test for verifying DragPolicies.
  *
@@ -113,7 +115,6 @@ public class TabPaneDragPolicyTest {
         @Override
         public void onChanged(Change<? extends Tab> c) {
             listenerTestResult = false;
-            changeListenerLatch.countDown();
         };
     }
 
@@ -137,8 +138,7 @@ public class TabPaneDragPolicyTest {
     @Test
     public void testReorderTop() {
         expectedTab = tabs[1];
-        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
-        tabPane.setSide(Side.TOP);
+        setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.TOP);
         tabPane.getTabs().addListener(reorderListener);
         testReorder(DX, DY, 1, 0, false);
         tabPane.getTabs().removeListener(reorderListener);
@@ -151,8 +151,7 @@ public class TabPaneDragPolicyTest {
     @Test
     public void testReorderBottom() {
         expectedTab = tabs[1];
-        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
-        tabPane.setSide(Side.BOTTOM);
+        setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.BOTTOM);
         tabPane.getTabs().addListener(reorderListener);
         testReorder(DX, SCENE_HEIGHT - DY, 1, 0, false);
         tabPane.getTabs().removeListener(reorderListener);
@@ -165,8 +164,7 @@ public class TabPaneDragPolicyTest {
     @Test
     public void testReorderLeft() {
         expectedTab = tabs[1];
-        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
-        tabPane.setSide(Side.LEFT);
+        setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.LEFT);
         tabPane.getTabs().addListener(reorderListener);
         testReorder(DX, DY, 0, 1, false);
         tabPane.getTabs().removeListener(reorderListener);
@@ -179,8 +177,7 @@ public class TabPaneDragPolicyTest {
     @Test
     public void testReorderRight() {
         expectedTab = tabs[1];
-        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.REORDER);
-        tabPane.setSide(Side.RIGHT);
+        setDragPolicyAndSide(TabPane.TabDragPolicy.REORDER, Side.RIGHT);
         tabPane.getTabs().addListener(reorderListener);
         testReorder(SCENE_WIDTH - DX, DY, 0, 1, false);
         tabPane.getTabs().removeListener(reorderListener);
@@ -194,8 +191,7 @@ public class TabPaneDragPolicyTest {
     public void testFixedTop() {
         expectedTab = tabs[0];
         listenerTestResult = true;
-        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.FIXED);
-        tabPane.setSide(Side.TOP);
+        setDragPolicyAndSide(TabPane.TabDragPolicy.FIXED, Side.TOP);
         tabPane.getTabs().addListener(fixedListener);
         testReorder(DX, DY, 1, 0, true);
         tabPane.getTabs().removeListener(fixedListener);
@@ -209,8 +205,7 @@ public class TabPaneDragPolicyTest {
     public void testFixedBottom() {
         expectedTab = tabs[0];
         listenerTestResult = true;
-        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.FIXED);
-        tabPane.setSide(Side.BOTTOM);
+        setDragPolicyAndSide(TabPane.TabDragPolicy.FIXED, Side.BOTTOM);
         tabPane.getTabs().addListener(fixedListener);
         testReorder(DX, SCENE_HEIGHT - DY, 1, 0, true);
         tabPane.getTabs().removeListener(fixedListener);
@@ -224,8 +219,7 @@ public class TabPaneDragPolicyTest {
     public void testFixedLeft() {
         expectedTab = tabs[0];
         listenerTestResult = true;
-        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.FIXED);
-        tabPane.setSide(Side.LEFT);
+        setDragPolicyAndSide(TabPane.TabDragPolicy.FIXED, Side.LEFT);
         tabPane.getTabs().addListener(fixedListener);
         testReorder(DX, DY, 0, 1, true);
         tabPane.getTabs().removeListener(fixedListener);
@@ -239,8 +233,7 @@ public class TabPaneDragPolicyTest {
     public void testFixedRight() {
         expectedTab = tabs[0];
         listenerTestResult = true;
-        tabPane.setTabDragPolicy(TabPane.TabDragPolicy.FIXED);
-        tabPane.setSide(Side.RIGHT);
+        setDragPolicyAndSide(TabPane.TabDragPolicy.FIXED, Side.RIGHT);
         tabPane.getTabs().addListener(fixedListener);
         testReorder(SCENE_WIDTH - DX, DY, 0, 1, true);
         tabPane.getTabs().removeListener(fixedListener);
@@ -310,7 +303,11 @@ public class TabPaneDragPolicyTest {
 
         if (isFixed) {
             // For FIXED drag policy, tabs[0] should remain the first tab.
-            waitForLatch(changeListenerLatch, 1, "Timeout waiting ChangeListener to get called.");
+            try {
+                Thread.sleep(500); // Wait for ChangeListener to get called.
+            } catch (Exception ex) {
+                fail("Thread was interrupted." + ex);
+            }
             waitForLatch(latches[0], 5, "Timeout waiting tabs[0] to get selected.");
         } else {
             // For REORDER drag policy, tabs[1] should be the first tab.
@@ -395,10 +392,17 @@ public class TabPaneDragPolicyTest {
     public static void waitForLatch(CountDownLatch latch, int seconds, String msg) {
         try {
             if (!latch.await(seconds, TimeUnit.SECONDS)) {
-                System.out.println(msg);
+                fail(msg);
             }
         } catch (Exception ex) {
             fail("Unexpected exception: " + ex);
         }
+    }
+
+    public void setDragPolicyAndSide(TabPane.TabDragPolicy dragPolicy, Side side) {
+        Util.runAndWait(() -> {
+            tabPane.setTabDragPolicy(dragPolicy);
+            tabPane.setSide(side);
+        });
     }
 }
