@@ -136,7 +136,7 @@
 #COMPILE_TARGETS = all
 
 # The JDK_HOME must either be specified or will be inferred based on the JDK / JRE used to
-# execute Gradle. From the JDK_HOME are derived the JAVA, JAVAC, JAVAH, JAVADOC, and STUB_RUNTIME
+# execute Gradle. From the JDK_HOME are derived the JAVA, JAVAC, JAVADOC, and STUB_RUNTIME
 # properties, although each of these may be specified individually. In addition, the LIBRARY_STUB
 # property is derived from STUB_RUNTIME. Normally the gradle build
 # will work based on whatever "java" is being used to run gradle. It does this by looking for
@@ -147,7 +147,6 @@
 #JDK_HOME = /path/to/the/jdk
 #JAVA = /path/to/the/jdk/bin/java
 #JAVAC = /path/to/the/jdk/bin/javac
-#JAVAH = /path/to/the/jdk/bin/javah
 #JAVADOC = /path/to/the/jdk/bin/javadoc
 #STUB_RUNTIME = /path/to/the/jdk/jre
 #LIBRARY_STUB = /path/to/the/jdk/jre/xxx (different location depending on platform)

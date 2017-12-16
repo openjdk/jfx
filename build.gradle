@@ -31,8 +31,8 @@
  *      - some things worth automatically sanity checking:
  *          - are there images in the javadocs?
  *          - are all of the expected dylibs etc there?
- *  - Perform sanity checking to make sure a JDK exists with javac, javah, etc
- *  - Support building with no known JDK location, as long as javac, javah, etc are on the path
+ *  - Perform sanity checking to make sure a JDK exists with javac, etc
+ *  - Support building with no known JDK location, as long as javac, etc are on the path
  *  - Check all of the native flags. We're adding weight to some libs that don't need it, and so forth.
  *
  * Additional projects to work on as we go:
@@ -313,7 +313,6 @@ ext.JAVA_HOME = JDK_HOME
 
 defineProperty("JAVA", cygpath("$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"))
-defineProperty("JAVAH", cygpath("$JDK_HOME/bin/javah${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
 defineProperty("JDK_DOCS", "http://download.java.net/java/jdk9/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
@@ -1031,7 +1030,6 @@ if (COMPILE_TARGETS == null || COMPILE_TARGETS == "") {
 // Make sure JDK_HOME/bin/java exists
 if (!file(JAVA).exists()) throw new Exception("Missing or incorrect path to 'java': '$JAVA'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVAC).exists()) throw new Exception("Missing or incorrect path to 'javac': '$JAVAC'. Perhaps bad JDK_HOME? $JDK_HOME")
-if (!file(JAVAH).exists()) throw new Exception("Missing or incorrect path to 'javah': '$JAVAH'. Perhaps bad JDK_HOME? $JDK_HOME")
 if (!file(JAVADOC).exists()) throw new Exception("Missing or incorrect path to 'javadoc': '$JAVADOC'. Perhaps bad JDK_HOME? $JDK_HOME")
 
 // Determine the verion of Java in JDK_HOME. It looks like this:
@@ -1156,11 +1154,9 @@ if (UPDATE_STUB_CACHE) {
  *                                                                            *
  *                Definition of Native Code Compilation Tasks                 *
  *                                                                            *
- *    - JavaHeaderTask is used to run javah. The JAVAH property will point at *
- *      the version of javah to be used (i.e.: a path to javah)               *
  *    - CCTask compiles native code. Specifically it will compile .m, .c,     *
- *      .cpp, or .cc files. It uses the headers provided by the               *
- *      JavaHeaderTask plus additional platform specific headers. It will     *
+ *      .cpp, or .cc files. It uses the headers provided by running           *
+ *      'javac -h' plus additional platform specific headers. It will         *
  *      compile into .obj files.                                              *
  *    - LinkTask will perform native linking and create the .dll / .so /      *
  *      .dylib as necessary.                                                  *
@@ -1173,8 +1169,8 @@ if (UPDATE_STUB_CACHE) {
 ext.BUILD_SRC = rootProject.files("buildSrc/build/libs/buildSrc.jar")
 
 /**
- * Convenience method for creating javah, cc, link, and "native" tasks in the given project. These
- * tasks are parameterized by name, so that we can produce, for example, javahGlass, ccGlass, etc
+ * Convenience method for creating cc, link, and "native" tasks in the given project. These
+ * tasks are parameterized by name, so that we can produce, for example, ccGlass, etc
  * named tasks.
  *
  * @param project The project to add tasks to
@@ -1200,7 +1196,7 @@ void addNative(Project project, String name) {
     // of these root dirs, with the name of the dir being the name of the target
     def nativeRootDir = project.file("$project.buildDir/native/$name")
     def libRootDir = project.file("$project.buildDir/libs/$name")
-    // For each compile target, create a javah / cc / link triplet
+    // For each compile target, create a cc / link pair
     compileTargets { t ->
         def targetProperties = project.rootProject.ext[t.upper]
         def library = targetProperties.library
