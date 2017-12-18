@@ -109,6 +109,25 @@ String cygpath(String path) {
     return ret
 }
 
+/**
+ * Converts cygwin file paths for java executables to windows style
+ * executable paths by changing forward slashes to back slashes and
+ * adding the '.exe' extension.
+ * This method is safe to call from any platform, and will only do work if
+ * called on Windows (in all other cases it simply returns the supplied path).
+ *
+ * @param path the path to convert
+ * @return the path converted to windows style, if on windows, otherwise it
+ *         is the supplied path.
+ */
+String cygpathExe(String path) {
+    if (!IS_WINDOWS) return path;
+    if (path == null || "".equals(path)) return path;
+    String ret = path.replaceAll('/', '\\\\')
+    logger.info("Converting path '$path' via cygpath to "+ret)
+    return ret + ".exe"
+}
+
 void loadProperties(String sourceFileName) {
     def config = new Properties()
     def propFile = new File(sourceFileName)
@@ -311,9 +330,9 @@ defineProperty("JDK_HOME",
         javaHome) // we have to bail and set it to something and this is as good as any!
 ext.JAVA_HOME = JDK_HOME
 
-defineProperty("JAVA", cygpath("$JDK_HOME/bin/java${IS_WINDOWS ? '.exe' : ''}"))
-defineProperty("JAVAC", cygpath("$JDK_HOME/bin/javac${IS_WINDOWS ? '.exe' : ''}"))
-defineProperty("JAVADOC", cygpath("$JDK_HOME/bin/javadoc${IS_WINDOWS ? '.exe' : ''}"))
+defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
+defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
+defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
 defineProperty("JDK_DOCS", "http://download.java.net/java/jdk9/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
