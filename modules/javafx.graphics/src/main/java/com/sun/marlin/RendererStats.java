@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,10 +64,6 @@ public final class RendererStats implements MarlinConst {
         = new StatLong("cache.rowAAChunk");
     final StatLong stat_cache_tiles
         = new StatLong("cache.tiles");
-    final StatLong stat_rdr_poly_stack_curves
-        = new StatLong("renderer.poly.stack.curves");
-    final StatLong stat_rdr_poly_stack_types
-        = new StatLong("renderer.poly.stack.types");
     final StatLong stat_rdr_addLine
         = new StatLong("renderer.addLine");
     final StatLong stat_rdr_addLine_skip
@@ -104,15 +100,25 @@ public final class RendererStats implements MarlinConst {
         = new StatLong("renderer.crossings.bsearch");
     final StatLong stat_rdr_crossings_msorts
         = new StatLong("renderer.crossings.msorts");
+    final StatLong stat_str_polystack_curves
+        = new StatLong("stroker.polystack.curves");
+    final StatLong stat_str_polystack_types
+        = new StatLong("stroker.polystack.types");
+    final StatLong stat_cpd_polystack_curves
+        = new StatLong("closedPathDetector.polystack.curves");
+    final StatLong stat_cpd_polystack_types
+        = new StatLong("closedPathDetector.polystack.types");
+    final StatLong stat_pcf_idxstack_indices
+        = new StatLong("pathClipFilter.stack.indices");
     // growable arrays
     final StatLong stat_array_dasher_dasher
         = new StatLong("array.dasher.dasher.d_float");
     final StatLong stat_array_dasher_firstSegmentsBuffer
         = new StatLong("array.dasher.firstSegmentsBuffer.d_float");
-    final StatLong stat_array_stroker_polystack_curves
-        = new StatLong("array.stroker.polystack.curves.d_float");
-    final StatLong stat_array_stroker_polystack_curveTypes
-        = new StatLong("array.stroker.polystack.curveTypes.d_byte");
+    final StatLong stat_array_marlincache_rowAAChunk
+        = new StatLong("array.marlincache.rowAAChunk.resize");
+    final StatLong stat_array_marlincache_touchedTile
+        = new StatLong("array.marlincache.touchedTile.int");
     final StatLong stat_array_renderer_alphaline
         = new StatLong("array.renderer.alphaline.int");
     final StatLong stat_array_renderer_crossings
@@ -127,11 +133,19 @@ public final class RendererStats implements MarlinConst {
         = new StatLong("array.renderer.edgePtrs.int");
     final StatLong stat_array_renderer_aux_edgePtrs
         = new StatLong("array.renderer.aux_edgePtrs.int");
+    final StatLong stat_array_str_polystack_curves
+        = new StatLong("array.stroker.polystack.curves.d_float");
+    final StatLong stat_array_str_polystack_types
+        = new StatLong("array.stroker.polystack.curveTypes.d_byte");
+    final StatLong stat_array_cpd_polystack_curves
+        = new StatLong("array.closedPathDetector.polystack.curves.d_float");
+    final StatLong stat_array_cpd_polystack_types
+        = new StatLong("array.closedPathDetector.polystack.curveTypes.d_byte");
+    final StatLong stat_array_pcf_idxstack_indices
+        = new StatLong("array.pathClipFilter.stack.indices.d_int");
     // histograms
     final Histogram hist_rdr_edges_count
         = new Histogram("renderer.edges.count");
-    final Histogram hist_rdr_poly_stack_curves
-        = new Histogram("renderer.polystack.curves");
     final Histogram hist_rdr_crossings
         = new Histogram("renderer.crossings");
     final Histogram hist_rdr_crossings_ratio
@@ -142,17 +156,27 @@ public final class RendererStats implements MarlinConst {
         = new Histogram("renderer.crossings.msorts");
     final Histogram hist_rdr_crossings_msorts_adds
         = new Histogram("renderer.crossings.msorts.adds");
+    final Histogram hist_str_polystack_curves
+        = new Histogram("stroker.polystack.curves");
+    final Histogram hist_tile_generator_alpha
+        = new Histogram("tile_generator.alpha");
     final Histogram hist_tile_generator_encoding
         = new Histogram("tile_generator.encoding");
     final Histogram hist_tile_generator_encoding_dist
         = new Histogram("tile_generator.encoding.dist");
+    final Histogram hist_tile_generator_encoding_ratio
+        = new Histogram("tile_generator.encoding.ratio");
+    final Histogram hist_tile_generator_encoding_runLen
+        = new Histogram("tile_generator.encoding.runLen");
+    final Histogram hist_cpd_polystack_curves
+        = new Histogram("closedPathDetector.polystack.curves");
+    final Histogram hist_pcf_idxstack_indices
+        = new Histogram("pathClipFilter.stack.indices");
     // all stats
     final StatLong[] statistics = new StatLong[]{
         stat_cache_rowAA,
         stat_cache_rowAAChunk,
         stat_cache_tiles,
-        stat_rdr_poly_stack_types,
-        stat_rdr_poly_stack_curves,
         stat_rdr_addLine,
         stat_rdr_addLine_skip,
         stat_rdr_curveBreak,
@@ -171,26 +195,41 @@ public final class RendererStats implements MarlinConst {
         stat_rdr_crossings_sorts,
         stat_rdr_crossings_bsearch,
         stat_rdr_crossings_msorts,
+        stat_str_polystack_types,
+        stat_str_polystack_curves,
+        stat_cpd_polystack_curves,
+        stat_cpd_polystack_types,
+        stat_pcf_idxstack_indices,
         hist_rdr_edges_count,
-        hist_rdr_poly_stack_curves,
         hist_rdr_crossings,
         hist_rdr_crossings_ratio,
         hist_rdr_crossings_adds,
         hist_rdr_crossings_msorts,
         hist_rdr_crossings_msorts_adds,
+        hist_tile_generator_alpha,
         hist_tile_generator_encoding,
         hist_tile_generator_encoding_dist,
+        hist_tile_generator_encoding_ratio,
+        hist_tile_generator_encoding_runLen,
+        hist_str_polystack_curves,
+        hist_cpd_polystack_curves,
+        hist_pcf_idxstack_indices,
         stat_array_dasher_dasher,
         stat_array_dasher_firstSegmentsBuffer,
-        stat_array_stroker_polystack_curves,
-        stat_array_stroker_polystack_curveTypes,
+        stat_array_marlincache_rowAAChunk,
+        stat_array_marlincache_touchedTile,
         stat_array_renderer_alphaline,
         stat_array_renderer_crossings,
         stat_array_renderer_aux_crossings,
         stat_array_renderer_edgeBuckets,
         stat_array_renderer_edgeBucketCounts,
         stat_array_renderer_edgePtrs,
-        stat_array_renderer_aux_edgePtrs
+        stat_array_renderer_aux_edgePtrs,
+        stat_array_str_polystack_curves,
+        stat_array_str_polystack_types,
+        stat_array_cpd_polystack_curves,
+        stat_array_cpd_polystack_types,
+        stat_array_pcf_idxstack_indices
     };
     // monitors
     final Monitor mon_pre_getAATileGenerator

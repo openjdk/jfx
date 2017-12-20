@@ -46,14 +46,14 @@ public final class DMarlinRenderingEngine implements MarlinConst
     }
 
     static {
-        if (PathIterator.WIND_NON_ZERO != DMarlinRenderer.WIND_NON_ZERO ||
-            PathIterator.WIND_EVEN_ODD != DMarlinRenderer.WIND_EVEN_ODD ||
-            BasicStroke.JOIN_MITER != DStroker.JOIN_MITER ||
-            BasicStroke.JOIN_ROUND != DStroker.JOIN_ROUND ||
-            BasicStroke.JOIN_BEVEL != DStroker.JOIN_BEVEL ||
-            BasicStroke.CAP_BUTT != DStroker.CAP_BUTT ||
-            BasicStroke.CAP_ROUND != DStroker.CAP_ROUND ||
-            BasicStroke.CAP_SQUARE != DStroker.CAP_SQUARE)
+        if (PathIterator.WIND_NON_ZERO != WIND_NON_ZERO ||
+            PathIterator.WIND_EVEN_ODD != WIND_EVEN_ODD ||
+            BasicStroke.JOIN_MITER != JOIN_MITER ||
+            BasicStroke.JOIN_ROUND != JOIN_ROUND ||
+            BasicStroke.JOIN_BEVEL != JOIN_BEVEL ||
+            BasicStroke.CAP_BUTT != CAP_BUTT ||
+            BasicStroke.CAP_ROUND != CAP_ROUND ||
+            BasicStroke.CAP_SQUARE != CAP_SQUARE)
         {
             throw new InternalError("mismatched renderer constants");
         }
@@ -178,6 +178,10 @@ public final class DMarlinRenderingEngine implements MarlinConst
         // optimisation parameters
         logInfo("prism.marlin.useSimplifier    = "
                 + MarlinConst.USE_SIMPLIFIER);
+        logInfo("prism.marlin.clip             = "
+                + MarlinProperties.isDoClip());
+        logInfo("prism.marlin.clip.runtime.enable = "
+                + MarlinProperties.isDoClipRuntimeFlag());
 
         // debugging parameters
         logInfo("prism.marlin.doStats          = "

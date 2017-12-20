@@ -33,8 +33,10 @@ import com.sun.javafx.geom.Rectangle;
 import com.sun.javafx.geom.Shape;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.marlin.MarlinConst;
+import com.sun.marlin.MarlinProperties;
 import com.sun.marlin.MarlinRenderer;
 import com.sun.marlin.RendererContext;
+import com.sun.marlin.Stroker;
 import com.sun.marlin.TransformingPathConsumer2D;
 import com.sun.prism.BasicStroke;
 
@@ -44,6 +46,13 @@ public final class MarlinPrismUtils {
 
     static final float UPPER_BND = Float.MAX_VALUE / 2.0f;
     static final float LOWER_BND = -UPPER_BND;
+
+    static final boolean DO_CLIP = MarlinProperties.isDoClip();
+    static final boolean DO_CLIP_FILL = true;
+
+    static final boolean DO_TRACE_PATH = false;
+
+    static final boolean DO_CLIP_RUNTIME_ENABLE = MarlinProperties.isDoClipRuntimeFlag();
 
     /**
      * Private constructor to prevent instantiation.
@@ -55,7 +64,7 @@ public final class MarlinPrismUtils {
         return Math.abs(num) < 2.0d * Math.ulp(num);
     }
 
-    private static PathConsumer2D initPipeline(
+    private static PathConsumer2D initStroker(
             final RendererContext rdrCtx,
             final BasicStroke stroke,
             final float lineWidth,
@@ -80,64 +89,75 @@ public final class MarlinPrismUtils {
         int dashLen = -1;
         boolean recycleDashes = false;
         float scale = 1.0f;
-        float width = 0.0f, dashphase = 0.0f;
-        float[] dashes = null;
+        float width = lineWidth;
+        float[] dashes = stroke.getDashArray();
+        float dashphase = stroke.getDashPhase();
 
-        if (stroke != null) {
-            width = lineWidth;
-            dashes = stroke.getDashArray();
-            dashphase = stroke.getDashPhase();
+        if ((tx != null) && !tx.isIdentity()) {
+            final double a = tx.getMxx();
+            final double b = tx.getMxy();
+            final double c = tx.getMyx();
+            final double d = tx.getMyy();
 
-            if ((tx != null) && !tx.isIdentity()) {
-                final double a = tx.getMxx();
-                final double b = tx.getMxy();
-                final double c = tx.getMyx();
-                final double d = tx.getMyy();
+            // If the transform is a constant multiple of an orthogonal transformation
+            // then every length is just multiplied by a constant, so we just
+            // need to transform input paths to stroker and tell stroker
+            // the scaled width. This condition is satisfied if
+            // a*b == -c*d && a*a+c*c == b*b+d*d. In the actual check below, we
+            // leave a bit of room for error.
+            if (nearZero(a*b + c*d) && nearZero(a*a + c*c - (b*b + d*d))) {
+                scale = (float) Math.sqrt(a*a + c*c);
 
-                // If the transform is a constant multiple of an orthogonal transformation
-                // then every length is just multiplied by a constant, so we just
-                // need to transform input paths to stroker and tell stroker
-                // the scaled width. This condition is satisfied if
-                // a*b == -c*d && a*a+c*c == b*b+d*d. In the actual check below, we
-                // leave a bit of room for error.
-                if (nearZero(a*b + c*d) && nearZero(a*a + c*c - (b*b + d*d))) {
-                    scale = (float) Math.sqrt(a*a + c*c);
-
-                    if (dashes != null) {
-                        recycleDashes = true;
-                        dashLen = dashes.length;
-                        dashes = rdrCtx.dasher.copyDashArray(dashes);
-                        for (int i = 0; i < dashLen; i++) {
-                            dashes[i] *= scale;
-                        }
-                        dashphase *= scale;
+                if (dashes != null) {
+                    recycleDashes = true;
+                    dashLen = dashes.length;
+                    dashes = rdrCtx.dasher.copyDashArray(dashes);
+                    for (int i = 0; i < dashLen; i++) {
+                        dashes[i] *= scale;
                     }
-                    width *= scale;
-
-                    // by now strokerat == null. Input paths to
-                    // stroker (and maybe dasher) will have the full transform tx
-                    // applied to them and nothing will happen to the output paths.
-                } else {
-                    strokerTx = tx;
-
-                    // by now strokerat == tx. Input paths to
-                    // stroker (and maybe dasher) will have the full transform tx
-                    // applied to them, then they will be normalized, and then
-                    // the inverse of *only the non translation part of tx* will
-                    // be applied to the normalized paths. This won't cause problems
-                    // in stroker, because, suppose tx = T*A, where T is just the
-                    // translation part of tx, and A is the rest. T*A has already
-                    // been applied to Stroker/Dasher's input. Then Ainv will be
-                    // applied. Ainv*T*A is not equal to T, but it is a translation,
-                    // which means that none of stroker's assumptions about its
-                    // input will be violated. After all this, A will be applied
-                    // to stroker's output.
+                    dashphase *= scale;
                 }
+                width *= scale;
+
+                // by now strokerat == null. Input paths to
+                // stroker (and maybe dasher) will have the full transform tx
+                // applied to them and nothing will happen to the output paths.
+            } else {
+                strokerTx = tx;
+
+                // by now strokerat == tx. Input paths to
+                // stroker (and maybe dasher) will have the full transform tx
+                // applied to them, then they will be normalized, and then
+                // the inverse of *only the non translation part of tx* will
+                // be applied to the normalized paths. This won't cause problems
+                // in stroker, because, suppose tx = T*A, where T is just the
+                // translation part of tx, and A is the rest. T*A has already
+                // been applied to Stroker/Dasher's input. Then Ainv will be
+                // applied. Ainv*T*A is not equal to T, but it is a translation,
+                // which means that none of stroker's assumptions about its
+                // input will be violated. After all this, A will be applied
+                // to stroker's output.
             }
+        }
+
+        // Get renderer offsets:
+        float rdrOffX = 0.0f, rdrOffY = 0.0f;
+
+        if (rdrCtx.doClip && (tx != null)) {
+            final MarlinRenderer renderer = (MarlinRenderer)out;
+            rdrOffX = renderer.getOffsetX();
+            rdrOffY = renderer.getOffsetY();
         }
 
         // Prepare the pipeline:
         PathConsumer2D pc = out;
+
+        final TransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
+
+        if (DO_TRACE_PATH) {
+            // trace Stroker:
+            pc = transformerPC2D.traceStroker(pc);
+        }
 
         if (MarlinConst.USE_SIMPLIFIER) {
             // Use simplifier after stroker before Renderer
@@ -145,23 +165,34 @@ public final class MarlinPrismUtils {
             pc = rdrCtx.simplifier.init(pc);
         }
 
-        final TransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
+        // deltaTransformConsumer may adjust the clip rectangle:
+        pc = transformerPC2D.deltaTransformConsumer(pc, strokerTx, rdrOffX, rdrOffY);
 
-        if (stroke != null) {
-            pc = transformerPC2D.deltaTransformConsumer(pc, strokerTx);
+        // stroker will adjust the clip rectangle (width / miter limit):
+        pc = rdrCtx.stroker.init(pc, width, stroke.getEndCap(),
+                stroke.getLineJoin(), stroke.getMiterLimit(),
+                scale, rdrOffX, rdrOffY);
 
-            pc = rdrCtx.stroker.init(pc, width, stroke.getEndCap(),
-                    stroke.getLineJoin(), stroke.getMiterLimit());
-
-            if (dashes != null) {
-                if (!recycleDashes) {
-                    dashLen = dashes.length;
-                }
-                pc = rdrCtx.dasher.init(pc, dashes, dashLen, dashphase, recycleDashes);
+        if (dashes != null) {
+            if (!recycleDashes) {
+                dashLen = dashes.length;
             }
-            pc = transformerPC2D.inverseDeltaTransformConsumer(pc, strokerTx);
-        }
+            pc = rdrCtx.dasher.init(pc, dashes, dashLen, dashphase, recycleDashes);
+        } else if (rdrCtx.doClip && (stroke.getEndCap() != Stroker.CAP_BUTT)) {
+            if (DO_TRACE_PATH) {
+                pc = transformerPC2D.traceClosedPathDetector(pc);
+            }
 
+            // If no dash and clip is enabled:
+            // detect closedPaths (polygons) for caps
+            pc = transformerPC2D.detectClosedPath(pc);
+        }
+        pc = transformerPC2D.inverseDeltaTransformConsumer(pc, strokerTx);
+
+        if (DO_TRACE_PATH) {
+            // trace Input:
+            pc = transformerPC2D.traceInput(pc);
+        }
         /*
          * Pipeline seems to be:
          * shape.getPathIterator(tx)
@@ -185,18 +216,52 @@ public final class MarlinPrismUtils {
             final int piRule,
             final MarlinRenderer renderer)
     {
-        final int oprule = ((stroke == null) && (piRule == PathIterator.WIND_EVEN_ODD)) ?
-            MarlinRenderer.WIND_EVEN_ODD : MarlinRenderer.WIND_NON_ZERO;
+        if (DO_CLIP || (DO_CLIP_RUNTIME_ENABLE && MarlinProperties.isDoClipAtRuntime())) {
+            // Define the initial clip bounds:
+            final float[] clipRect = rdrCtx.clipRect;
 
-        renderer.init(clip.x, clip.y, clip.width, clip.height, oprule);
+            clipRect[0] = clip.y;
+            clipRect[1] = clip.y + clip.height;
+            clipRect[2] = clip.x;
+            clipRect[3] = clip.x + clip.width;
 
-        float lw = 0.0f;
-
-        if (stroke != null) {
-            lw = stroke.getLineWidth();
+            // Enable clipping:
+            rdrCtx.doClip = true;
         }
 
-        return initPipeline(rdrCtx, stroke, lw, tx, renderer);
+        if (stroke != null) {
+            renderer.init(clip.x, clip.y, clip.width, clip.height,
+                          MarlinConst.WIND_NON_ZERO);
+
+            return initStroker(rdrCtx, stroke, stroke.getLineWidth(), tx, renderer);
+        } else {
+            // Filler:
+            final int oprule = (piRule == PathIterator.WIND_EVEN_ODD) ?
+                MarlinConst.WIND_EVEN_ODD : MarlinConst.WIND_NON_ZERO;
+
+            renderer.init(clip.x, clip.y, clip.width, clip.height, oprule);
+
+            PathConsumer2D pc = renderer;
+
+            final TransformingPathConsumer2D transformerPC2D = rdrCtx.transformerPC2D;
+
+            if (DO_CLIP_FILL && rdrCtx.doClip) {
+                float rdrOffX = renderer.getOffsetX();
+                float rdrOffY = renderer.getOffsetY();
+
+                if (DO_TRACE_PATH) {
+                    // trace Filler:
+                    pc = rdrCtx.transformerPC2D.traceFiller(pc);
+                }
+                pc = rdrCtx.transformerPC2D.pathClipper(pc, rdrOffX, rdrOffY);
+            }
+
+            if (DO_TRACE_PATH) {
+                // trace Input:
+                pc = transformerPC2D.traceInput(pc);
+            }
+            return pc;
+        }
     }
 
     public static MarlinRenderer setupRenderer(
@@ -232,7 +297,7 @@ public final class MarlinPrismUtils {
             final float lineWidth,
             final PathConsumer2D out)
     {
-        final PathConsumer2D pc2d = initPipeline(rdrCtx, stroke, lineWidth, null, out);
+        final PathConsumer2D pc2d = initStroker(rdrCtx, stroke, lineWidth, null, out);
 
         if (shape instanceof Path2D) {
             feedConsumer(rdrCtx, (Path2D)shape, null, pc2d);

@@ -72,6 +72,12 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
     public final Dasher dasher;
     // flag indicating the shape is stroked (1) or filled (0)
     int stroking = 0;
+    // flag indicating to clip the shape
+    public boolean doClip = false;
+    // flag indicating if the path is closed or not (in advance) to handle properly caps
+    boolean closedPath = false;
+    // clip rectangle (ymin, ymax, xmin, xmax):
+    public final float[] clipRect = new float[4];
 
 // MarlinFX specific:
     // dirty bbox rectangle
@@ -80,14 +86,14 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
     public MaskMarlinAlphaConsumer consumer = null;
 
     // Array caches:
-    /* clean int[] cache (zero-filled) = 4 refs */
-    private final IntArrayCache cleanIntCache = new IntArrayCache(true, 4);
-    /* dirty int[] cache = 4 refs */
-    private final IntArrayCache dirtyIntCache = new IntArrayCache(false, 4);
-    /* dirty float[] cache = 3 refs */
-    private final FloatArrayCache dirtyFloatCache = new FloatArrayCache(false, 3);
-    /* dirty byte[] cache = 1 ref */
-    private final ByteArrayCache dirtyByteCache = new ByteArrayCache(false, 1);
+    /* clean int[] cache (zero-filled) = 5 refs */
+    private final IntArrayCache cleanIntCache = new IntArrayCache(true, 5);
+    /* dirty int[] cache = 5 refs */
+    private final IntArrayCache dirtyIntCache = new IntArrayCache(false, 5);
+    /* dirty float[] cache = 4 refs (2 polystack) */
+    private final FloatArrayCache dirtyFloatCache = new FloatArrayCache(false, 4);
+    /* dirty byte[] cache = 2 ref (2 polystack) */
+    private final ByteArrayCache dirtyByteCache = new ByteArrayCache(false, 2);
 
     // RendererContext statistics
     final RendererStats stats;
@@ -115,7 +121,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
         }
 
         // MarlinRenderingEngine.TransformingPathConsumer2D
-        transformerPC2D = new TransformingPathConsumer2D();
+        transformerPC2D = new TransformingPathConsumer2D(this);
 
         // Renderer shared memory:
         rdrMem = new RendererSharedMemory(this);
@@ -138,7 +144,10 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
             }
             stats.totalOffHeap = 0L;
         }
-        stroking = 0;
+        stroking   = 0;
+        doClip     = false;
+        closedPath = false;
+
         // if context is maked as DIRTY:
         if (dirty) {
             // may happen if an exception if thrown in the pipeline processing:
@@ -160,7 +169,7 @@ public final class RendererContext extends ReentrantContext implements MarlinCon
 
         // create a new Path2D ?
         if (p2d == null) {
-            p2d = new Path2D(Path2D.WIND_NON_ZERO, INITIAL_EDGES_COUNT); // 32K
+            p2d = new Path2D(WIND_NON_ZERO, INITIAL_EDGES_COUNT); // 32K
 
             // update weak reference:
             refPath2D = new WeakReference<Path2D>(p2d);

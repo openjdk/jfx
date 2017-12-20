@@ -285,7 +285,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
         AtomicReference<IOException> ioe = new AtomicReference<>();
         final String finalVsVer = vsVer;
         try (Stream<Path> files = Files.list(runtimeDir.resolve("bin"))) {
-            files.filter(p -> Pattern.matches("(vcruntime|msvcp)\\d\\d\\d.dll", p.toFile().getName().toLowerCase()))
+            files.filter(p -> Pattern.matches("^(vcruntime|msvcp|msvcr|ucrtbase|api-ms-win-).*\\.dll$", p.toFile().getName().toLowerCase()))
                  .filter(p -> !p.toString().toLowerCase().endsWith(finalVsVer + ".dll"))
                  .forEach(p -> {
                     try {

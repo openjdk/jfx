@@ -215,6 +215,14 @@ public final class UIClientImpl implements UIClient {
         return "";
     }
 
+    @Override public boolean canRunBeforeUnloadConfirmPanel() {
+        return false;
+    }
+
+    @Override public boolean runBeforeUnloadConfirmPanel(String message) {
+        return false;
+    }
+
     @Override public String[] chooseFile(String initialFileName, boolean multiple, String mimeFilters) {
         // get the toplevel window
         Window win = null;

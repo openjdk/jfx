@@ -51,6 +51,7 @@ import javafx.css.StyleableProperty;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.event.WeakEventHandler;
+import javafx.geometry.Bounds;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleAttribute;
@@ -318,7 +319,8 @@ public class MenuBarSkin extends SkinBase<MenuBar> {
 
         // When we click else where in the scene - menu selection should be cleared.
         mouseEventHandler = t -> {
-            if (!container.localToScreen(container.getLayoutBounds()).contains(t.getScreenX(), t.getScreenY())) {
+            Bounds containerScreenBounds = container.localToScreen(container.getLayoutBounds());
+            if (containerScreenBounds == null || !containerScreenBounds.contains(t.getScreenX(), t.getScreenY())) {
                 unSelectMenus();
             }
         };
