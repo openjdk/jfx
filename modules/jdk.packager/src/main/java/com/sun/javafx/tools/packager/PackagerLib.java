@@ -30,6 +30,7 @@ import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.UnsupportedPlatformException;
+import com.oracle.tools.packager.IOUtils;
 import com.sun.javafx.tools.packager.JarSignature.InputStreamSource;
 import com.sun.javafx.tools.packager.bundlers.BundleParams;
 import com.sun.javafx.tools.packager.bundlers.Bundler.BundleType;
@@ -47,9 +48,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.security.InvalidKeyException;
@@ -97,20 +95,6 @@ public class PackagerLib {
 
 
     private enum Filter {ALL, CLASSES_ONLY, RESOURCES}
-
-    private ClassLoader classLoader;
-
-    private ClassLoader getClassLoader() throws PackagerException {
-        if (classLoader == null) {
-            try {
-                URL[] urls = {new URL(getJfxrtPath())};
-                classLoader = URLClassLoader.newInstance(urls);
-            } catch (MalformedURLException ex) {
-                throw new PackagerException(ex, "ERR_CantFindRuntime");
-            }
-        }
-        return classLoader;
-    }
 
     //  if set of input resources consist of SINGLE element and
     //   this element is jar file then we expect this to be request to
@@ -517,14 +501,6 @@ public class PackagerLib {
 
         final File javac = new File(new File(jHome), "bin/javac" + exe);
 
-        String jfxHome = System.getenv("JAVAFX_HOME");
-        if (jfxHome == null) {
-            jfxHome = System.getProperty("javafx.home");
-        }
-        if (jfxHome == null) {
-            throw new PackagerException("ERR_MissingJavaFxHome");
-        }
-
         final String srcDirName = "src";
         final String compiledDirName = "compiled";
         final String distDirName = "dist";
@@ -542,23 +518,31 @@ public class PackagerLib {
             try (FileWriter sources = new FileWriter(tmpFile)) {
                 scanAndCopy(new PackagerResource(new File(srcDirName), "."), sources, compiledDir);
             }
-            String classpath = jfxHome + "/../lib/jfxrt.jar";
-            if (makeAllParams.classpath != null) {
-                classpath += File.pathSeparator + makeAllParams.classpath;
-            }
+
             if (makeAllParams.verbose) {
                 Log.info("Executing javac:");
                 Log.infof("%s %s %s %s %s %s%n",
                         javac.getAbsolutePath(),
                         "-d", compiledDirName,
-                        "-cp", classpath,
+                        "-cp", makeAllParams.classpath != null ?
+                                makeAllParams.classpath : "<null>",
                         "@" + tmpFile.getAbsolutePath());
             }
-            int ret = execute(
-                    javac.getAbsolutePath(),
-                    "-d", compiledDirName,
-                    "-cp", classpath,
-                    "@" + tmpFile.getAbsolutePath());
+
+            int ret = -1;
+            if (makeAllParams.classpath != null) {
+                ret = IOUtils.execute(
+                        javac.getAbsolutePath(),
+                        "-d", compiledDirName,
+                        "-cp", makeAllParams.classpath,
+                        "@" + tmpFile.getAbsolutePath());
+            } else {
+                ret = IOUtils.execute(
+                        javac.getAbsolutePath(),
+                        "-d", compiledDirName,
+                        "@" + tmpFile.getAbsolutePath());
+            }
+
             if (ret != 0) {
                 throw new PackagerException("ERR_JavacFailed", Integer.toString(ret));
             }
@@ -595,46 +579,6 @@ public class PackagerLib {
         generateDeploymentPackages(dp);
 
         deleteDirectory(compiledDir);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static int execute(Object ... args) throws IOException, InterruptedException {
-        final ArrayList<String> argsList = new ArrayList<>();
-        for (Object a : args) {
-            if (a instanceof List) {
-                argsList.addAll((List)a);
-            } else if (a instanceof String) {
-                argsList.add((String)a);
-            }
-        }
-        final Process p = Runtime.getRuntime().exec(argsList.toArray(new String[argsList.size()]));
-        final BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        Thread t = new Thread(() -> {
-            try {
-                String line;
-                while ((line = in.readLine()) != null) {
-                    Log.info(line);
-                }
-            } catch (IOException ioe) {
-                com.oracle.tools.packager.Log.verbose(ioe);
-            }
-        });
-        t.setDaemon(true);
-        t.start();
-        final BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-        t = new Thread(() -> {
-            try {
-                String line;
-                while ((line = err.readLine()) != null) {
-                    Log.error(line);
-                }
-            } catch (IOException ioe) {
-                Log.verbose(ioe);
-            }
-        });
-        t.setDaemon(true);
-        t.start();
-        return p.waitFor();
     }
 
     private static void scanAndCopy(PackagerResource dir, Writer out, File outdir) throws PackagerException {
@@ -833,34 +777,6 @@ public class PackagerLib {
         }
     }
 
-    // Returns path to jfxrt.jar relatively to jar containing PackagerLib.class
-    private String getJfxrtPath() throws PackagerException {
-        String theClassFile = "PackagerLib.class";
-        Class theClass = PackagerLib.class;
-        String classUrl = theClass.getResource(theClassFile).toString();
-
-        if (!classUrl.startsWith("jar:file:") || !classUrl.contains("!")){
-            throw new PackagerException("ERR_CantFindRuntime");
-        }
-
-        // Strip everything after and including the "!"
-        classUrl = classUrl.substring(0, classUrl.lastIndexOf("!"));
-        // Strip everything after the last "/" or "\" to get rid of the jar filename
-        int lastIndexOfSlash = Math.max(classUrl.lastIndexOf("/"), classUrl.lastIndexOf("\\"));
-
-        return classUrl.substring(0, lastIndexOfSlash)
-                + "/../lib/jfxrt.jar!/";
-    }
-
-    private Class loadClassFromRuntime(String className) throws PackagerException {
-        try {
-            ClassLoader cl = getClassLoader();
-            return cl.loadClass(className);
-        } catch (ClassNotFoundException ex) {
-            throw new PackagerException(ex, "ERR_CantFindRuntime");
-        }
-    }
-
     private void createBinaryCss(String cssFile, String binCssFile) throws PackagerException {
         String ofname = (binCssFile != null)
                 ? binCssFile
@@ -874,14 +790,15 @@ public class PackagerLib {
         }
 
         // Using reflection because CSS parser is part of runtime
-        // and we want to avoid dependency on jfxrt during build
+        // and we want to avoid dependency on javafx.graphics
         Class<?> clazz;
         try {
             clazz = Class.forName("com.sun.javafx.css.parser.Css2Bin");
         } catch (ClassNotFoundException e) {
-            // class was not found with default class loader, trying to
-            // locate it by loading from jfxrt.jar
-            clazz = loadClassFromRuntime("com.sun.javafx.css.parser.Css2Bin");
+            Throwable causeEx = e.getCause();
+            String cause = (causeEx != null) ? causeEx.getMessage()
+                    : bundle.getString("ERR_UnknownReason");
+            throw new PackagerException(e, "ERR_BSSConversionFailed", cssFile, cause);
         }
 
         try {

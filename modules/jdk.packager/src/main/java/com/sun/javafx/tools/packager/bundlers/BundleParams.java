@@ -356,34 +356,48 @@ public class BundleParams {
         return ARGUMENTS.fetchFrom(params);
     }
 
-    //Validation approach:
+    // Validation approach:
+    //  - javac and
+    //
+    //  - /jmods dir
+    // or
     //  - JRE marker (rt.jar)
     //  - FX marker (jfxrt.jar)
     //  - JDK marker (tools.jar)
     private static boolean checkJDKRoot(File jdkRoot) {
-        File rtJar = new File(jdkRoot, "jre/lib/rt.jar");
-        if (!rtJar.exists()) {
-            Log.verbose("rt.jar is not found at " + rtJar.getAbsolutePath());
+        String exe = (Platform.getPlatform() == Platform.WINDOWS) ? ".exe" : "";
+        File javac = new File(jdkRoot, "bin/javac" + exe);
+        if (!javac.exists()) {
+            Log.verbose("javac is not found at " + javac.getAbsolutePath());
             return false;
         }
 
-        File jfxJar = new File(jdkRoot, "jre/lib/ext/jfxrt.jar");
-        if (!jfxJar.exists()) {
-            //Try again with new location
-            jfxJar = new File(jdkRoot, "jre/lib/jfxrt.jar");
+        File jmods = new File(jdkRoot, "jmods");
+        if (!jmods.exists()) {
+            // old non-modular JDKs
+            File rtJar = new File(jdkRoot, "jre/lib/rt.jar");
+            if (!rtJar.exists()) {
+                Log.verbose("rt.jar is not found at " + rtJar.getAbsolutePath());
+                return false;
+            }
+
+            File jfxJar = new File(jdkRoot, "jre/lib/ext/jfxrt.jar");
             if (!jfxJar.exists()) {
-                Log.verbose("jfxrt.jar is not found at " + jfxJar.getAbsolutePath());
+                //Try again with new location
+                jfxJar = new File(jdkRoot, "jre/lib/jfxrt.jar");
+                if (!jfxJar.exists()) {
+                    Log.verbose("jfxrt.jar is not found at " + jfxJar.getAbsolutePath());
+                    return false;
+                }
+            }
+
+
+            File toolsJar = new File(jdkRoot, "lib/tools.jar");
+            if (!toolsJar.exists()) {
+                Log.verbose("tools.jar is not found at " + toolsJar.getAbsolutePath());
                 return false;
             }
         }
-
-
-        File toolsJar = new File(jdkRoot, "lib/tools.jar");
-        if (!toolsJar.exists()) {
-            Log.verbose("tools.jar is not found at " + toolsJar.getAbsolutePath());
-            return false;
-        }
-
         return true;
     }
 

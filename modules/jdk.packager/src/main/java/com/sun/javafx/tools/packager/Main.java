@@ -74,6 +74,11 @@ public class Main {
     private static boolean signJar = false;
     private static boolean makeAll = false;
 
+    private static final String CREATE_BSS_INTERNAL = "-createbss_internal";
+    private static final String CREATE_BSS_EXTERNAL = "-createbss";
+    private static final String CREATE_JAR_INTERNAL = "-createjar_internal";
+    private static final String CREATE_JAR_EXTERNAL = "-createjar";
+
     private static void addResources(CommonParams commonParams,
                                      String srcdir, String srcfiles) {
         if (srcdir == null || "".equals(srcdir)) {
@@ -206,8 +211,53 @@ public class Main {
         return status;
     }
 
+    private static int relaunchJavapackager(String... args) throws Exception {
+
+        final String exe = (Platform.getPlatform() == Platform.WINDOWS) ? ".exe" : "";
+        String javaHome = System.getProperty("java.home");
+        if (javaHome == null) {
+            throw new PackagerException("ERR_MissingJavaHome");
+        }
+
+        final File java = new File(new File(javaHome), "bin/java" + exe);
+
+        // compose new arguments
+        List<String> newArgs = new ArrayList<>();
+        newArgs.add(java.getAbsolutePath());
+        newArgs.add("--add-modules");
+        newArgs.add("javafx.graphics");
+        newArgs.add("-m");
+        newArgs.add("jdk.packager/com.sun.javafx.tools.packager.Main");
+
+        for (String arg : args) {
+            if (arg.equalsIgnoreCase(CREATE_BSS_EXTERNAL)) {
+                newArgs.add(CREATE_BSS_INTERNAL);
+            } else if (arg.equalsIgnoreCase(CREATE_JAR_EXTERNAL)) {
+                newArgs.add(CREATE_JAR_INTERNAL);
+            } else {
+                newArgs.add(arg);
+            }
+        }
+
+        int ret = IOUtils.execute(newArgs);
+        if (ret != 0) {
+            throw new PackagerException(
+                    "Error: Conversion of CSS files to binary form failed");
+        }
+
+        return ret;
+    }
+
     @SuppressWarnings("deprecation")
     public static int run(String... args) throws Exception {
+
+       for (String arg : args) {
+            if (arg.equalsIgnoreCase(CREATE_BSS_EXTERNAL) ||
+                arg.equalsIgnoreCase(CREATE_JAR_EXTERNAL)) {
+                return relaunchJavapackager(args);
+            }
+        }
+
         BundleType bundleType = BundleType.NONE;
 
         if (args.length == 0 || args.length == 1 && args[0].equals("-help")) {
@@ -225,7 +275,7 @@ public class Main {
             String srcfiles = null;
 
             try {
-                if (args[0].equalsIgnoreCase("-createjar")) {
+                if (args[0].equalsIgnoreCase(CREATE_JAR_INTERNAL)) {
                     Log.info("Warning: -createjar has been deprecated and will be removed in a future release.");
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];
@@ -415,7 +465,7 @@ public class Main {
                     }
 
                     addResources(deployParams, srcdir, srcfiles);
-                } else if (args[0].equalsIgnoreCase("-createbss")) {
+                } else if (args[0].equalsIgnoreCase(CREATE_BSS_INTERNAL)) {
                     Log.info("Warning: -createbss has been deprecated and will be removed in a future release.");
                     for (int i = 1; i < args.length; i++) {
                         String arg = args[i];

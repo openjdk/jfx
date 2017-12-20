@@ -34,6 +34,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @deprecated use {@link ToolProvider} to locate the {@code "javapackager"} tool instead.
@@ -196,6 +198,46 @@ public class IOUtils {
             }
         } catch (InterruptedException ex) {
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static int execute(Object ... args) throws IOException, InterruptedException {
+        final ArrayList<String> argsList = new ArrayList<>();
+        for (Object a : args) {
+            if (a instanceof List) {
+                argsList.addAll((List)a);
+            } else if (a instanceof String) {
+                argsList.add((String)a);
+            }
+        }
+        final Process p = Runtime.getRuntime().exec(argsList.toArray(new String[argsList.size()]));
+        final BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        Thread t = new Thread(() -> {
+            try {
+                String line;
+                while ((line = in.readLine()) != null) {
+                    Log.info(line);
+                }
+            } catch (IOException ioe) {
+                com.oracle.tools.packager.Log.verbose(ioe);
+            }
+        });
+        t.setDaemon(true);
+        t.start();
+        final BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+        t = new Thread(() -> {
+            try {
+                String line;
+                while ((line = err.readLine()) != null) {
+                    Log.error(line);
+                }
+            } catch (IOException ioe) {
+                Log.verbose(ioe);
+            }
+        });
+        t.setDaemon(true);
+        t.start();
+        return p.waitFor();
     }
 
     //no good test if we are running pre-JRE7
