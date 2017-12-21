@@ -531,7 +531,7 @@ public class StandardBundlerParam<T> extends BundlerParamInfo<T> {
                     I18N.getString("param.drop-in-resources-root.description"),
                     "dropinResourcesRoot",
                     File.class,
-                    params -> null,
+                    params -> new File("."),
                     (s, p) -> new File(s)
             );
 
