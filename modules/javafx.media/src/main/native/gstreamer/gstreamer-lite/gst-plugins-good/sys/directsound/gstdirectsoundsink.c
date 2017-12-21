@@ -781,7 +781,7 @@ gst_directsound_sink_delay (GstAudioSink * asink)
   dsoundsink = GST_DIRECTSOUND_SINK (asink);
 
 #ifdef GSTREAMER_LITE
-  if (dsoundsink->pDS == NULL)
+  if (dsoundsink->pDS == NULL || dsoundsink->pDSBSecondary == NULL)
     return nNbSamplesInQueue;
 #endif // GSTREAMER_LITE
 
