@@ -51,7 +51,9 @@ public final class Module {
 
     public String getModuleName() {
         File file = new File(getFileName());
-        return getFileWithoutExtension(file.getName());
+        // do not try to remove extension for directories
+        return moduleType == ModuleType.ExplodedModule ?
+                file.getName() : getFileWithoutExtension(file.getName());
     }
 
     public String getFileName() {
