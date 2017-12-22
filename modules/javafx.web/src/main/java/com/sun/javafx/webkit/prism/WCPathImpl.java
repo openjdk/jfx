@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -104,165 +104,60 @@ final class WCPathImpl extends WCPath<Path2D> {
         path.append(arc, true);
     }
 
-    public void addArc(double x, double y, double r, double startAngle,
-                       double endAngle, boolean aclockwise)
+    public void addArc(double x, double y, double r, double sa,
+                       double ea, boolean aclockwise)
     {
+        // Use single precision float as native
+        final float TWO_PI = 2.0f * (float) Math.PI;
+        float startAngle = (float) sa;
+        float endAngle = (float) ea;
+
         if (log.isLoggable(Level.FINE)) {
-            log.log(Level.FINE, "WCPathImpl({0}).addArc({1},{2},{3},{4},{5},{6})",
+            log.log(Level.FINE, "WCPathImpl({0}).addArc(x={1},y={2},r={3},sa=|{4}|,ea=|{5}|,aclock={6})",
                     new Object[] {getID(), x, y, r, startAngle, endAngle, aclockwise});
         }
+
         hasCP = true;
 
+        float newEndAngle = endAngle;
+        // http://www.whatwg.org/specs/web-apps/current-work/multipage/the-canvas-element.html#dom-context-2d-arc
+        // If the anticlockwise argument is false and endAngle-startAngle is equal
+        // to or greater than 2pi, or,
+        // if the anticlockwise argument is true and startAngle-endAngle is equal to
+        // or greater than 2pi,
+        // then the arc is the whole circumference of this ellipse, and the point at
+        // startAngle along this circle's circumference, measured in radians clockwise
+        // from the ellipse's semi-major axis, acts as both the start point and the
+        // end point.
 
-        double eps = 0.001;
+        // below condition is already handled in normalizeAngles(), CanvasPath.cpp.
+        // if (!anticlockwise && end_angle - start_angle >= twoPiFloat) {
+        //   new_end_angle = start_angle + twoPiFloat;
+        // } else if (anticlockwise && start_angle - end_angle >= twoPiFloat) {
+        //   new_end_angle = start_angle - twoPiFloat;
+        // } else
 
-        if (!aclockwise) {
-            if (endAngle < 0.0) {
-                if (endAngle < -2.0*Math.PI - eps) {
-                    int eMult = (int) (-endAngle / (2*Math.PI)) ;
-                    endAngle += eMult*2.0*Math.PI;
-                }
-
-                endAngle += 2.0*Math.PI;
-            } else {
-                if (endAngle > 2.0*Math.PI + eps) {
-                    int eMult = (int) (endAngle / (2*Math.PI));
-                    endAngle -= eMult*2.0*Math.PI;
-                }
-            }
-
-            if (startAngle < 0.0) {
-                if (startAngle < -2.0*Math.PI - eps) {
-                    int sMult = (int) (-startAngle / (2*Math.PI));
-                    startAngle += sMult*2.0*Math.PI;
-                }
-
-                startAngle += 2.0*Math.PI;
-            } else {
-                if (startAngle > 2.0*Math.PI + eps) {
-                    int sMult = (int) (startAngle / (2*Math.PI));
-                    startAngle -= sMult*2.0*Math.PI;
-                }
-            }
-
-            double d = startAngle - endAngle;
-
-            if (startAngle < endAngle) {
-                d = Math.abs(d);
-            }
-
-            endAngle = (float) (2.0 * Math.PI - endAngle);
-
-            Shape arc = new Arc2D((float)(x - r), (float)(y - r),
-                                  (float)(2*r), (float)(2*r),
-                (float) ((endAngle * 180.0) / Math.PI),
-                (float) ((d * 180.0) / Math.PI),Arc2D.OPEN);
-
-            PathIterator pi = arc.getPathIterator(null);
-            List<Integer> segStack = new ArrayList<Integer>();
-            List<Float> valStack = new ArrayList<Float>();
-            float [] coords = new float[6];
-            while(!pi.isDone()) {
-                switch(pi.currentSegment(coords)) {
-                    case PathIterator.SEG_MOVETO:
-                        valStack.add(coords[1]);
-                        valStack.add(coords[0]);
-                        break;
-                    case PathIterator.SEG_QUADTO:
-                        throw new RuntimeException("Unexpected segment: " +
-                                                   "SEG_QUADTO");
-                    case PathIterator.SEG_CUBICTO:
-                        valStack.add(coords[1]);
-                        valStack.add(coords[0]);
-                        valStack.add(coords[3]);
-                        valStack.add(coords[2]);
-                        valStack.add(coords[5]);
-                        valStack.add(coords[4]);
-                        segStack.add(PathIterator.SEG_CUBICTO);
-                        break;
-                    case PathIterator.SEG_CLOSE:
-                        throw new RuntimeException("Unexpected segment: " +
-                                                   "SEG_CLOSE");
-                }
-
-                pi.next();
-            }
-
-            segStack.add(PathIterator.SEG_MOVETO);
-
-            Path2D invArc = new Path2D();
-            int segIndex = segStack.size();
-            int valIndex = valStack.size();
-            while (segIndex > 0) {
-                switch(segStack.get(--segIndex)) {
-                    case PathIterator.SEG_MOVETO:
-                        invArc.moveTo(valStack.get(--valIndex), valStack.get(--valIndex));
-                        break;
-                    case PathIterator.SEG_LINETO:
-                        invArc.lineTo(valStack.get(--valIndex), valStack.get(--valIndex));
-                        break;
-                    case PathIterator.SEG_QUADTO:
-                        invArc.quadTo(valStack.get(--valIndex), valStack.get(--valIndex),
-                                      valStack.get(--valIndex), valStack.get(--valIndex));
-                        break;
-                    case PathIterator.SEG_CUBICTO:
-                        invArc.curveTo(valStack.get(--valIndex), valStack.get(--valIndex),
-                                       valStack.get(--valIndex), valStack.get(--valIndex),
-                                       valStack.get(--valIndex), valStack.get(--valIndex));
-                        break;
-                }
-            }
-            path.append(invArc, true);
-        } else {
-
-            if (endAngle < 0.0) {
-                if (endAngle < -2.0*Math.PI - eps) {
-                    int eMult = (int) (-endAngle / (2*Math.PI));
-                    endAngle += eMult*2.0*Math.PI;
-                }
-
-                endAngle += 2.0*Math.PI;
-            } else {
-                if (endAngle > 2.0*Math.PI + eps) {
-                    int eMult = (int) (endAngle / (2*Math.PI));
-                    endAngle -= eMult*2.0*Math.PI;
-                }
-            }
-
-            if (startAngle < 0.0) {
-                if (startAngle < -2.0*Math.PI - eps) {
-                    int sMult = (int) (-startAngle / (2*Math.PI));
-                    startAngle += sMult*2.0*Math.PI;
-                }
-
-                startAngle += 2.0*Math.PI;
-            } else {
-                if (startAngle > 2.0*Math.PI + eps) {
-                    int sMult = (int) (startAngle / (2*Math.PI));
-                    startAngle -= sMult*2.0*Math.PI;
-                }
-            }
-
-            double d = startAngle - endAngle;
-
-            if (startAngle < endAngle) {
-                d += 2*Math.PI;
-                if (d < eps) {
-                    d += 2*Math.PI;
-                }
-            }
-
-            if (Math.abs(startAngle) > eps) {
-                startAngle = (float) (2.0 * Math.PI - startAngle);
-            }
-
-
-            path.append(new Arc2D((float)(x - r), (float)(y - r),
-                                  (float)(2*r), (float)(2*r),
-                                  (float)((startAngle*180.0f)/Math.PI),
-                                  (float)((d*180.0f)/Math.PI),
-                                  Arc2D.OPEN), true);
+        // Otherwise, the arc is the path along the circumference of this ellipse
+        // from the start point to the end point, going anti-clockwise if the
+        // anticlockwise argument is true, and clockwise otherwise.
+        // Since the points are on the ellipse, as opposed to being simply angles
+        // from zero, the arc can never cover an angle greater than 2pi radians.
+        //
+        // NOTE: When startAngle = 0, endAngle = 2Pi and anticlockwise = true, the
+        // spec does not indicate clearly.
+        // We draw the entire circle, because some web sites use arc(x, y, r, 0,
+        // 2*Math.PI, true) to draw circle.
+        // We preserve backward-compatibility.
+        if (!aclockwise && startAngle > endAngle) {
+            newEndAngle = startAngle + (TWO_PI - ((startAngle - endAngle) % TWO_PI));
+        } else if (aclockwise && startAngle < endAngle) {
+            newEndAngle = startAngle - (TWO_PI - ((endAngle - startAngle) % TWO_PI));
         }
+
+        path.append(new Arc2D((float) (x - r), (float) (y - r),
+                              (float) (2 * r), (float) (2 * r),
+                              (float) Math.toDegrees(-startAngle),
+                              (float) Math.toDegrees(startAngle - newEndAngle), Arc2D.OPEN), true);
     }
 
     public boolean contains(int rule, double x, double y) {

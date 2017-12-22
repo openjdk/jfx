@@ -146,4 +146,24 @@ public class CanvasTest extends TestBase {
             }
         });
     }
+
+    // JDK-8191035
+    @Test public void testCanvasArc() {
+        final String htmlCanvasArc =
+                "<canvas id='canvas' width='600' height='300'></canvas> <script>" +
+                        "var context = document.getElementById('canvas').getContext('2d');" +
+                        "context.beginPath();" +
+                        "context.arc(300, 150, 75, -1.5707, 2.1362, false);" +
+                        "context.strokeStyle = 'red';" +
+                        "context.stroke();  </script>";
+
+        loadContent(htmlCanvasArc);
+        submit(() -> {
+            int redColor = 255;
+            assertEquals("Arc startAngle", redColor,
+                    (int) getEngine().executeScript("document.getElementById('canvas').getContext('2d').getImageData(260,213,1,1).data[0]"));
+            assertEquals("Arc endAngle", redColor,
+                    (int) getEngine().executeScript("document.getElementById('canvas').getContext('2d').getImageData(300,75,1,1).data[0]"));
+        });
+    }
 }
