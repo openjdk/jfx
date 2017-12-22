@@ -116,11 +116,11 @@ import javafx.scene.control.skin.TableViewSkin;
  * <h2>Creating a TableView</h2>
  *
  * <p>
- * {@literal Creating a TableView is a multi-step process, and also depends on the
+ * Creating a TableView is a multi-step process, and also depends on the
  * underlying data model needing to be represented. For this example we'll use
- * an ObservableList<Person>, as it is the simplest way of showing data in a
- * TableView. The <code>Person</code> class will consist of a first
- * name and last name properties. That is:}
+ * an {@literal ObservableList<Person>}, as it is the simplest way of showing data in a
+ * TableView. The {@code Person} class will consist of a first
+ * name and last name properties. That is:
  *
  * <pre>
  * {@code
@@ -148,10 +148,9 @@ import javafx.scene.control.skin.TableViewSkin;
  * {@code
  * TableView<Person> table = new TableView<Person>();}</pre>
  *
- * {@literal
  * <p>With the basic table defined, we next focus on the data model. As mentioned,
- * for this example, we'll be using a ObservableList<Person>. We can immediately
- * set such a list directly in to the TableView, as such:}
+ * for this example, we'll be using a {@literal ObservableList<Person>}. We can immediately
+ * set such a list directly in to the TableView, as such:
  *
  * <pre>
  * {@code
@@ -207,7 +206,7 @@ import javafx.scene.control.skin.TableViewSkin;
  *         return p.getValue().firstNameProperty();
  *     }
  *  });
- * }}</pre>
+ * }</pre>
  *
  * <h3>TableView Selection / Focus APIs</h3>
  * <p>To track selection and focus, it is necessary to become familiar with the

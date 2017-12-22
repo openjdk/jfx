@@ -78,18 +78,17 @@ public interface ListChangeListener<E> {
      *     public void onChanged(Change&lt;Item&gt; c) {
      *         while (c.next()) {
      *             if (c.wasPermutated()) {
-     *                     for (int i = c.getFrom(); i &lt; c.getTo(); ++i) {
-     *                          //permutate
-     *                     }
-     *                 } else if (c.wasUpdated()) {
-     *                          //update item
-     *                 } else {
-     *                     for (Item remitem : c.getRemoved()) {
-     *                         remitem.remove(Outer.this);
-     *                     }
-     *                     for (Item additem : c.getAddedSubList()) {
-     *                         additem.add(Outer.this);
-     *                     }
+     *                 for (int i = c.getFrom(); i &lt; c.getTo(); ++i) {
+     *                      //permutate
+     *                 }
+     *             } else if (c.wasUpdated()) {
+     *                      //update item
+     *             } else {
+     *                 for (Item remitem : c.getRemoved()) {
+     *                     remitem.remove(Outer.this);
+     *                 }
+     *                 for (Item additem : c.getAddedSubList()) {
+     *                     additem.add(Outer.this);
      *                 }
      *             }
      *         }

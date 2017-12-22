@@ -49,15 +49,15 @@ import javafx.geometry.VPos;
  *         gridpane.getRowConstraints().add(row);
  *     }
  * }</pre>
- * Or, to create a GridPane where rows take 25%, 50%, 25% of its width:
+ * Or, to create a GridPane where rows take 25%, 50%, 25% of its height:
  * <pre>{@code
  *     GridPane gridpane = new GridPane();
  *     RowConstraints row1 = new RowConstraints();
- *     row1.setPercentWidth(25);
+ *     row1.setPercentHeight(25);
  *     RowConstraints row2 = new RowConstraints();
- *     row2.setPercentWidth(50);
+ *     row2.setPercentHeight(50);
  *     RowConstraints row3 = new RowConstraints();
- *     row3.setPercentWidth(25);
+ *     row3.setPercentHeight(25);
  *     gridpane.getRowConstraints().addAll(row1,row2,row3);
  * }</pre>
  *

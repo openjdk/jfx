@@ -41,7 +41,7 @@ import javafx.beans.NamedArg;
  * <pre>{@code
  * // object bounding box relative (proportional:true, default)
  * Stop[] stops = { new Stop(0, Color.WHITE), new Stop(1, Color.BLACK)};
- * LinearGradient lg = new LinearGradient(0, 0, 1, 0, true, CycleMethod.No_CYCLE, stops);
+ * LinearGradient lg = new LinearGradient(0, 0, 1, 0, true, CycleMethod.NO_CYCLE, stops);
  * Rectangle r = new Rectangle();
  * r.setFill(lg);
  * }</pre>
