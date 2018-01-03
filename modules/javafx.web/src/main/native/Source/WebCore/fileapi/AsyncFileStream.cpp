@@ -43,6 +43,10 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Threading.h>
 
+#if PLATFORM(JAVA)
+#include <wtf/java/JavaEnv.h>
+#endif
+
 namespace WebCore {
 
 struct AsyncFileStream::Internals {
@@ -86,7 +90,9 @@ static void callOnFileThread(Function<void ()>&& function)
 
                 // This can bever be null because we never queue a function that is null.
                 ASSERT(*function);
-
+#if PLATFORM(JAVA)
+                WTF::AutoAttachToJavaThread autoAttach;
+#endif
                 (*function)();
             }
         });
