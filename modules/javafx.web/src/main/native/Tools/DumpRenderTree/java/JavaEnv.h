@@ -10,6 +10,16 @@ extern JavaVM* jvm;
 
 JNIEnv* JNICALL DumpRenderTree_GetJavaEnv();
 
+jclass getDumpRenderTreeClass();
+jmethodID getWaitUntillDoneMethodId();
+jmethodID getNotifyDoneMID();
+jmethodID getOverridePreferenceMID();
+jmethodID getGetBackForwardItemCountMID();
+jmethodID getResolveURLMID();
+jmethodID getLoadURLMID();
+jmethodID getGoBackForward();
+
+
 bool CheckAndClearException(JNIEnv* env);
 
 #define jlong_to_ptr(a) ((void*)(uintptr_t)(a))

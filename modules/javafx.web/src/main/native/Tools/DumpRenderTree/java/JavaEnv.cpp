@@ -7,6 +7,53 @@
 
 JavaVM* jvm = 0;
 
+
+jclass dumpRenderTreeClass;
+static jmethodID waitUntilDoneMID;
+static jmethodID notifyDoneMID;
+static jmethodID overridePreferenceMID;
+static jmethodID getBackForwardItemCountMID;
+static jmethodID resolveURLMID;
+static jmethodID loadURLMID;
+static jmethodID goBackForwardMID;
+
+jclass getDumpRenderTreeClass() { return dumpRenderTreeClass; }
+jmethodID getWaitUntillDoneMethodId() { return waitUntilDoneMID; }
+jmethodID getNotifyDoneMID() { return notifyDoneMID; }
+jmethodID getOverridePreferenceMID() { return overridePreferenceMID; }
+jmethodID getGetBackForwardItemCountMID() { return getBackForwardItemCountMID; }
+jmethodID getResolveURLMID() { return resolveURLMID; }
+jmethodID getLoadURLMID() { return loadURLMID; }
+jmethodID getGoBackForward() { return goBackForwardMID; }
+
+static void initRefs(JNIEnv* env) {
+    if (!dumpRenderTreeClass) {
+        jclass cls =  env->FindClass("com/sun/javafx/webkit/drt/DumpRenderTree");
+        dumpRenderTreeClass = (jclass)env->NewGlobalRef(cls);
+        if (JNI_TRUE == env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+                env->ExceptionClear();
+                return;
+            }
+        ASSERT(dumpRenderTreeClass);
+        waitUntilDoneMID = env->GetStaticMethodID(dumpRenderTreeClass, "waitUntilDone", "()V");
+        ASSERT(waitUntilDoneMID);
+        notifyDoneMID = env->GetStaticMethodID(dumpRenderTreeClass, "notifyDone", "()V");
+        ASSERT(notifyDoneMID);
+        overridePreferenceMID = env->GetStaticMethodID(dumpRenderTreeClass, "overridePreference", "(Ljava/lang/String;Ljava/lang/String;)V");
+        ASSERT(overridePreferenceMID);
+        getBackForwardItemCountMID = env->GetStaticMethodID(dumpRenderTreeClass, "getBackForwardItemCount", "()I");
+        ASSERT(getBackForwardItemCountMID);
+        resolveURLMID = env->GetStaticMethodID(dumpRenderTreeClass, "resolveURL", "(Ljava/lang/String;)Ljava/lang/String;");
+        ASSERT(resolveURLMID);
+        loadURLMID = env->GetStaticMethodID(dumpRenderTreeClass, "loadURL", "(Ljava/lang/String;)V");
+        ASSERT(loadURLMID);
+        goBackForwardMID = env->GetStaticMethodID(dumpRenderTreeClass, "goBackForward", "(I)V");
+        ASSERT(goBackForwardMID);
+    }
+}
+
+
 JNIEnv* JNICALL DumpRenderTree_GetJavaEnv()
 {
     void* env;
@@ -31,11 +78,19 @@ extern "C" {
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved)
 {
     jvm = vm;
+    JNIEnv *env;
+    if (jvm->GetEnv((void **)&env, JNI_VERSION_1_2)) {
+        fprintf(stderr, "DumpRenderTree::JNI_OnLoad() failed \n");
+             return JNI_ERR; /* JNI version not supported */
+         }
+     initRefs(env);
     return JNI_VERSION_1_2;
 }
 
 JNIEXPORT void JNICALL JNI_OnUnLoad(JavaVM* vm, void* reserved)
 {
+    JNIEnv *env = DumpRenderTree_GetJavaEnv();
+    env->DeleteGlobalRef(dumpRenderTreeClass);
     jvm = 0;
 }
 
