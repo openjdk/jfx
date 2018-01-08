@@ -232,6 +232,8 @@ void MutationObserver::deliver()
     Vector<Ref<MutationRecord>> records;
     records.swap(m_records);
 
+    // FIXME: Keep mutation observer callback as long as its observed nodes are alive. See https://webkit.org/b/179224.
+    if (m_callback->hasCallback())
     m_callback->handleEvent(*this, records, *this);
 }
 
