@@ -217,19 +217,27 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometr
     D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
     RETURN_STATUS_IF_NULL(mesh, JNI_FALSE);
 
-    UINT vertexBufferSize = env->GetArrayLength(vb);
-    float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
-    UINT indexBufferSize = env->GetArrayLength(ib);
-    USHORT *indexBuffer = (USHORT *) (env->GetPrimitiveArrayCritical(ib, NULL));
-
     if (vbSize < 0 || ibSize < 0) {
         return JNI_FALSE;
     }
 
     UINT uvbSize = (UINT) vbSize;
     UINT uibSize = (UINT) ibSize;
-    if (vertexBuffer == NULL || indexBuffer == NULL
-            || uvbSize > vertexBufferSize || uibSize > indexBufferSize) {
+    UINT vertexBufferSize = env->GetArrayLength(vb);
+    UINT indexBufferSize = env->GetArrayLength(ib);
+
+    if (uvbSize > vertexBufferSize || uibSize > indexBufferSize) {
+        return JNI_FALSE;
+    }
+
+    float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
+    if (vertexBuffer == NULL) {
+        return JNI_FALSE;
+    }
+
+    USHORT *indexBuffer = (USHORT *) (env->GetPrimitiveArrayCritical(ib, NULL));
+    if (indexBuffer == NULL) {
+        env->ReleasePrimitiveArrayCritical(vb, vertexBuffer, 0);
         return JNI_FALSE;
     }
 
@@ -252,19 +260,26 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nBuildNativeGeometr
     D3DMesh *mesh = (D3DMesh *) jlong_to_ptr(nativeMesh);
     RETURN_STATUS_IF_NULL(mesh, JNI_FALSE);
 
-    UINT vertexBufferSize = env->GetArrayLength(vb);
-    float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
-    UINT indexBufferSize = env->GetArrayLength(ib);
-    UINT *indexBuffer = (UINT *) (env->GetPrimitiveArrayCritical(ib, NULL));
-
     if (vbSize < 0 || ibSize < 0) {
         return JNI_FALSE;
     }
 
     UINT uvbSize = (UINT) vbSize;
     UINT uibSize = (UINT) ibSize;
-    if (vertexBuffer == NULL || indexBuffer == NULL
-            || uvbSize > vertexBufferSize || uibSize > indexBufferSize) {
+    UINT vertexBufferSize = env->GetArrayLength(vb);
+    UINT indexBufferSize = env->GetArrayLength(ib);
+    if (uvbSize > vertexBufferSize || uibSize > indexBufferSize) {
+        return JNI_FALSE;
+    }
+
+    float *vertexBuffer = (float *) (env->GetPrimitiveArrayCritical(vb, NULL));
+    if (vertexBuffer == NULL) {
+        return JNI_FALSE;
+    }
+
+    UINT *indexBuffer = (UINT *) (env->GetPrimitiveArrayCritical(ib, NULL));
+    if (indexBuffer == NULL) {
+        env->ReleasePrimitiveArrayCritical(vb, vertexBuffer, 0);
         return JNI_FALSE;
     }
 
