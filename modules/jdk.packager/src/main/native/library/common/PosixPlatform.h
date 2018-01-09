@@ -43,6 +43,8 @@ class PosixPlatform : virtual public Platform {
 protected:
     TString SingleInstanceFile;
 
+    TString fixName(const TString& name);
+
     virtual TString getTmpDirString() = 0;
 
 public:

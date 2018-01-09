@@ -50,6 +50,7 @@
 #include <limits.h>
 #include <pwd.h>
 #include <iostream>
+#include <algorithm>
 #include <dlfcn.h>
 #include <signal.h>
 
@@ -76,6 +77,15 @@ TString PosixPlatform::GetTempDirectory() {
     return homedir;
 }
 
+TString PosixPlatform::fixName(const TString& name) {
+    TString fixedName(name);
+    const TString chars("?:*<>/\\");
+    for (TString::const_iterator it = chars.begin(); it != chars.end(); it++) {
+        fixedName.erase(std::remove(fixedName.begin(), fixedName.end(), *it), fixedName.end());
+    }
+    return fixedName;
+}
+
 // returns true if another instance is already running.
 // if false, we need to continue regular launch.
 bool PosixPlatform::CheckForSingleInstance(TString appName) {
@@ -85,7 +95,7 @@ bool PosixPlatform::CheckForSingleInstance(TString appName) {
         return false;
     }
 
-    TString lockFile = tmpDir + "/" + appName;
+    TString lockFile = tmpDir + "/" + fixName(appName);
     SingleInstanceFile = lockFile;
     int pid_file = open(lockFile.c_str(), O_CREAT | O_RDWR, 0666);
     int rc = flock(pid_file, LOCK_EX | LOCK_NB);
