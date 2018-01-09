@@ -26,6 +26,7 @@
 package jdk.packager.internal.legacy.builders;
 
 
+import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.RelativeFileSet;
 
 import com.oracle.tools.packager.Log;
@@ -97,6 +98,17 @@ public abstract class AbstractAppImageBuilder {
         }
 
         return result;
+    }
+
+    protected void copyEntry(Path appDir, File srcdir, String fname) throws IOException {
+        Path dest = appDir.resolve(fname);
+        Files.createDirectories(dest.getParent());
+        File src = new File(srcdir, fname);
+        if (src.isDirectory()) {
+            IOUtils.copyRecursive(src.toPath(), dest);
+        } else {
+            Files.copy(src.toPath(), dest);
+        }
     }
 
     protected InputStream locateResource(String publicName, String category,

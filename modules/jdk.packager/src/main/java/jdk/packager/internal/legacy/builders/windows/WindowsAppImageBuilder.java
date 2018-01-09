@@ -435,8 +435,7 @@ public class WindowsAppImageBuilder extends AbstractAppImageBuilder {
             }
             File srcdir = appResources.getBaseDirectory();
             for (String fname : appResources.getIncludedFiles()) {
-                writeEntry(new FileInputStream(new File(srcdir, fname)),
-                           new File(appDir.toFile(), fname).toPath());
+                copyEntry(appDir, srcdir, fname);
             }
         }
     }

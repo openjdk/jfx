@@ -444,9 +444,7 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
         for (RelativeFileSet classPath : resourcesList) {
             File srcdir = classPath.getBaseDirectory();
             for (String fname : classPath.getIncludedFiles()) {
-                // use new File since fname can have file separators
-                writeEntry(new FileInputStream(new File(srcdir, fname)),
-                           new File(javaDirectory.toFile(), fname).toPath());
+                copyEntry(javaDirectory, srcdir, fname);
             }
         }
     }
