@@ -67,7 +67,7 @@ import sun.util.logging.PlatformLogger;
  * The term texCoord is used to indicate a single pair of 2D texture
  * coordinates (u, v) for a single vertex, while the term texCoords (plural) is used
  * to indicate sets of texture coordinates for multiple vertices.
- * Lastly, the term face is used to indicate 3 set of interleaving points,
+ * Lastly, the term face is used to indicate 3 sets of interleaving points,
  * normals (optional, depending on the associated VertexFormat)
  * and texture coordinates that together represent the geometric topology of a
  * single triangle, while the term faces (plural) is used to indicate sets of

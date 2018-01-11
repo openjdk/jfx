@@ -234,7 +234,7 @@ public class FXCollections {
     private static ObservableMap EMPTY_OBSERVABLE_MAP = new EmptyObservableMap();
 
     /**
-     * Creates and empty unmodifiable observable map.
+     * Creates an empty unmodifiable observable map.
      * @param <K> the type of the wrapped key
      * @param <V> the type of the wrapped value
      * @return An empty unmodifiable observable map
@@ -436,7 +436,7 @@ public class FXCollections {
 
 
     /**
-     * Creates and empty unmodifiable observable list.
+     * Creates an empty unmodifiable observable list.
      * @param <E> The type of List to be wrapped
      * @return An empty unmodifiable observable list
      * @see Collections#emptyList()
@@ -506,7 +506,7 @@ public class FXCollections {
     private static ObservableSet EMPTY_OBSERVABLE_SET = new EmptyObservableSet();
 
     /**
-     * Creates and empty unmodifiable observable set.
+     * Creates an empty unmodifiable observable set.
      * @param <E> The type of List to be wrapped
      * @return An empty unmodifiable observable set
      * @see Collections#emptySet()

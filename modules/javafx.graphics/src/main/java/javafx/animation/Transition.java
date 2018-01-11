@@ -157,9 +157,16 @@ public abstract class Transition extends Animation {
     }
 
     /**
-     * Returns the target {@link Node} for animation of this {@code Transition}.
-     * This method returns {@code node} if it is set, else returns its
-     * {@code parent.getTargetNode()} otherwise null.
+     * Returns the first non-{@code null} target {@code Node} in the parent hierarchy of
+     * this {@code Transition}, or {@code null} if such a node is not found.
+     * <p>
+     * A parent animation is one that can have child animations. Examples are
+     * {@link javafx.animation.SequentialTransition SequentialTransition} and
+     * {@link javafx.animation.ParallelTransition ParallelTransition}. A parent animation can
+     * also be a child of another parent animation.
+     * <p>
+     * Note that if this {@code Transition} has a target node set and is not a parent animation,
+     * it will be ignored during the call as this method only queries parent animations.
      * @return the target {@code Node}
      */
     protected Node getParentTargetNode() {

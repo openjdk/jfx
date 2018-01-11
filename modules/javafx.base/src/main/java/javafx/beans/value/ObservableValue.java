@@ -31,8 +31,8 @@ import javafx.beans.Observable;
 /**
  * An {@code ObservableValue} is an entity that wraps a value and allows to
  * observe the value for changes. In general this interface should not be
- * implemented directly but one of its sub-interfaces (
- * {@code ObservableBooleanValue} etc.).
+ * implemented directly but one of its sub-interfaces
+ * ({@code ObservableBooleanValue} etc.).
  * <p>
  * The value of the {@code ObservableValue} can be requested with
  * {@link #getValue()}.

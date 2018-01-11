@@ -171,7 +171,7 @@ public class HBox extends Pane {
      * If set, the hbox will use the priority to allocate additional space if the
      * hbox is resized larger than it's preferred width.
      * If multiple hbox children have the same horizontal grow priority, then the
-     * extra space will be split evening between them.
+     * extra space will be split evenly between them.
      * If no horizontal grow priority is set on a child, the hbox will never
      * allocate it additional horizontal space if available.
      * Setting the value to null will remove the constraint.

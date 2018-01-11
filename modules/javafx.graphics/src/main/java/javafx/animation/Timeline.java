@@ -73,7 +73,7 @@ import com.sun.scenario.animation.shared.TimelineClipCore;
  * <p>
  * This Timeline will run for 10s, animating the node by x axis to value 25 and then back to 0 on the second cycle.
  * <p>
- * <b>Warning :</b> A running Timeline is being referenced from the FX runtime. Infinite Timeline
+ * <b>Warning:</b> A running Timeline is being referenced from the FX runtime. Infinite Timeline
  * might result in a memory leak if not stopped properly. All the objects with animated properties would not be garbage collected.
  *
  * @see Animation
