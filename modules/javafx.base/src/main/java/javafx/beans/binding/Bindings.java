@@ -5806,12 +5806,12 @@ public final class Bindings {
      * equal to a constant value.
      *
      * @param op1
-     *            the {@code ObservableCharacterValue}
+     *            the {@code ObservableObjectValue}
      * @param op2
      *            the constant value
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
-     *             if the {@code ObservableCharacterValue} is {@code null}
+     *             if the {@code ObservableObjectValue} is {@code null}
      */
     public static BooleanBinding equal(final ObservableObjectValue<?> op1, Object op2) {
         return equal(op1, ObjectConstant.valueOf(op2), op1);
@@ -5825,10 +5825,10 @@ public final class Bindings {
      * @param op1
      *            the constant value
      * @param op2
-     *            the {@code ObservableCharacterValue}
+     *            the {@code ObservableObjectValue}
      * @return the new {@code BooleanBinding}
      * @throws NullPointerException
-     *             if the {@code ObservableCharacterValue} is {@code null}
+     *             if the {@code ObservableObjectValue} is {@code null}
      */
     public static BooleanBinding equal(Object op1, final ObservableObjectValue<?> op2) {
         return equal(ObjectConstant.valueOf(op1), op2, op2);
@@ -6116,7 +6116,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.ObjectBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code ObjectBinding}
-     * will contain {@code null}, if the {@code index} points behind the {@code ObservableList}.
+     * will contain {@code null} if the {@code index} points behind the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6164,7 +6164,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.ObjectBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code ObjectBinding}
-     * will contain {@code null}, if the {@code index} is outside of the {@code ObservableList}.
+     * will contain {@code null} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6180,7 +6180,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.ObjectBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code ObjectBinding}
-     * will contain {@code null}, if the {@code index} is outside of the {@code ObservableList}.
+     * will contain {@code null} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}, converted to int
@@ -6224,7 +6224,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code BooleanBinding}
-     * will hold {@code false}, if the {@code index} points behind the {@code ObservableList}.
+     * will hold {@code false} if the {@code index} points behind the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6276,7 +6276,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code BooleanBinding}
-     * will hold {@code false}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code false} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6291,7 +6291,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code BooleanBinding}
-     * will hold {@code false}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code false} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}, converted to int
@@ -6339,7 +6339,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code DoubleBinding}
-     * will hold {@code 0.0}, if the {@code index} points behind the {@code ObservableList}.
+     * will hold {@code 0.0} if the {@code index} points behind the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6391,7 +6391,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code DoubleBinding}
-     * will hold {@code 0.0}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code 0.0} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6406,7 +6406,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code DoubleBinding}
-     * will hold {@code 0.0}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code 0.0} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}, converted to int
@@ -6454,7 +6454,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code FloatBinding}
-     * will hold {@code 0.0f}, if the {@code index} points behind the {@code ObservableList}.
+     * will hold {@code 0.0f} if the {@code index} points behind the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6506,7 +6506,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code FloatBinding}
-     * will hold {@code 0.0f}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code 0.0f} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6521,7 +6521,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code FloatBinding}
-     * will hold {@code 0.0f}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code 0.0f} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}, converted to int
@@ -6569,7 +6569,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code IntegerBinding}
-     * will hold {@code 0}, if the {@code index} points behind the {@code ObservableList}.
+     * will hold {@code 0} if the {@code index} points behind the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6621,7 +6621,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code IntegerBinding}
-     * will hold {@code 0}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code 0} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6636,7 +6636,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code IntegerBinding}
-     * will hold {@code 0}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code 0} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}, converted to int
@@ -6684,7 +6684,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.LongBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code LongBinding}
-     * will hold {@code 0L}, if the {@code index} points behind the {@code ObservableList}.
+     * will hold {@code 0L} if the {@code index} points behind the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6736,7 +6736,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.LongBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code LongBinding}
-     * will hold {@code 0L}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code 0L} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6751,7 +6751,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.LongBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code LongBinding}
-     * will hold {@code 0L}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code 0L} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}, converted to int
@@ -6799,7 +6799,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.StringBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code StringBinding}
-     * will hold {@code null}, if the {@code index} points behind the {@code ObservableList}.
+     * will hold {@code null} if the {@code index} points behind the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6846,7 +6846,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.StringBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code StringBinding}
-     * will hold {@code ""}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code ""} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}
@@ -6861,7 +6861,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.StringBinding} that contains the element
      * of an {@link javafx.collections.ObservableList} at the specified position. The {@code StringBinding}
-     * will hold {@code ""}, if the {@code index} is outside of the {@code ObservableList}.
+     * will hold {@code ""} if the {@code index} is outside of the {@code ObservableList}.
      *
      * @param op the {@code ObservableList}
      * @param index the position in the {@code List}, converted to int
@@ -7064,7 +7064,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
      * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code FloatBinding}
-     * will hold {@code 0.0f}, if the {@code index} points behind the {@code ObservableArray}.
+     * will hold {@code 0.0f} if the {@code index} points behind the {@code ObservableArray}.
      *
      * @param op the {@code ObservableArray}
      * @param index the position in the {@code ObservableArray}
@@ -7111,7 +7111,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
      * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code FloatBinding}
-     * will hold {@code 0.0f}, if the {@code index} is outside of the {@code ObservableArray}.
+     * will hold {@code 0.0f} if the {@code index} is outside of the {@code ObservableArray}.
      *
      * @param op the {@code ObservableArray}
      * @param index the position in the {@code ObservableArray}
@@ -7126,7 +7126,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the element
      * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code FloatBinding}
-     * will hold {@code 0.0f}, if the {@code index} is outside of the {@code ObservableArray}.
+     * will hold {@code 0.0f} if the {@code index} is outside of the {@code ObservableArray}.
      *
      * @param op the {@code ObservableArray}
      * @param index the position in the {@code ObservableArray}, converted to int
@@ -7169,7 +7169,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
      * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code IntegerBinding}
-     * will hold {@code 0}, if the {@code index} points behind the {@code ObservableArray}.
+     * will hold {@code 0} if the {@code index} points behind the {@code ObservableArray}.
      *
      * @param op the {@code ObservableArray}
      * @param index the position in the {@code ObservableArray}
@@ -7216,7 +7216,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
      * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code IntegerBinding}
-     * will hold {@code 0}, if the {@code index} is outside of the {@code ObservableArray}.
+     * will hold {@code 0} if the {@code index} is outside of the {@code ObservableArray}.
      *
      * @param op the {@code ObservableArray}
      * @param index the position in the {@code ObservableArray}
@@ -7231,7 +7231,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the element
      * of an {@link javafx.collections.ObservableArray} at the specified position. The {@code IntegerBinding}
-     * will hold {@code 0}, if the {@code index} is outside of the {@code ObservableArray}.
+     * will hold {@code 0} if the {@code index} is outside of the {@code ObservableArray}.
      *
      * @param op the {@code ObservableArray}
      * @param index the position in the {@code ObservableArray}, converted to int
@@ -7494,7 +7494,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code BooleanBinding}
-     * will hold {@code false}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code false} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7547,7 +7547,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.BooleanBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code BooleanBinding}
-     * will hold {@code false}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code false} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7600,7 +7600,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code DoubleBinding}
-     * will hold {@code 0.0}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code 0.0} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7653,7 +7653,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.DoubleBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code DoubleBinding}
-     * will hold {@code 0.0}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code 0.0} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7706,7 +7706,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code FloatBinding}
-     * will hold {@code 0.0f}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code 0.0f} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7759,7 +7759,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.FloatBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code FloatBinding}
-     * will hold {@code 0.0f}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code 0.0f} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7812,7 +7812,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code IntegerBinding}
-     * will hold {@code 0}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code 0} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7865,7 +7865,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.IntegerBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code IntegerBinding}
-     * will hold {@code 0}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code 0} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7918,7 +7918,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.LongBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code LongBinding}
-     * will hold {@code 0L}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code 0L} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -7971,7 +7971,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.LongBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code LongBinding}
-     * will hold {@code 0L}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code 0L} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -8024,7 +8024,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.StringBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code StringBinding}
-     * will hold {@code null}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code null} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}
@@ -8072,7 +8072,7 @@ public final class Bindings {
     /**
      * Creates a new {@link javafx.beans.binding.StringBinding} that contains the mapping of a specific key
      * in an {@link javafx.collections.ObservableMap}. The {@code StringBinding}
-     * will hold {@code ""}, if the {@code key} cannot be found in the {@code ObservableMap}.
+     * will hold {@code ""} if the {@code key} cannot be found in the {@code ObservableMap}.
      *
      * @param op the {@code ObservableMap}
      * @param key the key in the {@code Map}

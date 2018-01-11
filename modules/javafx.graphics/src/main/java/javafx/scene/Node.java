@@ -234,7 +234,7 @@ import sun.util.logging.PlatformLogger.Level;
  * scene graph. The id can also be used identify nodes for applying styles; see
  * the CSS section below.
  *
- * <h4>Coordinate System</h4>
+ * <h3>Coordinate System</h3>
  * <p>
  * The {@code Node} class defines a traditional computer graphics "local"
  * coordinate system in which the {@code x} axis increases to the right and the
@@ -267,7 +267,7 @@ import sun.util.logging.PlatformLogger.Level;
  * important context-specific information about coordinate mapping and how
  * it can affect rendering.
  *
- * <h4>Transformations</h4>
+ * <h3>Transformations</h3>
  * <p>
  * Any {@code Node} can have transformations applied to it. These include
  * translation, rotation, scaling, or shearing.
@@ -2691,7 +2691,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines the x coordinate of the translation that is added to this {@code Node}'s
-     * transform for the purpose of layout.  The value should be computed as the
+     * transform for the purpose of layout. The value should be computed as the
      * offset required to adjust the position of the node from its current
      * {@link #layoutBoundsProperty() layoutBounds minX} position (which might not be 0) to the desired location.
      *
@@ -2766,7 +2766,7 @@ public abstract class Node implements EventTarget, Styleable {
 
     /**
      * Defines the y coordinate of the translation that is added to this {@code Node}'s
-     * transform for the purpose of layout.  The value should be computed as the
+     * transform for the purpose of layout. The value should be computed as the
      * offset required to adjust the position of the node from its current
      * {@link #layoutBoundsProperty() layoutBounds minY} position (which might not be 0) to the desired location.
      *
@@ -3383,10 +3383,11 @@ public abstract class Node implements EventTarget, Styleable {
      * the transform created by setting the following additional variables
      * <ol>
      * <li>{@link #getTransforms transforms} ObservableList</li>
-     * <li>{@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}</li>
+     * <li>{@link #scaleXProperty scaleX}, {@link #scaleYProperty scaleY}, {@link #scaleZProperty scaleZ}</li>
      * <li>{@link #rotateProperty rotate}</li>
      * <li>{@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY}</li>
-     * <li>{@link #translateXProperty translateX}, {@link #translateYProperty translateY}</li>
+     * <li>{@link #translateXProperty translateX}, {@link #translateYProperty translateY},
+     * {@link #translateZProperty translateZ}</li>
      * </ol>
      * <p>
      * The resulting bounds will be conceptually in the coordinate space of the
@@ -3398,14 +3399,14 @@ public abstract class Node implements EventTarget, Styleable {
      * <p>
      * This property will always have a non-null value.
      * <p>
-     * Note that boundsInParent is automatically recomputed whenever the
+     * Note that {@code boundsInParent} is automatically recomputed whenever the
      * geometry of a node changes, or when any of the following the change:
-     * transforms ObservableList, translateX, translateY, layoutX, layoutY,
-     * scaleX, scaleY, or the rotate variable. For this reason, it is an error
+     * transforms {@code ObservableList}, any of the translate, layout or scale
+     * variables, or the rotate variable. For this reason, it is an error
      * to bind any of these values in a node to an expression that depends upon
      * this variable. For example, the x or y variables of a shape, or
-     * translateX, translateY should never be bound to boundsInParent
-     * for the purpose of positioning the node.
+     * {@code translateX}, {@code translateY} should never be bound to
+     * {@code boundsInParent} for the purpose of positioning the node.
      * @return the boundsInParent for this {@code Node}
      */
     public final ReadOnlyObjectProperty<Bounds> boundsInParentProperty() {
@@ -3463,25 +3464,29 @@ public abstract class Node implements EventTarget, Styleable {
      * {@link javafx.scene.control.Control Control}, or {@link javafx.scene.web.WebView WebView})
      * then the layoutBounds will always be {@code 0,0 width x height}.
      * If the node type is not resizable ({@link javafx.scene.shape.Shape Shape},
-     * {@link javafx.scene.text.Text Text}, or {@link Group}), then the layoutBounds
+     * {@link javafx.scene.text.Text Text}, or {@link Group}), then the {@code layoutBounds}
      * are computed based on the node's geometric properties and does not include the
      * node's clip, effect, or transforms.  See individual class documentation
      * for details.
      * <p>
-     * Note that the {@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY}, {@link #translateXProperty translateX}, and
-     * {@link #translateYProperty translateY} variables are not included in the layoutBounds.
+     * Note that the {@link #layoutXProperty layoutX}, {@link #layoutYProperty layoutY},
+     * {@link #translateXProperty translateX}, and {@link #translateYProperty translateY}
+     * variables are not included in the layoutBounds.
      * This is important because layout code must first determine the current
-     * size and location of the node (using layoutBounds) and then set
+     * size and location of the node (using {@code layoutBounds}) and then set
      * {@code layoutX} and {@code layoutY} to adjust the translation of the
      * node so that it will have the desired layout position.
      * <p>
      * Because the computation of layoutBounds is often tied to a node's
      * geometric variables, it is an error to bind any such variables to an
      * expression that depends upon {@code layoutBounds}. For example, the
-     * x or y variables of a shape should never be bound to layoutBounds
+     * x or y variables of a shape should never be bound to {@code layoutBounds}
      * for the purpose of positioning the node.
      * <p>
-     * The layoutBounds will never be null.
+     * Note that for 3D shapes, the layout bounds is actually a rectangular box
+     * with X, Y, and Z values, although only X and Y are used in layout calculations.
+     * <p>
+     * The {@code layoutBounds} will never be null.
      *
      */
     private LazyBoundsProperty layoutBounds = new LazyBoundsProperty() {
@@ -5608,7 +5613,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines the factor by which coordinates are scaled about the center of the
      * object along the X axis of this {@code Node}. This is used to stretch or
-     * animate the node either manually or by using an animation.
+     * shrink the node either manually or by using an animation.
      * <p>
      * This scale factor is not included in {@link #layoutBoundsProperty layoutBounds} by
      * default, which makes it ideal for scaling the entire node after
@@ -5636,7 +5641,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines the factor by which coordinates are scaled about the center of the
      * object along the Y axis of this {@code Node}. This is used to stretch or
-     * animate the node either manually or by using an animation.
+     * shrink the node either manually or by using an animation.
      * <p>
      * This scale factor is not included in {@link #layoutBoundsProperty layoutBounds} by
      * default, which makes it ideal for scaling the entire node after
@@ -5664,7 +5669,7 @@ public abstract class Node implements EventTarget, Styleable {
     /**
      * Defines the factor by which coordinates are scaled about the center of the
      * object along the Z axis of this {@code Node}. This is used to stretch or
-     * animate the node either manually or by using an animation.
+     * shrink the node either manually or by using an animation.
      * <p>
      * This scale factor is not included in {@link #layoutBoundsProperty layoutBounds} by
      * default, which makes it ideal for scaling the entire node after

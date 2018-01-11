@@ -146,10 +146,10 @@ import javafx.scene.control.skin.TableViewSkin;
  *
  * <pre>
  * {@code
- * TableView<Person> table = new TableView<Person>();}</pre>
+ * TableView<Person> table = new TableView<>();}</pre>
  *
  * <p>With the basic table defined, we next focus on the data model. As mentioned,
- * for this example, we'll be using a {@literal ObservableList<Person>}. We can immediately
+ * for this example, we'll be using an {@literal ObservableList<Person>}. We can immediately
  * set such a list directly in to the TableView, as such:
  *
  * <pre>
@@ -174,10 +174,10 @@ import javafx.scene.control.skin.TableViewSkin;
  * ObservableList<Person> teamMembers = ...;
  * table.setItems(teamMembers);
  *
- * TableColumn<Person,String> firstNameCol = new TableColumn<Person,String>("First Name");
- * firstNameCol.setCellValueFactory(new PropertyValueFactory("firstName"));
- * TableColumn<Person,String> lastNameCol = new TableColumn<Person,String>("Last Name");
- * lastNameCol.setCellValueFactory(new PropertyValueFactory("lastName"));
+ * TableColumn<Person,String> firstNameCol = new TableColumn<>("First Name");
+ * firstNameCol.setCellValueFactory(new PropertyValueFactory<>("firstName"));
+ * TableColumn<Person,String> lastNameCol = new TableColumn<>("Last Name");
+ * lastNameCol.setCellValueFactory(new PropertyValueFactory<>("lastName"));
  *
  * table.getColumns().setAll(firstNameCol, lastNameCol);}</pre>
  *
@@ -205,7 +205,10 @@ import javafx.scene.control.skin.TableViewSkin;
  *         // p.getValue() returns the Person instance for a particular TableView row
  *         return p.getValue().firstNameProperty();
  *     }
- *  });
+ * });
+ *
+ * // or with a lambda expression:
+ * firstNameCol.setCellValueFactory(p -> p.getValue().firstNameProperty());
  * }</pre>
  *
  * <h3>TableView Selection / Focus APIs</h3>

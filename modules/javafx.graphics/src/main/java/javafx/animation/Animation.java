@@ -263,14 +263,14 @@ public abstract class Animation {
      * Defines the direction/speed at which the {@code Animation} is expected to
      * be played.
      * <p>
-     * The absolute value of {@code rate} indicates the speed which the
+     * The absolute value of {@code rate} indicates the speed at which the
      * {@code Animation} is to be played, while the sign of {@code rate}
      * indicates the direction. A positive value of {@code rate} indicates
      * forward play, a negative value indicates backward play and {@code 0.0} to
      * stop a running {@code Animation}.
      * <p>
      * Rate {@code 1.0} is normal play, {@code 2.0} is 2 time normal,
-     * {@code -1.0} is backwards, etc...
+     * {@code -1.0} is backwards, etc.
      *
      * <p>
      * Inverting the rate of a running {@code Animation} will cause the

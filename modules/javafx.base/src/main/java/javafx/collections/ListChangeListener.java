@@ -45,20 +45,20 @@ public interface ListChangeListener<E> {
      * Each change must be one of the following:
      * <ul>
      * <li><b>Permutation change</b> : {@link #wasPermutated()} returns true in this case.
-     * The permutation happened at range between {@link #getFrom() from}(inclusive) and {@link #getTo() to}(exclusive) and
+     * The permutation happened at range between {@link #getFrom() from} (inclusive) and {@link #getTo() to} (exclusive) and
      * can be queried by calling {@link #getPermutation(int)} method.
      * <li><b>Add or remove change</b> : In this case, at least one of the {@link #wasAdded()}, {@link #wasRemoved()} returns true.
      * If both methods return true, {@link #wasReplaced()} will also return true.
      * <p>The {@link #getRemoved()} method returns a list of elements that have been
      * replaced or removed from the list.
-     * <p> The range between {@link #getFrom() from}(inclusive) and {@link #getTo() to}(exclusive)
+     * <p> The range between {@link #getFrom() from} (inclusive) and {@link #getTo() to} (exclusive)
      * denotes the sublist of the list that contain new elements. Note that this is a half-open
      * interval, so if no elements were added, {@code getFrom()} is equal to {@code getTo()}.
      * <p>It is possible to get a list of added elements by calling getAddedSubList().
      * <p>Note that in order to maintain correct indexes of the separate add/remove changes, these changes
      * <b>must</b> be sorted by their {@code from} index.
      * <li><b>Update change</b> : {@link #wasUpdated()} return true on an update change.
-     * All elements between {@link #getFrom() from}(inclusive) and {@link #getTo() to}(exclusive) were updated.
+     * All elements between {@link #getFrom() from} (inclusive) and {@link #getTo() to} (exclusive) were updated.
      * </ul>
      *
      * <b>Important:</b> It's necessary to call {@link #next()} method before calling
