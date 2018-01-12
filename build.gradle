@@ -3393,13 +3393,13 @@ project(":web") {
         }
     }
 
-    def drtClasses = "com/sun/javafx/webkit/drt/**"
-    jar.exclude(drtClasses)
+    def drtClasses = "**/com/sun/javafx/webkit/drt/**"
     task drtJar(type: Jar, dependsOn: compileJava) {
         archiveName = "drt.jar"
         destinationDir = file("$buildDir/test")
-        from "$buildDir/classes/main"
+        from "$buildDir/classes/main/javafx.web/"
         include drtClasses
+        includeEmptyDirs = false
     }
 
     if (IS_COMPILE_WEBKIT) {
@@ -4259,6 +4259,7 @@ compileTargets { t ->
                 exclude("com/sun/glass/ui/swt")
                 exclude("com/sun/javafx/tools/ant")
                 exclude("com/javafx/main")
+                exclude("com/sun/javafx/webkit/drt")
                 if (!IS_INCLUDE_NULL3D) {
                     exclude ("com/sun/prism/null3d")
                 }
