@@ -504,7 +504,7 @@ public class ImageView extends Node {
      * scaling to fit the image within the fitting bounding box.
      * <p>
      * If set to {@code true}, it affects the dimensions of this
-     * {@code ImageView} in the following way *
+     * {@code ImageView} in the following way
      * <ul>
      * <li>If only {@code fitWidth} is set, height is scaled to preserve ratio
      * <li>If only {@code fitHeight} is set, width is scaled to preserve ratio
@@ -513,7 +513,7 @@ public class ImageView extends Node {
      * </ul>
      *
      * If unset or set to {@code false}, it affects the dimensions of this
-     * {@code ImageView} in the following way *
+     * {@code ImageView} in the following way
      * <ul>
      * <li>If only {@code fitWidth} is set, image's view width is scaled to
      * match and height is unchanged;

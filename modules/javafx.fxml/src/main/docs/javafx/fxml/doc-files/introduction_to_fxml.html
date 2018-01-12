@@ -31,14 +31,14 @@
 <head>
 <link href="fxml.css" type="text/css" rel="stylesheet"/>    
 <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
-<title>Introduction to FXML | JavaFX 9</title>
-<meta name="description" content="The document introduces FXML, an XML-based declarative markup language for defining user interfaces in JavaFX 9 applications."/>
-<meta name="keywords" content="JavaFX 9, FXML, JavaFX GUI development, web development, Java application development, GUI applications, rich internet applications, RIA, expressive content"/>
+<title>Introduction to FXML | JavaFX 10</title>
+<meta name="description" content="The document introduces FXML, an XML-based declarative markup language for defining user interfaces in JavaFX 10 applications."/>
+<meta name="keywords" content="JavaFX 10, FXML, JavaFX GUI development, web development, Java application development, GUI applications, rich internet applications, RIA, expressive content"/>
 </head>
 <body>
 
 <div class="fx-code-header">
-<div class="version"><br/>Release: JavaFX 9</div>
+<div class="version"><br/>Release: JavaFX 10</div>
 </div>
 
 <h1>Introduction to FXML</h1>
@@ -704,7 +704,7 @@ Previous example using an expression handler:
 <pre class="code">
 public class MyController {
     
-    @FXML
+    &#64;FXML
     public EventHandler&lt;ActionEvent&gt; onActionHandler = new EventHandler&lt;&gt;() { ... }
 
     ...
@@ -894,10 +894,10 @@ package com.foo;
 public class MyController implements Initializable {
     public Button button;
 
-    @Override
+    &#64;Override
     public void initialize(URL location, Resources resources)
         button.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
-            @Override
+            &#64;Override
             public void handle(ActionEvent event) {
                 System.out.println("You clicked me!");
             }
@@ -929,7 +929,7 @@ the <span class="code">javafx.fxml</span> module.</p>
 package com.foo;
 
 public class MyController {
-    @FXML
+    &#64;FXML
     private void handleButtonAction(ActionEvent event) {
         System.out.println("You clicked me!");
     }
@@ -940,12 +940,12 @@ public class MyController {
 package com.foo;
 
 public class MyController implements Initializable {
-    @FXML private Button button;
+    &#64;FXML private Button button;
 
-    @FXML
+    &#64;FXML
     protected void initialize()
         button.setOnAction(new EventHandler&lt;ActionEvent&gt;() {
-            @Override
+            &#64;Override
             public void handle(ActionEvent event) {
                 System.out.println("You clicked me!");
             }
@@ -972,8 +972,8 @@ public class MyController implements Initializable {
 <div class="caption">MainController.java</div>
 <pre class="code">
 public class MainController extends Controller {
-    @FXML private Window dialog;
-    @FXML private DialogController dialogController;
+    &#64;FXML private Window dialog;
+    &#64;FXML private DialogController dialogController;
 
     ...
 }
@@ -1027,7 +1027,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 
 public class CustomControl extends VBox {
-    @FXML private TextField textField;
+    &#64;FXML private TextField textField;
 
     public CustomControl() {
         FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("custom_control.fxml"));
@@ -1053,7 +1053,7 @@ public class CustomControl extends VBox {
         return textField.textProperty();
     }
 
-    @FXML
+    &#64;FXML
     protected void doSomething() {
         System.out.println("The button was clicked!");
     }

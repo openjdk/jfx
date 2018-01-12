@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -119,6 +119,14 @@ public class ProgressIndicatorTest {
         assertEquals(TOTAL_PROGRESS_INDICATORS, getCleanedUpObjectCount());
     }
 
+    @Test public void memoryLeakTest_JDK_8189265_changingStage() {
+        testProgressIndicatorObjectsInChangingStage();
+
+        attemptGC(10);
+
+        assertEquals(TOTAL_PROGRESS_INDICATORS, getCleanedUpObjectCount());
+    }
+
     private void testProgressIndicatorObjectsInStage() {
         ProgressIndicator pi[] = new ProgressIndicator[TOTAL_PROGRESS_INDICATORS];
         HBox hb = new HBox();
@@ -162,6 +170,36 @@ public class ProgressIndicatorTest {
         tk.firePulse();
 
         dialog.close();
+        tk.firePulse();
+    }
+
+    private void testProgressIndicatorObjectsInChangingStage() {
+        ProgressIndicator pi[] = new ProgressIndicator[TOTAL_PROGRESS_INDICATORS];
+        HBox hb = new HBox();
+
+        for (int i = 0; i < TOTAL_PROGRESS_INDICATORS; i++) {
+            pi[i] = new ProgressIndicator();
+            weakRefArr.add(i, new WeakReference<ProgressIndicator>(pi[i]));
+            hb.getChildren().add(pi[i]);
+        }
+
+        assertEquals(TOTAL_PROGRESS_INDICATORS, weakRefArr.size());
+        assertEquals(0, getCleanedUpObjectCount());
+
+        Stage stage1 = new Stage();
+        Scene scene = new Scene(hb);
+        stage1.setScene(scene);
+        stage1.show();
+
+        tk.firePulse();
+
+        Stage stage2 = new Stage();
+        stage2.setScene(scene);
+
+        tk.firePulse();
+
+        stage1.close();
+        stage2.close();
         tk.firePulse();
     }
 

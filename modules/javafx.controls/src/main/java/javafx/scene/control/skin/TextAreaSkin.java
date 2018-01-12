@@ -809,6 +809,7 @@ public class TextAreaSkin extends TextInputControlSkin<TextArea> {
 
     // Public for FXVKSkin
     /**
+     * Gets the {@code Bounds} of the caret of the skinned {@code TextArea}.
      * @return the {@code Bounds} of the caret shape, relative to the {@code TextArea}.
      */
     public Bounds getCaretBounds() {

@@ -31,7 +31,7 @@ package javafx.scene.transform;
  */
 public enum MatrixType {
     /**
-     * A 2D affine transformation matrix of 2 rows and 3 columns containing
+     * A 2D affine transformation matrix of 2 rows and 3 columns. Contains
      * the following values:
      * <pre>
      * mxx, mxy, tx,
@@ -52,7 +52,7 @@ public enum MatrixType {
     MT_2D_3x3(3, 3),
 
     /**
-     * A 3D affine transformation matrix of 3 rows and 4 columns containing
+     * A 3D affine transformation matrix of 3 rows and 4 columns. Contains
      * the following values:
      * <pre>
      * mxx, mxy, mxz, tx,

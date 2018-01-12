@@ -30,7 +30,7 @@
 <html lang="en">
   <head>
     <meta name="description" content="This document describes the JavaFX
-              Cascading Style Sheets (CSS) for JavaFX 9 and explains the
+              Cascading Style Sheets (CSS) for JavaFX 10 and explains the
               styles, values, properties and associated grammar.">
     <meta name="keywords" content="JavaFX, JavaFX CSS, JavaFX CSS reference,
               JavaFX CSS guide, JavaFX styling, CSS styles, CSS, cascading style sheets,
@@ -241,7 +241,7 @@
   <body>
     <div class="fx-code-header">
       <div class="version"><br>
-        Release: JavaFX 9</div>
+        Release: JavaFX 10</div>
     </div>
     <h1>JavaFX CSS Reference Guide</h1>
     <h2>Contents</h2>
@@ -691,7 +691,7 @@
     <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:</p>
     <textarea rows="8" cols="132">
 
-     @font-face {
+     &#64;font-face {
         font-family: 'sample';
         font-style: normal;
         font-weight: normal;
@@ -709,7 +709,7 @@
     import javafx.stage.Stage;
 
     public class HelloFontFace extends Application {
-        @Override public void start(Stage primaryStage) {
+        &#64;Override public void start(Stage primaryStage) {
             Label label = new Label("Hello @FontFace");
             label.setStyle("-fx-font-family: sample; -fx-font-size: 80;");
             Scene scene = new Scene(label);
@@ -988,7 +988,7 @@
     'image' directory:</p>
     <textarea rows="9" cols="132">
 
-    @Override public void start(Stage stage) {
+    &#64;Override public void start(Stage stage) {
         StackPane root = new StackPane();
         root.setStyle("-fx-background-image: url(images/Duke.png);");
         Scene scene = new Scene(root, 300, 250);
