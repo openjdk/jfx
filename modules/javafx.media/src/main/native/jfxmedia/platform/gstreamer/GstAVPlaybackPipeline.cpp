@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -599,6 +599,10 @@ void CGstAVPlaybackPipeline::CheckQueueSize(GstElement *element)
     }
     else if ((state == GST_STATE_PLAYING && pending_state == GST_STATE_VOID_PENDING) || (state == GST_STATE_PAUSED && pending_state == GST_STATE_PLAYING) || (state == GST_STATE_PAUSED && pending_state == GST_STATE_PAUSED))
     {
+        // Do not increment queue if we playing and only have one track
+        if (!(m_bHasAudio && m_bHasVideo))
+            return;
+
         if (m_Elements[AUDIO_QUEUE] == element)
         {
             g_object_get(m_Elements[VIDEO_QUEUE], "current-level-buffers", &current_level_buffers, NULL);
