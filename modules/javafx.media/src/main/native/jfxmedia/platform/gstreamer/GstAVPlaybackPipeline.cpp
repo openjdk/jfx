@@ -432,6 +432,18 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
 
     if (g_str_has_prefix(pstrName, "audio"))
     {
+         // Ignore additional audio tracks if we already have one.
+         // Otherwise files with multiple audio track will fail to play, since
+         // we will not able to connect second audio track.
+         if (pPipeline->m_bHasAudio)
+         {
+            if (pCaps != NULL)
+                gst_caps_unref(pCaps);
+
+            pPipeline->m_pBusCallbackContent->m_DisposeLock->Exit();
+            return;
+        }
+
         if (pPipeline->IsCodecSupported(pCaps))
         {
             pPad = gst_element_get_static_pad(pPipeline->m_Elements[AUDIO_BIN], "sink");
