@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import javafx.application.Platform;
@@ -82,6 +83,8 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TabPaneShim;
+
+import java.lang.ref.WeakReference;
 
 public class TabPaneTest {
     private TabPane tabPane;//Empty string
@@ -1093,4 +1096,35 @@ public class TabPaneTest {
         tabPane.getTabs().remove(t2);
     }
 
+    // Test for JDK-8154039
+    WeakReference<Tab> weakTab;
+    @Test public void testSelectNonChildTab() {
+        tabPane.getTabs().addAll(tab1);
+        root.getChildren().add(tabPane);
+        show();
+        tk.firePulse();
+        weakTab = new WeakReference<>(new Tab("NonChildTab"));
+        tabPane.getSelectionModel().select(weakTab.get());
+        tk.firePulse();
+        attemptGC(10);
+        tk.firePulse();
+        assertNull(weakTab.get());
+    }
+
+    private void attemptGC(int n) {
+        // Attempt gc n times
+        for (int i = 0; i < n; i++) {
+            System.gc();
+            System.runFinalization();
+
+            if (weakTab.get() == null) {
+                break;
+            }
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                fail("InterruptedException occurred during Thread.sleep()");
+            }
+        }
+    }
 }
