@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -352,7 +352,11 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                     resetToolbarState = false;
                 } else if (event.isShiftDown() &&
                         (event.getCode() == KeyCode.UP || event.getCode() == KeyCode.DOWN ||
-                                event.getCode() == KeyCode.LEFT || event.getCode() == KeyCode.RIGHT)) {
+                         event.getCode() == KeyCode.LEFT || event.getCode() == KeyCode.RIGHT ||
+                         event.getCode() == KeyCode.HOME || event.getCode() == KeyCode.END)) {
+                    updateToolbarState(true);
+                } else if ((event.isControlDown() || event.isMetaDown()) &&
+                            event.getCode() == KeyCode.A) {
                     updateToolbarState(true);
                 }
             });
