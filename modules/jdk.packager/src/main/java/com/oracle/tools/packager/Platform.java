@@ -76,7 +76,7 @@ public enum Platform {UNKNOWN, WINDOWS, LINUX, MAC;
             majorVersion = Integer.parseInt(parts[0]);
 
             if (parts.length > 1) {
-                minorVersion = Integer.parseInt(parts[0]);
+                minorVersion = Integer.parseInt(parts[1]);
             }
             else {
                 minorVersion = -1;
