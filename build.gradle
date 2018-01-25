@@ -3784,7 +3784,16 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     doLast {
         projectsToDocument.each { p ->
             copy {
-                from "$p.projectDir/src/main/docs"
+                from("$p.projectDir/src/main/docs") {
+                    include "**/*.html"
+                    filter { line->
+                        line = line.replace("@FXVERSION@", RELEASE_VERSION)
+                    }
+                }
+                from("$p.projectDir/src/main/docs") {
+                    exclude "**/*.html"
+                }
+
                 into "$buildDir/javadoc"
             }
         }
@@ -4175,10 +4184,20 @@ compileTargets { t ->
         // Copy .html and other files needed for doc bundles
         def copyDocFiles = project.task("copyDocFiles$t.capital", type: Copy, dependsOn: copySourceFilesTask) {
             if (copySources) {
-                from "${project.projectDir}/src/main/java"
-                from "${project.projectDir}/src/main/docs"
+                from("${project.projectDir}/src/main/docs") {
+                    include "**/*.html"
+                    filter { line->
+                        line = line.replace("@FXVERSION@", RELEASE_VERSION)
+                    }
+                }
+                from("${project.projectDir}/src/main/docs") {
+                    exclude "**/*.html"
+                }
+                from("${project.projectDir}/src/main/java") {
+                    exclude "**/*.java"
+                }
+
                 into "${modulesSrcDir}/${moduleName}"
-                exclude "**/*.java"
             }
         }
 
