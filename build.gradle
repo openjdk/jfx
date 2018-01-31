@@ -1585,7 +1585,6 @@ allprojects {
 def qualExportsCore = [
     "--add-exports=java.base/jdk.internal.misc=javafx.graphics",
     "--add-exports=java.base/jdk.internal.ref=javafx.media",
-    "--add-exports=java.base/sun.net.www=javafx.web",
     "--add-exports=java.base/sun.nio.ch=javafx.media",
     "--add-exports=java.base/sun.reflect.misc=javafx.base",
     "--add-exports=java.base/sun.reflect.misc=javafx.fxml",
