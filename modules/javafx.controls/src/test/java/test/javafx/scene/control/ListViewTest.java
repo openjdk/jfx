@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1917,5 +1917,34 @@ public class ListViewTest {
         } catch (Exception e) {
             assert(e instanceof NoSuchElementException);
         }
+    }
+
+    @Test public void testListEditStartOnCellStandalone_JDK8187432() {
+        ListView<String> control = new ListView<>(FXCollections
+                .observableArrayList("Item1", "Item2", "Item3", "Item4"));
+        control.setEditable(true);
+        control.setCellFactory(TextFieldListCell.forListView());
+        StageLoader sl = new StageLoader(control);
+        int editIndex = 2;
+
+        IndexedCell cell = VirtualFlowTestUtils.getCell(control, editIndex);
+        ObjectProperty<ListView.EditEvent> editEvent = new SimpleObjectProperty<>();
+        control.addEventHandler(ListView.editStartEvent(), e -> editEvent.set(e));
+
+        // start edit on cell
+        cell.startEdit();
+
+        // test cell state
+        assertTrue(cell.isEditing());
+        assertEquals(editIndex, cell.getIndex());
+
+        // test editEvent
+        assertNotNull(editEvent.get());
+        assertEquals("type is startEdit",
+                     ListView.editStartEvent(), editEvent.get().getEventType());
+        assertEquals("index on start event",
+                     editIndex, editEvent.get().getIndex());
+
+        sl.dispose();
     }
 }

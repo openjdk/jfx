@@ -83,4 +83,10 @@ public class WebPageTest extends TestBase {
             assertEquals("Expected single frame : ", 1, WebPageShim.getFramesCount(page));
         });
     }
+
+    // JDK-8196011
+    @Test public void testICUTagParse() {
+        load(WebPageTest.class.getClassLoader().getResource(
+                "test/html/icutagparse.html").toExternalForm());
+    }
 }

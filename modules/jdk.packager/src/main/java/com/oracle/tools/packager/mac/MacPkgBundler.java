@@ -30,6 +30,7 @@ import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.Log;
 import com.oracle.tools.packager.ConfigException;
 import com.oracle.tools.packager.IOUtils;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.UnsupportedPlatformException;
 
@@ -396,6 +397,11 @@ public class MacPkgBundler extends MacBaseInstallerBundler {
     private File createPKG(Map<String, ? super Object> params, File outdir, File appLocation) {
         //generic find attempt
         try {
+            if (Platform.getMajorVersion() > 10 ||
+                (Platform.getMajorVersion() == 10 && Platform.getMinorVersion() >= 12)) {
+                // we need this for OS X 10.12+
+                Log.info(I18N.getString("message.signing.pkg"));
+            }
             String daemonLocation = DAEMON_IMAGE_BUILD_ROOT.fetchFrom(params) + "/" + APP_NAME.fetchFrom(params) + ".daemon";
 
             File appPKG = getPackages_AppPackage(params);
