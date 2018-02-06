@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -103,7 +103,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         System.setSecurityManager(sm);
         try {
             runAndWait(() -> {
-                testStage1 = getStage();
+                testStage1 = getStage(false);
                 testScene1 = new Scene(new Group(), WIDTH, HEIGHT);
                 testScene1.setFill(Color.RED);
                 testStage1.setScene(testScene1);
@@ -112,7 +112,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
             });
             waitFirstFrame();
             runAndWait(() -> {
-                testStage2 = getStage();
+                testStage2 = getStage(false);
                 testScene2 = new Scene(new Group(), WIDTH, HEIGHT);
                 testScene2.setFill(Color.GREEN);
                 testStage2.setScene(testScene2);
@@ -156,7 +156,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         System.setSecurityManager(sm);
         try {
             runAndWait(() -> {
-                testStage1 = getStage();
+                testStage1 = getStage(false);
                 testStage1.initStyle(StageStyle.DECORATED);
                 testScene1 = new Scene(new Group(), WIDTH, HEIGHT);
                 testScene1.setFill(Color.LIME);
@@ -167,6 +167,7 @@ public class CustomSecurityManagerTest extends VisualTestBase {
                 testStage1.setX((screenWidth.get() - WIDTH) / 2);
                 testStage1.setY((screenHeight.get() - HEIGHT) / 2);
                 testStage1.show();
+                testStage1.toFront();
             });
             waitFirstFrame();
             if (!initFullScreen) {

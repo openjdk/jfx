@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -129,9 +129,17 @@ public abstract class VisualTestBase {
 
     // This must be called on the FX app thread
     protected Stage getStage() {
+        return getStage(true);
+    }
+
+    // This must be called on the FX app thread
+    protected Stage getStage(boolean alwaysOnTop) {
         Stage stage = new Stage();
         // Undecorated stage to workaround RT-39904
         stage.initStyle(StageStyle.UNDECORATED);
+        if (alwaysOnTop) {
+            stage.setAlwaysOnTop(true);
+        }
         stages.add(stage);
         return stage;
     }
