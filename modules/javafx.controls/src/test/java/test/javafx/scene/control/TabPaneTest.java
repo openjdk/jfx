@@ -1096,6 +1096,41 @@ public class TabPaneTest {
         tabPane.getTabs().remove(t2);
     }
 
+    // Test for JDK-8193495
+    @Test public void testQuickRemoveAddTab() {
+        int tabHeaderMinWidth = 200;
+        int tabHeaderMinHeight = 50;
+        tabPane.setMaxSize(400, 200);
+        tabPane.setTabMinWidth(tabHeaderMinWidth);
+        tabPane.setTabMinHeight(tabHeaderMinHeight);
+        tabPane.getTabs().addAll(tab1, tab2, tab3);
+        tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        root.getChildren().add(tabPane);
+        show();
+        tabPane.requestFocus();
+        tk.firePulse();
+        assertTrue(tabPane.isFocused());
+
+        tabPane.getTabs().add(1, tabPane.getTabs().remove(0));
+        tk.firePulse();
+        tabPane.getSelectionModel().select(tab1);
+        tk.firePulse();
+
+        double xval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinX();
+        double yval = (tabPane.localToScene(tabPane.getLayoutBounds())).getMinY();
+
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval + 19, yval + 17));
+        tk.firePulse();
+        SceneHelper.processMouseEvent(scene,
+            MouseEventGenerator.generateMouseEvent(MouseEvent.MOUSE_PRESSED, xval + 19, yval + 17));
+        tk.firePulse();
+
+        assertEquals("Tabpane should have 3 tabs.", 3, tabPane.getTabs().size());
+        assertEquals("tab2 should be at index 0.", tab2, tabPane.getSelectionModel().getSelectedItem());
+    }
+
     // Test for JDK-8154039
     WeakReference<Tab> weakTab;
     @Test public void testSelectNonChildTab() {
