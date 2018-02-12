@@ -219,7 +219,7 @@ public class IOUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static int execute(Object ... args) throws IOException, InterruptedException {
+    private static Process startProcess(Object... args) throws IOException {
         final ArrayList<String> argsList = new ArrayList<>();
         for (Object a : args) {
             if (a instanceof List) {
@@ -228,7 +228,30 @@ public class IOUtils {
                 argsList.add((String)a);
             }
         }
-        final Process p = Runtime.getRuntime().exec(argsList.toArray(new String[argsList.size()]));
+
+        return Runtime.getRuntime().exec(argsList.toArray(new String[argsList.size()]));
+    }
+
+    private static void logErrorStream(Process p) {
+        final BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+        Thread t = new Thread(() -> {
+            try {
+                String line;
+                while ((line = err.readLine()) != null) {
+                    Log.error(line);
+                }
+            } catch (IOException ioe) {
+                Log.verbose(ioe);
+            }
+        });
+        t.setDaemon(true);
+        t.start();
+    }
+
+    @SuppressWarnings("unchecked")
+    public static int execute(Object ... args) throws IOException, InterruptedException {
+        final Process p = startProcess(args);
+
         final BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
         Thread t = new Thread(() -> {
             try {
@@ -242,20 +265,38 @@ public class IOUtils {
         });
         t.setDaemon(true);
         t.start();
-        final BufferedReader err = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-        t = new Thread(() -> {
+
+        logErrorStream(p);
+        return p.waitFor();
+    }
+
+    public static int getProcessOutput(List<String> result, Object... args)
+            throws IOException, InterruptedException {
+        final Process p = startProcess(args);
+
+        List<String> list = new ArrayList<>();
+        final BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        Thread t = new Thread(() -> {
             try {
                 String line;
-                while ((line = err.readLine()) != null) {
-                    Log.error(line);
+                while ((line = in.readLine()) != null) {
+                    list.add(line);
                 }
             } catch (IOException ioe) {
-                Log.verbose(ioe);
+                com.oracle.tools.packager.Log.verbose(ioe);
             }
         });
         t.setDaemon(true);
         t.start();
-        return p.waitFor();
+
+        logErrorStream(p);
+
+        int ret = p.waitFor();
+
+        result.clear();
+        result.addAll(list);
+
+        return ret;
     }
 
     //no good test if we are running pre-JRE7

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -432,6 +432,18 @@ void CGstAVPlaybackPipeline::on_pad_added(GstElement *element, GstPad *pad, CGst
 
     if (g_str_has_prefix(pstrName, "audio"))
     {
+         // Ignore additional audio tracks if we already have one.
+         // Otherwise files with multiple audio track will fail to play, since
+         // we will not able to connect second audio track.
+         if (pPipeline->m_bHasAudio)
+         {
+            if (pCaps != NULL)
+                gst_caps_unref(pCaps);
+
+            pPipeline->m_pBusCallbackContent->m_DisposeLock->Exit();
+            return;
+        }
+
         if (pPipeline->IsCodecSupported(pCaps))
         {
             pPad = gst_element_get_static_pad(pPipeline->m_Elements[AUDIO_BIN], "sink");
@@ -599,6 +611,10 @@ void CGstAVPlaybackPipeline::CheckQueueSize(GstElement *element)
     }
     else if ((state == GST_STATE_PLAYING && pending_state == GST_STATE_VOID_PENDING) || (state == GST_STATE_PAUSED && pending_state == GST_STATE_PLAYING) || (state == GST_STATE_PAUSED && pending_state == GST_STATE_PAUSED))
     {
+        // Do not increment queue if we playing and only have one track
+        if (!(m_bHasAudio && m_bHasVideo))
+            return;
+
         if (m_Elements[AUDIO_QUEUE] == element)
         {
             g_object_get(m_Elements[VIDEO_QUEUE], "current-level-buffers", &current_level_buffers, NULL);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -230,11 +230,7 @@ public final class ByteArrayCache implements MarlinConst {
     }
 
     static byte[] createArray(final int length, final boolean clean) {
-        if (clean) {
-            return new byte[length];
-        }
-        // use JDK9 Unsafe.allocateUninitializedArray(class, length):
-        return (byte[]) OffHeapArray.UNSAFE.allocateUninitializedArray(byte.class, length);
+        return new byte[length];
     }
 
     static void fill(final byte[] array, final int fromIndex,

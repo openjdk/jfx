@@ -1116,7 +1116,7 @@ ProcessReactivator::ProcessReactivator(pid_t pid): _pid(pid) {
 
     XInitThreadsFunc();
 
-    DllFunction<XOpenDisplayFuncPtr> XOpenDisplayFunc(libX11, "XOpenDisplay33");
+    DllFunction<XOpenDisplayFuncPtr> XOpenDisplayFunc(libX11, "XOpenDisplay");
 
     _display = XOpenDisplayFunc(NULL);
 

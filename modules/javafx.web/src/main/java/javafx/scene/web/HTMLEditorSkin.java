@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -352,7 +352,11 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                     resetToolbarState = false;
                 } else if (event.isShiftDown() &&
                         (event.getCode() == KeyCode.UP || event.getCode() == KeyCode.DOWN ||
-                                event.getCode() == KeyCode.LEFT || event.getCode() == KeyCode.RIGHT)) {
+                         event.getCode() == KeyCode.LEFT || event.getCode() == KeyCode.RIGHT ||
+                         event.getCode() == KeyCode.HOME || event.getCode() == KeyCode.END)) {
+                    updateToolbarState(true);
+                } else if ((event.isControlDown() || event.isMetaDown()) &&
+                            event.getCode() == KeyCode.A) {
                     updateToolbarState(true);
                 }
             });
@@ -1029,15 +1033,13 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         fgColorButton.setDisable(!isCommandEnabled(FOREGROUND_COLOR.getCommand()));
         String foregroundColorValue = getCommandValue(FOREGROUND_COLOR.getCommand());
         if (foregroundColorValue != null) {
-            Color c = Color.web(rgbToHex((String)foregroundColorValue));
-            fgColorButton.setValue(c);
+            fgColorButton.setValue(getColor(foregroundColorValue));
         }
 
         bgColorButton.setDisable(!isCommandEnabled(BACKGROUND_COLOR.getCommand()));
         String backgroundColorValue = getCommandValue(BACKGROUND_COLOR.getCommand());
         if (backgroundColorValue != null) {
-            Color c = Color.web(rgbToHex((String)backgroundColorValue));
-            bgColorButton.setValue(c);
+            bgColorButton.setValue(getColor(backgroundColorValue));
         }
 
         atomicityCount = atomicityCount == 0 ? 0 : --atomicityCount;
@@ -1119,29 +1121,16 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         return webPage.queryCommandValue(command);
     }
 
-    private static String rgbToHex(String value) {
-        if (value.startsWith("rgba")) {
-            String[] components = value.substring(value.indexOf('(') + 1, value.lastIndexOf(')')).split(",");
-            value = String.format("#%02X%02X%02X%02X",
-                Integer.parseInt(components[0].trim()),
-                Integer.parseInt(components[1].trim()),
-                Integer.parseInt(components[2].trim()),
-                Integer.parseInt(components[3].trim()));
-            // The default background color for WebView, according to the HTML
-            // standard is rgba=#00000000 (black). The canvas background is expected
-            // to be white.
-            if ("#00000000".equals(value)) {
-                return "#FFFFFFFF";
-            }
-        } else if (value.startsWith("rgb")) {
-            String[] components = value.substring(value.indexOf('(') + 1, value.lastIndexOf(')')).split(",");
-            value = String.format("#%02X%02X%02X",
-                Integer.parseInt(components[0].trim()),
-                Integer.parseInt(components[1].trim()),
-                Integer.parseInt(components[2].trim()));
+    private Color getColor(String value) {
+        Color color = Color.web(value);
+        /* The default background color for WebView, according to the HTML
+         * standard is rgba=#00000000 (transparent). The canvas background is expected
+         * to be white.
+         */
+        if (color.equals(Color.TRANSPARENT)) {
+            color = Color.WHITE;
         }
-
-        return value;
+        return color;
     }
 
     private void applyTextFormatting() {
