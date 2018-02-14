@@ -171,16 +171,7 @@ if (WIN32)
     list(APPEND WebCore_SOURCES
         platform/win/SystemInfo.cpp
     )
-    list(APPEND WebCore_INCLUDE_DIRECTORIES
-        ${THIRDPARTY_DIR}/libxml/win32/include
-        ${THIRDPARTY_DIR}/libxml/src/include
-        ${THIRDPARTY_DIR}/libxslt
-    )
-    list(APPEND WebCore_LIBRARIES
-        XMLJava
-        XSLTJava
-    )
-elseif(APPLE)
+elseif (APPLE)
     list(APPEND WebCore_INCLUDE_DIRECTORIES
         ${WEBCORE_DIR}/platform/mac
     )
@@ -194,20 +185,12 @@ elseif(APPLE)
     list(APPEND WebCore_LIBRARIES
         ${ACCELERATE_LIBRARY}
     )
-endif()
-
-# System libraries are used on non windows platform
-if (NOT WIN32)
-    list(APPEND WebCore_LIBRARIES
-        ${LIBXML2_LIBRARIES}
-        ${LIBXSLT_LIBRARIES}
-    )
-
-    list(APPEND WebCore_SYSTEM_INCLUDE_DIRECTORIES
-        ${LIBXML2_INCLUDE_DIR}
-        ${LIBXSLT_INCLUDE_DIR}
-    )
 endif ()
+
+list(APPEND WebCore_LIBRARIES
+    XMLJava
+    XSLTJava
+)
 
 list(APPEND WebCore_USER_AGENT_STYLE_SHEETS
     ${WEBCORE_DIR}/css/mediaControlsGtk.css

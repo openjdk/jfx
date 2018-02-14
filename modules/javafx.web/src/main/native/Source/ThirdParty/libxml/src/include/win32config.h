@@ -5,10 +5,11 @@
 #define HAVE_STDARG_H
 #define HAVE_MALLOC_H
 #define HAVE_ERRNO_H
+#define SEND_ARG2_CAST
+#define GETHOSTBYNAME_ARG_CAST
 
 #if defined(_WIN32_WCE)
 #undef HAVE_ERRNO_H
-#include <windows.h>
 #include "wincecompat.h"
 #else
 #define HAVE_SYS_STAT_H
@@ -25,10 +26,6 @@
 
 #ifndef ICONV_CONST
 #define ICONV_CONST const
-#endif
-
-#ifdef NEED_SOCKETS
-#include <wsockcompat.h>
 #endif
 
 /*

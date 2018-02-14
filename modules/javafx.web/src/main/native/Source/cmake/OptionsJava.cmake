@@ -44,9 +44,6 @@ elseif (APPLE)
     set(ICU_JAVA_DATA_LIB ${CMAKE_BINARY_DIR}/lib/libicudata.a)
     #### ICU-END ####
 
-    find_package(LibXml2 2.8.0 REQUIRED)
-    find_package(LibXslt 1.1.7 REQUIRED)
-
     set(CMAKE_MACOSX_RPATH TRUE)
     set(CMAKE_INSTALL_RPATH "@loader_path/.")
     set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
@@ -57,12 +54,15 @@ elseif (UNIX)
     set(ICU_JAVA_DATA_LIB ${CMAKE_BINARY_DIR}/lib/libicudata.a)
     #### ICU-END ####
 
-    find_package(LibXml2 2.7.0 REQUIRED)
-    find_package(LibXslt 1.1.7 REQUIRED)
     set(CMAKE_SKIP_RPATH TRUE)
 else ()
-    message(FATAL_ERROR "Configure libxml, libxslt, sqlite and icu library paths")
+    message(FATAL_ERROR "Configure icu library path")
 endif ()
+
+set(ICU_INCLUDE_DIRS
+    "${THIRDPARTY_DIR}/icu/source/common"
+    "${THIRDPARTY_DIR}/icu/source/i18n"
+)
 set(ICU_LIBRARIES ${ICU_JAVA_COMMON_LIB} ${ICU_JAVA_DATA_LIB})
 
 find_package(JNI REQUIRED)
@@ -189,10 +189,4 @@ if (CMAKE_MAJOR_VERSION LESS 3)
         FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE
     )
 endif ()
-
-set(ICU_INCLUDE_DIRS
-    "${THIRDPARTY_DIR}/icu/source/common"
-    "${THIRDPARTY_DIR}/icu/source/i18n"
-)
-
 

@@ -68,7 +68,9 @@ typedef enum {
     XPATH_UNDEF_PREFIX_ERROR,
     XPATH_ENCODING_ERROR,
     XPATH_INVALID_CHAR_ERROR,
-    XPATH_INVALID_CTXT
+    XPATH_INVALID_CTXT,
+    XPATH_STACK_ERROR,
+    XPATH_FORBID_VARIABLE_ERROR
 } xmlXPathError;
 
 /*
@@ -380,6 +382,8 @@ struct _xmlXPathParserContext {
     xmlXPathCompExprPtr comp;       /* the precompiled expression */
     int xptr;               /* it this an XPointer expression */
     xmlNodePtr         ancestor;    /* used for walking preceding axis */
+
+    int              valueFrame;        /* used to limit Pop on the stack */
 };
 
 /************************************************************************
@@ -417,7 +421,7 @@ XMLPUBVAR double xmlXPathNINF;
  *         @index is out of range (0 to length-1)
  */
 #define xmlXPathNodeSetItem(ns, index)              \
-        ((((ns) != NULL) &&                 \
+        ((((ns) != NULL) &&             \
           ((index) >= 0) && ((index) < (ns)->nodeNr)) ? \
          (ns)->nodeTab[(index)]             \
          : NULL)
@@ -504,6 +508,13 @@ XMLPUBFUN int XMLCALL
  */
 XMLPUBFUN long XMLCALL
             xmlXPathOrderDocElems   (xmlDocPtr doc);
+XMLPUBFUN int XMLCALL
+            xmlXPathSetContextNode  (xmlNodePtr node,
+                         xmlXPathContextPtr ctx);
+XMLPUBFUN xmlXPathObjectPtr XMLCALL
+            xmlXPathNodeEval        (xmlNodePtr node,
+                         const xmlChar *str,
+                         xmlXPathContextPtr ctx);
 XMLPUBFUN xmlXPathObjectPtr XMLCALL
             xmlXPathEval        (const xmlChar *str,
                          xmlXPathContextPtr ctx);
@@ -520,7 +531,7 @@ XMLPUBFUN xmlXPathCompExprPtr XMLCALL
             xmlXPathCompile     (const xmlChar *str);
 XMLPUBFUN xmlXPathCompExprPtr XMLCALL
             xmlXPathCtxtCompile     (xmlXPathContextPtr ctxt,
-                             const xmlChar *str);
+                         const xmlChar *str);
 XMLPUBFUN xmlXPathObjectPtr XMLCALL
             xmlXPathCompiledEval    (xmlXPathCompExprPtr comp,
                          xmlXPathContextPtr ctx);

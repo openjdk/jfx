@@ -190,7 +190,10 @@ struct _xmlParserCtxt {
     const xmlChar    *version;        /* the XML version string */
     const xmlChar   *encoding;        /* the declared encoding, if any */
     int            standalone;        /* standalone document */
-    int                  html;        /* an HTML(1)/Docbook(2) document */
+    int                  html;        /* an HTML(1)/Docbook(2) document
+                                       * 3 is HTML after <head>
+                                       * 10 is HTML after <body>
+                                       */
 
     /* Input stream stack */
     xmlParserInputPtr  input;         /* Current input stream */
@@ -257,7 +260,7 @@ struct _xmlParserCtxt {
     void              *catalogs;      /* document's own catalog */
     int                recovery;      /* run in recovery mode */
     int                progressive;   /* is this a progressive parsing */
-    xmlDictPtr         dict;          /* dictionnary for the parser */
+    xmlDictPtr         dict;          /* dictionary for the parser */
     const xmlChar *   *atts;          /* array for the attributes callbacks */
     int                maxatts;       /* the size of the array */
     int                docdict;       /* use strings from dict to build tree */
@@ -299,6 +302,15 @@ struct _xmlParserCtxt {
     xmlParserMode     parseMode;    /* the parser mode */
     unsigned long    nbentities;    /* number of entities references */
     unsigned long  sizeentities;    /* size of parsed entities */
+
+    /* for use by HTML non-recursive parser */
+    xmlParserNodeInfo *nodeInfo;      /* Current NodeInfo */
+    int                nodeInfoNr;    /* Depth of the parsing stack */
+    int                nodeInfoMax;   /* Max depth of the parsing stack */
+    xmlParserNodeInfo *nodeInfoTab;   /* array of nodeInfos */
+
+    int                input_id;      /* we need to label inputs */
+    unsigned long      sizeentcopy;   /* volume of entity copy */
 };
 
 /**
@@ -594,7 +606,7 @@ typedef void (*cdataBlockSAXFunc) (
  * Display and format a warning messages, callback.
  */
 typedef void (XMLCDECL *warningSAXFunc) (void *ctx,
-                const char *msg, ...);
+                const char *msg, ...) LIBXML_ATTR_FORMAT(2,3);
 /**
  * errorSAXFunc:
  * @ctx:  an XML parser context
@@ -604,7 +616,7 @@ typedef void (XMLCDECL *warningSAXFunc) (void *ctx,
  * Display and format an error messages, callback.
  */
 typedef void (XMLCDECL *errorSAXFunc) (void *ctx,
-                const char *msg, ...);
+                const char *msg, ...) LIBXML_ATTR_FORMAT(2,3);
 /**
  * fatalErrorSAXFunc:
  * @ctx:  an XML parser context
@@ -616,7 +628,7 @@ typedef void (XMLCDECL *errorSAXFunc) (void *ctx,
  *       get all the callbacks for errors.
  */
 typedef void (XMLCDECL *fatalErrorSAXFunc) (void *ctx,
-                const char *msg, ...);
+                const char *msg, ...) LIBXML_ATTR_FORMAT(2,3);
 /**
  * isStandaloneSAXFunc:
  * @ctx:  the user data (XML parser context)
@@ -850,7 +862,7 @@ XMLPUBFUN int XMLCALL
  * Recovery mode
  */
 XMLPUBFUN xmlDocPtr XMLCALL
-        xmlRecoverDoc       (xmlChar *cur);
+        xmlRecoverDoc       (const xmlChar *cur);
 XMLPUBFUN xmlDocPtr XMLCALL
         xmlRecoverMemory    (const char *buffer,
                      int size);
@@ -882,12 +894,12 @@ XMLPUBFUN xmlDocPtr XMLCALL
 XMLPUBFUN xmlDocPtr XMLCALL
         xmlSAXParseMemory   (xmlSAXHandlerPtr sax,
                      const char *buffer,
-                                     int size,
+                     int size,
                      int recovery);
 XMLPUBFUN xmlDocPtr XMLCALL
         xmlSAXParseMemoryWithData (xmlSAXHandlerPtr sax,
                      const char *buffer,
-                                     int size,
+                     int size,
                      int recovery,
                      void *data);
 XMLPUBFUN xmlDocPtr XMLCALL
@@ -1087,7 +1099,7 @@ typedef enum {
     XML_PARSE_SAX1  = 1<<9, /* use the SAX1 interface internally */
     XML_PARSE_XINCLUDE  = 1<<10,/* Implement XInclude substitition  */
     XML_PARSE_NONET = 1<<11,/* Forbid network access */
-    XML_PARSE_NODICT    = 1<<12,/* Do not reuse the context dictionnary */
+    XML_PARSE_NODICT    = 1<<12,/* Do not reuse the context dictionary */
     XML_PARSE_NSCLEAN   = 1<<13,/* remove redundant namespaces declarations */
     XML_PARSE_NOCDATA   = 1<<14,/* merge CDATA as text nodes */
     XML_PARSE_NOXINCNODE= 1<<15,/* do not generate XINCLUDE START/END nodes */
@@ -1096,7 +1108,10 @@ typedef enum {
                    crash if you try to modify the tree) */
     XML_PARSE_OLD10 = 1<<17,/* parse using XML-1.0 before update 5 */
     XML_PARSE_NOBASEFIX = 1<<18,/* do not fixup XINCLUDE xml:base uris */
-    XML_PARSE_HUGE      = 1<<19 /* relax any hardcoded limit from the parser */
+    XML_PARSE_HUGE      = 1<<19,/* relax any hardcoded limit from the parser */
+    XML_PARSE_OLDSAX    = 1<<20,/* parse using SAX2 interface before 2.7.0 */
+    XML_PARSE_IGNORE_ENC= 1<<21,/* ignore internal document encoding hint */
+    XML_PARSE_BIG_LINES = 1<<22 /* Store big lines numbers in text PSVI field */
 } xmlParserOption;
 
 XMLPUBFUN void XMLCALL
@@ -1212,6 +1227,8 @@ typedef enum {
     XML_WITH_DEBUG_MEM = 29,
     XML_WITH_DEBUG_RUN = 30,
     XML_WITH_ZLIB = 31,
+    XML_WITH_ICU = 32,
+    XML_WITH_LZMA = 33,
     XML_WITH_NONE = 99999 /* just to be sure of allocation size */
 } xmlFeature;
 
@@ -1222,4 +1239,3 @@ XMLPUBFUN int XMLCALL
 }
 #endif
 #endif /* __XML_PARSER_H__ */
-

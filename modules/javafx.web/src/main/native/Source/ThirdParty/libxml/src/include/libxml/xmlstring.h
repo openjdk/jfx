@@ -59,7 +59,7 @@ XMLPUBFUN const xmlChar * XMLCALL
                                          const xmlChar *val);
 XMLPUBFUN const xmlChar * XMLCALL
                 xmlStrcasestr            (const xmlChar *str,
-                                         xmlChar *val);
+                                         const xmlChar *val);
 XMLPUBFUN int XMLCALL
                 xmlStrcmp                (const xmlChar *str1,
                                          const xmlChar *str2);
@@ -97,13 +97,13 @@ XMLPUBFUN xmlChar * XMLCALL
 XMLPUBFUN int XMLCALL
                 xmlStrPrintf             (xmlChar *buf,
                                          int len,
-                                         const xmlChar *msg,
-                                         ...);
+                                         const char *msg,
+                                         ...) LIBXML_ATTR_FORMAT(3,4);
 XMLPUBFUN int XMLCALL
                 xmlStrVPrintf                (xmlChar *buf,
                                          int len,
-                                         const xmlChar *msg,
-                                         va_list ap);
+                                         const char *msg,
+                                         va_list ap) LIBXML_ATTR_FORMAT(3,0);
 
 XMLPUBFUN int XMLCALL
         xmlGetUTF8Char                   (const unsigned char *utf,

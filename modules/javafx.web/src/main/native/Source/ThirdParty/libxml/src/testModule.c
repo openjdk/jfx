@@ -47,7 +47,7 @@ int main(int argc ATTRIBUTE_UNUSED, char **argv ATTRIBUTE_UNUSED) {
 
     /* build the module filename, and confirm the module exists */
     xmlStrPrintf(filename, sizeof(filename),
-                 (const xmlChar*) "%s/testdso%s",
+                 "%s/testdso%s",
                  (const xmlChar*)MODULE_PATH,
          (const xmlChar*)LIBXML_MODULE_EXTENSION);
 

@@ -99,6 +99,10 @@ XMLPUBFUN int XMLCALL
                      int flags,
                      void *data);
 XMLPUBFUN int XMLCALL
+                xmlXIncludeProcessTreeFlagsData(xmlNodePtr tree,
+                                         int flags,
+                                         void *data);
+XMLPUBFUN int XMLCALL
         xmlXIncludeProcessTree  (xmlNodePtr tree);
 XMLPUBFUN int XMLCALL
         xmlXIncludeProcessTreeFlags(xmlNodePtr tree,

@@ -782,6 +782,24 @@ test_%s(void) {
 	test.write("        %s = gen_%s(n_%s, %d);\n" % (nam, type, nam, i))
 	i = i + 1;
 
+    # add checks to avoid out-of-bounds array access
+    i = 0;
+    for arg in t_args:
+        (nam, type, rtype, crtype, info) = arg;
+        # assume that "size", "len", and "start" parameters apply to either
+        # the nearest preceding or following char pointer
+        if type == "int" and (nam == "size" or nam == "len" or nam == "start"):
+            for j in range(i - 1, -1, -1) + range(i + 1, len(t_args)):
+                (bnam, btype) = t_args[j][:2]
+                if btype == "const_char_ptr" or btype == "const_xmlChar_ptr":
+                    test.write(
+                        "        if ((%s != NULL) &&\n"
+                        "            (%s > (int) strlen((const char *) %s) + 1))\n"
+                        "            continue;\n"
+                        % (bnam, nam, bnam))
+                    break
+	i = i + 1;
+
     # do the call, and clanup the result
     if extra_pre_call.has_key(name):
 	test.write("        %s\n"% (extra_pre_call[name]))

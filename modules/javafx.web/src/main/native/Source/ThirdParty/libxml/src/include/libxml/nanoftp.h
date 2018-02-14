@@ -15,6 +15,26 @@
 
 #ifdef LIBXML_FTP_ENABLED
 
+/* Needed for portability to Windows 64 bits */
+#if defined(_WIN32) && !defined(__CYGWIN__)
+#include <winsock2.h>
+#else
+/**
+ * SOCKET:
+ *
+ * macro used to provide portability of code to windows sockets
+ */
+#define SOCKET int
+/**
+ * INVALID_SOCKET:
+ *
+ * macro used to provide portability of code to windows sockets
+ * the value to be used when the socket is not valid
+ */
+#undef  INVALID_SOCKET
+#define INVALID_SOCKET (-1)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -114,7 +134,7 @@ XMLPUBFUN int XMLCALL
     xmlNanoFTPDele      (void *ctx,
                  const char *file);
 
-XMLPUBFUN int XMLCALL
+XMLPUBFUN SOCKET XMLCALL
     xmlNanoFTPGetConnection (void *ctx);
 XMLPUBFUN int XMLCALL
     xmlNanoFTPCloseConnection(void *ctx);
@@ -123,7 +143,7 @@ XMLPUBFUN int XMLCALL
                  ftpListCallback callback,
                  void *userData,
                  const char *filename);
-XMLPUBFUN int XMLCALL
+XMLPUBFUN SOCKET XMLCALL
     xmlNanoFTPGetSocket (void *ctx,
                  const char *filename);
 XMLPUBFUN int XMLCALL

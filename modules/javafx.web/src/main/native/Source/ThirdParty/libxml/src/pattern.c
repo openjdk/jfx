@@ -39,6 +39,9 @@
 
 /* #define DEBUG_STREAMING */
 
+#ifdef ERROR
+#undef ERROR
+#endif
 #define ERROR(a, b, c, d)
 #define ERROR5(a, b, c, d, e)
 
@@ -159,7 +162,7 @@ struct _xmlStepOp {
 #define PAT_FROM_CUR    (1<<9)
 
 struct _xmlPattern {
-    void *data;         /* the associated template */
+    void *data;     /* the associated template */
     xmlDictPtr dict;        /* the optional dictionary */
     struct _xmlPattern *next;   /* next pattern if | is used */
     const xmlChar *pattern; /* the pattern */
@@ -305,7 +308,8 @@ xmlNewPatParserContext(const xmlChar *pattern, xmlDictPtr dict,
     cur->base = pattern;
     if (namespaces != NULL) {
         int i;
-    for (i = 0;namespaces[2 * i] != NULL;i++);
+        for (i = 0;namespaces[2 * i] != NULL;i++)
+            ;
         cur->nb_namespaces = i;
     } else {
         cur->nb_namespaces = 0;
@@ -715,14 +719,14 @@ rollback:
 #define PEEKPREV(val) ctxt->cur[-(val)]
 #define CUR_PTR ctxt->cur
 
-#define SKIP_BLANKS                             \
+#define SKIP_BLANKS                         \
     while (IS_BLANK_CH(CUR)) NEXT
 
 #define CURRENT (*ctxt->cur)
 #define NEXT ((*ctxt->cur) ?  ctxt->cur++: ctxt->cur)
 
 
-#define PUSH(op, val, val2)                         \
+#define PUSH(op, val, val2)                     \
     if (xmlPatternAdd(ctxt, ctxt->comp, (op), (val), (val2))) goto error;
 
 #define XSLT_ERROR(X)                           \
@@ -965,6 +969,7 @@ xmlCompileAttributeTest(xmlPatParserContextPtr ctxt) {
         ERROR5(NULL, NULL, NULL,
             "xmlCompileAttributeTest : no namespace bound to prefix %s\n",
             prefix);
+            XML_PAT_FREE_STRING(ctxt, prefix);
         ctxt->error = 1;
         goto error;
         }
@@ -1927,7 +1932,7 @@ xmlStreamPushInternal(xmlStreamCtxtPtr stream,
         /*
         * Skip blocked expressions.
         */
-            stream->level++;
+        stream->level++;
         goto stream_next;
     }
 

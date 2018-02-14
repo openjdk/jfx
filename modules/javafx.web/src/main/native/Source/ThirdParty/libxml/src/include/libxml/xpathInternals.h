@@ -103,13 +103,13 @@ extern "C" {
 XMLPUBFUN int XMLCALL
         xmlXPathPopBoolean  (xmlXPathParserContextPtr ctxt);
 XMLPUBFUN double XMLCALL
-            xmlXPathPopNumber   (xmlXPathParserContextPtr ctxt);
+        xmlXPathPopNumber   (xmlXPathParserContextPtr ctxt);
 XMLPUBFUN xmlChar * XMLCALL
-            xmlXPathPopString   (xmlXPathParserContextPtr ctxt);
+        xmlXPathPopString   (xmlXPathParserContextPtr ctxt);
 XMLPUBFUN xmlNodeSetPtr XMLCALL
-            xmlXPathPopNodeSet  (xmlXPathParserContextPtr ctxt);
+        xmlXPathPopNodeSet  (xmlXPathParserContextPtr ctxt);
 XMLPUBFUN void * XMLCALL
-            xmlXPathPopExternal (xmlXPathParserContextPtr ctxt);
+        xmlXPathPopExternal (xmlXPathParserContextPtr ctxt);
 
 /**
  * xmlXPathReturnBoolean:
@@ -229,7 +229,7 @@ XMLPUBFUN void * XMLCALL
  * Empties a node-set.
  */
 #define xmlXPathEmptyNodeSet(ns)                    \
-    { while ((ns)->nodeNr > 0) (ns)->nodeTab[(ns)->nodeNr--] = NULL; }
+    { while ((ns)->nodeNr > 0) (ns)->nodeTab[--(ns)->nodeNr] = NULL; }
 
 /**
  * CHECK_ERROR:
@@ -296,7 +296,9 @@ XMLPUBFUN void * XMLCALL
 #define CHECK_ARITY(x)                          \
     if (ctxt == NULL) return;                       \
     if (nargs != (x))                           \
-        XP_ERROR(XPATH_INVALID_ARITY);
+        XP_ERROR(XPATH_INVALID_ARITY);                  \
+    if (ctxt->valueNr < ctxt->valueFrame + (x))             \
+        XP_ERROR(XPATH_STACK_ERROR);
 
 /**
  * CAST_TO_STRING:
@@ -498,13 +500,13 @@ XMLPUBFUN xmlXPathObjectPtr XMLCALL
         xmlXPathNewNodeSet      (xmlNodePtr val);
 XMLPUBFUN xmlXPathObjectPtr XMLCALL
         xmlXPathNewValueTree        (xmlNodePtr val);
-XMLPUBFUN void XMLCALL
+XMLPUBFUN int XMLCALL
         xmlXPathNodeSetAdd      (xmlNodeSetPtr cur,
                          xmlNodePtr val);
-XMLPUBFUN void XMLCALL
+XMLPUBFUN int XMLCALL
         xmlXPathNodeSetAddUnique    (xmlNodeSetPtr cur,
                          xmlNodePtr val);
-XMLPUBFUN void XMLCALL
+XMLPUBFUN int XMLCALL
         xmlXPathNodeSetAddNs        (xmlNodeSetPtr cur,
                          xmlNodePtr node,
                          xmlNsPtr ns);
