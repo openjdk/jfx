@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.embed.swing;
 
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingNode;
@@ -46,6 +47,7 @@ import org.junit.Test;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assume.assumeTrue;
 
 public class SwingNodeMemoryLeakTest {
 
@@ -82,6 +84,9 @@ public class SwingNodeMemoryLeakTest {
 
     @Test
     public void testSwingNodeMemoryLeak() {
+        if (PlatformUtil.isMac()) {
+            assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8196614
+        }
         Util.runAndWait(() -> {
             testSwingNodeObjectsInStage();
         });

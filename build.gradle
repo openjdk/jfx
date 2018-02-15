@@ -3894,6 +3894,10 @@ project(":systemTests") {
             // Disable all robot-based visual tests
             exclude("test/robot/**");
         }
+        if (!IS_UNSTABLE_TEST) {
+            // JDK-8196607 Don't run monocle test cases 
+            exclude("test/robot/com/sun/glass/ui/monocle/**");
+        }
         if (!IS_AWT_TEST) {
             // Disable all AWT-based tests
             exclude("**/javafx/embed/swing/*.*");
