@@ -927,7 +927,8 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
             }
         }
 
-        if (alignmentToggleGroup.getSelectedToggle() == null) {
+        if (alignmentToggleGroup.getSelectedToggle() == null
+                && webPage.getClientSelectedText().isEmpty()) {
             alignmentToggleGroup.selectToggle(alignLeftButton);
         }
 
