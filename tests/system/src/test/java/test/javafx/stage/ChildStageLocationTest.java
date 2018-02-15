@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -46,6 +46,7 @@ import org.junit.Test;
 
 import static junit.framework.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class ChildStageLocationTest {
     static CountDownLatch startupLatch;
@@ -75,6 +76,7 @@ public class ChildStageLocationTest {
 
     @Test
     public void testLocation() {
+        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8176776
         Rectangle2D bounds = Screen.getPrimary().getVisualBounds();
         Window window = stage.getScene().getWindow();
         double minX = bounds.getMinX() + (bounds.getWidth() - window.getWidth())/2 - 50;

@@ -144,6 +144,11 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
         try {
             appImageDir.mkdirs();
 
+            try {
+                MacAppImageBuilder.addNewKeychain(p);
+            } catch (InterruptedException e) {
+                Log.error(e.getMessage());
+            }
             // first, make sure we don't use the local signing key
             p.put(DEVELOPER_ID_APP_SIGNING_KEY.getID(), null);
             File appLocation = prepareAppBundle(p);
@@ -156,6 +161,8 @@ public class MacAppStoreBundler extends MacBaseInstallerBundler {
             String inheritEntitlements = getConfig_Inherit_Entitlements(p).toString();
 
             MacAppImageBuilder.signAppBundle(p, appLocation.toPath(), signingIdentity, identifierPrefix, entitlementsFile, inheritEntitlements);
+            MacAppImageBuilder.restoreKeychainList(p);
+
             ProcessBuilder pb;
 
             // create the final pkg file

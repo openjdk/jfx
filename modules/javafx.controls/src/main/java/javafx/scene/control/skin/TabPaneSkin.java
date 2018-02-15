@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -826,36 +826,13 @@ public class TabPaneSkin extends SkinBase<TabPane> {
                     if (tabsFit()) {
                         setScrollOffset(0.0);
                     } else {
-                        if (!removeTab.isEmpty()) {
-                            double offset = 0;
-                            double w = tabHeaderArea.getWidth() - snapSize(controlButtons.prefWidth(-1)) - firstTabIndent() - SPACER;
-                            Iterator<Node> i = getChildren().iterator();
-                            while (i.hasNext()) {
-                                TabHeaderSkin tabHeader = (TabHeaderSkin)i.next();
-                                double tabHeaderPrefWidth = snapSize(tabHeader.prefWidth(-1));
-                                if (removeTab.contains(tabHeader)) {
-                                    if (offset < w) {
-                                        isSelectingTab = true;
-                                    }
-                                    i.remove();
-                                    removeTab.remove(tabHeader);
-                                    if (removeTab.isEmpty()) {
-                                        break;
-                                    }
-                                }
-                                offset += tabHeaderPrefWidth;
-                            }
-//                        } else {
-//                            isSelectingTab = true;
+                        if (isSelectingTab) {
+                            ensureSelectedTabIsVisible();
+                        } else {
+                            validateScrollOffset();
                         }
                     }
-
-                    if (isSelectingTab) {
-                        ensureSelectedTabIsVisible();
-                        isSelectingTab = false;
-                    } else {
-                        validateScrollOffset();
-                    }
+                    isSelectingTab = false;
 
                     Side tabPosition = getSkinnable().getSide();
                     double tabBackgroundHeight = snapSize(prefHeight(-1));
@@ -990,18 +967,10 @@ public class TabPaneSkin extends SkinBase<TabPane> {
             headersRegion.getChildren().add(addToIndex, tabHeaderSkin);
         }
 
-        private List<TabHeaderSkin> removeTab = new ArrayList<>();
         private void removeTab(Tab tab) {
             TabHeaderSkin tabHeaderSkin = getTabHeaderSkin(tab);
             if (tabHeaderSkin != null) {
-                if (tabsFit()) {
-                    headersRegion.getChildren().remove(tabHeaderSkin);
-                } else {
-                    // The tab will be removed during layout because
-                    // we need its width to compute the scroll offset.
-                    removeTab.add(tabHeaderSkin);
-                    tabHeaderSkin.removeListeners(tab);
-                }
+                headersRegion.getChildren().remove(tabHeaderSkin);
             }
         }
 

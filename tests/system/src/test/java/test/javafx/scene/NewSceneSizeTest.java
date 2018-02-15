@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 public class NewSceneSizeTest {
     static CountDownLatch startupLatch;
@@ -85,6 +86,7 @@ public class NewSceneSizeTest {
 
     @Test
     public void testNewSceneSize() throws Exception {
+        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8193185
         Thread.sleep(200);
         final int nTries = 100;
         Stage childStage[] = new Stage[nTries];

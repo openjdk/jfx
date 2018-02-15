@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,8 +54,8 @@ public class AABalanceFlipTest extends VisualTestBase {
 
     @Test(timeout = 5000)
     public void testAABalanceFlip() {
-        final int WIDTH = 800;
-        final int HEIGHT = 800;
+        final int WIDTH = 600;
+        final int HEIGHT = 600;
         selfIllumMap = new WritableImage(64, 64);
         PixelWriter pWriter = selfIllumMap.getPixelWriter();
         setArgb(pWriter, 0, 32, 0, 32, 0Xff000000);
@@ -199,8 +199,8 @@ public class AABalanceFlipTest extends VisualTestBase {
         meshView.setCullFace(CullFace.BACK);
 
         final Group grp = new Group(meshView);
-        grp.setTranslateX(400);
-        grp.setTranslateY(400);
+        grp.setTranslateX(width/2);
+        grp.setTranslateY(height/2);
         grp.setTranslateZ(10);
 
         root = new Group(grp, new AmbientLight(Color.BLACK));

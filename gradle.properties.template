@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,18 @@
 
 #COMPILE_WEBKIT = true
 #COMPILE_MEDIA = true
+
+# These properties can be used to support building the libav stubs in support of
+# running on multiple Linux systems. BUILD_LIBAV_STUBS is intended to build a
+# distribution that will run on multiple versions of Linux. BUILD_WORKING_LIBAV
+# is only intended for developers to test their code locally without needing an
+# installed libav; most developers will not ever need to use this option.
+# BUILD_LIBAV_STUBS is valid with COMPILE_MEDIA = true and BUILD_WORKING_LIBAV
+# is valid with COMPILE_MEDIA = true and BUILD_LIBAV_STUBS = true on Linux
+# platforms only.
+
+# BUILD_LIBAV_STUBS = true
+# BUILD_WORKING_LIBAV = true
 
 # Specifies whether to include the Null3D pipeline, which can be used for
 # performance debugging.
