@@ -158,7 +158,7 @@ extern HMODULE _priv_gst_dll_handle;
 #include <dlfcn.h>
 
 // For libav (libavcodec.so)
-static const int AVCODEC_LIBAV_EXPLICIT_VERSIONS[] = { 53, 54, 55, 56 };
+static const int AVCODEC_LIBAV_EXPLICIT_VERSIONS[] = { 54, 56 };
 // For ffmpeg (libavcodec-ffmpeg.so)
 static const int AVCODEC_FFMPEG_EXPLICIT_VERSIONS[] = { 56 };
 // For libav or ffmpeg (libavcodec.so)
