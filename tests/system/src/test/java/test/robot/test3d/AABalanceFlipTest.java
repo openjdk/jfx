@@ -40,8 +40,11 @@ import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.stage.Stage;
+import org.junit.Before;
 import org.junit.Test;
 import test.robot.testharness.VisualTestBase;
+
+import static org.junit.Assume.assumeTrue;
 
 public class AABalanceFlipTest extends VisualTestBase {
 
@@ -51,6 +54,11 @@ public class AABalanceFlipTest extends VisualTestBase {
     private static final double TOLERANCE = 0.07;
 
     WritableImage selfIllumMap;
+
+    @Before
+    public void setupEach() {
+        assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+    }
 
     @Test(timeout = 5000)
     public void testAABalanceFlip() {
@@ -74,13 +82,6 @@ public class AABalanceFlipTest extends VisualTestBase {
         });
         waitFirstFrame();
         runAndWait(() -> {
-
-            if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
-                System.out.println("*************************************************************");
-                System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
-                System.out.println("*************************************************************");
-                return;
-            }
 
             Color color;
             Color blackColor = new Color(0, 0, 0, 1);
