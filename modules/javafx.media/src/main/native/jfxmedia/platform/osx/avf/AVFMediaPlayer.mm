@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -276,6 +276,25 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink,
         eventHandler->SendPlayerStateEvent(newState, 0.0);
         previousPlayerState = newState;
     }
+}
+
+- (void) hlsBugReset {
+    // schedule this to be done when we're not buried inside the AVPlayer callback
+    dispatch_async(dispatch_get_main_queue(), ^{
+        LOGGER_DEBUGMSG(([[NSString stringWithFormat:@"hlsBugReset()"] UTF8String]));
+
+        if (_playerOutput) {
+            _playerOutput.suppressesPlayerRendering = YES;
+
+            CVDisplayLinkStop(_displayLink);
+            [_player.currentItem removeOutput:_playerOutput];
+
+            [_playerOutput requestNotificationOfMediaDataChangeWithAdvanceInterval:ADVANCE_INTERVAL_IN_SECONDS];
+            [_player.currentItem addOutput:_playerOutput];
+
+            self.hlsBugResetCount = 0;
+        }
+    });
 }
 
 - (void) observeValueForKeyPath:(NSString *)keyPath
@@ -680,11 +699,9 @@ static CVReturn displayLinkCallback(CVDisplayLinkRef displayLink, const CVTimeSt
                      * than not playing at all, and this should not happen once
                      * the bug is fixed in AVFoundation.
                      */
-                    [self.player.currentItem removeOutput:playerItemVideoOutput];
-                    [self.player.currentItem addOutput:playerItemVideoOutput];
-                    self.hlsBugResetCount = 0;
+                    [self hlsBugReset];
                     self.lastHostTime = inNow->hostTime;
-                    // fall through to allow it to stop the display link
+                    return kCVReturnSuccess; // hlsBugReset() will stop display link
                 } else {
                     self.hlsBugResetCount++;
                     self.lastHostTime = inNow->hostTime;

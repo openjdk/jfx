@@ -2963,9 +2963,7 @@ project(":media") {
 
     dependencies {
         if (IS_BUILD_LIBAV_STUBS) {
-            media name: "libav-0.7.3", ext: "tar.gz"
             media name: "libav-9.14", ext: "tar.gz"
-            media name: "libav-10.7", ext: "tar.gz"
             media name: "libav-11.4", ext: "tar.gz"
             media name: "libav-12.1", ext: "tar.gz"
             media name: "ffmpeg-3.3.3", ext: "tar.gz"
@@ -3172,8 +3170,8 @@ project(":media") {
                     doLast {
                         project.ext.libav = [:]
                         project.ext.libav.basedir = "${buildDir}/native/linux/libav"
-                        project.ext.libav.versions = [ "0.7.3", "9.14", "10.7", "11.4", "12.1" ]
-                        project.ext.libav.versionmap = [ "0.7.3" : "53", "9.14" : "54", "10.7" : "55", "11.4" : "56", "12.1" : "57" ]
+                        project.ext.libav.versions = [ "9.14", "11.4", "12.1" ]
+                        project.ext.libav.versionmap = [ "9.14" : "54", "11.4" : "56", "12.1" : "57" ]
 
                         libav.versions.each { version ->
                             def libavDir = "${libav.basedir}/libav-${version}"
@@ -3202,18 +3200,10 @@ project(":media") {
                                     }
                                     exec {
                                         workingDir("$libavDir")
-                                        if (version.equals("0.7.3")) {
-                                            if (IS_BUILD_WORKING_LIBAV) {
-                                                commandLine("sh", "configure", "--enable-shared", "--disable-debug", "--disable-static", "--disable-yasm", "--disable-doc", "--disable-everything", "--disable-mmx", "--disable-mmx2", "--enable-decoder=aac,mp3,mp3float,h264", "--enable-parser=aac,h264", "--enable-demuxer=aac,h264,mpegts,mpegtsraw")
-                                            } else {
-                                                commandLine("sh", "configure", "--enable-shared", "--disable-debug", "--disable-static", "--disable-yasm", "--disable-doc", "--disable-everything", "--disable-mmx", "--disable-mmx2")
-                                            }
+                                        if (IS_BUILD_WORKING_LIBAV) {
+                                            commandLine(cfgCMDArgs + commonCfgArgs + codecsCfgArgs)
                                         } else {
-                                            if (IS_BUILD_WORKING_LIBAV) {
-                                                commandLine(cfgCMDArgs + commonCfgArgs + codecsCfgArgs)
-                                            } else {
-                                                commandLine(cfgCMDArgs + commonCfgArgs)
-                                            }
+                                            commandLine(cfgCMDArgs + commonCfgArgs)
                                         }
                                     }
                                 }
@@ -3631,6 +3621,9 @@ project(":web") {
                         3. Uncomment the line below
                          */
                         // args("--icu-unicode")
+
+                        // To enable ninja build on Windows
+                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT + ['CC' : 'cl', 'CXX' : 'cl'])
                     } else if (t.name == "mac") {
                         cmakeArgs = "-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
