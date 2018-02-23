@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -918,6 +918,7 @@ public final class WebPage {
                 log.log(Level.FINE, "getClientTextLocation() request for a disposed web page.");
                 return new int[] { 0, 0, 0, 0 };
             }
+            Invoker.getInvoker().checkEventThread();
             return twkGetTextLocation(getPage(), index);
 
         } finally {
@@ -932,6 +933,7 @@ public final class WebPage {
                 log.log(Level.FINE, "getClientLocationOffset() request for a disposed web page.");
                 return 0;
             }
+            Invoker.getInvoker().checkEventThread();
             return twkGetInsertPositionOffset(getPage());
 
         } finally {

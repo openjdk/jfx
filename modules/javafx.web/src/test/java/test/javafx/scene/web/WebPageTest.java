@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,5 +88,17 @@ public class WebPageTest extends TestBase {
     @Test public void testICUTagParse() {
         load(WebPageTest.class.getClassLoader().getResource(
                 "test/html/icutagparse.html").toExternalForm());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testGetClientTextLocationFromNonEventThread() {
+        WebPage page = WebEngineShim.getPage(getEngine());
+        page.getClientTextLocation(0);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testGetClientLocationOffsetFromNonEventThread() {
+        WebPage page = WebEngineShim.getPage(getEngine());
+        page.getClientLocationOffset(0, 0);
     }
 }

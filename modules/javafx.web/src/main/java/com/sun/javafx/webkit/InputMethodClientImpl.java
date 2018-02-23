@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,13 @@ import com.sun.javafx.scene.SceneHelper;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests;
+import com.sun.webkit.Invoker;
 import javafx.geometry.Point2D;
 import javafx.scene.input.InputMethodEvent;
 import javafx.scene.input.InputMethodHighlight;
@@ -46,6 +51,8 @@ import com.sun.webkit.graphics.WCPoint;
 public final class InputMethodClientImpl
     implements InputMethodClient, ExtendedInputMethodRequests
 {
+    private static final Logger log =
+            Logger.getLogger(InputMethodClientImpl.class.getName());
     private final WeakReference<WebView> wvRef;
     private final WebPage webPage;
 
@@ -118,16 +125,42 @@ public final class InputMethodClientImpl
 
     // InputMethodRequests implementation
     public Point2D getTextLocation(int offset) {
-        int[] loc = webPage.getClientTextLocation(offset);
-        WCPoint point = webPage.getPageClient().windowToScreen(
-                // We need lower left corner of the char bounds rectangle here
-                new WCPoint(loc[0], loc[1] + loc[3]));
-        return new Point2D(point.getIntX(), point.getIntY());
+        FutureTask<Point2D> f = new FutureTask<>(() -> {
+            int[] loc = webPage.getClientTextLocation(offset);
+            WCPoint point = webPage.getPageClient().windowToScreen(
+                    // We need lower left corner of the char bounds rectangle here
+                    new WCPoint(loc[0], loc[1] + loc[3]));
+            return new Point2D(point.getIntX(), point.getIntY());
+        });
+
+        Invoker.getInvoker().invokeOnEventThread(f);
+        Point2D result = null;
+        try {
+            result = f.get();
+        } catch (ExecutionException ex) {
+            log.log(Level.SEVERE, "InputMethodClientImpl.getTextLocation " + ex);
+        } catch (InterruptedException ex) {
+            log.log(Level.SEVERE, "InputMethodClientImpl.getTextLocation InterruptedException" + ex);
+        }
+        return result;
     }
 
     public int getLocationOffset(int x, int y) {
-        WCPoint point = webPage.getPageClient().windowToScreen(new WCPoint(0, 0));
-        return webPage.getClientLocationOffset(x - point.getIntX(), y - point.getIntY());
+        FutureTask<Integer> f = new FutureTask<>(() -> {
+            WCPoint point = webPage.getPageClient().windowToScreen(new WCPoint(0, 0));
+            return webPage.getClientLocationOffset(x - point.getIntX(), y - point.getIntY());
+        });
+
+        Invoker.getInvoker().invokeOnEventThread(f);
+        int location = 0;
+        try {
+            location = f.get();
+        } catch (ExecutionException ex) {
+            log.log(Level.SEVERE, "InputMethodClientImpl.getLocationOffset " + ex);
+        } catch (InterruptedException ex) {
+            log.log(Level.SEVERE, "InputMethodClientImpl.getTextLocation InterruptedException" + ex);
+        }
+        return location;
     }
 
     public void cancelLatestCommittedText() {
