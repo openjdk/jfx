@@ -3621,6 +3621,9 @@ project(":web") {
                         3. Uncomment the line below
                          */
                         // args("--icu-unicode")
+
+                        // To enable ninja build on Windows
+                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT + ['CC' : 'cl', 'CXX' : 'cl'])
                     } else if (t.name == "mac") {
                         cmakeArgs = "-DCMAKE_OSX_DEPLOYMENT_TARGET=$MACOSX_MIN_VERSION -DCMAKE_OSX_SYSROOT=$MACOSX_SDK_PATH"
                     } else if (t.name == "linux") {
