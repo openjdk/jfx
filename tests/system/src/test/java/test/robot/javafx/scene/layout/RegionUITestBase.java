@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,9 +29,11 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.stage.Stage;
+import javafx.stage.Window;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
@@ -79,6 +81,21 @@ public abstract class RegionUITestBase extends VisualTestBase {
     }
 
     static final double TOLERANCE = 0.07;
+
+    protected boolean checkIntegralUIScale() {
+        AtomicBoolean integralUIScale = new AtomicBoolean(false);
+        runAndWait(() -> {
+            Window window = scene.getWindow();
+            double outScaleX = window.getOutputScaleX();
+            double outScaleY = window.getOutputScaleY();
+
+            if (outScaleX == Math.rint(outScaleX)
+                    && outScaleY == Math.rint(outScaleY)) {
+                integralUIScale.set(true);
+            }
+        });
+        return integralUIScale.get();
+    }
 
     protected void assertColorEquals(Color expected, int x, int y, double tolerance) {
         Color actual = getColorThreadSafe(x, y);

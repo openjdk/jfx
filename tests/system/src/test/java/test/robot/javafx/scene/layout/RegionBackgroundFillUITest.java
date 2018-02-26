@@ -35,10 +35,6 @@ import static org.junit.Assume.assumeTrue;
  */
 public class RegionBackgroundFillUITest extends RegionUITestBase {
 
-    static {
-        System.setProperty("glass.win.uiScale", "100%");
-    }
-
     /**************************************************************************
      *                                                                        *
      * Tests for background fills. We start with a series of simple tests     *
@@ -135,7 +131,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void basicFill_Radius1() {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8170026
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: 10");
@@ -144,6 +140,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void basicFill_Radius2() {
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: 10 20");
@@ -152,6 +149,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void basicFill_Radius3() {
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: 10 20 30");
@@ -160,6 +158,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void basicFill_Radius4() {
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: 10 20 30 40");
@@ -182,7 +181,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void basicFill_RadiusAndInsets() {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8170026
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-radius: 10 20 30 40;" +
@@ -328,6 +327,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testScenario1() {
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red;" +
                 "-fx-background-insets: 0 0 -10 0, 0, 10, 20;" +
@@ -338,6 +338,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testScenario2() {
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red, green, blue, grey;" +
                 "-fx-background-insets: 0 0 -10 0, 0, 10, 20;" +
@@ -373,7 +374,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testScenario3() {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8170026
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red, green, blue, grey;" +
                 "-fx-background-insets: 0 0 -10 0, 0, 10, 20;" +
@@ -409,7 +410,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testScenario4() {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8170026
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red, green, blue, repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png');" +
                 "-fx-background-insets: 0 0 -10 0, 0, 10, 20;" +
@@ -445,6 +446,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testScenario5() {
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red, green, repeating-image-pattern('test/robot/javafx/scene/layout/test20x20.png'), blue;" +
                 "-fx-background-insets: 0 0 -10 0, 0, 10, 20;" +
@@ -496,7 +498,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testOnePixelTopInset() {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8170026
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red, yellow;" +
                 "-fx-background-insets: 0, 1 0 0 0;");
@@ -525,7 +527,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testOnePixelRightInset() {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8170026
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red, yellow;" +
                 "-fx-background-insets: 0, 0 1 0 0;");
@@ -554,7 +556,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testOnePixelBottomInset() {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8170026
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red, yellow;" +
                 "-fx-background-insets: 0, 0 0 1 0;");
@@ -583,7 +585,7 @@ public class RegionBackgroundFillUITest extends RegionUITestBase {
 
     @Test(timeout=20000)
     public void testOnePixelLeftInset() {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8170026
+        assumeTrue(checkIntegralUIScale());
         setStyle(
                 "-fx-background-color: red, yellow;" +
                 "-fx-background-insets: 0, 0 0 0 1;");
