@@ -2073,6 +2073,14 @@ _appendPrivateuseToLanguageTag(const char* localeID, char* appendAt, int32_t cap
 #define EXTV 0x0040
 #define PRIV 0x0080
 
+/**
+ * Ticket #12705 - VS2015 update 3, 32 bit release has problems with this function.
+ * As a workaround, we will turn off optimization just for this function.
+ */
+#if (defined(_MSC_VER) && (_MSC_VER >= 1900))
+#pragma optimize( "", off )
+#endif
+
 static ULanguageTag*
 ultag_parse(const char* tag, int32_t tagLen, int32_t* parsedLen, UErrorCode* status) {
     ULanguageTag *t;
@@ -2434,6 +2442,13 @@ error:
     uprv_free(t);
     return NULL;
 }
+
+/**
+* Ticket #12705 - Turn optimization back on.
+*/
+#if (defined(_MSC_VER) && (_MSC_VER >= 1900))
+#pragma optimize( "", on )
+#endif
 
 static void
 ultag_close(ULanguageTag* langtag) {

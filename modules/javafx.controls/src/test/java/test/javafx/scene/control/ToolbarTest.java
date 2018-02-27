@@ -27,7 +27,7 @@ package test.javafx.scene.control;
 
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import javafx.scene.control.skin.ToolBarSkin;
 import com.sun.javafx.tk.Toolkit;
@@ -38,9 +38,13 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.css.StyleableProperty;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ToolBar;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
+import javafx.stage.Stage;
 import static org.junit.Assert.*;
 
 
@@ -167,4 +171,54 @@ public class ToolbarTest {
         b3.fire();
     }
 
+    @Test public void toolBarFocusTraversalTest() {
+        toolBar.getItems().clear();
+
+        toolBar.setFocusTraversable(true);
+        assertTrue(toolBar.isFocusTraversable());
+
+        // Create 5 buttons - put 2 of them in a Pane
+        Button btn1 = new Button("Btn1");
+        Button btn2 = new Button("Btn2");
+
+        Button btn3 = new Button("Btn3");
+        Button btn4 = new Button("Btn4");
+        Pane p1 = new Pane(btn3, btn4);
+
+        Button btn5 = new Button("Btn5");
+
+        toolBar.getItems().addAll(btn1, btn2, p1, btn5);
+
+        ToolBarSkin toolbarSkin = new ToolBarSkin(toolBar);
+        toolBar.setSkin(toolbarSkin);
+
+        Scene scene = new Scene(toolBar);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+        tk.firePulse();
+
+        toolBar.getScene().getWindow().requestFocus();
+        assertTrue(btn1.isFocused());
+
+        KeyEventFirer keyboard1 = new KeyEventFirer(btn1);
+        keyboard1.doKeyPress(KeyCode.TAB);
+        tk.firePulse();
+        assertTrue(btn2.isFocused());
+
+        KeyEventFirer keyboard2 = new KeyEventFirer(btn2);
+        keyboard2.doKeyPress(KeyCode.TAB);
+        tk.firePulse();
+        assertTrue(btn3.isFocused());
+
+        KeyEventFirer keyboard3 = new KeyEventFirer(btn3);
+        keyboard3.doKeyPress(KeyCode.TAB);
+        tk.firePulse();
+        assertTrue(btn4.isFocused());
+
+        KeyEventFirer keyboard4 = new KeyEventFirer(btn4);
+        keyboard4.doKeyPress(KeyCode.TAB);
+        tk.firePulse();
+        assertTrue(btn5.isFocused());
+    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package test.robot.test3d;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.AmbientLight;
@@ -42,10 +41,13 @@ import javafx.scene.shape.Box;
 import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 import javafx.stage.Stage;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import test.robot.testharness.VisualTestBase;
+
+import static org.junit.Assume.assumeTrue;
 
 /**
  * 3D Snapshot validation tests.
@@ -148,20 +150,17 @@ public class Snapshot3DTest extends VisualTestBase {
         assertColorEquals(exColor, sColor, TOLERANCE);
     }
 
+    @Before
+    public void setupEach() {
+        assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+    }
+
     // -------------------------------------------------------------
     // Tests
     // -------------------------------------------------------------
 
     @Test(timeout=5000)
     public void testSnapshot3D() {
-        final AtomicBoolean scene3dSupported = new AtomicBoolean();
-        runAndWait(() -> scene3dSupported.set(Platform.isSupported(ConditionalFeature.SCENE3D)));
-        if (!scene3dSupported.get()) {
-            System.out.println("*************************************************************");
-            System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
-            System.out.println("*************************************************************");
-            return;
-        }
 
         runAndWait(() -> {
             testStage = getStage();
