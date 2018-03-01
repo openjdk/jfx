@@ -57,7 +57,7 @@ public class RT35019Test extends VisualTestBase {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testEmptyShapes() {
         final int WIDTH = 400;
         final int HEIGHT = 300;

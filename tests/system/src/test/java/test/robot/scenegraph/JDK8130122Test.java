@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,7 +50,7 @@ public class JDK8130122Test extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testEmptyShapes() {
         final int WIDTH = 800;
         final int HEIGHT = 400;

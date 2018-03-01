@@ -55,7 +55,7 @@ public class NearAndFarClipTest extends VisualTestBase {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testNearAndFarClips() {
         final int WIDTH = 500;
         final int HEIGHT = 500;

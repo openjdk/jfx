@@ -289,7 +289,7 @@ public class PNTMeshVertexBufferLengthTest {
     }
 
     // ========================== TEST CASES ==========================
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testMeshWithZeroDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();
@@ -306,7 +306,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertTrue(BaseMeshShim.test_isVertexBufferNull(baseMesh));
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testMeshWithOneDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();
@@ -325,7 +325,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertEquals(10 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testMeshWithTwoDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();
@@ -344,7 +344,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertEquals(27 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testMeshWithThreeDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();
@@ -364,7 +364,7 @@ public class PNTMeshVertexBufferLengthTest {
         assertEquals(325 * VERTEX_SIZE, BaseMeshShim.test_getVertexBufferLength(baseMesh));
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testMeshWithFiveDiv() throws InterruptedException {
         Util.runAndWait(() -> {
             Scene scene = myApp.primaryStage.getScene();

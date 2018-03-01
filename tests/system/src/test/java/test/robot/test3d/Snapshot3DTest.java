@@ -159,7 +159,7 @@ public class Snapshot3DTest extends VisualTestBase {
     // Tests
     // -------------------------------------------------------------
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testSnapshot3D() {
 
         runAndWait(() -> {

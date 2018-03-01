@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -100,167 +100,167 @@ public class ModuleLauncherTest {
     }
 
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testLaunchModule() throws Exception {
         doTestLaunchModule(modulePath2, "testapp.TestApp");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testLaunchModuleNoMain() throws Exception {
         doTestLaunchModule(modulePath2, "testapp.TestAppNoMain");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testLaunchModuleNotApplication() throws Exception {
         doTestLaunchModule(modulePath2, "testapp.TestNotApplication");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTableViewUnexported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewUnexported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTableViewExported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTableViewQualExported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewQualExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTableViewOpened() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTableViewQualOpened() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewQualOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTreeTableViewUnexported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewUnexported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTreeTableViewExported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTreeTableViewQualExported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewQualExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTreeTableViewOpened() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleTreeTableViewQualOpened() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewQualOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBeansUnexported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansUnexported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBeansExported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBeansQualExported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansQualExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBeansOpened() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBeansQualOpened() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansQualOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBindingsUnexported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsUnexported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBindingsExported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBindingsQualExported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsQualExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBindingsOpened() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleBindingsQualOpened() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsQualOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleJSCallbackUnexported() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackUnexported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleJSCallbackExported() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleJSCallbackQualExported() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackQualExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleJSCallbackOpened() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleJSCallbackQualOpened() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackQualOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleFXMLUnexported() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLUnexported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleFXMLExported() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleFXMLQualExported() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLQualExported");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleFXMLOpened() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLOpened");
     }
 
-    @Test (timeout=15000)
+    @Test (timeout = 15000)
     public void testModuleFXMLQualOpened() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLQualOpened");
     }
