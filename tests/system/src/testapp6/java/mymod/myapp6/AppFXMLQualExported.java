@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,7 +83,7 @@ public class AppFXMLQualExported extends Application {
             Node fxmlRoot = loader.load();
             throw new AssertionError("ERROR: did not get the expected exception");
         } catch (LoadException ex) {
-            ex.printStackTrace();
+            // This load exception is expected
         }
     }
 
@@ -96,7 +96,7 @@ public class AppFXMLQualExported extends Application {
             Node fxmlRoot = loader.load();
             throw new AssertionError("ERROR: did not get the expected exception");
         } catch (LoadException ex) {
-            ex.printStackTrace();
+            // This load exception is expected
         }
     }
 
@@ -109,7 +109,7 @@ public class AppFXMLQualExported extends Application {
             Node fxmlRoot = loader.load();
             throw new AssertionError("ERROR: did not get the expected exception");
         } catch (LoadException ex) {
-            ex.printStackTrace();
+            // This load exception is expected
         }
     }
 

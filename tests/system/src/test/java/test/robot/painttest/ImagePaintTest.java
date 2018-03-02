@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -112,12 +112,12 @@ public class ImagePaintTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testSeparateImagePaint() {
         doTestImagePaint(true);
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testSameImagePaint() {
         doTestImagePaint(false);
     }

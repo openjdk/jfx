@@ -42,19 +42,21 @@ public class PulseLogger {
         if (logger != null) {
             list.add(logger);
         }
-        try {
-            Class klass = Class.forName("com.sun.javafx.logging.JFRLogger");
-            if (klass != null) {
-                Method method = klass.getDeclaredMethod("getInstance");
-                logger = (Logger) method.invoke(null);
-                if (logger != null) {
-                    list.add(logger);
-                }
-            }
-        }
-        catch (NoClassDefFoundError | ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            // Ignore
-        }
+
+//        // Another optional logger could be added as follows:
+//        try {
+//            Class klass = Class.forName("com.sun.javafx.logging.OtherLogger");
+//            if (klass != null) {
+//                Method method = klass.getDeclaredMethod("getInstance");
+//                logger = (Logger) method.invoke(null);
+//                if (logger != null) {
+//                    list.add(logger);
+//                }
+//            }
+//        }
+//        catch (NoClassDefFoundError | ClassNotFoundException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+//            // Ignore
+//        }
 
         loggers = list.toArray(new Logger[list.size()]);
         PULSE_LOGGING_ENABLED = loggers.length > 0;

@@ -64,7 +64,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testEmptyMesh() {
         runAndWait(() -> {
             testStage = getStage();
@@ -87,7 +87,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testInvalidPointsLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -119,7 +119,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testInvalidTexCoordLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -147,7 +147,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testInvalidFacesLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -183,7 +183,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testInvalidFacesIndex() {
         runAndWait(() -> {
             testStage = getStage();
@@ -218,7 +218,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testInvalidFaceSmoothingGroupsLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -243,7 +243,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testPointsLengthChange() {
         runAndWait(() -> {
             testStage = getStage();
@@ -276,7 +276,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testTexCoordsLengthChange() {
         runAndWait(() -> {
             testStage = getStage();
@@ -309,7 +309,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testFaceLengthChange() {
         runAndWait(() -> {
             testStage = getStage();
@@ -353,7 +353,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testResetFaceSmoothingGroup() {
         runAndWait(() -> {
             testStage = getStage();
@@ -384,7 +384,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testUpdateMesh() {
         runAndWait(() -> {
             testStage = getStage();
@@ -431,7 +431,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testDegeneratedMeshUpdateFaces() {
         runAndWait(() -> {
             testStage = getStage();
@@ -471,7 +471,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testDegeneratedMeshUpdatePoints() {
         runAndWait(() -> {
             testStage = getStage();

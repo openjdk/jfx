@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -72,7 +72,7 @@ public class LayoutTest extends VisualTestBase {
     private Stage testStage;
     private Scene testScene;
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testRequestLayout() {
     final Label l1 = new Label("1 2");
     final Ellipse e1 = new Ellipse(20, 30);
@@ -152,7 +152,7 @@ public class LayoutTest extends VisualTestBase {
 
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testStackPane() {
     final Label l1 = new Label("1 2");
     final Ellipse e1 = new Ellipse(20, 30);
@@ -223,7 +223,7 @@ public class LayoutTest extends VisualTestBase {
 
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testVBox() {
     final Label l1 = new Label("1 2");
     final Ellipse e1 = new Ellipse(20, 30);
@@ -294,7 +294,7 @@ public class LayoutTest extends VisualTestBase {
 
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testHBox() {
     final Label l1 = new Label("1 2");
     final Ellipse e1 = new Ellipse(20, 30);

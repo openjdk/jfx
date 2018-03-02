@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ public class RectangleTest extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testSceneDefaultFill() {
         final int WIDTH = 400;
         final int HEIGHT = 300;
@@ -61,7 +61,7 @@ public class RectangleTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testSceneFillColor() {
         final int WIDTH = 400;
         final int HEIGHT = 300;
@@ -80,7 +80,7 @@ public class RectangleTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testFillRect() {
         final int WIDTH = 400;
         final int HEIGHT = 300;
@@ -112,7 +112,7 @@ public class RectangleTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout=5000)
+    @Test(timeout = 15000)
     public void testAddFillRect() {
         final int WIDTH = 400;
         final int HEIGHT = 300;

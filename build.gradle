@@ -1675,10 +1675,6 @@ project(":base") {
         }
     }
 
-//    if (IS_COMPILE_JFR) {
-//        sourceSets.main.java.srcDirs += "src/main/java-jfr"
-//    }
-
     // Make sure to include $buildDir/gensrc/java that we previously created.
     // We DO NOT want to include src/main/version-info
 

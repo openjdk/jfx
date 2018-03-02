@@ -63,7 +63,7 @@ public class TriangleMeshPNTValidationTest extends VisualTestBase {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testInvalidNormalsLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -88,7 +88,7 @@ public class TriangleMeshPNTValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testNormalsLengthChange() {
         runAndWait(() -> {
             testStage = getStage();
@@ -121,7 +121,7 @@ public class TriangleMeshPNTValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testDegeneratedMeshUpdateNormals() {
         runAndWait(() -> {
             testStage = getStage();
@@ -156,7 +156,7 @@ public class TriangleMeshPNTValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testDegeneratedMeshUpdatePoints() {
         runAndWait(() -> {
             testStage = getStage();

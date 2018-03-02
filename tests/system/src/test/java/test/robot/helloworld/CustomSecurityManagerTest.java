@@ -226,62 +226,62 @@ public class CustomSecurityManagerTest extends VisualTestBase {
         }
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testOnTopNoSecurityManager() {
         doTestOnTopCommon(null, true);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testOnTopPermissiveSecurityManager() {
         doTestOnTopCommon(new MySecurityManager(true), true);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testOnTopRestrictiveSecurityManager() {
         doTestOnTopCommon(new MySecurityManager(false), false);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testFullScreenInitNoSecurityManager() {
         doTestFullScreenCommon(null, true, true);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testFullScreenInitPermissiveSecurityManager() {
         doTestFullScreenCommon(new MySecurityManager(true), true, true);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testFullScreenInitRestrictiveSecurityManager() {
         doTestFullScreenCommon(new MySecurityManager(false), true, false);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testFullScreenAfterNoSecurityManager() {
         doTestFullScreenCommon(null, false, true);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testFullScreenAfterPermissiveSecurityManager() {
         doTestFullScreenCommon(new MySecurityManager(true), false, true);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testFullScreenAfterRestrictiveSecurityManager() {
         doTestFullScreenCommon(new MySecurityManager(false), false, false);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testRobotNoSecurityManager() {
         doTestRobotCommon(null, true);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testRobotPermissiveSecurityManager() {
         doTestRobotCommon(new MySecurityManager(true), true);
     }
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void testRobotRestrictiveSecurityManager() {
         doTestRobotCommon(new MySecurityManager(false), false);
     }

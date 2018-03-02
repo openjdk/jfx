@@ -60,7 +60,7 @@ public class AABalanceFlipTest extends VisualTestBase {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
     }
 
-    @Test(timeout = 5000)
+    @Test(timeout = 15000)
     public void testAABalanceFlip() {
         final int WIDTH = 600;
         final int HEIGHT = 600;

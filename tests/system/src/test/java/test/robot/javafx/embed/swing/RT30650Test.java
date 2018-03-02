@@ -36,7 +36,7 @@ import static org.junit.Assume.assumeTrue;
  */
 public class RT30650Test {
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void test() {
         assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8196606
         Assert.assertTrue(RT30650GUI.test());
