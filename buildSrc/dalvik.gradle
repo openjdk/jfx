@@ -781,4 +781,3 @@ DALVIK.includeEGL = true
 DALVIK.includeGTK = true
 DALVIK.includeLens = true
 ext.IS_COMPILE_PANGO = false
-ext.IS_COMPILE_JFR = false
