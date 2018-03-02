@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -170,6 +170,7 @@ public class AppBindingsUnexported {
         // In this case, the binding will succeed; calling get() will return 0;
         // the first time it is called it will log a warning.
         DoubleBinding binding3 = Bindings.selectDouble(root2, "next", "foo");
+        System.err.println("The following two WARNING messages are expected:");
         assertEquals(0, binding3.get()); // This will log a warning
         c.setFoo(3.4);
         assertEquals(0, binding3.get()); // No warning here
@@ -177,6 +178,7 @@ public class AppBindingsUnexported {
         // In this case, the binding will succeed; calling get() will return null;
         // the first time it is called it will log a warning.
         ObjectBinding<MyProps> binding4 = Bindings.select(root2, "next", "next");
+        System.err.println("The following two WARNING messages are expected:");
         assertSame(null, binding4.get()); // This will log a warning
         assertSame(null, binding4.get()); // No warning here
 

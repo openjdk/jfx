@@ -48,6 +48,7 @@ public class ModuleLauncherTest {
 
     private void doTestLaunchModule(String modulePath, String testAppName) throws Exception {
         assertNotNull(testAppName);
+        System.err.println("The following Unknown module WARNING messages are expected:");
         String mpArg = "--module-path=" + modulePath;
         String moduleAppName = "--module=" + moduleName + "/" + testAppName;
         final ArrayList<String> cmd =
