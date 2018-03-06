@@ -1591,7 +1591,6 @@ def qualExportsCore = [
     "--add-exports=java.base/sun.util.logging=javafx.controls",
     "--add-exports=java.base/sun.util.logging=javafx.fxml",
     "--add-exports=java.base/sun.util.logging=javafx.graphics",
-    "--add-exports=java.desktop/sun.font.lookup=javafx.graphics",
     "--add-exports=java.desktop/sun.print=javafx.graphics",
 ]
 
