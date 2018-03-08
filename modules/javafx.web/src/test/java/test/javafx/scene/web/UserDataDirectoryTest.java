@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -323,6 +323,7 @@ public class UserDataDirectoryTest extends TestBase {
 
     @Test
     public void testAlreadyInUseErrorWithPassiveHandler() {
+        System.err.println("The following error is expected");
         webEngine.setUserDataDirectory(PRE_LOCKED);
         ErrorHandler handler = new ErrorHandler();
         webEngine.setOnError(handler);
@@ -366,6 +367,7 @@ public class UserDataDirectoryTest extends TestBase {
         File f = new File("qux");
         f.createNewFile();
         try {
+            System.err.println("The following error is expected");
             webEngine.setUserDataDirectory(f);
             ErrorHandler handler = new ErrorHandler();
             webEngine.setOnError(handler);
@@ -423,6 +425,7 @@ public class UserDataDirectoryTest extends TestBase {
         System.setSecurityManager(new CustomSecurityManager(FOO));
         ErrorHandler handler = new ErrorHandler();
         try {
+            System.err.println("The following error is expected");
             webEngine.setUserDataDirectory(FOO);
             webEngine.setOnError(handler);
             load(webEngine, url);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,11 @@ import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import org.junit.Before;
 import org.junit.Test;
 import test.robot.testharness.VisualTestBase;
+
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Basic visual near and far clipping tests using glass Robot to sample pixels.
@@ -47,7 +50,12 @@ public class NearAndFarClipTest extends VisualTestBase {
     private static final double TOLERANCE = 0.07;
     private static final double OFFSET_PERCENT = 0.01; // 1 percent tolerance
 
-    @Test(timeout=5000)
+    @Before
+    public void setupEach() {
+        assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+    }
+
+    @Test(timeout = 15000)
     public void testNearAndFarClips() {
         final int WIDTH = 500;
         final int HEIGHT = 500;
@@ -117,13 +125,6 @@ public class NearAndFarClipTest extends VisualTestBase {
         });
         waitFirstFrame();
         runAndWait(() -> {
-
-            if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
-                System.out.println("*************************************************************");
-                System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
-                System.out.println("*************************************************************");
-                return;
-            }
 
             Color color;
             // Verify Near Clip

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,13 +29,16 @@ import test.robot.javafx.embed.swing.RT30650GUI;
 import junit.framework.Assert;
 import org.junit.Test;
 
+import static org.junit.Assume.assumeTrue;
+
 /**
  * RT-30650: SwingNode is not Resizable
  */
 public class RT30650Test {
 
-    @Test(timeout=10000)
+    @Test(timeout = 15000)
     public void test() {
+        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8196606
         Assert.assertTrue(RT30650GUI.test());
 
         System.out.println("Passed.");

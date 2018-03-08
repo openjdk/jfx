@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,7 +78,7 @@ public class JDK8183100Test extends VisualTestBase {
         }
     }
 
-    @Test(timeout=15000)
+    @Test(timeout = 15000)
     public void stackPaneColorTest() {
         final int WIDTH = 200;
         final int HEIGHT = 100;

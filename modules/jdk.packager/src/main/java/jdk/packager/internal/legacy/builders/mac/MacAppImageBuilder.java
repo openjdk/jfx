@@ -28,6 +28,7 @@ package jdk.packager.internal.legacy.builders.mac;
 import com.oracle.tools.packager.BundlerParamInfo;
 import com.oracle.tools.packager.IOUtils;
 import com.oracle.tools.packager.Log;
+import com.oracle.tools.packager.Platform;
 import com.oracle.tools.packager.RelativeFileSet;
 import com.oracle.tools.packager.StandardBundlerParam;
 import com.oracle.tools.packager.mac.MacResources;
@@ -91,6 +92,8 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
     private final Path mdir;
 
     private final Map<String, ? super Object> params;
+
+    private static List<String> keyChains;
 
     private static Map<String, String> getMacCategories() {
         Map<String, String> map = new HashMap<>();
@@ -415,10 +418,16 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
 
         // maybe sign
         if (Optional.ofNullable(SIGN_BUNDLE.fetchFrom(params)).orElse(Boolean.TRUE)) {
+            try {
+                addNewKeychain(params);
+            } catch (InterruptedException e) {
+                Log.error(e.getMessage());
+            }
             String signingIdentity = DEVELOPER_ID_APP_SIGNING_KEY.fetchFrom(params);
             if (signingIdentity != null) {
                 signAppBundle(params, root, signingIdentity, BUNDLE_ID_SIGNING_PREFIX.fetchFrom(params), null, null);
             }
+            restoreKeychainList(params);
         }
     }
 
@@ -717,6 +726,79 @@ public class MacAppImageBuilder extends AbstractAppImageBuilder {
             out.write(OS_TYPE_CODE + signature);
             out.flush();
         }
+    }
+
+    public static void addNewKeychain(Map<String, ? super Object> params)
+                                    throws IOException, InterruptedException {
+        if (Platform.getMajorVersion() < 10 ||
+            (Platform.getMajorVersion() == 10 && Platform.getMinorVersion() < 12)) {
+            // we need this for OS X 10.12+
+            return;
+        }
+
+        String keyChain = SIGNING_KEYCHAIN.fetchFrom(params);
+        if (keyChain == null || keyChain.isEmpty()) {
+            return;
+        }
+
+        // get current keychain list
+        String keyChainPath = new File (keyChain).getAbsolutePath().toString();
+        List<String> keychainList = new ArrayList<>();
+        int ret = IOUtils.getProcessOutput(keychainList, "security", "list-keychains");
+        if (ret != 0) {
+            Log.error(I18N.getString("message.keychain.error"));
+            return;
+        }
+
+        boolean contains = keychainList.stream().anyMatch(
+                    str -> str.trim().equals("\""+keyChainPath.trim()+"\""));
+        if (contains) {
+            // keychain is already added in the search list
+            return;
+        }
+
+        keyChains = new ArrayList<>();
+        // remove "
+        keychainList.forEach((String s) -> {
+            String path = s.trim();
+            if (path.startsWith("\"") && path.endsWith("\"")) {
+                path = path.substring(1, path.length()-1);
+            }
+            keyChains.add(path);
+        });
+
+        List<String> args = new ArrayList<>();
+        args.add("security");
+        args.add("list-keychains");
+        args.add("-s");
+
+        args.addAll(keyChains);
+        args.add(keyChain);
+
+        ProcessBuilder  pb = new ProcessBuilder(args);
+        IOUtils.exec(pb, VERBOSE.fetchFrom(params));
+    }
+
+    public static void restoreKeychainList(Map<String, ? super Object> params) throws IOException{
+        if (Platform.getMajorVersion() < 10 ||
+            (Platform.getMajorVersion() == 10 && Platform.getMinorVersion() < 12)) {
+            // we need this for OS X 10.12+
+            return;
+        }
+
+        if (keyChains == null || keyChains.isEmpty()) {
+            return;
+        }
+
+        List<String> args = new ArrayList<>();
+        args.add("security");
+        args.add("list-keychains");
+        args.add("-s");
+
+        args.addAll(keyChains);
+
+        ProcessBuilder  pb = new ProcessBuilder(args);
+        IOUtils.exec(pb, VERBOSE.fetchFrom(params));
     }
 
     public static void signAppBundle(Map<String, ? super Object> params, Path appLocation, String signingIdentity, String identifierPrefix, String entitlementsFile, String inheritedEntitlements) throws IOException {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -157,20 +157,8 @@ public abstract class PrismFontFactory implements FontFactory {
     }
 
     private static String getJDKFontDir() {
-        try {
-            Class<?> c = Class.forName("sun.font.lookup.JDKFontLookup");
-            Method m = c.getMethod("getJDKFontDir");
-            jreFontDir = (String)m.invoke(c);
-            return jreFontDir;
-        } catch (Throwable t) {
-            if (debugFonts) {
-                System.err.println("Could not get JRE font dir via API");
-                t.printStackTrace();
-            }
-        }
-        return
-            System.getProperty("java.home","") + File.separator +
-                "lib" + File.separator + "fonts" + File.separator;
+        return System.getProperty("java.home","") + File.separator +
+                "lib" + File.separator + "fonts";
     }
 
     private static String getNativeFactoryName() {

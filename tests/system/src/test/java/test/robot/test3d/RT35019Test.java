@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.robot.test3d;
 
+import javafx.application.ConditionalFeature;
+import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.Scene;
@@ -33,8 +35,11 @@ import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
 import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
+import org.junit.Before;
 import org.junit.Test;
 import test.robot.testharness.VisualTestBase;
+
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test 2D shapes rendered with a 3D transform where some of the shapes
@@ -47,7 +52,12 @@ public class RT35019Test extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
 
-    @Test(timeout=5000)
+    @Before
+    public void setupEach() {
+        assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+    }
+
+    @Test(timeout = 15000)
     public void testEmptyShapes() {
         final int WIDTH = 400;
         final int HEIGHT = 300;

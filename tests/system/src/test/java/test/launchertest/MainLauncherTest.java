@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -125,7 +125,7 @@ public class MainLauncherTest {
         this.testExitCode = testData.exitCode;
     }
 
-    @Test (timeout=5000)
+    @Test (timeout = 15000)
     public void testMainLauncher() throws Exception {
         if (headless) {
             // Headless tests currently only run on Linux

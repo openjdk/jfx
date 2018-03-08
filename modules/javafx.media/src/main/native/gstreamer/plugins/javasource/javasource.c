@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,6 +32,7 @@ GST_DEBUG_CATEGORY (java_source_debug);
 
 #define _BS(val) (val ? "TRUE" : "FALSE")
 #define BUFFER_SIZE 4096
+#define MAX_READ_SIZE 65536
 
 /***********************************************************************************
 * HLS Properties and Values
@@ -796,31 +797,55 @@ static GstFlowReturn java_source_getrange(GstPad *pad, GstObject *parent, guint6
 {
     JavaSource *element = JAVA_SOURCE (parent);
     gint     size = 0;
+    guint    read = 0;
+    guint    toRead = 0;
     GstFlowReturn ret = GST_FLOW_ERROR;
     GstMapInfo info;
 
-    g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_READ_BLOCK], 0, offset, length, &size);
-    if (size > 0 || size <= length)
+    // Do not read from Java more then MAX_READ_SIZE, so we do not allocate very large objects in Java
+    GstBuffer *buf = gst_buffer_new_allocate(NULL, length, NULL);
+    if (buf == NULL)
+        return GST_FLOW_ERROR;
+
+    GST_BUFFER_OFFSET(buf) = offset;
+
+    if (!gst_buffer_map(buf, &info, GST_MAP_READ))
     {
-        GstBuffer *buf = gst_buffer_new_allocate(NULL, size, NULL);
-        if (buf)
-        {
-            GST_BUFFER_OFFSET(buf) = offset;
-            if (gst_buffer_map(buf, &info, GST_MAP_READ))
-            {
-                g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_COPY_BLOCK], 0, info.data, size);
-                gst_buffer_unmap(buf, &info);
-                *buffer = buf;
-                ret = GST_FLOW_OK;
-            }
-        }
-    }
-    else if (size == EOS_CODE)
-    {
-        ret = GST_FLOW_EOS; // EOS
+        gst_buffer_unref(buf);
+        return GST_FLOW_ERROR;
     }
 
-    return ret;
+    while (read < length)
+    {
+        if ((length - read) >= MAX_READ_SIZE)
+            toRead = MAX_READ_SIZE;
+        else
+            toRead = (length - read);
+
+        g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_READ_BLOCK], 0, offset + read, toRead, &size);
+        if (size > 0 && size <= toRead)
+        {
+            g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_COPY_BLOCK], 0, info.data + read, size);
+            read += size;
+
+            if (size < toRead)
+            {
+                gst_buffer_set_size(buf, read); // Set ammount of valid data in buffer if read less then requested
+                break; // No more data to read, but we have some valid data
+            }
+        }
+        else if (size == EOS_CODE)
+        {
+            gst_buffer_unmap(buf, &info);
+            gst_buffer_unref(buf);
+            return GST_FLOW_EOS; // EOS
+        }
+    }
+
+    gst_buffer_unmap(buf, &info);
+    *buffer = buf;
+
+    return GST_FLOW_OK;
 }
 /***********************************************************************************
 * State change handler

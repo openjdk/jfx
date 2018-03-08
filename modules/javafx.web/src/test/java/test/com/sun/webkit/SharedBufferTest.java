@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.Random;
 import org.junit.After;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -124,14 +123,6 @@ public class SharedBufferTest {
                 getSomeData(SEGMENT_SIZE - 10, 10));
     }
 
-    @Test @Ignore
-    public void testGetSomeDataFirstSegmentLastTenBytesWithTruncation() {
-        append(SEGMENT_SIZE * 2.5);
-        assertArrayEquals(
-                g(SEGMENT_SIZE - 5, 5),
-                getSomeData(SEGMENT_SIZE - 5, 10));
-    }
-
     @Test
     public void testGetSomeDataInteriorSegmentFirstTenBytes() {
         append(SEGMENT_SIZE * 2.5);
@@ -152,14 +143,6 @@ public class SharedBufferTest {
         assertArrayEquals(
                 g(SEGMENT_SIZE * 2 - 10, 10),
                 getSomeData(SEGMENT_SIZE * 2 - 10, 10));
-    }
-
-    @Test @Ignore
-    public void testGetSomeDataInteriorSegmentLastTenBytesWithTruncation() {
-        append(SEGMENT_SIZE * 2.5);
-        assertArrayEquals(
-                g(SEGMENT_SIZE * 2 - 5, 5),
-                getSomeData(SEGMENT_SIZE * 2 - 5, 10));
     }
 
     @Test
@@ -211,28 +194,12 @@ public class SharedBufferTest {
         assertArrayEquals(g(0, SEGMENT_SIZE), getSomeData(0, SEGMENT_SIZE));
     }
 
-    @Test @Ignore
-    public void testGetSomeDataFirstSegmentWithTruncation() {
-        append(SEGMENT_SIZE * 2.5);
-        assertArrayEquals(
-                g(SEGMENT_SIZE * 0.5, SEGMENT_SIZE - SEGMENT_SIZE * 0.5),
-                getSomeData(SEGMENT_SIZE * 0.5, SEGMENT_SIZE));
-    }
-
     @Test
     public void testGetSomeDataInteriorSegment() {
         append(SEGMENT_SIZE * 2.5);
         assertArrayEquals(
                 g(SEGMENT_SIZE, SEGMENT_SIZE),
                 getSomeData(SEGMENT_SIZE, SEGMENT_SIZE));
-    }
-
-    @Test @Ignore
-    public void testGetSomeDataInteriorSegmentWithTruncation() {
-        append(SEGMENT_SIZE * 2.5);
-        assertArrayEquals(
-                g(SEGMENT_SIZE * 1.5, SEGMENT_SIZE - SEGMENT_SIZE * 0.5),
-                getSomeData(SEGMENT_SIZE * 1.5, SEGMENT_SIZE));
     }
 
     @Test
@@ -387,41 +354,6 @@ public class SharedBufferTest {
     public void testAppendSegment() {
         append(g(0, SEGMENT_SIZE));
         assertSharedBufferContains(g(0, SEGMENT_SIZE));
-    }
-
-    @Test @Ignore
-    public void testAppendThreeSegments() {
-        append(g(0, SEGMENT_SIZE * 3));
-        assertSharedBufferContains(
-                g(0, SEGMENT_SIZE),
-                g(SEGMENT_SIZE, SEGMENT_SIZE),
-                g(SEGMENT_SIZE * 2, SEGMENT_SIZE));
-    }
-
-    @Test @Ignore
-    public void testAppendThreeSegmentsPlusSegmentPlusTenBytes() {
-        append(g(0, SEGMENT_SIZE * 3));
-        append(g(0, SEGMENT_SIZE));
-        append(g(0, 10));
-        assertSharedBufferContains(
-                g(0, SEGMENT_SIZE),
-                g(SEGMENT_SIZE, SEGMENT_SIZE),
-                g(SEGMENT_SIZE * 2, SEGMENT_SIZE),
-                g(0, SEGMENT_SIZE),
-                g(0, 10));
-    }
-
-    @Test @Ignore
-    public void testAppendTenBytesPlusSegmentPlusThreeSegments() {
-        append(g(0, 10));
-        append(g(0, SEGMENT_SIZE));
-        append(g(0, SEGMENT_SIZE * 3));
-        assertSharedBufferContains(
-                g(0, 10),
-                g(0, SEGMENT_SIZE),
-                g(0, SEGMENT_SIZE),
-                g(SEGMENT_SIZE, SEGMENT_SIZE),
-                g(SEGMENT_SIZE * 2, SEGMENT_SIZE));
     }
 
     @Test

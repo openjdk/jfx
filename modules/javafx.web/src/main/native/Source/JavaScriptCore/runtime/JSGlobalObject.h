@@ -315,12 +315,12 @@ public:
 #endif
     LazyProperty<JSGlobalObject, Structure> m_nullPrototypeObjectStructure;
     WriteBarrier<Structure> m_calleeStructure;
-    WriteBarrier<Structure> m_functionStructure;
+    WriteBarrier<Structure> m_strictFunctionStructure;
+    WriteBarrier<Structure> m_sloppyFunctionStructure;
     LazyProperty<JSGlobalObject, Structure> m_boundFunctionStructure;
     LazyProperty<JSGlobalObject, Structure> m_customGetterSetterFunctionStructure;
     WriteBarrier<Structure> m_getterSetterStructure;
     LazyProperty<JSGlobalObject, Structure> m_nativeStdFunctionStructure;
-    LazyProperty<JSGlobalObject, Structure> m_namedFunctionStructure;
     PropertyOffset m_functionNameOffset;
     WriteBarrier<Structure> m_privateNameStructure;
     WriteBarrier<Structure> m_regExpStructure;
@@ -338,8 +338,10 @@ public:
     WriteBarrier<Structure> m_moduleLoaderStructure;
     WriteBarrier<JSArrayBufferPrototype> m_arrayBufferPrototype;
     WriteBarrier<Structure> m_arrayBufferStructure;
+#if ENABLE(SHARED_ARRAY_BUFFER)
     WriteBarrier<JSArrayBufferPrototype> m_sharedArrayBufferPrototype;
     WriteBarrier<Structure> m_sharedArrayBufferStructure;
+#endif
 
 #define DEFINE_STORAGE_FOR_SIMPLE_TYPE(capitalName, lowerName, properName, instanceType, jsName, prototypeBase) \
     WriteBarrier<capitalName ## Prototype> m_ ## lowerName ## Prototype; \
@@ -614,12 +616,12 @@ public:
     Structure* nullPrototypeObjectStructure() const { return m_nullPrototypeObjectStructure.get(this); }
     Structure* errorStructure() const { return m_errorStructure.get(); }
     Structure* calleeStructure() const { return m_calleeStructure.get(); }
-    Structure* functionStructure() const { return m_functionStructure.get(); }
+    Structure* strictFunctionStructure() const { return m_strictFunctionStructure.get(); }
+    Structure* sloppyFunctionStructure() const { return m_sloppyFunctionStructure.get(); }
     Structure* boundFunctionStructure() const { return m_boundFunctionStructure.get(this); }
     Structure* customGetterSetterFunctionStructure() const { return m_customGetterSetterFunctionStructure.get(this); }
     Structure* getterSetterStructure() const { return m_getterSetterStructure.get(); }
     Structure* nativeStdFunctionStructure() const { return m_nativeStdFunctionStructure.get(this); }
-    Structure* namedFunctionStructure() const { return m_namedFunctionStructure.get(this); }
     PropertyOffset functionNameOffset() const { return m_functionNameOffset; }
     Structure* numberObjectStructure() const { return m_numberObjectStructure.get(); }
     Structure* privateNameStructure() const { return m_privateNameStructure.get(); }
@@ -670,8 +672,13 @@ public:
         switch (sharingMode) {
         case ArrayBufferSharingMode::Default:
             return m_arrayBufferPrototype.get();
+#if ENABLE(SHARED_ARRAY_BUFFER)
         case ArrayBufferSharingMode::Shared:
             return m_sharedArrayBufferPrototype.get();
+#else
+        default:
+            return m_arrayBufferPrototype.get();
+#endif
         }
     }
     Structure* arrayBufferStructure(ArrayBufferSharingMode sharingMode) const
@@ -679,8 +686,13 @@ public:
         switch (sharingMode) {
         case ArrayBufferSharingMode::Default:
             return m_arrayBufferStructure.get();
+#if ENABLE(SHARED_ARRAY_BUFFER)
         case ArrayBufferSharingMode::Shared:
             return m_sharedArrayBufferStructure.get();
+#else
+        default:
+            return m_arrayBufferStructure.get();
+#endif
         }
         RELEASE_ASSERT_NOT_REACHED();
         return nullptr;

@@ -1,1 +1,0 @@
-See test/modenatest/ModenaTest.java file for more information.

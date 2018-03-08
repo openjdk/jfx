@@ -1,26 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-  <classpathentry kind="output" path="bin"/>
-  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-  <classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>
-  <classpathentry kind="src" exported="true" path="src/main/java"/>
-  <classpathentry kind="src" exported="true" path="src/test/java">
-    <attributes>
-      <attribute name="optional" value="true"/>
-    </attributes>
-  </classpathentry>
-  <classpathentry kind="src" exported="true" path="src/main/resources">
-    <attributes>
-      <attribute name="optional" value="true"/>
-    </attributes>
-  </classpathentry>
-  <classpathentry kind="src" exported="true" path="src/test/resources">
-    <attributes>
-      <attribute name="optional" value="true"/>
-    </attributes>
-  </classpathentry>
-  <classpathentry kind="src" exported="true" path="build/gensrc/jsl-decora"/>
-  <classpathentry kind="src" exported="true" path="build/gensrc/jsl-prism"/>
-  <classpathentry kind="src" exported="true" path="build/resources/jsl-decora"/>
-  <classpathentry kind="src" exported="true" path="build/resources/jsl-prism"/>
-  <classpathentry kind="src" exported="true" path="/base"/>
+	<classpathentry kind="src" path="src/main/java"/>
+	<classpathentry kind="src" output="testbin" path="src/shims/java">
+		<attributes>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="testbin" path="src/test/java">
+		<attributes>
+			<attribute name="test" value="true"/>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="src/main/resources">
+		<attributes>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" output="testbin" path="src/test/resources">
+		<attributes>
+			<attribute name="test" value="true"/>
+			<attribute name="optional" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry combineaccessrules="false" kind="src" path="/base">
+		<attributes>
+			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="javafx.base/com.sun.javafx.property=javafx.graphics"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">
+		<attributes>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+			<attribute name="add-exports" value="java.desktop/sun.font=javafx.graphics:java.base/sun.security.util=javafx.graphics:java.desktop/sun.awt=javafx.graphics:java.xml/com.sun.org.apache.xerces.internal.util=javafx.graphics"/>
+			<attribute name="limit-modules" value="java.se,jdk.accessibility,jdk.attach,jdk.compiler,jdk.httpserver,jdk.jartool,jdk.javadoc,jdk.jconsole,jdk.jdi,jdk.management,jdk.packager,jdk.sctp,jdk.security.auth,jdk.security.jgss,jdk.unsupported,jdk.dynalink,jdk.incubator.httpclient,jdk.jshell,jdk.jsobject,jdk.net,jdk.packager.services,jdk.scripting.nashorn,jdk.xml.dom,java.desktop"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
 </classpath>

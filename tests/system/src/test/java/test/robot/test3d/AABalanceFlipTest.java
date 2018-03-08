@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,8 +40,11 @@ import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.stage.Stage;
+import org.junit.Before;
 import org.junit.Test;
 import test.robot.testharness.VisualTestBase;
+
+import static org.junit.Assume.assumeTrue;
 
 public class AABalanceFlipTest extends VisualTestBase {
 
@@ -52,10 +55,15 @@ public class AABalanceFlipTest extends VisualTestBase {
 
     WritableImage selfIllumMap;
 
-    @Test(timeout = 5000)
+    @Before
+    public void setupEach() {
+        assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+    }
+
+    @Test(timeout = 15000)
     public void testAABalanceFlip() {
-        final int WIDTH = 800;
-        final int HEIGHT = 800;
+        final int WIDTH = 600;
+        final int HEIGHT = 600;
         selfIllumMap = new WritableImage(64, 64);
         PixelWriter pWriter = selfIllumMap.getPixelWriter();
         setArgb(pWriter, 0, 32, 0, 32, 0Xff000000);
@@ -74,13 +82,6 @@ public class AABalanceFlipTest extends VisualTestBase {
         });
         waitFirstFrame();
         runAndWait(() -> {
-
-            if (!Platform.isSupported(ConditionalFeature.SCENE3D)) {
-                System.out.println("*************************************************************");
-                System.out.println("*      Platform isn't SCENE3D capable, skipping 3D test.    *");
-                System.out.println("*************************************************************");
-                return;
-            }
 
             Color color;
             Color blackColor = new Color(0, 0, 0, 1);
@@ -199,8 +200,8 @@ public class AABalanceFlipTest extends VisualTestBase {
         meshView.setCullFace(CullFace.BACK);
 
         final Group grp = new Group(meshView);
-        grp.setTranslateX(400);
-        grp.setTranslateY(400);
+        grp.setTranslateX(width/2);
+        grp.setTranslateY(height/2);
         grp.setTranslateZ(10);
 
         root = new Group(grp, new AmbientLight(Color.BLACK));
