@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -2075,8 +2075,8 @@ public class TreeTableViewTest {
         tableView.setMinHeight(100);
         tableView.setPrefHeight(100);
 
-        TreeTableColumn firstNameCol = new TreeTableColumn("First Name");
-        firstNameCol.setCellValueFactory(new TreeItemPropertyValueFactory<Person, String>("firstName"));
+        TreeTableColumn<String, String> firstNameCol = new TreeTableColumn<>("First Name");
+        firstNameCol.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getValue()));
         firstNameCol.setCellFactory(CheckBoxTreeTableCell.forTreeTableColumn(param -> new ReadOnlyBooleanWrapper(true)));
         tableView.getColumns().add(firstNameCol);
 
@@ -3006,7 +3006,7 @@ public class TreeTableViewTest {
         group2.getChildren().addAll(employee1, employee2);
 
         TreeTableColumn<String, String> nameColumn = new TreeTableColumn<>("Name");
-        nameColumn.setCellValueFactory(new TreeItemPropertyValueFactory<String, String>("name"));
+        nameColumn.setCellValueFactory(param -> new SimpleStringProperty(param.getValue().getValue()));
         view.getColumns().add(nameColumn);
 
         view.expandedItemCountProperty().addListener((observableValue, oldCount, newCount) -> {
@@ -5238,12 +5238,12 @@ public class TreeTableViewTest {
         // as ListListenerHelp intercepts the exception otherwise
         final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
-            e.printStackTrace();
 
             if (test_rt_39822_count == 0) {
                 test_rt_39822_count++;
                 if (! (e instanceof IllegalStateException)) {
-                    fail("Incorrect exception type - expecting IllegalStateException");
+                    e.printStackTrace();
+                    fail("Expected IllegalStateException, instead got " + e);
                 }
             } else {
                 // don't care

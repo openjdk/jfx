@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -4787,12 +4787,12 @@ public class TableViewTest {
         // as ListListenerHelp intercepts the exception otherwise
         final Thread.UncaughtExceptionHandler exceptionHandler = Thread.currentThread().getUncaughtExceptionHandler();
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
-            e.printStackTrace();
 
             if (test_rt_39822_count == 0) {
                 test_rt_39822_count++;
                 if (! (e instanceof IllegalStateException)) {
-                    fail("Incorrect exception type - expecting IllegalStateException");
+                    e.printStackTrace();
+                    fail("Expected IllegalStateException, instead got " + e);
                 }
             } else {
                 // don't care
@@ -5186,9 +5186,9 @@ public class TableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         TableColumn<Person, String> c1 = new TableColumn<>("First Name");
-        c1.setCellValueFactory(new PropertyValueFactory<>("firstname"));
+        c1.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         TableColumn<Person, String> c2 = new TableColumn<>("Last Name");
-        c2.setCellValueFactory(new PropertyValueFactory<>("lastname"));
+        c2.setCellValueFactory(new PropertyValueFactory<>("lastName"));
         t.getColumns().addAll(c1, c2);
 
         final int startIndex = toRight ? 0 : 2;
@@ -5220,9 +5220,9 @@ public class TableViewTest {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
 
         TableColumn<Person, String> c1 = new TableColumn<>("First Name");
-        c1.setCellValueFactory(new PropertyValueFactory<>("firstname"));
+        c1.setCellValueFactory(new PropertyValueFactory<>("firstName"));
         TableColumn<Person, String> c2 = new TableColumn<>("Last Name");
-        c2.setCellValueFactory(new PropertyValueFactory<>("lastname"));
+        c2.setCellValueFactory(new PropertyValueFactory<>("lastName"));
         t.getColumns().addAll(c1, c2);
 
         p.add(new Person("FirstName1", "LastName1", ""));
