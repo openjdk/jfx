@@ -181,15 +181,20 @@ raise_wakeup (GstPoll * set)
 {
   gboolean result = TRUE;
 
-#ifndef GSTREAMER_LITE
-  if (g_atomic_int_add (&set->control_pending, 1) == 0) {
-#else // GSTREAMER_LITE
-  if (g_atomic_int_add (&set->control_pending, 1) >= 0) {
+#ifdef GSTREAMER_LITE
+  g_mutex_lock (&set->lock);
 #endif // GSTREAMER_LITE
+
+  if (g_atomic_int_add (&set->control_pending, 1) == 0) {
     /* raise when nothing pending */
     GST_LOG ("%p: raise", set);
     result = WAKE_EVENT (set);
   }
+
+#ifdef GSTREAMER_LITE
+  g_mutex_unlock (&set->lock);
+#endif // GSTREAMER_LITE
+
   return result;
 }
 
@@ -201,10 +206,19 @@ release_wakeup (GstPoll * set)
 {
   gboolean result = TRUE;
 
+#ifdef GSTREAMER_LITE
+  g_mutex_lock (&set->lock);
+#endif // GSTREAMER_LITE
+
   if (g_atomic_int_dec_and_test (&set->control_pending)) {
     GST_LOG ("%p: release", set);
     result = RELEASE_EVENT (set);
   }
+
+#ifdef GSTREAMER_LITE
+  g_mutex_unlock (&set->lock);
+#endif // GSTREAMER_LITE
+
   return result;
 }
 
@@ -212,6 +226,10 @@ static inline gint
 release_all_wakeup (GstPoll * set)
 {
   gint old;
+
+#ifdef GSTREAMER_LITE
+  g_mutex_lock (&set->lock);
+#endif // GSTREAMER_LITE
 
   while (TRUE) {
     if (!(old = g_atomic_int_get (&set->control_pending)))
@@ -228,6 +246,11 @@ release_all_wakeup (GstPoll * set)
         g_atomic_int_add (&set->control_pending, 1);
     }
   }
+
+#ifdef GSTREAMER_LITE
+  g_mutex_unlock (&set->lock);
+#endif // GSTREAMER_LITE
+
   return old;
 }
 
