@@ -250,7 +250,7 @@ if (!IS_64) {
 
 LINUX.launcherlibrary = [:]
 LINUX.launcherlibrary.compiler = compiler
-LINUX.launcherlibrary.ccFlags = ["-Wextra", "-Wformat", "-Wformat-security", "-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c", "-fPIC"]
+LINUX.launcherlibrary.ccFlags = ["-Wextra", "-Wformat", "-Wformat-security", "-DJAVAARCH=\"$OS_ARCH\"", "-I$JDK_HOME/include", "-I$JDK_HOME/include/linux", "-c", "-fPIC", "-std=gnu++98"]
 LINUX.launcherlibrary.linker = linker
 LINUX.launcherlibrary.linkFlags = ["-ldl", "-lpthread", "-shared" ]
 if (!IS_64) {
