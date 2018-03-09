@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.security.AccessControlContext;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
@@ -43,45 +41,6 @@ import com.sun.javafx.tk.TKStageListener;
 import com.sun.javafx.tk.Toolkit;
 
 abstract class GlassStage implements TKStage {
-
-    // Need to access via reflection since the SharedSecrets class moved to
-    // a new package in JDK 9 and we still build and test with JDK 8u.
-    private static Object javaSecurityAccess = null;
-    private static Method m_doIntersectionPrivilege = null;
-
-    static {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            Class cls_SharedSecrets;
-            Class cls_JavaSecurityAccess;
-
-            try {
-                try {
-                    // First look for these classes in their new location
-                    cls_SharedSecrets = Class.forName("jdk.internal.misc.SharedSecrets");
-                    cls_JavaSecurityAccess = Class.forName("jdk.internal.misc.JavaSecurityAccess");
-                } catch (ClassNotFoundException ex) {
-                    // As a fallback, look for these classes in their old location
-                    cls_SharedSecrets = Class.forName("sun.misc.SharedSecrets");
-                    cls_JavaSecurityAccess = Class.forName("sun.misc.JavaSecurityAccess");
-                }
-
-                // JavaSecurityAccess jsa = SharedSecrets.getJavaSecurityAccess();
-                Method m_getJavaSecurityAccess = cls_SharedSecrets.getMethod("getJavaSecurityAccess",
-                        new Class[0]);
-                javaSecurityAccess = m_getJavaSecurityAccess.invoke(null);
-                m_doIntersectionPrivilege = cls_JavaSecurityAccess.getMethod("doIntersectionPrivilege",
-                        PrivilegedAction.class, AccessControlContext.class, AccessControlContext.class);
-
-            } catch (ClassNotFoundException
-                    | NoSuchMethodException
-                    | IllegalAccessException
-                    | InvocationTargetException ex)
-            {
-                throw new SecurityException(ex);
-            }
-            return null;
-        });
-    }
 
     // A list of all GlassStage objects regardless of visibility.
     private static final List<GlassStage> windows = new ArrayList<>();
@@ -147,12 +106,11 @@ abstract class GlassStage implements TKStage {
     static AccessControlContext doIntersectionPrivilege(PrivilegedAction<AccessControlContext> action,
                                                        AccessControlContext stack,
                                                        AccessControlContext context) {
-        try {
-            return (AccessControlContext) m_doIntersectionPrivilege.invoke(
-                    javaSecurityAccess, action, stack, context);
-        } catch (IllegalAccessException | InvocationTargetException ex) {
-            throw new SecurityException(ex);
-        }
+        return AccessController.doPrivileged((PrivilegedAction<AccessControlContext>) () -> {
+            return AccessController.doPrivilegedWithCombiner((PrivilegedAction<AccessControlContext>) () -> {
+                return AccessController.getContext();
+            }, stack);
+        },  context);
     }
 
     public final void setSecurityContext(AccessControlContext ctx) {

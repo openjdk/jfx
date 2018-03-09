@@ -23,7 +23,6 @@
  * questions.
  */
 
-exports jdk.internal.misc to javafx.graphics;
 exports sun.reflect.misc to javafx.base;
 exports sun.reflect.misc to javafx.fxml;
 exports sun.reflect.misc to javafx.web;
