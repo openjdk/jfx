@@ -64,7 +64,6 @@ import javafx.scene.layout.Priority;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 
-import javax.swing.JApplet;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -88,7 +87,7 @@ import javax.swing.table.DefaultTableCellRenderer;
  * e.g. -Dhttp.proxyHost=webcache.mydomain.com -Dhttp.proxyPort=8080
  *
  */
-public class SwingInterop extends JApplet {
+public class SwingInterop extends JPanel {
 
     private static final int PANEL_WIDTH = 675;
     private static final int PANEL_HEIGHT = 400;
@@ -99,8 +98,7 @@ public class SwingInterop extends JApplet {
     private Chart chart;
     private Pane browser;
 
-    @Override
-    public void init() {
+    void initUI() {
         tableModel = new SampleTableModel();
         // create javafx panel for charts
         chartFxPanel = new JFXPanel();
@@ -162,16 +160,14 @@ public class SwingInterop extends JApplet {
                 JFrame frame = new JFrame("JavaFX in Swing");
                 frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-                JApplet applet = new SwingInterop();
-                applet.init();
+                SwingInterop app = new SwingInterop();
+                app.initUI();
 
-                frame.setContentPane(applet.getContentPane());
+                frame.setContentPane(app);
 
                 frame.pack();
                 frame.setLocationRelativeTo(null);
                 frame.setVisible(true);
-
-                applet.start();
             }
         });
     }
