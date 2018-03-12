@@ -46,8 +46,10 @@ import static org.junit.Assume.assumeTrue;
 public class RestoreSceneSizeTest {
     static CountDownLatch startupLatch;
     static Stage stage;
-    static double w;
-    static double h;
+
+    private static final int WIDTH = 234;
+    private static final int HEIGHT = 255;
+    private static double scaleX, scaleY;
 
     public static void main(String[] args) throws Exception {
         initFX();
@@ -65,13 +67,15 @@ public class RestoreSceneSizeTest {
 
         @Override
         public void start(Stage primaryStage) throws Exception {
-            primaryStage.setScene(new Scene(new VBox(), 234, 255));
+            primaryStage.setScene(new Scene(new VBox(), WIDTH, HEIGHT));
             stage = primaryStage;
-            w = stage.getScene().getWidth();
-            h = stage.getScene().getHeight();
             stage.setFullScreen(true);
-            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e ->
-                    Platform.runLater(startupLatch::countDown));
+            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
+                scaleX = stage.getOutputScaleX();
+                scaleY = stage.getOutputScaleY();
+
+                Platform.runLater(startupLatch::countDown);
+            });
             stage.show();
         }
     }
@@ -91,11 +95,12 @@ public class RestoreSceneSizeTest {
 
     @Test
     public void testUnfullscreenSize() throws Exception {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8193185
         // Disable on Mac until JDK-8176813 is fixed
         assumeTrue(!PlatformUtil.isMac());
 
         Thread.sleep(200);
+        final double w = (Math.ceil(WIDTH * scaleX)) / scaleX;
+        final double h = (Math.ceil(HEIGHT * scaleY)) / scaleY;
         Assert.assertTrue(stage.isShowing());
         Assert.assertTrue(stage.isFullScreen());
 

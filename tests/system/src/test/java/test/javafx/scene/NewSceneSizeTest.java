@@ -41,11 +41,12 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
 
 public class NewSceneSizeTest {
     static CountDownLatch startupLatch;
     static volatile Stage stage;
+
+    private static double scaleX, scaleY;
 
     public static void main(String[] args) throws Exception {
         initFX();
@@ -65,8 +66,12 @@ public class NewSceneSizeTest {
         public void start(Stage primaryStage) throws Exception {
             primaryStage.setScene(new Scene(new VBox()));
             stage = primaryStage;
-            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e ->
-                    Platform.runLater(startupLatch::countDown));
+            stage.addEventHandler(WindowEvent.WINDOW_SHOWN, e -> {
+                scaleX = stage.getOutputScaleX();
+                scaleY = stage.getOutputScaleY();
+
+                Platform.runLater(startupLatch::countDown);
+            });
             stage.show();
         }
     }
@@ -86,7 +91,6 @@ public class NewSceneSizeTest {
 
     @Test
     public void testNewSceneSize() throws Exception {
-        assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8193185
         Thread.sleep(200);
         final int nTries = 100;
         Stage childStage[] = new Stage[nTries];
@@ -106,8 +110,8 @@ public class NewSceneSizeTest {
                     stage.setResizable(fI % 2 == 0);
                     Scene scene = new Scene(new VBox(), 300 - fI, 200 - fI);
                     stage.setScene(scene);
-                    w[fI] = stage.getScene().getWidth();
-                    h[fI] = stage.getScene().getHeight();
+                    w[fI] = (Math.ceil((300 - fI) * scaleX)) / scaleX;
+                    h[fI] = (Math.ceil((200 - fI) * scaleY)) / scaleY;
                     Assert.assertTrue(w[fI] > 1);
                     Assert.assertTrue(h[fI] > 1);
                     stage.widthProperty().addListener(listenerW = (v, o, n) -> {
@@ -130,9 +134,9 @@ public class NewSceneSizeTest {
         Thread.sleep(200);
         for (int i = 0; i < nTries; i++) {
             Assert.assertEquals("Wrong scene " + i + " width", w[i],
-                                           childStage[i].getScene().getWidth());
+                                    childStage[i].getScene().getWidth(), 0.1);
             Assert.assertEquals("Wrong scene " + i + " height", h[i],
-                                          childStage[i].getScene().getHeight());
+                                    childStage[i].getScene().getHeight(), 0.1);
         }
     }
 
