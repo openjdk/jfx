@@ -28,8 +28,6 @@ package test.javafx.scene.input;
 import test.com.sun.javafx.scene.input.TestNodeHelper;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.geometry.Point2D;
@@ -58,11 +56,6 @@ public class TestNode extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((TestNode) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((TestNode) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -116,12 +109,5 @@ public class TestNode extends Node {
 
     private NGNode doCreatePeer() {
         return new NGGroup();
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return null;
     }
 }

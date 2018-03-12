@@ -27,8 +27,6 @@ package com.sun.javafx.scene.web;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.prism.Graphics;
 import com.sun.webkit.WebPage;
@@ -54,11 +52,6 @@ public final class Printable extends Node {
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((Printable) node).doComputeContains(localX, localY);
             }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((Printable) node).doProcessMXNode(alg, ctx);
-            }
         });
     }
 
@@ -73,13 +66,6 @@ public final class Printable extends Node {
 
     private NGNode doCreatePeer() {
         return peer;
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return null;
     }
 
     /*

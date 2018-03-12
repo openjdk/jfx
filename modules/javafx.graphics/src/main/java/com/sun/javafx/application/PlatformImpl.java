@@ -28,7 +28,6 @@ package com.sun.javafx.application;
 import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.tk.TKListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
@@ -399,10 +398,6 @@ public class PlatformImpl {
         pendingRunnables.incrementAndGet();
         waitForStart();
 
-        if (SystemProperties.isDebug()) {
-            Toolkit.getToolkit().pauseCurrentThread();
-        }
-
         synchronized (runLaterLock) {
             if (!exiting && toolkitExit.get()) {
                 // Don't schedule a runnable after we have exited the toolkit
@@ -431,10 +426,6 @@ public class PlatformImpl {
     }
 
     private static void runAndWait(final Runnable r, boolean exiting) {
-        if (SystemProperties.isDebug()) {
-            Toolkit.getToolkit().pauseCurrentThread();
-        }
-
         if (isFxApplicationThread()) {
              try {
                  r.run();

@@ -27,8 +27,6 @@ package test.com.sun.javafx.scene;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
@@ -76,16 +74,10 @@ public class CSSNodeHelper extends NodeHelper {
     protected boolean computeContainsImpl(Node node, double localX, double localY) {
         return cssNodeAccessor.doComputeContains(node, localX, localY);    }
 
-    @Override
-    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return cssNodeAccessor.doProcessMXNode(node, alg, ctx);
-    }
-
     public interface CSSNodeAccessor {
         NGNode doCreatePeer(Node node);
         BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         boolean doComputeContains(Node node, double localX, double localY);
-        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
     }
 
 }

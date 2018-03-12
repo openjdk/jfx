@@ -78,20 +78,12 @@ public final class SceneHelper {
         sceneAccessor.setWindow(scene, window);
     }
 
-    public static TKPulseListener getScenePulseListener(Scene scene) {
-        return sceneAccessor.getScenePulseListener(scene);
-    }
-
     public static TKScene getPeer(Scene scene) {
         return sceneAccessor.getPeer(scene);
     }
 
     public static void setAllowPGAccess(boolean flag) {
         sceneAccessor.setAllowPGAccess(flag);
-    }
-
-    public static void setPaused(final boolean paused) {
-        sceneAccessor.setPaused(paused);
     }
 
     public static void parentEffectiveOrientationInvalidated(
@@ -139,13 +131,9 @@ public final class SceneHelper {
 
         void setWindow(Scene scene, Window window);
 
-        TKPulseListener getScenePulseListener(Scene scene);
-
         TKScene getPeer(Scene scene);
 
         void setAllowPGAccess(boolean flag);
-
-        void setPaused(boolean paused);
 
         void parentEffectiveOrientationInvalidated(Scene scene);
 

@@ -27,8 +27,6 @@ package com.sun.javafx.scene.shape;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.util.Utils;
 import javafx.scene.Node;
@@ -62,11 +60,6 @@ public abstract class Shape3DHelper extends NodeHelper {
         return shape3DAccessor.doComputeContains(node, localX, localY);
     }
 
-    @Override
-    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return shape3DAccessor.doProcessMXNode(node, alg, ctx);
-    }
-
     public static void setShape3DAccessor(final Shape3DAccessor newAccessor) {
         if (shape3DAccessor != null) {
             throw new IllegalStateException();
@@ -79,7 +72,6 @@ public abstract class Shape3DHelper extends NodeHelper {
         void doUpdatePeer(Node node);
         BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         boolean doComputeContains(Node node, double localX, double localY);
-        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
     }
 
 }

@@ -71,8 +71,6 @@ import com.sun.javafx.embed.swing.Disposer;
 import com.sun.javafx.embed.swing.DisposerRecord;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGExternalNode;
 import com.sun.javafx.sg.prism.NGNode;
@@ -163,11 +161,6 @@ public class SwingNode extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((SwingNode) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((SwingNode) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -801,13 +794,6 @@ public class SwingNode extends Node {
         bounds.deriveWithNewBounds(0, 0, 0, (float)fxWidth, (float)fxHeight, 0);
         tx.transform(bounds, bounds);
         return bounds;
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return alg.processLeafNode(this, ctx);
     }
 
     private static class SwingNodeDisposer implements DisposerRecord {

@@ -27,8 +27,6 @@ package com.sun.javafx.scene.media;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
@@ -83,11 +81,6 @@ public class MediaViewHelper extends NodeHelper {
         return mediaViewAccessor.doComputeContains(node, localX, localY);
     }
 
-    @Override
-    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return mediaViewAccessor.doProcessMXNode(node, alg, ctx);
-    }
-
     public static void setMediaViewAccessor(final MediaViewAccessor newAccessor) {
         if (mediaViewAccessor != null) {
             throw new IllegalStateException();
@@ -102,7 +95,6 @@ public class MediaViewHelper extends NodeHelper {
         void doTransformsChanged(Node node);
         boolean doComputeContains(Node node, double localX, double localY);
         BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
-        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
     }
 
 }

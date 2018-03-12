@@ -40,8 +40,6 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CameraHelper;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
@@ -135,11 +133,6 @@ public abstract class Camera extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((Camera) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((Camera) node).doProcessMXNode(alg, ctx);
             }
 
             @Override
@@ -531,13 +524,6 @@ public abstract class Camera extends Node {
      */
     private boolean doComputeContains(double localX, double localY) {
         return false;
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }

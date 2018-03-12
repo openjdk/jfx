@@ -48,8 +48,6 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.NoninvertibleTransformException;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.input.PickResultChooser;
@@ -125,11 +123,6 @@ public abstract class Parent extends Node {
             @Override
             public void doProcessCSS(Node node) {
                 ((Parent) node).doProcessCSS();
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((Parent) node).doProcessMXNode(alg, ctx);
             }
 
             @Override
@@ -1909,13 +1902,6 @@ public abstract class Parent extends Node {
             }
         }
         return false;
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return alg.processContainerNode(this, ctx);
     }
 
     /** {@inheritDoc} */

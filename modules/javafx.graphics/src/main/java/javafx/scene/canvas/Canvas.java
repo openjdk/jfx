@@ -32,8 +32,6 @@ import javafx.scene.Node;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.RectBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.canvas.CanvasHelper;
@@ -95,11 +93,6 @@ public class Canvas extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((Canvas) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((Canvas) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -304,13 +297,5 @@ public class Canvas extends Node {
         bounds = new RectBounds(0f, 0f, (float) getWidth(), (float) getHeight());
         bounds = tx.transform(bounds, bounds);
         return bounds;
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg,
-                                     MXNodeAlgorithmContext ctx) {
-        return alg.processLeafNode(this, ctx);
     }
 }

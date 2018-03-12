@@ -69,10 +69,6 @@ public class WindowHelper {
      * instance method that is overridden by subclasses.
      * These methods exist in the base class only.
      */
-    public static String getMXWindowType(Window window) {
-        return getHelper(window).getMXWindowTypeImpl(window);
-    }
-
     public static void visibleChanging(Window window, boolean visible) {
         getHelper(window).visibleChangingImpl(window, visible);
     }
@@ -84,11 +80,6 @@ public class WindowHelper {
     /*
      * Methods that will be overridden by subclasses
      */
-
-    protected String getMXWindowTypeImpl(Window window) {
-        return windowAccessor.doGetMXWindowType(window);
-    }
-
     protected void visibleChangingImpl(Window window, boolean visible) {
         windowAccessor.doVisibleChanging(window, visible);
     }
@@ -158,7 +149,6 @@ public class WindowHelper {
     public interface WindowAccessor {
         WindowHelper getHelper(Window window);
         void setHelper(Window window, WindowHelper windowHelper);
-        String doGetMXWindowType(Window window);
         void doVisibleChanging(Window window, boolean visible);
         void doVisibleChanged(Window window, boolean visible);
         TKStage getPeer(Window window);

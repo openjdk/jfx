@@ -92,10 +92,6 @@ module javafx.graphics {
         javafx.web;
     exports com.sun.javafx.iio to
         javafx.web;
-    exports com.sun.javafx.jmx to
-        javafx.media,
-        javafx.swing,
-        javafx.web;
     exports com.sun.javafx.menu to
         javafx.controls;
     exports com.sun.javafx.scene to

@@ -30,8 +30,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import test.com.sun.javafx.scene.layout.MockNodeHelper;
 
 
@@ -51,9 +49,6 @@ public class MockNode extends Node {
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((MockNode) node).doComputeContains(localX, localY);
             }
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((MockNode) node).doProcessMXNode(alg, ctx);            }
         });
     }
 
@@ -68,5 +63,4 @@ public class MockNode extends Node {
     private NGNode doCreatePeer() { return null; }
     private BaseBounds doComputeGeomBounds(BaseBounds bounds, BaseTransform tx) { return null; }
     private boolean doComputeContains(double localX, double localY) { return false; }
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) { return null; }
 }

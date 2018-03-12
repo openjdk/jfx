@@ -29,8 +29,6 @@ import javafx.css.converter.PaintConverter;
 import javafx.css.converter.SizeConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
@@ -61,11 +59,6 @@ public  class CSSNode extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((CSSNode) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((CSSNode) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -349,12 +342,5 @@ public  class CSSNode extends Node {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return null;
     }
 }

@@ -115,11 +115,6 @@ public class Window implements EventTarget {
                     }
 
                     @Override
-                    public String doGetMXWindowType(Window window) {
-                        return window.doGetMXWindowType();
-                    }
-
-                    @Override
                     public void doVisibleChanging(Window window, boolean visible) {
                         window.doVisibleChanging(visible);
                     }
@@ -270,13 +265,6 @@ public class Window implements EventTarget {
 
     void setPeer(TKStage peer) {
         this.peer = peer;
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private String doGetMXWindowType() {
-        return getClass().getSimpleName();
     }
 
     /**

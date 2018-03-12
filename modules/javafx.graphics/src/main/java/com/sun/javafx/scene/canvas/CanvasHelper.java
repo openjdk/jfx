@@ -27,8 +27,6 @@ package com.sun.javafx.scene.canvas;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
@@ -77,10 +75,6 @@ public class CanvasHelper extends NodeHelper {
         return canvasAccessor.doComputeContains(node, localX, localY);
     }
 
-    @Override
-    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return canvasAccessor.doProcessMXNode(node, alg, ctx);
-    }
     public static void setCanvasAccessor(final CanvasAccessor newAccessor) {
         if (canvasAccessor != null) {
             throw new IllegalStateException();
@@ -94,7 +88,6 @@ public class CanvasHelper extends NodeHelper {
         void doUpdatePeer(Node node);
         BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         boolean doComputeContains(Node node, double localX, double localY);
-        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
     }
 
 }

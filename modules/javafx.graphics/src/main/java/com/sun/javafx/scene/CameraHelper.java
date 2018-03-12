@@ -27,8 +27,6 @@ package com.sun.javafx.scene;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
 import javafx.geometry.Point2D;
@@ -85,11 +83,6 @@ public class CameraHelper extends NodeHelper {
         return cameraAccessor.doComputeContains(node, localX, localY);
     }
 
-    @Override
-    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return cameraAccessor.doProcessMXNode(node, alg, ctx);
-    }
-
     public static Point2D project(Camera camera, Point3D p) {
         return cameraAccessor.project(camera, p);
     }
@@ -115,7 +108,6 @@ public class CameraHelper extends NodeHelper {
         void doUpdatePeer(Node node);
         BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         boolean doComputeContains(Node node, double localX, double localY);
-        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
         Point2D project(Camera camera, Point3D p);
         Point2D pickNodeXYPlane(Camera camera, Node node, double x, double y);
         Point3D pickProjectPlane(Camera camera, double x, double y);

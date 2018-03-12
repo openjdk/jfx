@@ -25,7 +25,6 @@
 
 package test.javafx.scene;
 
-import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import javafx.beans.value.ChangeListener;

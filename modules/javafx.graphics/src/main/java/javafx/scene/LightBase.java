@@ -30,8 +30,6 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.LightBaseHelper;
 import com.sun.javafx.scene.NodeHelper;
@@ -95,11 +93,6 @@ public abstract class LightBase extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((LightBase) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((LightBase) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -337,13 +330,6 @@ public abstract class LightBase extends Node {
     private boolean doComputeContains(double localX, double localY) {
         // TODO: 3D - Check is this the right default
         return false;
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }

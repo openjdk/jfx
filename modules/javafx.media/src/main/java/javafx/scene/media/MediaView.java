@@ -28,8 +28,6 @@ package javafx.scene.media;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.media.MediaViewHelper;
@@ -119,11 +117,6 @@ public class MediaView extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((MediaView) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((MediaView) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -1022,13 +1015,6 @@ public class MediaView extends Node {
         public void incrementRenderedFrameCount(int count) {
             renderedFrameCount += count;
         }
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return alg.processLeafNode(this, ctx);
     }
 
     /**

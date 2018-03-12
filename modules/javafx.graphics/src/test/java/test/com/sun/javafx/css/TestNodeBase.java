@@ -44,8 +44,6 @@ import javafx.scene.Node;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
@@ -69,11 +67,6 @@ public class TestNodeBase extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((TestNodeBase) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((TestNodeBase) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -272,12 +265,5 @@ public class TestNodeBase extends Node {
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return alg.processLeafNode(this, ctx);
     }
 }

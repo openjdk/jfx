@@ -77,7 +77,6 @@ import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.embed.HostInterface;
 import com.sun.javafx.geom.Path2D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.HighlightRegion;
 import com.sun.javafx.perf.PerformanceTracker;
 import com.sun.javafx.runtime.VersionInfo;
 import com.sun.javafx.runtime.async.AsyncOperation;
@@ -892,69 +891,6 @@ public abstract class Toolkit {
     public abstract int getMultiClickMaxY();
 
     private CountDownLatch pauseScenesLatch = null;
-
-    /*
-     * Causes all scenes to stop by removing its TKPulseListener from Toolkit.
-     * It is used by Scenegraph-JMX bean.
-     */
-    public void pauseScenes() {
-        pauseScenesLatch = new CountDownLatch(1);
-        Window.getWindows().stream().forEach(window -> {
-            final Scene scene = window.getScene();
-            if (scene != null) {
-                this.removeSceneTkPulseListener(SceneHelper.getScenePulseListener(scene));
-            }
-        });
-        this.getMasterTimer().pause();
-        SceneHelper.setPaused(true);
-    }
-
-    /*
-     * Resume all scenes by registering its TKPulseListener back to Toolkit.
-     * It is used by Scenegraph-JMX bean.
-     */
-    public void resumeScenes() {
-        SceneHelper.setPaused(false);
-        this.getMasterTimer().resume();
-        Window.getWindows().stream().forEach(window -> {
-            final Scene scene = window.getScene();
-            if (scene != null) {
-                this.addSceneTkPulseListener(SceneHelper.getScenePulseListener(scene));
-            }
-        });
-        pauseScenesLatch.countDown();
-        pauseScenesLatch = null;
-    }
-
-    /**
-     * Used to pause current thread when the Scene-graph is in "PAUSED" mode.
-     * It is mainly used by {@link javafx.application.Platform#runLater(Runnable)}
-     * to block the thread and not to pass the runnable to FX event queue.
-     */
-    public void pauseCurrentThread() {
-        final CountDownLatch cdl = pauseScenesLatch;
-        if (cdl == null) {
-            return;
-        }
-        try {
-            cdl.await();
-        } catch (InterruptedException e) { }
-    }
-
-    private Set<HighlightRegion> highlightRegions;
-
-    /**
-     * Getter for the set of regions to be highlighted using the JMX tooling
-     * interface.
-     *
-     * @return the set of regions to be highlighted.
-     */
-    public Set<HighlightRegion> getHighlightedRegions() {
-        if (highlightRegions == null) {
-            highlightRegions = new HashSet<HighlightRegion>();
-        }
-        return highlightRegions;
-    }
 
     public interface WritableImageAccessor {
         public void loadTkImage(WritableImage wimg, Object loader);

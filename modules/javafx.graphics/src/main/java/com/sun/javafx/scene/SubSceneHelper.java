@@ -28,8 +28,6 @@ package com.sun.javafx.scene;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.util.Utils;
@@ -93,11 +91,6 @@ public class SubSceneHelper extends NodeHelper {
     }
 
     @Override
-    protected Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return subSceneAccessor.doProcessMXNode(node, alg, ctx);
-    }
-
-    @Override
     protected void pickNodeLocalImpl(Node node, PickRay localPickRay,
             PickResultChooser result) {
         subSceneAccessor.doPickNodeLocal(node, localPickRay, result);
@@ -125,7 +118,6 @@ public class SubSceneHelper extends NodeHelper {
         BaseBounds doComputeGeomBounds(Node node, BaseBounds bounds, BaseTransform tx);
         boolean doComputeContains(Node node, double localX, double localY);
         void doProcessCSS(Node node);
-        Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
         void doPickNodeLocal(Node node, PickRay localPickRay,
                 PickResultChooser result);
         boolean isDepthBuffer(SubScene subScene);

@@ -29,8 +29,6 @@ import com.sun.glass.ui.Accessible;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.input.PickResultChooser;
 import com.sun.javafx.scene.traversal.Direction;
 import com.sun.javafx.sg.prism.NGNode;
@@ -148,17 +146,6 @@ public abstract class NodeHelper {
     }
 
     /*
-     * This method is used by Scene-graph JMX bean to obtain the Scene-graph structure.
-     *
-     * @param alg current algorithm to process this node
-     * @param ctx current context
-     * @return the algorithm specific result for this node
-     */
-    public static Object processMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return getHelper(node).processMXNodeImpl(node, alg, ctx);
-    }
-
-    /*
      * Methods that will be overridden by subclasses
      */
 
@@ -166,7 +153,6 @@ public abstract class NodeHelper {
     protected abstract boolean computeContainsImpl(Node node, double localX, double localY);
     protected abstract BaseBounds computeGeomBoundsImpl(Node node,
             BaseBounds bounds, BaseTransform tx);
-    protected abstract Object processMXNodeImpl(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx);
 
     protected void markDirtyImpl(Node node, DirtyBits dirtyBit) {
         nodeAccessor.doMarkDirty(node, dirtyBit);

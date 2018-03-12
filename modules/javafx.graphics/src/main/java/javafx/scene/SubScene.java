@@ -44,8 +44,6 @@ import java.util.List;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
@@ -128,11 +126,6 @@ public class SubScene extends Node {
             @Override
             public void doProcessCSS(Node node) {
                 ((SubScene) node).doProcessCSS();
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((SubScene) node).doProcessMXNode(alg, ctx);
             }
 
             @Override
@@ -875,14 +868,6 @@ public class SubScene extends Node {
             }
         }
     }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-
 
     private List<LightBase> lights = new ArrayList<>();
 

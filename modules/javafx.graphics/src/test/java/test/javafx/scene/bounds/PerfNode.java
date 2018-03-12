@@ -33,8 +33,6 @@ import javafx.beans.property.FloatProperty;
 import javafx.beans.property.SimpleFloatProperty;
 import javafx.scene.Node;
 
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import test.com.sun.javafx.scene.bounds.PerfNodeHelper;
 
@@ -61,11 +59,6 @@ public class PerfNode extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((PerfNode) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((PerfNode) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -202,12 +195,5 @@ public class PerfNode extends Node {
 
     private NGNode doCreatePeer() {
         return new NGRectangle();
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return null;
     }
 }

@@ -28,8 +28,6 @@ package javafx.scene.shape;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.BoxBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.paint.MaterialHelper;
@@ -89,11 +87,6 @@ public abstract class Shape3D extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((Shape3D) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((Shape3D) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -257,13 +250,6 @@ public abstract class Shape3D extends Node {
         if (NodeHelper.isDirty(this, DirtyBits.NODE_CULLFACE)) {
             peer.setCullFace(getCullFace() == null ? CullFace.BACK : getCullFace());
         }
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        throw new UnsupportedOperationException("Not supported yet.");
     }
 
 }

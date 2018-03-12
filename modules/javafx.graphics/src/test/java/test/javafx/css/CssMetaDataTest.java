@@ -55,8 +55,6 @@ import javafx.stage.Stage;
 import javafx.css.converter.BooleanConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.css.CompoundSelector;
 import javafx.css.CssMetaData;

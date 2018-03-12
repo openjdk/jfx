@@ -53,8 +53,6 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 import java.util.Base64;
 import java.util.Optional;
-import com.sun.javafx.jmx.MXExtension;
-import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.stage.StageHelper;
 
 
@@ -719,10 +717,6 @@ public class LauncherImpl {
     private static void startToolkit() throws InterruptedException {
         if (toolkitStarted.getAndSet(true)) {
             return;
-        }
-
-        if (SystemProperties.isDebug()) {
-            MXExtension.initializeIfAvailable();
         }
 
         final CountDownLatch startupLatch = new CountDownLatch(1);

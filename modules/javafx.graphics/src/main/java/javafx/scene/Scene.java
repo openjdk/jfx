@@ -38,7 +38,6 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.perf.PerformanceTracker;
-import com.sun.javafx.runtime.SystemProperties;
 import com.sun.javafx.scene.CssFlags;
 import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.SceneEventDispatcher;
@@ -410,11 +409,6 @@ public class Scene implements EventTarget {
                         }
 
                         @Override
-                        public TKPulseListener getScenePulseListener(Scene scene) {
-                            return scene.getScenePulseListener();
-                        }
-
-                        @Override
                         public TKScene getPeer(Scene scene) {
                             return scene.getPeer();
                         }
@@ -422,11 +416,6 @@ public class Scene implements EventTarget {
                         @Override
                         public void setAllowPGAccess(boolean flag) {
                             Scene.setAllowPGAccess(flag);
-                        }
-
-                        @Override
-                        public void setPaused(boolean paused) {
-                            Scene.paused = paused;
                         }
 
                         @Override
@@ -480,9 +469,6 @@ public class Scene implements EventTarget {
         private static boolean inMousePick = false;
         private static boolean allowPGAccess = false;
         private static int pgAccessCount = 0;
-
-        // Flag set by the Toolkit when we are paused for JMX debugging
-        private static boolean paused = false;
 
         /**
          * Used for debugging purposes. Returns true if we are in either the
@@ -607,13 +593,6 @@ public class Scene implements EventTarget {
      * The scene pulse listener that gets called on toolkit pulses
      */
     ScenePulseListener scenePulseListener = new ScenePulseListener();
-
-    TKPulseListener getScenePulseListener() {
-        if (SystemProperties.isDebug()) {
-            return scenePulseListener;
-        }
-        return null;
-    }
 
     private List<Runnable> preLayoutPulseListeners;
     private List<Runnable> postLayoutPulseListeners;
@@ -1283,20 +1262,18 @@ public class Scene implements EventTarget {
         // because this scene can be stage-less
         doLayoutPass();
 
-        if (!paused) {
-            getRoot().updateBounds();
-            if (peer != null) {
-                peer.waitForRenderingToComplete();
-                peer.waitForSynchronization();
-                try {
-                    // Run the synchronizer while holding the render lock
-                    scenePulseListener.synchronizeSceneNodes();
-                } finally {
-                    peer.releaseSynchronization(false);
-                }
-            } else {
+        getRoot().updateBounds();
+        if (peer != null) {
+            peer.waitForRenderingToComplete();
+            peer.waitForSynchronization();
+            try {
+                // Run the synchronizer while holding the render lock
                 scenePulseListener.synchronizeSceneNodes();
+            } finally {
+                peer.releaseSynchronization(false);
             }
+        } else {
+            scenePulseListener.synchronizeSceneNodes();
         }
 
     }
@@ -1480,9 +1457,7 @@ public class Scene implements EventTarget {
      * @since JavaFX 2.2
      */
     public WritableImage snapshot(WritableImage image) {
-        if (!paused) {
-            Toolkit.getToolkit().checkFxUserThread();
-        }
+        Toolkit.getToolkit().checkFxUserThread();
 
         return doSnapshot(image);
     }

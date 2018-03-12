@@ -30,8 +30,6 @@ import com.sun.javafx.css.StyleManager;
 import javafx.css.converter.URLConverter;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.ImageViewHelper;
 import com.sun.javafx.scene.NodeHelper;
@@ -162,11 +160,6 @@ public class ImageView extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((ImageView) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((ImageView) node).doProcessMXNode(alg, ctx);
             }
         });
     }
@@ -899,12 +892,5 @@ public class ImageView extends Node {
         if (NodeHelper.isDirty(this, DirtyBits.NODE_VIEWPORT) || NodeHelper.isDirty(this, DirtyBits.NODE_CONTENTS)) {
             updateViewport();
         }
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return alg.processLeafNode(this, ctx);
     }
 }

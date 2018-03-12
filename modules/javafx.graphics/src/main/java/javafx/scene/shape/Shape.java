@@ -56,8 +56,6 @@ import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.shape.ShapeHelper;
@@ -147,11 +145,6 @@ public abstract class Shape extends Node {
             @Override
             public boolean doComputeContains(Node node, double localX, double localY) {
                 return ((Shape) node).doComputeContains(localX, localY);
-            }
-
-            @Override
-            public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                return ((Shape) node).doProcessMXNode(alg, ctx);
             }
 
             @Override
@@ -1542,13 +1535,6 @@ public abstract class Shape extends Node {
                 NodeHelper.geomChanged(Shape.this);
             }
         }
-    }
-
-    /*
-     * Note: This method MUST only be called via its accessor method.
-     */
-    private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-        return alg.processLeafNode(this, ctx);
     }
 
     // PENDING_DOC_REVIEW

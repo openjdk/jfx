@@ -28,8 +28,6 @@ package test.javafx.scene;
 import javafx.collections.ObservableList;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
-import com.sun.javafx.jmx.MXNodeAlgorithm;
-import com.sun.javafx.jmx.MXNodeAlgorithmContext;
 import com.sun.javafx.sg.prism.NGGroup;
 import com.sun.javafx.sg.prism.NGNode;
 import javafx.scene.Group;
@@ -671,10 +669,6 @@ public class StructureTest {
                 public boolean doComputeContains(Node node, double localX, double localY) {
                     return ((StubNode) node).doComputeContains(localX, localY);
                 }
-                @Override
-                public Object doProcessMXNode(Node node, MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-                    return ((StubNode) node).doProcessMXNode(alg, ctx);
-                }
             });
         }
 
@@ -701,13 +695,6 @@ public class StructureTest {
         private boolean doComputeContains(double localX, double localY) {
             // TODO: Missing code.
             return false;
-        }
-
-        /*
-         * Note: This method MUST only be called via its accessor method.
-         */
-        private Object doProcessMXNode(MXNodeAlgorithm alg, MXNodeAlgorithmContext ctx) {
-            return null;
         }
     }
 

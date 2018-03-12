@@ -206,15 +206,6 @@ project(":fxml") {
     }
 }
 
-project(":jmx") {
-    apply plugin: 'java'
-
-    compileJava {
-        enabled = false
-    }
-}
-
-
 allprojects() {
     repositories {
         mavenCentral()

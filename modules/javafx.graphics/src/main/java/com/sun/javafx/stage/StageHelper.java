@@ -52,11 +52,6 @@ public class StageHelper extends WindowHelper {
     }
 
     @Override
-    protected String getMXWindowTypeImpl(Window window) {
-        return stageAccessor.doGetMXWindowType(window);
-    }
-
-    @Override
     protected void visibleChangingImpl(Window window, boolean visible) {
         super.visibleChangingImpl(window, visible);
         stageAccessor.doVisibleChanging(window, visible);
@@ -93,7 +88,6 @@ public class StageHelper extends WindowHelper {
     }
 
     public static interface StageAccessor {
-        String doGetMXWindowType(Window window);
         void doVisibleChanging(Window window, boolean visible);
         void doVisibleChanged(Window window, boolean visible);
         public void initSecurityDialog(Stage stage, boolean securityDialog);

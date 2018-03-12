@@ -23,7 +23,7 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "fxpackager", "fxpackagerservices", "jmx", "web", "media", "systemTests"
+include "base", "graphics", "controls", "swing", "swt", "fxml", "fxpackager", "fxpackagerservices", "web", "media", "systemTests"
 
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
@@ -33,7 +33,6 @@ project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")
 project(":fxpackager").projectDir = file("modules/jdk.packager")
 project(":fxpackagerservices").projectDir = file("modules/jdk.packager.services")
-project(":jmx").projectDir = file("modules/javafx.jmx")
 project(":web").projectDir = file("modules/javafx.web")
 project(":media").projectDir = file("modules/javafx.media")
 project(":systemTests").projectDir = file("tests/system")
