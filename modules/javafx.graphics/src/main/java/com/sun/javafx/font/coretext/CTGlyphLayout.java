@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -118,7 +118,7 @@ class CTGlyphLayout extends GlyphLayout {
                 if (slot != -1) {
                     glyphStart += OS.CTRunGetGlyphs(runRef, slot << 24, glyphStart, glyphs);
                 } else {
-                    glyphStart += OS.CTRunGetGlyphCount(runRef);
+                    glyphStart += OS.CTRunGetGlyphs(runRef, 0, glyphStart, glyphs);
                 }
                 if (size > 0) {
                     posStart += OS.CTRunGetPositions(runRef, posStart, positions);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -634,17 +634,36 @@ JNIEXPORT jint JNICALL OS_NATIVE(CTRunGetGlyphs)
 {
     CTRunRef run = (CTRunRef)runRef;
     const CGGlyph * glyphs = CTRunGetGlyphsPtr(run);
+    CFIndex count = CTRunGetGlyphCount(run);
+    if (count == 0) {
+        return 0;
+    }
+
+    CGGlyph* tempGlyphs = NULL;
+    if (!glyphs) {
+        tempGlyphs = (CGGlyph*) malloc(count * sizeof(CGGlyph));
+        if (!tempGlyphs) {
+            return 0;
+        }
+
+        CTRunGetGlyphs(run, CFRangeMake(0, 0), tempGlyphs);
+        glyphs = tempGlyphs;
+    }
+
     int i = 0;
     if (glyphs) {
         jint* buffer = (*env)->GetPrimitiveArrayCritical(env, bufferRef, NULL);
         if (buffer) {
-            CFIndex count = CTRunGetGlyphCount(run);
             while(i < count) {
                 buffer[start + i] = slotMask | (glyphs[i] & 0xFFFF);
                 i++;
             }
             (*env)->ReleasePrimitiveArrayCritical(env, bufferRef, buffer, 0);
         }
+    }
+
+    if (tempGlyphs) {
+        free(tempGlyphs);
     }
     return i;
 }
