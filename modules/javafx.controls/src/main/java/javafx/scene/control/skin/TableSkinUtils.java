@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,11 +140,22 @@ class TableSkinUtils {
 
         // RT-23486
         maxWidth += padding;
-        if(tv.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY) {
-            maxWidth = Math.max(maxWidth, tc.getWidth());
-        }
+        if (tv.getColumnResizePolicy() == TableView.CONSTRAINED_RESIZE_POLICY && tv.getWidth() > 0) {
 
-        TableColumnBaseHelper.setWidth(tc, maxWidth);
+            if (maxWidth > tc.getMaxWidth()) {
+                maxWidth = tc.getMaxWidth();
+            }
+
+            int size = tc.getColumns().size();
+            if (size > 0) {
+                resizeColumnToFitContent(tableSkin, tc.getColumns().get(size - 1), maxRows);
+                return;
+            }
+
+            resizeColumn(tableSkin, tc, Math.round(maxWidth - tc.getWidth()));
+        } else {
+            TableColumnBaseHelper.setWidth(tc, maxWidth);
+        }
     }
 
 
@@ -215,11 +226,22 @@ class TableSkinUtils {
 
         // RT-23486
         maxWidth += padding;
-        if(ttv.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY) {
-            maxWidth = Math.max(maxWidth, tc.getWidth());
-        }
+        if (ttv.getColumnResizePolicy() == TreeTableView.CONSTRAINED_RESIZE_POLICY && ttv.getWidth() > 0) {
 
-        TableColumnBaseHelper.setWidth(tc, maxWidth);
+            if (maxWidth > tc.getMaxWidth()) {
+                maxWidth = tc.getMaxWidth();
+            }
+
+            int size = tc.getColumns().size();
+            if (size > 0) {
+                resizeColumnToFitContent(tableSkin, tc.getColumns().get(size - 1), maxRows);
+                return;
+            }
+
+            resizeColumn(tableSkin, tc, Math.round(maxWidth - tc.getWidth()));
+        } else {
+            TableColumnBaseHelper.setWidth(tc, maxWidth);
+        }
     }
 
     public static ObjectProperty<Callback<ResizeFeaturesBase,Boolean>> columnResizePolicyProperty(TableViewSkinBase<?,?,?,?,?> tableSkin) {
