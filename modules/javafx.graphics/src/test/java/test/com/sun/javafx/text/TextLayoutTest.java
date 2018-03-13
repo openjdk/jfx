@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,13 +33,12 @@ import com.sun.javafx.scene.text.GlyphList;
 import com.sun.javafx.scene.text.TextSpan;
 import com.sun.javafx.scene.text.TextLine;
 import com.sun.javafx.scene.text.FontHelper;
-import com.sun.javafx.text.PrismTextLayout;
+import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.text.PrismTextLayout;
 
 import org.junit.Ignore;
 import org.junit.Test;
 
-import sun.font.CharToGlyphMapper;
 import static org.junit.Assert.*;
 
 public class TextLayoutTest {

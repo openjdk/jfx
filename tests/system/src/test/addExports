@@ -24,4 +24,3 @@
 --add-exports javafx.graphics/com.sun.prism.impl=ALL-UNNAMED
 # compilation additions
 --add-exports=javafx.graphics/com.sun.glass.events=ALL-UNNAMED
---add-exports=java.desktop/sun.awt=ALL-UNNAMED

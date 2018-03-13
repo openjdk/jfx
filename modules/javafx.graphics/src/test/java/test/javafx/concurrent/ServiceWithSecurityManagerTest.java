@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
-import sun.awt.AWTSecurityManager;
 
 /**
  * A test for the Service lifecycle methods with a security manager installed.
@@ -86,7 +85,7 @@ public class ServiceWithSecurityManagerTest extends ServiceLifecycleTest {
 
         /**
          */
-        private final class StrictSecurityManager extends AWTSecurityManager {
+        private final class StrictSecurityManager extends SecurityManager {
             // If you create a Thread that is a child of mainThreadGroup, that is OK.
             // If you create a ThreadGroup that is a child of mainThreadGroup, then that is bad.
             private ThreadGroup securityThreadGroup = new ThreadGroup("Security Thread Group");

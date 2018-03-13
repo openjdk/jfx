@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,12 +34,9 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.Robot;
-import java.awt.Toolkit;
 
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
-
-import sun.awt.SunToolkit;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +47,7 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 import org.junit.Ignore;
+import test.util.Util;
 
 /**
  * RT-23603: WebView does not display in JFXPanel on initialization
@@ -68,10 +66,14 @@ public class RT23603Test {
         //
         waitForLatch(l1, 5000);
 
-        //
-        // wait for frame to become really visible
-        //
-        ((SunToolkit)Toolkit.getDefaultToolkit()).realSync();
+        // FIXME: implement the following without accessing sun.awt classes
+        // In the mean time, we will sleep for 1 second which is what other
+        // similar tests do.
+//        //
+//        // wait for frame to become really visible
+//        //
+//        ((SunToolkit)Toolkit.getDefaultToolkit()).realSync();
+        Util.sleep(1000);
 
         // 3 pulses should guarantee the scene is rendered
         final CountDownLatch l2 = new CountDownLatch(3);
