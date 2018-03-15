@@ -7,9 +7,6 @@
 #
 # ----------------------------------------------------------------------
 #
-# Qualified exports for JDK-8177566
---add-exports=javafx.base/com.sun.javafx.reflect=javafx.fxml
---add-exports=javafx.base/com.sun.javafx.reflect=javafx.web
 # Reads for JDK-8195801
 --add-reads=javafx.graphics=jdk.unsupported
 #
