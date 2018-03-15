@@ -283,9 +283,9 @@ project(":web") {
             dependsOn(project(":graphics").classes, project(":base").classes)
             description = "Task compiles web component for Android."
             classpath = files(
-                project(":controls").sourceSets.main.output.classesDir,
-                project(":graphics").sourceSets.main.output.classesDir,
-                project(":base").sourceSets.main.output.classesDir
+                project(":controls").sourceSets.main.java.outputDir,
+                project(":graphics").sourceSets.main.java.outputDir,
+                project(":base").sourceSets.main.java.outputDir
             )
             destinationDir = file("${project("web").buildDir}/classes/android")
             dependencyCacheDir = file("${project("web").buildDir}/dependency-cache")

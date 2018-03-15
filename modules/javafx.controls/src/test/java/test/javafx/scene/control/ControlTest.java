@@ -1005,6 +1005,7 @@ public class ControlTest {
                 f = new File(base.toURI());
             }
             //System.err.println(f.getPath());
+            assertTrue("" + f.getCanonicalPath() + " is not a directory", f.isDirectory());
             recursiveCheck(f, f.getPath().length() - 7);
         } catch (Exception ex) {
             ex.printStackTrace(System.err);
@@ -1019,7 +1020,7 @@ public class ControlTest {
 
         if (javafx.scene.control.Control.class.isAssignableFrom(someClass) &&
                 Modifier.isAbstract(someClass.getModifiers()) == false &&
-                !Modifier.isPrivate(someClass.getModifiers()) == false) {
+                Modifier.isPrivate(someClass.getModifiers()) == false) {
             String what = someClass.getName();
             try {
                 // should get NoSuchMethodException if ctor is not public
@@ -1075,7 +1076,7 @@ public class ControlTest {
                     final int len = file.getPath().length() - ".class".length();
                     final String clName =
                         file.getPath().substring(pathLength+1, len).replace(File.separatorChar,'.');
-                    if (clName.startsWith("test.javafx.scene") == false) continue;
+                    if (clName.startsWith("javafx.scene") == false) continue;
                     try {
                         final Class cl = Class.forName(clName);
                         if (cl != null) checkClass(cl);

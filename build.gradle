@@ -813,9 +813,9 @@ List<String> computeModulePathArgs(String  pname, List<String> deps, boolean tes
                      !(!test && proj.name.equals(pname))) {
                  File dir;
                  if (test && proj.sourceSets.hasProperty('shims')) {
-                    dir = new File(proj.sourceSets.shims.output.classesDir, proj.ext.moduleName);
+                    dir = new File(proj.sourceSets.shims.java.outputDir, proj.ext.moduleName);
                  } else {
-                    dir = new File(proj.sourceSets.main.output.classesDir, proj.ext.moduleName);
+                    dir = new File(proj.sourceSets.main.java.outputDir, proj.ext.moduleName);
                  }
                  if (mp == null) {
                      mp = dir.path
@@ -863,14 +863,12 @@ void writeRunArgsFile(File dest, List<String> libpath, List<String> modpath) {
 // perform common project manipulation for modules
 void commonModuleSetup(Project p, List<String> moduleChain) {
 
-    // Allow the build to use either gradle 3.x or gradle 4.x
-    p.sourceSets.main.output.classesDir = new File(p.buildDir, "classes/main")
     p.ext.moduleChain = moduleChain
 
     if (p.hasProperty("moduleName")) {
-        p.ext.moduleDir = new File (p.sourceSets.main.output.classesDir, "${p.moduleName}")
+        p.ext.moduleDir = new File (p.sourceSets.main.java.outputDir, "${p.moduleName}")
         if (p.sourceSets.hasProperty('shims')) {
-            p.ext.moduleShimsDir = new File (p.sourceSets.shims.output.classesDir, "${p.moduleName}")
+            p.ext.moduleShimsDir = new File (p.sourceSets.shims.java.outputDir, "${p.moduleName}")
         }
     }
 
@@ -1303,15 +1301,15 @@ void addNative(Project project, String name) {
 void addJSL(Project project, String name, String pkg, List<String> addExports, Closure compile) {
     def lowerName = name.toLowerCase()
 
-    def modulePath = "${project.sourceSets.main.output.classesDir}"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/main"
+    def modulePath = "${project.sourceSets.main.java.outputDir}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
     def compileCompilers = project.task("compile${name}Compilers",
             type: JavaCompile,
             dependsOn: project.compileJava) {
         description = "Compile the $name JSL Compilers"
 
         classpath =
-               project.files(project.sourceSets.jslc.output.classesDir) +
+               project.files(project.sourceSets.jslc.java.outputDir) +
                project.configurations.antlr
         source = [project.file("src/main/jsl-$lowerName")]
         destinationDir = project.file("$project.buildDir/classes/jsl-compilers/$lowerName")
@@ -1787,7 +1785,7 @@ project(":graphics") {
         source += "$buildDir/gensrc/java"
         source += project.sourceSets.shaders.output
 
-        destinationDir = project.sourceSets.main.output.classesDir
+        destinationDir = project.sourceSets.main.java.outputDir
         options.compilerArgs.addAll([
             '-h', "$buildDir/gensrc/headers/",  // Note: this creates the native headers
             '-implicit:none',
@@ -1932,8 +1930,8 @@ project(":graphics") {
     // a new task for each of the decora files, preferring instead just to create a rule?? Also
     // need "clean" tasks for each compile task.
 
-    def modulePath = "${project.sourceSets.main.output.classesDir}"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/main"
+    def modulePath = "${project.sourceSets.main.java.outputDir}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
     addJSL(project, "Decora", "com/sun/scenario/effect/impl/hw/d3d/hlsl", decoraAddExports) { sourceDir, destinationDir ->
         [[fileName: "ColorAdjust", generator: "CompileJSL", outputs: "-all"],
          [fileName: "Brightpass", generator: "CompileJSL", outputs: "-all"],
@@ -1950,7 +1948,7 @@ project(":graphics") {
                 workingDir = project.projectDir
                 main = settings.generator
                 classpath = configurations.compile + configurations.antlr
-                classpath += files(project.sourceSets.jslc.output.classesDir)
+                classpath += files(project.sourceSets.jslc.java.outputDir)
 
                 classpath += files("${project.projectDir}/src/jslc/resources")
 
@@ -2039,7 +2037,7 @@ project(":graphics") {
                 workingDir = project.projectDir
                 main = "CompileJSL"
                 classpath = configurations.compile + configurations.antlr
-                classpath += files(project.sourceSets.jslc.output.classesDir)
+                classpath += files(project.sourceSets.jslc.java.outputDir)
                 classpath += files(project.sourceSets.jslc.resources)
                 classpath += files("$buildDir/classes/jsl-compilers/prism",
                     project.projectDir.path + "/src/main/jsl-prism") // for the .stg
@@ -2056,7 +2054,7 @@ project(":graphics") {
     processResources.dependsOn processDecoraShaders, processPrismShaders
 
     test {
-        def cssDir = file("$buildDir/classes/main/javafx")
+        def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
         enableAssertions = true
@@ -2071,33 +2069,35 @@ project(":graphics") {
     // To enable the IDEs to all be happy (no red squiggles) we need to have the libraries
     // available in some known location. Maybe in the future the Gradle plugins to each
     // of the IDEs will be good enough that we won't need this hack anymore.
-    classes << {
-        // Copy all of the download libraries to the libs directory for the sake of the IDEs
-        File libsDir = rootProject.file("build/libs");
+    classes {
+        doLast {
+            // Copy all of the download libraries to the libs directory for the sake of the IDEs
+            File libsDir = rootProject.file("build/libs");
 
-        // In some IDEs (Eclipse for example), touching these libraries
-        // cauese a full build within the IDE. When gradle is used
-        // outside of the IDE, for example to build the native code,
-        // a full rebuild is caused within the IDE. The fix is to check
-        // for the presence of the target files in the lib directory
-        // and not copy the files if all are present.
+            // In some IDEs (Eclipse for example), touching these libraries
+            // cauese a full build within the IDE. When gradle is used
+            // outside of the IDE, for example to build the native code,
+            // a full rebuild is caused within the IDE. The fix is to check
+            // for the presence of the target files in the lib directory
+            // and not copy the files if all are present.
 
-        libsDir.mkdirs();
+            libsDir.mkdirs();
 
-        def allLibsPresent = true
-        def libNames = [ "antlr-complete-3.5.2.jar" ]
-        libNames.each { name ->
-            File f = new File(libsDir, name)
-            if (!f.exists()) allLibsPresent = false
-        }
-        if (allLibsPresent) return;
+            def allLibsPresent = true
+            def libNames = [ "antlr-complete-3.5.2.jar" ]
+            libNames.each { name ->
+                File f = new File(libsDir, name)
+                if (!f.exists()) allLibsPresent = false
+            }
+            if (allLibsPresent) return;
 
-        for (File f : [configurations.compile.files, configurations.antlr.files].flatten()) {
-            copy {
-                into libsDir
-                from f.getParentFile()
-                include "**/antlr-complete-3.5.2.jar"
-                includeEmptyDirs = false
+            for (File f : [configurations.compile.files, configurations.antlr.files].flatten()) {
+                copy {
+                    into libsDir
+                    from f.getParentFile()
+                    include "**/antlr-complete-3.5.2.jar"
+                    includeEmptyDirs = false
+                }
             }
         }
     }
@@ -2128,7 +2128,7 @@ project(":controls") {
     }
 
     test {
-        def cssDir = file("$buildDir/classes/main/javafx")
+        def cssDir = file("$buildDir/classes/java/main/${moduleName}/javafx")
         jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit",
             "-DCSS_META_DATA_TEST_DIR=$cssDir"
     }
@@ -2136,10 +2136,11 @@ project(":controls") {
     List<String> css2BinAddExports = [
             '--add-exports=java.base/sun.util.logging=javafx.graphics',
             ]
-    def modulePath = "${project.sourceSets.main.output.classesDir}"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/main"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/main"
-    processResources << {
+    def modulePath = "${project.sourceSets.main.java.outputDir}"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+    processResources {
+      doLast {
         def cssFiles = fileTree(dir: "$moduleDir/com/sun/javafx/scene/control/skin")
         cssFiles.include "**/*.css"
         cssFiles.each { css ->
@@ -2156,6 +2157,7 @@ project(":controls") {
                 args css
             }
         }
+      }
     }
 
     processShimsResources.dependsOn(project.task("copyShimBss", type: Copy) {
@@ -2216,25 +2218,27 @@ project(":swt") {
         compile name: SWT_FILE_NAME
     }
 
-    classes << {
-        // Copy all of the download libraries to libs directory for the sake of the IDEs
-        File libsDir = rootProject.file("build/libs");
-        File swtLib = new File(libsDir, "swt-debug.jar")
-        libsDir.mkdirs();
+    classes {
+        doLast {
+            // Copy all of the download libraries to libs directory for the sake of the IDEs
+            File libsDir = rootProject.file("build/libs");
+            File swtLib = new File(libsDir, "swt-debug.jar")
+            libsDir.mkdirs();
 
-        // Skip copy if file is present.
-        if (swtLib.exists()) return;
+            // Skip copy if file is present.
+            if (swtLib.exists()) return;
 
-        for (File f : configurations.compile.files) {
-            // Have to rename the swt jar because it is some platform specific name but
-            // for the sake of the IDEs we need to have a single stable name that works
-            // on every platform
-            copy {
-                into libsDir
-                from f.getParentFile()
-                include "**/*swt*.jar"
-                includeEmptyDirs = false
-                rename ".*swt.*jar", "swt-debug\\.jar"
+            for (File f : configurations.compile.files) {
+                // Have to rename the swt jar because it is some platform specific name but
+                // for the sake of the IDEs we need to have a single stable name that works
+                // on every platform
+                copy {
+                    into libsDir
+                    from f.getParentFile()
+                    include "**/*swt*.jar"
+                    includeEmptyDirs = false
+                    rename ".*swt.*jar", "swt-debug\\.jar"
+                }
             }
         }
     }
@@ -2443,7 +2447,7 @@ project(":fxpackager") {
     }
     processResources.dependsOn man
 
-    String buildClassesDir = "${sourceSets.main.output.classesDir}/${moduleName}"
+    String buildClassesDir = "${sourceSets.main.java.outputDir}/${moduleName}"
 
     // Compile the native launchers. These are included in jdk.packager.jmod.
     if (IS_WINDOWS && COMPILE_FXPACKAGER) {
@@ -2636,21 +2640,23 @@ project(":fxpackager") {
         assemble.dependsOn buildJavaPackager
     }
 
-    classes << {
-        // Copy all of the download libraries to libs directory for the sake of the IDEs
-        File libsDir = rootProject.file("build/libs");
-        File antLib = new File(libsDir, "ant-1.8.2.jar")
-        libsDir.mkdirs();
+    classes {
+        doLast {
+            // Copy all of the download libraries to libs directory for the sake of the IDEs
+            File libsDir = rootProject.file("build/libs");
+            File antLib = new File(libsDir, "ant-1.8.2.jar")
+            libsDir.mkdirs();
 
-        // Skip copy if file is present.
-        if (antLib.exists()) return;
+            // Skip copy if file is present.
+            if (antLib.exists()) return;
 
-        for (File f : configurations.compile.files) {
-            copy {
-                into libsDir
-                from f.getParentFile()
-                include "**/ant-1.8.2.jar"
-                includeEmptyDirs = false
+            for (File f : configurations.compile.files) {
+                copy {
+                    into libsDir
+                    from f.getParentFile()
+                    include "**/ant-1.8.2.jar"
+                    includeEmptyDirs = false
+                }
             }
         }
     }
@@ -2757,7 +2763,7 @@ project(":fxpackager") {
                 include "**"
             }
 
-            from (project.file("$rootProject.buildDir/../modules/jdk.packager/build/classes/main/jdk.packager.services")) {
+            from (project.file("$rootProject.buildDir/../modules/jdk.packager/build/classes/java/main/jdk.packager.services")) {
                 include "module-info.class"
             }
         }
@@ -2776,7 +2782,7 @@ project(":fxpackager") {
                 include "**"
             }
 
-            from (project.file("$rootProject.buildDir/../modules/jdk.packager/build/classes/main/jdk.packager")) {
+            from (project.file("$rootProject.buildDir/../modules/jdk.packager/build/classes/java/main/jdk.packager")) {
                 include "module-info.class"
             }
         }
@@ -3402,35 +3408,37 @@ project(":media") {
             }
 
             if (t.name == "win") {
-                def buildResources = task("buildResources") << {
-                    def rcOutputDir = "${nativeOutputDir}/${buildType}"
-                    mkdir rcOutputDir
-                    exec {
-                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        commandLine (WIN.media.rcCompiler)
-                        args(WIN.media.glibRcFlags)
-                        args("/Fo${rcOutputDir}/${WIN.media.glibRcFile}", WIN.media.rcSource)
-                    }
+                def buildResources = task("buildResources") {
+                    doLast {
+                        def rcOutputDir = "${nativeOutputDir}/${buildType}"
+                        mkdir rcOutputDir
+                        exec {
+                            environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                            commandLine (WIN.media.rcCompiler)
+                            args(WIN.media.glibRcFlags)
+                            args("/Fo${rcOutputDir}/${WIN.media.glibRcFile}", WIN.media.rcSource)
+                        }
 
-                    exec {
-                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        commandLine (WIN.media.rcCompiler)
-                        args(WIN.media.gstreamerRcFlags)
-                        args("/Fo${rcOutputDir}/${WIN.media.gstreamerRcFile}", WIN.media.rcSource)
-                    }
+                        exec {
+                            environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                            commandLine (WIN.media.rcCompiler)
+                            args(WIN.media.gstreamerRcFlags)
+                            args("/Fo${rcOutputDir}/${WIN.media.gstreamerRcFile}", WIN.media.rcSource)
+                        }
 
-                    exec {
-                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        commandLine (WIN.media.rcCompiler)
-                        args(WIN.media.fxpluginsRcFlags)
-                        args("/Fo${rcOutputDir}/${WIN.media.fxpluginsRcFile}", WIN.media.rcSource)
-                    }
+                        exec {
+                            environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                            commandLine (WIN.media.rcCompiler)
+                            args(WIN.media.fxpluginsRcFlags)
+                            args("/Fo${rcOutputDir}/${WIN.media.fxpluginsRcFile}", WIN.media.rcSource)
+                        }
 
-                    exec {
-                        environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
-                        commandLine (WIN.media.rcCompiler)
-                        args(WIN.media.jfxmediaRcFlags)
-                        args("/Fo${rcOutputDir}/${WIN.media.jfxmediaRcFile}", WIN.media.rcSource)
+                        exec {
+                            environment(WINDOWS_NATIVE_COMPILE_ENVIRONMENT)
+                            commandLine (WIN.media.rcCompiler)
+                            args(WIN.media.jfxmediaRcFlags)
+                            args("/Fo${rcOutputDir}/${WIN.media.jfxmediaRcFile}", WIN.media.rcSource)
+                        }
                     }
                 }
 
@@ -3663,7 +3671,7 @@ project(":web") {
 
         def compileJavaDOMBindingTask = task("compileJavaDOMBinding${t.capital}", type: JavaCompile,
                 dependsOn: [compileJava, compileNativeTask, copyNativeTask]) {
-            destinationDir = file("$buildDir/classes/main")
+            destinationDir = file("$buildDir/classes/java/main")
             classpath = configurations.compile
             source = project.sourceSets.main.java.srcDirs
             options.compilerArgs.addAll([
@@ -3684,7 +3692,7 @@ project(":web") {
     task drtJar(type: Jar, dependsOn: compileJava) {
         archiveName = "drt.jar"
         destinationDir = file("$buildDir/test")
-        from "$buildDir/classes/main/javafx.web/"
+        from "$buildDir/classes/java/main/javafx.web/"
         include drtClasses
         includeEmptyDirs = false
     }
@@ -3775,7 +3783,7 @@ project(":systemTests") {
         destinationDir = file("$buildDir/testapp1")
         archiveName = testapp1JarName
         includeEmptyDirs = false
-        from project.sourceSets.testapp1.output.classesDir
+        from project.sourceSets.testapp1.java.outputDir
         include("testapp/**")
         include("com/javafx/main/**")
 
@@ -3796,7 +3804,7 @@ project(":systemTests") {
         destinationDir = file("$buildDir/testapp1")
         archiveName = "jar2.jar";
         includeEmptyDirs = false
-        from project.sourceSets.testapp1.output.classesDir
+        from project.sourceSets.testapp1.java.outputDir
         include("pkg2/**")
     }
 
@@ -3810,7 +3818,7 @@ project(":systemTests") {
     modtestapps.each { testapp ->
         def testappCapital = testapp.capitalize()
         def copyTestAppTask = task("copy${testappCapital}", type: Copy) {
-            from project.sourceSets."${testapp}".output.classesDir
+            from project.sourceSets."${testapp}".java.outputDir
             from project.sourceSets."${testapp}".output.resourcesDir
             into "${project.buildDir}/modules/${testapp}"
         }
@@ -3937,7 +3945,7 @@ allprojects {
         project.compileShimsJava.dependsOn(project.compileJava)
 
         def copyGeneratedShimsTask = task("copyGeneratedShims", type: Copy, dependsOn: [compileShimsJava, processShimsResources]) {
-            from project.sourceSets.shims.output.classesDir
+            from project.sourceSets.shims.java.outputDir
             into "${rootProject.buildDir}/shims"
             exclude("*/module-info.class")
         }
@@ -4184,7 +4192,7 @@ compileTargets { t ->
         description = "Creates the javafx-swt.jar for the $t.name target"
         archiveName = "${project(":swt").buildDir}/libs/javafx-swt.jar";
         includeEmptyDirs = false
-        from("${project(":swt").buildDir}/classes/main");
+        from("${project(":swt").buildDir}/classes/java/main");
         include("**/javafx/embed/swt/**")
 
         dependsOn(
@@ -4194,18 +4202,12 @@ compileTargets { t ->
             project(":swt").classes,
             // classes is needed for a jar copy
             )
-        onlyIf {
-            dependsOnTaskDidWork()
-        }
     }
 
     // FIXME: do we really need the index task for this modular jar?
     def javafxSwtIndexTask = task("javafxSwtIndex$t.capital") {
         //the following is a workaround for the lack of indexing in gradle 1.4 through 1.7
         dependsOn(javafxSwtTask)
-        onlyIf {
-            dependsOnTaskDidWork()
-        }
 
         doLast() {
             ant.jar (update: true, index: true, destfile: javafxSwtTask.archiveName)
@@ -4554,7 +4556,7 @@ compileTargets { t ->
             dependsOn(project.assemble)
             def buildDir = project.buildDir
             def sourceBuildDirs = [
-                "${buildDir}/classes/main/${project.moduleName}",
+                "${buildDir}/classes/java/main/${project.moduleName}",
             ]
 
             def moduleClassesDir = "$buildDir/${platformPrefix}module-classes"
@@ -4642,8 +4644,7 @@ compileTargets { t ->
                     from ("${webbld}/classes/ios",
                           "${webbld}/resources/ios")
                 } else {
-                    from ("${webbld}/classes/main",
-                          "${webbld}resources/main")
+                    from ("${webbld}/classes/java/main")
                 }
                 */
         }

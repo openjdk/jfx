@@ -1122,6 +1122,7 @@ public class CssMetaDataTest {
                 f = new File(base.toURI());
             }
             //System.err.println(f.getPath());
+            assertTrue("" + f.getCanonicalPath() + " is not a directory", f.isDirectory());
             recursiveCheck(f, f.getPath().length() - 7);
         } catch (Exception ex) {
             ex.printStackTrace(System.err);
