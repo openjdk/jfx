@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -495,6 +495,39 @@ public class DeployParams extends CommonParams {
                       path);
     }
 
+    public static void validateAppName(String s) throws PackagerException {
+        if (s == null || s.length() == 0) {
+            // empty or null string - there is no unsupported char
+            return;
+        }
+        int last = s.length() - 1;
+
+        char fc = s.charAt(0);
+        char lc = s.charAt(last);
+
+        // illegal to end in backslash escape char
+        if (lc == '\\') {
+            throw new PackagerException("ERR_InvalidCharacterInArgument", "-name");
+        }
+
+        for (int i = 0; i < s.length(); i++) {
+            char a = s.charAt(i);
+            // We check for ASCII codes first which we accept. If check fails,
+            // then check if it is acceptable extended ASCII or unicode character.
+            if (a < ' ' || a > '~' || a == '%') {
+                // Reject '%', whitespaces and ISO Control.
+                // Accept anything else including special characters like copyright
+                // symbols. Note: space will be included by ASCII check above,
+                // but other whitespace like tabs or new line will be ignored.
+                if (Character.isISOControl(a) || Character.isWhitespace(a) || a == '%') {
+                    throw new PackagerException("ERR_InvalidCharacterInArgument", "-name");
+                }
+            }
+            if (a == '"') {
+                throw new PackagerException("ERR_InvalidCharacterInArgument", "-name");
+            }
+        }
+    }
 
     @Override
     public void validate() throws PackagerException {
@@ -514,6 +547,7 @@ public class DeployParams extends CommonParams {
                 throw new PackagerException("ERR_MissingArgument", "-appclass");
             }
         }
+        validateAppName(appName);
     }
 
     public boolean validateForJNLP() {
