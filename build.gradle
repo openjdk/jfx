@@ -4065,6 +4065,7 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
     options.bottom("${javadocBottom}")
+    options.locale("en");
     if (BUILD_CLOSED) {
         options.linksOffline(JDK_DOCS, JDK_DOCS_CLOSED);
     } else {
