@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -146,7 +146,7 @@ final class GtkApplication extends Application implements
 
         final int gtkVersion = forcedGtkVersion == 0 ?
             AccessController.doPrivileged((PrivilegedAction<Integer>) () -> {
-                String v = System.getProperty("jdk.gtk.version","2");
+                String v = System.getProperty("jdk.gtk.version","3");
                 int ret = 0;
                 if ("3".equals(v) || v.startsWith("3.")) {
                     ret = 3;
