@@ -1597,6 +1597,8 @@ JNIEXPORT jint JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_startDecompr
     return cinfo->output_components;
 }
 
+#define SAFE_TO_MULT(a, b) (((a) > 0) && ((b) >= 0) && ((0x7fffffff / (a)) > (b)))
+
 JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompressIndirect
 (JNIEnv *env, jobject this, jlong ptr, jboolean report_progress, jbyteArray barray) {
     imageIODataPtr data = (imageIODataPtr) jlong_to_ptr(ptr);
@@ -1606,6 +1608,17 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     int bytes_per_row = cinfo->output_width * cinfo->output_components;
     JSAMPROW scanline_ptr = (JSAMPROW) malloc(bytes_per_row * sizeof (JSAMPLE));
     int offset = 0;
+
+    if (!SAFE_TO_MULT(cinfo->output_width, cinfo->output_components) ||
+        !SAFE_TO_MULT(bytes_per_row, cinfo->output_height) ||
+        ((*env)->GetArrayLength(env, barray) <
+         (bytes_per_row * cinfo->output_height)))
+     {
+        ThrowByName(env,
+                "java/lang/OutOfMemoryError",
+                "Reading JPEG Stream");
+        return JNI_FALSE;
+    }
 
     if (GET_ARRAYS(env, data, &cinfo->src->next_input_byte) == NOT_OK) {
         ThrowByName(env,
@@ -1691,69 +1704,3 @@ JNIEXPORT jboolean JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompre
     RELEASE_ARRAYS(env, data, cinfo->src->next_input_byte);
     return JNI_TRUE;
 }
-/*
- * Remove "if 0" to compile direct ByteBuffer call.
- */
-#if 0
-JNIEXPORT jobject JNICALL Java_com_sun_javafx_iio_jpeg_JPEGImageLoader_decompressDirect
-(JNIEnv *env, jobject this, jlong ptr, jboolean report_progress) {
-    imageIODataPtr data = (imageIODataPtr) jlong_to_ptr(ptr);
-    j_decompress_ptr cinfo = (j_decompress_ptr) data->jpegObj;
-    struct jpeg_source_mgr *src = cinfo->src;
-    sun_jpeg_error_ptr jerr;
-    int bytes_per_row = cinfo->output_width * cinfo->output_components;
-    JSAMPROW scanline_ptr;
-    int len = cinfo->output_height * bytes_per_row * sizeof (JSAMPLE);
-    JSAMPROW buf = malloc(len);
-    int offset = 0;
-    int num_scanlines;
-    if (buf == NULL) {
-        ThrowByName(env,
-                "java/lang/OutOfMemoryError",
-                "Reading JPEG Stream");
-        return NULL;
-    }
-
-    /* Establish the setjmp return context for sun_jpeg_error_exit to use. */
-    jerr = (sun_jpeg_error_ptr) cinfo->err;
-
-    if (setjmp(jerr->setjmp_buffer)) {
-        /* If we get here, the JPEG code has signaled an error
-           while reading. */
-        RELEASE_ARRAYS(env, data, src->next_input_byte);
-        if (!(*env)->ExceptionOccurred(env)) {
-            char buffer[JMSG_LENGTH_MAX];
-            (*cinfo->err->format_message) ((struct jpeg_common_struct *) cinfo,
-                    buffer);
-            ThrowByName(env, "java/io/IOException", buffer);
-        }
-        if (buf != NULL) {
-            free(buf);
-        }
-        return NULL;
-    }
-
-    while (cinfo->output_scanline < cinfo->output_height) {
-        if (report_progress == JNI_TRUE) {
-            (*env)->CallVoidMethod(env, this,
-                    JPEGImageLoader_updateImageProgressID,
-                    cinfo->output_scanline);
-        }
-        scanline_ptr = (JSAMPROW) (buf + offset);
-        num_scanlines = jpeg_read_scanlines(cinfo, &scanline_ptr, 1);
-        if (num_scanlines == 1) {
-            offset += bytes_per_row;
-        }
-    }
-
-    if (report_progress == JNI_TRUE) {
-        (*env)->CallVoidMethod(env, this,
-                JPEGImageLoader_updateImageProgressID,
-                cinfo->output_height);
-    }
-
-    jpeg_finish_decompress(cinfo);
-
-    return (*env)->NewDirectByteBuffer(env, buf, len);
-}
-#endif
