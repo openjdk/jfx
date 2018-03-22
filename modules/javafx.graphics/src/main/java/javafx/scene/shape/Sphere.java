@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -148,7 +148,7 @@ public class Sphere extends Shape3D {
                 public void invalidated() {
                     NodeHelper.markDirty(Sphere.this, DirtyBits.MESH_GEOM);
                     manager.invalidateSphereMesh(key);
-                    key = 0;
+                    key = null;
                     NodeHelper.geomChanged(Sphere.this);
                 }
             };
@@ -182,8 +182,8 @@ public class Sphere extends Shape3D {
             if (r < 0) {
                 pgSphere.updateMesh(null);
             } else {
-                if (key == 0) {
-                    key = generateKey(r, divisions);
+                if (key == null) {
+                    key = new SphereKey(r, divisions);
                 }
                 mesh = manager.getSphereMesh(r, divisions, key);
                 mesh.updatePG();
@@ -443,10 +443,43 @@ public class Sphere extends Shape3D {
         return m;
     }
 
-    private static int generateKey(float r, int div) {
-        int hash = 5;
-        hash = 23 * hash + Float.floatToIntBits(r);
-        hash = 23 * hash + div;
-        return hash;
+    private static class SphereKey extends Key {
+
+        final double radius;
+        final int divisions;
+
+        private SphereKey(double radius, int divisions) {
+            this.radius = radius;
+            this.divisions = divisions;
+        }
+
+        @Override
+        public int hashCode() {
+            long bits = 7L;
+            bits = 31L * bits + Double.doubleToLongBits(radius);
+            bits = 31L * bits + divisions;
+            return Long.hashCode(bits);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (!(obj instanceof SphereKey)) {
+                return false;
+            }
+            SphereKey other = (SphereKey) obj;
+            if (divisions != other.divisions) {
+                return false;
+            }
+            if (Double.compare(radius, other.radius) != 0) {
+                return false;
+            }
+            return true;
+        }
     }
 }
