@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,8 +45,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import javafx.beans.NamedArg;
 import javafx.util.Builder;
-import sun.reflect.misc.ConstructorUtil;
-import sun.reflect.misc.ReflectUtil;
+import com.sun.javafx.reflect.ConstructorUtil;
+import com.sun.javafx.reflect.ReflectUtil;
 
 /**
  * Using this builder assumes that some of the constructors of desired class

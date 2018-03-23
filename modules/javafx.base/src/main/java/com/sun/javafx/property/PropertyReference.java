@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,7 +33,7 @@ import java.security.PrivilegedAction;
 
 import javafx.beans.property.ReadOnlyProperty;
 
-import sun.reflect.misc.ReflectUtil;
+import com.sun.javafx.reflect.ReflectUtil;
 
 /**
  * A handle to a specific property defined on some {@link Bean}.

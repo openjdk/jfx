@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -92,7 +92,7 @@ public class Box extends Shape3D {
     public static final double DEFAULT_SIZE = 2;
 
     {
-        // To initialize the class helper at the begining each constructor of this class
+        // To initialize the class helper at the beginning of each constructor of this class
         BoxHelper.initHelper(this);
     }
 
@@ -135,7 +135,7 @@ public class Box extends Shape3D {
                 public void invalidated() {
                     NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
-                    key = 0;
+                    key = null;
                     NodeHelper.geomChanged(Box.this);
                 }
             };
@@ -165,7 +165,7 @@ public class Box extends Shape3D {
                 public void invalidated() {
                     NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
-                    key = 0;
+                    key = null;
                     NodeHelper.geomChanged(Box.this);
                 }
             };
@@ -195,7 +195,7 @@ public class Box extends Shape3D {
                 public void invalidated() {
                     NodeHelper.markDirty(Box.this, DirtyBits.MESH_GEOM);
                     manager.invalidateBoxMesh(key);
-                    key = 0;
+                    key = null;
                     NodeHelper.geomChanged(Box.this);
                 }
             };
@@ -222,8 +222,8 @@ public class Box extends Shape3D {
             if (w < 0 || h < 0 || d < 0) {
                 peer.updateMesh(null);
             } else {
-                if (key == 0) {
-                    key = generateKey(w, h, d);
+                if (key == null) {
+                    key = new BoxKey(w, h, d);
                 }
                 mesh = manager.getBoxMesh(w, h, d, key);
                 mesh.updatePG();
@@ -469,11 +469,47 @@ public class Box extends Shape3D {
         return mesh;
     }
 
-    private static int generateKey(float w, float h, float d) {
-        int hash = 3;
-        hash = 97 * hash + Float.floatToIntBits(w);
-        hash = 97 * hash + Float.floatToIntBits(h);
-        hash = 97 * hash + Float.floatToIntBits(d);
-        return hash;
+    private static class BoxKey extends Key {
+
+        final double width, height, depth;
+
+        private BoxKey(double width, double height, double depth) {
+            this.width = width;
+            this.height = height;
+            this.depth = depth;
+        }
+
+        @Override
+        public int hashCode() {
+            long bits = 7L;
+            bits = 31L * bits + Double.doubleToLongBits(depth);
+            bits = 31L * bits + Double.doubleToLongBits(height);
+            bits = 31L * bits + Double.doubleToLongBits(width);
+            return Long.hashCode(bits);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (!(obj instanceof BoxKey)) {
+                return false;
+            }
+            BoxKey other = (BoxKey) obj;
+            if (Double.compare(depth, other.depth) != 0) {
+                return false;
+            }
+            if (Double.compare(height, other.height) != 0) {
+                return false;
+            }
+            if (Double.compare(width, other.width) != 0) {
+                return false;
+            }
+            return true;
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -43,7 +43,7 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import sun.reflect.misc.ReflectUtil;
+import com.sun.javafx.reflect.ReflectUtil;
 
 
 class Trampoline {
@@ -89,15 +89,13 @@ public final class MethodUtil extends SecureClassLoader {
         super();
     }
 
-    /*public*/
-    static Method getMethod(Class<?> cls, String name, Class<?>[] args)
+    public static Method getMethod(Class<?> cls, String name, Class<?>[] args)
         throws NoSuchMethodException {
         ReflectUtil.checkPackageAccess(cls);
         return cls.getMethod(name, args);
     }
 
-    /*public*/
-    static Method[] getMethods(Class<?> cls) {
+    public static Method[] getMethods(Class<?> cls) {
         ReflectUtil.checkPackageAccess(cls);
         return cls.getMethods();
     }

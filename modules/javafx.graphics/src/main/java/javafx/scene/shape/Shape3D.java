@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,6 @@ import javafx.application.Platform;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.paint.Material;
@@ -107,7 +106,20 @@ public abstract class Shape3D extends Node {
     }
 
     PredefinedMeshManager manager = PredefinedMeshManager.getInstance();
-    int key = 0;
+    Key key;
+
+    /**
+     * Used by the caching mechanism to compare between instances of the same shape.
+     * Each shape implements equals and hashCode using its base parameters.
+     */
+    abstract static class Key {
+
+        @Override
+        public abstract boolean equals(Object obj);
+
+        @Override
+        public abstract int hashCode();
+    }
 
     /**
      * Defines the material this {@code Shape3D}.

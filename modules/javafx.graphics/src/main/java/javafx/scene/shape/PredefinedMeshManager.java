@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,9 @@
 package javafx.scene.shape;
 
 import java.util.HashMap;
+import java.util.Map;
+
+import javafx.scene.shape.Shape3D.Key;
 
 final class PredefinedMeshManager {
 
@@ -33,9 +36,9 @@ final class PredefinedMeshManager {
     private static final int INITAL_CAPACITY = 17; // TODO
     private static final float LOAD_FACTOR = 0.75f;
 
-    private HashMap<Integer, TriangleMesh> boxCache = null;
-    private HashMap<Integer, TriangleMesh> sphereCache = null;
-    private HashMap<Integer, TriangleMesh> cylinderCache = null;
+    private Map<Key, TriangleMesh> boxCache = null;
+    private Map<Key, TriangleMesh> sphereCache = null;
+    private Map<Key, TriangleMesh> cylinderCache = null;
 
     private PredefinedMeshManager() {}
 
@@ -43,7 +46,7 @@ final class PredefinedMeshManager {
         return INSTANCE;
     }
 
-    synchronized TriangleMesh getBoxMesh(float w, float h, float d, int key) {
+    synchronized TriangleMesh getBoxMesh(float w, float h, float d, Key key) {
         if (boxCache == null) {
             boxCache = BoxCacheLoader.INSTANCE;
         }
@@ -58,7 +61,7 @@ final class PredefinedMeshManager {
         return mesh;
     }
 
-    synchronized TriangleMesh getSphereMesh(float r, int div, int key) {
+    synchronized TriangleMesh getSphereMesh(float r, int div, Key key) {
         if (sphereCache == null) {
             sphereCache = SphereCacheLoader.INSTANCE;
         }
@@ -73,7 +76,7 @@ final class PredefinedMeshManager {
         return mesh;
     }
 
-    synchronized TriangleMesh getCylinderMesh(float h, float r, int div, int key) {
+    synchronized TriangleMesh getCylinderMesh(float h, float r, int div, Key key) {
         if (cylinderCache == null) {
             cylinderCache = CylinderCacheLoader.INSTANCE;
         }
@@ -88,7 +91,7 @@ final class PredefinedMeshManager {
         return mesh;
     }
 
-    synchronized void invalidateBoxMesh(int key) {
+    synchronized void invalidateBoxMesh(Key key) {
         if (boxCache != null) {
             TriangleMesh mesh = boxCache.get(key);
             if (mesh != null) {
@@ -101,7 +104,7 @@ final class PredefinedMeshManager {
         }
     }
 
-    synchronized void invalidateSphereMesh(int key) {
+    synchronized void invalidateSphereMesh(Key key) {
         if (sphereCache != null) {
             TriangleMesh mesh = sphereCache.get(key);
             if (mesh != null) {
@@ -114,7 +117,7 @@ final class PredefinedMeshManager {
         }
     }
 
-    synchronized void invalidateCylinderMesh(int key) {
+    synchronized void invalidateCylinderMesh(Key key) {
         if (cylinderCache != null) {
             TriangleMesh mesh = cylinderCache.get(key);
             if (mesh != null) {
@@ -155,25 +158,50 @@ final class PredefinedMeshManager {
         }
     }
 
+    /**
+     * Note: The only user of this method is in unit test: PredefinedMeshManagerTest.
+     */
+    void test_clearCaches() {
+        INSTANCE.dispose();
+    }
+
+    /**
+     * Note: The only user of this method is in unit test: PredefinedMeshManagerTest.
+     */
+    int test_getBoxCacheSize() {
+        return INSTANCE.boxCache.size();
+    }
+
+    /**
+     * Note: The only user of this method is in unit test: PredefinedMeshManagerTest.
+     */
+    int test_getSphereCacheSize() {
+        return INSTANCE.sphereCache.size();
+    }
+
+    /**
+     * Note: The only user of this method is in unit test: PredefinedMeshManagerTest.
+     */
+    int test_getCylinderCacheSize() {
+        return INSTANCE.cylinderCache.size();
+    }
+
     private final static class BoxCacheLoader {
 
         // lazy & thread-safe instantiation
-        private static final HashMap<Integer, TriangleMesh>
-                INSTANCE = new HashMap<Integer, TriangleMesh>(INITAL_CAPACITY, LOAD_FACTOR);
+        private static final Map<Key, TriangleMesh> INSTANCE = new HashMap<>(INITAL_CAPACITY, LOAD_FACTOR);
     }
 
     private final static class SphereCacheLoader {
 
         // lazy & thread-safe instantiation
-        private static final HashMap<Integer, TriangleMesh>
-                INSTANCE = new HashMap<Integer, TriangleMesh>(INITAL_CAPACITY, LOAD_FACTOR);
+        private static final Map<Key, TriangleMesh> INSTANCE = new HashMap<>(INITAL_CAPACITY, LOAD_FACTOR);
     }
 
     private final static class CylinderCacheLoader {
 
         // lazy & thread-safe instantiation
-        private static final HashMap<Integer, TriangleMesh>
-                INSTANCE = new HashMap<Integer, TriangleMesh>(INITAL_CAPACITY, LOAD_FACTOR);
+        private static final Map<Key, TriangleMesh> INSTANCE = new HashMap<>(INITAL_CAPACITY, LOAD_FACTOR);
     }
 
 };

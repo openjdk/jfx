@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,8 +63,8 @@ import javafx.scene.shape.TriangleMesh;
 import javafx.scene.text.Font;
 import javafx.util.Builder;
 import javafx.util.BuilderFactory;
-import sun.reflect.misc.ConstructorUtil;
-import sun.reflect.misc.MethodUtil;
+import com.sun.javafx.reflect.ConstructorUtil;
+import com.sun.javafx.reflect.MethodUtil;
 
 /**
  * JavaFX builder factory.

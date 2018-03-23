@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -153,7 +153,7 @@ public class Cylinder extends Shape3D {
                 public void invalidated() {
                     NodeHelper.markDirty(Cylinder.this, DirtyBits.MESH_GEOM);
                     manager.invalidateCylinderMesh(key);
-                    key = 0;
+                    key = null;
                     NodeHelper.geomChanged(Cylinder.this);
                 }
             };
@@ -183,7 +183,7 @@ public class Cylinder extends Shape3D {
                 public void invalidated() {
                     NodeHelper.markDirty(Cylinder.this, DirtyBits.MESH_GEOM);
                     manager.invalidateCylinderMesh(key);
-                    key = 0;
+                    key = null;
                     NodeHelper.geomChanged(Cylinder.this);
                 }
             };
@@ -211,8 +211,8 @@ public class Cylinder extends Shape3D {
             if (h < 0 || r < 0) {
                 peer.updateMesh(null);
             } else {
-                if (key == 0) {
-                    key = generateKey(h, r, divisions);
+                if (key == null) {
+                    key = new CylinderKey(h, r, divisions);
                 }
                 mesh = manager.getCylinderMesh(h, r, divisions, key);
                 mesh.updatePG();
@@ -563,11 +563,48 @@ public class Cylinder extends Shape3D {
         return m;
     }
 
-    private static int generateKey(float h, float r, int div) {
-        int hash = 7;
-        hash = 47 * hash + Float.floatToIntBits(h);
-        hash = 47 * hash + Float.floatToIntBits(r);
-        hash = 47 * hash + div;
-        return hash;
+    private static class CylinderKey extends Key {
+
+        final double radius, height;
+        final int divisions;
+
+        private CylinderKey(double radius, double height, int divisions) {
+            this.radius = radius;
+            this.height = height;
+            this.divisions = divisions;
+        }
+
+        @Override
+        public int hashCode() {
+            long bits = 7L;
+            bits = 31L * bits + Double.doubleToLongBits(radius);
+            bits = 31L * bits + Double.doubleToLongBits(height);
+            bits = 31L * bits + divisions;
+            return Long.hashCode(bits);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (!(obj instanceof CylinderKey)) {
+                return false;
+            }
+            CylinderKey other = (CylinderKey) obj;
+            if (divisions != other.divisions) {
+                return false;
+            }
+            if (Double.compare(radius, other.radius) != 0) {
+                return false;
+            }
+            if (Double.compare(height, other.height) != 0) {
+                return false;
+            }
+            return true;
+        }
     }
 }

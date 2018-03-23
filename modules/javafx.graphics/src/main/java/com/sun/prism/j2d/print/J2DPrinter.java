@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,7 +40,6 @@ import javax.print.attribute.ResolutionSyntax;
 import javax.print.attribute.standard.Chromaticity;
 import javax.print.attribute.standard.Copies;
 import javax.print.attribute.standard.CopiesSupported;
-import javax.print.attribute.standard.Destination;
 import javax.print.attribute.standard.Media;
 import javax.print.attribute.standard.MediaPrintableArea;
 import javax.print.attribute.standard.MediaSize;
@@ -61,8 +60,6 @@ import javafx.print.PageLayout;
 import javafx.print.Printer;
 import javafx.print.Printer.MarginType;
 import javafx.print.Collation;
-import javafx.print.Paper;
-import javafx.print.PaperSource;
 import javafx.print.PageRange;
 import javafx.print.PrintColor;
 import javafx.print.PageOrientation;
@@ -791,15 +788,12 @@ public class J2DPrinter implements PrinterImpl {
      * to pre-defined javafx.print Papers. For all other reported media we
      * create a printer-specific instance and store it in a per-printer map.
      */
-    private Map<MediaSizeName, Paper> mediaToPaperMap;
-    private Map<Paper, MediaSizeName> paperToMediaMap;
+    private final Map<MediaSizeName, Paper> mediaToPaperMap
+         = new HashMap<MediaSizeName, Paper>();
+    private final Map<Paper, MediaSizeName> paperToMediaMap
+         = new HashMap<Paper, MediaSizeName>();
+
     private synchronized final Paper addPaper(MediaSizeName media) {
-
-        if (mediaToPaperMap == null) {
-            mediaToPaperMap = new HashMap<MediaSizeName, Paper>();
-            paperToMediaMap = new HashMap<Paper, MediaSizeName>();
-        }
-
         Paper paper = predefinedPaperMap.get(media);
         if (paper == null ) {
             MediaSize sz = MediaSize.getMediaSizeForName(media);

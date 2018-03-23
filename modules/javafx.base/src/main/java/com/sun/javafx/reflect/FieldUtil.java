@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,11 +23,18 @@
  * questions.
  */
 
-exports sun.util.logging to javafx.base;
-exports sun.util.logging to javafx.controls;
-exports sun.util.logging to javafx.fxml;
-exports sun.util.logging to javafx.graphics;
-exports sun.util.logging to javafx.swing;
-exports sun.security.pkcs to jdk.packager;
-exports sun.security.timestamp to jdk.packager;
-exports sun.security.x509 to jdk.packager;
+package com.sun.javafx.reflect;
+
+import java.lang.reflect.Field;
+
+public final class FieldUtil {
+
+    private FieldUtil() {
+    }
+
+    public static Field getField(Class<?> cls, String name)
+        throws NoSuchFieldException {
+        ReflectUtil.checkPackageAccess(cls);
+        return cls.getField(name);
+    }
+}

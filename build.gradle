@@ -1581,9 +1581,6 @@ allprojects {
 
 // Qualified exports needed by javafx.* modules (excluding javafx.swing)
 def qualExportsCore = [
-    "--add-exports=java.base/sun.reflect.misc=javafx.base",
-    "--add-exports=java.base/sun.reflect.misc=javafx.fxml",
-    "--add-exports=java.base/sun.reflect.misc=javafx.web",
     "--add-exports=java.base/sun.util.logging=javafx.base",
     "--add-exports=java.base/sun.util.logging=javafx.controls",
     "--add-exports=java.base/sun.util.logging=javafx.fxml",
