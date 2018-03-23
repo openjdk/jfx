@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -90,9 +90,9 @@ import java.security.PrivilegedAction;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
-import sun.reflect.misc.ConstructorUtil;
-import sun.reflect.misc.MethodUtil;
-import sun.reflect.misc.ReflectUtil;
+import com.sun.javafx.reflect.ConstructorUtil;
+import com.sun.javafx.reflect.MethodUtil;
+import com.sun.javafx.reflect.ReflectUtil;
 
 /**
  * Loads an object hierarchy from an XML document.

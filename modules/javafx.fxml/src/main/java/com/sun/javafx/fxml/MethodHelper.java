@@ -30,7 +30,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import sun.reflect.misc.ReflectUtil;
+import com.sun.javafx.reflect.ReflectUtil;
 
 /**
  * Utility class to wrap method invocation.
