@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,8 +54,8 @@ import javafx.scene.control.Tooltip;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 import static org.junit.Assert.*;
 
@@ -106,14 +106,12 @@ public class ControlTest {
 
     private void disableLogging() {
         final PlatformLogger logger = Logging.getControlsLogger();
-        originalLogLevel = logger.level();
-        logger.setLevel(Level.OFF);
+        logger.disableLogging();
     }
 
     private void enableLogging() {
         final PlatformLogger logger = Logging.getControlsLogger();
-//        logger.setLevel(originalLogLevel);
-        logger.setLevel(Level.FINE);
+        logger.enableLogging();
     }
 
     @Test public void focusTraversableIsTrueByDefault() {

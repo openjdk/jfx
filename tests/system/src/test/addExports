@@ -1,4 +1,3 @@
---add-exports java.base/sun.util.logging=ALL-UNNAMED
 #
 --add-exports javafx.base/com.sun.javafx=ALL-UNNAMED
 #

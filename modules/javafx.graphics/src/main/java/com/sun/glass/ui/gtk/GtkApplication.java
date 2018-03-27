@@ -39,7 +39,7 @@ import com.sun.glass.ui.Window;
 import com.sun.javafx.util.Logging;
 import com.sun.glass.utils.NativeLibLoader;
 import com.sun.prism.impl.PrismSettings;
-import sun.util.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger;
 
 import java.io.File;
 import java.lang.reflect.Method;

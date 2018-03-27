@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -84,8 +84,9 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
+
 
 import java.io.BufferedReader;
 import java.io.CharArrayReader;

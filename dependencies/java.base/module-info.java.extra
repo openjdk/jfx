@@ -23,11 +23,6 @@
  * questions.
  */
 
-exports sun.util.logging to javafx.base;
-exports sun.util.logging to javafx.controls;
-exports sun.util.logging to javafx.fxml;
-exports sun.util.logging to javafx.graphics;
-exports sun.util.logging to javafx.swing;
 exports sun.security.pkcs to jdk.packager;
 exports sun.security.timestamp to jdk.packager;
 exports sun.security.x509 to jdk.packager;

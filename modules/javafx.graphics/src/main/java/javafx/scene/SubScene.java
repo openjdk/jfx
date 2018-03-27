@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,7 @@ import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGSubScene;
 import com.sun.javafx.tk.Toolkit;
 
-import sun.util.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger;
 
 /**
  * The {@code SubScene} class is the container for content in a scene graph.

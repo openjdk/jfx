@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,8 +59,8 @@ import com.sun.javafx.scene.layout.PaneHelper;
 import com.sun.javafx.stage.PopupWindowHelper;
 import javafx.css.StyleableProperty;
 import javafx.stage.Window;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 /**
  * An extension of PopupWindow that allows for CSS styling.

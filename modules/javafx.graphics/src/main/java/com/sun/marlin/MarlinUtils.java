@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,11 @@ package com.sun.marlin;
 
 public final class MarlinUtils {
     // Marlin logger
-    private static final sun.util.logging.PlatformLogger LOG;
+    private static final com.sun.javafx.logging.PlatformLogger LOG;
 
     static {
         if (MarlinConst.USE_LOGGER) {
-            LOG = sun.util.logging.PlatformLogger.getLogger("prism.marlin");
+            LOG = com.sun.javafx.logging.PlatformLogger.getLogger("prism.marlin");
         } else {
             LOG = null;
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ package com.sun.javafx.collections;
 import com.sun.javafx.binding.ExpressionHelperBase;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
-import sun.util.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger;
 
 import java.util.Arrays;
 

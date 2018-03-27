@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -159,8 +159,8 @@ import com.sun.prism.impl.PrismSettings;
 import com.sun.scenario.effect.EffectHelper;
 
 import javafx.scene.shape.Shape3D;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 /**
  * Base class for scene graph nodes. A scene graph is a set of tree data structures

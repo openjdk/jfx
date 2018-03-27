@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,8 +48,8 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 import javafx.scene.text.Font;
 import javafx.stage.Window;
-import sun.util.logging.PlatformLogger;
-import sun.util.logging.PlatformLogger.Level;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 import java.io.FileNotFoundException;
 import java.io.FilePermission;

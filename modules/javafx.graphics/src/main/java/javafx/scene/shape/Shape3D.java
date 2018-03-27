@@ -42,7 +42,7 @@ import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Node;
 import javafx.scene.paint.Material;
 import javafx.scene.paint.PhongMaterial;
-import sun.util.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger;
 
 
 /**

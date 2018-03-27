@@ -5,8 +5,8 @@
 --add-exports javafx.base/com.sun.javafx.property.adapter=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx.property=ALL-UNNAMED
 --add-exports javafx.base/com.sun.javafx.runtime=ALL-UNNAMED
+--add-exports javafx.base/com.sun.javafx.logging=ALL-UNNAMED
 --add-opens javafx.base/javafx.beans.property=ALL-UNNAMED
 --add-opens javafx.base/com.sun.javafx.binding=ALL-UNNAMED
 --add-opens javafx.base/javafx.beans.value=ALL-UNNAMED
 #
---add-exports java.base/sun.util.logging=ALL-UNNAMED

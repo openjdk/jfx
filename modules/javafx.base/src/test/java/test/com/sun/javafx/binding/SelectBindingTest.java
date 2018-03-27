@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,7 +42,7 @@ import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import test.javafx.binding.Variable;
 import javafx.collections.ObservableList;
-import sun.util.logging.PlatformLogger.Level;
+import com.sun.javafx.logging.PlatformLogger.Level;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -108,6 +108,7 @@ public class SelectBindingTest {
 
     @BeforeClass
     public static void setUpClass() {
+        System.err.println("SelectBindingTest : log messages are expected from these tests.");
         log.start();
     }
 
@@ -557,8 +558,6 @@ public class SelectBindingTest {
     @Test
     public void stressTestRandomOperationsResultInCorrectListenersInstalled() {
 
-        final Level logLevel = Logging.getLogger().level();
-        Logging.getLogger().setLevel(Level.SEVERE);
         List<String> steps = new ArrayList<String>();
 
         Random rand = new Random(System.currentTimeMillis());
@@ -644,7 +643,6 @@ public class SelectBindingTest {
                     fail("Should not reach here");
             }
         }
-        Logging.getLogger().setLevel(logLevel);
     }
 
     private void printSteps(int iteration, List<String> steps) {

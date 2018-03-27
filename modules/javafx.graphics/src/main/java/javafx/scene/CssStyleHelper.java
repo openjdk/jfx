@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,8 +66,8 @@ import javafx.css.converter.FontConverter;
 import com.sun.javafx.util.Logging;
 import com.sun.javafx.util.Utils;
 
-import sun.util.logging.PlatformLogger.Level;
-import sun.util.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.logging.PlatformLogger.Level;
 
 import static com.sun.javafx.css.CalculatedValue.*;
 

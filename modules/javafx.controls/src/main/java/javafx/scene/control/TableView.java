@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.WeakHashMap;
 
+import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.scene.control.Logging;
 import com.sun.javafx.scene.control.Properties;
 import com.sun.javafx.scene.control.SelectedCellsMap;
@@ -456,7 +457,7 @@ public class TableView<S> extends Control {
                     if (! comparatorsBound) {
                         // this isn't a good situation to be in, so lets log it
                         // out in case the developer is unaware
-                        if (Logging.getControlsLogger().isEnabled()) {
+                        if (Logging.getControlsLogger().isLoggable(Level.INFO)) {
                             String s = "TableView items list is a SortedList, but the SortedList " +
                                     "comparator should be bound to the TableView comparator for " +
                                     "sorting to be enabled (e.g. " +

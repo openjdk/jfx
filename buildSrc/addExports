@@ -9,6 +9,10 @@
 #
 # Reads for JDK-8195801
 --add-reads=javafx.graphics=jdk.unsupported
+# Qualified exports for JDK-8195799
+--add-exports=javafx.base/com.sun.javafx.logging=javafx.controls
+--add-exports=javafx.base/com.sun.javafx.logging=javafx.fxml
+--add-exports=javafx.base/com.sun.javafx.logging=javafx.swing
 #
 # ----------------------------------------------------------------------
 #
