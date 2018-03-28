@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,9 +40,11 @@ import javafx.stage.Stage;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import test.util.Util;
 
 import static javafx.concurrent.Worker.State.SUCCEEDED;
 import static junit.framework.TestCase.fail;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static test.util.Util.TIMEOUT;
@@ -52,6 +54,9 @@ public class HTMLEditorTest {
 
     // Maintain one application instance
     static HTMLEditorTestApp htmlEditorTestApp;
+
+    private HTMLEditor htmlEditor;
+    private WebView webView;
 
     public static class HTMLEditorTestApp extends Application {
         Stage primaryStage = null;
@@ -67,6 +72,7 @@ public class HTMLEditorTest {
 
         @Override
         public void start(Stage primaryStage) throws Exception {
+            Platform.setImplicitExit(false);
             this.primaryStage = primaryStage;
             launchLatch.countDown();
         }
@@ -146,11 +152,113 @@ public class HTMLEditorTest {
         });
 
         try {
-            editorStateLatch.await(10, TimeUnit.SECONDS);
+            editorStateLatch.await(TIMEOUT, TimeUnit.MILLISECONDS);
         } catch (InterruptedException ex) {
             throw new AssertionError(ex);
         } finally {
             assertTrue("Focus Change with design mode enabled ", result.get());
         }
+    }
+
+    /**
+     * @test
+     * @bug 8088769
+     * Summary Verify CSS styling in HTMLEditor
+     */
+    @Test
+    public void checkStyleWithCSS() throws Exception {
+        final CountDownLatch editorStateLatch = new CountDownLatch(2);
+        final String editorCommand1 =
+            "document.execCommand('bold', false, 'true');" +
+            "document.execCommand('italic', false, 'true');" +
+            "document.execCommand('insertText', false, 'Hello World');";
+        final String editorCommand2 =
+            "document.execCommand('selectAll', false, 'true');" +
+            "document.execCommand('delete', false, 'true');" +
+            "document.execCommand('bold', false, 'false');" +
+            "document.execCommand('italic', false, 'false');" +
+            "document.execCommand('underline', false, 'true');" +
+            "document.execCommand('forecolor', false," +
+                " 'rgba(255, 155, 0, 0.4)');" +
+            "document.execCommand('backcolor', false," +
+                " 'rgba(150, 90, 5, 0.5)');" +
+            "document.execCommand('insertText', false, 'Hello HTMLEditor');";
+        final String expectedHTML = "<html dir=\"ltr\"><head></head><body " +
+            "contenteditable=\"true\"><span style=\"font-weight: bold; " +
+            "font-style: italic;\">Hello World</span></body></html>";
+
+        Util.runAndWait(() -> {
+            htmlEditor = new HTMLEditor();
+            Scene scene = new Scene(htmlEditor);
+            htmlEditorTestApp.primaryStage.setScene(scene);
+            webView = (WebView)htmlEditor.lookup(".web-view");
+            assertNotNull(webView);
+
+            webView.focusedProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue) {
+                    editorStateLatch.countDown();
+                }
+            });
+
+            webView.getEngine().getLoadWorker().stateProperty().
+                addListener((observable, oldValue, newValue) -> {
+                if (newValue == SUCCEEDED) {
+                    htmlEditor.requestFocus();
+                    editorStateLatch.countDown();
+                }
+            });
+            htmlEditorTestApp.primaryStage.show();
+        });
+
+        try {
+            if (!editorStateLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
+                throw new AssertionError("Timeout waiting for callbacks");
+            }
+        } catch (InterruptedException ex) {
+            throw new AssertionError(ex);
+        }
+
+        Util.runAndWait(() -> {
+            webView.getEngine().executeScript(editorCommand1);
+            assertEquals(expectedHTML, htmlEditor.getHtmlText());
+            webView.getEngine().executeScript(editorCommand2);
+            assertEquals(webView.getEngine().executeScript(
+                "document.getElementsByTagName('span')[0].style.textDecoration")
+                .toString(),
+                "underline");
+            assertEquals(webView.getEngine().executeScript(
+                "document.getElementsByTagName('span')[0].style.fontWeight")
+                .toString(), "");
+            assertEquals(webView.getEngine().executeScript(
+                "document.getElementsByTagName('span')[0].style.fontStyle")
+                .toString(), "");
+            testColorEquality("rgba(255, 155, 0, 0.4)",
+                webView.getEngine().executeScript(
+                "document.getElementsByTagName('span')[0].style.color")
+                .toString(), 0.01);
+            testColorEquality("rgba(150, 90, 5, 0.5)",
+                webView.getEngine().executeScript(
+                "document.getElementsByTagName('span')[0].style.backgroundColor")
+                .toString(), 0.01);
+            htmlEditorTestApp.primaryStage.hide();
+        });
+    }
+
+    private void testColorEquality(String expectedColor, String actualColor,
+                                   double delta) {
+        assertTrue(actualColor.startsWith("rgba"));
+        final String[] actualValues =
+            actualColor.substring(actualColor.indexOf('(') + 1,
+            actualColor.lastIndexOf(')')).split(",");
+        final String[] expectedValues =
+            expectedColor.substring(expectedColor.indexOf('(') + 1,
+            expectedColor.lastIndexOf(')')).split(",");
+        for (int i = 0; i < 3; i++) {
+            assertEquals(Integer.parseInt(actualValues[i].trim()),
+                         Integer.parseInt(expectedValues[i].trim()));
+        }
+        assertEquals(Double.parseDouble(actualValues[3].trim()),
+                     Double.parseDouble(expectedValues[3].trim()), delta);
     }
 }

@@ -452,6 +452,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
                     setContentEditable(true);
                     updateToolbarState(true);
                     updateNodeOrientation();
+                    executeCommand(STYLEWITHCSS.getCommand(), "true");
                 });
             }
         });
@@ -784,7 +785,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         fgColorButton.setOnAction(ev1 -> {
             Color newValue = fgColorButton.getValue();
             if (newValue != null) {
-                executeCommand(FOREGROUND_COLOR.getCommand(), colorValueToHex(newValue));
+                executeCommand(FOREGROUND_COLOR.getCommand(), colorValueToRGBA(newValue));
                 fgColorButton.hide();
             }
         });
@@ -806,17 +807,18 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
         bgColorButton.setOnAction(ev -> {
             Color newValue = bgColorButton.getValue();
             if (newValue != null) {
-                executeCommand(BACKGROUND_COLOR.getCommand(), colorValueToHex(newValue));
+                executeCommand(BACKGROUND_COLOR.getCommand(), colorValueToRGBA(newValue));
                 bgColorButton.hide();
             }
         });
     }
 
-    private String colorValueToHex(Color c) {
-        return String.format((Locale)null, "#%02x%02x%02x",
+    private String colorValueToRGBA(Color c) {
+        return String.format((Locale)null, "rgba(%d, %d, %d, %.5f)",
                              Math.round(c.getRed() * 255),
                              Math.round(c.getGreen() * 255),
-                             Math.round(c.getBlue() * 255));
+                             Math.round(c.getBlue() * 255),
+                             c.getOpacity());
     }
 
     private Button addButton(ToolBar toolbar, final String iconName, String tooltipText,
@@ -1195,6 +1197,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> {
 
         FOREGROUND_COLOR("forecolor"),
         BACKGROUND_COLOR("backcolor"),
+        STYLEWITHCSS("styleWithCSS"),
 
         INSERT_NEW_LINE("insertnewline"),
         INSERT_TAB("inserttab");
