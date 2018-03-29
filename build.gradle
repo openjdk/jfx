@@ -2944,8 +2944,10 @@ project(":media") {
 
     compileToolsJava {
         enabled = IS_COMPILE_MEDIA
-        options.compilerArgs.addAll(project.modulePathArgs)
+        def modulePath = "${project.sourceSets.main.java.outputDir}"
         options.compilerArgs.addAll([
+            "--module-path=$modulePath",
+            "--add-modules=javafx.media",
             '--add-exports', 'javafx.media/com.sun.media.jfxmedia=ALL-UNNAMED',
             ])
     }
@@ -2956,7 +2958,7 @@ project(":media") {
     def nativeSrcDir = file("${projectDir}/src/main/native")
     def generatedHeadersDir = file("${buildDir}/gensrc/headers/${project.moduleName}")
 
-    task generateMediaErrorHeader(dependsOn: [compileToolsJava, compileJava]) {
+    task generateMediaErrorHeader(dependsOn: [compileJava, compileToolsJava]) {
         enabled = IS_COMPILE_MEDIA
         def headerpath = file("$generatedHeadersDir/jfxmedia_errors.h");
         doLast {
@@ -2966,9 +2968,15 @@ project(":media") {
 
             mkdir generatedHeadersDir;
 
+            def modulePath = "${project.sourceSets.main.java.outputDir}"
+            modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
+            modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
+
             exec {
                 commandLine("$JAVA");
                 args += patchModuleArgs
+                args += [ "--module-path=$modulePath" ]
+                args += [ "--add-modules=javafx.media" ]
                 args +=  [ '--add-exports=javafx.media/com.sun.media.jfxmedia=ALL-UNNAMED' ]
                 args +=  [ '-classpath', "${classpath.asPath}" ]
                 args += [ "headergen.HeaderGen", "$headerpath", "$srcRoot" ]
