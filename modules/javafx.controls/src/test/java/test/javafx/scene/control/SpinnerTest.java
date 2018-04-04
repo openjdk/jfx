@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@ package test.javafx.scene.control;
 
 import static junit.framework.Assert.*;
 
-import javafx.scene.control.skin.SpinnerSkin;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.junit.Before;
@@ -36,10 +35,20 @@ import org.junit.Test;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import javafx.scene.control.Button;
+import javafx.scene.control.skin.SpinnerSkin;
 import javafx.scene.control.Spinner;
 import javafx.scene.control.SpinnerShim;
 import javafx.scene.control.SpinnerValueFactory;
 import javafx.scene.control.SpinnerValueFactoryShim;
+import javafx.scene.input.KeyCode;
+import javafx.scene.layout.VBox;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+
+import test.com.sun.javafx.pgstub.StubToolkit;
+import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
+import com.sun.javafx.tk.Toolkit;
 
 import static javafx.scene.control.SpinnerValueFactoryShim.*;
 
@@ -1337,5 +1346,62 @@ public class SpinnerTest {
         spinner.cancelEdit();
         assertEquals(2.5, spinner.getValue());
         assertEquals("2.5", spinner.getEditor().getText());
+    }
+
+    // Test for JDK-8193311
+    boolean enterDefaultPass = false;
+    boolean escapeCancelPass = false;
+    @Test public void testEnterEscapeKeysWithDefaultCancelButtons() {
+        Toolkit tk = (StubToolkit)Toolkit.getToolkit();
+        VBox root = new VBox();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.setWidth(200);
+        stage.setHeight(200);
+
+        intSpinner.setEditable(true);
+
+        Button defaultButton = new Button("OK");
+        defaultButton.setOnAction(arg0 -> { enterDefaultPass = true; });
+        defaultButton.setDefaultButton(true);
+
+        Button cancelButton = new Button("Cancel");
+        cancelButton.setOnAction(arg0 -> { escapeCancelPass = true; });
+        cancelButton.setCancelButton(true);
+
+        root.getChildren().addAll(intSpinner, defaultButton, cancelButton);
+        stage.show();
+        intSpinner.requestFocus();
+        tk.firePulse();
+
+        KeyEventFirer keyboard = new KeyEventFirer(intSpinner);
+        keyboard.doKeyPress(KeyCode.ENTER);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+        tk.firePulse();
+
+        if (!enterDefaultPass || !escapeCancelPass) {
+            stage.hide();
+        }
+
+        String defMsg = "OnAction EventHandler of the default 'OK' " +
+            "button should get invoked on ENTER key press.";
+        String canMsg = "OnAction EventHandler of the cancel 'Cancel' " +
+            "button should get invoked on ESCAPE key press.";
+
+        assertTrue(defMsg, enterDefaultPass);
+        assertTrue(canMsg, escapeCancelPass);
+
+        // Same test with non editable spinner.
+        intSpinner.setEditable(false);
+        enterDefaultPass = false;
+        escapeCancelPass = false;
+        keyboard.doKeyPress(KeyCode.ENTER);
+        keyboard.doKeyPress(KeyCode.ESCAPE);
+        tk.firePulse();
+        stage.hide();
+
+        assertTrue(defMsg, enterDefaultPass);
+        assertTrue(canMsg, escapeCancelPass);
     }
 }
