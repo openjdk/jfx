@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,6 +34,7 @@ package javafx.geometry;
  * @since JavaFX 2.0
  */
 public abstract class Bounds {
+
     /**
      * The x coordinate of the upper-left corner of this {@code Bounds}.
      *
@@ -51,6 +52,7 @@ public abstract class Bounds {
      */
     public final double getMinY() { return minY; }
     private double minY;
+
     /**
      * The minimum z coordinate of this {@code Bounds}.
      *
@@ -59,6 +61,7 @@ public abstract class Bounds {
      */
     public final double getMinZ() { return minZ; }
     private double minZ;
+
     /**
      * The width of this {@code Bounds}.
      *
@@ -67,6 +70,7 @@ public abstract class Bounds {
      */
     public final double getWidth() { return width; }
     private double width;
+
     /**
      * The height of this {@code Bounds}.
      *
@@ -75,6 +79,7 @@ public abstract class Bounds {
      */
     public final double getHeight() { return height; }
     private double height;
+
     /**
      * The depth of this {@code Bounds}.
      *
@@ -83,6 +88,7 @@ public abstract class Bounds {
      */
     public final double getDepth() { return depth; }
     private double depth;
+
     /**
      * The x coordinate of the lower-right corner of this {@code Bounds}.
      *
@@ -91,6 +97,7 @@ public abstract class Bounds {
      */
     public final double getMaxX() { return maxX; }
     private double maxX;
+
     /**
      * The y coordinate of the lower-right corner of this {@code Bounds}.
      *
@@ -99,6 +106,7 @@ public abstract class Bounds {
      */
     public final double getMaxY() { return maxY; }
     private double maxY;
+
     /**
      * The maximum z coordinate of this {@code Bounds}.
      *
@@ -107,6 +115,39 @@ public abstract class Bounds {
      */
     public final double getMaxZ() { return maxZ; }
     private double maxZ;
+
+    /**
+     * The central x coordinate of this {@code Bounds}.
+     *
+     * @return the central x coordinate
+     * @implSpec This call is equivalent to {@code (getMaxX() + getMinX())/2.0}.
+     * @since 11
+     */
+    public final double getCenterX() {
+        return (getMaxX() + getMinX()) * 0.5;
+    }
+
+    /**
+     * The central y coordinate of this {@code Bounds}.
+     *
+     * @return the central y coordinate
+     * @implSpec This call is equivalent to {@code (getMaxY() + getMinY())/2.0}.
+     * @since 11
+     */
+    public final double getCenterY() {
+        return (getMaxY() + getMinY()) * 0.5;
+    }
+
+    /**
+     * The central z coordinate of this {@code Bounds}.
+     *
+     * @return the central z coordinate
+     * @implSpec This call is equivalent to {@code (getMaxZ() + getMinZ())/2.0}.
+     * @since 11
+     */
+    public final double getCenterZ() {
+        return (getMaxZ() + getMinZ()) * 0.5;
+    }
 
     /**
      * Indicates whether any of the dimensions(width, height or depth) of this bounds

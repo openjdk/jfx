@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,10 +28,8 @@ package test.javafx.geometry;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
+import static org.junit.Assert.*;
 import org.junit.Test;
 
 public class BoundingBoxTest {
@@ -57,6 +55,14 @@ public class BoundingBoxTest {
         assertTrue(new BoundingBox(0, 0, 0, 0, -1, 0).isEmpty());
         assertTrue(new BoundingBox(0, 0, 0, 0, 0, -1).isEmpty());
         assertTrue(new BoundingBox(0, 0, 0, -1, -1, -1).isEmpty());
+    }
+
+    @Test
+    public void testCenter() {
+        BoundingBox bb = new BoundingBox(-2, -1, 0,  2, 2, 1);
+        assertEquals(bb.getCenterX(), -1, 0);
+        assertEquals(bb.getCenterY(), 0, 0);
+        assertEquals(bb.getCenterZ(), 0.5, 0);
     }
 
     @Test
