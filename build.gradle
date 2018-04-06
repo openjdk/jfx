@@ -333,7 +333,7 @@ ext.JAVA_HOME = JDK_HOME
 defineProperty("JAVA", cygpathExe("$JDK_HOME/bin/java"))
 defineProperty("JAVAC", cygpathExe("$JDK_HOME/bin/javac"))
 defineProperty("JAVADOC", cygpathExe("$JDK_HOME/bin/javadoc"))
-defineProperty("JDK_DOCS", "http://download.java.net/java/jdk9/docs/api/")
+defineProperty("JDK_DOCS", "https://docs.oracle.com/javase/10/docs/api/")
 defineProperty("JDK_JMODS", cygpath(System.getenv("JDK_JMODS")) ?: cygpath(System.getenv("JDK_HOME") + "/jmods"))
 
 defineProperty("javaRuntimeVersion", System.getProperty("java.runtime.version"))
@@ -4057,7 +4057,20 @@ task javadoc(type: Javadoc, dependsOn: createMSPfile) {
     setDestinationDir(new File(buildDir, 'javadoc'));
 
     exclude("com/**/*", "Compile*", "javafx/builder/**/*", "javafx/scene/accessibility/**/*");
+
+    options.tags("apiNote:a:API Note:")
+    options.tags("implSpec:a:Implementation Requirements:")
+    options.tags("implNote:a:Implementation Note:")
+    options.tags("param")
+    options.tags("return")
+    options.tags("throws")
     options.tags("moduleGraph:X")
+    options.tags("since")
+    options.tags("version")
+    options.tags("serialData")
+    options.tags("factory")
+    options.tags("see")
+
     options.windowTitle("${javadocTitle}")
     options.header("${javadocHeader}")
     options.bottom("${javadocBottom}")
