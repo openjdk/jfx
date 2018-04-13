@@ -3545,6 +3545,19 @@ project(":web") {
     compileJava.dependsOn(copyWrappers);
 
     test {
+        doFirst {
+            if (!IS_COMPILE_WEBKIT) {
+                println "*****************************************************"
+                println "WARNING: running web tests without building webkit."
+                println "The webkit native library will be copied from the JDK,"
+                println "which might lead to failures in some web tests."
+                println "To avoid these failures, you should either build"
+                println "webkit locally, copy the native webkit library from a"
+                println "recent build, or skip execution of web test cases with"
+                println "'-x :web:test'"
+                println "*****************************************************"
+            }
+        }
         // Run web tests in headless mode
         systemProperty 'glass.platform', 'Monocle'
         systemProperty 'monocle.platform', 'Headless'
