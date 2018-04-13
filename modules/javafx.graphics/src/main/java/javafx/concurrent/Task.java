@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1002,7 +1002,7 @@ public abstract class Task<V> extends FutureTask<V> implements Worker<V>, EventT
     // Need to assert the modifyThread permission so an app can cancel
     // a task that it created (the default executor for the service runs in
     // its own thread group)
-    // Note that this is needed when running as an applet or a web start app.
+    // Note that this is needed when running with a security manager.
     private static final Permission modifyThreadPerm = new RuntimePermission("modifyThread");
 
     @Override public boolean cancel(boolean mayInterruptIfRunning) {

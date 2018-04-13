@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -74,7 +74,7 @@ import com.sun.javafx.scene.SceneHelper;
 /**
  * A top level window within which a scene is hosted, and with which the user
  * interacts. A Window might be a {@link Stage}, {@link PopupWindow}, or other
- * such top level. A Window is used also for browser plug-in based deployments.
+ * such top level window.
  * <p>
  * Window objects must be constructed and modified on the
  * JavaFX Application Thread.

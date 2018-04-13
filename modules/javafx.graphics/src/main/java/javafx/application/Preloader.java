@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,7 @@ import java.security.PrivilegedAction;
  * Class that is extended to define an optional preloader for a
  * JavaFX Application.
  * An application may contain a preloader that is used
- * to improve the application loading experience, especially for applications
- * that are embedded in a browser or launched in webstart execution mode.
+ * to improve the application loading experience.
  *
  * <p>
  * A preloader is a small application that is started
@@ -76,12 +75,8 @@ import java.security.PrivilegedAction;
  * Custom preloader implementations should follow these rules:
  * </p>
  * <ol>
- *  <li>there should be class extending Preloader</li>
- *  <li>classes needed for preloader need to be packaged in the separate jar.
- *      We recommend this jar to be unsigned.</li>
- *  <li>JNLP deployment descriptor should have preloader-class attribute
- *      with full name of the class as value in the javafx-desc element
- *      and jars needed for progress need to have download="progress" type</li>
+ *  <li>a custom preloader class should extend Preloader</li>
+ *  <li>classes needed for preloader need to be packaged in the separate jar.</li>
  * </ol>
  *
  * <p>
@@ -215,7 +210,7 @@ public abstract class Preloader extends Application {
 
     /**
      * Preloader notification that reports an error.
-     * This is delivered to preloader in case of problem with applet startup.
+     * This is delivered to preloader in case of problem with application startup.
      * @since JavaFX 2.0
      */
     public static class ErrorNotification implements PreloaderNotification {

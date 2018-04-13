@@ -51,9 +51,7 @@ public final class HostServices {
 
     /**
      * Gets the code base URI for this application.
-     * If the application was launched via a JNLP file, this method returns
-     * the codebase parameter specified in the JNLP file.
-     * If the application was launched in standalone mode, this method returns
+     * This method returns
      * the directory containing the application jar file. If the
      * application is not packaged in a jar file, this method
      * returns the empty string.
@@ -66,12 +64,7 @@ public final class HostServices {
 
     /**
      * Gets the document base URI for this application.
-     * If the application is embedded in a browser, this method returns the
-     * URI of the web page containing the application.
-     * If the application was launched in webstart mode, this method returns
-     * the the codebase parameter specified in the JNLP file (the document
-     * base and the code base are the same in this mode).
-     * If the application was launched in standalone mode, this method returns
+     * This method returns
      * the URI of the current directory.
      *
      * @return the document base URI for this application.

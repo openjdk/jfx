@@ -121,7 +121,7 @@ public class PlatformImpl {
 
     /**
      * Sets the name of the this application based on the Application class.
-     * This method is called by the launcher or by the deploy code, and is not
+     * This method is called by the launcher, and is not
      * called from the FX Application Thread, so we need to do it in a runLater.
      * We do not need to wait for the result since it will complete before the
      * Application start() method is called regardless.

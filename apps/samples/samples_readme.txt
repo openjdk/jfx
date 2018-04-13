@@ -6,7 +6,6 @@ What's in the samples zip file?
 What do I need to set up my environment?
 How do I run the prebuilt samples?
 How do I run the sample projects in NetBeans IDE?
-What are the other ways I can package the samples?
 Sample Descriptions
 
 
@@ -48,7 +47,7 @@ environment:
 - A supported version** of the JDK.
 - A supported version** of NetBeans IDE.
 
-**To find information about the supported versions of operating system and browser
+**To find information about the supported versions of operating system
 for a particular Java release, see
 http://www.oracle.com/technetwork/java/javase/downloads/index.html
 
@@ -75,16 +74,6 @@ To run the sample projects:
    directory, select a project, then click Open.
 3. To run the application in NetBeans IDE, in the Project pane, right-click
    the project and choose Run.
-
-
-==================================================
-What are the other ways I can package the samples?
-==================================================
-
-You can also package any of the samples as an applet, JNLP, or native bundle 
-that includes an installer and a copy of the JRE for execution in an environment
-that does not have JavaFX installed. See https://docs.oracle.com/javafx for 
-additional information about deploying JavaFX application.
 
 
 ===================
@@ -138,4 +127,4 @@ FXML files.
 
 
 --------------------------------------------------------------------
-Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.

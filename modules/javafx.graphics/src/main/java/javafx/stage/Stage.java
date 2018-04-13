@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2018, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -313,8 +313,7 @@ public class Stage extends Window {
     }
 
     /*
-     * sets this stage to be the primary stage.
-     * When run as an applet, this stage will appear in the broswer
+     * Sets this stage to be the primary stage.
      */
     void setPrimary(boolean primary) {
         this.primary = primary;
@@ -322,7 +321,6 @@ public class Stage extends Window {
 
     /*
      * Returns whether this stage is the primary stage.
-     * When run as an applet, the primary stage will appear in the broswer
      *
      * @return true if this stage is the primary stage for the application.
      */

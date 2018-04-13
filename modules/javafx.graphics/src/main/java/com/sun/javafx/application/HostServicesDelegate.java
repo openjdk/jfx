@@ -27,50 +27,13 @@ package com.sun.javafx.application;
 
 import java.awt.Desktop;
 import java.io.File;
-import java.lang.reflect.Method;
 import java.net.URI;
-import java.security.AccessController;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import javafx.application.Application;
 
 public abstract class HostServicesDelegate {
 
-    private static Method getInstanceMeth = null;
-
     public static HostServicesDelegate getInstance(final Application app) {
-        // Call into the deploy code to get the delegate class
-        HostServicesDelegate instance = null;
-        try {
-            instance = AccessController.doPrivileged(
-                    (PrivilegedExceptionAction<HostServicesDelegate>) () -> {
-                        if (getInstanceMeth == null) {
-                            try {
-                                final String factoryClassName =
-                                        "com.sun.deploy.uitoolkit.impl.fx.HostServicesFactory";
-
-                                Class factoryClass = Class.forName(factoryClassName,
-                                        true,
-                                        HostServicesDelegate.class.getClassLoader());
-                                getInstanceMeth = factoryClass.getMethod(
-                                        "getInstance", Application.class);
-                            } catch (Exception ex) {
-                                return null;
-                            }
-                        }
-                        return (HostServicesDelegate)
-                                getInstanceMeth.invoke(null, app);
-                    }
-            );
-        } catch (PrivilegedActionException pae) {
-            System.err.println(pae.getException().toString());
-            return null;
-        }
-        if (instance == null) {
-            // in this case we are in standalone mode
-            instance = StandaloneHostService.getInstance(app);
-        }
-        return instance;
+        return StandaloneHostService.getInstance(app);
     }
 
     protected HostServicesDelegate() {

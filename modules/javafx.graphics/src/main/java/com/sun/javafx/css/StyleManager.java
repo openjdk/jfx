@@ -950,7 +950,7 @@ final public class StyleManager {
 
             /*
             ** we got an access control exception, so
-            ** we could be running from an applet/jnlp/or with a security manager.
+            ** we could be running with a security manager.
             ** we'll allow the app to read a css file from our runtime jar,
             ** and give it one more chance.
             */
